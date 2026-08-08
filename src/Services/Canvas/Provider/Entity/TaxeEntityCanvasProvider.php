@@ -40,7 +40,7 @@ class TaxeEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "description", "intitule" => "Description", "type" => "Texte"],
                 ["code" => "tauxIARD", "intitule" => "Taux IARD", "type" => "Nombre", "format" => "Pourcentage"],
                 ["code" => "tauxVIE", "intitule" => "Taux VIE", "type" => "Nombre", "format" => "Pourcentage"],
-                ["code" => "redevable", "intitule" => "Redevable", "type" => "Texte"], // Valeur brute
+                ["masqueDansFiche" => true, "code" => "redevable", "intitule" => "Redevable", "type" => "Texte"], // Valeur brute (cherchable), affichée par « redevableString »
                 ["code" => "entreprise", "intitule" => "Entreprise", "type" => "Relation", "targetEntity" => Entreprise::class, "displayField" => "nom"],
                 ["code" => "autoriteFiscales", "intitule" => "Autorités Fiscales", "type" => "Collection", "targetEntity" => AutoriteFiscale::class, "displayField" => "nom"],
             ], $this->getSpecificIndicators())
@@ -51,7 +51,7 @@ class TaxeEntityCanvasProvider implements EntityCanvasProviderInterface
     {
         return [
             ["group" => "Détails", "code" => "redevableString", "intitule" => "Redevable", "type" => "Calcul", "format" => "Texte", "description" => "Entité redevable de la taxe."],
-            ["group" => "Détails", "code" => "autoritesFiscalesString", "intitule" => "Autorités Fiscales", "type" => "Calcul", "format" => "Texte", "description" => "Liste des autorités fiscales associées à cette taxe."],
+            ["group" => "Détails", "masqueDansFiche" => true, "code" => "autoritesFiscalesString", "intitule" => "Autorités Fiscales", "type" => "Calcul", "format" => "Texte", "description" => "Liste des autorités fiscales associées à cette taxe."],
             ["group" => "Statistiques", "code" => "montantTaxeTotal", "intitule" => "Montant Taxe Total", "type" => "Calcul", "format" => "Monetaire", "description" => "Montant total de cette taxe calculé sur l'ensemble du portefeuille."],
             ["group" => "Statistiques", "code" => "montantTaxePaye", "intitule" => "Montant Taxe Payé", "type" => "Calcul", "format" => "Monetaire", "description" => "Montant total des paiements effectués pour cette taxe."],
             ["group" => "Statistiques", "code" => "soldeRestantDu", "intitule" => "Solde Restant Dû", "type" => "Calcul", "format" => "Monetaire", "description" => "Solde restant à payer pour cette taxe."],

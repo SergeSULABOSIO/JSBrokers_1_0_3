@@ -148,6 +148,19 @@ trait ControllerUtilsTrait
     }
 
     /**
+     * Payload des fiches : relations du canevas que la sérialisation ne publie pas.
+     * Injecté par setter autowiré (#[Required]) comme les autres services du trait —
+     * aucun constructeur de contrôleur à toucher.
+     */
+    private \App\Services\Canvas\CanvasRelationHydrator $canvasRelationHydrator;
+
+    #[Required]
+    public function setCanvasRelationHydrator(\App\Services\Canvas\CanvasRelationHydrator $hydrator): void
+    {
+        $this->canvasRelationHydrator = $hydrator;
+    }
+
+    /**
      * Inspecteur des champs obligatoires (source UNIQUE de la notion « obligatoire »,
      * dérivée des métadonnées Doctrine et partagée avec l'assistant IA). Injecté par
      * setter autowiré (#[Required]) comme les autres services du trait. Permet de
@@ -1621,8 +1634,15 @@ trait ControllerUtilsTrait
         // y compris les indicateurs spécifiques.
         $this->loadCalculatedValues($entityCanvas, $entity);
 
-        // On retourne le tableau de données prêt à être sérialisé.
-        return ['entity' => $entity, 'entityType' => $entityType, 'entityCanvas' => $entityCanvas];
+        // On retourne le tableau de données prêt à être sérialisé. L'entité passe par
+        // l'hydrateur : il la normalise (mêmes groupes list:read qu'avant) ET y ajoute
+        // les relations que le canevas déclare mais que la sérialisation ne publie pas
+        // — sans quoi l'accordéon affiche « N/A » sur des données bien présentes.
+        return [
+            'entity' => $this->canvasRelationHydrator->payload($entity, $entityCanvas),
+            'entityType' => $entityType,
+            'entityCanvas' => $entityCanvas,
+        ];
     }
 
     /**

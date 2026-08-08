@@ -265,6 +265,15 @@
            pipeline markdown ne doit pas la revisiter au connect().
            Aucune couleur en dur : uniquement des jetons --aic-*, sans quoi la
            bascule de thème laisserait la bulle en arrière. */
+        /* La bulle du programme prend TOUTE la largeur disponible : elle ne
+           dialogue pas, elle présente des tableaux. Les 92 % des bulles de
+           conversation (respiration à droite, marque du tour de parole) ne feraient
+           ici que rogner des colonnes. Le padding intérieur se resserre aussi : dans
+           une colonne étroite, chaque pixel rendu au tableau est une colonne de
+           moins à faire défiler. */
+        .jsb-ai-chat .aic-msg--plan { max-width:100%; width:100%; }
+        .jsb-ai-chat .aic-msg--plan .aic-msg-body { flex:1 1 auto; }
+        .jsb-ai-chat .aic-msg--plan .aic-msg-text { padding:.6rem .55rem; }
         .jsb-ai-chat .aic-plan { margin-top:.25rem; }
         .jsb-ai-chat .aic-plan-intro { margin:0 0 .6rem; color:var(--aic-text-2); }
         .jsb-ai-chat .aic-plan-priorite {
@@ -287,30 +296,92 @@
         }
         .jsb-ai-chat .aic-plan-compte { font-size:.78rem; font-weight:600; color:var(--aic-accent); }
         .jsb-ai-chat .aic-plan-perimetre { font-size:.72rem; color:var(--aic-muted); }
-        .jsb-ai-chat .aic-plan-liste { margin:0; padding:0; list-style:none; }
-        /* Une ligne = une action. Bouton et non lien : elle ouvre une fiche dans
-           l'espace de travail, elle ne navigue pas. Survol/clic reprennent l'idiome
-           des lignes de tableau ci-dessus, pour une seule grammaire d'interaction. */
-        .jsb-ai-chat .aic-plan-ligne {
-            display:flex; align-items:baseline; gap:.45rem; width:100%;
-            padding:.3rem .4rem; border:0; border-radius:6px;
-            background:transparent; color:var(--aic-text-2); text-align:left;
-            font:inherit; font-size:.82rem; cursor:pointer;
-            transition:background-color .12s ease, color .12s ease;
+        /* ── Tableau d'une section ──────────────────────────────────────────────
+           Même idiome que les tableaux markdown des réponses (entête sobre en
+           majuscules, survol de ligne, pas de retour à la ligne dans une cellule) :
+           une seule grammaire de lecture dans tout le chat. C'est le CONTENEUR qui
+           défile, pas le tableau : ainsi la colonne N° peut rester collée à gauche
+           (sticky) pendant qu'on fait défiler les colonnes de droite. */
+        .jsb-ai-chat .aic-plan-tablewrap {
+            overflow-x:auto; overscroll-behavior-x:contain;
+            border:1px solid var(--aic-border-subtle); border-radius:8px;
+            background:var(--aic-surface);
         }
-        .jsb-ai-chat .aic-plan-ligne:hover { background:var(--aic-row-hover); color:var(--aic-text); }
-        .jsb-ai-chat .aic-plan-ligne:active { background:var(--aic-accent-subtle); }
-        .jsb-ai-chat .aic-plan-ligne:focus-visible { outline:2px solid var(--aic-accent); outline-offset:1px; }
-        .jsb-ai-chat .aic-plan-libelle { flex:1 1 auto; min-width:0; }
-        /* Le contexte (client, assureur) reste secondaire : il situe sans capter
-           l'attention, et s'efface plutôt que de pousser la pastille hors cadre. */
-        .jsb-ai-chat .aic-plan-contexte {
-            display:block; font-size:.74rem; color:var(--aic-muted);
-            overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+        /* Sélecteur volontairement aussi précis que `.aic-msg-text table` : à
+           spécificité égale ou moindre, la règle markdown ci-dessus l'emporterait
+           (elle est plus haut dans la feuille mais compte un élément de plus). */
+        .jsb-ai-chat .aic-msg-text table.aic-plan-table {
+            border-collapse:separate; border-spacing:0;
+            /* Un plancher de largeur : en colonne étroite le tableau déborde et
+               défile (comportement voulu), plutôt que de compresser les colonnes
+               jusqu'à l'illisible. */
+            width:100%; min-width:32rem; font-size:.8rem;
+            /* ANNULE la règle des tableaux markdown ci-dessus (display:block +
+               overflow-x:auto), qui ferait du tableau une SECONDE boîte défilante
+               dans son conteneur : deux barres de défilement empilées, et des
+               colonnes collantes qui ne collent plus à rien. Ici c'est le
+               conteneur qui défile, et lui seul. */
+            display:table; max-width:none; overflow:visible;
         }
-        .jsb-ai-chat .aic-plan-montant {
-            flex:0 0 auto; font-variant-numeric:tabular-nums;
+        .jsb-ai-chat .aic-plan-table th,
+        .jsb-ai-chat .aic-plan-table td {
+            padding:.32rem .5rem; text-align:left; white-space:nowrap; vertical-align:top;
+            border-bottom:1px solid var(--aic-border-subtle);
+        }
+        .jsb-ai-chat .aic-plan-table tbody tr:last-child td { border-bottom:0; }
+        .jsb-ai-chat .aic-plan-table thead th {
+            background:var(--aic-bg); color:var(--aic-muted);
+            font-weight:600; font-size:.68rem; text-transform:uppercase; letter-spacing:.3px;
+            border-bottom:1px solid var(--aic-border);
+        }
+        /* Colonne N° figée : en défilement horizontal, le courtier garde le repère
+           de la ligne qu'il lit (« la 3 »), y compris pour la citer à Ket. */
+        .jsb-ai-chat .aic-plan-table .aic-plan-c-num {
+            position:sticky; left:0; z-index:1;
+            width:1%; padding-right:.35rem; text-align:right;
+            font-variant-numeric:tabular-nums; color:var(--aic-muted); font-size:.72rem;
+            background:var(--aic-surface);
+        }
+        .jsb-ai-chat .aic-plan-table thead .aic-plan-c-num { background:var(--aic-bg); }
+        .jsb-ai-chat .aic-plan-c-ctx { color:var(--aic-text-2); }
+        .jsb-ai-chat .aic-plan-c-date { color:var(--aic-text-2); font-variant-numeric:tabular-nums; }
+        .jsb-ai-chat .aic-plan-c-montant {
+            text-align:right; font-variant-numeric:tabular-nums;
             font-weight:600; color:var(--aic-text);
+        }
+        /* Statut figé à droite, comme le N° l'est à gauche : les deux repères qui
+           font trier l'œil (« laquelle, et est-elle en retard ? ») restent visibles
+           quelle que soit la position du défilement horizontal. */
+        .jsb-ai-chat .aic-plan-table .aic-plan-c-statut {
+            position:sticky; right:0; z-index:1;
+            width:1%; text-align:right; background:var(--aic-surface);
+            box-shadow:-6px 0 6px -7px rgba(0,0,0,.35);
+        }
+        .jsb-ai-chat .aic-plan-table thead .aic-plan-c-statut { background:var(--aic-bg); }
+        .jsb-ai-chat .aic-plan-vide { color:var(--aic-muted); }
+
+        /* Une LIGNE = une action : toute sa surface ouvre la fiche. Le survol et le
+           clic reprennent l'idiome des tableaux markdown, pour une seule grammaire
+           d'interaction. */
+        .jsb-ai-chat .aic-plan-row { cursor:pointer; transition:background-color .12s ease; }
+        .jsb-ai-chat .aic-plan-row:hover > td { background:var(--aic-row-hover); color:var(--aic-text); }
+        .jsb-ai-chat .aic-plan-row:active > td { background:var(--aic-accent-subtle); }
+        /* Le bouton ne porte AUCUNE action (son clic remonte au <tr>) : il n'existe
+           que pour rendre la ligne atteignable au clavier et l'annoncer comme
+           actionnable aux lecteurs d'écran. Il se présente donc comme du texte. */
+        .jsb-ai-chat .aic-plan-objet {
+            display:block; max-width:22rem; overflow:hidden; text-overflow:ellipsis;
+            padding:0; border:0; background:transparent; text-align:left;
+            font:inherit; font-weight:600; color:var(--aic-text); cursor:pointer;
+        }
+        .jsb-ai-chat .aic-plan-row:hover .aic-plan-objet { color:var(--aic-accent); }
+        .jsb-ai-chat .aic-plan-objet:focus-visible { outline:2px solid var(--aic-accent); outline-offset:2px; border-radius:3px; }
+        /* Précision de second rang (police, assureur, assigné à) : elle situe la
+           ligne sans concurrencer son libellé, et s'efface plutôt que d'élargir
+           encore le tableau. */
+        .jsb-ai-chat .aic-plan-detail {
+            display:block; max-width:22rem; overflow:hidden; text-overflow:ellipsis;
+            font-size:.72rem; color:var(--aic-muted);
         }
         .jsb-ai-chat .aic-plan-reste {
             margin:.15rem 0 0; padding-left:.4rem;

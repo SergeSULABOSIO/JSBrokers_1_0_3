@@ -50,6 +50,21 @@ final class PlanDuJourService
     public const AUJOURDHUI = 'aujourdhui';
     public const A_VENIR = 'a_venir';
 
+    /**
+     * Entêtes de colonnes par défaut du tableau d'une section. Chaque section les
+     * surcharge avec le vocabulaire de son domaine : une ligne de la section
+     * « Polices à renouveler » n'est pas un « objet » rattaché à un « tiers »,
+     * c'est une POLICE rattachée à un CLIENT et qui expire à une date. C'est le
+     * service — seul à savoir de quelle entité il parle — qui nomme les colonnes ;
+     * le template se contente de les afficher.
+     */
+    private const COLONNES_PAR_DEFAUT = [
+        'objet' => 'Objet',
+        'contexte' => 'Rattachement',
+        'date' => 'Échéance',
+        'montant' => 'Montant',
+    ];
+
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly JSBDynamicSearchService $searchService,
@@ -125,12 +140,16 @@ final class PlanDuJourService
     {
         $assignees = $this->chercherTaches($entreprise, $this->chargeCritere->tachesAssignees($invite), $jour);
 
+        $colonnes = ['objet' => 'Tâche', 'contexte' => 'Client', 'date' => 'À finir le'];
+
         $sections = [$this->composer(
             'taches_assignees',
             'Mes tâches',
             'assignées à moi ou à personne',
             BoussoleService::URGENCE['taches'],
             $assignees,
+            null,
+            $colonnes,
         )];
 
         // Sans portefeuille, le critère de périmètre serait vide et la requête
@@ -145,6 +164,8 @@ final class PlanDuJourService
                 'mes clients, assignées à un collègue',
                 BoussoleService::URGENCE['taches'] - 1,
                 $portefeuille,
+                null,
+                $colonnes,
             );
         }
 
@@ -189,6 +210,9 @@ final class PlanDuJourService
             'entite' => 'Tache',
             'libelle' => $this->tronquer((string) $t->getDescription()),
             'contexte' => $this->contexteTache($t),
+            // Qui la traite : décisif pour la section « portefeuille » (assignée à
+            // un collègue), et rassurant pour la mienne (« à personne » = à moi).
+            'detail' => $t->getExecutor()?->getNom(),
             'date' => $t->getToBeEndedAt()?->format('Y-m-d'),
             'statutTemporel' => $this->statutTemporel($t->getToBeEndedAt(), $jour),
         ], array_slice($taches, 0, self::MAX_LIGNES_PAR_SECTION));
@@ -264,6 +288,8 @@ final class PlanDuJourService
             'issues de mes feedbacks',
             BoussoleService::URGENCE['feedbacks'],
             ['lignes' => $lignes, 'compte' => count($uniques), 'echeant' => count($uniques)],
+            null,
+            ['objet' => 'Action', 'contexte' => 'Tâche liée', 'date' => 'Prévue le'],
         )];
     }
 
@@ -307,6 +333,9 @@ final class PlanDuJourService
             'entite' => 'Avenant',
             'libelle' => $a->getReferencePolice() ?: ('Police #' . $a->getId()),
             'contexte' => $a->getCotation()?->getPiste()?->getClient()?->getNom(),
+            // L'assureur commande la relance : c'est lui qu'on sollicite pour les
+            // conditions de reconduction.
+            'detail' => $a->getCotation()?->getAssureur()?->getNom(),
             'date' => $a->getEndingAt()?->format('Y-m-d'),
             'statutTemporel' => $this->statutTemporel($a->getEndingAt(), $jour),
         ], array_slice($avenants, 0, self::MAX_LIGNES_PAR_SECTION));
@@ -317,6 +346,8 @@ final class PlanDuJourService
             'échues ou sous 30 jours',
             $echus > 0 ? BoussoleService::URGENCE['renouvellements'] : 60,
             ['lignes' => $lignes, 'compte' => $compte, 'echeant' => $compte],
+            null,
+            ['objet' => 'Police', 'contexte' => 'Client', 'date' => 'Fin de validité'],
         )];
     }
 
@@ -368,6 +399,7 @@ final class PlanDuJourService
                 BoussoleService::URGENCE['primes_impayees'],
                 $this->lignesTranches($primes, $jour, 'primeSoldeDue'),
                 (float) ($primes['totaux']['totalSoldePrime'] ?? 0),
+                ['objet' => 'Tranche', 'contexte' => 'Client', 'date' => 'Échéance', 'montant' => 'Solde dû'],
             ),
             $this->composer(
                 'commissions_a_facturer',
@@ -376,6 +408,7 @@ final class PlanDuJourService
                 BoussoleService::URGENCE['commissions'],
                 $this->lignesTranches($commissions, $jour, 'solde_restant_du'),
                 (float) ($commissions['totaux']['totalSoldeCommission'] ?? 0),
+                ['objet' => 'Tranche', 'contexte' => 'Client', 'date' => 'Échéance', 'montant' => 'Commission'],
             ),
         ];
     }
@@ -391,6 +424,9 @@ final class PlanDuJourService
             'entite' => 'Tranche',
             'libelle' => $t->getNom() ?: ('Tranche #' . $t->getId()),
             'contexte' => $t->clientNom ?? $t->referencePolice ?? null,
+            // Police (et assureur) : sans elle, deux tranches nommées « Tranche
+            // unique » chez le même client sont indiscernables dans la liste.
+            'detail' => $t->clientNom !== null ? ($t->referencePolice ?: $t->assureurNom) : $t->assureurNom,
             'date' => $t->getEcheanceAt()?->format('Y-m-d') ?? $t->getPayableAt()?->format('Y-m-d'),
             'statutTemporel' => $this->statutTemporel($t->getEcheanceAt() ?? $t->getPayableAt(), $jour),
             'montant' => round(max(0.0, (float) ($t->{$champSolde} ?? 0)), 2),
@@ -417,12 +453,16 @@ final class PlanDuJourService
 
         $lignes = array_map(function (Note $n) use ($jour): array {
             $anciennete = $this->noteRecouvrement->joursAnciennete($n, $jour);
+            $libelle = $n->getReference() ?: ($n->getNom() ?: ('Note #' . $n->getId()));
 
             return [
                 'id' => $n->getId(),
                 'entite' => 'Note',
-                'libelle' => $n->getReference() ?: ($n->getNom() ?: ('Note #' . $n->getId())),
+                'libelle' => $libelle,
                 'contexte' => $n->getAssureur()?->getNom(),
+                // L'intitulé de la note, sauf quand il TIENT DÉJÀ lieu de libellé
+                // (note sans référence) : jamais deux fois la même chaîne.
+                'detail' => $n->getNom() !== $libelle ? $n->getNom() : null,
                 'date' => ($n->getSentAt() ?? $n->getCreatedAt())?->format('Y-m-d'),
                 // Une créance émise est due : l'ancienneté sert d'argument de relance.
                 'statutTemporel' => ($anciennete ?? 0) > 0 ? self::EN_RETARD : self::AUJOURDHUI,
@@ -438,6 +478,7 @@ final class PlanDuJourService
             BoussoleService::URGENCE['recouvrement_notes'],
             ['lignes' => $lignes, 'compte' => (int) $resultat['totalItems'], 'echeant' => (int) $resultat['totalItems']],
             (float) ($resultat['totaux']['totalSolde'] ?? 0),
+            ['objet' => 'Note de débit', 'contexte' => 'Assureur', 'date' => 'Émise le', 'montant' => 'Solde'],
         )];
     }
 
@@ -445,9 +486,10 @@ final class PlanDuJourService
 
     /**
      * @param array{lignes: array<int, array>, compte: int, echeant: int} $contenu
+     * @param array<string, string> $colonnes surcharge des entêtes (cf. COLONNES_PAR_DEFAUT)
      * @return array<string, mixed>
      */
-    private function composer(string $cle, string $titre, string $perimetre, int $urgence, array $contenu, ?float $montant = null): array
+    private function composer(string $cle, string $titre, string $perimetre, int $urgence, array $contenu, ?float $montant = null, array $colonnes = []): array
     {
         $section = [
             'cle' => $cle,
@@ -456,6 +498,7 @@ final class PlanDuJourService
             'compte' => $contenu['compte'],
             'echeant' => $contenu['echeant'],
             'urgence' => $urgence,
+            'colonnes' => $colonnes + self::COLONNES_PAR_DEFAUT,
             'lignes' => $contenu['lignes'],
             'tronque' => $contenu['echeant'] > count($contenu['lignes']),
             'enRetard' => count(array_filter(

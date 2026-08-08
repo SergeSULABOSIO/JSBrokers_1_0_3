@@ -42,6 +42,7 @@ use App\Ai\Scope\AiScope;
 use App\Service\Workspace\MutationException;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Service\Workspace\WorkspaceMutationService;
+use App\Services\Canvas\CanvasRelationHydrator;
 use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
 use App\Token\InsufficientTokensException;
@@ -125,6 +126,7 @@ class AssistantIaController extends AbstractController
         private ProgrammeEnCours $programmeEnCours,
         private ProgrammeRunner $programmeRunner,
         private ProgrammeVerificateur $programmeVerificateur,
+        private CanvasRelationHydrator $relationHydrator,
     ) {
     }
 
@@ -1864,10 +1866,12 @@ class AssistantIaController extends AbstractController
 
         // Même contenu qu'une ligne de liste : attributs sérialisés + valeurs
         // CALCULÉES fusionnées (hors groupes list:read — on les ajoute depuis le
-        // canvas, comme le font les listes du workspace).
+        // canvas, comme le font les listes du workspace) + relations du canevas que
+        // la sérialisation ne publie pas (cf. CanvasRelationHydrator) : sans elles,
+        // l'accordéon affichait « N/A » sur l'assureur, le client ou le risque.
         $this->canvasBuilder->loadAllCalculatedValues($entity);
         $entityCanvas = $this->canvasBuilder->getEntityCanvas($fqcn);
-        $normalized = (array) $this->normalizer->normalize($entity, null, ['groups' => ['list:read']]);
+        $normalized = $this->relationHydrator->payload($entity, $entityCanvas);
         foreach (($entityCanvas['liste'] ?? []) as $fieldDef) {
             $code = (string) ($fieldDef['code'] ?? '');
             if ($code !== '' && !array_key_exists($code, $normalized) && isset($entity->{$code})) {
