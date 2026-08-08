@@ -6,6 +6,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Symfony\Component\Form\Extension\Core\Type\PercentType;
 use Symfony\Component\Form\FormFactoryInterface;
+use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\ResolvedFormTypeInterface;
 
 /**
@@ -44,6 +45,44 @@ class ChampsObligatoiresInspector
         'ChargementPourPrime' => ['type'],
     ];
 
+    /**
+     * Champs de CHOIX indispensables à la création, même si leur colonne tolère NULL :
+     * ce sont des DISCRIMINANTS métier, pour lesquels une valeur par défaut serait un
+     * mensonge silencieux (une note de crédit émise là où il fallait un débit, une
+     * souscription là où il fallait un renouvellement). On les EXIGE au lieu de les
+     * deviner — à l'identique côté écran (422 nommant le champ) et côté assistant
+     * (« manquants » de l'inventaire), via {@see scalaireRequis()}.
+     *
+     * Jumeau de RELATIONS_METIER_REQUISES ci-dessus : même patron, même fail-open
+     * (entité absente = aucune exigence supplémentaire).
+     *
+     * Les champs de choix qui admettent, eux, un défaut NON AMBIGU ne figurent pas ici :
+     * leur défaut est posé sur la PROPRIÉTÉ de l'entité (`= self::X`), ce qui sert d'un
+     * seul geste l'écran, l'assistant, l'import de fichier et l'API.
+     */
+    private const CHOIX_METIER_REQUIS = [
+        // Le type d'avenant scelle le sort d'une police : il fonde le pipeline
+        // d'échéance et les mouvements (renouvellement/prorogation/résiliation).
+        'Piste' => ['typeAvenant'],
+        // Débit ou crédit = facture émise ou avoir ; et le destinataire détermine qui
+        // doit l'argent. Aucun des deux ne se devine.
+        'Note' => ['type', 'addressedTo'],
+        // « Prime nette » est la BASE du calcul de commission : un défaut ferait d'un
+        // chargement quelconque l'assiette de la rémunération du courtier.
+        'Chargement' => ['fonction'],
+        // Deux mondes distincts : taxe SUR LA PRIME (chargement) ≠ taxe SUR LA
+        // COMMISSION. Le redevable dit lequel — jamais un défaut.
+        'Taxe' => ['redevable'],
+        'TypeRevenu' => ['redevable'],
+    ];
+
+    /**
+     * @var array<string, array<string, array{libelle: string, choix: array<int|string, string>,
+     *      defautFormulaire: mixed, aFormulaireData: bool, aide: string|null,
+     *      requisFormulaire: bool, multiple: bool, pourcentage: bool}>>
+     */
+    private array $descripteurs = [];
+
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly FormFactoryInterface $formFactory,
@@ -71,14 +110,17 @@ class ChampsObligatoiresInspector
         }
 
         $limiter = $champsPilotables !== null;
+        $shortName = $this->shortName($meta->getName());
         $manquants = [];
 
-        // Colonnes scalaires non-nullables, sans défaut BDD/PHP, laissées vides.
+        // Colonnes scalaires non-nullables sans défaut BDD/PHP, et discriminants métier
+        // ({@see CHOIX_METIER_REQUIS}), laissés vides.
         foreach ($meta->getFieldNames() as $field) {
-            if (in_array($field, self::CHAMPS_SYSTEME, true) || $meta->isNullable($field)) {
+            if (in_array($field, self::CHAMPS_SYSTEME, true)) {
                 continue;
             }
-            if ($this->aUnDefaut($meta, $field)) {
+            $discriminant = $this->choixRequis($shortName, $field);
+            if (!$discriminant && ($meta->isNullable($field) || $this->aUnDefaut($meta, $field))) {
                 continue;
             }
             if ($limiter && !in_array($field, $champsPilotables, true)) {
@@ -105,10 +147,22 @@ class ChampsObligatoiresInspector
         return $manquants;
     }
 
-    /** Un champ scalaire est-il OBLIGATOIRE (non-nullable, sans défaut BDD/PHP, hors système) ? */
+    /**
+     * Un champ scalaire est-il OBLIGATOIRE (non-nullable, sans défaut BDD/PHP, hors
+     * système) — ou bien un DISCRIMINANT métier exigé même sur colonne nullable
+     * ({@see CHOIX_METIER_REQUIS}) ?
+     */
     public function scalaireRequis(ClassMetadata $meta, object $entity, string $field): bool
     {
-        if (in_array($field, self::CHAMPS_SYSTEME, true) || $meta->isNullable($field)) {
+        if (in_array($field, self::CHAMPS_SYSTEME, true)) {
+            return false;
+        }
+        // Discriminant métier : la nullabilité de la colonne tolère les données
+        // héritées, elle ne dispense pas d'un choix explicite à la création.
+        if ($this->choixRequis($this->shortName($meta->getName()), $field)) {
+            return $this->estVide($entity, $meta, $field);
+        }
+        if ($meta->isNullable($field)) {
             return false;
         }
 
@@ -150,20 +204,165 @@ class ChampsObligatoiresInspector
         return $this->libellesFormulaire($shortName, $fqcn)[$field] ?? $this->humaniser($field);
     }
 
-    /** Libellés lisibles des champs, lus depuis le FormType (jamais les listes de choix). */
-    public function libellesFormulaire(string $shortName, string $fqcn): array
+    /**
+     * DESCRIPTEUR des champs d'une entité, dérivé de son FORMTYPE — le contrat exact de
+     * l'interface graphique, et le même principe directeur que {@see FormTreeInspector}
+     * pour les collections. Source UNIQUE de tout ce que l'on sait dire d'un champ sans
+     * le redéclarer nulle part : son libellé lisible, les VALEURS qu'il accepte quand
+     * c'est une liste fermée, le défaut que le formulaire lui impose, son aide métier.
+     *
+     * Pourquoi les valeurs de choix comptent : la plupart des champs « à cocher » ou
+     * « à sélectionner » persistent un CODE (`Piste::AVENANT_SOUSCRIPTION = 0`,
+     * `Depense::MOYEN_BANQUE = 'banque'`). L'écran le rend en clair, mais l'assistant —
+     * et l'import de fichier — n'avaient aucun moyen de savoir ce qui est permis : ils
+     * laissaient donc le champ vide, ou envoyaient le libellé affiché à la place du code.
+     *
+     * Un seul passage, mis en cache par nom court : l'inventaire des champs construisait
+     * auparavant deux à trois fois le même formulaire.
+     *
+     * @return array<string, array{libelle: string, choix: array<int|string, string>,
+     *      defautFormulaire: mixed, aFormulaireData: bool, aide: string|null,
+     *      requisFormulaire: bool, multiple: bool, pourcentage: bool}>
+     */
+    public function descripteursChamps(string $shortName, string $fqcn): array
     {
-        $labels = [];
+        if (array_key_exists($shortName, $this->descripteurs)) {
+            return $this->descripteurs[$shortName];
+        }
+
+        $descripteurs = [];
         try {
             $form = $this->formFactory->create('App\\Form\\' . $shortName . 'Type', new $fqcn());
             foreach ($form->all() as $child) {
-                $lbl = $child->getConfig()->getOption('label');
-                if (is_string($lbl) && trim($lbl) !== '') {
-                    $labels[$child->getName()] = $lbl;
-                }
+                $descripteurs[$child->getName()] = $this->descripteurChamp($child);
             }
         } catch (\Throwable) {
-            // Pas de FormType exploitable : on retombera sur l'humanisation.
+            // Pas de FormType exploitable : les appelants retombent sur l'humanisation
+            // et sur les seules métadonnées Doctrine (best-effort, comme avant).
+            $descripteurs = [];
+        }
+
+        return $this->descripteurs[$shortName] = $descripteurs;
+    }
+
+    /**
+     * @return array{libelle: string, choix: array<int|string, string>, defautFormulaire: mixed,
+     *      aFormulaireData: bool, aide: string|null, requisFormulaire: bool, multiple: bool,
+     *      pourcentage: bool}
+     */
+    private function descripteurChamp(FormInterface $child): array
+    {
+        $config = $child->getConfig();
+        $libelle = $config->getOption('label');
+        $aide = $config->getOption('help');
+
+        return [
+            'libelle' => is_string($libelle) && trim($libelle) !== '' ? $libelle : '',
+            'choix' => $this->choixDuChamp($config->getOption('choices')),
+            // L'option « data » d'un FormType PRIME sur la valeur portée par l'entité :
+            // un défaut posé sur la propriété y serait silencieusement écrasé. On la lit
+            // donc pour annoncer le VRAI défaut, sans chercher à la déplacer.
+            'defautFormulaire' => $config->getOption('data'),
+            'aFormulaireData' => $config->hasOption('data') && $config->getOption('data') !== null,
+            'aide' => is_string($aide) && trim($aide) !== '' ? $aide : null,
+            'requisFormulaire' => (bool) $config->getOption('required'),
+            'multiple' => (bool) $config->getOption('multiple'),
+            // PercentType fractionnel : l'écran attend 15, la colonne stocke 0.15.
+            'pourcentage' => $this->estPercentType($config->getType()) && $config->getOption('type') !== 'integer',
+        ];
+    }
+
+    /**
+     * Normalise l'option « choices » d'un ChoiceType en `code => libellé`.
+     *
+     * Le projet la déclare uniformément dans le sens `libellé => code`
+     * (`"Souscription" => Piste::AVENANT_SOUSCRIPTION`, ou `array_flip(LABELS)`), d'où
+     * le retournement. On ne lit JAMAIS `choice_label` : c'est une closure qui rend du
+     * HTML de présentation (`<div><strong>…`), inutilisable comme libellé de valeur.
+     *
+     * @return array<int|string, string> vide si le champ n'est pas une liste fermée
+     */
+    private function choixDuChamp(mixed $choices): array
+    {
+        if (!is_array($choices) || $choices === []) {
+            return [];
+        }
+
+        $plat = [];
+        foreach ($choices as $libelle => $valeur) {
+            // Groupes de choix (`'Groupe' => ['Libellé' => valeur]`) : un niveau aplati.
+            if (is_array($valeur)) {
+                foreach ($valeur as $sousLibelle => $sousValeur) {
+                    if (is_scalar($sousValeur)) {
+                        $plat[$this->cleChoix($sousValeur)] = (string) $sousLibelle;
+                    }
+                }
+                continue;
+            }
+            if (is_scalar($valeur)) {
+                $plat[$this->cleChoix($valeur)] = (string) $libelle;
+            }
+            // Une valeur null (« Tous les paquets » => null) n'est pas un code : ignorée.
+        }
+
+        return $plat;
+    }
+
+    /** Clé de tableau utilisable pour un code de choix (les booléens deviendraient 0/1 en silence). */
+    private function cleChoix(mixed $valeur): int|string
+    {
+        if (is_bool($valeur)) {
+            return $valeur ? '1' : '0';
+        }
+
+        return is_int($valeur) ? $valeur : (string) $valeur;
+    }
+
+    /**
+     * Forme COMPARABLE d'un libellé : sans casse, sans accents, ponctuation d'affichage
+     * réduite à des espaces. Sert à reconnaître « Résiliation », « resiliation » et
+     * « RÉSILIATION » comme le même choix.
+     *
+     * Table de translittération explicite, et non `iconv('ASCII//TRANSLIT')` : selon la
+     * bibliothèque C de l'hôte, celui-ci rend « R'esiliation » (apostrophe insérée)
+     * plutôt que « Resiliation ». La comparaison échouait alors sur les postes Windows
+     * et réussissait ailleurs — le pire des deux mondes pour une règle métier.
+     *
+     * Source UNIQUE de cette normalisation : partagée par la résolution à l'écriture
+     * (WorkspaceMutationService) et par la lecture d'un fichier joint.
+     */
+    public function libelleComparable(string $texte): string
+    {
+        static $accents = [
+            'à' => 'a', 'á' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a', 'å' => 'a', 'æ' => 'ae',
+            'ç' => 'c', 'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e',
+            'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i',
+            'ñ' => 'n', 'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'o', 'ø' => 'o', 'œ' => 'oe',
+            'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u', 'ý' => 'y', 'ÿ' => 'y', 'ß' => 'ss',
+        ];
+
+        $texte = mb_strtolower(strip_tags($texte));
+        $texte = strtr($texte, $accents);
+        $texte = (string) preg_replace('/[^a-z0-9]+/', ' ', $texte);
+
+        return trim($texte);
+    }
+
+    /**
+     * Libellés lisibles des champs, lus depuis le FormType.
+     *
+     * Façade au-dessus de {@see descripteursChamps()} — conservée telle quelle pour ses
+     * appelants (messages d'erreur 422, inventaire, lecture de fiche).
+     *
+     * @return array<string, string>
+     */
+    public function libellesFormulaire(string $shortName, string $fqcn): array
+    {
+        $labels = [];
+        foreach ($this->descripteursChamps($shortName, $fqcn) as $champ => $d) {
+            if ($d['libelle'] !== '') {
+                $labels[$champ] = $d['libelle'];
+            }
         }
 
         return $labels;
@@ -185,20 +384,48 @@ class ChampsObligatoiresInspector
     public function champsPourcentage(string $shortName, string $fqcn): array
     {
         $champs = [];
-        try {
-            $form = $this->formFactory->create('App\\Form\\' . $shortName . 'Type', new $fqcn());
-            foreach ($form->all() as $child) {
-                $config = $child->getConfig();
-                if (!$this->estPercentType($config->getType()) || $config->getOption('type') === 'integer') {
-                    continue;
-                }
-                $champs[] = $child->getName();
+        foreach ($this->descripteursChamps($shortName, $fqcn) as $champ => $d) {
+            if ($d['pourcentage']) {
+                $champs[] = $champ;
             }
-        } catch (\Throwable) {
-            return [];
         }
 
         return $champs;
+    }
+
+    /**
+     * Valeurs acceptées par un champ de CHOIX FERMÉ, en `code => libellé`.
+     * Tableau vide si le champ n'est pas une liste fermée (texte libre, relation, date).
+     *
+     * @return array<int|string, string>
+     */
+    public function choixDisponibles(string $shortName, string $fqcn, string $field): array
+    {
+        return $this->descripteursChamps($shortName, $fqcn)[$field]['choix'] ?? [];
+    }
+
+    /**
+     * Valeurs acceptées par un champ de formulaire DÉJÀ CONSTRUIT, en `code => libellé`.
+     *
+     * À préférer à {@see choixDisponibles()} quand on tient le formulaire réel : un
+     * enfant de collection est édité par l'`entry_type` déclaré par son parent, qui n'est
+     * pas nécessairement `App\Form\{Nom}Type`. Lire le champ vivant évite de reconstruire
+     * — et de se tromper de — formulaire.
+     *
+     * @return array<int|string, string>
+     */
+    public function choixDuFormulaire(FormInterface $child): array
+    {
+        return $this->choixDuChamp($child->getConfig()->getOption('choices'));
+    }
+
+    /**
+     * Un champ de choix est-il un DISCRIMINANT métier exigé à la création ?
+     * {@see CHOIX_METIER_REQUIS} pour le raisonnement champ par champ.
+     */
+    public function choixRequis(string $shortName, string $field): bool
+    {
+        return in_array($field, self::CHOIX_METIER_REQUIS[$shortName] ?? [], true);
     }
 
     private function estPercentType(?ResolvedFormTypeInterface $type): bool
@@ -235,14 +462,38 @@ class ChampsObligatoiresInspector
     /** Le champ a-t-il un défaut au niveau de la colonne (rempli par la BDD) ? */
     public function aUnDefaut(ClassMetadata $meta, string $field): bool
     {
+        return $this->optionsColonne($meta, $field) !== null;
+    }
+
+    /**
+     * VALEUR du défaut de colonne, à annoncer (et non plus seulement à compter).
+     * `aUnDefaut()` ne répondait qu'oui/non, pour EXCLURE le champ des obligatoires : la
+     * valeur était lue puis jetée, si bien qu'on ne pouvait pas dire à l'utilisateur — ni
+     * à l'assistant — ce qui allait être écrit.
+     *
+     * @return mixed null si le champ n'a pas de défaut de colonne
+     */
+    public function defautColonne(ClassMetadata $meta, string $field): mixed
+    {
+        return $this->optionsColonne($meta, $field)['default'] ?? null;
+    }
+
+    /**
+     * Options de mapping d'une colonne, uniquement si elle porte un « default ».
+     * Compatible mapping objet (ORM 3) et tableau (ORM 2).
+     *
+     * @return array<string, mixed>|null
+     */
+    private function optionsColonne(ClassMetadata $meta, string $field): ?array
+    {
         try {
             $mapping = $meta->getFieldMapping($field);
         } catch (\Throwable) {
-            return false;
+            return null;
         }
         $options = is_object($mapping) ? ($mapping->options ?? []) : ($mapping['options'] ?? []);
 
-        return is_array($options) && array_key_exists('default', $options);
+        return is_array($options) && array_key_exists('default', $options) ? $options : null;
     }
 
     /** Une valeur scalaire est-elle « vide » (null ou chaîne blanche) ? */

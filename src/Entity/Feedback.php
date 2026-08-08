@@ -40,8 +40,11 @@ class Feedback implements OwnerAwareInterface
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'feedback')]
     private Collection $documents;
 
+    // TYPE_UNDEFINED existait depuis toujours sans jamais servir : c'est exactement le
+    // défaut qui manquait à ce champ NOT NULL (un retour dont on ne sait pas encore par
+    // quel canal il est venu).
     #[ORM\Column]
-    private ?int $type = null;
+    private ?int $type = self::TYPE_UNDEFINED;
     public const TYPE_PHYSICAL_MEETING = 0;
     public const TYPE_CALL = 1;
     public const TYPE_EMAIL = 2;

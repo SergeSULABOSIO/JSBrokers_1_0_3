@@ -90,6 +90,20 @@ vous prévient avant la validation que le fichier ne sera pas conservé en base.
 - **Taux en points** : un taux s'écrit et se stocke en POINTS — 15 pour 15 %, jamais
   0,15. C'est la même valeur à l'écran, dans la fiche et dans le plan : l'assistant
   reprend celle que vous dites, sans conversion.
+- **Champs à liste fermée** : beaucoup de champs n'acceptent qu'une valeur parmi
+  quelques-unes — le type d'un avenant, le type d'une note et son destinataire, la
+  fonction d'un chargement, le redevable d'une taxe. L'assistant connaît la liste et
+  son sens : il vous propose les options en clair plutôt que de poser une question
+  ouverte, et il ne laisse plus ces champs vides.
+  - Quand une valeur va de soi, elle est déjà posée et l'assistant vous l'annonce
+    (« Statut de la police : En cours »). Vous n'avez qu'à la changer si besoin.
+  - Quand le choix ne peut appartenir qu'à vous, il est DEMANDÉ, jamais deviné :
+    débit ou crédit, souscription ou renouvellement, taxe due par le courtier ou par
+    l'assureur. Une valeur plausible mais fausse coûte plus cher qu'une question.
+- **Valeurs lues dans un document** : si une pièce jointe indique « Renouvellement »
+  là où la base attend un code, l'assistant fait la correspondance. S'il ne la trouve
+  pas, ou si elle est ambiguë, il vous montre ce qu'il a lu et les valeurs possibles —
+  il ne tranche pas à votre place.
 - **Portefeuille** : un client sans portefeuille n'apparaît pas dans la vue « Mon
   portefeuille ». L'assistant l'y range automatiquement si vous n'en gérez qu'un,
   sinon il vous demande lequel.

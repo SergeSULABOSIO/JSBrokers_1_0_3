@@ -45,9 +45,12 @@ class Contact
     // #[Groups(['list:read'])]
     private ?NotificationSinistre $notificationSinistre = null;
 
+    // « Autres » est la valeur fourre-tout déjà prévue : elle qualifie honnêtement un
+    // interlocuteur dont on ne connaît pas encore le rôle, là où le vide faisait
+    // échouer l'écriture (colonne NOT NULL).
     #[ORM\Column]
     #[Groups(['list:read'])]
-    private ?int $type = null;
+    private ?int $type = self::TYPE_CONTACT_AUTRES;
     public const TYPE_CONTACT_PRODUCTION = 0;
     public const TYPE_CONTACT_SINISTRE = 1;
     public const TYPE_CONTACT_ADMINISTRATION = 2;

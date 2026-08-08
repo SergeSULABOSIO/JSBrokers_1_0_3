@@ -85,11 +85,17 @@ class NoteController extends AbstractController
             Note::class,
             NoteType::class,
             $note,
+            // « type » (débit/crédit) et « addressedTo » n'ont VOLONTAIREMENT plus de
+            // défaut inconditionnel : ce sont des discriminants comptables — un débit
+            // réclame un paiement, un crédit accorde un avoir — et les préremplir
+            // revenait à trancher en silence à la place du courtier
+            // (ChampsObligatoiresInspector::CHOIX_METIER_REQUIS les exige désormais).
+            // Ils restent posés dans la branche BORDEREAU, où ils ne sont pas devinés
+            // mais DÉDUITS : facturer un bordereau validé, c'est émettre une note de
+            // débit à l'assureur.
             function (Note $note, Invite $invite) use ($request) {
                 $note->setSignature((string)time());
-                $note->setType(Note::TYPE_NOTE_DE_DEBIT);
                 $note->setInvite($invite);
-                $note->setAddressedTo(Note::TO_ASSUREUR);
                 $note->setValidated(false);
                 $note->setSentAt(new \DateTimeImmutable());
 
@@ -101,6 +107,8 @@ class NoteController extends AbstractController
                     $bordereau = $this->em->find(Bordereau::class, (int)$bordereauId);
                     if ($bordereau) {
                         $note->setBordereau($bordereau);
+                        $note->setType(Note::TYPE_NOTE_DE_DEBIT);
+                        $note->setAddressedTo(Note::TO_ASSUREUR);
                         $note->setAssureur($bordereau->getAssureur());
                         $note->setNom('Commission — Bordereau ' . $bordereau->getReference());
                         $note->setReference('FACT-' . $bordereau->getReference());

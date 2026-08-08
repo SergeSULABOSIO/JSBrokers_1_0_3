@@ -70,6 +70,7 @@ class WorkspaceMutationService
         private readonly ChampsObligatoiresInspector $champsInspector,
         private readonly FormTreeInspector $formTreeInspector,
         private readonly ConversationFichierResolver $fichierResolver,
+        private readonly ReferentielEnumerateur $referentiels,
     ) {
     }
 
@@ -751,8 +752,8 @@ class WorkspaceMutationService
             return $vide;
         }
 
+        $descripteurs = $this->champsInspector->descripteursChamps($shortName, $fqcn);
         $labels = $this->champsInspector->libellesFormulaire($shortName, $fqcn);
-        $pourcentages = $this->champsInspector->champsPourcentage($shortName, $fqcn);
         $entity = $cible ?? new $fqcn();
         $obligatoires = [];
         $facultatifs = [];
@@ -785,7 +786,7 @@ class WorkspaceMutationService
             if (!in_array((string) $meta->getTypeOfField($field), self::TYPES_SCALAIRES, true)) {
                 continue;
             }
-            $item = $this->itemChamp($field, $labels, $meta, $cible, $mode, $pourcentages);
+            $item = $this->itemChamp($field, $descripteurs, $meta, $cible, $mode, $entity);
             if ($mode === 'creation' && $this->champsInspector->scalaireRequis($meta, $entity, $field)) {
                 $obligatoires[] = $item;
             } else {
@@ -793,13 +794,20 @@ class WorkspaceMutationService
             }
         }
 
-        // Relations ManyToOne pilotables (par identifiant).
+        // Relations pilotables PAR IDENTIFIANT. Le périmètre est exactement celui que
+        // construireEtSoumettre() sait écrire — TO-ONE côté propriétaire (un OneToOne
+        // propriétaire porte sa colonne de jointure comme un ManyToOne, ex.
+        // Piste::avenantDeBase) et ManyToMany (liste d'ids). Le restreindre au ManyToOne
+        // rendait ces champs écrivables mais JAMAIS annoncés : ils restaient vides par
+        // construction, faute d'apparaître dans l'inventaire.
         foreach ($meta->getAssociationMappings() as $field => $mapping) {
-            if (!$mapping->isManyToOne() || !$mapping->isOwningSide()
+            $toOneProprietaire = $mapping->isToOneOwningSide();
+            $manyToMany = $mapping->isManyToMany() && $mapping->isOwningSide();
+            if ((!$toOneProprietaire && !$manyToMany)
                 || in_array($field, ChampsObligatoiresInspector::CHAMPS_SYSTEME, true) || in_array($field, $autoChamps, true)) {
                 continue;
             }
-            $item = $this->itemChamp($field, $labels, $meta, $cible, $mode, $pourcentages);
+            $item = $this->itemChamp($field, $descripteurs, $meta, $cible, $mode, $entity, $scope, $mapping);
             $requis = $mode === 'creation'
                 && ($this->champsInspector->relationRequise($field, $mapping) || ($field === 'portefeuille' && $portefeuilleObligatoire));
             if ($requis) {
@@ -813,26 +821,225 @@ class WorkspaceMutationService
     }
 
     /**
-     * Construit une entrée d'inventaire (avec valeur actuelle en édition).
+     * Construit une entrée d'inventaire : ce que l'appelant doit savoir pour REMPLIR le
+     * champ, et non seulement son nom.
      *
-     * @param string[] $pourcentages champs saisis en % mais stockés en fraction
+     * C'était le point de rupture du moteur d'écriture. L'entrée ne portait que
+     * `champ` + `libelle` — or beaucoup de champs ne persistent pas du texte libre mais
+     * un CODE issu d'une constante (`typeAvenant: 0` = « Souscription »). Annoncé
+     * « Type d'Avenant », sans liste ni sens, un tel champ ne pouvait qu'être laissé
+     * vide (le protocole interdit d'inventer une valeur) ou rempli avec le libellé
+     * affiché, aussitôt rejeté par le formulaire — et le message d'erreur
+     * (« Cette valeur n'est pas valide ») n'enseignait pas davantage les valeurs
+     * acceptables : la réparation bouclait.
+     *
+     * On y ajoute donc :
+     *  - `nature`      : ce qu'est le champ, pour savoir quoi fournir ;
+     *  - `valeurs`     : les codes acceptés AVEC leur sens (choix fermé, ou référentiel
+     *                    assez court pour être lu — cf. ReferentielEnumerateur) ;
+     *  - `defaut`      : ce qui sera écrit si l'on ne dit rien (propriété d'entité,
+     *                    défaut de colonne, ou option `data` du formulaire) ;
+     *  - `entiteCible` : sur une relation, l'entité où chercher l'identifiant ;
+     *  - `multiple`    : une LISTE d'identifiants est attendue, pas un seul.
+     *
+     * @param array<string, array> $descripteurs descripteurs de champs du FormType
+     * @param object|null          $mapping      mapping d'association (relations uniquement)
      */
-    private function itemChamp(string $field, array $labels, ClassMetadata $meta, ?object $cible, string $mode, array $pourcentages = []): array
-    {
-        $item = ['champ' => $field, 'libelle' => $labels[$field] ?? $this->champsInspector->humaniser($field)];
+    private function itemChamp(
+        string $field,
+        array $descripteurs,
+        ClassMetadata $meta,
+        ?object $cible,
+        string $mode,
+        object $entity,
+        ?AiScope $scope = null,
+        ?object $mapping = null,
+    ): array {
+        $d = $descripteurs[$field] ?? null;
+        $item = [
+            'champ'   => $field,
+            'libelle' => ($d['libelle'] ?? '') !== '' ? $d['libelle'] : $this->champsInspector->humaniser($field),
+            'nature'  => $this->natureChamp($field, $meta, $d, $mapping),
+        ];
+
+        if ($mapping !== null) {
+            $item['entiteCible'] = $this->shortNameDe((string) ($mapping->targetEntity ?? ''));
+            if ($mapping->isManyToMany()) {
+                $item['multiple'] = true;
+            }
+        } elseif (!empty($d['multiple'])) {
+            $item['multiple'] = true;
+        }
+
+        // VALEURS acceptées : liste fermée du formulaire, sinon référentiel court.
+        $valeurs = $this->valeursAcceptees($field, $d, $mapping, $scope);
+        if ($valeurs !== null) {
+            $item['valeurs'] = $valeurs;
+        } elseif ($mapping !== null && isset($item['entiteCible'])) {
+            // Trop d'entrées pour les lister : un renvoi explicite vaut mieux qu'une
+            // liste tronquée, qui se lirait comme l'ensemble.
+            $item['aide'] = sprintf(
+                'Fournis l’identifiant. Le référentiel « %s » compte trop d’entrées pour être listé ici : '
+                . 'trouve-le avec rechercher_entites (entite: %s).',
+                $item['entiteCible'],
+                $item['entiteCible'],
+            );
+        }
+
+        // DÉFAUT : ce qui sera écrit à défaut d'instruction. La consigne « applique et
+        // annonce le défaut » était inapplicable tant qu'aucun défaut n'était transmis.
+        if ($mode === 'creation') {
+            $defaut = $this->defautChamp($field, $meta, $entity, $d, $mapping);
+            if ($defaut !== null) {
+                $item['defaut'] = $defaut;
+            }
+        }
+
         if ($mode === 'edition') {
             $item['valeurActuelle'] = $this->valeurLisible($cible, $meta, $field);
         }
+
+        // Aide métier rédigée dans le formulaire (« Laissez « En cours » tant que la
+        // police court… ») : déjà en français, déjà juste, jamais transmise jusqu'ici.
+        if (!empty($d['aide']) && !isset($item['aide'])) {
+            $item['aide'] = $d['aide'];
+        }
+
         // Piège d'unité : l'écran (et donc l'écriture) attend un POURCENTAGE, la
         // base stocke une FRACTION. Sans cette mention, recopier la valeur lue
         // divise le taux par 100 en silence.
-        if (in_array($field, $pourcentages, true)) {
+        if (!empty($d['pourcentage'])) {
             $item['unite'] = 'pourcentage';
             $item['aide'] = 'À FOURNIR en pourcentage (ex. 15 pour 15 %). Attention : la valeur '
                 . 'LUE dans une fiche est une fraction (0.15) — ne la recopie jamais telle quelle.';
         }
 
         return $item;
+    }
+
+    /** Nature d'un champ, telle qu'elle dicte CE QU'IL FAUT FOURNIR. */
+    private function natureChamp(string $field, ClassMetadata $meta, ?array $d, ?object $mapping): string
+    {
+        if ($mapping !== null) {
+            return 'relation';
+        }
+        if (!empty($d['choix'])) {
+            return 'choix';
+        }
+
+        return match ((string) $meta->getTypeOfField($field)) {
+            'boolean' => 'booleen',
+            'date', 'date_immutable', 'datetime', 'datetime_immutable' => 'date',
+            'integer', 'smallint', 'bigint', 'float', 'decimal' => 'nombre',
+            default => 'texte',
+        };
+    }
+
+    /**
+     * Valeurs acceptées par le champ, en `[{code, libelle}]`.
+     *
+     * `null` signifie « pas d'énumération possible » : soit le champ est libre, soit son
+     * référentiel dépasse le plafond. La distinction avec un tableau VIDE compte : vide =
+     * ce référentiel n'a aucune entrée dans l'entreprise (il faut la créer), null = il y
+     * en a trop pour les montrer. Les confondre ferait dire « aucun assureur » là où il
+     * y en a trois cents.
+     *
+     * @return array<int, array{code: int|string, libelle: string}>|null
+     */
+    private function valeursAcceptees(string $field, ?array $d, ?object $mapping, ?AiScope $scope): ?array
+    {
+        // Liste fermée déclarée par le formulaire (le contrat exact de l'écran).
+        if (!empty($d['choix'])) {
+            return $this->enPaires($d['choix']);
+        }
+
+        // Relation : énumérer le référentiel s'il est assez court pour être lu.
+        if ($mapping === null || $scope === null) {
+            return null;
+        }
+        $cible = $this->shortNameDe((string) ($mapping->targetEntity ?? ''));
+        if ($cible === '') {
+            return null;
+        }
+        $codes = $this->referentiels->codes($cible, $scope);
+
+        return $codes === null ? null : $this->enPaires($codes);
+    }
+
+    /**
+     * @param array<int|string, string> $codes
+     *
+     * @return array<int, array{code: int|string, libelle: string}>
+     */
+    private function enPaires(array $codes): array
+    {
+        $paires = [];
+        foreach ($codes as $code => $libelle) {
+            $paires[] = ['code' => $code, 'libelle' => $libelle];
+        }
+
+        return $paires;
+    }
+
+    /**
+     * Ce qui sera EFFECTIVEMENT écrit si le champ n'est pas fourni, avec sa provenance.
+     *
+     * Trois sources, dans l'ordre où elles s'imposent réellement :
+     *  1. l'option `data` du FormType — elle PRIME sur la valeur de l'entité (Symfony),
+     *     donc un défaut posé sur la propriété y serait écrasé en silence ;
+     *  2. la valeur portée par la propriété de l'entité neuve (`= self::X`) ;
+     *  3. le défaut de colonne, appliqué par la base.
+     *
+     * @return array{code: int|string|bool, libelle: string, source: string}|null
+     */
+    private function defautChamp(string $field, ClassMetadata $meta, object $entity, ?array $d, ?object $mapping): ?array
+    {
+        if ($mapping !== null) {
+            return null; // une relation n'a pas de défaut annonçable ici (cf. portefeuille, traité en AUTO).
+        }
+
+        $choix = $d['choix'] ?? [];
+
+        if (!empty($d['aFormulaireData'])) {
+            $brut = $d['defautFormulaire'];
+            if (is_scalar($brut)) {
+                return $this->paireDefaut($brut, $choix, 'formulaire');
+            }
+        }
+
+        try {
+            $brut = $meta->getFieldValue($entity, $field);
+        } catch (\Throwable) {
+            $brut = null;
+        }
+        if (is_scalar($brut)) {
+            return $this->paireDefaut($brut, $choix, 'entite');
+        }
+
+        $brut = $this->champsInspector->defautColonne($meta, $field);
+
+        return is_scalar($brut) ? $this->paireDefaut($brut, $choix, 'colonne') : null;
+    }
+
+    /**
+     * @param array<int|string, string> $choix
+     *
+     * @return array{code: int|string|bool, libelle: string, source: string}
+     */
+    private function paireDefaut(bool|float|int|string $brut, array $choix, string $source): array
+    {
+        $cle = is_bool($brut) ? ($brut ? '1' : '0') : (is_int($brut) ? $brut : (string) $brut);
+        $libelle = $choix[$cle] ?? (is_bool($brut) ? ($brut ? 'Oui' : 'Non') : (string) $brut);
+
+        return ['code' => $brut, 'libelle' => $libelle, 'source' => $source];
+    }
+
+    /** Nom court d'une classe (dernier segment du FQCN). */
+    private function shortNameDe(string $fqcn): string
+    {
+        $pos = strrpos($fqcn, '\\');
+
+        return $pos === false ? $fqcn : substr($fqcn, $pos + 1);
     }
 
     /** Valeur lisible d'un champ pour l'édition (booléens en clair, relations libellées, dates formatées). */
@@ -1017,6 +1224,23 @@ class WorkspaceMutationService
             }
         }
 
+        // CHOIX FERMÉS : un libellé accepté à la place de son code. Ce n'est pas une
+        // tolérance de complaisance — c'est la symétrie qui manquait. La lecture d'une
+        // fiche restitue « Souscription » (indicateur calculé) là où l'écriture exige 0 :
+        // sans cette résolution, un champ à code était lisible et non réécrivable, et
+        // toute reprise de valeur lue partait en erreur.
+        //
+        // Les choix sont lus sur le formulaire RÉELLEMENT construit — un enfant de
+        // collection utilise l'entry_type déclaré par son parent, pas forcément
+        // App\Form\{Nom}Type. Un libellé inconnu ou ambigu n'est pas transformé : le
+        // ChoiceType reste seul juge, et aucune valeur n'est devinée.
+        foreach ($form->all() as $child) {
+            $nom = $child->getName();
+            if (array_key_exists($nom, $fields)) {
+                $fields[$nom] = $this->versCodeChoix($child, $fields[$nom]);
+            }
+        }
+
         // Pièces jointes résolues : mises à la forme attendue par le champ. Un
         // VichFileType est COMPOUND (enfant « file »), un FileType nu prend l'upload
         // directement. On respecte le contrat du formulaire réel (parité UI).
@@ -1044,6 +1268,57 @@ class WorkspaceMutationService
         $v = mb_strtolower(trim((string) $valeur));
 
         return in_array($v, ['1', 'true', 'vrai', 'oui', 'yes', 'y', 'o', 'x'], true);
+    }
+
+    /**
+     * Résout le LIBELLÉ d'un choix fermé vers son CODE. Jumeau de {@see versBooleen()},
+     * pour la même raison : une valeur juste sur le fond ne doit pas être rejetée sur sa
+     * forme.
+     *
+     * Prudent par construction — on ne devine rien :
+     *  - un code déjà valide passe intact (aucune conversion parasite) ;
+     *  - un champ hors liste fermée passe intact ;
+     *  - un libellé AMBIGU (deux codes portant le même texte) n'est pas transformé ;
+     *  - un libellé inconnu n'est pas transformé : le ChoiceType refusera, comme avant.
+     *
+     * La comparaison ignore la casse, les accents et la ponctuation d'affichage, parce
+     * que « Prime Nette », « prime nette » et « prime  nette » désignent la même chose.
+     */
+    private function versCodeChoix(FormInterface $child, mixed $valeur): mixed
+    {
+        $choix = $this->champsInspector->choixDuFormulaire($child);
+        if ($choix === []) {
+            return $valeur; // pas une liste fermée : rien à résoudre.
+        }
+
+        // Une liste (choix multiple) se résout élément par élément.
+        if (is_array($valeur)) {
+            return array_map(fn ($v) => $this->versCodeChoix($child, $v), $valeur);
+        }
+        if (!is_scalar($valeur)) {
+            return $valeur;
+        }
+
+        // Déjà un code valide (comparaison souple : '0' et 0 sont le même choix).
+        foreach (array_keys($choix) as $code) {
+            if ((string) $code === (string) $valeur) {
+                return $valeur;
+            }
+        }
+
+        $cherche = $this->champsInspector->libelleComparable((string) $valeur);
+        if ($cherche === '') {
+            return $valeur;
+        }
+        $trouves = [];
+        foreach ($choix as $code => $libelle) {
+            if ($this->champsInspector->libelleComparable($libelle) === $cherche) {
+                $trouves[] = $code;
+            }
+        }
+
+        // Exactement une correspondance, sinon on laisse le formulaire trancher.
+        return count($trouves) === 1 ? $trouves[0] : $valeur;
     }
 
     /**

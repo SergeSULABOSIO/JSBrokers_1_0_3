@@ -84,9 +84,12 @@ class TypeRevenu
     // #[ORM\ManyToMany(targetEntity: Article::class, mappedBy: 'revenus')]
     // private Collection $articles;
 
+    // Le taux du type appliqué à un chargement est la règle ; le montant forfaitaire est
+    // l'exception qu'on choisit. `redevable`, en revanche, reste sans défaut : il dit
+    // QUI paie, ce qui ne se devine pas (cf. CHOIX_METIER_REQUIS).
     #[ORM\Column(nullable: true)]
     #[Groups(['list:read'])]
-    private ?int $modeCalcul = null;
+    private ?int $modeCalcul = self::MODE_CALCUL_POURCENTAGE_CHARGEMENT;
 
     #[Groups(['list:read'])]
     public ?string $descriptionModeCalcul = null;

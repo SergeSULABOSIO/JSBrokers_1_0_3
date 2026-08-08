@@ -36,9 +36,11 @@ class Risque
     #[Groups(['list:read'])]
     private ?float $pourcentageCommissionSpecifiqueHT = null;
 
+    // Branche dominante du portefeuille d'un courtier ; la vie reste une bascule
+    // explicite. Colonne NOT NULL : sans défaut, la création échouait au flush.
     #[ORM\Column]
     #[Groups(['list:read'])]
-    private ?int $branche = null;
+    private ?int $branche = self::BRANCHE_IARD_OU_NON_VIE;
     public const BRANCHE_IARD_OU_NON_VIE = 0;
     public const BRANCHE_VIE = 1;
 

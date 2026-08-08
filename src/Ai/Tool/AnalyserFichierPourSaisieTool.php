@@ -363,6 +363,36 @@ final class AnalyserFichierPourSaisieTool implements AiToolInterface
                 continue; // champ inconnu de l'entité : jamais soumis.
             }
 
+            // CHOIX FERMÉ : le fichier porte un LIBELLÉ (« Renouvellement »), la colonne
+            // un CODE. Le cast par type Doctrine ci-dessous en ferait (int) 0 —
+            // « Souscription » — un champ d'apparence renseignée et faux, sur la donnée
+            // qui scelle le sort d'une police. On résout donc le libellé d'abord, et
+            // faute de correspondance on renvoie la ligne à l'utilisateur avec les
+            // valeurs possibles, plutôt que de trancher à sa place.
+            $choix = $this->champsInspector->choixDisponibles($shortName, $fqcn, $champ);
+            if ($choix !== []) {
+                $code = $this->resoudreChoix($choix, $brut);
+                $ligne = [
+                    'champ'   => $champ,
+                    'libelle' => $libelleChamp,
+                    'lu'      => (string) $brut,
+                    'source'  => $item['source'],
+                ];
+                if ($code === null) {
+                    $aResoudre[] = $ligne + [
+                        'candidats' => array_map(
+                            static fn ($c, $l) => ['code' => $c, 'libelle' => $l],
+                            array_keys($choix),
+                            array_values($choix),
+                        ),
+                    ];
+                    continue;
+                }
+                $champs[$champ] = $code;
+                $trouve[] = $ligne + ['valeur' => $choix[$code]];
+                continue;
+            }
+
             $valeur = $this->normaliser($brut, (string) $meta->getTypeOfField($champ));
             $champs[$champ] = $valeur;
             $ligne = [
@@ -457,10 +487,46 @@ final class AnalyserFichierPourSaisieTool implements AiToolInterface
     }
 
     /**
+     * Code d'un choix fermé à partir de ce qui a été LU dans le fichier : un code déjà
+     * valide, ou un libellé qui désigne exactement un choix (casse, accents et
+     * ponctuation ignorés). `null` dès que c'est indécidable — inconnu ou ambigu : la
+     * valeur remonte alors en « à résoudre », avec la liste des possibles.
+     *
+     * @param array<int|string, string> $choix code => libellé
+     */
+    private function resoudreChoix(array $choix, mixed $brut): int|string|null
+    {
+        if (!is_scalar($brut)) {
+            return null;
+        }
+        foreach (array_keys($choix) as $code) {
+            if ((string) $code === trim((string) $brut)) {
+                return $code;
+            }
+        }
+
+        $cherche = $this->champsInspector->libelleComparable((string) $brut);
+        if ($cherche === '') {
+            return null;
+        }
+        $trouves = [];
+        foreach ($choix as $code => $libelle) {
+            if ($this->champsInspector->libelleComparable($libelle) === $cherche) {
+                $trouves[] = $code;
+            }
+        }
+
+        return count($trouves) === 1 ? $trouves[0] : null;
+    }
+
+    /**
      * Normalise une valeur lue dans un document vers le type Doctrine du champ.
      * Le nettoyage des nombres est délégué à BordereauLigneNormaliseur (source
      * unique du traitement des séparateurs de milliers, déjà éprouvée sur les
      * bordereaux Excel).
+     *
+     * Ne voit JAMAIS un champ à liste fermée : resoudreChoix() l'a traité avant, car
+     * un cast y transformerait « Renouvellement » en 0, soit « Souscription ».
      */
     private function normaliser(mixed $brut, string $type): mixed
     {
