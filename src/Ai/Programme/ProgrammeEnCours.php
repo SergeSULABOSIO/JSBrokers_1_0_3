@@ -32,10 +32,19 @@ final class ProgrammeEnCours
     ) {
     }
 
-    /** Le programme encore en cours de ce fil, ou null. */
+    /**
+     * Le programme encore en cours de ce fil, ou null.
+     *
+     * Une conversation TRANSIENTE (jamais persistée, donc sans identifiant) n'a par
+     * construction aucun programme : rien n'a pu être rattaché à un fil qui n'existe
+     * pas en base. On le dit ici plutôt que de laisser Doctrine lever
+     * « Binding entities to query parameters only allowed for entities that have an
+     * identifier » — ce qui rendait `app:assistant:smoke` inutilisable, alors même que
+     * sa raison d'être est de tester le moteur SANS rien persister.
+     */
     public function courant(?AssistantConversation $conversation): ?AssistantProgramme
     {
-        if ($conversation === null) {
+        if ($conversation === null || $conversation->getId() === null) {
             return null;
         }
 

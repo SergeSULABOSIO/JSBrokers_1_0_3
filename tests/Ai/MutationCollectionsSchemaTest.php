@@ -3,6 +3,7 @@
 namespace App\Tests\Ai;
 
 use App\Ai\Mutation\MutationOperation;
+use App\Ai\Mutation\PlanBuilder;
 use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Tool\PreparerOperationsTool;
 use App\Service\Workspace\WorkspaceMutationService;
@@ -21,11 +22,11 @@ class MutationCollectionsSchemaTest extends TestCase
 {
     public function testSchemaCollectionsEstUnArraySansAdditionalProperties(): void
     {
-        $tool = new PreparerOperationsTool(
+        $tool = new PreparerOperationsTool(new PlanBuilder(
             $this->createMock(WorkspaceMutationService::class),
             $this->createMock(TokenAccountService::class),
             new PlanEnAttente($this->createMock(EntityManagerInterface::class)),
-        );
+        ));
         $col = $tool->schema()['properties']['operations']['items']['properties']['collections'];
 
         $this->assertSame('array', $col['type'], 'collections doit être un array (nom de collection = valeur, pas clé dynamique).');

@@ -2,6 +2,7 @@
 
 namespace App\Tests\Ai;
 
+use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\AiRequest;
 use App\Ai\Scope\AiScope;
 use App\Ai\Telemetrie\JournalTokens;
@@ -35,7 +36,7 @@ class JournalTokensTest extends TestCase
             }
         };
 
-        return new JournalTokens($espion);
+        return new JournalTokens($espion, new OutilsDePlan([]));
     }
 
     private function request(): AiRequest
