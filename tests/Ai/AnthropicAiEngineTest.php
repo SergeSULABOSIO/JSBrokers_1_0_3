@@ -2,6 +2,7 @@
 
 namespace App\Tests\Ai;
 
+use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\AiContextBuilder;
 use App\Ai\AiRequest;
 use App\Ai\Debit\BudgetDebit;
@@ -295,7 +296,7 @@ class AnthropicAiEngineTest extends TestCase
             'gm-x',
             'gemini-2.5-flash',
             new NullLogger(),
-            new JournalTokens(new NullLogger()),
+            new JournalTokens(new NullLogger(), new OutilsDePlan([])),
             new BudgetDebit(new ArrayAdapter()),
         );
 

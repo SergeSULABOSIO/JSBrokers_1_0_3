@@ -5,6 +5,7 @@ namespace App\Tests\Ai;
 use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Mutation\MutationOperation;
 use App\Ai\Mutation\MutationPlan;
+use App\Ai\Mutation\PlanBuilder;
 use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
@@ -142,7 +143,14 @@ class KetMutationTest extends TestCase
 
         // Scope sans conversation : le verrou anti-empilement est inopérant ici
         // (il est couvert par PlanEnAttenteVerrouTest, sur un fil réel).
-        return new PreparerOperationsTool($mutation, $tokens, new PlanEnAttente($this->createMock(EntityManagerInterface::class)));
+        // La construction du plan vit désormais dans PlanBuilder, partagé par tous
+        // les outils qui en produisent un : l'outil ne fait plus que lui passer les
+        // opérations dictées par le modèle.
+        return new PreparerOperationsTool(new PlanBuilder(
+            $mutation,
+            $tokens,
+            new PlanEnAttente($this->createMock(EntityManagerInterface::class)),
+        ));
     }
 
     public function testOutilRefuseToutHorsPerimetre(): void

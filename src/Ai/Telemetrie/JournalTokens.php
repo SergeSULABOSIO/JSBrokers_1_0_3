@@ -3,6 +3,7 @@
 namespace App\Ai\Telemetrie;
 
 use App\Ai\AiRequest;
+use App\Ai\Mutation\OutilsDePlan;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -68,7 +69,41 @@ final class JournalTokens
         // Canal dédié : MonologBundle câble ici le logger « assistant_tokens »
         // d'après le nom de l'argument (convention <channel>Logger).
         private readonly LoggerInterface $assistantTokensLogger,
+        // Les outils d'écriture sont DÉRIVÉS du code (marqueur AiToolProduisantUnPlan) :
+        // la classification en parcours ne peut donc pas oublier un outil ajouté plus
+        // tard, contrairement à une liste recopiée ici.
+        private readonly OutilsDePlan $outilsDePlan,
     ) {
+    }
+
+    /**
+     * PARCOURS auquel appartient un message, dérivé de sa séquence d'outils.
+     *
+     * Sans cette clé, l'avant/après du chantier n'est pas lisible : la campagne du
+     * 2026-08-08/09 a montré que quatre groupes se comportent très différemment —
+     * un seul (la saisie) portait 71 % des tokens et 12 des 13 saturations. Agréger
+     * tous les messages ensemble noierait précisément ce qu'on cherche à corriger.
+     *
+     * @param list<string> $sequenceOutils
+     */
+    private function parcours(array $sequenceOutils): string
+    {
+        if ($sequenceOutils === []) {
+            return 'aucun';
+        }
+        // Le chemin rapide se reconnaît à son outil : un seul appel, tout le parcours.
+        if (in_array('saisir_proposition', $sequenceOutils, true)) {
+            return 'saisie_directe';
+        }
+        if (array_intersect($sequenceOutils, $this->outilsDePlan->noms()) !== []) {
+            return 'saisie_guidee';
+        }
+        // Préparation d'une saisie qui n'a pas abouti à un plan dans ce message.
+        if (array_intersect($sequenceOutils, ['inventaire_champs', 'parcours_saisie']) !== []) {
+            return 'saisie_amorcee';
+        }
+
+        return 'lecture';
     }
 
     /** Ouvre la mesure d'un nouveau message utilisateur (appelé par le moteur). */
@@ -172,6 +207,7 @@ final class JournalTokens
             'cumulEntree'    => $cumulEntree,
             'cumulSortie'    => $cumulSortie,
             'sequenceOutils' => $sequenceOutils,
+            'parcours'       => $this->parcours($sequenceOutils),
         ] + ($complement !== [] ? ['complement' => $complement] : []));
     }
 

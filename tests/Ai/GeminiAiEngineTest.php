@@ -2,6 +2,7 @@
 
 namespace App\Tests\Ai;
 
+use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\AiContextBuilder;
 use App\Ai\AiRequest;
 use App\Ai\Debit\BudgetDebit;
@@ -128,7 +129,7 @@ class GeminiAiEngineTest extends TestCase
             'gm-test',
             'gemini-2.5-flash',
             new NullLogger(),
-            new JournalTokens($espion),
+            new JournalTokens($espion, new OutilsDePlan([])),
             $budget ?? $this->makeBudget(),
             function (int $secondes) use ($dormir): void {
                 $this->attentes[] = $secondes;
