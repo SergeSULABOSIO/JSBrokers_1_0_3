@@ -9,6 +9,7 @@ use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
 use App\Ai\Tool\EntiteLibelle;
 use App\Ai\Tool\PreparerOperationsTool;
+use App\Ai\Proposition\RevenuCourtierPrescrit;
 use App\Ai\Tool\SaisirPropositionTool;
 use App\Entity\Assureur;
 use App\Entity\Entreprise;
@@ -129,6 +130,10 @@ class PlanBuilderPariteTest extends TestCase
             $resolver,
             $referentiels,
             $this->resolveurAvec(['Assureur' => [7 => 'SFA']], $resolver),
+            // Aucun type de revenu dans ce jeu d'essai : la dérivation de la commission
+            // s'abstient et le dit, ce qui ne change pas la STRUCTURE du plan — c'est
+            // précisément ce que ce test compare.
+            new RevenuCourtierPrescrit($search, $resolver, $this->resolveurAvec([], $resolver)),
         ))->execute([
             'nom'         => 'Flotte automobile 2026',
             'assureur'    => 'SFA',

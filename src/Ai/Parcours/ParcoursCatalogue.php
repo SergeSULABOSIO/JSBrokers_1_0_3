@@ -67,21 +67,27 @@ final class ParcoursCatalogue
                     'cle' => 'echeancier', 'libelle' => 'L’échéancier (tranches de paiement)',
                     'entite' => 'Tranche', 'via' => 'collection:tranches', 'role' => self::ROLE_RECOMMANDE,
                     'questions' => [
-                        'La prime est-elle payable en une fois ou en plusieurs tranches ?',
+                        'La prime est-elle fractionnée ? (à défaut, elle est payable en une fois, à 100 %)',
                         'Pour chaque tranche : son libellé, sa date d’exigibilité, et son montant '
                             . '(ou son pourcentage de la prime) ?',
                     ],
+                    'note' => 'Une prime est payable EN UNE FOIS par défaut : une seule tranche à 100 % à la '
+                        . 'prise d’effet. Le fractionnement est l’exception — elle se dicte, avec le '
+                        . 'pourcentage de chaque tranche.',
                 ],
                 [
                     'cle' => 'revenu-courtier', 'libelle' => 'Le revenu du courtier (commission)',
-                    'entite' => 'RevenuPourCourtier', 'via' => 'collection:revenus', 'role' => self::ROLE_OPTIONNEL,
+                    'entite' => 'RevenuPourCourtier', 'via' => 'collection:revenus', 'role' => self::ROLE_RECOMMANDE,
                     'referentiel' => 'TypeRevenu',
                     'questions' => [
-                        'La rémunération suit-elle le taux habituel du type de revenu, ou un taux exceptionnel ?',
+                        'La rémunération déroge-t-elle au taux prescrit (taux exceptionnel) ?',
                         'S’agit-il d’un montant forfaitaire plutôt que d’un taux ?',
                     ],
-                    'note' => 'Le type de revenu (« typeRevenu ») est OBLIGATOIRE : c’est lui qui porte le '
-                        . 'taux et la base de calcul. À défaut de taux exceptionnel, le taux du type s’applique.',
+                    'note' => 'AUCUNE proposition ne se place sans commission : cette étape est ajoutée '
+                        . 'D’OFFICE. Le type de revenu (« typeRevenu ») est OBLIGATOIRE — c’est lui qui porte '
+                        . 'la base de calcul et le taux. À défaut de taux exceptionnel, le taux prescrit par '
+                        . 'la configuration du RISQUE de l’opportunité s’applique, puis celui du type. Ne '
+                        . 'demande donc pas un taux qui est déjà prescrit.',
                 ],
                 [
                     'cle' => 'contrat', 'libelle' => 'Le contrat (avenant)',
