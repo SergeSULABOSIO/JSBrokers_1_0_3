@@ -3,6 +3,7 @@
 namespace App\Ai\Tool;
 
 use App\Ai\AiText;
+use App\Ai\Resolution\CheminsDeRelation;
 use App\Ai\Resolution\Reference;
 use App\Ai\Resolution\ResolveurDeReferences;
 use App\Ai\Scope\AiScope;
@@ -39,18 +40,6 @@ final class RechercherEntitesTool implements AiToolInterface
     /** Taille de page fixe côté serveur : maîtrise des tokens restitués au modèle. */
     private const PAGE_SIZE = 20;
 
-    /** Profondeur maximale du chemin de relations exploré pour lieA (père → fils → petit-fils). */
-    private const MAX_PROFONDEUR_LIEN = 3;
-
-    /**
-     * Graphe des relations exploré une seule fois par entité de départ : il ne change
-     * pas d'une requête à l'autre, et la recherche d'un rattachement par son nom
-     * interroge toutes les cibles d'un coup.
-     *
-     * @var array<string, array<string, string[]>>
-     */
-    private array $cacheChemins = [];
-
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly JSBDynamicSearchService $searchService,
@@ -64,6 +53,9 @@ final class RechercherEntitesTool implements AiToolInterface
         // cet outil de comprendre « les polices de Kibali » sans réclamer un second
         // tour au modèle (cf. rattachementDepuisNom).
         private readonly ResolveurDeReferences $resolveur,
+        // Source unique du graphe de relations, partagée avec ouvrir_rubrique : la
+        // liste affichée à l'écran et celle rendue au chat suivent le MÊME chemin.
+        private readonly CheminsDeRelation $chemins,
     ) {
     }
 
@@ -86,7 +78,16 @@ final class RechercherEntitesTool implements AiToolInterface
             . 'De même, un « filtre » qui ne correspond à aucun libellé mais au nom d’un '
             . 'rattachement (un client, un assureur) est réinterprété automatiquement, et le '
             . 'champ « filtreInterpreteCommeLien » te dit alors ce qui a réellement été listé : '
-            . 'énonce-le. '
+            . 'énonce-le. Un filtre entièrement NUMÉRIQUE est aussi cherché comme IDENTIFIANT '
+            . '(« 131 » ramène l’enregistrement #131 si aucun libellé ne porte ce texte) : c’est '
+            . 'la façon de retrouver un enregistrement dont tu connais l’id — celui d’un plan que '
+            . 'tu viens de faire exécuter, par exemple. '
+            . 'Chaque POLICE listée porte les DEUX SENS de sa chaîne de renouvellement : '
+            . '« suiteDeLaPolice » + « avenantsIssusIds » (ce qu’elle est devenue, avec les '
+            . 'identifiants des polices qui lui succèdent) et « origineDeLaPolice » + '
+            . '« avenantPrecedentId » (la police qu’elle REMPLACE, vide pour une affaire '
+            . 'nouvelle). Utilise-les tels quels pour relier une police renouvelée à son '
+            . 'renouvellement : n’essaie JAMAIS de le déduire d’une ressemblance de nom ou de date. '
             . 'Les paramètres echeance (Avenant), statutPaiement (Tranche), validation (Cotation) '
             . 'et transformation (Piste) appliquent EXACTEMENT les mêmes règles que les filtres '
             . 'rapides de ces rubriques, tri par urgence inclus : à utiliser dès que la question '
@@ -366,8 +367,37 @@ final class RechercherEntitesTool implements AiToolInterface
         // qu'il n'a pas. Le serveur fait donc ce détour lui-même, et gratuitement :
         // si le terme désigne UN enregistrement rattaché (client, assureur, risque,
         // opportunité…), on relance la recherche sur ce rattachement.
+        // UN FILTRE ENTIÈREMENT NUMÉRIQUE EST AUSSI UN IDENTIFIANT — et c'était l'autre
+        // moitié de la panne du 2026-08-10. Ket venait de créer l'avenant #131 ; le journal
+        // du plan le nommait « #131 » ; interrogée dessus au tour suivant, elle a cherché
+        // « 131 » comme un LIBELLÉ, n'a rien trouvé (une référence de police ne s'appelle
+        // pas « 131 ») et a répondu « aucun élément ». Le serveur fait donc lui-même le
+        // second essai : le libellé d'abord — un vrai numéro de police reste prioritaire —,
+        // l'identifiant ensuite, et seulement si le premier n'a rien ramené.
+        $filtreIdentifiant = null;
+        if ($filtre !== '' && ctype_digit($filtre) && (int) $result['totalItems'] === 0) {
+            $parId = $this->searchService->search(
+                $fqcn,
+                ['id' => (int) $filtre] + $lienCriteria + $criteresRubrique + $criterePortefeuille,
+                $scope->entreprise,
+                null,
+                1,
+                self::PAGE_SIZE,
+            );
+            if (($parId['status']['code'] ?? 500) === 200 && (int) $parId['totalItems'] > 0) {
+                $result = $parId;
+                // ANNONCÉ, jamais subi : le modèle doit dire ce qu'il a réellement lu.
+                $filtreIdentifiant = sprintf(
+                    '« %s » ne correspond à aucun libellé de cette rubrique, mais à l’IDENTIFIANT %d : '
+                    . 'la liste porte donc sur cet enregistrement précis.',
+                    $filtre,
+                    (int) $filtre,
+                );
+            }
+        }
+
         $filtreLien = null;
-        if ($filtre !== '' && $lien === null && (int) $result['totalItems'] === 0) {
+        if ($filtre !== '' && $filtreIdentifiant === null && $lien === null && (int) $result['totalItems'] === 0) {
             $rattachement = $this->rattachementDepuisNom($fqcn, $filtre, $scope);
 
             if (isset($rattachement['ambigu'])) {
@@ -444,6 +474,20 @@ final class RechercherEntitesTool implements AiToolInterface
                 if ($suite['avenantsIssus'] !== [] || $suite['pisteDeriveeId'] !== null) {
                     $item['suiteDeLaPolice'] = $suite['phrase'];
                 }
+                // Les identifiants des polices SUCCESSEURS, en clair et à part de la phrase :
+                // « quel est l'id de l'avenant issu du renouvellement de 72 ? » se répond alors
+                // sans second tour d'outil, et sans que le modèle ait à extraire un nombre d'une
+                // phrase française — ce qu'il a raté en production le 2026-08-10.
+                if ($suite['avenantsIssus'] !== []) {
+                    $item['avenantsIssusIds'] = array_map(static fn (array $a): int => $a['id'], $suite['avenantsIssus']);
+                }
+                // ET LE SENS INVERSE : de quelle police celle-ci est-elle la suite ? Sans lui,
+                // une police née d'un renouvellement se lit comme une affaire nouvelle.
+                $origine = $this->renouvellementResolver->origine($entity);
+                if ($origine !== null) {
+                    $item['origineDeLaPolice'] = $origine['phrase'];
+                    $item['avenantPrecedentId'] = $origine['id'];
+                }
                 // Décision explicite de ne pas renouveler : la phrase du resolver la porte
                 // déjà, mais elle n'accompagne l'item que s'il existe une piste dérivée — or
                 // ce marquage n'en crée aucune. Sans cette ligne, une police écartée du
@@ -461,6 +505,7 @@ final class RechercherEntitesTool implements AiToolInterface
             'libelle'      => $labels[$shortName],
             'filtre'       => $filtre !== '' ? $filtre : null,
             'filtreIgnore' => ($filtre !== '' && $displayField === null) ? true : null,
+            'filtreInterpreteCommeIdentifiant' => $filtreIdentifiant,
             'filtreInterpreteCommeLien' => $filtreLien,
             'filtreRubrique' => $filtreRubrique,
             'perimetre'    => PortefeuilleScope::libellePerimetre($perimetreEntreprise, $criterePortefeuille),
@@ -558,7 +603,7 @@ final class RechercherEntitesTool implements AiToolInterface
 
     /**
      * TOUS les chemins de relations *-vers-un reliant $fqcn à $cibleFqcn dans la
-     * profondeur permise (MAX_PROFONDEUR_LIEN), chemins SIMPLES (sans repasser par
+     * profondeur permise (CheminsDeRelation::MAX_PROFONDEUR), chemins SIMPLES (sans repasser par
      * une classe déjà traversée) : « piste » (direct), « piste.client », « cotation.piste.client »…
      * Générique pour TOUT couple d'entités du workspace — chaque enfant pointant vers son
      * parent en *-vers-un, les chemins remontent la généalogie père → fils → petit-fils.
@@ -573,58 +618,21 @@ final class RechercherEntitesTool implements AiToolInterface
      */
     private function cheminsVers(string $fqcn, string $cibleFqcn): array
     {
-        return $this->cheminsParCible($fqcn)[$cibleFqcn] ?? [];
+        return $this->chemins->vers($fqcn, $cibleFqcn);
     }
 
     /**
-     * Le MÊME parcours, mais rendu pour TOUTES les cibles atteignables à la fois :
-     * chaque classe joignable en *-vers-un, avec les chemins qui y mènent.
+     * Le MÊME parcours, rendu pour TOUTES les cibles atteignables à la fois.
      *
-     * Une seule exploration sert alors les deux besoins — le lien explicite (une cible
-     * connue) et la recherche d'un rattachement par son nom (cible inconnue, à
-     * découvrir). La visite reste propre à chaque chemin, donc une cible n'apparaît
-     * jamais deux fois dans le même chemin : les chemins rendus ici pour une cible
-     * donnée sont exactement ceux que l'ancienne recherche ciblée produisait.
+     * Le parcours lui-même vit désormais dans CheminsDeRelation : il sert aussi à
+     * FILTRER la rubrique qu'on ouvre à l'écran (ouvrir_rubrique), et deux
+     * implémentations du même graphe auraient fini par montrer à l'écran autre chose
+     * que ce que le chat annonce.
      *
      * @return array<string, string[]> FQCN de la cible => chemins pointillés distincts
      */
     private function cheminsParCible(string $fqcn): array
     {
-        // Mémoïsation : le graphe des entités ne change pas d'une requête à l'autre, et
-        // la recherche d'un rattachement par son nom interroge toutes les cibles.
-        if (isset($this->cacheChemins[$fqcn])) {
-            return $this->cacheChemins[$fqcn];
-        }
-
-        $parCible = [];
-        // DFS sur les chemins simples : chaque état porte sa propre liste de classes visitées
-        // (pas de visite globale) pour explorer les chemins alternatifs, tout en évitant les
-        // cycles à l'intérieur d'un même chemin.
-        $pile = [[$fqcn, [], [$fqcn => true]]];
-
-        while ($pile !== []) {
-            [$classe, $chemin, $visites] = array_pop($pile);
-            if (\count($chemin) >= self::MAX_PROFONDEUR_LIEN) {
-                continue;
-            }
-            $metadata = $this->em->getClassMetadata($classe);
-            foreach ($metadata->getAssociationNames() as $name) {
-                if (!$metadata->isSingleValuedAssociation($name)) {
-                    continue;
-                }
-                $target = $metadata->getAssociationTargetClass($name);
-                $nouveauChemin = [...$chemin, $name];
-                $parCible[$target][] = implode('.', $nouveauChemin);
-                if (!isset($visites[$target])) {
-                    $pile[] = [$target, $nouveauChemin, $visites + [$target => true]];
-                }
-            }
-        }
-
-        foreach ($parCible as $cible => $chemins) {
-            $parCible[$cible] = array_values(array_unique($chemins));
-        }
-
-        return $this->cacheChemins[$fqcn] = $parCible;
+        return $this->chemins->parCible($fqcn);
     }
 }

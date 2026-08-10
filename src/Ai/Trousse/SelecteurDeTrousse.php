@@ -40,7 +40,15 @@ final class SelecteurDeTrousse
         . 'modifi|corrig|rectifi|change|mets? à jour|supprim|efface|renouvel|reconduis|reconduir|'
         . 'prorog|prolong|annul|r[ée]sili|marque|signale|affecte|attribue|valide|valider|souscri|'
         . 'fais-le|fais le|vas.?y|essaie|essaye|refais|r[ée]essaie|continue|poursui|'
-        . 'ouvre le formulaire|donne moi le plan|donne-moi le plan|pareil|par o[uù]|'
+        // FORMULAIRE ET ÉDITION, en mots NUS. La tournure exacte « ouvre le formulaire »
+        // était trop étroite d'un cheveu : « ouvre-moi par exemple le formulaire d'édition
+        // pour Olea » ne la déclenchait pas, la trousse de lecture partait sans
+        // ouvrir_dialogue, et Ket a ouvert la RUBRIQUE des partenaires — une liste, là où
+        // l'utilisateur demandait un formulaire (incident du 2026-08-10). Un message qui
+        // parle de formulaire ou d'édition demande à saisir : c'est le côté du doute où
+        // l'on penche, ici comme partout dans ce fichier.
+        . 'formulaire|[ée]dit|'
+        . 'donne moi le plan|donne-moi le plan|pareil|par o[uù]|'
         // Le VOCABULAIRE DU MÉTIER, ajouté après mesure : « j'ai une offre venant de
         // SFA. Que faire ? » ne contient aucun verbe d'action, et annonce pourtant
         // une saisie. Ces trois mots — offre, cotation, proposition — ouvraient les

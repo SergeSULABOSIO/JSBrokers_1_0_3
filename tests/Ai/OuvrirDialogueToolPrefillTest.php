@@ -2,6 +2,7 @@
 
 namespace App\Tests\Ai;
 
+use App\Ai\Resolution\ResolveurDeReferences;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
 use App\Ai\Tool\EntiteLexique;
@@ -29,11 +30,15 @@ use PHPUnit\Framework\TestCase;
  */
 class OuvrirDialogueToolPrefillTest extends TestCase
 {
-    private function makeTool(): OuvrirDialogueTool
+    /**
+     * @param array<int, Client> $trouves enregistrements que la recherche ramènera
+     */
+    private function makeTool(array $trouves = []): OuvrirDialogueTool
     {
         $resolver = $this->createMock(WorkspaceAccessResolver::class);
         $resolver->method('libellesEntites')->willReturn(['Client' => 'Clients']);
         $resolver->method('can')->willReturn(true);
+        $resolver->method('canRead')->willReturn(true);
 
         $metadata = new ClassMetadata(Client::class);
         foreach (['nom' => 'string', 'telephone' => 'string'] as $champ => $type) {
@@ -44,13 +49,33 @@ class OuvrirDialogueToolPrefillTest extends TestCase
         $em = $this->createMock(EntityManagerInterface::class);
         $em->method('getClassMetadata')->willReturn($metadata);
 
+        $search = $this->createMock(JSBDynamicSearchService::class);
+        $search->method('search')->willReturn([
+            'status' => ['code' => 200], 'data' => $trouves, 'totalItems' => count($trouves),
+        ]);
+
+        $libelleur = new EntiteLibelle($em);
+
         return new OuvrirDialogueTool(
             $resolver,
-            $this->createMock(JSBDynamicSearchService::class),
+            $search,
             new EntiteLexique($resolver),
-            new EntiteLibelle($em),
+            $libelleur,
             new PrefillWhitelist($em),
+            new ResolveurDeReferences($search, $resolver, $libelleur),
         );
+    }
+
+    /** Un client identifié, tel que la recherche le rendrait. */
+    private function client(int $id, string $nom): Client
+    {
+        $client = new Client();
+        $client->setNom($nom);
+        $reflexion = new \ReflectionProperty(Client::class, 'id');
+        $reflexion->setAccessible(true);
+        $reflexion->setValue($client, $id);
+
+        return $client;
     }
 
     private function makeScope(): AiScope
@@ -82,5 +107,80 @@ class OuvrirDialogueToolPrefillTest extends TestCase
         $this->assertSame(AiToolResult::STATUS_OK, $result->status);
         $this->assertArrayNotHasKey('valeurs', $result->uiAction);
         $this->assertArrayNotHasKey('precharge', $result->data);
+    }
+
+    /**
+     * L'INCIDENT DU 2026-08-10. « Ouvre-moi le formulaire d'édition pour Olea » exigeait
+     * un identifiant que le modèle n'a pas. Il dépensait donc son UNIQUE tour d'outils à
+     * chercher Olea ; au message suivant, faute de pouvoir enchaîner, il ouvrait la
+     * RUBRIQUE des partenaires. L'utilisateur demandait un formulaire et recevait une
+     * liste. Le nom suffit désormais : le serveur le résout lui-même.
+     */
+    public function testLeNomSuffitPourOuvrirLeFormulaireDEdition(): void
+    {
+        $result = $this->makeTool([$this->client(1, 'OLEA')])->execute([
+            'entite' => 'Client',
+            'mode'   => 'edition',
+            'nom'    => 'Olea',
+        ], $this->makeScope());
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertSame('open-dialog', $result->uiAction['type']);
+        $this->assertSame('edition', $result->uiAction['mode']);
+        $this->assertSame(1, $result->uiAction['id'], 'Le nom dicté est devenu l’identifiant.');
+        $this->assertSame('OLEA', $result->data['cible']);
+    }
+
+    /**
+     * ON NE DEVINE JAMAIS. Plusieurs correspondances = une QUESTION, et surtout AUCUN
+     * formulaire ouvert au hasard : ouvrir la fiche du mauvais partenaire serait pire
+     * que ne rien ouvrir.
+     */
+    public function testUnNomAmbiguPoseUneQuestionSansRienOuvrir(): void
+    {
+        $result = $this->makeTool([
+            $this->client(1, 'OLEA RDC'),
+            $this->client(2, 'OLEA Congo'),
+        ])->execute([
+            'entite' => 'Client',
+            'mode'   => 'edition',
+            'nom'    => 'Olea',
+        ], $this->makeScope());
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertNull($result->uiAction, 'Aucun formulaire ne s’ouvre sur une ambiguïté.');
+        $this->assertFalse($result->data['pret']);
+        $this->assertSame('ambigu', $result->data['aDemander'][0]['probleme']);
+        $this->assertSame([1 => 'OLEA RDC', 2 => 'OLEA Congo'], $result->data['aDemander'][0]['valeurs']);
+        $this->assertStringContainsString('n’ouvre aucune rubrique en remplacement', $result->data['note']);
+    }
+
+    /** Un nom qui ne correspond à rien : une question, jamais un identifiant inventé. */
+    public function testUnNomIntrouvablePoseUneQuestion(): void
+    {
+        $result = $this->makeTool()->execute([
+            'entite' => 'Client',
+            'mode'   => 'edition',
+            'nom'    => 'Zzzz',
+        ], $this->makeScope());
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertNull($result->uiAction);
+        $this->assertSame('introuvable', $result->data['aDemander'][0]['probleme']);
+        $this->assertSame('Zzzz', $result->data['aDemander'][0]['terme']);
+    }
+
+    /** L'identifiant explicite reste prioritaire : le nom n'est qu'un chemin de plus. */
+    public function testLIdentifiantExpliciteResteHonore(): void
+    {
+        $result = $this->makeTool([$this->client(7, 'OLEA')])->execute([
+            'entite' => 'Client',
+            'mode'   => 'edition',
+            'id'     => 7,
+            'nom'    => 'Peu importe',
+        ], $this->makeScope());
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertSame(7, $result->uiAction['id']);
     }
 }

@@ -662,6 +662,15 @@ class AiContextBuilder
         simule aucun, et ne dis jamais que tu vas « lancer » ou « vérifier » quelque chose.
         Si un résultat est incomplet ou si une information manque, DIS-LE simplement et propose à
         l'utilisateur de te la donner dans un prochain message.
+
+        REMETTRE EN FORME N'EXIGE AUCUNE DONNÉE NOUVELLE. « Refais le tableau », « ajoute une ligne
+        de totaux », « trie par montant », « résume en trois points », « reprends ça en français » :
+        tout cela porte sur ce qui est DÉJÀ dans le fil ci-dessus — ta propre réponse précédente
+        comprise, qui fait autorité au même titre qu'un résultat d'outil. Refais le travail
+        demandé à partir de ces chiffres-là, sans en réclamer d'autres et sans redemander de quel
+        client ou de quelle période il s'agit : c'est écrit juste au-dessus. Les totaux, moyennes
+        et sous-totaux se CALCULENT à partir des lignes affichées — additionne-les et donne le
+        résultat, ne dis jamais que tu ne peux pas le faire.
         {$this->glossaireFinancier()}
         {$this->reglesDeStyle()}
         {$sectionBoussole}
@@ -1004,7 +1013,29 @@ class AiContextBuilder
 
         return "        - QUAND APPELER QUOI (ces outils, et EUX SEULS, sont à ta disposition ce tour-ci ;\n"
             . "          n'en invoque jamais un autre, il n'existerait pas) :\n"
-            . implode("\n", $lignes);
+            . implode("\n", $lignes)
+            // ET QUAND N'EN APPELER AUCUN. Un message ne demande pas toujours des données
+            // neuves : « refais le tableau », « ajoute les totaux », « trie autrement »
+            // portent sur ce qui est déjà dans le fil. Le 2026-08-10, un tel message a
+            // pourtant déclenché un appel d'outil, puis un second en rédaction, et
+            // l'utilisateur a reçu « redites-le-moi » pour un tableau que Ket venait
+            // d'écrire. Un appel d'outil ne rend pas la réponse plus sûre : il la retarde.
+            // UNE DEMANDE, PLUSIEURS EFFETS. « Donne-moi les pistes de Mme Marlette ET
+            // ouvre cette liste » demande une RÉPONSE et un ÉCRAN. Tu n'as qu'un tour
+            // d'outils : les appeler l'un après l'autre est impossible, et n'en appeler
+            // qu'un laisse la moitié de la demande sans suite. Le 2026-08-10, l'écran a
+            // reçu la liste ENTIÈRE pendant que le chat en énumérait deux lignes.
+            . "\n        - PLUSIEURS OUTILS DANS LE MÊME TOUR, quand la demande porte plusieurs effets"
+            . "\n          (« donne-moi X ET ouvre-le », « liste-les ET prépare la relance ») : appelle-les TOUS"
+            . "\n          dans ce tour-ci, tu n'en auras pas d'autre. Et donne-leur le MÊME périmètre — mêmes"
+            . "\n          lieA, mêmes filtres, même client : deux outils appelés avec des périmètres différents"
+            . "\n          produisent une réponse écrite et un écran qui se contredisent, ce que l'utilisateur"
+            . "\n          voit immédiatement."
+            . "\n        - QUAND N'APPELER AUCUN OUTIL : quand la demande porte sur ce qui est DÉJÀ dans le fil"
+            . "\n          — remettre en forme, ajouter une ligne de totaux, trier, résumer, traduire, expliquer"
+            . "\n          ou corriger ta réponse précédente. Ces chiffres-là, tu les as : refais le travail"
+            . "\n          demandé directement, dans ce tour, sans relire les mêmes données et sans redemander"
+            . "\n          à l'utilisateur de quel client ou de quelle période il parle.";
     }
 
     private function sectionSansEcriture(): string
@@ -1287,7 +1318,12 @@ class AiContextBuilder
             . "\nd'échéance, d'après hasPisteDerivee (qui dit qu'un mouvement existe, pas qu'il a abouti),"
             . "\nni d'après l'absence d'information. Une police dite RENOUVELÉE l'est : nomme l'avenant qui"
             . "\nlui succède tel que suiteDeLaPolice le décrit. N'affirme « pas renouvelée » que si ces"
-            . "\nchamps le disent."
+            . "\nchamps le disent. Le champ origineDeLaPolice dit le sens INVERSE — de quelle police"
+            . "\ncelle-ci est la SUITE : c'est lui, et lui seul, qui relie un renouvellement à la police"
+            . "\nrenouvelée. Quand l'utilisateur dit « ce renouvellement », les DEUX polices sont en jeu"
+            . "\n(l'ancienne et la nouvelle) : nomme-les toutes deux par leur identifiant plutôt que de"
+            . "\ndemander laquelle, et ne déduis JAMAIS ce lien d'une ressemblance de nom, de client ou"
+            . "\nde date — s'il n'est pas dans ces champs, il n'existe pas."
             . "\nEnfin, la fiche ne liste PAS les"
             . "\nenregistrements liés en nombre (tâches, documents, tranches, avenants…), et ses valeurs vides"
             . "\nsont élaguées : ne conclus JAMAIS"
@@ -1369,6 +1405,7 @@ class AiContextBuilder
                 . 'l\'utilisateur avait demandé quelque chose qui n\'y figure pas, RECONNAIS-le et propose de '
                 . 'le préparer maintenant. Ne re-prépare pas ce plan-ci ; si on te demande simplement si c\'est '
                 . 'fait, réponds d\'après cette liste, sans relancer d\'outil d\'écriture.'
+                . $this->reutiliserLesIdentifiants()
                 . $this->interdictionDeRecopier() . ']';
         }
         if (PlanEnAttente::estAnnule($meta)) {
@@ -1397,6 +1434,29 @@ class AiContextBuilder
      * précédent recopié, le budget déduit par soustraction, et aucun bouton (à juste
      * titre : aucun outil d'écriture n'avait été appelé).
      */
+    /**
+     * CE QUI A ÉTÉ ÉCRIT RESTE SAISISSABLE — la contrepartie des identifiants portés
+     * par le journal.
+     *
+     * Un plan exécuté n'est pas la fin d'un sujet : c'est le début du suivant. « Et
+     * combien le client doit-il payer pour ce renouvellement ? » porte sur la police
+     * qui vient de naître, « c'est bien la suite de la 72 ? » sur le lien entre les
+     * deux. Le 2026-08-10, Ket a répondu « redites-le-moi en nommant la police »
+     * alors qu'elle venait elle-même de l'inscrire en base trente secondes plus tôt.
+     * Les identifiants sont désormais là, dans le journal juste au-dessus : cette
+     * consigne dit quoi en faire — les passer TELS QUELS aux outils, sans les
+     * rechercher par un texte qui n'existe pas.
+     */
+    private function reutiliserLesIdentifiants(): string
+    {
+        return ' CES IDENTIFIANTS SONT À TOI : quand l\'utilisateur reparle de ce qui vient d\'être '
+            . 'enregistré (« ce renouvellement », « cette police », « la nouvelle »), passe l\'id du '
+            . 'journal ci-dessus DIRECTEMENT à l\'outil (paramètre id, ou lieA={entite, id}) au lieu de '
+            . 'le chercher par un filtre texte — un identifiant n\'est pas un libellé, et le chercher '
+            . 'comme tel ne ramène rien. Ne réclame JAMAIS à l\'utilisateur une précision que ce '
+            . 'journal contient déjà.';
+    }
+
     private function interdictionDeRecopier(): string
     {
         return ' NE RECOPIE JAMAIS le tableau ni le budget de ce message pour une demande suivante, même '
@@ -1412,6 +1472,16 @@ class AiContextBuilder
      * plus déduire d'un simple « succès » que tout ce qui avait été évoqué a été
      * enregistré.
      *
+     * LES IDENTIFIANTS Y FIGURENT, et c'est le cœur de la correction du 2026-08-10.
+     * Le journal les portait déjà (WorkspaceMutationService renvoie l'id de chaque
+     * enregistrement écrit) mais cette restitution les jetait : le modèle ne lisait
+     * que « Avenants : créé (« #131 ») ». Au message suivant — « et pour ce
+     * renouvellement, combien le client doit-il payer ? » — il n'avait donc AUCUNE
+     * prise sur ce qu'il venait pourtant de créer ; il a cherché « 131 » comme un
+     * libellé, n'a rien trouvé, et a demandé à l'utilisateur de reformuler une
+     * demande à laquelle le serveur avait déjà répondu. Un identifiant écrit noir
+     * sur blanc coûte trois tokens et supprime le tour de rattrapage.
+     *
      * @param array<int, array> $journal
      */
     private function journalLisible(array $journal): string
@@ -1422,12 +1492,16 @@ class AiContextBuilder
             if (!is_array($etape) || ($etape['statut'] ?? 'ok') !== 'ok') {
                 continue;
             }
+            $id = $etape['id'] ?? null;
             $lignes[] = sprintf(
-                '%s- %s : %s%s',
+                '%s- %s : %s%s%s',
                 str_repeat('  ', max(0, (int) ($etape['niveau'] ?? 0))),
                 $etape['libelle'] ?? $etape['entite'] ?? '?',
                 $verbes[$etape['op'] ?? ''] ?? 'traité',
                 ($etape['cible'] ?? null) !== null ? sprintf(' (« %s »)', $etape['cible']) : '',
+                $id !== null
+                    ? sprintf(' → %s id=%d', $etape['entite'] ?? '?', (int) $id)
+                    : '',
             );
         }
 

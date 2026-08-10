@@ -508,9 +508,21 @@ export default class extends Controller {
                     await this.openVisualizationAction(action);
                     break;
                 case 'open-rubrique':
-                    // Navigation pure : le workspace-manager rejoue le clic de menu.
+                    // Navigation : le workspace-manager rejoue le clic de menu, puis
+                    // pose les critères calculés côté serveur. Sans eux, la liste
+                    // affichée contredisait la réponse écrite (le chat annonçait les
+                    // deux pistes d'un client, l'écran en montrait cinq).
                     document.dispatchEvent(new CustomEvent('app:workspace.open-rubrique', {
-                        detail: { entityName: action.entite },
+                        detail: { entityName: action.entite, criteres: action.criteres || null },
+                    }));
+                    break;
+                case 'close-rubrique':
+                    // Fermeture d'onglets : le workspace-manager rejoue la croix de
+                    // chaque onglet nommé. Sans ce case, Ket n'avait aucun moyen de
+                    // fermer quoi que ce soit — elle ouvrait le tableau de bord et
+                    // annonçait la fermeture (incident du 2026-08-10).
+                    document.dispatchEvent(new CustomEvent('app:workspace.close-rubrique', {
+                        detail: { entityNames: action.entites },
                     }));
                     break;
                 case 'close-workspace':

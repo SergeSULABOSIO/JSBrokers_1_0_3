@@ -143,6 +143,12 @@ class SelecteurDeTrousseTest extends TestCase
         yield 'un accord client' => ['Elle vient de confirmer son accord pour la proposition de SUNU.'];
         yield 'un ordre direct' => ['Enregistre-la.'];
         yield 'une continuation' => ['vas y'];
+        // INCIDENT DU 2026-08-10. La tournure exacte « ouvre le formulaire » était
+        // couverte ; ces deux-ci ne l'étaient pas d'un cheveu. Résultat : trousse de
+        // lecture, ouvrir_dialogue absent, et Ket a ouvert la RUBRIQUE des partenaires
+        // — une liste, là où l'utilisateur demandait un formulaire.
+        yield 'un formulaire demandé de biais' => ['Ouvre moi par exemple le formulaire d’édition pour Olea'];
+        yield 'un formulaire par pronom' => ['ouvre son formulaire d’édition'];
     }
 
     /**

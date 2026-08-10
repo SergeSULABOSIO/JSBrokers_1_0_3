@@ -87,6 +87,12 @@ export default class extends Controller {
         this.boundOpenRubriqueByEntity = this.openRubriqueByEntity.bind(this);
         document.addEventListener('app:workspace.open-rubrique', this.boundOpenRubriqueByEntity);
 
+        // NOUVEAU : FERME les onglets de rubrique nommés par l'assistant. Sans ce
+        // geste, Ket n'avait aucun moyen de fermer quoi que ce soit : priée de fermer
+        // deux rubriques, elle ouvrait le tableau de bord et annonçait la fermeture.
+        this.boundCloseRubriqueByEntity = this.closeRubriqueByEntity.bind(this);
+        document.addEventListener('app:workspace.close-rubrique', this.boundCloseRubriqueByEntity);
+
         // NOUVEAU : Demande de fermeture de l'espace de travail à la demande
         // (assistant IA) — rejoue le clic sur le bouton « Fermer » : même boîte
         // de confirmation, même exécution après validation manuelle.
@@ -184,6 +190,7 @@ export default class extends Controller {
         document.removeEventListener('app:workspace.inject-html', this.boundInjectHtml);
         document.removeEventListener('app:workspace.open-html-in-visualization', this.boundOpenHtmlInVisualization);
         document.removeEventListener('app:workspace.open-rubrique', this.boundOpenRubriqueByEntity);
+        document.removeEventListener('app:workspace.close-rubrique', this.boundCloseRubriqueByEntity);
         document.removeEventListener('app:workspace.request-logout', this.boundRequestLogoutViaBus);
         document.removeEventListener('app:workspace.reload-active-tab', this.boundReloadActiveTab);
         document.removeEventListener('app:loading.start', this.boundHandleLoadingStart);
@@ -1085,6 +1092,7 @@ export default class extends Controller {
     openRubriqueByEntity(event) {
         const entityName = event.detail?.entityName;
         if (!entityName) return;
+        const criteres = event.detail?.criteres || null;
 
         // Vue spéciale : le tableau de bord n'est pas une rubrique de groupe —
         // même geste que le clic sur l'item de menu (onglet créé et activé).
@@ -1101,6 +1109,7 @@ export default class extends Controller {
         const visible = this.rubriquesContainerTarget.querySelector(selector);
         if (visible) {
             this.loadComponent({ currentTarget: visible });
+            this._armerCriteresDeRubrique(criteres);
             return;
         }
 
@@ -1124,8 +1133,110 @@ export default class extends Controller {
             const rubriqueElement = this.rubriquesContainerTarget.querySelector(selector);
             if (rubriqueElement) {
                 this.loadComponent({ currentTarget: rubriqueElement });
+                this._armerCriteresDeRubrique(criteres);
             }
         });
+    }
+
+    /**
+     * Mémorise les critères à poser sur l'onglet qui vient d'être créé, pour les
+     * appliquer dès que son contenu est chargé (handleComponentLoaded).
+     *
+     * POURQUOI EN DEUX TEMPS. Le panneau se charge de façon asynchrone : demander la
+     * recherche tout de suite s'adresserait à une liste qui n'existe pas encore. Et
+     * pourquoi le faire du tout : sans cela, Ket répondait « voici les deux pistes de
+     * Mme Marlette » et ouvrait à côté la liste des CINQ pistes de tout le monde — le
+     * chat et l'écran se contredisant sous les yeux de l'utilisateur (2026-08-10).
+     * @private
+     */
+    _armerCriteresDeRubrique(criteres) {
+        if (!criteres || typeof criteres !== 'object' || Object.keys(criteres).length === 0) return;
+        if (!this.pendingWorkspaceTabId) return;
+
+        this._criteresEnAttente = this._criteresEnAttente || {};
+        this._criteresEnAttente[this.pendingWorkspaceTabId] = criteres;
+    }
+
+    /**
+     * Pose les critères mémorisés sur l'onglet fraîchement chargé, via le MÊME chemin
+     * qu'une recherche saisie à la main (`ui:search.submitted`) : même moteur, mêmes
+     * critères, mêmes chips synchronisés. Sans effet si l'onglet n'est plus l'actif —
+     * l'utilisateur a repris la main, et sa navigation prime.
+     * @private
+     */
+    _appliquerCriteresEnAttente(tabId) {
+        const criteres = this._criteresEnAttente?.[tabId];
+        if (!criteres) return;
+        delete this._criteresEnAttente[tabId];
+
+        if (tabId !== this.activeWorkspaceTabId) return;
+        this.notifyCerveau('ui:search.submitted', { criteria: criteres });
+    }
+
+    /**
+     * FERME les onglets de rubrique nommés — événement `app:workspace.close-rubrique`
+     * { entityNames: [...] } émis par le chat de l'assistant. Même effet que cliquer
+     * la croix de chaque onglet, en une fois.
+     *
+     * POURQUOI CE GESTE EXISTE. Il n'existait pas, et son absence produisait le pire
+     * des comportements : priée de fermer deux rubriques, Ket ouvrait le TABLEAU DE
+     * BORD — qui ne ferme rien — et annonçait « les rubriques ont été fermées ». Les
+     * onglets restaient sous les yeux de l'utilisateur, sous une réponse affirmative.
+     *
+     * « Toutes » ferme tout ; « TableauDeBord » vise l'onglet du tableau de bord, qui
+     * ne porte pas d'entité et se reconnaît à son composant.
+     *
+     * ET SURTOUT : ON NE ROUVRE RIEN. Contrairement à closeActiveWorkspaceTab, on ne
+     * recharge PAS le tableau de bord quand il ne reste plus d'onglet. L'utilisateur a
+     * demandé à fermer ; lui rouvrir une vue dans la foulée, c'est exactement ce dont
+     * il se plaignait.
+     * @param {CustomEvent} event
+     */
+    closeRubriqueByEntity(event) {
+        const demandes = event.detail?.entityNames;
+        if (!Array.isArray(demandes) || demandes.length === 0) return;
+
+        const toutes = demandes.includes('Toutes');
+        const composantTableauDeBord = this.hasDashboardItemTarget
+            ? (this.dashboardItemTarget.dataset.workspaceManagerComponentNameParam || '')
+            : '';
+
+        const cibles = Array.from(this.workspaceTabBarTarget.querySelectorAll('.workspace-tab-item'))
+            .filter((tabEl) => {
+                if (toutes) return true;
+                const entityName = tabEl.dataset.entityName || '';
+                if (entityName) return demandes.includes(entityName);
+                return demandes.includes('TableauDeBord')
+                    && composantTableauDeBord !== ''
+                    && tabEl.dataset.componentName === composantTableauDeBord;
+            });
+
+        if (cibles.length === 0) {
+            // NE JAMAIS ÉCHOUER EN SILENCE : le serveur a promis une fermeture qui
+            // n'avait rien à fermer. La trace permet de le constater.
+            console.warn('[Ket] close-rubrique : aucun onglet ouvert ne correspond à', demandes.join(', '));
+            return;
+        }
+
+        let actifFerme = false;
+        cibles.forEach((tabEl) => {
+            const tabId = tabEl.dataset.tabId;
+            if (tabEl.classList.contains('active')) actifFerme = true;
+            const panel = this.workspaceTabPanelsTarget.querySelector(`[data-tab-id="${tabId}"]`);
+            tabEl.remove();
+            if (panel) panel.remove();
+            this.workspaceTabs = this.workspaceTabs.filter(t => t.id !== tabId);
+        });
+
+        const restants = this.workspaceTabBarTarget.querySelectorAll('.workspace-tab-item');
+        if (actifFerme && restants.length > 0) {
+            this._activateWorkspaceTabById(restants[restants.length - 1].dataset.tabId);
+            return;
+        }
+        if (restants.length === 0) {
+            this.activeWorkspaceTabId = null;
+        }
+        this._saveWorkspaceTabsToStorage();
     }
 
     /**
@@ -1330,7 +1441,12 @@ export default class extends Controller {
             this.pendingWorkspaceTabId = null;
         }
         this.progressBarTarget.style.display = 'none';
-        if (!error) this.notifyCerveau('app:navigation-rubrique:openned', {});
+        if (!error) {
+            this.notifyCerveau('app:navigation-rubrique:openned', {});
+            // La liste existe enfin : c'est le moment de poser le filtre demandé par
+            // l'assistant, s'il y en avait un.
+            this._appliquerCriteresEnAttente(targetTabId);
+        }
     }
 
     /**

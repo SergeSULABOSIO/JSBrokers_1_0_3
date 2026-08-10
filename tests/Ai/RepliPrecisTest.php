@@ -170,8 +170,11 @@ class RepliPrecisTest extends TestCase
         $this->assertStringContainsString('Cette police est déjà résiliée.', $texte);
     }
 
-    /** Un résultat qui a abouti n'a rien à réclamer : il ne pollue pas le repli. */
-    public function testUnResultatCompletNAlimentePasLeRepli(): void
+    /**
+     * Un résultat SANS lignes (un simple comptage) n'a pas de tableau à rendre : le
+     * repli générique subsiste, faute de mieux. C'est le seul cas qui le mérite encore.
+     */
+    public function testUnResultatSansLignesNAlimentePasLeRepli(): void
     {
         $texte = $this->repli()->depuis([[
             'outil' => 'compter_entites',
@@ -179,5 +182,94 @@ class RepliPrecisTest extends TestCase
         ]]);
 
         $this->assertSame(RepliPrecis::GENERIQUE, $texte);
+    }
+
+    /**
+     * LE SECOND INCIDENT DU 2026-08-10. Le courtier demande « refais le tableau et
+     * affiche en dernière ligne les totaux, afin de voir le montant total restant ».
+     * L'outil avait rapporté les quatre tranches ; le modèle a réclamé un outil de plus
+     * au lieu d'écrire ; et le courtier a reçu « redites-la-moi ». Le serveur tenait
+     * pourtant les lignes ET savait les additionner — c'est ce que ce test verrouille :
+     * le tableau est rendu, et sa DERNIÈRE LIGNE porte le total demandé.
+     */
+    public function testUneLectureAboutieRendLeTableauEtSesTotaux(): void
+    {
+        $texte = $this->repli()->depuis([[
+            'outil' => 'suivi_impayes',
+            'data'  => [
+                'filtre'    => 'Prime impayée',
+                'perimetre' => 'Portefeuille de Serge',
+                'lignes'    => [
+                    ['id' => 136, 'reference' => 'Tranche unique', 'soldePrime' => 1200.0],
+                    ['id' => 137, 'reference' => 'Tranche unique', 'soldePrime' => 800.5],
+                    ['id' => 141, 'reference' => 'Tranche unique', 'soldePrime' => 2000.0],
+                ],
+            ],
+        ]]);
+
+        $this->assertStringContainsString('| Solde prime |', $texte, 'L’en-tête se lit, il ne se décode pas.');
+        $this->assertStringContainsString('136', $texte);
+        $this->assertStringContainsString('**TOTAL**', $texte);
+        $this->assertStringContainsString('**4 000,50**', $texte, 'La dernière ligne porte la somme réellement due.');
+        $this->assertStringNotContainsString(RepliPrecis::GENERIQUE, $texte);
+    }
+
+    /**
+     * La somme des IDENTIFIANTS ne veut rien dire. L'afficher ferait douter du reste
+     * du tableau — et les identifiants eux-mêmes restent bruts, sans séparateur de
+     * milliers : « 1 236 » n'est pas un numéro de tranche.
+     */
+    public function testLesIdentifiantsNeSontNiAdditionnesNiFormates(): void
+    {
+        $texte = $this->repli()->depuis([[
+            'outil' => 'rechercher_entites',
+            'data'  => [
+                'libelle'    => 'Tranches',
+                'totalItems' => 2,
+                'items'      => [
+                    ['id' => 1236, 'trancheId' => 4000, 'montant' => 10.0],
+                    ['id' => 1237, 'trancheId' => 5000, 'montant' => 15.0],
+                ],
+            ],
+        ]]);
+
+        $this->assertStringContainsString('| 1236 |', $texte, 'Un identifiant reste brut.');
+        $this->assertStringNotContainsString('2473', $texte, 'La somme des id n’a aucun sens.');
+        $this->assertStringNotContainsString('9 000', $texte, 'La somme des trancheId non plus.');
+        $this->assertStringContainsString('**25**', $texte, 'Seule la colonne de montants s’additionne.');
+    }
+
+    /**
+     * Un tableau tronqué qui ne le dit pas se lit comme un inventaire complet — et le
+     * courtier croit avoir vu toute sa dette.
+     */
+    public function testUnTableauTronqueLAnnonce(): void
+    {
+        $lignes = [];
+        for ($i = 1; $i <= 40; $i++) {
+            $lignes[] = ['id' => $i, 'montant' => 1.0];
+        }
+
+        $texte = $this->repli()->depuis([[
+            'outil' => 'rechercher_entites',
+            'data'  => ['libelle' => 'Tranches', 'totalItems' => 40, 'items' => $lignes],
+        ]]);
+
+        $this->assertStringContainsString('40 éléments au total, 25 affichés ici', $texte);
+    }
+
+    /**
+     * Une recherche VIDE reste une recherche vide : la branche « aucun résultat » passe
+     * avant le tableau, sans quoi on rendrait un en-tête sans lignes.
+     */
+    public function testUneRechercheVidePrimeSurLeTableau(): void
+    {
+        $texte = $this->repli()->depuis([[
+            'outil' => 'rechercher_entites',
+            'data'  => ['libelle' => 'Polices', 'filtre' => '131', 'totalItems' => 0, 'items' => []],
+        ]]);
+
+        $this->assertStringContainsString('Je n’ai trouvé aucun élément', $texte);
+        $this->assertStringNotContainsString('| ---', $texte);
     }
 }

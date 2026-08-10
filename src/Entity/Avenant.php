@@ -32,6 +32,12 @@ class Avenant
     public ?string $statutRenouvellement = null;
     #[Groups(['list:read'])]
     public ?string $suiteDeLaPolice = null;
+    // ET LE SENS INVERSE : de quelle police celle-ci est-elle la SUITE ? null pour une
+    // affaire nouvelle. Sans cet attribut, l'avenant issu d'un renouvellement ne portait
+    // aucune trace de son prédécesseur : l'assistante, à qui l'on demandait « et pour ce
+    // renouvellement ? » juste après l'avoir exécuté, ne savait plus relier les deux.
+    #[Groups(['list:read'])]
+    public ?string $origineDeLaPolice = null;
     // Présence d'une piste dérivée (renouvellement/prorogation/ajustement lié à cet
     // avenant de base) : sert de condition aux attribute_actions « piste dérivée ».
     // NE DIT RIEN de ce que cette piste a produit : voir $suiteDeLaPolice.
