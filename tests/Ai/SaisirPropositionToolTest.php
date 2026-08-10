@@ -5,13 +5,18 @@ namespace App\Tests\Ai;
 use App\Ai\Mutation\MutationOperation;
 use App\Ai\Mutation\PlanBuilder;
 use App\Ai\Mutation\PlanEnAttente;
+use App\Ai\Proposition\RevenuCourtierPrescrit;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
 use App\Ai\Tool\EntiteLibelle;
 use App\Ai\Tool\SaisirPropositionTool;
 use App\Entity\Assureur;
+use App\Entity\Chargement;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Entity\Piste;
+use App\Entity\Risque;
+use App\Entity\TypeRevenu;
 use App\Service\Workspace\ReferentielEnumerateur;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Service\Workspace\WorkspaceMutationService;
@@ -43,11 +48,15 @@ class SaisirPropositionToolTest extends TestCase
     /** @var array<int, MutationOperation> opérations réellement soumises au constructeur de plan */
     protected array $operationsVues = [];
 
+    /**
+     * @param float|null $tauxRisque taux de commission prescrit par le risque de
+     *                               l'opportunité, en POINTS ; null = aucun taux prescrit
+     */
     protected function makeTool(
         bool $peutEcrire = true,
         array $assureursTrouves = [7 => 'SFA'],
         ?array $referentielChargement = null,
-        array $typesRevenu = [],
+        ?float $tauxRisque = 15.0,
     ): SaisirPropositionTool {
         $this->operationsVues = [];
 
@@ -86,7 +95,6 @@ class SaisirPropositionToolTest extends TestCase
                 'Chargement' => $referentielChargement ?? [
                     1 => 'Prime nette', 2 => 'Frais accessoires', 3 => 'TVA', 4 => 'Frais ARCA',
                 ],
-                'TypeRevenu' => $typesRevenu,
                 default      => [],
             }
         );
@@ -105,7 +113,49 @@ class SaisirPropositionToolTest extends TestCase
             $resolver,
             $referentiels,
             $resolveur,
+            new RevenuCourtierPrescrit(
+                $this->rechercheDuReferentielDeRevenus($tauxRisque),
+                $resolver,
+                $resolveur,
+            ),
         );
+    }
+
+    /**
+     * Le référentiel de revenus de l'entreprise, tel que la plateforme l'installe :
+     * « Commission Ordinaire » (due par l'ASSUREUR, au taux du risque, assise sur la
+     * prime nette) et « Frais de consultance » (dus par le CLIENT). Les deux ensemble,
+     * car c'est leur COEXISTENCE qui faisait échouer la dérivation.
+     */
+    private function rechercheDuReferentielDeRevenus(?float $tauxRisque): JSBDynamicSearchService
+    {
+        $primeNette = (new Chargement())->setNom('Prime nette');
+        (new \ReflectionProperty(Chargement::class, 'id'))->setValue($primeNette, 1);
+
+        $ordinaire = (new TypeRevenu())->setNom('Commission Ordinaire')
+            ->setAppliquerPourcentageDuRisque(true)->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR)
+            ->setShared(true)->setMultipayments(true)->setTypeChargement($primeNette);
+        (new \ReflectionProperty(TypeRevenu::class, 'id'))->setValue($ordinaire, 1);
+
+        $consultance = (new TypeRevenu())->setNom('Frais de consultance')->setPourcentage(5)
+            ->setRedevable(TypeRevenu::REDEVABLE_CLIENT)
+            ->setShared(false)->setMultipayments(false)->setTypeChargement($primeNette);
+        (new \ReflectionProperty(TypeRevenu::class, 'id'))->setValue($consultance, 3);
+
+        $risque = (new Risque())->setNomComplet('Incendie et Risques Annexes')->setCode('FAP')
+            ->setImposable(true)->setPourcentageCommissionSpecifiqueHT($tauxRisque);
+        $piste = (new Piste())->setRisque($risque);
+
+        $search = $this->createMock(JSBDynamicSearchService::class);
+        $search->method('search')->willReturnCallback(
+            static fn (string $fqcn) => ['status' => ['code' => 200], 'data' => match ($fqcn) {
+                TypeRevenu::class => [$ordinaire, $consultance],
+                Piste::class      => [$piste],
+                default           => [],
+            }]
+        );
+
+        return $search;
     }
 
     protected function makeScope(): AiScope
@@ -330,6 +380,78 @@ class SaisirPropositionToolTest extends TestCase
         $problemes = array_column($result->data['aDemander'], 'probleme');
         $this->assertContains('introuvable', $problemes);
         $this->assertSame([], $this->operationsVues);
+    }
+
+    /**
+     * LE MANQUE QUI JUSTIFIE CE CHANTIER. L'offre du message #1335 ne dit pas un mot de
+     * la commission — et il n'y a pas d'affaire d'assurance sans commission. Le plan doit
+     * donc la porter, au taux prescrit par le risque, sans qu'on l'ait demandée.
+     *
+     * Avant, l'outil n'en créait une que si l'entreprise avait UN SEUL type de revenu :
+     * condition jamais remplie (la plateforme en installe quatre), donc plus aucune
+     * proposition ne repartait avec sa rémunération.
+     */
+    public function testLaRemunerationDuCourtierEstAjouteeSansQuOnLaDemande(): void
+    {
+        $result = $this->makeTool()->execute($this->argsOffreSfa(), $this->makeScope());
+
+        $this->assertTrue($result->data['pret']);
+        $revenus = $this->operationsVues[0]->collections['revenus'] ?? [];
+        $this->assertCount(1, $revenus, 'Une proposition sans revenu est une affaire sans rémunération.');
+        $this->assertSame(1, $revenus[0]->fields['typeRevenu'], 'La commission due par l’assureur, pas les frais du client.');
+        $this->assertSame('Commission Ordinaire', $revenus[0]->fields['nom']);
+        // Le taux n'est PAS recopié : il est prescrit par le risque et lu au calcul.
+        $this->assertArrayNotHasKey('tauxExceptionel', $revenus[0]->fields);
+
+        $annonce = implode(' ', $result->data['defauts']);
+        $this->assertStringContainsString('15,00 %', $annonce);
+        $this->assertStringContainsString('Incendie et Risques Annexes', $annonce);
+    }
+
+    /**
+     * On ne devine pas un taux. Un risque qui n'en prescrit aucun fait poser la question
+     * — plutôt qu'écrire une commission à 0, qui se lirait plus tard comme une affaire
+     * sans rémunération.
+     */
+    public function testSansTauxPrescritLaQuestionEstPoseeAuLieuDEcrireZero(): void
+    {
+        $result = $this->makeTool(tauxRisque: null)->execute($this->argsOffreSfa(), $this->makeScope());
+
+        $this->assertFalse($result->data['pret']);
+        $this->assertNull($result->uiAction, 'Aucun plan, donc aucun bouton de validation.');
+        $this->assertSame('tauxCommissionPercent', $result->data['aDemander'][0]['champ']);
+        $this->assertSame([], $this->operationsVues, 'Rien ne doit être construit sur une commission incertaine.');
+    }
+
+    /** Un taux dicté DÉROGE au prescrit : il se pose sur la commission, et s'annonce comme tel. */
+    public function testUnTauxDicteEstAppliqueEtAnnonce(): void
+    {
+        $args = ['tauxCommissionPercent' => 12.5] + $this->argsOffreSfa();
+
+        $result = $this->makeTool()->execute($args, $this->makeScope());
+
+        $revenus = $this->operationsVues[0]->collections['revenus'];
+        // Convention unique de la plateforme : les taux sont des POINTS (12,5 = 12,5 %).
+        $this->assertSame(12.5, $revenus[0]->fields['tauxExceptionel']);
+        $this->assertStringContainsString('exceptionnel', implode(' ', $result->data['defauts']));
+    }
+
+    /**
+     * UNE PRIME EST PAYABLE EN UNE FOIS, sauf fractionnement dicté. Sans échéance, rien
+     * n'est exigible — et sans exigible, aucune commission n'est encaissable.
+     */
+    public function testSansFractionnementDicteLaPrimeFaitUneTrancheUniqueACentPourCent(): void
+    {
+        $args = $this->argsOffreSfa();
+        unset($args['nombreTranches']);
+
+        $result = $this->makeTool()->execute($args, $this->makeScope());
+
+        $tranches = $this->operationsVues[0]->collections['tranches'] ?? [];
+        $this->assertCount(1, $tranches, 'Une proposition sans échéancier ne rend rien exigible.');
+        $this->assertSame(100.0, $tranches[0]->fields['pourcentage']);
+        $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/', $tranches[0]->fields['payableAt']);
+        $this->assertStringContainsString('une seule fois', implode(' ', $result->data['defauts']));
     }
 
     /** Les choix faits à la place de l'utilisateur voyagent avec le plan, pour être annoncés. */

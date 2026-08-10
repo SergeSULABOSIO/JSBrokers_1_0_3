@@ -7,6 +7,7 @@ use App\Ai\Trousse\AiToolEcriture;
 use App\Ai\Mutation\MutationPlan;
 use App\Ai\Mutation\PlanBuilder;
 use App\Ai\Parcours\ParcoursCatalogue;
+use App\Ai\Proposition\RevenuCourtierPrescrit;
 use App\Ai\Scope\AiScope;
 use App\Entity\Invite;
 use App\Service\Workspace\ReferentielEnumerateur;
@@ -40,6 +41,14 @@ use App\Ai\Resolution\ResolveurDeReferences;
  * un « ambigu », jamais un choix arbitraire — la règle de la maison est qu'on ne
  * devine pas une donnée du courtier.
  *
+ * CE QU'IL AJOUTE SANS QU'ON LE LUI DEMANDE, en revanche, parce que le métier le dit :
+ * la RÉMUNÉRATION du courtier ({@see RevenuCourtierPrescrit}, au taux prescrit par la
+ * configuration du risque) et l'ÉCHÉANCIER — une prime est payable en une fois, à
+ * 100 %, sauf fractionnement dicté. Ce ne sont pas des devinettes mais des règles :
+ * aucune affaire ne se place sans commission, et une proposition sans échéance ne rend
+ * rien exigible. Les deux sont ANNONCÉS dans « defauts » et restent décochables avant
+ * exécution — un défaut qu'on peut lire et corriger d'une phrase n'est pas un défaut subi.
+ *
  * FAIL-CLOSED : droit d'écriture sur Cotation vérifié ici, puis re-vérifié par
  * WorkspaceMutationService pour chaque opération du plan.
  */
@@ -70,6 +79,9 @@ final class SaisirPropositionTool implements AiToolProduisantUnPlan, AiToolEcrit
         // Source unique de la résolution « nom dicté → identifiant », partagée avec
         // tous les plans : deux implémentations parallèles divergeraient.
         private readonly ResolveurDeReferences $resolveur,
+        // La rémunération du courtier, dérivée de la configuration du risque : elle
+        // accompagne TOUTE proposition, car aucune affaire ne se place sans commission.
+        private readonly RevenuCourtierPrescrit $revenuPrescrit,
     ) {
     }
 
@@ -87,7 +99,10 @@ final class SaisirPropositionTool implements AiToolProduisantUnPlan, AiToolEcrit
             . 'client, la durée, la composition de la prime (prime nette, accessoires, TVA, ARCA…) et le '
             . 'découpage en tranches. LE SERVEUR fait le reste : il retrouve l\'assureur, la piste et les '
             . 'types de chargement PAR LEUR NOM, construit la cotation avec sa composition de prime, son '
-            . 'échéancier et le revenu du courtier, puis rend un PLAN + BUDGET à valider. '
+            . 'échéancier et LA RÉMUNÉRATION DU COURTIER, puis rend un PLAN + BUDGET à valider. '
+            . 'NE DEMANDE JAMAIS la commission ni le découpage de la prime : le revenu du courtier est '
+            . 'ajouté D\'OFFICE au taux prescrit par la configuration du risque, et la prime est réputée '
+            . 'payable en UNE FOIS (100 %). '
             . 'N\'APPELLE DONC NI rechercher_entites (aucun id à trouver), NI inventaire_champs, NI '
             . 'parcours_saisie avant lui : tu perdrais plusieurs tours pour un travail déjà fait. '
             . 'S\'il manque une information ou qu\'un nom est ambigu, l\'outil te le dit avec les valeurs '
@@ -154,6 +169,8 @@ final class SaisirPropositionTool implements AiToolProduisantUnPlan, AiToolEcrit
                     'minimum' => 1,
                     'description' => 'Nombre de tranches de paiement d\'égale valeur (ex. 2 pour « payable en deux '
                         . 'tranches de 50 % »). Le serveur répartit les pourcentages et échelonne les échéances. '
+                        . 'À NE DONNER QUE si l\'utilisateur a dit que la prime est FRACTIONNÉE : par défaut elle '
+                        . 'est payable en une seule fois (une tranche à 100 %), et tu n\'as pas à le demander. '
                         . 'Utilise « tranches » à la place si elles sont inégales ou datées précisément.',
                 ],
                 'tranches' => [
@@ -177,8 +194,9 @@ final class SaisirPropositionTool implements AiToolProduisantUnPlan, AiToolEcrit
                 'tauxCommissionPercent' => [
                     'type' => 'number',
                     'description' => 'Taux de commission EXCEPTIONNEL, en POINTS (16 = 16 %), UNIQUEMENT si '
-                        . 'l\'utilisateur en dicte un qui déroge au taux habituel. Sinon, ne le renseigne PAS : '
-                        . 'le taux du type de revenu s\'applique.',
+                        . 'l\'utilisateur en dicte un qui DÉROGE au taux habituel. Sinon, ne le renseigne PAS et '
+                        . 'ne le demande PAS : le serveur applique le taux prescrit par la configuration du '
+                        . 'risque de l\'opportunité, ou à défaut celui du type de revenu.',
                 ],
                 'remplacerPlanEnAttente' => [
                     'type' => 'boolean',
@@ -247,9 +265,28 @@ final class SaisirPropositionTool implements AiToolProduisantUnPlan, AiToolEcrit
             $collections[] = ['collection' => 'tranches', 'elements' => $tranches];
         }
 
-        $revenus = $this->construireRevenus($args, $scope, $etapes['revenu-courtier'], $defauts);
-        if ($revenus !== []) {
-            $collections[] = ['collection' => 'revenus', 'elements' => $revenus];
+        // LA COMMISSION N'EST PAS UNE OPTION. Elle est dérivée de la configuration —
+        // taux prescrit par le risque, ou taux du type —, jamais demandée quand elle
+        // se déduit. Si elle ne se déduit PAS, on s'arrête ici plutôt que d'écrire une
+        // affaire à commission nulle.
+        $revenu = $this->revenuPrescrit->deriver(
+            isset($piste['id']) ? (int) $piste['id'] : null,
+            $this->assiettes($chargements),
+            $this->idBaseDeCommission($scope),
+            isset($args['tauxCommissionPercent']) && is_numeric($args['tauxCommissionPercent'])
+                ? (float) $args['tauxCommissionPercent']
+                : null,
+            $etapes['revenu-courtier'],
+            $scope,
+        );
+        if ($revenu['aDemander'] !== []) {
+            return $this->demander($revenu['aDemander']);
+        }
+        if ($revenu['elements'] !== []) {
+            $collections[] = ['collection' => 'revenus', 'elements' => $revenu['elements']];
+        }
+        foreach ($revenu['defauts'] as $ligne) {
+            $defauts[] = $ligne;
         }
 
         $champs = array_filter([
@@ -271,7 +308,7 @@ final class SaisirPropositionTool implements AiToolProduisantUnPlan, AiToolEcrit
 
         // Les défauts appliqués voyagent AVEC le plan : la règle de la maison est de
         // les annoncer, pas de les demander — encore faut-il que le modèle les ait.
-        return $this->avecDefauts($resultat, $defauts, $assureur, $piste);
+        return $this->avecDefauts($resultat, $defauts, $assureur, $piste, $revenu['avertissements']);
     }
 
     /**
@@ -537,9 +574,27 @@ final class SaisirPropositionTool implements AiToolProduisantUnPlan, AiToolEcrit
             return $elements;
         }
 
-        $nombre = (int) ($args['nombreTranches'] ?? 0);
-        if ($nombre < 1) {
-            return [];
+        // UNE PRIME EST PAYABLE EN UNE FOIS, sauf mention contraire. Le fractionnement
+        // est l'exception que l'utilisateur dicte, avec ses pourcentages ; ne rien créer
+        // laissait la proposition sans échéancier, donc sans rien d'exigible — et sans
+        // exigible, pas de commission encaissable.
+        $nombre = max(1, (int) ($args['nombreTranches'] ?? 0));
+
+        if ($nombre === 1) {
+            $defauts[] = sprintf(
+                'Échéancier : prime payable en une seule fois (100 %%) le %s (aucun fractionnement dicté).',
+                $debut->format('d/m/Y'),
+            );
+
+            return [[
+                'op'     => 'create',
+                'etape'  => $etape,
+                'champs' => [
+                    'nom'         => 'Prime unique',
+                    'pourcentage' => 100.0,
+                    'payableAt'   => $this->formatDate($debut),
+                ],
+            ]];
         }
 
         // Répartition en points, le reliquat sur la PREMIÈRE tranche : trois tranches
@@ -571,35 +626,43 @@ final class SaisirPropositionTool implements AiToolProduisantUnPlan, AiToolEcrit
     }
 
     /**
-     * Revenu du courtier. Le type de revenu porte le taux : on ne le crée QUE si
-     * l'entreprise n'en a qu'un (aucune ambiguïté) ou si l'utilisateur a dicté un
-     * taux exceptionnel. Sinon on s'abstient — l'étape est optionnelle dans la trame,
-     * et une commission rangée sous le mauvais type serait pire que pas de ligne.
+     * ASSIETTES de commission : chargementId => montant, tirées des composantes déjà
+     * rattachées au référentiel. C'est ce qui permet à la dérivation de ne retenir que
+     * les revenus dont la base existe RÉELLEMENT dans cette proposition — une
+     * « Commission sur Fronting » sans ligne de fronting vaudrait 0.
      *
-     * @param array<int, string> $defauts
+     * @param array<int, array<string, mixed>> $chargements
      *
-     * @return array<int, array<string, mixed>>
+     * @return array<int, float>
      */
-    private function construireRevenus(array $args, AiScope $scope, string $etape, array &$defauts): array
+    private function assiettes(array $chargements): array
     {
-        $types = $this->referentiels->codes('TypeRevenu', $scope) ?? [];
-        if (count($types) !== 1) {
-            return [];
+        $assiettes = [];
+        foreach ($chargements as $chargement) {
+            $type = $chargement['champs']['type'] ?? null;
+            $montant = $chargement['champs']['montantFlatExceptionel'] ?? null;
+            if (is_numeric($type) && is_numeric($montant)) {
+                // Deux lignes sur le même type se cumulent : c'est bien une seule assiette.
+                $assiettes[(int) $type] = (float) ($assiettes[(int) $type] ?? 0) + (float) $montant;
+            }
         }
 
-        $typeId = array_key_first($types);
-        $champs = ['nom' => (string) reset($types), 'typeRevenu' => $typeId];
+        return $assiettes;
+    }
 
-        $taux = $args['tauxCommissionPercent'] ?? null;
-        if (is_numeric($taux)) {
-            // Convention unique de la plateforme : les taux sont des POINTS.
-            $champs['tauxExceptionel'] = (float) $taux;
-            $defauts[] = sprintf('Rémunération du courtier : taux exceptionnel de %s %% (dicté).', $taux);
-        } else {
-            $defauts[] = sprintf('Rémunération du courtier : « %s », au taux habituel du type.', reset($types));
-        }
+    /**
+     * Le chargement qui sert de BASE DE COMMISSION dans le référentiel de l'entreprise
+     * (« Prime nette »), quel que soit son libellé exact. Sert à savoir sur quel revenu
+     * poser un taux exceptionnel dicté : une dérogation vise la commission principale,
+     * pas les accessoires.
+     */
+    private function idBaseDeCommission(AiScope $scope): ?int
+    {
+        // Le référentiel est mémoïsé par ReferentielEnumerateur : aucune requête de plus.
+        $referentiel = $this->referentiels->codes('Chargement', $scope) ?? [];
+        [$id] = $this->rattacherChargement('prime nette', $referentiel);
 
-        return [['op' => 'create', 'etape' => $etape, 'champs' => $champs]];
+        return $id;
     }
 
     /**
@@ -709,9 +772,15 @@ final class SaisirPropositionTool implements AiToolProduisantUnPlan, AiToolEcrit
      * @param array<int, string>       $defauts
      * @param array{id: ?int, libelle: string} $assureur
      * @param array{id: ?int, libelle: ?string} $piste
+     * @param array<int, string>       $avertissements ce qui n'a PAS pu être dérivé
      */
-    private function avecDefauts(AiToolResult $resultat, array $defauts, array $assureur, array $piste): AiToolResult
-    {
+    private function avecDefauts(
+        AiToolResult $resultat,
+        array $defauts,
+        array $assureur,
+        array $piste,
+        array $avertissements = [],
+    ): AiToolResult {
         if (($resultat->data['pret'] ?? false) !== true) {
             return $resultat;
         }
@@ -721,8 +790,15 @@ final class SaisirPropositionTool implements AiToolProduisantUnPlan, AiToolEcrit
             $resolutions[] = sprintf('Opportunité : « %s ».', $piste['libelle']);
         }
 
+        $data = $resultat->data;
+        // Les avertissements du plan sont ceux de PlanBuilder : on s'AJOUTE à la liste,
+        // on ne la remplace pas — l'union « + » de PHP garderait la sienne en silence.
+        if ($avertissements !== []) {
+            $data['avertissements'] = array_merge($data['avertissements'] ?? [], $avertissements);
+        }
+
         return AiToolResult::ok(
-            $resultat->data + [
+            $data + [
                 'resolutions' => $resolutions,
                 'defauts'     => $defauts,
                 'noteDefauts' => 'ANNONCE ces « resolutions » et ces « defauts » dans ta réponse, en une ou deux '

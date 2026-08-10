@@ -46,9 +46,11 @@ du texte rédigé par l'assistant — deux listes :
 
 - **« Ce plan va enregistrer »** : chaque enregistrement qui sera créé, modifié ou
   supprimé, avec le décompte par rubrique.
-- **« Rien ne sera enregistré pour… »** : ce que le plan ne couvre pas. Si vous
-  aviez demandé le revenu de courtage et qu'il apparaît dans cette seconde liste,
-  c'est qu'il n'est PAS dans le plan — dites-le avant de valider.
+- **« Rien ne sera enregistré pour… »** : ce que le plan ne couvre pas. Une rubrique
+  que vous croyiez incluse et qui apparaît dans cette seconde liste n'est PAS dans le
+  plan — dites-le avant de valider. Le revenu de courtage, lui, ne devrait plus jamais
+  y figurer : il est ajouté d'office (voir ci-dessous). S'il y figure, c'est le signe
+  d'une configuration incomplète, et l'assistant vous dira laquelle.
 
 Après exécution, le journal énumère ligne par ligne ce qui a réellement été écrit.
 C'est la seule source de vérité : rien n'est jamais « généré automatiquement » en
@@ -83,10 +85,24 @@ vous prévient avant la validation que le fichier ne sera pas conservé en base.
 
 - **Composition de la prime** : chaque composante porte un nom, un montant et un
   TYPE de chargement. Sans le type, la commission ne peut pas se calculer.
-- **Revenu du courtier** : le type de revenu est obligatoire — c'est lui qui porte
-  le taux et la base de calcul. L'assistant dispose, pour chaque type, de son taux,
-  de son mode de calcul, de son chargement de base et de son redevable en clair :
-  il peut donc choisir « selon le taux relatif au risque » sans vous le redemander.
+- **Revenu du courtier : ajouté d'office.** Aucune proposition ne se place sans
+  commission, donc l'assistant ne vous la demande plus. Il retient les types de revenu
+  **dus par l'assureur** dont le chargement de base figure dans la prime que vous avez
+  dictée — la « Commission Ordinaire » sur la prime nette, et la « Commission sur
+  Fronting » seulement si vous avez dicté une ligne de fronting. Les frais payés par
+  le **client** (consultance, honoraires de gestion) se négocient : ils restent sur
+  demande explicite.
+  - **Le taux vient de la configuration du risque.** Rien n'est recopié dans le revenu :
+    le taux prescrit sur la fiche du risque (« % commission spécifique HT ») s'applique
+    à la lecture, et la commission suivra ce taux s'il change demain. À défaut, c'est
+    celui du type de revenu. L'assistant vous annonce lequel il a appliqué, et le montant.
+  - **Un taux jamais inventé.** Si le risque ne prescrit aucun taux et que le type n'en
+    porte pas, l'assistant ne présente PAS de plan : il vous demande le taux, en nommant
+    le risque concerné. Une commission écrite à zéro se lirait plus tard comme une
+    affaire sans rémunération.
+- **Échéancier : payable en une fois.** Sauf mention contraire, la prime fait une seule
+  tranche à 100 % à la date de prise d'effet. Le fractionnement est l'exception : dites
+  combien de tranches, et l'assistant les répartit sans perdre un centime sur l'arrondi.
 - **Taux en points** : un taux s'écrit et se stocke en POINTS — 15 pour 15 %, jamais
   0,15. C'est la même valeur à l'écran, dans la fiche et dans le plan : l'assistant
   reprend celle que vous dites, sans conversion.
