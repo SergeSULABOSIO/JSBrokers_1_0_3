@@ -7,11 +7,14 @@ use App\Ai\AiEngineFailure;
 use App\Ai\AiReply;
 use App\Ai\AiRequest;
 use App\Ai\Debit\BudgetDebit;
+use App\Ai\Routage\RouteurTrousse;
 use App\Ai\Scope\AiScope;
 use App\Ai\Telemetrie\JournalTokens;
-use App\Ai\Tool\AiToolConditionnel;
+use App\Ai\Tool\ActiverOutilsEcritureTool;
 use App\Ai\Tool\AiToolInterface;
 use App\Ai\Tool\AiToolResult;
+use App\Ai\Trousse\Trousse;
+use App\Ai\Trousse\TrousseCatalogue;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
@@ -62,6 +65,12 @@ final class GeminiAiEngine implements AiEngineInterface
     private const MAX_ATTENTE_CUMULEE_SECONDES = 25;
 
     /**
+     * Une seule escalade par message. Au-delà, ce n'est plus un aiguillage raté mais
+     * une boucle : le modèle réclamerait indéfiniment des outils qu'il tient déjà.
+     */
+    private const MAX_ESCALADES = 1;
+
+    /**
      * Ratio octets → tokens MESURÉ sur la campagne (3,52 le 2026-08-08), et non
      * supposé. Sert à estimer ce que coûtera le tour suivant avant de le lancer.
      */
@@ -73,6 +82,10 @@ final class GeminiAiEngine implements AiEngineInterface
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly AiContextBuilder $contextBuilder,
+        // Source unique des outils déclarés — la MÊME que celle dont le prompt tire
+        // sa section d'aiguillage.
+        private readonly TrousseCatalogue $trousseCatalogue,
+        private readonly RouteurTrousse $routeur,
         #[AutowireIterator('app.ai_tool')] iterable $tools,
         #[Autowire(env: 'GEMINI_API_KEY')] private readonly string $apiKey,
         #[Autowire(env: 'GEMINI_MODEL')] private readonly string $model,
@@ -139,8 +152,24 @@ final class GeminiAiEngine implements AiEngineInterface
         $sequenceOutils = [];
         $attenteCumulee = 0;
 
+        // TROUSSE du message : décidée UNE FOIS, avant la boucle. Elle ne bouge
+        // ensuite que sur escalade explicite du modèle — un préfixe qui changerait
+        // à chaque tour ne serait jamais mis en cache, et le cache tient 75 % du
+        // payload (jusqu'à 86 % sur les tours tardifs).
+        $routage = $this->routeur->router($request);
+        $trousse = $routage['trousse'];
+        $this->journal->routage(
+            $request,
+            $this->name(),
+            $trousse->libelle(),
+            (string) $routage['origine'],
+            (int) $routage['tokens'],
+            (int) $routage['millisecondes'],
+        );
+        $escalades = 0;
+
         for ($round = 0; $round <= self::MAX_TOOL_ROUNDS; $round++) {
-            ['reponse' => $response, 'octets' => $octets] = $this->appelerAvecReessai($request, $contents);
+            ['reponse' => $response, 'octets' => $octets] = $this->appelerAvecReessai($request, $contents, $trousse);
 
             $usage = $response['usageMetadata'] ?? [];
             $tokensDuTour = (int) ($usage['promptTokenCount'] ?? 0);
@@ -227,6 +256,16 @@ final class GeminiAiEngine implements AiEngineInterface
                 }
                 if ($result->uiAction !== null) {
                     $actions[] = $result->uiAction;
+                }
+                // ESCALADE : le modèle réclame les outils d'écriture, qui ne lui ont
+                // pas été déclarés. On bascule pour les tours suivants de CE message.
+                // Le tour en cours est déjà parti — c'est le prix d'un aiguillage
+                // raté, et il se paie au tarif réduit de la trousse de lecture.
+                $demandee = $result->data[ActiverOutilsEcritureTool::CLE_TROUSSE] ?? null;
+                if ($demandee !== null && $escalades < self::MAX_ESCALADES) {
+                    $trousse = Trousse::depuis((string) $demandee);
+                    $escalades++;
+                    $this->journal->escalade($request, $this->name(), $trousse->libelle(), $round + 1);
                 }
                 $responseParts[] = [
                     'functionResponse' => [
@@ -381,10 +420,10 @@ final class GeminiAiEngine implements AiEngineInterface
      * au-delà, l'exception remonte au contrôleur, qui sait déjà l'expliquer
      * (AiEngineFailure) et journaliser le quota violé.
      */
-    private function appelerAvecReessai(AiRequest $request, array $contents): array
+    private function appelerAvecReessai(AiRequest $request, array $contents, Trousse $trousse): array
     {
         try {
-            return $this->call($request, $contents);
+            return $this->call($request, $contents, $trousse);
         } catch (\Throwable $e) {
             $delai = AiEngineFailure::estLimiteDeDebit($e)
                 ? AiEngineFailure::secondesAvantNouvelEssai($e)
@@ -400,7 +439,7 @@ final class GeminiAiEngine implements AiEngineInterface
             ]);
             ($this->dormir ?? static fn (int $s) => sleep($s))($delai);
 
-            return $this->call($request, $contents);
+            return $this->call($request, $contents, $trousse);
         }
     }
 
@@ -414,10 +453,10 @@ final class GeminiAiEngine implements AiEngineInterface
      *
      * @return array{reponse: array, octets: array<string, int>}
      */
-    private function call(AiRequest $request, array $contents): array
+    private function call(AiRequest $request, array $contents, Trousse $trousse): array
     {
-        $promptSysteme = $this->contextBuilder->toSystemPrompt($request);
-        $declarations = $this->toolDeclarations($request->scope);
+        $promptSysteme = $this->contextBuilder->toSystemPrompt($request, $trousse);
+        $declarations = $this->toolDeclarations($request->scope, $trousse);
 
         $response = $this->httpClient->request('POST', sprintf('%s/%s:generateContent', self::API_BASE, $this->model), [
             'headers' => [
@@ -453,13 +492,10 @@ final class GeminiAiEngine implements AiEngineInterface
      * Le filtrage n'est PAS une sécurité (elle reste dans execute(), fail-closed)
      * mais une économie de débit — cf. AiToolConditionnel.
      */
-    private function toolDeclarations(AiScope $scope): array
+    private function toolDeclarations(AiScope $scope, Trousse $trousse): array
     {
         $declarations = [];
-        foreach ($this->tools as $tool) {
-            if ($tool instanceof AiToolConditionnel && !$tool->estDisponible($scope)) {
-                continue;
-            }
+        foreach ($this->trousseCatalogue->outilsDe($trousse, $scope) as $tool) {
             $declarations[] = [
                 'name'        => $tool->name(),
                 'description' => $tool->description(),

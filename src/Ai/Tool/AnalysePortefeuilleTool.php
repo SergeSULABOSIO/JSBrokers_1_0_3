@@ -81,6 +81,14 @@ final class AnalysePortefeuilleTool implements AiToolInterface
             . 'Pour un indicateur unitaire, préférer indicateur_calcule.';
     }
 
+    public function aiguillage(): string
+    {
+        return '« chiffre d\'affaires / CA VENTILÉ par assureur / risque / client / portefeuille / partenaire » '
+            . '(analyse=chiffre_affaires, dimension=<axe>) ; « CA par mois / mensuel » '
+            . '(chiffre_affaires_mensuel : HT et TTC, mois par mois) ; « compensations / indemnisations '
+            . 'SINISTRES ventilées » (analyse=sinistres, dimension=<axe> : montants payable / payé / solde).';
+    }
+
     public function schema(): array
     {
         return [

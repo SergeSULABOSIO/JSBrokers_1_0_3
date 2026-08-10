@@ -51,6 +51,11 @@ final class StatistiquesTool implements AiToolInterface
             . 'indicateur_calcule. En cas de champ invalide, la réponse liste les champs valides.';
     }
 
+    public function aiguillage(): string
+    {
+        return 'Répartitions, moyennes et sommes sur des champs STOCKÉS (par opposition aux chiffres calculés).';
+    }
+
     public function schema(): array
     {
         return [

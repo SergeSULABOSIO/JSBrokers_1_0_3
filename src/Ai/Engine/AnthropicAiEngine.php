@@ -6,9 +6,10 @@ use App\Ai\AiContextBuilder;
 use App\Ai\AiReply;
 use App\Ai\AiRequest;
 use App\Ai\Scope\AiScope;
-use App\Ai\Tool\AiToolConditionnel;
 use App\Ai\Tool\AiToolInterface;
 use App\Ai\Tool\AiToolResult;
+use App\Ai\Trousse\Trousse;
+use App\Ai\Trousse\TrousseCatalogue;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -42,6 +43,9 @@ final class AnthropicAiEngine implements AiEngineInterface
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly AiContextBuilder $contextBuilder,
+        // Même source que le prompt système : les deux doivent être dérivés du même
+        // tableau d'outils, sans quoi une consigne peut nommer un outil non déclaré.
+        private readonly TrousseCatalogue $trousseCatalogue,
         #[AutowireIterator('app.ai_tool')] iterable $tools,
         #[Autowire(env: 'ANTHROPIC_API_KEY')] private readonly string $apiKey,
         #[Autowire(env: 'ANTHROPIC_MODEL')] private readonly string $model,
@@ -205,10 +209,12 @@ final class AnthropicAiEngine implements AiEngineInterface
     private function toolDefinitions(AiScope $scope): array
     {
         $definitions = [];
-        foreach ($this->tools as $tool) {
-            if ($tool instanceof AiToolConditionnel && !$tool->estDisponible($scope)) {
-                continue;
-            }
+        // Même source que le prompt système (TrousseCatalogue) : c'est ce qui
+        // interdit qu'une consigne nomme un outil non déclaré. Ce moteur reste sur
+        // la trousse COMPLÈTE — le routage n'est implémenté que côté Gemini, et un
+        // moteur qui déclarerait moins d'outils que son prompt n'en nomme serait
+        // exactement le défaut qu'on cherche à éliminer.
+        foreach ($this->trousseCatalogue->outilsDe(Trousse::ECRITURE, $scope) as $tool) {
             $definitions[] = [
                 'name'         => $tool->name(),
                 'description'  => $tool->description(),

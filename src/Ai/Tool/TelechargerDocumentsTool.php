@@ -45,6 +45,13 @@ final class TelechargerDocumentsTool implements AiToolInterface
             . 'Ne prétends jamais ne pas pouvoir fournir le téléchargement d\'un document dont tu as l\'id.';
     }
 
+    public function aiguillage(): string
+    {
+        return 'Le téléchargement d\'un DOCUMENT enregistré en base (entité Document : documents d\'un avenant, '
+            . 'd\'un client, d\'un sinistre). Récupère d\'abord les id via rechercher_entites ou lire_fiche '
+            . '(entite=Document). J\'affiche des boutons de téléchargement sécurisés sous ta réponse.';
+    }
+
     public function schema(): array
     {
         return [

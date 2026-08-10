@@ -80,6 +80,13 @@ final class PaiementsPrimeTool implements AiToolInterface, AiToolConditionnel
             . 'encaissements du courtier). Pour EN CRÉER un, utiliser signaler_paiement_prime.';
     }
 
+    public function aiguillage(): string
+    {
+        return 'Le paiement de la PRIME par l\'assuré : « la prime a-t-elle été payée ? », « quels paiements de '
+            . 'prime signalés, quand, pour quel montant ? » (trancheId pour une tranche précise). Ne confonds '
+            . 'jamais avec l\'entité Paiement, qui est la trésorerie du cabinet.';
+    }
+
     public function schema(): array
     {
         return [

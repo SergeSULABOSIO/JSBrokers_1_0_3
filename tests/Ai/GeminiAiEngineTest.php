@@ -2,17 +2,28 @@
 
 namespace App\Tests\Ai;
 
-use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\AiContextBuilder;
 use App\Ai\AiRequest;
 use App\Ai\Debit\BudgetDebit;
 use App\Ai\Engine\GeminiAiEngine;
+use App\Ai\Mutation\OutilsDePlan;
+use App\Ai\Mutation\PlanEnAttente;
+use App\Ai\Programme\ProgrammeEnCours;
+use App\Ai\Routage\CatalogueCondense;
+use App\Ai\Routage\RouteurModele;
+use App\Ai\Routage\RouteurTrousse;
 use App\Ai\Scope\AiScope;
 use App\Ai\Telemetrie\JournalTokens;
+use App\Ai\Tool\ActiverOutilsEcritureTool;
 use App\Ai\Tool\AiToolInterface;
 use App\Ai\Tool\AiToolResult;
+use App\Ai\Trousse\AiToolEcriture;
+use App\Ai\Trousse\Trousse;
+use App\Ai\Trousse\TrousseCatalogue;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Repository\AssistantProgrammeRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\AbstractLogger;
 use Psr\Log\NullLogger;
@@ -43,6 +54,140 @@ class GeminiAiEngineTest extends TestCase
         );
     }
 
+    /**
+     * Routeur FIGÉ : ces tests portent sur la boucle de function calling, pas sur
+     * l'aiguillage (couvert par RouteurTrousseTest). On fixe donc la trousse, sans
+     * quoi chaque cas dépendrait d'un appel réseau supplémentaire.
+     */
+    private function routeurFige(Trousse $trousse): RouteurTrousse
+    {
+        $modele = new class($trousse) implements RouteurModele {
+            public function __construct(private Trousse $trousse)
+            {
+            }
+
+            public function choisirTrousse(string $instruction, string $catalogue, array $messages): array
+            {
+                return ['trousse' => $this->trousse->value, 'tokens' => 0];
+            }
+        };
+
+        $em = $this->createMock(EntityManagerInterface::class);
+
+        return new RouteurTrousse(
+            $modele,
+            new CatalogueCondense(new TrousseCatalogue([])),
+            new PlanEnAttente($em),
+            // Classes finales : on les construit réellement. Sans conversation dans
+            // le scope, les deux court-circuits sont inopérants — c'est exactement
+            // l'état voulu pour tester la boucle, pas l'aiguillage.
+            new ProgrammeEnCours($this->createMock(AssistantProgrammeRepository::class), $em),
+            new NullLogger(),
+        );
+    }
+
+    /**
+     * ESCALADE : routé en lecture, le modèle réclame les outils d'écriture. Le tour
+     * suivant doit les DÉCLARER — sinon l'aiguillage transformerait une capacité
+     * réelle en refus, exactement ce que le prompt lui interdit de formuler.
+     */
+    public function testLEscaladeDonneLesOutilsDEcritureAuTourSuivant(): void
+    {
+        $declarations = [];
+        $http = new MockHttpClient(function ($method, $url, $options) use (&$declarations) {
+            $corps = json_decode($options['body'], true);
+            $declarations[] = array_column($corps['tools'][0]['functionDeclarations'] ?? [], 'name');
+
+            // 1er tour : le modèle réclame les outils d'écriture. 2e : il répond.
+            $premier = count($declarations) === 1;
+
+            return new MockResponse(json_encode([
+                'candidates' => [[
+                    'content' => ['parts' => $premier
+                        ? [['functionCall' => ['name' => 'activer_outils_ecriture', 'args' => new \stdClass()]]]
+                        : [['text' => 'Voici le plan.']]],
+                ]],
+                'usageMetadata' => ['promptTokenCount' => 10, 'candidatesTokenCount' => 5],
+            ]));
+        });
+
+        $outils = [new ActiverOutilsEcritureTool(), $this->makeOutilDEcriture()];
+        $moteur = new GeminiAiEngine(
+            $http,
+            $this->contextBuilderFige(),
+            new TrousseCatalogue($outils),
+            $this->routeurFige(Trousse::LECTURE),
+            $outils,
+            'gm-test',
+            'gemini-2.5-flash',
+            new NullLogger(),
+            new JournalTokens(new NullLogger(), new OutilsDePlan([])),
+            $this->makeBudget(),
+        );
+
+        $moteur->reply($this->makeRequest('Crée-moi un client'));
+
+        $this->assertSame(
+            ['activer_outils_ecriture'],
+            $declarations[0],
+            'Le premier tour est en lecture : aucun outil d’écriture, mais l’escalade est offerte.',
+        );
+        $this->assertContains(
+            'preparer_operations',
+            $declarations[1],
+            'Après escalade, les outils d’écriture doivent être déclarés.',
+        );
+        $this->assertNotContains(
+            'activer_outils_ecriture',
+            $declarations[1],
+            'Une fois les outils donnés, réclamer n’a plus de sens.',
+        );
+    }
+
+    private function contextBuilderFige(): AiContextBuilder
+    {
+        $builder = $this->createMock(AiContextBuilder::class);
+        $builder->method('toSystemPrompt')->willReturn('SYSTEM');
+
+        return $builder;
+    }
+
+    /** Doublure d'un outil d'écriture : il porte le marqueur, donc la trousse le range. */
+    private function makeOutilDEcriture(): AiToolInterface
+    {
+        return new class implements AiToolInterface, AiToolEcriture {
+            public function name(): string
+            {
+                return 'preparer_operations';
+            }
+
+            public function description(): string
+            {
+                return 'Prépare un plan.';
+            }
+
+            public function aiguillage(): string
+            {
+                return '';
+            }
+
+            public function schema(): array
+            {
+                return ['type' => 'object', 'properties' => new \stdClass()];
+            }
+
+            public function match(string $question, AiScope $scope): ?array
+            {
+                return null;
+            }
+
+            public function execute(array $args, AiScope $scope): AiToolResult
+            {
+                return AiToolResult::ok(['pret' => true]);
+            }
+        };
+    }
+
     private function makeTool(AiToolResult $result): AiToolInterface
     {
         return new class($result) implements AiToolInterface {
@@ -60,6 +205,11 @@ class GeminiAiEngineTest extends TestCase
             public function description(): string
             {
                 return 'Compte les enregistrements.';
+            }
+
+            public function aiguillage(): string
+            {
+                return '';
             }
 
             public function schema(): array
@@ -125,6 +275,8 @@ class GeminiAiEngineTest extends TestCase
         return new GeminiAiEngine(
             $http,
             $contextBuilder,
+            new TrousseCatalogue($tools),
+            $this->routeurFige(Trousse::ECRITURE),
             $tools,
             'gm-test',
             'gemini-2.5-flash',
@@ -244,6 +396,11 @@ class GeminiAiEngineTest extends TestCase
             public function description(): string
             {
                 return 'Ouvre un formulaire.';
+            }
+
+            public function aiguillage(): string
+            {
+                return '';
             }
 
             public function schema(): array

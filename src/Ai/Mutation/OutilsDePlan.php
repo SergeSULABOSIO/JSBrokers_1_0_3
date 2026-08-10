@@ -70,9 +70,30 @@ final class OutilsDePlan
      * si aucun outil n'est marqué (configuration dégradée) — l'appelant garde
      * alors une phrase valide, sans liste mensongère.
      */
+    /**
+     * Énumération restreinte aux outils RÉELLEMENT déclarés ce tour-ci.
+     *
+     * Deux outils de plan sont conditionnels (marquage non renouvelable, signalement
+     * de paiement) : hors du périmètre de l'invité, ils ne sont pas déclarés. Les
+     * nommer quand même dans la règle anti-plan-fantôme ferait croire au modèle qu'il
+     * dispose d'une capacité absente — exactement la situation que cette règle existe
+     * pour empêcher.
+     *
+     * @param list<string> $nomsDeclares
+     */
+    public function enumerationParmi(array $nomsDeclares): string
+    {
+        return $this->enumerationDe(array_values(array_intersect($this->noms(), $nomsDeclares)));
+    }
+
     public function enumeration(): string
     {
-        $noms = $this->noms();
+        return $this->enumerationDe($this->noms());
+    }
+
+    /** @param list<string> $noms */
+    private function enumerationDe(array $noms): string
+    {
         if ($noms === []) {
             return '';
         }

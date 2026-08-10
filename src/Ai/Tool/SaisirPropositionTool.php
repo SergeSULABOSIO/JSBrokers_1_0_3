@@ -2,6 +2,8 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Trousse\AiToolEcriture;
+
 use App\Ai\Mutation\MutationPlan;
 use App\Ai\Mutation\PlanBuilder;
 use App\Ai\Parcours\ParcoursCatalogue;
@@ -41,7 +43,7 @@ use App\Services\JSBDynamicSearchService;
  * FAIL-CLOSED : droit d'écriture sur Cotation vérifié ici, puis re-vérifié par
  * WorkspaceMutationService pour chaque opération du plan.
  */
-final class SaisirPropositionTool implements AiToolProduisantUnPlan
+final class SaisirPropositionTool implements AiToolProduisantUnPlan, AiToolEcriture
 {
     /** Le parcours exécuté par cet outil (sa trame porte les libellés d'étape). */
     private const PARCOURS = 'proposition';
@@ -90,6 +92,14 @@ final class SaisirPropositionTool implements AiToolProduisantUnPlan
             . 'S\'il manque une information ou qu\'un nom est ambigu, l\'outil te le dit avec les valeurs '
             . 'disponibles : pose alors UNE question groupée, puis rappelle-le. '
             . 'Pour une saisie qui n\'est PAS une proposition d\'assureur, utilise preparer_operations.';
+    }
+
+    public function aiguillage(): string
+    {
+        return 'Une PROPOSITION d\'assureur que l\'utilisateur te DICTE (« voici l\'offre de SFA », « j\'ai reçu une '
+            . 'cotation », « enregistre cette proposition »), avec ou sans le détail de la prime. Appelle-moi '
+            . 'DIRECTEMENT, sans aucune recherche préalable : je résous l\'assureur, la piste et les types de '
+            . 'chargement par leur NOM, et je rends le plan complet en un seul appel.';
     }
 
     public function schema(): array

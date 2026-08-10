@@ -25,6 +25,25 @@ interface AiToolInterface
     /** Description destinée au modèle (à quoi sert l'outil, quand l'appeler). */
     public function description(): string;
 
+    /**
+     * RÈGLE D'AIGUILLAGE : « dans telle situation, appelle-moi ». Une ou deux
+     * phrases, à la deuxième personne, reprenant les mots que l'utilisateur emploie
+     * réellement. Chaîne vide quand la description suffit.
+     *
+     * Ces règles vivaient en prose dans le prompt système — 107 mentions d'outils
+     * en dur, portant sur 30 des 33 outils. Dès lors que les déclarations envoyées
+     * varient selon la trousse, cette prose devenait mensongère : elle nommait des
+     * outils absents du tour, et le modèle finissait par « appeler » un outil
+     * inexistant ou par recopier un plan sans bouton. La section d'aiguillage est
+     * donc GÉNÉRÉE à partir des outils RÉELLEMENT déclarés — c'est ici, et nulle
+     * part ailleurs, que chaque règle vit.
+     *
+     * CONTRAINTE : ne nomme jamais un outil d'une AUTRE trousse (un outil de lecture
+     * ne renvoie pas vers un outil d'écriture, absent du tour). PromptSansOutilFantomeTest
+     * échoue si la règle est violée.
+     */
+    public function aiguillage(): string;
+
     /** JSON-Schema des arguments (format tool-calling standard). */
     public function schema(): array;
 

@@ -60,6 +60,17 @@ final class SuiviImpayesTool implements AiToolInterface, AiToolConditionnel
             . 'perimetre). Restreignable à un client ou une cotation via lieA.';
     }
 
+    public function aiguillage(): string
+    {
+        return '« primes impayées / encore dues / que les clients doivent » => axes {prime: impayee} ; « '
+            . 'commissions à recouvrer auprès des assureurs / exigibles / à collecter » => axes {prime: payee, '
+            . 'commission: impayee} ; « rétros à reverser aux partenaires » => axes {retro: impayee, '
+            . 'commission: payee} ; « relances en retard » => ajoute {echeance: echue}. Il n\'existe AUCUN '
+            . 'filtre « impayé » global : le mot désignerait deux dettes de débiteurs différents à la fois. Si '
+            . 'l\'utilisateur reste vague, appelle sans axe de dette et LIS le bloc « repartition » de la '
+            . 'sortie, qui donne les deux comptes nommés — puis dis lequel il veut traiter.';
+    }
+
     public function schema(): array
     {
         return [

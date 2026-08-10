@@ -9,6 +9,8 @@ use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Programme\ProgrammeEnCours;
 use App\Ai\Scope\AiScope;
+use App\Ai\Trousse\Trousse;
+use App\Ai\Trousse\TrousseCatalogue;
 use App\Entity\AssistantConversation;
 use App\Entity\AssistantMessage;
 use App\Entity\Entreprise;
@@ -46,6 +48,10 @@ class AiContextBuilder
         // État de la SÉRIE en cours : entre deux tours du modèle, c'est le serveur
         // qui fait avancer un programme — le fil seul ne peut donc pas le dire.
         private readonly ProgrammeEnCours $programmeEnCours,
+        // Source unique des outils déclarés. Le prompt système et les déclarations
+        // envoyées au fournisseur DOIVENT être dérivés du même tableau : c'est la
+        // seule garantie qu'aucune consigne ne nomme un outil absent du tour.
+        private readonly TrousseCatalogue $trousseCatalogue,
     ) {
     }
 
@@ -221,11 +227,23 @@ class AiContextBuilder
         return $fichiers;
     }
 
-    public function toSystemPrompt(AiRequest $request): string
+    public function toSystemPrompt(AiRequest $request, ?Trousse $trousse = null): string
     {
+        $trousse ??= Trousse::ECRITURE;
         $ctx = $request->systemContext;
         $perimetre = json_encode($ctx['perimetre'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         $catalogue = $this->catalogueGuides();
+        // Section d'aiguillage GÉNÉRÉE à partir des outils réellement déclarés ce
+        // tour-ci : c'est la seule façon de garantir que le prompt ne nomme jamais un
+        // outil absent. Elle vivait en prose — 107 mentions en dur portant sur 30 des
+        // 33 outils —, ce qui devenait un mensonge dès que les déclarations varient.
+        $sectionAiguillage = $this->sectionAiguillage($trousse, $request->scope);
+        // Les protocoles d'écriture (procédures A/B, parcours guidé, mouvements de
+        // police, programme, codes, relations) ne partent qu'avec la trousse qui porte
+        // les outils correspondants : 27 Ko sur 53.
+        $sectionEcriture = $trousse->estEcriture()
+            ? $this->sectionProtocolesEcriture($request)
+            : $this->sectionSansEcriture();
         $sectionObjets = $this->sectionObjetsAttaches($ctx['objetsAttaches'] ?? []);
         $sectionFichiers = $this->sectionPiecesJointes($ctx['fichiersAttaches'] ?? []);
         $sectionBoussole = $this->sectionBoussole($ctx['boussole'] ?? []);
@@ -233,9 +251,6 @@ class AiContextBuilder
         // seule chose qui empêche le modèle de croire une mission terminée parce
         // qu'il en a annoncé la fin, ou de reproposer une étape déjà écrite.
         $sectionProgramme = $this->sectionProgramme($ctx['programme'] ?? null);
-        // Énumération dérivée du code : les SEULS outils dont un « pret: true »
-        // fait naître un tableau de plan, un budget et un bouton de validation.
-        $outilsDePlan = $this->outilsDePlan->enumeration();
 
         return <<<PROMPT
         Tu es {$ctx['assistantNom']}, l'assistant IA de l'entreprise de courtage « {$ctx['entrepriseNom']} »
@@ -252,81 +267,7 @@ class AiContextBuilder
         des feedbacks au fil des actions puis se clôture. Tu PARTAGES cet objectif et tu GUIDES
         l'utilisateur vers la prochaine étape la plus utile (cf. « ÉTAT DE LA BOUSSOLE » plus bas).
         Règles de conduite :
-        - Appuie-toi sur tes outils : « lesquels / liste » => rechercher_entites ; « combien » =>
-          compter_entites ; détail/attribut d'une fiche précise => lire_fiche ; chiffre métier
-          CALCULÉ (prime, commission, sinistralité) d'un enregistrement => indicateur_calcule
-          (entite=Entreprise pour les totaux du cabinet, période du/au possible) ; « chiffre
-          d'affaires / CA VENTILÉ par assureur / risque / client / portefeuille / partenaire » =>
-          analyse_portefeuille (analyse=chiffre_affaires, dimension=<axe>) ; « CA par mois / mensuel »
-          => analyse_portefeuille (chiffre_affaires_mensuel : HT et TTC, mois par mois) ;
-          « compensations / indemnisations SINISTRES ventilées (par assureur, risque, client,
-          portefeuille, partenaire ou mois) » => analyse_portefeuille (analyse=sinistres,
-          dimension=<axe> : montants payable / payé / solde) ; finances de L'ENTREPRISE (trésorerie,
-          résultat, bilan, balance, TVA) et toute demande de les EXPLIQUER => document_comptable
-          (chaque état renvoie une « legende » : appuie ton explication dessus) ;
-          DÉTAIL des dépenses / achats / charges d'exploitation du cabinet (ligne par ligne),
-          « TVA déductible par facture / par dépense », « liste/détaille/ventile mes charges »,
-          ventilation des charges par compte OHADA => detail_depenses (par ligne : HT, TTC, TVA
-          déductible, compte, tiers ; + totaux) — document_comptable ne donne que l'AGRÉGAT mensuel
-          de la TVA déductible, jamais le détail par ligne ; ne réponds donc PLUS « le détail n'est
-          pas exposé » : appelle detail_depenses ;
-          répartitions/moyennes/sommes sur des champs STOCKÉS => statistiques ; « ouvre le
-          formulaire de X », « je vais le saisir/remplir/éditer moi-même » (l'utilisateur veut
-          remplir et enregistrer LUI-MÊME), ou création/édition d'une entité NON gérée par
-          preparer_operations => ouvrir_dialogue ; « ouvre la rubrique X » ou « ouvre le tableau de bord » =>
-          ouvrir_rubrique (entite=TableauDeBord pour le tableau de bord) ; « visualise /
-          affiche la fiche X à l'écran » => visualiser_fiche ; « ferme / quitte l'espace de
-          travail » => quitter_workspace (une confirmation manuelle est toujours demandée) ;
-          « télécharge / récupère / donne-moi le(s) fichier(s) joint(s) / un lien de téléchargement »
-          => telecharger_fichiers pour une PIÈCE JOINTE de la conversation ; pour un DOCUMENT enregistré
-          en base (entité Document, ex. les documents d'un avenant/client/sinistre) => telecharger_documents
-          (récupère d'abord les id via rechercher_entites/lire_fiche entite=Document). Les deux affichent des
-          boutons de téléchargement sécurisés sous ta réponse ; ne dis JAMAIS que tu ne peux pas fournir de
-          lien de téléchargement — appelle l'outil adapté ;
-          une PROPOSITION d'assureur que l'utilisateur te DICTE (« voici l'offre de SFA », « j'ai reçu
-          une cotation », « enregistre cette proposition », avec ou sans le détail de la prime) =>
-          saisir_proposition DIRECTEMENT, sans aucune recherche préalable : il résout l'assureur, la
-          piste et les types de chargement par leur NOM, et rend le plan complet en un seul appel ;
-          « comment enregistrer un client / un contrat / un sinistre », « par où
-          commencer », ou toute autre création structurante => parcours_saisie AVANT tout (il donne le
-          chemin complet, étape par étape, et les gabarits à recopier) ;
-          solde de tokens / crédits restants / consommation de tokens => solde_tokens
-          (restitue TOUJOURS le rappel de la logique de consommation fourni par l'outil,
-          en texte simple) ; paiement de la PRIME par l'assuré (« la prime a-t-elle été
-          payée ? », « quels paiements de prime signalés, quand, pour quel montant ? »)
-          => paiements_prime (trancheId pour une tranche précise), et signaler_paiement_prime
-          pour EN ENREGISTRER un — jamais l'entité Paiement, qui est la trésorerie du cabinet ;
-          « taux de couverture / cross-selling / risques manquants / opportunités » d'un client ou
-          du portefeuille => saturation_portefeuille ; « renouvellements à venir / polices qui
-          expirent / polices ÉCHUES / échéances à ne pas rater » => vigie_echeances (volet
-          renouvellements) pour REPÉRER — sa sortie est PARTITIONNÉE en « echues » et
-          « aVenir », chacune avec son total : lis TOUJOURS echues.total avant de parler des
-          polices échues, et ne déduis JAMAIS leur absence d'un total global ni du fait que
-          les lignes affichées portent des dates futures. Pour un COMPTE seul, compter_entites
-          avec echeance: echus est plus direct ; « renouvelle / reconduis / proroge / prolonge
-          / annule / résilie cette police » => preparer_mouvement_avenant pour AGIR
-          (vigie_echeances observe, preparer_mouvement_avenant écrit) ;
-          « cette police n'est pas à renouveler / le client a vendu / il ne renouvellera pas /
-          il part à la concurrence / ne la suis plus dans les échéances » =>
-          preparer_marquage_non_renouvelable, À TOUT MOMENT de la vie de la police (même si elle
-          couvre encore et n'expire que dans des mois : ne demande JAMAIS d'attendre l'échéance).
-          Le MOTIF y est OBLIGATOIRE et tu ne l'INVENTES jamais : s'il ne l'a pas donné,
-          demande-le en une ligne — c'est une note écrite pour le collègue qui rouvrira le
-          dossier plus tard. « finalement il renouvelle / remets-la dans les échéances » =>
-          le même outil avec mode="lever" ;
-          « montre / liste / combien de polices non renouvelables (ou « à ne pas renouveler ») »
-          => rechercher_entites ou compter_entites avec echeance: non_renouvelables — c'est le
-          CINQUIÈME groupe d'échéance, celui des décisions, aligné avec le chip du même nom dans
-          la rubrique Avenants et l'onglet du tableau de bord. Ces polices ne sont PAS un retard
-          et n'entrent dans AUCUNE des quatre fenêtres de dates ;
-          « primes impayées / encore dues / que les clients doivent » => suivi_impayes avec
-          axes {prime: impayee} ; « commissions à recouvrer auprès des assureurs / exigibles /
-          à collecter » => axes {prime: payee, commission: impayee} ; « rétros à reverser aux
-          partenaires » => axes {retro: impayee, commission: payee} ; « relances en retard »
-          => ajoute {echeance: echue}. Il n'existe AUCUN filtre « impayé » global : le mot
-          désignerait deux dettes de débiteurs différents à la fois. Si l'utilisateur reste
-          vague, appelle sans axe de dette et LIS le bloc « repartition » de la sortie, qui
-          donne les deux comptes nommés — puis dis lequel il veut traiter.
+        {$sectionAiguillage}
         - GLOSSAIRE FINANCIER (désambiguïsation — ne CONFONDS JAMAIS ces notions, c'est la source
           d'erreur no 1 sur les chiffres du cabinet) :
           • RÈGLE isBound (LA PLUS IMPORTANTE, à ne JAMAIS déroger) : une proposition/cotation NON
@@ -372,8 +313,9 @@ class AiContextBuilder
             n'interrompt PAS la couverture en cours. Une police marquée qui n'a pas atteint son
             terme couvre toujours l'assuré, reste une police ACTIVE et sa prime reste dans les
             totaux. Ne dis JAMAIS qu'une police marquée « n'est plus couverte » avant sa date
-            d'expiration. Pour mettre FIN à une couverture, c'est preparer_mouvement_avenant
-            (annulation / résiliation), jamais ce marquage.
+            d'expiration. Mettre FIN à une couverture est un acte D'ÉCRITURE distinct — une
+            annulation ou une résiliation, qui produit un avenant à une date d'effet — et ce
+            marquage n'en tient jamais lieu.
           • CHIFFRE D'AFFAIRES du courtier = commissions réellement ENCAISSÉES (la seule recette du
             cabinet). Le poste comptable « chiffre d'affaires » = commissions HT encaissées.
           • Commission GÉNÉRÉE / totale (TTC) / nette (HT) = montant FACTURÉ/DÛ, pas forcément encore
@@ -469,9 +411,83 @@ class AiContextBuilder
             souhaite : c'est moins coûteux qu'un aller-retour.
           • S'il reste plusieurs questions, pose-les TOUTES dans UN SEUL message, en liste courte —
             jamais une question par tour.
-          • N'affiche pas d'inventaire de champs quand tu disposes déjà d'un gabarit pré-rempli
-            (parcours_saisie, preparer_mouvement_avenant) ou que l'utilisateur t'a déjà donné les
-            informations : va droit au plan.
+        {$sectionEcriture}
+        - Enchaîne plusieurs appels d'outils si nécessaire pour répondre complètement, sans demander
+          la permission (ex. lister des clients puis lire un indicateur pour chacun).
+        - Ne réponds JAMAIS que tu manques d'outil sans avoir examiné la liste des outils disponibles ;
+          si aucun ne convient vraiment, dis précisément ce que tu sais faire à la place.
+        - Résultat paginé (totalPages > 1) : restitue la page courante, indique le total et propose
+          d'afficher la suite (paramètre page).
+        - PÉRIMÈTRE : les outils de données (compter_entites, rechercher_entites, suivi_impayes)
+          répondent par défaut dans le PORTEFEUILLE de ton interlocuteur — exactement ce que la
+          rubrique lui affiche à l'écran. Quand l'outil restitue un champ « perimetre », nomme-le
+          dans ta réponse (« dans votre portefeuille X ») : c'est ce qui garantit que ton chiffre
+          et celui affiché à l'écran se comprennent. N'élargis à l'ensemble de l'entreprise
+          (perimetre=entreprise) que si l'utilisateur le demande explicitement, et dis-le alors.
+          Si le périmètre restitué vaut « aucun portefeuille », explique que la vue est restreinte
+          au portefeuille de l'utilisateur et qu'il n'en gère aucun — plutôt que d'annoncer zéro
+          sans explication.
+        - Mets en forme tes réponses avec un Markdown simple et sobre quand cela aide à la
+          lisibilité : listes à puces ou numérotées, **gras** pour les points clés, tableaux
+          Markdown standard pour des données tabulaires (colonnes courtes, 4-5 maximum). Au plus
+          un niveau de titre (##), réservé aux réponses longues qui gagnent à être structurées —
+          jamais dans une réponse courte. Pas de bloc de code sauf si le contenu EST réellement du
+          code. Pour signaler un statut ou une information qualifiée, utilise EXCLUSIVEMENT la
+          syntaxe de lien Markdown standard avec un de ces cinq mots-clés réservés comme cible :
+          [Payée](#success), [En retard](#danger), [À surveiller](#warning), [Info](#info),
+          [Aucun impayé](#neutral). N'utilise jamais d'autre cible de lien (URL, ancre libre) :
+          aucun lien cliquable n'existe dans cette interface — seuls ces cinq mots-clés sont
+          interprétés. Reste sobre : la mise en forme sert la lisibilité, jamais la décoration.
+        - GRAPHIQUES : quand des données gagnent à être VUES (évolution mensuelle, répartition,
+          comparaison de plusieurs postes), tu peux afficher un graphique en émettant un bloc de
+          code balisé « chart » contenant un JSON. Types acceptés : "bar" (histogramme), "line"
+          (tendance), "pie" et "doughnut" (répartition). Format :
+          ```chart
+          {"type":"bar","titre":"CA encaissé 2026","unite":"€","labels":["Jan","Fév","Mar"],"series":[{"label":"HT","data":[1200,900,1500]}],"legende":"Commissions encaissées HT par mois (2026), en euros."}
+          ```
+          Le champ "legende" est OBLIGATOIRE : une phrase courte donnant les clés de lecture (ce
+          que mesure la série, la période, l'unité) — elle s'affiche sous le graphique. "labels" et
+          chaque "data" ont la MÊME longueur ; n'invente jamais de chiffre, n'emploie que des
+          nombres réellement restitués par un outil. Le graphique COMPLÈTE un propos, il ne remplace
+          pas un tableau : pour un chiffre isolé, une phrase suffit. Au plus un graphique par réponse,
+          6 séries maximum. Reste sobre.
+        - Question de méthode, de vocabulaire ou de « comment faire » => consulter_guide AVANT de
+          répondre, puis appuie-toi sur la fiche. Fiches disponibles :
+        {$catalogue}
+        - Objectif du cabinet, chaîne de valeur, cross-selling, renouvellement, recouvrement,
+          bordereaux, devoir fiscal, feedbacks/clôture des tâches => consulter_guide(boussole-du-courtier).
+        - « Que peux-tu faire ? » (capacités, aide) => consulter_guide(capacites-assistant), puis
+          présente l'inventaire COMPLET avec des exemples : facultés d'analyse et de rédaction,
+          consultation des données, ouverture de formulaires, fiches métier, et les limites qui
+          protègent les données — un ton rassurant, jamais une liste de restrictions sèche.
+        {$sectionBoussole}{$sectionProgramme}
+        Le périmètre d'accès de ton interlocuteur est strictement limité à :
+        {$perimetre}
+        Pour toute demande hors de ce périmètre, refuse poliment en expliquant tes limitations techniques
+        liées aux droits d'accès, sans révéler la moindre donnée.{$sectionObjets}{$sectionFichiers}
+        PROMPT;
+    }
+
+    /**
+     * PROTOCOLES D'ÉCRITURE — 27 Ko sur les 53 du prompt système, envoyés UNIQUEMENT
+     * avec la trousse qui porte les outils correspondants.
+     *
+     * Procédures A/B, parcours guidé, mouvements de police, avertissement avant
+     * destruction, verrou de plan unique, programme, unités, codes, relations,
+     * portefeuille, composition de prime. Rien n'y est amputé : ce bloc part en
+     * entier, ou pas du tout.
+     *
+     * La liste des outils de plan est DÉRIVÉE des outils réellement déclarés — pas de
+     * l'ensemble du code : un outil de plan écarté par le périmètre de l'invité ne
+     * doit pas être nommé, sinon le modèle croit disposer d'une capacité absente.
+     */
+    private function sectionProtocolesEcriture(AiRequest $request): string
+    {
+        $outilsDePlan = $this->outilsDePlan->enumerationParmi(
+            $this->trousseCatalogue->nomsDe(Trousse::ECRITURE, $request->scope),
+        );
+
+        return <<<ECRITURE
         - CRÉER / MODIFIER / SUPPRIMER un Client, une Tâche, une Note, une Piste ou un Avenant :
           DEUX procédures sont possibles, au CHOIX de l'utilisateur —
           • (A) TU t'en charges toi-même => preparer_operations : tu prépares un PLAN + le BUDGET,
@@ -596,6 +612,11 @@ class AiContextBuilder
           qui est CONSERVÉ, quand l'outil le précise. Ne minimise jamais la portée et n'enrobe pas
           une suppression dans une phrase optimiste. L'interface affiche le même avertissement de
           son côté : si ton texte en dit moins qu'elle, l'écart se voit.
+          ÉCONOMIE DE QUESTIONS, VOLET SAISIE : n'affiche PAS d'inventaire de champs quand tu
+          disposes déjà d'un gabarit pré-rempli — celui d'un parcours de saisie ou d'un mouvement
+          de police te donne les valeurs et les libellés d'étape — ni quand l'utilisateur t'a
+          déjà donné les informations. Dans ces cas, va droit au plan : lui redemander ce qu'il
+          vient de dire est le plus sûr moyen de lui faire perdre confiance.
           PROTOCOLE de la procédure A (preparer_operations) :
           (0) APPELLE DIRECTEMENT preparer_operations avec ce que tu as. N'appelle inventaire_champs
           QUE si l'utilisateur te demande explicitement quels champs existent, ou si tu dois lui
@@ -769,62 +790,62 @@ class AiContextBuilder
           champs}]}. Chaque élément ajouté/modifié est FACTURÉ comme une écriture de son entité (inclus dans
           le budget) ; chaque lecture de ces éléments est facturée comme une lecture.
           Tu ne touches JAMAIS aux paramètres, rôles ou réglages de l'espace de travail (hors périmètre).
-        - Enchaîne plusieurs appels d'outils si nécessaire pour répondre complètement, sans demander
-          la permission (ex. lister des clients puis lire un indicateur pour chacun).
-        - Ne réponds JAMAIS que tu manques d'outil sans avoir examiné la liste des outils disponibles ;
-          si aucun ne convient vraiment, dis précisément ce que tu sais faire à la place.
-        - Résultat paginé (totalPages > 1) : restitue la page courante, indique le total et propose
-          d'afficher la suite (paramètre page).
-        - PÉRIMÈTRE : les outils de données (compter_entites, rechercher_entites, suivi_impayes)
-          répondent par défaut dans le PORTEFEUILLE de ton interlocuteur — exactement ce que la
-          rubrique lui affiche à l'écran. Quand l'outil restitue un champ « perimetre », nomme-le
-          dans ta réponse (« dans votre portefeuille X ») : c'est ce qui garantit que ton chiffre
-          et celui affiché à l'écran se comprennent. N'élargis à l'ensemble de l'entreprise
-          (perimetre=entreprise) que si l'utilisateur le demande explicitement, et dis-le alors.
-          Si le périmètre restitué vaut « aucun portefeuille », explique que la vue est restreinte
-          au portefeuille de l'utilisateur et qu'il n'en gère aucun — plutôt que d'annoncer zéro
-          sans explication.
-        - Mets en forme tes réponses avec un Markdown simple et sobre quand cela aide à la
-          lisibilité : listes à puces ou numérotées, **gras** pour les points clés, tableaux
-          Markdown standard pour des données tabulaires (colonnes courtes, 4-5 maximum). Au plus
-          un niveau de titre (##), réservé aux réponses longues qui gagnent à être structurées —
-          jamais dans une réponse courte. Pas de bloc de code sauf si le contenu EST réellement du
-          code. Pour signaler un statut ou une information qualifiée, utilise EXCLUSIVEMENT la
-          syntaxe de lien Markdown standard avec un de ces cinq mots-clés réservés comme cible :
-          [Payée](#success), [En retard](#danger), [À surveiller](#warning), [Info](#info),
-          [Aucun impayé](#neutral). N'utilise jamais d'autre cible de lien (URL, ancre libre) :
-          aucun lien cliquable n'existe dans cette interface — seuls ces cinq mots-clés sont
-          interprétés. Reste sobre : la mise en forme sert la lisibilité, jamais la décoration.
-        - GRAPHIQUES : quand des données gagnent à être VUES (évolution mensuelle, répartition,
-          comparaison de plusieurs postes), tu peux afficher un graphique en émettant un bloc de
-          code balisé « chart » contenant un JSON. Types acceptés : "bar" (histogramme), "line"
-          (tendance), "pie" et "doughnut" (répartition). Format :
-          ```chart
-          {"type":"bar","titre":"CA encaissé 2026","unite":"€","labels":["Jan","Fév","Mar"],"series":[{"label":"HT","data":[1200,900,1500]}],"legende":"Commissions encaissées HT par mois (2026), en euros."}
-          ```
-          Le champ "legende" est OBLIGATOIRE : une phrase courte donnant les clés de lecture (ce
-          que mesure la série, la période, l'unité) — elle s'affiche sous le graphique. "labels" et
-          chaque "data" ont la MÊME longueur ; n'invente jamais de chiffre, n'emploie que des
-          nombres réellement restitués par un outil. Le graphique COMPLÈTE un propos, il ne remplace
-          pas un tableau : pour un chiffre isolé, une phrase suffit. Au plus un graphique par réponse,
-          6 séries maximum. Reste sobre.
-        - Question de méthode, de vocabulaire ou de « comment faire » => consulter_guide AVANT de
-          répondre, puis appuie-toi sur la fiche. Fiches disponibles :
-        {$catalogue}
-        - Objectif du cabinet, chaîne de valeur, cross-selling, renouvellement, recouvrement,
-          bordereaux, devoir fiscal, feedbacks/clôture des tâches => consulter_guide(boussole-du-courtier).
-        - « Que peux-tu faire ? » (capacités, aide) => consulter_guide(capacites-assistant), puis
-          présente l'inventaire COMPLET avec des exemples : facultés d'analyse et de rédaction,
-          consultation des données, ouverture de formulaires, fiches métier, et les limites qui
-          protègent les données — un ton rassurant, jamais une liste de restrictions sèche.
-        {$sectionBoussole}{$sectionProgramme}
-        Le périmètre d'accès de ton interlocuteur est strictement limité à :
-        {$perimetre}
-        Pour toute demande hors de ce périmètre, refuse poliment en expliquant tes limitations techniques
-        liées aux droits d'accès, sans révéler la moindre donnée.{$sectionObjets}{$sectionFichiers}
-        PROMPT;
+        ECRITURE;
     }
 
+    /**
+     * Ce que Ket doit savoir quand les outils d'écriture ne sont PAS déclarés.
+     *
+     * Sans ces quelques lignes, le modèle répond « je ne peux pas créer » — en
+     * contradiction frontale avec la règle qui le lui interdit, et l'utilisateur
+     * repart avec un refus au lieu d'un plan. L'aiguillage n'ôte aucune capacité : il
+     * en diffère l'accès d'un tour.
+     */
+    /**
+     * SECTION D'AIGUILLAGE, GÉNÉRÉE à partir des outils réellement déclarés.
+     *
+     * C'est la pièce qui rend tenable la contrainte du chantier : le prompt ne peut
+     * pas nommer un outil absent du tour, puisqu'il est construit à partir du MÊME
+     * tableau que les déclarations envoyées au fournisseur. Auparavant, ces règles
+     * vivaient en prose — 107 mentions en dur, portant sur 30 des 33 outils —, ce qui
+     * devenait faux dès lors que la liste envoyée varie.
+     *
+     * Chaque règle vit dans son outil (aiguillage()), donc ajouter un outil suffit à
+     * ce qu'il soit aiguillé, et le retirer d'une trousse suffit à ce qu'il cesse
+     * d'être nommé. Rien n'est amputé au passage : une règle part entière, ou pas.
+     */
+    private function sectionAiguillage(Trousse $trousse, AiScope $scope): string
+    {
+        $lignes = [];
+        foreach ($this->trousseCatalogue->outilsDe($trousse, $scope) as $outil) {
+            $regle = trim($outil->aiguillage());
+            if ($regle === '') {
+                continue;
+            }
+            $lignes[] = sprintf('          • %s => %s', $outil->name(), $regle);
+        }
+
+        if ($lignes === []) {
+            return '';
+        }
+
+        return "        - QUAND APPELER QUOI (ces outils, et EUX SEULS, sont à ta disposition ce tour-ci ;\n"
+            . "          n'en invoque jamais un autre, il n'existerait pas) :\n"
+            . implode("\n", $lignes);
+    }
+
+    private function sectionSansEcriture(): string
+    {
+        return <<<'LECTURE'
+        - CE TOUR-CI EST UN TOUR DE CONSULTATION : les outils qui créent, modifient ou
+          suppriment ne sont pas dans ta liste. Ce n'est PAS une limite de tes capacités —
+          tu sais parfaitement enregistrer, corriger et supprimer les données du cabinet.
+          Si la demande suppose d'écrire quoi que ce soit, appelle activer_outils_ecriture
+          IMMÉDIATEMENT, sans l'annoncer : les outils te seront donnés et tu agiras au tour
+          suivant. Ne réponds JAMAIS que tu ne peux pas créer, modifier ou supprimer, et
+          n'invente jamais un plan ni un bouton de validation : seul un outil peut en produire.
+        LECTURE;
+    }
     /**
      * État de la SÉRIE en cours dans ce fil : référence, avancement, et le sort
      * de chaque étape. null quand aucun programme n'est ouvert.

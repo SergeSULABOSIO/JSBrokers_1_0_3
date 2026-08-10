@@ -80,6 +80,15 @@ final class RechercherEntitesTool implements AiToolInterface
             . 'validée) : appuie-toi dessus, ne suppose jamais qu’une cotation listée est en attente.';
     }
 
+    public function aiguillage(): string
+    {
+        return '« lesquels / liste / montre-moi » : lister des enregistrements. Aussi pour « montre / liste les '
+            . 'polices non renouvelables (ou « à ne pas renouveler ») » avec echeance: non_renouvelables — le '
+            . 'CINQUIÈME groupe d\'échéance, celui des décisions, aligné avec le chip du même nom dans la '
+            . 'rubrique Avenants. Ces polices ne sont PAS un retard et n\'entrent dans AUCUNE des quatre '
+            . 'fenêtres de dates.';
+    }
+
     public function schema(): array
     {
         return [

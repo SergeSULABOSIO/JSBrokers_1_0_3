@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Trousse\AiToolEcriture;
 use App\Ai\Mouvement\MouvementAvenant;
 use App\Ai\Mouvement\MouvementAvenantBuilder;
 use App\Ai\Scope\AiScope;
@@ -30,7 +31,7 @@ use App\Services\Search\AvenantSuccessionScope;
  * Comme preparer_operations, il n'écrit rien : il prépare un PLAN + un BUDGET
  * que l'utilisateur valide ou annule.
  */
-final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan
+final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiToolEcriture
 {
     /** Nombre maximal de polices proposées quand la référence est ambiguë. */
     private const MAX_CANDIDATS = 8;
@@ -63,6 +64,13 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan
             . 'mouvement. Si l\'utilisateur annonce un écart (« la prime passe à 12 000 », « à effet du 1er août », '
             . '« chez SUNU »), passe-le dans le MÊME appel. L\'outil prépare un PLAN + BUDGET à valider (comme '
             . 'preparer_operations) ; après validation, c\'est TOI qui enregistres. N\'écrit rien.';
+    }
+
+    public function aiguillage(): string
+    {
+        return '« renouvelle / reconduis / proroge / prolonge / annule / résilie cette police » : les quatre '
+            . 'actes qui font évoluer une police EXISTANTE. C\'est moi qui ÉCRIS ces mouvements — la vigie des '
+            . 'échéances, elle, ne fait qu\'observer.';
     }
 
     public function schema(): array

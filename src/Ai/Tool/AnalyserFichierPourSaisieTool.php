@@ -2,6 +2,8 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Trousse\AiToolEcriture;
+
 use App\Ai\Fichier\ConversationFichierResolver;
 use App\Ai\Fichier\FichierAttachePolicy;
 use App\Ai\Fichier\PieceSourceRattachement;
@@ -43,7 +45,7 @@ use Doctrine\ORM\EntityManagerInterface;
  * FAIL-CLOSED : mêmes gardes que l'écriture (allowlist + droit Écriture), et le
  * fichier doit appartenir à la conversation du scope.
  */
-final class AnalyserFichierPourSaisieTool implements AiToolInterface, AiToolConditionnel
+final class AnalyserFichierPourSaisieTool implements AiToolInterface, AiToolConditionnel, AiToolEcriture
 {
     /** Étiquette de l'opération de tête dans le gabarit (renvoi « @socle »). */
     private const REF_SOCLE = 'socle';
@@ -83,6 +85,12 @@ final class AnalyserFichierPourSaisieTool implements AiToolInterface, AiToolCond
             . '« avertissement » ; (3) DEMANDE L\'AUTORISATION de préparer le plan et ARRÊTE-TOI. '
             . 'N\'appelle preparer_operations qu\'au tour suivant, une fois l\'accord donné. '
             . 'N\'invente jamais une valeur absente du fichier. N\'écrit rien, ne chiffre aucun budget.';
+    }
+
+    public function aiguillage(): string
+    {
+        return 'SAISIR un enregistrement À PARTIR D\'UNE PIÈCE JOINTE de la conversation (« enregistre cette '
+            . 'proposition », « crée le client depuis ce document »).';
     }
 
     public function schema(): array

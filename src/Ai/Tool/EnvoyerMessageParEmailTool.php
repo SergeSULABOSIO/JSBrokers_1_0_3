@@ -67,6 +67,12 @@ final class EnvoyerMessageParEmailTool implements AiToolInterface
             . 'adresse, n\'appelle pas cet outil : propose-lui plutôt le carnet de contacts.';
     }
 
+    public function aiguillage(): string
+    {
+        return '« envoie-moi ça par mail », « transmets cette analyse à X » : expédier le contenu d\'un message '
+            . 'du fil par courriel.';
+    }
+
     public function schema(): array
     {
         return [

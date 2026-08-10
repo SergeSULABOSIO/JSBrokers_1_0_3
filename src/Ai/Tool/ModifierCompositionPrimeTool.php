@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Trousse\AiToolEcriture;
 use App\Ai\Scope\AiScope;
 use App\Entity\Chargement;
 use App\Entity\Cotation;
@@ -26,7 +27,7 @@ use App\Services\JSBDynamicSearchService;
  * les nouvelles sont créées. Avec remplacer=true, les chargements existants non
  * repris sont supprimés (là, mot de passe requis, comme toute suppression).
  */
-final class ModifierCompositionPrimeTool implements AiToolProduisantUnPlan
+final class ModifierCompositionPrimeTool implements AiToolProduisantUnPlan, AiToolEcriture
 {
     public function __construct(
         private readonly PreparerOperationsTool $preparer,
@@ -54,6 +55,12 @@ final class ModifierCompositionPrimeTool implements AiToolProduisantUnPlan
             . 'prépare un PLAN + BUDGET à valider (comme preparer_operations) ; après validation, c\'est '
             . 'TOI qui enregistres. NE tente PAS de mettre ces montants dans les champs de la cotation : '
             . 'ils y seraient ignorés. Récupère l\'id de la cotation via rechercher_entites/lire_fiche.';
+    }
+
+    public function aiguillage(): string
+    {
+        return 'Corriger la composition de la prime (prime nette, frais accessoires, taxes, ARCA) d\'une cotation '
+            . 'DÉJÀ enregistrée. Ces montants ne sont pas des champs de la Cotation : ils y seraient ignorés.';
     }
 
     public function schema(): array

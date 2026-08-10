@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Trousse\AiToolEcriture;
 use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
 use App\Entity\Invite;
@@ -31,7 +32,7 @@ use App\Services\JSBDynamicSearchService;
  * Écriture sur « Tranche » exigé (le moteur le re-contrôle via GOUVERNANCE_PARENT),
  * et la tranche est résolue STRICTEMENT dans l'entreprise du scope.
  */
-final class SignalerPaiementPrimeTool implements AiToolProduisantUnPlan, AiToolConditionnel
+final class SignalerPaiementPrimeTool implements AiToolProduisantUnPlan, AiToolConditionnel, AiToolEcriture
 {
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,
@@ -61,6 +62,12 @@ final class SignalerPaiementPrimeTool implements AiToolProduisantUnPlan, AiToolC
             . 'BUDGET à valider (comme preparer_operations) ; après validation, c\'est TOI '
             . 'qui enregistres. Pour seulement CONSULTER les signalements déjà enregistrés '
             . '(dates, montants, références), utiliser paiements_prime.';
+    }
+
+    public function aiguillage(): string
+    {
+        return 'ENREGISTRER un paiement de prime par l\'assuré (« la prime a été payée », « il a réglé la tranche '
+            . '2 »). Ne touche jamais à l\'entité Paiement, qui est la trésorerie du cabinet.';
     }
 
     public function schema(): array

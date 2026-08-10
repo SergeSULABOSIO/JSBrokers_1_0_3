@@ -89,6 +89,14 @@ final class VigieEcheancesTool implements AiToolInterface
             . 'impayées. Pour le détail complet des impayés, préférer suivi_impayes.';
     }
 
+    public function aiguillage(): string
+    {
+        return '« renouvellements à venir / polices qui expirent / polices ÉCHUES / échéances à ne pas rater » : '
+            . 'REPÉRER. Ma sortie est PARTITIONNÉE en « echues » et « aVenir », chacune avec son total : lis '
+            . 'TOUJOURS echues.total avant de parler des polices échues, et ne déduis JAMAIS leur absence d\'un '
+            . 'total global ni du fait que les lignes affichées portent des dates futures.';
+    }
+
     public function schema(): array
     {
         return [

@@ -42,6 +42,11 @@ final class VisualiserFicheTool implements AiToolInterface
             . 'lire_fiche.';
     }
 
+    public function aiguillage(): string
+    {
+        return '« visualise / affiche la fiche X à l\'écran ».';
+    }
+
     public function schema(): array
     {
         return [

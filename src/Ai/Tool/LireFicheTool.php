@@ -56,6 +56,11 @@ final class LireFicheTool implements AiToolInterface
             . 'total CALCULÉ (prime, commission agrégée…), utiliser indicateur_calcule.';
     }
 
+    public function aiguillage(): string
+    {
+        return 'Le détail ou un attribut d\'UNE fiche précise, quand tu connais l\'enregistrement visé.';
+    }
+
     public function schema(): array
     {
         return [

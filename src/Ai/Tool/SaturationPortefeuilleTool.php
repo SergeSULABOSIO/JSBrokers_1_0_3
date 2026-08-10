@@ -52,6 +52,12 @@ final class SaturationPortefeuilleTool implements AiToolInterface
             . 'Par défaut le portefeuille de l\'utilisateur (paramètre perimetre pour élargir).';
     }
 
+    public function aiguillage(): string
+    {
+        return '« taux de couverture / cross-selling / risques manquants / opportunités » d\'un client ou du '
+            . 'portefeuille.';
+    }
+
     public function schema(): array
     {
         return [

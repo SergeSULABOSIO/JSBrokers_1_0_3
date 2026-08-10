@@ -86,6 +86,13 @@ final class DocumentComptableTool implements AiToolInterface, AiToolConditionnel
             . 'client précis, utiliser indicateur_calcule.';
     }
 
+    public function aiguillage(): string
+    {
+        return 'Les finances de L\'ENTREPRISE (trésorerie, résultat, bilan, balance, TVA) et toute demande de les '
+            . 'EXPLIQUER. Chaque état renvoie une « legende » : appuie ton explication dessus. Attention, il ne '
+            . 'donne que l\'AGRÉGAT mensuel de la TVA déductible, jamais le détail par ligne.';
+    }
+
     public function schema(): array
     {
         return [

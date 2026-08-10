@@ -36,6 +36,11 @@ final class OuvrirRubriqueTool implements AiToolInterface
             . '(« ouvre les bordereaux », « ouvre le tableau de bord »).';
     }
 
+    public function aiguillage(): string
+    {
+        return '« ouvre la rubrique X » ou « ouvre le tableau de bord » (entite=TableauDeBord pour ce dernier).';
+    }
+
     public function schema(): array
     {
         return [

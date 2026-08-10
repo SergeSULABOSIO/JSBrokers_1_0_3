@@ -41,6 +41,12 @@ final class ConsulterGuideTool implements AiToolInterface
             . 'données. Fiches disponibles : ' . implode(' ; ', $catalogue) . '.';
     }
 
+    public function aiguillage(): string
+    {
+        return 'Toute question de méthode, de vocabulaire ou de « comment faire », et « que peux-tu faire ? » '
+            . '(fiche capacites-assistant). Consulte AVANT de répondre, puis appuie-toi sur la fiche.';
+    }
+
     public function schema(): array
     {
         return [

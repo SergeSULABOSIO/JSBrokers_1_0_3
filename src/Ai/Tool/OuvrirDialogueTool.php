@@ -2,6 +2,8 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Trousse\AiToolEcriture;
+
 use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
 use App\Entity\Invite;
@@ -20,7 +22,7 @@ use App\Services\JSBDynamicSearchService;
  * AvenantController::getPisteDeriveeContext). En édition, l'enregistrement est
  * résolu STRICTEMENT dans l'entreprise du scope (JSBDynamicSearchService).
  */
-final class OuvrirDialogueTool implements AiToolInterface
+final class OuvrirDialogueTool implements AiToolInterface, AiToolEcriture
 {
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,
@@ -49,6 +51,13 @@ final class OuvrirDialogueTool implements AiToolInterface
             . 'possible via « valeurs » avec STRICTEMENT les valeurs dictées (jamais inventées). '
             . 'EXCEPTION : pour signaler le paiement d\'une PRIME sur une tranche, utiliser '
             . 'signaler_paiement_prime (jamais le formulaire Paiement, qui est la trésorerie du courtier).';
+    }
+
+    public function aiguillage(): string
+    {
+        return '« ouvre le formulaire de X », « je vais le saisir / remplir / éditer moi-même » (l\'utilisateur '
+            . 'veut remplir et enregistrer LUI-MÊME), ou création/édition d\'une entité que preparer_operations '
+            . 'ne gère pas.';
     }
 
     public function schema(): array

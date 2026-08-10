@@ -2,6 +2,8 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Trousse\AiToolEcriture;
+
 use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Mutation\MutationOperation;
 use App\Ai\Mutation\MutationPlan;
@@ -23,7 +25,7 @@ use App\Ai\Scope\AiScope;
  * (jamais les paramètres/rôles de l'espace). Toute opération hors périmètre fait
  * échouer la préparation.
  */
-final class PreparerOperationsTool implements AiToolProduisantUnPlan
+final class PreparerOperationsTool implements AiToolProduisantUnPlan, AiToolEcriture
 {
     public function __construct(
         private readonly PlanBuilder $planBuilder,
@@ -50,6 +52,13 @@ final class PreparerOperationsTool implements AiToolProduisantUnPlan
             . "soumettre à la main. En édition/suppression, obtiens l'id via rechercher_entites. Si l'outil "
             . 'renvoie « manquants », repose les questions ; s’il renvoie « bloque », explique le blocage '
             . 'sans exécuter. Une suppression demandera le mot de passe. Ne devine jamais une valeur.';
+    }
+
+    public function aiguillage(): string
+    {
+        return 'Créer, modifier ou supprimer toi-même un enregistrement, quand l\'utilisateur veut que TU t\'en '
+            . 'charges (« fais-le », « crée-moi », « enregistre »). Je n\'écris rien : je valide, je chiffre le '
+            . 'coût et je rends un PLAN à valider.';
     }
 
     public function schema(): array

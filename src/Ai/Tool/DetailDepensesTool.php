@@ -50,6 +50,14 @@ final class DetailDepensesTool implements AiToolInterface, AiToolConditionnel
             . 'c\'est la TVA en amont, supportée sur les achats du cabinet.';
     }
 
+    public function aiguillage(): string
+    {
+        return 'Le DÉTAIL des dépenses / achats / charges d\'exploitation du cabinet, ligne par ligne : « TVA '
+            . 'déductible par facture / par dépense », « liste/détaille/ventile mes charges », ventilation par '
+            . 'compte OHADA. Par ligne : HT, TTC, TVA déductible, compte, tiers, plus les totaux. Ne réponds '
+            . 'donc JAMAIS que « le détail n\'est pas exposé » : appelle-moi.';
+    }
+
     public function schema(): array
     {
         return [

@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Trousse\AiToolEcriture;
 use App\Ai\Programme\OutilsDeProgramme;
 use App\Ai\Programme\ProgrammeEnCours;
 use App\Ai\Programme\ProgrammeRunner;
@@ -28,7 +29,7 @@ use App\Ai\Scope\AiScope;
  * construit, au contrôle d'accès de son propre outil : le programme n'ouvre
  * aucun droit.
  */
-final class PreparerProgrammeTool implements AiToolProduisantUnPlan
+final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcriture
 {
     /** En deçà de deux étapes, ce n'est pas une série : l'outil de plan suffit. */
     private const MIN_ETAPES = 2;
@@ -61,6 +62,14 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan
             . 'Outils utilisables par une étape et leurs paramètres — ' . $this->outilsDeProgramme->aideParametres()
             . '. Mets poursuivre=true (sans etapes) si un programme est en cours et que l\'utilisateur '
             . 'demande de continuer ou dit ne plus voir de bouton.';
+    }
+
+    public function aiguillage(): string
+    {
+        return 'Dès que la demande porte sur PLUSIEURS objets distincts (« signale le paiement des tranches 60, '
+            . '64 et 74 », « marque ces cinq polices non renouvelables », « fais pareil pour les trois autres '
+            . '»). Appelle-moi UNE SEULE FOIS en déclarant TOUTES les étapes : un outil de plan objet par objet '
+            . 's\'arrêterait au premier, et il n\'y a pas de tour suivant pour reprendre la main.';
     }
 
     public function schema(): array

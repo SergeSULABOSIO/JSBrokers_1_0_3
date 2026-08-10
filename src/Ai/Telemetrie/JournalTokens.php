@@ -155,6 +155,50 @@ final class JournalTokens
     }
 
     /**
+     * La décision d'AIGUILLAGE d'un message : quelle trousse, d'où vient la
+     * décision, ce qu'elle a coûté et combien de temps elle a pris.
+     *
+     * C'est la ligne qui permet de juger le routage sur pièces plutôt que sur
+     * impression : sa part de « lecture » dit l'économie réalisée, son « origine »
+     * dit combien de décisions ont été prises sans rien payer (court-circuits), et
+     * ses millisecondes disent le seul vrai coût du procédé — la latence ajoutée à
+     * CHAQUE message, y compris ceux qui n'appellent aucun outil.
+     */
+    public function routage(
+        AiRequest $request,
+        string $moteur,
+        string $trousse,
+        string $origine,
+        int $tokens,
+        int $millisecondes,
+    ): void {
+        $this->assistantTokensLogger->info('routage', $this->identite($request) + [
+            'evenement'     => 'routage',
+            'moteur'        => $moteur,
+            'trousse'       => $trousse,
+            'origine'       => $origine,
+            'tokens'        => $tokens,
+            'millisecondes' => $millisecondes,
+        ]);
+    }
+
+    /**
+     * Le modèle a RÉCLAMÉ les outils d'écriture : l'aiguillage s'était trompé.
+     *
+     * Le taux d'escalade est le critère d'abandon du routage — au-delà d'un quart
+     * des messages, le tour de routage coûte plus qu'il ne rapporte.
+     */
+    public function escalade(AiRequest $request, string $moteur, string $trousse, int $tour): void
+    {
+        $this->assistantTokensLogger->info('escalade', $this->identite($request) + [
+            'evenement' => 'escalade',
+            'moteur'    => $moteur,
+            'trousse'   => $trousse,
+            'tour'      => $tour,
+        ]);
+    }
+
+    /**
      * Le moteur a PATIENTÉ avant de relancer un tour, le temps que la fenêtre
      * d'une minute se libère, plutôt que d'abandonner une chaîne déjà payée.
      *

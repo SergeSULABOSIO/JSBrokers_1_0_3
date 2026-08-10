@@ -40,6 +40,13 @@ final class TelechargerFichiersTool implements AiToolInterface
             . 'téléchargement : cet outil affiche des boutons sécurisés à l\'utilisateur.';
     }
 
+    public function aiguillage(): string
+    {
+        return '« télécharge / récupère / donne-moi le(s) fichier(s) joint(s) / un lien de téléchargement » pour '
+            . 'une PIÈCE JOINTE de la conversation. J\'affiche des boutons de téléchargement sécurisés sous ta '
+            . 'réponse : ne dis JAMAIS que tu ne peux pas fournir de lien.';
+    }
+
     public function schema(): array
     {
         return [

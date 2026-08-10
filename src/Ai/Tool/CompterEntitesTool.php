@@ -53,6 +53,13 @@ final class CompterEntitesTool implements AiToolInterface
             . 'défaut sur le PORTEFEUILLE de l’utilisateur, comme la rubrique affichée (paramètre perimetre).';
     }
 
+    public function aiguillage(): string
+    {
+        return '« combien » : un COMPTE, sans les lignes. Plus direct que lister puis dénombrer — notamment '
+            . 'echeance: echus pour les polices échues, ou echeance: non_renouvelables pour celles dont le '
+            . 'courtier a tranché qu\'il n\'y aurait pas de suite.';
+    }
+
     public function schema(): array
     {
         return [

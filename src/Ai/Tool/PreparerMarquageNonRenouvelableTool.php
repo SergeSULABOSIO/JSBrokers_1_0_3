@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Trousse\AiToolEcriture;
 use App\Ai\Scope\AiScope;
 use App\Entity\Avenant;
 use App\Entity\Invite;
@@ -28,7 +29,7 @@ use App\Services\JSBDynamicSearchService;
  * commissions, taxes et rétrocommissions restent à recouvrer, et le résultat les énonce
  * pour que Ket ne laisse jamais croire que le dossier est clos.
  */
-final class PreparerMarquageNonRenouvelableTool implements AiToolProduisantUnPlan, AiToolConditionnel
+final class PreparerMarquageNonRenouvelableTool implements AiToolProduisantUnPlan, AiToolConditionnel, AiToolEcriture
 {
     /** Nombre maximal de polices proposées quand la référence est ambiguë. */
     private const MAX_CANDIDATS = 8;
@@ -66,6 +67,16 @@ final class PreparerMarquageNonRenouvelableTool implements AiToolProduisantUnPla
             . 'ce qui reste dû continue d\'être réclamé — pour mettre FIN à la couverture, utilise '
             . 'preparer_mouvement_avenant. L\'outil prépare un PLAN à valider (comme preparer_operations). '
             . 'N\'écrit rien.';
+    }
+
+    public function aiguillage(): string
+    {
+        return '« cette police n\'est pas à renouveler / le client a vendu / il ne renouvellera pas / il part à '
+            . 'la concurrence / ne la suis plus dans les échéances », À TOUT MOMENT de la vie de la police '
+            . '(même si elle couvre encore et n\'expire que dans des mois : ne demande JAMAIS d\'attendre '
+            . 'l\'échéance). Le MOTIF est OBLIGATOIRE et ne s\'INVENTE jamais : s\'il ne l\'a pas donné, demande-le '
+            . 'en une ligne — c\'est une note pour le collègue qui rouvrira le dossier. « finalement il '
+            . 'renouvelle / remets-la dans les échéances » => le même outil avec mode="lever".';
     }
 
     public function schema(): array
