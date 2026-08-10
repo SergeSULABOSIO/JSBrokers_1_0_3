@@ -324,6 +324,7 @@ class PaiementsPrimeToolTest extends TestCase
                 $this->createMock(\App\Repository\PisteRepository::class),
                 $this->createMock(\App\Repository\AvenantRepository::class),
             ),
+            new \App\Ai\Resolution\ResolveurDeReferences($search, $resolver, $libelleur),
         );
         $compter = new CompterEntitesTool($resolver, $search, $lexique, $this->fabriquePortefeuille());
         $lireFiche = new LireFicheTool(

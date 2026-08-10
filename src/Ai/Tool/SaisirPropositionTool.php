@@ -91,7 +91,8 @@ final class SaisirPropositionTool implements AiToolProduisantUnPlan, AiToolEcrit
             . 'N\'APPELLE DONC NI rechercher_entites (aucun id à trouver), NI inventaire_champs, NI '
             . 'parcours_saisie avant lui : tu perdrais plusieurs tours pour un travail déjà fait. '
             . 'S\'il manque une information ou qu\'un nom est ambigu, l\'outil te le dit avec les valeurs '
-            . 'disponibles : pose alors UNE question groupée, puis rappelle-le. '
+            . 'disponibles : pose alors UNE question groupée en PROPOSANT ces valeurs, et arrête-toi là — tu le '
+            . 'rappelleras au message SUIVANT, avec la réponse. '
             . 'Pour une saisie qui n\'est PAS une proposition d\'assureur, utilise preparer_operations.';
     }
 

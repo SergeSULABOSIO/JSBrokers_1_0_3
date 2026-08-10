@@ -8,6 +8,7 @@ use App\Ai\Debit\BudgetDebit;
 use App\Ai\Engine\GeminiAiEngine;
 use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\Mutation\PlanEnAttente;
+use App\Ai\Redaction\RepliPrecis;
 use App\Ai\Programme\ProgrammeEnCours;
 use App\Ai\Scope\AiScope;
 use App\Ai\Telemetrie\JournalTokens;
@@ -153,6 +154,35 @@ class GeminiAiEngineTest extends TestCase
         $this->assertCount(1, $bilan[0]['context']['sequenceOutils']);
     }
 
+    /**
+     * QUAND LE MODÈLE NE RÉDIGE PAS, C'EST LE SERVEUR QUI RÉDIGE — avec ce que les
+     * outils ont trouvé, jamais avec une phrase creuse.
+     *
+     * L'incident du 2026-08-10 (conversation 35) : deux messages d'affilée se sont
+     * soldés par « il me manque un élément pour conclure, reformulez », alors que
+     * l'outil avait rapporté une question parfaitement formulée. Deux tours facturés
+     * pour renvoyer l'utilisateur à sa propre demande.
+     */
+    public function testUneRedactionMuetteRestitueCeQueLesOutilsOntTrouve(): void
+    {
+        // Le modèle réclame un outil aux DEUX tours : il ne rédige donc jamais.
+        $http = new MockHttpClient(fn () => new MockResponse(json_encode($this->tourAvecOutil(1000))));
+
+        $tool = $this->makeTool(AiToolResult::ok([
+            'pret'      => false,
+            'aDemander' => [[
+                'champ'    => 'dateEffet',
+                'question' => 'À quelle date cette résiliation prend-elle effet ?',
+            ]],
+        ]));
+
+        $reply = $this->makeEngine($http, [$tool])->reply($this->makeRequest('Résilie la police de Kibali'));
+
+        $this->assertStringContainsString('À quelle date cette résiliation prend-elle effet ?', $reply->content);
+        $this->assertStringNotContainsString('Reformulez', $reply->content);
+        $this->assertStringNotContainsString('il me manque un élément', $reply->content);
+    }
+
     private function contextBuilderFige(): AiContextBuilder
     {
         $builder = $this->createMock(AiContextBuilder::class);
@@ -292,6 +322,7 @@ class GeminiAiEngineTest extends TestCase
             new NullLogger(),
             new JournalTokens($espion, new OutilsDePlan([])),
             $budget ?? $this->makeBudget(),
+            new RepliPrecis(),
             function (int $secondes) use ($dormir): void {
                 $this->attentes[] = $secondes;
                 if ($dormir !== null) {

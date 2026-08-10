@@ -7,6 +7,7 @@ use App\Ai\AiEngineFailure;
 use App\Ai\AiReply;
 use App\Ai\AiRequest;
 use App\Ai\Debit\BudgetDebit;
+use App\Ai\Redaction\RepliPrecis;
 use App\Ai\Trousse\Phase;
 use App\Ai\Trousse\SelecteurDeTrousse;
 use App\Ai\Scope\AiScope;
@@ -89,19 +90,6 @@ final class GeminiAiEngine implements AiEngineInterface
     private const MAX_ATTENTE_CUMULEE_SECONDES = 25;
 
     /**
-     * Ce que Ket dit quand la rédaction n'a rien produit — parce que le modèle a
-     * réclamé un outil de plus au lieu d'écrire.
-     *
-     * Le message doit dire la VÉRITÉ (il manque quelque chose) sans rejeter la
-     * faute sur l'utilisateur : il a été précis, c'est nous qui n'avons pas conclu.
-     * Et il doit indiquer la sortie : une nouvelle demande, plus ciblée, rouvre un
-     * cycle complet — c'est précisément ainsi que l'architecture est prévue.
-     */
-    private const AUCUNE_REDACTION = "Je n'ai pas pu aboutir sur cette demande en une seule fois : il me manque "
-        . 'un élément pour conclure. Reformulez-la en me donnant le point précis qui vous intéresse '
-        . '(le client, la police ou la période), et je la traite entièrement.';
-
-    /**
      * Ratio octets → tokens MESURÉ sur la campagne (3,52 le 2026-08-08), et non
      * supposé. Sert à estimer ce que coûtera le tour suivant avant de le lancer.
      */
@@ -123,6 +111,9 @@ final class GeminiAiEngine implements AiEngineInterface
         private readonly LoggerInterface $logger,
         private readonly JournalTokens $journal,
         private readonly BudgetDebit $budget,
+        // Rédige en PHP, à coût nul, ce que le modèle n'a pas rédigé — à partir des
+        // résultats d'outils déjà obtenus. Remplace l'ancienne phrase générique.
+        private readonly RepliPrecis $repliPrecis,
         // Injectable pour les tests : ils vérifient la DÉCISION d'attendre, pas
         // la capacité de PHP à dormir. Une suite qui dort n'est plus une suite.
         private readonly ?\Closure $dormir = null,
@@ -182,6 +173,9 @@ final class GeminiAiEngine implements AiEngineInterface
         $cumulSortie = 0;
         $sequenceOutils = [];
         $attenteCumulee = 0;
+        // Ce que les outils ont RÉELLEMENT rapporté : la matière du repli si le modèle
+        // ne rédige pas. Sans elle, on ne pouvait que servir une phrase générique.
+        $resultatsOutils = [];
 
         // TROUSSE du message : décidée par le SERVEUR, sans rien demander au modèle.
         // Un appel de routage était un TROISIÈME appel — la règle n'en tolère que
@@ -274,7 +268,12 @@ final class GeminiAiEngine implements AiEngineInterface
             // déjà été obtenu, actions comprises : un plan préparé et son bouton de
             // validation valent bien mieux qu'une page blanche.
             if ($phase === Phase::REDACTION) {
-                $texte = $this->extractText($parts, self::AUCUNE_REDACTION);
+                // Le modèle a redemandé un outil au lieu d'écrire. Plutôt que la phrase
+                // générique d'autrefois — qui renvoyait l'utilisateur à sa question alors
+                // que la réponse était déjà sur la table —, on restitue nous-mêmes ce que
+                // les outils ont rapporté : la question précise qui reste à poser, le
+                // blocage rencontré, ou les candidats à départager. Coût : zéro token.
+                $texte = $this->extractText($parts, $this->repliPrecis->depuis($resultatsOutils));
 
                 return $this->conclure(
                     $request,
@@ -303,6 +302,7 @@ final class GeminiAiEngine implements AiEngineInterface
                 $result = $this->executeTool($name, $args, $request);
                 $toolUsed = $name;
                 $sequenceOutils[] = $name;
+                $resultatsOutils[] = ['outil' => $name, 'data' => $result->data];
                 if ($result->status === AiToolResult::STATUS_HORS_PERIMETRE) {
                     $refused = true;
                 }
@@ -372,16 +372,20 @@ final class GeminiAiEngine implements AiEngineInterface
             $attenteCumulee += $attente;
         }
 
+        // Sortie de sécurité : les deux phases rendent toujours la main d'elles-mêmes,
+        // ce point n'est donc pas atteint aujourd'hui. Il reste écrit — et correct :
+        // une variable orpheline y attendait, qui aurait fait tomber le moteur le jour
+        // où une troisième phase serait ajoutée. Et là encore, on restitue le travail
+        // des outils plutôt qu'une phrase creuse.
         return $this->conclure(
             $request,
             JournalTokens::ISSUE_TOURS_EPUISES,
-            $toursDOutils + 1,
+            count($sequenceOutils) + 1,
             $cumulInput,
             $cumulSortie,
             $sequenceOutils,
             new AiReply(
-                "Je n'ai pas réussi à conclure ma recherche dans le temps imparti. Reformulez votre "
-                . 'question de façon plus ciblée, je réessaierai.',
+                $this->repliPrecis->depuis($resultatsOutils),
                 refused: $refused,
                 toolUsed: $toolUsed,
                 actions: $actions,

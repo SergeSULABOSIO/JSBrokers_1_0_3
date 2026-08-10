@@ -717,6 +717,99 @@ class MouvementAvenantTest extends WebTestCase
         $this->assertTrue($exact->data['pret'] ?? false, 'Une référence exacte n’est pas ambiguë.');
     }
 
+    // ──────────────── Désigner la police comme le courtier la désigne ────────────────
+
+    /**
+     * « Kibali Goldmines SA a donné l'ordre de renouveler leur police. » Cette phrase,
+     * dictée telle quelle le 2026-08-10, ne contient AUCUNE référence de police — et
+     * l'outil, qui ne cherchait que sur `referencePolice`, répondait « aucune police »
+     * à un client qui en avait sept.
+     *
+     * Le modèle ne pouvait pas rattraper : chercher le client puis ses polices, c'est
+     * un SECOND tour d'outils, que l'architecture interdit. C'est donc au serveur de
+     * faire ce chemin — et il le fait pour les deux façons de le dire.
+     */
+    public function testLaPoliceSeRetrouveParLeNomDuClient(): void
+    {
+        $s = $this->seed();
+
+        $parArgument = $this->outil->execute(
+            ['mouvement' => 'renouvellement', 'client' => 'ACME Mouvement'],
+            $this->scope($s),
+        );
+        $this->assertTrue($parArgument->data['pret'] ?? false, 'Le nom du client suffit à désigner la police.');
+        $this->assertNotNull($parArgument->uiAction, 'Donc un vrai plan, avec son bouton.');
+
+        // Le modèle range parfois le nom du client dans « police » : l'utilisateur, lui,
+        // ne classe pas ses mots. On réessaie donc comme nom de client.
+        $glisseDansPolice = $this->outil->execute(
+            ['mouvement' => 'renouvellement', 'police' => 'ACME Mouvement'],
+            $this->scope($s),
+        );
+        $this->assertTrue($glisseDansPolice->data['pret'] ?? false, 'Un nom de client rangé dans « police » reste compris.');
+    }
+
+    /**
+     * PLUSIEURS POLICES, UNE SEULE QUI COURT. Un client a rarement une police unique, et
+     * chaque renouvellement en ajoute une à la chaîne. Rendre la liste entière au modèle,
+     * c'est lui faire poser une question à laquelle l'utilisateur ne peut pas répondre :
+     * il ne connaît pas les identifiants internes.
+     *
+     * « Leur police », pour un courtier, c'est celle qui est EN VIGUEUR. Le serveur la
+     * retient donc — et l'ANNONCE dans « defauts », car un choix tu est un choix subi.
+     */
+    public function testEntrePlusieursPolicesCelleEnVigueurEstRetenueEtAnnoncee(): void
+    {
+        $s = $this->seed();
+
+        // Périodes RELATIVES : ce test porte sur « aujourd'hui », pas sur l'année 2026.
+        $s['base']->setStartingAt(new DateTimeImmutable('-1 month'))->setEndingAt(new DateTimeImmutable('+11 months'));
+
+        $echue = (new Avenant())
+            ->setReferencePolice('POL-MVT-ANCIENNE')->setNumero('9')->setDescription('Exercice écoulé')
+            ->setStartingAt(new DateTimeImmutable('-3 years'))->setEndingAt(new DateTimeImmutable('-2 years'))
+            ->setCotation($s['cotation']);
+        $echue->setEntreprise($s['ent'])->setInvite($s['inv']);
+        $this->em->persist($echue);
+        $this->em->flush();
+
+        $resultat = $this->outil->execute(
+            ['mouvement' => 'renouvellement', 'client' => 'ACME Mouvement'],
+            $this->scope($s),
+        );
+
+        $this->assertTrue($resultat->data['pret'] ?? false, 'Deux polices ne doivent pas bloquer : une seule court.');
+        $this->assertSame($s['base']->getId(), $resultat->data['source']['avenantId'], 'La police EN VIGUEUR est retenue.');
+        $this->assertStringContainsString(
+            'EN VIGUEUR',
+            implode(' ', $resultat->data['defauts']),
+            'Le choix de la police est une hypothèse : elle se dit.',
+        );
+    }
+
+    /**
+     * QUAND ON NE TROUVE VRAIMENT RIEN, ON DIT OÙ L'ON A CHERCHÉ.
+     *
+     * Un « aucune police » nu laisse l'utilisateur deviner s'il s'est trompé de nom, de
+     * rubrique ou de périmètre — et il répète sa demande à l'identique. Nommer les pistes
+     * suivies transforme une impasse en question à laquelle il peut répondre d'un mot.
+     */
+    public function testAucunePoliceTrouveeNommeCeQuiAEteCherche(): void
+    {
+        $s = $this->seed();
+
+        $resultat = $this->outil->execute(
+            ['mouvement' => 'renouvellement', 'client' => 'Client Qui N Existe Pas'],
+            $this->scope($s),
+        );
+
+        $this->assertFalse($resultat->data['pret'] ?? true);
+        $this->assertNull($resultat->uiAction);
+        $this->assertStringContainsString('Client Qui N Existe Pas', $resultat->data['bloquant']);
+        $this->assertContains('nom de client « Client Qui N Existe Pas »', $resultat->data['cherchePar']);
+        $this->assertStringContainsString('cherchePar', $resultat->data['note']);
+    }
+
     /**
      * Fail-closed : une police d'une autre entreprise est introuvable — et le refus PORTE
      * SA CONSIGNE. Un « INTROUVABLE » nu ne disait au modèle que ce qui manquait, jamais ce

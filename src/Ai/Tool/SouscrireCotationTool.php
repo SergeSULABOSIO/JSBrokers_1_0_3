@@ -363,8 +363,9 @@ final class SouscrireCotationTool implements AiToolProduisantUnPlan, AiToolEcrit
             'note'      => 'Je n’ai pas identifié la proposition avec certitude, et je ne devine jamais : '
                 . 'une piste porte des propositions CONCURRENTES, et me tromper attribuerait le marché au '
                 . 'mauvais assureur. Pose la question en UNE ligne — en PROPOSANT les options de « valeurs » '
-                . 'quand elles sont fournies — puis rappelle souscrire_cotation. N’appelle pas '
-                . 'rechercher_entites : les candidates sont déjà ci-dessus.',
+                . 'quand elles sont fournies — puis ARRÊTE-TOI : tu rappelleras souscrire_cotation au message '
+                . 'SUIVANT, avec sa réponse, pas dans ce tour-ci. N’appelle pas rechercher_entites : les '
+                . 'candidates sont déjà ci-dessus.',
         ]);
     }
 }

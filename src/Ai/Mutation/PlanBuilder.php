@@ -202,8 +202,10 @@ final class PlanBuilder
                 'pret'       => false,
                 'manquants'  => $manquants,
                 'inventaire' => $this->inventairePour($entitesInvalides, $scope),
-                'note'       => 'Informations incomplètes : demande à l\'utilisateur de fournir les champs manquants, '
-                    . 'puis rappelle ' . $outilAppelant . '. N\'appelle PAS inventaire_champs : « inventaire » '
+                'note'       => 'Informations incomplètes : demande à l\'utilisateur de fournir les champs manquants '
+                    . '— NOMME-les un par un, jamais « il manque un élément » —, puis ARRÊTE-TOI : tu rappelleras '
+                    . $outilAppelant . ' au message SUIVANT, avec ses réponses, pas dans ce tour-ci. '
+                    . 'N\'appelle PAS inventaire_champs : « inventaire » '
                     . 'ci-dessus porte déjà, pour chaque entité concernée, les champs obligatoires, facultatifs et '
                     . 'automatiques, avec leurs codes autorisés (« valeurs ») et leurs valeurs par défaut. '
                     . 'Un champ qui porte « valeurs » n\'accepte QUE ces codes : propose-les en clair à '

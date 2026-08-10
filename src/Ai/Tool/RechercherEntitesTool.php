@@ -3,6 +3,8 @@
 namespace App\Ai\Tool;
 
 use App\Ai\AiText;
+use App\Ai\Resolution\Reference;
+use App\Ai\Resolution\ResolveurDeReferences;
 use App\Ai\Scope\AiScope;
 use App\Entity\Avenant;
 use App\Entity\Cotation;
@@ -40,6 +42,15 @@ final class RechercherEntitesTool implements AiToolInterface
     /** Profondeur maximale du chemin de relations exploré pour lieA (père → fils → petit-fils). */
     private const MAX_PROFONDEUR_LIEN = 3;
 
+    /**
+     * Graphe des relations exploré une seule fois par entité de départ : il ne change
+     * pas d'une requête à l'autre, et la recherche d'un rattachement par son nom
+     * interroge toutes les cibles d'un coup.
+     *
+     * @var array<string, array<string, string[]>>
+     */
+    private array $cacheChemins = [];
+
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly JSBDynamicSearchService $searchService,
@@ -49,6 +60,10 @@ final class RechercherEntitesTool implements AiToolInterface
         private readonly PortefeuilleCritereFactory $portefeuilleCritere,
         private readonly IndicatorCalculationHelper $indicatorHelper,
         private readonly AvenantRenouvellementResolver $renouvellementResolver,
+        // Source unique « un nom dicté → un identifiant » : c'est elle qui permet à
+        // cet outil de comprendre « les polices de Kibali » sans réclamer un second
+        // tour au modèle (cf. rattachementDepuisNom).
+        private readonly ResolveurDeReferences $resolveur,
     ) {
     }
 
@@ -66,6 +81,12 @@ final class RechercherEntitesTool implements AiToolInterface
             . 'aux enregistrements LIÉS à une fiche précise, même à plusieurs niveaux de relation '
             . '(ex. les tâches d’une piste, les tâches ou avenants d’un CLIENT via ses pistes) — '
             . 'SEUL moyen fiable de connaître les éléments liés : une fiche ne les contient jamais. '
+            . 'lieA accepte un NOM (lieA={entite:"Client", nom:"Kibali"}) autant qu’un id : ne fais '
+            . 'JAMAIS une recherche préalable pour obtenir un identifiant, le serveur résout le nom. '
+            . 'De même, un « filtre » qui ne correspond à aucun libellé mais au nom d’un '
+            . 'rattachement (un client, un assureur) est réinterprété automatiquement, et le '
+            . 'champ « filtreInterpreteCommeLien » te dit alors ce qui a réellement été listé : '
+            . 'énonce-le. '
             . 'Les paramètres echeance (Avenant), statutPaiement (Tranche), validation (Cotation) '
             . 'et transformation (Piste) appliquent EXACTEMENT les mêmes règles que les filtres '
             . 'rapides de ces rubriques, tri par urgence inclus : à utiliser dès que la question '
@@ -142,8 +163,11 @@ final class RechercherEntitesTool implements AiToolInterface
                     'description' => 'Restreint aux enregistrements LIÉS à un enregistrement précis, '
                         . 'même indirectement (le chemin de relations est résolu automatiquement) : '
                         . 'les tâches de la piste 42 → entite=Tache et lieA={entite: "Piste", id: 42} ; '
-                        . 'les tâches du client 82 → entite=Tache et lieA={entite: "Client", id: 82}. '
-                        . "L'id s'obtient d'une fiche attachée ou d'une première recherche.",
+                        . 'les avenants du client « Kibali » → entite=Avenant et '
+                        . 'lieA={entite: "Client", nom: "Kibali"}. Donne "id" si tu l\'as (fiche '
+                        . 'attachée, résultat précédent) ; SINON donne simplement "nom" — le serveur '
+                        . 'résout le nom lui-même, tu n\'as JAMAIS à faire une recherche préalable '
+                        . 'pour obtenir un identifiant.',
                     'properties' => [
                         'entite' => [
                             'type' => 'string',
@@ -152,10 +176,15 @@ final class RechercherEntitesTool implements AiToolInterface
                         ],
                         'id' => [
                             'type' => 'integer',
-                            'description' => "Identifiant de l'enregistrement de rattachement.",
+                            'description' => "Identifiant de l'enregistrement de rattachement, si tu le connais déjà.",
+                        ],
+                        'nom' => [
+                            'type' => 'string',
+                            'description' => 'À défaut d\'identifiant : le nom dicté par l\'utilisateur '
+                                . '(« Kibali », « SUNU », « Mme Marlette »). Résolu par le serveur.',
                         ],
                     ],
-                    'required' => ['entite', 'id'],
+                    'required' => ['entite'],
                 ],
             ],
             'required' => ['entite'],
@@ -238,8 +267,37 @@ final class RechercherEntitesTool implements AiToolInterface
         $lieA = $args['lieA'] ?? null;
         if (\is_array($lieA) && $lieA !== []) {
             $lienType = (string) ($lieA['entite'] ?? '');
-            $lienId = (int) ($lieA['id'] ?? 0);
             $lienFqcn = 'App\\Entity\\' . $lienType;
+
+            // NOM PLUTÔT QU'IDENTIFIANT. Le modèle n'a presque jamais l'identifiant : le
+            // lui exiger, c'est le condamner à une recherche préalable — donc à un
+            // SECOND tour d'outils, que l'architecture interdit (cf. MAX_TOOL_ROUNDS).
+            // C'est exactement ce qui se produisait sur « les polices du client Kibali » :
+            // le modèle cherchait le client, n'avait plus de tour pour chercher ses
+            // polices, et l'utilisateur recevait une non-réponse. Le serveur résout donc
+            // le nom lui-même, gratuitement.
+            $lienId = (int) ($lieA['id'] ?? 0);
+            $nomLien = trim((string) ($lieA['nom'] ?? ''));
+            if ($lienId <= 0 && $nomLien !== '' && isset($labels[$lienType]) && class_exists($lienFqcn)) {
+                if (!$this->accessResolver->canRead($scope->invite, $lienType)) {
+                    return AiToolResult::horsPerimetre($labels[$lienType]);
+                }
+                $reference = $this->resolveur->resoudre($lienType, $nomLien, $scope);
+                if ($reference->estResolue()) {
+                    $lienId = (int) $reference->id;
+                } else {
+                    // On ne devine pas : on rend une question DÉJÀ formulée, avec ses
+                    // candidats. Une question précise vaut mieux qu'une liste vide.
+                    return AiToolResult::ok([
+                        'pret'      => false,
+                        'aDemander' => [$reference->question()],
+                        'note'      => 'Le rattachement demandé ne se résout pas. Pose la question telle quelle, '
+                            . 'en UNE ligne, en PROPOSANT les « valeurs » quand il y en a. N’invente aucun '
+                            . 'identifiant, ne relance AUCUN outil et n’annonce pas de liste.',
+                    ]);
+                }
+            }
+
             if (!isset($labels[$lienType]) || !class_exists($lienFqcn) || $lienId <= 0) {
                 $lienIgnore = true;
             } elseif (!$this->accessResolver->canRead($scope->invite, $lienType)) {
@@ -300,6 +358,56 @@ final class RechercherEntitesTool implements AiToolInterface
             return AiToolResult::introuvable($labels[$shortName]);
         }
 
+        // LE FILTRE TEXTE NE PORTE QUE SUR LE LIBELLÉ — ET C'EST UN PIÈGE.
+        // « Kibali » cherché parmi les Avenants s'écrase sur `referencePolice` et ne
+        // ramène rien, alors que ce client a sept polices : son nom ne vit pas sur
+        // l'avenant, il vit deux relations plus loin. Le modèle, lui, ne pouvait
+        // qu'annoncer « aucune police » ou relancer une recherche — un second tour
+        // qu'il n'a pas. Le serveur fait donc ce détour lui-même, et gratuitement :
+        // si le terme désigne UN enregistrement rattaché (client, assureur, risque,
+        // opportunité…), on relance la recherche sur ce rattachement.
+        $filtreLien = null;
+        if ($filtre !== '' && $lien === null && (int) $result['totalItems'] === 0) {
+            $rattachement = $this->rattachementDepuisNom($fqcn, $filtre, $scope);
+
+            if (isset($rattachement['ambigu'])) {
+                return AiToolResult::ok([
+                    'pret'      => false,
+                    'aDemander' => [$rattachement['ambigu']],
+                    'note'      => 'Aucun enregistrement ne porte ce nom, mais PLUSIEURS rattachements y '
+                        . 'correspondent. Pose la question telle quelle, en UNE ligne, en proposant les '
+                        . '« valeurs ». Ne relance AUCUN outil et n’annonce aucune liste.',
+                ]);
+            }
+
+            if ($rattachement !== null) {
+                $lienCriteria = [JSBDynamicSearchService::LIEN_MULTI_CHEMINS => [
+                    'paths' => $rattachement['chemins'],
+                    'id'    => $rattachement['id'],
+                ]];
+                $result = $this->searchService->search(
+                    $fqcn,
+                    $lienCriteria + $criteresRubrique + $criterePortefeuille,
+                    $scope->entreprise,
+                    null,
+                    $page,
+                    self::PAGE_SIZE,
+                );
+                if (($result['status']['code'] ?? 500) !== 200) {
+                    return AiToolResult::introuvable($labels[$shortName]);
+                }
+                $lien = ['entite' => $rattachement['entite'], 'id' => $rattachement['id']];
+                // ANNONCÉ, jamais subi : le modèle doit dire ce qu'il a réellement lu.
+                $filtreLien = sprintf(
+                    '« %s » ne correspond à aucun libellé de cette rubrique, mais à %s « %s » : '
+                    . 'la liste porte donc sur les enregistrements qui lui sont rattachés.',
+                    $filtre,
+                    mb_strtolower($labels[$rattachement['entite']] ?? $rattachement['entite']),
+                    $rattachement['libelle'],
+                );
+            }
+        }
+
         $items = [];
         foreach ($result['data'] as $entity) {
             $item = [
@@ -353,6 +461,7 @@ final class RechercherEntitesTool implements AiToolInterface
             'libelle'      => $labels[$shortName],
             'filtre'       => $filtre !== '' ? $filtre : null,
             'filtreIgnore' => ($filtre !== '' && $displayField === null) ? true : null,
+            'filtreInterpreteCommeLien' => $filtreLien,
             'filtreRubrique' => $filtreRubrique,
             'perimetre'    => PortefeuilleScope::libellePerimetre($perimetreEntreprise, $criterePortefeuille),
             'lien'         => $lien,
@@ -362,6 +471,89 @@ final class RechercherEntitesTool implements AiToolInterface
             'totalItems'   => (int) $result['totalItems'],
             'items'        => $items,
         ], static fn ($v) => $v !== null));
+    }
+
+    /**
+     * Le terme cherché désigne-t-il un enregistrement RATTACHÉ plutôt qu'un libellé
+     * de la rubrique ? (« Kibali » parmi les Avenants = le CLIENT Kibali.)
+     *
+     * On interroge chaque entité atteignable en *-vers-un, dans l'ordre de proximité
+     * — un rattachement direct prime sur un rattachement lointain, sans quoi « SUNU »
+     * chercherait aussi bien l'assureur de la cotation que celui de la piste. La
+     * résolution passe par la source unique (ResolveurDeReferences), donc scopée à
+     * l'entreprise et fail-closed sur le droit de lecture.
+     *
+     * Trois issues, comme partout : un seul rattachement → on l'applique ; plusieurs
+     * → on rend la question à poser ; aucun → null, et la liste vide reste vide.
+     *
+     * @return array{entite: string, id: int, libelle: string, chemins: string[]}|array{ambigu: array<string, mixed>}|null
+     */
+    private function rattachementDepuisNom(string $fqcn, string $terme, AiScope $scope): ?array
+    {
+        $trouves = [];
+        $candidatsAmbigus = [];
+
+        foreach ($this->cheminsParCible($fqcn) as $cibleFqcn => $chemins) {
+            $courtCible = substr($cibleFqcn, strrpos($cibleFqcn, '\\') + 1);
+            if (!isset($this->accessResolver->libellesEntites()[$courtCible])) {
+                continue;
+            }
+            // chercher() plutôt que resoudre() : on ne veut PAS l'aperçu du référentiel
+            // que la seconde ramène sur un échec — ce serait une requête de liste
+            // complète par entité explorée, pour une information dont on n'a que faire
+            // ici. La garde de lecture (canRead) est la même dans les deux cas.
+            $candidats = $this->resolveur->chercher($courtCible, $terme, $scope);
+            if (count($candidats) === 1) {
+                $trouves[] = [
+                    'entite'     => $courtCible,
+                    'id'         => (int) array_key_first($candidats),
+                    'libelle'    => (string) reset($candidats),
+                    'chemins'    => $chemins,
+                    'profondeur' => min(array_map(static fn (string $c) => substr_count($c, '.'), $chemins)),
+                ];
+                continue;
+            }
+            // Un nom porté par plusieurs enregistrements de la MÊME entité reste une
+            // question à poser : on garde ses candidats pour la formuler.
+            foreach ($candidats as $id => $libelle) {
+                $candidatsAmbigus[$courtCible . '#' . $id] = $libelle;
+            }
+        }
+
+        if ($trouves === []) {
+            return $candidatsAmbigus === [] ? null : ['ambigu' => [
+                'champ'    => 'lieA',
+                'libelle'  => 'Enregistrement de rattachement',
+                'probleme' => Reference::AMBIGUE,
+                'terme'    => $terme,
+                'valeurs'  => $candidatsAmbigus,
+            ]];
+        }
+
+        // Le rattachement le PLUS PROCHE l'emporte : c'est celui que l'utilisateur
+        // désigne quand il dit « les avenants de X » sans autre précision.
+        usort($trouves, static fn (array $a, array $b) => $a['profondeur'] <=> $b['profondeur']);
+        $meilleurs = array_values(array_filter(
+            $trouves,
+            static fn (array $t) => $t['profondeur'] === $trouves[0]['profondeur'],
+        ));
+
+        if (count($meilleurs) > 1) {
+            return ['ambigu' => [
+                'champ'    => 'lieA',
+                'libelle'  => 'Enregistrement de rattachement',
+                'probleme' => Reference::AMBIGUE,
+                'terme'    => $terme,
+                'valeurs'  => array_combine(
+                    array_map(static fn (array $t) => $t['entite'] . '#' . $t['id'], $meilleurs),
+                    array_map(static fn (array $t) => $t['libelle'] . ' (' . $t['entite'] . ')', $meilleurs),
+                ),
+            ]];
+        }
+
+        unset($meilleurs[0]['profondeur']);
+
+        return $meilleurs[0];
     }
 
     /**
@@ -381,7 +573,30 @@ final class RechercherEntitesTool implements AiToolInterface
      */
     private function cheminsVers(string $fqcn, string $cibleFqcn): array
     {
-        $chemins = [];
+        return $this->cheminsParCible($fqcn)[$cibleFqcn] ?? [];
+    }
+
+    /**
+     * Le MÊME parcours, mais rendu pour TOUTES les cibles atteignables à la fois :
+     * chaque classe joignable en *-vers-un, avec les chemins qui y mènent.
+     *
+     * Une seule exploration sert alors les deux besoins — le lien explicite (une cible
+     * connue) et la recherche d'un rattachement par son nom (cible inconnue, à
+     * découvrir). La visite reste propre à chaque chemin, donc une cible n'apparaît
+     * jamais deux fois dans le même chemin : les chemins rendus ici pour une cible
+     * donnée sont exactement ceux que l'ancienne recherche ciblée produisait.
+     *
+     * @return array<string, string[]> FQCN de la cible => chemins pointillés distincts
+     */
+    private function cheminsParCible(string $fqcn): array
+    {
+        // Mémoïsation : le graphe des entités ne change pas d'une requête à l'autre, et
+        // la recherche d'un rattachement par son nom interroge toutes les cibles.
+        if (isset($this->cacheChemins[$fqcn])) {
+            return $this->cacheChemins[$fqcn];
+        }
+
+        $parCible = [];
         // DFS sur les chemins simples : chaque état porte sa propre liste de classes visitées
         // (pas de visite globale) pour explorer les chemins alternatifs, tout en évitant les
         // cycles à l'intérieur d'un même chemin.
@@ -399,16 +614,17 @@ final class RechercherEntitesTool implements AiToolInterface
                 }
                 $target = $metadata->getAssociationTargetClass($name);
                 $nouveauChemin = [...$chemin, $name];
-                if ($target === $cibleFqcn) {
-                    $chemins[] = implode('.', $nouveauChemin);
-                    continue; // cible atteinte : inutile de la dépasser
-                }
+                $parCible[$target][] = implode('.', $nouveauChemin);
                 if (!isset($visites[$target])) {
                     $pile[] = [$target, $nouveauChemin, $visites + [$target => true]];
                 }
             }
         }
 
-        return array_values(array_unique($chemins));
+        foreach ($parCible as $cible => $chemins) {
+            $parCible[$cible] = array_values(array_unique($chemins));
+        }
+
+        return $this->cacheChemins[$fqcn] = $parCible;
     }
 }

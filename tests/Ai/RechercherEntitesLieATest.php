@@ -345,4 +345,96 @@ class RechercherEntitesLieATest extends KernelTestCase
         ], $scope);
         $this->assertSame(3, $global->data['totalItems'], 'Élargi : la tâche orpheline réapparaît.');
     }
+
+    /**
+     * LE NOM SUFFIT — et c'est ce qui rendait la question du courtier insoluble.
+     *
+     * Exiger un identifiant condamnait le modèle à une recherche préalable, donc à un
+     * SECOND tour d'outils, que l'architecture interdit (un message = deux appels).
+     * Résultat mesuré le 2026-08-10 : « les polices du client Kibali » consommait son
+     * unique tour à chercher le client, puis rendait une non-réponse générique.
+     * Le serveur résout donc le nom lui-même, à coût nul.
+     */
+    public function testLieAAccepteUnNomPlutotQuUnIdentifiant(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e, 'tachesPiste' => $ids] = $this->seed();
+        $scope = new AiScope($e, $owner);
+
+        $result = $this->tool()->execute([
+            'entite' => 'Tache',
+            'lieA'   => ['entite' => 'Client', 'nom' => 'Grand-Père'],
+        ], $scope);
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertSame(2, $result->data['totalItems']);
+        $this->assertEqualsCanonicalizing($ids, array_column($result->data['items'], 'id'));
+        $this->assertSame('Client', $result->data['lien']['entite']);
+    }
+
+    /**
+     * Un nom qui ne se résout pas ne devient JAMAIS un identifiant au jugé : l'outil
+     * rend une question déjà formulée, avec ses candidats — la matière d'une question
+     * précise, au lieu du « il me manque un élément » d'autrefois.
+     */
+    public function testLieAParNomIntrouvableRendUneQuestionEtNonUneListeVide(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $scope = new AiScope($e, $owner);
+
+        $result = $this->tool()->execute([
+            'entite' => 'Tache',
+            'lieA'   => ['entite' => 'Client', 'nom' => 'Client Qui N Existe Pas'],
+        ], $scope);
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertFalse($result->data['pret']);
+        $this->assertSame('Client', $result->data['aDemander'][0]['champ']);
+        $this->assertSame('introuvable', $result->data['aDemander'][0]['probleme']);
+        $this->assertSame('Client Qui N Existe Pas', $result->data['aDemander'][0]['terme']);
+        $this->assertArrayNotHasKey('items', $result->data, 'Aucune liste ne doit être servie à la place d’une question.');
+    }
+
+    /**
+     * LE FILTRE TEXTE NE PORTE QUE SUR LE LIBELLÉ, ET C'EST UN PIÈGE.
+     *
+     * Chercher « Kibali » parmi les polices s'écrase sur `referencePolice` et ne ramène
+     * rien, alors que ce client en a sept : son nom vit deux relations plus loin. Le
+     * modèle ne pouvait qu'annoncer « aucune police » — un mensonge — ou relancer une
+     * recherche, ce qu'il n'a pas les tours de faire. Le serveur fait donc ce détour
+     * lui-même, et l'ANNONCE pour que Ket dise ce qu'il a réellement listé.
+     */
+    public function testUnFiltreQuiNeMatcheAucunLibelleEstReinterpreteCommeRattachement(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e, 'tachesPiste' => $ids] = $this->seed();
+        $scope = new AiScope($e, $owner);
+
+        // « Grand-Père » n'est le libellé d'AUCUNE tâche : c'est un nom de client.
+        $result = $this->tool()->execute([
+            'entite' => 'Tache',
+            'filtre' => 'Grand-Père',
+        ], $scope);
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertSame(2, $result->data['totalItems'], 'Les tâches du client remontent malgré le filtre inopérant.');
+        $this->assertEqualsCanonicalizing($ids, array_column($result->data['items'], 'id'));
+        $this->assertSame('Client', $result->data['lien']['entite']);
+        $this->assertStringContainsString('Grand-Père', $result->data['filtreInterpreteCommeLien']);
+    }
+
+    /** Un filtre qui ne correspond à RIEN reste une liste vide : on n'invente aucun lien. */
+    public function testUnFiltreSansAucuneCorrespondanceResteUneListeVide(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $scope = new AiScope($e, $owner);
+
+        $result = $this->tool()->execute([
+            'entite' => 'Tache',
+            'filtre' => 'Zzzz Introuvable Nulle Part',
+        ], $scope);
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertSame(0, $result->data['totalItems']);
+        $this->assertArrayNotHasKey('filtreInterpreteCommeLien', $result->data);
+        $this->assertArrayNotHasKey('lien', $result->data);
+    }
 }

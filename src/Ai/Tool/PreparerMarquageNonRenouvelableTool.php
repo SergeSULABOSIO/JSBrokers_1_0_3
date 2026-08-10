@@ -167,8 +167,10 @@ final class PreparerMarquageNonRenouvelableTool implements AiToolProduisantUnPla
                 'pret'   => false,
                 'ambigu' => array_map($this->resumer(...), $candidats),
                 'note'   => 'Plusieurs polices correspondent à cette référence. Demande à l’utilisateur LAQUELLE, '
-                    . 'en UNE ligne (liste courte), puis rappelle cet outil avec « avenantId ». Ne présente aucun '
-                    . 'plan tant qu’il n’a pas tranché.',
+                    . 'en UNE ligne (liste courte), en les présentant par leur période et leur client — jamais par '
+                    . 'leur identifiant, qu’il ne connaît pas. Puis ARRÊTE-TOI : tu rappelleras cet outil avec '
+                    . '« avenantId » au message SUIVANT, quand il aura tranché, pas dans ce tour-ci. Ne présente '
+                    . 'aucun plan tant qu’il n’a pas répondu.',
             ]);
         }
 
@@ -198,7 +200,8 @@ final class PreparerMarquageNonRenouvelableTool implements AiToolProduisantUnPla
                 ]],
                 'note' => 'Il manque le MOTIF, la SEULE information que tu aies le droit de demander ici. Pose la '
                     . 'question telle quelle, en UNE ligne. Ne l’invente pas, ne le déduis pas du contexte, et ne '
-                    . 'présente aucun plan tant que l’utilisateur n’a pas répondu. Rappelle ensuite cet outil.',
+                    . 'présente aucun plan tant que l’utilisateur n’a pas répondu. Puis ARRÊTE-TOI : tu rappelleras '
+                    . 'cet outil au message SUIVANT, avec sa réponse — pas dans ce tour-ci.',
             ]);
         }
 
