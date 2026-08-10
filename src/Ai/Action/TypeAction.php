@@ -42,6 +42,19 @@ enum TypeAction: string
     /** Navigation : ouvre une rubrique du workspace. */
     case OUVRIR_RUBRIQUE = 'open-rubrique';
 
+    /**
+     * Navigation : FERME un ou plusieurs onglets de rubrique du workspace.
+     *
+     * Cette action manquait, et son absence produisait le pire des comportements :
+     * prié de « fermer la rubrique Monnaie et Clients », le modèle n'avait aucun
+     * outil pour le faire, ouvrait le TABLEAU DE BORD à la place — qui ne ferme
+     * rien — et annonçait « les rubriques ont été fermées ». L'utilisateur voyait
+     * ses onglets intacts sous une réponse affirmative, deux fois de suite
+     * (2026-08-10). Une capacité manquante se comble par du code, jamais par une
+     * consigne de prompt demandant au modèle de s'excuser.
+     */
+    case FERMER_RUBRIQUE = 'close-rubrique';
+
     /** Affiche la fiche d'un enregistrement à l'écran. */
     case VISUALISER_FICHE = 'open-visualization';
 
@@ -75,6 +88,7 @@ enum TypeAction: string
     {
         return match ($this) {
             self::OUVRIR_DIALOGUE, self::OUVRIR_RUBRIQUE => ['entite'],
+            self::FERMER_RUBRIQUE                        => ['entites'],
             self::VISUALISER_FICHE                       => ['entite', 'id'],
             self::OUVRIR_URL                             => ['url'],
             self::OUVRIR_ENVOI_SOA                       => ['clientId'],

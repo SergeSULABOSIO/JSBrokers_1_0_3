@@ -365,4 +365,80 @@ class AvenantRenouvellementTest extends WebTestCase
         $constante = static::getContainer()->get(Constante::class);
         $this->assertSame(Avenant::RENEWAL_STATUS_RENEWED, $constante->Avenant_getRenewalStatus($s['base'])['code']);
     }
+
+    // ------------------------------------------- le sens INVERSE : d'où vient-elle ?
+
+    /**
+     * L'INCIDENT DU 2026-08-10. Ket venait d'exécuter le renouvellement de la police
+     * #72 : l'avenant #131 était en base, son journal le disait. Interrogée dans la
+     * foulée — « quel est l'id de l'avenant dérivé du renouvellement de 72 ? » —, elle
+     * a répondu « je n'ai trouvé aucun élément ». Le sens ALLER existait pourtant ; le
+     * sens RETOUR, lui, n'existait nulle part : rien, sur la police neuve, ne disait
+     * de quelle police elle était la suite. Elle se lisait comme une affaire nouvelle.
+     */
+    public function testLaPoliceIssueNommeCelleQuElleRemplace(): void
+    {
+        $s = $this->seed();
+        $issu = $this->deriver($s, Piste::AVENANT_RENOUVELLEMENT, true);
+
+        $origine = $this->resolver->origine($issu);
+
+        $this->assertNotNull($origine, 'Une police née d’un renouvellement a une origine.');
+        $this->assertSame($s['base']->getId(), $origine['id']);
+        $this->assertSame('Renouvellement', $origine['typeMouvement']);
+        // La phrase porte la PREUVE : l'identifiant de la police remplacée et sa période.
+        $this->assertStringContainsString('#' . $s['base']->getId(), $origine['phrase']);
+        $this->assertStringContainsString($s['base']->getStartingAt()->format('d/m/Y'), $origine['phrase']);
+    }
+
+    /** Une affaire nouvelle ne remplace rien : on ne lui invente pas un prédécesseur. */
+    public function testUneAffaireNouvelleNaAucuneOrigine(): void
+    {
+        $s = $this->seed();
+
+        $this->assertNull($this->resolver->origine($s['base']));
+    }
+
+    /**
+     * Lien à MOITIÉ posé, dans le sens retour : l'opportunité ne pointe plus sa police
+     * de base, mais la police, elle, pointe l'opportunité. Le verdict ne change pas —
+     * comme pour le sens aller, une donnée ancienne ne doit pas se traduire par
+     * « aucune origine ».
+     */
+    public function testOrigineTrouveeParLeLienInverse(): void
+    {
+        $s = $this->seed();
+        $issu = $this->deriver($s, Piste::AVENANT_RENOUVELLEMENT, true);
+
+        $derivee = $issu->getCotation()->getPiste();
+        $derivee->setAvenantDeBase(null);
+        $this->em->flush();
+        $this->assertNull($derivee->getAvenantDeBase(), 'La moitié directe du lien est bien absente.');
+
+        $origine = $this->resolver->origine($issu);
+
+        $this->assertNotNull($origine);
+        $this->assertSame($s['base']->getId(), $origine['id']);
+    }
+
+    /**
+     * La fiche de la police NEUVE porte son origine, comme celle de l'ancienne porte
+     * sa suite. C'est ce qui permet de répondre à « et pour ce renouvellement ? » sans
+     * demander à l'utilisateur de quelle police il parle.
+     */
+    public function testLaFicheDeLaPoliceIssuePorteSonOrigine(): void
+    {
+        $s = $this->seed();
+        $issu = $this->deriver($s, Piste::AVENANT_RENOUVELLEMENT, true);
+
+        /** @var FicheNormaliseur $normaliseur */
+        $normaliseur = static::getContainer()->get(FicheNormaliseur::class);
+
+        $ficheIssue = $normaliseur->ficheEnrichie($issu);
+        $this->assertStringContainsString('#' . $s['base']->getId(), $ficheIssue['origineDeLaPolice']);
+
+        // Et la réciproque : la police de base n'a pas d'origine, seulement une suite.
+        $ficheBase = $normaliseur->ficheEnrichie($s['base']);
+        $this->assertArrayNotHasKey('origineDeLaPolice', $ficheBase);
+    }
 }

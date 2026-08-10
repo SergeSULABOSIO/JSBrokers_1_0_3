@@ -7,6 +7,7 @@ use App\Ai\Action\TypeAction;
 use App\Ai\Trousse\AiToolEcriture;
 
 use App\Ai\AiText;
+use App\Ai\Resolution\ResolveurDeReferences;
 use App\Ai\Scope\AiScope;
 use App\Entity\Invite;
 use App\Service\Workspace\WorkspaceAccessResolver;
@@ -32,6 +33,9 @@ final class OuvrirDialogueTool implements AiToolInterface, AiToolEcriture
         private readonly EntiteLexique $lexique,
         private readonly EntiteLibelle $libelleur,
         private readonly PrefillWhitelist $prefill,
+        // Source unique « un nom dicté → un identifiant ». Sans elle, cet outil
+        // réclamait un id que le modèle n'a pas : voir le paramètre « nom ».
+        private readonly ResolveurDeReferences $resolveur,
     ) {
     }
 
@@ -43,8 +47,14 @@ final class OuvrirDialogueTool implements AiToolInterface, AiToolEcriture
     public function description(): string
     {
         return "Ouvre dans l'espace de travail le formulaire d'une entité (mode « creation » vierge "
-            . "ou « edition », id requis via rechercher_entites) que l'utilisateur remplira et "
-            . "enregistrera LUI-MÊME. À utiliser quand l'utilisateur veut SAISIR/VALIDER lui-même "
+            . "ou « edition ») que l'utilisateur remplira et "
+            . "enregistrera LUI-MÊME. En mode edition, désigne l'enregistrement par son NOM "
+            . '(nom: "Olea") aussi bien que par son id : le serveur résout le nom lui-même, dans '
+            . "l'entreprise et le périmètre de l'utilisateur. NE FAIS DONC JAMAIS une recherche "
+            . "préalable pour obtenir un identifiant — tu n'aurais pas le tour suivant pour ouvrir "
+            . 'le formulaire, et l\'utilisateur se retrouverait devant une liste au lieu du '
+            . 'formulaire qu\'il a demandé. '
+            . "À utiliser quand l'utilisateur veut SAISIR/VALIDER lui-même "
             . '(« ouvre le formulaire », « je vais le remplir/éditer moi-même »), ou pour une entité '
             . 'non gérée par preparer_operations. Pour un Client/Tâche/Note/Piste/Avenant, deux '
             . 'procédures coexistent : ici (l\'utilisateur enregistre lui-même) OU preparer_operations '
@@ -57,9 +67,12 @@ final class OuvrirDialogueTool implements AiToolInterface, AiToolEcriture
 
     public function aiguillage(): string
     {
-        return '« ouvre le formulaire de X », « je vais le saisir / remplir / éditer moi-même » (l\'utilisateur '
-            . 'veut remplir et enregistrer LUI-MÊME), ou création/édition d\'une entité que preparer_operations '
-            . 'ne gère pas.';
+        return '« ouvre le formulaire de X », « ouvre le formulaire d\'ÉDITION de X », « modifie X moi-même », '
+            . '« je vais le saisir / remplir / éditer moi-même » (l\'utilisateur veut remplir et enregistrer '
+            . 'LUI-MÊME), ou création/édition d\'une entité que preparer_operations ne gère pas. Un FORMULAIRE '
+            . 'n\'est pas une RUBRIQUE : « ouvre le formulaire d\'édition d\'Olea » appelle CET outil avec '
+            . 'nom: "Olea" — jamais ouvrir_rubrique, qui n\'afficherait que la liste, et jamais '
+            . 'rechercher_entites d\'abord, qui consommerait le seul tour d\'outils disponible.';
     }
 
     public function schema(): array
@@ -79,7 +92,14 @@ final class OuvrirDialogueTool implements AiToolInterface, AiToolEcriture
                 ],
                 'id' => [
                     'type' => 'integer',
-                    'description' => "Identifiant de l'enregistrement à éditer (requis en mode edition).",
+                    'description' => "Identifiant de l'enregistrement à éditer (mode edition). "
+                        . 'Facultatif si « nom » est fourni.',
+                ],
+                'nom' => [
+                    'type' => 'string',
+                    'description' => "Nom de l'enregistrement à éditer, tel que l'utilisateur l'a dit "
+                        . '(ex. "Olea", "Kibali Goldmines"). Le serveur le résout en identifiant : '
+                        . "n'appelle PAS rechercher_entites pour cela.",
                 ],
                 'valeurs' => [
                     'type' => 'object',
@@ -150,6 +170,36 @@ final class OuvrirDialogueTool implements AiToolInterface, AiToolEcriture
         $cible = null;
         if ($mode === 'edition') {
             $id = (int) ($args['id'] ?? 0);
+
+            // LE NOM SUFFIT — et c'est ce qui manquait le 2026-08-10. « Ouvre-moi le
+            // formulaire d'édition pour Olea » exigeait un identifiant que le modèle
+            // n'a pas : il dépensait donc son UNIQUE tour d'outils à chercher Olea, et
+            // le message d'après, faute de pouvoir enchaîner, il ouvrait la RUBRIQUE
+            // des partenaires. L'utilisateur demandait un formulaire et recevait une
+            // liste. Le serveur résout donc le nom lui-même, comme partout ailleurs
+            // (ResolveurDeReferences) : scopé à l'entreprise, fail-closed sur le droit
+            // de lecture, et sans jamais deviner.
+            $nom = trim((string) ($args['nom'] ?? ''));
+            if ($id <= 0 && $nom !== '') {
+                $reference = $this->resolveur->resoudre($shortName, $nom, $scope);
+                if (!$reference->estResolue()) {
+                    // Introuvable ou ambigu : une QUESTION, pas une erreur. Elle est posée
+                    // telle quelle par la rédaction, avec les candidats à départager.
+                    return AiToolResult::ok([
+                        'pret'      => false,
+                        'aDemander' => [$reference->question()],
+                        'note'      => sprintf(
+                            'Le formulaire d’édition n’a PAS été ouvert : « %s » ne désigne pas un '
+                            . 'enregistrement unique. Pose la question telle quelle, en UNE ligne, en '
+                            . 'PROPOSANT les « valeurs » quand il y en a. N’invente aucun identifiant, '
+                            . 'ne relance AUCUN outil et n’ouvre aucune rubrique en remplacement.',
+                            $nom,
+                        ),
+                    ]);
+                }
+                $id = (int) $reference->id;
+            }
+
             if ($id <= 0) {
                 return AiToolResult::introuvable($labels[$shortName]);
             }

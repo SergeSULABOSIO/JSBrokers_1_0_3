@@ -421,6 +421,50 @@ class RechercherEntitesLieATest extends KernelTestCase
         $this->assertStringContainsString('Grand-Père', $result->data['filtreInterpreteCommeLien']);
     }
 
+    /**
+     * UN FILTRE ENTIÈREMENT NUMÉRIQUE EST AUSSI UN IDENTIFIANT — l'autre moitié de la
+     * panne du 2026-08-10. Ket venait de créer un enregistrement, son journal le
+     * nommait « #131 » ; interrogée dessus au tour suivant, elle a cherché « 131 »
+     * comme un LIBELLÉ, n'a rien trouvé, et a répondu « aucun élément » sur une donnée
+     * qu'elle venait elle-même d'écrire. Le serveur fait donc le second essai lui-même,
+     * et l'ANNONCE — comme pour le rattachement.
+     */
+    public function testUnFiltreNumeriqueRetrouveLEnregistrementParSonIdentifiant(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e, 'tachesPiste' => $ids] = $this->seed();
+        $scope = new AiScope($e, $owner);
+        $cible = (int) $ids[0];
+
+        $result = $this->tool()->execute([
+            'entite' => 'Tache',
+            'filtre' => (string) $cible,
+        ], $scope);
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertSame(1, $result->data['totalItems']);
+        $this->assertSame([$cible], array_column($result->data['items'], 'id'));
+        $this->assertStringContainsString((string) $cible, $result->data['filtreInterpreteCommeIdentifiant']);
+    }
+
+    /**
+     * Un identifiant qui n'existe pas ne devient PAS un rattachement de repli : on ne
+     * remplace jamais une liste vide par les enregistrements d'un homonyme numérique.
+     */
+    public function testUnFiltreNumeriqueSansCorrespondanceResteUneListeVide(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $scope = new AiScope($e, $owner);
+
+        $result = $this->tool()->execute([
+            'entite' => 'Tache',
+            'filtre' => '999999999',
+        ], $scope);
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertSame(0, $result->data['totalItems']);
+        $this->assertArrayNotHasKey('filtreInterpreteCommeIdentifiant', $result->data);
+    }
+
     /** Un filtre qui ne correspond à RIEN reste une liste vide : on n'invente aucun lien. */
     public function testUnFiltreSansAucuneCorrespondanceResteUneListeVide(): void
     {

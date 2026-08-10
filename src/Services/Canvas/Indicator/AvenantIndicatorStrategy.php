@@ -38,12 +38,17 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
         // fausse fait perdre un renouvellement. hasPisteDerivee ci-dessous ne dit
         // que l'existence d'un mouvement, jamais son aboutissement.
         $renouvellement = $this->renouvellementResolver->resoudre($entity);
+        // ET D'OÙ VIENT-ELLE ? Le sens inverse, pour la même raison : sans lui, une
+        // police NÉE d'un renouvellement se lit comme une affaire nouvelle et personne
+        // — l'assistante la première — ne sait la relier à celle qu'elle remplace.
+        $origine = $this->renouvellementResolver->origine($entity);
         if (!$cotation) {
             $urgenceSeule = $this->getUrgenceEcheance($entity, $renouvellement);
 
             return $this->nonRenouvelableIndicateurs($entity) + [
                 'statutRenouvellement' => $renouvellement['statut'],
                 'suiteDeLaPolice' => $renouvellement['phrase'],
+                'origineDeLaPolice' => $origine['phrase'] ?? null,
                 'hasPisteDerivee' => $entity->getPisteDeRenouvellement() !== null,
                 'pisteDeriveeLibelle' => $entity->getPisteDeRenouvellement() !== null ? 'Piste dérivée' : null,
                 'dureeCouverture' => $this->calculateDureeCouvertureAvenant($entity),
@@ -98,6 +103,7 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
             // Indicateurs de base de l'avenant
             'statutRenouvellement' => $renouvellement['statut'],
             'suiteDeLaPolice' => $renouvellement['phrase'],
+            'origineDeLaPolice' => $origine['phrase'] ?? null,
             'hasPisteDerivee' => $pisteDerivee !== null,
             'pisteDeriveeLibelle' => $pisteDerivee !== null ? 'Piste dérivée' : null,
             'dureeCouverture' => $this->calculateDureeCouvertureAvenant($entity),

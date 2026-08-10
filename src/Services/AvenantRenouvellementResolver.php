@@ -72,6 +72,9 @@ final class AvenantRenouvellementResolver
     /** @var array<int, Piste> pistes dérivées indexées par id d'avenant de base */
     private array $pisteParAvenant = [];
 
+    /** @var array<int, Avenant> polices de base indexées par id d'opportunité dérivée (sens inverse) */
+    private array $avenantParPiste = [];
+
     /** @var array<int, true> entreprises dont le lot est déjà chargé */
     private array $lotsCharges = [];
 
@@ -135,6 +138,107 @@ final class AvenantRenouvellementResolver
     public function estScellee(Avenant $base): bool
     {
         return AvenantSuccessionScope::estScellePour($base, $this->code($base));
+    }
+
+    /**
+     * D'OÙ VIENT CETTE POLICE ? — le sens INVERSE de resoudre().
+     *
+     * RAISON D'ÊTRE (incident du 2026-08-10). Ket venait d'exécuter un plan de
+     * renouvellement : l'avenant #131 succédait à l'avenant #72. Interrogée dans
+     * la foulée — « quel est l'id de l'avenant dérivé du renouvellement de 72 ? »,
+     * puis « combien le client doit-il payer pour ce renouvellement ? » —, elle
+     * n'a pas su relier les deux polices et a répondu « je n'ai trouvé aucun
+     * élément ». Le sens aller existait pourtant (resoudre()) ; le sens retour,
+     * lui, n'existait NULLE PART : rien, sur le nouvel avenant, ne disait de
+     * quelle police il était la suite. Un avenant issu d'un renouvellement se
+     * lisait donc comme une affaire nouvelle.
+     *
+     * Chemin lu : avenant → sa proposition → son opportunité → la police de base
+     * de cette opportunité (Piste::avenantDeBase). Le double lien étant posé dans
+     * les deux sens par les deux chemins d'écriture, on lit d'abord la relation
+     * directe (gratuite : proxy déjà mappé) et on ne retombe sur la requête que
+     * pour un lien à moitié posé — une donnée ancienne ne doit pas se traduire
+     * par « aucune origine ».
+     *
+     * @return array{
+     *     id: int,
+     *     numero: ?string,
+     *     referencePolice: ?string,
+     *     periode: ?string,
+     *     pisteDeriveeId: ?int,
+     *     typeMouvement: ?string,
+     *     phrase: string
+     * }|null null quand la police n'est la suite de rien (affaire nouvelle)
+     */
+    public function origine(Avenant $issu): ?array
+    {
+        $piste = $issu->getCotation()?->getPiste();
+        if ($piste === null) {
+            return null;
+        }
+
+        $base = $piste->getAvenantDeBase() ?? $this->avenantDeBaseParLienInverse($piste);
+        // Un lien mal posé ne doit pas faire d'une police sa propre origine.
+        if ($base === null || $base->getId() === null || $base->getId() === $issu->getId()) {
+            return null;
+        }
+
+        $debut = $base->getStartingAt();
+        $fin   = $base->getEndingAt();
+        $periode = $debut !== null && $fin !== null
+            ? sprintf('du %s au %s', $debut->format('d/m/Y'), $fin->format('d/m/Y'))
+            : null;
+        $mouvement = $this->libelleMouvement($piste->getTypeAvenant());
+
+        return [
+            'id'              => $base->getId(),
+            'numero'          => $base->getNumero(),
+            'referencePolice' => $base->getReferencePolice(),
+            'periode'         => $periode,
+            'pisteDeriveeId'  => $piste->getId(),
+            'typeMouvement'   => $mouvement,
+            'phrase'          => sprintf(
+                'Police ISSUE d’un mouvement%s : elle succède à l’avenant #%d (n° %s%s)%s, via '
+                . 'l’opportunité dérivée #%d. Pour toute question portant sur « ce renouvellement », '
+                . 'les DEUX polices sont concernées : #%d est la précédente, celle-ci la nouvelle.',
+                $mouvement !== null ? ' « ' . $mouvement . ' »' : '',
+                $base->getId(),
+                $base->getNumero() ?? '—',
+                $base->getReferencePolice() !== null ? ', réf. ' . $base->getReferencePolice() : '',
+                $periode !== null ? ' qui couvrait ' . $periode : '',
+                (int) $piste->getId(),
+                $base->getId(),
+            ),
+        ];
+    }
+
+    /**
+     * Moitié manquante du double lien : l'opportunité ne pointe pas sa police de
+     * base, mais une police pointe cette opportunité comme son renouvellement.
+     *
+     * CHARGÉ PAR LOT, et ce n'est pas un raffinement. Ce repli se déclenche pour
+     * toute police dont l'opportunité n'est PAS dérivée — c'est-à-dire l'immense
+     * majorité d'entre elles. Une requête par ligne de liste : exactement le N+1
+     * que ce service avait été écrit pour supprimer dans l'autre sens. Le lot
+     * porte les polices qui déclarent un renouvellement, dont le nombre est celui
+     * des mouvements jamais enregistrés par le cabinet.
+     */
+    private function avenantDeBaseParLienInverse(Piste $piste): ?Avenant
+    {
+        $pisteId = $piste->getId();
+        if ($pisteId === null) {
+            return null;
+        }
+
+        $entreprise = $piste->getEntreprise();
+        if ($entreprise === null || $entreprise->getId() === null) {
+            // Opportunité hors entreprise (cas résiduel) : requête ciblée.
+            return $this->avenantRepository->findOneBy(['pisteDeRenouvellement' => $piste]);
+        }
+
+        $this->chargerLot($entreprise);
+
+        return $this->avenantParPiste[$pisteId] ?? null;
     }
 
     // ------------------------------------------------------------------ calcul
@@ -457,6 +561,24 @@ final class AvenantRenouvellementResolver
             $avenantId = $piste->getAvenantDeBase()?->getId();
             if ($avenantId !== null) {
                 $this->pisteParAvenant[$avenantId] = $piste;
+            }
+        }
+
+        // SENS INVERSE, même lot, même raison : les polices qui déclarent une
+        // opportunité de renouvellement, indexées par cette opportunité. Sans lui,
+        // origine() interrogerait la base une fois par ligne de liste.
+        $avenants = $this->avenantRepository->createQueryBuilder('a')
+            ->join('a.pisteDeRenouvellement', 'p')
+            ->andWhere('a.entreprise = :entreprise')
+            ->setParameter('entreprise', $entreprise)
+            ->getQuery()
+            ->getResult();
+
+        /** @var Avenant $avenant */
+        foreach ($avenants as $avenant) {
+            $pisteId = $avenant->getPisteDeRenouvellement()?->getId();
+            if ($pisteId !== null) {
+                $this->avenantParPiste[$pisteId] = $avenant;
             }
         }
     }
