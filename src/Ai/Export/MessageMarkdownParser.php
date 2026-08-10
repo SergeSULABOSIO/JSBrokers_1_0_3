@@ -15,14 +15,17 @@ namespace App\Ai\Export;
  *
  * ── Spec NORMATIVE de la grammaire ───────────────────────────────────────────
  * La grammaire acceptée est fermée : c'est celle que le prompt système impose à
- * Ket, décrite dans App\Ai\AiContextBuilder::toSystemPrompt() (section « Mets en
- * forme tes réponses… » et section « GRAPHIQUES »). Elle est délibérément plus
- * petite que CommonMark :
+ * Ket, décrite dans App\Ai\AiContextBuilder::reglesDeMiseEnForme() (le CONTRAT DE
+ * PRÉSENTATION : mise en forme, listes, pastilles, tableaux, émojis) et sa section
+ * « GRAPHIQUES ». Elle est délibérément plus petite que CommonMark :
  *
  *   - titres `#`…`######`, tous aplatis en un seul niveau (miroir du renderer
  *     JS, qui rend `<p class="aic-md-heading">` quel que soit le niveau) ;
  *   - listes à puces (`-`, `*`, `+`) et numérotées (`1.`, `1)`) ;
- *   - tableaux GFM (ligne d'en-tête + ligne de séparation) ;
+ *   - tableaux GFM (ligne d'en-tête + ligne de séparation), dont l'ALIGNEMENT par
+ *     colonne (`---:`, `:--:`) et la LIGNE DE TOTAUX (première cellule `**TOTAL**`)
+ *     sont restitués — miroir de assets/controllers/assistant-markdown-table.js ;
+ *   - les émojis du jeu fermé du contrat, qui ne sont que du texte ;
  *   - blocs de code ``` (et ```chart / ```graphique, cf. plus bas) ;
  *   - inline PLAT, sans imbrication : `**gras**`, `*italique*`, `` `code` `` et
  *     les cinq pastilles `[texte](#success|#danger|#warning|#info|#neutral)` ;
@@ -177,18 +180,73 @@ class MessageMarkdownParser
     private function consommerTableau(array $lignes, int $depart, array &$blocs): int
     {
         $entetes = array_map(fn (string $c): array => $this->analyserInline($c), $this->cellules($lignes[$depart]));
+        $alignements = $this->alignements($lignes[$depart + 1], count($entetes));
 
         $corps = [];
+        $totaux = [];
         $i = $depart + 2; // en-tête + séparateur
         $nb = count($lignes);
         while ($i < $nb && trim($lignes[$i]) !== '' && str_contains($lignes[$i], '|')) {
-            $corps[] = array_map(fn (string $c): array => $this->analyserInline($c), $this->cellules($lignes[$i]));
+            $cellules = $this->cellules($lignes[$i]);
+            $totaux[] = $this->estLigneDeTotaux($cellules);
+            $corps[] = array_map(fn (string $c): array => $this->analyserInline($c), $cellules);
             ++$i;
         }
 
-        $blocs[] = ['type' => 'tableau', 'entetes' => $entetes, 'lignes' => $corps];
+        $blocs[] = [
+            'type'        => 'tableau',
+            'entetes'     => $entetes,
+            'alignements' => $alignements,
+            'lignes'      => $corps,
+            'totaux'      => $totaux,
+        ];
 
         return $i;
+    }
+
+    /**
+     * ALIGNEMENT DES COLONNES, lu dans la ligne de séparation — « ---: » à droite,
+     * « :--: » au centre, le reste à gauche.
+     *
+     * POURQUOI CE N'ÉTAIT PAS LU. La ligne de séparation était simplement SAUTÉE
+     * (« $depart + 2 »), donc l'alignement disparaissait de l'export comme il
+     * disparaissait du chat — où c'était DOMPurify qui le supprimait, l'attribut
+     * `align` de marked n'étant pas dans l'allowlist. Un même tableau se lisait donc
+     * plat dans les deux sorties. Le chat honore désormais l'alignement (cf.
+     * assets/controllers/assistant-markdown-table.js) : sans cette lecture, le PDF et
+     * le document Word resteraient les seuls à ne pas le faire.
+     *
+     * @return array<int, string> une valeur parmi 'left', 'center', 'right' par colonne
+     */
+    private function alignements(string $separateur, int $nbColonnes): array
+    {
+        $alignements = [];
+        foreach ($this->cellules($separateur) as $cellule) {
+            $cellule = trim($cellule);
+            $aDroite = str_ends_with($cellule, ':');
+            $aGauche = str_starts_with($cellule, ':');
+            $alignements[] = match (true) {
+                $aGauche && $aDroite => 'center',
+                $aDroite             => 'right',
+                default              => 'left',
+            };
+        }
+
+        // Une ligne de séparation mal comptée ne doit jamais décaler les colonnes du
+        // corps : on cadre sur le nombre d'en-têtes, en complétant à gauche.
+        return array_slice(array_pad($alignements, $nbColonnes, 'left'), 0, $nbColonnes);
+    }
+
+    /**
+     * La ligne de TOTAUX du contrat de présentation : première cellule en gras portant
+     * « TOTAL ». Miroir exact de estLigneDeTotaux() côté navigateur — sans ce marquage,
+     * le chiffre qui résume tout le tableau se lit comme une ligne de données de plus.
+     *
+     * @param array<int, string> $cellules
+     */
+    private function estLigneDeTotaux(array $cellules): bool
+    {
+        return (bool) preg_match('/^\*\*\s*TOTAL\b/i', trim($cellules[0] ?? ''));
     }
 
     /**

@@ -1,6 +1,8 @@
 import { Marked } from 'marked';
 import DOMPurify from 'dompurify';
 
+import { celluleTableau, ligneTableau } from './assistant-markdown-table.js';
+
 /**
  * Rendu Markdown restreint des réponses de l'assistant IA — jamais utilisé
  * sur la saisie utilisateur. Convention des pastilles : la syntaxe standard
@@ -28,6 +30,15 @@ const marked = new Marked({
         },
         heading({ tokens }) {
             return `<p class="aic-md-heading">${this.parser.parseInline(tokens)}</p>`;
+        },
+        // Alignement GFM et ligne de totaux : la décision vit dans le module PUR
+        // assistant-markdown-table.js (testé sans marked ni DOM), ce renderer ne fait
+        // que lui passer l'HTML déjà rendu par marked.
+        tablecell({ tokens, header, align }) {
+            return celluleTableau(this.parser.parseInline(tokens), { header, align });
+        },
+        tablerow({ text }) {
+            return ligneTableau(text);
         },
         code({ text, lang }) {
             // Bloc ```chart / ```graphique : on ne rend PAS le JSON, on dépose un

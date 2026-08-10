@@ -818,21 +818,75 @@ class AiContextBuilder
         CONCISION;
     }
 
-    /** Markdown, pastilles de statut et graphiques : le métier de la rédaction. */
+    /**
+     * LE CONTRAT DE PRÉSENTATION — la spec NORMATIVE de la grammaire de sortie de Ket.
+     *
+     * CE QU'IL REMPLACE, ET POURQUOI. Ce bloc disait « tableaux Markdown standard
+     * (colonnes courtes, 4-5 maximum) » et s'arrêtait là. Mesuré sur la capture du
+     * 2026-08-10 — un tableau des primes signalées : montants alignés à gauche comme du
+     * texte, dates au format d'échange (« 2026-08-05 »), ligne de totaux indiscernable
+     * d'une ligne de données. Et surtout, faute d'interdiction explicite, DEUX colonnes
+     * inventées : un « Client » découpé dans le préfixe des références (« MIC-RC » n'est
+     * pas un client, c'est le début de « MIC-RC0012454/2028 ») et un « Assureur
+     * partenaire » posé en bouche-trou. Le glossaire financier interdisait déjà
+     * d'inventer un MONTANT ; rien n'interdisait d'inventer un LIBELLÉ. C'est la règle (2).
+     *
+     * AUCUNE SYNTAXE NOUVELLE N'EST INTRODUITE ICI, et c'est délibéré : la grammaire est
+     * un contrat fermé à trois applications qui doivent rester synchrones — ce bloc,
+     * assets/controllers/assistant-markdown-render.js et
+     * App\Ai\Export\MessageMarkdownParser. L'alignement GFM, le gras et les pastilles
+     * existaient déjà ; les émojis sont du texte. Seul le RESPECT de ces éléments change.
+     *
+     * PRÉSENT AUX DEUX PHASES (via reglesDeStyle) : une question de pure conversation
+     * n'appelle aucun outil et se termine donc dès la planification.
+     */
     private function reglesDeMiseEnForme(): string
     {
         return <<<'MISEENFORME'
-        - Mets en forme tes réponses avec un Markdown simple et sobre quand cela aide à la
-          lisibilité : listes à puces ou numérotées, **gras** pour les points clés, tableaux
-          Markdown standard pour des données tabulaires (colonnes courtes, 4-5 maximum). Au plus
-          un niveau de titre (##), réservé aux réponses longues qui gagnent à être structurées —
-          jamais dans une réponse courte. Pas de bloc de code sauf si le contenu EST réellement du
-          code. Pour signaler un statut ou une information qualifiée, utilise EXCLUSIVEMENT la
-          syntaxe de lien Markdown standard avec un de ces cinq mots-clés réservés comme cible :
-          [Payée](#success), [En retard](#danger), [À surveiller](#warning), [Info](#info),
-          [Aucun impayé](#neutral). N'utilise jamais d'autre cible de lien (URL, ancre libre) :
-          aucun lien cliquable n'existe dans cette interface — seuls ces cinq mots-clés sont
-          interprétés. Reste sobre : la mise en forme sert la lisibilité, jamais la décoration.
+        - MISE EN FORME (Markdown sobre : elle sert la lisibilité, jamais la décoration).
+          **gras** pour les points clés ; au plus un niveau de titre (##), réservé aux réponses
+          longues qui gagnent à être structurées — jamais dans une réponse courte ; pas de bloc de
+          code sauf si le contenu EST réellement du code. Aucun lien cliquable n'existe dans cette
+          interface : n'écris jamais d'URL ni d'ancre libre.
+        - LISTES : « - » pour une énumération, « 1. » RÉSERVÉ à des étapes ordonnées (un parcours,
+          un plan, une chronologie). Un seul niveau, jamais de sous-liste. En dessous de trois
+          éléments, une phrase vaut mieux qu'une liste.
+        - PASTILLES DE STATUT — la syntaxe de lien Markdown détournée, avec ces cinq cibles
+          réservées et AUCUNE autre : [Payée](#success), [En retard](#danger),
+          [À surveiller](#warning), [Info](#info), [Aucun impayé](#neutral). Le texte entre
+          crochets est libre, la cible non. Réservées à un STATUT : jamais dans un titre, jamais
+          collées à un montant, jamais pour décorer une phrase.
+        - TABLEAUX — un tableau de gestion se lit d'un coup d'œil ou ne sert à rien. Six règles,
+          toutes obligatoires :
+          (1) COLONNES : si un résultat d'outil porte « presentation.colonnes », ce sont CES clés,
+              dans CET ordre, avec ces intitulés — l'outil a déjà choisi ce qui compte. Tu n'en
+              ajoutes une autre que si l'utilisateur la demande ET qu'elle figure dans les
+              résultats. Sans déclaration : six colonnes au plus, les plus discriminantes, pas
+              toutes celles qui existent.
+          (2) COLONNE FANTÔME — INTERDICTION ABSOLUE. Une colonne n'existe que si sa valeur figure
+              dans les résultats. Ne la DÉDUIS jamais d'une autre (un nom de client ne se lit pas
+              dans une référence de police) et ne comble jamais un vide par un libellé générique
+              (« Assureur partenaire », « Divers », « N/A »). Si l'utilisateur demande une colonne
+              que tu n'as pas, dis-le en UNE phrase en nommant l'information manquante, et
+              propose-la au message suivant : une colonne inventée est un mensonge, pas une
+              approximation.
+          (3) ALIGNEMENT : « ---: » dans la ligne de séparation pour toute colonne de montant, de
+              quantité ou de taux ; « --- » pour le reste. Sans cela les chiffres ne s'alignent
+              pas et l'œil doit relire chaque ligne pour comparer deux montants.
+          (4) FORMATS : dates en jj/mm/aaaa (jamais « 2026-08-05 ») ; montants « 1 234,50 $ »
+              (espace pour les milliers, virgule décimale, symbole après) ; taux en points
+              (« 16 % »). Un même tableau n'emploie jamais deux formats pour la même nature.
+          (5) TOTAUX : dernière ligne « | **TOTAL** | … | **1 911 633,28 $** | », sur les colonnes
+              de « presentation.totaliser » quand il y en a, sinon sur les montants et les
+              quantités. JAMAIS de total sur une date, un identifiant ni un taux.
+          (6) TRONCATURE DITE : 20 lignes au plus. S'il en reste, ajoute dessous, en italique,
+              « *N éléments au total, 20 affichés* » — un tableau tronqué muet se lit comme un
+              inventaire complet, et le courtier croit avoir vu toute sa dette.
+        - ÉMOJIS — huit, pas un de plus, et seulement pour repérer une section d'un coup d'œil :
+          📅 échéance · 💰 encaissement ou commission · 📄 police · 👤 client · 📊 analyse ·
+          ⚠ alerte · ✅ soldé · 📌 priorité. Au plus UN par titre « ## ». Jamais dans une cellule
+          de tableau, jamais accolé à un chiffre, jamais dans une réponse courte. Aucun autre
+          émoji, sous aucun prétexte : ce produit est un outil de travail, pas une conversation.
         - GRAPHIQUES : quand des données gagnent à être VUES (évolution mensuelle, répartition,
           comparaison de plusieurs postes), tu peux afficher un graphique en émettant un bloc de
           code balisé « chart » contenant un JSON. Types acceptés : "bar" (histogramme), "line"

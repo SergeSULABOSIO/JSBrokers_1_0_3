@@ -45,6 +45,88 @@ class AiContextBuilderSystemPromptFormatTest extends KernelTestCase
         $this->assertStringContainsString('[Aucun impayé](#neutral)', $prompt);
     }
 
+    /**
+     * LE CONTRAT DE PRÉSENTATION, verrouillé règle par règle.
+     *
+     * L'INCIDENT (capture du 2026-08-10, tableau des primes signalées). Le prompt ne
+     * disait rien de l'alignement, rien du format des dates, rien de la ligne de
+     * totaux — et surtout n'interdisait pas d'AJOUTER une colonne absente des données.
+     * Ket a donc livré des montants alignés à gauche, des dates « 2026-08-05 », un
+     * total noyé dans les lignes, un « Client » découpé dans le préfixe des références
+     * et un « Assureur partenaire » posé en bouche-trou.
+     *
+     * Ces assertions sont volontairement littérales : chacune correspond à un défaut
+     * observé, et le contrat est aussi la spec que doivent honorer le renderer du chat
+     * et le parseur d'export.
+     */
+    public function testPromptImposeLeContratDePresentationDesTableaux(): void
+    {
+        static::bootKernel();
+        $builder = static::getContainer()->get(AiContextBuilder::class);
+
+        $request = new AiRequest(
+            systemContext: [
+                'assistantNom'   => 'Ket',
+                'entrepriseNom'  => 'PHPUnit Présentation SARL',
+                'perimetre'      => [],
+                'date'           => '2026-08-11',
+                'objetsAttaches' => [],
+            ],
+            messages: [],
+            scope: new AiScope(new Entreprise(), new Invite()),
+        );
+
+        $prompt = $builder->toSystemPrompt($request);
+
+        // (1) Les colonnes déclarées par l'outil font autorité.
+        $this->assertStringContainsString('presentation.colonnes', $prompt);
+        // (2) LA règle qui manquait : une colonne ne s'invente pas.
+        $this->assertStringContainsString('COLONNE FANTÔME', $prompt);
+        $this->assertStringContainsString('Assureur partenaire', $prompt);
+        // (3) L'alignement, écrit en GFM et désormais honoré par le renderer.
+        $this->assertStringContainsString('---:', $prompt);
+        // (4) Les formats : date lisible, montant avec sa monnaie, taux en points.
+        $this->assertStringContainsString('jj/mm/aaaa', $prompt);
+        $this->assertStringContainsString('1 234,50 $', $prompt);
+        // (5) La ligne de totaux, distincte et jamais posée sur une date ou un taux.
+        $this->assertStringContainsString('**TOTAL**', $prompt);
+        $this->assertStringContainsString('presentation.totaliser', $prompt);
+        // (6) Une troncature muette se lit comme un inventaire complet.
+        $this->assertStringContainsString('éléments au total', $prompt);
+    }
+
+    /**
+     * Les émojis sont un JEU FERMÉ. Sans énumération explicite, le registre dérive d'un
+     * message à l'autre et le même tableau se lit différemment dans le chat, dans un
+     * e-mail et dans un export PDF.
+     */
+    public function testPromptEnumereUnJeuFermeDEmojis(): void
+    {
+        static::bootKernel();
+        $builder = static::getContainer()->get(AiContextBuilder::class);
+
+        $request = new AiRequest(
+            systemContext: [
+                'assistantNom'   => 'Ket',
+                'entrepriseNom'  => 'PHPUnit Émojis SARL',
+                'perimetre'      => [],
+                'date'           => '2026-08-11',
+                'objetsAttaches' => [],
+            ],
+            messages: [],
+            scope: new AiScope(new Entreprise(), new Invite()),
+        );
+
+        $prompt = $builder->toSystemPrompt($request);
+
+        $this->assertStringContainsString('ÉMOJIS', $prompt);
+        foreach (['📅', '💰', '📄', '👤', '📊', '⚠', '✅', '📌'] as $emoji) {
+            $this->assertStringContainsString($emoji, $prompt, sprintf('L’émoji %s doit être énuméré.', $emoji));
+        }
+        $this->assertStringContainsString('Aucun autre', $prompt);
+        $this->assertStringContainsString('Jamais dans une cellule', $prompt);
+    }
+
     public function testPromptEnseigneLaSyntaxeGraphique(): void
     {
         static::bootKernel();

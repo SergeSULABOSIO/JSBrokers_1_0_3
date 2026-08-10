@@ -10,6 +10,7 @@ use App\Ai\Engine\AiEngineResolver;
 use App\Ai\Engine\AnthropicAiEngine;
 use App\Ai\Engine\GeminiAiEngine;
 use App\Ai\Engine\SimulatedAiEngine;
+use App\Ai\Presentation\TableauMarkdown;
 use App\Ai\Redaction\RepliPrecis;
 use App\Ai\Programme\ProgrammeEnCours;
 use App\Ai\Scope\AiScope;
@@ -21,12 +22,14 @@ use App\Ai\Trousse\TrousseCatalogue;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Repository\AssistantProgrammeRepository;
+use App\Services\ServiceNombres;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\Translation\LocaleSwitcher;
 
 /**
  * Adaptateur API Claude (Messages API + tool-calling) testé avec un client
@@ -93,12 +96,18 @@ class AnthropicAiEngineTest extends TestCase
         };
     }
 
+    /** Le repli de rédaction, avec le rendu de tableau que Ket partage avec lui. */
+    private function repliPrecis(): RepliPrecis
+    {
+        return new RepliPrecis(new TableauMarkdown(new ServiceNombres(new LocaleSwitcher('fr', []))));
+    }
+
     private function makeEngine(MockHttpClient $http, array $tools = []): AnthropicAiEngine
     {
         $contextBuilder = $this->createMock(AiContextBuilder::class);
         $contextBuilder->method('toSystemPrompt')->willReturn('SYSTEM');
 
-        return new AnthropicAiEngine($http, $contextBuilder, new TrousseCatalogue($tools), $tools, 'sk-ant-test', 'claude-opus-4-8', new RepliPrecis());
+        return new AnthropicAiEngine($http, $contextBuilder, new TrousseCatalogue($tools), $tools, 'sk-ant-test', 'claude-opus-4-8', $this->repliPrecis());
     }
 
     public function testReponseTexteSimple(): void
@@ -317,7 +326,7 @@ class AnthropicAiEngineTest extends TestCase
             new NullLogger(),
             new JournalTokens(new NullLogger(), new OutilsDePlan([])),
             new BudgetDebit(new ArrayAdapter()),
-            new RepliPrecis(),
+            $this->repliPrecis(),
         );
 
         // Aucune clé → simulateur.

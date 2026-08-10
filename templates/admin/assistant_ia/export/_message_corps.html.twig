@@ -68,18 +68,30 @@
            l'e-mail comme pour le PDF : même fragment. #}
         {% set compact = bloc.entetes|length >= 5 %}
         {% set cellule_pad = compact ? '4px 6px' : '6px 8px' %}
+        {# ALIGNEMENT PAR COLONNE, lu dans la ligne de séparation GFM par
+           MessageMarkdownParser. Le chat l'honore désormais via une classe (l'attribut
+           `align` de marked ne survit pas à la sanitisation) ; sans ces styles en
+           ligne, le PDF et le document Word resteraient les seules sorties où les
+           montants s'alignent comme du texte. Style INLINE et non classe : un client de
+           messagerie ne charge pas de feuille externe, et TCPDF n'en applique qu'un
+           sous-ensemble. #}
+        {% set alignements = bloc.alignements|default([]) %}
         <table cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:0 0 12px;font-size:{{ compact ? '11px' : '12px' }};line-height:1.35;color:#343a40;">
             {% if bloc.entetes is not empty %}
                 <thead>
                     <tr>
                         {% for cellule in bloc.entetes %}
-                            <th style="text-align:left;padding:{{ cellule_pad }};background:#f1f3f5;border:1px solid #dee2e6;font-weight:700;color:#0d2440;word-break:break-word;">{{ md.inline(cellule, badgeStyles) }}</th>
+                            <th style="text-align:{{ alignements[loop.index0]|default('left') }};padding:{{ cellule_pad }};background:#f1f3f5;border:1px solid #dee2e6;font-weight:700;color:#0d2440;word-break:break-word;">{{ md.inline(cellule, badgeStyles) }}</th>
                         {% endfor %}
                     </tr>
                 </thead>
             {% endif %}
             <tbody>
                 {% for ligne in bloc.lignes %}
+                    {# La ligne de TOTAUX porte le chiffre qui résume le tableau : sur
+                       fond gris et sans coupure de mot, elle ne se lit plus comme une
+                       ligne de données de plus. #}
+                    {% set estTotaux = bloc.totaux[loop.index0]|default(false) %}
                     <tr>
                         {% for cellule in ligne %}
                             {# word-break:break-word — la cellule cède AVANT le tableau.
@@ -87,7 +99,7 @@
                                largeur de l'écran et c'est tout l'e-mail qui défile
                                horizontalement. La coupure n'intervient que si le mot ne
                                tient pas : sur un écran large, rien ne change. #}
-                            <td style="padding:{{ cellule_pad }};border:1px solid #dee2e6;vertical-align:top;word-break:break-word;">{{ md.inline(cellule, badgeStyles) }}</td>
+                            <td style="text-align:{{ alignements[loop.index0]|default('left') }};padding:{{ cellule_pad }};border:1px solid #dee2e6;vertical-align:top;word-break:break-word;{% if estTotaux %}background:#f1f3f5;font-weight:700;color:#0d2440;{% endif %}">{{ md.inline(cellule, badgeStyles) }}</td>
                         {% endfor %}
                     </tr>
                 {% endfor %}

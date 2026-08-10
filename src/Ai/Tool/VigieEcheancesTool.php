@@ -3,6 +3,7 @@
 namespace App\Ai\Tool;
 
 use App\Ai\AiText;
+use App\Ai\Presentation\Colonnes;
 use App\Ai\Scope\AiScope;
 use App\Services\DashboardDataProvider;
 use App\Services\Search\PortefeuilleCritereFactory;
@@ -327,13 +328,27 @@ final class VigieEcheancesTool implements AiToolInterface
             }
         }
 
-        $population = fn (array $liste): array => [
+        // Les colonnes d'un tableau d'échéances, et leur rôle : c'est ce qui donne
+        // l'échéance en jj/mm/aaaa et le compte de jours aligné à droite. Aucun total —
+        // additionner des jours restants n'aurait aucun sens, et c'est bien pour cela
+        // qu'on le déclare : « totaliser » vide vaut interdiction explicite.
+        $presentation = Colonnes::de([
+            'police'        => Colonnes::TEXTE,
+            'client'        => Colonnes::TEXTE,
+            'assureur'      => Colonnes::TEXTE,
+            'risque'        => Colonnes::TEXTE,
+            'echeance'      => Colonnes::DATE,
+            'joursRestants' => Colonnes::NOMBRE,
+        ], []);
+
+        $population = fn (array $liste): array => array_filter([
             'lignes' => array_map(
                 fn (object $e) => $this->projeter('renouvellements', $e),
                 array_slice($liste, 0, $max),
             ),
+            'presentation' => $liste === [] ? null : $presentation,
             'total' => count($liste),
-        ];
+        ], static fn ($v) => $v !== null);
 
         $payload = [
             'echues'  => $population($echues),
@@ -354,6 +369,15 @@ final class VigieEcheancesTool implements AiToolInterface
                         + ['motif' => $e->nonRenouvelableDetail ?? null],
                     array_slice($nonRenouvelables, 0, $max),
                 ),
+                // Le MOTIF de la décision remplace ici le compte de jours : ces polices ne
+                // réclament plus d'action de renouvellement, la question est « pourquoi ».
+                'presentation' => Colonnes::de([
+                    'police'   => Colonnes::TEXTE,
+                    'client'   => Colonnes::TEXTE,
+                    'assureur' => Colonnes::TEXTE,
+                    'echeance' => Colonnes::DATE,
+                    'motif'    => Colonnes::TEXTE,
+                ], []),
                 'total'  => count($nonRenouvelables),
                 'rappel' => 'Polices SIGNALÉES non renouvelables : une décision a été prise, elles ne '
                     . 'sont donc PAS comptées dans « total » et ne réclament aucune action de '

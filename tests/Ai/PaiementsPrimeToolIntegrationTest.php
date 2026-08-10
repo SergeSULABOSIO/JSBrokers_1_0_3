@@ -7,6 +7,8 @@ use App\Ai\Engine\SimulatedAiEngine;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
 use App\Ai\Tool\PaiementsPrimeTool;
+use App\Entity\Assureur;
+use App\Entity\Avenant;
 use App\Entity\ChargementPourPrime;
 use App\Entity\Client;
 use App\Entity\Cotation;
@@ -61,8 +63,9 @@ class PaiementsPrimeToolIntegrationTest extends KernelTestCase
         $conn = $this->em()->getConnection();
         $noms = [self::ENTREPRISE_NOM, self::ENTREPRISE_B_NOM];
 
-        // Enfants avant parents.
-        foreach (['paiement_prime', 'tranche', 'chargement_pour_prime', 'cotation', 'piste', 'client', 'portefeuille', 'invite'] as $table) {
+        // Enfants avant parents. `avenant` précède `cotation` (FK cotation_id) et
+        // `assureur` la suit (FK assureur_id portée par la cotation).
+        foreach (['paiement_prime', 'tranche', 'chargement_pour_prime', 'avenant', 'cotation', 'assureur', 'piste', 'client', 'portefeuille', 'invite'] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom IN (:noms)",
                 ['noms' => $noms],
@@ -175,10 +178,32 @@ class PaiementsPrimeToolIntegrationTest extends KernelTestCase
         $piste->setEntreprise($entreprise)->setInvite($gestionnaire);
         $em->persist($piste);
 
+        // ASSUREUR et AVENANT : sans eux, la liste transversale ne pouvait annoncer ni la
+        // compagnie ni la police, et Ket comblait ces colonnes de son propre chef (cf.
+        // l'incident du 2026-08-10 et PaiementsPrimeTool::projeter).
+        $assureur = (new Assureur())
+            ->setNom('Assureur PP ' . $suffixe)
+            ->setEmail(sprintf('assureur-pp-%s@example.test', strtolower($suffixe)))
+            ->setNumimpot('IMP-PP-' . $suffixe)
+            ->setIdnat('NAT-PP-' . $suffixe)
+            ->setRccm('RCCM-PP-' . $suffixe);
+        $assureur->setEntreprise($entreprise);
+        $em->persist($assureur);
+
         $cotation = (new Cotation())->setNom('Cotation PP ' . $suffixe)->setDuree(365);
-        $cotation->setPiste($piste);
+        $cotation->setPiste($piste)->setAssureur($assureur);
         $cotation->setEntreprise($entreprise);
         $em->persist($cotation);
+
+        $avenant = (new Avenant())
+            ->setReferencePolice('POL-PP-' . $suffixe)
+            ->setNumero('0')
+            ->setDescription('Police de test paiements de prime')
+            ->setStartingAt(new \DateTimeImmutable('-60 days'))
+            ->setEndingAt(new \DateTimeImmutable('+305 days'));
+        $avenant->setEntreprise($entreprise)->setInvite($gestionnaire);
+        $cotation->addAvenant($avenant);
+        $em->persist($avenant);
 
         $chargement = (new ChargementPourPrime())
             ->setNom('Prime PP ' . $suffixe)
@@ -273,6 +298,108 @@ class PaiementsPrimeToolIntegrationTest extends KernelTestCase
         );
         $this->assertSame(2, $vuEntreprise->data['total']);
         $this->assertSame(PortefeuilleScope::LIBELLE_ENTREPRISE, $vuEntreprise->data['perimetre']);
+    }
+
+    /**
+     * L'INCIDENT DU 2026-08-10, contre la VRAIE base.
+     *
+     * La liste transversale ne rendait ni le client ni l'assureur ; Ket a donc rempli ces
+     * colonnes elle-même — un « Client » découpé dans le préfixe des références, un
+     * « Assureur Partenaire » posé en bouche-trou. Ce test remonte les trois colonnes
+     * depuis le graphe réel (tranche → cotation → assureur, cotation → piste → client,
+     * cotation → avenant pour la police), joint en SQL et non deviné.
+     */
+    public function testLaListeTransversaleRemonteClientAssureurEtPoliceDepuisLaBase(): void
+    {
+        ['entreprise' => $entreprise, 'gestionnaire' => $gestionnaire] = $this->seed();
+
+        $result = $this->tool()->execute([], new AiScope($entreprise, $gestionnaire));
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertCount(2, $result->data['items']);
+        foreach ($result->data['items'] as $ligne) {
+            $this->assertSame('Client PP A', $ligne['client']);
+            $this->assertSame('Assureur PP A', $ligne['assureur']);
+            $this->assertSame('POL-PP-A', $ligne['police']);
+            $this->assertSame('Tranche PP A', $ligne['tranche'], 'Le rattachement est aplati, jamais imbriqué.');
+        }
+
+        // La présentation déclarée voyage avec les données : c'est elle qui fixe l'ordre
+        // des colonnes, l'alignement des montants et la ligne de totaux.
+        $this->assertSame(
+            ['date', 'client', 'assureur', 'police', 'reference', 'montant'],
+            array_keys($result->data['presentation']['colonnes']),
+        );
+        $this->assertSame(['montant'], $result->data['presentation']['totaliser']);
+    }
+
+    /**
+     * LE COÛT DE CES TROIS COLONNES : borné, et indépendant du nombre de lignes.
+     *
+     * Sans préchargement, chaque ligne parcourrait seule tranche → cotation → assureur,
+     * → piste → client et → avenants : une soixantaine de requêtes pour vingt lignes.
+     * prechargerContexte() hydrate le graphe to-one en UNE requête et les avenants en
+     * une seconde. On vérifie donc que passer de deux lignes à deux lignes de plus ne
+     * coûte AUCUNE requête supplémentaire — la seule preuve qui vaille, un compte absolu
+     * dépendant du reste du moteur de recherche.
+     */
+    public function testLeContexteDesLignesEstPrechargeEtNonChargeLigneParLigne(): void
+    {
+        ['entreprise' => $entrepriseSemee, 'gestionnaire' => $gestionnaireSeme, 'tranche' => $trancheSemee] = $this->seed();
+        [$entrepriseId, $gestionnaireId, $trancheId] = [
+            $entrepriseSemee->getId(), $gestionnaireSeme->getId(), $trancheSemee->getId(),
+        ];
+        $em = $this->em();
+
+        // Le compteur VIDE l'EM avant de mesurer : sans cela, le graphe déjà hydraté par
+        // le semis masquerait tout chargement paresseux. Il repart donc d'entités
+        // fraîches, à chaque passage — d'où le travail par identifiants.
+        $compter = function () use ($entrepriseId, $gestionnaireId, $em): int {
+            $em->clear();
+            $entreprise = $em->getRepository(Entreprise::class)->find($entrepriseId);
+            $gestionnaire = $em->getRepository(Invite::class)->find($gestionnaireId);
+
+            $logger = new class implements \Doctrine\DBAL\Logging\SQLLogger {
+                public int $nb = 0;
+
+                public function startQuery($sql, ?array $params = null, ?array $types = null): void
+                {
+                    ++$this->nb;
+                }
+
+                public function stopQuery(): void
+                {
+                }
+            };
+            $config = $em->getConnection()->getConfiguration();
+            $precedent = $config->getSQLLogger();
+            $config->setSQLLogger($logger);
+
+            try {
+                $this->tool()->execute([], new AiScope($entreprise, $gestionnaire));
+            } finally {
+                $config->setSQLLogger($precedent);
+            }
+
+            return $logger->nb;
+        };
+
+        $avecDeuxLignes = $compter();
+
+        $em->clear();
+        $entreprise = $em->getRepository(Entreprise::class)->find($entrepriseId);
+        $tranche = $em->getRepository(Tranche::class)->find($trancheId);
+        $this->makeSignalement($entreprise, $tranche, 'PP-A-003', 150.0, '-3 days');
+        $this->makeSignalement($entreprise, $tranche, 'PP-A-004', 250.0, '-2 days');
+        $em->flush();
+
+        $avecQuatreLignes = $compter();
+
+        $this->assertSame(
+            $avecDeuxLignes,
+            $avecQuatreLignes,
+            'Doubler les lignes ne doit coûter aucune requête de plus : le contexte est préchargé.',
+        );
     }
 
     /**

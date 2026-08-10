@@ -3,6 +3,7 @@
 namespace App\Ai\Tool;
 
 use App\Ai\AiText;
+use App\Ai\Presentation\Colonnes;
 use App\Ai\Scope\AiScope;
 use App\Entity\PaiementPrime;
 use App\Entity\Tranche;
@@ -11,6 +12,7 @@ use App\Services\JSBDynamicSearchService;
 use App\Services\Search\PortefeuilleCritereFactory;
 use App\Services\Search\PortefeuilleScope;
 use App\Services\Tranche\TranchePaiementService;
+use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * Outil de données : les SIGNALEMENTS de paiement de prime (entité PaiementPrime) —
@@ -56,6 +58,10 @@ final class PaiementsPrimeTool implements AiToolInterface, AiToolConditionnel
         private readonly JSBDynamicSearchService $searchService,
         private readonly TranchePaiementService $tranchePaiement,
         private readonly PortefeuilleCritereFactory $portefeuilleCritere,
+        // Sert UNIQUEMENT au préchargement du contexte des lignes (client, assureur,
+        // police) : sans lui, chaque ligne déclencherait ses propres chargements
+        // paresseux le long de tranche → cotation → piste → client.
+        private readonly EntityManagerInterface $em,
     ) {
     }
 
@@ -225,6 +231,14 @@ final class PaiementsPrimeTool implements AiToolInterface, AiToolConditionnel
             ],
             'commissionExigible' => $commissionExigible > 0 ? round($commissionExigible, 2) : null,
             'signalements' => array_map(fn (PaiementPrime $p) => $this->projeter($p), $signalements['data']),
+            // Mode ciblé : le client, l'assureur et la police sont déjà donnés par
+            // l'entête (une seule tranche), inutile de les répéter à chaque ligne.
+            'presentation' => $signalements['data'] === [] ? null : Colonnes::de([
+                'date'      => Colonnes::DATE,
+                'reference' => Colonnes::TEXTE,
+                'montant'   => Colonnes::MONTANT,
+                'preuves'   => Colonnes::NOMBRE,
+            ]),
             'total' => (int) $signalements['totalItems'],
             'page' => (int) $signalements['currentPage'],
             'totalPages' => (int) $signalements['totalPages'],
@@ -283,6 +297,11 @@ final class PaiementsPrimeTool implements AiToolInterface, AiToolConditionnel
             return AiToolResult::introuvable('Paiements de prime signalés');
         }
 
+        // Le contexte de CHAQUE ligne (client, assureur, police) en deux requêtes, avant
+        // toute projection : sans cela, vingt lignes déclencheraient une soixantaine de
+        // chargements paresseux le long de tranche → cotation → piste → client.
+        $this->prechargerContexte($result['data']);
+
         $items = array_map(fn (PaiementPrime $p) => $this->projeter($p, true), $result['data']);
         $montantPage = 0.0;
         foreach ($result['data'] as $paiement) {
@@ -295,6 +314,18 @@ final class PaiementsPrimeTool implements AiToolInterface, AiToolConditionnel
             'du' => $du,
             'au' => $au,
             'items' => $items,
+            // Les colonnes de CE tableau, et leur rôle : c'est ce qui fixe l'ordre,
+            // l'alignement des montants, le format des dates et la ligne de totaux —
+            // côté modèle comme côté repli PHP. « description » et « preuves » restent
+            // dans les données sans être affichées d'office.
+            'presentation' => $items === [] ? null : Colonnes::de([
+                'date'      => Colonnes::DATE,
+                'client'    => Colonnes::TEXTE,
+                'assureur'  => Colonnes::TEXTE,
+                'police'    => Colonnes::TEXTE,
+                'reference' => Colonnes::TEXTE,
+                'montant'   => Colonnes::MONTANT,
+            ]),
             'montantPage' => $items === [] ? null : round($montantPage, 2),
             'montantPageNote' => $items === [] ? null : 'Somme des signalements de CETTE page uniquement.',
             'total' => (int) $result['totalItems'],
@@ -306,24 +337,115 @@ final class PaiementsPrimeTool implements AiToolInterface, AiToolConditionnel
     }
 
     /**
-     * Projection compacte d'un signalement. $avecTranche rattache la ligne à sa tranche
-     * (mode transversal, où le contexte n'est pas déjà donné par l'entête).
+     * Projection compacte d'un signalement. $avecContexte rattache la ligne à sa
+     * tranche, à son client, à son assureur et à sa police — le mode transversal étant
+     * une liste, où l'entête ne donne aucun de ces repères.
+     *
+     * ── L'INCIDENT DU 2026-08-10, ET POURQUOI CES COLONNES SONT ARRIVÉES ICI ────────
+     * Cette projection ne rendait NI le client NI l'assureur. Un courtier a demandé la
+     * liste des primes signalées : Ket a produit un tableau avec une colonne « Client »
+     * remplie en découpant le préfixe des références — « MIC-RC » n'est pas un client,
+     * c'est le début de « MIC-RC0012454/2028 » — et une colonne « Assureur » remplie du
+     * libellé générique « Assureur Partenaire ». Puis, relancée, elle a répondu que ses
+     * outils ne lui donnaient pas le nom de la compagnie : c'était exact.
+     *
+     * LA RÈGLE QUI EN DÉCOULE, et qui vaut pour tout outil de liste : une colonne
+     * PRÉSENTABLE est une colonne RENVOYÉE. Tant qu'une information manque au résultat,
+     * le modèle n'a que deux issues — la taire, ou l'inventer. Les autres outils de
+     * liste (vigie_echeances, suivi_impayes) rendaient déjà client et assureur ;
+     * celui-ci était l'exception.
+     *
+     * Le rattachement est APLATI (chaînes + trancheId) et non imbriqué : une valeur
+     * structurée n'a pas de rendu de cellule honnête, et le tableau de repli comme le
+     * contrat de présentation écartent les sous-tableaux.
      */
-    private function projeter(PaiementPrime $paiement, bool $avecTranche = false): array
+    private function projeter(PaiementPrime $paiement, bool $avecContexte = false): array
     {
         $tranche = $paiement->getTranche();
+        $cotation = $avecContexte ? $tranche?->getCotation() : null;
+
+        // La référence de la POLICE, lue sur le premier avenant de la cotation (même
+        // source que Tranche::$referencePolice). Une cotation sans avenant n'est qu'une
+        // proposition : elle n'a pas de police, et on rend null plutôt qu'un libellé de
+        // remplissage — c'est précisément ce qu'on reproche au modèle.
+        $police = $avecContexte
+            ? ($cotation?->getAvenants()->first() ?: null)?->getReferencePolice()
+            : null;
 
         return array_filter([
             'id' => $paiement->getId(),
             'date' => $paiement->getPaidAt()?->format('Y-m-d'),
-            'montant' => round((float) ($paiement->getMontant() ?? 0), 2),
+            'client' => $cotation?->getPiste()?->getClient()?->getNom(),
+            'assureur' => $cotation?->getAssureur()?->getNom(),
+            'police' => $police,
+            'tranche' => $avecContexte ? $tranche?->getNom() : null,
+            'trancheId' => $avecContexte ? $tranche?->getId() : null,
             'reference' => $paiement->getReference(),
+            'montant' => round((float) ($paiement->getMontant() ?? 0), 2),
             'description' => $paiement->getDescription(),
             'preuves' => $paiement->getPreuves()->count() ?: null,
-            'tranche' => ($avecTranche && $tranche !== null)
-                ? ['id' => $tranche->getId(), 'nom' => $tranche->getNom()]
-                : null,
         ], static fn ($v) => $v !== null && $v !== '');
+    }
+
+    /**
+     * Précharge en TROIS requêtes, quel que soit le nombre de lignes, tout ce que
+     * projeter() parcourt ensuite : les pièces justificatives, le graphe to-one jusqu'au
+     * client et à l'assureur, puis les avenants (pour la référence de police).
+     *
+     * RÈGLE À NE PAS ENFREINDRE, comme dans preloadAvenantRelations : une seule
+     * collection to-many par requête. En joindre deux produirait un produit cartésien
+     * dont le coût croît en O(n×m) et annule le gain. Ici chaque requête n'en joint
+     * qu'une — et la deuxième, aucune.
+     *
+     * @param array<int, PaiementPrime> $paiements
+     */
+    private function prechargerContexte(array $paiements): void
+    {
+        // Les PIÈCES d'abord : projeter() en compte le nombre, et un Collection::count()
+        // sur une collection non initialisée émet son propre COUNT(*) — soit une requête
+        // PAR LIGNE. Le défaut préexistait à l'ajout du client et de l'assureur.
+        $paiementIds = array_values(array_filter(
+            array_map(static fn (PaiementPrime $p) => $p->getId(), $paiements),
+        ));
+        if ($paiementIds !== []) {
+            $this->em->createQuery(
+                'SELECT pp, pr
+                 FROM App\Entity\PaiementPrime pp
+                 LEFT JOIN pp.preuves pr
+                 WHERE pp.id IN (:ids)'
+            )->setParameter('ids', $paiementIds)->getResult();
+        }
+
+        $trancheIds = array_values(array_unique(array_filter(
+            array_map(static fn (PaiementPrime $p) => $p->getTranche()?->getId(), $paiements),
+        )));
+        if ($trancheIds === []) {
+            return;
+        }
+
+        $tranches = $this->em->createQuery(
+            'SELECT t, c, a, p, cl
+             FROM App\Entity\Tranche t
+             LEFT JOIN t.cotation c
+             LEFT JOIN c.assureur a
+             LEFT JOIN c.piste p
+             LEFT JOIN p.client cl
+             WHERE t.id IN (:ids)'
+        )->setParameter('ids', $trancheIds)->getResult();
+
+        $cotationIds = array_values(array_unique(array_filter(
+            array_map(static fn (Tranche $t) => $t->getCotation()?->getId(), $tranches),
+        )));
+        if ($cotationIds === []) {
+            return;
+        }
+
+        $this->em->createQuery(
+            'SELECT c, av
+             FROM App\Entity\Cotation c
+             LEFT JOIN c.avenants av
+             WHERE c.id IN (:ids)'
+        )->setParameter('ids', $cotationIds)->getResult();
     }
 
     /** Date AAAA-MM-JJ validée, ou null (une valeur mal formée est simplement ignorée). */
