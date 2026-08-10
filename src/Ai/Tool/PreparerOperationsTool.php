@@ -106,9 +106,15 @@ final class PreparerOperationsTool implements AiToolProduisantUnPlan, AiToolEcri
                             'champs' => [
                                 'type' => 'object',
                                 'description' => 'Champ => valeur, STRICTEMENT telles que dictées par '
-                                    . 'l\'utilisateur (create/edit). Les relations se donnent par id (ex. '
-                                    . '{"portefeuille": 42}) ; une relation MULTIPLE se donne par liste d\'id '
-                                    . '(ex. {"partenaires": [7, 12]}) ; une relation vers une création du même '
+                                    . 'l\'utilisateur (create/edit). Une relation se donne par son NOM, tel que '
+                                    . 'l\'utilisateur l\'a prononcé — le serveur le résout lui-même (ex. '
+                                    . '{"client": "Mme Marlette", "assureur": "SUNU"}). NE VA DONC PAS chercher '
+                                    . 'd\'identifiant avec rechercher_entites : c\'est inutile et coûteux. Si un '
+                                    . 'nom est introuvable ou ambigu, l\'outil te renvoie « aDemander » avec les '
+                                    . 'candidats, et tu poses UNE question groupée. Un id reste accepté quand tu '
+                                    . 'en disposes déjà (ex. {"portefeuille": 42}) ; une relation MULTIPLE se '
+                                    . 'donne par liste (ex. {"partenaires": ["Alpha Courtage", 12]}) ; une '
+                                    . 'relation vers une création du même '
                                     . 'plan se donne par son étiquette (ex. {"client": "@client"}). Pour DÉPOSER '
                                     . 'une PIÈCE JOINTE de la conversation dans un champ fichier (ex. le champ '
                                     . '"fichier" d\'un Document), donne au champ la valeur "@fichier:<id>" où <id> '

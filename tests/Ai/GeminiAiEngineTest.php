@@ -9,15 +9,12 @@ use App\Ai\Engine\GeminiAiEngine;
 use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Programme\ProgrammeEnCours;
-use App\Ai\Routage\CatalogueCondense;
-use App\Ai\Routage\RouteurModele;
-use App\Ai\Routage\RouteurTrousse;
 use App\Ai\Scope\AiScope;
 use App\Ai\Telemetrie\JournalTokens;
-use App\Ai\Tool\ActiverOutilsEcritureTool;
 use App\Ai\Tool\AiToolInterface;
 use App\Ai\Tool\AiToolResult;
 use App\Ai\Trousse\AiToolEcriture;
+use App\Ai\Trousse\SelecteurDeTrousse;
 use App\Ai\Trousse\Trousse;
 use App\Ai\Trousse\TrousseCatalogue;
 use App\Entity\Entreprise;
@@ -55,93 +52,102 @@ class GeminiAiEngineTest extends TestCase
     }
 
     /**
-     * Routeur FIGÉ : ces tests portent sur la boucle de function calling, pas sur
-     * l'aiguillage (couvert par RouteurTrousseTest). On fixe donc la trousse, sans
-     * quoi chaque cas dépendrait d'un appel réseau supplémentaire.
+     * SÉLECTEUR RÉEL, mais dans un contexte neutre : ces tests portent sur les DEUX
+     * PHASES, pas sur le choix de la trousse. Sans conversation dans le scope et
+     * sans verbe d'action dans la question, la sélection est déterministe.
      */
-    private function routeurFige(Trousse $trousse): RouteurTrousse
+    private function selecteurFige(): SelecteurDeTrousse
     {
-        $modele = new class($trousse) implements RouteurModele {
-            public function __construct(private Trousse $trousse)
-            {
-            }
-
-            public function choisirTrousse(string $instruction, string $catalogue, array $messages): array
-            {
-                return ['trousse' => $this->trousse->value, 'tokens' => 0];
-            }
-        };
-
-        $em = $this->createMock(EntityManagerInterface::class);
-
-        return new RouteurTrousse(
-            $modele,
-            new CatalogueCondense(new TrousseCatalogue([])),
-            new PlanEnAttente($em),
-            // Classes finales : on les construit réellement. Sans conversation dans
-            // le scope, les deux court-circuits sont inopérants — c'est exactement
-            // l'état voulu pour tester la boucle, pas l'aiguillage.
-            new ProgrammeEnCours($this->createMock(AssistantProgrammeRepository::class), $em),
-            new NullLogger(),
-        );
+        return new SelecteurDeTrousse(new ProgrammeEnCours(
+            $this->createMock(AssistantProgrammeRepository::class),
+            $this->createMock(EntityManagerInterface::class),
+        ));
     }
 
     /**
-     * ESCALADE : routé en lecture, le modèle réclame les outils d'écriture. Le tour
-     * suivant doit les DÉCLARER — sinon l'aiguillage transformerait une capacité
-     * réelle en refus, exactement ce que le prompt lui interdit de formuler.
+     * LA RÈGLE D'ARCHITECTURE, verrouillée : le modèle n'orchestre plus, PHP
+     * orchestre. Un message coûte DEUX appels — les outils, puis la formulation —
+     * quoi que le modèle réclame ensuite.
+     *
+     * Sans ce test, la boucle pourrait revenir d'un simple changement de constante,
+     * et personne ne le verrait avant la prochaine saturation : le 2026-08-10, cinq
+     * tours enchaînés ont consommé 188 000 tokens sur les 212 500 d'une minute, et
+     * rendu la conversation entière inutilisable — « salut » compris.
      */
-    public function testLEscaladeDonneLesOutilsDEcritureAuTourSuivant(): void
+    public function testUnMessageNeCoutteJamaisPlusDeDeuxAppels(): void
+    {
+        $appels = 0;
+        // Le modèle redemande un outil À CHAQUE tour : le pire cas, celui qui
+        // faisait précédemment neuf appels.
+        $http = new MockHttpClient(function () use (&$appels) {
+            ++$appels;
+
+            return new MockResponse(json_encode($this->tourAvecOutil(1000)));
+        });
+
+        $tool = $this->makeTool(AiToolResult::ok(['count' => 3]));
+        $this->makeEngine($http, [$tool])->reply($this->makeRequest('Analyse tout mon portefeuille'));
+
+        $this->assertSame(2, $appels, 'Un message ne doit jamais dépasser deux appels au moteur.');
+    }
+
+    /**
+     * LA SECONDE MOITIÉ DE L'ÉCONOMIE : la phase de RÉDACTION ne déclare AUCUN outil.
+     *
+     * Les 72 Ko de déclarations ne servent qu'à CHOISIR un outil ; commenter un
+     * résultat déjà obtenu n'en a aucun besoin. Les envoyer quand même, c'était
+     * payer le catalogue deux fois par message — mesuré : 131 653 octets au premier
+     * appel contre 15 432 au second, soit 88 % de moins.
+     */
+    public function testLaPhaseDeRedactionNeDeclareAucunOutil(): void
     {
         $declarations = [];
         $http = new MockHttpClient(function ($method, $url, $options) use (&$declarations) {
             $corps = json_decode($options['body'], true);
-            $declarations[] = array_column($corps['tools'][0]['functionDeclarations'] ?? [], 'name');
+            $declarations[] = $corps['tools'] ?? null;
 
-            // 1er tour : le modèle réclame les outils d'écriture. 2e : il répond.
-            $premier = count($declarations) === 1;
-
-            return new MockResponse(json_encode([
-                'candidates' => [[
-                    'content' => ['parts' => $premier
-                        ? [['functionCall' => ['name' => 'activer_outils_ecriture', 'args' => new \stdClass()]]]
-                        : [['text' => 'Voici le plan.']]],
-                ]],
-                'usageMetadata' => ['promptTokenCount' => 10, 'candidatesTokenCount' => 5],
-            ]));
+            // 1er appel : le modèle demande un outil. 2e : il rédige.
+            return new MockResponse(json_encode(count($declarations) === 1
+                ? $this->tourAvecOutil(1000)
+                : self::texte('Vous avez 3 clients.')));
         });
 
-        $outils = [new ActiverOutilsEcritureTool(), $this->makeOutilDEcriture()];
-        $moteur = new GeminiAiEngine(
-            $http,
-            $this->contextBuilderFige(),
-            new TrousseCatalogue($outils),
-            $this->routeurFige(Trousse::LECTURE),
-            $outils,
-            'gm-test',
-            'gemini-2.5-flash',
-            new NullLogger(),
-            new JournalTokens(new NullLogger(), new OutilsDePlan([])),
-            $this->makeBudget(),
-        );
+        $tool = $this->makeTool(AiToolResult::ok(['count' => 3]));
+        $reply = $this->makeEngine($http, [$tool])->reply($this->makeRequest('Combien de clients ?'));
 
-        $moteur->reply($this->makeRequest('Crée-moi un client'));
+        $this->assertCount(2, $declarations, 'Un message = deux appels, ni plus ni moins.');
+        $this->assertNotNull($declarations[0], 'La PLANIFICATION doit déclarer les outils.');
+        $this->assertNotEmpty($declarations[0][0]['functionDeclarations'] ?? []);
+        $this->assertNull($declarations[1], 'La RÉDACTION ne doit porter aucune clé « tools ».');
+        $this->assertSame('Vous avez 3 clients.', $reply->content);
+    }
 
-        $this->assertSame(
-            ['activer_outils_ecriture'],
-            $declarations[0],
-            'Le premier tour est en lecture : aucun outil d’écriture, mais l’escalade est offerte.',
-        );
-        $this->assertContains(
-            'preparer_operations',
-            $declarations[1],
-            'Après escalade, les outils d’écriture doivent être déclarés.',
-        );
-        $this->assertNotContains(
-            'activer_outils_ecriture',
-            $declarations[1],
-            'Une fois les outils donnés, réclamer n’a plus de sens.',
-        );
+    /**
+     * Un appel d'outil pendant la RÉDACTION ne peut être qu'une hallucination : rien
+     * ne lui a été déclaré. On ne l'exécute pas, et surtout on ne relance pas — ce
+     * serait le troisième appel. L'utilisateur repart avec ce qui a déjà été obtenu.
+     */
+    public function testUnOutilReclameEnRedactionNEstNiExecuteNiRelance(): void
+    {
+        $appels = 0;
+        $http = new MockHttpClient(function () use (&$appels) {
+            ++$appels;
+
+            return new MockResponse(json_encode($this->tourAvecOutil(1000)));
+        });
+
+        $tool = $this->makeTool(AiToolResult::ok(['count' => 3]));
+        $this->makeEngine($http, [$tool])->reply($this->makeRequest('Combien de clients ?'));
+
+        $this->assertSame(2, $appels);
+        // Un seul outil EXÉCUTÉ : celui de la planification. Le journal du message
+        // fait foi — la ligne de tour, elle, enregistre aussi l'appel halluciné,
+        // et c'est très bien : on veut savoir qu'il a eu lieu.
+        $bilan = array_values(array_filter(
+            $this->telemetrie,
+            static fn (array $l) => ($l['context']['evenement'] ?? null) === 'message',
+        ));
+        $this->assertCount(1, $bilan[0]['context']['sequenceOutils']);
     }
 
     private function contextBuilderFige(): AiContextBuilder
@@ -276,7 +282,7 @@ class GeminiAiEngineTest extends TestCase
             $http,
             $contextBuilder,
             new TrousseCatalogue($tools),
-            $this->routeurFige(Trousse::ECRITURE),
+            $this->selecteurFige(),
             $tools,
             'gm-test',
             'gemini-2.5-flash',
@@ -541,21 +547,21 @@ class GeminiAiEngineTest extends TestCase
      */
     public function testLaBoucleSArreteQuandLeDebitDeLaMinuteEstEpuise(): void
     {
-        // Plafond 250 000, 60 000 tokens par tour, horloge figée : rien ne sort
-        // jamais de la fenêtre. Au 4e tour le compteur est à 240 000 et un 5e
-        // (estimé au même prix) dépasserait — il faudrait attendre que la minute
-        // s'écoule, bien au-delà de l'attente tolérée.
+        // Le garde-fou reste actif, mais il faut désormais une VRAIE raison de
+        // renoncer : la rédaction ne portant plus le catalogue, elle est bon marché.
+        // Ici 200 000 tokens à la planification ET un résultat d'outil volumineux
+        // (un export, une longue liste) qui rendrait la rédaction hors de portée.
         $appels = 0;
         $http = new MockHttpClient(function () use (&$appels) {
             ++$appels;
 
-            return new MockResponse(json_encode($this->tourAvecOutil(60000)));
+            return new MockResponse(json_encode($this->tourAvecOutil(200000)));
         });
 
-        $tool = $this->makeTool(AiToolResult::ok(['count' => 3]));
+        $tool = $this->makeTool(AiToolResult::ok(['lignes' => str_repeat('x', 300000)]));
         $reply = $this->makeEngine($http, [$tool])->reply($this->makeRequest('Analyse tout mon portefeuille'));
 
-        $this->assertSame(4, $appels, 'La boucle doit cesser d\'appeler l\'API dès le débit épuisé.');
+        $this->assertSame(1, $appels, 'La boucle doit cesser d\'appeler l\'API dès le débit épuisé.');
         $this->assertStringContainsString('limite de débit', $reply->content);
         // Le refus ne doit plus accuser l'utilisateur d'avoir mal posé sa question.
         $this->assertStringNotContainsString('Découpez', $reply->content);
@@ -563,9 +569,10 @@ class GeminiAiEngineTest extends TestCase
     }
 
     /**
-     * Le cas qui justifie tout le chantier : la fenêtre est saturée mais se
-     * libère dans quelques secondes. Jeter là quatre tours DÉJÀ facturés pour
-     * rendre une non-réponse est le pire des choix — Ket patiente et termine.
+     * La fenêtre est saturée mais se libère dans quelques secondes. Jeter là un
+     * tour DÉJÀ facturé pour rendre une non-réponse est le pire des choix — Ket
+     * patiente et termine. Le tour de formulation compte autant que les autres :
+     * un plan préparé qu'on ne sait plus annoncer ne vaut rien pour l'utilisateur.
      */
     public function testLeMoteurPatienteBrievementPuisTermineLaChaine(): void
     {
@@ -578,14 +585,19 @@ class GeminiAiEngineTest extends TestCase
             0.0,
             static function () use (&$instant): int { return $instant; },
         );
+        // Une consommation ANTÉRIEURE occupe déjà la fenêtre — c'est le cas réel :
+        // le débit est partagé par tout le cabinet, pas propre à ce message. Elle
+        // sortira de la minute dans 11 s, d'où une attente brève et non un abandon.
+        $budget->enregistrer('gemini-2.5-flash', 50000);
 
         $appels = 0;
         $http = new MockHttpClient(function () use (&$appels, &$instant) {
             $instant += 50;
             ++$appels;
 
-            // Les deux premiers tours appellent l'outil, le troisième conclut.
-            return new MockResponse(json_encode($appels < 3
+            // Le premier tour appelle l'outil, le second conclut : c'est tout ce
+            // qu'un message peut désormais coûter.
+            return new MockResponse(json_encode($appels < 2
                 ? $this->tourAvecOutil(40000)
                 : [
                     'candidates'    => [['content' => ['role' => 'model', 'parts' => [['text' => 'Voici le bilan.']]]]],
@@ -593,7 +605,10 @@ class GeminiAiEngineTest extends TestCase
                 ]));
         });
 
-        $tool = $this->makeTool(AiToolResult::ok(['count' => 3]));
+        // Résultat volumineux : c'est lui qui rend la rédaction assez chère pour
+        // qu'elle doive attendre. Sans cela elle passerait sans encombre — ce qui
+        // est justement l'intérêt de ne plus lui envoyer le catalogue d'outils.
+        $tool = $this->makeTool(AiToolResult::ok(['lignes' => str_repeat('x', 40000)]));
         $reply = $this->makeEngine(
             $http,
             [$tool],
@@ -601,7 +616,7 @@ class GeminiAiEngineTest extends TestCase
             static function (int $secondes) use (&$instant): void { $instant += $secondes; },
         )->reply($this->makeRequest('Analyse tout mon portefeuille'));
 
-        $this->assertSame(3, $appels, 'La chaîne doit reprendre après l\'attente, pas s\'interrompre.');
+        $this->assertSame(2, $appels, 'La chaîne doit reprendre après l\'attente, pas s\'interrompre.');
         $this->assertSame('Voici le bilan.', $reply->content);
         $this->assertCount(1, $this->attentes, 'Une seule attente était nécessaire.');
         $this->assertLessThanOrEqual(15, $this->attentes[0], 'L\'attente doit rester brève (un seul worker en dev).');
@@ -625,9 +640,13 @@ class GeminiAiEngineTest extends TestCase
         callable $reponses,
         string $issueAttendue,
         int $toursAttendus,
+        int $tailleDuResultat = 10,
     ): void {
         $http = new MockHttpClient($reponses);
-        $tool = $this->makeTool(AiToolResult::ok(['count' => 3]));
+        // La taille du résultat d'outil fait partie du scénario : la rédaction ne
+        // portant plus le catalogue, seule une sortie volumineuse peut encore la
+        // rendre inabordable.
+        $tool = $this->makeTool(AiToolResult::ok(['lignes' => str_repeat('x', $tailleDuResultat)]));
 
         $this->makeEngine($http, [$tool])->reply($this->makeRequest('Question'));
 
@@ -665,20 +684,21 @@ class GeminiAiEngineTest extends TestCase
             1,
         ];
 
-        // 60 000 tokens par tour, horloge figée (rien ne sort de la fenêtre) :
-        // au 4e tour le compteur atteint 240 000 et un 5e dépasserait 250 000.
+        // 200 000 tokens à la planification ET un résultat d'outil volumineux : la
+        // rédaction, pourtant bon marché, ne tient plus dans les 212 500 utilisables.
+        // Le moteur s'arrête donc après le tour d'outils — un seul aura été payé.
         yield 'débit de la minute épuisé' => [
-            static fn () => new MockResponse(json_encode($appelOutil(60000))),
+            static fn () => new MockResponse(json_encode($appelOutil(200000))),
             JournalTokens::ISSUE_BUDGET_ATTEINT,
-            4,
+            1,
+            300000,
         ];
 
-        // Le modèle rappelle un outil indéfiniment : MAX_TOOL_ROUNDS borne la boucle.
-        yield 'tours épuisés' => [
-            static fn () => new MockResponse(json_encode($appelOutil())),
-            JournalTokens::ISSUE_TOURS_EPUISES,
-            9,
-        ];
+        // « Tours épuisés » n'a plus de jeu de données : la boucle ne pouvant plus
+        // compter que deux phases, il n'y a plus de tours à épuiser. Le cas où le
+        // modèle redemande un outil en RÉDACTION est couvert par
+        // testUnOutilReclameEnRedactionNEstNiExecuteNiRelance — on ne relance pas,
+        // on rend ce qui a été obtenu.
     }
 
     /**
@@ -716,7 +736,8 @@ class GeminiAiEngineTest extends TestCase
 
         $appels = 0;
         $http = new MockHttpClient(function () use (&$appels, $appelOutil) {
-            return ++$appels <= 3
+            // Un tour d'outils, puis la formulation : le maximum désormais possible.
+            return ++$appels <= 1
                 ? new MockResponse(json_encode($appelOutil))
                 : new MockResponse(json_encode(self::texte('Vous avez 3 clients.')));
         });
@@ -725,6 +746,6 @@ class GeminiAiEngineTest extends TestCase
         $reply = $this->makeEngine($http, [$tool])->reply($this->makeRequest('Combien de clients ?'));
 
         $this->assertSame('Vous avez 3 clients.', $reply->content);
-        $this->assertSame(4, $appels);
+        $this->assertSame(2, $appels);
     }
 }

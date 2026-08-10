@@ -34,8 +34,13 @@ final class AnthropicAiEngine implements AiEngineInterface
     private const API_VERSION = '2023-06-01';
     /** Assez ample pour restituer une page de liste (rechercher_entites) sans troncature. */
     private const MAX_OUTPUT_TOKENS = 4096;
-    /** Garde-fou : nombre maximal d'allers-retours de tool-calling par message. */
-    private const MAX_TOOL_ROUNDS = 8;
+    /**
+     * UN SEUL TOUR D'OUTILS, comme chez Gemini : le modèle n'orchestre pas, PHP
+     * orchestre. Un message = deux appels (les outils, puis la formulation).
+     * Les deux moteurs doivent se comporter à l'identique, sinon comparer leurs
+     * mesures n'a plus de sens et un défaut ne se reproduit que sur l'un des deux.
+     */
+    private const MAX_TOOL_ROUNDS = 1;
 
     /** @var iterable<AiToolInterface> */
     private iterable $tools;

@@ -20,12 +20,15 @@ use PHPUnit\Framework\TestCase;
  */
 class MutationCollectionsSchemaTest extends TestCase
 {
+    use ResolveurDeTest;
+
     public function testSchemaCollectionsEstUnArraySansAdditionalProperties(): void
     {
         $tool = new PreparerOperationsTool(new PlanBuilder(
             $this->createMock(WorkspaceMutationService::class),
             $this->createMock(TokenAccountService::class),
             new PlanEnAttente($this->createMock(EntityManagerInterface::class)),
+            $this->resolveurAvec(),
         ));
         $col = $tool->schema()['properties']['operations']['items']['properties']['collections'];
 

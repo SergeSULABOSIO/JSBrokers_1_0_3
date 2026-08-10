@@ -38,6 +38,8 @@ use PHPUnit\Framework\TestCase;
  */
 class PlanBuilderPariteTest extends TestCase
 {
+    use ResolveurDeTest;
+
     private function dependances(): array
     {
         $resolver = $this->createMock(WorkspaceAccessResolver::class);
@@ -67,7 +69,12 @@ class PlanBuilderPariteTest extends TestCase
 
     private function planBuilder(WorkspaceMutationService $mutation, TokenAccountService $tokens): PlanBuilder
     {
-        return new PlanBuilder($mutation, $tokens, new PlanEnAttente($this->createMock(EntityManagerInterface::class)));
+        return new PlanBuilder(
+            $mutation,
+            $tokens,
+            new PlanEnAttente($this->createMock(EntityManagerInterface::class)),
+            $this->resolveurAvec(),
+        );
     }
 
     private function emAvecChampNom(): EntityManagerInterface
@@ -121,8 +128,7 @@ class PlanBuilderPariteTest extends TestCase
             $builder,
             $resolver,
             $referentiels,
-            $search,
-            new EntiteLibelle($this->emAvecChampNom()),
+            $this->resolveurAvec(['Assureur' => [7 => 'SFA']], $resolver),
         ))->execute([
             'nom'         => 'Flotte automobile 2026',
             'assureur'    => 'SFA',
