@@ -38,10 +38,12 @@ use PHPUnit\Framework\TestCase;
  */
 class SaisirPropositionToolTest extends TestCase
 {
-    /** @var array<int, MutationOperation> opérations réellement soumises au constructeur de plan */
-    private array $operationsVues = [];
+    use ResolveurDeTest;
 
-    private function makeTool(
+    /** @var array<int, MutationOperation> opérations réellement soumises au constructeur de plan */
+    protected array $operationsVues = [];
+
+    protected function makeTool(
         bool $peutEcrire = true,
         array $assureursTrouves = [7 => 'SFA'],
         ?array $referentielChargement = null,
@@ -78,27 +80,6 @@ class SaisirPropositionToolTest extends TestCase
         $tokens->method('estimateWriteCost')->willReturn(120);
         $tokens->method('availableFor')->willReturn(10000);
 
-        $search = $this->createMock(JSBDynamicSearchService::class);
-        $search->method('search')->willReturnCallback(
-            static function (string $fqcn) use ($assureursTrouves) {
-                if ($fqcn !== Assureur::class) {
-                    return ['status' => ['code' => 200], 'data' => []];
-                }
-                $entites = [];
-                foreach ($assureursTrouves as $id => $nom) {
-                    $a = new Assureur();
-                    $a->setNom($nom);
-                    // L'id n'est pas assignable : on le pose par réflexion, comme le
-                    // ferait Doctrine à l'hydratation.
-                    $ref = new \ReflectionProperty(Assureur::class, 'id');
-                    $ref->setValue($a, $id);
-                    $entites[] = $a;
-                }
-
-                return ['status' => ['code' => 200], 'data' => $entites];
-            }
-        );
-
         $referentiels = $this->createMock(ReferentielEnumerateur::class);
         $referentiels->method('codes')->willReturnCallback(
             static fn (string $entite) => match ($entite) {
@@ -110,34 +91,30 @@ class SaisirPropositionToolTest extends TestCase
             }
         );
 
+        // Le résolveur ne connaît que les assureurs qu'on lui donne : c'est ainsi
+        // qu'on éprouve les trois issues — résolu, introuvable, ambigu.
+        $resolveur = $this->resolveurAvec(['Assureur' => $assureursTrouves], $resolver);
+
         return new SaisirPropositionTool(
-            new PlanBuilder($mutation, $tokens, new PlanEnAttente($this->createMock(EntityManagerInterface::class))),
+            new PlanBuilder(
+                $mutation,
+                $tokens,
+                new PlanEnAttente($this->createMock(EntityManagerInterface::class)),
+                $resolveur,
+            ),
             $resolver,
             $referentiels,
-            $search,
-            new EntiteLibelle($this->emAvecChampNom()),
+            $resolveur,
         );
     }
 
-    /** EntityManager minimal : toute entité possède un champ « nom » (champ d'affichage). */
-    private function emAvecChampNom(): EntityManagerInterface
-    {
-        $metadata = $this->createMock(ClassMetadata::class);
-        $metadata->method('hasField')->willReturnCallback(static fn (string $champ) => $champ === 'nom');
-
-        $em = $this->createMock(EntityManagerInterface::class);
-        $em->method('getClassMetadata')->willReturn($metadata);
-
-        return $em;
-    }
-
-    private function makeScope(): AiScope
+    protected function makeScope(): AiScope
     {
         return new AiScope(new Entreprise(), new Invite());
     }
 
     /** L'offre du message #1335 du journal : tout était dit, rien n'avait été enregistré. */
-    private function argsOffreSfa(): array
+    protected function argsOffreSfa(): array
     {
         return [
             'nom'            => 'Flotte automobile 2026',

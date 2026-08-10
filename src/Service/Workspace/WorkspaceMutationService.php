@@ -620,6 +620,51 @@ class WorkspaceMutationService
         return $proposables;
     }
 
+    /**
+     * Les champs de RELATION d'une entité, et le nom court de leur cible.
+     *
+     * Sert à traduire une relation dictée par son NOM (« SUNU », « Mme Marlette »)
+     * en identifiant, côté serveur — ce qui évite au modèle d'aller le chercher
+     * lui-même, tour après tour. Toutes les relations sont couvertes, to-one comme
+     * to-many : une relation multiple se donne par une LISTE de noms.
+     *
+     * @return array<string, string> nom du champ => nom court de l'entité cible
+     */
+    public function relationsDe(string $shortName): array
+    {
+        $fqcn = 'App\\Entity\\' . $shortName;
+        if (!class_exists($fqcn)) {
+            return [];
+        }
+
+        try {
+            $meta = $this->em->getClassMetadata($fqcn);
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $relations = [];
+        foreach ($meta->getAssociationMappings() as $champ => $mapping) {
+            $cible = (string) $mapping->targetEntity;
+            if (str_starts_with($cible, 'App\\Entity\\')) {
+                $relations[$champ] = substr($cible, strlen('App\\Entity\\'));
+            }
+        }
+
+        return $relations;
+    }
+
+    /**
+     * Nom court de l'entité portée par une collection éditable, ou null.
+     * Le nom vient du FORMULAIRE (parité avec l'écran), jamais d'une convention.
+     */
+    public function entiteDeCollection(string $shortName, string $collection): ?string
+    {
+        $ce = $this->formTreeInspector->collectionEditable($shortName, $collection);
+
+        return $ce?->childShortName;
+    }
+
     /** Pose la relation inverse (ManyToOne) de l'enfant vers le parent + l'ajoute à la collection. */
     private function lierAuParent(object $enfant, object $parent, CollectionEditable $ce): void
     {

@@ -34,6 +34,8 @@ use Symfony\Component\Form\FormFactoryInterface;
  */
 class KetMutationTest extends TestCase
 {
+    use ResolveurDeTest;
+
     // ───────────────────────── Allowlist & DTO ────────────────────────────────
 
     public function testAllowlistNAutoriseQueLesDonneesMetier(): void
@@ -150,6 +152,7 @@ class KetMutationTest extends TestCase
             $mutation,
             $tokens,
             new PlanEnAttente($this->createMock(EntityManagerInterface::class)),
+            $this->resolveurAvec(),
         ));
     }
 

@@ -158,11 +158,11 @@ final class JournalTokens
      * La décision d'AIGUILLAGE d'un message : quelle trousse, d'où vient la
      * décision, ce qu'elle a coûté et combien de temps elle a pris.
      *
-     * C'est la ligne qui permet de juger le routage sur pièces plutôt que sur
-     * impression : sa part de « lecture » dit l'économie réalisée, son « origine »
-     * dit combien de décisions ont été prises sans rien payer (court-circuits), et
-     * ses millisecondes disent le seul vrai coût du procédé — la latence ajoutée à
-     * CHAQUE message, y compris ceux qui n'appellent aucun outil.
+     * La décision est prise par le SERVEUR (tokens et millisecondes à zéro) :
+     * l'interroger coûterait un troisième appel, que la règle interdit. Cette ligne
+     * reste néanmoins utile — sa part de « lecture » dit l'économie réellement
+     * réalisée sur le terrain, et c'est elle qui dira si la sélection déterministe
+     * se trompe souvent.
      */
     public function routage(
         AiRequest $request,
@@ -179,22 +179,6 @@ final class JournalTokens
             'origine'       => $origine,
             'tokens'        => $tokens,
             'millisecondes' => $millisecondes,
-        ]);
-    }
-
-    /**
-     * Le modèle a RÉCLAMÉ les outils d'écriture : l'aiguillage s'était trompé.
-     *
-     * Le taux d'escalade est le critère d'abandon du routage — au-delà d'un quart
-     * des messages, le tour de routage coûte plus qu'il ne rapporte.
-     */
-    public function escalade(AiRequest $request, string $moteur, string $trousse, int $tour): void
-    {
-        $this->assistantTokensLogger->info('escalade', $this->identite($request) + [
-            'evenement' => 'escalade',
-            'moteur'    => $moteur,
-            'trousse'   => $trousse,
-            'tour'      => $tour,
         ]);
     }
 

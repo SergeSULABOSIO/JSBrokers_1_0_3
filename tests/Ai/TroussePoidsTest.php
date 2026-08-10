@@ -3,7 +3,7 @@
 namespace App\Tests\Ai;
 
 use App\Ai\AiContextBuilder;
-use App\Ai\Routage\CatalogueCondense;
+use App\Ai\Trousse\Phase;
 use App\Ai\Scope\AiScope;
 use App\Ai\Trousse\Trousse;
 use App\Ai\Trousse\TrousseCatalogue;
@@ -84,18 +84,41 @@ class TroussePoidsTest extends KernelTestCase
     }
 
     /**
-     * Le catalogue soumis à l'aiguilleur doit rester d'un ordre de grandeur en
-     * dessous des déclarations complètes — sinon router coûterait ce qu'il économise.
+     * LE SECOND APPEL NE PORTE PLUS LE CATALOGUE. Rédiger, c'est commenter un
+     * travail déjà fait : ni déclarations d'outils, ni protocoles d'écriture.
+     * C'est la moitié de l'économie du chantier, et ce test la garde.
      */
-    public function testLeCatalogueCondenseResteMarginal(): void
+    public function testLaPhaseDeRedactionEstBienPlusLegereQueLaPlanification(): void
     {
         static::bootKernel();
+        $conteneur = static::getContainer();
 
-        $condense = strlen(static::getContainer()->get(CatalogueCondense::class)->texte());
-        $complet = $this->poids(Trousse::ECRITURE)['outils'];
+        $entreprise = $conteneur->get(EntrepriseRepository::class)->findOneBy([]);
+        $invite = $conteneur->get(InviteRepository::class)->findOneBy(['entreprise' => $entreprise]);
+        $builder = $conteneur->get(AiContextBuilder::class);
+        $requete = $builder->build($entreprise, $invite, new AssistantConversation());
 
-        fwrite(STDERR, sprintf("  catalogue condensé : %d o (contre %d o de déclarations)\n", $condense, $complet));
+        $planification = $this->poids(Trousse::ECRITURE);
+        $redaction = strlen($builder->toSystemPrompt($requete, Trousse::ECRITURE, Phase::REDACTION));
 
-        self::assertLessThan($complet / 5, $condense);
+        $totalPlanification = $planification['prompt'] + $planification['outils'];
+        $gain = 1 - ($redaction / $totalPlanification);
+
+        fwrite(STDERR, sprintf(
+            "\n  appel 1 PLANIFICATION : prompt %6d o + outils %6d o = %6d o\n"
+            . "  appel 2 RÉDACTION     : prompt %6d o + outils      0 o = %6d o\n"
+            . "  un message complet    : %d o (contre %d o pour DEUX tours pleins avant)\n"
+            . "  allègement du 2e appel : %.0f %%\n",
+            $planification['prompt'], $planification['outils'], $totalPlanification,
+            $redaction, $redaction,
+            $totalPlanification + $redaction, 2 * $totalPlanification,
+            $gain * 100,
+        ));
+
+        self::assertGreaterThan(0.60, $gain, 'La rédaction doit être radicalement plus légère.');
+        // Le glossaire financier DOIT y rester : c'est en rédigeant qu'on confond
+        // une commission générée avec un chiffre d'affaires.
+        self::assertStringContainsString('GLOSSAIRE FINANCIER', $builder->toSystemPrompt($requete, Trousse::ECRITURE, Phase::REDACTION));
+        self::assertStringContainsString('GRAPHIQUES', $builder->toSystemPrompt($requete, Trousse::ECRITURE, Phase::REDACTION));
     }
 }

@@ -10,14 +10,17 @@ use App\Ai\Engine\AiEngineResolver;
 use App\Ai\Engine\AnthropicAiEngine;
 use App\Ai\Engine\GeminiAiEngine;
 use App\Ai\Engine\SimulatedAiEngine;
-use App\Ai\Routage\RouteurTrousse;
+use App\Ai\Programme\ProgrammeEnCours;
 use App\Ai\Scope\AiScope;
 use App\Ai\Telemetrie\JournalTokens;
 use App\Ai\Tool\AiToolInterface;
 use App\Ai\Tool\AiToolResult;
+use App\Ai\Trousse\SelecteurDeTrousse;
 use App\Ai\Trousse\TrousseCatalogue;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Repository\AssistantProgrammeRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -300,7 +303,10 @@ class AnthropicAiEngineTest extends TestCase
             new MockHttpClient([]),
             $contextBuilder,
             new TrousseCatalogue([]),
-            $this->createMock(RouteurTrousse::class),
+            new SelecteurDeTrousse(new ProgrammeEnCours(
+                $this->createMock(AssistantProgrammeRepository::class),
+                $this->createMock(EntityManagerInterface::class),
+            )),
             [],
             'gm-x',
             'gemini-2.5-flash',

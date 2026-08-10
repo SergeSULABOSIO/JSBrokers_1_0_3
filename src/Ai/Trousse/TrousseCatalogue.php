@@ -3,7 +3,6 @@
 namespace App\Ai\Trousse;
 
 use App\Ai\Scope\AiScope;
-use App\Ai\Tool\ActiverOutilsEcritureTool;
 use App\Ai\Tool\AiToolConditionnel;
 use App\Ai\Tool\AiToolInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
@@ -56,12 +55,6 @@ final class TrousseCatalogue
         $retenus = [];
         foreach ($this->outils as $outil) {
             if (!$trousse->estEcriture() && $outil instanceof AiToolEcriture) {
-                continue;
-            }
-            // L'escalade n'existe que pour RÉCLAMER les outils d'écriture : une fois
-            // qu'ils sont là, la déclarer inviterait le modèle à demander ce qu'il
-            // tient déjà — et lui ferait perdre un tour à ne rien faire.
-            if ($trousse->estEcriture() && $outil instanceof ActiverOutilsEcritureTool) {
                 continue;
             }
             if ($outil instanceof AiToolConditionnel && !$outil->estDisponible($scope)) {

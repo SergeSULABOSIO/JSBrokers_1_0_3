@@ -2,6 +2,7 @@
 
 namespace App\Ai\Mutation;
 
+use App\Ai\Resolution\ResolveurDeReferences;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
 use App\Service\Workspace\WorkspaceMutationService;
@@ -34,6 +35,9 @@ final class PlanBuilder
         private readonly WorkspaceMutationService $mutationService,
         private readonly TokenAccountService $tokenAccountService,
         private readonly PlanEnAttente $planEnAttente,
+        // Traduit les noms dictés en identifiants : c'est ce qui dispense le modèle
+        // d'aller les chercher, et donc d'enchaîner les tours.
+        private readonly ResolveurDeReferences $resolveur,
     ) {
     }
 
@@ -95,6 +99,15 @@ final class PlanBuilder
     {
         if ($plan->estVide()) {
             return AiToolResult::introuvable('opérations');
+        }
+
+        // LES RELATIONS SE DONNENT PAR LEUR NOM. Le modèle écrit « SUNU », « Mme
+        // Marlette » ; le serveur en fait des identifiants. C'est ce qui lui évite
+        // d'aller les chercher lui-même, tour après tour — le motif qui a consommé
+        // 188 000 tokens en un seul message le 2026-08-10.
+        [$plan, $questions] = $this->resoudreLesNoms($plan, $scope);
+        if ($questions !== []) {
+            return $this->demander($questions, $outilAppelant);
         }
 
         $lignes = [];
@@ -275,6 +288,192 @@ final class PlanBuilder
                 ) ?: [[]])),
             ],
         );
+    }
+
+    /**
+     * Remplace, dans TOUTES les opérations du plan (collections imbriquées
+     * comprises), les relations données par un NOM par leur identifiant.
+     *
+     * Ce qui n'est jamais touché : les valeurs numériques (déjà des identifiants),
+     * les étiquettes « @nom » qui renvoient à une création du même plan, et les
+     * marqueurs « @fichier:<id> » d'une pièce jointe. Y toucher casserait le
+     * chaînage interne du plan.
+     *
+     * @return array{0: MutationPlan, 1: array<int, array<string, mixed>>} le plan
+     *         résolu, et les questions restées sans réponse
+     */
+    private function resoudreLesNoms(MutationPlan $plan, AiScope $scope): array
+    {
+        $questions = [];
+        $operations = [];
+        foreach ($plan->toArray() as $operation) {
+            $operations[] = $this->resoudreOperation($operation, $scope, $questions);
+        }
+
+        return [MutationPlan::fromArray($operations), $questions];
+    }
+
+    /**
+     * @param array<string, mixed>                  $operation
+     * @param array<int, array<string, mixed>>      $questions
+     *
+     * @return array<string, mixed>
+     */
+    private function resoudreOperation(array $operation, AiScope $scope, array &$questions): array
+    {
+        $entite = (string) ($operation['entite'] ?? '');
+
+        // DEUX FORMES COEXISTENT, et les confondre coûte les champs du plan :
+        // « champs » est la clé exposée au modèle, « fields » celle de la
+        // sérialisation interne (MutationOperation::toArray). On écrit dans CELLE
+        // QUI EXISTE — poser un « champs » vide à côté d'un « fields » rempli le
+        // ferait gagner à la relecture, et le plan repartirait sans aucune valeur.
+        $cle = array_key_exists('champs', $operation) ? 'champs'
+            : (array_key_exists('fields', $operation) ? 'fields' : null);
+
+        if ($entite !== '' && $cle !== null && is_array($operation[$cle])) {
+            $operation[$cle] = $this->resoudreChamps($entite, $operation[$cle], $scope, $questions);
+        }
+
+        // Les collections suivent la même dualité : une LISTE de
+        // {collection, elements} côté modèle, une MAP nom => opérations côté
+        // sérialisation. Chaque enfant porte son propre « entite », qui fait
+        // autorité — inutile de le redemander au formulaire.
+        foreach ($operation['collections'] ?? [] as $cleCollection => $collection) {
+            if (isset($collection['elements']) && is_array($collection['elements'])) {
+                foreach ($collection['elements'] as $j => $element) {
+                    $operation['collections'][$cleCollection]['elements'][$j]
+                        = $this->resoudreOperation($this->avecEntite($element, $entite, (string) ($collection['collection'] ?? '')), $scope, $questions);
+                }
+                continue;
+            }
+            if (is_array($collection)) {
+                foreach ($collection as $j => $element) {
+                    if (is_array($element)) {
+                        $operation['collections'][$cleCollection][$j]
+                            = $this->resoudreOperation($this->avecEntite($element, $entite, (string) $cleCollection), $scope, $questions);
+                    }
+                }
+            }
+        }
+
+        return $operation;
+    }
+
+    /**
+     * Complète un élément de collection avec le nom court de son entité, quand il
+     * ne le porte pas lui-même (forme dictée par le modèle). La source est le
+     * FORMULAIRE du parent — parité avec l'écran, jamais une convention de nommage.
+     *
+     * @param array<string, mixed> $element
+     *
+     * @return array<string, mixed>
+     */
+    private function avecEntite(array $element, string $entiteParent, string $collection): array
+    {
+        if (($element['entite'] ?? '') !== '' || $collection === '') {
+            return $element;
+        }
+        $enfant = $this->mutationService->entiteDeCollection($entiteParent, $collection);
+        if ($enfant !== null) {
+            $element['entite'] = $enfant;
+        }
+
+        return $element;
+    }
+
+    /**
+     * @param array<string, mixed>             $champs
+     * @param array<int, array<string, mixed>> $questions
+     *
+     * @return array<string, mixed>
+     */
+    private function resoudreChamps(string $entite, array $champs, AiScope $scope, array &$questions): array
+    {
+        $relations = $this->mutationService->relationsDe($entite);
+
+        foreach ($champs as $champ => $valeur) {
+            $cible = $relations[$champ] ?? null;
+            if ($cible === null) {
+                continue;
+            }
+
+            if (is_array($valeur)) { // relation MULTIPLE : une liste d'identifiants
+                $resolus = [];
+                foreach ($valeur as $element) {
+                    $resolu = $this->resoudreValeur($cible, $element, $scope, $questions);
+                    if ($resolu !== null) {
+                        $resolus[] = $resolu;
+                    }
+                }
+                $champs[$champ] = $resolus;
+                continue;
+            }
+
+            $resolu = $this->resoudreValeur($cible, $valeur, $scope, $questions);
+            if ($resolu !== null) {
+                $champs[$champ] = $resolu;
+            }
+        }
+
+        return $champs;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $questions
+     *
+     * @return int|string|null l'identifiant résolu, la valeur d'origine si elle ne
+     *                         doit pas être touchée, ou null si elle est à écarter
+     */
+    private function resoudreValeur(string $cible, mixed $valeur, AiScope $scope, array &$questions): int|string|null
+    {
+        if (!is_string($valeur) && !is_int($valeur)) {
+            return null;
+        }
+        $texte = trim((string) $valeur);
+        if ($texte === '') {
+            return null;
+        }
+        // Chaînage interne du plan et pièces jointes : intouchables.
+        if (str_starts_with($texte, '@')) {
+            return $texte;
+        }
+        // Déjà un identifiant : on le rend TEL QUEL, sans même le convertir. Cette
+        // passe ne traduit que des NOMS ; normaliser au passage le type d'une valeur
+        // qui fonctionne déjà changerait le format des plans stockés sans rien
+        // apporter — un plan en attente relu après coup doit rester lisible.
+        if (ctype_digit($texte)) {
+            return $valeur;
+        }
+
+        $reference = $this->resolveur->resoudre($cible, $texte, $scope);
+        if ($reference->estResolue()) {
+            return $reference->id;
+        }
+
+        $questions[] = $reference->question();
+
+        return null;
+    }
+
+    /**
+     * Refus structuré quand un nom n'a pas pu être résolu : une question groupée,
+     * avec de quoi y répondre. Jamais un identifiant deviné.
+     *
+     * @param array<int, array<string, mixed>> $questions
+     */
+    private function demander(array $questions, string $outilAppelant): AiToolResult
+    {
+        return AiToolResult::ok([
+            'pret'      => false,
+            'aDemander' => array_values($questions),
+            'note'      => 'Je n’ai pas pu identifier avec certitude un ou plusieurs enregistrements que tu as '
+                . 'nommés, et je ne devine jamais une donnée du courtier. Pose à l’utilisateur, EN UN SEUL '
+                . 'MESSAGE et en liste courte, les questions correspondant à « aDemander » : quand des '
+                . '« valeurs » sont fournies, PROPOSE-LES en clair plutôt qu’une question ouverte. Puis '
+                . 'rappelle ' . $outilAppelant . ' avec la réponse. N’appelle PAS rechercher_entites : '
+                . 'les candidats sont déjà ci-dessus.',
+        ]);
     }
 
     /**

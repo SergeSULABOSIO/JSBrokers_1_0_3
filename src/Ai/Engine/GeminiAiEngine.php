@@ -7,10 +7,10 @@ use App\Ai\AiEngineFailure;
 use App\Ai\AiReply;
 use App\Ai\AiRequest;
 use App\Ai\Debit\BudgetDebit;
-use App\Ai\Routage\RouteurTrousse;
+use App\Ai\Trousse\Phase;
+use App\Ai\Trousse\SelecteurDeTrousse;
 use App\Ai\Scope\AiScope;
 use App\Ai\Telemetrie\JournalTokens;
-use App\Ai\Tool\ActiverOutilsEcritureTool;
 use App\Ai\Tool\AiToolInterface;
 use App\Ai\Tool\AiToolResult;
 use App\Ai\Trousse\Trousse;
@@ -40,8 +40,32 @@ final class GeminiAiEngine implements AiEngineInterface
     private const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
     /** Assez ample pour restituer une page de liste (rechercher_entites) sans troncature. */
     private const MAX_OUTPUT_TOKENS = 4096;
-    /** Garde-fou : nombre maximal d'allers-retours de function calling par message. */
-    private const MAX_TOOL_ROUNDS = 8;
+    /**
+     * UN SEUL TOUR D'OUTILS PAR MESSAGE. Ce n'est pas un réglage, c'est la règle
+     * d'architecture : **le modèle n'orchestre plus rien, PHP orchestre**.
+     *
+     * Un message coûte donc DEUX appels, et deux seulement :
+     *  1. le modèle reçoit la bulle et émet ses appels d'outils — plusieurs à la
+     *     fois s'il le veut, ce qui est du PARALLÈLE, pas de l'orchestration ;
+     *  2. le serveur exécute tout, puis un dernier appel sert à FORMULER la réponse.
+     *
+     * POURQUOI ON NE PEUT PAS SE CONTENTER D'UN PLAFOND PLUS HAUT. L'API étant sans
+     * mémoire, chaque tour réexpédie l'intégralité du contexte. Mesuré le
+     * 2026-08-10 sur une conversation réelle : un message a enchaîné CINQ tours de
+     * rechercher_entites à 37 700 tokens et consommé 188 000 tokens — presque toute
+     * la fenêtre d'une minute (212 500). Les messages suivants, « salut » compris,
+     * se sont tous heurtés à une fenêtre vide. Un seul message peut donc rendre la
+     * conversation entière inutilisable : le nombre de tours n'est pas un curseur de
+     * performance, c'est un risque de panne.
+     *
+     * CE QUI REND CE PLAFOND TENABLE : les outils résolvent eux-mêmes les noms en
+     * identifiants (cf. ResolveurDeReferences). Le modèle n'a plus d'identifiant à
+     * aller chercher, donc plus de raison d'enchaîner. Quand le serveur ne peut pas
+     * trancher, l'outil renvoie « aDemander » et Ket pose UNE question groupée —
+     * un tour de conversation vaut mieux que cinq tours de moteur.
+     */
+    private const MAX_TOOL_ROUNDS = 1;
+
     /**
      * Attente maximale AVANT DE RELANCER UN TOUR, quand la fenêtre d'une minute
      * est saturée mais sur le point de se libérer.
@@ -65,10 +89,17 @@ final class GeminiAiEngine implements AiEngineInterface
     private const MAX_ATTENTE_CUMULEE_SECONDES = 25;
 
     /**
-     * Une seule escalade par message. Au-delà, ce n'est plus un aiguillage raté mais
-     * une boucle : le modèle réclamerait indéfiniment des outils qu'il tient déjà.
+     * Ce que Ket dit quand la rédaction n'a rien produit — parce que le modèle a
+     * réclamé un outil de plus au lieu d'écrire.
+     *
+     * Le message doit dire la VÉRITÉ (il manque quelque chose) sans rejeter la
+     * faute sur l'utilisateur : il a été précis, c'est nous qui n'avons pas conclu.
+     * Et il doit indiquer la sortie : une nouvelle demande, plus ciblée, rouvre un
+     * cycle complet — c'est précisément ainsi que l'architecture est prévue.
      */
-    private const MAX_ESCALADES = 1;
+    private const AUCUNE_REDACTION = "Je n'ai pas pu aboutir sur cette demande en une seule fois : il me manque "
+        . 'un élément pour conclure. Reformulez-la en me donnant le point précis qui vous intéresse '
+        . '(le client, la police ou la période), et je la traite entièrement.';
 
     /**
      * Ratio octets → tokens MESURÉ sur la campagne (3,52 le 2026-08-08), et non
@@ -85,7 +116,7 @@ final class GeminiAiEngine implements AiEngineInterface
         // Source unique des outils déclarés — la MÊME que celle dont le prompt tire
         // sa section d'aiguillage.
         private readonly TrousseCatalogue $trousseCatalogue,
-        private readonly RouteurTrousse $routeur,
+        private readonly SelecteurDeTrousse $selecteur,
         #[AutowireIterator('app.ai_tool')] iterable $tools,
         #[Autowire(env: 'GEMINI_API_KEY')] private readonly string $apiKey,
         #[Autowire(env: 'GEMINI_MODEL')] private readonly string $model,
@@ -152,24 +183,23 @@ final class GeminiAiEngine implements AiEngineInterface
         $sequenceOutils = [];
         $attenteCumulee = 0;
 
-        // TROUSSE du message : décidée UNE FOIS, avant la boucle. Elle ne bouge
-        // ensuite que sur escalade explicite du modèle — un préfixe qui changerait
-        // à chaque tour ne serait jamais mis en cache, et le cache tient 75 % du
-        // payload (jusqu'à 86 % sur les tours tardifs).
-        $routage = $this->routeur->router($request);
-        $trousse = $routage['trousse'];
+        // TROUSSE du message : décidée par le SERVEUR, sans rien demander au modèle.
+        // Un appel de routage était un TROISIÈME appel — la règle n'en tolère que
+        // deux, et c'est la planification elle-même qui choisit les outils.
+        $trousse = $this->selecteur->trousseDe($request);
         $this->journal->routage(
             $request,
             $this->name(),
             $trousse->libelle(),
-            (string) $routage['origine'],
-            (int) $routage['tokens'],
-            (int) $routage['millisecondes'],
+            'serveur',
+            0,
+            0,
         );
-        $escalades = 0;
 
-        for ($round = 0; $round <= self::MAX_TOOL_ROUNDS; $round++) {
-            ['reponse' => $response, 'octets' => $octets] = $this->appelerAvecReessai($request, $contents, $trousse);
+        // DEUX PHASES, JAMAIS TROIS. Planification (les outils sont déclarés), puis
+        // rédaction (ils ne le sont plus : on commente un travail déjà fait).
+        foreach ([Phase::PLANIFICATION, Phase::REDACTION] as $round => $phase) {
+            ['reponse' => $response, 'octets' => $octets] = $this->appelerAvecReessai($request, $contents, $trousse, $phase);
 
             $usage = $response['usageMetadata'] ?? [];
             $tokensDuTour = (int) ($usage['promptTokenCount'] ?? 0);
@@ -223,6 +253,9 @@ final class GeminiAiEngine implements AiEngineInterface
                 );
             }
 
+            // Le modèle a formulé sa réponse : c'est la fin normale, à l'une ou
+            // l'autre phase (une question de pure conversation n'appelle aucun outil
+            // et se termine donc dès la planification, en UN seul appel).
             if ($functionCalls === []) {
                 return $this->conclure(
                     $request,
@@ -232,6 +265,25 @@ final class GeminiAiEngine implements AiEngineInterface
                     $cumulSortie,
                     $sequenceOutils,
                     new AiReply($this->extractText($parts), refused: $refused, toolUsed: $toolUsed, actions: $actions),
+                );
+            }
+
+            // Phase de RÉDACTION : aucun outil ne lui est déclaré, donc un appel
+            // d'outil ici ne peut être qu'une hallucination. On ne l'exécute pas et
+            // on ne relance pas — ce serait le troisième appel. On rend ce qui a
+            // déjà été obtenu, actions comprises : un plan préparé et son bouton de
+            // validation valent bien mieux qu'une page blanche.
+            if ($phase === Phase::REDACTION) {
+                $texte = $this->extractText($parts, self::AUCUNE_REDACTION);
+
+                return $this->conclure(
+                    $request,
+                    JournalTokens::ISSUE_REPONSE,
+                    $round + 1,
+                    $cumulInput,
+                    $cumulSortie,
+                    $sequenceOutils,
+                    new AiReply($texte, refused: $refused, toolUsed: $toolUsed, actions: $actions),
                 );
             }
 
@@ -257,16 +309,6 @@ final class GeminiAiEngine implements AiEngineInterface
                 if ($result->uiAction !== null) {
                     $actions[] = $result->uiAction;
                 }
-                // ESCALADE : le modèle réclame les outils d'écriture, qui ne lui ont
-                // pas été déclarés. On bascule pour les tours suivants de CE message.
-                // Le tour en cours est déjà parti — c'est le prix d'un aiguillage
-                // raté, et il se paie au tarif réduit de la trousse de lecture.
-                $demandee = $result->data[ActiverOutilsEcritureTool::CLE_TROUSSE] ?? null;
-                if ($demandee !== null && $escalades < self::MAX_ESCALADES) {
-                    $trousse = Trousse::depuis((string) $demandee);
-                    $escalades++;
-                    $this->journal->escalade($request, $this->name(), $trousse->libelle(), $round + 1);
-                }
                 $responseParts[] = [
                     'functionResponse' => [
                         'name'     => $name,
@@ -276,15 +318,15 @@ final class GeminiAiEngine implements AiEngineInterface
             }
             $contents[] = ['role' => 'user', 'parts' => $responseParts];
 
-            // Dernier tour autorisé : inutile de jauger un tour qui n'aura pas lieu.
-            if ($round >= self::MAX_TOOL_ROUNDS) {
-                continue;
-            }
-
-            // Le tour suivant réexpédiera tout le contexte, augmenté des résultats
-            // qu'on vient d'ajouter : il coûtera au moins autant que celui-ci.
-            $estime = $tokensDuTour + (int) ceil(
-                \strlen((string) json_encode($responseParts, JSON_UNESCAPED_UNICODE)) / self::OCTETS_PAR_TOKEN,
+            // La rédaction n'emporte NI les déclarations d'outils NI les protocoles
+            // d'écriture : elle coûte donc bien moins que la planification. On
+            // l'estime sur ce qu'elle transporte vraiment — l'historique et les
+            // résultats —, sans quoi on renoncerait à un tour bon marché en le
+            // croyant aussi cher que le précédent.
+            $estime = (int) ceil(
+                (\strlen((string) json_encode($contents, JSON_UNESCAPED_UNICODE))
+                    + \strlen($this->contextBuilder->toSystemPrompt($request, $trousse, Phase::REDACTION)))
+                / self::OCTETS_PAR_TOKEN,
             );
             $attente = $this->budget->secondesAvantLiberation($this->model, $estime);
 
@@ -333,7 +375,7 @@ final class GeminiAiEngine implements AiEngineInterface
         return $this->conclure(
             $request,
             JournalTokens::ISSUE_TOURS_EPUISES,
-            self::MAX_TOOL_ROUNDS + 1,
+            $toursDOutils + 1,
             $cumulInput,
             $cumulSortie,
             $sequenceOutils,
@@ -420,10 +462,10 @@ final class GeminiAiEngine implements AiEngineInterface
      * au-delà, l'exception remonte au contrôleur, qui sait déjà l'expliquer
      * (AiEngineFailure) et journaliser le quota violé.
      */
-    private function appelerAvecReessai(AiRequest $request, array $contents, Trousse $trousse): array
+    private function appelerAvecReessai(AiRequest $request, array $contents, Trousse $trousse, Phase $phase): array
     {
         try {
-            return $this->call($request, $contents, $trousse);
+            return $this->call($request, $contents, $trousse, $phase);
         } catch (\Throwable $e) {
             $delai = AiEngineFailure::estLimiteDeDebit($e)
                 ? AiEngineFailure::secondesAvantNouvelEssai($e)
@@ -439,7 +481,7 @@ final class GeminiAiEngine implements AiEngineInterface
             ]);
             ($this->dormir ?? static fn (int $s) => sleep($s))($delai);
 
-            return $this->call($request, $contents, $trousse);
+            return $this->call($request, $contents, $trousse, $phase);
         }
     }
 
@@ -453,10 +495,14 @@ final class GeminiAiEngine implements AiEngineInterface
      *
      * @return array{reponse: array, octets: array<string, int>}
      */
-    private function call(AiRequest $request, array $contents, Trousse $trousse): array
+    private function call(AiRequest $request, array $contents, Trousse $trousse, Phase $phase): array
     {
-        $promptSysteme = $this->contextBuilder->toSystemPrompt($request, $trousse);
-        $declarations = $this->toolDeclarations($request->scope, $trousse);
+        $promptSysteme = $this->contextBuilder->toSystemPrompt($request, $trousse, $phase);
+        // LA PIÈCE MAÎTRESSE DE L'ÉCONOMIE : en rédaction, aucun outil n'est déclaré.
+        // Les 72 Ko de déclarations ne servent qu'à CHOISIR un outil ; commenter un
+        // résultat déjà obtenu n'en a aucun besoin. Les envoyer quand même, c'était
+        // payer le catalogue deux fois par message.
+        $declarations = $phase->declareDesOutils() ? $this->toolDeclarations($request->scope, $trousse) : [];
 
         $response = $this->httpClient->request('POST', sprintf('%s/%s:generateContent', self::API_BASE, $this->model), [
             'headers' => [
@@ -466,9 +512,13 @@ final class GeminiAiEngine implements AiEngineInterface
             'json' => [
                 'systemInstruction' => ['parts' => [['text' => $promptSysteme]]],
                 'contents'          => $contents,
-                'tools'             => [['functionDeclarations' => $declarations]],
                 'generationConfig'  => ['maxOutputTokens' => self::MAX_OUTPUT_TOKENS],
-            ],
+            ] + ($declarations === []
+                // Aucun outil à déclarer : on OMET la clé au lieu d'envoyer une
+                // liste vide. Un « tools » vide reste une invitation à en chercher,
+                // et la phase de rédaction ne doit en trouver aucun.
+                ? []
+                : ['tools' => [['functionDeclarations' => $declarations]]]),
             'timeout' => 90,
         ]);
 
@@ -562,8 +612,16 @@ final class GeminiAiEngine implements AiEngineInterface
             || ($response['candidates'][0]['finishReason'] ?? null) === 'SAFETY';
     }
 
-    /** Concatène les blocs texte de la réponse finale. */
-    private function extractText(array $parts): string
+    /**
+     * Concatène les blocs texte de la réponse finale.
+     *
+     * @param string|null $repli message à rendre quand le modèle n'a produit aucun
+     *                           texte. Le défaut convient à une réponse vide ; la
+     *                           rédaction, elle, mérite mieux qu'un « précisez votre
+     *                           question » — l'utilisateur a déjà été précis, c'est
+     *                           nous qui n'avons pas su conclure.
+     */
+    private function extractText(array $parts, ?string $repli = null): string
     {
         $textes = [];
         foreach ($parts as $part) {
@@ -572,8 +630,10 @@ final class GeminiAiEngine implements AiEngineInterface
             }
         }
 
-        return $textes === []
-            ? "Je n'ai pas de réponse à formuler sur ce point. Pouvez-vous préciser votre question ?"
-            : implode("\n\n", $textes);
+        if ($textes !== []) {
+            return implode("\n\n", $textes);
+        }
+
+        return $repli ?? "Je n'ai pas de réponse à formuler sur ce point. Pouvez-vous préciser votre question ?";
     }
 }

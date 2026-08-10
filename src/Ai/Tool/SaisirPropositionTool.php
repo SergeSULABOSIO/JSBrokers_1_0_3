@@ -11,7 +11,7 @@ use App\Ai\Scope\AiScope;
 use App\Entity\Invite;
 use App\Service\Workspace\ReferentielEnumerateur;
 use App\Service\Workspace\WorkspaceAccessResolver;
-use App\Services\JSBDynamicSearchService;
+use App\Ai\Resolution\ResolveurDeReferences;
 
 /**
  * SAISIE COMPLÈTE d'une proposition (cotation) EN UN SEUL APPEL.
@@ -67,8 +67,9 @@ final class SaisirPropositionTool implements AiToolProduisantUnPlan, AiToolEcrit
         private readonly PlanBuilder $planBuilder,
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly ReferentielEnumerateur $referentiels,
-        private readonly JSBDynamicSearchService $searchService,
-        private readonly EntiteLibelle $libelleur,
+        // Source unique de la résolution « nom dicté → identifiant », partagée avec
+        // tous les plans : deux implémentations parallèles divergeraient.
+        private readonly ResolveurDeReferences $resolveur,
     ) {
     }
 
@@ -282,43 +283,19 @@ final class SaisirPropositionTool implements AiToolProduisantUnPlan, AiToolEcrit
      */
     private function resoudreEnregistrement(string $entite, string $terme, AiScope $scope, array &$aDemander): array
     {
-        $terme = trim($terme);
-        $labels = $this->accessResolver->libellesEntites();
-        $libelle = $labels[$entite] ?? $entite;
+        // SOURCE UNIQUE : la même résolution que celle appliquée aux relations de
+        // tout plan (PlanBuilder). Deux implémentations parallèles divergeraient au
+        // premier correctif, et la divergence ne se verrait que sur les données
+        // réelles de l'utilisateur.
+        $reference = $this->resolveur->resoudre($entite, $terme, $scope);
 
-        if ($terme === '') {
-            $aDemander[] = ['champ' => $entite, 'libelle' => $libelle, 'probleme' => 'absent'];
+        if (!$reference->estResolue()) {
+            $aDemander[] = $reference->question();
 
-            return ['id' => null, 'libelle' => $libelle, 'terme' => ''];
+            return ['id' => null, 'libelle' => $reference->libelleEntite, 'terme' => trim($terme)];
         }
 
-        $candidats = $this->chercher($entite, $terme, $scope);
-
-        if ($candidats === []) {
-            $aDemander[] = [
-                'champ'    => $entite,
-                'libelle'  => $libelle,
-                'probleme' => 'introuvable',
-                'terme'    => $terme,
-                'valeurs'  => $this->referentiels->codes($entite, $scope),
-            ];
-
-            return ['id' => null, 'libelle' => $libelle, 'terme' => $terme];
-        }
-
-        if (count($candidats) > 1) {
-            $aDemander[] = [
-                'champ'    => $entite,
-                'libelle'  => $libelle,
-                'probleme' => 'ambigu',
-                'terme'    => $terme,
-                'valeurs'  => $candidats,
-            ];
-
-            return ['id' => null, 'libelle' => $libelle, 'terme' => $terme];
-        }
-
-        return ['id' => array_key_first($candidats), 'libelle' => reset($candidats), 'terme' => $terme];
+        return ['id' => $reference->id, 'libelle' => (string) $reference->libelle, 'terme' => trim($terme)];
     }
 
     /**
@@ -363,7 +340,7 @@ final class SaisirPropositionTool implements AiToolProduisantUnPlan, AiToolEcrit
             return ['id' => null, 'libelle' => null];
         }
 
-        $pistes = $this->chercherLiees('Piste', 'client', $clientResolu['id'], $scope);
+        $pistes = $this->resolveur->chercherLies('Piste', 'client', (int) $clientResolu['id'], $scope);
         if ($pistes === []) {
             $aDemander[] = [
                 'champ'    => 'Piste',
@@ -475,20 +452,20 @@ final class SaisirPropositionTool implements AiToolProduisantUnPlan, AiToolEcrit
      */
     private function rattacherChargement(string $nom, array $referentiel): array
     {
-        $cible = $this->normaliser($nom);
+        $cible = $this->resolveur->normaliser($nom);
 
         foreach ($referentiel as $id => $libelle) {
-            if ($this->normaliser((string) $libelle) === $cible) {
+            if ($this->resolveur->normaliser((string) $libelle) === $cible) {
                 return [(int) $id, []];
             }
         }
 
         foreach (self::SYNONYMES_CHARGEMENT as $canonique => $synonymes) {
-            if (!in_array($cible, array_map($this->normaliser(...), $synonymes), true)) {
+            if (!in_array($cible, array_map($this->resolveur->normaliser(...), $synonymes), true)) {
                 continue;
             }
             foreach ($referentiel as $id => $libelle) {
-                if ($this->normaliser((string) $libelle) === $this->normaliser($canonique)) {
+                if ($this->resolveur->normaliser((string) $libelle) === $this->resolveur->normaliser($canonique)) {
                     return [(int) $id, []];
                 }
             }
@@ -496,7 +473,7 @@ final class SaisirPropositionTool implements AiToolProduisantUnPlan, AiToolEcrit
 
         $candidats = [];
         foreach ($referentiel as $id => $libelle) {
-            $normalise = $this->normaliser((string) $libelle);
+            $normalise = $this->resolveur->normaliser((string) $libelle);
             if ($normalise !== '' && (str_contains($normalise, $cible) || str_contains($cible, $normalise))) {
                 $candidats[(int) $id] = (string) $libelle;
             }
@@ -755,105 +732,4 @@ final class SaisirPropositionTool implements AiToolProduisantUnPlan, AiToolEcrit
         );
     }
 
-    /**
-     * Recherche par libellé, scopée à l'entreprise. Le plafond est bas à dessein :
-     * au-delà, ce n'est plus une résolution mais une liste à faire trancher.
-     *
-     * @return array<int, string> id => libellé
-     */
-    private function chercher(string $entite, string $terme, AiScope $scope): array
-    {
-        $fqcn = 'App\\Entity\\' . $entite;
-        if (!class_exists($fqcn) || !$this->accessResolver->canRead($scope->invite, $entite)) {
-            return [];
-        }
-
-        // Même construction de critère que lire_fiche : le champ d'affichage de
-        // l'entité, en LIKE « contains ». Une seule façon de chercher par nom dans
-        // toute la plateforme.
-        $champ = $this->libelleur->displayField($fqcn);
-        if ($champ === null) {
-            return [];
-        }
-
-        $resultat = $this->searchService->search(
-            $fqcn,
-            [$champ => ['operator' => 'LIKE', 'value' => $terme, 'mode' => 'contains']],
-            $scope->entreprise,
-            null,
-            1,
-            10,
-        );
-        if (($resultat['status']['code'] ?? 500) !== 200) {
-            return [];
-        }
-
-        return $this->indexer($fqcn, $resultat['data'] ?? [], $terme);
-    }
-
-    /**
-     * Enregistrements liés à un autre par une relation to-one (les pistes d'un client).
-     *
-     * @return array<int, string> id => libellé
-     */
-    private function chercherLiees(string $entite, string $champ, int $id, AiScope $scope): array
-    {
-        $fqcn = 'App\\Entity\\' . $entite;
-        if (!class_exists($fqcn) || !$this->accessResolver->canRead($scope->invite, $entite)) {
-            return [];
-        }
-
-        $resultat = $this->searchService->search($fqcn, [$champ => $id], $scope->entreprise, null, 1, 10);
-        if (($resultat['status']['code'] ?? 500) !== 200) {
-            return [];
-        }
-
-        return $this->indexer($fqcn, $resultat['data'] ?? [], null);
-    }
-
-    /**
-     * Indexe des entités en id => libellé. Quand un terme est fourni, une
-     * correspondance EXACTE (normalisée) l'emporte seule : « SFA » ne doit pas
-     * devenir ambigu parce qu'un « SFA Vie » existe aussi.
-     *
-     * @param array<int, object> $entites
-     *
-     * @return array<int, string>
-     */
-    private function indexer(string $fqcn, array $entites, ?string $terme): array
-    {
-        $champ = $this->libelleur->displayField($fqcn);
-        $index = [];
-        foreach ($entites as $entite) {
-            if (!is_object($entite) || !method_exists($entite, 'getId')) {
-                continue;
-            }
-            $id = $entite->getId();
-            if ($id === null) {
-                continue;
-            }
-            $index[(int) $id] = $this->libelleur->libelle($entite, $champ);
-        }
-
-        if ($terme === null || $index === []) {
-            return $index;
-        }
-
-        $cible = $this->normaliser($terme);
-        $exacts = array_filter($index, fn (string $libelle) => $this->normaliser($libelle) === $cible);
-
-        return $exacts !== [] ? $exacts : $index;
-    }
-
-    /** Comparaison insensible à la casse, aux accents et à la ponctuation. */
-    private function normaliser(string $valeur): string
-    {
-        $valeur = mb_strtolower(trim($valeur));
-        $translit = @iconv('UTF-8', 'ASCII//TRANSLIT', $valeur);
-        if ($translit !== false) {
-            $valeur = $translit;
-        }
-
-        return trim((string) preg_replace('/[^a-z0-9]+/', ' ', $valeur));
-    }
 }

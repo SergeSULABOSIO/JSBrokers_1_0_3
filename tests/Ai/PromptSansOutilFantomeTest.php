@@ -138,26 +138,22 @@ class PromptSansOutilFantomeTest extends KernelTestCase
     }
 
     /**
-     * La trousse de lecture doit dire, en toutes lettres, comment obtenir les outils
-     * d'écriture. Sans cette ligne, le modèle répond « je ne peux pas créer » — le
-     * refus exact que la règle historique lui interdit de formuler.
+     * La trousse de lecture doit dire à Ket quoi faire d'une demande d'écriture :
+     * répondre à ce qui est demandé, puis PROPOSER l'enregistrement et laisser
+     * l'utilisateur relancer. Il n'y a plus d'échappatoire technique — elle
+     * demanderait un troisième appel, que la règle interdit.
+     *
+     * Ce qui est interdit ici, et vérifié : répondre « je ne peux pas créer ».
+     * C'est faux, et c'est le refus que la règle historique proscrit.
      */
-    public function testLaTrousseDeLectureIndiqueLEchappatoire(): void
+    public function testLaTrousseDeLectureDitCommentPoursuivreSansRefuser(): void
     {
-        [$prompt, $declares] = $this->prompt(Trousse::LECTURE);
+        [$prompt] = $this->prompt(Trousse::LECTURE);
 
-        self::assertContains('activer_outils_ecriture', $declares);
-        self::assertStringContainsString('activer_outils_ecriture', $prompt);
         self::assertStringContainsString('CONSULTATION', $prompt);
-    }
-
-    /** L'escalade n'a aucun sens quand les outils d'écriture sont déjà là. */
-    public function testLEscaladeDisparaitDeLaTrousseDEcriture(): void
-    {
-        [$prompt, $declares] = $this->prompt(Trousse::ECRITURE);
-
-        self::assertNotContains('activer_outils_ecriture', $declares);
-        self::assertStringNotContainsString('activer_outils_ecriture', $prompt);
+        self::assertStringContainsString('PROPOSE l\'écriture en une phrase', $prompt);
+        self::assertStringContainsString('Voulez-vous que je l\'enregistre ?', $prompt);
+        self::assertStringContainsString('Ne dis JAMAIS que tu ne peux pas', $prompt);
     }
 
     /**
