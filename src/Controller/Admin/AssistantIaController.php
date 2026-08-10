@@ -2,6 +2,7 @@
 
 namespace App\Controller\Admin;
 
+use App\Ai\Action\ValidateurDActions;
 use App\Ai\AiContextBuilder;
 use App\Ai\AiEngineFailure;
 use App\Ai\Boussole\PlanDuJourService;
@@ -109,6 +110,9 @@ class AssistantIaController extends AbstractController
         private TokenAccountService $tokenAccountService,
         private AiContextBuilder $contextBuilder,
         private AiEngineInterface $aiEngine,
+        // Écarte les actions que le navigateur ne saurait pas exécuter, et les
+        // journalise : sans lui, elles partaient pour être ignorées en silence.
+        private ValidateurDActions $validateurDActions,
         private JournalTokens $journalTokens,
         private EntityManagerInterface $em,
         private LoggerInterface $logger,
@@ -490,6 +494,14 @@ class AssistantIaController extends AbstractController
         // tours précédents), seule la première barre de décision est conservée —
         // la seconde serait orpheline (aucun plan stocké derrière elle).
         $actions = PlanEnAttente::limiterAUnSeulPlan($reply->actions ?? []);
+
+        // CONTRAT AVEC LE NAVIGATEUR : il ignore silencieusement ce qu'il ne
+        // reconnaît pas. Une action d'un type inconnu, ou privée d'un champ dont son
+        // handler a besoin, partirait donc pour ne rien produire — l'utilisateur
+        // attendrait un bouton qui n'arrive jamais, sans la moindre trace. On l'écarte
+        // ici, et surtout on la JOURNALISE.
+        $actions = $this->validateurDActions->filtrer($actions, $conversation->getId());
+
         $mutationPlan = $this->extraireMutationPlan($actions);
 
         // GARDE-FOU anti-plan FANTÔME. Le modèle peut décrire un plan, un budget,

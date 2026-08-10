@@ -2,6 +2,8 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Action\TypeAction;
+
 use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -125,7 +127,7 @@ final class TelechargerFichiersTool implements AiToolInterface
                 'note'     => 'Des boutons de téléchargement sécurisés sont affichés à l\'utilisateur '
                     . 'sous ta réponse. Invite-le simplement à cliquer sur celui qu\'il veut.',
             ],
-            uiAction: ['type' => 'files-download', 'fichiers' => $pourUi],
+            uiAction: ['type' => TypeAction::TELECHARGER_FICHIERS->value, 'fichiers' => $pourUi],
         );
     }
 }

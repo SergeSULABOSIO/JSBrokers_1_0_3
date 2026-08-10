@@ -527,9 +527,6 @@ export default class extends Controller {
                 case 'assistant:message.envoyer-direct':
                     await this.envoyerMessageDirect(action);
                     break;
-                case 'signaler-paiement-prime':
-                    this.openSignalerPaiementPrimeAction(action);
-                    break;
                 case 'files-download':
                     this.renderFilesDownload(action);
                     break;
@@ -539,6 +536,14 @@ export default class extends Controller {
                 case 'ket-mutation.absent':
                     this.renderMutationAbsent();
                     break;
+                default:
+                    // NE JAMAIS IGNORER EN SILENCE. Un type inconnu signifie que le
+                    // serveur a demandé quelque chose que cette version du chat ne
+                    // sait pas faire : l'utilisateur attendrait un bouton qui
+                    // n'arrivera jamais, sans la moindre trace. Le serveur écarte déjà
+                    // les types qu'il ne déclare pas (App\Ai\Action\TypeAction) ; ce
+                    // garde-fou couvre le navigateur resté sur une version ancienne.
+                    console.warn('[Ket] Action inconnue, ignorée :', action.type);
             }
         }
     }
@@ -1305,27 +1310,6 @@ export default class extends Controller {
         content.innerHTML = renderAssistantMarkdown(lignes.join('\n'));
         bubble.removeAttribute('aria-hidden');
         this.scrollToBottom();
-    }
-
-    /**
-     * Ouvre le formulaire « Signaler un paiement de prime » d'une tranche : même
-     * événement que l'action du menu contextuel des tranches — le cerveau récupère
-     * le contexte (endpoint qui RE-VALIDE les droits, fail-closed) et ouvre le
-     * dialogue de création PaiementPrime PRÉREMPLI (solde de prime restant, date du
-     * jour), rattaché à la tranche. L'utilisateur relit et enregistre lui-même.
-     */
-    openSignalerPaiementPrimeAction(action) {
-        const id = parseInt(action.trancheId, 10);
-        if (!Number.isInteger(id) || id <= 0) return;
-        document.dispatchEvent(new CustomEvent('cerveau:event', {
-            bubbles: true,
-            detail: {
-                type:      'ui:tranche.signaler-paiement-prime',
-                source:    'assistant-chat',
-                payload:   { url: `/admin/tranche/api/get-paiement-prime-context/${id}` },
-                timestamp: Date.now(),
-            },
-        }));
     }
 
     /**

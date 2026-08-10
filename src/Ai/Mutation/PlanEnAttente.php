@@ -2,6 +2,8 @@
 
 namespace App\Ai\Mutation;
 
+use App\Ai\Action\TypeAction;
+
 use App\Entity\AssistantConversation;
 use App\Entity\AssistantMessage;
 use Doctrine\ORM\EntityManagerInterface;
@@ -19,8 +21,14 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final class PlanEnAttente
 {
-    /** Directive UI qui fait apparaître la barre de décision d'un plan. */
-    public const ACTION_REVUE = 'ket-mutation.review';
+    /**
+     * Directive UI qui fait apparaître la barre de décision d'un plan.
+     *
+     * La valeur vient du registre {@see TypeAction}, seule source des types d'action :
+     * ces constantes restent parce qu'elles sont lues partout (contrôleur, meta des
+     * messages, tests), mais elles n'inventent plus rien.
+     */
+    public const ACTION_REVUE = TypeAction::PLAN_A_VALIDER->value;
 
     /**
      * Directive UI AUTORITAIRE : le message décrit un plan / un bouton de
@@ -29,7 +37,7 @@ final class PlanEnAttente
      * clairement à l'utilisateur — jamais de bouton fantôme, jamais d'attente
      * d'une décision qui ne viendra pas.
      */
-    public const ACTION_ABSENT = 'ket-mutation.absent';
+    public const ACTION_ABSENT = TypeAction::PLAN_ABSENT->value;
 
     public function __construct(
         private readonly EntityManagerInterface $em,
