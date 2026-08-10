@@ -357,9 +357,12 @@ class AiContextBuilder
      */
     private function sectionProtocolesEcriture(AiRequest $request): string
     {
-        $outilsDePlan = $this->outilsDePlan->enumerationParmi(
-            $this->trousseCatalogue->nomsDe(Trousse::ECRITURE, $request->scope),
-        );
+        $outilsDeclares = $this->trousseCatalogue->nomsDe(Trousse::ECRITURE, $request->scope);
+        $outilsDePlan = $this->outilsDePlan->enumerationParmi($outilsDeclares);
+        // Chaque protocole suit SON outil : expliquer comment se servir d'un outil
+        // absent, c'est la même faute que le nommer dans une règle.
+        $blocProposition = $this->blocProposition($outilsDeclares);
+        $blocMouvements = $this->blocMouvements($outilsDeclares);
 
         return <<<ECRITURE
         - CRÉER / MODIFIER / SUPPRIMER un Client, une Tâche, une Note, une Piste ou un Avenant :
@@ -376,28 +379,7 @@ class AiContextBuilder
           D'ABORD LA QUESTION — préfère-t-il que tu t'en charges entièrement (A), ou qu'il remplisse
           et enregistre le formulaire lui-même (B) ? Attends sa réponse avant de continuer. Ne dis
           jamais que tu ne peux pas créer/modifier/supprimer : tu le peux (procédure A).
-          PROPOSITION D'ASSUREUR DICTÉE (chemin rapide — EXCEPTION au parcours guidé et aux étapes
-          (0)-(1)) : dès que l'utilisateur te transmet une offre reçue d'un assureur (« voici l'offre
-          de SFA », « j'ai reçu une cotation », « enregistre cette proposition »), appelle
-          saisir_proposition, et LUI SEUL, DANS CE TOUR. Tu lui passes ce qu'il a dit, en clair et sans
-          le traduire : le NOM de l'assureur, la piste ou le client, la durée, la composition de la
-          prime ligne par ligne (« Prime nette », « Arca », « Tva », « Accessoire »…) et le découpage
-          en tranches. Le serveur retrouve lui-même l'assureur, l'opportunité et les types de
-          chargement PAR LEUR NOM, puis rend le plan et son budget.
-          • N'appelle NI rechercher_entites (il n'y a aucun identifiant à aller chercher), NI
-            inventaire_champs, NI parcours_saisie avant lui : ces tours coûtent cher et refont un
-            travail déjà fait côté serveur. C'est l'erreur exacte à ne plus commettre — quatre
-            recherches enchaînées, puis plus assez de débit pour présenter le moindre plan, alors que
-            l'utilisateur avait TOUT donné dès sa première phrase.
-          • S'il renvoie « aDemander », c'est qu'un nom ne se résout pas ou qu'il est ambigu : pose
-            les questions EN UN SEUL message, en PROPOSANT les options listées dans « valeurs », puis
-            rappelle saisir_proposition. Ne pars pas chercher ailleurs ce qu'il vient de te donner.
-          • Quand il renvoie un plan, ANNONCE sous celui-ci les « resolutions » et les « defauts » :
-            ce sont des choix faits à la place de l'utilisateur (l'assureur retenu, l'opportunité, la
-            prise d'effet, l'échéancier, le taux de commission), et il doit pouvoir les corriger d'une
-            phrase. Ne les présente jamais comme des informations qu'il aurait fournies.
-          • Ce chemin vaut pour une PROPOSITION d'assureur. Pour toute autre saisie structurante,
-            applique le parcours guidé ci-dessous.
+          {$blocProposition}
           PARCOURS GUIDÉ (règle IMPÉRATIVE, procédure A) : une création un peu structurante ne se
           limite presque jamais à une seule entité — un client appelle ses interlocuteurs
           et son opportunité ; un contrat appelle ses pièces et son suivi. AVANT de préparer quoi que
@@ -420,65 +402,7 @@ class AiContextBuilder
           spécialisé t'oblige à découper : les collections (composition de la prime, tranches, revenus,
           avenants…) se mettent dans « collections » de la MÊME opération, et une entité dépendante que
           le formulaire n'expose pas se chaîne par « ref »/« @étiquette » dans le MÊME plan.
-          MOUVEMENTS D'UNE POLICE (chemin rapide — EXCEPTION au parcours guidé et aux étapes (0)-(1)) :
-          quatre actes font évoluer une police EXISTANTE, tous par l'outil UNIQUE
-          preparer_mouvement_avenant (avenantId, ou « police » = la référence dictée) —
-          • RENOUVELLEMENT (« renouvelle / reconduis cette police », « à l'identique », « refais la
-            même police pour l'année prochaine ») => mouvement="renouvellement". AUCUNE information
-            n'est requise de l'utilisateur : tout est puisé dans la police de base ;
-          • PROROGATION (« proroge / prolonge cet avenant de 20 jours ») => "prorogation" + dureeJours
-            (ou dateFin) ;
-          • ANNULATION (« annule cet avenant au 15 juin 2026 ») => "annulation" + dateEffet ;
-          • RÉSILIATION (« résilie cet avenant au 30 janvier 2026 ») => "resiliation" + dateEffet.
-          N'appelle NI parcours_saisie NI inventaire_champs : le décalque entier est calculé par le
-          serveur, tu ne recopies aucun montant.
-          • LA SEULE INFORMATION QUE TU PEUX DEMANDER est la DATE (ou la durée) des trois derniers
-            mouvements, et seulement si l'utilisateur ne l'a pas donnée : l'outil te la réclame alors
-            par « aDemander ». Pose la question en UNE ligne, puis rappelle l'outil. Pour un
-            RENOUVELLEMENT, ne demande RIEN — ni période, ni prime, ni assureur, ni référence.
-          • ZÉRO autre question : ni la question A/B (« renouvelle », « proroge », « annule »,
-            « résilie » sont des ordres => procédure A), ni la question de cadrage du parcours, ni la
-            liste des champs. La validation du plan EST la confirmation — ne la double jamais d'un
-            « confirmez-vous ? ».
-          • Défauts appliqués et ANNONCÉS, jamais demandés (l'outil te les restitue dans « defauts » :
-            énonce-les). Renouvellement : nouvelle période = lendemain de l'échéance, même durée ; même
-            assureur, même référence de police, numéro d'avenant incrémenté ; prime et sa composition,
-            échéancier (décalé d'autant) et rémunération du courtier reconduits à l'identique.
-            Prorogation : période = lendemain de l'échéance sur la durée demandée, prime recalculée AU
-            PRORATA des jours (chaque composante), échéancier réduit à une tranche unique à la prise
-            d'effet. Annulation / résiliation : avenant à la date d'effet, SANS prime — dis
-            explicitement qu'une éventuelle ristourne de prime se traite à part.
-          • TOUS les mouvements reconduisent les partenaires et les conditions de partage, et
-            rattachent le nouvel avenant à une opportunité dérivée liée à la police de base : c'est ce
-            lien qui fait basculer son statut (« Renouvelé », « Prorogé », « Résilié ») et la sort de
-            la vigie des échéances. Les TÂCHES et les COMPTES-RENDUS de la police de base ne sont
-            JAMAIS repris.
-          • Renouvellement et prorogation — l'affaire poursuit son cycle de vie — : le plan ajoute UNE
-            tâche de suivi du paiement de la prime auprès de l'assuré, car c'est ce paiement qui rend
-            la commission EXIGIBLE (cf. ta boussole). Elle est facturée au budget et forme une étape à
-            part, décochable : mentionne-la, ne la passe jamais sous silence.
-          • ÉCARTS : si l'utilisateur en annonce (« la prime passe à 12 000 », « à effet du 1er août »,
-            « chez SUNU cette fois »), passe-les en arguments du MÊME appel — ne les redemande pas — et
-            signale-les dans ton texte : ce n'est alors plus « à l'identique ».
-          • « ambigu » (plusieurs polices correspondent) => demande LAQUELLE en UNE ligne, rien
-            d'autre. « bloquant » => explique en une phrase, sans plan.
-          • « dejaTraite » => cet outil ne préparera PAS de second mouvement (ce serait un doublon).
-            Deux situations, à ne jamais confondre :
-            – sort SCELLÉ (un avenant successeur existe, ou la police est annulée / résiliée) : il n'y
-              a plus rien à écrire. Dis ce que la police est DEVENUE (« suiteDeLaPolice »), sans plan
-              ni bouton.
-            – « mouvementAmorce: true » (opportunité dérivée créée, mais AUCUN avenant émis) : la
-              police N'EST PAS reconduite et il reste une écriture à faire. N'annonce pas de bouton
-              pour le mouvement, mais NE T'ARRÊTE PAS LÀ — c'est une impasse pour l'utilisateur, qui
-              redemandera sinon indéfiniment un bouton qui ne viendra jamais. Énonce
-              « prochaineEtape », puis appelle preparer_operations DANS LE MÊME TOUR pour la réaliser
-              (créer l'Avenant sur la cotation de « propositionsEnAttente », ou créer la Cotation sur
-              l'opportunité dérivée si la liste est vide) : c'est CE plan qui portera le bouton.
-              Mentionne aussi qu'il peut REPARTIR DE ZÉRO : rappelle alors
-              preparer_mouvement_avenant avec abandonnerMouvementExistant=true, qui prépare un plan
-              supprimant l'opportunité dérivée (la police, elle, est CONSERVÉE et retrouve ses
-              quatre mouvements). Ne mets JAMAIS cet argument de ta propre initiative : il détruit
-              des données, et il faut que l'utilisateur l'ait demandé.
+          {$blocMouvements}
           AVERTIR AVANT DE DÉTRUIRE (règle IMPÉRATIVE) : dès qu'un plan contient une SUPPRESSION,
           ta réponse doit, AVANT toute autre chose et en clair : (1) nommer ce qui disparaît ;
           (2) énoncer les « impacts » renvoyés par l'outil — ce que la cascade emporte avec la
@@ -577,12 +501,15 @@ class AiContextBuilder
             options, ne le laisse jamais vide et ne le devine pas ;
           • en LECTURE, une fiche te montre souvent le libellé (« Souscription ») là où la base contient le
             code : ne recopie pas le libellé dans un plan sans le retraduire par « valeurs ».
-          RELATIONS : une relation s'écrit par son IDENTIFIANT (`risque: 12`), jamais par un nom. Quand
-          l'inventaire liste « valeurs » pour une relation, choisis dans cette liste — c'est le référentiel
-          réel de l'entreprise. Quand il ne les liste pas (référentiel trop grand), il te dit quelle entité
-          interroger : appelle rechercher_entites sur cette « entiteCible », puis utilise l'id trouvé. Un
-          champ « multiple: true » attend une LISTE d'identifiants (`partenaires: [3, 7]`). Ne laisse jamais
-          une relation obligatoire vide au motif que tu n'as pas l'id : va le chercher.
+          RELATIONS : une relation s'écrit par son NOM, tel que l'utilisateur l'a prononcé
+          (`assureur: "SUNU"`, `client: "Mme Marlette"`). LE SERVEUR LE RÉSOUT LUI-MÊME : tu n'as
+          aucun identifiant à aller chercher, et partir en quête d'un id avec rechercher_entites est
+          une dépense pure — c'est même l'erreur qui saturait le moteur. Un identifiant reste
+          accepté quand tu en disposes déjà (`risque: 12`) ; un champ « multiple: true » attend une
+          LISTE (`partenaires: ["Alpha Courtage", 7]`). Quand l'inventaire liste « valeurs » pour une
+          relation, tu peux y puiser directement. Si un nom est introuvable ou ambigu, l'outil te
+          renvoie « aDemander » avec les candidats : pose UNE question groupée, et ne devine jamais.
+          Ne laisse jamais une relation obligatoire vide au motif que tu n'as pas l'id : donne le nom.
           NE DIS QUE CE QUE LE PLAN FAIT (règle IMPÉRATIVE, la plus importante de toutes) : ta prose doit
           décrire EXACTEMENT les opérations renvoyées par l'outil — ni plus, ni moins. L'interface affiche
           à l'utilisateur, sous ta réponse, la liste RÉELLE de ce que le plan écrira et la liste de ce
@@ -889,6 +816,125 @@ class AiContextBuilder
     private function reglesDeStyle(): string
     {
         return $this->reglesDeConcision() . "\n" . $this->reglesDeMiseEnForme();
+    }
+
+    /**
+     * Protocole de « saisir_proposition » — envoyé UNIQUEMENT quand cet outil est
+     * déclaré au tour en cours.
+     *
+     * Expliquer comment se servir d'un outil absent, c'est la même faute que le
+     * nommer dans une règle : le modèle croit disposer d'une capacité qu'il n'a
+     * pas, puis décrit en prose ce qu'il aurait fait. Le bloc suit donc l'outil,
+     * et jamais l'inverse.
+     */
+    private function blocProposition(array $outilsDeclares): string
+    {
+        if (!in_array('saisir_proposition', $outilsDeclares, true)) {
+            return '';
+        }
+
+        return <<<'BLOC_PROPOSITION_FIN'
+          PROPOSITION D'ASSUREUR DICTÉE (chemin rapide — EXCEPTION au parcours guidé et aux étapes
+          (0)-(1)) : dès que l'utilisateur te transmet une offre reçue d'un assureur (« voici l'offre
+          de SFA », « j'ai reçu une cotation », « enregistre cette proposition »), appelle
+          saisir_proposition, et LUI SEUL, DANS CE TOUR. Tu lui passes ce qu'il a dit, en clair et sans
+          le traduire : le NOM de l'assureur, la piste ou le client, la durée, la composition de la
+          prime ligne par ligne (« Prime nette », « Arca », « Tva », « Accessoire »…) et le découpage
+          en tranches. Le serveur retrouve lui-même l'assureur, l'opportunité et les types de
+          chargement PAR LEUR NOM, puis rend le plan et son budget.
+          • N'appelle NI rechercher_entites (il n'y a aucun identifiant à aller chercher), NI
+            inventaire_champs, NI parcours_saisie avant lui : ces tours coûtent cher et refont un
+            travail déjà fait côté serveur. C'est l'erreur exacte à ne plus commettre — quatre
+            recherches enchaînées, puis plus assez de débit pour présenter le moindre plan, alors que
+            l'utilisateur avait TOUT donné dès sa première phrase.
+          • S'il renvoie « aDemander », c'est qu'un nom ne se résout pas ou qu'il est ambigu : pose
+            les questions EN UN SEUL message, en PROPOSANT les options listées dans « valeurs », puis
+            rappelle saisir_proposition. Ne pars pas chercher ailleurs ce qu'il vient de te donner.
+          • Quand il renvoie un plan, ANNONCE sous celui-ci les « resolutions » et les « defauts » :
+            ce sont des choix faits à la place de l'utilisateur (l'assureur retenu, l'opportunité, la
+            prise d'effet, l'échéancier, le taux de commission), et il doit pouvoir les corriger d'une
+            phrase. Ne les présente jamais comme des informations qu'il aurait fournies.
+          • Ce chemin vaut pour une PROPOSITION d'assureur. Pour toute autre saisie structurante,
+            applique le parcours guidé ci-dessous.
+        BLOC_PROPOSITION_FIN;
+    }
+
+    /**
+     * Protocole de « preparer_mouvement_avenant » — envoyé UNIQUEMENT quand cet outil est
+     * déclaré au tour en cours.
+     *
+     * Expliquer comment se servir d'un outil absent, c'est la même faute que le
+     * nommer dans une règle : le modèle croit disposer d'une capacité qu'il n'a
+     * pas, puis décrit en prose ce qu'il aurait fait. Le bloc suit donc l'outil,
+     * et jamais l'inverse.
+     */
+    private function blocMouvements(array $outilsDeclares): string
+    {
+        if (!in_array('preparer_mouvement_avenant', $outilsDeclares, true)) {
+            return '';
+        }
+
+        return <<<'BLOC_MOUVEMENTS_FIN'
+          MOUVEMENTS D'UNE POLICE (chemin rapide — EXCEPTION au parcours guidé et aux étapes (0)-(1)) :
+          quatre actes font évoluer une police EXISTANTE, tous par l'outil UNIQUE
+          preparer_mouvement_avenant (avenantId, ou « police » = la référence dictée) —
+          • RENOUVELLEMENT (« renouvelle / reconduis cette police », « à l'identique », « refais la
+            même police pour l'année prochaine ») => mouvement="renouvellement". AUCUNE information
+            n'est requise de l'utilisateur : tout est puisé dans la police de base ;
+          • PROROGATION (« proroge / prolonge cet avenant de 20 jours ») => "prorogation" + dureeJours
+            (ou dateFin) ;
+          • ANNULATION (« annule cet avenant au 15 juin 2026 ») => "annulation" + dateEffet ;
+          • RÉSILIATION (« résilie cet avenant au 30 janvier 2026 ») => "resiliation" + dateEffet.
+          N'appelle NI parcours_saisie NI inventaire_champs : le décalque entier est calculé par le
+          serveur, tu ne recopies aucun montant.
+          • LA SEULE INFORMATION QUE TU PEUX DEMANDER est la DATE (ou la durée) des trois derniers
+            mouvements, et seulement si l'utilisateur ne l'a pas donnée : l'outil te la réclame alors
+            par « aDemander ». Pose la question en UNE ligne, puis rappelle l'outil. Pour un
+            RENOUVELLEMENT, ne demande RIEN — ni période, ni prime, ni assureur, ni référence.
+          • ZÉRO autre question : ni la question A/B (« renouvelle », « proroge », « annule »,
+            « résilie » sont des ordres => procédure A), ni la question de cadrage du parcours, ni la
+            liste des champs. La validation du plan EST la confirmation — ne la double jamais d'un
+            « confirmez-vous ? ».
+          • Défauts appliqués et ANNONCÉS, jamais demandés (l'outil te les restitue dans « defauts » :
+            énonce-les). Renouvellement : nouvelle période = lendemain de l'échéance, même durée ; même
+            assureur, même référence de police, numéro d'avenant incrémenté ; prime et sa composition,
+            échéancier (décalé d'autant) et rémunération du courtier reconduits à l'identique.
+            Prorogation : période = lendemain de l'échéance sur la durée demandée, prime recalculée AU
+            PRORATA des jours (chaque composante), échéancier réduit à une tranche unique à la prise
+            d'effet. Annulation / résiliation : avenant à la date d'effet, SANS prime — dis
+            explicitement qu'une éventuelle ristourne de prime se traite à part.
+          • TOUS les mouvements reconduisent les partenaires et les conditions de partage, et
+            rattachent le nouvel avenant à une opportunité dérivée liée à la police de base : c'est ce
+            lien qui fait basculer son statut (« Renouvelé », « Prorogé », « Résilié ») et la sort de
+            la vigie des échéances. Les TÂCHES et les COMPTES-RENDUS de la police de base ne sont
+            JAMAIS repris.
+          • Renouvellement et prorogation — l'affaire poursuit son cycle de vie — : le plan ajoute UNE
+            tâche de suivi du paiement de la prime auprès de l'assuré, car c'est ce paiement qui rend
+            la commission EXIGIBLE (cf. ta boussole). Elle est facturée au budget et forme une étape à
+            part, décochable : mentionne-la, ne la passe jamais sous silence.
+          • ÉCARTS : si l'utilisateur en annonce (« la prime passe à 12 000 », « à effet du 1er août »,
+            « chez SUNU cette fois »), passe-les en arguments du MÊME appel — ne les redemande pas — et
+            signale-les dans ton texte : ce n'est alors plus « à l'identique ».
+          • « ambigu » (plusieurs polices correspondent) => demande LAQUELLE en UNE ligne, rien
+            d'autre. « bloquant » => explique en une phrase, sans plan.
+          • « dejaTraite » => cet outil ne préparera PAS de second mouvement (ce serait un doublon).
+            Deux situations, à ne jamais confondre :
+            – sort SCELLÉ (un avenant successeur existe, ou la police est annulée / résiliée) : il n'y
+              a plus rien à écrire. Dis ce que la police est DEVENUE (« suiteDeLaPolice »), sans plan
+              ni bouton.
+            – « mouvementAmorce: true » (opportunité dérivée créée, mais AUCUN avenant émis) : la
+              police N'EST PAS reconduite et il reste une écriture à faire. N'annonce pas de bouton
+              pour le mouvement, mais NE T'ARRÊTE PAS LÀ — c'est une impasse pour l'utilisateur, qui
+              redemandera sinon indéfiniment un bouton qui ne viendra jamais. Énonce
+              « prochaineEtape », puis appelle preparer_operations DANS LE MÊME TOUR pour la réaliser
+              (créer l'Avenant sur la cotation de « propositionsEnAttente », ou créer la Cotation sur
+              l'opportunité dérivée si la liste est vide) : c'est CE plan qui portera le bouton.
+              Mentionne aussi qu'il peut REPARTIR DE ZÉRO : rappelle alors
+              preparer_mouvement_avenant avec abandonnerMouvementExistant=true, qui prépare un plan
+              supprimant l'opportunité dérivée (la police, elle, est CONSERVÉE et retrouve ses
+              quatre mouvements). Ne mets JAMAIS cet argument de ta propre initiative : il détruit
+              des données, et il faut que l'utilisateur l'ait demandé.
+        BLOC_MOUVEMENTS_FIN;
     }
 
     /**
