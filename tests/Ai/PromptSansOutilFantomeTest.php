@@ -157,6 +157,37 @@ class PromptSansOutilFantomeTest extends KernelTestCase
     }
 
     /**
+     * UN PROTOCOLE SUIT SON OUTIL. Les blocs qui expliquent en détail comment se
+     * servir d'un outil précis (la saisie d'une proposition, les mouvements d'une
+     * police) ne partent que si cet outil est déclaré.
+     *
+     * Expliquer le mode d'emploi d'un outil absent, c'est la même faute que le
+     * nommer dans une règle : le modèle croit disposer d'une capacité qu'il n'a
+     * pas, puis décrit en prose ce qu'il aurait fait — le plan fantôme, encore.
+     */
+    public function testUnProtocoleNePartQuAvecSonOutil(): void
+    {
+        [$lecture] = $this->prompt(Trousse::LECTURE);
+        [$ecriture, $declares] = $this->prompt(Trousse::ECRITURE);
+
+        // En lecture, ni l'un ni l'autre : leurs outils sont absents.
+        self::assertStringNotContainsString("PROPOSITION D'ASSUREUR DICTÉE", $lecture);
+        self::assertStringNotContainsString("MOUVEMENTS D'UNE POLICE", $lecture);
+
+        // En écriture, chaque bloc n'apparaît QUE si son outil est bien déclaré.
+        self::assertSame(
+            in_array('saisir_proposition', $declares, true),
+            str_contains($ecriture, "PROPOSITION D'ASSUREUR DICTÉE"),
+            'Le protocole de saisie d’une proposition doit suivre exactement son outil.',
+        );
+        self::assertSame(
+            in_array('preparer_mouvement_avenant', $declares, true),
+            str_contains($ecriture, "MOUVEMENTS D'UNE POLICE"),
+            'Le protocole des mouvements de police doit suivre exactement son outil.',
+        );
+    }
+
+    /**
      * Un outil qui produit un plan mais ne serait pas rangé dans la trousse
      * d'écriture serait déclaré en lecture : le modèle pourrait préparer une
      * écriture dans un tour censé n'en porter aucune.
