@@ -3,6 +3,7 @@
 namespace App\Ai\Tool;
 
 use App\Ai\AiText;
+use App\Ai\Presentation\Colonnes;
 use App\Ai\Scope\AiScope;
 use App\Entity\Tranche;
 use App\Services\Search\PortefeuilleCritereFactory;
@@ -208,6 +209,22 @@ final class SuiviImpayesTool implements AiToolInterface, AiToolConditionnel
             'filtre' => $axes === [] ? 'Toutes les tranches suivies' : TranchePaiementScope::libelleCombinaison($axes),
             'perimetre' => PortefeuilleScope::libellePerimetre($perimetreEntreprise, $criterePortefeuille),
             'lignes' => array_map(fn (Tranche $t) => $this->projeter($t), $resultat['items']),
+            // LES COLONNES DE CE TABLEAU, et rien d'autre. Une ligne porte quatorze clés
+            // utiles au raisonnement ; en afficher quatorze ne se lit pas. On fixe donc
+            // les six qui font trier l'œil, leur ordre et leur rôle — d'où l'alignement
+            // des soldes à droite, l'échéance en jj/mm/aaaa et une ligne de totaux.
+            //
+            // DEUX TOTAUX SÉPARÉS, JAMAIS UN SEUL : la prime est due par l'ASSURÉ, la
+            // commission par l'ASSUREUR. Les additionner mélangerait deux débiteurs (cf.
+            // la règle « trois dettes, trois débiteurs » du glossaire).
+            'presentation' => $resultat['items'] === [] ? null : Colonnes::de([
+                'client'          => Colonnes::TEXTE,
+                'police'          => Colonnes::TEXTE,
+                'echeance'        => Colonnes::DATE,
+                'dette'           => Colonnes::TEXTE,
+                'soldePrime'      => Colonnes::MONTANT,
+                'soldeCommission' => Colonnes::MONTANT,
+            ]),
             'totaux' => $resultat['totaux'],
             'repartition' => $this->repartition($axes, $resultat['totaux']),
             'total' => $resultat['totalItems'],

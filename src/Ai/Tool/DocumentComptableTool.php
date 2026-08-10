@@ -3,6 +3,7 @@
 namespace App\Ai\Tool;
 
 use App\Ai\AiText;
+use App\Ai\Presentation\Colonnes;
 use App\Ai\Scope\AiScope;
 use App\Comptabilite\CourtierEcritureComptableService;
 use App\Comptabilite\CourtierSuiviFiscalService;
@@ -210,6 +211,16 @@ final class DocumentComptableTool implements AiToolInterface, AiToolConditionnel
                     ],
                     array_slice($docs['balance']['lignes'], 0, self::MAX_LIGNES),
                 ),
+                // Une balance ne se lit QUE colonnes alignées, débit et crédit totalisés
+                // séparément : c'est ainsi qu'on voit d'un coup d'œil si elle équilibre.
+                // Le numéro de compte reste un identifiant — jamais de séparateur de
+                // milliers sur « 6110 », et jamais de somme des numéros de compte.
+                'presentation' => Colonnes::de([
+                    'compte'      => Colonnes::IDENTIFIANT,
+                    'libelle'     => Colonnes::TEXTE,
+                    'soldeDebit'  => Colonnes::MONTANT,
+                    'soldeCredit' => Colonnes::MONTANT,
+                ]),
                 'lignesTronquees' => count($docs['balance']['lignes']) > self::MAX_LIGNES,
             ],
             'journal' => [

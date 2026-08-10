@@ -3,6 +3,7 @@
 namespace App\Ai\Tool;
 
 use App\Ai\AiText;
+use App\Ai\Presentation\Colonnes;
 use App\Ai\Scope\AiScope;
 use App\Services\DashboardDataProvider;
 use App\Services\Finance\VentilationFinanciereService;
@@ -251,9 +252,31 @@ final class AnalysePortefeuilleTool implements AiToolInterface
             array_slice($rows, 0, $limite),
         );
 
+        // Les rôles de ce classement. La PART DE MARCHÉ et le RATIO S/P sont des TAUX :
+        // déclarés en pourcentage, ils s'alignent à droite mais ne s'additionnent jamais
+        // — la somme de deux ratios n'est pas un ratio. Seuls les montants et le nombre
+        // de polices sont totalisables, et on les nomme explicitement.
+        $roles = [
+            'nom'            => Colonnes::TEXTE,
+            'nbPolices'      => Colonnes::NOMBRE,
+            'primesTotales'  => Colonnes::MONTANT,
+            'commissionsTtc' => Colonnes::MONTANT,
+            'partMarche'     => Colonnes::POURCENTAGE,
+        ];
+        if ($avecSinistralite) {
+            $roles['sinistresIndemnises'] = Colonnes::MONTANT;
+            $roles['ratioSP'] = Colonnes::POURCENTAGE;
+        }
+
         return AiToolResult::ok(array_filter([
             'analyse' => $analyse,
             'lignes'  => $lignes,
+            'presentation' => $lignes === [] ? null : Colonnes::de(
+                $roles,
+                $avecSinistralite
+                    ? ['nbPolices', 'primesTotales', 'commissionsTtc', 'sinistresIndemnises']
+                    : ['nbPolices', 'primesTotales', 'commissionsTtc'],
+            ),
             'note'    => $avecSinistralite ? null
                 : 'Sinistralité omise : les sinistres sont hors du périmètre de l\'utilisateur.',
         ], static fn ($v) => $v !== null));

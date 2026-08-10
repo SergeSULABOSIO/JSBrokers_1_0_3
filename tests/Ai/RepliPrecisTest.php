@@ -2,8 +2,11 @@
 
 namespace App\Tests\Ai;
 
+use App\Ai\Presentation\TableauMarkdown;
 use App\Ai\Redaction\RepliPrecis;
+use App\Services\ServiceNombres;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Translation\LocaleSwitcher;
 
 /**
  * LE REPLI DE RÉDACTION : ce que Ket dit quand le modèle a réclamé un outil de plus
@@ -22,9 +25,13 @@ use PHPUnit\Framework\TestCase;
  */
 class RepliPrecisTest extends TestCase
 {
+    /**
+     * Le repli et le tableau que Ket rédige elle-même passent par le MÊME rendu : ce
+     * qui est vérifié ici sur le repli vaut donc contrat pour les deux.
+     */
     private function repli(): RepliPrecis
     {
-        return new RepliPrecis();
+        return new RepliPrecis(new TableauMarkdown(new ServiceNombres(new LocaleSwitcher('fr', []))));
     }
 
     /** Aucun outil n'a tourné : il n'y a réellement rien à raconter. */

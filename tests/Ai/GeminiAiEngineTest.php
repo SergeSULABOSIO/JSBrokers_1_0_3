@@ -8,6 +8,7 @@ use App\Ai\Debit\BudgetDebit;
 use App\Ai\Engine\GeminiAiEngine;
 use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\Mutation\PlanEnAttente;
+use App\Ai\Presentation\TableauMarkdown;
 use App\Ai\Redaction\RepliPrecis;
 use App\Ai\Programme\ProgrammeEnCours;
 use App\Ai\Scope\AiScope;
@@ -21,6 +22,7 @@ use App\Ai\Trousse\TrousseCatalogue;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Repository\AssistantProgrammeRepository;
+use App\Services\ServiceNombres;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\AbstractLogger;
@@ -28,6 +30,7 @@ use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\Translation\LocaleSwitcher;
 
 /**
  * Adaptateur API Gemini (generateContent + function calling) testé avec un
@@ -281,6 +284,12 @@ class GeminiAiEngineTest extends TestCase
      * dormir ni dépendre du pool de cache réel : on vérifie la DÉCISION du
      * moteur, pas la capacité de PHP à attendre.
      */
+    /** Le repli de rédaction, avec le rendu de tableau que Ket partage avec lui. */
+    private function repliPrecis(): RepliPrecis
+    {
+        return new RepliPrecis(new TableauMarkdown(new ServiceNombres(new LocaleSwitcher('fr', []))));
+    }
+
     private function makeBudget(int $plafond = 250000, int $instant = 1_000_000): BudgetDebit
     {
         return new BudgetDebit(
@@ -322,7 +331,7 @@ class GeminiAiEngineTest extends TestCase
             new NullLogger(),
             new JournalTokens($espion, new OutilsDePlan([])),
             $budget ?? $this->makeBudget(),
-            new RepliPrecis(),
+            $this->repliPrecis(),
             function (int $secondes) use ($dormir): void {
                 $this->attentes[] = $secondes;
                 if ($dormir !== null) {

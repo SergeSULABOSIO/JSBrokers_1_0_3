@@ -3,6 +3,7 @@
 namespace App\Tests\Ai;
 
 use App\Ai\FicheNormaliseur;
+use App\Ai\Presentation\Colonnes;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
 use App\Ai\Tool\CompterEntitesTool;
@@ -12,9 +13,14 @@ use App\Ai\Tool\LireFicheTool;
 use App\Ai\Tool\PaiementsPrimeTool;
 use App\Ai\Tool\RechercherEntitesTool;
 use App\Ai\Tool\SignalerPaiementPrimeTool;
+use App\Entity\Assureur;
+use App\Entity\Avenant;
+use App\Entity\Client;
+use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\PaiementPrime;
+use App\Entity\Piste;
 use App\Entity\Tranche;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
@@ -72,7 +78,31 @@ class PaiementsPrimeToolTest extends TestCase
             $search ?? $this->createMock(JSBDynamicSearchService::class),
             $tranchePaiement ?? $this->createMock(TranchePaiementService::class),
             $this->fabriquePortefeuille(),
+            // Le préchargement du contexte n'est sollicité qu'avec des tranches
+            // PERSISTÉES (il travaille par identifiants) : sur ces entités en mémoire,
+            // il rend la main sans émettre une requête. Le test reste pur.
+            $this->createMock(EntityManagerInterface::class),
         );
+    }
+
+    /**
+     * Un signalement replacé dans son graphe réel : tranche → cotation → assureur, et
+     * cotation → piste → client, plus l'avenant qui porte la référence de police.
+     */
+    private function signalementContextualise(): PaiementPrime
+    {
+        $client = (new Client())->setNom('Fracht Trading Mauritius');
+        $assureur = (new Assureur())->setNom('SFA Assurances');
+        $piste = (new Piste())->setClient($client);
+        $avenant = (new Avenant())->setReferencePolice('POL-2026-0042');
+
+        $cotation = (new Cotation())->setAssureur($assureur)->setPiste($piste);
+        $cotation->addAvenant($avenant);
+
+        $tranche = (new Tranche())->setNom('Tranche unique - import bordereau');
+        $tranche->setCotation($cotation);
+
+        return $this->signalement('PRIME-05082026-160239', 3195.16, '2026-08-05')->setTranche($tranche);
     }
 
     private function makeScope(?Invite $invite = null): AiScope
@@ -163,9 +193,11 @@ class PaiementsPrimeToolTest extends TestCase
         $this->assertStringContainsString('trésorerie', $result->data['note']);
 
         $this->assertCount(2, $result->data['signalements']);
-        // Les clés vides sont élaguées (économie de tokens) : pas d'id sur une entité non persistée.
+        // Les clés vides sont élaguées (économie de tokens) : pas d'id sur une entité non
+        // persistée, et aucun contexte client/assureur en mode ciblé — l'entête le donne
+        // déjà. L'ORDRE des clés suit celui de la présentation déclarée.
         $this->assertSame(
-            ['date' => '2026-07-10', 'montant' => 200.0, 'reference' => 'PP-002', 'description' => 'Avis de règlement transmis par l\'assureur'],
+            ['date' => '2026-07-10', 'reference' => 'PP-002', 'montant' => 200.0, 'description' => 'Avis de règlement transmis par l\'assureur'],
             $result->data['signalements'][0],
         );
         $this->assertSame(2, $result->data['total']);
@@ -216,6 +248,85 @@ class PaiementsPrimeToolTest extends TestCase
         $this->assertArrayHasKey(PortefeuilleScope::CRITERION_KEY, $criteres);
         $this->assertSame('aucun portefeuille', $result->data['perimetre']);
         $this->assertSame(500.0, $result->data['montantPage']);
+    }
+
+    /**
+     * L'INCIDENT DU 2026-08-10, verrouillé.
+     *
+     * Un courtier demande la liste des primes signalées. La projection ne rendait NI le
+     * client NI l'assureur : Ket a produit un tableau dont la colonne « Client » était
+     * découpée dans le préfixe des références (« MIC-RC » n'est pas un client, c'est le
+     * début de « MIC-RC0012454/2028 ») et dont la colonne « Assureur » portait le
+     * libellé générique « Assureur Partenaire ». Relancée, elle a répondu — à juste
+     * titre — que ses outils ne lui donnaient pas le nom de la compagnie.
+     *
+     * LA RÈGLE : une colonne PRÉSENTABLE est une colonne RENVOYÉE. Tant qu'une
+     * information manque au résultat, le modèle n'a que deux issues, la taire ou
+     * l'inventer.
+     */
+    public function testLeModeTransversalRendLeVraiClientEtLeVraiAssureur(): void
+    {
+        $search = $this->createMock(JSBDynamicSearchService::class);
+        $search->method('search')->willReturn($this->reponse([$this->signalementContextualise()]));
+
+        $result = $this->makeTool(true, $search)->execute([], $this->makeScope($this->inviteAvecId(9)));
+        $ligne = $result->data['items'][0];
+
+        $this->assertSame('Fracht Trading Mauritius', $ligne['client']);
+        $this->assertSame('SFA Assurances', $ligne['assureur']);
+        $this->assertSame('POL-2026-0042', $ligne['police']);
+        // Le rattachement est APLATI : une valeur structurée n'a pas de rendu de cellule
+        // honnête, et le tableau de repli écarte les sous-tableaux.
+        $this->assertSame('Tranche unique - import bordereau', $ligne['tranche']);
+        $this->assertSame('PRIME-05082026-160239', $ligne['reference']);
+        $this->assertSame(3195.16, $ligne['montant']);
+    }
+
+    /**
+     * LA PRÉSENTATION DÉCLARÉE : l'ordre des colonnes, leurs rôles et la colonne à
+     * totaliser. C'est ce qui fixe l'alignement des montants, le format des dates et la
+     * ligne de totaux — pour le modèle comme pour le repli PHP.
+     */
+    public function testLeModeTransversalDeclareSesColonnesEtLeurRole(): void
+    {
+        $search = $this->createMock(JSBDynamicSearchService::class);
+        $search->method('search')->willReturn($this->reponse([$this->signalementContextualise()]));
+
+        $presentation = $this->makeTool(true, $search)
+            ->execute([], $this->makeScope($this->inviteAvecId(9)))
+            ->data['presentation'];
+
+        $this->assertSame(
+            ['date', 'client', 'assureur', 'police', 'reference', 'montant'],
+            array_keys($presentation['colonnes']),
+        );
+        $this->assertSame(Colonnes::DATE, $presentation['colonnes']['date']);
+        $this->assertSame(Colonnes::MONTANT, $presentation['colonnes']['montant']);
+        $this->assertSame(['montant'], $presentation['totaliser']);
+    }
+
+    /**
+     * Une cotation SANS avenant n'est qu'une proposition : elle n'a pas de police. On
+     * rend alors la clé absente, jamais un libellé de remplissage — c'est exactement ce
+     * qu'on reproche au modèle.
+     */
+    public function testUneCotationSansAvenantNeFabriquePasDeReferenceDePolice(): void
+    {
+        $tranche = (new Tranche())->setNom('Tranche unique');
+        $tranche->setCotation((new Cotation())->setAssureur((new Assureur())->setNom('SFA Assurances')));
+
+        $search = $this->createMock(JSBDynamicSearchService::class);
+        $search->method('search')->willReturn($this->reponse([
+            $this->signalement('PP-020', 100.0, '2026-07-01')->setTranche($tranche),
+        ]));
+
+        $ligne = $this->makeTool(true, $search)
+            ->execute([], $this->makeScope($this->inviteAvecId(9)))
+            ->data['items'][0];
+
+        $this->assertArrayNotHasKey('police', $ligne);
+        $this->assertArrayNotHasKey('client', $ligne);
+        $this->assertSame('SFA Assurances', $ligne['assureur']);
     }
 
     public function testModeTransversalElargiALEntreprise(): void

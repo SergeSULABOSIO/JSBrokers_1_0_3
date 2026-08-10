@@ -148,7 +148,7 @@ class MessageMarkdownParserTest extends TestCase
         self::assertSame(['tableau'], $this->types($blocs));
         self::assertCount(3, $blocs[0]['entetes']);
         self::assertSame('Prime nette', $this->texte($blocs[0]['entetes'][1]));
-        self::assertCount(2, $blocs[0]['lignes']);
+        self::assertCount(3, $blocs[0]['lignes']);
         self::assertSame('SONAS', $this->texte($blocs[0]['lignes'][0][0]));
 
         // Une pastille dans une cellule reste une pastille.
@@ -156,6 +156,47 @@ class MessageMarkdownParserTest extends TestCase
         self::assertSame('badge', $statut[0]['type']);
         self::assertSame('success', $statut[0]['variante']);
         self::assertSame('Payée', $statut[0]['texte']);
+    }
+
+    /**
+     * L'ALIGNEMENT ÉTAIT LU, PUIS PERDU — dans les deux sorties, et pour deux raisons
+     * différentes. Ici la ligne de séparation était simplement sautée (« depart + 2 »)
+     * sans qu'on en tire l'alignement ; côté chat, marked le rendait en attribut
+     * `align` que la sanitisation supprimait. Un même tableau se lisait donc plat
+     * partout, montants compris. Ce test est le miroir PHP de
+     * tests/js/assistant-markdown-table.test.mjs.
+     */
+    public function testLAlignementDesColonnesEstRestitue(): void
+    {
+        $blocs = $this->parser->analyser($this->fixture('tableau'));
+
+        self::assertSame(['left', 'right', 'center'], $blocs[0]['alignements']);
+    }
+
+    /**
+     * La ligne de TOTAUX du contrat de présentation : première cellule en gras portant
+     * « TOTAL ». Sans ce marquage, le chiffre qui résume tout le tableau se lit comme
+     * une ligne de données de plus.
+     */
+    public function testLaLigneDeTotauxEstIdentifiee(): void
+    {
+        $blocs = $this->parser->analyser($this->fixture('tableau'));
+
+        self::assertSame([false, false, true], $blocs[0]['totaux']);
+        self::assertSame('TOTAL', $this->texte($blocs[0]['lignes'][2][0]));
+    }
+
+    /**
+     * Un tableau sans alignement explicite reste entièrement à gauche, et le tableau
+     * d'alignements garde la LARGEUR des en-têtes : une ligne de séparation mal
+     * comptée ne doit jamais décaler les colonnes du corps.
+     */
+    public function testSansAlignementExpliciteToutResteAGaucheEtCadre(): void
+    {
+        $blocs = $this->parser->analyser("Client | Prime | Statut\n--- | ---\nSONAS | 1200 | ok");
+
+        self::assertSame(['left', 'left', 'left'], $blocs[0]['alignements']);
+        self::assertSame([false], $blocs[0]['totaux']);
     }
 
     public function testBarresDeBordFacultatives(): void

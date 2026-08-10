@@ -246,6 +246,26 @@
         .jsb-ai-chat .aic-msg-text tbody td { transition:background-color .12s ease, color .12s ease; }
         .jsb-ai-chat .aic-msg-text tbody tr:hover td { background:var(--aic-row-hover); color:var(--aic-text); }
         .jsb-ai-chat .aic-msg-text tbody tr:active td { background:var(--aic-accent-subtle); }
+        /* Rôles de colonne d'un tableau markdown — même idiome que .aic-plan-c-montant
+           plus bas, pour que les tableaux rédigés par Ket et ceux rendus par le serveur
+           se lisent de la même façon. La classe vient du renderer (assistant-markdown-
+           render.js), qui traduit l'alignement GFM « ---: » : l'attribut `align` de
+           marked, lui, ne survit pas à la sanitisation. `tabular-nums` donne aux
+           chiffres une largeur constante — sans quoi une colonne alignée à droite reste
+           illisible, les unités ne tombant pas les unes sous les autres. */
+        .jsb-ai-chat .aic-msg-text th.aic-md-num,
+        .jsb-ai-chat .aic-msg-text td.aic-md-num { text-align:right; font-variant-numeric:tabular-nums; }
+        .jsb-ai-chat .aic-msg-text th.aic-md-center,
+        .jsb-ai-chat .aic-msg-text td.aic-md-center { text-align:center; }
+        /* Ligne de TOTAUX : le chiffre qui résume le tableau ne doit pas se lire comme
+           une ligne de données de plus. Filet de séparation au-dessus, texte contrasté,
+           et pas de survol — ce n'est pas un enregistrement qu'on peut ouvrir. */
+        .jsb-ai-chat .aic-msg-text tr.aic-md-total td {
+            border-top:1px solid var(--aic-border); border-bottom:0;
+            font-weight:700; color:var(--aic-text-strong);
+        }
+        .jsb-ai-chat .aic-msg-text tbody tr.aic-md-total:hover td,
+        .jsb-ai-chat .aic-msg-text tbody tr.aic-md-total:active td { background:transparent; color:var(--aic-text-strong); }
         /* Pastilles : mêmes couleurs sémantiques que .jsb-state-badge (app.css). */
         .jsb-ai-chat .aic-md-badge {
             display:inline-block; padding:.1rem .5rem; border-radius:999px;

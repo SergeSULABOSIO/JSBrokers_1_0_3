@@ -3,6 +3,7 @@
 namespace App\Ai\Tool;
 
 use App\Ai\AiText;
+use App\Ai\Presentation\Colonnes;
 use App\Ai\Scope\AiScope;
 use App\Entity\DepenseCourtier;
 use App\Repository\DepenseCourtierRepository;
@@ -188,6 +189,18 @@ final class DetailDepensesTool implements AiToolInterface, AiToolConditionnel
             'note' => 'TVA déductible = TVA récupérable supportée sur les achats du cabinet (TTC − HT), '
                 . 'à ne pas confondre avec la TVA collectée sur les commissions.',
             'lignes' => array_map(fn (DepenseCourtier $d) => $this->projeter($d), $lignesPage),
+            // Les trois montants d'une dépense ne se confondent pas : HT (la charge),
+            // TVA déductible (récupérable) et TTC (le décaissement). On les affiche donc
+            // côte à côte, chacun avec son propre total — et le taux de TVA reste en
+            // POINTS, jamais additionné.
+            'presentation' => $lignesPage === [] ? null : Colonnes::de([
+                'date'          => Colonnes::DATE,
+                'compte'        => Colonnes::TEXTE,
+                'tiers'         => Colonnes::TEXTE,
+                'ht'            => Colonnes::MONTANT,
+                'tvaDeductible' => Colonnes::MONTANT,
+                'ttc'           => Colonnes::MONTANT,
+            ]),
             'ventilationParCompte' => $ventilation,
             'totaux' => [
                 'ht' => round($totHt, 2),
