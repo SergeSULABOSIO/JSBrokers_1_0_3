@@ -2,6 +2,8 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Action\TypeAction;
+
 use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
 use App\Ai\Export\MessageMailNotifier;
@@ -164,7 +166,7 @@ final class EnvoyerMessageParEmailTool implements AiToolInterface
                 ),
             ],
             [
-                'type' => 'assistant:message.envoyer-direct',
+                'type' => TypeAction::ENVOYER_MESSAGE_DIRECT->value,
                 'idMessage' => $cible->getId(),
                 'destinataires' => $adresses,
                 'format' => $format,

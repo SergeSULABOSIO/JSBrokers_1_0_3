@@ -2,6 +2,8 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Action\TypeAction;
+
 use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
 
@@ -58,7 +60,7 @@ final class QuitterWorkspaceTool implements AiToolInterface
                 'note' => 'La demande de fermeture est présentée à l\'utilisateur : une boîte de '
                     . 'confirmation s\'ouvre, il valide ou annule lui-même.',
             ],
-            uiAction: ['type' => 'close-workspace'],
+            uiAction: ['type' => TypeAction::QUITTER_WORKSPACE->value],
         );
     }
 }

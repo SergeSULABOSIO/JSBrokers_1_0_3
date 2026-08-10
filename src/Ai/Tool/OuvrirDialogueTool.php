@@ -2,6 +2,8 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Action\TypeAction;
+
 use App\Ai\Trousse\AiToolEcriture;
 
 use App\Ai\AiText;
@@ -181,7 +183,7 @@ final class OuvrirDialogueTool implements AiToolInterface, AiToolEcriture
                     . " : l'utilisateur le complètera et l’enregistrera lui-même.",
             ], static fn ($v) => $v !== null),
             uiAction: array_filter([
-                'type'    => 'open-dialog',
+                'type'    => TypeAction::OUVRIR_DIALOGUE->value,
                 'entite'  => $shortName,
                 'mode'    => $mode,
                 'id'      => $id,

@@ -2,6 +2,8 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Action\TypeAction;
+
 use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
 use App\Service\Workspace\WorkspaceAccessResolver;
@@ -91,7 +93,7 @@ final class OuvrirRubriqueTool implements AiToolInterface
                     'libelle' => 'Tableau de bord',
                     'note'    => 'Le tableau de bord s\'ouvre dans un onglet de l\'espace de travail et devient actif.',
                 ],
-                uiAction: ['type' => 'open-rubrique', 'entite' => 'TableauDeBord'],
+                uiAction: ['type' => TypeAction::OUVRIR_RUBRIQUE->value, 'entite' => 'TableauDeBord'],
             );
         }
 
@@ -111,7 +113,7 @@ final class OuvrirRubriqueTool implements AiToolInterface
                 'libelle' => $labels[$shortName],
                 'note'    => 'La rubrique s\'ouvre dans l\'espace de travail de l\'utilisateur.',
             ],
-            uiAction: ['type' => 'open-rubrique', 'entite' => $shortName],
+            uiAction: ['type' => TypeAction::OUVRIR_RUBRIQUE->value, 'entite' => $shortName],
         );
     }
 }

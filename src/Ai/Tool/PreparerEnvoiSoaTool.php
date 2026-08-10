@@ -2,6 +2,8 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Action\TypeAction;
+
 use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
 use App\Entity\Client;
@@ -139,7 +141,7 @@ final class PreparerEnvoiSoaTool implements AiToolInterface, AiToolConditionnel
                 'note'   => 'La boîte d\'envoi du relevé de compte s\'ouvre : l\'utilisateur choisit '
                     . 'le destinataire et confirme LUI-MÊME l\'envoi.',
             ],
-            uiAction: ['type' => 'open-soa-envoi', 'clientId' => $client->getId()],
+            uiAction: ['type' => TypeAction::OUVRIR_ENVOI_SOA->value, 'clientId' => $client->getId()],
         );
     }
 }

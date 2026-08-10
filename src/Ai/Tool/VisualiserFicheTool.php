@@ -2,6 +2,8 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Action\TypeAction;
+
 use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
 use App\Service\Workspace\WorkspaceAccessResolver;
@@ -144,7 +146,7 @@ final class VisualiserFicheTool implements AiToolInterface
                 'cible'   => $this->libelleur->libelle($entity, $displayField),
                 'note'    => 'La fiche s\'ouvre dans la colonne de visualisation de l\'utilisateur.',
             ],
-            uiAction: ['type' => 'open-visualization', 'entite' => $shortName, 'id' => $entity->getId()],
+            uiAction: ['type' => TypeAction::VISUALISER_FICHE->value, 'entite' => $shortName, 'id' => $entity->getId()],
         );
     }
 }

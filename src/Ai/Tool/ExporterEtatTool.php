@@ -2,6 +2,8 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Action\TypeAction;
+
 use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
 use App\Comptabilite\ComptaExportService;
@@ -145,7 +147,7 @@ final class ExporterEtatTool implements AiToolInterface
                     . '(le fichier est généré par le circuit d\'export standard).',
             ],
             uiAction: [
-                'type' => 'open-url',
+                'type' => TypeAction::OUVRIR_URL->value,
                 'url'  => $this->urlGenerator->generate('admin.documentcomptable.export', $parametres),
             ],
         );
@@ -181,7 +183,7 @@ final class ExporterEtatTool implements AiToolInterface
                 'note'    => 'Le PDF s\'ouvre dans un nouvel onglet de l\'utilisateur.',
             ],
             uiAction: [
-                'type' => 'open-url',
+                'type' => TypeAction::OUVRIR_URL->value,
                 'url'  => $this->urlGenerator->generate($route, [
                     'idEntreprise' => $scope->entreprise->getId(),
                     'idNote'       => $idNote,
