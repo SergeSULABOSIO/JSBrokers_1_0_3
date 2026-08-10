@@ -5,6 +5,7 @@ namespace App\Ai\Tool;
 use App\Ai\Trousse\AiToolEcriture;
 use App\Ai\Mouvement\MouvementAvenant;
 use App\Ai\Mouvement\MouvementAvenantBuilder;
+use App\Ai\Resolution\ResolveurDeReferences;
 use App\Ai\Scope\AiScope;
 use App\Entity\Avenant;
 use App\Services\AvenantRenouvellementResolver;
@@ -41,6 +42,9 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
         private readonly MouvementAvenantBuilder $builder,
         private readonly JSBDynamicSearchService $searchService,
         private readonly AvenantRenouvellementResolver $renouvellementResolver,
+        // Source unique « un nom dicté → un identifiant » : c'est par elle qu'un nom de
+        // CLIENT devient une police, sans second tour d'outils.
+        private readonly ResolveurDeReferences $resolveur,
     ) {
     }
 
@@ -94,6 +98,13 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
                     'type' => 'string',
                     'description' => 'À défaut d\'identifiant : la référence de police dictée par l\'utilisateur. '
                         . 'Si plusieurs polices correspondent, l\'outil renvoie la liste à départager.',
+                ],
+                'client' => [
+                    'type' => 'string',
+                    'description' => 'À défaut d\'identifiant ET de référence : le NOM du client dicté par '
+                        . 'l\'utilisateur (« Kibali Goldmines SA », « Mme Marlette »). L\'outil retrouve seul ses '
+                        . 'polices et retient celle qui est EN VIGUEUR. Ne fais JAMAIS une recherche préalable '
+                        . 'pour obtenir un identifiant : donne le nom tel qu\'il a été dit.',
                 ],
                 'dureeJours' => [
                     'type' => 'integer',
@@ -186,30 +197,36 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
         }
 
         // Police résolue STRICTEMENT dans l'entreprise du scope (fail-closed).
+        $designation = $this->designation($args);
         $candidats = $this->candidats($args, $scope);
         if ($candidats === []) {
             return AiToolResult::ok([
-                'pret'     => false,
-                'bloquant' => sprintf(
-                    'Aucune police %s dans cet espace de travail.',
-                    isset($args['police']) ? '« ' . trim((string) $args['police']) . ' »' : '#' . (int) ($args['avenantId'] ?? 0),
-                ),
-                'note'     => 'Dis-le en UNE phrase et demande la référence exacte (ou retrouve-la avec '
-                    . 'rechercher_entites entite=Avenant). Ne présente AUCUN plan, n’annonce AUCUN bouton '
-                    . 'et n’invoque aucune panne technique.',
-            ]);
-        }
-        if (count($candidats) > 1) {
-            return AiToolResult::ok([
-                'pret'   => false,
-                'ambigu' => array_map($this->resumer(...), $candidats),
-                'note'   => 'Plusieurs polices correspondent à cette référence. Demande à l’utilisateur LAQUELLE, '
-                    . 'en UNE ligne (liste courte), puis rappelle cet outil avec « avenantId ». Ne pose aucune '
-                    . 'autre question et ne présente aucun plan tant qu’il n’a pas tranché.',
+                'pret'      => false,
+                'bloquant'  => sprintf('Aucune police rattachée à %s dans cet espace de travail.', $designation),
+                'cherchePar' => $this->critairesEssayes($args),
+                'note'      => 'Dis-le en UNE phrase, en NOMMANT ce qui a été cherché (« cherchePar ») pour que '
+                    . 'l’utilisateur voie où l’on s’est trompé, puis demande UNE précision utile : la référence '
+                    . 'exacte de la police, OU le nom exact du client. Ne présente AUCUN plan, n’annonce AUCUN '
+                    . 'bouton, ne relance AUCUN outil et n’invoque aucune panne technique.',
             ]);
         }
 
-        $base = $candidats[0];
+        $choix = $this->departager($candidats, $designation);
+        if (isset($choix['ambigu'])) {
+            return AiToolResult::ok([
+                'pret'   => false,
+                'ambigu' => array_map($this->resumer(...), $choix['ambigu']),
+                'note'   => 'Plusieurs polices correspondent, et le serveur n’a pas pu trancher seul. Demande à '
+                    . 'l’utilisateur LAQUELLE, en UNE ligne : présente-les par leur PÉRIODE, leur client et leur '
+                    . 'assureur (jamais par leur identifiant, qu’il ne connaît pas), et dis leur statut de '
+                    . 'renouvellement. Puis ARRÊTE-TOI : ne relance aucun outil, ne pose aucune autre question et '
+                    . 'ne présente aucun plan tant qu’il n’a pas tranché.',
+            ]);
+        }
+
+        /** @var Avenant $base */
+        $base = $choix['police'];
+        $defautsDeChoix = $choix['defauts'];
 
         // DÉCISION EXPLICITE DE NE PAS RENOUVELER : un collègue a écrit noir sur blanc que
         // cette police n'aurait pas de suite. La reconduire en silence effacerait sa
@@ -255,9 +272,13 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
             return AiToolResult::ok([
                 'pret'      => false,
                 'aDemander' => $decalque['aDemander'],
+                'source'    => $decalque['source'] ?? null,
                 'note'      => 'Il manque la SEULE information que tu aies le droit de demander pour ce mouvement. '
                     . 'Pose la question telle quelle, en UNE ligne, sans rien demander d’autre (ni période, ni '
-                    . 'prime, ni assureur : tout le reste est dérivé de la police). Rappelle ensuite cet outil.',
+                    . 'prime, ni assureur : tout le reste est dérivé de la police). NOMME au passage la police '
+                    . 'concernée (« source » : client, référence, période) pour que l’utilisateur voie que tu l’as '
+                    . 'bien trouvée. Puis ARRÊTE-TOI : ne rappelle aucun outil dans ce tour, sa réponse rouvrira '
+                    . 'un cycle complet.',
             ]);
         }
 
@@ -293,7 +314,9 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
             'mouvement'        => $mouvement->value,
             'libelleMouvement' => $mouvement->libelle(),
             'source'           => $decalque['source'],
-            'defauts'          => $decalque['defauts'],
+            // Le choix de la police EST une hypothèse, au même titre que la période ou
+            // la prime reconduites : il se dit, il ne se subit pas.
+            'defauts'          => array_merge($defautsDeChoix, $decalque['defauts']),
             'ecarts'           => $decalque['ecarts'],
             'reconduit'        => $decalque['reconduit'],
             'consigne'         => 'Présente le plan et le budget comme pour toute écriture, et ÉNONCE les '
@@ -461,8 +484,19 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
     }
 
     /**
-     * Polices candidates dans l'entreprise du scope : par identifiant (une seule)
-     * ou par référence de police (plusieurs possibles, à départager).
+     * Polices candidates dans l'entreprise du scope.
+     *
+     * TROIS DÉSIGNATIONS, PAS UNE. L'identifiant est le cas idéal ; la référence de
+     * police le cas courant ; le NOM DU CLIENT le cas réel. « Kibali Goldmines SA a
+     * donné l'ordre de renouveler leur police » ne contient AUCUNE référence — et
+     * l'outil, qui ne savait chercher que sur `referencePolice`, répondait « aucune
+     * police » à un client qui en avait sept. Le modèle ne pouvait pas corriger : aller
+     * chercher le client puis ses polices, c'est un second tour d'outils, que
+     * l'architecture interdit. Le serveur fait donc ce chemin lui-même.
+     *
+     * Un terme donné en « police » mais qui ne ressemble à aucune référence est
+     * réessayé comme nom de client : l'utilisateur ne classe pas ses mots, et le modèle
+     * remplit l'argument qu'il croit bon.
      *
      * @return array<int, Avenant>
      */
@@ -471,31 +505,88 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
         $id = (int) ($args['avenantId'] ?? 0);
         if ($id > 0) {
             $result = $this->searchService->search(Avenant::class, ['id' => $id], $scope->entreprise, null, 1, 1);
-        } else {
-            $police = trim((string) ($args['police'] ?? ''));
-            if ($police === '') {
+            if (($result['status']['code'] ?? 500) !== 200) {
                 return [];
             }
-            $result = $this->searchService->search(
-                Avenant::class,
-                ['referencePolice' => ['operator' => 'LIKE', 'value' => $police, 'mode' => 'contains']],
-                $scope->entreprise,
-                null,
-                1,
-                self::MAX_CANDIDATS,
-            );
 
-            // Une correspondance EXACTE tranche d'elle-même : « AXA-1 » ne doit pas
-            // rester ambiguë au seul motif que « AXA-12 » existe aussi.
-            $exacts = array_values(array_filter(
-                array_filter($result['data'] ?? [], static fn ($a) => $a instanceof Avenant),
-                static fn (Avenant $a) => mb_strtolower(trim((string) $a->getReferencePolice())) === mb_strtolower($police),
-            ));
-            if (count($exacts) === 1) {
-                return $exacts;
+            return array_values(array_filter($result['data'] ?? [], static fn ($a) => $a instanceof Avenant));
+        }
+
+        $police = trim((string) ($args['police'] ?? ''));
+        if ($police !== '') {
+            $parReference = $this->parReferencePolice($police, $scope);
+            if ($parReference !== []) {
+                return $parReference;
             }
         }
 
+        // Le nom du client, qu'il ait été donné comme tel ou glissé dans « police ».
+        foreach ([trim((string) ($args['client'] ?? '')), $police] as $nomClient) {
+            if ($nomClient === '') {
+                continue;
+            }
+            $parClient = $this->parClient($nomClient, $scope);
+            if ($parClient !== []) {
+                return $parClient;
+            }
+        }
+
+        return [];
+    }
+
+    /** @return array<int, Avenant> */
+    private function parReferencePolice(string $police, AiScope $scope): array
+    {
+        $result = $this->searchService->search(
+            Avenant::class,
+            ['referencePolice' => ['operator' => 'LIKE', 'value' => $police, 'mode' => 'contains']],
+            $scope->entreprise,
+            null,
+            1,
+            self::MAX_CANDIDATS,
+        );
+        if (($result['status']['code'] ?? 500) !== 200) {
+            return [];
+        }
+
+        $trouves = array_values(array_filter($result['data'] ?? [], static fn ($a) => $a instanceof Avenant));
+
+        // Une correspondance EXACTE tranche d'elle-même : « AXA-1 » ne doit pas
+        // rester ambiguë au seul motif que « AXA-12 » existe aussi.
+        $exacts = array_values(array_filter(
+            $trouves,
+            static fn (Avenant $a) => mb_strtolower(trim((string) $a->getReferencePolice())) === mb_strtolower($police),
+        ));
+
+        return count($exacts) === 1 ? $exacts : $trouves;
+    }
+
+    /**
+     * Les polices d'un CLIENT désigné par son nom. Le nom est résolu par la source
+     * unique (donc scopée à l'entreprise et fail-closed), puis les avenants sont joints
+     * au client par TOUS les chemins possibles — un avenant tient son client de sa
+     * cotation, mais aussi de l'opportunité dérivée qui l'a fait naître.
+     *
+     * @return array<int, Avenant>
+     */
+    private function parClient(string $nom, AiScope $scope): array
+    {
+        $reference = $this->resolveur->resoudre('Client', $nom, $scope);
+        if (!$reference->estResolue()) {
+            return [];
+        }
+
+        $result = $this->searchService->search(
+            Avenant::class,
+            [JSBDynamicSearchService::LIEN_MULTI_CHEMINS => [
+                'paths' => ['cotation.piste.client', 'pisteDeRenouvellement.client'],
+                'id'    => (int) $reference->id,
+            ]],
+            $scope->entreprise,
+            null,
+            1,
+            self::MAX_CANDIDATS,
+        );
         if (($result['status']['code'] ?? 500) !== 200) {
             return [];
         }
@@ -503,12 +594,123 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
         return array_values(array_filter($result['data'] ?? [], static fn ($a) => $a instanceof Avenant));
     }
 
+    /**
+     * DÉPARTAGER PLUSIEURS POLICES SANS POSER DE QUESTION QUAND C'EST POSSIBLE.
+     *
+     * Un client a rarement une seule police, et un renouvellement en engendre une
+     * chaîne : sept avenants portaient la même référence chez le même client. Rendre
+     * les sept au modèle, c'était lui faire poser une question à laquelle l'utilisateur
+     * ne peut pas répondre — il ne connaît pas les identifiants internes.
+     *
+     * Deux tamis, dans cet ordre, et chacun est ANNONCÉ (jamais subi) :
+     *  1. le sort DÉJÀ RÉGLÉ — une police qui porte déjà un mouvement n'en recevra pas
+     *     un second. Si toutes sont dans ce cas, on n'écarte rien : le refus
+     *     « dejaTraite », avec sa vraie explication, vaut mieux qu'une liste ;
+     *  2. la police EN VIGUEUR aujourd'hui. C'est celle dont parle un courtier quand il
+     *     dit « leur police », et c'est précisément la précision qui manquait.
+     * À défaut, la plus récemment échue — la seule qu'on puisse encore reconduire.
+     *
+     * @param array<int, Avenant> $candidats
+     *
+     * @return array{police: Avenant, defauts: array<int, string>}|array{ambigu: array<int, Avenant>}
+     */
+    private function departager(array $candidats, string $designation): array
+    {
+        if (count($candidats) === 1) {
+            return ['police' => $candidats[0], 'defauts' => []];
+        }
+
+        $defauts = [];
+
+        $disponibles = array_values(array_filter(
+            $candidats,
+            static fn (Avenant $a) => $a->getPisteDeRenouvellement() === null && !$a->isNonRenouvelable(),
+        ));
+        if ($disponibles !== [] && count($disponibles) < count($candidats)) {
+            $defauts[] = sprintf(
+                '%d police(s) de %s ont été écartées : leur sort est déjà réglé (mouvement en cours, '
+                . 'suite émise ou décision de non-renouvellement).',
+                count($candidats) - count($disponibles),
+                $designation,
+            );
+        }
+        $restants = $disponibles !== [] ? $disponibles : $candidats;
+
+        if (count($restants) === 1) {
+            return ['police' => $restants[0], 'defauts' => $defauts];
+        }
+
+        $aujourdhui = new \DateTimeImmutable('today');
+        $enVigueur = array_values(array_filter(
+            $restants,
+            static fn (Avenant $a) => $a->getStartingAt() !== null
+                && $a->getEndingAt() !== null
+                && $a->getStartingAt() <= $aujourdhui
+                && $a->getEndingAt() >= $aujourdhui,
+        ));
+
+        if (count($enVigueur) === 1) {
+            $defauts[] = sprintf(
+                'Police retenue : celle de %s qui est EN VIGUEUR aujourd’hui (%s → %s). %d autre(s) '
+                . 'police(s) existaient, hors couverture à ce jour.',
+                $designation,
+                $enVigueur[0]->getStartingAt()?->format('d/m/Y') ?? '?',
+                $enVigueur[0]->getEndingAt()?->format('d/m/Y') ?? '?',
+                count($restants) - 1,
+            );
+
+            return ['police' => $enVigueur[0], 'defauts' => $defauts];
+        }
+
+        return ['ambigu' => $enVigueur !== [] ? $enVigueur : $restants];
+    }
+
+    /** Comment l'utilisateur a désigné la police, dans SES mots — pour le lui redire. */
+    private function designation(array $args): string
+    {
+        $client = trim((string) ($args['client'] ?? ''));
+        $police = trim((string) ($args['police'] ?? ''));
+        $id     = (int) ($args['avenantId'] ?? 0);
+
+        return match (true) {
+            $client !== '' => 'au client « ' . $client . ' »',
+            $police !== '' => '« ' . $police . ' »',
+            $id > 0        => 'la police #' . $id,
+            default        => 'la police demandée',
+        };
+    }
+
+    /**
+     * CE QUI A ÉTÉ CHERCHÉ, ET OÙ. Un « aucune police » nu laisse l'utilisateur
+     * deviner s'il s'est trompé de nom, de rubrique ou de périmètre. Nommer les pistes
+     * suivies transforme une impasse en question à laquelle il peut répondre.
+     *
+     * @return array<int, string>
+     */
+    private function critairesEssayes(array $args): array
+    {
+        $essais = [];
+        if ((int) ($args['avenantId'] ?? 0) > 0) {
+            $essais[] = sprintf('identifiant de police #%d', (int) $args['avenantId']);
+        }
+        if (($police = trim((string) ($args['police'] ?? ''))) !== '') {
+            $essais[] = sprintf('référence de police contenant « %s »', $police);
+            $essais[] = sprintf('nom de client « %s »', $police);
+        }
+        if (($client = trim((string) ($args['client'] ?? ''))) !== '') {
+            $essais[] = sprintf('nom de client « %s »', $client);
+        }
+
+        return array_values(array_unique($essais));
+    }
+
     /** @return array<string, mixed> Fiche courte d'une police, pour départager une ambiguïté. */
     private function resumer(Avenant $avenant): array
     {
         $piste = $avenant->getCotation()?->getPiste();
+        $suite = $this->renouvellementResolver->resoudre($avenant);
 
-        return [
+        return array_filter([
             'id'       => $avenant->getId(),
             'police'   => $avenant->getReferencePolice(),
             'numero'   => $avenant->getNumero(),
@@ -519,6 +721,23 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
                 $avenant->getStartingAt()?->format('d/m/Y') ?? '?',
                 $avenant->getEndingAt()?->format('d/m/Y') ?? '?',
             ),
-        ];
+            // Sans ces deux-là, l'utilisateur choisit à l'aveugle entre des lignes qui se
+            // ressemblent — c'est exactement ce qui rend une question inutilisable.
+            'enVigueur'            => $this->estEnVigueur($avenant) ? true : null,
+            'statutRenouvellement' => $suite['statut'],
+        ], static fn ($v) => $v !== null);
+    }
+
+    /** La couverture court-elle aujourd'hui ? (La question que pose vraiment « leur police ».) */
+    private function estEnVigueur(Avenant $avenant): bool
+    {
+        $debut = $avenant->getStartingAt();
+        $fin   = $avenant->getEndingAt();
+        if ($debut === null || $fin === null) {
+            return false;
+        }
+        $aujourdhui = new \DateTimeImmutable('today');
+
+        return $debut <= $aujourdhui && $fin >= $aujourdhui;
     }
 }

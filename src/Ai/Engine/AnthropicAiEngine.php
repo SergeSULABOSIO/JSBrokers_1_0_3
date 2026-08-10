@@ -5,6 +5,7 @@ namespace App\Ai\Engine;
 use App\Ai\AiContextBuilder;
 use App\Ai\AiReply;
 use App\Ai\AiRequest;
+use App\Ai\Redaction\RepliPrecis;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolInterface;
 use App\Ai\Tool\AiToolResult;
@@ -54,6 +55,8 @@ final class AnthropicAiEngine implements AiEngineInterface
         #[AutowireIterator('app.ai_tool')] iterable $tools,
         #[Autowire(env: 'ANTHROPIC_API_KEY')] private readonly string $apiKey,
         #[Autowire(env: 'ANTHROPIC_MODEL')] private readonly string $model,
+        // Rédige en PHP, à coût nul, ce que le modèle n'a pas rédigé.
+        private readonly RepliPrecis $repliPrecis,
     ) {
         $this->tools = $tools;
     }
@@ -129,6 +132,9 @@ final class AnthropicAiEngine implements AiEngineInterface
         $refused = false;
         $toolUsed = null;
         $actions = [];
+        // Ce que les outils ont réellement rapporté : la matière du repli si la boucle
+        // s'achève sans réponse rédigée (même règle que le moteur Gemini).
+        $resultatsOutils = [];
 
         for ($round = 0; $round <= self::MAX_TOOL_ROUNDS; $round++) {
             $response = $this->call($request, $messages);
@@ -156,6 +162,7 @@ final class AnthropicAiEngine implements AiEngineInterface
                 }
                 $result = $this->executeTool((string) $block['name'], (array) ($block['input'] ?? []), $request);
                 $toolUsed = (string) $block['name'];
+                $resultatsOutils[] = ['outil' => $toolUsed, 'data' => $result->data];
                 if ($result->status === AiToolResult::STATUS_HORS_PERIMETRE) {
                     $refused = true;
                 }
@@ -174,9 +181,11 @@ final class AnthropicAiEngine implements AiEngineInterface
             $messages[] = ['role' => 'user', 'content' => $toolResults];
         }
 
+        // Les tours sont épuisés sans réponse rédigée. On ne renvoie pas l'utilisateur à
+        // sa question : on lui restitue ce que les outils ont trouvé — la question
+        // précise qui reste, le blocage, ou les candidats à départager (cf. RepliPrecis).
         return new AiReply(
-            "Je n'ai pas réussi à conclure ma recherche dans le temps imparti. Reformulez votre "
-            . 'question de façon plus ciblée, je réessaierai.',
+            $this->repliPrecis->depuis($resultatsOutils),
             refused: $refused,
             toolUsed: $toolUsed,
             actions: $actions,

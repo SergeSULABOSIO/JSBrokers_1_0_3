@@ -10,6 +10,7 @@ use App\Ai\Engine\AiEngineResolver;
 use App\Ai\Engine\AnthropicAiEngine;
 use App\Ai\Engine\GeminiAiEngine;
 use App\Ai\Engine\SimulatedAiEngine;
+use App\Ai\Redaction\RepliPrecis;
 use App\Ai\Programme\ProgrammeEnCours;
 use App\Ai\Scope\AiScope;
 use App\Ai\Telemetrie\JournalTokens;
@@ -97,7 +98,7 @@ class AnthropicAiEngineTest extends TestCase
         $contextBuilder = $this->createMock(AiContextBuilder::class);
         $contextBuilder->method('toSystemPrompt')->willReturn('SYSTEM');
 
-        return new AnthropicAiEngine($http, $contextBuilder, new TrousseCatalogue($tools), $tools, 'sk-ant-test', 'claude-opus-4-8');
+        return new AnthropicAiEngine($http, $contextBuilder, new TrousseCatalogue($tools), $tools, 'sk-ant-test', 'claude-opus-4-8', new RepliPrecis());
     }
 
     public function testReponseTexteSimple(): void
@@ -316,6 +317,7 @@ class AnthropicAiEngineTest extends TestCase
             new NullLogger(),
             new JournalTokens(new NullLogger(), new OutilsDePlan([])),
             new BudgetDebit(new ArrayAdapter()),
+            new RepliPrecis(),
         );
 
         // Aucune clé → simulateur.
