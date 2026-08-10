@@ -303,10 +303,13 @@ class AnthropicAiEngineTest extends TestCase
             new MockHttpClient([]),
             $contextBuilder,
             new TrousseCatalogue([]),
-            new SelecteurDeTrousse(new ProgrammeEnCours(
-                $this->createMock(AssistantProgrammeRepository::class),
-                $this->createMock(EntityManagerInterface::class),
-            )),
+            new SelecteurDeTrousse(
+                new ProgrammeEnCours(
+                    $this->createMock(AssistantProgrammeRepository::class),
+                    $this->createMock(EntityManagerInterface::class),
+                ),
+                new TrousseCatalogue([]),
+            ),
             [],
             'gm-x',
             'gemini-2.5-flash',

@@ -58,10 +58,13 @@ class GeminiAiEngineTest extends TestCase
      */
     private function selecteurFige(): SelecteurDeTrousse
     {
-        return new SelecteurDeTrousse(new ProgrammeEnCours(
-            $this->createMock(AssistantProgrammeRepository::class),
-            $this->createMock(EntityManagerInterface::class),
-        ));
+        return new SelecteurDeTrousse(
+            new ProgrammeEnCours(
+                $this->createMock(AssistantProgrammeRepository::class),
+                $this->createMock(EntityManagerInterface::class),
+            ),
+            new TrousseCatalogue([]),
+        );
     }
 
     /**

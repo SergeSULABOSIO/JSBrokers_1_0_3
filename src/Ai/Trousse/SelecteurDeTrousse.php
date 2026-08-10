@@ -5,6 +5,8 @@ namespace App\Ai\Trousse;
 use App\Ai\AiRequest;
 use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Programme\ProgrammeEnCours;
+use App\Entity\AssistantConversation;
+use App\Entity\AssistantMessage;
 
 /**
  * Choisit la TROUSSE d'un message — côté SERVEUR, sans rien demander au modèle.
@@ -38,10 +40,19 @@ final class SelecteurDeTrousse
         . 'modifi|corrig|rectifi|change|mets? à jour|supprim|efface|renouvel|reconduis|reconduir|'
         . 'prorog|prolong|annul|r[ée]sili|marque|signale|affecte|attribue|valide|valider|souscri|'
         . 'fais-le|fais le|vas.?y|essaie|essaye|refais|r[ée]essaie|continue|poursui|'
-        . 'ouvre le formulaire|donne moi le plan|donne-moi le plan|pareil|par o[uù] commencer)/iu';
+        . 'ouvre le formulaire|donne moi le plan|donne-moi le plan|pareil|par o[uù]|'
+        // Le VOCABULAIRE DU MÉTIER, ajouté après mesure : « j'ai une offre venant de
+        // SFA. Que faire ? » ne contient aucun verbe d'action, et annonce pourtant
+        // une saisie. Ces trois mots — offre, cotation, proposition — ouvraient les
+        // seuls faux négatifs du corpus.
+        . 'offre|cotation|proposition|devis|accord|mission|que faire|comment (faire|proc[ée]der)|'
+        . 'r[ée]ponds|traite|prends en charge)/iu';
 
     public function __construct(
         private readonly ProgrammeEnCours $programmeEnCours,
+        // Source unique de l'appartenance d'un outil à l'écriture — la même que
+        // celle qui décide des déclarations envoyées au fournisseur.
+        private readonly TrousseCatalogue $catalogue,
     ) {
     }
 
@@ -62,6 +73,15 @@ final class SelecteurDeTrousse
             return Trousse::ECRITURE;
         }
 
+        // SIGNAL STRUCTUREL, et non lexical : le tour précédent a utilisé un outil
+        // d'écriture. Une saisie engagée se poursuit — l'utilisateur répond à une
+        // question, fournit un montant, dit « le taux est de 15 % ». Aucun verbe
+        // d'action là-dedans, et pourtant l'écriture continue. Mesuré : ce signal
+        // n'ouvre aucun faux positif de plus, il est donc gratuit.
+        if ($this->dernierTourAEcrit($conversation)) {
+            return Trousse::ECRITURE;
+        }
+
         // L'intention vit souvent dans le FIL et non dans la bulle (« vas y »,
         // « essaie encore ») : on lit donc les derniers échanges, pas le seul
         // dernier message.
@@ -71,5 +91,33 @@ final class SelecteurDeTrousse
         }
 
         return preg_match(self::VERBES_ACTION, $recent) === 1 ? Trousse::ECRITURE : Trousse::LECTURE;
+    }
+
+    /**
+     * Le dernier tour de l'assistant s'est-il conclu par un outil d'ÉCRITURE ?
+     *
+     * L'appartenance est lue dans le catalogue (marqueur AiToolEcriture), jamais
+     * dans une liste recopiée ici : ajouter un outil d'écriture suffit à ce que la
+     * continuité de saisie le prenne en compte.
+     */
+    private function dernierTourAEcrit(?AssistantConversation $conversation): bool
+    {
+        if ($conversation === null) {
+            return false;
+        }
+
+        $dernier = null;
+        foreach ($conversation->getMessages() as $message) {
+            if ($message->getRole() === AssistantMessage::ROLE_ASSISTANT) {
+                $dernier = $message;
+            }
+        }
+        if ($dernier === null) {
+            return false;
+        }
+
+        $outil = ($dernier->getMeta() ?? [])['tool'] ?? null;
+
+        return is_string($outil) && $this->catalogue->estOutilDEcriture($outil);
     }
 }
