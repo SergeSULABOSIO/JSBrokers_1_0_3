@@ -29,6 +29,11 @@ final class QuitterWorkspaceTool implements AiToolInterface
             . 'l\'utilisateur demande de fermer/quitter l\'espace de travail ou de se déconnecter.';
     }
 
+    public function aiguillage(): string
+    {
+        return '« ferme / quitte l\'espace de travail ». Une confirmation manuelle est toujours demandée.';
+    }
+
     public function schema(): array
     {
         return ['type' => 'object', 'properties' => new \stdClass()];

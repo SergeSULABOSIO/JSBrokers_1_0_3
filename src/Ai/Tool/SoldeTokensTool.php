@@ -46,6 +46,12 @@ final class SoldeTokensTool implements AiToolInterface
             . 'consomment. Aucun paramètre : le solde est toujours celui de l\'entreprise courante.';
     }
 
+    public function aiguillage(): string
+    {
+        return 'Solde de tokens, crédits restants, consommation. Restitue TOUJOURS le rappel de la logique de '
+            . 'consommation que je fournis, en texte simple.';
+    }
+
     public function schema(): array
     {
         return ['type' => 'object', 'properties' => new \stdClass()];

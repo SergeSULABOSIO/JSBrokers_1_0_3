@@ -10,10 +10,12 @@ use App\Ai\Engine\AiEngineResolver;
 use App\Ai\Engine\AnthropicAiEngine;
 use App\Ai\Engine\GeminiAiEngine;
 use App\Ai\Engine\SimulatedAiEngine;
+use App\Ai\Routage\RouteurTrousse;
 use App\Ai\Scope\AiScope;
 use App\Ai\Telemetrie\JournalTokens;
 use App\Ai\Tool\AiToolInterface;
 use App\Ai\Tool\AiToolResult;
+use App\Ai\Trousse\TrousseCatalogue;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use PHPUnit\Framework\TestCase;
@@ -63,6 +65,11 @@ class AnthropicAiEngineTest extends TestCase
                 return 'Compte les enregistrements.';
             }
 
+            public function aiguillage(): string
+            {
+                return '';
+            }
+
             public function schema(): array
             {
                 return ['type' => 'object', 'properties' => ['entite' => ['type' => 'string']], 'required' => ['entite']];
@@ -87,7 +94,7 @@ class AnthropicAiEngineTest extends TestCase
         $contextBuilder = $this->createMock(AiContextBuilder::class);
         $contextBuilder->method('toSystemPrompt')->willReturn('SYSTEM');
 
-        return new AnthropicAiEngine($http, $contextBuilder, $tools, 'sk-ant-test', 'claude-opus-4-8');
+        return new AnthropicAiEngine($http, $contextBuilder, new TrousseCatalogue($tools), $tools, 'sk-ant-test', 'claude-opus-4-8');
     }
 
     public function testReponseTexteSimple(): void
@@ -292,6 +299,8 @@ class AnthropicAiEngineTest extends TestCase
         $gemini = new GeminiAiEngine(
             new MockHttpClient([]),
             $contextBuilder,
+            new TrousseCatalogue([]),
+            $this->createMock(RouteurTrousse::class),
             [],
             'gm-x',
             'gemini-2.5-flash',

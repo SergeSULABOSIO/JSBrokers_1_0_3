@@ -2,6 +2,8 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Trousse\AiToolEcriture;
+
 use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Scope\AiScope;
 use App\Entity\Invite;
@@ -20,7 +22,7 @@ use App\Services\JSBDynamicSearchService;
  * FAIL-CLOSED : mêmes gardes que l'écriture — allowlist de mutation + niveau
  * d'accès requis (Écriture en création, Modification en édition). N'écrit rien.
  */
-final class InventaireChampsTool implements AiToolInterface
+final class InventaireChampsTool implements AiToolInterface, AiToolEcriture
 {
     public function __construct(
         private readonly WorkspaceMutationService $mutationService,
@@ -43,6 +45,13 @@ final class InventaireChampsTool implements AiToolInterface
             . 'n\'en gère qu\'un). À appeler AVANT de préparer une opération d\'écriture, pour présenter '
             . 'clairement à l\'utilisateur ce qu\'il DOIT et ce qu\'il PEUT fournir, et ce que tu complètes '
             . 'toi-même. N\'écrit rien.';
+    }
+
+    public function aiguillage(): string
+    {
+        return 'SEULEMENT si l\'utilisateur demande explicitement quels champs existent, ou s\'il faut lui '
+            . 'présenter un formulaire avant qu\'il ne dicte quoi que ce soit. Sinon, ne m\'appelle pas : les '
+            . 'outils de plan renvoient déjà l\'inventaire avec leurs « manquants ».';
     }
 
     public function schema(): array

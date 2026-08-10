@@ -44,6 +44,11 @@ final class PreparerEnvoiSoaTool implements AiToolInterface, AiToolConditionnel
             . 'envoyer / transmettre le SOA ou le relevé de compte d\'un client.';
     }
 
+    public function aiguillage(): string
+    {
+        return '« envoie le relevé de compte / le SOA au client », « donne-lui accès à sa situation ».';
+    }
+
     public function schema(): array
     {
         return [

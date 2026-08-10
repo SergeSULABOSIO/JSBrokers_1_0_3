@@ -7,6 +7,8 @@ use App\Ai\AiRequest;
 use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolProduisantUnPlan;
+use App\Ai\Trousse\Trousse;
+use App\Ai\Trousse\TrousseCatalogue;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -138,8 +140,27 @@ class OutilsDePlanTest extends KernelTestCase
         ));
 
         $this->assertStringContainsString('liste EXHAUSTIVE de ces outils', $prompt);
-        foreach ($registre->noms() as $nom) {
+
+        // Depuis l'introduction des trousses, la règle ne nomme QUE les outils de
+        // plan réellement DÉCLARÉS pour ce périmètre — deux d'entre eux sont
+        // conditionnels (marquage non renouvelable, signalement de paiement) et
+        // disparaissent quand l'invité n'a pas le droit correspondant. Les nommer
+        // quand même ferait croire au modèle qu'il dispose d'une capacité absente :
+        // c'est précisément le plan fantôme que cette règle existe pour empêcher.
+        $declares = static::getContainer()->get(TrousseCatalogue::class)
+            ->nomsDe(Trousse::ECRITURE, new AiScope(new Entreprise(), new Invite()));
+
+        $attendus = array_intersect($registre->noms(), $declares);
+        $this->assertNotEmpty($attendus, 'Au moins un outil de plan doit être déclaré.');
+        foreach ($attendus as $nom) {
             $this->assertStringContainsString($nom, $prompt, sprintf('Le prompt doit nommer %s.', $nom));
+        }
+        foreach (array_diff($registre->noms(), $declares) as $absent) {
+            $this->assertStringNotContainsString(
+                $absent,
+                $prompt,
+                sprintf('Le prompt ne doit PAS nommer %s : il n’est pas déclaré pour ce périmètre.', $absent),
+            );
         }
 
         // Interdiction de réutiliser le tableau d'un tour précédent comme gabarit,

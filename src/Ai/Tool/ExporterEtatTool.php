@@ -49,6 +49,12 @@ final class ExporterEtatTool implements AiToolInterface
             . 'imprimer. Pour CONSULTER les chiffres d\'un état comptable, préférer document_comptable.';
     }
 
+    public function aiguillage(): string
+    {
+        return '« exporte / télécharge cet état en Excel », après avoir produit un tableau ou un document '
+            . 'comptable.';
+    }
+
     public function schema(): array
     {
         return [

@@ -53,6 +53,11 @@ class SimulatedAiEngineTest extends TestCase
                 return 'Outil de test.';
             }
 
+            public function aiguillage(): string
+            {
+                return '';
+            }
+
             public function schema(): array
             {
                 return ['type' => 'object', 'properties' => []];

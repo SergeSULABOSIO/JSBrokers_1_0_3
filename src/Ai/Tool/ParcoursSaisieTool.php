@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Trousse\AiToolEcriture;
 use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Parcours\ParcoursBuilder;
 use App\Ai\Parcours\ParcoursCatalogue;
@@ -22,7 +23,7 @@ use App\Ai\Scope\AiScope;
  * N'écrit rien. FAIL-CLOSED : les étapes hors des droits de l'invité ne sont pas
  * proposées (elles sont signalées comme indisponibles).
  */
-final class ParcoursSaisieTool implements AiToolInterface
+final class ParcoursSaisieTool implements AiToolInterface, AiToolEcriture
 {
     public function __construct(
         private readonly ParcoursBuilder $builder,
@@ -46,6 +47,13 @@ final class ParcoursSaisieTool implements AiToolInterface
             . 'de quelles informations il dispose DÉJÀ ; (3) une étape sans information est simplement '
             . 'IGNORÉE ; (4) assemble ensuite UN SEUL appel preparer_operations couvrant TOUT ce qu\'il '
             . 'a accepté — jamais un plan par étape. N\'écrit rien.';
+    }
+
+    public function aiguillage(): string
+    {
+        return '« comment enregistrer un client / un contrat / un sinistre », « par où commencer », ou toute '
+            . 'autre création structurante qui n\'est pas une proposition d\'assureur. Je donne le chemin '
+            . 'complet, étape par étape, et les gabarits à recopier.';
     }
 
     public function schema(): array

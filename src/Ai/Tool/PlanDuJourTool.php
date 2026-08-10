@@ -45,6 +45,11 @@ final class PlanDuJourTool implements AiToolInterface
             . 'saturation_portefeuille (opportunités de vente).';
     }
 
+    public function aiguillage(): string
+    {
+        return '« par quoi je commence ? », « qu\'est-ce qui est urgent aujourd\'hui ? », « fais le point ».';
+    }
+
     public function schema(): array
     {
         return [

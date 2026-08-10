@@ -81,6 +81,14 @@ final class IndicateurCalculeTool implements AiToolInterface
             . 'les états comptables de document_comptable.';
     }
 
+    public function aiguillage(): string
+    {
+        return 'Un chiffre métier CALCULÉ d\'un enregistrement (prime, commission, sinistralité). '
+            . 'entite=Entreprise pour les totaux du cabinet, période du/au possible. Chaque indicateur renvoie '
+            . '« description » (sa définition) et « base » (generee / encaissee / solde / taux) : LIS-LES et '
+            . 'nomme la bonne notion.';
+    }
+
     public function schema(): array
     {
         return [
