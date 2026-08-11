@@ -4,6 +4,7 @@ namespace App\Ai;
 
 use App\Ai\Boussole\BoussoleService;
 use App\Ai\Document\BullesDeDonnees;
+use App\Ai\Document\DocumentFormat;
 use App\Ai\Fichier\FichierAttachePolicy;
 use App\Ai\Guide\GuideRepository;
 use App\Ai\Mutation\OutilsDePlan;
@@ -35,6 +36,9 @@ class AiContextBuilder
 
     /** Plafond cumulé des pièces natives d'une requête (garde-fou volumétrie API). */
     private const MAX_PIECES_NATIVES_OCTETS = 15 * 1024 * 1024;
+
+    /** Documents déjà produits proposés à la reprise (« le même, mais en PDF »). */
+    private const MAX_DOCUMENTS_REPRISABLES = 6;
 
     public function __construct(
         private readonly AssistantParametresRepository $parametresRepository,
@@ -88,9 +92,6 @@ class AiContextBuilder
             // le re-prépare (ou nie à tort l'enregistrement) quand on lui demande.
             if ($message->getRole() === AssistantMessage::ROLE_ASSISTANT) {
                 $contenu .= $this->marqueurEtatMutation($message->getMeta() ?? []);
-                // Une bulle qui porte un TABLEAU est reprenable telle quelle dans un
-                // document : encore faut-il que le modèle connaisse son identifiant.
-                $contenu .= $this->marqueurBulleReprisable($message);
             }
             $messages[] = [
                 'role'    => $message->getRole() === AssistantMessage::ROLE_ASSISTANT ? 'assistant' : 'user',
@@ -110,6 +111,15 @@ class AiContextBuilder
                 // La boussole du courtier : instantané compact de la chaîne de valeur dans le
                 // périmètre de l'invité, présent à CHAQUE message pour que Ket rappelle et guide.
                 'boussole'      => $this->boussole->etat($entreprise, $invite),
+                // Ce qu'un DOCUMENT peut reprendre tel quel : les bulles porteuses de
+                // tableaux et les documents déjà produits. Reconstruit à chaque tour
+                // depuis la base, DONC HORS du plafond de MAX_MESSAGES — c'est tout
+                // l'intérêt : la donnée à reprendre est presque toujours plus haut
+                // dans le fil que la fenêtre d'historique ne va.
+                'reprises'      => [
+                    'bulles'    => $this->bullesDeDonnees->catalogue($conversation),
+                    'documents' => $this->documentsProduits($conversation),
+                ],
                 // Série de plans en cours : le fil ne suffit pas à la décrire (une
                 // étape est préparée par le SERVEUR entre deux tours du modèle).
                 'programme'     => $this->etatProgramme($conversation),
@@ -264,6 +274,10 @@ class AiContextBuilder
             : $this->sectionSansEcriture();
         $sectionObjets = $this->sectionObjetsAttaches($ctx['objetsAttaches'] ?? []);
         $sectionFichiers = $this->sectionPiecesJointes($ctx['fichiersAttaches'] ?? []);
+        // Ce qu'un document peut reprendre tel quel. Hors plafond d'historique : la
+        // donnée à reprendre est presque toujours plus haut dans le fil que la
+        // fenêtre ne va (cf. sectionReprises).
+        $sectionReprises = $this->sectionReprises($ctx['reprises'] ?? []);
         $sectionBoussole = $this->sectionBoussole($ctx['boussole'] ?? []);
         // État RÉEL de la série en cours (rien quand il n'y en a pas) : c'est la
         // seule chose qui empêche le modèle de croire une mission terminée parce
@@ -374,7 +388,7 @@ class AiContextBuilder
         Le périmètre d'accès de ton interlocuteur est strictement limité à :
         {$perimetre}
         Pour toute demande hors de ce périmètre, refuse poliment en expliquant tes limitations techniques
-        liées aux droits d'accès, sans révéler la moindre donnée.{$sectionObjets}{$sectionFichiers}
+        liées aux droits d'accès, sans révéler la moindre donnée.{$sectionObjets}{$sectionFichiers}{$sectionReprises}
         PROMPT;
     }
 
@@ -1237,6 +1251,120 @@ class AiContextBuilder
      *
      * @param array<int, array{id:int, nom:string, type:string, taille:int, extrait:?string}> $fichiers
      */
+    /**
+     * Les DOCUMENTS déjà produits dans ce fil, du plus récent au plus ancien.
+     *
+     * Leur spécification est conservée intégralement côté serveur (meta du message
+     * qui a présenté le plan). Refaire le même rapport dans un autre format ne
+     * demande donc AUCUNE réécriture : c'est ce que `reprendreDocumentId` exploite.
+     *
+     * @return list<array{id: int, titre: string, format: string, date: string}>
+     */
+    private function documentsProduits(AssistantConversation $conversation): array
+    {
+        $documents = [];
+        foreach ($conversation->getDocumentsGeneres() as $document) {
+            if ($document->getId() === null) {
+                continue;
+            }
+            $documents[] = [
+                'id'     => $document->getId(),
+                'titre'  => (string) $document->getTitre(),
+                'format' => DocumentFormat::depuis($document->getFormat())->libelle(),
+                'date'   => $document->getCreatedAt()?->format('d/m/Y H:i') ?? '',
+            ];
+        }
+
+        usort($documents, static fn (array $a, array $b) => $b['id'] <=> $a['id']);
+
+        return array_slice($documents, 0, self::MAX_DOCUMENTS_REPRISABLES);
+    }
+
+    /**
+     * CE QU'UN DOCUMENT PEUT REPRENDRE TEL QUEL — la section qui a manqué le plus.
+     *
+     * L'incident du 11/08/2026, dans l'ordre. Ket affiche un tableau de dix-huit
+     * lignes de paiements de primes (message 1628). Huit bulles plus loin —
+     * quatre plans d'écriture, quatre annonces de plan — l'utilisateur demande
+     * « produis-moi un rapport à partir de cette réponse » (message 1645). Or
+     * l'historique transmis au moteur s'arrête à vingt messages : le 1628 n'y est
+     * plus. Ket a donc rédigé de mémoire, puis, aux tours suivants, repris le seul
+     * identifiant qui lui restait — celui d'une chronologie sans rapport. Quatre
+     * documents de suite sont sortis avec les bonnes phrases et le mauvais tableau,
+     * ou sans tableau du tout.
+     *
+     * Cette section est la réponse : elle vit dans le CONTEXTE SYSTÈME, reconstruite
+     * à chaque tour depuis la base, donc affranchie du plafond d'historique. Elle ne
+     * transporte aucun tableau — juste de quoi les désigner.
+     *
+     * @param array{bulles: list<array<string, mixed>>, documents: list<array<string, mixed>>} $reprises
+     */
+    private function sectionReprises(array $reprises): string
+    {
+        $bulles = $reprises['bulles'] ?? [];
+        $documents = $reprises['documents'] ?? [];
+        if ($bulles === [] && $documents === []) {
+            return '';
+        }
+
+        $texte = "\n\nCE QUE TU PEUX REPRENDRE TEL QUEL DANS UN DOCUMENT (preparer_document)."
+            . "\nRÈGLE ABSOLUE : un rapport tiré d'un travail chiffré doit EMPORTER ses chiffres. Ne"
+            . "\nremplace JAMAIS un tableau par un total, un résumé ou un commentaire, et ne le réécris"
+            . "\npas de mémoire — un document dont les données ont été résumées est un document FAUX."
+            . "\nLes éléments ci-dessous sont repris par le SERVEUR, à l'identique : rien ne transite"
+            . "\npar toi, rien n'est tronqué, et cela ne consomme aucun jeton de rédaction.";
+
+        if ($bulles !== []) {
+            $texte .= "\n\n• BULLES DE DONNÉES de ce fil (les plus récentes d'abord). Pour en faire figurer"
+                . "\n  une dans un document, donne son numéro à une section : sections:[{titre:\"…\","
+                . "\n  sourceMessageId:<numéro>}]. Le numéro DOIT venir de cette liste — n'en invente"
+                . "\n  aucun, et ne recopie pas un numéro vu dans un tour précédent : cette liste est la"
+                . "\n  SEULE à jour. Choisis la bulle dont le résumé correspond à ce que l'utilisateur"
+                . "\n  demande, pas simplement la plus récente.";
+            foreach ($bulles as $bulle) {
+                $texte .= sprintf(
+                    "\n  – message #%d (%s) — %d tableau%s — « %s »",
+                    $bulle['id'],
+                    $bulle['date'],
+                    $bulle['tableaux'],
+                    $bulle['tableaux'] > 1 ? 'x' : '',
+                    $bulle['resume'],
+                );
+            }
+        }
+
+        // La bulle d'OUVERTURE (programme du jour) est rendue par le serveur et n'est
+        // PAS un message : elle n'a donc pas de numéro et ne peut pas être reprise.
+        // Sans cette précision, Ket répondait « il me manque quelques éléments » à
+        // « exporte-moi ceci » — alors qu'un simple appel d'outil lui rend la donnée.
+        $texte .= "\n\n• LE PROGRAMME DU JOUR (la bulle d'ouverture : tâches, échéances, impayés) n'est PAS"
+            . "\n  un message du fil et n'a pas de numéro : il ne peut pas être repris par sourceMessageId."
+            . "\n  Si l'utilisateur demande d'en faire un document (« exporte ceci », « mets-moi ça dans un"
+            . "\n  rapport »), appelle plan_du_jour pour en récupérer les chiffres, puis rédige les sections"
+            . "\n  du document à partir de CE QU'IL TE REND. Ne lui redemande RIEN : le titre, la"
+            . "\n  problématique, l'introduction et la conclusion, c'est à toi de les écrire.";
+
+        if ($documents !== []) {
+            $texte .= "\n\n• DOCUMENTS DÉJÀ PRODUITS dans ce fil. Quand l'utilisateur demande LE MÊME"
+                . "\n  rapport dans un AUTRE format (« refais-le en HTML », « le même en PDF »), NE LE"
+                . "\n  RÉÉCRIS PAS : appelle preparer_document avec reprendreDocumentId=<numéro> et le"
+                . "\n  format voulu. Je reprends sa spécification EXACTE — titre, sections, tableaux,"
+                . "\n  définitions, conclusion — et seul le format change. C'est la seule façon de"
+                . "\n  garantir que les deux fichiers portent les mêmes données.";
+            foreach ($documents as $document) {
+                $texte .= sprintf(
+                    "\n  – document #%d (%s, %s) — « %s »",
+                    $document['id'],
+                    $document['format'],
+                    $document['date'],
+                    $document['titre'],
+                );
+            }
+        }
+
+        return $texte;
+    }
+
     private function sectionPiecesJointes(array $fichiers): string
     {
         if ($fichiers === []) {
@@ -1510,47 +1638,6 @@ class AiContextBuilder
         }
 
         return '';
-    }
-
-    /**
-     * L'IDENTIFIANT d'une bulle qui porte des DONNÉES — la clé qui rend
-     * `sourceMessageId` de preparer_document réellement utilisable.
-     *
-     * Sans ce marqueur, on demandait au modèle de désigner une bulle par un numéro
-     * qu'il n'avait jamais vu : aucun identifiant de message ne figurait dans
-     * l'historique. Il ne pouvait donc que réécrire les chiffres de mémoire — et,
-     * borné à 4 096 jetons de sortie, il remplaçait un tableau de dix-huit lignes
-     * par une phrase de total. C'est l'incident du rapport « paiements de primes »
-     * du 11/08/2026 : le document sortait sans ses données.
-     *
-     * POSÉ SEULEMENT SUR LES BULLES PORTEUSES. Annoter les vingt messages de la
-     * fenêtre coûterait des jetons à chaque tour pour un renseignement inutile la
-     * plupart du temps ; ici, le marqueur n'apparaît que là où il y a quelque chose
-     * à reprendre — et il dit à la fois quoi, comment, et ce qu'il ne faut pas faire.
-     */
-    private function marqueurBulleReprisable(AssistantMessage $message): string
-    {
-        $id = $message->getId();
-        if ($id === null) {
-            return '';
-        }
-
-        $tableaux = $this->bullesDeDonnees->compterLesTableaux((string) $message->getContenu());
-        if ($tableaux < 1) {
-            return '';
-        }
-
-        return sprintf(
-            "\n\n[SYSTÈME — cette bulle est le message #%d du fil et porte %d tableau%s de données. "
-            . 'Pour la faire figurer dans un DOCUMENT, appelle preparer_document avec une section portant '
-            . 'sourceMessageId=%d : le serveur y recopiera son texte EXACT, tableaux compris, sans que rien '
-            . 'ne transite par toi. NE RÉÉCRIS JAMAIS ces chiffres de tête et ne les remplace pas par un '
-            . 'total ou un résumé — un document dont les données ont été résumées est un document faux.]',
-            $id,
-            $tableaux,
-            $tableaux > 1 ? 'x' : '',
-            $id,
-        );
     }
 
     /**

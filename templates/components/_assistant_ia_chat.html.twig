@@ -194,6 +194,35 @@
         .jsb-ai-chat .aic-fullscreen .aic-ic-collapse { display:none; }
         .jsb-ai-chat .aic-fullscreen[aria-pressed="true"] .aic-ic-expand { display:none; }
         .jsb-ai-chat .aic-fullscreen[aria-pressed="true"] .aic-ic-collapse { display:block; }
+        /* ── Entête : commandes repliées ou dépliées selon la place ──
+           En colonne étroite, quatre icônes rognaient « Assistant IA · Sté COURTAGE
+           RDC Sarl », le seul texte qui dit à l'utilisateur OÙ il travaille : les
+           commandes occasionnelles passent donc dans le menu ⋮.
+           EN PLEIN ÉCRAN, la contrainte tombe — la barre fait toute la largeur. On
+           DÉPLIE alors les commandes en boutons d'icône et l'on masque le ⋮ : un clic
+           au lieu de deux, sans jamais rogner le titre. Les mêmes éléments servent
+           dans les deux états ; rien n'est dupliqué, donc rien ne peut diverger. */
+        /* `.chat-fullscreen` est posée par workspace-manager sur la RACINE du poste
+           de travail, pas sur le chat : le sélecteur part donc de l'ancêtre. */
+        .chat-fullscreen .jsb-ai-chat .aic-header .aic-msg-menu {
+            position:static; display:flex; gap:.15rem; padding:0;
+            min-width:0; background:none; border:none; border-radius:0; box-shadow:none;
+            /* Le ⋮ portait l'auto-marge qui pousse le groupe à droite ; il est masqué
+               ici, c'est donc au menu déplié de la porter. */
+            margin-left:auto;
+        }
+        .chat-fullscreen .jsb-ai-chat .aic-header .aic-msg-menu[hidden] { display:flex; }
+        .chat-fullscreen .jsb-ai-chat .aic-header .aic-msg-menu-item {
+            width:36px; height:36px; padding:0; justify-content:center; border-radius:8px;
+            color:var(--aic-muted);
+        }
+        /* Le libellé cède la place à l'icône ; le nom accessible, lui, reste porté
+           par `aria-label` — jamais de bouton muet. */
+        .chat-fullscreen .jsb-ai-chat .aic-header .aic-msg-menu-item > span { display:none; }
+        .chat-fullscreen .jsb-ai-chat .aic-header .aic-msg-menu-sep { display:none; }
+        .chat-fullscreen .jsb-ai-chat .aic-header .aic-msg-menu-item svg { width:20px; height:20px; }
+        .chat-fullscreen .jsb-ai-chat .aic-header .aic-options { display:none; }
+
         /* Bascule de thème : même mécanique que le plein écran — l'icône suit
            aria-pressed. Au repos (clair) on propose la lune ; pressé (sombre) on
            propose le soleil, c'est-à-dire toujours l'action à venir. */
@@ -919,55 +948,101 @@
             <p class="aic-header-nom">{{ assistantNom }}</p>
             <p class="aic-header-sub">Assistant IA · {{ entreprise.nom }}</p>
         </div>
-        {# Confort visuel : bascule clair / sombre du chat (et du chat SEUL). Placé
-           en premier pour porter l'auto-marge `.aic-iconbtn:first-of-type` qui
-           pousse tout le groupe à droite. SVG inline (lune/soleil) auto-porté —
-           pas d'ux_icon serveur dans ce partial injecté, comme le micro et le
-           plein écran (cf. correctif 500 du commit 456208af).
-           A11y : `aria-label` STABLE + `aria-pressed` qui bascule — faire varier
-           les deux s'annoncerait de façon contradictoire (« Activer le mode
-           clair, bouton bascule, activé »), et `title` doit rester identique à
-           l'`aria-label` (WCAG 2.5.3, l'étiquette dans le nom accessible). #}
-        <button type="button" class="aic-iconbtn aic-theme"
-                data-action="click->assistant-chat#toggleTheme"
-                aria-pressed="false"
-                aria-label="Mode sombre"
-                title="Mode sombre">
-            <svg class="aic-ic-moon" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
-            </svg>
-            <svg class="aic-ic-sun" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="4"/>
-                <path d="M12 2v2"/><path d="M12 20v2"/><path d="M4.93 4.93l1.41 1.41"/>
-                <path d="M17.66 17.66l1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/>
-                <path d="M6.34 17.66l-1.41 1.41"/><path d="M19.07 4.93l-1.41 1.41"/>
-            </svg>
-        </button>
-        {# Plein écran : élargit le chat sur les colonnes 3+4 (voir
-           workspace-manager#toggleChatFullscreen). SVG inline (agrandir/réduire)
-           auto-porté — pas d'ux_icon serveur, pour éviter le circuit d'icônes
-           comme le bouton micro (cf. correctif 500 du commit 456208af). La bascule
-           d'icône suit aria-pressed, synchronisé par le contrôleur. #}
-        <button type="button" class="aic-iconbtn aic-fullscreen"
-                data-action="click->workspace-manager#toggleChatFullscreen"
-                aria-pressed="false"
-                aria-label="Afficher le chat en plein écran"
-                title="Plein écran">
-            <svg class="aic-ic-expand" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/>
-                <path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
-            </svg>
-            <svg class="aic-ic-collapse" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/>
-                <path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/>
+        {# DEUX BOUTONS, PAS QUATRE. L'entête portait quatre icônes, et le nom du
+           cabinet — « Assistant IA · Sté COURTAGE RDC Sarl » — s'y trouvait rogné :
+           dans une colonne étroite, ce texte est pourtant ce qui dit à l'utilisateur
+           OÙ il travaille. Les commandes occasionnelles (thème, plein écran,
+           nouvelle conversation) passent donc dans un menu ⋮, et seules restent
+           visibles les deux dont on a besoin d'un coup d'œil : ouvrir les options,
+           et fermer.
+           Le ⋮ porte l'auto-marge `.aic-iconbtn:first-of-type` qui pousse le groupe
+           à droite, d'où sa place en premier. #}
+        {# ── Commandes de la conversation ──
+           UN SEUL jeu d'éléments, deux présentations : replié en menu flottant
+           quand la place manque, déplié en boutons d'icône en plein écran (cf. les
+           règles .jsb-ai-chat--full plus haut). Rien n'est dupliqué, donc les deux
+           états ne peuvent pas diverger.
+           Mêmes classes que le menu de bulle : une seule apparence de menu flottant
+           dans le chat, un seul comportement à apprendre.
+           Les classes .aic-theme et .aic-fullscreen sont CONSERVÉES sur les items :
+           c'est par elles que le contrôleur de thème et le workspace-manager
+           synchronisent leur état. Les déplacer sans elles aurait laissé deux
+           bascules muettes. #}
+        <div class="aic-msg-menu" role="menu" hidden
+             id="aic-menu-entete-{{ conversation.id }}"
+             aria-label="Options de la conversation"
+             data-assistant-chat-target="menuEntete"
+             data-action="keydown->assistant-chat#naviguerMenuEntete">
+            {# NOUVELLE CONVERSATION — le raccourci qui manquait. Repartir de zéro
+               supposait de passer par la liste des conversations ; or c'est le geste
+               qu'on fait quand le fil est devenu long, donc au moment où l'on a le
+               moins envie de naviguer. Il REMPLACE le fil affiché sans rien
+               détruire : la conversation précédente reste ouvrable depuis la liste. #}
+            <button type="button" class="aic-msg-menu-item aic-new" role="menuitem"
+                    aria-label="Nouvelle conversation" title="Nouvelle conversation"
+                    data-action="click->assistant-chat#nouvelleConversation">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/>
+                    <path d="M12 7v6"/><path d="M9 10h6"/>
+                </svg>
+                <span>Nouvelle conversation</span>
+            </button>
+            <hr class="aic-msg-menu-sep">
+            {# Bascule clair / sombre du chat (et du chat SEUL).
+               A11y : libellé STABLE + état porté par aria-pressed/aria-checked —
+               faire varier les deux s'annoncerait de façon contradictoire
+               (« Activer le mode clair, activé »). #}
+            <button type="button" class="aic-msg-menu-item aic-theme" role="menuitemcheckbox"
+                    aria-checked="false" aria-pressed="false"
+                    aria-label="Mode sombre" title="Mode sombre"
+                    data-action="click->assistant-chat#toggleTheme click->assistant-chat#fermerMenuEntete">
+                <svg class="aic-ic-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+                </svg>
+                <svg class="aic-ic-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="4"/>
+                    <path d="M12 2v2"/><path d="M12 20v2"/><path d="M4.93 4.93l1.41 1.41"/>
+                    <path d="M17.66 17.66l1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/>
+                    <path d="M6.34 17.66l-1.41 1.41"/><path d="M19.07 4.93l-1.41 1.41"/>
+                </svg>
+                <span>Mode sombre</span>
+            </button>
+            {# Plein écran : élargit le chat sur les colonnes 3+4 (voir
+               workspace-manager#toggleChatFullscreen). L'icône suit aria-pressed. #}
+            <button type="button" class="aic-msg-menu-item aic-fullscreen" role="menuitemcheckbox"
+                    aria-checked="false" aria-pressed="false"
+                    aria-label="Afficher le chat en plein écran" title="Plein écran"
+                    data-action="click->workspace-manager#toggleChatFullscreen click->assistant-chat#fermerMenuEntete">
+                <svg class="aic-ic-expand" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/>
+                    <path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
+                </svg>
+                <svg class="aic-ic-collapse" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/>
+                    <path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/>
+                </svg>
+                <span>Plein écran</span>
+            </button>
+        </div>
+        <button type="button" class="aic-iconbtn aic-options"
+                data-action="click->assistant-chat#basculerMenuEntete keydown->assistant-chat#toucheOptions"
+                aria-haspopup="menu" aria-expanded="false"
+                aria-controls="aic-menu-entete-{{ conversation.id }}"
+                aria-label="Options de la conversation"
+                title="Options">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                 viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/>
             </svg>
         </button>
         <button type="button" class="aic-iconbtn aic-close" data-action="click->workspace-manager#closeTab"
@@ -975,6 +1050,7 @@
             <twig:UX:Icon name="{{ resolve_icon_name('action:exit') }}" style="width:20px;height:20px;" />
         </button>
     </div>
+
 
     {# ── Fil de messages ── #}
     <div class="aic-messages" role="log" aria-live="polite"

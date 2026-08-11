@@ -90,6 +90,9 @@ class KetRapportDonneesEtThemeTest extends KernelTestCase
         $em = $this->em();
         $user = (new Utilisateur())->setEmail(self::OWNER)->setNom('PHPUnit Owner')->setVerified(true);
         $user->setPassword('x');
+        // Le module IA est réservé aux comptes payants : sans jetons prépayés, les
+        // routes du chat répondent 402 et les tests HTTP ne parleraient de rien.
+        $user->setPaidTokens(1_000_000);
         $em->persist($user);
 
         $entreprise = (new Entreprise())
@@ -137,30 +140,67 @@ class KetRapportDonneesEtThemeTest extends KernelTestCase
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * LE MARQUEUR : une bulle porteuse de tableau annonce son identifiant dans
-     * l'historique. Sans lui, `sourceMessageId` reste une parade que le modèle ne
-     * peut pas actionner — c'est la cause première de l'incident.
+     * LE CATALOGUE : une bulle porteuse de tableau est désignable, même LOIN dans le
+     * fil.
+     *
+     * Pourquoi ce n'est pas un marqueur dans l'historique — la première version l'a
+     * été, et elle n'a jamais servi. L'historique transmis au moteur est plafonné à
+     * vingt messages ; dans le fil du 11/08/2026, la bulle des paiements était huit
+     * messages plus haut que la fenêtre. Son marqueur n'a donc jamais été lu, et Ket
+     * a repris le numéro d'une chronologie sans rapport. Le catalogue, lui, est
+     * reconstruit à chaque tour depuis la base : la distance ne compte plus.
      */
-    public function testUneBullePorteuseDeTableauAnnonceSonIdentifiantDansLHistorique(): void
+    public function testUneBullePorteuseDeTableauEstDesignableMemeLoinDansLeFil(): void
     {
         [$entreprise, $invite, $conversation] = $this->seed();
         $porteuse = $this->bulle($conversation, self::TABLEAU);
-        $this->bulle($conversation, 'Très bien, je reste à votre disposition.');
 
-        $messages = static::getContainer()->get(AiContextBuilder::class)
-            ->build($entreprise, $invite, $conversation)->messages;
+        // On enterre la bulle sous PLUS de messages que la fenêtre d'historique n'en
+        // transporte (MAX_MESSAGES = 20, tous rôles confondus) : c'est exactement la
+        // configuration de l'incident. Des ÉCHANGES, pas des monologues — c'est ainsi
+        // qu'un vrai fil se remplit.
+        for ($i = 0; $i < 12; $i++) {
+            $question = (new AssistantMessage())
+                ->setRole(AssistantMessage::ROLE_USER)
+                ->setContenu('Autre question (' . $i . ')');
+            $conversation->addMessage($question);
+            $this->bulle($conversation, 'Très bien, je reste à votre disposition. (' . $i . ')');
+        }
 
-        $avecTableau = $messages[0]['content'];
-        $sansTableau = $messages[1]['content'];
+        $requete = static::getContainer()->get(AiContextBuilder::class)->build($entreprise, $invite, $conversation);
+        $catalogue = $requete->systemContext['reprises']['bulles'] ?? [];
 
-        self::assertStringContainsString('message #' . $porteuse->getId(), $avecTableau);
-        self::assertStringContainsString('sourceMessageId=' . $porteuse->getId(), $avecTableau);
-        // Le texte de la bulle reste INTACT : le marqueur s'ajoute, il ne remplace pas.
-        self::assertStringContainsString('Kibali Goldmines SA', $avecTableau);
+        self::assertNotSame([], $catalogue, 'Le catalogue doit voir la bulle malgré la distance.');
+        self::assertSame($porteuse->getId(), $catalogue[0]['id']);
+        self::assertSame(1, $catalogue[0]['tableaux']);
+        self::assertStringContainsString('paiements signalés', $catalogue[0]['resume']);
 
-        // Pas de marqueur là où il n'y a rien à reprendre : le coût du tour ne doit
-        // pas grimper pour une bulle de courtoisie.
-        self::assertStringNotContainsString('sourceMessageId=', $sansTableau);
+        // La bulle est HORS de la fenêtre d'historique : c'est bien le catalogue, et
+        // lui seul, qui la rend atteignable.
+        $historique = implode("\n", array_column($requete->messages, 'content'));
+        self::assertStringNotContainsString('Kibali Goldmines SA', $historique);
+    }
+
+    /**
+     * Une bulle qui présente un PLAN n'est pas une bulle de données : son tableau
+     * décrit ce que Ket s'apprête à écrire. Le rattacher à un rapport y ferait
+     * figurer une intention sous un titre annonçant des résultats.
+     */
+    public function testUnePresentationDePlanNEstPasUneBulleDeDonnees(): void
+    {
+        [$entreprise, $invite, $conversation] = $this->seed();
+
+        $plan = (new AssistantMessage())
+            ->setRole(AssistantMessage::ROLE_ASSISTANT)
+            ->setContenu("Voici le plan préparé :\n\n| Entité | Champ |\n| --- | --- |\n| Client | Nom |")
+            ->setMeta(['mutationPlan' => ['operations' => []]]);
+        $conversation->addMessage($plan);
+        $this->em()->flush();
+
+        $catalogue = static::getContainer()->get(AiContextBuilder::class)
+            ->build($entreprise, $invite, $conversation)->systemContext['reprises']['bulles'] ?? [];
+
+        self::assertSame([], $catalogue, 'Un plan ne doit jamais être proposé à la reprise.');
     }
 
     /**
@@ -228,6 +268,72 @@ class KetRapportDonneesEtThemeTest extends KernelTestCase
         self::assertCount(1, $resultat->uiAction['spec']['sections']);
     }
 
+    /**
+     * LE FILET, DANS UN VRAI FIL. Reproduction exacte de l'incident du 11/08/2026 :
+     * entre le tableau des paiements et la demande de rapport s'intercalent des
+     * plans d'écriture et des annonces de plan — aucun ne porte de données.
+     *
+     * La première version du filet ne regardait que la bulle PRÉCÉDENTE : elle
+     * tombait donc toujours sur une annonce de plan, et ne s'est jamais déclenchée
+     * en production. Quatre rapports de suite sont sortis sans leurs chiffres.
+     */
+    public function testLeFiletTraverseLesAnnoncesDePlanPourAtteindreLesDonnees(): void
+    {
+        [$entreprise, $invite, $conversation] = $this->seed();
+        $this->bulle($conversation, self::TABLEAU);
+
+        // Quatre plans d'écriture — ils portent un tableau, mais c'est un APERÇU.
+        for ($i = 0; $i < 4; $i++) {
+            $plan = (new AssistantMessage())
+                ->setRole(AssistantMessage::ROLE_ASSISTANT)
+                ->setContenu("Voici le plan d'opération :\n\n| Entité | Champ |\n| --- | --- |\n| Client | Nom |")
+                // TRANCHÉ : un plan encore en attente ferait refuser l'outil par le
+                // verrou de décision, et ce n'est pas ce que ce test éprouve.
+                ->setMeta(['mutationPlan' => ['plan' => []], 'mutationPlanCancelled' => true]);
+            $conversation->addMessage($plan);
+        }
+        // Quatre annonces de plan de document — aucun tableau du tout.
+        for ($i = 0; $i < 4; $i++) {
+            $this->bulle($conversation, '📊 Le rapport a été préparé sous format Word. Veuillez valider.');
+        }
+        $this->em()->flush();
+
+        $resultat = $this->preparer($this->arguments(), $entreprise, $invite, $conversation);
+
+        self::assertTrue($resultat->data['pret']);
+        self::assertTrue(
+            $resultat->data['apercu']['donneesRattachees'],
+            'Le filet doit traverser les plans et les annonces pour atteindre la bulle de données.',
+        );
+        $sections = $resultat->uiAction['spec']['sections'];
+        self::assertStringContainsString('Kibali Goldmines SA', $sections[1]['corps']);
+        // Et surtout PAS le tableau d'un plan, qui décrit une intention.
+        self::assertStringNotContainsString('| Entité | Champ |', $sections[1]['corps']);
+    }
+
+    /**
+     * L'APERÇU DIT COMBIEN DE TABLEAUX. Un rapport annoncé « aucun tableau » alors
+     * qu'on l'attendait chiffré doit se voir AVANT d'être payé — c'est le contrôle
+     * qui manquait, et qui aurait épargné quatre productions inutiles.
+     */
+    public function testLApercuAnnonceLeNombreDeTableauxAvantLaValidation(): void
+    {
+        [$entreprise, $invite, $conversation] = $this->seed();
+        $this->bulle($conversation, self::TABLEAU);
+
+        $avec = $this->preparer($this->arguments(), $entreprise, $invite, $conversation);
+        self::assertSame(1, $avec->data['apercu']['tableaux']);
+
+        // Dans un fil VIERGE, le document sort à zéro tableau et l'outil le SIGNALE.
+        $vierge = (new AssistantConversation())->setEntreprise($entreprise)->setInvite($invite);
+        $this->em()->persist($vierge);
+        $this->em()->flush();
+
+        $sans = $this->preparer($this->arguments(), $entreprise, $invite, $vierge);
+        self::assertSame(0, $sans->data['apercu']['tableaux']);
+        self::assertStringContainsString('AUCUN tableau', $sans->data['note']);
+    }
+
     // ── THÈME ────────────────────────────────────────────────────────────────
 
     private function pied(): PiedDePage
@@ -287,6 +393,44 @@ class KetRapportDonneesEtThemeTest extends KernelTestCase
         $sombre = $this->rendre(DocumentFormat::Docx, ThemeDocument::Sombre);
         $clair = $this->rendre(DocumentFormat::Docx, ThemeDocument::Clair);
         self::assertSame(strlen($clair), strlen($sombre));
+    }
+
+    /**
+     * LE BOUTON « NOUVELLE CONVERSATION » de l'entête : il crée un fil neuf et
+     * renvoie de quoi le charger à la place du précédent. Rien n'est détruit — c'est
+     * ce que le test vérifie en premier, car c'est ce que le libellé promet.
+     */
+    public function testLeRaccourciDeNouvelleConversationOuvreUnFilNeufSansDetruireLAncien(): void
+    {
+        [$entreprise, $invite, $conversation] = $this->seed();
+        $this->bulle($conversation, self::TABLEAU);
+        $ancien = $conversation->getId();
+
+        // KernelTestCase : pas d'assertResponseIsSuccessful(), on lit le code.
+        $client = static::getContainer()->get('test.client');
+        $client->loginUser($invite->getUtilisateur());
+        $client->request('POST', '/admin/assistant-ia/api/conversations/' . $entreprise->getId());
+
+        self::assertSame(200, $client->getResponse()->getStatusCode());
+        $data = json_decode((string) $client->getResponse()->getContent(), true) ?: [];
+
+        self::assertArrayHasKey('chatUrl', $data);
+        self::assertNotSame($ancien, $data['id'], 'Le raccourci doit ouvrir un fil NEUF.');
+
+        // Le partial renvoyé est un chat complet, prêt à remplacer le précédent —
+        // c'est ce que le contrôleur injecte par outerHTML.
+        $client->request('GET', $data['chatUrl']);
+        self::assertSame(200, $client->getResponse()->getStatusCode());
+        $html = (string) $client->getResponse()->getContent();
+        self::assertStringContainsString('data-assistant-chat-id-conversation-value="' . $data['id'] . '"', $html);
+        self::assertStringContainsString('assistant-chat#nouvelleConversation', $html);
+        self::assertStringNotContainsString('Kibali Goldmines SA', $html, 'Le fil neuf est vide.');
+
+        // L'ANCIEN fil est intact, avec son tableau.
+        $this->em()->clear();
+        $ancienneConversation = $this->em()->getRepository(AssistantConversation::class)->find($ancien);
+        self::assertNotNull($ancienneConversation, 'La conversation précédente ne doit PAS être supprimée.');
+        self::assertCount(1, $ancienneConversation->getMessages());
     }
 
     /**

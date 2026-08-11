@@ -116,12 +116,19 @@ class PreparerDocumentAiguillageTest extends KernelTestCase
 
         self::assertStringNotContainsString('additionalProperties', json_encode($schema));
 
-        // Les parties imposées sont exigées AU NIVEAU DU SCHÉMA, pas seulement dans
-        // la prose : un modèle omet volontiers ce qui est facultatif.
-        self::assertSame(
-            ['titre', 'problematique', 'introduction', 'sections', 'conclusion'],
-            $schema['required'],
-        );
+        // Les cinq parties imposées ne sont PLUS requises au niveau du schéma, et ce
+        // n'est pas un relâchement : `reprendreDocumentId` refait un document déjà
+        // produit à partir de sa spec stockée, et les exiger obligerait le modèle à
+        // réécrire ce qu'il vient justement de ne pas avoir à réécrire. Le dialecte
+        // accepté par Gemini est plat — « requis sauf si » n'y est pas exprimable.
+        // L'exigence est donc portée par la description ET par RapportSpec, qui
+        // refuse en nommant ce qui manque.
+        self::assertSame([], $schema['required']);
+        self::assertArrayHasKey('reprendreDocumentId', $schema['properties']);
+        foreach (['titre', 'problematique', 'introduction', 'sections', 'conclusion'] as $partie) {
+            self::assertArrayHasKey($partie, $schema['properties']);
+        }
+        self::assertStringContainsString('Obligatoire', $schema['properties']['conclusion']['description']);
 
         // definitions et sections sont des TABLEAUX D'OBJETS SCALAIRES : le terme est
         // une valeur, jamais une clé dynamique (leçon des incidents « collections »).
