@@ -64,6 +64,7 @@ export default class extends Controller {
     static ICON_CHECK = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
     static ICON_X = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
     static ICON_WALLET = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>';
+    static ICON_DOC_DOWNLOAD = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h5"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg>';
 
     static values = {
         sendUrl: String,
@@ -96,6 +97,7 @@ export default class extends Controller {
         // Reconstruit la barre de décision des plans EN ATTENTE après un rechargement
         // (F5) : le live la crée via executeActions, l'historique la restaure ici.
         this.restoreMutationReviews();
+        this.restoreDocumentReviews();
         // Rapports de programme portant des écarts : le bouton de correction est
         // la seule issue proposée, il doit survivre au rechargement.
         this.restoreProgrammeCorrections();
@@ -548,6 +550,9 @@ export default class extends Controller {
                 case 'ket-mutation.absent':
                     this.renderMutationAbsent();
                     break;
+                case 'ket-document.review':
+                    this.renderDocumentReview(action);
+                    break;
                 default:
                     // NE JAMAIS IGNORER EN SILENCE. Un type inconnu signifie que le
                     // serveur a demandé quelque chose que cette version du chat ne
@@ -585,6 +590,256 @@ export default class extends Controller {
                 this.renderMutationReview(action, el);
             }
         });
+    }
+
+    /**
+     * Même chose pour les plans de DOCUMENT non tranchés (data-document-review).
+     * Sans cela, un F5 laisserait le texte du plan sans son bouton, et l'utilisateur
+     * attendrait une décision impossible à prendre.
+     */
+    restoreDocumentReviews() {
+        if (!this.hasMessagesTarget) return;
+        this.messagesTarget.querySelectorAll('.aic-msg[data-document-review]').forEach((el) => {
+            let action;
+            try {
+                action = JSON.parse(el.dataset.documentReview);
+            } catch (e) {
+                return;
+            }
+            el.removeAttribute('data-document-review');
+            if (action && action.idMessage) {
+                this.renderDocumentReview(action, el);
+            }
+        });
+    }
+
+    /**
+     * Barre de décision d'un DOCUMENT à produire. Sœur de renderMutationReview,
+     * volontairement plus simple : rien à décocher, aucune cascade, aucun mot de
+     * passe — on ne détruit rien, on fabrique.
+     *
+     * Ce qu'elle ajoute et que l'autre n'a pas : le SÉLECTEUR DE FORMAT. Le coût de
+     * chaque format est calculé par le serveur (budget.parFormat), si bien que
+     * changer de format réajuste le budget instantanément sans aller-retour — et
+     * sans que le navigateur ait jamais à connaître le barème.
+     */
+    renderDocumentReview(action, anchor = null) {
+        if (!action || !action.idMessage || !this.hasMessagesTarget) return;
+
+        const budget = action.budget || {};
+        const apercu = action.apercu || {};
+        const parFormat = Array.isArray(budget.parFormat) ? budget.parFormat : [];
+        const solde = budget.soldeDisponible || 0;
+        let format = action.format || budget.format || 'docx';
+        let cout = budget.coutEstime || 0;
+
+        const bar = document.createElement('div');
+        bar.className = 'aic-mutation-actions aic-mutation-actions--doc';
+        bar.setAttribute('role', 'group');
+        bar.setAttribute('aria-label', 'Décision sur le document préparé par l’assistant');
+
+        // ── Aperçu AUTORITAIRE : ce que le document contiendra réellement, dérivé
+        // des données du serveur et non de la prose du modèle.
+        const entete = document.createElement('p');
+        entete.className = 'aic-doc-apercu';
+        const titre = document.createElement('strong');
+        titre.textContent = apercu.titre || 'Document';
+        entete.appendChild(titre);
+        const detail = document.createElement('span');
+        const morceaux = [];
+        if (apercu.sections) morceaux.push(`${apercu.sections} section${apercu.sections > 1 ? 's' : ''}`);
+        if (apercu.definitions) morceaux.push(`${apercu.definitions} définition${apercu.definitions > 1 ? 's' : ''}`);
+        if (apercu.pages) morceaux.push(`${apercu.pages} page${apercu.pages > 1 ? 's' : ''}`);
+        detail.textContent = morceaux.length ? ` — ${morceaux.join(' · ')}` : '';
+        entete.appendChild(detail);
+        bar.appendChild(entete);
+
+        // ── Sélecteur de format.
+        let select = null;
+        if (parFormat.length > 1) {
+            const champ = document.createElement('label');
+            champ.className = 'aic-doc-format';
+            const libelle = document.createElement('span');
+            libelle.textContent = 'Format';
+            select = document.createElement('select');
+            select.setAttribute('aria-label', 'Format du document à produire');
+            for (const option of parFormat) {
+                const opt = document.createElement('option');
+                opt.value = option.valeur;
+                opt.textContent = `${option.libelle} (${option.badge})`;
+                if (option.valeur === format) opt.selected = true;
+                select.appendChild(opt);
+            }
+            champ.appendChild(libelle);
+            champ.appendChild(select);
+            bar.appendChild(champ);
+        }
+
+        // ── Budget : TOUJOURS affiché, garantie serveur indépendante de la prose.
+        const budgetLine = document.createElement('p');
+        budgetLine.className = 'aic-mutation-budget';
+        const majBudget = () => {
+            budgetLine.textContent = `Budget : ${formatNombre(cout)} tokens · solde ${formatNombre(solde)} · reste ${formatNombre(Math.max(0, solde - cout))}`;
+        };
+        majBudget();
+        bar.appendChild(budgetLine);
+
+        const notice = document.createElement('p');
+        notice.className = 'aic-notice aic-notice--warning';
+        notice.setAttribute('role', 'status');
+        notice.textContent = 'Solde de tokens insuffisant pour produire ce document.';
+
+        const exec = this._mutBtn('primary', this.constructor.ICON_DOC_DOWNLOAD, 'Valider et produire');
+        const cancel = this._mutBtn('ghost', this.constructor.ICON_X, 'Annuler', () => this.cancelDocumentPlan(action.idMessage, bar));
+        const achat = this._mutBtn('primary', this.constructor.ICON_WALLET, 'Acheter des tokens', null, '/admin/tokens/buy');
+
+        // Le solde peut suffire pour un format et pas pour un autre : la barre
+        // bascule donc entre « produire » et « acheter » à chaque changement.
+        const majEtat = () => {
+            const suffisant = solde >= cout;
+            exec.hidden = !suffisant;
+            achat.hidden = suffisant;
+            notice.hidden = suffisant;
+        };
+
+        bar.appendChild(notice);
+        bar.appendChild(exec);
+        bar.appendChild(achat);
+        bar.appendChild(cancel);
+        majEtat();
+
+        if (select) {
+            select.addEventListener('change', () => {
+                const choisi = parFormat.find((o) => o.valeur === select.value);
+                if (!choisi) return;
+                format = choisi.valeur;
+                cout = choisi.cout;
+                majBudget();
+                majEtat();
+            });
+        }
+
+        exec.addEventListener('click', async () => {
+            const label = exec.querySelector('.aic-mut-label');
+            const prev = label ? label.textContent : '';
+            exec.disabled = true;
+            cancel.disabled = true;
+            if (label) label.textContent = 'Production…';
+
+            const resultat = await this.produireDocument(action.idMessage, format);
+            if (resultat && resultat.document) {
+                this._replaceBar(bar, this.renderDocumentDownload(resultat.document));
+                return;
+            }
+            exec.disabled = false;
+            cancel.disabled = false;
+            if (label) label.textContent = prev;
+        });
+
+        if (anchor && anchor.parentNode) {
+            anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+        } else {
+            this.messagesTarget.appendChild(bar);
+        }
+        this.scrollToBottom();
+    }
+
+    /** POST de production. Renvoie la charge utile en cas de succès, null sinon. */
+    async produireDocument(idMessage, format) {
+        const url = `/admin/assistant-ia/api/document/${this.idEntrepriseValue}/${this.idConversationValue}/${idMessage}/produire`;
+        try {
+            const reponse = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ format }),
+            });
+            const data = await reponse.json().catch(() => ({}));
+
+            if (reponse.ok) return data;
+
+            // Solde insuffisant : la barre porte déjà le CTA d'achat, on se
+            // contente de dire ce qui bloque.
+            this.appendNotice(
+                reponse.status === 402 ? 'warning' : 'error',
+                data.message || 'La production du document a échoué.',
+            );
+        } catch (e) {
+            this.appendNotice('error', 'La production du document a échoué (réseau).');
+        }
+        return null;
+    }
+
+    /** Annulation : la barre laisse place à un feedback permanent. */
+    async cancelDocumentPlan(idMessage, bar) {
+        const url = `/admin/assistant-ia/api/document/${this.idEntrepriseValue}/${this.idConversationValue}/${idMessage}/cancel`;
+        try {
+            const reponse = await fetch(url, { method: 'POST' });
+            if (reponse.ok) {
+                this._replaceBar(bar, this._planStatusNote('cancelled', 'Production annulée — aucun document n’a été produit, aucun token débité.'));
+                return;
+            }
+            const data = await reponse.json().catch(() => ({}));
+            this.appendNotice('error', data.message || 'Annulation impossible.');
+        } catch (e) {
+            this.appendNotice('error', 'Annulation impossible (réseau).');
+        }
+    }
+
+    /**
+     * LE BOUTON DE TÉLÉCHARGEMENT : nom, format et taille, comme demandé.
+     *
+     * Le nom vient du serveur et passe par textContent — il dérive d'un titre rédigé
+     * par le modèle, donc il n'a rien à faire dans du HTML brut. Le format est une
+     * pastille TEXTUELLE et non une simple couleur : une information portée par la
+     * seule couleur n'existe pas pour tout le monde (WCAG 1.4.1).
+     */
+    renderDocumentDownload(doc) {
+        const panel = document.createElement('div');
+        panel.className = 'aic-doc-dl';
+        panel.setAttribute('role', 'group');
+        panel.setAttribute('aria-label', 'Téléchargement du document produit');
+
+        const titre = document.createElement('p');
+        titre.className = 'aic-files-dl-title';
+        titre.textContent = 'Document prêt';
+        panel.appendChild(titre);
+
+        const lien = document.createElement('a');
+        lien.className = 'aic-doc-dl-btn';
+        lien.href = doc.url;
+        lien.setAttribute('download', '');
+        lien.setAttribute('rel', 'noopener');
+        lien.setAttribute(
+            'aria-label',
+            `Télécharger « ${doc.titre || doc.nom} » — ${doc.formatLibelle || ''}, ${doc.tailleLisible || this.formatTaille(doc.taille || 0)}`,
+        );
+        lien.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h5"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg>';
+
+        const corps = document.createElement('span');
+        corps.className = 'aic-doc-dl-corps';
+
+        const nom = document.createElement('span');
+        nom.className = 'aic-doc-dl-nom';
+        nom.textContent = doc.nom || 'document';
+        corps.appendChild(nom);
+
+        const meta = document.createElement('span');
+        meta.className = 'aic-doc-dl-meta';
+        const badge = document.createElement('span');
+        badge.className = 'aic-doc-dl-badge';
+        badge.textContent = doc.formatBadge || '';
+        meta.appendChild(badge);
+        const taille = document.createElement('span');
+        // Le serveur envoie la taille déjà formatée, pour que le bouton direct et
+        // celui reconstruit par Twig après un F5 soient identiques.
+        taille.textContent = doc.tailleLisible || this.formatTaille(doc.taille || 0);
+        meta.appendChild(taille);
+        corps.appendChild(meta);
+
+        lien.appendChild(corps);
+        panel.appendChild(lien);
+
+        return panel;
     }
 
     renderMutationReview(action, anchor = null) {

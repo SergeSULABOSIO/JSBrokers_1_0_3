@@ -349,6 +349,58 @@ class TokenAccountService
         );
     }
 
+    /**
+     * Nom court journalisé pour une PRODUCTION DE DOCUMENT.
+     *
+     * Volontairement distinct de « Document », qui désigne déjà la GED (entité
+     * App\Entity\Document) : confondre les deux mélangerait dans le grand livre de
+     * consommation les pièces classées par le courtier et les livrables fabriqués
+     * par Ket, qui n'ont ni le même barème ni le même sens.
+     */
+    public const ENTITE_DOCUMENT_IA = 'DocumentIa';
+
+    /**
+     * Métrage de la PRODUCTION d'un document téléchargeable par Ket. Bloquant,
+     * débité en une fois, APRÈS que les octets existent (l'appelant s'en assure) :
+     * on ne facture jamais un rendu qui a échoué.
+     *
+     * Le coût vient de App\Ai\Document\DocumentTarificateur — il n'est pas recalculé
+     * ici, et surtout pas dérivé d'un poids d'entité : un document n'est pas un
+     * enregistrement. Il est passé en scalaire pour que le portefeuille reste
+     * indépendant du domaine documentaire (le tarificateur, lui, dépend déjà de ce
+     * service pour lire le solde).
+     *
+     * UNE SEULE ligne de journal, de poids égal au coût total — à la différence de
+     * meterContexteIa(), qui en écrit une PAR objet parce que son coût, lui, est
+     * linéaire. Ici il ne l'est pas : il y a une part fixe et un arrondi après
+     * multiplication, qu'aucun poids unitaire entier ne reproduirait.
+     *
+     * @throws InsufficientTokensException si le solde du propriétaire est insuffisant.
+     */
+    public function meterDocumentIa(Entreprise $entreprise, ?Utilisateur $acteur, int $cout): void
+    {
+        if ($cout <= 0) {
+            return;
+        }
+
+        $owner = $entreprise->getUtilisateur();
+        if (!$owner instanceof Utilisateur) {
+            return; // Pas de propriétaire identifiable : on ne facture pas.
+        }
+
+        $this->guardAndConsume($owner, $cout);
+
+        $this->log(
+            $entreprise,
+            $owner,
+            $acteur,
+            self::ENTITE_DOCUMENT_IA,
+            TokenConsumption::SENS_ENTREE,
+            1,
+            $cout,
+        );
+    }
+
     /** Vérifie la solvabilité puis débite, ou lève l'exception de blocage. */
     private function guardAndConsume(Utilisateur $owner, int $cost): void
     {

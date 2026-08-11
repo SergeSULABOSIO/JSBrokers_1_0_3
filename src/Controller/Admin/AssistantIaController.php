@@ -7,6 +7,12 @@ use App\Ai\AiContextBuilder;
 use App\Ai\AiEngineFailure;
 use App\Ai\Boussole\PlanDuJourService;
 use App\Ai\AiReply;
+use App\Ai\Document\DocumentEnAttente;
+use App\Ai\Document\DocumentFormat;
+use App\Ai\Document\DocumentProducteur;
+use App\Ai\Document\DocumentTarificateur;
+use App\Ai\Document\PiedDePage;
+use App\Ai\Document\RapportSpec;
 use App\Ai\Engine\AiEngineInterface;
 use App\Ai\Export\ImageJointeValidator;
 use App\Ai\Export\MessageDestinataires;
@@ -25,6 +31,7 @@ use Psr\Log\LoggerInterface;
 use App\Entity\AssistantConversation;
 use App\Entity\AssistantConversationContexte;
 use App\Entity\AssistantConversationFichier;
+use App\Entity\AssistantDocument;
 use App\Entity\AssistantMessage;
 use App\Entity\AssistantParametres;
 use App\Entity\AssistantProgramme;
@@ -32,6 +39,7 @@ use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Utilisateur;
 use App\Repository\AssistantConversationRepository;
+use App\Repository\AssistantDocumentRepository;
 use App\Repository\AssistantMessageRepository;
 use App\Repository\AssistantParametresRepository;
 use App\Repository\AssistantProgrammeRepository;
@@ -131,6 +139,10 @@ class AssistantIaController extends AbstractController
         private ProgrammeRunner $programmeRunner,
         private ProgrammeVerificateur $programmeVerificateur,
         private CanvasRelationHydrator $relationHydrator,
+        private DocumentEnAttente $documentEnAttente,
+        private DocumentTarificateur $documentTarificateur,
+        private DocumentProducteur $documentProducteur,
+        private AssistantDocumentRepository $documentRepository,
     ) {
     }
 
@@ -494,6 +506,9 @@ class AssistantIaController extends AbstractController
         // tours précédents), seule la première barre de décision est conservée —
         // la seconde serait orpheline (aucun plan stocké derrière elle).
         $actions = PlanEnAttente::limiterAUnSeulPlan($reply->actions ?? []);
+        // Même règle pour le plan de DOCUMENT : un message ne stocke qu'une spec,
+        // une seconde barre « Valider et produire » serait orpheline.
+        $actions = DocumentEnAttente::limiterAUnSeulPlan($actions);
 
         // CONTRAT AVEC LE NAVIGATEUR : il ignore silencieusement ce qu'il ne
         // reconnaît pas. Une action d'un type inconnu, ou privée d'un champ dont son
@@ -503,6 +518,7 @@ class AssistantIaController extends AbstractController
         $actions = $this->validateurDActions->filtrer($actions, $conversation->getId());
 
         $mutationPlan = $this->extraireMutationPlan($actions);
+        $documentPlan = DocumentEnAttente::planStockable($actions);
 
         // GARDE-FOU anti-plan FANTÔME. Le modèle peut décrire un plan, un budget,
         // voire affirmer qu'un « bouton de validation » est actif — le tout dans sa
@@ -512,9 +528,16 @@ class AssistantIaController extends AbstractController
         // d'interface »). Quand la prose simule une décision alors qu'AUCUN plan n'a
         // été préparé ce tour-ci NI n'est en attente dans le fil, on émet un signal
         // AUTORITAIRE (serveur) qui dit la vérité — indépendamment de la prose.
+        //
+        // Le test porte sur TOUTE décision — d'écriture ou de document. Ne regarder
+        // que le plan d'écriture retournerait le garde-fou contre le cas qu'il
+        // protège : un VRAI plan de document, légitimement annoncé en prose
+        // (« budget », « prêt à être validé »), déclencherait l'avertissement
+        // « aucun plan n'est en attente » juste au-dessus de sa propre barre.
         $planFantome = $mutationPlan === null
+            && $documentPlan === null
             && !$reply->refused
-            && !PlanEnAttente::aUnPlanEnAttente($conversation)
+            && !DocumentEnAttente::aUneDecisionEnAttente($conversation)
             && PlanEnAttente::proseSimuleUneDecision((string) $reply->content);
         if ($planFantome) {
             $actions[] = ['type' => PlanEnAttente::ACTION_ABSENT];
@@ -534,6 +557,10 @@ class AssistantIaController extends AbstractController
                 'erreur'       => $erreurMoteur ?: null,
                 'actions'      => $actions ?: null,
                 'mutationPlan' => $mutationPlan,
+                // Spec du document FIGÉE au moment où le budget est annoncé : la
+                // production ne fera plus que la rendre. C'est ce qui garantit que
+                // le fichier livré est exactement celui qui a été chiffré.
+                DocumentEnAttente::CLE_PLAN => $documentPlan,
                 // Trace du garde-fou : réaffiche l'avertissement autoritaire après
                 // un rechargement de page (F5), comme les statuts de plan.
                 'mutationAbsent' => $planFantome ?: null,
@@ -631,9 +658,15 @@ class AssistantIaController extends AbstractController
     private function actionsAvecMessage(array $actions, int $idMessage): array
     {
         return array_map(static function (array $action) use ($idMessage) {
-            if (($action['type'] ?? null) === PlanEnAttente::ACTION_REVUE) {
+            if (in_array($action['type'] ?? null, [PlanEnAttente::ACTION_REVUE, DocumentEnAttente::ACTION_REVUE], true)) {
                 $action['idMessage'] = $idMessage;
             }
+
+            // La spec n'a rien à faire dans le navigateur : elle est volumineuse et
+            // seul le serveur la relit (depuis la meta) pour produire. L'envoyer
+            // n'apporterait qu'un aller-retour plus lourd et une tentation d'y
+            // faire confiance.
+            unset($action['spec'], $action['pied']);
 
             return $action;
         }, $actions);
@@ -933,6 +966,231 @@ class AssistantIaController extends AbstractController
         }
 
         return $this->json($reponse);
+    }
+
+    /**
+     * PRODUIT le document préparé par Ket, dont la spec est stockée dans la meta du
+     * message qui a présenté le plan. HORS-LLM, déterministe :
+     *  1) relit la spec CÔTÉ SERVEUR (jamais le corps de la requête) ;
+     *  2) re-chiffre au barème COURANT ;
+     *  3) contrôle de solvabilité (402 + CTA d'achat) ;
+     *  4) REND le fichier, PUIS débite — jamais l'inverse ;
+     *  5) renvoie le descriptif du bouton de téléchargement.
+     *
+     * ORDRE DU DÉBIT, et pourquoi il diffère de executeMutation(). Ici on facture
+     * APRÈS que les octets existent. La raison est concrète : refund() ne recrédite
+     * que le solde PRÉPAYÉ, si bien qu'un débit tombé sur l'allocation gratuite
+     * serait irrécupérable. En produisant d'abord, il n'y a jamais de remboursement
+     * à écrire — un rendu qui échoue ne coûte rien.
+     */
+    #[Route('/api/document/{idEntreprise}/{idConversation}/{idMessage}/produire', name: 'api.document.produire', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS, 'idMessage' => Requirement::DIGITS], methods: ['POST'])]
+    public function produireDocument(int $idEntreprise, int $idConversation, int $idMessage, Request $request): JsonResponse
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        if ($blocage = $this->blocagePremium($entreprise)) {
+            return $blocage;
+        }
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        $message = $this->trouverMessage($conversation, $idMessage);
+        $meta = $message?->getMeta() ?? [];
+        if ($message === null || !DocumentEnAttente::porteUnPlan($meta)) {
+            return $this->json(['message' => 'Plan de document introuvable.'], Response::HTTP_NOT_FOUND);
+        }
+        if (DocumentEnAttente::estProduit($meta)) {
+            return $this->json(['message' => 'Ce document a déjà été produit.'], Response::HTTP_CONFLICT);
+        }
+        if (DocumentEnAttente::estAnnule($meta)) {
+            return $this->json(['message' => 'Cette production a été annulée.'], Response::HTTP_CONFLICT);
+        }
+        // Anti-rejeu de dernier recours : même si la meta avait été perdue, la
+        // contrainte d'unicité en base dit la vérité — on ne refabrique pas, et
+        // surtout on ne refacture pas.
+        if ($this->documentRepository->pourMessage($message) !== null) {
+            return $this->json(['message' => 'Ce document a déjà été produit.'], Response::HTTP_CONFLICT);
+        }
+
+        $plan = $meta[DocumentEnAttente::CLE_PLAN];
+        $spec = RapportSpec::fromArray((array) ($plan['spec'] ?? []));
+        if ($spec->manquants() !== []) {
+            return $this->json(['message' => 'Le plan de document est incomplet.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Le FORMAT peut être changé par l'utilisateur sur la barre de décision :
+        // c'est la seule donnée du client qu'on accepte, et elle est re-validée
+        // contre l'enum ET contre les rendus réellement disponibles.
+        $payload = json_decode($request->getContent(), true) ?: [];
+        $format = DocumentFormat::depuis($payload['format'] ?? ($plan['format'] ?? null));
+
+        $devis = $this->documentTarificateur->chiffrer($spec->texteFacturable(), $format);
+
+        // Pré-vol : on ne rend rien si le solde ne suit pas.
+        $solde = $this->tokenAccountService->availableFor($entreprise);
+        if ($solde < $devis->cout) {
+            return $this->json([
+                'message'         => 'Solde de tokens insuffisant pour produire ce document.',
+                'blocked'         => true,
+                'coutEstime'      => $devis->cout,
+                'soldeDisponible' => $solde,
+                'detail'          => $devis->toArray(),
+                'buyUrl'          => $this->generateUrl('admin.token.buy'),
+            ], Response::HTTP_PAYMENT_REQUIRED);
+        }
+
+        $pied = $this->piedDePageStocke($plan, $spec, $entreprise, $invite);
+
+        try {
+            $octets = $this->documentProducteur->rendre($spec, $format, $pied);
+        } catch (\Throwable $e) {
+            $this->logger->error('Assistant IA : le rendu du document a échoué.', [
+                'exception' => $e,
+                'format'    => $format->value,
+                'message'   => $idMessage,
+            ]);
+
+            return $this->json([
+                'message' => 'La production du document a échoué. Aucun token n’a été débité.',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        if ($octets === '') {
+            return $this->json([
+                'message' => 'Le document produit est vide. Aucun token n’a été débité.',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        try {
+            $document = $this->em->wrapInTransaction(function () use ($octets, $spec, $format, $devis, $message, $entreprise, $pied, &$meta) {
+                $document = $this->documentProducteur->deposer(
+                    $octets, $spec, $format, $devis, $message, $entreprise, $this->currentUser(), $pied->produitLe,
+                );
+
+                // Le débit vient APRÈS le rendu, mais DANS la transaction : si la
+                // persistance échoue, le débit est annulé avec elle.
+                $this->tokenAccountService->meterDocumentIa($entreprise, $this->currentUser(), $devis->cout);
+
+                $meta[DocumentEnAttente::CLE_PRODUIT] = true;
+                $message->setMeta($meta);
+
+                return $document;
+            });
+        } catch (InsufficientTokensException $e) {
+            // Course : le solde a fondu entre le pré-vol et le débit.
+            return $this->json([
+                'message'         => 'Solde épuisé au moment de la production. Aucun document n’a été produit.',
+                'blocked'         => true,
+                'coutEstime'      => $e->required,
+                'soldeDisponible' => $e->available,
+                'buyUrl'          => $this->generateUrl('admin.token.buy'),
+            ], Response::HTTP_PAYMENT_REQUIRED);
+        }
+
+        $descriptif = DocumentProducteur::descriptif($document, $this->urlDuDocument($entreprise, $conversation, $document));
+
+        // Descriptif MÉMORISÉ : c'est lui que Twig relit pour réafficher le bouton
+        // après un rechargement. Un fichier payé ne doit pas disparaître avec la page.
+        $meta[DocumentEnAttente::CLE_RESULTAT] = $descriptif;
+        $message->setMeta($meta);
+        $this->em->flush();
+
+        return $this->json(['success' => true, 'document' => $descriptif, 'budget' => $devis->toArray()]);
+    }
+
+    /**
+     * Marque un plan de document comme ANNULÉ. Miroir de cancelMutation : la
+     * décision est persistée, donc le fil s'en souvient après rechargement.
+     */
+    #[Route('/api/document/{idEntreprise}/{idConversation}/{idMessage}/cancel', name: 'api.document.cancel', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS, 'idMessage' => Requirement::DIGITS], methods: ['POST'])]
+    public function cancelDocument(int $idEntreprise, int $idConversation, int $idMessage): JsonResponse
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        $message = $this->trouverMessage($conversation, $idMessage);
+        $meta = $message?->getMeta() ?? [];
+        if ($message === null || !DocumentEnAttente::porteUnPlan($meta)) {
+            return $this->json(['message' => 'Plan de document introuvable.'], Response::HTTP_NOT_FOUND);
+        }
+        if (DocumentEnAttente::estProduit($meta)) {
+            return $this->json(['message' => 'Ce document a déjà été produit.'], Response::HTTP_CONFLICT);
+        }
+
+        $meta[DocumentEnAttente::CLE_ANNULE] = true;
+        $message->setMeta($meta);
+        $this->em->flush();
+
+        return $this->json(['success' => true, 'message' => 'Production annulée.']);
+    }
+
+    /**
+     * Télécharge un document produit par Ket — FAIL-CLOSED, même contrat que les
+     * pièces jointes : module IA autorisé, et le document doit appartenir à une
+     * conversation de CET invité dans CETTE entreprise.
+     *
+     * Pas de garde premium ici, délibérément, à l'inverse de la production. Le
+     * document a déjà été payé en tokens ; bloquer sa récupération parce que le
+     * solde payant est retombé à zéro reviendrait à faire disparaître un livrable
+     * acheté. C'est la même règle que downloadFichier(), qui n'en a pas non plus.
+     */
+    #[Route('/api/documents-ket/{idEntreprise}/{idConversation}/{idDocument}/download', name: 'api.documentket.download', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS, 'idDocument' => Requirement::DIGITS], methods: ['GET'])]
+    public function downloadDocumentKet(int $idEntreprise, int $idConversation, int $idDocument, DownloadHandler $downloadHandler): Response
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            throw $this->createAccessDeniedException('Accès refusé.');
+        }
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        $document = $this->documentRepository->dansConversation($idDocument, $conversation);
+        if ($document === null || $document->getNomFichierStocke() === null) {
+            throw $this->createNotFoundException('Document introuvable.');
+        }
+
+        // Le nom a été assaini et FIGÉ à la production : ce que l'utilisateur a vu
+        // sur le bouton est ce qu'il obtient.
+        return $downloadHandler->downloadObject($document, 'fichier', null, $document->getNomFichier());
+    }
+
+    /** URL de téléchargement d'un document produit — une seule façon de la fabriquer. */
+    private function urlDuDocument(Entreprise $entreprise, AssistantConversation $conversation, AssistantDocument $document): string
+    {
+        return $this->generateUrl('admin.assistantia.api.documentket.download', [
+            'idEntreprise'   => $entreprise->getId(),
+            'idConversation' => $conversation->getId(),
+            'idDocument'     => $document->getId(),
+        ]);
+    }
+
+    /**
+     * Le pied de page, relu depuis le plan stocké. On le RECONSTRUIT plutôt que de
+     * faire confiance au stockage pour la date : elle doit être celle de la
+     * PRODUCTION, pas celle où le plan a été présenté — l'utilisateur peut valider
+     * le lendemain.
+     *
+     * @param array<string, mixed> $plan
+     */
+    private function piedDePageStocke(array $plan, RapportSpec $spec, Entreprise $entreprise, Invite $invite): PiedDePage
+    {
+        $stocke = (array) ($plan['pied'] ?? []);
+        $compte = $invite->getUtilisateur();
+        $utilisateur = trim((string) ($stocke['utilisateur'] ?? ''));
+        if ($utilisateur === '') {
+            $utilisateur = trim((string) ($compte?->getNom() ?? '')) ?: (string) ($compte?->getEmail() ?? 'Utilisateur');
+        }
+
+        return new PiedDePage(
+            entreprise: (string) $entreprise->getNom(),
+            utilisateur: $utilisateur,
+            titre: $spec->titre,
+            produitLe: new \DateTimeImmutable(),
+            assistantNom: (string) ($stocke['assistantNom'] ?? $this->parametresRepository->nomPour($entreprise)),
+        );
     }
 
     /**

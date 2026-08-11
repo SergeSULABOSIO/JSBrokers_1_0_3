@@ -48,6 +48,20 @@ class AssistantConversation
     #[ORM\OrderBy(['id' => 'ASC'])]
     private Collection $fichiers;
 
+    /**
+     * Documents PRODUITS par Ket dans ce fil.
+     *
+     * `cascade: ['remove']` en plus de l'orphanRemoval, à la différence des pièces
+     * jointes : la suppression doit passer par l'ORM pour que Vich efface aussi le
+     * binaire. Un `ON DELETE CASCADE` seul court-circuite les événements Doctrine
+     * et laisserait des fichiers orphelins sur le disque.
+     *
+     * @var Collection<int, AssistantDocument>
+     */
+    #[ORM\OneToMany(targetEntity: AssistantDocument::class, mappedBy: 'conversation', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['id' => 'ASC'])]
+    private Collection $documentsGeneres;
+
     #[ORM\Column(type: 'datetime_immutable')]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -59,6 +73,7 @@ class AssistantConversation
         $this->messages = new ArrayCollection();
         $this->contextes = new ArrayCollection();
         $this->fichiers = new ArrayCollection();
+        $this->documentsGeneres = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -154,6 +169,31 @@ class AssistantConversation
             }
         }
         return false;
+    }
+
+    /** @return Collection<int, AssistantDocument> */
+    public function getDocumentsGeneres(): Collection
+    {
+        return $this->documentsGeneres;
+    }
+
+    public function addDocumentGenere(AssistantDocument $document): self
+    {
+        if (!$this->documentsGeneres->contains($document)) {
+            $this->documentsGeneres->add($document);
+            $document->setConversation($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDocumentGenere(AssistantDocument $document): self
+    {
+        if ($this->documentsGeneres->removeElement($document) && $document->getConversation() === $this) {
+            $document->setConversation(null);
+        }
+
+        return $this;
     }
 
     /** @return Collection<int, AssistantConversationFichier> */

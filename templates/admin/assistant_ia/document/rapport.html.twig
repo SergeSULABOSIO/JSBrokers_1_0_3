@@ -1,0 +1,101 @@
+{# Gabarit UNIQUE du rapport en HTML — servi tel quel pour le format « page web »
+   et donné à DomPDF pour le PDF. Un seul fichier pour les deux : la mise en page
+   d'un document officiel ne doit pas dépendre du bouton sur lequel on a cliqué.
+
+   Styles INLINE, comme templates/admin/assistant_ia/export/_message_corps.html.twig
+   et pour les mêmes raisons : DomPDF ne suit pas les feuilles de style externes, et
+   un fichier .html téléchargé doit rester lisible hors de toute connexion.
+
+   AUCUN |raw sur le contenu : tout vient de l'assistant, donc de l'extérieur.
+   L'autoescape de Twig est la frontière de sécurité de ce document. #}
+{% set cobalt = '#0047AB' %}
+{% set encre = '#1f2937' %}
+{% set gris = '#6b7280' %}
+{% set filet = '#dee2e6' %}
+
+{% macro blocs(liste, cobalt, encre, gris, filet) %}
+    {% for bloc in liste %}
+        {% if bloc.type == 'titre' %}
+            <h3 style="font-size:13pt; color:{{ cobalt }}; margin:16px 0 6px; font-weight:600;">{{ bloc.texte }}</h3>
+        {% elseif bloc.type == 'paragraphe' %}
+            <p style="margin:0 0 8px; line-height:1.55; color:{{ encre }};">{{ bloc.texte|nl2br }}</p>
+        {% elseif bloc.type == 'code' %}
+            <pre style="margin:0 0 10px; padding:8px 10px; background:#f6f8fa; border:1px solid {{ filet }}; border-radius:4px; font-family:'Courier New',monospace; font-size:9pt; white-space:pre-wrap; color:{{ encre }};">{{ bloc.texte }}</pre>
+        {% elseif bloc.type == 'liste' %}
+            {% if bloc.ordonnee %}<ol style="margin:0 0 10px; padding-left:20px; color:{{ encre }};">{% else %}<ul style="margin:0 0 10px; padding-left:20px; color:{{ encre }};">{% endif %}
+            {% for item in bloc.items %}<li style="margin-bottom:3px; line-height:1.5;">{{ item }}</li>{% endfor %}
+            {% if bloc.ordonnee %}</ol>{% else %}</ul>{% endif %}
+        {% elseif bloc.type == 'tableau' %}
+            {% if bloc.titre %}
+                <p style="margin:10px 0 4px; font-size:9.5pt; font-weight:600; color:{{ gris }};">{{ bloc.titre }}</p>
+            {% endif %}
+            <table style="width:100%; border-collapse:collapse; margin:0 0 12px; font-size:9.5pt;">
+                {% if bloc.entetes|length %}
+                    <thead>
+                        <tr>
+                            {% for entete in bloc.entetes %}
+                                <th style="background:{{ cobalt }}; color:#ffffff; text-align:left; padding:6px 8px; border:1px solid {{ cobalt }}; font-weight:600;">{{ entete }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                {% endif %}
+                <tbody>
+                    {% for ligne in bloc.lignes %}
+                        <tr>
+                            {% for cellule in ligne %}
+                                <td style="padding:5px 8px; border:1px solid {{ filet }}; color:{{ encre }}; vertical-align:top;">{{ cellule }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    {% endfor %}
+{% endmacro %}
+{% import _self as r %}
+
+<div style="font-family:'DejaVu Sans',Arial,Helvetica,sans-serif; font-size:10.5pt; color:{{ encre }}; max-width:820px; margin:0 auto; padding:24px;">
+
+    <div style="border-bottom:3px solid {{ cobalt }}; padding-bottom:12px; margin-bottom:20px;">
+        {% if logo %}
+            <img src="{{ logo }}" alt="" style="height:34px; margin-bottom:8px;">
+        {% endif %}
+        <h1 style="font-size:19pt; color:{{ cobalt }}; margin:0 0 4px; font-weight:700; line-height:1.25;">{{ spec.titre }}</h1>
+        <p style="margin:0; font-size:9pt; color:{{ gris }};">{{ pied.entreprise }} — produit le {{ pied.produitLe|date('d/m/Y à H:i') }}</p>
+    </div>
+
+    <h2 style="font-size:14pt; color:{{ cobalt }}; margin:0 0 8px; font-weight:600;">1. Objet du document</h2>
+    <p style="margin:0 0 18px; line-height:1.55;">{{ spec.problematique|nl2br }}</p>
+
+    <h2 style="font-size:14pt; color:{{ cobalt }}; margin:0 0 8px; font-weight:600;">2. Introduction</h2>
+    <p style="margin:0 0 10px; line-height:1.55;">{{ spec.introduction|nl2br }}</p>
+
+    {% if spec.definitions|length %}
+        <p style="margin:0 0 6px; font-weight:600; font-size:10pt;">Définitions des termes employés</p>
+        <table style="width:100%; border-collapse:collapse; margin:0 0 18px; font-size:9.5pt;">
+            <tbody>
+                {% for definition in spec.definitions %}
+                    <tr>
+                        <th style="text-align:left; padding:5px 8px; border:1px solid {{ filet }}; background:#f6f8fb; width:28%; vertical-align:top; font-weight:600;">{{ definition.terme }}</th>
+                        <td style="padding:5px 8px; border:1px solid {{ filet }}; vertical-align:top;">{{ definition.explication }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+
+    <h2 style="font-size:14pt; color:{{ cobalt }}; margin:0 0 8px; font-weight:600;">3. Résultat</h2>
+    {% for section in sections %}
+        {% if section.titre %}
+            <h3 style="font-size:12pt; color:{{ encre }}; margin:14px 0 6px; font-weight:600;">3.{{ loop.index }} {{ section.titre }}</h3>
+        {% endif %}
+        {{ r.blocs(section.blocs, cobalt, encre, gris, filet) }}
+    {% endfor %}
+
+    <h2 style="font-size:14pt; color:{{ cobalt }}; margin:18px 0 8px; font-weight:600;">4. Conclusion</h2>
+    <p style="margin:0 0 22px; line-height:1.55;">{{ spec.conclusion|nl2br }}</p>
+
+    <div style="border-top:1px solid {{ filet }}; padding-top:8px; font-size:8pt; color:{{ gris }}; line-height:1.5;">
+        {{ pied.ligne }}
+    </div>
+</div>

@@ -71,6 +71,50 @@ final class TokenPricing
      */
     public const FICHIER_IA_RATIO = 1.0;
 
+    /**
+     * Assistant IA — DOCUMENT téléchargeable produit par Ket (Word, Excel, PDF,
+     * Markdown, texte, HTML). Coût FIXE d'une production, indépendant de la
+     * longueur : il couvre l'assemblage, la mise en page, le rendu et le stockage.
+     *
+     * Contrairement aux poids d'écriture, ce barème n'est pas indexé par entité :
+     * un document n'est pas un enregistrement, c'est un livrable qui sort du
+     * logiciel. Il a donc ses propres paramètres, éditables en console.
+     */
+    public const DOCUMENT_BASE = 60;
+
+    /** Part variable : coût d'une page facturée, en tokens. */
+    public const DOCUMENT_PAR_PAGE = 30;
+
+    /**
+     * Définition de la PAGE facturée. Mesurée en CARACTÈRES (`mb_strlen`, jamais
+     * `strlen`) : un texte accentué — donc tout document français — coûterait le
+     * double si on comptait des octets. Arrondi supérieur, minimum une page.
+     */
+    public const DOCUMENT_CARACTERES_PAR_PAGE = 2500;
+
+    /**
+     * Multiplicateur par format de sortie : un rendu bureautique paginé coûte plus
+     * qu'un fichier texte. Clé = extension servie.
+     */
+    public const DOCUMENT_FORMATS = [
+        'txt'  => 1.0,
+        'md'   => 1.0,
+        'html' => 1.2,
+        'xlsx' => 1.4,
+        'docx' => 1.5,
+        'pdf'  => 1.8,
+    ];
+
+    /** Format retenu quand l'utilisateur n'en précise aucun (décision produit). */
+    public const DOCUMENT_FORMAT_DEFAUT = 'docx';
+
+    /**
+     * Repli NEUTRE pour un format absent de la carte. Ne peut normalement pas
+     * survenir (la route et l'enum contraignent déjà les formats servis) ; protège
+     * le cas où un agent retire un format de la console alors qu'un plan l'attend.
+     */
+    public const DOCUMENT_MULTIPLICATEUR_DEFAUT = 1.0;
+
     /** Poids en tokens d'une entité envoyée vers le frontend (LECTURE / sortie). */
     public const READ_WEIGHT = 2;
 
