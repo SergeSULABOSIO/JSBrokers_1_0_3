@@ -88,6 +88,10 @@ final class DocumentTarificateur
                 'libelle' => $candidat->libelle(),
                 'badge'   => $candidat->badge(),
                 'cout'    => $chiffrage->cout,
+                // Le sélecteur de THÈME de la barre n'apparaît que sur les formats
+                // qui le tiennent : c'est le serveur qui le dit, pas une liste
+                // recopiée dans le navigateur.
+                'theme'   => $candidat->supporteTheme(),
             ];
         }
 

@@ -5,6 +5,7 @@ namespace App\Ai\Document\Renderer;
 use App\Ai\Document\DocumentFormat;
 use App\Ai\Document\PiedDePage;
 use App\Ai\Document\RapportSpec;
+use App\Ai\Document\ThemeDocument;
 
 /**
  * Rapport en MARKDOWN — le format des gens qui vont le réutiliser ailleurs (wiki,
@@ -22,7 +23,8 @@ final class MarkdownRapportRenderer implements RapportRendererInterface
         return DocumentFormat::Md;
     }
 
-    public function rendre(RapportSpec $spec, array $sections, PiedDePage $pied): string
+    /** Le thème est ignoré : du markdown n'a pas de couleurs, il en reçoit chez son lecteur. */
+    public function rendre(RapportSpec $spec, array $sections, PiedDePage $pied, ThemeDocument $theme): string
     {
         $lignes = [
             '# ' . $spec->titre,

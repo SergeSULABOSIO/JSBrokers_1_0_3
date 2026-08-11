@@ -5,6 +5,7 @@ namespace App\Ai\Document\Renderer;
 use App\Ai\Document\DocumentFormat;
 use App\Ai\Document\PiedDePage;
 use App\Ai\Document\RapportSpec;
+use App\Ai\Document\ThemeDocument;
 use App\Services\Bordereau\BordereauLigneNormaliseur;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
@@ -44,7 +45,12 @@ final class ExcelRapportRenderer implements RapportRendererInterface
         return DocumentFormat::Xlsx;
     }
 
-    public function rendre(RapportSpec $spec, array $sections, PiedDePage $pied): string
+    /**
+     * Le thème est ignoré : une feuille de calcul ne teinte que ses cellules
+     * remplies, et le reste du quadrillage resterait blanc — un demi-thème est pire
+     * que pas de thème (cf. DocumentFormat::supporteTheme()).
+     */
+    public function rendre(RapportSpec $spec, array $sections, PiedDePage $pied, ThemeDocument $theme): string
     {
         $classeur = new Spreadsheet();
         $classeur->getProperties()

@@ -61,6 +61,24 @@ enum DocumentFormat: string
     }
 
     /**
+     * Ce format sait-il porter un THÈME (clair / sombre) ?
+     *
+     * Seuls ceux qui PEIGNENT leur propre fond : la page web et le PDF, qui
+     * partagent le même gabarit. Un .docx n'a pas de fond de page en OOXML tel que
+     * PHPWord l'écrit — une encre claire y donnerait un document blanc illisible —
+     * une feuille Excel ne teinte que ses cellules remplies, et .txt / .md n'ont
+     * aucune couleur. Le sélecteur de thème de la barre de décision se règle sur
+     * cette réponse : il disparaît quand l'option ne serait pas tenue.
+     */
+    public function supporteTheme(): bool
+    {
+        return match ($this) {
+            self::Html, self::Pdf => true,
+            default               => false,
+        };
+    }
+
+    /**
      * Le format retenu quand l'utilisateur n'en précise aucun. Décision produit :
      * Word — c'est le format qu'un courtier retouche puis envoie à son client.
      */

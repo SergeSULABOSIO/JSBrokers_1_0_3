@@ -4,6 +4,7 @@ namespace App\Tests\Ai;
 
 use App\Ai\Document\DocumentEnAttente;
 use App\Ai\Document\DocumentTarificateur;
+use App\Ai\Document\ThemeDocument;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\PreparerDocumentTool;
 use App\Entity\AssistantConversation;
@@ -12,6 +13,7 @@ use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\RolesEnAdministration;
 use App\Entity\Utilisateur;
+use App\Repository\AssistantDocumentRepository;
 use App\Repository\TokenConsumptionRepository;
 use App\Token\TokenAccountService;
 use Doctrine\DBAL\ArrayParameterType;
@@ -199,7 +201,7 @@ class KetDocumentGenerationTest extends WebTestCase
         return [$message, $resultat->data['budget']];
     }
 
-    private function produire(Entreprise $e, AssistantConversation $c, AssistantMessage $m, ?string $format = null): array
+    private function produire(Entreprise $e, AssistantConversation $c, AssistantMessage $m, ?string $format = null, ?string $theme = null): array
     {
         // L'EM est partagé entre le test et le contrôleur : sans ce clear(), la
         // collection des messages restée en mémoire empêcherait trouverMessage()
@@ -210,7 +212,7 @@ class KetDocumentGenerationTest extends WebTestCase
             'POST',
             sprintf('/admin/assistant-ia/api/document/%d/%d/%d/produire', $e->getId(), $c->getId(), $m->getId()),
             [], [], ['CONTENT_TYPE' => 'application/json'],
-            $format === null ? '{}' : json_encode(['format' => $format]),
+            json_encode(array_filter(['format' => $format, 'theme' => $theme])) ?: '{}',
         );
 
         return json_decode((string) $this->client->getResponse()->getContent(), true) ?: [];
@@ -523,6 +525,47 @@ class KetDocumentGenerationTest extends WebTestCase
             ->execute($args, new AiScope($entreprise, $invite, $conversation));
 
         self::assertFalse($hors->data['pret'], 'Sans section exploitable, le plan ne peut pas être prêt.');
+    }
+
+    /**
+     * LE THÈME VOYAGE JUSQU'AU FICHIER TÉLÉCHARGÉ. C'est la seule assertion qui
+     * couvre la chaîne entière — barre de décision → POST → producteur → octets
+     * stockés → téléchargement — et donc la seule qui verrait un maillon oublié.
+     *
+     * Le thème n'est PAS dans le plan figé : il est choisi au moment de produire,
+     * comme le format. Il ne change ni le contenu ni le prix — d'où l'assertion sur
+     * le coût, qui doit rester identique à celui annoncé.
+     */
+    public function testLeThemeSombreChoisiSurLaBarreArriveDansLeFichier(): void
+    {
+        [$entreprise, $invite, $conversation] = $this->seed();
+        [$message, $budget] = $this->planPrepare($entreprise, $invite, $conversation, $this->arguments('html'));
+
+        $reponse = $this->produire($entreprise, $conversation, $message, 'html', 'sombre');
+        self::assertResponseIsSuccessful();
+        self::assertSame($budget['coutEstime'], $reponse['budget']['cout'], 'Une couleur ne coûte rien.');
+
+        // Le téléchargement répond, et c'est lui qui sert ces octets…
+        $this->client->request('GET', $reponse['document']['url']);
+        self::assertResponseIsSuccessful();
+
+        // …mais son contenu est ÉMIS en flux, jamais posé dans getContent(). On lit
+        // donc les octets RÉELLEMENT stockés, seule preuve que le thème a survécu
+        // jusqu'au fichier.
+        $document = static::getContainer()->get(AssistantDocumentRepository::class)
+            ->find($reponse['document']['idDocument']);
+        self::assertNotNull($document?->getNomFichierStocke());
+        $html = (string) file_get_contents(
+            static::getContainer()->getParameter('kernel.project_dir')
+            . '/var/uploads/assistant-documents/' . $document->getNomFichierStocke(),
+        );
+
+        self::assertStringContainsString(ThemeDocument::Sombre->palette()['fond'], $html);
+        self::assertStringNotContainsString(ThemeDocument::Clair->palette()['encre'], $html,
+            'Une encre du thème clair oubliée dans un rendu sombre serait illisible.');
+        // Le fond est posé sur <html> ET <body> : sinon le navigateur laisse un
+        // liseré blanc autour du document.
+        self::assertStringContainsString('<html lang="fr" style="background:', $html);
     }
 
     /**

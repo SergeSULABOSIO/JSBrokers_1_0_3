@@ -5,6 +5,7 @@ namespace App\Ai\Document\Renderer;
 use App\Ai\Document\DocumentFormat;
 use App\Ai\Document\PiedDePage;
 use App\Ai\Document\RapportSpec;
+use App\Ai\Document\ThemeDocument;
 
 /**
  * Rapport en TEXTE BRUT — le format qui s'ouvre partout, y compris dans trente ans.
@@ -28,7 +29,8 @@ final class TexteRapportRenderer implements RapportRendererInterface
         return DocumentFormat::Txt;
     }
 
-    public function rendre(RapportSpec $spec, array $sections, PiedDePage $pied): string
+    /** Le thème est ignoré : un fichier texte n'a pas de couleurs. */
+    public function rendre(RapportSpec $spec, array $sections, PiedDePage $pied, ThemeDocument $theme): string
     {
         $lignes = [];
 

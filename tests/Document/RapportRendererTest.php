@@ -7,6 +7,7 @@ use App\Ai\Document\PiedDePage;
 use App\Ai\Document\RapportAssembleur;
 use App\Ai\Document\RapportSpec;
 use App\Ai\Document\Renderer\RapportRendererResolver;
+use App\Ai\Document\ThemeDocument;
 use PhpOffice\PhpSpreadsheet\IOFactory as SpreadsheetIOFactory;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -66,7 +67,7 @@ class RapportRendererTest extends KernelTestCase
     }
 
     /** @return array{0: string, 1: RapportSpec} octets rendus + la spec */
-    private function rendre(DocumentFormat $format): array
+    private function rendre(DocumentFormat $format, ThemeDocument $theme = ThemeDocument::Clair): array
     {
         static::bootKernel();
         $conteneur = static::getContainer();
@@ -74,7 +75,7 @@ class RapportRendererTest extends KernelTestCase
 
         $octets = $conteneur->get(RapportRendererResolver::class)
             ->pour($format)
-            ->rendre($spec, $conteneur->get(RapportAssembleur::class)->sections($spec), $this->pied());
+            ->rendre($spec, $conteneur->get(RapportAssembleur::class)->sections($spec), $this->pied(), $theme);
 
         return [$octets, $spec];
     }

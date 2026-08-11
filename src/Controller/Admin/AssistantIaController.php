@@ -13,6 +13,7 @@ use App\Ai\Document\DocumentProducteur;
 use App\Ai\Document\DocumentTarificateur;
 use App\Ai\Document\PiedDePage;
 use App\Ai\Document\RapportSpec;
+use App\Ai\Document\ThemeDocument;
 use App\Ai\Engine\AiEngineInterface;
 use App\Ai\Export\ImageJointeValidator;
 use App\Ai\Export\MessageDestinataires;
@@ -1049,6 +1050,10 @@ class AssistantIaController extends AbstractController
         // contre l'enum ET contre les rendus réellement disponibles.
         $payload = json_decode($request->getContent(), true) ?: [];
         $format = DocumentFormat::depuis($payload['format'] ?? ($plan['format'] ?? null));
+        // Le THÈME suit la même règle que le format : donnée du client, re-validée
+        // contre l'enum, et sans effet sur le prix (une couleur ne coûte rien). Les
+        // formats qui ne le tiennent pas retombent sur clair dans le producteur.
+        $theme = ThemeDocument::depuis($payload['theme'] ?? null);
 
         $devis = $this->documentTarificateur->chiffrer($spec->texteFacturable(), $format);
 
@@ -1068,7 +1073,7 @@ class AssistantIaController extends AbstractController
         $pied = $this->piedDePageStocke($plan, $spec, $entreprise, $invite);
 
         try {
-            $octets = $this->documentProducteur->rendre($spec, $format, $pied);
+            $octets = $this->documentProducteur->rendre($spec, $format, $pied, $theme);
         } catch (\Throwable $e) {
             $this->logger->error('Assistant IA : le rendu du document a échoué.', [
                 'exception' => $e,
