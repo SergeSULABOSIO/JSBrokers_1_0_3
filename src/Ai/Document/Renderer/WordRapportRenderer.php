@@ -32,6 +32,8 @@ final class WordRapportRenderer implements RapportRendererInterface
     private const ENCRE = '1F2937';
     private const GRIS = '6B7280';
     private const FILET = 'DEE2E6';
+    /** Fond de la ligne de totaux — le même gris que dans le chat et l'export de bulle. */
+    private const TOTAUX_FOND = 'F1F3F5';
 
     public function __construct(
         private readonly FichierTemporaire $temporaire,
@@ -128,6 +130,11 @@ final class WordRapportRenderer implements RapportRendererInterface
 
         $word->addParagraphStyle('corps', ['spaceAfter' => 120, 'lineHeight' => 1.4, 'alignment' => Jc::BOTH]);
         $word->addParagraphStyle('cellule', ['spaceAfter' => 0, 'spaceBefore' => 0]);
+        // Les deux variantes d'alignement des cellules. Un montant calé à droite est
+        // ce qui rend une colonne de chiffres comparable d'un coup d'œil : c'est une
+        // donnée du tableau, écrite dans son markdown (`---:`), pas un ornement.
+        $word->addParagraphStyle('celluleDroite', ['spaceAfter' => 0, 'spaceBefore' => 0, 'alignment' => Jc::END]);
+        $word->addParagraphStyle('celluleCentre', ['spaceAfter' => 0, 'spaceBefore' => 0, 'alignment' => Jc::CENTER]);
         $word->addFontStyle('codeMono', ['name' => 'Consolas', 'size' => 9]);
         $word->addParagraphStyle('codeBloc', ['spaceAfter' => 120, 'indentation' => ['left' => 280]]);
 
@@ -180,7 +187,13 @@ final class WordRapportRenderer implements RapportRendererInterface
         }
     }
 
-    /** @param array<string, mixed> $bloc */
+    /**
+     * Un tableau Word. Les lignes arrivent DÉJÀ rectangulaires et accompagnées de
+     * leurs alignements et de leur marquage de totaux (cf. RapportAssembleur) : ce
+     * qui se joue ici est de les honorer, pas de les recalculer.
+     *
+     * @param array<string, mixed> $bloc
+     */
     private function tableau(mixed $section, array $bloc): void
     {
         $lignes = $bloc['lignes'];
@@ -193,11 +206,13 @@ final class WordRapportRenderer implements RapportRendererInterface
             $section->addText($bloc['titre'], ['bold' => true, 'size' => 9.5, 'color' => self::GRIS], ['spaceAfter' => 60]);
         }
 
-        $colonnes = max(count($entetes), ...array_map('count', $lignes ?: [[]]));
+        $colonnes = max(count($entetes), 0, ...array_map('count', $lignes));
         if ($colonnes < 1) {
             return;
         }
         $largeur = (int) floor(9000 / $colonnes);
+        $alignements = (array) ($bloc['alignements'] ?? []);
+        $totaux = (array) ($bloc['totaux'] ?? []);
 
         $table = $section->addTable('tableauRapport');
 
@@ -206,20 +221,42 @@ final class WordRapportRenderer implements RapportRendererInterface
             // le tableau se coupe — sans quoi la seconde page devient illisible.
             $table->addRow(null, ['tblHeader' => true]);
             for ($i = 0; $i < $colonnes; $i++) {
-                $table->addCell($largeur, ['bgColor' => self::COBALT])
-                    ->addText((string) ($entetes[$i] ?? ''), ['bold' => true, 'size' => 9.5, 'color' => 'FFFFFF'], 'cellule');
+                $table->addCell($largeur, ['bgColor' => self::COBALT])->addText(
+                    (string) ($entetes[$i] ?? ''),
+                    ['bold' => true, 'size' => 9.5, 'color' => 'FFFFFF'],
+                    $this->styleCellule($alignements[$i] ?? 'left'),
+                );
             }
         }
 
-        foreach ($lignes as $ligne) {
+        foreach ($lignes as $rang => $ligne) {
+            $estTotaux = (bool) ($totaux[$rang] ?? false);
             $table->addRow();
             for ($i = 0; $i < $colonnes; $i++) {
-                $table->addCell($largeur)
-                    ->addText((string) ($ligne[$i] ?? ''), ['size' => 9.5, 'color' => self::ENCRE], 'cellule');
+                $table->addCell($largeur, $estTotaux ? ['bgColor' => self::TOTAUX_FOND] : null)->addText(
+                    (string) ($ligne[$i] ?? ''),
+                    ['size' => 9.5, 'color' => self::ENCRE, 'bold' => $estTotaux],
+                    $this->styleCellule($alignements[$i] ?? 'left'),
+                );
             }
         }
 
         $section->addTextBreak(1);
+    }
+
+    /**
+     * Le style de paragraphe d'une cellule selon l'alignement de sa colonne. Les
+     * trois styles sont déclarés au démarrage plutôt que passés en tableau inline :
+     * PHPWord ne fusionne pas un style nommé avec un style ad hoc, et « cellule »
+     * porte déjà les espacements sans lesquels les lignes se décollent.
+     */
+    private function styleCellule(string $alignement): string
+    {
+        return match ($alignement) {
+            'right'  => 'celluleDroite',
+            'center' => 'celluleCentre',
+            default  => 'cellule',
+        };
     }
 
     /**

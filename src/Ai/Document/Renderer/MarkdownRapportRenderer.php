@@ -134,17 +134,36 @@ final class MarkdownRapportRenderer implements RapportRendererInterface
         }
 
         $lignes[] = '| ' . implode(' | ', array_map($this->cellule(...), $entetes)) . ' |';
-        $lignes[] = '| ' . implode(' | ', array_fill(0, count($entetes), '---')) . ' |';
+        // LA LIGNE DE SÉPARATION PORTE L'ALIGNEMENT. C'est le seul endroit où le
+        // markdown sait l'écrire : sans « ---: », un fichier rouvert dans un wiki ou
+        // un éditeur perd pour de bon l'information que le rapport avait reçue.
+        $lignes[] = '| ' . implode(' | ', array_map(
+            $this->separateur(...),
+            array_slice(array_pad((array) ($bloc['alignements'] ?? []), count($entetes), 'left'), 0, count($entetes)),
+        )) . ' |';
 
         foreach ($bloc['lignes'] as $ligne) {
-            // Complète ou tronque : une ligne plus courte que l'en-tête casserait
-            // le tableau chez le lecteur.
-            $ligne = array_pad(array_slice($ligne, 0, count($entetes)), count($entetes), '');
+            // On COMPLÈTE, on ne tronque plus. Les lignes arrivent rectangulaires de
+            // RapportAssembleur ; ce padding n'est qu'une ceinture. Le `slice` qui se
+            // trouvait ici faisait disparaître toute cellule au-delà de la largeur de
+            // l'en-tête — une donnée écrite par le modèle, effacée en silence, et
+            // présente dans les cinq autres formats.
+            $ligne = array_pad(array_values($ligne), count($entetes), '');
             $lignes[] = '| ' . implode(' | ', array_map($this->cellule(...), $ligne)) . ' |';
         }
         $lignes[] = '';
 
         return $lignes;
+    }
+
+    /** La cellule de séparation qui encode l'alignement d'une colonne. */
+    private function separateur(string $alignement): string
+    {
+        return match ($alignement) {
+            'right'  => '---:',
+            'center' => ':---:',
+            default  => '---',
+        };
     }
 
     /** Une barre verticale dans une cellule couperait la colonne en deux. */

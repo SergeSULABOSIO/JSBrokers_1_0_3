@@ -23,8 +23,29 @@ use App\Ai\Export\MessageMarkdownParser;
  *   ['type' => 'titre',      'texte' => string]
  *   ['type' => 'paragraphe', 'texte' => string]
  *   ['type' => 'liste',      'ordonnee' => bool, 'items' => list<string>]
- *   ['type' => 'tableau',    'titre' => ?string, 'entetes' => list<string>, 'lignes' => list<list<string>>]
+ *   ['type' => 'tableau',    'titre' => ?string, 'entetes' => list<string>,
+ *                            'alignements' => list<string>, 'lignes' => list<list<string>>,
+ *                            'totaux' => list<bool>]
  *   ['type' => 'code',       'texte' => string]
+ *
+ * ── LES TABLEAUX SORTENT D'ICI RECTANGULAIRES, ALIGNÉS ET MARQUÉS ───────────────
+ * Trois propriétés que chaque rendu recevait autrefois à sa charge, ou pas du tout.
+ *
+ * RECTANGULAIRES. Le modèle produit des lignes irrégulières — une ligne sans sa
+ * dernière valeur, une ligne avec une cellule de trop. Le HTML rendait alors des
+ * `<tr>` de longueurs différentes : la ligne « Orange RDC SA », privée de sa
+ * commission, remontait son montant d'une colonne et se lisait sous le mauvais
+ * en-tête. Dans un document comptable, c'est le pire défaut possible. On complète
+ * donc ici, une fois, pour les six.
+ *
+ * ALIGNÉS. L'alignement GFM (`---:`) est une DONNÉE : c'est lui qui met les
+ * montants les uns sous les autres et rend deux chiffres comparables d'un coup
+ * d'œil. Le parseur le lit, le chat l'honore, l'export de bulle aussi — le rapport
+ * était le seul à le jeter en route.
+ *
+ * MARQUÉS. La ligne de totaux est repérée par le parseur (« **TOTAL** ») ; sans ce
+ * drapeau, le chiffre qui résume tout le tableau se lit comme une ligne de données
+ * de plus.
  *
  * Un bloc ```chart devient un TABLEAU. C'est ce que fait déjà l'export de bulle, et
  * pour la même raison : on ne peut pas peindre un canvas dans un .docx, et une
@@ -87,18 +108,57 @@ final class RapportAssembleur
                 'ordonnee' => (bool) ($bloc['ordonnee'] ?? false),
                 'items'    => array_map(self::plat(...), array_values((array) ($bloc['items'] ?? []))),
             ],
-            'tableau' => [
-                'type'    => 'tableau',
-                'titre'   => null,
-                'entetes' => array_map(self::plat(...), array_values((array) ($bloc['entetes'] ?? []))),
-                'lignes'  => array_map(
+            'tableau' => self::tableau(
+                entetes: array_map(self::plat(...), array_values((array) ($bloc['entetes'] ?? []))),
+                lignes: array_map(
                     static fn (array $ligne) => array_map(self::plat(...), array_values($ligne)),
                     array_values((array) ($bloc['lignes'] ?? [])),
                 ),
-            ],
+                alignements: array_values(array_filter((array) ($bloc['alignements'] ?? []), 'is_string')),
+                totaux: array_map(static fn (mixed $t) => (bool) $t, array_values((array) ($bloc['totaux'] ?? []))),
+            ),
             'chart' => self::chartEnTableau($bloc),
             default => null,
         };
+    }
+
+    /**
+     * LE TABLEAU NORMALISÉ — rectangulaire, aligné, marqué. Point de passage unique
+     * des tableaux GFM comme des graphiques convertis.
+     *
+     * La largeur retenue est la PLUS GRANDE observée, en-tête comprise : on complète,
+     * on ne coupe jamais. Une cellule surnuméraire est une donnée que le modèle a
+     * écrite ; la faire disparaître au motif que l'en-tête est plus court reviendrait
+     * à choisir, en silence, ce que le lecteur a le droit de voir.
+     *
+     * @param list<string>       $entetes
+     * @param list<list<string>> $lignes
+     * @param list<string>       $alignements
+     * @param list<bool>         $totaux
+     *
+     * @return array<string, mixed>
+     */
+    private static function tableau(array $entetes, array $lignes, array $alignements, array $totaux, ?string $titre = null): array
+    {
+        $colonnes = max(count($entetes), 0, ...array_map('count', $lignes));
+
+        return [
+            'type'    => 'tableau',
+            'titre'   => $titre,
+            // Un en-tête complété reste un en-tête : sans cela, une colonne de
+            // données existerait sans intitulé au-dessus d'elle.
+            'entetes' => $entetes === [] ? [] : array_pad($entetes, $colonnes, ''),
+            // 'left' par défaut : c'est déjà la valeur de repli du parseur pour une
+            // colonne dont la ligne de séparation ne dit rien.
+            'alignements' => array_slice(array_pad($alignements, $colonnes, 'left'), 0, $colonnes),
+            'lignes'      => array_map(
+                static fn (array $ligne) => array_pad(array_values($ligne), $colonnes, ''),
+                $lignes,
+            ),
+            // Un drapeau par ligne, dans le même ordre : un tableau sans ligne de
+            // totaux en porte autant de `false` que de lignes.
+            'totaux' => array_slice(array_pad($totaux, count($lignes), false), 0, count($lignes)),
+        ];
     }
 
     /**
@@ -136,12 +196,15 @@ final class RapportAssembleur
         $titre = trim((string) ($bloc['titre'] ?? '')) ?: null;
         $legende = trim((string) ($bloc['legende'] ?? ''));
 
-        return [
-            'type'    => 'tableau',
-            'titre'   => $titre ?? ($legende !== '' ? $legende : null),
-            'entetes' => $entetes,
-            'lignes'  => $lignes,
-        ];
+        return self::tableau(
+            entetes: $entetes,
+            lignes: $lignes,
+            // La colonne des étiquettes à gauche, les valeurs à droite : ce sont des
+            // nombres, et c'est ainsi qu'ils se comparent.
+            alignements: array_merge(['left'], array_fill(0, count($series), 'right')),
+            totaux: [],
+            titre: $titre ?? ($legende !== '' ? $legende : null),
+        );
     }
 
     /**
