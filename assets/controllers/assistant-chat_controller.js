@@ -1571,7 +1571,10 @@ export default class extends Controller {
         event?.stopPropagation();
         if (!this.hasMenuEnteteTarget) return;
 
-        if (!this.menuEnteteTarget.hidden) {
+        // `is-ferme` et non l'attribut `hidden` : Chromium impose
+        // `[hidden] { display:none !important }`, qu'aucune règle d'auteur ne peut
+        // surcharger — le menu ne pouvait alors pas se déplier en plein écran.
+        if (!this.menuEnteteTarget.classList.contains('is-ferme')) {
             this.fermerMenuEntete();
             return;
         }
@@ -1581,7 +1584,7 @@ export default class extends Controller {
 
         const bouton = this.element.querySelector('.aic-options');
         const menu = this.menuEnteteTarget;
-        menu.hidden = false;
+        menu.classList.remove('is-ferme');
         menu.style.visibility = 'hidden'; // mesurable sans être visible
         // positionnerMenu attend un RECTANGLE (left/right/top/bottom) et aligne le
         // menu sur le bord DROIT de l'ancre. Lui passer {x, y} donnait un
@@ -1608,7 +1611,11 @@ export default class extends Controller {
 
     fermerMenuEntete() {
         if (!this.hasMenuEnteteTarget) return;
-        this.menuEnteteTarget.hidden = true;
+        this.menuEnteteTarget.classList.add('is-ferme');
+        // Le menu redevient flottant au prochain affichage : on efface le placement
+        // du tour précédent, sinon il réapparaîtrait à l'ancienne position le temps
+        // d'une frame après un changement de largeur de colonne.
+        this.menuEnteteTarget.style.visibility = '';
         this.element.querySelector('.aic-options')?.setAttribute('aria-expanded', 'false');
         if (this._onPointerHorsEntete) {
             document.removeEventListener('pointerdown', this._onPointerHorsEntete, true);
@@ -1622,7 +1629,9 @@ export default class extends Controller {
         if (event.key !== 'ArrowDown' && event.key !== 'Enter' && event.key !== ' ') return;
         if (event.key === 'ArrowDown') {
             event.preventDefault();
-            if (this.hasMenuEnteteTarget && this.menuEnteteTarget.hidden) this.basculerMenuEntete(event);
+            if (this.hasMenuEnteteTarget && this.menuEnteteTarget.classList.contains('is-ferme')) {
+                this.basculerMenuEntete(event);
+            }
             this._itemsMenuEntete()[0]?.focus();
         }
     }

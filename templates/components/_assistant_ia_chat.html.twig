@@ -211,7 +211,11 @@
                ici, c'est donc au menu déplié de la porter. */
             margin-left:auto;
         }
-        .chat-fullscreen .jsb-ai-chat .aic-header .aic-msg-menu[hidden] { display:flex; }
+        /* Replié : le menu flottant est retiré du flux ET de l'arbre d'accessibilité. */
+        .jsb-ai-chat .aic-menu-entete.is-ferme { display:none; }
+        /* Déplié en plein écran, même quand il est « fermé » : les commandes sont
+           alors des boutons de barre, il n'y a plus rien à ouvrir. */
+        .chat-fullscreen .jsb-ai-chat .aic-header .aic-menu-entete.is-ferme { display:flex; }
         .chat-fullscreen .jsb-ai-chat .aic-header .aic-msg-menu-item {
             width:36px; height:36px; padding:0; justify-content:center; border-radius:8px;
             color:var(--aic-muted);
@@ -968,7 +972,15 @@
            c'est par elles que le contrôleur de thème et le workspace-manager
            synchronisent leur état. Les déplacer sans elles aurait laissé deux
            bascules muettes. #}
-        <div class="aic-msg-menu" role="menu" hidden
+        {# REPLIÉ PAR UNE CLASSE, PAS PAR L'ATTRIBUT `hidden`.
+           Les navigateurs Chromium appliquent `[hidden] { display:none !important }`
+           dans leur feuille de style utilisateur : aucune règle d'auteur ne peut la
+           surcharger, quelle que soit sa spécificité. Le menu restait donc invisible
+           en plein écran alors que le ⋮, masqué par une règle ORDINAIRE, disparaissait
+           bien — d'où une entête avec le seul bouton « fermer ».
+           Une classe produit le même `display:none` (donc la même sortie de l'arbre
+           d'accessibilité) tout en restant surchargeable. #}
+        <div class="aic-msg-menu aic-menu-entete is-ferme" role="menu"
              id="aic-menu-entete-{{ conversation.id }}"
              aria-label="Options de la conversation"
              data-assistant-chat-target="menuEntete"

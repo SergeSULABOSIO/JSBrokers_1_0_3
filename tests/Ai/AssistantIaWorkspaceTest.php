@@ -419,6 +419,16 @@ class AssistantIaWorkspaceTest extends WebTestCase
         // A11y : libellé STABLE + état pressé (pas de libellé qui varie).
         $this->assertStringContainsString('aria-label="Mode sombre"', $content, 'Le libellé de la bascule doit être stable.');
 
+        // LE PIÈGE À NE PAS REFAIRE : le menu est replié par une CLASSE, jamais par
+        // l'attribut `hidden`. Chromium impose `[hidden] { display:none !important }`
+        // dans sa feuille utilisateur ; aucune règle d'auteur ne peut la surcharger,
+        // et le menu restait invisible en plein écran — l'entête n'y montrait plus
+        // que le bouton « fermer ».
+        $this->assertStringContainsString('class="aic-msg-menu aic-menu-entete is-ferme"', $content,
+            'Le menu d\'entête doit être replié par une classe surchargeable.');
+        $this->assertStringNotContainsString('aic-menu-entete is-ferme" role="menu" hidden', $content,
+            'L\'attribut hidden rendrait le dépliage en plein écran impossible.');
+
         // Ordre du menu : la bascule de thème précède le plein écran, comme avant.
         $this->assertLessThan(
             strpos($content, 'aic-fullscreen'),
