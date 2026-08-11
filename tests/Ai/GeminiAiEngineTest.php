@@ -433,6 +433,29 @@ class GeminiAiEngineTest extends TestCase
         $this->assertSame(1, $http->getRequestsCount());
     }
 
+    /**
+     * RÉPONSE VIDE : ni texte, ni appel d'outil. Le modèle a brûlé son budget de
+     * sortie sans rien rendre (`finishReason: MAX_TOKENS`, cas classique quand le
+     * raisonnement interne consomme tout).
+     *
+     * L'incident du 11/08/2026 : à « affiche le même tableau, mais ajoute une
+     * colonne pour les numéros », l'utilisateur s'est vu répondre « précisez votre
+     * question » — alors que sa demande était limpide et le tableau juste au-dessus.
+     * Le repli renvoyait la faute à celui qui n'y était pour rien.
+     */
+    public function testUneReponseVideNeRenvoiePasLaFauteALUtilisateur(): void
+    {
+        $vide = ['candidates' => [['finishReason' => 'MAX_TOKENS', 'content' => ['role' => 'model', 'parts' => []]]]];
+        $http = new MockHttpClient([new MockResponse(json_encode($vide))]);
+
+        $reply = $this->makeEngine($http)->reply($this->makeRequest('Refais ce tableau avec une colonne de numéros'));
+
+        self::assertStringNotContainsString('préciser votre question', $reply->content,
+            'Un repli ne doit pas demander à l’utilisateur de préciser une demande déjà précise.');
+        self::assertStringContainsString('pas pu aboutir', $reply->content,
+            'Le repli doit reconnaître que c’est NOUS qui n’avons pas conclu.');
+    }
+
     public function testBoucleFunctionCalling(): void
     {
         $bodies = [];

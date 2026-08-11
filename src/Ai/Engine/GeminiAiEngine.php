@@ -285,7 +285,31 @@ final class GeminiAiEngine implements AiEngineInterface
             // l'autre phase (une question de pure conversation n'appelle aucun outil
             // et se termine donc dès la planification, en UN seul appel).
             if ($functionCalls === []) {
-                $texte = $this->extractText($parts);
+                // TEXTE VIDE SANS APPEL D'OUTIL : le modèle n'a RIEN rendu. Le cas
+                // s'est produit le 11/08/2026 sur « affiche le même tableau, mais
+                // ajoute une colonne » — une pure remise en forme, où l'utilisateur
+                // s'est vu répondre « précisez votre question » alors que sa demande
+                // était parfaitement claire et que le tableau était juste au-dessus.
+                //
+                // Deux corrections, distinctes :
+                //  1) on TRACE la cause. `finishReason` la nomme (MAX_TOKENS quand le
+                //     budget de sortie est parti en raisonnement interne, RECITATION,
+                //     OTHER…), et sans elle on ne peut que supposer. Le journal ne
+                //     disait rien de ce tour : c'est ce qui a rendu l'incident opaque.
+                //  2) on cesse de RENVOYER LA FAUTE. Le repli par défaut demande à
+                //     l'utilisateur de préciser ; RepliPrecis, lui, restitue ce que les
+                //     outils du tour ont rapporté et, à défaut, reconnaît franchement
+                //     que NOUS n'avons pas conclu. C'est déjà ce que fait la phase de
+                //     rédaction ; il n'y avait aucune raison que celle-ci en diffère.
+                $texte = $this->extractText($parts, $this->repliPrecis->depuis($resultatsOutils));
+                if (trim($this->extractText($parts, '')) === '') {
+                    $this->logger->warning('Assistant IA (gemini) : réponse SANS texte ni appel d’outil.', [
+                        'phase'        => $phase->name,
+                        'finishReason' => $response['candidates'][0]['finishReason'] ?? null,
+                        'outilsDuTour' => $sequenceOutils,
+                        'sortie'       => (int) ($usage['candidatesTokenCount'] ?? 0),
+                    ]);
+                }
 
                 // FILET DE SÛRETÉ D'AFFICHAGE. Si ce texte est encore un appel d'outil
                 // écrit en prose — parce qu'il nomme un outil qui n'existe pas, ou qui
