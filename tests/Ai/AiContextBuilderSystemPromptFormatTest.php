@@ -96,9 +96,14 @@ class AiContextBuilderSystemPromptFormatTest extends KernelTestCase
     }
 
     /**
-     * Les émojis sont un JEU FERMÉ. Sans énumération explicite, le registre dérive d'un
-     * message à l'autre et le même tableau se lit différemment dans le chat, dans un
-     * e-mail et dans un export PDF.
+     * Les émojis sont un JEU FERMÉ — mais un jeu qui doit RÉELLEMENT SERVIR.
+     *
+     * Première rédaction de la règle : « au plus un par titre ## ». Or les titres sont
+     * eux-mêmes « réservés aux réponses longues », que la règle de CONCISION décourage
+     * activement. La permission se refermait donc sur elle-même et Ket n'a affiché aucun
+     * émoji — comportement conforme à la lettre, contraire à l'intention. La consigne est
+     * désormais POSITIVE (« places-en un, toujours en tête ») et détachée du titre : c'est
+     * ce que ce test verrouille, autant que l'énumération elle-même.
      */
     public function testPromptEnumereUnJeuFermeDEmojis(): void
     {
@@ -124,7 +129,24 @@ class AiContextBuilderSystemPromptFormatTest extends KernelTestCase
             $this->assertStringContainsString($emoji, $prompt, sprintf('L’émoji %s doit être énuméré.', $emoji));
         }
         $this->assertStringContainsString('Aucun autre', $prompt);
-        $this->assertStringContainsString('Jamais dans une cellule', $prompt);
+        $this->assertStringContainsString('jamais dans une cellule', $prompt);
+
+        // On raisonne sur le SEUL bloc émojis : « jamais dans une réponse courte »
+        // s'applique légitimement aux titres « ## » quelques lignes plus haut, et
+        // l'assertion négative ci-dessous n'a de sens qu'ici.
+        $debut = mb_strpos($prompt, '- ÉMOJIS');
+        $this->assertNotFalse($debut, 'Le bloc ÉMOJIS doit exister dans le contrat.');
+        $blocEmojis = mb_substr($prompt, $debut, 900);
+
+        // La consigne doit être ATTEIGNABLE : posée en tête de réponse, et pas adossée au
+        // seul titre « ## », que la règle de concision rend rare.
+        $this->assertStringContainsString('EN TÊTE', $blocEmojis);
+        $this->assertStringContainsString('SINON au début de sa première ligne', $blocEmojis);
+        $this->assertStringNotContainsString(
+            'jamais dans une réponse courte',
+            $blocEmojis,
+            'Cette clause fermait la dernière porte : plus aucun émoji ne pouvait apparaître.',
+        );
     }
 
     public function testPromptEnseigneLaSyntaxeGraphique(): void
