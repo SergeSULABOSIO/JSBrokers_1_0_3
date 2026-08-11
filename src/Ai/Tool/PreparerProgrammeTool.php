@@ -2,6 +2,8 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Mutation\MutationAllowlist;
+use App\Ai\Mutation\MutationOperation;
 use App\Ai\Trousse\AiToolEcriture;
 use App\Ai\Programme\OutilsDeProgramme;
 use App\Ai\Programme\ProgrammeEnCours;
@@ -54,7 +56,11 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcrit
         return 'Prépare un PROGRAMME : une série de plans d\'écriture à valider l\'un après l\'autre, '
             . 'du premier au dernier. À APPELER DÈS QUE la demande porte sur PLUSIEURS objets '
             . '(« signale le paiement des tranches 60, 64 et 74 », « marque ces 5 polices non '
-            . 'renouvelables ») : déclare TOUTES les étapes ici, en une seule fois. Tu n\'auras rien '
+            . 'renouvelables ») ET DÈS QUE l\'utilisateur demande explicitement de procéder EN '
+            . 'PLUSIEURS TEMPS, même sur des entités différentes (« créons d\'abord ce fournisseur, '
+            . 'ensuite nous enregistrerons la dépense ») : une étape par temps, la seconde renvoyant '
+            . 'au résultat de la première par « ref »/« @ref ». Déclare TOUTES les étapes ici, en une '
+            . 'seule fois. Tu n\'auras rien '
             . 'à relancer ensuite — après chaque validation, la plateforme prépare et présente '
             . 'elle-même l\'étape suivante, puis établit un rapport final vérifié en base. '
             . 'N\'appelle donc JAMAIS un outil de plan étape par étape pour une série : tu t\'arrêterais '
@@ -67,9 +73,11 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcrit
     public function aiguillage(): string
     {
         return 'Dès que la demande porte sur PLUSIEURS objets distincts (« signale le paiement des tranches 60, '
-            . '64 et 74 », « marque ces cinq polices non renouvelables », « fais pareil pour les trois autres '
-            . '»). Appelle-moi UNE SEULE FOIS en déclarant TOUTES les étapes : un outil de plan objet par objet '
-            . 's\'arrêterait au premier, et il n\'y a pas de tour suivant pour reprendre la main.';
+            . '64 et 74 », « marque ces cinq polices non renouvelables », « fais pareil pour les trois autres ») '
+            . 'ou que l\'utilisateur demande d\'AVANCER PAR ÉTAPES VALIDÉES SÉPARÉMENT (« créons d\'abord le '
+            . 'fournisseur, puis enregistrons la dépense »). Appelle-moi UNE SEULE FOIS en déclarant TOUTES les '
+            . 'étapes : un outil de plan objet par objet s\'arrêterait au premier, et il n\'y a pas de tour '
+            . 'suivant pour reprendre la main.';
     }
 
     public function schema(): array
@@ -103,8 +111,50 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcrit
                             'cibleId' => [
                                 'type' => 'integer',
                                 'minimum' => 1,
-                                'description' => 'Identifiant de l\'objet visé (la tranche, l\'avenant…). '
-                                    . 'Renseigne-le systématiquement : c\'est lui qui distingue une étape de la suivante.',
+                                'description' => 'Identifiant de l\'objet visé (la tranche, l\'avenant, '
+                                    . 'l\'enregistrement à modifier ou supprimer…). Renseigne-le systématiquement : '
+                                    . 'c\'est lui qui distingue une étape de la suivante.',
+                            ],
+                            // ÉCRITURE ORDINAIRE dans une série. Ces trois champs ne servent
+                            // qu'aux étapes dont l'outil sait assembler ses arguments (cf.
+                            // EtapeAssemblable) : c'est ce qui rend enfin exprimable
+                            // « créer le fournisseur, PUIS enregistrer la dépense ».
+                            'entite' => [
+                                'type' => 'string',
+                                'enum' => MutationAllowlist::membres(),
+                                'description' => 'Pour une étape d\'écriture ordinaire (preparer_operations) : '
+                                    . 'nom court de l\'entité métier concernée.',
+                            ],
+                            'operation' => [
+                                'type' => 'string',
+                                'enum' => MutationOperation::OPS,
+                                'description' => 'Pour une étape d\'écriture ordinaire : create = créer, '
+                                    . 'edit = modifier (cibleId requis), delete = supprimer (cibleId requis). '
+                                    . 'Par défaut create.',
+                            ],
+                            'champs' => [
+                                'type' => 'array',
+                                'description' => 'Pour une étape d\'écriture ordinaire : les champs de '
+                                    . 'l\'enregistrement, en paires. Ex. [{"cle":"montant","valeur":"150"},'
+                                    . '{"cle":"fournisseur","valeur":"Loyken Motors"}]. Une relation se donne par '
+                                    . 'son NOM (le serveur la résout), une date comme l\'utilisateur l\'a dictée.',
+                                'items' => [
+                                    'type' => 'object',
+                                    'properties' => [
+                                        'cle'    => ['type' => 'string', 'description' => 'Nom du champ.'],
+                                        'valeur' => ['type' => 'string', 'description' => 'Valeur du champ, en texte.'],
+                                    ],
+                                    'required' => ['cle', 'valeur'],
+                                ],
+                            ],
+                            'ref' => [
+                                'type' => 'string',
+                                'description' => 'Étiquette posée sur une étape de CRÉATION dont une étape '
+                                    . 'SUIVANTE a besoin. L\'étape suivante donne alors à son champ de relation la '
+                                    . 'valeur "@etiquette" : la plateforme y injectera l\'identifiant réel dès que '
+                                    . 'la première étape aura été validée et écrite. Ex. étape 1 crée le '
+                                    . 'fournisseur (ref:"fournisseur"), étape 2 enregistre la dépense '
+                                    . '(champs:[{"cle":"fournisseur","valeur":"@fournisseur"}]).',
                             ],
                             // Paires PLATES, et non un objet libre : un paramètre complexe
                             // optionnel est ce que les modèles omettent le plus souvent
@@ -241,12 +291,29 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcrit
                     ),
                 ]);
             }
-            $cibleId = isset($brut['cibleId']) ? (int) $brut['cibleId'] : null;
-            $paires = is_array($brut['arguments'] ?? null) ? $brut['arguments'] : [];
+            $arguments = $this->outilsDeProgramme->arguments($outil, $brut);
+            // Une étape dont les arguments n'ont pas pu être assemblés (entité hors
+            // périmètre, édition sans cible, création sans champ) est REFUSÉE ICI, en
+            // nommant l'étape. La laisser passer produirait un programme qui échoue à
+            // sa préparation, donc un « aucune étape n'a pu être préparée » sans
+            // indication de la coupable.
+            if ($arguments === []) {
+                return AiToolResult::ok([
+                    'pret' => false,
+                    'note' => sprintf(
+                        'L\'étape « %s » est inexploitable pour %s : je n\'ai pas pu en dériver d\'arguments. '
+                        . 'Vérifie qu\'elle porte tout ce que cet outil attend — %s.',
+                        (string) ($brut['libelle'] ?? 'sans libellé'),
+                        $outil,
+                        $this->outilsDeProgramme->aideParametres(),
+                    ),
+                ]);
+            }
+
             $etapes[] = [
                 'libelle'   => (string) ($brut['libelle'] ?? ''),
                 'outil'     => $outil,
-                'arguments' => $this->outilsDeProgramme->arguments($outil, $cibleId, $paires),
+                'arguments' => $arguments,
             ];
         }
 

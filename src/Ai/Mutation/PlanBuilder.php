@@ -2,6 +2,7 @@
 
 namespace App\Ai\Mutation;
 
+use App\Ai\Resolution\Reference;
 use App\Ai\Resolution\ResolveurDeReferences;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
@@ -38,6 +39,10 @@ final class PlanBuilder
         // Traduit les noms dictés en identifiants : c'est ce qui dispense le modèle
         // d'aller les chercher, et donc d'enchaîner les tours.
         private readonly ResolveurDeReferences $resolveur,
+        // Traduit les dates dictées (« 11/08/2026 ») dans le format du formulaire.
+        // Même principe que le résolveur : ce que le serveur sait faire seul ne se
+        // demande pas au modèle.
+        private readonly NormaliseurDeDates $normaliseurDeDates,
     ) {
     }
 
@@ -392,6 +397,16 @@ final class PlanBuilder
      */
     private function resoudreChamps(string $entite, array $champs, AiScope $scope, array &$questions): array
     {
+        // LES DATES DICTÉES d'abord : « 11/08/2026 » devient « 2026-08-11 » (ou
+        // « 2026-08-11T00:00 » si le champ est un horodatage). Sans cette passe, le
+        // formulaire répond « Veuillez entrer une date valide », le plan n'est jamais
+        // prêt, aucun bouton n'apparaît — et l'utilisateur redonne indéfiniment une
+        // date qu'il avait parfaitement écrite (incident du 2026-08-11).
+        $champs = $this->normaliseurDeDates->normaliserChamps(
+            $champs,
+            $this->mutationService->champsTemporelsDe($entite),
+        );
+
         $relations = $this->mutationService->relationsDe($entite);
 
         foreach ($champs as $champ => $valeur) {
@@ -469,13 +484,65 @@ final class PlanBuilder
         return AiToolResult::ok([
             'pret'      => false,
             'aDemander' => array_values($questions),
+            // LA TROISIÈME ISSUE, celle qui manquait. Quand un nom introuvable désigne
+            // une entité que Ket sait CRÉER, choisir entre les enregistrements
+            // existants n'est pas la seule sortie — et c'était la seule proposée. Le
+            // 2026-08-11, « Loyken Motors » étant inconnu, Ket a offert le seul autre
+            // fournisseur du cabinet ; l'utilisateur a dû dicter lui-même la marche à
+            // suivre (« créons d'abord ce fournisseur »), et quatre messages plus tard
+            // la dépense n'était toujours pas enregistrée. La création manquante fait
+            // partie du travail : elle se dit dans le MÊME message que la question.
+            'creationsPossibles' => $this->creationsPossibles($questions),
             'note'      => 'Je n’ai pas pu identifier avec certitude un ou plusieurs enregistrements que tu as '
                 . 'nommés, et je ne devine jamais une donnée du courtier. Pose à l’utilisateur, EN UN SEUL '
                 . 'MESSAGE et en liste courte, les questions correspondant à « aDemander » : quand des '
-                . '« valeurs » sont fournies, PROPOSE-LES en clair plutôt qu’une question ouverte. Puis '
-                . 'rappelle ' . $outilAppelant . ' avec la réponse. N’appelle PAS rechercher_entites : '
-                . 'les candidats sont déjà ci-dessus.',
+                . '« valeurs » sont fournies, PROPOSE-LES en clair plutôt qu’une question ouverte. '
+                . 'ET quand l’enregistrement figure dans « creationsPossibles », propose-lui AUSSI, dans la '
+                . 'même phrase, de le CRÉER — c’est souvent ce qu’il veut : un nom introuvable est le plus '
+                . 'souvent un nouveau fournisseur, un nouveau client, une nouvelle charge. S’il accepte, '
+                . 'rappelle ' . $outilAppelant . ' avec DEUX opérations dans le MÊME plan : la création '
+                . 'étiquetée (ref:"x"), puis l’opération d’origine dont le champ vaut "@x" — une seule '
+                . 'validation pour l’ensemble. S’il tient à valider les deux temps SÉPARÉMENT, c’est '
+                . 'preparer_programme (deux étapes, « ref »/« @ref »). '
+                . 'N’appelle PAS rechercher_entites : les candidats sont déjà ci-dessus.',
         ]);
+    }
+
+    /**
+     * Parmi les références non résolues, celles qui désignent une entité que Ket a le
+     * droit de CRÉER — donc celles dont l'absence n'est pas une impasse.
+     *
+     * L'appartenance vient de l'allowlist de mutation, jamais d'une liste recopiée :
+     * une entité qu'on ne peut pas écrire ne doit surtout pas être proposée à la
+     * création, ce serait promettre une capacité inexistante.
+     *
+     * @param array<int, array<string, mixed>> $questions
+     *
+     * @return array<int, array{entite: string, libelle: string, terme: string}>
+     */
+    private function creationsPossibles(array $questions): array
+    {
+        $possibles = [];
+        foreach ($questions as $question) {
+            $entite = trim((string) ($question['champ'] ?? ''));
+            $terme = trim((string) ($question['terme'] ?? ''));
+            if ($entite === '' || $terme === '' || !MutationAllowlist::autorise($entite)) {
+                continue;
+            }
+            // Seul un nom INTROUVABLE appelle une création : une ambiguïté, elle, se
+            // tranche par un choix — en créer un de plus ne ferait qu'aggraver le
+            // doublon.
+            if (($question['probleme'] ?? '') !== Reference::INTROUVABLE) {
+                continue;
+            }
+            $possibles[] = [
+                'entite'  => $entite,
+                'libelle' => (string) ($question['libelle'] ?? $entite),
+                'terme'   => $terme,
+            ];
+        }
+
+        return $possibles;
     }
 
     /**

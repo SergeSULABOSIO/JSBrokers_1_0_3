@@ -655,6 +655,46 @@ class WorkspaceMutationService
     }
 
     /**
+     * Les champs TEMPORELS d'une entité et leur type Doctrine (`date`, `datetime`,
+     * suffixe `_immutable` compris).
+     *
+     * Sert à normaliser une date DICTÉE (« 11/08/2026 ») dans le format qu'exige le
+     * formulaire, avant même de la lui soumettre — cf. NormaliseurDeDates. Le type
+     * est lu dans les métadonnées de l'ORM : c'est la seule source qui distingue à
+     * coup sûr une date nue d'un horodatage, distinction dont dépend le format
+     * attendu (`Y-m-d` contre `Y-m-d\TH:i`).
+     *
+     * @return array<string, string> nom du champ => type Doctrine
+     */
+    public function champsTemporelsDe(string $shortName): array
+    {
+        $fqcn = 'App\\Entity\\' . $shortName;
+        if (!class_exists($fqcn)) {
+            return [];
+        }
+
+        try {
+            $meta = $this->em->getClassMetadata($fqcn);
+        } catch (\Throwable) {
+            return [];
+        }
+
+        // Liste FERMÉE : « dateinterval » commence aussi par « date » et n'est pas une
+        // date. Un type non listé repart tel quel vers le formulaire, qui tranchera.
+        $connus = ['date', 'date_immutable', 'datetime', 'datetime_immutable'];
+
+        $temporels = [];
+        foreach ($meta->getFieldNames() as $champ) {
+            $type = (string) $meta->getTypeOfField($champ);
+            if (in_array($type, $connus, true)) {
+                $temporels[$champ] = $type;
+            }
+        }
+
+        return $temporels;
+    }
+
+    /**
      * Nom court de l'entité portée par une collection éditable, ou null.
      * Le nom vient du FORMULAIRE (parité avec l'écran), jamais d'une convention.
      */

@@ -7,6 +7,8 @@ use App\Ai\AiEngineFailure;
 use App\Ai\AiReply;
 use App\Ai\AiRequest;
 use App\Ai\Debit\BudgetDebit;
+use App\Ai\Mutation\MotifDeRefus;
+use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\Redaction\RepliPrecis;
 use App\Ai\Trousse\Phase;
 use App\Ai\Trousse\SelecteurDeTrousse;
@@ -114,6 +116,11 @@ final class GeminiAiEngine implements AiEngineInterface
         // Rédige en PHP, à coût nul, ce que le modèle n'a pas rédigé — à partir des
         // résultats d'outils déjà obtenus. Remplace l'ancienne phrase générique.
         private readonly RepliPrecis $repliPrecis,
+        // Rattrape l'appel d'outil que le modèle a ÉCRIT au lieu de l'émettre.
+        private readonly AppelDOutilEnTexte $appelEnTexte,
+        // Source unique des outils qui produisent un plan : sert à signaler au
+        // contrôleur qu'un tel outil a tourné SANS produire de plan.
+        private readonly OutilsDePlan $outilsDePlan,
         // Injectable pour les tests : ils vérifient la DÉCISION d'attendre, pas
         // la capacité de PHP à dormir. Une suite qui dort n'est plus une suite.
         private readonly ?\Closure $dormir = null,
@@ -176,6 +183,9 @@ final class GeminiAiEngine implements AiEngineInterface
         // Ce que les outils ont RÉELLEMENT rapporté : la matière du repli si le modèle
         // ne rédige pas. Sans elle, on ne pouvait que servir une phrase générique.
         $resultatsOutils = [];
+        // Outils de plan qui ont REFUSÉ : le contrôleur croise ce signal avec la prose
+        // pour démasquer un plan décrit mais jamais préparé — et dire ce qui manque.
+        $plansRefuses = [];
 
         // TROUSSE du message : décidée par le SERVEUR, sans rien demander au modèle.
         // Un appel de routage était un TROISIÈME appel — la règle n'en tolère que
@@ -211,6 +221,30 @@ final class GeminiAiEngine implements AiEngineInterface
 
             $parts = $response['candidates'][0]['content']['parts'] ?? [];
             $functionCalls = array_values(array_filter($parts, static fn (array $p) => isset($p['functionCall'])));
+
+            // RATTRAPAGE — L'APPEL D'OUTIL ÉCRIT AU LIEU D'ÊTRE ÉMIS. Le modèle rend
+            // parfois « consulter_guide(parcours-de-saisie) » comme du TEXTE, sans
+            // rien émettre dans le canal des fonctions. Servir cette ligne à
+            // l'utilisateur — ce qui est arrivé le 2026-08-11 — c'est lui montrer nos
+            // rouages et lui refuser une réponse que nous pouvions produire : l'outil
+            // existe, l'argument est bon, seul le canal était faux. On l'exécute donc,
+            // sans aucun appel supplémentaire au fournisseur.
+            $rattrapage = false;
+            if ($functionCalls === [] && $phase === Phase::PLANIFICATION) {
+                foreach ($this->appelEnTexte->extraire(
+                    $this->extractText($parts, ''),
+                    $this->trousseCatalogue->outilsDe($trousse, $request->scope),
+                ) as $appel) {
+                    $functionCalls[] = ['functionCall' => ['name' => $appel['name'], 'args' => $appel['args']]];
+                    $rattrapage = true;
+                }
+                if ($rattrapage) {
+                    $this->logger->warning('Assistant IA (gemini) : appel d’outil rendu en texte, rattrapé par le serveur.', [
+                        'outils' => array_map(static fn (array $p) => $p['functionCall']['name'], $functionCalls),
+                    ]);
+                }
+            }
+
             $outilsDuTour = array_map(
                 static fn (array $p) => (string) $p['functionCall']['name'],
                 $functionCalls,
@@ -251,6 +285,23 @@ final class GeminiAiEngine implements AiEngineInterface
             // l'autre phase (une question de pure conversation n'appelle aucun outil
             // et se termine donc dès la planification, en UN seul appel).
             if ($functionCalls === []) {
+                $texte = $this->extractText($parts);
+
+                // FILET DE SÛRETÉ D'AFFICHAGE. Si ce texte est encore un appel d'outil
+                // écrit en prose — parce qu'il nomme un outil qui n'existe pas, ou qui
+                // n'est pas déclaré ce tour-ci —, le rattrapage n'a rien pu en faire.
+                // Le servir tel quel resterait la pire des issues : l'utilisateur a
+                // reçu « consulter_guide(parcours-de-saisie) » et répondu « je ne
+                // comprends rien !! ». On restitue plutôt ce que les outils du tour ont
+                // rapporté, et à défaut on dit honnêtement qu'on n'a pas conclu.
+                if ($this->appelEnTexte->ressembleAUnAppel($texte)) {
+                    $this->logger->warning('Assistant IA (gemini) : appel d’outil en texte non rattrapable, masqué.', [
+                        'phase' => $phase->name,
+                        'texte' => mb_substr($texte, 0, 120),
+                    ]);
+                    $texte = $this->repliPrecis->depuis($resultatsOutils);
+                }
+
                 return $this->conclure(
                     $request,
                     JournalTokens::ISSUE_REPONSE,
@@ -258,7 +309,7 @@ final class GeminiAiEngine implements AiEngineInterface
                     $cumulInput,
                     $cumulSortie,
                     $sequenceOutils,
-                    new AiReply($this->extractText($parts), refused: $refused, toolUsed: $toolUsed, actions: $actions),
+                    new AiReply($texte, refused: $refused, toolUsed: $toolUsed, actions: $actions, plansRefuses: $plansRefuses),
                 );
             }
 
@@ -282,7 +333,7 @@ final class GeminiAiEngine implements AiEngineInterface
                     $cumulInput,
                     $cumulSortie,
                     $sequenceOutils,
-                    new AiReply($texte, refused: $refused, toolUsed: $toolUsed, actions: $actions),
+                    new AiReply($texte, refused: $refused, toolUsed: $toolUsed, actions: $actions, plansRefuses: $plansRefuses),
                 );
             }
 
@@ -309,6 +360,12 @@ final class GeminiAiEngine implements AiEngineInterface
                 if ($result->uiAction !== null) {
                     $actions[] = $result->uiAction;
                 }
+                // Un outil de plan qui n'a PAS produit de plan : le contrôleur doit le
+                // savoir, sans quoi rien ne distingue « le modèle a décrit un plan
+                // inexistant » de « le modèle a répondu à une question ».
+                if ($this->outilsDePlan->estOutilDePlan($name) && MotifDeRefus::estUnRefus($result)) {
+                    $plansRefuses[] = ['outil' => $name, 'motif' => MotifDeRefus::depuis($result)];
+                }
                 $responseParts[] = [
                     'functionResponse' => [
                         'name'     => $name,
@@ -316,7 +373,13 @@ final class GeminiAiEngine implements AiEngineInterface
                     ],
                 ];
             }
-            $contents[] = ['role' => 'user', 'parts' => $responseParts];
+            // Un appel RATTRAPÉ n'existe pas dans le tour du modèle : lui renvoyer un
+            // « functionResponse » sans « functionCall » correspondant ferait rejeter
+            // toute la requête par le proto (400). Le résultat repart donc en texte —
+            // même contenu, canal que la conversation accepte.
+            $contents[] = $rattrapage
+                ? ['role' => 'user', 'parts' => [['text' => $this->resultatsEnTexte($responseParts)]]]
+                : ['role' => 'user', 'parts' => $responseParts];
 
             // La rédaction n'emporte NI les déclarations d'outils NI les protocoles
             // d'écriture : elle coûte donc bien moins que la planification. On
@@ -361,6 +424,7 @@ final class GeminiAiEngine implements AiEngineInterface
                         refused: $refused,
                         toolUsed: $toolUsed,
                         actions: $actions,
+                        plansRefuses: $plansRefuses,
                     ),
                 );
             }
@@ -389,6 +453,7 @@ final class GeminiAiEngine implements AiEngineInterface
                 refused: $refused,
                 toolUsed: $toolUsed,
                 actions: $actions,
+                plansRefuses: $plansRefuses,
             ),
         );
     }
@@ -596,6 +661,33 @@ final class GeminiAiEngine implements AiEngineInterface
         }
 
         return $parts;
+    }
+
+    /**
+     * Les résultats d'outils rendus en TEXTE, pour le cas d'un appel rattrapé.
+     *
+     * Le canal normal (functionResponse) exige un functionCall correspondant dans le
+     * tour du modèle ; un appel écrit en prose n'en a pas. Le contenu, lui, est le
+     * même : le modèle reçoit les mêmes données, seule l'enveloppe change.
+     *
+     * @param array<int, array{functionResponse: array{name: string, response: array}}> $responseParts
+     */
+    private function resultatsEnTexte(array $responseParts): string
+    {
+        $lignes = [];
+        foreach ($responseParts as $part) {
+            $reponse = $part['functionResponse'] ?? null;
+            if (!is_array($reponse)) {
+                continue;
+            }
+            $lignes[] = sprintf(
+                'Résultat de %s : %s',
+                (string) ($reponse['name'] ?? '?'),
+                (string) json_encode($reponse['response'] ?? [], JSON_UNESCAPED_UNICODE),
+            );
+        }
+
+        return implode("\n\n", $lignes);
     }
 
     private function executeTool(string $name, array $args, AiRequest $request): AiToolResult

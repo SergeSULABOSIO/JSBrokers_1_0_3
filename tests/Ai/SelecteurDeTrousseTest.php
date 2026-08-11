@@ -222,6 +222,71 @@ class SelecteurDeTrousseTest extends TestCase
         );
     }
 
+    /**
+     * LA BOUCLE FERMÉE, corrigée le 2026-08-11 — le seul cas où l'aiguillage pouvait
+     * s'enfermer sur lui-même.
+     *
+     * En trousse de lecture, le prompt ORDONNE à Ket de proposer l'écriture
+     * (« préférez-vous que je m'en charge ? »), faute de quoi elle répondrait « je ne
+     * peux pas », ce qui est faux. Mais la réponse à cette question est un simple
+     * « oui », « allez-y », « option A » : aucun verbe d'action, aucun vocabulaire
+     * métier. Sans ce signal, la lecture repart, Ket propose une deuxième fois, et
+     * l'utilisateur tourne en rond sur une capacité qu'on venait de lui promettre.
+     *
+     * On reconnaît ici NOS propres tournures, pas l'intention de l'utilisateur :
+     * c'est ce qui rend le test fiable.
+     *
+     * @dataProvider reponsesAUneOffreDEcriture
+     */
+    public function testUneOffreDEcritureAuTourPrecedentOuvreLEcriture(string $reponse): void
+    {
+        $conversation = new AssistantConversation();
+        $conversation->addMessage(
+            (new AssistantMessage())
+                ->setRole(AssistantMessage::ROLE_ASSISTANT)
+                // Prose RÉELLE de l'incident : Ket vient d'exposer les procédures A/B.
+                ->setContenu(
+                    'Pour enregistrer une dépense, deux procédures s’offrent à vous : (A) je m’en charge '
+                    . 'entièrement, ou (B) je vous ouvre le formulaire. Préférez-vous que je m’en charge ?'
+                )
+                // Aucun outil n'a tourné : le signal « le dernier tour a écrit » ne
+                // peut rien voir ici. C'est bien la PROSE qui engage Ket.
+                ->setMeta(['engine' => 'gemini'])
+        );
+
+        $this->assertSame(
+            Trousse::ECRITURE,
+            $this->selecteur()->trousseDe($this->requete($this->bulles([$reponse]), $conversation)),
+            'Une offre d’écriture faite au tour précédent doit pouvoir être tenue au tour suivant.',
+        );
+    }
+
+    /** @return iterable<string, array{0: string}> */
+    public static function reponsesAUneOffreDEcriture(): iterable
+    {
+        yield 'la réponse de l’incident' => ['Je veux que tu t’en charge'];
+        yield 'un acquiescement nu' => ['oui'];
+        yield 'un choix de procédure' => ['A'];
+        yield 'une invitation brève' => ['allez-y'];
+    }
+
+    /** Sans offre d'écriture au tour précédent, un « oui » nu reste une consultation. */
+    public function testUnAcquiescementSansOffreResteEnLecture(): void
+    {
+        $conversation = new AssistantConversation();
+        $conversation->addMessage(
+            (new AssistantMessage())
+                ->setRole(AssistantMessage::ROLE_ASSISTANT)
+                ->setContenu('Votre portefeuille compte 42 clients.')
+                ->setMeta(['engine' => 'gemini'])
+        );
+
+        $this->assertSame(
+            Trousse::LECTURE,
+            $this->selecteur()->trousseDe($this->requete($this->bulles(['oui']), $conversation)),
+        );
+    }
+
     /** Une série en cours : chaque étape est une écriture. */
     public function testUnProgrammeEnCoursOuvreLEcriture(): void
     {

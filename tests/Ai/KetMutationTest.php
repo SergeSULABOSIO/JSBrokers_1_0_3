@@ -5,6 +5,7 @@ namespace App\Tests\Ai;
 use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Mutation\MutationOperation;
 use App\Ai\Mutation\MutationPlan;
+use App\Ai\Mutation\NormaliseurDeDates;
 use App\Ai\Mutation\PlanBuilder;
 use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Scope\AiScope;
@@ -153,6 +154,7 @@ class KetMutationTest extends TestCase
             $tokens,
             new PlanEnAttente($this->createMock(EntityManagerInterface::class)),
             $this->resolveurAvec(),
+            new NormaliseurDeDates(),
         ));
     }
 

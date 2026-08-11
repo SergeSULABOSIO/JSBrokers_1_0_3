@@ -40,6 +40,11 @@ final class SelecteurDeTrousse
         . 'modifi|corrig|rectifi|change|mets? à jour|supprim|efface|renouvel|reconduis|reconduir|'
         . 'prorog|prolong|annul|r[ée]sili|marque|signale|affecte|attribue|valide|valider|souscri|'
         . 'fais-le|fais le|vas.?y|essaie|essaye|refais|r[ée]essaie|continue|poursui|'
+        // « Je veux que tu t'en charges » — la réponse la plus naturelle à la question
+        // que Ket vient elle-même de poser (procédure A ou B). Elle ne contenait aucun
+        // verbe de la liste : le 2026-08-11, seule la présence de « enregistrer » deux
+        // messages plus haut a sauvé l'aiguillage.
+        . 'en charg|charge-toi|proc[ée]dure a|option a|'
         // FORMULAIRE ET ÉDITION, en mots NUS. La tournure exacte « ouvre le formulaire »
         // était trop étroite d'un cheveu : « ouvre-moi par exemple le formulaire d'édition
         // pour Olea » ne la déclenchait pas, la trousse de lecture partait sans
@@ -90,6 +95,22 @@ final class SelecteurDeTrousse
             return Trousse::ECRITURE;
         }
 
+        // SIGNAL STRUCTUREL DÉCISIF : au tour précédent, Ket a PROPOSÉ d'écrire.
+        //
+        // C'est le seul cas où l'aiguillage pouvait s'enfermer. En trousse de lecture,
+        // le prompt lui ordonne de proposer l'écriture (« Voulez-vous que je
+        // l'enregistre ? », « préférez-vous que je m'en charge ? ») — sans quoi elle
+        // répondrait « je ne peux pas », ce qui est faux. Mais la réponse de
+        // l'utilisateur à cette question est un simple « oui », « allez-y », « option
+        // A » : aucun verbe d'action, aucun vocabulaire métier. Sans ce signal, la
+        // lecture repart, Ket propose une deuxième fois, et l'utilisateur tourne en
+        // rond sur une capacité qu'on lui a promise au tour d'avant. Une question
+        // posée engage celui qui l'a posée : si Ket a offert d'écrire, elle doit
+        // pouvoir tenir l'offre au tour suivant.
+        if ($this->dernierTourAProposeDEcrire($conversation)) {
+            return Trousse::ECRITURE;
+        }
+
         // L'intention vit souvent dans le FIL et non dans la bulle (« vas y »,
         // « essaie encore ») : on lit donc les derniers échanges, pas le seul
         // dernier message.
@@ -110,8 +131,60 @@ final class SelecteurDeTrousse
      */
     private function dernierTourAEcrit(?AssistantConversation $conversation): bool
     {
-        if ($conversation === null) {
+        $dernier = $this->dernierMessageAssistant($conversation);
+        if ($dernier === null) {
             return false;
+        }
+
+        $outil = ($dernier->getMeta() ?? [])['tool'] ?? null;
+
+        return is_string($outil) && $this->catalogue->estOutilDEcriture($outil);
+    }
+
+    /**
+     * Le tour précédent a-t-il OFFERT d'écrire quelque chose ?
+     *
+     * Les marqueurs sont ceux des phrases que le prompt lui fait écrire — la question
+     * des procédures A/B et l'invitation de la trousse de lecture. On reconnaît donc
+     * NOS propres tournures, pas celles de l'utilisateur : c'est ce qui rend ce test
+     * fiable là où deviner une intention ne l'est pas.
+     */
+    private function dernierTourAProposeDEcrire(?AssistantConversation $conversation): bool
+    {
+        $dernier = $this->dernierMessageAssistant($conversation);
+        if ($dernier === null) {
+            return false;
+        }
+
+        $texte = mb_strtolower((string) $dernier->getContenu());
+
+        foreach ([
+            'en charg',
+            'procédure a',
+            'procédure b',
+            'voulez-vous que je l',
+            'souhaitez-vous que je',
+            'préférez-vous',
+            'que je m’en',
+            "que je m'en",
+            'que je le crée',
+            'que je l’enregistre',
+            "que je l'enregistre",
+            'ouvrir le formulaire',
+            'remplir le formulaire',
+        ] as $marqueur) {
+            if (str_contains($texte, $marqueur)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function dernierMessageAssistant(?AssistantConversation $conversation): ?AssistantMessage
+    {
+        if ($conversation === null) {
+            return null;
         }
 
         $dernier = null;
@@ -120,12 +193,7 @@ final class SelecteurDeTrousse
                 $dernier = $message;
             }
         }
-        if ($dernier === null) {
-            return false;
-        }
 
-        $outil = ($dernier->getMeta() ?? [])['tool'] ?? null;
-
-        return is_string($outil) && $this->catalogue->estOutilDEcriture($outil);
+        return $dernier;
     }
 }

@@ -308,6 +308,88 @@ class PlanEnAttenteVerrouTest extends WebTestCase
         }
     }
 
+    /**
+     * LE CAS QUE LES MARQUEURS LEXICAUX ONT LAISSÉ PASSER (2026-08-11, deux messages
+     * de suite). L'outil venait de refuser — date invalide, puis référence
+     * introuvable — et Ket a pourtant rendu un tableau de plan complet, un
+     * « Budget estimé : 10 unités (Solde disponible : 115 321) » recopié du tour
+     * précédent, et « Veuillez valider ce plan ». Aucun de ces mots ne figurait dans
+     * proseSimuleUneDecision, et l'utilisateur a cherché un bouton qui ne viendrait
+     * jamais.
+     *
+     * C'est le signal SERVEUR — un outil de plan a refusé ce tour-ci — qui tranche.
+     */
+    public function testUnPlanDecritApresUnRefusDOutilEstDemasque(): void
+    {
+        $prose = "📄 Voici le plan d'opération préparé pour l'enregistrement de votre dépense :\n\n"
+            . "| Étape | Entité | Action | Données |\n| --- | --- | --- | --- |\n"
+            . "| Enregistrement | DepenseCourtier | Créer | Montant : 150,00 $ |\n\n"
+            . "- Budget estimé : 10 unités (Solde disponible : 115 321 unités, suffisant).\n"
+            . 'Veuillez valider ce plan pour finaliser l’enregistrement de cette dépense.';
+
+        // Les mots seuls ne suffisaient pas — c'est justement le constat de l'incident.
+        $this->assertFalse(
+            PlanEnAttente::proseSimuleUneDecision($prose),
+            'Ce texte ne revendique aucune surface de décision : les marqueurs de haute précision '
+            . 'ne peuvent pas le voir, et il ne faut pas les élargir indéfiniment.',
+        );
+
+        // Mais la prose AFFICHE bien un plan, et un outil de plan a refusé : preuve faite.
+        $this->assertTrue(PlanEnAttente::proseAfficheUnPlan($prose));
+        $this->assertTrue(
+            PlanEnAttente::estUnPlanFantome($prose, aucuneDecision: true, unOutilDePlanARefuse: true),
+            'Un plan décrit alors que l’outil a refusé de le préparer est un plan fantôme.',
+        );
+
+        // Sans le refus d'outil, on ne conclut PAS : le même texte accompagnant un vrai
+        // plan ne doit jamais déclencher l'avertissement.
+        $this->assertFalse(
+            PlanEnAttente::estUnPlanFantome($prose, aucuneDecision: true, unOutilDePlanARefuse: false),
+        );
+    }
+
+    /**
+     * LE VERROU QUI GARANTIT L'ABSENCE DE FAUX POSITIF : dès qu'une décision réelle
+     * est en jeu (plan émis ce tour-ci, ou plan en attente dans le fil), aucun
+     * avertissement — même si la prose parle de bouton de validation.
+     */
+    public function testUnePlanReelNeDeclencheJamaisLAvertissement(): void
+    {
+        $this->assertFalse(
+            PlanEnAttente::estUnPlanFantome(
+                'Le bouton de validation est actif : cliquez sur Valider et exécuter.',
+                aucuneDecision: false,
+                unOutilDePlanARefuse: false,
+            ),
+        );
+        $this->assertFalse(
+            PlanEnAttente::estUnPlanFantome(
+                'Voici le plan. Budget estimé : 10 unités.',
+                aucuneDecision: false,
+                unOutilDePlanARefuse: true,
+            ),
+        );
+    }
+
+    /** Une réponse ordinaire n'affiche pas de plan, refus d'outil ou non. */
+    public function testUneReponseOrdinaireNAffichePasDePlan(): void
+    {
+        foreach ([
+            'Il me manque la date de la dépense (jj/mm/aaaa) pour préparer l’enregistrement.',
+            'Voici la liste des dépenses de juillet 2026.',
+            '« Loyken Motors » n’est pas répertorié : voulez-vous que je le crée ?',
+        ] as $texte) {
+            $this->assertFalse(
+                PlanEnAttente::proseAfficheUnPlan($texte),
+                sprintf('Ne devrait PAS être vu comme un plan affiché : « %s »', mb_substr($texte, 0, 40)),
+            );
+            $this->assertFalse(
+                PlanEnAttente::estUnPlanFantome($texte, aucuneDecision: true, unOutilDePlanARefuse: true),
+                'Une question honnête après un refus d’outil est le comportement ATTENDU, pas un défaut.',
+            );
+        }
+    }
+
     /** L'état « un plan attend-il ? » reflète le fil (source unique), sans EM. */
     public function testAUnPlanEnAttenteRefleteLeFil(): void
     {

@@ -66,6 +66,19 @@ final class OutilsDePlan
     }
 
     /**
+     * Cet outil est-il de ceux qui peuvent faire apparaître une barre de décision ?
+     *
+     * Sert au moteur : quand un outil de plan a tourné SANS produire de plan, la
+     * réponse doit le signaler au contrôleur — c'est le seul signal fiable du plan
+     * décrit en prose mais jamais préparé. La question se pose sur un NOM (celui que
+     * le fournisseur a renvoyé), d'où cette forme.
+     */
+    public function estOutilDePlan(string $nom): bool
+    {
+        return in_array($nom, $this->noms(), true);
+    }
+
+    /**
      * Énumération lisible pour le prompt système : « a, b, c ou d ». Chaîne vide
      * si aucun outil n'est marqué (configuration dégradée) — l'appelant garde
      * alors une phrase valide, sans liste mensongère.

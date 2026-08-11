@@ -25,10 +25,14 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
  *     valeurs sont ensuite RETYPÉES d'après le schéma de l'outil cible — le seul
  *     endroit qui connaisse vraiment le type attendu.
  *
- * Un outil n'est éligible que si TOUS ses paramètres REQUIS sont scalaires : un
- * outil qui exige une structure (preparer_operations et ses `operations`,
- * modifier_composition_prime et ses `composantes`) ne peut pas être piloté par
- * des paires, et l'annoncer serait mentir au modèle.
+ * Un outil n'est éligible que si TOUS ses paramètres REQUIS sont scalaires — OU
+ * s'il sait ASSEMBLER lui-même ses arguments à partir d'une étape décrite à plat
+ * (marqueur {@see EtapeAssemblable}). Cette seconde porte a été ouverte le
+ * 2026-08-11 : sans elle, `preparer_operations` restait inéligible et une série
+ * aussi banale que « créer ce fournisseur, puis enregistrer la dépense » était
+ * INEXPRIMABLE — Ket validait le premier plan puis s'arrêtait, faute d'un moyen
+ * de déclarer la suite. La structure n'est toujours pas demandée au modèle : c'est
+ * l'outil qui la fabrique.
  */
 final class OutilsDeProgramme
 {
@@ -67,6 +71,12 @@ final class OutilsDeProgramme
     {
         $lignes = [];
         foreach ($this->catalogue() as $nom => $outil) {
+            // Un outil assemblable décrit lui-même la forme de son étape : elle n'a
+            // rien à voir avec la liste de ses paramètres plats.
+            if ($outil instanceof EtapeAssemblable) {
+                $lignes[] = $outil->aideEtape();
+                continue;
+            }
             $params = [];
             foreach ($this->proprietes($outil) as $cle => $definition) {
                 if ($cle === 'remplacerPlanEnAttente') {
@@ -139,16 +149,30 @@ final class OutilsDeProgramme
      * inconnue de l'outil est ignorée (fail-closed : on ne transmet pas de
      * paramètre fantôme), sauf `remplacerPlanEnAttente` qui n'a rien à faire ici.
      *
-     * @param array<int, array{cle?: string, valeur?: mixed}> $paires
+     * Un outil ASSEMBLABLE fait exception : lui seul connaît la structure de ses
+     * arguments, on lui passe donc l'étape entière et il la fabrique.
+     *
+     * @param array{
+     *     cibleId?: int|null,
+     *     arguments?: array<int, array{cle?: string, valeur?: mixed}>,
+     *     entite?: string, operation?: string, ref?: string|null,
+     *     champs?: array<int, array{cle?: string, valeur?: mixed}>
+     * } $etape
      *
      * @return array<string, mixed>
      */
-    public function arguments(string $nom, ?int $cibleId, array $paires): array
+    public function arguments(string $nom, array $etape): array
     {
         $outil = $this->catalogue()[$nom] ?? null;
         if ($outil === null) {
             return [];
         }
+        if ($outil instanceof EtapeAssemblable) {
+            return $outil->argumentsDepuisEtape($etape);
+        }
+
+        $cibleId = isset($etape['cibleId']) ? (int) $etape['cibleId'] : null;
+        $paires = is_array($etape['arguments'] ?? null) ? $etape['arguments'] : [];
         $proprietes = $this->proprietes($outil);
 
         $args = [];
@@ -185,11 +209,16 @@ final class OutilsDeProgramme
                 continue;
             }
             $proprietes = $this->proprietes($outil);
-            $pilotable = true;
-            foreach ($this->requis($outil) as $cle) {
-                if (!$this->estScalaire($proprietes[$cle] ?? [])) {
-                    $pilotable = false;
-                    break;
+            // L'outil sait fabriquer ses propres arguments : la forme de son schéma ne
+            // le disqualifie plus.
+            $pilotable = $outil instanceof EtapeAssemblable;
+            if (!$pilotable) {
+                $pilotable = true;
+                foreach ($this->requis($outil) as $cle) {
+                    if (!$this->estScalaire($proprietes[$cle] ?? [])) {
+                        $pilotable = false;
+                        break;
+                    }
                 }
             }
             if ($pilotable) {
