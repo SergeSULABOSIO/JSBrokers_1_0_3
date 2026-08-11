@@ -30,3 +30,16 @@ vich_uploader:
       inject_on_load: false
       delete_on_update: true
       delete_on_remove: true
+
+    # Documents PRODUITS par Ket (Word, Excel, PDF, Markdown, texte, HTML). Même
+    # régime que les pièces jointes — HORS public/, servis uniquement par la route
+    # de téléchargement fail-closed du contrôleur IA. Ils ont été payés en tokens :
+    # ils sont conservés tant que vit la conversation qui les a produits.
+    assistant_documents:
+      uri_prefix: /_private/assistant-documents
+      upload_destination: "%kernel.project_dir%/var/uploads/assistant-documents"
+      namer: Vich\UploaderBundle\Naming\SmartUniqueNamer
+
+      inject_on_load: false
+      delete_on_update: true
+      delete_on_remove: true

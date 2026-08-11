@@ -15,6 +15,13 @@
             {{ ux_icon('mdi:minus-circle-outline', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
             <span>{{ "security_pricing_basic_option_ia" | trans }}</span>
         </li>
+        {# Contrepartie de l'exclusion : la production de documents suit l'assistant,
+           donc elle est hors de l'offre gratuite. Le dire ICI évite une promesse
+           trompeuse au visiteur qui découvre la capacité. #}
+        <li class="pp-feature pp-feature--off">
+            {{ ux_icon('mdi:minus-circle-outline', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
+            <span>{{ "security_pricing_basic_option_documents" | trans }}</span>
+        </li>
         <li class="pp-feature pp-feature--off">
             {{ ux_icon('mdi:minus-circle-outline', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
             <span>{{ "security_pricing_basic_option_assistance" | trans }}</span>

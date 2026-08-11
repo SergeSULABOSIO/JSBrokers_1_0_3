@@ -109,7 +109,12 @@ final class SoldeTokensTool implements AiToolInterface
             . 'charge). Lecture : %d token%s par enregistrement affiché ou exporté. Écriture '
             . '(création/modification) : poids variable selon le type de fiche (%d tokens par '
             . 'défaut). Assistant IA : %d tokens par message envoyé, %d tokens par objet attaché '
-            . 'au contexte du chat. Mode gratuit : %d tokens offerts, renouvelés toutes les %d '
+            . 'au contexte du chat. Document téléchargeable produit par l\'assistant (Word, Excel, '
+            . 'PDF, Markdown, texte, page web) : %d tokens de base + %d tokens par page de %d '
+            . 'caractères, le tout multiplié par le coefficient du format (texte et Markdown ×1, '
+            . 'Excel ×%s, Word ×%s, PDF ×%s) ; le coût exact est TOUJOURS annoncé avant que '
+            . 'l\'utilisateur ne valide la production, et rien n\'est débité s\'il annule. '
+            . 'Mode gratuit : %d tokens offerts, renouvelés toutes les %d '
             . 'heures (non cumulables) ; les paquets prépayés, eux, se cumulent et sont consommés '
             . 'en premier. Solde épuisé : lectures et écritures sont bloquées jusqu\'à la recharge '
             . 'ou au renouvellement gratuit. Détail complet sur la page « Fonctionnement des '
@@ -119,8 +124,24 @@ final class SoldeTokensTool implements AiToolInterface
             $this->parametres->defaultWriteWeight(),
             $this->parametres->weightFor(AssistantMessage::class),
             $this->tokenAccountService->coutContexteIa(),
+            $this->parametres->documentBase(),
+            $this->parametres->documentParPage(),
+            $this->parametres->documentCaracteresParPage(),
+            // %s et non %.1f : « 1,4 » se lit, « 1.4 » détonne dans une phrase
+            // française, et %d écraserait la décimale.
+            $this->coefficient('xlsx'),
+            $this->coefficient('docx'),
+            $this->coefficient('pdf'),
             $this->parametres->freeAllowance(),
             $this->parametres->freeWindowHours(),
         );
+    }
+
+    /** Coefficient d'un format, écrit à la française (« 1,5 » et non « 1.5 »). */
+    private function coefficient(string $format): string
+    {
+        $valeur = $this->parametres->documentMultiplicateur($format);
+
+        return rtrim(rtrim(number_format($valeur, 2, ',', ''), '0'), ',');
     }
 }

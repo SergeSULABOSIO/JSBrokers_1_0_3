@@ -3,6 +3,9 @@
 {% set readWeight = plan.readWeight %}
 {% set freeAllowance = plan.freeAllowance|format_nombre(0, 'en') %}
 {% set freeWindowHours = plan.freeWindowHours %}
+{% set docBase = plan.documentBase %}
+{% set docParPage = plan.documentParPage %}
+{% set docCarPage = plan.documentCaracteresParPage %}
 
 <p class="cgu-intro">
     On JS Brokers, the <strong>token</strong> is the unit measuring your usage of the platform.
@@ -24,7 +27,8 @@
         <li><strong>Output (reading)</strong>: every entity displayed/downloaded to your screen costs <strong>{{ readWeight }} tokens</strong>. Loading a list of 20 items therefore costs 20 × {{ readWeight }} = {{ 20 * readWeight }} tokens.</li>
         <li><strong>Input (writing)</strong>: every save (creation or update) costs a variable weight depending on the entity type.</li>
         <li><strong>AI assistant (premium)</strong>: every message sent to the assistant is metered as a write (see the "AI assistant message" weight below). The assistant is <strong>reserved for accounts with a paid token balance</strong> — the free allowance is not enough.</li>
-    </ul>
+            <li><strong>Documents produced by the assistant (premium)</strong>: when the assistant writes a downloadable document (Word, Excel, PDF…), its production is charged based on length and format — see §4. The exact cost is always shown <strong>before</strong> you approve the production.</li>
+</ul>
 </section>
 
 <section class="cgu-section">
@@ -66,7 +70,43 @@
 </section>
 
 <section class="cgu-section">
-    <h2>4. The free tier (Basic)</h2>
+    <h2>4. Documents produced by the assistant</h2>
+    <p>
+        The assistant can <strong>build a downloadable document</strong> (Word, Excel, PDF, Markdown,
+        plain text, web page) from an analysis: a structured report, meant to be used outside the
+        platform. The cost follows this formula:
+    </p>
+    <p class="cgu-formule">
+        <strong>({{ docBase }} + number of pages × {{ docParPage }}) × format coefficient</strong>,
+        where a page is {{ docCarPage|format_nombre(0, 'en') }} characters (rounded up, minimum one page).
+    </p>
+    <table class="cgu-table">
+        <thead>
+            <tr><th>Format</th><th>Coefficient</th><th>Example: 3 pages</th></tr>
+        </thead>
+        <tbody>
+        {% for format, coefficient in plan.documentFormats %}
+            <tr class="cgu-format-row">
+                <td>
+                    <span class="cgu-entity">
+                        <span class="cgu-entity-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('document'), {height:'18px', width:'18px'}) }}</span>
+                        <span>{{ token_format_document_label(format, 'en') }}</span>
+                    </span>
+                </td>
+                <td>×{{ coefficient|format_nombre(2, 'en')|replace({'.00': ''}) }}</td>
+                <td><strong>{{ token_cout_document(3, format)|format_nombre(0, 'en') }}</strong> tokens</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <p class="cgu-note">
+        The exact cost is <strong>always shown before</strong> you approve the production, and
+        <strong>nothing is charged if you cancel</strong>.
+    </p>
+</section>
+
+<section class="cgu-section">
+    <h2>5. The free tier (Basic)</h2>
     <p>
         Every account receives <strong>{{ freeAllowance }} free tokens</strong>, automatically
         <strong>renewed every {{ freeWindowHours }} hours</strong>. The counter starts on your first activity after
@@ -81,7 +121,7 @@
 </section>
 
 <section class="cgu-section">
-    <h2>5. Prepaid packs</h2>
+    <h2>6. Prepaid packs</h2>
     <p>Need more? You can buy <strong>stackable</strong> packs:</p>
     <table class="cgu-table">
         <thead><tr><th>Pack</th><th>Price</th></tr></thead>
@@ -98,7 +138,7 @@
 </section>
 
 <section class="cgu-section">
-    <h2>6. What happens when tokens run out?</h2>
+    <h2>7. What happens when tokens run out?</h2>
     <p>
         When your balance (free + prepaid) is no longer enough, <strong>reading and writing are
         temporarily blocked</strong>. You can then either <strong>top up</strong> a pack or
@@ -107,7 +147,7 @@
 </section>
 
 <section class="cgu-section">
-    <h2>7. Who pays and who consumes?</h2>
+    <h2>8. Who pays and who consumes?</h2>
     <p>
         The <strong>company owner</strong> pays. Any activity performed within a company — by its
         owner <em>or</em> by invited collaborators — is deducted from that company owner's balance.

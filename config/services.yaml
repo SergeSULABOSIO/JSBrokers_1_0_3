@@ -69,6 +69,12 @@ services:
         App\Ai\Tool\AiToolInterface:
             tags: ['app.ai_tool']
 
+        # Rendus des DOCUMENTS produits par Ket, un par format (Word, Excel, PDF,
+        # Markdown, texte, HTML). Retrouvés par RapportRendererResolver : ajouter un
+        # format se fait en ajoutant une classe, jamais en modifiant une liste.
+        App\Ai\Document\Renderer\RapportRendererInterface:
+            tags: ['app.ai_document_renderer']
+
         # Vérificateurs d'EFFET MÉTIER du rapport final d'un programme : au-delà de
         # « la ligne est bien en base », ils répondent « la conséquence attendue
         # s'est-elle produite ? » (une prime signalée est-elle réellement soldée ?).

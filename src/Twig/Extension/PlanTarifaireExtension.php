@@ -2,6 +2,7 @@
 
 namespace App\Twig\Extension;
 
+use App\Ai\Document\DocumentTarificateur;
 use App\Entity\Article;
 use App\Entity\AssistantMessage;
 use App\Entity\Assureur;
@@ -138,9 +139,32 @@ class PlanTarifaireExtension extends AbstractExtension
         RolesEnSinistre::class => ['fr' => 'Rôle en sinistre', 'en' => 'Claims role',  'icon' => 'role'],
     ];
 
+    /**
+     * Catalogue d'affichage des FORMATS de document, PARALLÈLE à ENTITES et dans un
+     * espace de clés distinct.
+     *
+     * RÈGLE GÉNÉRALE, dont ceci est la première application. Un item facturable qui
+     * n'est pas une entité Doctrine est parfaitement légitime — TokenConsumption
+     * stocke un nom court, pas un FQCN (précédent : « DocumentComptable ») — mais il
+     * ne doit JAMAIS transiter par ENTITES ni par weightFor(), qui sont indexés par
+     * FQCN. L'y glisser ferait apparaître, dans l'éditeur de poids d'écriture, un
+     * réglage sans effet : deux prix pour une même chose, dont un mort.
+     *
+     * @var array<string, array{fr: string, en: string, icon: string}>
+     */
+    private const FORMATS_DOCUMENTS = [
+        'docx' => ['fr' => 'Word (.docx)',    'en' => 'Word (.docx)',   'icon' => 'document'],
+        'xlsx' => ['fr' => 'Excel (.xlsx)',   'en' => 'Excel (.xlsx)',  'icon' => 'document'],
+        'pdf'  => ['fr' => 'PDF',             'en' => 'PDF',            'icon' => 'document'],
+        'md'   => ['fr' => 'Markdown',        'en' => 'Markdown',       'icon' => 'document'],
+        'txt'  => ['fr' => 'Texte brut',      'en' => 'Plain text',     'icon' => 'document'],
+        'html' => ['fr' => 'Page web (HTML)', 'en' => 'Web page (HTML)', 'icon' => 'document'],
+    ];
+
     public function __construct(
         private ParametresTokenService $parametres,
         private CouponService $couponService,
+        private DocumentTarificateur $documentTarificateur,
     ) {}
 
     public function getFunctions(): array
@@ -152,7 +176,48 @@ class PlanTarifaireExtension extends AbstractExtension
             new TwigFunction('token_entite_label', [$this, 'getEntiteLabel']),
             new TwigFunction('token_entite_icon', [$this, 'getEntiteIcon']),
             new TwigFunction('token_entites_facturables', [$this, 'getEntitesFacturables']),
+            new TwigFunction('token_formats_documents', [$this, 'getFormatsDocuments']),
+            new TwigFunction('token_format_document_label', [$this, 'getFormatDocumentLabel']),
+            new TwigFunction('token_cout_document', [$this, 'getCoutDocument']),
         ];
+    }
+
+    /**
+     * Formats servis => libellé traduit, pour l'éditeur de console et la page
+     * publique. Seuls les formats RÉELLEMENT tarifés sont retournés.
+     *
+     * @return array<string, string>
+     */
+    public function getFormatsDocuments(?string $locale = null): array
+    {
+        $langue = str_starts_with((string) $locale, 'en') ? 'en' : 'fr';
+
+        $formats = [];
+        foreach (array_keys($this->parametres->documentFormats()) as $format) {
+            $formats[$format] = self::FORMATS_DOCUMENTS[$format][$langue] ?? mb_strtoupper($format);
+        }
+
+        return $formats;
+    }
+
+    public function getFormatDocumentLabel(string $format, ?string $locale = null): string
+    {
+        $langue = str_starts_with((string) $locale, 'en') ? 'en' : 'fr';
+
+        return self::FORMATS_DOCUMENTS[$format][$langue] ?? mb_strtoupper($format);
+    }
+
+    /**
+     * Coût d'un document de N pages dans un format donné.
+     *
+     * DÉLÈGUE au tarificateur, et c'est tout l'intérêt : le prix AFFICHÉ au visiteur
+     * est littéralement produit par le code qui FACTURE. Un `|round` posé dans un
+     * template serait une seconde implémentation du barème, qui dériverait au premier
+     * changement de formule.
+     */
+    public function getCoutDocument(int $pages, string $format): int
+    {
+        return $this->documentTarificateur->chiffrerPages($pages, $format)->cout;
     }
 
     /**

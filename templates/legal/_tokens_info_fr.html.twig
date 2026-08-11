@@ -3,6 +3,9 @@
 {% set readWeight = plan.readWeight %}
 {% set freeAllowance = plan.freeAllowance|format_nombre(0, 'fr') %}
 {% set freeWindowHours = plan.freeWindowHours %}
+{% set docBase = plan.documentBase %}
+{% set docParPage = plan.documentParPage %}
+{% set docCarPage = plan.documentCaracteresParPage %}
 
 <p class="cgu-intro">
     Sur JS Brokers, le <strong>token</strong> est l'unité de mesure de votre usage de la plateforme.
@@ -24,7 +27,8 @@
         <li><strong>En sortie (lecture)</strong> : chaque entité affichée/téléchargée vers votre écran coûte <strong>{{ readWeight }} tokens</strong>. Charger une liste de 20 éléments coûte donc 20 × {{ readWeight }} = {{ 20 * readWeight }} tokens.</li>
         <li><strong>En entrée (écriture)</strong> : chaque enregistrement (création ou modification) coûte un poids variable selon le type d'entité.</li>
         <li><strong>Assistant IA (premium)</strong> : chaque message envoyé à l'assistant est métré comme une écriture (poids « Message à l'assistant IA » du tableau ci-dessous). L'assistant est <strong>réservé aux comptes disposant d'un solde de tokens payant</strong> — l'allocation gratuite ne suffit pas.</li>
-    </ul>
+            <li><strong>Documents produits par l'assistant (premium)</strong> : lorsque l'assistant rédige un document téléchargeable (Word, Excel, PDF…), sa production est facturée selon sa longueur et son format — voir le §4. Le coût exact vous est toujours annoncé <strong>avant</strong> que vous ne validiez la production.</li>
+</ul>
 </section>
 
 <section class="cgu-section">
@@ -66,7 +70,43 @@
 </section>
 
 <section class="cgu-section">
-    <h2>4. Le mode gratuit (Basic)</h2>
+    <h2>4. Documents produits par l'assistant</h2>
+    <p>
+        L'assistant peut <strong>fabriquer un document téléchargeable</strong> (Word, Excel, PDF,
+        Markdown, texte, page web) à partir d'une analyse : un rapport structuré, destiné à un
+        usage hors de la plateforme. Le coût suit la formule&nbsp;:
+    </p>
+    <p class="cgu-formule">
+        <strong>({{ docBase }} + nombre de pages × {{ docParPage }}) × coefficient du format</strong>,
+        une page valant {{ docCarPage|format_nombre(0, 'fr') }} caractères (arrondi au supérieur, minimum une page).
+    </p>
+    <table class="cgu-table">
+        <thead>
+            <tr><th>Format</th><th>Coefficient</th><th>Exemple : 3 pages</th></tr>
+        </thead>
+        <tbody>
+        {% for format, coefficient in plan.documentFormats %}
+            <tr class="cgu-format-row">
+                <td>
+                    <span class="cgu-entity">
+                        <span class="cgu-entity-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('document'), {height:'18px', width:'18px'}) }}</span>
+                        <span>{{ token_format_document_label(format, 'fr') }}</span>
+                    </span>
+                </td>
+                <td>×{{ coefficient|format_nombre(2, 'fr')|replace({',00': ''}) }}</td>
+                <td><strong>{{ token_cout_document(3, format)|format_nombre(0, 'fr') }}</strong> tokens</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <p class="cgu-note">
+        Le coût exact vous est <strong>toujours annoncé avant</strong> que vous ne validiez la
+        production, et <strong>rien n'est débité si vous annulez</strong>.
+    </p>
+</section>
+
+<section class="cgu-section">
+    <h2>5. Le mode gratuit (Basic)</h2>
     <p>
         Chaque compte reçoit <strong>{{ freeAllowance }} tokens offerts</strong>, automatiquement
         <strong>renouvelés toutes les {{ freeWindowHours }} heures</strong>. Le compteur démarre à votre première
@@ -81,7 +121,7 @@
 </section>
 
 <section class="cgu-section">
-    <h2>5. Les paquets prépayés</h2>
+    <h2>6. Les paquets prépayés</h2>
     <p>Besoin de plus ? Vous pouvez acheter des paquets <strong>cumulables</strong> :</p>
     <table class="cgu-table">
         <thead><tr><th>Paquet</th><th>Prix</th></tr></thead>
@@ -98,7 +138,7 @@
 </section>
 
 <section class="cgu-section">
-    <h2>6. Que se passe-t-il en cas d'épuisement ?</h2>
+    <h2>7. Que se passe-t-il en cas d'épuisement ?</h2>
     <p>
         Lorsque votre solde (gratuit + prépayé) ne suffit plus, la <strong>lecture et l'écriture
         sont temporairement bloquées</strong>. Vous pouvez alors soit <strong>recharger</strong>
@@ -108,7 +148,7 @@
 </section>
 
 <section class="cgu-section">
-    <h2>7. Qui paie et qui consomme ?</h2>
+    <h2>8. Qui paie et qui consomme ?</h2>
     <p>
         C'est le <strong>propriétaire de l'entreprise</strong> qui paie. Toute activité réalisée
         dans une entreprise — par son propriétaire <em>ou</em> par ses collaborateurs invités —

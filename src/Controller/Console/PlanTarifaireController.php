@@ -38,21 +38,32 @@ class PlanTarifaireController extends AbstractConsoleController
         $params->setReadWeight($params->getReadWeight() ?? $this->parametres->readWeight());
         $params->setDefaultWriteWeight($params->getDefaultWriteWeight() ?? $this->parametres->defaultWriteWeight());
         $params->setUsdPerToken($params->getUsdPerToken() ?? $this->parametres->usdPerToken());
+        $params->setDocumentBase($params->getDocumentBase() ?? $this->parametres->documentBase());
+        $params->setDocumentParPage($params->getDocumentParPage() ?? $this->parametres->documentParPage());
+        $params->setDocumentCaracteresParPage($params->getDocumentCaracteresParPage() ?? $this->parametres->documentCaracteresParPage());
 
         $jsonOpts = JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
         $form = $this->createForm(PlanTarifaireType::class, $params, [
             'packs_json'         => json_encode($this->parametres->packs(), $jsonOpts),
             'write_weights_json' => json_encode($this->parametres->writeWeights(), $jsonOpts),
+            // La carte FUSIONNÉE, jamais la seule personnalisation : sans quoi le
+            // premier enregistrement figerait une carte partielle et les formats
+            // non repris retomberaient au multiplicateur neutre.
+            'document_formats_json' => json_encode($this->parametres->documentFormats(), $jsonOpts),
         ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $packs = $this->decodeJsonMap($form, 'packsJson');
             $weights = $this->decodeJsonMap($form, 'writeWeightsJson');
+            $formats = $this->decodeJsonMap($form, 'documentFormatsJson');
 
-            if ($packs !== false && $weights !== false) {
+            // Garde ÉLARGIE, et c'est ce qui préserve l'atomicité : un seul JSON
+            // invalide n'enregistre rien du tout, pas même les scalaires valides.
+            if ($packs !== false && $weights !== false && $formats !== false) {
                 $params->setPacks($packs);
                 $params->setWriteWeights($weights);
+                $params->setDocumentFormats($formats);
                 $this->em->flush();
                 $this->parametres->refresh();
 

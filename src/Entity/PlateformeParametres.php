@@ -56,6 +56,33 @@ class PlateformeParametres
     private ?float $usdPerToken = null;
 
     /**
+     * Documents produits par l'assistant IA : coût FIXE d'une production, en tokens.
+     * NULL → TokenPricing::DOCUMENT_BASE.
+     *
+     * Trois scalaires SÉPARÉS plutôt qu'un JSON unique : chacun porte alors son
+     * propre repli, et personnaliser l'un ne masque jamais les deux autres.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?int $documentBase = null;
+
+    /** Coût d'une page facturée, en tokens. NULL → TokenPricing::DOCUMENT_PAR_PAGE. */
+    #[ORM\Column(nullable: true)]
+    private ?int $documentParPage = null;
+
+    /** Taille d'une page facturée, en caractères. NULL → TokenPricing::DOCUMENT_CARACTERES_PAR_PAGE. */
+    #[ORM\Column(nullable: true)]
+    private ?int $documentCaracteresParPage = null;
+
+    /**
+     * Multiplicateurs par format : { "pdf": 1.8, ... }. FUSIONNÉ clé par clé avec
+     * TokenPricing::DOCUMENT_FORMATS, jamais substitué en bloc : un format ajouté
+     * au CODE doit apparaître même sur une plateforme dont la carte est déjà
+     * personnalisée.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?array $documentFormats = null;
+
+    /**
      * Capital social de JS Brokers (USD). Apport d'ouverture des actionnaires :
      * génère l'écriture fondatrice (D 521 Banques / C 101 Capital social) qui
      * alimente la trésorerie et les capitaux propres dans les documents comptables.
@@ -231,6 +258,74 @@ class PlateformeParametres
     public function setUsdPerToken(?float $usdPerToken): static
     {
         $this->usdPerToken = $usdPerToken;
+
+        return $this;
+    }
+
+    public function getDocumentBase(): ?int
+    {
+        return $this->documentBase;
+    }
+
+    public function setDocumentBase(?int $documentBase): static
+    {
+        $this->documentBase = $documentBase;
+
+        return $this;
+    }
+
+    public function getDocumentParPage(): ?int
+    {
+        return $this->documentParPage;
+    }
+
+    public function setDocumentParPage(?int $documentParPage): static
+    {
+        $this->documentParPage = $documentParPage;
+
+        return $this;
+    }
+
+    public function getDocumentCaracteresParPage(): ?int
+    {
+        return $this->documentCaracteresParPage;
+    }
+
+    public function setDocumentCaracteresParPage(?int $documentCaracteresParPage): static
+    {
+        $this->documentCaracteresParPage = $documentCaracteresParPage;
+
+        return $this;
+    }
+
+    public function getDocumentFormats(): ?array
+    {
+        return $this->documentFormats;
+    }
+
+    /**
+     * Normalise la carte saisie en console (même esprit que setCapitalSocial) :
+     * clés en minuscules sans espaces, valeurs numériques uniquement, jamais
+     * négatives. Une carte vide vaut NULL — « rien de personnalisé ».
+     */
+    public function setDocumentFormats(?array $documentFormats): static
+    {
+        if ($documentFormats === null) {
+            $this->documentFormats = null;
+
+            return $this;
+        }
+
+        $propres = [];
+        foreach ($documentFormats as $format => $multiplicateur) {
+            $cle = mb_strtolower(trim((string) $format));
+            if ($cle === '' || !is_numeric($multiplicateur)) {
+                continue;
+            }
+            $propres[$cle] = max(0.0, (float) $multiplicateur);
+        }
+
+        $this->documentFormats = $propres === [] ? null : $propres;
 
         return $this;
     }

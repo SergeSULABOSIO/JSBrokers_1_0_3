@@ -36,6 +36,17 @@ enum TypeAction: string
     /** Avertissement autoritaire : la prose annonce un plan qu'aucun outil n'a préparé. */
     case PLAN_ABSENT = 'ket-mutation.absent';
 
+    /**
+     * Barre de décision d'un DOCUMENT à produire (« Valider et produire » / « Annuler »).
+     *
+     * Voisine du plan d'écriture, et volontairement distincte : ce qu'on valide ici
+     * n'est pas une écriture en base mais la FABRICATION d'un livrable qui sortira du
+     * logiciel — d'où un budget, mais ni étendue décochable, ni impact de cascade, ni
+     * mot de passe. Le verrou « une seule décision en attente », lui, est commun aux
+     * deux (cf. DocumentEnAttente::aUneDecisionEnAttente).
+     */
+    case DOCUMENT_A_VALIDER = 'ket-document.review';
+
     /** Ouvre un formulaire de saisie, éventuellement pré-rempli. */
     case OUVRIR_DIALOGUE = 'open-dialog';
 
@@ -94,7 +105,10 @@ enum TypeAction: string
             self::OUVRIR_ENVOI_SOA                       => ['clientId'],
             self::TELECHARGER_FICHIERS                   => ['fichiers'],
             self::ENVOYER_MESSAGE_DIRECT                 => ['idMessage', 'destinataires'],
-            self::PLAN_A_VALIDER, self::PLAN_ABSENT, self::QUITTER_WORKSPACE => [],
+            // Comme PLAN_A_VALIDER : la structure d'un plan de document est vérifiée
+            // bien plus finement par DocumentEnAttente::planStockable(), qui exige la
+            // spec elle-même. La dupliquer ici créerait deux vérités.
+            self::PLAN_A_VALIDER, self::PLAN_ABSENT, self::QUITTER_WORKSPACE, self::DOCUMENT_A_VALIDER => [],
         };
     }
 

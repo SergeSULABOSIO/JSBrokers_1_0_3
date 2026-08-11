@@ -42,6 +42,21 @@ class PlanTarifaireType extends AbstractType
                 'scale' => 5,
                 'attr'  => ['placeholder' => 'Ex. 0.001', 'data-icon' => 'monnaie'],
             ])
+            // Documents produits par l'assistant. Trois scalaires SÉPARÉS (et non un
+            // JSON unique) : chacun porte ainsi son propre repli sur la constante,
+            // si bien que régler le coût de base n'emporte pas le prix de la page.
+            ->add('documentBase', IntegerType::class, [
+                'label' => 'Documents IA — coût de base (tokens)',
+                'attr'  => ['placeholder' => 'Ex. 60', 'data-icon' => 'action:count'],
+            ])
+            ->add('documentParPage', IntegerType::class, [
+                'label' => 'Documents IA — coût par page (tokens)',
+                'attr'  => ['placeholder' => 'Ex. 30', 'data-icon' => 'action:count'],
+            ])
+            ->add('documentCaracteresParPage', IntegerType::class, [
+                'label' => 'Documents IA — taille d\'une page (caractères)',
+                'attr'  => ['placeholder' => 'Ex. 2500', 'data-icon' => 'action:description'],
+            ])
             // Paquets prépayés : édités via une collection + boîte de dialogue (contrôleur
             // Stimulus `packs-editor`) qui tient ce champ caché synchronisé en JSON. Le
             // contrôleur PHP décode ce JSON de façon générique (cf. decodeJsonMap).
@@ -56,15 +71,23 @@ class PlanTarifaireType extends AbstractType
                 'mapped'   => false,
                 'required' => false,
                 'data'     => $options['write_weights_json'],
+            ])
+            // Multiplicateurs par format : même mécanique JSON cachée, tenue à jour
+            // par le contrôleur Stimulus `formats-editor`.
+            ->add('documentFormatsJson', HiddenType::class, [
+                'mapped'   => false,
+                'required' => false,
+                'data'     => $options['document_formats_json'],
             ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            'data_class'         => PlateformeParametres::class,
-            'packs_json'         => '',
-            'write_weights_json' => '',
+            'data_class'            => PlateformeParametres::class,
+            'packs_json'            => '',
+            'write_weights_json'    => '',
+            'document_formats_json' => '',
         ]);
     }
 }
