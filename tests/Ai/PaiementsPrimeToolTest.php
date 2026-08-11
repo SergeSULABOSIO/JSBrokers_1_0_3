@@ -3,6 +3,7 @@
 namespace App\Tests\Ai;
 
 use App\Ai\FicheNormaliseur;
+use App\Ai\Finance\EconomieTranche;
 use App\Ai\Presentation\Colonnes;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
@@ -23,12 +24,14 @@ use App\Entity\PaiementPrime;
 use App\Entity\Piste;
 use App\Entity\Tranche;
 use App\Service\Workspace\WorkspaceAccessResolver;
+use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use App\Services\JSBDynamicSearchService;
 use App\Services\Search\PortefeuilleCritereFactory;
 use App\Services\Search\PortefeuilleScope;
 use App\Services\Tranche\TranchePaiementService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\Query;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 
@@ -78,11 +81,28 @@ class PaiementsPrimeToolTest extends TestCase
             $search ?? $this->createMock(JSBDynamicSearchService::class),
             $tranchePaiement ?? $this->createMock(TranchePaiementService::class),
             $this->fabriquePortefeuille(),
-            // Le préchargement du contexte n'est sollicité qu'avec des tranches
-            // PERSISTÉES (il travaille par identifiants) : sur ces entités en mémoire,
-            // il rend la main sans émettre une requête. Le test reste pur.
-            $this->createMock(EntityManagerInterface::class),
+            $this->entityManagerMuet(),
+            $this->createMock(IndicatorCalculationHelper::class),
         );
+    }
+
+    /**
+     * EntityManager MUET mais correctement typé : ses requêtes de préchargement rendent
+     * un résultat VIDE au lieu de null. Le préchargement travaille par identifiants — dès
+     * qu'une tranche du test en porte un (ce qu'exige la dédoublonnage des cumuls), il
+     * s'exécute réellement, et un doublon nu lui ferait rendre null là où Doctrine rend
+     * toujours un tableau. Le test reste pur : aucune requête n'atteint de base.
+     */
+    private function entityManagerMuet(): EntityManagerInterface
+    {
+        $query = $this->createMock(Query::class);
+        $query->method('setParameter')->willReturnSelf();
+        $query->method('getResult')->willReturn([]);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->method('createQuery')->willReturn($query);
+
+        return $em;
     }
 
     /**
@@ -103,6 +123,42 @@ class PaiementsPrimeToolTest extends TestCase
         $tranche->setCotation($cotation);
 
         return $this->signalement('PRIME-05082026-160239', 3195.16, '2026-08-05')->setTranche($tranche);
+    }
+
+    /**
+     * Une tranche PERSISTÉE et déjà HYDRATÉE : les indicateurs y sont posés tels que
+     * TrancheIndicatorStrategy les écrit (le service qui les calcule est doublé ici, on
+     * simule donc son effet). Chiffres cohérents avec le glossaire : commission HT 100,
+     * TVA assureur 16 % = 16, donc TTC 116 ; taxe courtier ARCA 2 % = 2, HORS TTC.
+     */
+    private function trancheHydratee(int $id, string $nom = 'Tranche unique - import bordereau'): Tranche
+    {
+        $tranche = (new Tranche())->setNom($nom);
+        (new \ReflectionProperty(Tranche::class, 'id'))->setValue($tranche, $id);
+
+        $tranche->statutPaiement = 'Prime payée, commission due';
+        $tranche->clientNom = 'Fracht Trading Mauritius';
+        $tranche->assureurNom = 'SFA Assurances';
+        $tranche->referencePolice = 'POL-2026-0042';
+        $tranche->primeTranche = 1000.0;
+        $tranche->primePayee = 1000.0;
+        $tranche->primeDeclareePayee = 1000.0;
+        $tranche->primeSoldeDue = 0.0;
+        $tranche->montantCalculeHT = 100.0;
+        $tranche->taxeAssureurMontant = 16.0;
+        $tranche->taxeAssureurTaux = 16.0;
+        $tranche->montantCalculeTTC = 116.0;
+        $tranche->taxeCourtierMontant = 2.0;
+        $tranche->taxeCourtierTaux = 2.0;
+        $tranche->montant_paye = 0.0;
+        $tranche->solde_restant_du = 116.0;
+        $tranche->commissionExigible = 116.0;
+        $tranche->retroCommission = 0.0;
+        $tranche->retroCommissionReversee = 0.0;
+        $tranche->retroCommissionSolde = 0.0;
+        $tranche->retroCommissionExigible = 0.0;
+
+        return $tranche;
     }
 
     private function makeScope(?Invite $invite = null): AiScope
@@ -327,6 +383,166 @@ class PaiementsPrimeToolTest extends TestCase
         $this->assertArrayNotHasKey('police', $ligne);
         $this->assertArrayNotHasKey('client', $ligne);
         $this->assertSame('SFA Assurances', $ligne['assureur']);
+    }
+
+    /**
+     * L'INCIDENT DU 2026-08-11, verrouillé.
+     *
+     * Ket liste les paiements de prime signalés ; le courtier enchaîne « ajoute une
+     * colonne pour afficher les commissions exigibles relatives à toutes ces tranches ».
+     * Ket répond que ces commissions « ne figurent pas directement dans les résultats des
+     * paiements de prime déclaratifs » — exact, et parfaitement évitable : chaque ligne
+     * portait déjà son trancheId, et la tranche sait tout le reste.
+     *
+     * LA RÈGLE : quand un outil DÉTIENT la clé d'une information, la taire revient au même
+     * que ne pas l'avoir. Chaque ligne rend donc l'économie complète de sa tranche.
+     */
+    public function testChaqueLigneTransversalePorteLEconomieDeSaTranche(): void
+    {
+        $signalement = $this->signalement('PRIME-05082026-160239', 3195.16, '2026-08-05')
+            ->setTranche($this->trancheHydratee(71));
+
+        $search = $this->createMock(JSBDynamicSearchService::class);
+        $search->method('search')->willReturn($this->reponse([$signalement]));
+
+        $tranchePaiement = $this->createMock(TranchePaiementService::class);
+        // Les indicateurs sont hydratés UNE fois pour les tranches de la page, par la
+        // source unique du projet — jamais recalculés dans l'outil.
+        $tranchePaiement->expects($this->once())->method('chargerIndicateurs');
+
+        $result = $this->makeTool(true, $search, $tranchePaiement)
+            ->execute([], $this->makeScope($this->inviteAvecId(9)));
+        $ligne = $result->data['items'][0];
+
+        $this->assertSame(71, $ligne['trancheId']);
+        $this->assertSame('Prime payée, commission due', $ligne['statutTranche']);
+        $this->assertSame(1000.0, $ligne['primeTranche']);
+        $this->assertSame(0.0, $ligne['primeSolde']);
+        // Les deux mondes de taxes ne se confondent pas : celles-ci portent sur la
+        // COMMISSION, et le TTC n'inclut que la taxe assureur.
+        $this->assertSame(100.0, $ligne['commissionHt']);
+        $this->assertSame(16.0, $ligne['taxeAssureur']);
+        $this->assertSame(16.0, $ligne['tauxTaxeAssureur']);
+        $this->assertSame(116.0, $ligne['commissionTtc']);
+        $this->assertSame(2.0, $ligne['taxeCourtier']);
+        $this->assertSame(2.0, $ligne['tauxTaxeCourtier']);
+        $this->assertSame(116.0, $ligne['commissionSolde']);
+        $this->assertSame(116.0, $ligne['commissionExigible']);
+
+        // Aucune rétrocommission : la clé est ABSENTE, jamais posée à 0 — une dette
+        // inexistante ne s'affiche pas.
+        $this->assertArrayNotHasKey('retroCommission', $ligne);
+        $this->assertArrayNotHasKey('retroAPayer', $ligne);
+
+        // Le montant du RÈGLEMENT reste distinct de l'économie de la tranche.
+        $this->assertSame(3195.16, $ligne['montant']);
+        $this->assertStringContainsString('ÉCONOMIE DE LA TRANCHE', $result->data['note']);
+    }
+
+    /**
+     * LE PIÈGE DE LA COLONNE RÉPÉTÉE. Deux règlements partiels de la même prime portent
+     * la MÊME commission : sommer la colonne la compterait deux fois. Les cumuls se font
+     * donc sur les tranches DISTINCTES, et la ligne de totaux du tableau ne concerne que
+     * le montant des règlements.
+     */
+    public function testLesCumulsPortentSurLesTranchesDistinctesEtNonSurLesLignes(): void
+    {
+        $tranche = $this->trancheHydratee(71);
+        $search = $this->createMock(JSBDynamicSearchService::class);
+        $search->method('search')->willReturn($this->reponse([
+            $this->signalement('PP-001', 600.0, '2026-08-05')->setTranche($tranche),
+            $this->signalement('PP-002', 400.0, '2026-07-05')->setTranche($tranche),
+        ]));
+
+        $result = $this->makeTool(true, $search)->execute([], $this->makeScope($this->inviteAvecId(9)));
+
+        $this->assertSame(1, $result->data['economiePage']['nbTranches']);
+        $this->assertSame(116.0, $result->data['economiePage']['commissionTtc'], 'La commission ne double pas.');
+        $this->assertSame(116.0, $result->data['economiePage']['commissionExigible']);
+        $this->assertSame(1000.0, $result->data['economiePage']['primeTranche']);
+        $this->assertStringContainsString('TRANCHES DISTINCTES', $result->data['economiePageNote']);
+
+        // Le montant des règlements, lui, s'additionne bien ligne à ligne.
+        $this->assertSame(1000.0, $result->data['montantPage']);
+        $this->assertStringContainsString('n\'additionne JAMAIS', $result->data['note']);
+    }
+
+    /**
+     * Les colonnes que le modèle peut PROMOUVOIR à la demande arrivent avec leur rôle :
+     * un montant s'aligne à droite et porte sa monnaie, un taux s'écrit en points et ne
+     * s'additionne jamais. La ligne de totaux, elle, reste sur le seul montant réglé.
+     */
+    public function testLesColonnesPromouvablesDeclarentLeurRoleSansEtreTotalisees(): void
+    {
+        $search = $this->createMock(JSBDynamicSearchService::class);
+        $search->method('search')->willReturn($this->reponse([
+            $this->signalement('PP-001', 600.0, '2026-08-05')->setTranche($this->trancheHydratee(71)),
+        ]));
+
+        $data = $this->makeTool(true, $search)->execute([], $this->makeScope($this->inviteAvecId(9)))->data;
+
+        $this->assertSame(Colonnes::MONTANT, $data['colonnesDisponibles']['commissionExigible']);
+        $this->assertSame(Colonnes::POURCENTAGE, $data['colonnesDisponibles']['tauxTaxeAssureur']);
+        $this->assertSame(EconomieTranche::ROLES, $data['colonnesDisponibles']);
+        $this->assertSame(['montant'], $data['presentation']['totaliser']);
+    }
+
+    /**
+     * Une tranche dont les indicateurs n'ont pas été calculés ne produit AUCUNE clé
+     * financière — pas une seule à 0. « Commission : 0 » sur une affaire qui en porte une
+     * est un mensonge ; l'absence, elle, se dit.
+     */
+    public function testUneTrancheNonHydrateeNeFabriquePasDeZeros(): void
+    {
+        $search = $this->createMock(JSBDynamicSearchService::class);
+        $search->method('search')->willReturn($this->reponse([$this->signalementContextualise()]));
+
+        $data = $this->makeTool(true, $search)->execute([], $this->makeScope($this->inviteAvecId(9)))->data;
+        $ligne = $data['items'][0];
+
+        foreach (array_keys(EconomieTranche::ROLES) as $cle) {
+            $this->assertArrayNotHasKey($cle, $ligne);
+        }
+        $this->assertArrayNotHasKey('economiePage', $data);
+        // Le contexte, lui, reste rendu : il ne dépend pas des indicateurs calculés.
+        $this->assertSame('SFA Assurances', $ligne['assureur']);
+    }
+
+    /**
+     * Mode ciblé : une seule tranche décrite, donc une restitution STRUCTURÉE par notion
+     * — le taux et le montant d'une taxe vont ensemble, la rétrocommission est un autre
+     * flux. Rien n'est répété sur les signalements, l'entête le donne déjà.
+     */
+    public function testModeCibleRestitueLaCommissionEtSesTaxes(): void
+    {
+        $tranche = $this->trancheHydratee(71);
+        $tranche->retroCommission = 30.0;
+        $tranche->retroCommissionReversee = 10.0;
+        $tranche->retroCommissionSolde = 20.0;
+        $tranche->retroCommissionExigible = 0.0; // commission pas encore encaissée
+
+        $search = $this->createMock(JSBDynamicSearchService::class);
+        $search->method('search')->willReturnCallback(
+            fn (string $class) => $class === Tranche::class
+                ? $this->reponse([$tranche])
+                : $this->reponse([$this->signalement('PP-001', 1000.0, '2026-08-05')]),
+        );
+
+        $data = $this->makeTool(true, $search)->execute(['trancheId' => 71], $this->makeScope())->data;
+
+        $this->assertSame('Fracht Trading Mauritius', $data['tranche']['client']);
+        $this->assertSame('POL-2026-0042', $data['tranche']['police']);
+        $this->assertSame(
+            ['ht' => 100.0, 'taxeAssureur' => 16.0, 'tauxTaxeAssureur' => 16.0, 'ttc' => 116.0,
+             'taxeCourtier' => 2.0, 'tauxTaxeCourtier' => 2.0, 'encaissee' => 0.0,
+             'solde' => 116.0, 'exigible' => 116.0],
+            $data['commission'],
+        );
+        // Rétro DUE et non encore exigible : « aPayer » est absent, pas posé à 0.
+        $this->assertSame(['due' => 30.0, 'reversee' => 10.0, 'solde' => 20.0], $data['retrocommission']);
+
+        // Les signalements ne répètent pas l'économie : l'entête la porte une fois.
+        $this->assertArrayNotHasKey('commissionTtc', $data['signalements'][0]);
     }
 
     public function testModeTransversalElargiALEntreprise(): void

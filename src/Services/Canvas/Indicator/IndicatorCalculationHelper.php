@@ -1860,9 +1860,34 @@ class IndicatorCalculationHelper implements ResetInterface
      */
     public function preloadAvenantRelations(array $avenants): void
     {
-        $cotationIds = array_values(array_unique(array_filter(
-            array_map(fn($a) => $a->getCotation()?->getId(), $avenants)
-        )));
+        $this->preloadDepuisCotationIds(array_map(fn($a) => $a->getCotation()?->getId(), $avenants));
+    }
+
+    /**
+     * Même préchargement, mais amorcé depuis des TRANCHES au lieu d'avenants : les
+     * indicateurs d'une tranche (prime, commission HT/TTC, taxes sur la commission,
+     * rétrocommission) parcourent exactement le même graphe, puisqu'ils se lisent tous
+     * sur la cotation portante. Sert aux outils de l'assistant qui hydratent un LOT de
+     * tranches désignées par autre chose qu'elles-mêmes — un signalement de paiement de
+     * prime, par exemple.
+     *
+     * @param Tranche[] $tranches
+     */
+    public function preloadTrancheRelations(array $tranches): void
+    {
+        $this->preloadDepuisCotationIds(array_map(fn($t) => $t->getCotation()?->getId(), $tranches));
+    }
+
+    /**
+     * Le préchargement lui-même, partagé par les deux entrées ci-dessus : la COTATION est
+     * la racine réelle du graphe des indicateurs, l'entité par laquelle on y arrive n'est
+     * qu'un chemin d'accès.
+     *
+     * @param array<int, int|null> $cotationIds identifiants bruts, doublons et nuls admis
+     */
+    private function preloadDepuisCotationIds(array $cotationIds): void
+    {
+        $cotationIds = array_values(array_unique(array_filter($cotationIds)));
         if (empty($cotationIds)) return;
 
         // 1. Graphe to-one + partenaires (une seule collection : partenaires).
