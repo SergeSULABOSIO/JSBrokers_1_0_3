@@ -17,7 +17,10 @@ use App\Entity\Invite;
 use App\Entity\PaiementPrime;
 use App\Entity\Piste;
 use App\Entity\Portefeuille;
+use App\Entity\RevenuPourCourtier;
+use App\Entity\Taxe;
 use App\Entity\Tranche;
+use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
 use App\Services\Search\PortefeuilleScope;
 use Doctrine\ORM\EntityManagerInterface;
@@ -35,6 +38,13 @@ class PaiementsPrimeToolIntegrationTest extends KernelTestCase
     private const OWNER_EMAIL = 'phpunit-paiementsprime-owner@test.local';
     private const ENTREPRISE_NOM = 'PHPUnit PaiementsPrime SARL';
     private const ENTREPRISE_B_NOM = 'PHPUnit PaiementsPrime Autre SARL';
+
+    /** Commission de courtage due par l'ASSUREUR, en montant fixe (assiette des taxes). */
+    private const COMMISSION = 100.0;
+
+    /** Taxes SUR LA COMMISSION : TVA due par l'assureur, ARCA due par le courtier. */
+    private const TAUX_TVA = 16.0;
+    private const TAUX_ARCA = 2.0;
 
     protected function setUp(): void
     {
@@ -65,7 +75,12 @@ class PaiementsPrimeToolIntegrationTest extends KernelTestCase
 
         // Enfants avant parents. `avenant` précède `cotation` (FK cotation_id) et
         // `assureur` la suit (FK assureur_id portée par la cotation).
-        foreach (['paiement_prime', 'tranche', 'chargement_pour_prime', 'avenant', 'cotation', 'assureur', 'piste', 'client', 'portefeuille', 'invite'] as $table) {
+        $tables = [
+            'paiement_prime', 'tranche', 'chargement_pour_prime', 'revenu_pour_courtier',
+            'avenant', 'cotation', 'type_revenu', 'assureur', 'piste', 'client',
+            'portefeuille', 'invite', 'taxe',
+        ];
+        foreach ($tables as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom IN (:noms)",
                 ['noms' => $noms],
@@ -131,6 +146,11 @@ class PaiementsPrimeToolIntegrationTest extends KernelTestCase
         $sansPortefeuille = (new Invite())->setNom('Collaborateur sans portefeuille');
         $sansPortefeuille->setEntreprise($entreprise)->setProprietaire(true);
         $em->persist($sansPortefeuille);
+
+        // Les deux taxes SUR LA COMMISSION du cabinet (paramétrage d'entreprise) : sans
+        // elles, la commission TTC vaudrait le HT et les taux resteraient à zéro.
+        $this->makeTaxe($entreprise, 'TVA-PP', Taxe::REDEVABLE_ASSUREUR, self::TAUX_TVA);
+        $this->makeTaxe($entreprise, 'ARCA-PP', Taxe::REDEVABLE_COURTIER, self::TAUX_ARCA);
 
         $tranche = $this->makeChaine($entreprise, $gestionnaire, 'A', 1000.0, true);
         $this->makeSignalement($entreprise, $tranche, 'PP-A-001', 400.0, '-40 days');
@@ -212,6 +232,24 @@ class PaiementsPrimeToolIntegrationTest extends KernelTestCase
         $chargement->setEntreprise($entreprise);
         $em->persist($chargement);
 
+        // COMMISSION due par l'ASSUREUR : la seconde dette, celle dont le débiteur n'est
+        // pas l'assuré, et l'assiette des deux taxes sur la commission.
+        $typeRevenu = (new TypeRevenu())
+            ->setNom('Commission PP ' . $suffixe)
+            ->setMontantflat(self::COMMISSION)
+            ->setShared(false)
+            ->setMultipayments(true)
+            ->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR);
+        $typeRevenu->setEntreprise($entreprise);
+        $em->persist($typeRevenu);
+
+        $revenu = (new RevenuPourCourtier())
+            ->setNom('Revenu PP ' . $suffixe)
+            ->setTypeRevenu($typeRevenu)
+            ->setCotation($cotation);
+        $revenu->setEntreprise($entreprise);
+        $em->persist($revenu);
+
         $tranche = (new Tranche())
             ->setNom('Tranche PP ' . $suffixe)
             ->setPourcentage(100.0) // 100 % en POINTS (convention pourcentage, pas fraction)
@@ -222,6 +260,38 @@ class PaiementsPrimeToolIntegrationTest extends KernelTestCase
         $em->persist($tranche);
 
         return $tranche;
+    }
+
+    /**
+     * Une taxe SUR LA COMMISSION. Le même taux est posé en IARD et en VIE : la piste de
+     * ce fixture n'a pas de risque, la branche retombe donc sur VIE (cf. isIARD) — un
+     * détail de fixture qui n'a rien à dire sur le comportement testé ici.
+     */
+    private function makeTaxe(Entreprise $entreprise, string $code, int $redevable, float $taux): Taxe
+    {
+        $taxe = (new Taxe())
+            ->setCode($code)
+            ->setDescription('Taxe de test ' . $code)
+            ->setRedevable($redevable)
+            ->setTauxIARD((string) $taux)
+            ->setTauxVIE((string) $taux);
+        $taxe->setEntreprise($entreprise);
+        $this->em()->persist($taxe);
+
+        return $taxe;
+    }
+
+    /**
+     * Le calcul des MONTANTS de taxe passe par ServiceTaxes, qui — hors contexte
+     * explicite — lit le paramétrage de l'entreprise ACTIVE de l'utilisateur connecté.
+     * Le chat, lui, est toujours authentifié : on pose donc le jeton comme il le fait.
+     */
+    private function connecter(): void
+    {
+        $ownerUser = $this->em()->getRepository(Utilisateur::class)->findOneBy(['email' => self::OWNER_EMAIL]);
+        static::getContainer()->get('security.token_storage')->setToken(
+            new UsernamePasswordToken($ownerUser, 'main', $ownerUser->getRoles()),
+        );
     }
 
     private function makeSignalement(Entreprise $entreprise, Tranche $tranche, string $reference, float $montant, string $quand): PaiementPrime
@@ -356,6 +426,13 @@ class PaiementsPrimeToolIntegrationTest extends KernelTestCase
         // fraîches, à chaque passage — d'où le travail par identifiants.
         $compter = function () use ($entrepriseId, $gestionnaireId, $em): int {
             $em->clear();
+            // Les services du moteur d'indicateurs mémorisent leurs agrégats coûteux
+            // (commissions, couverture des bordereaux, paramétrage fiscal) le temps d'une
+            // requête HTTP, et le noyau de test en partage UNE seule instance entre les
+            // deux mesures. Sans ce reset — que le conteneur fait lui-même à chaque
+            // requête réelle — la seconde mesure repartirait d'un cache chaud et
+            // coûterait, artificiellement, MOINS : on comparerait le froid au chaud.
+            static::getContainer()->get('services_resetter')->reset();
             $entreprise = $em->getRepository(Entreprise::class)->find($entrepriseId);
             $gestionnaire = $em->getRepository(Invite::class)->find($gestionnaireId);
 
@@ -400,6 +477,172 @@ class PaiementsPrimeToolIntegrationTest extends KernelTestCase
             $avecQuatreLignes,
             'Doubler les lignes ne doit coûter aucune requête de plus : le contexte est préchargé.',
         );
+    }
+
+    /**
+     * LE COÛT DE L'ÉCONOMIE, mesuré par TRANCHE et non par ligne.
+     *
+     * Hydrater les indicateurs d'une tranche fait parcourir tout le graphe de sa cotation
+     * (revenus, chargements, articles, avenants) : sans préchargement, chaque tranche de
+     * la page paierait sa propre rafale. preloadTrancheRelations la groupe pour TOUTES les
+     * tranches en un nombre fixe de requêtes ; ne reste, par tranche, que ce que la
+     * stratégie de calcul va chercher hors du graphe (le paramétrage des taxes).
+     *
+     * On mesure donc le coût MARGINAL d'une tranche supplémentaire et on le plafonne. Un
+     * plafond, pas une égalité : le contraire de la mesure ligne à ligne, où l'on exige
+     * zéro. C'est le compromis assumé — l'information manquait, elle coûte quelque chose.
+     */
+    public function testLeCoutMarginalDUneTrancheSupplementaireResteBorne(): void
+    {
+        ['entreprise' => $entrepriseSemee, 'gestionnaire' => $gestionnaireSeme] = $this->seed();
+        [$entrepriseId, $gestionnaireId] = [$entrepriseSemee->getId(), $gestionnaireSeme->getId()];
+        $em = $this->em();
+
+        $compter = function () use ($entrepriseId, $gestionnaireId, $em): int {
+            $em->clear();
+            static::getContainer()->get('services_resetter')->reset();
+            $entreprise = $em->getRepository(Entreprise::class)->find($entrepriseId);
+            $gestionnaire = $em->getRepository(Invite::class)->find($gestionnaireId);
+
+            $logger = new class implements \Doctrine\DBAL\Logging\SQLLogger {
+                public int $nb = 0;
+
+                public function startQuery($sql, ?array $params = null, ?array $types = null): void
+                {
+                    ++$this->nb;
+                }
+
+                public function stopQuery(): void
+                {
+                }
+            };
+            $config = $em->getConnection()->getConfiguration();
+            $precedent = $config->getSQLLogger();
+            $config->setSQLLogger($logger);
+
+            try {
+                $this->tool()->execute([], new AiScope($entreprise, $gestionnaire));
+            } finally {
+                $config->setSQLLogger($precedent);
+            }
+
+            return $logger->nb;
+        };
+
+        $uneTranche = $compter();
+
+        // Deux tranches de PLUS, chacune avec son signalement : trois tranches distinctes.
+        $em->clear();
+        $entreprise = $em->getRepository(Entreprise::class)->find($entrepriseId);
+        $gestionnaire = $em->getRepository(Invite::class)->find($gestionnaireId);
+        foreach (['C', 'D'] as $suffixe) {
+            $autre = $this->makeChaine($entreprise, $gestionnaire, $suffixe, 500.0, true);
+            $this->makeSignalement($entreprise, $autre, 'PP-' . $suffixe . '-001', 500.0, '-1 day');
+        }
+        $em->flush();
+
+        $troisTranches = $compter();
+
+        // Mesuré : 18 requêtes pour une tranche, 20 pour trois — UNE requête marginale par
+        // tranche. C'était CINQ avant la mémoïsation du paramétrage fiscal dans
+        // TrancheIndicatorStrategy (quatre findOneBy par tranche pour relire deux lignes
+        // de configuration invariantes). Le plafond garde un cran de marge.
+        $marginal = ($troisTranches - $uneTranche) / 2;
+        $this->assertLessThanOrEqual(
+            2,
+            $marginal,
+            sprintf(
+                'Coût marginal par tranche : %.1f requêtes (%d → %d). Au-delà, c\'est que le '
+                . 'préchargement du graphe de cotation ne joue plus.',
+                $marginal,
+                $uneTranche,
+                $troisTranches,
+            ),
+        );
+    }
+
+    /**
+     * L'INCIDENT DU 2026-08-11, contre la VRAIE base et le VRAI moteur d'indicateurs.
+     *
+     * « Ajoute une colonne pour afficher les commissions exigibles relatives à toutes ces
+     * tranches » — Ket répondait que ces commissions ne figuraient pas dans les résultats.
+     * Elles y figurent désormais, calculées par la source unique du projet (celle qui
+     * alimente la rubrique Tranches), et non recalculées à côté.
+     *
+     * Les chiffres attendus tiennent au fixture : commission fixe de 100, TVA assureur à
+     * 16 % (donc TTC 116), ARCA courtier à 2 % — et surtout la commission est EXIGIBLE,
+     * puisque la prime de 1000 a été intégralement signalée (400 + 200 ne suffiraient pas,
+     * d'où le troisième signalement).
+     */
+    public function testLaListeTransversaleRendLaCommissionSesTaxesEtSonExigibilite(): void
+    {
+        ['entreprise' => $entreprise, 'gestionnaire' => $gestionnaire, 'tranche' => $tranche] = $this->seed();
+        $this->makeSignalement($entreprise, $tranche, 'PP-A-003', 400.0, '-1 day'); // prime soldée
+        $this->em()->flush();
+        $this->connecter();
+
+        $result = $this->tool()->execute([], new AiScope($entreprise, $gestionnaire));
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertCount(3, $result->data['items']);
+
+        foreach ($result->data['items'] as $ligne) {
+            $this->assertSame($tranche->getId(), $ligne['trancheId']);
+            $this->assertSame(1000.0, $ligne['primeTranche']);
+            $this->assertSame(1000.0, $ligne['primeSignalee']);
+            $this->assertSame(0.0, $ligne['primeSolde']);
+
+            // Deux mondes de taxes, jamais confondus : celles-ci portent sur la
+            // COMMISSION, et le TTC n'inclut que la taxe de l'assureur.
+            $this->assertSame(self::COMMISSION, $ligne['commissionHt']);
+            $this->assertSame(16.0, $ligne['taxeAssureur']);
+            $this->assertSame(self::TAUX_TVA, $ligne['tauxTaxeAssureur']);
+            $this->assertSame(116.0, $ligne['commissionTtc']);
+            $this->assertSame(2.0, $ligne['taxeCourtier']);
+            $this->assertSame(self::TAUX_ARCA, $ligne['tauxTaxeCourtier']);
+
+            // Prime intégralement réglée et commission non collectée : elle est exigible
+            // auprès de l'assureur — c'est très exactement la colonne demandée.
+            $this->assertSame(0.0, $ligne['commissionEncaissee']);
+            $this->assertSame(116.0, $ligne['commissionSolde']);
+            $this->assertSame(116.0, $ligne['commissionExigible']);
+            $this->assertSame('Prime payée, commission due', $ligne['statutTranche']);
+        }
+
+        // TROIS lignes, UNE tranche : les cumuls ne comptent la commission qu'une fois.
+        $this->assertSame(1, $result->data['economiePage']['nbTranches']);
+        $this->assertSame(116.0, $result->data['economiePage']['commissionTtc']);
+        $this->assertSame(116.0, $result->data['economiePage']['commissionExigible']);
+        // Le montant des RÈGLEMENTS, lui, s'additionne bien ligne à ligne.
+        $this->assertSame(1000.0, $result->data['montantPage']);
+    }
+
+    /**
+     * Le mode ciblé rend la même matière, mais STRUCTURÉE : une seule tranche décrite,
+     * rien ne sera rendu en tableau, et le taux d'une taxe reste collé à son montant.
+     */
+    public function testLeModeCibleRendLaCommissionStructuree(): void
+    {
+        ['entreprise' => $entreprise, 'gestionnaire' => $invite, 'tranche' => $tranche] = $this->seed();
+        $this->connecter();
+
+        $data = $this->tool()->execute(['trancheId' => $tranche->getId()], new AiScope($entreprise, $invite))->data;
+
+        $this->assertSame('Client PP A', $data['tranche']['client']);
+        $this->assertSame('Assureur PP A', $data['tranche']['assureur']);
+        $this->assertSame('POL-PP-A', $data['tranche']['police']);
+        $this->assertSame(self::COMMISSION, $data['commission']['ht']);
+        $this->assertSame(16.0, $data['commission']['taxeAssureur']);
+        $this->assertSame(self::TAUX_TVA, $data['commission']['tauxTaxeAssureur']);
+        $this->assertSame(116.0, $data['commission']['ttc']);
+        $this->assertSame(self::TAUX_ARCA, $data['commission']['tauxTaxeCourtier']);
+        $this->assertSame(116.0, $data['commission']['solde']);
+
+        // Prime non soldée (600 sur 1000) : la commission N'EST PAS encore exigible, et on
+        // ne la proratise surtout pas sur ce qui a été réglé. C'est 0, et 0 se dit.
+        $this->assertSame(400.0, $data['prime']['solde']);
+        $this->assertSame(0.0, $data['commission']['exigible']);
+        $this->assertArrayNotHasKey('commissionExigible', $data);
     }
 
     /**

@@ -7,12 +7,28 @@ use App\Entity\Taxe;
 use App\Entity\Note;
 use App\Repository\TaxeRepository;
 use App\Services\ServiceDates;
+use App\Entity\Entreprise;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\ServiceMonnaies;
+use Symfony\Contracts\Service\ResetInterface;
 
-class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
+class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface, ResetInterface
 {
+    /**
+     * Le paramétrage fiscal de l'entreprise, mémorisé le temps d'une requête.
+     *
+     * POURQUOI. Quatre lectures de la table `taxe` étaient émises PAR TRANCHE (les deux
+     * taux, puis les deux noms d'autorité) — un findOneBy touche la base même quand
+     * l'entité est déjà dans l'identity map. Sur une page de vingt tranches, cela faisait
+     * quatre-vingts requêtes pour lire deux lignes de configuration qui ne changent pas
+     * pendant la requête. Mesuré depuis l'outil paiements_prime, qui hydrate désormais les
+     * tranches de sa page : cinq requêtes marginales par tranche, dont ces quatre.
+     *
+     * @var array<string, Taxe|null> "id d'entreprise:redevable" => taxe (null mémorisé aussi)
+     */
+    private array $taxeCache = [];
+
     public function __construct(
         private ServiceDates $serviceDates,
         private ServiceMonnaies $serviceMonnaies,
@@ -20,6 +36,12 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
         private IndicatorCalculationHelper $calculationHelper,
         private EntityManagerInterface $em
     ) {
+    }
+
+    /** Le conteneur vide ce cache à chaque requête : la configuration peut changer entre deux. */
+    public function reset(): void
+    {
+        $this->taxeCache = [];
     }
 
     public function supports(string $entityClassName): bool
@@ -198,24 +220,43 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function getTrancheTaxeCourtierTaux(Tranche $tranche): float
     {
-        $entreprise = $tranche->getCotation()?->getPiste()?->getInvite()?->getEntreprise();
-        
-        $taxe = $this->taxeRepository->findOneBy(['redevable' => Taxe::REDEVABLE_COURTIER, 'entreprise' => $entreprise]);
+        return $this->getTrancheTaxeTaux($tranche, Taxe::REDEVABLE_COURTIER);
+    }
+
+    private function getTrancheTaxeAssureurTaux(Tranche $tranche): float
+    {
+        return $this->getTrancheTaxeTaux($tranche, Taxe::REDEVABLE_ASSUREUR);
+    }
+
+    /** Taux en POINTS (16 = 16 %) de la taxe SUR LA COMMISSION due par ce redevable. */
+    private function getTrancheTaxeTaux(Tranche $tranche, int $redevable): float
+    {
+        $taxe = $this->getTaxe($tranche, $redevable);
         if (!$taxe) return 0.0;
         $isIARD = $this->calculationHelper->isIARD($tranche->getCotation());
         $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
         return (float)($rate ?? 0.0);
     }
 
-    private function getTrancheTaxeAssureurTaux(Tranche $tranche): float
+    /**
+     * La taxe paramétrée pour ce redevable dans l'entreprise de la tranche — lue UNE fois
+     * par entreprise et par redevable, pas une fois par tranche (cf. $taxeCache).
+     */
+    private function getTaxe(Tranche $tranche, int $redevable): ?Taxe
     {
         $entreprise = $tranche->getCotation()?->getPiste()?->getInvite()?->getEntreprise();
-        
-        $taxe = $this->taxeRepository->findOneBy(['redevable' => Taxe::REDEVABLE_ASSUREUR, 'entreprise' => $entreprise]);
-        if (!$taxe) return 0.0;
-        $isIARD = $this->calculationHelper->isIARD($tranche->getCotation());
-        $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
-        return (float)($rate ?? 0.0);
+        $cle = ($entreprise instanceof Entreprise ? (string) $entreprise->getId() : '') . ':' . $redevable;
+
+        // array_key_exists, jamais ?? : une entreprise SANS taxe paramétrée mémorise null,
+        // et un `??=` reposerait la question à chaque tranche — le cas le plus coûteux
+        // serait alors celui qui n'a rien à lire.
+        if (!array_key_exists($cle, $this->taxeCache)) {
+            $this->taxeCache[$cle] = $this->taxeRepository->findOneBy(
+                ['redevable' => $redevable, 'entreprise' => $entreprise],
+            );
+        }
+
+        return $this->taxeCache[$cle];
     }
 
     private function getTrancheEstPartageable(Tranche $tranche): string
@@ -483,10 +524,9 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function getTaxeAutoriteNom(Tranche $tranche, int $redevable): string
     {
-        $entreprise = $tranche->getCotation()?->getPiste()?->getInvite()?->getEntreprise();
-        if (!$entreprise) return 'N/A';
+        if (!$tranche->getCotation()?->getPiste()?->getInvite()?->getEntreprise()) return 'N/A';
 
-        $taxe = $this->taxeRepository->findOneBy(['redevable' => $redevable, 'entreprise' => $entreprise]);
+        $taxe = $this->getTaxe($tranche, $redevable);
         if (!$taxe) return 'N/A';
 
         $autorite = $taxe->getAutoriteFiscales()->first();
