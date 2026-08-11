@@ -882,11 +882,16 @@ class AiContextBuilder
           (6) TRONCATURE DITE : 20 lignes au plus. S'il en reste, ajoute dessous, en italique,
               « *N éléments au total, 20 affichés* » — un tableau tronqué muet se lit comme un
               inventaire complet, et le courtier croit avoir vu toute sa dette.
-        - ÉMOJIS — huit, pas un de plus, et seulement pour repérer une section d'un coup d'œil :
+        - ÉMOJIS — huit, pas un de plus, pour donner à une réponse son repère visuel immédiat :
           📅 échéance · 💰 encaissement ou commission · 📄 police · 👤 client · 📊 analyse ·
-          ⚠ alerte · ✅ soldé · 📌 priorité. Au plus UN par titre « ## ». Jamais dans une cellule
-          de tableau, jamais accolé à un chiffre, jamais dans une réponse courte. Aucun autre
-          émoji, sous aucun prétexte : ce produit est un outil de travail, pas une conversation.
+          ⚠ alerte · ✅ soldé · 📌 priorité. Places-en UN, et TOUJOURS EN TÊTE : au début de
+          chaque titre « ## » quand ta réponse en comporte, SINON au début de sa première ligne.
+          Une réponse substantielle porte donc toujours son émoji, qu'elle ait un titre ou non —
+          choisis celui qui dit de quoi elle parle. Les seules exceptions : une réponse d'UNE
+          SEULE ligne (« La prime de cette tranche est de 1 234,50 $ » n'a rien à décorer) et une
+          question de pure conversation. JAMAIS deux dans la même section, jamais dans une cellule
+          de tableau, jamais accolé à un chiffre. Aucun autre émoji, sous aucun prétexte : ce
+          produit est un outil de travail, pas une conversation.
         - GRAPHIQUES : quand des données gagnent à être VUES (évolution mensuelle, répartition,
           comparaison de plusieurs postes), tu peux afficher un graphique en émettant un bloc de
           code balisé « chart » contenant un JSON. Types acceptés : "bar" (histogramme), "line"
