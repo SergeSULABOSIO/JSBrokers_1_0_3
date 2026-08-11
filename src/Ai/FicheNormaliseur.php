@@ -42,7 +42,48 @@ final class FicheNormaliseur
 
     public function fiche(object $entity): array
     {
-        return $this->nettoyer((array) $this->normalizer->normalize($entity, null, ['groups' => ['list:read']]));
+        return $this->nettoyer((array) $this->normalizer->normalize($entity, null, ['groups' => ['list:read']]))
+            + $this->horodatage($entity);
+    }
+
+    /**
+     * L'HORODATAGE D'AUDIT, absent de toute fiche jusqu'au 2026-08-11.
+     *
+     * L'INCIDENT. Un courtier demande les dates ; Ket répond que « la date exacte de
+     * création du compte et des avenants n'est pas renseignée dans le système ». C'était
+     * faux : createdAt est NOT NULL et posé au PrePersist sur les 42 entités portant
+     * AuditableTrait. Mais le trait ne déclare aucun #[Groups(['list:read'])], et la
+     * fiche se construit exclusivement sur ce groupe : la donnée existait, elle n'était
+     * jamais sérialisée. Une information invisible se raconte comme une information
+     * absente.
+     *
+     * POURQUOI ICI ET PAS SUR LE TRAIT. Ajouter le groupe à AuditableTrait exposerait
+     * createdAt partout où `list:read` sert — les listes du workspace, les réponses de
+     * JSBDynamicSearchService, l'autocomplétion —, c'est-à-dire bien au-delà de
+     * l'assistant. On le pose donc sur la seule fiche de l'IA, sans toucher au contrat de
+     * sérialisation de l'application.
+     *
+     * Les deux dates sont nommées SANS ambiguïté : ce sont des dates de SAISIE, pas les
+     * dates métier de l'objet (prise d'effet, échéance, règlement). L'outil chronologie
+     * repose sur la même distinction.
+     *
+     * @return array<string, string>
+     */
+    private function horodatage(object $entity): array
+    {
+        $lire = static function (string $getter) use ($entity): ?string {
+            if (!method_exists($entity, $getter)) {
+                return null;
+            }
+            $valeur = $entity->{$getter}();
+
+            return $valeur instanceof \DateTimeInterface ? $valeur->format('Y-m-d H:i') : null;
+        };
+
+        return array_filter([
+            'saisiLe' => $lire('getCreatedAt'),
+            'modifieLe' => $lire('getUpdatedAt'),
+        ], static fn (?string $v) => $v !== null);
     }
 
     /**
