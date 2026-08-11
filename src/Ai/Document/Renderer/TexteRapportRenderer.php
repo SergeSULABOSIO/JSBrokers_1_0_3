@@ -13,16 +13,20 @@ use App\Ai\Document\ThemeDocument;
  * Deux partis pris de lisibilité :
  *  - fins de ligne CRLF, parce que le Bloc-notes de Windows reste le lecteur le
  *    plus probable et qu'un LF seul y produit un pavé d'une seule ligne ;
- *  - tableaux alignés en colonnes de largeur fixe, calculées sur le contenu réel.
- *    Sans cet alignement, un tableau de chiffres en texte brut est illisible — et
- *    c'est précisément ce qu'un courtier vient y chercher.
+ *  - tableaux alignés en colonnes de largeur fixe, calculées sur le contenu réel,
+ *    et calés selon l'alignement de leur colonne. Sans cet alignement, un tableau
+ *    de chiffres en texte brut est illisible — et c'est précisément ce qu'un
+ *    courtier vient y chercher.
+ *
+ * AUCUNE TRONCATURE. Les colonnes étaient plafonnées à quarante caractères, un
+ * nom de client plus long partait avec des points de suspension : le .txt était
+ * alors le seul des six formats à ne pas porter la donnée entière. Un fichier
+ * qu'on choisit pour sa longévité ne doit rien perdre en chemin ; c'est la largeur
+ * de ligne qui cède, pas le contenu.
  */
 final class TexteRapportRenderer implements RapportRendererInterface
 {
     private const EOL = "\r\n";
-
-    /** Au-delà, une colonne est tronquée : mieux vaut un tableau lisible que fidèle. */
-    private const LARGEUR_MAX_COLONNE = 40;
 
     public function format(): DocumentFormat
     {
@@ -131,12 +135,21 @@ final class TexteRapportRenderer implements RapportRendererInterface
         $largeurs = array_fill(0, $colonnes, 0);
         foreach ($toutes as $ligne) {
             foreach (array_values($ligne) as $index => $cellule) {
-                $largeurs[$index] = min(
-                    self::LARGEUR_MAX_COLONNE,
-                    max($largeurs[$index], mb_strlen($this->celluleTexte($cellule))),
-                );
+                // Aucun plafond : une colonne fait la largeur de son plus long
+                // contenu. Un plafond tronquait « CASH MANAGEMENT SOLUTIONS (CMS)
+                // SARL BUKAVU » en « CASH MANAGEMENT SOLUTIONS (CMS) SARL BUK… » —
+                // le nom du client, amputé dans le seul format texte alors que les
+                // cinq autres le portaient en entier. Une ligne longue reste lisible ;
+                // une donnée coupée, non.
+                $largeurs[$index] = max($largeurs[$index], mb_strlen($this->celluleTexte($cellule)));
             }
         }
+
+        $alignements = array_slice(
+            array_pad((array) ($bloc['alignements'] ?? []), $colonnes, 'left'),
+            0,
+            $colonnes,
+        );
 
         $lignes = [];
         if (($bloc['titre'] ?? null) !== null) {
@@ -144,11 +157,11 @@ final class TexteRapportRenderer implements RapportRendererInterface
         }
 
         if ($bloc['entetes'] !== []) {
-            $lignes[] = $this->ligneAlignee($bloc['entetes'], $largeurs, $colonnes);
+            $lignes[] = $this->ligneAlignee($bloc['entetes'], $largeurs, $colonnes, $alignements);
             $lignes[] = implode('-+-', array_map(static fn (int $l) => str_repeat('-', $l), $largeurs));
         }
         foreach ($bloc['lignes'] as $ligne) {
-            $lignes[] = $this->ligneAlignee($ligne, $largeurs, $colonnes);
+            $lignes[] = $this->ligneAlignee($ligne, $largeurs, $colonnes, $alignements);
         }
         $lignes[] = '';
 
@@ -156,20 +169,30 @@ final class TexteRapportRenderer implements RapportRendererInterface
     }
 
     /**
+     * Une ligne du tableau, chaque cellule calée selon l'alignement de SA colonne.
+     *
+     * En texte brut, l'alignement n'est pas un ornement : c'est la seule chose qui
+     * met les unités des montants les unes sous les autres. Une colonne de chiffres
+     * calée à gauche est illisible — et c'est précisément ce qu'un courtier vient
+     * chercher dans ce fichier.
+     *
      * @param list<string> $ligne
      * @param list<int>    $largeurs
+     * @param list<string> $alignements
      */
-    private function ligneAlignee(array $ligne, array $largeurs, int $colonnes): string
+    private function ligneAlignee(array $ligne, array $largeurs, int $colonnes, array $alignements): string
     {
         $cellules = [];
         for ($index = 0; $index < $colonnes; $index++) {
             $texte = $this->celluleTexte($ligne[$index] ?? '');
-            if (mb_strlen($texte) > $largeurs[$index]) {
-                $texte = mb_substr($texte, 0, max(1, $largeurs[$index] - 1)) . '…';
-            }
             // mb_str_pad n'existe qu'à partir de PHP 8.3 : on complète à la main
             // pour que l'alignement tienne aussi sur du texte accentué.
-            $cellules[] = $texte . str_repeat(' ', max(0, $largeurs[$index] - mb_strlen($texte)));
+            $manque = max(0, $largeurs[$index] - mb_strlen($texte));
+            $cellules[] = match ($alignements[$index] ?? 'left') {
+                'right'  => str_repeat(' ', $manque) . $texte,
+                'center' => str_repeat(' ', intdiv($manque, 2)) . $texte . str_repeat(' ', $manque - intdiv($manque, 2)),
+                default  => $texte . str_repeat(' ', $manque),
+            };
         }
 
         return rtrim(implode(' | ', $cellules));

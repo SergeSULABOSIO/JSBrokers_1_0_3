@@ -221,6 +221,12 @@ final class ExcelRapportRenderer implements RapportRendererInterface
     /**
      * Écrit une cellule en NOMBRE quand c'en est un, en texte sinon. C'est ce qui
      * rend la feuille exploitable : sans cela, « 12 345,67 » resterait du texte.
+     *
+     * L'UNITÉ SUIT LE NOMBRE. Convertir « 3 195,16 $ » en 3195,16 faisait disparaître
+     * le « $ » de la feuille : la valeur restait juste, mais la seule mention de la
+     * devise avait été effacée, et le classeur devenait le seul format à ne pas la
+     * porter. On la reporte donc dans le FORMAT de la cellule — le nombre reste un
+     * nombre (il s'additionne, se trie, se met en graphique) et l'unité s'affiche.
      */
     private function ecrireCellule(mixed $feuille, string $coordonnee, string $valeur): void
     {
@@ -231,13 +237,32 @@ final class ExcelRapportRenderer implements RapportRendererInterface
 
         if ($this->estNombre($valeur)) {
             $feuille->setCellValueExplicit($coordonnee, BordereauLigneNormaliseur::nettoyerNombre($valeur), DataType::TYPE_NUMERIC);
-            $feuille->getStyle($coordonnee)->getNumberFormat()->setFormatCode(self::FORMAT_NOMBRE);
+            $feuille->getStyle($coordonnee)->getNumberFormat()->setFormatCode($this->formatAvecUnite($valeur));
 
             return;
         }
 
         $feuille->setCellValueExplicit($coordonnee, $valeur, DataType::TYPE_STRING);
         $feuille->getStyle($coordonnee)->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+    }
+
+    /**
+     * Le format d'affichage d'un nombre, unité comprise quand la valeur d'origine en
+     * portait une. Le symbole est mis entre guillemets : sans cela, Excel lirait « $ »
+     * comme un code de format et non comme un texte à afficher.
+     */
+    private function formatAvecUnite(string $valeur): string
+    {
+        if (preg_match('/(%|€|\$|USD|EUR|CDF)\s*$/iu', $valeur, $trouve) !== 1) {
+            return self::FORMAT_NOMBRE;
+        }
+
+        $unite = strtoupper($trouve[1]) === $trouve[1] ? $trouve[1] : mb_strtoupper($trouve[1]);
+
+        // Le pourcentage se colle au nombre, une devise s'en sépare d'une espace.
+        return $unite === '%'
+            ? self::FORMAT_NOMBRE . '"%"'
+            : self::FORMAT_NOMBRE . ' "' . $unite . '"';
     }
 
     /**

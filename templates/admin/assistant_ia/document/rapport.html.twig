@@ -30,21 +30,30 @@
             {% if bloc.titre %}
                 <p style="margin:10px 0 4px; font-size:9.5pt; font-weight:600; color:{{ p.gris }};">{{ bloc.titre }}</p>
             {% endif %}
+            {# L'ALIGNEMENT est une donnée, pas une décoration : c'est lui qui met les
+               montants les uns sous les autres. Il vient de la ligne de séparation GFM
+               (`---:`), lue par le parseur et normalisée par RapportAssembleur, qui
+               garantit aussi qu'il y a exactement autant d'alignements que de colonnes.
+               Même traitement que l'export de bulle (_message_corps.html.twig). #}
+            {% set alignements = bloc.alignements|default([]) %}
             <table style="width:100%; border-collapse:collapse; margin:0 0 12px; font-size:9.5pt;">
                 {% if bloc.entetes|length %}
                     <thead>
                         <tr>
                             {% for entete in bloc.entetes %}
-                                <th style="background:{{ p.enteteFond }}; color:{{ p.enteteTexte }}; text-align:left; padding:6px 8px; border:1px solid {{ p.enteteFond }}; font-weight:600;">{{ entete }}</th>
+                                <th style="background:{{ p.enteteFond }}; color:{{ p.enteteTexte }}; text-align:{{ alignements[loop.index0]|default('left') }}; padding:6px 8px; border:1px solid {{ p.enteteFond }}; font-weight:600;">{{ entete }}</th>
                             {% endfor %}
                         </tr>
                     </thead>
                 {% endif %}
                 <tbody>
                     {% for ligne in bloc.lignes %}
+                        {# La LIGNE DE TOTAUX se distingue : elle résume tout le tableau,
+                           elle ne doit pas se lire comme une ligne de données de plus. #}
+                        {% set estTotaux = bloc.totaux[loop.index0]|default(false) %}
                         <tr>
                             {% for cellule in ligne %}
-                                <td style="padding:5px 8px; border:1px solid {{ p.filet }}; color:{{ p.encre }}; vertical-align:top;">{{ cellule }}</td>
+                                <td style="padding:5px 8px; border:1px solid {{ p.filet }}; color:{{ p.encre }}; text-align:{{ alignements[loop.index0]|default('left') }}; vertical-align:top;{% if estTotaux %} background:{{ p.blocFond }}; font-weight:700;{% endif %}">{{ cellule }}</td>
                             {% endfor %}
                         </tr>
                     {% endfor %}
