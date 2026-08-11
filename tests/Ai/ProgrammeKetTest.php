@@ -275,6 +275,11 @@ class ProgrammeKetTest extends WebTestCase
         $this->assertNotSame($premier, $this->programme($scope)->getReference());
     }
 
+    /**
+     * Un outil qui exige une STRUCTURE et ne sait pas l'assembler lui-même reste
+     * impilotable : l'annoncer serait mentir au modèle (modifier_composition_prime et
+     * ses « composantes »).
+     */
     public function testOutilNonPilotableParUneEtapeEstRefuse(): void
     {
         ['scope' => $scope, 'tranches' => $tranches] = $this->seed();
@@ -282,14 +287,38 @@ class ProgrammeKetTest extends WebTestCase
         $refus = $this->outil()->execute([
             'objectif' => 'Mission impossible',
             'etapes'   => [
-                ['libelle' => 'A', 'outil' => 'preparer_operations', 'cibleId' => $tranches[0]],
+                ['libelle' => 'A', 'outil' => 'modifier_composition_prime', 'cibleId' => 1],
                 ['libelle' => 'B', 'outil' => 'signaler_paiement_prime', 'cibleId' => $tranches[1]],
             ],
         ], $scope);
 
         $this->assertFalse($refus->data['pret']);
-        $this->assertStringContainsString('preparer_operations', $refus->data['note']);
+        $this->assertStringContainsString('modifier_composition_prime', $refus->data['note']);
         $this->assertNull($this->programmeEnCours()->courant($scope->conversation), 'Aucun programme ne doit rester ouvert.');
+    }
+
+    /**
+     * Une étape d'écriture ORDINAIRE mal décrite est refusée EN NOMMANT l'étape.
+     *
+     * Sans cette garde, l'étape partait sans arguments, la préparation échouait plus
+     * loin, et le modèle recevait « aucune étape n'a pu être préparée » — un constat
+     * qui ne dit pas laquelle est en cause.
+     */
+    public function testUneEtapeDEcritureSansEntiteEstRefuseeEnNommantLEtape(): void
+    {
+        ['scope' => $scope, 'tranches' => $tranches] = $this->seed();
+
+        $refus = $this->outil()->execute([
+            'objectif' => 'Écriture mal décrite',
+            'etapes'   => [
+                ['libelle' => 'Étape bancale', 'outil' => 'preparer_operations'],
+                ['libelle' => 'B', 'outil' => 'signaler_paiement_prime', 'cibleId' => $tranches[1]],
+            ],
+        ], $scope);
+
+        $this->assertFalse($refus->data['pret']);
+        $this->assertStringContainsString('Étape bancale', $refus->data['note']);
+        $this->assertNull($this->programmeEnCours()->courant($scope->conversation));
     }
 
     public function testUnSeulObjetNeFaitPasUnProgramme(): void
@@ -332,6 +361,130 @@ class ProgrammeKetTest extends WebTestCase
         $this->assertTrue(PlanEnAttente::estEnAttente($message->getMeta() ?? []));
         $this->assertSame('programme', $message->getMeta()['engine'], 'Cette bulle ne coûte aucun appel au modèle.');
         $this->assertStringContainsString('étape 2 sur 2', (string) $message->getContenu());
+    }
+
+    /**
+     * LE CAS DE L'INCIDENT DU 2026-08-11 : « Commençons par créer ce fournisseur,
+     * après nous poursuivrons l'enregistrement de la dépense. »
+     *
+     * Cette demande — deux ÉCRITURES ORDINAIRES sur des entités DIFFÉRENTES, validées
+     * séparément parce que l'utilisateur l'a demandé — était tout bonnement
+     * INEXPRIMABLE : `preparer_operations` étant déclaré impilotable, aucun programme
+     * ne pouvait la porter. Ket a donc validé le premier plan puis s'est arrêtée net,
+     * et l'utilisateur a dû relancer trois fois sans jamais obtenir le second bouton.
+     *
+     * Ici, la série entière est déclarée EN UNE FOIS, et l'identifiant créé par
+     * l'étape 1 est injecté dans l'étape 2 par le SERVEUR — au moment où il existe.
+     */
+    public function testUneSerieDEcrituresOrdinairesSEnchaineAvecUneReferenceEntreEtapes(): void
+    {
+        ['scope' => $scope] = $this->seed();
+
+        $resultat = $this->outil()->execute([
+            'objectif' => 'Créer le client puis sa piste',
+            'etapes'   => [
+                [
+                    'libelle'   => 'Le client',
+                    'outil'     => 'preparer_operations',
+                    'entite'    => 'Client',
+                    'operation' => 'create',
+                    'ref'       => 'client',
+                    'champs'    => [['cle' => 'nom', 'valeur' => 'Client chaîné PRG']],
+                ],
+                [
+                    'libelle'   => 'Sa piste',
+                    'outil'     => 'preparer_operations',
+                    'entite'    => 'Piste',
+                    'operation' => 'create',
+                    'champs'    => [
+                        ['cle' => 'nom', 'valeur' => 'Piste chaînée PRG'],
+                        ['cle' => 'typeAvenant', 'valeur' => '0'],
+                        ['cle' => 'descriptionDuRisque', 'valeur' => 'Risque chaîné'],
+                        ['cle' => 'exercice', 'valeur' => '2026'],
+                        // L'identifiant n'existe PAS encore : il n'existera qu'après la
+                        // validation de l'étape 1.
+                        ['cle' => 'client', 'valeur' => '@client'],
+                    ],
+                ],
+            ],
+        ], $scope);
+
+        $this->assertTrue($resultat->data['pret'], 'La première étape d’écriture ordinaire doit être prête.');
+        $this->assertSame(PlanEnAttente::ACTION_REVUE, $resultat->uiAction['type']);
+        $this->assertSame('Client', $resultat->uiAction['plan'][0]['entite']);
+        $this->assertSame(2, $resultat->uiAction['programme']['total']);
+
+        // L'étape 1 est validée et écrite : le journal porte l'identifiant réel. On
+        // réutilise le client du décor comme enregistrement « créé » — ce qui vérifie
+        // AUSSI que le plan de l'étape 2 reste valide avec un identifiant véritable.
+        $programme = $this->programme($scope);
+        $etape1 = $programme->getEtapes()->first();
+        $idClient = (int) $this->em->getRepository(Client::class)
+            ->findOneBy(['nom' => 'Client PRG'])->getId();
+        $this->runner()->marquerExecutee($etape1, [
+            ['op' => 'create', 'entite' => 'Client', 'libelle' => 'Clients', 'cible' => 'Client chaîné PRG',
+             'id' => $idClient, 'statut' => 'ok', 'niveau' => 0],
+        ]);
+
+        $suivant = $this->runner()->preparerProchaine($programme, $scope);
+
+        $this->assertNotNull($suivant, 'L’étape 2 doit être présentée SANS intervention du modèle.');
+        $this->assertSame(2, $suivant['programme']['position']);
+        $this->assertSame(PlanEnAttente::ACTION_REVUE, $suivant['action']['type']);
+        $this->assertSame('Piste', $suivant['action']['plan'][0]['entite']);
+        // LE CŒUR : « @client » est devenu l'identifiant réel, injecté par le serveur.
+        $this->assertSame(
+            $idClient,
+            $suivant['action']['plan'][0]['fields']['client'],
+            'La référence à l’étape précédente doit être résolue en identifiant réel.',
+        );
+    }
+
+    /**
+     * Une référence vers une étape qui n'a PAS été écrite (passée, refusée, en échec)
+     * ne doit jamais devenir un identifiant arbitraire : l'étape est traversée avec
+     * son motif, et la série continue.
+     */
+    public function testUneReferenceVersUneEtapeNonEcriteRendLEtapeImpossible(): void
+    {
+        ['scope' => $scope, 'tranches' => $tranches] = $this->seed();
+
+        $this->outil()->execute([
+            'objectif' => 'Client puis piste, mais le client sera refusé',
+            'etapes'   => [
+                [
+                    'libelle' => 'Le client', 'outil' => 'preparer_operations', 'entite' => 'Client',
+                    'operation' => 'create', 'ref' => 'client',
+                    'champs' => [['cle' => 'nom', 'valeur' => 'Client jamais créé']],
+                ],
+                [
+                    'libelle' => 'Sa piste', 'outil' => 'preparer_operations', 'entite' => 'Piste',
+                    'operation' => 'create',
+                    'champs' => [
+                        ['cle' => 'nom', 'valeur' => 'Piste orpheline'],
+                        ['cle' => 'typeAvenant', 'valeur' => '0'],
+                        ['cle' => 'descriptionDuRisque', 'valeur' => 'Risque orphelin'],
+                        ['cle' => 'exercice', 'valeur' => '2026'],
+                        ['cle' => 'client', 'valeur' => '@client'],
+                    ],
+                ],
+                ['libelle' => 'Un paiement', 'outil' => 'signaler_paiement_prime', 'cibleId' => $tranches[0]],
+            ],
+        ], $scope);
+
+        $programme = $this->programme($scope);
+        // L'utilisateur refuse l'étape 1 : rien n'a été écrit, donc « @client » ne
+        // désigne rien.
+        $this->runner()->marquerAnnulee($programme->getEtapes()->first());
+
+        $suivant = $this->runner()->preparerProchaine($programme, $scope);
+
+        $etape2 = $programme->getEtapes()->get(1);
+        $this->assertSame(AssistantProgrammeEtape::STATUT_IMPOSSIBLE, $etape2->getStatut());
+        $this->assertStringContainsString('client', (string) $etape2->getErreur());
+        // La série n'est pas figée pour autant : la troisième étape est présentée.
+        $this->assertNotNull($suivant, 'Une étape impossible ne doit jamais figer la mission.');
+        $this->assertSame(3, $suivant['programme']['position']);
     }
 
     public function testUneEtapeRefuseeNInterrompsPasLaSerie(): void

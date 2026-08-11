@@ -2,6 +2,7 @@
 
 namespace App\Ai\Programme;
 
+use App\Ai\Mutation\MotifDeRefus;
 use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
@@ -145,6 +146,8 @@ final class ProgrammeRunner
      */
     private function executerOutil(AssistantProgrammeEtape $etape, AiScope $scope): ?AiToolResult
     {
+        $absentes = [];
+
         // Résolution FAIL-CLOSED, déléguée à la source unique : un programme ne
         // peut déclencher qu'un outil producteur de plan pilotable par paramètres
         // plats. Refaire ce filtrage ici ferait diverger « ce qu'on a le droit de
@@ -156,12 +159,32 @@ final class ProgrammeRunner
             return null;
         }
 
+        // RÉFÉRENCES ENTRE ÉTAPES. Une étape peut viser ce qu'une étape PRÉCÉDENTE a
+        // créé (« la dépense du fournisseur qu'on vient d'enregistrer ») : impossible à
+        // écrire d'avance, l'identifiant n'existait pas au moment de la déclaration.
+        // Ici, il existe — l'étape précédente est écrite —, et c'est le SERVEUR qui
+        // l'injecte. C'est le pendant, à l'échelle de la série, du chaînage « @ref »
+        // interne à un plan.
+        $arguments = $this->injecterReferences(
+            $etape->getArguments(),
+            $this->identifiantsDesEtapesEcrites($etape),
+            $absentes,
+        );
+        if ($absentes !== []) {
+            $this->marquerImpossible($etape, sprintf(
+                'Cette étape renvoie à %s, qui n’a pas été enregistré (étape passée, refusée ou en échec).',
+                implode(', ', array_map(static fn (string $ref) => '« ' . $ref . ' »', $absentes)),
+            ));
+
+            return null;
+        }
+
         try {
             // `remplacerPlanEnAttente` : à ce point du programme, le plan précédent
             // est TRANCHÉ (exécuté ou annulé) et le verrou est donc ouvert. On ne
             // force rien — si un plan isolé attendait par ailleurs, le refus est
             // légitime et sera reporté tel quel.
-            $resultat = $outil->execute($etape->getArguments(), $scope);
+            $resultat = $outil->execute($arguments, $scope);
         } catch (\Throwable $e) {
             $this->logger->error('Ket : échec de préparation d’une étape de programme.', [
                 'etape'     => $etape->getReference(),
@@ -185,6 +208,89 @@ final class ProgrammeRunner
         }
 
         return $resultat;
+    }
+
+    /**
+     * Ce que les étapes DÉJÀ ÉCRITES de la série ont créé : étiquette => identifiant.
+     *
+     * L'étiquette est celle que porte l'opération de l'étape (`ref`), et
+     * l'identifiant vient de son JOURNAL d'exécution — la seule liste vraie de ce qui
+     * a été écrit. Une étape annulée, refusée ou en échec n'apporte donc RIEN, et
+     * c'est exactement ce qu'il faut : une référence vers un enregistrement qui
+     * n'existe pas doit faire échouer l'étape suivante, jamais lui donner un
+     * identifiant arbitraire.
+     *
+     * @return array<string, int>
+     */
+    private function identifiantsDesEtapesEcrites(AssistantProgrammeEtape $courante): array
+    {
+        $programme = $courante->getProgramme();
+        if ($programme === null) {
+            return [];
+        }
+
+        $identifiants = [];
+        foreach ($programme->getEtapes() as $etape) {
+            if ($etape === $courante || $etape->getStatut() !== AssistantProgrammeEtape::STATUT_EXECUTEE) {
+                continue;
+            }
+            $ref = null;
+            foreach ((array) (($etape->getArguments() ?? [])['operations'] ?? []) as $operation) {
+                if (is_array($operation) && trim((string) ($operation['ref'] ?? '')) !== '') {
+                    $ref = trim((string) $operation['ref']);
+                    break;
+                }
+            }
+            if ($ref === null) {
+                continue;
+            }
+            foreach ((array) ($etape->getJournal() ?? []) as $ligne) {
+                $id = is_array($ligne) ? ($ligne['id'] ?? null) : null;
+                if (is_int($id) || (is_string($id) && ctype_digit($id))) {
+                    $identifiants[$ref] = (int) $id;
+                    break;
+                }
+            }
+        }
+
+        return $identifiants;
+    }
+
+    /**
+     * Remplace récursivement, dans les arguments d'une étape, toute valeur « @ref »
+     * par l'identifiant réel. Les étiquettes sans correspondance sont COLLECTÉES
+     * plutôt que laissées passer : l'étape sera traversée avec un motif lisible.
+     *
+     * Les autres marqueurs « @ » (une pièce jointe « @fichier:7 ») ne sont jamais
+     * touchés — ils appartiennent au plan, pas à la série.
+     *
+     * @param array<mixed>       $arguments
+     * @param array<string, int> $identifiants
+     * @param list<string>       $absentes     (par référence)
+     *
+     * @return array<mixed>
+     */
+    private function injecterReferences(array $arguments, array $identifiants, array &$absentes): array
+    {
+        foreach ($arguments as $cle => $valeur) {
+            if (is_array($valeur)) {
+                $arguments[$cle] = $this->injecterReferences($valeur, $identifiants, $absentes);
+                continue;
+            }
+            if (!is_string($valeur) || !str_starts_with($valeur, '@') || str_starts_with($valeur, '@fichier:')) {
+                continue;
+            }
+            $ref = substr($valeur, 1);
+            if (isset($identifiants[$ref])) {
+                $arguments[$cle] = $identifiants[$ref];
+                continue;
+            }
+            if (!in_array($ref, $absentes, true)) {
+                $absentes[] = $ref;
+            }
+        }
+
+        return $arguments;
     }
 
     /**
@@ -322,34 +428,15 @@ final class ProgrammeRunner
      * Motif LISIBLE d'un refus d'outil, tiré de ce que l'outil a réellement dit
      * (champs manquants, blocages, note). Jamais une phrase générique inventée :
      * le rapport final doit pouvoir citer la cause exacte.
+     *
+     * La traduction elle-même appartient à MotifDeRefus : le fil de conversation
+     * affiche désormais le MÊME motif quand la prose du modèle décrit un plan que
+     * l'outil a refusé de préparer, et les deux ne doivent pas raconter deux
+     * histoires du même refus.
      */
     private function motifRefus(AiToolResult $resultat): string
     {
-        if ($resultat->status === AiToolResult::STATUS_HORS_PERIMETRE) {
-            return sprintf('Hors de votre périmètre d’accès (%s).', (string) ($resultat->data['libelle'] ?? 'données'));
-        }
-        if ($resultat->status === AiToolResult::STATUS_INTROUVABLE) {
-            $precision = trim((string) ($resultat->data['precision'] ?? ''));
-
-            return $precision !== '' ? sprintf('Cible introuvable : %s.', $precision) : 'Cible introuvable.';
-        }
-
-        $manquants = $resultat->data['manquants'] ?? [];
-        if (is_array($manquants) && $manquants !== []) {
-            return 'Informations manquantes : ' . implode(' ; ', array_map('strval', $manquants));
-        }
-        $blocages = $resultat->data['blocages'] ?? [];
-        if (is_array($blocages) && $blocages !== []) {
-            return 'Blocage : ' . implode(' ; ', array_map('strval', $blocages));
-        }
-        if (($resultat->data['planEnAttente'] ?? false) === true) {
-            return 'Un autre plan attendait déjà une décision.';
-        }
-        if (($resultat->data['dejaAJour'] ?? false) === true) {
-            return 'Rien à écrire : les données étaient déjà à jour.';
-        }
-
-        return trim((string) ($resultat->data['note'] ?? '')) ?: 'L’outil n’a pas pu préparer cette étape.';
+        return MotifDeRefus::depuis($resultat);
     }
 
     /** Bandeau d'avancement affiché au-dessus de la barre de décision (et après un F5). */

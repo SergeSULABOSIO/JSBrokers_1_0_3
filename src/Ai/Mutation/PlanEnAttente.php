@@ -243,6 +243,83 @@ final class PlanEnAttente
     }
 
     /**
+     * DÉCISION FINALE du garde-fou anti-plan fantôme, en un seul endroit.
+     *
+     * Deux preuves, et l'une des deux suffit :
+     *  - la prose REVENDIQUE la surface de décision ({@see proseSimuleUneDecision}) :
+     *    marqueurs de haute précision, valables même si aucun outil n'a tourné ;
+     *  - un outil de plan a RÉELLEMENT REFUSÉ ce tour-ci (signal serveur) ET la prose
+     *    affiche malgré tout un plan ({@see proseAfficheUnPlan}).
+     *
+     * La seconde branche est celle qui manquait le 2026-08-11 : deux messages de suite
+     * ont montré un tableau de plan complet et un budget recopié du tour précédent
+     * alors que l'outil venait de refuser, et le garde-fou lexical seul n'a rien vu.
+     *
+     * `$aucuneDecision` (aucun plan d'écriture ni de document émis, aucun en attente,
+     * aucun refus de périmètre) est le VERROU qui rend l'ensemble sans faux positif :
+     * un plan légitime porte toujours une action réelle.
+     */
+    public static function estUnPlanFantome(
+        string $contenu,
+        bool $aucuneDecision,
+        bool $unOutilDePlanARefuse,
+    ): bool {
+        if (!$aucuneDecision) {
+            return false;
+        }
+
+        return self::proseSimuleUneDecision($contenu)
+            || ($unOutilDePlanARefuse && self::proseAfficheUnPlan($contenu));
+    }
+
+    /**
+     * La prose PRÉSENTE-t-elle un plan — un tableau d'opérations, un budget, une
+     * invitation à valider — sans revendiquer explicitement la surface de décision ?
+     *
+     * POURQUOI CE SECOND TEST, PLUS LARGE. {@see proseSimuleUneDecision()} est
+     * volontairement conservateur parce qu'il ne s'appuie QUE sur des mots. Le
+     * 2026-08-11, il est passé à côté de deux messages consécutifs qui affichaient un
+     * tableau de plan complet, un « Budget estimé : 10 unités (Solde disponible :
+     * 115 321) » recopié du tour précédent et « Veuillez valider ce plan pour
+     * finaliser l'enregistrement » — sans aucun bouton, puisque l'outil venait de
+     * refuser. Élargir les mots-clés indéfiniment serait un jeu perdu.
+     *
+     * Ce test est donc fait pour être croisé avec un signal STRUCTUREL : un outil de
+     * plan a tourné ce tour-ci et a REFUSÉ (cf. AiReply::$plansRefuses). C'est cette
+     * conjonction qui fait la preuve — les mots seuls ne la feraient pas.
+     */
+    public static function proseAfficheUnPlan(string $contenu): bool
+    {
+        $texte = mb_strtolower($contenu);
+
+        foreach ([
+            'voici le plan',
+            'plan d’opération',
+            "plan d'opération",
+            'plan d’operation',
+            "plan d'operation",
+            'budget estimé',
+            'budget estime',
+            'coût estimé',
+            'cout estime',
+            'valider ce plan',
+            'validez ce plan',
+            'plan pour validation',
+            'plan à valider',
+            'plan a valider',
+        ] as $marqueur) {
+            if (str_contains($texte, $marqueur)) {
+                return true;
+            }
+        }
+
+        // Le TABLEAU de plan lui-même : un en-tête markdown portant les colonnes
+        // imposées par le protocole (opération/entité). Rendre ce tableau, c'est
+        // affirmer qu'un plan existe.
+        return (bool) preg_match('/\|[^|\n]*\b(?:opération|operation|entité|entite)\b[^|\n]*\|/u', $texte);
+    }
+
+    /**
      * Annule le plan en attente d'une conversation (décision implicite de
      * l'utilisateur qui demande un plan DIFFÉRENT). Même effet que le bouton
      * « Annuler » : la barre de décision devient un feedback permanent, et rien

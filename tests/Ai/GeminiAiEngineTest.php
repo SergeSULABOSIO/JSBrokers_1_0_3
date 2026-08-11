@@ -5,6 +5,7 @@ namespace App\Tests\Ai;
 use App\Ai\AiContextBuilder;
 use App\Ai\AiRequest;
 use App\Ai\Debit\BudgetDebit;
+use App\Ai\Engine\AppelDOutilEnTexte;
 use App\Ai\Engine\GeminiAiEngine;
 use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\Mutation\PlanEnAttente;
@@ -155,6 +156,57 @@ class GeminiAiEngineTest extends TestCase
             static fn (array $l) => ($l['context']['evenement'] ?? null) === 'message',
         ));
         $this->assertCount(1, $bilan[0]['context']['sequenceOutils']);
+    }
+
+    /**
+     * UN APPEL D'OUTIL ÉCRIT EN TEXTE EST EXÉCUTÉ, PAS AFFICHÉ.
+     *
+     * L'incident du 2026-08-11 : à « J'ai une dépense à enregistrer, que faire ? »,
+     * Ket a répondu la ligne `consulter_guide(parcours-de-saisie)` — le journal le
+     * confirme, aucun appel de fonction n'avait été émis. Le bon outil, le bon
+     * argument, seul le canal était faux : le serveur peut le comprendre, et il ne
+     * coûte AUCUN appel supplémentaire de le faire (la réponse est déjà payée).
+     */
+    public function testUnAppelEcritEnTexteEstExecuteEtNonAffiche(): void
+    {
+        $appels = 0;
+        $http = new MockHttpClient(function () use (&$appels) {
+            ++$appels;
+
+            // 1er tour : le modèle ÉCRIT l'appel au lieu de l'émettre.
+            // 2e tour (rédaction) : il commente le résultat, normalement.
+            return new MockResponse(json_encode(
+                $appels === 1
+                    ? self::texte('compter_entites(entite="Client")')
+                    : self::texte('Votre portefeuille compte 3 clients.'),
+            ));
+        });
+
+        $tool = $this->makeTool(AiToolResult::ok(['count' => 3]));
+        $reply = $this->makeEngine($http, [$tool])->reply($this->makeRequest('Combien de clients ?'));
+
+        $this->assertSame(2, $appels, 'Le rattrapage ne coûte aucun appel de plus : la règle des deux tient.');
+        $this->assertSame(['entite' => 'Client'], $tool->receivedArgs, 'L’outil doit avoir été RÉELLEMENT exécuté.');
+        $this->assertSame('compter_entites', $reply->toolUsed);
+        $this->assertSame('Votre portefeuille compte 3 clients.', $reply->content);
+        $this->assertStringNotContainsString('compter_entites(', $reply->content, 'Nos rouages ne sont jamais la réponse.');
+    }
+
+    /**
+     * Non rattrapable (l'outil n'existe pas) : on ne sert pas la ligne pour autant.
+     * L'utilisateur reçoit ce que les outils du tour ont réellement rapporté.
+     */
+    public function testUnAppelEnTexteNonRattrapableNEstJamaisServiTelQuel(): void
+    {
+        $http = new MockHttpClient(fn () => new MockResponse(json_encode(
+            self::texte('chercher_client(nom="Marlette")'),
+        )));
+
+        $reply = $this->makeEngine($http, [$this->makeTool(AiToolResult::ok(['count' => 3]))])
+            ->reply($this->makeRequest('Trouve Mme Marlette'));
+
+        $this->assertStringNotContainsString('chercher_client', $reply->content);
+        $this->assertNotSame('', trim($reply->content));
     }
 
     /**
@@ -332,6 +384,8 @@ class GeminiAiEngineTest extends TestCase
             new JournalTokens($espion, new OutilsDePlan([])),
             $budget ?? $this->makeBudget(),
             $this->repliPrecis(),
+            new AppelDOutilEnTexte(),
+            new OutilsDePlan([]),
             function (int $secondes) use ($dormir): void {
                 $this->attentes[] = $secondes;
                 if ($dormir !== null) {

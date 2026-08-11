@@ -8,6 +8,7 @@ use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Mutation\MutationOperation;
 use App\Ai\Mutation\MutationPlan;
 use App\Ai\Mutation\PlanBuilder;
+use App\Ai\Programme\EtapeAssemblable;
 use App\Ai\Scope\AiScope;
 
 /**
@@ -25,7 +26,7 @@ use App\Ai\Scope\AiScope;
  * (jamais les paramètres/rôles de l'espace). Toute opération hors périmètre fait
  * échouer la préparation.
  */
-final class PreparerOperationsTool implements AiToolProduisantUnPlan, AiToolEcriture
+final class PreparerOperationsTool implements AiToolProduisantUnPlan, AiToolEcriture, EtapeAssemblable
 {
     public function __construct(
         private readonly PlanBuilder $planBuilder,
@@ -184,6 +185,74 @@ final class PreparerOperationsTool implements AiToolProduisantUnPlan, AiToolEcri
     public function match(string $question, AiScope $scope): ?array
     {
         return null;
+    }
+
+    /**
+     * UNE ÉTAPE DE PROGRAMME DEVIENT UNE OPÉRATION. C'est ce qui permet à une série
+     * de porter des écritures QUELCONQUES — « créer le fournisseur », puis
+     * « enregistrer la dépense » — là où seuls des outils spécialisés (paiement de
+     * prime, marquage de police) pouvaient être enchaînés.
+     *
+     * Le modèle décrit l'étape à plat ; la structure est fabriquée ici, par le seul
+     * code qui connaisse la forme attendue. Le `ref` posé sur une étape et le
+     * « @ref » d'une étape suivante sont conservés TELS QUELS : c'est le programme
+     * qui les résout, une fois l'étape précédente réellement écrite (à ce moment-là
+     * l'identifiant existe).
+     */
+    public function argumentsDepuisEtape(array $etape): array
+    {
+        $entite = trim((string) ($etape['entite'] ?? ''));
+        if ($entite === '' || !MutationAllowlist::autorise($entite)) {
+            return [];
+        }
+
+        $op = trim((string) ($etape['operation'] ?? MutationOperation::OP_CREATE));
+        if (!in_array($op, MutationOperation::OPS, true)) {
+            return [];
+        }
+
+        $champs = [];
+        foreach ((array) ($etape['champs'] ?? []) as $paire) {
+            if (!is_array($paire)) {
+                continue;
+            }
+            $cle = trim((string) ($paire['cle'] ?? ''));
+            if ($cle === '' || !array_key_exists('valeur', $paire)) {
+                continue;
+            }
+            $champs[$cle] = $paire['valeur'];
+        }
+
+        $cibleId = isset($etape['cibleId']) ? (int) $etape['cibleId'] : 0;
+        // Une modification ou une suppression SANS cible n'a pas de sens : mieux vaut
+        // rendre l'étape inexploitable (elle sera traversée avec son motif) que de la
+        // transformer en création silencieuse.
+        if ($op !== MutationOperation::OP_CREATE && $cibleId <= 0) {
+            return [];
+        }
+        // Une création sans aucun champ n'écrirait rien : même raisonnement.
+        if ($op === MutationOperation::OP_CREATE && $champs === []) {
+            return [];
+        }
+
+        $operation = ['op' => $op, 'entite' => $entite, 'champs' => $champs];
+        if ($cibleId > 0) {
+            $operation['id'] = $cibleId;
+        }
+        if (($ref = trim((string) ($etape['ref'] ?? ''))) !== '') {
+            $operation['ref'] = $ref;
+        }
+
+        return ['operations' => [$operation]];
+    }
+
+    public function aideEtape(): string
+    {
+        return 'preparer_operations : étape d\'écriture ORDINAIRE — donne « entite » (nom court de '
+            . 'l\'entité), « operation » (create/edit/delete), « champs » en paires '
+            . '[{"cle":"montant","valeur":"150"}], et « cibleId » pour un edit/delete. Pose « ref » sur une '
+            . 'étape de CRÉATION dont une étape SUIVANTE a besoin, et donne alors à son champ de relation la '
+            . 'valeur "@ref" : l\'identifiant sera injecté après l\'écriture de la première';
     }
 
     public function execute(array $args, AiScope $scope): AiToolResult

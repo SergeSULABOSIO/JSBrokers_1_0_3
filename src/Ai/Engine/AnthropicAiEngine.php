@@ -5,6 +5,8 @@ namespace App\Ai\Engine;
 use App\Ai\AiContextBuilder;
 use App\Ai\AiReply;
 use App\Ai\AiRequest;
+use App\Ai\Mutation\MotifDeRefus;
+use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\Redaction\RepliPrecis;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolInterface;
@@ -57,6 +59,9 @@ final class AnthropicAiEngine implements AiEngineInterface
         #[Autowire(env: 'ANTHROPIC_MODEL')] private readonly string $model,
         // Rédige en PHP, à coût nul, ce que le modèle n'a pas rédigé.
         private readonly RepliPrecis $repliPrecis,
+        // Source unique des outils qui produisent un plan — la même que celle du
+        // prompt et du moteur Gemini.
+        private readonly OutilsDePlan $outilsDePlan,
     ) {
         $this->tools = $tools;
     }
@@ -135,6 +140,11 @@ final class AnthropicAiEngine implements AiEngineInterface
         // Ce que les outils ont réellement rapporté : la matière du repli si la boucle
         // s'achève sans réponse rédigée (même règle que le moteur Gemini).
         $resultatsOutils = [];
+        // Outils de plan ayant REFUSÉ : le garde-fou anti-plan fantôme du contrôleur
+        // s'appuie sur ce signal. Le renseigner ici aussi n'est pas une précaution de
+        // confort — un garde-fou qui ne s'appliquerait qu'à un moteur sur deux serait
+        // une divergence silencieuse, exactement ce que ce chantier corrige.
+        $plansRefuses = [];
 
         for ($round = 0; $round <= self::MAX_TOOL_ROUNDS; $round++) {
             $response = $this->call($request, $messages);
@@ -149,7 +159,13 @@ final class AnthropicAiEngine implements AiEngineInterface
             }
 
             if (($response['stop_reason'] ?? null) !== 'tool_use') {
-                return new AiReply($this->extractText($response), refused: $refused, toolUsed: $toolUsed, actions: $actions);
+                return new AiReply(
+                    $this->extractText($response),
+                    refused: $refused,
+                    toolUsed: $toolUsed,
+                    actions: $actions,
+                    plansRefuses: $plansRefuses,
+                );
             }
 
             // Tool-calling : exécuter TOUS les appels demandés (fail-closed dans
@@ -168,6 +184,9 @@ final class AnthropicAiEngine implements AiEngineInterface
                 }
                 if ($result->uiAction !== null) {
                     $actions[] = $result->uiAction;
+                }
+                if ($this->outilsDePlan->estOutilDePlan($toolUsed) && MotifDeRefus::estUnRefus($result)) {
+                    $plansRefuses[] = ['outil' => $toolUsed, 'motif' => MotifDeRefus::depuis($result)];
                 }
                 $toolResults[] = [
                     'type'        => 'tool_result',
@@ -189,6 +208,7 @@ final class AnthropicAiEngine implements AiEngineInterface
             refused: $refused,
             toolUsed: $toolUsed,
             actions: $actions,
+            plansRefuses: $plansRefuses,
         );
     }
 

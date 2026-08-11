@@ -1116,7 +1116,18 @@
                réellement préparé (aucune action émise). Avertissement autoritaire
                réaffiché après un rechargement, en miroir du live (executeActions). #}
             {% if estAssistant and (message.meta.mutationAbsent ?? false) %}
-                <p class="aic-notice aic-notice--warning" role="status">Aucun plan n'est réellement en attente de validation : l'opération n'a pas été préparée, donc aucun bouton « Valider et exécuter » n'apparaîtra. Redemandez l'action pour que le plan et son bouton s'affichent.</p>
+                {# Les messages ANTÉRIEURS à l'ajout du motif portent un simple booléen :
+                   on ne cherche la clé que sur une structure, sinon le fil d'archive
+                   casserait à l'affichage. #}
+                {% set motifAbsent = message.meta.mutationAbsent is iterable
+                    ? (message.meta.mutationAbsent.motif ?? null) : null %}
+                <p class="aic-notice aic-notice--warning" role="status">
+                    {%- if motifAbsent -%}
+                        Aucun plan n'a pu être préparé, donc aucun bouton « Valider et exécuter » n'apparaîtra — {{ motifAbsent }}
+                    {%- else -%}
+                        Aucun plan n'est réellement en attente de validation : l'opération n'a pas été préparée, donc aucun bouton « Valider et exécuter » n'apparaîtra. Redemandez l'action pour que le plan et son bouton s'affichent.
+                    {%- endif -%}
+                </p>
             {% endif %}
             {# RAPPORT FINAL d'un programme portant des écarts : le bouton de
                correction doit survivre au rechargement, sinon la seule issue

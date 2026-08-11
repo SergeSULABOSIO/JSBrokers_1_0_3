@@ -3,6 +3,7 @@
 namespace App\Tests\Ai;
 
 use App\Ai\Mutation\MutationOperation;
+use App\Ai\Mutation\NormaliseurDeDates;
 use App\Ai\Mutation\PlanBuilder;
 use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Tool\PreparerOperationsTool;
@@ -29,6 +30,7 @@ class MutationCollectionsSchemaTest extends TestCase
             $this->createMock(TokenAccountService::class),
             new PlanEnAttente($this->createMock(EntityManagerInterface::class)),
             $this->resolveurAvec(),
+            new NormaliseurDeDates(),
         ));
         $col = $tool->schema()['properties']['operations']['items']['properties']['collections'];
 

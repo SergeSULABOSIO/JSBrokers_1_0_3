@@ -534,16 +534,40 @@ class AssistantIaController extends AbstractController
         // protège : un VRAI plan de document, légitimement annoncé en prose
         // (« budget », « prêt à être validé »), déclencherait l'avertissement
         // « aucun plan n'est en attente » juste au-dessus de sa propre barre.
-        $planFantome = $mutationPlan === null
+        //
+        // DEUX PREUVES, ET NON UNE. La première est LEXICALE (proseSimuleUneDecision) :
+        // conservatrice par construction, elle ne voit que les revendications
+        // explicites. Le 2026-08-11 elle est passée à côté de deux messages qui
+        // affichaient un tableau de plan complet et un budget recopié du tour
+        // précédent, avec « Veuillez valider ce plan » — l'utilisateur a cherché un
+        // bouton pendant deux tours. La seconde preuve est STRUCTURELLE : le serveur
+        // SAIT qu'un outil de plan a tourné et qu'il a refusé, et il sait pourquoi.
+        // Croisée avec une prose qui montre un plan, elle est sans appel — et surtout
+        // elle permet de dire à l'utilisateur ce qui MANQUE, au lieu de l'informer
+        // qu'il n'y a rien à valider.
+        $planRefuse = $reply->plansRefuses[0] ?? null;
+        $aucuneDecision = $mutationPlan === null
             && $documentPlan === null
             && !$reply->refused
-            && !DocumentEnAttente::aUneDecisionEnAttente($conversation)
-            && PlanEnAttente::proseSimuleUneDecision((string) $reply->content);
+            && !DocumentEnAttente::aUneDecisionEnAttente($conversation);
+        $planFantome = PlanEnAttente::estUnPlanFantome(
+            (string) $reply->content,
+            $aucuneDecision,
+            $planRefuse !== null,
+        );
         if ($planFantome) {
-            $actions[] = ['type' => PlanEnAttente::ACTION_ABSENT];
+            $actions[] = array_filter([
+                'type'  => PlanEnAttente::ACTION_ABSENT,
+                // Le motif vient de l'OUTIL, pas d'une phrase générique : « il manque
+                // la date de la dépense » est actionnable, « aucun plan n'est en
+                // attente » ne l'est pas.
+                'motif' => $planRefuse['motif'] ?? null,
+            ]);
             $this->logger->warning('Assistant IA : plan fantôme détecté (prose sans action de mutation).', [
                 'conversation' => $conversation->getId(),
                 'engine'       => $this->aiEngine->name(),
+                'outilRefuse'  => $planRefuse['outil'] ?? null,
+                'motif'        => $planRefuse['motif'] ?? null,
             ]);
         }
 
@@ -562,8 +586,9 @@ class AssistantIaController extends AbstractController
                 // le fichier livré est exactement celui qui a été chiffré.
                 DocumentEnAttente::CLE_PLAN => $documentPlan,
                 // Trace du garde-fou : réaffiche l'avertissement autoritaire après
-                // un rechargement de page (F5), comme les statuts de plan.
-                'mutationAbsent' => $planFantome ?: null,
+                // un rechargement de page (F5), comme les statuts de plan — AVEC son
+                // motif, pour dire la même chose en direct et après rechargement.
+                'mutationAbsent' => $planFantome ? ['motif' => $planRefuse['motif'] ?? null] : null,
                 // Bandeau d'avancement quand ce plan est l'étape d'un PROGRAMME
                 // (« étape 1 sur 3 ») : persisté pour survivre au rechargement,
                 // au même titre que le plan lui-même.

@@ -53,6 +53,12 @@ export default class extends Controller {
 
     /** Message autoritaire affiché quand le modèle décrit un plan sans l'avoir préparé (aucun bouton ne viendra). */
     static MUTATION_ABSENT_MESSAGE = "Aucun plan n'est réellement en attente de validation : l'opération n'a pas été préparée, donc aucun bouton « Valider et exécuter » n'apparaîtra. Redemandez l'action (par ex. « supprime le revenu de cette cotation ») pour que le plan et son bouton s'affichent.";
+    /**
+     * Même avertissement, mais quand le serveur SAIT pourquoi la préparation a
+     * échoué : on nomme l'obstacle au lieu de demander à l'utilisateur de
+     * recommencer à l'aveugle.
+     */
+    static MUTATION_ABSENT_PREFIXE = "Aucun plan n'a pu être préparé, donc aucun bouton « Valider et exécuter » n'apparaîtra —";
 
     /** Bornes du rythme de déploiement mot à mot (ms par mot). */
     static TYPE_DELAY_MAX = 45;
@@ -548,7 +554,7 @@ export default class extends Controller {
                     this.renderMutationReview(action);
                     break;
                 case 'ket-mutation.absent':
-                    this.renderMutationAbsent();
+                    this.renderMutationAbsent(action);
                     break;
                 case 'ket-document.review':
                     this.renderDocumentReview(action);
@@ -1352,8 +1358,19 @@ export default class extends Controller {
      * l'utilisateur — pas de bouton fantôme, pas d'attente d'une décision qui ne
      * viendra pas. Rendu identique au chargement (Twig) et en direct.
      */
-    renderMutationAbsent() {
-        this.appendNotice('warning', this.constructor.MUTATION_ABSENT_MESSAGE);
+    renderMutationAbsent(action = null) {
+        // Le MOTIF vient du serveur, qui sait ce que l'outil a répondu : « il manque
+        // la date de la dépense » aide, « redemandez l'action » ne fait que renvoyer
+        // l'utilisateur à son point de départ. Le message générique reste le repli
+        // quand aucun outil n'a été appelé — là, il n'y a effectivement rien de plus
+        // à dire.
+        const motif = action && typeof action.motif === 'string' ? action.motif.trim() : '';
+        this.appendNotice(
+            'warning',
+            motif === ''
+                ? this.constructor.MUTATION_ABSENT_MESSAGE
+                : `${this.constructor.MUTATION_ABSENT_PREFIXE} ${motif}`,
+        );
     }
 
     /** Note de statut PERMANENTE d'un plan (validé / annulé) — même rendu que le serveur. */
