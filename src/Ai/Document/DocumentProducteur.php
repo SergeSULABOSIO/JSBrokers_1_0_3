@@ -41,9 +41,13 @@ final class DocumentProducteur
      * Séparé de la persistance : c'est ce qui permet au contrôleur de n'engager le
      * portefeuille qu'une fois le fichier réellement fabriqué.
      */
-    public function rendre(RapportSpec $spec, DocumentFormat $format, PiedDePage $pied): string
+    public function rendre(RapportSpec $spec, DocumentFormat $format, PiedDePage $pied, ?ThemeDocument $theme = null): string
     {
-        return $this->resolver->pour($format)->rendre($spec, $this->assembleur->sections($spec), $pied);
+        // Le thème n'est demandé qu'aux formats qui savent le tenir : ailleurs, on
+        // rend clair plutôt que de laisser un rendu à moitié sombre s'échapper.
+        $theme = $format->supporteTheme() ? ($theme ?? ThemeDocument::defaut()) : ThemeDocument::defaut();
+
+        return $this->resolver->pour($format)->rendre($spec, $this->assembleur->sections($spec), $pied, $theme);
     }
 
     /**

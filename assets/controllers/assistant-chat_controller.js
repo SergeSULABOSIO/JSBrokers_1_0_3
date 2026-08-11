@@ -628,6 +628,12 @@ export default class extends Controller {
      * chaque format est calculé par le serveur (budget.parFormat), si bien que
      * changer de format réajuste le budget instantanément sans aller-retour — et
      * sans que le navigateur ait jamais à connaître le barème.
+     *
+     * Et le SÉLECTEUR DE THÈME, préréglé sur celui du chat : un document préparé
+     * depuis une conversation en sombre sortait toujours blanc. Il n'apparaît que
+     * pour les formats qui peignent leur fond — c'est le serveur qui le dit
+     * (`option.theme`, dérivé de DocumentFormat::supporteTheme()), jamais une liste
+     * recopiée ici. Le thème ne change pas le prix : une couleur ne coûte rien.
      */
     renderDocumentReview(action, anchor = null) {
         if (!action || !action.idMessage || !this.hasMessagesTarget) return;
@@ -638,6 +644,7 @@ export default class extends Controller {
         const solde = budget.soldeDisponible || 0;
         let format = action.format || budget.format || 'docx';
         let cout = budget.coutEstime || 0;
+        let theme = this._theme === THEME_SOMBRE ? 'sombre' : 'clair';
 
         const bar = document.createElement('div');
         bar.className = 'aic-mutation-actions aic-mutation-actions--doc';
@@ -656,6 +663,9 @@ export default class extends Controller {
         if (apercu.sections) morceaux.push(`${apercu.sections} section${apercu.sections > 1 ? 's' : ''}`);
         if (apercu.definitions) morceaux.push(`${apercu.definitions} définition${apercu.definitions > 1 ? 's' : ''}`);
         if (apercu.pages) morceaux.push(`${apercu.pages} page${apercu.pages > 1 ? 's' : ''}`);
+        // Le filet serveur s'est déclenché : le document emporte le tableau de la
+        // bulle précédente. L'utilisateur doit le savoir AVANT de payer.
+        if (apercu.donneesRattachees) morceaux.push('détail chiffré de la réponse précédente inclus');
         detail.textContent = morceaux.length ? ` — ${morceaux.join(' · ')}` : '';
         entete.appendChild(detail);
         bar.appendChild(entete);
@@ -680,6 +690,34 @@ export default class extends Controller {
             champ.appendChild(select);
             bar.appendChild(champ);
         }
+
+        // ── Sélecteur de thème, préréglé sur celui du chat. Masqué (et non désactivé)
+        // pour les formats qui ne le tiennent pas : une option inopérante affichée
+        // est une promesse qu'on ne tiendra pas.
+        const champTheme = document.createElement('label');
+        champTheme.className = 'aic-doc-format';
+        const libelleTheme = document.createElement('span');
+        libelleTheme.textContent = 'Rendu';
+        const selectTheme = document.createElement('select');
+        selectTheme.setAttribute('aria-label', 'Thème du document à produire');
+        for (const option of [{ valeur: 'clair', libelle: 'Clair' }, { valeur: 'sombre', libelle: 'Sombre' }]) {
+            const opt = document.createElement('option');
+            opt.value = option.valeur;
+            opt.textContent = option.libelle;
+            if (option.valeur === theme) opt.selected = true;
+            selectTheme.appendChild(opt);
+        }
+        champTheme.appendChild(libelleTheme);
+        champTheme.appendChild(selectTheme);
+        bar.appendChild(champTheme);
+
+        const majTheme = () => {
+            const choisi = parFormat.find((o) => o.valeur === format);
+            // Sans réponse du serveur sur ce format, on n'invente pas : on masque.
+            champTheme.hidden = !(choisi && choisi.theme);
+        };
+        majTheme();
+        selectTheme.addEventListener('change', () => { theme = selectTheme.value; });
 
         // ── Budget : TOUJOURS affiché, garantie serveur indépendante de la prose.
         const budgetLine = document.createElement('p');
@@ -722,6 +760,7 @@ export default class extends Controller {
                 cout = choisi.cout;
                 majBudget();
                 majEtat();
+                majTheme();
             });
         }
 
@@ -732,7 +771,7 @@ export default class extends Controller {
             cancel.disabled = true;
             if (label) label.textContent = 'Production…';
 
-            const resultat = await this.produireDocument(action.idMessage, format);
+            const resultat = await this.produireDocument(action.idMessage, format, theme);
             if (resultat && resultat.document) {
                 this._replaceBar(bar, this.renderDocumentDownload(resultat.document));
                 return;
@@ -751,13 +790,13 @@ export default class extends Controller {
     }
 
     /** POST de production. Renvoie la charge utile en cas de succès, null sinon. */
-    async produireDocument(idMessage, format) {
+    async produireDocument(idMessage, format, theme) {
         const url = `/admin/assistant-ia/api/document/${this.idEntrepriseValue}/${this.idConversationValue}/${idMessage}/produire`;
         try {
             const reponse = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ format }),
+                body: JSON.stringify({ format, theme }),
             });
             const data = await reponse.json().catch(() => ({}));
 

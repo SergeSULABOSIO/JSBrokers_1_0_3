@@ -5,6 +5,7 @@ namespace App\Ai\Document\Renderer;
 use App\Ai\Document\DocumentFormat;
 use App\Ai\Document\PiedDePage;
 use App\Ai\Document\RapportSpec;
+use App\Ai\Document\ThemeDocument;
 
 /**
  * Un rendu de rapport, pour un format.
@@ -23,9 +24,15 @@ interface RapportRendererInterface
     public function format(): DocumentFormat;
 
     /**
+     * Le THÈME est reçu par TOUS, honoré par ceux qui peuvent : un .txt n'a pas de
+     * couleurs, un .docx pas de fond de page. Le passer quand même plutôt que de
+     * scinder l'interface garde une seule signature — et
+     * {@see DocumentFormat::supporteTheme()} dit d'avance, à l'utilisateur comme au
+     * code appelant, qui l'honore. Aucun rendu ne fait donc semblant.
+     *
      * @param list<array{titre: string, blocs: list<array<string, mixed>>}> $sections
      *
      * @return string les octets du fichier
      */
-    public function rendre(RapportSpec $spec, array $sections, PiedDePage $pied): string;
+    public function rendre(RapportSpec $spec, array $sections, PiedDePage $pied, ThemeDocument $theme): string;
 }

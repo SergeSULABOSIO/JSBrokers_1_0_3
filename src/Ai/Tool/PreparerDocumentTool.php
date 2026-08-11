@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Document\BullesDeDonnees;
 use App\Ai\Document\DocumentEnAttente;
 use App\Ai\Document\DocumentFormat;
 use App\Ai\Document\DocumentTarificateur;
@@ -45,12 +46,18 @@ use App\Repository\AssistantParametresRepository;
  */
 final class PreparerDocumentTool implements AiToolInterface
 {
+    /** Titre de la section rattachée d'office par le filet anti-document-vide. */
+    public const TITRE_DONNEES = 'Données détaillées';
+
     public function __construct(
         private readonly DocumentTarificateur $tarificateur,
         private readonly RapportRendererResolver $resolver,
         private readonly DocumentEnAttente $documentEnAttente,
         private readonly PlanEnAttente $planEnAttente,
         private readonly AssistantParametresRepository $parametresRepository,
+        // Le filet : un rapport tiré d'une analyse chiffrée doit emporter ses
+        // chiffres, même quand le modèle a rédigé de mémoire.
+        private readonly BullesDeDonnees $bulles,
     ) {
     }
 
@@ -117,7 +124,10 @@ final class PreparerDocumentTool implements AiToolInterface
                     'type' => 'array',
                     'description' => 'Les sections du RÉSULTAT (traitement, calculs, analyses). Chaque section '
                         . 'porte SOIT un corps rédigé, SOIT le sourceMessageId d\'un message du fil dont je '
-                        . 'reprendrai le texte exact.',
+                        . 'reprendrai le texte exact. RÈGLE : si le résultat chiffré est DÉJÀ affiché dans une '
+                        . 'bulle (les bulles porteuses de tableaux annoncent leur numéro « message #N » dans le '
+                        . 'fil), donne son sourceMessageId. Ne remplace JAMAIS un tableau par un total ou un '
+                        . 'commentaire : un rapport sans ses données est un rapport faux.',
                     'items' => [
                         'type' => 'object',
                         'properties' => [
@@ -129,9 +139,10 @@ final class PreparerDocumentTool implements AiToolInterface
                             ],
                             'sourceMessageId' => [
                                 'type' => 'integer',
-                                'description' => 'Identifiant d\'un message DÉJÀ affiché dans cette conversation, '
-                                    . 'dont je reprendrai le contenu exact. À PRIVILÉGIER dès que le résultat y '
-                                    . 'figure : tu évites de le recopier, et rien n\'est tronqué.',
+                                'description' => 'Numéro d\'un message DÉJÀ affiché dans cette conversation (les '
+                                    . 'bulles porteuses de données l\'annoncent : « cette bulle est le message #N »), '
+                                    . 'dont je reprendrai le contenu exact. OBLIGATOIRE dès que le résultat y '
+                                    . 'figure : tu évites de le recopier, et rien n\'est tronqué ni résumé.',
                             ],
                         ],
                         'required' => ['titre'],
@@ -180,6 +191,7 @@ final class PreparerDocumentTool implements AiToolInterface
         }
 
         [$sections, $introuvables] = $this->resoudreSections($args, $scope);
+        [$sections, $rattachee] = $this->rattacherLesDonneesDuFil($sections, $scope);
         $spec = RapportSpec::depuisArguments($args, $sections);
 
         // ── Structure incomplète : on NOMME ce qui manque plutôt que de livrer un
@@ -222,6 +234,9 @@ final class PreparerDocumentTool implements AiToolInterface
             'definitions' => count($spec->definitions),
             'pages'       => $budget['pages'],
             'caracteres'  => $budget['caracteres'],
+            // Le filet s'est-il déclenché ? La barre l'annonce à l'utilisateur —
+            // il doit savoir que son document emporte le tableau de la bulle.
+            'donneesRattachees' => $rattachee,
         ];
 
         $note = $budget['suffisant']
@@ -236,6 +251,14 @@ final class PreparerDocumentTool implements AiToolInterface
         if ($introuvables !== []) {
             $note .= ' ATTENTION : ' . count($introuvables) . ' section(s) référençaient un message '
                 . 'introuvable dans cette conversation et sont vides — signale-le à l\'utilisateur.';
+        }
+
+        if ($rattachee) {
+            $note .= ' IMPORTANT : ton document ne contenait AUCUN tableau alors que ta réponse précédente '
+                . 'en portait ; j\'ai donc ajouté en dernière section « ' . self::TITRE_DONNEES . ' » le texte '
+                . 'exact de cette bulle, tableaux compris. Le budget ci-dessus en tient déjà compte. '
+                . 'Annonce-le en une phrase à l\'utilisateur : le rapport emporte bien le détail chiffré, '
+                . 'et pas seulement son commentaire.';
         }
 
         return AiToolResult::ok(
@@ -343,6 +366,68 @@ final class PreparerDocumentTool implements AiToolInterface
         }
 
         return [$sections, $introuvables];
+    }
+
+    /**
+     * LE FILET : un rapport tiré d'une analyse chiffrée doit EMPORTER ses chiffres.
+     *
+     * L'incident du 11/08/2026. Ket affiche dix-huit lignes de paiements de primes
+     * avec commissions, taxes et réserve. L'utilisateur demande « produis-moi un
+     * rapport à partir de cette réponse ». Le rapport sort avec son objet, son
+     * introduction, ses définitions, sa conclusion — et une seule phrase à la place
+     * du tableau : « le montant total cumulé s'élève à 1 911 633,28 $ ». Le
+     * document ne contenait pas ses données ; il n'était plus qu'un commentaire.
+     *
+     * La cause première est réparée ailleurs : les identifiants de bulle figurent
+     * désormais dans l'historique (AiContextBuilder::marqueurBulleReprisable), donc
+     * `sourceMessageId` est enfin adressable. Ceci en est le FILET, pour le tour où
+     * le modèle rédige quand même de mémoire.
+     *
+     * TROIS CONDITIONS CUMULATIVES, pour qu'il reste étroit :
+     *   1. aucune section du document ne porte de tableau — le modèle n'a donc rien
+     *      repris, ni recopié à la main ;
+     *   2. la DERNIÈRE bulle de l'assistant en porte un — c'est « cette réponse »
+     *      que l'utilisateur désigne ;
+     *   3. son texte n'est pas déjà présent dans une section (double sécurité
+     *      contre une reprise en double).
+     *
+     * Le rattachement a lieu AVANT le chiffrage : le budget annoncé couvre donc le
+     * tableau ajouté, et la promesse « le budget annoncé est le budget débité »
+     * tient toujours.
+     *
+     * @param list<array{titre: string, corps: string}> $sections
+     *
+     * @return array{0: list<array{titre: string, corps: string}>, 1: bool}
+     */
+    private function rattacherLesDonneesDuFil(array $sections, AiScope $scope): array
+    {
+        if ($sections === []) {
+            // Document vide : `manquants()` va le refuser, et un tableau rattaché
+            // ne ferait que masquer une structure absente.
+            return [$sections, false];
+        }
+
+        foreach ($sections as $section) {
+            if ($this->bulles->porteDesDonnees($section['corps'])) {
+                return [$sections, false];
+            }
+        }
+
+        $porteuse = $this->bulles->dernierePorteuse($scope->conversation);
+        if ($porteuse === null) {
+            return [$sections, false];
+        }
+
+        $contenu = trim((string) $porteuse->getContenu());
+        foreach ($sections as $section) {
+            if (str_contains($section['corps'], $contenu)) {
+                return [$sections, false];
+            }
+        }
+
+        $sections[] = ['titre' => self::TITRE_DONNEES, 'corps' => $contenu];
+
+        return [$sections, true];
     }
 
     /**

@@ -100,7 +100,22 @@
             --aic-mic-pulse:rgba(132,32,41,.45);
             --aic-mic-fade:rgba(132,32,41,0);
 
+            /* Les CONTRÔLES NATIFS (liste déroulante d'un <select>, barres de
+               défilement, curseurs de saisie) sont peints par le navigateur, hors
+               de portée de nos jetons : la liste d'un select s'ouvrait blanche sur
+               un chat sombre. `color-scheme` est le seul levier qui les fasse
+               suivre. Il est posé EXPLICITEMENT sur les deux thèmes — sans la
+               valeur `light` ici, un poste dont le système est en sombre ouvrirait
+               une liste sombre sur un chat clair, soit l'incohérence inverse. */
+            color-scheme: light;
+
             display:flex; flex-direction:column; height:100%; min-height:0; background:var(--aic-bg);
+        }
+        /* Ceinture et bretelles : les navigateurs qui rendent la liste déroulante
+           avec les styles d'auteur lisent ces règles, les autres suivent
+           color-scheme. Dans les deux cas, la liste est du thème du chat. */
+        .jsb-ai-chat select option {
+            background:var(--aic-input-bg); color:var(--aic-input-text);
         }
 
         /* ══ Mode sombre ════════════════════════════════════════════════════════
@@ -112,6 +127,10 @@
            Contrastes WCAG AA vérifiés par calcul (texte courant 13.48:1, texte
            atténué 7.71:1, accent 6.62:1, contours de composants 3.41:1). */
         .jsb-ai-chat[data-aic-theme="dark"] {
+            /* Bascule les contrôles natifs (liste d'un select, barres de défilement)
+               en sombre : ils ne lisent aucun de nos jetons. */
+            color-scheme: dark;
+
             --aic-bg:#16181b;
             --aic-surface:#1e2227;
             --aic-surface-raised:#2a2f36;
@@ -825,6 +844,10 @@
         .jsb-ai-chat .aic-doc-apercu { flex:1 1 100%; margin:0 0 .1rem; font-size:.82rem; color:var(--aic-text); }
         .jsb-ai-chat .aic-doc-apercu span { color:var(--aic-muted); }
         .jsb-ai-chat .aic-doc-format { display:inline-flex; align-items:center; gap:.4rem; font-size:.78rem; color:var(--aic-muted); }
+        /* `display:inline-flex` l'emporterait sur la règle [hidden] du navigateur :
+           sans cette ligne, le sélecteur de thème resterait visible sur un Word, qui
+           ne sait pas le tenir. Même précaution que .aic-msg-menu et .aic-citation. */
+        .jsb-ai-chat .aic-doc-format[hidden] { display:none; }
         .jsb-ai-chat .aic-doc-format select {
             padding:.25rem .45rem; border-radius:7px; font-size:.78rem;
             border:1px solid var(--aic-border-strong); background:var(--aic-input-bg); color:var(--aic-input-text);

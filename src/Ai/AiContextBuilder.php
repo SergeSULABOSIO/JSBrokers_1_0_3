@@ -3,6 +3,7 @@
 namespace App\Ai;
 
 use App\Ai\Boussole\BoussoleService;
+use App\Ai\Document\BullesDeDonnees;
 use App\Ai\Fichier\FichierAttachePolicy;
 use App\Ai\Guide\GuideRepository;
 use App\Ai\Mutation\OutilsDePlan;
@@ -53,6 +54,10 @@ class AiContextBuilder
         // envoyées au fournisseur DOIVENT être dérivés du même tableau : c'est la
         // seule garantie qu'aucune consigne ne nomme un outil absent du tour.
         private readonly TrousseCatalogue $trousseCatalogue,
+        // Détection des bulles porteuses de tableaux : c'est elle qui décide
+        // quelles bulles de l'historique reçoivent leur identifiant, et donc
+        // deviennent reprenables telles quelles dans un document.
+        private readonly BullesDeDonnees $bullesDeDonnees,
     ) {
     }
 
@@ -83,6 +88,9 @@ class AiContextBuilder
             // le re-prépare (ou nie à tort l'enregistrement) quand on lui demande.
             if ($message->getRole() === AssistantMessage::ROLE_ASSISTANT) {
                 $contenu .= $this->marqueurEtatMutation($message->getMeta() ?? []);
+                // Une bulle qui porte un TABLEAU est reprenable telle quelle dans un
+                // document : encore faut-il que le modèle connaisse son identifiant.
+                $contenu .= $this->marqueurBulleReprisable($message);
             }
             $messages[] = [
                 'role'    => $message->getRole() === AssistantMessage::ROLE_ASSISTANT ? 'assistant' : 'user',
@@ -1502,6 +1510,47 @@ class AiContextBuilder
         }
 
         return '';
+    }
+
+    /**
+     * L'IDENTIFIANT d'une bulle qui porte des DONNÉES — la clé qui rend
+     * `sourceMessageId` de preparer_document réellement utilisable.
+     *
+     * Sans ce marqueur, on demandait au modèle de désigner une bulle par un numéro
+     * qu'il n'avait jamais vu : aucun identifiant de message ne figurait dans
+     * l'historique. Il ne pouvait donc que réécrire les chiffres de mémoire — et,
+     * borné à 4 096 jetons de sortie, il remplaçait un tableau de dix-huit lignes
+     * par une phrase de total. C'est l'incident du rapport « paiements de primes »
+     * du 11/08/2026 : le document sortait sans ses données.
+     *
+     * POSÉ SEULEMENT SUR LES BULLES PORTEUSES. Annoter les vingt messages de la
+     * fenêtre coûterait des jetons à chaque tour pour un renseignement inutile la
+     * plupart du temps ; ici, le marqueur n'apparaît que là où il y a quelque chose
+     * à reprendre — et il dit à la fois quoi, comment, et ce qu'il ne faut pas faire.
+     */
+    private function marqueurBulleReprisable(AssistantMessage $message): string
+    {
+        $id = $message->getId();
+        if ($id === null) {
+            return '';
+        }
+
+        $tableaux = $this->bullesDeDonnees->compterLesTableaux((string) $message->getContenu());
+        if ($tableaux < 1) {
+            return '';
+        }
+
+        return sprintf(
+            "\n\n[SYSTÈME — cette bulle est le message #%d du fil et porte %d tableau%s de données. "
+            . 'Pour la faire figurer dans un DOCUMENT, appelle preparer_document avec une section portant '
+            . 'sourceMessageId=%d : le serveur y recopiera son texte EXACT, tableaux compris, sans que rien '
+            . 'ne transite par toi. NE RÉÉCRIS JAMAIS ces chiffres de tête et ne les remplace pas par un '
+            . 'total ou un résumé — un document dont les données ont été résumées est un document faux.]',
+            $id,
+            $tableaux,
+            $tableaux > 1 ? 'x' : '',
+            $id,
+        );
     }
 
     /**

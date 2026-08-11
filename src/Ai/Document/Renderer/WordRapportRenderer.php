@@ -5,6 +5,7 @@ namespace App\Ai\Document\Renderer;
 use App\Ai\Document\DocumentFormat;
 use App\Ai\Document\PiedDePage;
 use App\Ai\Document\RapportSpec;
+use App\Ai\Document\ThemeDocument;
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\Settings;
@@ -42,7 +43,12 @@ final class WordRapportRenderer implements RapportRendererInterface
         return DocumentFormat::Docx;
     }
 
-    public function rendre(RapportSpec $spec, array $sections, PiedDePage $pied): string
+    /**
+     * Le thème est ignoré : PHPWord n'écrit pas de fond de page OOXML, si bien
+     * qu'une encre claire donnerait un .docx blanc au texte illisible. Mieux vaut
+     * un document clair honnête (cf. DocumentFormat::supporteTheme()).
+     */
+    public function rendre(RapportSpec $spec, array $sections, PiedDePage $pied, ThemeDocument $theme): string
     {
         // Toute chaîne écrite est échappée à la sérialisation. À poser AVANT de
         // construire le document : c'est un réglage global, lu à l'écriture.
