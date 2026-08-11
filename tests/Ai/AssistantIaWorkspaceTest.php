@@ -380,7 +380,10 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $this->assertResponseIsSuccessful();
         $content = (string) $this->client->getResponse()->getContent();
 
-        $this->assertStringContainsString('class="aic-iconbtn aic-fullscreen"', $content, 'Le bouton plein écran doit porter le socle commun + sa classe.');
+        // Le plein écran est passé dans le menu ⋮ (l'entête n'affiche plus que deux
+        // boutons), en gardant .aic-fullscreen — la classe par laquelle
+        // workspace-manager synchronise l'état de TOUS les boutons plein écran.
+        $this->assertStringContainsString('class="aic-msg-menu-item aic-fullscreen"', $content, 'Le plein écran doit être une entrée du menu d\'options.');
         $this->assertStringContainsString('workspace-manager#toggleChatFullscreen', $content, 'Le bouton doit déclencher la bascule plein écran du contrôleur workspace.');
         // Icônes inline (agrandir / réduire) : pas d'ux_icon serveur, comme le micro.
         $this->assertStringContainsString('aic-ic-expand', $content, 'L\'icône « agrandir » doit être rendue.');
@@ -403,21 +406,24 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $this->assertResponseIsSuccessful();
         $content = (string) $this->client->getResponse()->getContent();
 
-        // Bouton : socle commun + classe propre, câblé sur le contrôleur du chat.
-        $this->assertStringContainsString('class="aic-iconbtn aic-theme"', $content, 'La bascule doit porter le socle commun + sa classe.');
+        // La bascule vit désormais dans le menu ⋮ de l'entête : l'entête n'affiche
+        // plus que deux boutons (options, fermer) pour ne pas rogner le nom du
+        // cabinet dans une colonne étroite. Elle garde sa classe .aic-theme, par
+        // laquelle le contrôleur synchronise son état.
+        $this->assertStringContainsString('class="aic-msg-menu-item aic-theme"', $content, 'La bascule doit être une entrée du menu d\'options.');
         $this->assertStringContainsString('assistant-chat#toggleTheme', $content, 'La bascule doit déclencher toggleTheme.');
+        $this->assertStringContainsString('class="aic-iconbtn aic-options"', $content, 'L\'entête doit porter le bouton ⋮ qui ouvre les options.');
         // Icônes inline (lune / soleil) : pas d'ux_icon serveur, comme le micro.
         $this->assertStringContainsString('aic-ic-moon', $content, 'L\'icône « lune » doit être rendue.');
         $this->assertStringContainsString('aic-ic-sun', $content, 'L\'icône « soleil » doit être rendue.');
         // A11y : libellé STABLE + état pressé (pas de libellé qui varie).
         $this->assertStringContainsString('aria-label="Mode sombre"', $content, 'Le libellé de la bascule doit être stable.');
 
-        // L'ordre porte l'auto-marge `.aic-iconbtn:first-of-type` qui pousse le
-        // groupe de boutons à droite : la bascule doit précéder le plein écran.
+        // Ordre du menu : la bascule de thème précède le plein écran, comme avant.
         $this->assertLessThan(
             strpos($content, 'aic-fullscreen'),
             strpos($content, 'aic-theme'),
-            'La bascule de thème doit précéder le bouton plein écran dans l\'entête.'
+            'La bascule de thème doit précéder le bouton plein écran.'
         );
 
         // Défaut : aucun choix explicite → le front suit la préférence système.

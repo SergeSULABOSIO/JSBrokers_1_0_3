@@ -4,6 +4,7 @@ namespace App\Tests\Ai;
 
 use App\Ai\Document\DocumentEnAttente;
 use App\Ai\Document\DocumentTarificateur;
+use App\Ai\Document\RapportSpec;
 use App\Ai\Document\ThemeDocument;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\PreparerDocumentTool;
@@ -566,6 +567,76 @@ class KetDocumentGenerationTest extends WebTestCase
         // Le fond est posé sur <html> ET <body> : sinon le navigateur laisse un
         // liseré blanc autour du document.
         self::assertStringContainsString('<html lang="fr" style="background:', $html);
+    }
+
+    /**
+     * « LE MÊME RAPPORT, MAIS EN HTML » — de bout en bout.
+     *
+     * C'est la demande qui a mis le défaut à nu : Ket repartait de zéro et rédigeait
+     * un NOUVEAU document de mémoire. Le tableau, hors de la fenêtre d'historique,
+     * disparaissait — deux fichiers censés être le même rapport ne portaient pas les
+     * mêmes données, ce qui ruine la parité des six formats.
+     *
+     * Le serveur détient pourtant la spec, FIGÉE au moment du plan. La reprendre ne
+     * coûte aucune rédaction et rend les deux fichiers identiques au format près.
+     */
+    public function testLeMemeRapportPeutEtreRefaitDansUnAutreFormatSansRienReecrire(): void
+    {
+        [$entreprise, $invite, $conversation] = $this->seed();
+
+        // 1) Un premier rapport, en Word, avec son tableau.
+        [$message] = $this->planPrepare($entreprise, $invite, $conversation, $this->arguments('docx'));
+        $premier = $this->produire($entreprise, $conversation, $message, 'docx');
+        self::assertResponseIsSuccessful();
+        $idDocument = $premier['document']['idDocument'];
+
+        // 2) « Refais-le en HTML » : le modèle ne fournit QUE le numéro et le format.
+        $this->em()->clear();
+        $frais = [
+            $this->em()->getRepository(Entreprise::class)->find($entreprise->getId()),
+            $this->em()->getRepository(Invite::class)->find($invite->getId()),
+            $this->em()->getRepository(AssistantConversation::class)->find($conversation->getId()),
+        ];
+        $reprise = static::getContainer()->get(PreparerDocumentTool::class)->execute(
+            ['reprendreDocumentId' => $idDocument, 'format' => 'html'],
+            new AiScope($frais[0], $frais[1], $frais[2]),
+        );
+
+        self::assertTrue($reprise->data['pret'] ?? false, 'La reprise doit produire un plan prêt sans rédaction.');
+        self::assertSame($idDocument, $reprise->data['apercu']['reprisDuDocument']);
+        self::assertSame('html', $reprise->uiAction['format']);
+
+        // 3) La spec est IDENTIQUE, au caractère près : c'est toute la promesse.
+        $origine = RapportSpec::fromArray((array) ($message->getMeta()[DocumentEnAttente::CLE_PLAN]['spec'] ?? []));
+        self::assertSame($origine->toArray(), RapportSpec::fromArray($reprise->uiAction['spec'])->toArray());
+        self::assertSame(1, $reprise->data['apercu']['tableaux'], 'Le tableau doit survivre à la reprise.');
+    }
+
+    /** FAIL-CLOSED : un document d'un AUTRE fil n'est jamais repris. */
+    public function testUneRepriseNeFranchitPasLesFrontieresDuFil(): void
+    {
+        [$entreprise, $invite, $conversation] = $this->seed();
+        [$message] = $this->planPrepare($entreprise, $invite, $conversation, $this->arguments('docx'));
+        $document = $this->produire($entreprise, $conversation, $message, 'docx')['document'];
+
+        // produire() vide l'EM : on relit les entités, sinon la nouvelle conversation
+        // pointerait vers des objets détachés.
+        $entreprise = $this->em()->getRepository(Entreprise::class)->find($entreprise->getId());
+        $invite = $this->em()->getRepository(Invite::class)->find($invite->getId());
+
+        $ailleurs = (new AssistantConversation())->setEntreprise($entreprise)->setInvite($invite);
+        $this->em()->persist($ailleurs);
+        $this->em()->flush();
+
+        $resultat = static::getContainer()->get(PreparerDocumentTool::class)->execute(
+            ['reprendreDocumentId' => $document['idDocument'], 'format' => 'html'],
+            new AiScope($entreprise, $invite, $ailleurs),
+        );
+
+        // Aucune spec reprise : l'outil retombe sur la voie normale et refuse, faute
+        // de structure — il ne sert JAMAIS le document d'un autre fil.
+        self::assertFalse($resultat->data['pret']);
+        self::assertNull($resultat->uiAction);
     }
 
     /**

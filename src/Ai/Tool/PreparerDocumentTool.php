@@ -12,6 +12,7 @@ use App\Ai\Document\Renderer\RapportRendererResolver;
 use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Scope\AiScope;
 use App\Entity\AssistantMessage;
+use App\Repository\AssistantDocumentRepository;
 use App\Repository\AssistantParametresRepository;
 
 /**
@@ -58,6 +59,9 @@ final class PreparerDocumentTool implements AiToolInterface
         // Le filet : un rapport tiré d'une analyse chiffrée doit emporter ses
         // chiffres, même quand le modèle a rédigé de mémoire.
         private readonly BullesDeDonnees $bulles,
+        // Les documents déjà produits : refaire le même rapport dans un autre format
+        // se fait en relisant sa spec, jamais en la réécrivant.
+        private readonly AssistantDocumentRepository $documents,
     ) {
     }
 
@@ -158,13 +162,35 @@ final class PreparerDocumentTool implements AiToolInterface
                     'description' => "Format de sortie. Omets-le pour Word, le défaut. Ne le renseigne que si "
                         . "l'utilisateur a précisé lequel il veut.",
                 ],
+                'reprendreDocumentId' => [
+                    'type' => 'integer',
+                    'description' => "Numéro d'un document DÉJÀ produit dans ce fil (voir « CE QUE TU PEUX "
+                        . 'REPRENDRE TEL QUEL »), à refaire dans un AUTRE format. Je reprends sa '
+                        . "spécification EXACTE — titre, sections, tableaux, définitions, conclusion — et "
+                        . "seul le format change. À UTILISER SYSTÉMATIQUEMENT quand l'utilisateur demande "
+                        . '« le même rapport en HTML/PDF/Excel » : tu n\'as alors RIEN à rédiger, il suffit '
+                        . 'de donner ce numéro et le format. Les autres arguments sont ignorés.',
+                ],
                 'remplacerPlanEnAttente' => [
                     'type' => 'boolean',
                     'description' => "Ne mets true QUE si une décision attend déjà ET que l'utilisateur demande "
                         . 'de la CHANGER : la précédente est alors annulée et remplacée.',
                 ],
             ],
-            'required' => ['titre', 'problematique', 'introduction', 'sections', 'conclusion'],
+            // AUCUN CHAMP REQUIS AU NIVEAU DU SCHÉMA, et c'est un choix.
+            //
+            // Les cinq parties (titre, problématique, introduction, sections,
+            // conclusion) restent OBLIGATOIRES — mais seulement quand le document est
+            // rédigé. Avec reprendreDocumentId, la spec vient du serveur et les exiger
+            // forcerait le modèle à réécrire ce qu'il vient précisément de ne pas
+            // avoir à réécrire. Le dialecte accepté par Gemini est PLAT : ni `anyOf`,
+            // ni `if/then`, donc « requis sauf si » n'y est pas exprimable
+            // (cf. GeminiAiEngine::sanitizeSchema, qui élague ces mots-clés).
+            //
+            // L'exigence n'est donc pas perdue, elle est déplacée : la description
+            // ci-dessus la porte, et RapportSpec::manquants() la fait respecter en
+            // NOMMANT ce qui manque — un refus qui se répare tout seul.
+            'required' => [],
         ];
     }
 
@@ -190,9 +216,15 @@ final class PreparerDocumentTool implements AiToolInterface
             $format = DocumentFormat::defaut();
         }
 
-        [$sections, $introuvables] = $this->resoudreSections($args, $scope);
-        [$sections, $rattachee] = $this->rattacherLesDonneesDuFil($sections, $scope);
-        $spec = RapportSpec::depuisArguments($args, $sections);
+        // ── « LE MÊME, MAIS EN PDF » — la voie sans réécriture.
+        $repris = $this->specDUnDocumentProduit($args, $scope);
+        if ($repris !== null) {
+            [$spec, $introuvables, $rattachee] = [$repris, [], false];
+        } else {
+            [$sections, $introuvables] = $this->resoudreSections($args, $scope);
+            [$sections, $rattachee] = $this->rattacherLesDonneesDuFil($sections, $scope);
+            $spec = RapportSpec::depuisArguments($args, $sections);
+        }
 
         // ── Structure incomplète : on NOMME ce qui manque plutôt que de livrer un
         // document mutilé. Même contrat de refus que preparer_operations.
@@ -237,6 +269,14 @@ final class PreparerDocumentTool implements AiToolInterface
             // Le filet s'est-il déclenché ? La barre l'annonce à l'utilisateur —
             // il doit savoir que son document emporte le tableau de la bulle.
             'donneesRattachees' => $rattachee,
+            // La reprise d'un document déjà produit : l'utilisateur doit lire
+            // « repris du document #4 » plutôt que de découvrir après paiement que
+            // ce n'était pas le même rapport.
+            'reprisDuDocument'  => $repris !== null ? (int) $args['reprendreDocumentId'] : null,
+            // COMBIEN DE TABLEAUX le document contiendra. Un rapport annoncé sans
+            // aucun tableau alors qu'on l'attendait chiffré se voit AVANT d'être
+            // payé : c'est le contrôle qui manquait le 11/08/2026.
+            'tableaux'          => $this->compterLesTableaux($spec),
         ];
 
         $note = $budget['suffisant']
@@ -251,6 +291,20 @@ final class PreparerDocumentTool implements AiToolInterface
         if ($introuvables !== []) {
             $note .= ' ATTENTION : ' . count($introuvables) . ' section(s) référençaient un message '
                 . 'introuvable dans cette conversation et sont vides — signale-le à l\'utilisateur.';
+        }
+
+        if ($repris !== null) {
+            $note = 'Ce document REPREND la spécification exacte du document #' . (int) $args['reprendreDocumentId']
+                . ' ; seul le FORMAT change. Dis-le à l\'utilisateur en une phrase : c\'est le même rapport, '
+                . "aux mêmes données, dans le format demandé. Présente ensuite le budget avec son explication "
+                . "— recopie « explication » telle quelle. N'invente aucun autre chiffre.";
+        }
+
+        if ($apercu['tableaux'] === 0 && $repris === null) {
+            $note .= ' ATTENTION : ce document ne contient AUCUN tableau. Si l\'utilisateur attendait un '
+                . 'travail chiffré, tu as rédigé de mémoire au lieu de reprendre la bulle qui porte les '
+                . 'données : annule ce plan et rappelle-moi avec sourceMessageId (voir « CE QUE TU PEUX '
+                . 'REPRENDRE TEL QUEL » dans ton contexte). Sinon, signale-le simplement à l\'utilisateur.';
         }
 
         if ($rattachee) {
@@ -366,6 +420,56 @@ final class PreparerDocumentTool implements AiToolInterface
         }
 
         return [$sections, $introuvables];
+    }
+
+    /** Nombre de tableaux que le document contiendra, toutes sections confondues. */
+    private function compterLesTableaux(RapportSpec $spec): int
+    {
+        $total = 0;
+        foreach ($spec->sections as $section) {
+            $total += $this->bulles->compterLesTableaux($section['corps']);
+        }
+
+        return $total;
+    }
+
+    /**
+     * LA SPEC D'UN DOCUMENT DÉJÀ PRODUIT — « refais-moi le même, mais en HTML ».
+     *
+     * ── Le besoin, tel qu'il s'est présenté ─────────────────────────────────────
+     * Un rapport est produit en Word. L'utilisateur le veut aussi en HTML. Ket
+     * repartait alors de zéro : elle rédigeait un NOUVEAU document de mémoire, et le
+     * tableau — hors de la fenêtre d'historique — disparaissait ou changeait. Deux
+     * fichiers censés être le même rapport ne portaient pas les mêmes données. C'est
+     * l'exact contraire de ce que la parité des six formats vient garantir.
+     *
+     * Or le serveur détient déjà la réponse : la spécification est FIGÉE dans la meta
+     * du message qui a présenté le plan — c'est elle qui rend tenable la promesse
+     * « le budget annoncé est le budget débité ». La reprendre ne coûte donc rien à
+     * rédiger, et rend les deux fichiers rigoureusement identiques au format près.
+     *
+     * FAIL-CLOSED : le document doit appartenir à la conversation du scope. Un
+     * identifiant d'ailleurs ne renvoie rien — jamais une spec d'un autre fil.
+     */
+    private function specDUnDocumentProduit(array $args, AiScope $scope): ?RapportSpec
+    {
+        $id = (int) ($args['reprendreDocumentId'] ?? 0);
+        if ($id < 1 || $scope->conversation === null) {
+            return null;
+        }
+
+        $document = $this->documents->dansConversation($id, $scope->conversation);
+        $plan = (array) (($document?->getMessage()?->getMeta() ?? [])[DocumentEnAttente::CLE_PLAN] ?? []);
+        $spec = (array) ($plan['spec'] ?? []);
+        if ($spec === []) {
+            return null;
+        }
+
+        $reconstruite = RapportSpec::fromArray($spec);
+
+        // Une spec incomplète en base ne doit pas se transformer en document mutilé :
+        // on repart alors sur la voie normale, où `manquants()` dira ce qui cloche.
+        return $reconstruite->manquants() === [] ? $reconstruite : null;
     }
 
     /**

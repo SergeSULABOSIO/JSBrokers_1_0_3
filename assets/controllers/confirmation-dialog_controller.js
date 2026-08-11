@@ -22,7 +22,10 @@ export default class extends Controller {
         "itemList",
         "passwordContainer",
         "passwordField",
-        "passwordToggle"
+        "passwordToggle",
+        // Icônes d'entête : destructrice (défaut) ou neutre, selon l'action.
+        "iconDanger",
+        "iconNeutre"
     ];
 
     connect() {
@@ -135,6 +138,19 @@ export default class extends Controller {
         // Alerte "irréversible" masquable
         if (this.hasIrreversibleAlertTarget) {
             this.irreversibleAlertTarget.style.display = (showIrreversible === false) ? 'none' : '';
+        }
+
+        // Icône d'entête accordée à l'action. Elle était figée sur la corbeille :
+        // une confirmation sans suppression s'annonçait donc comme une destruction.
+        // Le défaut reste la corbeille — aucun appel existant ne change de rendu ;
+        // seules les confirmations qui se déclarent NON destructrices (via
+        // showIrreversible: false) reçoivent l'icône neutre.
+        const destructif = showIrreversible !== false;
+        if (this.hasIconDangerTarget) {
+            this.iconDangerTarget.style.setProperty('display', destructif ? 'inline-flex' : 'none', 'important');
+        }
+        if (this.hasIconNeutreTarget) {
+            this.iconNeutreTarget.style.setProperty('display', destructif ? 'none' : 'inline-flex', 'important');
         }
 
         // NOUVEAU : Gère l'affichage des descriptions des éléments concernés.

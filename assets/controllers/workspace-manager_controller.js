@@ -1015,6 +1015,11 @@ export default class extends Controller {
             // pas s'entendre proposer d'agrandir un chat depuis une fiche.
             const quoi = btn.classList.contains('aic-fullscreen') ? ' le chat' : '';
             btn.setAttribute('aria-pressed', actif ? 'true' : 'false');
+            // Le même bouton existe en ENTRÉE DE MENU (⋮ du chat), où le rôle est
+            // `menuitemcheckbox` : là, l'état se dit avec aria-checked et non
+            // aria-pressed. On pose les deux — chacun n'est lu que dans son rôle,
+            // et l'entrée de menu cesse d'être muette sur son état.
+            btn.setAttribute('aria-checked', actif ? 'true' : 'false');
             btn.setAttribute('aria-label', actif ? `Réduire${quoi}` : `Afficher${quoi} en plein écran`);
             btn.setAttribute('title', actif ? 'Réduire' : 'Plein écran');
         });

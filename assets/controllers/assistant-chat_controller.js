@@ -38,6 +38,8 @@ export default class extends Controller {
         'fichierBar', 'fichierInput',
         // Actions de bulle : menu unique ancré, gabarits clonés, bandeau de citation.
         'menuBulle', 'tplKebab', 'tplCitation', 'citationBar', 'citationQui', 'citationExtrait',
+        // Menu ⋮ de l'entête : thème, plein écran, nouvelle conversation.
+        'menuEntete',
     ];
 
     /** Seuil d'affichage du compteur de caractères restants (proche de maxlength). */
@@ -350,7 +352,12 @@ export default class extends Controller {
         this._theme = theme;
         this.element.setAttribute('data-aic-theme', theme);
         this.element.querySelectorAll('.aic-theme').forEach((btn) => {
-            btn.setAttribute('aria-pressed', theme === THEME_SOMBRE ? 'true' : 'false');
+            const sombre = theme === THEME_SOMBRE ? 'true' : 'false';
+            btn.setAttribute('aria-pressed', sombre);
+            // La bascule vit désormais dans le menu ⋮, où son rôle est
+            // `menuitemcheckbox` : l'état s'y dit avec aria-checked. Les deux sont
+            // posés, chacun n'étant lu que dans son rôle.
+            btn.setAttribute('aria-checked', sombre);
         });
         // Chart.js ne lit pas les variables CSS : ses couleurs sont figées dans la
         // configuration, il faut donc repeindre les graphiques déjà montés.
@@ -663,9 +670,18 @@ export default class extends Controller {
         if (apercu.sections) morceaux.push(`${apercu.sections} section${apercu.sections > 1 ? 's' : ''}`);
         if (apercu.definitions) morceaux.push(`${apercu.definitions} définition${apercu.definitions > 1 ? 's' : ''}`);
         if (apercu.pages) morceaux.push(`${apercu.pages} page${apercu.pages > 1 ? 's' : ''}`);
+        // COMBIEN DE TABLEAUX. Un rapport annoncé « 0 tableau » alors qu'on l'attendait
+        // chiffré se voit AVANT d'être payé — c'est le contrôle qui manquait.
+        if (typeof apercu.tableaux === 'number') {
+            morceaux.push(apercu.tableaux > 0
+                ? `${apercu.tableaux} tableau${apercu.tableaux > 1 ? 'x' : ''} de données`
+                : 'aucun tableau');
+        }
         // Le filet serveur s'est déclenché : le document emporte le tableau de la
         // bulle précédente. L'utilisateur doit le savoir AVANT de payer.
         if (apercu.donneesRattachees) morceaux.push('détail chiffré de la réponse précédente inclus');
+        // Reprise à l'identique d'un document déjà produit : seul le format change.
+        if (apercu.reprisDuDocument) morceaux.push(`repris du document #${apercu.reprisDuDocument}`);
         detail.textContent = morceaux.length ? ` — ${morceaux.join(' · ')}` : '';
         entete.appendChild(detail);
         bar.appendChild(entete);
@@ -1503,10 +1519,217 @@ export default class extends Controller {
                 });
             return;
         }
+        // Nouvelle conversation confirmée depuis la modale. La modale reste en
+        // « En cours… » tant que personne ne la referme : c'est son contrat, et
+        // c'est à l'action confirmée de le faire une fois son travail engagé.
+        if (detail.type === 'ket:conversation.new') {
+            document.dispatchEvent(new CustomEvent('ui:confirmation.close'));
+            this.creerEtOuvrirUneConversation();
+            return;
+        }
         // Retour du picker de destinataires : confirmation dans le fil, à
         // l'endroit même où l'utilisateur a lancé l'envoi.
         if (detail.type === 'assistant:message.envoye') {
             this.appendNotice('status', payload.message || 'Message envoyé.');
+        }
+    }
+
+    /**
+     * MÉMORISE le fil désormais ouvert, pour que F5 le retrouve.
+     *
+     * Le poste de travail restaure le panneau du chat en REJOUANT son `sourceUrl`
+     * (workspace-manager > openHtmlTabInVisualization). Cette URL porte
+     * l'identifiant de la conversation : tant qu'on ne la met pas à jour, un
+     * rechargement rouvre fidèlement… l'ANCIENNE conversation, et le fil neuf
+     * paraît s'être évaporé alors qu'il existe bel et bien en base.
+     *
+     * On réécrit donc l'entrée en place, sans toucher au reste (titre, icône, clé
+     * d'onglet) : c'est le même panneau, sur une autre conversation.
+     */
+    _memoriserConversationOuverte(idConversation, chatUrl) {
+        if (!chatUrl || !this.hasIdEntrepriseValue) return;
+        const cle = `visualizationHtmlTab_${this.idEntrepriseValue}`;
+        try {
+            const brut = localStorage.getItem(cle);
+            if (!brut) return;
+            const etat = JSON.parse(brut);
+            if (!etat || !etat.sourceUrl) return;
+            etat.sourceUrl = chatUrl;
+            localStorage.setItem(cle, JSON.stringify(etat));
+        } catch (e) {
+            // Un localStorage indisponible ou corrompu ne doit pas empêcher
+            // l'ouverture du fil : au pire, F5 rouvrira l'ancien.
+        }
+    }
+
+    /**
+     * MENU D'OPTIONS DE L'ENTÊTE (⋮). Réutilise l'apparence et le placement du menu
+     * de bulle : une seule surface flottante dans le chat, donc un seul
+     * comportement à apprendre et un seul jeu de règles à maintenir.
+     */
+    basculerMenuEntete(event) {
+        event?.stopPropagation();
+        if (!this.hasMenuEnteteTarget) return;
+
+        if (!this.menuEnteteTarget.hidden) {
+            this.fermerMenuEntete();
+            return;
+        }
+
+        // Deux surfaces flottantes ouvertes en même temps se recouvriraient.
+        this.fermerMenuBulle?.();
+
+        const bouton = this.element.querySelector('.aic-options');
+        const menu = this.menuEnteteTarget;
+        menu.hidden = false;
+        menu.style.visibility = 'hidden'; // mesurable sans être visible
+        // positionnerMenu attend un RECTANGLE (left/right/top/bottom) et aligne le
+        // menu sur le bord DROIT de l'ancre. Lui passer {x, y} donnait un
+        // `ancre.right` indéfini : le calcul partait en NaN et l'écrêtage collait le
+        // menu à la marge gauche du viewport, très loin du ⋮ qui l'avait ouvert.
+        const { left, top } = positionnerMenu({
+            ancre: bouton.getBoundingClientRect(),
+            menu: { largeur: menu.offsetWidth, hauteur: menu.offsetHeight },
+            viewport: { largeur: window.innerWidth, hauteur: window.innerHeight },
+        });
+        menu.style.left = `${left}px`;
+        menu.style.top = `${top}px`;
+        menu.style.visibility = 'visible';
+        bouton.setAttribute('aria-expanded', 'true');
+
+        this._onPointerHorsEntete = (e) => {
+            if (menu.contains(e.target) || bouton.contains(e.target)) return;
+            this.fermerMenuEntete();
+        };
+        this._onFermerEntete = () => this.fermerMenuEntete();
+        document.addEventListener('pointerdown', this._onPointerHorsEntete, true);
+        window.addEventListener('resize', this._onFermerEntete);
+    }
+
+    fermerMenuEntete() {
+        if (!this.hasMenuEnteteTarget) return;
+        this.menuEnteteTarget.hidden = true;
+        this.element.querySelector('.aic-options')?.setAttribute('aria-expanded', 'false');
+        if (this._onPointerHorsEntete) {
+            document.removeEventListener('pointerdown', this._onPointerHorsEntete, true);
+            window.removeEventListener('resize', this._onFermerEntete);
+            this._onPointerHorsEntete = null;
+        }
+    }
+
+    /** Sur le bouton ⋮ : ↓ ouvre et entre dans le menu (WAI-ARIA menu button). */
+    toucheOptions(event) {
+        if (event.key !== 'ArrowDown' && event.key !== 'Enter' && event.key !== ' ') return;
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            if (this.hasMenuEnteteTarget && this.menuEnteteTarget.hidden) this.basculerMenuEntete(event);
+            this._itemsMenuEntete()[0]?.focus();
+        }
+    }
+
+    /** Flèches / Home / End dans le menu ; Échap ferme et rend le focus au ⋮. */
+    naviguerMenuEntete(event) {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            const bouton = this.element.querySelector('.aic-options');
+            this.fermerMenuEntete();
+            bouton?.focus();
+            return;
+        }
+        const items = this._itemsMenuEntete();
+        const suivant = indexApresTouche(event.key, items.indexOf(document.activeElement), items.length);
+        if (suivant === null) return;
+        event.preventDefault();
+        items[suivant].focus();
+    }
+
+    _itemsMenuEntete() {
+        if (!this.hasMenuEnteteTarget) return [];
+        return Array.from(this.menuEnteteTarget.querySelectorAll('[role^="menuitem"]:not([hidden])'));
+    }
+
+    /**
+     * NOUVELLE CONVERSATION — le raccourci de l'entête.
+     *
+     * Rien n'est détruit : le fil courant reste en base et reste ouvrable depuis la
+     * liste des conversations. Ce bouton REMPLACE seulement ce qui est affiché.
+     *
+     * La confirmation n'apparaît que si le fil courant porte des messages. Sur un
+     * chat déjà vide, elle ne protégerait de rien et transformerait un raccourci en
+     * formalité ; sur un fil nourri, en revanche, le remplacer d'un clic accidentel
+     * fait perdre le contexte de travail — et surtout la ou les décisions encore en
+     * attente, dont les barres disparaissent de l'écran.
+     */
+    nouvelleConversation() {
+        this.fermerMenuEntete();
+        const filNourri = this.hasMessagesTarget
+            && this.messagesTarget.querySelector('.aic-msg') !== null;
+
+        if (!filNourri) {
+            this.creerEtOuvrirUneConversation();
+            return;
+        }
+
+        document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
+            bubbles: true,
+            detail: {
+                title: 'Nouvelle conversation',
+                body: 'La conversation en cours va laisser la place à un nouveau fil. '
+                    + 'Elle n’est pas supprimée : vous la retrouverez dans la liste de vos conversations.',
+                // Rien n'est détruit : ni l'entête rouge, ni l'alerte « irréversible »
+                // n'ont lieu d'être. Une alerte qui crie sur une action anodine finit
+                // par ne plus être lue quand elle porte sur une vraie suppression.
+                showIrreversible: false,
+                headerClass: 'bg-primary text-white',
+                confirmClass: 'btn btn-primary',
+                onConfirm: { type: 'ket:conversation.new', payload: {} },
+            },
+        }));
+    }
+
+    /**
+     * Crée le fil côté serveur, puis remplace le panneau par le chat neuf.
+     *
+     * On réinjecte le PARTIAL COMPLET plutôt que de vider la liste des messages :
+     * l'entête, le composer et le contrôleur portent tous l'identifiant de la
+     * conversation. Un simple effacement laisserait un chat qui écrit encore dans
+     * l'ancien fil — et le programme du jour, rendu par le serveur pour une
+     * conversation vide, ne s'afficherait pas.
+     */
+    async creerEtOuvrirUneConversation() {
+        // Barre de progression du haut : deux allers-retours réseau se suivent
+        // (création, puis chargement du partial), pendant lesquels l'écran ne bouge
+        // pas. Sans ce retour, l'utilisateur reclique — et crée un second fil.
+        document.dispatchEvent(new CustomEvent('app:loading.start', { detail: {} }));
+        try {
+            const reponse = await fetch(`/admin/assistant-ia/api/conversations/${this.idEntrepriseValue}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            });
+            const data = await reponse.json().catch(() => ({}));
+
+            if (!reponse.ok || !data.chatUrl) {
+                this.appendNotice('error', data.message || 'Impossible d’ouvrir une nouvelle conversation.');
+                return;
+            }
+
+            const partial = await fetch(data.chatUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!partial.ok) {
+                this.appendNotice('error', 'La nouvelle conversation a été créée, mais son affichage a échoué.');
+                return;
+            }
+
+            // Le poste de travail doit MÉMORISER le fil ouvert : sans cela, un F5
+            // rouvrait la conversation précédente et le nouveau fil semblait perdu.
+            this._memoriserConversationOuverte(data.id, data.chatUrl);
+
+            // outerHTML : le nouveau markup porte son propre data-controller, donc
+            // Stimulus déconnecte l'ancien et connecte le neuf tout seul.
+            this.element.outerHTML = await partial.text();
+        } catch (e) {
+            this.appendNotice('error', 'Impossible d’ouvrir une nouvelle conversation (réseau).');
+        } finally {
+            document.dispatchEvent(new CustomEvent('app:loading.stop', { detail: {} }));
         }
     }
 

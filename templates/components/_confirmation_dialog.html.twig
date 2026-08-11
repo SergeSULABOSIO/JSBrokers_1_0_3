@@ -5,8 +5,19 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white" data-confirmation-dialog-target="header">
+                {# L'icône d'entête était FIGÉE sur la corbeille : toute confirmation,
+                   même sans la moindre suppression, s'annonçait donc comme une
+                   destruction. C'est trompeur, et à la longue cela désarme le signal
+                   — on cesse de lire une alerte qui crie toujours. Les deux icônes
+                   sont posées ici, le contrôleur affiche celle qui correspond à
+                   l'action (corbeille par défaut : aucun appel existant ne change). #}
                 <h5 class="modal-title d-flex align-items-center" id="confirmation-dialog-title">
-                    <twig:UX:Icon name="{{ resolve_icon_name('action:delete') }}" class="me-2 flex-shrink-0" style="width: 22px; height: 22px;" />
+                    <span class="me-2 flex-shrink-0 d-inline-flex" data-confirmation-dialog-target="iconDanger">
+                        <twig:UX:Icon name="{{ resolve_icon_name('action:delete') }}" style="width: 22px; height: 22px;" />
+                    </span>
+                    <span class="me-2 flex-shrink-0 d-inline-flex" data-confirmation-dialog-target="iconNeutre" style="display: none !important;">
+                        <twig:UX:Icon name="{{ resolve_icon_name('action:information') }}" style="width: 22px; height: 22px;" />
+                    </span>
                     <span data-confirmation-dialog-target="title">Confirmation requise</span>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" aria-label="Fermer" data-action="click->confirmation-dialog#close"></button>
