@@ -561,6 +561,14 @@
             background:var(--aic-accent-subtle); color:var(--aic-on-subtle); outline:none;
         }
         .jsb-ai-chat .aic-msg-menu-item svg { flex:0 0 auto; color:var(--aic-muted); }
+        /* COLONNE D'ICÔNES DE LARGEUR FIXE — menu d'entête uniquement.
+           Chaque icône imposait sa propre largeur, si bien que les libellés ne
+           démarraient pas tous au même endroit. Une base fixe les aligne quoi qu'il
+           arrive, y compris si une icône future arrivait sans attribut de taille.
+           SCOPÉ : le menu de bulle a des icônes de 15 px, qu'il ne faut pas gonfler. */
+        .jsb-ai-chat .aic-menu-entete .aic-msg-menu-item svg {
+            flex:0 0 18px; width:18px; height:18px; align-self:center;
+        }
         .jsb-ai-chat .aic-msg-menu-item:hover svg,
         .jsb-ai-chat .aic-msg-menu-item:focus-visible svg { color:var(--aic-on-subtle); }
         .jsb-ai-chat .aic-msg-menu-sep {
