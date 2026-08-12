@@ -1,6 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 import { } from './base_controller.js';
 import { ouvrirPickerAutonome } from './picker-open.js';
+import { estDelegue, proprietaireDe } from './cerveau-delegations.js';
 
 /**
  * @file Ce fichier contient le contrôleur Stimulus 'cerveau'.
@@ -549,12 +550,16 @@ export default class extends Controller {
                 break;
             case 'ui:dialog.closed':
                 break;
-            case 'ket:mutation.execute':
-                // Exécution d'un plan de mutation de l'assistant IA : traitée
-                // directement par assistant-chat_controller (qui appelle l'endpoint
-                // et rejoue le journal). No-op ici — évite l'avertissement générique.
-                break;
             default:
+                // DÉLÉGATION DÉCLARÉE : le bus est partagé, et une dizaine de
+                // contrôleurs y guettent leur propre type. Avertir pour ceux-là
+                // n'apprenait rien à personne et noyait le seul cas utile — un type
+                // que PERSONNE ne traite, qui est toujours un défaut. La carte des
+                // propriétaires vit dans cerveau-delegations.js.
+                if (estDelegue(type)) {
+                    console.debug(`[Cerveau] "${type}" est traité par ${proprietaireDe(type)}.`);
+                    break;
+                }
                 console.warn(`-> ATTENTION: Aucun gestionnaire défini pour l'événement "${type}".`);
         }
     }
