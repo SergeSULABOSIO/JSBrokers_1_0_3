@@ -41,6 +41,7 @@ use PHPUnit\Framework\TestCase;
 class PlanBuilderPariteTest extends TestCase
 {
     use ResolveurDeTest;
+    use EntiteCanoniqueDeTest;
 
     private function dependances(): array
     {
@@ -101,7 +102,7 @@ class PlanBuilderPariteTest extends TestCase
         [$resolver, $mutation, $tokens] = $this->dependances();
         $builder = $this->planBuilder($mutation, $tokens);
 
-        $generique = (new PreparerOperationsTool($builder))->execute([
+        $generique = (new PreparerOperationsTool($builder, $this->entiteCanonique()))->execute([
             'operations' => [[
                 'op'     => 'create',
                 'entite' => 'Cotation',
@@ -209,7 +210,7 @@ class PlanBuilderPariteTest extends TestCase
             ->with('Cotation')
             ->willReturn(['obligatoires' => ['assureur' => []], 'facultatifs' => [], 'auto' => []]);
 
-        $result = (new PreparerOperationsTool($this->planBuilder($mutation, $tokens)))->execute([
+        $result = (new PreparerOperationsTool($this->planBuilder($mutation, $tokens), $this->entiteCanonique()))->execute([
             'operations' => [['op' => 'create', 'entite' => 'Cotation', 'champs' => ['nom' => 'X']]],
         ], $this->scope());
 

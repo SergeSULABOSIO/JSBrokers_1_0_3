@@ -277,6 +277,18 @@ class PlanEnAttenteVerrouTest extends WebTestCase
             'Le plan de renouvellement pour l’avenant #62 est entièrement prêt à être exécuté.',
             'Je lance immédiatement l’outil preparer_mouvement_avenant pour l’avenant #62.',
             'Je vais appeler preparer_operations pour créer ce revenu.',
+            // INCIDENT DU 2026-08-12 : le tableau de budget rendu en prose, sans le
+            // moindre appel d'outil, et qu'aucun marqueur ne voyait alors.
+            "**Budget de l'opération**\n\n| Étape | Coût estimé | Enregistrements | Obligatoire |\n"
+                . "| Enregistrement complet du dossier | 50 € | 7 | Oui |\n| TOTAL | 50 € | 7 |",
+            // La règle vise TOUTE monnaie, pas l'euro : un budget n'en porte aucune.
+            'Budget de l’opération — coût estimé : 50 $ pour 7 enregistrements.',
+            'Budget de l’opération — coût estimé : 50 USD pour 7 enregistrements.',
+            'Budget de l’opération — coût estimé : 45 000 CDF pour 7 enregistrements.',
+            'Le coût estimé de cette opération est de 50 euros.',
+            // Et le tableau complet, même libellé en tokens : « planifiées » le trahit.
+            "**Opérations planifiées**\n\n| # | Entité | Action |\n\n**Budget de l'opération** : "
+                . '50 tokens pour 7 enregistrements.',
         ];
         foreach ($cas as $texte) {
             $this->assertTrue(
@@ -299,6 +311,15 @@ class PlanEnAttenteVerrouTest extends WebTestCase
             // Restitution honnête d'un refus « dejaTraite » : aucune surface de décision.
             'Cette police porte déjà un mouvement enregistré : une piste de renouvellement existe, '
                 . 'mais aucun avenant successeur n’a encore été émis.',
+            // RÉCAPITULATIF D'APRÈS-EXÉCUTION : il parle d'opérations RÉALISÉES et
+            // compte en tokens. C'est le seul voisin dangereux de la règle « budget
+            // fabriqué » — il doit rester muet.
+            '7 enregistrements ont été créés, pour un coût de 50 tokens. Solde restant : 29 303.',
+            'Le dossier est enregistré : 7 opérations réalisées, budget consommé 50 tokens.',
+            // Un MONTANT MÉTIER n'est pas un budget : la prime du client est en dollars,
+            // et elle n'a rien à voir avec le coût en tokens d'un plan.
+            'La prime de cette tranche est de 95,00 $, dont 80,00 $ de prime nette.',
+            'Le coût de la police s’élève à 1 234,50 USD pour l’exercice 2026.',
         ];
         foreach ($cas as $texte) {
             $this->assertFalse(

@@ -93,11 +93,13 @@ final class MutationOperation
         // `champs` = clé exposée au LLM par le schéma de preparer_operations ;
         // `fields` = clé de sérialisation interne (toArray) ; `valeurs` = alias
         // toléré. Lire les trois évite de perdre les valeurs dictées par le modèle.
+        //
+        // La FORME, elle, est décodée par ChampsDictes : le modèle voit dans le même
+        // tour un schéma qui veut une map et un autre qui veut des paires, et il les
+        // intervertit. Sans ce décodage, des champs envoyés en paires ici donnaient
+        // un foreach à clés entières et disparaissaient TOUS en silence.
         $fields = [];
-        foreach ((array) ($data['champs'] ?? $data['fields'] ?? $data['valeurs'] ?? []) as $champ => $valeur) {
-            if (!is_string($champ)) {
-                continue;
-            }
+        foreach (ChampsDictes::normaliser($data['champs'] ?? $data['fields'] ?? $data['valeurs'] ?? null) as $champ => $valeur) {
             if (is_scalar($valeur) || $valeur === null) {
                 $fields[$champ] = $valeur;
                 continue;

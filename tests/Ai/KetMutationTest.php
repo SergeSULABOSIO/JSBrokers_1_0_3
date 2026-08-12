@@ -36,6 +36,7 @@ use Symfony\Component\Form\FormFactoryInterface;
 class KetMutationTest extends TestCase
 {
     use ResolveurDeTest;
+    use EntiteCanoniqueDeTest;
 
     // ───────────────────────── Allowlist & DTO ────────────────────────────────
 
@@ -155,7 +156,7 @@ class KetMutationTest extends TestCase
             new PlanEnAttente($this->createMock(EntityManagerInterface::class)),
             $this->resolveurAvec(),
             new NormaliseurDeDates(),
-        ));
+        ), $this->entiteCanonique());
     }
 
     public function testOutilRefuseToutHorsPerimetre(): void
@@ -434,5 +435,145 @@ class KetMutationTest extends TestCase
         // 2 écritures Client (30) + 1 autre (10) = 70. Les suppressions ne sont pas comptées par l'appelant.
         $this->assertSame(70, $tokens->estimateWriteCost([Client::class, Client::class, 'App\\Entity\\Tache']));
         $this->assertSame(0, $tokens->estimateWriteCost([]));
+    }
+
+    // ────────────────── Dialecte des champs & nom d'entité ────────────────────
+
+    /**
+     * Le modèle voit dans le même tour un schéma qui veut les champs en OBJET et un
+     * autre qui les veut en PAIRES : il intervertit. Jusqu'au 2026-08-12, des champs
+     * envoyés en paires ici étaient TOUS perdus en silence (clés entières), ce qui
+     * produisait une création vide au lieu d'une erreur.
+     */
+    public function testOperationLitLesChampsEnPaires(): void
+    {
+        $op = MutationOperation::fromArray([
+            'op' => 'create', 'entite' => 'Client',
+            'champs' => [
+                ['cle' => 'nom', 'valeur' => 'MBUSA'],
+                ['cle' => 'telephone', 'valeur' => '+243999888777'],
+            ],
+        ]);
+
+        $this->assertSame('MBUSA', $op->fields['nom']);
+        $this->assertSame('+243999888777', $op->fields['telephone']);
+    }
+
+    public function testUneListeDeScalairesNestPasUneCarteDeChamps(): void
+    {
+        // Deviner un appariement positionnel écrirait des données FAUSSES dans le
+        // dossier d'un client : mieux vaut ne rien retenir.
+        $op = MutationOperation::fromArray([
+            'op' => 'create', 'entite' => 'Client', 'champs' => ['nom', 'MBUSA'],
+        ]);
+
+        $this->assertSame([], $op->fields);
+    }
+
+    public function testLesDeuxDialectesDeChampsDonnentLeMemeResultat(): void
+    {
+        $enMap = MutationOperation::fromArray([
+            'op' => 'create', 'entite' => 'Client', 'champs' => ['nom' => 'MBUSA'],
+        ]);
+        $enPaires = MutationOperation::fromArray([
+            'op' => 'create', 'entite' => 'Client', 'champs' => [['cle' => 'nom', 'valeur' => 'MBUSA']],
+        ]);
+
+        $this->assertSame($enMap->fields, $enPaires->fields);
+    }
+
+    /**
+     * Ket désigne les entités par le LIBELLÉ DE L'ÉCRAN — c'est le vocabulaire qu'on
+     * lui montre partout, et celui de l'utilisateur. La table est DÉRIVÉE de la carte
+     * de permissions, jamais recopiée.
+     */
+    public function testLesLibellesDeLUiSeRamenentAuNomCourt(): void
+    {
+        $canonique = $this->entiteCanonique();
+
+        $attendus = [
+            'Risque'             => 'Risque',      // chemin nominal
+            'Risques'            => 'Risque',      // le libellé du menu, au pluriel
+            'clients'            => 'Client',      // casse indifférente
+            'COTATION'           => 'Cotation',
+            'Propositions'       => 'Cotation',    // le libellé diffère du nom court
+            'Paiements de prime' => 'PaiementPrime',
+            'Dépenses'           => 'DepenseCourtier',
+            'Charges'            => 'ChargeCourtier',
+            'Intermédiaires'     => 'Partenaire',
+        ];
+        foreach ($attendus as $dicte => $court) {
+            $this->assertSame($court, $canonique->resoudre($dicte), sprintf('« %s » doit se ramener à %s', $dicte, $court));
+        }
+    }
+
+    /**
+     * La tolérance porte sur l'ORTHOGRAPHE, jamais sur le PÉRIMÈTRE : un libellé ne
+     * doit pas ouvrir une porte que l'allowlist ferme.
+     */
+    public function testUnLibelleNouvrePasUnePorteFermeeParLAllowlist(): void
+    {
+        $canonique = $this->entiteCanonique();
+
+        foreach ([null, '', '   ', 'Licorne', 'Invite', 'Invités', 'Entreprise', 'DocumentComptable'] as $hors) {
+            $this->assertNull($canonique->resoudre($hors), sprintf('« %s » ne doit RIEN résoudre', (string) $hors));
+        }
+    }
+
+    /**
+     * Un mot-clé revendiqué par deux entités ne tranche rien : il est retiré. Écrire
+     * dans la mauvaise entité serait bien pire qu'un refus.
+     */
+    public function testAucunTermeNeResoutVersDeuxEntites(): void
+    {
+        $canonique = $this->entiteCanonique();
+
+        // Voisinages dangereux connus : chacun doit rendre SON entité, ou rien.
+        $this->assertSame('Paiement', $canonique->resoudre('Paiement'));
+        $this->assertSame('PaiementPrime', $canonique->resoudre('PaiementPrime'));
+        $this->assertSame('Chargement', $canonique->resoudre('Chargement'));
+        $this->assertSame('PieceSinistre', $canonique->resoudre('PieceSinistre'));
+        $this->assertSame('ModelePieceSinistre', $canonique->resoudre('ModelePieceSinistre'));
+    }
+
+    /**
+     * Garde-fou d'extension : toute entité écrivable doit porter un libellé dans la
+     * carte de permissions, faute de quoi elle échapperait silencieusement à la
+     * canonisation le jour où le modèle la désignera par son nom d'écran.
+     */
+    public function testChaqueEntiteEcrivablePorteUnLibelle(): void
+    {
+        $libelles = (new WorkspaceAccessResolver($this->createMock(\App\Repository\InviteRepository::class)))
+            ->libellesEntites();
+
+        foreach (MutationAllowlist::membres() as $membre) {
+            $this->assertArrayHasKey($membre, $libelles, $membre . ' doit porter un libellé lisible');
+        }
+    }
+
+    public function testUneEntiteAuLibelleDEcranEstAcceptee(): void
+    {
+        $tool = $this->makeTool([]);
+
+        $result = $tool->execute([
+            'operations' => [['op' => 'create', 'entite' => 'Clients', 'champs' => ['nom' => 'MBUSA']]],
+        ], $this->makeScope());
+
+        $this->assertNotNull($result->uiAction, 'Le plan doit être produit : ' . json_encode($result->data));
+        $this->assertSame('Client', $result->uiAction['plan'][0]['entite']);
+    }
+
+    public function testUneEntiteInconnueEstRefuseeEnNommantCeQuiEstAccepte(): void
+    {
+        $tool = $this->makeTool([]);
+
+        $result = $tool->execute([
+            'operations' => [['op' => 'create', 'entite' => 'Licorne', 'champs' => ['nom' => 'X']]],
+        ], $this->makeScope());
+
+        $this->assertNull($result->uiAction);
+        $this->assertFalse($result->data['pret']);
+        $this->assertStringContainsString('Licorne', $result->data['note']);
+        $this->assertStringContainsString('PaiementPrime', $result->data['note']);
     }
 }

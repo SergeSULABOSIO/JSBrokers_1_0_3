@@ -49,6 +49,20 @@ final class EntiteLexique
     }
 
     /**
+     * Libellés d'écran par nom court, tels que l'utilisateur les voit dans le menu
+     * (« Propositions » pour Cotation, « Paiements de prime » pour PaiementPrime).
+     * Simple passe-plat vers la carte de permissions : ce lexique est déjà le seul
+     * point du domaine IA qui la lise, et EntiteCanonique a besoin des libellés
+     * pour NOMMER ce qu'il accepte quand il refuse un terme.
+     *
+     * @return array<string, string>
+     */
+    public function libelles(): array
+    {
+        return $this->accessResolver->libellesEntites();
+    }
+
+    /**
      * Entité sur laquelle porte la question : celle dont un mot-clé apparaît le PLUS TÔT
      * dans la phrase, le mot-clé le plus long l'emportant à position égale.
      *
