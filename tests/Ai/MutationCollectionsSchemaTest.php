@@ -22,6 +22,7 @@ use PHPUnit\Framework\TestCase;
 class MutationCollectionsSchemaTest extends TestCase
 {
     use ResolveurDeTest;
+    use EntiteCanoniqueDeTest;
 
     public function testSchemaCollectionsEstUnArraySansAdditionalProperties(): void
     {
@@ -31,7 +32,7 @@ class MutationCollectionsSchemaTest extends TestCase
             new PlanEnAttente($this->createMock(EntityManagerInterface::class)),
             $this->resolveurAvec(),
             new NormaliseurDeDates(),
-        ));
+        ), $this->entiteCanonique());
         $col = $tool->schema()['properties']['operations']['items']['properties']['collections'];
 
         $this->assertSame('array', $col['type'], 'collections doit être un array (nom de collection = valeur, pas clé dynamique).');

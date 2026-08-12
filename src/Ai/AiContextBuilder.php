@@ -21,6 +21,7 @@ use App\Entity\Invite;
 use App\Repository\AssistantParametresRepository;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
+use App\Services\ServiceMonnaies;
 use Vich\UploaderBundle\Storage\StorageInterface;
 
 /**
@@ -62,6 +63,11 @@ class AiContextBuilder
         // quelles bulles de l'historique reçoivent leur identifiant, et donc
         // deviennent reprenables telles quelles dans un document.
         private readonly BullesDeDonnees $bullesDeDonnees,
+        // La MONNAIE du cabinet. Sans elle, le prompt n'en nommait aucune et le seul
+        // symbole monétaire que le modèle y voyait était « € », dans l'exemple de
+        // graphique : Ket a fini par libeller en euros un budget qui n'a pas de
+        // monnaie, chez un courtier congolais qui travaille en dollars.
+        private readonly ServiceMonnaies $serviceMonnaies,
     ) {
     }
 
@@ -106,6 +112,10 @@ class AiContextBuilder
                 'entrepriseNom' => (string) $entreprise->getNom(),
                 'perimetre'     => $this->accessResolver->describePerimetreDetailed($invite),
                 'date'          => (new \DateTimeImmutable('now'))->format('Y-m-d'),
+                // Monnaie d'AFFICHAGE du cabinet (paramétrage de l'entreprise), pour
+                // que Ket libelle tout montant dans la monnaie que le courtier voit
+                // sur ses écrans, et jamais dans une monnaie par défaut.
+                'monnaie'       => $this->monnaieDuCabinet($entreprise),
                 'objetsAttaches' => $this->objetsAttaches($conversation, $entreprise, $invite),
                 'fichiersAttaches' => $this->fichiersAttaches($conversation),
                 // La boussole du courtier : instantané compact de la chaîne de valeur dans le
@@ -287,7 +297,7 @@ class AiContextBuilder
         // deux phases finiraient par ne plus dire la même chose des mêmes notions.
         $sectionGlossaire = $this->glossaireFinancier();
         $sectionConcision = $this->reglesDeConcision();
-        $sectionMiseEnForme = $this->reglesDeMiseEnForme();
+        $sectionMiseEnForme = $this->reglesDeMiseEnForme($ctx['monnaie'] ?? null);
 
         return <<<PROMPT
         Tu es {$ctx['assistantNom']}, l'assistant IA de l'entreprise de courtage « {$ctx['entrepriseNom']} »
@@ -413,6 +423,9 @@ class AiContextBuilder
         // absent, c'est la même faute que le nommer dans une règle.
         $blocProposition = $this->blocProposition($outilsDeclares);
         $blocMouvements = $this->blocMouvements($outilsDeclares);
+        // L'exemple travaillé du dossier chaîné : il NOMME preparer_operations, il ne
+        // part donc qu'avec lui (même discipline que les deux blocs ci-dessus).
+        $blocDossierChaine = $this->blocDossierChaine($outilsDeclares);
 
         return <<<ECRITURE
         - CRÉER / MODIFIER / SUPPRIMER un Client, une Tâche, une Note, une Piste ou un Avenant :
@@ -595,23 +608,33 @@ class AiContextBuilder
           déjà affichée. S'il demande de CHANGER ce plan, rappelle le MÊME outil d'écriture que celui qui
           l'avait préparé, avec remplacerPlanEnAttente=true : l'ancien sera annulé et remplacé — jamais deux
           plans à valider.
+          UN DOSSIER = UN SEUL PLAN (règle IMPÉRATIVE, à trancher AVANT de choisir ton outil) : quand
+          les pièces demandées se TIENNENT PAR DES RELATIONS — le client, son risque, sa piste, sa
+          proposition et ses composantes, son contrat, ses documents, le paiement de sa tranche —,
+          c'est UN SEUL dossier, donc UN SEUL appel à preparer_operations, chaîné par « ref »/« @ref »,
+          et UNE SEULE validation. Une consigne À PUCES qui énumère les pièces d'un même dossier n'est
+          PAS une demande de découper : c'est une liste de courses. NE COMPTE PAS LES PUCES pour choisir
+          ton outil — regarde si les pièces dépendent les unes des autres. Si oui : un seul plan.
+          {$blocDossierChaine}
           PROGRAMME — PLUSIEURS VALIDATIONS, UNE SEULE DÉCLARATION (règle IMPÉRATIVE) : appelle
           preparer_programme UNE SEULE FOIS, en y déclarant TOUTES les étapes, dans l'ordre et sans en
           omettre aucune, dans DEUX situations :
           • PLUSIEURS OBJETS du même genre (« signale le paiement des tranches 60, 64 et 74 », « marque ces
             cinq polices non renouvelables », « fais pareil pour les trois autres ») — une étape par objet ;
-          • L'UTILISATEUR VEUT AVANCER PAR ÉTAPES, en validant chacune séparément, même sur des entités
-            DIFFÉRENTES : « créons d'abord ce fournisseur, ensuite nous enregistrerons la dépense »,
-            « commençons par le client, on verra la piste après ». Une étape par temps ; quand une étape a
+          • L'UTILISATEUR DEMANDE EXPLICITEMENT DE VALIDER EN PLUSIEURS TEMPS, par une phrase qui le dit :
+            « créons d'abord ce fournisseur, ensuite nous enregistrerons la dépense », « commençons par le
+            client, on verra la piste après », « je veux valider chaque étape ». L'ABSENCE d'une telle
+            phrase vaut demande de TOUT REGROUPER. Contre-exemple à connaître : « créer le compte client /
+            créer la piste / créer la proposition / créer l'avenant / enregistrer le paiement » n'est PAS
+            une demande de découper — c'est un dossier, donc UN plan.
+            Une étape par temps ; quand une étape a
             besoin de ce qu'une étape PRÉCÉDENTE crée, pose « ref » sur la création et donne au champ de
             l'étape suivante la valeur « @ref » — la plateforme y injectera l'identifiant réel dès que la
             première étape sera validée et écrite. Une étape d'écriture ordinaire se décrit à plat :
-            entite, operation, champs (paires), cibleId pour un edit/delete.
+            entite (NOM COURT), operation, champs, cibleId pour un edit/delete.
           N'appelle PAS un outil de plan étape par étape : tu t'arrêterais au premier, et il n'y a pas de
           tour suivant pour reprendre la main. C'est exactement l'erreur à ne plus commettre — un premier
           plan validé, le second jamais présenté, et un utilisateur qui doit relancer pour rien.
-          RAPPEL : si l'utilisateur n'a PAS demandé de découper, un seul plan portant toutes les opérations
-          (chaînées par ref/@ref) vaut mieux qu'un programme — une validation au lieu de deux.
           • Une fois le programme lancé, tu n'as PLUS RIEN à faire pour la série : après chaque validation,
             la plateforme prépare et présente elle-même l'étape suivante, puis rend un RAPPORT FINAL vérifié
             en base. Ne prépare aucun autre plan pour ces objets, ne re-présente aucune étape, et n'affirme
@@ -714,9 +737,60 @@ class AiContextBuilder
         et sous-totaux se CALCULENT à partir des lignes affichées — additionne-les et donne le
         résultat, ne dis jamais que tu ne peux pas le faire.
         {$this->glossaireFinancier()}
-        {$this->reglesDeStyle()}
+        {$this->reglesDeStyle($ctx['monnaie'] ?? null)}
         {$sectionBoussole}
         REDACTION;
+    }
+
+    /**
+     * LE CODE DE LA MONNAIE dans laquelle ce cabinet lit ses montants.
+     *
+     * SOURCE UNIQUE : ServiceMonnaies, c'est-à-dire le paramétrage « Monnaies » de
+     * l'entreprise — la monnaie dont la fonction est « affichage » ou « saisie et
+     * affichage ». Repli sur la monnaie LOCALE, dont le service garantit lui-même
+     * un dernier ressort à USD.
+     *
+     * POURQUOI CETTE MÉTHODE EXISTE (2026-08-12). Le prompt système ne nommait
+     * AUCUNE monnaie : la seule que le modèle y rencontrait était « € », dans
+     * l'exemple de graphique. Ket a donc libellé en euros — chez un courtier
+     * congolais qui travaille en dollars — jusqu'à un « budget » de « 50 € » qui
+     * n'existait ni en euros, ni du tout (le budget est en tokens). L'euro n'est
+     * la monnaie de rien ici : ni du cabinet, ni de la plateforme, dont l'économie
+     * de tokens est libellée en USD.
+     */
+    /**
+     * La règle de monnaie, énoncée au modèle. Présente aux DEUX phases : c'est en
+     * RÉDIGEANT qu'on écrit un symbole monétaire, pas en planifiant.
+     */
+    private function regleMonnaie(?string $monnaie): string
+    {
+        $code = trim((string) $monnaie) !== '' ? trim((string) $monnaie) : 'USD';
+
+        return <<<MONNAIE
+        - MONNAIE (règle impérative) : ce cabinet lit ses montants en {$code}. C'est la monnaie
+          configurée dans ses paramètres, et la SEULE dans laquelle tu libelles un montant — dans
+          une phrase, dans un tableau, dans l'unité et la légende d'un graphique. N'emploie JAMAIS
+          une autre monnaie, et surtout aucune monnaie « par défaut » : n'écris pas « euros » parce
+          que tu réponds en français. Ne convertis rien et ne suppose aucun taux — rapporte les
+          montants tels que les outils te les rendent, en {$code}. Le BUDGET en tokens, lui, n'est
+          PAS de l'argent : c'est un décompte d'unités de la plateforme. Ne lui accole aucun
+          symbole monétaire et ne le convertis jamais, ni en {$code} ni en autre chose.
+        MONNAIE;
+    }
+
+    private function monnaieDuCabinet(Entreprise $entreprise): string
+    {
+        $affichage = $this->serviceMonnaies->getMonnaieAffichagePourEntreprise($entreprise);
+        if ($affichage !== null && trim((string) $affichage->getCode()) !== '') {
+            return trim((string) $affichage->getCode());
+        }
+
+        $locale = $this->serviceMonnaies->getMonnaieLocalePourEntreprise($entreprise);
+        if ($locale !== null && trim((string) $locale->getCode()) !== '') {
+            return trim((string) $locale->getCode());
+        }
+
+        return 'USD';
     }
 
     /**
@@ -882,9 +956,12 @@ class AiContextBuilder
      * PRÉSENT AUX DEUX PHASES (via reglesDeStyle) : une question de pure conversation
      * n'appelle aucun outil et se termine donc dès la planification.
      */
-    private function reglesDeMiseEnForme(): string
+    private function reglesDeMiseEnForme(?string $monnaie = null): string
     {
-        return <<<'MISEENFORME'
+        // Le corps reste un NOWDOC : il contient des « $ » d'exemple (« 1 234,50 $ »)
+        // et des accolades de JSON qu'une interpolation abîmerait. La seule partie
+        // variable est donc assemblée à part.
+        return $this->regleMonnaie($monnaie) . "\n" . <<<'MISEENFORME'
         - MISE EN FORME (Markdown sobre : elle sert la lisibilité, jamais la décoration).
           **gras** pour les points clés ; au plus un niveau de titre (##), réservé aux réponses
           longues qui gagnent à être structurées — jamais dans une réponse courte ; pas de bloc de
@@ -939,8 +1016,10 @@ class AiContextBuilder
           code balisé « chart » contenant un JSON. Types acceptés : "bar" (histogramme), "line"
           (tendance), "pie" et "doughnut" (répartition). Format :
           ```chart
-          {"type":"bar","titre":"CA encaissé 2026","unite":"€","labels":["Jan","Fév","Mar"],"series":[{"label":"HT","data":[1200,900,1500]}],"legende":"Commissions encaissées HT par mois (2026), en euros."}
+          {"type":"bar","titre":"CA encaissé 2026","unite":"<code de la monnaie du cabinet>","labels":["Jan","Fév","Mar"],"series":[{"label":"HT","data":[1200,900,1500]}],"legende":"Commissions encaissées HT par mois (2026)."}
           ```
+          Le champ "unite" porte le CODE de la monnaie du cabinet (cf. règle MONNAIE ci-dessus),
+          jamais un symbole choisi au hasard.
           Le champ "legende" est OBLIGATOIRE : une phrase courte donnant les clés de lecture (ce
           que mesure la série, la période, l'unité) — elle s'affiche sous le graphique. "labels" et
           chaque "data" ont la MÊME longueur ; n'invente jamais de chiffre, n'emploie que des
@@ -951,9 +1030,9 @@ class AiContextBuilder
     }
 
     /** Tout ce qui gouverne la FORME d'une réponse, réuni pour la rédaction. */
-    private function reglesDeStyle(): string
+    private function reglesDeStyle(?string $monnaie = null): string
     {
-        return $this->reglesDeConcision() . "\n" . $this->reglesDeMiseEnForme();
+        return $this->reglesDeConcision() . "\n" . $this->reglesDeMiseEnForme($monnaie);
     }
 
     /**
@@ -995,6 +1074,45 @@ class AiContextBuilder
           • Ce chemin vaut pour une PROPOSITION d'assureur. Pour toute autre saisie structurante,
             applique le parcours guidé ci-dessous.
         BLOC_PROPOSITION_FIN;
+    }
+
+    /**
+     * L'EXEMPLE TRAVAILLÉ d'un dossier chaîné — envoyé UNIQUEMENT quand
+     * preparer_operations est déclaré au tour en cours (il le nomme).
+     *
+     * POURQUOI UN EXEMPLE, ET PAS UNE RÈGLE DE PLUS (incident du 2026-08-12). La
+     * règle « un seul plan » existait déjà, mais enterrée à la fin de quinze lignes
+     * qui poussaient vers le programme. Face à un courtier qui listait à puces les
+     * pièces d'un dossier d'assurance voyage, Ket a choisi une série de six plans,
+     * puis a échoué à en assembler la première étape. Un modèle recopie ce qu'on lui
+     * MONTRE bien plus fidèlement qu'il n'applique ce qu'on lui décrit : la forme
+     * exacte du plan attendu vaut mieux qu'un paragraphe de plus.
+     */
+    private function blocDossierChaine(array $outilsDeclares): string
+    {
+        if (!in_array('preparer_operations', $outilsDeclares, true)) {
+            return '';
+        }
+
+        return <<<'BLOC_DOSSIER_FIN'
+          EXEMPLE TRAVAILLÉ — un contrat d'assurance reçu, enregistré EN UN SEUL plan (5 opérations,
+          UNE validation). Les composantes, l'échéancier, la commission, l'avenant et ses documents
+          sont des COLLECTIONS de la cotation : ils ne font pas un plan de plus.
+          1 {"op":"create","entite":"Client","ref":"client","champs":{"nom":"…"}}
+          2 {"op":"create","entite":"Risque","ref":"risque","champs":{"nom":"Assurance Voyage"}}
+          3 {"op":"create","entite":"Piste","ref":"piste","champs":{"client":"@client","risque":"@risque"}}
+          4 {"op":"create","entite":"Cotation","ref":"cotation","champs":{"piste":"@piste","assureur":"SUNU"},
+             "collections":[{"collection":"chargements","elements":[…]},
+                            {"collection":"tranches","elements":[{"op":"create","ref":"tranche1","champs":{…}}]},
+                            {"collection":"revenus","elements":[…]},
+                            {"collection":"avenants","elements":[{"op":"create","ref":"avenant","champs":{…},
+                               "collections":[{"collection":"documents","elements":[{"op":"create",
+                                  "champs":{"nom":"Contrat signé","fichier":"@fichier:<id>"}}]}]}]}]}
+          5 {"op":"create","entite":"PaiementPrime","champs":{"tranche":"@tranche1","montant":…}}
+          Le nom d'entité s'écrit avec son NOM COURT (Client, Risque, Piste, Cotation, Avenant,
+          Document, PaiementPrime, Tranche…), JAMAIS le libellé de l'écran (« Clients », « Risques »,
+          « Propositions », « Paiements de prime ») : ce sont des rubriques, pas des entités.
+        BLOC_DOSSIER_FIN;
     }
 
     /**

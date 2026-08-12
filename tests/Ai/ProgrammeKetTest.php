@@ -441,6 +441,139 @@ class ProgrammeKetTest extends WebTestCase
     }
 
     /**
+     * L'INCIDENT DU 2026-08-12, REJOUÉ.
+     *
+     * Ket a préparé le dossier d'un contrat d'assurance voyage en désignant les
+     * entités par les LIBELLÉS DE L'ÉCRAN, au pluriel (« Risques »), et en écrivant
+     * les champs en MAP là où le schéma du programme attend des PAIRES. Les deux
+     * écarts se cumulaient : l'entité sortait de l'allowlist, et les champs étaient
+     * silencieusement vidés, si bien que la création n'avait plus AUCUN champ.
+     * L'étape était refusée, tout le programme avec elle, et le courtier repartait
+     * après quatre échanges sans le moindre enregistrement.
+     *
+     * Le test fixe les deux tolérances D'UN COUP, telles que l'incident les a
+     * présentées — c'est ce cumul qui compte, chacune prise seule serait plus facile.
+     */
+    public function testLIncidentDuContratVoyageSAssembleDesormais(): void
+    {
+        ['scope' => $scope] = $this->seed();
+
+        $resultat = $this->outil()->execute([
+            'objectif' => 'Enregistrer le dossier du contrat d’assurance voyage',
+            'etapes'   => [
+                [
+                    'libelle'   => 'Créer le risque Assurance Voyage',
+                    'outil'     => 'preparer_operations',
+                    // Le libellé de la rubrique, au pluriel, tel que Ket l'a écrit.
+                    'entite'    => 'Risques',
+                    'operation' => 'create',
+                    'ref'       => 'risque',
+                    // Le dialecte de l'AUTRE schéma : une map, pas des paires.
+                    'champs'    => [
+                        'nomComplet' => 'Assurance Voyage',
+                        'code'       => 'AVOY',
+                        'branche'    => 0,
+                        'imposable'  => true,
+                    ],
+                ],
+                [
+                    'libelle'   => 'Créer le client',
+                    'outil'     => 'preparer_operations',
+                    'entite'    => 'Clients',
+                    'operation' => 'create',
+                    'champs'    => ['nom' => 'MBUSA KAYITHULA JEAN DE DIEU'],
+                ],
+            ],
+        ], $scope);
+
+        $this->assertTrue(
+            $resultat->data['pret'],
+            'L’étape doit désormais s’assembler : ' . ($resultat->data['note'] ?? ''),
+        );
+        $this->assertStringNotContainsString('inexploitable', (string) ($resultat->data['note'] ?? ''));
+        // L'entité est CANONISÉE : c'est le nom court qui entre dans le plan.
+        $this->assertSame('Risque', $resultat->uiAction['plan'][0]['entite']);
+        // Et les champs de la map ont bien survécu — sans eux, création vide.
+        $this->assertSame('Assurance Voyage', $resultat->uiAction['plan'][0]['fields']['nomComplet']);
+
+        // Les arguments PERSISTÉS de l'étape portent eux aussi le nom canonique :
+        // c'est eux que le serveur rejouera, sans repasser par le modèle.
+        $arguments = $this->programme($scope)->getEtapes()->first()->getArguments();
+        $this->assertSame('Risque', $arguments['operations'][0]['entite']);
+    }
+
+    /**
+     * Les deux dialectes de « champs » décrivent la MÊME étape : ils doivent
+     * produire le même plan, au caractère près.
+     */
+    public function testLesDeuxDialectesDeChampsDonnentLeMemePlan(): void
+    {
+        ['scope' => $scope] = $this->seed();
+
+        $etape = static fn (array $champs): array => [
+            'libelle'   => 'Le client',
+            'outil'     => 'preparer_operations',
+            'entite'    => 'Client',
+            'operation' => 'create',
+            'champs'    => $champs,
+        ];
+        $secondeEtape = [
+            'libelle' => 'Un autre client', 'outil' => 'preparer_operations',
+            'entite' => 'Client', 'operation' => 'create',
+            'champs' => ['nom' => 'Second client PRG'],
+        ];
+
+        $enPaires = $this->outil()->execute([
+            'objectif' => 'Paires',
+            'etapes'   => [$etape([['cle' => 'nom', 'valeur' => 'Dialecte PRG']]), $secondeEtape],
+        ], $scope);
+
+        // Le verrou « un seul programme en cours » impose de remplacer le précédent.
+        $enMap = $this->outil()->execute([
+            'objectif'                   => 'Map',
+            'remplacerProgrammeEnCours'  => true,
+            'etapes'                     => [$etape(['nom' => 'Dialecte PRG']), $secondeEtape],
+        ], $scope);
+
+        $this->assertTrue($enPaires->data['pret']);
+        $this->assertTrue($enMap->data['pret']);
+        $this->assertSame(
+            $enPaires->uiAction['plan'][0]['fields'],
+            $enMap->uiAction['plan'][0]['fields'],
+            'Paires et map décrivent la même étape : le plan doit être identique.',
+        );
+    }
+
+    /**
+     * La tolérance porte sur l'ORTHOGRAPHE, jamais sur le PÉRIMÈTRE : un terme qui
+     * ne désigne aucune entité écrivable reste refusé, et le refus NOMME ce qui est
+     * accepté pour que le tour suivant se corrige seul.
+     */
+    public function testUneEntiteVraimentInconnueResteRefusee(): void
+    {
+        ['scope' => $scope] = $this->seed();
+
+        $resultat = $this->outil()->execute([
+            'objectif' => 'Créer n’importe quoi',
+            'etapes'   => [
+                [
+                    'libelle' => 'Une licorne', 'outil' => 'preparer_operations',
+                    'entite' => 'Licorne', 'operation' => 'create',
+                    'champs' => ['nom' => 'Licorne'],
+                ],
+                [
+                    'libelle' => 'Un client', 'outil' => 'preparer_operations',
+                    'entite' => 'Client', 'operation' => 'create',
+                    'champs' => ['nom' => 'Client licorne'],
+                ],
+            ],
+        ], $scope);
+
+        $this->assertFalse($resultat->data['pret']);
+        $this->assertStringContainsString('inexploitable', (string) $resultat->data['note']);
+    }
+
+    /**
      * Une référence vers une étape qui n'a PAS été écrite (passée, refusée, en échec)
      * ne doit jamais devenir un identifiant arbitraire : l'étape est traversée avec
      * son motif, et la série continue.

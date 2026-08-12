@@ -226,6 +226,10 @@ final class PlanEnAttente
             return true;
         }
 
+        if (self::budgetFabrique($texte)) {
+            return true;
+        }
+
         // ANNONCE D'UN APPEL D'OUTIL À VENIR. Une phrase ne déclenche rien, et il n'y aura
         // pas de tour suivant : « je lance immédiatement preparer_mouvement_avenant » est
         // une promesse que rien ne tiendra. L'utilisateur attend, puis relance — c'est
@@ -240,6 +244,67 @@ final class PlanEnAttente
             . '(?:preparer_mouvement_avenant|preparer_operations|parcours_saisie|modifier_composition_prime)/u',
             $texte,
         );
+    }
+
+    /**
+     * UN BUDGET FABRIQUÉ DE TOUTES PIÈCES, reconnaissable à sa forme.
+     *
+     * L'INCIDENT (2026-08-12). Ket a rendu « Budget de l'opération — COÛT ESTIMÉ :
+     * 50 € / ENREGISTREMENTS : 7 » sans avoir appelé le moindre outil, et aucune
+     * bannière n'est apparue : les marqueurs de l'époque ne voyaient que les
+     * revendications de bouton. L'utilisateur a cru qu'un plan l'attendait.
+     *
+     * DEUX SIGNATURES, chacune impossible à produire honnêtement :
+     *
+     * (a) UN BUDGET LIBELLÉ EN MONNAIE — n'importe laquelle. Le budget de la
+     *     plateforme est en TOKENS et ne porte AUCUNE unité monétaire (PlanBuilder
+     *     ne renvoie que coutEstime / soldeDisponible / resteApres / enregistrements).
+     *     La règle ne vise donc PAS l'euro en particulier : ce serait le mauvais
+     *     raisonnement, et il ferait manquer « 50 $ » ou « 50 USD ». C'est TOUTE
+     *     monnaie sous un libellé de BUDGET qui est inventée par construction.
+     *     Aucun faux positif : les montants MÉTIER (une prime de 95 $, une
+     *     commission) ne se présentent jamais sous un libellé de budget.
+     *
+     * (b) LE TABLEAU DE BUDGET lui-même : un entête de budget, un décompte
+     *     d'ENREGISTREMENTS et une mention d'opérations PLANIFIÉES. Le troisième
+     *     terme est ce qui écarte un RÉCAPITULATIF d'après-exécution — celui-là
+     *     parle d'opérations réalisées, jamais planifiées.
+     *
+     * Le verrou « aucune décision émise ni en attente » reste au-dessus
+     * ({@see estUnPlanFantome}) : un plan légitime porte toujours une action
+     * réelle, il ne peut donc pas déclencher d'avertissement.
+     */
+    private static function budgetFabrique(string $texte): bool
+    {
+        $entete = str_contains($texte, 'budget de l\'opération')
+            || str_contains($texte, 'budget de l’opération')
+            || str_contains($texte, 'budget de l\'operation')
+            || str_contains($texte, 'budget de la mission');
+
+        // (a) une monnaie — quelle qu'elle soit — sous un libellé de BUDGET.
+        //
+        // La fenêtre TRAVERSE les sauts de ligne, et c'est indispensable : dans un
+        // tableau Markdown, « Coût estimé » est un entête de colonne et « 50 € » vit
+        // dans la ligne SUIVANTE. Elle reste bornée (120 caractères) pour ne pas
+        // rapprocher un budget honnête d'un montant métier cité plus loin.
+        //
+        // Le déclencheur est « coût ESTIMÉ » / « budget », jamais « coût » seul : le
+        // coût d'une police, lui, s'exprime légitimement en monnaie.
+        if (preg_match(
+            '/(?:budget|coût estimé|cout estime|total estimé|total estime)[\s\S]{0,120}?'
+            . '\d[\d\s.,]*\s*(?:€|\$|£|(?:usd|eur|euros?|cdf|fc|xaf|xof)\b)/iu',
+            $texte,
+        ) === 1) {
+            return true;
+        }
+
+        // (b) le tableau complet, en tokens comme en monnaie.
+        return $entete
+            && str_contains($texte, 'enregistrement')
+            && (str_contains($texte, 'opérations planifiées')
+                || str_contains($texte, 'operations planifiees')
+                || str_contains($texte, 'plan d\'enregistrement')
+                || str_contains($texte, 'plan d’enregistrement'));
     }
 
     /**

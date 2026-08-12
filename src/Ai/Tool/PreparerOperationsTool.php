@@ -4,6 +4,8 @@ namespace App\Ai\Tool;
 
 use App\Ai\Trousse\AiToolEcriture;
 
+use App\Ai\Mutation\ChampsDictes;
+use App\Ai\Mutation\EntiteCanonique;
 use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Mutation\MutationOperation;
 use App\Ai\Mutation\MutationPlan;
@@ -30,6 +32,7 @@ final class PreparerOperationsTool implements AiToolProduisantUnPlan, AiToolEcri
 {
     public function __construct(
         private readonly PlanBuilder $planBuilder,
+        private readonly EntiteCanonique $entiteCanonique,
     ) {
     }
 
@@ -201,8 +204,12 @@ final class PreparerOperationsTool implements AiToolProduisantUnPlan, AiToolEcri
      */
     public function argumentsDepuisEtape(array $etape): array
     {
-        $entite = trim((string) ($etape['entite'] ?? ''));
-        if ($entite === '' || !MutationAllowlist::autorise($entite)) {
+        // Le modèle désigne volontiers l'entité par le LIBELLÉ DE L'ÉCRAN, au pluriel
+        // (« Risques », « Paiements de prime ») : c'est le vocabulaire qu'on lui
+        // montre partout. La canonisation vit dans EntiteCanonique, qui reste
+        // fail-closed sur le périmètre.
+        $entite = $this->entiteCanonique->resoudre($etape['entite'] ?? null);
+        if ($entite === null) {
             return [];
         }
 
@@ -211,17 +218,9 @@ final class PreparerOperationsTool implements AiToolProduisantUnPlan, AiToolEcri
             return [];
         }
 
-        $champs = [];
-        foreach ((array) ($etape['champs'] ?? []) as $paire) {
-            if (!is_array($paire)) {
-                continue;
-            }
-            $cle = trim((string) ($paire['cle'] ?? ''));
-            if ($cle === '' || !array_key_exists('valeur', $paire)) {
-                continue;
-            }
-            $champs[$cle] = $paire['valeur'];
-        }
+        // Les DEUX dialectes de champs sont acceptés (map et paires) : le modèle voit
+        // les deux schémas dans le même tour et les intervertit. Cf. ChampsDictes.
+        $champs = ChampsDictes::normaliser($etape['champs'] ?? null);
 
         $cibleId = isset($etape['cibleId']) ? (int) $etape['cibleId'] : 0;
         // Une modification ou une suppression SANS cible n'a pas de sens : mieux vaut
@@ -249,10 +248,11 @@ final class PreparerOperationsTool implements AiToolProduisantUnPlan, AiToolEcri
     public function aideEtape(): string
     {
         return 'preparer_operations : étape d\'écriture ORDINAIRE — donne « entite » (nom court de '
-            . 'l\'entité), « operation » (create/edit/delete), « champs » en paires '
-            . '[{"cle":"montant","valeur":"150"}], et « cibleId » pour un edit/delete. Pose « ref » sur une '
-            . 'étape de CRÉATION dont une étape SUIVANTE a besoin, et donne alors à son champ de relation la '
-            . 'valeur "@ref" : l\'identifiant sera injecté après l\'écriture de la première';
+            . 'l\'entité, ex. Risque, Cotation, PaiementPrime), « operation » (create/edit/delete), '
+            . '« champs » soit en paires [{"cle":"montant","valeur":"150"}] soit directement en objet '
+            . '{"montant":"150"} (les deux sont acceptés), et « cibleId » pour un edit/delete. Pose « ref » '
+            . 'sur une étape de CRÉATION dont une étape SUIVANTE a besoin, et donne alors à son champ de '
+            . 'relation la valeur "@ref" : l\'identifiant sera injecté après l\'écriture de la première';
     }
 
     public function execute(array $args, AiScope $scope): AiToolResult
@@ -260,6 +260,24 @@ final class PreparerOperationsTool implements AiToolProduisantUnPlan, AiToolEcri
         $operations = $args['operations'] ?? null;
         if (!is_array($operations) || $operations === []) {
             return AiToolResult::introuvable('opérations');
+        }
+
+        // CANONISATION À LA PORTE D'ENTRÉE. Les deux seuls endroits où un nom
+        // d'entité DICTÉ par le modèle entre dans le système sont ici et
+        // argumentsDepuisEtape() ; au-delà, le nom court est canonique partout —
+        // plan stocké et ré-exécution comprises. Un terme irrésoluble est refusé
+        // en NOMMANT ce qui est accepté, pour que le tour suivant se corrige seul.
+        $operations = $this->canoniser($operations, $inconnu);
+        if ($inconnu !== null) {
+            return AiToolResult::ok([
+                'pret' => false,
+                'note' => sprintf(
+                    'L\'entité « %s » n\'existe pas. Écris le NOM COURT de l\'entité, jamais le libellé de '
+                    . 'l\'écran. Entités que je peux écrire : %s.',
+                    $inconnu,
+                    implode(', ', $this->entiteCanonique->nomsAcceptes()),
+                ),
+            ]);
         }
 
         // VERROU (état de la conversation) : un plan attend déjà la décision de
@@ -283,5 +301,36 @@ final class PreparerOperationsTool implements AiToolProduisantUnPlan, AiToolEcri
         // les dérive d'un parcours métier — les deux doivent produire strictement
         // le même plan, d'où la source unique.
         return $this->planBuilder->construire(MutationPlan::fromArray($operations), $scope, $this->name());
+    }
+
+    /**
+     * Réécrit l'`entite` de chaque opération RACINE en son nom court canonique.
+     *
+     * Seule la racine est concernée : le nom court d'un enfant de collection est
+     * DÉRIVÉ côté serveur du FormType parent (entry_type/targetEntity), jamais
+     * dicté par le modèle — il n'y a donc rien à canoniser en profondeur.
+     *
+     * @param array<int, mixed> $operations
+     * @param string|null       $inconnu    reçoit le premier terme irrésoluble
+     *
+     * @return array<int, mixed>
+     */
+    private function canoniser(array $operations, ?string &$inconnu = null): array
+    {
+        $inconnu = null;
+        foreach ($operations as $index => $operation) {
+            if (!is_array($operation) || !array_key_exists('entite', $operation)) {
+                continue;
+            }
+            $canonique = $this->entiteCanonique->resoudre((string) $operation['entite']);
+            if ($canonique === null) {
+                $inconnu = trim((string) $operation['entite']);
+
+                return $operations;
+            }
+            $operations[$index]['entite'] = $canonique;
+        }
+
+        return $operations;
     }
 }

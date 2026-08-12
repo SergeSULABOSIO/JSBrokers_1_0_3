@@ -2,6 +2,7 @@
 
 namespace App\Tests\Ai;
 
+use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\PreparerOperationsTool;
 use App\Entity\AssistantConversation;
@@ -70,7 +71,7 @@ class SaisieAutonomeTest extends WebTestCase
              JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom = :n',
             ['n' => self::ENT],
         );
-        foreach (['assistant_conversation', 'tache', 'client', 'portefeuille', 'invite'] as $table) {
+        foreach (['assistant_conversation', 'tache', 'client', 'assureur', 'portefeuille', 'invite'] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :n",
                 ['n' => self::ENT],
@@ -239,6 +240,99 @@ class SaisieAutonomeTest extends WebTestCase
         $this->assertCount(2, $resultat->uiAction['plan'], 'Deux opérations, une seule validation.');
         $this->assertSame('@client', $resultat->uiAction['plan'][1]['fields']['client']);
         $this->assertSame(2, $resultat->data['budget']['enregistrements']);
+    }
+
+    /**
+     * LE DOSSIER ENTIER EN UN SEUL PLAN — la capacité que l'incident du 2026-08-12 a
+     * révélée manquante.
+     *
+     * Un courtier joint un contrat d'assurance et demande, à puces : le client, le
+     * risque, la piste, la proposition, l'avenant, le document, le paiement de prime.
+     * Ket avait choisi une SÉRIE de six plans (six validations), puis avait échoué à
+     * en assembler la première étape. Or tout cela tient dans UN plan : les pièces se
+     * tiennent par des relations, et « ref »/« @ref » les chaîne — y compris depuis
+     * une COLLECTION (la tranche de l'échéancier) vers une opération racine (le
+     * signalement de paiement).
+     *
+     * C'est ce dernier point qui est le moins évident et le plus utile : sans lui, le
+     * paiement de la prime ne pourrait jamais entrer dans le même plan que la
+     * proposition qui crée sa tranche.
+     */
+    public function testLeDossierDunContratTientDansUnSeulPlan(): void
+    {
+        [$scope] = $this->seed();
+
+        $assureur = (new \App\Entity\Assureur())->setNom('SUNU Assurances IARD RDC')
+            ->setEmail('sunu-phpunit@test.local')->setTelephone('+243000000012')
+            ->setNumimpot('IMP-SUNU')->setRccm('RCCM-SUNU')->setIdnat('IDNAT-SUNU')
+            ->setAdressePhysique('Gombe, Kinshasa');
+        $assureur->setEntreprise($scope->entreprise);
+        $this->em->persist($assureur);
+        $this->em->flush();
+
+        $resultat = $this->preparer->execute(['operations' => [
+            [
+                'op' => 'create', 'entite' => 'Client', 'ref' => 'client',
+                'etape' => 'Le client',
+                'champs' => ['nom' => 'MBUSA KAYITHULA JEAN DE DIEU'],
+            ],
+            [
+                'op' => 'create', 'entite' => 'Risque', 'ref' => 'risque',
+                'etape' => 'Le risque',
+                'champs' => [
+                    'nomComplet' => 'Assurance Voyage', 'code' => 'AVOY',
+                    'branche' => 0, 'imposable' => true,
+                ],
+            ],
+            [
+                'op' => 'create', 'entite' => 'Piste', 'ref' => 'piste',
+                'etape' => 'L’opportunité',
+                'champs' => [
+                    'nom' => 'Voyage SUISSE — MBUSA', 'typeAvenant' => 0, 'exercice' => 2026,
+                    'descriptionDuRisque' => 'Assurance voyage espace Schengen',
+                    'client' => '@client', 'risque' => '@risque',
+                ],
+            ],
+            [
+                'op' => 'create', 'entite' => 'Cotation', 'ref' => 'cotation',
+                'etape' => 'La proposition',
+                'champs' => [
+                    'nom' => 'Proposition SUNU — Voyage SUISSE', 'duree' => 1,
+                    'piste' => '@piste', 'assureur' => 'SUNU Assurances IARD RDC',
+                ],
+                'collections' => [[
+                    'collection' => 'tranches',
+                    'elements' => [[
+                        'op' => 'create', 'ref' => 'tranche1', 'etape' => 'L’échéancier',
+                        'champs' => ['nom' => 'Prime unique', 'pourcentage' => 100, 'payableAt' => '14/09/2026'],
+                    ]],
+                ]],
+            ],
+            [
+                'op' => 'create', 'entite' => 'PaiementPrime',
+                'etape' => 'Le paiement de la prime',
+                'champs' => [
+                    'montant' => 95, 'tranche' => '@tranche1',
+                    'paidAt' => '10/08/2026', 'reference' => 'SURDCVO00018389',
+                ],
+            ],
+        ]], $scope);
+
+        $this->assertTrue(
+            $resultat->data['pret'] ?? false,
+            'Le dossier entier doit tenir dans un seul plan : ' . json_encode($resultat->data, JSON_UNESCAPED_UNICODE),
+        );
+        $this->assertCount(5, $resultat->uiAction['plan'], 'Cinq opérations racines, UNE seule validation.');
+        $this->assertSame(
+            ['Client', 'Risque', 'Piste', 'Cotation', 'PaiementPrime'],
+            array_column($resultat->uiAction['plan'], 'entite'),
+            'L’ordre métier dicté doit être conservé : une création précède toujours qui la référence.',
+        );
+        // LE CŒUR : le paiement renvoie à une tranche créée DANS une collection.
+        $this->assertSame('@tranche1', $resultat->uiAction['plan'][4]['fields']['tranche']);
+        // La tranche est bien facturée avec le reste : le budget couvre tout d'un tenant.
+        $this->assertSame(6, $resultat->data['budget']['enregistrements'], '5 racines + la tranche.');
+        $this->assertSame(PlanEnAttente::ACTION_REVUE, $resultat->uiAction['type']);
     }
 
     // ───────────────────── 3. L'avertissement après rechargement ─────────────────────

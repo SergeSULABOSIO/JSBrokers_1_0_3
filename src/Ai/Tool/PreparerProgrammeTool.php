@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tool;
 
+use App\Ai\Mutation\ChampsDictes;
 use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Mutation\MutationOperation;
 use App\Ai\Trousse\AiToolEcriture;
@@ -9,6 +10,8 @@ use App\Ai\Programme\OutilsDeProgramme;
 use App\Ai\Programme\ProgrammeEnCours;
 use App\Ai\Programme\ProgrammeRunner;
 use App\Ai\Scope\AiScope;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 /**
  * Outil de MISSION EN PLUSIEURS PLANS — le « programme ».
@@ -43,6 +46,7 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcrit
         private readonly ProgrammeRunner $runner,
         private readonly ProgrammeEnCours $programmeEnCours,
         private readonly OutilsDeProgramme $outilsDeProgramme,
+        private readonly LoggerInterface $logger = new NullLogger(),
     ) {
     }
 
@@ -59,8 +63,13 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcrit
             . 'renouvelables ») ET DÈS QUE l\'utilisateur demande explicitement de procéder EN '
             . 'PLUSIEURS TEMPS, même sur des entités différentes (« créons d\'abord ce fournisseur, '
             . 'ensuite nous enregistrerons la dépense ») : une étape par temps, la seconde renvoyant '
-            . 'au résultat de la première par « ref »/« @ref ». Déclare TOUTES les étapes ici, en une '
-            . 'seule fois. Tu n\'auras rien '
+            . 'au résultat de la première par « ref »/« @ref ». '
+            . 'NE M\'APPELLE PAS pour un DOSSIER dont les pièces se tiennent par des relations (le '
+            . 'client, son risque, sa piste, sa proposition et ses composantes, son contrat, ses '
+            . 'documents, le paiement de sa tranche) : cela tient dans UN SEUL plan de l\'outil '
+            . 'd\'écriture ordinaire, chaîné par ref/@ref, donc UNE seule validation. Une consigne à '
+            . 'PUCES qui énumère les pièces d\'un même dossier n\'est PAS une demande de découper. '
+            . 'Déclare TOUTES les étapes ici, en une '
             . 'à relancer ensuite — après chaque validation, la plateforme prépare et présente '
             . 'elle-même l\'étape suivante, puis établit un rapport final vérifié en base. '
             . 'N\'appelle donc JAMAIS un outil de plan étape par étape pour une série : tu t\'arrêterais '
@@ -75,7 +84,9 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcrit
         return 'Dès que la demande porte sur PLUSIEURS objets distincts (« signale le paiement des tranches 60, '
             . '64 et 74 », « marque ces cinq polices non renouvelables », « fais pareil pour les trois autres ») '
             . 'ou que l\'utilisateur demande d\'AVANCER PAR ÉTAPES VALIDÉES SÉPARÉMENT (« créons d\'abord le '
-            . 'fournisseur, puis enregistrons la dépense »). Appelle-moi UNE SEULE FOIS en déclarant TOUTES les '
+            . 'fournisseur, puis enregistrons la dépense »). Pas pour un DOSSIER dont les pièces se tiennent par '
+            . 'des relations : celui-là tient dans UN SEUL plan ordinaire chaîné par ref/@ref. Appelle-moi UNE '
+            . 'SEULE FOIS en déclarant TOUTES les '
             . 'étapes : un outil de plan objet par objet s\'arrêterait au premier, et il n\'y a pas de tour '
             . 'suivant pour reprendre la main.';
     }
@@ -298,11 +309,30 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcrit
             // sa préparation, donc un « aucune étape n'a pu être préparée » sans
             // indication de la coupable.
             if ($arguments === []) {
+                // SANS CETTE TRACE, L'INCIDENT EST INDIAGNOSTICABLE. Le 2026-08-12, il a
+                // été impossible de savoir si l'étape refusée portait « Risques » au lieu
+                // de « Risque » ou des champs en map au lieu de paires : JournalTokens ne
+                // journalise que les NOMS d'outils appelés, jamais la tête de leurs
+                // arguments. On journalise donc la FORME de ce qui arrive — clés, dialecte,
+                // entité demandée — et JAMAIS les valeurs, qui sont les données du
+                // courtier (nom du client, montant de la prime).
+                $this->logger->warning('Assistant IA : étape de programme inexploitable.', [
+                    'outil'       => $outil,
+                    'libelle'     => (string) ($brut['libelle'] ?? ''),
+                    'clesEtape'   => array_keys($brut),
+                    'entite'      => (string) ($brut['entite'] ?? ''),
+                    'operation'   => (string) ($brut['operation'] ?? ''),
+                    'formeChamps' => ChampsDictes::forme($brut['champs'] ?? null),
+                    'champsCles'  => array_keys(ChampsDictes::normaliser($brut['champs'] ?? null)),
+                    'cibleId'     => isset($brut['cibleId']) ? 'présent' : 'absent',
+                ]);
+
                 return AiToolResult::ok([
                     'pret' => false,
                     'note' => sprintf(
                         'L\'étape « %s » est inexploitable pour %s : je n\'ai pas pu en dériver d\'arguments. '
-                        . 'Vérifie qu\'elle porte tout ce que cet outil attend — %s.',
+                        . 'Vérifie qu\'elle porte tout ce que cet outil attend — %s. N\'affiche AUCUN plan : '
+                        . 'aucun bouton n\'apparaîtra.',
                         (string) ($brut['libelle'] ?? 'sans libellé'),
                         $outil,
                         $this->outilsDeProgramme->aideParametres(),
