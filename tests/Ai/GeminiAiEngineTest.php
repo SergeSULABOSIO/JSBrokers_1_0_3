@@ -82,6 +82,63 @@ class GeminiAiEngineTest extends TestCase
      * tours enchaînés ont consommé 188 000 tokens sur les 212 500 d'une minute, et
      * rendu la conversation entière inutilisable — « salut » compris.
      */
+    /**
+     * L'APPEL D'OUTIL MALFORMÉ — le blocage du 2026-08-12.
+     *
+     * Sur « Je confirme », Gemini a TENTÉ d'émettre preparer_operations et a produit
+     * une structure invalide qu'il a lui-même rejetée : finishReason
+     * MALFORMED_FUNCTION_CALL, 698 jetons de sortie, et RIEN dans le canal des
+     * fonctions. L'utilisateur recevait « redites-le-moi en nommant le point précis »
+     * — notre échec de sérialisation présenté comme son imprécision.
+     *
+     * C'est un aléa d'échantillonnage : le même appel réémis passe le plus souvent.
+     * On reprend donc UNE fois, et l'outil finit par être appelé.
+     */
+    public function testUnAppelDOutilMalformeEstRepris(): void
+    {
+        $appels = 0;
+        $http = new MockHttpClient(function () use (&$appels) {
+            ++$appels;
+            // 1er appel : Gemini rejette son propre appel d'outil.
+            if ($appels === 1) {
+                return new MockResponse(json_encode($this->tourMalforme()));
+            }
+
+            return new MockResponse(json_encode($this->tourAvecOutil(1000)));
+        });
+
+        $tool = $this->makeTool(AiToolResult::ok(['count' => 3]));
+        $reponse = $this->makeEngine($http, [$tool])->reply($this->makeRequest('Enregistre le dossier'));
+
+        // 1 malformé + 1 reprise (qui appelle l'outil) + 1 rédaction = 3.
+        $this->assertSame(3, $appels, 'Un appel malformé doit être repris UNE fois.');
+        $this->assertSame('compter_entites', $reponse->toolUsed, 'La reprise doit aboutir à l’appel de l’outil.');
+    }
+
+    /**
+     * Repris UNE fois, pas davantage : le quota se compte par minute, et deux échecs
+     * de suite ne relèvent plus de l'aléa mais d'un schéma que ce modèle ne sait pas
+     * sérialiser. S'acharner ne ferait que brûler le débit.
+     */
+    public function testUnAppelMalformeNEstReprisQuUneSeuleFois(): void
+    {
+        $appels = 0;
+        $http = new MockHttpClient(function () use (&$appels) {
+            ++$appels;
+
+            return new MockResponse(json_encode($this->tourMalforme()));
+        });
+
+        $reponse = $this->makeEngine($http, [$this->makeTool(AiToolResult::ok([]))])
+            ->reply($this->makeRequest('Enregistre le dossier'));
+
+        // 1 malformé + 1 reprise malformée = 2, et RIEN de plus : aucun outil n'ayant
+        // été appelé, il n'y a rien à rédiger — la phase de rédaction est épargnée.
+        $this->assertSame(2, $appels, 'Pas d’acharnement : une seule reprise, et pas de rédaction inutile.');
+        // L'utilisateur reçoit malgré tout une réponse — jamais une bulle vide.
+        $this->assertNotSame('', trim($reponse->content));
+    }
+
     public function testUnMessageNeCoutteJamaisPlusDeDeuxAppels(): void
     {
         $appels = 0;
@@ -644,6 +701,21 @@ class GeminiAiEngineTest extends TestCase
     }
 
     /** Un tour de function calling qui redemande toujours le même outil. */
+    /**
+     * La réponse RÉELLE observée le 2026-08-12 : le fournisseur a rejeté son propre
+     * appel d'outil. Aucun `parts`, aucun texte — seul `finishReason` le dit.
+     */
+    private function tourMalforme(): array
+    {
+        return [
+            'candidates' => [[
+                'content'      => ['role' => 'model', 'parts' => []],
+                'finishReason' => 'MALFORMED_FUNCTION_CALL',
+            ]],
+            'usageMetadata' => ['promptTokenCount' => 1000, 'candidatesTokenCount' => 698],
+        ];
+    }
+
     private function tourAvecOutil(int $tokensEntree): array
     {
         return [
