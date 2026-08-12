@@ -8,6 +8,8 @@ use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
 use App\Service\Workspace\WorkspaceMutationService;
 use App\Token\TokenAccountService;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 /**
  * SOURCE UNIQUE de la construction d'un plan d'écriture (dry-run) : analyse des
@@ -43,7 +45,47 @@ final class PlanBuilder
         // Même principe que le résolveur : ce que le serveur sait faire seul ne se
         // demande pas au modèle.
         private readonly NormaliseurDeDates $normaliseurDeDates,
+        // Un refus de dry-run n'était tracé NULLE PART : le 2026-08-12, il a été
+        // impossible de savoir quelle opération le modèle avait mal formée.
+        private readonly LoggerInterface $logger = new NullLogger(),
     ) {
+    }
+
+    /**
+     * CE QU'IL FAUT FAIRE quand une opération est « introuvable », en toutes lettres.
+     *
+     * Deux causes, deux remèdes — et dans les deux cas l'interdiction d'inventer un
+     * incident technique, qui est ce que le modèle a fait faute de consigne.
+     */
+    private function quoiFaireSiIntrouvable(MutationOperation $op, array $analyse, int $position): string
+    {
+        $commun = ' N\'affiche AUCUN plan, n\'annonce AUCUN « ajustement technique » et ne propose PAS de '
+            . 'créer les enregistrements « par étape » : dis en une phrase ce qui bloque, puis reprends '
+            . 'l\'appel corrigé — ou pose la question qui manque.';
+
+        if ($op->isCreate()) {
+            return sprintf(
+                'L\'opération #%d (création de « %s ») est mal formée : une CRÉATION ne porte jamais '
+                . 'd\'identifiant de cible. Retire « id »/« cibleId » de cette opération et rappelle l\'outil. '
+                . 'Pour rattacher une création à une AUTRE création du même plan, n\'utilise pas d\'identifiant : '
+                . 'pose « ref » sur celle qui est créée d\'abord et donne au champ de relation la valeur '
+                . '"@etiquette".%s',
+                $position,
+                $analyse['libelle'],
+                $commun,
+            );
+        }
+
+        return sprintf(
+            'L\'opération #%d (%s de « %s ») vise l\'enregistrement #%d, qui n\'existe pas dans cette '
+            . 'entreprise. Vérifie l\'identifiant (rechercher_entites) — et s\'il s\'agit en réalité d\'un '
+            . 'enregistrement à CRÉER, remplace cette opération par une création.%s',
+            $position,
+            $op->op === MutationOperation::OP_DELETE ? 'suppression' : 'modification',
+            $analyse['libelle'],
+            (int) $op->targetId,
+            $commun,
+        );
     }
 
     /**
@@ -150,7 +192,26 @@ final class PlanBuilder
                 return AiToolResult::horsPerimetre($analyse['libelle']);
             }
             if ($analyse['statut'] === 'introuvable') {
-                return AiToolResult::introuvable(sprintf('%s %s', $analyse['libelle'], $op->targetId ? '#' . $op->targetId : ''));
+                // Le refus JOURNALISÉ et EXPLIQUÉ. Le 2026-08-12, « Avenants #1 » est
+                // remonté seul jusqu'au modèle, qui n'avait rien pour se corriger :
+                // il a annoncé un « ajustement technique » imaginaire et l'utilisateur
+                // est resté sans dossier. On journalise la forme de l'opération (jamais
+                // les valeurs, qui sont les données du courtier) et on rend au modèle
+                // la marche à suivre.
+                $this->logger->warning('Assistant IA : opération introuvable au dry-run.', [
+                    'outil'      => $outilAppelant,
+                    'position'   => $i + 1,
+                    'op'         => $op->op,
+                    'entite'     => $op->entityShortName,
+                    'cible'      => $op->targetId,
+                    'champsCles' => array_keys($op->fields),
+                    'ref'        => $op->ref,
+                ]);
+
+                return AiToolResult::introuvable(
+                    sprintf('%s %s', $analyse['libelle'], $op->targetId ? '#' . $op->targetId : ''),
+                    $this->quoiFaireSiIntrouvable($op, $analyse, $i + 1),
+                );
             }
 
             $analyses[$i] = $analyse;
