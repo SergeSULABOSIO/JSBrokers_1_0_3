@@ -67,6 +67,35 @@ final class MutationPlan
     }
 
     /**
+     * Les POSITIONS déclarées des opérations, dans l'ordre où elles seront
+     * RÉELLEMENT exécutées.
+     *
+     * POURQUOI CETTE MÉTHODE EXISTE. Le dry-run doit rendre le même verdict que
+     * l'exécution — sans quoi il refuse des plans qui marcheraient, ou l'inverse.
+     * Or il a besoin des DEUX ordres à la fois : l'ordre d'EXÉCUTION pour savoir
+     * quand chaque « @etiquette » devient disponible, et l'ordre DÉCLARÉ pour
+     * numéroter le plan comme l'utilisateur le lira. Rendre les indices plutôt que
+     * les objets lui donne les deux, en dérivant du MÊME tri que l'exécution :
+     * il n'y a toujours qu'une seule règle d'ordre dans le projet.
+     *
+     * @return list<int> indices dans $this->operations, en ordre d'exécution
+     */
+    public function indicesOrdonnes(): array
+    {
+        $indices = array_keys($this->operations);
+        $rangs = self::rangs();
+        // Même tri stable que ordonner(), appliqué aux indices.
+        usort($indices, function (int $a, int $b) use ($rangs): int {
+            $ra = $rangs[$this->operations[$a]->op] ?? 9;
+            $rb = $rangs[$this->operations[$b]->op] ?? 9;
+
+            return ($ra <=> $rb) ?: ($a <=> $b);
+        });
+
+        return array_values($indices);
+    }
+
+    /**
      * Ordonne une liste d'opérations (tête ou enfants de collection) : créations
      * d'abord, puis éditions, puis suppressions ; ordre stable au sein d'un même
      * type. Helper partagé (DRY) avec le tri des sous-opérations de collection.
@@ -76,11 +105,7 @@ final class MutationPlan
      */
     public static function ordonner(array $ops): array
     {
-        $rang = [
-            MutationOperation::OP_CREATE => 0,
-            MutationOperation::OP_EDIT   => 1,
-            MutationOperation::OP_DELETE => 2,
-        ];
+        $rang = self::rangs();
         // tri stable (usort ne l'est pas partout) : on décore par l'index d'origine.
         $decore = [];
         foreach ($ops as $i => $op) {
@@ -89,6 +114,21 @@ final class MutationPlan
         usort($decore, static fn ($a, $b) => ($a[0] <=> $b[0]) ?: ($a[1] <=> $b[1]));
 
         return array_map(static fn ($d) => $d[2], $decore);
+    }
+
+    /**
+     * LA règle d'ordre, en un seul endroit : créations d'abord (leurs identifiants
+     * peuvent servir aux suivantes), puis éditions, puis suppressions.
+     *
+     * @return array<string, int>
+     */
+    private static function rangs(): array
+    {
+        return [
+            MutationOperation::OP_CREATE => 0,
+            MutationOperation::OP_EDIT   => 1,
+            MutationOperation::OP_DELETE => 2,
+        ];
     }
 
     /**
@@ -119,9 +159,15 @@ final class MutationPlan
             $retenues[self::cleEtape($socle)] = true;
         }
 
-        $ops = [];
+        // La CASCADE se calcule dans l'ordre d'EXÉCUTION, pas dans l'ordre déclaré :
+        // c'est le seul dans lequel une création précède toujours ce qui y renvoie.
+        // Décidée dans l'ordre déclaré, une édition placée AVANT la création dont
+        // elle dépend survivait à l'élagage de celle-ci et repartait avec un
+        // « @etiquette » orphelin. Le résultat, lui, reste dans l'ordre DÉCLARÉ.
         $abandonnees = []; // étiquettes de créations élaguées => leurs dépendantes tombent aussi.
-        foreach ($this->operations as $op) {
+        $gardees = [];
+        foreach ($this->indicesOrdonnes() as $i) {
+            $op = $this->operations[$i];
             $etape = $op->etape;
             $garde = $etape === null || isset($retenues[self::cleEtape($etape)]);
             if ($garde) {
@@ -138,7 +184,14 @@ final class MutationPlan
                 }
                 continue;
             }
-            $ops[] = self::filtrerNoeud($op, $retenues, $etape);
+            $gardees[$i] = true;
+        }
+
+        $ops = [];
+        foreach ($this->operations as $i => $op) {
+            if (isset($gardees[$i])) {
+                $ops[] = self::filtrerNoeud($op, $retenues, $op->etape);
+            }
         }
 
         return new self($ops);

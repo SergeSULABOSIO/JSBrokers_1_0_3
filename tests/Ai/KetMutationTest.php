@@ -98,6 +98,31 @@ class KetMutationTest extends TestCase
         $this->assertTrue($plan->contientSuppression());
     }
 
+    /**
+     * Les deux vues du MÊME tri doivent rester d'accord : `operationsOrdonnees()`
+     * sert l'exécution, `indicesOrdonnes()` sert le dry-run (qui a besoin des
+     * positions déclarées pour numéroter le plan). Si elles divergeaient, le
+     * dry-run se remettrait à refuser des plans que l'exécution réussirait.
+     */
+    public function testLesDeuxVuesDeLOrdreDExecutionConcordent(): void
+    {
+        $plan = new MutationPlan([
+            new MutationOperation('delete', 'Tache', 3),
+            new MutationOperation('edit', 'Note', 7),
+            new MutationOperation('create', 'Client', null, ['nom' => 'X']),
+            new MutationOperation('create', 'Piste', null, ['nom' => 'Y']),
+        ]);
+
+        // Créations d'abord (dans l'ordre déclaré), puis édition, puis suppression.
+        $this->assertSame([2, 3, 1, 0], $plan->indicesOrdonnes());
+
+        $parIndices = array_map(
+            static fn (int $i) => $plan->operations[$i],
+            $plan->indicesOrdonnes(),
+        );
+        $this->assertSame($plan->operationsOrdonnees(), $parIndices);
+    }
+
     public function testOperationLitLesChampsEnvoyesParLeLLM(): void
     {
         // Le schéma de l'outil expose la clé « champs » : elle doit être lue
