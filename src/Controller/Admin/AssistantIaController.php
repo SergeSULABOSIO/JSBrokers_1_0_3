@@ -572,6 +572,27 @@ class AssistantIaController extends AbstractController
             ]);
         }
 
+        // EXÉCUTION FANTÔME — le mensonge le plus coûteux. Le 2026-08-12, Ket a
+        // annoncé « Le dossier complet a été enregistré avec succès dans la base de
+        // données », récapitulatif détaillé à l'appui, alors que la base ne contenait
+        // rien : aucun plan n'avait été présenté, donc aucune validation, donc aucune
+        // écriture. Une écriture ne peut avoir lieu que par l'endpoint d'exécution,
+        // après un clic — jamais pendant un tour de chat. Si donc la prose affirme un
+        // enregistrement alors que le fil n'en porte aucun, l'utilisateur doit
+        // l'apprendre ICI, et pas le mois prochain en cherchant sa police.
+        $executionFantome = PlanEnAttente::estUneExecutionFantome(
+            (string) $reply->content,
+            $aucuneDecision,
+            !PlanEnAttente::aUnPlanExecute($conversation),
+        );
+        if ($executionFantome) {
+            $actions[] = ['type' => PlanEnAttente::ACTION_NON_EXECUTE];
+            $this->logger->warning('Assistant IA : exécution fantôme détectée (enregistrement affirmé, jamais fait).', [
+                'conversation' => $conversation->getId(),
+                'engine'       => $this->aiEngine->name(),
+            ]);
+        }
+
         $messageAssistant = (new AssistantMessage())
             ->setRole(AssistantMessage::ROLE_ASSISTANT)
             ->setContenu($reply->content)
@@ -590,6 +611,10 @@ class AssistantIaController extends AbstractController
                 // un rechargement de page (F5), comme les statuts de plan — AVEC son
                 // motif, pour dire la même chose en direct et après rechargement.
                 'mutationAbsent' => $planFantome ? ['motif' => $planRefuse['motif'] ?? null] : null,
+                // Même trace, pour le démenti d'exécution : il doit survivre au F5,
+                // sinon un rechargement laisserait le récapitulatif mensonger seul
+                // à l'écran — exactement l'état qu'on corrige.
+                'executionAbsente' => $executionFantome ?: null,
                 // Bandeau d'avancement quand ce plan est l'étape d'un PROGRAMME
                 // (« étape 1 sur 3 ») : persisté pour survivre au rechargement,
                 // au même titre que le plan lui-même.

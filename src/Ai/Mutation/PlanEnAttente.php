@@ -39,6 +39,13 @@ final class PlanEnAttente
      */
     public const ACTION_ABSENT = TypeAction::PLAN_ABSENT->value;
 
+    /**
+     * Directive UI AUTORITAIRE : le message affirme un ENREGISTREMENT qui n'a pas
+     * eu lieu. Le contraire de ce que Ket vient d'écrire doit être dit clairement,
+     * sans quoi l'utilisateur repart en croyant son dossier constitué.
+     */
+    public const ACTION_NON_EXECUTE = TypeAction::EXECUTION_ABSENTE->value;
+
     public function __construct(
         private readonly EntityManagerInterface $em,
     ) {
@@ -305,6 +312,101 @@ final class PlanEnAttente
                 || str_contains($texte, 'operations planifiees')
                 || str_contains($texte, 'plan d\'enregistrement')
                 || str_contains($texte, 'plan d’enregistrement'));
+    }
+
+    /**
+     * La conversation porte-t-elle un plan RÉELLEMENT EXÉCUTÉ ?
+     *
+     * C'est le seul fait qui autorise Ket à parler d'un enregistrement au passé :
+     * une écriture n'a jamais lieu pendant un tour de chat (elle passe par
+     * l'endpoint d'exécution, après un clic), elle ne peut donc être QUE dans
+     * l'historique.
+     */
+    public static function aUnPlanExecute(?AssistantConversation $conversation): bool
+    {
+        if ($conversation === null) {
+            return false;
+        }
+
+        foreach ($conversation->getMessages() as $message) {
+            if ($message->getRole() === AssistantMessage::ROLE_ASSISTANT
+                && self::estExecute($message->getMeta() ?? [])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * LA PROSE AFFIRME-T-ELLE UN ENREGISTREMENT DÉJÀ FAIT ?
+     *
+     * L'INCIDENT (2026-08-12, le plus grave de la série). Ket a écrit « Le dossier
+     * complet a été préparé et ENREGISTRÉ AVEC SUCCÈS DANS LA BASE DE DONNÉES »,
+     * suivi d'un récapitulatif détaillé — client, risque, police, prime, règlement,
+     * document. Vérification faite : la base ne contenait RIEN. Aucun plan n'avait
+     * été présenté, aucun bouton, aucun budget, et bien sûr aucune exécution.
+     *
+     * C'est pire qu'un plan fantôme. Un plan fantôme fait attendre un bouton qui ne
+     * vient pas — l'utilisateur s'en aperçoit. Une exécution fantôme, elle, le fait
+     * PARTIR en croyant son dossier constitué : il ne le découvrira qu'au moment où
+     * il en aura besoin, et il aura perdu la pièce entre-temps.
+     *
+     * Marqueurs à HAUTE PRÉCISION, exigeant un accomplissement ET sa destination :
+     * « enregistré avec succès », « créé en base », « opérations réalisées ». Un
+     * futur (« je vais créer », « le plan créera ») ne déclenche rien, et un plan
+     * légitime non plus — celui-là annonce ce qu'il FERA, pas ce qu'il a fait.
+     */
+    public static function proseAffirmeUnEnregistrement(string $contenu): bool
+    {
+        $texte = mb_strtolower($contenu);
+
+        foreach ([
+            'enregistré avec succès', 'enregistrés avec succès', 'enregistrée avec succès',
+            'enregistrees avec succes', 'enregistre avec succes', 'enregistres avec succes',
+            'créé avec succès', 'créés avec succès', 'créée avec succès',
+            'cree avec succes', 'crees avec succes',
+            'opérations réalisées', 'operations realisees',
+            'a bien été enregistré', 'ont bien été enregistrés',
+        ] as $marqueur) {
+            if (str_contains($texte, $marqueur)) {
+                return true;
+            }
+        }
+
+        // Un accomplissement suivi, de près, de sa DESTINATION : « le dossier a été
+        // créé dans la base de données ». La conjonction est ce qui évite de
+        // confondre avec l'annonce de ce qu'un plan fera.
+        return (bool) preg_match(
+            '/\b(?:a été|ont été|avons|ai)\s+(?:bien\s+)?(?:enregistr|cré|sauvegard|ajout)\w*'
+            . '[^.!?]{0,60}\b(?:en base|dans la base|base de données|base de donnees)\b/u',
+            $texte,
+        );
+    }
+
+    /**
+     * DÉCISION FINALE du garde-fou anti-EXÉCUTION fantôme.
+     *
+     * Trois conditions, toutes nécessaires :
+     *  - la prose affirme un enregistrement accompli ;
+     *  - AUCUNE décision n'a été émise ce tour-ci (aucun plan, aucun refus) ;
+     *  - et le fil ne porte AUCUN plan réellement exécuté.
+     *
+     * La troisième est ce qui protège le cas légitime : après une vraie exécution,
+     * l'utilisateur demande souvent « c'est bien fait ? » et Ket doit pouvoir
+     * répondre oui. Le fil porte alors le marqueur d'exécution, et rien ne se
+     * déclenche.
+     */
+    public static function estUneExecutionFantome(
+        string $contenu,
+        bool $aucuneDecision,
+        bool $aucunPlanExecute,
+    ): bool {
+        if (!$aucuneDecision || !$aucunPlanExecute) {
+            return false;
+        }
+
+        return self::proseAffirmeUnEnregistrement($contenu);
     }
 
     /**

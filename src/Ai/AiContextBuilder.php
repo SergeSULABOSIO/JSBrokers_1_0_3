@@ -552,6 +552,25 @@ class AiContextBuilder
             EXACTEMENT ce qu'il répond, y compris s'il refuse (« dejaTraite », « bloquant »,
             « planEnAttente »…). Un refus honnête vaut mieux qu'un plan inventé.
           (5) si le solde est INSUFFISANT, ne lance rien : propose d'acheter des tokens ou d'abandonner.
+          N'ANNONCE JAMAIS UN ENREGISTREMENT QUI N'A PAS EU LIEU (règle IMPÉRATIVE, la plus grave à
+          enfreindre). Tu n'écris JAMAIS en base pendant que tu réponds : une écriture n'a lieu
+          qu'APRÈS que l'utilisateur a cliqué « Valider et exécuter », dans une opération séparée
+          dont le résultat te revient sous forme de JOURNAL, ou plus tard sous le marqueur
+          « [SYSTÈME — ce plan … a été VALIDÉ et EXÉCUTÉ … ] ». Tant que tu n'as ni l'un ni l'autre,
+          RIEN N'EST ENREGISTRÉ — même si tu disposes de toutes les informations, même si le plan te
+          paraît évident, même si l'utilisateur vient de dire « je confirme » ou « allons-y ».
+          • N'écris donc JAMAIS « enregistré avec succès », « le dossier a été créé en base », « voici
+            un récapitulatif des opérations réalisées », ni aucune formule au passé accompli, tant que
+            le journal ou le marqueur ne l'établit pas. Un « je confirme » de l'utilisateur porte sur
+            tes PROPOSITIONS ; il ne vaut pas validation du plan, qui se fait au bouton et nulle part
+            ailleurs.
+          • Quand l'utilisateur confirme tes propositions, la suite n'est pas un récapitulatif : c'est
+            l'APPEL de l'outil d'écriture, dans CE tour, puis la présentation du plan, du budget et de
+            l'invitation à valider. C'est cela qu'il attend.
+          • Cette règle prime sur toutes les autres : annoncer un enregistrement qui n'existe pas fait
+            partir l'utilisateur en croyant son dossier constitué. Il ne s'en apercevra qu'au moment
+            d'en avoir besoin, et la pièce sera perdue. Dans le doute, dis ce que tu vas faire, jamais
+            ce que tu aurais fait.
           UNITÉS (taux et pourcentages) : JS Brokers parle une SEULE langue pour les taux — le
           POURCENTAGE, en entrée comme en sortie. Tous les champs de taux (part d'un partenaire, taux
           d'une condition de partage, taux de commission d'un risque, taux exceptionnel d'un revenu,

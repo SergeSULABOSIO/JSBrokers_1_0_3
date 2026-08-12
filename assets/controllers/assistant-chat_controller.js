@@ -62,6 +62,14 @@ export default class extends Controller {
      */
     static MUTATION_ABSENT_PREFIXE = "Aucun plan n'a pu être préparé, donc aucun bouton « Valider et exécuter » n'apparaîtra —";
 
+    /**
+     * DÉMENTI D'EXÉCUTION. Le message qui précède affirme un enregistrement qui n'a
+     * pas eu lieu : rien n'a été validé, donc rien n'a été écrit. On le dit sans
+     * détour, parce que l'utilisateur s'apprêtait à passer à autre chose en croyant
+     * son dossier constitué.
+     */
+    static EXECUTION_ABSENTE_MESSAGE = "⚠ RIEN N'A ÉTÉ ENREGISTRÉ. Le récapitulatif ci-dessus est faux : aucun plan n'a été validé, donc aucune donnée n'a été écrite en base. Rien ne s'enregistre sans le bouton « Valider et exécuter ». Redemandez l'opération pour obtenir le plan, son budget et ce bouton.";
+
     /** Bornes du rythme de déploiement mot à mot (ms par mot). */
     static TYPE_DELAY_MAX = 45;
     static TYPE_DELAY_MIN = 12;
@@ -562,6 +570,9 @@ export default class extends Controller {
                     break;
                 case 'ket-mutation.absent':
                     this.renderMutationAbsent(action);
+                    break;
+                case 'ket-mutation.non-executee':
+                    this.renderExecutionAbsente();
                     break;
                 case 'ket-document.review':
                     this.renderDocumentReview(action);
@@ -1413,6 +1424,15 @@ export default class extends Controller {
      * l'utilisateur — pas de bouton fantôme, pas d'attente d'une décision qui ne
      * viendra pas. Rendu identique au chargement (Twig) et en direct.
      */
+    /**
+     * Dément un enregistrement affirmé mais jamais réalisé. En « error » et non en
+     * « warning » : ce n'est pas une nuance de plus dans une réponse, c'est le
+     * contraire de ce que le message annonce.
+     */
+    renderExecutionAbsente() {
+        this.appendNotice('error', this.constructor.EXECUTION_ABSENTE_MESSAGE);
+    }
+
     renderMutationAbsent(action = null) {
         // Le MOTIF vient du serveur, qui sait ce que l'outil a répondu : « il manque
         // la date de la dépense » aide, « redemandez l'action » ne fait que renvoyer
