@@ -462,6 +462,63 @@ class KetMutationTest extends TestCase
         $this->assertSame(0, $tokens->estimateWriteCost([]));
     }
 
+    // ────────────────────────── Refus exploitables ────────────────────────────
+
+    /**
+     * L'INCIDENT DU 2026-08-12, SECONDE PARTIE. Ket avait glissé dans son plan une
+     * MODIFICATION d'un avenant qui n'existait pas (« Avenants #1 »). Le refus ne
+     * portait qu'un libellé et un identifiant : sans rien pour se corriger, Ket a
+     * annoncé un « ajustement technique requis » et proposé de « valider le
+     * lancement direct de la création par étape » — c'est-à-dire rien. Le courtier
+     * est resté sans dossier.
+     *
+     * Un refus doit dire CE QU'IL FAUT FAIRE.
+     */
+    public function testUnRefusIntrouvableDitQuoiFaire(): void
+    {
+        $tool = $this->makeTool([
+            'Avenant' => ['ok' => false, 'statut' => 'introuvable', 'entite' => 'Avenant',
+                          'libelle' => 'Avenants', 'cible' => null, 'manquants' => [], 'impacts' => []],
+        ]);
+
+        $result = $tool->execute(['operations' => [
+            ['op' => 'create', 'entite' => 'Client', 'ref' => 'client', 'champs' => ['nom' => 'X']],
+            ['op' => 'edit', 'entite' => 'Avenant', 'id' => 1, 'champs' => ['description' => 'Souscription']],
+        ]], $this->makeScope());
+
+        $this->assertSame(AiToolResult::STATUS_INTROUVABLE, $result->status);
+        $note = (string) ($result->data['note'] ?? '');
+        // Il NOMME l'opération fautive, à sa position DÉCLARÉE.
+        $this->assertStringContainsString('#2', $note);
+        $this->assertStringContainsString('Avenants', $note);
+        $this->assertStringContainsString('#1', $note);
+        // Il propose les deux issues réelles.
+        $this->assertStringContainsString('rechercher_entites', $note);
+        $this->assertStringContainsString('création', $note);
+        // Et il ferme la porte à l'impasse polie qui a été servie à l'utilisateur.
+        $this->assertStringContainsString('ajustement technique', $note);
+        $this->assertStringContainsString('par étape', $note);
+    }
+
+    /** Une création qui porte un identifiant est mal formée : on le dit, et on dit quoi retirer. */
+    public function testUneCreationAvecIdentifiantEstExpliquee(): void
+    {
+        $tool = $this->makeTool([
+            'Avenant' => ['ok' => false, 'statut' => 'introuvable', 'entite' => 'Avenant',
+                          'libelle' => 'Avenants', 'cible' => null, 'manquants' => [], 'impacts' => []],
+        ]);
+
+        $result = $tool->execute(['operations' => [
+            ['op' => 'create', 'entite' => 'Avenant', 'id' => 7, 'champs' => ['description' => 'X']],
+        ]], $this->makeScope());
+
+        $note = (string) ($result->data['note'] ?? '');
+        $this->assertStringContainsString('création', $note);
+        $this->assertStringContainsString('cibleId', $note);
+        // Le bon chemin pour lier deux créations est rappelé sur place.
+        $this->assertStringContainsString('@etiquette', $note);
+    }
+
     // ────────────────── Dialecte des champs & nom d'entité ────────────────────
 
     /**

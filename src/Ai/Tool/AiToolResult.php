@@ -37,8 +37,23 @@ final class AiToolResult
         return new self(self::STATUS_HORS_PERIMETRE, ['libelle' => $libelle]);
     }
 
-    public static function introuvable(string $precision = ''): self
+    /**
+     * @param string $note CE QU'IL FAUT FAIRE, à l'intention du modèle.
+     *
+     * POURQUOI CE SECOND PARAMÈTRE (incident du 2026-08-12). Ce refus ne portait
+     * qu'une « precision » — un libellé et un identifiant, « Avenants #1 ». Le
+     * modèle n'avait donc RIEN pour se corriger : il a inventé un « ajustement
+     * technique requis » et proposé à l'utilisateur de « valider le lancement
+     * direct de la création par étape », c'est-à-dire rien du tout. Un refus qui
+     * ne dit pas quoi faire produit une impasse polie.
+     */
+    public static function introuvable(string $precision = '', string $note = ''): self
     {
-        return new self(self::STATUS_INTROUVABLE, ['precision' => $precision]);
+        $data = ['precision' => $precision];
+        if (trim($note) !== '') {
+            $data['note'] = $note;
+        }
+
+        return new self(self::STATUS_INTROUVABLE, $data);
     }
 }

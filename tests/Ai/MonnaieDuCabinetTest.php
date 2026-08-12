@@ -103,6 +103,38 @@ class MonnaieDuCabinetTest extends KernelTestCase
      * Le budget n'est pas de l'argent : le prompt doit le dire, sans quoi le modèle
      * lui accole naturellement un symbole monétaire — c'est exactement ce qu'il a fait.
      */
+    /**
+     * COMPRENDRE AVANT D'AGIR (demandé le 2026-08-12). Le modèle doit remettre au
+     * propre la demande avant de l'outiller, et s'ARRÊTER sur une reformulation +
+     * des questions quand elle reste ambiguë — plutôt que d'agir de travers.
+     */
+    public function testLePromptImposeDeReformulerAvantDAgir(): void
+    {
+        $prompt = $this->builder()->toSystemPrompt($this->requete('USD'));
+
+        $this->assertStringContainsString('COMPRENDRE AVANT D\'AGIR', $prompt);
+        $this->assertStringContainsString('Ce que je comprends', $prompt);
+        $this->assertStringContainsString('Voici comment j\'ai compris votre demande', $prompt);
+        // La longueur ou le désordre d'une consigne ne sont PAS des motifs de question :
+        // sans cette borne, la règle dégénère en interrogatoire.
+        $this->assertStringContainsString('cela se range, cela ne se redemande pas', $prompt);
+    }
+
+    /**
+     * Un refus d'outil doit être dit en clair. Le 2026-08-12, Ket a traduit un refus
+     * exploitable en « Ajustement technique requis » puis a proposé de « lancer la
+     * création par étapes » — une impasse polie, dont l'utilisateur ne pouvait rien
+     * faire.
+     */
+    public function testLePromptInterditDeTraduireUnRefusEnPanneTechnique(): void
+    {
+        $prompt = $this->builder()->toSystemPrompt($this->requete('USD'));
+
+        $this->assertStringContainsString('UN REFUS SE DIT EN CLAIR', $prompt);
+        $this->assertStringContainsString('ajustement', $prompt);
+        $this->assertStringContainsString('par étapes', $prompt);
+    }
+
     public function testLePromptInterditDeLibellerLeBudgetEnMonnaie(): void
     {
         $builder = $this->builder();

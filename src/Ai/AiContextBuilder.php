@@ -314,6 +314,7 @@ class AiContextBuilder
         des feedbacks au fil des actions puis se clôture. Tu PARTAGES cet objectif et tu GUIDES
         l'utilisateur vers la prochaine étape la plus utile (cf. « ÉTAT DE LA BOUSSOLE » plus bas).
         Règles de conduite :
+        {$this->regleComprendreAvantDAgir()}
         {$sectionAiguillage}
         {$sectionGlossaire}
         {$sectionConcision}
@@ -498,6 +499,15 @@ class AiContextBuilder
           tu ne dis rien : APPLIQUE-LE et ANNONCE-LE. Puis rappelle preparer_operations. Ne présente
           AUCUN tableau de plan tant qu'un obligatoire manque ;
           (2) s'il renvoie « blocages », explique-les et n'exécute pas ;
+          (2 bis) UN REFUS SE DIT EN CLAIR, JAMAIS EN PANNE (règle IMPÉRATIVE). Quand l'outil refuse —
+          « manquants », « introuvable », « aDemander », « bloque » —, il te dit EXACTEMENT ce qui
+          cloche et sa « note » te dit quoi faire : suis-la. N'écris JAMAIS qu'un « ajustement
+          technique » est requis, qu'un « statut » a été retourné, ni le nom d'un statut interne : ce
+          vocabulaire ne veut rien dire pour un courtier et transforme une information exploitable en
+          impasse. Ne propose JAMAIS non plus, en guise de solution, de « lancer la création par étapes »
+          ou de « reprendre la séquence » : ce ne sont pas des offres, l'utilisateur ne peut rien en
+          faire. Deux issues, et deux seulement : soit l'information manque et tu la DEMANDES en la
+          nommant, soit ton appel était mal formé et tu le REFAIS corrigé dans ce même tour.
           (3) présente ALORS, à partir des données EXACTES de l'outil, un PLAN NUMÉROTÉ clair et
           scannable — TOUJOURS un tableau des opérations (colonnes : #, Opération, Entité, Cible,
           Changements), une liste des implications/impacts (cascades de suppression, irréversibilité)
@@ -758,6 +768,47 @@ class AiContextBuilder
      * la monnaie de rien ici : ni du cabinet, ni de la plateforme, dont l'économie
      * de tokens est libellée en USD.
      */
+    /**
+     * COMPRENDRE AVANT D'AGIR — la première chose à faire de chaque message.
+     *
+     * POURQUOI CETTE RÈGLE (demande du propriétaire, 2026-08-12). Une consigne
+     * longue, à puces, mêlant données du contrat et instructions, arrive telle
+     * quelle au modèle qui se met aussitôt à outiller — et se trompe sur un détail
+     * qu'une reformulation d'une ligne aurait tranché. Le remède est le même que
+     * pour un collègue : redire ce qu'on a compris AVANT de faire, et ne poser de
+     * question que sur ce qui reste réellement ambigu.
+     *
+     * Elle ne coûte pas un tour de plus : la reformulation voyage DANS la réponse
+     * du tour courant, et l'appel d'outil a lieu dans le même tour dès que la
+     * demande est claire. C'est seulement quand elle ne l'est pas que le tour
+     * s'arrête sur une question — ce qui est précisément l'économie visée.
+     */
+    private function regleComprendreAvantDAgir(): string
+    {
+        return <<<'COMPRENDRE'
+        - COMPRENDRE AVANT D'AGIR (règle IMPÉRATIVE, à appliquer AVANT toute autre) : commence par
+          RELIRE le message de l'utilisateur — et le fil qui le précède — et par le remettre au propre
+          POUR TOI : qui est concerné, ce qu'il faut écrire ou lire, dans quel ordre, avec quelles
+          valeurs, et ce qui n'est pas dit. Une consigne longue, à puces ou dictée à la voix mélange
+          souvent les DONNÉES et les INSTRUCTIONS : sépare-les avant de décider quoi que ce soit.
+          • Si, après cette remise au propre, la demande est CLAIRE : agis dans CE tour (appelle
+            l'outil), et ouvre ta réponse par une phrase de restitution — « Ce que je comprends : … » —
+            afin que l'utilisateur voie immédiatement si tu as bien lu. Une seule phrase, pas un résumé
+            de son message.
+          • Si elle NE L'EST PAS : n'appelle AUCUN outil d'écriture et n'invente aucune valeur. Réponds
+            en DEUX temps dans le même message : (1) « Voici comment j'ai compris votre demande », suivi
+            de sa demande REFORMULÉE point par point, telle que tu l'as comprise, valeurs comprises ;
+            (2) la LISTE COURTE des points qui restent à trancher, en questions fermées quand c'est
+            possible. Puis ARRÊTE-TOI : l'utilisateur corrige ou confirme, et tu agiras au message
+            suivant sur une base sûre.
+          • Ce qui rend une demande PEU CLAIRE, et rien d'autre : une valeur contradictoire (deux
+            montants, deux dates pour la même chose), un objet désigné de façon ambiguë (plusieurs
+            candidats possibles), une instruction dont l'objet manque, ou une information que tu
+            devrais deviner. Ce qui NE la rend PAS peu claire : sa longueur, son désordre, ou le fait
+            qu'elle porte plusieurs demandes — cela se range, cela ne se redemande pas.
+        COMPRENDRE;
+    }
+
     /**
      * La règle de monnaie, énoncée au modèle. Présente aux DEUX phases : c'est en
      * RÉDIGEANT qu'on écrit un symbole monétaire, pas en planifiant.
