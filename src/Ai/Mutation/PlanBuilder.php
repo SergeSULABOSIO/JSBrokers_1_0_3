@@ -127,9 +127,22 @@ final class PlanBuilder
         // (« @etiquette » vers une création précédente).
         $refs = MutationReferences::dryRun();
         $entitesInvalides = [];
-        $n = 0;
-        foreach ($plan->operations as $op) {
-            $n++;
+
+        // DEUX ORDRES, ET C'EST INDISPENSABLE.
+        //
+        // L'ANALYSE suit l'ordre d'EXÉCUTION (créations d'abord) : c'est lui qui
+        // décide quand chaque « @etiquette » devient disponible. L'analyser dans
+        // l'ordre DÉCLARÉ faisait diverger le dry-run de l'exécution — un plan qui
+        // édite un enregistrement en renvoyant à une création déclarée PLUS BAS
+        // était refusé (« référence inconnue ») alors que l'exécution, elle, aurait
+        // créé d'abord et réussi. Le courtier voyait un refus incompréhensible sur
+        // un plan parfaitement valide.
+        //
+        // La PRÉSENTATION, elle, reste dans l'ordre DÉCLARÉ : c'est l'ordre métier
+        // que l'utilisateur a dicté et qu'il relira, numéros « #N » compris.
+        $analyses = [];
+        foreach ($plan->indicesOrdonnes() as $i) {
+            $op = $plan->operations[$i];
             $analyse = $this->mutationService->analyserOperation($op, $scope, $refs);
 
             // Fail-closed : toute opération hors périmètre fait échouer la préparation entière.
@@ -139,6 +152,14 @@ final class PlanBuilder
             if ($analyse['statut'] === 'introuvable') {
                 return AiToolResult::introuvable(sprintf('%s %s', $analyse['libelle'], $op->targetId ? '#' . $op->targetId : ''));
             }
+
+            $analyses[$i] = $analyse;
+        }
+
+        $n = 0;
+        foreach ($plan->operations as $i => $op) {
+            $n++;
+            $analyse = $analyses[$i];
 
             // Budget : chaque nœud écrit RÉELLEMENT (tête + enfants de collection,
             // TOUTES imbrications), étiqueté par son étape. Source UNIQUE du

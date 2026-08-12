@@ -302,6 +302,56 @@ class PlanMultiEntitesTest extends WebTestCase
         $this->assertSame('Client', $filtre->operations[0]->entityShortName);
     }
 
+    /**
+     * MÊME RÈGLE, MAIS L'ORDRE DÉCLARÉ NE SUIT PAS L'ORDRE D'EXÉCUTION.
+     *
+     * Une ÉDITION peut être dictée AVANT la création à laquelle elle renvoie —
+     * l'exécution remet les créations en tête, donc le plan est valide. Mais la
+     * cascade d'élagage, elle, se décidait dans l'ordre DÉCLARÉ : l'édition était
+     * examinée alors qu'aucune étiquette n'avait encore été abandonnée, elle
+     * survivait à l'élagage de sa création, et repartait vers l'exécution avec un
+     * « @pf » qui ne désignait plus rien.
+     */
+    public function testFiltrageEmporteUneEditionDicteeAvantSaCreation(): void
+    {
+        $plan = MutationPlan::fromArray([
+            // L'édition d'abord…
+            ['op' => 'edit', 'entite' => 'Client', 'id' => 12, 'etape' => 'Le rangement',
+             'champs' => ['portefeuille' => '@pf']],
+            // …et la création dont elle dépend ENSUITE.
+            ['op' => 'create', 'entite' => 'Portefeuille', 'ref' => 'pf', 'etape' => 'Le portefeuille',
+             'champs' => ['nom' => 'Voyages']],
+        ]);
+
+        // L'utilisateur ne retient QUE l'étape socle (celle de la 1re opération) :
+        // la création du portefeuille est décochée.
+        $filtre = $plan->filtrerEtapes(['le-rangement']);
+
+        $this->assertCount(
+            0,
+            $filtre->operations,
+            'L’édition doit tomber avec la création qu’elle référence, même déclarée avant elle.',
+        );
+    }
+
+    /** L'ordre DÉCLARÉ est conservé par le filtrage : c'est le plan que l'utilisateur relit. */
+    public function testFiltrageConserveLOrdreDeclare(): void
+    {
+        $plan = MutationPlan::fromArray([
+            ['op' => 'edit', 'entite' => 'Client', 'id' => 12, 'etape' => 'Le rangement',
+             'champs' => ['portefeuille' => '@pf']],
+            ['op' => 'create', 'entite' => 'Portefeuille', 'ref' => 'pf', 'etape' => 'Le portefeuille',
+             'champs' => ['nom' => 'Voyages']],
+        ]);
+
+        $filtre = $plan->filtrerEtapes(['le-rangement', 'le-portefeuille']);
+
+        $this->assertSame(
+            ['edit', 'create'],
+            array_map(static fn ($o) => $o->op, $filtre->operations),
+        );
+    }
+
     // ───────────────────────── Budget d'un seul tenant ─────────────────────────
 
     /**

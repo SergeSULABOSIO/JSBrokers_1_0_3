@@ -335,6 +335,59 @@ class SaisieAutonomeTest extends WebTestCase
         $this->assertSame(PlanEnAttente::ACTION_REVUE, $resultat->uiAction['type']);
     }
 
+    /**
+     * LE DRY-RUN DOIT RENDRE LE MÊME VERDICT QUE L'EXÉCUTION.
+     *
+     * L'exécution ordonne les opérations — créations d'abord, puis éditions, puis
+     * suppressions (MutationPlan::operationsOrdonnees) —, tandis que le dry-run
+     * parcourait les opérations dans l'ordre DÉCLARÉ. Les deux ordres coïncident
+     * pour un plan de créations pures, mais divergent dès qu'une ÉDITION renvoie à
+     * une création déclarée plus bas : le dry-run refusait « référence inconnue »
+     * un plan que l'exécution, elle, aurait parfaitement réussi.
+     *
+     * Ici, l'utilisateur range un client existant dans un portefeuille qu'il crée
+     * dans le même souffle, et il l'a dit dans cet ordre-là. Le plan doit être
+     * PRÊT — et le numéro affiché doit rester celui de l'ordre DÉCLARÉ, puisque
+     * c'est le plan que l'utilisateur relit.
+     */
+    public function testUnRenvoiVersUneCreationDeclareePlusBasResteValide(): void
+    {
+        [$scope] = $this->seed();
+
+        $client = (new Client())->setNom('Client à ranger');
+        $client->setEntreprise($scope->entreprise);
+        $this->em->persist($client);
+        $this->em->flush();
+        $idClient = (int) $client->getId();
+
+        $resultat = $this->preparer->execute(['operations' => [
+            // (1) L'ÉDITION vient EN PREMIER, et renvoie à une création qui suit.
+            [
+                'op' => 'edit', 'entite' => 'Client', 'id' => $idClient,
+                'champs' => ['portefeuille' => '@pf'],
+            ],
+            // (2) La CRÉATION est déclarée APRÈS — mais sera exécutée AVANT.
+            [
+                'op' => 'create', 'entite' => 'Portefeuille', 'ref' => 'pf',
+                'champs' => ['nom' => 'Portefeuille Voyages', 'gestionnaire' => 'Propriétaire SA'],
+            ],
+        ]], $scope);
+
+        $this->assertTrue(
+            $resultat->data['pret'] ?? false,
+            'Le dry-run doit accepter ce que l’exécution réussirait : '
+            . json_encode($resultat->data, JSON_UNESCAPED_UNICODE),
+        );
+        // La PRÉSENTATION garde l'ordre dicté : l'utilisateur relit son propre plan.
+        $this->assertSame(
+            ['edit', 'create'],
+            array_column($resultat->uiAction['plan'], 'op'),
+            'Le plan présenté doit rester dans l’ordre DÉCLARÉ.',
+        );
+        $this->assertSame([1, 2], array_column($resultat->data['plan'], 'n'));
+        $this->assertSame('@pf', $resultat->uiAction['plan'][0]['fields']['portefeuille']);
+    }
+
     // ───────────────────── 3. L'avertissement après rechargement ─────────────────────
 
     /**
