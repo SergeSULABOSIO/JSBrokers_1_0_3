@@ -135,6 +135,26 @@ class MonnaieDuCabinetTest extends KernelTestCase
         $this->assertStringContainsString('par étapes', $prompt);
     }
 
+    /**
+     * L'INTERDIT LE PLUS GRAVE (2026-08-12). Ket a annoncé « Le dossier complet a été
+     * enregistré avec succès dans la base de données » sans qu'aucun plan n'ait été
+     * validé — donc sans qu'une seule ligne n'ait été écrite. Le prompt doit poser
+     * l'interdit en toutes lettres, et lever l'ambiguïté du « je confirme » : il
+     * porte sur les PROPOSITIONS, jamais sur le plan, qui se valide au bouton.
+     */
+    public function testLePromptInterditDAnnoncerUnEnregistrementNonFait(): void
+    {
+        $prompt = $this->builder()->toSystemPrompt($this->requete('USD'));
+
+        $this->assertStringContainsString('N\'ANNONCE JAMAIS UN ENREGISTREMENT QUI N\'A PAS EU LIEU', $prompt);
+        $this->assertStringContainsString('enregistré avec succès', $prompt);
+        $this->assertStringContainsString('RIEN N\'EST ENREGISTRÉ', $prompt);
+        // Le « je confirme » de l'utilisateur ne vaut pas validation.
+        $this->assertStringContainsString('je confirme', $prompt);
+        // Et la bonne suite est nommée : appeler l'outil, pas récapituler.
+        $this->assertStringContainsString('l\'APPEL de l\'outil d\'écriture', $prompt);
+    }
+
     public function testLePromptInterditDeLibellerLeBudgetEnMonnaie(): void
     {
         $builder = $this->builder();

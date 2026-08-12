@@ -1248,6 +1248,17 @@
                     {%- endif -%}
                 </p>
             {% endif %}
+            {# EXÉCUTION FANTÔME : le message affirme un enregistrement qui n'a jamais
+               eu lieu (rien n'a été validé, donc rien n'a été écrit). Le démenti doit
+               survivre au rechargement — sinon un F5 laisserait le récapitulatif
+               mensonger seul à l'écran, ce qui est exactement l'état qu'on corrige. #}
+            {% if estAssistant and (message.meta.executionAbsente ?? false) %}
+                <p class="aic-notice aic-notice--error" role="alert">
+                    ⚠ RIEN N'A ÉTÉ ENREGISTRÉ. Le récapitulatif ci-dessus est faux : aucun plan n'a été validé,
+                    donc aucune donnée n'a été écrite en base. Rien ne s'enregistre sans le bouton
+                    « Valider et exécuter ». Redemandez l'opération pour obtenir le plan, son budget et ce bouton.
+                </p>
+            {% endif %}
             {# RAPPORT FINAL d'un programme portant des écarts : le bouton de
                correction doit survivre au rechargement, sinon la seule issue
                proposée à l'utilisateur disparaîtrait avec la page. #}

@@ -330,6 +330,82 @@ class PlanEnAttenteVerrouTest extends WebTestCase
     }
 
     /**
+     * L'EXÉCUTION FANTÔME — le mensonge le plus coûteux de la série (2026-08-12).
+     *
+     * Ket a écrit « Le dossier complet a été préparé et ENREGISTRÉ AVEC SUCCÈS DANS
+     * LA BASE DE DONNÉES », avec un récapitulatif détaillé : client, risque, police,
+     * prime, règlement, document. Vérification faite en base : RIEN. Aucun plan
+     * n'avait été présenté, donc aucun bouton, donc aucune validation, donc aucune
+     * écriture — une écriture ne peut avoir lieu que par l'endpoint d'exécution.
+     *
+     * C'est pire qu'un plan fantôme : celui-là fait attendre un bouton qui ne vient
+     * pas, et cela se voit. Celui-ci fait PARTIR l'utilisateur en croyant son dossier
+     * constitué.
+     */
+    public function testUneExecutionAffirmeeSansPlanEstDemasquee(): void
+    {
+        $cas = [
+            // La phrase RÉELLE de l'incident.
+            'Le dossier complet pour le client Mr. Jean de Dieu a été préparé et enregistré avec '
+                . 'succès dans la base de données. Voici un récapitulatif des opérations réalisées :',
+            'Les 8 enregistrements ont été créés avec succès.',
+            'Le client a bien été enregistré.',
+            'J’ai enregistré l’ensemble du dossier dans la base de données.',
+            'La piste a été créée en base, ainsi que sa proposition.',
+        ];
+        foreach ($cas as $texte) {
+            $this->assertTrue(
+                PlanEnAttente::proseAffirmeUnEnregistrement($texte),
+                sprintf('Devrait être vu comme un enregistrement affirmé : « %s »', mb_substr($texte, 0, 45)),
+            );
+            // Aucune décision émise, aucun plan exécuté dans le fil => fantôme.
+            $this->assertTrue(PlanEnAttente::estUneExecutionFantome($texte, true, true));
+        }
+    }
+
+    /**
+     * Ce qui ANNONCE une écriture à venir n'est pas une écriture faite : un plan
+     * légitime décrit ce qu'il FERA. Le garde-fou ne doit pas le confondre, sinon il
+     * démentirait les plans honnêtes.
+     */
+    public function testUneEcritureANNONCEENestPasUneExecutionAffirmee(): void
+    {
+        $cas = [
+            'Le plan créera le client, sa piste et sa proposition.',
+            'Je vais enregistrer ces huit éléments dès que vous aurez validé.',
+            'Après validation, le dossier sera enregistré en base.',
+            'Voici le plan : 8 opérations, 265 tokens. Validez pour lancer l’enregistrement.',
+            'Souhaitez-vous que je prépare ce plan complet d’exécution pour validation ?',
+        ];
+        foreach ($cas as $texte) {
+            $this->assertFalse(
+                PlanEnAttente::proseAffirmeUnEnregistrement($texte),
+                sprintf('Ne devrait PAS être vu comme accompli : « %s »', mb_substr($texte, 0, 45)),
+            );
+        }
+    }
+
+    /**
+     * LE CAS LÉGITIME, qu'il ne faut surtout pas démentir : après une VRAIE
+     * exécution, l'utilisateur demande « c'est bien fait ? » et Ket répond oui. Le
+     * fil porte alors un plan exécuté — le garde-fou doit se taire.
+     */
+    public function testUnEnregistrementREELNestJamaisDementi(): void
+    {
+        $texte = 'Oui, le dossier a bien été enregistré dans la base de données.';
+
+        // La prose est bien celle d'un accompli…
+        $this->assertTrue(PlanEnAttente::proseAffirmeUnEnregistrement($texte));
+        // …mais le fil porte un plan exécuté : aucun démenti.
+        $this->assertFalse(
+            PlanEnAttente::estUneExecutionFantome($texte, true, false),
+            'Un enregistrement réel ne doit jamais être démenti.',
+        );
+        // Et si une décision a été émise ce tour-ci, non plus.
+        $this->assertFalse(PlanEnAttente::estUneExecutionFantome($texte, false, true));
+    }
+
+    /**
      * LE CAS QUE LES MARQUEURS LEXICAUX ONT LAISSÉ PASSER (2026-08-11, deux messages
      * de suite). L'outil venait de refuser — date invalide, puis référence
      * introuvable — et Ket a pourtant rendu un tableau de plan complet, un

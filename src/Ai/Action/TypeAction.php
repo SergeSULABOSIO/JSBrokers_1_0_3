@@ -37,6 +37,17 @@ enum TypeAction: string
     case PLAN_ABSENT = 'ket-mutation.absent';
 
     /**
+     * Avertissement autoritaire : la prose affirme un ENREGISTREMENT qui n'a pas eu
+     * lieu. Distinct de PLAN_ABSENT, et il fallait qu'il le soit — les deux
+     * mensonges n'ont pas la même conséquence. Un plan fantôme fait attendre un
+     * bouton qui ne vient pas, et cela se voit. Une exécution fantôme fait PARTIR
+     * l'utilisateur en croyant son dossier constitué : il ne le découvrira qu'au
+     * moment d'en avoir besoin. Le message doit donc dire l'inverse exact — rien
+     * n'a été écrit — et non « aucun plan n'a pu être préparé ».
+     */
+    case EXECUTION_ABSENTE = 'ket-mutation.non-executee';
+
+    /**
      * Barre de décision d'un DOCUMENT à produire (« Valider et produire » / « Annuler »).
      *
      * Voisine du plan d'écriture, et volontairement distincte : ce qu'on valide ici
@@ -108,7 +119,8 @@ enum TypeAction: string
             // Comme PLAN_A_VALIDER : la structure d'un plan de document est vérifiée
             // bien plus finement par DocumentEnAttente::planStockable(), qui exige la
             // spec elle-même. La dupliquer ici créerait deux vérités.
-            self::PLAN_A_VALIDER, self::PLAN_ABSENT, self::QUITTER_WORKSPACE, self::DOCUMENT_A_VALIDER => [],
+            self::PLAN_A_VALIDER, self::PLAN_ABSENT, self::EXECUTION_ABSENTE,
+            self::QUITTER_WORKSPACE, self::DOCUMENT_A_VALIDER => [],
         };
     }
 

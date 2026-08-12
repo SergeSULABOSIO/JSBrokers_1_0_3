@@ -93,6 +93,18 @@ class ContratDesActionsTest extends TestCase
     {
         self::assertSame(TypeAction::PLAN_A_VALIDER->value, PlanEnAttente::ACTION_REVUE);
         self::assertSame(TypeAction::PLAN_ABSENT->value, PlanEnAttente::ACTION_ABSENT);
+        self::assertSame(TypeAction::EXECUTION_ABSENTE->value, PlanEnAttente::ACTION_NON_EXECUTE);
+    }
+
+    /**
+     * Les deux démentis sont DISTINCTS, et doivent le rester : « aucun plan n'a pu
+     * être préparé » et « rien n'a été enregistré » ne disent pas la même chose à
+     * l'utilisateur, et n'ont pas la même gravité. Les confondre reviendrait à
+     * répondre « il n'y a pas de bouton » à quelqu'un qui croit son dossier écrit.
+     */
+    public function testLesDeuxDementisRestentDistincts(): void
+    {
+        self::assertNotSame(TypeAction::PLAN_ABSENT->value, TypeAction::EXECUTION_ABSENTE->value);
     }
 
     /**
