@@ -1,5 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 import { Modal } from 'bootstrap';
+import { confirmationAutorisee, DELAI_ARMEMENT_MS as DELAI_PAR_DEFAUT } from './confirmation-armement.js';
 
 /**
  * @class ConfirmationDialogController
@@ -10,6 +11,15 @@ import { Modal } from 'bootstrap';
  * de l'action qu'il confirme.
  */
 export default class extends Controller {
+    /**
+     * Délai plancher entre l'ouverture de la modale et la première confirmation
+     * acceptée. Il ne s'agit pas d'un ralentissement de confort : c'est ce qui rend
+     * structurellement impossible qu'un geste d'ouverture confirme la question qu'il
+     * vient de poser (cf. connect()). 400 ms est en dessous du temps de lecture de
+     * n'importe quel libellé, et au-dessus de la durée d'un clic ou d'un double-clic.
+     */
+    static DELAI_ARMEMENT_MS = DELAI_PAR_DEFAUT;
+
     static targets = [
         "title",
         "body",
@@ -37,6 +47,23 @@ export default class extends Controller {
         // (clic sur « Supprimer » du menu contextuel, à l'emplacement du curseur)
         // ne retombe sur le bouton « Confirmer » pendant l'animation d'apparition.
         this.armed = false;
+
+        // …ET PAS AVANT UN DÉLAI, ce qui est le vrai verrou (incident du 2026-08-12).
+        //
+        // « shown.bs.modal » ne dit pas ce qu'on croyait. Bootstrap ne l'émet APRÈS
+        // l'animation que s'il y a une animation à jouer : sans transition effective
+        // (mouvement réduit, feuille de style surchargée, modale déjà en cours
+        // d'affichage), il l'émet SYNCHRONEMENT dans show() — donc à l'intérieur même
+        // du gestionnaire de clic qui vient d'ouvrir la modale. La garde se réarmait
+        // ainsi pile pendant le geste qu'elle devait bloquer : sur « Nouvelle
+        // conversation », la boîte s'ouvrait et se confirmait d'elle-même, le fil
+        // courant était remplacé sans que personne n'ait rien décidé.
+        //
+        // Un instant d'ouverture + un délai plancher ne dépendent, eux, d'aucun
+        // détail d'animation. Le seuil est imperceptible pour qui doit LIRE la
+        // question posée, et rend une confirmation issue du geste d'ouverture
+        // impossible, quel que soit le chemin.
+        this.ouvertA = 0;
 
         // Centralisation des écouteurs d'événements via le Cerveau
         this.boundHandleCerveauEvent = this.handleCerveauEvent.bind(this);
@@ -104,6 +131,7 @@ export default class extends Controller {
         // confirmation désarmée jusqu'à l'affichage complet (cf. shown.bs.modal).
         // Évite un bouton bloqué sur « En cours… » hérité d'une fermeture par Échap/backdrop.
         this.armed = false;
+        this.ouvertA = this._maintenant();
         this.toggleLoading(false);
         this.toggleProgressBar(false);
         this.feedbackTarget.innerHTML = '';
@@ -196,6 +224,17 @@ export default class extends Controller {
     }
 
     /**
+     * Horloge monotone : `performance.now()` ne recule pas et n'est pas sensible à
+     * un changement d'heure système, contrairement à `Date.now()`.
+     * @private
+     */
+    _maintenant() {
+        return (typeof performance !== 'undefined' && typeof performance.now === 'function')
+            ? performance.now()
+            : Date.now();
+    }
+
+    /**
      * Restaure l'opacité des backdrops restants après la fermeture de la modale.
      * À ce stade, Bootstrap a déjà supprimé le backdrop de CETTE modale du DOM.
      * @private
@@ -212,9 +251,16 @@ export default class extends Controller {
      * @fires cerveau:event
      */
     confirm() {
-        // Tant que la modale n'est pas pleinement affichée, on ignore toute confirmation :
-        // protège contre le clic d'ouverture qui « traverserait » sur le bouton Confirmer.
-        if (!this.armed) {
+        // La modale doit s'être annoncée affichée ET le délai plancher doit être
+        // écoulé — c'est cette seconde condition qui tient réellement, « armed »
+        // seul se réarmant parfois dans le geste même d'ouverture (cf. connect()).
+        // Règle en UN SEUL endroit, et testée seule : confirmation-armement.js.
+        if (!confirmationAutorisee({
+            armed: this.armed,
+            ouvertA: this.ouvertA,
+            maintenant: this._maintenant(),
+            delai: this.constructor.DELAI_ARMEMENT_MS,
+        })) {
             return;
         }
 
