@@ -205,6 +205,32 @@ final class GeminiAiEngine implements AiEngineInterface
         foreach ([Phase::PLANIFICATION, Phase::REDACTION] as $round => $phase) {
             ['reponse' => $response, 'octets' => $octets] = $this->appelerAvecReessai($request, $contents, $trousse, $phase);
 
+            // APPEL D'OUTIL MALFORMÉ — le blocage du 2026-08-12, et il ne venait ni du
+            // prompt ni du raisonnement du modèle. Sur « Je confirme », Gemini a bien
+            // TENTÉ d'émettre preparer_operations, mais son sérialiseur d'appels a
+            // produit une structure invalide qu'il a lui-même rejetée : finishReason
+            // MALFORMED_FUNCTION_CALL, 698 jetons de sortie, et RIEN dans le canal des
+            // fonctions. L'utilisateur recevait alors « redites-le-moi en nommant le
+            // point précis », c'est-à-dire notre échec présenté comme son imprécision.
+            //
+            // C'est un défaut de SÉRIALISATION, donc dépendant de l'échantillonnage :
+            // le même appel réémis passe le plus souvent. On réessaie UNE fois, et une
+            // seule — le quota se compte par minute, et un échec répété relève d'autre
+            // chose (un schéma trop profond pour ce modèle) que d'un aléa.
+            if ($phase === Phase::PLANIFICATION && $this->estAppelMalforme($response)) {
+                $this->logger->warning('Assistant IA (gemini) : appel d’outil MALFORMÉ, une reprise.', [
+                    'sortie' => (int) ($response['usageMetadata']['candidatesTokenCount'] ?? 0),
+                ]);
+                ['reponse' => $response, 'octets' => $octets] = $this->appelerAvecReessai($request, $contents, $trousse, $phase);
+                if ($this->estAppelMalforme($response)) {
+                    // Deux fois de suite : ce n'est plus un aléa. On le DIT — et
+                    // surtout on ne renvoie pas la faute à l'utilisateur.
+                    $this->logger->error('Assistant IA (gemini) : appel d’outil malformé DEUX fois, abandon du tour.', [
+                        'sortie' => (int) ($response['usageMetadata']['candidatesTokenCount'] ?? 0),
+                    ]);
+                }
+            }
+
             $usage = $response['usageMetadata'] ?? [];
             $tokensDuTour = (int) ($usage['promptTokenCount'] ?? 0);
             $cumulInput += $tokensDuTour;
@@ -723,6 +749,31 @@ final class GeminiAiEngine implements AiEngineInterface
         }
 
         return AiToolResult::introuvable($name);
+    }
+
+    /**
+     * Le fournisseur a-t-il rejeté SON PROPRE appel d'outil ?
+     *
+     * `MALFORMED_FUNCTION_CALL` signifie que le modèle a voulu appeler un outil et
+     * que la structure émise était invalide : rien n'arrive dans le canal des
+     * fonctions, et le texte est vide. C'est un défaut de sérialisation, pas de
+     * raisonnement — d'où la reprise (cf. la boucle des phases).
+     */
+    private function estAppelMalforme(array $response): bool
+    {
+        if (($response['candidates'][0]['finishReason'] ?? null) !== 'MALFORMED_FUNCTION_CALL') {
+            return false;
+        }
+
+        // Ceinture : si malgré tout un appel est arrivé, il n'y a rien à reprendre.
+        $parts = $response['candidates'][0]['content']['parts'] ?? [];
+        foreach ($parts as $part) {
+            if (isset($part['functionCall'])) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /** Prompt bloqué ou réponse coupée par les filtres de sécurité Gemini ? */
