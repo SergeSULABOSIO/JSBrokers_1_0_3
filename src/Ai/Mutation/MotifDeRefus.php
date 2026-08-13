@@ -76,6 +76,14 @@ final class MotifDeRefus
         if (($resultat->data['dejaAJour'] ?? false) === true) {
             return 'Rien à écrire : les données étaient déjà à jour.';
         }
+        // « bloquant » est, par contrat, la phrase écrite POUR L'UTILISATEUR (c'est
+        // aussi celle que RepliPrecis restitue). Elle passe donc avant « note », qui
+        // s'adresse au modèle : le 2026-08-13, faute de cette branche, le courtier a
+        // lu « reprends le nom exact et rappelle preparer_operations ».
+        $bloquant = trim((string) ($resultat->data['bloquant'] ?? ''));
+        if ($bloquant !== '') {
+            return $bloquant;
+        }
 
         return trim((string) ($resultat->data['note'] ?? '')) ?: 'L’outil n’a pas pu préparer ce plan.';
     }

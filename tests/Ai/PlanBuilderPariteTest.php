@@ -2,6 +2,7 @@
 
 namespace App\Tests\Ai;
 
+use App\Ai\Mutation\MotifDeRefus;
 use App\Ai\Mutation\MutationOperation;
 use App\Ai\Mutation\NormaliseurDeDates;
 use App\Ai\Mutation\PlanBuilder;
@@ -287,6 +288,46 @@ class PlanBuilderPariteTest extends TestCase
         $this->assertNotEmpty($result->data['champsIgnores']);
         $this->assertArrayHasKey('Risque', $result->data['inventaire']);
         $this->assertStringContainsString('couleurPreferee', $result->data['note']);
+
+        // ET L'UTILISATEUR, LUI, DOIT COMPRENDRE. Sans cette phrase, le refus ne
+        // portait que la note écrite pour le modèle : le courtier recevait soit du
+        // jargon (« rappelle preparer_operations »), soit — la rédaction n'ayant rien
+        // à restituer — le repli générique « redites-la-moi », qui lui rend son propre
+        // travail. Les champs sont nommés par leur LIBELLÉ : c'est le seul vocabulaire
+        // qu'il partage avec la plateforme.
+        $this->assertArrayHasKey('bloquant', $result->data);
+        $this->assertStringContainsString('Rien n’a été écrit', $result->data['bloquant']);
+        $this->assertStringContainsString('Taux de commission', $result->data['bloquant']);
+        $this->assertStringNotContainsString('preparer_operations', $result->data['bloquant']);
+        $this->assertStringNotContainsString('pourcentageCommissionSpecifiqueHT', $result->data['bloquant']);
+    }
+
+    /**
+     * LE REFUS ARRIVE JUSQU'À L'UTILISATEUR. `MotifDeRefus` alimente à la fois
+     * l'avertissement affiché dans le fil et le rapport de fin de programme : s'il
+     * retombe sur la note du modèle, c'est cette note que le courtier lit.
+     */
+    public function testLeMotifAfficheEstCeluiEcritPourLUtilisateur(): void
+    {
+        [, , $tokens] = $this->dependances();
+
+        $mutation = $this->createMock(WorkspaceMutationService::class);
+        $mutation->method('analyserOperation')->willReturn([
+            'ok' => true, 'statut' => 'ok', 'entite' => 'Risque', 'libelle' => 'Risques',
+            'cible' => 'VOY', 'manquants' => [], 'impacts' => [], 'bloque' => false, 'portefeuille' => null,
+        ]);
+        $mutation->method('facturablesDetailles')->willReturn([]);
+        $mutation->method('collectionsProposables')->willReturn([]);
+        $mutation->method('inventaireChamps')->willReturn(self::INVENTAIRE_RISQUE);
+
+        $result = (new PreparerOperationsTool($this->planBuilder($mutation, $tokens), $this->entiteCanonique()))->execute([
+            'operations' => [['op' => 'edit', 'entite' => 'Risque', 'id' => 142, 'champs' => ['couleurPreferee' => 'bleu']]],
+        ], $this->scope());
+
+        $this->assertTrue(MotifDeRefus::estUnRefus($result));
+        $motif = MotifDeRefus::depuis($result);
+        $this->assertStringContainsString('Taux de commission', $motif);
+        $this->assertStringNotContainsString('rappelle preparer_operations', $motif);
     }
 
     /** L'inventaire réel d'un Risque : chaque champ porte son libellé d'écran. */

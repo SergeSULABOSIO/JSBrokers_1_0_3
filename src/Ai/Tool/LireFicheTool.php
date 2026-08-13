@@ -4,6 +4,7 @@ namespace App\Ai\Tool;
 
 use App\Ai\AiText;
 use App\Ai\FicheNormaliseur;
+use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Scope\AiScope;
 use App\Service\Workspace\ChampsObligatoiresInspector;
 use App\Service\Workspace\FormTreeInspector;
@@ -187,6 +188,26 @@ final class LireFicheTool implements AiToolInterface
             $data['unites'] = $unites;
         }
 
+        // LES NOMS EXACTS DES CHAMPS, PARCE QUE LA FICHE NE LES DONNE PAS TOUS.
+        //
+        // L'INCIDENT DU 2026-08-13, dans son fond. La fiche est sérialisée puis
+        // ÉLAGUÉE DE SES VALEURS VIDES, pour ne pas payer des tokens à énumérer des
+        // nuls. Conséquence mécanique : le champ qu'on veut RENSEIGNER est justement
+        // celui qui est vide, donc celui dont le nom n'apparaît nulle part. Ket lisait
+        // la fiche du risque, n'y voyait aucun taux, et devait inventer un nom pour
+        // l'écrire — « tauxCommission », puis « tauxCommissionPercent », quand le champ
+        // s'appelle « pourcentageCommissionSpecifiqueHT ». Chaque tentative était
+        // écartée, et le plan partait vide.
+        //
+        // On donne donc les noms AVANT qu'elle ait à les deviner, et seulement pour ce
+        // qu'elle peut réellement écrire. Les libellés viennent du FORMULAIRE de
+        // l'entité (source unique, mise en cache) : c'est la même parité que partout
+        // ailleurs — ce que l'écran expose, Ket l'écrit, sous le même nom.
+        $modifiables = $this->champsModifiables($shortName);
+        if ($modifiables !== []) {
+            $data['champsModifiables'] = $modifiables;
+        }
+
         // Membres des collections ÉDITABLES (mêmes que la surface d'écriture de Ket) :
         // exposés avec leur id pour cibler edit/delete. Facturés en LECTURE.
         $collections = $this->collectionsEditablesLisibles($entity, $shortName, $scope);
@@ -206,6 +227,38 @@ final class LireFicheTool implements AiToolInterface
      *
      * @return array<string, string>
      */
+    /**
+     * Les champs que Ket peut ÉCRIRE sur cette entité, sous leur NOM EXACT et avec
+     * le libellé de l'écran — « pourcentageCommissionSpecifiqueHT » et « Taux de
+     * commission » sont le même champ, et Ket a besoin des deux : le libellé pour
+     * parler à l'utilisateur, le nom pour écrire.
+     *
+     * Rien n'est exposé pour une entité que Ket ne peut pas écrire : ce seraient des
+     * tokens dépensés à décrire une surface interdite. Les libellés sont ceux du
+     * FormType, mis en cache par nom court (une seule inspection par entité).
+     *
+     * @return array<string, string> nom du champ => libellé
+     */
+    private function champsModifiables(string $shortName): array
+    {
+        if (!MutationAllowlist::autorise($shortName)) {
+            return [];
+        }
+
+        $fqcn = 'App\\Entity\\' . $shortName;
+        if (!class_exists($fqcn)) {
+            return [];
+        }
+
+        try {
+            return $this->champsInspector->libellesFormulaire($shortName, $fqcn);
+        } catch (\Throwable) {
+            // Une entité sans FormType exploitable ne doit pas faire échouer une
+            // LECTURE : on rend la fiche, simplement sans cette aide.
+            return [];
+        }
+    }
+
     private function unitesPourcentage(string $shortName, array $fiche): array
     {
         $fqcn = 'App\\Entity\\' . $shortName;
