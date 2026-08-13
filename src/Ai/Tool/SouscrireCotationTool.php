@@ -195,10 +195,16 @@ final class SouscrireCotationTool implements AiToolProduisantUnPlan, AiToolEcrit
             return $resultat;
         }
 
+        // Les DÉDUCTIONS DE PLANBUILDER arrivent déjà dans `defauts` : l'union « + »
+        // de PHP garderait la sienne et TAIRAIT celles-ci en silence. On compose les
+        // deux listes — période, numéro d'avenant et déductions du plan sont tous des
+        // choix faits à la place de l'utilisateur, et tous doivent lui être annoncés.
+        $data = $resultat->data;
+        $data['defauts'] = array_merge($data['defauts'] ?? [], $defauts);
+
         return AiToolResult::ok(
-            $resultat->data + [
+            $data + [
                 'resolutions' => [sprintf('Proposition souscrite : « %s ».', (string) $cotation->getNom())],
-                'defauts'     => $defauts,
                 'noteDefauts' => 'ANNONCE ces « resolutions » et ces « defauts » sous le plan : la période et le '
                     . 'numéro d’avenant ont été DÉDUITS, l’utilisateur doit pouvoir les corriger d’une phrase. '
                     . 'Rappelle aussi que c’est cette souscription qui rend la prime exigible, puis la '

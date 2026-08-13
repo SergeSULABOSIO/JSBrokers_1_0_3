@@ -54,6 +54,14 @@ class PisteType extends AbstractType
             ])
             ->add('typeAvenant', ChoiceType::class, [
                 'label' => "Type d'Avenant",
+                // PAS DE DÉFAUT ICI, et c'est délibéré : le type d'avenant est le
+                // DISCRIMINANT de la piste — souscription, renouvellement, annulation,
+                // résiliation. Le choisir à la place de l'utilisateur classerait une
+                // police dans la mauvaise catégorie, en silence. La règle est verrouillée
+                // par InventaireChampsValeursTest::testUnDiscriminantExigeNAnnonceAucunDefaut
+                // (« un discriminant ne se devine pas »), et le prompt la répète : un champ
+                // à liste fermée, obligatoire et sans défaut est un choix qui n'appartient
+                // qu'à l'utilisateur — on le DEMANDE.
                 'expanded' => true,
                 'label_html' => true,
                 'required' => true,
@@ -96,6 +104,10 @@ class PisteType extends AbstractType
 
             ->add('exercice', NumberType::class, [
                 'label' => "Exercice",
+                // DÉFAUT : l'exercice en cours. Une piste se crée presque toujours pour
+                // l'année courante, et ce champ obligatoire faisait sinon poser une
+                // question dont la réponse est au calendrier.
+                'data' => (int) date('Y'),
                 'grouping' => false,
                 'attr' => [
                     'placeholder' => "Année",
