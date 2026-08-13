@@ -21,8 +21,11 @@ namespace App\Ai\Trousse;
  *
  * CE N'EST PAS UN MÉCANISME DE SÉCURITÉ. La garde reste dans execute(), qui
  * re-vérifie les droits en fail-closed. Un mauvais aiguillage ne donne jamais
- * d'accès ; il prive au pire le modèle d'une capacité, que l'escalade
- * (activer_outils_ecriture) lui rend au tour suivant.
+ * d'accès ; il prive au pire le modèle d'une capacité — que les signaux structurels
+ * de SelecteurDeTrousse (plan en attente, programme en cours, pièce jointe, tour
+ * précédent ayant écrit ou ayant PROPOSÉ d'écrire) lui rendent au message SUIVANT.
+ * Jamais dans le même message : la règle des deux appels (cf. Phase) interdit un
+ * troisième tour, la trousse ne peut donc pas s'élargir en cours de route.
  */
 enum Trousse: string
 {
