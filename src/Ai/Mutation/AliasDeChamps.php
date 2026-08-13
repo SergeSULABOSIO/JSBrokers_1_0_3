@@ -128,12 +128,24 @@ final class AliasDeChamps
     }
 
     /**
-     * Le champ dont le LIBELLÉ dit exactement ce que ce nom dit, ou null.
+     * Le champ dont le LIBELLÉ dit ce que ce nom dit, ou null.
      *
-     * L'égalité porte sur l'ENSEMBLE des mots significatifs, pas sur leur ordre ni
-     * sur les mots de liaison : « tauxCommission » == « Taux de commission ». Elle
-     * reste une ÉGALITÉ — un mot commun ne suffit pas —, et le candidat doit être
-     * unique, sans quoi on écarte.
+     * DEUX ÉTAGES, dans cet ordre, et le second ne sert que si le premier n'a rien
+     * trouvé :
+     *  1. ÉGALITÉ des ensembles de mots significatifs, ordre et mots de liaison
+     *     indifférents : « tauxCommission » == « Taux de commission ».
+     *  2. INCLUSION d'un ensemble dans l'autre. Le 2026-08-13, à la deuxième
+     *     tentative, le modèle a dicté `tauxCommissionPercent` — le même champ, avec
+     *     l'unité en plus. Exiger l'égalité stricte revenait à parier sur le nombre
+     *     exact de mots que le modèle emploierait, ce qui n'est pas une propriété
+     *     stable. L'inclusion, elle, reste sûre : « montantCommission » face au seul
+     *     « Montant de la prime » n'est inclus dans aucun sens et demeure écarté.
+     *
+     * Les étages sont séparés pour que le meilleur candidat gagne : là où un libellé
+     * « Montant » et un libellé « Montant de la commission » coexistent, l'égalité
+     * tranche au premier étage, alors que l'inclusion les rendrait tous deux
+     * candidats — donc ambigus, donc perdus. Dans les deux étages, le candidat doit
+     * être UNIQUE.
      *
      * @param array<string, string> $libelles     champ réel => libellé
      * @param list<string>          $champsConnus les champs réellement exposés
@@ -145,16 +157,27 @@ final class AliasDeChamps
             return null;
         }
 
-        $candidats = [];
+        $egalite = [];
+        $inclusion = [];
         foreach ($libelles as $reel => $libelle) {
             // Un libellé sans champ exposé ne désigne rien d'écrivable.
             if (!in_array($reel, $champsConnus, true)) {
                 continue;
             }
-            if ($this->motsSignificatifs((string) $libelle) === $mots) {
-                $candidats[$reel] = true;
+            $motsLibelle = $this->motsSignificatifs((string) $libelle);
+            if ($motsLibelle === []) {
+                continue;
+            }
+            if ($motsLibelle === $mots) {
+                $egalite[$reel] = true;
+                continue;
+            }
+            if (array_diff($motsLibelle, $mots) === [] || array_diff($mots, $motsLibelle) === []) {
+                $inclusion[$reel] = true;
             }
         }
+
+        $candidats = $egalite !== [] ? $egalite : $inclusion;
 
         return count($candidats) === 1 ? (string) array_key_first($candidats) : null;
     }

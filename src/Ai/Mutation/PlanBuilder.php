@@ -234,6 +234,13 @@ final class PlanBuilder
             'sansEffet'     => $sansEffet,
             'champsIgnores' => $ignores,
             'inventaire'    => $this->inventairePour($entites, $scope),
+            // CE QUE L'UTILISATEUR, LUI, DOIT LIRE. La « note » ci-dessous est écrite
+            // pour le modèle — elle le tutoie et lui nomme des outils. Servie telle
+            // quelle dans le fil (c'est ce que font MotifDeRefus et RepliPrecis faute
+            // de mieux), elle donne au courtier du jargon, ou pire, la phrase
+            // générique « redites-la-moi » qui lui rend son propre travail. Il a droit
+            // à la raison exacte et aux champs qu'il peut nommer.
+            'bloquant'      => $this->bloquantUtilisateur($ignores, $entites, $scope),
             'note'          => 'Ce plan n\'écrirait RIEN : ' . implode(' ', $sansEffet)
                 . ($ignores !== []
                     ? ' Les champs que tu as dictés ne portent pas le nom que le formulaire leur donne : '
@@ -244,6 +251,41 @@ final class PlanBuilder
                 . 'et son libellé à l\'écran : reprends le nom exact et rappelle ' . $outilAppelant
                 . ' au message SUIVANT. Si la valeur à écrire te manque, demande-la à l\'utilisateur.',
         ]);
+    }
+
+    /**
+     * LA PHRASE DESTINÉE AU COURTIER quand rien n'a pu être écrit — en libellés
+     * d'écran, jamais en noms de champs internes : c'est le seul vocabulaire qu'il
+     * partage avec la plateforme.
+     *
+     * @param list<string>          $ignores les champs dictés non rattachés
+     * @param array<string, string> $entites entité => mode
+     */
+    private function bloquantUtilisateur(array $ignores, array $entites, AiScope $scope): string
+    {
+        $shortName = (string) array_key_first($entites);
+        $inventaire = $shortName !== '' ? $this->inventaire($shortName, $scope) : [];
+        $libelle = trim((string) ($inventaire['libelle'] ?? $shortName));
+
+        $texte = $ignores !== []
+            ? sprintf(
+                'Je n’ai pas pu enregistrer cette modification : le champ que j’ai visé n’existe pas sous ce '
+                . 'nom sur « %s ». Rien n’a été écrit.',
+                $libelle,
+            )
+            : sprintf(
+                'Je n’ai pas pu enregistrer cette modification sur « %s » : aucune valeur à écrire ne m’est '
+                . 'parvenue. Rien n’a été écrit.',
+                $libelle,
+            );
+
+        $modifiables = array_values(array_unique(array_values($this->libellesConnus($shortName, $scope))));
+        if ($modifiables !== []) {
+            $texte .= ' Ce que je peux modifier ici : ' . implode(', ', $modifiables)
+                . '. Dites-moi lequel corriger et sa valeur, et je reprends.';
+        }
+
+        return $texte;
     }
 
     /**

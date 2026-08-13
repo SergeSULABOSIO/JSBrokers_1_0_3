@@ -481,6 +481,16 @@ class AiContextBuilder
           de police te donne les valeurs et les libellés d'étape — ni quand l'utilisateur t'a
           déjà donné les informations. Dans ces cas, va droit au plan : lui redemander ce qu'il
           vient de dire est le plus sûr moyen de lui faire perdre confiance.
+          UN NOM DE CHAMP NE S'INVENTE JAMAIS. Les champs que tu peux écrire portent des noms
+          FIXES, que la plateforme te donne : « champsModifiables » sur toute fiche lue
+          (lire_fiche) — nom exact à gauche, libellé de l'écran à droite —, et « inventaire »
+          dans les réponses de preparer_operations. Écris EXACTEMENT ce nom-là. Ne le déduis
+          jamais du libellé affiché : « Taux de commission » ne s'écrit pas « tauxCommission ».
+          ATTENTION, le piège est là : une fiche n'affiche QUE les champs REMPLIS, or le champ que
+          l'utilisateur te demande de renseigner est souvent VIDE — ne conclus pas de son absence
+          qu'il n'existe pas, son nom est dans « champsModifiables ». Si tu ne l'y trouves pas,
+          DIS-LE et demande, plutôt que de tenter un nom : un champ inconnu n'est pas écrit, et
+          l'écriture partirait vide.
           PROTOCOLE de la procédure A (preparer_operations) :
           (0) APPELLE DIRECTEMENT preparer_operations avec ce que tu as. N'appelle inventaire_champs
           QUE si l'utilisateur te demande explicitement quels champs existent, ou si tu dois lui

@@ -10,6 +10,7 @@ use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\RevenuPourCourtier;
+use App\Entity\Risque;
 use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
 use App\Service\Workspace\WorkspaceMutationService;
@@ -60,7 +61,7 @@ class KetLisibiliteEntiteTest extends WebTestCase
     {
         $conn = $this->em->getConnection();
         $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email = :e', ['e' => self::OWNER]);
-        foreach (['revenu_pour_courtier', 'cotation', 'type_revenu', 'chargement', 'invite'] as $t) {
+        foreach (['revenu_pour_courtier', 'cotation', 'type_revenu', 'chargement', 'risque', 'invite'] as $t) {
             $conn->executeStatement("DELETE x FROM {$t} x JOIN entreprise e ON x.entreprise_id = e.id WHERE e.nom = :n", ['n' => self::ENT]);
         }
         $conn->executeStatement('DELETE FROM entreprise WHERE nom = :n', ['n' => self::ENT]);
@@ -111,6 +112,42 @@ class KetLisibiliteEntiteTest extends WebTestCase
         // La relation typeChargement est présente ET élaguée de ses champs vides.
         $this->assertSame('Prime nette', $fiche['typeChargement']['nom'] ?? null);
         $this->assertArrayNotHasKey('description', $fiche['typeChargement'] ?? [], 'Les champs vides de la relation sont élagués (tokens).');
+    }
+
+    /**
+     * LA FICHE DONNE LES NOMS EXACTS DES CHAMPS ÉCRIVABLES — la cause de fond de
+     * l'incident du 2026-08-13.
+     *
+     * La fiche est élaguée de ses valeurs VIDES, pour ne pas payer des tokens à
+     * énumérer des nuls. Conséquence mécanique : le champ que l'utilisateur demande
+     * de RENSEIGNER est précisément celui qui est vide, donc celui dont le nom
+     * n'apparaît nulle part. Ket lisait la fiche d'un risque sans taux, n'y voyait
+     * aucun champ de taux, et inventait un nom pour l'écrire — deux fois de suite,
+     * deux fois écarté, plan vide et « modification enregistrée » annoncée pour rien.
+     * Elle ne peut le savoir que si on le lui dit AVANT qu'elle ait à le deviner.
+     */
+    public function testLireFicheDonneLesNomsExactsDesChampsEcrivables(): void
+    {
+        [$ent, $inv] = $this->seed();
+        $risque = (new Risque())->setNomComplet('Assurance voyage')->setCode('VOY')
+            ->setBranche(Risque::BRANCHE_IARD_OU_NON_VIE)->setImposable(true);
+        $risque->setEntreprise($ent)->setInvite($inv);
+        $this->em->persist($risque);
+        $this->em->flush();
+
+        $res = $this->lireFiche->execute(['entite' => 'Risque', 'nom' => 'Assurance voyage'], new AiScope($ent, $inv));
+
+        $this->assertArrayNotHasKey(
+            'pourcentageCommissionSpecifiqueHT',
+            $res->data['fiche'],
+            'Le champ est vide : il est élagué de la fiche — c’est bien là le piège.',
+        );
+        $this->assertArrayHasKey('champsModifiables', $res->data);
+        $this->assertSame(
+            'Taux de commission',
+            $res->data['champsModifiables']['pourcentageCommissionSpecifiqueHT'] ?? null,
+            'Le nom EXACT est donné avec le libellé de l’écran : plus rien à inventer.',
+        );
     }
 
     /** Les valeurs de référentiel d'une étape portent leurs attributs — donc décidables. */

@@ -137,6 +137,42 @@ class AliasDeChampsTest extends TestCase
     }
 
     /**
+     * LE MÊME CHAMP AVEC UN MOT DE PLUS. Deuxième tentative du même incident, une
+     * heure plus tard : le modèle dicte `tauxCommissionPercent` — l'unité en prime.
+     * Exiger l'égalité stricte des mots revenait à parier sur le nombre exact de mots
+     * que le modèle emploierait, ce qui n'est pas une propriété stable ; l'inclusion
+     * d'un ensemble dans l'autre, avec candidat unique, l'est.
+     */
+    public function testUnLibelleInclusDansLeNomDicteEstRattache(): void
+    {
+        $issue = (new AliasDeChamps())->normaliser(
+            ['tauxCommissionPercent' => 20],
+            self::RISQUE,
+            self::LIBELLES_RISQUE,
+        );
+
+        $this->assertSame(['pourcentageCommissionSpecifiqueHT' => 20], $issue['champs']);
+        $this->assertSame([], $issue['ignores']);
+    }
+
+    /**
+     * L'ÉGALITÉ L'EMPORTE SUR L'INCLUSION. Là où « Montant » et « Montant de la
+     * commission » coexistent, « montantCommission » désigne le second sans hésiter.
+     * Traiter les deux étages ensemble en ferait deux candidats — donc une ambiguïté,
+     * donc un champ perdu alors que la réponse était évidente.
+     */
+    public function testLEgaliteDesMotsLEmporteSurLInclusion(): void
+    {
+        $issue = (new AliasDeChamps())->normaliser(
+            ['montantCommission' => 500],
+            ['montant', 'montantCommission2'],
+            ['montant' => 'Montant', 'montantCommission2' => 'Montant de la commission'],
+        );
+
+        $this->assertSame(['montantCommission2' => 500], $issue['champs']);
+    }
+
+    /**
      * UN MOT COMMUN NE FAIT PAS UN CHAMP. La correspondance est une ÉGALITÉ
      * d'ensembles de mots : « montantCommission » face au seul « Montant de la
      * prime » ne désigne rien. Rattacher ici écrirait la commission dans la prime —
