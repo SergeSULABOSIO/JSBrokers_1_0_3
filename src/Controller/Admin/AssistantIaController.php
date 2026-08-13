@@ -781,6 +781,29 @@ class AssistantIaController extends AbstractController
             }
         }
 
+        // 1 ter) UN PLAN QUI N'ÉCRIRAIT RIEN N'EST PAS EXÉCUTÉ. La préparation le
+        // refuse déjà (PlanBuilder), mais c'est ICI qu'un plan sans effet devenait
+        // une « mission exécutée avec succès » assortie d'un journal « ok » — le
+        // 2026-08-13, sur un taux de commission resté vide en base. Le dernier point
+        // du circuit qui puisse encore mentir doit donc le vérifier lui aussi.
+        foreach ($plan->operations as $op) {
+            if ($op->ecritQuelqueChose()) {
+                continue;
+            }
+
+            $this->logger->warning('Ket : plan sans effet refusé à l’exécution.', [
+                'message' => $idMessage,
+                'op'      => $op->op,
+                'entite'  => $op->entityShortName,
+                'cible'   => $op->targetId,
+            ]);
+
+            return $this->json([
+                'message' => 'Ce plan ne modifierait aucune donnée : aucun champ à écrire. Rien n’a été enregistré.',
+                'blocked' => true,
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         $scope = new AiScope($entreprise, $invite, $conversation);
 
         // 2) SOLVABILITÉ (pré-vol strict) : seules les écritures sont facturées —

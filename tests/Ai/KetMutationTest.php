@@ -462,6 +462,48 @@ class KetMutationTest extends TestCase
         $this->assertSame(0, $tokens->estimateWriteCost([]));
     }
 
+    // ─────────────────── Une opération qui n'écrit rien ───────────────────────
+
+    /**
+     * L'INCIDENT DU 2026-08-13, LE PLUS COÛTEUX DE CETTE SÉRIE.
+     *
+     * L'utilisateur demande de porter à 20 % le taux de commission d'un risque. Ket
+     * dicte un nom de champ que le formulaire n'expose pas sous cette forme ; le
+     * champ est écarté, il ne reste AUCUNE modification — et le plan est tout de même
+     * présenté, validé, puis annoncé « 1 opération exécutée avec succès ». Le taux,
+     * lui, est resté vide en base.
+     *
+     * Une réussite qui n'écrit rien est un mensonge de plus. Une modification sans
+     * aucun champ ni collection n'est pas un plan : elle est refusée, en disant quoi
+     * corriger.
+     */
+    public function testUneModificationSansAucunChampNestPasUnPlan(): void
+    {
+        $tool = $this->makeTool([]);
+
+        $result = $tool->execute([
+            'operations' => [['op' => 'edit', 'entite' => 'Client', 'id' => 5, 'champs' => []]],
+        ], $this->makeScope());
+
+        $this->assertNull($result->uiAction, 'Aucune barre de décision pour un plan qui n’écrit rien.');
+        $this->assertFalse($result->data['pret']);
+        $this->assertStringContainsString('n\'écrirait RIEN', $result->data['note']);
+        $this->assertStringContainsString('#1', $result->data['note']);
+        $this->assertStringContainsString('Ne présente aucun plan', $result->data['note']);
+    }
+
+    /** Une SUPPRESSION agit par elle-même : elle n'a aucun champ à porter. */
+    public function testUneSuppressionSansChampResteUnPlanValide(): void
+    {
+        $tool = $this->makeTool([]);
+
+        $result = $tool->execute([
+            'operations' => [['op' => 'delete', 'entite' => 'Client', 'id' => 5]],
+        ], $this->makeScope());
+
+        $this->assertTrue($result->data['pret'], 'Une suppression n’a pas besoin de champs pour agir.');
+    }
+
     // ────────────────────────── Refus exploitables ────────────────────────────
 
     /**

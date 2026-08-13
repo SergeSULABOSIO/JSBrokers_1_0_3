@@ -63,6 +63,23 @@ final class MutationOperation
         return $this->op === self::OP_DELETE;
     }
 
+    /**
+     * CETTE OPÉRATION CHANGE-T-ELLE QUELQUE CHOSE ?
+     *
+     * Règle SOURCE UNIQUE, partagée par la préparation du plan et par son exécution :
+     * une création ou une modification sans le moindre champ ni la moindre
+     * sous-opération de collection n'écrit rien. Le 2026-08-13, une telle opération a
+     * traversé tout le circuit — plan affiché, validation de l'utilisateur, journal
+     * « ok » — pour ne toucher aucune donnée, pendant que Ket annonçait la valeur
+     * demandée comme enregistrée.
+     *
+     * Une SUPPRESSION, elle, agit par elle-même : elle n'a aucun champ à porter.
+     */
+    public function ecritQuelqueChose(): bool
+    {
+        return $this->isDelete() || $this->fields !== [] || $this->collections !== [];
+    }
+
     /** Niveau d'accès requis (fail-closed) selon l'opération. */
     public function requiredLevel(): int
     {

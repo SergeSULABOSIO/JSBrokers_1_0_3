@@ -82,7 +82,11 @@ final class PlanBuilder
 
         foreach ($plan->operations as $op) {
             $connus = $this->champsConnus($op->entityShortName, $scope);
-            $issue = $this->aliasDeChamps->normaliser($op->fields, $connus);
+            $issue = $this->aliasDeChamps->normaliser(
+                $op->fields,
+                $connus,
+                $this->libellesConnus($op->entityShortName, $scope),
+            );
 
             foreach ($issue['alias'] as $ligne) {
                 $alias[] = sprintf('%s — %s', $op->entityShortName, $ligne);
@@ -128,6 +132,34 @@ final class PlanBuilder
     }
 
     /**
+     * Les LIBELLÉS d'écran de ces mêmes champs. C'est sous cette forme que le modèle
+     * a lu la fiche, et donc sous cette forme qu'il redonne parfois un champ
+     * (« tauxCommission » pour « Taux de commission ») : sans eux, AliasDeChamps ne
+     * peut rattacher que par préfixe.
+     *
+     * @return array<string, string> champ => libellé
+     */
+    private function libellesConnus(string $entite, AiScope $scope): array
+    {
+        $inventaire = $this->inventaire($entite, $scope);
+        $libelles = [];
+        foreach (['obligatoires', 'facultatifs', 'auto'] as $groupe) {
+            foreach ((array) ($inventaire[$groupe] ?? []) as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $champ = $item['champ'] ?? null;
+                $libelle = $item['libelle'] ?? null;
+                if (is_string($champ) && $champ !== '' && is_string($libelle) && $libelle !== '') {
+                    $libelles[$champ] = $libelle;
+                }
+            }
+        }
+
+        return $libelles;
+    }
+
+    /**
      * L'inventaire des champs d'une entité, lu UNE SEULE FOIS par plan.
      *
      * Deux consommateurs le demandent — la normalisation des noms de champs, et
@@ -141,6 +173,77 @@ final class PlanBuilder
     {
         return $this->champsParEntite[$entite]
             ??= $this->mutationService->inventaireChamps($entite, $scope);
+    }
+
+    /**
+     * LE REFUS D'UN PLAN QUI N'ÉCRIRAIT RIEN.
+     *
+     * L'INCIDENT DU 2026-08-13. « Modifie le taux de commission à 20 % » : le modèle
+     * dicte `tauxCommission`, le formulaire du risque nomme ce champ
+     * `pourcentageCommissionSpecifiqueHT`, le champ inconnu est écarté — et
+     * l'opération continue son chemin, VIDE. Le plan s'affiche (budget 0, aucune
+     * valeur), l'utilisateur valide, l'exécuteur écrit consciencieusement rien du
+     * tout et journalise « ok ». Ket annonce alors « Détails mis à jour — taux de
+     * commission : 20 % ». Le taux était resté vide en base, et il a fallu que
+     * l'utilisateur demande lui-même « c'est bien enregistré ? » pour l'apprendre.
+     *
+     * Ce refus est le filet de dernier recours, et il est volontairement placé très
+     * bas : quelle que soit la raison pour laquelle il ne reste rien à écrire — nom
+     * de champ inconnu, paramètre omis par le modèle, dialecte de schéma —, une
+     * création ou une modification sans le moindre champ ni la moindre sous-opération
+     * ne devient jamais un plan. Une SUPPRESSION, elle, agit par elle-même : elle
+     * n'a aucun champ à porter.
+     *
+     * @param list<string> $ignores les champs dictés qu'on n'a pas su rattacher
+     */
+    private function refusSiRienAEcrire(
+        MutationPlan $plan,
+        array $ignores,
+        AiScope $scope,
+        string $outilAppelant,
+    ): ?AiToolResult {
+        $sansEffet = [];
+        $entites = [];
+        $n = 0;
+        foreach ($plan->operations as $op) {
+            $n++;
+            if ($op->ecritQuelqueChose()) {
+                continue;
+            }
+            $sansEffet[] = sprintf(
+                '#%d %s de %s — aucun champ à écrire.',
+                $n,
+                $op->isCreate() ? 'création' : 'modification',
+                $op->entityShortName,
+            );
+            $entites[$op->entityShortName] = $op->isCreate() ? 'creation' : 'edition';
+        }
+
+        if ($sansEffet === []) {
+            return null;
+        }
+
+        $this->logger->warning('Assistant IA : opération sans aucun champ à écrire, plan refusé.', [
+            'outil'     => $outilAppelant,
+            'sansEffet' => $sansEffet,
+            'ignores'   => $ignores,
+        ]);
+
+        return AiToolResult::ok([
+            'pret'          => false,
+            'sansEffet'     => $sansEffet,
+            'champsIgnores' => $ignores,
+            'inventaire'    => $this->inventairePour($entites, $scope),
+            'note'          => 'Ce plan n\'écrirait RIEN : ' . implode(' ', $sansEffet)
+                . ($ignores !== []
+                    ? ' Les champs que tu as dictés ne portent pas le nom que le formulaire leur donne : '
+                        . implode(' ', $ignores)
+                    : ' Tu n\'as dicté aucun champ pour cette opération.')
+                . ' Ne présente aucun plan, n\'annonce aucun enregistrement et ne dis pas que c\'est fait. '
+                . '« inventaire » ci-dessus donne, pour chaque entité concernée, le NOM EXACT de chaque champ '
+                . 'et son libellé à l\'écran : reprends le nom exact et rappelle ' . $outilAppelant
+                . ' au message SUIVANT. Si la valeur à écrire te manque, demande-la à l\'utilisateur.',
+        ]);
     }
 
     /**
@@ -410,6 +513,15 @@ final class PlanBuilder
                     . 'l\'utilisateur et écris le CODE, jamais le libellé.',
             ]);
         }
+        // UNE ÉCRITURE QUI N'ÉCRIT RIEN N'EST PAS UN PLAN. Le contrôle vient ici, et
+        // pas plus haut, pour deux raisons : les défauts contextuels ont pu compléter
+        // l'opération (elle a alors bel et bien quelque chose à écrire), et une
+        // CRÉATION à qui il manque des champs obligatoires mérite le refus
+        // « manquants », qui NOMME ce qu'il faut demander — plus utile que celui-ci.
+        $refusSansEffet = $this->refusSiRienAEcrire($plan, $ignores, $scope, $outilAppelant);
+        if ($refusSansEffet !== null) {
+            return $refusSansEffet;
+        }
         // Suppression bloquée par une contrainte : on ne présente pas de plan exécutable.
         if ($blocages !== []) {
             return AiToolResult::ok([
@@ -446,6 +558,9 @@ final class PlanBuilder
                 // Ce que le SERVEUR a déduit à la place de l'utilisateur : à ANNONCER,
                 // jamais à taire — c'est une écriture qu'il n'a pas dictée lui-même.
                 'defauts'          => $defauts,
+                // Ce que le modèle a dicté et que le formulaire ne connaît pas : le
+                // plan ne l'écrira pas, donc il ne doit pas figurer dans la prose.
+                'champsIgnores'    => $ignores,
                 'etapes'           => $etapes,
                 'budget'           => $budget,
                 'requiresPassword' => $requiresPassword,
@@ -456,7 +571,11 @@ final class PlanBuilder
                     . 'EXACTEMENT : n’annonce aucune étape qui ne figure pas dans « plan » ci-dessus, et ne dis '
                     . 'jamais qu’un élément sera enregistré « automatiquement » — seul ce qui est dans le plan '
                     . 'sera écrit. Si une information demandée par l’utilisateur n’a pas pu entrer dans le plan, '
-                    . 'DIS-LE explicitement au lieu de la passer sous silence.',
+                    . 'DIS-LE explicitement au lieu de la passer sous silence.'
+                    . ($ignores !== []
+                        ? ' EN PARTICULIER : ' . implode(' ', $ignores) . ' Dis-le à l’utilisateur en une '
+                            . 'phrase — n’annonce jamais une valeur que ce plan n’écrira pas.'
+                        : ''),
                 'note'             => $suffisant
                     ? ('Présente le plan EN UNE FOIS : tableau des opérations (avec la colonne Étape), liste des '
                         . 'impacts, et tableau du budget ventilé par étape (« parEtape ») avec son total. '

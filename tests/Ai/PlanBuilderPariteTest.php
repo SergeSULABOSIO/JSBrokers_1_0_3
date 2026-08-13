@@ -222,6 +222,91 @@ class PlanBuilderPariteTest extends TestCase
     }
 
     /**
+     * L'INCIDENT DU 2026-08-13, DE BOUT EN BOUT : « Modifie le taux de commission à
+     * 20 % » sur un risque.
+     *
+     * Le modèle dicte `tauxCommission` — le libellé que la fiche affiche, camel-casé.
+     * Le formulaire, lui, nomme ce champ `pourcentageCommissionSpecifiqueHT`. Le
+     * champ était écarté sans un mot, la modification devenait VIDE, le plan
+     * s'affichait quand même (budget 0), l'utilisateur validait, l'exécuteur
+     * journalisait « ok » — et Ket annonçait « taux de commission : 20 % » sur une
+     * fiche restée vide. Le libellé, ici, rattrape ce que le préfixe ne pouvait pas.
+     */
+    public function testUnChampDicteSousSonLibelleEntreDansLePlan(): void
+    {
+        [, , $tokens] = $this->dependances();
+
+        $mutation = $this->createMock(WorkspaceMutationService::class);
+        $mutation->method('analyserOperation')->willReturn([
+            'ok' => true, 'statut' => 'ok', 'entite' => 'Risque', 'libelle' => 'Risques',
+            'cible' => 'VOY', 'manquants' => [], 'impacts' => [], 'bloque' => false, 'portefeuille' => null,
+        ]);
+        $mutation->method('facturablesDetailles')->willReturn([
+            ['fqcn' => 'App\\Entity\\Risque', 'entite' => 'Risque', 'etape' => null],
+        ]);
+        $mutation->method('collectionsProposables')->willReturn([]);
+        $mutation->method('inventaireChamps')->willReturn(self::INVENTAIRE_RISQUE);
+
+        $result = (new PreparerOperationsTool($this->planBuilder($mutation, $tokens), $this->entiteCanonique()))->execute([
+            'operations' => [['op' => 'edit', 'entite' => 'Risque', 'id' => 142, 'champs' => ['tauxCommission' => 20]]],
+        ], $this->scope());
+
+        $this->assertTrue($result->data['pret']);
+        $this->assertSame(
+            ['pourcentageCommissionSpecifiqueHT' => 20],
+            $result->uiAction['plan'][0]['fields'],
+            'Le plan doit porter le NOM RÉEL du champ, sans quoi il n’écrira rien.',
+        );
+        $this->assertNotEmpty($result->data['defauts'], 'Le rattrapage est annoncé, jamais silencieux.');
+    }
+
+    /**
+     * ET QUAND ON NE SAIT PAS RATTACHER : plus de plan du tout. Une modification à
+     * qui il ne reste aucun champ n'écrirait rien — la présenter, c'est promettre un
+     * enregistrement qui n'aura pas lieu.
+     */
+    public function testUneModificationSansChampRattachableNeDevientPasUnPlan(): void
+    {
+        [, , $tokens] = $this->dependances();
+
+        $mutation = $this->createMock(WorkspaceMutationService::class);
+        $mutation->method('analyserOperation')->willReturn([
+            'ok' => true, 'statut' => 'ok', 'entite' => 'Risque', 'libelle' => 'Risques',
+            'cible' => 'VOY', 'manquants' => [], 'impacts' => [], 'bloque' => false, 'portefeuille' => null,
+        ]);
+        $mutation->method('facturablesDetailles')->willReturn([]);
+        $mutation->method('collectionsProposables')->willReturn([]);
+        $mutation->method('inventaireChamps')->willReturn(self::INVENTAIRE_RISQUE);
+
+        $result = (new PreparerOperationsTool($this->planBuilder($mutation, $tokens), $this->entiteCanonique()))->execute([
+            'operations' => [['op' => 'edit', 'entite' => 'Risque', 'id' => 142, 'champs' => ['couleurPreferee' => 'bleu']]],
+        ], $this->scope());
+
+        $this->assertFalse($result->data['pret']);
+        $this->assertNull($result->uiAction, 'Aucune barre de décision : il n’y a rien à valider.');
+        $this->assertNotEmpty($result->data['champsIgnores']);
+        $this->assertArrayHasKey('Risque', $result->data['inventaire']);
+        $this->assertStringContainsString('couleurPreferee', $result->data['note']);
+    }
+
+    /** L'inventaire réel d'un Risque : chaque champ porte son libellé d'écran. */
+    private const INVENTAIRE_RISQUE = [
+        'entite'       => 'Risque',
+        'libelle'      => 'Risques',
+        'obligatoires' => [
+            ['champ' => 'nomComplet', 'libelle' => 'Nom Complet'],
+            ['champ' => 'code', 'libelle' => 'Code'],
+        ],
+        'facultatifs'  => [
+            ['champ' => 'description', 'libelle' => 'Description'],
+            ['champ' => 'pourcentageCommissionSpecifiqueHT', 'libelle' => 'Taux de commission'],
+            ['champ' => 'branche', 'libelle' => 'Branche'],
+            ['champ' => 'imposable', 'libelle' => 'Imposable ?'],
+        ],
+        'auto'         => [],
+    ];
+
+    /**
      * LE PIÈGE DE L'UNION « + », qui a déjà mordu quatre fois.
      *
      * L'union de tableaux de PHP garde la clé de GAUCHE. Un outil qui enrichit le

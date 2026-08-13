@@ -8,6 +8,7 @@ use App\Entity\Client;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Portefeuille;
+use App\Entity\Risque;
 use App\Entity\Utilisateur;
 use App\Service\Workspace\MutationException;
 use App\Service\Workspace\WorkspaceMutationService;
@@ -61,6 +62,7 @@ class WorkspaceMutationServiceTest extends WebTestCase
         foreach ([self::ENT_A, self::ENT_B] as $nom) {
             $conn->executeStatement('DELETE c FROM client c JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom = :n', ['n' => $nom]);
             $conn->executeStatement('DELETE t FROM taxe t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :n', ['n' => $nom]);
+            $conn->executeStatement('DELETE r FROM risque r JOIN entreprise e ON r.entreprise_id = e.id WHERE e.nom = :n', ['n' => $nom]);
             $conn->executeStatement('DELETE pf FROM portefeuille pf JOIN entreprise e ON pf.entreprise_id = e.id WHERE e.nom = :n', ['n' => $nom]);
             $conn->executeStatement('DELETE i FROM invite i JOIN entreprise e ON i.entreprise_id = e.id WHERE e.nom = :n', ['n' => $nom]);
             $conn->executeStatement('DELETE FROM entreprise WHERE nom = :n', ['n' => $nom]);
@@ -127,6 +129,71 @@ class WorkspaceMutationServiceTest extends WebTestCase
         $this->em->clear();
         $reloaded = $this->em->getRepository(Client::class)->find($id);
         $this->assertSame('+243999888777', $reloaded->getTelephone(), 'Le téléphone a été réellement persisté.');
+    }
+
+    /**
+     * LE TAUX DE COMMISSION D'UN RISQUE ARRIVE VRAIMENT EN BASE (incident du
+     * 2026-08-13). Ce champ est rendu par un PercentType en POINTS (20 = 20 %) sous
+     * le libellé « Taux de commission », et il porte le nom le plus éloigné de son
+     * libellé de tout le périmètre : `pourcentageCommissionSpecifiqueHT`. Il n'avait
+     * jamais été écrit par ce chemin — c'est celui sur lequel Ket a annoncé « 20 % »
+     * pour une fiche restée vide.
+     */
+    public function testLeTauxDeCommissionDUnRisqueEstReellementPersiste(): void
+    {
+        $owner = $this->seedUser(self::OWNER_A);
+        $ent = $this->seedEntreprise(self::ENT_A, $owner);
+        $inv = $this->seedOwnerInvite($ent, $owner);
+        $risque = (new Risque())
+            ->setNomComplet('Assurance voyage')->setCode('VOY')
+            ->setBranche(Risque::BRANCHE_IARD_OU_NON_VIE)->setImposable(true)
+            ->setEntreprise($ent)->setInvite($inv);
+        $this->em->persist($risque);
+        $owner->setConnectedTo($ent);
+        $this->em->flush();
+        $id = $risque->getId();
+        $this->assertNull($risque->getPourcentageCommissionSpecifiqueHT(), 'Au départ, aucun taux.');
+
+        $this->client->loginUser($owner);
+
+        $op = new MutationOperation('edit', 'Risque', $id, ['pourcentageCommissionSpecifiqueHT' => 20]);
+        $this->service->executer($op, new AiScope($ent, $inv), $owner);
+
+        $this->em->clear();
+        $reloaded = $this->em->getRepository(Risque::class)->find($id);
+        $this->assertSame(
+            20.0,
+            (float) $reloaded->getPourcentageCommissionSpecifiqueHT(),
+            'Le taux est stocké en POINTS : 20 pour 20 %, jamais 0,2.',
+        );
+    }
+
+    /**
+     * LE LIBELLÉ VOYAGE AVEC LE CHAMP. C'est lui qui permet de rattacher un champ que
+     * le modèle a dicté sous le nom lu à l'écran (« tauxCommission ») au champ réel.
+     * Sans libellé dans l'inventaire, le rattrapage d'AliasDeChamps est aveugle et
+     * l'incident du 2026-08-13 se reproduit à l'identique.
+     */
+    public function testLInventaireDUnRisquePorteLeLibelleDeChaqueChamp(): void
+    {
+        $owner = $this->seedUser(self::OWNER_A);
+        $ent = $this->seedEntreprise(self::ENT_A, $owner);
+        $inv = $this->seedOwnerInvite($ent, $owner);
+        $owner->setConnectedTo($ent);
+        $this->em->flush();
+        $this->client->loginUser($owner);
+
+        $inventaire = $this->service->inventaireChamps('Risque', new AiScope($ent, $inv));
+
+        $libelles = [];
+        foreach (['obligatoires', 'facultatifs', 'auto'] as $groupe) {
+            foreach ($inventaire[$groupe] as $item) {
+                $libelles[$item['champ']] = $item['libelle'] ?? null;
+            }
+        }
+
+        $this->assertArrayHasKey('pourcentageCommissionSpecifiqueHT', $libelles);
+        $this->assertSame('Taux de commission', $libelles['pourcentageCommissionSpecifiqueHT']);
     }
 
     public function testCreationEnregistreReellementLaFiche(): void
