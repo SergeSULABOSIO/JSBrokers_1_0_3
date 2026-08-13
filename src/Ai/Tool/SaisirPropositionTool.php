@@ -797,10 +797,17 @@ final class SaisirPropositionTool implements AiToolProduisantUnPlan, AiToolEcrit
             $data['avertissements'] = array_merge($data['avertissements'] ?? [], $avertissements);
         }
 
+        // Les DÉDUCTIONS DE PLANBUILDER (nom d'une piste, durée lue sur la période…)
+        // arrivent déjà dans `defauts` : l'union « + » de PHP garderait alors la
+        // sienne et TAIRAIT les hypothèses de cet outil, exactement comme pour les
+        // avertissements ci-dessus. On compose les deux listes — les unes et les
+        // autres sont des choix faits à la place de l'utilisateur, et toutes doivent
+        // lui être annoncées.
+        $data['defauts'] = array_merge($data['defauts'] ?? [], $defauts);
+
         return AiToolResult::ok(
             $data + [
                 'resolutions' => $resolutions,
-                'defauts'     => $defauts,
                 'noteDefauts' => 'ANNONCE ces « resolutions » et ces « defauts » dans ta réponse, en une ou deux '
                     . 'lignes sous le plan : ce sont des choix faits À LA PLACE de l’utilisateur, il doit pouvoir '
                     . 'les corriger d’une phrase. Ne les présente jamais comme des informations qu’il aurait données.',

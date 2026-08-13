@@ -34,6 +34,15 @@ use Psr\Log\NullLogger;
  */
 final class PlanBuilder
 {
+    /**
+     * Inventaires de champs déjà lus, par entité : un plan porte volontiers
+     * plusieurs opérations d'une même entité, et l'inventaire coûte une inspection
+     * de formulaire complète.
+     *
+     * @var array<string, array<string, mixed>>
+     */
+    private array $champsParEntite = [];
+
     public function __construct(
         private readonly WorkspaceMutationService $mutationService,
         private readonly TokenAccountService $tokenAccountService,
@@ -45,10 +54,93 @@ final class PlanBuilder
         // Même principe que le résolveur : ce que le serveur sait faire seul ne se
         // demande pas au modèle.
         private readonly NormaliseurDeDates $normaliseurDeDates,
+        // Ce que le dossier dit déjà : les champs obligatoires DÉDUCTIBLES du plan
+        // lui-même, plutôt que redemandés à un utilisateur qui vient de les donner.
+        private readonly DefautsContextuels $defautsContextuels = new DefautsContextuels(),
+        // Ramène un champ dicté au nom RÉEL du formulaire (« nom » → « nomComplet »)
+        // et écarte, en le disant, ce qui ne correspond à rien.
+        private readonly AliasDeChamps $aliasDeChamps = new AliasDeChamps(),
         // Un refus de dry-run n'était tracé NULLE PART : le 2026-08-12, il a été
         // impossible de savoir quelle opération le modèle avait mal formée.
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {
+    }
+
+    /**
+     * Ramène les champs dictés aux noms RÉELS du formulaire, et écarte ce qui ne
+     * correspond à rien. Seules les opérations de TÊTE sont traitées : les champs
+     * d'un enfant de collection sont validés par le FormType de la collection, dont
+     * l'inventaire n'est pas adressable par nom court à ce stade.
+     *
+     * @return array{plan: MutationPlan, alias: list<string>, ignores: list<string>}
+     */
+    private function normaliserLesChamps(MutationPlan $plan, AiScope $scope): array
+    {
+        $alias = [];
+        $ignores = [];
+        $operations = [];
+
+        foreach ($plan->operations as $op) {
+            $connus = $this->champsConnus($op->entityShortName, $scope);
+            $issue = $this->aliasDeChamps->normaliser($op->fields, $connus);
+
+            foreach ($issue['alias'] as $ligne) {
+                $alias[] = sprintf('%s — %s', $op->entityShortName, $ligne);
+            }
+            foreach ($issue['ignores'] as $champ) {
+                $ignores[] = sprintf('%s — « %s » n’existe pas sur cette entité : rien ne sera écrit dans ce champ.', $op->entityShortName, $champ);
+            }
+
+            $operations[] = $issue['champs'] === $op->fields ? $op : new MutationOperation(
+                op: $op->op,
+                entityShortName: $op->entityShortName,
+                targetId: $op->targetId,
+                fields: $issue['champs'],
+                collections: $op->collections,
+                ref: $op->ref,
+                etape: $op->etape,
+            );
+        }
+
+        return ['plan' => new MutationPlan($operations), 'alias' => $alias, 'ignores' => $ignores];
+    }
+
+    /**
+     * Les noms de champs que le formulaire de cette entité expose réellement.
+     * Mémoïsé : un plan porte volontiers plusieurs opérations d'une même entité.
+     *
+     * @return list<string>
+     */
+    private function champsConnus(string $entite, AiScope $scope): array
+    {
+        $inventaire = $this->inventaire($entite, $scope);
+        $noms = [];
+        foreach (['obligatoires', 'facultatifs', 'auto'] as $groupe) {
+            foreach ((array) ($inventaire[$groupe] ?? []) as $item) {
+                $champ = is_array($item) ? ($item['champ'] ?? null) : null;
+                if (is_string($champ) && $champ !== '') {
+                    $noms[] = $champ;
+                }
+            }
+        }
+
+        return array_values(array_unique($noms));
+    }
+
+    /**
+     * L'inventaire des champs d'une entité, lu UNE SEULE FOIS par plan.
+     *
+     * Deux consommateurs le demandent — la normalisation des noms de champs, et
+     * l'inventaire embarqué avec un refus « manquants ». L'inspection d'un
+     * formulaire n'est pas gratuite, et la relire deux fois par entité serait payer
+     * deux fois la même chose ; c'est d'ailleurs ce qu'un test de parité vérifie.
+     *
+     * @return array<string, mixed>
+     */
+    private function inventaire(string $entite, AiScope $scope): array
+    {
+        return $this->champsParEntite[$entite]
+            ??= $this->mutationService->inventaireChamps($entite, $scope);
     }
 
     /**
@@ -156,6 +248,25 @@ final class PlanBuilder
         if ($questions !== []) {
             return $this->demander($questions, $outilAppelant);
         }
+
+        // CE QUE LE DOSSIER DIT DÉJÀ. Avant de réclamer un champ obligatoire, on
+        // regarde si le plan ne le porte pas ailleurs : le nom d'une piste se déduit
+        // de son client et de son risque, la durée d'une proposition de la période de
+        // son avenant. Le 2026-08-12, Ket a demandé cinq précisions de ce genre sur
+        // un dossier complet — dont elle venait elle-même de proposer la plupart.
+        // Les valeurs déduites entrent dans les CHAMPS de l'opération : elles
+        // figurent donc dans le tableau du plan que l'utilisateur relit, et la liste
+        // « defauts » les lui fait annoncer. Jamais de valeur posée en silence.
+        // UN CHAMP DICTÉ QUI N'EXISTE PAS. « nom » sur un Risque — qui, seul de tout
+        // le périmètre, appelle ce champ « nomComplet » — était jeté sans un mot, puis
+        // réclamé à l'utilisateur qui l'avait déjà donné, tout en FIGURANT dans le
+        // tableau du plan. On rattrape ce qui est sans ambiguïté, et on retire (en le
+        // disant) ce qu'on ne sait pas rattacher : le plan ne doit afficher que ce
+        // qu'il écrira.
+        ['plan' => $plan, 'alias' => $alias, 'ignores' => $ignores] = $this->normaliserLesChamps($plan, $scope);
+
+        ['plan' => $plan, 'defauts' => $defauts] = $this->defautsContextuels->appliquer($plan);
+        $defauts = array_merge($alias, $defauts);
 
         $lignes = [];
         $manquants = [];
@@ -332,6 +443,9 @@ final class PlanBuilder
             [
                 'pret'             => true,
                 'plan'             => $lignes,
+                // Ce que le SERVEUR a déduit à la place de l'utilisateur : à ANNONCER,
+                // jamais à taire — c'est une écriture qu'il n'a pas dictée lui-même.
+                'defauts'          => $defauts,
                 'etapes'           => $etapes,
                 'budget'           => $budget,
                 'requiresPassword' => $requiresPassword,
@@ -345,7 +459,14 @@ final class PlanBuilder
                     . 'DIS-LE explicitement au lieu de la passer sous silence.',
                 'note'             => $suffisant
                     ? ('Présente le plan EN UNE FOIS : tableau des opérations (avec la colonne Étape), liste des '
-                        . 'impacts, et tableau du budget ventilé par étape (« parEtape ») avec son total. Précise '
+                        . 'impacts, et tableau du budget ventilé par étape (« parEtape ») avec son total. '
+                        . ($defauts !== []
+                            ? 'ANNONCE aussi, en une ligne, les valeurs de « defauts » : ce sont des champs que le '
+                                . 'serveur a DÉDUITS du dossier à la place de l\'utilisateur — il doit pouvoir les '
+                                . 'corriger d\'une phrase avant de valider. Ne les présente jamais comme des '
+                                . 'informations qu\'il aurait fournies. '
+                            : '')
+                        . 'Précise '
                         . 'que l\'utilisateur peut encore DÉCOCHER une étape facultative avant d\'exécuter — le '
                         . 'budget se réajuste — et qu\'une seule validation suffit pour l\'ensemble'
                         . ($requiresPassword ? ' (une suppression exige son mot de passe).' : '.')
@@ -648,7 +769,7 @@ final class PlanBuilder
             if (!MutationAllowlist::autorise($shortName)) {
                 continue;
             }
-            $inventaires[$shortName] = $this->mutationService->inventaireChamps($shortName, $scope);
+            $inventaires[$shortName] = $this->inventaire($shortName, $scope);
         }
 
         return $inventaires;

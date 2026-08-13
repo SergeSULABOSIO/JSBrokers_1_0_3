@@ -220,4 +220,54 @@ class PlanBuilderPariteTest extends TestCase
         $this->assertArrayHasKey('obligatoires', $result->data['inventaire']['Cotation']);
         $this->assertStringContainsString('N\'appelle PAS inventaire_champs', $result->data['note']);
     }
+
+    /**
+     * LE PIÈGE DE L'UNION « + », qui a déjà mordu quatre fois.
+     *
+     * L'union de tableaux de PHP garde la clé de GAUCHE. Un outil qui enrichit le
+     * résultat de PlanBuilder par `$data + ['defauts' => …]` voit donc sa propre
+     * liste ÉCARTÉE EN SILENCE dès que PlanBuilder produit la même clé — ce qui est
+     * arrivé le 2026-08-12 quand les déductions contextuelles sont entrées dans
+     * `defauts` : trois outils ont cessé d'annoncer leurs hypothèses, sans la moindre
+     * erreur. Le même piège avait déjà été payé sur `avertissements`, et le remède
+     * est écrit en commentaire dans ces fichiers depuis.
+     *
+     * Ces listes se COMPOSENT (array_merge), elles ne se remplacent pas : les
+     * hypothèses du serveur et celles de l'outil sont toutes des choix faits à la
+     * place de l'utilisateur, et toutes doivent lui être annoncées. Ce test lit les
+     * sources : il tombe si quelqu'un réintroduit la forme dangereuse.
+     */
+    public function testAucunOutilNEcraseLesListesCumulativesDuPlan(): void
+    {
+        // Les clés surveillées sont DÉRIVÉES d'un vrai plan, jamais recopiées : ce
+        // sont exactement celles que PlanBuilder possède. Une clé qu'il ne produit
+        // pas (« resolutions », propre à certains outils) ne court aucun risque, et
+        // le jour où il en produira une nouvelle, elle sera surveillée d'office.
+        [$generique] = $this->lesDeuxPlans();
+        $cumulatives = array_keys(array_filter($generique->data, is_array(...)));
+        self::assertContains('defauts', $cumulatives, 'Le plan doit porter ses déductions.');
+
+        $fichiers = glob(__DIR__ . '/../../src/Ai/Tool/*.php') ?: [];
+        self::assertNotEmpty($fichiers, 'Les sources des outils doivent être lisibles.');
+
+        foreach ($fichiers as $fichier) {
+            $source = (string) file_get_contents($fichier);
+            foreach ($cumulatives as $cle) {
+                // Une clé cumulative posée dans un littéral d'union « + [ … ] ».
+                $dangereux = (bool) preg_match(
+                    '/\+\s*\[[^]]{0,400}?[\'"]' . $cle . '[\'"]\s*=>/s',
+                    $source,
+                );
+                self::assertFalse(
+                    $dangereux,
+                    sprintf(
+                        "%s pose « %s » dans une union « + » : la clé de PlanBuilder l'emporterait et cette "
+                        . 'liste disparaîtrait en silence. Compose-la avec array_merge().',
+                        basename($fichier),
+                        $cle,
+                    ),
+                );
+            }
+        }
+    }
 }

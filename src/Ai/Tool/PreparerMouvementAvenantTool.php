@@ -310,13 +310,20 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
             array_map(strval(...), (array) ($data['avertissements'] ?? [])),
             $decalque['avertissements'],
         )));
+        // Le choix de la police EST une hypothèse, au même titre que la période ou la
+        // prime reconduites : il se dit, il ne se subit pas. Les DÉDUCTIONS DE
+        // PLANBUILDER arrivent déjà dans `defauts` — l'union « += » ci-dessous
+        // garderait la sienne et TAIRAIT celles-ci en silence, comme pour les
+        // avertissements juste au-dessus. On compose donc les listes.
+        $data['defauts'] = array_merge(
+            (array) ($data['defauts'] ?? []),
+            $defautsDeChoix,
+            $decalque['defauts'],
+        );
         $data += [
             'mouvement'        => $mouvement->value,
             'libelleMouvement' => $mouvement->libelle(),
             'source'           => $decalque['source'],
-            // Le choix de la police EST une hypothèse, au même titre que la période ou
-            // la prime reconduites : il se dit, il ne se subit pas.
-            'defauts'          => array_merge($defautsDeChoix, $decalque['defauts']),
             'ecarts'           => $decalque['ecarts'],
             'reconduit'        => $decalque['reconduit'],
             'consigne'         => 'Présente le plan et le budget comme pour toute écriture, et ÉNONCE les '
