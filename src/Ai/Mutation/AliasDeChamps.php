@@ -25,6 +25,16 @@ use App\Ai\AiText;
  *     champs de l'opération — pour qu'il cesse de figurer dans le tableau du plan —
  *     et signalé, afin que l'utilisateur voie qu'il ne sera pas écrit.
  *
+ * LE LIBELLÉ D'ÉCRAN EST UN NOM DE CHAMP (incident du 2026-08-13). « Modifie le
+ * taux de commission de ce risque » : le modèle dicte `tauxCommission`, quand le
+ * formulaire nomme ce champ `pourcentageCommissionSpecifiqueHT`. Aucun préfixe ne
+ * les rapproche — mais le champ porte le LIBELLÉ « Taux de commission », que le
+ * modèle a lu sur la fiche et camel-casé. Ce n'est donc pas une devinette : on
+ * rattache un champ dicté au champ dont le libellé porte EXACTEMENT les mêmes mots
+ * (mots vides ôtés), et à condition qu'il soit le seul. « montantCommission » face
+ * à un unique « Montant de la prime » ne correspond à rien et reste écarté — c'est
+ * précisément ce qu'on veut, un mot commun ne fait pas un champ.
+ *
  * Rien n'est deviné, tout est annoncé : c'est la même règle que partout ailleurs.
  */
 final class AliasDeChamps
@@ -36,12 +46,22 @@ final class AliasDeChamps
     private const LONGUEUR_MINIMALE = 3;
 
     /**
-     * @param array<string, mixed> $champs       ce que le modèle a dicté
-     * @param list<string>         $champsConnus les champs réels du formulaire
+     * Mots qui n'apprennent rien sur le champ désigné : les retenir ferait échouer
+     * la correspondance entre « tauxCommission » et « Taux de commission ».
+     */
+    private const MOTS_VIDES = [
+        'de', 'du', 'des', 'la', 'le', 'les', 'l', 'd', 'un', 'une', 'et', 'en',
+        'a', 'au', 'aux', 'par', 'pour', 'sur', 'dans',
+    ];
+
+    /**
+     * @param array<string, mixed>  $champs       ce que le modèle a dicté
+     * @param list<string>          $champsConnus les champs réels du formulaire
+     * @param array<string, string> $libelles     champ réel => libellé affiché à l'écran
      *
      * @return array{champs: array<string, mixed>, alias: list<string>, ignores: list<string>}
      */
-    public function normaliser(array $champs, array $champsConnus): array
+    public function normaliser(array $champs, array $champsConnus, array $libelles = []): array
     {
         // Sans inventaire exploitable, on ne touche à RIEN : mieux vaut le
         // comportement d'avant qu'un rattrapage à l'aveugle.
@@ -64,7 +84,8 @@ final class AliasDeChamps
                 continue;
             }
 
-            $cible = $this->cibleUnique((string) $champ, $normalises);
+            $cible = $this->cibleUnique((string) $champ, $normalises)
+                ?? $this->cibleParLibelle((string) $champ, $libelles, $champsConnus);
             if ($cible === null) {
                 $ignores[] = (string) $champ;
                 continue;
@@ -104,5 +125,63 @@ final class AliasDeChamps
         }
 
         return count($candidats) === 1 ? (string) array_key_first($candidats) : null;
+    }
+
+    /**
+     * Le champ dont le LIBELLÉ dit exactement ce que ce nom dit, ou null.
+     *
+     * L'égalité porte sur l'ENSEMBLE des mots significatifs, pas sur leur ordre ni
+     * sur les mots de liaison : « tauxCommission » == « Taux de commission ». Elle
+     * reste une ÉGALITÉ — un mot commun ne suffit pas —, et le candidat doit être
+     * unique, sans quoi on écarte.
+     *
+     * @param array<string, string> $libelles     champ réel => libellé
+     * @param list<string>          $champsConnus les champs réellement exposés
+     */
+    private function cibleParLibelle(string $champ, array $libelles, array $champsConnus): ?string
+    {
+        $mots = $this->motsSignificatifs($champ);
+        if ($mots === []) {
+            return null;
+        }
+
+        $candidats = [];
+        foreach ($libelles as $reel => $libelle) {
+            // Un libellé sans champ exposé ne désigne rien d'écrivable.
+            if (!in_array($reel, $champsConnus, true)) {
+                continue;
+            }
+            if ($this->motsSignificatifs((string) $libelle) === $mots) {
+                $candidats[$reel] = true;
+            }
+        }
+
+        return count($candidats) === 1 ? (string) array_key_first($candidats) : null;
+    }
+
+    /**
+     * Les mots d'un nom de champ ou d'un libellé, normalisés, triés et dédoublonnés :
+     * « pourcentageCommissionSpecifiqueHT » comme « Taux de commission » se ramènent
+     * à un ENSEMBLE de mots comparable.
+     *
+     * @return list<string>
+     */
+    private function motsSignificatifs(string $texte): array
+    {
+        // Frontières camelCase d'abord (« tauxCommission » → « taux Commission »),
+        // puis tout ce qui n'est pas alphanumérique fait séparateur.
+        $espace = (string) preg_replace('/(?<=[a-z0-9])(?=[A-Z])/u', ' ', $texte);
+        $brut = preg_split('/[^\p{L}\p{N}]+/u', AiText::normalize($espace), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        $mots = [];
+        foreach ($brut as $mot) {
+            if (!in_array($mot, self::MOTS_VIDES, true)) {
+                $mots[$mot] = true;
+            }
+        }
+        $mots = array_keys($mots);
+        sort($mots);
+
+        return $mots;
     }
 }

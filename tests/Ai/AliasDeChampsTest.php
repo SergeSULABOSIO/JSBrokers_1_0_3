@@ -20,6 +20,16 @@ class AliasDeChampsTest extends TestCase
     /** Les champs réels d'un Risque : ni « nom », ni « libelle ». */
     private const RISQUE = ['code', 'nomComplet', 'description', 'branche', 'imposable', 'pourcentageCommissionSpecifiqueHT'];
 
+    /** Les libellés que la fiche affiche pour ces mêmes champs — ce que le modèle lit. */
+    private const LIBELLES_RISQUE = [
+        'code'                              => 'Code',
+        'nomComplet'                        => 'Nom Complet',
+        'description'                       => 'Description',
+        'branche'                           => 'Branche',
+        'imposable'                         => 'Imposable ?',
+        'pourcentageCommissionSpecifiqueHT' => 'Taux de commission',
+    ];
+
     public function testUnChampInconnuDesignantUnSeulChampReelEstRattache(): void
     {
         $issue = (new AliasDeChamps())->normaliser(
@@ -86,6 +96,75 @@ class AliasDeChampsTest extends TestCase
 
         $this->assertSame('Assurance Voyage', $issue['champs']['nomComplet']);
         $this->assertSame(['nom'], $issue['ignores']);
+    }
+
+    // ─────────────────── Le libellé d'écran est un nom de champ ──────────────
+
+    /**
+     * L'INCIDENT DU 2026-08-13, SECONDE MANCHE. « Modifie le taux de commission à
+     * 20 % » : le modèle dicte `tauxCommission`, parce que c'est ainsi que la fiche
+     * nomme ce champ à l'écran — « Taux de commission ». Le champ réel s'appelle
+     * `pourcentageCommissionSpecifiqueHT` : aucun préfixe ne les rapproche, le champ
+     * était écarté, la modification devenait vide, et Ket annonçait pourtant « 20 % »
+     * enregistré. Le libellé n'est pas une devinette : c'est ce que le modèle a lu.
+     */
+    public function testUnChampDicteSousSonLibelleDEcranEstRattache(): void
+    {
+        $issue = (new AliasDeChamps())->normaliser(
+            ['tauxCommission' => 20],
+            self::RISQUE,
+            self::LIBELLES_RISQUE,
+        );
+
+        $this->assertSame(['pourcentageCommissionSpecifiqueHT' => 20], $issue['champs']);
+        $this->assertSame(
+            ['« tauxCommission » lu comme « pourcentageCommissionSpecifiqueHT ».'],
+            $issue['alias'],
+        );
+        $this->assertSame([], $issue['ignores']);
+    }
+
+    /** Le libellé se reconnaît aussi écrit en clair, accents et espaces compris. */
+    public function testLeLibelleEstReconnuTelQuAffiche(): void
+    {
+        $issue = (new AliasDeChamps())->normaliser(
+            ['Taux de commission' => 20],
+            self::RISQUE,
+            self::LIBELLES_RISQUE,
+        );
+
+        $this->assertSame(['pourcentageCommissionSpecifiqueHT' => 20], $issue['champs']);
+    }
+
+    /**
+     * UN MOT COMMUN NE FAIT PAS UN CHAMP. La correspondance est une ÉGALITÉ
+     * d'ensembles de mots : « montantCommission » face au seul « Montant de la
+     * prime » ne désigne rien. Rattacher ici écrirait la commission dans la prime —
+     * une donnée fausse dans le dossier d'un client, c'est-à-dire pire que rien.
+     */
+    public function testUnSimpleMotCommunNeSuffitPasARattacher(): void
+    {
+        $issue = (new AliasDeChamps())->normaliser(
+            ['montantCommission' => 500],
+            ['montantPrime'],
+            ['montantPrime' => 'Montant de la prime'],
+        );
+
+        $this->assertSame([], $issue['champs']);
+        $this->assertSame(['montantCommission'], $issue['ignores']);
+    }
+
+    /** Deux champs au même libellé ne départagent rien : on écarte. */
+    public function testUnLibellePorteParDeuxChampsNeRattacheRien(): void
+    {
+        $issue = (new AliasDeChamps())->normaliser(
+            ['tauxCommission' => 20],
+            ['tauxA', 'tauxB'],
+            ['tauxA' => 'Taux de commission', 'tauxB' => 'Taux de commission'],
+        );
+
+        $this->assertSame([], $issue['champs']);
+        $this->assertSame(['tauxCommission'], $issue['ignores']);
     }
 
     /** Un nom trop court ne désigne rien : « id » s'accrocherait à n'importe quoi. */
