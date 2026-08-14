@@ -15,6 +15,7 @@ use App\Token\TokenAccountService;
 use App\Services\JSBDynamicSearchService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormInterface;
 
@@ -1248,17 +1249,26 @@ class WorkspaceMutationService
         // Retirées de $fields d'abord (pour ne pas polluer la pré-hydratation des
         // relations), puis ré-injectées après la construction du formulaire, sous la
         // forme attendue par le champ (VichFileType est COMPOUND : ['file' => upload]).
-        // Introuvable / hors périmètre : le marqueur est retiré, le champ reste vide.
+        // UNE PIÈCE QUI NE PEUT PAS ÊTRE JOINTE SE DIT. Ce bloc retirait le marqueur
+        // en silence quand il ne résolvait rien : le 2026-08-14, Ket a référencé une
+        // pièce #19 inexistante (la conversation s'arrêtait à #18), le Document s'est
+        // créé SANS fichier, et le plan s'est annoncé « exécuté, conforme au plan
+        // validé ». L'utilisateur a cherché son contrat dans un document vide.
+        // Le refus devient donc une erreur de FORMULAIRE : le plan n'est plus « prêt »
+        // au dry-run, et l'exécution échoue au lieu d'écrire une coquille.
         $fichiersResolus = [];
+        $piecesRefusees = [];
         foreach ($fields as $champ => $valeur) {
             if (!ConversationFichierRef::estMarqueur($valeur)) {
                 continue;
             }
             unset($fields[$champ]);
-            $upload = $this->fichierResolver->uploadPourMarqueur((string) $valeur, $scope, $pourExecution);
-            if ($upload !== null) {
-                $fichiersResolus[$champ] = $upload;
+            $piece = $this->fichierResolver->resoudre((string) $valeur, $scope, $pourExecution);
+            if ($piece->estResolue()) {
+                $fichiersResolus[$champ] = $piece->upload;
+                continue;
             }
+            $piecesRefusees[$champ] = (string) $piece->motif;
         }
 
         // Pré-hydratation des relations TO-ONE côté PROPRIÉTAIRE (création surtout)
@@ -1330,13 +1340,28 @@ class WorkspaceMutationService
         // VichFileType est COMPOUND (enfant « file »), un FileType nu prend l'upload
         // directement. On respecte le contrat du formulaire réel (parité UI).
         foreach ($fichiersResolus as $champ => $upload) {
+            // Le champ n'existe pas sur ce formulaire : joindre un fichier à une
+            // entité qui n'en accepte pas était l'autre perte silencieuse. On le DIT,
+            // plutôt que de laisser croire que la pièce a été rattachée.
             if (!$form->has($champ)) {
+                $piecesRefusees[$champ] = sprintf(
+                    'Le champ « %s » n’existe pas sur ce formulaire : cet enregistrement n’accepte pas de fichier. '
+                    . 'Passe par un Document rattaché (champ « fichier »).',
+                    $champ,
+                );
                 continue;
             }
             $fields[$champ] = $form->get($champ)->has('file') ? ['file' => $upload] : $upload;
         }
 
         $form->submit($fields, false);
+
+        // APRÈS la soumission : une erreur ajoutée avant serait effacée par submit().
+        // Portée par le champ quand il existe, sinon par le formulaire — dans les deux
+        // cas erreurs() la nomme, et le plan la remonte à l'utilisateur.
+        foreach ($piecesRefusees as $champ => $motif) {
+            ($form->has($champ) ? $form->get($champ) : $form)->addError(new FormError($motif));
+        }
 
         return $form;
     }

@@ -84,6 +84,26 @@ final class AliasDeChamps
                 continue;
             }
 
+            // UNE PIÈCE JOINTE NE SE RENOMME JAMAIS (incident du 2026-08-14).
+            //
+            // Un champ portant « @fichier:<id> » vise une propriété d'UPLOAD (Vich),
+            // qui n'est PAS une colonne Doctrine : elle est donc absente de
+            // l'inventaire, donc « inconnue », donc offerte au rapprochement par
+            // libellé. Sur un Document, « fichier » se faisait ainsi rattacher à
+            // « nomFichierStocke » — dont le libellé humanisé « Nom fichier stocke »
+            // contient le mot « fichier ». La clé devenait un champ que DocumentType
+            // n'expose pas, l'upload était jeté plus loin sans un mot, et Ket
+            // annonçait un contrat enregistré dans un document vide.
+            //
+            // Aucun rapprochement par ressemblance ne peut être juste ici : le nom du
+            // champ d'upload est fixé par le FormType, pas devinable depuis les
+            // colonnes. On laisse donc la clé INTACTE — le formulaire tranchera, et
+            // s'il ne connaît pas ce champ il le dira (cf. WorkspaceMutationService).
+            if (ConversationFichierRef::estMarqueur($valeur)) {
+                $resultat[$champ] = $valeur;
+                continue;
+            }
+
             $cible = $this->cibleUnique((string) $champ, $normalises)
                 ?? $this->cibleParLibelle((string) $champ, $libelles, $champsConnus);
             if ($cible === null) {
