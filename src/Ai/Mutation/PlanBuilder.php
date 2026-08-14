@@ -552,7 +552,17 @@ final class PlanBuilder
                     . 'ci-dessus porte déjà, pour chaque entité concernée, les champs obligatoires, facultatifs et '
                     . 'automatiques, avec leurs codes autorisés (« valeurs ») et leurs valeurs par défaut. '
                     . 'Un champ qui porte « valeurs » n\'accepte QUE ces codes : propose-les en clair à '
-                    . 'l\'utilisateur et écris le CODE, jamais le libellé.',
+                    . 'l\'utilisateur et écris le CODE, jamais le libellé. '
+                    // Le refus disait « demande les champs manquants » sans distinguer ceux
+                    // dont l'inventaire donne DÉJÀ la valeur. Ket les redemandait donc tous,
+                    // y compris ceux qu'elle avait sous les yeux — l'utilisateur a le
+                    // sentiment, légitime, de fournir ce qui est déjà connu. Un champ qui
+                    // porte « defaut » n'est pas une question : c'est une réponse à annoncer.
+                    . 'NE REDEMANDE JAMAIS un champ qui porte un « defaut » dans cet inventaire : '
+                    . 'reprends cette valeur telle quelle dans ton prochain appel et ANNONCE-la '
+                    . '(« j’ai retenu X, dites-le-moi si ce n’est pas cela »). Ne pose de question '
+                    . 'que sur les champs manquants qui n’ont NI défaut NI valeur déductible du '
+                    . 'dossier — et pose-les toutes EN UNE FOIS.',
             ]);
         }
         // UNE ÉCRITURE QUI N'ÉCRIT RIEN N'EST PAS UN PLAN. Le contrôle vient ici, et

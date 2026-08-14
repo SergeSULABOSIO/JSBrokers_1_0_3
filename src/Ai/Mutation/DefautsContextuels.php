@@ -2,6 +2,8 @@
 
 namespace App\Ai\Mutation;
 
+use App\Entity\Piste;
+
 /**
  * CE QUE LE DOSSIER DIT DÉJÀ — les champs obligatoires qu'on peut DÉDUIRE au lieu
  * de les demander.
@@ -124,7 +126,7 @@ final class DefautsContextuels
                 continue; // source absente : on laisse le champ MANQUANT, et Ket demandera.
             }
             $champs[$champ] = $valeur;
-            $defauts[] = sprintf('%s — « %s » : %s (déduit du dossier).', $entite, $champ, $valeur);
+            $defauts[] = sprintf('%s — « %s » : %s (déduit du dossier).', $entite, $champ, $this->lisible($entite, $champ, $valeur));
         }
 
         if ($champs === $op->fields) {
@@ -143,6 +145,28 @@ final class DefautsContextuels
     }
 
     /**
+     * Comment ANNONCER un code de choix déduit.
+     *
+     * La règle n° 2 veut qu'un défaut soit toujours annoncé ; encore faut-il qu'il soit
+     * compréhensible. « typeAvenant : 0 » n'apprend rien à un courtier et ne lui permet
+     * pas de contester la déduction avant de valider — ce qui vide l'annonce de son
+     * objet. On écrit donc le CODE dans le champ (c'est ce que la base attend) et le
+     * LIBELLÉ dans l'annonce.
+     */
+    private const LIBELLE_VALEUR = [
+        'Piste' => [
+            'typeAvenant' => [Piste::AVENANT_SOUSCRIPTION => 'Souscription'],
+        ],
+    ];
+
+    private function lisible(string $entite, string $champ, string|int $valeur): string
+    {
+        $libelle = self::LIBELLE_VALEUR[$entite][$champ][$valeur] ?? null;
+
+        return $libelle === null ? (string) $valeur : sprintf('%s (%s)', $libelle, $valeur);
+    }
+
+    /**
      * Les règles de déduction, par entité. Chacune ne lit que le plan : jamais la
      * base, jamais une convention inventée.
      *
@@ -152,6 +176,25 @@ final class DefautsContextuels
     {
         return match ($entite) {
             'Piste' => [
+                // UNE POLICE NEUVE EST UNE SOUSCRIPTION, et ce n'est pas une supposition :
+                // les quatre autres types (incorporation, prorogation, résiliation,
+                // renouvellement) désignent tous une piste DÉRIVÉE d'une police existante,
+                // et ne sont jamais dictés à la main — MouvementAvenantBuilder les pose
+                // lui-même, avec le lien « avenantDeBase » qui les distingue.
+                //
+                // La source de la déduction est donc STRUCTURELLE, comme l'exige la règle
+                // n° 1 : une création SANS police de base ne peut pas être autre chose
+                // qu'une souscription. Si le lien est là, on ne déduit rien et le type
+                // dicté fait foi — c'est très exactement la confusion que redoutait
+                // ChampsObligatoiresInspector::CHOIX_METIER_REQUIS (« une souscription là
+                // où il fallait un renouvellement »), et elle reste impossible.
+                //
+                // Le défaut n'est PAS posé sur la propriété de l'entité : l'écran continue
+                // d'exiger le choix, où l'utilisateur peut créer une piste dérivée à la
+                // main. Seul le plan de Ket, dont on connaît la provenance, le déduit.
+                'typeAvenant' => static fn (MutationOperation $op) => isset($op->fields['avenantDeBase'])
+                    ? null
+                    : Piste::AVENANT_SOUSCRIPTION,
                 // « Voyage — Mr. Jean de Dieu » : le risque dit QUOI, le client POUR QUI.
                 'nom' => fn (MutationOperation $op, array $refs) => $this->joindre([
                     $this->nomDe($op->fields['risque'] ?? null, $refs),

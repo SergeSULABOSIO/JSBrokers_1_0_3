@@ -5,6 +5,7 @@ namespace App\Tests\Ai;
 use App\Ai\Mutation\DefautsContextuels;
 use App\Ai\Mutation\MutationOperation;
 use App\Ai\Mutation\MutationPlan;
+use App\Entity\Piste;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -119,7 +120,14 @@ class DefautsContextuelsTest extends TestCase
 
         $this->assertArrayNotHasKey('nom', $this->champs($complete, 'Piste'));
         $this->assertArrayNotHasKey('duree', $this->champs($complete, 'Cotation'));
-        $this->assertSame([], $defauts);
+        // Le type d'avenant fait exception, et c'est voulu : sa source n'est pas un
+        // AUTRE champ mais la STRUCTURE de l'opération — une piste qui ne dérive
+        // d'aucune police ne peut être qu'une souscription. Les déductions qui
+        // dépendent d'une source absente, elles, ne se déclenchent toujours pas.
+        $this->assertSame(
+            ['Piste — « typeAvenant » : Souscription (0) (déduit du dossier).'],
+            $defauts,
+        );
     }
 
     /** Un identifiant nu n'est pas un nom : on ne remplit pas un libellé avec « 4 ». */
@@ -151,6 +159,68 @@ class DefautsContextuelsTest extends TestCase
         foreach (['Piste — « nom »', 'Cotation — « duree »', 'Avenant — « description »'] as $attendu) {
             $this->assertStringContainsString($attendu, $joint);
         }
+    }
+
+    /**
+     * UNE POLICE NEUVE EST UNE SOUSCRIPTION, et Ket n'a pas à poser la question.
+     *
+     * Le type d'avenant figure dans CHOIX_METIER_REQUIS : il était donc réclamé à
+     * chaque création de piste, alors qu'une police qui ne dérive d'aucune autre ne
+     * peut être qu'une souscription. Une question de plus sur un dossier que
+     * l'utilisateur vient de fournir en entier.
+     */
+    public function testUnePisteQuiNeDeriveDeRienEstUneSouscription(): void
+    {
+        $plan = new MutationPlan([
+            new MutationOperation('create', 'Piste', null, ['client' => 'Mme Marlette', 'risque' => 'Voyage']),
+        ]);
+
+        ['plan' => $complete, 'defauts' => $defauts] = (new DefautsContextuels())->appliquer($plan);
+
+        $this->assertSame(Piste::AVENANT_SOUSCRIPTION, $complete->operations[0]->fields['typeAvenant']);
+        // Annoncé EN LIBELLÉ : « typeAvenant : 0 » ne permettrait pas au courtier de
+        // contester la déduction avant de valider, ce qui viderait l'annonce de son objet.
+        $this->assertStringContainsString('Souscription', implode("\n", $defauts));
+    }
+
+    /**
+     * L'AUTRE MOITIÉ, ET C'EST ELLE QUI PROTÈGE. Une piste DÉRIVÉE porte le lien vers
+     * sa police de base : y écrire « souscription » serait exactement le mensonge
+     * silencieux que CHOIX_METIER_REQUIS cherchait à empêcher — « une souscription là
+     * où il fallait un renouvellement ».
+     */
+    public function testUnePisteDeriveeNeRecoitAucunTypeParDefaut(): void
+    {
+        $plan = new MutationPlan([
+            new MutationOperation('create', 'Piste', null, [
+                'client' => 'Mme Marlette',
+                'risque' => 'Voyage',
+                'avenantDeBase' => 42,
+            ]),
+        ]);
+
+        ['plan' => $complete] = (new DefautsContextuels())->appliquer($plan);
+
+        $this->assertArrayNotHasKey(
+            'typeAvenant',
+            $complete->operations[0]->fields,
+            'Une piste dérivée doit garder son type dicté : le déduire écraserait un renouvellement.',
+        );
+    }
+
+    /** Un type explicitement dicté n'est jamais remplacé par le défaut. */
+    public function testUnTypeDicteLEmporteSurLeDefaut(): void
+    {
+        $plan = new MutationPlan([
+            new MutationOperation('create', 'Piste', null, [
+                'client' => 'Mme Marlette',
+                'typeAvenant' => Piste::AVENANT_RENOUVELLEMENT,
+            ]),
+        ]);
+
+        ['plan' => $complete] = (new DefautsContextuels())->appliquer($plan);
+
+        $this->assertSame(Piste::AVENANT_RENOUVELLEMENT, $complete->operations[0]->fields['typeAvenant']);
     }
 
     /** Une édition n'est jamais complétée : on ne réécrit pas des champs non dictés. */
