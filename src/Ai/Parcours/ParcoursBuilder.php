@@ -2,6 +2,7 @@
 
 namespace App\Ai\Parcours;
 
+use App\Ai\Fichier\PreuveDeContrat;
 use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Scope\AiScope;
 use App\Entity\Invite;
@@ -121,6 +122,49 @@ class ParcoursBuilder
     }
 
     /**
+     * Le rôle EFFECTIF d'une étape, et ce qui le justifie quand il a été promu.
+     *
+     * Une étape n'est optionnelle que tant que le fait qu'elle décrit reste une
+     * hypothèse. Le 2026-08-14, le courtier a joint le contrat signé et Ket lui a
+     * demandé s'il existait un contrat : l'étape « Le contrat (avenant) » était rangée
+     * parmi les optionnelles, aux côtés des tâches de suivi, et le plan l'a donc
+     * omise — laissant une cotation sans police, c'est-à-dire un dossier dont les
+     * primes et les commissions ne comptent nulle part.
+     *
+     * La promotion est décidée ICI, par le serveur, à partir du fil : le modèle ne la
+     * devine pas et ne peut pas l'inventer. Et elle est JUSTIFIÉE — l'utilisateur doit
+     * lire pourquoi une étape qu'il n'a pas demandée entre dans son plan.
+     *
+     * @param array<string, mixed> $etape
+     *
+     * @return array{0: string, 1: string|null}
+     */
+    private function role(array $etape, AiScope $scope): array
+    {
+        $role = (string) ($etape['role'] ?? ParcoursCatalogue::ROLE_OPTIONNEL);
+
+        if (($etape['promuSi'] ?? null) !== ParcoursCatalogue::PROMU_SI_CONTRAT_JOINT) {
+            return [$role, null];
+        }
+
+        $piece = PreuveDeContrat::piece($scope->conversation?->getFichiers() ?? []);
+        if ($piece === null) {
+            return [$role, null];
+        }
+
+        return [
+            ParcoursCatalogue::ROLE_RECOMMANDE,
+            sprintf(
+                'Cette étape n’est PAS optionnelle ici : « %s » est joint au dossier, ce qui établit '
+                . 'que la police existe. Inclus-la dans le plan sans demander si un contrat est à '
+                . 'enregistrer — la question est déjà tranchée par la pièce. Lis-y la référence de '
+                . 'police et la période de couverture ; ne demande que ce qui n’y figure pas.',
+                (string) $piece->getNomOriginal(),
+            ),
+        ];
+    }
+
+    /**
      * Enrichit une étape de trame par le réel : droits, champs, gabarit à recopier
      * dans preparer_operations, valeurs de référentiel. null = étape à écarter
      * (droit manquant, collection non éditable, entité hors périmètre).
@@ -161,10 +205,12 @@ class ParcoursBuilder
 
         $inventaire = $this->mutationService->inventaireChamps($entite, $scope);
 
+        [$role, $justification] = $this->role($etape, $scope);
+
         $construite = [
             'cle'          => $cle,
             'libelle'      => (string) ($etape['libelle'] ?? $labels[$entite] ?? $entite),
-            'role'         => (string) ($etape['role'] ?? ParcoursCatalogue::ROLE_OPTIONNEL),
+            'role'         => $role,
             'entite'       => $entite,
             'rattachement' => $via,
             'informations' => array_values((array) ($etape['questions'] ?? [])),
@@ -174,6 +220,9 @@ class ParcoursBuilder
             'gabarit'      => $this->gabarit($etape, $entite, $socle, $collection, $cle),
         ];
 
+        if ($justification !== null) {
+            $construite['justification'] = $justification;
+        }
         if (isset($etape['note'])) {
             $construite['note'] = (string) $etape['note'];
         }

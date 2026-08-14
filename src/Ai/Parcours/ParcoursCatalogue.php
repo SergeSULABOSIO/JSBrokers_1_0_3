@@ -31,6 +31,17 @@ final class ParcoursCatalogue
     public const ROLE_OPTIONNEL  = 'optionnel';
 
     /**
+     * Condition de PROMOTION d'une étape optionnelle : le dossier porte la preuve
+     * qu'une police existe (un contrat en pièce jointe). Évaluée par ParcoursBuilder
+     * à partir du fil, jamais devinée par le modèle.
+     *
+     * Une étape n'est optionnelle que tant que le fait qu'elle décrit n'est pas
+     * établi. Quand il l'est, la garder optionnelle revient à demander à
+     * l'utilisateur de confirmer ce qu'il vient de fournir.
+     */
+    public const PROMU_SI_CONTRAT_JOINT = 'contrat-joint';
+
+    /**
      * @var array<string, array{libelle: string, resume: string, socle: string, etapes: array<int, array>}>
      */
     private const TRAMES = [
@@ -92,6 +103,11 @@ final class ParcoursCatalogue
                 [
                     'cle' => 'contrat', 'libelle' => 'Le contrat (avenant)',
                     'entite' => 'Avenant', 'via' => 'collection:avenants', 'role' => self::ROLE_OPTIONNEL,
+                    // Optionnel tant que la proposition se négocie — mais plus du tout
+                    // dès qu'un contrat est versé au dossier : il n'y a alors plus rien
+                    // à confirmer, la police EXISTE. Sans son avenant, la cotation reste
+                    // un projet dont les primes et les commissions ne comptent nulle part.
+                    'promuSi' => self::PROMU_SI_CONTRAT_JOINT,
                     'questions' => [
                         'La proposition est-elle déjà acceptée (donc un contrat à enregistrer) ?',
                         'Quelle référence de police et quel numéro d’avenant ?',
