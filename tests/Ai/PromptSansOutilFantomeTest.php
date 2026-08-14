@@ -5,6 +5,7 @@ namespace App\Tests\Ai;
 use App\Ai\AiContextBuilder;
 use App\Ai\Scope\AiScope;
 use App\Ai\Trousse\AiToolEcriture;
+use App\Ai\Trousse\Phase;
 use App\Ai\Trousse\Trousse;
 use App\Ai\Trousse\TrousseCatalogue;
 use App\Ai\Tool\AiToolInterface;
@@ -69,8 +70,12 @@ class PromptSansOutilFantomeTest extends KernelTestCase
             new \App\Entity\AssistantConversation(),
         );
 
+        // Chaque trousse a SA phase : la compréhension ne rend pas le prompt de
+        // planification, et c'est bien le texte réellement envoyé qu'on inspecte ici.
+        $phase = $trousse === Trousse::COMPREHENSION ? Phase::COMPREHENSION : null;
+
         return [
-            $conteneur->get(AiContextBuilder::class)->toSystemPrompt($requete, $trousse),
+            $conteneur->get(AiContextBuilder::class)->toSystemPrompt($requete, $trousse, $phase),
             $conteneur->get(TrousseCatalogue::class)->nomsDe($trousse, $requete->scope),
         ];
     }
@@ -80,6 +85,7 @@ class PromptSansOutilFantomeTest extends KernelTestCase
      */
     public static function trousses(): iterable
     {
+        yield 'compréhension' => [Trousse::COMPREHENSION];
         yield 'lecture' => [Trousse::LECTURE];
         yield 'écriture' => [Trousse::ECRITURE];
     }

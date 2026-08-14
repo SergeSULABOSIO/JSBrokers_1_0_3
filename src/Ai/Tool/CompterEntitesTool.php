@@ -4,6 +4,7 @@ namespace App\Ai\Tool;
 
 use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
+use App\Ai\Trousse\AiToolDeComprehension;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
 use App\Services\Search\AvenantEcheanceScope;
@@ -23,7 +24,7 @@ use App\Services\Search\TranchePaiementScope;
  * exactement comme la rubrique correspondante à l'écran, qui pose le même
  * critère par défaut (cf. PortefeuilleCritereFactory, source unique).
  */
-final class CompterEntitesTool implements AiToolInterface
+final class CompterEntitesTool implements AiToolInterface, AiToolDeComprehension
 {
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,

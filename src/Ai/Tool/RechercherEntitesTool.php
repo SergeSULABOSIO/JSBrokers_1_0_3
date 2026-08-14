@@ -7,6 +7,7 @@ use App\Ai\Resolution\CheminsDeRelation;
 use App\Ai\Resolution\Reference;
 use App\Ai\Resolution\ResolveurDeReferences;
 use App\Ai\Scope\AiScope;
+use App\Ai\Trousse\AiToolDeComprehension;
 use App\Entity\Avenant;
 use App\Entity\Cotation;
 use App\Service\Workspace\WorkspaceAccessResolver;
@@ -35,7 +36,7 @@ use Doctrine\ORM\EntityManagerInterface;
  * tokens — les détails d'un enregistrement relèvent d'outils dédiés (ex.
  * indicateur_calcule).
  */
-final class RechercherEntitesTool implements AiToolInterface
+final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehension
 {
     /** Taille de page fixe côté serveur : maîtrise des tokens restitués au modèle. */
     private const PAGE_SIZE = 20;

@@ -58,6 +58,16 @@ enum TypeAction: string
      */
     case DOCUMENT_A_VALIDER = 'ket-document.review';
 
+    /**
+     * Barre de décision d'une CLARIFICATION (« Oui, c'est bien ça » / « Non, je précise »).
+     *
+     * Émise par la phase de compréhension quand la demande n'est pas exécutable telle
+     * quelle. Sa parenté avec PLAN_A_VALIDER est trompeuse : ici rien n'a été préparé,
+     * rien ne sera écrit, et il n'y a donc ni budget, ni étendue, ni mot de passe.
+     * Ce qui se valide, c'est une PHRASE — celle que Ket croit avoir comprise.
+     */
+    case CLARIFICATION = 'ket-comprehension.clarifier';
+
     /** Ouvre un formulaire de saisie, éventuellement pré-rempli. */
     case OUVRIR_DIALOGUE = 'open-dialog';
 
@@ -119,6 +129,9 @@ enum TypeAction: string
             // Comme PLAN_A_VALIDER : la structure d'un plan de document est vérifiée
             // bien plus finement par DocumentEnAttente::planStockable(), qui exige la
             // spec elle-même. La dupliquer ici créerait deux vérités.
+            // Sans intention, le bouton « Oui, c'est bien ça » n'aurait rien à
+            // renvoyer : l'utilisateur cliquerait dans le vide.
+            self::CLARIFICATION                              => ['intention'],
             self::PLAN_A_VALIDER, self::PLAN_ABSENT, self::EXECUTION_ABSENTE,
             self::QUITTER_WORKSPACE, self::DOCUMENT_A_VALIDER => [],
         };

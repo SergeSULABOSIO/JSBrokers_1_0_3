@@ -2,6 +2,7 @@
 
 namespace App\Ai;
 
+use App\Ai\Comprehension\DemandeComprise;
 use App\Ai\Scope\AiScope;
 
 /**
@@ -25,7 +26,24 @@ final class AiRequest
         public readonly array $messages,
         public readonly AiScope $scope,
         public readonly array $piecesNatives = [],
+        // Ce que la phase de compréhension a établi, quand elle a eu lieu. null =
+        // le moteur n'en fait pas usage (moteur simulé, Claude) ou le comprenant
+        // s'est replié : la planification retombe alors sur la règle « comprendre
+        // avant d'agir » du prompt, exactement comme avant.
+        public readonly ?DemandeComprise $comprise = null,
     ) {
+    }
+
+    /**
+     * La même requête, augmentée de ce qui a été compris.
+     *
+     * Une nouvelle instance plutôt qu'une mutation : la requête est relue par la
+     * télémétrie et par les deux prompts, et une valeur qui change en cours de
+     * route rendrait le journal impossible à interpréter.
+     */
+    public function withComprehension(DemandeComprise $comprise): self
+    {
+        return new self($this->systemContext, $this->messages, $this->scope, $this->piecesNatives, $comprise);
     }
 
     /** Dernier message de l'utilisateur (celui auquel le moteur doit répondre). */

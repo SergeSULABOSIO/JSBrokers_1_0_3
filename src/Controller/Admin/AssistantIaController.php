@@ -3,6 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Ai\Action\ValidateurDActions;
+use App\Ai\Comprehension\ClarificationEnAttente;
 use App\Ai\AiContextBuilder;
 use App\Ai\AiEngineFailure;
 use App\Ai\Boussole\PlanDuJourService;
@@ -449,10 +450,23 @@ class AssistantIaController extends AbstractController
             // Même logique pour les pièces jointes attachées à l'envoi.
             ->setFichiersJoints($this->instantaneFichiers($conversation));
 
+        // CONFIRMATION D'UNE INTENTION : l'utilisateur vient de cliquer « Oui, c'est
+        // bien ça » sous une reformulation de Ket. Ce message-là ne se facture PAS —
+        // c'est NOTRE compréhension qu'il corrige, pas une demande neuve, et faire
+        // payer deux fois une question que nous avons mal lue serait indéfendable.
+        //
+        // FAIL-CLOSED : le drapeau vient du navigateur, il est donc forgeable. La
+        // gratuité n'est accordée que si le fil PORTE réellement une clarification
+        // en attente — sinon c'est un message ordinaire, facturé comme tel.
+        $confirmationDIntention = ($payload['intentionConfirmee'] ?? false) === true
+            && ClarificationEnAttente::enAttente($conversation);
+
         // MÉTRAGE (écriture) avant moteur et persistance : si le solde est
         // épuisé, rien n'est traité ni enregistré.
         try {
-            $this->tokenAccountService->meterWrite($messageUser, $entreprise, $this->currentUser());
+            if (!$confirmationDIntention) {
+                $this->tokenAccountService->meterWrite($messageUser, $entreprise, $this->currentUser());
+            }
         } catch (InsufficientTokensException $e) {
             return $this->json([
                 'message'       => 'Quota de tokens épuisé. Rechargez votre solde ou attendez le renouvellement de votre allocation gratuite.',
@@ -551,9 +565,18 @@ class AssistantIaController extends AbstractController
         // Croisée avec une prose qui montre un plan, elle est sans appel — et surtout
         // elle permet de dire à l'utilisateur ce qui MANQUE, au lieu de l'informer
         // qu'il n'y a rien à valider.
+        // Une CLARIFICATION est une décision en attente comme une autre — et l'oublier
+        // retournerait le garde-fou contre le cas qu'il protège. Sa prose énumère par
+        // construction ce que Ket croit devoir faire (« créer un client, puis une
+        // piste… ») : sans ce désarmement, toute demande de confirmation s'afficherait
+        // sous un avertissement « aucun plan n'est en attente », c'est-à-dire un
+        // démenti de la question qu'elle est justement en train de poser.
+        $clarification = ClarificationEnAttente::stockable($actions);
+
         $planRefuse = $reply->plansRefuses[0] ?? null;
         $aucuneDecision = $mutationPlan === null
             && $documentPlan === null
+            && $clarification === null
             && !$reply->refused
             && !DocumentEnAttente::aUneDecisionEnAttente($conversation);
         $planFantome = PlanEnAttente::estUnPlanFantome(
@@ -612,6 +635,10 @@ class AssistantIaController extends AbstractController
                 // production ne fera plus que la rendre. C'est ce qui garantit que
                 // le fichier livré est exactement celui qui a été chiffré.
                 DocumentEnAttente::CLE_PLAN => $documentPlan,
+                // La reformulation à confirmer, persistée comme un plan : elle doit
+                // survivre au rechargement, sinon un F5 laisserait la question seule
+                // à l'écran, sans les deux boutons qui permettent d'y répondre.
+                ClarificationEnAttente::CLE_META => $clarification,
                 // Trace du garde-fou : réaffiche l'avertissement autoritaire après
                 // un rechargement de page (F5), comme les statuts de plan — AVEC son
                 // motif, pour dire la même chose en direct et après rechargement.

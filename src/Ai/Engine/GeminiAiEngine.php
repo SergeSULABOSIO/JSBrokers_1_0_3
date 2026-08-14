@@ -6,6 +6,8 @@ use App\Ai\AiContextBuilder;
 use App\Ai\AiEngineFailure;
 use App\Ai\AiReply;
 use App\Ai\AiRequest;
+use App\Ai\Comprehension\ClarificationEnAttente;
+use App\Ai\Comprehension\Comprehenseur;
 use App\Ai\Debit\BudgetDebit;
 use App\Ai\Mutation\MotifDeRefus;
 use App\Ai\Mutation\OutilsDePlan;
@@ -14,13 +16,12 @@ use App\Ai\Trousse\Phase;
 use App\Ai\Trousse\SelecteurDeTrousse;
 use App\Ai\Scope\AiScope;
 use App\Ai\Telemetrie\JournalTokens;
-use App\Ai\Tool\AiToolInterface;
 use App\Ai\Tool\AiToolResult;
+use App\Ai\Tool\ExecuteurDOutils;
 use App\Ai\Trousse\Trousse;
 use App\Ai\Trousse\TrousseCatalogue;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
@@ -97,17 +98,19 @@ final class GeminiAiEngine implements AiEngineInterface
      */
     private const OCTETS_PAR_TOKEN = 3.5;
 
-    /** @var iterable<AiToolInterface> */
-    private iterable $tools;
-
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly AiContextBuilder $contextBuilder,
         // Source unique des outils déclarés — la MÊME que celle dont le prompt tire
         // sa section d'aiguillage.
         private readonly TrousseCatalogue $trousseCatalogue,
+        // Les particularités du proto Gemini (déclarations assainies, objets vides
+        // préservés), partagées avec la phase de compréhension.
+        private readonly DialecteGemini $dialecte,
         private readonly SelecteurDeTrousse $selecteur,
-        #[AutowireIterator('app.ai_tool')] iterable $tools,
+        // Le seul chemin vers le code métier, partagé avec l'autre moteur et avec la
+        // phase de compréhension : la méthode vivait en trois exemplaires identiques.
+        private readonly ExecuteurDOutils $executeur,
         #[Autowire(env: 'GEMINI_API_KEY')] private readonly string $apiKey,
         #[Autowire(env: 'GEMINI_MODEL')] private readonly string $model,
         private readonly LoggerInterface $logger,
@@ -121,11 +124,14 @@ final class GeminiAiEngine implements AiEngineInterface
         // Source unique des outils qui produisent un plan : sert à signaler au
         // contrôleur qu'un tel outil a tourné SANS produire de plan.
         private readonly OutilsDePlan $outilsDePlan,
+        // PREMIÈRE PHASE : établir ce que l'utilisateur veut avant de décider quoi
+        // que ce soit. Fail-open par construction — s'il ne conclut pas, la demande
+        // part telle quelle et la planification retrouve son comportement d'avant.
+        private readonly Comprehenseur $comprehenseur,
         // Injectable pour les tests : ils vérifient la DÉCISION d'attendre, pas
         // la capacité de PHP à dormir. Une suite qui dort n'est plus une suite.
         private readonly ?\Closure $dormir = null,
     ) {
-        $this->tools = $tools;
     }
 
     public function name(): string
@@ -153,6 +159,33 @@ final class GeminiAiEngine implements AiEngineInterface
             ],
             $request->messages,
         );
+
+        // PREMIÈRE PHASE — COMPRENDRE. Avant les pièces natives, et ce n'est pas un
+        // détail d'ordre : joindre un PDF scanné à l'appel censé rester petit lui
+        // ferait perdre sa raison d'être. Le nom des pièces figure dans son prompt,
+        // c'est assez pour savoir qu'elles existent.
+        //
+        // Demande ambiguë => on s'arrête ICI. Ni planification ni rédaction : le
+        // message aura coûté un seul appel, le plus léger des trois, au lieu de deux
+        // appels pleins pour une réponse à côté suivie d'une relance.
+        $comprise = $this->comprehenseur->comprendre($request, $contents);
+        if (!$comprise->claire) {
+            return $this->conclure(
+                $request,
+                JournalTokens::ISSUE_CLARIFICATION,
+                0,
+                0,
+                0,
+                [],
+                new AiReply(
+                    $comprise->texteDeClarification(),
+                    actions: [ClarificationEnAttente::action($comprise)],
+                ),
+            );
+        }
+        // L'intention voyage désormais avec la requête : la planification la lira en
+        // tête de ses règles, à côté — jamais à la place — du message d'origine.
+        $request = $request->withComprehension($comprise);
 
         // Pièces jointes lisibles nativement (PDF scannés, images) : jointes au
         // DERNIER tour utilisateur en inlineData, pour que Gemini les lise par
@@ -395,12 +428,12 @@ final class GeminiAiEngine implements AiEngineInterface
             // faut malgré tout s'arrêter là, autant que l'utilisateur reparte
             // avec ce qu'ils ont produit — un plan préparé et son bouton de
             // validation (uiAction) valent bien mieux qu'une page blanche.
-            $contents[] = ['role' => 'model', 'parts' => $this->preserverArgsObjets($parts)];
+            $contents[] = ['role' => 'model', 'parts' => DialecteGemini::preserverArgsObjets($parts)];
             $responseParts = [];
             foreach ($functionCalls as $part) {
                 $name = (string) $part['functionCall']['name'];
                 $args = (array) ($part['functionCall']['args'] ?? []);
-                $result = $this->executeTool($name, $args, $request);
+                $result = $this->executeur->executer($name, $args, $request->scope);
                 $toolUsed = $name;
                 $sequenceOutils[] = $name;
                 $resultatsOutils[] = ['outil' => $name, 'data' => $result->data];
@@ -621,7 +654,7 @@ final class GeminiAiEngine implements AiEngineInterface
         // Les 72 Ko de déclarations ne servent qu'à CHOISIR un outil ; commenter un
         // résultat déjà obtenu n'en a aucun besoin. Les envoyer quand même, c'était
         // payer le catalogue deux fois par message.
-        $declarations = $phase->declareDesOutils() ? $this->toolDeclarations($request->scope, $trousse) : [];
+        $declarations = $phase->declareDesOutils() ? $this->dialecte->declarations($trousse, $request->scope) : [];
 
         $response = $this->httpClient->request('POST', sprintf('%s/%s:generateContent', self::API_BASE, $this->model), [
             'headers' => [
@@ -661,58 +694,6 @@ final class GeminiAiEngine implements AiEngineInterface
      * Le filtrage n'est PAS une sécurité (elle reste dans execute(), fail-closed)
      * mais une économie de débit — cf. AiToolConditionnel.
      */
-    private function toolDeclarations(AiScope $scope, Trousse $trousse): array
-    {
-        $declarations = [];
-        foreach ($this->trousseCatalogue->outilsDe($trousse, $scope) as $tool) {
-            $declarations[] = [
-                'name'        => $tool->name(),
-                'description' => $tool->description(),
-                'parameters'  => $this->sanitizeSchema($tool->schema()),
-            ];
-        }
-
-        return $declarations;
-    }
-
-    /**
-     * Le proto Schema de Gemini ne connaît qu'un SOUS-ENSEMBLE de JSON-Schema :
-     * un mot-clé inconnu (ex. additionalProperties, posé par ouvrir_dialogue
-     * pour le pré-remplissage libre) fait rejeter TOUTE la requête en 400
-     * INVALID_ARGUMENT. On élague donc récursivement ces mots-clés ici — le
-     * schéma des outils reste du JSON-Schema standard pour les autres moteurs
-     * (Claude les accepte) ; c'est le dialecte Gemini qui s'adapte.
-     */
-    private function sanitizeSchema(array $schema): array
-    {
-        unset($schema['additionalProperties']);
-        foreach ($schema as $key => $value) {
-            if (\is_array($value)) {
-                $schema[$key] = $this->sanitizeSchema($value);
-            }
-        }
-
-        return $schema;
-    }
-
-    /**
-     * PHP décode « args: {} » (objet JSON vide) en TABLEAU vide ; ré-encodé tel
-     * quel dans l'écho du tour model, il redeviendrait [] (une liste), rejetée
-     * par le proto Gemini (400 « Proto field is not repeating, cannot start
-     * list »). On restitue l'objet vide — cas de tout outil SANS paramètre
-     * (solde_tokens, quitter_workspace).
-     */
-    private function preserverArgsObjets(array $parts): array
-    {
-        foreach ($parts as $i => $part) {
-            if (isset($part['functionCall']) && ($part['functionCall']['args'] ?? null) === []) {
-                $parts[$i]['functionCall']['args'] = new \stdClass();
-            }
-        }
-
-        return $parts;
-    }
-
     /**
      * Les résultats d'outils rendus en TEXTE, pour le cas d'un appel rattrapé.
      *
@@ -738,17 +719,6 @@ final class GeminiAiEngine implements AiEngineInterface
         }
 
         return implode("\n\n", $lignes);
-    }
-
-    private function executeTool(string $name, array $args, AiRequest $request): AiToolResult
-    {
-        foreach ($this->tools as $tool) {
-            if ($tool->name() === $name) {
-                return $tool->execute($args, $request->scope);
-            }
-        }
-
-        return AiToolResult::introuvable($name);
     }
 
     /**

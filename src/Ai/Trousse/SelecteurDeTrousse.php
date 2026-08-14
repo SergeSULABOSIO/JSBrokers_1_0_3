@@ -183,17 +183,6 @@ final class SelecteurDeTrousse
 
     private function dernierMessageAssistant(?AssistantConversation $conversation): ?AssistantMessage
     {
-        if ($conversation === null) {
-            return null;
-        }
-
-        $dernier = null;
-        foreach ($conversation->getMessages() as $message) {
-            if ($message->getRole() === AssistantMessage::ROLE_ASSISTANT) {
-                $dernier = $message;
-            }
-        }
-
-        return $dernier;
+        return $conversation?->dernierMessageAssistant();
     }
 }
