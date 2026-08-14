@@ -91,6 +91,9 @@ class Document
     #[Groups(['list:read'])]
     public ?string $typeFichier;
 
+    #[Groups(['list:read'])]
+    public ?string $tailleFichier;
+
     public function setFichier(?File $fichier = null): void
     {
         $this->fichier = $fichier;

@@ -653,6 +653,13 @@ class PaiementsPrimeToolTest extends TestCase
             ),
             new \App\Ai\Resolution\ResolveurDeReferences($search, $resolver, $libelleur),
             new \App\Ai\Resolution\CheminsDeRelation($em),
+            // La résolution du rattachement n'intervient qu'à l'EXÉCUTION, jamais dans
+            // match() : instance réelle sur des dépôts doublés, comme au-dessus.
+            new \App\Ai\Resolution\CritereLieA(
+                $resolver,
+                new \App\Ai\Resolution\ResolveurDeReferences($search, $resolver, $libelleur),
+                new \App\Ai\Resolution\CheminsDeRelation($em),
+            ),
             // Ce test ne vérifie que le ROUTAGE des intentions (match), jamais une
             // exécution : les colonnes d'écran ne sont donc jamais sollicitées.
             new \App\Ai\Presentation\ColonnesDeLEcran(

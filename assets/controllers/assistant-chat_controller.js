@@ -18,9 +18,26 @@ import {
     urlDestinatairesMessage,
     nomFichierImage,
 } from './assistant-message-menu.js';
+import {
+    COLONNES,
+    fichiersValides,
+    formatTaille,
+    ligneFichier,
+    modeAffichage,
+    titrePanneau,
+} from './assistant-files-download.js';
 import { formatInstant } from '../datetime-format.js';
 import { formatNombre } from '../number-format.js';
 import { documentLocale } from '../locale.js';
+
+/**
+ * Les deux icônes du panneau de téléchargement, écrites une fois : elles sont posées
+ * par innerHTML sur des éléments dont le contenu est ENTIÈREMENT sous notre contrôle
+ * (aucune donnée serveur n'y entre), et `aria-hidden` les retire de la vocalisation —
+ * le libellé accessible du lien porte déjà l'information.
+ */
+const ICONE_TELECHARGEMENT = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>';
+const ICONE_ARCHIVE = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>';
 
 /**
  * @class AssistantChatController
@@ -2447,50 +2464,178 @@ export default class extends Controller {
     }
 
     /**
-     * Rend, sous la réponse de l'assistant, un panneau de boutons de
-     * TÉLÉCHARGEMENT des pièces jointes (directive uiAction 'files-download').
-     * Chaque bouton est un lien vers la route de téléchargement FAIL-CLOSED :
-     * l'accès est re-vérifié côté serveur au clic. Les libellés viennent du
-     * serveur (échappés via textContent) — jamais de HTML brut du modèle.
+     * Rend, sous la réponse de l'assistant, le panneau de TÉLÉCHARGEMENT (directive
+     * uiAction 'files-download') — pièces jointes de la conversation comme documents
+     * retrouvés en base : la directive est la même, le rendu aussi.
+     *
+     * DEUX PRÉSENTATIONS, selon ce que le serveur renvoie (cf. modeAffichage) : une
+     * CARTE détaillée pour un fichier unique, un TABLEAU NUMÉROTÉ dès qu'il y en a
+     * plusieurs — avec un bouton par ligne et, si le serveur l'a fourni, une archive
+     * groupée. Le choix lui-même vit dans un module pur, testé sans navigateur.
+     *
+     * Chaque bouton est un lien vers une route FAIL-CLOSED : l'accès est re-vérifié
+     * côté serveur au clic. Les libellés viennent du serveur et sont posés via
+     * textContent — jamais de HTML brut, un nom de fichier étant du texte saisi.
      */
     renderFilesDownload(action) {
-        const fichiers = Array.isArray(action?.fichiers) ? action.fichiers : [];
-        if (fichiers.length === 0 || !this.hasMessagesTarget) return;
+        if (!this.hasMessagesTarget) return;
+
+        const fichiers = fichiersValides(action?.fichiers);
+        const mode = modeAffichage(fichiers);
+        if (mode === 'aucun') return;
 
         const panel = document.createElement('div');
         panel.className = 'aic-files-dl';
         panel.setAttribute('role', 'group');
-        panel.setAttribute('aria-label', 'Téléchargement des pièces jointes');
+        panel.setAttribute('aria-label', 'Téléchargement des documents');
 
         const titre = document.createElement('p');
         titre.className = 'aic-files-dl-title';
-        titre.textContent = fichiers.length === 1 ? 'Télécharger la pièce jointe' : 'Télécharger les pièces jointes';
+        titre.textContent = titrePanneau(fichiers.length);
         panel.appendChild(titre);
 
-        for (const f of fichiers) {
-            if (!f || typeof f.url !== 'string') continue;
-            const lien = document.createElement('a');
-            lien.className = 'aic-file-dl-btn';
-            lien.href = f.url;
-            lien.setAttribute('download', '');
-            lien.setAttribute('rel', 'noopener');
-            lien.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>';
-            const label = document.createElement('span');
-            label.className = 'aic-file-dl-label';
-            label.textContent = f.taille ? `${f.nom} (${this.formatTaille(f.taille)})` : String(f.nom || 'fichier');
-            lien.appendChild(label);
-            panel.appendChild(lien);
+        if (mode === 'carte') {
+            panel.appendChild(this._fileDownloadCard(ligneFichier(fichiers[0], 0)));
+        } else {
+            panel.appendChild(this._fileDownloadTable(fichiers));
+            if (typeof action?.zipUrl === 'string' && action.zipUrl !== '') {
+                panel.appendChild(this._fileDownloadZip(action.zipUrl, fichiers.length));
+            }
         }
 
         this.messagesTarget.appendChild(panel);
         this.scrollToBottom();
     }
 
-    /** Taille de fichier lisible (o / Ko / Mo). */
+    /**
+     * UN SEUL FICHIER : une carte qui se lit d'une phrase — le nom en tête, puis le
+     * format, la taille, la date et le dossier d'origine. Le format est une pastille
+     * TEXTUELLE, jamais une simple couleur : une information portée par la seule
+     * couleur n'existe pas pour tout le monde (WCAG 1.4.1).
+     */
+    _fileDownloadCard(l) {
+        const lien = document.createElement('a');
+        lien.className = 'aic-doc-dl-btn';
+        lien.href = l.url;
+        lien.setAttribute('download', '');
+        lien.setAttribute('rel', 'noopener');
+        lien.setAttribute('aria-label', `Télécharger « ${l.nom} » — ${l.format}, ${l.taille}`);
+        lien.innerHTML = ICONE_TELECHARGEMENT;
+
+        const corps = document.createElement('span');
+        corps.className = 'aic-doc-dl-corps';
+
+        const nom = document.createElement('span');
+        nom.className = 'aic-doc-dl-nom';
+        nom.textContent = l.nom;
+        corps.appendChild(nom);
+
+        const meta = document.createElement('span');
+        meta.className = 'aic-doc-dl-meta';
+        const badge = document.createElement('span');
+        badge.className = 'aic-doc-dl-badge';
+        badge.textContent = l.format;
+        meta.appendChild(badge);
+        for (const texte of [l.taille, l.chargeLe]) {
+            if (texte === '—') continue;
+            const part = document.createElement('span');
+            part.textContent = texte;
+            meta.appendChild(part);
+        }
+        corps.appendChild(meta);
+
+        if (l.rattacheA !== '—') {
+            const origine = document.createElement('span');
+            origine.className = 'aic-fdl-origine';
+            origine.textContent = l.rattacheA;
+            corps.appendChild(origine);
+        }
+
+        lien.appendChild(corps);
+        return lien;
+    }
+
+    /**
+     * PLUSIEURS FICHIERS : un tableau numéroté, une ligne par fichier, un bouton de
+     * téléchargement par ligne. Le tableau défile DANS son propre conteneur — sans
+     * quoi une colonne « Rattaché à » un peu longue ferait défiler toute la colonne
+     * de conversation latéralement.
+     */
+    _fileDownloadTable(fichiers) {
+        const scroll = document.createElement('div');
+        scroll.className = 'aic-fdl-scroll';
+
+        const table = document.createElement('table');
+        table.className = 'aic-fdl-table';
+
+        const thead = document.createElement('thead');
+        const trh = document.createElement('tr');
+        for (const col of COLONNES) {
+            const th = document.createElement('th');
+            th.scope = 'col';
+            th.className = col.classe;
+            th.textContent = col.libelle;
+            trh.appendChild(th);
+        }
+        const thAction = document.createElement('th');
+        thAction.scope = 'col';
+        thAction.className = 'aic-fdl-c-btn';
+        // L'en-tête de la colonne des boutons reste ANNONCÉ aux lecteurs d'écran :
+        // une colonne sans nom se lit « colonne 7 », ce qui n'apprend rien.
+        thAction.textContent = 'Télécharger';
+        trh.appendChild(thAction);
+        thead.appendChild(trh);
+        table.appendChild(thead);
+
+        const tbody = document.createElement('tbody');
+        fichiers.forEach((f, i) => {
+            const l = ligneFichier(f, i);
+            const tr = document.createElement('tr');
+            for (const col of COLONNES) {
+                const td = document.createElement('td');
+                td.className = col.classe;
+                td.textContent = l[col.cle];
+                tr.appendChild(td);
+            }
+
+            const td = document.createElement('td');
+            td.className = 'aic-fdl-c-btn';
+            const lien = document.createElement('a');
+            lien.className = 'aic-fdl-btn';
+            lien.href = l.url;
+            lien.setAttribute('download', '');
+            lien.setAttribute('rel', 'noopener');
+            lien.setAttribute('aria-label', `Télécharger « ${l.nom} » — ${l.format}, ${l.taille}`);
+            lien.innerHTML = ICONE_TELECHARGEMENT;
+            td.appendChild(lien);
+            tr.appendChild(td);
+
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+
+        scroll.appendChild(table);
+        return scroll;
+    }
+
+    /** « Tout télécharger » : une seule archive, servie par la route ZIP fail-closed. */
+    _fileDownloadZip(url, nombre) {
+        const lien = document.createElement('a');
+        lien.className = 'aic-fdl-zip';
+        lien.href = url;
+        lien.setAttribute('download', '');
+        lien.setAttribute('rel', 'noopener');
+        lien.setAttribute('aria-label', `Télécharger les ${nombre} documents dans une archive ZIP`);
+        lien.innerHTML = ICONE_ARCHIVE;
+        const label = document.createElement('span');
+        label.textContent = 'Tout télécharger (.zip)';
+        lien.appendChild(label);
+        return lien;
+    }
+
+    /** Taille de fichier lisible (o / Ko / Mo) — même barème que le panneau. */
     formatTaille(octets) {
-        if (octets < 1024) return `${octets} o`;
-        if (octets < 1024 * 1024) return `${(octets / 1024).toFixed(1)} Ko`;
-        return `${(octets / (1024 * 1024)).toFixed(1)} Mo`;
+        return formatTaille(octets);
     }
 
     // ── Infobulle sombre des puces (pattern data-piste-tip du tableau de bord) ──

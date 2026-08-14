@@ -880,6 +880,55 @@
             padding:.05rem .35rem; border-radius:4px; letter-spacing:.03em;
             background:var(--aic-accent-subtle); color:var(--aic-on-subtle); font-weight:700; font-size:.68rem;
         }
+        /* Dossier d'origine, sous la carte d'un fichier unique : c'est le contexte que
+           l'utilisateur vient chercher, mais il ne doit pas concurrencer le nom. */
+        .jsb-ai-chat .aic-fdl-origine { font-size:.72rem; color:var(--aic-muted); }
+
+        /* TABLEAU DES FICHIERS (deux fichiers ou plus). Un tableau parce qu'à partir de
+           deux lignes l'œil compare par colonnes ; numéroté parce que l'utilisateur
+           désigne ensuite « le 3 » dans la conversation. Il défile DANS son conteneur :
+           sans cela, un rattachement un peu long ferait défiler toute la colonne de
+           chat latéralement. Tous les jetons sont ceux du chat — le mode sombre suit. */
+        .jsb-ai-chat .aic-fdl-scroll { max-width:100%; overflow-x:auto; }
+        .jsb-ai-chat .aic-fdl-table { border-collapse:collapse; width:100%; font-size:.76rem; }
+        .jsb-ai-chat .aic-fdl-table th {
+            text-align:left; white-space:nowrap; font-weight:700; font-size:.66rem;
+            letter-spacing:.05em; text-transform:uppercase; color:var(--aic-muted);
+            padding:.3rem .5rem; border-bottom:1px solid var(--aic-border-strong);
+        }
+        .jsb-ai-chat .aic-fdl-table td {
+            padding:.4rem .5rem; color:var(--aic-text); vertical-align:middle;
+            border-bottom:1px solid var(--aic-border);
+        }
+        .jsb-ai-chat .aic-fdl-table tbody tr:last-child td { border-bottom:none; }
+        .jsb-ai-chat .aic-fdl-c-num { text-align:right; color:var(--aic-muted); font-variant-numeric:tabular-nums; }
+        .jsb-ai-chat .aic-fdl-c-nom { font-weight:600; max-width:16rem; }
+        .jsb-ai-chat .aic-fdl-c-fmt { font-weight:700; font-size:.68rem; color:var(--aic-on-subtle); }
+        .jsb-ai-chat .aic-fdl-c-taille { white-space:nowrap; color:var(--aic-muted); font-variant-numeric:tabular-nums; }
+        .jsb-ai-chat .aic-fdl-c-date { white-space:nowrap; color:var(--aic-muted); font-variant-numeric:tabular-nums; }
+        .jsb-ai-chat .aic-fdl-c-lien { color:var(--aic-muted); max-width:14rem; }
+        .jsb-ai-chat .aic-fdl-c-btn { text-align:center; }
+        /* Bouton de ligne : carré, discret, mais avec une cible de clic tenable. */
+        .jsb-ai-chat .aic-fdl-btn {
+            display:inline-flex; align-items:center; justify-content:center;
+            width:28px; height:28px; border-radius:7px;
+            border:1px solid var(--aic-border-strong); background:var(--aic-btn-neutral-bg);
+            color:var(--aic-accent); text-decoration:none;
+            transition:background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+        }
+        .jsb-ai-chat .aic-fdl-btn:hover { background:var(--aic-accent-subtle); border-color:var(--aic-accent); }
+        .jsb-ai-chat .aic-fdl-btn:focus-visible { outline:none; box-shadow:0 0 0 3px var(--aic-ring); }
+        /* « Tout télécharger » : l'action GLOBALE, donc pleine largeur sous le tableau
+           et non alignée avec les boutons de ligne, qu'elle ne remplace pas. */
+        .jsb-ai-chat .aic-fdl-zip {
+            display:inline-flex; align-items:center; gap:.45rem; align-self:flex-start;
+            margin-top:.15rem; padding:.4rem .75rem; border-radius:8px;
+            border:1px solid var(--aic-accent); background:var(--aic-accent-subtle);
+            color:var(--aic-on-subtle); text-decoration:none; font-size:.8rem; font-weight:600;
+            transition:box-shadow .15s ease, filter .15s ease;
+        }
+        .jsb-ai-chat .aic-fdl-zip:hover { filter:brightness(1.04); }
+        .jsb-ai-chat .aic-fdl-zip:focus-visible { outline:none; box-shadow:0 0 0 3px var(--aic-ring); }
 
         /* Barre de décision d'un document : sélecteur de format en plus du budget. */
         .jsb-ai-chat .aic-doc-apercu { flex:1 1 100%; margin:0 0 .1rem; font-size:.82rem; color:var(--aic-text); }

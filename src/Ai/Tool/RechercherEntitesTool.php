@@ -5,6 +5,7 @@ namespace App\Ai\Tool;
 use App\Ai\AiText;
 use App\Ai\Presentation\ColonnesDeLEcran;
 use App\Ai\Resolution\CheminsDeRelation;
+use App\Ai\Resolution\CritereLieA;
 use App\Ai\Resolution\Reference;
 use App\Ai\Resolution\ResolveurDeReferences;
 use App\Ai\Scope\AiScope;
@@ -65,6 +66,9 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
         // Source unique du graphe de relations, partagée avec ouvrir_rubrique : la
         // liste affichée à l'écran et celle rendue au chat suivent le MÊME chemin.
         private readonly CheminsDeRelation $chemins,
+        // Source unique de la traduction « lieA » → critère de recherche, partagée
+        // avec telecharger_documents (cf. CritereLieA).
+        private readonly CritereLieA $critereLieA,
         // Les colonnes que la RUBRIQUE affiche pour cette entité, préchargées en lot :
         // la même source, le même coût qu'un écran de liste.
         private readonly ColonnesDeLEcran $colonnesDeLEcran,
@@ -270,65 +274,24 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
         $page = max(1, (int) ($args['page'] ?? 1));
         $displayField = $this->libelleur->displayField($fqcn);
 
-        // Restriction aux enregistrements LIÉS à une fiche (lieA) : le plus
-        // court chemin de relations Doctrine vers l'entité de rattachement est
-        // détecté par métadonnées, à plusieurs niveaux (ex. Tache → piste →
-        // client pour « les tâches du client X ») — le service de recherche
-        // joint chaque segment et filtre par identité. FAIL-CLOSED sur
-        // l'entité liée aussi (référencer une fiche = la lire). Sans chemin,
-        // on liste sans lien et on le signale au modèle (lienIgnore).
-        $lien = null;
-        $lienIgnore = null;
-        $lienCriteria = [];
-        $lieA = $args['lieA'] ?? null;
-        if (\is_array($lieA) && $lieA !== []) {
-            $lienType = (string) ($lieA['entite'] ?? '');
-            $lienFqcn = 'App\\Entity\\' . $lienType;
-
-            // NOM PLUTÔT QU'IDENTIFIANT. Le modèle n'a presque jamais l'identifiant : le
-            // lui exiger, c'est le condamner à une recherche préalable — donc à un
-            // SECOND tour d'outils, que l'architecture interdit (cf. MAX_TOOL_ROUNDS).
-            // C'est exactement ce qui se produisait sur « les polices du client Kibali » :
-            // le modèle cherchait le client, n'avait plus de tour pour chercher ses
-            // polices, et l'utilisateur recevait une non-réponse. Le serveur résout donc
-            // le nom lui-même, gratuitement.
-            $lienId = (int) ($lieA['id'] ?? 0);
-            $nomLien = trim((string) ($lieA['nom'] ?? ''));
-            if ($lienId <= 0 && $nomLien !== '' && isset($labels[$lienType]) && class_exists($lienFqcn)) {
-                if (!$this->accessResolver->canRead($scope->invite, $lienType)) {
-                    return AiToolResult::horsPerimetre($labels[$lienType]);
-                }
-                $reference = $this->resolveur->resoudre($lienType, $nomLien, $scope);
-                if ($reference->estResolue()) {
-                    $lienId = (int) $reference->id;
-                } else {
-                    // On ne devine pas : on rend une question DÉJÀ formulée, avec ses
-                    // candidats. Une question précise vaut mieux qu'une liste vide.
-                    return AiToolResult::ok([
-                        'pret'      => false,
-                        'aDemander' => [$reference->question()],
-                        'note'      => 'Le rattachement demandé ne se résout pas. Pose la question telle quelle, '
-                            . 'en UNE ligne, en PROPOSANT les « valeurs » quand il y en a. N’invente aucun '
-                            . 'identifiant, ne relance AUCUN outil et n’annonce pas de liste.',
-                    ]);
-                }
-            }
-
-            if (!isset($labels[$lienType]) || !class_exists($lienFqcn) || $lienId <= 0) {
-                $lienIgnore = true;
-            } elseif (!$this->accessResolver->canRead($scope->invite, $lienType)) {
-                return AiToolResult::horsPerimetre($labels[$lienType]);
-            } elseif (($chemins = $this->cheminsVers($fqcn, $lienFqcn)) === []) {
-                $lienIgnore = true;
-            } else {
-                // Plusieurs chemins peuvent relier les deux entités (ex. Avenant → Client via sa
-                // cotation OU via sa piste de renouvellement) : on les passe TOUS au moteur, qui
-                // matche dès qu'un seul pointe sur la fiche (OR) — sinon le plus court, parfois une
-                // relation secondaire nulle, masquait les enregistrements réellement liés.
-                $lienCriteria[JSBDynamicSearchService::LIEN_MULTI_CHEMINS] = ['paths' => $chemins, 'id' => $lienId];
-                $lien = ['entite' => $lienType, 'id' => $lienId];
-            }
+        // Restriction aux enregistrements LIÉS à une fiche (lieA) : les chemins de
+        // relations Doctrine vers l'entité de rattachement sont détectés par
+        // métadonnées, à plusieurs niveaux (ex. Tache → piste → client pour « les
+        // tâches du client X ») — le service de recherche joint chaque segment et
+        // filtre par identité. FAIL-CLOSED sur l'entité liée aussi (référencer une
+        // fiche = la lire). Sans chemin, on liste sans lien et on le signale au
+        // modèle (lienIgnore) : élargir en silence ferait passer une liste générale
+        // pour celle du dossier demandé.
+        //
+        // La résolution elle-même vit dans CritereLieA : telecharger_documents en a
+        // besoin à l'identique, et deux copies auraient divergé au premier correctif.
+        $resolution = $this->critereLieA->resoudre($args['lieA'] ?? null, $fqcn, $scope);
+        if ($resolution->estRefus()) {
+            return $resolution->refus;
         }
+        $lien = $resolution->lien;
+        $lienIgnore = $resolution->ignore ?: null;
+        $lienCriteria = $resolution->criteria;
 
         // Le filtre texte exige un champ de libellé persisté ; sans lui, on
         // liste sans filtrer et on le signale au modèle (filtreIgnore).
@@ -625,26 +588,6 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
         unset($meilleurs[0]['profondeur']);
 
         return $meilleurs[0];
-    }
-
-    /**
-     * TOUS les chemins de relations *-vers-un reliant $fqcn à $cibleFqcn dans la
-     * profondeur permise (CheminsDeRelation::MAX_PROFONDEUR), chemins SIMPLES (sans repasser par
-     * une classe déjà traversée) : « piste » (direct), « piste.client », « cotation.piste.client »…
-     * Générique pour TOUT couple d'entités du workspace — chaque enfant pointant vers son
-     * parent en *-vers-un, les chemins remontent la généalogie père → fils → petit-fils.
-     *
-     * On renvoie TOUS les chemins, pas seulement le plus court : celui-ci peut emprunter une
-     * relation secondaire souvent NULLE (ex. Avenant.pisteDeRenouvellement → Client, len 2)
-     * tandis que le vrai lien passe plus profond (Avenant.cotation.piste.client, len 3). L'appelant
-     * les combine en OR pour ne manquer aucun enregistrement réellement lié. Seuls les segments
-     * *-vers-un sont traversés (un segment collection dupliquerait les lignes paginées).
-     *
-     * @return string[] Chemins pointillés distincts ([] si aucun dans la profondeur permise).
-     */
-    private function cheminsVers(string $fqcn, string $cibleFqcn): array
-    {
-        return $this->chemins->vers($fqcn, $cibleFqcn);
     }
 
     /**

@@ -14,9 +14,21 @@
     </div>
     <div class="item-text">
         <div class="text-main">{{ item.nom }}</div>
+        {# Le nom de STOCKAGE Vich (« contrat-a1b2c3d4.pdf ») s'affichait ici : il
+           n'apprend rien, et ce n'est même pas le nom sous lequel le fichier arrive
+           quand on clique dessus. On montre le FORMAT et la DATE — ce qui aide à
+           choisir, et ce que Ket annonce de son côté pour le même document.
+
+           L'extension est dérivée ici du nom stocké plutôt que lue dans l'attribut
+           calculé « typeFichier » : cet attribut n'est peuplé que par le canevas, et
+           y accéder depuis un item de collection lèverait une erreur de propriété
+           non initialisée. #}
         <div class="text-secondary">
             <em>
-                Fichier: {{ item.nomFichierStocke }} - Ajouté le: {{ item.createdAt|date('d/m/Y') }}
+                {%- set extension = (item.nomFichierStocke and '.' in item.nomFichierStocke)
+                    ? item.nomFichierStocke|split('.')|last|upper : '' -%}
+                {{ extension ?: 'Format inconnu' }}
+                {%- if item.createdAt %} &middot; Ajouté le {{ item.createdAt|date('d/m/Y') }}{% endif %}
             </em>
         </div>
     </div>
