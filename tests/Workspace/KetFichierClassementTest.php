@@ -4,6 +4,8 @@ namespace App\Tests\Workspace;
 
 use App\Ai\Mutation\ConversationFichierRef;
 use App\Ai\Mutation\MutationOperation;
+use App\Ai\Mutation\MutationPlan;
+use App\Ai\Mutation\PlanBuilder;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
 use App\Ai\Tool\TelechargerDocumentsTool;
@@ -13,6 +15,7 @@ use App\Entity\Document;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Utilisateur;
+use App\Service\Workspace\MutationException;
 use App\Service\Workspace\WorkspaceMutationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -170,6 +173,118 @@ class KetFichierClassementTest extends WebTestCase
         $this->assertFileExists($cheminConv, 'Le binaire original de la conversation n’a pas été déplacé.');
     }
 
+    /**
+     * LE CHEMIN RÉELLEMENT EMPRUNTÉ PAR KET — et le seul qui n'était pas testé.
+     *
+     * L'INCIDENT DU 2026-08-14. Les tests existants construisent la MutationOperation
+     * à la main et attaquent directement le service : ils sautent PlanBuilder, donc
+     * AliasDeChamps. Or `fichier` est une propriété VICH, pas une colonne Doctrine :
+     * elle est absente de inventaireChamps(), donc traitée comme un champ INCONNU, et
+     * rapprochée par libellé du seul champ contenant le mot « fichier » —
+     * `nomFichierStocke` (« Nom fichier stocke »). Le marqueur changeait de clé,
+     * DocumentType ne connaissait pas cette clé, l'upload était jeté sans un mot, et
+     * Ket annonçait « 1 opération exécutée, conforme au plan validé » sur un document
+     * VIDE. L'utilisateur a cherché son contrat pendant deux tours.
+     *
+     * Ce test emprunte la route officielle — celle que le prompt dicte au modèle
+     * (AiContextBuilder : « entite=Document, champs:{…, "fichier":"@fichier:<id>"} »).
+     */
+    public function testUnFichierTraversePlanBuilderSansChangerDeChamp(): void
+    {
+        [$ent, $inv, $owner, $conversation] = $this->seed();
+        $client = (new Client())->setNom('Client PlanBuilder')->setExonere(false)->setEntreprise($ent);
+        $this->em->persist($client);
+        $this->em->flush();
+        $clientId = $client->getId();
+
+        $this->client->loginUser($owner);
+        $idFichier = $this->uploaderFichier($ent, $conversation, 'contrat.txt', 'Contrat signe par le client.');
+
+        $this->em->clear();
+        $conversation = $this->em->getRepository(AssistantConversation::class)->find($conversation->getId());
+        $ent = $this->em->getRepository(Entreprise::class)->find($ent->getId());
+        $inv = $this->em->getRepository(Invite::class)->find($inv->getId());
+        $owner = $this->em->getRepository(Utilisateur::class)->findOneBy(['email' => self::OWNER]);
+        $scope = new AiScope($ent, $inv, $conversation);
+
+        $plan = MutationPlan::fromArray([[
+            'op'     => 'create',
+            'entite' => 'Document',
+            'champs' => [
+                'nom'     => 'Contrat signé',
+                'client'  => $clientId,
+                'fichier' => ConversationFichierRef::marqueur($idFichier),
+            ],
+        ]]);
+
+        $resultat = static::getContainer()->get(PlanBuilder::class)
+            ->construire($plan, $scope, 'preparer_operations');
+
+        self::assertTrue(
+            $resultat->data['pret'] ?? false,
+            'Le plan doit être prêt : le champ fichier ne doit PAS être renommé en cours de route. Manquants : '
+                . json_encode($resultat->data['manquants'] ?? [], JSON_UNESCAPED_UNICODE),
+        );
+
+        // Et la pièce arrive VRAIMENT jusqu'au disque — c'est la seule preuve qui vaille.
+        $op = new MutationOperation('create', 'Document', null, [
+            'nom'     => 'Contrat signé',
+            'client'  => $clientId,
+            'fichier' => ConversationFichierRef::marqueur($idFichier),
+        ]);
+        $step = $this->service->executer($op, $scope, $owner);
+
+        $this->em->clear();
+        $document = $this->em->getRepository(Document::class)->find($step['id']);
+        self::assertNotNull($document);
+        self::assertNotNull(
+            $document->getNomFichierStocke(),
+            'Le fichier doit être attaché au Document, pas perdu en chemin.',
+        );
+    }
+
+    /**
+     * UNE PIÈCE QUI NE PEUT PAS ÊTRE JOINTE SE DIT.
+     *
+     * Ket avait référencé une pièce #19 alors que la conversation s'arrêtait à #18.
+     * Le marqueur était retiré en silence, le Document créé sans fichier, et le plan
+     * annoncé conforme. Un plan qui perdrait la pièce ne doit plus être présentable :
+     * il est REFUSÉ, en nommant le champ et les pièces réellement disponibles — sans
+     * quoi ni l'utilisateur ni Ket ne peuvent corriger.
+     */
+    public function testUnePieceIntrouvableRefuseLePlanAuLieuDeLaPerdre(): void
+    {
+        [$ent, $inv, $owner, $conversation] = $this->seed();
+        $client = (new Client())->setNom('Client Piece Absente')->setExonere(false)->setEntreprise($ent);
+        $this->em->persist($client);
+        $this->em->flush();
+        $clientId = $client->getId();
+
+        $this->client->loginUser($owner);
+        $idFichier = $this->uploaderFichier($ent, $conversation, 'reel.txt', 'Une piece reellement attachee.');
+
+        $this->em->clear();
+        $conversation = $this->em->getRepository(AssistantConversation::class)->find($conversation->getId());
+        $ent = $this->em->getRepository(Entreprise::class)->find($ent->getId());
+        $inv = $this->em->getRepository(Invite::class)->find($inv->getId());
+        $scope = new AiScope($ent, $inv, $conversation);
+
+        $op = new MutationOperation('create', 'Document', null, [
+            'nom'     => 'Contrat fantôme',
+            'client'  => $clientId,
+            'fichier' => ConversationFichierRef::marqueur($idFichier + 10_000),
+        ]);
+
+        $analyse = $this->service->analyserOperation($op, $scope);
+
+        self::assertFalse($analyse['ok'], 'Un plan qui perdrait la pièce jointe ne doit pas être présentable.');
+        $motifs = implode(' ', array_merge(...array_values($analyse['manquants'])));
+        self::assertStringContainsString('fichier', implode(' ', array_keys($analyse['manquants'])));
+        self::assertStringContainsString('n’est pas attachée à cette conversation', $motifs);
+        // Le motif NOMME ce qui existe : sans cela, personne ne peut corriger.
+        self::assertStringContainsString('reel.txt', $motifs, 'Le refus doit lister les pièces disponibles.');
+    }
+
     public function testTelechargerDocumentDepuisLeChat(): void
     {
         // 1) Crée un Document RÉEL avec fichier (via le classement d'une pièce jointe).
@@ -223,11 +338,17 @@ class KetFichierClassementTest extends WebTestCase
         $this->assertSame(AiToolResult::STATUS_INTROUVABLE, $res2->status);
     }
 
+    /**
+     * FAIL-CLOSED, ET À VOIX HAUTE.
+     *
+     * Un fichier d'une AUTRE conversation ne doit jamais pouvoir être classé depuis
+     * la conversation courante. C'était déjà le cas — mais le marqueur était retiré
+     * en SILENCE et le Document se créait quand même, vide, sous un « enregistré avec
+     * succès ». Depuis le 2026-08-14 la garantie est plus forte : rien n'est écrit du
+     * tout, et le refus nomme la raison. Une pièce perdue se dit.
+     */
     public function testFichierHorsConversationNeFuitPas(): void
     {
-        // Un fichier appartenant à une AUTRE conversation ne doit JAMAIS pouvoir
-        // être classé depuis la conversation courante (fail-closed) : le marqueur
-        // reste non résolu et AUCUN fichier n'est attaché (pas de fuite).
         [$ent, $inv, $owner, $conversation] = $this->seed();
         $client = (new Client())->setNom('Client FailClosed')->setExonere(false)->setEntreprise($ent);
         $this->em->persist($client);
@@ -254,14 +375,25 @@ class KetFichierClassementTest extends WebTestCase
             'client'  => $clientId,
             'fichier' => ConversationFichierRef::marqueur($idFichierAutre),
         ]);
-        $step = $this->service->executer($op, $scope, $owner);
+        // Le dry-run refuse : l'utilisateur ne se voit jamais proposer un plan qui
+        // perdrait la pièce.
+        $analyse = $this->service->analyserOperation($op, $scope);
+        $this->assertFalse($analyse['ok'], 'Le plan doit être refusé, pas présenté puis vidé de sa pièce.');
+
+        // Et l'exécution ne crée RIEN plutôt qu'un document vide.
+        $avant = (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM document');
+        try {
+            $this->service->executer($op, $scope, $owner);
+            $this->fail('L’exécution doit échouer : le fichier d’une autre conversation est hors périmètre.');
+        } catch (MutationException $e) {
+            $this->assertStringContainsString('Documents', $e->getMessage());
+        }
 
         $this->em->clear();
-        $document = $this->em->getRepository(Document::class)->find($step['id']);
-        $this->assertNotNull($document);
-        $this->assertNull(
-            $document->getNomFichierStocke(),
-            'Le fichier d’une autre conversation ne doit PAS être attaché (fail-closed).',
+        $this->assertSame(
+            $avant,
+            (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM document'),
+            'Aucun document ne doit être créé quand sa pièce ne peut pas être jointe.',
         );
     }
 }
