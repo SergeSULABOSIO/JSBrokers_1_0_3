@@ -7,8 +7,8 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Règle de numérotation de la version applicative : la base (3881 commits) vaut
- * 1.00, chaque commit ajoute +1, le mineur court de 00 à 100 puis le majeur
- * bascule (après 1.100 vient 2.00).
+ * 1.00, chaque commit ajoute +1, le mineur court de 00 à 99 puis le majeur
+ * bascule (après 1.99 vient 2.00).
  * Vérifie aussi la lecture du fichier VERSION et les replis.
  */
 class VersionServiceTest extends TestCase
@@ -20,17 +20,17 @@ class VersionServiceTest extends TestCase
         $this->assertSame('1.00', VersionService::format($base), 'La base = 1.00');
         $this->assertSame('1.01', VersionService::format($base + 1), 'Premier commit = 1.01');
         $this->assertSame('1.42', VersionService::format($base + 42));
-        $this->assertSame('1.99', VersionService::format($base + 99));
-        $this->assertSame('1.100', VersionService::format($base + 100), 'Dernier mineur avant bascule');
-        $this->assertSame('2.00', VersionService::format($base + 101), 'Après 1.100 vient 2.00');
-        $this->assertSame('2.01', VersionService::format($base + 102));
-        $this->assertSame('2.100', VersionService::format($base + 201), 'Dernier mineur de la série 2');
-        $this->assertSame('3.00', VersionService::format($base + 202), 'Puis 3.00');
+        $this->assertSame('1.99', VersionService::format($base + 99), 'Dernier mineur avant bascule');
+        $this->assertSame('2.00', VersionService::format($base + 100), 'Après 1.99 vient 2.00');
+        $this->assertSame('2.01', VersionService::format($base + 101));
+        $this->assertSame('2.99', VersionService::format($base + 199), 'Dernier mineur de la série 2');
+        $this->assertSame('3.00', VersionService::format($base + 200), 'Puis 3.00');
     }
 
     /**
      * La suite est continue et strictement croissante sur deux bascules : aucun
-     * numéro sauté ni répété entre 1.00 et 3.00.
+     * numéro sauté ni répété entre 1.00 et 3.00, et jamais plus de deux chiffres
+     * après le point.
      */
     public function testFormatEnumereSansTrouSurDeuxBascules(): void
     {
@@ -38,19 +38,19 @@ class VersionServiceTest extends TestCase
 
         $attendus = [];
         foreach ([1, 2] as $majeur) {
-            foreach (range(0, 100) as $mineur) {
+            foreach (range(0, 99) as $mineur) {
                 $attendus[] = $majeur . '.' . str_pad((string) $mineur, 2, '0', STR_PAD_LEFT);
             }
         }
         $attendus[] = '3.00';
 
         $obtenus = [];
-        foreach (range(0, 202) as $pas) {
+        foreach (range(0, 200) as $pas) {
             $obtenus[] = VersionService::format($base + $pas);
         }
 
         $this->assertSame($attendus, $obtenus);
-        $this->assertCount(202 + 1, array_unique($obtenus), 'Aucun numéro répété.');
+        $this->assertCount(200 + 1, array_unique($obtenus), 'Aucun numéro répété.');
     }
 
     public function testFormatClampeSousLaBase(): void
@@ -233,7 +233,7 @@ class VersionServiceTest extends TestCase
     {
         [$majeur, $mineur] = array_map('intval', explode('.', $version, 2));
 
-        return 3881 + ($majeur - 1) * 101 + $mineur;
+        return 3881 + ($majeur - 1) * 100 + $mineur;
     }
 
     private function projetTemporaire(string $contenuVersion): string
