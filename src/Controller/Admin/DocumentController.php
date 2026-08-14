@@ -32,6 +32,8 @@ use App\Repository\InviteRepository;
 use App\Repository\DocumentRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Service\Document\DocumentFichier;
+use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
 use App\Services\CanvasBuilder;
 use App\Entity\OffreIndemnisationSinistre;
@@ -141,14 +143,53 @@ class DocumentController extends AbstractController
     }
 
     /**
-     * NOUVELLE ACTION : Gère le téléchargement d'un fichier.
+     * Télécharge le fichier d'un document.
+     *
+     * DEUX CORRECTIONS, ET ELLES COMPTENT TOUTES LES DEUX.
+     *
+     * 1. LE CONTRÔLE D'ACCÈS N'EXISTAIT PAS. La route se contentait du `ROLE_USER` de
+     *    la classe : n'importe quel utilisateur connecté, de n'importe quelle
+     *    entreprise, obtenait n'importe quel document en incrémentant l'identifiant
+     *    dans l'URL. Le ParamConverter chargeait l'entité par sa clé primaire, sans
+     *    jamais demander à qui elle appartenait. On repasse donc par le MÊME chemin que
+     *    l'assistant : droit de lecture sur Document, et résolution scopée entreprise
+     *    par le service de recherche. Un document d'ailleurs devient un 404 — la
+     *    réponse qu'aurait donnée un id inexistant, et qui n'apprend donc rien.
+     *
+     * 2. LE FICHIER ARRIVAIT SOUS SON NOM DE STOCKAGE. `downloadObject()` sans quatrième
+     *    argument sert le nom généré par SmartUniqueNamer : l'utilisateur recevait
+     *    « contrat-a1b2c3d4.pdf » là où sa fiche affiche « Contrat KIN AVIA ». Le nom
+     *    lisible vient maintenant de DocumentFichier, la même source que l'assistant :
+     *    le fichier servi par la rubrique et celui servi par Ket sont identiques, nom
+     *    compris.
      */
-    #[Route('/api/{id}/download', name: 'api.download', methods: ['GET'])]
-    public function downloadApi(Document $document, DownloadHandler $downloadHandler): Response
-    {
-        // Le DownloadHandler de VichUploader s'occupe de tout :
-        // il génère une réponse HTTP avec le bon fichier et les bons en-têtes.
-        return $downloadHandler->downloadObject($document, $fileField = 'fichier');
+    #[Route('/api/{id}/download', name: 'api.download', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function downloadApi(
+        int $id,
+        DownloadHandler $downloadHandler,
+        WorkspaceAccessResolver $accessResolver,
+        DocumentFichier $documentFichier,
+    ): Response {
+        // getInvite() résout l'invité du WORKSPACE COURANT (connectedTo) et lève
+        // lui-même si l'utilisateur n'en a aucun : le périmètre est celui de l'écran.
+        $invite = $this->getInvite();
+        $entreprise = $invite->getEntreprise();
+        if (!$accessResolver->canRead($invite, 'Document')) {
+            throw $this->createAccessDeniedException('Accès refusé.');
+        }
+
+        $result = $this->searchService->search(Document::class, ['id' => $id], $entreprise, null, 1, 1);
+        $document = $result['data'][0] ?? null;
+        if (($result['status']['code'] ?? 500) !== 200 || !$document instanceof Document || $document->getNomFichierStocke() === null) {
+            throw $this->createNotFoundException('Document introuvable ou sans fichier.');
+        }
+
+        return $downloadHandler->downloadObject(
+            $document,
+            DocumentFichier::CHAMP_VICH,
+            null,
+            $documentFichier->nomDeTelechargement($document),
+        );
     }
 
     #[Route(

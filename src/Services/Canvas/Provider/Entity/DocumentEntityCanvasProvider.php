@@ -47,6 +47,7 @@ class DocumentEntityCanvasProvider implements EntityCanvasProviderInterface
             ["group" => "Contexte", "code" => "classeur_string", "intitule" => "Classement", "type" => "Calcul", "format" => "Texte", "fonction" => "Document_getClasseurAsString", "description" => "Classeur dans lequel le document est archivé."],
             ["group" => "Fichier", "code" => "ageDocument", "intitule" => "Âge du document", "type" => "Calcul", "format" => "Texte", "fonction" => "calculateDocumentAge", "description" => "Âge du document depuis sa création."],
             ["group" => "Fichier", "code" => "typeFichier", "intitule" => "Type de fichier", "type" => "Calcul", "format" => "Texte", "fonction" => "getDocumentTypeFichier", "description" => "Extension du fichier."],
+            ["group" => "Fichier", "code" => "tailleFichier", "intitule" => "Taille du fichier", "type" => "Calcul", "format" => "Texte", "fonction" => "getDocumentTaille", "description" => "Poids du fichier sur le serveur."],
         ];
     }
 }
