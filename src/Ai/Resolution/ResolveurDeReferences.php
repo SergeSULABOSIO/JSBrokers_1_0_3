@@ -2,6 +2,7 @@
 
 namespace App\Ai\Resolution;
 
+use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\EntiteLibelle;
 use App\Service\Workspace\WorkspaceAccessResolver;
@@ -189,15 +190,22 @@ final class ResolveurDeReferences
         return count($tout) <= self::MAX_CANDIDATS ? $tout : [];
     }
 
-    /** Comparaison insensible à la casse, aux accents et à la ponctuation. */
+    /**
+     * Comparaison insensible à la casse, aux accents et à la ponctuation.
+     *
+     * DÉLÈGUE À AiText, et ce n'est pas un simple rangement. Cette méthode faisait
+     * son propre `iconv('UTF-8', 'ASCII//TRANSLIT')`, qui sous Windows DÉCOMPOSE au
+     * lieu de translittérer : « Société Générale » donnait « soci et e g en erale ».
+     * Deux libellés issus de la base continuaient de s'égaler — les artefacts
+     * s'annulent —, si bien que le défaut restait invisible ; mais « Societe
+     * Generale » tapé sans accents ne pouvait plus JAMAIS égaler le nom en base. La
+     * correspondance EXACTE ci-dessus, celle qui empêche « SUNU » de devenir ambigu
+     * face à « SUNU IARD RDC », était donc morte sur tout nom accentué. Et depuis que
+     * la vérification d'existence décide s'il faut CRÉER un maillon, cela revenait à
+     * fabriquer un doublon pour tout client dont le nom porte un accent.
+     */
     public function normaliser(string $valeur): string
     {
-        $valeur = mb_strtolower(trim($valeur));
-        $translit = @iconv('UTF-8', 'ASCII//TRANSLIT', $valeur);
-        if ($translit !== false) {
-            $valeur = $translit;
-        }
-
-        return trim((string) preg_replace('/[^a-z0-9]+/', ' ', $valeur));
+        return AiText::cle($valeur);
     }
 }
