@@ -168,6 +168,7 @@ final class GeminiAiEngine implements AiEngineInterface
         // Demande ambiguë => on s'arrête ICI. Ni planification ni rédaction : le
         // message aura coûté un seul appel, le plus léger des trois, au lieu de deux
         // appels pleins pour une réponse à côté suivie d'une relance.
+        $this->journal->debutDePhase(Phase::COMPREHENSION);
         $comprise = $this->comprehenseur->comprendre($request, $contents);
         if (!$comprise->claire) {
             return $this->conclure(
@@ -236,6 +237,10 @@ final class GeminiAiEngine implements AiEngineInterface
         // DEUX PHASES, JAMAIS TROIS. Planification (les outils sont déclarés), puis
         // rédaction (ils ne le sont plus : on commente un travail déjà fait).
         foreach ([Phase::PLANIFICATION, Phase::REDACTION] as $round => $phase) {
+            // La phase est annoncée AVANT de partir : c'est pendant l'appel que
+            // l'utilisateur attend, pas après. Tout le reste de ce journal se
+            // mesure au retour, et arriverait donc une phase trop tard.
+            $this->journal->debutDePhase($phase);
             ['reponse' => $response, 'octets' => $octets] = $this->appelerAvecReessai($request, $contents, $trousse, $phase);
 
             // APPEL D'OUTIL MALFORMÉ — le blocage du 2026-08-12, et il ne venait ni du

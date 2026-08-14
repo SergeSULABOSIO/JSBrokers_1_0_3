@@ -71,7 +71,9 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
@@ -104,6 +106,13 @@ use Vich\UploaderBundle\Handler\DownloadHandler;
 class AssistantIaController extends AbstractController
 {
     private const MAX_MESSAGE_LENGTH = 4000;
+
+    /**
+     * Type que le chat NOMME pour obtenir le fil d'activité plutôt qu'une réponse
+     * d'un seul bloc. Voir enFlux() : ce choix est dicté par une mesure, pas par
+     * une préférence.
+     */
+    private const FLUX_MIME = 'text/event-stream';
 
     /** Nombre maximal d'objets attachés au contexte d'une même conversation. */
     private const MAX_CONTEXTES = 20;
@@ -409,11 +418,109 @@ class AssistantIaController extends AbstractController
     }
 
     /**
-     * Envoi d'un message à l'assistant : métrage AVANT tout traitement, puis
-     * moteur IA, puis persistance des deux messages (question + réponse).
+     * Envoi d'un message à l'assistant. Deux transports pour un seul traitement :
+     * une réponse d'un bloc par défaut, ou le même contenu précédé du FIL
+     * D'ACTIVITÉ (où en est le moteur) quand le client le demande.
      */
     #[Route('/api/messages/{idEntreprise}/{idConversation}', name: 'api.message.send', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS], methods: ['POST'])]
-    public function sendMessage(int $idEntreprise, int $idConversation, Request $request): JsonResponse
+    public function sendMessage(int $idEntreprise, int $idConversation, Request $request): Response
+    {
+        // Comparaison LITTÉRALE de l'en-tête, jamais getAcceptableContentTypes() :
+        // le client de test envoie « */* », qui satisferait n'importe quelle
+        // négociation et basculerait en flux les huit tests qui lisent une réponse
+        // d'un seul bloc. Seul un client qui NOMME le type obtient le fil.
+        if (!str_contains((string) $request->headers->get('Accept', ''), self::FLUX_MIME)) {
+            return $this->traiterMessage($idEntreprise, $idConversation, $request);
+        }
+
+        return $this->enFlux(fn () => $this->traiterMessage($idEntreprise, $idConversation, $request));
+    }
+
+    /**
+     * Enveloppe une réponse JSON dans un flux d'événements, pour que le navigateur
+     * apprenne où en est le moteur PENDANT qu'il travaille.
+     *
+     * POURQUOI « text/event-stream » ALORS QU'ON N'UTILISE PAS EventSource. Mesuré le
+     * 2026-08-14 sur ce poste : à travers le proxy TLS de « symfony serve », un flux
+     * annoncé en application/x-ndjson est intégralement retenu et n'arrive qu'à la
+     * toute fin (six lignes écrites à une seconde d'intervalle, toutes livrées à
+     * +6,99 s) — exactement ce qu'on cherchait à éviter. Le même flux annoncé en
+     * text/event-stream passe en temps réel. Le type MIME n'est donc pas décoratif :
+     * c'est lui qui décide si la fonctionnalité existe. EventSource, lui, reste
+     * inutilisable ici : il ne sait pas faire de POST.
+     *
+     * @param \Closure(): JsonResponse $traitement
+     */
+    private function enFlux(\Closure $traitement): StreamedResponse
+    {
+        $journal = $this->journalTokens;
+        $logger = $this->logger;
+
+        $response = new StreamedResponse(static function () use ($traitement, $journal, $logger): void {
+            // Avant le moindre echo : une compression active retiendrait tout
+            // jusqu'à la fin, et la fonctionnalité n'existerait plus.
+            @ini_set('zlib.output_compression', '0');
+            // Fermer l'onglet ne doit pas tuer le script au milieu du flush Doctrine :
+            // la question serait persistée sans sa réponse.
+            ignore_user_abort(true);
+
+            $ecrire = static function (array $evenement) use ($logger): void {
+                echo 'data: ' . json_encode($evenement, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) . "\n\n";
+
+                // Sous PHPUnit (SAPI cli), le navigateur de test capture la sortie
+                // dans SON tampon : y toucher lui volerait la réponse.
+                if (\PHP_SAPI === 'cli') {
+                    return;
+                }
+                // ob_flush() et NON ob_end_flush() : on vide le tampon sans le
+                // fermer, car il ne nous appartient pas.
+                if (ob_get_level() > 0) {
+                    @ob_flush();
+                }
+                flush();
+            };
+
+            $journal->ecouter(static function (array $etape) use ($ecrire): void {
+                $ecrire(['type' => 'etape'] + $etape);
+            });
+
+            try {
+                $reponse = $traitement();
+                $ecrire([
+                    'type'    => 'fin',
+                    // Le statut voyage DANS le flux : une fois les en-têtes partis,
+                    // le code HTTP est figé à 200. C'est le seul compromis de ce
+                    // transport, et il évite de scinder une action qui décide déjà
+                    // ses 402/403/400 bien avant d'appeler le moteur.
+                    'statut'  => $reponse->getStatusCode(),
+                    'donnees' => json_decode((string) $reponse->getContent(), true),
+                ]);
+            } catch (HttpExceptionInterface $e) {
+                $ecrire(['type' => 'fin', 'statut' => $e->getStatusCode(), 'donnees' => null]);
+            } catch (\Throwable $e) {
+                $logger->error('Assistant IA : le fil d’activité a échoué.', ['exception' => $e]);
+                $ecrire(['type' => 'erreur']);
+            } finally {
+                // TOUJOURS débrancher : le journal est un service partagé, et un
+                // abonné oublié écrirait dans une réponse déjà close.
+                $journal->ecouter(null);
+            }
+        });
+
+        $response->headers->set('Content-Type', 'text/event-stream; charset=utf-8');
+        // Reverse-proxies (nginx) : ne pas mettre le flux en tampon.
+        $response->headers->set('X-Accel-Buffering', 'no');
+        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
+
+        return $response;
+    }
+
+    /**
+     * Envoi d'un message à l'assistant : métrage AVANT tout traitement, puis moteur
+     * IA, puis persistance des deux messages. Corps historique, inchangé — le flux
+     * ci-dessus ne fait que l'envelopper.
+     */
+    private function traiterMessage(int $idEntreprise, int $idConversation, Request $request): JsonResponse
     {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
         if (!$this->moduleAutorise($invite)) {
@@ -505,6 +612,10 @@ class AssistantIaController extends AbstractController
         // l'excuse, pas un 500) mais déclarée avant, pour rester disponible au
         // moment de journaliser l'échec.
         $aiRequest = null;
+        // Durée réellement passée avec le moteur, mesurée ici parce que c'est le
+        // seul endroit qui voit l'aller ET le retour. Elle figure au récapitulatif :
+        // « 6,2 s » explique après coup une attente que l'utilisateur a subie.
+        $debutMoteur = microtime(true);
         try {
             $aiRequest = $this->contextBuilder->build($entreprise, $invite, $conversation);
             $reply = $this->aiEngine->reply($aiRequest);
@@ -669,6 +780,12 @@ class AssistantIaController extends AbstractController
                 // (« étape 1 sur 3 ») : persisté pour survivre au rechargement,
                 // au même titre que le plan lui-même.
                 'programme'      => $this->extraireBandeauProgramme($actions),
+                // Ce que le message a coûté au moteur, tel qu'il vient d'être montré
+                // au fil de l'eau. Persisté pour la même raison que les clés
+                // ci-dessus : sans lui, un F5 effacerait le récapitulatif que
+                // l'utilisateur venait de lire. Null quand le moteur n'a pas de
+                // télémétrie (simulé, Anthropic) — array_filter l'écarte alors.
+                'activite'       => $this->activiteDuMessage($debutMoteur),
             ]));
         $conversation->addMessage($messageAssistant);
 
@@ -711,9 +828,31 @@ class AssistantIaController extends AbstractController
                 // ket-mutation.review sait ainsi vers quel endpoint d'exécution pointer.
                 'actions'   => $this->actionsAvecMessage($actions, (int) $messageAssistant->getId()),
                 'createdAt' => $messageAssistant->getCreatedAt()?->format(\DateTimeImmutable::ATOM),
+                // Même contenu que la clé `activite` de meta : le front rend le
+                // récapitulatif en direct, le Twig le rend après rechargement.
+                'activite'  => $messageAssistant->getMeta()['activite'] ?? null,
             ],
             'conversationTitre' => $conversation->getTitre(),
         ]);
+    }
+
+    /**
+     * Récapitulatif de ce que le message a coûté au moteur, prêt à être affiché.
+     *
+     * MÊME SOURCE que le fil en direct (le journal a compté les deux), donc aucun
+     * risque que la ligne lue pendant l'attente et le récapitulatif lu après
+     * racontent deux histoires différentes.
+     *
+     * @return array{appels: int, jetonsIa: int, secondes: float, etapes: list<array{cle: string, jetons: int}>}|null
+     */
+    private function activiteDuMessage(float $debutMoteur): ?array
+    {
+        $recap = $this->journalTokens->recapitulatif();
+        if ($recap === null) {
+            return null;
+        }
+
+        return $recap + ['secondes' => round(microtime(true) - $debutMoteur, 1)];
     }
 
     /**

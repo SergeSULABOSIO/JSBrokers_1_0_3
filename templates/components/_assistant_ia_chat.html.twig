@@ -745,6 +745,28 @@
         .jsb-ai-chat .aic-typing .dot:nth-child(2) { animation-delay:.2s; }
         .jsb-ai-chat .aic-typing .dot:nth-child(3) { animation-delay:.4s; }
         @keyframes aic-blink { 0%, 80%, 100% { opacity:.25; } 40% { opacity:1; } }
+        /* Compteur de jetons IA, à droite du verbe. `tabular-nums` est
+           indispensable : sans lui, la ligne tressaute à chaque chiffre qui change. */
+        .jsb-ai-chat .aic-typing-tokens {
+            color:var(--aic-muted); font-size:.76rem; opacity:.85;
+            font-variant-numeric:tabular-nums;
+        }
+        .jsb-ai-chat .aic-typing-tokens[hidden] { display:none; }
+        .jsb-ai-chat .aic-typing-tokens::before { content:'·'; margin-right:.35rem; }
+
+        /* ── Récapitulatif d'activité, replié sous une réponse ── */
+        .jsb-ai-chat .aic-activite { margin:.3rem 0 0; font-size:.72rem; color:var(--aic-muted); }
+        .jsb-ai-chat .aic-activite > summary {
+            cursor:pointer; list-style:none; padding:.1rem 0;
+            font-variant-numeric:tabular-nums; opacity:.8;
+        }
+        .jsb-ai-chat .aic-activite > summary:hover { opacity:1; }
+        .jsb-ai-chat .aic-activite > summary::-webkit-details-marker { display:none; }
+        .jsb-ai-chat .aic-activite > summary::before { content:'▸'; margin-right:.3rem; }
+        .jsb-ai-chat .aic-activite[open] > summary::before { content:'▾'; }
+        .jsb-ai-chat .aic-activite ul { margin:.2rem 0 0; padding:0 0 0 .9rem; list-style:none; }
+        .jsb-ai-chat .aic-activite li { display:flex; justify-content:space-between; gap:1rem; padding:.05rem 0; }
+        .jsb-ai-chat .aic-activite-cout { font-variant-numeric:tabular-nums; opacity:.75; }
 
         /* ── Zone de saisie (groupe champ + envoi, focus-within visible) ── */
         .jsb-ai-chat .aic-composer {
@@ -1248,6 +1270,15 @@
                     {# Heure seule pour les messages du jour, date + heure au-delà. #}
                     {% set memeJour = message.createdAt|date('Y-m-d') == 'now'|date('Y-m-d') %}
                     <span class="aic-msg-time">{{ message.createdAt|date(memeJour ? 'H:i' : 'd/m/Y H:i') }}</span>
+                    {# RÉCAPITULATIF D'ACTIVITÉ après rechargement. Ce nœud ne porte que
+                       les CHIFFRES : c'est le contrôleur Stimulus qui le remplace par le
+                       bloc rendu, avec la même table de verbes qu'en direct. Recopier ces
+                       libellés ici en ferait une seconde vérité, qui divergerait au premier
+                       changement de vocabulaire — même parti pris que pour les propositions
+                       de correction d'un programme (data-programme-correction). #}
+                    {% if estAssistant and (message.meta.activite ?? null) %}
+                        <div data-activite="{{ message.meta.activite|json_encode|e('html_attr') }}"></div>
+                    {% endif %}
                 </div>
             </div>
             {# Décision mémorisée : feedback PERMANENT sous le plan (validé / annulé). #}
@@ -1352,9 +1383,15 @@
         <span class="dot" aria-hidden="true"></span>
         <span class="dot" aria-hidden="true"></span>
         <span class="dot" aria-hidden="true"></span>
-        {# Libellé contextuel : « réfléchit… » pendant l'attente serveur,
-           « écrit… » pendant le déploiement mot à mot de la réponse. #}
+        {# Libellé contextuel, réécrit à chaque étape annoncée par le serveur :
+           « réfléchit… », « prépare le travail… », « consulte vos données… »,
+           « rédige la réponse… », puis « écrit… » pendant la frappe. #}
         <span data-assistant-chat-target="typingLabel">{{ assistantNom }} réfléchit…</span>
+        {# Compteur de JETONS IA (ceux du moteur), sans aucun rapport avec le solde
+           de tokens du cabinet. aria-hidden : il change à chaque appel au modèle,
+           et l'annoncer noierait le verbe, seul porteur d'information. #}
+        <span class="aic-typing-tokens" hidden aria-hidden="true"
+              data-assistant-chat-target="typingTokens"></span>
     </div>
 
     {# ── Zone de saisie ── #}
