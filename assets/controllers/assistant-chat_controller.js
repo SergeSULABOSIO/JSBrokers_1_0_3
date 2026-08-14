@@ -29,6 +29,7 @@ import {
 import { formatInstant } from '../datetime-format.js';
 import { formatNombre } from '../number-format.js';
 import { documentLocale } from '../locale.js';
+import { verbeEtape, compteurEtape, decouperFlux, resumeActivite } from './assistant-etapes.js';
 
 /**
  * Les deux icônes du panneau de téléchargement, écrites une fois : elles sont posées
@@ -51,7 +52,7 @@ const ICONE_ARCHIVE = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height
  */
 export default class extends Controller {
     static targets = [
-        'messages', 'input', 'send', 'typing', 'typingLabel', 'count', 'contextBar', 'mic',
+        'messages', 'input', 'send', 'typing', 'typingLabel', 'typingTokens', 'count', 'contextBar', 'mic',
         'fichierBar', 'fichierInput',
         // Actions de bulle : menu unique ancré, gabarits clonés, bandeau de citation.
         'menuBulle', 'tplKebab', 'tplCitation', 'citationBar', 'citationQui', 'citationExtrait',
@@ -135,6 +136,7 @@ export default class extends Controller {
         // Rapports de programme portant des écarts : le bouton de correction est
         // la seule issue proposée, il doit survivre au rechargement.
         this.restoreProgrammeCorrections();
+        this.restoreActivites();
         this.scrollToBottom();
         this.onInput();
         if (this.hasInputTarget) {
@@ -498,23 +500,38 @@ export default class extends Controller {
         try {
             const response = await fetch(this.sendUrlValue, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    // NOMMER le type est ce qui déclenche le fil d'activité : sans
+                    // cet en-tête, le serveur répond d'un seul bloc, exactement
+                    // comme avant.
+                    Accept: 'text/event-stream',
+                },
                 body: JSON.stringify({ contenu, replyToId: citation ? citation.id : null, ...extra }),
             });
 
-            if (response.status === 402) {
-                const data = await response.json().catch(() => ({}));
+            // Le fil ne rend le statut qu'à sa conclusion : une fois les en-têtes
+            // partis, le code HTTP est figé à 200. Hors flux (proxy, page d'erreur
+            // Symfony), on retombe sur la lecture d'un bloc — le code d'avant.
+            let statut = response.status;
+            let data = null;
+            if ((response.headers.get('Content-Type') || '').includes('text/event-stream') && response.body) {
+                ({ statut, data } = await this._lireFlux(response));
+            } else if (response.ok || statut === 402) {
+                data = await response.json().catch(() => ({}));
+            }
+
+            if (statut === 402) {
                 userBubble.remove();
                 this.inputTarget.value = contenu;
                 // Deux blocages distincts : premium (pas de solde payant) vs
                 // solde insuffisant (message chiffré construit localement).
-                this.appendNotice('warning', data.premium ? (data.message || 'Fonctionnalité premium.') : this.tokensMessage(data));
-            } else if (!response.ok) {
+                this.appendNotice('warning', data?.premium ? (data.message || 'Fonctionnalité premium.') : this.tokensMessage(data || {}));
+            } else if (statut < 200 || statut >= 300 || !data) {
                 userBubble.remove();
                 this.inputTarget.value = contenu;
                 this.appendNotice('error', "L'envoi a échoué. Vérifiez votre connexion puis réessayez.");
             } else {
-                const data = await response.json();
                 // La bulle optimiste reçoit enfin son identité : ses actions
                 // (répondre, exporter, envoyer) n'existaient pas avant, puisque
                 // le message n'était pas encore persisté.
@@ -524,9 +541,15 @@ export default class extends Controller {
                 // restauré dans la zone de saisie.
                 this.annulerCitation();
                 // La réponse se déploie mot après mot (façon ChatGPT/Claude) ;
-                // l'indicateur bascule de « réfléchit… » à « écrit… ».
-                this.setTypingLabel('écrit…');
-                await this.typeMessage(data.assistant.contenu, data.assistant.refus === true, data.assistant.id);
+                // l'indicateur passe à « écrit… », en conservant le total déjà
+                // affiché — le travail est fini, son coût ne change plus.
+                const activite = data.assistant.activite || null;
+                this.setTypingLabel(
+                    verbeEtape('ecriture'),
+                    compteurEtape({ tokensCumul: activite ? activite.jetonsIa : 0 }),
+                );
+                const bulle = await this.typeMessage(data.assistant.contenu, data.assistant.refus === true, data.assistant.id);
+                this.renderActivite(bulle, activite);
                 await this.executeActions(data.assistant.actions);
             }
         } catch (error) {
@@ -1445,6 +1468,28 @@ export default class extends Controller {
         bloc.appendChild(bouton);
 
         return bloc;
+    }
+
+    /**
+     * Reconstruit après un F5 les récapitulatifs d'activité posés par Twig.
+     *
+     * Le serveur n'envoie que des chiffres ; les verbes restent du seul ressort du
+     * navigateur, sans quoi le même vocabulaire vivrait à deux endroits.
+     */
+    restoreActivites() {
+        if (!this.hasMessagesTarget) return;
+        this.messagesTarget.querySelectorAll('[data-activite]').forEach((el) => {
+            let activite;
+            try {
+                activite = JSON.parse(el.dataset.activite);
+            } catch (e) {
+                el.remove();
+                return;
+            }
+            const bulle = el.closest('.aic-msg');
+            el.remove();
+            this.renderActivite(bulle, activite);
+        });
     }
 
     /** Reconstruit après un F5 les propositions de correction posées par Twig. */
@@ -2951,10 +2996,58 @@ export default class extends Controller {
         return `${message}.`;
     }
 
-    /** Libellé contextuel de l'indicateur (« {nom} réfléchit… » / « {nom} écrit… »). */
-    setTypingLabel(verbe) {
-        if (!this.hasTypingLabelTarget) return;
-        this.typingLabelTarget.textContent = `${this.assistantNomValue || 'Assistant'} ${verbe}`;
+    /**
+     * Libellé contextuel de l'indicateur (« {nom} prépare le travail… »), et son
+     * compteur de jetons IA.
+     *
+     * Le compteur vit dans une cible SÉPARÉE, hors de la zone annoncée : il change
+     * à chaque appel au modèle, et le faire relire par un lecteur d'écran noierait
+     * le verbe — qui est la seule information réellement utile.
+     */
+    setTypingLabel(verbe, compteur = '') {
+        if (this.hasTypingLabelTarget) {
+            this.typingLabelTarget.textContent = `${this.assistantNomValue || 'Assistant'} ${verbe}`;
+        }
+        if (this.hasTypingTokensTarget) {
+            this.typingTokensTarget.textContent = compteur;
+            this.typingTokensTarget.hidden = compteur === '';
+        }
+    }
+
+    /**
+     * Lit le fil d'activité jusqu'à sa conclusion, en réécrivant la ligne d'attente
+     * à chaque étape annoncée par le serveur.
+     *
+     * @returns {Promise<{statut: number, data: object|null}>}
+     */
+    async _lireFlux(response) {
+        const lecteur = response.body.getReader();
+        const decodeur = new TextDecoder('utf-8');
+        let tampon = '';
+        let statut = 0;
+        let data = null;
+
+        for (;;) {
+            const { value, done } = await lecteur.read();
+            // { stream: true } n'est pas optionnel : un « é » coupé entre deux
+            // morceaux réseau deviendrait sinon un caractère de remplacement.
+            const [evenements, reste] = decouperFlux(tampon, decodeur.decode(value, { stream: !done }));
+            tampon = reste;
+
+            for (const evenement of evenements) {
+                if (evenement.type === 'etape') {
+                    this.setTypingLabel(verbeEtape(evenement.cle), compteurEtape(evenement));
+                } else if (evenement.type === 'fin') {
+                    statut = evenement.statut;
+                    data = evenement.donnees;
+                }
+                // 'erreur' : rien à faire, statut reste 0 → branche d'échec.
+            }
+
+            if (done) break;
+        }
+
+        return { statut, data };
     }
 
     /**
@@ -3481,6 +3574,45 @@ export default class extends Controller {
         this.messagesTarget.appendChild(bubble);
         this.scrollToBottom();
         return bubble;
+    }
+
+    /**
+     * Récapitulatif de ce que le message a coûté, sous la bulle : « 3 appels ·
+     * 38 400 jetons IA · 6,2 s », dépliable pour le détail par étape.
+     *
+     * MIROIR EXACT du bloc `activite` rendu par _assistant_ia_chat.html.twig :
+     * modifier l'un sans l'autre ferait diverger l'affichage direct et l'affichage
+     * après rechargement — même règle que pour le panneau de document produit.
+     *
+     * Aucune donnée du modèle n'entre ici : uniquement des nombres et des clés
+     * d'étape traduites par notre propre table de verbes.
+     */
+    renderActivite(bulle, activite) {
+        const resume = resumeActivite(activite);
+        if (!bulle || !resume) return;
+
+        const bloc = document.createElement('details');
+        bloc.className = 'aic-activite';
+
+        const titre = document.createElement('summary');
+        titre.textContent = resume;
+        bloc.appendChild(titre);
+
+        const liste = document.createElement('ul');
+        for (const etape of activite.etapes || []) {
+            const ligne = document.createElement('li');
+            const verbe = document.createElement('span');
+            verbe.textContent = verbeEtape(etape.cle);
+            const cout = document.createElement('span');
+            cout.className = 'aic-activite-cout';
+            cout.textContent = etape.jetons ? `${formatNombre(etape.jetons)} jetons IA` : '—';
+            ligne.append(verbe, cout);
+            liste.appendChild(ligne);
+        }
+        bloc.appendChild(liste);
+
+        bulle.querySelector('.aic-msg-body')?.appendChild(bloc);
+        this.scrollToBottom();
     }
 
     /**

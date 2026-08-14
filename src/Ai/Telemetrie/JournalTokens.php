@@ -4,6 +4,7 @@ namespace App\Ai\Telemetrie;
 
 use App\Ai\AiRequest;
 use App\Ai\Mutation\OutilsDePlan;
+use App\Ai\Trousse\Phase;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -75,6 +76,38 @@ final class JournalTokens
     private int $cumulEntree = 0;
     private int $cumulSortie = 0;
 
+    /**
+     * FIL D'ACTIVITÉ — l'abonné qui suit le message PENDANT qu'il se déroule.
+     *
+     * POURQUOI ICI, et pas dans le moteur. Le navigateur restait aveugle de bout en
+     * bout : un fetch bloquant de vingt à quarante secondes, et un « Ket réfléchit… »
+     * figé pendant que trois appels au modèle et une exécution d'outils s'enchaînaient.
+     * Une attente aussi longue sans explication se lit comme une panne.
+     *
+     * Ce journal est le SEUL endroit par où passent déjà toutes les mesures : y
+     * greffer l'abonné évite de recâbler quoi que ce soit ailleurs, et surtout donne
+     * la bonne dégradation sans écrire une seule garde — un moteur qui ne sollicite
+     * pas le journal (le simulé, Anthropic) n'émet rien, et l'affichage retombe de
+     * lui-même sur l'indicateur d'avant.
+     *
+     * Nul par défaut : hors requête en flux, tout ce mécanisme est inerte.
+     */
+    private ?\Closure $echo = null;
+
+    /**
+     * Compteurs du FIL, délibérément distincts de $cumulEntree/$cumulSortie.
+     *
+     * Les seconds servent la campagne de mesure et sont relus par messageInterrompu() :
+     * les mêler à un affichage fausserait des chiffres sur lesquels on tranche des
+     * décisions d'architecture. Ceux-ci ne servent qu'à écrire une ligne à l'écran.
+     */
+    private int $cumulIa = 0;
+    /** Coût du dernier appel au modèle, pas encore montré à l'utilisateur. */
+    private int $dernierAppel = 0;
+    /** @var list<array{cle: string, jetons: int}> les étapes déjà annoncées, pour le récapitulatif */
+    private array $etapes = [];
+    private int $appels = 0;
+
     public function __construct(
         // Canal dédié : MonologBundle câble ici le logger « assistant_tokens »
         // d'après le nom de l'argument (convention <channel>Logger).
@@ -123,6 +156,104 @@ final class JournalTokens
         $this->toursEmis = 0;
         $this->cumulEntree = 0;
         $this->cumulSortie = 0;
+        $this->cumulIa = 0;
+        $this->dernierAppel = 0;
+        $this->etapes = [];
+        $this->appels = 0;
+    }
+
+    /**
+     * Branche (ou débranche, avec null) l'abonné du fil d'activité.
+     *
+     * SETTER, et non un argument de constructeur : le journal est un service partagé
+     * que quarante appelants reçoivent sans rien demander. Le passer au constructeur
+     * obligerait à le décrire partout, et casserait au passage les tests qui
+     * l'instancient à la main.
+     *
+     * @param \Closure(array{cle: string, tokensEtape: int, tokensCumul: int}): void|null $abonne
+     */
+    public function ecouter(?\Closure $abonne): void
+    {
+        $this->echo = $abonne;
+    }
+
+    /**
+     * Une phase DÉMARRE.
+     *
+     * Seul point d'accroche « avant » de ce journal, et il est indispensable : tout le
+     * reste ne se mesure qu'APRÈS le retour du fournisseur. Annoncer la rédaction
+     * depuis sa propre ligne « tour » l'annoncerait une fois FINIE — or c'est
+     * précisément pendant qu'elle tourne que l'utilisateur attend sans rien voir.
+     */
+    public function debutDePhase(Phase $phase): void
+    {
+        $this->annoncer($phase->libelle());
+    }
+
+    /**
+     * Ce que le message aura coûté, tel qu'on peut le montrer sous la réponse.
+     *
+     * Null quand rien n'a été annoncé : le moteur simulé et Anthropic ne passent pas
+     * par ici, et il vaut mieux ne rien afficher qu'afficher des zéros.
+     *
+     * @return array{appels: int, jetonsIa: int, etapes: list<array{cle: string, jetons: int}>}|null
+     */
+    public function recapitulatif(): ?array
+    {
+        if ($this->etapes === []) {
+            return null;
+        }
+
+        // Le DERNIER appel du message n'est suivi d'aucune annonce — plus rien ne
+        // commence après la rédaction. Son coût reviendrait donc à l'étape courante,
+        // et sans cette ligne le détail ne totaliserait pas le montant affiché.
+        $etapes = $this->etapes;
+        if ($this->dernierAppel > 0) {
+            $etapes[array_key_last($etapes)]['jetons'] += $this->dernierAppel;
+        }
+
+        return [
+            'appels'   => $this->appels,
+            'jetonsIa' => $this->cumulIa,
+            'etapes'   => $etapes,
+        ];
+    }
+
+    /**
+     * Pousse une étape vers l'abonné, et la retient pour le récapitulatif.
+     *
+     * Le coût annoncé est celui du DERNIER appel au modèle, remis à zéro aussitôt :
+     * sans cela, une étape qui ne consomme rien (l'exécution locale des outils)
+     * réafficherait le montant de la précédente, et l'utilisateur croirait payer deux
+     * fois la même chose.
+     */
+    private function annoncer(string $cle): void
+    {
+        $jetons = $this->dernierAppel;
+        $this->dernierAppel = 0;
+
+        // ATTRIBUTION. Ce qui vient d'être payé l'a été par l'étape PRÉCÉDENTE :
+        // une phase s'annonce avant de partir, et son coût n'est connu qu'au retour.
+        // Le récapitulatif doit donc reculer d'un cran, sinon il affiche « rédige la
+        // réponse — 0 jeton » pour un appel qui en a coûté six mille (constaté en
+        // conditions réelles le 2026-08-14 : 46 220 jetons facturés, 39 752 répartis).
+        if ($jetons > 0 && $this->etapes !== []) {
+            $this->etapes[array_key_last($this->etapes)]['jetons'] += $jetons;
+        }
+        $this->etapes[] = ['cle' => $cle, 'jetons' => 0];
+
+        if ($this->echo === null) {
+            return;
+        }
+
+        // Le fil EN DIRECT, lui, annonce ce qui vient d'être payé à l'instant : c'est
+        // la seule chose qu'on puisse dire honnêtement quand l'étape qui commence
+        // n'a encore rien coûté.
+        ($this->echo)([
+            'cle'         => $cle,
+            'tokensEtape' => $jetons,
+            'tokensCumul' => $this->cumulIa,
+        ]);
     }
 
     /**
@@ -162,6 +293,20 @@ final class JournalTokens
             'octetsHistorique' => $octets['historique'] ?? 0,
             'outils'           => $outils,
         ]);
+
+        // FIL D'ACTIVITÉ. Entrée ET sortie : l'utilisateur veut savoir ce que l'échange
+        // a coûté, pas ce qu'a coûté la moitié montante.
+        ++$this->appels;
+        $this->dernierAppel = ($tokens['entree'] ?? 0) + ($tokens['sortie'] ?? 0);
+        $this->cumulIa += $this->dernierAppel;
+
+        // Des outils sont partis : Symfony va les exécuter localement, sans rien
+        // demander à personne. C'est le silence le plus long du message, et le seul
+        // qu'on puisse nommer honnêtement — d'où une étape à lui, qui n'est PAS une
+        // phase (Phase déclare qu'il n'y en aura jamais une quatrième).
+        if ($outils !== []) {
+            $this->annoncer('outils');
+        }
     }
 
     /**
@@ -219,6 +364,23 @@ final class JournalTokens
             'tokens'        => $tokens,
             'millisecondes' => $millisecondes,
         ]);
+
+        // FIL D'ACTIVITÉ. Comprehenseur::facturer() ne remonte que les tokens
+        // d'ENTRÉE : le total affiché sous-estime cette phase d'une centaine de
+        // jetons. On le signale plutôt que de le corriger — inventer une sortie
+        // qu'on n'a pas mesurée serait pire qu'un écart connu.
+        if ($tokens > 0) {
+            ++$this->appels;
+            $this->dernierAppel = $tokens;
+            $this->cumulIa += $tokens;
+        }
+
+        // Demande jugée ambiguë : le message s'arrête sur une reformulation à
+        // confirmer. Ni planification ni rédaction ne suivront — l'utilisateur doit
+        // lire autre chose que « prépare le travail… » avant que la ligne s'efface.
+        if ($clarte !== 'claire') {
+            $this->annoncer('clarification');
+        }
     }
 
     /**
