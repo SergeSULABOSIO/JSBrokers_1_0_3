@@ -49,9 +49,9 @@ class NouveautesPageTest extends WebTestCase
 
         $premiere = $entrees->first();
         $this->assertMatchesRegularExpression(
-            '/^\d+\.\d{2,}$/',
+            '/^\d+\.\d{2}$/',
             trim($premiere->filter('.chg-version')->text()),
-            'Le numéro jalonne chaque livraison, mineur sur deux chiffres (1.00 … 1.100).',
+            'Le numéro jalonne chaque livraison, mineur sur deux chiffres (1.00 … 1.99).',
         );
         $this->assertSame(1, $premiere->filter('time.chg-date')->count(), 'Date complète présente.');
         $this->assertNotSame('', trim($premiere->filter('time.chg-date')->text()));
@@ -108,7 +108,7 @@ class NouveautesPageTest extends WebTestCase
 
     /**
      * Le numéro affiché à l'écran est bien celui produit par la règle de
-     * numérotation — mineur sur deux chiffres, du 1.00 au 1.100 avant bascule.
+     * numérotation — mineur sur deux chiffres, de 00 à 99 avant bascule.
      */
     public function testLaVersionAfficheeSuitLaRegleDeNumerotation(): void
     {
@@ -120,11 +120,11 @@ class NouveautesPageTest extends WebTestCase
         $attendue = static::getContainer()->get(VersionService::class)->getVersion();
 
         $this->assertStringContainsString($attendue, $affichee);
-        $this->assertMatchesRegularExpression('/^\d+\.\d{2,}$/', $attendue);
+        $this->assertMatchesRegularExpression('/^\d+\.\d{2}$/', $attendue);
 
-        // Le mineur ne dépasse jamais 100 : au-delà, c'est le majeur qui monte.
+        // Le mineur ne dépasse jamais 99 : au-delà, c'est le majeur qui monte.
         [, $mineur] = explode('.', $attendue, 2);
-        $this->assertLessThanOrEqual(100, (int) $mineur, 'Après x.100 vient (x+1).00.');
+        $this->assertLessThanOrEqual(99, (int) $mineur, 'Après x.99 vient (x+1).00.');
     }
 
     /**

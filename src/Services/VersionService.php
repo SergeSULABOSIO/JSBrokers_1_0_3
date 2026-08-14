@@ -26,11 +26,11 @@ class VersionService
 
     /**
      * Commits nécessaires pour incrémenter le numéro majeur (1.x → 2.x).
-     * Le mineur parcourt 00 → 100, soit 101 valeurs : après 1.100 vient 2.00.
+     * Le mineur parcourt 00 → 99, soit 100 valeurs : après 1.99 vient 2.00.
      */
-    private const COMMITS_PER_MAJOR = 101;
+    private const COMMITS_PER_MAJOR = 100;
 
-    /** Largeur minimale du mineur : 00, 01 … 99, puis 100 (déborde naturellement). */
+    /** Largeur du mineur : toujours deux chiffres, de 00 à 99. */
     private const MINOR_PAD = 2;
 
     /** Séparateur d'unité (0x1F) entre champs de `git log` : jamais présent dans un message. */
@@ -56,8 +56,8 @@ class VersionService
      * Fonction pure et déterministe : c'est ici, et seulement ici, que vit la
      * règle de numérotation (donc facilement testable, sans filesystem).
      *
-     * Le mineur est écrit sur deux chiffres (1.00, 1.01 … 1.99) et va jusqu'à
-     * 1.100 ; le commit suivant fait basculer le majeur : 2.00, 2.01, etc.
+     * Le mineur est écrit sur deux chiffres et va de 00 à 99 ; le commit qui
+     * suit 1.99 fait basculer le majeur : 2.00, 2.01 … 2.99, puis 3.00.
      */
     public static function format(int $commitCount): string
     {
