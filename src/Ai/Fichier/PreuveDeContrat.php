@@ -2,6 +2,7 @@
 
 namespace App\Ai\Fichier;
 
+use App\Ai\AiText;
 use App\Entity\AssistantConversationFichier;
 
 /**
@@ -113,27 +114,12 @@ final class PreuveDeContrat
     /**
      * Minuscules, sans accents ni ponctuation : « Police N° » == « police n ».
      *
-     * GOTCHA — PAS D'iconv //TRANSLIT ICI. Sous Windows il ne translittère pas, il
-     * DÉCOMPOSE : « particulières » devient « particuli`eres », et le filtre de
-     * ponctuation en fait « particuli eres ». Une comparaison entre deux chaînes
-     * passées par la même moulinette n'y voit rien (les artefacts s'annulent), mais
-     * ici on confronte à des marqueurs ASCII écrits à la main : la preuve était
-     * manquée sur tout document accentué, c'est-à-dire sur tous. Table explicite,
-     * donc, dont le résultat ne dépend ni de la plateforme ni de la locale.
+     * Source unique {@see AiText::cle()} — surtout PAS une table recopiée ici, et
+     * surtout pas iconv //TRANSLIT, qui sous Windows décompose au lieu de
+     * translittérer et faisait manquer la preuve sur tout document accentué.
      */
-    private const ACCENTS = [
-        'à' => 'a', 'â' => 'a', 'ä' => 'a', 'á' => 'a', 'ã' => 'a', 'å' => 'a',
-        'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
-        'î' => 'i', 'ï' => 'i', 'í' => 'i', 'ì' => 'i',
-        'ô' => 'o', 'ö' => 'o', 'ó' => 'o', 'õ' => 'o', 'ò' => 'o',
-        'ù' => 'u', 'û' => 'u', 'ü' => 'u', 'ú' => 'u',
-        'ç' => 'c', 'ñ' => 'n', 'ÿ' => 'y', 'œ' => 'oe', 'æ' => 'ae',
-    ];
-
     private static function normaliser(string $valeur): string
     {
-        $valeur = strtr(mb_strtolower(trim($valeur)), self::ACCENTS);
-
-        return trim((string) preg_replace('/[^a-z0-9]+/', ' ', $valeur));
+        return AiText::cle($valeur);
     }
 }
