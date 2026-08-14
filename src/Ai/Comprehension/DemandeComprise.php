@@ -91,16 +91,15 @@ final class DemandeComprise
      */
     public function texteDeClarification(): string
     {
-        $texte = "Avant d'agir, je préfère m'assurer d'avoir bien compris.\n\n"
-            . '**Ce que je comprends :** ' . $this->intention;
+        $texte = 'Je veux être sûr de bien vous suivre : **' . rtrim($this->intention, '.') . '**.';
 
         if ($this->questions !== []) {
-            $texte .= "\n\n**Ce qu'il me reste à trancher :**\n";
+            $texte .= "\n\nIl me manque juste " . (count($this->questions) === 1 ? 'un point' : 'quelques points') . " :\n";
             foreach ($this->questions as $question) {
                 $texte .= "\n- " . $question;
             }
         }
 
-        return $texte . "\n\nConfirmez-moi que c'est bien cela, ou corrigez-moi : j'enchaîne aussitôt.";
+        return $texte . "\n\nDites-moi si c'est bien cela — ou corrigez-moi, j'enchaîne aussitôt.";
     }
 }

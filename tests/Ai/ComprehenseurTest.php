@@ -182,8 +182,12 @@ class ComprehenseurTest extends TestCase
         self::assertFalse($comprise->claire);
         self::assertSame(['Laquelle : la police auto ou la police incendie ?'], $comprise->questions);
         // La bulle est composée par le SERVEUR, pas par le modèle : une seule plume.
-        self::assertStringContainsString('Ce que je comprends', $comprise->texteDeClarification());
-        self::assertStringContainsString('Renouveler la police de Kibali', $comprise->texteDeClarification());
+        // Et elle PARLE — pas d'accusé de réception (« Ce que je comprends : »), qui
+        // est précisément le tic banni du prompt le 2026-08-14.
+        $bulle = $comprise->texteDeClarification();
+        self::assertStringContainsString('Renouveler la police de Kibali', $bulle);
+        self::assertStringContainsString('Laquelle : la police auto', $bulle);
+        self::assertStringNotContainsString('Ce que je comprends', $bulle);
     }
 
     /**
