@@ -653,6 +653,12 @@ class PaiementsPrimeToolTest extends TestCase
             ),
             new \App\Ai\Resolution\ResolveurDeReferences($search, $resolver, $libelleur),
             new \App\Ai\Resolution\CheminsDeRelation($em),
+            // Ce test ne vérifie que le ROUTAGE des intentions (match), jamais une
+            // exécution : les colonnes d'écran ne sont donc jamais sollicitées.
+            new \App\Ai\Presentation\ColonnesDeLEcran(
+                $this->createMock(\App\Services\CanvasBuilder::class),
+                $this->createMock(\App\Services\ServiceMonnaies::class),
+            ),
         );
         $compter = new CompterEntitesTool($resolver, $search, $lexique, $this->fabriquePortefeuille());
         $lireFiche = new LireFicheTool(

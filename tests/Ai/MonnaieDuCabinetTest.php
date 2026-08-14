@@ -120,6 +120,31 @@ class MonnaieDuCabinetTest extends KernelTestCase
     }
 
     /**
+     * PAS DE LATEX DANS LE CHAT (2026-08-14).
+     *
+     * Interrogée sur le calcul d'une rétrocommission, Ket a rendu
+     * « $$\text{Commission} = 1,000{,}00\,$ \times 10\,\% = 100{,}00\,$$ » — affiché
+     * TEL QUEL, car l'interface rend du Markdown simple et n'a aucun moteur de
+     * formules. Le calcul, qui était juste, devenait illisible.
+     *
+     * Le remède ne peut PAS être un nettoyage serveur : la monnaie du cabinet est le
+     * dollar, donc toute expression retirant des « $ » détruirait de vrais montants.
+     * C'est donc une règle de rédaction — et elle vaut aux DEUX phases, puisque
+     * reglesDeMiseEnForme alimente la planification comme la rédaction.
+     */
+    public function testLePromptInterditLaNotationMathematique(): void
+    {
+        $prompt = $this->builder()->toSystemPrompt($this->requete('USD'));
+
+        $this->assertStringContainsString('AUCUNE NOTATION MATHÉMATIQUE', $prompt);
+        $this->assertStringContainsString('\\text{}', $prompt);
+        // Le calcul se lit en toutes lettres, avec le signe multiplié.
+        $this->assertStringContainsString('1 000,00 $ × 10 % =', $prompt);
+        // Et l'illustration par un taux inventé est nommée comme une faute.
+        $this->assertStringContainsString("n'ILLUSTRE JAMAIS un calcul avec un taux inventé", $prompt);
+    }
+
+    /**
      * REDIRE N'EST PAS ACCUSER RÉCEPTION (2026-08-14).
      *
      * La règle prescrivait « Ce que je comprends : … » en tête de CHAQUE réponse. Sur

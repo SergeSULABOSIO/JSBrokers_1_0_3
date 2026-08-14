@@ -3,6 +3,7 @@
 namespace App\Ai\Tool;
 
 use App\Ai\AiText;
+use App\Ai\Presentation\ColonnesDeLEcran;
 use App\Ai\Resolution\CheminsDeRelation;
 use App\Ai\Resolution\Reference;
 use App\Ai\Resolution\ResolveurDeReferences;
@@ -31,10 +32,17 @@ use Doctrine\ORM\EntityManagerInterface;
  * client), à PLUSIEURS niveaux de relation : le plus court chemin de
  * relations Doctrine entre les deux entités est détecté par métadonnées
  * (BFS), générique pour tout couple d'entités du workspace. Recherche
- * déléguée à JSBDynamicSearchService (scoping entreprise systématique) ;
- * restitution volontairement compacte (id + libellé) pour maîtriser les
- * tokens — les détails d'un enregistrement relèvent d'outils dédiés (ex.
- * indicateur_calcule).
+ * déléguée à JSBDynamicSearchService (scoping entreprise systématique).
+ *
+ * CHAQUE LIGNE PORTE LES COLONNES DE L'ÉCRAN (cf. ColonnesDeLEcran) : celles que
+ * la RUBRIQUE affiche pour cette entité, valeurs calculées comprises, avec leur
+ * rôle de présentation. La restitution était auparavant réduite à « id + libellé »
+ * pour maîtriser les tokens, et cette économie coûtait cher : prié d'ajouter « une
+ * colonne pour le taux », le modèle n'avait aucune donnée, affichait 0 % pour dix
+ * partenaires dont les parts valaient 30, 45 et 50 %, puis fabriquait une
+ * explication à l'écart. Le juste milieu n'est ni le libellé seul ni la fiche
+ * complète (6 000 à 18 000 tokens pour une page) : ce sont les colonnes que le
+ * métier a déjà choisies pour l'écran.
  */
 final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehension
 {
@@ -57,6 +65,9 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
         // Source unique du graphe de relations, partagée avec ouvrir_rubrique : la
         // liste affichée à l'écran et celle rendue au chat suivent le MÊME chemin.
         private readonly CheminsDeRelation $chemins,
+        // Les colonnes que la RUBRIQUE affiche pour cette entité, préchargées en lot :
+        // la même source, le même coût qu'un écran de liste.
+        private readonly ColonnesDeLEcran $colonnesDeLEcran,
     ) {
     }
 
@@ -97,7 +108,10 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
             . 'ou un statut de transformation (« quelles pistes en cours ? »), afin que la réponse '
             . 'coïncide avec ce que l’utilisateur voit à l’écran. La liste porte par défaut sur le '
             . 'PORTEFEUILLE de l’utilisateur, comme la rubrique affichée (paramètre perimetre). '
-            . 'Renvoie l’identifiant et le libellé de chaque enregistrement ; pour une COTATION, '
+            . 'Chaque enregistrement porte son identifiant, son libellé ET LES COLONNES DE LA '
+            . 'RUBRIQUE (valeurs calculées comprises : taux, montants, soldes), avec leurs rôles '
+            . 'de présentation — tu peux donc composer un tableau riche sans autre appel. '
+            . 'Pour une COTATION, '
             . 'chaque item porte aussi son statut (« Souscrite » = déjà liée à un avenant, donc '
             . 'police concrétisée, PAS une simple proposition ; « En attente » = proposition non '
             . 'validée) : appuie-toi dessus, ne suppose jamais qu’une cotation listée est en attente.';
@@ -439,12 +453,19 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
             }
         }
 
+        // LES COLONNES DE L'ÉCRAN, pour chaque ligne. Sans elles, une liste ne portait
+        // que `id` + `libelle` : prié d'ajouter « une colonne pour le taux », le modèle
+        // n'avait aucune donnée et affichait 0 % partout, alors que la rubrique montrait
+        // 30 %. La source est le canevas de liste — ajouter une colonne à un écran
+        // l'offre désormais du même coup au chat. Un seul préchargement pour la page.
+        $ecran = $this->colonnesDeLEcran->projeter($result['data'], $fqcn);
+
         $items = [];
         foreach ($result['data'] as $entity) {
             $item = [
                 'id'      => $entity->getId(),
                 'libelle' => $this->libelleur->libelle($entity, $displayField),
-            ];
+            ] + ($ecran['valeurs'][(int) $entity->getId()] ?? []);
             // Une COTATION porte son statut de souscription (bound = au moins un avenant), sinon
             // le modèle, ne voyant qu'un libellé, prend une cotation déjà transformée en police
             // pour une simple proposition en attente. Même source de vérité que le chip de la
@@ -516,6 +537,10 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
             'totalPages'   => (int) $result['totalPages'],
             'totalItems'   => (int) $result['totalItems'],
             'items'        => $items,
+            // Les rôles de colonne viennent des UNITÉS du canevas : « % » est un taux
+            // (jamais sommé), la monnaie du cabinet est un montant. Sans cette
+            // déclaration, un « partPourcentage: 30 » s'afficherait « 30 » et non « 30 % ».
+            'presentation' => $ecran['presentation'] ?: null,
         ], static fn ($v) => $v !== null));
     }
 
