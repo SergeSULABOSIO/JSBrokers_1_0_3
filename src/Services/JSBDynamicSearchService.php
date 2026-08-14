@@ -375,6 +375,30 @@ class JSBDynamicSearchService
                     $orParts[] = $qb->expr()->eq("{$finalAlias}.id", ':scopeInvite' . $suffix);
                 }
 
+                // L'ORPHELIN RESTE VISIBLE, quand l'entité le tolère (cf.
+                // PortefeuilleScope::ORPHELINS_TOLERES). Un document rattaché à un
+                // bordereau, à un fournisseur ou à un simple classeur n'atteint AUCUN
+                // portefeuille : la règle stricte le ferait disparaître de la rubrique
+                // sans qu'il appartienne pour autant à quelqu'un d'autre. On ajoute donc
+                // « ou aucune de ses relations de périmètre n'est renseignée » — le
+                // filtre garde son objet, écarter les pièces des clients d'un AUTRE
+                // gestionnaire, sans masquer ce qui est commun à l'entreprise.
+                //
+                // Les relations testées sont les PREMIERS SEGMENTS des chemins ci-dessus,
+                // dérivés d'eux : elles vivent sur l'entité racine, donc aucune jointure
+                // supplémentaire n'est nécessaire.
+                if ($orParts !== [] && PortefeuilleScope::tolereLesOrphelins($shortName)) {
+                    $sansParent = [];
+                    foreach (PortefeuilleScope::relationsDirectes($shortName) as $relation) {
+                        if ($metadata->hasAssociation($relation)) {
+                            $sansParent[] = $qb->expr()->isNull("{$rootAlias}.{$relation}");
+                        }
+                    }
+                    if ($sansParent !== []) {
+                        $orParts[] = $qb->expr()->andX(...$sansParent);
+                    }
+                }
+
                 if (!empty($orParts)) {
                     $qb->andWhere($qb->expr()->orX(...$orParts))
                        ->setParameter('scopeInvite' . $suffix, $inviteId);

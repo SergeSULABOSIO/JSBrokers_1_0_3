@@ -100,6 +100,7 @@ class SoaAccesClientTest extends WebTestCase
             $conn->executeStatement("DELETE r FROM risque r JOIN entreprise e ON r.entreprise_id = e.id WHERE e.nom = :nom", ['nom' => $nom]);
             $conn->executeStatement("DELETE ct FROM contact ct JOIN client c ON ct.client_id = c.id JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom = :nom", ['nom' => $nom]);
             $conn->executeStatement("DELETE c FROM client c JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom = :nom", ['nom' => $nom]);
+            $conn->executeStatement("DELETE pf FROM portefeuille pf JOIN entreprise e ON pf.entreprise_id = e.id WHERE e.nom = :nom", ['nom' => $nom]);
             $conn->executeStatement("DELETE i FROM invite i JOIN entreprise e ON i.entreprise_id = e.id WHERE e.nom = :nom", ['nom' => $nom]);
             $conn->executeStatement("DELETE FROM entreprise WHERE nom = :nom", ['nom' => $nom]);
         }
@@ -155,11 +156,23 @@ class SoaAccesClientTest extends WebTestCase
         $entrepriseB->setUtilisateur($ownerUser);
         $em->persist($entrepriseB);
 
+        // LE CLIENT APPARTIENT À UN PORTEFEUILLE. Un client sans portefeuille est déjà
+        // invisible dans la rubrique Clients (périmètre appliqué par défaut), et l'est
+        // désormais aussi pour ses DOCUMENTS — Document ayant rejoint les entités
+        // scopées. Ce test charge la rubrique Documents : sans portefeuille, elle
+        // reviendrait vide, et l'échec se lirait à tort comme une régression d'affichage.
+        $portefeuille = new \App\Entity\Portefeuille();
+        $portefeuille->setNom('Portefeuille PHPUnit SOA');
+        $portefeuille->setGestionnaire($ownerInvite);
+        $portefeuille->setEntreprise($entreprise);
+        $em->persist($portefeuille);
+
         $clientA = new Client();
         $clientA->setNom(self::CLI_NOM);
         $clientA->setEmail(self::CLI_EMAIL);
         $clientA->setExonere(false);
         $clientA->setEntreprise($entreprise);
+        $clientA->setPortefeuille($portefeuille);
         $em->persist($clientA);
 
         $contact = new Contact();

@@ -73,7 +73,83 @@ final class PortefeuilleScope
             'tache.notificationSinistre.assure.portefeuille.gestionnaire',
             'tache.offreIndemnisationSinistre.notificationSinistre.assure.portefeuille.gestionnaire',
         ],
+        /**
+         * LES DOCUMENTS SUIVENT LE DOSSIER AUQUEL ILS APPARTIENNENT.
+         *
+         * Document n'était soumis à aucun périmètre : la rubrique — et Ket avec elle —
+         * montrait à chaque invité les pièces de TOUS les clients de l'entreprise, y
+         * compris ceux d'un autre gestionnaire. « Les fichiers de mon portefeuille » ne
+         * voulait donc rien dire.
+         *
+         * Un document n'a qu'un seul parent renseigné parmi une quinzaine : les chemins
+         * couvrent ceux qui mènent à un client, chacun essayé en OU. Les parents SANS
+         * client (bordereau, fournisseur, compte bancaire, partenaire, classeur) n'en
+         * ont aucun — c'est le rôle de {@see ORPHELINS_TOLERES} de les garder visibles
+         * plutôt que de les faire disparaître de l'écran.
+         */
+        'Document' => [
+            'client.portefeuille.gestionnaire',
+            'piste.client.portefeuille.gestionnaire',
+            'cotation.piste.client.portefeuille.gestionnaire',
+            'avenant.cotation.piste.client.portefeuille.gestionnaire',
+            'pieceSinistre.notificationSinistre.assure.portefeuille.gestionnaire',
+            'offreIndemnisationSinistre.notificationSinistre.assure.portefeuille.gestionnaire',
+            'paiementPrime.tranche.cotation.piste.client.portefeuille.gestionnaire',
+            'tache.piste.client.portefeuille.gestionnaire',
+            'tache.cotation.piste.client.portefeuille.gestionnaire',
+            'tache.notificationSinistre.assure.portefeuille.gestionnaire',
+            'feedback.tache.piste.client.portefeuille.gestionnaire',
+        ],
     ];
+
+    /**
+     * Entités dont un enregistrement N'ATTEIGNANT AUCUN portefeuille reste VISIBLE.
+     *
+     * POURQUOI CETTE EXCEPTION EXISTE, ET POURQUOI ELLE NE VAUT QUE POUR LES DOCUMENTS.
+     * Les autres entités scopées appartiennent toutes, par construction, à un client :
+     * une cotation sans client n'existe pas. Un document, si — celui d'un bordereau,
+     * d'un fournisseur, d'un compte bancaire, ou rangé dans un simple classeur. Appliquer
+     * la règle stricte les ferait disparaître de la rubrique sans que personne ne
+     * comprenne pourquoi, alors qu'ils n'appartiennent au portefeuille de PERSONNE.
+     *
+     * Le filtre garde donc son objet — écarter les pièces des clients d'un AUTRE
+     * gestionnaire — sans masquer ce qui est commun à l'entreprise.
+     *
+     * Conséquence assumée : un document rattaché à un parent dont le chemin n'est pas
+     * déclaré ci-dessus est traité comme orphelin, donc visible. C'est la bonne
+     * direction de défaut — le périmètre portefeuille est un CONFORT DE LECTURE, pas une
+     * frontière de sécurité ; celle-ci est le scoping entreprise, qui s'applique
+     * toujours et n'a pas d'exception.
+     *
+     * @var list<string>
+     */
+    public const ORPHELINS_TOLERES = ['Document'];
+
+    /** Un enregistrement de cette entité sans aucun portefeuille reste-t-il visible ? */
+    public static function tolereLesOrphelins(string $entityShortName): bool
+    {
+        return \in_array($entityShortName, self::ORPHELINS_TOLERES, true);
+    }
+
+    /**
+     * Les relations DIRECTES de l'entité qui mènent à un portefeuille — les premiers
+     * segments des chemins, dédoublonnés.
+     *
+     * Elles servent à reconnaître un orphelin : un enregistrement dont AUCUNE de ces
+     * relations n'est renseignée n'appartient à aucun portefeuille. La liste est dérivée
+     * des chemins eux-mêmes, jamais réécrite : ajouter un chemin suffit.
+     *
+     * @return list<string>
+     */
+    public static function relationsDirectes(string $entityShortName): array
+    {
+        $premiers = [];
+        foreach (self::pathsFor($entityShortName) as $chemin) {
+            $premiers[strtok($chemin, '.')] = true;
+        }
+
+        return array_keys($premiers);
+    }
 
     /**
      * Retourne les chemins de périmètre pour une entité (nom court), ou un tableau vide si
