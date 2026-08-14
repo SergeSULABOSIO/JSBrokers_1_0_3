@@ -5,6 +5,7 @@ namespace App\Ai\Tool;
 use App\Ai\AiText;
 use App\Ai\Presentation\Colonnes;
 use App\Ai\Resolution\CheminsDeRelation;
+use App\Ai\Resolution\ResolveurDeReferences;
 use App\Ai\Scope\AiScope;
 use App\Entity\Client;
 use App\Service\Workspace\WorkspaceAccessResolver;
@@ -137,6 +138,10 @@ final class ChronologieTool implements AiToolInterface
         // graphe est fiable (relations *-vers-un, profondeur suffisante).
         private readonly CheminsDeRelation $chemins,
         private readonly EntiteLibelle $libelleur,
+        // Source unique de « un nom dicté → un identifiant » : la MÊME que celle
+        // d'ouvrir_dialogue, sans quoi les deux outils répondent différemment sur la
+        // même personne (incident du 2026-08-13).
+        private readonly ResolveurDeReferences $resolveur,
     ) {
         $this->accessor = PropertyAccess::createPropertyAccessor();
     }
@@ -185,7 +190,17 @@ final class ChronologieTool implements AiToolInterface
                 'id' => [
                     'type' => 'integer',
                     'minimum' => 1,
-                    'description' => 'Identifiant de cette fiche (obtenu via rechercher_entites ou une fiche attachée).',
+                    'description' => 'Identifiant de cette fiche quand tu en disposes déjà (fiche attachée, '
+                        . 'résultat précédent). Facultatif si « nom » est fourni. N’y mets JAMAIS un '
+                        . 'identifiant vu plus haut dans le fil pour un AUTRE dossier : si l’utilisateur '
+                        . 'vient de nommer quelqu’un, donne son nom et laisse-moi le résoudre.',
+                ],
+                'nom' => [
+                    'type' => 'string',
+                    'description' => 'Nom de la fiche, tel que l’utilisateur vient de le prononcer '
+                        . '(ex. "Mbusa Jean de Dieu", "Kibali Goldmines"). Le serveur le résout lui-même : '
+                        . 'n’appelle PAS rechercher_entites pour cela. À PRIVILÉGIER dès que l’utilisateur '
+                        . 'nomme le dossier, même si tu crois déjà en connaître l’identifiant.',
                 ],
                 'du' => [
                     'type' => 'string',
@@ -196,7 +211,10 @@ final class ChronologieTool implements AiToolInterface
                     'description' => 'Ne garder que les faits jusqu\'à cette date métier, AAAA-MM-JJ.',
                 ],
             ],
-            'required' => ['entite', 'id'],
+            // « id » n'est plus exigé : le NOM suffit, et c'est le seul moyen pour le
+            // serveur de vérifier que le dossier retracé est bien celui que
+            // l'utilisateur vient de nommer.
+            'required' => ['entite'],
         ];
     }
 
@@ -229,8 +247,8 @@ final class ChronologieTool implements AiToolInterface
         $ancreId = (int) ($args['id'] ?? 0);
         $ancreFqcn = 'App\\Entity\\' . $ancreNom;
 
-        if (!isset($labels[$ancreNom]) || !class_exists($ancreFqcn) || $ancreId < 1) {
-            return AiToolResult::introuvable($ancreNom . '#' . $ancreId);
+        if (!isset($labels[$ancreNom]) || !class_exists($ancreFqcn)) {
+            return AiToolResult::introuvable($ancreNom);
         }
 
         // FAIL-CLOSED sur l'ancre ET sur le client : la chronologie porte sur le dossier,
@@ -239,6 +257,43 @@ final class ChronologieTool implements AiToolInterface
             if (!$this->accessResolver->canRead($scope->invite, $requis)) {
                 return AiToolResult::horsPerimetre($labels[$requis] ?? $requis);
             }
+        }
+
+        // LE NOM PRIME SUR L'IDENTIFIANT REPORTÉ. Cet outil était le dernier à EXIGER
+        // un id, alors que la doctrine du projet est qu'un outil résout lui-même ce
+        // qu'on lui dicte (ResolveurDeReferences). La conséquence s'est vue en
+        // production le 2026-08-13 : à « non, je parle de Mr. Mbusa Jean de Dieu », le
+        // modèle n'avait aucun moyen de faire résoudre ce nom ; il a donc reporté
+        // l'identifiant du dossier PRÉCÉDENT (Kibali Goldmines) et retracé sa
+        // chronologie sous le nom de Mbusa. L'utilisateur a lu l'historique d'un tiers
+        // en croyant lire le sien — et au message suivant, ouvrir_dialogue, lui,
+        // résolvait par nom et répondait « introuvable » : deux outils, deux réponses
+        // contradictoires sur la même personne.
+        //
+        // Le nom l'emporte donc quand il est fourni : un identifiant reporté est une
+        // hypothèse, un nom prononcé est une donnée.
+        $nom = trim((string) ($args['nom'] ?? ''));
+        if ($nom !== '') {
+            $reference = $this->resolveur->resoudre($ancreNom, $nom, $scope);
+            if (!$reference->estResolue()) {
+                // Introuvable ou ambigu : une QUESTION, pas une chronologie approximative.
+                return AiToolResult::ok([
+                    'pret'      => false,
+                    'aDemander' => [$reference->question()],
+                    'note'      => sprintf(
+                        'AUCUNE chronologie n’a été établie : « %s » ne désigne pas un enregistrement '
+                        . 'unique. Pose la question telle quelle, en UNE ligne. N’invente aucun '
+                        . 'identifiant, ne REPRENDS PAS celui d’un dossier cité plus haut dans le fil, '
+                        . 'et ne présente sous ce nom l’historique de personne d’autre.',
+                        $nom,
+                    ),
+                ]);
+            }
+            $ancreId = (int) $reference->id;
+        }
+
+        if ($ancreId < 1) {
+            return AiToolResult::introuvable($labels[$ancreNom]);
         }
 
         $resultat = $this->searchService->search($ancreFqcn, ['id' => $ancreId], $scope->entreprise, null, 1, 1);
@@ -315,7 +370,17 @@ final class ChronologieTool implements AiToolInterface
                 . 'chronologie ; « saisiLe » est la date d\'ENREGISTREMENT dans le système. Un fait dont '
                 . 'la date métier est future (une échéance à venir) figure normalement en fin de liste — '
                 . 'ce n\'est pas une anomalie. La chronologie porte sur le DOSSIER nommé par « dossier » : '
-                . 'ne l\'annonce jamais comme l\'historique de la seule fiche interrogée.'
+                . 'ne l\'annonce jamais comme l\'historique de la seule fiche interrogée. '
+                // Le 2026-08-13, la prose a titré « Le dossier du client M. Mbusa Jean de
+                // Dieu (rattaché à Kibali Goldmines SA) » : le nom soufflé par l'utilisateur
+                // promu en sujet, et le libellé qui fait foi relégué entre parenthèses. Le
+                // lecteur croit alors lire l'historique d'une personne dont la base ne sait
+                // rien. Le nom du dossier n'est pas une formulation, c'est une donnée.
+                . 'NOMME CE DOSSIER EXACTEMENT COMME « dossier » le nomme, mot pour mot. '
+                . 'N\'y substitue pas le nom que l\'utilisateur a prononcé, ne le complète pas, '
+                . 'et n\'en fais pas une personne « rattachée » à ce libellé : si le dossier '
+                . 'trouvé ne porte pas le nom attendu par l\'utilisateur, DIS-LUI que c\'est '
+                . 'celui-là que tu as lu, et demande-lui s\'il visait quelqu\'un d\'autre.'
                 . ($sourcesOmises === []
                     ? ''
                     : ' Chronologie PARTIELLE : les sources listées dans « sourcesOmises » sont hors du '

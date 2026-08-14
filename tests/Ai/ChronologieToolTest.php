@@ -4,6 +4,7 @@ namespace App\Tests\Ai;
 
 use App\Ai\Presentation\Colonnes;
 use App\Ai\Resolution\CheminsDeRelation;
+use App\Ai\Resolution\ResolveurDeReferences;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
 use App\Ai\Tool\ChronologieTool;
@@ -85,6 +86,10 @@ class ChronologieToolTest extends KernelTestCase
             $search,
             $conteneur->get(CheminsDeRelation::class),
             $conteneur->get(EntiteLibelle::class),
+            // Le VRAI résolveur, monté sur le MÊME double de recherche : c'est ce qui
+            // rend testable « le nom dicté l'emporte », sans quoi la résolution
+            // interrogerait la base pendant que le reste du test lit le double.
+            new ResolveurDeReferences($search, $resolver, $conteneur->get(EntiteLibelle::class)),
         );
     }
 
@@ -386,5 +391,112 @@ class ChronologieToolTest extends KernelTestCase
         $this->assertCount(1, $reglement);
         $this->assertSame('2026-03-15', $reglement[0]['date']);
         $this->assertSame('2026-03-17', $reglement[0]['saisiLe'], 'Réglée le 15, saisie le 17 : les deux se lisent.');
+    }
+
+    /**
+     * Double de recherche qui distingue les DEUX interrogations de ce chemin : la
+     * résolution d'un nom (critère LIKE) et la relecture d'une fiche par identifiant.
+     *
+     * @param array<int, object> $parNom  ce que la recherche par libellé rapporte
+     * @param array<int, object> $parId   fiches disponibles, indexées par identifiant
+     */
+    private function rechercheNommee(array $parNom, array $parId): JSBDynamicSearchService
+    {
+        $search = $this->createMock(JSBDynamicSearchService::class);
+        $search->method('search')->willReturnCallback(
+            function (string $classe, array $criteres) use ($parNom, $parId) {
+                if ($classe !== Client::class) {
+                    return $this->reponse([]);
+                }
+                // Critère LIKE => c'est le résolveur qui cherche un nom.
+                if (\is_array($criteres['nom'] ?? null)) {
+                    return $this->reponse($parNom);
+                }
+                $id = (int) ($criteres['id'] ?? 0);
+
+                return $this->reponse(isset($parId[$id]) ? [$parId[$id]] : []);
+            },
+        );
+
+        return $search;
+    }
+
+    private function clientNomme(string $nom, int $id): Client
+    {
+        $client = (new Client())->setNom($nom)->setExonere(false);
+        $client->setCreatedAt(new \DateTimeImmutable('2026-01-12 09:30:00'));
+
+        return $this->id($client, $id);
+    }
+
+    /**
+     * L'INCIDENT DU 2026-08-13, ET C'EST LE TEST QUI COMPTE ICI.
+     *
+     * L'utilisateur corrige : « non, je parle de Mr. Mbusa Jean de Dieu ». Aucun client
+     * ne porte ce nom. Mais l'outil EXIGEAIT alors un identifiant, que le modèle n'avait
+     * aucun moyen de faire résoudre : il a donc reporté celui du dossier précédent
+     * (Kibali Goldmines) et retracé SON histoire sous le nom de Mbusa. Le courtier a lu
+     * l'historique d'un tiers en croyant lire le sien — et au message suivant,
+     * ouvrir_dialogue, qui résout par nom, répondait « introuvable » : deux outils,
+     * deux réponses contradictoires sur la même personne.
+     *
+     * Le nom l'emporte donc sur l'identifiant reporté : un identifiant repris du fil est
+     * une hypothèse, un nom qu'on vient de prononcer est une donnée.
+     */
+    public function testUnNomQuiNeResoutPasNeProduitAucuneChronologie(): void
+    {
+        $kibali = $this->clientNomme('Kibali Goldmines SA', 11);
+        // Rien ne correspond à « Mbusa » : c'est l'état réel de la base.
+        $search = $this->rechercheNommee([], [11 => $kibali]);
+
+        $result = $this->makeTool($search)->execute(
+            // Exactement ce que le modèle a envoyé : l'id du dossier précédent.
+            ['entite' => 'Client', 'id' => 11, 'nom' => 'Mbusa Jean de Dieu'],
+            $this->scope(),
+        );
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertFalse($result->data['pret'], 'Un nom introuvable ne peut pas produire une chronologie.');
+        $this->assertNotEmpty($result->data['aDemander']);
+        $this->assertArrayNotHasKey('lignes', $result->data);
+        $this->assertArrayNotHasKey('dossier', $result->data, 'Aucun dossier ne doit être retracé sous un nom introuvable.');
+    }
+
+    /**
+     * Le nom prime AUSSI quand il résout — et vers un AUTRE dossier que l'identifiant
+     * transporté. Sans cette règle, l'outil servirait poliment la chronologie du dossier
+     * précédent chaque fois que l'utilisateur change de sujet.
+     */
+    public function testLeNomDicteLEmporteSurLIdentifiantReporte(): void
+    {
+        $kibali = $this->clientNomme('Kibali Goldmines SA', 11);
+        $jeanDeDieu = $this->clientNomme('Mr. jean de dieu', 96);
+        $search = $this->rechercheNommee([$jeanDeDieu], [11 => $kibali, 96 => $jeanDeDieu]);
+
+        $result = $this->makeTool($search)->execute(
+            ['entite' => 'Client', 'id' => 11, 'nom' => 'jean de dieu'],
+            $this->scope(),
+        );
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertStringContainsString('Mr. jean de dieu', $result->data['dossier']);
+        $this->assertStringNotContainsString('Kibali', $result->data['dossier']);
+    }
+
+    /**
+     * Le libellé qui FAIT FOI voyage dans le payload, et la consigne interdit d'y
+     * substituer les mots de l'utilisateur. C'est la seconde moitié de l'incident : la
+     * prose avait titré « M. Mbusa Jean de Dieu (rattaché à Kibali Goldmines SA) »,
+     * promouvant le nom soufflé en sujet et reléguant le vrai entre parenthèses.
+     */
+    public function testLePayloadOrdonneDeNommerLeDossierMotPourMot(): void
+    {
+        $search = $this->rechercheNommee([], [42 => $this->client()]);
+
+        $data = $this->makeTool($search)->execute(['entite' => 'Client', 'id' => 42], $this->scope())->data;
+
+        $this->assertStringContainsString('MIC-RC', $data['dossier']);
+        $this->assertStringContainsString('EXACTEMENT COMME', $data['note']);
+        $this->assertStringContainsString('rattachée', $data['note']);
     }
 }
