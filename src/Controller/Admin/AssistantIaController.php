@@ -28,6 +28,7 @@ use App\Ai\Programme\RapportProgramme;
 use App\Ai\Telemetrie\JournalTokens;
 use App\Ai\Tool\EntiteLibelle;
 use App\Ai\Tool\PrefillWhitelist;
+use App\Ai\Verification\RelectureDeControle;
 use Psr\Log\LoggerInterface;
 use App\Entity\AssistantConversation;
 use App\Entity\AssistantConversationContexte;
@@ -139,6 +140,10 @@ class AssistantIaController extends AbstractController
         private ProgrammeEnCours $programmeEnCours,
         private ProgrammeRunner $programmeRunner,
         private ProgrammeVerificateur $programmeVerificateur,
+        // Confronte à la base ce qu'un plan validé prétend avoir écrit. Le journal
+        // d'exécution ne peut pas jouer ce rôle : il est produit par le code qui
+        // vient d'écrire, et ne peut donc pas se contredire.
+        private RelectureDeControle $relectureDeControle,
         private CanvasRelationHydrator $relationHydrator,
         private DocumentEnAttente $documentEnAttente,
         private DocumentTarificateur $documentTarificateur,
@@ -891,19 +896,41 @@ class AssistantIaController extends AbstractController
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
+        // RELECTURE DE CONTRÔLE — le dernier maillon qui pouvait encore mentir.
+        // Le journal ci-dessus est produit par le code qui vient d'écrire : il ne
+        // peut donc pas se contredire, et c'est lui qui a servi de preuve au
+        // « N opérations exécutées avec succès » du 2026-08-13, alors que le taux
+        // de commission était resté vide en base. On confronte donc le plan VALIDÉ
+        // à ce que la base contient RÉELLEMENT — hors-LLM, coût nul en tokens.
+        // Le résultat est stocké au même titre que le journal : il doit survivre au
+        // rechargement et repartir au moteur au tour suivant.
+        $verification = $this->relectureDeControle->verifier($plan, $journal, $scope);
+        if (!$verification['conforme']) {
+            $this->logger->warning('Ket : écart entre le plan validé et la base après exécution.', [
+                'message' => $idMessage,
+                'ecarts'  => $verification['ecarts'],
+            ]);
+        }
+
         // Marque le plan comme exécuté (anti-rejeu) après succès, et CONSERVE le
         // journal : c'est la seule liste vraie de ce qui a été écrit. Elle est
         // réinjectée au moteur au tour suivant, pour qu'il ne puisse plus affirmer
         // qu'un enregistrement a été créé alors qu'il n'y figure pas.
         $meta['mutationPlanExecuted'] = true;
         $meta['mutationPlanJournal'] = $journal;
+        $meta['mutationVerification'] = $verification;
         $message->setMeta($meta);
         $this->em->flush();
 
         $reponse = [
             'success' => true,
-            'message' => 'Mission exécutée avec succès.',
+            // Le message de tête ne peut plus annoncer un succès que la base
+            // dément : c'est la relecture qui tranche, pas l'absence d'exception.
+            'message' => $verification['conforme']
+                ? 'Mission exécutée avec succès.'
+                : 'Mission exécutée, mais la relecture en base signale un écart.',
             'journal' => $journal,
+            'verification' => $verification,
         ];
 
         // ENCHAÎNEMENT DU PROGRAMME. C'est ici que se refermait le trou : jusqu'à

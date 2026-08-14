@@ -1788,7 +1788,7 @@ export default class extends Controller {
 
             if (response.ok && data.success) {
                 if (viaModal) document.dispatchEvent(new CustomEvent('ui:confirmation.close', { bubbles: true }));
-                await this.renderMutationJournal(data.journal || []);
+                await this.renderMutationJournal(data.journal || [], data.verification || null);
                 // Ket a modifié des données : demande au Cerveau de rafraîchir la
                 // liste de la rubrique affichée (refresh inconditionnel — une
                 // édition d'entité liée peut changer des colonnes calculées de la
@@ -1855,8 +1855,14 @@ export default class extends Controller {
      * Rejoue le journal d'exécution ÉTAPE PAR ÉTAPE dans une bulle assistant :
      * rappel du plan puis, séquentiellement, chaque opération cochée (feedback
      * « coulisses » demandé). Réutilise le rendu Markdown sanitisé + pastilles.
+     *
+     * `verification` = verdict de la RELECTURE EN BASE (RelectureDeControle),
+     * seule autorité sur la conclusion. Le journal, lui, dit ce que le code croit
+     * avoir écrit : conclure « avec succès » sur sa seule foi, c'est ce qui a
+     * annoncé un taux de commission enregistré alors que la base était vide.
+     * Absent (réponse d'une version antérieure), on garde l'ancienne conclusion.
      */
-    async renderMutationJournal(journal) {
+    async renderMutationJournal(journal, verification = null) {
         const bubble = this.appendMessage('assistant', '');
         const content = bubble.querySelector('.aic-msg-text');
         bubble.setAttribute('aria-hidden', 'true');
@@ -1881,7 +1887,21 @@ export default class extends Controller {
         }
 
         const fait = journal.filter((s) => s.statut === 'ok').length;
-        lignes.push('', `[Terminé](#success) ${fait} opération${fait > 1 ? 's' : ''} exécutée${fait > 1 ? 's' : ''} avec succès.`);
+        const pluriel = fait > 1 ? 's' : '';
+        const ecarts = Array.isArray(verification?.ecarts) ? verification.ecarts : [];
+
+        if (verification && ecarts.length > 0) {
+            // La base dément ce que le journal affirme. On le dit ICI, sous les
+            // lignes « Fait » qui viennent de défiler — sinon l'utilisateur repart
+            // avec un succès et découvrira le trou des semaines plus tard.
+            lignes.push('', `[Écart](#danger) ${fait} opération${pluriel} exécutée${pluriel}, mais la relecture en base ne correspond pas au plan validé :`);
+            for (const ecart of ecarts) lignes.push(`- ${ecart}`);
+            lignes.push('', 'Ce qui précède n’a donc **pas** été enregistré comme annoncé. Demandez-moi de le reprendre.');
+        } else if (verification) {
+            lignes.push('', `[Terminé](#success) ${fait} opération${pluriel} exécutée${pluriel} — relu${pluriel} en base, conforme${pluriel} au plan validé.`);
+        } else {
+            lignes.push('', `[Terminé](#success) ${fait} opération${pluriel} exécutée${pluriel} avec succès.`);
+        }
         content.innerHTML = renderAssistantMarkdown(lignes.join('\n'));
         bubble.removeAttribute('aria-hidden');
         this.scrollToBottom();
