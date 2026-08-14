@@ -113,11 +113,32 @@ class MonnaieDuCabinetTest extends KernelTestCase
         $prompt = $this->builder()->toSystemPrompt($this->requete('USD'));
 
         $this->assertStringContainsString('COMPRENDRE AVANT D\'AGIR', $prompt);
-        $this->assertStringContainsString('Ce que je comprends', $prompt);
         $this->assertStringContainsString('Voici comment j\'ai compris votre demande', $prompt);
         // La longueur ou le désordre d'une consigne ne sont PAS des motifs de question :
         // sans cette borne, la règle dégénère en interrogatoire.
         $this->assertStringContainsString('cela se range, cela ne se redemande pas', $prompt);
+    }
+
+    /**
+     * REDIRE N'EST PAS ACCUSER RÉCEPTION (2026-08-14).
+     *
+     * La règle prescrivait « Ce que je comprends : … » en tête de CHAQUE réponse. Sur
+     * un simple « Bonjour », Ket a donc répondu : « Ce que je comprends : Vous
+     * souhaitez engager la conversation et faire un point sur vos activités de
+     * courtage. » Personne ne parle ainsi — et un préfixe systématique n'est pas une
+     * preuve d'écoute, c'est un tic de machine qui décrédibilise les cas où redire
+     * sert vraiment.
+     *
+     * Le prompt doit donc INTERDIRE la formule, et non la réclamer.
+     */
+    public function testLePromptInterditLesFormulesDAccuseDeReception(): void
+    {
+        $prompt = $this->builder()->toSystemPrompt($this->requete('USD'));
+
+        $this->assertStringContainsString('Sont INTERDITES : « Ce que je comprends : »', $prompt);
+        $this->assertStringContainsString('NE REDIS RIEN sur une salutation', $prompt);
+        // Et la boussole ne s'invite pas non plus sous un bonjour.
+        $this->assertStringContainsString('une SALUTATION', $prompt);
     }
 
     /**
