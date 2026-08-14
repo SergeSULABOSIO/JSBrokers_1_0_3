@@ -24,8 +24,14 @@ class VersionService
     /** Nombre de commits correspondant à la version 1.0 (base figée). */
     private const BASELINE_COMMITS = 3881;
 
-    /** Commits nécessaires pour incrémenter le numéro majeur (1.x → 2.x). */
-    private const COMMITS_PER_MAJOR = 1000;
+    /**
+     * Commits nécessaires pour incrémenter le numéro majeur (1.x → 2.x).
+     * Le mineur parcourt 00 → 100, soit 101 valeurs : après 1.100 vient 2.00.
+     */
+    private const COMMITS_PER_MAJOR = 101;
+
+    /** Largeur minimale du mineur : 00, 01 … 99, puis 100 (déborde naturellement). */
+    private const MINOR_PAD = 2;
 
     /** Séparateur d'unité (0x1F) entre champs de `git log` : jamais présent dans un message. */
     private const SEP = "\x1f";
@@ -49,6 +55,9 @@ class VersionService
      * Traduit un nombre total de commits en numéro de version « majeur.mineur ».
      * Fonction pure et déterministe : c'est ici, et seulement ici, que vit la
      * règle de numérotation (donc facilement testable, sans filesystem).
+     *
+     * Le mineur est écrit sur deux chiffres (1.00, 1.01 … 1.99) et va jusqu'à
+     * 1.100 ; le commit suivant fait basculer le majeur : 2.00, 2.01, etc.
      */
     public static function format(int $commitCount): string
     {
@@ -57,10 +66,10 @@ class VersionService
         $majeur = 1 + intdiv($n, self::COMMITS_PER_MAJOR);
         $mineur = $n % self::COMMITS_PER_MAJOR;
 
-        return $majeur . '.' . $mineur;
+        return $majeur . '.' . str_pad((string) $mineur, self::MINOR_PAD, '0', STR_PAD_LEFT);
     }
 
-    /** Version applicative affichable, ex. « 1.1 ». */
+    /** Version applicative affichable, ex. « 2.01 ». */
     public function getVersion(): string
     {
         return self::format($this->values()['count']);

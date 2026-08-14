@@ -7,7 +7,8 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Règle de numérotation de la version applicative : la base (3881 commits) vaut
- * 1.0, chaque commit ajoute +1, et 1000 commits font passer de 1.x à 2.x.
+ * 1.00, chaque commit ajoute +1, le mineur court de 00 à 100 puis le majeur
+ * bascule (après 1.100 vient 2.00).
  * Vérifie aussi la lecture du fichier VERSION et les replis.
  */
 class VersionServiceTest extends TestCase
@@ -16,20 +17,47 @@ class VersionServiceTest extends TestCase
     {
         $base = 3881;
 
-        $this->assertSame('1.0', VersionService::format($base), 'La base = 1.0');
-        $this->assertSame('1.1', VersionService::format($base + 1), 'Premier commit = 1.1');
+        $this->assertSame('1.00', VersionService::format($base), 'La base = 1.00');
+        $this->assertSame('1.01', VersionService::format($base + 1), 'Premier commit = 1.01');
         $this->assertSame('1.42', VersionService::format($base + 42));
-        $this->assertSame('1.999', VersionService::format($base + 999), 'Dernier mineur avant bascule');
-        $this->assertSame('2.0', VersionService::format($base + 1000), '1000 commits → 2.0');
-        $this->assertSame('2.1', VersionService::format($base + 1001));
-        $this->assertSame('3.0', VersionService::format($base + 2000));
+        $this->assertSame('1.99', VersionService::format($base + 99));
+        $this->assertSame('1.100', VersionService::format($base + 100), 'Dernier mineur avant bascule');
+        $this->assertSame('2.00', VersionService::format($base + 101), 'Après 1.100 vient 2.00');
+        $this->assertSame('2.01', VersionService::format($base + 102));
+        $this->assertSame('2.100', VersionService::format($base + 201), 'Dernier mineur de la série 2');
+        $this->assertSame('3.00', VersionService::format($base + 202), 'Puis 3.00');
+    }
+
+    /**
+     * La suite est continue et strictement croissante sur deux bascules : aucun
+     * numéro sauté ni répété entre 1.00 et 3.00.
+     */
+    public function testFormatEnumereSansTrouSurDeuxBascules(): void
+    {
+        $base = 3881;
+
+        $attendus = [];
+        foreach ([1, 2] as $majeur) {
+            foreach (range(0, 100) as $mineur) {
+                $attendus[] = $majeur . '.' . str_pad((string) $mineur, 2, '0', STR_PAD_LEFT);
+            }
+        }
+        $attendus[] = '3.00';
+
+        $obtenus = [];
+        foreach (range(0, 202) as $pas) {
+            $obtenus[] = VersionService::format($base + $pas);
+        }
+
+        $this->assertSame($attendus, $obtenus);
+        $this->assertCount(202 + 1, array_unique($obtenus), 'Aucun numéro répété.');
     }
 
     public function testFormatClampeSousLaBase(): void
     {
-        // Un décompte inférieur à la base (dépôt tronqué) ne descend jamais sous 1.0.
-        $this->assertSame('1.0', VersionService::format(0));
-        $this->assertSame('1.0', VersionService::format(100));
+        // Un décompte inférieur à la base (dépôt tronqué) ne descend jamais sous 1.00.
+        $this->assertSame('1.00', VersionService::format(0));
+        $this->assertSame('1.00', VersionService::format(100));
     }
 
     public function testLitLeFichierVersion(): void
@@ -38,19 +66,19 @@ class VersionServiceTest extends TestCase
 
         $service = new VersionService($dir);
 
-        $this->assertSame('1.1', $service->getVersion());
+        $this->assertSame('1.01', $service->getVersion());
         $this->assertSame('2026-07-25', $service->getDate()->format('Y-m-d'));
     }
 
     public function testFichierAbsentRetombeSurLaBase(): void
     {
-        // Dossier sans fichier VERSION ni dépôt git : repli déterministe sur 1.0.
+        // Dossier sans fichier VERSION ni dépôt git : repli déterministe sur 1.00.
         $dir = sys_get_temp_dir() . '/jsb_version_' . uniqid('', true);
         mkdir($dir);
 
         $service = new VersionService($dir);
 
-        $this->assertSame('1.0', $service->getVersion());
+        $this->assertSame('1.00', $service->getVersion());
 
         rmdir($dir);
     }
@@ -205,7 +233,7 @@ class VersionServiceTest extends TestCase
     {
         [$majeur, $mineur] = array_map('intval', explode('.', $version, 2));
 
-        return 3881 + ($majeur - 1) * 1000 + $mineur;
+        return 3881 + ($majeur - 1) * 101 + $mineur;
     }
 
     private function projetTemporaire(string $contenuVersion): string

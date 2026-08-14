@@ -2,6 +2,7 @@
 
 namespace App\Tests\Nouveautes;
 
+use App\Services\VersionService;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Process\ExecutableFinder;
 
@@ -48,9 +49,9 @@ class NouveautesPageTest extends WebTestCase
 
         $premiere = $entrees->first();
         $this->assertMatchesRegularExpression(
-            '/^\d+\.\d+$/',
+            '/^\d+\.\d{2,}$/',
             trim($premiere->filter('.chg-version')->text()),
-            'Le numéro de version jalonne chaque livraison, à la place de la pastille.',
+            'Le numéro jalonne chaque livraison, mineur sur deux chiffres (1.00 … 1.100).',
         );
         $this->assertSame(1, $premiere->filter('time.chg-date')->count(), 'Date complète présente.');
         $this->assertNotSame('', trim($premiere->filter('time.chg-date')->text()));
@@ -103,6 +104,27 @@ class NouveautesPageTest extends WebTestCase
         $lien = $crawler->filter('a.auth__brand-version');
         $this->assertSame(1, $lien->count(), 'Le panneau de marque affiche la version cliquable.');
         $this->assertSame('/nouveautes', $lien->attr('href'));
+    }
+
+    /**
+     * Le numéro affiché à l'écran est bien celui produit par la règle de
+     * numérotation — mineur sur deux chiffres, du 1.00 au 1.100 avant bascule.
+     */
+    public function testLaVersionAfficheeSuitLaRegleDeNumerotation(): void
+    {
+        $client = static::createClient();
+        $crawler = $client->request('GET', '/login');
+        $this->assertResponseIsSuccessful();
+
+        $affichee = trim($crawler->filter('a.auth__brand-version')->text());
+        $attendue = static::getContainer()->get(VersionService::class)->getVersion();
+
+        $this->assertStringContainsString($attendue, $affichee);
+        $this->assertMatchesRegularExpression('/^\d+\.\d{2,}$/', $attendue);
+
+        // Le mineur ne dépasse jamais 100 : au-delà, c'est le majeur qui monte.
+        [, $mineur] = explode('.', $attendue, 2);
+        $this->assertLessThanOrEqual(100, (int) $mineur, 'Après x.100 vient (x+1).00.');
     }
 
     /**
