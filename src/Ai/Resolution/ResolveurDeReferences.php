@@ -115,6 +115,25 @@ final class ResolveurDeReferences
     /**
      * Recherche par libellé, scopée à l'entreprise.
      *
+     * PLUSIEURS CHAMPS, ESSAYÉS DANS L'ORDRE — et non le seul champ d'affichage.
+     *
+     * L'INCIDENT DU 2026-08-14. « Attache ces fichiers à la police SURDCVO00018389 » :
+     * la référence existait bien en base, sur l'avenant 134. Mais la recherche ne portait
+     * que sur le champ d'AFFICHAGE, et un utilisateur ne désigne pas toujours un
+     * enregistrement par ce champ-là. Ket a donc répondu que « cette police n'a pas pu
+     * être trouvée dans votre portefeuille » — une phrase fausse, et de la pire espèce :
+     * elle ne dit pas « je n'ai pas su chercher », elle dit « cela n'existe pas ».
+     *
+     * On essaie donc chaque champ identifiant, du plus précis au plus large, et on
+     * S'ARRÊTE au premier qui répond. L'ordre fait la précision : une correspondance sur
+     * la référence l'emporte sur une correspondance dans une description, qui n'est
+     * consultée que si rien de mieux n'a été trouvé. Le coût est nul dans le cas nominal
+     * — une seule requête, comme avant — et borné au nombre de champs identifiants sinon.
+     *
+     * Les LIBELLÉS rendus restent ceux du champ d'affichage, quel que soit le champ qui a
+     * permis de trouver : la question « lequel ? » doit montrer ce que l'utilisateur
+     * reconnaît, pas le champ par lequel le serveur est arrivé.
+     *
      * @return array<int, string> id => libellé
      */
     public function chercher(string $entite, string $terme, AiScope $scope): array
@@ -123,17 +142,20 @@ final class ResolveurDeReferences
         if (!class_exists($fqcn)) {
             return [];
         }
-        $champ = $this->libelleur->displayField($fqcn);
-        if ($champ === null) {
-            return [];
+
+        foreach ($this->libelleur->champsDeResolution($fqcn) as $champ) {
+            $candidats = $this->chercherPar(
+                $entite,
+                [$champ => ['operator' => 'LIKE', 'value' => $terme, 'mode' => 'contains']],
+                $terme,
+                $scope,
+            );
+            if ($candidats !== []) {
+                return $candidats;
+            }
         }
 
-        return $this->chercherPar(
-            $entite,
-            [$champ => ['operator' => 'LIKE', 'value' => $terme, 'mode' => 'contains']],
-            $terme,
-            $scope,
-        );
+        return [];
     }
 
     /**

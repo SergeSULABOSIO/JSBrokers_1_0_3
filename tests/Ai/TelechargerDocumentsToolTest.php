@@ -15,6 +15,7 @@ use App\Entity\Document;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Piste;
+use App\Entity\Portefeuille;
 use App\Entity\Utilisateur;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use Doctrine\ORM\EntityManagerInterface;
@@ -101,8 +102,9 @@ class TelechargerDocumentsToolTest extends KernelTestCase
         $noms = [self::ENTREPRISE_NOM, self::ENTREPRISE_AUTRE];
         $emails = [self::OWNER_EMAIL, self::AUTRE_EMAIL];
 
-        // Enfants avant parents : document précède avenant, qui précède cotation.
-        foreach (['document', 'avenant', 'cotation', 'assureur', 'piste', 'client', 'classeur', 'invite'] as $table) {
+        // Enfants avant parents : document précède avenant, qui précède cotation ; le
+        // portefeuille suit le client, qui le référence.
+        foreach (['document', 'avenant', 'cotation', 'assureur', 'piste', 'client', 'portefeuille', 'classeur', 'invite'] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom IN (:noms)",
                 ['noms' => $noms],
@@ -179,8 +181,16 @@ class TelechargerDocumentsToolTest extends KernelTestCase
         $invite->setUtilisateur($owner)->setEntreprise($entreprise)->setProprietaire(true);
         $em->persist($invite);
 
+        // LE CLIENT APPARTIENT À UN PORTEFEUILLE, et ce détail n'en est pas un : depuis
+        // que Document est soumis au périmètre portefeuille, un client sans portefeuille
+        // rendrait ses documents invisibles — état qui n'existe pas en exploitation, et
+        // qui ferait passer un test pour une régression.
+        $portefeuille = (new Portefeuille())->setNom('Portefeuille de Serge')->setGestionnaire($invite);
+        $portefeuille->setEntreprise($entreprise)->setInvite($invite);
+        $em->persist($portefeuille);
+
         $client = (new Client())->setNom('KIN AVIA')->setExonere(false);
-        $client->setEntreprise($entreprise)->setInvite($invite);
+        $client->setEntreprise($entreprise)->setInvite($invite)->setPortefeuille($portefeuille);
         $em->persist($client);
 
         $piste = (new Piste())
@@ -247,6 +257,36 @@ class TelechargerDocumentsToolTest extends KernelTestCase
         $doc4->setClient($client);
         $doc4->setEntreprise($entreprise)->setInvite($invite);
         $em->persist($doc4);
+
+        // ── UN AUTRE GESTIONNAIRE, dans la MÊME entreprise ──
+        // C'est le cas que le périmètre portefeuille existe pour traiter : son client
+        // n'est pas le mien, ses pièces ne me regardent pas — bien que nous partagions
+        // l'entreprise, donc le scoping de sécurité.
+        $autreGestionnaire = (new Invite())->setNom('Collègue');
+        $autreGestionnaire->setUtilisateur($owner)->setEntreprise($entreprise)->setProprietaire(false);
+        $em->persist($autreGestionnaire);
+
+        $autrePortefeuille = (new Portefeuille())->setNom('Portefeuille du collègue')->setGestionnaire($autreGestionnaire);
+        $autrePortefeuille->setEntreprise($entreprise)->setInvite($autreGestionnaire);
+        $em->persist($autrePortefeuille);
+
+        $clientDuCollegue = (new Client())->setNom('SOCIÉTÉ DU COLLÈGUE')->setExonere(false);
+        $clientDuCollegue->setEntreprise($entreprise)->setInvite($autreGestionnaire)->setPortefeuille($autrePortefeuille);
+        $em->persist($clientDuCollegue);
+
+        $docDuCollegue = (new Document())->setNom('Dossier du collègue');
+        $docDuCollegue->setNomFichierStocke($this->ecrireBinaire('pdf', 111));
+        $docDuCollegue->setClient($clientDuCollegue);
+        $docDuCollegue->setEntreprise($entreprise)->setInvite($autreGestionnaire);
+        $em->persist($docDuCollegue);
+
+        // UN ORPHELIN : rattaché à un classeur seulement, donc à aucun portefeuille.
+        // Il doit rester VISIBLE — il n'appartient à personne en particulier.
+        $orphelin = (new Document())->setNom('Note de service');
+        $orphelin->setNomFichierStocke($this->ecrireBinaire('pdf', 222));
+        $orphelin->setClasseur($classeur);
+        $orphelin->setEntreprise($entreprise)->setInvite($invite);
+        $em->persist($orphelin);
 
         // ── L'entreprise concurrente, et son document homonyme ──
         $autreUser = (new Utilisateur())
@@ -520,18 +560,76 @@ class TelechargerDocumentsToolTest extends KernelTestCase
     }
 
     /**
-     * SANS CRITÈRE, ON NE DÉVERSE RIEN. Lister tous les documents de l'entreprise
-     * parce que la question était vague coûterait des tokens pour une liste que
-     * personne n'a demandée — et le refus doit DIRE quoi faire.
+     * « DONNE-MOI LE TABLEAU DES FICHIERS DE TOUT MON PORTEFEUILLE » — sans le moindre
+     * critère, et c'est une demande complète.
+     *
+     * Elle ne déverse pas l'entreprise : elle rend le périmètre de CELUI QUI DEMANDE, par
+     * la fabrique partagée avec la rubrique Documents. Le périmètre appliqué est déclaré
+     * dans la réponse, pour que Ket ne puisse pas présenter un portefeuille comme la
+     * totalité de l'entreprise.
      */
-    public function testSansCritereLOutilDemandeDeQuoiChercher(): void
+    public function testSansCritereLOutilRendTousLesFichiersDuPortefeuille(): void
     {
         $seed = $this->seed();
 
         $resultat = $this->tool()->execute([], $seed['scope']);
 
-        self::assertSame(AiToolResult::STATUS_INTROUVABLE, $resultat->status);
-        self::assertArrayHasKey('note', $resultat->data, 'Un refus qui ne dit pas quoi faire produit une impasse polie.');
+        self::assertSame(AiToolResult::STATUS_OK, $resultat->status);
+        $noms = array_column($resultat->data['fichiers'], 'nom');
+        self::assertContains('Contrat signé', $noms);
+        self::assertContains('Registre de commerce', $noms);
+        self::assertSame('Mon portefeuille', $resultat->data['perimetre']);
+    }
+
+    /**
+     * LE CLOISONNEMENT ENTRE GESTIONNAIRES, qui est la raison d'être du périmètre.
+     *
+     * Document n'y était soumis à aucun titre : la rubrique — et Ket avec elle — montrait
+     * à chaque invité les pièces de TOUS les clients de l'entreprise, y compris ceux d'un
+     * autre gestionnaire. « Les fichiers de mon portefeuille » ne voulait donc rien dire.
+     */
+    public function testLesDocumentsDUnAutreGestionnaireNeRemontentPas(): void
+    {
+        $seed = $this->seed();
+
+        $resultat = $this->tool()->execute([], $seed['scope']);
+
+        self::assertNotContains(
+            'Dossier du collègue',
+            array_column($resultat->data['fichiers'], 'nom'),
+            'Le client appartient au portefeuille d’un autre gestionnaire.',
+        );
+    }
+
+    /**
+     * MAIS UN DOCUMENT SANS CLIENT RESTE VISIBLE. Un bordereau, un fournisseur, une note
+     * rangée dans un classeur n'atteignent aucun portefeuille : les masquer les ferait
+     * disparaître de l'écran alors qu'ils n'appartiennent au portefeuille de PERSONNE.
+     */
+    public function testUnDocumentSansPortefeuilleResteVisible(): void
+    {
+        $seed = $this->seed();
+
+        $resultat = $this->tool()->execute([], $seed['scope']);
+
+        self::assertContains(
+            'Note de service',
+            array_column($resultat->data['fichiers'], 'nom'),
+            'Un orphelin n’appartient à personne : il ne doit être masqué à personne.',
+        );
+    }
+
+    /**
+     * L'ÉLARGISSEMENT RESTE POSSIBLE, mais sur demande explicite — et il est DIT.
+     */
+    public function testLePerimetreSElargitALEntrepriseSurDemande(): void
+    {
+        $seed = $this->seed();
+
+        $resultat = $this->tool()->execute(['perimetre' => 'entreprise'], $seed['scope']);
+
+        self::assertContains('Dossier du collègue', array_column($resultat->data['fichiers'], 'nom'));
+        self::assertSame("toute l'entreprise", $resultat->data['perimetre']);
     }
 
     /**
@@ -555,6 +653,7 @@ class TelechargerDocumentsToolTest extends KernelTestCase
             $conteneur->get(\App\Ai\Document\ContexteDeDocument::class),
             $conteneur->get(\App\Service\Document\DocumentFichier::class),
             $conteneur->get(\App\Token\TokenAccountService::class),
+            $conteneur->get(\App\Services\Search\PortefeuilleCritereFactory::class),
         );
 
         $resultat = $outil->execute(['nom' => 'Contrat'], $seed['scope']);

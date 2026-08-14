@@ -119,7 +119,18 @@ final class ContexteDeDocument
         $entite = (new \ReflectionClass($parent))->getShortName();
         $libelle = $this->libelle($parent);
 
-        return $libelle === '' ? $entite : $entite . ' ' . $libelle;
+        if ($libelle === '') {
+            return $entite;
+        }
+
+        // Ne pas bégayer : un bordereau nommé « Bordereau SFA - Mars 2026 » donnerait
+        // « Bordereau Bordereau SFA - Mars 2026 ». Le préfixe n'apporte le type que
+        // lorsque le libellé ne le porte pas déjà.
+        if (stripos($libelle, $entite) === 0) {
+            return $libelle;
+        }
+
+        return $entite . ' ' . $libelle;
     }
 
     /**

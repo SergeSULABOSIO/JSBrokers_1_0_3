@@ -11,6 +11,8 @@ use App\Entity\Document;
 use App\Service\Document\DocumentFichier;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
+use App\Services\Search\PortefeuilleCritereFactory;
+use App\Services\Search\PortefeuilleScope;
 use App\Token\TokenAccountService;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
@@ -60,6 +62,9 @@ final class TelechargerDocumentsTool implements AiToolInterface
         private readonly ContexteDeDocument $contexte,
         private readonly DocumentFichier $documentFichier,
         private readonly TokenAccountService $tokenAccountService,
+        // Fabrique PARTAGÉE avec le contrôleur de liste : le périmètre que Ket applique
+        // est celui que la rubrique affiche, au critère près.
+        private readonly PortefeuilleCritereFactory $portefeuilleCritere,
     ) {
     }
 
@@ -74,20 +79,25 @@ final class TelechargerDocumentsTool implements AiToolInterface
             . "d'un client, d'une cotation, d'un sinistre, preuves de paiement…) et affiche à "
             . "l'utilisateur des boutons de téléchargement, avec pour chaque fichier son format, sa "
             . 'taille, sa date de mise en ligne et le dossier dont il provient. Cherche par '
-            . 'rattachement (lieA), par nom, ou par identifiants — au moins un des trois. À utiliser '
-            . "dès que l'utilisateur veut télécharger, récupérer, obtenir ou consulter un fichier "
-            . 'archivé dans la base. Différent de telecharger_fichiers, qui ne concerne QUE les '
-            . 'pièces jointes de la conversation en cours. Ne prétends JAMAIS ne pas pouvoir fournir '
-            . 'de téléchargement : cet outil affiche des boutons sécurisés.';
+            . 'rattachement (lieA), par nom, ou par identifiants. SANS AUCUN CRITÈRE, rend TOUS les '
+            . "fichiers du portefeuille de l'utilisateur — c'est la bonne réponse à « la liste / le "
+            . 'tableau des fichiers de mon portefeuille », « tous mes documents ». À utiliser dès que '
+            . "l'utilisateur veut voir, lister, télécharger, récupérer ou consulter des FICHIERS "
+            . '(par opposition à des données) : cet outil est le seul qui rende le format, la taille, '
+            . "la date de mise en ligne et un bouton de téléchargement. N'utilise PAS rechercher_entites "
+            . "pour une demande de fichiers — il ne rend qu'une liste, sans téléchargement possible. "
+            . 'Différent de telecharger_fichiers, qui ne concerne QUE les pièces jointes de la '
+            . 'conversation en cours. Ne prétends JAMAIS ne pas pouvoir fournir de téléchargement.';
     }
 
     public function aiguillage(): string
     {
-        return '« télécharge / récupère / donne-moi / envoie-moi le(s) document(s) » d\'un dossier de la base '
-            . '— les documents d\'une police, d\'un client, d\'une cotation, d\'un sinistre. Tu n\'as PAS besoin '
-            . 'des identifiants : donne-moi le rattachement (lieA={entite:"Avenant", nom:"…"}) ou le nom du '
-            . 'document. J\'affiche des boutons de téléchargement sécurisés sous ta réponse — ne dis JAMAIS '
-            . 'que tu ne peux pas fournir de fichier ou de lien.';
+        return 'TOUTE demande portant sur des FICHIERS : « la liste / le tableau des fichiers de mon '
+            . 'portefeuille », « tous mes documents », « télécharge / récupère / donne-moi le(s) document(s) » '
+            . 'd\'une police, d\'un client, d\'une cotation, d\'un sinistre. Appelle-moi SANS argument pour tout '
+            . 'le portefeuille, ou donne-moi le rattachement (lieA={entite:"Avenant", nom:"…"}) — tu n\'as pas '
+            . 'besoin des identifiants. Moi seul rends le format, la taille, la date et un bouton de '
+            . 'téléchargement ; ne dis JAMAIS que tu ne peux pas fournir de fichier ou de lien.';
     }
 
     public function schema(): array
@@ -121,6 +131,7 @@ final class TelechargerDocumentsTool implements AiToolInterface
                     'description' => 'Nombre maximum de documents à proposer (défaut ' . self::LIMITE_DEFAUT
                         . ', maximum ' . self::LIMITE_MAX . ').',
                 ],
+                'perimetre' => PortefeuilleScope::proprieteSchema(),
             ],
         ];
     }
@@ -173,6 +184,21 @@ final class TelechargerDocumentsTool implements AiToolInterface
             return $resolution->refus;
         }
 
+        // PÉRIMÈTRE : par défaut celui de l'écran — le portefeuille de l'invité —, par la
+        // fabrique PARTAGÉE avec le contrôleur de liste, donc le même critère, le même SQL
+        // et les mêmes enregistrements que la rubrique Documents. Élargi seulement sur
+        // demande explicite.
+        //
+        // C'est ce qui rend « donne-moi les fichiers de tout mon portefeuille » légitime
+        // et complet, même sans autre critère : la demande ne déverse pas l'entreprise
+        // entière, elle rend le périmètre de celui qui la formule.
+        //
+        // DÉLIBÉRÉMENT HORS du mode par identifiants : demander un document par son
+        // identifiant, c'est déjà l'avoir vu quelque part. Lui appliquer en plus le filtre
+        // de portefeuille produirait un « introuvable » incompréhensible sur une pièce que
+        // l'utilisateur a sous les yeux. Le scoping ENTREPRISE, lui, s'applique toujours.
+        $perimetreEntreprise = PortefeuilleScope::estEntreprise($args['perimetre'] ?? null);
+
         // DEUX MODES, jamais mélangés. Donner des identifiants, c'est déjà savoir
         // exactement ce qu'on veut : le rattachement et le nom n'y ajouteraient rien
         // qu'une occasion de se contredire. Les combiner n'a aucun usage réel.
@@ -184,15 +210,8 @@ final class TelechargerDocumentsTool implements AiToolInterface
             if ($nom !== '') {
                 $criteria['nom'] = ['operator' => 'LIKE', 'value' => $nom, 'mode' => 'contains'];
             }
-
-            // Aucun critère du tout : on ne déverse pas la totalité des documents de
-            // l'entreprise dans le chat. On demande de quoi chercher, en le disant.
-            if ($criteria === []) {
-                return AiToolResult::introuvable(
-                    'aucun critère de recherche',
-                    'Précise de QUEL dossier il s\'agit (lieA={entite:"Avenant", nom:"…"} par exemple) ou le nom '
-                    . 'du document recherché, puis rappelle-moi. Ne liste rien tant que tu ne l\'as pas.',
-                );
+            if (!$perimetreEntreprise) {
+                $criteria += $this->portefeuilleCritere->pour('Document', $scope->invite);
             }
 
             // Scoping entreprise : assuré par le service de recherche, jamais par le prompt.
@@ -303,6 +322,13 @@ final class TelechargerDocumentsTool implements AiToolInterface
                     count($pourUi),
                 ),
         ];
+
+        // DIRE LE PÉRIMÈTRE, toujours. « 6 fichiers » et « 6 fichiers de VOTRE
+        // portefeuille » ne veulent pas dire la même chose à un invité qui en gère un
+        // parmi plusieurs, et c'est au serveur de trancher — pas au modèle de deviner.
+        $data['perimetre'] = $perimetreEntreprise
+            ? PortefeuilleScope::LIBELLE_ENTREPRISE
+            : PortefeuilleScope::PERIMETRES[PortefeuilleScope::PERIMETRE_PORTEFEUILLE];
 
         if ($resolution->ignore) {
             $data['lienIgnore'] = 'Le rattachement demandé n\'a pas pu être appliqué : ces documents ne sont '
