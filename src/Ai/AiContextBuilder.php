@@ -1812,6 +1812,7 @@ class AiContextBuilder
             return "\n\n[SYSTÈME — ce plan d'écriture a été VALIDÉ et EXÉCUTÉ. Voici la liste EXHAUSTIVE et "
                 . "EXACTE de ce qui a été écrit en base :\n"
                 . $this->journalLisible($meta['mutationPlanJournal'] ?? [])
+                . $this->ecartsDeRelecture($meta)
                 . "\nRÈGLE ABSOLUE : rien d'autre n'a été enregistré. N'affirme JAMAIS qu'un enregistrement "
                 . 'existe s\'il ne figure pas dans cette liste, et n\'invoque JAMAIS un calcul « automatique » '
                 . 'du moteur pour combler un élément absent : ce qui n\'a pas été écrit n\'existe pas. Si '
@@ -1836,6 +1837,40 @@ class AiContextBuilder
         }
 
         return '';
+    }
+
+    /**
+     * Ce que la RELECTURE EN BASE a démenti, après coup.
+     *
+     * Le journal d'exécution dit ce que le code croit avoir écrit ; il est produit
+     * par ce même code et ne peut donc pas se contredire. La relecture, elle,
+     * confronte le plan validé au contenu réel de la base — et quand les deux
+     * divergent, le modèle doit l'apprendre ICI. Sans ce fragment, il lirait un
+     * journal impeccable et confirmerait au tour suivant un enregistrement que la
+     * base ne porte pas : exactement le mensonge que le bandeau du fil vient
+     * d'empêcher, mais reconduit d'un message plus tard.
+     *
+     * Chaîne vide quand tout concorde — le cas normal ne doit rien coûter.
+     *
+     * @param array<string, mixed> $meta
+     */
+    private function ecartsDeRelecture(array $meta): string
+    {
+        $ecarts = $meta['mutationVerification']['ecarts'] ?? [];
+        if (!is_array($ecarts) || $ecarts === []) {
+            return '';
+        }
+
+        $lignes = '';
+        foreach ($ecarts as $ecart) {
+            $lignes .= "\n  - " . trim((string) $ecart);
+        }
+
+        return "\n\nATTENTION — la relecture en base CONTREDIT ce journal sur les points suivants :"
+            . $lignes
+            . "\nCes éléments-là n'ont PAS été enregistrés comme annoncé. Ne les présente jamais comme "
+            . 'acquis, ne les recopie pas dans un récapitulatif de réussite, et si l\'utilisateur '
+            . 'te demande où en est le dossier, DIS l\'écart et propose de le reprendre.';
     }
 
     /**

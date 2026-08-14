@@ -1259,6 +1259,23 @@
                     « Valider et exécuter ». Redemandez l'opération pour obtenir le plan, son budget et ce bouton.
                 </p>
             {% endif %}
+            {# RELECTURE DE CONTRÔLE : le plan a bien été exécuté, mais la base ne
+               porte pas ce qu'il annonçait. Le bandeau du fil, lui, vit dans une
+               bulle éphémère créée au moment du clic — un F5 laisserait donc le
+               plan affiché comme exécuté, sans la moindre trace de l'écart. C'est
+               la même raison qui a fait persister executionAbsente ci-dessus. #}
+            {% set ecartsRelecture = estAssistant
+                ? (message.meta.mutationVerification.ecarts ?? []) : [] %}
+            {% if ecartsRelecture|length > 0 %}
+                <p class="aic-notice aic-notice--error" role="alert">
+                    ⚠ RELU EN BASE — CE QUI SUIT N'A PAS ÉTÉ ENREGISTRÉ COMME ANNONCÉ :
+                </p>
+                <ul class="aic-notice aic-notice--error">
+                    {% for ecart in ecartsRelecture %}
+                        <li>{{ ecart }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
             {# RAPPORT FINAL d'un programme portant des écarts : le bouton de
                correction doit survivre au rechargement, sinon la seule issue
                proposée à l'utilisateur disparaîtrait avec la page. #}
