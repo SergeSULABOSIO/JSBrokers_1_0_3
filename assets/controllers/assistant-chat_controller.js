@@ -114,6 +114,7 @@ export default class extends Controller {
         // (F5) : le live la crée via executeActions, l'historique la restaure ici.
         this.restoreMutationReviews();
         this.restoreDocumentReviews();
+        this.restoreClarifications();
         // Rapports de programme portant des écarts : le bouton de correction est
         // la seule issue proposée, il doit survivre au rechargement.
         this.restoreProgrammeCorrections();
@@ -449,8 +450,20 @@ export default class extends Controller {
         input.style.height = `${Math.min(input.scrollHeight, 160)}px`;
     }
 
+    /** Envoi depuis la zone de saisie (bouton, ou Entrée). */
     async send() {
         const contenu = this.inputTarget.value.trim();
+        if (contenu === '' || this.sending) return;
+        await this._envoyer(contenu);
+    }
+
+    /**
+     * LE chemin d'envoi, partagé par la zone de saisie et par les boutons qui
+     * répondent à la place de l'utilisateur (« Oui, c'est bien ça » sous une
+     * reformulation). `extra` complète la charge utile — deux fetch parallèles
+     * finiraient par ne plus traiter les 402 ni les citations de la même façon.
+     */
+    async _envoyer(contenu, extra = {}) {
         if (contenu === '' || this.sending) return;
 
         this.sending = true;
@@ -469,7 +482,7 @@ export default class extends Controller {
             const response = await fetch(this.sendUrlValue, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contenu, replyToId: citation ? citation.id : null }),
+                body: JSON.stringify({ contenu, replyToId: citation ? citation.id : null, ...extra }),
             });
 
             if (response.status === 402) {
@@ -568,6 +581,9 @@ export default class extends Controller {
                 case 'ket-mutation.review':
                     this.renderMutationReview(action);
                     break;
+                case 'ket-comprehension.clarifier':
+                    this.renderClarification(action);
+                    break;
                 case 'ket-mutation.absent':
                     this.renderMutationAbsent(action);
                     break;
@@ -614,6 +630,77 @@ export default class extends Controller {
                 this.renderMutationReview(action, el);
             }
         });
+    }
+
+    /**
+     * Reconstruit la barre d'une REFORMULATION à confirmer laissée en suspens
+     * (data-clarification). Sans elle, un F5 laisserait la question de Ket seule à
+     * l'écran, sans les deux boutons qui permettent d'y répondre — et l'utilisateur
+     * devrait retaper une demande qu'il venait de valider du regard.
+     */
+    restoreClarifications() {
+        if (!this.hasMessagesTarget) return;
+        this.messagesTarget.querySelectorAll('.aic-msg[data-clarification]').forEach((el) => {
+            let action;
+            try {
+                action = JSON.parse(el.dataset.clarification);
+            } catch (e) {
+                return;
+            }
+            el.removeAttribute('data-clarification'); // évite tout doublon
+            if (action && action.intention) {
+                this.renderClarification(action, el);
+            }
+        });
+    }
+
+    /**
+     * Barre de décision d'une REFORMULATION : « Oui, c'est bien ça » / « Non, je
+     * précise ».
+     *
+     * Sœur des deux autres barres, et la plus simple de la famille : il n'y a ici ni
+     * budget, ni étendue, ni mot de passe — rien n'a été préparé et rien ne sera
+     * écrit. Ce qui se valide, c'est une PHRASE. Elle réutilise donc telle quelle la
+     * mise en forme des barres de décision (aic-mutation-actions) : ces boutons ont
+     * la même fonction pour l'utilisateur, ils n'ont aucune raison d'avoir un autre
+     * aspect.
+     *
+     * « Oui » renvoie l'INTENTION, pas le message d'origine : c'est ce texte-là que
+     * l'utilisateur vient d'approuver, et le faire retaper serait lui infliger le
+     * travail que cette phase existe précisément pour lui épargner.
+     */
+    renderClarification(action, anchor = null) {
+        const intention = action && typeof action.intention === 'string' ? action.intention.trim() : '';
+        if (intention === '') return;
+
+        const bar = document.createElement('div');
+        bar.className = 'aic-mutation-actions';
+        bar.setAttribute('role', 'group');
+        bar.setAttribute('aria-label', 'Confirmation de la demande comprise par l’assistant');
+
+        const oui = this._mutBtn('primary', this.constructor.ICON_CHECK, 'Oui, c’est bien ça', async () => {
+            bar.remove();
+            await this._envoyer(intention, { intentionConfirmee: true });
+        });
+        const non = this._mutBtn('ghost', this.constructor.ICON_X, 'Non, je précise', () => {
+            bar.remove();
+            // On PRÉ-REMPLIT plutôt que de vider : corriger une phrase déjà écrite
+            // coûte un mot, la réécrire coûte tout le message.
+            this.inputTarget.value = intention;
+            this.onInput();
+            this.autoGrow();
+            this.inputTarget.focus();
+            this.inputTarget.select();
+        });
+        bar.appendChild(oui);
+        bar.appendChild(non);
+
+        if (anchor && anchor.parentNode) {
+            anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+        } else {
+            this.messagesTarget.appendChild(bar);
+        }
+        this.scrollToBottom();
     }
 
     /**

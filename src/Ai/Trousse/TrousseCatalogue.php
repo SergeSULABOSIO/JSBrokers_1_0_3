@@ -54,7 +54,15 @@ final class TrousseCatalogue
 
         $retenus = [];
         foreach ($this->outils as $outil) {
-            if (!$trousse->estEcriture() && $outil instanceof AiToolEcriture) {
+            // La trousse de COMPRÉHENSION est une LISTE BLANCHE, à l'inverse des deux
+            // autres qui écartent. Elle doit le rester : un outil ajouté au projet
+            // n'a aucune raison d'atterrir dans la phase la plus légère du moteur
+            // sans que quelqu'un l'ait décidé.
+            if ($trousse === Trousse::COMPREHENSION) {
+                if (!$outil instanceof AiToolDeComprehension) {
+                    continue;
+                }
+            } elseif (!$trousse->estEcriture() && $outil instanceof AiToolEcriture) {
                 continue;
             }
             if ($outil instanceof AiToolConditionnel && !$outil->estDisponible($scope)) {

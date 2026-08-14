@@ -5,10 +5,12 @@ namespace App\Tests\Ai;
 use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\AiContextBuilder;
 use App\Ai\AiRequest;
+use App\Ai\Comprehension\Comprehenseur;
 use App\Ai\Debit\BudgetDebit;
 use App\Ai\Engine\AiEngineResolver;
 use App\Ai\Engine\AnthropicAiEngine;
 use App\Ai\Engine\AppelDOutilEnTexte;
+use App\Ai\Engine\DialecteGemini;
 use App\Ai\Engine\GeminiAiEngine;
 use App\Ai\Engine\SimulatedAiEngine;
 use App\Ai\Presentation\TableauMarkdown;
@@ -18,6 +20,7 @@ use App\Ai\Scope\AiScope;
 use App\Ai\Telemetrie\JournalTokens;
 use App\Ai\Tool\AiToolInterface;
 use App\Ai\Tool\AiToolResult;
+use App\Ai\Tool\ExecuteurDOutils;
 use App\Ai\Trousse\SelecteurDeTrousse;
 use App\Ai\Trousse\TrousseCatalogue;
 use App\Entity\Entreprise;
@@ -108,7 +111,7 @@ class AnthropicAiEngineTest extends TestCase
         $contextBuilder = $this->createMock(AiContextBuilder::class);
         $contextBuilder->method('toSystemPrompt')->willReturn('SYSTEM');
 
-        return new AnthropicAiEngine($http, $contextBuilder, new TrousseCatalogue($tools), $tools, 'sk-ant-test', 'claude-opus-4-8', $this->repliPrecis(), new OutilsDePlan([]));
+        return new AnthropicAiEngine($http, $contextBuilder, new TrousseCatalogue($tools), new ExecuteurDOutils($tools), 'sk-ant-test', 'claude-opus-4-8', $this->repliPrecis(), new OutilsDePlan([]));
     }
 
     public function testReponseTexteSimple(): void
@@ -314,6 +317,7 @@ class AnthropicAiEngineTest extends TestCase
             new MockHttpClient([]),
             $contextBuilder,
             new TrousseCatalogue([]),
+            new DialecteGemini(new TrousseCatalogue([])),
             new SelecteurDeTrousse(
                 new ProgrammeEnCours(
                     $this->createMock(AssistantProgrammeRepository::class),
@@ -321,7 +325,7 @@ class AnthropicAiEngineTest extends TestCase
                 ),
                 new TrousseCatalogue([]),
             ),
-            [],
+            new ExecuteurDOutils([]),
             'gm-x',
             'gemini-2.5-flash',
             new NullLogger(),
@@ -330,6 +334,22 @@ class AnthropicAiEngineTest extends TestCase
             $this->repliPrecis(),
             new AppelDOutilEnTexte(),
             new OutilsDePlan([]),
+            // Ce test ne fait que lire name() : le comprenant n'est jamais sollicité.
+            new Comprehenseur(
+                new MockHttpClient([]),
+                $contextBuilder,
+                new ProgrammeEnCours(
+                    $this->createMock(AssistantProgrammeRepository::class),
+                    $this->createMock(EntityManagerInterface::class),
+                ),
+                new DialecteGemini(new TrousseCatalogue([])),
+                new ExecuteurDOutils([]),
+                new BudgetDebit(new ArrayAdapter()),
+                new JournalTokens(new NullLogger(), new OutilsDePlan([])),
+                new NullLogger(),
+                'gm-x',
+                'gemini-flash-lite-test',
+            ),
         );
 
         // Aucune clé → simulateur.

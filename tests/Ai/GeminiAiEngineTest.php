@@ -4,8 +4,10 @@ namespace App\Tests\Ai;
 
 use App\Ai\AiContextBuilder;
 use App\Ai\AiRequest;
+use App\Ai\Comprehension\Comprehenseur;
 use App\Ai\Debit\BudgetDebit;
 use App\Ai\Engine\AppelDOutilEnTexte;
+use App\Ai\Engine\DialecteGemini;
 use App\Ai\Engine\GeminiAiEngine;
 use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\Mutation\PlanEnAttente;
@@ -16,6 +18,7 @@ use App\Ai\Scope\AiScope;
 use App\Ai\Telemetrie\JournalTokens;
 use App\Ai\Tool\AiToolInterface;
 use App\Ai\Tool\AiToolResult;
+use App\Ai\Tool\ExecuteurDOutils;
 use App\Ai\Trousse\AiToolEcriture;
 use App\Ai\Trousse\SelecteurDeTrousse;
 use App\Ai\Trousse\Trousse;
@@ -139,7 +142,14 @@ class GeminiAiEngineTest extends TestCase
         $this->assertNotSame('', trim($reponse->content));
     }
 
-    public function testUnMessageNeCoutteJamaisPlusDeDeuxAppels(): void
+    /**
+     * LA RÈGLE D'ARCHITECTURE, verrouillée : le modèle n'orchestre plus, PHP
+     * orchestre. Le TRAVAIL d'un message coûte DEUX appels — les outils, puis la
+     * formulation — quoi que le modèle réclame ensuite. (La compréhension, qui les
+     * précède, tourne sur un autre modèle et son propre client : c'est justement ce
+     * que ce compteur-ci ne doit PAS voir bouger.)
+     */
+    public function testUnMessageNeCoutteJamaisPlusDeDeuxAppelsDeTravail(): void
     {
         $appels = 0;
         // Le modèle redemande un outil À CHAQUE tour : le pire cas, celui qui
@@ -154,6 +164,77 @@ class GeminiAiEngineTest extends TestCase
         $this->makeEngine($http, [$tool])->reply($this->makeRequest('Analyse tout mon portefeuille'));
 
         $this->assertSame(2, $appels, 'Un message ne doit jamais dépasser deux appels au moteur.');
+    }
+
+    /**
+     * L'ÉCONOMIE QUI JUSTIFIE LA TROISIÈME PHASE : une demande ambiguë ne paie PLUS
+     * la planification ni la rédaction.
+     *
+     * C'était le vrai coût de la mécompréhension : deux appels pleins pour une
+     * réponse à côté, puis la relance de l'utilisateur — quatre appels pour rien.
+     * Ket s'arrête désormais sur le plus petit des trois et rend la main.
+     */
+    public function testUneDemandeAmbigueNeDeclencheAucunAppelDeTravail(): void
+    {
+        $appels = 0;
+        $http = new MockHttpClient(function () use (&$appels) {
+            ++$appels;
+
+            return new MockResponse(json_encode(self::texte('jamais atteint')));
+        });
+
+        $reply = $this->makeEngine($http, [], comprehension: [
+            'claire'    => false,
+            'intention' => 'Renouveler la police de Kibali',
+            'questions' => ['Parlez-vous de la police auto ou de la police incendie ?'],
+        ])->reply($this->makeRequest('renouvelle sa police'));
+
+        $this->assertSame(0, $appels, 'Une demande ambiguë ne doit coûter NI planification NI rédaction.');
+        $this->assertStringContainsString('Renouveler la police de Kibali', $reply->content);
+        $this->assertStringContainsString('police incendie', $reply->content, 'Les points à trancher doivent être rendus.');
+        $this->assertSame(
+            ['ket-comprehension.clarifier'],
+            array_column($reply->actions, 'type'),
+            'La barre « Oui, c’est bien ça » / « Non, je précise » doit être proposée.',
+        );
+        $this->assertSame(
+            'clarification',
+            $this->bilanDuMessage()['issue'] ?? null,
+            'Le bilan doit nommer la clarification : c’est lui qui dira si Ket questionne trop.',
+        );
+    }
+
+    /**
+     * L'intention part vers la PLANIFICATION, à côté du message d'origine — jamais à
+     * sa place. Le prompt est construit par le contextBuilder, on vérifie donc que la
+     * requête qui lui est passée porte bien ce qui a été compris.
+     */
+    public function testLIntentionComprisePartAvecLaPlanification(): void
+    {
+        $comprises = [];
+        $contextBuilder = $this->createMock(AiContextBuilder::class);
+        $contextBuilder->method('toSystemPrompt')->willReturnCallback(
+            static function (AiRequest $requete) use (&$comprises): string {
+                $comprises[] = $requete->comprise?->intention;
+
+                return 'SYSTEM';
+            },
+        );
+
+        $http = new MockHttpClient(static fn (): MockResponse => new MockResponse(
+            json_encode(self::texte('Voici votre réponse.')),
+        ));
+
+        $this->makeEngine($http, [], contextBuilder: $contextBuilder, comprehension: [
+            'claire'    => true,
+            'intention' => 'Compter les clients du portefeuille',
+        ])->reply($this->makeRequest('combien j’en ai ?'));
+
+        $this->assertContains(
+            'Compter les clients du portefeuille',
+            $comprises,
+            'La planification doit recevoir la demande comprise.',
+        );
     }
 
     /**
@@ -409,14 +490,55 @@ class GeminiAiEngineTest extends TestCase
         );
     }
 
+    /**
+     * COMPRENANT NEUTRE : il conclut toujours « claire », sur son PROPRE client HTTP.
+     *
+     * Deux raisons de ne pas le laisser partager celui du moteur. D'abord ces tests
+     * portent sur les phases de PLANIFICATION et de RÉDACTION : une réponse canned
+     * consommée par la compréhension décalerait toutes les autres. Ensuite c'est le
+     * montage réel — le comprenant tourne sur un modèle distinct, avec son propre
+     * compteur de débit ; les tests doivent refléter cette séparation, pas la masquer.
+     */
+    private function comprehenseurFige(
+        AiContextBuilder $contextBuilder,
+        JournalTokens $journal,
+        BudgetDebit $budget,
+        array $sortie = ['claire' => true, 'intention' => 'Question de test'],
+    ): Comprehenseur {
+        $http = new MockHttpClient(static fn (): MockResponse => new MockResponse(json_encode([
+            'candidates'    => [['content' => ['parts' => [['text' => json_encode($sortie, JSON_THROW_ON_ERROR)]]]]],
+            'usageMetadata' => ['promptTokenCount' => 300],
+        ], JSON_THROW_ON_ERROR)));
+
+        return new Comprehenseur(
+            $http,
+            $contextBuilder,
+            new ProgrammeEnCours(
+                $this->createMock(AssistantProgrammeRepository::class),
+                $this->createMock(EntityManagerInterface::class),
+            ),
+            new DialecteGemini(new TrousseCatalogue([])),
+            new ExecuteurDOutils([]),
+            $budget,
+            $journal,
+            new NullLogger(),
+            'gm-test',
+            'gemini-flash-lite-test',
+        );
+    }
+
     private function makeEngine(
         MockHttpClient $http,
         array $tools = [],
         ?BudgetDebit $budget = null,
         ?\Closure $dormir = null,
+        ?AiContextBuilder $contextBuilder = null,
+        ?array $comprehension = null,
     ): GeminiAiEngine {
-        $contextBuilder = $this->createMock(AiContextBuilder::class);
-        $contextBuilder->method('toSystemPrompt')->willReturn('SYSTEM');
+        if ($contextBuilder === null) {
+            $contextBuilder = $this->createMock(AiContextBuilder::class);
+            $contextBuilder->method('toSystemPrompt')->willReturn('SYSTEM');
+        }
 
         $espion = new class($this->telemetrie) extends AbstractLogger {
             public function __construct(private array &$lignes)
@@ -429,20 +551,26 @@ class GeminiAiEngineTest extends TestCase
             }
         };
 
+        $journal = new JournalTokens($espion, new OutilsDePlan([]));
+
         return new GeminiAiEngine(
             $http,
             $contextBuilder,
             new TrousseCatalogue($tools),
+            new DialecteGemini(new TrousseCatalogue($tools)),
             $this->selecteurFige(),
-            $tools,
+            new ExecuteurDOutils($tools),
             'gm-test',
             'gemini-2.5-flash',
             new NullLogger(),
-            new JournalTokens($espion, new OutilsDePlan([])),
+            $journal,
             $budget ?? $this->makeBudget(),
             $this->repliPrecis(),
             new AppelDOutilEnTexte(),
             new OutilsDePlan([]),
+            $comprehension === null
+                ? $this->comprehenseurFige($contextBuilder, $journal, $budget ?? $this->makeBudget())
+                : $this->comprehenseurFige($contextBuilder, $journal, $budget ?? $this->makeBudget(), $comprehension),
             function (int $secondes) use ($dormir): void {
                 $this->attentes[] = $secondes;
                 if ($dormir !== null) {

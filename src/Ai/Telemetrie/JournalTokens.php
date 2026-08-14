@@ -52,6 +52,16 @@ final class JournalTokens
     public const ISSUE_ECHEC_TECHNIQUE = 'echec_technique';
 
     /**
+     * La phase de compréhension a jugé la demande ambiguë : le message s'arrête sur
+     * une reformulation à confirmer, sans planification ni rédaction.
+     *
+     * Issue à part entière, et c'est tout l'intérêt : c'est elle qui dira si le
+     * comprenant rend service ou s'il est devenu un questionneur compulsif. Au-delà
+     * d'environ 15 % des messages, le réglage est mauvais.
+     */
+    public const ISSUE_CLARIFICATION = 'clarification';
+
+    /**
      * Corrélation. Une requête HTTP = un message de l'utilisateur : l'état
      * ci-dessous vit donc le temps d'un message et rattache ses lignes « tour »
      * à sa ligne « message ». Sans lui, deux utilisateurs écrivant en même
@@ -176,6 +186,35 @@ final class JournalTokens
             'evenement'     => 'routage',
             'moteur'        => $moteur,
             'trousse'       => $trousse,
+            'origine'       => $origine,
+            'tokens'        => $tokens,
+            'millisecondes' => $millisecondes,
+        ]);
+    }
+
+    /**
+     * La phase de COMPRÉHENSION d'un message : ce qu'elle a conclu, d'où venait la
+     * décision, ce qu'elle a coûté et combien de temps elle a pris.
+     *
+     * Ligne jumelle de {@see routage()}, et pour la même raison : une décision prise
+     * avant le travail ne laisse aucune trace dans les tours, et sans elle on ne
+     * saurait pas distinguer un fil qui coule (beaucoup de « court-circuit », zéro
+     * token) d'un comprenant en panne silencieuse (beaucoup de « repli », zéro token
+     * lui aussi). Ce sont ces deux colonnes — clarté et origine — qui diront si le
+     * troisième appel valait la peine d'être ajouté.
+     */
+    public function comprehension(
+        AiRequest $request,
+        string $modele,
+        string $clarte,
+        string $origine,
+        int $tokens,
+        int $millisecondes,
+    ): void {
+        $this->assistantTokensLogger->info('comprehension', $this->identite($request) + [
+            'evenement'     => 'comprehension',
+            'modele'        => $modele,
+            'clarte'        => $clarte,
             'origine'       => $origine,
             'tokens'        => $tokens,
             'millisecondes' => $millisecondes,

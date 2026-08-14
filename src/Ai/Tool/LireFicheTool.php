@@ -6,6 +6,7 @@ use App\Ai\AiText;
 use App\Ai\FicheNormaliseur;
 use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Scope\AiScope;
+use App\Ai\Trousse\AiToolDeComprehension;
 use App\Service\Workspace\ChampsObligatoiresInspector;
 use App\Service\Workspace\FormTreeInspector;
 use App\Service\Workspace\WorkspaceAccessResolver;
@@ -24,7 +25,7 @@ use App\Token\TokenAccountService;
  * libellé) pour que le modèle demande précision. FAIL-CLOSED : canRead par
  * entité, scoping entreprise via JSBDynamicSearchService.
  */
-final class LireFicheTool implements AiToolInterface
+final class LireFicheTool implements AiToolInterface, AiToolDeComprehension
 {
     /** Nombre maximal de candidats restitués sur un nom ambigu. */
     private const MAX_CANDIDATS = 6;

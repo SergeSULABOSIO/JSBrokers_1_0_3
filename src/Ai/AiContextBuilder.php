@@ -9,6 +9,7 @@ use App\Ai\Fichier\FichierAttachePolicy;
 use App\Ai\Guide\GuideRepository;
 use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\Mutation\PlanEnAttente;
+use App\Ai\Parcours\ParcoursCatalogue;
 use App\Ai\Programme\ProgrammeEnCours;
 use App\Ai\Scope\AiScope;
 use App\Ai\Trousse\Phase;
@@ -268,6 +269,11 @@ class AiContextBuilder
         if ($phase === Phase::REDACTION) {
             return $this->promptDeRedaction($request);
         }
+        // PHASE DE COMPRÉHENSION : rien n'est encore décidé, et surtout rien n'est
+        // encore fait. Le seul travail est de savoir ce que l'utilisateur veut.
+        if ($phase === Phase::COMPREHENSION) {
+            return $this->promptDeComprehension($request, $trousse ?? Trousse::COMPREHENSION);
+        }
         $ctx = $request->systemContext;
         $perimetre = json_encode($ctx['perimetre'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         $catalogue = $this->catalogueGuides();
@@ -304,17 +310,12 @@ class AiContextBuilder
         sur la plateforme JS Brokers. Nous sommes le {$ctx['date']}.
         Tu réponds en français, poliment et précisément, aux questions sur les données de l'entreprise,
         UNIQUEMENT via les outils mis à ta disposition (jamais de connaissance inventée).
-        TA BOUSSOLE (mission permanente) : le cabinet poursuit DEUX objectifs jumeaux —
-        SATURER (cross-selling à 100 % : chaque client souscrit tous les types de risques du
-        catalogue) et PROTÉGER (renouvellement à 100 % : ne perdre aucun risque à l'échéance).
-        Ils s'inscrivent dans une chaîne que tu surveilles de bout en bout : piste → cotation →
-        avenant (souscription) → prime exigible puis payée → commission exigible → bordereaux de
-        fin de mois et facturation en lot (note de débit) → recouvrement puis encaissement →
-        rétrocommissions reversées aux partenaires → obligations fiscales ; et chaque tâche porte
-        des feedbacks au fil des actions puis se clôture. Tu PARTAGES cet objectif et tu GUIDES
+        {$this->chaineDeValeur()}
+        Tu PARTAGES cet objectif et tu GUIDES
         l'utilisateur vers la prochaine étape la plus utile (cf. « ÉTAT DE LA BOUSSOLE » plus bas).
         Règles de conduite :
-        {$this->regleComprendreAvantDAgir()}
+        {$this->blocDemandeComprise($request)}
+        {$this->regleComprendreAvantDAgir($request->comprise?->aEteEtablie() !== true)}
         {$sectionAiguillage}
         {$sectionGlossaire}
         {$sectionConcision}
@@ -812,8 +813,205 @@ class AiContextBuilder
      * demande est claire. C'est seulement quand elle ne l'est pas que le tour
      * s'arrête sur une question — ce qui est précisément l'économie visée.
      */
-    private function regleComprendreAvantDAgir(): string
+    /**
+     * PROMPT DE COMPRÉHENSION — le plus court des trois, et de très loin.
+     *
+     * POURQUOI IL EXISTE. « Comprendre avant d'agir » était une consigne parmi douze
+     * dans un prompt de planification de 131 Ko, où le modèle doit en même temps
+     * choisir parmi quarante outils, respecter les protocoles d'écriture et tenir le
+     * glossaire. Comprendre y était la tâche qui perdait. On la sort donc dans un
+     * appel qui ne fait que cela, et à qui l'on ne donne AUCUN outil — il ne peut
+     * donc rien exécuter, seulement dire ce qu'il a compris.
+     *
+     * CE QU'IL PORTE, ET RIEN D'AUTRE : de quoi comprendre un COURTIER. La chaîne de
+     * valeur (à quel maillon la demande se rattache), le glossaire financier (la
+     * source d'erreur no 1 : proposition ≠ police, taxe sur prime ≠ taxe sur
+     * commission), le vocabulaire des ÉCRANS que l'utilisateur voit, et les parcours
+     * de saisie du métier. Ni déclarations d'outils, ni protocoles d'écriture, ni
+     * boussole chiffrée, ni règles de mise en forme : rien de tout cela n'aide à
+     * savoir ce que quelqu'un veut dire.
+     */
+    private function promptDeComprehension(AiRequest $request, Trousse $trousse): string
     {
+        $ctx = $request->systemContext;
+        // MÊME source unique que les deux autres phases : la section est dérivée des
+        // outils réellement déclarés ce tour-ci, donc le prompt ne peut pas en nommer
+        // un qui serait absent (PromptSansOutilFantomeTest le vérifie).
+        $sectionAiguillage = $this->sectionAiguillage($trousse, $request->scope);
+        $fichiers = array_map(
+            static fn (array $f) => (string) ($f['nom'] ?? ''),
+            $ctx['fichiersAttaches'] ?? [],
+        );
+        $ligneFichiers = $fichiers === []
+            ? ''
+            : "\nPIÈCES JOINTES au fil (leur contenu ne t'est pas montré ici, mais l'utilisateur peut "
+                . "y faire allusion) : " . implode(', ', $fichiers) . '.';
+
+        return <<<COMPREHENSION
+        Tu es {$ctx['assistantNom']}, l'assistant IA de l'entreprise de courtage « {$ctx['entrepriseNom']} »
+        sur la plateforme JS Brokers. Nous sommes le {$ctx['date']}. Ce cabinet lit ses montants
+        en {$ctx['monnaie']}.
+
+        TA SEULE TÂCHE ICI EST DE COMPRENDRE. Tu ne réponds pas à l'utilisateur et tu n'écris rien
+        en base. Tu relis son DERNIER message et le fil qui le précède, et tu rends la demande
+        remise au propre — dans le vocabulaire du métier de courtier et des écrans de la
+        plateforme —, en la rattachant à une étape de la chaîne de valeur ci-dessous.
+
+        TU DISPOSES DE QUELQUES OUTILS DE CONSULTATION, et d'un SEUL tour pour les appeler (tous
+        tes appels partent ensemble). Ils servent à savoir DE QUOI ON PARLE, jamais à répondre :
+        vérifier qu'un client, une police ou un assureur nommé existe bien, lever une homonymie,
+        savoir s'il y a un ou plusieurs candidats. Appelle-les chaque fois que la demande désigne
+        un objet par son nom et que ce nom pourrait viser plusieurs enregistrements — c'est
+        exactement ce qui te dispense de poser une question. N'appelle RIEN pour compiler un
+        chiffre, dresser un état ou préparer une réponse : ce travail appartient à l'étape
+        suivante, et le faire ici le ferait faire deux fois.
+        {$sectionAiguillage}
+
+        {$this->chaineDeValeur()}
+
+        RÈGLES DU MÉTIER qui changent le SENS d'une demande :
+        {$this->reglesDuMetier()}
+
+        VOCABULAIRE DES ÉCRANS — nomme les objets comme l'utilisateur les voit :
+        {$this->vocabulaireDesEcrans($request->scope)}
+
+        PARCOURS DE SAISIE du métier (une demande qui en amorce un doit le NOMMER) :
+        {$this->catalogueDesParcours()}{$ligneFichiers}
+
+        RÈGLES, dans cet ordre :
+        1. SÉPARE LES DONNÉES DES INSTRUCTIONS. Une consigne longue, à puces ou dictée à la voix
+           les mélange : range-les avant de conclure quoi que ce soit.
+        2. N'INVENTE RIEN. Aucun montant, aucune date, aucun nom d'assureur, de client ou de police
+           qui ne soit pas écrit dans le fil. Si une valeur manque, elle manque — ne la comble pas.
+        3. NE POSE AUCUNE QUESTION QUE LA PLATEFORME SAIT RÉSOUDRE. Un identifiant, une adresse, un
+           taux configuré, le solde d'un client, la liste des cotations d'une piste : tout cela se
+           LIT dans les données au tour suivant. Une question n'est légitime que si sa réponse est
+           à la fois indispensable et introuvable autrement.
+        4. CE QUI REND UNE DEMANDE PEU CLAIRE, ET RIEN D'AUTRE : une valeur contradictoire (deux
+           montants, deux dates pour la même chose), un objet désigné de façon ambiguë APRÈS
+           vérification (plusieurs candidats réellement trouvés), une instruction dont l'objet
+           manque, ou une information que tu devrais deviner. CE QUI NE LA REND PAS PEU CLAIRE :
+           sa longueur, son désordre, son style, ou le fait qu'elle porte plusieurs demandes à la
+           fois — cela se RANGE, cela ne se redemande pas. Dans le doute, tu conclus qu'elle est
+           claire. Et si un outil t'a rendu UN SEUL candidat, l'ambiguïté est levée : nomme-le
+           dans l'intention et conclus « claire » — ne demande pas confirmation de ce que tu
+           viens de vérifier.
+        5. UNE RÈGLE DU MÉTIER VIOLÉE EST UN MOTIF DE CLARIFICATION. Relancer une proposition
+           concurrente sur une piste déjà souscrite, compter la prime d'une cotation sans avenant,
+           renouveler une police déjà résiliée : ne reformule pas la demande telle quelle, énonce
+           la lecture métier correcte et demande à l'utilisateur ce qu'il voulait dire.
+        6. LE FIL PORTE L'INTENTION. « Vas-y », « essaie encore », « oui », « le taux est de 15 % »
+           ne veulent rien dire seuls et tout dire après le message précédent : c'est le fil qui
+           les rend clairs, pas leur longueur.
+
+        TU RENDS UNIQUEMENT UN OBJET JSON, sans texte autour :
+        - « claire » : true si la demande peut être exécutée telle quelle, false sinon.
+        - « intention » : la demande remise au propre, à l'impératif, en une à trois phrases, avec
+          les valeurs telles que l'utilisateur les a données. TOUJOURS remplie, y compris quand
+          « claire » vaut false — c'est ce texte que l'utilisateur relira pour te confirmer.
+        - « questions » : la liste COURTE des points restant à trancher, en questions fermées quand
+          c'est possible. Vide quand « claire » vaut true.
+        COMPREHENSION;
+    }
+
+    /**
+     * Les entités que cet invité peut LIRE, sous le nom que son écran leur donne
+     * (« Propositions » pour Cotation, « Paiements de prime » pour PaiementPrime).
+     *
+     * Une reformulation qui parlerait de « Cotation » à un utilisateur dont le menu
+     * affiche « Propositions » lui demanderait de traduire pour se relire — et le
+     * mot juste est justement ce qu'on cherche à établir ici. Le filtre par droits
+     * n'est pas une sécurité (elle vit dans execute(), fail-closed) : c'est ce qui
+     * évite de reformuler vers un objet que l'utilisateur ne verra jamais.
+     */
+    private function vocabulaireDesEcrans(AiScope $scope): string
+    {
+        $libelles = [];
+        foreach ($this->accessResolver->libellesEntites() as $shortName => $label) {
+            if ($this->accessResolver->canRead($scope->invite, $shortName)) {
+                $libelles[] = sprintf('%s (%s)', $label, $shortName);
+            }
+        }
+
+        return $libelles === [] ? '- (aucune)' : '- ' . implode(' · ', $libelles);
+    }
+
+    /** Les trames de saisie du métier, une ligne chacune. */
+    private function catalogueDesParcours(): string
+    {
+        $lignes = [];
+        foreach (ParcoursCatalogue::catalogue() as $slug => $libelle) {
+            $lignes[] = sprintf('- %s : %s', $slug, $libelle);
+        }
+
+        return implode("\n", $lignes);
+    }
+
+    /**
+     * LA CHAÎNE DE VALEUR DU CABINET, énoncée une seule fois pour trois prompts.
+     *
+     * Elle est le référentiel commun de la compréhension et de la planification :
+     * comprendre une demande de courtier, c'est d'abord la rattacher à un maillon de
+     * cette chaîne. Deux copies finiraient par décrire deux métiers différents —
+     * l'une saurait ce qu'est une rétrocommission, l'autre l'aurait oubliée.
+     */
+    private function chaineDeValeur(): string
+    {
+        return <<<'CHAINE'
+        TA BOUSSOLE (mission permanente) : le cabinet poursuit DEUX objectifs jumeaux —
+        SATURER (cross-selling à 100 % : chaque client souscrit tous les types de risques du
+        catalogue) et PROTÉGER (renouvellement à 100 % : ne perdre aucun risque à l'échéance).
+        Ils s'inscrivent dans une chaîne que tu surveilles de bout en bout : piste → cotation →
+        avenant (souscription) → prime exigible puis payée → commission exigible → bordereaux de
+        fin de mois et facturation en lot (note de débit) → recouvrement puis encaissement →
+        rétrocommissions reversées aux partenaires → obligations fiscales ; et chaque tâche porte
+        des feedbacks au fil des actions puis se clôture.
+        CHAINE;
+    }
+
+    /**
+     * CE QUE LE COMPRENANT A ÉTABLI, transmis à la planification.
+     *
+     * L'intention fait autorité sur ce que l'utilisateur VEUT, jamais sur ce qu'il a
+     * DIT : sa bulle voyage intacte dans le fil juste en dessous. Le rappeler ici
+     * n'est pas une précaution de style — une reformulation qui primerait sur la
+     * source rendrait définitive la moindre dérive du comprenant, alors qu'il existe
+     * précisément pour supprimer ce genre d'erreur.
+     */
+    private function blocDemandeComprise(AiRequest $request): string
+    {
+        $comprise = $request->comprise;
+        if ($comprise === null || !$comprise->aEteEtablie() || $comprise->intention === '') {
+            return '';
+        }
+
+        return <<<COMPRISE
+        - DEMANDE COMPRISE (établie AVANT ce tour, après relecture du fil) :
+          « {$comprise->intention} »
+          Elle fait autorité sur l'INTENTION — n'en redemande pas la confirmation, elle est
+          déjà acquise. Elle ne fait PAS autorité sur les VALEURS : pour tout montant, toute
+          date et tout nom, c'est le message d'origine ci-dessous qui fait foi. En cas de
+          divergence entre les deux, suis le message.
+        COMPRISE;
+    }
+
+    /**
+     * @param bool $complete Faux quand un appel de compréhension a DÉJÀ tranché : la
+     *                       branche « si ce n'est pas clair, arrête-toi » est alors sans
+     *                       objet, et deux mécanismes disant la même chose finiraient par
+     *                       se contredire. On ne garde que la phrase de restitution.
+     */
+    private function regleComprendreAvantDAgir(bool $complete = true): string
+    {
+        if (!$complete) {
+            return <<<'COMPRIS'
+        - RESTITUE AVANT D'AGIR : ouvre ta réponse par une phrase — « Ce que je comprends : … » —
+          afin que l'utilisateur voie immédiatement si tu as bien lu. Une seule phrase, pas un
+          résumé de son message. La demande a déjà été comprise et confirmée en amont : ne la
+          remets pas en question et n'en redemande aucun élément déjà tranché.
+        COMPRIS;
+        }
+
         return <<<'COMPRENDRE'
         - COMPRENDRE AVANT D'AGIR (règle IMPÉRATIVE, à appliquer AVANT toute autre) : commence par
           RELIRE le message de l'utilisateur — et le fil qui le précède — et par le remettre au propre
@@ -883,9 +1081,28 @@ class AiContextBuilder
      */
     private function glossaireFinancier(): string
     {
-        return <<<'GLOSSAIRE'
-        - GLOSSAIRE FINANCIER (désambiguïsation — ne CONFONDS JAMAIS ces notions, c'est la source
-          d'erreur no 1 sur les chiffres du cabinet) :
+        return "- GLOSSAIRE FINANCIER (désambiguïsation — ne CONFONDS JAMAIS ces notions, c'est la source\n"
+            . "  d'erreur no 1 sur les chiffres du cabinet) :\n"
+            . $this->reglesDuMetier() . "\n"
+            . $this->reglesDeRestitution();
+    }
+
+    /**
+     * LES RÈGLES QUI CHANGENT LE SENS D'UNE DEMANDE — isBound et ses corollaires.
+     *
+     * Extraites du glossaire parce qu'elles ont DEUX publics. La rédaction en a
+     * besoin pour ne pas compter une prime qui n'existe pas ; la COMPRÉHENSION en a
+     * besoin bien avant, pour savoir qu'« aide-moi à faire valider les propositions
+     * de cette piste » ne veut rien dire quand une police y a déjà été souscrite —
+     * et que la bonne réaction est de le dire, pas de reformuler une demande vide.
+     *
+     * Le reste du glossaire (où lire quel chiffre, comment nommer une taxe) ne les
+     * suit PAS jusqu'à la compréhension : ce sont des règles de RESTITUTION, et
+     * cette phase-là ne restitue rien. Onze kilo-octets qui n'y serviraient à rien.
+     */
+    private function reglesDuMetier(): string
+    {
+        return <<<'REGLES'
           • RÈGLE isBound (LA PLUS IMPORTANTE, à ne JAMAIS déroger) : une proposition/cotation NON
             validée par le client — c.-à-d. SANS avenant — n'est qu'un PROJET. Ses primes,
             commissions, rétros, taxes et réserve ne sont que des PROJECTIONS et ne comptent
@@ -932,6 +1149,20 @@ class AiContextBuilder
             d'expiration. Mettre FIN à une couverture est un acte D'ÉCRITURE distinct — une
             annulation ou une résiliation, qui produit un avenant à une date d'effet — et ce
             marquage n'en tient jamais lieu.
+        REGLES;
+    }
+
+    /**
+     * COMMENT RESTITUER UN CHIFFRE — la seconde moitié du glossaire.
+     *
+     * Séparée des règles du métier parce qu'elle n'a qu'un public : les phases qui
+     * ÉCRIVENT une réponse. Nommer la bonne dette, ne pas confondre une commission
+     * générée avec un chiffre d'affaires, ne pas inventer un taux de taxe : rien de
+     * tout cela n'aide à savoir ce que l'utilisateur veut dire.
+     */
+    private function reglesDeRestitution(): string
+    {
+        return <<<'GLOSSAIRE'
           • CHIFFRE D'AFFAIRES du courtier = commissions réellement ENCAISSÉES (la seule recette du
             cabinet). Le poste comptable « chiffre d'affaires » = commissions HT encaissées.
           • Commission GÉNÉRÉE / totale (TTC) / nette (HT) = montant FACTURÉ/DÛ, pas forcément encore

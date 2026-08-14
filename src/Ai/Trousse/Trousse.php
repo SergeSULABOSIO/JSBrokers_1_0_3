@@ -29,6 +29,14 @@ namespace App\Ai\Trousse;
  */
 enum Trousse: string
 {
+    /**
+     * Le strict nécessaire pour lever une ambiguïté de RÉFÉRENCE, servi à la phase
+     * de compréhension (cf. AiToolDeComprehension). Elle n'entre pas en conflit avec
+     * la règle « deux trousses » ci-dessus : cette phase tourne sur un AUTRE modèle,
+     * elle ne partage donc aucun préfixe de cache avec les deux autres.
+     */
+    case COMPREHENSION = 'comprehension';
+
     /** Consultation, analyse, restitution. Ne peut rien préparer qui s'écrive. */
     case LECTURE = 'lecture';
 

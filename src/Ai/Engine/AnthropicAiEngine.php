@@ -9,12 +9,11 @@ use App\Ai\Mutation\MotifDeRefus;
 use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\Redaction\RepliPrecis;
 use App\Ai\Scope\AiScope;
-use App\Ai\Tool\AiToolInterface;
 use App\Ai\Tool\AiToolResult;
+use App\Ai\Tool\ExecuteurDOutils;
 use App\Ai\Trousse\Trousse;
 use App\Ai\Trousse\TrousseCatalogue;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
@@ -45,16 +44,14 @@ final class AnthropicAiEngine implements AiEngineInterface
      */
     private const MAX_TOOL_ROUNDS = 1;
 
-    /** @var iterable<AiToolInterface> */
-    private iterable $tools;
-
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly AiContextBuilder $contextBuilder,
         // Même source que le prompt système : les deux doivent être dérivés du même
         // tableau d'outils, sans quoi une consigne peut nommer un outil non déclaré.
         private readonly TrousseCatalogue $trousseCatalogue,
-        #[AutowireIterator('app.ai_tool')] iterable $tools,
+        // Partagé avec le moteur Gemini et la phase de compréhension.
+        private readonly ExecuteurDOutils $executeur,
         #[Autowire(env: 'ANTHROPIC_API_KEY')] private readonly string $apiKey,
         #[Autowire(env: 'ANTHROPIC_MODEL')] private readonly string $model,
         // Rédige en PHP, à coût nul, ce que le modèle n'a pas rédigé.
@@ -63,7 +60,6 @@ final class AnthropicAiEngine implements AiEngineInterface
         // prompt et du moteur Gemini.
         private readonly OutilsDePlan $outilsDePlan,
     ) {
-        $this->tools = $tools;
     }
 
     public function name(): string
@@ -176,7 +172,7 @@ final class AnthropicAiEngine implements AiEngineInterface
                 if (($block['type'] ?? null) !== 'tool_use') {
                     continue;
                 }
-                $result = $this->executeTool((string) $block['name'], (array) ($block['input'] ?? []), $request);
+                $result = $this->executeur->executer((string) $block['name'], (array) ($block['input'] ?? []), $request->scope);
                 $toolUsed = (string) $block['name'];
                 $resultatsOutils[] = ['outil' => $toolUsed, 'data' => $result->data];
                 if ($result->status === AiToolResult::STATUS_HORS_PERIMETRE) {
@@ -274,17 +270,6 @@ final class AnthropicAiEngine implements AiEngineInterface
         }
 
         return $blocks;
-    }
-
-    private function executeTool(string $name, array $args, AiRequest $request): AiToolResult
-    {
-        foreach ($this->tools as $tool) {
-            if ($tool->name() === $name) {
-                return $tool->execute($args, $request->scope);
-            }
-        }
-
-        return AiToolResult::introuvable($name);
     }
 
     /** Concatène les blocs texte de la réponse finale. */

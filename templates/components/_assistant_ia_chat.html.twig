@@ -1111,6 +1111,12 @@
                d'un document PRODUIT doit survivre au rechargement : il a été payé
                en tokens, le voir disparaître avec la page reviendrait à le faire
                payer deux fois. Règle canonique : App\Ai\Document\DocumentEnAttente. #}
+            {# Reformulation à confirmer (phase de compréhension). Elle n'a ni statut
+               « exécuté » ni statut « annulé » : elle est en attente tant qu'elle est
+               le DERNIER message du fil — dès que l'utilisateur a répondu, une bulle
+               suit et la question est tranchée. C'est aussi la règle que la garde
+               anti-boucle applique côté PHP (App\Ai\Comprehension\ClarificationEnAttente). #}
+            {% set clarifEnAttente = estAssistant and (message.meta.clarification ?? null) is not null and loop.last %}
             {% set hasDoc = estAssistant and (message.meta.documentPlan ?? null) is not null %}
             {% set docProduit = hasDoc and (message.meta.documentPlanExecuted ?? false) %}
             {% set docAnnule = hasDoc and (message.meta.documentPlanCancelled ?? false) %}
@@ -1140,6 +1146,9 @@
                     apercu: message.meta.documentPlan.apercu ?? [],
                     budget: message.meta.documentPlan.budget ?? [],
                     format: message.meta.documentPlan.format ?? 'docx'
+                }|json_encode|e('html_attr') }}"{% endif %}
+                {%- if clarifEnAttente %} data-clarification="{{ {
+                    intention: message.meta.clarification.intention ?? ''
                 }|json_encode|e('html_attr') }}"{% endif %}>
                 {% if estAssistant %}
                     <span class="aic-msg-avatar" aria-hidden="true">{{ assistantNom|first|upper }}</span>

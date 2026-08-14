@@ -137,6 +137,26 @@ class AssistantConversation
         return $this;
     }
 
+    /**
+     * Le DERNIER message de l'assistant dans ce fil, ou null s'il n'y en a aucun.
+     *
+     * Vit ici parce que plusieurs règles de conduite s'y accrochent — l'aiguillage
+     * de trousse (le tour précédent a-t-il écrit ? proposé d'écrire ?) et la garde
+     * anti-boucle des clarifications — et que la même boucle recopiée dans chacune
+     * finirait par diverger. La collection est déjà triée par identifiant croissant.
+     */
+    public function dernierMessageAssistant(): ?AssistantMessage
+    {
+        $dernier = null;
+        foreach ($this->messages as $message) {
+            if ($message->getRole() === AssistantMessage::ROLE_ASSISTANT) {
+                $dernier = $message;
+            }
+        }
+
+        return $dernier;
+    }
+
     /** @return Collection<int, AssistantConversationContexte> */
     public function getContextes(): Collection
     {
