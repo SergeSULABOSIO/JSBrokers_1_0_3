@@ -2,6 +2,8 @@
 
 namespace App\Form;
 
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+
 use App\Entity\Taxe;
 use App\Entity\AutoriteFiscale;
 use App\Services\FormListenerFactory;
@@ -44,6 +46,20 @@ class AutoriteFiscaleType extends AbstractType
                 'label' => "Taxe associée",
                 // Le query_builder filtre les taxes pour ne montrer que celles de l'entreprise courante.
                 'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
+            ])
+            // PIÈCES JOINTES de cette fiche. `mapped: false` comme les onze autres
+            // collections de documents du projet : chaque pièce est créée, modifiée et
+            // supprimée par son propre dialogue, via l'API de Document — le formulaire
+            // parent ne fait que porter le widget.
+            ->add('documents', CollectionType::class, [
+                'label' => "Documents",
+                'entry_type' => DocumentType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'required' => false,
+                'entry_options' => ['label' => false],
+                'mapped' => false,
             ])
         ;
     }

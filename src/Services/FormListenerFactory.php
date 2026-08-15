@@ -95,18 +95,23 @@ class FormListenerFactory
     public function setFiltreEntreprise(): callable
     {
         return function (EntityRepository $er): QueryBuilder {
-            /** @var Utilisateur $user */
             $user = $this->security->getUser();
 
-            /** @var Entreprise $entreprise */
-            $entreprise = $user->getConnectedTo();
-
-
-            // dd($entreprise->getNom());
+            // AUCUN UTILISATEUR AUTHENTIFIÉ : le cas existe pour de bon, et il ne doit
+            // pas casser la CONSTRUCTION du formulaire. Une ligne de commande, un test
+            // qui n'inspecte qu'un champ, FormTreeInspector qui monte un FormType pour
+            // en lire l'arborescence : aucun n'a de session, et tous montaient jusqu'ici
+            // sur une erreur fatale « getConnectedTo() on null » — d'autant plus
+            // déroutante qu'elle survenait dans un champ SANS RAPPORT avec ce qu'on
+            // regardait, embarqué par une collection imbriquée.
+            //
+            // Le repli est FAIL-CLOSED : l'entreprise -1 n'existe pas, la liste de choix
+            // est donc VIDE. Sans identité, on ne propose rien — jamais tout.
+            $entreprise = $user instanceof Utilisateur ? $user->getConnectedTo() : null;
 
             return $er->createQueryBuilder('e')
                 ->where('e.entreprise =:eseId')
-                ->setParameter('eseId', $entreprise != null ? $entreprise->getId() : -1)
+                ->setParameter('eseId', $entreprise?->getId() ?? -1)
                 ->orderBy('e.id', 'ASC');
         };
     }

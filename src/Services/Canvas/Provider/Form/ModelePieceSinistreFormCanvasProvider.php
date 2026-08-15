@@ -35,12 +35,19 @@ class ModelePieceSinistreFormCanvasProvider implements FormCanvasProviderInterfa
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
+                "documents" => "document",
                 "nom"         => "action:edit",
                 "description" => "action:description",
                 "obligatoire" => "action:check",
             ],
         ];
         $layout = $this->buildModelePieceSinistreLayout($modeleId, $isParentNew);
+
+        // Pièces jointes de cette fiche.
+        $collections = [
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'modelePieceSinistre'],
+        ];
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
         return [
             "parametres" => $parametres,

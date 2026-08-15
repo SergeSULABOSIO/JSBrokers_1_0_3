@@ -33,6 +33,7 @@ class TypeRevenuFormCanvasProvider implements FormCanvasProviderInterface
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
+                "documents" => "document",
                 "nom"                          => "action:edit",
                 "modeCalcul"                   => "action:options",
                 "typeChargement"               => "chargement",
@@ -45,6 +46,12 @@ class TypeRevenuFormCanvasProvider implements FormCanvasProviderInterface
             ],
         ];
         $layout = $this->buildTypeRevenuLayout($typeRevenuId, $isParentNew);
+
+        // Pièces jointes de cette fiche.
+        $collections = [
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'typeRevenu'],
+        ];
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
         return [
             "parametres" => $parametres,

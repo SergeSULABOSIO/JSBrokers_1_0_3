@@ -2,6 +2,8 @@
 
 namespace App\Entity;
 
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use App\Entity\Traits\AuditableTrait;
 use App\Repository\DepenseCourtierRepository;
 use Doctrine\DBAL\Types\Types;
@@ -94,6 +96,47 @@ class DepenseCourtier
     #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['list:read'])]
     private ?string $description = null;
+
+    public function __construct()
+    {
+        $this->documents = new ArrayCollection();
+    }
+
+    /**
+     * @var Collection<int, Document> Pièces jointes de cette fiche.
+     */
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'depenseCourtier', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $documents;
+
+    /**
+     * @return Collection<int, Document>
+     */
+    public function getDocuments(): Collection
+    {
+        return $this->documents;
+    }
+
+    public function addDocument(Document $document): static
+    {
+        if (!$this->documents->contains($document)) {
+            $this->documents->add($document);
+            $document->setDepenseCourtier($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDocument(Document $document): static
+    {
+        if ($this->documents->removeElement($document)) {
+            // set the owning side to null (unless already changed)
+            if ($document->getDepenseCourtier() === $this) {
+                $document->setDepenseCourtier(null);
+            }
+        }
+
+        return $this;
+    }
 
     public function getId(): ?int
     {

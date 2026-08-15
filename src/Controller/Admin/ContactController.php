@@ -135,4 +135,17 @@ class ContactController extends AbstractController
     {
         return $this->renderViewOrListComponent(Contact::class, $request, true);
     }
+
+    /**
+     * Liste des éléments d'une collection de ce contact (ses documents, aujourd'hui).
+     *
+     * Cette route manquait — non parce qu'elle posait problème, mais parce qu'aucune
+     * collection n'était encore affichée sur la fiche d'un contact. Le widget la
+     * réclame : c'est elle qui alimente la liste des pièces jointes.
+     */
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
+    {
+        return $this->handleCollectionApiRequest($id, $collectionName, Contact::class, $usage);
+    }
 }

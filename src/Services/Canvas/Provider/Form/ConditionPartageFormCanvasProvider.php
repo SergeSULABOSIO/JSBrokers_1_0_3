@@ -41,6 +41,7 @@ class ConditionPartageFormCanvasProvider implements FormCanvasProviderInterface
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
+                "documents" => "document",
                 "nom"           => "action:edit",
                 "taux"          => "action:count",
                 "seuil"         => "action:count",
@@ -70,6 +71,8 @@ class ConditionPartageFormCanvasProvider implements FormCanvasProviderInterface
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["critereRisque"]]]],
         ];
         $collections = [['fieldName' => 'produits', 'entityRouteName' => 'risque', 'formTitle' => 'Risque', 'parentFieldName' => 'conditionPartage']];
+        // Pièces jointes de cette fiche.
+        $collections[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'conditionPartage'];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;
     }

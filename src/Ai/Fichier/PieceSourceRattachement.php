@@ -23,39 +23,18 @@ use Doctrine\ORM\EntityManagerInterface;
  *  - niveau 2 — pas de collection au formulaire, mais Document porte une
  *    relation vers l'entité (ex. Paiement/PaiementPrime via « preuves ») :
  *    opération de tête distincte, chaînée par référence.
- *  - niveau 2b — UNIVERSEL : aucune relation typée, mais l'entité est persistée.
- *    Le couple `cibleType`/`cibleId` de Document la désigne. C'est ce niveau qui
- *    rend l'attachement possible sur N'IMPORTE QUEL objet de la plateforme.
  *  - niveau 3 — aucun rattachement possible : le fichier NE SERA PAS conservé en
  *    base. C'est une perte de donnée pour l'utilisateur, donc un AVERTISSEMENT
  *    que le serveur rédige lui-même. Le laisser à la charge du modèle, c'est
  *    accepter qu'il l'oublie — même raison que l'aperçu autoritaire d'un plan :
  *    ce que l'utilisateur lit avant de décider doit venir du serveur.
- *    Depuis l'ouverture du niveau universel, il ne subsiste plus que pour une
- *    entité INCONNUE (nom qui ne désigne aucune classe persistée).
- *
- * ⚠️ L'ORDRE EST LA RÈGLE, et il n'est pas décoratif. Un rattachement doit avoir
- * UNE écriture et une seule : si le couple universel pouvait doubler une relation
- * typée, la rubrique Documents et l'assistant liraient deux vérités différentes du
- * même fichier. Le niveau universel n'est donc atteint que lorsque les trois
- * premiers ont échoué — c'est ce que vérifie PieceSourceRattachementTest.
  */
 final class PieceSourceRattachement
 {
-    // Les valeurs se lisent comme un RANG : plus le niveau est bas, plus le
-    // rattachement est spécifique et proche de ce que l'écran fait déjà. Personne ne
-    // persiste ces entiers (ils ne voyagent que dans le résultat d'outil du tour
-    // courant), et tout le code les désigne par leur constante — c'est ce qui permet
-    // d'insérer le niveau universel à sa place logique plutôt qu'à la fin.
     public const NIVEAU_CHAMP_PROPRE = 0;
     public const NIVEAU_COLLECTION   = 1;
     public const NIVEAU_RELATION     = 2;
-    public const NIVEAU_UNIVERSEL    = 3;
-    public const NIVEAU_AUCUN        = 4;
-
-    /** Les deux moitiés du rattachement universel, telles que DocumentType les expose. */
-    public const CHAMP_CIBLE_TYPE = 'cibleType';
-    public const CHAMP_CIBLE_ID   = 'cibleId';
+    public const NIVEAU_AUCUN        = 3;
 
     /** Libellé d'étape : rend le classement décochable dans la barre de décision. */
     public const ETAPE = 'Classement de la pièce';
@@ -120,34 +99,14 @@ final class PieceSourceRattachement
             );
         }
 
-        // RATTACHEMENT UNIVERSEL — atteint seulement ici, une fois les trois formes
-        // spécifiques écartées. L'ordre n'est pas une commodité : si ce couple pouvait
-        // doubler une relation typée, le même fichier serait rattaché de deux façons
-        // et les deux surfaces (rubrique Documents, assistant) n'en liraient pas la
-        // même. Le dernier recours reste le dernier.
-        if ($this->estUneEntitePersistee($shortName)) {
-            return $this->descripteur(
-                self::NIVEAU_UNIVERSEL,
-                champ: self::CHAMP_CIBLE_ID,
-                cibleType: $shortName,
-                explication: sprintf(
-                    'La pièce sera enregistrée comme Document rattaché à %s. Cette rubrique n’a pas de '
-                    . 'collection « Documents » à l’écran : le rattachement est porté par le document '
-                    . 'lui-même, et le fichier se retrouve depuis la rubrique Documents comme depuis '
-                    . 'l’assistant.',
-                    $libelle,
-                ),
-            );
-        }
-
         return $this->descripteur(
             self::NIVEAU_AUCUN,
             explication: sprintf('Aucun rattachement de pièce n’est possible sur %s.', $libelle),
             avertissement: sprintf(
-                'ATTENTION — « %s » ne désigne aucun enregistrement de la plateforme : LE FICHIER SOURCE '
-                . 'NE SERA PAS CONSERVÉ EN BASE. Seules les données extraites du fichier y seront '
-                . 'enregistrées. La pièce reste attachée à cette conversation (vous pouvez la '
-                . 'retélécharger depuis le chat), mais elle disparaîtra avec elle.',
+                'ATTENTION — la rubrique « %s » n’a pas de collection « Documents » et aucun document ne peut '
+                . 'lui être rattaché : LE FICHIER SOURCE NE SERA PAS CONSERVÉ EN BASE. Seules les données '
+                . 'extraites du fichier y seront enregistrées. La pièce reste attachée à cette conversation '
+                . '(vous pouvez la retélécharger depuis le chat), mais elle disparaîtra avec elle.',
                 $libelle,
             ),
         );
@@ -202,25 +161,6 @@ final class PieceSourceRattachement
                     ],
                 ],
             ],
-            // Même forme que le niveau 2 — une opération de tête chaînée au socle —,
-            // au champ de rattachement près. `cibleId` accepte le renvoi « @socle »
-            // comme n'importe quel autre champ : la résolution des renvois est
-            // indifférente au nom du champ (WorkspaceMutationService), ce qui permet
-            // de rattacher la pièce à un objet créé dans le MÊME plan.
-            self::NIVEAU_UNIVERSEL => [
-                'cible'    => 'operation',
-                'fragment' => [
-                    'op'     => 'create',
-                    'entite' => self::ENTITE_DOCUMENT,
-                    'etape'  => self::ETAPE,
-                    'champs' => [
-                        self::CHAMP_CIBLE_TYPE => $descripteur['cibleType'],
-                        self::CHAMP_CIBLE_ID   => $renvoiSocle,
-                        'nom'                  => $nomDocument,
-                        self::CHAMP_FICHIER    => $marqueurFichier,
-                    ],
-                ],
-            ],
             default => null,
         };
     }
@@ -256,36 +196,11 @@ final class PieceSourceRattachement
         return null;
     }
 
-    /**
-     * L'entité existe-t-elle vraiment, et Doctrine la persiste-t-elle ?
-     *
-     * C'est la SEULE condition du rattachement universel — et c'est aussi ce qui
-     * empêche d'écrire un couple qui ne désignerait rien : un nom d'entité inventé
-     * par le modèle (« Sinistre », « Dossier ») ne doit pas produire un document
-     * rattaché à un fantôme, il doit produire l'avertissement de perte.
-     */
-    private function estUneEntitePersistee(string $shortName): bool
-    {
-        $fqcn = 'App\\Entity\\' . $shortName;
-        if (!class_exists($fqcn)) {
-            return false;
-        }
-
-        try {
-            // Une classe du dossier Entity qui n'est PAS une entité mappée (les DTO
-            // de ReportSet, par exemple) lève ici : c'est exactement le tri voulu.
-            return !$this->em->getClassMetadata($fqcn)->isMappedSuperclass;
-        } catch (\Throwable) {
-            return false;
-        }
-    }
-
-    /** @return array{niveau:int, rattachable:bool, collection:?string, champ:?string, cibleType:?string, explication:string, avertissement:?string} */
+    /** @return array{niveau:int, rattachable:bool, collection:?string, champ:?string, explication:string, avertissement:?string} */
     private function descripteur(
         int $niveau,
         ?string $collection = null,
         ?string $champ = null,
-        ?string $cibleType = null,
         string $explication = '',
         ?string $avertissement = null,
     ): array {
@@ -294,9 +209,6 @@ final class PieceSourceRattachement
             'rattachable'   => $niveau !== self::NIVEAU_AUCUN,
             'collection'    => $collection,
             'champ'         => $champ,
-            // Renseigné au seul niveau universel : c'est la valeur littérale qui
-            // partira dans la colonne `cible_type` du document.
-            'cibleType'     => $cibleType,
             'explication'   => $explication,
             'avertissement' => $avertissement,
         ];

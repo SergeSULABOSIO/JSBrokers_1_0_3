@@ -32,6 +32,7 @@ class DepenseCourtierFormCanvasProvider implements FormCanvasProviderInterface
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
+                "documents" => "document",
                 "charge"        => "charge",
                 "dateDepense"   => "action:calendar",
                 "montant"       => "monnaie",
@@ -52,6 +53,12 @@ class DepenseCourtierFormCanvasProvider implements FormCanvasProviderInterface
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["reference"], 'width' => 12]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"], 'width' => 12]]],
         ];
+
+        // Pièces jointes de cette fiche.
+        $collections = [
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'depenseCourtier'],
+        ];
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
         return [
             "parametres" => $parametres,

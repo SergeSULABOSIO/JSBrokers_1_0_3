@@ -6,7 +6,6 @@ use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
-use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * « LES DOCUMENTS DE LA POLICE KIN AVIA » — la traduction d'un rattachement dicté en
@@ -37,7 +36,6 @@ final class CritereLieA
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly ResolveurDeReferences $resolveur,
         private readonly CheminsDeRelation $chemins,
-        private readonly EntityManagerInterface $em,
     ) {
     }
 
@@ -93,41 +91,13 @@ final class CritereLieA
         }
 
         $cheminsVers = $this->chemins->vers($fqcn, $lienFqcn);
-
-        // RATTACHEMENT UNIVERSEL — l'entité cherchée porte-t-elle le couple
-        // cibleType/cibleId ? La question se pose aux MÉTADONNÉES, pas à une liste :
-        // aujourd'hui seul Document le porte, et le jour où une autre entité l'adopte,
-        // ce collaborateur n'a pas à l'apprendre.
-        //
-        // Sans cela, « les documents de la tranche n°12 » retombait sur ignore() —
-        // c'est-à-dire AUCUN filtre —, et l'outil rendait tous les documents du
-        // portefeuille en les présentant comme ceux de la tranche. Une réponse fausse
-        // et confiante, la pire des deux.
-        $cibleUniverselle = $this->supporteCibleUniverselle($fqcn) ? $lienType : null;
-
-        if ($cheminsVers === [] && $cibleUniverselle === null) {
+        if ($cheminsVers === []) {
             return ResolutionLieA::ignore();
         }
 
         return ResolutionLieA::lie(
             ['entite' => $lienType, 'id' => $lienId],
-            [JSBDynamicSearchService::LIEN_MULTI_CHEMINS => array_filter([
-                'paths' => $cheminsVers,
-                'id'    => $lienId,
-                'cible' => $cibleUniverselle,
-            ])],
+            [JSBDynamicSearchService::LIEN_MULTI_CHEMINS => ['paths' => $cheminsVers, 'id' => $lienId]],
         );
-    }
-
-    /** L'entité cherchée porte-t-elle le couple de rattachement universel ? */
-    private function supporteCibleUniverselle(string $fqcn): bool
-    {
-        try {
-            $meta = $this->em->getClassMetadata($fqcn);
-        } catch (\Throwable) {
-            return false;
-        }
-
-        return $meta->hasField('cibleType') && $meta->hasField('cibleId');
     }
 }

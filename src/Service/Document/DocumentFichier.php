@@ -172,13 +172,6 @@ final class DocumentFichier
      *
      * « Le premier » et non « tous » : le formulaire n'en pose qu'un, et les 14 autres
      * colonnes restent nulles. Un document a une origine, pas quatorze.
-     *
-     * DEUX MÉCANISMES, UN SEUL ORDRE. Les relations typées d'abord, le rattachement
-     * UNIVERSEL (`cibleType`/`cibleId`) ensuite — jamais l'inverse. C'est le même
-     * ordre que celui de PieceSourceRattachement, et il faut qu'il le reste : ce
-     * couple n'est écrit que là où aucune relation typée n'existe, de sorte que les
-     * deux ne peuvent pas se contredire. Le lire en second est simplement la
-     * contrepartie de l'écrire en dernier.
      */
     public function parentDe(Document $document): ?object
     {
@@ -193,34 +186,7 @@ final class DocumentFichier
             }
         }
 
-        return $this->cibleUniverselleDe($document);
-    }
-
-    /**
-     * L'objet désigné par le couple de rattachement universel, ou null.
-     *
-     * TOUT ÉCHEC EST SILENCIEUX, et volontairement : il n'y a aucune clé étrangère
-     * derrière ces deux colonnes, donc un type devenu inconnu (entité renommée) ou un
-     * identifiant devenu introuvable (parent supprimé pendant que la page se rendait)
-     * sont des états possibles. Ils signifient « ce document n'a plus de parent
-     * visible » — pas « la page doit tomber ».
-     */
-    public function cibleUniverselleDe(Document $document): ?object
-    {
-        if (!$document->aUneCibleUniverselle()) {
-            return null;
-        }
-
-        $fqcn = 'App\\Entity\\' . $document->getCibleType();
-        if (!class_exists($fqcn)) {
-            return null;
-        }
-
-        try {
-            return $this->em->find($fqcn, (int) $document->getCibleId());
-        } catch (\Throwable) {
-            return null;
-        }
+        return null;
     }
 
     /**

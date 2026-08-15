@@ -91,6 +91,20 @@ class ConditionPartageType extends AbstractType
                     'label' => false,
                 ],
             ])
+            // PIÈCES JOINTES de cette fiche. `mapped: false` comme les onze autres
+            // collections de documents du projet : chaque pièce est créée, modifiée et
+            // supprimée par son propre dialogue, via l'API de Document — le formulaire
+            // parent ne fait que porter le widget.
+            ->add('documents', CollectionType::class, [
+                'label' => "Documents",
+                'entry_type' => DocumentType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'required' => false,
+                'entry_options' => ['label' => false],
+                'mapped' => false,
+            ])
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;

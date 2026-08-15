@@ -33,6 +33,7 @@ class AssureurFormCanvasProvider implements FormCanvasProviderInterface
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
+                "documents" => "document",
                 "nom"             => "action:edit",
                 "telephone"       => "contact",
                 "adressePhysique" => "contact",
@@ -44,6 +45,12 @@ class AssureurFormCanvasProvider implements FormCanvasProviderInterface
             ],
         ];
         $layout = $this->buildAssureurLayout($assureurId, $isParentNew);
+
+        // Pièces jointes de cette fiche.
+        $collections = [
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'assureur'],
+        ];
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
         return [
             "parametres" => $parametres,

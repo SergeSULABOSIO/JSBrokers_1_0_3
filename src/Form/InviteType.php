@@ -122,6 +122,20 @@ class InviteType extends AbstractType
                 'label' => "Gestionnaire des invités et des rôles",
                 'help' => "Autorise cet invité à créer, modifier et supprimer les invités et à leur attribuer des rôles. N'accorde aucun accès supplémentaire aux données métier.",
                 'required' => false,
+            ])
+            // PIÈCES JOINTES de cette fiche. `mapped: false` comme les onze autres
+            // collections de documents du projet : chaque pièce est créée, modifiée et
+            // supprimée par son propre dialogue, via l'API de Document — le formulaire
+            // parent ne fait que porter le widget.
+            ->add('documents', CollectionType::class, [
+                'label' => "Documents",
+                'entry_type' => DocumentType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'required' => false,
+                'entry_options' => ['label' => false],
+                'mapped' => false,
             ]);
         }
 

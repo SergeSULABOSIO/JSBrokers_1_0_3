@@ -182,6 +182,7 @@ class Invite
 
     public function __construct()
     {
+        $this->documents = new ArrayCollection();
         // $this->entreprises = new ArrayCollection();
         $this->pistes = new ArrayCollection();
         $this->taches = new ArrayCollection();
@@ -198,6 +199,42 @@ class Invite
         $this->rolesEnAdministration = new ArrayCollection();
         $this->portefeuilles = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
+    }
+
+    /**
+     * @var Collection<int, Document> Pièces jointes de cette fiche.
+     */
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'inviteRattache', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $documents;
+
+    /**
+     * @return Collection<int, Document>
+     */
+    public function getDocuments(): Collection
+    {
+        return $this->documents;
+    }
+
+    public function addDocument(Document $document): static
+    {
+        if (!$this->documents->contains($document)) {
+            $this->documents->add($document);
+            $document->setInviteRattache($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDocument(Document $document): static
+    {
+        if ($this->documents->removeElement($document)) {
+            // set the owning side to null (unless already changed)
+            if ($document->getInviteRattache() === $this) {
+                $document->setInviteRattache(null);
+            }
+        }
+
+        return $this;
     }
 
     public function getId(): ?int

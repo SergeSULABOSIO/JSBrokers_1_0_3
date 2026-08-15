@@ -32,6 +32,7 @@ class ChargeCourtierFormCanvasProvider implements FormCanvasProviderInterface
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
+                "documents" => "document",
                 "code"                  => "action:edit",
                 "libelle"               => "action:description",
                 "compteOhada"           => "charge",
@@ -47,6 +48,12 @@ class ChargeCourtierFormCanvasProvider implements FormCanvasProviderInterface
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["comportement"], 'width' => 6], ["champs" => ["periodicite"], 'width' => 6]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["montantBudgeteMensuel"], 'width' => 6], ["champs" => ["actif"], 'width' => 6]]],
         ];
+
+        // Pièces jointes de cette fiche.
+        $collections = [
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'chargeCourtier'],
+        ];
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
         return [
             "parametres" => $parametres,

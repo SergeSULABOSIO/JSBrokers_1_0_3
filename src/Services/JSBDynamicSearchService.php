@@ -25,12 +25,6 @@ class JSBDynamicSearchService
      * quand plusieurs chemins mènent à l'entité de rattachement — le plus court n'étant pas
      * toujours le bon (ex. Avenant → Client via pisteDeRenouvellement.client, souvent nul, OU via
      * cotation.piste.client, le vrai lien). Valeur : ['paths' => string[], 'id' => int].
-     *
-     * La clé facultative 'cible' ajoute un DISJONCTIF de plus : le rattachement UNIVERSEL
-     * (cibleType/cibleId), qui ne passe par aucune relation et n'a donc aucun chemin à
-     * joindre. Il doit rejoindre le même OR et non un AND — un document lié à un assureur
-     * peut l'être par le chemin document → avenant → assureur OU par ce couple, et
-     * exiger les deux ne rendrait jamais rien.
      */
     public const LIEN_MULTI_CHEMINS = '__lien_multi_chemins__';
 
@@ -433,39 +427,54 @@ class JSBDynamicSearchService
             // par pisteDeRenouvellement.client (relation de renouvellement, NULLE pour une police
             // ordinaire) ET par cotation.piste.client (le vrai lien). On matche donc dès qu'AU
             // MOINS un chemin pointe sur l'id demandé (OR), exactement comme le périmètre
-            // portefeuille. Chaque chemin est joint en leftJoin (associations to-one : aucun
-            // doublon de ligne), les alias étant dédupliqués/partagés par joinPath.
+            // portefeuille.
+            //
+            // CHAQUE CHEMIN EST UNE SOUS-REQUÊTE « EXISTS », ET NON UNE JOINTURE DE PLUS.
+            // Ces chemins étaient autrefois joints à la requête principale, comme le
+            // périmètre portefeuille. C'était tenable tant que Document portait quinze
+            // relations de parent ; le 2026-08-15 il en a gagné vingt-huit — une par
+            // entité métier, pour que TOUT objet puisse porter une pièce jointe — et le
+            // nombre de chemins vers un client a triplé. La requête est alors passée
+            // au-dessus de la limite dure de MariaDB : SOIXANTE ET UNE tables par SELECT.
+            // Elle n'a pas ralenti, elle a ÉCHOUÉ, et l'outil répondait « aucun document
+            // ne correspond » sur une police qui en portait deux.
+            //
+            // Une sous-requête corrélée emporte son propre budget de jointures : la
+            // requête principale n'en garde AUCUNE de ce chef, et le graphe peut
+            // continuer de grandir avec le métier sans jamais retoucher à ceci. Elle
+            // évite au passage toute multiplication de lignes.
             if ($field === self::LIEN_MULTI_CHEMINS) {
                 $paths = is_array($value) ? ($value['paths'] ?? []) : [];
                 $lienId = is_array($value) ? ($value['id'] ?? null) : null;
-                $cibleUniverselle = is_array($value) ? trim((string) ($value['cible'] ?? '')) : '';
-                if ($lienId === null || $lienId === '' || (!is_array($paths) || $paths === []) && $cibleUniverselle === '') {
-                    continue; // rien à appliquer (ni chemin, ni cible universelle, ou id manquant)
+                if ($lienId === null || $lienId === '' || !is_array($paths) || $paths === []) {
+                    continue; // rien à appliquer (aucun chemin ou id manquant)
                 }
-                $paths = is_array($paths) ? $paths : [];
 
                 $orParts = [];
+                foreach (array_values($paths) as $rang => $path) {
+                    $alias = 'lmr' . $rang . $suffix;
+                    $sousRequete = $this->em->createQueryBuilder()
+                        ->select('1')
+                        ->from($entityClass, $alias)
+                        ->andWhere(sprintf('%s.id = %s.id', $alias, $rootAlias));
 
-                // RATTACHEMENT UNIVERSEL — aucun chemin à joindre : les deux colonnes
-                // vivent sur l'entité racine. C'est précisément ce qui lui permet de
-                // désigner une entité vers laquelle aucune relation n'existe.
-                if ($cibleUniverselle !== ''
-                    && $metadata->hasField('cibleType') && $metadata->hasField('cibleId')) {
-                    $orParts[] = $qb->expr()->andX(
-                        $qb->expr()->eq("{$rootAlias}.cibleType", ':lienCible' . $suffix),
-                        $qb->expr()->eq("{$rootAlias}.cibleId", ':lienMulti' . $suffix),
+                    $aliasSousRequete = [];
+                    $finalAlias = $this->joinPath(
+                        $sousRequete,
+                        $alias,
+                        $metadata,
+                        (string) $path,
+                        $aliasSousRequete,
+                        $suffix . '_lm' . $rang,
                     );
-                    $qb->setParameter('lienCible' . $suffix, $cibleUniverselle);
-                }
-                foreach ($paths as $path) {
-                    $finalAlias = $this->joinPath($qb, $rootAlias, $metadata, (string) $path, $joinedEntities, $suffix);
                     if ($finalAlias === null) {
                         $this->logger->warning('[JSBDynamicSearch] Chemin de lien invalide ignoré.', [
                             'entity' => $entityClass, 'path' => $path,
                         ]);
                         continue;
                     }
-                    $orParts[] = $qb->expr()->eq("{$finalAlias}.id", ':lienMulti' . $suffix);
+                    $sousRequete->andWhere($qb->expr()->eq("{$finalAlias}.id", ':lienMulti' . $suffix));
+                    $orParts[] = $qb->expr()->exists($sousRequete->getDQL());
                 }
 
                 if (!empty($orParts)) {

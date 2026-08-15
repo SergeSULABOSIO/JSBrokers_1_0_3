@@ -43,6 +43,7 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
+                "documents" => "document",
                 "nom"            => "action:edit",
                 "modeCalcul"     => "action:options",
                 "montantFlat"    => "action:count",
@@ -100,6 +101,8 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
         $collections = [
             ['fieldName' => 'paiementsPrime', 'entityRouteName' => 'paiementprime', 'formTitle' => 'Paiement de prime', 'parentFieldName' => 'tranche'],
         ];
+        // Pièces jointes de cette fiche.
+        $collections[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'tranche'];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
         return $layout;

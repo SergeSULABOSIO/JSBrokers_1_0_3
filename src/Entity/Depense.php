@@ -2,6 +2,8 @@
 
 namespace App\Entity;
 
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use App\Repository\DepenseRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -127,6 +129,47 @@ class Depense
     public static function statutKeys(): array
     {
         return array_keys(self::STATUTS);
+    }
+
+    public function __construct()
+    {
+        $this->documents = new ArrayCollection();
+    }
+
+    /**
+     * @var Collection<int, Document> Pièces jointes de cette fiche.
+     */
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'depense', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $documents;
+
+    /**
+     * @return Collection<int, Document>
+     */
+    public function getDocuments(): Collection
+    {
+        return $this->documents;
+    }
+
+    public function addDocument(Document $document): static
+    {
+        if (!$this->documents->contains($document)) {
+            $this->documents->add($document);
+            $document->setDepense($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDocument(Document $document): static
+    {
+        if ($this->documents->removeElement($document)) {
+            // set the owning side to null (unless already changed)
+            if ($document->getDepense() === $this) {
+                $document->setDepense(null);
+            }
+        }
+
+        return $this;
     }
 
     public function getId(): ?int

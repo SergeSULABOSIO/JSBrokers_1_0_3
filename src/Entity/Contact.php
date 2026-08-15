@@ -2,6 +2,8 @@
 
 namespace App\Entity;
 
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\ContactRepository;
 use App\Entity\Traits\AuditableTrait;
@@ -118,6 +120,47 @@ class Contact
     #[Groups(['list:read'])]
     public ?string $tauxSPInterpretation = null;
 
+
+    public function __construct()
+    {
+        $this->documents = new ArrayCollection();
+    }
+
+    /**
+     * @var Collection<int, Document> Pièces jointes de cette fiche.
+     */
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'contact', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $documents;
+
+    /**
+     * @return Collection<int, Document>
+     */
+    public function getDocuments(): Collection
+    {
+        return $this->documents;
+    }
+
+    public function addDocument(Document $document): static
+    {
+        if (!$this->documents->contains($document)) {
+            $this->documents->add($document);
+            $document->setContact($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDocument(Document $document): static
+    {
+        if ($this->documents->removeElement($document)) {
+            // set the owning side to null (unless already changed)
+            if ($document->getContact() === $this) {
+                $document->setContact(null);
+            }
+        }
+
+        return $this;
+    }
 
     public function getId(): ?int
     {

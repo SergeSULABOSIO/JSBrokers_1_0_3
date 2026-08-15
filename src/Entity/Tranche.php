@@ -230,8 +230,45 @@ class Tranche
 
     public function __construct()
     {
+        $this->documents = new ArrayCollection();
         $this->articles = new ArrayCollection();
         $this->paiementsPrime = new ArrayCollection();
+    }
+
+    /**
+     * @var Collection<int, Document> Pièces jointes de cette fiche.
+     */
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'tranche', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $documents;
+
+    /**
+     * @return Collection<int, Document>
+     */
+    public function getDocuments(): Collection
+    {
+        return $this->documents;
+    }
+
+    public function addDocument(Document $document): static
+    {
+        if (!$this->documents->contains($document)) {
+            $this->documents->add($document);
+            $document->setTranche($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDocument(Document $document): static
+    {
+        if ($this->documents->removeElement($document)) {
+            // set the owning side to null (unless already changed)
+            if ($document->getTranche() === $this) {
+                $document->setTranche(null);
+            }
+        }
+
+        return $this;
     }
 
     public function getId(): ?int

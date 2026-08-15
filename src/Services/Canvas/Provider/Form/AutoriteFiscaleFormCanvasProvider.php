@@ -33,12 +33,19 @@ class AutoriteFiscaleFormCanvasProvider implements FormCanvasProviderInterface
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
+                "documents" => "document",
                 "nom"         => "action:edit",
                 "abreviation" => "action:edit",
                 "taxe"        => "taxe",
             ],
         ];
         $layout = $this->buildAutoriteFiscaleLayout($autoriteId, $isParentNew);
+
+        // Pièces jointes de cette fiche.
+        $collections = [
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'autoriteFiscale'],
+        ];
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
         return [
             "parametres" => $parametres,

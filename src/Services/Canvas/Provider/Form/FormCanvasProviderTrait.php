@@ -29,6 +29,16 @@ trait FormCanvasProviderTrait
             }
             // Personnalisation des actions de ligne (bouton d'édition masqué, libellé/icône
             // de l'action de suppression — ex. « Retirer » pour un détachement).
+            // NOM DE ROUTE DU PARENT, quand il diffère du nom du champ.
+            //
+            // Les URL de collection se déduisent du `parentFieldName` : /admin/piste/api/…
+            // pour un champ « piste ». La déduction tombe dès que le champ ne peut PAS
+            // porter le nom de l'entité — c'est le cas des documents rattachés à une
+            // entreprise ou à un invité, où « entreprise » et « invite » sont déjà pris
+            // sur Document par le scoping d'AuditableTrait, et où le champ s'appelle donc
+            // « entrepriseRattachee » / « inviteRattache ». Sans cette échappatoire, le
+            // widget appellerait /admin/inviterattache/api/… — une route qui n'existe pas.
+            if (isset($config['parentRouteName'])) $extraOptions['parentRouteName'] = $config['parentRouteName'];
             if (isset($config['hideEditAction']))    $extraOptions['hideEditAction'] = $config['hideEditAction'];
             if (isset($config['deleteActionLabel']))  $extraOptions['deleteActionLabel'] = $config['deleteActionLabel'];
             if (isset($config['deleteActionIcon']))   $extraOptions['deleteActionIcon'] = $config['deleteActionIcon'];
@@ -99,11 +109,17 @@ trait FormCanvasProviderTrait
 
     private function getCollectionWidgetConfig(string $fieldName, string $entityRouteName, int $parentId, string $formtitle, string $parentFieldName, ?array $defaultValueConfig = null, bool $isDisabled = false, array $extraOptions = [], ?int $idEntreprise = null, ?int $idInvite = null): array
     {
+        // Le nom de route du parent vaut son nom de champ, sauf mention contraire
+        // (cf. parentRouteName ci-dessus). Retiré des options : c'est une donnée de
+        // construction d'URL, le navigateur n'en a aucun usage.
+        $routeParent = strtolower((string) ($extraOptions['parentRouteName'] ?? $parentFieldName));
+        unset($extraOptions['parentRouteName']);
+
         $config = [
             "field_code" => $fieldName,
             "widget" => "collection",
             "options" => [
-                "listUrl"       => "/admin/" . strtolower($parentFieldName) . "/api/" . $parentId . "/" . $fieldName,
+                "listUrl"       => "/admin/" . $routeParent . "/api/" . $parentId . "/" . $fieldName,
                 "itemFormUrl"   => "/admin/" . $entityRouteName . "/api/get-form",
                 "itemSubmitUrl" => "/admin/" . $entityRouteName . "/api/submit",
                 "itemDeleteUrl" => "/admin/" . $entityRouteName . "/api/delete",
@@ -112,7 +128,7 @@ trait FormCanvasProviderTrait
                 "parentEntityId" => $parentId,
                 "parentFieldName" => $parentFieldName,
                 "disabled" => $isDisabled,
-                "url" => "/admin/" . strtolower($parentFieldName) . "/api/" . $parentId . "/" . $fieldName,
+                "url" => "/admin/" . $routeParent . "/api/" . $parentId . "/" . $fieldName,
                 "idEntreprise" => $idEntreprise,
                 "idInvite" => $idInvite,
             ]

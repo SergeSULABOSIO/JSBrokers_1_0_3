@@ -35,10 +35,9 @@ use Doctrine\ORM\EntityManagerInterface;
  * validation, budget, verrou « un seul plan en attente », barre « Valider et exécuter »,
  * exécution et journal viennent de là. Cet outil n'écrit rien.
  *
- * IL COUVRE LES QUATRE NIVEAUX, y compris le RATTACHEMENT UNIVERSEL : depuis que Document
- * porte le couple cibleType/cibleId, il n'existe plus d'objet de la plateforme auquel on
- * ne puisse pas joindre un fichier. La réponse « cet enregistrement n'accepte pas de
- * document » n'a plus de cas d'emploi.
+ * IL COUVRE TOUTES LES ENTITÉS MÉTIER : chacune porte désormais une vraie collection
+ * « Documents », la même que celle du widget de son écran. La réponse « cet
+ * enregistrement n'accepte pas de document » n'a donc plus de cas d'emploi.
  */
 final class AttacherFichierTool implements AiToolProduisantUnPlan, AiToolConditionnel, AiToolEcriture
 {
