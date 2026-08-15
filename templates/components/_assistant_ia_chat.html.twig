@@ -1371,6 +1371,22 @@
                     « Valider et exécuter ». Redemandez l'opération pour obtenir le plan, son budget et ce bouton.
                 </p>
             {% endif %}
+            {# DÉMENTI DE PIÈCE JOINTE : la réponse nie un fichier que l'utilisateur a
+               bel et bien attaché, et dont l'agrafe est affichée sous sa propre bulle.
+               La mise au point doit survivre au rechargement, comme les deux démentis
+               ci-dessus — et elle NOMME les pièces : « il y a bien un fichier » sans
+               dire lequel n'aiderait personne à corriger sa demande. #}
+            {% set fichiersNies = estAssistant
+                ? (message.meta.fichierPresent.fichiers ?? []) : [] %}
+            {% if fichiersNies|length > 0 %}
+                <p class="aic-notice aic-notice--warning" role="status">
+                    ⚠ VOTRE FICHIER EST BIEN LÀ. {{ fichiersNies|length > 1 ? 'Les pièces jointes suivantes sont' : 'La pièce jointe suivante est' }}
+                    attachée{{ fichiersNies|length > 1 ? 's' : '' }} à cette conversation :
+                    {{ fichiersNies|map(f => f.nom)|filter(n => n is not empty)|join(', ') }}.
+                    Inutile de {{ fichiersNies|length > 1 ? 'les' : 'le' }} téléverser à nouveau — redemandez simplement
+                    à Ket de {{ fichiersNies|length > 1 ? 'les' : 'l’' }}attacher à l’enregistrement voulu.
+                </p>
+            {% endif %}
             {# RELECTURE DE CONTRÔLE : le plan a bien été exécuté, mais la base ne
                porte pas ce qu'il annonçait. Le bandeau du fil, lui, vit dans une
                bulle éphémère créée au moment du clic — un F5 laisserait donc le

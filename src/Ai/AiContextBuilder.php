@@ -758,6 +758,14 @@ class AiContextBuilder
     {
         $ctx = $request->systemContext;
         $sectionBoussole = $this->sectionBoussole($ctx['boussole'] ?? []);
+        // LA PHASE QUI ÉCRIT DOIT SAVOIR QU'IL Y A DES FICHIERS. Sans cette ligne, la
+        // bulle finale était rédigée par un modèle qui ne voyait aucune pièce jointe :
+        // quand la planification n'avait rien rapporté à leur sujet, il concluait de
+        // bonne foi qu'il n'y en avait pas et répondait « aucun fichier n'a été
+        // transmis » — à un utilisateur dont la pièce était bel et bien attachée, et
+        // affichée sous sa propre bulle. La compréhension et la planification, elles,
+        // les voyaient déjà : c'est cette ASYMÉTRIE qui produisait le démenti.
+        $ligneFichiers = $this->ligneFichiersDuFil($ctx['fichiersAttaches'] ?? []);
 
         return <<<REDACTION
         Tu es {$ctx['assistantNom']}, l'assistant IA de l'entreprise de courtage « {$ctx['entrepriseNom']} »
@@ -777,11 +785,43 @@ class AiContextBuilder
         demandé à partir de ces chiffres-là, sans en réclamer d'autres et sans redemander de quel
         client ou de quelle période il s'agit : c'est écrit juste au-dessus. Les totaux, moyennes
         et sous-totaux se CALCULENT à partir des lignes affichées — additionne-les et donne le
-        résultat, ne dis jamais que tu ne peux pas le faire.
+        résultat, ne dis jamais que tu ne peux pas le faire.{$ligneFichiers}
         {$this->glossaireFinancier()}
         {$this->reglesDeStyle($ctx['monnaie'] ?? null)}
         {$sectionBoussole}
         REDACTION;
+    }
+
+    /**
+     * LES PIÈCES JOINTES DU FIL, en une ligne — nom et référence, sans les extraits.
+     *
+     * Source unique des phases de COMPRÉHENSION et de RÉDACTION, qui n'ont pas à
+     * connaître le contenu des fichiers mais doivent savoir qu'ils EXISTENT. La
+     * planification, elle, reçoit la section complète (sectionPiecesJointes) : c'est
+     * elle qui travaille sur le contenu, et elle seule doit en payer le poids.
+     *
+     * Chaîne vide sans pièce jointe : le prompt reste alors strictement identique, ce
+     * qui préserve le cache de préfixe du fournisseur.
+     *
+     * @param array<int, array{id:int, nom:string, type:string, taille:int, extrait:?string}> $fichiers
+     */
+    private function ligneFichiersDuFil(array $fichiers): string
+    {
+        if ($fichiers === []) {
+            return '';
+        }
+
+        $items = [];
+        foreach ($fichiers as $f) {
+            $items[] = sprintf('« %s » (@fichier:%d)', (string) ($f['nom'] ?? ''), (int) ($f['id'] ?? 0));
+        }
+
+        return "\n\nPIÈCES JOINTES RÉELLEMENT PRÉSENTES dans cette conversation : "
+            . implode(', ', $items) . '. '
+            . "Elles SONT là, l'utilisateur les a bien envoyées et il les voit affichées sous ses "
+            . "messages. Ne dis JAMAIS le contraire — ni « aucun fichier n'a été transmis », ni « je ne "
+            . "vois pas de fichier », ni « veuillez le téléverser » : ce serait lui demander de refaire "
+            . "ce qu'il vient de faire.";
     }
 
     /**
@@ -840,14 +880,10 @@ class AiContextBuilder
         // outils réellement déclarés ce tour-ci, donc le prompt ne peut pas en nommer
         // un qui serait absent (PromptSansOutilFantomeTest le vérifie).
         $sectionAiguillage = $this->sectionAiguillage($trousse, $request->scope);
-        $fichiers = array_map(
-            static fn (array $f) => (string) ($f['nom'] ?? ''),
-            $ctx['fichiersAttaches'] ?? [],
-        );
-        $ligneFichiers = $fichiers === []
-            ? ''
-            : "\nPIÈCES JOINTES au fil (leur contenu ne t'est pas montré ici, mais l'utilisateur peut "
-                . "y faire allusion) : " . implode(', ', $fichiers) . '.';
+        // MÊME source unique que la rédaction : deux phases qui doivent savoir que des
+        // fichiers existent, sans en payer le contenu. Les faire diverger, c'est
+        // permettre à l'une de nier ce que l'autre affirme.
+        $ligneFichiers = $this->ligneFichiersDuFil($ctx['fichiersAttaches'] ?? []);
 
         return <<<COMPREHENSION
         Tu es {$ctx['assistantNom']}, l'assistant IA de l'entreprise de courtage « {$ctx['entrepriseNom']} »
@@ -1730,10 +1766,15 @@ class AiContextBuilder
      * Section du prompt système consacrée aux PIÈCES JOINTES (fichiers attachés
      * par l'utilisateur). Chaîne vide sans fichier — le prompt reste alors
      * strictement identique (non-régression). Pour chaque fichier : identifiant,
-     * nom, type, taille et l'EXTRAIT de texte capturé à l'upload (tronqué). Trois
-     * usages : (a) CLASSER le fichier dans un enregistrement via preparer_operations
-     * en donnant au champ fichier la valeur « @fichier:<id> » ; (b) LIRE / EXTRAIRE
-     * des données depuis l'extrait ; (c) s'en servir pour RECHERCHER en base.
+     * nom, type, taille et l'EXTRAIT de texte capturé à l'upload (tronqué).
+     *
+     * C'est la SOURCE UNIQUE de la doctrine « fichiers » : cinq usages y sont
+     * énoncés une fois pour toutes — (1) ATTACHER la pièce à un enregistrement
+     * existant via attacher_fichier, (2) LIRE / restituer son contenu, (3) s'en
+     * servir pour RECHERCHER en base, (4) SAISIR un enregistrement depuis ses
+     * données via analyser_fichier_pour_saisie, (5) TÉLÉCHARGER. Les laisser se
+     * disperser dans les descriptions d'outils reviendrait à les laisser se
+     * contredire.
      *
      * @param array<int, array{id:int, nom:string, type:string, taille:int, extrait:?string}> $fichiers
      */
@@ -1879,9 +1920,16 @@ class AiContextBuilder
 
         return "\nPIÈCES JOINTES — l'utilisateur a ATTACHÉ le(s) fichier(s) ci-dessous à cette conversation."
             . "\nRÈGLE IMPÉRATIVE : ce sont des pièces de travail. Cinq usages, selon la demande :"
-            . "\n1) CLASSER une pièce dans un enregistrement (ex. « ajoute ce fichier aux documents de "
-            . "l'avenant 42 ») : utilise preparer_operations en donnant au champ fichier la valeur "
-            . "« @fichier:<id> » (ex. entite=Document, champs:{\"nom\":\"…\",\"avenant\":42,\"fichier\":\"@fichier:<id>\"}). "
+            . "\n1) ATTACHER une pièce à un enregistrement (ex. « ajoute ce fichier à l'avenant MIC2026-001 », "
+            . "« joins-le au dossier du client Orange », « range cette facture dans la tranche n°3 ») : appelle "
+            . "attacher_fichier avec fichierId et cible={entite:\"…\", nom:\"…\"}. C'est le SEUL chemin quand "
+            . "l'enregistrement EXISTE DÉJÀ : n'emploie pas preparer_operations pour cela, tu devrais y deviner "
+            . "le champ de rattachement — le serveur, lui, le déduit. (Un enregistrement que tu CRÉES dans le "
+            . "même plan garde sa pièce dans sa collection « documents », comme le montre l'exemple travaillé.) "
+            . "TOUT enregistrement de la plateforme peut recevoir un fichier, sans exception : police, client, "
+            . "cotation, piste, sinistre, paiement, mais aussi tranche, note, assureur, risque, portefeuille… "
+            . "Ne réponds JAMAIS qu'un enregistrement n'accepte pas de document, ni que le fichier ne pourra pas "
+            . "être conservé. "
             . "N'invente JAMAIS un identifiant de pièce jointe : reprends EXACTEMENT le @fichier:<id> listé ci-dessous."
             . "\n2) LIRE / RESTITUER / SYNTHÉTISER : le « Contenu extrait » ci-dessous EST le contenu du "
             . "fichier — c'est ta source. Tu PEUX le lire, le citer, le résumer, le traduire, le reformuler, "

@@ -7,6 +7,7 @@ use App\Entity\Client;
 use App\Entity\Cotation;
 use App\Entity\Document;
 use App\Entity\Piste;
+use App\Service\Document\DocumentsDe;
 
 /**
  * Rassemble tous les documents enregistrés sur le serveur concernant un dossier
@@ -33,6 +34,11 @@ class SoaPoliceDocumentsCollector
         'image' => ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'tif', 'tiff'],
         'archive' => ['zip', 'rar', '7z', 'tar', 'gz'],
     ];
+
+    public function __construct(
+        private readonly DocumentsDe $documentsDe,
+    ) {
+    }
 
     /**
      * @param Client|Piste|Cotation|Avenant $entity
@@ -96,18 +102,23 @@ class SoaPoliceDocumentsCollector
             throw new \InvalidArgumentException(sprintf('Type non supporté par le collecteur de documents : %s', get_debug_type($entity)));
         }
 
+        // DocumentsDe et non getDocuments() : depuis que TOUT objet peut porter un
+        // fichier, une pièce peut être rattachée par le couple universel plutôt que
+        // par la collection Doctrine. Lire seulement la collection reviendrait à
+        // omettre du relevé un document que la rubrique Documents, elle, affiche —
+        // et un relevé de compte incomplet est pire qu'un relevé absent.
         $sources = [];
         foreach ($pistes as $piste) {
-            $sources[] = ['niveau' => 'Piste', 'documents' => $piste->getDocuments()];
+            $sources[] = ['niveau' => 'Piste', 'documents' => $this->documentsDe->pour($piste)];
         }
         foreach ($cotations as $cotation) {
-            $sources[] = ['niveau' => 'Cotation', 'documents' => $cotation->getDocuments()];
+            $sources[] = ['niveau' => 'Cotation', 'documents' => $this->documentsDe->pour($cotation)];
         }
         foreach ($avenants as $avenant) {
-            $sources[] = ['niveau' => 'Police', 'documents' => $avenant->getDocuments()];
+            $sources[] = ['niveau' => 'Police', 'documents' => $this->documentsDe->pour($avenant)];
         }
         if ($client !== null) {
-            $sources[] = ['niveau' => 'Client', 'documents' => $client->getDocuments()];
+            $sources[] = ['niveau' => 'Client', 'documents' => $this->documentsDe->pour($client)];
         }
 
         $items = [];

@@ -208,7 +208,17 @@ final class TelechargerDocumentsTool implements AiToolInterface
         } else {
             $criteria = $resolution->criteria;
             if ($nom !== '') {
-                $criteria['nom'] = ['operator' => 'LIKE', 'value' => $nom, 'mode' => 'contains'];
+                // DEUX NOMS, ET L'UTILISATEUR NE DISTINGUE PAS LES DEUX. « Retrouve-moi
+                // CONTRAT-2026 » désigne le plus souvent le nom du FICHIER tel qu'il
+                // était sur le poste, pas le libellé saisi dans la fiche du document.
+                // Ne chercher que le libellé rendait introuvable un fichier pourtant
+                // présent, et poussait à conclure qu'il n'avait jamais été versé.
+                // Le nom de stockage préserve le nom d'origine (SmartUniqueNamer n'y
+                // ajoute qu'un suffixe), donc la correspondance partielle y fonctionne.
+                $criteria[JSBDynamicSearchService::OU_TEXTE_LIBRE] = [
+                    'champs' => ['nom', 'nomFichierStocke'],
+                    'valeur' => $nom,
+                ];
             }
             if (!$perimetreEntreprise) {
                 $criteria += $this->portefeuilleCritere->pour('Document', $scope->invite);

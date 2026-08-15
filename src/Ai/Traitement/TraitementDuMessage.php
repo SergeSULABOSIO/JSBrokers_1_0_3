@@ -6,9 +6,11 @@ use App\Ai\Action\ValidateurDActions;
 use App\Ai\AiContextBuilder;
 use App\Ai\AiEngineFailure;
 use App\Ai\AiReply;
+use App\Ai\Action\TypeAction;
 use App\Ai\Comprehension\ClarificationEnAttente;
 use App\Ai\Document\DocumentEnAttente;
 use App\Ai\Engine\AiEngineInterface;
+use App\Ai\Fichier\FichierNieAtort;
 use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Programme\ProgrammeEnCours;
 use App\Ai\Programme\ProgrammeRunner;
@@ -224,6 +226,28 @@ final class TraitementDuMessage
             ]);
         }
 
+        // DÉMENTI DE FICHIER — le troisième garde-fou de la même famille, et celui qui
+        // renvoie l'utilisateur à sa propre manipulation. Le 2026-08-15, Ket a répondu
+        // deux fois « aucun fichier n'a été transmis, je vous invite à téléverser le
+        // document » à un message qui PORTAIT sa pièce jointe, agrafe affichée. La
+        // cause première (une phase de rédaction aveugle aux pièces) est corrigée dans
+        // AiContextBuilder ; ceci en est la ceinture, car le contenu d'une bulle reste
+        // écrit par un modèle. Le serveur, lui, sait ce qui est attaché.
+        $fichierNie = $aiRequest === null
+            ? null
+            : FichierNieAtort::detecter(
+                (string) $reply->content,
+                $aiRequest->systemContext['fichiersAttaches'] ?? [],
+            );
+        if ($fichierNie !== null) {
+            $actions[] = ['type' => TypeAction::FICHIER_PRESENT->value] + $fichierNie;
+            $this->logger->warning('Assistant IA : démenti de pièce jointe (fichiers présents, réponse contraire).', [
+                'conversation' => $conversation->getId(),
+                'engine'       => $this->aiEngine->name(),
+                'fichiers'     => count($fichierNie['fichiers']),
+            ]);
+        }
+
         $messageAssistant = (new AssistantMessage())
             ->setRole(AssistantMessage::ROLE_ASSISTANT)
             ->setContenu($reply->content)
@@ -250,6 +274,10 @@ final class TraitementDuMessage
                 // sinon un rechargement laisserait le récapitulatif mensonger seul
                 // à l'écran — exactement l'état qu'on corrige.
                 'executionAbsente' => $executionFantome ?: null,
+                // Même trace, pour la mise au point de pièce jointe : elle porte les
+                // NOMS des fichiers réellement présents, seule façon d'être utile —
+                // « il y a bien un fichier » sans dire lequel n'aide personne.
+                'fichierPresent' => $fichierNie,
                 // Bandeau d'avancement quand ce plan est l'étape d'un PROGRAMME
                 // (« étape 1 sur 3 ») : persisté pour survivre au rechargement,
                 // au même titre que le plan lui-même.

@@ -835,6 +835,9 @@ export default class extends Controller {
                 case 'ket-mutation.non-executee':
                     this.renderExecutionAbsente();
                     break;
+                case 'ket-fichier.present':
+                    this.renderFichierPresent(action);
+                    break;
                 case 'ket-document.review':
                     this.renderDocumentReview(action);
                     break;
@@ -1809,6 +1812,30 @@ export default class extends Controller {
             motif === ''
                 ? this.constructor.MUTATION_ABSENT_MESSAGE
                 : `${this.constructor.MUTATION_ABSENT_PREFIXE} ${motif}`,
+        );
+    }
+
+    /**
+     * Rétablit les faits quand la réponse nie une pièce jointe réellement présente.
+     *
+     * En « warning » et non en « error » : rien de faux n'a été écrit en base, mais
+     * l'utilisateur est renvoyé à une manipulation qu'il a DÉJÀ faite — et il faut
+     * l'en dissuader avant qu'il ne reverse son fichier une troisième fois.
+     *
+     * Les NOMS viennent du serveur, qui seul sait ce qui est attaché : « vous avez
+     * bien un fichier » sans dire lequel ne permet pas de reformuler sa demande.
+     */
+    renderFichierPresent(action = null) {
+        const fichiers = Array.isArray(action?.fichiers) ? action.fichiers : [];
+        const noms = fichiers.map((f) => (f && typeof f.nom === 'string' ? f.nom.trim() : '')).filter(Boolean);
+        if (noms.length === 0) return;
+
+        const pluriel = noms.length > 1;
+        this.appendNotice(
+            'warning',
+            `Votre fichier est bien là. ${pluriel ? 'Les pièces jointes suivantes sont attachées' : 'La pièce jointe suivante est attachée'}`
+            + ` à cette conversation : ${noms.join(', ')}. Inutile de ${pluriel ? 'les' : 'le'} téléverser à nouveau —`
+            + ` redemandez simplement à Ket de ${pluriel ? 'les' : 'l’'}attacher à l’enregistrement voulu.`,
         );
     }
 
