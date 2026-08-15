@@ -42,6 +42,7 @@ class OperationFormCanvasProvider implements FormCanvasProviderInterface
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
+                "documents" => "document",
                 "referencePolice" => "action:edit",
                 "numeroAvenant"   => "avenant",
                 "montantHT"       => "action:count",
@@ -49,6 +50,12 @@ class OperationFormCanvasProvider implements FormCanvasProviderInterface
             ],
         ];
         $layout = $this->buildOperationLayout($object, $isParentNew);
+
+        // Pièces jointes de cette fiche.
+        $collections = [
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'operation'],
+        ];
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
         return [
             "parametres" => $parametres,

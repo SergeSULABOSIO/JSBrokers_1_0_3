@@ -11,7 +11,6 @@ use Vich\UploaderBundle\Mapping\Annotation as Vich;
 
 #[ORM\Entity(repositoryClass: DocumentRepository::class)]
 #[ORM\HasLifecycleCallbacks]
-#[ORM\Index(name: 'idx_document_cible', columns: ['cible_type', 'cible_id'])]
 #[Vich\Uploadable]
 class Document
 {
@@ -80,34 +79,89 @@ class Document
     #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?Fournisseur $fournisseur = null;
 
-    /**
-     * RATTACHEMENT UNIVERSEL — le nom court de l'entité à laquelle ce document est
-     * rattaché quand AUCUNE des relations ci-dessus ne la couvre (« Tranche »,
-     * « Note », « Assureur »…).
-     *
-     * POURQUOI DEUX COLONNES ET NON QUINZE DE PLUS. Quinze colonnes de parent
-     * disaient déjà « un document a une origine, pas quatorze » — mais elles ne le
-     * disaient que pour quinze entités sur soixante-dix-sept. Partout ailleurs, le
-     * serveur devait avertir que le fichier NE SERAIT PAS CONSERVÉ : la donnée
-     * extraite entrait en base, la pièce qui la justifiait mourait avec la
-     * conversation. Ajouter une colonne par entité aurait déplacé la limite sans la
-     * supprimer, et fait grossir cette table à chaque entité nouvelle.
-     *
-     * ⚠️ CE COUPLE EST UN DERNIER RECOURS, PAS UNE ALTERNATIVE. Quand une relation
-     * typée existe pour la cible, c'est ELLE qui est écrite et ce couple reste nul —
-     * sinon la rubrique Documents et Ket liraient deux vérités différentes du même
-     * rattachement. La règle est centralisée dans PieceSourceRattachement, et
-     * DocumentFichier::parentDe() lit les deux mécanismes dans cet ordre.
-     *
-     * Il n'y a PAS de clé étrangère derrière : la suppression du parent est prise en
-     * charge par DocumentsOrphelinsSubscriber, faute de quoi ces lignes survivraient
-     * à l'objet qu'elles décrivent.
-     */
-    #[ORM\Column(length: 80, nullable: true)]
-    private ?string $cibleType = null;
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Assureur $assureur = null;
 
-    #[ORM\Column(nullable: true)]
-    private ?int $cibleId = null;
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?AutoriteFiscale $autoriteFiscale = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Charge $charge = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?ChargeCourtier $chargeCourtier = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Chargement $chargement = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?ChargementPourPrime $chargementPourPrime = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?ConditionPartage $conditionPartage = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Contact $contact = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Depense $depense = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?DepenseCourtier $depenseCourtier = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Entreprise $entrepriseRattachee = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Evaluation $evaluation = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Groupe $groupe = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Invite $inviteRattache = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?ModelePieceSinistre $modelePieceSinistre = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Monnaie $monnaie = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Note $note = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?NotificationSinistre $notificationSinistre = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Objectif $objectif = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Operation $operation = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Portefeuille $portefeuille = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?ReglementTaxe $reglementTaxe = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?RevenuPourCourtier $revenuPourCourtier = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Risque $risque = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Taxe $taxe = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?TaxeVente $taxeVente = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Tranche $tranche = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?TypeRevenu $typeRevenu = null;
 
     #[Groups(['list:read'])]
     public ?string $parent_string;
@@ -357,38 +411,340 @@ class Document
         return $this;
     }
 
-    public function getCibleType(): ?string
+    public function getAssureur(): ?Assureur
     {
-        return $this->cibleType;
+        return $this->assureur;
     }
 
-    public function setCibleType(?string $cibleType): static
+    public function setAssureur(?Assureur $assureur): static
     {
-        // Une chaîne vide arrive du formulaire quand le champ caché n'est pas
-        // renseigné ; la laisser passer produirait un rattachement vers une entité
-        // nommée « », c'est-à-dire un parent que parentDe() chercherait à résoudre à
-        // chaque ligne de liste.
-        $this->cibleType = ($cibleType === null || trim($cibleType) === '') ? null : trim($cibleType);
+        $this->assureur = $assureur;
 
         return $this;
     }
 
-    public function getCibleId(): ?int
+    public function getAutoriteFiscale(): ?AutoriteFiscale
     {
-        return $this->cibleId;
+        return $this->autoriteFiscale;
     }
 
-    public function setCibleId(?int $cibleId): static
+    public function setAutoriteFiscale(?AutoriteFiscale $autoriteFiscale): static
     {
-        $this->cibleId = ($cibleId !== null && $cibleId > 0) ? $cibleId : null;
+        $this->autoriteFiscale = $autoriteFiscale;
 
         return $this;
     }
 
-    /** Le couple de rattachement universel est-il complet ? (les deux moitiés, ou rien) */
-    public function aUneCibleUniverselle(): bool
+    public function getCharge(): ?Charge
     {
-        return $this->cibleType !== null && $this->cibleId !== null;
+        return $this->charge;
+    }
+
+    public function setCharge(?Charge $charge): static
+    {
+        $this->charge = $charge;
+
+        return $this;
+    }
+
+    public function getChargeCourtier(): ?ChargeCourtier
+    {
+        return $this->chargeCourtier;
+    }
+
+    public function setChargeCourtier(?ChargeCourtier $chargeCourtier): static
+    {
+        $this->chargeCourtier = $chargeCourtier;
+
+        return $this;
+    }
+
+    public function getChargement(): ?Chargement
+    {
+        return $this->chargement;
+    }
+
+    public function setChargement(?Chargement $chargement): static
+    {
+        $this->chargement = $chargement;
+
+        return $this;
+    }
+
+    public function getChargementPourPrime(): ?ChargementPourPrime
+    {
+        return $this->chargementPourPrime;
+    }
+
+    public function setChargementPourPrime(?ChargementPourPrime $chargementPourPrime): static
+    {
+        $this->chargementPourPrime = $chargementPourPrime;
+
+        return $this;
+    }
+
+    public function getConditionPartage(): ?ConditionPartage
+    {
+        return $this->conditionPartage;
+    }
+
+    public function setConditionPartage(?ConditionPartage $conditionPartage): static
+    {
+        $this->conditionPartage = $conditionPartage;
+
+        return $this;
+    }
+
+    public function getContact(): ?Contact
+    {
+        return $this->contact;
+    }
+
+    public function setContact(?Contact $contact): static
+    {
+        $this->contact = $contact;
+
+        return $this;
+    }
+
+    public function getDepense(): ?Depense
+    {
+        return $this->depense;
+    }
+
+    public function setDepense(?Depense $depense): static
+    {
+        $this->depense = $depense;
+
+        return $this;
+    }
+
+    public function getDepenseCourtier(): ?DepenseCourtier
+    {
+        return $this->depenseCourtier;
+    }
+
+    public function setDepenseCourtier(?DepenseCourtier $depenseCourtier): static
+    {
+        $this->depenseCourtier = $depenseCourtier;
+
+        return $this;
+    }
+
+    public function getEntrepriseRattachee(): ?Entreprise
+    {
+        return $this->entrepriseRattachee;
+    }
+
+    public function setEntrepriseRattachee(?Entreprise $entrepriseRattachee): static
+    {
+        $this->entrepriseRattachee = $entrepriseRattachee;
+
+        return $this;
+    }
+
+    public function getEvaluation(): ?Evaluation
+    {
+        return $this->evaluation;
+    }
+
+    public function setEvaluation(?Evaluation $evaluation): static
+    {
+        $this->evaluation = $evaluation;
+
+        return $this;
+    }
+
+    public function getGroupe(): ?Groupe
+    {
+        return $this->groupe;
+    }
+
+    public function setGroupe(?Groupe $groupe): static
+    {
+        $this->groupe = $groupe;
+
+        return $this;
+    }
+
+    public function getInviteRattache(): ?Invite
+    {
+        return $this->inviteRattache;
+    }
+
+    public function setInviteRattache(?Invite $inviteRattache): static
+    {
+        $this->inviteRattache = $inviteRattache;
+
+        return $this;
+    }
+
+    public function getModelePieceSinistre(): ?ModelePieceSinistre
+    {
+        return $this->modelePieceSinistre;
+    }
+
+    public function setModelePieceSinistre(?ModelePieceSinistre $modelePieceSinistre): static
+    {
+        $this->modelePieceSinistre = $modelePieceSinistre;
+
+        return $this;
+    }
+
+    public function getMonnaie(): ?Monnaie
+    {
+        return $this->monnaie;
+    }
+
+    public function setMonnaie(?Monnaie $monnaie): static
+    {
+        $this->monnaie = $monnaie;
+
+        return $this;
+    }
+
+    public function getNote(): ?Note
+    {
+        return $this->note;
+    }
+
+    public function setNote(?Note $note): static
+    {
+        $this->note = $note;
+
+        return $this;
+    }
+
+    public function getNotificationSinistre(): ?NotificationSinistre
+    {
+        return $this->notificationSinistre;
+    }
+
+    public function setNotificationSinistre(?NotificationSinistre $notificationSinistre): static
+    {
+        $this->notificationSinistre = $notificationSinistre;
+
+        return $this;
+    }
+
+    public function getObjectif(): ?Objectif
+    {
+        return $this->objectif;
+    }
+
+    public function setObjectif(?Objectif $objectif): static
+    {
+        $this->objectif = $objectif;
+
+        return $this;
+    }
+
+    public function getOperation(): ?Operation
+    {
+        return $this->operation;
+    }
+
+    public function setOperation(?Operation $operation): static
+    {
+        $this->operation = $operation;
+
+        return $this;
+    }
+
+    public function getPortefeuille(): ?Portefeuille
+    {
+        return $this->portefeuille;
+    }
+
+    public function setPortefeuille(?Portefeuille $portefeuille): static
+    {
+        $this->portefeuille = $portefeuille;
+
+        return $this;
+    }
+
+    public function getReglementTaxe(): ?ReglementTaxe
+    {
+        return $this->reglementTaxe;
+    }
+
+    public function setReglementTaxe(?ReglementTaxe $reglementTaxe): static
+    {
+        $this->reglementTaxe = $reglementTaxe;
+
+        return $this;
+    }
+
+    public function getRevenuPourCourtier(): ?RevenuPourCourtier
+    {
+        return $this->revenuPourCourtier;
+    }
+
+    public function setRevenuPourCourtier(?RevenuPourCourtier $revenuPourCourtier): static
+    {
+        $this->revenuPourCourtier = $revenuPourCourtier;
+
+        return $this;
+    }
+
+    public function getRisque(): ?Risque
+    {
+        return $this->risque;
+    }
+
+    public function setRisque(?Risque $risque): static
+    {
+        $this->risque = $risque;
+
+        return $this;
+    }
+
+    public function getTaxe(): ?Taxe
+    {
+        return $this->taxe;
+    }
+
+    public function setTaxe(?Taxe $taxe): static
+    {
+        $this->taxe = $taxe;
+
+        return $this;
+    }
+
+    public function getTaxeVente(): ?TaxeVente
+    {
+        return $this->taxeVente;
+    }
+
+    public function setTaxeVente(?TaxeVente $taxeVente): static
+    {
+        $this->taxeVente = $taxeVente;
+
+        return $this;
+    }
+
+    public function getTranche(): ?Tranche
+    {
+        return $this->tranche;
+    }
+
+    public function setTranche(?Tranche $tranche): static
+    {
+        $this->tranche = $tranche;
+
+        return $this;
+    }
+
+    public function getTypeRevenu(): ?TypeRevenu
+    {
+        return $this->typeRevenu;
+    }
+
+    public function setTypeRevenu(?TypeRevenu $typeRevenu): static
+    {
+        $this->typeRevenu = $typeRevenu;
+
+        return $this;
     }
 
     public function __toString(): string

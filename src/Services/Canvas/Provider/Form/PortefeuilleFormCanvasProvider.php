@@ -52,6 +52,7 @@ class PortefeuilleFormCanvasProvider implements FormCanvasProviderInterface
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
+                "documents" => "document",
                 "nom"          => "action:edit",
                 "gestionnaire" => "invite",
                 "clients"      => "client",
@@ -77,6 +78,8 @@ class PortefeuilleFormCanvasProvider implements FormCanvasProviderInterface
         // adapté aux portefeuilles de plusieurs dizaines de clients. Le « retrait » d'un client
         // pointe vers l'action de détachement (client.portefeuille = null), et non vers la
         // suppression du client (qui est une entité partagée).
+        // Pièces jointes de cette fiche.
+        $collections[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'portefeuille'];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, [
             [
                 'fieldName'       => 'clients',

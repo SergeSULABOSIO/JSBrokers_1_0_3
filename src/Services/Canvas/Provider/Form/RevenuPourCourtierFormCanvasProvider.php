@@ -33,6 +33,7 @@ class RevenuPourCourtierFormCanvasProvider implements FormCanvasProviderInterfac
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
+                "documents" => "document",
                 "nom"                    => "action:edit",
                 "typeRevenu"             => "type-revenu",
                 "montantFlatExceptionel" => "action:count",
@@ -40,6 +41,12 @@ class RevenuPourCourtierFormCanvasProvider implements FormCanvasProviderInterfac
             ],
         ];
         $layout = $this->buildRevenuPourCourtierLayout($revenuId, $isParentNew);
+
+        // Pièces jointes de cette fiche.
+        $collections = [
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'revenuPourCourtier'],
+        ];
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
         return [
             "parametres" => $parametres,

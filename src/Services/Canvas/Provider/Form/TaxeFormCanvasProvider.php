@@ -33,6 +33,7 @@ class TaxeFormCanvasProvider implements FormCanvasProviderInterface
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
+                "documents" => "document",
                 "code"             => "action:edit",
                 "tauxIARD"         => "action:count",
                 "tauxVIE"          => "action:count",
@@ -65,6 +66,8 @@ class TaxeFormCanvasProvider implements FormCanvasProviderInterface
             ['fieldName' => 'autoriteFiscales', 'entityRouteName' => 'autoritefiscale', 'formTitle' => 'Autorité Fiscale', 'parentFieldName' => 'taxe'],
         ];
 
+        // Pièces jointes de cette fiche.
+        $collections[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'taxe'];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
         return $layout;

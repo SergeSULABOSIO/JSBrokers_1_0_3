@@ -41,6 +41,7 @@ class NotificationSinistreFormCanvasProvider implements FormCanvasProviderInterf
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
+                "documents" => "document",
                 "assure"                      => "client",
                 "assureur"                    => "assureur",
                 "risque"                      => "risque",
@@ -89,6 +90,8 @@ class NotificationSinistreFormCanvasProvider implements FormCanvasProviderInterf
             ['fieldName' => 'taches', 'entityRouteName' => 'tache', 'formTitle' => 'Tâche', 'parentFieldName' => 'notificationSinistre'],
         ];
 
+        // Pièces jointes de cette fiche.
+        $collections[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'notificationSinistre'];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
         return $layout;

@@ -92,6 +92,20 @@ class TrancheType extends AbstractType
                 'entry_options' => ['label' => false],
                 'mapped' => false, // logique API par élément (même pattern que Paiement.preuves)
             ])
+            // PIÈCES JOINTES de cette fiche. `mapped: false` comme les onze autres
+            // collections de documents du projet : chaque pièce est créée, modifiée et
+            // supprimée par son propre dialogue, via l'API de Document — le formulaire
+            // parent ne fait que porter le widget.
+            ->add('documents', CollectionType::class, [
+                'label' => "Documents",
+                'entry_type' => DocumentType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'required' => false,
+                'entry_options' => ['label' => false],
+                'mapped' => false,
+            ])
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
             ->addEventListener(FormEvents::PRE_SET_DATA, function (FormEvent $event) {
                 $tranche = $event->getData();

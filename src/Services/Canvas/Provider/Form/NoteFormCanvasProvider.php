@@ -69,6 +69,7 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
+                "documents" => "document",
                 "type"            => "action:options",
                 "addressedTo"     => "action:options",
                 "client"          => "client",
@@ -175,6 +176,8 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             'disabled'       => ($object->solde !== null && (float)$object->solde <= 0),
         ];
 
+        // Pièces jointes de cette fiche.
+        $collections[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'note'];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
         // On ajoute le reste des champs après les collections

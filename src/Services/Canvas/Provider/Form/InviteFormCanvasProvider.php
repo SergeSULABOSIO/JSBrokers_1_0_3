@@ -45,6 +45,7 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
+                "documents" => "document",
                 "nom" => "utilisateur",
                 "email" => "mdi:email-outline",
                 "assistants" => "invite",
@@ -168,6 +169,8 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
             ],
         ];
 
+        // Pièces jointes de cette fiche.
+        $collections[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'inviteRattache', 'parentRouteName' => 'invite'];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collectionsConfig);
 
         return $layout;

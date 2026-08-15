@@ -40,6 +40,7 @@ class MonnaieFormCanvasProvider implements FormCanvasProviderInterface
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
+                "documents" => "document",
                 "nom"      => "action:edit",
                 "code"     => "action:edit",
                 "tauxusd"  => "action:count",
@@ -48,6 +49,12 @@ class MonnaieFormCanvasProvider implements FormCanvasProviderInterface
             ],
         ];
         $layout = $this->buildMonnaieLayout($object, $isParentNew);
+
+        // Pièces jointes de cette fiche.
+        $collections = [
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'monnaie'],
+        ];
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
         return [
             "parametres" => $parametres,

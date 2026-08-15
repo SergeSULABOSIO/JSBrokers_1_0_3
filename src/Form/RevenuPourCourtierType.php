@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Form;
+
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use App\Entity\TypeRevenu;
 use App\Entity\RevenuPourCourtier;
 use App\Form\TypeRevenuAutocompleteField;
@@ -58,6 +60,20 @@ class RevenuPourCourtierType extends AbstractType
                 // La propriété de l'entité est nullable, donc le champ ne doit pas être requis.
                 'required' => false,
                 'placeholder' => "Sélectionner un type de revenu",
+            ])
+            // PIÈCES JOINTES de cette fiche. `mapped: false` comme les onze autres
+            // collections de documents du projet : chaque pièce est créée, modifiée et
+            // supprimée par son propre dialogue, via l'API de Document — le formulaire
+            // parent ne fait que porter le widget.
+            ->add('documents', CollectionType::class, [
+                'label' => "Documents",
+                'entry_type' => DocumentType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'required' => false,
+                'entry_options' => ['label' => false],
+                'mapped' => false,
             ])
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
