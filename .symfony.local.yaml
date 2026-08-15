@@ -1,0 +1,19 @@
+# Configuration locale de `symfony serve`.
+#
+# LE WORKER DE L'ASSISTANT. Sans lui, une question déposée en file n'obtient
+# jamais de réponse : la bulle « Ket réfléchit… » tourne indéfiniment. Le
+# déclarer ici, c'est laisser `symfony serve` le démarrer avec le serveur et le
+# relancer à chaque modification du code — la friction « il faut penser à lancer
+# un worker » disparaît, et c'est elle qui aurait fait échouer la refonte en
+# développement.
+#
+# Tant que ASSISTANT_ASYNC vaut 0, le traitement a lieu pendant la requête et ce
+# worker n'a rien à consommer côté assistant : le déclarer est sans effet, et
+# le rend disponible pour le jour de la bascule.
+workers:
+    messenger_async:
+        cmd: ['symfony', 'console', 'messenger:consume', 'async', '-v', '--time-limit=3600', '--memory-limit=256M']
+        # Redémarre le worker quand le code change : sinon il continuerait à
+        # exécuter l'ancienne version, et on chercherait longtemps pourquoi un
+        # correctif « ne prend pas ».
+        watch: ['config', 'src', 'templates', 'vendor']

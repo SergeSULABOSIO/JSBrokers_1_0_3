@@ -7,6 +7,11 @@ framework:
             async:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
                 options:
+                    # use_notify est une option PostgreSQL (LISTEN/NOTIFY). La base
+                    # est MariaDB : le transport retombe sur son propre scrutin,
+                    # d'environ une seconde. Négligeable devant un traitement de
+                    # vingt à quarante secondes. Laissé en place — la bascule
+                    # PostgreSQL du compose.yaml le rendrait vrai.
                     use_notify: true
                     check_delayed_interval: 60000
                 retry_strategy:
@@ -26,8 +31,22 @@ framework:
             Symfony\Component\Notifier\Message\SmsMessage: async
             App\Message\EntreprisePDFMessage: async
 
+            # Traitement d'un message de l'assistant IA. Le routage vers `async`
+            # n'est PAS ce qui décide du régime : FileDeTraitement estampille
+            # l'enveloppe pour `sync` tant que ASSISTANT_ASYNC vaut 0. C'est cette
+            # variable, et elle seule, qui bascule — ici on ne fait que déclarer
+            # où le signal ira quand elle passera à 1.
+            App\Message\TraiterMessagesAssistant: async
+
             # Route your messages to the transports
             # 'App\Message\YourMessage': async
+
+# PAS de routage `sync` pour l'assistant sous PHPUnit. Ce serait un SECOND
+# mécanisme de bascule, en concurrence avec ASSISTANT_ASYNC — et le routage
+# gagnerait, rendant le drapeau intestable. Le drapeau vaut 0 en test comme
+# ailleurs : le drainage a donc lieu pendant le dispatch, l'envoi rend 200 avec
+# la charge utile complète, et les tests d'envoi existants restent valables mot
+# pour mot. AssistantRafaleTest, lui, pose le drapeau à 1 pour observer la file.
 
 when@dev:
     framework:

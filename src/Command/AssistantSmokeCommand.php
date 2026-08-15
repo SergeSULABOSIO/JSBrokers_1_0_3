@@ -5,6 +5,7 @@ namespace App\Command;
 use App\Ai\AiContextBuilder;
 use App\Ai\Engine\AiEngineInterface;
 use App\Ai\Scope\AiScope;
+use App\Ai\Traitement\IdentiteDuTraitement;
 use App\Ai\Tool\AiToolInterface;
 use App\Entity\AssistantConversation;
 use App\Entity\AssistantMessage;
@@ -20,8 +21,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
-use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 
 /**
  * Test de fumée de l'assistant IA en ligne de commande : envoie une question
@@ -44,8 +43,9 @@ class AssistantSmokeCommand extends Command
         // relations lisent l'utilisateur connecté et son espace de travail
         // (FormListenerFactory::setFiltreEntreprise). Sans jeton, toute
         // préparation de plan casse sur « getConnectedTo() on null » et le test de
-        // fumée ne peut vérifier que les outils de lecture.
-        private readonly TokenStorageInterface $tokenStorage,
+        // fumée ne peut vérifier que les outils de lecture. Même besoin, et donc
+        // même code, que le traitement d'un message hors requête HTTP.
+        private readonly IdentiteDuTraitement $identite,
         /** @var iterable<AiToolInterface> */
         #[AutowireIterator('app.ai_tool')] private readonly iterable $outils = [],
     ) {
@@ -84,10 +84,7 @@ class AssistantSmokeCommand extends Command
         // place l'utilisateur de l'invité dans l'espace de travail visé, exactement
         // comme le ferait une session web. C'est ce qui rend les parcours d'écriture
         // testables ici — ils restent en dry-run, rien n'est écrit ni flushé.
-        if (($utilisateur = $invite->getUtilisateur()) !== null) {
-            $utilisateur->setConnectedTo($entreprise);
-            $this->tokenStorage->setToken(new UsernamePasswordToken($utilisateur, 'main', $utilisateur->getRoles()));
-        }
+        $this->identite->endosser($invite, $entreprise);
 
         // Invocation DIRECTE d'un outil : ce que le moteur aurait obtenu, mot pour
         // mot, sans passer par lui. Indispensable pour diagnostiquer — la prose du

@@ -430,7 +430,17 @@
     <template data-workspace-manager-target="tabTemplate">
         <div class="tab-item" data-action="click->workspace-manager#activateTab">
             <span class="tab-item-icon"></span>
-            <span class="tab-item-title" data-role="tab-title"></span>
+            {# Double-clic = renommer la conversation. Posé sur le LIBELLÉ et non sur
+           l'onglet entier : un double-clic sur la croix de fermeture ne doit pas
+           ouvrir un champ de saisie sur un onglet qu'on est en train de fermer.
+           Sans URL de renommage sur l'onglet (onglets d'entité), l'action ne
+           fait rien.
+
+           AUCUN `title` ici : l'infobulle de l'ONGLET porte déjà le titre entier,
+           et c'est elle qui permet de lire un libellé tronqué. En poser une
+           seconde sur le texte la masquerait à l'endroit précis où l'on survole. #}
+        <span class="tab-item-title" data-role="tab-title"
+              data-action="dblclick->workspace-manager#startTabRename"></span>
             <button class="tab-item-close" data-action="click->workspace-manager#closeTab" aria-label="Fermer l'onglet">
                 <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" />
             </button>

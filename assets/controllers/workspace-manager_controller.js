@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { appliquerTitre, conversationDeLOnglet, editerEnPlace } from './assistant-conversation-titre.js';
 
 /**
  * @class WorkspaceManagerController
@@ -897,6 +898,90 @@ export default class extends Controller {
      * Active un onglet spécifique et affiche son contenu.
      * @param {Event} event 
      */
+    /**
+     * RENOMMER UNE CONVERSATION DEPUIS SON ONGLET, au double-clic sur le libellé.
+     *
+     * Pourquoi ici et pas seulement dans la liste de la colonne 3 : quand on
+     * travaille dans le chat, la liste n'est pas forcément à l'écran, et aller
+     * la rouvrir pour renommer l'onglet qu'on a sous les yeux est un détour que
+     * rien ne justifie. Le libellé est là, on le corrige là.
+     *
+     * Ne s'active que sur un onglet de conversation porteur de son URL de
+     * renommage : les onglets d'entité, eux, affichent « #42 » et n'ont pas de
+     * titre à changer.
+     *
+     * Entrée valide, Échap annule, la perte de focus valide — mêmes règles que
+     * dans la liste, parce que c'est le même code (editerEnPlace).
+     */
+    startTabRename(event) {
+        const tabElement = event.currentTarget.closest('.tab-item');
+        const convId = conversationDeLOnglet(tabElement);
+        if (!convId) return;
+
+        // L'URL est lue dans le CONTENU de l'onglet, où le partial du chat la
+        // pose (data-renommer-url). Elle y est par construction : ce partial est
+        // re-téléchargé depuis le serveur à chaque ouverture comme à chaque
+        // restauration. La faire voyager par l'événement d'ouverture et le
+        // localStorage, comme on l'avait d'abord fait, rendait la fonctionnalité
+        // muette sur tout onglet restauré depuis une entrée mémorisée plus
+        // ancienne qu'elle.
+        const contenu = this.tabContentContainerTarget.querySelector(`#${tabElement.dataset.tabContentId}`);
+        const renameUrl = contenu?.querySelector('[data-renommer-url]')?.dataset.renommerUrl;
+        if (!renameUrl) {
+            console.warn('WorkspaceManager - onglet sans URL de renommage, double-clic ignoré.', tabElement.dataset.entityId);
+            return;
+        }
+
+        // Le double-clic a déjà activé l'onglet (deux `click` l'ont précédé) :
+        // pas de sélection de texte parasite par-dessus le champ de saisie.
+        event.preventDefault();
+        window.getSelection()?.removeAllRanges();
+
+        const libelle = tabElement.querySelector('[data-role="tab-title"]');
+        editerEnPlace({
+            hote: tabElement,
+            aMasquer: libelle,
+            valeur: libelle ? libelle.textContent.trim() : '',
+            classe: 'tab-item-edit',
+            enregistrer: (titre) => this._executeTabRename(convId, renameUrl, titre),
+        });
+    }
+
+    /**
+     * Enregistre le titre puis le répercute PARTOUT : liste de la colonne 3,
+     * onglet, et onglet mémorisé pour la restauration après rechargement.
+     *
+     * Ce dernier point n'est pas décoratif : sans lui, le titre reviendrait à
+     * son ancienne valeur au premier F5, alors même que le serveur, lui, a bien
+     * enregistré le nouveau.
+     */
+    async _executeTabRename(convId, renameUrl, titre) {
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        try {
+            const response = await fetch(renameUrl, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ titre }),
+            });
+            if (!response.ok) {
+                throw new Error(`Renommage impossible (HTTP ${response.status}).`);
+            }
+            const data = await response.json();
+
+            appliquerTitre(convId, data.titre, this.idEntrepriseValue);
+            document.dispatchEvent(new CustomEvent('app:notification.show', {
+                detail: { type: 'success', text: `Conversation renommée en « ${data.titre} ».` },
+            }));
+        } catch (error) {
+            console.error('WorkspaceManager - renommage de l’onglet échoué :', error);
+            document.dispatchEvent(new CustomEvent('app:notification.show', {
+                detail: { type: 'error', text: 'Le renommage de la conversation a échoué. Réessayez.' },
+            }));
+        } finally {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+        }
+    }
+
     activateTab(event) {
         const clickedTab = event.currentTarget;
 

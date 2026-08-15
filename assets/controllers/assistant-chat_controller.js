@@ -29,7 +29,8 @@ import {
 import { formatInstant } from '../datetime-format.js';
 import { formatNombre } from '../number-format.js';
 import { documentLocale } from '../locale.js';
-import { verbeEtape, compteurEtape, decouperFlux, resumeActivite } from './assistant-etapes.js';
+import { verbeEtape, compteurEtape, resumeActivite } from './assistant-etapes.js';
+import { ongletDeConversation } from './assistant-conversation-titre.js';
 
 /**
  * Les deux icônes du panneau de téléchargement, écrites une fois : elles sont posées
@@ -100,8 +101,23 @@ export default class extends Controller {
     static ICON_WALLET = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>';
     static ICON_DOC_DOWNLOAD = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h5"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg>';
 
+    /**
+     * Cadence du suivi d'un traitement parti en tâche de fond. Une seconde : le
+     * moteur annonce quatre à six étapes sur vingt à quarante secondes, scruter
+     * plus vite ne montrerait rien de plus.
+     */
+    static SCRUTIN_MS = 1000;
+
+    /**
+     * Au-delà, sans la moindre réponse, on cesse de scruter et on le dit. Sans
+     * cette borne, un worker jamais démarré ferait tourner l'onglet indéfiniment
+     * en promettant une réponse qui ne viendrait pas.
+     */
+    static SCRUTIN_MAX_MS = 3 * 60 * 1000;
+
     static values = {
         sendUrl: String,
+        etatUrl: String,
         dialogContextUrl: String,
         visualContextUrl: String,
         contexteUrl: String,
@@ -122,7 +138,12 @@ export default class extends Controller {
         // cette écriture précède le premier paint : pas de flash clair.
         this.setupTheme();
 
-        this.sending = false;
+        // Les questions dont on attend encore la réponse : identifiant de tâche →
+        // bulle. Vide, le scrutin ne tourne pas et aucune requête ne part.
+        this._tachesSuivies = new Map();
+        this._scrutinTimer = null;
+        this._scrutinDepuis = null;
+
         this.renderHistoricalMarkdown();
         // Équipe l'historique du bouton ⋮ (les bulles ajoutées en direct le
         // reçoivent dans appendMessage) et arme le clic droit sur le fil.
@@ -145,6 +166,13 @@ export default class extends Controller {
         // Annonce silencieuse de l'état du contexte (badges « déjà en
         // contexte » des listes) — les puces initiales sont rendues serveur.
         this.emitContexteOperation({ phase: 'announce', objets: this.contexteObjets() });
+
+        // REPRISE APRÈS RECHARGEMENT. Une question peut être en cours de
+        // traitement dans un worker au moment où cette page se monte — parce que
+        // l'utilisateur a rechargé, fermé puis rouvert l'onglet, ou envoyé depuis
+        // un autre. Un premier scrutin la retrouve et lui refait sa bulle : la
+        // réponse n'est plus perdue avec l'onglet, ce qui n'était pas vrai avant.
+        if (this.hasEtatUrlValue) this._planifierScrutin(0);
 
         // Infobulle sombre des puces de contexte (pattern du bloc Pistes du
         // tableau de bord : élément flottant au <body>, suit le curseur).
@@ -278,6 +306,13 @@ export default class extends Controller {
     }
 
     disconnect() {
+        // Le panneau col-4 est re-rendu à chaque changement de rubrique : un
+        // scrutin oublié continuerait d'interroger le serveur pour une
+        // conversation qui n'est plus à l'écran.
+        if (this._scrutinTimer) {
+            clearTimeout(this._scrutinTimer);
+            this._scrutinTimer = null;
+        }
         if (this._onMutationExecute) {
             document.removeEventListener('cerveau:event', this._onMutationExecute);
         }
@@ -431,9 +466,14 @@ export default class extends Controller {
         this.updateCount();
     }
 
+    /**
+     * Le bouton ne dépend plus QUE du champ. Il se désactivait aussi pendant un
+     * traitement, ce qui revenait à interdire la rafale — et le faisait sans le
+     * dire, puisque la touche Entrée, elle, ne signalait rien du tout.
+     */
     updateSendState() {
         if (!this.hasSendTarget || !this.hasInputTarget) return;
-        this.sendTarget.disabled = this.sending || this.inputTarget.value.trim() === '';
+        this.sendTarget.disabled = this.inputTarget.value.trim() === '';
     }
 
     updateCount() {
@@ -472,7 +512,7 @@ export default class extends Controller {
     /** Envoi depuis la zone de saisie (bouton, ou Entrée). */
     async send() {
         const contenu = this.inputTarget.value.trim();
-        if (contenu === '' || this.sending) return;
+        if (contenu === '') return;
         await this._envoyer(contenu);
     }
 
@@ -481,12 +521,20 @@ export default class extends Controller {
      * répondent à la place de l'utilisateur (« Oui, c'est bien ça » sous une
      * reformulation). `extra` complète la charge utile — deux fetch parallèles
      * finiraient par ne plus traiter les 402 ni les citations de la même façon.
+     *
+     * PLUS AUCUN VERROU D'ENVOI. Il y en avait un — un simple booléen `sending` —
+     * et il jetait SILENCIEUSEMENT tout message tapé pendant qu'une réponse se
+     * préparait : ni bulle, ni avertissement, rien. Le serveur tient désormais la
+     * file ; le navigateur se contente de poster et de suivre. Il n'a donc plus
+     * besoin d'interdire quoi que ce soit.
+     *
+     * Deux régimes, un seul code d'affichage. Le serveur répond soit 200 avec la
+     * réponse (traitement fait pendant la requête), soit 202 avec une tâche à
+     * suivre. Dans les deux cas c'est _afficherReponse() qui rend.
      */
     async _envoyer(contenu, extra = {}) {
-        if (contenu === '' || this.sending) return;
+        if (contenu === '') return;
 
-        this.sending = true;
-        this.sendTarget.disabled = true;
         const citation = this._citation;
         const userBubble = this.appendMessage(
             'user', contenu, false, this.contexteInstantane(), this.fichiersInstantane(), { citation }
@@ -500,26 +548,12 @@ export default class extends Controller {
         try {
             const response = await fetch(this.sendUrlValue, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // NOMMER le type est ce qui déclenche le fil d'activité : sans
-                    // cet en-tête, le serveur répond d'un seul bloc, exactement
-                    // comme avant.
-                    Accept: 'text/event-stream',
-                },
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
                 body: JSON.stringify({ contenu, replyToId: citation ? citation.id : null, ...extra }),
             });
 
-            // Le fil ne rend le statut qu'à sa conclusion : une fois les en-têtes
-            // partis, le code HTTP est figé à 200. Hors flux (proxy, page d'erreur
-            // Symfony), on retombe sur la lecture d'un bloc — le code d'avant.
-            let statut = response.status;
-            let data = null;
-            if ((response.headers.get('Content-Type') || '').includes('text/event-stream') && response.body) {
-                ({ statut, data } = await this._lireFlux(response));
-            } else if (response.ok || statut === 402) {
-                data = await response.json().catch(() => ({}));
-            }
+            const statut = response.status;
+            const data = await response.json().catch(() => null);
 
             if (statut === 402) {
                 userBubble.remove();
@@ -527,43 +561,214 @@ export default class extends Controller {
                 // Deux blocages distincts : premium (pas de solde payant) vs
                 // solde insuffisant (message chiffré construit localement).
                 this.appendNotice('warning', data?.premium ? (data.message || 'Fonctionnalité premium.') : this.tokensMessage(data || {}));
+                this._majIndicateur();
             } else if (statut < 200 || statut >= 300 || !data) {
                 userBubble.remove();
                 this.inputTarget.value = contenu;
                 this.appendNotice('error', "L'envoi a échoué. Vérifiez votre connexion puis réessayez.");
-            } else {
-                // La bulle optimiste reçoit enfin son identité : ses actions
-                // (répondre, exporter, envoyer) n'existaient pas avant, puisque
-                // le message n'était pas encore persisté.
-                this.identifierBulle(userBubble, data.user?.id);
-                // Envoi accepté : le brouillon de citation a joué son rôle. En
-                // 402 ou en erreur, il est au contraire CONSERVÉ, comme le texte
-                // restauré dans la zone de saisie.
+                this._majIndicateur();
+            } else if (statut === 202) {
+                // ACCEPTÉ, PAS ENCORE TRAITÉ. La question n'entre dans le fil qu'à
+                // son tour (c'est ce qui garde une rafale ordonnée), donc la bulle
+                // n'a pas encore d'identité — l'identifiant de tâche en tient lieu
+                // jusqu'à ce que le scrutin rapporte la réponse.
                 this.annulerCitation();
-                // La réponse se déploie mot après mot (façon ChatGPT/Claude) ;
-                // l'indicateur passe à « écrit… », en conservant le total déjà
-                // affiché — le travail est fini, son coût ne change plus.
-                const activite = data.assistant.activite || null;
-                this.setTypingLabel(
-                    verbeEtape('ecriture'),
-                    compteurEtape({ tokensCumul: activite ? activite.jetonsIa : 0 }),
-                );
-                const bulle = await this.typeMessage(data.assistant.contenu, data.assistant.refus === true, data.assistant.id);
-                this.renderActivite(bulle, activite);
-                await this.executeActions(data.assistant.actions);
+                userBubble.classList.add('aic-msg--en-file');
+                userBubble.setAttribute('aria-busy', 'true');
+                this._tachesSuivies.set(data.tache.id, userBubble);
+                this._majIndicateur();
+                this._planifierScrutin(0);
+            } else {
+                this.annulerCitation();
+                await this._afficherReponse(data, userBubble);
+                this._majIndicateur();
             }
         } catch (error) {
             console.error('AssistantChat - envoi échoué :', error);
             userBubble.remove();
             this.inputTarget.value = contenu;
             this.appendNotice('error', "L'envoi a échoué. Vérifiez votre connexion puis réessayez.");
+            this._majIndicateur();
         } finally {
-            this.typingTarget.hidden = true;
-            this.sending = false;
-            this.onInput(); // recalcul : bouton actif seulement si le champ est non vide
+            this.onInput();
             this.inputTarget.focus();
             this.scrollToBottom();
         }
+    }
+
+    /**
+     * Rend une réponse complète. Appelé par le chemin synchrone comme par le
+     * scrutin : c'est ce partage qui garantit qu'une réponse s'affiche
+     * exactement pareil dans les deux régimes.
+     */
+    async _afficherReponse(data, userBubble) {
+        // La bulle optimiste reçoit enfin son identité : ses actions
+        // (répondre, exporter, envoyer) n'existaient pas avant, puisque
+        // le message n'était pas encore persisté.
+        if (userBubble) {
+            userBubble.classList.remove('aic-msg--en-file');
+            userBubble.removeAttribute('aria-busy');
+            this.identifierBulle(userBubble, data.user?.id);
+        }
+        if (!data.assistant) return;
+
+        // La réponse se déploie mot après mot (façon ChatGPT/Claude) ;
+        // l'indicateur passe à « écrit… », en conservant le total déjà
+        // affiché — le travail est fini, son coût ne change plus.
+        const activite = data.assistant.activite || null;
+        this.setTypingLabel(
+            verbeEtape('ecriture'),
+            compteurEtape({ tokensCumul: activite ? activite.jetonsIa : 0 }),
+        );
+        this.typingTarget.hidden = false;
+        const bulle = await this.typeMessage(data.assistant.contenu, data.assistant.refus === true, data.assistant.id);
+        this.renderActivite(bulle, activite);
+        await this.executeActions(data.assistant.actions);
+    }
+
+    /**
+     * LE SCRUTIN. Une requête brève tant qu'il reste une question sans réponse,
+     * aucune quand la file est vide.
+     *
+     * POURQUOI PAS UN FLUX. Une connexion tenue quarante secondes immobiliserait
+     * l'unique worker php-cgi de `symfony serve` et retiendrait le verrou de
+     * session pendant tout ce temps — le gel qu'on vient précisément de
+     * supprimer. Le scrutin, lui, survit gratuitement au rechargement de page :
+     * l'état vit en base, pas dans une connexion ouverte.
+     *
+     * setTimeout récursif et JAMAIS setInterval : une réponse lente ne doit pas
+     * faire s'empiler les requêtes suivantes.
+     */
+    _planifierScrutin(delai = this.constructor.SCRUTIN_MS) {
+        if (this._scrutinTimer) clearTimeout(this._scrutinTimer);
+        this._scrutinTimer = setTimeout(() => this._scruter(), delai);
+    }
+
+    async _scruter() {
+        this._scrutinTimer = null;
+        if (!this.hasEtatUrlValue) return;
+
+        // Borne basse : on redemande TOUTES les tâches encore suivies, y compris
+        // celles qui viennent de se conclure — sans quoi elles sortiraient de la
+        // liste des tâches ouvertes et leur réponse ne nous parviendrait jamais.
+        const suivies = [...this._tachesSuivies.keys()];
+        const depuis = suivies.length ? Math.min(...suivies) - 1 : null;
+
+        let etat = null;
+        try {
+            const url = this.etatUrlValue + (depuis === null ? '' : `?depuis=${depuis}`);
+            const response = await fetch(url, { headers: { Accept: 'application/json' } });
+            if (response.ok) etat = await response.json();
+        } catch (error) {
+            console.error('AssistantChat - suivi échoué :', error);
+        }
+
+        if (!etat) {
+            // Réseau instable : on réessaie, sans abandonner une réponse déjà
+            // payée. La garde d'inactivité ci-dessous finira par nous arrêter.
+            this._replanifierOuArreter();
+            return;
+        }
+
+        for (const tache of etat.taches || []) {
+            await this._appliquerEtatDeTache(tache);
+        }
+
+        // L'étape vient de la tâche EN COURS : c'est la seule qui travaille.
+        const enCours = (etat.taches || []).find((t) => t.statut === 'en_cours');
+        this._majIndicateur(enCours || null);
+        if (this._tachesSuivies.size > 0 || etat.enCours) {
+            this._replanifierOuArreter(true);
+        } else {
+            this._scrutinDepuis = null;
+        }
+    }
+
+    /** Une tâche vue par le scrutin : nouvelle, en cours, ou conclue. */
+    async _appliquerEtatDeTache(tache) {
+        let bulle = this._tachesSuivies.get(tache.id);
+
+        // Tâche inconnue et encore ouverte : elle vient d'un AUTRE onglet, ou
+        // d'avant un rechargement de page. On la reprend en charge pour que
+        // l'utilisateur retrouve sa question — et bientôt sa réponse.
+        if (!bulle && (tache.statut === 'en_attente' || tache.statut === 'en_cours')) {
+            // ⚠️ NE PAS REFABRIQUER UNE BULLE DÉJÀ À L'ÉCRAN. Une question
+            // « en_attente » n'est pas encore dans le fil (elle n'y entre qu'au
+            // drainage) : Twig ne l'a donc pas rendue, il faut la créer. Une
+            // question « en_cours », elle, VIENT d'y entrer — Twig l'a rendue au
+            // chargement de la page, et en créer une seconde afficherait la même
+            // question deux fois. C'est le cas exact d'un F5 pendant que Ket
+            // répond, c'est-à-dire ce que cette reprise est censée bien faire.
+            const idQuestion = tache.user?.id;
+            bulle = (idQuestion && this.hasMessagesTarget)
+                ? this.messagesTarget.querySelector(`.aic-msg[data-message-id="${idQuestion}"]`)
+                : null;
+
+            if (!bulle) {
+                bulle = this.appendMessage(
+                    'user', tache.user?.contenu || '', false,
+                    tache.user?.contexteObjets || [], tache.user?.fichiersJoints || [], {}
+                );
+                if (idQuestion) this.identifierBulle(bulle, idQuestion);
+            }
+
+            bulle.classList.add('aic-msg--en-file');
+            bulle.setAttribute('aria-busy', 'true');
+            this._tachesSuivies.set(tache.id, bulle);
+            return;
+        }
+        if (!bulle) return; // conclue et déjà rendue (ou jamais suivie ici)
+
+        if (tache.statut === 'terminee') {
+            this._tachesSuivies.delete(tache.id);
+            await this._afficherReponse(tache, bulle);
+        } else if (tache.statut === 'echouee') {
+            this._tachesSuivies.delete(tache.id);
+            bulle.classList.remove('aic-msg--en-file');
+            bulle.removeAttribute('aria-busy');
+            this.identifierBulle(bulle, tache.user?.id);
+            // Le texte n'est PAS restauré dans la zone de saisie : la question est
+            // enregistrée et facturée, la remettre inviterait à un double envoi.
+            this.appendNotice('error', "Ket n'a pas pu traiter ce message. Reformulez-le ou réessayez plus tard.");
+        }
+    }
+
+    /**
+     * Garde-fou anti-boucle : sans worker en marche, le scrutin tournerait
+     * indéfiniment dans l'onglet. Au-delà du plafond sans la moindre conclusion,
+     * on s'arrête en le disant.
+     */
+    _replanifierOuArreter(progression = false) {
+        const debut = this._scrutinDepuis || (this._scrutinDepuis = Date.now());
+        if (progression && this._tachesSuivies.size === 0) this._scrutinDepuis = Date.now();
+
+        if (Date.now() - debut > this.constructor.SCRUTIN_MAX_MS) {
+            this._scrutinDepuis = null;
+            this._tachesSuivies.clear();
+            this._majIndicateur();
+            this.appendNotice('warning', "La réponse tarde anormalement. Rechargez la page pour reprendre le fil.");
+            return;
+        }
+        this._planifierScrutin();
+    }
+
+    /**
+     * L'indicateur « Ket réfléchit… » suit la tâche EN COURS, et elle seule :
+     * une seule chose se traite à la fois, l'afficher autrement serait mentir.
+     * Les questions encore en file portent leur propre état sur leur bulle.
+     */
+    _majIndicateur(tacheEnCours = null) {
+        if (!this.hasTypingTarget) return;
+        if (this._tachesSuivies.size === 0) {
+            this.typingTarget.hidden = true;
+            return;
+        }
+        const etape = tacheEnCours?.etape || null;
+        this.setTypingLabel(
+            etape ? verbeEtape(etape.cle) : verbeEtape('attente'),
+            etape ? compteurEtape(etape) : '',
+        );
+        this.typingTarget.hidden = false;
     }
 
     /**
@@ -719,6 +924,16 @@ export default class extends Controller {
         bar.setAttribute('aria-label', 'Confirmation de la demande comprise par l’assistant');
 
         const oui = this._mutBtn('primary', this.constructor.ICON_CHECK, 'Oui, c’est bien ça', async () => {
+            // SEUL ENVOI ENCORE VERROUILLÉ, et pour une raison de facturation. La
+            // gratuité de cette confirmation est accordée par le serveur à la
+            // condition, fail-closed, que le fil porte VRAIMENT une clarification
+            // en attente. Postée pendant qu'une autre question se traite, elle
+            // pourrait arriver avant que cette clarification n'existe — et serait
+            // alors facturée comme un message ordinaire. On attend son tour.
+            if (this._tachesSuivies.size > 0) {
+                this.appendNotice('warning', 'Ket termine sa réponse précédente. Confirmez dans un instant.');
+                return;
+            }
             bar.remove();
             await this._envoyer(intention, { intentionConfirmee: true });
         });
@@ -1704,34 +1919,6 @@ export default class extends Controller {
     }
 
     /**
-     * MÉMORISE le fil désormais ouvert, pour que F5 le retrouve.
-     *
-     * Le poste de travail restaure le panneau du chat en REJOUANT son `sourceUrl`
-     * (workspace-manager > openHtmlTabInVisualization). Cette URL porte
-     * l'identifiant de la conversation : tant qu'on ne la met pas à jour, un
-     * rechargement rouvre fidèlement… l'ANCIENNE conversation, et le fil neuf
-     * paraît s'être évaporé alors qu'il existe bel et bien en base.
-     *
-     * On réécrit donc l'entrée en place, sans toucher au reste (titre, icône, clé
-     * d'onglet) : c'est le même panneau, sur une autre conversation.
-     */
-    _memoriserConversationOuverte(idConversation, chatUrl) {
-        if (!chatUrl || !this.hasIdEntrepriseValue) return;
-        const cle = `visualizationHtmlTab_${this.idEntrepriseValue}`;
-        try {
-            const brut = localStorage.getItem(cle);
-            if (!brut) return;
-            const etat = JSON.parse(brut);
-            if (!etat || !etat.sourceUrl) return;
-            etat.sourceUrl = chatUrl;
-            localStorage.setItem(cle, JSON.stringify(etat));
-        } catch (e) {
-            // Un localStorage indisponible ou corrompu ne doit pas empêcher
-            // l'ouverture du fil : au pire, F5 rouvrira l'ancien.
-        }
-    }
-
-    /**
      * MENU D'OPTIONS DE L'ENTÊTE (⋮). Réutilise l'apparence et le placement du menu
      * de bulle : une seule surface flottante dans le chat, donc un seul
      * comportement à apprendre et un seul jeu de règles à maintenir.
@@ -1866,13 +2053,26 @@ export default class extends Controller {
     }
 
     /**
-     * Crée le fil côté serveur, puis remplace le panneau par le chat neuf.
+     * Crée le fil côté serveur, puis affiche le chat neuf.
      *
      * On réinjecte le PARTIAL COMPLET plutôt que de vider la liste des messages :
      * l'entête, le composer et le contrôleur portent tous l'identifiant de la
      * conversation. Un simple effacement laisserait un chat qui écrit encore dans
      * l'ancien fil — et le programme du jour, rendu par le serveur pour une
      * conversation vide, ne s'afficherait pas.
+     *
+     * L'ONGLET CHANGE D'IDENTITÉ, PAS SEULEMENT DE CONTENU. Une version
+     * précédente remplaçait le panneau sur place et ne réécrivait que l'URL
+     * mémorisée, « sans toucher au reste (titre, icône, clé d'onglet) ». C'était
+     * une erreur : l'onglet continuait d'afficher le titre de la conversation
+     * PRÉCÉDENTE, et sa clé désignait toujours l'ancien fil — de sorte qu'un
+     * double-clic pour renommer aurait visé la mauvaise conversation.
+     *
+     * On passe donc par le chemin d'ouverture ORDINAIRE (celui de la liste
+     * col-3), qui sait fabriquer un onglet complet et cohérent, puis on ferme
+     * l'ancien. Dans cet ordre : la fermeture ne purge l'entrée mémorisée que si
+     * elle porte encore la clé de l'onglet fermé — l'ouverture l'a déjà réécrite
+     * avec la nouvelle.
      */
     async creerEtOuvrirUneConversation() {
         // Barre de progression du haut : deux allers-retours réseau se suivent
@@ -1897,13 +2097,33 @@ export default class extends Controller {
                 return;
             }
 
-            // Le poste de travail doit MÉMORISER le fil ouvert : sans cela, un F5
-            // rouvrait la conversation précédente et le nouveau fil semblait perdu.
-            this._memoriserConversationOuverte(data.id, data.chatUrl);
+            const html = await partial.text();
+            const ancienOnglet = ongletDeConversation(this.idConversationValue);
 
-            // outerHTML : le nouveau markup porte son propre data-controller, donc
-            // Stimulus déconnecte l'ancien et connecte le neuf tout seul.
-            this.element.outerHTML = await partial.text();
+            if (!ancienOnglet) {
+                // Chat affiché hors du système d'onglets : on se contente de
+                // remplacer le panneau. outerHTML — le nouveau markup porte son
+                // propre data-controller, donc Stimulus déconnecte l'ancien et
+                // connecte le neuf tout seul.
+                this.element.outerHTML = html;
+                return;
+            }
+
+            // Onglet NEUF : bonne clé, bon libellé (« CONV#136 »), bonne URL
+            // mémorisée pour le rechargement de page — tout cela est le métier du
+            // workspace-manager, on ne le refait pas ici.
+            document.dispatchEvent(new CustomEvent('app:workspace.open-html-in-visualization', {
+                detail: {
+                    html,
+                    title: data.titre,
+                    iconAlias: 'assistant-ia',
+                    tabKey: `ia-conv-${data.id}`,
+                    sourceUrl: data.chatUrl,
+                },
+            }));
+
+            // Puis seulement, l'ancien s'efface.
+            ancienOnglet.querySelector('.tab-item-close')?.click();
         } catch (e) {
             this.appendNotice('error', 'Impossible d’ouvrir une nouvelle conversation (réseau).');
         } finally {
@@ -3014,41 +3234,6 @@ export default class extends Controller {
         }
     }
 
-    /**
-     * Lit le fil d'activité jusqu'à sa conclusion, en réécrivant la ligne d'attente
-     * à chaque étape annoncée par le serveur.
-     *
-     * @returns {Promise<{statut: number, data: object|null}>}
-     */
-    async _lireFlux(response) {
-        const lecteur = response.body.getReader();
-        const decodeur = new TextDecoder('utf-8');
-        let tampon = '';
-        let statut = 0;
-        let data = null;
-
-        for (;;) {
-            const { value, done } = await lecteur.read();
-            // { stream: true } n'est pas optionnel : un « é » coupé entre deux
-            // morceaux réseau deviendrait sinon un caractère de remplacement.
-            const [evenements, reste] = decouperFlux(tampon, decodeur.decode(value, { stream: !done }));
-            tampon = reste;
-
-            for (const evenement of evenements) {
-                if (evenement.type === 'etape') {
-                    this.setTypingLabel(verbeEtape(evenement.cle), compteurEtape(evenement));
-                } else if (evenement.type === 'fin') {
-                    statut = evenement.statut;
-                    data = evenement.donnees;
-                }
-                // 'erreur' : rien à faire, statut reste 0 → branche d'échec.
-            }
-
-            if (done) break;
-        }
-
-        return { statut, data };
-    }
 
     /**
      * Déploie la réponse de l'assistant mot après mot dans une bulle (effet

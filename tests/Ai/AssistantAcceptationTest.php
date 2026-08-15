@@ -13,23 +13,22 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * LES DEUX TRANSPORTS d'un même envoi de message.
+ * L'ACCEPTATION D'UN MESSAGE — le contrat de la réponse d'envoi.
  *
- * Le chat restait aveugle entre le clic et la réponse : un fetch bloquant de vingt à
- * quarante secondes, et un « Ket réfléchit… » figé pendant que trois appels au modèle
- * s'enchaînaient. Le fil d'activité comble ce silence — mais il ne devait rien coûter
- * à l'existant.
+ * Ce fichier s'appelait AssistantFluxEnvoiTest et défendait deux transports : une
+ * réponse d'un bloc, et la même précédée d'un flux d'événements qui meublait les
+ * vingt à quarante secondes d'attente. Le traitement étant passé en tâche de
+ * fond, cette attente n'existe plus et le flux non plus — la progression se lit
+ * sur l'endpoint d'état, qui survit au rechargement de page.
  *
- * Ces tests verrouillent donc les deux moitiés du contrat :
- *  - SANS l'en-tête, la réponse est exactement celle d'avant. C'est ce test-là qui
- *    protège les huit fichiers de tests qui lisent un JSON d'un seul bloc ;
- *  - AVEC l'en-tête, le même contenu arrive, précédé d'événements — et surtout la
- *    charge utile finale est identique clé pour clé, sans quoi les deux chemins
- *    divergeraient en silence.
+ * Le test le plus précieux du fichier, lui, SURVIT INTACT :
+ * testLaReponseEstUnJsonDUnSeulBloc protégeait les huit fichiers de tests qui
+ * lisent un JSON d'un bloc ; il garde exactement le même rôle, en gardien du
+ * chemin où le traitement a lieu pendant la requête (ASSISTANT_ASYNC=0).
  */
-class AssistantFluxEnvoiTest extends WebTestCase
+class AssistantAcceptationTest extends WebTestCase
 {
-    private const OWNER_EMAIL = 'phpunit-iaflux-owner@test.local';
+    private const OWNER_EMAIL = 'phpunit-iaaccept-owner@test.local';
     private const PASSWORD = 'Test1234!';
     private const ENTREPRISE_NOM = 'PHPUnit IAFLUX SARL';
 
@@ -176,18 +175,15 @@ class AssistantFluxEnvoiTest extends WebTestCase
             json_encode(['contenu' => $contenu])
         );
 
-        // getInternalResponse(), et non getResponse() : une StreamedResponse n'a pas
-        // de contenu en propre — le navigateur de test l'obtient en encadrant
-        // sendContent() d'un tampon de sortie. C'est aussi pourquoi le contrôleur
-        // ne doit jamais FERMER ce tampon (ob_flush, jamais ob_end_flush).
-        return (string) $this->client->getInternalResponse()->getContent();
+        return (string) $this->client->getResponse()->getContent();
     }
 
     /**
-     * LE test de non-régression. Un client qui ne demande rien reçoit exactement ce
-     * qu'il recevait avant : même statut, même structure, même type.
+     * LE test de non-régression, inchangé depuis le temps du flux. Il protégeait
+     * les huit fichiers de tests qui lisent un JSON d'un seul bloc ; il garde ce
+     * rôle exact pour le chemin où le traitement a lieu pendant la requête.
      */
-    public function testSansEnTeteLaReponseResteUnJsonDUnSeulBloc(): void
+    public function testLaReponseEstUnJsonDUnSeulBloc(): void
     {
         $seed = $this->seed();
         $corps = $this->envoyer($seed, 'Combien de clients ai-je ?');
@@ -201,91 +197,26 @@ class AssistantFluxEnvoiTest extends WebTestCase
         $data = json_decode($corps, true);
         self::assertSame(['user', 'assistant', 'conversationTitre'], array_keys($data));
         self::assertArrayHasKey('contenu', $data['assistant']);
-        self::assertStringNotContainsString('data: ', $corps, 'Aucun événement ne doit polluer ce chemin.');
+        self::assertStringNotContainsString('data: ', $corps, "Le flux d'événements n'existe plus.");
     }
 
-    public function testAvecLEnTeteLaReponseDevientUnFluxDEvenements(): void
+    /**
+     * Le type d'événements n'a plus aucun effet. Un navigateur resté sur une
+     * version ancienne de la page — celle qui NOMMAIT ce type pour obtenir le
+     * fil — reçoit la même réponse JSON que les autres, plutôt qu'un flux vide
+     * qu'il attendrait indéfiniment.
+     */
+    public function testLAncienEnTeteDeFluxNaPlusDEffet(): void
     {
         $seed = $this->seed();
-        $corps = $this->envoyer($seed, 'Combien de clients ai-je ?', ['HTTP_ACCEPT' => self::FLUX_MIME]);
+        $corps = $this->envoyer($seed, 'Bonjour.', ['HTTP_ACCEPT' => 'text/event-stream']);
 
         self::assertResponseIsSuccessful();
-        self::assertSame(
-            'text/event-stream; charset=utf-8',
-            $this->client->getResponse()->headers->get('Content-Type')
+        self::assertStringContainsString(
+            'application/json',
+            (string) $this->client->getResponse()->headers->get('Content-Type')
         );
-        // Sans lui, nginx retiendrait le flux et la fonctionnalité n'existerait plus.
-        self::assertSame('no', $this->client->getResponse()->headers->get('X-Accel-Buffering'));
-
-        $evenements = $this->evenements($corps);
-        self::assertNotSame([], $evenements, 'Le flux doit au moins porter sa conclusion.');
-
-        $fin = end($evenements);
-        self::assertSame('fin', $fin['type'], 'Le dernier événement conclut toujours le message.');
-        self::assertSame(200, $fin['statut'], 'Le statut voyage DANS le flux, les en-têtes étant déjà partis.');
-        self::assertArrayHasKey('assistant', $fin['donnees']);
+        self::assertSame(['user', 'assistant', 'conversationTitre'], array_keys(json_decode($corps, true)));
     }
 
-    /**
-     * Le point qui compte vraiment : deux transports, une seule vérité. Si les
-     * charges utiles divergeaient, le chat afficherait deux choses différentes
-     * selon qu'il a demandé le fil ou non.
-     */
-    public function testLesDeuxTransportsRendentLaMemeChargeUtile(): void
-    {
-        $seed = $this->seed();
-
-        $bloc = json_decode($this->envoyer($seed, 'Une première question.'), true);
-
-        $evenements = $this->evenements($this->envoyer(
-            $seed,
-            'Une seconde question.',
-            ['HTTP_ACCEPT' => self::FLUX_MIME]
-        ));
-        $flux = end($evenements)['donnees'];
-
-        self::assertSame(array_keys($bloc), array_keys($flux));
-        self::assertSame(array_keys($bloc['user']), array_keys($flux['user']));
-        self::assertSame(array_keys($bloc['assistant']), array_keys($flux['assistant']));
-    }
-
-    /**
-     * Le moteur des tests (AI_ENGINE=simulated) ne passe pas par le journal : aucune
-     * étape n'est donc attendue ici. Ce test dit que c'est BIEN une absence propre —
-     * pas d'événement bancal, pas de récapitulatif rempli de zéros.
-     */
-    public function testUnMoteurSansTelemetrieNAnnonceAucuneEtape(): void
-    {
-        $seed = $this->seed();
-        $corps = $this->envoyer($seed, 'Bonjour.', ['HTTP_ACCEPT' => self::FLUX_MIME]);
-
-        $evenements = $this->evenements($corps);
-        $types = array_column($evenements, 'type');
-
-        self::assertSame(['fin'], $types, 'Sans télémétrie, le flux ne porte que sa conclusion.');
-        // La clé reste présente — le front n'a pas à distinguer « absente » de
-        // « vide » — mais elle est NULLE : mieux vaut ne rien montrer que montrer
-        // des zéros. Dans meta, array_filter l'écarte purement et simplement.
-        self::assertNull(end($evenements)['donnees']['assistant']['activite']);
-    }
-
-    /**
-     * Chaque ligne « data: » du flux, décodée.
-     *
-     * @return list<array<string, mixed>>
-     */
-    private function evenements(string $corps): array
-    {
-        $evenements = [];
-        foreach (explode("\n", $corps) as $ligne) {
-            if (!str_starts_with($ligne, 'data: ')) {
-                continue;
-            }
-            $decode = json_decode(substr($ligne, 6), true);
-            self::assertIsArray($decode, 'Chaque ligne du flux doit être un JSON valide.');
-            $evenements[] = $decode;
-        }
-
-        return $evenements;
-    }
 }
