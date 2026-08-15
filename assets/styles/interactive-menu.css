@@ -779,6 +779,35 @@ a.company-version:hover {
   width: 18px;
 }
 
+/* Le libellé est BORNÉ. Un titre de conversation est libre (jusqu'à 120
+   caractères) : sans plafond, un seul onglet étirerait la barre et repousserait
+   les autres hors de vue. L'infobulle native de l'onglet donne le titre entier. */
+.tab-item-title {
+  max-width: 18ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Champ de renommage inline, aux dimensions du libellé qu'il remplace : sans
+   cela l'onglet sursaute au double-clic, et la barre se réorganise sous le
+   curseur au moment précis où l'on vise. */
+.tab-item-edit {
+  width: 18ch;
+  min-width: 0;
+  font: inherit;
+  color: var(--text-dark-secondary);
+  background: var(--bg-white);
+  border: 1px solid var(--cobalt);
+  border-radius: var(--nav-radius-sm);
+  padding: 0 4px;
+}
+
+.tab-item-edit:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--cobalt-focus-ring);
+}
+
 .tab-item-close {
   border: none;
   background: transparent;

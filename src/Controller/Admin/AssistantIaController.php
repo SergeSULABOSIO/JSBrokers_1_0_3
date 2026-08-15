@@ -2,12 +2,9 @@
 
 namespace App\Controller\Admin;
 
-use App\Ai\Action\ValidateurDActions;
 use App\Ai\Comprehension\ClarificationEnAttente;
 use App\Ai\AiContextBuilder;
-use App\Ai\AiEngineFailure;
 use App\Ai\Boussole\PlanDuJourService;
-use App\Ai\AiReply;
 use App\Ai\Document\DocumentEnAttente;
 use App\Ai\Document\DocumentFormat;
 use App\Ai\Document\DocumentProducteur;
@@ -16,7 +13,6 @@ use App\Ai\Document\PiedDePage;
 use App\Ai\Document\RapportSpec;
 use App\Ai\Document\Renderer\FichierTemporaire;
 use App\Ai\Document\ThemeDocument;
-use App\Ai\Engine\AiEngineInterface;
 use App\Ai\Export\ImageJointeValidator;
 use App\Ai\Export\MessageDestinataires;
 use App\Ai\Export\MessageExporter;
@@ -27,7 +23,9 @@ use App\Ai\Programme\ProgrammeEnCours;
 use App\Ai\Programme\ProgrammeRunner;
 use App\Ai\Programme\ProgrammeVerificateur;
 use App\Ai\Programme\RapportProgramme;
+use App\Ai\Presentation\ChargeUtileDuMessage;
 use App\Ai\Telemetrie\JournalTokens;
+use App\Ai\Traitement\FileDeTraitement;
 use App\Ai\Tool\EntiteLibelle;
 use App\Ai\Tool\PrefillWhitelist;
 use App\Ai\Verification\RelectureDeControle;
@@ -48,6 +46,7 @@ use App\Repository\AssistantDocumentRepository;
 use App\Repository\AssistantMessageRepository;
 use App\Repository\AssistantParametresRepository;
 use App\Repository\AssistantProgrammeRepository;
+use App\Repository\AssistantTacheRepository;
 use App\Repository\EntrepriseRepository;
 use App\Ai\Mutation\MutationPlan;
 use App\Ai\Mutation\MutationReferences;
@@ -71,9 +70,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
-use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
@@ -107,12 +104,6 @@ class AssistantIaController extends AbstractController
 {
     private const MAX_MESSAGE_LENGTH = 4000;
 
-    /**
-     * Type que le chat NOMME pour obtenir le fil d'activité plutôt qu'une réponse
-     * d'un seul bloc. Voir enFlux() : ce choix est dicté par une mesure, pas par
-     * une préférence.
-     */
-    private const FLUX_MIME = 'text/event-stream';
 
     /** Nombre maximal d'objets attachés au contexte d'une même conversation. */
     private const MAX_CONTEXTES = 20;
@@ -144,10 +135,14 @@ class AssistantIaController extends AbstractController
         private WorkspaceAccessResolver $accessResolver,
         private TokenAccountService $tokenAccountService,
         private AiContextBuilder $contextBuilder,
-        private AiEngineInterface $aiEngine,
-        // Écarte les actions que le navigateur ne saurait pas exécuter, et les
-        // journalise : sans lui, elles partaient pour être ignorées en silence.
-        private ValidateurDActions $validateurDActions,
+        // Par où une question entre dans la file : inscrit la tâche, puis
+        // réclame son traitement — en tâche de fond, ou pendant le dépôt selon
+        // ASSISTANT_ASYNC.
+        private FileDeTraitement $fileDeTraitement,
+        private AssistantTacheRepository $tacheRepository,
+        // Source unique de ce que le navigateur reçoit après un envoi,
+        // reconstruite depuis les entités et non depuis les variables du tour.
+        private ChargeUtileDuMessage $chargeUtile,
         private JournalTokens $journalTokens,
         private EntityManagerInterface $em,
         private LoggerInterface $logger,
@@ -370,7 +365,7 @@ class AssistantIaController extends AbstractController
 
         return $this->json([
             'id'      => $conversation->getId(),
-            'titre'   => $conversation->getTitre(),
+            'titre'   => $conversation->libelle(),
             'chatUrl' => $this->generateUrl('admin.assistantia.chat', [
                 'idEntreprise'   => $idEntreprise,
                 'idConversation' => $conversation->getId(),
@@ -396,7 +391,7 @@ class AssistantIaController extends AbstractController
         $conversation->setTitre($titre);
         $this->em->flush();
 
-        return $this->json(['success' => true, 'titre' => $conversation->getTitre()]);
+        return $this->json(['success' => true, 'titre' => $conversation->libelle()]);
     }
 
     /** Supprime une conversation de l'invité (messages en cascade). */
@@ -418,109 +413,20 @@ class AssistantIaController extends AbstractController
     }
 
     /**
-     * Envoi d'un message à l'assistant. Deux transports pour un seul traitement :
-     * une réponse d'un bloc par défaut, ou le même contenu précédé du FIL
-     * D'ACTIVITÉ (où en est le moteur) quand le client le demande.
+     * Envoi d'un message à l'assistant : gardes d'accès, validation, métrage,
+     * puis dépôt en file. Répond 200 avec la réponse quand le traitement a eu
+     * lieu pendant la requête, 202 avec une tâche à suivre sinon.
+     *
+     * UN SEUL TRANSPORT DEPUIS QUE LE TRAITEMENT EST ASYNCHRONE. Il y en avait
+     * deux : une réponse d'un bloc, et la même précédée d'un flux d'événements
+     * annonçant où en était le moteur. Ce flux existait pour meubler les vingt à
+     * quarante secondes pendant lesquelles cette requête restait bloquée — une
+     * attente qui n'existe plus. La progression se lit désormais sur l'endpoint
+     * d'état, qui a de surcroît l'avantage de survivre au rechargement de page :
+     * le flux, lui, mourait avec l'onglet en emportant la réponse.
      */
     #[Route('/api/messages/{idEntreprise}/{idConversation}', name: 'api.message.send', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS], methods: ['POST'])]
-    public function sendMessage(int $idEntreprise, int $idConversation, Request $request): Response
-    {
-        // Comparaison LITTÉRALE de l'en-tête, jamais getAcceptableContentTypes() :
-        // le client de test envoie « */* », qui satisferait n'importe quelle
-        // négociation et basculerait en flux les huit tests qui lisent une réponse
-        // d'un seul bloc. Seul un client qui NOMME le type obtient le fil.
-        if (!str_contains((string) $request->headers->get('Accept', ''), self::FLUX_MIME)) {
-            return $this->traiterMessage($idEntreprise, $idConversation, $request);
-        }
-
-        return $this->enFlux(fn () => $this->traiterMessage($idEntreprise, $idConversation, $request));
-    }
-
-    /**
-     * Enveloppe une réponse JSON dans un flux d'événements, pour que le navigateur
-     * apprenne où en est le moteur PENDANT qu'il travaille.
-     *
-     * POURQUOI « text/event-stream » ALORS QU'ON N'UTILISE PAS EventSource. Mesuré le
-     * 2026-08-14 sur ce poste : à travers le proxy TLS de « symfony serve », un flux
-     * annoncé en application/x-ndjson est intégralement retenu et n'arrive qu'à la
-     * toute fin (six lignes écrites à une seconde d'intervalle, toutes livrées à
-     * +6,99 s) — exactement ce qu'on cherchait à éviter. Le même flux annoncé en
-     * text/event-stream passe en temps réel. Le type MIME n'est donc pas décoratif :
-     * c'est lui qui décide si la fonctionnalité existe. EventSource, lui, reste
-     * inutilisable ici : il ne sait pas faire de POST.
-     *
-     * @param \Closure(): JsonResponse $traitement
-     */
-    private function enFlux(\Closure $traitement): StreamedResponse
-    {
-        $journal = $this->journalTokens;
-        $logger = $this->logger;
-
-        $response = new StreamedResponse(static function () use ($traitement, $journal, $logger): void {
-            // Avant le moindre echo : une compression active retiendrait tout
-            // jusqu'à la fin, et la fonctionnalité n'existerait plus.
-            @ini_set('zlib.output_compression', '0');
-            // Fermer l'onglet ne doit pas tuer le script au milieu du flush Doctrine :
-            // la question serait persistée sans sa réponse.
-            ignore_user_abort(true);
-
-            $ecrire = static function (array $evenement) use ($logger): void {
-                echo 'data: ' . json_encode($evenement, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) . "\n\n";
-
-                // Sous PHPUnit (SAPI cli), le navigateur de test capture la sortie
-                // dans SON tampon : y toucher lui volerait la réponse.
-                if (\PHP_SAPI === 'cli') {
-                    return;
-                }
-                // ob_flush() et NON ob_end_flush() : on vide le tampon sans le
-                // fermer, car il ne nous appartient pas.
-                if (ob_get_level() > 0) {
-                    @ob_flush();
-                }
-                flush();
-            };
-
-            $journal->ecouter(static function (array $etape) use ($ecrire): void {
-                $ecrire(['type' => 'etape'] + $etape);
-            });
-
-            try {
-                $reponse = $traitement();
-                $ecrire([
-                    'type'    => 'fin',
-                    // Le statut voyage DANS le flux : une fois les en-têtes partis,
-                    // le code HTTP est figé à 200. C'est le seul compromis de ce
-                    // transport, et il évite de scinder une action qui décide déjà
-                    // ses 402/403/400 bien avant d'appeler le moteur.
-                    'statut'  => $reponse->getStatusCode(),
-                    'donnees' => json_decode((string) $reponse->getContent(), true),
-                ]);
-            } catch (HttpExceptionInterface $e) {
-                $ecrire(['type' => 'fin', 'statut' => $e->getStatusCode(), 'donnees' => null]);
-            } catch (\Throwable $e) {
-                $logger->error('Assistant IA : le fil d’activité a échoué.', ['exception' => $e]);
-                $ecrire(['type' => 'erreur']);
-            } finally {
-                // TOUJOURS débrancher : le journal est un service partagé, et un
-                // abonné oublié écrirait dans une réponse déjà close.
-                $journal->ecouter(null);
-            }
-        });
-
-        $response->headers->set('Content-Type', 'text/event-stream; charset=utf-8');
-        // Reverse-proxies (nginx) : ne pas mettre le flux en tampon.
-        $response->headers->set('X-Accel-Buffering', 'no');
-        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
-
-        return $response;
-    }
-
-    /**
-     * Envoi d'un message à l'assistant : métrage AVANT tout traitement, puis moteur
-     * IA, puis persistance des deux messages. Corps historique, inchangé — le flux
-     * ci-dessus ne fait que l'envelopper.
-     */
-    private function traiterMessage(int $idEntreprise, int $idConversation, Request $request): JsonResponse
+    public function sendMessage(int $idEntreprise, int $idConversation, Request $request): JsonResponse
     {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
         if (!$this->moduleAutorise($invite)) {
@@ -563,6 +469,12 @@ class AssistantIaController extends AbstractController
             }
         }
 
+        // TRANSITOIRE, ET IL LE RESTE. Cet objet sert à deux choses ici : porter
+        // l'instantané pris à l'envoi, et se faire métrer — le poids est
+        // paramétrique (meterWrite ne lit que la CLASSE), donc métrer un message
+        // non persisté coûte exactement ce que coûtait l'ancien. Le vrai message
+        // du fil, lui, naîtra au drainage : c'est ce qui garde une rafale dans
+        // l'ordre « Q1 A1 Q2 A2 » plutôt que « Q1 Q2 A1 A2 ». Voir AssistantTache.
         $messageUser = (new AssistantMessage())
             ->setRole(AssistantMessage::ROLE_USER)
             ->setContenu($contenu)
@@ -602,314 +514,74 @@ class AssistantIaController extends AbstractController
             ], Response::HTTP_PAYMENT_REQUIRED);
         }
 
-        $conversation->addMessage($messageUser);
+        // LE TRAITEMENT VIT À PART. Tout ce qui précède décide d'un code
+        // d'erreur (400/402/403/404) et doit donc rester ici, sur le chemin de la
+        // requête : un message accepté puis refusé trente secondes plus tard
+        // serait un autre produit. Tout ce qui suit est LENT (20 à 40 s) et n'a
+        // besoin de rien de la requête HTTP — c'est cette frontière-là, et pas un
+        // découpage de confort, qui rend le traitement déportable.
+        $tache = $this->fileDeTraitement->deposer($conversation, $messageUser);
 
-        // Le moteur réel (API Claude/Gemini) peut échouer (réseau, quota, clé) :
-        // la conversation reste utilisable — réponse d'excuse persistée (honnête
-        // sur la cause quand elle est identifiable, cf. AiEngineFailure), pas de 500.
-        $erreurMoteur = false;
-        // Construite DANS le try (une construction qui échoue doit produire
-        // l'excuse, pas un 500) mais déclarée avant, pour rester disponible au
-        // moment de journaliser l'échec.
-        $aiRequest = null;
-        // Durée réellement passée avec le moteur, mesurée ici parce que c'est le
-        // seul endroit qui voit l'aller ET le retour. Elle figure au récapitulatif :
-        // « 6,2 s » explique après coup une attente que l'utilisateur a subie.
-        $debutMoteur = microtime(true);
-        try {
-            $aiRequest = $this->contextBuilder->build($entreprise, $invite, $conversation);
-            $reply = $this->aiEngine->reply($aiRequest);
-        } catch (\Throwable $e) {
-            $quotaEpuise = AiEngineFailure::estLimiteDeDebit($e);
-            // Sur un 429, le corps de la réponse nomme le quota violé et le délai
-            // d'attente : sans ces champs le journal ne dit que « HTTP 429 » et la
-            // saturation reste indiagnosticable.
-            $detailsQuota = $quotaEpuise ? AiEngineFailure::detailsPourJournal($e) : [];
-            $this->logger->error('Assistant IA : le moteur a échoué.', [
-                'exception' => $e,
-                'engine'    => $this->aiEngine->name(),
-            ] + ($quotaEpuise ? ['quota' => $detailsQuota] : []));
-
-            // Les tours déjà effectués ont été payés : ils doivent figurer dans la
-            // campagne de mesure, sans quoi les messages les plus coûteux — ceux
-            // qui butent sur le quota — seraient précisément ceux qui manquent.
-            if ($aiRequest !== null) {
-                $this->journalTokens->messageInterrompu(
-                    $aiRequest,
-                    $this->aiEngine->name(),
-                    $this->aiEngine->modelName(),
-                    $quotaEpuise ? JournalTokens::ISSUE_QUOTA_FOURNISSEUR : JournalTokens::ISSUE_ECHEC_TECHNIQUE,
-                    $detailsQuota,
-                );
-            }
-
-            $erreurMoteur = true;
-            $reply = new AiReply(AiEngineFailure::messagePour($e));
+        // Une seule branche, et elle est honnête : quand le drainage a eu lieu
+        // pendant le dépôt (transport `sync`), la réponse est déjà là — rien ne
+        // justifierait de faire patienter un client pour ce qu'on tient déjà.
+        if ($tache->estTerminee()) {
+            return $this->json($this->chargeUtile->pour(
+                $tache->getMessageUtilisateur(),
+                $tache->getMessageAssistant()
+            ));
         }
 
-        // Un plan de mutation préparé par Ket (uiAction ket-mutation.review) est
-        // STOCKÉ côté serveur (meta du message) : l'endpoint d'exécution le
-        // rechargera et le re-validera intégralement — jamais de confiance au client.
-        // Un seul plan par réponse : si le moteur a appelé deux fois l'outil de
-        // préparation dans le MÊME tour (le verrou de conversation ne voit que les
-        // tours précédents), seule la première barre de décision est conservée —
-        // la seconde serait orpheline (aucun plan stocké derrière elle).
-        $actions = PlanEnAttente::limiterAUnSeulPlan($reply->actions ?? []);
-        // Même règle pour le plan de DOCUMENT : un message ne stocke qu'une spec,
-        // une seconde barre « Valider et produire » serait orpheline.
-        $actions = DocumentEnAttente::limiterAUnSeulPlan($actions);
-
-        // CONTRAT AVEC LE NAVIGATEUR : il ignore silencieusement ce qu'il ne
-        // reconnaît pas. Une action d'un type inconnu, ou privée d'un champ dont son
-        // handler a besoin, partirait donc pour ne rien produire — l'utilisateur
-        // attendrait un bouton qui n'arrive jamais, sans la moindre trace. On l'écarte
-        // ici, et surtout on la JOURNALISE.
-        $actions = $this->validateurDActions->filtrer($actions, $conversation->getId());
-
-        $mutationPlan = $this->extraireMutationPlan($actions);
-        $documentPlan = DocumentEnAttente::planStockable($actions);
-
-        // GARDE-FOU anti-plan FANTÔME. Le modèle peut décrire un plan, un budget,
-        // voire affirmer qu'un « bouton de validation » est actif — le tout dans sa
-        // seule PROSE, sans avoir appelé preparer_operations. Aucune action n'est
-        // alors émise : aucun bouton ne s'affiche, et l'utilisateur attend une
-        // décision qui ne viendra jamais (au pire le modèle invente ensuite un « bug
-        // d'interface »). Quand la prose simule une décision alors qu'AUCUN plan n'a
-        // été préparé ce tour-ci NI n'est en attente dans le fil, on émet un signal
-        // AUTORITAIRE (serveur) qui dit la vérité — indépendamment de la prose.
-        //
-        // Le test porte sur TOUTE décision — d'écriture ou de document. Ne regarder
-        // que le plan d'écriture retournerait le garde-fou contre le cas qu'il
-        // protège : un VRAI plan de document, légitimement annoncé en prose
-        // (« budget », « prêt à être validé »), déclencherait l'avertissement
-        // « aucun plan n'est en attente » juste au-dessus de sa propre barre.
-        //
-        // DEUX PREUVES, ET NON UNE. La première est LEXICALE (proseSimuleUneDecision) :
-        // conservatrice par construction, elle ne voit que les revendications
-        // explicites. Le 2026-08-11 elle est passée à côté de deux messages qui
-        // affichaient un tableau de plan complet et un budget recopié du tour
-        // précédent, avec « Veuillez valider ce plan » — l'utilisateur a cherché un
-        // bouton pendant deux tours. La seconde preuve est STRUCTURELLE : le serveur
-        // SAIT qu'un outil de plan a tourné et qu'il a refusé, et il sait pourquoi.
-        // Croisée avec une prose qui montre un plan, elle est sans appel — et surtout
-        // elle permet de dire à l'utilisateur ce qui MANQUE, au lieu de l'informer
-        // qu'il n'y a rien à valider.
-        // Une CLARIFICATION est une décision en attente comme une autre — et l'oublier
-        // retournerait le garde-fou contre le cas qu'il protège. Sa prose énumère par
-        // construction ce que Ket croit devoir faire (« créer un client, puis une
-        // piste… ») : sans ce désarmement, toute demande de confirmation s'afficherait
-        // sous un avertissement « aucun plan n'est en attente », c'est-à-dire un
-        // démenti de la question qu'elle est justement en train de poser.
-        $clarification = ClarificationEnAttente::stockable($actions);
-
-        $planRefuse = $reply->plansRefuses[0] ?? null;
-        $aucuneDecision = $mutationPlan === null
-            && $documentPlan === null
-            && $clarification === null
-            && !$reply->refused
-            && !DocumentEnAttente::aUneDecisionEnAttente($conversation);
-        $planFantome = PlanEnAttente::estUnPlanFantome(
-            (string) $reply->content,
-            $aucuneDecision,
-            $planRefuse !== null,
+        return $this->json(
+            $this->chargeUtile->acceptation($tache),
+            Response::HTTP_ACCEPTED
         );
-        if ($planFantome) {
-            $actions[] = array_filter([
-                'type'  => PlanEnAttente::ACTION_ABSENT,
-                // Le motif vient de l'OUTIL, pas d'une phrase générique : « il manque
-                // la date de la dépense » est actionnable, « aucun plan n'est en
-                // attente » ne l'est pas.
-                'motif' => $planRefuse['motif'] ?? null,
-            ]);
-            $this->logger->warning('Assistant IA : plan fantôme détecté (prose sans action de mutation).', [
-                'conversation' => $conversation->getId(),
-                'engine'       => $this->aiEngine->name(),
-                'outilRefuse'  => $planRefuse['outil'] ?? null,
-                'motif'        => $planRefuse['motif'] ?? null,
-            ]);
+    }
+
+    /**
+     * Où en sont les questions de cette conversation.
+     *
+     * C'est par ici que le navigateur suit un traitement parti en tâche de fond :
+     * une requête brève, toutes les secondes, tant qu'il reste quelque chose à
+     * attendre — et aucune quand la file est vide.
+     *
+     * POURQUOI UN SCRUTIN ET NON UN FLUX. Un flux d'événements sur une requête
+     * GET tiendrait une connexion ouverte pendant les vingt à quarante secondes
+     * du traitement. En développement, `symfony serve` ne dispose que d'UN worker
+     * php-cgi : cette connexion gèlerait toute l'application — précisément le mal
+     * que cette refonte soigne. Et comme la route est authentifiée, elle
+     * retiendrait aussi le verrou de session pendant tout ce temps, bloquant
+     * jusqu'aux requêtes suivantes du même utilisateur.
+     *
+     * Le scrutin, lui, survit gratuitement au rechargement de page : l'état vit
+     * en base, pas dans une connexion. Fermer l'onglet ne perd plus la réponse.
+     *
+     * `depuis` est l'identifiant de la dernière tâche déjà connue du navigateur :
+     * les tâches conclues au-delà sont renvoyées avec leur réponse, ce qui permet
+     * de recoller un fil après un F5 sans tout recharger.
+     */
+    #[Route('/api/messages/{idEntreprise}/{idConversation}/etat', name: 'api.message.etat', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS], methods: ['GET'])]
+    public function etatDesTaches(int $idEntreprise, int $idConversation, Request $request): JsonResponse
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
         }
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
 
-        // EXÉCUTION FANTÔME — le mensonge le plus coûteux. Le 2026-08-12, Ket a
-        // annoncé « Le dossier complet a été enregistré avec succès dans la base de
-        // données », récapitulatif détaillé à l'appui, alors que la base ne contenait
-        // rien : aucun plan n'avait été présenté, donc aucune validation, donc aucune
-        // écriture. Une écriture ne peut avoir lieu que par l'endpoint d'exécution,
-        // après un clic — jamais pendant un tour de chat. Si donc la prose affirme un
-        // enregistrement alors que le fil n'en porte aucun, l'utilisateur doit
-        // l'apprendre ICI, et pas le mois prochain en cherchant sa police.
-        $executionFantome = PlanEnAttente::estUneExecutionFantome(
-            (string) $reply->content,
-            $aucuneDecision,
-            !PlanEnAttente::aUnPlanExecute($conversation),
-        );
-        if ($executionFantome) {
-            $actions[] = ['type' => PlanEnAttente::ACTION_NON_EXECUTE];
-            $this->logger->warning('Assistant IA : exécution fantôme détectée (enregistrement affirmé, jamais fait).', [
-                'conversation' => $conversation->getId(),
-                'engine'       => $this->aiEngine->name(),
-            ]);
-        }
-
-        $messageAssistant = (new AssistantMessage())
-            ->setRole(AssistantMessage::ROLE_ASSISTANT)
-            ->setContenu($reply->content)
-            ->setMeta(array_filter([
-                'engine'       => $this->aiEngine->name(),
-                'tool'         => $reply->toolUsed,
-                'refus'        => $reply->refused ?: null,
-                'erreur'       => $erreurMoteur ?: null,
-                'actions'      => $actions ?: null,
-                'mutationPlan' => $mutationPlan,
-                // Spec du document FIGÉE au moment où le budget est annoncé : la
-                // production ne fera plus que la rendre. C'est ce qui garantit que
-                // le fichier livré est exactement celui qui a été chiffré.
-                DocumentEnAttente::CLE_PLAN => $documentPlan,
-                // La reformulation à confirmer, persistée comme un plan : elle doit
-                // survivre au rechargement, sinon un F5 laisserait la question seule
-                // à l'écran, sans les deux boutons qui permettent d'y répondre.
-                ClarificationEnAttente::CLE_META => $clarification,
-                // Trace du garde-fou : réaffiche l'avertissement autoritaire après
-                // un rechargement de page (F5), comme les statuts de plan — AVEC son
-                // motif, pour dire la même chose en direct et après rechargement.
-                'mutationAbsent' => $planFantome ? ['motif' => $planRefuse['motif'] ?? null] : null,
-                // Même trace, pour le démenti d'exécution : il doit survivre au F5,
-                // sinon un rechargement laisserait le récapitulatif mensonger seul
-                // à l'écran — exactement l'état qu'on corrige.
-                'executionAbsente' => $executionFantome ?: null,
-                // Bandeau d'avancement quand ce plan est l'étape d'un PROGRAMME
-                // (« étape 1 sur 3 ») : persisté pour survivre au rechargement,
-                // au même titre que le plan lui-même.
-                'programme'      => $this->extraireBandeauProgramme($actions),
-                // Ce que le message a coûté au moteur, tel qu'il vient d'être montré
-                // au fil de l'eau. Persisté pour la même raison que les clés
-                // ci-dessus : sans lui, un F5 effacerait le récapitulatif que
-                // l'utilisateur venait de lire. Null quand le moteur n'a pas de
-                // télémétrie (simulé, Anthropic) — array_filter l'écarte alors.
-                'activite'       => $this->activiteDuMessage($debutMoteur),
-            ]));
-        $conversation->addMessage($messageAssistant);
-
-        if ($conversation->getTitre() === null) {
-            $conversation->setTitre(mb_substr($contenu, 0, 80));
-        }
-
-        $this->em->flush();
-
-        // La PREMIÈRE étape d'un programme voyage sur ce message-ci (l'outil ne
-        // fabrique pas de bulle supplémentaire pour elle) : on rattache l'étape à
-        // son message maintenant qu'il a une identité. C'est ce lien, et lui seul,
-        // qui permettra à l'exécution de savoir qu'elle vient de trancher une
-        // étape — et donc d'enchaîner sur la suivante.
-        $programmeCourant = $this->programmeEnCours->courant($conversation);
-        if ($programmeCourant !== null) {
-            $this->programmeRunner->attacherMessage($programmeCourant, $messageAssistant);
-        }
+        $depuis = $request->query->get('depuis');
+        $taches = $this->tacheRepository->suivies($conversation, $depuis === null ? null : (int) $depuis);
 
         return $this->json([
-            'user' => [
-                'id'             => $messageUser->getId(),
-                'contenu'        => $messageUser->getContenu(),
-                'contexteObjets' => $messageUser->getContexteObjets(),
-                'fichiersJoints' => $messageUser->getFichiersJoints(),
-                // Contrat testable de la persistance de la citation (le front
-                // affiche déjà sa bulle optimiste sans attendre cette valeur).
-                'citation'       => $repondA === null ? null : [
-                    'id'      => $repondA->getId(),
-                    'role'    => $repondA->getRole(),
-                    'extrait' => $repondA->extraitCitation(),
-                ],
-                'createdAt'      => $messageUser->getCreatedAt()?->format(\DateTimeImmutable::ATOM),
-            ],
-            'assistant' => [
-                'id'        => $messageAssistant->getId(),
-                'contenu'   => $messageAssistant->getContenu(),
-                'refus'     => $reply->refused,
-                // Les actions renvoyées portent l'id du message : une action
-                // ket-mutation.review sait ainsi vers quel endpoint d'exécution pointer.
-                'actions'   => $this->actionsAvecMessage($actions, (int) $messageAssistant->getId()),
-                'createdAt' => $messageAssistant->getCreatedAt()?->format(\DateTimeImmutable::ATOM),
-                // Même contenu que la clé `activite` de meta : le front rend le
-                // récapitulatif en direct, le Twig le rend après rechargement.
-                'activite'  => $messageAssistant->getMeta()['activite'] ?? null,
-            ],
+            'taches'            => array_map(
+                fn ($tache) => $this->chargeUtile->tache($tache),
+                $taches
+            ),
+            // Le navigateur arrête son scrutin sur cette seule information : pas
+            // besoin qu'il déduise l'inactivité d'une liste vide.
+            'enCours'           => $this->tacheRepository->aUnTraitementOuvert($conversation),
             'conversationTitre' => $conversation->getTitre(),
         ]);
-    }
-
-    /**
-     * Récapitulatif de ce que le message a coûté au moteur, prêt à être affiché.
-     *
-     * MÊME SOURCE que le fil en direct (le journal a compté les deux), donc aucun
-     * risque que la ligne lue pendant l'attente et le récapitulatif lu après
-     * racontent deux histoires différentes.
-     *
-     * @return array{appels: int, jetonsIa: int, secondes: float, etapes: list<array{cle: string, jetons: int}>}|null
-     */
-    private function activiteDuMessage(float $debutMoteur): ?array
-    {
-        $recap = $this->journalTokens->recapitulatif();
-        if ($recap === null) {
-            return null;
-        }
-
-        return $recap + ['secondes' => round(microtime(true) - $debutMoteur, 1)];
-    }
-
-    /**
-     * Extrait le plan de mutation (plan + budget + exige-mdp) d'une éventuelle
-     * action ket-mutation.review, pour stockage serveur. null si absent.
-     *
-     * Délègue à PlanEnAttente : la structure stockée est partagée avec la
-     * préparation déterministe des étapes de programme (ProgrammeRunner), et les
-     * deux chemins doivent écrire exactement la même chose.
-     *
-     * @param array<int, array> $actions
-     */
-    private function extraireMutationPlan(array $actions): ?array
-    {
-        return PlanEnAttente::planStockable($actions);
-    }
-
-    /**
-     * Bandeau d'avancement du programme porté par une action de revue, ou null
-     * quand le plan est isolé. Stocké à part du plan : le plan est ce qui sera
-     * ÉCRIT, le bandeau est ce qui situe l'étape dans la série — deux choses
-     * indépendantes, l'une n'ayant pas à polluer l'autre.
-     *
-     * @param array<int, array> $actions
-     */
-    private function extraireBandeauProgramme(array $actions): ?array
-    {
-        foreach ($actions as $action) {
-            if (($action['type'] ?? null) === PlanEnAttente::ACTION_REVUE && is_array($action['programme'] ?? null)) {
-                return $action['programme'];
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Recopie les actions en injectant l'id du message assistant dans l'action
-     * ket-mutation.review (le front en dérive l'URL d'exécution).
-     *
-     * @param array<int, array> $actions
-     */
-    private function actionsAvecMessage(array $actions, int $idMessage): array
-    {
-        return array_map(static function (array $action) use ($idMessage) {
-            if (in_array($action['type'] ?? null, [PlanEnAttente::ACTION_REVUE, DocumentEnAttente::ACTION_REVUE], true)) {
-                $action['idMessage'] = $idMessage;
-            }
-
-            // La spec n'a rien à faire dans le navigateur : elle est volumineuse et
-            // seul le serveur la relit (depuis la meta) pour produire. L'envoyer
-            // n'apporterait qu'un aller-retour plus lourd et une tentation d'y
-            // faire confiance.
-            unset($action['spec'], $action['pied']);
-
-            return $action;
-        }, $actions);
     }
 
     /**
@@ -932,6 +604,13 @@ class AssistantIaController extends AbstractController
             return $blocage;
         }
         $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        // Fail-closed : tant que Ket répond, aucune décision ne se prend sur ce
+        // fil — le worker et cette requête sont deux processus distincts, et le
+        // verrou de session ne les relie plus. Voir refusSiTraitementEnCours().
+        if ($occupe = $this->refusSiTraitementEnCours($conversation)) {
+            return $occupe;
+        }
 
         // Le plan est relu depuis la meta du message (jamais depuis le client).
         $message = $this->trouverMessage($conversation, $idMessage);
@@ -1223,6 +902,13 @@ class AssistantIaController extends AbstractController
         }
         $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
 
+        // Fail-closed : tant que Ket répond, aucune décision ne se prend sur ce
+        // fil — le worker et cette requête sont deux processus distincts, et le
+        // verrou de session ne les relie plus. Voir refusSiTraitementEnCours().
+        if ($occupe = $this->refusSiTraitementEnCours($conversation)) {
+            return $occupe;
+        }
+
         $message = $this->trouverMessage($conversation, $idMessage);
         $meta = $message?->getMeta() ?? [];
         if ($message === null || !PlanEnAttente::porteUnPlan($meta)) {
@@ -1279,6 +965,13 @@ class AssistantIaController extends AbstractController
             return $blocage;
         }
         $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        // Fail-closed : tant que Ket répond, aucune décision ne se prend sur ce
+        // fil — le worker et cette requête sont deux processus distincts, et le
+        // verrou de session ne les relie plus. Voir refusSiTraitementEnCours().
+        if ($occupe = $this->refusSiTraitementEnCours($conversation)) {
+            return $occupe;
+        }
 
         $message = $this->trouverMessage($conversation, $idMessage);
         $meta = $message?->getMeta() ?? [];
@@ -1401,6 +1094,13 @@ class AssistantIaController extends AbstractController
         }
         $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
 
+        // Fail-closed : tant que Ket répond, aucune décision ne se prend sur ce
+        // fil — le worker et cette requête sont deux processus distincts, et le
+        // verrou de session ne les relie plus. Voir refusSiTraitementEnCours().
+        if ($occupe = $this->refusSiTraitementEnCours($conversation)) {
+            return $occupe;
+        }
+
         $message = $this->trouverMessage($conversation, $idMessage);
         $meta = $message?->getMeta() ?? [];
         if ($message === null || !DocumentEnAttente::porteUnPlan($meta)) {
@@ -1497,6 +1197,13 @@ class AssistantIaController extends AbstractController
         }
         $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
 
+        // Fail-closed : tant que Ket répond, aucune décision ne se prend sur ce
+        // fil — le worker et cette requête sont deux processus distincts, et le
+        // verrou de session ne les relie plus. Voir refusSiTraitementEnCours().
+        if ($occupe = $this->refusSiTraitementEnCours($conversation)) {
+            return $occupe;
+        }
+
         $programme = $this->programmeRepository->findDansConversation($idProgramme, $conversation);
         if ($programme === null) {
             return $this->json(['message' => 'Programme introuvable.'], Response::HTTP_NOT_FOUND);
@@ -1531,6 +1238,13 @@ class AssistantIaController extends AbstractController
             return $blocage;
         }
         $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        // Fail-closed : tant que Ket répond, aucune décision ne se prend sur ce
+        // fil — le worker et cette requête sont deux processus distincts, et le
+        // verrou de session ne les relie plus. Voir refusSiTraitementEnCours().
+        if ($occupe = $this->refusSiTraitementEnCours($conversation)) {
+            return $occupe;
+        }
 
         $programme = $this->programmeRepository->findDansConversation($idProgramme, $conversation);
         $corrections = $programme?->getRapport()['corrections'] ?? [];
@@ -2624,6 +2338,36 @@ class AssistantIaController extends AbstractController
 
         return $this->conversationRepository->findOneDeLInvite($idConversation, $invite, $entreprise)
             ?? throw $this->createNotFoundException('Conversation introuvable.');
+    }
+
+    /**
+     * 409 tant qu'une question de CETTE conversation n'a pas obtenu sa réponse.
+     *
+     * POURQUOI CE REFUS EXISTE, ALORS QU'IL N'EXISTAIT PAS AVANT. Il existait,
+     * mais implicitement : tant que tout se passait dans la même requête HTTP, le
+     * verrou de session PHP sérialisait de fait toutes les actions d'un même
+     * utilisateur. Un worker, lui, tourne dans un AUTRE processus — plus rien ne
+     * les relie.
+     *
+     * Ce que cela protégerait autrement : le moteur construit son contexte au
+     * début du traitement, et marqueurEtatMutation() y inscrit l'état des plans
+     * du fil. Qu'une exécution ou une annulation tombe entre-temps, et le modèle
+     * raisonne sur un fil qui n'existe déjà plus — il annoncerait un plan à
+     * valider alors qu'il vient d'être exécuté.
+     *
+     * Fail-closed : on refuse en le disant, plutôt que de laisser deux écritures
+     * se croiser en silence.
+     */
+    private function refusSiTraitementEnCours(AssistantConversation $conversation): ?JsonResponse
+    {
+        if (!$this->tacheRepository->aUnTraitementOuvert($conversation)) {
+            return null;
+        }
+
+        return $this->json([
+            'message' => 'Ket est en train de répondre. Réessayez dès qu’elle a terminé.',
+            'occupe'  => true,
+        ], Response::HTTP_CONFLICT);
     }
 
     /**

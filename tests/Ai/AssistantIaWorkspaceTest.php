@@ -740,7 +740,21 @@ class AssistantIaWorkspaceTest extends WebTestCase
         // Sans personnalisation, le personnage porte le nom par défaut « Ket ».
         $this->assertStringContainsString('Ket', $data['assistant']['contenu']);
         $this->assertStringContainsString(self::ENTREPRISE_NOM, $data['assistant']['contenu']);
-        $this->assertSame('Bonjour, qui es-tu ?', $data['conversationTitre'], 'Le titre est dérivé du premier message.');
+        // Le titre n'est PLUS dérivé du premier message. Il en reprenait
+        // quatre-vingts caractères — une phrase entière dans un onglet, figée
+        // pour toujours sur le hasard de la première question. Une conversation
+        // non renommée s'appelle « CONV#<id> » ; l'utilisateur choisit le reste,
+        // d'un double-clic sur l'onglet.
+        $this->assertSame(
+            'CONV#' . $conversation->getId(),
+            $data['conversationTitre'],
+            'Le libellé par défaut est court et dérivé de l’identifiant.'
+        );
+        $this->assertStringNotContainsString(
+            'Bonjour',
+            (string) $data['conversationTitre'],
+            'Le premier message ne doit plus baptiser la conversation.'
+        );
 
         // Les deux messages (question + réponse) sont persistés.
         $conn = $this->em()->getConnection();

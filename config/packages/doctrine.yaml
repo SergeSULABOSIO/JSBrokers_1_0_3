@@ -8,6 +8,15 @@ doctrine:
 
         profiling_collect_backtrace: '%kernel.debug%'
         use_savepoints: true
+
+        # PAS de schema_filter sur messenger_messages. On a cru en avoir besoin
+        # pour empêcher `migrations:diff` de proposer un DROP TABLE sur une table
+        # sans entité ; vérifié le 2026-08-15, c'est faux : symfony/doctrine-messenger
+        # déclare lui-même sa table au schéma (MessengerTransportDoctrineSchemaListener),
+        # et `schema:update --dump-sql` ne propose rien dessus. Le filtre, lui,
+        # cassait quelque chose de bien réel — il excluait la table de
+        # l'introspection, donc `schema:drop --full-database` la laissait en place
+        # et le `schema:create` suivant échouait sur « table already exists ».
     orm:
         auto_generate_proxy_classes: true
         enable_lazy_ghost_objects: true

@@ -23,6 +23,10 @@ import { formatNombre } from '../number-format.js';
  * l'application est découpée.
  */
 export const VERBES = {
+    // Une question acceptée mais qui attend son tour : elle n'est PAS en train
+    // d'être traitée, et le dire évite de laisser croire que Ket travaille sur
+    // trois choses à la fois — elle n'en traite jamais qu'une.
+    attente:       'a bien reçu, votre message attend son tour…',
     comprehension: 'réfléchit…',
     clarification: 'demande une précision…',
     planification: 'prépare le travail…',

@@ -81,11 +81,17 @@ final class GeminiAiEngine implements AiEngineInterface
      * l'appel) et lui rendre une non-réponse. Patienter quelques secondes coûte
      * infiniment moins cher que recommencer.
      *
-     * PLAFOND BAS, ET CE N'EST PAS NÉGOCIABLE : en développement, « symfony
-     * serve » ne dispose que d'UN worker php-cgi — une requête qui dort fige
-     * toute l'application, y compris le rechargement de la page. On ne patiente
-     * jamais non plus avant le PREMIER tour : là, rendre la main tout de suite
-     * vaut mieux que geler le navigateur sur une question pas encore commencée.
+     * PLAFOND BAS. La raison d'origine était le développement : « symfony serve »
+     * ne dispose que d'UN worker php-cgi, et une requête qui dort y figeait toute
+     * l'application, rechargement de page compris.
+     *
+     * ⚠️ CETTE RAISON A DISPARU, LE PLAFOND RESTE. Le traitement vit désormais
+     * dans un worker, où dormir ne gèle plus rien. La tentation de relever ces
+     * bornes est donc réelle — et c'est un AUTRE sujet : ce serait changer le
+     * comportement de repli face au quota du fournisseur, décision à prendre sur
+     * des mesures, pas au détour d'une refonte de transport. La seconde raison,
+     * elle, tient toujours : au-delà d'une trentaine de secondes, l'utilisateur
+     * préfère une réponse honnête à une attente muette.
      */
     private const MAX_ATTENTE_SECONDES = 15;
 

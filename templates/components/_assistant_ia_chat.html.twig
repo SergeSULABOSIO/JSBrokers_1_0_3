@@ -35,6 +35,7 @@
      data-aic-theme="{{ themeAssistant|default('auto') }}"
      data-controller="assistant-chat"
      data-assistant-chat-send-url-value="{{ path('admin.assistantia.api.message.send', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
+     data-assistant-chat-etat-url-value="{{ path('admin.assistantia.api.message.etat', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
      data-assistant-chat-dialog-context-url-value="{{ path('admin.assistantia.api.dialog_context', {idEntreprise: idEntreprise}) }}"
      data-assistant-chat-visual-context-url-value="{{ path('admin.assistantia.api.visual_context', {idEntreprise: idEntreprise}) }}"
      data-assistant-chat-contexte-url-value="{{ path('admin.assistantia.api.contexte.attach', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
@@ -45,6 +46,17 @@
      data-assistant-chat-id-invite-value="{{ idInvite }}"
      data-assistant-chat-id-conversation-value="{{ conversation.id }}"
      data-assistant-chat-assistant-nom-value="{{ assistantNom }}"
+     {# URL de renommage de CETTE conversation, lue par le workspace-manager
+        quand on double-clique le libellé de l'onglet qui contient ce chat.
+
+        POURQUOI ICI PLUTÔT QUE SUR L'ONGLET. Elle y a d'abord voyagé, par
+        l'événement d'ouverture puis par le localStorage — et c'était fragile :
+        un onglet restauré depuis une entrée mémorisée AVANT l'arrivée de cette
+        fonctionnalité n'avait pas l'URL, donc le double-clic ne faisait rien,
+        en silence. Ce partial, lui, est toujours re-téléchargé depuis le
+        serveur à chaque ouverture ou restauration : l'attribut est là par
+        construction, jamais périmé. #}
+     data-renommer-url="{{ path('admin.assistantia.api.conversation.rename', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
      data-action="assistant:contexte.attach-request->assistant-chat#attachFromEvent">
     <style>
         /* ══ Jetons de couleur du chat ══════════════════════════════════════════
@@ -258,6 +270,17 @@
         }
         .jsb-ai-chat .aic-msg--user .aic-msg-text { background:var(--aic-accent-subtle); border-top-right-radius:4px; }
         .jsb-ai-chat .aic-msg--refus .aic-msg-text { border-left:3px solid var(--aic-warning-line); }
+
+        /* Question ACCEPTÉE mais qui attend son tour. Ket n'en traite qu'une à la
+           fois : les suivantes doivent se distinguer de celle qui travaille, sans
+           quoi l'utilisateur croirait à un traitement simultané. Un simple
+           estompement — pas un spinner : rien ne tourne encore pour elle. */
+        .jsb-ai-chat .aic-msg--en-file .aic-msg-text { opacity:.62; }
+        .jsb-ai-chat .aic-msg--en-file .aic-msg-text::after {
+            content:'en file';
+            display:block; margin-top:.25rem;
+            font-size:.72rem; font-style:italic; opacity:.8;
+        }
 
         /* Rendu Markdown restreint des réponses assistant (voir
            assistant-markdown-render.js) : sobre, densité compacte adaptée à

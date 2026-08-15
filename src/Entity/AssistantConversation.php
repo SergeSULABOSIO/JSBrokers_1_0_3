@@ -68,6 +68,16 @@ class AssistantConversation
     #[ORM\Column(type: 'datetime_immutable', nullable: true)]
     private ?\DateTimeImmutable $updatedAt = null;
 
+    /**
+     * Depuis quand un worker draine cette conversation — le VERROU qui garantit
+     * qu'un seul le fait à la fois. Voir VerrouDeConversation : la colonne n'est
+     * jamais lue ni écrite par l'ORM, uniquement par un UPDATE conditionnel
+     * atomique. Elle est déclarée ici pour que le schéma la connaisse, et pour
+     * qu'un `doctrine:migrations:diff` ne propose pas de la supprimer.
+     */
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $traitementDepuis = null;
+
     public function __construct()
     {
         $this->messages = new ArrayCollection();
@@ -112,6 +122,26 @@ class AssistantConversation
     {
         $this->titre = $titre;
         return $this;
+    }
+
+    /**
+     * Ce qu'on AFFICHE pour désigner cette conversation. Source unique : onglet
+     * de la colonne 4, liste de la colonne 3, charges utiles JSON.
+     *
+     * POURQUOI UN LIBELLÉ DÉRIVÉ PLUTÔT QU'UN TITRE ÉCRIT EN BASE. Le titre
+     * était auparavant fabriqué au premier message, en tronquant celui-ci à
+     * quatre-vingts caractères. C'était long, c'était laid dans un onglet — la
+     * barre s'étirait sur une phrase entière — et surtout c'était FIGÉ : le
+     * hasard de la première phrase collait à la conversation pour toujours.
+     *
+     * Une conversation non renommée s'appelle donc « CONV#135 ». Court, stable,
+     * et sans ambiguïté quand plusieurs onglets sont ouverts. `titre` reste NUL
+     * en base tant que l'utilisateur n'a rien choisi : rien à migrer, et le jour
+     * où il renomme, c'est son texte qui prime.
+     */
+    public function libelle(): string
+    {
+        return $this->titre ?? 'CONV#' . $this->id;
     }
 
     /** @return Collection<int, AssistantMessage> */

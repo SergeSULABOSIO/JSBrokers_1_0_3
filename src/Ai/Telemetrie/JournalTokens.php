@@ -63,13 +63,20 @@ final class JournalTokens
     public const ISSUE_CLARIFICATION = 'clarification';
 
     /**
-     * Corrélation. Une requête HTTP = un message de l'utilisateur : l'état
-     * ci-dessous vit donc le temps d'un message et rattache ses lignes « tour »
-     * à sa ligne « message ». Sans lui, deux utilisateurs écrivant en même
-     * temps produiraient des tours entrelacés et inexploitables.
+     * Corrélation. UN TRAITEMENT = un message de l'utilisateur : l'état ci-dessous
+     * vit donc le temps d'un message et rattache ses lignes « tour » à sa ligne
+     * « message ». Sans lui, deux messages traités coup sur coup produiraient des
+     * tours entrelacés et inexploitables.
      *
-     * Il sert aussi au contrôleur : quand le moteur meurt sur un 429, personne
-     * ne sait plus combien de tours avaient déjà été payés — ces compteurs, si.
+     * ⚠️ « UN TRAITEMENT », ET NON PLUS « UNE REQUÊTE HTTP ». La nuance n'était
+     * pas visible tant que chaque message naissait d'une requête neuve, qui
+     * apportait son conteneur neuf. Un worker, lui, VIT : il enchaîne les
+     * messages dans le même processus, donc avec le même service. C'est pourquoi
+     * le handler appelle nouveauMessage() en tête de chaque tâche — sans quoi les
+     * compteurs de la précédente contamineraient le récapitulatif de la suivante.
+     *
+     * Ces compteurs servent aussi au rattrapage d'échec : quand le moteur meurt
+     * sur un 429, personne ne sait plus combien de tours avaient déjà été payés.
      */
     private ?string $messageId = null;
     private int $toursEmis = 0;
