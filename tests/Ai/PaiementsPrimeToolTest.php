@@ -659,6 +659,7 @@ class PaiementsPrimeToolTest extends TestCase
                 $resolver,
                 new \App\Ai\Resolution\ResolveurDeReferences($search, $resolver, $libelleur),
                 new \App\Ai\Resolution\CheminsDeRelation($em),
+                $em,
             ),
             // Ce test ne vérifie que le ROUTAGE des intentions (match), jamais une
             // exécution : les colonnes d'écran ne sont donc jamais sollicitées.

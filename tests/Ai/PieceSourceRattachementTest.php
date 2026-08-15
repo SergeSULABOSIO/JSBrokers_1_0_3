@@ -146,19 +146,64 @@ class PieceSourceRattachementTest extends WebTestCase
     }
 
     /**
-     * Niveau 3 — LE POINT SENSIBLE : aucun rattachement possible. L'utilisateur
-     * DOIT être averti que son fichier ne sera pas conservé, et cet avertissement
-     * est rédigé par le SERVEUR — pas laissé à la bonne volonté du modèle.
+     * Niveau 2b — RATTACHEMENT UNIVERSEL. Une entité sans collection « Documents » au
+     * formulaire ET sans relation typée depuis Document reçoit tout de même sa pièce,
+     * par le couple cibleType/cibleId.
+     *
+     * CE TEST A ÉTÉ RETOURNÉ, et il faut dire pourquoi. Il verrouillait auparavant
+     * l'inverse : « Assureur ne peut pas porter de document, avertis de la perte du
+     * fichier ». C'était l'assertion d'un MANQUE — honnêtement signalé, mais un manque
+     * tout de même : la donnée extraite entrait en base et la pièce qui la justifiait
+     * mourait avec la conversation. Ce manque est supprimé, donc l'assertion qui le
+     * protégeait devait l'être aussi.
      */
-    public function testEntiteSansRattachementAvertitDeLaPerteDuFichier(): void
+    public function testEntiteSansRelationTypeeRecoitQuandMemeSaPiece(): void
     {
         $d = $this->rattachement->resoudre('Assureur', 'Assureurs');
+
+        $this->assertSame(PieceSourceRattachement::NIVEAU_UNIVERSEL, $d['niveau']);
+        $this->assertTrue($d['rattachable']);
+        $this->assertNull($d['avertissement'], 'Plus rien ne se perd : il n’y a plus rien à avertir.');
+        $this->assertSame('Assureur', $d['cibleType']);
+        $this->assertStringContainsString('Assureurs', $d['explication'], 'L’explication nomme la rubrique.');
+
+        $fragment = $this->rattachement->fragmentGabarit($d, '@fichier:1', 'x.pdf', '@socle');
+        $this->assertSame('operation', $fragment['cible']);
+        $this->assertSame('Document', $fragment['fragment']['entite']);
+        $this->assertSame('Assureur', $fragment['fragment']['champs']['cibleType']);
+        $this->assertSame('@socle', $fragment['fragment']['champs']['cibleId'], 'Chaînage par référence : l’id n’existe pas encore.');
+        $this->assertSame('@fichier:1', $fragment['fragment']['champs']['fichier']);
+    }
+
+    /**
+     * Les rubriques dépourvues de tout lien Document sont désormais couvertes, elles
+     * aussi : « n'importe quel objet persisté peut recevoir un fichier » n'est pas une
+     * formule, c'est une propriété vérifiable.
+     */
+    public function testToutesLesRubriquesPeuventPorterUnDocument(): void
+    {
+        foreach (['Risque', 'Note', 'Tranche', 'Monnaie', 'Taxe'] as $entite) {
+            $d = $this->rattachement->resoudre($entite);
+            $this->assertTrue($d['rattachable'], sprintf('%s doit pouvoir porter un document.', $entite));
+            $this->assertSame(PieceSourceRattachement::NIVEAU_UNIVERSEL, $d['niveau'], $entite);
+            $this->assertNull($d['avertissement'], sprintf('%s n’a plus rien à perdre.', $entite));
+        }
+    }
+
+    /**
+     * Le niveau 3 ne disparaît pas : il se déplace sur le SEUL cas qui le mérite —
+     * un nom d'entité qui ne désigne aucun enregistrement de la plateforme. Sans lui,
+     * un nom inventé par le modèle produirait un document rattaché à un fantôme, ce
+     * qui est pire qu'un fichier non conservé.
+     */
+    public function testUnNomDEntiteInexistantAvertitToujoursDeLaPerteDuFichier(): void
+    {
+        $d = $this->rattachement->resoudre('DossierImaginaire', 'Dossiers imaginaires');
 
         $this->assertSame(PieceSourceRattachement::NIVEAU_AUCUN, $d['niveau']);
         $this->assertFalse($d['rattachable']);
         $this->assertNotNull($d['avertissement'], 'Une perte de donnée silencieuse est inacceptable.');
         $this->assertStringContainsString('NE SERA PAS CONSERVÉ EN BASE', $d['avertissement']);
-        $this->assertStringContainsString('Assureurs', $d['avertissement'], 'L’avertissement nomme la rubrique.');
         $this->assertStringContainsString('données extraites', $d['avertissement'], 'Il dit ce qui SERA enregistré.');
 
         $this->assertNull(
@@ -167,13 +212,21 @@ class PieceSourceRattachementTest extends WebTestCase
         );
     }
 
-    /** Quelques rubriques réellement dépourvues de tout lien Document. */
-    public function testAutresRubriquesSansLienDocument(): void
+    /**
+     * LA RÈGLE DE FORME CANONIQUE : le couple universel ne double JAMAIS une relation
+     * typée. Sans elle, un même fichier serait rattaché de deux façons et la rubrique
+     * Documents ne dirait pas la même chose que l'assistant.
+     */
+    public function testLeCoupleUniverselNeDoubleJamaisUneRelationTypee(): void
     {
-        foreach (['Risque', 'Note', 'Tranche', 'Monnaie', 'Taxe'] as $entite) {
+        foreach (['Avenant', 'Client', 'Cotation', 'Piste', 'PaiementPrime', 'Document'] as $entite) {
             $d = $this->rattachement->resoudre($entite);
-            $this->assertFalse($d['rattachable'], sprintf('%s ne peut pas porter de document.', $entite));
-            $this->assertNotNull($d['avertissement'], sprintf('%s doit avertir de la perte du fichier.', $entite));
+            $this->assertNotSame(
+                PieceSourceRattachement::NIVEAU_UNIVERSEL,
+                $d['niveau'],
+                sprintf('%s a une forme de rattachement plus spécifique : elle doit l’emporter.', $entite),
+            );
+            $this->assertNull($d['cibleType'], sprintf('%s ne doit pas écrire de couple universel.', $entite));
         }
     }
 }

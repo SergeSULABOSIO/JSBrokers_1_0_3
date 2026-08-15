@@ -378,7 +378,17 @@ class KetSaisieDepuisFichierTest extends WebTestCase
      * l'AVERTISSEMENT que le fichier ne sera pas conservé — et la consigne impose
      * de le restituer mot pour mot avant toute autorisation.
      */
-    public function testRubriqueSansRattachementAvertitAvantAutorisation(): void
+    /**
+     * Une rubrique sans collection « Documents » CONSERVE désormais la pièce source,
+     * par le rattachement universel — et le gabarit du plan la classe pour de bon.
+     *
+     * CE TEST A ÉTÉ RETOURNÉ. Il vérifiait auparavant que l'avertissement de PERTE
+     * était bien rédigé par le serveur et restitué mot pour mot. L'avertissement était
+     * juste, et sa mécanique reste vérifiée (PieceSourceRattachementTest, sur un nom
+     * d'entité inexistant) — mais il n'a plus lieu d'être ici : un Risque peut
+     * maintenant porter son fichier, donc plus rien ne se perd.
+     */
+    public function testRubriqueSansCollectionConserveQuandMemeLaPieceSource(): void
     {
         [$ent, $inv, $owner, $conversation] = $this->seed();
         $idEnt = $ent->getId();
@@ -402,17 +412,19 @@ class KetSaisieDepuisFichierTest extends WebTestCase
 
         $data = $resultat->data;
         $this->assertTrue($data['pret']);
-        $this->assertFalse($data['pieceSource']['rattachable']);
-        $this->assertStringContainsString('NE SERA PAS CONSERVÉ EN BASE', $data['pieceSource']['avertissement']);
+        $this->assertTrue($data['pieceSource']['rattachable'], 'Un Risque peut désormais porter sa pièce source.');
+        $this->assertNull($data['pieceSource']['avertissement'], 'Plus rien ne se perd : plus rien à avertir.');
 
-        // Le gabarit ne contient AUCUN classement : rien ne doit laisser croire l'inverse.
+        // Le gabarit porte une SECONDE opération : le Document, rattaché au Risque par
+        // le couple universel et chaîné au socle — la pièce suit sa donnée.
         $gabarit = $data['gabaritPlan'];
-        $this->assertCount(1, $gabarit);
-        $this->assertArrayNotHasKey('collections', $gabarit[0]);
-        $this->assertArrayNotHasKey('fichier', $gabarit[0]['champs']);
+        $this->assertCount(2, $gabarit);
+        $this->assertSame('Risque', $gabarit[0]['entite']);
 
-        // La consigne EXIGE la restitution mot pour mot, dans le même message.
-        $this->assertStringContainsString($data['pieceSource']['avertissement'], $data['note']);
-        $this->assertStringContainsString('MOT POUR MOT', $data['note']);
+        $classement = $gabarit[1];
+        $this->assertSame('Document', $classement['entite']);
+        $this->assertSame('Risque', $classement['champs']['cibleType']);
+        $this->assertSame('@socle', $classement['champs']['cibleId']);
+        $this->assertStringStartsWith('@fichier:', (string) $classement['champs']['fichier']);
     }
 }

@@ -48,6 +48,19 @@ enum TypeAction: string
     case EXECUTION_ABSENTE = 'ket-mutation.non-executee';
 
     /**
+     * Mise au point autoritaire : la réponse nie une pièce jointe RÉELLEMENT présente.
+     *
+     * Troisième de la même famille, et le démenti le plus vexant des trois : les deux
+     * autres portent sur ce que Ket a fait, celui-ci porte sur ce que l'UTILISATEUR a
+     * fait. Lui répondre « aucun fichier n'a été transmis, je vous invite à le
+     * téléverser » alors que son agrafe est affichée sous sa propre bulle, c'est lui
+     * demander de refaire ce qu'il vient de faire et lui laisser croire que la
+     * plateforme a égaré son document. Le serveur sait ce qui est attaché : quand la
+     * prose le contredit, il rétablit les faits et NOMME les pièces.
+     */
+    case FICHIER_PRESENT = 'ket-fichier.present';
+
+    /**
      * Barre de décision d'un DOCUMENT à produire (« Valider et produire » / « Annuler »).
      *
      * Voisine du plan d'écriture, et volontairement distincte : ce qu'on valide ici

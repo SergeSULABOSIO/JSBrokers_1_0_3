@@ -11,6 +11,7 @@ use Vich\UploaderBundle\Mapping\Annotation as Vich;
 
 #[ORM\Entity(repositoryClass: DocumentRepository::class)]
 #[ORM\HasLifecycleCallbacks]
+#[ORM\Index(name: 'idx_document_cible', columns: ['cible_type', 'cible_id'])]
 #[Vich\Uploadable]
 class Document
 {
@@ -78,6 +79,35 @@ class Document
 
     #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?Fournisseur $fournisseur = null;
+
+    /**
+     * RATTACHEMENT UNIVERSEL — le nom court de l'entité à laquelle ce document est
+     * rattaché quand AUCUNE des relations ci-dessus ne la couvre (« Tranche »,
+     * « Note », « Assureur »…).
+     *
+     * POURQUOI DEUX COLONNES ET NON QUINZE DE PLUS. Quinze colonnes de parent
+     * disaient déjà « un document a une origine, pas quatorze » — mais elles ne le
+     * disaient que pour quinze entités sur soixante-dix-sept. Partout ailleurs, le
+     * serveur devait avertir que le fichier NE SERAIT PAS CONSERVÉ : la donnée
+     * extraite entrait en base, la pièce qui la justifiait mourait avec la
+     * conversation. Ajouter une colonne par entité aurait déplacé la limite sans la
+     * supprimer, et fait grossir cette table à chaque entité nouvelle.
+     *
+     * ⚠️ CE COUPLE EST UN DERNIER RECOURS, PAS UNE ALTERNATIVE. Quand une relation
+     * typée existe pour la cible, c'est ELLE qui est écrite et ce couple reste nul —
+     * sinon la rubrique Documents et Ket liraient deux vérités différentes du même
+     * rattachement. La règle est centralisée dans PieceSourceRattachement, et
+     * DocumentFichier::parentDe() lit les deux mécanismes dans cet ordre.
+     *
+     * Il n'y a PAS de clé étrangère derrière : la suppression du parent est prise en
+     * charge par DocumentsOrphelinsSubscriber, faute de quoi ces lignes survivraient
+     * à l'objet qu'elles décrivent.
+     */
+    #[ORM\Column(length: 80, nullable: true)]
+    private ?string $cibleType = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $cibleId = null;
 
     #[Groups(['list:read'])]
     public ?string $parent_string;
@@ -325,6 +355,40 @@ class Document
         $this->fournisseur = $fournisseur;
 
         return $this;
+    }
+
+    public function getCibleType(): ?string
+    {
+        return $this->cibleType;
+    }
+
+    public function setCibleType(?string $cibleType): static
+    {
+        // Une chaîne vide arrive du formulaire quand le champ caché n'est pas
+        // renseigné ; la laisser passer produirait un rattachement vers une entité
+        // nommée « », c'est-à-dire un parent que parentDe() chercherait à résoudre à
+        // chaque ligne de liste.
+        $this->cibleType = ($cibleType === null || trim($cibleType) === '') ? null : trim($cibleType);
+
+        return $this;
+    }
+
+    public function getCibleId(): ?int
+    {
+        return $this->cibleId;
+    }
+
+    public function setCibleId(?int $cibleId): static
+    {
+        $this->cibleId = ($cibleId !== null && $cibleId > 0) ? $cibleId : null;
+
+        return $this;
+    }
+
+    /** Le couple de rattachement universel est-il complet ? (les deux moitiés, ou rien) */
+    public function aUneCibleUniverselle(): bool
+    {
+        return $this->cibleType !== null && $this->cibleId !== null;
     }
 
     public function __toString(): string

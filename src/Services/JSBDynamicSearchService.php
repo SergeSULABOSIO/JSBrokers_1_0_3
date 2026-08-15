@@ -25,8 +25,29 @@ class JSBDynamicSearchService
      * quand plusieurs chemins mènent à l'entité de rattachement — le plus court n'étant pas
      * toujours le bon (ex. Avenant → Client via pisteDeRenouvellement.client, souvent nul, OU via
      * cotation.piste.client, le vrai lien). Valeur : ['paths' => string[], 'id' => int].
+     *
+     * La clé facultative 'cible' ajoute un DISJONCTIF de plus : le rattachement UNIVERSEL
+     * (cibleType/cibleId), qui ne passe par aucune relation et n'a donc aucun chemin à
+     * joindre. Il doit rejoindre le même OR et non un AND — un document lié à un assureur
+     * peut l'être par le chemin document → avenant → assureur OU par ce couple, et
+     * exiger les deux ne rendrait jamais rien.
      */
     public const LIEN_MULTI_CHEMINS = '__lien_multi_chemins__';
+
+    /**
+     * Critère synthétique « un même texte, plusieurs colonnes, en OU ».
+     *
+     * Les critères ordinaires se combinent en ET : poser `nom` LIKE x et
+     * `nomFichierStocke` LIKE x exigerait que les DEUX correspondent, ce qui n'arrive
+     * jamais. Or une même chose peut porter deux noms sans que l'utilisateur ait à
+     * savoir lequel il cite — un document a un libellé de fiche ET un nom de fichier,
+     * et « retrouve-moi CONTRAT-2026 » désigne indifféremment l'un ou l'autre.
+     *
+     * Valeur : ['champs' => string[], 'valeur' => string]. Les champs inexistants sur
+     * l'entité sont ignorés (fail-open : mieux vaut chercher sur ce qui existe que ne
+     * rien chercher du tout).
+     */
+    public const OU_TEXTE_LIBRE = '__ou_texte_libre__';
 
     private EntityManagerInterface $em;
     private LoggerInterface $logger;
@@ -417,11 +438,25 @@ class JSBDynamicSearchService
             if ($field === self::LIEN_MULTI_CHEMINS) {
                 $paths = is_array($value) ? ($value['paths'] ?? []) : [];
                 $lienId = is_array($value) ? ($value['id'] ?? null) : null;
-                if ($lienId === null || $lienId === '' || !is_array($paths) || $paths === []) {
-                    continue; // rien à appliquer (aucun chemin ou id manquant)
+                $cibleUniverselle = is_array($value) ? trim((string) ($value['cible'] ?? '')) : '';
+                if ($lienId === null || $lienId === '' || (!is_array($paths) || $paths === []) && $cibleUniverselle === '') {
+                    continue; // rien à appliquer (ni chemin, ni cible universelle, ou id manquant)
                 }
+                $paths = is_array($paths) ? $paths : [];
 
                 $orParts = [];
+
+                // RATTACHEMENT UNIVERSEL — aucun chemin à joindre : les deux colonnes
+                // vivent sur l'entité racine. C'est précisément ce qui lui permet de
+                // désigner une entité vers laquelle aucune relation n'existe.
+                if ($cibleUniverselle !== ''
+                    && $metadata->hasField('cibleType') && $metadata->hasField('cibleId')) {
+                    $orParts[] = $qb->expr()->andX(
+                        $qb->expr()->eq("{$rootAlias}.cibleType", ':lienCible' . $suffix),
+                        $qb->expr()->eq("{$rootAlias}.cibleId", ':lienMulti' . $suffix),
+                    );
+                    $qb->setParameter('lienCible' . $suffix, $cibleUniverselle);
+                }
                 foreach ($paths as $path) {
                     $finalAlias = $this->joinPath($qb, $rootAlias, $metadata, (string) $path, $joinedEntities, $suffix);
                     if ($finalAlias === null) {
@@ -436,6 +471,32 @@ class JSBDynamicSearchService
                 if (!empty($orParts)) {
                     $qb->andWhere($qb->expr()->orX(...$orParts))
                        ->setParameter('lienMulti' . $suffix, $lienId);
+                }
+                continue;
+            }
+
+            // CAS 0 quinquies : un même texte cherché sur PLUSIEURS colonnes, en OU.
+            // Les colonnes visées vivent sur l'entité racine (aucune jointure), et une
+            // colonne absente est simplement sautée — ce critère sert des recherches
+            // « par nom » où l'utilisateur ne sait pas quel nom il cite.
+            if ($field === self::OU_TEXTE_LIBRE) {
+                $champs = is_array($value) ? (array) ($value['champs'] ?? []) : [];
+                $texte = is_array($value) ? trim((string) ($value['valeur'] ?? '')) : '';
+                if ($texte === '' || $champs === []) {
+                    continue;
+                }
+
+                $orParts = [];
+                foreach ($champs as $champ) {
+                    if (!$metadata->hasField((string) $champ)) {
+                        continue;
+                    }
+                    $orParts[] = $qb->expr()->like("{$rootAlias}." . $champ, ':ouTexte' . $suffix);
+                }
+
+                if (!empty($orParts)) {
+                    $qb->andWhere($qb->expr()->orX(...$orParts))
+                       ->setParameter('ouTexte' . $suffix, '%' . $texte . '%');
                 }
                 continue;
             }
