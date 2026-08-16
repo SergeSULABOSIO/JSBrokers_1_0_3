@@ -3,6 +3,7 @@
 namespace App\Tests\Workspace;
 
 use App\Ai\Fichier\PieceSourceRattachement;
+use App\Ai\Mutation\MutationAllowlist;
 use App\Entity\Document;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
@@ -268,6 +269,54 @@ class DocumentsSurToutesLesEntitesTest extends WebTestCase
             $this->em->getRepository(Document::class)->find($idDocument),
             'Un document survivant à sa fiche serait une pièce sans contexte dans la rubrique Documents.',
         );
+    }
+
+    /**
+     * 5. CE QUE KET ANNONCE = CE QU'ELLE SAIT FAIRE.
+     *
+     * L'outil d'attachement énumère les rubriques qu'il sert. Cette énumération part au
+     * fournisseur avec la déclaration de l'outil : elle doit donc être exactement ce que
+     * le serveur accepterait, sans quoi le modèle nommerait de bonne foi une rubrique
+     * dont le plan serait refusé APRÈS avoir été annoncé — la famille de défaut que ce
+     * projet traque depuis le début.
+     *
+     * DEUX SENS, et il faut les deux :
+     *  - rien d'annoncé qui échouerait (une rubrique de l'énumération est rattachable
+     *    ET écrivable) ;
+     *  - rien de servable qui soit tu (une rubrique rattachable ET écrivable figure
+     *    bien dans l'énumération).
+     */
+    public function testKetNAnnonceQueLesRubriquesQuElleSaitServir(): void
+    {
+        $rattachement = static::getContainer()->get(PieceSourceRattachement::class);
+        $annoncees = $rattachement->entitesAttachables();
+
+        $this->assertNotSame([], $annoncees, 'Une énumération vide priverait Ket de toute capacité d’attachement.');
+
+        // Sens 1 — rien d'annoncé qui échouerait.
+        $mensonges = [];
+        foreach ($annoncees as $entite) {
+            if (!MutationAllowlist::autorise($entite)) {
+                $mensonges[] = sprintf('%s : annoncée, mais hors du périmètre d’écriture', $entite);
+                continue;
+            }
+            if (!$rattachement->resoudre($entite)['rattachable']) {
+                $mensonges[] = sprintf('%s : annoncée, mais aucune pièce ne peut y être rattachée', $entite);
+            }
+        }
+        $this->assertSame([], $mensonges, "Ket annoncerait des rubriques qu’elle ne sait pas servir :\n" . implode("\n", $mensonges));
+
+        // Sens 2 — rien de servable qui soit tu.
+        $oubliees = [];
+        foreach (MutationAllowlist::MEMBRES as $entite) {
+            if (!$rattachement->resoudre($entite)['rattachable']) {
+                continue;
+            }
+            if (!in_array($entite, $annoncees, true)) {
+                $oubliees[] = $entite;
+            }
+        }
+        $this->assertSame([], $oubliees, "Ket sait les servir mais ne les annonce pas :\n" . implode("\n", $oubliees));
     }
 
     /** L'entreprise du jeu de test, rechargée après un éventuel em->clear(). */
