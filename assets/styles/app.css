@@ -5013,6 +5013,13 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
    ici, avec les autres, et non dans un <style> du gabarit : une boîte dont la
    facture serait embarquée cesserait de suivre la charte le jour où celle-ci
    bouge. */
+/* La gouttière du corps. .jsb-picker-listwrap n'en a aucune — elle est faite pour
+   accueillir un tableau pleine largeur à entête collante. Notre contenu n'est pas un
+   tableau : il reprend donc l'alignement horizontal de l'entête (1,25 rem), sinon la
+   zone de dépôt et les fichiers touchent les bords de la boîte. */
+.jsb-attach-corps { padding: 1rem 1.25rem 1.25rem; }
+.jsb-attach-corps .jsb-picker-empty { padding: 1.1rem .5rem 0; }
+
 .jsb-attach-drop {
     display: flex;
     flex-direction: column;

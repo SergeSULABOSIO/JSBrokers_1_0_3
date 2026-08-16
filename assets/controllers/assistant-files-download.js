@@ -25,7 +25,12 @@ export const COLONNES = [
     { cle: 'format', libelle: 'Format', classe: 'aic-fdl-c-fmt' },
     { cle: 'taille', libelle: 'Taille', classe: 'aic-fdl-c-taille' },
     { cle: 'chargeLe', libelle: 'Chargé le', classe: 'aic-fdl-c-date' },
-    { cle: 'rattacheA', libelle: 'Rattaché à', classe: 'aic-fdl-c-lien' },
+    // LE NIVEAU, et non plus le seul rattachement. Depuis que la recherche descend TOUT
+    // le dossier — un client rend aussi les pièces de ses pistes, cotations et polices —,
+    // la première question devant une liste est « d'où sort ce fichier ? ». Le serveur
+    // répond par la rubrique qui le détient ; à défaut, on retombe sur le rattachement,
+    // qui dit la même chose pour une recherche à plat.
+    { cle: 'niveau', libelle: 'Niveau', classe: 'aic-fdl-c-lien' },
 ];
 
 /**
@@ -89,6 +94,9 @@ export function ligneFichier(fichier, index) {
         format: String(fichier.format || '—'),
         taille: formatTaille(fichier.taille) || '—',
         chargeLe: formatDate(fichier.chargeLe) || '—',
+        // Le niveau vient de la descente ; le rattachement direct reste le repli, pour
+        // les charges utiles anciennes comme pour une recherche à plat.
+        niveau: String(fichier.niveau || fichier.rattacheA || '—'),
         rattacheA: String(fichier.rattacheA || '—'),
         url: fichier.url,
     };

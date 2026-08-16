@@ -8,6 +8,8 @@ use App\Ai\Presentation\Colonnes;
 use App\Ai\Resolution\CritereLieA;
 use App\Ai\Scope\AiScope;
 use App\Entity\Document;
+use App\Service\Document\DescenteDesDocuments;
+use Doctrine\ORM\EntityManagerInterface;
 use App\Service\Document\DocumentFichier;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
@@ -65,6 +67,9 @@ final class TelechargerDocumentsTool implements AiToolInterface
         // Fabrique PARTAGÉE avec le contrôleur de liste : le périmètre que Ket applique
         // est celui que la rubrique affiche, au critère près.
         private readonly PortefeuilleCritereFactory $portefeuilleCritere,
+        // LE MOTEUR : tout ce qui pend sous une fiche, quelle que soit la profondeur.
+        private readonly DescenteDesDocuments $descente,
+        private readonly EntityManagerInterface $em,
     ) {
     }
 
@@ -75,11 +80,14 @@ final class TelechargerDocumentsTool implements AiToolInterface
 
     public function description(): string
     {
-        return "Retrouve des DOCUMENTS enregistrés en base (entité Document : documents d'un avenant, "
-            . "d'un client, d'une cotation, d'un sinistre, preuves de paiement…) et affiche à "
-            . "l'utilisateur des boutons de téléchargement, avec pour chaque fichier son format, sa "
-            . 'taille, sa date de mise en ligne et le dossier dont il provient. Cherche par '
-            . 'rattachement (lieA), par nom, ou par identifiants. SANS AUCUN CRITÈRE, rend TOUS les '
+        return "LE moteur de recherche de FICHIERS, à tous les niveaux du dossier. Donne-lui une fiche "
+            . "(lieA) et il rend TOUT ce qui pend en dessous, aussi profond que ça aille : les fichiers "
+            . "d'un CLIENT, ce sont les siens PLUS ceux de ses pistes, de leurs cotations et de leurs "
+            . "polices ; ceux d'une PISTE partent de la piste et descendent ; ceux d'une COTATION "
+            . "partent de la cotation. Ne cherche donc JAMAIS niveau par niveau et ne pose pas de "
+            . "question de profondeur : un seul appel suffit, le serveur descend tout seul. Chaque "
+            . "ligne porte son NIVEAU — la rubrique d'où sort le fichier. Cherche aussi par "
+            . 'nom, ou par identifiants. SANS AUCUN CRITÈRE, rend TOUS les '
             . "fichiers du portefeuille de l'utilisateur — c'est la bonne réponse à « la liste / le "
             . 'tableau des fichiers de mon portefeuille », « tous mes documents ». À utiliser dès que '
             . "l'utilisateur veut voir, lister, télécharger, récupérer ou consulter des FICHIERS "
@@ -96,8 +104,11 @@ final class TelechargerDocumentsTool implements AiToolInterface
             . 'portefeuille », « tous mes documents », « télécharge / récupère / donne-moi le(s) document(s) » '
             . 'd\'une police, d\'un client, d\'une cotation, d\'un sinistre. Appelle-moi SANS argument pour tout '
             . 'le portefeuille, ou donne-moi le rattachement (lieA={entite:"Avenant", nom:"…"}) — tu n\'as pas '
-            . 'besoin des identifiants. Moi seul rends le format, la taille, la date et un bouton de '
-            . 'téléchargement ; ne dis JAMAIS que tu ne peux pas fournir de fichier ou de lien.';
+            . 'besoin des identifiants. JE DESCENDS TOUT LE DOSSIER : « les fichiers du client X » me suffit '
+            . 'pour rendre aussi ceux de ses pistes, cotations et polices — n\'enchaîne pas plusieurs appels '
+            . 'pour explorer les niveaux, et ne demande pas à l\'utilisateur jusqu\'où chercher. Moi seul rends '
+            . 'le format, la taille, le niveau et un bouton de téléchargement ; ne dis JAMAIS que tu ne peux '
+            . 'pas fournir de fichier ou de lien.';
     }
 
     public function schema(): array
@@ -202,9 +213,34 @@ final class TelechargerDocumentsTool implements AiToolInterface
         // DEUX MODES, jamais mélangés. Donner des identifiants, c'est déjà savoir
         // exactement ce qu'on veut : le rattachement et le nom n'y ajouteraient rien
         // qu'une occasion de se contredire. Les combiner n'a aucun usage réel.
+        // LE DOSSIER, ET NON LA SEULE LIGNE. « Les fichiers du client Jean de Dieu » ne
+        // désigne pas les pièces posées sur la ligne « client » : cela désigne tout ce
+        // qui pend sous lui — ses pistes, leurs cotations, leurs polices. Filtrer
+        // Document par un critère de rattachement ne rendait que le premier niveau, et
+        // l'assistant répondait « un seul fichier » à qui savait qu'il y en avait
+        // d'autres plus bas. On DESCEND donc depuis la fiche nommée.
+        //
+        // Les identifiants explicites gardent leur chemin : demander un document par son
+        // id, c'est déjà l'avoir vu — il n'y a pas de dossier à explorer.
+        $descente = null;
+        $niveaux = [];
         if ($ids !== []) {
             $trouves = $this->parIdentifiants(\array_slice($ids, 0, $limite), $scope);
             $total = count($trouves);
+        } elseif ($resolution->lien !== null && ($racine = $this->racineDuDossier($resolution->lien, $scope)) !== null) {
+            $descente = $this->descente->depuis($racine, $this->accessResolver->libellesEntites());
+            $total = count($descente['documents']);
+            $trouves = array_map(
+                static fn (array $t) => $t['document'],
+                \array_slice($descente['documents'], 0, $limite),
+            );
+            // Le niveau voyage à côté du document : la ligne du tableau le réclame, et
+            // c'est la première chose que cherche quelqu'un qui retrouve un fichier
+            // dans une liste — d'où il sort.
+            $niveaux = [];
+            foreach ($descente['documents'] as $t) {
+                $niveaux[(int) $t['document']->getId()] = $t['niveau'];
+            }
         } else {
             $criteria = $resolution->criteria;
             if ($nom !== '') {
@@ -251,12 +287,18 @@ final class TelechargerDocumentsTool implements AiToolInterface
             }
 
             $ligne = $this->contexte->ligne($document);
+            // Le NIVEAU : la rubrique de l'enregistrement qui détient la pièce. Il vient
+            // de la descente quand il y en a eu une ; sinon on retombe sur le
+            // rattachement direct, qui dit la même chose pour une recherche à plat.
+            $niveau = $niveaux[$ligne['id']] ?? $ligne['rattacheA'];
+
             $pourUi[] = [
                 'id'        => $ligne['id'],
                 'nom'       => $ligne['fichier'],
                 'format'    => $ligne['format'],
                 'taille'    => $ligne['octets'],
                 'chargeLe'  => $ligne['chargeLe'],
+                'niveau'    => $niveau,
                 'rattacheA' => $ligne['rattacheA'],
                 'url'       => $this->urlGenerator->generate('admin.assistantia.api.document.download', [
                     'idEntreprise' => $scope->entreprise->getId(),
@@ -264,14 +306,18 @@ final class TelechargerDocumentsTool implements AiToolInterface
                 ]),
             ];
 
+            // LES COLONNES DEMANDÉES, ET ELLES SEULES : numéro, nom, format, taille,
+            // niveau. La sixième — l'action — ne peut pas être une CELLULE : le chat
+            // n'affiche aucun lien (son allowlist de sanitisation ne connaît ni `a` ni
+            // `href`), un lien écrit dans le tableau serait du texte mort. Le bouton de
+            // téléchargement de chaque ligne vit donc dans le panneau rendu juste en
+            // dessous, où il fonctionne vraiment.
             $lignes[] = [
-                'n°'        => ++$numero,
-                'nom'       => $ligne['nom'],
-                'format'    => $ligne['format'],
-                'taille'    => $ligne['taille'],
-                'chargeLe'  => $ligne['chargeLe'],
-                'rattacheA' => $ligne['rattacheA'],
-                'classeur'  => $ligne['classeur'],
+                'n°'     => ++$numero,
+                'nom'    => $ligne['nom'],
+                'format' => $ligne['format'],
+                'taille' => $ligne['taille'],
+                'niveau' => $niveau,
             ];
 
             $contextes[] = $this->contexte->complet($document);
@@ -312,25 +358,28 @@ final class TelechargerDocumentsTool implements AiToolInterface
             // rendent alors le même tableau numéroté. Aucun montant ici — rien à
             // totaliser, et un total de tailles de fichiers n'apprendrait rien.
             'presentation' => Colonnes::de([
-                'n°'        => Colonnes::IDENTIFIANT,
-                'nom'       => Colonnes::TEXTE,
-                'format'    => Colonnes::TEXTE,
-                'taille'    => Colonnes::TEXTE,
-                'chargeLe'  => Colonnes::DATE,
-                'rattacheA' => Colonnes::TEXTE,
-                'classeur'  => Colonnes::TEXTE,
+                'n°'     => Colonnes::IDENTIFIANT,
+                'nom'    => Colonnes::TEXTE,
+                'format' => Colonnes::TEXTE,
+                'taille' => Colonnes::TEXTE,
+                'niveau' => Colonnes::TEXTE,
             ], []),
             'contexte' => $contextes,
-            'note'     => count($pourUi) === 1
-                ? 'UN seul fichier : présente-le en une phrase (nom, format, taille, dossier d\'origine), '
-                    . 'sans tableau. Un bouton de téléchargement sécurisé est affiché sous ta réponse — '
-                    . 'invite l\'utilisateur à cliquer.'
-                : sprintf(
-                    '%d fichiers : présente-les dans un tableau NUMÉROTÉ reprenant exactement les colonnes '
-                    . 'de « fichiers ». Un bouton de téléchargement par ligne et un bouton « Tout télécharger » '
-                    . 'sont affichés sous ta réponse — invite l\'utilisateur à cliquer.',
-                    count($pourUi),
-                ),
+            // TOUJOURS UN TABLEAU, même pour un seul fichier. Une phrase pour un fichier
+            // et un tableau pour plusieurs, c'était deux présentations pour la même
+            // question : l'utilisateur ne retrouvait pas les mêmes informations d'une
+            // réponse à l'autre, et ne pouvait pas comparer. Les colonnes sont celles de
+            // « fichiers », et il n'y en a pas d'autres à inventer.
+            'note'     => sprintf(
+                '%d fichier(s) trouvé(s) dans TOUT le dossier, niveaux inférieurs compris. Présente-les '
+                . 'dans un tableau NUMÉROTÉ reprenant EXACTEMENT les colonnes de « fichiers » '
+                . '(n°, nom, format, taille, niveau) — n\'en ajoute ni n\'en retire aucune. La colonne '
+                . '« niveau » dit d\'où sort chaque pièce : ne la remplace pas par autre chose. '
+                . 'Un bouton de téléchargement par ligne%s est affiché sous ta réponse — invite '
+                . 'l\'utilisateur à cliquer, et n\'écris AUCUN lien toi-même.',
+                count($pourUi),
+                count($pourUi) > 1 ? ', plus un bouton « Tout télécharger »' : '',
+            ),
         ];
 
         // DIRE LE PÉRIMÈTRE, toujours. « 6 fichiers » et « 6 fichiers de VOTRE
@@ -378,6 +427,42 @@ final class TelechargerDocumentsTool implements AiToolInterface
      *
      * @return list<Document>
      */
+    /**
+     * L'enregistrement d'où PART la descente, re-résolu et re-scopé.
+     *
+     * `CritereLieA` a déjà vérifié le droit de lecture sur la rubrique et résolu le nom
+     * dicté en identifiant. Il reste à charger l'objet — et à revérifier son cabinet :
+     * un identifiant résolu reste une donnée d'entrée, jamais une autorisation.
+     *
+     * null quand la racine ne peut pas être chargée : l'appelant retombe alors sur la
+     * recherche à plat, qui reste juste — simplement moins profonde.
+     *
+     * @param array{entite: string, id: int} $lien
+     */
+    private function racineDuDossier(array $lien, AiScope $scope): ?object
+    {
+        $fqcn = 'App\\Entity\\' . ($lien['entite'] ?? '');
+        if (!class_exists($fqcn)) {
+            return null;
+        }
+
+        try {
+            $racine = $this->em->find($fqcn, (int) ($lien['id'] ?? 0));
+        } catch (\Throwable) {
+            return null;
+        }
+        if ($racine === null) {
+            return null;
+        }
+        if (method_exists($racine, 'getEntreprise')
+            && $racine->getEntreprise() !== null
+            && $racine->getEntreprise()->getId() !== $scope->entreprise->getId()) {
+            return null;
+        }
+
+        return $racine;
+    }
+
     private function parIdentifiants(array $ids, AiScope $scope): array
     {
         $trouves = [];
