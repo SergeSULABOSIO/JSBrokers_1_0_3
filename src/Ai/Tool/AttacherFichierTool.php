@@ -68,9 +68,10 @@ final class AttacherFichierTool implements AiToolProduisantUnPlan, AiToolConditi
             . "preparer_operations pour cela, tu devrais y deviner le champ de rattachement et tu te "
             . "tromperais. Donne le fichier (fichierId, lu dans la section PIÈCES JOINTES) et l'objet "
             . "visé (cible) : le serveur détermine seul OÙ la pièce doit aller. "
-            . "TOUT enregistrement de la plateforme peut recevoir un fichier — police, client, "
-            . "cotation, piste, paiement, mais aussi tranche, note, assureur, risque, portefeuille… : "
-            . "ne réponds JAMAIS qu'un enregistrement n'accepte pas de document. "
+            . "LES RUBRIQUES QUE JE SERS sont énumérées dans « cible.entite » — n'en invente aucune "
+            . "autre. Toute fiche de la plateforme porte une collection « Documents » à l'écran : si "
+            . "l'utilisateur en vise une qui n'est pas dans cette liste, dis-lui simplement d'y déposer "
+            . "le fichier depuis le widget « Documents » de sa fiche, jamais que c'est impossible. "
             . "Différent de analyser_fichier_pour_saisie, qui sert à CRÉER un enregistrement à partir "
             . "des DONNÉES lues dans le fichier ; ici, on range le fichier lui-même sur un "
             . "enregistrement qui existe déjà. Prépare un PLAN à valider. N'écrit rien.";
@@ -80,10 +81,11 @@ final class AttacherFichierTool implements AiToolProduisantUnPlan, AiToolConditi
     {
         return '« ajoute / joins / attache / range / mets ce fichier (ce document, cette pièce, ce contrat, '
             . 'cette facture) dans / sur / à <un enregistrement> » — police, client, cotation, piste, '
-            . 'sinistre, paiement, tranche, note, assureur, portefeuille, n\'importe lequel. Donne-moi '
+            . 'sinistre, paiement, tranche, note, assureur, portefeuille… La liste EXACTE des rubriques '
+            . 'que je sers est l\'énumération de mon paramètre « cible.entite ». Donne-moi '
             . 'cible={entite:"Avenant", nom:"MIC2026-001"} : tu n\'as pas besoin de l\'identifiant, je '
             . 'résous le nom. Moi seul sais OÙ la pièce doit être rangée — ne le devine pas avec '
-            . 'preparer_operations. Ne dis JAMAIS qu\'un enregistrement ne peut pas recevoir de fichier.';
+            . 'preparer_operations.';
     }
 
     public function schema(): array
@@ -102,7 +104,17 @@ final class AttacherFichierTool implements AiToolProduisantUnPlan, AiToolConditi
                         . 'connais, sinon « nom » — le serveur résout le nom lui-même et te rend les '
                         . 'candidats si plusieurs correspondent.',
                     'properties' => [
-                        'entite' => ['type' => 'string', 'description' => "Nom court de l'entité visée (Avenant, Client, Cotation, Tranche, Note…)."],
+                        // ÉNUMÉRATION DÉRIVÉE, et non une liste d'exemples. Le modèle ne
+                        // peut PLUS nommer une rubrique dont le plan serait refusé
+                        // ensuite : celles qui figurent ici sont exactement celles que
+                        // le serveur sait servir. Une rubrique ouverte demain y entre
+                        // toute seule.
+                        'entite' => [
+                            'type' => 'string',
+                            'enum' => $this->rattachement->entitesAttachables(),
+                            'description' => "Nom court de l'entité visée. UNIQUEMENT une valeur de cette liste : "
+                                . "ce sont les rubriques auxquelles je sais attacher une pièce.",
+                        ],
                         'id'     => ['type' => 'integer', 'description' => "Identifiant de l'enregistrement."],
                         'nom'    => ['type' => 'string', 'description' => "Nom ou référence de l'enregistrement, si l'id est inconnu."],
                     ],

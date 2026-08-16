@@ -2,6 +2,7 @@
 
 namespace App\Ai\Fichier;
 
+use App\Ai\Mutation\MutationAllowlist;
 use App\Entity\Document;
 use App\Service\Workspace\FormTreeInspector;
 use Doctrine\ORM\EntityManagerInterface;
@@ -45,6 +46,9 @@ final class PieceSourceRattachement
 
     /** Relations d'audit portées par le trait : ce ne sont pas des parents de classement. */
     private const RELATIONS_AUDIT = ['entreprise', 'invite'];
+
+    /** @var list<string>|null mémoïsation : les métadonnées ne bougent pas d'un tour à l'autre */
+    private ?array $attachables = null;
 
     public function __construct(
         private readonly FormTreeInspector $formTree,
@@ -110,6 +114,47 @@ final class PieceSourceRattachement
                 $libelle,
             ),
         );
+    }
+
+    /**
+     * LES RUBRIQUES QUE L'ASSISTANT PEUT RÉELLEMENT SERVIR pour attacher une pièce.
+     *
+     * POURQUOI CETTE MÉTHODE EXISTE. La liste était énoncée en PROSE, à deux endroits :
+     * la description de l'outil et la section « pièces jointes » du prompt, qui
+     * promettait même « TOUT enregistrement de la plateforme, sans exception ». C'était
+     * faux pour cinq rubriques : elles portent bien une collection « Documents » à
+     * l'écran, mais Ket n'a pas le droit de les écrire, et son plan aurait été refusé
+     * APRÈS avoir été annoncé. Une liste récitée finit toujours par mentir ; celle-ci
+     * est DÉRIVÉE, et elle suivra d'elle-même la prochaine entité ouverte.
+     *
+     * DEUX CONDITIONS, ET LES DEUX SONT NÉCESSAIRES :
+     *  1. Document sait pointer vers cette entité (la relation existe en base — c'est
+     *     ce qui rend les niveaux 0, 1 et 2 possibles) ;
+     *  2. l'entité figure dans le périmètre d'écriture de Ket (MutationAllowlist),
+     *     faute de quoi le plan serait refusé au moment de le préparer.
+     *
+     * Les droits de l'invité, eux, restent vérifiés à l'exécution : cette liste dit ce
+     * que l'assistant PEUT servir, jamais ce que celui qui demande a le droit de faire.
+     *
+     * @return list<string> noms courts, triés — l'ordre alimente une énumération
+     *                      envoyée au fournisseur, il doit être stable d'un tour à l'autre
+     */
+    public function entitesAttachables(): array
+    {
+        if ($this->attachables !== null) {
+            return $this->attachables;
+        }
+
+        $retenues = [];
+        foreach (MutationAllowlist::MEMBRES as $shortName) {
+            // Document lui-même : la pièce va dans son propre champ « fichier ».
+            if ($shortName === self::ENTITE_DOCUMENT || $this->relationDepuisDocument($shortName) !== null) {
+                $retenues[] = $shortName;
+            }
+        }
+        sort($retenues);
+
+        return $this->attachables = $retenues;
     }
 
     /**
