@@ -1,116 +1,117 @@
 {#
-    Boîte « Attacher des pièces » — ouverte depuis la barre d'outils ou le clic droit
-    d'une rubrique, sur la ligne que l'utilisateur a sélectionnée.
+    Boîte « Attacher des pièces » — ouverte depuis la barre d'outils ou le clic droit,
+    sur la ligne que l'utilisateur a sélectionnée.
 
-    AUTONOME, comme le picker de documents du SOA dont elle reprend la facture : styles
-    embarqués, comportements accrochés aux attributs data-picker-* seuls. Le fragment
-    est injecté dans la modale ouverte la plus haute (cf. picker-open.js), où app.css
-    n'est pas garanti.
+    ALIGNÉE SUR LE PATTERN DES PICKERS (cf. _client_picker.html.twig) : mêmes classes
+    .jsb-picker-* d'app.css, même barre de titre (pastille d'entité + .modal-title +
+    .btn-close), même entête contextuel, même barre de progression, même pied. Un picker
+    qui aurait sa propre facture obligerait l'utilisateur à réapprendre une boîte qu'il
+    connaît déjà — et diverger au premier ajustement de la charte.
 
-    Contexte attendu : libelle (la fiche visée, telle qu'elle est nommée à l'écran),
-    parent (le champ de rattachement, pour l'URL de dépôt), limites (bornes publiées
-    au navigateur), standalone (le fragment embarque-t-il son contrôleur Stimulus).
+    LES ICÔNES VIENNENT TOUTES D'IconCanvasProvider, par leurs alias : jamais un SVG
+    écrit ici, jamais un nom de set en dur.
+
+    Contexte attendu : libelle (la fiche visée), rubrique (son intitulé d'écran), parent
+    (le champ de rattachement), cible, limites, famillesParExtension, standalone.
 #}
-<div class="doc-attach-overlay"
+<div class="jsb-picker-overlay"
      {% if standalone|default(false) %}data-controller="documents-attach-picker"{% endif %}
      data-picker-overlay
      data-documents-attach-picker-url-value="{{ path('admin.document.api.attacher', {parent: parent, id: cible.id}) }}"
-     data-documents-attach-picker-limites-value="{{ limites|json_encode|e('html_attr') }}">
-    <style>
-        .doc-attach-overlay {
-            position: fixed; inset: 0; z-index: 10050;
-            background: rgba(13, 36, 64, .55);
-            display: flex; align-items: center; justify-content: center; padding: 1rem;
-        }
-        .doc-attach-modal {
-            background: #fff; border-radius: 12px; width: 100%; max-width: 640px;
-            max-height: 88vh; display: flex; flex-direction: column;
-            box-shadow: 0 12px 40px rgba(0,0,0,.30); overflow: hidden;
-        }
-        .doc-attach-header {
-            display: flex; align-items: flex-start; gap: .75rem;
-            padding: 1rem 1.25rem; border-bottom: 1px solid #e9ecef;
-        }
-        .doc-attach-header h2 { font-size: 1.05rem; margin: 0 0 .15rem; color: #0d2440; }
-        .doc-attach-header p  { font-size: .85rem; margin: 0; color: #6c757d; }
-        .doc-attach-close {
-            margin-left: auto; border: 0; background: transparent; cursor: pointer;
-            font-size: 1.35rem; line-height: 1; color: #6c757d; padding: 0 .25rem;
-        }
-        .doc-attach-body { padding: 1rem 1.25rem; overflow-y: auto; }
-        .doc-attach-drop {
-            border: 2px dashed #b9c6d4; border-radius: 10px; padding: 1.75rem 1rem;
-            text-align: center; color: #5a6c7f; cursor: pointer; transition: .15s;
-        }
-        .doc-attach-drop:hover, .doc-attach-drop.is-over { border-color: #0047AB; background: #f4f8ff; color: #0047AB; }
-        .doc-attach-drop strong { display: block; font-size: .95rem; color: #0d2440; margin-bottom: .2rem; }
-        .doc-attach-drop small  { display: block; margin-top: .45rem; font-size: .78rem; }
-        .doc-attach-liste { list-style: none; margin: .9rem 0 0; padding: 0; }
-        .doc-attach-liste li {
-            display: flex; align-items: center; gap: .6rem;
-            padding: .5rem .65rem; border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: .4rem;
-            font-size: .87rem;
-        }
-        .doc-attach-liste li.is-refuse { border-color: #f1c9c4; background: #fdf4f3; }
-        .doc-attach-nom    { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .doc-attach-taille { color: #6c757d; font-size: .8rem; white-space: nowrap; }
-        .doc-attach-motif  { color: #c0392b; font-size: .78rem; white-space: nowrap; }
-        .doc-attach-retirer {
-            border: 0; background: transparent; color: #6c757d; cursor: pointer; font-size: 1.05rem; line-height: 1;
-        }
-        /* Le socle de picker pilote cette zone par l'attribut `hidden` : une règle
-           `display:none` inconditionnelle la garderait invisible même une fois
-           l'erreur posée. */
-        .doc-attach-erreur {
-            margin-top: .75rem; padding: .6rem .75rem; border-radius: 8px;
-            background: #fdf4f3; color: #c0392b; font-size: .85rem;
-        }
-        .doc-attach-erreur[hidden] { display: none; }
-        .doc-attach-footer {
-            display: flex; align-items: center; gap: .6rem;
-            padding: .85rem 1.25rem; border-top: 1px solid #e9ecef; background: #f8f9fa;
-        }
-        .doc-attach-compte { flex: 1 1 auto; font-size: .83rem; color: #6c757d; }
-        .doc-attach-btn {
-            border-radius: 8px; padding: .45rem 1rem; font-size: .88rem; cursor: pointer; border: 1px solid transparent;
-        }
-        .doc-attach-btn--ghost   { background: #fff; border-color: #ced4da; color: #495057; }
-        .doc-attach-btn--primary { background: #0047AB; color: #fff; }
-        .doc-attach-btn--primary:disabled { background: #a9bcd8; cursor: not-allowed; }
-    </style>
+     data-documents-attach-picker-limites-value="{{ limites|json_encode|e('html_attr') }}"
+     data-documents-attach-picker-familles-value="{{ famillesParExtension|json_encode|e('html_attr') }}">
+    <div class="jsb-picker-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="jsb-attach-title"
+         aria-describedby="jsb-attach-desc"
+         tabindex="-1">
 
-    <div class="doc-attach-modal" role="dialog" aria-modal="true" aria-labelledby="doc-attach-titre">
-        <div class="doc-attach-header">
-            <div>
-                <h2 id="doc-attach-titre">Attacher des pièces</h2>
-                <p>Les fichiers seront enregistrés comme documents de « {{ libelle }} ».</p>
+        <div class="modal-header jsb-picker-header">
+            <div class="d-flex align-items-center">
+                <span class="me-2 d-inline-flex" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('document') }}" style="width:22px;height:22px;color:#0047AB;" />
+                </span>
+                <h5 id="jsb-attach-title" class="modal-title mb-0">Attacher des pièces à «&nbsp;{{ libelle }}&nbsp;»</h5>
             </div>
-            <button type="button" class="doc-attach-close" data-picker-close aria-label="Fermer">&times;</button>
+            <button type="button" class="btn-close" data-picker-close aria-label="Fermer la fenêtre d'attachement"></button>
         </div>
 
-        <div class="doc-attach-body">
-            <div class="doc-attach-drop" data-attach-drop tabindex="0" role="button"
-                 aria-label="Déposer des fichiers ou parcourir">
-                <strong>Déposez vos fichiers ici</strong>
-                ou cliquez pour parcourir
-                <small>
-                    {{ limites.extensions|default([])|join(', ') }} —
-                    {{ (limites.maxSize|default(0) / 1024 / 1024)|round }} Mo par fichier au maximum
-                </small>
+        {# Barre de progression : animée pendant l'envoi du lot. #}
+        <div class="jsb-picker-progress" data-picker-progress role="progressbar" aria-hidden="true">
+            <div class="jsb-picker-progress-bar"></div>
+        </div>
+
+        <div class="jsb-picker-intro">
+            <span class="jsb-picker-intro-icon" aria-hidden="true">
+                <twig:UX:Icon name="{{ resolve_icon_name('action:upload') }}" style="width:26px;height:26px;" />
+            </span>
+            <div class="jsb-picker-intro-text">
+                <p class="jsb-picker-intro-title">Dépôt de fichiers</p>
+                <p id="jsb-attach-desc" class="jsb-picker-intro-desc">
+                    Chaque fichier déposé devient un <strong>document</strong> de
+                    {{ rubrique|lower }} «&nbsp;<strong>{{ libelle }}</strong>&nbsp;», et se retrouve
+                    ensuite depuis «&nbsp;Voir les documents&nbsp;» comme depuis la rubrique Documents.
+                    Formats acceptés&nbsp;: {{ limites.extensions|default([])|join(', ') }}
+                    — {{ (limites.maxSize|default(0) / 1024 / 1024)|round }}&nbsp;Mo par fichier au maximum.
+                </p>
+
+                <div class="jsb-picker-stats" role="status" aria-live="polite">
+                    <span class="jsb-picker-stat">
+                        <span class="jsb-picker-stat-num" data-attach-compte>0</span>
+                        fichier(s) prêt(s)
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        {# Zone d'erreur — Nielsen 9 : au-dessus de la liste, perçue sans défilement. #}
+        <p class="jsb-picker-empty text-danger" data-picker-error role="alert" hidden></p>
+
+        <div class="jsb-picker-listwrap">
+            <div class="jsb-attach-drop" data-attach-drop tabindex="0" role="button"
+                 aria-label="Déposer des fichiers, ou parcourir votre ordinateur">
+                <span class="jsb-attach-drop-icon" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:upload') }}" style="width:30px;height:30px;" />
+                </span>
+                <span class="jsb-attach-drop-titre">Déposez vos fichiers ici</span>
+                <span class="jsb-attach-drop-aide">ou cliquez pour parcourir votre ordinateur</span>
             </div>
             <input type="file" multiple hidden data-attach-input
                    accept="{{ limites.extensions|default([])|map(e => '.' ~ e)|join(',') }}">
 
-            <ul class="doc-attach-liste" data-attach-liste></ul>
-            <div class="doc-attach-erreur" data-picker-error role="alert" hidden></div>
+            <ul class="jsb-attach-liste" data-attach-liste></ul>
+            <p class="jsb-picker-empty" data-attach-vide role="status">Aucun fichier choisi pour l'instant.</p>
         </div>
 
-        <div class="doc-attach-footer">
-            <span class="doc-attach-compte" data-attach-compte></span>
-            <button type="button" class="doc-attach-btn doc-attach-btn--ghost" data-picker-close>Annuler</button>
-            <button type="button" class="doc-attach-btn doc-attach-btn--primary" data-attach-envoyer disabled>
-                Attacher
+        <footer class="jsb-picker-foot">
+            <span class="jsb-picker-hint text-muted small">
+                Rien n'est enregistré tant que vous n'avez pas cliqué sur «&nbsp;Attacher&nbsp;».
+            </span>
+            <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
+                <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                Annuler
             </button>
-        </div>
+            <button type="button" class="btn btn-primary jsb-picker-btn" data-attach-envoyer disabled>
+                <twig:UX:Icon name="{{ resolve_icon_name('action:save') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                <span data-attach-envoyer-libelle>Attacher</span>
+            </button>
+        </footer>
     </div>
+
+    {#
+        LES ICÔNES DE FORMAT, RENDUES D'AVANCE. La liste des fichiers est construite par
+        le navigateur, à partir de fichiers qui ne sont pas encore partis : aucun serveur
+        ne peut donc rendre sa ligne. Plutôt que de faire voyager les icônes une à une par
+        le circuit asynchrone (ui:icon.request), on les pose ici en gabarits que le
+        contrôleur clone — même source d'alias, zéro aller-retour, aucune ligne sans icône.
+    #}
+    {% for famille in ['pdf', 'word', 'excel', 'ppt', 'image', 'archive', 'autre'] %}
+        <template data-attach-icone="{{ famille }}">
+            <twig:UX:Icon name="{{ resolve_icon_name('fichier:' ~ famille) }}" style="width:18px;height:18px;" aria-hidden="true" />
+        </template>
+    {% endfor %}
+    <template data-attach-icone-retirer>
+        <twig:UX:Icon name="{{ resolve_icon_name('action:delete') }}" style="width:15px;height:15px;" aria-hidden="true" />
+    </template>
 </div>
