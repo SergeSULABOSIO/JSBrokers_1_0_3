@@ -372,19 +372,22 @@ class TelechargerDocumentsToolTest extends KernelTestCase
     }
 
     /**
-     * LE RATTACHEMENT À UN CLIENT NE REMONTE PAS SES POLICES, et il faut le savoir.
+     * « LES FICHIERS DU CLIENT » DESCENDENT TOUT LE DOSSIER — ses pièces ET celles de
+     * ses pistes, cotations et polices.
      *
-     * Le graphe générique de relations s'arrête à trois segments
-     * (CheminsDeRelation::MAX_PROFONDEUR) : Document→client est direct, mais
-     * Document→avenant→cotation→piste→client en compte quatre. « Les documents du
-     * client » rend donc ceux qui lui sont attachés DIRECTEMENT, pas ceux de ses
-     * polices. C'est la même borne que pour rechercher_entites — la lever changerait le
-     * comportement de tout le workspace, pas seulement de cet outil.
+     * CE TEST A ÉTÉ RETOURNÉ, et c'est la correction qui compte le plus ici. Il fixait
+     * la limite inverse : le graphe générique de relations s'arrêtant à trois segments,
+     * « les documents du client » ne rendait que les pièces DIRECTEMENT attachées, et le
+     * test entérinait cette borne comme « un choix visible ». À l'usage, ce choix ne
+     * tenait pas : l'utilisateur qui demandait les fichiers d'un client savait qu'il y
+     * en avait sous ses polices, recevait « un seul fichier », et devait corriger
+     * l'assistant tour après tour pour les obtenir un par un.
      *
-     * Ce test fixe la limite pour qu'elle reste un choix visible, et non une surprise
-     * découverte devant un utilisateur.
+     * La borne du graphe n'est plus en cause : la recherche ne filtre plus Document par
+     * un chemin de relations, elle DESCEND depuis la fiche (DescenteDesDocuments).
+     * Chaque pièce arrive avec le NIVEAU d'où elle sort.
      */
-    public function testLeRattachementAUnClientNeRemontePasSesPolices(): void
+    public function testLesFichiersDUnClientDescendentJusquASesPolices(): void
     {
         $seed = $this->seed();
 
@@ -395,8 +398,17 @@ class TelechargerDocumentsToolTest extends KernelTestCase
 
         self::assertSame(AiToolResult::STATUS_OK, $resultat->status);
         $noms = array_column($resultat->data['fichiers'], 'nom');
-        self::assertContains('Registre de commerce', $noms, 'Le document porté directement par le client.');
-        self::assertNotContains('Contrat signé', $noms, 'Quatre segments : hors de portée du graphe générique.');
+        self::assertContains('Registre de commerce', $noms, 'La pièce portée par le client lui-même.');
+        self::assertContains('Contrat signé', $noms, 'La pièce de sa POLICE, quatre niveaux plus bas.');
+
+        // Et chaque ligne dit d'où elle sort : c'est la première question devant une
+        // liste qui mélange les étages du dossier.
+        $niveaux = array_column($resultat->data['fichiers'], 'niveau', 'nom');
+        self::assertNotSame(
+            $niveaux['Registre de commerce'] ?? null,
+            $niveaux['Contrat signé'] ?? null,
+            'Deux pièces d’étages différents ne peuvent pas annoncer le même niveau.',
+        );
     }
 
     /** Recherche par nom, sans aucun rattachement. */
@@ -475,10 +487,19 @@ class TelechargerDocumentsToolTest extends KernelTestCase
     }
 
     /**
-     * UN SEUL FICHIER : pas de tableau, pas d'archive. Proposer « tout télécharger »
-     * pour un fichier unique ajouterait un clic et un dossier à ouvrir.
+     * UN SEUL FICHIER : le MÊME tableau que pour dix, et toujours pas d'archive.
+     *
+     * CE TEST A ÉTÉ RETOURNÉ. Il exigeait qu'un fichier unique soit présenté « sans
+     * tableau », en une phrase. Deux présentations pour la même question, c'était deux
+     * lectures à apprendre : selon le nombre de résultats, l'utilisateur ne retrouvait
+     * pas les mêmes informations au même endroit et ne pouvait pas comparer d'une
+     * réponse à l'autre. Les colonnes sont désormais les mêmes quel qu'en soit le
+     * nombre.
+     *
+     * L'archive, elle, reste réservée à plusieurs fichiers : proposer « tout
+     * télécharger » pour un seul ajouterait un clic et un dossier à ouvrir.
      */
-    public function testUnSeulFichierNeProposeNiTableauNiArchive(): void
+    public function testUnSeulFichierEstPresenteDansLeMemeTableau(): void
     {
         $seed = $this->seed();
 
@@ -486,7 +507,12 @@ class TelechargerDocumentsToolTest extends KernelTestCase
 
         self::assertCount(1, $resultat->uiAction['fichiers']);
         self::assertArrayNotHasKey('zipUrl', $resultat->uiAction, 'Une archive d’un seul fichier n’a pas de sens.');
-        self::assertStringContainsString('sans tableau', $resultat->data['note']);
+        self::assertStringContainsString('tableau NUMÉROTÉ', $resultat->data['note']);
+        self::assertSame(
+            ['n°', 'nom', 'format', 'taille', 'niveau'],
+            array_keys($resultat->data['fichiers'][0]),
+            'Les colonnes ne dépendent pas du nombre de résultats.',
+        );
     }
 
     /** PLUSIEURS FICHIERS : le tableau numéroté ET l'archive groupée. */
@@ -654,6 +680,8 @@ class TelechargerDocumentsToolTest extends KernelTestCase
             $conteneur->get(\App\Service\Document\DocumentFichier::class),
             $conteneur->get(\App\Token\TokenAccountService::class),
             $conteneur->get(\App\Services\Search\PortefeuilleCritereFactory::class),
+            $conteneur->get(\App\Service\Document\DescenteDesDocuments::class),
+            $conteneur->get(\Doctrine\ORM\EntityManagerInterface::class),
         );
 
         $resultat = $outil->execute(['nom' => 'Contrat'], $seed['scope']);

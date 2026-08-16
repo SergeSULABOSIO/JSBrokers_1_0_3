@@ -68,7 +68,14 @@
         {# Zone d'erreur — Nielsen 9 : au-dessus de la liste, perçue sans défilement. #}
         <p class="jsb-picker-empty text-danger" data-picker-error role="alert" hidden></p>
 
+        {#
+            .jsb-picker-listwrap est volontairement SANS gouttière : les autres pickers y
+            posent un tableau pleine largeur à entête collante. Notre contenu n'est pas un
+            tableau, il lui faut donc sa propre marge — calée sur celle de l'entête, sans
+            quoi la zone de dépôt touche les bords de la boîte.
+        #}
         <div class="jsb-picker-listwrap">
+          <div class="jsb-attach-corps">
             <div class="jsb-attach-drop" data-attach-drop tabindex="0" role="button"
                  aria-label="Déposer des fichiers, ou parcourir votre ordinateur">
                 <span class="jsb-attach-drop-icon" aria-hidden="true">
@@ -82,6 +89,7 @@
 
             <ul class="jsb-attach-liste" data-attach-liste></ul>
             <p class="jsb-picker-empty" data-attach-vide role="status">Aucun fichier choisi pour l'instant.</p>
+          </div>
         </div>
 
         <footer class="jsb-picker-foot">
