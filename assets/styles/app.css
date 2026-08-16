@@ -5006,3 +5006,64 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 }
 .jsb-picker-hint { margin: 0; }
 
+/* ── Boîte « Attacher des pièces » ───────────────────────────────────────────
+   Le picker de dépôt réutilise TOUT le socle .jsb-picker-* (overlay, entête,
+   intro, progression, pied) ; seule la zone de dépôt et la liste des fichiers
+   choisis lui appartiennent, parce qu'aucun autre picker n'en a. Elles vivent
+   ici, avec les autres, et non dans un <style> du gabarit : une boîte dont la
+   facture serait embarquée cesserait de suivre la charte le jour où celle-ci
+   bouge. */
+.jsb-attach-drop {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .2rem;
+    padding: 1.6rem 1rem;
+    border: 2px dashed #b9c6d4;
+    border-radius: 10px;
+    color: #5a6c7f;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color .15s, background-color .15s, color .15s;
+}
+.jsb-attach-drop:hover,
+.jsb-attach-drop:focus-visible,
+.jsb-attach-drop.is-over { border-color: #0047AB; background: #f4f8ff; color: #0047AB; }
+.jsb-attach-drop-icon { color: #0047AB; }
+.jsb-attach-drop-titre { font-weight: 600; color: #0d2440; }
+.jsb-attach-drop-aide { font-size: .82rem; }
+
+.jsb-attach-liste { list-style: none; margin: .9rem 0 0; padding: 0; }
+.jsb-attach-liste:empty { margin: 0; }
+.jsb-attach-liste li {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .5rem .65rem;
+    margin-bottom: .4rem;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    font-size: .87rem;
+}
+/* Un fichier écarté reste VISIBLE et se distingue autrement que par la seule
+   couleur (son motif est écrit à côté) — /ergonomie-web. */
+.jsb-attach-liste li.is-refuse { border-color: #f1c9c4; background: #fdf4f3; }
+.jsb-attach-icone { display: inline-flex; color: #5a6c7f; flex: 0 0 auto; }
+.jsb-attach-liste li.is-refuse .jsb-attach-icone { color: #c0392b; }
+.jsb-attach-nom { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jsb-attach-taille { color: #6c757d; font-size: .8rem; white-space: nowrap; }
+.jsb-attach-motif { color: #c0392b; font-size: .78rem; white-space: nowrap; }
+.jsb-attach-retirer {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    min-height: 32px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #6c757d;
+    cursor: pointer;
+}
+.jsb-attach-retirer:hover, .jsb-attach-retirer:focus-visible { background: #fdf4f3; color: #c0392b; }
+

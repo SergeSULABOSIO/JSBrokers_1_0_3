@@ -193,6 +193,21 @@ class SoaPoliceDocumentsCollector
         return $items;
     }
 
+    /**
+     * Les familles de format, extension par extension.
+     *
+     * PUBLIQUE parce qu'un SECOND consommateur en a besoin : la boîte d'attachement
+     * classe ses fichiers AVANT tout envoi, donc côté navigateur, à partir du seul nom
+     * du fichier. Lui laisser sa propre table aurait produit deux classements du même
+     * fichier — l'un à l'écran de dépôt, l'autre sur la fiche une fois enregistré.
+     *
+     * @return array<string, list<string>>
+     */
+    public static function familles(): array
+    {
+        return self::FAMILLES;
+    }
+
     private function famille(string $extension): string
     {
         foreach (self::FAMILLES as $famille => $extensions) {

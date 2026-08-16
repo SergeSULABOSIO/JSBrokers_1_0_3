@@ -213,15 +213,25 @@ class DocumentController extends AbstractController
      * droit d'écriture sur Document, et le scoping entreprise de l'objet visé.
      */
     #[Route('/api/attacher/{parent}/{id}', name: 'api.attacher_form', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
-    public function attacherFormApi(string $parent, int $id, DocumentFichier $documentFichier, EntiteLibelle $libelleur): Response
-    {
+    public function attacherFormApi(
+        string $parent,
+        int $id,
+        DocumentFichier $documentFichier,
+        EntiteLibelle $libelleur,
+        WorkspaceAccessResolver $accessResolver,
+    ): Response {
         $cible = $this->cibleDAttachement($parent, $id, $documentFichier, Invite::ACCESS_ECRITURE);
+        $shortName = $this->nomCourt($cible);
 
         return $this->render('components/document/_attach_picker.html.twig', [
             'parent'     => $parent,
             'cible'      => $cible,
             'libelle'    => $this->libelleDeLaCible($cible, $libelleur),
+            'rubrique'   => $accessResolver->libellesEntites()[$shortName] ?? $shortName,
             'limites'    => FichierAttachePolicy::limitesFront(),
+            // Extension => famille de format : la MÊME table que celle qui classe les
+            // pièces déjà enregistrées, pour que l'icône du dépôt soit celle de la fiche.
+            'famillesParExtension' => $this->famillesParExtension(),
             // Convention partagée avec les autres pickers : le fragment n'embarque son
             // contrôleur Stimulus que lorsqu'il vit seul (cf. _client_picker.html.twig).
             'standalone' => true,
@@ -368,6 +378,28 @@ class DocumentController extends AbstractController
         }
 
         return $cible;
+    }
+
+    /**
+     * La table extension => famille, retournée à plat pour le navigateur.
+     *
+     * Le serveur la tient par famille (une famille, ses extensions) ; le picker, lui,
+     * part d'un nom de fichier et cherche sa famille. On retourne donc la table plutôt
+     * que d'en écrire une seconde dans le JavaScript — deux tables du même classement
+     * finiraient par ranger le même fichier dans deux cases.
+     *
+     * @return array<string, string>
+     */
+    private function famillesParExtension(): array
+    {
+        $plat = [];
+        foreach (SoaPoliceDocumentsCollector::familles() as $famille => $extensions) {
+            foreach ($extensions as $extension) {
+                $plat[$extension] = $famille;
+            }
+        }
+
+        return $plat;
     }
 
     /** Nom court de la classe RÉELLE (une entité chargée peut arriver en proxy). */

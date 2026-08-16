@@ -53,6 +53,23 @@ class IconCanvasProvider
         'dashboard'       => 'ant-design:dashboard-twotone',
         'default'         => 'mdi:file-outline', // Icône par défaut
         
+        // --- Icônes de FORMAT DE FICHIER ---
+        //
+        // Une pièce jointe se reconnaît d'abord à son format : sur une liste de fichiers,
+        // c'est ce que l'œil attrape avant le nom. Les familles sont celles de
+        // SoaPoliceDocumentsCollector::familles() — extension => famille —, de sorte que
+        // le picker de dépôt et celui de consultation classent un fichier pareil.
+        //
+        // `fichier:autre` est le repli, jamais une absence : une ligne sans icône, au
+        // milieu de lignes qui en portent, se lit comme une anomalie.
+        'fichier:pdf'     => 'tabler:file-type-pdf',
+        'fichier:word'    => 'tabler:file-type-docx',
+        'fichier:excel'   => 'tabler:file-type-xls',
+        'fichier:ppt'     => 'tabler:file-type-ppt',
+        'fichier:image'   => 'tabler:photo',
+        'fichier:archive' => 'tabler:file-zip',
+        'fichier:autre'   => 'tabler:file',
+
         // --- Icônes d'Actions ---
         'action:add'          => 'gridicons:add',
         'action:calendar'     => 'jsb:calendar', // icône locale (aucune dispo dans les sets)
