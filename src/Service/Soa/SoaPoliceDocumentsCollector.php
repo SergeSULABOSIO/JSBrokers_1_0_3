@@ -162,6 +162,37 @@ class SoaPoliceDocumentsCollector
         return $clientDuDocument !== null && $clientDuDocument->getId() === $client->getId();
     }
 
+    /**
+     * DÉCRIT une collection de documents déjà connue, sans rien collecter.
+     *
+     * Le picker de documents attend des lignes enrichies (extension, famille de format
+     * pour la pastille, niveau d'attache). Quand on sait DÉJÀ quels documents montrer —
+     * ceux d'une fiche précise, ouverts depuis la liste d'une rubrique —, il n'y a aucun
+     * dossier à parcourir : seulement à les habiller. Cette méthode existe pour que le
+     * MÊME gabarit serve les deux cas, plutôt qu'un second picker qui divergerait au
+     * premier changement de présentation.
+     *
+     * @param iterable<Document> $documents
+     * @param string             $niveau    Ce que la colonne « niveau » affichera (la rubrique d'origine)
+     *
+     * @return array<int, array{document: Document, niveau: string, extension: string, famille: string}>
+     */
+    public function decrire(iterable $documents, string $niveau): array
+    {
+        $items = [];
+        foreach ($documents as $document) {
+            $extension = strtolower(pathinfo((string) $document->getNomFichierStocke(), PATHINFO_EXTENSION));
+            $items[] = [
+                'document'  => $document,
+                'niveau'    => $niveau,
+                'extension' => $extension,
+                'famille'   => $this->famille($extension),
+            ];
+        }
+
+        return $items;
+    }
+
     private function famille(string $extension): string
     {
         foreach (self::FAMILLES as $famille => $extensions) {

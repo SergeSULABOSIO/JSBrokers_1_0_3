@@ -59,6 +59,9 @@ final class DocumentFichier
     /** @var list<string>|null noms des relations parentes, lus une fois dans les métadonnées */
     private ?array $relationsParentes = null;
 
+    /** @var array<string, string>|null nom court d'entité => champ de Document, mémoïsé */
+    private ?array $parentsPossibles = null;
+
     public function __construct(
         private readonly StorageInterface $storage,
         private readonly EntityManagerInterface $em,
@@ -187,6 +190,38 @@ final class DocumentFichier
         }
 
         return null;
+    }
+
+    /**
+     * QUELLES RUBRIQUES PEUVENT RECEVOIR DES PIÈCES, et par quel champ.
+     *
+     * Nom court de l'entité => nom du champ que Document porte vers elle
+     * (`Tranche => tranche`, `Invite => inviteRattache`). C'est la source unique de la
+     * question « puis-je attacher un fichier ici ? », posée par l'injection des actions
+     * de barre d'outils comme par les routes d'attachement.
+     *
+     * DÉRIVÉE, jamais écrite : la carte se lit dans les métadonnées Doctrine, exactement
+     * comme {@see parentDe()} lit l'origine d'un document. Une entité qui gagne demain
+     * sa relation vers Document y entre d'elle-même, et une entité qui la perd en sort —
+     * là où une liste tenue à la main aurait fini par promettre un rattachement
+     * impossible, ou par taire un rattachement offert.
+     *
+     * @return array<string, string>
+     */
+    public function parentsPossibles(): array
+    {
+        if ($this->parentsPossibles !== null) {
+            return $this->parentsPossibles;
+        }
+
+        $meta = $this->em->getClassMetadata(Document::class);
+        $parents = [];
+        foreach ($this->relationsParentes() as $champ) {
+            $cible = $meta->getAssociationTargetClass($champ);
+            $parents[(new \ReflectionClass($cible))->getShortName()] = $champ;
+        }
+
+        return $this->parentsPossibles = $parents;
     }
 
     /**

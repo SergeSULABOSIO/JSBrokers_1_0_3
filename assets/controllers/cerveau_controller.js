@@ -470,6 +470,15 @@ export default class extends Controller {
             case 'ui:soa.docs-picker-request':
                 this.handleSoaDocsPickerRequest(payload);
                 break;
+            case 'ui:documents.attach-request': // « Attacher des pièces » (toolbar / clic droit)
+                this.handleDocumentsAttachRequest(payload);
+                break;
+            case 'ui:documents.liste-request': // « Voir les documents » d'une fiche quelconque
+                this.handleDocumentsListeRequest(payload);
+                break;
+            case 'documents:attaches': // le picker a fini de déposer le lot
+                this._handleDocumentsAttaches(payload);
+                break;
             case 'client:soa.revoke-execute': // confirmation validée → DELETE effectif
                 this._handleSoaRevokeExecute(payload);
                 break;
@@ -1424,6 +1433,62 @@ export default class extends Controller {
             controllerName: 'soa-docs-picker',
             errorLabel: 'les documents de la police',
         });
+    }
+
+    /**
+     * « Attacher des pièces » : dépôt de fichiers sur la fiche SÉLECTIONNÉE.
+     *
+     * L'action est injectée pour toute rubrique capable de porter des documents
+     * (FormCanvasProvider::injecterActionsDocuments) et n'a pas de drapeau `multi` —
+     * elle n'apparaît donc que sur une sélection UNIQUE, ce qui garantit à l'ouverture
+     * qu'il existe une destination et une seule.
+     * @param {object} payload
+     */
+    async handleDocumentsAttachRequest(payload) {
+        await this._openStandalonePicker(payload.url, {
+            controllerName: 'documents-attach-picker',
+            errorLabel: "l'attachement de pièces",
+        });
+    }
+
+    /** « Voir les documents » d'une fiche quelconque (même boîte que le dossier SOA). */
+    async handleDocumentsListeRequest(payload) {
+        await this._openStandalonePicker(payload.url, {
+            controllerName: 'soa-docs-picker',
+            errorLabel: 'les documents de cette fiche',
+        });
+    }
+
+    /**
+     * Le lot est déposé : on le dit, et on rafraîchit la liste.
+     *
+     * Le rafraîchissement n'est pas cosmétique — certaines rubriques affichent un
+     * compteur de pièces, et une liste qui ne bouge pas après un dépôt réussi laisse
+     * croire que rien n'a été enregistré.
+     * @param {object} payload
+     */
+    _handleDocumentsAttaches(payload) {
+        const crees = payload.crees || [];
+        const refuses = payload.refuses || [];
+
+        if (crees.length > 0) {
+            const cible = payload.cible ? ` à « ${payload.cible} »` : '';
+            this._showNotification(
+                `${crees.length} pièce${crees.length > 1 ? 's' : ''} attachée${crees.length > 1 ? 's' : ''}${cible}.`,
+                'success',
+            );
+        }
+        // Les refus sont dits À PART et en avertissement : noyés dans le message de
+        // succès, ils passeraient inaperçus — or ce sont les fichiers qui MANQUENT.
+        if (refuses.length > 0) {
+            const detail = refuses.map((r) => `${r.nom} (${r.motif})`).join(', ');
+            this._showNotification(`Non attaché${refuses.length > 1 ? 's' : ''} : ${detail}.`, 'warning');
+        }
+        if (crees.length === 0) return;
+
+        const etat = this._getActiveTabState();
+        this.broadcast('app:loading.start', { originatorId: etat.elementId, workspaceTabId: this.currentWorkspaceTabId });
+        this._requestListRefresh(this.getActiveTabId());
     }
 
     /**
