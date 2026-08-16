@@ -84,7 +84,6 @@ class PisteIndicatorStrategy implements IndicatorCalculationStrategyInterface
     private function aggregateSubscribedCotationIndicator(Piste $piste, string $indicatorName): float
     {
         $total = 0.0;
-        $precomputedSums = ['by_risque' => [], 'by_client' => [], 'by_partenaire' => []];
 
         foreach ($piste->getCotations() as $cotation) {
             if ($this->calculationHelper->isCotationBound($cotation)) {
@@ -96,8 +95,8 @@ class PisteIndicatorStrategy implements IndicatorCalculationStrategyInterface
                     'montant_paye' => $this->calculationHelper->getCotationMontantCommissionEncaissee($cotation),
                     'solde_restant_du' => $this->calculationHelper->getCotationMontantCommissionTtc($cotation, -1, false) - $this->calculationHelper->getCotationMontantCommissionEncaissee($cotation),
                     'montantPur' => $this->calculationHelper->getCotationMontantCommissionPure($cotation, -1, false),
-                    'retroCommission' => $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1, $precomputedSums),
-                    'reserve' => $this->calculationHelper->getCotationMontantCommissionPure($cotation, -1, false) - $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1, $precomputedSums),
+                    'retroCommission' => $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1),
+                    'reserve' => $this->calculationHelper->getCotationMontantCommissionPure($cotation, -1, false) - $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1),
                     default => 0.0,
                 };
                 $total += $val;

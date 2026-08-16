@@ -138,12 +138,11 @@ class ConditionPartageIndicatorStrategy implements IndicatorCalculationStrategyI
         }
         
         $cotations = array_unique($cotations, SORT_REGULAR);
-        $precomputedSums = ['by_risque' => [], 'by_client' => [], 'by_partenaire' => []];
 
         foreach ($cotations as $cotation) {
             $applied = false;
             foreach ($cotation->getRevenus() as $revenu) {
-                $montant = $this->calculationHelper->applyRevenuConditionsSpeciales($condition, $revenu, -1, $precomputedSums);
+                $montant = $this->calculationHelper->applyRevenuConditionsSpeciales($condition, $revenu, -1);
                 if ($montant > 0) {
                     $retroCommission += $montant;
                     $assiette += $this->calculationHelper->getRevenuMontantPure($revenu, -1, true);

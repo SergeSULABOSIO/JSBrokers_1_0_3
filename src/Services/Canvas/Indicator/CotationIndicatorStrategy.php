@@ -59,10 +59,10 @@ class CotationIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'taxeAssureurPayee' => round($this->calculationHelper->getCotationMontantTaxeAssureurPayee($entity), 2),
             'taxeAssureurSolde' => round($this->calculationHelper->getCotationMontantTaxeAssureur($entity, false) - $this->calculationHelper->getCotationMontantTaxeAssureurPayee($entity), 2),
             'montantPur' => round($this->calculationHelper->getCotationMontantCommissionPure($entity, -1, false), 2),
-            'retroCommission' => round($this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($entity, null, -1, []), 2),
+            'retroCommission' => round($this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($entity, null, -1), 2),
             'retroCommissionReversee' => round($this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtierPayee($entity, null), 2),
-            'retroCommissionSolde' => round($this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($entity, null, -1, []) - $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtierPayee($entity, null), 2),
-            'reserve' => round($this->calculationHelper->getCotationMontantCommissionPure($entity, -1, false) - $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($entity, null, -1, []), 2),
+            'retroCommissionSolde' => round($this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($entity, null, -1) - $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtierPayee($entity, null), 2),
+            'reserve' => round($this->calculationHelper->getCotationMontantCommissionPure($entity, -1, false) - $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($entity, null, -1), 2),
         ];
     }
 

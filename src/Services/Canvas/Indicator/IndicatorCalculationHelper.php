@@ -2,9 +2,13 @@
 
 namespace App\Services\Canvas\Indicator;
 
+use App\Entity\Assureur;
 use App\Entity\Avenant;
+use App\Entity\Client;
 use App\Entity\Entreprise;
 use App\Entity\Cotation;
+use App\Entity\Groupe;
+use App\Entity\Portefeuille;
 use App\Entity\Risque;
 use App\Entity\Tranche;
 use App\Entity\Note;
@@ -44,6 +48,42 @@ class IndicatorCalculationHelper implements ResetInterface
      */
     private array $couvertureBordereauxCache = [];
 
+    /**
+     * Sinistres déjà lus, par identifiant d'entreprise : ils étaient relus une fois par
+     * ligne de rubrique, pour n'être ensuite filtrés que sur des références de police.
+     *
+     * @var array<int, NotificationSinistre[]>
+     */
+    private array $sinistresParEntrepriseCache = [];
+
+    /**
+     * Identifiants de cotation dont le graphe a DÉJÀ été préchargé pendant cette requête.
+     *
+     * Sans ce mémo, afficher vingt partenaires rejouait vingt fois les six requêtes de
+     * preloadDepuisCotationIds() sur un sous-graphe très largement commun. Le mémo est
+     * revalidé contre l'identity map avant usage : après un em->clear(), les collections
+     * ne sont plus hydratées et il FAUT recharger, sinon l'économie se paierait en
+     * chargements paresseux ligne à ligne — l'inverse du but.
+     *
+     * @var array<int, true>
+     */
+    private array $cotationsPrechargees = [];
+
+    /**
+     * Unités de mesure des conditions de partage (cf. sommeCommissionPureDeLUnite) : des
+     * sommes qui balaient tout le portefeuille d'un partenaire, et qu'une rubrique
+     * réclamerait sinon une fois par revenu et par ligne.
+     *
+     * @var array<string, float>
+     */
+    private array $uniteMesureCache = [];
+
+    /**
+     * La stratégie « revenu », qui porte le calcul du taux de partage. Elle était
+     * instanciée À CHAQUE REVENU de chaque cotation — un objet neuf par ligne de calcul.
+     */
+    private ?RevenuPourCourtierIndicatorStrategy $strategieRevenu = null;
+
     public function __construct(
         private CotationRepository $cotationRepository,
         private NotificationSinistreRepository $notificationSinistreRepository,
@@ -59,6 +99,9 @@ class IndicatorCalculationHelper implements ResetInterface
         $this->claimsCache = [];
         $this->commissionHtCache = [];
         $this->couvertureBordereauxCache = [];
+        $this->sinistresParEntrepriseCache = [];
+        $this->cotationsPrechargees = [];
+        $this->uniteMesureCache = [];
     }
 
     public function getInterpretationTauxSP(float $taux): string
@@ -354,28 +397,30 @@ class IndicatorCalculationHelper implements ResetInterface
         $notificationSinistreCible = $options['notificationSinistreCible'] ?? null;
         $conditionPartageCible = $options['conditionPartageCible'] ?? null;
 
+        // LA REQUÊTE RACINE NE RAMÈNE QUE DES COTATIONS. Elle joignait auparavant quinze
+        // relations, TOUTES en addSelect — dont six collections to-many simultanées
+        // (avenants, revenus, tranches, articles, paiements, chargements) : exactement le
+        // produit cartésien que le docblock de preloadAvenantRelations interdit
+        // formellement quelques centaines de lignes plus bas. Le graphe est désormais
+        // hydraté après coup par preloadDepuisCotationIds(), en un nombre FIXE de
+        // requêtes, une seule collection to-many chacune. Ne subsistent ici que les
+        // jointures dont un FILTRE a besoin, et seulement quand ce filtre est actif.
         $qb = $this->cotationRepository->createQueryBuilder('c')
+            ->select('c')
             ->join('c.piste', 'p')
             ->join('p.invite', 'i')
-            ->leftJoin('c.avenants', 'av')
-            ->leftJoin('c.revenus', 'rev')
-            ->leftJoin('rev.typeRevenu', 'rt')
-            ->leftJoin('c.tranches', 't')
-            ->leftJoin('t.articles', 'art')
-            ->leftJoin('art.note', 'n')
-            ->leftJoin('n.paiements', 'np')
-            ->leftJoin('c.chargements', 'ch')
-            ->leftJoin('ch.type', 'cht')
-            ->leftJoin('p.risque', 'r')
-            ->leftJoin('p.client', 'cl')
-            ->leftJoin('p.partenaires', 'pa')
-            ->leftJoin('cl.partenaires', 'clpa')
-            ->addSelect('p', 'i', 'av', 'rev', 'rt', 't', 'art', 'n', 'np', 'ch', 'cht', 'r', 'cl', 'pa', 'clpa')
             ->where('i.entreprise = :entreprise')
             ->setParameter('entreprise', $entreprise)
             ->distinct();
 
-        if ($isBound) $qb->andWhere($qb->expr()->gt('SIZE(c.avenants)', 0));
+        // LES PROPOSITIONS NE SONT PLUS HYDRATÉES POUR ÊTRE JETÉES. Les deux seules
+        // boucles qui consomment ce résultat commencent l'une et l'autre par écarter les
+        // cotations non souscrites, et isCotationBound() vaut exactement
+        // « avenants non vide ». Filtrer en SQL est donc sans effet sur les chiffres, et
+        // épargne l'hydratation de toutes les propositions en cours.
+        // $isBound est conservé pour la compatibilité des appelants : il ne décide plus
+        // rien, la règle métier étant désormais appliquée dans tous les cas.
+        $qb->andWhere('SIZE(c.avenants) > 0');
         if ($pisteCible) $qb->andWhere('p = :pisteCible')->setParameter('pisteCible', $pisteCible);
         if ($cotationCible) $qb->andWhere('c = :cotationCible')->setParameter('cotationCible', $cotationCible);
         if ($assureurCible) {
@@ -398,10 +443,17 @@ class IndicatorCalculationHelper implements ResetInterface
         }
         if ($partenaireCible) {
             if ($partenaireCible->getId() === null) $qb->andWhere('1=0');
-            else $qb->andWhere('pa = :partenaireCible OR clpa = :partenaireCible')->setParameter('partenaireCible', $partenaireCible);
+            else {
+                // Un partenaire s'attache à la PISTE ou au CLIENT : les deux chemins comptent.
+                $qb->leftJoin('p.client', 'cl')
+                    ->leftJoin('p.partenaires', 'pa')
+                    ->leftJoin('cl.partenaires', 'clpa')
+                    ->andWhere('pa = :partenaireCible OR clpa = :partenaireCible')
+                    ->setParameter('partenaireCible', $partenaireCible);
+            }
         }
-        if ($avenantCible) $qb->andWhere('av = :avenantCible')->setParameter('avenantCible', $avenantCible);
-        if ($trancheCible) $qb->andWhere('t = :trancheCible')->setParameter('trancheCible', $trancheCible);
+        if ($avenantCible) $qb->leftJoin('c.avenants', 'av')->andWhere('av = :avenantCible')->setParameter('avenantCible', $avenantCible);
+        if ($trancheCible) $qb->leftJoin('c.tranches', 't')->andWhere('t = :trancheCible')->setParameter('trancheCible', $trancheCible);
         if ($revenuPourCourtierCible) $qb->join('c.revenus', 'rpc')->andWhere('rpc = :revenuPourCourtierCible')->setParameter('revenuPourCourtierCible', $revenuPourCourtierCible);
         if ($typeRevenuCible) $qb->join('c.revenus', 'rpc_tr')->andWhere('rpc_tr.typeRevenu = :typeRevenuCible')->setParameter('typeRevenuCible', $typeRevenuCible);
 
@@ -444,6 +496,12 @@ class IndicatorCalculationHelper implements ResetInterface
 
         $cotationsAcalculer = $qb->getQuery()->getResult();
 
+        // Le graphe que la boucle d'agrégation va parcourir, hydraté en six requêtes à
+        // nombre fixe — ce que les addSelect faisaient auparavant en une seule, au prix
+        // du produit cartésien. Sans cet appel, chaque cotation rallumerait ses propres
+        // chargements paresseux : le remède serait pire que le mal.
+        $this->preloadDepuisCotationIds(array_map(static fn (Cotation $c) => $c->getId(), $cotationsAcalculer));
+
         $policeReferences = [];
         foreach ($cotationsAcalculer as $cotation) {
             if (!$this->isCotationBound($cotation)) continue;
@@ -455,36 +513,15 @@ class IndicatorCalculationHelper implements ResetInterface
         }
         $policeReferences = array_unique($policeReferences);
 
-        $commissionSums = $this->precomputeCommissionSums($entreprise, $options);
-
-        $sinistresQb = $this->notificationSinistreRepository->createQueryBuilder('ns')
-            ->join('ns.invite', 'i')
-            ->where('i.entreprise = :entreprise')
-            ->setParameter('entreprise', $entreprise);
-
-        if (!empty($options)) {
-            if (!empty($policeReferences)) {
-                $sinistresQb->andWhere('ns.referencePolice IN (:policeReferences)')->setParameter('policeReferences', $policeReferences);
-            } else {
-                $sinistresQb->andWhere('1=0');
-            }
-        }
-
-        if ($notificationSinistreCible) $sinistresQb->andWhere('ns = :notificationSinistreCible')->setParameter('notificationSinistreCible', $notificationSinistreCible);
-
-        if ($paiementCible) {
-            if ($offre = $paiementCible->getOffreIndemnisationSinistre()) {
-                if ($sinistreDuPaiement = $offre->getNotificationSinistre()) {
-                    $sinistresQb->andWhere('ns = :sinistreDuPaiement')->setParameter('sinistreDuPaiement', $sinistreDuPaiement);
-                } else {
-                    $sinistresQb->andWhere('1=0');
-                }
-            } else {
-                $sinistresQb->andWhere('1=0');
-            }
-        }
-
-        $sinistresAcalculer = $sinistresQb->getQuery()->getResult();
+                // LE CAS COURANT NE VAUT PLUS UNE REQUÊTE PAR LIGNE. Vingt partenaires affichés,
+        // c'étaient vingt fois la même lecture des sinistres de l'entreprise, à la seule
+        // différence de la liste de références de police. Celle-ci se filtre aussi bien en
+        // mémoire, sur une collection lue une fois par requête HTTP.
+        // Les deux cibles ci-dessous restreignent à UN sinistre nommé : trop rares et trop
+        // particulières pour mériter le détour, elles gardent leur requête d'origine.
+        $sinistresAcalculer = ($notificationSinistreCible === null && $paiementCible === null)
+            ? $this->sinistresDesPolices($entreprise, $options === [] ? null : $policeReferences)
+            : $this->sinistresFiltres($entreprise, $options, $policeReferences, $notificationSinistreCible, $paiementCible);
 
         foreach ($cotationsAcalculer as $cotation) {
             // RÈGLE MÉTIER : une cotation NON validée (proposition sans avenant) n'est qu'un
@@ -522,7 +559,7 @@ class IndicatorCalculationHelper implements ResetInterface
             $cotation_taxe_courtier_partageable = $this->getCotationMontantTaxeCourtier($cotation, true);
             $commission_partageable += $cotation_com_nette_partageable - $cotation_taxe_courtier_partageable;
 
-            $retro_commission_partenaire += $this->getCotationMontantRetrocommissionsPayableParCourtier($cotation, $partenaireCible, -1, $commissionSums);
+            $retro_commission_partenaire += $this->getCotationMontantRetrocommissionsPayableParCourtier($cotation, $partenaireCible, -1);
             $retro_commission_partenaire_payee += $this->getCotationMontantRetrocommissionsPayableParCourtierPayee($cotation, $partenaireCible);
         }
 
@@ -612,11 +649,156 @@ class IndicatorCalculationHelper implements ResetInterface
         ];
     }
 
-    public function precomputeCommissionSums(Entreprise $entreprise, array $options): array
+    /**
+     * Les sinistres de l'entreprise, restreints aux polices données.
+     *
+     * @param string[]|null $references null = toutes les polices (appel sans options)
+     *
+     * @return NotificationSinistre[]
+     */
+    private function sinistresDesPolices(Entreprise $entreprise, ?array $references): array
     {
-        $exerciceCible = $options['exercice'] ?? null; 
-        if (!$exerciceCible) return ['by_risque' => [], 'by_client' => [], 'by_partenaire' => []];
-        return ['by_risque' => [], 'by_client' => [], 'by_partenaire' => []];
+        $tous = $this->sinistresDeLEntreprise($entreprise);
+
+        if ($references === null) {
+            return $tous;
+        }
+        if ($references === []) {
+            // Une cible sans aucune police n'a aucun sinistre : c'était le « 1=0 » de la
+            // requête d'origine.
+            return [];
+        }
+
+        $index = array_flip($references);
+
+        return array_values(array_filter(
+            $tous,
+            static fn (NotificationSinistre $ns) => isset($index[$ns->getReferencePolice()]),
+        ));
+    }
+
+    /**
+     * @return NotificationSinistre[]
+     */
+    private function sinistresDeLEntreprise(Entreprise $entreprise): array
+    {
+        $cle = (int) $entreprise->getId();
+        $connus = $this->sinistresParEntrepriseCache[$cle] ?? null;
+
+        // Un cache d'ENTITÉS ne survit pas à un em->clear() : les objets gardés seraient
+        // détachés et leurs relations mortes. On le revalide donc plutôt que de le vider
+        // à l'aveugle (même précaution que pour le mémo de préchargement).
+        if ($connus !== null && ($connus === [] || $this->em->contains($connus[0]))) {
+            return $connus;
+        }
+
+        $sinistres = $this->notificationSinistreRepository->createQueryBuilder('ns')
+            ->join('ns.invite', 'i')
+            ->where('i.entreprise = :entreprise')
+            ->setParameter('entreprise', $entreprise)
+            ->getQuery()
+            ->getResult();
+
+        return $this->sinistresParEntrepriseCache[$cle] = $sinistres;
+    }
+
+    /**
+     * Le chemin d'origine, mot pour mot, pour les deux cibles qui désignent UN sinistre.
+     *
+     * @param string[] $policeReferences
+     *
+     * @return NotificationSinistre[]
+     */
+    private function sinistresFiltres(
+        Entreprise $entreprise,
+        array $options,
+        array $policeReferences,
+        ?NotificationSinistre $notificationSinistreCible,
+        ?Paiement $paiementCible,
+    ): array {
+        $sinistresQb = $this->notificationSinistreRepository->createQueryBuilder('ns')
+            ->join('ns.invite', 'i')
+            ->where('i.entreprise = :entreprise')
+            ->setParameter('entreprise', $entreprise);
+
+        if (!empty($options)) {
+            if (!empty($policeReferences)) {
+                $sinistresQb->andWhere('ns.referencePolice IN (:policeReferences)')->setParameter('policeReferences', $policeReferences);
+            } else {
+                $sinistresQb->andWhere('1=0');
+            }
+        }
+
+        if ($notificationSinistreCible) $sinistresQb->andWhere('ns = :notificationSinistreCible')->setParameter('notificationSinistreCible', $notificationSinistreCible);
+
+        if ($paiementCible) {
+            if ($offre = $paiementCible->getOffreIndemnisationSinistre()) {
+                if ($sinistreDuPaiement = $offre->getNotificationSinistre()) {
+                    $sinistresQb->andWhere('ns = :sinistreDuPaiement')->setParameter('sinistreDuPaiement', $sinistreDuPaiement);
+                } else {
+                    $sinistresQb->andWhere('1=0');
+                }
+            } else {
+                $sinistresQb->andWhere('1=0');
+            }
+        }
+
+        return $sinistresQb->getQuery()->getResult();
+    }
+
+    /**
+     * L'UNITÉ DE MESURE d'une condition de partage : la somme de commission pure à
+     * laquelle son SEUIL est comparé.
+     *
+     * La règle n'est pas inventée ici — elle est reprise de l'implémentation d'origine
+     * (Constante::appliquerConditions et ses trois Cotation_getSommeCommissionPure*),
+     * seule source de vérité de ce calcul : on somme la commission pure de toutes les
+     * cotations de l'ENTREPRISE, du MÊME EXERCICE et du MÊME PARTENAIRE, restreintes
+     * selon l'unité au même risque, au même client, ou à rien du tout.
+     *
+     * Le résultat est mémoïsé : sans cela, une rubrique interrogerait ces sommes une fois
+     * par revenu et par ligne, sur des requêtes qui balaient tout le portefeuille.
+     */
+    private function sommeCommissionPureDeLUnite(ConditionPartage $condition, ?Cotation $cotation, $addressedTo, bool $onlySharable): float
+    {
+        $piste = $cotation?->getPiste();
+        $entreprise = $piste?->getInvite()?->getEntreprise();
+        if (!$piste || !$entreprise) return 0.0;
+
+        $exercice = $piste->getExercice();
+        $partenaire = $this->getCotationPartenaire($cotation);
+        $unite = $condition->getUniteMesure();
+
+        $cle = implode(':', [
+            $unite,
+            (int) $entreprise->getId(),
+            (int) $exercice,
+            (int) $partenaire?->getId(),
+            (int) $piste->getRisque()?->getId(),
+            (int) $piste->getClient()?->getId(),
+            $addressedTo,
+            $onlySharable ? '1' : '0',
+        ]);
+        if (array_key_exists($cle, $this->uniteMesureCache)) {
+            return $this->uniteMesureCache[$cle];
+        }
+
+        $cotations = match ($unite) {
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_RISQUE => $piste->getRisque() === null ? []
+                : $this->cotationRepository->loadCotationsWithPartnerRisque($exercice, $entreprise, $piste->getRisque(), $partenaire),
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT => $piste->getClient() === null ? []
+                : $this->cotationRepository->loadCotationsWithPartnerClient($exercice, $entreprise, $piste->getClient(), $partenaire),
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE
+                => $this->cotationRepository->loadCotationsWithPartnerAll($exercice, $entreprise, $partenaire),
+            default => [],
+        };
+
+        $somme = 0.0;
+        foreach ($cotations as $proposition) {
+            $somme += $this->getCotationMontantCommissionPure($proposition, $addressedTo, $onlySharable);
+        }
+
+        return $this->uniteMesureCache[$cle] = $somme;
     }
 
     public function getCotationMontantPrimeNette(?Cotation $cotation): float
@@ -963,17 +1145,17 @@ class IndicatorCalculationHelper implements ResetInterface
         return $montant;
     }
 
-    public function getCotationMontantRetrocommissionsPayableParCourtier(?Cotation $cotation, ?Partenaire $partenaireCible, $addressedTo, array $precomputedSums): float
+    public function getCotationMontantRetrocommissionsPayableParCourtier(?Cotation $cotation, ?Partenaire $partenaireCible, $addressedTo): float
     {
         if (!$cotation) return 0.0;
         $montant = 0.0;
         foreach ($cotation->getRevenus() as $revenu) {
-            $montant += $this->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, $partenaireCible, $addressedTo, $precomputedSums);
+            $montant += $this->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, $partenaireCible, $addressedTo);
         }
         return $montant;
     }
 
-    public function getRevenuMontantRetrocommissionsPayableParCourtier(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible, $addressedTo, array $precomputedSums): float
+    public function getRevenuMontantRetrocommissionsPayableParCourtier(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible, $addressedTo): float
     {
         if (!$revenu || !$revenu->getTypeRevenu() || !$revenu->getTypeRevenu()->isShared()) return 0.0;
         $cotation = $revenu->getCotation();
@@ -983,12 +1165,12 @@ class IndicatorCalculationHelper implements ResetInterface
         if (!$partenaireAffaire || !$this->isSamePartenaire($partenaireAffaire, $partenaireCible)) return 0.0;
 
 
-        // On instancie la stratégie pour utiliser sa logique de calcul de taux.
-        // C'est une approche pragmatique pour réutiliser la logique existante sans duplication.
-        $revenuStrategy = new RevenuPourCourtierIndicatorStrategy($this, $this->taxeRepository, $this->em);
-        
+        // La logique de taux vit dans la stratégie « revenu » : on la réutilise plutôt que
+        // de la dupliquer. Une seule instance suffit — elle était créée à chaque revenu.
+        $this->strategieRevenu ??= new RevenuPourCourtierIndicatorStrategy($this, $this->taxeRepository, $this->em);
+
         // On récupère le taux de partage (maintenant un facteur correct, ex: 0.15)
-        $tauxPartage = $revenuStrategy->getRevenuPartPartenaire($revenu);
+        $tauxPartage = $this->strategieRevenu->getRevenuPartPartenaire($revenu);
     
         // On calcule l'assiette (Commission Pure)
         $assiette = $this->getRevenuMontantPure($revenu, $addressedTo, true);
@@ -1017,19 +1199,21 @@ class IndicatorCalculationHelper implements ResetInterface
         return $partenaireCible == $partenaire;
     }
 
-    public function applyRevenuConditionsSpeciales(?ConditionPartage $conditionPartage, RevenuPourCourtier $revenu, $addressedTo, array $precomputedSums): float
+    public function applyRevenuConditionsSpeciales(?ConditionPartage $conditionPartage, RevenuPourCourtier $revenu, $addressedTo): float
     {
         $montant = 0;
+        if (!$conditionPartage) return 0.0;
         $assiette = $this->getRevenuMontantPure($revenu, $addressedTo, true);
         $piste = $revenu->getCotation()->getPiste();
         if (!$piste) return 0.0;
 
-        $uniteMesure = match ($conditionPartage->getUniteMesure()) {
-            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_RISQUE => $precomputedSums['by_risque'][$piste->getRisque()->getId()] ?? 0.0,
-            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT => $precomputedSums['by_client'][$piste->getClient()->getId()] ?? 0.0,
-            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE => $precomputedSums['by_partenaire'][($this->getCotationPartenaire($revenu->getCotation()))?->getId()] ?? 0.0,
-            default => 0.0,
-        };
+        // LE SEUIL SE COMPARE ENFIN À QUELQUE CHOSE. L'unité de mesure était lue dans un
+        // tableau que precomputeCommissionSums() renvoyait TOUJOURS VIDE : elle valait donc
+        // invariablement 0. Les deux formules à seuil n'étaient pas neutralisées de la même
+        // façon, ce qui rendait la panne discrète — « assiette < seuil » était toujours
+        // VRAIE (0 est inférieur à tout seuil positif) et « assiette >= seuil » toujours
+        // FAUSSE. Le calcul réel vit maintenant dans sommeCommissionPureDeLUnite().
+        $uniteMesure = $this->sommeCommissionPureDeLUnite($conditionPartage, $revenu->getCotation(), $addressedTo, true);
 
         $formule = $conditionPartage->getFormule();
         $seuil = $conditionPartage->getSeuil();
@@ -1049,15 +1233,33 @@ class IndicatorCalculationHelper implements ResetInterface
     }
 
     /**
-     * NOUVEAU : Calcule le montant "pur" d'un revenu (HT moins la taxe courtier).
-     * Centralise la logique pour éviter les incohérences.
+     * Le montant « pur » d'un revenu : son HT moins la taxe due par le courtier.
      *
-     * @param RevenuPourCourtier $revenu
-     * @return float
+     * LES DEUX FILTRES ÉTAIENT PERDUS EN SILENCE. La méthode ne déclarait qu'un
+     * paramètre, mais trois lui étaient passés depuis
+     * getRevenuMontantRetrocommissionsPayableParCourtier, applyRevenuConditionsSpeciales
+     * et ConditionPartageIndicatorStrategy. PHP tolère les arguments surnuméraires : le
+     * redevable visé et la restriction aux revenus PARTAGEABLES étaient donc écrits dans
+     * les appels, et jamais appliqués. Conséquence concrète : un revenu NON partageable
+     * gonflait l'assiette et la rétrocommission d'une condition de partage — alors que
+     * « non partageable » veut précisément dire qu'il n'est pas partagé avec le partenaire.
+     *
+     * Les deux filtres suivent exactement les règles de leurs équivalents à l'échelle de
+     * la cotation (computeCommissionHt / getRevenuMontantHtAddressedTo), et leurs valeurs
+     * par défaut ne filtrent rien : les appelants qui ne passent qu'un revenu obtiennent
+     * le même résultat qu'avant.
+     *
+     * @param int|string $addressedTo redevable visé, -1 pour ne pas filtrer
+     * @param bool $onlySharable true = seuls les revenus partageables comptent
      */
-    public function getRevenuMontantPure(RevenuPourCourtier $revenu): float
+    public function getRevenuMontantPure(RevenuPourCourtier $revenu, $addressedTo = -1, bool $onlySharable = false): float
     {
-        $montantHT = $this->getRevenuMontantHt($revenu);
+        $typeRevenu = $revenu->getTypeRevenu();
+        if ($onlySharable && (!$typeRevenu || !$typeRevenu->isShared())) {
+            return 0.0;
+        }
+
+        $montantHT = $this->getRevenuMontantHtAddressedTo($addressedTo, $revenu);
         $taxeCourtier = $this->serviceTaxes->getMontantTaxe($montantHT, $this->isIARD($revenu->getCotation()), false);
         return $montantHT - $taxeCourtier;
     }
@@ -1628,7 +1830,7 @@ class IndicatorCalculationHelper implements ResetInterface
         // CAS 2 : Note de crédit pour un partenaire (rétrocommission).
         if ($note->getType() === Note::TYPE_NOTE_DE_CREDIT && $note->getAddressedTo() === Note::TO_PARTENAIRE && $revenu) {
             // On calcule le montant total de la rétrocommission pour le revenu.
-            $montantRetroBase = $this->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, null, -1, []);
+            $montantRetroBase = $this->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, null, -1);
             // On applique le prorata de la tranche et la quantité.
             $facteurTranche = $tranche ? $this->getTrancheTauxFactor($tranche) : 1.0;
             $quantite = $article->getQuantite() ?? 1.0;
@@ -1864,6 +2066,202 @@ class IndicatorCalculationHelper implements ResetInterface
     }
 
     /**
+     * LE GRAPHE D'UNE PAGE ENTIÈRE, LU EN UNE PASSE.
+     *
+     * Sept rubriques — Partenaire, Client, Assureur, Risque, Groupe, Portefeuille et
+     * Contact — affichent des colonnes qui viennent toutes de getIndicateursGlobaux(),
+     * appelé UNE FOIS PAR LIGNE avec une cible différente. Chaque appel relisait donc
+     * son propre sous-graphe, alors que les vingt lignes d'une page partagent
+     * l'essentiel du portefeuille.
+     *
+     * On lit ici, en une seule requête, l'union des cotations concernées par TOUTES les
+     * cibles de la page, puis on hydrate leur graphe une fois pour toutes. Les appels
+     * par ligne qui suivent retrouvent tout en mémoire : le mémo de
+     * preloadDepuisCotationIds() leur évite de recharger, et le cache des sinistres leur
+     * évite de relire l'entreprise.
+     *
+     * CE QUI N'EST PAS FAIT ICI, ET POURQUOI. On ne pré-calcule PAS les agrégats par
+     * cible. Les montants ne sont pas des sommes SQL : ils dérivent d'un prorata de
+     * notes, d'un max() entre articles et couverture bordereau, et d'une imputation FIFO
+     * sur les tranches les plus anciennes. Les recomposer en dehors de la boucle
+     * d'origine, ce serait ouvrir une seconde source de vérité financière. Ce qui est
+     * groupé, c'est la LECTURE — l'arithmétique reste exactement où elle était.
+     *
+     * @param object[] $cibles entités d'une même rubrique (partenaires, clients…)
+     */
+    public function preloadIndicateursGlobauxParCible(Entreprise $entreprise, string $cleOption, array $cibles): void
+    {
+        $cibles = array_values(array_filter($cibles, static fn (object $c) => method_exists($c, 'getId') && $c->getId() !== null));
+        if ($cibles === []) {
+            return;
+        }
+
+        $qb = $this->cotationRepository->createQueryBuilder('c')
+            ->select('c')
+            ->join('c.piste', 'p')
+            ->join('p.invite', 'i')
+            ->where('i.entreprise = :entreprise')
+            ->andWhere('SIZE(c.avenants) > 0')
+            ->setParameter('entreprise', $entreprise)
+            ->setParameter('cibles', $cibles)
+            ->distinct();
+
+        // Les mêmes prédicats que les filtres unitaires, au pluriel. Une imprécision
+        // serait ici sans conséquence sur les chiffres — un préchargement trop large ne
+        // fait que charger un peu trop — mais les garder alignés évite qu'une page ne
+        // précharge à côté de ce que les lignes vont réellement lire.
+        switch ($cleOption) {
+            case 'partenaireCible':
+                $qb->leftJoin('p.client', 'cl')
+                    ->leftJoin('p.partenaires', 'pa')
+                    ->leftJoin('cl.partenaires', 'clpa')
+                    ->andWhere('pa IN (:cibles) OR clpa IN (:cibles)');
+                break;
+            case 'clientCible':
+                $qb->andWhere('p.client IN (:cibles)');
+                break;
+            case 'assureurCible':
+                $qb->andWhere('c.assureur IN (:cibles)');
+                break;
+            case 'risqueCible':
+                $qb->andWhere('p.risque IN (:cibles)');
+                break;
+            case 'groupeCible':
+                $qb->join('p.client', 'cl_g')->andWhere('cl_g.groupe IN (:cibles)');
+                break;
+            case 'portefeuilleCible':
+                $qb->join('p.client', 'cl_pf')->andWhere('cl_pf.portefeuille IN (:cibles)');
+                break;
+            default:
+                return; // Rubrique non agrégatrice : rien à précharger de ce côté.
+        }
+
+        $cotations = $qb->getQuery()->getResult();
+        $this->preloadDepuisCotationIds(array_map(static fn (Cotation $c) => $c->getId(), $cotations));
+
+        // Les sinistres se lisent par référence de police, jamais par association : une
+        // lecture par entreprise, puis un filtre en mémoire pour chaque ligne.
+        $this->sinistresDeLEntreprise($entreprise);
+
+        $this->preloadParcoursDeLaRubrique($cleOption, $cibles);
+    }
+
+    /**
+     * Les collections que chaque rubrique agrégatrice parcourt POUR SON PROPRE COMPTE,
+     * en plus de l'agrégat : compter les polices d'un client, résumer les conditions de
+     * partage d'un partenaire, attribuer une commission de bordereau…
+     *
+     * Ces parcours descendent tous vers « pistes → cotations → avenants », et ils
+     * atteignent des cotations que l'agrégat ignore volontairement (les propositions non
+     * souscrites). Sans ce préchargement, ils rallumaient un chargement paresseux par
+     * ligne et par niveau : mesuré à 59 lectures de `cotation` pour dix clients.
+     */
+    private const COLLECTIONS_DE_RUBRIQUE = [
+        'partenaireCible'   => [Partenaire::class, ['pistes', 'clients', 'conditionPartages']],
+        // Les pistes des clients sont chargées plus bas, pour TOUS les chemins qui
+        // mènent à un client : les redemander ici ferait deux fois la même requête.
+        'clientCible'       => [Client::class, []],
+        'assureurCible'     => [Assureur::class, ['cotations']],
+        'risqueCible'       => [Risque::class, ['pistes']],
+        'groupeCible'       => [Groupe::class, ['clients']],
+        'portefeuilleCible' => [Portefeuille::class, ['clients']],
+    ];
+
+    /**
+     * @param object[] $cibles
+     */
+    private function preloadParcoursDeLaRubrique(string $cleOption, array $cibles): void
+    {
+        if (!isset(self::COLLECTIONS_DE_RUBRIQUE[$cleOption])) {
+            return;
+        }
+        [$classe, $collections] = self::COLLECTIONS_DE_RUBRIQUE[$cleOption];
+
+        $ids = array_map(static fn (object $c) => $c->getId(), $cibles);
+        $clients = [];
+        $pistes = [];
+        $cotations = [];
+        $conditions = [];
+
+        // UNE SEULE COLLECTION TO-MANY PAR REQUÊTE : joindre `pistes` et `clients`
+        // ensemble produirait le produit cartésien que tout ce chantier combat.
+        foreach ($collections as $collection) {
+            $lus = $this->em->createQuery(
+                sprintf('SELECT e, x FROM %s e LEFT JOIN e.%s x WHERE e.id IN (:ids)', $classe, $collection)
+            )->setParameter('ids', $ids)->getResult();
+
+            foreach ($lus as $entite) {
+                foreach ($entite->{'get' . ucfirst($collection)}() as $lie) {
+                    match ($collection) {
+                        'pistes'            => $pistes[] = $lie,
+                        'clients'           => $clients[] = $lie,
+                        'cotations'         => $cotations[] = $lie,
+                        'conditionPartages' => $conditions[] = $lie,
+                        default             => null,
+                    };
+                }
+            }
+        }
+
+        if ($cleOption === 'clientCible') {
+            $clients = $cibles;
+        }
+
+        // Les conditions de partage portent leurs risques ciblés : le résumé affiché en
+        // liste les énumère, donc les charge.
+        if ($conditions !== []) {
+            $this->em->createQuery(
+                'SELECT cp, pr FROM App\Entity\ConditionPartage cp LEFT JOIN cp.produits pr WHERE cp.id IN (:ids)'
+            )->setParameter('ids', $this->identifiants($conditions))->getResult();
+        }
+
+        if ($clients !== []) {
+            foreach ($this->em->createQuery(
+                'SELECT cl, p FROM App\Entity\Client cl LEFT JOIN cl.pistes p WHERE cl.id IN (:ids)'
+            )->setParameter('ids', $this->identifiants($clients))->getResult() as $client) {
+                foreach ($client->getPistes() as $piste) {
+                    $pistes[] = $piste;
+                }
+            }
+        }
+
+        if ($pistes !== []) {
+            foreach ($this->em->createQuery(
+                'SELECT p, c FROM App\Entity\Piste p LEFT JOIN p.cotations c WHERE p.id IN (:ids)'
+            )->setParameter('ids', $this->identifiants($pistes))->getResult() as $piste) {
+                foreach ($piste->getCotations() as $cotation) {
+                    $cotations[] = $cotation;
+                }
+            }
+        }
+
+        if ($cotations !== []) {
+            $ids = $this->identifiants($cotations);
+
+            $this->em->createQuery(
+                'SELECT c, a FROM App\Entity\Cotation c LEFT JOIN c.avenants a WHERE c.id IN (:ids)'
+            )->setParameter('ids', $ids)->getResult();
+
+            // ET LEUR GRAPHE FINANCIER. L'agrégat ne connaît que les cotations
+            // SOUSCRITES ; les parcours de la rubrique, eux, descendent aussi dans les
+            // propositions en cours — dont les revenus et les chargements se
+            // rechargeaient alors une par une. Le mémo garantit que les cotations déjà
+            // vues par l'agrégat ne sont pas relues ici.
+            $this->preloadDepuisCotationIds($ids);
+        }
+    }
+
+    /**
+     * @param object[] $entites
+     *
+     * @return int[]
+     */
+    private function identifiants(array $entites): array
+    {
+        return array_values(array_unique(array_filter(array_map(static fn (object $e) => $e->getId(), $entites))));
+    }
+
+    /**
      * Même préchargement, mais amorcé depuis des TRANCHES au lieu d'avenants : les
      * indicateurs d'une tranche (prime, commission HT/TTC, taxes sur la commission,
      * rétrocommission) parcourent exactement le même graphe, puisqu'ils se lisent tous
@@ -1888,7 +2286,34 @@ class IndicatorCalculationHelper implements ResetInterface
     private function preloadDepuisCotationIds(array $cotationIds): void
     {
         $cotationIds = array_values(array_unique(array_filter($cotationIds)));
+
+        // CE QUI EST DÉJÀ CHAUD NE SE RECHARGE PAS. Vingt lignes d'une rubrique partagent
+        // très largement le même sous-graphe : sans ce filtre, chacune rejouait les six
+        // requêtes ci-dessous pour des cotations déjà hydratées.
+        // La revalidation contre l'identity map n'est pas une précaution de style : un
+        // em->clear() détache tout, et un mémo non revalidé ferait retomber la page dans
+        // le chargement paresseux ligne à ligne.
+        $uow = $this->em->getUnitOfWork();
+        $cotationIds = array_values(array_filter(
+            $cotationIds,
+            function (int $id) use ($uow): bool {
+                if (!isset($this->cotationsPrechargees[$id])) {
+                    return true;
+                }
+                if ($uow->tryGetById($id, Cotation::class) !== false) {
+                    return false;
+                }
+                unset($this->cotationsPrechargees[$id]);
+
+                return true;
+            },
+        ));
+
         if (empty($cotationIds)) return;
+
+        foreach ($cotationIds as $id) {
+            $this->cotationsPrechargees[$id] = true;
+        }
 
         // 1. Graphe to-one + partenaires (une seule collection : partenaires).
         $this->em->createQuery(

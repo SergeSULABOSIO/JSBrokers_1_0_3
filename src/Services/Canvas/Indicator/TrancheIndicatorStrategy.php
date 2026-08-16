@@ -288,7 +288,7 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
     private function getTrancheRetroCommission(Tranche $tranche): float
     {
         $taux = $this->calculateTrancheTauxFactor($tranche);
-        $cotationRetro = $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($tranche->getCotation(), null, -1, []);
+        $cotationRetro = $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($tranche->getCotation(), null, -1);
         return $cotationRetro * $taux;
     }
 

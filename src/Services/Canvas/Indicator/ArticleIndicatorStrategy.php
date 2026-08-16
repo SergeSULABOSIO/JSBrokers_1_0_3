@@ -174,7 +174,7 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
         $revenu->montantCalculeTTC = $this->calculationHelper->getRevenuMontantTTC($revenu);
         
         $revenu->montantPur = $montantHT - $taxeMontant;
-        $revenu->reserve = $revenu->montantPur - $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, null, -1, []);
+        $revenu->reserve = $revenu->montantPur - $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, null, -1);
     }
 
     private function hydrateTranche(Tranche $tranche): void

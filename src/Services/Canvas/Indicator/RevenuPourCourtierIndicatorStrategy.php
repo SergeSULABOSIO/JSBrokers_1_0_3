@@ -54,7 +54,7 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             'solde_restant_du' => round($this->calculationHelper->getRevenuMontantTTC($entity) - $this->getRevenuPourCourtierMontantPaye($entity), 2),            
             'montantPur' => round($this->calculationHelper->getRevenuMontantPure($entity), 2),
             'retroCommissionReversee' => round($this->getRevenuRetroCommissionReversee($entity), 2),
-            'retroCommissionSolde' => round($this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []) - $this->getRevenuRetroCommissionReversee($entity), 2),
+            'retroCommissionSolde' => round($this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1) - $this->getRevenuRetroCommissionReversee($entity), 2),
             'taxeCourtierMontant' => round($this->calculationHelper->getRevenuMontantTaxeCourtier($entity), 2),
             // Taux via le VO Pourcentage (source unique de la convention) : pourcent()
             // rend le nombre à afficher (16.0), quelle que soit la convention de stockage.
@@ -69,7 +69,7 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             'montantCalculeHT' => $montantHT,
             // Part partenaire = FRACTION (0.35) → pourcent() pour l'affichage (via le VO).
             'partPartenaire' => round(Pourcentage::fromFraction($this->getRevenuPartPartenaire($entity))->pourcent(), 2),
-            'retroCommission' => $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []),
+            'retroCommission' => $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1),
             'reserve' => $this->getReserveCourtier($entity),
         ];
     }
@@ -98,7 +98,7 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
     private function getReserveCourtier(RevenuPourCourtier $revenu): float
     {
         $montantPur = $this->calculationHelper->getRevenuMontantPure($revenu);
-        $retrocommission = $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, null, -1, []);
+        $retrocommission = $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, null, -1);
         return $montantPur - $retrocommission;
     }
 
