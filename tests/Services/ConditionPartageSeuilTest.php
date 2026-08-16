@@ -45,6 +45,10 @@ class ConditionPartageSeuilTest extends KernelTestCase
     private const COMMISSION_PAR_COTATION = 200.0;
     private const SEUIL = 300.0;
 
+    /** Deux taux volontairement distincts, pour lire dans le montant lequel a servi. */
+    private const TAUX_CONDITION = 30.0;
+    private const PART_PAR_DEFAUT = 10.0;
+
     protected function setUp(): void
     {
         static::bootKernel();
@@ -115,7 +119,7 @@ class ConditionPartageSeuilTest extends KernelTestCase
         $risque->setEntreprise($entreprise);
         $em->persist($risque);
 
-        $partenaire = (new Partenaire())->setNom('Partenaire Seuil')->setPart(10.0);
+        $partenaire = (new Partenaire())->setNom('Partenaire Seuil')->setPart(self::PART_PAR_DEFAUT);
         $partenaire->setEntreprise($entreprise);
         $em->persist($partenaire);
 
@@ -151,6 +155,10 @@ class ConditionPartageSeuilTest extends KernelTestCase
             $piste->setEntreprise($entreprise)->setInvite($invite);
             $piste->addPartenaire($partenaire);
             $em->persist($piste);
+
+            if ($porteur === 'piste') {
+                $condition = $fabriquerCondition($piste);
+            }
 
             $cotation = (new Cotation())->setNom('Cotation Seuil ' . $i)->setDuree(365);
             $cotation->setPiste($piste);
@@ -188,12 +196,36 @@ class ConditionPartageSeuilTest extends KernelTestCase
         $em->flush();
         $ids = [
             'entrepriseId' => (int) $entreprise->getId(),
-            'conditionId'  => (int) $condition->getId(),
+            'conditionId'  => $condition === null ? 0 : (int) $condition->getId(),
+            'partenaireId' => (int) $partenaire->getId(),
             'revenuIds'    => array_map(static fn (RevenuPourCourtier $r) => (int) $r->getId(), $revenus),
+            'cotationIds'  => array_map(static fn (RevenuPourCourtier $r) => (int) $r->getCotation()->getId(), $revenus),
         ];
         $em->clear();
 
         return $ids;
+    }
+
+    /**
+     * LA RÉTROCOMMISSION RÉELLEMENT DUE AU PARTENAIRE — le chemin de l'argent, celui que
+     * lisent les rubriques Cotation, Avenant, Tranche, Partenaire et Client, à ne pas
+     * confondre avec les indicateurs d'impact de la rubrique Condition de partage.
+     */
+    private function retrocommissionDue(array $ids): float
+    {
+        $em = $this->em();
+        $partenaire = $em->getRepository(Partenaire::class)->find($ids['partenaireId']);
+
+        $montant = 0.0;
+        foreach ($ids['cotationIds'] as $cotationId) {
+            $montant += $this->helper()->getCotationMontantRetrocommissionsPayableParCourtier(
+                $em->getRepository(Cotation::class)->find($cotationId),
+                $partenaire,
+                -1,
+            );
+        }
+
+        return round($montant, 2);
     }
 
     private function montantDeLaCondition(array $ids): float
@@ -265,6 +297,74 @@ class ConditionPartageSeuilTest extends KernelTestCase
             0.0,
             $this->montantDeLaCondition($ids),
             'Un revenu non partageable ne doit alimenter aucune rétrocommission de partenaire.',
+        );
+    }
+
+    public function testLaRetrocommissionDueHonoreLeSeuilQuandIlEstFranchi(): void
+    {
+        // Deux cotations à 200 : l'unité de mesure vaut 400, le seuil 300 est franchi.
+        // La condition (30 %) remplace la part par défaut du partenaire (10 %).
+        $ids = $this->semer(2, ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL);
+
+        $this->assertSame(
+            round(2 * self::COMMISSION_PAR_COTATION * self::TAUX_CONDITION / 100, 2),
+            $this->retrocommissionDue($ids),
+            'Seuil franchi : le partenaire doit toucher au taux de la condition.',
+        );
+    }
+
+    public function testSousLeSeuilLaConditionNePartageRien(): void
+    {
+        // Une seule cotation : l'unité de mesure vaut 200, sous le seuil de 300.
+        // La condition ne s'applique pas — et elle ne retombe pas sur les 10 % par
+        // défaut, qu'elle remplace. C'est le cas où le taux versé était FAUX : la
+        // condition s'appliquait dès le premier franc, seuil ou pas.
+        $ids = $this->semer(1, ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL);
+
+        $this->assertSame(
+            0.0,
+            $this->retrocommissionDue($ids),
+            'Sous le seuil, la condition ne partage rien.',
+        );
+    }
+
+    public function testUneConditionPorteeParLePartenaireModuleEnfinSaRetrocommission(): void
+    {
+        // La condition de ce jeu est portée par le PARTENAIRE, pas par une piste — le
+        // rattachement le plus courant. Elle n'était jamais consultée sur le chemin du
+        // taux, alors que la rubrique Partenaire annonce qu'elle « module le calcul de sa
+        // rétro-commission ». Sans seuil, elle doit s'appliquer telle quelle.
+        $ids = $this->semer(1, ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL);
+
+        $this->assertSame(
+            round(self::COMMISSION_PAR_COTATION * self::TAUX_CONDITION / 100, 2),
+            $this->retrocommissionDue($ids),
+            'Une condition portée par le partenaire doit modifier le taux appliqué — '
+            . 'sans elle, le montant serait celui de la part par défaut.',
+        );
+    }
+
+    public function testSansAucuneConditionLaPartParDefautSapplique(): void
+    {
+        $ids = $this->semer(1, ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL, true, 'aucune');
+
+        $this->assertSame(
+            round(self::COMMISSION_PAR_COTATION * self::PART_PAR_DEFAUT / 100, 2),
+            $this->retrocommissionDue($ids),
+            'Sans condition, le taux par défaut du partenaire reste la règle (non-régression).',
+        );
+    }
+
+    public function testLaConditionDeLaPistePrimeSurCelleDuPartenaire(): void
+    {
+        // Portée par la piste, sans seuil : même taux, mais on vérifie que le chemin
+        // « piste » reste prioritaire et fonctionnel après l'ajout du repli partenaire.
+        $ids = $this->semer(1, ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL, true, 'piste');
+
+        $this->assertSame(
+            round(self::COMMISSION_PAR_COTATION * self::TAUX_CONDITION / 100, 2),
+            $this->retrocommissionDue($ids),
+            'Une condition portée par la piste doit continuer de déterminer le taux.',
         );
     }
 
