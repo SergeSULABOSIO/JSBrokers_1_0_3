@@ -94,7 +94,7 @@ class ConditionPartageSeuilTest extends KernelTestCase
      *
      * @return array{entrepriseId: int, conditionId: int, revenuIds: int[]}
      */
-    private function semer(int $nbCotations, int $formule, bool $revenuPartageable = true): array
+    private function semer(int $nbCotations, int $formule, bool $revenuPartageable = true, string $porteur = 'partenaire'): array
     {
         $em = $this->em();
 
@@ -125,15 +125,23 @@ class ConditionPartageSeuilTest extends KernelTestCase
 
         // La condition porte un taux DIFFÉRENT de la part par défaut du partenaire (10 %),
         // pour que son application se lise sans ambiguïté dans le montant obtenu.
-        $condition = (new ConditionPartage())->setNom('Condition Seuil')
-            ->setFormule($formule)
-            ->setSeuil(self::SEUIL)
-            ->setTaux(30.0)
-            ->setUniteMesure(ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT)
-            ->setCritereRisque(ConditionPartage::CRITERE_PAS_RISQUES_CIBLES)
-            ->setPartenaire($partenaire);
-        $condition->setEntreprise($entreprise);
-        $em->persist($condition);
+        $fabriquerCondition = function (?Piste $piste) use ($em, $entreprise, $partenaire, $formule): ConditionPartage {
+            $condition = (new ConditionPartage())->setNom('Condition Seuil')
+                ->setFormule($formule)
+                ->setSeuil(self::SEUIL)
+                ->setTaux(self::TAUX_CONDITION)
+                ->setUniteMesure(ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT)
+                ->setCritereRisque(ConditionPartage::CRITERE_PAS_RISQUES_CIBLES);
+            // Portée par la PISTE ou par le PARTENAIRE : ce sont les deux rattachements
+            // possibles, et leur ordre de priorité est justement ce qui se teste ici.
+            $piste === null ? $condition->setPartenaire($partenaire) : $condition->setPiste($piste);
+            $condition->setEntreprise($entreprise);
+            $em->persist($condition);
+
+            return $condition;
+        };
+
+        $condition = $porteur === 'partenaire' ? $fabriquerCondition(null) : null;
 
         $revenus = [];
         for ($i = 0; $i < $nbCotations; ++$i) {

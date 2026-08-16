@@ -2,8 +2,10 @@
 
 namespace App\Services\Canvas\Indicator;
 
+use App\Entity\ConditionPartage;
 use App\Entity\RevenuPourCourtier;
 use App\Entity\Note;
+use App\Entity\Risque;
 use App\Entity\Taxe;
 use App\Util\Pourcentage;
 use App\Repository\TaxeRepository;
@@ -155,20 +157,50 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             return 0.0;
         }
 
-        // On vérifie d'abord s'il y a des conditions de partage exceptionnelles sur la piste.
-        if (!$piste->getConditionsPartageExceptionnelles()->isEmpty()) {
-            $risqueActuel = $piste->getRisque();
-            foreach ($piste->getConditionsPartageExceptionnelles() as $condition) {
-                // Règle d'applicabilité centralisée sur l'entité (cf. ConditionPartage::sappliqueAuRisque).
-                if ($condition->sappliqueAuRisque($risqueActuel)) {
-                    // La première condition applicable trouvée détermine le taux (facteur = fraction).
-                    return $condition->getFraction();
-                }
+        // LA CASCADE, dans l'ordre de l'implémentation d'origine
+        // (Constante::Revenu_getMontant_retrocommissions_payable_par_courtier) : la
+        // condition portée par la PISTE l'emporte ; à défaut celle portée par le
+        // PARTENAIRE ; à défaut seulement, son taux par défaut.
+        //
+        // LES CONDITIONS DU PARTENAIRE NE MODULAIENT RIEN. Elles n'étaient jamais
+        // consultées ici, alors que la rubrique Partenaire annonce à l'utilisateur, noir
+        // sur blanc, qu'elles « modulent le calcul de sa rétro-commission ».
+        $risqueActuel = $piste->getRisque();
+        $condition = $this->premiereConditionApplicable($piste->getConditionsPartageExceptionnelles(), $risqueActuel)
+            ?? $this->premiereConditionApplicable($partenaire->getConditionPartages(), $risqueActuel);
+
+        if ($condition !== null) {
+            // ET SON SEUIL EST ENFIN HONORÉ. Le taux de la condition était pris tel quel :
+            // `formule`, `seuil` et `uniteMesure` n'étaient consultés nulle part sur ce
+            // chemin — celui de l'argent réellement versé au partenaire. Une condition
+            // écrite pour ne récompenser qu'au-delà d'un volume s'appliquait donc dès le
+            // premier franc. Sous le seuil, la condition ne partage RIEN : elle ne
+            // retombe pas sur le taux par défaut du partenaire, qu'elle remplace.
+            return $this->calculationHelper->conditionFranchitSonSeuil($condition, $revenu)
+                ? $condition->getFraction()
+                : 0.0;
+        }
+
+        // Aucune condition : le taux par défaut du partenaire (facteur = fraction).
+        return $partenaire->getFraction();
+    }
+
+    /**
+     * La première condition de la collection qui vise ce risque, ou null.
+     *
+     * @param iterable<ConditionPartage> $conditions
+     */
+    private function premiereConditionApplicable(iterable $conditions, ?Risque $risque): ?ConditionPartage
+    {
+        foreach ($conditions as $condition) {
+            // Règle d'applicabilité centralisée sur l'entité (cf. ConditionPartage::sappliqueAuRisque),
+            // partagée avec la reconduction du partage sur les avenants dérivés.
+            if ($condition->sappliqueAuRisque($risque)) {
+                return $condition;
             }
         }
 
-        // S'il n'y a pas de condition exceptionnelle applicable, on utilise le taux par défaut du partenaire (facteur = fraction).
-        return $partenaire->getFraction();
+        return null;
     }
 
     private function getRevenuRetroCommissionReversee(RevenuPourCourtier $revenu): float

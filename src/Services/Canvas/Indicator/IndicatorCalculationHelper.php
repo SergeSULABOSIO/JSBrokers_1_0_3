@@ -1201,35 +1201,49 @@ class IndicatorCalculationHelper implements ResetInterface
 
     public function applyRevenuConditionsSpeciales(?ConditionPartage $conditionPartage, RevenuPourCourtier $revenu, $addressedTo): float
     {
-        $montant = 0;
         if (!$conditionPartage) return 0.0;
-        $assiette = $this->getRevenuMontantPure($revenu, $addressedTo, true);
-        $piste = $revenu->getCotation()->getPiste();
+        $piste = $revenu->getCotation()?->getPiste();
         if (!$piste) return 0.0;
 
-        // LE SEUIL SE COMPARE ENFIN À QUELQUE CHOSE. L'unité de mesure était lue dans un
-        // tableau que precomputeCommissionSums() renvoyait TOUJOURS VIDE : elle valait donc
-        // invariablement 0. Les deux formules à seuil n'étaient pas neutralisées de la même
-        // façon, ce qui rendait la panne discrète — « assiette < seuil » était toujours
-        // VRAIE (0 est inférieur à tout seuil positif) et « assiette >= seuil » toujours
-        // FAUSSE. Le calcul réel vit maintenant dans sommeCommissionPureDeLUnite().
-        $uniteMesure = $this->sommeCommissionPureDeLUnite($conditionPartage, $revenu->getCotation(), $addressedTo, true);
-
-        $formule = $conditionPartage->getFormule();
-        $seuil = $conditionPartage->getSeuil();
-        $risque = $revenu->getCotation()->getPiste()->getRisque();
-
-        switch ($formule) {
-            case ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL:
-                return $this->calculerRetroCommission($risque, $conditionPartage, $assiette);
-            case ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL:
-                if ($uniteMesure < $seuil) return $this->calculerRetroCommission($risque, $conditionPartage, $assiette);
-                return 0;
-            case ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL:
-                if ($uniteMesure >= $seuil) return $this->calculerRetroCommission($risque, $conditionPartage, $assiette);
-                return 0;
+        if (!$this->conditionFranchitSonSeuil($conditionPartage, $revenu, $addressedTo)) {
+            return 0.0;
         }
-        return $montant;
+
+        return $this->calculerRetroCommission(
+            $piste->getRisque(),
+            $conditionPartage,
+            $this->getRevenuMontantPure($revenu, $addressedTo, true),
+        );
+    }
+
+    /**
+     * La condition passe-t-elle son SEUIL pour ce revenu ?
+     *
+     * Source unique de la formule, partagée par les deux consommateurs : le taux de
+     * rétrocommission RÉELLEMENT appliqué (RevenuPourCourtierIndicatorStrategy) et les
+     * indicateurs d'impact de la rubrique Condition de partage. Ils l'évaluaient
+     * séparément — et l'un d'eux ne l'évaluait pas du tout.
+     *
+     * L'unité de mesure était auparavant lue dans un tableau toujours vide, donc toujours
+     * nulle. Les deux formules n'en étaient pas neutralisées de la même façon, ce qui
+     * rendait la panne discrète : « assiette < seuil » se vérifiait TOUJOURS (zéro est
+     * inférieur à tout seuil positif) et « assiette >= seuil » JAMAIS.
+     */
+    public function conditionFranchitSonSeuil(ConditionPartage $condition, RevenuPourCourtier $revenu, $addressedTo = -1): bool
+    {
+        $formule = $condition->getFormule();
+        if ($formule === ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL) {
+            return true;
+        }
+
+        $seuil = (float) $condition->getSeuil();
+        $uniteMesure = $this->sommeCommissionPureDeLUnite($condition, $revenu->getCotation(), $addressedTo, true);
+
+        return match ($formule) {
+            ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL => $uniteMesure < $seuil,
+            ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL => $uniteMesure >= $seuil,
+            default => false,
+        };
     }
 
     /**
