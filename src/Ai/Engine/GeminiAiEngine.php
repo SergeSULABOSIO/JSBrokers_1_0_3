@@ -10,6 +10,7 @@ use App\Ai\Comprehension\ClarificationEnAttente;
 use App\Ai\Comprehension\Comprehenseur;
 use App\Ai\Debit\BudgetDebit;
 use App\Ai\Mutation\MotifDeRefus;
+use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\Redaction\RepliPrecis;
 use App\Ai\Trousse\Phase;
@@ -474,6 +475,15 @@ final class GeminiAiEngine implements AiEngineInterface
             $contents[] = $rattrapage
                 ? ['role' => 'user', 'parts' => [['text' => $this->resultatsEnTexte($responseParts)]]]
                 : ['role' => 'user', 'parts' => $responseParts];
+
+            // CE QUI VIENT D'ARRIVER DÉCIDE DU TEMPS DE LA PHRASE SUIVANTE. Si la
+            // planification a préparé une décision — plan d'écriture, document à
+            // produire —, RIEN n'est écrit : la rédaction doit parler au futur. Sans ce
+            // signal, elle n'a que le fil pour se situer et son prompt lui affirme que
+            // le travail est fait ; c'est ainsi que Ket a annoncé « le document a été
+            // correctement rattaché au client » sous un bouton « Valider et exécuter »
+            // que personne n'avait touché (2026-08-16).
+            $request = $request->withDecisionEnAttente(PlanEnAttente::porteUneDecision($actions));
 
             // La rédaction n'emporte NI les déclarations d'outils NI les protocoles
             // d'écriture : elle coûte donc bien moins que la planification. On

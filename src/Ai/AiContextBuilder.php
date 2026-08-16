@@ -766,14 +766,14 @@ class AiContextBuilder
         // affichée sous sa propre bulle. La compréhension et la planification, elles,
         // les voyaient déjà : c'est cette ASYMÉTRIE qui produisait le démenti.
         $ligneFichiers = $this->ligneFichiersDuFil($ctx['fichiersAttaches'] ?? []);
+        $etatDuTravail = $this->etatDuTravail($request->decisionEnAttente);
 
         return <<<REDACTION
         Tu es {$ctx['assistantNom']}, l'assistant IA de l'entreprise de courtage « {$ctx['entrepriseNom']} »
         sur la plateforme JS Brokers. Nous sommes le {$ctx['date']}.
 
-        LE TRAVAIL EST DÉJÀ FAIT. Les outils ont été exécutés et leurs résultats figurent dans le fil
-        ci-dessus. Ta seule tâche est d'écrire la réponse finale à l'utilisateur, à partir de CES
-        résultats. Tu n'as aucun outil à ta disposition dans ce tour : n'annonce aucun appel, n'en
+        {$etatDuTravail}
+        Tu n'as aucun outil à ta disposition dans ce tour : n'annonce aucun appel, n'en
         simule aucun, et ne dis jamais que tu vas « lancer » ou « vérifier » quelque chose.
         Si un résultat est incomplet ou si une information manque, DIS-LE simplement et propose à
         l'utilisateur de te la donner dans un prochain message.
@@ -790,6 +790,43 @@ class AiContextBuilder
         {$this->reglesDeStyle($ctx['monnaie'] ?? null)}
         {$sectionBoussole}
         REDACTION;
+    }
+
+    /**
+     * CE QUI EST FAIT, ET CE QUI NE L'EST PAS — la première chose que la rédaction doit
+     * savoir, parce que tout le TEMPS de sa phrase en dépend.
+     *
+     * L'INCIDENT (2026-08-16). Ket a écrit « Le document “AR Demande IDNAT.pdf” a été
+     * correctement rattaché au client 96 » — au passé, l'affaire close — juste au-dessus
+     * d'une barre « Valider et exécuter » que personne n'avait touchée. Rien n'était
+     * enregistré. L'utilisateur pouvait fermer la fenêtre en croyant sa pièce classée.
+     *
+     * ET LA CAUSE ÉTAIT DANS CE PROMPT. Il affirmait « LE TRAVAIL EST DÉJÀ FAIT » à
+     * TOUS les tours, sans distinguer les deux régimes. Or ils sont opposés : quand la
+     * planification a lu des données, le travail est effectivement fait et le passé
+     * convient ; quand elle a préparé un PLAN, rien n'est écrit et le passé est un
+     * mensonge. La consigne particulière de l'outil disait bien « n'annonce aucun
+     * enregistrement déjà fait » — elle perdait contre l'affirmation générale placée en
+     * tête du prompt, et c'est normal : on ne corrige pas une prémisse fausse par une
+     * exception enfouie.
+     */
+    private function etatDuTravail(bool $decisionEnAttente): string
+    {
+        if (!$decisionEnAttente) {
+            return 'LE TRAVAIL EST DÉJÀ FAIT. Les outils ont été exécutés et leurs résultats figurent dans le fil'
+                . "\n        " . 'ci-dessus. Ta seule tâche est d’écrire la réponse finale à l’utilisateur, à partir de CES'
+                . "\n        " . 'résultats.';
+        }
+
+        return 'RIEN N’EST ENCORE ENREGISTRÉ. Ce tour a préparé une DÉCISION — un plan, un document — qui'
+            . "\n        " . 'attend l’utilisateur : une barre de validation s’affiche sous ta réponse, et RIEN ne sera'
+            . "\n        " . 'écrit tant qu’il n’aura pas cliqué. Ta seule tâche est de lui présenter ce qui se PASSERA'
+            . "\n        " . 's’il valide.'
+            . "\n"
+            . "\n        " . 'ÉCRIS DONC AU FUTUR, JAMAIS AU PASSÉ. « Le document SERA rattaché au client Jean de Dieu »,'
+            . "\n        " . 'et jamais « a été rattaché », « est désormais lié », « c’est fait », « j’ai enregistré ».'
+            . "\n        " . 'Ne remercie pas, ne félicite pas, ne conclus pas : l’opération n’a pas eu lieu. Termine en'
+            . "\n        " . 'invitant à valider — c’est le seul geste qui l’accomplira.';
     }
 
     /**

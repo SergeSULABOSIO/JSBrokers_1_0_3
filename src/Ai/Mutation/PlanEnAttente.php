@@ -2,6 +2,7 @@
 
 namespace App\Ai\Mutation;
 
+use App\Ai\Document\DocumentEnAttente;
 use App\Ai\Action\TypeAction;
 
 use App\Entity\AssistantConversation;
@@ -385,6 +386,30 @@ final class PlanEnAttente
     }
 
     /**
+     * Ces actions portent-elles une DÉCISION qui attend l'utilisateur ?
+     *
+     * Un plan d'écriture ou un document à produire : dans les deux cas une barre de
+     * validation s'affiche, et RIEN n'est écrit tant que personne n'a cliqué. C'est ce
+     * fait — et lui seul — qui décide du temps que la rédaction doit employer.
+     *
+     * Les deux types sont réunis ici parce qu'ils partagent la seule chose qui compte à
+     * cet endroit : l'opération n'a pas encore eu lieu. Ce qu'ils font ensuite (écrire
+     * en base, fabriquer un fichier) n'y change rien.
+     *
+     * @param array<int, array> $actions
+     */
+    public static function porteUneDecision(array $actions): bool
+    {
+        foreach ($actions as $action) {
+            if (in_array($action['type'] ?? null, [self::ACTION_REVUE, DocumentEnAttente::ACTION_REVUE], true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * DÉCISION FINALE du garde-fou anti-EXÉCUTION fantôme.
      *
      * Trois conditions, toutes nécessaires :
@@ -407,6 +432,78 @@ final class PlanEnAttente
         }
 
         return self::proseAffirmeUnEnregistrement($contenu);
+    }
+
+    /**
+     * LE PASSÉ EMPLOYÉ SOUS UNE BARRE DE VALIDATION — le trou que laissait le garde-fou
+     * ci-dessus, et le mensonge le plus facile à croire.
+     *
+     * L'INCIDENT (2026-08-16). « Le document “AR Demande IDNAT.pdf” a été correctement
+     * rattaché au client 96 (Mr. jean de dieu) », et juste en dessous une barre
+     * « Valider et exécuter » intacte. Rien n'était écrit. L'utilisateur pouvait fermer
+     * la fenêtre en croyant sa pièce classée, et ne s'en apercevoir que le jour où il la
+     * chercherait.
+     *
+     * POURQUOI estUneExecutionFantome() NE LE VOYAIT PAS. Elle exige `$aucuneDecision` —
+     * elle se DÉSARME donc dès qu'un plan est présenté. C'était volontaire pour le plan
+     * FANTÔME (une prose qui décrit un plan pendant qu'un vrai plan s'affiche n'a rien
+     * d'anormal), mais c'est précisément l'inverse ici : le moment où une décision
+     * attend est celui où « c'est fait » est le plus trompeur, parce que la barre juste
+     * en dessous a l'air d'une confirmation.
+     *
+     * On ne regarde donc PAS la même chose : là-bas, une prose qui MONTRE un plan ; ici,
+     * une prose qui affirme un ENREGISTREMENT ACCOMPLI alors qu'il est encore à
+     * décider. Les deux situations sont disjointes, et cette fonction n'a de sens que
+     * lorsqu'une décision est réellement en attente — d'où le paramètre, qui vient du
+     * serveur et jamais de la prose.
+     */
+    public static function estUneExecutionPrematuree(string $contenu, bool $decisionEnAttente): bool
+    {
+        return $decisionEnAttente
+            && (self::proseAffirmeUnEnregistrement($contenu) || self::proseAffirmeUneOperationAccomplie($contenu));
+    }
+
+    /**
+     * Une OPÉRATION dite accomplie, au-delà du seul verbe « enregistrer ».
+     *
+     * POURQUOI UN LEXIQUE À PART, et non l'élargissement de celui d'à côté. La phrase de
+     * l'incident — « le document a été correctement RATTACHÉ au client 96 » — ne parle
+     * ni d'enregistrement ni de base de données : elle décrit un RATTACHEMENT, et le
+     * détecteur d'exécution fantôme, réglé sur « enregistré / créé … en base », ne la
+     * voyait pas. L'élargir là-bas aurait déclenché des démentis sur des tours où AUCUNE
+     * décision n'est en jeu, c'est-à-dire sur des phrases parfaitement honnêtes.
+     *
+     * Ici le risque n'est pas le même : on SAIT déjà, par le serveur, qu'une décision
+     * attend une validation à cet instant précis. Dans ce contexte, tout accompli est
+     * faux, et un lexique large est le bon réglage.
+     *
+     * LE TEMPS EST LE CRITÈRE, PAS LE VERBE. Chaque motif exige une marque d'accompli
+     * (« a été », « nous avons », « est désormais ») : « sera rattaché », « serait
+     * classée », « va être ajouté » ne matchent pas — ce sont précisément les tournures
+     * que l'on veut voir employées.
+     */
+    private static function proseAffirmeUneOperationAccomplie(string $texte): bool
+    {
+        $texte = mb_strtolower($texte);
+        // Les apostrophes typographiques abondent dans les réponses du modèle.
+        $texte = str_replace(['’', '‘'], "'", $texte);
+
+        // Le verbe peut être séparé de l'auxiliaire par un adverbe (« a été CORRECTEMENT
+        // rattaché ») : on en tolère deux, pas davantage — au-delà, on relierait deux
+        // propositions sans rapport.
+        $verbes = '(?:rattach|attach|ajout|class|joint|associ|import|televers|télévers|enregistr|cr[ée]|sauvegard)\w*';
+
+        foreach ([
+            '/\b(?:a|ont)\s+été\s+(?:\w+\s+){0,2}' . $verbes . '/u',
+            '/\b(?:j\'ai|nous avons)\s+(?:\w+\s+){0,2}' . $verbes . '/u',
+            '/\best\s+(?:désormais|maintenant|bien)\s+(?:\w+\s+){0,1}(?:rattaché|attaché|lié|associé|classé|enregistré)e?s?\b/u',
+        ] as $motif) {
+            if (preg_match($motif, $texte) === 1) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

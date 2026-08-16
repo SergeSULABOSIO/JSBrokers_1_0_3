@@ -89,6 +89,12 @@ export default class extends Controller {
      */
     static EXECUTION_ABSENTE_MESSAGE = "⚠ RIEN N'A ÉTÉ ENREGISTRÉ. Le récapitulatif ci-dessus est faux : aucun plan n'a été validé, donc aucune donnée n'a été écrite en base. Rien ne s'enregistre sans le bouton « Valider et exécuter ». Redemandez l'opération pour obtenir le plan, son budget et ce bouton.";
 
+    /**
+     * Le plan EST là et il est correct : on ne renvoie donc pas l'utilisateur redemander
+     * l'opération (ce que dit le message ci-dessus), on lui montre le geste qui reste.
+     */
+    static EXECUTION_PREMATUREE_MESSAGE = "⚠ PAS ENCORE ENREGISTRÉ. La réponse ci-dessus en parle au passé, mais rien n'a été écrit : le plan attend votre validation. Cliquez sur « Valider et exécuter » pour que l'opération ait lieu.";
+
     /** Bornes du rythme de déploiement mot à mot (ms par mot). */
     static TYPE_DELAY_MAX = 45;
     static TYPE_DELAY_MIN = 12;
@@ -834,6 +840,9 @@ export default class extends Controller {
                     break;
                 case 'ket-mutation.non-executee':
                     this.renderExecutionAbsente();
+                    break;
+                case 'ket-mutation.pas-encore':
+                    this.renderExecutionPrematuree();
                     break;
                 case 'ket-fichier.present':
                     this.renderFichierPresent(action);
@@ -1798,6 +1807,19 @@ export default class extends Controller {
      */
     renderExecutionAbsente() {
         this.appendNotice('error', this.constructor.EXECUTION_ABSENTE_MESSAGE);
+    }
+
+    /**
+     * Remet au futur une réponse écrite au passé, alors que le plan juste en dessous
+     * attend encore d'être validé.
+     *
+     * En « warning » et non en « error » : rien de faux n'a été écrit en base, et le
+     * plan affiché est correct. Ce qui est faux, c'est le TEMPS de la phrase — et la
+     * conséquence serait qu'on referme la fenêtre en croyant l'affaire close. Le message
+     * désigne donc le geste qui reste, au lieu de renvoyer l'utilisateur en arrière.
+     */
+    renderExecutionPrematuree() {
+        this.appendNotice('warning', this.constructor.EXECUTION_PREMATUREE_MESSAGE);
     }
 
     renderMutationAbsent(action = null) {
