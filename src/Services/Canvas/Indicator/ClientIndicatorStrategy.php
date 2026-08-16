@@ -9,16 +9,31 @@ use App\Repository\AvenantRepository;
 use App\Repository\BordereauRepository;
 use App\Repository\SoaAccesTokenRepository;
 use App\Repository\TaxeRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Contracts\Service\ResetInterface;
 
-class ClientIndicatorStrategy implements IndicatorCalculationStrategyInterface
+class ClientIndicatorStrategy implements IndicatorCalculationStrategyInterface, ResetInterface
 {
+    /** @var array<string, Taxe|null> barème par entreprise et redevable */
+    private array $taxeCache = [];
+
+    /** @var array<int, array> bordereaux par entreprise */
+    private array $bordereauxCache = [];
+
     public function __construct(
         private IndicatorCalculationHelper $calculationHelper,
         private TaxeRepository $taxeRepository,
         private AvenantRepository $avenantRepository,
         private BordereauRepository $bordereauRepository,
         private SoaAccesTokenRepository $soaAccesTokenRepository,
+        private EntityManagerInterface $em,
     ) {
+    }
+
+    public function reset(): void
+    {
+        $this->taxeCache = [];
+        $this->bordereauxCache = [];
     }
 
     public function supports(string $entityClassName): bool
@@ -118,20 +133,32 @@ class ClientIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function getTaxeCode(Client $entity, int $redevable): string
     {
-        $taxe = $this->taxeRepository->findOneBy([
-            'redevable'  => $redevable,
-            'entreprise' => $entity->getEntreprise(),
-        ]);
+        $taxe = $this->taxe($entity, $redevable);
         return $taxe?->getCode() ?? ($redevable === Taxe::REDEVABLE_COURTIER ? 'Taxe courtier' : 'Taxe assureur');
     }
 
     private function getTaxeTaux(Client $entity, int $redevable): float
     {
-        $taxe = $this->taxeRepository->findOneBy([
-            'redevable'  => $redevable,
-            'entreprise' => $entity->getEntreprise(),
-        ]);
-        return (float) ($taxe?->getTauxIARD() ?? 0.0);
+        return (float) ($this->taxe($entity, $redevable)?->getTauxIARD() ?? 0.0);
+    }
+
+    /**
+     * LA TAXE D'UN REDEVABLE NE DÉPEND PAS DU CLIENT. Elle était pourtant relue pour
+     * chacun, et deux fois par redevable (code puis taux) : quarante lectures de `taxe`
+     * pour dix lignes de rubrique. Le mémo vaut le temps d'une requête HTTP.
+     */
+    private function taxe(Client $entity, int $redevable): ?Taxe
+    {
+        $cle = ((int) $entity->getEntreprise()?->getId()) . ':' . $redevable;
+
+        if (!array_key_exists($cle, $this->taxeCache)) {
+            $this->taxeCache[$cle] = $this->taxeRepository->findOneBy([
+                'redevable'  => $redevable,
+                'entreprise' => $entity->getEntreprise(),
+            ]);
+        }
+
+        return $this->taxeCache[$cle];
     }
 
     private function getPayeeViaBordereaux(Client $entity): array
@@ -151,7 +178,16 @@ class ClientIndicatorStrategy implements IndicatorCalculationStrategyInterface
         }
         if (empty($clientAvenantIds)) return $zero;
 
-        $bordereaux = $this->bordereauRepository->findBy(['entreprise' => $entity->getEntreprise()]);
+        // Les bordereaux de l'entreprise sont les mêmes d'un client à l'autre : une
+        // lecture par page suffit là où il y en avait une par ligne. Le cache est
+        // revalidé contre l'identity map — un bordereau détaché par un em->clear()
+        // aurait des lignes mortes, et on lit justement ses lignes plus bas.
+        $cleBordereaux = (int) $entity->getEntreprise()->getId();
+        $bordereaux = $this->bordereauxCache[$cleBordereaux] ?? null;
+        if ($bordereaux === null || ($bordereaux !== [] && !$this->em->contains($bordereaux[0]))) {
+            $bordereaux = $this->bordereauxCache[$cleBordereaux] = $this->bordereauRepository
+                ->findBy(['entreprise' => $entity->getEntreprise()]);
+        }
 
         $totalCommission   = 0.0;
         $totalTaxeAss      = 0.0;

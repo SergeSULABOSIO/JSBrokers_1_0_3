@@ -8,13 +8,26 @@ use App\Entity\Taxe;
 use App\Entity\Utilisateur;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Contracts\Service\ResetInterface;
 
-class ServiceTaxes
+class ServiceTaxes implements ResetInterface
 {
+    /**
+     * Barème par identifiant d'entreprise, le temps d'une requête.
+     *
+     * @var array<int, Taxe[]>
+     */
+    private array $taxesParEntreprise = [];
+
     public function __construct(
         private Security $security,
         private EntityManagerInterface $entityManager,
     ) {}
+
+    public function reset(): void
+    {
+        $this->taxesParEntreprise = [];
+    }
 
     public function getUtilisateurConnecte(): ?Utilisateur
     {
@@ -37,7 +50,19 @@ class ServiceTaxes
             return [];
         }
 
-        return $this->entityManager->getRepository(Taxe::class)->findBy(['entreprise' => $entreprise]);
+        // LE BARÈME NE CHANGE PAS PENDANT UNE REQUÊTE. Il était pourtant relu à chaque
+        // calcul de commission — quarante lectures de `taxe` pour dix lignes de rubrique,
+        // toutes identiques. Le cache est revalidé contre l'identity map : après un
+        // em->clear(), les taxes gardées seraient détachées et leurs relations mortes.
+        $cle = (int) $entreprise->getId();
+        $connues = $this->taxesParEntreprise[$cle] ?? null;
+        if ($connues !== null && ($connues === [] || $this->entityManager->contains($connues[0]))) {
+            return $connues;
+        }
+
+        return $this->taxesParEntreprise[$cle] = $this->entityManager
+            ->getRepository(Taxe::class)
+            ->findBy(['entreprise' => $entreprise]);
     }
 
     public function getTaxesPayableParCourtier(?Entreprise $entreprise = null)

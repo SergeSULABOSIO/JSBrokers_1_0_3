@@ -94,7 +94,7 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
         // Le partenaire conditionne les trois indicateurs de rétrocommission ET la réserve :
         // on ne paie le parcours du graphe des rétrocommissions que s'il existe.
         $partenaire   = $this->calculationHelper->getCotationPartenaire($cotation);
-        $retro        = $partenaire ? $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1, []) : 0.0;
+        $retro        = $partenaire ? $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1) : 0.0;
         $retroReverse = $partenaire ? $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtierPayee($cotation, null) : 0.0;
 
         $montantsBordereau = $this->calculationHelper->getAvenantMontantsBordereau($entity);
