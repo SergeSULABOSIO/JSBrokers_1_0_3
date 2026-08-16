@@ -221,10 +221,11 @@ final class AttacherFichierTool implements AiToolProduisantUnPlan, AiToolConditi
             // Le classement d'une pièce est irréversible du point de vue de l'utilisateur
             // (le fichier quitte la conversation pour entrer au dossier) : il doit lire
             // OÙ elle atterrit avant de valider, dans les mots du serveur.
-            'note' => 'Annonce en UNE phrase le fichier et l’enregistrement qui va le recevoir, en '
-                . 'reprenant « explication » — c’est le serveur qui sait où va la pièce, pas toi. '
-                . 'Puis laisse la barre de validation faire le reste : n’annonce aucun enregistrement '
-                . 'déjà fait, rien n’est écrit tant que l’utilisateur n’a pas validé.',
+            'note' => 'Annonce en UNE phrase, AU FUTUR, le fichier et l’enregistrement qui va le '
+                . 'recevoir, en reprenant « explication » — c’est le serveur qui sait où va la pièce, '
+                . 'pas toi. « Le document SERA rattaché à… », jamais « a été rattaché » ni « est '
+                . 'désormais lié » : rien n’est écrit tant que l’utilisateur n’a pas cliqué sur '
+                . '« Valider et exécuter ». Termine en l’invitant à valider.',
         ], $resultat->uiAction);
     }
 

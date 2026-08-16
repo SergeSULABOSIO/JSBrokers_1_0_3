@@ -48,6 +48,18 @@ enum TypeAction: string
     case EXECUTION_ABSENTE = 'ket-mutation.non-executee';
 
     /**
+     * Mise au point autoritaire : la réponse parle au PASSÉ d'une opération que la barre
+     * de validation, juste en dessous, attend encore.
+     *
+     * Distincte d'EXECUTION_ABSENTE, et il faut qu'elle le soit : là-bas rien n'a été
+     * préparé et il faut redemander l'opération ; ici le plan est là, correct, à un clic.
+     * Servir le message de l'autre — « redemandez l'opération pour obtenir le plan » —
+     * enverrait l'utilisateur refaire ce qu'il a sous les yeux. Le démenti doit être
+     * bref et désigner le geste qui reste : valider.
+     */
+    case EXECUTION_PREMATUREE = 'ket-mutation.pas-encore';
+
+    /**
      * Mise au point autoritaire : la réponse nie une pièce jointe RÉELLEMENT présente.
      *
      * Troisième de la même famille, et le démenti le plus vexant des trois : les deux
@@ -145,7 +157,7 @@ enum TypeAction: string
             // Sans intention, le bouton « Oui, c'est bien ça » n'aurait rien à
             // renvoyer : l'utilisateur cliquerait dans le vide.
             self::CLARIFICATION                              => ['intention'],
-            self::PLAN_A_VALIDER, self::PLAN_ABSENT, self::EXECUTION_ABSENTE,
+            self::PLAN_A_VALIDER, self::PLAN_ABSENT, self::EXECUTION_ABSENTE, self::EXECUTION_PREMATUREE,
             self::QUITTER_WORKSPACE, self::DOCUMENT_A_VALIDER => [],
         };
     }

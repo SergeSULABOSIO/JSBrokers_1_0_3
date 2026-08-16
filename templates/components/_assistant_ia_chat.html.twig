@@ -1371,6 +1371,16 @@
                     « Valider et exécuter ». Redemandez l'opération pour obtenir le plan, son budget et ce bouton.
                 </p>
             {% endif %}
+            {# PAS ENCORE ENREGISTRÉ : la réponse parle au passé d'une opération que la
+               barre de validation, juste en dessous, attend encore. Le démenti doit
+               survivre au rechargement — sinon un F5 laisserait la phrase au passé seule
+               au-dessus d'un plan toujours en attente, ce qui est l'état qu'on corrige. #}
+            {% if estAssistant and (message.meta.executionPrematuree ?? false) %}
+                <p class="aic-notice aic-notice--warning" role="status">
+                    ⚠ PAS ENCORE ENREGISTRÉ. La réponse ci-dessus en parle au passé, mais rien n'a été écrit :
+                    le plan attend votre validation. Cliquez sur « Valider et exécuter » pour que l'opération ait lieu.
+                </p>
+            {% endif %}
             {# DÉMENTI DE PIÈCE JOINTE : la réponse nie un fichier que l'utilisateur a
                bel et bien attaché, et dont l'agrafe est affichée sous sa propre bulle.
                La mise au point doit survivre au rechargement, comme les deux démentis

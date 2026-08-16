@@ -31,6 +31,16 @@ final class AiRequest
         // s'est replié : la planification retombe alors sur la règle « comprendre
         // avant d'agir » du prompt, exactement comme avant.
         public readonly ?DemandeComprise $comprise = null,
+        /**
+         * Le tour a-t-il produit une DÉCISION qui attend encore l'utilisateur — un plan
+         * d'écriture, un document à produire ?
+         *
+         * Renseigné entre la planification et la rédaction, par le moteur qui vient de
+         * voir les outils s'exécuter. C'est la différence entre « voici ce qui a été
+         * fait » et « voici ce qui sera fait si vous validez », et la phase de rédaction
+         * n'a aucun autre moyen de la connaître : elle ne voit que le fil.
+         */
+        public readonly bool $decisionEnAttente = false,
     ) {
     }
 
@@ -43,7 +53,21 @@ final class AiRequest
      */
     public function withComprehension(DemandeComprise $comprise): self
     {
-        return new self($this->systemContext, $this->messages, $this->scope, $this->piecesNatives, $comprise);
+        return new self($this->systemContext, $this->messages, $this->scope, $this->piecesNatives, $comprise, $this->decisionEnAttente);
+    }
+
+    /**
+     * La même requête, sachant qu'une décision attend l'utilisateur.
+     *
+     * Posée par le moteur AVANT la rédaction, quand la planification a produit une barre
+     * de validation. Sans elle, la rédaction croit — parce que son prompt le lui dit —
+     * que le travail est déjà fait, et l'annonce au PASSÉ : « le document a été
+     * correctement rattaché au client », sous un bouton « Valider et exécuter » que
+     * personne n'a encore touché.
+     */
+    public function withDecisionEnAttente(bool $enAttente = true): self
+    {
+        return new self($this->systemContext, $this->messages, $this->scope, $this->piecesNatives, $this->comprise, $enAttente);
     }
 
     /** Dernier message de l'utilisateur (celui auquel le moteur doit répondre). */

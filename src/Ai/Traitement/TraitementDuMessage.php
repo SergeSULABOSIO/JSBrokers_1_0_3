@@ -226,6 +226,26 @@ final class TraitementDuMessage
             ]);
         }
 
+        // LE PASSÉ SOUS UNE BARRE DE VALIDATION. Le garde-fou d'exécution fantôme se
+        // désarme dès qu'une décision est présentée — c'est voulu pour le plan fantôme,
+        // et c'est justement là que « c'est fait » trompe le plus : la barre juste en
+        // dessous ressemble à une confirmation. Le 2026-08-16, Ket a écrit « le document
+        // a été correctement rattaché au client 96 » au-dessus d'un bouton « Valider et
+        // exécuter » intact. La cause est corrigée dans le prompt de rédaction, qui
+        // affirmait « le travail est déjà fait » à tous les tours ; ceci en est la
+        // ceinture, car le contenu d'une bulle reste écrit par un modèle.
+        $executionPrematuree = PlanEnAttente::estUneExecutionPrematuree(
+            (string) $reply->content,
+            $mutationPlan !== null || $documentPlan !== null,
+        );
+        if ($executionPrematuree) {
+            $actions[] = ['type' => TypeAction::EXECUTION_PREMATUREE->value];
+            $this->logger->warning('Assistant IA : enregistrement annoncé au passé alors qu’une décision attend.', [
+                'conversation' => $conversation->getId(),
+                'engine'       => $this->aiEngine->name(),
+            ]);
+        }
+
         // DÉMENTI DE FICHIER — le troisième garde-fou de la même famille, et celui qui
         // renvoie l'utilisateur à sa propre manipulation. Le 2026-08-15, Ket a répondu
         // deux fois « aucun fichier n'a été transmis, je vous invite à téléverser le
@@ -274,6 +294,10 @@ final class TraitementDuMessage
                 // sinon un rechargement laisserait le récapitulatif mensonger seul
                 // à l'écran — exactement l'état qu'on corrige.
                 'executionAbsente' => $executionFantome ?: null,
+                // Même trace, pour le démenti « pas encore » : il doit survivre au F5,
+                // sinon un rechargement laisserait la phrase au passé seule au-dessus
+                // d'un plan toujours en attente.
+                'executionPrematuree' => $executionPrematuree ?: null,
                 // Même trace, pour la mise au point de pièce jointe : elle porte les
                 // NOMS des fichiers réellement présents, seule façon d'être utile —
                 // « il y a bien un fichier » sans dire lequel n'aide personne.
