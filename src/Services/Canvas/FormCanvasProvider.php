@@ -3,6 +3,8 @@
 namespace App\Services\Canvas;
 use App\Entity\Utilisateur;
 use App\Repository\EntrepriseRepository;
+use App\Entity\Invite;
+use App\Service\Document\DocumentFichier;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\Canvas\Provider\Form\FormCanvasProviderInterface;
 use App\Token\TokenAccountService;
@@ -26,6 +28,9 @@ class FormCanvasProvider
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly TokenAccountService $tokenAccountService,
         private readonly EntrepriseRepository $entrepriseRepository,
+        // Source unique des rubriques capables de porter des pièces : la carte est lue
+        // dans les métadonnées Doctrine, jamais écrite à la main.
+        private readonly DocumentFichier $documentFichier,
     ) {
         $this->providers = $providers;
     }
@@ -41,6 +46,7 @@ class FormCanvasProvider
             if ($provider->supports($entityClassName)) {
                 $canvas = $provider->getCanvas($object, $idEntreprise);
                 $this->injecterActionAssistant($canvas, $entityClassName, $idEntreprise);
+                $this->injecterActionsDocuments($canvas, $entityClassName, $idEntreprise);
 
                 return $canvas;
             }
@@ -74,6 +80,100 @@ class FormCanvasProvider
             'url'   => '',
             'multi' => true,
         ];
+    }
+
+    /**
+     * PIÈCES JOINTES : « Attacher des pièces » et « Voir les documents », injectées
+     * centralement pour toute rubrique capable d'en porter.
+     *
+     * POURQUOI ICI, ET NON DANS TRENTE-SIX PROVIDERS. La liste des rubriques qui peuvent
+     * recevoir un fichier est déjà connue du code — c'est la carte des relations de
+     * Document. La recopier entité par entité, ce serait accepter qu'elle diverge dès la
+     * prochaine entité ouverte : l'une des deux listes serait à jour, l'autre non, et
+     * l'utilisateur découvrirait au clic que la rubrique promise n'accepte rien.
+     *
+     * UNE SEULE DÉCLARATION, DEUX SURFACES. La barre d'outils et le menu contextuel
+     * consomment le même `attribute_actions` — l'action apparaît donc aux deux endroits
+     * sans qu'on ait à le demander, et avec le même comportement.
+     *
+     * PAS DE CLÉ `multi` : c'est elle, et elle seule, qui impose la sélection d'UN SEUL
+     * élément (toolbar_controller::organizeButtons). L'utilisateur doit avoir désigné la
+     * fiche avant de pouvoir y déposer quoi que ce soit — sans quoi « attacher » n'aurait
+     * pas de destinataire.
+     *
+     * LES DEUX SONT REPLIÉES SOUS UNE FAMILLE. La barre n'affiche que quatre entrées en
+     * ligne et renvoie le surplus dans « Autres actions » : deux actions transverses de
+     * plus auraient repoussé les actions MÉTIER des rubriques déjà chargées (les
+     * mouvements d'une police, par exemple) dans un menu de débordement. Une entrée
+     * « Pièces jointes » qui déploie les deux coûte une place au lieu de deux.
+     */
+    private function injecterActionsDocuments(array &$canvas, string $fqcn, ?int $idEntreprise): void
+    {
+        $shortName = substr($fqcn, (int) strrpos($fqcn, '\\') + 1);
+        $champ = $this->documentFichier->parentsPossibles()[$shortName] ?? null;
+        if ($champ === null || $idEntreprise === null) {
+            return;
+        }
+
+        $invite = $this->inviteConnecte($idEntreprise);
+        if ($invite === null || !$this->accessResolver->canRead($invite, 'Document')) {
+            return;
+        }
+
+        $famille = ['groupe' => 'Pièces jointes', 'groupe_icone' => 'classeur'];
+
+        // Attacher est une ÉCRITURE : sans le droit, l'entrée n'apparaît pas. Le gating
+        // reste cosmétique — la route re-valide, fail-closed.
+        if ($this->accessResolver->can($invite, 'Document', Invite::ACCESS_ECRITURE)) {
+            $canvas['parametres']['attribute_actions'][] = $famille + [
+                'label' => 'Attacher des pièces',
+                'icon'  => 'action:upload',
+                'event' => 'ui:documents.attach-request',
+                'url'   => sprintf('/admin/document/api/attacher/%s/%%id%%', $champ),
+            ];
+        }
+
+        // « Voir les documents » existe DÉJÀ sur Client, Piste, Cotation et Avenant, où
+        // elle ouvre le dossier COMPLET (ascendants et descendants, cf.
+        // SoaPoliceDocumentsCollector) — bien plus que les pièces de la ligne. En
+        // injecter une seconde du même nom ferait cohabiter deux entrées identiques
+        // disant deux choses différentes : on ne pose la nôtre que là où il n'y en a pas.
+        if (!$this->porteDejaUneVueDocuments($canvas)) {
+            $canvas['parametres']['attribute_actions'][] = $famille + [
+                'label' => 'Voir les documents',
+                'icon'  => 'classeur',
+                'event' => 'ui:documents.liste-request',
+                'url'   => sprintf('/admin/document/api/de/%s/%%id%%', $champ),
+            ];
+        }
+    }
+
+    /** Le canevas déclare-t-il déjà une consultation de documents (dossier SOA) ? */
+    private function porteDejaUneVueDocuments(array $canvas): bool
+    {
+        foreach ($canvas['parametres']['attribute_actions'] ?? [] as $action) {
+            if (($action['event'] ?? null) === 'ui:soa.docs-picker-request') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * L'invité connecté DANS ce workspace, ou null. Fail-closed hors HTTP (ligne de
+     * commande, worker) et hors de l'entreprise demandée — un canevas construit pour un
+     * autre cabinet ne doit proposer aucune action.
+     */
+    private function inviteConnecte(int $idEntreprise): ?Invite
+    {
+        $user = $this->security->getUser();
+        if (!$user instanceof Utilisateur) {
+            return null;
+        }
+        $invite = $this->accessResolver->resolveConnectedInvite($user);
+
+        return $invite?->getEntreprise()?->getId() === $idEntreprise ? $invite : null;
     }
 
     /**

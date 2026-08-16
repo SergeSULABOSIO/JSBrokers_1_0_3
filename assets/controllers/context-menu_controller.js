@@ -132,7 +132,14 @@ export default class extends Controller {
                 this.btModifierTarget.style.display = 'none';
             }
         }
-        if (this.hasBtouvrirTarget) {
+        // CASSE DE LA PROPRIÉTÉ, ET LE DÉFAUT ÉTAIT MUET. Ces deux gardes s'écrivaient
+        // « hasBtouvrirTarget » / « hasBtsupprimerTarget » — Stimulus expose
+        // « hasBtOuvrirTarget » / « hasBtSupprimerTarget ». Les expressions valaient donc
+        // `undefined`, les blocs ne s'exécutaient JAMAIS, et « Ouvrir » comme
+        // « Supprimer » restaient proposés — raccourcis O et S compris — alors qu'aucune
+        // ligne n'était sélectionnée. Rien ne le signalait : une propriété inconnue ne
+        // lève pas en JavaScript, elle vaut `undefined`.
+        if (this.hasBtOuvrirTarget) {
             if (hasSelection) {
                 this.btOuvrirTarget.classList.add("d-flex");
                 this.btOuvrirTarget.style.display = 'flex';
@@ -141,7 +148,7 @@ export default class extends Controller {
                 this.btOuvrirTarget.style.display = 'none';
             }
         }
-        if (this.hasBtsupprimerTarget) {
+        if (this.hasBtSupprimerTarget) {
             if (hasSelection) {
                 this.btSupprimerTarget.classList.add("d-flex");
                 this.btSupprimerTarget.style.display = 'flex';

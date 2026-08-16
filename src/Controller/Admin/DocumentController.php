@@ -18,6 +18,11 @@
 
 namespace App\Controller\Admin;
 
+use App\Ai\Fichier\FichierAttachePolicy;
+use App\Token\InsufficientTokensException;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+use App\Service\Soa\SoaPoliceDocumentsCollector;
+use App\Ai\Tool\EntiteLibelle;
 use App\Entity\Tache;
 use App\Entity\Invite;
 use App\Entity\Document;
@@ -190,6 +195,226 @@ class DocumentController extends AbstractController
             null,
             $documentFichier->nomDeTelechargement($document),
         );
+    }
+
+    /**
+     * ATTACHER DES PIÈCES À UNE FICHE, depuis la liste d'une rubrique.
+     *
+     * POURQUOI CE CIRCUIT EXISTE. Toute entité métier porte désormais une collection
+     * « Documents », mais y déposer un fichier obligeait à ouvrir la fiche, gagner
+     * l'onglet Documents, et créer les pièces une par une. Le geste naturel est
+     * l'inverse : on désigne une ligne, on y dépose ses fichiers. C'est ce que servent
+     * ces deux méthodes — le GET rend la boîte, le POST reçoit le lot.
+     *
+     * FAIL-CLOSED À TROIS VERROUS, et le premier est le moins évident : `{parent}` vient
+     * de l'URL, donc de l'extérieur. On ne l'emploie JAMAIS comme nom de champ sans
+     * l'avoir confronté à la carte des relations réelles de Document — sans quoi une URL
+     * fabriquée à la main choisirait elle-même où atterrit la pièce. Viennent ensuite le
+     * droit d'écriture sur Document, et le scoping entreprise de l'objet visé.
+     */
+    #[Route('/api/attacher/{parent}/{id}', name: 'api.attacher_form', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function attacherFormApi(string $parent, int $id, DocumentFichier $documentFichier, EntiteLibelle $libelleur): Response
+    {
+        $cible = $this->cibleDAttachement($parent, $id, $documentFichier, Invite::ACCESS_ECRITURE);
+
+        return $this->render('components/document/_attach_picker.html.twig', [
+            'parent'     => $parent,
+            'cible'      => $cible,
+            'libelle'    => $this->libelleDeLaCible($cible, $libelleur),
+            'limites'    => FichierAttachePolicy::limitesFront(),
+            // Convention partagée avec les autres pickers : le fragment n'embarque son
+            // contrôleur Stimulus que lorsqu'il vit seul (cf. _client_picker.html.twig).
+            'standalone' => true,
+        ]);
+    }
+
+    /**
+     * Reçoit le lot `fichiers[]` et crée UN Document par fichier, rattaché à la fiche.
+     *
+     * LE LOT EST VALIDÉ AVANT TOUT DÉBIT, comme le fait l'upload du chat : un fichier
+     * refusé est NOMMÉ dans la réponse, jamais écarté en silence — sans quoi
+     * l'utilisateur croirait avoir versé cinq pièces là où trois sont arrivées. Les
+     * fichiers valides du même lot passent quand même : refuser tout pour un intrus
+     * ferait recommencer une manipulation déjà faite.
+     *
+     * LE MÉTRAGE EST LE MÊME QUE CELUI DU FORMULAIRE. `commitWrite()` débite le
+     * propriétaire avant la persistance et lève quand le solde est épuisé (402, rien
+     * n'est écrit). L'oublier ici aurait ouvert un chemin d'écriture gratuit à côté d'un
+     * chemin payant — deux prix pour le même geste.
+     */
+    #[Route('/api/attacher/{parent}/{id}', name: 'api.attacher', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    public function attacherApi(string $parent, int $id, Request $request, DocumentFichier $documentFichier, EntiteLibelle $libelleur): Response
+    {
+        $cible = $this->cibleDAttachement($parent, $id, $documentFichier, Invite::ACCESS_ECRITURE);
+        $invite = $this->getInvite();
+        $entreprise = $invite->getEntreprise();
+
+        $fichiers = $request->files->all()['fichiers'] ?? [];
+        if (!\is_array($fichiers)) {
+            $fichiers = [$fichiers];
+        }
+        $fichiers = array_values(array_filter($fichiers));
+        if ($fichiers === []) {
+            return $this->json(['error' => 'Aucun fichier reçu.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $setter = 'set' . ucfirst($documentFichier->parentsPossibles()[$this->nomCourt($cible)]);
+
+        $crees = [];
+        $refuses = [];
+        foreach ($fichiers as $fichier) {
+            $motif = $this->motifDeRefus($fichier);
+            if ($motif !== null) {
+                $refuses[] = ['nom' => $fichier->getClientOriginalName(), 'motif' => $motif];
+                continue;
+            }
+
+            $document = (new Document())->setNom($fichier->getClientOriginalName());
+            $document->setFichier($fichier);
+            $document->{$setter}($cible);
+            $document->setEntreprise($entreprise);
+            $document->setInvite($invite);
+
+            try {
+                $this->workspaceMutationService->commitWrite($document, $entreprise, $this->getUser());
+            } catch (InsufficientTokensException $e) {
+                // Le solde s'épuise EN COURS DE LOT : on garde ce qui a déjà été débité
+                // et enregistré, et on le dit. Tout annuler ferait perdre des pièces
+                // pourtant payées ; se taire laisserait croire le lot complet.
+                $this->em->flush();
+
+                return $this->json([
+                    'crees'    => $crees,
+                    'refuses'  => $refuses,
+                    'error'    => $e->getMessage(),
+                ], Response::HTTP_PAYMENT_REQUIRED);
+            }
+
+            $this->em->persist($document);
+            $crees[] = $fichier->getClientOriginalName();
+        }
+
+        $this->em->flush();
+
+        return $this->json([
+            'crees'   => $crees,
+            'refuses' => $refuses,
+            'cible'   => $this->libelleDeLaCible($cible, $libelleur),
+        ]);
+    }
+
+    /**
+     * Les pièces DE CETTE FICHE, pour relecture.
+     *
+     * Attacher sans pouvoir relire serait un aller sans retour : l'utilisateur verse un
+     * fichier et n'a plus aucun endroit où le retrouver depuis la liste. Le gabarit est
+     * celui du picker de documents du SOA, dont le contrôleur Stimulus est un socle nu —
+     * seule la source des lignes change.
+     */
+    #[Route('/api/de/{parent}/{id}', name: 'api.liste_de', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function listeDeApi(
+        string $parent,
+        int $id,
+        DocumentFichier $documentFichier,
+        SoaPoliceDocumentsCollector $collector,
+        WorkspaceAccessResolver $accessResolver,
+    ): Response {
+        $cible = $this->cibleDAttachement($parent, $id, $documentFichier, Invite::ACCESS_LECTURE);
+        $shortName = $this->nomCourt($cible);
+        $champ = $documentFichier->parentsPossibles()[$shortName];
+        $libelle = $this->libelleDeLaCible($cible, $libelleur);
+        $rubrique = $accessResolver->libellesEntites()[$shortName] ?? $shortName;
+
+        return $this->render('components/soa/_documents_picker.html.twig', [
+            'titre'              => sprintf('Documents de « %s »', $libelle),
+            'contexteNom'        => $libelle,
+            'items'              => $collector->decrire(
+                $this->documentRepository->findBy([$champ => $cible], ['id' => 'DESC']),
+                $rubrique,
+            ),
+            'downloadUrlPattern' => '/admin/document/api/%did%/download',
+        ]);
+    }
+
+    /**
+     * L'objet visé, résolu et re-vérifié — ou une 404/403 qui n'apprend rien.
+     *
+     * `$parent` vient de l'URL : il n'est un nom de champ qu'APRÈS confrontation à la
+     * carte des relations de Document, jamais avant.
+     */
+    private function cibleDAttachement(string $parent, int $id, DocumentFichier $documentFichier, int $niveau): object
+    {
+        if (!$this->mayAccessEntity(Document::class, $niveau)) {
+            throw $this->createAccessDeniedException('Accès refusé.');
+        }
+
+        $shortName = array_search($parent, $documentFichier->parentsPossibles(), true);
+        if ($shortName === false) {
+            throw $this->createNotFoundException('Rattachement inconnu.');
+        }
+
+        $cible = $this->em->find('App\\Entity\\' . $shortName, $id);
+        if ($cible === null) {
+            throw $this->createNotFoundException('Enregistrement introuvable.');
+        }
+
+        // Le cloisonnement par cabinet : sans lui, un identifiant dicté au hasard
+        // rattacherait une pièce au dossier d'une autre entreprise.
+        $entreprise = $this->getInvite()->getEntreprise();
+        if (method_exists($cible, 'getEntreprise')
+            && $cible->getEntreprise() !== null
+            && $cible->getEntreprise()->getId() !== $entreprise?->getId()) {
+            throw $this->createNotFoundException('Enregistrement introuvable.');
+        }
+
+        return $cible;
+    }
+
+    /** Nom court de la classe RÉELLE (une entité chargée peut arriver en proxy). */
+    private function nomCourt(object $entite): string
+    {
+        return (new \ReflectionClass($this->em->getClassMetadata($entite::class)->getName()))->getShortName();
+    }
+
+    /**
+     * Ce que l'utilisateur lit en tête de la boîte : la fiche qu'il a désignée.
+     *
+     * On passe par EntiteLibelle, la source unique déjà employée par l'assistant et par
+     * la résolution des références. Une liste de getters écrite ici aurait nommé un
+     * Risque par son CODE (« RCA7 ») là où tout le reste de l'application l'appelle
+     * « RC Automobile » — et l'utilisateur aurait douté d'avoir désigné la bonne ligne.
+     */
+    private function libelleDeLaCible(object $cible, EntiteLibelle $libelleur): string
+    {
+        $classe = $this->em->getClassMetadata($cible::class)->getName();
+        $libelle = trim($libelleur->libelle($cible, $libelleur->displayField($classe)));
+
+        return $libelle !== ''
+            ? $libelle
+            : $this->nomCourt($cible) . ' #' . (method_exists($cible, 'getId') ? $cible->getId() : '?');
+    }
+
+    /**
+     * Pourquoi ce fichier est refusé, ou null s'il passe.
+     *
+     * On réutilise les bornes des pièces jointes du chat — mêmes formats, même plafond
+     * de dix mégaoctets. Pas leur nombre maximal, en revanche : « cinq fichiers » est une
+     * règle de CONVERSATION, pas une règle de dossier.
+     */
+    private function motifDeRefus(UploadedFile $fichier): ?string
+    {
+        if (!$fichier->isValid()) {
+            return 'téléversement incomplet';
+        }
+        if ($fichier->getSize() > FichierAttachePolicy::MAX_SIZE_BYTES) {
+            return sprintf('dépasse %s', DocumentFichier::tailleLisible(FichierAttachePolicy::MAX_SIZE_BYTES));
+        }
+        $extension = strtolower($fichier->getClientOriginalExtension());
+        if (!\in_array($extension, FichierAttachePolicy::EXTENSIONS, true)) {
+            return sprintf('format « %s » non accepté', $extension !== '' ? $extension : 'inconnu');
+        }
+
+        return null;
     }
 
     #[Route(
