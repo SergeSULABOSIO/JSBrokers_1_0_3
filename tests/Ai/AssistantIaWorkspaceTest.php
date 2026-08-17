@@ -1095,6 +1095,109 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $this->assertStringContainsString('data-mutation-review', (string) $this->client->getResponse()->getContent());
     }
 
+    /**
+     * LE TABLEAU DES FICHIERS SURVIT AU F5, et le prouve sur le vrai gabarit.
+     *
+     * Le contrat de restauration (PanneauxRestauresApresF5Test) vérifie que les trois
+     * bouts existent ; il ne peut pas vérifier que l'expression Twig TROUVE réellement
+     * l'action dans `meta.actions`. C'est un filtre sur une liste de hashes, et il n'a
+     * qu'un seul comportement d'échec : ne rien trouver, sans erreur ni trace. Le
+     * panneau redisparaîtrait au rechargement comme avant, et tous les autres tests
+     * resteraient verts.
+     *
+     * On rejoue donc la forme EXACTE que le serveur écrit en base — telle qu'observée
+     * sur une réponse réelle de `telecharger_documents` — et on relit la page.
+     */
+    public function testLesFichiersATelechargerSurviventAuRechargement(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $owner);
+
+        $message = (new AssistantMessage())
+            ->setRole(AssistantMessage::ROLE_ASSISTANT)
+            ->setContenu('J’ai trouvé 2 fichiers dans le dossier, du client jusqu’à sa police.')
+            ->setMeta([
+                'actions' => [[
+                    'type'     => 'files-download',
+                    'fichiers' => [
+                        [
+                            'id' => 12, 'nom' => 'contrat.pdf', 'format' => 'PDF', 'taille' => 525267,
+                            'chargeLe' => '2026-08-14', 'niveau' => 'Avenants', 'rattacheA' => 'Avenant SUR001',
+                            'url' => '/admin/assistant-ia/api/documents/1/12/download',
+                        ],
+                        [
+                            'id' => 14, 'nom' => 'rccm.xlsx', 'format' => 'XLSX', 'taille' => 53759,
+                            'chargeLe' => '2026-08-16', 'niveau' => 'Clients', 'rattacheA' => 'Client Untel',
+                            'url' => '/admin/assistant-ia/api/documents/1/14/download',
+                        ],
+                    ],
+                    'zipUrl' => '/admin/assistant-ia/api/documents/1/zip?ids=12,14',
+                ]],
+            ]);
+        $conversation->addMessage($message);
+        $this->em()->persist($message);
+        $this->em()->flush();
+
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $this->client->request('GET', sprintf('/admin/assistant-ia/chat/%d/%d', $e->getId(), $conversation->getId()));
+        $this->assertResponseIsSuccessful();
+
+        $contenu = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString(
+            'data-files-download',
+            $contenu,
+            'Sans cet attribut, le tableau et ses boutons de téléchargement disparaissent au rechargement.',
+        );
+
+        // ON RELIT L'ATTRIBUT COMME LE FAIT LE NAVIGATEUR, en le décodant puis en le
+        // passant à un parseur JSON. Chercher une sous-chaîne dans le HTML brut ne
+        // prouverait rien ici : l'échappement `html_attr` transforme tout ce qui n'est
+        // pas alphanumérique en entité hexadécimale, si bien qu'une URL présente et
+        // valide n'y apparaît jamais telle quelle. Et c'est bien la relecture qui doit
+        // être garantie : un attribut présent mais illisible ne restaure rien.
+        $this->assertSame(1, preg_match('/data-files-download="([^"]*)"/', $contenu, $m));
+        $action = json_decode(html_entity_decode($m[1], \ENT_QUOTES, 'UTF-8'), true);
+
+        $this->assertIsArray($action, 'L’attribut doit contenir du JSON relisible par le navigateur.');
+        $this->assertSame('files-download', $action['type']);
+        // La charge utile doit être COMPLÈTE : le panneau se reconstruit à partir d'elle
+        // seule, sans second appel au serveur pour la compléter.
+        $this->assertSame(['contrat.pdf', 'rccm.xlsx'], array_column($action['fichiers'], 'nom'));
+        $this->assertSame(['Avenants', 'Clients'], array_column($action['fichiers'], 'niveau'), 'Le niveau est une colonne du tableau.');
+        $this->assertStringContainsString('zip?ids=12,14', $action['zipUrl'], 'Le bouton « Tout télécharger » doit survivre aussi.');
+    }
+
+    /**
+     * Une action de GESTE ne se rejoue pas au rechargement.
+     *
+     * Le pendant du test précédent, et il compte autant : un `open-dialog` restauré
+     * rouvrirait un formulaire que l'utilisateur vient peut-être de fermer, à chaque F5.
+     * L'attribut ne doit donc apparaître que pour les panneaux qui portent un bouton
+     * encore cliquable.
+     */
+    public function testUneActionDeGesteNEstPasRestauree(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $owner);
+
+        $message = (new AssistantMessage())
+            ->setRole(AssistantMessage::ROLE_ASSISTANT)
+            ->setContenu('J’ouvre le formulaire.')
+            ->setMeta(['actions' => [['type' => 'open-dialog', 'entite' => 'Client']]]);
+        $conversation->addMessage($message);
+        $this->em()->persist($message);
+        $this->em()->flush();
+
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $this->client->request('GET', sprintf('/admin/assistant-ia/chat/%d/%d', $e->getId(), $conversation->getId()));
+        $this->assertResponseIsSuccessful();
+        $this->assertStringNotContainsString(
+            'data-files-download',
+            (string) $this->client->getResponse()->getContent(),
+            'Seules les actions déclarées restaurables se rangent dans un attribut.',
+        );
+    }
+
     public function testPlanDejaExecuteNAPlusDeBarreDeDecision(): void
     {
         ['owner' => $owner, 'entreprise' => $e] = $this->seed();
