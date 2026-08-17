@@ -15,6 +15,7 @@ import {
     etatSuivant,
     estOuvert,
     ancreDeReposChange,
+    rubriqueAMarquer,
 } from '../../assets/controllers/workspace-col2.js';
 
 /* ─────────────────────────── Géométrie ─────────────────────────── */
@@ -179,6 +180,53 @@ test('un panneau fermé n\'a aucune ancre de repos', () => {
     for (const type of ['clicRubrique', 'echap', 'exterieur', 'deplie', 'quitte']) {
         assert.equal(ancreDeReposChange(etatSuivant(epingle, { type }), { type }), false, `action « ${type} »`);
     }
+});
+
+/* ────────────────── Rappel de la rubrique ouverte ──────────────── */
+
+const ongletPortefeuilles = {
+    componentName: '_view_manager_production.html.twig',
+    entityName: 'Portefeuille',
+    groupName: 'Production',
+};
+
+test('la rubrique ouverte est marquée quand on rouvre la liste de son groupe', () => {
+    // Le cas rapporté : l'onglet « Portefeuilles » est actif, l'utilisateur clique le
+    // groupe « Production » ; la liste qui s'affiche doit rappeler « Portefeuilles ».
+    assert.deepEqual(
+        rubriqueAMarquer(ongletPortefeuilles, 'Production'),
+        { componentName: '_view_manager_production.html.twig', entityName: 'Portefeuille' }
+    );
+});
+
+test('la liste d\'un AUTRE groupe ne marque rien', () => {
+    // Sinon on désignerait une rubrique absente de la liste affichée — ou une homonyme.
+    assert.equal(rubriqueAMarquer(ongletPortefeuilles, 'Sinistre'), null);
+});
+
+test('sans onglet actif, rien n\'est marqué', () => {
+    assert.equal(rubriqueAMarquer(null, 'Production'), null);
+    assert.equal(rubriqueAMarquer(undefined, 'Production'), null);
+});
+
+test('un onglet injecté à la volée ne désigne aucune rubrique', () => {
+    // Aperçu de note, panneau HTML du chat : ni composant, ni groupe.
+    assert.equal(rubriqueAMarquer({ title: 'Aperçu', tabKey: 'note-12' }, 'Production'), null);
+    assert.equal(rubriqueAMarquer({ title: 'Aperçu', groupName: 'Production' }, 'Production'), null);
+});
+
+test('une rubrique sans entité reste marquable', () => {
+    // `entity_name` est facultatif dans le menu : le gabarit rend alors un attribut
+    // vide, que le rapprochement doit viser tel quel plutôt que de renoncer.
+    assert.deepEqual(
+        rubriqueAMarquer({ componentName: '_view_x.html.twig', groupName: 'IA' }, 'IA'),
+        { componentName: '_view_x.html.twig', entityName: '' }
+    );
+});
+
+test('un onglet hors groupe ne se confond pas avec un groupe vide', () => {
+    const horsGroupe = { componentName: '_dashboard.html.twig', entityName: '', groupName: '' };
+    assert.equal(rubriqueAMarquer(horsGroupe, 'Production'), null);
 });
 
 test('estOuvert accepte l\'état nu comme l\'objet', () => {

@@ -144,6 +144,40 @@ export function ancreDeReposChange(suivant, action) {
 }
 
 /**
+ * Quelle rubrique de la liste qu'on vient d'afficher doit porter la marque de
+ * sélection — celle qui est ouverte dans l'espace de travail — ou `null`.
+ *
+ * Le HTML des rubriques est recopié depuis un `<template>` inerte : il arrive donc
+ * TOUJOURS vierge de toute classe `active`. Sans ce rapprochement, rouvrir la liste
+ * d'un groupe efface le rappel de ce qu'on a sous les yeux — d'autant plus gênant
+ * dans le panneau flottant, où cette liste est tout ce que l'utilisateur voit.
+ *
+ * Deux garde-fous qui ne se voient pas à l'œil nu :
+ *  - un onglet d'un AUTRE groupe ne marque rien (sinon on désignerait une rubrique
+ *    absente de la liste affichée, ou pire, une homonyme) ;
+ *  - les onglets injectés à la volée (aperçu de note, panneau HTML du chat) n'ont
+ *    pas de `componentName` : ils ne désignent aucune rubrique.
+ *
+ * @param {{componentName?: string, entityName?: string, groupName?: string}|null} ongletActif
+ * @param {string} groupeAffiche
+ * @returns {{componentName: string, entityName: string}|null}
+ */
+export function rubriqueAMarquer(ongletActif, groupeAffiche) {
+    if (!ongletActif || !ongletActif.componentName) {
+        return null;
+    }
+
+    if ((ongletActif.groupName || '') !== groupeAffiche) {
+        return null;
+    }
+
+    return {
+        componentName: ongletActif.componentName,
+        entityName: ongletActif.entityName || '',
+    };
+}
+
+/**
  * Le panneau est-il visible dans cet état ? Un seul endroit pour en décider :
  * la coquille ne doit pas comparer les constantes à la main à chaque geste.
  *
