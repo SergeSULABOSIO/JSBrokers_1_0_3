@@ -321,6 +321,48 @@ class ColonneDeuxRepliableTest extends TestCase
             "updateActiveState doit continuer de poser `active` sur la rubrique cliquée."
         );
 
+        // Toute réinjection de la liste doit reposer la marque : le HTML vient d'un
+        // `<template>` inerte, il arrive vierge de toute classe `active`.
+        self::assertTrue(
+            (bool) preg_match(
+                '/rubriquesContainerTarget\.innerHTML = templateContent\.outerHTML;\s*\n\s*this\._marquerRubriqueOuverte\(groupName\);/s',
+                $controleur
+            ),
+            'displayRubriquesForGroup doit reposer la marque juste après avoir réinjecté la liste.'
+        );
+
+        // …en lisant l'ONGLET ACTIF, seule source de vérité vivante.
+        self::assertStringContainsString(
+            'this.workspaceTabs.find((t) => t.id === this.activeWorkspaceTabId)',
+            $controleur,
+            "La rubrique ouverte se lit sur l'onglet actif — `activeRubriqueState` est mort "
+            . '(écrit uniquement par restoreLastState, qui n\'est plus appelée).'
+        );
+    }
+
+    /**
+     * NON-RÉGRESSION — le rappel de la rubrique ouverte ne doit pas retomber sur
+     * `activeRubriqueState`.
+     *
+     * Ce champ n'est écrit que par `restoreLastState()`, méthode morte depuis le
+     * passage aux onglets : il vaut TOUJOURS null. S'en servir revient à ne rien
+     * marquer du tout — la panne était invisible en relecture, et c'est exactement
+     * ce qui faisait disparaître la sélection dès qu'on rouvrait la liste d'un groupe.
+     */
+    public function testLeRappelNeRetombePasSurLEtatMort(): void
+    {
+        $controleur = $this->lire(self::CONTROLEUR);
+
+        self::assertTrue(
+            (bool) preg_match('/_marquerRubriqueOuverte\(groupName\)\s*\{.*?\n    \}/s', $controleur, $corps),
+            'La méthode de marquage doit rester lisible d\'un bloc.'
+        );
+        self::assertStringNotContainsString(
+            'activeRubriqueState',
+            $corps[0],
+            'Le marquage ne doit pas dépendre de `activeRubriqueState`, qui vaut toujours null.'
+        );
+
         // Le garde-fou du repli ne doit JAMAIS s'appliquer colonne dépliée : sinon il
         // toucherait un parcours qui n'a rien demandé.
         self::assertStringContainsString(

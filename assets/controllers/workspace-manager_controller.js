@@ -1,6 +1,8 @@
 import { Controller } from '@hotwired/stimulus';
 import { appliquerTitre, conversationDeLOnglet, editerEnPlace } from './assistant-conversation-titre.js';
-import { FERME, EPINGLE, etatSuivant, estOuvert, ancreDeReposChange, sommetDuFlyout } from './workspace-col2.js';
+import {
+    FERME, EPINGLE, etatSuivant, estOuvert, ancreDeReposChange, rubriqueAMarquer, sommetDuFlyout,
+} from './workspace-col2.js';
 
 /**
  * @class WorkspaceManagerController
@@ -1617,6 +1619,56 @@ export default class extends Controller {
     }
 
     /**
+     * La rubrique réellement ouverte dans l'espace de travail, c'est-à-dire celle de
+     * l'onglet actif de la colonne 3 — ou null si aucun onglet de rubrique n'est actif.
+     *
+     * Source de vérité DÉLIBÉRÉE. `activeRubriqueState` ne peut pas servir : il n'est
+     * écrit que par `restoreLastState()`, méthode morte depuis le passage aux onglets
+     * (cf. son commentaire « Remplace l'ancienne méthode restoreLastState »). Il vaut
+     * donc toujours null, et la marque de sélection disparaissait dès qu'on rouvrait la
+     * liste d'un groupe — le menu ne rappelait plus quelle rubrique on avait sous les
+     * yeux. Les onglets injectés à la volée (aperçus de note, panneaux HTML) n'ont ni
+     * `groupName` ni `componentName` : ils ne désignent aucune rubrique, et le
+     * rapprochement ci-dessous les écarte de lui-même.
+     *
+     * @returns {{componentName: string, entityName: string, groupName: string}|null}
+     */
+    _rubriqueDeLOngletActif() {
+        if (!this.activeWorkspaceTabId) {
+            return null;
+        }
+
+        return this.workspaceTabs.find((t) => t.id === this.activeWorkspaceTabId) || null;
+    }
+
+    /**
+     * Repose la marque de sélection sur la rubrique ouverte, si elle appartient au
+     * groupe qui vient d'être affiché.
+     *
+     * À rappeler après CHAQUE réinjection de `rubriquesContainer` : le HTML vient du
+     * `<template>` inerte, il arrive donc toujours vierge de toute classe `active`.
+     *
+     * @param {string} groupName
+     */
+    _marquerRubriqueOuverte(groupName) {
+        const cible = rubriqueAMarquer(this._rubriqueDeLOngletActif(), groupName);
+        if (!cible) {
+            return;
+        }
+
+        const selector = `[data-workspace-manager-component-name-param='${cible.componentName}'][data-workspace-manager-entity-name-param='${cible.entityName}']`;
+        const rubriqueElement = this.rubriquesContainerTarget.querySelector(selector);
+        if (!rubriqueElement) {
+            return;
+        }
+
+        rubriqueElement.classList.add('active');
+        // La référence doit suivre le NOUVEL élément : l'ancien vient d'être détruit
+        // par la réinjection, et `updateActiveState` s'en sert pour dépointer.
+        this.activeRubriqueItem = rubriqueElement;
+    }
+
+    /**
      * Affiche les rubriques (sous-menus) pour un groupe de navigation donné.
      * @param {HTMLElement} groupElement
      */
@@ -1631,17 +1683,7 @@ export default class extends Controller {
 
         if (templateContent) {
             this.rubriquesContainerTarget.innerHTML = templateContent.outerHTML;
-
-            // NOUVEAU : Logique pour restaurer l'état actif de la rubrique si elle appartient à ce groupe.
-            if (this.activeRubriqueState && this.activeRubriqueState.group === groupName) {
-                const selector = `[data-workspace-manager-component-name-param='${this.activeRubriqueState.component}'][data-workspace-manager-entity-name-param='${this.activeRubriqueState.entity}']`;
-                const rubriqueElement = this.rubriquesContainerTarget.querySelector(selector);
-                if (rubriqueElement) {
-                    rubriqueElement.classList.add('active');
-                    // On met à jour la référence vers le nouvel élément DOM actif.
-                    this.activeRubriqueItem = rubriqueElement;
-                }
-            }
+            this._marquerRubriqueOuverte(groupName);
         } else {
             this.rubriquesContainerTarget.innerHTML = '';
         }
