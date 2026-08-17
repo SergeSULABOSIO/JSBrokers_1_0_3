@@ -11,7 +11,6 @@ use App\Ai\Document\DocumentProducteur;
 use App\Ai\Document\DocumentTarificateur;
 use App\Ai\Document\PiedDePage;
 use App\Ai\Document\RapportSpec;
-use App\Ai\Document\Renderer\FichierTemporaire;
 use App\Ai\Document\ThemeDocument;
 use App\Ai\Export\ImageJointeValidator;
 use App\Ai\Export\MessageDestinataires;
@@ -52,6 +51,7 @@ use App\Ai\Mutation\MutationPlan;
 use App\Ai\Mutation\MutationReferences;
 use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Scope\AiScope;
+use App\Service\Document\ArchiveDeDocuments;
 use App\Service\Document\DocumentFichier;
 use App\Service\Workspace\MutationException;
 use App\Service\Workspace\WorkspaceAccessResolver;
@@ -64,12 +64,10 @@ use App\Token\TokenAccountService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -116,16 +114,6 @@ class AssistantIaController extends AbstractController
      * entreprise demanderait symfony/rate-limiter, absent du projet.)
      */
     private const MAX_ENVOIS_PAR_MESSAGE = 10;
-
-    /**
-     * Bornes de l'archive ZIP de documents. Une archive se fabrique fichier par
-     * fichier sur le disque — la mémoire n'est donc pas le risque —, mais le TEMPS
-     * l'est : `symfony serve` ne sert qu'une requête à la fois, et compresser
-     * indéfiniment y gèlerait tout le reste de l'application. Mieux vaut refuser en
-     * le disant que faire attendre sans expliquer.
-     */
-    private const ZIP_MAX_FICHIERS = 50;
-    private const ZIP_MAX_OCTETS = 200 * 1024 * 1024;
 
     public function __construct(
         private EntrepriseRepository $entrepriseRepository,
@@ -1705,108 +1693,31 @@ class AssistantIaController extends AbstractController
      * que de laisser le worker s'épuiser en silence.
      */
     #[Route('/api/documents/{idEntreprise}/zip', name: 'api.documents.zip', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
-    public function downloadDocumentsZip(int $idEntreprise, Request $request, FichierTemporaire $fichierTemporaire): Response
+    public function downloadDocumentsZip(int $idEntreprise, Request $request, ArchiveDeDocuments $archives): Response
     {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
         if (!$this->moduleAutorise($invite) || !$this->accessResolver->canRead($invite, 'Document')) {
             throw $this->createAccessDeniedException('Accès refusé.');
         }
 
-        $ids = array_values(array_unique(array_filter(
-            array_map('intval', explode(',', (string) $request->query->get('ids', ''))),
-            static fn (int $id) => $id > 0,
-        )));
+        // TOUTE LA MÉCANIQUE EST PARTAGÉE avec la rubrique Documents ({@see ArchiveDeDocuments}) :
+        // re-résolution scopée de chaque identifiant, plafonds en nombre et en poids,
+        // dé-doublonnage des noms. Elle vivait ici, en dur ; la seconde copie qu'aurait
+        // exigée la rubrique aurait dérivé sans que rien ne le signale — c'est toujours un
+        // plafond ou une garde de périmètre qu'on oublie de reporter.
+        $ids = ArchiveDeDocuments::identifiants((string) $request->query->get('ids', ''));
         if ($ids === []) {
             throw $this->createNotFoundException('Aucun document demandé.');
         }
-        if (count($ids) > self::ZIP_MAX_FICHIERS) {
+        if (count($ids) > ArchiveDeDocuments::MAX_FICHIERS) {
             return new Response(
-                sprintf('Trop de documents demandés (%d) : le maximum est de %d par archive.', count($ids), self::ZIP_MAX_FICHIERS),
+                sprintf('Trop de documents demandés (%d) : le maximum est de %d par archive.', count($ids), ArchiveDeDocuments::MAX_FICHIERS),
                 Response::HTTP_REQUEST_ENTITY_TOO_LARGE,
                 ['Content-Type' => 'text/plain; charset=UTF-8'],
             );
         }
 
-        // Rassembler d'abord, empaqueter ensuite : on ne veut pas découvrir à
-        // mi-archive qu'on dépasse le poids autorisé.
-        $aEmpaqueter = [];
-        $poids = 0;
-        foreach ($ids as $id) {
-            $result = $this->searchService->search('App\\Entity\\Document', ['id' => $id], $entreprise, null, 1, 1);
-            $document = $result['data'][0] ?? null;
-            if (($result['status']['code'] ?? 500) !== 200 || !$document instanceof Document) {
-                continue;
-            }
-            $chemin = $this->documentFichier->chemin($document);
-            if ($chemin === null || !is_file($chemin)) {
-                continue;
-            }
-            $poids += (int) $this->documentFichier->taille($document);
-            if ($poids > self::ZIP_MAX_OCTETS) {
-                return new Response(
-                    sprintf('Archive trop volumineuse : le total dépasse %d Mo. Téléchargez les documents séparément.', intdiv(self::ZIP_MAX_OCTETS, 1024 * 1024)),
-                    Response::HTTP_REQUEST_ENTITY_TOO_LARGE,
-                    ['Content-Type' => 'text/plain; charset=UTF-8'],
-                );
-            }
-            $aEmpaqueter[] = [$chemin, $this->documentFichier->nomDeTelechargement($document)];
-        }
-
-        if ($aEmpaqueter === []) {
-            throw $this->createNotFoundException('Aucun document téléchargeable.');
-        }
-
-        $cheminZip = $fichierTemporaire->chemin('zip');
-        $zip = new \ZipArchive();
-        if ($zip->open($cheminZip, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
-            throw new \RuntimeException("L'archive n'a pas pu être créée.");
-        }
-
-        // DEUX DOCUMENTS PEUVENT PORTER LE MÊME NOM. Sans dé-doublonnage, le second
-        // écrase le premier dans l'archive : l'utilisateur reçoit moins de fichiers
-        // qu'il n'en a demandés, sans qu'aucune erreur ne le signale.
-        $utilises = [];
-        foreach ($aEmpaqueter as [$chemin, $nom]) {
-            $zip->addFile($chemin, $this->nomUniqueDansArchive($nom, $utilises));
-        }
-        $zip->close();
-
-        $reponse = new BinaryFileResponse($cheminZip);
-        $reponse->deleteFileAfterSend(true);
-        $reponse->setContentDisposition(
-            ResponseHeaderBag::DISPOSITION_ATTACHMENT,
-            'documents.zip',
-        );
-        $reponse->headers->set('Content-Type', 'application/zip');
-
-        return $reponse;
-    }
-
-    /**
-     * Un nom encore libre dans l'archive : « contrat.pdf », puis « contrat (2).pdf ».
-     *
-     * @param array<string, true> $utilises noms déjà placés, modifié par référence
-     */
-    private function nomUniqueDansArchive(string $nom, array &$utilises): string
-    {
-        $cle = mb_strtolower($nom);
-        if (!isset($utilises[$cle])) {
-            $utilises[$cle] = true;
-
-            return $nom;
-        }
-
-        $ext = pathinfo($nom, PATHINFO_EXTENSION);
-        $base = $ext === '' ? $nom : substr($nom, 0, -\strlen($ext) - 1);
-        for ($i = 2; ; ++$i) {
-            $candidat = $ext === '' ? sprintf('%s (%d)', $base, $i) : sprintf('%s (%d).%s', $base, $i, $ext);
-            $cle = mb_strtolower($candidat);
-            if (!isset($utilises[$cle])) {
-                $utilises[$cle] = true;
-
-                return $candidat;
-            }
-        }
+        return $archives->archiver($archives->documentsLisibles($ids, $entreprise), 'documents');
     }
 
     /**

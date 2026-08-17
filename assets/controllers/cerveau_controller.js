@@ -476,6 +476,9 @@ export default class extends Controller {
             case 'ui:documents.liste-request': // « Voir les documents » d'une fiche quelconque
                 this.handleDocumentsListeRequest(payload);
                 break;
+            case 'ui:documents.download-request': // « Télécharger » la sélection de la rubrique Documents
+                this.handleDocumentsDownloadRequest(payload);
+                break;
             case 'documents:attaches': // le picker a fini de déposer le lot
                 this._handleDocumentsAttaches(payload);
                 break;
@@ -1457,6 +1460,50 @@ export default class extends Controller {
             controllerName: 'soa-docs-picker',
             errorLabel: 'les documents de cette fiche',
         });
+    }
+
+    /**
+     * TÉLÉCHARGER LA SÉLECTION de la rubrique Documents — un fichier, ou une archive.
+     *
+     * ON N'UTILISE PAS `payload.url`. Elle ne saurait porter qu'un seul identifiant
+     * (`%id%` est résolu sur la première ligne cochée), alors que c'est justement la
+     * sélection entière qui compte ici. Les identifiants sont donc repris de
+     * `payload.selection`, comme le fait déjà « Ajouter au chat ».
+     *
+     * ON NE DÉCIDE PAS NON PLUS entre « le fichier » et « l'archive » : le serveur le
+     * fait. Le navigateur ignore combien de pièces sont réellement téléchargeables —
+     * l'une peut avoir perdu son binaire, une autre relever d'un autre cabinet et devoir
+     * disparaître en silence. Trancher ici sur un décompte qu'on n'a pas, c'est annoncer
+     * une archive et servir un PDF.
+     *
+     * UN ANCRE `download` PLUTÔT QU'UN `fetch`. Un téléchargement doit rester un
+     * téléchargement : le navigateur gère la barre de progression, la reprise, et le
+     * dossier de destination. Passer par `fetch` obligerait à charger tout le binaire en
+     * mémoire pour le redonner au disque — pour une archive de 200 Mo, c'est l'onglet qui
+     * tombe. `window.open` conviendrait aussi mais ouvre une fenêtre que les bloqueurs
+     * ferment ; l'ancre synthétique, elle, passe toujours.
+     */
+    handleDocumentsDownloadRequest(payload) {
+        const ids = (payload.selection || [])
+            .map(s => parseInt(s.id, 10))
+            .filter(id => Number.isInteger(id) && id > 0);
+
+        if (ids.length === 0) {
+            this._showNotification('Sélectionnez au moins un document à télécharger.', 'warning');
+            return;
+        }
+
+        const lien = document.createElement('a');
+        lien.href = `/admin/document/api/telecharger?ids=${ids.join(',')}`;
+        lien.setAttribute('download', '');
+        lien.rel = 'noopener';
+        document.body.appendChild(lien);
+        lien.click();
+        lien.remove();
+
+        this._publishSelectionStatus(
+            ids.length === 1 ? 'Téléchargement en cours.' : `Téléchargement de ${ids.length} documents (archive).`,
+        );
     }
 
     /**

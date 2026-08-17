@@ -37,6 +37,7 @@ use App\Repository\InviteRepository;
 use App\Repository\DocumentRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Service\Document\ArchiveDeDocuments;
 use App\Service\Document\DocumentFichier;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
@@ -198,6 +199,97 @@ class DocumentController extends AbstractController
     }
 
     /**
+     * TÉLÉCHARGER LA SÉLECTION de la rubrique Documents — un fichier, ou une archive.
+     *
+     * UNE SEULE ROUTE POUR LES DEUX CAS, et c'est délibéré. L'interface ne sait pas
+     * combien de pièces sont réellement téléchargeables : parmi les lignes cochées, l'une
+     * peut avoir perdu son binaire, une autre appartenir à un autre cabinet et devoir
+     * disparaître en silence. Laisser le navigateur choisir entre « le fichier » et
+     * « l'archive » lui ferait prendre cette décision sur un décompte qu'il n'a pas. Le
+     * serveur, lui, le connaît après résolution : une pièce → le fichier lui-même, sous
+     * son nom lisible ; plusieurs → un ZIP.
+     *
+     * LE NOM DE L'ARCHIVE. La demande veut qu'il vaille « le libellé de l'objet Document ».
+     * Or un Document ne porte qu'UN fichier (champ Vich unique) : plusieurs fichiers, ce
+     * sont plusieurs Documents, et donc plusieurs libellés. On prend alors le libellé de
+     * ce qu'ils ont en commun — leur classeur quand ils le partagent, ce qui est le cas
+     * courant depuis que les pièces d'un client se rangent ensemble. À défaut,
+     * « documents.zip ». Chaque fichier DANS l'archive garde, lui, le libellé de son
+     * propre Document.
+     *
+     * FAIL-CLOSED, comme le téléchargement unitaire : droit de lecture sur Document, puis
+     * re-résolution de CHAQUE identifiant dans l'entreprise de l'écran. Les identifiants
+     * viennent du navigateur ; sans cela, il suffirait d'en écrire d'autres à la main.
+     */
+    #[Route('/api/telecharger', name: 'api.telecharger', methods: ['GET'])]
+    public function telechargerApi(
+        Request $request,
+        DownloadHandler $downloadHandler,
+        WorkspaceAccessResolver $accessResolver,
+        DocumentFichier $documentFichier,
+        ArchiveDeDocuments $archives,
+    ): Response {
+        $invite = $this->getInvite();
+        $entreprise = $invite->getEntreprise();
+        if (!$accessResolver->canRead($invite, 'Document')) {
+            throw $this->createAccessDeniedException('Accès refusé.');
+        }
+
+        $ids = ArchiveDeDocuments::identifiants((string) $request->query->get('ids', ''));
+        if ($ids === []) {
+            throw $this->createNotFoundException('Aucun document demandé.');
+        }
+        if (\count($ids) > ArchiveDeDocuments::MAX_FICHIERS) {
+            return new Response(
+                sprintf('Trop de documents demandés (%d) : le maximum est de %d par archive.', \count($ids), ArchiveDeDocuments::MAX_FICHIERS),
+                Response::HTTP_REQUEST_ENTITY_TOO_LARGE,
+                ['Content-Type' => 'text/plain; charset=UTF-8'],
+            );
+        }
+
+        $documents = $archives->documentsLisibles($ids, $entreprise);
+        if ($documents === []) {
+            throw $this->createNotFoundException('Aucun document téléchargeable.');
+        }
+
+        if (\count($documents) === 1) {
+            return $downloadHandler->downloadObject(
+                $documents[0],
+                DocumentFichier::CHAMP_VICH,
+                null,
+                $documentFichier->nomDeTelechargement($documents[0]),
+            );
+        }
+
+        return $archives->archiver($documents, $this->nomDeLArchive($documents));
+    }
+
+    /**
+     * Ce que la sélection a en commun, pour nommer l'archive.
+     *
+     * Le classeur, et lui seul : c'est le rangement, donc précisément ce qui réunit des
+     * pièces. Les rattacher par leur parent direct donnerait « Avenant » pour l'un et
+     * « Client » pour l'autre alors qu'ils sont du même dossier. Dès que la sélection
+     * franchit deux classeurs, elle n'a plus de nom propre et « documents » est la
+     * réponse honnête.
+     *
+     * @param list<Document> $documents
+     */
+    private function nomDeLArchive(array $documents): string
+    {
+        $classeurs = [];
+        foreach ($documents as $document) {
+            $classeur = $document->getClasseur();
+            if ($classeur === null) {
+                return 'documents';
+            }
+            $classeurs[(int) $classeur->getId()] = (string) $classeur->getNom();
+        }
+
+        return \count($classeurs) === 1 ? reset($classeurs) : 'documents';
+    }
+
+    /**
      * ATTACHER DES PIÈCES À UNE FICHE, depuis la liste d'une rubrique.
      *
      * POURQUOI CE CIRCUIT EXISTE. Toute entité métier porte désormais une collection
@@ -328,6 +420,7 @@ class DocumentController extends AbstractController
         DocumentFichier $documentFichier,
         SoaPoliceDocumentsCollector $collector,
         WorkspaceAccessResolver $accessResolver,
+        EntiteLibelle $libelleur,
     ): Response {
         $cible = $this->cibleDAttachement($parent, $id, $documentFichier, Invite::ACCESS_LECTURE);
         $shortName = $this->nomCourt($cible);
