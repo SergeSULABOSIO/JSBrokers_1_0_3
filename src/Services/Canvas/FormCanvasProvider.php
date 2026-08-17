@@ -47,6 +47,7 @@ class FormCanvasProvider
                 $canvas = $provider->getCanvas($object, $idEntreprise);
                 $this->injecterActionAssistant($canvas, $entityClassName, $idEntreprise);
                 $this->injecterActionsDocuments($canvas, $entityClassName, $idEntreprise);
+                $this->injecterActionTelechargerDocuments($canvas, $entityClassName, $idEntreprise);
 
                 return $canvas;
             }
@@ -146,6 +147,46 @@ class FormCanvasProvider
                 'url'   => sprintf('/admin/document/api/de/%s/%%id%%', $champ),
             ];
         }
+    }
+
+    /**
+     * TÉLÉCHARGER LA SÉLECTION, sur la rubrique Documents elle-même.
+     *
+     * POURQUOI ELLE EST INJECTÉE ICI et non déclarée dans le canevas de Document. Le
+     * gating vit ici : c'est ce provider qui sait résoudre l'invité connecté au workspace
+     * demandé et lui demander son droit de lecture. Un provider d'entité, lui, ne reçoit
+     * ni l'invité ni l'entreprise — il déclarerait l'action pour tout le monde, et le
+     * bouton apparaîtrait à qui n'a pas le droit de s'en servir. Le gating reste
+     * cosmétique : la route re-valide, fail-closed.
+     *
+     * `multi` : c'est la seule action de la rubrique qui ait un sens sur plusieurs lignes.
+     * Sans cette clé, les deux surfaces n'affichent l'entrée que pour une sélection
+     * d'exactement un élément (toolbar_controller L.162, context-menu_controller L.168) —
+     * et il n'y aurait jamais d'archive.
+     *
+     * L'`url` est laissée vide : elle ne saurait porter qu'un seul identifiant
+     * (`%id%` est résolu sur `selection[0]`), alors que c'est justement la SÉLECTION
+     * ENTIÈRE qui compte. Le Cerveau la reconstruit depuis `payload.selection`, comme le
+     * fait déjà « Ajouter au chat ».
+     */
+    private function injecterActionTelechargerDocuments(array &$canvas, string $fqcn, ?int $idEntreprise): void
+    {
+        if (substr($fqcn, (int) strrpos($fqcn, '\\') + 1) !== 'Document' || $idEntreprise === null) {
+            return;
+        }
+
+        $invite = $this->inviteConnecte($idEntreprise);
+        if ($invite === null || !$this->accessResolver->canRead($invite, 'Document')) {
+            return;
+        }
+
+        $canvas['parametres']['attribute_actions'][] = [
+            'label' => 'Télécharger',
+            'icon'  => 'action:download',
+            'event' => 'ui:documents.download-request',
+            'url'   => '',
+            'multi' => true,
+        ];
     }
 
     /** Le canevas déclare-t-il déjà une consultation de documents (dossier SOA) ? */
