@@ -39,7 +39,7 @@ html {
 
 /* Colonne 1 : Navigation */
 .menu-col-1 {
-  width: 130px; /* [cite_start] [cite: 191] */
+  width: var(--ws-col1-width); /* [cite_start] [cite: 191] */
   flex-shrink: 0;
   background-color: var(--bg-dark-secondary);
   display: flex;
@@ -253,8 +253,8 @@ a.nav-item-bottom:hover {
 
 /* Colonne 2 : Info & Rubriques */
 .menu-col-2 {
-  min-width: 350px; /* Example width */
-  max-width: 350px;
+  min-width: var(--ws-col2-width);
+  max-width: var(--ws-col2-width);
   background-color: var(--bg-light);
   color: var(--text-dark-secondary);
   display: flex;
@@ -449,6 +449,207 @@ a.company-version:hover {
   height: 60%;
   border-radius: 3px;
   background-color: var(--cobalt);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   COLONNE 2 REPLIABLE
+   ══════════════════════════════════════════════════════════════════════════
+   Sur un petit écran, les 350 px de la colonne 2 sont pris en permanence alors
+   que leur contenu ne sert qu'au moment de naviguer. Repliée, la colonne quitte
+   le flux (position: fixed) et la colonne 3 récupère la place aussitôt, sans
+   rien déformer : c'est `.menu-col-3 { flex-grow: 1 }` qui s'en charge.
+
+   La colonne repliée n'est pas dupliquée : c'est LE MÊME élément qui devient le
+   panneau flottant. Les conteneurs de rubriques et de description restent donc
+   les mêmes nœuds du DOM, et tout le JavaScript de navigation continue de les
+   viser sans savoir que la colonne a changé de nature.
+
+   `position: fixed` et non `absolute` : cela évite de poser `position: relative`
+   sur `.interactive-menu`, qui reparenterait tous les descendants absolus des
+   colonnes 3 et 4. Comme `body` ne défile jamais (`overflow: hidden`) et que
+   `.interactive-menu` fait 100vh, les coordonnées `fixed` sont exactement celles
+   de getBoundingClientRect() — aucune correction de défilement à écrire.
+
+   Deux classes d'état, posées sur la RACINE du contrôleur comme
+   `chat-fullscreen` : `col2-collapsed` (la colonne est repliée) et
+   `col2-flyout-open` (le panneau est visible). Sur la racine, et non sur la
+   colonne, pour que la poignée puisse se styler selon l'état sans `:has()`. */
+
+.col2-collapsed .menu-col-2 {
+  position: fixed;
+  /* La gouttière laisse la poignée cliquable à gauche du panneau. */
+  left: calc(var(--ws-col1-width) + var(--ws-handle-gutter));
+  top: var(--ws-flyout-top, 8px);
+  /* Le panneau épouse son contenu : c'est ce qui donne l'ombre portée « en bas
+     du bloc », impossible avec une colonne de 100vh. */
+  height: auto;
+  max-height: calc(100vh - 16px);
+  z-index: var(--ws-flyout-z);
+  border: 1px solid var(--border-light);
+  border-radius: var(--nav-radius);
+  /* Ombre à deux étages : le halo rapproché détache la carte, l'ombre longue et
+     diffuse la fait planer au-dessus de la liste. */
+  box-shadow: var(--shadow-md), 0 12px 28px rgba(0, 0, 0, 0.12);
+  /* Indispensable avec le border-radius : sans lui, l'enfant qui défile déborde
+     par les coins arrondis. */
+  overflow: hidden;
+
+  /* Fermé par défaut. `visibility` et NON `display: none` : le panneau reste
+     mis en page, donc son offsetHeight est mesurable avant d'être révélé —
+     c'est ce qui permet de l'ancrer sans saut visible. `visibility: hidden` le
+     retire aussi du survol, de la tabulation et de l'arbre d'accessibilité :
+     aucun `aria-hidden` ni `inert` à gérer à la main. */
+  visibility: hidden;
+  transition: opacity var(--nav-transition), visibility var(--nav-transition);
+  opacity: 0;
+}
+
+.col2-collapsed.col2-flyout-open .menu-col-2 {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* La marque et la carte d'identité de l'entreprise appartiennent à la COLONNE,
+   pas au sous-menu : le panneau flottant ne porte que la navigation. */
+.col2-collapsed .menu-col-2-row-1,
+.col2-collapsed .menu-col-2-company {
+  display: none;
+}
+
+.col2-collapsed .menu-col-2-row-2 {
+  padding: 0.4rem 0;
+  /* Une barre de défilement native de 15 px dans un panneau de 350 px mangerait
+     le confort de lecture des rubriques. */
+  scrollbar-width: thin;
+}
+
+/* Dans la colonne, la description est une carte posée sur le fond gris. Dans le
+   panneau flottant, le panneau EST la carte : garder les deux donnerait une
+   carte dans une carte. On ne conserve que le liseré cobalt, qui reste le repère
+   de « ceci est une description, pas une liste ». */
+.col2-collapsed .description-wrapper {
+  margin: 0;
+  border: none;
+  border-left: 4px solid var(--cobalt);
+  border-radius: 0;
+  box-shadow: none;
+  background-color: var(--bg-white);
+  /* L'animation d'entrée se rejouerait à CHAQUE survol dans un panneau flottant
+     (le contenu est réinjecté à chaque fois) : un tremblement permanent. */
+  animation: none;
+}
+
+/* ── Poignées de bord ──────────────────────────────────────────────────────
+   Deux poignées, un seul geste : une pastille posée sur la frontière d'une
+   colonne, qui l'escamote et la rétablit en un clic.
+
+   - `.ws-col2-handle` sur le joint du menu : replie / déplie la colonne 2.
+   - `.ws-col4-handle` sur le bord gauche de la colonne 4 : bascule son plein
+     écran. C'est un RACCOURCI, pas un remplacement — la même bascule reste
+     accessible depuis le menu ⋮ du chat et la barre d'outils d'une fiche, et
+     les trois commandes partagent le même état (workspace-manager).
+
+   L'apparence est mutualisée ici ; seules la position et l'attribut d'état
+   changent d'une poignée à l'autre. */
+.ws-edge-handle {
+  position: fixed;
+  top: 50%;
+  /* Juste au-dessus du panneau flottant : même si les deux se touchent, la
+     poignée reste saisissable. */
+  z-index: calc(var(--ws-flyout-z) + 1);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 60px;
+  padding: 0;
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  background-color: var(--bg-white);
+  color: var(--cobalt);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: background-color var(--nav-transition), border-color var(--nav-transition),
+    color var(--nav-transition);
+}
+
+/* La pastille reste fine pour ne pas encombrer la frontière, mais la cible
+   réelle atteint 44×82 px (WCAG 2.5.5). */
+.ws-edge-handle::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
+.ws-edge-handle:hover {
+  background-color: var(--bg-cobalt-subtle);
+  border-color: var(--cobalt);
+}
+
+.ws-edge-handle:focus-visible {
+  outline: none;
+  border-color: var(--cobalt);
+  box-shadow: 0 0 0 3px var(--cobalt-focus-ring);
+}
+
+.ws-edge-handle svg {
+  width: 14px;
+  height: 14px;
+  transition: transform var(--nav-transition);
+}
+
+/* ── Poignée de la colonne 2 ───────────────────────────────────────────────
+   Toujours sur la frontière visible entre le menu et l'espace de travail : le
+   joint colonne 2 / colonne 3 quand la colonne est dépliée, le joint colonne 1 /
+   colonne 3 quand elle est repliée. Elle ne bouge PAS à l'ouverture du panneau
+   — la gouttière lui réserve sa place — sinon elle sauterait de 350 px à chaque
+   survol d'un groupe. */
+.ws-col2-handle {
+  left: calc(var(--ws-col1-width) + var(--ws-col2-width));
+  transform: translate(-50%, -50%);
+}
+
+.col2-collapsed .ws-col2-handle {
+  left: var(--ws-col1-width);
+}
+
+/* Le sens du chevron dit l'état sans recourir à la couleur seule : il pointe
+   vers l'endroit où la colonne va aller. */
+.ws-col2-handle[aria-expanded='false'] svg {
+  transform: rotate(180deg);
+}
+
+/* ── Poignée de la colonne 4 ───────────────────────────────────────────────
+   Sur le bord GAUCHE de la colonne de visualisation. Elle vit dans la colonne :
+   celle-ci est `display: none` tant qu'aucun panneau n'est ouvert, ce qui suffit
+   à masquer la poignée — un raccourci vers une colonne absente n'aurait aucun
+   sens. Position `fixed`, donc aucune incidence sur la mise en page interne. */
+.ws-col4-handle {
+  right: var(--ws-col4-width);
+  transform: translate(50%, -50%);
+}
+
+/* En plein écran, la colonne 4 commence exactement là où le menu s'arrête : les
+   deux poignées partagent alors le même joint. On ancre celle-ci à gauche et on
+   la décale verticalement, pour qu'elles restent deux cibles bien distinctes. */
+.chat-fullscreen .ws-col4-handle {
+  right: auto;
+  left: calc(var(--ws-col1-width) + var(--ws-col2-width));
+  top: calc(50% + 76px);
+  transform: translate(-50%, -50%);
+}
+
+.chat-fullscreen.col2-collapsed .ws-col4-handle {
+  left: var(--ws-col1-width);
+}
+
+/* Chevron vers la gauche pour agrandir (la colonne va s'étendre par la gauche),
+   vers la droite pour réduire. `aria-pressed` est tenu à jour par
+   `_syncFullscreenButtons`, qui synchronise TOUTES les commandes de plein écran :
+   la poignée ne peut donc pas afficher un état que le menu ⋮ contredirait. */
+.ws-col4-handle[aria-pressed='true'] svg {
+  transform: rotate(180deg);
 }
 
 /* Colonne 3 : Espace de travail */
@@ -650,8 +851,8 @@ a.company-version:hover {
 .menu-col-4 {
   display: none; /* Cachée par défaut [cite: 22, 31] */
   flex-direction: column;
-  min-width: 450px; /* Largeur doublée pour une meilleure visibilité */
-  max-width: 450px;
+  min-width: var(--ws-col4-width); /* Largeur doublée pour une meilleure visibilité */
+  max-width: var(--ws-col4-width);
   height: 100%; /* [cite: 29] */
   background-color: var(--bg-light);
   color: var(--text-dark-secondary);
@@ -1190,7 +1391,10 @@ a.company-version:hover {
   .accordion-content,
   .accordion-toggle,
   .accordion-search-bar,
-  .menu-col-3 {
+  .menu-col-3,
+  .ws-edge-handle,
+  .ws-edge-handle svg,
+  .col2-collapsed .menu-col-2 {
     transition: none !important;
   }
 

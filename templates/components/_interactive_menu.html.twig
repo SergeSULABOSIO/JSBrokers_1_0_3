@@ -50,8 +50,9 @@
     data-workspace-manager-id-entreprise-value="{{ idEntreprise }}"
     data-workspace-manager-id-invite-value="{{ idInvite }}"
     data-workspace-manager-entreprise-nom-value="{{ entrepriseNom }}"
+    data-action="keydown.esc->workspace-manager#fermerFlyout"
 >
-    {# ── PLEIN ÉCRAN : rétabli AVANT le premier rendu ────────────────────────────
+    {# ── DISPOSITION : rétablie AVANT le premier rendu ───────────────────────────
        Ce script est volontairement inline et synchrone. Stimulus ne se connecte
        qu'une fois ses modules chargés : d'ici là, le navigateur a déjà peint la
        page en disposition normale, et l'utilisateur qui avait quitté en plein
@@ -63,11 +64,21 @@
        panneau de colonne 4 à restaurer. Sans panneau, la colonne 4 resterait
        vide et la colonne 3 masquée — un espace de travail inutilisable.
        Le contrôleur retire `workspace-restoring-fullscreen` dès que le panneau
-       est en place (ou si sa restauration échoue). #}
+       est en place (ou si sa restauration échoue).
+
+       Le repli de la COLONNE 2 obéit à la même raison d'être et se lit AVANT :
+       les deux `return` ci-dessous ne gouvernent que le plein écran, et un
+       utilisateur qui avait replié la colonne 2 sans être en plein écran doit
+       lui aussi être servi. Une seule condition ici : replier ne peut pas
+       rendre l'espace de travail inutilisable, la navigation reste entière
+       dans le panneau flottant. #}
     <script>
         (function (racine) {
             try {
                 var id = racine.dataset.workspaceManagerIdEntrepriseValue;
+                if (localStorage.getItem('menuCol2Collapsed_' + id) === '1') {
+                    racine.classList.add('col2-collapsed');
+                }
                 if (localStorage.getItem('chatFullscreen_' + id) !== '1') return;
                 var panneau = JSON.parse(localStorage.getItem('visualizationHtmlTab_' + id) || 'null');
                 if (!panneau || !panneau.sourceUrl || !panneau.tabKey) return;
@@ -86,10 +97,13 @@
             <nav aria-label="Menu principal">
             {# Ligne 1: Tableau de bord #}
             <div class="menu-col-1-row-1">
+                {# Les filtres `keydown.enter`/`keydown.space` ne sont PAS décoratifs : ce
+                   `div role="button"` ne s'active pas nativement au clavier, contrairement
+                   à un vrai `<button>`. Sans eux, la navigation est souris-seule. #}
                 <div class="nav-item"
                     role="button"
                     tabindex="0"
-                    data-action="mouseenter->workspace-manager#showItemDescription mouseleave->workspace-manager#clearDescription click->workspace-manager#loadComponent"
+                    data-action="mouseenter->workspace-manager#showItemDescription mouseleave->workspace-manager#clearDescription click->workspace-manager#loadComponent keydown.enter->workspace-manager#loadComponent keydown.space->workspace-manager#loadComponent"
                     data-workspace-manager-component-name-param="{{ menu.colonne_1.tableau_de_bord.composant_twig }}"
                     data-workspace-manager-description-param="{{ menu.colonne_1.tableau_de_bord.description }}"
                     data-workspace-manager-icon-param="{{ menu.colonne_1.tableau_de_bord.icone }}"
@@ -103,10 +117,15 @@
             {# Ligne 2: Groupes #}
             <div class="menu-col-1-row-2">
                 {% for group_name, group_data in menu.colonne_1.groupes %}
+                    {# `aria-expanded` décrit ici le PANNEAU des rubriques (colonne 2 ou
+                       panneau flottant selon le repli), que ce groupe ouvre et referme.
+                       Il est piloté par le contrôleur, jamais par le serveur. #}
                     <div class="nav-item"
                         role="button"
                         tabindex="0"
-                        data-action="mouseenter->workspace-manager#showItemDescription mouseleave->workspace-manager#clearDescription click->workspace-manager#showGroupRubriques"
+                        aria-expanded="false"
+                        aria-controls="ws-col2"
+                        data-action="mouseenter->workspace-manager#showItemDescription mouseleave->workspace-manager#clearDescription click->workspace-manager#showGroupRubriques keydown.enter->workspace-manager#showGroupRubriques keydown.space->workspace-manager#showGroupRubriques"
                         data-workspace-manager-group-name-param="{{ group_name }}"
                         data-workspace-manager-description-param="{{ group_data.description }}"
                     >
@@ -161,8 +180,18 @@
             </nav>
         </div>
 
-        {# COLONNE 2 : Rubriques & Descriptions #}
-        <div class="menu-col-2">
+        {# COLONNE 2 : Rubriques & Descriptions
+           `id` requis par l'`aria-controls` des groupes et de la poignée de repli.
+           Repliée, cette MÊME colonne devient le panneau flottant (cf. CSS
+           `.col2-collapsed .menu-col-2`) : aucune duplication de balisage, donc
+           aucun risque de voir les deux versions diverger.
+
+           Le survol du panneau annule sa fermeture différée : sans cela, le pointeur
+           qui quitte l'icône du groupe pour aller LIRE la description la ferait
+           disparaître avant d'y arriver. #}
+        <div class="menu-col-2" id="ws-col2"
+             data-workspace-manager-target="col2"
+             data-action="mouseenter->workspace-manager#annulerFermetureFlyout mouseleave->workspace-manager#quitterFlyout">
             {# Ligne 1: Marque JS Brokers — version compacte pour laisser de la place aux rubriques #}
             {# Au survol du nom « JS Brokers » et de la version : infobulle sombre du
                DERNIER commit (réf — date + explication), même pattern que les infobulles
@@ -361,6 +390,31 @@
 
         {# COLONNE 4 : COLONNE DE VISUALISATION #}
         <div class="menu-col-4" data-workspace-manager-target="visualizationColumn">
+            {# RACCOURCI de plein écran, posé sur le bord gauche de la colonne — même
+               geste que la poignée du menu. Il ne remplace rien : la bascule reste
+               offerte par le menu ⋮ du chat et par la barre d'outils d'une fiche.
+
+               La classe `vis-fullscreen` n'est pas décorative : `_syncFullscreenButtons`
+               s'en sert pour tenir à jour aria-pressed/aria-checked/libellés sur TOUTES
+               les commandes de plein écran à la fois. Sans elle, la poignée afficherait
+               un état que le menu ⋮ contredirait.
+
+               La poignée vit DANS la colonne : celle-ci est `display:none` tant qu'aucun
+               panneau n'est ouvert, ce qui suffit à la masquer. SVG inline (et non
+               ux_icon) comme les autres commandes de plein écran : la bascule d'icône
+               suit aria-pressed, sans aller-retour avec le circuit d'icônes. #}
+            <button type="button"
+                    class="ws-edge-handle ws-col4-handle vis-fullscreen"
+                    aria-pressed="false"
+                    aria-label="Afficher en plein écran"
+                    title="Plein écran"
+                    data-action="click->workspace-manager#toggleChatFullscreen">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true">
+                    <path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/>
+                </svg>
+            </button>
             {# Squelette de restauration en plein écran : rendu par le serveur, mais
                affiché UNIQUEMENT sous .workspace-restoring-fullscreen (cf. le script
                ci-dessus). Il annonce la disposition qui arrive — un panneau large
@@ -399,6 +453,35 @@
         </div>
     </div>
 
+    {# ── Poignée de repli de la colonne 2 ────────────────────────────────────────
+       Posée SUR le joint des colonnes, hors de `.interactive-menu` : elle flotte
+       (position: fixed) et n'a donc pas à être un enfant du flex, ce qui lui
+       éviterait de fausser les largeurs.
+
+       Le libellé nomme l'entreprise : repliée, la colonne emporte avec elle la
+       carte d'identité qui est le seul rappel à l'écran du cabinet dans lequel on
+       travaille. Sans cela, un utilisateur qui gère plusieurs cabinets perdrait
+       ce repère en repliant. `aria-expanded` décrit la COLONNE (le contrôleur le
+       synchronise à la connexion, car la classe de repli est posée par le script
+       inline ci-dessus, donc après le rendu serveur). #}
+    <button type="button"
+            class="ws-edge-handle ws-col2-handle"
+            aria-expanded="true"
+            aria-controls="ws-col2"
+            aria-label="Masquer le panneau des rubriques{% if entreprise is defined and entreprise %} — {{ entreprise.nom }}{% endif %}"
+            title="Masquer le panneau"
+            data-workspace-manager-target="col2Handle"
+            data-action="click->workspace-manager#toggleCol2">
+        {# SVG inline, comme les autres commandes de bord : le jeu lucide n'est vendu
+           localement qu'à neuf icônes, et « chevrons-left » n'en fait pas partie — elle
+           dépendrait d'une récupération Iconify à la volée, donc du réseau. #}
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round" aria-hidden="true">
+            <path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/>
+        </svg>
+    </button>
+
     {# Template caché pour générer la liste des rubriques (utilisé par Stimulus) #}
     <template data-workspace-manager-target="rubriquesTemplate">
         {# On fusionne les groupes normaux et le groupe de paramètres pour que la logique de chargement des rubriques fonctionne pour tous. #}
@@ -410,7 +493,7 @@
                         <div class="rubrique-item"
                             role="button"
                             tabindex="0"
-                            data-action="click->workspace-manager#loadComponent"
+                            data-action="click->workspace-manager#loadComponent keydown.enter->workspace-manager#loadComponent keydown.space->workspace-manager#loadComponent"
                             data-workspace-manager-component-name-param="{{ rubrique_data.composant_twig }}"
                             data-workspace-manager-group-name-param="{{ group_name }}"
                             data-workspace-manager-entity-name-param="{{ rubrique_data.entity_name|default('') }}"

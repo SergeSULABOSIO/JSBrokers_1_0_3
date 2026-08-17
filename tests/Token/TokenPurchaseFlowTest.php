@@ -407,7 +407,7 @@ class TokenPurchaseFlowTest extends WebTestCase
         $this->assertResponseRedirects('/admin/tokens');
 
         // E-mail de confirmation corporate (routé en asynchrone → mis en file).
-        $this->assertQueuedEmailCount(1);
+        $this->confirmationEmail();
 
         // Solde prépayé crédité de 10 000 + achat journalisé.
         $this->em()->clear();
@@ -452,9 +452,7 @@ class TokenPurchaseFlowTest extends WebTestCase
         $this->client->loginUser($this->user());
         $this->submitValidPurchase();
 
-        $this->assertQueuedEmailCount(1);
-        $email = $this->getMailerMessage();
-        $this->assertInstanceOf(TemplatedEmail::class, $email);
+        $email = $this->confirmationEmail();
 
         // Objet traduit en anglais.
         $this->assertStringContainsString('Payment confirmation', $email->getSubject());
@@ -477,9 +475,7 @@ class TokenPurchaseFlowTest extends WebTestCase
         $this->client->loginUser($this->user());
         $this->submitValidPurchase();
 
-        $this->assertQueuedEmailCount(1);
-        $email = $this->getMailerMessage();
-        $this->assertInstanceOf(TemplatedEmail::class, $email);
+        $email = $this->confirmationEmail();
 
         $this->assertStringContainsString('Confirmation de paiement', $email->getSubject());
 
@@ -488,6 +484,35 @@ class TokenPurchaseFlowTest extends WebTestCase
         $this->assertStringNotContainsString('Payment confirmed', $body);
         // (l'apostrophe est échappée à l'affichage → on teste un fragment sûr)
         $this->assertStringContainsString('équipe JS Brokers', $body);
+    }
+
+    /**
+     * L'e-mail de confirmation adressé à L'ACHETEUR.
+     *
+     * Un achat met désormais DEUX messages en file : la confirmation du client et
+     * l'alerte de vente diffusée à l'équipe JS Brokers
+     * (App\EventSubscriber\AgentNotificationSubscriber, branché sur le même
+     * TokenPurchaseEvent). Compter les messages ne dit donc plus rien, et prendre
+     * le premier venu ferait dépendre ces tests de l'ordre d'appel des écouteurs.
+     * On sélectionne par destinataire : c'est exactement ce que ces tests veulent
+     * vérifier, et cela reste vrai quel que soit le nombre d'agents notifiés.
+     */
+    private function confirmationEmail(): TemplatedEmail
+    {
+        $pourLAcheteur = [];
+        foreach ($this->getMailerMessages() as $message) {
+            foreach ($message->getTo() as $destinataire) {
+                if ($destinataire->getAddress() === self::EMAIL) {
+                    $pourLAcheteur[] = $message;
+                    break;
+                }
+            }
+        }
+
+        $this->assertCount(1, $pourLAcheteur, "L'acheteur doit recevoir exactement une confirmation.");
+        $this->assertInstanceOf(TemplatedEmail::class, $pourLAcheteur[0]);
+
+        return $pourLAcheteur[0];
     }
 
     /** Corps HTML rendu de l'e-mail (l'envoi asynchrone le rend au dispatch). */

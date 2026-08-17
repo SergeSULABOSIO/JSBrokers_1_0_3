@@ -76,6 +76,29 @@ class PaymentLifecycleTest extends WebTestCase
     }
 
     /** Soumet le formulaire d'achat avec une carte (4242… = succès, 4000…0002 = refus). */
+    /**
+     * Exactement un message en file est adressé à cette personne. Sélectionner par
+     * destinataire plutôt que compter : le nombre total dépend du nombre d'agents
+     * notifiés, qui n'a rien à voir avec ce que ce test vérifie.
+     */
+    private function assertQueuedEmailAddressedTo(string $adresse): void
+    {
+        $pourLui = array_filter(
+            $this->getMailerMessages(),
+            static function ($message) use ($adresse): bool {
+                foreach ($message->getTo() as $destinataire) {
+                    if ($destinataire->getAddress() === $adresse) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        );
+
+        $this->assertCount(1, $pourLui, sprintf('Un seul message doit être adressé à « %s ».', $adresse));
+    }
+
     private function submitPurchase(string $cardNumber = '4242 4242 4242 4242'): void
     {
         $crawler = $this->client->request('GET', '/admin/tokens/buy');
@@ -96,7 +119,10 @@ class PaymentLifecycleTest extends WebTestCase
         $this->client->loginUser($this->user());
         $this->submitPurchase();
         $this->assertResponseRedirects('/admin/tokens');
-        $this->assertQueuedEmailCount(1);
+        // Un achat met DEUX messages en file : la confirmation de l'acheteur et
+        // l'alerte de vente diffusée à l'équipe (AgentNotificationSubscriber, branché
+        // sur le même TokenPurchaseEvent). On vérifie celui qui concerne l'acheteur.
+        $this->assertQueuedEmailAddressedTo(self::EMAIL);
 
         $this->em()->clear();
         $purchase = $this->lastPurchase();
