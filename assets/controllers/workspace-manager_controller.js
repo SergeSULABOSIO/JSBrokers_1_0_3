@@ -1,5 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 import { appliquerTitre, conversationDeLOnglet, editerEnPlace } from './assistant-conversation-titre.js';
+import { FERME, EPINGLE, etatSuivant, estOuvert, ancreDeReposChange, sommetDuFlyout } from './workspace-col2.js';
 
 /**
  * @class WorkspaceManagerController
@@ -21,7 +22,9 @@ export default class extends Controller {
         "tabContentTemplate",
         "workspaceTabBar",
         "workspaceTabPanels",
-        "workspaceTabTemplate"
+        "workspaceTabTemplate",
+        "col2",
+        "col2Handle"
     ];
 
 
@@ -42,9 +45,29 @@ export default class extends Controller {
     activeWorkspaceTabId = null;
     pendingWorkspaceTabId = null;
 
+    // --- Repli de la colonne 2 (cf. workspace-col2.js pour la machine à états) ---
+    etatFlyout = { etat: FERME, groupe: null };
+    /** Élément de groupe sur lequel le panneau est épinglé, ou null. */
+    ancreFlyout = null;
+    /** Minuterie de fermeture différée : laisse au pointeur le temps d'entrer dans le panneau. */
+    minuterieFlyout = null;
+
     connect() {
         this.nomControleur = "WorkspaceManager";
         this.activeRubriqueState = null;
+
+        // Le script inline du gabarit a déjà posé `col2-collapsed` avant le premier
+        // rendu (anti-clignotement). On relit quand même la préférence : le bouton
+        // rendu par le serveur ignore l'état, et Turbo peut rejouer connect().
+        this._appliquerEtatCol2(this._lireCol2Pref());
+
+        // Un panneau flottant épinglé sortirait de l'écran après un redimensionnement.
+        this.boundReancrerFlyout = this._reancrerFlyout.bind(this);
+        window.addEventListener('resize', this.boundReancrerFlyout);
+
+        // Clic hors de la navigation : range le panneau épinglé, comme tout menu.
+        this.boundClicExterieurFlyout = this._clicExterieurFlyout.bind(this);
+        document.addEventListener('click', this.boundClicExterieurFlyout);
 
         this.boundOpenTabInVisualization = this.openTabInVisualization.bind(this);
         document.addEventListener('app:liste-element:openned', this.boundOpenTabInVisualization);
@@ -198,6 +221,9 @@ export default class extends Controller {
         document.removeEventListener('app:loading.stop', this.boundHandleLoadingStop);
         document.removeEventListener('workspace:navigate-to', this.boundHandleNavigateTo);
         document.removeEventListener('cerveau:event', this.boundHandleCerveauEvent);
+        window.removeEventListener('resize', this.boundReancrerFlyout);
+        document.removeEventListener('click', this.boundClicExterieurFlyout);
+        this._annulerMinuterieFlyout();
     }
 
     /**
@@ -1124,6 +1150,267 @@ export default class extends Controller {
         }
     }
 
+    /* ════════════════════════════════════════════════════════════════════════
+       REPLI DE LA COLONNE 2
+       ════════════════════════════════════════════════════════════════════════
+       Repliée, la colonne 2 quitte le flux et devient un panneau flottant : le
+       survol d'un groupe y affiche sa description, le clic y épingle la liste
+       de ses rubriques. C'est LE MÊME élément du DOM dans les deux modes — les
+       méthodes de navigation (showItemDescription, showGroupRubriques,
+       clearDescription, displayRubriquesForGroup) sont donc inchangées dans
+       leur cœur : on ne fait qu'y greffer l'ouverture et l'ancrage du panneau.
+
+       La machine à états vit dans `workspace-col2.js`, testée sous Node. Ici,
+       on ne fait que mesurer le DOM et appliquer le résultat. */
+
+    /**
+     * Bascule le repli de la colonne 2. Préférence persistée par entreprise et
+     * restaurée au rechargement, sur le modèle exact du plein écran ci-dessus.
+     */
+    toggleCol2() {
+        const replie = !this._lireCol2Pref();
+        this._ecrireCol2Pref(replie);
+        this._appliquerEtatCol2(replie);
+    }
+
+    /** La colonne 2 est-elle repliée ? */
+    _replie() {
+        return this.element.classList.contains('col2-collapsed');
+    }
+
+    _lireCol2Pref() {
+        return localStorage.getItem(`menuCol2Collapsed_${this.idEntrepriseValue}`) === '1';
+    }
+
+    _ecrireCol2Pref(replie) {
+        const cle = `menuCol2Collapsed_${this.idEntrepriseValue}`;
+        if (replie) {
+            localStorage.setItem(cle, '1');
+        } else {
+            localStorage.removeItem(cle);
+        }
+    }
+
+    /**
+     * Applique l'état de repli au DOM. Volontairement idempotent (`toggle` avec
+     * un booléen explicite) : le script inline du gabarit l'a déjà posé avant le
+     * premier rendu, et Turbo peut rejouer connect().
+     * @param {boolean} replie
+     */
+    _appliquerEtatCol2(replie) {
+        this.element.classList.toggle('col2-collapsed', replie);
+
+        // Déplier range le panneau : il n'a plus lieu d'être, la colonne est là.
+        if (!replie) {
+            this._appliquerEtatFlyout(etatSuivant(this.etatFlyout, { type: 'deplie' }));
+        }
+
+        if (this.hasCol2HandleTarget) {
+            const nom = this.entrepriseNomValue ? ` — ${this.entrepriseNomValue}` : '';
+            this.col2HandleTarget.setAttribute('aria-expanded', replie ? 'false' : 'true');
+            this.col2HandleTarget.setAttribute(
+                'aria-label',
+                replie ? `Afficher le panneau des rubriques${nom}` : `Masquer le panneau des rubriques${nom}`
+            );
+            this.col2HandleTarget.setAttribute('title', replie ? 'Afficher le panneau' : 'Masquer le panneau');
+        }
+    }
+
+    /**
+     * Un geste UTILISATEUR, par opposition aux appels programmatiques.
+     *
+     * `showGroupRubriques` et `loadComponent` sont aussi appelés par le code :
+     * `_syncMenuWithTab` et `handleNavigateTo` leur passent un objet nu
+     * `{currentTarget}`, `openRubriqueByEntity` et `loadDefaultComponent` font
+     * `element.click()` (événement synthétique, donc `isTrusted === false`).
+     * Sans ce filtre, demander une rubrique à Ket ferait clignoter le panneau.
+     *
+     * `instanceof Event` exclut STRUCTURELLEMENT les objets nus : le filtre tient
+     * même si un refactor futur leur ajoutait des champs.
+     *
+     * @param {Event|object} event
+     * @returns {boolean}
+     */
+    _gesteUtilisateur(event) {
+        return event instanceof Event && event.isTrusted === true;
+    }
+
+    /**
+     * Ouvre (ou déplace) le panneau flottant sur un élément de la colonne 1.
+     * Sans effet si la colonne n'est pas repliée.
+     * @param {HTMLElement} ancre
+     * @param {{type: string, groupe?: string|null}} action
+     */
+    _ouvrirFlyout(ancre, action) {
+        if (!this._replie() || !ancre) {
+            return;
+        }
+
+        this._annulerMinuterieFlyout();
+
+        const suivant = etatSuivant(this.etatFlyout, action);
+        if (!estOuvert(suivant)) {
+            this._appliquerEtatFlyout(suivant);
+            return;
+        }
+
+        // L'ancre de REPOS ne suit pas forcément l'élément survolé : épinglé sur un
+        // groupe, le panneau doit revenir se poser sur LUI quand le pointeur s'en va.
+        if (ancreDeReposChange(suivant, action) || !this.ancreFlyout) {
+            this.ancreFlyout = ancre;
+        }
+
+        this._appliquerEtatFlyout(suivant);
+
+        // En revanche l'affichage IMMÉDIAT suit bien le survol : le contenu montré
+        // est celui du groupe survolé, il doit apparaître à côté de lui.
+        this._ancrerFlyout(ancre);
+    }
+
+    /**
+     * Pose la position verticale du panneau à hauteur de son ancre.
+     *
+     * La hauteur se mesure AVANT toute révélation : l'état fermé est
+     * `visibility: hidden` (et non `display: none`), le panneau est donc déjà
+     * mis en page et `offsetHeight` est exact. D'où l'absence de
+     * requestAnimationFrame — et l'absence de saut visible.
+     *
+     * @param {HTMLElement} ancre
+     */
+    _ancrerFlyout(ancre) {
+        if (!this._replie() || !ancre || !this.hasCol2Target) {
+            return;
+        }
+
+        // getBoundingClientRect() et non offsetTop : la colonne 1 a son propre
+        // défilement interne, et seules les coordonnées viewport suivent.
+        const top = sommetDuFlyout({
+            ancreTop: ancre.getBoundingClientRect().top,
+            hauteurPanneau: this.col2Target.offsetHeight,
+            hauteurViewport: window.innerHeight,
+        });
+
+        this.element.style.setProperty('--ws-flyout-top', `${top}px`);
+    }
+
+    /** Recale un panneau épinglé après un redimensionnement de la fenêtre. */
+    _reancrerFlyout() {
+        if (this._replie() && estOuvert(this.etatFlyout) && this.ancreFlyout) {
+            this._ancrerFlyout(this.ancreFlyout);
+        }
+    }
+
+    /**
+     * Range le panneau. Câblée sur Échap à la racine du workspace, et appelée
+     * directement par le contrôleur.
+     */
+    fermerFlyout() {
+        this._annulerMinuterieFlyout();
+
+        const etaitEpingle = this.etatFlyout.etat === EPINGLE;
+        const ancre = this.ancreFlyout;
+
+        this._appliquerEtatFlyout(etatSuivant(this.etatFlyout, { type: 'echap' }));
+
+        // Rendre le focus à son point de départ : sans cela, Échap le laisse dans
+        // un panneau devenu invisible (WCAG 2.4.3).
+        // `hasCol2Target` et non `this.col2Target?.` : le getter singulier de Stimulus
+        // LÈVE une erreur quand la cible manque, il ne renvoie pas undefined.
+        if (etaitEpingle && ancre && this.hasCol2Target
+            && document.activeElement && this.col2Target.contains(document.activeElement)) {
+            ancre.focus();
+        }
+    }
+
+    /**
+     * Le pointeur quitte le panneau flottant. Sans effet colonne dépliée : la
+     * colonne 2 est alors un meuble permanent, en sortir ne doit rien déclencher.
+     */
+    quitterFlyout() {
+        if (!this._replie() || this.etatFlyout.etat === EPINGLE) {
+            return;
+        }
+
+        this._programmerFermetureFlyout();
+    }
+
+    /** Le pointeur entre dans le panneau : il veut le lire, on ne le referme pas. */
+    annulerFermetureFlyout() {
+        this._annulerMinuterieFlyout();
+    }
+
+    /**
+     * Fermeture différée. Le délai n'est pas cosmétique : `mouseleave` part à
+     * l'instant où le pointeur quitte l'icône du groupe, donc AVANT d'avoir
+     * atteint le panneau qu'il vise. Sans ce sursis, une description de trois
+     * lignes est impossible à lire.
+     */
+    _programmerFermetureFlyout() {
+        this._annulerMinuterieFlyout();
+        this.minuterieFlyout = window.setTimeout(() => {
+            this.minuterieFlyout = null;
+            if (this.etatFlyout.etat !== EPINGLE) {
+                this._appliquerEtatFlyout(etatSuivant(this.etatFlyout, { type: 'quitte' }));
+            }
+        }, 150);
+    }
+
+    _annulerMinuterieFlyout() {
+        if (this.minuterieFlyout !== null) {
+            window.clearTimeout(this.minuterieFlyout);
+            this.minuterieFlyout = null;
+        }
+    }
+
+    /**
+     * Applique un état de la machine au DOM : visibilité du panneau et
+     * `aria-expanded` des groupes.
+     * @param {{etat: string, groupe: string|null}} suivant
+     */
+    _appliquerEtatFlyout(suivant) {
+        this.etatFlyout = suivant;
+        const ouvert = estOuvert(suivant);
+
+        this.element.classList.toggle('col2-flyout-open', ouvert);
+
+        if (!ouvert) {
+            this.ancreFlyout = null;
+        }
+
+        // `aria-expanded` ne vaut que pour un panneau ÉPINGLÉ : un survol n'est
+        // pas une ouverture au sens où un lecteur d'écran l'entend.
+        const epingle = suivant.etat === EPINGLE ? suivant.groupe : null;
+        this.element.querySelectorAll('.menu-col-1 [data-workspace-manager-group-name-param]').forEach((item) => {
+            if (item.hasAttribute('aria-expanded')) {
+                item.setAttribute('aria-expanded', item.dataset.workspaceManagerGroupNameParam === epingle ? 'true' : 'false');
+            }
+        });
+    }
+
+    /** Clic hors de la navigation : range le panneau épinglé, comme tout menu. */
+    _clicExterieurFlyout(event) {
+        if (!this._replie() || !estOuvert(this.etatFlyout)) {
+            return;
+        }
+
+        const cible = event.target;
+        if (!(cible instanceof Node)) {
+            return;
+        }
+
+        // `hasXTarget` et non `this.xTarget?.` : le getter singulier de Stimulus LÈVE
+        // une erreur quand la cible manque — l'optional chaining ne protège de rien.
+        const dansLaNavigation = this.element.querySelector('.menu-col-1')?.contains(cible)
+            || (this.hasCol2Target && this.col2Target.contains(cible))
+            || (this.hasCol2HandleTarget && this.col2HandleTarget.contains(cible));
+
+        if (dansLaNavigation) {
+            return;
+        }
+
+        this._appliquerEtatFlyout(etatSuivant(this.etatFlyout, { type: 'exterieur' }));
+    }
+
     /**
      * Formate une valeur en fonction de son type.
      * @param {*} value - La valeur à formater.
@@ -1369,18 +1656,40 @@ export default class extends Controller {
         this.descriptionContainerTarget.innerHTML = `<div class="description-wrapper">${description}</div>`;
         this.rubriquesContainerTarget.style.display = 'none';
         this.descriptionContainerTarget.style.display = 'block';
+
+        // Colonne repliée : la description se montre en panneau flottant, ancré
+        // sur l'icône survolée. Le contenu est déjà injecté, donc mesurable.
+        if (this._gesteUtilisateur(event)) {
+            this._ouvrirFlyout(event.currentTarget, {
+                type: 'survol',
+                groupe: event.currentTarget.dataset.workspaceManagerGroupNameParam || null,
+            });
+        }
     }
 
     /**
      * Gère le clic sur un groupe de navigation pour afficher ses rubriques.
-     * @param {MouseEvent} event
+     * @param {MouseEvent|KeyboardEvent|{currentTarget: HTMLElement}} event
      */
     showGroupRubriques(event) {
+        // Entrée/Espace sur un `div role="button"` : sans cela, Espace ferait
+        // défiler la page sous le menu.
+        if (event.type === 'keydown') {
+            event.preventDefault();
+        }
+
         const clickedElement = event.currentTarget;
         this.updateActiveState(clickedElement);
         this.displayRubriquesForGroup(clickedElement);
         this.descriptionContainerTarget.style.display = 'none';
         this.rubriquesContainerTarget.style.display = 'block';
+
+        if (this._gesteUtilisateur(event)) {
+            this._ouvrirFlyout(clickedElement, {
+                type: 'clicGroupe',
+                groupe: clickedElement.dataset.workspaceManagerGroupNameParam || null,
+            });
+        }
     }
 
     /**
@@ -1388,6 +1697,26 @@ export default class extends Controller {
      * @param {MouseEvent} event 
      */
     clearDescription(event) {
+        // ── Colonne repliée ────────────────────────────────────────────────
+        // Le panneau flottant ne se VIDE jamais sous les yeux de l'utilisateur :
+        // il se ferme (après un sursis, le temps que le pointeur puisse l'atteindre)
+        // ou il revient à son groupe épinglé. La branche 3 ci-dessous, qui remet les
+        // conteneurs à blanc, donnerait ici un panneau visible et vide.
+        if (this._replie()) {
+            if (this.etatFlyout.etat === EPINGLE) {
+                this.descriptionContainerTarget.style.display = 'none';
+                this.rubriquesContainerTarget.style.display = 'block';
+                // La hauteur vient de changer (description courte → longue liste de
+                // rubriques) : sans ce recalage, un panneau épinglé en haut de la
+                // colonne déborde sous le bas de la fenêtre.
+                this._ancrerFlyout(this.ancreFlyout);
+                return;
+            }
+
+            this._programmerFermetureFlyout();
+            return;
+        }
+
         if (this.activeNavItem && this.activeNavItem.dataset.workspaceManagerGroupNameParam) {
             // Un groupe est actif, on s'assure que ses rubriques sont visibles.
             this.descriptionContainerTarget.style.display = 'none';
@@ -1414,6 +1743,12 @@ export default class extends Controller {
      */
     async loadComponent(event, options = {}) {
         const { isRestoration } = options;
+
+        // Entrée/Espace sur un `div role="button"` (cf. showGroupRubriques).
+        if (event.type === 'keydown') {
+            event.preventDefault();
+        }
+
         const clickedElement = event.currentTarget;
 
         const componentName = clickedElement.dataset.workspaceManagerComponentNameParam;
@@ -1425,6 +1760,14 @@ export default class extends Controller {
         if (!componentName) return;
 
         const isRubrique = clickedElement.classList.contains('rubrique-item');
+
+        // Le choix est fait : le panneau flottant a rempli son office et se range.
+        // Vaut aussi pour les items de premier niveau (Tableau de bord), qui
+        // n'appartiennent à aucun groupe et n'ont donc rien à garder ouvert.
+        if (this._gesteUtilisateur(event)) {
+            this._appliquerEtatFlyout(etatSuivant(this.etatFlyout, { type: 'clicRubrique' }));
+            this._annulerMinuterieFlyout();
+        }
 
         // Mettre à jour col-2 (description) uniquement pour les items top-level (pas les rubriques)
         if (!isRubrique) {
@@ -1943,6 +2286,15 @@ export default class extends Controller {
      */
     _syncMenuWithTab(tabData) {
         this.updateActiveGroupState(tabData.groupName || null);
+
+        // Cette méthode est appelée à CHAQUE activation d'onglet de la colonne 3,
+        // et elle réécrit le contenu de la colonne 2. Colonne repliée, un panneau
+        // épinglé sur un autre groupe changerait donc de contenu dans le dos de
+        // l'utilisateur, en restant ancré sur la mauvaise icône et à une hauteur
+        // devenue fausse. On le range.
+        if (this._replie() && estOuvert(this.etatFlyout) && this.etatFlyout.groupe !== (tabData.groupName || null)) {
+            this._appliquerEtatFlyout(etatSuivant(this.etatFlyout, { type: 'exterieur' }));
+        }
 
         if (tabData.groupName) {
             const groupEl = this.element.querySelector(`[data-workspace-manager-group-name-param='${tabData.groupName}']`);

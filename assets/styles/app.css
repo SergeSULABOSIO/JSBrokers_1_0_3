@@ -54,6 +54,24 @@
   --nav-transition: 0.15s ease;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.10);
+
+  /* --- Géométrie du workspace (source unique des largeurs de colonnes) ---
+     Ces largeurs étaient écrites en dur dans interactive-menu.css. La poignée
+     de repli de la colonne 2 se pose sur le JOINT des colonnes : elle doit
+     calculer sa position à partir des mêmes nombres, sinon elle dérive dès que
+     quelqu'un retouche une largeur. */
+  --ws-col1-width: 130px;
+  --ws-col2-width: 350px;
+  --ws-col4-width: 450px;
+  /* Gouttière réservée à la poignée quand la colonne 2 est repliée : le panneau
+     flottant démarre après elle, la poignée reste donc cliquable en permanence
+     sans jamais se déplacer selon que le panneau est ouvert ou non. */
+  --ws-handle-gutter: 20px;
+  /* Au-dessus des entêtes collants (100) et des barres d'outils (1020), sous
+     les modales Bootstrap (1050) et les toasts (1100) : le panneau recouvre les
+     listes, jamais un dialogue. Sans z-index explicite il passerait SOUS
+     `.menu-col-4 .tab-content` (position:absolute, postérieur dans le DOM). */
+  --ws-flyout-z: 1045;
 }
 
 /* ================================================================== */
