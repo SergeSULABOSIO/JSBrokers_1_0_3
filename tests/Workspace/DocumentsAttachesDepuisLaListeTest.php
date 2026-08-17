@@ -2,6 +2,7 @@
 
 namespace App\Tests\Workspace;
 
+use App\Entity\Client;
 use App\Entity\Document;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
@@ -79,7 +80,11 @@ class DocumentsAttachesDepuisLaListeTest extends WebTestCase
             }
         }
 
-        foreach (['document', 'risque'] as $table) {
+        // Le document précède le classeur, qui précède le client : chacun référence le
+        // suivant. Le classeur d'un client naît désormais tout seul avec la première
+        // pièce — l'oublier ici laisserait l'entreprise indestructible d'une exécution
+        // à l'autre.
+        foreach (['document', 'classeur', 'client', 'risque'] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom IN (:noms)",
                 ['noms' => $noms],
@@ -200,6 +205,58 @@ class DocumentsAttachesDepuisLaListeTest extends WebTestCase
             $this->assertNotSame('', (string) $document->getNomFichierStocke(), 'Le binaire doit avoir suivi.');
             $this->assertSame($ent->getId(), $document->getEntreprise()?->getId(), 'Le scoping entreprise s’applique.');
         }
+    }
+
+    /**
+     * 2b. UN LOT ATTACHÉ À UN CLIENT SE RANGE DANS LE CLASSEUR DE CE CLIENT — un seul.
+     *
+     * LE CHEMIN DE L'INTERFACE, celui qu'emprunte l'utilisateur qui sélectionne une ligne
+     * et dépose trois fichiers. La règle du rangement automatique est posée au ras de
+     * Doctrine pour valoir autant ici que chez Ket ; encore faut-il vérifier que cette
+     * route y passe vraiment.
+     *
+     * ET UN SEUL CLASSEUR POUR LES TROIS. C'est le cas qui casse : les trois documents
+     * naissent dans le MÊME flush, si bien que le classeur créé pour le premier n'est pas
+     * encore en base quand vient le deuxième. Une recherche naïve en base en aurait créé
+     * trois — dont deux refusés par la contrainte d'unicité, l'enregistrement entier
+     * échouant sous les yeux de l'utilisateur.
+     */
+    public function testUnLotAttacheAUnClientSeRangeDansSonClasseur(): void
+    {
+        [$ent, $inv] = $this->seed();
+
+        $client = (new Client())->setNom('Client du sélecteur');
+        $client->setEntreprise($ent)->setInvite($inv);
+        $this->em->persist($client);
+        $this->em->flush();
+        $idClient = $client->getId();
+
+        $this->client->request(
+            'POST',
+            sprintf('/admin/document/api/attacher/client/%d', $idClient),
+            [],
+            ['fichiers' => [
+                $this->fichier('kbis.txt'),
+                $this->fichier('mandat.txt'),
+                $this->fichier('rib.txt'),
+            ]],
+        );
+
+        $this->assertResponseIsSuccessful();
+        $this->em->clear();
+
+        $documents = $this->em->getRepository(Document::class)->findBy(['client' => $idClient]);
+        $this->assertCount(3, $documents);
+
+        $classeurs = [];
+        foreach ($documents as $document) {
+            $classeur = $document->getClasseur();
+            $this->assertNotNull($classeur, 'Chaque pièce du client doit être rangée dans son dossier.');
+            $this->assertSame($idClient, $classeur->getClient()?->getId());
+            $this->assertSame('Client du sélecteur', $classeur->getNom());
+            $classeurs[$classeur->getId()] = true;
+        }
+        $this->assertCount(1, $classeurs, 'Les trois pièces du même lot partagent UN classeur, pas trois.');
     }
 
     /**

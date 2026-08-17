@@ -132,6 +132,48 @@ final class PortefeuilleScope
     }
 
     /**
+     * Le suffixe commun à TOUS les chemins ci-dessus : ce qui mène du client à son
+     * gestionnaire. Le retirer d'un chemin de périmètre donne un chemin vers le CLIENT.
+     */
+    private const SUFFIXE_GESTIONNAIRE = '.portefeuille.gestionnaire';
+
+    /**
+     * LES CHEMINS QUI MÈNENT AU CLIENT, dérivés de ceux qui mènent au gestionnaire.
+     *
+     * POURQUOI ILS SONT DÉRIVÉS ET NON ÉCRITS. Savoir de quel client relève un
+     * enregistrement était déjà nécessaire ailleurs, et cette connaissance existait en
+     * TROIS versions désaccordées : onze chemins ici, quatre dans
+     * {@see \App\Service\Soa\SoaPoliceDocumentsCollector::documentAppartientAuClient()},
+     * et une dérivation Doctrine bornée à trois segments dans
+     * {@see \App\Ai\Resolution\CheminsDeRelation} — trop courte pour
+     * `avenant.cotation.piste.client`, qui en compte quatre. Trois vérités pour une
+     * question, donc au moins deux qui se trompent : le rangement automatique des
+     * documents aurait manqué des clients selon le chemin emprunté par la pièce.
+     *
+     * La liste la plus complète est celle-ci, parce que c'est elle qui gouverne ce que
+     * l'écran affiche et qu'un oubli s'y voit tout de suite. On en dérive plutôt que de
+     * la recopier : ajouter un chemin de périmètre suffit désormais à ce que le
+     * rangement en tienne compte.
+     *
+     * @return list<string> chemins de relations vers un Client, à essayer dans l'ordre
+     */
+    public static function cheminsVersLeClient(string $entityShortName): array
+    {
+        $chemins = [];
+        foreach (self::pathsFor($entityShortName) as $chemin) {
+            if (!str_ends_with($chemin, self::SUFFIXE_GESTIONNAIRE)) {
+                // Un chemin qui n'atteint pas le gestionnaire par ce suffixe n'est pas
+                // tronquable en chemin vers un client : on l'écarte plutôt que d'en
+                // fabriquer un faux, qui rendrait silencieusement le mauvais client.
+                continue;
+            }
+            $chemins[substr($chemin, 0, -\strlen(self::SUFFIXE_GESTIONNAIRE))] = true;
+        }
+
+        return array_keys($chemins);
+    }
+
+    /**
      * Les relations DIRECTES de l'entité qui mènent à un portefeuille — les premiers
      * segments des chemins, dédoublonnés.
      *

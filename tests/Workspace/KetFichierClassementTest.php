@@ -159,6 +159,22 @@ class KetFichierClassementTest extends WebTestCase
         $this->assertNotNull($document->getNomFichierStocke(), 'Le fichier physique du Document est enregistré.');
         $this->assertSame($clientId, $document->getClient()?->getId());
 
+        // LE RANGEMENT AUTOMATIQUE VAUT AUSSI POUR KET, et c'est ici qu'on le prouve : le
+        // document n'a pas été créé par l'interface mais par un plan d'écriture, sans que
+        // personne ne mentionne de classeur. La règle est posée au ras de Doctrine
+        // (ClasseurAutomatiqueListener) précisément pour que les deux chemins n'aient pas
+        // à la connaître — encore faut-il que celui de Ket y passe réellement.
+        $this->assertNotNull(
+            $document->getClasseur(),
+            'Un document créé par Ket pour un client doit atterrir dans le classeur de ce client.',
+        );
+        $this->assertSame('Client Classement', $document->getClasseur()?->getNom());
+        $this->assertSame(
+            $clientId,
+            $document->getClasseur()?->getClient()?->getId(),
+            'Le classeur doit être RELIÉ au client, pas seulement porter son nom.',
+        );
+
         // Le fichier physique du Document existe.
         $storage = static::getContainer()->get(StorageInterface::class);
         $cheminDoc = $storage->resolvePath($document, 'fichier');
