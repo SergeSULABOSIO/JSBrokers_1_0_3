@@ -162,6 +162,43 @@ enum TypeAction: string
         };
     }
 
+    /**
+     * L'ATTRIBUT SOUS LEQUEL CETTE ACTION SURVIT AU RECHARGEMENT — null quand elle n'a
+     * pas à y survivre.
+     *
+     * CE QUI DISTINGUE LES DEUX FAMILLES. Certaines actions sont des GESTES : ouvrir un
+     * formulaire, naviguer vers une rubrique, quitter l'espace de travail. Les rejouer
+     * après un F5 rouvrirait des fenêtres que l'utilisateur vient peut-être de fermer —
+     * elles doivent donc mourir avec la page, et c'est bien ce qu'elles font.
+     *
+     * D'autres sont des PANNEAUX portant un bouton que l'utilisateur doit encore pouvoir
+     * cliquer : la barre d'un plan en attente, celle d'un document à produire, celle
+     * d'une clarification, le tableau des fichiers à télécharger. Leur affichage est
+     * idempotent — le rejouer n'écrit rien, ne navigue pas, ne consomme rien — et leur
+     * disparition est une perte sèche : le fil garde la phrase « voici vos fichiers » et
+     * plus rien pour les obtenir. Elles se rangent donc dans un attribut du gabarit, que
+     * le contrôleur relit au montage.
+     *
+     * POURQUOI CETTE MÉTHODE EXISTE. `files-download` était le seul panneau de la seconde
+     * famille à ne pas être restauré, et rien ne le signalait : les huit autres
+     * restaurations étaient là, celle-là manquait, et l'anomalie ne se voyait qu'en
+     * appuyant sur F5 devant un tableau de fichiers. Le manque est maintenant DÉRIVÉ du
+     * code et vérifié (PanneauxRestauresApresF5Test), au lieu d'être remarqué par hasard.
+     *
+     * Les démentis autoritaires (PLAN_ABSENT et sa famille) n'en font pas partie : ils ne
+     * portent aucun bouton, ils rectifient une phrase. Ils restent hors de ce contrat.
+     */
+    public function attributDeRestauration(): ?string
+    {
+        return match ($this) {
+            self::PLAN_A_VALIDER        => 'data-mutation-review',
+            self::DOCUMENT_A_VALIDER    => 'data-document-review',
+            self::CLARIFICATION         => 'data-clarification',
+            self::TELECHARGER_FICHIERS  => 'data-files-download',
+            default                     => null,
+        };
+    }
+
     /** Lecture tolérante : null quand la valeur ne correspond à aucun type déclaré. */
     public static function depuis(mixed $valeur): ?self
     {

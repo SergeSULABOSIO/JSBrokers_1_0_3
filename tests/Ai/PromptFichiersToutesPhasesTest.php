@@ -109,6 +109,24 @@ class PromptFichiersToutesPhasesTest extends KernelTestCase
         );
     }
 
+    /**
+     * LA PHASE QUI ÉCRIT DOIT SAVOIR QU'ELLE NE DESSINE PAS LES TABLEAUX.
+     *
+     * La consigne compte ici et nulle part ailleurs : c'est la rédaction qui produit le
+     * Markdown. Et sans elle, la redondance revient d'elle-même — un outil renvoie des
+     * lignes, le modèle en fait spontanément un tableau, et l'utilisateur en voit deux :
+     * celui de la prose et celui du panneau, sous la même bulle. La `note` de
+     * `telecharger_documents` porte déjà l'interdiction pour son cas ; cette règle la
+     * généralise, de façon qu'un futur outil à panneau n'ait pas à la redécouvrir.
+     */
+    public function testLaRedactionSaitQuUnPanneauNeSeRecopiePas(): void
+    {
+        $prompt = $this->prompt(Trousse::ECRITURE, Phase::REDACTION, avecFichier: false);
+
+        $this->assertStringContainsString('CE QUE L\'INTERFACE DESSINE DÉJÀ NE SE RÉÉCRIT PAS', $prompt);
+        $this->assertStringContainsString('DEUX fois', $prompt, 'La conséquence doit être nommée, pas seulement la règle.');
+    }
+
     /** Le prompt réellement envoyé pour cette trousse et cette phase. */
     private function prompt(Trousse $trousse, ?Phase $phase, bool $avecFichier): string
     {

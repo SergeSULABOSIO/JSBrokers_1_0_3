@@ -4,7 +4,6 @@ namespace App\Ai\Tool;
 
 use App\Ai\Action\TypeAction;
 use App\Ai\Document\ContexteDeDocument;
-use App\Ai\Presentation\Colonnes;
 use App\Ai\Resolution\CritereLieA;
 use App\Ai\Scope\AiScope;
 use App\Entity\Document;
@@ -29,21 +28,22 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
  * soldait le plus souvent par un « je ne peux pas fournir de lien » — le refus que la
  * description de cet outil interdit pourtant explicitement.
  *
- * CE QU'IL FAIT MAINTENANT. Il CHERCHE (par rattachement, par nom, ou par identifiants),
- * puis il rend trois choses de front :
+ * CE QU'IL FAIT MAINTENANT. Il CHERCHE (par rattachement — et alors il DESCEND tout le
+ * dossier —, par nom, ou par identifiants), puis il rend trois choses de front :
  *
- *  1. une LIGNE par fichier — n°, nom, format, poids, date de mise en ligne,
- *     rattachement — avec sa déclaration de présentation, pour que le tableau numéroté
- *     soit le MÊME qu'il soit rendu par le modèle ou par le repli PHP ;
- *  2. le CONTEXTE complet de chaque fichier ({@see ContexteDeDocument}) : la fiche du
- *     document et celle de l'objet dont il provient, indicateurs calculés compris ;
- *  3. une DIRECTIVE d'interface qui fait apparaître les boutons — un par fichier, plus
- *     une archive ZIP dès qu'il y en a deux.
+ *  1. une DIRECTIVE d'interface qui dessine LE tableau — n°, nom, format, taille, niveau
+ *     — avec un bouton de téléchargement par ligne, plus une archive dès deux fichiers ;
+ *  2. les mêmes lignes pour le MODÈLE, non pour qu'il les recopie mais pour qu'il sache
+ *     ce qui a été trouvé et puisse en citer une dans sa phrase ;
+ *  3. le CONTEXTE complet de chaque fichier ({@see ContexteDeDocument}) : la fiche du
+ *     document et celle de l'objet dont il provient, indicateurs calculés compris.
  *
- * POURQUOI DES BOUTONS ET PAS DES LIENS DANS LE TEXTE. Le chat n'affiche aucun lien :
- * son allowlist de sanitisation ne connaît ni la balise `a` ni l'attribut `href`. Un
- * lien écrit par le modèle serait donc dégradé en texte mort. Le téléchargement passe
- * par la directive d'interface, et par elle seule.
+ * UN SEUL TABLEAU, ET C'EST CELUI DE L'INTERFACE. Le chat n'affiche aucun lien : son
+ * allowlist de sanitisation ne connaît ni la balise `a` ni l'attribut `href`, et un lien
+ * écrit par le modèle serait dégradé en texte mort. Seul un panneau peut donc porter un
+ * bouton — d'où la directive. Et puisque ce panneau montre déjà tout, demander au modèle
+ * d'écrire le même tableau en markdown le faisait afficher DEUX fois : la note lui
+ * demande une phrase, et l'outil ne déclare volontairement aucune `presentation`.
  *
  * FAIL-CLOSED, à trois verrous : droit de lecture sur Document, scoping entreprise par
  * le service de recherche, et re-vérification complète au CLIC par la route de
@@ -306,12 +306,13 @@ final class TelechargerDocumentsTool implements AiToolInterface
                 ]),
             ];
 
-            // LES COLONNES DEMANDÉES, ET ELLES SEULES : numéro, nom, format, taille,
-            // niveau. La sixième — l'action — ne peut pas être une CELLULE : le chat
-            // n'affiche aucun lien (son allowlist de sanitisation ne connaît ni `a` ni
-            // `href`), un lien écrit dans le tableau serait du texte mort. Le bouton de
-            // téléchargement de chaque ligne vit donc dans le panneau rendu juste en
-            // dessous, où il fonctionne vraiment.
+            // LES MÊMES LIGNES POUR LE MODÈLE — pour qu'il SACHE, pas pour qu'il les
+            // recopie. Le tableau visible est celui du panneau ci-dessus, qui seul peut
+            // porter un bouton : le chat n'affiche aucun lien (son allowlist de
+            // sanitisation ne connaît ni `a` ni `href`), et un lien écrit dans un tableau
+            // markdown serait du texte mort. Ket a besoin de ces lignes pour compter les
+            // fichiers et citer un nom dans sa phrase ; la « note » lui interdit d'en
+            // refaire le tableau, qui s'afficherait alors deux fois.
             $lignes[] = [
                 'n°'     => ++$numero,
                 'nom'    => $ligne['nom'],
@@ -357,26 +358,28 @@ final class TelechargerDocumentsTool implements AiToolInterface
             // Les rôles de colonne, déclarés UNE fois : le modèle et le repli PHP
             // rendent alors le même tableau numéroté. Aucun montant ici — rien à
             // totaliser, et un total de tailles de fichiers n'apprendrait rien.
-            'presentation' => Colonnes::de([
-                'n°'     => Colonnes::IDENTIFIANT,
-                'nom'    => Colonnes::TEXTE,
-                'format' => Colonnes::TEXTE,
-                'taille' => Colonnes::TEXTE,
-                'niveau' => Colonnes::TEXTE,
-            ], []),
+            // PAS DE DÉCLARATION `presentation` ICI, ET C'EST VOULU. Elle sert à guider le
+            // MODÈLE quand c'est lui qui écrit le tableau en markdown. Or le tableau des
+            // fichiers est dessiné par l'interface — seul un panneau peut porter un bouton
+            // de téléchargement, l'allowlist du chat ne connaissant ni `a` ni `href`. La
+            // laisser ici obligerait le modèle, par la règle des colonnes déclarées, à
+            // réécrire en prose le tableau qui s'affiche juste en dessous : c'est
+            // exactement le doublon qu'on supprime.
             'contexte' => $contextes,
-            // TOUJOURS UN TABLEAU, même pour un seul fichier. Une phrase pour un fichier
-            // et un tableau pour plusieurs, c'était deux présentations pour la même
-            // question : l'utilisateur ne retrouvait pas les mêmes informations d'une
-            // réponse à l'autre, et ne pouvait pas comparer. Les colonnes sont celles de
-            // « fichiers », et il n'y en a pas d'autres à inventer.
+            // UNE PHRASE, PAS UN TABLEAU. Cette note ordonnait au modèle d'écrire un
+            // tableau numéroté — que l'interface redessinait ensuite, à l'identique, avec
+            // ses boutons. L'utilisateur recevait donc DEUX fois la même liste pour une
+            // seule réponse, et le fil se remplissait deux fois plus vite. Le tableau qui
+            // reste est celui qui sait porter un bouton ; la prose cède la place.
             'note'     => sprintf(
-                '%d fichier(s) trouvé(s) dans TOUT le dossier, niveaux inférieurs compris. Présente-les '
-                . 'dans un tableau NUMÉROTÉ reprenant EXACTEMENT les colonnes de « fichiers » '
-                . '(n°, nom, format, taille, niveau) — n\'en ajoute ni n\'en retire aucune. La colonne '
-                . '« niveau » dit d\'où sort chaque pièce : ne la remplace pas par autre chose. '
-                . 'Un bouton de téléchargement par ligne%s est affiché sous ta réponse — invite '
-                . 'l\'utilisateur à cliquer, et n\'écris AUCUN lien toi-même.',
+                '%d fichier(s) trouvé(s) dans TOUT le dossier, niveaux inférieurs compris. '
+                . 'N\'ÉCRIS AUCUN TABLEAU et ne liste pas les fichiers un par un : l\'interface '
+                . 'affiche déjà, sous ta réponse, le tableau complet (n°, nom, format, taille, '
+                . 'niveau) avec un bouton de téléchargement par ligne%s. Écris UNE phrase de '
+                . 'synthèse — combien de fichiers, pour quel dossier, et jusqu\'où la recherche est '
+                . 'descendue (« du client jusqu\'à sa police ») — puis invite l\'utilisateur à '
+                . 'cliquer. Tu peux citer un nom de fichier si la question portait sur lui. '
+                . 'N\'écris aucun lien : il serait effacé à l\'affichage.',
                 count($pourUi),
                 count($pourUi) > 1 ? ', plus un bouton « Tout télécharger »' : '',
             ),

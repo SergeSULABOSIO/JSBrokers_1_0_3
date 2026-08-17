@@ -164,6 +164,9 @@ export default class extends Controller {
         // la seule issue proposée, il doit survivre au rechargement.
         this.restoreProgrammeCorrections();
         this.restoreActivites();
+        // Les fichiers proposés au téléchargement : un panneau purement déclaratif, donc
+        // rejouable sans effet de bord — et le seul qui ne l'était pas.
+        this.restoreFilesDownloads();
         this.scrollToBottom();
         this.onInput();
         if (this.hasInputTarget) {
@@ -873,6 +876,32 @@ export default class extends Controller {
      * portés par l'historique (attribut data-mutation-review posé côté serveur).
      * Indispensable après un F5 : sans cela, seul le texte du plan resterait.
      */
+    /**
+     * Reconstruit les PANNEAUX DE TÉLÉCHARGEMENT portés par l'historique.
+     *
+     * Ils disparaissaient au rechargement, alors qu'ils étaient les seuls du chat à
+     * pouvoir revenir sans risque : un tableau de fichiers ne déclenche rien, il montre.
+     * L'utilisateur qui rafraîchissait sa page perdait les boutons d'une recherche qu'il
+     * venait de payer, et devait la redemander pour les retrouver.
+     *
+     * Le renderer est le MÊME que celui du direct — c'est la seule façon que l'affichage
+     * après F5 ne diverge pas de l'affichage immédiat. Le panneau est reposé dans SA
+     * bulle, pas à la fin du fil.
+     */
+    restoreFilesDownloads() {
+        if (!this.hasMessagesTarget) return;
+        this.messagesTarget.querySelectorAll('.aic-msg[data-files-download]').forEach((el) => {
+            let action;
+            try {
+                action = JSON.parse(el.dataset.filesDownload);
+            } catch (e) {
+                return;
+            }
+            el.removeAttribute('data-files-download'); // évite tout doublon
+            this.renderFilesDownload(action, el);
+        });
+    }
+
     restoreMutationReviews() {
         if (!this.hasMessagesTarget) return;
         this.messagesTarget.querySelectorAll('.aic-msg[data-mutation-review]').forEach((el) => {
@@ -2791,7 +2820,7 @@ export default class extends Controller {
      * côté serveur au clic. Les libellés viennent du serveur et sont posés via
      * textContent — jamais de HTML brut, un nom de fichier étant du texte saisi.
      */
-    renderFilesDownload(action) {
+    renderFilesDownload(action, anchor = null) {
         if (!this.hasMessagesTarget) return;
 
         const fichiers = fichiersValides(action?.fichiers);
@@ -2817,8 +2846,35 @@ export default class extends Controller {
             }
         }
 
-        this.messagesTarget.appendChild(panel);
+        this._poserPanneauDansLaBulle(panel, anchor);
         this.scrollToBottom();
+    }
+
+    /**
+     * LE PANNEAU VA DANS LA BULLE, et c'est tout l'objet de cette méthode.
+     *
+     * Il était ajouté à la FIN de la liste des messages, frère de `.aic-msg` : il se
+     * lisait donc comme un message de plus — son propre fond, son propre bloc, pour une
+     * seule réponse. Et à la restauration après rechargement, un `appendChild` l'aurait
+     * envoyé au bas du fil, détaché de la réponse qu'il complète.
+     *
+     * Dans le corps de la bulle, il n'y a plus qu'un bloc, un fond, un horodatage — et la
+     * place du panneau dans le fil est celle de la bulle, sans que personne ait à la
+     * calculer.
+     *
+     * LE REPLI EST DÉLIBÉRÉ : si aucune bulle n'est trouvée, on retombe sur l'ancien
+     * comportement. Un panneau mal placé reste un téléchargement disponible ; un panneau
+     * abandonné est un fichier perdu de vue.
+     *
+     * @param {HTMLElement} panel
+     * @param {HTMLElement|null} anchor la bulle `.aic-msg` visée (restauration), ou null
+     *        pour la dernière réponse de l'assistant (rendu en direct).
+     */
+    _poserPanneauDansLaBulle(panel, anchor = null) {
+        const bulle = anchor || this.messagesTarget.querySelector('.aic-msg--assistant:last-of-type');
+        const corps = bulle?.querySelector('.aic-msg-body');
+
+        (corps || this.messagesTarget).appendChild(panel);
     }
 
     /**

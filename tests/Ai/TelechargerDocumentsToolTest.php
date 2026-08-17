@@ -424,12 +424,17 @@ class TelechargerDocumentsToolTest extends KernelTestCase
     }
 
     /**
-     * LA NUMÉROTATION ET LES COLONNES. Le tableau demandé est numéroté, et chaque
-     * colonne annoncée dans « presentation » doit exister dans les lignes : une colonne
-     * déclarée mais absente produirait une colonne fantôme chez le modèle comme dans le
-     * repli PHP (règle du contrat de présentation).
+     * UN SEUL TABLEAU, ET C'EST CELUI DU PANNEAU. L'outil ne déclare plus de
+     * « presentation » : cette déclaration n'existait que pour guider le markdown du
+     * modèle, et par la règle (1) du contrat de présentation elle l'OBLIGEAIT à écrire
+     * le tableau — celui-là même que le panneau dessine déjà juste en dessous. Deux
+     * tableaux pour une réponse. La présence de la clé ferait donc revenir la
+     * redondance : ce test la garde absente.
+     *
+     * Les lignes restent numérotées et restent renvoyées : Ket doit pouvoir compter les
+     * fichiers et citer un nom dans sa phrase de synthèse.
      */
-    public function testLesLignesSontNumeroteesEtLesColonnesDeclareesExistent(): void
+    public function testAucuneDeclarationDePresentationEtDesLignesNumerotees(): void
     {
         $seed = $this->seed();
 
@@ -438,14 +443,52 @@ class TelechargerDocumentsToolTest extends KernelTestCase
             $seed['scope'],
         );
 
+        self::assertArrayNotHasKey(
+            'presentation',
+            $resultat->data,
+            'Déclarer des colonnes ferait réécrire au modèle le tableau que l’interface affiche déjà.',
+        );
+
         $lignes = $resultat->data['fichiers'];
         self::assertSame([1, 2], array_column($lignes, 'n°'), 'La numérotation commence à 1 et ne saute pas.');
+    }
 
-        $declarees = array_keys($resultat->data['presentation']['colonnes']);
-        foreach ($declarees as $colonne) {
-            self::assertArrayHasKey($colonne, $lignes[0], sprintf('La colonne déclarée « %s » doit être RENVOYÉE.', $colonne));
+    /**
+     * LE CONTRAT AVEC LE PANNEAU, croisé PHP ↔ JS. Puisque le tableau visible est
+     * désormais celui du panneau et lui seul, toute colonne que le module JS dessine
+     * doit être PRÉSENTE dans la charge utile envoyée à l'interface. Une colonne
+     * dessinée sans donnée derrière produirait une colonne de tirets — l'anomalie que
+     * le contrat de présentation nomme « colonne fantôme », transposée au panneau.
+     *
+     * On lit la source JS plutôt que de recopier la liste : une liste recopiée est une
+     * seconde vérité, qui cesse d'être vraie au premier ajout de colonne.
+     */
+    public function testChaqueColonneDuPanneauEstAlimenteeParLOutil(): void
+    {
+        $source = file_get_contents(\dirname(__DIR__, 2) . '/assets/controllers/assistant-files-download.js');
+        self::assertIsString($source, 'Le module de présentation du panneau doit être lisible.');
+
+        preg_match_all("/\{\s*cle:\s*'([^']+)'/", $source, $m);
+        $colonnes = $m[1];
+        self::assertNotEmpty($colonnes, 'Les colonnes du panneau doivent être déclarées dans COLONNES.');
+
+        $seed = $this->seed();
+        $resultat = $this->tool()->execute(
+            ['lieA' => ['entite' => 'Avenant', 'id' => $seed['avenant']->getId()]],
+            $seed['scope'],
+        );
+
+        $premiere = $resultat->uiAction['fichiers'][0];
+        foreach ($colonnes as $cle) {
+            // « n » est le rang, calculé par le panneau à partir de la position ; il n'a
+            // pas à voyager. Toutes les autres colonnes sont des données.
+            if ($cle === 'n') {
+                continue;
+            }
+            self::assertArrayHasKey($cle, $premiere, sprintf('La colonne « %s » du panneau doit être ALIMENTÉE.', $cle));
         }
-        self::assertSame([], $resultat->data['presentation']['totaliser'], 'Rien à totaliser : additionner des tailles de fichiers n’apprendrait rien.');
+
+        self::assertArrayHasKey('url', $premiere, 'Sans URL, le bouton de téléchargement de la ligne est mort.');
     }
 
     /**
@@ -487,19 +530,18 @@ class TelechargerDocumentsToolTest extends KernelTestCase
     }
 
     /**
-     * UN SEUL FICHIER : le MÊME tableau que pour dix, et toujours pas d'archive.
+     * UN SEUL FICHIER : le MÊME panneau que pour dix, et toujours pas d'archive.
      *
-     * CE TEST A ÉTÉ RETOURNÉ. Il exigeait qu'un fichier unique soit présenté « sans
-     * tableau », en une phrase. Deux présentations pour la même question, c'était deux
-     * lectures à apprendre : selon le nombre de résultats, l'utilisateur ne retrouvait
-     * pas les mêmes informations au même endroit et ne pouvait pas comparer d'une
-     * réponse à l'autre. Les colonnes sont désormais les mêmes quel qu'en soit le
-     * nombre.
+     * CE TEST A ÉTÉ RETOURNÉ DEUX FOIS, et les deux fois pour la même raison — le
+     * nombre de résultats ne doit pas changer où l'utilisateur va lire. Il a d'abord
+     * exigé qu'un fichier unique soit présenté « sans tableau » ; il exige maintenant
+     * que la note interdise le tableau au modèle, dans les deux cas, parce que le
+     * tableau est celui de l'interface.
      *
      * L'archive, elle, reste réservée à plusieurs fichiers : proposer « tout
      * télécharger » pour un seul ajouterait un clic et un dossier à ouvrir.
      */
-    public function testUnSeulFichierEstPresenteDansLeMemeTableau(): void
+    public function testUnSeulFichierEstPresenteDansLeMemePanneau(): void
     {
         $seed = $this->seed();
 
@@ -507,7 +549,7 @@ class TelechargerDocumentsToolTest extends KernelTestCase
 
         self::assertCount(1, $resultat->uiAction['fichiers']);
         self::assertArrayNotHasKey('zipUrl', $resultat->uiAction, 'Une archive d’un seul fichier n’a pas de sens.');
-        self::assertStringContainsString('tableau NUMÉROTÉ', $resultat->data['note']);
+        self::assertStringContainsString('N\'ÉCRIS AUCUN TABLEAU', $resultat->data['note']);
         self::assertSame(
             ['n°', 'nom', 'format', 'taille', 'niveau'],
             array_keys($resultat->data['fichiers'][0]),
@@ -528,7 +570,7 @@ class TelechargerDocumentsToolTest extends KernelTestCase
         self::assertCount(2, $resultat->uiAction['fichiers']);
         self::assertArrayHasKey('zipUrl', $resultat->uiAction);
         self::assertStringContainsString('/zip', $resultat->uiAction['zipUrl']);
-        self::assertStringContainsString('NUMÉROTÉ', $resultat->data['note']);
+        self::assertStringContainsString('Tout télécharger', $resultat->data['note'], 'La note doit annoncer le bouton d’archive, que le modèle ne voit pas.');
 
         // Chaque entrée porte de quoi peupler une ligne du tableau, URL comprise.
         foreach ($resultat->uiAction['fichiers'] as $entree) {

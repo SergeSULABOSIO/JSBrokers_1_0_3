@@ -15,9 +15,14 @@
  */
 
 /**
- * Les colonnes du tableau, DANS L'ORDRE. Elles reprennent une à une les clés que
- * l'outil serveur déclare dans sa « presentation » : le tableau que Ket écrit en prose
- * et celui que rend ce panneau montrent ainsi les mêmes colonnes, dans le même ordre.
+ * Les colonnes du tableau, DANS L'ORDRE — et c'est ici le SEUL tableau des fichiers.
+ *
+ * Il en existait deux : celui que Ket écrivait en Markdown, et celui-ci. L'outil serveur
+ * déclarait une « presentation » pour que les deux montrent les mêmes colonnes — sauf que
+ * montrer deux fois la même liste, c'était surtout remplir le fil deux fois plus vite.
+ * L'outil ne déclare donc plus rien : le modèle écrit une phrase, ce panneau montre les
+ * lignes, et le bouton de téléchargement n'est possible qu'ici (l'allowlist de
+ * sanitisation du chat ne connaît ni `a` ni `href`).
  */
 export const COLONNES = [
     { cle: 'n', libelle: '#', classe: 'aic-fdl-c-num' },
