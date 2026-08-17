@@ -950,6 +950,20 @@ class SoaAccesClientTest extends WebTestCase
         $invite = $this->em()->getRepository(Invite::class)->findOneBy(['entreprise' => $entreprise]);
         $this->client->loginUser($this->user(self::OWNER_EMAIL));
 
+        // UNE PIÈCE QUI N'APPARTIENT À PERSONNE, exprès.
+        //
+        // CE TEST A ÉTÉ RETOURNÉ. Il s'appuyait sur le fait que les documents du jeu
+        // d'essai n'avaient pas de classeur — ce qui était vrai quand RIEN n'en posait
+        // jamais. Depuis que toute pièce rattachée à un client rejoint automatiquement le
+        // dossier de ce client, « Non classé » ne se rencontre plus que là où il doit se
+        // rencontrer : sur une pièce sans client — celle d'un bordereau, d'un fournisseur,
+        // d'un compte bancaire. On en fabrique donc une, plutôt que de retirer
+        // l'assertion : l'affichage « Non classé » existe toujours et doit rester juste.
+        $orpheline = (new Document())->setNom('Pièce sans dossier');
+        $orpheline->setEntreprise($entreprise)->setInvite($invite);
+        $this->em()->persist($orpheline);
+        $this->em()->flush();
+
         $this->client->request(
             'GET',
             sprintf('/espacedetravail/api/load-component/%d/%d', $invite->getId(), $entreprise->getId()),

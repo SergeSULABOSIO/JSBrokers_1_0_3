@@ -29,7 +29,12 @@ class DocumentFormCanvasProvider implements FormCanvasProviderInterface
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Document du classeur",
-                "description" => "Vous enregistrez un document en précisant son nom, le classeur de rattachement et le fichier à téléverser. Chaque pièce ainsi archivée reste traçable et accessible pour la gestion administrative du cabinet.",
+                // LE CLASSEUR N'EST PLUS À PRÉCISER, et il fallait cesser de le demander :
+                // un document rattaché à un client est désormais rangé tout seul dans le
+                // classeur de ce client. Laisser la consigne d'avant ferait chercher à
+                // l'utilisateur une décision qu'il n'a plus à prendre — et le champ, resté
+                // facultatif, ne sert plus qu'à ranger AILLEURS que dans le dossier du client.
+                "description" => "Vous enregistrez un document en précisant son nom et le fichier à téléverser. Le classement est automatique : une pièce rattachée à un client rejoint le classeur de ce client. Le champ « classeur » ne sert qu'à la ranger ailleurs.",
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
