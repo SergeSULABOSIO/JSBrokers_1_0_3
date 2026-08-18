@@ -59,6 +59,7 @@ class WorkspaceMutationService
         'ChargementPourPrime' => 'Composition de la prime',
         'ConditionPartage'    => 'Conditions de partage',
         'PaiementPrime'       => 'Paiements de prime signalés',
+        'ReversementRetroAgent' => 'Reversements de rétrocommission agent',
     ];
 
     public function __construct(

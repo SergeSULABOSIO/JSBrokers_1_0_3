@@ -8,6 +8,7 @@ use App\Entity\Client;
 use App\Entity\Entreprise;
 use App\Entity\Cotation;
 use App\Entity\Groupe;
+use App\Entity\Invite;
 use App\Entity\Portefeuille;
 use App\Entity\Risque;
 use App\Entity\Tranche;
@@ -29,6 +30,7 @@ use App\Repository\CotationRepository;
 use App\Repository\NotificationSinistreRepository;
 use App\Repository\TaxeRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Service\Partage\Reserve;
 use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
 use DateTimeImmutable;
@@ -372,7 +374,9 @@ class IndicatorCalculationHelper implements ResetInterface
             'prime_totale', 'prime_totale_payee', 'commission_totale', 'commission_totale_encaissee',
             'commission_nette', 'commission_pure', 'prime_nette', 'commission_partageable', 'reserve',
             'retro_commission_partenaire', 'retro_commission_partenaire_payee', 'taxe_courtier',
-            'taxe_courtier_payee', 'taxe_assureur', 'taxe_assureur_payee', 'sinistre_payable', 'sinistre_paye'
+            'taxe_courtier_payee', 'taxe_assureur', 'taxe_assureur_payee', 'sinistre_payable', 'sinistre_paye',
+            // Rétrocommission des AGENTS INTERNES — second bénéficiaire du partage.
+            'retro_commission_agent', 'retro_commission_agent_payee',
         ], 0.0);
         extract($totals);
 
@@ -382,6 +386,13 @@ class IndicatorCalculationHelper implements ResetInterface
         $risqueCible = $options['risqueCible'] ?? null;
         $partenaireCible = $options['partenaireCible'] ?? null;
         $inviteCible = $options['inviteCible'] ?? null;
+        // ⚠ NE PAS CONFONDRE inviteCible ET agentCible. Le premier filtre le GESTIONNAIRE
+        // de l'affaire (Piste::invite, posé par AuditableTrait à la saisie) ; le second, le
+        // BÉNÉFICIAIRE de la rétrocommission (l'agent d'une condition rattachée à la
+        // piste). Un agent peut apporter une affaire et en confier la gestion à un
+        // collègue : les deux axes sont indépendants, et les confondre attribuerait la
+        // rémunération à la mauvaise personne.
+        $agentCible = $options['agentCible'] ?? null;
         $groupeCible = $options['groupeCible'] ?? null;
         $portefeuilleCible = $options['portefeuilleCible'] ?? null;
         $avenantCible = $options['avenantCible'] ?? null;
@@ -432,6 +443,20 @@ class IndicatorCalculationHelper implements ResetInterface
             else $qb->andWhere('p.risque = :risqueCible')->setParameter('risqueCible', $risqueCible);
         }
         if ($inviteCible) $qb->andWhere('p.invite = :inviteCible')->setParameter('inviteCible', $inviteCible);
+        if ($agentCible) {
+            if ($agentCible->getId() === null) $qb->andWhere('1=0');
+            else {
+                // EXISTS plutôt qu'une jointure : la piste peut porter plusieurs conditions
+                // d'agent, et joindre les multiplierait les lignes de cotation — le produit
+                // cartésien que cette requête s'interdit formellement. Le plafond de 61
+                // jointures de MariaDB dissuade aussi d'en ajouter une de plus.
+                $qb->andWhere(
+                    'EXISTS (SELECT 1 FROM App\Entity\ConditionPartage cpa_e
+                             JOIN cpa_e.pistesAffectees cpa_p
+                             WHERE cpa_p = p AND cpa_e.agent = :agentCible)'
+                )->setParameter('agentCible', $agentCible);
+            }
+        }
         if ($clientCible) {
             if ($clientCible->getId() === null) $qb->andWhere('1=0');
             else $qb->andWhere('p.client = :clientCible')->setParameter('clientCible', $clientCible);
@@ -561,6 +586,11 @@ class IndicatorCalculationHelper implements ResetInterface
 
             $retro_commission_partenaire += $this->getCotationMontantRetrocommissionsPayableParCourtier($cotation, $partenaireCible, -1);
             $retro_commission_partenaire_payee += $this->getCotationMontantRetrocommissionsPayableParCourtierPayee($cotation, $partenaireCible);
+
+            $retro_commission_agent += $this->getCotationMontantRetroAgent($cotation, $agentCible);
+            foreach ($cotation->getAvenants() as $avenantDeLaCotation) {
+                $retro_commission_agent_payee += $this->getAvenantMontantRetroAgentReversee($avenantDeLaCotation, $agentCible);
+            }
         }
 
         foreach ($sinistresAcalculer as $sinistre) {
@@ -581,6 +611,7 @@ class IndicatorCalculationHelper implements ResetInterface
             $commission_partageable *= $facteur;
             $prime_nette *= $facteur;
             $retro_commission_partenaire *= $facteur;
+            $retro_commission_agent *= $facteur;
             $reserve *= $facteur;
             $taxe_courtier *= $facteur;
             $taxe_assureur *= $facteur;
@@ -595,10 +626,20 @@ class IndicatorCalculationHelper implements ResetInterface
             $taxe_assureur_payee = $this->getTrancheMontantTaxePayee($trancheCible, true);
         }
 
-        $reserve = $commission_pure - $retro_commission_partenaire;
+        // Réserve : formule UNIQUE du projet (App\Service\Partage\Reserve), partagée avec
+        // les fiches Tranche / Avenant / Revenu. Ce qui reste au cabinet, c'est la
+        // commission pure moins TOUT ce qui est rétrocédé — externe ET interne.
+        //
+        // ⚠ Quand un agentCible est posé, `retro_commission_agent` ne compte que CET
+        // agent : la réserve rendue est alors celle « vue de son côté », pas la réserve
+        // réelle du cabinet. C'est cohérent avec le reste de la méthode, où toutes les
+        // cibles restreignent de la même façon (un partenaireCible ne compte pas non plus
+        // les rétros des autres).
+        $reserve = Reserve::calculer($commission_pure, $retro_commission_partenaire, $retro_commission_agent);
         $prime_totale_solde = $prime_totale - $prime_totale_payee;
         $commission_totale_solde = $commission_totale - $commission_totale_encaissee;
         $retro_commission_partenaire_solde = $retro_commission_partenaire - $retro_commission_partenaire_payee;
+        $retro_commission_agent_solde = $retro_commission_agent - $retro_commission_agent_payee;
         $taxe_courtier_solde = $taxe_courtier - $taxe_courtier_payee;
         $taxe_assureur_solde = $taxe_assureur - $taxe_assureur_payee;
         $sinistre_solde = $sinistre_payable - $sinistre_paye;
@@ -609,6 +650,7 @@ class IndicatorCalculationHelper implements ResetInterface
         $taux_de_paiement_prime = ($prime_totale > 0) ? ($prime_totale_payee / $prime_totale) * 100 : 0;
         $taux_de_paiement_commission = ($commission_totale > 0) ? ($commission_totale_encaissee / $commission_totale) * 100 : 0;
         $taux_de_paiement_retro_commission = ($retro_commission_partenaire > 0) ? ($retro_commission_partenaire_payee / $retro_commission_partenaire) * 100 : 0;
+        $taux_de_paiement_retro_agent = ($retro_commission_agent > 0) ? ($retro_commission_agent_payee / $retro_commission_agent) * 100 : 0;
         $taux_de_paiement_taxe_courtier = ($taxe_courtier > 0) ? ($taxe_courtier_payee / $taxe_courtier) * 100 : 0;
         $taux_de_paiement_taxe_assureur = ($taxe_assureur > 0) ? ($taxe_assureur_payee / $taxe_assureur) * 100 : 0;
         $taux_de_paiement_sinistre = ($sinistre_payable > 0) ? ($sinistre_paye / $sinistre_payable) * 100 : 0;
@@ -628,6 +670,9 @@ class IndicatorCalculationHelper implements ResetInterface
             'retro_commission_partenaire' => $retro_commission_partenaire,
             'retro_commission_partenaire_payee' => $retro_commission_partenaire_payee,
             'retro_commission_partenaire_solde' => $retro_commission_partenaire_solde,
+            'retro_commission_agent' => $retro_commission_agent,
+            'retro_commission_agent_payee' => $retro_commission_agent_payee,
+            'retro_commission_agent_solde' => $retro_commission_agent_solde,
             'taxe_courtier' => $taxe_courtier,
             'taxe_courtier_payee' => $taxe_courtier_payee,
             'taxe_courtier_solde' => $taxe_courtier_solde,
@@ -643,6 +688,7 @@ class IndicatorCalculationHelper implements ResetInterface
             'taux_de_paiement_prime' => $taux_de_paiement_prime,
             'taux_de_paiement_commission' => $taux_de_paiement_commission,
             'taux_de_paiement_retro_commission' => $taux_de_paiement_retro_commission,
+            'taux_de_paiement_retro_agent' => $taux_de_paiement_retro_agent,
             'taux_de_paiement_taxe_courtier' => $taux_de_paiement_taxe_courtier,
             'taux_de_paiement_taxe_assureur' => $taux_de_paiement_taxe_assureur,
             'taux_de_paiement_sinistre' => $taux_de_paiement_sinistre,
@@ -753,8 +799,15 @@ class IndicatorCalculationHelper implements ResetInterface
      * La règle n'est pas inventée ici — elle est reprise de l'implémentation d'origine
      * (Constante::appliquerConditions et ses trois Cotation_getSommeCommissionPure*),
      * seule source de vérité de ce calcul : on somme la commission pure de toutes les
-     * cotations de l'ENTREPRISE, du MÊME EXERCICE et du MÊME PARTENAIRE, restreintes
+     * cotations de l'ENTREPRISE, du MÊME EXERCICE et du MÊME BÉNÉFICIAIRE, restreintes
      * selon l'unité au même risque, au même client, ou à rien du tout.
+     *
+     * LE BÉNÉFICIAIRE, ET NON LE PARTENAIRE. Il était résolu ici en dur par
+     * getCotationPartenaire(). Une condition au profit d'un AGENT INTERNE aurait donc
+     * mesuré son seuil sur la production du partenaire de l'affaire — un chiffre qui ne la
+     * concerne pas, et qui vaut zéro quand l'affaire n'a pas de partenaire. La production
+     * d'un agent, ce sont les affaires dont il est BÉNÉFICIAIRE (celles portant une de ses
+     * conditions) — jamais celles qu'il gère.
      *
      * Le résultat est mémoïsé : sans cela, une rubrique interrogerait ces sommes une fois
      * par revenu et par ligne, sur des requêtes qui balaient tout le portefeuille.
@@ -766,14 +819,22 @@ class IndicatorCalculationHelper implements ResetInterface
         if (!$piste || !$entreprise) return 0.0;
 
         $exercice = $piste->getExercice();
-        $partenaire = $this->getCotationPartenaire($cotation);
+        $beneficiaire = $condition->getAgent() ?? $this->getCotationPartenaire($cotation);
         $unite = $condition->getUniteMesure();
+        // « Somme de la production du partenaire » et « … de l'agent » sont la même
+        // portée — toute la production du bénéficiaire — sous deux noms d'écran.
+        if ($unite === ConditionPartage::UNITE_SOMME_COMMISSION_PURE_AGENT) {
+            $unite = ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE;
+        }
 
         $cle = implode(':', [
             $unite,
+            // Discriminant de BORD : sans lui, l'agent nº7 et le partenaire nº7
+            // partageraient la même entrée de cache et le même total.
+            $condition->estPourAgent() ? 'a' : 'p',
             (int) $entreprise->getId(),
             (int) $exercice,
-            (int) $partenaire?->getId(),
+            (int) $beneficiaire?->getId(),
             (int) $piste->getRisque()?->getId(),
             (int) $piste->getClient()?->getId(),
             $addressedTo,
@@ -785,11 +846,11 @@ class IndicatorCalculationHelper implements ResetInterface
 
         $cotations = match ($unite) {
             ConditionPartage::UNITE_SOMME_COMMISSION_PURE_RISQUE => $piste->getRisque() === null ? []
-                : $this->cotationRepository->loadCotationsWithPartnerRisque($exercice, $entreprise, $piste->getRisque(), $partenaire),
+                : $this->cotationRepository->loadCotationsWithPartnerRisque($exercice, $entreprise, $piste->getRisque(), $beneficiaire),
             ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT => $piste->getClient() === null ? []
-                : $this->cotationRepository->loadCotationsWithPartnerClient($exercice, $entreprise, $piste->getClient(), $partenaire),
+                : $this->cotationRepository->loadCotationsWithPartnerClient($exercice, $entreprise, $piste->getClient(), $beneficiaire),
             ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE
-                => $this->cotationRepository->loadCotationsWithPartnerAll($exercice, $entreprise, $partenaire),
+                => $this->cotationRepository->loadCotationsWithPartnerAll($exercice, $entreprise, $beneficiaire),
             default => [],
         };
 
@@ -1179,6 +1240,18 @@ class IndicatorCalculationHelper implements ResetInterface
         return $assiette * $tauxPartage;
     }
 
+    /**
+     * La condition de partage qui l'emporte pour ce revenu (cascade piste ▸ partenaire).
+     * Simple façade vers la source unique — RevenuPourCourtierIndicatorStrategy — pour que
+     * les appelants qui ne tiennent que le helper n'aient pas à réécrire la cascade.
+     */
+    public function conditionPartageRetenue(RevenuPourCourtier $revenu): ?ConditionPartage
+    {
+        $this->strategieRevenu ??= new RevenuPourCourtierIndicatorStrategy($this, $this->taxeRepository, $this->em);
+
+        return $this->strategieRevenu->conditionRetenue($revenu);
+    }
+
     public function getCotationPartenaire(?Cotation $cotation)
     {
         if ($cotation?->getPiste()) {
@@ -1193,17 +1266,54 @@ class IndicatorCalculationHelper implements ResetInterface
         return null;
     }
 
+    /**
+     * Le partenaire de l'affaire est-il celui qu'on cherche ?
+     *
+     * `$partenaireCible = null` veut dire « NE PAS FILTRER » (et non « pas de partenaire ») :
+     * c'est ainsi que tous les appelants qui totalisent, tous partenaires confondus,
+     * l'invoquent. D'où le `true` — il est intentionnel, pas un oubli.
+     *
+     * COMPARAISON D'IDENTITÉ, jamais `==`. L'égalité lâche de PHP compare deux objets
+     * champ par champ : deux PROXIES Doctrine non initialisés ont tous leurs champs à
+     * null et se déclarent donc égaux, quel que soit le partenaire qu'ils représentent.
+     * Le filtre par partenaire pouvait ainsi retenir une affaire qui appartenait à un
+     * autre — d'autant plus facilement que ces objets arrivent ici en lazy-loading.
+     */
     public function isSamePartenaire(?Partenaire $partenaire, ?Partenaire $partenaireCible): bool
     {
-        if ($partenaireCible == null) return true;
-        return $partenaireCible == $partenaire;
+        if ($partenaireCible === null) return true;
+        if ($partenaire === null) return false;
+
+        // Les identifiants tranchent quand les deux côtés sont persistés : un proxy et son
+        // entité chargée sont le MÊME partenaire sans être la même instance PHP.
+        $id = $partenaire->getId();
+        $idCible = $partenaireCible->getId();
+        if ($id !== null && $idCible !== null) {
+            return $id === $idCible;
+        }
+
+        return $partenaire === $partenaireCible;
     }
 
+    /**
+     * Ce qu'une condition rétrocède RÉELLEMENT sur ce revenu — zéro si une autre l'emporte.
+     *
+     * LA CASCADE ÉTAIT IGNORÉE ICI. La méthode appliquait la condition qu'on lui présentait
+     * dès que son seuil était franchi, sans vérifier qu'elle est bien celle que le calcul
+     * de l'argent retient. Or la condition d'une PISTE masque celle du PARTENAIRE : la
+     * rubrique Condition de partage annonçait donc, pour la condition masquée, un « Total
+     * rétrocommission » et un « Nombre de dossiers concernés » qui ne correspondaient à
+     * aucun franc versé. Le garde ci-dessous aligne l'indicateur sur la réalité.
+     */
     public function applyRevenuConditionsSpeciales(?ConditionPartage $conditionPartage, RevenuPourCourtier $revenu, $addressedTo): float
     {
         if (!$conditionPartage) return 0.0;
         $piste = $revenu->getCotation()?->getPiste();
         if (!$piste) return 0.0;
+
+        if ($this->conditionPartageRetenue($revenu) !== $conditionPartage) {
+            return 0.0;
+        }
 
         if (!$this->conditionFranchitSonSeuil($conditionPartage, $revenu, $addressedTo)) {
             return 0.0;
@@ -1237,7 +1347,13 @@ class IndicatorCalculationHelper implements ResetInterface
         }
 
         $seuil = (float) $condition->getSeuil();
-        $uniteMesure = $this->sommeCommissionPureDeLUnite($condition, $revenu->getCotation(), $addressedTo, true);
+        // « Partageable » est une notion du contrat PARTENAIRE : elle désigne les revenus
+        // que le courtier a accepté de partager avec un apporteur externe. Elle ne
+        // gouverne pas la rémunération d'un salarié, dont l'assiette est ce qui reste au
+        // cabinet — tous revenus confondus. Mesurer le seuil d'un agent sur la seule part
+        // partageable le placerait hors de portée sur toute affaire non partagée.
+        $onlySharable = !$condition->estPourAgent();
+        $uniteMesure = $this->sommeCommissionPureDeLUnite($condition, $revenu->getCotation(), $addressedTo, $onlySharable);
 
         return match ($formule) {
             ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL => $uniteMesure < $seuil,
@@ -1299,23 +1415,246 @@ class IndicatorCalculationHelper implements ResetInterface
         return $this->serviceTaxes->getMontantTaxe($montantHT, $this->isIARD($revenu->getCotation()), true); // true = Taxe Assureur
     }
 
+    /**
+     * Applique le taux d'une condition à une assiette, si la condition VISE bien ce risque.
+     *
+     * LA RÈGLE DE CIBLAGE N'EST PLUS RÉÉCRITE ICI. Elle était recopiée à la main sous
+     * forme d'un `switch` sur `critereRisque`, alors que ConditionPartage::sappliqueAuRisque()
+     * se déclare — dans son propre docblock — « règle unique, partagée par le calcul du taux
+     * de rétrocommission et par la reconduction du partage ». Deux écritures d'une même
+     * règle, c'est deux occasions de diverger : ajouter un quatrième critère de ciblage
+     * aurait laissé ce chemin-ci en arrière, sans que rien ne le signale.
+     *
+     * Le comportement est strictement identique : les trois critères connus se
+     * correspondent un à un, et une valeur inconnue ne partageait déjà rien (le `return 0.0`
+     * final ici, le `default => false` là-bas).
+     *
+     * Le garde `!$risque` est conservé tel quel : une piste sans risque ne rétrocédait rien
+     * par ce chemin, alors que sappliqueAuRisque(null) rendrait `true` pour une condition
+     * sans ciblage. Le relâcher changerait des montants — ce n'est pas l'objet de ce lot.
+     */
     public function calculerRetroCommission(?Risque $risque, ?ConditionPartage $conditionPartage, $assiette): float
     {
         if (!$conditionPartage || !$risque) return 0.0;
-        $taux = $conditionPartage->getFraction();
-        $produitsCible = $conditionPartage->getProduits();
 
-        switch ($conditionPartage->getCritereRisque()) {
-            case ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES:
-                if (!$produitsCible->contains($risque)) return $assiette * $taux;
-                return 0.0;
-            case ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES:
-                if ($produitsCible->contains($risque)) return $assiette * $taux;
-                return 0.0;
-            case ConditionPartage::CRITERE_PAS_RISQUES_CIBLES:
-                return $assiette * $taux;
+        return $conditionPartage->sappliqueAuRisque($risque)
+            ? $assiette * $conditionPartage->getFraction()
+            : 0.0;
+    }
+
+    // ==================================================================================
+    // RÉTROCOMMISSION DES AGENTS INTERNES
+    //
+    // Symétrique de celle des partenaires, et posée au même endroit pour que la symétrie
+    // se lise. Trois différences de fond, toutes voulues :
+    //
+    //  1. L'ASSIETTE. Le partenaire se partage la commission pure des revenus PARTAGEABLES ;
+    //     l'agent touche un pourcentage de ce qui RESTE au cabinet — commission pure
+    //     totale, moins ce qui est déjà parti chez les partenaires externes. Un agent ne
+    //     peut pas être payé sur de l'argent que le cabinet n'a pas gardé.
+    //
+    //  2. PLUSIEURS BÉNÉFICIAIRES POSSIBLES. Une affaire peut porter les conditions de
+    //     deux agents. Ils s'ADDITIONNENT, mais sur la MÊME assiette : déduire le premier
+    //     avant de calculer le second rendrait les montants dépendants de l'ordre de
+    //     parcours de la collection, donc instables d'une requête à l'autre. Pour un même
+    //     agent porteur de plusieurs conditions, c'est la PREMIÈRE APPLICABLE qui
+    //     l'emporte — même règle que la cascade des partenaires.
+    //
+    //  3. LE VERSEMENT NE PASSE PAS PAR UNE NOTE. La rétro d'un partenaire se facture, et
+    //     son « payé » se déduit du prorata de règlement des notes. La rémunération d'un
+    //     salarié se verse : le payé se lit en clair sur ReversementRetroAgent.
+    // ==================================================================================
+
+    /**
+     * Les conditions RETENUES sur cette affaire, une par agent bénéficiaire.
+     *
+     * @return array<int, ConditionPartage> indexé par identifiant d'agent
+     */
+    public function getCotationConditionsAgent(?Cotation $cotation, ?Invite $agentCible = null): array
+    {
+        $piste = $cotation?->getPiste();
+        if ($piste === null) {
+            return [];
         }
-        return 0.0;
+
+        $risque = $piste->getRisque();
+        $retenues = [];
+
+        // LES DEUX RATTACHEMENTS COMPTENT, et c'est délibéré.
+        //
+        // Une condition d'agent se pose normalement par la collection PARTAGÉE
+        // (`conditionsPartageAgent`), celle qui la rend réutilisable d'une affaire à
+        // l'autre. Mais rien n'empêche un gestionnaire de la créer dans la collection des
+        // « conditions spéciales de partage », qui la lie à cette seule piste par le
+        // ManyToOne historique. Ne lire que la première laisserait alors une
+        // rétrocommission ENREGISTRÉE mais jamais comptée — le pire des cas : un silence,
+        // découvert par l'agent qui réclame sa part.
+        //
+        // On parcourt donc les deux, en dédoublonnant : une même condition peut figurer
+        // dans les deux collections, elle ne doit payer qu'une fois.
+        $candidates = [];
+        foreach ($piste->getConditionsPartageAgent() as $condition) {
+            $candidates[spl_object_id($condition)] = $condition;
+        }
+        foreach ($piste->getConditionsPartageExceptionnelles() as $condition) {
+            if ($condition->estPourAgent()) {
+                $candidates[spl_object_id($condition)] = $condition;
+            }
+        }
+
+        foreach ($candidates as $condition) {
+            $agent = $condition->getAgent();
+            if ($agent === null || $agent->getId() === null) {
+                continue;
+            }
+            if ($agentCible !== null && $agent->getId() !== $agentCible->getId()) {
+                continue;
+            }
+            if (!$condition->sappliqueAuRisque($risque)) {
+                continue;
+            }
+            // Première applicable par agent : les suivantes ne s'ajoutent pas.
+            $retenues[$agent->getId()] ??= $condition;
+        }
+
+        return $retenues;
+    }
+
+    /**
+     * L'assiette de la rétrocommission des agents : ce qui reste au cabinet une fois les
+     * taxes et les partenaires externes servis. C'est exactement la « réserve » d'avant
+     * l'introduction des agents — et c'est voulu : on ne rétrocède en interne que sur ce
+     * qu'on a effectivement gardé.
+     */
+    public function getCotationAssietteRetroAgent(?Cotation $cotation): float
+    {
+        if (!$cotation) return 0.0;
+
+        return $this->getCotationMontantCommissionPure($cotation, -1, false)
+            - $this->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1);
+    }
+
+    /**
+     * Rétrocommission DUE aux agents internes sur cette affaire. Sans agent ciblé, la
+     * somme de tous ; avec, la part de celui-là seulement.
+     */
+    public function getCotationMontantRetroAgent(?Cotation $cotation, ?Invite $agentCible = null): float
+    {
+        $conditions = $this->getCotationConditionsAgent($cotation, $agentCible);
+        if ($conditions === []) {
+            return 0.0;
+        }
+
+        $assiette = $this->getCotationAssietteRetroAgent($cotation);
+        if ($assiette <= 0.0) {
+            return 0.0;
+        }
+
+        $montant = 0.0;
+        foreach ($conditions as $condition) {
+            // Le seuil se mesure sur un revenu de l'affaire : n'importe lequel convient,
+            // l'unité de mesure étant une somme à l'échelle de l'exercice.
+            if (!$this->conditionAgentFranchitSonSeuil($condition, $cotation)) {
+                continue;
+            }
+            $montant += $assiette * $condition->getFraction();
+        }
+
+        return $montant;
+    }
+
+    /**
+     * Le seuil d'une condition d'agent, mesuré sur l'affaire plutôt que sur un revenu
+     * précis : l'unité de mesure est une somme d'exercice, elle ne dépend pas du revenu
+     * par lequel on l'interroge. Une affaire sans aucun revenu n'a pas de seuil à
+     * franchir — la condition s'applique alors si elle est sans seuil, et pas autrement.
+     */
+    private function conditionAgentFranchitSonSeuil(ConditionPartage $condition, Cotation $cotation): bool
+    {
+        if ($condition->getFormule() === ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL) {
+            return true;
+        }
+
+        foreach ($cotation->getRevenus() as $revenu) {
+            return $this->conditionFranchitSonSeuil($condition, $revenu, -1);
+        }
+
+        return false;
+    }
+
+    /**
+     * Rétrocommission DUE à un agent au titre d'UN avenant.
+     *
+     * Un avenant vaut son affaire entière — convention déjà en place dans tout le projet
+     * (AvenantIndicatorStrategy lit les montants de sa cotation). C'est cette maille que
+     * le rapport de production et les reversements utilisent comme « ligne ».
+     */
+    public function getAvenantMontantRetroAgent(?Avenant $avenant, ?Invite $agentCible = null): float
+    {
+        return $this->getCotationMontantRetroAgent($avenant?->getCotation(), $agentCible);
+    }
+
+    /**
+     * Rétrocommission déjà VERSÉE à un agent au titre d'un avenant. Lecture directe des
+     * reversements : aucun prorata de note n'intervient dans ce circuit.
+     */
+    public function getAvenantMontantRetroAgentReversee(?Avenant $avenant, ?Invite $agentCible = null): float
+    {
+        if (!$avenant) return 0.0;
+
+        $montant = 0.0;
+        foreach ($avenant->getReversementsRetroAgent() as $reversement) {
+            $agent = $reversement->getAgent();
+            if ($agentCible !== null && $agent?->getId() !== $agentCible->getId()) {
+                continue;
+            }
+            $montant += (float) $reversement->getMontant();
+        }
+
+        return $montant;
+    }
+
+    /** Solde restant dû à un agent sur un avenant (jamais négatif : un trop-versé n'est pas une dette). */
+    public function getAvenantRetroAgentSolde(?Avenant $avenant, ?Invite $agentCible = null): float
+    {
+        return max(0.0, round(
+            $this->getAvenantMontantRetroAgent($avenant, $agentCible)
+            - $this->getAvenantMontantRetroAgentReversee($avenant, $agentCible),
+            2,
+        ));
+    }
+
+    /**
+     * Rétrocommission EXIGIBLE : le solde dû, mais seulement une fois la commission de
+     * courtage de l'affaire intégralement encaissée par le cabinet.
+     *
+     * Miroir strict de getTrancheRetroExigible() côté partenaire. Payer un agent avant
+     * d'avoir soi-même perçu, c'est avancer sa trésorerie sur une créance non recouvrée —
+     * le piège que le circuit partenaire garde déjà. Le « dû » reste visible, il n'est
+     * simplement pas encore réclamable.
+     */
+    public function getAvenantRetroAgentExigible(?Avenant $avenant, ?Invite $agentCible = null): float
+    {
+        $cotation = $avenant?->getCotation();
+        if (!$cotation || !$this->isCotationBound($cotation)) {
+            return 0.0;
+        }
+
+        $solde = $this->getAvenantRetroAgentSolde($avenant, $agentCible);
+        if ($solde <= 0.0) {
+            return 0.0;
+        }
+
+        $due = round($this->getCotationMontantCommissionTtc($cotation, -1, false), 2);
+        if ($due <= 0.0) {
+            // Affaire sans commission : rien n'est à attendre de l'assureur, la dette
+            // interne est donc née dès la souscription.
+            return $solde;
+        }
+
+        $encaissee = round($this->getCotationMontantCommissionEncaissee($cotation), 2);
+
+        return $encaissee >= $due ? $solde : 0.0;
     }
 
     public function getCotationMontantRetrocommissionsPayableParCourtierPayee(?Cotation $cotation, ?Partenaire $partenaireCible): float
@@ -2146,6 +2485,16 @@ class IndicatorCalculationHelper implements ResetInterface
             case 'portefeuilleCible':
                 $qb->join('p.client', 'cl_pf')->andWhere('cl_pf.portefeuille IN (:cibles)');
                 break;
+            case 'agentCible':
+                // Les affaires dont ils sont BÉNÉFICIAIRES (condition de partage à leur
+                // nom). EXISTS et non jointure : une piste peut porter les conditions de
+                // plusieurs agents, et les joindre multiplierait les lignes de cotation.
+                $qb->andWhere(
+                    'EXISTS (SELECT 1 FROM App\Entity\ConditionPartage cpa_pre
+                             JOIN cpa_pre.pistesAffectees cpa_pre_p
+                             WHERE cpa_pre_p = p AND cpa_pre.agent IN (:cibles))'
+                );
+                break;
             default:
                 return; // Rubrique non agrégatrice : rien à précharger de ce côté.
         }
@@ -2179,6 +2528,9 @@ class IndicatorCalculationHelper implements ResetInterface
         'risqueCible'       => [Risque::class, ['pistes']],
         'groupeCible'       => [Groupe::class, ['clients']],
         'portefeuilleCible' => [Portefeuille::class, ['clients']],
+        // La rubrique Invités parcourt sa propre collection en plus de l'agrégat : les
+        // conditions dont l'invité est bénéficiaire (lues pour `hasRetroAgent`).
+        'agentCible'        => [Invite::class, ['conditionsPartageAgent']],
     ];
 
     /**
@@ -2355,6 +2707,31 @@ class IndicatorCalculationHelper implements ResetInterface
              FROM App\Entity\Cotation c
              LEFT JOIN c.chargements ch
              LEFT JOIN ch.type cht
+             WHERE c.id IN (:ids)'
+        )->setParameter('ids', $cotationIds)->getResult();
+
+        // 3 bis. Les DEUX rattachements de conditions de partage portés par la piste, et
+        // leur agent (to-one). Le calcul de la rétrocommission des agents internes les
+        // parcourt tous les deux — une condition d'agent peut avoir été posée par l'un ou
+        // par l'autre — ce qui rallumerait DEUX chargements paresseux par ligne sans ce
+        // préchargement. Deux requêtes distinctes, jamais une seule : joindre deux
+        // collections to-many de la même piste produirait le cartésien que ce
+        // préchargement existe précisément pour éviter.
+        $this->em->createQuery(
+            'SELECT c, p, cpa, cpa_ag
+             FROM App\Entity\Cotation c
+             LEFT JOIN c.piste p
+             LEFT JOIN p.conditionsPartageAgent cpa
+             LEFT JOIN cpa.agent cpa_ag
+             WHERE c.id IN (:ids)'
+        )->setParameter('ids', $cotationIds)->getResult();
+
+        $this->em->createQuery(
+            'SELECT c, p, cpe, cpe_ag
+             FROM App\Entity\Cotation c
+             LEFT JOIN c.piste p
+             LEFT JOIN p.conditionsPartageExceptionnelles cpe
+             LEFT JOIN cpe.agent cpe_ag
              WHERE c.id IN (:ids)'
         )->setParameter('ids', $cotationIds)->getResult();
 

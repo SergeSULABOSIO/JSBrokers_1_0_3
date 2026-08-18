@@ -9,6 +9,7 @@ use App\Entity\Risque;
 use App\Entity\Taxe;
 use App\Util\Pourcentage;
 use App\Repository\TaxeRepository;
+use App\Service\Partage\Reserve;
 use Doctrine\ORM\EntityManagerInterface;
 
 class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrategyInterface
@@ -97,11 +98,13 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
         return $montantPaye;
     }
 
+    /** Réserve : formule UNIQUE du projet (App\Service\Partage\Reserve). */
     private function getReserveCourtier(RevenuPourCourtier $revenu): float
     {
-        $montantPur = $this->calculationHelper->getRevenuMontantPure($revenu);
-        $retrocommission = $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, null, -1);
-        return $montantPur - $retrocommission;
+        return Reserve::calculer(
+            $this->calculationHelper->getRevenuMontantPure($revenu),
+            $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, null, -1),
+        );
     }
 
     private function getRevenuPourCourtierDescriptionCalcul(RevenuPourCourtier $revenu): string
@@ -149,7 +152,6 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             return 0.0;
         }
 
-        $piste = $cotation->getPiste();
         $partenaire = $this->calculationHelper->getCotationPartenaire($cotation);
 
         // S'il n'y a pas de partenaire associé à l'affaire, pas de partage.
@@ -157,17 +159,7 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             return 0.0;
         }
 
-        // LA CASCADE, dans l'ordre de l'implémentation d'origine
-        // (Constante::Revenu_getMontant_retrocommissions_payable_par_courtier) : la
-        // condition portée par la PISTE l'emporte ; à défaut celle portée par le
-        // PARTENAIRE ; à défaut seulement, son taux par défaut.
-        //
-        // LES CONDITIONS DU PARTENAIRE NE MODULAIENT RIEN. Elles n'étaient jamais
-        // consultées ici, alors que la rubrique Partenaire annonce à l'utilisateur, noir
-        // sur blanc, qu'elles « modulent le calcul de sa rétro-commission ».
-        $risqueActuel = $piste->getRisque();
-        $condition = $this->premiereConditionApplicable($piste->getConditionsPartageExceptionnelles(), $risqueActuel)
-            ?? $this->premiereConditionApplicable($partenaire->getConditionPartages(), $risqueActuel);
+        $condition = $this->conditionRetenue($revenu);
 
         if ($condition !== null) {
             // ET SON SEUIL EST ENFIN HONORÉ. Le taux de la condition était pris tel quel :
@@ -183,6 +175,41 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
 
         // Aucune condition : le taux par défaut du partenaire (facteur = fraction).
         return $partenaire->getFraction();
+    }
+
+    /**
+     * LA CONDITION DE PARTAGE QUI L'EMPORTE pour ce revenu — SOURCE UNIQUE de la cascade.
+     *
+     * Ordre, repris de l'implémentation d'origine (Constante::
+     * Revenu_getMontant_retrocommissions_payable_par_courtier) : la condition portée par
+     * la PISTE l'emporte ; à défaut celle portée par le PARTENAIRE ; à défaut, aucune —
+     * et c'est alors le taux par défaut du partenaire qui s'applique.
+     *
+     * (Les conditions du partenaire ne modulaient rien : elles n'étaient jamais
+     * consultées, alors que la rubrique Partenaire annonce noir sur blanc qu'elles
+     * « modulent le calcul de sa rétro-commission ».)
+     *
+     * PUBLIQUE PARCE QU'ELLE A DEUX CONSOMMATEURS. Le second est la rubrique Condition de
+     * partage, dont les indicateurs d'impact imputaient à CHAQUE condition la
+     * rétrocommission qu'elle aurait produite seule — sans vérifier qu'elle l'emporte.
+     * Une condition de partenaire masquée par une condition de piste annonçait donc un
+     * « Total rétrocommission » et des « dossiers concernés » qui ne correspondaient à
+     * aucun franc versé. Les deux passent désormais par ici.
+     */
+    public function conditionRetenue(RevenuPourCourtier $revenu): ?ConditionPartage
+    {
+        $piste = $revenu->getCotation()?->getPiste();
+        if ($piste === null) {
+            return null;
+        }
+
+        $partenaire = $this->calculationHelper->getCotationPartenaire($revenu->getCotation());
+        $risqueActuel = $piste->getRisque();
+
+        return $this->premiereConditionApplicable($piste->getConditionsPartageExceptionnelles(), $risqueActuel)
+            ?? ($partenaire !== null
+                ? $this->premiereConditionApplicable($partenaire->getConditionPartages(), $risqueActuel)
+                : null);
     }
 
     /**

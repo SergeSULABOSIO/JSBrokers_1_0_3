@@ -10,6 +10,7 @@ use App\Entity\Paiement;
 use App\Entity\Taxe;
 use App\Repository\DepenseCourtierRepository;
 use App\Repository\PaiementRepository;
+use App\Repository\ReversementRetroAgentRepository;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use App\Services\ServiceMonnaies;
 use App\Services\ServiceTaxes;
@@ -35,6 +36,11 @@ use App\Services\ServiceTaxes;
  *      · assureur/client   → D 706 (avoir : réduction de produit) ;
  *  - dépenses du courtier (DepenseCourtier, non annulées) → D charge classe 6 (HT)
  *    [+ D 445 TVA récupérable] / C trésorerie (payée) ou C 401 Fournisseurs (engagée) ;
+ *  - rétrocommission versée à un AGENT INTERNE (ReversementRetroAgent) → D 6611
+ *    Appointements, salaires et commissions / C trésorerie. 6611 et non 632 : l'agent
+ *    est un salarié, la charge tombe donc en Charges de personnel. Les lignes d'un même
+ *    virement (même lotReference) sont regroupées en UNE écriture, pour que le journal
+ *    se rapproche du relevé bancaire ;
  *  - capital social (Entreprise.capitalSociale) → écriture fondatrice D 521 / C 101.
  *
  * Les sept documents sont construits par le moteur générique partagé
@@ -48,6 +54,7 @@ class CourtierEcritureComptableService
     public function __construct(
         private PaiementRepository $paiementRepository,
         private DepenseCourtierRepository $depenseRepository,
+        private ReversementRetroAgentRepository $reversementRepository,
         private IndicatorCalculationHelper $helper,
         private ServiceTaxes $serviceTaxes,
         private ServiceMonnaies $serviceMonnaies,
@@ -91,6 +98,11 @@ class CourtierEcritureComptableService
         // 3) Dépenses du cabinet non annulées : charge HT, TVA déductible, sortie TTC.
         foreach ($depenses as $depense) {
             $ecritures[] = $this->ecritureDepense($depense);
+        }
+
+        // 4) Rétrocommissions versées aux AGENTS INTERNES : charge de personnel.
+        foreach ($this->ecrituresRetroAgent($id) as $ecriture) {
+            $ecritures[] = $ecriture;
         }
 
         // Tri chronologique stable.
@@ -235,6 +247,90 @@ class CourtierEcritureComptableService
         $taxePart = round($montantPaye - $htPart, 2);
 
         return [$htPart, $taxePart];
+    }
+
+    /**
+     * ÉCRITURES DES RÉTROCOMMISSIONS VERSÉES AUX AGENTS INTERNES.
+     *
+     *     D 6611 Appointements, salaires et commissions   montant
+     *     C 521 Banques | 571 Caisse                      montant
+     *
+     * 6611 et non 632 : l'agent est un salarié du cabinet, pas un intermédiaire externe —
+     * la charge doit tomber en Charges de personnel au résultat et au TFR.
+     *
+     * ── UN VERSEMENT RÉEL = UNE ÉCRITURE ────────────────────────────────────────────────
+     * Un virement unique couvrant dix affaires est saisi comme dix LIGNES (pour que le
+     * solde reste exact affaire par affaire dans le rapport de production), mais il n'a
+     * quitté la banque qu'UNE fois. Les émettre en dix écritures rendrait le journal
+     * irréconciliable avec le relevé bancaire : on les regroupe donc sur leur
+     * `lotReference`, et on n'émet qu'une écriture équilibrée pour le total. Le détail par
+     * affaire reste lisible dans le rapport, qui est son lieu.
+     *
+     * Un reversement isolé (lotReference nul) porte une clé qui n'appartient qu'à lui :
+     * il ne peut jamais être fondu dans le lot d'un autre.
+     *
+     * PAS D'ÉCRITURE D'ENGAGEMENT pour le dû non encore versé (D 6611 / C 4221 Personnel,
+     * rémunérations dues). Ce service est en comptabilité de TRÉSORERIE — son fait
+     * générateur est le paiement, comme le dit son docblock. Y introduire le seul accrual
+     * du système fausserait le rapprochement entre trésorerie et résultat. Le « dû » reste
+     * un indicateur de gestion : colonnes de la rubrique Invités et rapport de production.
+     *
+     * @return array<int, array>
+     */
+    private function ecrituresRetroAgent(int $idEntreprise): array
+    {
+        $lots = [];
+        foreach ($this->reversementRepository->findChronologiqueForEntreprise($idEntreprise) as $reversement) {
+            $montant = round((float) $reversement->getMontant(), 2);
+            if (abs($montant) < 0.005) {
+                continue;
+            }
+
+            $cle = $reversement->cleDeRegroupement();
+            if (!isset($lots[$cle])) {
+                $lots[$cle] = [
+                    'date'       => $reversement->getPaidAt(),
+                    'piece'      => $reversement->getLotReference() ?: ($reversement->getReference() ?: 'RA-' . $reversement->getId()),
+                    'agent'      => $reversement->getAgent()?->getNom() ?? 'Agent',
+                    'tresorerie' => $reversement->getCompteBancaire() !== null ? PlanComptable::BANQUES : PlanComptable::CAISSE,
+                    'total'      => 0.0,
+                    'polices'    => [],
+                ];
+            }
+            $lots[$cle]['total'] += $montant;
+            $police = $reversement->getAvenant()?->getReferencePolice();
+            if ($police !== null && $police !== '') {
+                $lots[$cle]['polices'][$police] = true;
+            }
+        }
+
+        $ecritures = [];
+        foreach ($lots as $lot) {
+            $total = round($lot['total'], 2);
+            if (abs($total) < 0.005) {
+                continue;
+            }
+
+            $polices = array_keys($lot['polices']);
+            $detail = match (count($polices)) {
+                0 => '',
+                1 => ' — police ' . $polices[0],
+                default => sprintf(' — %d polices', count($polices)),
+            };
+
+            $ecritures[] = [
+                'date'    => $lot['date'],
+                'piece'   => $lot['piece'],
+                'libelle' => sprintf('Rétrocommission agent — %s%s', $lot['agent'], $detail),
+                'type'    => 'retro_agent',
+                'lignes'  => [
+                    $this->ligne(PlanComptable::COMMISSIONS_PERSONNEL, $total, 0.0),
+                    $this->ligne($lot['tresorerie'], 0.0, $total),
+                ],
+            ];
+        }
+
+        return $ecritures;
     }
 
     /**

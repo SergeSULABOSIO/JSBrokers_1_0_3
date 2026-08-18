@@ -76,6 +76,10 @@ class Document
     #[ORM\ManyToOne(inversedBy: 'preuves')]
     private ?PaiementPrime $paiementPrime = null;
 
+    // Preuve d'un reversement de rétrocommission à un agent interne (bordereau, reçu).
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?ReversementRetroAgent $reversementRetroAgent = null;
+
     #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?Fournisseur $fournisseur = null;
 
@@ -395,6 +399,18 @@ class Document
     public function setPaiementPrime(?PaiementPrime $paiementPrime): static
     {
         $this->paiementPrime = $paiementPrime;
+
+        return $this;
+    }
+
+    public function getReversementRetroAgent(): ?ReversementRetroAgent
+    {
+        return $this->reversementRetroAgent;
+    }
+
+    public function setReversementRetroAgent(?ReversementRetroAgent $reversementRetroAgent): static
+    {
+        $this->reversementRetroAgent = $reversementRetroAgent;
 
         return $this;
     }

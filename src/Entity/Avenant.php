@@ -244,9 +244,26 @@ class Avenant
     #[Groups(['list:read'])]
     private ?\DateTimeImmutable $nonRenouvelableLeveLe = null;
 
+    /**
+     * @var Collection<int, ReversementRetroAgent> Rétrocommissions déjà versées aux agents
+     *      internes au titre de cette affaire. Sans cascade remove : supprimer un avenant
+     *      ne doit pas effacer la trace d'un décaissement réel, qui est en comptabilité.
+     */
+    #[ORM\OneToMany(targetEntity: ReversementRetroAgent::class, mappedBy: 'avenant')]
+    private Collection $reversementsRetroAgent;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();
+        $this->reversementsRetroAgent = new ArrayCollection();
+    }
+
+    /**
+     * @return Collection<int, ReversementRetroAgent>
+     */
+    public function getReversementsRetroAgent(): Collection
+    {
+        return $this->reversementsRetroAgent;
     }
 
     public function getId(): ?int

@@ -2,6 +2,7 @@
 
 namespace App\Service\Workspace;
 
+use App\Entity\ConditionPartage;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Symfony\Component\Form\Extension\Core\Type\PercentType;
@@ -144,7 +145,50 @@ class ChampsObligatoiresInspector
             }
         }
 
-        return $manquants;
+        return $manquants + $this->incoherencesMetier($entity, $shortName, $champsPilotables);
+    }
+
+    /**
+     * INCOHÉRENCES entre champs — l'autre famille de refus, à côté des champs manquants.
+     *
+     * Un champ peut être individuellement valide et rendre la fiche insensée en
+     * combinaison avec un autre. Ces règles ne se déduisent d'aucune métadonnée Doctrine :
+     * on les nomme ici, une par une, plutôt que de semer des #[Assert] par entité (le
+     * projet n'en pose aucune, cf. le refus 422 générique du trait CRUD).
+     *
+     * @param string[]|null $champsPilotables cf. champsManquants()
+     *
+     * @return array<string, string[]>
+     */
+    private function incoherencesMetier(object $entity, string $shortName, ?array $champsPilotables): array
+    {
+        // Une condition de partage rétrocède à UN bénéficiaire : un partenaire EXTERNE ou
+        // un agent INTERNE, jamais les deux, jamais aucun. Avec les deux, l'assiette à
+        // retenir serait ambiguë — celle du partenaire ne porte que les revenus
+        // partageables, celle de l'agent porte ce qui reste au cabinet APRÈS les
+        // partenaires — et trancher en silence ferait perdre de l'argent à quelqu'un.
+        if ($shortName === 'ConditionPartage' && $entity instanceof ConditionPartage && !$entity->estValide()) {
+            // MÊME DISCIPLINE QUE LES CHAMPS MANQUANTS : on ne signale que ce que le
+            // formulaire courant peut corriger. Un appel restreint à d'autres champs — ou
+            // un écran qui ne montre aucun des deux bénéficiaires — n'a pas à recevoir un
+            // refus qu'il ne saurait pas lever.
+            $pilotable = static fn (string $champ): bool
+                => $champsPilotables === null || in_array($champ, $champsPilotables, true);
+            if (!$pilotable('agent') && !$pilotable('partenaire')) {
+                return [];
+            }
+
+            // Le champ visé est celui que l'écran expose : sur la fiche d'un partenaire,
+            // `agent` n'existe pas — y signaler « agent » serait incompréhensible.
+            $champ = $pilotable('agent') ? 'agent' : 'partenaire';
+
+            return [$champ => [$entity->getBeneficiaire() === null
+                ? 'Désignez un bénéficiaire : un partenaire externe, ou un agent interne.'
+                : 'Une condition rétrocède à un partenaire externe OU à un agent interne, pas aux deux.',
+            ]];
+        }
+
+        return [];
     }
 
     /**

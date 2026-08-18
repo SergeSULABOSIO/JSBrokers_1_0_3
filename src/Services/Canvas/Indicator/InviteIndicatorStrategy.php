@@ -14,7 +14,8 @@ class InviteIndicatorStrategy implements IndicatorCalculationStrategyInterface
     public function __construct(
         private ServiceDates $serviceDates,
         private TranslatorInterface $translator,
-        private UtilisateurRepository $utilisateurRepository
+        private UtilisateurRepository $utilisateurRepository,
+        private IndicatorCalculationHelper $calculationHelper,
     ) {
     }
 
@@ -26,7 +27,7 @@ class InviteIndicatorStrategy implements IndicatorCalculationStrategyInterface
     public function calculate(object $entity): array
     {
         /** @var Invite $entity */
-        return [
+        return $this->indicateursFinanciers($entity) + [
             'ageInvitation' => $this->calculateInviteAge($entity),
             'tachesEnCours' => $this->countInviteTachesEnCours($entity),
             'rolePrincipal' => $this->getInviteRolePrincipal($entity),
@@ -38,6 +39,57 @@ class InviteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             // Ligne secondaire : l'absence de portefeuille est une information métier,
             // affichée explicitement (pas de null masquant comme sur la fiche client).
             'portefeuilleNom' => $this->getInvitePortefeuilleNom($entity),
+        ];
+    }
+
+    /**
+     * LES CHIFFRES DE L'INVITÉ SONT CEUX DE SON EFFORT COMMERCIAL, PAS DE SA GESTION.
+     *
+     * Toutes les colonnes numériques de la rubrique décrivent les affaires dont il est
+     * BÉNÉFICIAIRE — celles qu'il a apportées, où une condition de partage le rémunère
+     * (filtre `agentCible`). Jamais celles qu'il gère comme gestionnaire de compte
+     * (`inviteCible` → Piste::invite), qui ne disent rien de ce qu'il a produit.
+     *
+     * LA DISTINCTION N'EST PAS COSMÉTIQUE. Un gestionnaire de compte suit des dizaines
+     * d'affaires apportées par d'autres : afficher leurs primes sur sa ligne lui
+     * attribuerait un résultat commercial qui n'est pas le sien, juste à côté d'une
+     * rétrocommission à zéro. La ligne se lit donc d'un bloc : même périmètre pour la
+     * prime, la commission, la réserve et la rétro.
+     *
+     * (Ces quatre colonnes étaient déclarées par le canevas mais jamais alimentées — la
+     * stratégie n'appelait pas getIndicateursGlobaux() et Invite était absente de
+     * CalculationProvider::CIBLES_AGREGEES : l'écran affichait quatre « — ».)
+     *
+     * @return array<string, float|bool>
+     */
+    private function indicateursFinanciers(Invite $invite): array
+    {
+        $entreprise = $invite->getEntreprise();
+        if ($entreprise === null) {
+            return [];
+        }
+
+        $apporte = $this->calculationHelper->getIndicateursGlobaux($entreprise, false, ['agentCible' => $invite]);
+
+        $retroDue = round($apporte['retro_commission_agent'], 2);
+        $retroPayee = round($apporte['retro_commission_agent_payee'], 2);
+
+        return [
+            // Ce que ses affaires ont produit.
+            'primeTotale' => round($apporte['prime_totale'], 2),
+            'montantTTC' => round($apporte['commission_totale'], 2),
+            'montantPur' => round($apporte['commission_pure'], 2),
+            'reserve' => round($apporte['reserve'], 2),
+
+            // Ce qui lui revient dessus.
+            'retroAgentDue' => $retroDue,
+            'retroAgentPayee' => $retroPayee,
+            // Plafonné à zéro : un trop-versé n'est pas une dette de l'agent envers le cabinet.
+            'retroAgentSolde' => round(max(0.0, $retroDue - $retroPayee), 2),
+
+            // Condition des actions de la barre d'outils (rapport, reversement) : booléen
+            // strict, comparé en == lâche côté JS.
+            'hasRetroAgent' => $retroDue > 0.0 || !$invite->getConditionsPartageAgent()->isEmpty(),
         ];
     }
 

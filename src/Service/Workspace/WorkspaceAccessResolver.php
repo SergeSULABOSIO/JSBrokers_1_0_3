@@ -87,6 +87,15 @@ class WorkspaceAccessResolver
         'Risque'                     => ['Production', 'getRolesEnProduction', 'getAccessRisque', 'Risques'],
         'Avenant'                    => ['Production', 'getRolesEnProduction', 'getAccessAvenant', 'Avenants'],
         'Partenaire'                 => ['Production', 'getRolesEnProduction', 'getAccessPartenaire', 'Intermédiaires'],
+        // Conditions de partage : RUBRIQUE à part entière depuis qu'elles portent la
+        // rémunération nominative d'agents internes — il fallait un écran pour les créer
+        // et auditer les taux en vigueur. Elles partagent le droit « Intermédiaires » :
+        // c'est là qu'elles vivent (Partenaire::conditionPartages) et le même
+        // collaborateur négocie les deux. Aucun nouveau champ de rôle, aucune migration.
+        //
+        // Elles n'étaient auparavant NI ici NI dans GOUVERNANCE_PARENT : can() retombait
+        // donc sur son `return true` final — un fail-open sur des taux de rémunération.
+        'ConditionPartage'           => ['Production', 'getRolesEnProduction', 'getAccessPartenaire', 'Conditions de partage'],
         'Cotation'                   => ['Production', 'getRolesEnProduction', 'getAccessCotation', 'Propositions'],
         // SINISTRE
         'ModelePieceSinistre'        => ['Sinistre', 'getRolesEnSinistre', 'getAccessTypePiece', 'Types pièces'],
@@ -131,6 +140,9 @@ class WorkspaceAccessResolver
      */
     private const GOUVERNANCE_PARENT = [
         'PaiementPrime' => 'Tranche',
+        // Reversement de rétrocommission : gouverné par l'AVENANT, la ligne d'affaire qu'il
+        // solde — c'est là que le montant dû se lit, et c'est le droit qu'exige déjà l'écran.
+        'ReversementRetroAgent' => 'Avenant',
     ];
 
     /**
@@ -142,6 +154,7 @@ class WorkspaceAccessResolver
      */
     private const SOUS_ENTITES_LIBELLES = [
         'PaiementPrime' => 'Paiements de prime',
+        'ReversementRetroAgent' => 'Reversements de rétrocommission agent',
     ];
 
     public function __construct(

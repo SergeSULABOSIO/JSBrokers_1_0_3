@@ -46,6 +46,7 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
                 "documents" => "document",
+                "conditionsPartageAgent" => "condition",
                 "nom" => "utilisateur",
                 "email" => "mdi:email-outline",
                 "assistants" => "invite",
@@ -67,6 +68,24 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
                     "icon"  => "action:resend-invitation",
                     "event" => "ui:invite.resend-request",
                     "url"   => "/admin/invite/api/resend-invitation/%id%",
+                ],
+                // Rétrocommission de l'agent : visibles seulement s'il en perçoit une
+                // (attribut calculé hasRetroAgent, InviteIndicatorStrategy). Le rapport
+                // détaille sa production affaire par affaire ; le reversement enregistre
+                // ce que le cabinet lui verse, en une ligne ou en lot.
+                [
+                    "label"     => "Voir le rapport de production",
+                    "icon"      => "action:view",
+                    "event"     => "ui:retroagent.rapport-request",
+                    "url"       => "/admin/retro-agent/%id%/rapport",
+                    "condition" => ["field" => "hasRetroAgent", "value" => true],
+                ],
+                [
+                    "label"     => "Signaler un reversement de rétrocommission",
+                    "icon"      => "depense",
+                    "event"     => "ui:retroagent.reversement-request",
+                    "url"       => "/admin/retro-agent/%id%/reversement-picker",
+                    "condition" => ["field" => "hasRetroAgent", "value" => true],
                 ],
                 // Actions « portefeuille » conditionnelles, sur le modèle des actions
                 // linked-note du Bordereau : la condition est évaluée côté front contre
@@ -169,8 +188,22 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
             ],
         ];
 
+        // Rémunération de l'agent sur les affaires qu'il apporte. `parentFieldName` =
+        // `agent` : le ManyToOne par lequel la condition désigne son bénéficiaire, donc
+        // celui que le trait injecte à la création depuis cette fiche.
+        $collectionsConfig[] = [
+            'fieldName' => 'conditionsPartageAgent', 'entityRouteName' => 'conditionpartage',
+            'formTitle' => 'Condition de partage', 'parentFieldName' => 'agent',
+            'parentRouteName' => 'invite',
+        ];
+
         // Pièces jointes de cette fiche.
-        $collections[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'inviteRattache', 'parentRouteName' => 'invite'];
+        //
+        // Le widget était ajouté à `$collections`, une variable qui n'existe nulle part
+        // ailleurs, alors que la méthode reçoit `$collectionsConfig` : la collection
+        // « Documents » de la fiche Invité était donc déclarée dans le FormType mais
+        // jamais rendue à l'écran.
+        $collectionsConfig[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'inviteRattache', 'parentRouteName' => 'invite'];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collectionsConfig);
 
         return $layout;

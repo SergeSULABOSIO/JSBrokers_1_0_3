@@ -54,6 +54,27 @@ class InviteType extends AbstractType
                     'placeholder' => "Assistants",
                 ],
             ])
+            // CONDITIONS DE PARTAGE dont cet invité est le BÉNÉFICIAIRE — jumelle de la
+            // collection du Partenaire, à ceci près que la part revient à un agent du
+            // cabinet. Son taux s'applique sur la commission pure APRÈS déduction de la
+            // part d'un éventuel partenaire extérieur : c'est la dernière part retirée.
+            //
+            // La condition créée ici ne s'applique encore à RIEN : elle décrit la règle.
+            // C'est en la rattachant à une piste (champ « Agents internes rémunérés sur
+            // cette affaire ») qu'elle prend effet — et la même règle sert autant
+            // d'affaires que l'agent en apporte.
+            ->add('conditionsPartageAgent', CollectionType::class, [
+                'label' => "Conditions spéciales de partage",
+                'entry_type' => ConditionPartageType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'required' => false,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'mapped' => false,
+            ])
             ->add('rolesEnFinance', CollectionType::class, [
                 'label' => "Droits d'accès dans le module Finances",
                 'entry_type' => RolesEnFinanceType::class,

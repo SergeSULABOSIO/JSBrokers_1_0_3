@@ -14,7 +14,9 @@ export default class extends Controller {
      * @property {HTMLTemplateElement} collectionTabTemplateTarget - Le template pour un onglet de collection.
      * @property {HTMLElement} selectionContextTarget - La pastille d'entête rappelant l'élément sélectionné (Guidage).
      */
-    static targets = ["tabsContainer", "tabContentContainer", "display", "collectionTabTemplate", "selectionContext"];
+    static targets = ["tabsContainer", "tabContentContainer", "display", "collectionTabTemplate", "selectionContext",
+        // Repli des onglets qui ne tiennent pas dans la barre.
+        "tabsWrapper", "tabsMore", "tabsMoreCount", "tabsOverflowPanel"];
     
     static values = {
         idEntreprise: Number,
@@ -95,8 +97,11 @@ export default class extends Controller {
 
         // Affordance de débordement de la barre d'onglets : recalculée quand la
         // barre change de taille (le scroll est couvert par data-action côté template).
+        // On observe le WRAPPER, pas la rangée : celle-ci est en `overflow: hidden` et sa
+        // largeur ne bouge plus quand des onglets sont repliés — l'observer ne se
+        // réveillerait donc jamais au redimensionnement de la fenêtre.
         this.tabsOverflowObserver = new ResizeObserver(() => this.updateTabsOverflow());
-        this.tabsOverflowObserver.observe(this.tabsContainerTarget);
+        this.tabsOverflowObserver.observe(this.hasTabsWrapperTarget ? this.tabsWrapperTarget : this.tabsContainerTarget);
     }
 
     /**
@@ -110,6 +115,7 @@ export default class extends Controller {
         document.removeEventListener('workspace:tab-became-active', this.boundHandleTabBecameActive);
         document.removeEventListener('app:icon.loaded', this.boundHandleIconLoaded);
         this.tabsOverflowObserver.disconnect();
+        this.closeTabsOverflow();
     }
 
     /**
@@ -247,6 +253,14 @@ export default class extends Controller {
             tab.setAttribute('aria-selected', tab === clickedTab ? 'true' : 'false');
             tab.setAttribute('tabindex', tab === clickedTab ? '0' : '-1');
         });
+
+        // LE REPLI SE RECALCULE À CHAQUE ACTIVATION, et ce n'était pas le cas.
+        // Un onglet activé DEPUIS le panneau restait marqué « replié » : il devenait
+        // actif sans jamais reparaître dans la barre, et le panneau ne le signalait pas
+        // davantage. L'utilisateur se retrouvait sur une rubrique dont aucun repère à
+        // l'écran ne disait où elle se trouvait (Nielsen 1). Ce recalcul le remet dans la
+        // rangée — l'onglet actif n'est jamais replié — et remet à jour le panneau ouvert.
+        this.updateTabsOverflow();
 
         const newContent = this.tabContentContainerTarget.querySelector(`#${this.activeTabId}`);
 
@@ -417,10 +431,161 @@ export default class extends Controller {
      * et après chaque création/suppression d'onglets.
      */
     updateTabsOverflow() {
-        const el = this.tabsContainerTarget;
-        const canScroll = el.scrollWidth > el.clientWidth + 1;
-        el.classList.toggle('is-overflowing-left', canScroll && el.scrollLeft > 1);
-        el.classList.toggle('is-overflowing-right', canScroll && el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+        if (!this.hasTabsMoreTarget || !this.hasTabsWrapperTarget) return;
+
+        const conteneur = this.tabsContainerTarget;
+        const onglets = Array.from(conteneur.querySelectorAll('.list-tab'));
+        if (onglets.length === 0) return;
+
+        // On repart d'une barre ENTIÈREMENT dépliée avant de mesurer : sans cela, la
+        // mesure porterait sur l'état replié du tour précédent et la barre ne se
+        // redéplierait jamais quand la fenêtre s'élargit.
+        onglets.forEach((o) => o.classList.remove('is-tab-replie'));
+        this.tabsMoreTarget.classList.add('d-none');
+
+        // Largeur réellement disponible, une fois retirée la place que prendra le bouton
+        // « + N » s'il s'avère nécessaire. On la réserve d'emblée : la calculer après coup
+        // ferait osciller le dernier onglet entre visible et replié à chaque redimension.
+        const largeurBouton = 76;
+        const disponible = this.tabsWrapperTarget.clientWidth - largeurBouton;
+
+        // LA RANGÉE RESTE STABLE : l'onglet actif n'est PAS épinglé de force dans la barre.
+        // L'y ramener ferait sauter les onglets à chaque changement — un onglet chasse
+        // l'autre, et la barre ne ressemble jamais deux fois à elle-même. On garde donc
+        // l'ordre, et on DIT où l'on se trouve : le bouton « + N » signale que l'onglet
+        // courant est replié, et le panneau met la rubrique en évidence.
+        const actif = onglets.find((o) => o.classList.contains('active'));
+
+        let cumul = 0;
+        const replies = [];
+        for (const onglet of onglets) {
+            const largeur = onglet.offsetWidth;
+            if (cumul + largeur <= disponible) {
+                cumul += largeur;
+            } else {
+                onglet.classList.add('is-tab-replie');
+                replies.push(onglet);
+            }
+        }
+
+        this.tabsReplies = replies;
+        if (replies.length === 0) {
+            this.tabsMoreTarget.classList.remove('has-current');
+            this.closeTabsOverflow();
+            return;
+        }
+
+        this.tabsMoreTarget.classList.remove('d-none');
+        if (this.hasTabsMoreCountTarget) this.tabsMoreCountTarget.textContent = `+${replies.length}`;
+
+        // L'onglet courant est-il parmi les repliés ? Si oui, le bouton le dit — sans quoi
+        // l'utilisateur ne verrait NULLE PART où il se trouve (Nielsen 1).
+        const courantReplie = actif !== undefined && replies.includes(actif);
+        this.tabsMoreTarget.classList.toggle('has-current', courantReplie);
+        this.tabsMoreTarget.setAttribute(
+            'aria-label',
+            courantReplie
+                ? `Onglet courant « ${actif.textContent.trim()} » replié — afficher les ${replies.length} onglets repliés`
+                : `Afficher ${replies.length} onglet${replies.length > 1 ? 's' : ''} replié${replies.length > 1 ? 's' : ''}`,
+        );
+        this.tabsMoreTarget.setAttribute(
+            'title',
+            courantReplie ? `Vous êtes sur « ${actif.textContent.trim()} »` : 'Onglets repliés',
+        );
+
+        // Panneau déjà ouvert au moment d'une redimension : on le repeuple à chaud plutôt
+        // que de le refermer sous le curseur de l'utilisateur.
+        if (this.tabsMoreTarget.getAttribute('aria-expanded') === 'true') this._peuplerPanneauOnglets();
+    }
+
+    /**
+     * Ouvre ou ferme le panneau des onglets repliés.
+     * @param {MouseEvent} event
+     */
+    toggleTabsOverflow(event) {
+        event?.preventDefault();
+        event?.stopPropagation();
+        const ouvert = this.tabsMoreTarget.getAttribute('aria-expanded') === 'true';
+        if (ouvert) this.closeTabsOverflow();
+        else this.openTabsOverflow();
+    }
+
+    openTabsOverflow() {
+        if (!this.hasTabsOverflowPanelTarget) return;
+        this._peuplerPanneauOnglets();
+        this.tabsOverflowPanelTarget.classList.remove('d-none');
+        this.tabsMoreTarget.setAttribute('aria-expanded', 'true');
+
+        // Sorties d'urgence (Nielsen 3) : Échap, ou un clic hors du panneau.
+        this.boundFermetureOnglets = (e) => {
+            if (e.type === 'keydown' && e.key !== 'Escape') return;
+            if (e.type === 'click' && this.tabsWrapperTarget.contains(e.target)) return;
+            this.closeTabsOverflow();
+            if (e.type === 'keydown') this.tabsMoreTarget.focus();
+        };
+        document.addEventListener('keydown', this.boundFermetureOnglets);
+        document.addEventListener('click', this.boundFermetureOnglets);
+
+        this.tabsOverflowPanelTarget.querySelector('button')?.focus();
+    }
+
+    closeTabsOverflow() {
+        if (!this.hasTabsOverflowPanelTarget) return;
+        this.tabsOverflowPanelTarget.classList.add('d-none');
+        this.tabsMoreTarget?.setAttribute('aria-expanded', 'false');
+        if (this.boundFermetureOnglets) {
+            document.removeEventListener('keydown', this.boundFermetureOnglets);
+            document.removeEventListener('click', this.boundFermetureOnglets);
+            this.boundFermetureOnglets = null;
+        }
+    }
+
+    /**
+     * Reconstruit la liste du panneau depuis les onglets repliés.
+     *
+     * Chaque entrée est un RACCOURCI vers l'onglet réel, qui reste dans le tablist du
+     * DOM : l'activation passe par le même switchTab, donc par le même chemin que le clic
+     * direct — aucune seconde logique d'activation à maintenir.
+     * @private
+     */
+    _peuplerPanneauOnglets() {
+        const panneau = this.tabsOverflowPanelTarget;
+        panneau.innerHTML = '';
+
+        (this.tabsReplies || []).forEach((onglet) => {
+            const entree = document.createElement('button');
+            entree.type = 'button';
+            entree.className = 'list-tabs-overflow-item';
+            entree.setAttribute('role', 'listitem');
+            entree.dataset.tabId = onglet.dataset.tabId;
+
+            // RUBRIQUE COURANTE mise en évidence, comme dans le menu de navigation :
+            // gras + cobalt + fond cobalt léger. `aria-current` porte la même information
+            // aux lecteurs d'écran — l'état ne tient jamais à la seule couleur (WCAG 1.4.1).
+            if (onglet.classList.contains('active')) {
+                entree.classList.add('is-current');
+                entree.setAttribute('aria-current', 'true');
+            }
+
+            // On recopie l'icône de l'onglet : le panneau se lit avec les mêmes repères
+            // visuels que la barre (Bastien & Scapin > Cohérence).
+            const icone = onglet.querySelector('.list-tab-icon');
+            if (icone) {
+                const copie = icone.cloneNode(true);
+                copie.setAttribute('aria-hidden', 'true');
+                entree.appendChild(copie);
+            }
+            const libelle = document.createElement('span');
+            libelle.textContent = onglet.textContent.trim();
+            entree.appendChild(libelle);
+
+            entree.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.closeTabsOverflow();
+                onglet.click();
+            });
+            panneau.appendChild(entree);
+        });
     }
 
     /**

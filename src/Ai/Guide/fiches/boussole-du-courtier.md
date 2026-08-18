@@ -27,8 +27,14 @@ fait l'assistant :
    bordereaux, les analyse/ajuste, puis **facture ses commissions en lot** (note de débit).
 7. Une note de débit transmise à l'assureur ouvre le **recouvrement** : suivre les
    commissions dues par les assureurs jusqu'à leur **encaissement**.
-8. Dès la commission encaissée, les **rétrocommissions** dues aux partenaires deviennent
-   exigibles et doivent être **reversées**.
+8. Dès la commission encaissée, les **rétrocommissions** deviennent exigibles et doivent
+   être **reversées**. Elles vont à DEUX sortes de bénéficiaires, qu'il ne faut jamais
+   confondre :
+   - un **partenaire EXTERNE** (apporteur hors cabinet) : sa part se calcule sur la
+     commission pure des revenus *partageables*, et se **facture** par note de crédit ;
+   - un **agent INTERNE** du cabinet (un invité, apporteur de l'affaire) : sa part se
+     calcule sur ce qui **reste au cabinet** — commission pure MOINS les partenaires
+     externes — et se **verse** directement, sans aucune note, en charges de personnel.
 9. Dès la commission encaissée, le courtier a un **devoir fiscal** : s'acquitter des
    **taxes** (TVA) auprès de l'administration.
 10. Chaque **tâche** porte des **feedbacks** au fil des actions planifiées et se
@@ -60,7 +66,14 @@ mise en place). Tant qu'une proposition n'a **aucun avenant**, ce n'est qu'un **
 - **Exigible** : dû, à collecter/verser MAINTENANT (n'implique pas que c'est encaissé).
 - **À recouvrer** : commission exigible auprès de l'ASSUREUR (via note de débit / bordereau).
 - **Encaissé** : effectivement reçu par le courtier (seule vraie recette = chiffre d'affaires).
-- **À reverser** : rétrocommission due au PARTENAIRE, une fois la commission encaissée.
+- **À reverser** : rétrocommission due, une fois la commission encaissée — à un PARTENAIRE
+  externe (facturée) ou à un AGENT interne (versée directement).
+- **Réserve** : ce qui reste VRAIMENT au cabinet = commission pure (HT moins la taxe due
+  par le courtier) MOINS les rétrocommissions des partenaires externes MOINS celles des
+  agents internes. Ne jamais l'annoncer en oubliant l'un des deux bénéficiaires.
+- **Agent bénéficiaire ≠ gestionnaire** : celui qui touche la rétrocommission interne n'est
+  pas forcément celui qui gère l'affaire. Un agent peut décrocher le premier rendez-vous
+  puis confier le suivi à un collègue. Ne jamais déduire l'un de l'autre.
 - **Cross-selling** (saturer) ≠ **renouvellement** (protéger) : le premier AJOUTE des
   risques, le second PRÉSERVE ceux déjà en portefeuille.
 
@@ -68,7 +81,9 @@ mise en place). Tant qu'une proposition n'a **aucun avenant**, ce n'est qu'un **
 
 - Saturation / risques manquants : `saturation_portefeuille` (client ou portefeuille).
 - Renouvellements à venir : `vigie_echeances` (volet renouvellements).
-- Primes impayées, commissions à recouvrer, rétros à reverser : `suivi_impayes`.
+- Primes impayées, commissions à recouvrer, rétros de PARTENAIRES à reverser : `suivi_impayes`.
+- Rétrocommissions des AGENTS internes (dues, payées, solde, détail affaire par affaire) :
+  `retrocommissions_agent` ; pour en verser une : `signaler_reversement_retro_agent`.
 - Commission générée / encaissée / exigible : `indicateur_calcule`.
 - Bordereaux et facturation en lot : rubrique Bordereaux → Note (`ouvrir_rubrique`, `exporter_etat`).
 - Devoir fiscal (TVA) : `document_comptable`.

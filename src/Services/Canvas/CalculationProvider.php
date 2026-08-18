@@ -9,6 +9,7 @@ use App\Entity\Contact;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Groupe;
+use App\Entity\Invite;
 use App\Entity\Partenaire;
 use App\Entity\Portefeuille;
 use App\Entity\Risque;
@@ -81,6 +82,9 @@ class CalculationProvider
         Risque::class       => 'risqueCible',
         Groupe::class       => 'groupeCible',
         Portefeuille::class => 'portefeuilleCible',
+        // Les chiffres d'un invité sont ceux des affaires qu'il a APPORTÉES (agentCible),
+        // jamais de celles qu'il gère : une seule clé suffit donc à précharger sa ligne.
+        Invite::class       => 'agentCible',
     ];
 
     public function batchPreload(array $items): void

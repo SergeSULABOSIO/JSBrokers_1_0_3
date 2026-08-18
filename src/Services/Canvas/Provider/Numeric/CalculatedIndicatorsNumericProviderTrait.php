@@ -28,6 +28,13 @@ trait CalculatedIndicatorsNumericProviderTrait
             'retroCommission' => ['description' => 'Rétrocommission Partenaire', 'is_percentage' => false],
             'retroCommissionReversee' => ['description' => 'Rétrocommission Payée', 'is_percentage' => false],
             'retroCommissionSolde' => ['description' => 'Solde Rétrocommission', 'is_percentage' => false],
+            // Rétrocommission des AGENTS INTERNES — l'autre bénéficiaire du partage.
+            // Les inscrire ici suffit à les rendre totalisables : la barre des totaux
+            // (list-summary_controller.js) construit son sélecteur depuis ce dictionnaire,
+            // et calcule le total global comme celui de la sélection.
+            'retroAgentDue' => ['description' => 'Rétrocom. agent due', 'is_percentage' => false],
+            'retroAgentPayee' => ['description' => 'Rétrocom. agent payée', 'is_percentage' => false],
+            'retroAgentSolde' => ['description' => 'Rétrocom. agent solde', 'is_percentage' => false],
             'taxeCourtierMontant' => ['description' => 'Taxe Courtier', 'is_percentage' => false],
             'taxeCourtierPayee' => ['description' => 'Taxe Courtier Payée', 'is_percentage' => false],
             'taxeCourtierSolde' => ['description' => 'Solde Taxe Courtier', 'is_percentage' => false],

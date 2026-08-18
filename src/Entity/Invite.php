@@ -198,6 +198,8 @@ class Invite
         $this->rolesEnSinistre = new ArrayCollection();
         $this->rolesEnAdministration = new ArrayCollection();
         $this->portefeuilles = new ArrayCollection();
+        $this->conditionsPartageAgent = new ArrayCollection();
+        $this->reversementsRetroAgent = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
     }
 
@@ -206,6 +208,55 @@ class Invite
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'inviteRattache', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $documents;
+
+    /**
+     * @var Collection<int, ConditionPartage> Conditions de partage dont cet invité est le
+     *      BÉNÉFICIAIRE — les règles qui lui rétrocèdent une part de la commission du
+     *      cabinet. Navigation seule : la règle vit sur la condition.
+     */
+    #[ORM\OneToMany(targetEntity: ConditionPartage::class, mappedBy: 'agent')]
+    private Collection $conditionsPartageAgent;
+
+    /**
+     * @var Collection<int, ReversementRetroAgent> Reversements de rétrocommission reçus.
+     */
+    #[ORM\OneToMany(targetEntity: ReversementRetroAgent::class, mappedBy: 'agent')]
+    private Collection $reversementsRetroAgent;
+
+    /**
+     * @return Collection<int, ConditionPartage>
+     */
+    public function getConditionsPartageAgent(): Collection
+    {
+        return $this->conditionsPartageAgent;
+    }
+
+    public function addConditionsPartageAgent(ConditionPartage $condition): static
+    {
+        if (!$this->conditionsPartageAgent->contains($condition)) {
+            $this->conditionsPartageAgent->add($condition);
+            $condition->setAgent($this);
+        }
+
+        return $this;
+    }
+
+    public function removeConditionsPartageAgent(ConditionPartage $condition): static
+    {
+        if ($this->conditionsPartageAgent->removeElement($condition) && $condition->getAgent() === $this) {
+            $condition->setAgent(null);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, ReversementRetroAgent>
+     */
+    public function getReversementsRetroAgent(): Collection
+    {
+        return $this->reversementsRetroAgent;
+    }
 
     /**
      * @return Collection<int, Document>

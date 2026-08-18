@@ -21,6 +21,11 @@ class IconCanvasProvider
         'classeur'        => 'hugeicons:folder-01',
         'client'          => 'hugeicons:user-group',
         'compte-bancaire' => 'hugeicons:wallet-02',
+        // Repli des WIDGETS DE COLLECTION : toute collection d'un dialogue porte une
+        // pastille, comme les champs simples. Un provider qui déclare son propre alias
+        // dans `field_icons` l'emporte ; celui-ci évite qu'une collection non déclarée
+        // fasse un trou dans l'alignement de la colonne d'icônes.
+        'collection'      => 'hugeicons:menu-square',
         'condition'       => 'streamline-plump:file-check-alternate',
         'contact'         => 'hugeicons:contact-01',
         'cotation'        => 'hugeicons:invoice-02',

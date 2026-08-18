@@ -1,0 +1,188 @@
+{# templates/admin/retro_agent/rapport.html.twig
+   RAPPORT DE PRODUCTION D'UN AGENT INTERNE — rendu dans un onglet de la zone de travail.
+   Partial : ni html/head/body, les styles Bootstrap viennent de la page parente.
+
+   Ce que le tableau doit rendre lisible d'un seul regard, affaire par affaire : de la
+   prime du client jusqu'au solde restant dû à l'agent, en passant par tout ce qui a été
+   prélevé en chemin (taxes, partenaire externe). C'est un document que l'agent peut
+   contester : chaque colonne doit donc être nommée, et chaque total vérifiable à la main.
+
+   Toutes les couleurs viennent de la charte JS Brokers (cobalt #0047AB en accent).
+#}
+{% set m = monnaie %}
+
+<style>
+    .rpa-container {
+        max-width: 1400px;
+        margin: 1.5rem auto;
+        background-color: #ffffff;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 12px rgba(0,0,0,.07);
+    }
+    .rpa-header {
+        padding: 1rem 1.25rem;
+        background-color: #212529;
+        color: #ffffff;
+        border-bottom: 3px solid #0047AB;
+    }
+    .rpa-header h2 { margin: 0; font-size: 1.15rem; }
+    .rpa-header .rpa-sub { color: rgba(255,255,255,0.65); font-size: 0.85rem; }
+    .rpa-chips { padding: 0.75rem 1.25rem; background-color: #f8f9fa; border-bottom: 1px solid #dee2e6; }
+    .rpa-chip {
+        display: inline-block; padding: 0.25rem 0.75rem; margin-right: 0.4rem;
+        border: 1px solid #dee2e6; border-radius: 999px; background-color: #ffffff;
+        color: #495057; font-size: 0.85rem; text-decoration: none; cursor: pointer;
+    }
+    .rpa-chip:hover { background-color: #e9ecef; color: #212529; }
+    .rpa-chip.is-active { background-color: #0047AB; border-color: #0047AB; color: #ffffff; }
+    /* Défilement horizontal PROPRE : le tableau est large par nature (16 colonnes), il
+       doit défiler dans son conteneur — jamais faire défiler la page entière. */
+    .rpa-scroll { overflow-x: auto; }
+    .rpa-table { font-size: 0.82rem; margin-bottom: 0; white-space: nowrap; }
+    .rpa-table thead th {
+        background-color: #f8f9fa; color: #495057; font-weight: 600;
+        border-bottom: 2px solid #dee2e6; position: sticky; top: 0; z-index: 2;
+    }
+    .rpa-table tbody td { color: #495057; vertical-align: middle; }
+    .rpa-num { text-align: right; font-variant-numeric: tabular-nums; }
+    /* La colonne qui intéresse l'agent : mise en avant sans couleur décorative. */
+    .rpa-table .rpa-focus { background-color: #f8f9fa; font-weight: 600; color: #212529; }
+    .rpa-table tfoot td {
+        background-color: #212529; color: #ffffff; font-weight: 600;
+        border-top: 2px solid #0047AB;
+    }
+    .rpa-empty { padding: 2rem 1.25rem; text-align: center; color: #6c757d; }
+</style>
+
+<div class="rpa-container">
+    <div class="rpa-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h2>Rétrocommissions de {{ agent.nom }}</h2>
+            <div class="rpa-sub">
+                Production dont cet agent est <strong>bénéficiaire</strong> —
+                distincte des affaires qu'il gère.
+            </div>
+        </div>
+        <div class="rpa-sub">{{ totaux.nbLignes }} ligne(s) · montants en {{ m }}</div>
+    </div>
+
+    {# Filtres : la partition Souscrites ⊎ En attente ⊎ Caduques de CotationSouscriptionScope. #}
+    <div class="rpa-chips" data-controller="retro-agent-rapport"
+         data-retro-agent-rapport-base-url-value="/admin/retro-agent/{{ agent.id }}/rapport">
+        {% for valeur, libelle in statuts %}
+            <a class="rpa-chip {{ valeur == statut ? 'is-active' : '' }}"
+               role="button"
+               data-action="click->retro-agent-rapport#filtrer"
+               data-statut="{{ valeur }}">{{ libelle }}</a>
+        {% endfor %}
+    </div>
+
+    {% if projection %}
+        {# Une projection n'est pas une dette : le dire, sans quoi ces montants seraient
+           lus comme exigibles. #}
+        <div class="alert alert-warning m-3" role="status">
+            <strong>Projection.</strong> Ces affaires ne sont pas encore souscrites : aucun
+            montant n'est dû tant que le client n'a pas validé. Elles servent à piloter
+            l'effort commercial en cours.
+        </div>
+    {% endif %}
+
+    {% if lignes is empty %}
+        <div class="rpa-empty">Aucune affaire dans ce statut pour cet agent.</div>
+    {% else %}
+    <div class="rpa-scroll">
+        <table class="table table-sm table-hover rpa-table" aria-label="Rétrocommissions de {{ agent.nom }}">
+            <thead>
+                <tr>
+                    <th scope="col">Client</th>
+                    <th scope="col">Police / Proposition</th>
+                    <th scope="col">Risque</th>
+                    <th scope="col">Assureur</th>
+                    <th scope="col">Gestionnaire</th>
+                    <th scope="col" class="rpa-num">Prime</th>
+                    <th scope="col" class="rpa-num">Comm. TTC</th>
+                    <th scope="col" class="rpa-num">Comm. HT</th>
+                    <th scope="col" class="rpa-num">Taxe assureur</th>
+                    <th scope="col" class="rpa-num">Taxe courtier</th>
+                    <th scope="col" class="rpa-num">Comm. pure</th>
+                    <th scope="col" class="rpa-num">Partageable</th>
+                    <th scope="col" class="rpa-num">Rétro partenaire</th>
+                    <th scope="col">Condition</th>
+                    <th scope="col" class="rpa-num">Rétro agent due</th>
+                    <th scope="col" class="rpa-num">Payée</th>
+                    <th scope="col" class="rpa-num">Solde</th>
+                    <th scope="col" class="rpa-num">Exigible</th>
+                    <th scope="col">Éligibilité</th>
+                </tr>
+            </thead>
+            <tbody class="table-group-divider">
+                {% for l in lignes %}
+                    <tr>
+                        <td>{{ l.client }}</td>
+                        <td>
+                            {{ l.reference }}
+                            {% if l.debut %}
+                                <div class="text-muted" style="font-size:0.75rem;">
+                                    {{ l.debut|date('d/m/Y') }}{% if l.fin %} → {{ l.fin|date('d/m/Y') }}{% endif %}
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>{{ l.risque }}</td>
+                        <td>{{ l.assureur }}</td>
+                        <td>{{ l.gestionnaire }}</td>
+                        <td class="rpa-num">{{ l.prime|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.commissionTtc|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.commissionHt|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.taxeAssureur|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.taxeCourtier|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.commissionPure|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.partageable|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.retroPartenaire|number_format(2, ',', ' ') }}</td>
+                        <td>
+                            {% if l.conditionNom %}
+                                {{ l.conditionNom }}
+                                <span class="text-muted">({{ l.conditionTaux|number_format(2, ',', ' ') }} %)</span>
+                            {% else %}
+                                <span class="text-muted">&mdash;</span>
+                            {% endif %}
+                        </td>
+                        <td class="rpa-num rpa-focus">{{ l.retroAgentDue|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.retroAgentPayee|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num rpa-focus">{{ l.retroAgentSolde|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.retroAgentExigible|number_format(2, ',', ' ') }}</td>
+                        <td>
+                            {# Verdict N-1 : INDICATIF. Un « hors règle » s'annonce, il n'interdit rien. #}
+                            {% if l.avertissement %}
+                                <span class="badge text-bg-warning" title="{{ l.avertissement }}">{{ l.eligibiliteLibelle }}</span>
+                            {% else %}
+                                <span class="text-muted">{{ l.eligibiliteLibelle }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="5">Totaux ({{ totaux.nbLignes }} ligne(s))</td>
+                    <td class="rpa-num">{{ totaux.prime|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.commissionTtc|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.commissionHt|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.taxeAssureur|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.taxeCourtier|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.commissionPure|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.partageable|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.retroPartenaire|number_format(2, ',', ' ') }}</td>
+                    <td></td>
+                    <td class="rpa-num">{{ totaux.retroAgentDue|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.retroAgentPayee|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.retroAgentSolde|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.retroAgentExigible|number_format(2, ',', ' ') }}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    {% endif %}
+</div>
