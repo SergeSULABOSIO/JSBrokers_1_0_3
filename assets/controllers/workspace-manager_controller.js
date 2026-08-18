@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { DebordementOnglets } from './onglets-debordement.js';
 import { appliquerTitre, conversationDeLOnglet, editerEnPlace } from './assistant-conversation-titre.js';
 import {
     FERME, EPINGLE, etatSuivant, estOuvert, ancreDeReposChange, rubriqueAMarquer, sommetDuFlyout,
@@ -23,6 +24,11 @@ export default class extends Controller {
         "tabTemplate",
         "tabContentTemplate",
         "workspaceTabBar",
+        // Repli des rubriques ouvertes qui ne tiennent pas dans la barre.
+        "workspaceTabBarWrapper",
+        "workspaceTabsMore",
+        "workspaceTabsMoreCount",
+        "workspaceTabsOverflowPanel",
         "workspaceTabPanels",
         "workspaceTabTemplate",
         "col2",
@@ -193,6 +199,14 @@ export default class extends Controller {
         else {
             this.loadDefaultComponent();
         }
+
+        // La barre se replie aussi quand la FENÊTRE change de largeur, pas seulement quand
+        // on ouvre une rubrique. On observe le wrapper : la rangée, en `overflow: hidden`,
+        // ne varie plus une fois des onglets repliés — l'observer ne se réveillerait jamais.
+        if (this.hasWorkspaceTabBarWrapperTarget) {
+            this.workspaceTabsObserver = new ResizeObserver(() => this.updateWorkspaceTabsOverflow());
+            this.workspaceTabsObserver.observe(this.workspaceTabBarWrapperTarget);
+        }
     }
 
 
@@ -208,6 +222,8 @@ export default class extends Controller {
     }
 
     disconnect() {
+        this.workspaceTabsObserver?.disconnect();
+        this.debordementWorkspace?.detruire();
         document.removeEventListener('app:liste-element:openned', this.boundOpenTabInVisualization);
         document.removeEventListener('app:icon.loaded', this.boundHandleIconLoaded);
         document.removeEventListener('workspace:component.loaded', this.boundHandleComponentLoaded);
@@ -2133,6 +2149,7 @@ export default class extends Controller {
         if (initialSkeleton) initialSkeleton.remove();
 
         this.workspaceTabBarTarget.appendChild(tabEl);
+        this.updateWorkspaceTabsOverflow();
         this.workspaceTabPanelsTarget.appendChild(panel);
 
         this.workspaceTabs.push({ id: tabId, componentName, entityName: entityName || '', groupName: groupName || '', title: title || entityName || componentName, iconAlias: iconAlias || '' });
@@ -2151,6 +2168,48 @@ export default class extends Controller {
         const tabId = tabEl.dataset.tabId;
         if (!tabId) return;
         this._activateWorkspaceTabById(tabId);
+    }
+
+    /**
+     * Recalcule le repli des RUBRIQUES ouvertes. Appelé à chaque ouverture, fermeture et
+     * activation d'onglet, et au redimensionnement : c'est à ces trois moments que la
+     * barre change de contenu ou de largeur.
+     */
+    updateWorkspaceTabsOverflow() {
+        this._debordementWorkspace()?.recalculer();
+    }
+
+    /** Ouvre ou ferme le panneau des rubriques repliées. */
+    toggleWorkspaceTabsOverflow(event) {
+        this._debordementWorkspace()?.basculer(event);
+    }
+
+    /**
+     * Le gestionnaire de débordement de la barre du workspace — même module que la barre
+     * d'onglets d'une rubrique, avec deux adaptations :
+     *  - le libellé se lit sur `.workspace-tab-title`, car chaque onglet porte aussi une
+     *    croix de fermeture dont le texte polluerait un simple textContent ;
+     *  - l'activation passe par _activateWorkspaceTabById, et non par un clic simulé :
+     *    cliquer l'onglet déclencherait aussi ses gestes de fermeture et de glisser.
+     * @private
+     */
+    _debordementWorkspace() {
+        if (this.debordementWorkspace) return this.debordementWorkspace;
+        if (!this.hasWorkspaceTabsMoreTarget || !this.hasWorkspaceTabBarWrapperTarget) return null;
+
+        this.debordementWorkspace = new DebordementOnglets({
+            wrapper: this.workspaceTabBarWrapperTarget,
+            rangee: this.workspaceTabBarTarget,
+            bouton: this.workspaceTabsMoreTarget,
+            compteur: this.hasWorkspaceTabsMoreCountTarget ? this.workspaceTabsMoreCountTarget : null,
+            panneau: this.hasWorkspaceTabsOverflowPanelTarget ? this.workspaceTabsOverflowPanelTarget : null,
+            selecteurOnglet: '.workspace-tab-item',
+            libelle: (onglet) => onglet.querySelector('.workspace-tab-title')?.textContent.trim()
+                || onglet.textContent.trim(),
+            activer: (onglet) => this._activateWorkspaceTabById(onglet.dataset.tabId),
+        });
+
+        return this.debordementWorkspace;
     }
 
     /**
@@ -2173,6 +2232,9 @@ export default class extends Controller {
         tabEl.classList.add('active');
         tabEl.setAttribute('aria-selected', 'true');
         panel.classList.add('active');
+        // Le repli se recalcule : l'onglet activé DEPUIS le panneau doit être signalé
+        // comme courant, sans quoi rien à l'écran ne dirait où l'on se trouve.
+        this.updateWorkspaceTabsOverflow();
         this.activeWorkspaceTabId = tabId;
 
         // Lazy load : charger le contenu si pas encore chargé
@@ -2225,6 +2287,8 @@ export default class extends Controller {
         tabEl.remove();
         if (panel) panel.remove();
         this.workspaceTabs = this.workspaceTabs.filter(t => t.id !== tabId);
+        // Une rubrique fermée libère de la place : une repliée peut revenir dans la barre.
+        this.updateWorkspaceTabsOverflow();
 
         if (wasActive) {
             const remaining = this.workspaceTabBarTarget.querySelectorAll('.workspace-tab-item');
@@ -2312,6 +2376,7 @@ export default class extends Controller {
         panel.innerHTML = html;
 
         this.workspaceTabBarTarget.appendChild(tabEl);
+        this.updateWorkspaceTabsOverflow();
         this.workspaceTabPanelsTarget.appendChild(panel);
 
         // Si une loadUrl est fournie, persister l'onglet pour le restaurer après rechargement
@@ -2383,6 +2448,7 @@ export default class extends Controller {
         panel.innerHTML = this._workspaceSkeletonHtml();
 
         this.workspaceTabBarTarget.appendChild(tabEl);
+        this.updateWorkspaceTabsOverflow();
         this.workspaceTabPanelsTarget.appendChild(panel);
 
         // Icône demandée APRÈS insertion dans le DOM : handleIconLoaded cherche le

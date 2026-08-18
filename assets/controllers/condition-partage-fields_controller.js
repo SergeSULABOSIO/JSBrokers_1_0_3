@@ -1,4 +1,9 @@
 import { Controller } from '@hotwired/stimulus';
+import {
+    SELECTEUR_CRITERE_COCHE,
+    estChampCritereRisque,
+    risquesCiblesVisibles,
+} from './condition-partage-champs.js';
 
 /**
  * @class ConditionPartageFieldsController
@@ -19,16 +24,13 @@ import { Controller } from '@hotwired/stimulus';
  * l'événement `change` est fiable — contrairement aux champs pilotés par TomSelect.
  */
 export default class extends Controller {
-    /** Valeur du critère « il n'y a pas de risques ciblés » (ConditionPartage::CRITERE_PAS_RISQUES_CIBLES). */
-    static PAS_DE_RISQUES_CIBLES = '2';
-
     connect() {
         this.nomControleur = 'CONDITION-PARTAGE-FIELDS';
 
         // Délégation sur le formulaire : les radios sont rendues par Symfony et peuvent
         // être remplacées à chaud (rechargement du formulaire dans le dialogue).
         this.boundChange = (event) => {
-            if (event.target?.name?.includes('[critereRisque]')) this.appliquer();
+            if (estChampCritereRisque(event.target?.name)) this.appliquer();
         };
         this.element.addEventListener('change', this.boundChange);
 
@@ -47,10 +49,8 @@ export default class extends Controller {
         const bloc = this._blocRisques();
         if (!bloc) return;
 
-        const coche = this.element.querySelector('[name*="[critereRisque]"]:checked');
-        // Aucun critère coché : on montre, plutôt que de cacher un champ dont on ne sait
-        // pas encore s'il servira. Fail-open sur l'affichage, jamais sur les données.
-        const cible = !coche || coche.value !== this.constructor.PAS_DE_RISQUES_CIBLES;
+        const coche = this.element.querySelector(SELECTEUR_CRITERE_COCHE);
+        const cible = risquesCiblesVisibles(coche ? coche.value : null);
 
         bloc.classList.toggle('d-none', !cible);
         // `aria-hidden` suit l'état visuel : un champ masqué ne doit pas rester dans le

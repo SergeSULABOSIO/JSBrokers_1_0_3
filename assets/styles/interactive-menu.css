@@ -663,22 +663,50 @@ a.company-version:hover {
 }
 
 /* --- Barre d'onglets col-3 --- */
+
+/* Le wrapper porte le fond, la bordure et le bouton « + N » ; il est le référent de
+   position du panneau des rubriques repliées. */
+.workspace-tab-bar-wrapper {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 0;
+  background-color: var(--bg-light);
+  border-bottom: 1px solid var(--border-light);
+  padding: 6px 8px 0;
+  flex-shrink: 0;
+}
+
 .workspace-tab-bar {
   display: flex;
   flex-direction: row;
-  overflow-x: auto;
-  background-color: var(--bg-light);
-  border-bottom: 1px solid var(--border-light);
-  min-height: 44px;
+  /* Les rubriques qui ne tiennent pas sont REPLIÉES derrière « + N », plus défilées :
+     une barre de défilement ne dit ni combien il en reste, ni comment y aller. */
+  overflow: hidden;
+  min-height: 38px;
   align-items: flex-end;
-  flex-shrink: 0;
+  flex: 1 1 auto;
+  min-width: 0;
   gap: 2px;
-  padding: 6px 8px 0;
-  scrollbar-width: thin;
 }
 
-.workspace-tab-bar:empty {
+/* Aucun onglet ouvert : la barre ET son cadre s'effacent. La règle portait sur la seule
+   rangée ; depuis qu'un wrapper l'entoure, c'est lui qui doit disparaître, sinon un
+   bandeau vide subsisterait en haut de l'espace de travail. */
+.workspace-tab-bar-wrapper:has(.workspace-tab-bar:empty) {
   display: none;
+}
+
+/* Onglet de rubrique replié : retiré de la rangée, accessible par le panneau. */
+.workspace-tab-item.is-tab-replie {
+  display: none;
+}
+
+/* Le bouton « + N » de cette barre s'assoit sur la ligne des onglets. */
+.workspace-tabs-more {
+  min-height: 38px;
+  margin-bottom: 0;
 }
 
 .workspace-tab-item {

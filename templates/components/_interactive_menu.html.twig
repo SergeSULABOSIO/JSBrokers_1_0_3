@@ -272,9 +272,32 @@
 
         {# COLONNE 3 : Espace de travail #}
         <div class="menu-col-3" data-workspace-manager-target="workspace">
-            {# Barre d'onglets — générée dynamiquement par workspace-manager_controller.js #}
-            <div class="workspace-tab-bar" role="tablist" aria-label="Onglets de travail"
-                 data-workspace-manager-target="workspaceTabBar"></div>
+            {# Barre d'onglets — générée dynamiquement par workspace-manager_controller.js.
+               Les rubriques qui ne tiennent pas sont REPLIÉES derrière « + N » plutôt que
+               défilées : même mécanique que la barre d'onglets d'une rubrique, même module
+               (DebordementOnglets). Le wrapper est le référent de position du panneau. #}
+            <div class="workspace-tab-bar-wrapper" data-workspace-manager-target="workspaceTabBarWrapper">
+                <div class="workspace-tab-bar" role="tablist" aria-label="Onglets de travail"
+                     data-workspace-manager-target="workspaceTabBar"></div>
+
+                <button type="button"
+                        class="list-tabs-more workspace-tabs-more d-none"
+                        data-workspace-manager-target="workspaceTabsMore"
+                        data-action="click->workspace-manager#toggleWorkspaceTabsOverflow"
+                        aria-expanded="false"
+                        aria-haspopup="true"
+                        aria-controls="workspace-tabs-overflow-panel">
+                    <span data-workspace-manager-target="workspaceTabsMoreCount">+0</span>
+                    <span class="visually-hidden">rubriques ouvertes supplémentaires</span>
+                    <twig:UX:Icon name="{{ resolve_icon_name('lucide:chevron-down') }}" class="list-tabs-more-chevron" aria-hidden="true" />
+                </button>
+
+                <div id="workspace-tabs-overflow-panel"
+                     class="list-tabs-overflow-panel d-none"
+                     data-workspace-manager-target="workspaceTabsOverflowPanel"
+                     role="list"
+                     aria-label="Rubriques ouvertes repliées"></div>
+            </div>
             {# Zone de contenu des onglets #}
             <div class="workspace-tab-panels" data-workspace-manager-target="workspaceTabPanels">
                 {% if hasPerimetre is same as(false) %}
