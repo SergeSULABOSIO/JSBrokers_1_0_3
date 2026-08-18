@@ -84,7 +84,12 @@ trait FormCanvasProviderTrait
             // Plutôt que de l'afficher grisée, on la masque (d-none) : la ligne reste
             // rendue — ce qui empêche form_end(render_rest) de produire un accordéon
             // brut en bas du formulaire — mais elle n'est pas visible.
-            $isHidden = $isParentNew && $isDisabled;
+            // Une collection peut REFUSER ce masquage. Quand sa presence a l'ecran est
+            // elle-meme conditionnee par un autre champ (`visibility_conditions`),
+            // la cacher en creation la rendrait invisible EN TOUTES CIRCONSTANCES :
+            // celui qui vient de cocher le critere cense la faire paraitre n'aurait
+            // alors rien pour comprendre pourquoi rien ne se passe.
+            $isHidden = $config['hidden'] ?? ($isParentNew && $isDisabled);
 
             $layout[] = [
                 "couleur_fond" => "white",
@@ -104,6 +109,16 @@ trait FormCanvasProviderTrait
                     )]], // Correction: Ajout des IDs
                 ]
             ];
+
+            // Conditions de visibilite portees par la COLONNE : c'est le niveau que
+            // le moteur generique du dialogue sait traiter. Il masque la colonne, puis
+            // la rangee des que toutes ses colonnes le sont (dialog-instance_controller).
+            // Les poser sur la RANGEE serait inoperant : la seconde passe la
+            // reafficherait aussitot, ses colonnes etant restees visibles.
+            if (isset($config['visibility_conditions'])) {
+                $dernier = array_key_last($layout);
+                $layout[$dernier]['colonnes'][0]['champs'][0]['visibility_conditions'] = $config['visibility_conditions'];
+            }
         }
     }
 

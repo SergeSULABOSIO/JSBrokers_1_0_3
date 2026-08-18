@@ -34,10 +34,6 @@ class ConditionPartageFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/conditionpartage/api/delete",
             "endpoint_form_url" => "/admin/conditionpartage/api/get-form",
             "isCreationMode" => $isParentNew,
-            // Les « risques ciblés » n'ont de sens que pour deux des trois critères : ce
-            // contrôleur les montre ou les cache à la volée, plutôt que d'exposer en
-            // permanence un champ sans objet (Bastien & Scapin > Charge de travail).
-            "form_controller" => "condition-partage-fields",
             // AUCUNE CRÉATION DEPUIS LA RUBRIQUE. Une condition de partage n'existe que
             // rattachée à quelque chose : un partenaire, un agent, ou une piste. La créer
             // depuis la liste produirait une règle orpheline — sans bénéficiaire, donc
@@ -99,7 +95,38 @@ class ConditionPartageFormCanvasProvider implements FormCanvasProviderInterface
             ]);
         }
 
-        $collections = [['fieldName' => 'produits', 'entityRouteName' => 'risque', 'formTitle' => 'Risque', 'parentFieldName' => 'conditionPartage']];
+        // LES RISQUES CIBLES NE PARAISSENT QUE S'ILS ONT UN OBJET.
+        //
+        // Le critere sur le risque a trois valeurs : ne cibler AUCUN risque, ne partager
+        // QUE sur certains, ou ne PAS partager sur certains. Dans le premier cas la liste
+        // n'a rien a designer — la laisser a l'ecran demande a l'utilisateur de comprendre
+        // seul qu'elle ne sert a rien ici (Bastien & Scapin > Charge de travail).
+        //
+        // La regle est DECLAREE, pas codee : le dialogue possede deja un moteur de
+        // visibilite conditionnelle (dialog-instance_controller), qui ecoute le champ
+        // source et masque la colonne puis la rangee. Un controleur Stimulus dedie ferait
+        // doublon, et divergerait au premier changement du moteur.
+        //
+        // `hidden => false` est indispensable : sans lui, une collection est masquee
+        // d'office en creation (pas encore d'id parent), et le bloc resterait donc
+        // invisible QUOI QU'ON COCHE — exactement ce que l'utilisateur constatait. En
+        // creation le widget reste desactive : on voit le bloc, on comprend qu'il se
+        // remplira apres l'enregistrement.
+        $collections = [[
+            'fieldName' => 'produits',
+            'entityRouteName' => 'risque',
+            'formTitle' => 'Risque',
+            'parentFieldName' => 'conditionPartage',
+            'hidden' => false,
+            'visibility_conditions' => [[
+                'field' => 'critereRisque',
+                'operator' => 'in',
+                'value' => [
+                    ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES,
+                    ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES,
+                ],
+            ]],
+        ]];
         // Pièces jointes de cette fiche.
         $collections[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'conditionPartage'];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
