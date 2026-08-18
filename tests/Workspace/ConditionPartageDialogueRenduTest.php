@@ -9,25 +9,33 @@ use App\Entity\Utilisateur;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * LE DIALOGUE D'UNE CONDITION DE PARTAGE, TEL QU'IL ARRIVE DANS LE NAVIGATEUR.
+ * LE BLOC « RISQUES CIBLÉS » NE PARAÎT QUE S'IL A UN OBJET — EN CRÉATION COMME EN ÉDITION.
  *
- * La visibilité conditionnelle du bloc « Risques ciblés » repose sur deux accroches que
- * le serveur doit poser dans le HTML, et sur elles seules :
- *   - `data-controller` sur le <form>, sans quoi aucun comportement ne se branche ;
- *   - `data-field-code="produits"` sur la carte du champ, sans quoi le contrôleur ne
- *     trouve pas le bloc à masquer.
+ * Le critère sur le risque a trois valeurs : ne cibler AUCUN risque, ne partager QUE sur
+ * certains, ou ne PAS partager sur certains. Dans le premier cas la liste des risques n'a
+ * rien à désigner.
  *
- * Aucune des deux ne se voit à l'œil nu, et leur absence est SILENCIEUSE : le formulaire
- * s'affiche normalement, le champ reste simplement toujours visible. D'où ce test, qui
- * les exige dans le HTML rendu plutôt que dans l'intention du gabarit.
+ * La règle est DÉCLARÉE dans le canvas, pas codée dans un contrôleur dédié : le dialogue
+ * possède déjà un moteur de visibilité conditionnelle (dialog-instance_controller). Ce
+ * test exige donc la déclaration dans le HTML rendu, à l'endroit exact que ce moteur lit.
+ *
+ * ── DEUX INCIDENTS, DEUX ASSERTIONS ─────────────────────────────────────────────────
+ * 1. Un contrôleur sur mesure ciblait `[name$="[critereRisque]"]`. Or les FormTypes du
+ *    workspace rendent `getBlockPrefix()` VIDE : le champ s'appelle « critereRisque »,
+ *    sans crochets. Le sélecteur ne matchait jamais — sans la moindre erreur en console.
+ * 2. Le bloc restait invisible EN CRÉATION quoi qu'on coche : une collection est masquée
+ *    d'office tant que le parent n'a pas d'id, et cette rangée `d-none` l'emportait sur
+ *    tout. D'où l'assertion sur les DEUX modes : c'est le mode création qui a échoué le
+ *    plus longtemps, et c'est celui qu'on oublie de vérifier.
+ *
+ * Les deux pannes étaient SILENCIEUSES : un formulaire parfaitement normal, avec un champ
+ * qui refusait seulement d'obéir. C'est ce que ce test rend impossible à réintroduire.
  */
 class ConditionPartageDialogueRenduTest extends WebTestCase
 {
     private const EMAIL = 'phpunit-cpdlg@test.local';
-    private const PASSWORD = 'Test1234!';
     private const ENTREPRISE_NOM = 'PHPUnit CPDialogue SARL';
 
     private KernelBrowser $client;
@@ -63,45 +71,89 @@ class ConditionPartageDialogueRenduTest extends WebTestCase
         $conn->executeStatement('DELETE FROM utilisateur WHERE email = :m', ['m' => self::EMAIL]);
     }
 
-    public function testLeDialogueDeclareSonControleurEtMarqueLeBlocDesRisques(): void
+    /** @return iterable<string, array{0:bool}> */
+    public static function modesDuDialogue(): iterable
+    {
+        yield 'création' => [true];
+        yield 'édition' => [false];
+    }
+
+    /**
+     * @dataProvider modesDuDialogue
+     */
+    public function testLeBlocDesRisquesEstGouverneParLeCritere(bool $enCreation): void
     {
         $ids = $this->semer();
         $this->client->loginUser($this->em()->getRepository(Utilisateur::class)->findOneBy(['email' => self::EMAIL]));
 
-        $this->client->request('GET', '/admin/conditionpartage/api/get-form/' . $ids['conditionId']);
+        $url = '/admin/conditionpartage/api/get-form' . ($enCreation ? '' : '/' . $ids['conditionId']);
+        $this->client->request('GET', $url);
         self::assertResponseIsSuccessful();
 
         $html = $this->client->getResponse()->getContent();
 
-        self::assertStringContainsString(
-            'data-controller="condition-partage-fields"',
+        // 1. Le champ source, sous le nom RÉELLEMENT rendu — sans crochets.
+        self::assertMatchesRegularExpression(
+            '/name="critereRisque"/',
             $html,
-            'Sans ce contrôleur sur le <form>, aucune visibilité conditionnelle ne se branche.',
+            'Le moteur lit form.elements["critereRisque"] : tout autre nom le rend aveugle.',
         );
+
+        // 2. La colonne des risques déclare sa condition, au niveau que le moteur traite.
+        $colonne = $this->colonneDesRisques($html);
+        self::assertNotNull($colonne, 'La colonne « Risques ciblés » ne déclare aucune condition de visibilité.');
+        self::assertStringContainsString('critereRisque', $colonne, 'La condition n\'écoute pas le bon champ.');
+        self::assertStringContainsString('&quot;operator&quot;:&quot;in&quot;', $colonne);
+        // Les deux critères qui DÉSIGNENT des risques, et eux seuls.
         self::assertStringContainsString(
-            'data-field-code="produits"',
-            $html,
-            'Sans cette accroche, le contrôleur ne trouve pas le bloc « Risques ciblés » à masquer.',
+            '[' . ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES . ',' . ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES . ']',
+            $colonne,
+            'Le bloc doit paraître pour « exclure » ET « n\'inclure que », jamais pour « aucun risque ciblé ».',
         );
-        // Les radios que le contrôleur écoute — et SOUS QUEL NOM.
-        preg_match_all('/name="([^"]*critereRisque[^"]*)"/', $html, $m);
-        fwrite(STDERR, "
-[NOMS critereRisque] " . implode(' | ', array_unique($m[1])) . "
-");
-        preg_match_all('/data-field-code="([^"]+)"/', $html, $m2);
-        fwrite(STDERR, "[CARTES] " . implode(' | ', array_unique($m2[1])) . "
-");
-        self::assertStringContainsString('critereRisque', $html);
+
+        // 3. LA RÉGRESSION DU MODE CRÉATION : la rangée ne doit pas être masquée d'office,
+        //    sans quoi la condition ci-dessus ne serait jamais visible à l'écran.
+        self::assertStringNotContainsString(
+            'class="row d-none"',
+            $this->rangeeDesRisques($html) ?? '',
+            'La rangée des risques est masquée d\'office : le bloc resterait invisible quoi qu\'on coche.',
+        );
+    }
+
+    /** Le fragment de la colonne qui porte la condition de visibilité, s'il existe. */
+    private function colonneDesRisques(string $html): ?string
+    {
+        $pos = strpos($html, 'data-field-code="produits"');
+        if ($pos === false) {
+            return null;
+        }
+        // La déclaration vit sur la colonne, en AMONT de la carte du champ.
+        $amont = substr($html, max(0, $pos - 1500), min($pos, 1500));
+        $debut = strrpos($amont, 'data-visibility-conditions-value=');
+
+        return $debut === false ? null : substr($amont, $debut);
+    }
+
+    /** La rangée qui contient les risques ciblés, pour vérifier qu'elle n'est pas masquée. */
+    private function rangeeDesRisques(string $html): ?string
+    {
+        $pos = strpos($html, 'data-field-code="produits"');
+        if ($pos === false) {
+            return null;
+        }
+        $amont = substr($html, max(0, $pos - 2000), min($pos, 2000));
+        $debut = strrpos($amont, '<div class="row');
+
+        return $debut === false ? null : substr($amont, $debut);
     }
 
     /** @return array{conditionId:int} */
     private function semer(): array
     {
         $em = $this->em();
-        $hasher = static::getContainer()->get(UserPasswordHasherInterface::class);
 
         $user = (new Utilisateur())->setEmail(self::EMAIL)->setNom('CPDialogue')->setVerified(true);
-        $user->setPassword($hasher->hashPassword($user, self::PASSWORD));
+        $user->setPassword('peu importe : on se connecte par loginUser()');
         $em->persist($user);
 
         $entreprise = (new Entreprise())->setNom(self::ENTREPRISE_NOM)->setLicence('LIC')->setAdresse('1 rue')

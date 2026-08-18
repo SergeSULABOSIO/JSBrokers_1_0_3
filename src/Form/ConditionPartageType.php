@@ -125,7 +125,7 @@ class ConditionPartageType extends AbstractType
                 ],
                 // Aucun risque ciblé : la condition vaut pour toutes les affaires. Le champ
                 // « Risques ciblés » reste donc masqué tant que l'utilisateur n'a pas
-                // choisi de restreindre (cf. condition-partage-fields_controller).
+                // choisi de restreindre (visibility_conditions du canvas, cf. le provider).
                 'data' => $isCreationMode
                     ? ConditionPartage::CRITERE_PAS_RISQUES_CIBLES
                     : $condition?->getCritereRisque(),
