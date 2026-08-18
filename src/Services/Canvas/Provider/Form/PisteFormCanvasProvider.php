@@ -60,6 +60,7 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
                 "primePotentielle"                 => "action:count",
                 "commissionPotentielle"            => "action:count",
                 "partenaires"                      => "partenaire",
+                "conditionsPartageAgent"           => "condition",
                 "conditionsPartageExceptionnelles" => "condition",
                 "cotations"                        => "cotation",
                 "taches"                           => "tache",
@@ -117,6 +118,15 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
             [
                 'colonnes' => [
                     ['width' => 12, 'champs' => ['partenaires']]
+                ]
+            ],
+            // Rattachement des conditions d'AGENTS INTERNES à cette affaire, juste sous
+            // les partenaires externes : les deux désignent qui se partage la commission.
+            // Explicitement dans le layout — sans quoi le champ tombait en bas du
+            // formulaire via render_rest, là où personne ne le cherche.
+            [
+                'colonnes' => [
+                    ['width' => 12, 'champs' => ['conditionsPartageAgent']]
                 ]
             ],
         ];

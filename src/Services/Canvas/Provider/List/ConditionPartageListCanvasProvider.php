@@ -25,7 +25,12 @@ class ConditionPartageListCanvasProvider implements ListCanvasProviderInterface
                     "attribut_code" => "nom", 
                     "icone" => "mdi:share-variant"
                     ],
+                "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
+                    // QUI TOUCHE, avant COMBIEN. Une liste de conditions dont on ne lit
+                    // pas le bénéficiaire oblige à ouvrir chaque fiche pour savoir si la
+                    // ligne concerne un partenaire externe ou un salarié du cabinet.
+                    ["attribut_code" => "beneficiaireNom", "icone" => "lucide:user-round"],
                     ["attribut_code" => "descriptionRegle"],
                 ],
             ],

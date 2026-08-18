@@ -211,6 +211,10 @@ final class MouvementAvenantBuilder
                 'revenus'      => count($revenus),
                 'partenaires'  => count($opPiste['champs']['partenaires'] ?? []),
                 'conditions'   => count($conditions),
+                // Conditions d'agents internes RATTACHÉES (jamais clonées) : à annoncer,
+                // sans quoi l'utilisateur ne saurait pas que la rémunération de son
+                // apporteur suit la police renouvelée.
+                'conditionsAgent' => count($opPiste['champs']['conditionsPartageAgent'] ?? []),
                 'tacheDeSuivi' => $tache === null ? 0 : 1,
             ],
             'avertissements' => $avertissements,
@@ -346,6 +350,16 @@ final class MouvementAvenantBuilder
         }
         if ($partenaires !== []) {
             $champs['partenaires'] = $partenaires;
+        }
+
+        // Conditions de partage au profit d'AGENTS INTERNES : la MÊME condition suit
+        // l'affaire, posée par liste d'identifiants — le moteur de mutation sait déjà
+        // écrire un ManyToMany de cette façon (c'est ainsi que `partenaires` ci-dessus
+        // voyage). La règle vient du service de reconduction, unique pour l'écran et pour
+        // Ket : ce qui est reconduit ne peut pas différer d'un chemin à l'autre.
+        $conditionsAgent = $this->reconductionPartage->idsConditionsAgent($pisteBase);
+        if ($conditionsAgent !== []) {
+            $champs['conditionsPartageAgent'] = $conditionsAgent;
         }
 
         // Prime / commission potentielles : mêmes sources que le pré-remplissage

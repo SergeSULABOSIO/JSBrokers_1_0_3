@@ -30,6 +30,9 @@
             {% if apercu.reconduit.revenus > 0 %}{% set repris = repris|merge(['%d revenu(s)'|format(apercu.reconduit.revenus)]) %}{% endif %}
             {% if apercu.reconduit.partenaires > 0 %}{% set repris = repris|merge(['%d partenaire(s)'|format(apercu.reconduit.partenaires)]) %}{% endif %}
             {% if apercu.reconduit.conditions > 0 %}{% set repris = repris|merge(['%d condition(s) de partage'|format(apercu.reconduit.conditions)]) %}{% endif %}
+            {# Conditions d'AGENTS INTERNES : rattachées telles quelles (même règle, même
+               identifiant), à distinguer des conditions de partenaire qui sont clonées. #}
+            {% if apercu.reconduit.conditionsAgent|default(0) > 0 %}{% set repris = repris|merge(["%d rémunération(s) d'agent interne"|format(apercu.reconduit.conditionsAgent)]) %}{% endif %}
             {% if apercu.reconduit.tacheDeSuivi > 0 %}{% set repris = repris|merge(['1 tâche de suivi du paiement']) %}{% endif %}
             {{ repris is empty ? 'Aucun (acte seul)' : repris|join(' · ') }}
         </dd>

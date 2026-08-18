@@ -111,7 +111,14 @@
                peut focaliser un champ caché). La validation de référence est côté SERVEUR ;
                un contrôle JS léger (dialog-instance#triggerSubmit) signale, lui, les seuls
                champs requis VISIBLES avant l'envoi. Robuste y compris sur la touche Entrée. #}
-            {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
+            {# Un canevas peut attacher son propre contrôleur Stimulus au formulaire
+               (`form_controller`) : c'est le point d'accroche des comportements propres à
+               une entité — champs qui apparaissent selon un choix, calculs à la volée. À
+               défaut, le formulaire reste nu, exactement comme avant. #}
+            {% set form_controller = formCanvas.parametres.form_controller|default(null) %}
+            {{ form_start(form, {'attr': form_controller
+                ? {'novalidate': 'novalidate', 'data-controller': form_controller}
+                : {'novalidate': 'novalidate'}}) }}
             {% if formCanvas.form_layout is defined and formCanvas.form_layout is not empty %}
                 {# Pour chaque ligne définie dans la configuration du layout... #}
                 {% for row in formCanvas.form_layout %}
@@ -148,8 +155,29 @@
                                 {% for field in champs_list %}
                                     {% set field_code = (field is mapping and field.field_code is defined) ? field.field_code : field %}
                                     {% if field is mapping and field.widget is defined and field.widget == 'collection' %}
-                                        {# Pour les collections, on appelle form_widget directement pour éviter le div.mb-3 superflu. #}
-                                        {% if form[field_code] is defined %}{{ form_row(form[field_code], {'manager_options': field.options, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}{% endif %}
+                                        {# Pour les collections, on appelle form_widget directement pour éviter le div.mb-3 superflu.
+                                           L'icône du champ voyage dans manager_options : une collection porte sa pastille
+                                           comme n'importe quel autre champ, sans quoi elle fait un trou dans l'alignement
+                                           de la colonne d'icônes. Repli sur l'alias générique « collection » quand le
+                                           provider n'en déclare pas. #}
+                                        {% set field_icon = formCanvas.parametres.field_icons[field_code]|default('collection') %}
+                                        {% if form[field_code] is defined %}
+                                            {# EXACTEMENT la même carte qu'un champ simple : pastille et libellé dans
+                                               le bandeau, contenu dans le corps. La collection cesse ainsi d'être le
+                                               seul bloc à flotter sans son cadre blanc — et l'icône se pose devant le
+                                               TITRE DU BLOC, pas dans l'accordéon, qui garde son seul disque +/-. #}
+                                            <div class="mb-3 dlg-field-card" data-field-code="{{ field_code }}">
+                                                <div class="dlg-field-card-head">
+                                                    <span class="dlg-field-card-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(field_icon), {height: '16px', width: '16px'}) }}</span>
+                                                    {{ form_label(form[field_code]) }}
+                                                </div>
+                                                <div class="dlg-field-card-body">
+                                                    {{ form_widget(form[field_code], {'manager_options': field.options, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
+                                                    {{ form_help(form[field_code]) }}
+                                                    {{ form_errors(form[field_code]) }}
+                                                </div>
+                                            </div>
+                                        {% endif %}
                                     {% else %}
                                         {# Pour les champs standards, on utilise form_row qui génère un div.mb-3. #}
                                         {% if form[field_code] is defined %}
@@ -166,7 +194,7 @@
                                                form_row d'origine inchangé. #}
                                             {% set field_icon = formCanvas.parametres.field_icons[field_code]|default(null) %}
                                             {% if field_icon %}
-                                                <div class="mb-3 dlg-field-card">
+                                                <div class="mb-3 dlg-field-card" data-field-code="{{ field_code }}">
                                                     <div class="dlg-field-card-head">
                                                         <span class="dlg-field-card-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(field_icon), {height: '16px', width: '16px'}) }}</span>
                                                         {{ form_label(form[field_code]) }}

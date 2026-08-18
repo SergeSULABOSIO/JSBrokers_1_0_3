@@ -29,6 +29,16 @@ final class PlanComptable
     // --- Subdivisions employées par la comptabilité du COURTIER (workspace). ---
     public const RETRO_COMMISSIONS   = '632'; // Rémunérations d'intermédiaires (rétro-commissions)
     public const IMPOTS_TAXES        = '641'; // Impôts et taxes (taxes dont le courtier est redevable)
+    /**
+     * Rétrocommissions versées aux AGENTS INTERNES du cabinet.
+     *
+     * 6611 « Appointements, salaires et commissions » (classe 66 Charges de personnel), et
+     * non 632 : l'agent est un salarié, pas un intermédiaire externe. La distinction n'est
+     * pas cosmétique — elle décide de la ligne où la charge apparaît au compte de résultat
+     * et au tableau financier des ressources (Charges de personnel vs Services extérieurs),
+     * donc de la lecture qu'un tiers fait de la structure de coûts du cabinet.
+     */
+    public const COMMISSIONS_PERSONNEL = '6611';
 
     /** @var array<string, string> Libellés des comptes hors classe 6 (+ subdivisions courtier). */
     private const LIBELLES = [
@@ -44,6 +54,7 @@ final class PlanComptable
         self::SERVICES_VENDUS   => 'Services vendus',
         self::RETRO_COMMISSIONS => 'Rémunérations d\'intermédiaires et de conseils',
         self::IMPOTS_TAXES      => 'Impôts et taxes',
+        self::COMMISSIONS_PERSONNEL => 'Appointements, salaires et commissions',
     ];
 
     /** Comptes de trésorerie (classe 5) suivis par le tableau de flux. */

@@ -116,6 +116,36 @@ class WorkspaceAccessResolverTest extends KernelTestCase
         $this->assertFalse($this->resolver->canRead($invite, 'OffreIndemnisationSinistre'));
     }
 
+    /**
+     * LA CONDITION DE PARTAGE N'ÉTAIT GARDÉE PAR RIEN.
+     *
+     * Absente de MAP comme de GOUVERNANCE_PARENT, elle tombait sur le `return true` final
+     * de can() : n'importe quel invité authentifié pouvait lire et écrire les taux de
+     * rétrocommission, ses routes n'étant protégées que par ROLE_USER. Elle porte
+     * désormais la rémunération NOMINATIVE des agents internes — le trou est refermé en
+     * la rattachant au droit « Intermédiaires », là où ces conditions vivent et s'éditent.
+     */
+    public function testConditionPartageSuitLeDroitIntermediaires(): void
+    {
+        $sansDroit = $this->guestInvite();
+        $this->assertFalse(
+            $this->resolver->canRead($sansDroit, 'ConditionPartage'),
+            'Fail-closed : sans droit sur les Intermédiaires, aucune lecture des conditions de partage.',
+        );
+        $this->assertFalse($this->resolver->can($sansDroit, 'ConditionPartage', Invite::ACCESS_ECRITURE));
+
+        $avecDroit = $this->guestInvite();
+        $role = new RolesEnProduction();
+        $role->setAccessPartenaire([Invite::ACCESS_LECTURE, Invite::ACCESS_ECRITURE]);
+        $avecDroit->addRolesEnProduction($role);
+
+        $this->assertTrue($this->resolver->canRead($avecDroit, 'ConditionPartage'));
+        $this->assertTrue($this->resolver->can($avecDroit, 'ConditionPartage', Invite::ACCESS_ECRITURE));
+        // Le niveau non accordé reste refusé : la gouvernance délègue au parent, elle
+        // n'ouvre pas tout en bloc.
+        $this->assertFalse($this->resolver->can($avecDroit, 'ConditionPartage', Invite::ACCESS_SUPPRESSION));
+    }
+
     public function testInviteAndRoleEntitiesRequireManagement(): void
     {
         $guest = $this->guestInvite();

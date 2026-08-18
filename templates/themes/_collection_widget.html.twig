@@ -35,7 +35,7 @@
             <div class="title-left-block-loading" data-collection-target="titleLoading" style="display: none; align-items: center;">
                 <span class="toggle-icon"></span> {# Espace réservé pour l'alignement avec le titre normal #}
                 <span class="spinner-border spinner-border-sm text-primary me-2" role="status" aria-hidden="true"></span>
-                <span class="loading-text fw-normal">Chargement de {{ form.vars.label|default(form.vars.name) }}...</span>
+                <span class="loading-text fw-normal">Chargement de la liste...</span>
             </div>
 
             {# Conteneur pour le titre normal, qui sera caché pendant le chargement #}
@@ -49,7 +49,14 @@
                         {{ manager_options.totalValue|number_format(2, ',', ' ') }} {{ manager_options.totalUnit|default('') }}
                     </strong>
                 {% endif %}
-                <strong class="field-label">{{ form.vars.label|default(form.vars.name) }}</strong>
+                {# TAUTOLOGIE ÉVITÉE. Le titre du champ, juste au-dessus, nomme déjà la
+                   collection : répéter « Droits d'accès dans le module Finances » deux
+                   lignes de suite n'apprend rien et double la charge de lecture
+                   (Bastien & Scapin > Charge de travail). L'accordéon annonce donc ce
+                   qu'il OUVRE — la liste — et le lecteur d'écran garde le libellé complet,
+                   lui, pour que le bouton reste identifiable hors contexte visuel. #}
+                <strong class="field-label">Liste</strong>
+                <span class="visually-hidden">{{ form.vars.label|default(form.vars.name) }}</span>
                 <span class="badge bg-primary" data-collection-target="countBadge" style="display: none;">0</span>
             </div>
 

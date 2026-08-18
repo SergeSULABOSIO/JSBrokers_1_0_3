@@ -459,48 +459,144 @@ textarea:hover,
 }
 
 /* Barre d'onglets */
+/* Barre d'onglets : la rangée et son bouton de repli. Le wrapper est le référent de
+   positionnement du panneau des onglets repliés. */
+.list-tabs-wrapper {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    min-width: 0;
+}
+
 .list-tabs-container {
     display: flex;
     margin-top: 3px;
-    /* Défilement horizontal quand les onglets dépassent */
-    overflow-x: auto;
+    /* Les onglets qui ne tiennent pas sont REPLIÉS (cf. .is-tab-replie), plus
+       défilés : une barre de défilement de 3 px ne se voit pas, et ce qu'elle
+       cachait était introuvable. */
+    overflow: hidden;
+    flex: 1 1 auto;
+    min-width: 0;
     white-space: nowrap;
-    /* La scrollbar fine (3px WebKit / thin Firefox) est dessinée dans la boîte :
-       la marge négative résorbe la hauteur qu'elle ajoute sous les onglets. */
-    padding-bottom: 0;
-    margin-bottom: -5px;
-    /* Firefox : équivalent du style ::-webkit-scrollbar ci-dessous */
-    scrollbar-width: thin;
-    scrollbar-color: #0047AB transparent;
 }
 
-/* Affordance de débordement : fondu sur le bord où des onglets sont hors champ
-   (classes posées par view-manager#updateTabsOverflow). */
-.list-tabs-container.is-overflowing-right {
-    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
-    mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
-}
-.list-tabs-container.is-overflowing-left {
-    -webkit-mask-image: linear-gradient(to right, transparent, #000 32px);
-    mask-image: linear-gradient(to right, transparent, #000 32px);
-}
-.list-tabs-container.is-overflowing-left.is-overflowing-right {
-    -webkit-mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
-    mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
+/* Les masques de fondu et la barre de défilement horizontale de cette rangée ont été
+   retirés : les onglets qui ne tiennent pas sont désormais REPLIÉS derrière « + N »
+   (cf. .list-tabs-more), et non plus défilés derrière un fondu. Un fondu dit qu'il
+   « reste quelque chose » ; il ne dit pas quoi, ni combien, ni comment y aller. */
+
+.list-tab.is-tab-replie {
+    display: none;
 }
 
-.list-tabs-container::-webkit-scrollbar {
-    height: 3px; /* Epaisseur réduite de moitié */
+/* Bouton de repli. Cible ≥ 44 px (WCAG 2.5.5), état ouvert marqué par le fond cobalt
+   ET la rotation du chevron — jamais par la couleur seule (WCAG 1.4.1). */
+.list-tabs-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 44px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    border: 1px solid #dee2e6;
+    border-radius: 999px;
+    background-color: #ffffff;
+    color: #495057;
+    font-weight: 600;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color .15s ease, color .15s ease, border-color .15s ease;
 }
-.list-tabs-container::-webkit-scrollbar-track {
-    background: transparent; /* La piste est invisible */
+.list-tabs-more:hover {
+    background-color: #e9ecef;
+    color: #212529;
 }
-.list-tabs-container::-webkit-scrollbar-thumb {
+.list-tabs-more:focus-visible {
+    outline: 2px solid #0047AB;
+    outline-offset: 2px;
+}
+/* L'onglet COURANT est parmi les repliés : le bouton le dit par sa couleur ET par son
+   liseré inférieur — le même trait cobalt qui souligne un onglet actif dans la rangée,
+   pour que le repère soit le même où qu'il se trouve (WCAG 1.4.1 : jamais la couleur seule). */
+.list-tabs-more.has-current {
+    background-color: #e8f0fb;
+    border-color: #0047AB;
+    color: #0047AB;
+    box-shadow: inset 0 -4px 0 #0047AB;
+}
+
+.list-tabs-more[aria-expanded="true"] {
     background-color: #0047AB;
-    border-radius: 1.5px;
+    border-color: #0047AB;
+    color: #ffffff;
 }
-.list-tabs-container::-webkit-scrollbar-thumb:hover {
-    background-color: #0a58ca; /* NOUVEAU : Bleu cobalt plus foncé au survol */
+.list-tabs-more-chevron {
+    width: 14px;
+    height: 14px;
+    transition: transform .15s ease;
+}
+.list-tabs-more[aria-expanded="true"] .list-tabs-more-chevron {
+    transform: rotate(180deg);
+}
+
+/* Panneau des onglets repliés : surcouche ancrée sous le bouton, jamais une modale —
+   le geste est un simple aiguillage, il ne mérite pas de piéger le focus. */
+.list-tabs-overflow-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 1050;
+    min-width: 240px;
+    max-width: 320px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 6px;
+    background-color: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+}
+.list-tabs-overflow-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 8px;
+    background-color: transparent;
+    color: #212529;
+    font-size: 0.9rem;
+    text-align: left;
+    cursor: pointer;
+}
+.list-tabs-overflow-item:hover {
+    background-color: #e8f0fb;
+    color: #0047AB;
+}
+/* Rubrique COURANTE dans le panneau : même retour visuel que la rubrique ouverte du
+   menu de navigation — gras, cobalt, fond cobalt léger. Le liseré de gauche double
+   l'information pour qui ne distingue pas les couleurs (WCAG 1.4.1). */
+.list-tabs-overflow-item.is-current {
+    background-color: #e8f0fb;
+    color: #0047AB;
+    font-weight: 600;
+    box-shadow: inset 3px 0 0 #0047AB;
+}
+.list-tabs-overflow-item.is-current:hover {
+    background-color: #e8f0fb;
+}
+
+.list-tabs-overflow-item:focus-visible {
+    outline: 2px solid #0047AB;
+    outline-offset: -2px;
+}
+.list-tabs-overflow-item .list-tab-icon svg {
+    width: 1.05em;
+    height: 1.05em;
 }
 
 .list-tab {
@@ -3028,6 +3124,20 @@ thead.sticky-header {
     align-items: center;
     gap: 0.5rem;
 }
+/* ACTION OFFERTE MAIS INDISPONIBLE ICI — grisée, jamais masquée.
+   Une action qui disparaît laisse l'utilisateur soupçonner un droit manquant ou une
+   panne ; inactive et porteuse de son infobulle, elle dit où aller. Sert au bouton
+   « Ajouter » des rubriques dont l'entité n'existe que rattachée à une autre
+   (cf. `creation_interdite`). */
+.btn.is-disabled,
+.btn.is-disabled:hover,
+[data-toolbar-target].is-disabled,
+[data-context-menu-target].is-disabled {
+    opacity: 0.65;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
 .toggle-icon {
     /* Disque d'état ouvert/fermé : cible visuelle nette dans le bandeau. */
     flex: 0 0 auto;

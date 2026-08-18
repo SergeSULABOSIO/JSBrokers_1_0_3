@@ -38,11 +38,19 @@
                        view-manager#_updateSelectionContext. #}
                     <span class="rubrique-context d-none" data-view-manager-target="selectionContext"></span>
                 </h2>
+                {# DÉBORDEMENT DES ONGLETS — le défilement horizontal ne suffisait pas.
+                   Au-delà d'une dizaine d'onglets, la barre partait en dehors du cadre et
+                   n'offrait qu'une barre de défilement fine : les onglets hors champ
+                   étaient invisibles ET introuvables (Nielsen 6, reconnaissance plutôt que
+                   rappel). Les onglets qui ne tiennent pas sont désormais repliés derrière
+                   un bouton « + N » qui les liste en surcouche.
+                   Le wrapper est le référent de positionnement du panneau. #}
+                <div class="list-tabs-wrapper" data-view-manager-target="tabsWrapper">
                 <div class="list-tabs-container"
                      role="tablist"
                      aria-label="Onglets de la rubrique {{ entite_nom }}"
                      data-view-manager-target="tabsContainer"
-                     data-action="keydown->view-manager#handleTabKeydown scroll->view-manager#updateTabsOverflow"
+                     data-action="keydown->view-manager#handleTabKeydown"
                 >
                     <button class="list-tab active" role="tab" id="tab-principal" aria-selected="true" aria-controls="principal" data-tab-id="principal" data-action="click->view-manager#switchTab">
                         {# Signifiance : l'onglet principal porte l'icône de l'entité de la
@@ -51,6 +59,31 @@
                         <span class="list-tab-icon" aria-hidden="true"><twig:UX:Icon name="{{ resolve_icon_name(entityCanvas.parametres.icone | default('lucide:file-text')) }}" /></span>
                         Principal
                     </button>
+                </div>
+
+                {# Bouton de repli : masqué tant que tout tient. `aria-expanded` +
+                   `aria-controls` en font un vrai révélateur pour les lecteurs d'écran ;
+                   le compteur dit COMBIEN d'onglets sont cachés, pas seulement qu'il y en a. #}
+                <button type="button"
+                        class="list-tabs-more d-none"
+                        data-view-manager-target="tabsMore"
+                        data-action="click->view-manager#toggleTabsOverflow"
+                        aria-expanded="false"
+                        aria-haspopup="true"
+                        aria-controls="list-tabs-overflow-panel">
+                    <span data-view-manager-target="tabsMoreCount">+0</span>
+                    <span class="visually-hidden">onglets supplémentaires</span>
+                    <twig:UX:Icon name="{{ resolve_icon_name('lucide:chevron-down') }}" class="list-tabs-more-chevron" aria-hidden="true" />
+                </button>
+
+                {# Panneau des onglets repliés. `role="list"` et non `menu` : ce sont des
+                   onglets, et ils restent dans le tablist du DOM — ce panneau n'est qu'un
+                   RACCOURCI vers eux, peuplé à l'ouverture par le contrôleur. #}
+                <div id="list-tabs-overflow-panel"
+                     class="list-tabs-overflow-panel d-none"
+                     data-view-manager-target="tabsOverflowPanel"
+                     role="list"
+                     aria-label="Onglets repliés"></div>
                 </div>
             </div>
         </div>
@@ -89,10 +122,16 @@
             data-server-root-name="{{ serverRootName }}"
             data-can-add="true"
         >
+            {# Bouton « Ajouter » de l'état vide : même drapeau que la barre d'outils et le
+               menu contextuel (`creation_interdite`), pour qu'une rubrique fermée à la
+               création ne l'offre pas par une troisième porte. Le repli sur {} est
+               nécessaire : `entityFormCanvas` peut arriver vide, et l'accès en chaîne
+               lèverait avant que `default` n'ait son mot à dire. #}
+            {% set peutAjouter = (entityFormCanvas.parametres|default({})).creation_interdite|default(false) != true %}
             {# On utilise notre nouveau composant générique pour la liste principale #}
             {{ include('components/_list_manager.html.twig', {
                 'listId': 'principal',
-                'can_add': true,
+                'can_add': peutAjouter,
                 'data': data,
                 'entite_nom': entite_nom,
                 'serverRootName': serverRootName,

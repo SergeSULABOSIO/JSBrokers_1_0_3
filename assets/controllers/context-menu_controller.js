@@ -120,6 +120,23 @@ export default class extends Controller {
         const hasSelection = selectos.length > 0;
         const isSingleSelection = selectos.length === 1;
 
+        // « Ajouter » reste VISIBLE mais INACTIF pour les entités qui n'existent que
+        // rattachées à une autre (cf. `creation_interdite`, même drapeau que la barre
+        // d'outils). Le masquer laisserait croire à un droit manquant ; grisé avec son
+        // infobulle, il dit où créer. Le raccourci « A » suit : il ne fait que cliquer
+        // ce bouton, qu'un `disabled` neutralise.
+        if (this.hasBtAjouterTarget) {
+            const creationInterdite = this.entityFormCanvas?.parametres?.creation_interdite === true;
+            this.btAjouterTarget.classList.toggle('is-disabled', creationInterdite);
+            this.btAjouterTarget.setAttribute('aria-disabled', creationInterdite ? 'true' : 'false');
+            if (creationInterdite) {
+                this.btAjouterTarget.setAttribute('title', "Une condition de partage se crée depuis la fiche d'un partenaire, d'un invité ou d'une piste.");
+            } else {
+                this.btAjouterTarget.removeAttribute('title');
+            }
+            if ('disabled' in this.btAjouterTarget) this.btAjouterTarget.disabled = creationInterdite;
+        }
+
         console.log(this.nomControleur + " - organizeButtons - Code: 8888 - Selection:", selectos, "Length:", selectos.length, "Single:", isSingleSelection, "Has:", hasSelection);
         
         // console.log(this.nomControleur + " - organizeButtons - Code: 8888 - hasBtModifierTarget:", this.hasBtModifierTarget);

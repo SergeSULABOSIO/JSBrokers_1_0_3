@@ -136,12 +136,25 @@ export default class extends Controller {
 
         // Conditions de visibilité basées sur la sélection ET les permissions du canvas.
         const canAdd = !!canvasParams.endpoint_submit_url;
+        // `creation_interdite` : certaines entités n'existent que RATTACHÉES à une autre
+        // (une condition de partage sans bénéficiaire ni affaire n'est qu'une règle
+        // orpheline). Leur rubrique reste consultable et éditable, mais la création se
+        // fait depuis la fiche parente.
+        //
+        // Le bouton est GRISÉ, PAS MASQUÉ : un bouton qui disparaît laisse croire à un
+        // droit manquant ou à un bug ; désactivé avec son infobulle, il dit où aller.
+        const creationInterdite = canvasParams.creation_interdite === true;
         const canEdit = selectionCount === 1 && !!canvasParams.endpoint_submit_url;
         const canDelete = selectionCount > 0 && !!canvasParams.endpoint_delete_url;
         const canOpen = selectionCount > 0; // L'ouverture est généralement toujours possible si sélection.
 
         // Règle : "Ajouter" est visible si le canvas le permet.
         this.toggleButton(this.btajouterTarget, canAdd);
+        this.setButtonDisabled(
+            this.btajouterTarget,
+            creationInterdite,
+            "Une condition de partage se crée depuis la fiche d'un partenaire, d'un invité ou d'une piste.",
+        );
 
         // Règle : "Modifier" est visible uniquement pour une sélection unique.
         this.toggleButton(this.btmodifierTarget, canEdit);
@@ -176,6 +189,30 @@ export default class extends Controller {
     toggleButton(target, show) {
         if (!target) return;
         target.style.display = show ? 'block' : 'none';
+    }
+
+    /**
+     * Grise un bouton sans le faire disparaître, et dit POURQUOI par une infobulle.
+     *
+     * Masquer une action légitime ailleurs laisse l'utilisateur chercher un droit qu'il a
+     * peut-être, ou soupçonner une panne. Un bouton inactif qui explique où aller répond
+     * à la question au lieu de la poser.
+     *
+     * @param {HTMLElement|undefined} target
+     * @param {boolean} disabled
+     * @param {string} raison - infobulle affichée à l'état inactif.
+     * @private
+     */
+    setButtonDisabled(target, disabled, raison = '') {
+        if (!target) return;
+        target.classList.toggle('is-disabled', disabled);
+        target.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+        const bouton = target.matches('button, a') ? target : target.querySelector('button, a');
+        if (bouton) {
+            bouton.disabled = disabled;
+            if (disabled && raison) bouton.setAttribute('title', raison);
+            else bouton.removeAttribute('title');
+        }
     }
 
     /**

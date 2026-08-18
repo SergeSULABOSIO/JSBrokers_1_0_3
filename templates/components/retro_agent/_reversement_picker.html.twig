@@ -1,0 +1,191 @@
+{#
+    REVERSEMENT DE RÉTROCOMMISSION À UN AGENT INTERNE — une affaire, ou plusieurs en LOT.
+
+    Le tableau ne propose que les affaires dont le solde est EXIGIBLE : le dû dont le
+    cabinet n'a pas encore encaissé la commission n'a pas à être versé — payer avant, c'est
+    avancer sa trésorerie sur une créance non recouvrée. Même garde que pour les partenaires.
+
+    LE LOT. Cocher plusieurs lignes n'enregistre pas plusieurs virements : les lignes
+    partagent une référence de lot posée par le SERVEUR, et la comptabilité n'émet alors
+    QU'UNE écriture pour le total — celle du virement réel. Le solde, lui, reste exact
+    affaire par affaire, ce dont le rapport de production a besoin.
+
+    Miroir visuel des pickers jsb-picker-* (/ergonomie-web : role=dialog, aria-modal,
+    fieldset/legend, cibles ≥44px, Échap, restitution du focus, zone d'erreur inline ;
+    /charte-couleurs : cobalt #0047AB). Piloté par « reversement-retro-picker », auto-connecté
+    à l'insertion par le cerveau.
+#}
+<div class="jsb-picker-overlay"
+     data-controller="reversement-retro-picker"
+     data-reversement-retro-picker-submit-url-value="{{ submitUrl }}"
+     data-picker-overlay>
+    <div class="jsb-picker-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="jsb-rra-picker-title"
+         aria-describedby="jsb-rra-picker-desc"
+         tabindex="-1">
+
+        <div class="modal-header jsb-picker-header">
+            <div class="d-flex align-items-center">
+                <span class="me-2 d-inline-flex" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('depense') }}" style="width:22px;height:22px;color:#0047AB;" />
+                </span>
+                <h5 id="jsb-rra-picker-title" class="modal-title mb-0">
+                    Reverser une rétrocommission à&nbsp;«&nbsp;{{ agent.nom }}&nbsp;»
+                </h5>
+            </div>
+            <button type="button" class="btn-close" data-picker-close aria-label="Fermer la fenêtre"></button>
+        </div>
+
+        <div class="jsb-picker-progress" data-picker-progress role="progressbar" aria-hidden="true">
+            <div class="jsb-picker-progress-bar"></div>
+        </div>
+
+        <div class="jsb-picker-intro">
+            <span class="jsb-picker-intro-icon" aria-hidden="true">
+                <twig:UX:Icon name="{{ resolve_icon_name('invite') }}" style="width:26px;height:26px;" />
+            </span>
+            <div class="jsb-picker-intro-text">
+                <p class="jsb-picker-intro-title">{{ agent.nom }}</p>
+                <p id="jsb-rra-picker-desc" class="jsb-picker-intro-desc">
+                    Cochez les affaires réglées par ce versement. Seules celles dont la
+                    commission a été <strong>encaissée par le cabinet</strong> apparaissent —
+                    les autres ne sont pas encore réclamables.
+                    {% if lignes|length > 1 %}
+                        En cocher plusieurs enregistre <strong>un seul virement</strong> couvrant
+                        toutes ces lignes.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+        <p class="jsb-picker-empty text-danger" data-picker-error role="alert" hidden></p>
+
+        <div class="jsb-picker-listwrap" style="padding: .25rem 1.25rem 1rem;">
+            {% if lignes is empty %}
+                <p class="jsb-picker-empty text-muted" role="status">
+                    Rien à reverser pour l'instant : aucune affaire de cet agent n'a de solde
+                    exigible. Une rétrocommission ne devient réclamable qu'une fois la
+                    commission de courtage encaissée par le cabinet.
+                </p>
+            {% else %}
+                <fieldset class="border-0 p-0 m-0 mb-3">
+                    <legend class="fs-6 fw-semibold mb-2" style="color:#0d2440;">Affaires à régler</legend>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0" aria-label="Affaires avec un solde exigible">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col" style="width:44px;">
+                                        <input class="form-check-input" type="checkbox"
+                                               data-action="change->reversement-retro-picker#toutCocher"
+                                               aria-label="Tout cocher">
+                                    </th>
+                                    <th scope="col">Client / Police</th>
+                                    <th scope="col" class="text-end">Solde exigible</th>
+                                    <th scope="col" class="text-end" style="width:160px;">Montant à verser</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for l in lignes %}
+                                    <tr data-reversement-retro-picker-target="ligne"
+                                        data-avenant-id="{{ l.avenant.id }}">
+                                        <td>
+                                            <input class="form-check-input" type="checkbox"
+                                                   data-reversement-retro-picker-target="coche"
+                                                   data-action="change->reversement-retro-picker#recalculer"
+                                                   aria-label="Régler {{ l.client }} — {{ l.reference }}">
+                                        </td>
+                                        <td>
+                                            <strong>{{ l.client }}</strong>
+                                            <div class="text-muted small">{{ l.reference }} · {{ l.risque }}</div>
+                                        </td>
+                                        <td class="text-end" style="font-variant-numeric: tabular-nums;">
+                                            {{ l.retroAgentExigible|number_format(2, ',', ' ') }} {{ monnaie }}
+                                        </td>
+                                        <td>
+                                            {# Pré-rempli au solde exigible : le geste courant est de
+                                               solder. Un versement partiel reste possible en corrigeant. #}
+                                            <input type="number" class="form-control form-control-sm text-end"
+                                                   step="0.01" min="0" max="{{ l.retroAgentExigible }}"
+                                                   value="{{ l.retroAgentExigible }}"
+                                                   data-reversement-retro-picker-target="montant"
+                                                   data-action="input->reversement-retro-picker#recalculer"
+                                                   aria-label="Montant versé pour {{ l.reference }}">
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </fieldset>
+
+                <fieldset class="border-0 p-0 m-0 mb-3">
+                    <legend class="fs-6 fw-semibold mb-2" style="color:#0d2440;">Le versement</legend>
+                    <div class="row g-2">
+                        <div class="col-sm-4">
+                            <label for="rra-date" class="form-label fw-semibold mb-0" style="color:#0d2440;">Date</label>
+                            <span class="text-muted small d-block mb-1" id="rra-date-aide">
+                                Date de sortie des fonds. Par défaut&nbsp;: aujourd'hui.
+                            </span>
+                            <input type="date" id="rra-date" class="form-control"
+                                   value="{{ 'now'|date('Y-m-d') }}"
+                                   data-reversement-retro-picker-target="date"
+                                   aria-describedby="rra-date-aide">
+                        </div>
+                        <div class="col-sm-4">
+                            <label for="rra-reference" class="form-label fw-semibold mb-0" style="color:#0d2440;">Référence</label>
+                            <span class="text-muted small d-block mb-1" id="rra-ref-aide">
+                                Référence du virement. Laissez vide pour une référence automatique.
+                            </span>
+                            <input type="text" id="rra-reference" class="form-control" maxlength="255"
+                                   placeholder="Ex.&nbsp;: VIR-2026-0142"
+                                   data-reversement-retro-picker-target="reference"
+                                   aria-describedby="rra-ref-aide">
+                        </div>
+                        <div class="col-sm-4">
+                            <label for="rra-compte" class="form-label fw-semibold mb-0" style="color:#0d2440;">Compte débité</label>
+                            <span class="text-muted small d-block mb-1" id="rra-compte-aide">
+                                Sans compte&nbsp;: la sortie est comptabilisée en caisse.
+                            </span>
+                            <select id="rra-compte" class="form-select"
+                                    data-reversement-retro-picker-target="compte"
+                                    aria-describedby="rra-compte-aide">
+                                <option value="">Caisse (espèces)</option>
+                                {% for compte in comptes %}
+                                    <option value="{{ compte.id }}">{{ compte.intitule }} — {{ compte.banque }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <section aria-live="polite">
+                    <h6 class="fw-semibold mb-2" style="color:#0d2440;">Ce qui sera enregistré</h6>
+                    <p class="mb-0 text-muted small" data-reversement-retro-picker-target="apercu">
+                        Aucune affaire cochée.
+                    </p>
+                </section>
+            {% endif %}
+        </div>
+
+        <footer class="jsb-picker-foot">
+            <span class="jsb-picker-hint text-muted small">
+                L'écriture comptable (charges de personnel) est générée automatiquement.
+            </span>
+            <span class="d-inline-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:cancel') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                    Annuler
+                </button>
+                <button type="button" class="btn btn-primary jsb-picker-btn"
+                        data-picker-executer
+                        data-reversement-retro-picker-target="executer"
+                        disabled>
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:save') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                    Enregistrer le versement
+                </button>
+            </span>
+        </footer>
+    </div>
+</div>

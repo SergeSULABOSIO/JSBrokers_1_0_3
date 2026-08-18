@@ -5,6 +5,7 @@ namespace App\Services\Canvas\Indicator;
 use App\Entity\Avenant;
 use App\Entity\Entreprise;
 use App\Repository\CotationRepository;
+use App\Service\Partage\Reserve;
 use App\Services\AvenantRenouvellementResolver;
 use App\Services\Search\AvenantEcheanceScope;
 use App\Services\Search\AvenantSuccessionScope;
@@ -97,6 +98,13 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
         $retro        = $partenaire ? $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1) : 0.0;
         $retroReverse = $partenaire ? $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtierPayee($cotation, null) : 0.0;
 
+        // Rétrocommission des AGENTS INTERNES : second bénéficiaire du partage, sur une
+        // assiette différente (ce qui reste au cabinet après les partenaires). Elle pèse
+        // sur la réserve exactement comme la rétro externe.
+        $retroAgent        = $this->calculationHelper->getAvenantMontantRetroAgent($entity);
+        $retroAgentReverse = $this->calculationHelper->getAvenantMontantRetroAgentReversee($entity);
+        $retroAgentExigible = $this->calculationHelper->getAvenantRetroAgentExigible($entity);
+
         $montantsBordereau = $this->calculationHelper->getAvenantMontantsBordereau($entity);
 
         return $this->nonRenouvelableIndicateurs($entity) + [
@@ -156,7 +164,15 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'retroCommission' => $partenaire ? round($retro, 2) : 0.0,
             'retroCommissionReversee' => $partenaire ? round($retroReverse, 2) : 0.0,
             'retroCommissionSolde' => $partenaire ? round($retro - $retroReverse, 2) : 0.0,
-            'reserve' => round($commissionPure - $retro, 2),
+            'retroAgentDue' => round($retroAgent, 2),
+            'retroAgentPayee' => round($retroAgentReverse, 2),
+            'retroAgentSolde' => round(max(0.0, $retroAgent - $retroAgentReverse), 2),
+            'retroAgentExigible' => round($retroAgentExigible, 2),
+            // Réserve : formule UNIQUE du projet (App\Service\Partage\Reserve).
+            'reserve' => Reserve::calculer($commissionPure, $retro, $retroAgent),
+            // Le cabinet rétrocède-t-il plus qu'il ne garde ? Cumul de taux mal paramétré :
+            // on l'AFFICHE plutôt que d'écrêter la réserve à zéro en silence.
+            'reserveDeficitaire' => Reserve::estDeficitaire($commissionPure, $retro, $retroAgent),
         ];
     }
 

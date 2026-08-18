@@ -3,6 +3,7 @@
 namespace App\Form;
 
 use App\Entity\Piste;
+use App\Entity\ConditionPartage;
 use App\Entity\Partenaire;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
@@ -151,6 +152,24 @@ class PisteType extends AbstractType
                 'autocomplete' => true,
                 'attr' => [
                     'placeholder' => "Les intermédiaires",
+                ],
+            ])
+            // RATTACHEMENT (et non création) des conditions au profit d'agents INTERNES.
+            // La condition vit ailleurs et sert peut-être à dix autres affaires : on la
+            // désigne, on ne la duplique pas. C'est ce qui la garde comme source unique —
+            // à l'inverse de `conditionsPartageExceptionnelles` juste dessous, propriété
+            // de cette piste et clonée au renouvellement.
+            ->add('conditionsPartageAgent', ConditionPartageAgentAutocompleteField::class, [
+                'required' => false,
+                'label' => "Agents internes rémunérés",
+                'class' => ConditionPartage::class,
+                'choice_label' => "nom",
+                'multiple' => true,
+                'expanded' => false,
+                'by_reference' => false,
+                'autocomplete' => true,
+                'attr' => [
+                    'placeholder' => "Les conditions d'agents",
                 ],
             ])
             ->add('conditionsPartageExceptionnelles', CollectionType::class, [

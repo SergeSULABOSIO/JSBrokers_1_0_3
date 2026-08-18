@@ -23,6 +23,8 @@ class ConditionPartageIndicatorStrategy implements IndicatorCalculationStrategyI
 
         return [
             'descriptionRegle' => $this->getConditionPartageDescriptionRegle($entity),
+            'beneficiaireNom' => $this->getConditionPartageBeneficiaire($entity),
+            'estPourAgent' => $entity->estPourAgent(),
             'nombreRisquesCibles' => $entity->getProduits()->count(),
             'porteeCondition' => $this->getConditionPartagePortee($entity),
             'totalAssiette' => round($impact['assiette'], 2),
@@ -59,6 +61,13 @@ class ConditionPartageIndicatorStrategy implements IndicatorCalculationStrategyI
 
     private function getConditionPartagePortee(ConditionPartage $condition): string
     {
+        // L'agent d'abord : une condition interne est rattachée à des pistes, mais ce
+        // n'est pas une « exceptionnelle » — elle est PARTAGÉE entre ses affaires.
+        if ($condition->estPourAgent()) {
+            $nb = $condition->getPistesAffectees()->count();
+
+            return sprintf('Agent interne (%d affaire%s)', $nb, $nb > 1 ? 's' : '');
+        }
         if ($condition->getPiste()) return 'Exceptionnelle (Piste)';
         if ($condition->getPartenaire()) return 'Générale (Partenaire)';
         return 'Non définie';
@@ -100,17 +109,38 @@ class ConditionPartageIndicatorStrategy implements IndicatorCalculationStrategyI
     private function ConditionPartage_getContexteParentString(?ConditionPartage $condition): string
     {
         if ($condition === null) return 'N/A';
+        if ($condition->estPourAgent()) return "Agent: " . $condition->getAgent()->getNom();
         if ($condition->getPiste()) return "Piste: " . $condition->getPiste()->getNom();
         if ($condition->getPartenaire()) return "Partenaire: " . $condition->getPartenaire()->getNom();
         return "Aucun parent défini";
     }
 
+    /** Qui touche, en clair — la colonne que la liste affiche sous le nom de la condition. */
+    private function getConditionPartageBeneficiaire(ConditionPartage $condition): string
+    {
+        $beneficiaire = $condition->getBeneficiaire();
+        if ($beneficiaire === null) {
+            return 'Aucun bénéficiaire';
+        }
+
+        return $condition->estPourAgent()
+            ? sprintf('%s (agent interne)', $beneficiaire->getNom())
+            : sprintf('%s (partenaire)', $beneficiaire->getNom());
+    }
+
     private function calculateConditionPartageImpact(ConditionPartage $condition): array
     {
+        // Condition d'AGENT : un circuit à part, parce que son assiette l'est aussi (ce qui
+        // reste au cabinet après les partenaires, et non la commission partageable). La
+        // réutiliser ici serait un raccourci qui donnerait un chiffre faux.
+        if ($condition->estPourAgent()) {
+            return $this->impactConditionAgent($condition);
+        }
+
         $assiette = 0.0;
         $retroCommission = 0.0;
         $dossiers = 0;
-        
+
         $cotations = [];
         if ($condition->getPiste()) {
             foreach ($condition->getPiste()->getCotations() as $cotation) {
@@ -156,6 +186,47 @@ class ConditionPartageIndicatorStrategy implements IndicatorCalculationStrategyI
             'assiette' => $assiette,
             'retroCommission' => $retroCommission,
             'dossiers' => $dossiers
+        ];
+    }
+
+    /**
+     * Impact d'une condition au profit d'un AGENT INTERNE : on parcourt les affaires
+     * auxquelles elle est RATTACHÉE (jamais celles que l'agent gère), et on ne compte que
+     * celles où c'est bien ELLE qui l'emporte — un agent peut porter deux conditions
+     * applicables, seule la première sert.
+     *
+     * @return array{assiette: float, retroCommission: float, dossiers: int}
+     */
+    private function impactConditionAgent(ConditionPartage $condition): array
+    {
+        $agent = $condition->getAgent();
+        $assiette = 0.0;
+        $retroCommission = 0.0;
+        $dossiers = 0;
+
+        foreach ($condition->getPistesAffectees() as $piste) {
+            foreach ($piste->getCotations() as $cotation) {
+                if (!$this->calculationHelper->isCotationBound($cotation)) {
+                    continue;
+                }
+                $retenues = $this->calculationHelper->getCotationConditionsAgent($cotation, $agent);
+                if (($retenues[$agent?->getId()] ?? null) !== $condition) {
+                    continue;
+                }
+                $montant = $this->calculationHelper->getCotationMontantRetroAgent($cotation, $agent);
+                if ($montant <= 0.0) {
+                    continue;
+                }
+                $retroCommission += $montant;
+                $assiette += $this->calculationHelper->getCotationAssietteRetroAgent($cotation);
+                ++$dossiers;
+            }
+        }
+
+        return [
+            'assiette' => $assiette,
+            'retroCommission' => $retroCommission,
+            'dossiers' => $dossiers,
         ];
     }
 }

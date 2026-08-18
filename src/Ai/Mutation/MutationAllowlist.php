@@ -44,6 +44,11 @@ final class MutationAllowlist
         'Assureur',
         'Risque',
         'Partenaire',     // « Intermédiaires »
+        // Condition de partage : elle était ABSENTE, donc Ket ne savait pas créer la règle
+        // qui rémunère un partenaire ou un agent — un trou de parité que « Ket doit tout
+        // savoir faire » ne tolère pas. SOUS-entité (hors carte d'accès) gouvernée par le
+        // droit « Intermédiaires » via GOUVERNANCE_PARENT.
+        'ConditionPartage',
         'Groupe',
         'Contact',
         // Finances
@@ -58,6 +63,10 @@ final class MutationAllowlist
         // d'accès (WorkspaceAccessResolver::MAP), son écriture est gouvernée par le
         // droit « Tranche » via GOUVERNANCE_PARENT — donc jamais top-level en lecture.
         'PaiementPrime',
+        // Reversement d'une rétrocommission à un agent INTERNE. SOUS-entité de l'Avenant
+        // (la ligne d'affaire réglée), dont elle suit le droit — jamais top-level en lecture.
+        // Ne passe par AUCUNE note : le versement est direct, comptabilisé en 6611.
+        'ReversementRetroAgent',
         'RevenuPourCourtier', // « Revenus »
         'Chargement',      // « Types Chargements »
         'TypeRevenu',

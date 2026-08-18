@@ -49,6 +49,42 @@ class ConditionPartage
     private ?Partenaire $partenaire = null;
 
     /**
+     * LE BÉNÉFICIAIRE INTERNE — miroir exact de $partenaire, pour un agent du cabinet.
+     *
+     * Une condition rétrocède soit à un partenaire EXTERNE, soit à un agent INTERNE,
+     * jamais aux deux (cf. estValide()). Le reste de la condition — taux, seuil, formule,
+     * unité de mesure, ciblage des risques — s'applique à l'identique dans les deux cas :
+     * c'est ce qui permet de récompenser un effort commercial interne avec exactement la
+     * même grammaire qu'un accord d'apport externe, sans second mécanisme à maintenir.
+     *
+     * ⚠ L'agent BÉNÉFICIAIRE n'est pas le GESTIONNAIRE de l'affaire (Piste::invite, posé
+     * par AuditableTrait). Un agent peut initier le premier contact puis confier la
+     * gestion quotidienne à quelqu'un d'autre : il reste le bénéficiaire. Ne jamais
+     * dériver l'un de l'autre.
+     */
+    #[ORM\ManyToOne(inversedBy: 'conditionsPartageAgent')]
+    #[Groups(['list:read'])]
+    private ?Invite $agent = null;
+
+    /**
+     * @var Collection<int, Piste> Les affaires sur lesquelles cette condition s'applique.
+     *
+     * POURQUOI UNE SECONDE RELATION VERS LA PISTE, à côté de $piste. Les deux ne disent
+     * pas la même chose :
+     *  - $piste (ManyToOne) = condition EXCEPTIONNELLE, propriété de cette piste-là, et
+     *    CLONÉE au renouvellement (cf. ReconductionPartageService) ;
+     *  - $pistesAffectees (ManyToMany) = condition PARTAGÉE, définie une fois puis
+     *    rattachée à autant d'affaires qu'on veut, et RECONDUITE telle quelle (même
+     *    identifiant) sur les pistes dérivées.
+     * Une condition d'agent emprunte le second chemin : la règle « prime apporteur 15 % »
+     * s'écrit une fois et se retrouve à l'identique sur chaque affaire qu'il apporte.
+     * Fondre les deux relations aurait fait cloner les conditions partagées — donc perdre
+     * la source unique que cette collection existe précisément pour offrir.
+     */
+    #[ORM\ManyToMany(targetEntity: Piste::class, mappedBy: 'conditionsPartageAgent')]
+    private Collection $pistesAffectees;
+
+    /**
      * @var Collection<int, Risque>
      */
     #[ORM\OneToMany(targetEntity: Risque::class, mappedBy: 'conditionPartage')]
@@ -72,6 +108,15 @@ class ConditionPartage
     public const UNITE_SOMME_COMMISSION_PURE_RISQUE = 0;
     public const UNITE_SOMME_COMMISSION_PURE_CLIENT = 1;
     public const UNITE_SOMME_COMMISSION_PURE_PARTENAIRE = 2;
+    /**
+     * Toute la production du BÉNÉFICIAIRE sur l'exercice — pendant interne de
+     * UNITE_SOMME_COMMISSION_PURE_PARTENAIRE, pour un intéressement à palier du genre
+     * « 15 %, mais seulement au-delà de 10 000 apportés dans l'année ».
+     *
+     * ⚠ « Production de l'agent » = les affaires dont il est BÉNÉFICIAIRE (celles portant
+     * une de ses conditions), jamais celles qu'il gère.
+     */
+    public const UNITE_SOMME_COMMISSION_PURE_AGENT = 3;
     // Unité de référence du partage : la commission pure du RISQUE.
     #[ORM\Column(nullable: true)]
     #[Groups(['list:read'])]
@@ -105,6 +150,7 @@ class ConditionPartage
     {
         $this->documents = new ArrayCollection();
         $this->produits = new ArrayCollection();
+        $this->pistesAffectees = new ArrayCollection();
     }
 
     /**
@@ -272,6 +318,75 @@ class ConditionPartage
     //     return $this;
     // }
 
+    public function getAgent(): ?Invite
+    {
+        return $this->agent;
+    }
+
+    public function setAgent(?Invite $agent): static
+    {
+        $this->agent = $agent;
+
+        return $this;
+    }
+
+    /** Cette condition rétrocède-t-elle à un agent INTERNE plutôt qu'à un partenaire ? */
+    public function estPourAgent(): bool
+    {
+        return $this->agent !== null;
+    }
+
+    /**
+     * Le bénéficiaire de la rétrocommission, quel que soit son bord. Null tant que la
+     * condition n'en désigne aucun — état incomplet que estValide() signale.
+     */
+    public function getBeneficiaire(): Partenaire|Invite|null
+    {
+        return $this->agent ?? $this->partenaire;
+    }
+
+    /**
+     * Une condition rétrocède à UN bénéficiaire, et à un seul.
+     *
+     * Sans partenaire ni agent, elle ne partage avec personne : elle ne peut rien
+     * calculer. Avec les deux, l'assiette à retenir serait ambiguë (celle du partenaire
+     * ne porte que les revenus partageables, celle de l'agent porte ce qui reste au
+     * cabinet APRÈS les partenaires) — et le choix silencieux de l'une ferait perdre de
+     * l'argent à quelqu'un. La saisie est donc refusée dans les deux cas, en nommant
+     * le champ (cf. le refus 422 du trait CRUD).
+     */
+    public function estValide(): bool
+    {
+        return ($this->agent !== null) !== ($this->partenaire !== null);
+    }
+
+    /**
+     * @return Collection<int, Piste> Les affaires portant cette condition partagée.
+     */
+    public function getPistesAffectees(): Collection
+    {
+        return $this->pistesAffectees;
+    }
+
+    public function addPisteAffectee(Piste $piste): static
+    {
+        if (!$this->pistesAffectees->contains($piste)) {
+            $this->pistesAffectees->add($piste);
+            $piste->addConditionsPartageAgent($this);
+        }
+
+        return $this;
+    }
+
+    public function removePisteAffectee(Piste $piste): static
+    {
+        if ($this->pistesAffectees->removeElement($piste)) {
+            $piste->removeConditionsPartageAgent($this);
+        }
+
+        return $this;
+    }
+
     public function getPiste(): ?Piste
     {
         return $this->piste;
@@ -299,6 +414,22 @@ class ConditionPartage
     public function __toString(): string
     {
         return $this->nom ?? 'Nouvelle condition';
+    }
+
+    /**
+     * La condition vise-t-elle cette affaire ?
+     *
+     * Deux rattachements, une seule question : la condition EXCEPTIONNELLE appartient à sa
+     * piste, la condition PARTAGÉE (agent) figure dans la liste de ses affaires. Le
+     * ciblage par risque reste à vérifier séparément — cf. sappliqueAuRisque().
+     */
+    public function viseLaPiste(?Piste $piste): bool
+    {
+        if ($piste === null) {
+            return false;
+        }
+
+        return $this->piste === $piste || $this->pistesAffectees->contains($piste);
     }
 
     /**

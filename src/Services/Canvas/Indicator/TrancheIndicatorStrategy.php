@@ -6,6 +6,7 @@ use App\Entity\Tranche;
 use App\Entity\Taxe;
 use App\Entity\Note;
 use App\Repository\TaxeRepository;
+use App\Service\Partage\Reserve;
 use App\Services\ServiceDates;
 use App\Entity\Entreprise;
 use DateTimeImmutable;
@@ -120,7 +121,20 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
             'retroCommission' => $montantRetroCommission,
             'retroCommissionReversee' => round($this->calculationHelper->getTrancheMontantRetrocommissionsPayableParCourtierPayee($entity), 2),
             'retroCommissionSolde' => $montantRetroCommission - round($this->calculationHelper->getTrancheMontantRetrocommissionsPayableParCourtierPayee($entity), 2),
-            'reserve' => round($this->getTrancheMontantPur($entity) - $this->getTrancheRetroCommission($entity), 2),
+            // Réserve : formule UNIQUE du projet (App\Service\Partage\Reserve), jamais
+            // réécrite sur place — c'est ce qui garantit que la tranche, l'avenant, le
+            // revenu et les agrégats globaux répondent tous la même chose.
+            // Rétrocommission des AGENTS INTERNES, au prorata de la tranche — même
+            // traitement que la rétro partenaire, dont elle partage la maille.
+            'retroAgentDue' => round($this->getTrancheRetroAgent($entity), 2),
+            // Termes NON arrondis : l'arrondi est celui du résultat, une seule fois. Passer
+            // ici la rétro déjà arrondie déplacerait la réserve d'un centime sur certaines
+            // affaires — une régression invisible et impossible à expliquer au courtier.
+            'reserve' => Reserve::calculer(
+                $this->getTrancheMontantPur($entity),
+                $this->getTrancheRetroCommission($entity),
+                $this->getTrancheRetroAgent($entity),
+            ),
             'statutPaiement' => $this->getTrancheStatutPaiement($entity),
             'urgenceRecouvrement' => $urgence['libelle'],
             'urgenceNiveau' => $urgence['niveau'],
@@ -283,6 +297,20 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
     {
         $partenaire = $this->calculationHelper->getCotationPartenaire($tranche->getCotation());
         return $partenaire ? ($partenaire->getPart() ?? 0.0) : 0.0;
+    }
+
+    /**
+     * Rétrocommission DUE aux agents internes, ramenée à la quote-part de la tranche.
+     *
+     * Seul le DÛ est proratisé. Le « versé », lui, ne l'est pas et n'apparaît pas ici :
+     * un reversement est un fait rattaché à un AVENANT (un virement réel, daté, référencé),
+     * pas une grandeur qu'on découpe. L'écran qui répond « combien lui reste-t-il dû ? »
+     * est la fiche de l'avenant et le rapport de production, jamais la tranche.
+     */
+    private function getTrancheRetroAgent(Tranche $tranche): float
+    {
+        return $this->calculationHelper->getCotationMontantRetroAgent($tranche->getCotation())
+            * $this->calculateTrancheTauxFactor($tranche);
     }
 
     private function getTrancheRetroCommission(Tranche $tranche): float

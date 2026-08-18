@@ -497,6 +497,15 @@ export default class extends Controller {
             case 'ui:invite.resend-request':
                 this.handleInviteResendRequest(payload);
                 break;
+            case 'ui:retroagent.rapport-request': // rapport de production d'un agent interne
+                this.handleRetroAgentRapportRequest(payload);
+                break;
+            case 'ui:retroagent.reversement-request': // saisie d'un reversement (une ligne ou un lot)
+                this.handleRetroAgentReversementRequest(payload);
+                break;
+            case 'client:retroagent.reversement-enregistre': // le picker a écrit ses lignes
+                this._handleRetroAgentReversementEnregistre(payload);
+                break;
             case 'ui:invite.portefeuille-form-request':
                 this.handleInvitePortefeuilleFormRequest(payload);
                 break;
@@ -1390,6 +1399,74 @@ export default class extends Controller {
             this.broadcast('app:loading.stop');
         }
     }
+
+    /**
+     * Ouvre le RAPPORT DE PRODUCTION d'un agent interne dans un onglet de la zone de
+     * travail : sa rétrocommission affaire par affaire, ce qui lui a été versé et ce qui
+     * reste dû. Même mécanique que le SOA d'un client — la route rend {html, title} et le
+     * `loadUrl` permet à l'onglet de se recharger seul après une écriture.
+     * @param {object} payload
+     * @param {string} payload.url - URL de type '/admin/retro-agent/{id}/rapport'
+     */
+    async handleRetroAgentRapportRequest(payload) {
+        if (!payload.url) {
+            console.error('[Cerveau] handleRetroAgentRapportRequest() : URL manquante.', payload);
+            this._showNotification('Impossible de charger le rapport : URL manquante.', 'error');
+            return;
+        }
+        try {
+            this._publishSelectionStatus('Chargement du rapport de production…');
+            this.broadcast('app:loading.start');
+
+            const response = await fetch(payload.url);
+            const result = await response.json();
+            if (!response.ok) throw result;
+
+            const agentId = payload.url.split('/').filter(Boolean).at(-2);
+            this.broadcast('app:workspace.inject-html', {
+                html:      result.html,
+                title:     result.title,
+                iconAlias: 'invite',
+                tabKey:    `retro-agent-${agentId}`,
+                loadUrl:   payload.url,
+            });
+            this._publishSelectionStatus('Rapport de production chargé.');
+        } catch (error) {
+            console.error('[Cerveau] Erreur lors du chargement du rapport de production :', error);
+            this._showNotification(error.message || 'Erreur lors du chargement du rapport.', 'error');
+        } finally {
+            this.broadcast('app:loading.stop');
+        }
+    }
+
+    /**
+     * Ouvre le picker de reversement : la liste des affaires où l'agent a un solde dû,
+     * à cocher ligne à ligne. Un seul envoi crée autant de reversements que de lignes
+     * cochées, partageant une référence de LOT — un virement réel, une écriture comptable.
+     * @param {object} payload
+     * @param {string} payload.url - URL de type '/admin/retro-agent/{id}/reversement-picker'
+     */
+    async handleRetroAgentReversementRequest(payload) {
+        await this._openStandalonePicker(payload.url, {
+            controllerName: 'reversement-retro-picker',
+            errorLabel: 'le reversement de rétrocommission',
+        });
+    }
+
+    /**
+     * Reversement(s) enregistré(s) : notification puis rafraîchissement de la liste, ce qui
+     * fait tomber les colonnes « Rétrocom. payée » et « solde » de l'agent à leur nouvelle
+     * valeur. Même séquence que l'enregistrement d'un mouvement de police.
+     * @private
+     */
+    _handleRetroAgentReversementEnregistre(payload) {
+        this._showNotification(payload.message || 'Reversement enregistré.', 'success');
+        const etat = this._getActiveTabState();
+        this._publishSelectionStatus('Actualisation de la liste...');
+        this.broadcast('app:loading.start', { originatorId: etat.elementId, workspaceTabId: this.currentWorkspaceTabId });
+        this._requestListRefresh(this.getActiveTabId());
+    }
+
 
     /**
      * Copie dans le presse-papiers le lien PUBLIC du SOA (utilisable par l'assuré

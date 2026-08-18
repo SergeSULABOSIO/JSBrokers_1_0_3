@@ -93,6 +93,21 @@ class Piste implements OwnerAwareInterface
     #[ORM\OneToMany(targetEntity: ConditionPartage::class, mappedBy: 'piste', cascade: ['persist', 'remove'])]
     private Collection $conditionsPartageExceptionnelles;
 
+    /**
+     * @var Collection<int, ConditionPartage> Conditions de partage au profit d'AGENTS
+     *      INTERNES, rattachées à cette affaire.
+     *
+     * Côté PROPRIÉTAIRE de la relation, comme $partenaires : c'est ce qui permet au moteur
+     * de mutation de la poser par simple liste d'identifiants — donc à l'assistant de
+     * reconduire ces conditions sur une piste dérivée sans machinerie dédiée.
+     *
+     * Ni cascade persist ni cascade remove, VOLONTAIREMENT : la condition ne appartient
+     * pas à la piste, elle lui est prêtée. Supprimer une affaire ne doit pas emporter une
+     * règle de rémunération qui sert peut-être à dix autres.
+     */
+    #[ORM\ManyToMany(targetEntity: ConditionPartage::class, inversedBy: 'pistesAffectees')]
+    private Collection $conditionsPartageAgent;
+
     #[ORM\Column]
     #[Groups(['list:read'])]
     private ?int $exercice = null;
@@ -118,6 +133,7 @@ class Piste implements OwnerAwareInterface
         $this->documents = new ArrayCollection();
         $this->partenaires = new ArrayCollection();
         $this->conditionsPartageExceptionnelles = new ArrayCollection();
+        $this->conditionsPartageAgent = new ArrayCollection();
     }
 
 
@@ -364,6 +380,31 @@ class Piste implements OwnerAwareInterface
                 $conditionsPartageExceptionnelle->setPiste(null);
             }
         }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, ConditionPartage> Conditions de partage RATTACHÉES à cette
+     *         affaire au profit d'agents internes (partagées, jamais clonées).
+     */
+    public function getConditionsPartageAgent(): Collection
+    {
+        return $this->conditionsPartageAgent;
+    }
+
+    public function addConditionsPartageAgent(ConditionPartage $condition): static
+    {
+        if (!$this->conditionsPartageAgent->contains($condition)) {
+            $this->conditionsPartageAgent->add($condition);
+        }
+
+        return $this;
+    }
+
+    public function removeConditionsPartageAgent(ConditionPartage $condition): static
+    {
+        $this->conditionsPartageAgent->removeElement($condition);
 
         return $this;
     }
