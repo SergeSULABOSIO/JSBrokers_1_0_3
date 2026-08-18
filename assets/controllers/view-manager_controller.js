@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { DebordementOnglets } from './onglets-debordement.js';
 
 /**
  * @class ViewManagerController
@@ -430,162 +431,39 @@ export default class extends Controller {
      * Appelé au scroll (data-action), au redimensionnement (ResizeObserver)
      * et après chaque création/suppression d'onglets.
      */
+    /** Recalcule le repli des onglets (mécanique partagée avec la barre du workspace). */
     updateTabsOverflow() {
-        if (!this.hasTabsMoreTarget || !this.hasTabsWrapperTarget) return;
-
-        const conteneur = this.tabsContainerTarget;
-        const onglets = Array.from(conteneur.querySelectorAll('.list-tab'));
-        if (onglets.length === 0) return;
-
-        // On repart d'une barre ENTIÈREMENT dépliée avant de mesurer : sans cela, la
-        // mesure porterait sur l'état replié du tour précédent et la barre ne se
-        // redéplierait jamais quand la fenêtre s'élargit.
-        onglets.forEach((o) => o.classList.remove('is-tab-replie'));
-        this.tabsMoreTarget.classList.add('d-none');
-
-        // Largeur réellement disponible, une fois retirée la place que prendra le bouton
-        // « + N » s'il s'avère nécessaire. On la réserve d'emblée : la calculer après coup
-        // ferait osciller le dernier onglet entre visible et replié à chaque redimension.
-        const largeurBouton = 76;
-        const disponible = this.tabsWrapperTarget.clientWidth - largeurBouton;
-
-        // LA RANGÉE RESTE STABLE : l'onglet actif n'est PAS épinglé de force dans la barre.
-        // L'y ramener ferait sauter les onglets à chaque changement — un onglet chasse
-        // l'autre, et la barre ne ressemble jamais deux fois à elle-même. On garde donc
-        // l'ordre, et on DIT où l'on se trouve : le bouton « + N » signale que l'onglet
-        // courant est replié, et le panneau met la rubrique en évidence.
-        const actif = onglets.find((o) => o.classList.contains('active'));
-
-        let cumul = 0;
-        const replies = [];
-        for (const onglet of onglets) {
-            const largeur = onglet.offsetWidth;
-            if (cumul + largeur <= disponible) {
-                cumul += largeur;
-            } else {
-                onglet.classList.add('is-tab-replie');
-                replies.push(onglet);
-            }
-        }
-
-        this.tabsReplies = replies;
-        if (replies.length === 0) {
-            this.tabsMoreTarget.classList.remove('has-current');
-            this.closeTabsOverflow();
-            return;
-        }
-
-        this.tabsMoreTarget.classList.remove('d-none');
-        if (this.hasTabsMoreCountTarget) this.tabsMoreCountTarget.textContent = `+${replies.length}`;
-
-        // L'onglet courant est-il parmi les repliés ? Si oui, le bouton le dit — sans quoi
-        // l'utilisateur ne verrait NULLE PART où il se trouve (Nielsen 1).
-        const courantReplie = actif !== undefined && replies.includes(actif);
-        this.tabsMoreTarget.classList.toggle('has-current', courantReplie);
-        this.tabsMoreTarget.setAttribute(
-            'aria-label',
-            courantReplie
-                ? `Onglet courant « ${actif.textContent.trim()} » replié — afficher les ${replies.length} onglets repliés`
-                : `Afficher ${replies.length} onglet${replies.length > 1 ? 's' : ''} replié${replies.length > 1 ? 's' : ''}`,
-        );
-        this.tabsMoreTarget.setAttribute(
-            'title',
-            courantReplie ? `Vous êtes sur « ${actif.textContent.trim()} »` : 'Onglets repliés',
-        );
-
-        // Panneau déjà ouvert au moment d'une redimension : on le repeuple à chaud plutôt
-        // que de le refermer sous le curseur de l'utilisateur.
-        if (this.tabsMoreTarget.getAttribute('aria-expanded') === 'true') this._peuplerPanneauOnglets();
+        this._debordement()?.recalculer();
     }
 
-    /**
-     * Ouvre ou ferme le panneau des onglets repliés.
-     * @param {MouseEvent} event
-     */
+    /** Ouvre ou ferme le panneau des onglets repliés. */
     toggleTabsOverflow(event) {
-        event?.preventDefault();
-        event?.stopPropagation();
-        const ouvert = this.tabsMoreTarget.getAttribute('aria-expanded') === 'true';
-        if (ouvert) this.closeTabsOverflow();
-        else this.openTabsOverflow();
-    }
-
-    openTabsOverflow() {
-        if (!this.hasTabsOverflowPanelTarget) return;
-        this._peuplerPanneauOnglets();
-        this.tabsOverflowPanelTarget.classList.remove('d-none');
-        this.tabsMoreTarget.setAttribute('aria-expanded', 'true');
-
-        // Sorties d'urgence (Nielsen 3) : Échap, ou un clic hors du panneau.
-        this.boundFermetureOnglets = (e) => {
-            if (e.type === 'keydown' && e.key !== 'Escape') return;
-            if (e.type === 'click' && this.tabsWrapperTarget.contains(e.target)) return;
-            this.closeTabsOverflow();
-            if (e.type === 'keydown') this.tabsMoreTarget.focus();
-        };
-        document.addEventListener('keydown', this.boundFermetureOnglets);
-        document.addEventListener('click', this.boundFermetureOnglets);
-
-        this.tabsOverflowPanelTarget.querySelector('button')?.focus();
+        this._debordement()?.basculer(event);
     }
 
     closeTabsOverflow() {
-        if (!this.hasTabsOverflowPanelTarget) return;
-        this.tabsOverflowPanelTarget.classList.add('d-none');
-        this.tabsMoreTarget?.setAttribute('aria-expanded', 'false');
-        if (this.boundFermetureOnglets) {
-            document.removeEventListener('keydown', this.boundFermetureOnglets);
-            document.removeEventListener('click', this.boundFermetureOnglets);
-            this.boundFermetureOnglets = null;
-        }
+        this._debordement()?.fermer();
     }
 
     /**
-     * Reconstruit la liste du panneau depuis les onglets repliés.
-     *
-     * Chaque entrée est un RACCOURCI vers l'onglet réel, qui reste dans le tablist du
-     * DOM : l'activation passe par le même switchTab, donc par le même chemin que le clic
-     * direct — aucune seconde logique d'activation à maintenir.
+     * Le gestionnaire de débordement, construit à la demande : les cibles peuvent ne pas
+     * exister au connect() selon le rendu partiel qui monte le contrôleur.
      * @private
      */
-    _peuplerPanneauOnglets() {
-        const panneau = this.tabsOverflowPanelTarget;
-        panneau.innerHTML = '';
+    _debordement() {
+        if (this.debordement) return this.debordement;
+        if (!this.hasTabsMoreTarget || !this.hasTabsWrapperTarget) return null;
 
-        (this.tabsReplies || []).forEach((onglet) => {
-            const entree = document.createElement('button');
-            entree.type = 'button';
-            entree.className = 'list-tabs-overflow-item';
-            entree.setAttribute('role', 'listitem');
-            entree.dataset.tabId = onglet.dataset.tabId;
-
-            // RUBRIQUE COURANTE mise en évidence, comme dans le menu de navigation :
-            // gras + cobalt + fond cobalt léger. `aria-current` porte la même information
-            // aux lecteurs d'écran — l'état ne tient jamais à la seule couleur (WCAG 1.4.1).
-            if (onglet.classList.contains('active')) {
-                entree.classList.add('is-current');
-                entree.setAttribute('aria-current', 'true');
-            }
-
-            // On recopie l'icône de l'onglet : le panneau se lit avec les mêmes repères
-            // visuels que la barre (Bastien & Scapin > Cohérence).
-            const icone = onglet.querySelector('.list-tab-icon');
-            if (icone) {
-                const copie = icone.cloneNode(true);
-                copie.setAttribute('aria-hidden', 'true');
-                entree.appendChild(copie);
-            }
-            const libelle = document.createElement('span');
-            libelle.textContent = onglet.textContent.trim();
-            entree.appendChild(libelle);
-
-            entree.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.closeTabsOverflow();
-                onglet.click();
-            });
-            panneau.appendChild(entree);
+        this.debordement = new DebordementOnglets({
+            wrapper: this.tabsWrapperTarget,
+            rangee: this.tabsContainerTarget,
+            bouton: this.tabsMoreTarget,
+            compteur: this.hasTabsMoreCountTarget ? this.tabsMoreCountTarget : null,
+            panneau: this.hasTabsOverflowPanelTarget ? this.tabsOverflowPanelTarget : null,
+            selecteurOnglet: '.list-tab',
         });
+
+        return this.debordement;
     }
 
     /**

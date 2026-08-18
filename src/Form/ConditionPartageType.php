@@ -62,6 +62,12 @@ class ConditionPartageType extends AbstractType
                    // BÉNÉFICIAIRE sur l'exercice (jamais celle qu'il gère).
                    "La somme des commissions pures apportées par l'agent" => ConditionPartage::UNITE_SOMME_COMMISSION_PURE_AGENT,
                 ],
+                // Pour un agent, la seule unité qui parle de LUI : les trois autres
+                // mesurent la production d'un partenaire ou d'un périmètre qui ne le
+                // concerne pas. Reste modifiable — c'est un point de départ, pas un verrou.
+                'data' => $isCreationMode && $agent !== null
+                    ? ConditionPartage::UNITE_SOMME_COMMISSION_PURE_AGENT
+                    : $condition?->getUniteMesure(),
             ])
             ->add('formule', ChoiceType::class, [
                 'label' => "Formule",
@@ -71,6 +77,12 @@ class ConditionPartageType extends AbstractType
                    "Lorsque l'unité de mésure est inférieure au seuil" => ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL,
                    "Ne pas appliquer le seuil" => ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL,
                 ],
+                // Sans seuil par défaut : la condition s'applique dès le premier franc.
+                // C'est la formule la plus simple à comprendre, et celle qui ne réserve
+                // aucune surprise à qui ne toucherait pas au champ.
+                'data' => $isCreationMode
+                    ? ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL
+                    : $condition?->getFormule(),
             ])
             ->add('seuil', NumberType::class, [
                 'label' => "Seuil applicable",
@@ -111,6 +123,12 @@ class ConditionPartageType extends AbstractType
                    "On ne partage que quand il s'agit de risques ciblés" => ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES,
                    "Il n'y a pas de risques ciblés" => ConditionPartage::CRITERE_PAS_RISQUES_CIBLES,
                 ],
+                // Aucun risque ciblé : la condition vaut pour toutes les affaires. Le champ
+                // « Risques ciblés » reste donc masqué tant que l'utilisateur n'a pas
+                // choisi de restreindre (cf. condition-partage-fields_controller).
+                'data' => $isCreationMode
+                    ? ConditionPartage::CRITERE_PAS_RISQUES_CIBLES
+                    : $condition?->getCritereRisque(),
             ])
             
             ->add('produits', CollectionType::class, [

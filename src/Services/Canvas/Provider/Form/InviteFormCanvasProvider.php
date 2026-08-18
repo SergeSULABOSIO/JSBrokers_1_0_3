@@ -43,6 +43,12 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
                 "titre" => "Invitation d'un collaborateur",
                 "description" => "Vous invitez un collaborateur à rejoindre l'espace de travail de l'entreprise et définissez son périmètre : assistants rattachés, délégation éventuelle et rôles par module. L'invité n'accède qu'aux données couvertes par les droits accordés ici.",
             ],
+            // Titre de carte, pour les champs dont le WIDGET porte déjà le libellé : une case
+            // à cocher l'affiche à côté d'elle, si bien que le bandeau de la carte restait
+            // vide — une pastille sans titre, que rien n'expliquait.
+            "field_titles" => [
+                "gestionnaireInvites" => "Visibilité sur les invités et les rôles",
+            ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
                 "documents" => "document",

@@ -194,10 +194,21 @@
                                                form_row d'origine inchangé. #}
                                             {% set field_icon = formCanvas.parametres.field_icons[field_code]|default(null) %}
                                             {% if field_icon %}
+                                                {# TITRE DE CARTE EXPLICITE (`field_titles` du canvas).
+                                                   Certains widgets consomment eux-mêmes leur libellé — une case à
+                                                   cocher l'affiche à côté de la case — et `form_label` ne rend
+                                                   alors RIEN : la carte se retrouvait avec une pastille et un
+                                                   bandeau vide. On donne donc un titre à la carte, distinct du
+                                                   libellé du champ. #}
+                                                {% set field_title = formCanvas.parametres.field_titles[field_code]|default(null) %}
                                                 <div class="mb-3 dlg-field-card" data-field-code="{{ field_code }}">
                                                     <div class="dlg-field-card-head">
                                                         <span class="dlg-field-card-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(field_icon), {height: '16px', width: '16px'}) }}</span>
-                                                        {{ form_label(form[field_code]) }}
+                                                        {% if field_title %}
+                                                            <span class="form-label">{{ field_title }}</span>
+                                                        {% else %}
+                                                            {{ form_label(form[field_code]) }}
+                                                        {% endif %}
                                                     </div>
                                                     <div class="dlg-field-card-body">
                                                         {{ form_widget(form[field_code], {'manager_options': current_field_options, 'attr': current_widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
