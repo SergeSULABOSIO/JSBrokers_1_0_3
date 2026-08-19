@@ -75,15 +75,26 @@ trait FormCanvasProviderTrait
                 $extraOptions['totalValue'] = $total;
             }
 
-            // On détermine si le widget doit être désactivé.
-            // Par défaut, on désactive en mode création ($isParentNew),
-            // SAUF si le provider a spécifié une règle personnalisée dans $config['disabled'].
-            $isDisabled = $config['disabled'] ?? $isParentNew;
+            // LE VERROU DE LA CRÉATION — ouvert, sauf là où l'enfant ne peut pas s'en passer.
+            //
+            // Une collection était inerte tant que sa fiche parente n'avait pas d'id : il
+            // fallait enregistrer, rouvrir, puis saisir. Ses éléments sont désormais gardés
+            // en mémoire du navigateur et créés après l'enregistrement de l'ancêtre
+            // (collection-tampon.js), ce qui lève le besoin d'un id à la saisie.
+            //
+            // UNE SEULE configuration s'y oppose, et elle se lit dans le config lui-même
+            // plutôt que dans une liste à maintenir : `defaultValueConfig`, où le SERVEUR
+            // pré-remplit l'enfant à partir du parent (le montant d'un paiement déduit de
+            // l'offre). Différer priverait la saisie de ses défauts, en silence.
+            //
+            // Le rattachement (`pickerUrl`), lui, se diffère très bien : on ne retient qu'un
+            // id, et on l'attache une fois le parent né.
+            $isDisabled = $config['disabled'] ?? ($isParentNew && isset($config['defaultValueConfig']));
 
-            // En création, une collection désactivée est inutilisable (pas d'ID parent).
-            // Plutôt que de l'afficher grisée, on la masque (d-none) : la ligne reste
-            // rendue — ce qui empêche form_end(render_rest) de produire un accordéon
-            // brut en bas du formulaire — mais elle n'est pas visible.
+            // Une collection désactivée en création est inutilisable (pas d'ID parent, et
+            // rien à mettre en attente). Plutôt que de l'afficher grisée, on la masque
+            // (d-none) : la ligne reste rendue — ce qui empêche form_end(render_rest) de
+            // produire un accordéon brut en bas du formulaire — mais elle n'est pas visible.
             // Une collection peut REFUSER ce masquage. Quand sa presence a l'ecran est
             // elle-meme conditionnee par un autre champ (`visibility_conditions`),
             // la cacher en creation la rendrait invisible EN TOUTES CIRCONSTANCES :

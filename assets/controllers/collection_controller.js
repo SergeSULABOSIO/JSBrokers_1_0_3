@@ -1,4 +1,13 @@
 import { Controller } from '@hotwired/stimulus';
+import {
+    ajouter as ajouterAuTampon,
+    compter as compterLeTampon,
+    creerGroupe,
+    libellesEnAttente,
+    rejouerGroupe,
+    retirer as retirerDuTampon,
+    vider as viderLeTampon,
+} from './collection-tampon.js';
 
 /**
  * @class CollectionController
@@ -34,6 +43,9 @@ export default class extends Controller {
         // formulaire de création. Rétro-compatible : absent → comportement historique.
         pickerUrl: String,
         disabled: Boolean,
+        // MODE DIFFÉRÉ : le parent n'a pas encore d'id. La collection reste utilisable,
+        // mais ses éléments attendent en mémoire au lieu d'être écrits (collection-tampon.js).
+        differe: Boolean,
         entiteNom: String,
         idEntreprise: Number,
         idInvite: Number,
@@ -54,11 +66,17 @@ export default class extends Controller {
         // Écoute l'événement de sauvegarde pour se rafraîchir
         document.addEventListener('app:list.refresh-request', this.boundRefresh);
         this.tooltipElement = null; // NOUVEAU : Propriété pour stocker l'infobulle
+        // L'arbre des saisies en attente de CETTE collection. Il reste vide en mode
+        // édition : là, chaque ajout part directement en base.
+        this.groupe = creerGroupe(this.parentFieldNameValue);
+        this.boundTampon = this._surDemandeDeTampon.bind(this);
+        document.addEventListener('app:collection.tampon-request', this.boundTampon);
         this.load();
     }
 
     disconnect() {
         document.removeEventListener('app:list.refresh-request', this.boundRefresh);
+        document.removeEventListener('app:collection.tampon-request', this.boundTampon);
         // NOUVEAU : S'assurer que l'infobulle est retirée si le contrôleur est déconnecté
         if (this.tooltipElement) {
             this.tooltipElement.remove();
@@ -71,6 +89,12 @@ export default class extends Controller {
      * Charge ou recharge le contenu de la liste via AJAX.
      */
     async load() {
+        // EN DIFFÉRÉ, LA LISTE EST LOCALE. Interroger le serveur avec un parentId à 0
+        // ne rendrait jamais que du vide : la vérité est dans le tampon.
+        if (this.differeValue) {
+            this._rendreTampon();
+            return;
+        }
         if (this.disabledValue) {
             // console.log(`${this.nomControleur} - load() - Code: 1986 - disabledValue: `, this.disabledValue);
             this.listContainerTarget.innerHTML = '<div class="alert alert-warning">Commencez par enregistrer.</div>';
@@ -344,7 +368,12 @@ export default class extends Controller {
         // Le contexte parent pour lier le nouvel élément.
         const parentContext = {
             id: this.parentEntityIdValue,
-            fieldName: this.parentFieldNameValue
+            fieldName: this.parentFieldNameValue,
+            // Ce drapeau voyage jusqu'au dialogue enfant : c'est lui qui décide s'il
+            // ÉCRIT ou s'il met en attente — et, accessoirement, si son bouton de pied
+            // dit « Enregistrer » ou « Ajouter ».
+            differe: this.differeValue,
+            collectionId: this.element.id
         };
  
         // On utilise le même événement que la barre d'outils pour une logique unifiée dans le cerveau.
@@ -622,6 +651,15 @@ export default class extends Controller {
         if (!row || !row.dataset.itemId) return;
         const itemId = row.dataset.itemId;
 
+        // LIGNE EN ATTENTE : rien n'est en base, il n'y a donc rien à supprimer ni à
+        // faire confirmer. On retire du tampon — avec tout son sous-arbre, car ses
+        // propres éléments n'avaient d'existence que par elle.
+        if (this.differeValue) {
+            retirerDuTampon(this.groupe, Number(itemId));
+            this._rendreTampon();
+            return;
+        }
+
         // On notifie le cerveau. C'est lui qui construira la demande de confirmation.
         // C'est le cerveau qui construira la demande de confirmation complexe.
         this.notifyCerveau('app:delete-request', {
@@ -644,6 +682,151 @@ export default class extends Controller {
      * @param {string} type
      * @param {object} payload
      */
+    // ───────────────────────── LE MODE DIFFÉRÉ ─────────────────────────
+    // Tant que la fiche parente n'a pas d'id, les éléments de cette collection attendent
+    // ici, en mémoire. Ils sont créés d'un coup après l'enregistrement de l'ancêtre, chacun
+    // recevant l'id que le niveau du dessus vient d'obtenir (cf. collection-tampon.js).
+
+    /**
+     * Un dialogue enfant a validé sa saisie sans l'écrire : on la range.
+     *
+     * L'événement est diffusé à tout le document — chaque widget vérifie donc qu'il en est
+     * bien le destinataire. Même discipline que `app:list.refresh-request`.
+     * @private
+     */
+    _surDemandeDeTampon(event) {
+        const detail = event.detail || {};
+        if (!this.differeValue || detail.collectionId !== this.element.id) return;
+
+        ajouterAuTampon(this.groupe, {
+            nature: detail.nature || 'creation',
+            libelle: detail.libelle,
+            formData: detail.formData,
+            submitUrl: detail.submitUrl,
+            idCible: detail.idCible,
+            pickerBase: detail.pickerBase,
+            action: detail.action,
+            // Le sous-arbre que l'enfant portait lui-même : c'est ce qui fait tenir la
+            // généalogie sur toute sa profondeur.
+            enfants: detail.enfants || {},
+        });
+
+        this._rendreTampon();
+    }
+
+    /** Nombre d'éléments en attente ici, descendants compris — le chiffre du garde-fou. */
+    compterEnAttente() {
+        return this.differeValue ? compterLeTampon(this.groupe) : 0;
+    }
+
+    /** Ce qui serait perdu à l'abandon, nommé — jamais un simple nombre. */
+    libellesEnAttente() {
+        return this.differeValue ? libellesEnAttente(this.groupe) : [];
+    }
+
+    /** L'abandon assumé, une fois confirmé. */
+    viderTampon() {
+        viderLeTampon(this.groupe);
+        if (this.differeValue) this._rendreTampon();
+    }
+
+    /**
+     * Rejoue l'arbre en attente, maintenant que le parent a un id.
+     * @returns {Promise<Array<{chemin: string[], erreur: any}>>} les échecs, vide si tout passe
+     */
+    async rejouer(parentId) {
+        if (!this.differeValue) return [];
+
+        return rejouerGroupe(this.groupe, parentId, (noeud, charge, idParent) =>
+            noeud.nature === 'creation'
+                ? this._creerEnBase(noeud, charge)
+                : this._rattacherEnBase(noeud, idParent));
+    }
+
+    /** POST de la saisie mise en attente — exactement celui qu'aurait fait le dialogue. */
+    async _creerEnBase(noeud, charge) {
+        try {
+            const reponse = await fetch(noeud.submitUrl, { method: 'POST', body: charge });
+            const resultat = await reponse.json().catch(() => ({}));
+            if (!reponse.ok) return { ok: false, erreur: resultat };
+
+            return { ok: true, id: resultat.entity?.id };
+        } catch (error) {
+            return { ok: false, erreur: error.message };
+        }
+    }
+
+    /** Rattachement d'une entité existante, une fois le parent né. */
+    async _rattacherEnBase(noeud, parentId) {
+        // pickerBase porte encore le parentId de la saisie (0) : on le remplace par le vrai.
+        const base = String(noeud.pickerBase).replace(/\/0(\/|$)/, `/${parentId}$1`);
+        try {
+            const reponse = await fetch(`${base}/${noeud.action}/${noeud.idCible}`, {
+                method: 'PUT',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const resultat = await reponse.json().catch(() => ({}));
+
+            return reponse.ok ? { ok: true, id: noeud.idCible } : { ok: false, erreur: resultat };
+        } catch (error) {
+            return { ok: false, erreur: error.message };
+        }
+    }
+
+    /**
+     * Rend les lignes en attente.
+     *
+     * Volontairement SOBRE : libellé + « Retirer », et non la ligne enrichie du canevas
+     * (colonnes calculées, totaux). Reproduire celle-ci sans entité en base obligerait à
+     * réécrire _list_row.html.twig en JavaScript — deux rendus pour une même chose, qui
+     * divergeraient au premier changement. La mention « à enregistrer » dit clairement à
+     * l'utilisateur où en est sa saisie.
+     * @private
+     */
+    _rendreTampon() {
+        if (!this.hasListContainerTarget) return;
+
+        const noeuds = this.groupe?.noeuds ?? [];
+        this.updateCount(compterLeTampon(this.groupe));
+
+        if (noeuds.length === 0) {
+            this.listContainerTarget.innerHTML =
+                '<div class="text-muted small p-2">Aucun élément pour l\'instant. Ce que vous ajouterez ici sera créé à l\'enregistrement de la fiche.</div>';
+            return;
+        }
+
+        const lignes = noeuds.map((noeud) => {
+            const descendants = compterLeTampon({ noeuds: [noeud] }) - 1;
+            const detail = descendants > 0
+                ? ` <span class="badge bg-secondary">+${descendants}</span>`
+                : '';
+
+            return `
+                <tr data-item-id="${noeud.cle}">
+                    <td class="align-middle">${this._echapper(noeud.libelle)}${detail}
+                        <span class="text-muted small ms-2">à enregistrer</span></td>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-sm btn-link text-danger"
+                                data-action="click->collection#deleteItem">Retirer</button>
+                    </td>
+                </tr>`;
+        }).join('');
+
+        this.listContainerTarget.innerHTML = `
+            <table class="table table-sm table-enhanced mb-1"><tbody>${lignes}</tbody></table>
+            <div class="text-muted small px-2 pb-2">
+                ${compterLeTampon(this.groupe)} élément(s) seront créés à l'enregistrement de la fiche.
+            </div>`;
+    }
+
+    /** Le libellé vient d'une saisie utilisateur : il ne doit jamais être interprété. */
+    _echapper(texte) {
+        const noeud = document.createElement('span');
+        noeud.textContent = texte ?? '';
+
+        return noeud.innerHTML;
+    }
+
     notifyCerveau(type, payload = {}) {
         const event = new CustomEvent('cerveau:event', {
             bubbles: true,

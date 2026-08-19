@@ -152,6 +152,25 @@ export async function rejouerGroupe(groupe, parentId, executer) {
     return echecs;
 }
 
+/**
+ * CE QUE COÛTERAIT UNE FERMETURE, tous groupes d'un même dialogue confondus.
+ *
+ * Un dialogue porte souvent plusieurs collections (documents, cotations, tâches…) :
+ * la question ne se pose pas collection par collection, mais pour la boîte entière.
+ * On rend le nombre ET les libellés, parce qu'annoncer « 3 éléments seront perdus »
+ * sans dire lesquels oblige l'utilisateur à deviner ce qu'il abandonne.
+ */
+export function resumeDeFermeture(groupes) {
+    const liste = (groupes ?? []).filter(Boolean);
+    const nombre = liste.reduce((total, groupe) => total + compter(groupe), 0);
+
+    return {
+        doitConfirmer: nombre > 0,
+        nombre,
+        libelles: liste.flatMap((groupe) => libellesEnAttente(groupe)),
+    };
+}
+
 /** Vide un groupe — l'abandon assumé, après confirmation. */
 export function vider(groupe) {
     if (groupe) groupe.noeuds = [];

@@ -6,14 +6,22 @@
     {# On récupère l'état 'disabled' depuis les options #}
     {% set isDisabled = manager_options.disabled|default(false) %}
 
-    {# On détermine si l'accordéon lui-même doit être désactivé (clic bloqué). #}
-    {# Il n'est désactivé QUE si nous sommes en mode création (parentEntityId == 0). #}
-    {# En mode édition (ID > 0), on veut toujours pouvoir ouvrir l'accordéon pour gérer les items existants. #}
-    {% set isAccordionDisabled = (manager_options.parentEntityId|default(0) == 0) %}
+    {# MODE DIFFÉRÉ : le parent n'a pas encore d'id, mais la collection reste utilisable.
+       Ses éléments sont gardés en mémoire du navigateur (collection-tampon.js) et créés
+       après l'enregistrement de l'ancêtre, chacun recevant l'id que le niveau du dessus
+       vient d'obtenir. #}
+    {% set estDiffere = (manager_options.parentEntityId|default(0) == 0) and not isDisabled %}
+
+    {# L'ACCORDÉON SUIT LA DÉCISION DU SERVEUR, ET RIEN D'AUTRE.
+       Il la recalculait auparavant pour son compte (parentEntityId == 0), si bien qu'une
+       collection ouverte côté serveur serait restée inerte à l'écran — le verrou aurait été
+       levé sans le moindre effet visible. FormCanvasProviderTrait est seul juge. #}
+    {% set isAccordionDisabled = isDisabled %}
     
     {# On découple : le contrôleur JS n'est bloqué que si l'accordéon entier est inactif #}
     {% set stimulus_options = manager_options|merge({
-        'disabled': isAccordionDisabled
+        'disabled': isAccordionDisabled,
+        'differe': estDiffere
     }) %}
 
     <div 
