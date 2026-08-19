@@ -118,6 +118,17 @@ class ConditionPartageFormCanvasProvider implements FormCanvasProviderInterface
             'formTitle' => 'Risque',
             'parentFieldName' => 'conditionPartage',
             'hidden' => false,
+            // ON CHOISIT AU CATALOGUE, ON NE FABRIQUE PAS. Un risque (« Incendie », « RC
+            // automobile ») appartient au catalogue de l'entreprise, pas à une condition :
+            // le créer d'ici produirait un doublon par condition. Depuis le passage en
+            // ManyToMany, plusieurs conditions peuvent viser le même risque, ce qui rend
+            // ce rattachement sûr — il ne le retire à personne.
+            'pickerUrl' => '/admin/conditionpartage/api/%parentId%/risque-picker',
+            'hideEditAction' => true,
+            // « Retirer », jamais « Supprimer » : on sort le risque des cibles, on ne le
+            // raye pas du catalogue où il sert ailleurs.
+            'deleteActionLabel' => 'Retirer',
+            'itemDeleteUrl' => '/admin/conditionpartage/api/%parentId%/detach-risque',
             'visibility_conditions' => [[
                 'field' => 'critereRisque',
                 'operator' => 'in',

@@ -483,11 +483,42 @@ export default class extends Controller {
      */
     async _pickerAction(button, mode) {
         const row = button.closest('[data-picker-row]');
-        const clientId = row?.dataset.clientId;
-        if (!clientId || !this.pickerBase) return;
+        // `data-picker-id` est générique ; `data-client-id` reste lu pour le sélecteur de
+        // clients d'un portefeuille, qui existait avant que ce code serve à deux entités.
+        const cibleId = row?.dataset.pickerId ?? row?.dataset.clientId;
+        if (!cibleId || !this.pickerBase) return;
 
         const isAttach = mode === 'attach';
-        const url = `${this.pickerBase}/${isAttach ? 'attach-client' : 'detach-client'}/${clientId}`;
+        // Les noms d'action se DÉDUISENT du nom de l'entité rattachée, au lieu d'être
+        // écrits en dur : le même code sert les clients d'un portefeuille et les risques
+        // ciblés d'une condition de partage, sans savoir lequel il sert.
+        const quoi = this._pickerNomDeLaCible();
+        const action = `${isAttach ? 'attach' : 'detach'}-${quoi}`;
+
+        // EN DIFFÉRÉ, ON NE RATTACHE RIEN TOUT DE SUITE : le parent n'existe pas encore,
+        // et l'URL /admin/x/api/0/attach-y ne mènerait nulle part. On retient le choix,
+        // et le rattachement se fera au rejeu, une fois le parent né.
+        if (this.differeValue) {
+            if (isAttach) {
+                ajouterAuTampon(this.groupe, {
+                    nature: 'rattachement',
+                    libelle: row.querySelector('.jsb-picker-client-nom')?.textContent?.trim() || `#${cibleId}`,
+                    idCible: cibleId,
+                    pickerBase: this.pickerBase,
+                    action,
+                });
+            } else {
+                const inscrit = this.groupe.noeuds.find((n) => String(n.idCible) === String(cibleId));
+                if (inscrit) retirerDuTampon(this.groupe, inscrit.cle);
+            }
+            this._pickerSetRowState(row, isAttach ? 'current' : 'free');
+            this._pickerUpdateCount(isAttach ? 1 : -1);
+            this._pickerNotify(isAttach ? 'Ajouté — sera enregistré avec la fiche.' : 'Retiré de la sélection.', 'success');
+            this._rendreTampon();
+            return;
+        }
+
+        const url = `${this.pickerBase}/${action}/${cibleId}`;
 
         button.disabled = true;
         this._pickerProgress(true);
@@ -500,8 +531,10 @@ export default class extends Controller {
             if (!response.ok) throw new Error(data.message || `Erreur serveur: ${response.status}`);
 
             this._pickerSetRowState(row, isAttach ? 'current' : 'free');
-            this._pickerUpdateCount(isAttach ? 1 : -1); // met à jour « N dans ce portefeuille »
-            this._pickerNotify(data.message || (isAttach ? 'Client ajouté au portefeuille.' : 'Client retiré du portefeuille.'), 'success');
+            this._pickerUpdateCount(isAttach ? 1 : -1); // met à jour le compteur d'entête
+            // Le message vient du SERVEUR, qui seul sait de quoi il parle : « Client ajouté
+            // au portefeuille » ou « Risque ajouté aux risques ciblés ».
+            this._pickerNotify(data.message || (isAttach ? 'Élément ajouté.' : 'Élément retiré.'), 'success');
             this.load(); // rafraîchit la collection derrière la modale
         } catch (error) {
             button.disabled = false;
@@ -509,6 +542,20 @@ export default class extends Controller {
         } finally {
             this._pickerProgress(false);
         }
+    }
+
+    /**
+     * Le nom d'entité qui compose les actions du sélecteur (`attach-client`, `attach-risque`).
+     *
+     * Il se lit dans l'URL du sélecteur, que le provider a déjà fournie
+     * (`/admin/conditionpartage/api/%parentId%/risque-picker`) : une source de moins à tenir
+     * synchronisée avec les routes du contrôleur.
+     * @private
+     */
+    _pickerNomDeLaCible() {
+        const trouve = /\/([a-z-]+)-picker(?:\?|$)/.exec(this.pickerUrlValue || '');
+
+        return trouve ? trouve[1] : 'client';
     }
 
     /**

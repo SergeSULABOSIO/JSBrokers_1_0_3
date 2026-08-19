@@ -1,0 +1,152 @@
+{#
+    SÉLECTION DES RISQUES CIBLÉS d'une condition de partage.
+
+    On CHOISIT ici un risque du catalogue de l'entreprise, on n'en fabrique pas un :
+    créer depuis la fiche d'une condition dupliquerait le catalogue, une entrée
+    « Incendie » par condition. Un même risque peut être visé par plusieurs conditions
+    (relation ManyToMany) — le cibler ici ne le retire à personne.
+
+    Structure et classes strictement alignées sur le sélecteur de clients d'un
+    portefeuille : c'est le même contrôleur qui le pilote (collection_controller.openPicker),
+    et le même vocabulaire visuel pour l'utilisateur. Conforme /ergonomie-web (role=dialog,
+    aria-modal, statut jamais porté par la seule couleur, Échap, focus) et /charte-couleurs.
+#}
+<div class="jsb-picker-overlay" data-picker-overlay data-picker-base="/admin/conditionpartage/api/{{ conditionPartage.id }}">
+    <div class="jsb-picker-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="jsb-picker-title"
+         aria-describedby="jsb-picker-desc"
+         tabindex="-1">
+
+        <div class="modal-header jsb-picker-header">
+            <div class="d-flex align-items-center">
+                <span class="me-2 d-inline-flex" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('condition') }}" style="width:22px;height:22px;color:#0047AB;" />
+                </span>
+                <h5 id="jsb-picker-title" class="modal-title mb-0">Risques ciblés par «&nbsp;{{ conditionPartage.nom }}&nbsp;»</h5>
+            </div>
+            <button type="button" class="btn-close" data-picker-close aria-label="Fermer la fenêtre de sélection"></button>
+        </div>
+
+        <div class="jsb-picker-progress" data-picker-progress role="progressbar" aria-hidden="true">
+            <div class="jsb-picker-progress-bar"></div>
+        </div>
+
+        <div class="jsb-picker-intro">
+            <span class="jsb-picker-intro-icon" aria-hidden="true">
+                <twig:UX:Icon name="{{ resolve_icon_name('risque') }}" style="width:26px;height:26px;" />
+            </span>
+            <div class="jsb-picker-intro-text">
+                <p class="jsb-picker-intro-title">Sélection des risques concernés</p>
+                <p id="jsb-picker-desc" class="jsb-picker-intro-desc">
+                    Désignez les risques du catalogue que cette condition vise.
+                    Un même risque peut être ciblé par <strong>plusieurs conditions</strong> :
+                    l'ajouter ici ne le retire à aucune autre. «&nbsp;Retirer&nbsp;» le sort des
+                    cibles <strong>sans le supprimer du catalogue</strong>, où il sert ailleurs.
+                </p>
+
+                <div class="jsb-picker-stats" role="status" aria-live="polite">
+                    <span class="jsb-picker-stat">
+                        <span class="jsb-picker-stat-num" data-picker-count-current>{{ risquesCibles }}</span>
+                        ciblé(s) par cette condition
+                    </span>
+                    <span class="jsb-picker-stat-sep" aria-hidden="true">/</span>
+                    <span class="jsb-picker-stat">
+                        <span class="jsb-picker-stat-num">{{ risquesTotal }}</span>
+                        au catalogue
+                    </span>
+                    <span class="jsb-picker-stat-sep" aria-hidden="true">·</span>
+                    <span class="jsb-picker-stat">
+                        <span class="jsb-picker-stat-num" data-picker-count-shown>{{ risquesTotal }}</span>
+                        affiché(s)
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="jsb-picker-search">
+            <span class="jsb-picker-search-icon" aria-hidden="true">
+                <twig:UX:Icon name="hugeicons:search-01" style="width:16px;height:16px;" />
+            </span>
+            <label for="jsb-picker-search-input" class="visually-hidden">Rechercher un risque par nom ou code</label>
+            <input type="search"
+                   id="jsb-picker-search-input"
+                   name="recherche_risque"
+                   class="form-control"
+                   placeholder="Rechercher par nom ou code…"
+                   autocomplete="off"
+                   data-picker-search>
+        </div>
+
+        <p class="jsb-picker-empty text-danger" data-picker-error role="alert" hidden></p>
+
+        <div class="jsb-picker-listwrap">
+            {% if risques is empty %}
+                <p class="jsb-picker-empty" role="status">Aucun risque n'existe encore au catalogue de cet espace de travail.</p>
+            {% else %}
+                <table class="jsb-picker-table">
+                    <caption class="visually-hidden">Catalogue des risques et leur statut de ciblage par cette condition</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Risque</th>
+                            <th scope="col">Statut</th>
+                            <th scope="col" class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody data-picker-tbody>
+                        {% for risque in risques %}
+                            {% set isCurrent = conditionPartage.produits.contains(risque) %}
+                            <tr data-picker-row
+                                data-picker-state="{{ isCurrent ? 'current' : 'free' }}"
+                                data-picker-id="{{ risque.id }}"
+                                data-search="{{ (risque.nomComplet ~ ' ' ~ risque.code)|lower|e('html_attr') }}">
+                                <td>
+                                    <span class="jsb-picker-client-nom">{{ risque.nomComplet }}</span>
+                                    <span class="jsb-picker-client-mail">{{ risque.code }}</span>
+                                </td>
+                                <td data-picker-status>
+                                    {% if isCurrent %}
+                                        <span class="jsb-picker-chip jsb-picker-chip--current">Ciblé</span>
+                                    {% else %}
+                                        <span class="jsb-picker-chip jsb-picker-chip--free">Non ciblé</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end" data-picker-action>
+                                    {# Les DEUX boutons sont rendus, on bascule leur visibilité côté JS
+                                       après ajout/retrait : les icônes viennent du serveur et restent
+                                       cohérentes avec le reste de l'application. #}
+                                    <button type="button"
+                                            class="btn btn-sm btn-primary jsb-picker-btn"
+                                            data-picker-attach
+                                            aria-label="Cibler le risque {{ risque.nomComplet }}"
+                                            {{ isCurrent ? 'hidden' : '' }}>
+                                        <twig:UX:Icon name="{{ resolve_icon_name('action:add') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                                        Ajouter
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-danger jsb-picker-btn"
+                                            data-picker-detach
+                                            aria-label="Retirer le risque {{ risque.nomComplet }} des cibles"
+                                            {{ isCurrent ? '' : 'hidden' }}>
+                                        <twig:UX:Icon name="{{ resolve_icon_name('action:delete') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                                        Retirer
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <p class="jsb-picker-empty" data-picker-empty role="status" hidden>Aucun risque ne correspond à votre recherche.</p>
+            {% endif %}
+        </div>
+
+        <footer class="jsb-picker-foot">
+            <span class="jsb-picker-hint text-muted small">Astuce : filtrez la liste puis cliquez sur «&nbsp;Ajouter&nbsp;» ou «&nbsp;Retirer&nbsp;».</span>
+            <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
+                <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                Fermer
+            </button>
+        </footer>
+    </div>
+</div>
