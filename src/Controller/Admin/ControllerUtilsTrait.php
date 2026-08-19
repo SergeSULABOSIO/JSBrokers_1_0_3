@@ -1019,6 +1019,22 @@ trait ControllerUtilsTrait
                 }
             }
 
+            // VALIDATION SEULE — le dialogue veut savoir si la saisie TIENDRAIT.
+            //
+            // Une collection dont le parent n'existe pas encore garde ses éléments en
+            // mémoire du navigateur jusqu'à l'enregistrement de l'ancêtre. Elle a pourtant
+            // besoin de dire TOUT DE SUITE si la saisie est recevable, sinon l'utilisateur
+            // découvrirait ses erreurs bien plus tard, sur un formulaire qu'il a fermé.
+            //
+            // On s'arrête donc ICI, après que le formulaire a passé TOUS les contrôles —
+            // Symfony, champs obligatoires, périmètre workspace — et juste avant d'écrire.
+            // Aucun régime de validation parallèle n'est créé : c'est le même chemin, une
+            // ligne plus tôt. Et comme rien n'est écrit, rien n'est facturé : un solde de
+            // tokens épuisé n'empêche plus de SAISIR, seulement d'enregistrer.
+            if ($request->request->getBoolean('dry_run')) {
+                return $this->json(['valide' => true]);
+            }
+
             // MÉTRAGE TOKENS (écriture) + PERSISTANCE : bloquant, via le point de
             // passage unique partagé avec l'assistant IA (WorkspaceMutationService).
             // On débite le propriétaire AVANT la persistance ; solde épuisé => 402,

@@ -154,7 +154,11 @@ class ReconductionPartageServiceTest extends TestCase
         $this->service->reconduire($source, $cible, $this->entreprise, null);
 
         $this->assertCount(1, $cond->getProduits(), 'La condition source garde ses risques ciblés.');
-        $this->assertSame($cond, $risque->getConditionPartage(), 'Le risque reste rattaché à la condition d’origine.');
+        // Depuis le passage en ManyToMany, le rattachement se lit depuis la CONDITION,
+        // côté propriétaire : le risque n'appartient plus à une condition, il est ciblé
+        // par elle. (Le côté inverse n'est peuplé qu'après un flush : on ne l'interroge
+        // pas ici, ce test travaillant en mémoire.)
+        $this->assertTrue($cond->getProduits()->contains($risque), 'Le risque reste ciblé par la condition d’origine.');
     }
 
     /** Toutes les conditions comptent : deux à l'entrée, deux à la sortie. */

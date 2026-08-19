@@ -42,7 +42,7 @@ class RisqueEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "description", "intitule" => "Description", "type" => "Texte"],
                 ["code" => "pourcentageCommissionSpecifiqueHT", "intitule" => "Com. Spécifique (%)", "type" => "Nombre", "unite" => "%"],
                 ["code" => "imposable", "intitule" => "Imposable", "type" => "Booleen"],
-                ["code" => "conditionPartage", "intitule" => "Condition de Partage", "type" => "Relation", "targetEntity" => ConditionPartage::class, "displayField" => "nom"],
+                ["code" => "conditionsPartage", "intitule" => "Conditions de Partage", "type" => "Collection", "targetEntity" => ConditionPartage::class, "displayField" => "nom"],
                 ["code" => "pistes", "intitule" => "Pistes", "type" => "Collection", "targetEntity" => Piste::class, "displayField" => "nom"],
                 ["code" => "notificationSinistres", "intitule" => "Sinistres", "type" => "Collection", "targetEntity" => NotificationSinistre::class, "displayField" => "referenceSinistre"],
             ], $this->getSpecificIndicators())

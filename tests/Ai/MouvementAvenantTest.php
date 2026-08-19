@@ -82,9 +82,9 @@ class MouvementAvenantTest extends WebTestCase
         // Cycle de FK Avenant ↔ Piste : dissocier les deux liens croisés d'abord.
         $conn->executeStatement('UPDATE avenant a JOIN entreprise e ON a.entreprise_id = e.id SET a.piste_de_renouvellement_id = NULL WHERE e.nom = :n', ['n' => $n]);
         $conn->executeStatement('UPDATE piste p JOIN entreprise e ON p.entreprise_id = e.id SET p.avenant_de_base_id = NULL WHERE e.nom = :n', ['n' => $n]);
-        // Les risques CIBLÉS par une condition de partage la référencent (risque.condition_partage_id) :
-        // dissocier avant de supprimer les conditions, sinon la FK bloque.
-        $conn->executeStatement('UPDATE risque r JOIN entreprise e ON r.entreprise_id = e.id SET r.condition_partage_id = NULL WHERE e.nom = :n', ['n' => $n]);
+        // Les risques CIBLÉS vivent désormais dans la table de liaison condition_partage_risque,
+        // dont les deux clés étrangères sont en ON DELETE CASCADE : supprimer une condition
+        // emporte ses rattachements, et le risque reste au catalogue. Plus rien à dissocier ici.
 
         foreach ([
             'DELETE f FROM feedback f JOIN tache t ON f.tache_id = t.id JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :n',
