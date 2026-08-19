@@ -66,9 +66,19 @@ class Risque
     #[Groups(['list:read'])]
     private Collection $notificationSinistres;
 
-    #[ORM\ManyToOne(inversedBy: 'produits')]
+    /**
+     * LES CONDITIONS DE PARTAGE QUI CIBLENT CE RISQUE — côté inverse, en lecture.
+     *
+     * Un risque est une entrée du CATALOGUE de l'entreprise (« Incendie », « RC
+     * automobile »), pas la propriété d'une condition de partage. Il peut donc être visé
+     * par plusieurs conditions à la fois — ce que l'ancienne relation to-one interdisait :
+     * le cibler depuis une seconde condition le retirait silencieusement de la première.
+     *
+     * @var Collection<int, ConditionPartage>
+     */
+    #[ORM\ManyToMany(targetEntity: ConditionPartage::class, mappedBy: 'produits')]
     #[Groups(['list:read'])]
-    private ?ConditionPartage $conditionPartage = null;
+    private Collection $conditionsPartage;
 
     // NOUVEAU : Attributs calculés spécifiques (Miroir de Cotation/Partenaire)
     #[Groups(['list:read'])]
@@ -168,6 +178,7 @@ class Risque
         $this->documents = new ArrayCollection();
         $this->pistes = new ArrayCollection();
         $this->notificationSinistres = new ArrayCollection();
+        $this->conditionsPartage = new ArrayCollection();
     }
 
     /**
@@ -358,15 +369,18 @@ class Risque
         return $this;
     }
 
-    public function getConditionPartage(): ?ConditionPartage
+    /**
+     * Les conditions de partage qui ciblent ce risque.
+     *
+     * Lecture seule, volontairement : le rattachement se pose depuis la CONDITION
+     * (`ConditionPartage::addProduit()`), qui est le côté propriétaire. Offrir ici un
+     * setter donnerait deux chemins pour écrire la même chose, dont un qui ne mettrait
+     * pas la table de liaison à jour.
+     *
+     * @return Collection<int, ConditionPartage>
+     */
+    public function getConditionsPartage(): Collection
     {
-        return $this->conditionPartage;
-    }
-
-    public function setConditionPartage(?ConditionPartage $conditionPartage): static
-    {
-        $this->conditionPartage = $conditionPartage;
-
-        return $this;
+        return $this->conditionsPartage;
     }
 }

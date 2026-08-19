@@ -3167,6 +3167,14 @@ thead.sticky-header {
     background-color: #0d6efd !important;
 }
 .title-right-block {
+    /* TOUJOURS A DROITE, y compris pendant le chargement de la liste.
+       Deux regles .accordion-title se contredisent (space-between ici, flex-start dans
+       interactive-menu.css) et c'est la seconde qui l'emporte : le bouton ne tenait sa
+       place que par le flex-grow de .title-left-block — or ce bloc cede la place a
+       .title-left-block-loading pendant le chargement, lequel ne grandit pas. Le bouton
+       retombait alors contre le spinner. margin-left:auto le tient a droite quelle que
+       soit la regle gagnante, et quoi qu'il ait a sa gauche. */
+    margin-left: auto;
     transition: opacity 0.3s ease; /* On ne garde que la transition sur l'opacité */
     opacity: 0;
     /* La gouttière est maintenant gérée par le padding du .accordion-title parent. */

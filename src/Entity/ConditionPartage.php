@@ -85,9 +85,21 @@ class ConditionPartage
     private Collection $pistesAffectees;
 
     /**
+     * LES RISQUES CIBLÉS PAR CETTE CONDITION — choisis au catalogue, jamais fabriqués ici.
+     *
+     * ManyToMany, et non OneToMany : un risque est une entrée du CATALOGUE de l'entreprise
+     * (« Incendie », « RC automobile »), pas la propriété d'une condition de partage. Sous
+     * l'ancienne cardinalité, le cibler depuis une seconde condition le RETIRAIT
+     * silencieusement de la première — et comme on ne pouvait pas le partager, l'écran ne
+     * proposait que d'en créer un, ce qui dupliquait le catalogue.
+     *
+     * La règle métier, elle, ne change pas d'un iota : sappliqueAuRisque() teste toujours
+     * l'appartenance à cette collection.
+     *
      * @var Collection<int, Risque>
      */
-    #[ORM\OneToMany(targetEntity: Risque::class, mappedBy: 'conditionPartage')]
+    #[ORM\ManyToMany(targetEntity: Risque::class, inversedBy: 'conditionsPartage')]
+    #[ORM\JoinTable(name: 'condition_partage_risque')]
     private Collection $produits;
 
     // « Pas de risques ciblés » = la condition ne discrimine aucun risque : le neutre.
@@ -274,9 +286,11 @@ class ConditionPartage
 
     public function addProduit(Risque $produit): static
     {
+        // Côté PROPRIÉTAIRE de la relation : la table de liaison suffit, il n'y a plus de
+        // clé étrangère à poser sur le risque — et donc plus de risque de le déposséder
+        // d'une autre condition en le rattachant à celle-ci.
         if (!$this->produits->contains($produit)) {
             $this->produits->add($produit);
-            $produit->setConditionPartage($this);
         }
 
         return $this;
@@ -284,12 +298,7 @@ class ConditionPartage
 
     public function removeProduit(Risque $produit): static
     {
-        if ($this->produits->removeElement($produit)) {
-            // set the owning side to null (unless already changed)
-            if ($produit->getConditionPartage() === $this) {
-                $produit->setConditionPartage(null);
-            }
-        }
+        $this->produits->removeElement($produit);
 
         return $this;
     }
