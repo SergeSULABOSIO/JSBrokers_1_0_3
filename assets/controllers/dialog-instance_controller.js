@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { resumeDeFermeture } from './collection-tampon.js';
 /**
  * @file Ce fichier contient le contrôleur Stimulus 'dialog-instance'.
  * @description Ce contrôleur gère le cycle de vie et les interactions d'UNE SEULE instance de dialogue.
@@ -67,6 +68,10 @@ export default class extends Controller {
         this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
         document.addEventListener('app:icon.loaded', this.boundHandleIconLoaded);
         document.addEventListener('app:dialog.do-close', this.boundDoClose);
+        this.boundAbandon = this._abandonner.bind(this);
+        document.addEventListener('cerveau:event', this.boundAbandon);
+        this.boundAvantDechargement = this._avertirAvantDechargement.bind(this);
+        window.addEventListener('beforeunload', this.boundAvantDechargement);
 
         const detail = this.element.dialogDetail;
 
@@ -91,6 +96,8 @@ export default class extends Controller {
         document.removeEventListener('ui:dialog.content-ready', this.boundHandleContentReady);
         document.removeEventListener('app:icon.loaded', this.boundHandleIconLoaded);
         document.removeEventListener('app:dialog.do-close', this.boundDoClose);
+        document.removeEventListener('cerveau:event', this.boundAbandon);
+        window.removeEventListener('beforeunload', this.boundAvantDechargement);
     }
 
     /**
@@ -247,6 +254,10 @@ export default class extends Controller {
             form.setAttribute('data-action', 'submit->dialog-instance#submitForm');
         }
 
+
+        // Le pied de la boîte doit dire ce que son bouton fait vraiment : « Ajouter »
+        // quand la saisie est différée, « Enregistrer » quand elle part en base.
+        this._habillerLePiedSiDiffere();
 
         // Initialiser la logique de visibilité dynamique du formulaire
         this.initializeFormVisibility();
@@ -420,6 +431,15 @@ export default class extends Controller {
             formData.append(this.parentContext.fieldName, this.parentContext.id);
         }
  
+        // SAISIE DIFFÉRÉE : le parent n'existe pas encore, il n'y a donc rien à quoi
+        // rattacher cet enfant. On emprunte quand même TOUT le chemin de validation du
+        // serveur — pour dire immédiatement si la saisie tiendrait — mais on s'arrête
+        // avant l'écriture, et on range le résultat dans le tampon de la collection.
+        if (this.parentContext?.differe) {
+            await this._mettreEnAttente(formData);
+            return;
+        }
+
         try {
             const response = await fetch(this.entityFormCanvas.parametres.endpoint_submit_url, {
                 method: 'POST',
@@ -427,6 +447,15 @@ export default class extends Controller {
             });
             const result = await response.json();
             if (!response.ok) throw result;
+
+            // L'ANCÊTRE VIENT DE NAÎTRE : ses collections en attente peuvent enfin être
+            // créées, chacune recevant l'id qu'il vient d'obtenir. Un échec ici ne doit
+            // pas fermer la boîte — ce serait perdre la saisie sans le dire.
+            const echecs = await this._rejouerLesTampons(result.entity?.id);
+            if (echecs.length > 0) {
+                this._signalerRejeuPartiel(echecs, result);
+                return;
+            }
  
             // On notifie le cerveau du succès. C'est lui qui décidera qui doit être rafraîchi.
             this.notifyCerveau('app:entity.saved', {
@@ -962,15 +991,233 @@ export default class extends Controller {
      * Ferme la modale et notifie le cerveau de cette action.
      */
     close() {
+        // GARDE-FOU : cette boîte porte peut-être une saisie qui n'existe NULLE PART
+        // ailleurs. La fermer sans rien dire la perdrait — silencieusement, et sans
+        // aucun moyen de la retrouver, puisqu'elle n'a jamais atteint la base.
+        const resume = resumeDeFermeture(this._widgetsEnAttente().map((widget) => widget.groupe));
+        if (resume.doitConfirmer) {
+            document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
+                detail: {
+                    title: 'Abandonner la saisie en cours ?',
+                    body: `${resume.nombre} élément(s) n'ont pas encore été enregistrés. Ils seront perdus.`,
+                    // Nommer ce qui disparaît, plutôt qu'un nombre que l'utilisateur
+                    // devrait interpréter (Nielsen 1 — visibilité de l'état du système).
+                    itemDescriptions: resume.libelles,
+                    onConfirm: {
+                        type: 'app:dialog.abandon-execute',
+                        payload: { dialogId: this.dialogId },
+                    },
+                },
+            }));
+            return;
+        }
+
         // On ne ferme plus directement. On demande au cerveau de le faire.
         // Cela garantit que la fermeture est ciblée et orchestrée.
         this.notifyCerveau('ui:dialog.close-request', { dialogId: this.dialogId });
+    }
+
+    /** Les widgets de collection de CETTE boîte qui gardent une saisie en mémoire. @private */
+    _widgetsEnAttente() {
+        return [...this.element.querySelectorAll('[data-controller~="collection"]')]
+            .map((noeud) => this.application.getControllerForElementAndIdentifier(noeud, 'collection'))
+            .filter((widget) => widget?.differeValue);
+    }
+
+    /**
+     * L'abandon confirmé : on détruit franchement, puis on ferme.
+     *
+     * Vider AVANT de demander la fermeture, sinon le garde-fou se redéclencherait sur
+     * la saisie que l'utilisateur vient justement d'accepter de perdre.
+     * @private
+     */
+    _abandonner(event) {
+        if (event.detail?.type !== 'app:dialog.abandon-execute') return;
+        if (event.detail.payload?.dialogId !== this.dialogId) return;
+
+        this._widgetsEnAttente().forEach((widget) => widget.viderTampon());
+        document.dispatchEvent(new CustomEvent('ui:confirmation.close'));
+        this.notifyCerveau('ui:dialog.close-request', { dialogId: this.dialogId });
+    }
+
+    /**
+     * Fermeture brutale de l'onglet : le navigateur pose sa propre question.
+     *
+     * Ni stylable ni personnalisable — mais c'est le seul levier à ce niveau, et il vaut
+     * mieux qu'une saisie qui disparaît sans un mot.
+     * @private
+     */
+    _avertirAvantDechargement(event) {
+        const resume = resumeDeFermeture(this._widgetsEnAttente().map((widget) => widget.groupe));
+        if (!resume.doitConfirmer) return;
+        event.preventDefault();
+        event.returnValue = '';
     }
 
     /**
      * Méthode qui exécute la fermeture, appelée par le cerveau.
      * @param {CustomEvent} event
      */
+    // ───────────────────────── SAISIE DIFFÉRÉE ─────────────────────────
+
+    /**
+     * Valide la saisie SANS l'écrire, puis la range dans le tampon de sa collection.
+     *
+     * La validation emprunte le chemin de soumission ordinaire — mêmes contrôles Symfony,
+     * mêmes champs obligatoires, même périmètre workspace — avec le seul drapeau `dry_run`,
+     * que le serveur lit une ligne avant d'écrire. Aucun régime de validation parallèle
+     * n'est créé, et rien n'est facturé puisque rien n'est persisté.
+     *
+     * Sans cela, l'utilisateur ne découvrirait ses erreurs qu'au rejeu, sur un formulaire
+     * qu'il a fermé depuis longtemps.
+     * @private
+     */
+    async _mettreEnAttente(formData) {
+        // Le champ parent n'a pas de valeur utile ici (le parent n'existe pas) et sa
+        // présence ferait échouer la résolution côté serveur. Il sera posé au rejeu.
+        formData.delete(this.parentContext.fieldName);
+        formData.append('dry_run', '1');
+
+        try {
+            const response = await fetch(this.entityFormCanvas.parametres.endpoint_submit_url, {
+                method: 'POST',
+                body: formData,
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw result;
+
+            formData.delete('dry_run');
+
+            document.dispatchEvent(new CustomEvent('app:collection.tampon-request', {
+                detail: {
+                    collectionId: this.parentContext.collectionId,
+                    nature: 'creation',
+                    formData,
+                    libelle: this._libelleDeLaSaisie(formData),
+                    submitUrl: this.entityFormCanvas.parametres.endpoint_submit_url,
+                    // LE SOUS-ARBRE : ce que ce dialogue portait lui-même en attente. C'est
+                    // par lui que la généalogie tient sur toute sa profondeur.
+                    enfants: this._collecterLesTampons(),
+                },
+            }));
+
+            this.notifyCerveau('ui:dialog.close-request', { dialogId: this.dialogId });
+        } catch (error) {
+            this.handleFailedSubmit(error, this.contentTarget, '');
+        } finally {
+            this.toggleLoading(false);
+            this.toggleProgressBar(false);
+        }
+    }
+
+    /**
+     * Les tampons des collections de CE dialogue, prêts à voyager vers celui du dessus.
+     * @private
+     */
+    _collecterLesTampons() {
+        const enfants = {};
+        this.element.querySelectorAll('[data-controller~="collection"]').forEach((noeud) => {
+            const widget = this.application.getControllerForElementAndIdentifier(noeud, 'collection');
+            if (widget?.differeValue && widget.groupe?.noeuds?.length) {
+                enfants[noeud.id] = widget.groupe;
+            }
+        });
+
+        return enfants;
+    }
+
+    /**
+     * Rejoue les tampons de ce dialogue, l'ancêtre ayant désormais un id.
+     * @private
+     */
+    async _rejouerLesTampons(parentId) {
+        if (!parentId) return [];
+
+        const echecs = [];
+        const widgets = [...this.element.querySelectorAll('[data-controller~="collection"]')]
+            .map((noeud) => this.application.getControllerForElementAndIdentifier(noeud, 'collection'))
+            .filter((w) => w?.differeValue);
+
+        // En série : deux collections peuvent viser la même entité, et un serveur de
+        // développement monothread n'aime pas qu'on lui parle en même temps.
+        for (const widget of widgets) {
+            echecs.push(...await widget.rejouer(parentId));
+        }
+        if (echecs.length === 0) widgets.forEach((w) => w.viderTampon());
+
+        return echecs;
+    }
+
+    /**
+     * Un ou plusieurs éléments ne sont pas passés : on le DIT, et on ne ferme pas.
+     *
+     * La fiche existe désormais : le dialogue bascule en édition, ses collections
+     * redeviennent vivantes, et l'utilisateur ressaisit ce qui manque en voyant ce qui est
+     * déjà passé. Fermer ici aurait perdu la saisie en silence.
+     * @private
+     */
+    _signalerRejeuPartiel(echecs, result) {
+        const liste = echecs.map((e) => e.chemin.join(' › ')).join(', ');
+        this.showFeedback(
+            'warning',
+            `La fiche est enregistrée, mais ${echecs.length} élément(s) n'ont pas pu être créés : ${liste}. `
+            + 'Ils sont à ressaisir ci-dessous.',
+        );
+        this.notifyCerveau('app:entity.saved', {
+            entity: result.entity,
+            originatorId: this.userContext?.originatorId,
+            userContext: this.userContext,
+        });
+        this.toggleLoading(false);
+        this.toggleProgressBar(false);
+    }
+
+    /**
+     * Le libellé de la ligne en attente, déduit de la saisie.
+     *
+     * On ne peut pas demander au serveur la ligne enrichie du canevas : l'entité n'existe
+     * pas encore. On prend donc le premier champ qui NOMME la chose, et à défaut le titre
+     * du formulaire — jamais une ligne muette.
+     * @private
+     */
+    _libelleDeLaSaisie(formData) {
+        for (const champ of ['nom', 'libelle', 'description', 'reference', 'code']) {
+            const valeur = formData.get(champ);
+            if (typeof valeur === 'string' && valeur.trim() !== '') return valeur.trim();
+        }
+
+        return this.entityFormCanvas?.parametres?.titre_creation || 'Élément';
+    }
+
+    /**
+     * LE PIED DE LA BOÎTE DIT CE QUE LE BOUTON FAIT VRAIMENT.
+     *
+     * Un dialogue descendant n'enregistre RIEN tant qu'on est en différé : lui laisser
+     * un bouton « Enregistrer » ferait croire à l'utilisateur qu'il a persisté, et la
+     * confirmation d'abandon lui paraîtrait alors incohérente. Il n'a donc qu'un seul
+     * bouton, « Ajouter ».
+     *
+     * Le test est LOCAL et sans état global : est descendant celui dont le parent est
+     * lui-même en attente. Aucune profondeur à suivre, aucun compteur à tenir — la même
+     * expression qui déclenche la mise au tampon décide de l'habillage.
+     * @private
+     */
+    _habillerLePiedSiDiffere() {
+        if (!this.parentContext?.differe) return;
+
+        if (this.hasSubmitButtonTarget) {
+            const texte = this.submitButtonTarget.querySelector('.button-text');
+            if (texte) texte.textContent = 'Ajouter';
+        }
+        // Le bouton « Fermer » du pied disparaît, mais JAMAIS la croix de l'entête :
+        // enfermer quelqu'un dans une boîte est pire que de lui offrir deux sorties
+        // (Nielsen 3 — contrôle et liberté). Cette croix passe par le même doClose(),
+        // donc par la confirmation d'abandon si ce dialogue porte des éléments en attente.
+        if (this.hasCloseFooterButtonTarget) {
+            this.closeFooterButtonTarget.classList.add('d-none');
+        }
+    }
+
     doClose(event) {
         // On s'assure que l'ordre de fermeture nous est bien destiné.
         if (event.detail.dialogId === this.dialogId) {
@@ -1001,7 +1248,14 @@ export default class extends Controller {
                 submitIcon.style.display = isLoading ? 'none' : ''; // On utilise '' pour revenir au style par défaut du navigateur/CSS
             }
             if (submitText) {
-                submitText.textContent = isLoading ? 'Enregistrement...' : 'Enregistrer';
+                // LE BOUTON DIT CE QU'IL FAIT. En différé, cette boîte n'enregistre rien :
+                // elle valide et met en attente. Écrire « Enregistrement… » ferait croire
+                // à une persistance qui n'a pas lieu — et c'est ICI que le libellé se
+                // décide en dernier, toute autre écriture étant écrasée par ce passage.
+                const differe = Boolean(this.parentContext?.differe);
+                submitText.textContent = isLoading
+                    ? (differe ? 'Vérification…' : 'Enregistrement...')
+                    : (differe ? 'Ajouter' : 'Enregistrer');
             }
         }
 
