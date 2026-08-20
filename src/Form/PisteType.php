@@ -168,6 +168,8 @@ class PisteType extends AbstractType
             ->add('conditionsPartageAgent', ConditionPartageAgentAutocompleteField::class, [
                 'required' => false,
                 'label' => "Agents internes rémunérés",
+                'help' => "Conditions RÉUTILISABLES : définies une fois, rattachées à plusieurs affaires. "
+                    . "Leur part se calcule sur ce qui reste APRÈS l'intermédiaire externe.",
                 'class' => ConditionPartage::class,
                 'choice_label' => "nom",
                 'multiple' => true,
@@ -175,11 +177,13 @@ class PisteType extends AbstractType
                 'by_reference' => false,
                 'autocomplete' => true,
                 'attr' => [
-                    'placeholder' => "Les conditions d'agents",
+                    'placeholder' => "Choisir une condition d'agent…",
                 ],
             ])
             ->add('conditionsPartageExceptionnelles', CollectionType::class, [
-                'label' => "Liste des conditions spéciales de partage",
+                'label' => "Conditions propres à cette affaire",
+                'help' => "Elles REMPLACENT la condition habituelle du bénéficiaire pour les risques visés "
+                    . "— elles ne s'y ajoutent pas. Créées ici, elles n'appartiennent qu'à cette affaire.",
                 'entry_type' => ConditionPartageType::class,
                 'by_reference' => false,
                 'allow_add' => true,

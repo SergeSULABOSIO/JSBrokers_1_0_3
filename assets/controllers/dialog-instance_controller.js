@@ -1,5 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 import { resumeDeFermeture } from './collection-tampon.js';
+import { champsSources, conteneurVisible, rangeeVisible, trouverChamp, valeurObservee } from './visibilite-conditions.js';
 /**
  * @file Ce fichier contient le contrôleur Stimulus 'dialog-instance'.
  * @description Ce contrôleur gère le cycle de vie et les interactions d'UNE SEULE instance de dialogue.
@@ -610,16 +611,20 @@ export default class extends Controller {
         this.sourceFields = new Map();
         this.dynamicFieldContainerTargets.forEach(container => {
             const conditions = JSON.parse(container.dataset.visibilityConditionsValue);
-            conditions.forEach(condition => {
-                if (!this.sourceFields.has(condition.field)) {
-                    this.sourceFields.set(condition.field, []);
+            // Les champs sources sont DÉDUITS de l'arbre des conditions : une condition
+            // composée (`any`/`all`) ne porte pas de `field`, elle porte des
+            // sous-conditions. Les lire à plat ne posait aucun écouteur, et le bloc
+            // gardait alors l'état calculé à l'ouverture.
+            champsSources(conditions).forEach(nomDuChamp => {
+                if (!this.sourceFields.has(nomDuChamp)) {
+                    this.sourceFields.set(nomDuChamp, []);
                 }
                 const form = this.element.querySelector('form'); // Search within modal-content
                 // Trouve le ou les champs source (peut être une collection de radios)
-                const sourceInputs = form.querySelectorAll(`[name="${condition.field}"], [name="${condition.field}[]"]`);
+                const sourceInputs = form.querySelectorAll(`[name="${nomDuChamp}"], [name="${nomDuChamp}[]"]`);
                 if (sourceInputs.length > 0) {
                     sourceInputs.forEach(sourceInput => {
-                        const listeners = this.sourceFields.get(condition.field);
+                        const listeners = this.sourceFields.get(nomDuChamp);
                         // On s'assure de n'ajouter l'écouteur qu'une seule fois par champ source
                         if (!listeners.find(el => el === sourceInput)) {
                             sourceInput.addEventListener('change', this.checkFormVisibility.bind(this));
@@ -703,16 +708,23 @@ export default class extends Controller {
         this.dynamicFieldContainerTargets.forEach(container => {
             const conditions = JSON.parse(container.dataset.visibilityConditionsValue);
             // Le conteneur est visible si TOUTES ses conditions sont remplies
-            const isVisible = conditions.every(condition => this.evaluateCondition(condition));
+            // La décision revient au module pur : lui seul connaît la grammaire des
+            // conditions (ET, OU, `in`, `not_empty`), et lui seul est testé hors navigateur.
+            const isVisible = conteneurVisible(conditions, (nom) => this.valeurDuChampSource(nom));
             container.classList.toggle('d-none', !isVisible);
         });
 
-        // Vérifie la visibilité des lignes après avoir masqué/affiché les champs
+        // Vérifie la visibilité des lignes après avoir masqué/affiché les champs.
+        // La décision revient au module pur : une rangée que le CANEVAS a masquée le
+        // reste, sans quoi cette passe la rouvrait (une seule colonne visible suffisait).
         this.formRowTargets.forEach(row => {
-            // Une ligne est masquée si TOUTES ses colonnes enfants sont masquées
-            const columns = Array.from(row.children);
-            const visibleColumns = columns.filter(col => !col.classList.contains('d-none'));
-            row.classList.toggle('d-none', visibleColumns.length === 0);
+            const colonnesVisibles = Array.from(row.children)
+                .filter(col => !col.classList.contains('d-none')).length;
+            const visible = rangeeVisible({
+                masqueeParLeCanevas: row.dataset.rangeeMasquee === '1',
+                colonnesVisibles,
+            });
+            row.classList.toggle('d-none', !visible);
         });
 
         // On appelle la logique de mise à jour des choix dynamiques à la fin.
@@ -776,43 +788,32 @@ export default class extends Controller {
     }
 
     /**
-     * Évalue une condition de visibilité unique.
-     * @param {object} condition - L'objet condition à évaluer.
-     * @returns {boolean} - `true` si la condition est remplie, sinon `false`.
+     * La valeur observable d'un champ source, pour le moteur de visibilité.
+     *
+     * Tout ce qui touche au DOM est ici ; la DÉCISION, elle, vit dans visibilite-conditions.js,
+     * où elle est testée sans navigateur. C'est ce partage qui rend visibles des pannes qui,
+     * autrement, ne se manifestent que par un champ obstinément masqué.
+     *
+     * Rend `undefined` quand le champ n'existe pas — distinct d'une valeur vide, qui est
+     * une réponse.
      */
-    evaluateCondition(condition) {
-        const form = this.contentTarget.querySelector('form'); // Search within modal-body
-        const fieldName = condition.field;
-        const field = form.elements[fieldName]; // Manière robuste de récupérer un champ de formulaire
+    valeurDuChampSource(fieldName) {
+        const form = this.contentTarget.querySelector('form');
+        if (!form) return undefined;
 
-        if (!field) return false;
+        // Les deux écritures : le nom nu, et le nom suffixé d'un champ à choix multiple.
+        const field = trouverChamp(form.elements, fieldName);
+        if (!field) return undefined;
 
-        let sourceValue;
         if (field instanceof RadioNodeList) {
-            // Cas d'un groupe de boutons radio (expanded: true)
-            const checkedRadio = form.querySelector(`[name="${fieldName}"]:checked`);
-            if (!checkedRadio) return false;
-            sourceValue = checkedRadio.value;
-        } else {
-            // Cas d'un <select>, <input>, etc. (expanded: false)
-            sourceValue = field.value;
+            const coche = form.querySelector(`[name="${fieldName}"]:checked, [name="${fieldName}[]"]:checked`);
+
+            return valeurObservee({ estGroupeRadio: true }, coche ? coche.value : null);
         }
 
-        if (sourceValue === null || sourceValue === undefined) return false;
-
-        if (condition.operator === 'in') {
-            // On s'assure que les deux côtés sont des chaînes de caractères pour une comparaison fiable
-            return condition.value.map(String).includes(String(sourceValue));
-        }
-
-        // Ajout du support pour l'opérateur 'not_empty'
-        if (condition.operator === 'not_empty') {
-            // La condition est remplie si la valeur n'est pas null, undefined, ou une chaîne vide.
-            return sourceValue !== null && sourceValue !== undefined && String(sourceValue).trim() !== "";
-        }
-
-        return false;
+        return valeurObservee(field);
     }
+
     
 
     /**

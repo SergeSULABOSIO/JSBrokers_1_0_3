@@ -858,20 +858,19 @@ trait ControllerUtilsTrait
         if ($entity->getId() !== null) {
             $this->canvasBuilder->batchPreloadForCollection([$entity]);
         }
-        // Hydratation avant la génération du canevas pour que le Provider
-        // évalue correctement le solde (évite le solde NULL).
-        $this->loadCalculatedValues(null, $entity);
-
-        $formCanvas = $this->canvasBuilder->getEntityFormCanvas($entity, $entreprise->getId());
-
-        // NOUVEAU : Injection dynamique du champ parent pour les collections polymorphes.
-        // Si on est en mode création et que l'URL contient les infos du parent (fournies par dialog-instance.js),
-        // on injecte un champ masqué dans le formulaire de l'enfant et on pré-remplit l'entité.
+        // LE PARENT EST POSÉ AVANT QUE LE CANEVAS NE SOIT CONSTRUIT.
+        //
+        // Un canevas se bâtit à partir de l'entité : c'est ce qui permet à un provider de
+        // dire « cette rangée n'a de sens que dans une affaire ». L'entité étant remplie
+        // APRÈS, elle arrivait vierge au provider, et toute règle qui dépendait du parent
+        // se trouvait ignorée — sans erreur : le champ concerné tombait simplement en bas
+        // du formulaire via render_rest, sans la condition de visibilité qui devait le
+        // gouverner. C'est ce qui laissait le sélecteur d'agent à l'écran alors que la
+        // part revenait à l'intermédiaire.
         $parentFieldName = $request->query->get('parent_field_name');
         $parentId = $request->query->get('parent_id');
 
         if ($isCreationMode && $parentFieldName && $parentId) {
-            // 1. On pré-remplit l'entité enfant avec son parent.
             $setter = 'set' . ucfirst($parentFieldName);
             $parentMap = $this->buildParentAssociationMapFromEntity($entityClass);
             if (method_exists($entity, $setter) && isset($parentMap[$parentFieldName])) {
@@ -881,8 +880,16 @@ trait ControllerUtilsTrait
                     $entity->$setter($parentEntity);
                 }
             }
+        }
 
-            // 2. LE PARENT EST CONNU : on ne le demande pas, on le rappelle.
+        // Hydratation avant la génération du canevas pour que le Provider
+        // évalue correctement le solde (évite le solde NULL).
+        $this->loadCalculatedValues(null, $entity);
+
+        $formCanvas = $this->canvasBuilder->getEntityFormCanvas($entity, $entreprise->getId());
+
+        if ($isCreationMode && $parentFieldName && $parentId) {
+            // LE PARENT EST CONNU : on ne le demande pas, on le rappelle.
             //
             // Ouvrir « Ajouter un contact » depuis la fiche d'un client ne laisse aucun
             // doute sur le client concerné. Lui présenter malgré tout un champ « Client

@@ -5275,3 +5275,21 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
    9999px) : la première cellule restait blanche pendant que les autres viraient au gris,
    et la ligne se survolait en deux couleurs. La pastille « à enregistrer » suffit
    largement à distinguer la ligne — inutile de payer ce prix. */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   INTERTITRE DE SECTION dans un dialogue (`group_title` du canevas).
+
+   Il nomme un GROUPE de champs — « Partage des revenus de cette affaire » — et
+   non un champ : il ne doit donc ni porter la marque des champs obligatoires, ni
+   se confondre avec un libellé. Cobalt de la marque, pour dire l'appartenance à
+   une section sans crier plus fort que les champs qu'elle rassemble.
+   ───────────────────────────────────────────────────────────────────────────── */
+.dlg-group-title {
+    display: block;
+    margin: 1.25rem 0 0.35rem;
+    color: var(--text-cobalt, #0047AB);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}

@@ -122,16 +122,25 @@
             {% if formCanvas.form_layout is defined and formCanvas.form_layout is not empty %}
                 {# Pour chaque ligne définie dans la configuration du layout... #}
                 {% for row in formCanvas.form_layout %}
-                    {# Le titre de groupe est un libellé sur sa propre ligne. #}
+                    {# INTERTITRE DE SECTION — il nomme un GROUPE, pas un champ.
+                       La classe « required » était posée en dur : un titre de section y
+                       prenait l'apparence d'un champ obligatoire, promettant une saisie
+                       qu'il ne demande pas. Aucun provider n'utilisait ce mécanisme, ce
+                       qui explique que personne ne l'ait vu. #}
                     {% if row.group_title is defined %}
                         <div class="row">
-                            <div class="col-12"><label class="form-label required">{{ row.group_title }}</label></div>
+                            <div class="col-12"><span class="dlg-group-title">{{ row.group_title }}</span></div>
                         </div>
                     {% endif %}
 
                     {% set row_visibility_conditions = (row.visibility_conditions is defined) ? row.visibility_conditions|json_encode : null %}
 
+                    {# Une rangée masquée par le CANEVAS se signale : sans ce marqueur, la
+                       seconde passe du contrôleur la rouvrait aussitôt (une colonne visible
+                       suffisait à conclure « rangée visible »), et le masquage déclaré
+                       n'existait que dans le HTML brut. #}
                     <div class="row{% if row.hidden is defined and row.hidden %} d-none{% endif %}"
+                        {% if row.hidden is defined and row.hidden %}data-rangee-masquee="1"{% endif %}
                         data-dialog-instance-target="formRow {% if row_visibility_conditions %}dynamicFieldContainer{% endif %}"
                         {% if row_visibility_conditions %}
                             data-visibility-conditions-value="{{ row_visibility_conditions }}"
