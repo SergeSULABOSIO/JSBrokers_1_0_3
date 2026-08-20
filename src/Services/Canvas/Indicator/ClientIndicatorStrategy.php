@@ -274,11 +274,14 @@ class ClientIndicatorStrategy implements IndicatorCalculationStrategyInterface, 
     {
         if ($client === null || $client->getCivilite() === null) return null;
 
+        // Mêmes mots qu'au formulaire : une fiche qui propose « Société » ne doit pas
+        // afficher « Entreprise » ailleurs, sous peine de faire douter qu'il s'agit de
+        // la même notion.
         return match ($client->getCivilite()) {
-            Client::CIVILITE_Mr => "Monsieur",
-            Client::CIVILITE_Mme => "Madame",
-            Client::CIVILITE_ENTREPRISE => "Entreprise",
-            Client::CIVILITE_ASBL => "ASBL",
+            Client::CIVILITE_Mr => "Mr",
+            Client::CIVILITE_Mme => "Mme",
+            Client::CIVILITE_ENTREPRISE => "Société",
+            Client::CIVILITE_ASBL => "ONG/ASBL",
             default => "Inconnue",
         };
     }

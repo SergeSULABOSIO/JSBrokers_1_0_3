@@ -95,9 +95,12 @@ class ConditionPartageController extends AbstractController
     }
 
     #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
-    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
+    public function getCollectionListApi(int $id, string $collectionName, Request $request, ?string $usage = "generic"): Response
     {
-        return $this->handleCollectionApiRequest($id, $collectionName, ConditionPartage::class, $usage);
+        // La requête est transmise pour que la collection puisse lire « ids » : en
+        // création, un sélecteur garde ses choix côté navigateur et les redemande ici
+        // pour que le SERVEUR les rende, avec le gabarit des lignes enregistrées.
+        return $this->handleCollectionApiRequest($id, $collectionName, ConditionPartage::class, $usage, $request);
     }
 
     /**

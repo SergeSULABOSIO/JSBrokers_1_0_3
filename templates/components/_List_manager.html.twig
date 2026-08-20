@@ -145,10 +145,18 @@
         </div>
         <div data-list-manager-target="emptyStateContainer" class="d-none h-100">
             {% if usage is defined and usage == 'dialog' %}
-                {# CAS : État vide pour une collection DANS UN FORMULAIRE D'ÉDITION. #}
+                {# CAS : État vide pour une collection DANS UN FORMULAIRE D'ÉDITION.
+                   Quand la fiche parente n'est pas encore enregistrée, seul le TEXTE change :
+                   le composant, lui, reste le même. Deux états vides différents selon qu'on
+                   crée ou qu'on modifie donneraient deux visages à une même situation — et
+                   celui de la création doit dire ce qui a d'unique ici : la saisie est
+                   possible tout de suite, et elle sera écrite avec la fiche. #}
+                {% set parentEnAttente = parentEntity is defined and parentEntity is not null and parentEntity.id is null %}
                 {% set emptyStateParams = {
                     title: "La collection est vide",
-                    description: "Ajouter un élément à la collection en cliquant sur le bouton \"Ajouter\".",
+                    description: parentEnAttente
+                        ? "Ajoutez vos éléments dès maintenant : ils seront créés en même temps que la fiche."
+                        : "Ajouter un élément à la collection en cliquant sur le bouton \"Ajouter\".",
                     icon_name: entityCanvas.parametres.icone | default('lucide:folder-plus'),
                     button_text: "Ajouter",
                     button_action: customAddAction, 
