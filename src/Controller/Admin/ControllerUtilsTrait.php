@@ -436,6 +436,42 @@ trait ControllerUtilsTrait
      * @param string $collectionFieldName The name of the collection field on the parent entity's form canvas.
      * @return Response
      */
+    /**
+     * Rend UNE ligne de collection pour une entité qui n'est pas encore en base.
+     *
+     * Strictement le gabarit des lignes enregistrées (`components/_list_row.html.twig`),
+     * avec les mêmes canevas : même pastille d'entité, mêmes colonnes, mêmes actions. La
+     * création et la modification ne doivent pas offrir deux habillages pour la même chose.
+     *
+     * Les indicateurs calculés sont chargés comme pour n'importe quelle ligne — ils vaudront
+     * simplement zéro, l'entité n'ayant encore aucune histoire.
+     *
+     * @param array $data la charge soumise, d'où proviennent les options d'action de ligne
+     */
+    private function rendreLigneEnAttente(object $entity, string $entityClass, array $data): string
+    {
+        $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
+        $this->loadCalculatedValues($entityCanvas, $entity);
+
+        return $this->renderView('components/_list_row.html.twig', [
+            'entity' => $entity,
+            'listeCanvas' => $this->canvasBuilder->getListeCanvas($entityClass),
+            'entite_nom' => $this->getEntityName($entityClass),
+            'entityCanvas' => $entityCanvas,
+            // « dialog » : c'est le contexte d'une collection, celui qui rend la colonne
+            // d'actions à droite de la ligne.
+            'usage' => 'dialog',
+            'listActionOptions' => [
+                // Une collection de RATTACHEMENT dit « Retirer » plutôt que « Supprimer ».
+                // Le navigateur transmet ces libellés : ils vivent dans la configuration du
+                // widget, que le serveur ne connaît pas depuis ce point d'entrée.
+                'deleteActionLabel' => $data['ligne_delete_label'] ?? null,
+                'deleteActionIcon' => $data['ligne_delete_icon'] ?? null,
+                // Une ligne en attente ne s'ouvre pas : elle n'existe nulle part encore.
+                'hideEditAction' => true,
+            ],
+        ]);
+    }
     private function renderCollectionOrList(
         string $usage,
         string $entityClass,
@@ -1032,7 +1068,19 @@ trait ControllerUtilsTrait
             // ligne plus tôt. Et comme rien n'est écrit, rien n'est facturé : un solde de
             // tokens épuisé n'empêche plus de SAISIR, seulement d'enregistrer.
             if ($request->request->getBoolean('dry_run')) {
-                return $this->json(['valide' => true]);
+                return $this->json([
+                    'valide' => true,
+                    // LA LIGNE EST RENDUE ICI, PAR LE MÊME GABARIT QUE LES AUTRES.
+                    //
+                    // Sans cela, le navigateur devrait reconstruire un tableau de son côté :
+                    // il RESSEMBLERAIT aux lignes enregistrées sans jamais leur être
+                    // identique, et divergerait au premier changement du gabarit. Deux
+                    // habillages pour une même chose, selon qu'on crée ou qu'on modifie.
+                    //
+                    // L'entité est complète — elle vient de passer toute la validation — mais
+                    // n'a pas d'id : le tampon posera le sien sur la ligne.
+                    'ligne' => $this->rendreLigneEnAttente($entity, $entityClass, $data),
+                ]);
             }
 
             // MÉTRAGE TOKENS (écriture) + PERSISTANCE : bloquant, via le point de
@@ -1191,6 +1239,27 @@ trait ControllerUtilsTrait
             $totalUnit = '';
             $data = $parentEntity->{'get' . ucfirst($collectionName)}();
             $entityClass = $collectionMap[$collectionName];
+
+            // PARENT PAS ENCORE EN BASE, MAIS SÉLECTION DÉJÀ FAITE.
+            //
+            // Une collection de RATTACHEMENT (sélecteur) désigne des entités qui existent
+            // déjà : en création, le navigateur en garde les identifiants en mémoire et nous
+            // les passe ici. On rend alors la liste EXACTEMENT comme si elle était rattachée
+            // — même gabarit, même pastille, mêmes actions.
+            //
+            // C'est ce qui évite un second habillage, reconstruit côté navigateur, qui
+            // divergerait du premier dès que le gabarit changerait.
+            $idsChoisis = array_filter(array_map('intval', explode(',', (string) $request?->query->get('ids', ''))));
+            if ($id === 0 && $idsChoisis !== []) {
+                $data = new \Doctrine\Common\Collections\ArrayCollection(
+                    $this->em->getRepository($entityClass)->findBy([
+                        'id' => $idsChoisis,
+                        // Scoping d'entreprise : on ne rend visible que ce qui appartient à
+                        // l'espace de travail, même quand les identifiants viennent du client.
+                        'entreprise' => $this->getEntreprise(),
+                    ]),
+                );
+            }
 
             // Preload inconditionnel — couvre totalizableField ET les collections sans champ totalisable.
             $this->canvasBuilder->batchPreloadForCollection($data->toArray());

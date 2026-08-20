@@ -3540,7 +3540,14 @@ tr:hover .list-row-actions-container,
     align-items: center;
     justify-content: center;
     border-radius: var(--bs-border-radius);
-    background-color: #f8f9fa; /* --bg-light */
+    /* AUCUN FOND PROPRE, ET PAS D'OMBRE AU REPOS.
+       Le bouton portait un gris clair et une ombre : il dessinait un bloc qui tranchait
+       sur la ligne, alors qu'il n'est qu'une action DANS cette ligne. Transparent, il
+       épouse le fond quel qu'il soit — blanc au repos, et le gris de survol de la ligne
+       quand la souris passe, sans jamais créer de rupture dans un sens ni dans l'autre.
+       Le survol du bouton lui-même, lui, reste marqué : c'est là qu'un retour est utile. */
+    background-color: transparent;
+    box-shadow: none;
     transition: background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 .list-row-action-btn:hover {
@@ -3550,7 +3557,14 @@ tr:hover .list-row-actions-container,
     outline: none;
     box-shadow: 0 0 0 0.2rem rgba(0, 71, 171, 0.35); /* --cobalt-focus-ring */
 }
-/* Nuance de survol pour l'action destructive (retrait / suppression). */
+/* L'ACTION DESTRUCTIVE SE VOIT ROUGE, DÈS LE REPOS.
+   La couleur est portée par le bouton, donc héritée par l'icône (currentColor) :
+   celle rendue par le serveur comme celle injectée par le tampon des collections
+   s'accordent sans que l'une ait à répéter la classe de l'autre.
+   Le rouge ne décore rien ici — il annonce une perte (charte, Règle 3). */
+.list-row-action-btn--danger {
+    color: var(--danger, #dc3545);
+}
 .list-row-action-btn--danger:hover {
     background-color: #f8d7da; /* --danger-bg */
 }
@@ -5248,8 +5262,8 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     border-top: 1px solid var(--border-subtle, #e0e0e0);
 }
 
-/* Liseré cobalt discret : la ligne se distingue au premier coup d'œil sans cesser
-   de ressembler à une ligne de liste ordinaire. */
-.collection-ligne-en-attente > td:first-child {
-    box-shadow: inset 3px 0 0 var(--bg-cobalt-subtle, #e8f0fb);
-}
+/* PAS DE LISERÉ SUR LA LIGNE. Un `box-shadow` posé sur la cellule ÉCRASE celui par
+   lequel Bootstrap peint le survol (`--bs-table-accent-bg`, rendu en ombre interne de
+   9999px) : la première cellule restait blanche pendant que les autres viraient au gris,
+   et la ligne se survolait en deux couleurs. La pastille « à enregistrer » suffit
+   largement à distinguer la ligne — inutile de payer ce prix. */

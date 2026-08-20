@@ -147,14 +147,23 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
         ];
 
         $layout = [
-            // Ligne 1: "civilité" (full width)
+            // Ligne 1 : L'IDENTITÉ, D'UN SEUL TENANT — « civilité » et « nom ».
+            //
+            // Ces deux champs n'en font qu'un pour le lecteur : la civilité QUALIFIE le
+            // nom, elle ne vaut rien seule. Les empiler sur deux rangées séparait ce qui
+            // se lit d'un trait — « Monsieur Serge Test » — et faisait descendre le nom
+            // sous la ligne de flottaison du bloc, loin de ce qu'il complète.
+            //
+            // Même mécanique que « groupe / portefeuille » ou « e-mail / téléphone » plus
+            // bas : une rangée, deux colonnes, des largeurs. Le NOM prend le plus large —
+            // c'est lui qu'on lit, et il peut être long ; la civilité, repliée en liste
+            // déroulante, tient dans un quart de ligne. Lui en donner davantage la ferait
+            // paraître plus importante que ce qu'elle qualifie.
             [
-                // "couleur_fond" => "white", 
-                "colonnes" => [["champs" => ["civilite"]]]
-            ],
-            // Ligne 2: "nom" (full width)
-            [
-                "colonnes" => [["champs" => ["nom"]]]
+                "colonnes" => [
+                    ["champs" => ["civilite"], "width" => 3],
+                    ["champs" => ["nom"], "width" => 9],
+                ]
             ],
             // Ligne 3: "groupe", "portefeuille" (1/2 each)
             [

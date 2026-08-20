@@ -71,15 +71,12 @@ export default class extends Controller {
         this.groupe = creerGroupe(this.parentFieldNameValue);
         this.boundTampon = this._surDemandeDeTampon.bind(this);
         document.addEventListener('app:collection.tampon-request', this.boundTampon);
-        this.boundIcone = this._surIconeChargee.bind(this);
-        document.addEventListener('app:icon.loaded', this.boundIcone);
         this.load();
     }
 
     disconnect() {
         document.removeEventListener('app:list.refresh-request', this.boundRefresh);
         document.removeEventListener('app:collection.tampon-request', this.boundTampon);
-        document.removeEventListener('app:icon.loaded', this.boundIcone);
         // NOUVEAU : S'assurer que l'infobulle est retirée si le contrôleur est déconnecté
         if (this.tooltipElement) {
             this.tooltipElement.remove();
@@ -764,6 +761,9 @@ export default class extends Controller {
             // Le sous-arbre que l'enfant portait lui-même : c'est ce qui fait tenir la
             // généalogie sur toute sa profondeur.
             enfants: detail.enfants || {},
+            // Le balisage rendu par le serveur : c'est LUI qu'on affichera, pas une
+            // reconstruction locale qui finirait par en différer.
+            ligne: detail.ligne,
         });
 
         this._rendreTampon();
@@ -829,108 +829,112 @@ export default class extends Controller {
     }
 
     /**
-     * Rend les lignes en attente — AVEC LE MÊME HABILLAGE QUE LES LIGNES PERSISTÉES.
+     * Rend la collection en attente — ENTIÈREMENT AVEC LE BALISAGE DU SERVEUR.
      *
-     * Une ligne provisoire qui ne ressemblerait pas à une ligne enregistrée obligerait
-     * l'utilisateur à apprendre deux vocabulaires visuels pour la même chose. On reprend
-     * donc les classes de `_list_row.html.twig` et le tableau de `_list_manager.html.twig`,
-     * et les icônes viennent du MÊME dépôt (IconCanvasProvider) via le circuit d'icônes du
-     * cerveau — jamais d'un SVG recopié ici, qui divergerait au premier changement d'alias.
+     * Rien n'est fabriqué ici : le cadre (tableau, entêtes, état vide) est demandé au
+     * serveur comme en mode édition, et chaque ligne a été rendue par
+     * `components/_list_row.html.twig` au moment de sa validation. Reconstruire tout cela
+     * côté navigateur donnerait un second habillage, qui s'écarterait du premier dès que le
+     * gabarit changerait — et la fiche n'aurait pas le même visage selon qu'on la crée ou
+     * qu'on la modifie.
      *
-     * Ce qui reste différent, et doit l'être : la mention « à enregistrer » et le pied qui
-     * annonce ce qui sera créé. L'utilisateur doit savoir que ces lignes n'existent encore
-     * nulle part — c'est la seule chose qu'une ligne persistée ne dit pas.
+     * Ne s'ajoutent que les deux marques que le serveur ne peut pas connaître : la clé du
+     * tampon (la ligne n'a pas d'id) et la pastille « à enregistrer », sans laquelle
+     * l'utilisateur croirait sa saisie déjà enregistrée.
      * @private
      */
-    _rendreTampon() {
+    async _rendreTampon() {
         if (!this.hasListContainerTarget) return;
 
         const noeuds = this.groupe?.noeuds ?? [];
         const total = compterLeTampon(this.groupe);
         this.updateCount(total);
 
-        if (noeuds.length === 0) {
-            this.listContainerTarget.innerHTML =
-                '<div class="text-muted small p-3">Aucun élément pour l\'instant. Ce que vous ajouterez ici sera créé à l\'enregistrement de la fiche.</div>';
-            return;
-        }
+        // Les entités RATTACHÉES existent déjà : le serveur sait les rendre, il lui suffit
+        // de leurs identifiants. Les entités CRÉÉES, elles, n'existent nulle part — leurs
+        // lignes voyagent avec le tampon depuis leur validation.
+        const idsChoisis = noeuds.filter((n) => n.nature === 'rattachement').map((n) => n.idCible);
+        const lignesCreees = noeuds.filter((n) => n.nature === 'creation');
 
-        const libelleRetrait = this.element.dataset.collectionDeleteActionLabelValue || 'Retirer';
-        const lignes = noeuds.map((noeud) => {
-            const descendants = compterLeTampon({ noeuds: [noeud] }) - 1;
-            const detail = descendants > 0
-                ? ` <span class="badge bg-secondary align-middle">+${descendants}</span>`
-                : '';
-
-            // Mêmes classes que _list_row.html.twig : l'œil ne doit voir aucune couture.
-            return `
-                <tr data-item-id="${noeud.cle}"
-                    class="element-a-encadrer parent-a-options align-middle collection-ligne-en-attente"
-                    data-action="mouseenter->collection#showRowActions mouseleave->collection#hideRowActions">
-                    <td class="align-middle">
-                        <span class="fw-semibold">${this._echapper(noeud.libelle)}</span>${detail}
-                        <span class="collection-chip-attente ms-2">à enregistrer</span>
-                    </td>
-                    <td class="text-end pe-3">
-                        <div class="list-row-actions-container" data-collection-target="rowActions">
-                            <button type="button"
-                                    class="btn btn-sm btn-light list-row-action-btn list-row-action-btn--danger shadow-sm border-0"
-                                    title="${libelleRetrait}"
-                                    aria-label="${libelleRetrait} « ${this._echapper(noeud.libelle)} »"
-                                    data-action="click->collection#deleteItem">
-                                <span data-icone-retrait></span>
-                            </button>
-                        </div>
-                    </td>
-                </tr>`;
-        }).join('');
-
-        this.listContainerTarget.innerHTML = `
-            <table class="table table-hover table-sm table-enhanced" aria-label="Éléments en attente d'enregistrement">
-                <tbody class="table-group-divider">${lignes}</tbody>
-            </table>
-            <p class="collection-pied-attente" role="status">
-                ${total} élément(s) seront créés à l'enregistrement de la fiche.
-            </p>`;
-
-        this._demanderIconeDeRetrait();
+        await this._chargerLeCadre(idsChoisis);
+        this._injecterLesLignes(lignesCreees);
+        this._poserLePiedEnAttente(total);
     }
 
     /**
-     * L'icône de retrait, prise au dépôt d'icônes de l'application.
-     *
-     * Elle transite par le cerveau (`ui:icon.request` → `app:icon.loaded`), comme partout
-     * ailleurs : c'est ce qui garantit qu'une ligne en attente et une ligne enregistrée
-     * montrent la MÊME icône, y compris le jour où l'alias changera.
+     * Le cadre de la liste, demandé au serveur exactement comme en mode édition.
      * @private
      */
-    _demanderIconeDeRetrait() {
-        if (this.iconeRetraitHtml) {
-            this._poserIconeDeRetrait();
-            return;
+    async _chargerLeCadre(idsChoisis) {
+        try {
+            const url = new URL(`${this.listUrlValue}/dialog`, window.location.origin);
+            if (idsChoisis.length > 0) url.searchParams.set('ids', idsChoisis.join(','));
+
+            const reponse = await fetch(url);
+            if (!reponse.ok) throw new Error(reponse.statusText);
+            const data = await reponse.json();
+            this.listContainerTarget.innerHTML = data.html;
+        } catch (error) {
+            // Le tampon reste intact : c'est l'affichage qui manque, pas la saisie.
+            this.listContainerTarget.innerHTML =
+                `<div class="alert alert-warning">Impossible d'afficher la liste : ${error.message}</div>`;
         }
-        this.requesterIdIcone = `${this.element.id}-retrait`;
-        this.notifyCerveau('ui:icon.request', {
-            iconName: this.element.dataset.collectionDeleteActionIconValue || 'lucide:trash-2',
-            iconSize: 20,
-            requesterId: this.requesterIdIcone,
+    }
+
+    /**
+     * Glisse les lignes en attente dans le tableau rendu par le serveur.
+     * @private
+     */
+    _injecterLesLignes(noeuds) {
+        if (noeuds.length === 0) return;
+
+        const corps = this.listContainerTarget.querySelector('tbody');
+        if (!corps) return;
+
+        // Des lignes existent : l'état vide n'a plus lieu d'être.
+        this.listContainerTarget.querySelector('[data-list-manager-target="emptyStateContainer"]')
+            ?.classList.add('d-none');
+        // Le conteneur du tableau s'appelle « listContainer » dans _list_manager : c'est
+        // lui que le contrôleur de liste masque quand il croit la collection vide.
+        this.listContainerTarget.querySelector('[data-list-manager-target="listContainer"]')
+            ?.classList.remove('d-none');
+
+        noeuds.forEach((noeud) => {
+            const gabarit = document.createElement('tbody');
+            gabarit.innerHTML = (noeud.ligne || '').trim();
+            const ligne = gabarit.firstElementChild;
+            if (!ligne) return;
+
+            // L'entité n'a pas d'id : la ligne est repérée par sa clé de tampon, celle que
+            // deleteItem() lira pour la retirer.
+            ligne.dataset.itemId = String(noeud.cle);
+            ligne.classList.add('collection-ligne-en-attente');
+            this._marquerEnAttente(ligne, noeud);
+            corps.appendChild(ligne);
         });
     }
 
-    /** @private */
-    _surIconeChargee(event) {
-        const { html, requesterId } = event.detail || {};
-        if (requesterId !== this.requesterIdIcone || !html) return;
+    /** La pastille qui distingue une ligne en attente d'une ligne enregistrée. @private */
+    _marquerEnAttente(ligne, noeud) {
+        const descendants = compterLeTampon({ noeuds: [noeud] }) - 1;
+        const marque = document.createElement('span');
+        marque.className = 'collection-chip-attente ms-2';
+        marque.textContent = descendants > 0 ? `à enregistrer · +${descendants}` : 'à enregistrer';
 
-        this.iconeRetraitHtml = html;
-        this._poserIconeDeRetrait();
+        // Auprès du texte principal, là où l'œil arrive — et non en bout de ligne, où la
+        // mention se perdrait derrière les colonnes.
+        (ligne.querySelector('.list-row-primary') ?? ligne.querySelector('td'))?.appendChild(marque);
     }
 
-    /** @private */
-    _poserIconeDeRetrait() {
-        this.listContainerTarget?.querySelectorAll('[data-icone-retrait]').forEach((hote) => {
-            if (!hote.innerHTML.trim()) hote.innerHTML = this.iconeRetraitHtml;
-        });
+    /** Le rappel de ce qui sera écrit à l'enregistrement. @private */
+    _poserLePiedEnAttente(total) {
+        if (total === 0) return;
+
+        const pied = document.createElement('p');
+        pied.className = 'collection-pied-attente';
+        pied.setAttribute('role', 'status');
+        pied.textContent = `${total} élément(s) seront créés à l'enregistrement de la fiche.`;
+        this.listContainerTarget.appendChild(pied);
     }
 
     /**

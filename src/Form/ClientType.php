@@ -15,24 +15,38 @@ class ClientType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        /** @var Client|null $client */
+        $client = $builder->getData();
+        $isCreationMode = !$client || null === $client->getId();
+
         $builder
+            // UNE LISTE DÉROULANTE, PAS CINQ BOUTONS RADIO.
+            //
+            // La civilité est un choix unique parmi quatre, court et sans ambiguïté : elle
+            // occupait pourtant un demi-écran en boutons dépliés, sur deux colonnes, avec
+            // une option vide « None » en tête que personne ne choisit jamais. Repliée, elle
+            // tient sur une ligne à côté du nom qu'elle qualifie.
+            //
+            // ⚠ Les VALEURS ne changent pas (0 à 3) : elles sont en base sur toutes les
+            // fiches existantes, et deux d'entre elles pilotent l'affichage des champs
+            // légaux (cf. visibility_conditions du canvas). Seuls les libellés évoluent.
             ->add('civilite', ChoiceType::class, [
                 'label' => "Civilité",
                 'choices' => [
-                    'Monsieur' => Client::CIVILITE_Mr,
-                    'Madame' => Client::CIVILITE_Mme,
-                    'Entreprise' => Client::CIVILITE_ENTREPRISE,
-                    'ASBL' => Client::CIVILITE_ASBL,
+                    'Mr' => Client::CIVILITE_Mr,
+                    'Mme' => Client::CIVILITE_Mme,
+                    'Société' => Client::CIVILITE_ENTREPRISE,
+                    'ONG/ASBL' => Client::CIVILITE_ASBL,
                 ],
-                'expanded' => true,
-                'required' => false,
-                'label_html' => true,
-                'choice_label' => function ($choice, $key, $value) {
-                    if ($value === Client::CIVILITE_ENTREPRISE || $value === Client::CIVILITE_ASBL) {
-                        return '<div><strong>' . $key . '</strong><div class="text-muted small">Personne morale. Les champs N° Impôt, RCCM, etc. seront affichés.</div></div>';
-                    }
-                    return '<div><strong>' . $key . '</strong><div class="text-muted small">Personne physique.</div></div>';
-                },
+                'expanded' => false,
+                // Pas d'entrée vide : quatre choix couvrent tous les cas, et « Mr » est posé
+                // d'office en création. Une option vide n'aurait dit qu'une chose — que la
+                // fiche est incomplète — sans jamais aider à la compléter.
+                'required' => true,
+                'placeholder' => false,
+                'data' => $isCreationMode ? Client::CIVILITE_Mr : $client?->getCivilite(),
+                // Pas de texte d'aide : les champs légaux APPARAISSENT au moment du choix,
+                // ce qui l'explique mieux qu'une phrase lue avant de choisir.
             ])
             ->add('nom', TextType::class, [
                 'label' => "Nom",

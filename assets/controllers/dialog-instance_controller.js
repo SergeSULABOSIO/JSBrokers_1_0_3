@@ -1077,6 +1077,16 @@ export default class extends Controller {
         // présence ferait échouer la résolution côté serveur. Il sera posé au rejeu.
         formData.delete(this.parentContext.fieldName);
         formData.append('dry_run', '1');
+        // Le serveur rend la ligne, mais il ignore comment CETTE collection nomme son
+        // action de retrait (« Retirer » pour un rattachement, « Supprimer » sinon) :
+        // ces libellés vivent dans la configuration du widget, on les lui passe.
+        const widget = document.getElementById(this.parentContext.collectionId);
+        if (widget?.dataset.collectionDeleteActionLabelValue) {
+            formData.append('ligne_delete_label', widget.dataset.collectionDeleteActionLabelValue);
+        }
+        if (widget?.dataset.collectionDeleteActionIconValue) {
+            formData.append('ligne_delete_icon', widget.dataset.collectionDeleteActionIconValue);
+        }
 
         try {
             const response = await fetch(this.entityFormCanvas.parametres.endpoint_submit_url, {
@@ -1087,6 +1097,8 @@ export default class extends Controller {
             if (!response.ok) throw result;
 
             formData.delete('dry_run');
+            formData.delete('ligne_delete_label');
+            formData.delete('ligne_delete_icon');
 
             document.dispatchEvent(new CustomEvent('app:collection.tampon-request', {
                 detail: {
@@ -1094,6 +1106,8 @@ export default class extends Controller {
                     nature: 'creation',
                     formData,
                     libelle: this._libelleDeLaSaisie(formData),
+                    // Rendue par _list_row.html.twig, comme une ligne déjà enregistrée.
+                    ligne: result.ligne,
                     submitUrl: this.entityFormCanvas.parametres.endpoint_submit_url,
                     // LE SOUS-ARBRE : ce que ce dialogue portait lui-même en attente. C'est
                     // par lui que la généalogie tient sur toute sa profondeur.
