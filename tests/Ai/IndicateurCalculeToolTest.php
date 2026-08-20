@@ -146,4 +146,60 @@ class IndicateurCalculeToolTest extends TestCase
         $taux = $tool->execute(['code' => 'taux_de_commission', 'entite' => 'Entreprise'], $scope);
         $this->assertSame('taux', $taux->data['base']);
     }
+
+    /**
+     * L'AGENT ÉTAIT UNE CIBLE DÉCLARÉE MAIS INATTEIGNABLE.
+     *
+     * CIBLES annonce « Invite => inviteCible » depuis toujours, et le moteur sait
+     * parfaitement ventiler les chiffres d'un apporteur. Mais l'outil exigeait d'abord que
+     * l'entité figure dans les libellés d'écran — or Invite n'y est pas, il relève du droit
+     * de gestion des invités. La ligne était donc du code mort, et « la commission apportée
+     * par tel agent » répondait INTROUVABLE sans que rien n'explique pourquoi.
+     */
+    public function testUnAgentEstUneCibleAtteignable(): void
+    {
+        $tool = $this->makeTool(['commission_totale' => 4200.0]);
+        $result = $tool->execute([
+            'code' => 'commission_totale',
+            'entite' => 'Invite',
+            'id' => 7,
+        ], $this->makeScope());
+
+        // Le refus par libellé manquant a disparu : ce qui échoue désormais, s'il échoue,
+        // c'est la recherche de l'agent — pas la porte d'entrée.
+        self::assertNotSame(
+            'Invite',
+            $result->data['precision'] ?? null,
+            'La cible ne doit plus être rejetée au motif qu\'elle n\'a pas de rubrique.',
+        );
+    }
+
+    public function testSansLePrivilegeDeGestionLAgentResteRefuseEtEstNomme(): void
+    {
+        $resolver = $this->createMock(WorkspaceAccessResolver::class);
+        $resolver->method('canRead')->willReturn(false);
+
+        $canvas = $this->createMock(CanvasHelper::class);
+        $canvas->method('getGlobalIndicatorsCanvas')->willReturn(self::CANVAS);
+
+        $tool = new IndicateurCalculeTool(
+            $resolver,
+            $canvas,
+            $this->createMock(CalculationProvider::class),
+            $this->createMock(JSBDynamicSearchService::class),
+            new EntiteLexique($resolver),
+            new EntiteLibelle($this->createMock(EntityManagerInterface::class)),
+        );
+
+        $result = $tool->execute([
+            'code' => 'commission_totale',
+            'entite' => 'Invite',
+            'id' => 7,
+        ], $this->makeScope());
+
+        // La garde n'a pas bougé — seule la porte d'entrée a cessé de mentir. Et le refus
+        // NOMME l'objet : « Invite » ne dit rien à personne.
+        self::assertSame(AiToolResult::STATUS_HORS_PERIMETRE, $result->status);
+        self::assertSame('Agents et invités du cabinet', $result->data['libelle']);
+    }
 }

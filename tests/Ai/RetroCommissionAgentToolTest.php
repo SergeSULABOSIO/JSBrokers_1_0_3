@@ -4,7 +4,7 @@ namespace App\Tests\Ai;
 
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
-use App\Ai\Tool\RetrocommissionsAgentTool;
+use App\Ai\Tool\RetrocommissionsTool;
 use App\Ai\Tool\SignalerReversementRetroAgentTool;
 use App\Entity\Avenant;
 use App\Entity\ChargementPourPrime;
@@ -64,9 +64,9 @@ class RetroCommissionAgentToolTest extends KernelTestCase
         return static::getContainer()->get(EntityManagerInterface::class);
     }
 
-    private function lecture(): RetrocommissionsAgentTool
+    private function lecture(): RetrocommissionsTool
     {
-        return static::getContainer()->get(RetrocommissionsAgentTool::class);
+        return static::getContainer()->get(RetrocommissionsTool::class);
     }
 
     private function ecriture(): SignalerReversementRetroAgentTool
@@ -109,7 +109,8 @@ class RetroCommissionAgentToolTest extends KernelTestCase
         self::assertCount(1, $data['items'], 'Seuls les agents ayant une rétrocommission figurent.');
         $ligne = $data['items'][0];
 
-        self::assertSame('Alice', $ligne['agent']);
+        self::assertSame('Alice', $ligne['beneficiaire']);
+        self::assertSame('agent', $ligne['type']);
         self::assertSame(2, $ligne['affaires']);
         // 15 % de la commission pure de deux affaires à 1000.
         self::assertEqualsWithDelta(2 * self::COMMISSION * 0.15, $ligne['due'], 0.01);
@@ -118,10 +119,12 @@ class RetroCommissionAgentToolTest extends KernelTestCase
         // Aucune commission encaissée : rien n'est encore réclamable.
         self::assertEqualsWithDelta(0.0, $ligne['exigible'], 0.01);
 
-        // La règle métier voyage avec les chiffres : sans elle, le modèle confondrait
-        // cette rétro avec celle d'un partenaire externe.
-        self::assertStringContainsString('AGENT INTERNE', $data['note']);
-        self::assertStringContainsString('n\'est PAS le gestionnaire', $data['note']);
+        // La règle métier voyage avec les chiffres. Ce tableau-ci mélange les deux camps :
+        // sa note doit donc les DISTINGUER — assiettes, circuits et comptes — sans quoi le
+        // modèle prêterait à l'agent la mécanique du partenaire.
+        self::assertStringContainsString('DEUX CIRCUITS', $data['note']);
+        self::assertStringContainsString('AGENT interne partage ensuite le RELIQUAT', $data['note']);
+        self::assertStringContainsString('n\'en est pas le gestionnaire', $data['note']);
     }
 
     public function testLeModeParLigneDetailleAffaireParAffaire(): void
@@ -130,7 +133,7 @@ class RetroCommissionAgentToolTest extends KernelTestCase
         $scope = $this->scope($ids['gestionnaireId'], $ids['entrepriseId']);
 
         $data = $this->lecture()->execute(
-            ['agentId' => $ids['aliceId'], 'detail' => 'par_ligne'],
+            ['beneficiaire' => 'Alice', 'detail' => 'par_ligne'],
             $scope,
         )->data;
 
@@ -147,6 +150,15 @@ class RetroCommissionAgentToolTest extends KernelTestCase
 
         // Les totaux accompagnent le tableau : le modèle n'a pas à les additionner.
         self::assertEqualsWithDelta(2 * self::COMMISSION * 0.15, $data['totaux']['due'], 0.01);
+
+        // Le décompte d'UN bénéficiaire porte la note de SON circuit, pas un résumé des deux.
+        self::assertStringContainsString('AGENT INTERNE', $data['note']);
+        self::assertStringContainsString('SYSCOHADA 6611', $data['note']);
+
+        // LA CHAÎNE DE CALCUL : de quoi justifier le montant, et non seulement l'affirmer.
+        self::assertSame('condition du bénéficiaire', $ligne['origineDuTaux']);
+        self::assertEqualsWithDelta(self::COMMISSION, $ligne['assiette'], 0.01);
+        self::assertEqualsWithDelta($ligne['assiette'] * self::TAUX_ALICE / 100, $ligne['due'], 0.01);
     }
 
     // ===================== 2. Le périmètre de lecture =====================
@@ -162,7 +174,7 @@ class RetroCommissionAgentToolTest extends KernelTestCase
 
         self::assertSame('Vos propres rétrocommissions', $data['perimetre']);
         foreach ($data['items'] ?? [] as $item) {
-            self::assertSame('Alice', $item['agent']);
+            self::assertSame('Alice', $item['beneficiaire']);
         }
     }
 
@@ -171,7 +183,7 @@ class RetroCommissionAgentToolTest extends KernelTestCase
         $ids = $this->semer();
         $scope = $this->scope($ids['aliceId'], $ids['entrepriseId']);
 
-        $resultat = $this->lecture()->execute(['agentId' => $ids['brunoId']], $scope);
+        $resultat = $this->lecture()->execute(['beneficiaire' => 'Bruno'], $scope);
 
         // Le REFUS est un STATUT, pas une tournure de phrase : c'est lui que le moteur
         // lit pour ne rien restituer au modèle.
@@ -188,9 +200,13 @@ class RetroCommissionAgentToolTest extends KernelTestCase
         $ids = $this->semer();
         $scope = $this->scope($ids['gestionnaireId'], $ids['entrepriseId']);
 
-        $resultat = $this->lecture()->execute(['agentId' => 999999999], $scope);
+        $resultat = $this->lecture()->execute(['beneficiaire' => 'Personne Inconnue'], $scope);
 
-        self::assertStringContainsString('999999999', json_encode($resultat->data, JSON_UNESCAPED_UNICODE));
+        self::assertSame(AiToolResult::STATUS_INTROUVABLE, $resultat->status);
+        // UN REFUS DIT QUOI FAIRE. Sans sa note, le modèle n'a rien pour se corriger et
+        // finit par inventer une explication — c'est l'impasse polie du 2026-08-12.
+        self::assertArrayHasKey('note', $resultat->data);
+        self::assertStringContainsString('SANS bénéficiaire', $resultat->data['note']);
     }
 
     // ===================== 3. L'écriture =====================
@@ -342,5 +358,38 @@ class RetroCommissionAgentToolTest extends KernelTestCase
         $em->clear();
 
         return $ids;
+    }
+
+    /**
+     * LE CHEMIN SIMULÉ DOIT SAVOIR DE QUI ON PARLE.
+     *
+     * Sans clé d'API — en test comme sur un poste de développement — c'est le moteur simulé
+     * qui route, et il n'a que des motifs. Rendre la liste de TOUS les agents à qui demande
+     * la rétro de Serge SULA serait une réponse plausible et hors sujet : la pire espèce,
+     * celle qu'on ne vérifie pas.
+     */
+    public function testLeCheminSimuleRetrouveLeNomDicte(): void
+    {
+        $ids = $this->semer();
+        $scope = $this->scope($ids['gestionnaireId'], $ids['entrepriseId']);
+        $outil = $this->lecture();
+
+        $args = $outil->match('Peux-tu me faire le décompte de la rétrocommission due à l\'agent Serge SULA ?', $scope);
+        self::assertSame('Serge SULA', $args['beneficiaire'] ?? null);
+        self::assertSame('agent', $args['type'] ?? null);
+
+        $args = $outil->match('détaille la rétrocommission du partenaire SUNU Courtage affaire par affaire', $scope);
+        self::assertSame('SUNU Courtage', $args['beneficiaire'] ?? null);
+        self::assertSame('partenaire', $args['type'] ?? null);
+        self::assertSame('par_ligne', $args['detail'] ?? null);
+
+        $args = $outil->match('répartis-moi la rétrocommission de l\'agent Serge SULA par assureur', $scope);
+        self::assertSame('par_axe', $args['detail'] ?? null);
+        self::assertSame('assureur', $args['axe'] ?? null);
+
+        // « À QUI dois-je ? » ne nomme personne : y voir un bénéficiaire fermerait la
+        // question au lieu d'y répondre.
+        $args = $outil->match('à qui dois-je de la rétrocommission ?', $scope);
+        self::assertArrayNotHasKey('beneficiaire', $args ?? []);
     }
 }

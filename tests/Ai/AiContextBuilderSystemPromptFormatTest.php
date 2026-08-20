@@ -5,6 +5,8 @@ namespace App\Tests\Ai;
 use App\Ai\AiContextBuilder;
 use App\Ai\AiRequest;
 use App\Ai\Scope\AiScope;
+use App\Ai\Trousse\Phase;
+use App\Ai\Trousse\Trousse;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -276,5 +278,46 @@ class AiContextBuilderSystemPromptFormatTest extends KernelTestCase
         // et l'utilisateur lit deux fois la même liste.
         $this->assertStringContainsString('DÉJÀ vu son programme du jour', $prompt);
         $this->assertStringContainsString('plan_du_jour', $prompt);
+    }
+
+    /**
+     * UN AGENT N'EST PAS UN INTERMÉDIAIRE — dit à la phase de COMPRÉHENSION.
+     *
+     * L'INCIDENT (capture du 2026-08-20). « Fais-moi le décompte de la rétrocommission due
+     * à l'agent Serge SULA » n'a jamais atteint le moindre outil : la compréhension, dont
+     * le seul vocabulaire de personne-qui-apporte-des-affaires est « Intermédiaires », a
+     * cherché ce nom parmi les partenaires, n'a rien trouvé, et a rendu la demande « peu
+     * claire ». Or l'étape suivante savait parfaitement répondre.
+     *
+     * Les agents relèvent de la gestion des invités : ils n'ont pas de rubrique, et il
+     * n'est pas question de leur en donner une pour ce seul motif. C'est donc le PROMPT
+     * qui doit dire que leur absence du menu n'est pas une absence tout court.
+     */
+    public function testLePromptDeComprehensionDistingueLAgentDeLIntermediaire(): void
+    {
+        static::bootKernel();
+        $builder = static::getContainer()->get(AiContextBuilder::class);
+
+        $request = new AiRequest(
+            systemContext: [
+                'assistantNom'   => 'Ket',
+                'entrepriseNom'  => 'PHPUnit Format SARL',
+                'perimetre'      => [],
+                'date'           => '2026-08-20',
+                'monnaie'        => 'USD',
+                'objetsAttaches' => [],
+            ],
+            messages: [],
+            scope: new AiScope(new Entreprise(), new Invite()),
+        );
+
+        $prompt = $builder->toSystemPrompt($request, Trousse::COMPREHENSION, Phase::COMPREHENSION);
+
+        $this->assertStringContainsString('n\'est PAS un', $prompt);
+        $this->assertStringContainsString('« Intermédiaire »', $prompt);
+        // Et surtout la conclusion opérationnelle : ne pas transformer cette absence en
+        // question, sous peine de rejouer l'incident.
+        $this->assertStringContainsString('est CLAIRE', $prompt);
+        $this->assertStringContainsString('aucun intermédiaire ne', $prompt);
     }
 }

@@ -61,7 +61,7 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
     {
         return 'Enregistre le REVERSEMENT d\'une rétrocommission à un AGENT INTERNE du cabinet, '
             . 'sur une ou PLUSIEURS affaires à la fois. Fournis agentId et `lignes` : une entrée '
-            . 'par affaire réglée, chacune avec son avenantId (obtenu via retrocommissions_agent '
+            . 'par affaire réglée, chacune avec son avenantId (obtenu via retrocommissions '
             . 'en mode par_ligne) et, si l\'utilisateur le précise, son montant — sinon le solde '
             . 'EXIGIBLE de l\'affaire s\'applique. Plusieurs lignes = UN SEUL virement : elles '
             . 'partagent une référence de lot, et la comptabilité n\'émettra qu\'une écriture '
@@ -71,7 +71,7 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
             . 'par note de crédit, tout autre circuit. NE PAS utiliser ouvrir_dialogue avec '
             . 'l\'entité Paiement : Paiement = encaissement du courtier. L\'outil prépare un PLAN '
             . '+ BUDGET à valider ; après validation, c\'est TOI qui enregistres. Pour seulement '
-            . 'CONSULTER ce qui est dû ou déjà versé, utiliser retrocommissions_agent.';
+            . 'CONSULTER ce qui est dû ou déjà versé, utiliser retrocommissions.';
     }
 
     public function aiguillage(): string
