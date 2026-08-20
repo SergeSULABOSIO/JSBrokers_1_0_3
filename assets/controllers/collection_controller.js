@@ -71,12 +71,15 @@ export default class extends Controller {
         this.groupe = creerGroupe(this.parentFieldNameValue);
         this.boundTampon = this._surDemandeDeTampon.bind(this);
         document.addEventListener('app:collection.tampon-request', this.boundTampon);
+        this.boundIcone = this._surIconeChargee.bind(this);
+        document.addEventListener('app:icon.loaded', this.boundIcone);
         this.load();
     }
 
     disconnect() {
         document.removeEventListener('app:list.refresh-request', this.boundRefresh);
         document.removeEventListener('app:collection.tampon-request', this.boundTampon);
+        document.removeEventListener('app:icon.loaded', this.boundIcone);
         // NOUVEAU : S'assurer que l'infobulle est retirée si le contrôleur est déconnecté
         if (this.tooltipElement) {
             this.tooltipElement.remove();
@@ -433,11 +436,16 @@ export default class extends Controller {
                 searchInput.addEventListener('keyup', handler);
             }
 
+            // EN DIFFÉRÉ, le serveur ignore tout de la sélection en cours : elle vit dans
+            // le tampon. Sans ce report, rouvrir le sélecteur montrerait « non ciblé » sur
+            // des risques déjà choisis, et l'utilisateur les ajouterait deux fois.
+            if (this.differeValue) this._pickerRefleterLeTampon();
+
             // Focus initial (accessibilité : le focus entre dans la modale).
             const focusTarget = searchInput || this.pickerElement.querySelector('[role="dialog"]');
             if (focusTarget) focusTarget.focus();
         } catch (error) {
-            this._pickerNotify("Impossible d'ouvrir la liste des clients.", 'error');
+            this._pickerNotify("Impossible d'ouvrir la liste de sélection.", 'error');
         } finally {
             this.pickerOpening = false;
             if (triggerButton) {
@@ -821,49 +829,127 @@ export default class extends Controller {
     }
 
     /**
-     * Rend les lignes en attente.
+     * Rend les lignes en attente — AVEC LE MÊME HABILLAGE QUE LES LIGNES PERSISTÉES.
      *
-     * Volontairement SOBRE : libellé + « Retirer », et non la ligne enrichie du canevas
-     * (colonnes calculées, totaux). Reproduire celle-ci sans entité en base obligerait à
-     * réécrire _list_row.html.twig en JavaScript — deux rendus pour une même chose, qui
-     * divergeraient au premier changement. La mention « à enregistrer » dit clairement à
-     * l'utilisateur où en est sa saisie.
+     * Une ligne provisoire qui ne ressemblerait pas à une ligne enregistrée obligerait
+     * l'utilisateur à apprendre deux vocabulaires visuels pour la même chose. On reprend
+     * donc les classes de `_list_row.html.twig` et le tableau de `_list_manager.html.twig`,
+     * et les icônes viennent du MÊME dépôt (IconCanvasProvider) via le circuit d'icônes du
+     * cerveau — jamais d'un SVG recopié ici, qui divergerait au premier changement d'alias.
+     *
+     * Ce qui reste différent, et doit l'être : la mention « à enregistrer » et le pied qui
+     * annonce ce qui sera créé. L'utilisateur doit savoir que ces lignes n'existent encore
+     * nulle part — c'est la seule chose qu'une ligne persistée ne dit pas.
      * @private
      */
     _rendreTampon() {
         if (!this.hasListContainerTarget) return;
 
         const noeuds = this.groupe?.noeuds ?? [];
-        this.updateCount(compterLeTampon(this.groupe));
+        const total = compterLeTampon(this.groupe);
+        this.updateCount(total);
 
         if (noeuds.length === 0) {
             this.listContainerTarget.innerHTML =
-                '<div class="text-muted small p-2">Aucun élément pour l\'instant. Ce que vous ajouterez ici sera créé à l\'enregistrement de la fiche.</div>';
+                '<div class="text-muted small p-3">Aucun élément pour l\'instant. Ce que vous ajouterez ici sera créé à l\'enregistrement de la fiche.</div>';
             return;
         }
 
+        const libelleRetrait = this.element.dataset.collectionDeleteActionLabelValue || 'Retirer';
         const lignes = noeuds.map((noeud) => {
             const descendants = compterLeTampon({ noeuds: [noeud] }) - 1;
             const detail = descendants > 0
-                ? ` <span class="badge bg-secondary">+${descendants}</span>`
+                ? ` <span class="badge bg-secondary align-middle">+${descendants}</span>`
                 : '';
 
+            // Mêmes classes que _list_row.html.twig : l'œil ne doit voir aucune couture.
             return `
-                <tr data-item-id="${noeud.cle}">
-                    <td class="align-middle">${this._echapper(noeud.libelle)}${detail}
-                        <span class="text-muted small ms-2">à enregistrer</span></td>
-                    <td class="text-end">
-                        <button type="button" class="btn btn-sm btn-link text-danger"
-                                data-action="click->collection#deleteItem">Retirer</button>
+                <tr data-item-id="${noeud.cle}"
+                    class="element-a-encadrer parent-a-options align-middle collection-ligne-en-attente"
+                    data-action="mouseenter->collection#showRowActions mouseleave->collection#hideRowActions">
+                    <td class="align-middle">
+                        <span class="fw-semibold">${this._echapper(noeud.libelle)}</span>${detail}
+                        <span class="collection-chip-attente ms-2">à enregistrer</span>
+                    </td>
+                    <td class="text-end pe-3">
+                        <div class="list-row-actions-container" data-collection-target="rowActions">
+                            <button type="button"
+                                    class="btn btn-sm btn-light list-row-action-btn list-row-action-btn--danger shadow-sm border-0"
+                                    title="${libelleRetrait}"
+                                    aria-label="${libelleRetrait} « ${this._echapper(noeud.libelle)} »"
+                                    data-action="click->collection#deleteItem">
+                                <span data-icone-retrait></span>
+                            </button>
+                        </div>
                     </td>
                 </tr>`;
         }).join('');
 
         this.listContainerTarget.innerHTML = `
-            <table class="table table-sm table-enhanced mb-1"><tbody>${lignes}</tbody></table>
-            <div class="text-muted small px-2 pb-2">
-                ${compterLeTampon(this.groupe)} élément(s) seront créés à l'enregistrement de la fiche.
-            </div>`;
+            <table class="table table-hover table-sm table-enhanced" aria-label="Éléments en attente d'enregistrement">
+                <tbody class="table-group-divider">${lignes}</tbody>
+            </table>
+            <p class="collection-pied-attente" role="status">
+                ${total} élément(s) seront créés à l'enregistrement de la fiche.
+            </p>`;
+
+        this._demanderIconeDeRetrait();
+    }
+
+    /**
+     * L'icône de retrait, prise au dépôt d'icônes de l'application.
+     *
+     * Elle transite par le cerveau (`ui:icon.request` → `app:icon.loaded`), comme partout
+     * ailleurs : c'est ce qui garantit qu'une ligne en attente et une ligne enregistrée
+     * montrent la MÊME icône, y compris le jour où l'alias changera.
+     * @private
+     */
+    _demanderIconeDeRetrait() {
+        if (this.iconeRetraitHtml) {
+            this._poserIconeDeRetrait();
+            return;
+        }
+        this.requesterIdIcone = `${this.element.id}-retrait`;
+        this.notifyCerveau('ui:icon.request', {
+            iconName: this.element.dataset.collectionDeleteActionIconValue || 'lucide:trash-2',
+            iconSize: 20,
+            requesterId: this.requesterIdIcone,
+        });
+    }
+
+    /** @private */
+    _surIconeChargee(event) {
+        const { html, requesterId } = event.detail || {};
+        if (requesterId !== this.requesterIdIcone || !html) return;
+
+        this.iconeRetraitHtml = html;
+        this._poserIconeDeRetrait();
+    }
+
+    /** @private */
+    _poserIconeDeRetrait() {
+        this.listContainerTarget?.querySelectorAll('[data-icone-retrait]').forEach((hote) => {
+            if (!hote.innerHTML.trim()) hote.innerHTML = this.iconeRetraitHtml;
+        });
+    }
+
+    /**
+     * Reporte sur le sélecteur ce qui attend déjà dans le tampon.
+     *
+     * Le serveur rend le catalogue sans rien savoir de la sélection en cours — elle n'existe
+     * qu'ici. Sans ce report, rouvrir le sélecteur afficherait « non ciblé » sur des risques
+     * déjà choisis, et l'utilisateur les ajouterait une seconde fois.
+     * @private
+     */
+    _pickerRefleterLeTampon() {
+        const dejaChoisis = new Set((this.groupe?.noeuds ?? [])
+            .filter((n) => n.nature === 'rattachement')
+            .map((n) => String(n.idCible)));
+
+        this.pickerElement?.querySelectorAll('[data-picker-row]').forEach((ligne) => {
+            const id = ligne.dataset.pickerId ?? ligne.dataset.clientId;
+            if (dejaChoisis.has(String(id))) this._pickerSetRowState(ligne, 'current');
+        });
     }
 
     /** Le libellé vient d'une saisie utilisateur : il ne doit jamais être interprété. */

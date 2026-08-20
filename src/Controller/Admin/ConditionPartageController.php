@@ -112,13 +112,27 @@ class ConditionPartageController extends AbstractController
     // priorité explicite vaut mieux qu'un ordre de déclaration, qu'un déplacement de
     // méthode suffirait à casser en silence.
     #[Route('/api/{id}/risque-picker', name: 'api.risque_picker', requirements: ['id' => Requirement::DIGITS], methods: ['GET'], priority: 10)]
-    public function risquePicker(ConditionPartage $conditionPartage): Response
+    public function risquePicker(int $id): Response
     {
         if (!$this->mayAccessEntity(ConditionPartage::class, Invite::ACCESS_MODIFICATION)) {
             throw $this->createAccessDeniedException("Modification des conditions de partage hors de votre périmètre d'accès.");
         }
         $entreprise = $this->getEntreprise();
-        if ($entreprise === null || $conditionPartage->getEntreprise()?->getId() !== $entreprise->getId()) {
+        if ($entreprise === null) {
+            throw $this->createNotFoundException("Espace de travail introuvable.");
+        }
+
+        // ID 0 = LA CONDITION N'EXISTE PAS ENCORE. On sert quand même le catalogue :
+        // en création, les risques choisis attendent dans le tampon du navigateur et
+        // seront rattachés après l'enregistrement. Refuser ici rendrait la collection
+        // inutilisable au moment précis où l'utilisateur en a besoin. Même tolérance
+        // que findParentOrNew() pour les listes de collection.
+        $conditionPartage = $id === 0
+            ? new ConditionPartage()
+            : $this->em->getRepository(ConditionPartage::class)->find($id);
+
+        if ($conditionPartage === null
+            || ($id !== 0 && $conditionPartage->getEntreprise()?->getId() !== $entreprise->getId())) {
             throw $this->createNotFoundException("Condition de partage introuvable dans cet espace de travail.");
         }
 
