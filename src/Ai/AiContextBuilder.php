@@ -949,6 +949,12 @@ class AiContextBuilder
 
         VOCABULAIRE DES ÉCRANS — nomme les objets comme l'utilisateur les voit :
         {$this->vocabulaireDesEcrans($request->scope)}
+        Un AGENT (apporteur, collaborateur interne, salarié du cabinet) n'est PAS un
+        « Intermédiaire » : l'intermédiaire est une société EXTERNE, l'agent est une personne
+        de la maison. Les agents n'ont pas de rubrique ci-dessus et ne se cherchent donc pas
+        avec tes outils — l'étape suivante les retrouve par leur NOM. Une demande qui nomme un
+        agent est CLAIRE : ne la renvoie jamais en question au motif qu'aucun intermédiaire ne
+        porte ce nom.
 
         PARCOURS DE SAISIE du métier (une demande qui en amorce un doit le NOMMER) :
         {$this->catalogueDesParcours()}{$ligneFichiers}

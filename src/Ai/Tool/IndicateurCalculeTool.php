@@ -56,6 +56,16 @@ final class IndicateurCalculeTool implements AiToolInterface
         'ConditionPartage'     => 'conditionPartageCible',
     ];
 
+    /**
+     * Libellés des cibles qui n'ont pas de rubrique dans le menu — elles ne figurent donc
+     * pas dans libellesEntites(), sans être pour autant hors de portée du moteur
+     * d'indicateurs. Sert à NOMMER l'objet dans un refus : « Invite » ne dit rien à
+     * personne.
+     */
+    private const LIBELLES_HORS_MENU = [
+        'Invite' => 'Agents et invités du cabinet',
+    ];
+
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly CanvasHelper $canvasHelper,
@@ -186,8 +196,17 @@ final class IndicateurCalculeTool implements AiToolInterface
             return $this->lireIndicateur($code, $indicateur, $options, $scope, 'Entreprise', (string) $scope->entreprise->getNom());
         }
 
+        // UNE CIBLE DÉCLARÉE N'EST PAS BARRÉE PAR L'ABSENCE DE RUBRIQUE.
+        //
+        // Le menu ne montre pas tout : Invite est gouverné à part, par le droit de gestion
+        // des invités, et ne figure donc dans aucun libellé d'écran. Exiger ce libellé
+        // rendait la ligne 'Invite' de CIBLES INATTEIGNABLE — « la commission apportée par
+        // tel agent » répondait INTROUVABLE alors que le moteur sait parfaitement la
+        // calculer. La garde ne bouge pas pour autant : c'est canRead(), plus bas, qui
+        // tranche, et pour Invite il exige toujours le privilège de gestion.
         $labels = $this->accessResolver->libellesEntites();
-        if (!isset($labels[$shortName])) {
+        $libelle = $labels[$shortName] ?? (self::LIBELLES_HORS_MENU[$shortName] ?? null);
+        if ($libelle === null) {
             return AiToolResult::introuvable($shortName);
         }
         if (!isset(self::CIBLES[$shortName])) {
@@ -200,7 +219,7 @@ final class IndicateurCalculeTool implements AiToolInterface
 
         // FAIL-CLOSED : l'indicateur d'une entité est une donnée de cette entité.
         if (!$this->accessResolver->canRead($scope->invite, $shortName)) {
-            return AiToolResult::horsPerimetre($labels[$shortName]);
+            return AiToolResult::horsPerimetre($libelle);
         }
 
         $fqcn = 'App\\Entity\\' . $shortName;
@@ -217,18 +236,18 @@ final class IndicateurCalculeTool implements AiToolInterface
         } elseif ($cible !== '' && $displayField !== null) {
             $criteria = [$displayField => ['operator' => 'LIKE', 'value' => $cible, 'mode' => 'contains']];
         } else {
-            return AiToolResult::introuvable($labels[$shortName]);
+            return AiToolResult::introuvable($libelle);
         }
 
         $result = $this->searchService->search($fqcn, $criteria, $scope->entreprise, null, 1, self::MAX_CANDIDATS);
         $entities = ($result['status']['code'] ?? 500) === 200 ? $result['data'] : [];
         if ($entities === []) {
-            return AiToolResult::introuvable(sprintf('%s « %s »', $labels[$shortName], $cible !== '' ? $cible : '#' . $id));
+            return AiToolResult::introuvable(sprintf('%s « %s »', $libelle, $cible !== '' ? $cible : '#' . $id));
         }
         if (count($entities) > 1) {
             return AiToolResult::ok([
                 'entite'    => $shortName,
-                'libelle'   => $labels[$shortName],
+                'libelle'   => $libelle,
                 'ambigu'    => true,
                 'candidats' => array_map(
                     fn (object $e) => ['id' => $e->getId(), 'libelle' => $this->libelleur->libelle($e, $displayField)],

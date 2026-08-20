@@ -82,8 +82,10 @@ mise en place). Tant qu'une proposition n'a **aucun avenant**, ce n'est qu'un **
 - Saturation / risques manquants : `saturation_portefeuille` (client ou portefeuille).
 - Renouvellements à venir : `vigie_echeances` (volet renouvellements).
 - Primes impayées, commissions à recouvrer, rétros de PARTENAIRES à reverser : `suivi_impayes`.
-- Rétrocommissions des AGENTS internes (dues, payées, solde, détail affaire par affaire) :
-  `retrocommissions_agent` ; pour en verser une : `signaler_reversement_retro_agent`.
+- Rétrocommissions des AGENTS internes ET des PARTENAIRES externes (dues, payées, solde,
+  exigible, détail affaire par affaire, ventilation par axe) : `retrocommissions` — un NOM
+  suffit à désigner le bénéficiaire. Pour en verser une à un agent :
+  `signaler_reversement_retro_agent`.
 - Commission générée / encaissée / exigible : `indicateur_calcule`.
 - Bordereaux et facturation en lot : rubrique Bordereaux → Note (`ouvrir_rubrique`, `exporter_etat`).
 - Devoir fiscal (TVA) : `document_comptable`.
