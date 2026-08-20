@@ -46,7 +46,7 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Fiche piste",
-                "description" => "Vous qualifiez une opportunité commerciale : client, risque visé, potentiel de prime et de commission, apporteurs impliqués. La piste structure la prospection et prépare les cotations à venir.",
+                "description" => "Vous qualifiez une opportunité commerciale : client, risque visé, potentiel de prime et de commission. Vous y désignez aussi qui se partage cette commission — l'intermédiaire qui a apporté l'affaire, les agents du cabinet rémunérés dessus, et les conditions qui remplacent leurs taux habituels pour cette affaire seulement.",
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
@@ -60,7 +60,7 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
                 "primePotentielle"                 => "action:count",
                 "commissionPotentielle"            => "action:count",
                 "partenaire"                       => "partenaire",
-                "conditionsPartageAgent"           => "condition",
+                "conditionsPartageAgent"           => "utilisateur",
                 "conditionsPartageExceptionnelles" => "condition",
                 "cotations"                        => "cotation",
                 "taches"                           => "tache",
@@ -92,7 +92,16 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
                     ['width' => 12, 'champs' => ['descriptionDuRisque']]
                 ]
             ],
+            // LE CLIENT NE SE REDEMANDE PAS EN MODIFICATION.
+            //
+            // Une affaire appartient à un client dès sa création, et on ne rouvre pas sa
+            // fiche pour en changer : on y travaille les autres champs. Laisser le champ
+            // occuper toute une rangée en tête — développé en carte, avec les chiffres du
+            // client — c'est poser une question dont la réponse est déjà donnée, avant
+            // celles qui comptent. Il reste rendu, donc porteur de sa valeur, mais masqué,
+            // et le client est rappelé parmi les faits en tête du dialogue.
             [
+                'hidden' => !$isParentNew,
                 'colonnes' => [
                     ['width' => 12, 'champs' => ['client']]
                 ]
@@ -115,24 +124,45 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
                     ['width' => 4, 'champs' => ['commissionPotentielle']]
                 ]
             ],
+            // LE PARTAGE DES REVENUS, D'UN SEUL TENANT.
+            //
+            // Trois blocs traitent du même sujet — qui se partage la commission — et se
+            // suivaient sans que rien ne le dise. L'intertitre les rassemble, et les deux
+            // familles de bénéficiaires se lisent côte à côte : l'externe et l'interne.
+            // Les conditions propres à l'affaire, elles, restent en dessous : elles ne
+            // désignent pas un bénéficiaire, elles modifient une règle.
+            //
+            // Les champs sont explicitement dans le layout — sans quoi ils tomberaient en
+            // bas du formulaire via render_rest, là où personne ne les cherche.
             [
+                'group_title' => "Partage des revenus de cette affaire",
                 'colonnes' => [
-                    ['width' => 12, 'champs' => ['partenaire']]
-                ]
-            ],
-            // Rattachement des conditions d'AGENTS INTERNES à cette affaire, juste sous
-            // les partenaires externes : les deux désignent qui se partage la commission.
-            // Explicitement dans le layout — sans quoi le champ tombait en bas du
-            // formulaire via render_rest, là où personne ne le cherche.
-            [
-                'colonnes' => [
-                    ['width' => 12, 'champs' => ['conditionsPartageAgent']]
+                    ['width' => 6, 'champs' => ['partenaire']],
+                    ['width' => 6, 'champs' => ['conditionsPartageAgent']],
                 ]
             ],
         ];
 
         $collections = [
-            ['fieldName' => 'conditionsPartageExceptionnelles', 'entityRouteName' => 'conditionpartage', 'formTitle' => 'Conditions de partage', 'parentFieldName' => 'piste'],
+            [
+                'fieldName' => 'conditionsPartageExceptionnelles',
+                'entityRouteName' => 'conditionpartage',
+                'formTitle' => 'Conditions de partage',
+                'parentFieldName' => 'piste',
+                // SANS BÉNÉFICIAIRE, CE BLOC N'A AUCUN OBJET.
+                //
+                // Une affaire sans intermédiaire ET sans agent rémunéré n'a personne à qui
+                // rétrocéder : y proposer des conditions de partage demande à l'utilisateur
+                // de comprendre seul pourquoi rien n'y produit d'effet. Le bloc reparaît dès
+                // qu'un bénéficiaire est désigné, sans recharger la fiche.
+                'visibility_conditions' => [[
+                    'operator' => 'any',
+                    'conditions' => [
+                        ['field' => 'partenaire', 'operator' => 'not_empty'],
+                        ['field' => 'conditionsPartageAgent', 'operator' => 'not_empty'],
+                    ],
+                ]],
+            ],
             ['fieldName' => 'cotations', 'entityRouteName' => 'cotation', 'formTitle' => 'Cotation', 'parentFieldName' => 'piste', 'totalizableField' => 'primeTotale'],
             ['fieldName' => 'taches', 'entityRouteName' => 'tache', 'formTitle' => 'Tâches', 'parentFieldName' => 'piste'],
             ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'piste'],

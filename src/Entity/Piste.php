@@ -349,7 +349,33 @@ class Piste implements OwnerAwareInterface
 
     public function setPartenaire(?Partenaire $partenaire): static
     {
+        $ancien = $this->partenaire;
         $this->partenaire = $partenaire;
+
+        // L'INTERMÉDIAIRE CHANGE : SES CONDITIONS PROPRES LE SUIVENT.
+        //
+        // Une condition propre à cette affaire qui vise « l'intermédiaire » nomme en base
+        // un partenaire précis. Le calcul, lui, ne lit pas ce bénéficiaire : il prend la
+        // première condition de l'affaire qui vise le risque. Sans ce report, une condition
+        // continuerait donc de NOMMER l'ancien intermédiaire à l'écran tout en s'appliquant
+        // au nouveau — l'écran et le calcul diraient deux choses différentes.
+        //
+        // La règle est posée dans le setter pour valoir sur TOUS les chemins d'écriture :
+        // formulaire, assistant IA, reconduction.
+        if ($partenaire !== null && $ancien !== $partenaire) {
+            foreach ($this->conditionsPartageExceptionnelles as $condition) {
+                // Une condition d'agent ne regarde pas l'intermédiaire : y toucher
+                // poserait deux bénéficiaires et romprait l'invariant.
+                if ($condition->estPourAgent()) {
+                    continue;
+                }
+                $condition->setPartenaire($partenaire);
+            }
+        }
+
+        // Retirer l'intermédiaire ne détruit RIEN : les conditions gardent le bénéficiaire
+        // qu'elles nomment. Les effacer serait supprimer une donnée saisie sans le dire ;
+        // c'est à l'utilisateur de les retirer s'il ne les veut plus.
 
         return $this;
     }

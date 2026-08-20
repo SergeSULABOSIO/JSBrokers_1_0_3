@@ -3,6 +3,7 @@
 namespace App\Services\Canvas\Provider\Form;
 
 use App\Entity\ConditionPartage;
+use App\Form\ConditionPartageType;
 use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -57,6 +58,7 @@ class ConditionPartageFormCanvasProvider implements FormCanvasProviderInterface
             "field_icons" => [
                 "documents" => "document",
                 "nom"           => "action:edit",
+                "beneficiaireType" => "action:options",
                 "agent"         => "invite",
                 "taux"          => "action:count",
                 "seuil"         => "action:count",
@@ -90,9 +92,35 @@ class ConditionPartageFormCanvasProvider implements FormCanvasProviderInterface
         // Absent dès que la condition appartient à un PARTENAIRE : la question de l'agent
         // ne se pose pas, et le FormType ne déclare alors même pas le champ.
         if ($object->getPartenaire() === null) {
-            array_splice($layout, 1, 0, [
-                ["couleur_fond" => "white", "colonnes" => [["champs" => ["agent"]]]],
-            ]);
+            // LE CHOIX DU BÉNÉFICIAIRE, puis le sélecteur qu'il commande.
+            //
+            // Sur une condition qui appartient à une AFFAIRE, la question se pose : la part
+            // revient-elle à l'intermédiaire de l'affaire, ou à un agent du cabinet ? Le
+            // FormType ne déclare le champ que dans ce cas — d'où la garde ci-dessous, qui
+            // évite d'annoncer au canevas un champ que le formulaire ne rendra pas.
+            $rangees = [];
+
+            if ($object->getPiste() !== null) {
+                $rangees[] = [
+                    "couleur_fond" => "white",
+                    "colonnes" => [["champs" => ["beneficiaireType"]]],
+                ];
+            }
+
+            // Le sélecteur d'agent ne paraît que sur le second choix — par le moteur
+            // DÉCLARATIF déjà en place, jamais par un contrôleur dédié qui ferait doublon.
+            // Hors affaire (fiche d'un agent), aucune condition : il est toujours visible.
+            $champAgent = ['field_code' => 'agent'];
+            if ($object->getPiste() !== null) {
+                $champAgent['visibility_conditions'] = [[
+                    'field' => 'beneficiaireType',
+                    'operator' => 'in',
+                    'value' => [ConditionPartageType::BENEFICIAIRE_AGENT],
+                ]];
+            }
+            $rangees[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$champAgent]]]];
+
+            array_splice($layout, 1, 0, $rangees);
         }
 
         // LES RISQUES CIBLES NE PARAISSENT QUE S'ILS ONT UN OBJET.

@@ -3,6 +3,7 @@
 namespace App\Form;
 
 use App\Entity\ConditionPartage;
+use App\Entity\Invite;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -13,9 +14,19 @@ use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\PercentType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
 
 class ConditionPartageType extends AbstractType
 {
+    /**
+     * Les deux réponses possibles à « cette part revient à qui ? », quand la condition
+     * appartient à une AFFAIRE. Ailleurs — sur la fiche d'un intermédiaire ou d'un agent —
+     * le parent a déjà tranché et la question ne se pose pas.
+     */
+    public const BENEFICIAIRE_INTERMEDIAIRE = 'intermediaire';
+    public const BENEFICIAIRE_AGENT = 'agent';
+
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
         private TranslatorInterface $translatorInterface
@@ -171,17 +182,119 @@ class ConditionPartageType extends AbstractType
         // Le champ ABSENT du formulaire est aussi un garde-fou : une valeur soumise
         // malgré tout est simplement ignorée par Symfony.
         if ($condition?->getPartenaire() === null) {
-            $builder->add('agent', InviteAutocompleteField::class, [
+            $options = [
                 'label' => "Agent bénéficiaire",
-                'help' => "L'agent du cabinet à qui cette part est rétrocédée. Laisser vide pour un partenaire externe.",
+                'help' => "L'agent du cabinet à qui cette part est rétrocédée.",
                 'required' => false,
                 'attr' => [
                     'placeholder' => "Agent bénéficiaire",
                 ],
+            ];
+
+            // UNE SEULE RÉPONSE POSSIBLE SE DONNE, ELLE NE SE DEMANDE PAS.
+            //
+            // Quand l'affaire ne rémunère qu'un seul agent, lui demander lequel revient à
+            // faire chercher une information que l'écran possède déjà. Avec plusieurs
+            // agents rattachés, en revanche, aucune réponse ne s'impose : le choix reste
+            // entier plutôt que deviné (Bastien & Scapin > Charge de travail).
+            $agentUnique = $this->agentUniqueDeLAffaire($condition);
+            if ($agentUnique !== null && $condition?->getId() === null && $condition?->getAgent() === null) {
+                $options['data'] = $agentUnique;
+            }
+
+            $builder->add('agent', InviteAutocompleteField::class, $options);
+        }
+
+        // LA QUESTION POSÉE FRANCHEMENT — seulement quand elle a un sens.
+        //
+        // Une condition qui appartient à une AFFAIRE peut rétrocéder à l'intermédiaire de
+        // cette affaire, ou à un agent du cabinet. Le formulaire n'exposait jamais le champ
+        // `partenaire` : ouvert depuis une piste, il ne proposait donc que `agent`, et son
+        // aide affirmait « laisser vide pour un partenaire externe » — ce qui était faux,
+        // puisque vide viole l'invariant et fait refuser l'écriture en 422. Une condition
+        // pour l'intermédiaire était tout simplement impossible à créer depuis une affaire.
+        //
+        // Le choix est donc explicite, et il est APPLIQUÉ (ci-dessous) plutôt que deviné
+        // d'un champ laissé vide — c'est cette implicitude qui avait produit la confusion.
+        $piste = $condition?->getPiste();
+        if ($piste !== null && $condition?->getPartenaire() === null) {
+            $intermediaire = $piste->getPartenaire();
+
+            $choix = [];
+            // Sans intermédiaire sur l'affaire, l'option ne peut pas être honorée : on ne
+            // la propose pas, plutôt que de la laisser échouer plus tard.
+            if ($intermediaire !== null) {
+                $choix["L'intermédiaire de cette affaire (" . $intermediaire->getNom() . ')'] = self::BENEFICIAIRE_INTERMEDIAIRE;
+            }
+            $choix['Un agent interne'] = self::BENEFICIAIRE_AGENT;
+
+            $defaut = ($intermediaire === null || $condition?->estPourAgent())
+                ? self::BENEFICIAIRE_AGENT
+                : self::BENEFICIAIRE_INTERMEDIAIRE;
+
+            $builder->add('beneficiaireType', ChoiceType::class, [
+                'label' => "Cette part revient à",
+                'help' => "Une condition rétrocède à UN bénéficiaire : l'intermédiaire de l'affaire, "
+                    . "ou un agent du cabinet. Jamais aux deux.",
+                'mapped' => false,
+                'expanded' => true,
+                'required' => true,
+                'placeholder' => false,
+                'choices' => $choix,
+                'data' => $defaut,
             ]);
+
+            $builder->addEventListener(
+                FormEvents::POST_SUBMIT,
+                static function (FormEvent $event) use ($intermediaire): void {
+                    /** @var ConditionPartage $entite */
+                    $entite = $event->getData();
+                    $form = $event->getForm();
+                    if ($entite === null || !$form->has('beneficiaireType')) {
+                        return;
+                    }
+
+                    // On POSE le bénéficiaire au lieu de le déduire d'un champ vide :
+                    // l'invariant « exactement un » est ainsi satisfait par construction,
+                    // au lieu d'être découvert par un refus que rien n'expliquait.
+                    if ($form->get('beneficiaireType')->getData() === self::BENEFICIAIRE_INTERMEDIAIRE) {
+                        $entite->setPartenaire($intermediaire);
+                        $entite->setAgent(null);
+
+                        return;
+                    }
+
+                    $entite->setPartenaire(null);
+                },
+            );
         }
     }
 
+    /**
+     * L'unique agent rémunéré par cette affaire, s'il n'y en a qu'un.
+     *
+     * On lit les conditions d'agents RATTACHÉES à la piste : ce sont elles qui désignent
+     * qui, dans le cabinet, touche une part sur cette affaire. Deux conditions au profit
+     * du même agent ne font qu'un bénéficiaire — c'est le nombre d'AGENTS distincts qui
+     * décide, pas le nombre de lignes.
+     */
+    private function agentUniqueDeLAffaire(?ConditionPartage $condition): ?Invite
+    {
+        $piste = $condition?->getPiste();
+        if ($piste === null) {
+            return null;
+        }
+
+        $agents = [];
+        foreach ($piste->getConditionsPartageAgent() as $conditionDAgent) {
+            $agent = $conditionDAgent->getAgent();
+            if ($agent !== null) {
+                $agents[spl_object_id($agent)] = $agent;
+            }
+        }
+
+        return count($agents) === 1 ? reset($agents) : null;
+    }
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
