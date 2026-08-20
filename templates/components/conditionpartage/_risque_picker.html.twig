@@ -11,7 +11,7 @@
     et le même vocabulaire visuel pour l'utilisateur. Conforme /ergonomie-web (role=dialog,
     aria-modal, statut jamais porté par la seule couleur, Échap, focus) et /charte-couleurs.
 #}
-<div class="jsb-picker-overlay" data-picker-overlay data-picker-base="/admin/conditionpartage/api/{{ conditionPartage.id }}">
+<div class="jsb-picker-overlay" data-picker-overlay data-picker-base="/admin/conditionpartage/api/{{ conditionPartage.id|default(0) ?: 0 }}">
     <div class="jsb-picker-modal"
          role="dialog"
          aria-modal="true"
@@ -24,7 +24,7 @@
                 <span class="me-2 d-inline-flex" aria-hidden="true">
                     <twig:UX:Icon name="{{ resolve_icon_name('condition') }}" style="width:22px;height:22px;color:#0047AB;" />
                 </span>
-                <h5 id="jsb-picker-title" class="modal-title mb-0">Risques ciblés par «&nbsp;{{ conditionPartage.nom }}&nbsp;»</h5>
+                <h5 id="jsb-picker-title" class="modal-title mb-0">{{ conditionPartage.nom ? 'Risques ciblés par « ' ~ conditionPartage.nom ~ ' »' : 'Risques à cibler' }}</h5>
             </div>
             <button type="button" class="btn-close" data-picker-close aria-label="Fermer la fenêtre de sélection"></button>
         </div>
@@ -40,7 +40,7 @@
             <div class="jsb-picker-intro-text">
                 <p class="jsb-picker-intro-title">Sélection des risques concernés</p>
                 <p id="jsb-picker-desc" class="jsb-picker-intro-desc">
-                    Désignez les risques du catalogue que cette condition vise.
+                    Désignez les risques du catalogue que cette condition vise.{% if conditionPartage.id is null %} Votre sélection sera enregistrée en même temps que la fiche.{% endif %}
                     Un même risque peut être ciblé par <strong>plusieurs conditions</strong> :
                     l'ajouter ici ne le retire à aucune autre. «&nbsp;Retirer&nbsp;» le sort des
                     cibles <strong>sans le supprimer du catalogue</strong>, où il sert ailleurs.

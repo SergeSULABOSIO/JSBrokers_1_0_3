@@ -78,8 +78,6 @@ class PortefeuilleFormCanvasProvider implements FormCanvasProviderInterface
         // adapté aux portefeuilles de plusieurs dizaines de clients. Le « retrait » d'un client
         // pointe vers l'action de détachement (client.portefeuille = null), et non vers la
         // suppression du client (qui est une entité partagée).
-        // Pièces jointes de cette fiche.
-        $collections[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'portefeuille'];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, [
             [
                 'fieldName'       => 'clients',
@@ -100,6 +98,16 @@ class PortefeuilleFormCanvasProvider implements FormCanvasProviderInterface
                 // et affiche le total du portefeuille en entête. Volontairement SANS champ
                 // secondaire : une ligne épurée par client (nom + commission TTC).
                 'totalizableField' => 'montantTTC',
+            ],
+            // PIÈCES JOINTES DE CETTE FICHE. Elles étaient empilées dans une variable
+            // $collections qui n'était jamais transmise : le tableau littéral ci-dessus
+            // prenait sa place à l'appel, et la collection « documents » d'un portefeuille
+            // n'a donc jamais été rendue — sans erreur, sans trace, juste un bloc absent.
+            [
+                'fieldName' => 'documents',
+                'entityRouteName' => 'document',
+                'formTitle' => 'Document',
+                'parentFieldName' => 'portefeuille',
             ],
         ]);
 

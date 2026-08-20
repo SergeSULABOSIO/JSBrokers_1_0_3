@@ -5210,3 +5210,46 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 }
 .jsb-attach-retirer:hover, .jsb-attach-retirer:focus-visible { background: #fdf4f3; color: #c0392b; }
 
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   COLLECTION EN ATTENTE — les lignes saisies avant l'enregistrement de la fiche.
+
+   Elles reprennent l'habillage des lignes persistées (.table-enhanced, mêmes
+   classes de ligne et d'action, mêmes icônes) : un vocabulaire visuel unique pour
+   une même chose. Ne restent distincts que les deux signes qui disent l'état —
+   sans quoi l'utilisateur croirait sa saisie déjà enregistrée.
+
+   Le cobalt très clair est le ton du statut « nouveau » de la charte
+   (--bg-cobalt-subtle, comme .analysis-item-status-bar--new) : une information,
+   pas un avertissement. Réserver le jaune ou le rouge à ce qui va mal.
+   ───────────────────────────────────────────────────────────────────────────── */
+.collection-chip-attente {
+    /* PAS de .badge Bootstrap ici : la classe est forcée en bleu plein dans ce projet,
+       ce qui écrasait ces couleurs et rendait le mot illisible. Même parti pris que
+       .jsb-picker-chip, qui a rencontré le problème avant nous. */
+    display: inline-block;
+    background-color: var(--bg-cobalt-subtle, #e8f0fb);
+    color: var(--text-cobalt, #0047AB);
+    font-weight: 600;
+    font-size: 0.7rem;
+    line-height: 1.4;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    vertical-align: middle;
+    /* Le statut ne passe JAMAIS par la seule couleur : le mot « à enregistrer »
+       le porte aussi, pour qui ne distingue pas les teintes (WCAG 1.4.1). */
+}
+
+.collection-pied-attente {
+    margin: 0;
+    padding: 0.5rem 0.75rem 0.65rem;
+    color: var(--text-muted, #6c757d);
+    font-size: 0.8rem;
+    border-top: 1px solid var(--border-subtle, #e0e0e0);
+}
+
+/* Liseré cobalt discret : la ligne se distingue au premier coup d'œil sans cesser
+   de ressembler à une ligne de liste ordinaire. */
+.collection-ligne-en-attente > td:first-child {
+    box-shadow: inset 3px 0 0 var(--bg-cobalt-subtle, #e8f0fb);
+}
