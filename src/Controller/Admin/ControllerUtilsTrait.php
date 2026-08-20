@@ -255,6 +255,58 @@ trait ControllerUtilsTrait
      * Le code de champ $fieldCode est-il déjà présent dans le layout de formulaire ?
      * Les champs sont soit une chaîne, soit un tableau avec la clé 'field_code'.
      */
+    /**
+     * Masque, dans le layout, la rangée qui porte un champ donné.
+     *
+     * La rangée entière quand elle ne contient que lui — c'est le cas courant, et le
+     * gabarit sait déjà rendre `hidden` (le champ compte alors parmi les « faits » rappelés
+     * en tête du dialogue). Sinon, le seul champ, pour ne pas emporter ses voisins avec lui.
+     */
+    private function masquerLaRangeeDuChamp(array &$formLayout, string $fieldCode): void
+    {
+        foreach ($formLayout as $indexRangee => $rangee) {
+            $champsDeLaRangee = 0;
+            $porteLeChamp = false;
+
+            foreach (($rangee['colonnes'] ?? []) as $col) {
+                foreach (($col['champs'] ?? []) as $field) {
+                    $champsDeLaRangee++;
+                    $code = is_array($field) ? ($field['field_code'] ?? null) : $field;
+                    if ($code === $fieldCode) {
+                        $porteLeChamp = true;
+                    }
+                }
+            }
+
+            if (!$porteLeChamp) {
+                continue;
+            }
+
+            if ($champsDeLaRangee === 1) {
+                $formLayout[$indexRangee]['hidden'] = true;
+
+                return;
+            }
+
+            // Rangée partagée : on ne masque que le champ concerné, en normalisant sa
+            // déclaration (une chaîne devient une configuration) pour pouvoir lui poser
+            // l'attribut de rangée.
+            foreach (($rangee['colonnes'] ?? []) as $indexCol => $col) {
+                foreach (($col['champs'] ?? []) as $indexChamp => $field) {
+                    $code = is_array($field) ? ($field['field_code'] ?? null) : $field;
+                    if ($code !== $fieldCode) {
+                        continue;
+                    }
+                    $config = is_array($field) ? $field : ['field_code' => $field];
+                    $classe = trim(($config['options']['row_attr']['class'] ?? '') . ' d-none');
+                    $config['options']['row_attr']['class'] = $classe;
+                    $formLayout[$indexRangee]['colonnes'][$indexCol]['champs'][$indexChamp] = $config;
+                }
+            }
+
+            return;
+        }
+    }
     private function layoutHasField(array $formLayout, string $fieldCode): bool
     {
         foreach ($formLayout as $row) {
@@ -830,21 +882,34 @@ trait ControllerUtilsTrait
                 }
             }
 
-            // 2. On ajoute le champ au layout du formulaire pour qu'il soit rendu, mais masqué.
-            //    SAUF s'il figure déjà dans le layout du provider (ex. les formulaires
-            //    RolesEn* déclarent explicitement le champ « invite ») : sinon il serait
-            //    rendu deux fois → « Field has already been rendered ». L'entité est de
-            //    toute façon déjà pré-remplie (étape 1), le champ existant suffit.
-            if (isset($formCanvas['form_layout']) && is_array($formCanvas['form_layout'])
-                && !$this->layoutHasField($formCanvas['form_layout'], $parentFieldName)) {
-                $parentFieldConfig = [
-                    'field_code' => $parentFieldName,
-                    'options' => ['row_attr' => ['class' => 'd-none']] // Masque la ligne du formulaire.
-                ];
-                // On ajoute ce champ au début du layout.
-                array_unshift($formCanvas['form_layout'], [
-                    "colonnes" => [["champs" => [$parentFieldConfig]]]
-                ]);
+            // 2. LE PARENT EST CONNU : on ne le demande pas, on le rappelle.
+            //
+            // Ouvrir « Ajouter un contact » depuis la fiche d'un client ne laisse aucun
+            // doute sur le client concerné. Lui présenter malgré tout un champ « Client
+            // associé » — parfois développé en carte, avec les chiffres du client — c'est
+            // poser une question dont la réponse est déjà donnée, et occuper le haut du
+            // formulaire avec elle. Le parent reste rappelé en tête du dialogue, sous forme
+            // de fait (`parentContextFacts`), qui est sa place.
+            //
+            // Deux situations, un seul résultat :
+            //  - le provider ne déclare pas le champ → on l'injecte, masqué ;
+            //  - il le déclare (RolesEn* pour « invite », Contact pour « client »
+            //    ...) → on masque SA rangée, plutôt que d'en ajouter une seconde qui
+            //    provoquerait « Field has already been rendered ».
+            if (isset($formCanvas['form_layout']) && is_array($formCanvas['form_layout'])) {
+                if ($this->layoutHasField($formCanvas['form_layout'], $parentFieldName)) {
+                    $this->masquerLaRangeeDuChamp($formCanvas['form_layout'], $parentFieldName);
+                } else {
+                    // Le masquage passe par le DRAPEAU DE RANGÉE, seul honoré par le
+                    // gabarit. `row_attr` ne l'était pas : il n'est transmis à aucun des
+                    // deux chemins de rendu, si bien que le champ parent restait visible
+                    // — silencieusement, et depuis toujours. Le drapeau, lui, fait aussi
+                    // remonter le parent parmi les FAITS rappelés en tête du dialogue.
+                    array_unshift($formCanvas['form_layout'], [
+                        "hidden" => true,
+                        "colonnes" => [["champs" => [$parentFieldName]]]
+                    ]);
+                }
             }
         }
 

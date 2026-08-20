@@ -707,7 +707,13 @@ export default class extends Controller {
         // faire confirmer. On retire du tampon — avec tout son sous-arbre, car ses
         // propres éléments n'avaient d'existence que par elle.
         if (this.differeValue) {
-            retirerDuTampon(this.groupe, Number(itemId));
+            // Une ligne CRÉÉE porte la clé du tampon ; une ligne RATTACHÉE portait
+            // l'identifiant de l'entité avant d'être marquée. On accepte les deux plutôt
+            // que de supposer laquelle on a sous la main.
+            const cible = row.dataset.cibleId;
+            const noeud = this.groupe.noeuds.find((n) => String(n.cle) === String(itemId))
+                ?? this.groupe.noeuds.find((n) => cible !== undefined && String(n.idCible) === String(cible));
+            if (noeud) retirerDuTampon(this.groupe, noeud.cle);
             this._rendreTampon();
             return;
         }
@@ -857,6 +863,7 @@ export default class extends Controller {
         const lignesCreees = noeuds.filter((n) => n.nature === 'creation');
 
         await this._chargerLeCadre(idsChoisis);
+        this._marquerLesLignesRattachees();
         this._injecterLesLignes(lignesCreees);
         this._poserLePiedEnAttente(total);
     }
@@ -879,6 +886,35 @@ export default class extends Controller {
             this.listContainerTarget.innerHTML =
                 `<div class="alert alert-warning">Impossible d'afficher la liste : ${error.message}</div>`;
         }
+    }
+
+    /**
+     * Marque les lignes RATTACHÉES rendues par le serveur.
+     *
+     * Le serveur les rend comme des lignes ordinaires — il ignore qu'elles ne sont pas
+     * encore liées au parent, qui n'existe pas. Deux choses leur manquent donc : la
+     * pastille qui dit leur état, et surtout la CLÉ DU TAMPON. Leur `data-item-id` porte
+     * l'identifiant de l'entité choisie, si bien qu'un clic sur « Retirer » cherchait une
+     * clé qui n'existait pas et ne retirait rien — en silence.
+     * @private
+     */
+    _marquerLesLignesRattachees() {
+        const parId = new Map((this.groupe?.noeuds ?? [])
+            .filter((n) => n.nature === 'rattachement')
+            .map((n) => [String(n.idCible), n]));
+        if (parId.size === 0) return;
+
+        this.listContainerTarget.querySelectorAll('tbody > tr').forEach((ligne) => {
+            const noeud = parId.get(String(ligne.dataset.itemId));
+            if (!noeud) return;
+
+            // On garde l'id de l'entité à part : le rejeu en aura besoin, et le retrait
+            // s'appuiera dessus pour retrouver son nœud.
+            ligne.dataset.cibleId = ligne.dataset.itemId;
+            ligne.dataset.itemId = String(noeud.cle);
+            ligne.classList.add('collection-ligne-en-attente');
+            this._marquerEnAttente(ligne, noeud);
+        });
     }
 
     /**
