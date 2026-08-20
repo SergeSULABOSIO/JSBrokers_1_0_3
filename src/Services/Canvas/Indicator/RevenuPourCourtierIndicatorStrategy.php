@@ -220,6 +220,21 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
     private function premiereConditionApplicable(iterable $conditions, ?Risque $risque): ?ConditionPartage
     {
         foreach ($conditions as $condition) {
+            // UNE CONDITION D'AGENT NE PAIE PAS UN PARTENAIRE.
+            //
+            // Les deux natures de bénéficiaire cohabitent dans les conditions d'une affaire :
+            // rien n'empêche d'y saisir la part d'un agent interne. Sans ce filtre, une ligne
+            // « Alice 15 % » devenait candidate ICI, masquait la condition du partenaire et le
+            // payait au taux d'Alice — avant d'être recomptée par la cascade agent, qui lit
+            // délibérément la même collection. La même ligne alimentait deux circuits d'argent.
+            //
+            // Cette méthode ne sert QUE la part partenaire, et ses deux appelants (conditions
+            // de la piste, conditions du partenaire) demandent la même exclusion : c'est donc
+            // ici, et nulle part ailleurs, que le tri se fait.
+            if ($condition->estPourAgent()) {
+                continue;
+            }
+
             // Règle d'applicabilité centralisée sur l'entité (cf. ConditionPartage::sappliqueAuRisque),
             // partagée avec la reconduction du partage sur les avenants dérivés.
             if ($condition->sappliqueAuRisque($risque)) {

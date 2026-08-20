@@ -70,11 +70,6 @@ class PrechargementLotIndicateursTest extends KernelTestCase
              JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom = :nom',
             ['nom' => self::ENTREPRISE_NOM],
         );
-        $conn->executeStatement(
-            'DELETE pp FROM piste_partenaire pp JOIN piste p ON pp.piste_id = p.id
-             JOIN entreprise e ON p.entreprise_id = e.id WHERE e.nom = :nom',
-            ['nom' => self::ENTREPRISE_NOM],
-        );
         foreach ([
             'avenant', 'revenu_pour_courtier', 'type_revenu', 'chargement_pour_prime', 'cotation',
             'piste', 'client', 'partenaire', 'assureur', 'risque', 'groupe', 'portefeuille', 'invite',
@@ -170,7 +165,7 @@ class PrechargementLotIndicateursTest extends KernelTestCase
             ->setDescriptionDuRisque('Risque lot')->setExercice(2026)
             ->setClient($client)->setRisque($risque);
         $piste->setEntreprise($e)->setInvite($invite);
-        $piste->addPartenaire($partenaire);
+        $piste->setPartenaire($partenaire);
         $em->persist($piste);
 
         $cotation = (new Cotation())->setNom($nom)->setDuree(365);

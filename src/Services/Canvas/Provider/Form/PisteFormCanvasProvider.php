@@ -59,7 +59,7 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
                 "exercice"                         => "action:calendar",
                 "primePotentielle"                 => "action:count",
                 "commissionPotentielle"            => "action:count",
-                "partenaires"                      => "partenaire",
+                "partenaire"                       => "partenaire",
                 "conditionsPartageAgent"           => "condition",
                 "conditionsPartageExceptionnelles" => "condition",
                 "cotations"                        => "cotation",
@@ -117,7 +117,7 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
             ],
             [
                 'colonnes' => [
-                    ['width' => 12, 'champs' => ['partenaires']]
+                    ['width' => 12, 'champs' => ['partenaire']]
                 ]
             ],
             // Rattachement des conditions d'AGENTS INTERNES à cette affaire, juste sous

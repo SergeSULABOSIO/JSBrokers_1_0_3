@@ -141,17 +141,23 @@ class PisteType extends AbstractType
                 'required' => true,
                 'placeholder' => 'Sélectionner un risque',
             ])
-            ->add('partenaires', PartenaireAutocompleteField::class, [
+            // L'INTERMÉDIAIRE DE L'AFFAIRE — un seul, aligné sur ce que le moteur sait faire.
+            //
+            // Le champ acceptait plusieurs apporteurs alors que le calcul n'en retenait
+            // qu'un, pris au hasard d'une table de liaison sans ordre : l'écran promettait
+            // un partage que personne n'aurait su honorer.
+            ->add('partenaire', PartenaireAutocompleteField::class, [
                 'required' => false,
-                'label' => "Partenaires",
+                'label' => "Intermédiaire externe",
+                'help' => "L'apporteur de cette affaire. Sans lui, aucune commission n'est partagée. "
+                    . "Son taux habituel s'applique, sauf condition contraire ci-dessous.",
                 'class' => Partenaire::class,
                 'choice_label' => "nom",
-                'multiple' => true,
+                'multiple' => false,
                 'expanded' => false,
-                'by_reference' => false,
                 'autocomplete' => true,
                 'attr' => [
-                    'placeholder' => "Les intermédiaires",
+                    'placeholder' => "Choisir l'intermédiaire…",
                 ],
             ])
             // RATTACHEMENT (et non création) des conditions au profit d'agents INTERNES.

@@ -43,7 +43,7 @@ class DashboardDataProvider
              LEFT JOIN cot.piste p
              LEFT JOIN p.client cl
              LEFT JOIN p.risque r
-             LEFT JOIN p.partenaires par
+             LEFT JOIN p.partenaire par
              WHERE a.entreprise = :e AND a.renewalStatus = :status'
         )
         ->setParameter('e', $entreprise)
@@ -543,7 +543,9 @@ class DashboardDataProvider
         foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
             $piste = $avenant->getCotation()?->getPiste();
             if (!$piste) continue;
-            foreach ($piste->getPartenaires() as $partenaire) {
+            // UN SEUL INTERMÉDIAIRE PAR AFFAIRE. Cette boucle comptait le même avenant
+            // sous chaque partenaire listé, gonflant les totaux par axe.
+            if (($partenaire = $piste->getPartenaire()) !== null) {
                 $parId = $partenaire->getId();
                 if (!isset($grouped[$parId])) {
                     $grouped[$parId] = [
@@ -1005,7 +1007,7 @@ class DashboardDataProvider
              LEFT JOIN rpc.cotation cot
              LEFT JOIN cot.avenants avs
              LEFT JOIN cot.piste piste
-             LEFT JOIN piste.partenaires pars
+             LEFT JOIN piste.partenaire pars
              LEFT JOIN piste.client cli
              LEFT JOIN cli.partenaires cpars
              LEFT JOIN n.bordereau bord
@@ -1515,7 +1517,7 @@ class DashboardDataProvider
              LEFT JOIN arts.revenuFacture rpc
              LEFT JOIN rpc.cotation cot
              LEFT JOIN cot.piste piste
-             LEFT JOIN piste.partenaires pars
+             LEFT JOIN piste.partenaire pars
              LEFT JOIN piste.client cli
              LEFT JOIN cli.portefeuille pf
              WHERE n.id IN (:ids)'
@@ -1538,7 +1540,7 @@ class DashboardDataProvider
                 $piste = $art->getRevenuFacture()?->getCotation()?->getPiste();
                 if (!$piste) continue;
                 if ($axe === 'partenaire') {
-                    foreach ($piste->getPartenaires() as $par) {
+                    if (($par = $piste->getPartenaire()) !== null) {
                         $found[$par->getId()] = $par->getNom();
                     }
                 } elseif ($axe === 'client') {

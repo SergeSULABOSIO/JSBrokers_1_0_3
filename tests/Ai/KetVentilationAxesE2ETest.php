@@ -114,7 +114,7 @@ class KetVentilationAxesE2ETest extends KernelTestCase
         $piste = (new Piste())
             ->setNom('Piste CAF')->setTypeAvenant(0)->setDescriptionDuRisque('Test')->setExercice(self::ANNEE)
             ->setClient($client)->setRisque($risque)->setEntreprise($entreprise);
-        $piste->addPartenaire($partenaire);
+        $piste->setPartenaire($partenaire);
         $em->persist($piste);
 
         $cotation = (new Cotation())

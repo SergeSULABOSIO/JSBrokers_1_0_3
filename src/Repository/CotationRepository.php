@@ -183,9 +183,9 @@ class CotationRepository extends ServiceEntityRepository
     {
         if ($cotation) {
             if ($cotation->getPiste()) {
-                if (count($cotation->getPiste()->getPartenaires()) >= 1) {
+                if ($cotation->getPiste()->getPartenaire() !== null) {
                     // dd($cotation->getPiste()->getPartenaires()[0]);
-                    return $cotation->getPiste()->getPartenaires()[0];
+                    return $cotation->getPiste()->getPartenaire();
                 } else if (count($cotation->getPiste()->getClient()->getPartenaires()) != 0) {
                     return $cotation->getPiste()->getClient()->getPartenaires()[0];
                 }

@@ -74,11 +74,6 @@ class ConditionPartageSeuilTest extends KernelTestCase
     private function cleanUp(): void
     {
         $conn = $this->em()->getConnection();
-        $conn->executeStatement(
-            'DELETE pp FROM piste_partenaire pp JOIN piste p ON pp.piste_id = p.id
-             JOIN entreprise e ON p.entreprise_id = e.id WHERE e.nom = :nom',
-            ['nom' => self::ENTREPRISE_NOM],
-        );
         foreach ([
             'condition_partage', 'avenant', 'revenu_pour_courtier', 'type_revenu',
             'chargement_pour_prime', 'cotation', 'piste', 'client', 'partenaire', 'risque', 'invite',
@@ -153,7 +148,7 @@ class ConditionPartageSeuilTest extends KernelTestCase
                 ->setDescriptionDuRisque('Risque seuil')->setExercice((int) date('Y'))
                 ->setClient($client)->setRisque($risque);
             $piste->setEntreprise($entreprise)->setInvite($invite);
-            $piste->addPartenaire($partenaire);
+            $piste->setPartenaire($partenaire);
             $em->persist($piste);
 
             if ($porteur === 'piste') {

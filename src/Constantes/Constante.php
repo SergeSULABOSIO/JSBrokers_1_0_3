@@ -2722,9 +2722,9 @@ class Constante
     {
         if ($cotation != null) {
             if ($cotation->getPiste() != null) {
-                if (count($cotation->getPiste()->getPartenaires()) != 0) {
+                if ($cotation->getPiste()->getPartenaire() !== null) {
                     // dd($cotation->getPiste()->getPartenaires()[0]);
-                    return $cotation->getPiste()->getPartenaires()[0];
+                    return $cotation->getPiste()->getPartenaire();
                 } else if (count($cotation->getPiste()->getClient()->getPartenaires()) != 0) {
                     return $cotation->getPiste()->getClient()->getPartenaires()[0];
                 }
@@ -2737,7 +2737,7 @@ class Constante
     {
         if ($cotation) {
             if ($cotation->getPiste()) {
-                if (count($cotation->getPiste()->getPartenaires()) >= 1) {
+                if ($cotation->getPiste()->getPartenaire() !== null) {
                     // dd($cotation->getPiste()->getPartenaires()[0]);
                     // dd($cotation->getPiste()->getConditionsPartageExceptionnelles()[0]);
                     return count($cotation->getPiste()->getConditionsPartageExceptionnelles()) != 0;

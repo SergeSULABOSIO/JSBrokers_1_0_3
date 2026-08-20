@@ -59,7 +59,7 @@ class PisteEntityCanvasProvider implements EntityCanvasProviderInterface
                     ["code" => "cotations", "intitule" => "Cotations", "type" => "Collection", "targetEntity" => Cotation::class, "displayField" => "nom"],
                     ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
                     ["code" => "taches", "intitule" => "Tâches", "type" => "Collection", "targetEntity" => Tache::class, "displayField" => "description"],
-                    ["code" => "partenaires", "intitule" => "Partenaires", "type" => "Collection", "targetEntity" => Partenaire::class, "displayField" => "nom"],
+                    ["code" => "partenaire", "intitule" => "Intermédiaire", "type" => "Relation", "targetEntity" => Partenaire::class, "displayField" => "nom"],
                     ["code" => "conditionsPartageExceptionnelles", "intitule" => "Conditions de Partage (Except.)", "type" => "Collection", "targetEntity" => ConditionPartage::class, "displayField" => "nom"],
                 ],
                 $this->getSpecificIndicators()

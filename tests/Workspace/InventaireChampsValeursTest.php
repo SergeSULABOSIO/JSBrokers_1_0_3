@@ -217,8 +217,17 @@ class InventaireChampsValeursTest extends WebTestCase
         $champs = $this->parChamp($this->service->inventaireChamps('Piste', $this->scope()));
 
         $this->assertArrayHasKey('avenantDeBase', $champs, 'OneToOne propriétaire : écrivable, donc annonçable.');
-        $this->assertArrayHasKey('partenaires', $champs, 'ManyToMany : écrivable, donc annonçable.');
-        $this->assertTrue($champs['partenaires']['multiple'], 'Une liste d’identifiants est attendue.');
+        $this->assertArrayHasKey('conditionsPartageAgent', $champs, 'ManyToMany : écrivable, donc annonçable.');
+        $this->assertTrue($champs['conditionsPartageAgent']['multiple'], 'Une liste d’identifiants est attendue.');
+
+        // L'intermédiaire, lui, est passé au SINGULIER : il doit être annoncé comme une
+        // relation simple, sans quoi Ket lui enverrait une liste que rien ne lirait.
+        $this->assertArrayHasKey('partenaire', $champs, 'ManyToOne : écrivable, donc annonçable.');
+        $this->assertArrayNotHasKey(
+            'multiple',
+            $champs['partenaire'],
+            'Une relation simple ne porte pas ce marqueur : Ket enverrait une liste que rien ne lirait.',
+        );
     }
 
     public function testLeCoteInverseDUneRelationResteHorsInventaire(): void
