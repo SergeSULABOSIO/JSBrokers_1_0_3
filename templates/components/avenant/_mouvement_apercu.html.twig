@@ -28,7 +28,8 @@
             {% if apercu.reconduit.chargements > 0 %}{% set repris = repris|merge(['%d composante(s) de prime'|format(apercu.reconduit.chargements)]) %}{% endif %}
             {% if apercu.reconduit.tranches > 0 %}{% set repris = repris|merge(['%d tranche(s)'|format(apercu.reconduit.tranches)]) %}{% endif %}
             {% if apercu.reconduit.revenus > 0 %}{% set repris = repris|merge(['%d revenu(s)'|format(apercu.reconduit.revenus)]) %}{% endif %}
-            {% if apercu.reconduit.partenaires > 0 %}{% set repris = repris|merge(['%d partenaire(s)'|format(apercu.reconduit.partenaires)]) %}{% endif %}
+            {# UN SEUL intermédiaire par affaire : on annonce sa reconduction, pas un décompte. #}
+            {% if apercu.reconduit.partenaire|default(0) > 0 %}{% set repris = repris|merge(['l’intermédiaire']) %}{% endif %}
             {% if apercu.reconduit.conditions > 0 %}{% set repris = repris|merge(['%d condition(s) de partage'|format(apercu.reconduit.conditions)]) %}{% endif %}
             {# Conditions d'AGENTS INTERNES : rattachées telles quelles (même règle, même
                identifiant), à distinguer des conditions de partenaire qui sont clonées. #}

@@ -78,11 +78,6 @@ class RetroCommissionAgentTest extends KernelTestCase
              JOIN entreprise e ON p.entreprise_id = e.id WHERE e.nom = :nom',
             ['nom' => self::ENTREPRISE_NOM],
         );
-        $conn->executeStatement(
-            'DELETE pp FROM piste_partenaire pp JOIN piste p ON pp.piste_id = p.id
-             JOIN entreprise e ON p.entreprise_id = e.id WHERE e.nom = :nom',
-            ['nom' => self::ENTREPRISE_NOM],
-        );
         foreach ([
             'reversement_retro_agent', 'condition_partage', 'avenant', 'revenu_pour_courtier',
             'type_revenu', 'chargement_pour_prime', 'cotation', 'piste', 'client', 'partenaire',
@@ -367,7 +362,7 @@ class RetroCommissionAgentTest extends KernelTestCase
             $partenaire = (new Partenaire())->setNom('Partenaire Externe')->setPart(self::PART_PARTENAIRE);
             $partenaire->setEntreprise($entreprise);
             $em->persist($partenaire);
-            $piste->addPartenaire($partenaire);
+            $piste->setPartenaire($partenaire);
         }
 
         $agentIds = [];

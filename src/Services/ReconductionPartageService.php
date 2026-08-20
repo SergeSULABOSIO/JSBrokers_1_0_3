@@ -36,10 +36,8 @@ class ReconductionPartageService
      */
     public function reconduire(Piste $source, Piste $cible, Entreprise $entreprise, ?Invite $invite): void
     {
-        // 1. Partenaires — idempotent (garde contains via addPartenaire).
-        foreach ($source->getPartenaires() as $partenaire) {
-            $cible->addPartenaire($partenaire);
-        }
+        // 1. L'intermédiaire — un seul par affaire, donc une simple affectation.
+        $cible->setPartenaire($source->getPartenaire());
 
         // 2. Conditions de partage exceptionnelles — TOUTES, sans exception
         // (règle et justification : champsReconductibles).

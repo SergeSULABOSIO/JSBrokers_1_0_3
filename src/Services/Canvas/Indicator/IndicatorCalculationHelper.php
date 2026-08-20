@@ -470,10 +470,11 @@ class IndicatorCalculationHelper implements ResetInterface
             if ($partenaireCible->getId() === null) $qb->andWhere('1=0');
             else {
                 // Un partenaire s'attache à la PISTE ou au CLIENT : les deux chemins comptent.
+                // L'affaire ne désigne plus qu'UN intermédiaire (relation to-one) ; le
+                // client, lui, en garde plusieurs. Les deux chemins comptent toujours.
                 $qb->leftJoin('p.client', 'cl')
-                    ->leftJoin('p.partenaires', 'pa')
                     ->leftJoin('cl.partenaires', 'clpa')
-                    ->andWhere('pa = :partenaireCible OR clpa = :partenaireCible')
+                    ->andWhere('p.partenaire = :partenaireCible OR clpa = :partenaireCible')
                     ->setParameter('partenaireCible', $partenaireCible);
             }
         }
@@ -1255,8 +1256,8 @@ class IndicatorCalculationHelper implements ResetInterface
     public function getCotationPartenaire(?Cotation $cotation)
     {
         if ($cotation?->getPiste()) {
-            if (!$cotation->getPiste()->getPartenaires()->isEmpty()) {
-                return $cotation->getPiste()->getPartenaires()->first();
+            if ($cotation->getPiste()->getPartenaire() !== null) {
+                return $cotation->getPiste()->getPartenaire();
             }
             $client = $cotation->getPiste()->getClient();
             if ($client && !$client->getPartenaires()->isEmpty()) {
@@ -2466,9 +2467,8 @@ class IndicatorCalculationHelper implements ResetInterface
         switch ($cleOption) {
             case 'partenaireCible':
                 $qb->leftJoin('p.client', 'cl')
-                    ->leftJoin('p.partenaires', 'pa')
                     ->leftJoin('cl.partenaires', 'clpa')
-                    ->andWhere('pa IN (:cibles) OR clpa IN (:cibles)');
+                    ->andWhere('p.partenaire IN (:cibles) OR clpa IN (:cibles)');
                 break;
             case 'clientCible':
                 $qb->andWhere('p.client IN (:cibles)');
@@ -2688,7 +2688,7 @@ class IndicatorCalculationHelper implements ResetInterface
              LEFT JOIN c.piste p
              LEFT JOIN p.client cl
              LEFT JOIN p.risque r
-             LEFT JOIN p.partenaires par
+             LEFT JOIN p.partenaire par
              WHERE c.id IN (:ids)'
         )->setParameter('ids', $cotationIds)->getResult();
 

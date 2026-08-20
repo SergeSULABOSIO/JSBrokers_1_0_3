@@ -10,6 +10,7 @@ use App\Ai\Tool\AiToolResult;
 use App\Ai\Tool\PreparerOperationsTool;
 use App\Entity\Chargement;
 use App\Entity\Client;
+use App\Entity\ConditionPartage;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
@@ -61,10 +62,11 @@ class PlanMultiEntitesTest extends WebTestCase
     {
         $conn = $this->em->getConnection();
         $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email = :e', ['e' => self::OWNER]);
-        $conn->executeStatement('DELETE pp FROM piste_partenaire pp JOIN piste p ON pp.piste_id = p.id JOIN entreprise e ON p.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE cpp FROM chargement_pour_prime cpp JOIN entreprise e ON cpp.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE co FROM cotation co JOIN entreprise e ON co.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE p FROM piste p JOIN entreprise e ON p.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
+        // Les conditions d'agent référencent l'invité : elles partent AVANT lui.
+        $conn->executeStatement('DELETE cp FROM condition_partage cp JOIN entreprise e ON cp.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE c FROM client c JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE pa FROM partenaire pa JOIN entreprise e ON pa.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE ch FROM chargement ch JOIN entreprise e ON ch.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
@@ -210,12 +212,20 @@ class PlanMultiEntitesTest extends WebTestCase
 
     // ───────────────────────── Relation multiple ─────────────────────────
 
-    /** Une relation MULTIPLE (partenaires d'une piste) se donne par liste d'identifiants. */
+    /** Une relation MULTIPLE (les conditions d'agents d'une piste) se donne par liste d'identifiants. */
     public function testRelationMultipleEcriteParListeDIdentifiants(): void
     {
         [$ent, $inv, $owner] = $this->seedWorkspace();
-        $p1 = (new Partenaire())->setNom('Courtier Sud')->setPart(0.5);
-        $p2 = (new Partenaire())->setNom('Courtier Nord')->setPart(0.5);
+        $agent = (new Invite())->setNom('Alice Agent')->setProprietaire(false);
+        $agent->setEntreprise($ent);
+        $this->em->persist($agent);
+
+        $p1 = (new ConditionPartage())->setNom('Prime apporteur Sud')->setTaux(5.0)->setSeuil(0.0)
+            ->setFormule(ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL)
+            ->setCritereRisque(ConditionPartage::CRITERE_PAS_RISQUES_CIBLES)->setAgent($agent);
+        $p2 = (new ConditionPartage())->setNom('Prime apporteur Nord')->setTaux(3.0)->setSeuil(0.0)
+            ->setFormule(ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL)
+            ->setCritereRisque(ConditionPartage::CRITERE_PAS_RISQUES_CIBLES)->setAgent($agent);
         foreach ([$p1, $p2] as $p) {
             $p->setEntreprise($ent)->setInvite($inv);
             $this->em->persist($p);
@@ -226,16 +236,16 @@ class PlanMultiEntitesTest extends WebTestCase
 
         $op = MutationOperation::fromArray([
             'op' => 'create', 'entite' => 'Piste',
-            'champs' => ['nom' => 'Coassurance 2026', 'typeAvenant' => 1, 'exercice' => 2026, 'descriptionDuRisque' => 'x', 'partenaires' => [$id1, $id2]],
+            'champs' => ['nom' => 'Coassurance 2026', 'typeAvenant' => 1, 'exercice' => 2026, 'descriptionDuRisque' => 'x', 'conditionsPartageAgent' => [$id1, $id2]],
         ]);
-        $this->assertSame([$id1, $id2], $op->fields['partenaires'], 'La liste d’identifiants survit au décodage.');
+        $this->assertSame([$id1, $id2], $op->fields['conditionsPartageAgent'], 'La liste d’identifiants survit au décodage.');
 
         $this->service->executer($op, new AiScope($ent, $inv), $owner);
 
         $this->em->clear();
         $piste = $this->em->getRepository(Piste::class)->findOneBy(['nom' => 'Coassurance 2026']);
         $this->assertNotNull($piste);
-        $this->assertCount(2, $piste->getPartenaires(), 'Les deux partenaires sont rattachés à la piste.');
+        $this->assertCount(2, $piste->getConditionsPartageAgent(), 'Les deux conditions d’agent sont rattachées à la piste.');
     }
 
     // ───────────────────────── Étendue choisie ─────────────────────────

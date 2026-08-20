@@ -46,19 +46,17 @@ class ReconductionPartageServiceTest extends TestCase
     {
         $risque = new Risque();
         $p1 = (new Partenaire())->setNom('Alpha');
-        $p2 = (new Partenaire())->setNom('Beta');
 
         $source = (new Piste())->setRisque($risque);
-        $source->addPartenaire($p1);
-        $source->addPartenaire($p2);
+        $source->setPartenaire($p1);
 
         $cible = (new Piste())->setRisque($risque);
 
         $this->service->reconduire($source, $cible, $this->entreprise, null);
 
-        $this->assertCount(2, $cible->getPartenaires());
-        $this->assertTrue($cible->getPartenaires()->contains($p1));
-        $this->assertTrue($cible->getPartenaires()->contains($p2));
+        // Une affaire ne désigne plus qu'UN intermédiaire : la reconduction le reporte,
+        // elle n'a plus de liste à parcourir.
+        $this->assertSame($p1, $cible->getPartenaire());
     }
 
     public function testConditionGeneraleClonee(): void
@@ -186,15 +184,14 @@ class ReconductionPartageServiceTest extends TestCase
         $risque = new Risque();
         $p1 = (new Partenaire())->setNom('Alpha');
         $source = (new Piste())->setRisque($risque);
-        $source->addPartenaire($p1);
+        $source->setPartenaire($p1);
         $cible = (new Piste())->setRisque($risque);
 
         $this->service->reconduire($source, $cible, $this->entreprise, null);
-        // Un second appel ne doit pas dupliquer le partenaire déjà présent.
-        foreach ($source->getPartenaires() as $p) {
-            $cible->addPartenaire($p);
-        }
+        // Rejouer la reconduction ne doit rien changer — l'idempotence tenait autrefois à
+        // une garde `contains` ; elle tient désormais à la nature même d'une affectation.
+        $this->service->reconduire($source, $cible, $this->entreprise, null);
 
-        $this->assertCount(1, $cible->getPartenaires());
+        $this->assertSame($p1, $cible->getPartenaire());
     }
 }

@@ -58,7 +58,7 @@ class Partenaire
     /**
      * @var Collection<int, Piste>
      */
-    #[ORM\ManyToMany(targetEntity: Piste::class, mappedBy: 'partenaires')]
+    #[ORM\OneToMany(targetEntity: Piste::class, mappedBy: 'partenaire')]
     private Collection $pistes;
 
     /**
@@ -346,7 +346,7 @@ class Partenaire
     {
         if (!$this->pistes->contains($piste)) {
             $this->pistes->add($piste);
-            $piste->addPartenaire($this);
+            $piste->setPartenaire($this);
         }
 
         return $this;
@@ -354,8 +354,8 @@ class Partenaire
 
     public function removePiste(Piste $piste): static
     {
-        if ($this->pistes->removeElement($piste)) {
-            $piste->removePartenaire($this);
+        if ($this->pistes->removeElement($piste) && $piste->getPartenaire() === $this) {
+            $piste->setPartenaire(null);
         }
 
         return $this;

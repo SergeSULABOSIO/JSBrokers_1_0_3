@@ -90,7 +90,6 @@ class MouvementAvenantTest extends WebTestCase
             'DELETE f FROM feedback f JOIN tache t ON f.tache_id = t.id JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE t FROM tache t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE cp FROM condition_partage cp JOIN entreprise e ON cp.entreprise_id = e.id WHERE e.nom = :n',
-            'DELETE pp FROM piste_partenaire pp JOIN piste p ON pp.piste_id = p.id JOIN entreprise e ON p.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE a FROM avenant a JOIN entreprise e ON a.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE tr FROM tranche tr JOIN entreprise e ON tr.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE cpp FROM chargement_pour_prime cpp JOIN entreprise e ON cpp.entreprise_id = e.id WHERE e.nom = :n',
@@ -175,7 +174,7 @@ class MouvementAvenantTest extends WebTestCase
             ->setDescriptionDuRisque('Entrepôt principal')
             ->setExercice(2026)
             ->setRenewalCondition(Piste::RENEWAL_CONDITION_RENEWABLE));
-        $piste->addPartenaire($partenaire);
+        $piste->setPartenaire($partenaire);
 
         // Condition APPLICABLE (générale, sans ciblage de risque) : doit être reconduite.
         $piste->addConditionsPartageExceptionnelle($scoper((new ConditionPartage())
@@ -229,7 +228,7 @@ class MouvementAvenantTest extends WebTestCase
         $this->em->flush();
         $this->client->loginUser($user);
 
-        return compact('ent', 'inv', 'user', 'base', 'piste', 'cotation', 'autreRisque');
+        return compact('ent', 'inv', 'user', 'base', 'piste', 'cotation', 'autreRisque', 'partenaire');
     }
 
     private function scope(array $s): AiScope
@@ -371,7 +370,7 @@ class MouvementAvenantTest extends WebTestCase
         $this->assertSame('Renouvellement — Incendie ACME 2026', $piste['nom']);
         $this->assertSame(2027, $piste['exercice']);
         $this->assertSame($s['base']->getId(), $piste['avenantDeBase'], 'La piste dérivée pointe la police de base.');
-        $this->assertCount(1, $piste['partenaires'], 'Le partenaire est reconduit.');
+        $this->assertSame($s['partenaire']->getId(), $piste['partenaire'], 'L\'intermédiaire est reconduit.');
 
         // Conditions de partage : TOUTES suivent — un engagement de rétrocommission
         // ne se perd pas au changement d'exercice.
@@ -469,8 +468,8 @@ class MouvementAvenantTest extends WebTestCase
         $lien = $this->op($d, 'Avenant', 'edit')['champs'];
         $this->assertSame((string) Avenant::RENEWAL_STATUS_CANCELLED, $lien['renewalStatus'], 'La police morte sort des polices actives.');
 
-        // Les partenaires suivent même un acte de fin (la rétro reste due sur le couru).
-        $this->assertCount(1, $this->op($d, 'Piste')['champs']['partenaires']);
+        // L'intermédiaire suit même un acte de fin (la rétro reste due sur le couru).
+        $this->assertArrayHasKey('partenaire', $this->op($d, 'Piste')['champs']);
     }
 
     /** Les tâches et comptes-rendus de la police de base ne suivent jamais ; une tâche NEUVE est créée. */
@@ -1059,7 +1058,7 @@ class MouvementAvenantTest extends WebTestCase
         $this->assertNotNull($derivee, 'La police de base pointe désormais son opportunité dérivée.');
         $this->assertSame($baseId, $derivee->getAvenantDeBase()?->getId(), 'Le lien retour (OneToOne) est posé : c’est lui qui pilote le statut affiché.');
         $this->assertSame(Piste::AVENANT_RENOUVELLEMENT, $derivee->getTypeAvenant());
-        $this->assertCount(1, $derivee->getPartenaires(), 'Le partenaire est reconduit en base.');
+        $this->assertNotNull($derivee->getPartenaire(), 'L’intermédiaire est reconduit en base.');
         // TOUTES les conditions de partage sont réellement écrites — c'est l'engagement
         // de rétrocommission qui est en jeu, aucune ne doit se perdre en chemin.
         $this->assertCount(2, $derivee->getConditionsPartageExceptionnelles(), 'Les deux conditions de partage sont écrites en base.');

@@ -127,9 +127,7 @@ class PisteController extends AbstractController
                     $piste->setPrimePotentielle($this->indicatorHelper->getCotationMontantPrimePayableParClient($cotation) ?: $src->getPrimePotentielle());
                     $piste->setCommissionPotentielle($this->indicatorHelper->getCotationMontantCommissionTtc($cotation, -1, false) ?: $src->getCommissionPotentielle());
                     $piste->setRenewalCondition($src->getRenewalCondition() ?? Piste::RENEWAL_CONDITION_RENEWABLE);
-                    foreach ($src->getPartenaires() as $partenaire) {
-                        $piste->addPartenaire($partenaire);
-                    }
+                    $piste->setPartenaire($src->getPartenaire());
                     $piste->setNom(substr('Renouvellement — ' . $src->getNom(), 0, 255));
                 }
 

@@ -209,7 +209,7 @@ final class MouvementAvenantBuilder
                 'chargements'  => count($chargements),
                 'tranches'     => count($tranches),
                 'revenus'      => count($revenus),
-                'partenaires'  => count($opPiste['champs']['partenaires'] ?? []),
+                'partenaire'   => isset($opPiste['champs']['partenaire']) ? 1 : 0,
                 'conditions'   => count($conditions),
                 // Conditions d'agents internes RATTACHÉES (jamais clonées) : à annoncer,
                 // sans quoi l'utilisateur ne saurait pas que la rémunération de son
@@ -342,14 +342,11 @@ final class MouvementAvenantBuilder
             $champs['risque'] = $pisteBase->getRisque()->getId();
         }
 
-        $partenaires = [];
-        foreach ($pisteBase->getPartenaires() as $partenaire) {
-            if ($partenaire->getId()) {
-                $partenaires[] = $partenaire->getId();
-            }
-        }
-        if ($partenaires !== []) {
-            $champs['partenaires'] = $partenaires;
+        // UN SEUL INTERMÉDIAIRE. Le champ portait une liste d'identifiants ; l'affaire n'en
+        // désigne plus qu'un, et le moteur de mutation pose une relation to-one comme un
+        // scalaire. Ket doit écrire ce que l'écran écrit — même champ, même forme.
+        if ($pisteBase->getPartenaire()?->getId()) {
+            $champs['partenaire'] = $pisteBase->getPartenaire()->getId();
         }
 
         // Conditions de partage au profit d'AGENTS INTERNES : la MÊME condition suit

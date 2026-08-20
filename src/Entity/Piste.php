@@ -82,10 +82,20 @@ class Piste implements OwnerAwareInterface
     private Collection $taches;
 
     /**
-     * @var Collection<int, Partenaire>
+     * L'INTERMÉDIAIRE EXTERNE DE CETTE AFFAIRE — un seul, et c'est délibéré.
+     *
+     * Le champ acceptait plusieurs apporteurs, mais le moteur n'en a jamais retenu qu'un :
+     * `getCotationPartenaire()` prenait le premier venu d'une table de liaison, laquelle
+     * n'a aucun ordre défini. L'écran promettait donc un partage multi-apporteurs que le
+     * calcul ne savait pas faire, et le tableau de bord comptait un même avenant sous
+     * chacun d'eux.
+     *
+     * Il est aussi la CLÉ D'ENTRÉE du partage : sans intermédiaire (ni ici, ni sur le
+     * client), la part partenaire vaut zéro et les conditions propres à l'affaire ne sont
+     * même pas consultées.
      */
-    #[ORM\ManyToMany(targetEntity: Partenaire::class, inversedBy: 'pistes')]
-    private Collection $partenaires;
+    #[ORM\ManyToOne(inversedBy: 'pistes')]
+    private ?Partenaire $partenaire = null;
 
     /**
      * @var Collection<int, ConditionPartage>
@@ -97,7 +107,7 @@ class Piste implements OwnerAwareInterface
      * @var Collection<int, ConditionPartage> Conditions de partage au profit d'AGENTS
      *      INTERNES, rattachées à cette affaire.
      *
-     * Côté PROPRIÉTAIRE de la relation, comme $partenaires : c'est ce qui permet au moteur
+     * Côté PROPRIÉTAIRE de la relation : c'est ce qui permet au moteur
      * de mutation de la poser par simple liste d'identifiants — donc à l'assistant de
      * reconduire ces conditions sur une piste dérivée sans machinerie dédiée.
      *
@@ -131,7 +141,6 @@ class Piste implements OwnerAwareInterface
         $this->taches = new ArrayCollection();
         $this->cotations = new ArrayCollection();
         $this->documents = new ArrayCollection();
-        $this->partenaires = new ArrayCollection();
         $this->conditionsPartageExceptionnelles = new ArrayCollection();
         $this->conditionsPartageAgent = new ArrayCollection();
     }
@@ -333,23 +342,14 @@ class Piste implements OwnerAwareInterface
     /**
      * @return Collection<int, Partenaire>
      */
-    public function getPartenaires(): Collection
+    public function getPartenaire(): ?Partenaire
     {
-        return $this->partenaires;
+        return $this->partenaire;
     }
 
-    public function addPartenaire(Partenaire $partenaire): static
+    public function setPartenaire(?Partenaire $partenaire): static
     {
-        if (!$this->partenaires->contains($partenaire)) {
-            $this->partenaires->add($partenaire);
-        }
-
-        return $this;
-    }
-
-    public function removePartenaire(Partenaire $partenaire): static
-    {
-        $this->partenaires->removeElement($partenaire);
+        $this->partenaire = $partenaire;
 
         return $this;
     }
