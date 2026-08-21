@@ -31,6 +31,7 @@ class ReversementPickerRenduTest extends KernelTestCase
             'comptes' => $comptes,
             'submitUrl' => '/admin/retro-agent/1/reversement',
             'referenceParDefaut' => 'RETRO-21082026-141359',
+            'compteProposeId' => $comptes[0]['id'] ?? null,
             'lignes'  => [[
                 'avenant' => ['id' => 3],
                 'client' => 'Kibali Goldmines SA',

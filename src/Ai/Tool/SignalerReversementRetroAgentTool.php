@@ -8,6 +8,7 @@ use App\Ai\Trousse\AiToolEcriture;
 use App\Entity\Avenant;
 use App\Entity\Invite;
 use App\Repository\InviteRepository;
+use App\Service\Retro\DefautsDuVersement;
 use App\Service\RetroAgent\RapportProductionAgentBuilder;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
@@ -49,6 +50,9 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
         private readonly PreparerOperationsTool $preparer,
         private readonly IndicatorCalculationHelper $calculationHelper,
         private readonly RapportProductionAgentBuilder $rapportBuilder,
+        // PARITÉ AVEC L'ÉCRAN : la référence proposée et le compte débité par défaut
+        // ne se recopient pas ici, ils se demandent.
+        private readonly DefautsDuVersement $defautsDuVersement,
     ) {
     }
 
@@ -66,6 +70,9 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
             . 'EXIGIBLE de l\'affaire s\'applique. Plusieurs lignes = UN SEUL virement : elles '
             . 'partagent une référence de lot, et la comptabilité n\'émettra qu\'une écriture '
             . '(charges de personnel, SYSCOHADA 6611). '
+            . 'Le versement est débité du compte bancaire proposé par défaut — le même que '
+            . 'l\'écran de reversement ; précise compteBancaireId pour en choisir un autre, '
+            . 'ou 0 si l\'utilisateur dit payer en ESPÈCES. '
             . 'À appeler quand l\'utilisateur veut payer, verser ou régler la rétrocommission d\'un '
             . 'agent. NE PAS utiliser pour un PARTENAIRE externe : sa rétrocommission se facture '
             . 'par note de crédit, tout autre circuit. NE PAS utiliser ouvrir_dialogue avec '
@@ -121,6 +128,13 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
                 'reference' => [
                     'type' => 'string',
                     'description' => 'Référence du virement. Omets-la pour une référence auto-générée.',
+                ],
+                'compteBancaireId' => [
+                    'type' => 'integer',
+                    'minimum' => 1,
+                    'description' => 'Compte bancaire débité. Omets-le pour le compte proposé '
+                        . 'par défaut (le même que l\'écran de reversement). Mets 0 pour un '
+                        . 'versement en ESPÈCES, comptabilisé en caisse.',
                 ],
                 'description' => [
                     'type' => 'string',
@@ -192,6 +206,7 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
 
         $paidAt = $this->resoudrePaidAt($args);
         $reference = $this->resoudreReference($args, $paidAt);
+        $compteId = $this->resoudreCompte($args, $scope);
         // Un lot n'existe qu'à partir de DEUX lignes : un reversement isolé garde
         // lotReference vide, pour ne jamais être fondu dans le lot d'un autre.
         $lotReference = count($lignesDemandees) > 1 ? $reference : null;
@@ -225,6 +240,12 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
                 'paidAt'    => $paidAt,
                 'reference' => $reference,
             ];
+            // Le compte débité manquait ICI, et nulle part ailleurs : tout reversement
+            // demandé à Ket partait donc EN CAISSE, quand le même geste à l'écran
+            // passait par la banque. Deux comptabilités pour un seul acte.
+            if ($compteId !== null) {
+                $champs['compteBancaire'] = $compteId;
+            }
             if ($lotReference !== null) {
                 $champs['lotReference'] = $lotReference;
             }
@@ -317,7 +338,12 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
         return $date->format('Y-m-d\TH:i:s');
     }
 
-    /** Référence fournie, sinon générée — même schéma que le picker de l'écran. */
+    /**
+     * Référence fournie, sinon celle que l'écran proposerait — la formule vit dans
+     * DefautsDuVersement, elle n'est pas recopiée ici. Elle l'était, et le commentaire
+     * promettait « le même schéma que le picker » : une promesse qu'aucun test ne
+     * tenait, et que le premier changement de format aurait rompue en silence.
+     */
     private function resoudreReference(array $args, string $paidAt): string
     {
         $ref = trim((string) ($args['reference'] ?? ''));
@@ -326,9 +352,34 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
         }
 
         try {
-            return 'RETRO-' . (new \DateTimeImmutable($paidAt))->format('dmY-His');
+            return $this->defautsDuVersement->reference(new \DateTimeImmutable($paidAt));
         } catch (\Throwable) {
-            return 'RETRO-' . (new \DateTimeImmutable('now'))->format('dmY-His');
+            return $this->defautsDuVersement->reference(new \DateTimeImmutable('now'));
         }
+    }
+
+    /**
+     * Le compte débité : celui qu'on dicte, le compte proposé à défaut, ou AUCUN si
+     * l'utilisateur a dit « en espèces » (compteBancaireId = 0).
+     *
+     * Un identifiant hors de l'entreprise du scope est ignoré et retombe sur le
+     * compte proposé : on ne débite pas le compte d'un autre cabinet sur un id dicté.
+     */
+    private function resoudreCompte(array $args, AiScope $scope): ?int
+    {
+        if (array_key_exists('compteBancaireId', $args) && (int) $args['compteBancaireId'] === 0) {
+            return null;
+        }
+
+        $dicte = (int) ($args['compteBancaireId'] ?? 0);
+        if ($dicte > 0) {
+            foreach ($this->defautsDuVersement->comptes($scope->entreprise) as $compte) {
+                if ($compte->getId() === $dicte) {
+                    return $dicte;
+                }
+            }
+        }
+
+        return $this->defautsDuVersement->comptePropose($scope->entreprise)?->getId();
     }
 }

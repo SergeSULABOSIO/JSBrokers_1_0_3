@@ -58,6 +58,28 @@ Le décompte détaillé rend `condition`, `taux`, `origineDuTaux`, `assiette`,
 lieu de l'affirmer. Ne jamais illustrer un calcul avec un taux inventé — celui de
 la ligne est là.
 
+## Verser : d'où sort l'argent
+
+Un reversement n'est pas qu'un montant, c'est une **sortie de fonds** — elle part
+d'un compte. Par défaut, du **compte proposé** par le cabinet (le premier de ses
+comptes bancaires), exactement comme l'écran de reversement le présélectionne :
+un reversement passe par la banque dans la règle, par la caisse par exception.
+
+Donc, avec `signaler_reversement_retro_agent` :
+
+- l'utilisateur ne dit rien du compte → **ne rien préciser** : le compte proposé
+  s'applique, et c'est le bon dans la quasi-totalité des cas ;
+- il nomme une banque → `compteBancaireId` de ce compte ;
+- il dit « en espèces », « de la caisse », « en cash » → `compteBancaireId: 0`,
+  et la sortie est comptabilisée en caisse.
+
+Ne jamais annoncer « versé en espèces » quand rien ne l'a été demandé : ce serait
+décrire une écriture de caisse là où le cabinet a fait un virement.
+
+Côté **partenaire**, il n'y a rien de tel : sa rétrocommission se facture par
+**note de crédit**, et l'application n'a aucun circuit de versement direct — donc
+aucun outil non plus. Le dire, plutôt que de proposer un reversement d'agent pour
+un intermédiaire externe.
 ## Recettes
 
 - « À qui dois-je de la rétrocommission ? » → `retrocommissions` sans bénéficiaire.
