@@ -76,8 +76,33 @@ class ReversementPickerRenduTest extends KernelTestCase
         // conteneur `jsb-picker-cartes` et le titre `jsb-picker-carte-titre`.
         self::assertSame(3, substr_count($html, 'jsb-picker-carte"'));
         self::assertStringContainsString('jsb-picker-cartes', $html);
+
+        // Une carte SANS bordure n'est pas une carte : `border-0` pose
+        // `border: 0 !important` et l'effaçait, ne laissant s'encadrer que la
+        // section voisine, qui ne portait pas l'utilitaire.
+        self::assertStringNotContainsString('border-0 jsb-picker-carte', $html);
     }
 
+    /**
+     * Le titre d'une carte-fieldset doit rester DANS la carte.
+     *
+     * Une `legend` n'est pas une boîte ordinaire : le navigateur la pose sur la bordure
+     * haute du fieldset, hors du cadre, et la dimensionne au contenu. Le
+     * `float: left; width: 100%` de Reboot est ce qui la rend à une mise en page
+     * normale — l'annuler sortait le titre de la carte et réduisait son filet à la
+     * largeur du mot. Rien dans le HTML ne le dit : c'est la règle qu'on garde.
+     */
+    public function testLaLegendeDUneCarteResteDansLaCarte(): void
+    {
+        $css = (string) file_get_contents(__DIR__ . '/../../assets/styles/app.css');
+
+        $regle = strstr($css, '.jsb-picker-carte > legend {');
+        self::assertNotFalse($regle, 'La règle de légende des cartes a disparu.');
+
+        $corps = substr($regle, 0, (int) strpos($regle, '}'));
+        self::assertStringContainsString('float: left', $corps);
+        self::assertStringContainsString('width: 100%', $corps);
+    }
     /** Date, référence et compte s'ouvrent renseignés. */
     public function testLesTroisChampsArriventRemplis(): void
     {

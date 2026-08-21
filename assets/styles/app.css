@@ -5198,6 +5198,11 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     padding: .75rem 1.25rem 1.25rem;
     background-color: var(--bg-light, #f8f9fa);
 }
+/* NE JAMAIS JOINDRE `border-0` À CETTE CLASSE. L'utilitaire de Bootstrap pose
+   `border: 0 !important` et efface donc la bordure de la carte : les deux
+   fieldset le portaient — pour neutraliser l'encadré par défaut, que Reboot
+   supprime déjà — et n'affichaient aucune carte, quand la section voisine, elle,
+   s'encadrait bien. Un cas où l'utilitaire et le composant disent le contraire. */
 .jsb-picker-carte {
     margin: 0 0 .85rem;
     padding: .85rem 1rem 1rem;
@@ -5206,12 +5211,19 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     border-radius: 10px;
 }
 .jsb-picker-carte:last-child { margin-bottom: 0; }
-/* Reboot met les legend en float pleine largeur : un titre flottant ne saurait
-   porter le filet qui le détache de son contenu. On le rend au flux normal. */
+/* LA LÉGENDE RESTE FLOTTANTE — c'est ce qui la fait entrer dans la carte.
+   Une `legend` n'est pas une boîte ordinaire : le navigateur la pose SUR la
+   bordure haute de son fieldset, en dehors du cadre, et la dimensionne au
+   contenu. Le `float: left; width: 100%` de Reboot est justement ce qui la
+   rend à une mise en page normale ; l'avoir annulé sortait le titre de la
+   carte et réduisait son filet à la largeur du mot, quand la section voisine,
+   dont le titre est un h6 ordinaire, s'affichait correctement. */
+.jsb-picker-carte > legend {
+    float: left;
+    width: 100%;
+}
 .jsb-picker-carte > legend,
 .jsb-picker-carte > .jsb-picker-carte-titre {
-    float: none;
-    width: auto;
     margin: 0 0 .75rem;
     padding-bottom: .55rem;
     border-bottom: 1px solid var(--border-light, #dee2e6);
