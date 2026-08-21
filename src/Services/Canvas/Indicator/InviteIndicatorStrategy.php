@@ -73,6 +73,7 @@ class InviteIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
         $retroDue = round($apporte['retro_commission_agent'], 2);
         $retroPayee = round($apporte['retro_commission_agent_payee'], 2);
+        $retroExigible = round($apporte['retro_commission_agent_exigible'] ?? 0.0, 2);
 
         return [
             // Ce que ses affaires ont produit.
@@ -87,9 +88,19 @@ class InviteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             // Plafonné à zéro : un trop-versé n'est pas une dette de l'agent envers le cabinet.
             'retroAgentSolde' => round(max(0.0, $retroDue - $retroPayee), 2),
 
+            // Ce qui est RÉCLAMABLE aujourd'hui : le cabinet a encaissé sa commission,
+            // la dette envers l'agent est donc née.
+            'retroAgentExigible' => $retroExigible,
+
             // Condition des actions de la barre d'outils (rapport, reversement) : booléen
             // strict, comparé en == lâche côté JS.
             'hasRetroAgent' => $retroDue > 0.0 || !$invite->getConditionsPartageAgent()->isEmpty(),
+
+            // LE MÊME, MAIS EXIGEANT. Les deux actions « rapport » et « reversement » ne
+            // paraissent que si quelque chose est réellement réclamable : proposer de
+            // verser un dû que le cabinet n'a pas encore encaissé, c'est inviter à
+            // avancer sa trésorerie sur une créance non recouvrée.
+            'hasRetroAgentExigible' => $retroExigible > 0.0,
         ];
     }
 

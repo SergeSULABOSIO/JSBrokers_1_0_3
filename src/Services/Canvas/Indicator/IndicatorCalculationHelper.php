@@ -377,6 +377,8 @@ class IndicatorCalculationHelper implements ResetInterface
             'taxe_courtier_payee', 'taxe_assureur', 'taxe_assureur_payee', 'sinistre_payable', 'sinistre_paye',
             // Rétrocommission des AGENTS INTERNES — second bénéficiaire du partage.
             'retro_commission_agent', 'retro_commission_agent_payee',
+            // EXIGIBLE : le solde RÉCLAMABLE, une fois le cabinet lui-même encaissé.
+            'retro_commission_agent_exigible',
         ], 0.0);
         extract($totals);
 
@@ -450,10 +452,20 @@ class IndicatorCalculationHelper implements ResetInterface
                 // d'agent, et joindre les multiplierait les lignes de cotation — le produit
                 // cartésien que cette requête s'interdit formellement. Le plafond de 61
                 // jointures de MariaDB dissuade aussi d'en ajouter une de plus.
+                //
+                // DEUX FAÇONS D'ÊTRE DÉSIGNÉ, ET IL FAUT LES DEUX. Une condition d'agent
+                // est soit PARTAGÉE (rattachée à plusieurs affaires via pistesAffectees),
+                // soit PROPRE à une affaire (ConditionPartage::piste). getCotationConditionsAgent()
+                // lit délibérément les deux collections ; ne regarder ici que la première
+                // rendait un agrégat à ZÉRO pour un agent rémunéré par une condition propre —
+                // sa fiche annonçait donc « rien » pendant que son rapport de production, lui,
+                // chiffrait la somme due.
                 $qb->andWhere(
                     'EXISTS (SELECT 1 FROM App\Entity\ConditionPartage cpa_e
                              JOIN cpa_e.pistesAffectees cpa_p
-                             WHERE cpa_p = p AND cpa_e.agent = :agentCible)'
+                             WHERE cpa_p = p AND cpa_e.agent = :agentCible)
+                     OR EXISTS (SELECT 1 FROM App\Entity\ConditionPartage cpe_e
+                                WHERE cpe_e.piste = p AND cpe_e.agent = :agentCible)'
                 )->setParameter('agentCible', $agentCible);
             }
         }
@@ -591,6 +603,9 @@ class IndicatorCalculationHelper implements ResetInterface
             $retro_commission_agent += $this->getCotationMontantRetroAgent($cotation, $agentCible);
             foreach ($cotation->getAvenants() as $avenantDeLaCotation) {
                 $retro_commission_agent_payee += $this->getAvenantMontantRetroAgentReversee($avenantDeLaCotation, $agentCible);
+                // Même boucle, donc aucun parcours supplémentaire : l'exigible se lit à la
+                // maille de l'avenant, comme le versé.
+                $retro_commission_agent_exigible += $this->getAvenantRetroAgentExigible($avenantDeLaCotation, $agentCible);
             }
         }
 
@@ -673,6 +688,7 @@ class IndicatorCalculationHelper implements ResetInterface
             'retro_commission_partenaire_solde' => $retro_commission_partenaire_solde,
             'retro_commission_agent' => $retro_commission_agent,
             'retro_commission_agent_payee' => $retro_commission_agent_payee,
+            'retro_commission_agent_exigible' => $retro_commission_agent_exigible,
             'retro_commission_agent_solde' => $retro_commission_agent_solde,
             'taxe_courtier' => $taxe_courtier,
             'taxe_courtier_payee' => $taxe_courtier_payee,

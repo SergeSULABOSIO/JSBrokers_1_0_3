@@ -75,23 +75,29 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
                     "event" => "ui:invite.resend-request",
                     "url"   => "/admin/invite/api/resend-invitation/%id%",
                 ],
-                // Rétrocommission de l'agent : visibles seulement s'il en perçoit une
-                // (attribut calculé hasRetroAgent, InviteIndicatorStrategy). Le rapport
-                // détaille sa production affaire par affaire ; le reversement enregistre
-                // ce que le cabinet lui verse, en une ligne ou en lot.
+                // RÉTROCOMMISSION DE L'AGENT — visibles seulement si quelque chose est
+                // EXIGIBLE, c'est-à-dire réclamable aujourd'hui : le cabinet a encaissé sa
+                // commission, la dette envers l'agent est née. Un dû non encore encaissé
+                // n'ouvre aucune de ces deux portes — proposer d'ouvrir un sélecteur de
+                // reversement qui n'aurait aucune ligne à montrer serait une impasse.
+                //
+                // La condition porte sur `hasRetroAgentExigible`, une propriété DÉCLARÉE de
+                // l'entité (groupe list:read) : c'est ce qui la fait voyager jusqu'à la ligne
+                // de liste, donc jusqu'à la BARRE D'OUTILS et au MENU CONTEXTUEL, et pas
+                // seulement jusqu'à la fiche ouverte.
                 [
                     "label"     => "Voir le rapport de production",
                     "icon"      => "action:view",
                     "event"     => "ui:retroagent.rapport-request",
                     "url"       => "/admin/retro-agent/%id%/rapport",
-                    "condition" => ["field" => "hasRetroAgent", "value" => true],
+                    "condition" => ["field" => "hasRetroAgentExigible", "value" => true],
                 ],
                 [
                     "label"     => "Signaler un reversement de rétrocommission",
                     "icon"      => "depense",
                     "event"     => "ui:retroagent.reversement-request",
                     "url"       => "/admin/retro-agent/%id%/reversement-picker",
-                    "condition" => ["field" => "hasRetroAgent", "value" => true],
+                    "condition" => ["field" => "hasRetroAgentExigible", "value" => true],
                 ],
                 // Actions « portefeuille » conditionnelles, sur le modèle des actions
                 // linked-note du Bordereau : la condition est évaluée côté front contre

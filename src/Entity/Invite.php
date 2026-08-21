@@ -156,6 +156,17 @@ class Invite
     #[Groups(['list:read'])]
     public ?bool $hasPortefeuille = null;
 
+    // POURQUOI CETTE PROPRIÉTÉ EXISTE ALORS QUE LA STRATÉGIE LA CALCULE DÉJÀ.
+    //
+    // Une valeur calculée posée en propriété DYNAMIQUE n'appartient à aucun groupe de
+    // sérialisation : elle ne figure donc pas dans le `data-entity` de la ligne, et une
+    // action conditionnée dessus reste INVISIBLE dans la barre d'outils comme dans le
+    // menu contextuel — sans la moindre erreur, la condition valant `undefined`.
+    // C'est ce qui privait « rapport de production » et « reversement » de ces deux
+    // surfaces : elles n'étaient joignables que depuis la fiche ouverte.
+    #[Groups(['list:read'])]
+    public ?bool $hasRetroAgentExigible = null;
+
     // Ligne secondaire de la liste : nom du portefeuille géré, ou « Aucun portefeuille ».
     // Contrairement au client (info masquée si absente), l'ABSENCE est ici une information
     // métier à afficher explicitement.
