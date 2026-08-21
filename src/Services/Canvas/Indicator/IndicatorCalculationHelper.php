@@ -1242,6 +1242,62 @@ class IndicatorCalculationHelper implements ResetInterface
     }
 
     /**
+     * La rétrocommission d'AGENT attribuable à UN revenu.
+     *
+     * Les agents se partagent l'assiette de la COTATION — ce qui reste au cabinet une fois
+     * les intermédiaires servis —, et non revenu par revenu. Or une fiche de revenu doit
+     * pouvoir dire ce qui lui échappe : sans cela, sa réserve annonce un montant que le
+     * cabinet ne garde pas.
+     *
+     * La répartition est un PRORATA d'assiette, et elle est exacte : le montant dû aux
+     * agents est linéaire en l'assiette, si bien que la somme des parts de tous les revenus
+     * redonne, au centime, le montant de la cotation. On ne réécrit surtout pas le calcul
+     * des taux — seuils et première-condition-applicable compris : on répartit ce que la
+     * source unique a déjà tranché.
+     */
+    public function getRevenuMontantRetroAgent(?RevenuPourCourtier $revenu): float
+    {
+        $cotation = $revenu?->getCotation();
+        if ($cotation === null) {
+            return 0.0;
+        }
+
+        $assietteCotation = $this->getCotationAssietteRetroAgent($cotation);
+        if ($assietteCotation <= 0.0) {
+            return 0.0;
+        }
+
+        $assietteRevenu = $this->getRevenuMontantPure($revenu, -1, false)
+            - $this->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, null, -1);
+
+        return $this->getCotationMontantRetroAgent($cotation) * ($assietteRevenu / $assietteCotation);
+    }
+
+    /**
+     * LE TAUX RÉELLEMENT APPLIQUÉ à ce revenu, en FRACTION (0.15 pour 15 %).
+     *
+     * Ce n'est PAS la part habituelle du partenaire : c'est ce que la cascade retient —
+     * condition propre à l'affaire ▸ condition du partenaire ▸ part par défaut — et zéro
+     * quand une condition existe mais que son seuil n'est pas franchi (aucun repli sur le
+     * taux par défaut dans ce cas).
+     *
+     * POURQUOI CETTE FAÇADE. Le tableau de bord multipliait l'assiette par
+     * Partenaire::getFraction() en dur, court-circuitant conditions et seuils : dès qu'une
+     * condition de partage existait, il annonçait une rétrocommission que ni la fiche, ni
+     * la cotation, ni l'assistant ne confirmaient. Le courtier lisait deux chiffres pour
+     * le même argent, et rien ne disait lequel croire.
+     */
+    public function getRevenuTauxPartenaireApplique(?RevenuPourCourtier $revenu): float
+    {
+        if ($revenu === null) {
+            return 0.0;
+        }
+        $this->strategieRevenu ??= new RevenuPourCourtierIndicatorStrategy($this, $this->taxeRepository, $this->em);
+
+        return $this->strategieRevenu->getRevenuPartPartenaire($revenu);
+    }
+
+    /**
      * La condition de partage qui l'emporte pour ce revenu (cascade piste ▸ partenaire).
      * Simple façade vers la source unique — RevenuPourCourtierIndicatorStrategy — pour que
      * les appelants qui ne tiennent que le helper n'aient pas à réécrire la cascade.
