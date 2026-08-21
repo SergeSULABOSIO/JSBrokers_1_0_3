@@ -1,0 +1,100 @@
+<?php
+
+namespace App\Tests\Workspace;
+
+use App\Entity\Invite;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Twig\Environment;
+
+/**
+ * LE PICKER DE REVERSEMENT, RENDU POUR DE VRAI.
+ *
+ * Les tests fonctionnels de ce picker ne l'ouvrent que pour un agent SANS solde
+ * exigible : le bloc « Le versement » n'y est jamais rendu, et tout ce qu'il contient
+ * — champs, icônes, valeurs par défaut — pouvait donc casser sans qu'un test bronche.
+ *
+ * On rend ici le gabarit avec des données fabriquées, sans base : ce qui est vérifié,
+ * c'est la MISE EN FORME, et elle ne dépend d'aucune donnée réelle.
+ */
+class ReversementPickerRenduTest extends KernelTestCase
+{
+    private function rendre(array $comptes = [['id' => 7, 'intitule' => 'AIB RDC', 'banque' => 'Equity BCDC']]): string
+    {
+        self::bootKernel();
+
+        /** @var Environment $twig */
+        $twig = self::getContainer()->get('twig');
+
+        return $twig->render('components/retro_agent/_reversement_picker.html.twig', [
+            'agent'   => (new Invite())->setNom('Administrateur (Serge SULA)'),
+            'monnaie' => 'USD',
+            'comptes' => $comptes,
+            'submitUrl' => '/admin/retro-agent/1/reversement',
+            'referenceParDefaut' => 'RETRO-21082026-141359',
+            'lignes'  => [[
+                'avenant' => ['id' => 3],
+                'client' => 'Kibali Goldmines SA',
+                'reference' => '12002-33002-0021-111-00071014-2025',
+                'risque' => 'GIT,MAR,MOC,MARINE',
+                'retroAgentExigible' => 5.99,
+            ]],
+        ]);
+    }
+
+    /**
+     * Les trois champs suivent le pattern maison, celui du picker de mouvements et de
+     * celui des destinataires : icône incrustée et largeur bornée.
+     *
+     * Ce test existe parce que ces champs avaient d'abord été écrits en Bootstrap nu —
+     * trois `form-control` étirés sur toute la fenêtre, sans icône. Rien ne l'avait vu.
+     */
+    public function testLesChampsSuiventLePatternDesAutresPickers(): void
+    {
+        $html = $this->rendre();
+
+        // Une icône incrustée par champ : date, référence, compte.
+        self::assertSame(3, substr_count($html, 'class="jsb-picker-field"'));
+        self::assertSame(3, substr_count($html, 'jsb-picker-field-icon'));
+
+        // Les icônes sont RENDUES, pas seulement demandées : un alias inconnu passerait
+        // l'analyse du gabarit et n'échouerait qu'à l'affichage.
+        self::assertGreaterThanOrEqual(3, substr_count($html, '<svg'));
+
+        // Largeur bornée : un champ pleine fenêtre ne dit rien de ce qu'on attend.
+        self::assertStringContainsString('max-width:15rem', $html);
+        self::assertStringContainsString('max-width:22rem', $html);
+        self::assertStringContainsString('max-width:26rem', $html);
+    }
+
+    /** Deux structures différentes, deux cartes — pas un seul long formulaire. */
+    public function testChaqueSectionEstUneCarteDistincte(): void
+    {
+        $html = $this->rendre();
+
+        // Affaires à régler, le versement, ce qui sera enregistré.
+        // Le guillemet fermant est délibéré : sans lui on compterait aussi le
+        // conteneur `jsb-picker-cartes` et le titre `jsb-picker-carte-titre`.
+        self::assertSame(3, substr_count($html, 'jsb-picker-carte"'));
+        self::assertStringContainsString('jsb-picker-cartes', $html);
+    }
+
+    /** Date, référence et compte s'ouvrent renseignés. */
+    public function testLesTroisChampsArriventRemplis(): void
+    {
+        $html = $this->rendre();
+
+        self::assertStringContainsString('value="' . date('Y-m-d') . '"', $html);
+        self::assertStringContainsString('value="RETRO-21082026-141359"', $html);
+        // Le compte, et non la caisse : un reversement passe par la banque dans la règle.
+        self::assertStringContainsString('<option value="7" selected>', $html);
+        self::assertStringContainsString('<option value="">Caisse', $html);
+    }
+
+    /** Sans aucun compte enregistré, la caisse reste le choix retenu. */
+    public function testSansCompteLaCaisseResteRetenue(): void
+    {
+        $html = $this->rendre(comptes: []);
+
+        self::assertStringContainsString('<option value="" selected>Caisse', $html);
+    }
+}
