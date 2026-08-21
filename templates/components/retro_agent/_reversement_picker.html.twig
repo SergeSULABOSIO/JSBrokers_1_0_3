@@ -122,8 +122,12 @@
 
                 <fieldset class="border-0 p-0 m-0 mb-3">
                     <legend class="fs-6 fw-semibold mb-2" style="color:#0d2440;">Le versement</legend>
-                    <div class="row g-2">
-                        <div class="col-sm-4">
+                    {# UN CHAMP PAR LIGNE. Les trois côte à côte, chacun sous son propre
+                       texte d'aide, faisaient trois colonnes de prose à lire en travers :
+                       l'œil devait remonter à chaque champ au lieu de descendre une fois.
+                       Empilés, ils se parcourent dans l'ordre où on les remplit. #}
+                    <div class="row g-3">
+                        <div class="col-12">
                             <label for="rra-date" class="form-label fw-semibold mb-0" style="color:#0d2440;">Date</label>
                             <span class="text-muted small d-block mb-1" id="rra-date-aide">
                                 Date de sortie des fonds. Par défaut&nbsp;: aujourd'hui.
@@ -133,27 +137,36 @@
                                    data-reversement-retro-picker-target="date"
                                    aria-describedby="rra-date-aide">
                         </div>
-                        <div class="col-sm-4">
+                        <div class="col-12">
                             <label for="rra-reference" class="form-label fw-semibold mb-0" style="color:#0d2440;">Référence</label>
                             <span class="text-muted small d-block mb-1" id="rra-ref-aide">
-                                Référence du virement. Laissez vide pour une référence automatique.
+                                Proposée d'office. Remplacez-la par la référence de votre virement.
                             </span>
-                            <input type="text" id="rra-reference" class="form-control" maxlength="255"
+                            {# `name` et `autocomplete` ne sont pas décoratifs : un champ texte
+                               ANONYME se fait remplir tout seul par le navigateur, qui écraserait
+                               la référence proposée par une adresse e-mail mémorisée. #}
+                            <input type="text" id="rra-reference" name="reversement_reference"
+                                   class="form-control" maxlength="255" autocomplete="off"
+                                   value="{{ referenceParDefaut }}"
                                    placeholder="Ex.&nbsp;: VIR-2026-0142"
                                    data-reversement-retro-picker-target="reference"
                                    aria-describedby="rra-ref-aide">
                         </div>
-                        <div class="col-sm-4">
+                        <div class="col-12">
                             <label for="rra-compte" class="form-label fw-semibold mb-0" style="color:#0d2440;">Compte débité</label>
                             <span class="text-muted small d-block mb-1" id="rra-compte-aide">
-                                Sans compte&nbsp;: la sortie est comptabilisée en caisse.
+                                Le premier compte est retenu d'office. Choisissez la caisse pour un
+                                versement en espèces.
                             </span>
+                            {# Un reversement passe par la banque dans la règle et par la caisse par
+                               exception : c'est donc le premier compte qui est proposé, la caisse
+                               restant à un clic. Sans aucun compte enregistré, elle reste le choix. #}
                             <select id="rra-compte" class="form-select"
                                     data-reversement-retro-picker-target="compte"
                                     aria-describedby="rra-compte-aide">
-                                <option value="">Caisse (espèces)</option>
+                                <option value=""{{ comptes|length == 0 ? ' selected' : '' }}>Caisse (espèces)</option>
                                 {% for compte in comptes %}
-                                    <option value="{{ compte.id }}">{{ compte.intitule }} — {{ compte.banque }}</option>
+                                    <option value="{{ compte.id }}"{{ loop.first ? ' selected' : '' }}>{{ compte.intitule }} — {{ compte.banque }}</option>
                                 {% endfor %}
                             </select>
                         </div>

@@ -117,6 +117,9 @@ class RetroAgentController extends AbstractController
             // echouerait a l'affichage.
             'comptes' => $this->em->getRepository(CompteBancaire::class)
                 ->findBy(['entreprise' => $agent->getEntreprise()], ['intitule' => 'ASC']),
+            // Pré-remplie à l'instant de l'ouverture : l'utilisateur voit la référence
+            // qui sera écrite, et peut la remplacer par celle de son virement réel.
+            'referenceParDefaut' => self::referenceParDefaut(new \DateTimeImmutable('now')),
             'submitUrl' => $this->generateUrl('admin.retro_agent.reversement_submit', ['id' => $agent->getId()]),
         ]);
     }
@@ -143,7 +146,10 @@ class RetroAgentController extends AbstractController
         $paidAt = $this->dateDeVersement($donnees['paidAt'] ?? null);
         $reference = trim((string) ($donnees['reference'] ?? ''));
         if ($reference === '') {
-            $reference = 'RETRO-' . $paidAt->format('dmY-His');
+            // Le champ est pré-rempli à l'ouverture : ne revient vide que si
+            // l'utilisateur l'a effacé. On lui en rend une plutôt que d'écrire
+            // un reversement anonyme, introuvable en rapprochement bancaire.
+            $reference = self::referenceParDefaut($paidAt);
         }
         // Un lot n'existe qu'à partir de DEUX lignes : un reversement isolé garde
         // lotReference à null, pour ne jamais être fondu dans le lot d'un autre.
@@ -264,6 +270,18 @@ class RetroAgentController extends AbstractController
     }
 
     /** Date fournie, sinon maintenant. Une date illisible ne fait pas échouer la saisie. */
+    /**
+     * Le format de référence d'un reversement, en UN seul endroit.
+     *
+     * Le gabarit s'en sert pour PRÉ-REMPLIR le champ, le POST pour le remplacer si
+     * le champ revient vide. Deux formules auraient fini par différer, et un
+     * reversement n'aurait plus porté la référence que le picker avait annoncée.
+     */
+    public static function referenceParDefaut(\DateTimeImmutable $date): string
+    {
+        return 'RETRO-' . $date->format('dmY-His');
+    }
+
     private function dateDeVersement(?string $brut): \DateTimeImmutable
     {
         $brut = trim((string) $brut);
