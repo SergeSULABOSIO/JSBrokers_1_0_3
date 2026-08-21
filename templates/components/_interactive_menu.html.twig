@@ -60,15 +60,15 @@
        deux clés de localStorage coûte quelques microsecondes et supprime ce
        clignotement, parce que la classe est posée pendant l'analyse du document.
 
-       DEUX conditions, jamais une seule : la préférence de plein écran ET un
-       panneau de colonne 4 à restaurer. Sans panneau, la colonne 4 resterait
-       vide et la colonne 3 masquée — un espace de travail inutilisable.
-       Le contrôleur retire `workspace-restoring-fullscreen` dès que le panneau
-       est en place (ou si sa restauration échoue).
+       UNE condition : un panneau de colonne 4 à restaurer. Sans panneau, la
+       colonne 4 s'ouvrirait vide — on ne pré-positionne donc rien. Le plein écran,
+       lui, n'est plus une condition mais une NUANCE : il s'ajoute par-dessus quand
+       la préférence est là. Le contrôleur retire `workspace-restoring-visualization`
+       dès que le panneau est en place (ou si sa restauration échoue).
 
-       Le repli de la COLONNE 2 obéit à la même raison d'être et se lit AVANT :
-       les deux `return` ci-dessous ne gouvernent que le plein écran, et un
-       utilisateur qui avait replié la colonne 2 sans être en plein écran doit
+       Le repli de la COLONNE 2 obéit à la même raison d'être et se lit AVANT la
+       sortie anticipée ci-dessous : celle-ci ne gouverne que la colonne 4, et un
+       utilisateur qui avait replié la colonne 2 sans rien laisser en colonne 4 doit
        lui aussi être servi. Une seule condition ici : replier ne peut pas
        rendre l'espace de travail inutilisable, la navigation reste entière
        dans le panneau flottant. #}
@@ -79,10 +79,19 @@
                 if (localStorage.getItem('menuCol2Collapsed_' + id) === '1') {
                     racine.classList.add('col2-collapsed');
                 }
-                if (localStorage.getItem('chatFullscreen_' + id) !== '1') return;
                 var panneau = JSON.parse(localStorage.getItem('visualizationHtmlTab_' + id) || 'null');
                 if (!panneau || !panneau.sourceUrl || !panneau.tabKey) return;
-                racine.classList.add('chat-fullscreen', 'visualization-visible', 'workspace-restoring-fullscreen');
+                // LA COLONNE 4 EXISTE DÈS LE PREMIER RENDU, plein écran OU NON.
+                //
+                // Ce pré-positionnement ne valait auparavant que pour le plein écran : dans
+                // la disposition normale, la page naissait donc à TROIS colonnes, restaurait
+                // ses onglets, puis se réorganisait quand le panneau arrivait — l'utilisateur
+                // voyait sa mise en page bouger sous ses yeux, et le repli des onglets se
+                // calculait sur une largeur qui n'était pas la bonne.
+                racine.classList.add('visualization-visible', 'workspace-restoring-visualization');
+                if (localStorage.getItem('chatFullscreen_' + id) === '1') {
+                    racine.classList.add('chat-fullscreen');
+                }
             } catch (e) { /* localStorage indisponible : disposition normale */ }
         })(document.currentScript.parentElement);
     </script>
@@ -439,7 +448,7 @@
                 </svg>
             </button>
             {# Squelette de restauration en plein écran : rendu par le serveur, mais
-               affiché UNIQUEMENT sous .workspace-restoring-fullscreen (cf. le script
+               affiché UNIQUEMENT sous .workspace-restoring-visualization (cf. le script
                ci-dessus). Il annonce la disposition qui arrive — un panneau large
                occupant les colonnes 3 + 4 — plutôt que les onglets de la colonne 3,
                qui vont justement être masqués. Purement décoratif : aria-hidden. #}

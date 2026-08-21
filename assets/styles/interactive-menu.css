@@ -899,20 +899,22 @@ a.company-version:hover {
 .chat-fullscreen .menu-col-3 { display: none; }
 .chat-fullscreen .menu-col-4 { min-width: 0; max-width: none; flex: 1 1 auto; }
 
-/* ── Restauration en plein écran (avant que Stimulus ne prenne la main) ──────
+/* ── Restauration de la COLONNE 4 (avant que Stimulus ne prenne la main) ─────
    La classe est posée par le script inline du gabarit, pendant l'analyse du
-   document : la colonne 4 s'ouvre donc en pleine largeur DÈS le premier rendu,
-   avec son squelette, au lieu de laisser voir la colonne 3 le temps du
-   chargement. Le contrôleur retire la classe quand le panneau est prêt. */
-.workspace-restoring-fullscreen .menu-col-4 { display: flex; }
+   document : la colonne s'ouvre donc DÈS le premier rendu, avec son squelette,
+   au lieu d'apparaître après coup et de faire bouger la mise en page. Elle vaut
+   dans les deux dispositions — normale et plein écran (où `chat-fullscreen`, posé
+   en plus, lui donne la largeur des colonnes 3 + 4). Le contrôleur la retire quand
+   le panneau est prêt. */
+.workspace-restoring-visualization .menu-col-4 { display: flex; }
 /* Sélecteur aussi précis que `.menu-col-4 .tab-panel-container` (défini plus bas,
    il l'emporterait sinon) : le panneau réel, encore vide, ne doit pas se montrer
    à côté du squelette. */
-.workspace-restoring-fullscreen .menu-col-4 .tab-panel-container { display: none; }
+.workspace-restoring-visualization .menu-col-4 .tab-panel-container { display: none; }
 
 .visualization-skeleton { display: none; }
 
-.workspace-restoring-fullscreen .visualization-skeleton {
+.workspace-restoring-visualization .visualization-skeleton {
   display: flex;
   flex-direction: column;
   width: 100%;

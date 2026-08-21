@@ -41,23 +41,35 @@ class ColonneDeuxRepliableTest extends TestCase
 
     /**
      * Le cœur du dispositif anti-clignotement : la classe de repli doit être posée
-     * pendant l'analyse du document, et donc AVANT les `return` du plein écran.
+     * pendant l'analyse du document, et donc avant TOUT `return` du script en ligne.
+     *
+     * Le garde-fou visait à l'origine un `return` nommément lié au plein écran. Le
+     * viser par son libellé rendait le test complice d'une forme : la sortie a changé
+     * de motif — elle ne dépend plus du plein écran mais de la présence d'un panneau
+     * de colonne 4 — et le test s'est cassé alors que le contrat, lui, tenait toujours.
+     * On vérifie donc ce qui compte réellement : qu'AUCUNE sortie anticipée, quelle
+     * qu'elle soit, ne précède la lecture de la préférence de repli.
      */
     public function testLaPreferenceDeRepliEstLuePendantLAnalyseDuDocument(): void
     {
         $gabarit = $this->lire(self::GABARIT);
 
         $repli = strpos($gabarit, 'menuCol2Collapsed_');
-        $pleinEcran = strpos($gabarit, "chatFullscreen_' + id) !== '1') return");
-
         self::assertNotFalse($repli, 'Le script inline ne lit plus la préférence de repli de la colonne 2.');
-        self::assertNotFalse($pleinEcran, 'Le garde-fou du plein écran a changé de forme : revoir ce test avec lui.');
-        self::assertLessThan(
-            $pleinEcran,
-            $repli,
-            "La préférence de repli doit être lue AVANT le `return` du plein écran : sinon elle "
-            . "n'est restaurée que pour les utilisateurs qui étaient aussi en plein écran."
-        );
+
+        // On ne regarde que le CODE du script, pas les commentaires qui le précèdent :
+        // le mot « return » y apparaît pour l'expliquer.
+        $debutScript = strpos($gabarit, '(function (racine) {');
+        self::assertNotFalse($debutScript, 'Le script en ligne de restauration a disparu.');
+
+        if (preg_match('/\breturn\b/', $gabarit, $m, PREG_OFFSET_CAPTURE, $debutScript)) {
+            self::assertLessThan(
+                $m[0][1],
+                $repli,
+                "La préférence de repli doit être lue AVANT toute sortie anticipée du script "
+                . "en ligne : sinon elle n'est restaurée que pour une partie des utilisateurs."
+            );
+        }
 
         self::assertStringContainsString(
             "racine.classList.add('col2-collapsed')",
