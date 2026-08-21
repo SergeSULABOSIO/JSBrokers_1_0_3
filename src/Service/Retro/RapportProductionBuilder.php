@@ -6,6 +6,7 @@ use App\Entity\Avenant;
 use App\Entity\ConditionPartage;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
+use App\Entity\Piste;
 use App\Service\RetroAgent\EligibiliteRetroAgent;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use App\Services\Search\CotationSouscriptionScope;
@@ -178,6 +179,16 @@ final class RapportProductionBuilder
         $due = $beneficiaire->montantDu($cotation);
         $payee = $beneficiaire->montantPaye($cotation, $avenant);
 
+        // OÙ EN EST L'ARGENT, EN AMONT DU PARTAGE.
+        //
+        // Un bénéficiaire qui conteste son solde demande presque toujours la même chose :
+        // « le client a-t-il payé ? le cabinet a-t-il encaissé ? ». Ces deux réponses
+        // décident de l'EXIGIBILITÉ de sa part ; les taire obligeait à ouvrir l'affaire
+        // pour les lire ailleurs.
+        $prime = $this->helper->getCotationMontantPrimePayableParClient($cotation);
+        $primePayee = $this->helper->getCotationMontantPrimePayableParClientPayee($cotation);
+        $commissionEncaissee = $this->helper->getCotationMontantCommissionEncaissee($cotation);
+
         return [
             'avenant'   => $avenant,
             'cotation'  => $cotation,
@@ -191,11 +202,21 @@ final class RapportProductionBuilder
             // Le GESTIONNAIRE de l'affaire : rappel visible que le bénéficiaire n'est pas
             // forcément celui qui la suit au quotidien.
             'gestionnaire' => $piste?->getInvite()?->getNom() ?? 'N/A',
+            // Le MOUVEMENT opéré sur la police : une souscription et un renouvellement ne
+            // se commentent pas de la même façon quand on discute d'une rémunération.
+            'mouvement' => $piste !== null ? Piste::libelleTypeAvenant($piste->getTypeAvenant()) : 'N/A',
             'debut'     => $avenant?->getStartingAt(),
             'fin'       => $avenant?->getEndingAt(),
 
-            'prime'            => round($this->helper->getCotationMontantPrimePayableParClient($cotation), 2),
+            'prime'            => round($prime, 2),
+            // Ce que le CLIENT a réglé, et ce qu'il doit encore.
+            'primePayee'       => round($primePayee, 2),
+            'primeSolde'       => round(max(0.0, $prime - $primePayee), 2),
             'commissionTtc'    => round($commissionTtc, 2),
+            // Ce que le CABINET a perçu de l'assureur, et ce qu'il attend encore.
+            // C'est cet encaissement qui fait naître la dette envers le bénéficiaire.
+            'commissionEncaissee' => round($commissionEncaissee, 2),
+            'commissionSolde'     => round(max(0.0, $commissionTtc - $commissionEncaissee), 2),
             'commissionHt'     => round($commissionHt, 2),
             'taxeAssureur'     => round($this->helper->getCotationMontantTaxeAssureur($cotation, false), 2),
             'taxeCourtier'     => round($this->helper->getCotationMontantTaxeCourtier($cotation, false), 2),
@@ -325,7 +346,9 @@ final class RapportProductionBuilder
     private function totaux(array $lignes): array
     {
         $colonnes = [
-            'prime', 'commissionTtc', 'commissionHt', 'taxeAssureur', 'taxeCourtier',
+            'prime', 'primePayee', 'primeSolde',
+            'commissionTtc', 'commissionEncaissee', 'commissionSolde',
+            'commissionHt', 'taxeAssureur', 'taxeCourtier',
             'commissionPure', 'partageable', 'retroPartenaire',
             'due', 'payee', 'solde', 'exigible',
         ];

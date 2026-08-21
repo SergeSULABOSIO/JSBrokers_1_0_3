@@ -337,7 +337,13 @@ final class RetrocommissionsTool implements AiToolInterface
                 // Le GESTIONNAIRE : rappel explicite qu'il n'est pas le bénéficiaire.
                 'gestionnaire'    => $ligne['gestionnaire'],
                 'prime'           => $ligne['prime'],
+                // Où en est l'argent EN AMONT du partage : c'est ce qui décide de
+                // l'exigibilité, et la première question de qui conteste son solde.
+                'primePayee'      => $ligne['primePayee'],
+                'primeSolde'      => $ligne['primeSolde'],
                 'commissionTtc'   => $ligne['commissionTtc'],
+                'commissionEncaissee' => $ligne['commissionEncaissee'],
+                'commissionSolde'     => $ligne['commissionSolde'],
                 'commissionHt'    => $ligne['commissionHt'],
                 'taxeAssureur'    => $ligne['taxeAssureur'],
                 'taxeCourtier'    => $ligne['taxeCourtier'],
@@ -385,6 +391,8 @@ final class RetrocommissionsTool implements AiToolInterface
                 . 'de son rôle. Pour JUSTIFIER un montant, cite assiette, taux et origineDuTaux.',
             'totaux' => $items === [] ? null : [
                 'prime'           => $rapport['totaux']['prime'],
+                'primePayee'      => $rapport['totaux']['primePayee'],
+                'commissionEncaissee' => $rapport['totaux']['commissionEncaissee'],
                 'commissionPure'  => $rapport['totaux']['commissionPure'],
                 'retroPartenaire' => $rapport['totaux']['retroPartenaire'],
                 'due'             => $rapport['totaux']['due'],
@@ -656,6 +664,10 @@ final class RetrocommissionsTool implements AiToolInterface
         'risque'          => Colonnes::TEXTE,
         'assureur'        => Colonnes::TEXTE,
         'commissionTtc'   => Colonnes::MONTANT,
+        'primePayee'      => Colonnes::MONTANT,
+        'primeSolde'      => Colonnes::MONTANT,
+        'commissionEncaissee' => Colonnes::MONTANT,
+        'commissionSolde'     => Colonnes::MONTANT,
         'commissionHt'    => Colonnes::MONTANT,
         'taxeAssureur'    => Colonnes::MONTANT,
         'taxeCourtier'    => Colonnes::MONTANT,

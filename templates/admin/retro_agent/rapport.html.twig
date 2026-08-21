@@ -4,59 +4,195 @@
 
    Ce que le tableau doit rendre lisible d'un seul regard, affaire par affaire : de la
    prime du client jusqu'au solde restant dû à l'agent, en passant par tout ce qui a été
-   prélevé en chemin (taxes, partenaire externe). C'est un document que l'agent peut
-   contester : chaque colonne doit donc être nommée, et chaque total vérifiable à la main.
+   prélevé en chemin (taxes, partenaire externe) et par l'état des règlements. C'est un
+   document que l'agent peut contester : chaque colonne doit donc être nommée, et chaque
+   total vérifiable à la main.
 
-   Toutes les couleurs viennent de la charte JS Brokers (cobalt #0047AB en accent).
+   ── VINGT-TROIS COLONNES SE LISENT PAR GROUPES, PAS À PLAT ────────────────────────
+   Une bande unique de vingt-trois en-têtes est un mur : l'œil doit relire chaque libellé
+   pour savoir de quel argent on parle (Bastien & Scapin > Charge de travail, Guidage).
+   Un premier rang d'en-têtes les rassemble donc en cinq blocs qui suivent le trajet de
+   l'argent — l'affaire, la prime du client, la commission du cabinet, ce qui part au
+   partage, ce qui revient à l'agent. Le second rang garde le détail, et chaque `th` reste
+   porteur de son `scope` pour les lecteurs d'écran.
+
+   Toutes les couleurs viennent de la charte JS Brokers, par leurs JETONS (var(--…)) ;
+   les valeurs en dur ne servent que de repli si la feuille globale n'est pas chargée.
 #}
 {% set m = monnaie %}
 
 <style>
+    /* PLEINE LARGEUR, AVEC DES GOUTTIÈRES. Le rapport occupe la place disponible — un
+       tableau de vingt-trois colonnes centré dans une boîte étroite se lisait à travers
+       une meurtrière, et défilait horizontalement alors que l'écran était vide de part
+       et d'autre. La marge, elle, reste : un panneau collé aux bords étouffe. */
     .rpa-container {
-        max-width: 1400px;
-        margin: 1.5rem auto;
-        background-color: #ffffff;
-        border: 1px solid #dee2e6;
+        /* COLONNE BORNÉE À LA HAUTEUR DU PANNEAU.
+
+           C'est ce qui garde la ligne des totaux au bas de la FENÊTRE : dès que les
+           affaires dépassent, le tableau défile dans la zone du milieu pendant que
+           l'entête et le pied restent en place. Sans cette borne, le pied suivait la
+           dernière ligne et sortait de l'écran dès dix affaires.
+
+           Le vide entre la dernière affaire et le pied n'est pas laissé à nu : une rangée
+           de REMPLISSAGE l'absorbe (voir .rpa-remplissage), de sorte que le tableau se
+           poursuit visuellement jusqu'au bas. */
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100% - 2.5rem);
+        margin: 1.25rem;
+        background-color: var(--bg-white, #ffffff);
+        border: 1px solid var(--border-light, #dee2e6);
         border-radius: 10px;
-        overflow: hidden;
-        box-shadow: 0 2px 12px rgba(0,0,0,.07);
+        box-shadow: 0 2px 12px rgba(0, 0, 0, .07);
     }
+    .rpa-header { border-radius: 10px 10px 0 0; }
+    .rpa-container > *:not(.rpa-scroll) { flex: 0 0 auto; }
     .rpa-header {
         padding: 1rem 1.25rem;
-        background-color: #212529;
-        color: #ffffff;
-        border-bottom: 3px solid #0047AB;
+        background-color: var(--bg-dark, #212529);
+        color: var(--text-white, #ffffff);
+        border-bottom: 3px solid var(--cobalt, #0047AB);
     }
     .rpa-header h2 { margin: 0; font-size: 1.15rem; }
-    .rpa-header .rpa-sub { color: rgba(255,255,255,0.65); font-size: 0.85rem; }
-    .rpa-chips { padding: 0.75rem 1.25rem; background-color: #f8f9fa; border-bottom: 1px solid #dee2e6; }
-    .rpa-chip {
-        display: inline-block; padding: 0.25rem 0.75rem; margin-right: 0.4rem;
-        border: 1px solid #dee2e6; border-radius: 999px; background-color: #ffffff;
-        color: #495057; font-size: 0.85rem; text-decoration: none; cursor: pointer;
+    .rpa-header .rpa-sub { color: var(--text-white-muted, rgba(255, 255, 255, 0.65)); font-size: 0.85rem; }
+    /* La barre de contrôles reprend les composants de la plateforme — `jsb-preset-filters`
+       pour les chips, `jsb-search-bar` pour la saisie —, jamais un style inventé ici :
+       deux dessins de chips dans une même application se lisent comme deux applications
+       (Bastien & Scapin > Cohérence). Ce bloc ne fait que les POSER côte à côte. */
+    .rpa-controles {
+        display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem;
+        padding: 0.75rem 1.25rem;
+        background-color: var(--bg-light, #f8f9fa);
+        border-bottom: 1px solid var(--border-light, #dee2e6);
     }
-    .rpa-chip:hover { background-color: #e9ecef; color: #212529; }
-    .rpa-chip.is-active { background-color: #0047AB; border-color: #0047AB; color: #ffffff; }
-    /* Défilement horizontal PROPRE : le tableau est large par nature (16 colonnes), il
-       doit défiler dans son conteneur — jamais faire défiler la page entière. */
-    .rpa-scroll { overflow-x: auto; }
+    .rpa-recherche { flex: 1 1 18rem; max-width: 28rem; }
+    /* Aucune ligne ne répond : on le DIT, plutôt que de laisser un tableau vide. */
+    .rpa-sans-resultat { padding: 1.5rem 1.25rem; text-align: center; color: var(--text-muted, #6c757d); }
+
+    /* Défilement PROPRE, dans les deux axes : à vingt-trois colonnes le tableau reste
+       large sur un écran modeste, et long dès qu'un agent produit. Il défile DANS son
+       conteneur — jamais la page entière — et c'est ce défilement qui sert d'ancrage
+       aux en-têtes et au pied collants. */
+    .rpa-scroll { flex: 1 1 auto; overflow: auto; min-height: 0; }
     .rpa-table { font-size: 0.82rem; margin-bottom: 0; white-space: nowrap; }
+    /* ── LA HAUTEUR DES LIGNES NE BOUGE PAS ─────────────────────────────────────
+       Le tableau garde sa hauteur naturelle. J'ai d'abord tenté de l'étirer sur toute
+       la zone pour poser le pied au ras de la fenêtre, en dirigeant le surplus vers une
+       rangée vide : mesuré au navigateur, le moteur de rendu répartit ce surplus entre
+       TOUTES les rangées quoi qu'on lui demande — six affaires devenaient six bandes de
+       190 pixels, et la même liste changeait d'allure selon son nombre de lignes.
+
+       Les totaux restent donc COLLANTS : dès que les affaires dépassent la hauteur
+       visible — le cas où l'on en a besoin —, le pied reste au bas de l'écran pendant
+       le défilement. Sur une liste courte, il se pose sous la dernière ligne, comme
+       dans un tableur. */
+    /* GOUTTIÈRES DES CELLULES. `table-sm` de Bootstrap serre à 0.25rem — acceptable
+       pour une liste qu'on survole, trop peu pour un tableau qu'on ÉPLUCHE : les
+       montants se touchaient d'une colonne à l'autre et l'œil devait s'accrocher au
+       filet pour les séparer. On respire, sans gagner de largeur inutile. */
+    .rpa-table > :not(caption) > * > * { padding: 0.6rem 0.85rem; }
+    /* Et l'on ne colle pas au bord du panneau : premier et dernier de chaque rangée
+       reprennent la gouttière de l'entête. */
+    .rpa-table > :not(caption) > * > *:first-child { padding-left: 1.25rem; }
+    .rpa-table > :not(caption) > * > *:last-child { padding-right: 1.25rem; }
+
+    /* ── DEUX RANGS D'EN-TÊTES, TOUS DEUX COLLANTS ────────────────────────────────
+       En défilant, on garde à la fois le nom de la colonne ET le groupe auquel elle
+       appartient.
+
+       LE GROUPE SE DÉSIGNE PAR UN FILET, PAS PAR UNE COULEUR DE TEXTE. Un rang
+       d'en-têtes écrit en couleur de marque crie plus fort que les chiffres qu'il
+       surmonte, et une bande teintée en travers du tableau fait bannière. Le rang des
+       groupes est donc SOBRE — petites capitales grises, centrées sur leurs colonnes —
+       et c'est un filet cobalt continu qui le sépare du détail : l'accent souligne, il
+       n'occupe pas.
+
+       Hauteur FIXÉE au premier rang : c'est elle qui donne le `top` du second. Une
+       hauteur déduite du contenu ferait chevaucher les deux rangs dès qu'une police
+       change de corps. */
     .rpa-table thead th {
-        background-color: #f8f9fa; color: #495057; font-weight: 600;
-        border-bottom: 2px solid #dee2e6; position: sticky; top: 0; z-index: 2;
+        position: sticky; z-index: 2;
+        background-color: var(--bg-light, #f8f9fa);
+        color: var(--text-body, #495057);
+        font-weight: 600;
     }
-    .rpa-table tbody td { color: #495057; vertical-align: middle; }
+    .rpa-table thead tr:first-child th {
+        top: 0;
+        height: 2.1rem;
+        padding: 0 0.85rem;
+        background-color: var(--bg-white, #ffffff);
+        color: var(--text-muted, #6c757d);
+        font-size: 0.68rem; font-weight: 700;
+        letter-spacing: 0.09em; text-transform: uppercase;
+        text-align: center;
+        border-bottom: 2px solid var(--cobalt, #0047AB);
+    }
+    .rpa-table thead tr:last-child th {
+        top: 2.1rem;
+        color: var(--text-dark-secondary, #343a40);
+        border-bottom: 1px solid var(--border-medium, #ced4da);
+    }
+    /* Un filet vertical sépare les groupes : c'est lui qui fait tenir la lecture par blocs
+       une fois l'œil descendu dans les lignes. */
+    .rpa-table .rpa-groupe { border-left: 2px solid var(--border-light, #dee2e6); }
+    .rpa-table .rpa-rang { color: var(--text-label, #adb5bd); width: 2.5rem; }
+    /* ÉTAT DE LA PART : seul ce sur quoi on peut AGIR porte la couleur de succès.
+       Le reste s'efface — un tableau où tout est coloré ne signale plus rien. */
+    .rpa-etat { font-size: 0.8rem; }
+    .rpa-etat--exigible { color: var(--success, #198754); font-weight: 700; }
+    .rpa-etat--attente  { color: var(--text-muted, #6c757d); }
+    .rpa-etat--soldee   { color: var(--text-label, #adb5bd); }
+
+    .rpa-table tbody td { color: var(--text-body, #495057); vertical-align: middle; }
     .rpa-num { text-align: right; font-variant-numeric: tabular-nums; }
-    /* La colonne qui intéresse l'agent : mise en avant sans couleur décorative. */
-    .rpa-table .rpa-focus { background-color: #f8f9fa; font-weight: 600; color: #212529; }
-    .rpa-table tfoot td {
-        background-color: #212529; color: #ffffff; font-weight: 600;
-        border-top: 2px solid #0047AB;
+
+    /* Pastille d'identité : elle se lit AVANT le texte et distingue un client d'un risque
+       ou d'un assureur sans qu'on relise l'en-tête. Couleur discrète — c'est un repère,
+       pas une alerte. */
+    .rpa-pastille {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 1.35rem; height: 1.35rem; margin-right: 0.4rem; flex: 0 0 auto;
+        border-radius: 6px;
+        background-color: var(--bg-muted, #e9ecef);
+        color: var(--text-muted, #6c757d);
+        vertical-align: middle;
     }
-    .rpa-empty { padding: 2rem 1.25rem; text-align: center; color: #6c757d; }
+    .rpa-cellule { display: inline-flex; align-items: center; min-width: 0; }
+    .rpa-secondaire { font-size: 0.75rem; color: var(--text-muted, #6c757d); }
+
+    /* Les colonnes qui intéressent l'agent : mises en avant sans couleur décorative. */
+    .rpa-table .rpa-focus {
+        background-color: var(--bg-light, #f8f9fa);
+        font-weight: 600;
+        color: var(--text-dark, #212529);
+    }
+    /* L'EXIGIBLE est le seul montant sur lequel on peut AGIR aujourd'hui : il porte donc
+       l'accent de la marque, là où les autres restent neutres. */
+    .rpa-table .rpa-exigible { color: var(--cobalt, #0047AB); font-weight: 700; }
+
+    /* LE PIED RESTE SOUS LES YEUX. Un total qu'il faut aller chercher au bas d'une
+       longue liste ne sert à rien pendant la lecture : il est collant, comme les
+       en-têtes le sont en haut. */
+    .rpa-table tfoot td {
+        position: sticky;
+        bottom: 0;
+        z-index: 3;
+        background-color: var(--bg-dark, #212529);
+        color: var(--text-white, #ffffff);
+        font-weight: 600;
+        border-top: 2px solid var(--cobalt, #0047AB);
+    }
+    .rpa-empty { padding: 2rem 1.25rem; text-align: center; color: var(--text-muted, #6c757d); }
 </style>
 
-<div class="rpa-container">
+{# Le contrôleur couvre TOUT le rapport, entête compris : le bouton de reversement y
+   vit, et une action posée hors de la portée d'un contrôleur Stimulus ne se déclenche
+   jamais — sans erreur, le clic ne fait simplement rien. #}
+<div class="rpa-container"
+     data-controller="retro-agent-rapport"
+     data-retro-agent-rapport-base-url-value="/admin/retro-agent/{{ agent.id }}/rapport"
+     data-retro-agent-rapport-picker-url-value="/admin/retro-agent/{{ agent.id }}/reversement-picker">
     <div class="rpa-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
             <h2>Rétrocommissions de {{ agent.nom }}</h2>
@@ -65,18 +201,82 @@
                 distincte des affaires qu'il gère.
             </div>
         </div>
-        <div class="rpa-sub">{{ totaux.nbLignes }} ligne(s) · montants en {{ m }}</div>
+        {# La devise n'est mentionnée que si elle est CONFIGURÉE : « montants en » suivi de
+           rien laisse la phrase en suspens et fait douter du reste. #}
+        <div class="d-flex align-items-center gap-3">
+            {# Le NOMBRE de lignes est dit par la barre de contrôles, qui le tient à jour
+               quand la recherche restreint l'affichage : l'écrire deux fois, c'est risquer
+               de le voir écrit deux fois DIFFÉREMMENT. Ne reste ici que la devise. #}
+            {% if m %}<div class="rpa-sub">Montants en {{ m }}</div>{% endif %}
+            {# VERSER SE FAIT D'ICI. C'est en lisant ce rapport qu'on décide de payer :
+               renvoyer l'utilisateur à la liste des invités pour y retrouver l'agent, le
+               sélectionner et rouvrir une action, c'est lui faire refaire le chemin qu'il
+               vient de parcourir. Le bouton n'apparaît que s'il y a de quoi verser. #}
+            {% if totaux.exigible > 0 %}
+                <button type="button" class="btn btn-sm btn-light d-inline-flex align-items-center gap-2"
+                        data-action="click->retro-agent-rapport#reverser"
+                        title="Enregistrer un reversement sur les affaires dont la part est exigible">
+                    <span aria-hidden="true" class="d-inline-flex">
+                        {{ ux_icon(resolve_icon_name('depense'), {width: '16px', height: '16px'}) }}
+                    </span>
+                    Signaler un reversement
+                </button>
+            {% endif %}
+        </div>
     </div>
 
-    {# Filtres : la partition Souscrites ⊎ En attente ⊎ Caduques de CotationSouscriptionScope. #}
-    <div class="rpa-chips" data-controller="retro-agent-rapport"
-         data-retro-agent-rapport-base-url-value="/admin/retro-agent/{{ agent.id }}/rapport">
-        {% for valeur, libelle in statuts %}
-            <a class="rpa-chip {{ valeur == statut ? 'is-active' : '' }}"
-               role="button"
-               data-action="click->retro-agent-rapport#filtrer"
-               data-statut="{{ valeur }}">{{ libelle }}</a>
-        {% endfor %}
+    {# Barre de contrôles : la partition Souscrites ⊎ En attente ⊎ Caduques
+       (CotationSouscriptionScope, règle SERVEUR) à gauche, la recherche rapide à droite.
+       Les deux composants sont ceux de la plateforme — mêmes classes, mêmes gestes. #}
+    {% set icones_statut = {
+        'souscrites': 'action:check',
+        'en_attente': 'action:ongoing',
+        'caduques':   'action:cancel',
+    } %}
+    <div class="rpa-controles">
+
+        <div class="jsb-preset-filters" role="group" aria-label="Statut de souscription">
+            <span class="jsb-preset-filters__titre">Statut</span>
+            {% for valeur, libelle in statuts %}
+                <button type="button"
+                        class="jsb-preset-chip {{ valeur == statut ? 'is-active' : '' }}"
+                        aria-pressed="{{ valeur == statut ? 'true' : 'false' }}"
+                        data-action="click->retro-agent-rapport#filtrer"
+                        data-statut="{{ valeur }}">
+                    <span class="jsb-preset-chip__icon" aria-hidden="true">
+                        {{ ux_icon(resolve_icon_name(icones_statut[valeur]|default('action:filter')), {width: '15px', height: '15px'}) }}
+                    </span>
+                    <span>{{ libelle }}</span>
+                </button>
+            {% endfor %}
+        </div>
+
+        {# RECHERCHE RAPIDE — locale, sur les lignes DÉJÀ chargées : le statut, lui, est une
+           règle serveur et se redemande. Filtrer côté navigateur évite un aller-retour pour
+           retrouver un client dans une liste qu'on a sous les yeux.
+
+           `type="search"` + `name` + les attributs anti-remplissage : sans eux, Chrome
+           injecte l'adresse e-mail mémorisée dans un champ texte anonyme. #}
+        <div class="jsb-search-bar rpa-recherche">
+            <div class="jsb-search-bar__row">
+                <span class="jsb-search-bar__icon" aria-hidden="true">
+                    {{ ux_icon(resolve_icon_name('lucide:search'), {width: '18px', height: '18px'}) }}
+                </span>
+                <input type="search"
+                       class="jsb-search-bar__input"
+                       name="rpa-recherche"
+                       aria-label="Rechercher dans le rapport"
+                       aria-controls="rpa-corps-{{ agent.id }}"
+                       placeholder="Client, police, risque, assureur…"
+                       autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                       data-lpignore="true" data-1p-ignore data-form-type="other"
+                       data-retro-agent-rapport-target="recherche"
+                       data-action="input->retro-agent-rapport#chercher search->retro-agent-rapport#chercher">
+            </div>
+        </div>
+
+        <div class="rpa-sub text-muted small" role="status" aria-live="polite"
+             data-retro-agent-rapport-target="compteur"></div>
     </div>
 
     {% if projection %}
@@ -94,70 +294,187 @@
     {% else %}
     <div class="rpa-scroll">
         <table class="table table-sm table-hover rpa-table" aria-label="Rétrocommissions de {{ agent.nom }}">
+            <caption class="visually-hidden">
+                Production de {{ agent.nom }} affaire par affaire : prime du client et son
+                règlement, commission du cabinet et son encaissement, part des partenaires
+                externes, puis rétrocommission due, versée, restante et exigible.
+            </caption>
             <thead>
+                {# Premier rang : les cinq étapes du trajet de l'argent. #}
                 <tr>
+                    <th scope="colgroup" colspan="7">Affaire</th>
+                    <th scope="colgroup" colspan="3" class="rpa-groupe">Prime du client</th>
+                    <th scope="colgroup" colspan="7" class="rpa-groupe">Commission du cabinet</th>
+                    <th scope="colgroup" colspan="3" class="rpa-groupe">Partage</th>
+                    <th scope="colgroup" colspan="5" class="rpa-groupe">Part de l'agent</th>
+                </tr>
+                <tr>
+                    <th scope="col" class="rpa-num rpa-rang">#</th>
                     <th scope="col">Client</th>
                     <th scope="col">Police / Proposition</th>
+                    <th scope="col">Mouvement</th>
                     <th scope="col">Risque</th>
                     <th scope="col">Assureur</th>
                     <th scope="col">Gestionnaire</th>
-                    <th scope="col" class="rpa-num">Prime</th>
-                    <th scope="col" class="rpa-num">Comm. TTC</th>
-                    <th scope="col" class="rpa-num">Comm. HT</th>
-                    <th scope="col" class="rpa-num">Taxe assureur</th>
-                    <th scope="col" class="rpa-num">Taxe courtier</th>
-                    <th scope="col" class="rpa-num">Comm. pure</th>
-                    <th scope="col" class="rpa-num">Partageable</th>
-                    <th scope="col" class="rpa-num">Rétro partenaire</th>
-                    <th scope="col">Condition</th>
-                    <th scope="col" class="rpa-num">Rétro agent due</th>
+
+                    <th scope="col" class="rpa-num rpa-groupe">Due</th>
                     <th scope="col" class="rpa-num">Payée</th>
                     <th scope="col" class="rpa-num">Solde</th>
+
+                    <th scope="col" class="rpa-num rpa-groupe">TTC</th>
+                    <th scope="col" class="rpa-num">Encaissée</th>
+                    <th scope="col" class="rpa-num">Solde</th>
+                    <th scope="col" class="rpa-num">HT</th>
+                    <th scope="col" class="rpa-num">Taxe assureur</th>
+                    <th scope="col" class="rpa-num">Taxe courtier</th>
+                    <th scope="col" class="rpa-num">Pure</th>
+
+                    <th scope="col" class="rpa-num rpa-groupe">Partageable</th>
+                    <th scope="col" class="rpa-num">Rétro partenaire</th>
+                    <th scope="col">Condition</th>
+
+                    <th scope="col" class="rpa-num rpa-groupe">Due</th>
+                    <th scope="col" class="rpa-num">Versée</th>
+                    <th scope="col" class="rpa-num">Solde</th>
                     <th scope="col" class="rpa-num">Exigible</th>
-                    <th scope="col">Éligibilité</th>
+                    <th scope="col">État</th>
                 </tr>
             </thead>
-            <tbody class="table-group-divider">
+            <tbody class="table-group-divider" id="rpa-corps-{{ agent.id }}">
                 {% for l in lignes %}
-                    <tr>
-                        <td>{{ l.client }}</td>
+                    {# Le texte cherchable est PRÉ-CALCULÉ ici : le filtre du navigateur ne
+                       relit pas le DOM ligne par ligne, et cherche exactement sur ce que
+                       le placeholder annonce. #}
+                    <tr data-rpa-ligne
+                        data-rpa-texte="{{ (l.client ~ ' ' ~ l.reference ~ ' ' ~ l.risque ~ ' ' ~ l.assureur ~ ' ' ~ l.gestionnaire ~ ' ' ~ (l.conditionNom ?? ''))|lower }}">
+                        {# NUMÉRO D'ORDRE DU RAPPORT, pas un identifiant : il sert à se
+                           désigner une ligne à l'oral (« la 7 ») et à retrouver sa place
+                           après un défilement. Il suit l'ordre SERVEUR et ne se renumérote
+                           pas quand la recherche masque des lignes — sans quoi deux lectures
+                           du même rapport ne parleraient pas de la même ligne. #}
+                        <td class="rpa-num rpa-rang">{{ loop.index }}</td>
                         <td>
-                            {{ l.reference }}
-                            {% if l.debut %}
-                                <div class="text-muted" style="font-size:0.75rem;">
-                                    {{ l.debut|date('d/m/Y') }}{% if l.fin %} → {{ l.fin|date('d/m/Y') }}{% endif %}
-                                </div>
-                            {% endif %}
+                            <span class="rpa-cellule">
+                                <span class="rpa-pastille" aria-hidden="true">
+                                    {{ ux_icon(resolve_icon_name('client'), {height: '14px', width: '14px'}) }}
+                                </span>{{ l.client }}
+                            </span>
                         </td>
-                        <td>{{ l.risque }}</td>
-                        <td>{{ l.assureur }}</td>
-                        <td>{{ l.gestionnaire }}</td>
-                        <td class="rpa-num">{{ l.prime|number_format(2, ',', ' ') }}</td>
-                        <td class="rpa-num">{{ l.commissionTtc|number_format(2, ',', ' ') }}</td>
+                        <td>
+                            <span class="rpa-cellule">
+                                {# La pastille dit d'emblée si la ligne est une POLICE ou une
+                                   simple proposition : deux natures que les montants seuls
+                                   ne distinguent pas. #}
+                                <span class="rpa-pastille" aria-hidden="true">
+                                    {{ ux_icon(resolve_icon_name(l.avenant ? 'avenant' : 'cotation'), {height: '14px', width: '14px'}) }}
+                                </span>
+                                <span>
+                                    {{ l.reference }}
+                                    {% if l.debut %}
+                                        <div class="rpa-secondaire">
+                                            {{ l.debut|date('d/m/Y') }}{% if l.fin %} → {{ l.fin|date('d/m/Y') }}{% endif %}
+                                        </div>
+                                    {% endif %}
+                                </span>
+                            </span>
+                        </td>
+                        {# Le MOUVEMENT : une souscription et un renouvellement ne se discutent
+                           pas de la même façon quand on parle d'une rémunération. #}
+                        <td>
+                            <span class="rpa-cellule">
+                                <span class="rpa-pastille" aria-hidden="true">
+                                    {{ ux_icon(resolve_icon_name('avenant'), {height: '14px', width: '14px'}) }}
+                                </span>{{ l.mouvement }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="rpa-cellule">
+                                <span class="rpa-pastille" aria-hidden="true">
+                                    {{ ux_icon(resolve_icon_name('risque'), {height: '14px', width: '14px'}) }}
+                                </span>{{ l.risque }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="rpa-cellule">
+                                <span class="rpa-pastille" aria-hidden="true">
+                                    {{ ux_icon(resolve_icon_name('assureur'), {height: '14px', width: '14px'}) }}
+                                </span>{{ l.assureur }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="rpa-cellule">
+                                <span class="rpa-pastille" aria-hidden="true">
+                                    {{ ux_icon(resolve_icon_name('utilisateur'), {height: '14px', width: '14px'}) }}
+                                </span>{{ l.gestionnaire }}
+                            </span>
+                        </td>
+
+                        <td class="rpa-num rpa-groupe">{{ l.prime|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.primePayee|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.primeSolde|number_format(2, ',', ' ') }}</td>
+
+                        <td class="rpa-num rpa-groupe">{{ l.commissionTtc|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.commissionEncaissee|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.commissionSolde|number_format(2, ',', ' ') }}</td>
                         <td class="rpa-num">{{ l.commissionHt|number_format(2, ',', ' ') }}</td>
                         <td class="rpa-num">{{ l.taxeAssureur|number_format(2, ',', ' ') }}</td>
                         <td class="rpa-num">{{ l.taxeCourtier|number_format(2, ',', ' ') }}</td>
                         <td class="rpa-num">{{ l.commissionPure|number_format(2, ',', ' ') }}</td>
-                        <td class="rpa-num">{{ l.partageable|number_format(2, ',', ' ') }}</td>
+
+                        <td class="rpa-num rpa-groupe">{{ l.partageable|number_format(2, ',', ' ') }}</td>
                         <td class="rpa-num">{{ l.retroPartenaire|number_format(2, ',', ' ') }}</td>
                         <td>
                             {% if l.conditionNom %}
-                                {{ l.conditionNom }}
-                                <span class="text-muted">({{ l.conditionTaux|number_format(2, ',', ' ') }} %)</span>
+                                <span class="rpa-cellule">
+                                    <span class="rpa-pastille" aria-hidden="true">
+                                        {{ ux_icon(resolve_icon_name('condition'), {height: '14px', width: '14px'}) }}
+                                    </span>
+                                    <span>
+                                        {{ l.conditionNom }}
+                                        <span class="rpa-secondaire">({{ l.conditionTaux|number_format(2, ',', ' ') }} %)</span>
+                                    </span>
+                                </span>
                             {% else %}
                                 <span class="text-muted">&mdash;</span>
                             {% endif %}
                         </td>
-                        <td class="rpa-num rpa-focus">{{ l.retroAgentDue|number_format(2, ',', ' ') }}</td>
-                        <td class="rpa-num">{{ l.retroAgentPayee|number_format(2, ',', ' ') }}</td>
-                        <td class="rpa-num rpa-focus">{{ l.retroAgentSolde|number_format(2, ',', ' ') }}</td>
-                        <td class="rpa-num">{{ l.retroAgentExigible|number_format(2, ',', ' ') }}</td>
+
+                        <td class="rpa-num rpa-groupe rpa-focus">{{ l.due|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.payee|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num rpa-focus">{{ l.solde|number_format(2, ',', ' ') }}</td>
+                        {# Le seul montant sur lequel on peut agir aujourd'hui. #}
+                        <td class="rpa-num rpa-exigible"
+                            title="Réclamable dès maintenant : la commission de l'affaire est encaissée.">
+                            {{ l.exigible|number_format(2, ',', ' ') }}
+                        </td>
                         <td>
-                            {# Verdict N-1 : INDICATIF. Un « hors règle » s'annonce, il n'interdit rien. #}
-                            {% if l.avertissement %}
-                                <span class="badge text-bg-warning" title="{{ l.avertissement }}">{{ l.eligibiliteLibelle }}</span>
+                            {# CE QU'ON PEUT FAIRE DE CETTE LIGNE, AUJOURD'HUI.
+
+                               La colonne annonçait le verdict N-1 de l'éligibilité — « Nouvelle
+                               affaire », « Ligne existante » — une information indicative, qui
+                               n'interdit ni n'autorise rien, et qui répétait à l'identique sur
+                               toutes les lignes. Ce que le courtier cherche ici, c'est de
+                               savoir s'il PEUT verser : le dû naît à la souscription, mais il
+                               n'est réclamable qu'une fois la commission encaissée.
+
+                               Le verdict d'éligibilité n'est pas perdu : il reste en infobulle,
+                               là où il ne dispute plus la place à l'essentiel. #}
+                            {# Du TEXTE, pas une pastille : `.badge` est forcé en bleu dans cette
+                               application, et une colonne entière de pilules bleues ne dit plus
+                               rien — sinon que tout se ressemble. C'est la COULEUR du mot qui
+                               porte l'état, et le vert gras ne va qu'à ce sur quoi on peut agir. #}
+                            {% if l.exigible > 0 %}
+                                <span class="rpa-etat rpa-etat--exigible"
+                                      title="La commission de cette affaire est encaissée : cette part est réclamable dès maintenant.">Exigible</span>
+                            {% elseif l.solde > 0 %}
+                                <span class="rpa-etat rpa-etat--attente"
+                                      title="Le montant est dû mais pas encore réclamable : le cabinet n'a pas fini d'encaisser sa commission.">Pas encore exigible</span>
                             {% else %}
-                                <span class="text-muted">{{ l.eligibiliteLibelle }}</span>
+                                <span class="rpa-etat rpa-etat--soldee"
+                                      title="Rien ne reste dû sur cette affaire.">Soldée</span>
+                            {% endif %}
+                            {% if l.avertissement %}
+                                <span class="rpa-secondaire d-block" title="{{ l.avertissement }}">{{ l.eligibiliteLibelle }}</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -165,24 +482,36 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="5">Totaux ({{ totaux.nbLignes }} ligne(s))</td>
+                    <td colspan="7">Totaux ({{ totaux.nbLignes }} ligne(s))</td>
+
                     <td class="rpa-num">{{ totaux.prime|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.primePayee|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.primeSolde|number_format(2, ',', ' ') }}</td>
+
                     <td class="rpa-num">{{ totaux.commissionTtc|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.commissionEncaissee|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.commissionSolde|number_format(2, ',', ' ') }}</td>
                     <td class="rpa-num">{{ totaux.commissionHt|number_format(2, ',', ' ') }}</td>
                     <td class="rpa-num">{{ totaux.taxeAssureur|number_format(2, ',', ' ') }}</td>
                     <td class="rpa-num">{{ totaux.taxeCourtier|number_format(2, ',', ' ') }}</td>
                     <td class="rpa-num">{{ totaux.commissionPure|number_format(2, ',', ' ') }}</td>
+
                     <td class="rpa-num">{{ totaux.partageable|number_format(2, ',', ' ') }}</td>
                     <td class="rpa-num">{{ totaux.retroPartenaire|number_format(2, ',', ' ') }}</td>
                     <td></td>
-                    <td class="rpa-num">{{ totaux.retroAgentDue|number_format(2, ',', ' ') }}</td>
-                    <td class="rpa-num">{{ totaux.retroAgentPayee|number_format(2, ',', ' ') }}</td>
-                    <td class="rpa-num">{{ totaux.retroAgentSolde|number_format(2, ',', ' ') }}</td>
-                    <td class="rpa-num">{{ totaux.retroAgentExigible|number_format(2, ',', ' ') }}</td>
+
+                    <td class="rpa-num">{{ totaux.due|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.payee|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.solde|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.exigible|number_format(2, ',', ' ') }}</td>
                     <td></td>
                 </tr>
             </tfoot>
         </table>
+        <div class="rpa-sans-resultat d-none" role="status"
+             data-retro-agent-rapport-target="sansResultat">
+            Aucune affaire ne correspond à cette recherche.
+        </div>
     </div>
     {% endif %}
 </div>

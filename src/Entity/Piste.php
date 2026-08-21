@@ -255,6 +255,28 @@ class Piste implements OwnerAwareInterface
         return $this;
     }
 
+    /**
+     * Le MOUVEMENT que cette affaire opère sur la police — souscription, renouvellement,
+     * incorporation…
+     *
+     * La table vit ici, avec les codes qu'elle traduit : elle était recopiée dans la
+     * stratégie d'indicateurs, et tout écran qui en avait besoin devait soit passer par
+     * elle, soit se réécrire un `match` de plus — la manière sûre de voir apparaître un
+     * septième libellé le jour où un code s'ajoute.
+     */
+    public static function libelleTypeAvenant(?int $type): string
+    {
+        return match ($type) {
+            self::AVENANT_SOUSCRIPTION => 'Souscription',
+            self::AVENANT_INCORPORATION => 'Incorporation',
+            self::AVENANT_PROROGATION => 'Prorogation',
+            self::AVENANT_ANNULATION => 'Annulation',
+            self::AVENANT_RENOUVELLEMENT => 'Renouvellement',
+            self::AVENANT_RESILIATION => 'Résiliation',
+            default => 'Non défini',
+        };
+    }
+
     public function getTypeAvenant(): ?int
     {
         return $this->typeAvenant;
