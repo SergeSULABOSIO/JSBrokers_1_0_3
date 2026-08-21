@@ -79,8 +79,12 @@ class RevenuPourCourtierEntityCanvasProvider implements EntityCanvasProviderInte
             ["group" => "Partage Partenaire", "code" => "retroCommissionReversee", "intitule" => "Rétro-commission Reversée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "La somme des montants déjà versés au partenaire pour ce revenu."],
             ["group" => "Partage Partenaire", "code" => "retroCommissionSolde", "intitule" => "Rétro-commission Solde", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Le montant de la rétro-commission restant à verser au partenaire."],
 
+            // Groupe 4 bis : PARTAGE AGENT. Il manquait, et la réserve baissait donc sans
+            // cause visible dès qu'un agent interne était rémunéré sur l'affaire.
+            ["group" => "Partage Agent", "code" => "retroAgentDue", "intitule" => "Rétro-commission Agent", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "La part des agents internes du cabinet sur ce revenu. Elle se calcule sur le RELIQUAT — le montant pur diminué de la rétro-commission du partenaire —, les intermédiaires externes se servant les premiers."],
+
             // Groupe 5: Résultat
-            ["group" => "Résultat Final", "code" => "reserve", "intitule" => "Réserve Courtier", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Le revenu net final pour le courtier après déduction de la taxe courtier et de la rétro-commission du partenaire."],
+            ["group" => "Résultat Final", "code" => "reserve", "intitule" => "Réserve Courtier", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Le revenu net final pour le courtier après déduction de la taxe courtier, de la rétro-commission du partenaire ET de la part des agents internes."],
         ];
     }
 }

@@ -73,6 +73,9 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             // Part partenaire = FRACTION (0.35) → pourcent() pour l'affichage (via le VO).
             'partPartenaire' => round(Pourcentage::fromFraction($this->getRevenuPartPartenaire($entity))->pourcent(), 2),
             'retroCommission' => $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1),
+            // UNE COLONNE ANNONCÉE EST UNE COLONNE RENDUE : sans elle, la réserve baisserait
+            // sans que rien n'explique où l'argent est passé.
+            'retroAgentDue' => round($this->calculationHelper->getRevenuMontantRetroAgent($entity), 2),
             'reserve' => $this->getReserveCourtier($entity),
         ];
     }
@@ -98,12 +101,20 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
         return $montantPaye;
     }
 
-    /** Réserve : formule UNIQUE du projet (App\Service\Partage\Reserve). */
+    /**
+     * Réserve : formule UNIQUE du projet (App\Service\Partage\Reserve).
+     *
+     * LES TROIS TERMES, PAS DEUX. Le troisième — la part des agents internes — manquait :
+     * la fiche d'un revenu annonçait donc une réserve que le cabinet ne gardait pas, tandis
+     * que la fiche de l'avenant, elle, la déduisait. Deux réserves cohabitaient pour le même
+     * argent, et c'est la plus flatteuse qui s'affichait au plus près de la saisie.
+     */
     private function getReserveCourtier(RevenuPourCourtier $revenu): float
     {
         return Reserve::calculer(
             $this->calculationHelper->getRevenuMontantPure($revenu),
             $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, null, -1),
+            $this->calculationHelper->getRevenuMontantRetroAgent($revenu),
         );
     }
 

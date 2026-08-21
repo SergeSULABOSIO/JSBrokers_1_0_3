@@ -6,6 +6,7 @@ use App\Entity\Avenant;
 use App\Entity\Bordereau;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Entity\Note;
 use App\Entity\Taxe;
 use App\Repository\TaxeRepository;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
@@ -535,6 +536,26 @@ class DashboardDataProvider
         usort($parRisque, fn($a, $b) => $b['primesTotales'] <=> $a['primesTotales']);
 
         return $this->sliceAvecRestes(array_values($parRisque));
+    }
+
+    /**
+     * Le taux de rétrocommission RÉELLEMENT appliqué aux affaires que cette note facture.
+     *
+     * On interroge la source unique — la même cascade que la fiche, la cotation et
+     * l'assistant — plutôt que de multiplier par la part habituelle du partenaire. Le
+     * premier article suffit : une note de production porte les revenus d'une même
+     * affaire, et c'est déjà l'hypothèse que faisait le code précédent.
+     */
+    private function tauxPartenaireApplique(Note $note): float
+    {
+        foreach ($note->getArticles() as $article) {
+            $revenu = $article->getRevenuFacture();
+            if ($revenu !== null) {
+                return $this->calculationHelper->getRevenuTauxPartenaireApplique($revenu);
+            }
+        }
+
+        return 0.0;
     }
 
     private function getAvenantsParPartenaire(Entreprise $entreprise): array
@@ -1083,16 +1104,13 @@ class DashboardDataProvider
             $rows[$month][$assId]['taxeAssureur']   += $metrics['taxeAssureur'];
             $rows[$month][$assId]['taxeCourtier']   += $metrics['taxeCourtier'];
 
-            // Rétrocommission : taux partenaire × assiette produite (commission pure)
-            $tauxPart = 0.0;
-            foreach ($note->getArticles() as $art) {
-                $cot = $art->getRevenuFacture()?->getCotation();
-                if ($cot) {
-                    $partenaire = $this->calculationHelper->getCotationPartenaire($cot);
-                    $tauxPart = $partenaire ? $partenaire->getFraction() : 0.0;
-                    break;
-                }
-            }
+            // Rétrocommission : le taux RÉELLEMENT APPLIQUÉ × l'assiette produite.
+            //
+            // Surtout pas Partenaire::getFraction() : c'est la part HABITUELLE, celle qui ne
+            // vaut qu'à défaut de condition. Dès qu'une condition de partage existait, ce
+            // tableau annonçait une rétrocommission que ni la fiche de l'affaire, ni la
+            // cotation, ni l'assistant ne confirmaient — deux chiffres pour le même argent.
+            $tauxPart = $this->tauxPartenaireApplique($note);
             $rows[$month][$assId]['retrocommission'] += AvenantIndicatorStrategy::computeRetrocommission($metrics['commissionPure'], $tauxPart);
 
             // Prime produite : navigation vers l'avenant (notes avec articles seulement)
@@ -1407,15 +1425,7 @@ class DashboardDataProvider
                     $byRisqueMonthly[$risId][$month]['taxeAssureur']   += $metrics['taxeAssureur'];
                     $byRisqueMonthly[$risId][$month]['taxeCourtier']   += $metrics['taxeCourtier'];
 
-                    $tauxPart = 0.0;
-                    foreach ($note->getArticles() as $art) {
-                        $cot = $art->getRevenuFacture()?->getCotation();
-                        if ($cot) {
-                            $partenaire = $this->calculationHelper->getCotationPartenaire($cot);
-                            $tauxPart   = $partenaire ? $partenaire->getFraction() : 0.0;
-                            break;
-                        }
-                    }
+                    $tauxPart = $this->tauxPartenaireApplique($note);
                     $retro = AvenantIndicatorStrategy::computeRetrocommission($metrics['commissionPure'], $tauxPart);
                     $byRisque[$risId]['retrocommission']               += $retro;
                     $byRisqueMonthly[$risId][$month]['retrocommission'] += $retro;
