@@ -18,7 +18,7 @@ import { Controller } from '@hotwired/stimulus';
  * explicitement combien de lignes sont montrées sur combien.
  */
 export default class extends Controller {
-    static targets = ['recherche', 'compteur', 'sansResultat'];
+    static targets = ['recherche', 'compteur', 'sansResultat', 'scroll', 'tableau', 'pied', 'colonnesPied'];
 
     static values = {
         baseUrl: String,
@@ -29,14 +29,87 @@ export default class extends Controller {
         this.nomControleur = 'RETRO-AGENT-RAPPORT';
         this.lignes = Array.from(document.querySelectorAll('[data-rpa-ligne]'));
 
-        // L'AFFICHAGE SUIT TOUJOURS LE CHAMP.
+        // UN RAPPORT S'OUVRE SANS FILTRE.
         //
-        // Au rechargement, le navigateur restitue de lui-même ce qui était saisi. Se
-        // contenter d'afficher toutes les lignes laisserait alors un terme écrit dans la
-        // barre au-dessus d'une liste complète : l'écran contredirait ce qu'on y lit.
-        // On applique donc le filtre tel qu'il est — vide compris, auquel cas rien n'est
-        // masqué et le compteur annonce le total.
+        // Au rechargement, le navigateur restitue de lui-même le dernier terme saisi :
+        // le rapport rouvrait donc filtré, sans que personne l'ait demandé, et l'écran
+        // n'annonçait qu'une partie des affaires. On repart du vide — le serveur vient
+        // de rendre la liste complète, c'est elle qu'on montre — puis on aligne
+        // l'affichage sur le champ, pour que les deux ne se contredisent jamais.
+        if (this.hasRechercheTarget) {
+            this.rechercheTarget.value = '';
+        }
         this.chercher();
+
+        // La barre des totaux vit HORS du tableau : c'est ce qui la garde au bas de la
+        // page quelle que soit la longueur de la liste, et ce qui oblige à tenir son
+        // alignement à la main.
+        this._alignerLePied();
+        this._suivreLeDefilement = () => this._reporterLeDefilement();
+        if (this.hasScrollTarget) {
+            this.scrollTarget.addEventListener('scroll', this._suivreLeDefilement, { passive: true });
+        }
+        // Les largeurs bougent avec la fenêtre, avec le repli des colonnes du
+        // workspace, et à l'arrivée des polices de caractères.
+        if (this.hasTableauTarget && typeof ResizeObserver !== 'undefined') {
+            this._observateur = new ResizeObserver(() => this._alignerLePied());
+            this._observateur.observe(this.tableauTarget);
+        }
+    }
+
+    disconnect() {
+        this._observateur?.disconnect();
+        if (this.hasScrollTarget && this._suivreLeDefilement) {
+            this.scrollTarget.removeEventListener('scroll', this._suivreLeDefilement);
+        }
+    }
+
+    /**
+     * Recopie sur la barre les largeurs MESURÉES du tableau.
+     *
+     * Vingt-cinq colonnes dont la largeur dépend du contenu : aucune valeur écrite
+     * d'avance ne tiendrait: un nom de client plus long, et tout se décale. On lit donc
+     * la rangée d'en-têtes de détail — celle qui porte une cellule par colonne — et on
+     * la reporte sur les `col` de la barre, qui est en `table-layout: fixed` et les
+     * respecte donc à la lettre.
+     *
+     * @private
+     */
+    _alignerLePied() {
+        if (!this.hasTableauTarget || !this.hasColonnesPiedTarget) {
+            return;
+        }
+        const enTetes = this.tableauTarget.querySelectorAll('thead tr:last-child th');
+        const colonnes = this.colonnesPiedTarget.querySelectorAll('col');
+        if (enTetes.length === 0 || enTetes.length !== colonnes.length) {
+            return;
+        }
+
+        let total = 0;
+        enTetes.forEach((th, i) => {
+            const largeur = th.getBoundingClientRect().width;
+            colonnes[i].style.width = `${largeur}px`;
+            total += largeur;
+        });
+        // La barre doit être aussi large que le tableau, sans quoi son défilement
+        // reporté n'aurait nulle part où aller.
+        const tableauPied = this.piedTarget?.querySelector('table');
+        if (tableauPied) {
+            tableauPied.style.width = `${total}px`;
+        }
+        this._reporterLeDefilement();
+    }
+
+    /**
+     * La barre suit le tableau quand il défile de côté : deux rangées de chiffres qui
+     * ne parlent pas des mêmes colonnes seraient pires qu'un total absent.
+     *
+     * @private
+     */
+    _reporterLeDefilement() {
+        if (this.hasScrollTarget && this.hasPiedTarget) {
+            this.piedTarget.scrollLeft = this.scrollTarget.scrollLeft;
+        }
     }
 
     /** Statut : règle serveur, la page se redemande. */
@@ -78,6 +151,17 @@ export default class extends Controller {
                 timestamp: Date.now(),
             },
         }));
+    }
+
+    /**
+     * Le champ n'est éditable qu'une fois cliqué : c'est ce qui empêche Chrome d'y
+     * écrire de lui-même (il n'écrit jamais dans un champ en lecture seule). Même
+     * parade que la barre de recherche des listes.
+     */
+    activerSaisie() {
+        if (this.hasRechercheTarget) {
+            this.rechercheTarget.removeAttribute('readonly');
+        }
     }
 
     /** Recherche rapide : restreint l'affichage, ne touche à aucun montant. */

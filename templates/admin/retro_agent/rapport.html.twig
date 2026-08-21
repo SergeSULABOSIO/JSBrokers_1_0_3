@@ -20,6 +20,19 @@
    les valeurs en dur ne servent que de repli si la feuille globale n'est pas chargée.
 #}
 {% set m = monnaie %}
+{# LARGEUR PLANCHER DES COLONNES DE CHIFFRES.
+
+   Un total est presque toujours plus large que chacune des lignes qu'il additionne :
+   une colonne dimensionnée sur ses lignes tronquait « 106 000,00 » en « 106 00… », et
+   c'est justement le chiffre qu'on vient lire. Les colonnes numériques prennent donc
+   toutes le gabarit du plus long total — uniforme, comme dans un état comptable. #}
+{% set largeur_totaux = 0 %}
+{% for cle, valeur in totaux %}
+    {% if cle != 'nbLignes' %}
+        {% set largeur_totaux = max(largeur_totaux, (valeur|number_format(2, ',', ' '))|length) %}
+    {% endif %}
+{% endfor %}
+{% set min_num = 'min-width: calc(' ~ largeur_totaux ~ 'ch + 1.7rem);' %}
 
 <style>
     /* PLEINE LARGEUR, AVEC DES GOUTTIÈRES. Le rapport occupe la place disponible — un
@@ -39,7 +52,7 @@
            poursuit visuellement jusqu'au bas. */
         display: flex;
         flex-direction: column;
-        max-height: calc(100% - 2.5rem);
+        height: calc(100% - 2.5rem);
         margin: 1.25rem;
         background-color: var(--bg-white, #ffffff);
         border: 1px solid var(--border-light, #dee2e6);
@@ -76,17 +89,48 @@
        aux en-têtes et au pied collants. */
     .rpa-scroll { flex: 1 1 auto; overflow: auto; min-height: 0; }
     .rpa-table { font-size: 0.82rem; margin-bottom: 0; white-space: nowrap; }
-    /* ── LA HAUTEUR DES LIGNES NE BOUGE PAS ─────────────────────────────────────
-       Le tableau garde sa hauteur naturelle. J'ai d'abord tenté de l'étirer sur toute
-       la zone pour poser le pied au ras de la fenêtre, en dirigeant le surplus vers une
-       rangée vide : mesuré au navigateur, le moteur de rendu répartit ce surplus entre
-       TOUTES les rangées quoi qu'on lui demande — six affaires devenaient six bandes de
-       190 pixels, et la même liste changeait d'allure selon son nombre de lignes.
+    /* ── LES TOTAUX SONT UNE BARRE, PAS UNE RANGÉE ──────────────────────────────
+       Ils doivent tenir le bas de la page QUELLE QUE SOIT la longueur de la liste.
+       Deux tentatives ont échoué avant celle-ci, et il vaut la peine de dire
+       pourquoi : un `tfoot` collant ne descend que si le tableau dépasse sa zone —
+       sur six affaires il se posait sous la dernière ligne ; et étirer le tableau
+       pour occuper la hauteur fait répartir le surplus entre TOUTES les rangées,
+       mesuré au navigateur, quoi qu'on demande à une rangée de remplissage : six
+       affaires devenaient six bandes de 190 pixels.
 
-       Les totaux restent donc COLLANTS : dès que les affaires dépassent la hauteur
-       visible — le cas où l'on en a besoin —, le pied reste au bas de l'écran pendant
-       le défilement. Sur une liste courte, il se pose sous la dernière ligne, comme
-       dans un tableur. */
+       Le pied est donc SORTI du tableau : c'est une barre, dernier élément de la
+       colonne, donc toujours en bas. Le prix à payer est l'alignement — il est tenu
+       par le contrôleur, qui recopie les largeurs mesurées du tableau et suit son
+       défilement horizontal. Le tableau, lui, garde ses rangées à hauteur naturelle. */
+    .rpa-pied {
+        flex: 0 0 auto;
+        overflow: hidden;
+        border-top: 2px solid var(--cobalt, #0047AB);
+        border-radius: 0 0 10px 10px;
+        background-color: var(--bg-dark, #212529);
+    }
+    /* DES TOTAUX BLANCS SUR FOND SOMBRE — DEUX RÈGLES LEUR DISPUTAIENT LA COULEUR.
+       La barre porte `rpa-table` comme la liste, pour que ses colonnes s'alignent sur
+       elle : elle héritait donc aussi du gris de corps destiné aux lignes, sur son
+       fond sombre — illisible. Ce sélecteur-là est désormais réservé à la liste.
+       Restait Bootstrap, qui colore les cellules depuis `.table > :not(caption) > * > *`,
+       trois fois plus spécifique que `.rpa-pied td` : une déclaration `color` y aurait
+       encore perdu. On règle donc les VARIABLES que cette règle consomme, ce qui la
+       fait travailler pour nous plutôt que contre nous. */
+    .rpa-pied table {
+        margin: 0;
+        table-layout: fixed;
+        --bs-table-color: var(--text-white, #ffffff);
+        --bs-table-bg: transparent;
+        --bs-table-border-color: transparent;
+    }
+    .rpa-pied td {
+        font-weight: 600;
+        border: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
     /* GOUTTIÈRES DES CELLULES. `table-sm` de Bootstrap serre à 0.25rem — acceptable
        pour une liste qu'on survole, trop peu pour un tableau qu'on ÉPLUCHE : les
        montants se touchaient d'une colonne à l'autre et l'œil devait s'accrocher au
@@ -144,7 +188,7 @@
     .rpa-etat--attente  { color: var(--text-muted, #6c757d); }
     .rpa-etat--soldee   { color: var(--text-label, #adb5bd); }
 
-    .rpa-table tbody td { color: var(--text-body, #495057); vertical-align: middle; }
+    .rpa-scroll .rpa-table tbody td { color: var(--text-body, #495057); vertical-align: middle; }
     .rpa-num { text-align: right; font-variant-numeric: tabular-nums; }
 
     /* Pastille d'identité : elle se lit AVANT le texte et distingue un client d'un risque
@@ -171,18 +215,6 @@
        l'accent de la marque, là où les autres restent neutres. */
     .rpa-table .rpa-exigible { color: var(--cobalt, #0047AB); font-weight: 700; }
 
-    /* LE PIED RESTE SOUS LES YEUX. Un total qu'il faut aller chercher au bas d'une
-       longue liste ne sert à rien pendant la lecture : il est collant, comme les
-       en-têtes le sont en haut. */
-    .rpa-table tfoot td {
-        position: sticky;
-        bottom: 0;
-        z-index: 3;
-        background-color: var(--bg-dark, #212529);
-        color: var(--text-white, #ffffff);
-        font-weight: 600;
-        border-top: 2px solid var(--cobalt, #0047AB);
-    }
     .rpa-empty { padding: 2rem 1.25rem; text-align: center; color: var(--text-muted, #6c757d); }
 </style>
 
@@ -255,8 +287,17 @@
            règle serveur et se redemande. Filtrer côté navigateur évite un aller-retour pour
            retrouver un client dans une liste qu'on a sous les yeux.
 
-           `type="search"` + `name` + les attributs anti-remplissage : sans eux, Chrome
-           injecte l'adresse e-mail mémorisée dans un champ texte anonyme. #}
+           LE CHAMP REPART VIDE À CHAQUE OUVERTURE. Deux mécanismes le remplissaient tout
+           seul : le remplissage automatique de Chrome, qui injecte l'adresse e-mail
+           mémorisée dans un champ texte anonyme, et la RESTAURATION de formulaire au
+           rechargement, qui rendait le terme précédent — et relançait donc un filtrage
+           que personne n'avait demandé, sur un rapport qu'on venait de rouvrir.
+
+           D'où `type="search"`, un `name`, les attributs anti-remplissage, et `readonly`
+           levé au premier clic : c'est la parade éprouvée de la barre de recherche des
+           listes (Chrome n'écrit jamais dans un champ en lecture seule). Le contrôleur
+           vide en outre le champ à sa connexion — ceinture et bretelles, parce que la
+           restauration, elle, se moque de `autocomplete`. #}
         <div class="jsb-search-bar rpa-recherche">
             <div class="jsb-search-bar__row">
                 <span class="jsb-search-bar__icon" aria-hidden="true">
@@ -270,8 +311,9 @@
                        placeholder="Client, police, risque, assureur…"
                        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
                        data-lpignore="true" data-1p-ignore data-form-type="other"
+                       readonly
                        data-retro-agent-rapport-target="recherche"
-                       data-action="input->retro-agent-rapport#chercher search->retro-agent-rapport#chercher">
+                       data-action="input->retro-agent-rapport#chercher search->retro-agent-rapport#chercher focus->retro-agent-rapport#activerSaisie">
             </div>
         </div>
 
@@ -292,8 +334,10 @@
     {% if lignes is empty %}
         <div class="rpa-empty">Aucune affaire dans ce statut pour cet agent.</div>
     {% else %}
-    <div class="rpa-scroll">
-        <table class="table table-sm table-hover rpa-table" aria-label="Rétrocommissions de {{ agent.nom }}">
+    <div class="rpa-scroll" data-retro-agent-rapport-target="scroll">
+        <table class="table table-sm table-hover rpa-table"
+               data-retro-agent-rapport-target="tableau"
+               aria-label="Rétrocommissions de {{ agent.nom }}">
             <caption class="visually-hidden">
                 Production de {{ agent.nom }} affaire par affaire : prime du client et son
                 règlement, commission du cabinet et son encaissement, part des partenaires
@@ -309,7 +353,7 @@
                     <th scope="colgroup" colspan="5" class="rpa-groupe">Part de l'agent</th>
                 </tr>
                 <tr>
-                    <th scope="col" class="rpa-num rpa-rang">#</th>
+                    <th scope="col" class="rpa-num rpa-rang" style="{{ min_num }}">#</th>
                     <th scope="col">Client</th>
                     <th scope="col">Police / Proposition</th>
                     <th scope="col">Mouvement</th>
@@ -317,26 +361,26 @@
                     <th scope="col">Assureur</th>
                     <th scope="col">Gestionnaire</th>
 
-                    <th scope="col" class="rpa-num rpa-groupe">Due</th>
-                    <th scope="col" class="rpa-num">Payée</th>
-                    <th scope="col" class="rpa-num">Solde</th>
+                    <th scope="col" class="rpa-num rpa-groupe" style="{{ min_num }}">Due</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Payée</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Solde</th>
 
-                    <th scope="col" class="rpa-num rpa-groupe">TTC</th>
-                    <th scope="col" class="rpa-num">Encaissée</th>
-                    <th scope="col" class="rpa-num">Solde</th>
-                    <th scope="col" class="rpa-num">HT</th>
-                    <th scope="col" class="rpa-num">Taxe assureur</th>
-                    <th scope="col" class="rpa-num">Taxe courtier</th>
-                    <th scope="col" class="rpa-num">Pure</th>
+                    <th scope="col" class="rpa-num rpa-groupe" style="{{ min_num }}">TTC</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Encaissée</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Solde</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">HT</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Taxe assureur</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Taxe courtier</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Pure</th>
 
-                    <th scope="col" class="rpa-num rpa-groupe">Partageable</th>
-                    <th scope="col" class="rpa-num">Rétro partenaire</th>
+                    <th scope="col" class="rpa-num rpa-groupe" style="{{ min_num }}">Partageable</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Rétro partenaire</th>
                     <th scope="col">Condition</th>
 
-                    <th scope="col" class="rpa-num rpa-groupe">Due</th>
-                    <th scope="col" class="rpa-num">Versée</th>
-                    <th scope="col" class="rpa-num">Solde</th>
-                    <th scope="col" class="rpa-num">Exigible</th>
+                    <th scope="col" class="rpa-num rpa-groupe" style="{{ min_num }}">Due</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Versée</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Solde</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Exigible</th>
                     <th scope="col">État</th>
                 </tr>
             </thead>
@@ -480,9 +524,25 @@
                     </tr>
                 {% endfor %}
             </tbody>
-            <tfoot>
+        </table>
+        <div class="rpa-sans-resultat d-none" role="status"
+             data-retro-agent-rapport-target="sansResultat">
+            Aucune affaire ne correspond à cette recherche.
+        </div>
+    </div>
+
+    {# ── BARRE DES TOTAUX ──────────────────────────────────────────────────────
+       Hors du tableau, donc toujours au bas de la page — que la liste tienne en six
+       lignes ou en deux cents. Ses colonnes sont alignées et son défilement suivi par
+       le contrôleur : `table-layout: fixed` + des largeurs recopiées du tableau. #}
+    <div class="rpa-pied" data-retro-agent-rapport-target="pied" aria-hidden="true">
+        <table class="table table-sm rpa-table">
+            <colgroup data-retro-agent-rapport-target="colonnesPied">
+                {% for i in 1..25 %}<col>{% endfor %}
+            </colgroup>
+            <tbody>
                 <tr>
-                    <td colspan="7">Totaux ({{ totaux.nbLignes }} ligne(s))</td>
+<td colspan="7">Totaux ({{ totaux.nbLignes }} ligne(s))</td>
 
                     <td class="rpa-num">{{ totaux.prime|number_format(2, ',', ' ') }}</td>
                     <td class="rpa-num">{{ totaux.primePayee|number_format(2, ',', ' ') }}</td>
@@ -506,12 +566,18 @@
                     <td class="rpa-num">{{ totaux.exigible|number_format(2, ',', ' ') }}</td>
                     <td></td>
                 </tr>
-            </tfoot>
+            </tbody>
         </table>
-        <div class="rpa-sans-resultat d-none" role="status"
-             data-retro-agent-rapport-target="sansResultat">
-            Aucune affaire ne correspond à cette recherche.
-        </div>
     </div>
+
+    {# Les totaux sont aussi énoncés pour les lecteurs d'écran, que la barre visuelle
+       — recopiée et découplée du tableau — ne saurait leur rattacher. #}
+    <p class="visually-hidden">
+        Totaux sur {{ totaux.nbLignes }} affaire(s) : rétrocommission due
+        {{ totaux.due|number_format(2, ',', ' ') }}, versée
+        {{ totaux.payee|number_format(2, ',', ' ') }}, solde
+        {{ totaux.solde|number_format(2, ',', ' ') }}, exigible
+        {{ totaux.exigible|number_format(2, ',', ' ') }}.
+    </p>
     {% endif %}
 </div>

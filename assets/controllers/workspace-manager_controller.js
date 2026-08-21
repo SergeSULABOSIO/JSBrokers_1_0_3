@@ -145,6 +145,31 @@ export default class extends Controller {
         // NOUVEAU : Écoute la confirmation de l'utilisateur avant d'exécuter la déconnexion.
         this.boundHandleCerveauEvent = this.handleCerveauEvent.bind(this);
         document.addEventListener('cerveau:event', this.boundHandleCerveauEvent);
+
+        // ── LA BARRE D'ONGLETS SUIT TOUTE RECOMPOSITION DES COLONNES ──────────────
+        //
+        // Ces deux observateurs vivaient au bas de `restoreLastState()`, qui sort par la
+        // première porte quand la session ne garde aucun état : la barre n'était alors
+        // JAMAIS réactive, et ne devait son repli qu'au hasard des icônes qui arrivent.
+        // Leur place est ici, dans `connect()`, où rien ne peut les court-circuiter.
+        //
+        // Deux observateurs, parce qu'il y a deux façons de changer la place disponible :
+        //  - la TAILLE du conteneur (fenêtre redimensionnée, colonne 2 repliée) ;
+        //  - la DISPOSITION, annoncée par une classe posée sur la racine du workspace —
+        //    le volet de Ket qui s'ouvre ou se ferme, le passage en plein écran. Une
+        //    bascule peut recomposer la page sans que le conteneur observé ait varié au
+        //    moment précis où on le mesure ; l'attribut, lui, ne ment pas.
+        // On observe le wrapper et non la rangée : celle-ci, en `overflow: hidden`, ne
+        // varie plus une fois des onglets repliés — l'observateur ne se réveillerait jamais.
+        if (this.hasWorkspaceTabBarWrapperTarget) {
+            this.workspaceTabsObserver = new ResizeObserver(() => this._replierLesOngletsBientot());
+            this.workspaceTabsObserver.observe(this.workspaceTabBarWrapperTarget);
+        }
+        this.workspaceDispositionObserver = new MutationObserver(() => this._replierLesOngletsBientot());
+        this.workspaceDispositionObserver.observe(this.element, {
+            attributes: true,
+            attributeFilter: ['class'],
+        });
     }
 
     /**
@@ -199,14 +224,6 @@ export default class extends Controller {
         else {
             this.loadDefaultComponent();
         }
-
-        // La barre se replie aussi quand la FENÊTRE change de largeur, pas seulement quand
-        // on ouvre une rubrique. On observe le wrapper : la rangée, en `overflow: hidden`,
-        // ne varie plus une fois des onglets repliés — l'observer ne se réveillerait jamais.
-        if (this.hasWorkspaceTabBarWrapperTarget) {
-            this.workspaceTabsObserver = new ResizeObserver(() => this.updateWorkspaceTabsOverflow());
-            this.workspaceTabsObserver.observe(this.workspaceTabBarWrapperTarget);
-        }
     }
 
 
@@ -226,6 +243,7 @@ export default class extends Controller {
         this.debordementWorkspace?.detruire();
         document.removeEventListener('app:liste-element:openned', this.boundOpenTabInVisualization);
         document.removeEventListener('app:icon.loaded', this.boundHandleIconLoaded);
+        this.workspaceDispositionObserver?.disconnect();
         document.removeEventListener('workspace:component.loaded', this.boundHandleComponentLoaded);
         document.removeEventListener('app:workspace.load-default', this.boundLoadDefault);
         document.removeEventListener('app:workspace.close-active-tab', this.boundCloseActiveTab);
@@ -2650,7 +2668,7 @@ export default class extends Controller {
 
     /**
      * Clôt la phase de restauration en plein écran ouverte par le script inline du
-     * gabarit (classe `workspace-restoring-fullscreen`, posée avant le premier rendu).
+     * gabarit (classe `workspace-restoring-visualization`, posée avant le premier rendu).
      *
      * ÉCHEC = on rend la disposition normale. La colonne 3 est masquée par le plein
      * écran et la colonne 4 n'aura rien à montrer : sans ce retour en arrière,
@@ -2659,9 +2677,9 @@ export default class extends Controller {
      * @param {boolean} restaure le panneau de la colonne 4 est-il bien en place ?
      */
     _finirRestaurationPleinEcran(restaure) {
-        if (!this.element.classList.contains('workspace-restoring-fullscreen')) return;
+        if (!this.element.classList.contains('workspace-restoring-visualization')) return;
 
-        this.element.classList.remove('workspace-restoring-fullscreen');
+        this.element.classList.remove('workspace-restoring-visualization');
         if (restaure) return;
 
         this.element.classList.remove('chat-fullscreen', 'visualization-visible');
