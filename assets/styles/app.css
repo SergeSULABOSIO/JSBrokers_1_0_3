@@ -5013,10 +5013,15 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     top: .72rem;
     transform: none;
 }
-.jsb-picker-field .form-control {
+/* Le retrait vaut aussi pour une LISTE DÉROULANTE : sans lui, l'icône se posait
+   par-dessus le premier caractère de l'option retenue. Son chevron, lui, est à
+   droite — les deux ne se disputent rien. */
+.jsb-picker-field .form-control,
+.jsb-picker-field .form-select {
     padding-left: 2.4rem;
 }
-.jsb-picker-field .form-control:focus {
+.jsb-picker-field .form-control:focus,
+.jsb-picker-field .form-select:focus {
     border-color: #0047AB;
     box-shadow: 0 0 0 .2rem rgba(0, 71, 171, 0.15) !important;
 }
@@ -5177,6 +5182,42 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
    zone de dépôt et les fichiers touchent les bords de la boîte. */
 .jsb-attach-corps { padding: 1rem 1.25rem 1.25rem; }
 .jsb-attach-corps .jsb-picker-empty { padding: 1.1rem .5rem 0; }
+
+/* ── CARTES DE SECTION D'UN PICKER ───────────────────────────────────────────
+   Deux structures différentes ne doivent pas se lire comme une seule. Le picker
+   de reversement en aligne trois — les affaires à régler, le versement lui-même,
+   ce qui sera enregistré — et leurs seules légendes ne suffisaient pas à les
+   séparer : le regard descendait d'un titre à l'autre sans frontière, et la
+   fenêtre paraissait ne contenir qu'un long formulaire.
+
+   Chaque section devient donc une CARTE blanche sur un fond légèrement grisé,
+   sa légende détachée par un filet. La classe est générique — jsb-picker-carte —
+   parce que rien ici ne concerne le reversement : tout picker qui alignera
+   plusieurs structures en aura besoin. */
+.jsb-picker-cartes {
+    padding: .75rem 1.25rem 1.25rem;
+    background-color: var(--bg-light, #f8f9fa);
+}
+.jsb-picker-carte {
+    margin: 0 0 .85rem;
+    padding: .85rem 1rem 1rem;
+    background-color: var(--bg-white, #ffffff);
+    border: 1px solid var(--border-light, #dee2e6);
+    border-radius: 10px;
+}
+.jsb-picker-carte:last-child { margin-bottom: 0; }
+/* Reboot met les legend en float pleine largeur : un titre flottant ne saurait
+   porter le filet qui le détache de son contenu. On le rend au flux normal. */
+.jsb-picker-carte > legend,
+.jsb-picker-carte > .jsb-picker-carte-titre {
+    float: none;
+    width: auto;
+    margin: 0 0 .75rem;
+    padding-bottom: .55rem;
+    border-bottom: 1px solid var(--border-light, #dee2e6);
+    font-size: .95rem;
+    font-weight: 600;
+}
 
 .jsb-attach-drop {
     display: flex;
