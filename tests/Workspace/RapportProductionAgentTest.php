@@ -207,6 +207,44 @@ class RapportProductionAgentTest extends WebTestCase
         self::assertStringContainsString('Rien à reverser', $html);
     }
 
+    /**
+     * Les trois champs du versement s'ouvrent RENSEIGNÉS — date, référence, compte.
+     *
+     * Ce contrôle se fait sur les fichiers et non sur une page rendue : le bloc « Le
+     * versement » n'existe que s'il reste un solde exigible, ce que ce jeu de données
+     * n'a pas (aucune commission encaissée). Vérifier le câblage a tout de même du
+     * sens — une variable renommée d'un seul côté ne se voit qu'à l'exécution, et
+     * seulement pour un agent qu'on doit réellement payer.
+     */
+    public function testLesChampsDuVersementSontProposesRemplis(): void
+    {
+        $gabarit = (string) file_get_contents(
+            __DIR__ . '/../../templates/components/retro_agent/_reversement_picker.html.twig'
+        );
+
+        // La référence : proposée par le serveur, et le champ NOMMÉ — un champ texte
+        // anonyme se fait remplir tout seul par le navigateur.
+        self::assertStringContainsString('value="{{ referenceParDefaut }}"', $gabarit);
+        self::assertStringContainsString('name="reversement_reference"', $gabarit);
+        self::assertStringContainsString('autocomplete="off"', $gabarit);
+
+        $controleur = (string) file_get_contents(
+            __DIR__ . '/../../src/Controller/Admin/RetroAgentController.php'
+        );
+        self::assertStringContainsString("'referenceParDefaut' =>", $controleur);
+
+        // Le premier compte est retenu d'office, la caisse ne l'étant qu'à défaut de
+        // tout compte : sans ce repli, un cabinet sans banque n'aurait AUCUN choix coché.
+        self::assertStringContainsString("loop.first ? ' selected' : ''", $gabarit);
+        self::assertStringContainsString("comptes|length == 0 ? ' selected' : ''", $gabarit);
+
+        // Le format, lui, ne vit qu'à un seul endroit : le POST reprend la même méthode
+        // quand le champ revient vide.
+        $reference = \App\Controller\Admin\RetroAgentController::referenceParDefaut(
+            new \DateTimeImmutable('2026-08-21 14:35:12')
+        );
+        self::assertSame('RETRO-21082026-143512', $reference);
+    }
     public function testUnReversementEnLotEcritUneLigneParAffaireEtUneSeuleReference(): void
     {
         $ids = $this->semer();
