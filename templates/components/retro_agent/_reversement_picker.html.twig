@@ -173,9 +173,9 @@
                                 Le premier compte est retenu d'office. Choisissez la caisse pour un
                                 versement en espèces.
                             </span>
-                            {# Un reversement passe par la banque dans la règle et par la caisse par
-                               exception : c'est donc le premier compte qui est proposé, la caisse
-                               restant à un clic. Sans aucun compte enregistré, elle reste le choix. #}
+                            {# Le compte proposé est calculé par DefautsDuVersement, PAS ici : Ket
+                               propose le même, et un reversement demandé à la voix doit débiter le
+                               même compte que le même geste fait à la souris. #}
                             <div class="jsb-picker-field" style="max-width:26rem;">
                                 <span class="jsb-picker-field-icon" aria-hidden="true">
                                     {{ ux_icon(resolve_icon_name('compte-bancaire'), {width: '16px', height: '16px'}) }}
@@ -183,9 +183,9 @@
                                 <select id="rra-compte" class="form-select"
                                         data-reversement-retro-picker-target="compte"
                                         aria-describedby="rra-compte-aide">
-                                    <option value=""{{ comptes|length == 0 ? ' selected' : '' }}>Caisse (espèces)</option>
+                                    <option value=""{{ compteProposeId is null ? ' selected' : '' }}>Caisse (espèces)</option>
                                     {% for compte in comptes %}
-                                        <option value="{{ compte.id }}"{{ loop.first ? ' selected' : '' }}>{{ compte.intitule }} — {{ compte.banque }}</option>
+                                        <option value="{{ compte.id }}"{{ compte.id == compteProposeId ? ' selected' : '' }}>{{ compte.intitule }} — {{ compte.banque }}</option>
                                     {% endfor %}
                                 </select>
                             </div>

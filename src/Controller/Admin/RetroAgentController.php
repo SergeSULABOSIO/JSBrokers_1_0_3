@@ -8,6 +8,7 @@ use App\Entity\Invite;
 use App\Entity\ReversementRetroAgent;
 use App\Repository\AvenantRepository;
 use App\Repository\InviteRepository;
+use App\Service\Retro\DefautsDuVersement;
 use App\Service\RetroAgent\RapportProductionAgentBuilder;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\CanvasBuilder;
@@ -68,6 +69,9 @@ class RetroAgentController extends AbstractController
         // ACTIVE (connectedTo) — un utilisateur peut en avoir un par entreprise.
         private InviteRepository $inviteRepository,
         private ServiceMonnaies $serviceMonnaies,
+        // Les valeurs proposées du versement (référence, compte débité) sont les
+        // MÊMES pour l'écran et pour Ket : elles vivent hors d'ici.
+        private DefautsDuVersement $defautsDuVersement,
         CanvasBuilder $canvasBuilder,
     ) {
         $this->canvasBuilder = $canvasBuilder;
@@ -112,14 +116,14 @@ class RetroAgentController extends AbstractController
             'agent'   => $agent,
             'lignes'  => $this->rapportBuilder->lignesAVerser($agent),
             'monnaie' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-            // Les comptes viennent d'ICI : Entreprise n'expose aucune collection de
-            // comptes bancaires, et un gabarit qui interrogerait une methode absente
-            // echouerait a l'affichage.
-            'comptes' => $this->em->getRepository(CompteBancaire::class)
-                ->findBy(['entreprise' => $agent->getEntreprise()], ['intitule' => 'ASC']),
+            // Les comptes viennent d'un SERVICE : Entreprise n'expose aucune collection
+            // de comptes bancaires, et surtout l'ordre de cette liste détermine lequel
+            // est proposé — Ket doit proposer le même.
+            'comptes' => $this->defautsDuVersement->comptes($agent->getEntreprise()),
+            'compteProposeId' => $this->defautsDuVersement->comptePropose($agent->getEntreprise())?->getId(),
             // Pré-remplie à l'instant de l'ouverture : l'utilisateur voit la référence
             // qui sera écrite, et peut la remplacer par celle de son virement réel.
-            'referenceParDefaut' => self::referenceParDefaut(new \DateTimeImmutable('now')),
+            'referenceParDefaut' => $this->defautsDuVersement->reference(new \DateTimeImmutable('now')),
             'submitUrl' => $this->generateUrl('admin.retro_agent.reversement_submit', ['id' => $agent->getId()]),
         ]);
     }
@@ -149,7 +153,7 @@ class RetroAgentController extends AbstractController
             // Le champ est pré-rempli à l'ouverture : ne revient vide que si
             // l'utilisateur l'a effacé. On lui en rend une plutôt que d'écrire
             // un reversement anonyme, introuvable en rapprochement bancaire.
-            $reference = self::referenceParDefaut($paidAt);
+            $reference = $this->defautsDuVersement->reference($paidAt);
         }
         // Un lot n'existe qu'à partir de DEUX lignes : un reversement isolé garde
         // lotReference à null, pour ne jamais être fondu dans le lot d'un autre.
@@ -270,18 +274,6 @@ class RetroAgentController extends AbstractController
     }
 
     /** Date fournie, sinon maintenant. Une date illisible ne fait pas échouer la saisie. */
-    /**
-     * Le format de référence d'un reversement, en UN seul endroit.
-     *
-     * Le gabarit s'en sert pour PRÉ-REMPLIR le champ, le POST pour le remplacer si
-     * le champ revient vide. Deux formules auraient fini par différer, et un
-     * reversement n'aurait plus porté la référence que le picker avait annoncée.
-     */
-    public static function referenceParDefaut(\DateTimeImmutable $date): string
-    {
-        return 'RETRO-' . $date->format('dmY-His');
-    }
-
     private function dateDeVersement(?string $brut): \DateTimeImmutable
     {
         $brut = trim((string) $brut);

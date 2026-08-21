@@ -233,17 +233,15 @@ class RapportProductionAgentTest extends WebTestCase
         );
         self::assertStringContainsString("'referenceParDefaut' =>", $controleur);
 
-        // Le premier compte est retenu d'office, la caisse ne l'étant qu'à défaut de
-        // tout compte : sans ce repli, un cabinet sans banque n'aurait AUCUN choix coché.
-        self::assertStringContainsString("loop.first ? ' selected' : ''", $gabarit);
-        self::assertStringContainsString("comptes|length == 0 ? ' selected' : ''", $gabarit);
+        // Le compte retenu d'office est celui que le SERVICE propose — pas « le premier
+        // de la boucle » : c'est la même règle qui sert Ket, et deux formulations de la
+        // même règle finissent par désigner deux comptes différents.
+        self::assertStringContainsString("compte.id == compteProposeId", $gabarit);
+        self::assertStringContainsString("compteProposeId is null ? ' selected' : ''", $gabarit);
+        self::assertStringContainsString("'compteProposeId' =>", $controleur);
 
-        // Le format, lui, ne vit qu'à un seul endroit : le POST reprend la même méthode
-        // quand le champ revient vide.
-        $reference = \App\Controller\Admin\RetroAgentController::referenceParDefaut(
-            new \DateTimeImmutable('2026-08-21 14:35:12')
-        );
-        self::assertSame('RETRO-21082026-143512', $reference);
+        // Ni le gabarit ni le contrôleur ne portent la formule de référence.
+        self::assertStringNotContainsString("'RETRO-' .", $controleur);
     }
     public function testUnReversementEnLotEcritUneLigneParAffaireEtUneSeuleReference(): void
     {
