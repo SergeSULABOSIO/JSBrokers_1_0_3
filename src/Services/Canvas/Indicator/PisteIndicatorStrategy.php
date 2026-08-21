@@ -41,17 +41,10 @@ class PisteIndicatorStrategy implements IndicatorCalculationStrategyInterface
         ];
     }
 
+    /** Source unique : la table vit sur l'entité, avec les codes qu'elle traduit. */
     private function getPisteTypeAvenantString(Piste $piste): string
     {
-        return match ($piste->getTypeAvenant()) {
-            Piste::AVENANT_SOUSCRIPTION => 'Souscription',
-            Piste::AVENANT_INCORPORATION => 'Incorporation',
-            Piste::AVENANT_PROROGATION => 'Prorogation',
-            Piste::AVENANT_ANNULATION => 'Annulation',
-            Piste::AVENANT_RENOUVELLEMENT => 'Renouvellement',
-            Piste::AVENANT_RESILIATION => 'Résiliation',
-            default => 'Non défini',
-        };
+        return Piste::libelleTypeAvenant($piste->getTypeAvenant());
     }
 
     private function getPisteRenewalConditionString(Piste $piste): string

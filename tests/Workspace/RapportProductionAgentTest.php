@@ -187,7 +187,20 @@ class RapportProductionAgentTest extends WebTestCase
         $this->client->request('GET', '/admin/retro-agent/' . $ids['aliceId'] . '/reversement-picker');
 
         self::assertResponseIsSuccessful();
-        $html = json_decode($this->client->getResponse()->getContent(), true)['html'];
+        $html = (string) $this->client->getResponse()->getContent();
+
+        // ── LE PICKER DOIT S'OUVRIR, PAS SEULEMENT RÉPONDRE ────────────────────────
+        //
+        // Cette réponse était une enveloppe JSON `{html, title}`, et ce test se
+        // contentait d'y lire la clé « html » : il passait au vert pendant que le picker
+        // ne s'ouvrait JAMAIS. `picker-open.js` — l'ouvreur commun au portefeuille, aux
+        // risques ciblés et aux clients — lit la réponse en TEXTE et insère son premier
+        // élément ; une chaîne JSON n'en contient aucun, d'où « Contenu du picker vide ».
+        //
+        // On vérifie donc ce dont l'ouvreur a réellement besoin : un fragment HTML dont
+        // la racine porte le contrôleur du picker.
+        self::assertStringStartsWith('<div', ltrim($html));
+        self::assertStringContainsString('data-controller="reversement-retro-picker"', $html);
 
         // Aucune commission n'a été encaissée par le cabinet : rien n'est encore
         // réclamable, et le picker l'explique au lieu d'afficher un tableau vide muet.

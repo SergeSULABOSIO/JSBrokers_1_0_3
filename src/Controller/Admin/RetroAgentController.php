@@ -99,23 +99,25 @@ class RetroAgentController extends AbstractController
      * à ligne. Un seul envoi crée autant de reversements que de lignes cochées.
      */
     #[Route('/{id}/reversement-picker', name: 'reversement_picker', methods: ['GET'])]
-    public function reversementPicker(Invite $agent): JsonResponse
+    public function reversementPicker(Invite $agent): Response
     {
         $this->assertPeutVerser($agent);
 
-        return $this->json([
-            'html' => $this->renderView('components/retro_agent/_reversement_picker.html.twig', [
-                'agent'   => $agent,
-                'lignes'  => $this->rapportBuilder->lignesAVerser($agent),
-                'monnaie' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                // Les comptes viennent d'ICI : Entreprise n'expose aucune collection de
-                // comptes bancaires, et un gabarit qui interrogerait une methode absente
-                // echouerait a l'affichage.
-                'comptes' => $this->em->getRepository(CompteBancaire::class)
-                    ->findBy(['entreprise' => $agent->getEntreprise()], ['intitule' => 'ASC']),
-                'submitUrl' => $this->generateUrl('admin.retro_agent.reversement_submit', ['id' => $agent->getId()]),
-            ]),
-            'title' => 'Reverser une rétrocommission — ' . $agent->getNom(),
+        // DU HTML, PAS DU JSON. L'ouvreur de pickers autonomes (`picker-open.js`, partagé
+        // avec le portefeuille, les risques ciblés et les clients) lit la réponse en TEXTE
+        // et l'insère telle quelle. Une enveloppe JSON lui donnait donc une chaîne sans
+        // aucun élément — « Contenu du picker vide » — et le bouton de reversement ne
+        // faisait rien d'autre qu'une notification d'erreur.
+        return $this->render('components/retro_agent/_reversement_picker.html.twig', [
+            'agent'   => $agent,
+            'lignes'  => $this->rapportBuilder->lignesAVerser($agent),
+            'monnaie' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+            // Les comptes viennent d'ICI : Entreprise n'expose aucune collection de
+            // comptes bancaires, et un gabarit qui interrogerait une methode absente
+            // echouerait a l'affichage.
+            'comptes' => $this->em->getRepository(CompteBancaire::class)
+                ->findBy(['entreprise' => $agent->getEntreprise()], ['intitule' => 'ASC']),
+            'submitUrl' => $this->generateUrl('admin.retro_agent.reversement_submit', ['id' => $agent->getId()]),
         ]);
     }
 

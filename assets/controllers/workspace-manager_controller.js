@@ -585,9 +585,39 @@ export default class extends Controller {
         // On cherche un élément avec l'ID du demandeur dans le périmètre de ce contrôleur.
         // Cela garantit que ce contrôleur ne met à jour que les icônes qu'il a lui-même demandées.
         const iconContainer = this.element.querySelector(`#${requesterId}`);
-        if (iconContainer) {
-            iconContainer.innerHTML = html;
+        if (!iconContainer) {
+            return;
         }
+        iconContainer.innerHTML = html;
+
+        // UNE ICÔNE QUI ARRIVE ÉLARGIT SON ONGLET.
+        //
+        // Après un rechargement, la barre se reconstitue SANS icônes — elles sont
+        // demandées au circuit d'icônes et arrivent ensuite, une par une. Le repli
+        // calculé avant leur arrivée mesurait donc des onglets trop étroits et concluait
+        // qu'ils tenaient tous : le bouton « +N » disparaissait au F5 et ne revenait qu'au
+        // premier redimensionnement de la fenêtre.
+        if (iconContainer.closest('.workspace-tab-item')) {
+            this._replierLesOngletsBientot();
+        }
+    }
+
+    /**
+     * Recalcule le repli des onglets une fois les largeurs stabilisées, en fondant les
+     * demandes rapprochées : douze icônes qui arrivent coup sur coup ne doivent pas
+     * déclencher douze mesures.
+     *
+     * @private
+     */
+    _replierLesOngletsBientot() {
+        if (this._replierEnAttente) {
+            return;
+        }
+        this._replierEnAttente = true;
+        requestAnimationFrame(() => {
+            this._replierEnAttente = false;
+            this.updateWorkspaceTabsOverflow();
+        });
     }
 
     /**
@@ -2340,11 +2370,36 @@ export default class extends Controller {
     injectHtmlInNewTab(event) {
         const { html, title, iconAlias, tabKey, loadUrl } = event.detail;
 
-        // Dédoublonnage : si un onglet portant cette clé existe déjà, l'activer
+        // Dédoublonnage : un onglet portant cette clé existe déjà — on le RÉUTILISE.
+        //
+        // Et « réutiliser » veut dire remplacer son contenu, pas seulement l'activer.
+        // L'ancienne version se contentait de le mettre au premier plan : le HTML
+        // fraîchement demandé au serveur était donc récupéré puis JETÉ, en silence. Tout
+        // ce qui recharge un panneau dans son propre onglet — les chips de statut du
+        // rapport de production, au premier chef — semblait ne rien faire : l'écran ne
+        // bougeait pas, aucune erreur ne s'affichait.
         if (tabKey) {
             const existing = this.workspaceTabBarTarget
                 .querySelector(`.workspace-tab-item[data-tab-key="${tabKey}"]`);
             if (existing) {
+                const panelExistant = this.workspaceTabPanelsTarget
+                    .querySelector(`[data-tab-id="${existing.dataset.tabId}"]`);
+                if (panelExistant) {
+                    panelExistant.innerHTML = html;
+                    panelExistant.dataset.loaded = 'true';
+                }
+                if (title) {
+                    existing.querySelector('.workspace-tab-title').textContent = title;
+                }
+                // L'URL mémorisée suit l'état affiché : après un F5, l'onglet revient sur
+                // ce que l'utilisateur regardait, pas sur son état d'origine.
+                if (loadUrl) {
+                    const memorise = this.workspaceTabs.find(t => t.id === existing.dataset.tabId);
+                    if (memorise) {
+                        memorise.loadUrl = loadUrl;
+                        this._saveWorkspaceTabsToStorage();
+                    }
+                }
                 this._activateWorkspaceTabById(existing.dataset.tabId);
                 return;
             }
@@ -2526,6 +2581,16 @@ export default class extends Controller {
         // Reconstruire la barre d'onglets
         this.workspaceTabs = tabs;
         tabs.forEach(tabData => this._createTabStructure(tabData));
+
+        // LE GROUPEMENT DES ONGLETS EN SURNOMBRE SE RECALCULE ICI AUSSI.
+        //
+        // Toutes les autres portes d'entrée le font — ouvrir, fermer, injecter — mais pas
+        // la restauration : après un F5, une barre de douze onglets se reconstituait à
+        // plat, débordait, et le bouton « +N » n'apparaissait qu'au premier redimensionnement
+        // de la fenêtre (l'observateur de taille étant le seul à repasser). Le report d'une
+        // frame est nécessaire : le calcul compare des largeurs, et les onglets qu'on vient
+        // d'insérer n'en ont pas encore.
+        this._replierLesOngletsBientot();
 
         // Activer l'onglet précédemment actif (lazy-load déclenché automatiquement)
         const targetId = (activeTabId && tabs.find(t => t.id === activeTabId)) ? activeTabId : tabs[tabs.length - 1].id;
