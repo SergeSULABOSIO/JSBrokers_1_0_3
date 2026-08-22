@@ -558,11 +558,60 @@ textarea:hover,
     border-radius: 10px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
 }
+/* UNE RANGÉE : l'entrée qui mène à l'onglet, et la croix qui le ferme.
+   L'entrée occupait toute la largeur et était elle-même un bouton ; un onglet replié
+   n'avait donc AUCUN moyen d'être fermé — il fallait d'abord le ramener dans la barre,
+   donc élargir la fenêtre ou fermer un autre onglet. La croix vit à côté, hors du
+   bouton : un bouton dans un bouton n'est pas du HTML valide. */
+.list-tabs-overflow-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+/* La croix ne se révèle qu'au survol de SA rangée — visible en permanence, elle
+   ferait d'un panneau de navigation une liste d'actions destructrices. Elle reste
+   toutefois montrée dès qu'elle a le focus, sans quoi elle serait inatteignable au
+   clavier (WCAG 2.4.7). */
+.list-tabs-overflow-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    background-color: transparent;
+    color: #6c757d;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+}
+.list-tabs-overflow-row:hover .list-tabs-overflow-close,
+.list-tabs-overflow-close:focus-visible {
+    opacity: 1;
+}
+.list-tabs-overflow-close:hover {
+    background-color: #f8d7da;
+    color: #dc3545;
+}
+.list-tabs-overflow-close:focus-visible {
+    outline: 2px solid #0047AB;
+    outline-offset: -2px;
+}
+.list-tabs-overflow-close svg {
+    width: 14px;
+    height: 14px;
+}
 .list-tabs-overflow-item {
     display: flex;
     align-items: center;
     gap: 8px;
-    width: 100%;
+    /* `flex: 1` et non `width: 100%` : la rangée doit pouvoir réserver la place de
+       la croix sans que le libellé la pousse dehors. */
+    flex: 1 1 auto;
+    min-width: 0;
     min-height: 44px;
     padding: 8px 12px;
     border: none;

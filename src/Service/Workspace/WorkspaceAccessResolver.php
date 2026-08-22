@@ -97,7 +97,11 @@ class WorkspaceAccessResolver
         // personne n'a demandé de séparer : qui peut lire les avenants peut lire ce qui
         // a été reversé dessus. Le jour où il faudra les distinguer, ce sera un champ
         // de plus, pas un changement de logique.
-        'ReversementRetroAgent'      => ['Production', 'getRolesEnProduction', 'getAccessAvenant', 'Reversements de rétrocommission'],
+        // Le MODULE dit où l'utilisateur trouve la rubrique (Finances : un décaissement
+        // se cherche là) ; les deux getters disent quel DROIT la gouverne (celui de
+        // l'avenant, l'affaire que le versement solde). Les deux peuvent différer : le
+        // premier est un libellé de regroupement, les seconds sont la règle.
+        'ReversementRetroAgent'      => ['Finances', 'getRolesEnProduction', 'getAccessAvenant', 'Reversements de rétrocommission'],
         'Partenaire'                 => ['Production', 'getRolesEnProduction', 'getAccessPartenaire', 'Intermédiaires'],
         // Conditions de partage : RUBRIQUE à part entière depuis qu'elles portent la
         // rémunération nominative d'agents internes — il fallait un écran pour les créer

@@ -258,6 +258,11 @@ class RetroAgentController extends AbstractController
                 'parent' => 'reversementRetroAgent',
                 'id' => 0,
             ]),
+            // APRÈS L'ÉCRITURE, IL FAUT RAFRAÎCHIR CE QUI EST À L'ÉCRAN. Le picker
+            // s'ouvre aussi depuis le rapport de production, qui n'est pas une liste :
+            // on lui donne de quoi le redemander, sans quoi il resterait sur les
+            // montants d'avant le versement.
+            'rapportUrl' => $this->generateUrl('admin.retro_agent.rapport', ['id' => $agent->getId()]),
             'submitUrl' => $this->generateUrl('admin.retro_agent.reversement_submit', ['id' => $agent->getId()]),
         ]);
     }

@@ -30,6 +30,9 @@ class ReversementPickerRenduTest extends KernelTestCase
             'monnaie' => 'USD',
             'comptes' => $comptes,
             'submitUrl' => '/admin/retro-agent/1/reversement',
+            // Ce qu'il faudra rafraîchir après l'écriture : le picker s'ouvre depuis le
+            // rapport, qui n'est pas une liste.
+            'rapportUrl' => '/admin/retro-agent/1/rapport',
             'referenceParDefaut' => 'RETRO-21082026-141359',
             'compteProposeId' => $comptes[0]['id'] ?? null,
             // La zone de dépôt est celle des fiches : on lui passe le MÊME contexte que

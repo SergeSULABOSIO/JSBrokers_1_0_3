@@ -55,7 +55,11 @@ class ReversementRubriqueTest extends KernelTestCase
 
         self::assertSame($map['Avenant'][1], $collectionGetter, 'Même collection de rôles que l’avenant.');
         self::assertSame($map['Avenant'][2], $fieldGetter, 'Même champ d’accès que l’avenant.');
-        self::assertSame($map['Avenant'][0], $module, 'Même module, sinon le droit se refuserait sans dire où l’accorder.');
+
+        // LE MODULE, LUI, N'A PAS À SUIVRE. Ce n'est qu'un libellé de regroupement —
+        // celui sous lequel l'utilisateur cherche la rubrique. Un décaissement se cherche
+        // dans les Finances, quand bien même son droit vient de la production.
+        self::assertSame('Finances', $module);
 
         // Le getter doit EXISTER sur l'entité de rôles nommée : describePerimetre() l'appelle,
         // et un nom fantaisiste n'échouerait qu'à l'affichage du périmètre d'un invité.
