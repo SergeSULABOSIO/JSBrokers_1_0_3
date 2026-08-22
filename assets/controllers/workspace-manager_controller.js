@@ -2255,6 +2255,9 @@ export default class extends Controller {
             libelle: (onglet) => onglet.querySelector('.workspace-tab-title')?.textContent.trim()
                 || onglet.textContent.trim(),
             activer: (onglet) => this._activateWorkspaceTabById(onglet.dataset.tabId),
+            // FERMER DEPUIS LE PANNEAU. Sans ce geste, un onglet replié ne pouvait pas
+            // être fermé du tout : il fallait d'abord le ramener dans la barre.
+            fermer: (onglet) => this._closeWorkspaceTabById(onglet.dataset.tabId),
         });
 
         return this.debordementWorkspace;
@@ -2321,13 +2324,32 @@ export default class extends Controller {
     }
 
     /**
-     * Gestionnaire d'événement : ferme l'onglet workspace ciblé.
+     * Gestionnaire d'événement : ferme l'onglet workspace ciblé (croix de la barre).
      */
     closeWorkspaceTab(event) {
         event.stopPropagation();
         const tabEl = event.currentTarget.closest('.workspace-tab-item');
         if (!tabEl) return;
-        const tabId = tabEl.dataset.tabId;
+
+        this._closeWorkspaceTabById(tabEl.dataset.tabId);
+    }
+
+    /**
+     * Ferme un onglet par son ID, sans événement.
+     *
+     * Extrait de closeWorkspaceTab pour que la croix du PANNEAU des onglets repliés
+     * emprunte exactement le même chemin. Un onglet replié n'avait aucune croix : le
+     * seul moyen de le fermer était de le déplier — donc d'élargir la fenêtre ou d'en
+     * fermer un autre. Simuler un clic sur la croix réelle aurait marché, mais le
+     * projet évite délibérément les clics simulés (cf. `activer` du même panneau).
+     *
+     * @private
+     */
+    _closeWorkspaceTabById(tabId) {
+        if (!tabId) return;
+
+        const tabEl = this.workspaceTabBarTarget.querySelector(`[data-tab-id="${tabId}"]`);
+        if (!tabEl) return;
 
         const panel = this.workspaceTabPanelsTarget.querySelector(`[data-tab-id="${tabId}"]`);
         const wasActive = tabEl.classList.contains('active');

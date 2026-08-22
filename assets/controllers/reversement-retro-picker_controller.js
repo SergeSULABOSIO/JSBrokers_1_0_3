@@ -23,6 +23,7 @@ export default class extends PickerBase {
     static values = {
         submitUrl: String,
         attacherUrl: String,
+        rapportUrl: String,
         limites: Object,
         familles: Object,
     };
@@ -134,6 +135,10 @@ export default class extends PickerBase {
             this._notifyCerveau('client:retroagent.reversement-enregistre', {
                 message: [result.message, pieces].filter(Boolean).join(' '),
                 agentNom: null,
+                // Ce qu'il faut rafraîchir : le rapport, si c'est de là qu'on vient.
+                // Sans lui, le cerveau cherchait une liste inexistante et le rapport
+                // gardait ses montants d'avant le versement.
+                rapportUrl: this.hasRapportUrlValue ? this.rapportUrlValue : null,
             });
             this.close();
         } catch (error) {

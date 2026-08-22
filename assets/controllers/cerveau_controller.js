@@ -1461,6 +1461,31 @@ export default class extends Controller {
      */
     _handleRetroAgentReversementEnregistre(payload) {
         this._showNotification(payload.message || 'Reversement enregistré.', 'success');
+
+        // CE QU'IL FAUT RAFRAÎCHIR DÉPEND DE CE QUI EST À L'ÉCRAN.
+        //
+        // Le picker s'ouvre depuis DEUX endroits : la liste des invités, et le rapport
+        // de production de l'agent. Dans le second cas, l'onglet actif n'est pas une
+        // liste mais un panneau injecté : il n'a pas de `serverRootName`, et la demande
+        // de rafraîchissement échouait en deux erreurs de console — « serverRootName
+        // manquant », puis « URL non trouvée » — pendant que le rapport continuait
+        // d'afficher les montants d'AVANT le versement.
+        //
+        // On redemande donc le RAPPORT quand le picker en vient (il nous donne son
+        // URL), et la liste seulement quand il y en a une.
+        if (payload.rapportUrl) {
+            this.handleRetroAgentRapportRequest({ url: payload.rapportUrl });
+
+            return;
+        }
+
+        const tabState = this._getCurrentWsTabState()[this.getActiveTabId()];
+        if (!tabState?.serverRootName) {
+            // Ni liste, ni rapport : il n'y a rien à rafraîchir, et se taire vaut mieux
+            // qu'une erreur de console pour une opération qui a RÉUSSI.
+            return;
+        }
+
         const etat = this._getActiveTabState();
         this._publishSelectionStatus('Actualisation de la liste...');
         this.broadcast('app:loading.start', { originatorId: etat.elementId, workspaceTabId: this.currentWorkspaceTabId });

@@ -32,6 +32,8 @@ export class DebordementOnglets {
      * @param {number} [config.largeurBouton] - place réservée au bouton, en pixels.
      * @param {(onglet: HTMLElement) => string} [config.libelle] - texte d'une entrée.
      * @param {(onglet: HTMLElement) => void} [config.activer] - action d'une entrée.
+     * @param {(onglet: HTMLElement) => void} [config.fermer] - fermeture d'une entrée.
+     *        Absent, aucune croix n'est posée : toutes les barres ne se ferment pas.
      */
     constructor(config) {
         this.cfg = {
@@ -169,10 +171,19 @@ export class DebordementOnglets {
         panneau.innerHTML = '';
 
         this.replies.forEach((onglet) => {
+            // UNE RANGÉE, PAS UN SEUL BOUTON.
+            //
+            // L'entrée était elle-même un `button` ; y glisser une croix aurait imbriqué
+            // un bouton dans un bouton — HTML invalide, et comportement de clic
+            // imprévisible. On sépare donc : une rangée qui porte le rôle de liste, un
+            // bouton pour aller à l'onglet, un autre pour le fermer.
+            const rangee = document.createElement('div');
+            rangee.className = 'list-tabs-overflow-row';
+            rangee.setAttribute('role', 'listitem');
+
             const entree = document.createElement('button');
             entree.type = 'button';
             entree.className = 'list-tabs-overflow-item';
-            entree.setAttribute('role', 'listitem');
             if (onglet.dataset.tabId) entree.dataset.tabId = onglet.dataset.tabId;
 
             // Rubrique COURANTE mise en évidence, comme dans le menu de navigation : gras,
@@ -200,7 +211,56 @@ export class DebordementOnglets {
                 this.fermer();
                 this.cfg.activer(onglet);
             });
-            panneau.appendChild(entree);
+            rangee.appendChild(entree);
+
+            if (typeof this.cfg.fermer === 'function') {
+                rangee.appendChild(this._croix(onglet));
+            }
+            panneau.appendChild(rangee);
         });
+    }
+
+    /**
+     * La croix de fermeture d'une entrée.
+     *
+     * Le panneau se REPEUPLE après coup, et se referme s'il ne reste rien à montrer :
+     * laisser une liste vide ouverte sous le curseur donnerait à croire que le geste
+     * n'a pas abouti.
+     *
+     * @private
+     */
+    _croix(onglet) {
+        const croix = document.createElement('button');
+        croix.type = 'button';
+        croix.className = 'list-tabs-overflow-close';
+        croix.setAttribute('aria-label', `Fermer l'onglet « ${this.cfg.libelle(onglet)} »`);
+        croix.title = 'Fermer cet onglet';
+
+        // L'icône de la croix est CLONÉE de l'onglet réel : les icônes du projet sont
+        // résolues côté serveur, et en écrire une ici ferait un second jeu qui
+        // cesserait de suivre le premier. À défaut, un « × » textuel — une croix
+        // absente rendrait le bouton invisible.
+        const source = onglet.querySelector('.workspace-tab-close, .list-tab-close');
+        const svg = source?.querySelector('svg');
+        if (svg) {
+            const copie = svg.cloneNode(true);
+            copie.setAttribute('aria-hidden', 'true');
+            croix.appendChild(copie);
+        } else {
+            croix.textContent = '×';
+        }
+
+        croix.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.cfg.fermer(onglet);
+            this.recalculer();
+            if (this.replies.length === 0) {
+                this.fermer();
+            } else {
+                this._peupler();
+            }
+        });
+
+        return croix;
     }
 }
