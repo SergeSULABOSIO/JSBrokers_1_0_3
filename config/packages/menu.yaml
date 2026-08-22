@@ -65,6 +65,14 @@ parameters:
                         "Contacts": { icone: 'contact', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Contact' }
                         "Risques": { icone: 'risque', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Risque' }
                         "Avenants": { icone: 'avenant', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Avenant' }
+                        # Reversements de rétrocommission aux agents INTERNES : rubrique de
+                        # CONSULTATION (la création est refusée par son canevas — un versement
+                        # s'enregistre depuis le rapport de production ou par l'assistant, avec
+                        # son justificatif du même geste). Elle est ici, dans Production, parce
+                        # que c'est le droit de l'AVENANT qui la gouverne : une rubrique dont le
+                        # droit vit dans un autre module se refuserait sans qu'on comprenne où
+                        # l'accorder.
+                        "Reversements de rétrocommission": { icone: 'depense', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\ReversementRetroAgent' }
                         "Intermédiaires": { icone: 'partenaire', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Partenaire' }
                         # Règles de rétrocommission, partenaires EXTERNES comme agents INTERNES.
                         # Elles n'avaient aucune porte d'entrée : on ne pouvait les créer que

@@ -18,6 +18,11 @@
 <div class="jsb-picker-overlay"
      data-controller="reversement-retro-picker"
      data-reversement-retro-picker-submit-url-value="{{ submitUrl }}"
+     {# Le dépôt des pièces réutilise la route GÉNÉRIQUE d'attachement : son métrage de
+        jetons, son refus nommé par fichier, sa réponse. Aucun chemin d'écriture propre. #}
+     data-reversement-retro-picker-attacher-url-value="{{ attacherUrlPattern }}"
+     data-reversement-retro-picker-limites-value="{{ limites|json_encode|e('html_attr') }}"
+     data-reversement-retro-picker-familles-value="{{ famillesParExtension|json_encode|e('html_attr') }}"
      data-picker-overlay>
     <div class="jsb-picker-modal"
          role="dialog"
@@ -191,6 +196,32 @@
                             </div>
                         </div>
                     </div>
+                </fieldset>
+
+                {# ── LA PREUVE DU VIREMENT, EXIGÉE ────────────────────────────────────
+                   Un reversement est une sortie de fonds réelle : sans bordereau, c'est
+                   un montant que rien ne rattache à la banque. La pièce est donc
+                   OBLIGATOIRE, et le bouton d'enregistrement reste inerte tant qu'aucun
+                   fichier n'est choisi — le serveur re-valide, cette garde n'est que le
+                   moyen de ne pas laisser cliquer pour rien.
+
+                   UNE SEULE PIÈCE POUR TOUT LE VIREMENT. Cocher trois affaires n'est pas
+                   faire trois virements : le fichier est écrit UNE fois, sur le porteur du
+                   lot (cf. LotDeVersement), et les trois lignes le montrent. #}
+                <fieldset class="jsb-picker-carte"
+                          data-reversement-retro-picker-target="zonePiece">
+                    <legend class="fs-6" style="color:#0d2440;">Pièce justificative</legend>
+                    <span class="text-muted small d-block mb-2">
+                        Bordereau de virement ou reçu signé. Une seule pièce suffit&nbsp;: elle
+                        vaut pour toutes les affaires réglées par ce versement.
+                    </span>
+                    {# Zone de dépôt HABITUELLE, partagée avec la boîte « Attacher des
+                       pièces » d'une fiche — mêmes classes, mêmes refus, mêmes icônes. #}
+                    {{ include('components/document/_attach_zone.html.twig', {
+                        limites: limites,
+                        titre: 'Déposez le justificatif ici',
+                        vide_message: 'Aucune pièce choisie : le versement ne peut pas encore être enregistré.'
+                    }, with_context = false) }}
                 </fieldset>
 
                 <section class="jsb-picker-carte" aria-live="polite">

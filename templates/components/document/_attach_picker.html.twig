@@ -76,19 +76,9 @@
         #}
         <div class="jsb-picker-listwrap">
           <div class="jsb-attach-corps">
-            <div class="jsb-attach-drop" data-attach-drop tabindex="0" role="button"
-                 aria-label="Déposer des fichiers, ou parcourir votre ordinateur">
-                <span class="jsb-attach-drop-icon" aria-hidden="true">
-                    <twig:UX:Icon name="{{ resolve_icon_name('action:upload') }}" style="width:30px;height:30px;" />
-                </span>
-                <span class="jsb-attach-drop-titre">Déposez vos fichiers ici</span>
-                <span class="jsb-attach-drop-aide">ou cliquez pour parcourir votre ordinateur</span>
-            </div>
-            <input type="file" multiple hidden data-attach-input
-                   accept="{{ limites.extensions|default([])|map(e => '.' ~ e)|join(',') }}">
-
-            <ul class="jsb-attach-liste" data-attach-liste></ul>
-            <p class="jsb-picker-empty" data-attach-vide role="status">Aucun fichier choisi pour l'instant.</p>
+            {# Zone de dépôt et gabarits d'icônes : fragment partagé avec la carte
+               « Pièce justificative » du picker de reversement. #}
+            {{ include('components/document/_attach_zone.html.twig', {limites: limites}, with_context = false) }}
           </div>
         </div>
 
@@ -106,20 +96,4 @@
             </button>
         </footer>
     </div>
-
-    {#
-        LES ICÔNES DE FORMAT, RENDUES D'AVANCE. La liste des fichiers est construite par
-        le navigateur, à partir de fichiers qui ne sont pas encore partis : aucun serveur
-        ne peut donc rendre sa ligne. Plutôt que de faire voyager les icônes une à une par
-        le circuit asynchrone (ui:icon.request), on les pose ici en gabarits que le
-        contrôleur clone — même source d'alias, zéro aller-retour, aucune ligne sans icône.
-    #}
-    {% for famille in ['pdf', 'word', 'excel', 'ppt', 'image', 'archive', 'autre'] %}
-        <template data-attach-icone="{{ famille }}">
-            <twig:UX:Icon name="{{ resolve_icon_name('fichier:' ~ famille) }}" style="width:18px;height:18px;" aria-hidden="true" />
-        </template>
-    {% endfor %}
-    <template data-attach-icone-retirer>
-        <twig:UX:Icon name="{{ resolve_icon_name('action:delete') }}" style="width:15px;height:15px;" aria-hidden="true" />
-    </template>
 </div>

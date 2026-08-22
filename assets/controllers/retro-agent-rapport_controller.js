@@ -23,6 +23,8 @@ export default class extends Controller {
     static values = {
         baseUrl: String,
         pickerUrl: String,
+        versementsUrl: String,
+        justificatifsUrl: String,
     };
 
     connect() {
@@ -148,6 +150,54 @@ export default class extends Controller {
                 type: 'ui:retroagent.reversement-request',
                 source: this.nomControleur,
                 payload: { url: this.pickerUrlValue },
+                timestamp: Date.now(),
+            },
+        }));
+    }
+
+    /**
+     * LES JUSTIFICATIFS DES VERSEMENTS SUR UNE AFFAIRE, depuis sa ligne.
+     *
+     * Même boîte que celle d'une fiche : on émet `ui:documents.liste-request`, que le
+     * cerveau traite déjà. Seule la source des lignes change — une affaire peut avoir
+     * été soldée par plusieurs virements, chacun avec sa pièce.
+     */
+    justificatifs(event) {
+        event.preventDefault();
+        const avenantId = event.currentTarget?.dataset?.avenantId;
+        if (!avenantId || !this.hasJustificatifsUrlValue) return;
+
+        this.element.dispatchEvent(new CustomEvent('cerveau:event', {
+            bubbles: true,
+            detail: {
+                type: 'ui:documents.liste-request',
+                source: this.nomControleur,
+                // Le gabarit d'URL porte un 0 en place de l'affaire : le serveur rend une
+                // page pour tout le rapport, il ne peut pas y écrire chaque identifiant.
+                payload: { url: this.justificatifsUrlValue.replace('/affaire/0/', `/affaire/${avenantId}/`) },
+                timestamp: Date.now(),
+            },
+        }));
+    }
+
+    /**
+     * RELIRE LES VIREMENTS DÉJÀ ENREGISTRÉS, et y joindre un justificatif oublié.
+     *
+     * Le volet s'ouvre dans le MÊME onglet que le rapport (tabKey identique) : c'est
+     * un autre regard sur la même production, pas un second dossier à empiler. Il
+     * groupe par VIREMENT là où le rapport raisonne par affaire — un lot de trois
+     * affaires y fait une seule ligne, avec sa preuve unique.
+     */
+    versements(event) {
+        event.preventDefault();
+        if (!this.hasVersementsUrlValue) return;
+
+        this.element.dispatchEvent(new CustomEvent('cerveau:event', {
+            bubbles: true,
+            detail: {
+                type: 'ui:retroagent.rapport-request',
+                source: this.nomControleur,
+                payload: { url: this.versementsUrlValue },
                 timestamp: Date.now(),
             },
         }));
