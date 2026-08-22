@@ -187,6 +187,63 @@ class ReversementPariteEcranKetTest extends KernelTestCase
     }
 
     /**
+     * KET EXIGE LE JUSTIFICATIF, exactement comme l'écran — et le DIT.
+     *
+     * Sans cette symétrie, « paie Alice » dit à l'assistant serait le contournement de la
+     * règle : le versement passerait sans preuve là où le picker l'aurait refusé. Et un
+     * refus muet ne vaut rien — le modèle improviserait une explication, ou annoncerait un
+     * obstacle sans dire quoi faire.
+     */
+    public function testKetExigeLeJustificatifEtDitCommentLeFournir(): void
+    {
+        $outil = $this->outil();
+
+        self::assertContains('fichierId', $outil->schema()['required'], 'La pièce doit être exigée par le schéma.');
+        self::assertStringContainsString('fichierId', $outil->description());
+        self::assertStringContainsString('JUSTIFICATIF', $outil->description());
+
+        // Le message est celui de l'écran : une seule règle, une seule formulation.
+        $regle = static::getContainer()->get(\App\Service\Retro\JustificatifExige::class);
+        self::assertFalse($regle->estSatisfait(false));
+        self::assertTrue($regle->estSatisfait(true));
+        self::assertStringContainsString('justificatif', $regle->messageAssistant());
+        self::assertStringContainsString('fichierId', $regle->messageAssistant());
+    }
+
+    /**
+     * LA PIÈCE VA DANS LE MÊME PLAN, ET UNE SEULE FOIS.
+     *
+     * On inspecte la fabrication du plan, pas son exécution : c'est là que se joue la
+     * consigne « un seul Document en base ». La pièce est posée sur la PREMIÈRE opération
+     * — celle qui recevra le plus petit identifiant, donc le porteur du lot au sens de
+     * LotDeVersement, la même ligne que celle sur laquelle l'écran dépose la sienne.
+     */
+    public function testLaPieceEstPoseeUneSeuleFoisSurLaPremiereLigne(): void
+    {
+        $s = $this->semer();
+        $outil = $this->outil();
+
+        $classer = new \ReflectionMethod(SignalerReversementRetroAgentTool::class, 'classerLaPiece');
+        $classer->setAccessible(true);
+
+        // Deux lignes, comme un virement qui solde deux affaires.
+        $operations = [
+            ['op' => 'create', 'entite' => 'ReversementRetroAgent', 'champs' => ['montant' => 120.0]],
+            ['op' => 'create', 'entite' => 'ReversementRetroAgent', 'champs' => ['montant' => 80.0]],
+        ];
+
+        $piece = (new \App\Entity\AssistantConversationFichier())->setNomOriginal('bordereau.pdf');
+        $avec = $classer->invoke($outil, $operations, $piece);
+
+        self::assertCount(2, $avec, 'Aucune opération ne doit être ajoutée ni retirée.');
+        self::assertArrayHasKey('collections', $avec[0], 'La pièce va sur la PREMIÈRE ligne.');
+        self::assertArrayNotHasKey('collections', $avec[1], 'La seconde ligne ne reçoit AUCUNE copie.');
+
+        $elements = $avec[0]['collections'][0]['elements'];
+        self::assertCount(1, $elements, 'Un seul Document, donc un seul fichier en base.');
+        self::assertSame('bordereau.pdf', $elements[0]['champs']['nom']);
+    }
+    /**
      * Le compte réellement retenu par l'outil, dans les quatre cas.
      *
      * On passe par la réflexion : cette décision est privée, et c'est justement elle qui

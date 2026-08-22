@@ -1,4 +1,5 @@
 import PickerBase from './picker-base_controller.js';
+import { SelectionDeFichiers } from './attach-selection.js';
 
 /**
  * @class ReversementRetroPickerController
@@ -17,15 +18,31 @@ import PickerBase from './picker-base_controller.js';
 export default class extends PickerBase {
     static pickerName = 'REVERSEMENT-RETRO-PICKER';
 
-    static targets = ['ligne', 'coche', 'montant', 'date', 'reference', 'compte', 'apercu', 'executer'];
+    static targets = ['ligne', 'coche', 'montant', 'date', 'reference', 'compte', 'apercu', 'executer', 'zonePiece'];
 
     static values = {
         submitUrl: String,
+        attacherUrl: String,
+        limites: Object,
+        familles: Object,
     };
 
     connect() {
         super.connect();
         this.enCours = false;
+
+        // La zone de dépôt est le socle partagé avec la boîte « Attacher des pièces » :
+        // mêmes refus, mêmes icônes, même liste. Chaque changement rearme le bouton,
+        // car sans pièce il n'y a pas de versement.
+        if (this.hasZonePieceTarget) {
+            this.selection = new SelectionDeFichiers({
+                racine: this.zonePieceTarget,
+                limites: this.limitesValue || {},
+                familles: this.famillesValue || {},
+                onChange: () => this.recalculer(),
+            });
+        }
+
         this.recalculer();
     }
 
@@ -45,8 +62,12 @@ export default class extends PickerBase {
         const lignes = this._lignesCochees();
         const total = lignes.reduce((somme, l) => somme + l.montant, 0);
 
+        // PAS DE VERSEMENT SANS PREUVE : la même règle que le serveur, appliquée ici
+        // pour ne pas laisser cliquer sur un bouton qui refusera.
+        const sansPiece = this.selection ? this.selection.estVide() : false;
+
         if (this.hasExecuterTarget) {
-            this.executerTarget.disabled = this.enCours || lignes.length === 0 || total <= 0;
+            this.executerTarget.disabled = this.enCours || lignes.length === 0 || total <= 0 || sansPiece;
         }
 
         if (!this.hasApercuTarget) return;
@@ -64,12 +85,22 @@ export default class extends PickerBase {
 
     /** Envoie le lot au serveur, qui pose la référence de lot et écrit les lignes. */
     async _onActionClick(event) {
+        // Retrait d'un fichier de la liste : c'est le socle qui sait le reconnaître.
+        if (this.selection?.onClick(event)) return;
+
         if (!event.target.closest('[data-picker-executer]')) return;
         if (this.enCours) return;
 
         const lignes = this._lignesCochees();
         if (lignes.length === 0) {
             this._showError('Cochez au moins une affaire à régler.');
+            return;
+        }
+        if (this.selection?.estVide()) {
+            this._showError(
+                'Un reversement ne s\'enregistre pas sans justificatif : déposez le bordereau '
+                + 'de virement (ou le reçu signé) avant de valider.',
+            );
             return;
         }
 
@@ -87,15 +118,21 @@ export default class extends PickerBase {
                     paidAt: this.hasDateTarget ? this.dateTarget.value : null,
                     reference: this.hasReferenceTarget ? this.referenceTarget.value : null,
                     compteBancaireId: this.hasCompteTarget ? this.compteTarget.value : null,
+                    // La pièce ne peut pas partir dans cet envoi : sa cible n'existe pas
+                    // encore. On ANNONCE donc qu'elle suit, et le serveur refuse le
+                    // versement si elle n'est pas annoncée — la garde reste côté serveur.
+                    avecPiece: !this.selection?.estVide(),
                 }),
             });
             const result = await response.json();
             if (!response.ok) throw result;
 
+            const pieces = await this._deposerLesPieces(result.porteurId);
+
             // Le cerveau notifie et rafraîchit la liste : les colonnes « payée » et
             // « solde » de l'agent tombent alors à leur nouvelle valeur.
             this._notifyCerveau('client:retroagent.reversement-enregistre', {
-                message: result.message,
+                message: [result.message, pieces].filter(Boolean).join(' '),
                 agentNom: null,
             });
             this.close();
@@ -104,6 +141,58 @@ export default class extends PickerBase {
             this._progress(false);
             this._showError(error?.message || "Le reversement n'a pas pu être enregistré.");
             this.recalculer();
+        }
+    }
+
+    /**
+     * DÉPOSE LA PIÈCE SUR LE PORTEUR DU LOT, une fois les reversements écrits.
+     *
+     * En DEUX temps, et il ne peut pas en être autrement : la cible n'existe pas quand
+     * l'utilisateur choisit son fichier. Le serveur renvoie donc l'identifiant du
+     * PORTEUR — le membre du lot qui garde la pièce — et l'on poste sur la route
+     * GÉNÉRIQUE d'attachement, celle des fiches : son métrage de jetons, son refus
+     * nommé par fichier, sa réponse. Le fichier n'est écrit qu'UNE fois, même si le
+     * virement solde dix affaires.
+     *
+     * ── UN ÉCHEC ICI N'EST PAS UN ÉCHEC DU VERSEMENT ────────────────────────────
+     * Les reversements sont déjà enregistrés à ce stade. Faire remonter une exception
+     * ferait croire que rien n'a été écrit, et l'utilisateur recommencerait — en
+     * doublant le décaissement. On rend donc une phrase à ajouter à la notification,
+     * et le volet des versements montrera « 0 pièce », ce qui dit la vérité.
+     *
+     * @returns {Promise<string>} ce qu'il faut dire des pièces, ou une chaîne vide
+     * @private
+     */
+    async _deposerLesPieces(porteurId) {
+        if (!this.selection || this.selection.estVide() || !this.hasAttacherUrlValue) return '';
+        if (!porteurId) {
+            return 'Le justificatif n\'a pas pu être joint : reprenez-le depuis « Versements enregistrés ».';
+        }
+
+        // Le gabarit d'URL porte un 0 à la place de l'identifiant, que le serveur ne
+        // pouvait pas connaître au rendu.
+        const url = this.attacherUrlValue.replace(/\/0(?=(\?|#|$))/, `/${porteurId}`);
+
+        try {
+            const reponse = await fetch(url, {
+                method: 'POST',
+                body: this.selection.versFormData(),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await reponse.json().catch(() => ({}));
+            const crees = (data.crees || []).length;
+            const refuses = (data.refuses || []).length;
+
+            if (!reponse.ok && crees === 0) {
+                return `Le versement est enregistré, mais le justificatif n'a pas pu être joint${data.error ? ' : ' + data.error : ''}.`;
+            }
+            if (refuses > 0) {
+                return `${crees} pièce(s) jointe(s), ${refuses} refusée(s).`;
+            }
+
+            return crees > 1 ? `${crees} pièces jointes.` : '1 pièce jointe.';
+        } catch (e) {
+            return 'Le versement est enregistré, mais le justificatif n\'a pas pu être joint.';
         }
     }
 

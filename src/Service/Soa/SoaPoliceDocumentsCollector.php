@@ -208,6 +208,30 @@ class SoaPoliceDocumentsCollector
         return self::FAMILLES;
     }
 
+    /**
+     * La MÊME table, retournée à plat : une extension, sa famille.
+     *
+     * Le serveur la tient par famille (une famille, ses extensions) ; les zones de
+     * dépôt, elles, partent d'un nom de fichier et cherchent sa famille. Deux écrans
+     * en ont besoin — la boîte « Attacher des pièces » et la carte « Pièce
+     * justificative » du picker de reversement — et chacun la retournait pour son
+     * compte. Elle est calculée ici, là où la table vit : deux inversions du même
+     * classement finiraient par ranger le même fichier dans deux cases.
+     *
+     * @return array<string, string>
+     */
+    public static function famillesParExtension(): array
+    {
+        $plat = [];
+        foreach (self::FAMILLES as $famille => $extensions) {
+            foreach ($extensions as $extension) {
+                $plat[$extension] = $famille;
+            }
+        }
+
+        return $plat;
+    }
+
     private function famille(string $extension): string
     {
         foreach (self::FAMILLES as $famille => $extensions) {

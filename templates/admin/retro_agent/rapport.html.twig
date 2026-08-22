@@ -187,6 +187,26 @@
     .rpa-etat--exigible { color: var(--success, #198754); font-weight: 700; }
     .rpa-etat--attente  { color: var(--text-muted, #6c757d); }
     .rpa-etat--soldee   { color: var(--text-label, #adb5bd); }
+    /* LA DETTE DE PREUVE, LÀ OÙ ON LIT LES MONTANTS. Une affaire payée sans
+       justificatif ne se voyait nulle part : il fallait ouvrir un volet pour
+       l'apprendre. Le compte est discret — c'est une indication, pas une colonne. */
+    .rpa-pieces {
+        display: block;
+        font-size: 0.72rem;
+        line-height: 1.2;
+        background: none;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+        text-decoration: underline dotted;
+        color: var(--success, #198754);
+    }
+    .rpa-pieces:hover { color: var(--cobalt, #0047AB); }
+    .rpa-pieces--sans {
+        color: var(--danger, #dc3545);
+        cursor: default;
+        text-decoration: none;
+    }
 
     .rpa-scroll .rpa-table tbody td { color: var(--text-body, #495057); vertical-align: middle; }
     .rpa-num { text-align: right; font-variant-numeric: tabular-nums; }
@@ -224,7 +244,9 @@
 <div class="rpa-container"
      data-controller="retro-agent-rapport"
      data-retro-agent-rapport-base-url-value="/admin/retro-agent/{{ agent.id }}/rapport"
-     data-retro-agent-rapport-picker-url-value="/admin/retro-agent/{{ agent.id }}/reversement-picker">
+     data-retro-agent-rapport-picker-url-value="/admin/retro-agent/{{ agent.id }}/reversement-picker"
+     data-retro-agent-rapport-versements-url-value="/admin/retro-agent/{{ agent.id }}/versements"
+     data-retro-agent-rapport-justificatifs-url-value="/admin/retro-agent/{{ agent.id }}/affaire/0/justificatifs">
     <div class="rpa-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
             <h2>Rétrocommissions de {{ agent.nom }}</h2>
@@ -254,6 +276,17 @@
                     Signaler un reversement
                 </button>
             {% endif %}
+            {# RELIRE CE QUI A DÉJÀ ÉTÉ VERSÉ, et y joindre un justificatif oublié.
+               Le volet groupe par VIREMENT là où ce tableau raisonne par affaire :
+               les deux répondent à deux questions, et c'est pourquoi il faut les deux. #}
+            <button type="button" class="btn btn-sm btn-light d-inline-flex align-items-center gap-2"
+                    data-action="click->retro-agent-rapport#versements"
+                    title="Voir les virements déjà enregistrés, et leurs justificatifs">
+                <span aria-hidden="true" class="d-inline-flex">
+                    {{ ux_icon(resolve_icon_name('classeur'), {width: '16px', height: '16px'}) }}
+                </span>
+                Versements enregistrés
+            </button>
         </div>
     </div>
 
@@ -484,7 +517,27 @@
                         </td>
 
                         <td class="rpa-num rpa-groupe rpa-focus">{{ l.due|number_format(2, ',', ' ') }}</td>
-                        <td class="rpa-num">{{ l.payee|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">
+                            {{ l.payee|number_format(2, ',', ' ') }}
+                            {# On ne l'annonce que si un versement a eu lieu : « 0 pièce » sur une
+                               affaire jamais payée serait un reproche sans objet. #}
+                            {% if l.payee > 0 %}
+                                {% set nb = piecesParAvenant[l.avenant.id]|default(0) %}
+                                {% if nb > 0 %}
+                                    <button type="button" class="rpa-pieces"
+                                            data-action="click->retro-agent-rapport#justificatifs"
+                                            data-avenant-id="{{ l.avenant.id }}"
+                                            title="Voir les justificatifs des versements sur cette affaire">
+                                        {{ nb }} pièce{{ nb > 1 ? 's' : '' }}
+                                    </button>
+                                {% else %}
+                                    <span class="rpa-pieces rpa-pieces--sans"
+                                          title="Ce versement n'a pas de justificatif : joignez-le depuis « Versements enregistrés ».">
+                                        sans pièce
+                                    </span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
                         <td class="rpa-num rpa-focus">{{ l.solde|number_format(2, ',', ' ') }}</td>
                         {# Le seul montant sur lequel on peut agir aujourd'hui. #}
                         <td class="rpa-num rpa-exigible"

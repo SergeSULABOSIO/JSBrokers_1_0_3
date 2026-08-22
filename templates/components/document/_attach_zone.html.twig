@@ -1,0 +1,53 @@
+{#
+    LA ZONE DE DÉPÔT DE FICHIERS — partagée par tous les écrans qui en ont une.
+
+    Deux endroits la posent : la boîte « Attacher des pièces » d'une fiche
+    (_attach_picker.html.twig) et la carte « Pièce justificative » du picker de
+    reversement, où le bordereau de virement se dépose au moment même du versement. La
+    recopier aurait fait deux zones qui se ressemblent aujourd'hui et divergeraient au
+    premier ajustement — un accept différent, une aide différente, une icône oubliée.
+
+    Le pendant JavaScript est `assets/controllers/attach-selection.js` : ce sont les
+    `data-attach-*` de ce fragment qu'il câble. Les deux vont ensemble.
+
+    L'ENVELOPPE EST À L'HÔTE. Ni gouttière ni bordure ici : la boîte de fiche entoure
+    d'un `.jsb-attach-corps`, la carte du picker de sa propre bordure. Poser un padding
+    ici le ferait doubler dans l'un des deux.
+
+    Contexte attendu : limites (extensions, taille max — de FichierAttachePolicy).
+    Facultatif : titre, aide, vide_message.
+#}
+<div class="jsb-attach-drop" data-attach-drop tabindex="0" role="button"
+     aria-label="Déposer des fichiers, ou parcourir votre ordinateur">
+    <span class="jsb-attach-drop-icon" aria-hidden="true">
+        <twig:UX:Icon name="{{ resolve_icon_name('action:upload') }}" style="width:30px;height:30px;" />
+    </span>
+    <span class="jsb-attach-drop-titre">{{ titre|default('Déposez vos fichiers ici') }}</span>
+    <span class="jsb-attach-drop-aide">{{ aide|default('ou cliquez pour parcourir votre ordinateur') }}</span>
+</div>
+{# `accept` est DÉRIVÉ des limites du serveur : deux listes d'extensions finiraient par
+   accepter au choix ce que l'autre refuse. #}
+<input type="file" multiple hidden data-attach-input
+       accept="{{ limites.extensions|default([])|map(e => '.' ~ e)|join(',') }}">
+
+<ul class="jsb-attach-liste" data-attach-liste></ul>
+<p class="jsb-picker-empty" data-attach-vide role="status">
+    {{ vide_message|default("Aucun fichier choisi pour l'instant.") }}
+</p>
+
+{#
+    LES ICÔNES DE FORMAT, en gabarits inertes.
+
+    Les lignes de la liste sont construites en JavaScript ; plutôt que de leur faire
+    demander chaque icône au circuit asynchrone (ui:icon.request), on les pose ici en
+    gabarits que le socle clone — même source d'alias, zéro aller-retour, aucune ligne
+    sans icône.
+#}
+{% for famille in ['pdf', 'word', 'excel', 'ppt', 'image', 'archive', 'autre'] %}
+    <template data-attach-icone="{{ famille }}">
+        <twig:UX:Icon name="{{ resolve_icon_name('fichier:' ~ famille) }}" style="width:18px;height:18px;" aria-hidden="true" />
+    </template>
+{% endfor %}
+<template data-attach-icone-retirer>
+    <twig:UX:Icon name="{{ resolve_icon_name('action:delete') }}" style="width:15px;height:15px;" aria-hidden="true" />
+</template>

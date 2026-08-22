@@ -254,6 +254,9 @@ class RapportProductionAgentTest extends WebTestCase
             server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode([
                 'reference' => 'VIR-TEST-77',
+                // Un versement ne s'enregistre plus sans justificatif : le client annonce
+                // la pièce qu'il déposera juste après, sur le porteur du lot.
+                'avecPiece' => true,
                 'lignes' => [
                     ['avenantId' => $ids['avenantIds'][0], 'montant' => 120.0],
                     ['avenantId' => $ids['avenantIds'][1], 'montant' => 80.0],
@@ -289,6 +292,7 @@ class RapportProductionAgentTest extends WebTestCase
             server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode([
                 'reference' => 'VIR-SOLO-1',
+                'avecPiece' => true,
                 'lignes' => [['avenantId' => $ids['avenantIds'][0], 'montant' => 50.0]],
             ]),
         );
@@ -304,6 +308,40 @@ class RapportProductionAgentTest extends WebTestCase
         );
     }
 
+    /**
+     * PAS DE VERSEMENT SANS PREUVE, et le refus tombe AVANT la moindre écriture.
+     *
+     * Un reversement est une sortie de fonds réelle : sans bordereau, c'est un montant que
+     * rien ne rattache à la banque. Refuser après coup aurait laissé un décaissement
+     * enregistré sans justificatif — précisément ce que la règle interdit.
+     */
+    public function testUnVersementSansJustificatifEstRefuseAvantTouteEcriture(): void
+    {
+        $ids = $this->semer();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $this->client->request(
+            'POST',
+            '/admin/retro-agent/' . $ids['aliceId'] . '/reversement',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode([
+                'reference' => 'VIR-SANS-PIECE',
+                'lignes' => [['avenantId' => $ids['avenantIds'][0], 'montant' => 50.0]],
+            ]),
+        );
+
+        self::assertResponseStatusCodeSame(422);
+        $reponse = json_decode($this->client->getResponse()->getContent(), true);
+        self::assertStringContainsString('justificatif', $reponse['message']);
+
+        // RIEN n'a été écrit : c'est tout l'intérêt d'une garde posée avant la boucle.
+        self::assertCount(
+            0,
+            $this->em()->getRepository(\App\Entity\ReversementRetroAgent::class)
+                ->findBy(['reference' => 'VIR-SANS-PIECE']),
+            'Un versement refusé ne doit laisser aucune ligne derrière lui.',
+        );
+    }
     public function testUnAvenantHorsPerimetreEstIgnore(): void
     {
         $ids = $this->semer();

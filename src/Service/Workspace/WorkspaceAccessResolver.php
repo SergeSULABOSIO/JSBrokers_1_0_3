@@ -86,6 +86,18 @@ class WorkspaceAccessResolver
         'Contact'                    => ['Production', 'getRolesEnProduction', 'getAccessContact', 'Contacts'],
         'Risque'                     => ['Production', 'getRolesEnProduction', 'getAccessRisque', 'Risques'],
         'Avenant'                    => ['Production', 'getRolesEnProduction', 'getAccessAvenant', 'Avenants'],
+        // REVERSEMENTS DE RÉTROCOMMISSION : une rubrique de CONSULTATION, gouvernée par
+        // le droit de l'AVENANT — la ligne d'affaire que le versement solde. Elle était
+        // hors carte (GOUVERNANCE_PARENT), donc sans écran : ni liste, ni fiche, ni
+        // actions documentaires, et par conséquent aucun endroit où joindre le bordereau
+        // d'un virement déjà passé.
+        //
+        // ELLE PARTAGE LE GETTER DE L'AVENANT, à dessein. Un champ de rôle propre aurait
+        // imposé une migration et une reprise des rôles existants, pour un droit que
+        // personne n'a demandé de séparer : qui peut lire les avenants peut lire ce qui
+        // a été reversé dessus. Le jour où il faudra les distinguer, ce sera un champ
+        // de plus, pas un changement de logique.
+        'ReversementRetroAgent'      => ['Production', 'getRolesEnProduction', 'getAccessAvenant', 'Reversements de rétrocommission'],
         'Partenaire'                 => ['Production', 'getRolesEnProduction', 'getAccessPartenaire', 'Intermédiaires'],
         // Conditions de partage : RUBRIQUE à part entière depuis qu'elles portent la
         // rémunération nominative d'agents internes — il fallait un écran pour les créer
@@ -140,9 +152,6 @@ class WorkspaceAccessResolver
      */
     private const GOUVERNANCE_PARENT = [
         'PaiementPrime' => 'Tranche',
-        // Reversement de rétrocommission : gouverné par l'AVENANT, la ligne d'affaire qu'il
-        // solde — c'est là que le montant dû se lit, et c'est le droit qu'exige déjà l'écran.
-        'ReversementRetroAgent' => 'Avenant',
     ];
 
     /**
@@ -154,7 +163,6 @@ class WorkspaceAccessResolver
      */
     private const SOUS_ENTITES_LIBELLES = [
         'PaiementPrime' => 'Paiements de prime',
-        'ReversementRetroAgent' => 'Reversements de rétrocommission agent',
     ];
 
     public function __construct(

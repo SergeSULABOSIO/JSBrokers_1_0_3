@@ -2,6 +2,7 @@
 
 namespace App\Controller\Admin;
 
+use App\Ai\Fichier\FichierAttachePolicy;
 use App\Entity\Avenant;
 use App\Entity\CompteBancaire;
 use App\Entity\Invite;
@@ -9,7 +10,10 @@ use App\Entity\ReversementRetroAgent;
 use App\Repository\AvenantRepository;
 use App\Repository\InviteRepository;
 use App\Service\Retro\DefautsDuVersement;
+use App\Service\Retro\JustificatifExige;
+use App\Service\Retro\LotDeVersement;
 use App\Service\RetroAgent\RapportProductionAgentBuilder;
+use App\Service\Soa\SoaPoliceDocumentsCollector;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\CanvasBuilder;
 use App\Services\Search\CotationSouscriptionScope;
@@ -20,6 +24,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
@@ -72,6 +77,8 @@ class RetroAgentController extends AbstractController
         // Les valeurs proposées du versement (référence, compte débité) sont les
         // MÊMES pour l'écran et pour Ket : elles vivent hors d'ici.
         private DefautsDuVersement $defautsDuVersement,
+        private JustificatifExige $justificatifExige,
+        private LotDeVersement $lotDeVersement,
         CanvasBuilder $canvasBuilder,
     ) {
         $this->canvasBuilder = $canvasBuilder;
@@ -92,12 +99,126 @@ class RetroAgentController extends AbstractController
             (string) $request->query->get('statut', CotationSouscriptionScope::STATUT_SOUSCRITES),
         );
 
+        // LA DETTE DE PREUVE, LÀ OÙ ON LIT LES MONTANTS. Une affaire payée sans
+        // justificatif ne se voyait nulle part : il fallait ouvrir un volet pour
+        // l'apprendre. Le compte est joint au contexte, en UNE agrégation pour tout
+        // le rapport — pas une requête par ligne.
+        $contexte['piecesParAvenant'] = $this->lotDeVersement
+            ->comptesDePiecesParAvenant($agent, $agent->getEntreprise());
+
         return $this->json([
             'html'  => $this->renderView('admin/retro_agent/rapport.html.twig', $contexte),
             'title' => 'Rétrocommissions — ' . $agent->getNom(),
         ]);
     }
 
+    /**
+     * LES VERSEMENTS DÉJÀ ENREGISTRÉS — une ligne par VIREMENT, pas par reversement.
+     *
+     * Ce volet n'est pas un doublon de la rubrique. Une liste de rubrique montre la base
+     * telle qu'elle est : un virement qui solde trois affaires y paraît en trois lignes,
+     * comme trois versements indépendants. Or le courtier n'a fait QU'UN décaissement, avec
+     * UN bordereau. Le volet dit cela : un virement, une ligne, une preuve — et c'est de là
+     * qu'on joint le justificatif d'un virement passé.
+     */
+    #[Route('/{id}/versements', name: 'versements', methods: ['GET'])]
+    public function versements(Invite $agent): JsonResponse
+    {
+        $this->assertPeutConsulter($agent);
+
+        $lots = $this->lotDeVersement->grouper($agent, $agent->getEntreprise());
+
+        // ENVELOPPE {html, title}, comme le rapport : c'est ce que le cerveau attend de
+        // `ui:retroagent.rapport-request` pour injecter dans un onglet. Rendre du HTML nu
+        // ici ouvrirait un onglet vide — la panne exacte du picker de reversement,
+        // qu'un test avait masquée en n'assertant que l'enveloppe.
+        $html = $this->renderView('components/retro_agent/_versements.html.twig', [
+            'agent'   => $agent,
+            'lots'    => $lots,
+            // Le compte des pièces en UNE agrégation : les versements enregistrés avant que
+            // la preuve soit exigée s'affichent à zéro, ce qui rend la dette de preuve
+            // visible plutôt que de la masquer.
+            'pieces'  => $this->lotDeVersement->comptesDePieces($lots),
+            'monnaie' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+            // Les deux actions habituelles, par leurs routes GÉNÉRIQUES : attacher sur le
+            // porteur du lot, relire le lot ENTIER (voir la route ci-dessous).
+            'attacherUrlPattern' => $this->generateUrl('admin.document.api.attacher', [
+                'parent' => 'reversementRetroAgent',
+                'id' => 0,
+            ]),
+        ]);
+
+        return $this->json([
+            'html'  => $html,
+            'title' => 'Versements — ' . $agent->getNom(),
+        ]);
+    }
+
+    /**
+     * LES PIÈCES D'UN VIREMENT — l'union de celles de ses lignes.
+     *
+     * Pourquoi pas la route générique de relecture : elle rend les documents d'UN
+     * enregistrement. L'écran, lui, écrit toujours sur le porteur du lot, mais l'assistant
+     * attache au reversement que l'utilisateur NOMME, qui peut être n'importe quel membre.
+     * Une relecture limitée au porteur rendrait ces pièces invisibles — et l'utilisateur
+     * conclurait que Ket n'a rien classé.
+     *
+     * Le gabarit et le collecteur sont ceux de la relecture générique : la boîte qui
+     * s'ouvre est la même, seule la source des lignes change.
+     */
+    #[Route('/{id}/versements/{cle}/documents', name: 'versement_documents', methods: ['GET'])]
+    public function documentsDuVersement(
+        Invite $agent,
+        string $cle,
+        SoaPoliceDocumentsCollector $collector,
+        WorkspaceAccessResolver $accessResolver,
+    ): Response {
+        $this->assertPeutConsulter($agent);
+
+        $membres = $this->lotDeVersement->membres($agent, $agent->getEntreprise(), $cle);
+        if ($membres === []) {
+            throw $this->createNotFoundException('Virement introuvable.');
+        }
+
+        $reference = $membres[0]->getReference() ?: $cle;
+        $rubrique = $accessResolver->libellesEntites()['ReversementRetroAgent'] ?? 'Reversements';
+
+        return $this->render('components/soa/_documents_picker.html.twig', [
+            'titre'              => sprintf('Justificatifs du virement « %s »', $reference),
+            'contexteNom'        => $reference,
+            'items'              => $collector->decrire($this->lotDeVersement->documentsDuLot($membres), $rubrique),
+            'downloadUrlPattern' => '/admin/document/api/%did%/download',
+        ]);
+    }
+    /**
+     * LES JUSTIFICATIFS D'UNE AFFAIRE — depuis la ligne du rapport.
+     *
+     * Une affaire peut avoir été soldée par plusieurs virements successifs, et chacun a sa
+     * pièce. On rend l'union de celles de tous les lots qui l'ont payée : partir du seul
+     * dernier versement aurait caché les précédents, et c'est bien l'historique qu'on
+     * cherche quand on conteste un montant.
+     */
+    #[Route('/{id}/affaire/{avenantId}/justificatifs', name: 'affaire_justificatifs', requirements: ['avenantId' => Requirement::DIGITS], methods: ['GET'])]
+    public function justificatifsDeLAffaire(
+        Invite $agent,
+        int $avenantId,
+        SoaPoliceDocumentsCollector $collector,
+        WorkspaceAccessResolver $accessResolver,
+    ): Response {
+        $this->assertPeutConsulter($agent);
+
+        $documents = $this->lotDeVersement->documentsPourAvenant($agent, $agent->getEntreprise(), $avenantId);
+        $avenant = $this->avenantDuPerimetre($agent, $avenantId);
+        $libelle = $avenant?->getReferencePolice() ?: ('affaire #' . $avenantId);
+        $rubrique = $accessResolver->libellesEntites()['ReversementRetroAgent'] ?? 'Reversements';
+
+        return $this->render('components/soa/_documents_picker.html.twig', [
+            'titre'              => sprintf('Justificatifs des versements sur « %s »', $libelle),
+            'contexteNom'        => $libelle,
+            'items'              => $collector->decrire($documents, $rubrique),
+            'downloadUrlPattern' => '/admin/document/api/%did%/download',
+        ]);
+    }
     /**
      * Picker de reversement : les affaires où l'agent a un solde EXIGIBLE, à cocher ligne
      * à ligne. Un seul envoi crée autant de reversements que de lignes cochées.
@@ -124,6 +245,16 @@ class RetroAgentController extends AbstractController
             // Pré-remplie à l'instant de l'ouverture : l'utilisateur voit la référence
             // qui sera écrite, et peut la remplacer par celle de son virement réel.
             'referenceParDefaut' => $this->defautsDuVersement->reference(new \DateTimeImmutable('now')),
+            // La zone de dépôt est celle des fiches : mêmes limites, même table de
+            // familles, mêmes refus. Rien n'est redéfini ici.
+            'limites' => FichierAttachePolicy::limitesFront(),
+            'famillesParExtension' => SoaPoliceDocumentsCollector::famillesParExtension(),
+            // Le gabarit d'URL d'attachement : l'identifiant du porteur du lot n'est
+            // connu qu'APRÈS l'écriture des reversements, le client le substitue.
+            'attacherUrlPattern' => $this->generateUrl('admin.document.api.attacher', [
+                'parent' => 'reversementRetroAgent',
+                'id' => 0,
+            ]),
             'submitUrl' => $this->generateUrl('admin.retro_agent.reversement_submit', ['id' => $agent->getId()]),
         ]);
     }
@@ -145,6 +276,17 @@ class RetroAgentController extends AbstractController
         $lignes = is_array($donnees['lignes'] ?? null) ? $donnees['lignes'] : [];
         if ($lignes === []) {
             return $this->json(['message' => 'Aucune affaire sélectionnée.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        // PAS DE VERSEMENT SANS PREUVE, et la garde est ICI — avant la moindre écriture.
+        // Le client annonce la pièce qu'il déposera juste après (la cible n'existe pas
+        // encore quand il la choisit) ; refuser plus tard laisserait un décaissement
+        // enregistré sans justificatif, exactement ce que la règle interdit.
+        if (!$this->justificatifExige->estSatisfait(($donnees['avecPiece'] ?? false) === true)) {
+            return $this->json(
+                ['message' => $this->justificatifExige->messageEcran()],
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+            );
         }
 
         $paidAt = $this->dateDeVersement($donnees['paidAt'] ?? null);
@@ -169,6 +311,7 @@ class RetroAgentController extends AbstractController
 
         $crees = 0;
         $total = 0.0;
+        $ecrits = [];
         foreach ($lignes as $ligne) {
             $avenant = $this->avenantDuPerimetre($agent, (int) ($ligne['avenantId'] ?? 0));
             if ($avenant === null) {
@@ -191,6 +334,7 @@ class RetroAgentController extends AbstractController
             $reversement->setEntreprise($agent->getEntreprise())->setInvite($this->getInvite());
             $this->em->persist($reversement);
 
+            $ecrits[] = $reversement;
             ++$crees;
             $total += $montant;
         }
@@ -214,6 +358,10 @@ class RetroAgentController extends AbstractController
             ),
             'crees' => $crees,
             'total' => round($total, 2),
+            // LE PORTEUR DU LOT : celui des reversements qui gardera la pièce. Le client
+            // y poste ses fichiers juste après, sur la route générique. Un seul fichier
+            // en base, quel que soit le nombre d'affaires soldées par ce virement.
+            'porteurId' => $this->lotDeVersement->porteurParmi($ecrits)?->getId(),
         ]);
     }
 

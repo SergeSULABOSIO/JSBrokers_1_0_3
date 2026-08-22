@@ -323,7 +323,7 @@ class DocumentController extends AbstractController
             'limites'    => FichierAttachePolicy::limitesFront(),
             // Extension => famille de format : la MÊME table que celle qui classe les
             // pièces déjà enregistrées, pour que l'icône du dépôt soit celle de la fiche.
-            'famillesParExtension' => $this->famillesParExtension(),
+            'famillesParExtension' => SoaPoliceDocumentsCollector::famillesParExtension(),
             // Convention partagée avec les autres pickers : le fragment n'embarque son
             // contrôleur Stimulus que lorsqu'il vit seul (cf. _client_picker.html.twig).
             'standalone' => true,
@@ -471,28 +471,6 @@ class DocumentController extends AbstractController
         }
 
         return $cible;
-    }
-
-    /**
-     * La table extension => famille, retournée à plat pour le navigateur.
-     *
-     * Le serveur la tient par famille (une famille, ses extensions) ; le picker, lui,
-     * part d'un nom de fichier et cherche sa famille. On retourne donc la table plutôt
-     * que d'en écrire une seconde dans le JavaScript — deux tables du même classement
-     * finiraient par ranger le même fichier dans deux cases.
-     *
-     * @return array<string, string>
-     */
-    private function famillesParExtension(): array
-    {
-        $plat = [];
-        foreach (SoaPoliceDocumentsCollector::familles() as $famille => $extensions) {
-            foreach ($extensions as $extension) {
-                $plat[$extension] = $famille;
-            }
-        }
-
-        return $plat;
     }
 
     /** Nom court de la classe RÉELLE (une entité chargée peut arriver en proxy). */

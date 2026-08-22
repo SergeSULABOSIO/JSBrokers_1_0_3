@@ -84,6 +84,32 @@ class ReversementRetroAgentRepository extends ServiceEntityRepository
     }
 
     /**
+     * TOUS les reversements d'un agent, du plus récent au plus ancien.
+     *
+     * Alimente le volet « Versements enregistrés » du rapport de production, qui les
+     * regroupe ensuite PAR VIREMENT (cf. LotDeVersement). On joint ici les relations
+     * to-ONE dont la ligne a besoin — l'avenant pour la police, le compte pour la
+     * trésorerie — et rien de plus : joindre en même temps la collection `documents`
+     * multiplierait chaque reversement par son nombre de pièces (produit cartésien),
+     * et le total du lot serait faux. Le compte des pièces se lit séparément.
+     *
+     * @return ReversementRetroAgent[]
+     */
+    public function findPourAgent(Invite $agent, Entreprise $entreprise): array
+    {
+        return $this->createQueryBuilder('r')
+            ->join('r.avenant', 'av')->addSelect('av')
+            ->leftJoin('r.compteBancaire', 'cb')->addSelect('cb')
+            ->where('r.agent = :agent')
+            ->andWhere('r.entreprise = :entreprise')
+            ->setParameter('agent', $agent)
+            ->setParameter('entreprise', $entreprise)
+            ->orderBy('r.paidAt', 'DESC')
+            ->addOrderBy('r.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+    /**
      * Total déjà reversé à un agent dans l'entreprise, tous avenants confondus.
      * Une seule agrégation SQL : c'est la colonne « Rétrocom. payée » de la rubrique
      * Invités, appelée une fois par ligne de liste.

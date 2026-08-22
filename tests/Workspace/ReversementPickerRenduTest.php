@@ -32,6 +32,11 @@ class ReversementPickerRenduTest extends KernelTestCase
             'submitUrl' => '/admin/retro-agent/1/reversement',
             'referenceParDefaut' => 'RETRO-21082026-141359',
             'compteProposeId' => $comptes[0]['id'] ?? null,
+            // La zone de dépôt est celle des fiches : on lui passe le MÊME contexte que
+            // la boîte « Attacher des pièces », d'où qu'il vienne.
+            'limites' => \App\Ai\Fichier\FichierAttachePolicy::limitesFront(),
+            'famillesParExtension' => \App\Service\Soa\SoaPoliceDocumentsCollector::famillesParExtension(),
+            'attacherUrlPattern' => '/admin/document/api/attacher/reversementRetroAgent/0',
             'lignes'  => [[
                 'avenant' => ['id' => 3],
                 'client' => 'Kibali Goldmines SA',
@@ -75,7 +80,8 @@ class ReversementPickerRenduTest extends KernelTestCase
         // Affaires à régler, le versement, ce qui sera enregistré.
         // Le guillemet fermant est délibéré : sans lui on compterait aussi le
         // conteneur `jsb-picker-cartes` et le titre `jsb-picker-carte-titre`.
-        self::assertSame(3, substr_count($html, 'jsb-picker-carte"'));
+        // Quatre : les affaires, le versement, la pièce justificative, et l'aperçu.
+        self::assertSame(4, substr_count($html, 'jsb-picker-carte"'));
         self::assertStringContainsString('jsb-picker-cartes', $html);
 
         // Une carte SANS bordure n'est pas une carte : `border-0` pose
@@ -116,6 +122,31 @@ class ReversementPickerRenduTest extends KernelTestCase
         self::assertStringContainsString('<option value="">Caisse', $html);
     }
 
+    /**
+     * LA ZONE DE DÉPÔT EST CELLE DES FICHES, pas une zone maison.
+     *
+     * C'est la vérification qui manquait la première fois : les champs du versement
+     * avaient été écrits en Bootstrap nu alors que le pattern existait. Ici, ce qu'on
+     * exige est la RÉUTILISATION — mêmes crochets `data-attach-*` que la boîte
+     * « Attacher des pièces », donc même socle JavaScript, donc mêmes refus.
+     */
+    public function testLaPieceSeDeposeDansLaZoneHabituelle(): void
+    {
+        $html = $this->rendre();
+
+        self::assertStringContainsString('Pièce justificative', $html);
+        // Les crochets du socle partagé (assets/controllers/attach-selection.js).
+        foreach (['data-attach-drop', 'data-attach-input', 'data-attach-liste', 'data-attach-vide'] as $crochet) {
+            self::assertStringContainsString($crochet, $html, "Crochet manquant : {$crochet}.");
+        }
+        // Les gabarits d'icônes de format viennent avec, sinon les lignes de la liste
+        // s'afficheraient sans icône.
+        self::assertStringContainsString('data-attach-icone="pdf"', $html);
+        self::assertStringContainsString('data-attach-icone-retirer', $html);
+
+        // Le bouton d'enregistrement part DÉSARMÉ : sans pièce, le serveur refusera.
+        self::assertMatchesRegularExpression('/data-picker-executer[^>]*\n?[^>]*disabled/', $html);
+    }
     /** Sans aucun compte enregistré, la caisse reste le choix retenu. */
     public function testSansCompteLaCaisseResteRetenue(): void
     {

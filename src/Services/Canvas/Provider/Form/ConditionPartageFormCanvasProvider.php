@@ -49,6 +49,9 @@ class ConditionPartageFormCanvasProvider implements FormCanvasProviderInterface
             // l'état vide. La sécurité, elle, ne dépend pas de l'écran : le POST reste
             // gouverné par le droit « Intermédiaires » comme toute autre écriture.
             "creation_interdite" => true,
+            // Le motif accompagne le drapeau : l'infobulle du bouton grisé doit dire OÙ
+            // l'on crée, sans quoi il ne dit que « non ».
+            "creation_interdite_message" => "Une condition de partage se crée depuis la fiche d'un partenaire, d'un invité ou d'une piste.",
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Condition de partage",

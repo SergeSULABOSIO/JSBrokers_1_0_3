@@ -144,17 +144,20 @@ export default class extends Controller {
         // Le bouton est GRISÉ, PAS MASQUÉ : un bouton qui disparaît laisse croire à un
         // droit manquant ou à un bug ; désactivé avec son infobulle, il dit où aller.
         const creationInterdite = canvasParams.creation_interdite === true;
+        // LE MOTIF VIENT DU CANEVAS. Il était écrit ici, au nom des conditions de
+        // partage — la seule rubrique qui posait alors le drapeau. La deuxième (les
+        // reversements de rétrocommission) aurait donc annoncé à l'utilisateur d'aller
+        // créer sa pièce « depuis la fiche d'un partenaire ». Chaque rubrique dit
+        // désormais où l'on crée la sienne.
+        const motifCreation = canvasParams.creation_interdite_message
+            || 'Cet enregistrement se crée depuis la fiche à laquelle il se rattache.';
         const canEdit = selectionCount === 1 && !!canvasParams.endpoint_submit_url;
         const canDelete = selectionCount > 0 && !!canvasParams.endpoint_delete_url;
         const canOpen = selectionCount > 0; // L'ouverture est généralement toujours possible si sélection.
 
         // Règle : "Ajouter" est visible si le canvas le permet.
         this.toggleButton(this.btajouterTarget, canAdd);
-        this.setButtonDisabled(
-            this.btajouterTarget,
-            creationInterdite,
-            "Une condition de partage se crée depuis la fiche d'un partenaire, d'un invité ou d'une piste.",
-        );
+        this.setButtonDisabled(this.btajouterTarget, creationInterdite, motifCreation);
 
         // Règle : "Modifier" est visible uniquement pour une sélection unique.
         this.toggleButton(this.btmodifierTarget, canEdit);

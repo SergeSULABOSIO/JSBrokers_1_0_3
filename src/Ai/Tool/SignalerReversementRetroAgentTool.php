@@ -3,12 +3,17 @@
 namespace App\Ai\Tool;
 
 use App\Ai\AiText;
+use App\Ai\Fichier\ConversationFichierResolver;
+use App\Ai\Fichier\PieceSourceRattachement;
+use App\Ai\Mutation\ConversationFichierRef;
 use App\Ai\Scope\AiScope;
 use App\Ai\Trousse\AiToolEcriture;
 use App\Entity\Avenant;
+use App\Entity\AssistantConversationFichier;
 use App\Entity\Invite;
 use App\Repository\InviteRepository;
 use App\Service\Retro\DefautsDuVersement;
+use App\Service\Retro\JustificatifExige;
 use App\Service\RetroAgent\RapportProductionAgentBuilder;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
@@ -53,6 +58,11 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
         // PARITÉ AVEC L'ÉCRAN : la référence proposée et le compte débité par défaut
         // ne se recopient pas ici, ils se demandent.
         private readonly DefautsDuVersement $defautsDuVersement,
+        // LE JUSTIFICATIF. La règle d'exigence et le classement de la pièce sont tous
+        // deux partagés : rien de tout cela ne s'écrit ici une seconde fois.
+        private readonly JustificatifExige $justificatifExige,
+        private readonly ConversationFichierResolver $fichiers,
+        private readonly PieceSourceRattachement $rattachement,
     ) {
     }
 
@@ -78,7 +88,10 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
             . 'par note de crédit, tout autre circuit. NE PAS utiliser ouvrir_dialogue avec '
             . 'l\'entité Paiement : Paiement = encaissement du courtier. L\'outil prépare un PLAN '
             . '+ BUDGET à valider ; après validation, c\'est TOI qui enregistres. Pour seulement '
-            . 'CONSULTER ce qui est dû ou déjà versé, utiliser retrocommissions.';
+            . 'CONSULTER ce qui est dû ou déjà versé, utiliser retrocommissions. '
+            . 'UN VERSEMENT NE S\'ENREGISTRE PAS SANS JUSTIFICATIF : fournis fichierId, la '
+            . 'pièce de la conversation qui prouve le virement. Si l\'utilisateur n\'en a joint '
+            . 'aucune, demande-la-lui AVANT de m\'appeler — je refuserai sinon.';
     }
 
     public function aiguillage(): string
@@ -129,6 +142,14 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
                     'type' => 'string',
                     'description' => 'Référence du virement. Omets-la pour une référence auto-générée.',
                 ],
+                'fichierId' => [
+                    'type' => 'integer',
+                    'minimum' => 1,
+                    'description' => 'OBLIGATOIRE : la pièce jointe de la conversation qui '
+                        . 'justifie ce virement (bordereau, reçu signé), lue dans la section '
+                        . 'PIÈCES JOINTES. Une seule suffit, même si le versement solde '
+                        . 'plusieurs affaires : elle vaut pour tout le virement.',
+                ],
                 'compteBancaireId' => [
                     'type' => 'integer',
                     'minimum' => 1,
@@ -147,7 +168,7 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
                         . 'remplacé. Sinon, tant qu\'un plan attend, la préparation est refusée.',
                 ],
             ],
-            'required' => ['agentId'],
+            'required' => ['agentId', 'fichierId'],
         ];
     }
 
@@ -202,6 +223,20 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
                 'Aucune affaire de cet agent n\'a de solde exigible : une rétrocommission ne '
                 . 'devient réclamable qu\'une fois la commission de courtage encaissée par le cabinet.',
             );
+        }
+
+        // PAS DE VERSEMENT SANS PREUVE — mais APRÈS avoir vérifié qu'il y a de quoi
+        // verser. Réclamer un bordereau pour un virement impossible serait absurde : on
+        // dit d'abord qu'il n'y a rien à payer, et la pièce ne se demande que lorsque le
+        // versement, lui, a un sens.
+        //
+        // Le refus vient tout de même AVANT le plan : préparer puis refuser à
+        // l'exécution aurait fait valider une écriture qui n'aurait jamais lieu. La règle
+        // et son message sont ceux de l'écran — un utilisateur ne doit pas apprendre deux
+        // formulations d'une contrainte unique.
+        $piece = $this->pieceJustificative($args, $scope);
+        if ($piece instanceof AiToolResult) {
+            return $piece;
         }
 
         $paidAt = $this->resoudrePaidAt($args);
@@ -274,12 +309,89 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
             );
         }
 
+        // LA PIÈCE EST CLASSÉE DANS LE MÊME PLAN, SUR LA PREMIÈRE LIGNE.
+        //
+        // Une seule opération Document, donc un seul fichier en base — la consigne du
+        // courtier. La première ligne créée est celle qui recevra le plus petit
+        // identifiant, donc le PORTEUR du lot au sens de LotDeVersement : la même ligne
+        // que celle sur laquelle l'écran dépose sa pièce. Les autres lignes du virement
+        // la voient par la lecture du lot.
+        $operations = $this->classerLaPiece($operations, $piece);
+
         return $this->preparer->execute([
             'operations' => $operations,
             'remplacerPlanEnAttente' => ($args['remplacerPlanEnAttente'] ?? false) === true,
         ], $scope);
     }
 
+    /**
+     * La pièce qui justifie le virement, ou le refus déjà rédigé.
+     *
+     * Deux refus distincts, et il importe de les distinguer : AUCUN fichierId donné (la
+     * règle n'est pas connue du modèle, on la lui apprend) et un fichierId qui ne désigne
+     * rien (le modèle s'est trompé, le résolveur lui liste ce qui existe).
+     *
+     * @return AssistantConversationFichier|AiToolResult
+     */
+    private function pieceJustificative(array $args, AiScope $scope): object
+    {
+        $id = (int) ($args['fichierId'] ?? 0);
+        if (!$this->justificatifExige->estSatisfait($id > 0)) {
+            return AiToolResult::ok([
+                'pret'     => false,
+                'bloquant' => $this->justificatifExige->messageAssistant(),
+                'note'     => 'Dis-le en UNE phrase, et demande la pièce. Ne présente AUCUN plan et '
+                    . 'n\'annonce AUCUN bouton.',
+            ]);
+        }
+
+        $piece = $this->fichiers->trouver($id, $scope);
+        if ($piece === null) {
+            return AiToolResult::introuvable(
+                'Pièce jointe #' . $id,
+                'Relis la section PIÈCES JOINTES et reprends l\'identifiant exact du bordereau.',
+            );
+        }
+
+        return $piece;
+    }
+
+    /**
+     * Ajoute au plan la création du Document, sur la PREMIÈRE ligne du virement.
+     *
+     * Le « où » n'est pas décidé ici : PieceSourceRattachement le dérive des formulaires et
+     * des métadonnées Doctrine, comme pour attacher_fichier. On ne fait que poser le
+     * fragment sur la bonne opération — la première, qui portera le plus petit identifiant.
+     *
+     * @param array<int, array> $operations
+     *
+     * @return array<int, array>
+     */
+    private function classerLaPiece(array $operations, AssistantConversationFichier $piece): array
+    {
+        $descripteur = $this->rattachement->resoudre('ReversementRetroAgent');
+        $fragment = $this->rattachement->fragmentGabarit(
+            $descripteur,
+            ConversationFichierRef::marqueur((int) $piece->getId()),
+            $piece->getNomOriginal() ?: 'Justificatif du virement',
+            // La cible n'existe pas encore : le renvoi vaut « la tête du plan », que le
+            // moteur résout après création.
+            '@socle',
+        );
+        if ($fragment === null || $fragment['cible'] !== 'collections') {
+            // Le rattachement d'un reversement passe par sa collection « Documents ». Si
+            // ce n'était plus le cas, mieux vaut un plan SANS pièce — refusé plus haut par
+            // la garde — qu'un plan qui range le fichier on ne sait où.
+            return $operations;
+        }
+
+        $operations[0]['collections'] = array_merge(
+            $operations[0]['collections'] ?? [],
+            [$fragment['fragment']],
+        );
+
+        return $operations;
+    }
     /**
      * Les lignes à traiter : celles fournies, ou — à défaut — TOUTES les affaires de
      * l'agent dont le solde est exigible. « Paie à Alice ce qu'on lui doit » est une

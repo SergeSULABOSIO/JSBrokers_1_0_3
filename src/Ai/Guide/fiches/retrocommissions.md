@@ -76,6 +76,21 @@ Donc, avec `signaler_reversement_retro_agent` :
 Ne jamais annoncer « versé en espèces » quand rien ne l'a été demandé : ce serait
 décrire une écriture de caisse là où le cabinet a fait un virement.
 
+**UN VERSEMENT NE S'ENREGISTRE PAS SANS JUSTIFICATIF.** C'est une sortie de fonds
+réelle : sans bordereau de virement (ou reçu signé), c'est un montant que rien ne
+rattache à la banque. La règle vaut à l'écran comme ici — l'assistant n'en est pas
+dispensé, sinon « paie Alice » suffirait à s'en affranchir.
+
+En pratique : `signaler_reversement_retro_agent` exige `fichierId`, la pièce jointe de
+la conversation. Si l'utilisateur n'en a joint aucune, la lui demander AVANT d'appeler
+l'outil — il refusera sinon, et le dira. **Une seule pièce suffit pour tout le
+virement**, même s'il solde plusieurs affaires : elle est enregistrée une fois et
+justifie chacune des lignes.
+
+Pour joindre une pièce à un virement DÉJÀ enregistré, c'est `attacher_fichier` sur le
+reversement (il se désigne par sa référence). L'écran a le même geste, dans le volet
+« Versements enregistrés » du rapport de production.
+
 Côté **partenaire**, il n'y a rien de tel : sa rétrocommission se facture par
 **note de crédit**, et l'application n'a aucun circuit de versement direct — donc
 aucun outil non plus. Le dire, plutôt que de proposer un reversement d'agent pour
