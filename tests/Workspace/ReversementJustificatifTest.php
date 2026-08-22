@@ -174,7 +174,12 @@ class ReversementJustificatifTest extends WebTestCase
         $this->em->flush();
         $this->client->loginUser($owner);
 
-        return ['agent' => $agent, 'avenants' => $avenants];
+        return [
+            'agent' => $agent,
+            'avenants' => $avenants,
+            'proprietaire' => $proprietaire,
+            'entreprise' => $ent,
+        ];
     }
 
     /** Enregistre un virement couvrant les deux affaires, et rend l'identifiant du porteur. */
@@ -197,6 +202,60 @@ class ReversementJustificatifTest extends WebTestCase
         return json_decode((string) $this->client->getResponse()->getContent(), true) ?? [];
     }
 
+    /**
+     * LA RUBRIQUE SE CHARGE VRAIMENT.
+     *
+     * Ce test existe parce qu'elle ne se chargeait pas : déclarée au menu, dans la carte
+     * d'accès, avec ses trois canevas — et l'onglet répondait 404. Il manquait deux choses
+     * qu'aucun test structurel ne pouvait voir : une action `index` sur le contrôleur, et
+     * l'entrée correspondante dans la carte des composants du workspace. Le chargeur
+     * traduisait ce 404 en panneau vide, sans un mot.
+     *
+     * On passe donc par l'URL que le navigateur appelle réellement.
+     */
+    public function testLaRubriqueSeChargeDansLeWorkspace(): void
+    {
+        $s = $this->semer();
+
+        $this->client->request('GET', sprintf(
+            '/espacedetravail/api/load-component/%d/%d?component=_view_manager_production.html.twig&entity=ReversementRetroAgent',
+            $s['proprietaire']->getId(),
+            $s['entreprise']->getId(),
+        ));
+
+        self::assertResponseIsSuccessful('La rubrique doit se charger, pas répondre 404 en silence.');
+        $html = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('Reversements de rétrocommission', $html);
+    }
+    /**
+     * LE VOLET DES VERSEMENTS A UN RETOUR — et ce n'est pas un ornement.
+     *
+     * Le volet REMPLACE le rapport dans le même onglet : c'est voulu, les deux parlent du
+     * même agent. Mais sans bouton de retour, l'aller est sans retour — il faut refermer
+     * l'onglet et repartir de la liste des invités pour revoir les montants. Le défaut
+     * n'était pas visible d'un test structurel : il fallait cliquer.
+     */
+    public function testLeVoletDesVersementsRamèneAuRapport(): void
+    {
+        $s = $this->semer();
+
+        $this->client->request('GET', '/admin/retro-agent/' . $s['agent']->getId() . '/versements');
+
+        self::assertResponseIsSuccessful();
+        $reponse = json_decode((string) $this->client->getResponse()->getContent(), true);
+
+        // Enveloppe {html, title} : c'est ce que le cerveau injecte dans l'onglet. Du HTML
+        // nu ouvrirait un panneau vide, sans un mot.
+        self::assertArrayHasKey('html', $reponse);
+        self::assertArrayHasKey('title', $reponse);
+
+        self::assertStringContainsString('Retour au rapport de production', $reponse['html']);
+        self::assertStringContainsString(
+            '/admin/retro-agent/' . $s['agent']->getId() . '/rapport',
+            $reponse['html'],
+            'Le retour doit viser le rapport de CET agent.',
+        );
+    }
     /** Sans pièce annoncée, rien ne s'écrit — et la réponse dit quoi faire. */
     public function testSansJustificatifRienNEstEcrit(): void
     {

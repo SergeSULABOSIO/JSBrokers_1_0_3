@@ -33,6 +33,7 @@ use App\Entity\Partenaire;
 use App\Entity\PieceSinistre;
 use App\Entity\Piste;
 use App\Entity\RevenuPourCourtier;
+use App\Entity\ReversementRetroAgent;
 use App\Entity\Risque;
 use App\Entity\Tache;
 use App\Entity\Taxe;
@@ -1525,6 +1526,9 @@ trait ControllerUtilsTrait
                 ConditionPartage::class => 'App\Controller\Admin\ConditionPartageController::index',
                 Partenaire::class => 'App\Controller\Admin\PartenaireController::index',
                 Cotation::class => 'App\Controller\Admin\CotationController::index',
+                // Reversements de rétrocommission : rubrique de consultation. L'oublier
+                // ici laisse la rubrique dans le menu et l'onglet vide (404 silencieux).
+                ReversementRetroAgent::class => 'App\Controller\Admin\ReversementRetroAgentController::index',
             ],
             // SINISTRE
             '_view_manager_sinistre.html.twig' => [

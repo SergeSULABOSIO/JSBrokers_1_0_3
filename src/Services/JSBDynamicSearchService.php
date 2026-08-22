@@ -82,6 +82,7 @@ class JSBDynamicSearchService
         'PieceSinistre',
         'Piste',
         'Portefeuille',
+        'ReversementRetroAgent',
         'RevenuPourCourtier',
         'Risque',
         'Tache',
