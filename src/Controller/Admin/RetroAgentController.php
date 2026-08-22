@@ -146,6 +146,9 @@ class RetroAgentController extends AbstractController
                 'parent' => 'reversementRetroAgent',
                 'id' => 0,
             ]),
+            // Le retour : ce volet remplace le rapport dans le même onglet, il doit donc
+            // savoir comment le redemander.
+            'rapportUrl' => $this->generateUrl('admin.retro_agent.rapport', ['id' => $agent->getId()]),
         ]);
 
         return $this->json([

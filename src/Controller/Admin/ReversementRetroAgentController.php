@@ -64,6 +64,16 @@ class ReversementRetroAgentController extends AbstractController
         return $this->buildParentAssociationMapFromEntity(ReversementRetroAgent::class);
     }
 
+    /**
+     * La LISTE de la rubrique. Sans cette action, la carte des composants n'a rien à
+     * appeler et l'onglet répond 404 — ce que le chargeur traduit par un panneau vide.
+     */
+    #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function index(Request $request)
+    {
+        return $this->renderViewOrListComponent(ReversementRetroAgent::class, $request);
+    }
+
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?ReversementRetroAgent $reversement, Request $request): Response
     {

@@ -20,10 +20,33 @@ import { Controller } from '@hotwired/stimulus';
  * membre, et une lecture limitée au porteur l'aurait rendue invisible.
  */
 export default class extends Controller {
-    static values = { attacherUrl: String };
+    static values = { attacherUrl: String, rapportUrl: String };
 
     connect() {
         this.nomControleur = 'RETRO-AGENT-VERSEMENTS';
+    }
+
+    /**
+     * RETOUR AU RAPPORT DE PRODUCTION.
+     *
+     * Le volet a remplacé le rapport dans le même onglet — c'est voulu, les deux
+     * parlent du même agent — mais un aller sans retour est un piège : il fallait
+     * refermer l'onglet et repartir de la liste des invités pour revoir les montants.
+     * On redemande le rapport par le même événement, donc dans le même onglet.
+     */
+    retour(event) {
+        event.preventDefault();
+        if (!this.hasRapportUrlValue) return;
+
+        this.element.dispatchEvent(new CustomEvent('cerveau:event', {
+            bubbles: true,
+            detail: {
+                type: 'ui:retroagent.rapport-request',
+                source: this.nomControleur,
+                payload: { url: this.rapportUrlValue },
+                timestamp: Date.now(),
+            },
+        }));
     }
 
     /** Joindre : la boîte habituelle, sur le porteur du lot. */

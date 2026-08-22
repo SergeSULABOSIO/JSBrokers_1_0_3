@@ -16,7 +16,8 @@
 #}
 <div class="rva-wrap"
      data-controller="retro-agent-versements"
-     data-retro-agent-versements-attacher-url-value="{{ attacherUrlPattern }}">
+     data-retro-agent-versements-attacher-url-value="{{ attacherUrlPattern }}"
+     data-retro-agent-versements-rapport-url-value="{{ rapportUrl }}">
     <style>
         /* La carte reprend celle du picker : une facture propre à cet écran cesserait de
            suivre la charte au premier ajustement. */
@@ -53,6 +54,23 @@
         .rva-avec-piece { color: var(--success, #198754); font-weight: 600; }
         .rva-affaires { color: var(--text-muted, #6c757d); font-size: .82rem; }
     </style>
+
+    {# LE RETOUR EST INDISPENSABLE, PAS DÉCORATIF. Ce volet REMPLACE le rapport dans
+       le même onglet : sans ce bouton, on ne peut plus revenir au rapport de l'agent
+       qu'en refermant l'onglet et en repartant de la liste des invités — refaire tout
+       le chemin pour un aller-retour. #}
+    <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-2 mb-3"
+            data-action="retro-agent-versements#retour">
+        {# SVG inline, comme les poignées de bord du workspace : aucune flèche gauche
+           n'est vendue localement dans les jeux d'icônes du projet, et un alias
+           inconnu ferait dépendre ce bouton d'une récupération en ligne. #}
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round" aria-hidden="true">
+            <path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>
+        </svg>
+        Retour au rapport de production
+    </button>
 
     <div class="rva-carte">
         <h6 class="rva-titre">Versements enregistrés — {{ agent.nom }}</h6>
