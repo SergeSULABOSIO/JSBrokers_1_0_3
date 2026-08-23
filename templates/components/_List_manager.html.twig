@@ -79,12 +79,17 @@
                                         data-criterion-key="{{ groupe.critere }}"
                                         data-selecteur-entite="{{ option.selecteur.entite }}"
                                         data-selecteur-champ="{{ option.selecteur.displayField | default('nom') }}"
+                                        {# Le libellé d'ORIGINE, pour pouvoir y revenir : une fois
+                                           un agent choisi, le chip porte son NOM — un filtre
+                                           qu'on ne peut pas lire est un filtre qu'on croit
+                                           absent. « Tous les agents » le remet à zéro. #}
+                                        data-selecteur-libelle-defaut="{{ option.label }}"
                                         aria-haspopup="listbox"
                                         aria-expanded="false">
                                     {%- if option.icon is defined and option.icon -%}
                                         <span class="jsb-preset-chip__icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(option.icon), {width: '15px', height: '15px'}) }}</span>
                                     {%- endif -%}
-                                    <span>{{ option.label }}</span>
+                                    <span data-selecteur-libelle>{{ option.label }}</span>
                                 </button>
                             {% else %}
                             {# `titre_complet` porte le libellé non abrégé : le titre du groupe
