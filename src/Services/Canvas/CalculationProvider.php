@@ -25,7 +25,8 @@ class CalculationProvider
 
     public function __construct(
         #[TaggedIterator('app.indicator_calculation_strategy')] iterable $strategies,
-        private IndicatorCalculationHelper $calculationHelper
+        private IndicatorCalculationHelper $calculationHelper,
+        private readonly \App\Service\Retro\LotDeVersement $lotDeVersement,
     ) {
         $this->strategies = $strategies;
     }
@@ -100,6 +101,11 @@ class CalculationProvider
                 => $this->calculationHelper->preloadCotationRelations($items),
             is_a($entityClass, Avenant::class, true)
                 => $this->calculationHelper->preloadAvenantRelations($items),
+            // Le compte de pièces d'un reversement est celui de son VIREMENT : sans ce
+            // préchargement, chaque ligne interrogerait son lot, et un lot de trois lignes
+            // en coûterait trois de plus.
+            is_a($entityClass, \App\Entity\ReversementRetroAgent::class, true)
+                => $this->lotDeVersement->prechargerJustificatifs($items),
             is_a($entityClass, Contact::class, true)
                 => $this->preloadCiblesAgregees(
                     array_filter(array_map(static fn (Contact $c) => $c->getClient(), $items)),

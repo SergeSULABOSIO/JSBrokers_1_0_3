@@ -241,33 +241,85 @@ class ReversementJustificatifTest extends WebTestCase
         self::assertStringContainsString('POL-JUS-1', $html, 'La police réglée doit paraître.');
     }
     /**
-     * LE VOLET DES VERSEMENTS A UN RETOUR — et ce n'est pas un ornement.
+     * LE VOLET A DISPARU — et le bouton du rapport mène désormais à la RUBRIQUE.
      *
-     * Le volet REMPLACE le rapport dans le même onglet : c'est voulu, les deux parlent du
-     * même agent. Mais sans bouton de retour, l'aller est sans retour — il faut refermer
-     * l'onglet et repartir de la liste des invités pour revoir les montants. Le défaut
-     * n'était pas visible d'un test structurel : il fallait cliquer.
+     * Il y avait deux écrans pour la même donnée : un volet dédié et la rubrique. Deux
+     * lectures à maintenir, deux endroits où corriger un bug. Ce test empêche le volet de
+     * revenir par mégarde, et vérifie que le rapport porte de quoi ouvrir la rubrique
+     * FILTRÉE sur son agent.
      */
-    public function testLeVoletDesVersementsRamèneAuRapport(): void
+    public function testLeVoletADisparuEtLeRapportOuvreLaRubrique(): void
     {
         $s = $this->semer();
 
+        // L'ancienne route n'existe plus : un 404, pas un écran fantôme.
         $this->client->request('GET', '/admin/retro-agent/' . $s['agent']->getId() . '/versements');
+        self::assertResponseStatusCodeSame(404);
 
+        // Et le rapport porte l'agent, de quoi ouvrir la rubrique filtrée sur lui.
+        $this->client->request('GET', '/admin/retro-agent/' . $s['agent']->getId() . '/rapport');
         self::assertResponseIsSuccessful();
-        $reponse = json_decode((string) $this->client->getResponse()->getContent(), true);
+        $html = json_decode((string) $this->client->getResponse()->getContent(), true)['html'];
 
-        // Enveloppe {html, title} : c'est ce que le cerveau injecte dans l'onglet. Du HTML
-        // nu ouvrirait un panneau vide, sans un mot.
-        self::assertArrayHasKey('html', $reponse);
-        self::assertArrayHasKey('title', $reponse);
+        self::assertStringContainsString('Versements enregistrés', $html);
+        self::assertStringContainsString('retro-agent-rapport-agent-id-value', $html);
+        self::assertStringContainsString('Alice Apporteuse', $html, 'Le libellé du filtre doit être le nom de l’agent.');
+    }
 
-        self::assertStringContainsString('Retour au rapport de production', $reponse['html']);
-        self::assertStringContainsString(
-            '/admin/retro-agent/' . $s['agent']->getId() . '/rapport',
-            $reponse['html'],
-            'Le retour doit viser le rapport de CET agent.',
+    /**
+     * LA PREUVE EST CELLE DU VIREMENT, PAS DE LA LIGNE.
+     *
+     * Un bordereau couvre tout un lot. Sans cette règle, deux lignes sur trois d'un virement
+     * groupé paraîtraient sans justificatif alors qu'elles sont couvertes — la dette de
+     * preuve affichée serait fausse. C'est invisible sur un versement isolé : il faut un lot
+     * de deux lignes dont UNE SEULE porte le fichier.
+     */
+    public function testLaLigneAnnonceLesPiecesDeSonVirement(): void
+    {
+        $s = $this->semer();
+        $porteurId = $this->verser($s['agent'], $s['avenants'])['porteurId'];
+
+        $this->client->request(
+            'POST',
+            '/admin/document/api/attacher/reversementRetroAgent/' . $porteurId,
+            [],
+            ['fichiers' => [$this->fichier('bordereau.txt')]],
         );
+        self::assertResponseIsSuccessful();
+
+        $this->em->clear();
+        $lot = static::getContainer()->get(LotDeVersement::class);
+        $lignes = $this->em->getRepository(ReversementRetroAgent::class)
+            ->findBy(['reference' => 'VIR-JUST-1'], ['id' => 'ASC']);
+        self::assertCount(2, $lignes);
+
+        // Préchargé comme en liste : c'est le chemin réel, et celui dont le coût est borné.
+        $lot->prechargerJustificatifs($lignes);
+
+        foreach ($lignes as $ligne) {
+            self::assertSame(
+                1,
+                $lot->compteDeJustificatifs($ligne),
+                'Chaque ligne du virement doit annoncer la pièce qui la couvre.',
+            );
+            self::assertSame('1 pièce', $lot->libelleJustificatif($ligne));
+        }
+    }
+
+    /** Un versement sans pièce le dit — c'est la dette de preuve, rendue visible. */
+    public function testUnVersementSansPieceLAnnonce(): void
+    {
+        $s = $this->semer();
+        $this->verser($s['agent'], $s['avenants']);
+
+        $this->em->clear();
+        $lot = static::getContainer()->get(LotDeVersement::class);
+        $lignes = $this->em->getRepository(ReversementRetroAgent::class)
+            ->findBy(['reference' => 'VIR-JUST-1'], ['id' => 'ASC']);
+        $lot->prechargerJustificatifs($lignes);
+
+        self::assertSame(0, $lot->compteDeJustificatifs($lignes[0]));
+        self::assertSame('Aucune pièce', $lot->libelleJustificatif($lignes[0]));
     }
     /** Sans pièce annoncée, rien ne s'écrit — et la réponse dit quoi faire. */
     public function testSansJustificatifRienNEstEcrit(): void

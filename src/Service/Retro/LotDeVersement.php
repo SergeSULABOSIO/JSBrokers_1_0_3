@@ -39,6 +39,9 @@ final class LotDeVersement
     /** Préfixe des lots d'un seul membre : un reversement isolé n'a pas de lotReference. */
     private const PREFIXE_SOLO = 'solo-';
 
+    /** @var array<string, int> clé de lot => pièces, préchargées pour une page. */
+    private array $comptesParLot = [];
+
     public function __construct(
         private readonly ReversementRetroAgentRepository $reversements,
         private readonly EntityManagerInterface $em,
@@ -178,6 +181,82 @@ final class LotDeVersement
         return $comptes;
     }
 
+    /**
+     * PRÉCHARGE le compte de pièces d'une PAGE de reversements, en une requête.
+     *
+     * Appelé avant le calcul des indicateurs (CalculationProvider::batchPreload). Sans lui,
+     * chaque ligne interrogerait son lot — et un lot de trois lignes en coûterait trois de
+     * plus. C'est exactement le N+1 que `preloadAvenantRelations` combat pour les avenants.
+     *
+     * @param ReversementRetroAgent[] $reversements
+     */
+    public function prechargerJustificatifs(array $reversements): void
+    {
+        $ids = [];
+        $references = [];
+        foreach ($reversements as $reversement) {
+            if (!$reversement instanceof ReversementRetroAgent || $reversement->getId() === null) {
+                continue;
+            }
+            $ids[] = $reversement->getId();
+            $lot = trim((string) $reversement->getLotReference());
+            if ($lot !== '') {
+                $references[] = $lot;
+            }
+        }
+        if ($ids === []) {
+            return;
+        }
+
+        $comptes = [];
+        foreach ($this->reversements->comptesDeJustificatifs($ids, $references) as $ligne) {
+            $lot = trim((string) $ligne['lot']);
+            // La clé d'un versement isolé est la sienne : même normalisation que cle().
+            $cle = $lot !== '' ? $lot : self::PREFIXE_SOLO . $ligne['id'];
+            $comptes[$cle] = ($comptes[$cle] ?? 0) + $ligne['nb'];
+        }
+
+        // On ÉCRASE plutôt qu'on ne fusionne : une page succède à une autre dans la même
+        // requête (pagination, rafraîchissement), et un compte périmé se lirait comme un
+        // compte à jour.
+        $this->comptesParLot = $comptes;
+    }
+
+    /**
+     * Le nombre de pièces qui justifient CE versement — c'est-à-dire son VIREMENT.
+     *
+     * Lu dans le préchargement quand il y en a un ; à défaut (une fiche ouverte seule, un
+     * appel isolé), une requête ciblée sur ce seul lot. Le repli existe pour que la valeur
+     * soit toujours juste, jamais pour dispenser du préchargement en liste.
+     */
+    public function compteDeJustificatifs(ReversementRetroAgent $reversement): int
+    {
+        $cle = $this->cle($reversement);
+        if (array_key_exists($cle, $this->comptesParLot)) {
+            return $this->comptesParLot[$cle];
+        }
+
+        $lot = trim((string) $reversement->getLotReference());
+        $comptes = $this->reversements->comptesDeJustificatifs(
+            [$reversement->getId()],
+            $lot !== '' ? [$lot] : [],
+        );
+
+        $total = 0;
+        foreach ($comptes as $ligne) {
+            $total += $ligne['nb'];
+        }
+
+        return $this->comptesParLot[$cle] = $total;
+    }
+
+    /** Le libellé porté par la ligne de liste : « 1 pièce », « 3 pièces », ou « Aucune ». */
+    public function libelleJustificatif(ReversementRetroAgent $reversement): string
+    {
+        $nb = $this->compteDeJustificatifs($reversement);
+
+        return $nb === 0 ? 'Aucune pièce' : sprintf('%d pièce%s', $nb, $nb > 1 ? 's' : '');
+    }
     /**
      * LES PIÈCES QUI JUSTIFIENT CHAQUE AFFAIRE — vu depuis la ligne du rapport.
      *

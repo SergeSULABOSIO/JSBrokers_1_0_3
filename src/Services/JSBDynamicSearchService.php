@@ -7,6 +7,7 @@ use App\Entity\Entreprise;
 use App\Services\Search\AvenantEcheanceScope;
 use App\Services\Search\AvenantSuccessionScope;
 use App\Services\Search\CotationSouscriptionScope;
+use App\Services\Search\ReversementScope;
 use App\Services\Search\PisteTransformationScope;
 use App\Services\Search\PortefeuilleScope;
 use App\Services\Search\TranchePaiementScope;
@@ -595,6 +596,72 @@ class JSBDynamicSearchService
                 continue;
             }
 
+            // CAS 0 quater : les trois filtres rapides des REVERSEMENTS de rétrocommission.
+            // Tous exprimables en SQL, donc filtrés en base — jamais en mémoire, sans quoi la
+            // pagination et les totaux porteraient sur un ensemble et l'affichage sur un autre.
+            if ($field === ReversementScope::CLE_JUSTIFICATIF) {
+                $valeur = is_array($value) ? ($value['value'] ?? null) : $value;
+                if (!ReversementScope::estValide(ReversementScope::CLE_JUSTIFICATIF, is_string($valeur) ? $valeur : null)) {
+                    continue; // « Tous » : filtre ignoré
+                }
+
+                // LA PREUVE EST CELLE DU VIREMENT, pas de la ligne. Un bordereau couvre tout un
+                // lot : filtrer sur les documents de la SEULE ligne ferait passer pour « sans
+                // pièce » deux lignes sur trois d'un virement pourtant justifié. On regarde donc
+                // les pièces de toutes les lignes partageant la même référence de lot — et, pour
+                // un versement isolé (lotReference nulle), les siennes.
+                $docAlias = 'justif_doc' . $suffix;
+                $revAlias = 'justif_rev' . $suffix;
+                $couverts = $this->em->createQueryBuilder()
+                    ->select("{$revAlias}.id")
+                    ->from(\App\Entity\ReversementRetroAgent::class, $revAlias)
+                    ->join(\App\Entity\ReversementRetroAgent::class, 'lot' . $suffix, 'WITH',
+                        "(lot{$suffix}.lotReference IS NOT NULL AND lot{$suffix}.lotReference = {$revAlias}.lotReference)"
+                        . " OR lot{$suffix}.id = {$revAlias}.id")
+                    ->join(\App\Entity\Document::class, $docAlias, 'WITH', "{$docAlias}.reversementRetroAgent = lot{$suffix}.id")
+                    ->getDQL();
+
+                if ($valeur === ReversementScope::AVEC_PIECE) {
+                    $qb->andWhere($qb->expr()->in("{$rootAlias}.id", $couverts));
+                } else {
+                    $qb->andWhere($qb->expr()->notIn("{$rootAlias}.id", $couverts));
+                }
+                continue;
+            }
+
+            if ($field === ReversementScope::CLE_PERIODE) {
+                $valeur = is_array($value) ? ($value['value'] ?? null) : $value;
+                if (!ReversementScope::estValide(ReversementScope::CLE_PERIODE, is_string($valeur) ? $valeur : null)) {
+                    continue;
+                }
+
+                // Les bornes viennent du scope : le filtre et tout libellé de rapprochement
+                // doivent parler des mêmes dates.
+                $bornes = ReversementScope::bornes($valeur);
+                if ($bornes === null) {
+                    continue;
+                }
+                $qb->andWhere("{$rootAlias}.paidAt BETWEEN :periodeDebut{$suffix} AND :periodeFin{$suffix}")
+                    ->setParameter('periodeDebut' . $suffix, $bornes[0])
+                    ->setParameter('periodeFin' . $suffix, $bornes[1]);
+                continue;
+            }
+
+            if ($field === ReversementScope::CLE_VIREMENT) {
+                $valeur = is_array($value) ? ($value['value'] ?? null) : $value;
+                if (!ReversementScope::estValide(ReversementScope::CLE_VIREMENT, is_string($valeur) ? $valeur : null)) {
+                    continue;
+                }
+
+                // Un lot n'existe qu'à partir de DEUX lignes : la référence de lot n'est posée
+                // que dans ce cas (cf. RetroAgentController), et une chaîne vide vaut absence.
+                if ($valeur === ReversementScope::GROUPE) {
+                    $qb->andWhere("{$rootAlias}.lotReference IS NOT NULL AND {$rootAlias}.lotReference <> ''");
+                } else {
+                    $qb->andWhere("{$rootAlias}.lotReference IS NULL OR {$rootAlias}.lotReference = ''");
+                }
+                continue;
+            }
             // CAS 1 : C'est une plage de dates (recherche avancée pour les champs de type DateTimeRange).
             // La valeur est un tableau comme { from: 'YYYY-MM-DD', to: 'YYYY-MM-DD' }.
             if (is_array($value) && (isset($value['from']) || isset($value['to'])) && !isset($value['operator'])) {

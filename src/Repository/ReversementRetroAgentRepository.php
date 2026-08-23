@@ -111,6 +111,52 @@ class ReversementRetroAgentRepository extends ServiceEntityRepository
             ->getResult();
     }
     /**
+     * LES PIÈCES DE CHAQUE VIREMENT, POUR UNE PAGE ENTIÈRE — en UNE requête.
+     *
+     * La colonne « Justificatif » compte les pièces du VIREMENT et non de la ligne : un
+     * bordereau couvre tout un lot. Calculer cela ligne à ligne rallumerait une requête par
+     * ligne, et deux pour un lot — le N+1 déjà combattu ailleurs dans ce projet. On lit donc
+     * d'un coup les reversements de la page ET leurs frères de lot, avec leur compte de
+     * documents ; le regroupement par lot se fait ensuite en mémoire.
+     *
+     * @param int[]    $ids        identifiants des lignes de la page
+     * @param string[] $references références de lot présentes dans la page
+     *
+     * @return array<int, array{id: int, lot: ?string, nb: int}>
+     */
+    public function comptesDeJustificatifs(array $ids, array $references): array
+    {
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        $references = array_values(array_filter(array_map('strval', $references), static fn (string $r) => $r !== ''));
+        if ($ids === [] && $references === []) {
+            return [];
+        }
+
+        $qb = $this->createQueryBuilder('r')
+            ->select('r.id AS id', 'r.lotReference AS lot', 'COUNT(d.id) AS nb')
+            ->leftJoin(\App\Entity\Document::class, 'd', 'WITH', 'd.reversementRetroAgent = r.id')
+            ->groupBy('r.id')
+            ->addGroupBy('r.lotReference');
+
+        // Les lignes de la page, ET les frères de lot qui n'y figurent pas : c'est l'un
+        // d'eux qui porte peut-être le bordereau.
+        $ou = [];
+        if ($ids !== []) {
+            $ou[] = 'r.id IN (:ids)';
+            $qb->setParameter('ids', $ids);
+        }
+        if ($references !== []) {
+            $ou[] = 'r.lotReference IN (:refs)';
+            $qb->setParameter('refs', $references);
+        }
+        $qb->where(implode(' OR ', $ou));
+
+        return array_map(
+            static fn (array $l) => ['id' => (int) $l['id'], 'lot' => $l['lot'], 'nb' => (int) $l['nb']],
+            $qb->getQuery()->getScalarResult(),
+        );
+    }
+    /**
      * A-T-ON DÉJÀ VERSÉ QUELQUE CHOSE À CET AGENT SUR CETTE AFFAIRE ?
      *
      * C'est la question qui SCELLE un rattachement : dès qu'un virement est parti, la

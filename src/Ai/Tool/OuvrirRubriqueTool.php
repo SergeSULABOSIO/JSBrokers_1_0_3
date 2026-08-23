@@ -2,6 +2,9 @@
 
 namespace App\Ai\Tool;
 
+use App\Services\Search\ReversementScope;
+use App\Repository\InviteRepository;
+use App\Entity\Invite;
 use App\Ai\Action\TypeAction;
 
 use App\Ai\AiText;
@@ -34,6 +37,8 @@ final class OuvrirRubriqueTool implements AiToolInterface
         private readonly ResolveurDeReferences $resolveur,
         private readonly CheminsDeRelation $chemins,
         private readonly EntiteLibelle $libelleur,
+        // Un agent bénéficiaire n'est pas une rubrique : il se cherche à part.
+        private readonly InviteRepository $inviteRepository,
     ) {
     }
 
@@ -128,6 +133,27 @@ final class OuvrirRubriqueTool implements AiToolInterface
                     'description' => 'PISTE uniquement : ouvre la rubrique sur un statut de '
                         . 'transformation (transformees, en_cours).',
                 ],
+                // REVERSEMENTS : les mêmes chips que l'écran, mot pour mot. Le vocabulaire
+                // vient de ReversementScope, comme les options de la barre — deux listes
+                // de valeurs auraient fini par désigner deux sous-ensembles.
+                'justificatif' => ReversementScope::proprieteSchema(
+                    ReversementScope::CLE_JUSTIFICATIF,
+                    'REVERSEMENT uniquement : les versements selon qu\'ils portent une pièce justificative ou non.',
+                ),
+                'periode' => ReversementScope::proprieteSchema(
+                    ReversementScope::CLE_PERIODE,
+                    'REVERSEMENT uniquement : la fenêtre de dates du versement.',
+                ),
+                'virement' => ReversementScope::proprieteSchema(
+                    ReversementScope::CLE_VIREMENT,
+                    'REVERSEMENT uniquement : virement GROUPÉ (qui solde plusieurs affaires) ou ISOLÉ.',
+                ),
+                'beneficiaire' => [
+                    'type' => 'string',
+                    'description' => 'REVERSEMENT uniquement : le NOM de l\'agent bénéficiaire '
+                        . '(« les versements d\'Alice »). Un agent n\'est pas une rubrique et ne '
+                        . 'se met donc pas dans lieA : c\'est ce paramètre qui le résout.',
+                ],
             ],
             'required' => ['entite'],
         ];
@@ -220,7 +246,27 @@ final class OuvrirRubriqueTool implements AiToolInterface
         $criteresRubrique = AvenantEcheanceScope::critereRecherche($shortName, $args['echeance'] ?? null)
             + TranchePaiementScope::critereRecherche($shortName, $axesTranche)
             + CotationSouscriptionScope::critereRecherche($shortName, $args['validation'] ?? null)
-            + PisteTransformationScope::critereRecherche($shortName, $args['transformation'] ?? null);
+            + PisteTransformationScope::critereRecherche($shortName, $args['transformation'] ?? null)
+            + ReversementScope::criteresDepuisArguments($shortName, $args);
+
+        // LE BÉNÉFICIAIRE : une RELATION, donc un critère d'identité — la même forme que
+        // celle du chip-sélecteur de l'écran et du bouton du rapport de production.
+        // `lieA` ne pouvait pas servir : il n'accepte que les entités du lexique, et un
+        // agent n'en est pas une (les invités sont gouvernés à part, délibérément).
+        $beneficiaire = trim((string) ($args['beneficiaire'] ?? ''));
+        if ($shortName === ReversementScope::ENTITE && $beneficiaire !== '') {
+            $agent = $this->agentNomme($beneficiaire, $scope);
+            if ($agent === null) {
+                // On n'ouvre SURTOUT pas la liste entière en lot de consolation : ce serait
+                // annoncer les versements d'une personne et en montrer ceux de tout le monde.
+                return AiToolResult::introuvable(
+                    'Agent « ' . $beneficiaire . ' »',
+                    'Aucun agent de cet espace ne porte ce nom. La rubrique n\'a PAS été ouverte.',
+                );
+            }
+            $criteresRubrique += ReversementScope::critereBeneficiaire((int) $agent->getId(), (string) $agent->getNom());
+            $filtres[] = sprintf('bénéficiaire « %s »', $agent->getNom());
+        }
 
         if (isset($criteresRubrique[AvenantEcheanceScope::CRITERION_KEY])) {
             $filtres[] = AvenantEcheanceScope::libelle((string) $criteresRubrique[AvenantEcheanceScope::CRITERION_KEY]['value']);
@@ -230,6 +276,11 @@ final class OuvrirRubriqueTool implements AiToolInterface
             $filtres[] = CotationSouscriptionScope::libelle((string) $criteresRubrique[CotationSouscriptionScope::CRITERION_KEY]['value']);
         } elseif (isset($criteresRubrique[PisteTransformationScope::CRITERION_KEY])) {
             $filtres[] = PisteTransformationScope::libelle((string) $criteresRubrique[PisteTransformationScope::CRITERION_KEY]['value']);
+        }
+        foreach ([ReversementScope::CLE_JUSTIFICATIF, ReversementScope::CLE_PERIODE, ReversementScope::CLE_VIREMENT] as $cleReversement) {
+            if (isset($criteresRubrique[$cleReversement])) {
+                $filtres[] = ReversementScope::libelle($cleReversement, (string) $criteresRubrique[$cleReversement]['value']);
+            }
         }
         $criteres += $criteresRubrique;
 
@@ -255,6 +306,35 @@ final class OuvrirRubriqueTool implements AiToolInterface
                 'criteres' => $criteres !== [] ? $criteres : null,
             ], static fn ($v) => $v !== null),
         );
+    }
+
+    /**
+     * L'agent NOMMÉ, cherché dans l'espace de travail — exact d'abord, partiel ensuite.
+     *
+     * Même règle que `retrocommissions`, qui résout déjà un bénéficiaire par son nom :
+     * « SUNU » ne doit pas être écrasé par « SUNU IARD RDC ». Un invité n'est pas une
+     * rubrique — il n'a donc ni lexique ni résolveur générique, et c'est pour cela que
+     * cette petite recherche vit ici.
+     */
+    private function agentNomme(string $terme, AiScope $scope): ?Invite
+    {
+        if (ctype_digit($terme)) {
+            return $this->inviteRepository->findOneBy(['id' => (int) $terme, 'entreprise' => $scope->entreprise]);
+        }
+
+        $candidats = $this->inviteRepository->createQueryBuilder('i')
+            ->andWhere('i.entreprise = :e')->setParameter('e', $scope->entreprise)
+            ->andWhere('LOWER(i.nom) LIKE :t')->setParameter('t', '%' . mb_strtolower($terme) . '%')
+            ->orderBy('i.nom', 'ASC')
+            ->getQuery()->getResult();
+
+        foreach ($candidats as $candidat) {
+            if (mb_strtolower((string) $candidat->getNom()) === mb_strtolower($terme)) {
+                return $candidat;
+            }
+        }
+
+        return $candidats[0] ?? null;
     }
 
     /**

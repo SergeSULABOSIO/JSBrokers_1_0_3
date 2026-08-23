@@ -66,6 +66,27 @@
                            elle dit l'état — c'est la règle de toutes les rubriques. #}
                         <span class="jsb-preset-filters__titre" aria-hidden="true">{{ groupe.titre | default(groupe.libelle | default('Filtrer')) }}</span>
                         {% for option in groupe.options %}
+                            {% if option.selecteur is defined %}
+                                {# CHIP-SÉLECTEUR : l'option ne porte pas une valeur mais une
+                                   ENTITÉ où aller chercher les valeurs au clic. C'est ce qui
+                                   permet de filtrer sur une relation (un agent, un client…)
+                                   sans figer une option par enregistrement dans un canevas de
+                                   liste — lesquels sont partagés et ignorent l'entreprise.
+                                   Le choix retombe ensuite dans le MÊME chemin que les autres
+                                   chips : ui:filter.preset. #}
+                                <button type="button" class="jsb-preset-chip"
+                                        data-action="click->list-manager#openPresetSelector"
+                                        data-criterion-key="{{ groupe.critere }}"
+                                        data-selecteur-entite="{{ option.selecteur.entite }}"
+                                        data-selecteur-champ="{{ option.selecteur.displayField | default('nom') }}"
+                                        aria-haspopup="listbox"
+                                        aria-expanded="false">
+                                    {%- if option.icon is defined and option.icon -%}
+                                        <span class="jsb-preset-chip__icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(option.icon), {width: '15px', height: '15px'}) }}</span>
+                                    {%- endif -%}
+                                    <span>{{ option.label }}</span>
+                                </button>
+                            {% else %}
                             {# `titre_complet` porte le libellé non abrégé : le titre du groupe
                                n'est pas annoncé avec le bouton par les lecteurs d'écran, et
                                « Partielle » seul ne dirait pas de quelle dette il s'agit. #}
@@ -81,6 +102,7 @@
                                 {%- endif -%}
                                 <span>{{ option.label }}</span>
                             </button>
+                            {% endif %}
                         {% endfor %}
                     </div>
                 {% endfor %}
