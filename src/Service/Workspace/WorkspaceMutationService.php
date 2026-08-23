@@ -2,6 +2,8 @@
 
 namespace App\Service\Workspace;
 
+use App\Entity\Piste;
+use App\Service\Partage\EffortCommercialAgent;
 use App\Ai\Fichier\ConversationFichierResolver;
 use App\Ai\Mutation\ConversationFichierRef;
 use App\Ai\Mutation\MutationAllowlist;
@@ -73,6 +75,10 @@ class WorkspaceMutationService
         private readonly FormTreeInspector $formTreeInspector,
         private readonly ConversationFichierResolver $fichierResolver,
         private readonly ReferentielEnumerateur $referentiels,
+        // La règle du rattachement d'agent, consultée ICI comme par l'écran : c'est ce
+        // qui empêche l'assistant de contourner par le chemin générique ce que son outil
+        // nommé refuse (même intention que LiensProteges).
+        private readonly EffortCommercialAgent $effortCommercialAgent,
     ) {
     }
 
@@ -136,6 +142,23 @@ class WorkspaceMutationService
                 return ['ok' => false, 'statut' => 'introuvable'] + $base;
             }
             $base['cible'] = $this->libelleInstance($cible);
+        }
+
+        // RÈGLE MÉTIER DU RATTACHEMENT D'AGENT — le pendant exact de LiensProteges.
+        //
+        // Une affaire n'a qu'UN agent bénéficiaire, et un versement scelle ce choix. La
+        // règle est appliquée par l'écran et par l'outil nommé (effort_commercial_agent) ;
+        // mais rien n'empêcherait le modèle d'écrire directement
+        // `{entite: "Piste", champs: {conditionsPartageAgent: [7]}}` par preparer_operations.
+        // Sans ce garde-fou, la parité avec l'assistant serait un trou de sécurité déguisé
+        // en fonctionnalité : la règle vaudrait pour qui l'emprunte, et pas pour qui la
+        // contourne. On la pose donc là où TOUS les chemins d'écriture passent.
+        $refusPartage = $this->refusDuRattachementAgent($op, $cible);
+        if ($refusPartage !== null) {
+            $base['impacts'] = [$refusPartage];
+            $base['bloque'] = true;
+
+            return ['ok' => false, 'statut' => 'bloque'] + $base;
         }
 
         // Suppression : impacts de cascade + blocages FK.
@@ -519,6 +542,49 @@ class WorkspaceMutationService
     // ─────────────────────────────── Interne ──────────────────────────────────
 
     /** Allowlist métier + accès fail-closed au niveau requis par l'opération. */
+    /**
+     * Le motif s'opposant à une écriture sur `Piste.conditionsPartageAgent`, ou null.
+     *
+     * Deux règles, une seule autorité (EffortCommercialAgent) :
+     *  — POSER une condition sur une affaire qui en a déjà une est refusé : une affaire n'a
+     *    qu'un agent bénéficiaire, et le décompte n'aurait plus qu'à choisir « la première
+     *    applicable », ce que personne ne voit à l'écran ;
+     *  — RETIRER celle en place après un versement est refusé : on ne réécrit pas l'histoire
+     *    d'un décaissement comptabilisé.
+     *
+     * On ne regarde que les opérations qui TOUCHENT ce champ : tout le reste passe, y compris
+     * les éditions d'une piste qui portent d'autres champs.
+     */
+    private function refusDuRattachementAgent(MutationOperation $op, ?object $cible): ?string
+    {
+        if ($op->entityShortName !== 'Piste' || !array_key_exists('conditionsPartageAgent', $op->fields)) {
+            return null;
+        }
+
+        $demande = array_values(array_filter((array) $op->fields['conditionsPartageAgent']));
+        $piste = $cible instanceof Piste ? $cible : null;
+
+        // Création : l'affaire naît vierge, il n'y a rien à écraser ni à défaire.
+        if ($piste === null) {
+            return null;
+        }
+
+        $enPlace = $this->effortCommercialAgent->condition($piste);
+
+        // On VIDE le champ : c'est un détachement.
+        if ($demande === []) {
+            return $enPlace === null ? null : $this->effortCommercialAgent->refusDeDetachement($piste);
+        }
+
+        // On POSE : autorisé si l'affaire est libre, ou si l'on repose exactement la même
+        // condition (une réécriture à l'identique ne change rien et ne doit pas bloquer un
+        // plan qui touche la piste pour d'autres raisons).
+        if ($enPlace === null || in_array((int) $enPlace->getId(), array_map('intval', $demande), true)) {
+            return null;
+        }
+
+        return $this->effortCommercialAgent->refusDeRattachement($piste);
+    }
     private function estAutorise(MutationOperation $op, AiScope $scope): bool
     {
         if (!MutationAllowlist::autorise($op->entityShortName)) {

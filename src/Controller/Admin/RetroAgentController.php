@@ -113,6 +113,24 @@ class RetroAgentController extends AbstractController
     }
 
     /**
+     * LE RAPPORT DE PRODUCTION, DEPUIS UNE LIGNE DE REVERSEMENT.
+     *
+     * L'`%id%` d'une action de barre d'outils est celui de la LIGNE sélectionnée — ici un
+     * reversement, pas un agent. D'où cette route de traduction : elle résout le
+     * bénéficiaire et délègue au rapport, plutôt que d'inventer un `%agentId%` que le
+     * mécanisme d'actions ne sait pas produire.
+     */
+    #[Route('/reversement/{id}/rapport', name: 'rapport_depuis_reversement', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function rapportDepuisReversement(ReversementRetroAgent $reversement, Request $request): JsonResponse
+    {
+        $agent = $reversement->getAgent();
+        if ($agent === null || $reversement->getEntreprise()?->getId() !== $this->getInvite()->getEntreprise()?->getId()) {
+            throw $this->createNotFoundException('Reversement introuvable.');
+        }
+
+        return $this->rapport($agent, $request);
+    }
+    /**
      * LES VERSEMENTS DÉJÀ ENREGISTRÉS — une ligne par VIREMENT, pas par reversement.
      *
      * Ce volet n'est pas un doublon de la rubrique. Une liste de rubrique montre la base

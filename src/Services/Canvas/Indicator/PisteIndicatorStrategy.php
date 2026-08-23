@@ -2,6 +2,7 @@
 
 namespace App\Services\Canvas\Indicator;
 
+use App\Service\Partage\EffortCommercialAgent;
 use App\Entity\Piste;
 use App\Services\ServiceDates;
 use DateTimeImmutable;
@@ -10,7 +11,10 @@ class PisteIndicatorStrategy implements IndicatorCalculationStrategyInterface
 {
     public function __construct(
         private ServiceDates $serviceDates,
-        private IndicatorCalculationHelper $calculationHelper
+        private IndicatorCalculationHelper $calculationHelper,
+        // LE VOYANT « effort commercial » : une seule autorité le calcule, pour les
+        // quatre écrans de l'arbre d'une affaire.
+        private EffortCommercialAgent $effortCommercial,
     ) {
     }
 
@@ -23,6 +27,12 @@ class PisteIndicatorStrategy implements IndicatorCalculationStrategyInterface
     {
         /** @var Piste $entity */
         return [
+            // LE VOYANT DE LA LIGNE, et le drapeau des actions de partage : une seule
+            // valeur pour une seule information — deux champs finiraient par se
+            // contredire. `null` pour une affaire du cabinet seul, qui est le cas normal.
+            'effortCommercialAgent' => $this->effortCommercial->libelle(
+                $this->effortCommercial->piste($entity),
+            ),
             'risqueCode' => $entity->getRisque()?->getCode() ?? 'N/A',
             'typeAvenantString' => $this->getPisteTypeAvenantString($entity),
             'renewalConditionString' => $this->getPisteRenewalConditionString($entity),

@@ -2,6 +2,7 @@
 
 namespace App\Services\Canvas\Indicator;
 
+use App\Service\Partage\EffortCommercialAgent;
 use App\Entity\Tranche;
 use App\Entity\Taxe;
 use App\Entity\Note;
@@ -35,7 +36,10 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
         private ServiceMonnaies $serviceMonnaies,
         private TaxeRepository $taxeRepository,
         private IndicatorCalculationHelper $calculationHelper,
-        private EntityManagerInterface $em
+        private EntityManagerInterface $em,
+        // LE VOYANT « effort commercial » : une seule autorité le calcule, pour les
+        // quatre écrans de l'arbre d'une affaire.
+        private EffortCommercialAgent $effortCommercial,
     ) {
     }
 
@@ -85,6 +89,12 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
         $retroExigible = $this->getTrancheRetroExigible($entity);
         $commissionExigible = $this->getTrancheCommissionExigible($entity);
         return [
+            // LE VOYANT DE LA LIGNE, et le drapeau des actions de partage : une seule
+            // valeur pour une seule information — deux champs finiraient par se
+            // contredire. `null` pour une affaire du cabinet seul, qui est le cas normal.
+            'effortCommercialAgent' => $this->effortCommercial->libelle(
+                $this->effortCommercial->piste($entity),
+            ),
             'nomCompletAvecStatut' => $nomComplet,
             'clientDescription' => $this->calculationHelper->getClientDescriptionFromCotation($cotation),
             'risqueDescription' => $this->calculationHelper->getRisqueDescriptionFromCotation($cotation),

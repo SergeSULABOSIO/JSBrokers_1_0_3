@@ -555,6 +555,25 @@ export default class extends Controller {
                 this._requestListRefresh(this.getActiveTabId());
                 break;
             }
+            case 'ui:partage.picker-request': // « Rattacher une condition de partage »
+                this.handlePartagePickerRequest(payload);
+                break;
+            case 'ui:partage.detach-request': // « Détacher la condition de partage »
+                this.handlePartageDetachRequest(payload);
+                break;
+            case 'client:partage.detach-execute': // confirmation validée → DELETE effectif
+                this._handlePartageDetachExecute(payload);
+                break;
+            case 'client:partage.updated': { // succès d'un rattachement via le picker
+                this._showNotification(payload.message || 'Condition de partage rattachée.', 'success');
+                // Le voyant « Effort commercial » ne s'allume qu'au rafraîchissement :
+                // c'est le serveur qui le calcule, ligne par ligne.
+                const partageState = this._getActiveTabState();
+                this._publishSelectionStatus('Actualisation de la liste...');
+                this.broadcast('app:loading.start', { originatorId: partageState.elementId, workspaceTabId: this.currentWorkspaceTabId });
+                this._requestListRefresh(this.getActiveTabId());
+                break;
+            }
             case 'ui:bordereau.edit-linked-note':
                 this.handleBordereauEditLinkedNote(payload);
                 break;
@@ -2270,6 +2289,95 @@ export default class extends Controller {
         });
     }
 
+    /**
+     * Ouvre le picker des conditions de partage d'agent, pour la SÉLECTION ENTIÈRE.
+     *
+     * L'action est déclarée `multi` : on couvre plusieurs affaires d'un geste. Les
+     * identifiants voyagent en clair dans l'URL du picker, et c'est le serveur qui remonte
+     * chacun à son affaire, dédoublonne, et refuse le lot entier si l'une est déjà prise.
+     * Le navigateur n'a pas à connaître l'arbre d'une affaire.
+     *
+     * @param {object} payload
+     * @param {string} payload.url - '/admin/partage/{entite}/conditions-picker'
+     * @param {Array}  payload.selection - les lignes sélectionnées
+     */
+    async handlePartagePickerRequest(payload) {
+        const ids = (payload.selection || [])
+            .map((s) => parseInt(s.id, 10))
+            .filter((id) => Number.isInteger(id) && id > 0);
+
+        if (!payload.url || ids.length === 0) {
+            this._showNotification('Sélectionnez au moins une ligne à rattacher.', 'warning');
+            return;
+        }
+
+        await this._openStandalonePicker(`${payload.url}?ids=${ids.join(',')}`, {
+            controllerName: 'partage-conditions-picker',
+            errorLabel: 'la sélection des conditions de partage',
+        });
+    }
+
+    /**
+     * Détacher : on CONFIRME d'abord.
+     *
+     * À la différence du rattachement — où le picker porte les implications et où le clic
+     * vaut accord —, détacher défait quelque chose : l'affaire cesse de revenir à son agent.
+     * Le refus éventuel (rétrocommission déjà versée) est rendu par le serveur, dans la
+     * boîte elle-même : c'est ainsi qu'on apprend POURQUOI c'est trop tard.
+     */
+    handlePartageDetachRequest(payload) {
+        if (!payload.url) {
+            console.error('[Cerveau] handlePartageDetachRequest() : URL manquante.', payload);
+            this._showNotification('Impossible de détacher : contexte manquant.', 'error');
+            return;
+        }
+
+        const ligne = payload.selection?.[0];
+        this.broadcast('ui:confirmation.request', {
+            title: 'Détacher la condition de partage',
+            body: "Cette affaire cessera de revenir à son agent : elle redeviendra un effort commercial "
+                + "du cabinet seul, et plus aucune rétrocommission ne sera due dessus. Vous pourrez "
+                + "rattacher une autre condition ensuite — tant que rien n'a été versé.",
+            itemDescriptions: [ligne?.name || 'la ligne sélectionnée'],
+            showIrreversible: false,
+            onConfirm: {
+                type: 'client:partage.detach-execute',
+                payload: { url: payload.url },
+            },
+        });
+    }
+
+    /**
+     * Exécute le détachement après confirmation. Le refus du serveur remonte DANS la boîte
+     * (`ui:confirmation.error`) plutôt qu'en toast : l'utilisateur y lit le motif sans avoir
+     * à retrouver ce qu'il venait de demander.
+     *
+     * @private
+     */
+    async _handlePartageDetachExecute(payload) {
+        if (!payload.url) {
+            this.broadcast('ui:confirmation.error', { error: 'Contexte de détachement manquant.' });
+            return;
+        }
+        try {
+            const reponse = await fetch(payload.url, {
+                method: 'DELETE',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await reponse.json().catch(() => ({}));
+            if (!reponse.ok) throw new Error(data.message || `Erreur serveur ${reponse.status}`);
+
+            this._showNotification(data.message || 'Condition de partage détachée.', 'success');
+            const detachState = this._getActiveTabState();
+            this._publishSelectionStatus('Actualisation de la liste...');
+            this.broadcast('app:loading.start', { originatorId: detachState.elementId, workspaceTabId: this.currentWorkspaceTabId });
+            this._requestListRefresh(this.getActiveTabId());
+            this.broadcast('ui:confirmation.close');
+        } catch (error) {
+            console.error('[Cerveau] _handlePartageDetachExecute() failed:', error);
+            this.broadcast('ui:confirmation.error', { error: error.message || 'Le détachement a échoué.' });
+        }
+    }
     /**
      * Mécanique COMMUNE d'ouverture d'un picker autonome : récupère le HTML du picker
      * et l'insère dans le DOM ; le contrôleur Stimulus dédié (`controllerName`)

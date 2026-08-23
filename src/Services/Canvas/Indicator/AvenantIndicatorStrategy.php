@@ -2,6 +2,7 @@
 
 namespace App\Services\Canvas\Indicator;
 
+use App\Service\Partage\EffortCommercialAgent;
 use App\Entity\Avenant;
 use App\Entity\Entreprise;
 use App\Repository\CotationRepository;
@@ -21,7 +22,10 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
         private ServiceDates $serviceDates,
         private IndicatorCalculationHelper $calculationHelper,
         private CotationRepository $cotationRepository,
-        private AvenantRenouvellementResolver $renouvellementResolver
+        private AvenantRenouvellementResolver $renouvellementResolver,
+        // LE VOYANT « effort commercial » : une seule autorité le calcule, pour les
+        // quatre écrans de l'arbre d'une affaire.
+        private EffortCommercialAgent $effortCommercial,
     ) {
     }
 
@@ -108,6 +112,12 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
         $montantsBordereau = $this->calculationHelper->getAvenantMontantsBordereau($entity);
 
         return $this->nonRenouvelableIndicateurs($entity) + [
+            // LE VOYANT DE LA LIGNE, et le drapeau des actions de partage : une seule
+            // valeur pour une seule information — deux champs finiraient par se
+            // contredire. `null` pour une affaire du cabinet seul, qui est le cas normal.
+            'effortCommercialAgent' => $this->effortCommercial->libelle(
+                $this->effortCommercial->piste($entity),
+            ),
             // Indicateurs de base de l'avenant
             'statutRenouvellement' => $renouvellement['statut'],
             'suiteDeLaPolice' => $renouvellement['phrase'],

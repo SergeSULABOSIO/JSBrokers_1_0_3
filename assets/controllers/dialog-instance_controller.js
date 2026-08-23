@@ -647,19 +647,18 @@ export default class extends Controller {
         if (!attributeToolbar) return;
 
         // Actions conditionnelles : le template rend TOUS les boutons ; on masque ici
-        // ceux dont la condition échoue contre l'entité, avec la même comparaison lâche
-        // que la toolbar de liste (toolbar_controller). Une action sans condition reste
-        // toujours visible.
-        attributeToolbar.querySelectorAll('button[data-condition-field]').forEach(button => {
-            const field = button.dataset.conditionField;
-            let expected;
+        // ceux dont la condition échoue contre l'entité. La règle est celle des deux
+        // autres surfaces (barre de liste et clic droit) — `condition-action.js` —, et
+        // non une troisième copie : elles proposent les mêmes actions et doivent donc
+        // répondre la même chose. Une action sans condition reste toujours visible.
+        attributeToolbar.querySelectorAll('button[data-condition]').forEach(button => {
+            let condition = null;
             try {
-                expected = JSON.parse(button.dataset.conditionValue);
+                condition = JSON.parse(button.dataset.condition);
             } catch (e) {
-                expected = button.dataset.conditionValue;
+                condition = null;
             }
-            const matches = (this.entity || {})[field] == expected;
-            button.classList.toggle('d-none', !matches);
+            button.classList.toggle('d-none', !conditionRemplie(this.entity, condition));
         });
 
         const iconContainers = attributeToolbar.querySelectorAll('.button-icon[data-icon-alias]');

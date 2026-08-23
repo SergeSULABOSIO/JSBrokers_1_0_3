@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Entity\Avenant;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Entity\Piste;
 use App\Entity\ReversementRetroAgent;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -108,6 +109,40 @@ class ReversementRetroAgentRepository extends ServiceEntityRepository
             ->addOrderBy('r.id', 'ASC')
             ->getQuery()
             ->getResult();
+    }
+    /**
+     * A-T-ON DÉJÀ VERSÉ QUELQUE CHOSE À CET AGENT SUR CETTE AFFAIRE ?
+     *
+     * C'est la question qui SCELLE un rattachement : dès qu'un virement est parti, la
+     * condition de partage ne peut plus être détachée — donc l'agent bénéficiaire ne peut
+     * plus changer. On ne réécrit pas l'histoire d'un décaissement comptabilisé.
+     *
+     * UNE requête, et un total plutôt qu'un booléen : le refus doit pouvoir DIRE combien a
+     * déjà été reçu. « Alice a déjà reçu 154,19 USD » se comprend ; « opération impossible »
+     * laisse chercher.
+     *
+     * On remonte par la cotation : un reversement porte l'avenant, l'avenant sa cotation,
+     * la cotation sa piste. Charger les avenants pour les passer en IN(...) coûterait une
+     * requête de plus et plafonnerait sur les grosses affaires.
+     */
+    public function totalVersePourAgentSurPiste(Invite $agent, Piste $piste): float
+    {
+        if ($agent->getId() === null || $piste->getId() === null) {
+            return 0.0;
+        }
+
+        $total = $this->createQueryBuilder('r')
+            ->select('SUM(r.montant)')
+            ->join('r.avenant', 'av')
+            ->join('av.cotation', 'c')
+            ->where('r.agent = :agent')
+            ->andWhere('c.piste = :piste')
+            ->setParameter('agent', $agent)
+            ->setParameter('piste', $piste)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return round((float) $total, 2);
     }
     /**
      * Total déjà reversé à un agent dans l'entreprise, tous avenants confondus.

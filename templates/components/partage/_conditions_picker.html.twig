@@ -1,0 +1,176 @@
+{#
+    Boîte de sélection d'une CONDITION DE PARTAGE D'AGENT, à rattacher aux affaires
+    sélectionnées — depuis n'importe quel écran de leur arbre (piste, proposition, avenant,
+    tranche). Miroir visuel exact du picker de portefeuilles (_portefeuille_picker.html.twig :
+    mêmes classes jsb-picker-*), selon /ergonomie-web (role=dialog, aria-modal, libellés
+    explicites, information jamais transmise par la seule couleur, cibles ≥44px, Échap,
+    restitution du focus) et /charte-couleurs.
+
+    LE CLIC VAUT ACCORD : c'est pour cela que les implications sont écrites ICI, dans
+    l'entête, et non dans une seconde boîte. Un utilisateur qui rattache dix affaires à la
+    suite ne doit pas confirmer vingt fois ; mais il doit savoir, avant le premier clic, ce
+    qu'il engage.
+
+    Contexte attendu : entite, ids, pistes, refus, conditions, submitUrl, standalone.
+#}
+<div class="jsb-picker-overlay"
+     {% if standalone|default(false) %}data-controller="partage-conditions-picker"{% endif %}
+     data-partage-conditions-picker-submit-url-value="{{ submitUrl }}"
+     data-partage-conditions-picker-ids-value="{{ ids|join(',') }}"
+     data-picker-overlay>
+    <div class="jsb-picker-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="jsb-partage-picker-title"
+         aria-describedby="jsb-partage-picker-desc"
+         tabindex="-1">
+
+        <div class="modal-header jsb-picker-header">
+            <div class="d-flex align-items-center">
+                <span class="me-2 d-inline-flex" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('partenaire') }}" style="width:22px;height:22px;color:#0047AB;" />
+                </span>
+                <h5 id="jsb-partage-picker-title" class="modal-title mb-0">
+                    Rattacher une condition de partage
+                </h5>
+            </div>
+            <button type="button" class="btn-close" data-picker-close aria-label="Fermer la fenêtre de sélection"></button>
+        </div>
+
+        {# Barre de progression : animée pendant l'écriture (retour visuel). #}
+        <div class="jsb-picker-progress" data-picker-progress role="progressbar" aria-hidden="true">
+            <div class="jsb-picker-progress-bar"></div>
+        </div>
+
+        <div class="jsb-picker-intro">
+            <span class="jsb-picker-intro-icon" aria-hidden="true">
+                <twig:UX:Icon name="{{ resolve_icon_name('invite') }}" style="width:26px;height:26px;" />
+            </span>
+            <div class="jsb-picker-intro-text">
+                <p class="jsb-picker-intro-title">
+                    {{ pistes|length }} affaire{{ pistes|length > 1 ? 's' : '' }} concernée{{ pistes|length > 1 ? 's' : '' }}
+                </p>
+                <p id="jsb-partage-picker-desc" class="jsb-picker-intro-desc">
+                    Vous déclarez que {{ pistes|length > 1 ? 'ces affaires viennent' : 'cette affaire vient' }} de
+                    l'<strong>effort commercial d'un agent interne</strong>. Sa rétrocommission deviendra
+                    <strong>due</strong> dès que le cabinet aura encaissé la commission de courtage — et une fois
+                    qu'elle lui aura été <strong>versée</strong>, le rattachement ne pourra plus être défait ni
+                    confié à un autre agent.
+                    {% if pistes|length > 1 %}
+                        Le rattachement s'écrit sur l'affaire&nbsp;: deux lignes d'une même affaire ne comptent
+                        que pour une.
+                    {% endif %}
+                </p>
+
+                {# LES AFFAIRES VISÉES, NOMMÉES. Agir en lot sans savoir sur quoi serait un
+                   saut dans le vide — d'autant que la sélection portait sur des avenants ou
+                   des tranches, pas sur les affaires elles-mêmes. #}
+                {% if pistes is not empty %}
+                    <p class="jsb-picker-intro-desc mb-0">
+                        <span class="text-muted">Affaires&nbsp;:</span>
+                        {% for p in pistes %}<strong>{{ p.nom ?: '#' ~ p.id }}</strong>{{ not loop.last ? ' · ' : '' }}{% endfor %}
+                    </p>
+                {% endif %}
+
+                <div class="jsb-picker-stats" role="status" aria-live="polite">
+                    <span class="jsb-picker-stat">
+                        <span class="jsb-picker-stat-num">{{ conditions|length }}</span>
+                        condition(s) d'agent
+                    </span>
+                    <span class="jsb-picker-stat-sep" aria-hidden="true">·</span>
+                    <span class="jsb-picker-stat">
+                        <span class="jsb-picker-stat-num" data-picker-count-shown>{{ conditions|length }}</span>
+                        affichée(s)
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="jsb-picker-search">
+            <span class="jsb-picker-search-icon" aria-hidden="true">
+                <twig:UX:Icon name="hugeicons:search-01" style="width:16px;height:16px;" />
+            </span>
+            <label for="jsb-partage-picker-search-input" class="visually-hidden">Rechercher une condition par nom ou agent</label>
+            <input type="text"
+                   id="jsb-partage-picker-search-input"
+                   class="form-control"
+                   placeholder="Rechercher par condition ou par agent…"
+                   autocomplete="off"
+                   data-picker-search>
+        </div>
+
+        {# Zone d'erreur API (rendue visible par le JS) — Nielsen 9 : message en langage
+           naturel, au-dessus de la liste pour être perçu sans défilement. #}
+        <p class="jsb-picker-empty text-danger" data-picker-error role="alert" {{ refus is null ? 'hidden' : '' }}>
+            {{ refus }}
+        </p>
+
+        <div class="jsb-picker-listwrap">
+            {% if refus is not null %}
+                {# LE REFUS EST MONTRÉ AVANT LE CLIC. Laisser choisir une condition pour
+                   refuser ensuite ferait perdre un geste et n'apprendrait rien de plus. #}
+                <p class="jsb-picker-empty" role="status">
+                    Retirez de votre sélection {{ pistes|length > 1 ? 'les affaires déjà rattachées' : "l'affaire déjà rattachée" }},
+                    ou détachez d'abord la condition en place.
+                </p>
+            {% elseif conditions is empty %}
+                <p class="jsb-picker-empty" role="status">
+                    Aucune condition de partage ne désigne encore un agent interne.
+                    Créez-en une depuis la rubrique «&nbsp;Conditions de partage&nbsp;» (module Production),
+                    puis relancez le rattachement.
+                </p>
+            {% else %}
+                <table class="jsb-picker-table">
+                    <caption class="visually-hidden">Conditions de partage au profit d'un agent interne</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Condition</th>
+                            <th scope="col">Agent bénéficiaire</th>
+                            <th scope="col" class="text-end">Taux</th>
+                            <th scope="col">Affaires couvertes</th>
+                            <th scope="col" class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody data-picker-tbody>
+                        {% for c in conditions %}
+                            <tr data-picker-row
+                                data-condition-id="{{ c.id }}"
+                                data-search="{{ (c.nom ~ ' ' ~ (c.agent ? c.agent.nom : ''))|lower|e('html_attr') }}">
+                                <td>
+                                    <span class="jsb-picker-client-nom">{{ c.nom }}</span>
+                                    {% if c.seuil %}
+                                        <span class="jsb-picker-client-mail">Seuil&nbsp;: {{ c.seuil|number_format(2, ',', ' ') }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ c.agent ? c.agent.nom : '—' }}</td>
+                                {# Les taux sont en POINTS dans tout le logiciel : 15 se lit 15 %. #}
+                                <td class="text-end">{{ c.taux is not null ? c.taux|number_format(2, ',', ' ') ~ ' %' : '—' }}</td>
+                                <td>{{ c.pistesAffectees|length }} affaire(s)</td>
+                                <td class="text-end">
+                                    <button type="button"
+                                            class="btn btn-sm btn-primary jsb-picker-btn"
+                                            data-picker-affect
+                                            data-condition-id="{{ c.id }}"
+                                            aria-label="Rattacher la condition {{ c.nom }} aux {{ pistes|length }} affaire(s) sélectionnée(s)">
+                                        <twig:UX:Icon name="{{ resolve_icon_name('action:add') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                                        Rattacher ici
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+        </div>
+
+        <footer class="jsb-picker-foot">
+            <span class="jsb-picker-hint text-muted small">
+                Le rattachement s'écrit sur l'affaire, jamais sur la ligne d'où vous partez.
+            </span>
+            <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
+                <twig:UX:Icon name="{{ resolve_icon_name('action:cancel') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                Annuler
+            </button>
+        </footer>
+    </div>
+</div>

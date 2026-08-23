@@ -36,6 +36,37 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
             "isCreationMode" => $isParentNew,
             // Picker de documents générique (client + piste + cotations + polices).
             "attribute_actions" => [
+                // ── L'EFFORT COMMERCIAL D'UN AGENT INTERNE ────────────────────────────
+                //
+                // Le rattachement s'ÉCRIT toujours sur la PISTE : c'est la règle métier, et
+                // elle ne bouge pas. Ce qui change, c'est qu'on peut l'ORDONNER d'ici —
+                // parce que c'est d'ici qu'on travaille. Le serveur remonte l'arbre
+                // (EffortCommercialAgent::piste) et écrit au seul endroit légitime.
+                //
+                // `multi` sur le rattachement : on couvre une sélection entière d'un geste.
+                // ⚠ La condition d'une action `multi` n'est évaluée que sur la PREMIÈRE
+                // ligne (toolbar_controller) : le bouton peut donc s'afficher alors qu'une
+                // ligne plus bas est déjà prise. Le contrôle « toutes libres » est SERVEUR,
+                // et c'est là qu'il doit être — ce gating-ci reste cosmétique.
+                [
+                    "label"        => "Rattacher une condition de partage",
+                    "icon"         => "partenaire",
+                    "groupe"       => "Partage",
+                    "groupe_icone" => "partenaire",
+                    "event"        => "ui:partage.picker-request",
+                    "url"          => "/admin/partage/piste/conditions-picker",
+                    "multi"        => true,
+                    "condition"    => ["field" => "effortCommercialAgent", "present" => false],
+                ],
+                [
+                    "label"        => "Détacher la condition de partage",
+                    "icon"         => "action:detach",
+                    "groupe"       => "Partage",
+                    "groupe_icone" => "partenaire",
+                    "event"        => "ui:partage.detach-request",
+                    "url"          => "/admin/partage/piste/%id%/detacher",
+                    "condition"    => ["field" => "effortCommercialAgent", "present" => true],
+                ],
                 [
                     "label" => "Voir les documents",
                     "icon"  => "classeur",
