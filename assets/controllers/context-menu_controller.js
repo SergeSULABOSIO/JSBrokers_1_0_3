@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { conditionRemplie } from './condition-action.js';
 import { grouperActions } from './actions-groupees.js';
 
 /**
@@ -184,8 +185,7 @@ export default class extends Controller {
         const specificActions = rawActions.filter(action => {
             const countOk = action.multi === true ? hasSelection : isSingleSelection;
             if (!countOk) return false;
-            if (!action.condition) return true;
-            return entityData[action.condition.field] == action.condition.value;
+            return conditionRemplie(entityData, action.condition);
         });
         if (this.hasSpecificActionsContainerTarget) {
             this.updateSpecificActionButtons(specificActions);

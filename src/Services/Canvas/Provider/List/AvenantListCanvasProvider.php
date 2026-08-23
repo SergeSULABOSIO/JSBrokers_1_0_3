@@ -40,6 +40,14 @@ class AvenantListCanvasProvider implements ListCanvasProviderInterface
                 ],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
+                    // LE VOYANT DE L'EFFORT COMMERCIAL, en tête : c'est ce qui distingue un
+                    // compte apporté par un agent interne d'un compte gagné par le cabinet
+                    // seul — lequel reste MUET, étant le cas normal.
+                    //
+                    // ⚠ Code PLAT obligatoire : le rendu d'une ligne fait
+                    // `attribute(entity, code)`, où un chemin pointé (« agent.nom ») est lu
+                    // comme un nom de propriété et fait tomber la rubrique ENTIÈRE.
+                    ["attribut_code" => "effortCommercialAgent", "icone" => "invite"],
                     ["attribut_prefixe" => "Avt n°", "attribut_code" => "numero"],
                     ["attribut_code" => "risqueCode"],
                     ["attribut_code" => "periodeCouverture"],

@@ -22,12 +22,15 @@
                     data-event-name="{{ action.event }}"
                     data-event-url="{{ action.url }}"
                     data-event-payload="{{ {id: entity.id}|json_encode }}"
-                    {# Condition éventuelle de l'action : évaluée côté JS contre l'entité
-                       (dialog-instance#initializeAttributeToolbar), même sémantique que la
-                       toolbar de liste (toolbar_controller). #}
+                    {# Condition éventuelle de l'action, rendue ENTIÈRE.
+                       Elle était éclatée en deux attributs — champ et valeur — ce qui
+                       obligeait le JS à reconstruire la règle, et l'a laissé tomber le jour
+                       où une condition a porté « present » plutôt que « value ». Le
+                       contrat entier voyage désormais d'un bloc, et les trois surfaces
+                       (barre de liste, clic droit, barre de dialogue) le lisent avec la
+                       MÊME fonction : condition-action.js. #}
                     {% if action.condition is defined %}
-                        data-condition-field="{{ action.condition.field }}"
-                        data-condition-value="{{ action.condition.value|json_encode }}"
+                        data-condition="{{ action.condition|json_encode }}"
                     {% endif %}
                 >
                     {# Icône chargée par son alias via JS ; décorative → masquée aux lecteurs d'écran (WCAG 1.1.1) #}

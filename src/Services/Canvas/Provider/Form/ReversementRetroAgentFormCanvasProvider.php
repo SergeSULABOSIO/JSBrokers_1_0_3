@@ -60,6 +60,19 @@ class ReversementRetroAgentFormCanvasProvider implements FormCanvasProviderInter
                 "description"    => "action:description",
                 "documents"      => "document",
             ],
+            // VOIR D'OÙ VIENT CE VERSEMENT. Un reversement isolé ne dit ni ce qui reste dû
+            // à l'agent, ni sur quelles affaires : le rapport de production le dit, et
+            // c'est là qu'on décide du versement suivant.
+            "attribute_actions" => [
+                [
+                    "label"        => "Voir le rapport de production de l'agent",
+                    "icon"         => "invite",
+                    "groupe"       => "Rétrocommissions",
+                    "groupe_icone" => "depense",
+                    "event"        => "ui:retroagent.rapport-request",
+                    "url"          => "/admin/retro-agent/reversement/%id%/rapport",
+                ],
+            ],
             "facts_labels" => [
                 "lotReference" => "Virement groupé (référence de lot)",
             ],

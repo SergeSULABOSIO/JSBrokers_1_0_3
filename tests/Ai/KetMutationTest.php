@@ -314,6 +314,14 @@ class KetMutationTest extends TestCase
             // Énumération des référentiels : ces tests portent sur le fail-closed et le
             // scope, jamais sur l'inventaire des champs — un double suffit.
             $this->createMock(\App\Service\Workspace\ReferentielEnumerateur::class),
+            // Règle du rattachement d'agent : elle ne concerne que les écritures sur
+            // Piste.conditionsPartageAgent, qu'aucun de ces tests ne produit. La classe est
+            // `final` (donc non doublable) : on en construit une VRAIE sur des dépendances
+            // doublées — elle ne sera de toute façon jamais interrogée ici.
+            new \App\Service\Partage\EffortCommercialAgent(
+                $this->createMock(\App\Repository\ReversementRetroAgentRepository::class),
+                $this->createMock(\App\Services\ServiceMonnaies::class),
+            ),
         );
     }
 

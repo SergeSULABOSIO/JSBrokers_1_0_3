@@ -249,7 +249,12 @@ class AvenantPisteDeriveeActionsTest extends WebTestCase
 
         $this->assertStringContainsString('get-piste-derivee-context/%id%', $html, 'Les actions Ajouter/Éditer doivent pointer le contexte piste dérivée.');
         $this->assertStringContainsString('delete-piste-derivee', $html, "L'action Supprimer doit pointer la route de suppression.");
-        $this->assertStringContainsString('data-condition-field="hasPisteDerivee"', $html, 'Les actions doivent porter leur condition pour le filtrage côté dialogue.');
+        // La condition voyage ENTIÈRE, en JSON : éclatée en champ + valeur, elle
+        // obligeait le JS à reconstruire la règle — et il l'a laissée tomber le jour où
+        // une condition a porté « present » plutôt que « value ». Les trois surfaces la
+        // lisent désormais avec la même fonction (condition-action.js).
+        $this->assertStringContainsString('data-condition=', $html, 'Les actions doivent porter leur condition pour le filtrage côté dialogue.');
+        $this->assertStringContainsString('hasPisteDerivee', $html, 'Et la condition doit nommer son champ.');
     }
 
     public function testContextReturnsEditModeWhenPisteDeriveeExists(): void

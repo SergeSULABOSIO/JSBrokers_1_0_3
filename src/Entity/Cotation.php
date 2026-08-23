@@ -189,6 +189,19 @@ class Cotation
     #[Groups(['list:read'])]
     public ?float $reserve = null;
 
+    // LE VOYANT « EFFORT COMMERCIAL », ET LE DRAPEAU DES ACTIONS DE PARTAGE.
+    //
+    // Une valeur calculée posée en propriété DYNAMIQUE n'appartient à aucun groupe de
+    // sérialisation : elle ne figure pas dans le `data-entity` de la ligne, et une action
+    // conditionnée dessus reste INVISIBLE en barre d'outils comme au clic droit — sans la
+    // moindre erreur, la condition valant `undefined`. D'où cette déclaration.
+    //
+    // UNE SEULE VALEUR POUR DEUX USAGES : elle nomme l'agent sur la ligne secondaire, et
+    // sa présence gouverne « Rattacher » / « Détacher ». Deux champs pour la même
+    // information finiraient par se contredire. `null` = affaire du cabinet seul.
+    #[Groups(['list:read'])]
+    public ?string $effortCommercialAgent = null;
+
     public function __construct()
     {
         $this->taches = new ArrayCollection();

@@ -294,7 +294,11 @@ class ClientPortefeuilleActionsTest extends WebTestCase
 
         $this->assertStringContainsString('portefeuille-picker', $html, 'Les actions Affecter/Transférer doivent pointer le picker.');
         $this->assertStringContainsString('retirer-portefeuille', $html, 'L\'action Retirer doit pointer la route de retrait.');
-        $this->assertStringContainsString('data-condition-field="hasPortefeuille"', $html, 'Les actions doivent porter leur condition pour le filtrage côté dialogue.');
+        // La condition voyage ENTIÈRE, en JSON : éclatée en champ + valeur, elle
+        // obligeait chaque surface à reconstruire la règle. Les trois la lisent
+        // désormais avec la même fonction (condition-action.js).
+        $this->assertStringContainsString('data-condition=', $html, 'Les actions doivent porter leur condition pour le filtrage côté dialogue.');
+        $this->assertStringContainsString('hasPortefeuille', $html, 'Et la condition doit nommer son champ.');
     }
 
     public function testHasPortefeuilleCalculatedIndicator(): void

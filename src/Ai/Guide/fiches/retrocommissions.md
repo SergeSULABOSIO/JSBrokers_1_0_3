@@ -46,6 +46,27 @@ indépendants. Un agent peut apporter dix affaires et n'en gérer aucune. Ne jam
 déduire l'un de l'autre — la colonne `gestionnaire` du décompte est là pour
 rappeler la différence.
 
+## Déclarer qu'une affaire vient de l'effort d'un agent
+
+Une affaire ne rapporte à un agent que si une **condition de partage à son nom** y est
+rattachée. Sans ce rattachement, l'affaire est réputée gagnée par le **cabinet seul** — c'est
+le cas par défaut, et c'est ce qui explique la plupart des « pourquoi Alice ne touche rien ? ».
+
+Le rattachement s'écrit **sur l'AFFAIRE (la piste)**, toujours. Mais il peut s'ORDONNER
+depuis n'importe quel objet de son arbre : une police, une proposition, une tranche. C'est
+`effort_commercial_agent` qui le fait, et le serveur remonte lui-même à l'affaire.
+
+Quatre règles, et elles valent pour l'écran comme pour toi :
+
+- **Une affaire, un agent bénéficiaire.** Rattacher à une affaire déjà prise est refusé.
+- **Pour changer d'agent : détacher d'abord**, puis rattacher. Il n'y a pas de remplacement.
+- **Un versement scelle l'affaire.** Dès qu'une rétrocommission a été VERSÉE, plus rien ne
+  se détache — donc plus rien ne se change. On ne réécrit pas un décaissement comptabilisé.
+- **En lot, c'est tout ou rien.** Plusieurs affaires d'un geste, mais si une seule est déjà
+  prise, rien n'est écrit — et le refus la nomme.
+
+N'écris JAMAIS ce rattachement par `preparer_operations` : tu devrais deviner le champ et
+l'affaire, et les règles ci-dessus te refuseraient de toute façon.
 ## D'où vient le taux
 
 Pour un partenaire, la cascade est : **condition propre à l'affaire** ▸
