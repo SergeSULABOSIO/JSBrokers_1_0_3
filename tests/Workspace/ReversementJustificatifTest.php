@@ -217,15 +217,28 @@ class ReversementJustificatifTest extends WebTestCase
     {
         $s = $this->semer();
 
+        // AVEC AU MOINS UNE LIGNE. La première version de ce test chargeait une liste
+        // VIDE : elle prouvait que la route répondait, jamais qu'une ligne savait se
+        // rendre. Or c'est là que la rubrique tombait — le canevas y demandait
+        // « agent.nom », que le rendu d'une ligne lit comme un nom de propriété et non
+        // comme un chemin. Une liste vide ne peut pas révéler cela.
+        $this->verser($s['agent'], $s['avenants']);
+        self::assertResponseIsSuccessful();
+
         $this->client->request('GET', sprintf(
             '/espacedetravail/api/load-component/%d/%d?component=_view_manager_production.html.twig&entity=ReversementRetroAgent',
             $s['proprietaire']->getId(),
             $s['entreprise']->getId(),
         ));
 
-        self::assertResponseIsSuccessful('La rubrique doit se charger, pas répondre 404 en silence.');
+        self::assertResponseIsSuccessful('La rubrique doit se charger, pas répondre 404 ni 500 en silence.');
         $html = (string) $this->client->getResponse()->getContent();
         self::assertStringContainsString('Reversements de rétrocommission', $html);
+
+        // Et la LIGNE dit ce qu'elle doit dire : le bénéficiaire, la police, le compte.
+        self::assertStringContainsString('VIR-JUST-1', $html, 'La référence du virement doit paraître.');
+        self::assertStringContainsString('Alice Apporteuse', $html, 'Le bénéficiaire doit paraître.');
+        self::assertStringContainsString('POL-JUS-1', $html, 'La police réglée doit paraître.');
     }
     /**
      * LE VOLET DES VERSEMENTS A UN RETOUR — et ce n'est pas un ornement.
