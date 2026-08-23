@@ -37,14 +37,19 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
                 "titre_colonne" => "Reversements de rétrocommission",
                 "texte_principal" => ["attribut_code" => "reference", "icone" => "depense"],
                 "textes_secondaires_separateurs" => " • ",
+                // DES CODES PLATS, JAMAIS DE CHEMIN POINTÉ. Le rendu d'une ligne fait
+                // `attribute(entity, code)` : « agent.nom » n'y est pas un chemin mais un nom
+                // de propriété, et la rubrique tombait en erreur dès la première ligne — ce
+                // qu'une liste vide ne pouvait pas révéler. Les données de relation passent
+                // donc par ReversementRetroAgentIndicatorStrategy.
                 "textes_secondaires" => [
-                    ["attribut_prefixe" => "Bénéficiaire : ", "attribut_code" => "agent.nom", "attribut_type" => "text"],
-                    ["attribut_prefixe" => "Police : ", "attribut_code" => "avenant.referencePolice", "attribut_type" => "text"],
+                    ["attribut_prefixe" => "Bénéficiaire : ", "attribut_code" => "beneficiaireNom", "attribut_type" => "text"],
+                    ["attribut_prefixe" => "Police : ", "attribut_code" => "policeReference", "attribut_type" => "text"],
                     ["attribut_prefixe" => "Versé le : ", "attribut_code" => "paidAt", "attribut_type" => "date"],
-                    // La référence de LOT dit que ce versement partage un virement avec
-                    // d'autres lignes : sans elle, trois lignes du même décaissement se
-                    // liraient comme trois virements.
-                    ["attribut_prefixe" => "Lot : ", "attribut_code" => "lotReference", "attribut_type" => "text"],
+                    ["attribut_prefixe" => "Débité de : ", "attribut_code" => "compteLibelle", "attribut_type" => "text"],
+                    // Un virement groupé se dit : sans cela, trois lignes d'un même
+                    // décaissement se liraient comme trois virements distincts.
+                    ["attribut_code" => "virementGroupe", "attribut_type" => "text"],
                 ],
             ],
             "colonnes_numeriques" => [
