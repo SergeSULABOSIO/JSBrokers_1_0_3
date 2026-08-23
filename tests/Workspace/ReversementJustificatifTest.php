@@ -239,6 +239,17 @@ class ReversementJustificatifTest extends WebTestCase
         self::assertStringContainsString('VIR-JUST-1', $html, 'La référence du virement doit paraître.');
         self::assertStringContainsString('Alice Apporteuse', $html, 'Le bénéficiaire doit paraître.');
         self::assertStringContainsString('POL-JUS-1', $html, 'La police réglée doit paraître.');
+
+        // LE CHIP-SÉLECTEUR ET SES DEUX CROCHETS.
+        //
+        // Le JavaScript remplace le libellé du chip par le NOM de l'agent choisi, et sait
+        // y revenir : il lui faut donc un texte identifiable et le libellé d'origine. Sans
+        // eux, le filtre resterait « Choisir un agent… » quel que soit l'agent retenu — un
+        // filtre qu'on ne peut pas lire est un filtre qu'on croit absent.
+        self::assertStringContainsString('data-selecteur-entite="Invite"', $html);
+        self::assertStringContainsString('data-selecteur-libelle-defaut="Choisir un agent…"', $html);
+        self::assertStringContainsString('data-selecteur-libelle', $html);
+        self::assertStringContainsString('Tous les agents', $html, 'On doit pouvoir retirer le filtre.');
     }
     /**
      * LE VOLET A DISPARU — et le bouton du rapport mène désormais à la RUBRIQUE.

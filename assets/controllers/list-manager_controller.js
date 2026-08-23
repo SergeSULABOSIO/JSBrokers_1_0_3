@@ -275,7 +275,12 @@ export default class extends BaseController {
                 e.stopPropagation();
                 this._fermerSelecteur(bouton);
                 this.notifyCerveau('ui:filter.preset', { key: criterionKey, value: r.value, label: r.text });
-                this._syncPresetChips({ ...this._presetCriteria, [criterionKey]: { value: r.value } });
+                // Le libellé voyage avec la valeur : sans lui, le chip resterait sur
+                // « Choisir un agent… » jusqu'au retour du cerveau.
+                this._syncPresetChips({
+                    ...this._presetCriteria,
+                    [criterionKey]: { value: r.value, label: r.text },
+                });
             });
             panneau.appendChild(entree);
         });
@@ -348,11 +353,23 @@ export default class extends BaseController {
         if (chips.length === 0) return;
 
         chips.forEach(chip => {
-            const raw = criteria[chip.dataset.criterionKey];
-            const current = (raw && typeof raw === 'object') ? String(raw.value ?? '') : String(raw ?? '');
-            const isActive = current === String(chip.dataset.criterionValue ?? '');
-            chip.classList.toggle('is-active', isActive);
-            chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            // La RÈGLE vit dans `chip-preset-etat.js` : c'est une décision, pas un rendu,
+            // et elle s'éprouve sans DOM. Ici on ne fait que l'appliquer.
+            const texte = chip.querySelector('[data-selecteur-libelle]');
+            const { actif, libelle } = etatChipPreset(
+                {
+                    valeurAttendue: chip.dataset.criterionValue ?? '',
+                    estSelecteur: Boolean(chip.dataset.selecteurEntite),
+                    libelleDefaut: chip.dataset.selecteurLibelleDefaut || (texte ? texte.textContent : ''),
+                },
+                criteria[chip.dataset.criterionKey],
+            );
+
+            if (libelle !== null && texte) {
+                texte.textContent = libelle;
+            }
+            chip.classList.toggle('is-active', actif);
+            chip.setAttribute('aria-pressed', actif ? 'true' : 'false');
         });
     }
 
