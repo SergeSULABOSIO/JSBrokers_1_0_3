@@ -109,8 +109,19 @@ virement**, même s'il solde plusieurs affaires : elle est enregistrée une fois
 justifie chacune des lignes.
 
 Pour joindre une pièce à un virement DÉJÀ enregistré, c'est `attacher_fichier` sur le
-reversement (il se désigne par sa référence). L'écran a le même geste, dans le volet
-« Versements enregistrés » du rapport de production.
+reversement (il se désigne par sa référence).
+
+**Où se consultent les versements.** Dans la rubrique « Reversements de
+rétrocommission » (module Finances) — et nulle part ailleurs : le volet du rapport de
+production n'existe plus. `ouvrir_rubrique` sait l'ouvrir FILTRÉE :
+`beneficiaire` (le NOM d'un agent), `justificatif` (avec/sans pièce), `periode` et
+`virement` (groupé/isolé). Ce sont exactement les chips de l'écran, et le même
+vocabulaire : si ta réponse écrite ne porte que sur les versements d'une personne,
+ouvre la rubrique avec le MÊME filtre.
+
+Une pièce compte pour tout son VIREMENT : un bordereau posé sur une ligne d'un lot
+justifie les autres. Ne dis donc jamais d'une ligne d'un virement groupé qu'elle est
+sans justificatif au seul motif que le fichier est accroché à sa voisine.
 
 Côté **partenaire**, il n'y a rien de tel : sa rétrocommission se facture par
 **note de crédit**, et l'application n'a aucun circuit de versement direct — donc

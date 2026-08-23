@@ -207,6 +207,110 @@ export default class extends BaseController {
      * conservant les autres critères actifs de l'onglet.
      * @param {Event} event
      */
+    /**
+     * CHIP-SÉLECTEUR : filtrer sur une RELATION, sans figer ses valeurs dans le canevas.
+     *
+     * Certains filtres ne portent pas sur un statut mais sur un enregistrement — « les
+     * reversements d'Alice ». Une chip par agent était exclue : les canevas de LISTE sont
+     * partagés entre entreprises et ne les connaissent pas, et la barre deviendrait
+     * illisible à dix agents. On va donc chercher les valeurs AU CLIC, à l'autocomplétion
+     * générique du workspace — déjà scopée au cabinet, et déjà gardée par les droits.
+     *
+     * Le choix retombe dans le MÊME chemin que les autres chips (`ui:filter.preset`), qui
+     * produit exactement la forme d'un critère de relation. Rien de parallèle à maintenir.
+     */
+    async openPresetSelector(event) {
+        const bouton = event.currentTarget;
+        const { criterionKey, selecteurEntite, selecteurChamp } = bouton.dataset;
+        if (!criterionKey || !selecteurEntite) return;
+
+        // Un second clic referme : le panneau est un aiguillage, pas une modale.
+        if (this._fermerSelecteur(bouton)) return;
+
+        const url = `/espacedetravail/api/search-autocomplete/${this.idInviteValue}/${this.idEntrepriseValue}`
+            + `?entity=${encodeURIComponent(selecteurEntite)}`
+            + `&displayField=${encodeURIComponent(selecteurChamp || 'nom')}`;
+
+        let resultats = [];
+        try {
+            const reponse = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const data = await reponse.json().catch(() => ({}));
+            resultats = data.results || [];
+        } catch (e) {
+            resultats = [];
+        }
+
+        this._ouvrirSelecteur(bouton, criterionKey, resultats);
+    }
+
+    /**
+     * Le panneau du chip-sélecteur, ancré sous lui. Même parti que le panneau des onglets
+     * repliés : une surcouche légère, fermée par Échap ou par un clic au dehors — le geste
+     * ne mérite pas de piéger le focus.
+     *
+     * @private
+     */
+    _ouvrirSelecteur(bouton, criterionKey, resultats) {
+        const panneau = document.createElement('div');
+        panneau.className = 'jsb-preset-selecteur';
+        panneau.setAttribute('role', 'listbox');
+
+        if (resultats.length === 0) {
+            const vide = document.createElement('p');
+            vide.className = 'jsb-preset-selecteur__vide';
+            // On DIT pourquoi c'est vide : l'accès à ces valeurs peut être refusé (les
+            // agents ne sont lisibles que par qui gère les invités), et un panneau muet
+            // laisserait croire à une panne.
+            vide.textContent = 'Aucune valeur disponible, ou vous n’avez pas le droit de les consulter.';
+            panneau.appendChild(vide);
+        }
+
+        resultats.forEach((r) => {
+            const entree = document.createElement('button');
+            entree.type = 'button';
+            entree.className = 'jsb-preset-selecteur__item';
+            entree.setAttribute('role', 'option');
+            entree.textContent = r.text;
+            entree.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._fermerSelecteur(bouton);
+                this.notifyCerveau('ui:filter.preset', { key: criterionKey, value: r.value, label: r.text });
+                this._syncPresetChips({ ...this._presetCriteria, [criterionKey]: { value: r.value } });
+            });
+            panneau.appendChild(entree);
+        });
+
+        bouton.parentElement.style.position = 'relative';
+        bouton.parentElement.appendChild(panneau);
+        bouton.setAttribute('aria-expanded', 'true');
+
+        this._fermetureSelecteur = (e) => {
+            if (e.type === 'keydown' && e.key !== 'Escape') return;
+            if (e.type === 'click' && panneau.contains(e.target)) return;
+            this._fermerSelecteur(bouton);
+            if (e.type === 'keydown') bouton.focus();
+        };
+        document.addEventListener('keydown', this._fermetureSelecteur);
+        document.addEventListener('click', this._fermetureSelecteur);
+
+        panneau.querySelector('button')?.focus();
+    }
+
+    /** Referme le panneau s'il est ouvert. Rend true dans ce cas. @private */
+    _fermerSelecteur(bouton) {
+        const ouvert = bouton.parentElement?.querySelector('.jsb-preset-selecteur');
+        if (!ouvert) return false;
+
+        ouvert.remove();
+        bouton.setAttribute('aria-expanded', 'false');
+        if (this._fermetureSelecteur) {
+            document.removeEventListener('keydown', this._fermetureSelecteur);
+            document.removeEventListener('click', this._fermetureSelecteur);
+            this._fermetureSelecteur = null;
+        }
+
+        return true;
+    }
     applyPresetFilter(event) {
         const { criterionKey, criterionValue, criterionLabel } = event.currentTarget.dataset;
         this._logDebug(`Filtre rapide « ${criterionLabel} » (${criterionKey}=${criterionValue}).`);

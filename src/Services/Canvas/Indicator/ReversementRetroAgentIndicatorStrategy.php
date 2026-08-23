@@ -3,6 +3,7 @@
 namespace App\Services\Canvas\Indicator;
 
 use App\Entity\ReversementRetroAgent;
+use App\Service\Retro\LotDeVersement;
 
 /**
  * CE QU'UNE LIGNE DE LA LISTE DES REVERSEMENTS DOIT MONTRER.
@@ -17,6 +18,10 @@ use App\Entity\ReversementRetroAgent;
  */
 class ReversementRetroAgentIndicatorStrategy implements IndicatorCalculationStrategyInterface
 {
+    public function __construct(private readonly LotDeVersement $lots)
+    {
+    }
+
     public function supports(string $entityClassName): bool
     {
         return $entityClassName === ReversementRetroAgent::class;
@@ -33,10 +38,15 @@ class ReversementRetroAgentIndicatorStrategy implements IndicatorCalculationStra
             // versement sans provenance, c'est une sortie de caisse. Le même libellé qu'au
             // picker, pour que la ligne et le formulaire disent la même chose.
             'compteLibelle' => $entity->getCompteBancaire()?->getIntitule() ?? 'Caisse (espèces)',
-            // Le nombre de PIÈCES de cette ligne. Une seule suffit pour tout un virement :
-            // les autres lignes du lot afficheront donc zéro, et c'est le volet
-            // « Versements enregistrés » du rapport qui raisonne par virement.
-            'nombreJustificatifs' => $entity->getDocuments()->count(),
+            // LES PIÈCES DU VIREMENT, PAS DE LA LIGNE.
+            //
+            // Un bordereau couvre tout un lot : ne compter que les pièces de la ligne
+            // ferait passer pour nues deux lignes sur trois d'un virement pourtant
+            // justifié — la dette de preuve affichée serait fausse. Le compte est
+            // PRÉCHARGÉ par page (LotDeVersement::prechargerJustificatifs), sans quoi
+            // chaque ligne interrogerait son lot.
+            'nombreJustificatifs' => $this->lots->compteDeJustificatifs($entity),
+            'justificatifLibelle' => $this->lots->libelleJustificatif($entity),
             // Un virement groupé se dit : sans cela, trois lignes d'un même décaissement se
             // liraient comme trois virements distincts.
             'virementGroupe' => $entity->getLotReference() !== null && trim($entity->getLotReference()) !== ''

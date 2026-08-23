@@ -245,7 +245,11 @@
      data-controller="retro-agent-rapport"
      data-retro-agent-rapport-base-url-value="/admin/retro-agent/{{ agent.id }}/rapport"
      data-retro-agent-rapport-picker-url-value="/admin/retro-agent/{{ agent.id }}/reversement-picker"
-     data-retro-agent-rapport-versements-url-value="/admin/retro-agent/{{ agent.id }}/versements"
+     {# Le bouton « Versements enregistrés » n'ouvre plus un volet à lui : il ouvre la
+        RUBRIQUE, filtrée sur cet agent. Deux écrans pour une même donnée, c'était deux
+        endroits où corriger un bug et un utilisateur qui ne savait pas lequel fait foi. #}
+     data-retro-agent-rapport-agent-id-value="{{ agent.id }}"
+     data-retro-agent-rapport-agent-nom-value="{{ agent.nom|e('html_attr') }}"
      data-retro-agent-rapport-justificatifs-url-value="/admin/retro-agent/{{ agent.id }}/affaire/0/justificatifs">
     <div class="rpa-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>

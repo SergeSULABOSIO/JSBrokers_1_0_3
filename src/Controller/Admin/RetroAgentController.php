@@ -131,112 +131,42 @@ class RetroAgentController extends AbstractController
         return $this->rapport($agent, $request);
     }
     /**
-     * LES VERSEMENTS DÉJÀ ENREGISTRÉS — une ligne par VIREMENT, pas par reversement.
+     * LES JUSTIFICATIFS D'UN VERSEMENT — c'est-à-dire de son VIREMENT.
      *
-     * Ce volet n'est pas un doublon de la rubrique. Une liste de rubrique montre la base
-     * telle qu'elle est : un virement qui solde trois affaires y paraît en trois lignes,
-     * comme trois versements indépendants. Or le courtier n'a fait QU'UN décaissement, avec
-     * UN bordereau. Le volet dit cela : un virement, une ligne, une preuve — et c'est de là
-     * qu'on joint le justificatif d'un virement passé.
+     * Un bordereau couvre tout un lot, et l'assistant peut avoir classé la pièce sur
+     * n'importe lequel de ses membres. On rend donc l'UNION des pièces du virement : s'en
+     * tenir à la ligne ferait passer pour nues deux lignes sur trois d'un versement groupé
+     * pourtant justifié.
+     *
+     * Cette action REMPLACE la relecture générique pour cette rubrique : le canevas la
+     * déclare lui-même, ce qui empêche l'injection de l'autre (porteDejaUneVueDocuments) et
+     * évite deux entrées du même nom disant deux choses.
      */
-    #[Route('/{id}/versements', name: 'versements', methods: ['GET'])]
-    public function versements(Invite $agent): JsonResponse
-    {
-        $this->assertPeutConsulter($agent);
-
-        $lots = $this->lotDeVersement->grouper($agent, $agent->getEntreprise());
-
-        // ENVELOPPE {html, title}, comme le rapport : c'est ce que le cerveau attend de
-        // `ui:retroagent.rapport-request` pour injecter dans un onglet. Rendre du HTML nu
-        // ici ouvrirait un onglet vide — la panne exacte du picker de reversement,
-        // qu'un test avait masquée en n'assertant que l'enveloppe.
-        $html = $this->renderView('components/retro_agent/_versements.html.twig', [
-            'agent'   => $agent,
-            'lots'    => $lots,
-            // Le compte des pièces en UNE agrégation : les versements enregistrés avant que
-            // la preuve soit exigée s'affichent à zéro, ce qui rend la dette de preuve
-            // visible plutôt que de la masquer.
-            'pieces'  => $this->lotDeVersement->comptesDePieces($lots),
-            'monnaie' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-            // Les deux actions habituelles, par leurs routes GÉNÉRIQUES : attacher sur le
-            // porteur du lot, relire le lot ENTIER (voir la route ci-dessous).
-            'attacherUrlPattern' => $this->generateUrl('admin.document.api.attacher', [
-                'parent' => 'reversementRetroAgent',
-                'id' => 0,
-            ]),
-            // Le retour : ce volet remplace le rapport dans le même onglet, il doit donc
-            // savoir comment le redemander.
-            'rapportUrl' => $this->generateUrl('admin.retro_agent.rapport', ['id' => $agent->getId()]),
-        ]);
-
-        return $this->json([
-            'html'  => $html,
-            'title' => 'Versements — ' . $agent->getNom(),
-        ]);
-    }
-
-    /**
-     * LES PIÈCES D'UN VIREMENT — l'union de celles de ses lignes.
-     *
-     * Pourquoi pas la route générique de relecture : elle rend les documents d'UN
-     * enregistrement. L'écran, lui, écrit toujours sur le porteur du lot, mais l'assistant
-     * attache au reversement que l'utilisateur NOMME, qui peut être n'importe quel membre.
-     * Une relecture limitée au porteur rendrait ces pièces invisibles — et l'utilisateur
-     * conclurait que Ket n'a rien classé.
-     *
-     * Le gabarit et le collecteur sont ceux de la relecture générique : la boîte qui
-     * s'ouvre est la même, seule la source des lignes change.
-     */
-    #[Route('/{id}/versements/{cle}/documents', name: 'versement_documents', methods: ['GET'])]
-    public function documentsDuVersement(
-        Invite $agent,
-        string $cle,
+    #[Route('/reversement/{id}/justificatifs', name: 'reversement_justificatifs', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function justificatifsDuVersement(
+        ReversementRetroAgent $reversement,
         SoaPoliceDocumentsCollector $collector,
         WorkspaceAccessResolver $accessResolver,
     ): Response {
-        $this->assertPeutConsulter($agent);
-
-        $membres = $this->lotDeVersement->membres($agent, $agent->getEntreprise(), $cle);
-        if ($membres === []) {
-            throw $this->createNotFoundException('Virement introuvable.');
+        if ($reversement->getEntreprise()?->getId() !== $this->getInvite()->getEntreprise()?->getId()) {
+            throw $this->createNotFoundException('Reversement introuvable.');
         }
 
-        $reference = $membres[0]->getReference() ?: $cle;
+        $agent = $reversement->getAgent();
+        $membres = $agent !== null
+            ? $this->lotDeVersement->membres($agent, $reversement->getEntreprise(), $this->lotDeVersement->cle($reversement))
+            : [$reversement];
+        if ($membres === []) {
+            $membres = [$reversement];
+        }
+
+        $reference = $reversement->getReference() ?: ('#' . $reversement->getId());
         $rubrique = $accessResolver->libellesEntites()['ReversementRetroAgent'] ?? 'Reversements';
 
         return $this->render('components/soa/_documents_picker.html.twig', [
             'titre'              => sprintf('Justificatifs du virement « %s »', $reference),
             'contexteNom'        => $reference,
             'items'              => $collector->decrire($this->lotDeVersement->documentsDuLot($membres), $rubrique),
-            'downloadUrlPattern' => '/admin/document/api/%did%/download',
-        ]);
-    }
-    /**
-     * LES JUSTIFICATIFS D'UNE AFFAIRE — depuis la ligne du rapport.
-     *
-     * Une affaire peut avoir été soldée par plusieurs virements successifs, et chacun a sa
-     * pièce. On rend l'union de celles de tous les lots qui l'ont payée : partir du seul
-     * dernier versement aurait caché les précédents, et c'est bien l'historique qu'on
-     * cherche quand on conteste un montant.
-     */
-    #[Route('/{id}/affaire/{avenantId}/justificatifs', name: 'affaire_justificatifs', requirements: ['avenantId' => Requirement::DIGITS], methods: ['GET'])]
-    public function justificatifsDeLAffaire(
-        Invite $agent,
-        int $avenantId,
-        SoaPoliceDocumentsCollector $collector,
-        WorkspaceAccessResolver $accessResolver,
-    ): Response {
-        $this->assertPeutConsulter($agent);
-
-        $documents = $this->lotDeVersement->documentsPourAvenant($agent, $agent->getEntreprise(), $avenantId);
-        $avenant = $this->avenantDuPerimetre($agent, $avenantId);
-        $libelle = $avenant?->getReferencePolice() ?: ('affaire #' . $avenantId);
-        $rubrique = $accessResolver->libellesEntites()['ReversementRetroAgent'] ?? 'Reversements';
-
-        return $this->render('components/soa/_documents_picker.html.twig', [
-            'titre'              => sprintf('Justificatifs des versements sur « %s »', $libelle),
-            'contexteNom'        => $libelle,
-            'items'              => $collector->decrire($documents, $rubrique),
             'downloadUrlPattern' => '/admin/document/api/%did%/download',
         ]);
     }

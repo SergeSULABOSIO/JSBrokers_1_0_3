@@ -64,6 +64,20 @@ class ReversementRetroAgentFormCanvasProvider implements FormCanvasProviderInter
             // à l'agent, ni sur quelles affaires : le rapport de production le dit, et
             // c'est là qu'on décide du versement suivant.
             "attribute_actions" => [
+                // LA RELECTURE EST CELLE DU VIREMENT, pas de la ligne. En la déclarant ici,
+                // on empêche l'injection de l'action générique (porteDejaUneVueDocuments) :
+                // deux entrées du même nom disant deux choses seraient pires qu'une seule.
+                // « Attacher des pièces », elle, reste générique — puisque la lecture est
+                // lot-consciente, une pièce déposée sur n'importe quel membre est vue par
+                // tout le virement.
+                [
+                    "label"        => "Voir les documents",
+                    "icon"         => "classeur",
+                    "groupe"       => "Pièces jointes",
+                    "groupe_icone" => "classeur",
+                    "event"        => "ui:documents.liste-request",
+                    "url"          => "/admin/retro-agent/reversement/%id%/justificatifs",
+                ],
                 [
                     "label"        => "Voir le rapport de production de l'agent",
                     "icon"         => "invite",

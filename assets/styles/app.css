@@ -1630,6 +1630,56 @@ textarea:hover,
     white-space: nowrap;
     user-select: none;
 }
+/* ── PANNEAU DU CHIP-SÉLECTEUR ───────────────────────────────────────────────
+   Certains filtres portent sur une RELATION (un agent, un client) et non sur un
+   statut : leurs valeurs ne peuvent pas être figées dans un canevas de liste, qui
+   est partagé entre entreprises. La chip va donc les chercher au clic, et les
+   présente ici. Surcouche ancrée sous la chip, jamais une modale : le geste est un
+   aiguillage, il ne mérite pas de piéger le focus. */
+.jsb-preset-selecteur {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 1050;
+    min-width: 220px;
+    max-width: 320px;
+    max-height: 50vh;
+    overflow-y: auto;
+    padding: 6px;
+    background-color: var(--bg-white, #ffffff);
+    border: 1px solid var(--border-light, #dee2e6);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+}
+.jsb-preset-selecteur__item {
+    display: block;
+    width: 100%;
+    /* 44 px : la cible cliquable minimale (WCAG 2.5.5). */
+    min-height: 44px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 8px;
+    background-color: transparent;
+    color: var(--text-dark, #212529);
+    font-size: 0.9rem;
+    text-align: left;
+    cursor: pointer;
+}
+.jsb-preset-selecteur__item:hover {
+    background-color: var(--bg-cobalt-subtle, #e8f0fb);
+    color: var(--cobalt, #0047AB);
+}
+.jsb-preset-selecteur__item:focus-visible {
+    outline: 2px solid var(--cobalt, #0047AB);
+    outline-offset: -2px;
+}
+.jsb-preset-selecteur__vide {
+    margin: 0;
+    padding: 10px 12px;
+    color: var(--text-muted, #6c757d);
+    font-size: 0.85rem;
+}
+
 .jsb-preset-chip {
     display: inline-flex;
     align-items: center;

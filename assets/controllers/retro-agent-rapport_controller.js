@@ -23,7 +23,8 @@ export default class extends Controller {
     static values = {
         baseUrl: String,
         pickerUrl: String,
-        versementsUrl: String,
+        agentId: Number,
+        agentNom: String,
         justificatifsUrl: String,
     };
 
@@ -181,28 +182,36 @@ export default class extends Controller {
     }
 
     /**
-     * RELIRE LES VIREMENTS DÉJÀ ENREGISTRÉS, et y joindre un justificatif oublié.
+     * OUVRIR LA RUBRIQUE DES REVERSEMENTS, filtrée sur cet agent.
      *
-     * Le volet s'ouvre dans le MÊME onglet que le rapport (tabKey identique) : c'est
-     * un autre regard sur la même production, pas un second dossier à empiler. Il
-     * groupe par VIREMENT là où le rapport raisonne par affaire — un lot de trois
-     * affaires y fait une seule ligne, avec sa preuve unique.
+     * Il y avait ici un volet dédié : un second écran pour la même donnée, à maintenir en
+     * double. La rubrique fait tout ce qu'il faisait, et davantage — recherche, tri, chips,
+     * actions documentaires.
+     *
+     * ON EMPRUNTE L'ÉVÉNEMENT DE L'ASSISTANT, pas un nouveau. `app:workspace.open-rubrique`
+     * est exactement ce que produit `ouvrir_rubrique` de Ket : écran et assistant ouvrent
+     * donc la même liste, avec la même forme de critère, par le même chemin. La parité n'est
+     * pas à construire, elle est structurelle. Et le critère apparaît en badge retirable dans
+     * la barre de recherche, ce qu'un filtre maison n'aurait pas fait.
      */
     versements(event) {
         event.preventDefault();
-        if (!this.hasVersementsUrlValue) return;
+        if (!this.hasAgentIdValue) return;
 
-        this.element.dispatchEvent(new CustomEvent('cerveau:event', {
+        document.dispatchEvent(new CustomEvent('app:workspace.open-rubrique', {
             bubbles: true,
             detail: {
-                type: 'ui:retroagent.rapport-request',
-                source: this.nomControleur,
-                payload: { url: this.versementsUrlValue },
-                timestamp: Date.now(),
+                entityName: 'ReversementRetroAgent',
+                criteres: {
+                    agent: {
+                        operator: '=',
+                        value: this.agentIdValue,
+                        label: this.hasAgentNomValue ? this.agentNomValue : `#${this.agentIdValue}`,
+                    },
+                },
             },
         }));
     }
-
     /**
      * Le champ n'est éditable qu'une fois cliqué : c'est ce qui empêche Chrome d'y
      * écrire de lui-même (il n'écrit jamais dans un champ en lecture seule). Même

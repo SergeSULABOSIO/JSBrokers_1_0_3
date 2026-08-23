@@ -3,6 +3,7 @@
 namespace App\Services\Canvas\Provider\List;
 
 use App\Entity\ReversementRetroAgent;
+use App\Services\Search\ReversementScope;
 use App\Services\ServiceMonnaies;
 
 /**
@@ -50,6 +51,75 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
                     // Un virement groupé se dit : sans cela, trois lignes d'un même
                     // décaissement se liraient comme trois virements distincts.
                     ["attribut_code" => "virementGroupe", "attribut_type" => "text"],
+                    // LE JUSTIFICATIF, compté SUR LE VIREMENT. Un bordereau couvre tout un
+                    // lot : n'annoncer que les pièces de la ligne ferait passer pour nues
+                    // deux lignes sur trois d'un virement pourtant justifié.
+                    ["attribut_code" => "justificatifLibelle", "icone" => "document"],
+                ],
+            ],
+            // ── FILTRES RAPIDES ───────────────────────────────────────────────────
+            //
+            // Trois questions reviennent sur cette liste — qu'est-ce qui n'est pas
+            // justifié, qu'ai-je versé ce mois-ci, quels virements soldent plusieurs
+            // affaires — et une quatrième, le bénéficiaire, qui n'est pas un statut mais
+            // une RELATION : d'où le chip-sélecteur, qui va chercher les agents là où
+            // ils vivent plutôt que de figer une option par agent dans un canevas que
+            // toutes les entreprises partagent.
+            //
+            // Les valeurs viennent de ReversementScope : la chip, la traduction SQL et le
+            // paramètre de `ouvrir_rubrique` de l'assistant lisent le MÊME vocabulaire.
+            "filtres_predefinis" => [
+                [
+                    "critere" => ReversementScope::CLE_JUSTIFICATIF,
+                    "libelle" => "Justificatif",
+                    "options" => ReversementScope::optionsChips(
+                        ReversementScope::CLE_JUSTIFICATIF,
+                        [
+                            ReversementScope::AVEC_PIECE => 'document',
+                            ReversementScope::SANS_PIECE => 'action:alert',
+                        ],
+                        'Tous',
+                    ),
+                ],
+                [
+                    "critere" => ReversementScope::CLE_PERIODE,
+                    "libelle" => "Période",
+                    "options" => ReversementScope::optionsChips(
+                        ReversementScope::CLE_PERIODE,
+                        [
+                            ReversementScope::CE_MOIS => 'action:calendar',
+                            ReversementScope::TRENTE_JOURS => 'action:renew',
+                            ReversementScope::EXERCICE => 'action:count',
+                        ],
+                        'Toutes',
+                    ),
+                ],
+                [
+                    "critere" => ReversementScope::CLE_VIREMENT,
+                    "libelle" => "Virement",
+                    "options" => ReversementScope::optionsChips(
+                        ReversementScope::CLE_VIREMENT,
+                        [
+                            ReversementScope::GROUPE => 'action:copy',
+                            ReversementScope::ISOLE => 'depense',
+                        ],
+                        'Tous',
+                    ),
+                ],
+                [
+                    "critere" => ReversementScope::CHAMP_BENEFICIAIRE,
+                    "libelle" => "Bénéficiaire",
+                    "options" => [
+                        // Une option qui ne porte pas de valeur mais un SÉLECTEUR : au clic,
+                        // la liste des agents est demandée à l'autocomplétion générique —
+                        // déjà scopée au cabinet, et déjà gardée par canManageInvites.
+                        [
+                            "selecteur" => ["entite" => "Invite", "displayField" => "nom"],
+                            "label" => "Choisir un agent…",
+                            "icon" => "invite",
+                        ],
+                        ["value" => "", "label" => "Tous les agents", "icon" => "action:filter"],
+                    ],
                 ],
             ],
             "colonnes_numeriques" => [
