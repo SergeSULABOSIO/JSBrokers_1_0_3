@@ -13,6 +13,7 @@ use App\Entity\ReversementRetroAgent;
 use App\Entity\Risque;
 use App\Entity\Utilisateur;
 use App\Service\Retro\LotDeVersement;
+use App\Services\Canvas\Provider\List\ReversementRetroAgentListCanvasProvider;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -315,6 +316,37 @@ class ReversementJustificatifTest extends WebTestCase
             );
             self::assertSame('1 pièce', $lot->libelleJustificatif($ligne));
         }
+    }
+
+    /**
+     * LE JUSTIFICATIF NE DOIT PAS RETOMBER EN QUEUE DE LIGNE SECONDAIRE.
+     *
+     * La ligne secondaire est un flex d'UNE seule ligne : ce qui dépasse est écrasé à 1 px
+     * et remplacé par « … ». L'indicateur de pièce était le dernier élément, donc invisible
+     * dans la vue par défaut — constaté au navigateur, jamais par un test, puisque le DOM le
+     * contenait bel et bien. Une liste peut ainsi TOUT afficher et ne RIEN montrer.
+     *
+     * Ajouter un attribut secondaire après lui suffirait à l'escamoter de nouveau, sans
+     * qu'aucune assertion existante ne bronche : d'où cette borne sur son RANG.
+     */
+    public function testLeJustificatifResteEnTeteDeLigneSecondaire(): void
+    {
+        $canvas = static::getContainer()->get(ReversementRetroAgentListCanvasProvider::class)->getCanvas();
+        $secondaires = $canvas['colonne_principale']['textes_secondaires'] ?? [];
+        $codes = array_column($secondaires, 'attribut_code');
+
+        $rang = array_search('justificatifLibelle', $codes, true);
+        self::assertNotFalse($rang, 'L’indicateur de pièce a disparu de la ligne secondaire.');
+        self::assertLessThanOrEqual(
+            1,
+            $rang,
+            sprintf(
+                'Le justificatif est en position %d sur %d : au-delà de la deuxième place il est '
+                . 'écrasé par le débordement, et la dette de preuve redevient invisible.',
+                $rang,
+                count($codes),
+            ),
+        );
     }
 
     /** Un versement sans pièce le dit — c'est la dette de preuve, rendue visible. */

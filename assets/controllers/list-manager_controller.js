@@ -1,5 +1,6 @@
 import BaseController from './base_controller.js';
 import { etatChipPreset } from './chip-preset-etat.js';
+import { positionnerMenu } from './menu-flottant.js';
 
 /**
  * @class ListManagerController
@@ -124,6 +125,26 @@ export default class extends BaseController {
         this.element.removeEventListener('change', this.boundHandlePaginationJump);
         this.element.removeEventListener('keydown', this.boundHandlePaginationJumpKeydown);
         this._controlsBarResizeObserver?.disconnect();
+        // Le panneau du chip-sélecteur vit dans le <body>, hors de cet élément : fermer
+        // l'onglet ne l'emporte donc pas. Sans ce nettoyage, il resterait à l'écran, ancré
+        // à une chip qui n'existe plus, avec ses écouteurs de défilement encore actifs.
+        this._fermerPanneauSelecteurOrphelin();
+    }
+
+    /** Retire le panneau détaché et ses écouteurs, quel que soit le bouton d'origine. @private */
+    _fermerPanneauSelecteurOrphelin() {
+        this._panneauSelecteur?.remove();
+        this._panneauSelecteur = null;
+        if (this._fermetureSelecteur) {
+            document.removeEventListener('keydown', this._fermetureSelecteur);
+            document.removeEventListener('click', this._fermetureSelecteur);
+            this._fermetureSelecteur = null;
+        }
+        if (this._suiviSelecteur) {
+            window.removeEventListener('scroll', this._suiviSelecteur, true);
+            window.removeEventListener('resize', this._suiviSelecteur);
+            this._suiviSelecteur = null;
+        }
     }
 
     /**
@@ -286,9 +307,18 @@ export default class extends BaseController {
             panneau.appendChild(entree);
         });
 
-        bouton.parentElement.style.position = 'relative';
-        bouton.parentElement.appendChild(panneau);
+        // DANS LE <body>, PAS SOUS LA CHIP.
+        //
+        // Ancré dans la barre de chips, le panneau passait SOUS l'en-tête du tableau : son
+        // `z-index` ne pouvait rien: il ne se compare qu'entre frères d'un même contexte
+        // d'empilement, et la barre en formait un. Le premier agent de la liste devenait
+        // illisible. Porté dans le <body> et positionné en `fixed`, il n'a plus d'ancêtre
+        // qui l'enferme — c'est le même remède que le `dropdownParent: body` des
+        // autocomplétions.
+        document.body.appendChild(panneau);
+        this._positionnerSelecteur(bouton, panneau);
         bouton.setAttribute('aria-expanded', 'true');
+        this._panneauSelecteur = panneau;
 
         this._fermetureSelecteur = (e) => {
             if (e.type === 'keydown' && e.key !== 'Escape') return;
@@ -299,20 +329,53 @@ export default class extends BaseController {
         document.addEventListener('keydown', this._fermetureSelecteur);
         document.addEventListener('click', this._fermetureSelecteur);
 
+        // Détaché du flux, le panneau ne suit plus sa chip : on le RECALE. En capture, car
+        // le défilement qui compte est celui d'un conteneur interne, et il ne remonte pas.
+        this._suiviSelecteur = () => this._positionnerSelecteur(bouton, panneau);
+        window.addEventListener('scroll', this._suiviSelecteur, true);
+        window.addEventListener('resize', this._suiviSelecteur);
+
         panneau.querySelector('button')?.focus();
+    }
+
+    /**
+     * Pose le panneau sous sa chip, en coordonnées viewport.
+     *
+     * La géométrie vient de `positionnerMenu`, partagée avec le menu de bulle : bascule
+     * au-dessus s'il déborderait en bas, écrêtage aux marges. Aligné à GAUCHE, du côté où
+     * la chip commence.
+     *
+     * @private
+     */
+    _positionnerSelecteur(bouton, panneau) {
+        const ancre = bouton.getBoundingClientRect();
+        const { left, top } = positionnerMenu({
+            ancre,
+            menu: { largeur: panneau.offsetWidth, hauteur: panneau.offsetHeight },
+            viewport: { largeur: window.innerWidth, hauteur: window.innerHeight },
+            alignement: 'gauche',
+        });
+        panneau.style.left = `${left}px`;
+        panneau.style.top = `${top}px`;
     }
 
     /** Referme le panneau s'il est ouvert. Rend true dans ce cas. @private */
     _fermerSelecteur(bouton) {
-        const ouvert = bouton.parentElement?.querySelector('.jsb-preset-selecteur');
+        const ouvert = this._panneauSelecteur;
         if (!ouvert) return false;
 
         ouvert.remove();
+        this._panneauSelecteur = null;
         bouton.setAttribute('aria-expanded', 'false');
         if (this._fermetureSelecteur) {
             document.removeEventListener('keydown', this._fermetureSelecteur);
             document.removeEventListener('click', this._fermetureSelecteur);
             this._fermetureSelecteur = null;
+        }
+        if (this._suiviSelecteur) {
+            window.removeEventListener('scroll', this._suiviSelecteur, true);
+            window.removeEventListener('resize', this._suiviSelecteur);
+            this._suiviSelecteur = null;
         }
 
         return true;
