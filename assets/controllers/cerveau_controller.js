@@ -157,6 +157,9 @@ export default class extends Controller {
                     this._publishSelectionStatus();
 
                     this.broadcast('app:context.changed', {
+                        // L ONGLET INTERNE concerné (principal, ou une collection contextuelle) :
+                        // `workspaceTabId` ne dit que l onglet de RUBRIQUE, qui en contient plusieurs.
+                        tabId: this.activeTabId,
                         selection: storedState.selectionState,
                         numericAttributesAndValues: storedState.numericAttributesAndValues,
                         formCanvas: storedState.activeTabFormCanvas,
@@ -174,6 +177,9 @@ export default class extends Controller {
                     this.displayState.selectionCount = 0;
                     this._publishSelectionStatus('Chargement...');
                     this.broadcast('app:context.changed', {
+                        // L ONGLET INTERNE concerné (principal, ou une collection contextuelle) :
+                        // `workspaceTabId` ne dit que l onglet de RUBRIQUE, qui en contient plusieurs.
+                        tabId: this.activeTabId,
                         selection: [],
                         numericAttributesAndValues: {},
                         formCanvas: null,
@@ -425,6 +431,9 @@ export default class extends Controller {
 
                     // On publie le nouveau contexte pour que la toolbar, la barre des totaux et la barre de recherche se mettent à jour.
                     this.broadcast('app:context.changed', {
+                        // L ONGLET INTERNE concerné (principal, ou une collection contextuelle) :
+                        // `workspaceTabId` ne dit que l onglet de RUBRIQUE, qui en contient plusieurs.
+                        tabId: this.activeTabId,
                         selection: activeTabState.selectionState,
                         numericAttributesAndValues: activeTabState.numericAttributesAndValues,
                         formCanvas: activeTabState.activeTabFormCanvas,
@@ -742,6 +751,9 @@ export default class extends Controller {
 
         // C'est ce qui permet à la toolbar et à la barre des totaux de se mettre à jour.
         this.broadcast('app:context.changed', {
+                        // L ONGLET INTERNE concerné (principal, ou une collection contextuelle) :
+                        // `workspaceTabId` ne dit que l onglet de RUBRIQUE, qui en contient plusieurs.
+                        tabId: this.activeTabId,
             selection: activeTabState.selectionState,
             numericAttributesAndValues: activeTabState.numericAttributesAndValues,
             contextMenuPosition: contextMenuPosition, // On passe la position (ou null)
@@ -921,6 +933,9 @@ export default class extends Controller {
                 // 3. CRUCIAL : On diffuse le nouveau contexte pour que la barre des totaux et la barre d'outils
                 // se mettent à jour avec les nouvelles informations (nouvelles données numériques et sélection vide).
                 this.broadcast('app:context.changed', {
+                        // L ONGLET INTERNE concerné (principal, ou une collection contextuelle) :
+                        // `workspaceTabId` ne dit que l onglet de RUBRIQUE, qui en contient plusieurs.
+                        tabId: this.activeTabId,
                     selection: tabState.selectionState,
                     numericAttributesAndValues: tabState.numericAttributesAndValues,
                     formCanvas: tabState.activeTabFormCanvas,

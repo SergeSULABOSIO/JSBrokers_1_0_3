@@ -115,6 +115,68 @@ class FiltreApresEtatOngletTest extends TestCase
     }
 
     /**
+     * UN FILTRE EN ATTENTE N'EST CONSOMMÉ QU'APRÈS AVOIR ÉTÉ POSÉ.
+     *
+     * Le retrait précédait le contrôle « est-ce bien l'onglet actif ? » : un onglet non
+     * actif perdait son filtre sans l'avoir jamais appliqué. Sans conséquence tant qu'un
+     * seul onglet était concerné à la fois — mais la RESTAURATION après un F5 en rétablit
+     * plusieurs d'un coup, et un seul est actif. Les autres reviendraient donc non
+     * filtrés : très exactement le défaut que la persistance vient corriger.
+     *
+     * On vérifie l'ORDRE dans le corps de la méthode, faute de pouvoir rejouer sans DOM
+     * l'enchaînement de plusieurs onglets restaurés.
+     */
+    public function testLeFiltreEnAttenteNEstConsommeQuApresAvoirEtePose(): void
+    {
+        $code = $this->codeNu($this->source(self::WORKSPACE));
+
+        $debut = strpos($code, '_appliquerCriteresEnAttente(tabId)');
+        self::assertNotFalse($debut, '_appliquerCriteresEnAttente est introuvable.');
+        $corps = substr($code, $debut, 700);
+
+        $garde = strpos($corps, 'activeWorkspaceTabId');
+        $retrait = strpos($corps, 'delete this._criteresEnAttente');
+        self::assertNotFalse($garde, 'Le contrôle de l’onglet actif a disparu.');
+        self::assertNotFalse($retrait, 'La consommation du filtre en attente a disparu.');
+
+        self::assertLessThan(
+            $retrait,
+            $garde,
+            'Le filtre doit être retiré APRÈS le contrôle de l’onglet actif : retiré avant, un '
+            . 'onglet restauré non actif le perd sans l’avoir jamais appliqué.',
+        );
+    }
+
+    /**
+     * LES FILTRES SONT MÉMORISÉS ET REMIS EN ATTENTE À LA RESTAURATION.
+     *
+     * Les deux moitiés du mécanisme, chacune inutile sans l'autre : on se greffe sur
+     * `app:context.changed` pour retenir, et on amorce les critères en attente lors de la
+     * reconstruction des onglets.
+     */
+    public function testLesFiltresSontMemorisesEtRemisEnAttente(): void
+    {
+        $code = $this->codeNu($this->source(self::WORKSPACE));
+
+        self::assertStringContainsString(
+            'memoriserCriteres',
+            $code,
+            'Les critères d’un onglet doivent être mémorisés au passage de app:context.changed.',
+        );
+
+        // On s'ancre sur la reconstruction de la barre — la ligne qui EST la restauration,
+        // et non sur le nom de la méthode, qui apparaît aussi à son appel.
+        $debut = strpos($code, 'this.workspaceTabs = tabs;');
+        self::assertNotFalse($debut, 'La reconstruction des onglets restaurés est introuvable.');
+        self::assertStringContainsString(
+            'criteresARestaurer',
+            substr($code, $debut, 1200),
+            'La restauration doit remettre les filtres en attente, sans quoi les onglets '
+            . 'reviennent vidés de leur filtre — le défaut à corriger.',
+        );
+    }
+
+    /**
      * UN ABANDON AVANT LA REQUÊTE ÉTEINT CE QU'IL A ALLUMÉ.
      *
      * Filet de sécurité, et non le correctif : l'extinction de la barre dépend de la chaîne

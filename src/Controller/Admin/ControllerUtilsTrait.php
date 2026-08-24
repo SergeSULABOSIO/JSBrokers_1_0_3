@@ -1376,6 +1376,7 @@ trait ControllerUtilsTrait
         }
         $data = $parentEntity->$getter();
         $entityClass = $collectionMap[$collectionName];
+        $data = $this->ajusterCollectionContextuelle($collectionName, $parentEntity, $data);
         // Preload des relations avant renderCollectionOrList (évite N×M lazy-loads).
         $this->canvasBuilder->batchPreloadForCollection($data->toArray());
         return $this->renderCollectionOrList($usage, $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField, $secondaryField, $secondaryLabel, $page, 20, $listActionOptions);
@@ -1699,11 +1700,49 @@ trait ControllerUtilsTrait
     }
 
     /**
+     * DERNIER MOT SUR CE QU'UN ONGLET CONTEXTUEL AFFICHE.
+     *
+     * Par défaut, la collection d'un parent est exactement celle de son getter — c'est le
+     * cas de 42 des 43 relations. Un contrôleur peut cependant l'élargir quand la LECTURE
+     * métier n'est pas celle de la relation Doctrine.
+     *
+     * Le cas qui a motivé ce point d'extension : un virement de rétrocommission groupé
+     * solde N affaires avec UN seul bordereau, attaché au porteur du lot. La colonne de la
+     * liste annonce « 1 pièce » sur CHAQUE ligne du virement ; sans ce crochet, l'onglet
+     * « Justificatifs » d'un membre non porteur en montrait zéro. Deux surfaces, deux
+     * réponses sur la même pièce.
+     *
+     * @param \Doctrine\Common\Collections\Collection<int, object> $data
+     * @return \Doctrine\Common\Collections\Collection<int, object>
+     */
+    protected function ajusterCollectionContextuelle(
+        string $collectionName,
+        object $parentEntity,
+        \Doctrine\Common\Collections\Collection $data,
+    ): \Doctrine\Common\Collections\Collection {
+        return $data;
+    }
+
+    /**
      * Applique en mémoire le « périmètre portefeuille » à une collection déjà chargée
      * (onglets de collection : les éléments viennent du getter du parent, pas du moteur
      * de recherche). Même sémantique que JSBDynamicSearchService : l'élément est retenu
      * si AU MOINS un des chemins de PortefeuilleScope mène à un portefeuille dont le
-     * gestionnaire est l'invité connecté.
+     * gestionnaire est l'invité connecté — ou s'il est ORPHELIN et que son entité le
+     * tolère.
+     *
+     * ⚠ CETTE DERNIÈRE CLAUSE MANQUAIT, et le commentaire ci-dessus affirmait pourtant
+     * déjà « même sémantique » (incident du 2026-08-24). Le chemin SQL honore
+     * `PortefeuilleScope::tolereLesOrphelins()` ; ce filtre-ci l'ignorait. Conséquence :
+     * l'onglet contextuel « Justificatifs » d'une rétro s'affichait VIDE. Un document
+     * rattaché à un reversement n'atteint aucun portefeuille — la règle déclarée le veut
+     * donc visible, mais la règle appliquée ici le supprimait. Il fallait cliquer sur
+     * « Réinitialiser » pour que la pièce apparaisse, parce que ce geste passe par le
+     * moteur de recherche, c'est-à-dire par l'implémentation CORRECTE.
+     *
+     * Deux implémentations d'une même règle, dont une seule lisait la règle. C'est le
+     * motif exact des divergences déjà rencontrées sur les échéances : la déclaration doit
+     * être unique ET consultée par tous ses consommateurs.
      *
      * @param array<int, object> $items
      * @return array<int, object>
@@ -1716,7 +1755,12 @@ trait ControllerUtilsTrait
             return $items;
         }
 
-        return array_values(array_filter($items, function (object $item) use ($paths, $idInvite): bool {
+        $tolereLesOrphelins = \App\Services\Search\PortefeuilleScope::tolereLesOrphelins($shortName);
+        // Les relations testées sont les PREMIERS SEGMENTS des chemins, dérivées d'eux :
+        // elles vivent sur l'entité elle-même. Même source que le chemin SQL.
+        $relationsDirectes = \App\Services\Search\PortefeuilleScope::relationsDirectes($shortName);
+
+        return array_values(array_filter($items, function (object $item) use ($paths, $idInvite, $tolereLesOrphelins, $relationsDirectes): bool {
             foreach ($paths as $path) {
                 $value = $item;
                 foreach (explode('.', $path) as $segment) {
@@ -1734,8 +1778,33 @@ trait ControllerUtilsTrait
                     return true;
                 }
             }
-            return false;
+
+            // L'ORPHELIN RESTE VISIBLE quand l'entité le tolère : le périmètre
+            // portefeuille est un CONFORT DE LECTURE, pas une frontière de sécurité
+            // (celle-ci est le scoping entreprise, sans exception). Écarter une pièce qui
+            // n'appartient à personne d'autre serait la faire disparaître pour rien.
+            return $tolereLesOrphelins && !$this->aUneRelationDePerimetre($item, $relationsDirectes);
         }));
+    }
+
+    /**
+     * L'élément renseigne-t-il au moins une de ses relations de périmètre ?
+     *
+     * Sinon il est ORPHELIN au sens de PortefeuilleScope : aucun portefeuille ne peut le
+     * revendiquer, dans un sens comme dans l'autre.
+     *
+     * @param string[] $relationsDirectes
+     */
+    private function aUneRelationDePerimetre(object $item, array $relationsDirectes): bool
+    {
+        foreach ($relationsDirectes as $relation) {
+            $getter = 'get' . ucfirst($relation);
+            if (method_exists($item, $getter) && $item->$getter() !== null) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected function getEntitiesForType(string $entityType): array

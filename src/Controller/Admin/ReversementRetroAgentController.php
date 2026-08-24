@@ -23,9 +23,12 @@ use App\Entity\Traits\HandleChildAssociationTrait;
 use App\Form\ReversementRetroAgentType;
 use App\Repository\EntrepriseRepository;
 use App\Repository\InviteRepository;
+use App\Service\Retro\LotDeVersement;
 use App\Services\Canvas\CalculationProvider;
 use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -49,6 +52,7 @@ class ReversementRetroAgentController extends AbstractController
         private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer,
         private CalculationProvider $calculationProvider,
+        private LotDeVersement $lots,
         CanvasBuilder $canvasBuilder
     ) {
         $this->canvasBuilder = $canvasBuilder;
@@ -57,6 +61,43 @@ class ReversementRetroAgentController extends AbstractController
     protected function getCollectionMap(): array
     {
         return $this->buildCollectionMapFromEntity(ReversementRetroAgent::class);
+    }
+
+    /**
+     * L'ONGLET « JUSTIFICATIFS » MONTRE LES PIÈCES DU VIREMENT, pas de la seule ligne.
+     *
+     * Un virement groupé solde N affaires avec UN bordereau, attaché au porteur du lot
+     * (le membre de plus petit id) : c'est la consigne du non-stockage redondant. La
+     * colonne de la liste annonce donc « 1 pièce » sur CHAQUE ligne du virement — et sans
+     * cette surcharge, l'onglet contextuel d'un membre NON porteur en affichait zéro.
+     * Deux surfaces disaient deux choses de la même pièce, et celle qui disait « aucune »
+     * laissait croire à un décaissement sans preuve.
+     *
+     * On réutilise `LotDeVersement::documentsDuLot()`, déjà employé par la colonne : une
+     * seule requête pour tout le lot, et une seule règle pour les deux surfaces.
+     */
+    protected function ajusterCollectionContextuelle(
+        string $collectionName,
+        object $parentEntity,
+        Collection $data,
+    ): Collection {
+        if ($collectionName !== 'documents' || !$parentEntity instanceof ReversementRetroAgent) {
+            return $data;
+        }
+
+        $agent = $parentEntity->getAgent();
+        $entreprise = $parentEntity->getEntreprise();
+        if ($agent === null || $entreprise === null) {
+            return $data;
+        }
+
+        $membres = $this->lots->membres($agent, $entreprise, $this->lots->cle($parentEntity));
+
+        // Lot inconnu (versement isolé, ou données en cours d'écriture) : la relation dit
+        // déjà la vérité, on n'y touche pas.
+        return $membres === []
+            ? $data
+            : new ArrayCollection($this->lots->documentsDuLot($membres));
     }
 
     protected function getParentAssociationMap(): array
