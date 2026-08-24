@@ -27,16 +27,23 @@ export const MARGE_VIEWPORT = 8;
  * viewport. L'écrêtage passe en dernier : il l'emporte toujours sur
  * l'alignement, donc le menu reste visible même dans une colonne étroite.
  *
+ * `alignement` choisit le bord de l'ancre sur lequel caler le menu. Le défaut reste
+ * « droite », qui est la géométrie du menu de bulle pour qui cette fonction a été écrite ;
+ * un déclencheur posé À GAUCHE de sa zone — le chip-sélecteur d'un filtre — se lit mieux
+ * aligné à gauche, sans quoi le panneau part vers l'arrière du geste. L'écrêtage final
+ * s'applique dans les deux cas, donc aucun alignement ne peut sortir du viewport.
+ *
  * @param {{
  *   ancre: {left: number, right: number, top: number, bottom: number},
  *   menu: {largeur: number, hauteur: number},
  *   viewport: {largeur: number, hauteur: number},
  *   marge?: number,
+ *   alignement?: 'gauche'|'droite',
  * }} entrees
  * @returns {{left: number, top: number}}
  */
-export function positionnerMenu({ ancre, menu, viewport, marge = MARGE_VIEWPORT }) {
-    let left = ancre.right - menu.largeur;
+export function positionnerMenu({ ancre, menu, viewport, marge = MARGE_VIEWPORT, alignement = 'droite' }) {
+    let left = alignement === 'gauche' ? ancre.left : ancre.right - menu.largeur;
     let top = ancre.bottom + 4;
 
     // Bascule au-dessus de l'ancre s'il n'y a pas la place dessous.

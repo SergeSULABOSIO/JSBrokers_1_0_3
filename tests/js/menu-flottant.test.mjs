@@ -117,3 +117,29 @@ test('indexApresTouche renvoie null pour les touches non gérées', () => {
         assert.equal(indexApresTouche(touche, 1, 4), null);
     }
 });
+
+/**
+ * ALIGNEMENT À GAUCHE — pour le chip-sélecteur d'un filtre.
+ *
+ * Le menu de bulle est ancré à un déclencheur posé en haut à DROITE de sa zone ; une chip
+ * de filtre, elle, commence à gauche. Aligner son panneau à droite le ferait partir en
+ * arrière du geste. L'option existe pour cela, et le défaut reste « droite » : aucun
+ * appelant existant ne doit bouger.
+ */
+test('positionnerMenu aligne à gauche sur demande, et à droite par défaut', () => {
+    const ancre = { left: 1000, right: 1026, top: 300, bottom: 326 };
+
+    assert.equal(positionnerMenu({ ancre, menu: MENU, viewport: VIEWPORT, alignement: 'gauche' }).left, 1000);
+    assert.equal(positionnerMenu({ ancre, menu: MENU, viewport: VIEWPORT }).left, 1026 - 200);
+});
+
+test('l\'écrêtage l\'emporte aussi sur l\'alignement à gauche', () => {
+    // Une chip tout à droite : aligné à gauche, le panneau sortirait du viewport. Il doit
+    // être ramené dans les marges plutôt que de déborder — sinon la moitié des agents est
+    // hors de l'écran, ce que le défaut d'empilement avait déjà fait subir à cette liste.
+    const ancre = { left: 1400, right: 1430, top: 300, bottom: 326 };
+    const { left } = positionnerMenu({ ancre, menu: MENU, viewport: VIEWPORT, alignement: 'gauche' });
+
+    assert.equal(left, VIEWPORT.largeur - MENU.largeur - MARGE_VIEWPORT);
+    assert.ok(left + MENU.largeur <= VIEWPORT.largeur);
+});

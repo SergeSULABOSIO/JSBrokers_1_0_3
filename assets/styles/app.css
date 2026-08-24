@@ -1637,9 +1637,12 @@ textarea:hover,
    présente ici. Surcouche ancrée sous la chip, jamais une modale : le geste est un
    aiguillage, il ne mérite pas de piéger le focus. */
 .jsb-preset-selecteur {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
+    /* FIXE, ET DANS LE <body>. Ancré sous la chip, le panneau appartenait au contexte
+       d'empilement de la barre de filtres et passait SOUS l'en-tête du tableau : le
+       `z-index` ne se compare qu'entre frères d'un même contexte, il ne pouvait rien.
+       Le contrôleur le porte donc dans le <body> et calcule `left`/`top` en coordonnées
+       viewport (positionnerMenu), en le recalant au défilement. */
+    position: fixed;
     z-index: 1050;
     min-width: 220px;
     max-width: 320px;

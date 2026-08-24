@@ -45,16 +45,25 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
                 // donc par ReversementRetroAgentIndicatorStrategy.
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Bénéficiaire : ", "attribut_code" => "beneficiaireNom", "attribut_type" => "text"],
-                    ["attribut_prefixe" => "Police : ", "attribut_code" => "policeReference", "attribut_type" => "text"],
-                    ["attribut_prefixe" => "Versé le : ", "attribut_code" => "paidAt", "attribut_type" => "date"],
-                    ["attribut_prefixe" => "Débité de : ", "attribut_code" => "compteLibelle", "attribut_type" => "text"],
+                    // LE JUSTIFICATIF EN DEUXIÈME POSITION, et non en queue.
+                    //
+                    // La ligne secondaire est un flex d'UNE seule ligne : ce qui dépasse est
+                    // écrasé à 1 px et remplacé par « … ». Placé en dernier, l'indicateur de
+                    // pièce était donc INVISIBLE dans la vue par défaut — constaté au
+                    // navigateur, pas déduit — alors que c'est la question qui motive cette
+                    // rubrique : qu'ai-je versé sans preuve ? La référence de police et le
+                    // compte débité, eux, supportent d'être les premiers escamotés.
+                    //
+                    // Compté SUR LE VIREMENT : un bordereau couvre tout un lot, et n'annoncer
+                    // que les pièces de la ligne ferait passer pour nues deux lignes sur
+                    // trois d'un virement pourtant justifié.
+                    ["attribut_code" => "justificatifLibelle", "icone" => "document"],
                     // Un virement groupé se dit : sans cela, trois lignes d'un même
                     // décaissement se liraient comme trois virements distincts.
                     ["attribut_code" => "virementGroupe", "attribut_type" => "text"],
-                    // LE JUSTIFICATIF, compté SUR LE VIREMENT. Un bordereau couvre tout un
-                    // lot : n'annoncer que les pièces de la ligne ferait passer pour nues
-                    // deux lignes sur trois d'un virement pourtant justifié.
-                    ["attribut_code" => "justificatifLibelle", "icone" => "document"],
+                    ["attribut_prefixe" => "Versé le : ", "attribut_code" => "paidAt", "attribut_type" => "date"],
+                    ["attribut_prefixe" => "Police : ", "attribut_code" => "policeReference", "attribut_type" => "text"],
+                    ["attribut_prefixe" => "Débité de : ", "attribut_code" => "compteLibelle", "attribut_type" => "text"],
                 ],
             ],
             // ── FILTRES RAPIDES ───────────────────────────────────────────────────
