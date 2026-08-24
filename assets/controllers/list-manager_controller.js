@@ -1,4 +1,5 @@
 import BaseController from './base_controller.js';
+import { etatChipPreset } from './chip-preset-etat.js';
 
 /**
  * @class ListManagerController
