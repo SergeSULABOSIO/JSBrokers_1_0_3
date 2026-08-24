@@ -33,7 +33,7 @@ class ReversementRetroAgentEntityCanvasProvider implements EntityCanvasProviderI
     {
         return [
             "parametres" => [
-                "description" => "Reversement de rétrocommission à un agent",
+                "description" => "Rétro agent",
                 "icone" => "depense",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [

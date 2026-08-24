@@ -205,6 +205,19 @@ class RolesEnFinanceType extends AbstractType
                 ],
             ])
 
+            ->add('accessReversementRetroAgent', ChoiceType::class, [
+                'label' => "Droit d'accès sur les rétros agents",
+                'multiple' => true,
+                'expanded' => true,
+                'required' => false,
+                'choices'  => [
+                    "Lecture" => Invite::ACCESS_LECTURE,
+                    "Ecriture" => Invite::ACCESS_ECRITURE,
+                    "Modification" => Invite::ACCESS_MODIFICATION,
+                    "Suppression" => Invite::ACCESS_SUPPRESSION,
+                ],
+            ])
+
             ->add('invite', InviteAutocompleteField::class, [
                 'label' => "Collaborateur",
                 'required' => true,

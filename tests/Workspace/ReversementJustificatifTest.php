@@ -234,7 +234,7 @@ class ReversementJustificatifTest extends WebTestCase
 
         self::assertResponseIsSuccessful('La rubrique doit se charger, pas répondre 404 ni 500 en silence.');
         $html = (string) $this->client->getResponse()->getContent();
-        self::assertStringContainsString('Reversements de rétrocommission', $html);
+        self::assertStringContainsString('Rétros agents', $html);
 
         // Et la LIGNE dit ce qu'elle doit dire : le bénéficiaire, la police, le compte.
         self::assertStringContainsString('VIR-JUST-1', $html, 'La référence du virement doit paraître.');
@@ -424,7 +424,15 @@ class ReversementJustificatifTest extends WebTestCase
         $this->em->clear();
 
         // UN SEUL document en base, quoi qu'il arrive : c'est la consigne.
-        $documents = $this->em->getRepository(Document::class)->findAll();
+        //
+        // ⚠ SCOPÉ À L'ENTREPRISE DU TEST. Ce décompte partait d'un `findAll()` sur toute la
+        // base : n'importe quelle autre donnée portant une pièce sur un reversement — les
+        // jeux d'essai d'une vérification au navigateur, par exemple — le faisait tomber
+        // pour une raison étrangère à ce qu'il vérifie. Un test qui dépend du reste de la
+        // base ne parle plus de son sujet.
+        $documents = $this->em->getRepository(Document::class)->createQueryBuilder('d')
+            ->join('d.entreprise', 'e')->andWhere('e.nom = :nom')->setParameter('nom', self::ENT)
+            ->getQuery()->getResult();
         $documents = array_values(array_filter(
             $documents,
             static fn (Document $d) => $d->getReversementRetroAgent() !== null,

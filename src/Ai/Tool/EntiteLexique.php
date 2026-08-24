@@ -25,13 +25,22 @@ final class EntiteLexique
     public function lexique(): array
     {
         $lexique = [];
+        $alias = $this->accessResolver->aliasEntites();
         foreach ($this->accessResolver->libellesEntites() as $shortName => $label) {
             if (!class_exists('App\\Entity\\' . $shortName)) {
                 continue;
             }
 
+            // Les libellés ANTÉRIEURS comptent autant que l'actuel : renommer une rubrique
+            // ne renomme pas le vocabulaire des courtiers, et un terme retiré du lexique
+            // devient une demande refusée.
+            $candidats = [AiText::normalize($label), AiText::normalize($shortName)];
+            foreach ($alias[$shortName] ?? [] as $ancien) {
+                $candidats[] = AiText::normalize($ancien);
+            }
+
             $keywords = [];
-            foreach ([AiText::normalize($label), AiText::normalize($shortName)] as $candidate) {
+            foreach ($candidats as $candidate) {
                 $keywords[] = $candidate;
                 // Variante singulier/pluriel naïve, suffisante pour un lexique FR.
                 $keywords[] = str_ends_with($candidate, 's') ? rtrim($candidate, 's') : $candidate . 's';

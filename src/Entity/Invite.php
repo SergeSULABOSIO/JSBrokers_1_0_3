@@ -229,7 +229,7 @@ class Invite
     private Collection $conditionsPartageAgent;
 
     /**
-     * @var Collection<int, ReversementRetroAgent> Reversements de rétrocommission reçus.
+     * @var Collection<int, ReversementRetroAgent> Rétrocommissions reçues (rétros agents).
      */
     #[ORM\OneToMany(targetEntity: ReversementRetroAgent::class, mappedBy: 'agent')]
     private Collection $reversementsRetroAgent;

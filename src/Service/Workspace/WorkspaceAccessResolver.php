@@ -86,22 +86,20 @@ class WorkspaceAccessResolver
         'Contact'                    => ['Production', 'getRolesEnProduction', 'getAccessContact', 'Contacts'],
         'Risque'                     => ['Production', 'getRolesEnProduction', 'getAccessRisque', 'Risques'],
         'Avenant'                    => ['Production', 'getRolesEnProduction', 'getAccessAvenant', 'Avenants'],
-        // REVERSEMENTS DE RÉTROCOMMISSION : une rubrique de CONSULTATION, gouvernée par
-        // le droit de l'AVENANT — la ligne d'affaire que le versement solde. Elle était
-        // hors carte (GOUVERNANCE_PARENT), donc sans écran : ni liste, ni fiche, ni
-        // actions documentaires, et par conséquent aucun endroit où joindre le bordereau
-        // d'un virement déjà passé.
+        // RÉTROS AGENTS : rubrique de CONSULTATION des rétrocommissions déjà versées, avec
+        // son DROIT PROPRE depuis le 2026-08-24.
         //
-        // ELLE PARTAGE LE GETTER DE L'AVENANT, à dessein. Un champ de rôle propre aurait
-        // imposé une migration et une reprise des rôles existants, pour un droit que
-        // personne n'a demandé de séparer : qui peut lire les avenants peut lire ce qui
-        // a été reversé dessus. Le jour où il faudra les distinguer, ce sera un champ
-        // de plus, pas un changement de logique.
-        // Le MODULE dit où l'utilisateur trouve la rubrique (Finances : un décaissement
-        // se cherche là) ; les deux getters disent quel DROIT la gouverne (celui de
-        // l'avenant, l'affaire que le versement solde). Les deux peuvent différer : le
-        // premier est un libellé de regroupement, les seconds sont la règle.
-        'ReversementRetroAgent'      => ['Finances', 'getRolesEnProduction', 'getAccessAvenant', 'Reversements de rétrocommission'],
+        // Elle empruntait jusque-là le droit de l'AVENANT — l'affaire que le versement
+        // solde. C'était commode et faux : le cabinet ne pouvait ni l'ouvrir ni la fermer
+        // sans toucher aux avenants, et le réglage n'apparaissait NULLE PART dans le
+        // gestionnaire des rôles. Or ce que montre cette rubrique — combien chaque
+        // collaborateur a touché — n'a pas la même sensibilité qu'un contrat.
+        //
+        // LE DROIT EST UN INTERRUPTEUR, comme partout ailleurs : qui l'a voit tout le
+        // cabinet, le propriétaire voit tout d'office. Aucun filtrage par bénéficiaire
+        // n'est appliqué ici, et l'assistant applique EXACTEMENT la même règle
+        // (RetrocommissionsTool) : deux surfaces, une seule réponse.
+        'ReversementRetroAgent'      => ['Finances', 'getRolesEnFinance', 'getAccessReversementRetroAgent', 'Rétros agents'],
         'Partenaire'                 => ['Production', 'getRolesEnProduction', 'getAccessPartenaire', 'Intermédiaires'],
         // Conditions de partage : RUBRIQUE à part entière depuis qu'elles portent la
         // rémunération nominative d'agents internes — il fallait un écran pour les créer
@@ -349,6 +347,38 @@ class WorkspaceAccessResolver
         }
 
         return $labels;
+    }
+
+    /**
+     * ANCIENS NOMS D'UNE RUBRIQUE, encore compris de l'assistant.
+     *
+     * Renommer une rubrique ne renomme pas le vocabulaire des utilisateurs. Or
+     * `EntiteLexique` DÉRIVE les mots-clés de l'assistant des libellés de la carte
+     * ci-dessus : renommer sans plus retirerait l'ancien terme de ce que Ket comprend, et
+     * un courtier qui l'emploie encore se verrait refuser sa demande — exactement
+     * l'incident du 2026-08-12 que `EntiteCanonique` a été écrite pour clore.
+     *
+     * On ne garde ici que des termes SANS ambiguïté : le lexique retire de lui-même tout
+     * mot-clé revendiqué par deux entités, mais mieux vaut ne pas l'y pousser.
+     *
+     * @var array<string, string[]> nom court => libellés antérieurs
+     */
+    private const ALIAS = [
+        // « Reversements de rétrocommission » (jusqu'au 2026-08-24), abrégé en
+        // « Rétros agents » parce qu'il se tronquait en « Reversements d… » dans un onglet.
+        'ReversementRetroAgent' => ['Reversements de rétrocommission'],
+    ];
+
+    /**
+     * Libellés ANTÉRIEURS par nom court, pour les seuls consommateurs qui doivent
+     * COMPRENDRE l'ancien vocabulaire (le lexique de l'assistant). Les surfaces qui
+     * AFFICHENT un nom, elles, n'utilisent que `libellesEntites()`.
+     *
+     * @return array<string, string[]>
+     */
+    public function aliasEntites(): array
+    {
+        return self::ALIAS;
     }
 
     /** L'invité a-t-il au moins un périmètre (sinon : coquille « aucun accès ») ? */

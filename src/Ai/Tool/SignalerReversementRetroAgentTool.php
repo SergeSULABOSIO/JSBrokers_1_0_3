@@ -205,7 +205,7 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
         // FAIL-CLOSED, et plus strict que la lecture : verser relève de la gestion de
         // l'espace. Personne ne se paie soi-même.
         if (!$this->accessResolver->canManageInvites($scope->invite)) {
-            return AiToolResult::horsPerimetre('Reversements de rétrocommission');
+            return AiToolResult::horsPerimetre('Rétros agents');
         }
 
         $agentId = (int) ($args['agentId'] ?? 0);

@@ -276,7 +276,14 @@ class DocumentsAttachesDepuisLaListeTest extends WebTestCase
         );
 
         $this->assertResponseStatusCodeSame(404);
-        $this->assertSame(0, (int) $this->em->getRepository(Document::class)->count([]));
+        // SCOPÉ À L'ENTREPRISE DU TEST. Ce décompte portait sur toute la base : n'importe
+        // quelle donnée étrangère — un jeu d'essai laissé par une vérification au
+        // navigateur — le faisait tomber pour une raison sans rapport avec ce qu'il vérifie.
+        $this->assertSame(0, (int) $this->em->getRepository(Document::class)
+            ->createQueryBuilder('d')
+            ->select('COUNT(d.id)')
+            ->join('d.entreprise', 'e')->andWhere('e.nom = :nom')->setParameter('nom', self::ENT)
+            ->getQuery()->getSingleScalarResult());
     }
 
     /** 3b. UNE FICHE D'UN AUTRE CABINET EST INTROUVABLE — la réponse d'un id inexistant. */

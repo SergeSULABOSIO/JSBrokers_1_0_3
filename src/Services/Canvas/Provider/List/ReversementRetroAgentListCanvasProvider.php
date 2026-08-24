@@ -14,11 +14,12 @@ use App\Services\ServiceMonnaies;
  * de documents. Sans cette rubrique, un bordereau oublié au moment du virement n'avait
  * plus AUCUN endroit où être joint.
  *
- * ⚠ ELLE NE REMPLACE PAS LE VOLET « VERSEMENTS ENREGISTRÉS » du rapport de production.
- * Ici, un virement qui solde trois affaires apparaît en TROIS lignes — c'est la vérité
- * de la base, et c'est ce qu'il faut pour retrouver une ligne précise. Le volet, lui,
- * groupe par virement : un décaissement, une ligne, une preuve. Deux lectures, deux
- * questions différentes.
+ * ⚠ UN VIREMENT QUI SOLDE TROIS AFFAIRES APPARAÎT EN TROIS LIGNES — c'est la vérité de la
+ * base, et c'est ce qu'il faut pour retrouver une ligne précise. Le volet « Versements
+ * enregistrés » du rapport de production, qui groupait par virement, a été supprimé : le
+ * bouton ouvre désormais CETTE rubrique, filtrée sur son agent. La lecture « un
+ * décaissement, une ligne » se reconstitue par la chip « Virement : groupé » et la
+ * référence de lot portée par chaque ligne.
  */
 class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInterface
 {
@@ -35,7 +36,7 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
     {
         return [
             "colonne_principale" => [
-                "titre_colonne" => "Reversements de rétrocommission",
+                "titre_colonne" => "Rétros agents",
                 "texte_principal" => ["attribut_code" => "reference", "icone" => "depense"],
                 "textes_secondaires_separateurs" => " • ",
                 // DES CODES PLATS, JAMAIS DE CHEMIN POINTÉ. Le rendu d'une ligne fait

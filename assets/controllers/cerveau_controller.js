@@ -434,6 +434,16 @@ export default class extends Controller {
                         entiteNom: activeTabState.entiteNom || null,
                         workspaceTabId: this.currentWorkspaceTabId,
                     });
+
+                    // L'ÉTAT EST ENREGISTRÉ ET L'ONGLET EST BIEN L'ACTIF : c'est le premier
+                    // instant où une recherche sur cet onglet peut aboutir. Le workspace-manager
+                    // y pose le filtre qu'il gardait en attente (bouton d'un rapport, ouverture
+                    // de rubrique par l'assistant). Émis d'ICI et pas plus tôt : c'est cette
+                    // ligne qui garantit qu'un `serverRootName` existe.
+                    this.broadcast('app:tab.state-ready', {
+                        tabId,
+                        workspaceTabId: this.currentWorkspaceTabId,
+                    });
                 }
 
                 // Badges « déjà en contexte » du chat IA : une liste ouverte APRÈS
@@ -855,6 +865,14 @@ export default class extends Controller {
         const url = this._buildDynamicQueryUrl(tabState);
         if (!url) {
             console.error("Impossible de rafraîchir la liste : URL non trouvée pour l'onglet", targetTabId);
+            // ON ÉTEINT CE QU'ON A ALLUMÉ. L'appelant vient de diffuser `app:loading.start` ;
+            // sortir sans rien dire laissait la barre de progression tourner pour toujours,
+            // puisque son extinction dépend de la chaîne
+            // `app:list.refreshed` → `app:list.rendered` → `app:loading.stop`, dont aucun
+            // maillon n'a lieu sans requête. C'est un FILET, pas le correctif : la vraie
+            // cause est de chercher avant que l'onglet ait un état (cf.
+            // workspace-manager::_appliquerCriteresEnAttente).
+            this.broadcast('app:loading.stop');
             return;
         }
 

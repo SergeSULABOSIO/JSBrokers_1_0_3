@@ -139,6 +139,11 @@ export default class extends Controller {
         this.boundHandleLoadingStop = this.handleLoadingStop.bind(this);
         document.addEventListener('app:loading.stop', this.boundHandleLoadingStop);
 
+        // L'ÉTAT DE L'ONGLET EST PRÊT : c'est SEULEMENT là qu'on peut poser un filtre.
+        // Voir _appliquerCriteresEnAttente pour le détail de l'incident que cela corrige.
+        this.boundHandleTabStateReady = this.handleTabStateReady.bind(this);
+        document.addEventListener('app:tab.state-ready', this.boundHandleTabStateReady);
+
         this.boundHandleNavigateTo = this.handleNavigateTo.bind(this);
         document.addEventListener('workspace:navigate-to', this.boundHandleNavigateTo);
 
@@ -255,6 +260,7 @@ export default class extends Controller {
         document.removeEventListener('app:workspace.reload-active-tab', this.boundReloadActiveTab);
         document.removeEventListener('app:loading.start', this.boundHandleLoadingStart);
         document.removeEventListener('app:loading.stop', this.boundHandleLoadingStop);
+        document.removeEventListener('app:tab.state-ready', this.boundHandleTabStateReady);
         document.removeEventListener('workspace:navigate-to', this.boundHandleNavigateTo);
         document.removeEventListener('cerveau:event', this.boundHandleCerveauEvent);
         window.removeEventListener('resize', this.boundReancrerFlyout);
@@ -1605,9 +1611,26 @@ export default class extends Controller {
      * qu'une recherche saisie à la main (`ui:search.submitted`) : même moteur, mêmes
      * critères, mêmes chips synchronisés. Sans effet si l'onglet n'est plus l'actif —
      * l'utilisateur a repris la main, et sa navigation prime.
+     *
+     * QUAND, ET POURQUOI PAS PLUS TÔT (incident du 2026-08-24). Ce filtre était posé dès
+     * `handleComponentLoaded`, c'est-à-dire dès que le HTML de la liste était en place. Mais
+     * le Cerveau n'enregistre l'état d'un onglet qu'au `ui:tab.initialized` du list-manager,
+     * lui-même différé d'une frame. La recherche partait donc vers un onglet SANS état :
+     * `_buildDynamicQueryUrl` ne trouvait pas de `serverRootName`, `_requestListRefresh`
+     * abandonnait avant le `fetch`, et TOUT en découlait —
+     *
+     *   — la liste n'était pas filtrée (Bruno restait affiché sous un badge « Alice ») ;
+     *   — la barre de progression, allumée avant la recherche, n'était jamais éteinte ;
+     *   — les chips ne pouvaient pas refléter un filtre qui n'avait jamais été appliqué.
+     *
+     * Un écran qui affiche un badge de filtre sans avoir filtré est pire qu'un écran non
+     * filtré : il affirme. C'est exactement la contradiction que ce mécanisme existait pour
+     * empêcher. On attend donc le signal `app:tab.state-ready`, émis par le Cerveau APRÈS
+     * l'enregistrement — le premier instant où une recherche peut aboutir.
      * @private
      */
     _appliquerCriteresEnAttente(tabId) {
+        if (!tabId) return;
         const criteres = this._criteresEnAttente?.[tabId];
         if (!criteres) return;
         delete this._criteresEnAttente[tabId];
@@ -1982,10 +2005,18 @@ export default class extends Controller {
         this.progressBarTarget.style.display = 'none';
         if (!error) {
             this.notifyCerveau('app:navigation-rubrique:openned', {});
-            // La liste existe enfin : c'est le moment de poser le filtre demandé par
-            // l'assistant, s'il y en avait un.
-            this._appliquerCriteresEnAttente(targetTabId);
+            // LE FILTRE N'EST PLUS POSÉ ICI. Le HTML de la liste existe, mais le Cerveau
+            // n'a pas encore ENREGISTRÉ l'état de cet onglet : chercher maintenant, c'est
+            // chercher dans le vide. Voir _appliquerCriteresEnAttente.
         }
+    }
+
+    /**
+     * Le Cerveau vient d'enregistrer l'état d'un onglet : c'est le premier instant où une
+     * recherche peut aboutir. On y pose le filtre mis en attente, s'il y en avait un.
+     */
+    handleTabStateReady(event) {
+        this._appliquerCriteresEnAttente(event.detail?.workspaceTabId);
     }
 
     /**

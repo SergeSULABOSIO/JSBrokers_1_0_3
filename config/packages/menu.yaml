@@ -37,12 +37,18 @@ parameters:
                         "Bordereaux": { icone: 'bordereau', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Bordereau' }
                         "Revenus": { icone: 'revenu', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\RevenuPourCourtier' }
                         "Charges": { icone: 'charge', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\ChargeCourtier' }
-                        # Reversements de rétrocommission aux agents INTERNES : rubrique de
+                        # Rétrocommissions REVERSÉES aux agents INTERNES : rubrique de
                         # CONSULTATION (la création est refusée par son canevas — un versement
                         # s'enregistre depuis le rapport de production ou par l'assistant, avec
                         # son justificatif du même geste). Un décaissement se cherche dans les
-                        # Finances ; son DROIT reste celui de l'avenant, l'affaire qu'il solde.
-                        "Reversements de rétrocommission": { icone: 'depense', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\ReversementRetroAgent' }
+                        # Finances, et le droit qui la gouverne s'y règle aussi.
+                        #
+                        # « Rétros agents » et non l'intitulé complet : cette clé EST le
+                        # libellé affiché, au menu comme en titre d'onglet, où
+                        # « Reversements de rétrocommission » se tronquait en
+                        # « Reversements d… ». L'ancien terme reste compris de
+                        # l'assistant (WorkspaceAccessResolver::ALIAS).
+                        "Rétros agents": { icone: 'depense', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\ReversementRetroAgent' }
                         "Fournisseurs": { icone: 'fournisseur', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Fournisseur' }
                         "Dépenses": { icone: 'depense', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\DepenseCourtier' }
                         # Rubrique SANS entité Doctrine : 'DocumentComptable' est une PSEUDO-entité

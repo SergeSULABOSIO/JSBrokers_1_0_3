@@ -75,6 +75,17 @@ class RolesEnFinance implements OwnerAwareInterface
     #[Groups(['list:read'])]
     private array $accessDocumentComptable = [];
 
+    /**
+     * Rétros agents : droit PROPRE depuis le 2026-08-24.
+     *
+     * La rubrique empruntait en silence le droit « Avenants » — le cabinet ne pouvait
+     * donc ni l'ouvrir ni la fermer, et le réglage n'apparaissait nulle part dans le
+     * gestionnaire des rôles. Un décaissement se règle là où il se cherche : en Finances.
+     */
+    #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
+    private array $accessReversementRetroAgent = [];
+
     #[ORM\Column(type: Types::ARRAY)]
     #[Groups(['list:read'])]
     private array $accessFournisseur = [];
@@ -248,6 +259,18 @@ class RolesEnFinance implements OwnerAwareInterface
     public function setAccessDocumentComptable(array $accessDocumentComptable): static
     {
         $this->accessDocumentComptable = $accessDocumentComptable;
+
+        return $this;
+    }
+
+    public function getAccessReversementRetroAgent(): array
+    {
+        return $this->accessReversementRetroAgent;
+    }
+
+    public function setAccessReversementRetroAgent(array $accessReversementRetroAgent): static
+    {
+        $this->accessReversementRetroAgent = $accessReversementRetroAgent;
 
         return $this;
     }
