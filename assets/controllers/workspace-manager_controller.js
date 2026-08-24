@@ -4,6 +4,7 @@ import { appliquerTitre, conversationDeLOnglet, editerEnPlace } from './assistan
 import {
     FERME, EPINGLE, etatSuivant, estOuvert, ancreDeReposChange, rubriqueAMarquer, sommetDuFlyout,
 } from './workspace-col2.js';
+import { criteresARestaurer, memoriserCriteres } from './criteres-persistes.js';
 
 /**
  * @class WorkspaceManagerController
@@ -144,6 +145,11 @@ export default class extends Controller {
         this.boundHandleTabStateReady = this.handleTabStateReady.bind(this);
         document.addEventListener('app:tab.state-ready', this.boundHandleTabStateReady);
 
+        // LES FILTRES SE MÉMORISENT AU PASSAGE. `app:context.changed` porte déjà les
+        // critères ET l'onglet concerné : aucun événement ni requête à ajouter.
+        this.boundMemoriserCriteres = this.memoriserCriteresDOnglet.bind(this);
+        document.addEventListener('app:context.changed', this.boundMemoriserCriteres);
+
         this.boundHandleNavigateTo = this.handleNavigateTo.bind(this);
         document.addEventListener('workspace:navigate-to', this.boundHandleNavigateTo);
 
@@ -261,6 +267,7 @@ export default class extends Controller {
         document.removeEventListener('app:loading.start', this.boundHandleLoadingStart);
         document.removeEventListener('app:loading.stop', this.boundHandleLoadingStop);
         document.removeEventListener('app:tab.state-ready', this.boundHandleTabStateReady);
+        document.removeEventListener('app:context.changed', this.boundMemoriserCriteres);
         document.removeEventListener('workspace:navigate-to', this.boundHandleNavigateTo);
         document.removeEventListener('cerveau:event', this.boundHandleCerveauEvent);
         window.removeEventListener('resize', this.boundReancrerFlyout);
@@ -1633,9 +1640,15 @@ export default class extends Controller {
         if (!tabId) return;
         const criteres = this._criteresEnAttente?.[tabId];
         if (!criteres) return;
-        delete this._criteresEnAttente[tabId];
 
+        // ON NE CONSOMME QU'APRÈS AVOIR POSÉ. Le retrait précédait ce contrôle : un onglet
+        // qui n'était pas l'actif perdait son filtre sans l'avoir jamais appliqué. Sans
+        // conséquence tant qu'un seul onglet était concerné à la fois — mais la
+        // RESTAURATION en rétablit plusieurs d'un coup, et un seul est actif. Les autres
+        // reviendraient donc non filtrés, ce qui est précisément le défaut à corriger.
         if (tabId !== this.activeWorkspaceTabId) return;
+
+        delete this._criteresEnAttente[tabId];
         this.notifyCerveau('ui:search.submitted', { criteria: criteres });
     }
 
@@ -2017,6 +2030,44 @@ export default class extends Controller {
      */
     handleTabStateReady(event) {
         this._appliquerCriteresEnAttente(event.detail?.workspaceTabId);
+    }
+
+    /**
+     * MÉMORISE LES FILTRES DE L'ONGLET, pour qu'ils survivent au rechargement.
+     *
+     * Les onglets revenaient après un F5 ; leurs filtres non — ils ne vivaient que dans
+     * l'état en mémoire du Cerveau. L'utilisateur retrouvait donc la liste ENTIÈRE là où
+     * il avait restreint, sans qu'aucun chip ni badge ne le signale.
+     *
+     * On se greffe sur `app:context.changed`, diffusé après chaque recherche avec les
+     * critères ET l'onglet : rien de nouveau à émettre, rien à demander au serveur. La
+     * décision de ce qu'on garde vit dans `criteres-persistes.js`, éprouvée sans DOM.
+     */
+    memoriserCriteresDOnglet(event) {
+        const tabId = event.detail?.workspaceTabId;
+        if (!tabId) return;
+
+        // SEULE LA LISTE PRINCIPALE EST PERSISTÉE, et cette garde n'est pas cosmétique.
+        //
+        // Un onglet de rubrique contient PLUSIEURS listes : la principale, et une par
+        // collection contextuelle (« Justificatifs »…). Elles partagent le même
+        // `workspaceTabId` mais n'ont ni la même entité ni les mêmes critères. Sans ce
+        // filtre, le filtre de périmètre de la collection Document se retrouvait enregistré
+        // sur l'onglet, puis rejoué au rechargement sur la liste des rétros — laquelle ne
+        // connaît même pas ce critère : le badge affichait la clé brute
+        // `__mon_portefeuille__ : "1"`, et la liste était filtrée par un critère venu
+        // d'ailleurs. Constaté au navigateur après un F5.
+        //
+        // Les onglets contextuels ne sont de toute façon pas restaurés : ils naissent d'une
+        // sélection, qui ne survit pas au rechargement.
+        if ((event.detail?.tabId ?? 'principal') !== 'principal') return;
+
+        const avant = this.workspaceTabs;
+        const apres = memoriserCriteres(avant, tabId, event.detail?.searchCriteria);
+        if (apres === avant) return;
+
+        this.workspaceTabs = apres;
+        this._saveWorkspaceTabsToStorage();
     }
 
     /**
@@ -2652,6 +2703,13 @@ export default class extends Controller {
         // Reconstruire la barre d'onglets
         this.workspaceTabs = tabs;
         tabs.forEach(tabData => this._createTabStructure(tabData));
+
+        // LES FILTRES REVIENNENT AVEC LEURS ONGLETS, par le chemin qui existe déjà : ils
+        // sont mis EN ATTENTE, et posés quand `app:tab.state-ready` annoncera que l'état de
+        // l'onglet est enregistré. Exactement le geste du bouton d'un rapport ou de
+        // `ouvrir_rubrique` de l'assistant — restaurer un filtre n'est rien d'autre
+        // qu'ouvrir une rubrique filtrée.
+        this._criteresEnAttente = { ...(this._criteresEnAttente || {}), ...criteresARestaurer(tabs) };
 
         // LE GROUPEMENT DES ONGLETS EN SURNOMBRE SE RECALCULE ICI AUSSI.
         //
