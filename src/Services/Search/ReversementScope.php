@@ -3,7 +3,7 @@
 namespace App\Services\Search;
 
 /**
- * Les filtres rapides de la rubrique « Reversements de rétrocommission » — source UNIQUE
+ * Les filtres rapides de la rubrique « Rétros agents » — source UNIQUE
  * partagée par les chips de l'écran et par l'assistant.
  *
  * Trois questions reviennent sur cette liste, et chacune a sa chip :

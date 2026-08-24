@@ -109,7 +109,7 @@ class ReversementRetroAgent
     {
         return sprintf(
             '%s (%s)',
-            $this->reference ?? 'Reversement de rétrocommission',
+            $this->reference ?? 'Rétro agent',
             $this->paidAt?->format('d/m/Y') ?? 'sans date',
         );
     }

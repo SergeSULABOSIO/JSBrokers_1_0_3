@@ -33,7 +33,7 @@ class ReversementRetroAgentFormCanvasProvider implements FormCanvasProviderInter
         $isParentNew = ($object->getId() === null);
 
         $parametres = [
-            "titre_creation" => "Reversement de rétrocommission",
+            "titre_creation" => "Rétro agent",
             "titre_modification" => "Reversement #%id%",
             "endpoint_submit_url" => "/admin/reversementretroagent/api/submit",
             "endpoint_delete_url" => "/admin/reversementretroagent/api/delete",
@@ -43,7 +43,7 @@ class ReversementRetroAgentFormCanvasProvider implements FormCanvasProviderInter
             "creation_interdite_message" => "Un reversement s'enregistre depuis « Voir le rapport de production » "
                 . "de l'agent, ou en le demandant à l'assistant : le justificatif du virement est exigé du même geste.",
             "form_intro" => [
-                "titre" => "Reversement de rétrocommission",
+                "titre" => "Rétro agent",
                 "description" => "La part d'une commission déjà encaissée par le cabinet, reversée à l'agent qui a "
                     . "apporté l'affaire. La sortie de fonds est réelle : elle se justifie par un bordereau de "
                     . "virement ou un reçu signé. Plusieurs affaires réglées par un même virement partagent une "

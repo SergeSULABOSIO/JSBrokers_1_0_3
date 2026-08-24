@@ -36,16 +36,19 @@ class ReversementRubriqueTest extends KernelTestCase
         $libelles = $this->resolver()->libellesEntites();
 
         self::assertArrayHasKey('ReversementRetroAgent', $libelles);
-        self::assertSame('Reversements de rétrocommission', $libelles['ReversementRetroAgent']);
+        self::assertSame('Rétros agents', $libelles['ReversementRetroAgent']);
     }
 
     /**
-     * Le droit est celui de l'avenant, et ce n'est pas un détail : c'est ce qui a permis
-     * d'ouvrir la rubrique SANS champ de rôle nouveau, donc sans migration ni reprise des
-     * rôles existants. Le jour où il faudra les distinguer, ce sera un champ de plus —
-     * pas un changement de logique.
+     * LE DROIT EST PROPRE À LA RUBRIQUE — il ne l'est plus à l'avenant.
+     *
+     * Ce test affirmait l'inverse jusqu'au 2026-08-24, et il avait alors raison : emprunter
+     * le droit de l'avenant avait permis d'ouvrir la rubrique sans migration. Mais le
+     * cabinet ne pouvait ni l'ouvrir ni la fermer sans toucher aux contrats, et le réglage
+     * n'apparaissait NULLE PART dans le gestionnaire des rôles — alors que ce que cette
+     * rubrique montre, c'est ce que chaque collaborateur a touché.
      */
-    public function testLeDroitResteCeluiDeLAvenant(): void
+    public function testLeDroitEstPropreALaRubrique(): void
     {
         $carte = new \ReflectionClass(WorkspaceAccessResolver::class);
         $map = $carte->getConstant('MAP');
@@ -53,13 +56,18 @@ class ReversementRubriqueTest extends KernelTestCase
         self::assertArrayHasKey('ReversementRetroAgent', $map);
         [$module, $collectionGetter, $fieldGetter] = $map['ReversementRetroAgent'];
 
-        self::assertSame($map['Avenant'][1], $collectionGetter, 'Même collection de rôles que l’avenant.');
-        self::assertSame($map['Avenant'][2], $fieldGetter, 'Même champ d’accès que l’avenant.');
+        self::assertNotSame(
+            $map['Avenant'][2],
+            $fieldGetter,
+            'Le droit ne doit plus être celui de l’avenant : lire un contrat ne dit rien de ce '
+            . 'qu’un collègue a touché.',
+        );
+        self::assertSame('getAccessReversementRetroAgent', $fieldGetter);
 
-        // LE MODULE, LUI, N'A PAS À SUIVRE. Ce n'est qu'un libellé de regroupement —
-        // celui sous lequel l'utilisateur cherche la rubrique. Un décaissement se cherche
-        // dans les Finances, quand bien même son droit vient de la production.
+        // Le droit se règle là où l'utilisateur cherche la rubrique : en Finances, module ET
+        // collection de rôles. Les deux coïncident enfin, ce qui n'était pas le cas.
         self::assertSame('Finances', $module);
+        self::assertSame('getRolesEnFinance', $collectionGetter);
 
         // Le getter doit EXISTER sur l'entité de rôles nommée : describePerimetre() l'appelle,
         // et un nom fantaisiste n'échouerait qu'à l'affichage du périmètre d'un invité.

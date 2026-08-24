@@ -497,7 +497,27 @@ final class RetrocommissionsTool implements AiToolInterface
         );
     }
 
-    /** @return list<Invite> */
+    /**
+     * Qui peut voir la rétrocommission des AUTRES ?
+     *
+     * Source unique de la règle pour cet outil, alignée sur la rubrique « Rétros agents » :
+     * le droit de lecture de `ReversementRetroAgent` (le propriétaire l'obtient d'office par
+     * le bypass du resolver). Sans lui, l'invité ne sort pas de son propre cas.
+     */
+    private function peutVoirToutesLesRetros(AiScope $scope): bool
+    {
+        return $this->accessResolver->canRead($scope->invite, 'ReversementRetroAgent');
+    }
+
+    /**
+     * @return list<Invite>
+     *
+     * La RÉSOLUTION est volontairement large : elle trouve l'agent, et c'est `peutConsulter()`
+     * qui décide ensuite s'il est consultable. Séparer les deux permet de refuser en DISANT
+     * « hors périmètre » plutôt qu'« introuvable » — un refus qui prétend que la personne
+     * n'existe pas envoie le modèle corriger une orthographe correcte, et l'utilisateur
+     * chercher un collègue qu'il côtoie tous les jours.
+     */
     private function chercherAgents(string $terme, AiScope $scope): array
     {
         if (ctype_digit($terme)) {
@@ -561,7 +581,16 @@ final class RetrocommissionsTool implements AiToolInterface
         $beneficiaires = [];
 
         if ($type !== BeneficiaireRetro::TYPE_PARTENAIRE) {
-            $agents = $this->accessResolver->canManageInvites($scope->invite)
+            // LE MÊME DROIT QUE L'ÉCRAN, et plus « gestionnaire d'invités ».
+            //
+            // La rubrique « Rétros agents » a désormais son droit propre : qui l'a voit tout
+            // le cabinet. S'en tenir ici à `canManageInvites` faisait dire à l'assistant
+            // moins que ce que la liste montrait au même utilisateur — deux surfaces, deux
+            // réponses, et l'utilisateur au milieu.
+            //
+            // Sans ce droit, il reste SOI : sa propre rémunération n'a jamais eu besoin
+            // d'une permission, et la lui retirer serait une régression.
+            $agents = $this->peutVoirToutesLesRetros($scope)
                 ? $this->inviteRepository->findBy(['entreprise' => $scope->entreprise], ['nom' => 'ASC'])
                 : [$scope->invite];
             foreach ($agents as $agent) {
@@ -598,13 +627,16 @@ final class RetrocommissionsTool implements AiToolInterface
             return $this->accessResolver->canRead($scope->invite, 'Partenaire');
         }
 
+        // SOI-MÊME TOUJOURS, LES AUTRES SELON LE DROIT DE LA RUBRIQUE.
+        // Sa propre rémunération n'a jamais demandé de permission ; celle d'un collègue
+        // relève désormais du même droit que la liste « Rétros agents ».
         return $beneficiaire->id() === $scope->invite->getId()
-            || $this->accessResolver->canManageInvites($scope->invite);
+            || $this->peutVoirToutesLesRetros($scope);
     }
 
     private function libellePerimetre(AiScope $scope): string
     {
-        $agents = $this->accessResolver->canManageInvites($scope->invite)
+        $agents = $this->peutVoirToutesLesRetros($scope)
             ? 'tous les agents du cabinet'
             : 'vos propres rétrocommissions';
         $partenaires = $this->accessResolver->canRead($scope->invite, 'Partenaire')
