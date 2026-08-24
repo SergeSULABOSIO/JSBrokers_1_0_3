@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { conditionRemplie } from './condition-action.js';
 import { resumeDeFermeture } from './collection-tampon.js';
 import { champsSources, conteneurVisible, rangeeVisible, trouverChamp, valeurObservee } from './visibilite-conditions.js';
 /**
