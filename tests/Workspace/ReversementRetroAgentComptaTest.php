@@ -67,7 +67,9 @@ class ReversementRetroAgentComptaTest extends KernelTestCase
         $conn = $this->em()->getConnection();
         foreach ([
             'reversement_retro_agent', 'avenant', 'cotation', 'piste', 'client',
-            'risque', 'compte_bancaire', 'invite',
+            // Le partenaire arrive avec les versements d'intermédiaires externes : l'oublier
+            // rendrait l'entreprise indestructible d'une exécution à l'autre.
+            'risque', 'partenaire', 'compte_bancaire', 'invite',
         ] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :nom",
@@ -175,6 +177,108 @@ class ReversementRetroAgentComptaTest extends KernelTestCase
      *
      * @return array{entrepriseId:int}
      */
+    /**
+     * LE COMPTE DE CHARGE SUIT LE BÉNÉFICIAIRE, PAS L'ENREGISTREMENT.
+     *
+     * Les deux familles partagent la table depuis que le partenaire est réglé en clair : il
+     * facture par sa note de débit, le cabinet lui reverse et garde la pièce. Elles ne
+     * partagent PAS le compte — l'agent est un salarié (6611, Charges de personnel), le
+     * partenaire un intermédiaire externe (632). Les confondre fausserait le résultat par
+     * NATURE de charge, et ferait disparaître la piste comptable que la note de crédit du
+     * partenaire portait jusqu'ici.
+     */
+    public function testLeCompteSuitLeBeneficiaire(): void
+    {
+        $ids = $this->semer();
+        $montantPartenaire = 90.0;
+        $this->verserAuPartenaire($ids, $montantPartenaire);
+
+        $entreprise = $this->em()->getRepository(Entreprise::class)->find($ids['entrepriseId']);
+        $service = static::getContainer()->get(CourtierEcritureComptableService::class);
+
+        $partenaires = [];
+        $agents = [];
+        foreach ($service->ecritures($entreprise) as $ecriture) {
+            if ($ecriture['type'] === 'retro_partenaire') {
+                $partenaires[] = $ecriture;
+            } elseif ($ecriture['type'] === 'retro_agent') {
+                $agents[] = $ecriture;
+            }
+        }
+
+        self::assertCount(1, $partenaires, 'Le versement au partenaire doit produire SON écriture.');
+        $ecriture = $partenaires[0];
+
+        self::assertSame(PlanComptable::RETRO_COMMISSIONS, $ecriture['lignes'][0]['compte']);
+        self::assertSame($montantPartenaire, round($ecriture['lignes'][0]['debit'], 2));
+        self::assertSame($montantPartenaire, round($ecriture['lignes'][1]['credit'], 2), 'L’écriture est équilibrée.');
+        self::assertStringContainsString('partenaire', $ecriture['libelle']);
+        self::assertStringContainsString('SUNU Compta', $ecriture['libelle'], 'Le libellé nomme le bénéficiaire.');
+
+        // Et les écritures de l'agent n'ont pas bougé : deux, toujours en 6611.
+        self::assertCount(2, $agents);
+        foreach ($agents as $ecritureAgent) {
+            self::assertSame(PlanComptable::COMMISSIONS_PERSONNEL, $ecritureAgent['lignes'][0]['compte']);
+        }
+    }
+
+    /**
+     * DEUX FAMILLES PARTAGEANT UNE RÉFÉRENCE DE LOT NE SE FONDENT PAS.
+     *
+     * Le regroupement se faisait sur la seule `lotReference` : deux versements portant par
+     * accident la même — un agent et un partenaire — auraient été fondus dans UNE écriture,
+     * donc imputés à un seul des deux comptes. Un lot est un virement à UN bénéficiaire.
+     */
+    public function testDeuxFamillesNeSeFondentPasDansUneEcriture(): void
+    {
+        $ids = $this->semer();
+        // Le partenaire reçoit un versement portant la MÊME référence de lot que l'agent.
+        $this->verserAuPartenaire($ids, 60.0, 'VIR-LOT-001');
+
+        $entreprise = $this->em()->getRepository(Entreprise::class)->find($ids['entrepriseId']);
+        $service = static::getContainer()->get(CourtierEcritureComptableService::class);
+
+        $comptes = [];
+        foreach ($service->ecritures($entreprise) as $ecriture) {
+            if (!in_array($ecriture['type'], ['retro_agent', 'retro_partenaire'], true)) {
+                continue;
+            }
+            $comptes[$ecriture['type']][] = $ecriture['lignes'][0]['compte'];
+        }
+
+        self::assertSame([PlanComptable::RETRO_COMMISSIONS], $comptes['retro_partenaire'] ?? []);
+        self::assertSame(
+            [PlanComptable::COMMISSIONS_PERSONNEL, PlanComptable::COMMISSIONS_PERSONNEL],
+            $comptes['retro_agent'] ?? [],
+            'Le lot de l’agent ne doit pas avoir absorbé la ligne du partenaire.',
+        );
+    }
+
+    /** Enregistre un versement à un partenaire externe sur la première police semée. */
+    private function verserAuPartenaire(array $ids, float $montant, ?string $lot = null): void
+    {
+        $em = $this->em();
+        $entreprise = $em->getRepository(Entreprise::class)->find($ids['entrepriseId']);
+
+        $partenaire = (new \App\Entity\Partenaire())->setNom('SUNU Compta')->setPart(20.0);
+        $partenaire->setEntreprise($entreprise);
+        $em->persist($partenaire);
+
+        $avenant = $em->getRepository(Avenant::class)->findOneBy(['entreprise' => $entreprise], ['id' => 'ASC']);
+
+        $reversement = (new ReversementRetroAgent())
+            ->setPartenaire($partenaire)
+            ->setAvenant($avenant)
+            ->setMontant($montant)
+            ->setPaidAt(new \DateTimeImmutable(self::EXERCICE . '-08-10'))
+            ->setReference('RETRO-PART')
+            ->setLotReference($lot);
+        $reversement->setEntreprise($entreprise);
+        $em->persist($reversement);
+        $em->flush();
+        $em->clear();
+    }
+
     private function semer(): array
     {
         $em = $this->em();

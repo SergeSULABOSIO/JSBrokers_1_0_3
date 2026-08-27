@@ -250,13 +250,27 @@ class CourtierEcritureComptableService
     }
 
     /**
-     * ÉCRITURES DES RÉTROCOMMISSIONS VERSÉES AUX AGENTS INTERNES.
+     * ÉCRITURES DES RÉTROCOMMISSIONS VERSÉES AUX INTERMÉDIAIRES.
      *
-     *     D 6611 Appointements, salaires et commissions   montant
-     *     C 521 Banques | 571 Caisse                      montant
+     *     agent interne       D 6611 Appointements, salaires et commissions   montant
+     *     partenaire externe  D 632  Rémunérations d'intermédiaires           montant
+     *                         C 521 Banques | 571 Caisse                      montant
      *
-     * 6611 et non 632 : l'agent est un salarié du cabinet, pas un intermédiaire externe —
-     * la charge doit tomber en Charges de personnel au résultat et au TFR.
+     * ── LE COMPTE SUIT LE BÉNÉFICIAIRE, PAS L'ENREGISTREMENT ────────────────────────────
+     * Les deux familles partagent la table depuis que le partenaire est réglé en clair
+     * (il facture par sa note de débit, le cabinet lui reverse et garde la pièce). Elles ne
+     * partagent PAS le compte : l'agent est un salarié, sa charge tombe en Charges de
+     * personnel au résultat et au TFR ; le partenaire est un intermédiaire externe, la
+     * sienne tombe en 632. Confondre les deux fausserait le résultat par nature de charge.
+     *
+     * C'est aussi ce qui préserve la piste comptable du partenaire : elle passait par sa
+     * note de crédit, circuit retiré — sans cette branche, son versement ne produirait
+     * aucune écriture.
+     *
+     * ⚠ LE REGROUPEMENT INCLUT LE BÉNÉFICIAIRE. Deux versements partageant par accident la
+     * même référence de lot — un intermédiaire et un agent — seraient sinon fondus dans UNE
+     * écriture, donc imputés à un seul des deux comptes. Un lot est un virement à UN
+     * bénéficiaire : la clé le dit.
      *
      * ── UN VERSEMENT RÉEL = UNE ÉCRITURE ────────────────────────────────────────────────
      * Un virement unique couvrant dix affaires est saisi comme dix LIGNES (pour que le
@@ -286,15 +300,21 @@ class CourtierEcritureComptableService
                 continue;
             }
 
-            $cle = $reversement->cleDeRegroupement();
+            $estAgent = $reversement->getAgent() !== null;
+            // La famille du bénéficiaire entre dans la clé : elle décide du compte de
+            // charge, et deux familles ne peuvent pas partager une écriture.
+            $cle = $reversement->cleDeRegroupement()
+                . '|' . ($estAgent ? 'A' : 'P')
+                . ($reversement->getBeneficiaire()?->getId() ?? 0);
             if (!isset($lots[$cle])) {
                 $lots[$cle] = [
-                    'date'       => $reversement->getPaidAt(),
-                    'piece'      => $reversement->getLotReference() ?: ($reversement->getReference() ?: 'RA-' . $reversement->getId()),
-                    'agent'      => $reversement->getAgent()?->getNom() ?? 'Agent',
-                    'tresorerie' => $reversement->getCompteBancaire() !== null ? PlanComptable::BANQUES : PlanComptable::CAISSE,
-                    'total'      => 0.0,
-                    'polices'    => [],
+                    'date'        => $reversement->getPaidAt(),
+                    'piece'       => $reversement->getLotReference() ?: ($reversement->getReference() ?: 'RA-' . $reversement->getId()),
+                    'beneficiaire' => $reversement->beneficiaireNom(),
+                    'estAgent'    => $estAgent,
+                    'tresorerie'  => $reversement->getCompteBancaire() !== null ? PlanComptable::BANQUES : PlanComptable::CAISSE,
+                    'total'       => 0.0,
+                    'polices'     => [],
                 ];
             }
             $lots[$cle]['total'] += $montant;
@@ -321,10 +341,19 @@ class CourtierEcritureComptableService
             $ecritures[] = [
                 'date'    => $lot['date'],
                 'piece'   => $lot['piece'],
-                'libelle' => sprintf('Rétrocommission agent — %s%s', $lot['agent'], $detail),
-                'type'    => 'retro_agent',
+                'libelle' => sprintf(
+                    'Rétrocommission %s — %s%s',
+                    $lot['estAgent'] ? 'agent' : 'partenaire',
+                    $lot['beneficiaire'],
+                    $detail,
+                ),
+                'type'    => $lot['estAgent'] ? 'retro_agent' : 'retro_partenaire',
                 'lignes'  => [
-                    $this->ligne(PlanComptable::COMMISSIONS_PERSONNEL, $total, 0.0),
+                    $this->ligne(
+                        $lot['estAgent'] ? PlanComptable::COMMISSIONS_PERSONNEL : PlanComptable::RETRO_COMMISSIONS,
+                        $total,
+                        0.0,
+                    ),
                     $this->ligne($lot['tresorerie'], 0.0, $total),
                 ],
             ];
