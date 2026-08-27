@@ -10,6 +10,7 @@ use App\Entity\Cotation;
 use App\Entity\Groupe;
 use App\Entity\Invite;
 use App\Entity\Portefeuille;
+use App\Entity\ReversementRetroAgent;
 use App\Entity\Risque;
 use App\Entity\Tranche;
 use App\Entity\Note;
@@ -1816,43 +1817,85 @@ class IndicatorCalculationHelper implements ResetInterface
         return $encaissee >= $due ? $solde : 0.0;
     }
 
+    /**
+     * CE QUI A ÉTÉ REVERSÉ À UN PARTENAIRE SUR UNE AFFAIRE.
+     *
+     * ── CHANGEMENT DE SOURCE, PAS DE FORMULE ────────────────────────────────────────
+     * Ce montant se DÉDUISAIT du prorata des règlements d'une note de crédit
+     * (`Article → Note → paiements`) : aucun enregistrement de versement n'existait pour un
+     * partenaire. Il facture désormais le cabinet par SA note de débit, le cabinet lui
+     * reverse et garde la pièce — comme pour un agent interne. Le payé se LIT donc, au lieu
+     * de se reconstituer.
+     *
+     * Ce qui est DÛ n'a pas bougé d'un centime : `...PayableParCourtier()` (sans « Payee »)
+     * garde son assiette, son taux et son seuil.
+     *
+     * Les lignes ANTÉRIEURES à la maille de l'échéance sont comptées par leur avenant, et le
+     * garde-fou `getTranche() !== null` empêche de les compter deux fois — c'est ce qui
+     * permet aux deux mailles de coexister sans se contredire.
+     */
     public function getCotationMontantRetrocommissionsPayableParCourtierPayee(?Cotation $cotation, ?Partenaire $partenaireCible): float
     {
-        $montant = 0;
-        if ($cotation != null) {
-            $partenaire = $this->getCotationPartenaire($cotation);
-            if ($partenaire) {
-                if ($this->isSamePartenaire($partenaire, $partenaireCible)) {
-                    foreach ($cotation->getTranches() as $tranche) {
-                        $montant += $this->getTrancheMontantRetrocommissionsPayableParCourtierPayee($tranche, $partenaireCible);
-                    }
+        if ($cotation === null) {
+            return 0.0;
+        }
+
+        $montant = 0.0;
+        foreach ($cotation->getTranches() as $tranche) {
+            $montant += $this->getTrancheMontantRetrocommissionsPayableParCourtierPayee($tranche, $partenaireCible);
+        }
+
+        foreach ($cotation->getAvenants() as $avenant) {
+            foreach ($avenant->getReversementsRetroAgent() as $reversement) {
+                if ($reversement->getTranche() !== null) {
+                    continue; // déjà compté à la maille de l'échéance
                 }
+                $montant += $this->montantSiPartenaire($reversement, $partenaireCible);
             }
         }
+
         return $montant;
     }
 
+    /**
+     * Le montant d'un reversement s'il va bien au partenaire visé — 0 sinon.
+     *
+     * Un reversement destiné à un AGENT ne compte jamais ici : sa dette est une autre, et
+     * son compte comptable un autre aussi (6611 contre 632). `$partenaireCible` à null
+     * signifie « tous les partenaires », comme dans les indicateurs de cotation.
+     */
+    private function montantSiPartenaire(ReversementRetroAgent $reversement, ?Partenaire $partenaireCible): float
+    {
+        $partenaire = $reversement->getPartenaire();
+        if ($partenaire === null) {
+            return 0.0;
+        }
+        if ($partenaireCible !== null && $partenaire->getId() !== $partenaireCible->getId()) {
+            return 0.0;
+        }
+
+        return (float) $reversement->getMontant();
+    }
+
+    /**
+     * CE QUI A ÉTÉ REVERSÉ À UN PARTENAIRE AU TITRE D'UNE ÉCHÉANCE.
+     *
+     * Même bascule de source que la version par affaire : le payé se LIT sur les
+     * reversements au lieu de se déduire du prorata des règlements d'une note de crédit.
+     * C'est aussi ce qui rend la colonne « rétro reversée » d'une échéance EXACTE — le
+     * versement s'y rattache désormais, il ne s'y répartissait pas.
+     */
     public function getTrancheMontantRetrocommissionsPayableParCourtierPayee(?Tranche $tranche, ?Partenaire $partenaireCible = null): float
     {
-        $montant = 0;
-        if (!$tranche || $tranche->getArticles()->isEmpty()) return 0.0;
-
-        if ($this->isSamePartenaire($this->getTranchePartenaire($tranche), $partenaireCible)) {
-            foreach ($tranche->getArticles() as $article) {
-                $note = $article->getNote();
-                if (!$note) continue;
-
-                $montantPayableNote = $this->getNoteMontantPayable($note);
-                $proportionPaiement = 0;
-                if ($montantPayableNote > 0) {
-                    $proportionPaiement = $this->getNoteMontantPaye($note) / $montantPayableNote;
-                }
-
-                if ($note->getAddressedTo() == Note::TO_PARTENAIRE) {
-                    $montant += $proportionPaiement * $this->getArticleMontant($article);
-                }
-            }
+        if (!$tranche) {
+            return 0.0;
         }
+
+        $montant = 0.0;
+        foreach ($tranche->getReversementsRetroAgent() as $reversement) {
+            $montant += $this->montantSiPartenaire($reversement, $partenaireCible);
+        }
+
         return $montant;
     }
 
