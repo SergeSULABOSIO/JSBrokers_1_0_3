@@ -7,6 +7,7 @@ use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Piste;
 use App\Entity\ReversementRetroAgent;
+use App\Entity\Tranche;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -29,13 +30,18 @@ class ReversementRetroAgentRepository extends ServiceEntityRepository
      * nom du bénéficiaire, la référence de police et le compte de trésorerie de CHAQUE
      * ligne — sans quoi trois requêtes par reversement s'allumeraient au parcours.
      *
+     * ⚠ L'AVENANT EN JOINTURE EXTERNE, et il ne faut pas « l'optimiser » : depuis que la
+     * maille du fait est la tranche, un reversement peut n'avoir aucun avenant. Une
+     * jointure interne écarterait cette ligne SANS RIEN DIRE — donc un décaissement réel
+     * sans écriture comptable. Le service, lui, lit déjà la police en null-safe.
+     *
      * @return ReversementRetroAgent[]
      */
     public function findChronologiqueForEntreprise(int $idEntreprise): array
     {
         return $this->createQueryBuilder('r')
             ->join('r.agent', 'a')->addSelect('a')
-            ->join('r.avenant', 'av')->addSelect('av')
+            ->leftJoin('r.avenant', 'av')->addSelect('av')
             ->leftJoin('r.compteBancaire', 'cb')->addSelect('cb')
             ->where('r.entreprise = :entrepriseId')
             ->setParameter('entrepriseId', $idEntreprise)
@@ -85,6 +91,53 @@ class ReversementRetroAgentRepository extends ServiceEntityRepository
     }
 
     /**
+     * Le versé PAR TRANCHE, pour un lot de tranches.
+     *
+     * La prime et la commission se paient par tranche : c'est à cette maille que
+     * l'intermédiaire est rémunéré, et c'est donc à cette maille que la colonne
+     * « rétro reversée » d'une tranche devient EXACTE au lieu d'être indérivable.
+     *
+     * S'AJOUTE à `totauxParAvenant()` sans le remplacer : le rapport de production raisonne
+     * par AFFAIRE et continue de s'appuyer sur elle. Chaque reversement portant les DEUX
+     * liens, les deux lectures voient le même argent sans jamais le compter deux fois.
+     *
+     * Les lignes ANTÉRIEURES à ce lot n'ont pas de tranche : elles n'apparaissent donc pas
+     * ici. C'était déjà le cas — le versé n'était alors attribuable à aucune tranche — et
+     * rien n'est perdu ; seule la précision nouvelle leur manque.
+     *
+     * @param Tranche[] $tranches
+     *
+     * @return array<int, float> identifiant de tranche => total versé
+     */
+    public function totauxParTranche(Invite $agent, array $tranches): array
+    {
+        $ids = array_values(array_filter(array_map(
+            static fn (Tranche $t) => $t->getId(),
+            $tranches,
+        )));
+        if ($ids === [] || $agent->getId() === null) {
+            return [];
+        }
+
+        $lignes = $this->createQueryBuilder('r')
+            ->select('IDENTITY(r.tranche) AS trancheId', 'SUM(r.montant) AS total')
+            ->where('r.agent = :agent')
+            ->andWhere('r.tranche IN (:tranches)')
+            ->setParameter('agent', $agent)
+            ->setParameter('tranches', $ids)
+            ->groupBy('r.tranche')
+            ->getQuery()
+            ->getScalarResult();
+
+        $totaux = [];
+        foreach ($lignes as $ligne) {
+            $totaux[(int) $ligne['trancheId']] = round((float) $ligne['total'], 2);
+        }
+
+        return $totaux;
+    }
+
+    /**
      * TOUS les reversements d'un agent, du plus récent au plus ancien.
      *
      * Alimente le volet « Versements enregistrés » du rapport de production, qui les
@@ -99,7 +152,7 @@ class ReversementRetroAgentRepository extends ServiceEntityRepository
     public function findPourAgent(Invite $agent, Entreprise $entreprise): array
     {
         return $this->createQueryBuilder('r')
-            ->join('r.avenant', 'av')->addSelect('av')
+            ->leftJoin('r.avenant', 'av')->addSelect('av')
             ->leftJoin('r.compteBancaire', 'cb')->addSelect('cb')
             ->where('r.agent = :agent')
             ->andWhere('r.entreprise = :entreprise')
