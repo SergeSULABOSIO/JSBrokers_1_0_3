@@ -31,7 +31,10 @@ class ReversementRetroAgentIndicatorStrategy implements IndicatorCalculationStra
     {
         /** @var ReversementRetroAgent $entity */
         return [
-            'beneficiaireNom' => $entity->getAgent()?->getNom() ?? 'N/A',
+            // Le nom du bénéficiaire, quelle que soit sa famille : la source unique vit sur
+            // l'entité, sinon chaque surface refait le XOR et l'une d'elles n'en traite
+            // qu'une moitié — ici, un partenaire se serait affiché « N/A ».
+            'beneficiaireNom' => $entity->beneficiaireNom(),
             'policeReference' => $entity->getAvenant()?->getReferencePolice()
                 ?: ($entity->getAvenant() !== null ? '#' . $entity->getAvenant()->getId() : 'N/A'),
             // « Caisse (espèces) » plutôt que rien : un versement sans compte n'est pas un

@@ -158,13 +158,13 @@ class ReversementDroitDedieTest extends KernelTestCase
     {
         $s = $this->semer();
         $menu = ['colonne_1' => ['groupes' => ['Finances' => ['rubriques' => [
-            'Rétros agents' => ['entity_name' => 'ReversementRetroAgent'],
+            'Rétros intermédiaires' => ['entity_name' => 'ReversementRetroAgent'],
             'Notes' => ['entity_name' => 'Note'],
         ]]]]];
 
         $sansDroit = $this->resolver()->filterMenu($menu, $s['agent']);
         self::assertArrayNotHasKey(
-            'Rétros agents',
+            'Rétros intermédiaires',
             $sansDroit['colonne_1']['groupes']['Finances']['rubriques'] ?? [],
             'Sans le droit, la rubrique ne doit pas figurer au menu.',
         );
@@ -172,7 +172,7 @@ class ReversementDroitDedieTest extends KernelTestCase
         $this->droitFinance($s['agent'], $s['entreprise'], [Invite::ACCESS_LECTURE]);
         $avecDroit = $this->resolver()->filterMenu($menu, $s['agent']);
         self::assertArrayHasKey(
-            'Rétros agents',
+            'Rétros intermédiaires',
             $avecDroit['colonne_1']['groupes']['Finances']['rubriques'] ?? [],
         );
     }
@@ -220,6 +220,6 @@ class ReversementDroitDedieTest extends KernelTestCase
     /** Le libellé du droit est celui de la rubrique : on règle ce qu'on a sous les yeux. */
     public function testLeDroitPorteLeLibelleDeLaRubrique(): void
     {
-        self::assertSame('Rétros agents', $this->resolver()->libellesEntites()['ReversementRetroAgent'] ?? null);
+        self::assertSame('Rétros intermédiaires', $this->resolver()->libellesEntites()['ReversementRetroAgent'] ?? null);
     }
 }

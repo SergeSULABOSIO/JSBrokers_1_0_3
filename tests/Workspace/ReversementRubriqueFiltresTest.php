@@ -8,6 +8,7 @@ use App\Entity\Cotation;
 use App\Entity\Document;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Entity\Partenaire;
 use App\Entity\Piste;
 use App\Entity\ReversementRetroAgent;
 use App\Entity\Risque;
@@ -63,7 +64,7 @@ class ReversementRubriqueFiltresTest extends KernelTestCase
     {
         $conn = $this->em()->getConnection();
         $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email = :e', ['e' => self::OWNER_EMAIL]);
-        foreach (['document', 'reversement_retro_agent', 'avenant', 'cotation', 'piste', 'client', 'risque', 'invite'] as $table) {
+        foreach (['document', 'reversement_retro_agent', 'avenant', 'cotation', 'piste', 'client', 'risque', 'partenaire', 'invite'] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :nom",
                 ['nom' => self::ENT],
@@ -182,10 +183,10 @@ class ReversementRubriqueFiltresTest extends KernelTestCase
         return $refs;
     }
 
-    // ===================== 1. Les quatre groupes =====================
+    // ===================== 1. Les CINQ groupes =====================
 
-    /** Les quatre groupes sont déclarés, avec leur option « Tous » et le chip-sélecteur. */
-    public function testLesQuatreGroupesDeChipsSontDeclares(): void
+    /** Les cinq groupes sont déclarés, avec leur option « Tous » et le chip-sélecteur. */
+    public function testLesCinqGroupesDeChipsSontDeclares(): void
     {
         $canvas = static::getContainer()->get(ReversementRetroAgentListCanvasProvider::class)->getCanvas();
         $groupes = $canvas['filtres_predefinis'] ?? [];
@@ -195,6 +196,7 @@ class ReversementRubriqueFiltresTest extends KernelTestCase
         self::assertContains(ReversementScope::CLE_PERIODE, $criteres);
         self::assertContains(ReversementScope::CLE_VIREMENT, $criteres);
         self::assertContains(ReversementScope::CHAMP_BENEFICIAIRE, $criteres);
+        self::assertContains(ReversementScope::CLE_TYPE, $criteres, 'La rubrique porte les DEUX familles : il faut pouvoir les distinguer.');
 
         foreach ($groupes as $groupe) {
             $valeurs = array_column($groupe['options'], 'value');
@@ -411,5 +413,67 @@ class ReversementRubriqueFiltresTest extends KernelTestCase
 
         self::assertSame(['1 pièce', '1 pièce'], $parReference['VIR-LOT']);
         self::assertSame(['Aucune pièce'], $parReference['VIR-SOLO']);
+    }
+
+    /**
+     * Ajoute un versement de PARTENAIRE — hors de la fixture partagée, à dessein : les
+     * tests voisins affirment des listes de références EXACTES, et une ligne de plus les
+     * ferait tomber pour une raison étrangère à ce qu'ils vérifient.
+     */
+    private function semerUnVersementDePartenaire(Entreprise $ent): void
+    {
+        $em = $this->em();
+        $partenaire = (new Partenaire())->setNom('SUNU Filtres')->setPart(20.0);
+        $partenaire->setEntreprise($ent);
+        $em->persist($partenaire);
+
+        $avenant = $em->getRepository(Avenant::class)->findOneBy(['entreprise' => $ent], ['id' => 'ASC']);
+        $invite = $em->getRepository(Invite::class)->findOneBy(['entreprise' => $ent]);
+
+        $versement = (new ReversementRetroAgent())->setPartenaire($partenaire)->setAvenant($avenant)
+            ->setMontant(100.0)->setPaidAt(new \DateTimeImmutable('now'))->setReference('VIR-PART');
+        $versement->setEntreprise($ent)->setInvite($invite);
+        $em->persist($versement);
+        $em->flush();
+    }
+
+    // ===================== 5. Le type de bénéficiaire =====================
+
+    /**
+     * LE CHIP « TYPE » FILTRE VRAIMENT, ET EN SQL.
+     *
+     * Les deux familles vivent sur le même enregistrement depuis que le partenaire est
+     * réglé en clair. Elles n'ont ni la même dette ni le même compte comptable — 6611 pour
+     * un salarié, 632 pour un intermédiaire externe — et ce chip est le seul moyen de lire
+     * l'une sans l'autre. Un chip qui ne restreindrait rien serait pire qu'un chip absent :
+     * on croirait avoir isolé une famille.
+     */
+    public function testLeChipTypeSepareLesDeuxFamilles(): void
+    {
+        $s = $this->semer();
+        $this->semerUnVersementDePartenaire($s['entreprise']);
+
+        $agents = $this->references($s['entreprise'], ReversementScope::critereRecherche(
+            ReversementScope::ENTITE, ReversementScope::CLE_TYPE, ReversementScope::TYPE_AGENT,
+        ));
+        $partenaires = $this->references($s['entreprise'], ReversementScope::critereRecherche(
+            ReversementScope::ENTITE, ReversementScope::CLE_TYPE, ReversementScope::TYPE_PARTENAIRE,
+        ));
+
+        self::assertSame(['VIR-PART'], $partenaires);
+        self::assertNotContains('VIR-PART', $agents, 'Un versement de partenaire n\x27est pas celui d\x27un agent.');
+        self::assertContains('VIR-SOLO', $agents);
+    }
+
+    /** « Tous » ne retire rien : les deux familles reviennent ensemble. */
+    public function testSansFiltreDeTypeLesDeuxFamillesSontLa(): void
+    {
+        $s = $this->semer();
+        $this->semerUnVersementDePartenaire($s['entreprise']);
+
+        $toutes = $this->references($s['entreprise'], []);
+
+        self::assertContains('VIR-PART', $toutes);
+        self::assertContains('VIR-SOLO', $toutes);
     }
 }

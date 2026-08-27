@@ -206,7 +206,7 @@ class RolesEnFinanceType extends AbstractType
             ])
 
             ->add('accessReversementRetroAgent', ChoiceType::class, [
-                'label' => "Droit d'accès sur les rétros agents",
+                'label' => "Droit d'accès sur les rétros intermédiaires",
                 'multiple' => true,
                 'expanded' => true,
                 'required' => false,

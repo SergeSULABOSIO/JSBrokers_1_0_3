@@ -99,7 +99,7 @@ class WorkspaceAccessResolver
         // cabinet, le propriétaire voit tout d'office. Aucun filtrage par bénéficiaire
         // n'est appliqué ici, et l'assistant applique EXACTEMENT la même règle
         // (RetrocommissionsTool) : deux surfaces, une seule réponse.
-        'ReversementRetroAgent'      => ['Finances', 'getRolesEnFinance', 'getAccessReversementRetroAgent', 'Rétros agents'],
+        'ReversementRetroAgent'      => ['Finances', 'getRolesEnFinance', 'getAccessReversementRetroAgent', 'Rétros intermédiaires'],
         'Partenaire'                 => ['Production', 'getRolesEnProduction', 'getAccessPartenaire', 'Intermédiaires'],
         // Conditions de partage : RUBRIQUE à part entière depuis qu'elles portent la
         // rémunération nominative d'agents internes — il fallait un écran pour les créer
@@ -366,7 +366,7 @@ class WorkspaceAccessResolver
     private const ALIAS = [
         // « Reversements de rétrocommission » (jusqu'au 2026-08-24), abrégé en
         // « Rétros agents » parce qu'il se tronquait en « Reversements d… » dans un onglet.
-        'ReversementRetroAgent' => ['Reversements de rétrocommission'],
+        'ReversementRetroAgent' => ['Reversements de rétrocommission', 'Rétros agents'],
     ];
 
     /**

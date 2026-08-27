@@ -234,7 +234,7 @@ class ReversementJustificatifTest extends WebTestCase
 
         self::assertResponseIsSuccessful('La rubrique doit se charger, pas répondre 404 ni 500 en silence.');
         $html = (string) $this->client->getResponse()->getContent();
-        self::assertStringContainsString('Rétros agents', $html);
+        self::assertStringContainsString('Rétros intermédiaires', $html);
 
         // Et la LIGNE dit ce qu'elle doit dire : le bénéficiaire, la police, le compte.
         self::assertStringContainsString('VIR-JUST-1', $html, 'La référence du virement doit paraître.');

@@ -10,8 +10,10 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 /**
  * RENOMMER UNE RUBRIQUE NE RENOMME PAS LE VOCABULAIRE DES COURTIERS.
  *
- * « Reversements de rétrocommission » est devenu « Rétros agents » le 2026-08-24, parce que
- * l'intitulé complet se tronquait en « Reversements d… » dans un onglet. Mais l'assistant
+ * « Reversements de rétrocommission » est devenu « Rétros agents » le 2026-08-24 parce que
+ * l'intitulé complet se tronquait en « Reversements d… » dans un onglet, puis
+ * « Rétros intermédiaires » lorsque la rubrique s'est mise à porter les DEUX familles.
+ * Chaque renommage AJOUTE un alias : les trois noms restent compris. Mais l'assistant
  * DÉRIVE ses mots-clés des libellés de la carte de permissions (`EntiteLexique`) : renommer
  * sans plus aurait retiré l'ancien terme de ce qu'il comprend, et un courtier qui l'emploie
  * encore — c'est-à-dire tous, pendant des mois — se serait vu refuser sa demande.
@@ -26,8 +28,9 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 class RenommageAliasTest extends KernelTestCase
 {
     private const NOM_COURT = 'ReversementRetroAgent';
-    private const NOUVEAU = 'Rétros agents';
-    private const ANCIEN = 'Reversements de rétrocommission';
+    private const NOUVEAU = 'Rétros intermédiaires';
+    /** Les noms ANTÉRIEURS, du plus ancien au plus récent. */
+    private const ANCIENS = ['Reversements de rétrocommission', 'Rétros agents'];
 
     protected function setUp(): void
     {
@@ -58,7 +61,7 @@ class RenommageAliasTest extends KernelTestCase
 
         self::assertNotSame([], $motsCles, 'La rubrique a disparu du lexique de l’assistant.');
 
-        foreach ([self::NOUVEAU, self::ANCIEN] as $terme) {
+        foreach (array_merge([self::NOUVEAU], self::ANCIENS) as $terme) {
             self::assertContains(
                 \App\Ai\AiText::normalize($terme),
                 $motsCles,
@@ -77,7 +80,7 @@ class RenommageAliasTest extends KernelTestCase
     public function testLAliasBeneficieDesMemesVariantes(): void
     {
         $motsCles = $this->lexique()->lexique()[self::NOM_COURT] ?? [];
-        $ancienNormalise = \App\Ai\AiText::normalize(self::ANCIEN);
+        $ancienNormalise = \App\Ai\AiText::normalize(self::ANCIENS[0]);
 
         self::assertContains(rtrim($ancienNormalise, 's'), $motsCles);
     }
@@ -110,7 +113,7 @@ class RenommageAliasTest extends KernelTestCase
     {
         $canonique = static::getContainer()->get(EntiteCanonique::class);
 
-        foreach ([self::NOUVEAU, self::ANCIEN] as $terme) {
+        foreach (array_merge([self::NOUVEAU], self::ANCIENS) as $terme) {
             self::assertSame(
                 self::NOM_COURT,
                 $canonique->resoudre($terme),
