@@ -3,10 +3,10 @@
 namespace App\Services\Search;
 
 /**
- * Les filtres rapides de la rubrique « Rétros agents » — source UNIQUE
+ * Les filtres rapides de la rubrique « Rétros intermédiaires » — source UNIQUE
  * partagée par les chips de l'écran et par l'assistant.
  *
- * Trois questions reviennent sur cette liste, et chacune a sa chip :
+ * Quatre questions reviennent sur cette liste, et chacune a sa chip :
  *
  *  — QU'EST-CE QUI N'EST PAS JUSTIFIÉ ? La dette de preuve, rendue actionnable. C'est le
  *    pendant direct de la règle « pas de versement sans justificatif » : elle vaut à
@@ -15,6 +15,9 @@ namespace App\Services\Search;
  *  — QU'AI-JE VERSÉ CE MOIS-CI ? Le rapprochement bancaire et la clôture.
  *  — QUELS VIREMENTS SOLDENT PLUSIEURS AFFAIRES ? Retrouver un lot à partir de l'une de ses
  *    lignes.
+ *  — AGENT OU PARTENAIRE ? Les deux familles vivent sur le même enregistrement depuis que
+ *    le partenaire est réglé en clair ; elles n'ont ni la même dette ni le même compte
+ *    comptable, et ce chip est le seul moyen de lire l'une sans l'autre.
  *
  * Le BÉNÉFICIAIRE, lui, n'est pas ici : c'est une vraie relation (`agent`), filtrée par le
  * critère de relation ordinaire — le chip-sélecteur et le bouton du rapport de production
@@ -47,6 +50,15 @@ final class ReversementScope
     public const GROUPE = 'groupe';
     public const ISOLE = 'isole';
 
+    // ── Type de bénéficiaire ────────────────────────────────────────────────────────
+    //
+    // La rubrique porte désormais les DEUX familles d'intermédiaires sur le même
+    // enregistrement : un agent interne (salarié, charge en 6611) ou un partenaire externe
+    // (intermédiaire, charge en 632). Ce chip est le seul moyen de lire l'une sans l'autre.
+    public const CLE_TYPE = '__type_beneficiaire__';
+    public const TYPE_AGENT = 'agent';
+    public const TYPE_PARTENAIRE = 'partenaire';
+
     /** Le champ de relation du bénéficiaire : un critère ORDINAIRE, pas un synthétique. */
     public const CHAMP_BENEFICIAIRE = 'agent';
 
@@ -68,6 +80,10 @@ final class ReversementScope
         self::CLE_VIREMENT => [
             self::GROUPE => 'Groupé',
             self::ISOLE => 'Isolé',
+        ],
+        self::CLE_TYPE => [
+            self::TYPE_AGENT => 'Agent',
+            self::TYPE_PARTENAIRE => 'Partenaire',
         ],
     ];
 
@@ -101,7 +117,7 @@ final class ReversementScope
     }
 
     /**
-     * Les trois critères d'un coup, tels que les reçoit `ouvrir_rubrique`.
+     * Les quatre critères d'un coup, tels que les reçoit `ouvrir_rubrique`.
      *
      * @return array<string, array{operator: string, value: string, label: string}>
      */
@@ -109,7 +125,8 @@ final class ReversementScope
     {
         return self::critereRecherche($entityShortName, self::CLE_JUSTIFICATIF, $args['justificatif'] ?? null)
             + self::critereRecherche($entityShortName, self::CLE_PERIODE, $args['periode'] ?? null)
-            + self::critereRecherche($entityShortName, self::CLE_VIREMENT, $args['virement'] ?? null);
+            + self::critereRecherche($entityShortName, self::CLE_VIREMENT, $args['virement'] ?? null)
+            + self::critereRecherche($entityShortName, self::CLE_TYPE, $args['type'] ?? null);
     }
 
     /**

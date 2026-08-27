@@ -148,6 +148,12 @@ final class OuvrirRubriqueTool implements AiToolInterface
                     ReversementScope::CLE_VIREMENT,
                     'REVERSEMENT uniquement : virement GROUPÉ (qui solde plusieurs affaires) ou ISOLÉ.',
                 ),
+                'type' => ReversementScope::proprieteSchema(
+                    ReversementScope::CLE_TYPE,
+                    'REVERSEMENT uniquement : la famille du bénéficiaire — AGENT interne (salarié) '
+                        . 'ou PARTENAIRE externe (intermédiaire). Les deux vivent dans la même '
+                        . 'rubrique ; ce paramètre est le seul moyen de lire l\x27une sans l\x27autre.',
+                ),
                 'beneficiaire' => [
                     'type' => 'string',
                     'description' => 'REVERSEMENT uniquement : le NOM de l\'agent bénéficiaire '
@@ -277,7 +283,7 @@ final class OuvrirRubriqueTool implements AiToolInterface
         } elseif (isset($criteresRubrique[PisteTransformationScope::CRITERION_KEY])) {
             $filtres[] = PisteTransformationScope::libelle((string) $criteresRubrique[PisteTransformationScope::CRITERION_KEY]['value']);
         }
-        foreach ([ReversementScope::CLE_JUSTIFICATIF, ReversementScope::CLE_PERIODE, ReversementScope::CLE_VIREMENT] as $cleReversement) {
+        foreach ([ReversementScope::CLE_JUSTIFICATIF, ReversementScope::CLE_PERIODE, ReversementScope::CLE_VIREMENT, ReversementScope::CLE_TYPE] as $cleReversement) {
             if (isset($criteresRubrique[$cleReversement])) {
                 $filtres[] = ReversementScope::libelle($cleReversement, (string) $criteresRubrique[$cleReversement]['value']);
             }

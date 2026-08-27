@@ -48,7 +48,7 @@ parameters:
                         # « Reversements de rétrocommission » se tronquait en
                         # « Reversements d… ». L'ancien terme reste compris de
                         # l'assistant (WorkspaceAccessResolver::ALIAS).
-                        "Rétros agents": { icone: 'depense', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\ReversementRetroAgent' }
+                        "Rétros intermédiaires": { icone: 'depense', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\ReversementRetroAgent' }
                         "Fournisseurs": { icone: 'fournisseur', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Fournisseur' }
                         "Dépenses": { icone: 'depense', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\DepenseCourtier' }
                         # Rubrique SANS entité Doctrine : 'DocumentComptable' est une PSEUDO-entité

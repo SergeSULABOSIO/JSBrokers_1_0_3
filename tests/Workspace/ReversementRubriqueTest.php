@@ -8,7 +8,7 @@ use App\Services\Canvas\Provider\Form\ReversementRetroAgentFormCanvasProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
- * LA RUBRIQUE « REVERSEMENTS DE RÉTROCOMMISSION » — ce qu'elle ouvre, et ce qu'elle ferme.
+ * LA RUBRIQUE « RÉTROS INTERMÉDIAIRES » — ce qu'elle ouvre, et ce qu'elle ferme.
  *
  * Elle n'existait pas : l'entité était gouvernée hors carte d'accès, donc sans liste, sans
  * fiche, et sans les deux actions documentaires que FormCanvasProvider injecte sur toute
@@ -17,8 +17,8 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  *
  * Ce test tient les trois propriétés qui rendent cette ouverture sûre :
  *   1. la rubrique est déclarée, et sous le libellé qu'on lit à l'écran ;
- *   2. son droit reste CELUI DE L'AVENANT — aucun nouveau champ de rôle, donc aucune
- *      migration, et personne ne gagne un accès qu'il n'avait pas ;
+ *   2. son droit lui est PROPRE — il empruntait celui de l'avenant, ce qui rendait la
+ *      rubrique inréglable depuis le gestionnaire des rôles ;
  *   3. la CRÉATION y est refusée, avec son motif.
  */
 class ReversementRubriqueTest extends KernelTestCase
@@ -36,7 +36,7 @@ class ReversementRubriqueTest extends KernelTestCase
         $libelles = $this->resolver()->libellesEntites();
 
         self::assertArrayHasKey('ReversementRetroAgent', $libelles);
-        self::assertSame('Rétros agents', $libelles['ReversementRetroAgent']);
+        self::assertSame('Rétros intermédiaires', $libelles['ReversementRetroAgent']);
     }
 
     /**

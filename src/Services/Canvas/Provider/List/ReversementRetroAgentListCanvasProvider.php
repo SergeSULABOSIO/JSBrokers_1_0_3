@@ -36,7 +36,7 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
     {
         return [
             "colonne_principale" => [
-                "titre_colonne" => "Rétros agents",
+                "titre_colonne" => "Rétros intermédiaires",
                 "texte_principal" => ["attribut_code" => "reference", "icone" => "depense"],
                 "textes_secondaires_separateurs" => " • ",
                 // DES CODES PLATS, JAMAIS DE CHEMIN POINTÉ. Le rendu d'une ligne fait
@@ -79,6 +79,21 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
             // Les valeurs viennent de ReversementScope : la chip, la traduction SQL et le
             // paramètre de `ouvrir_rubrique` de l'assistant lisent le MÊME vocabulaire.
             "filtres_predefinis" => [
+                [
+                    // La rubrique porte les DEUX familles : c'est le seul moyen de lire
+                    // l'une sans l'autre, et elles n'ont ni la même dette ni le même
+                    // compte comptable (6611 pour un salarié, 632 pour un externe).
+                    "critere" => ReversementScope::CLE_TYPE,
+                    "libelle" => "Type",
+                    "options" => ReversementScope::optionsChips(
+                        ReversementScope::CLE_TYPE,
+                        [
+                            ReversementScope::TYPE_AGENT => 'invite',
+                            ReversementScope::TYPE_PARTENAIRE => 'partenaire',
+                        ],
+                        'Tous',
+                    ),
+                ],
                 [
                     "critere" => ReversementScope::CLE_JUSTIFICATIF,
                     "libelle" => "Justificatif",

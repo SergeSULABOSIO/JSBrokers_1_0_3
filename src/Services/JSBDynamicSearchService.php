@@ -662,6 +662,21 @@ class JSBDynamicSearchService
                 }
                 continue;
             }
+
+            // LA FAMILLE DU BÉNÉFICIAIRE. Les deux vivent sur le même enregistrement, en
+            // XOR : on lit donc la présence de l'une des deux relations plutôt qu'un
+            // discriminant, qui n'existe pas et qui pourrait diverger de la réalité.
+            if ($field === ReversementScope::CLE_TYPE) {
+                $valeur = is_array($value) ? ($value['value'] ?? null) : $value;
+                if (!ReversementScope::estValide(ReversementScope::CLE_TYPE, is_string($valeur) ? $valeur : null)) {
+                    continue;
+                }
+
+                $qb->andWhere($valeur === ReversementScope::TYPE_AGENT
+                    ? "{$rootAlias}.agent IS NOT NULL"
+                    : "{$rootAlias}.partenaire IS NOT NULL");
+                continue;
+            }
             // CAS 1 : C'est une plage de dates (recherche avancée pour les champs de type DateTimeRange).
             // La valeur est un tableau comme { from: 'YYYY-MM-DD', to: 'YYYY-MM-DD' }.
             if (is_array($value) && (isset($value['from']) || isset($value['to'])) && !isset($value['operator'])) {
