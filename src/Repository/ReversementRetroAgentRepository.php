@@ -26,21 +26,27 @@ class ReversementRetroAgentRepository extends ServiceEntityRepository
      * qu'attend la génération des écritures comptables (même contrat que
      * PaiementRepository et DepenseCourtierRepository).
      *
-     * L'agent, l'avenant et le compte bancaire sont joints : le service comptable lit le
-     * nom du bénéficiaire, la référence de police et le compte de trésorerie de CHAQUE
-     * ligne — sans quoi trois requêtes par reversement s'allumeraient au parcours.
+     * Le bénéficiaire (agent OU partenaire), l'avenant et le compte bancaire sont joints :
+     * le service comptable lit le nom du bénéficiaire, la référence de police et le compte
+     * de trésorerie de CHAQUE ligne — sans quoi trois requêtes par reversement s'allumeraient
+     * au parcours.
      *
-     * ⚠ L'AVENANT EN JOINTURE EXTERNE, et il ne faut pas « l'optimiser » : depuis que la
-     * maille du fait est la tranche, un reversement peut n'avoir aucun avenant. Une
-     * jointure interne écarterait cette ligne SANS RIEN DIRE — donc un décaissement réel
-     * sans écriture comptable. Le service, lui, lit déjà la police en null-safe.
+     * ⚠ TOUTES CES JOINTURES SONT EXTERNES, et il ne faut pas les « optimiser ». Un
+     * reversement n'a qu'UN bénéficiaire — donc l'autre relation est nulle — et, depuis que
+     * la maille du fait est la tranche, il peut n'avoir aucun avenant. Une jointure interne
+     * écarterait la ligne SANS RIEN DIRE : un décaissement réel se retrouverait sans
+     * écriture comptable, ce qu'aucune erreur ne signale.
+     *
+     * C'est arrivé : la jointure sur l'agent est restée interne le temps d'un lot, et le
+     * versement d'un partenaire ne produisait aucune écriture.
      *
      * @return ReversementRetroAgent[]
      */
     public function findChronologiqueForEntreprise(int $idEntreprise): array
     {
         return $this->createQueryBuilder('r')
-            ->join('r.agent', 'a')->addSelect('a')
+            ->leftJoin('r.agent', 'a')->addSelect('a')
+            ->leftJoin('r.partenaire', 'p')->addSelect('p')
             ->leftJoin('r.avenant', 'av')->addSelect('av')
             ->leftJoin('r.compteBancaire', 'cb')->addSelect('cb')
             ->where('r.entreprise = :entrepriseId')
