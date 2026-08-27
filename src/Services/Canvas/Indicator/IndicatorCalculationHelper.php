@@ -1698,16 +1698,102 @@ class IndicatorCalculationHelper implements ResetInterface
     }
 
     /**
-     * Rétrocommission EXIGIBLE : le solde dû, mais seulement une fois la commission de
-     * courtage de l'affaire intégralement encaissée par le cabinet.
+     * Ce qui a été versé à un agent au titre d'une ÉCHÉANCE.
      *
-     * Miroir strict de getTrancheRetroExigible() côté partenaire. Payer un agent avant
-     * d'avoir soi-même perçu, c'est avancer sa trésorerie sur une créance non recouvrée —
-     * le piège que le circuit partenaire garde déjà. Le « dû » reste visible, il n'est
-     * simplement pas encore réclamable.
+     * Miroir de getAvenantMontantRetroAgentReversee(), à la maille où l'argent circule
+     * réellement. Les reversements antérieurs au passage à cette maille n'ont pas de
+     * tranche : ils ne sont donc comptés que par leur avenant, comme avant.
+     */
+    public function getTrancheMontantRetroAgentReversee(?Tranche $tranche, ?Invite $agentCible = null): float
+    {
+        if (!$tranche) {
+            return 0.0;
+        }
+
+        $montant = 0.0;
+        foreach ($tranche->getReversementsRetroAgent() as $reversement) {
+            $agent = $reversement->getAgent();
+            if ($agentCible !== null && $agent?->getId() !== $agentCible->getId()) {
+                continue;
+            }
+            $montant += (float) $reversement->getMontant();
+        }
+
+        return $montant;
+    }
+
+    /**
+     * RÉTROCOMMISSION D'AGENT EXIGIBLE AU TITRE D'UNE ÉCHÉANCE.
+     *
+     * Miroir strict de getTrancheRetroExigible() côté partenaire, à la seule différence de
+     * l'assiette : l'agent partage le reliquat, le partenaire la commission partageable.
+     * La prime ET la commission se paient par tranche, c'est donc à ce rythme que la dette
+     * du cabinet envers son agent NAÎT — et non au solde de l'affaire entière.
+     *
+     * Payer avant d'avoir soi-même perçu resterait interdit : le « dû » d'une échéance non
+     * encaissée demeure visible sans être réclamable.
+     */
+    public function getTrancheRetroAgentExigible(?Tranche $tranche, ?Invite $agentCible = null): float
+    {
+        $cotation = $tranche?->getCotation();
+        if (!$tranche || !$cotation || !$this->isCotationBound($cotation)) {
+            return 0.0;
+        }
+
+        $facteur = $this->getTrancheTauxFactor($tranche);
+        $solde = round(
+            $this->getCotationMontantRetroAgent($cotation, $agentCible) * $facteur
+            - $this->getTrancheMontantRetroAgentReversee($tranche, $agentCible),
+            2,
+        );
+        if ($solde <= 0.0) {
+            return 0.0;
+        }
+
+        $due = round($this->getCotationMontantCommissionTtc($cotation, -1, false) * $facteur, 2);
+        if ($due <= 0.0) {
+            // Échéance sans commission attendue : rien n'est à percevoir de l'assureur, la
+            // dette interne est donc née dès la souscription.
+            return $solde;
+        }
+
+        $encaissee = round($this->getTrancheMontantCommissionEncaissee($tranche), 2);
+
+        // Circuit bordereau sans articles : un bordereau couvrant l'échéance et
+        // intégralement encaissé prouve que la commission a été perçue — même tolérance
+        // que côté partenaire, sans quoi ce circuit ne rendrait jamais rien exigible.
+        return ($encaissee >= $due || $this->isTrancheCouverteParBordereau($tranche, true))
+            ? $solde
+            : 0.0;
+    }
+
+    /**
+     * Rétrocommission EXIGIBLE d'une AFFAIRE : la somme de ses échéances.
+     *
+     * ── CHANGEMENT DE RÈGLE, ASSUMÉ ─────────────────────────────────────────────────
+     * Cette méthode appliquait un TOUT-OU-RIEN au niveau de la cotation : le solde n'était
+     * réclamable qu'une fois la commission de l'affaire ENTIÈRE encaissée. Un cabinet ayant
+     * perçu la commission de la première échéance ne devait donc rien à son agent, alors
+     * que l'argent était là — tandis que le partenaire, lui, était déjà servi échéance par
+     * échéance. Deux familles, deux règles, sur le même argent.
+     *
+     * C'est désormais une SOMME, jamais un prorata : le prorata a déjà eu lieu à la maille
+     * de la tranche. Le repli sur l'ancienne règle subsiste pour une affaire sans
+     * échéancier — sans lui, une telle affaire verrait son exigible tomber à zéro pour
+     * toujours, ce qui serait une perte silencieuse et non une règle.
      */
     public function getAvenantRetroAgentExigible(?Avenant $avenant, ?Invite $agentCible = null): float
     {
+        $cotationAvecTranches = $avenant?->getCotation();
+        if ($cotationAvecTranches !== null && !$cotationAvecTranches->getTranches()->isEmpty()) {
+            $exigible = 0.0;
+            foreach ($cotationAvecTranches->getTranches() as $tranche) {
+                $exigible += $this->getTrancheRetroAgentExigible($tranche, $agentCible);
+            }
+
+            return round($exigible, 2);
+        }
+
         $cotation = $avenant?->getCotation();
         if (!$cotation || !$this->isCotationBound($cotation)) {
             return 0.0;

@@ -193,6 +193,19 @@ class Tranche
     #[Groups(['list:read'])]
     public ?float $retroCommissionExigible = null;
 
+    // Rétrocommission des AGENTS INTERNES, à la maille de cette échéance : le dû proratisé,
+    // et la part réclamable une fois la commission de CETTE échéance encaissée.
+    //
+    // DÉCLARÉES, et pas seulement produites : `retroAgentDue` était posée en propriété
+    // dynamique, ce que PHP 8.2 déprécie — la suite le signalait à chaque exécution — et ce
+    // qui la laissait hors de tout groupe de sérialisation, donc invisible du `data-entity`
+    // d'une ligne et de toute action conditionnée dessus.
+    #[Groups(['list:read'])]
+    public ?float $retroAgentDue = null;
+
+    #[Groups(['list:read'])]
+    public ?float $retroAgentExigible = null;
+
     #[Groups(['list:read'])]
     public ?string $retroAPayerAffiche = null;
 
@@ -244,6 +257,7 @@ class Tranche
     public function __construct()
     {
         $this->documents = new ArrayCollection();
+        $this->reversementsRetroAgent = new ArrayCollection();
         $this->articles = new ArrayCollection();
         $this->paiementsPrime = new ArrayCollection();
     }
@@ -253,6 +267,17 @@ class Tranche
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'tranche', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $documents;
+
+    /**
+     * @var Collection<int, ReversementRetroAgent> Rétrocommissions déjà versées au titre de
+     *      CETTE échéance — c'est à ce rythme que la prime, la commission et donc la
+     *      rémunération de l'intermédiaire circulent.
+     *
+     * Sans cascade remove, comme du côté de l'avenant : supprimer une échéance ne doit pas
+     * effacer la trace d'un décaissement réel, qui est en comptabilité.
+     */
+    #[ORM\OneToMany(targetEntity: ReversementRetroAgent::class, mappedBy: 'tranche')]
+    private Collection $reversementsRetroAgent;
 
     /**
      * @return Collection<int, Document>
@@ -435,5 +460,13 @@ class Tranche
     public function __toString()
     {
         return ($this->cotation != null ? $this->cotation->getNom() : "") . " / " . $this->id . " / " . $this->nom;
+    }
+
+    /**
+     * @return Collection<int, ReversementRetroAgent>
+     */
+    public function getReversementsRetroAgent(): Collection
+    {
+        return $this->reversementsRetroAgent;
     }
 }
