@@ -56,11 +56,33 @@ class ReversementRetroAgent
     #[Groups(['list:read'])]
     private ?Invite $agent = null;
 
-    /** La LIGNE d'affaire soldée : c'est elle qui porte le montant dû. */
+    /**
+     * L'AFFAIRE réglée. Elle dit SUR QUOI porte le versement.
+     *
+     * Nullable depuis le passage à la maille de la tranche : les reversements ventilés par
+     * la migration portent toujours leur avenant, mais une cotation peut compter plusieurs
+     * avenants et la tranche n'en désigne aucun en particulier. Quand l'affaire est
+     * connue, l'invariant `tranche.cotation === avenant.cotation` doit tenir.
+     */
     #[ORM\ManyToOne(inversedBy: 'reversementsRetroAgent')]
-    #[ORM\JoinColumn(nullable: false)]
     #[Groups(['list:read'])]
     private ?Avenant $avenant = null;
+
+    /**
+     * LA MAILLE DU FAIT : la tranche réglée. Elle dit QUAND.
+     *
+     * La prime ET la commission se paient par tranche ; c'est donc à ce rythme que
+     * l'intermédiaire — agent interne ou partenaire externe — est rémunéré. Le dû était
+     * déjà proratisé par tranche (`TrancheIndicatorStrategy::retroAgentDue`) tandis que le
+     * versé restait accroché à l'avenant : dû et payé ne se comparaient donc jamais à la
+     * même maille, et la colonne « rétro reversée » d'une tranche était indérivable.
+     *
+     * Nullable le temps de la transition : les lignes antérieures à la ventilation n'ont
+     * pas de tranche, et la lecture sait encore les compter par leur avenant.
+     */
+    #[ORM\ManyToOne]
+    #[Groups(['list:read'])]
+    private ?Tranche $tranche = null;
 
     #[ORM\Column]
     #[Groups(['list:read'])]
@@ -141,6 +163,30 @@ class ReversementRetroAgent
         $this->avenant = $avenant;
 
         return $this;
+    }
+
+    public function getTranche(): ?Tranche
+    {
+        return $this->tranche;
+    }
+
+    public function setTranche(?Tranche $tranche): static
+    {
+        $this->tranche = $tranche;
+
+        return $this;
+    }
+
+    /**
+     * La COTATION réglée, quelle que soit la maille renseignée.
+     *
+     * Source unique pour tout ce qui raisonne à l'affaire : la tranche la porte, et les
+     * lignes antérieures à la ventilation la tiennent encore de leur avenant. Sans ce
+     * point d'accès, chaque lecteur réinventerait le repli et l'un d'eux l'oublierait.
+     */
+    public function getCotation(): ?Cotation
+    {
+        return $this->tranche?->getCotation() ?? $this->avenant?->getCotation();
     }
 
     public function getMontant(): ?float

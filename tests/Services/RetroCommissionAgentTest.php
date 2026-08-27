@@ -116,6 +116,45 @@ class RetroCommissionAgentTest extends KernelTestCase
         );
     }
 
+    /**
+     * LE TÉMOIN D ARITHMÉTIQUE : les montants DUS, épinglés au centime.
+     *
+     * Le test voisin tient la RELATION (assiette = pure moins partenaire) ; celui-ci tient
+     * les VALEURS. La distinction compte : une relation reste vraie même si ses deux membres
+     * dérivent ensemble, et c est précisément ce qui arriverait si la commission pure
+     * changeait de définition sans que personne le remarque.
+     *
+     * Ce témoin existe pour les lots qui touchent au RÈGLEMENT (maille, source du payé,
+     * écritures comptables) : ils ne doivent déplacer aucun de ces trois nombres. S il tombe
+     * pendant un tel lot, c est que la frontière entre « ce qui est dû » et « ce qui est
+     * payé » a été franchie.
+     *
+     * Aucune taxe dans ce jeu d essai : la commission pure vaut donc la commission.
+     */
+    public function testLesMontantsDusSontEpinglesAuCentime(): void
+    {
+        $ids = $this->semer([["Alice", 10.0]], avecPartenaire: true);
+        $cotation = $this->em()->getRepository(Cotation::class)->find($ids["cotationId"]);
+
+        self::assertEqualsWithDelta(
+            self::COMMISSION,
+            $this->helper()->getCotationMontantCommissionPure($cotation, -1, false),
+            0.01,
+            "Sans taxe, la commission pure vaut la commission.",
+        );
+
+        // Le partenaire se sert LE PREMIER : 20 % de 1 000.
+        self::assertEqualsWithDelta(
+            self::COMMISSION * self::PART_PARTENAIRE / 100,
+            $this->helper()->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1),
+            0.01,
+        );
+
+        // L agent partage le RELIQUAT : 10 % de 800, jamais 10 % de 1 000.
+        $reliquat = self::COMMISSION - (self::COMMISSION * self::PART_PARTENAIRE / 100);
+        self::assertEqualsWithDelta($reliquat, $this->helper()->getCotationAssietteRetroAgent($cotation), 0.01);
+        self::assertEqualsWithDelta($reliquat * 0.10, $this->helper()->getCotationMontantRetroAgent($cotation), 0.01);
+    }
     public function testLeTauxEstLuEnPointsEtNonEnFraction(): void
     {
         // 25 dans le champ = 25 %, jamais 2 500 %. La conversion passe par getFraction(),
