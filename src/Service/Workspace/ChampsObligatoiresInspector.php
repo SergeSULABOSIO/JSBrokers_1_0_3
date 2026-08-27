@@ -3,6 +3,7 @@
 namespace App\Service\Workspace;
 
 use App\Entity\ConditionPartage;
+use App\Entity\ReversementRetroAgent;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Symfony\Component\Form\Extension\Core\Type\PercentType;
@@ -186,6 +187,36 @@ class ChampsObligatoiresInspector
                 ? 'Désignez un bénéficiaire : un partenaire externe, ou un agent interne.'
                 : 'Une condition rétrocède à un partenaire externe OU à un agent interne, pas aux deux.',
             ]];
+        }
+
+        // Un reversement VERSE à un bénéficiaire, et à un seul. Sans agent ni partenaire il
+        // ne verse à personne ; avec les deux, on ne saurait ni quelle dette il éteint ni
+        // quelle écriture il produit — 6611 pour un salarié, 632 pour un intermédiaire
+        // externe. Même règle, même forme et même chemin de refus que ci-dessus.
+        if ($shortName === 'ReversementRetroAgent' && $entity instanceof ReversementRetroAgent) {
+            $pilotable = static fn (string $champ): bool
+                => $champsPilotables === null || in_array($champ, $champsPilotables, true);
+
+            if (!$entity->estValide() && ($pilotable('agent') || $pilotable('partenaire'))) {
+                $champ = $pilotable('agent') ? 'agent' : 'partenaire';
+
+                return [$champ => [$entity->getBeneficiaire() === null
+                    ? 'Désignez le bénéficiaire du versement : un agent interne, ou un partenaire externe.'
+                    : 'Un versement va à un agent interne OU à un partenaire externe, pas aux deux.',
+                ]];
+            }
+
+            // L'ÉCHÉANCE ET L'AFFAIRE DOIVENT RELEVER DE LA MÊME COTATION. Rien dans le
+            // schéma ne l'impose — les deux sont enfants de Cotation — et le versement
+            // porterait alors sur une affaire tout en s'imputant à l'échéance d'une autre :
+            // le solde des deux serait faux, sans qu'aucune erreur ne le dise.
+            if (!$entity->mailleCoherente() && ($pilotable('tranche') || $pilotable('avenant'))) {
+                $champ = $pilotable('tranche') ? 'tranche' : 'avenant';
+
+                return [$champ => [
+                    'L’échéance et l’affaire réglées doivent appartenir à la même proposition.',
+                ]];
+            }
         }
 
         return [];
