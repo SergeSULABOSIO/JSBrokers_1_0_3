@@ -68,6 +68,18 @@ class Partenaire
     private Collection $notes;
 
     /**
+     * @var Collection<int, ReversementRetroAgent> Rétrocommissions que le cabinet lui a
+     *      VERSÉES, échéance par échéance. Le partenaire facture (sa note de débit), le
+     *      cabinet reverse et garde la pièce : son circuit de règlement est celui de
+     *      l'agent interne, et les deux familles tiennent sur un seul enregistrement.
+     *
+     * Sans cascade remove : supprimer un partenaire ne doit pas effacer la trace d'un
+     * décaissement réel, qui est en comptabilité.
+     */
+    #[ORM\OneToMany(targetEntity: ReversementRetroAgent::class, mappedBy: 'partenaire')]
+    private Collection $reversementsRetro;
+
+    /**
      * @var Collection<int, Client>
      */
     #[ORM\ManyToMany(targetEntity: Client::class, mappedBy: 'partenaires')]
@@ -187,6 +199,7 @@ class Partenaire
         $this->conditionPartages = new ArrayCollection();
         $this->pistes = new ArrayCollection();
         $this->notes = new ArrayCollection();
+        $this->reversementsRetro = new ArrayCollection();
         $this->clients = new ArrayCollection();
     }
 
@@ -452,5 +465,13 @@ class Partenaire
         $this->rccm = $rccm;
 
         return $this;
+    }
+
+    /**
+     * @return Collection<int, ReversementRetroAgent>
+     */
+    public function getReversementsRetro(): Collection
+    {
+        return $this->reversementsRetro;
     }
 }

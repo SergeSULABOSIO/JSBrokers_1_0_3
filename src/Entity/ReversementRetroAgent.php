@@ -10,33 +10,46 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
 
 /**
- * Reversement d'une rétrocommission à un AGENT INTERNE du cabinet, sur UNE affaire.
+ * Reversement d'une rétrocommission à un INTERMÉDIAIRE, échéance par échéance.
  *
- * L'agent a apporté l'affaire (ou saturé une ligne neuve) ; une ConditionPartage à son
- * nom, rattachée à la piste, lui promet un pourcentage de ce qui reste au cabinet une
- * fois les taxes et les rétrocommissions des partenaires externes retirées. Cette entité
- * trace ce que le cabinet lui a effectivement VERSÉ, avenant par avenant.
+ * ── UN SEUL CIRCUIT POUR LES DEUX FAMILLES ──────────────────────────────────────────
+ * Le bénéficiaire est un AGENT interne OU un PARTENAIRE externe — jamais les deux, jamais
+ * aucun. Chacun tient sa promesse d'une `ConditionPartage` à son nom : l'agent touche un
+ * pourcentage de ce qui RESTE au cabinet une fois les partenaires servis, le partenaire se
+ * sert le premier sur la commission partageable. Les deux assiettes diffèrent ; le
+ * règlement, lui, est le même.
+ *
+ * Le partenaire envoie SA note de débit : il facture le cabinet, le cabinet lui reverse et
+ * garde la pièce. C'est ce qui a permis d'unifier — auparavant sa rétro se facturait par
+ * note de crédit et son « payé » se déduisait du prorata des règlements, sans qu'aucun
+ * enregistrement de versement n'existe pour lui.
  *
  * ── CE QUE CE N'EST PAS ─────────────────────────────────────────────────────────────
- * Ce n'est PAS une note de débit ni de crédit, et ce circuit ne passe donc ni par Note,
- * ni par Article, ni par Paiement — contrairement à la rétrocommission d'un partenaire
- * externe, qui se facture. La rémunération d'un salarié ne se facture pas : elle se
- * verse. Le « payé » et le « solde » d'une rétro agent se lisent donc ici, en clair,
- * sans le prorata de note qu'exige l'autre circuit.
+ * Ce n'est ni une note de débit ni une note de crédit : ce circuit ne passe ni par Note,
+ * ni par Article, ni par Paiement. Le « payé » et le « solde » d'une rétro se lisent donc
+ * ici, en clair, sans prorata de note.
+ *
+ * ── LA MAILLE : L'ÉCHÉANCE ──────────────────────────────────────────────────────────
+ * `tranche` dit QUAND, `avenant` dit SUR QUOI. La prime ET la commission se paient par
+ * tranche : c'est à ce rythme que l'intermédiaire est rémunéré, et c'est pourquoi le fait
+ * s'y rattache. Les deux liens coexistent, à charge pour l'applicatif de tenir l'invariant
+ * `tranche.cotation === avenant.cotation`.
  *
  * ── LE LOT ──────────────────────────────────────────────────────────────────────────
- * Un virement unique couvrant dix affaires produit DIX lignes partageant le même
+ * Un virement unique couvrant dix échéances produit DIX lignes partageant le même
  * `lotReference`. Aucune entité d'en-tête n'a été créée pour cela : elle ne porterait
- * rien que la clé ne porte déjà. En échange, le solde reste exact affaire par affaire —
+ * rien que la clé ne porte déjà. En échange, le solde reste exact échéance par échéance —
  * ce dont le rapport de production a besoin — sans aucun algorithme d'imputation, et la
  * comptabilité regroupe les lignes d'un même lot en UNE écriture, pour que le journal se
  * rapproche du relevé bancaire ligne à ligne.
  *
  * ── COMPTABILITÉ ────────────────────────────────────────────────────────────────────
- * Chaque reversement génère, à la volée, l'écriture SYSCOHADA D 6611 « Appointements,
- * salaires et commissions » / C 521 Banques (ou 571 Caisse) — cf.
- * CourtierEcritureComptableService. Rien n'est persisté : la comptabilité de ce projet
- * est dérivée de ses données transactionnelles.
+ * L'écriture SYSCOHADA suit le BÉNÉFICIAIRE, pas le type d'enregistrement :
+ *  — agent interne (un salarié)        → D 6611 Appointements, salaires et commissions ;
+ *  — partenaire externe (intermédiaire) → D 632 Rétrocommissions ;
+ * au crédit, la trésorerie (521 Banques, ou 571 Caisse à défaut de compte). Rien n'est
+ * persisté : la comptabilité de ce projet est dérivée de ses données transactionnelles —
+ * cf. CourtierEcritureComptableService.
  */
 #[ORM\Entity(repositoryClass: ReversementRetroAgentRepository::class)]
 #[ORM\HasLifecycleCallbacks]
@@ -52,9 +65,25 @@ class ReversementRetroAgent
 
     /** Le bénéficiaire — un invité de l'entreprise, porteur d'une condition de partage. */
     #[ORM\ManyToOne(inversedBy: 'reversementsRetroAgent')]
-    #[ORM\JoinColumn(nullable: false)]
     #[Groups(['list:read'])]
     private ?Invite $agent = null;
+
+    /**
+     * LE BÉNÉFICIAIRE PARTENAIRE, en XOR avec l'agent : l'un OU l'autre, jamais les deux,
+     * jamais aucun.
+     *
+     * Le partenaire externe envoie SA note de débit : il facture le cabinet, le cabinet lui
+     * reverse et garde la pièce. Son circuit de règlement est donc celui de l'agent, et
+     * c'est ce qui permet de tenir les deux familles sur un seul enregistrement, une seule
+     * liste, un seul écran.
+     *
+     * Même patron que `ConditionPartage`, qui porte déjà ce XOR : l'invariant est refusé en
+     * 422 côté applicatif, un champ de formulaire non mappé pilotant la visibilité des deux
+     * sélecteurs.
+     */
+    #[ORM\ManyToOne(inversedBy: 'reversementsRetro')]
+    #[Groups(['list:read'])]
+    private ?Partenaire $partenaire = null;
 
     /**
      * L'AFFAIRE réglée. Elle dit SUR QUOI porte le versement.
@@ -163,6 +192,69 @@ class ReversementRetroAgent
         $this->avenant = $avenant;
 
         return $this;
+    }
+
+    public function getPartenaire(): ?Partenaire
+    {
+        return $this->partenaire;
+    }
+
+    public function setPartenaire(?Partenaire $partenaire): static
+    {
+        $this->partenaire = $partenaire;
+
+        return $this;
+    }
+
+    /**
+     * LE NOM DU BÉNÉFICIAIRE, quelle que soit sa famille.
+     *
+     * Source unique pour tout ce qui l'affiche — liste, fiche, écriture comptable,
+     * réponse de l'assistant. Sans elle, chaque surface refait le XOR et l'une d'elles
+     * finira par n'en traiter qu'une moitié.
+     */
+    public function beneficiaireNom(): string
+    {
+        return (string) ($this->agent?->getNom() ?? $this->partenaire?->getNom() ?? 'N/A');
+    }
+
+    public function getBeneficiaire(): Partenaire|Invite|null
+    {
+        return $this->agent ?? $this->partenaire;
+    }
+
+    /**
+     * UN REVERSEMENT VA À UN BÉNÉFICIAIRE, ET À UN SEUL.
+     *
+     * Sans agent ni partenaire, il ne verse à personne. Avec les deux, on ne saurait
+     * pas quelle dette il éteint — ni quelle écriture comptable il produit, 6611 et
+     * 632 ne se confondant pas. Trancher en silence ferait perdre de l'argent à
+     * quelqu'un ; le refus est donc explicite (422), même règle et même forme que
+     * ConditionPartage::estValide().
+     */
+    public function estValide(): bool
+    {
+        return ($this->agent !== null) !== ($this->partenaire !== null);
+    }
+
+    /**
+     * L'ÉCHÉANCE ET L'AFFAIRE RELÈVENT-ELLES DE LA MÊME COTATION ?
+     *
+     * `Tranche` et `Avenant` sont tous deux enfants de `Cotation` : rien dans le schéma
+     * n'empêche de les prendre dans deux affaires différentes. Le versement porterait
+     * alors sur une affaire et s'imputerait à l'échéance d'une autre — le solde des
+     * deux serait faux, et aucune erreur ne le dirait.
+     *
+     * Vraie quand l'un des deux manque : la maille est alors simplement moins précise,
+     * ce qui est le cas des lignes antérieures au passage à l'échéance.
+     */
+    public function mailleCoherente(): bool
+    {
+        $cotationTranche = $this->tranche?->getCotation()?->getId();
+        $cotationAvenant = $this->avenant?->getCotation()?->getId();
+
+        return $cotationTranche === null || $cotationAvenant === null
+            || $cotationTranche === $cotationAvenant;
     }
 
     public function getTranche(): ?Tranche
