@@ -137,6 +137,9 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
             // Rétrocommission des AGENTS INTERNES, au prorata de la tranche — même
             // traitement que la rétro partenaire, dont elle partage la maille.
             'retroAgentDue' => round($this->getTrancheRetroAgent($entity), 2),
+            // La part RÉCLAMABLE de cette échéance : le dû, une fois SA commission
+            // encaissée. Même rythme que la rétro partenaire ci-dessus.
+            'retroAgentExigible' => round($this->calculationHelper->getTrancheRetroAgentExigible($entity), 2),
             // Termes NON arrondis : l'arrondi est celui du résultat, une seule fois. Passer
             // ici la rétro déjà arrondie déplacerait la réserve d'un centime sur certaines
             // affaires — une régression invisible et impossible à expliquer au courtier.

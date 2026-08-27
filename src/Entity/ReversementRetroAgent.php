@@ -80,7 +80,7 @@ class ReversementRetroAgent
      * Nullable le temps de la transition : les lignes antérieures à la ventilation n'ont
      * pas de tranche, et la lecture sait encore les compter par leur avenant.
      */
-    #[ORM\ManyToOne]
+    #[ORM\ManyToOne(inversedBy: 'reversementsRetroAgent')]
     #[Groups(['list:read'])]
     private ?Tranche $tranche = null;
 
