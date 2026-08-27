@@ -284,14 +284,23 @@ class RapportProductionPartenaireTest extends KernelTestCase
         );
     }
 
-    public function testRienNEstVerseNiExigibleSansNoteDeCredit(): void
+    /**
+     * RIEN N'EST VERSÉ NI EXIGIBLE SANS REVERSEMENT NI ENCAISSEMENT.
+     *
+     * Ce test s'appelait « sans note de crédit », et il passait pour cette raison : le payé
+     * d'un partenaire se déduisait alors du prorata des règlements d'une note. Le partenaire
+     * facture désormais le cabinet par SA note de débit, et le cabinet enregistre un
+     * REVERSEMENT — la source a changé, la propriété tenue ici non. Le nom, lui, aurait
+     * continué de décrire un circuit disparu.
+     */
+    public function testRienNEstVerseNiExigibleSansReversement(): void
     {
         $ids = $this->semer();
         $rapport = $this->rapport($ids['partenaireId'], $ids['entrepriseId']);
 
-        // Le dû naît à la souscription ; le versé se lit sur les notes, et l'exigible
-        // attend l'encaissement. Sans facture ni règlement, les deux valent zéro — le
-        // « dû », lui, reste visible.
+        // Le dû naît à la souscription ; le versé se lit sur les reversements, et
+        // l'exigible attend l'encaissement. Sans versement ni encaissement, les deux valent
+        // zéro — le « dû », lui, reste visible.
         self::assertGreaterThan(0.0, (float) $rapport['totaux']['due']);
         self::assertSame(0.0, (float) $rapport['totaux']['payee']);
         self::assertSame(0.0, (float) $rapport['totaux']['exigible']);
