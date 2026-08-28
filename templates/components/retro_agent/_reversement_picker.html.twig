@@ -38,7 +38,7 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('depense') }}" style="width:22px;height:22px;color:#0047AB;" />
                 </span>
                 <h5 id="jsb-rra-picker-title" class="modal-title mb-0">
-                    Reverser une rétrocommission à&nbsp;«&nbsp;{{ agent.nom }}&nbsp;»
+                    Reverser une rétrocommission à&nbsp;«&nbsp;{{ beneficiaireNom }}&nbsp;»
                 </h5>
             </div>
             <button type="button" class="btn-close" data-picker-close aria-label="Fermer la fenêtre"></button>
@@ -53,7 +53,7 @@
                 <twig:UX:Icon name="{{ resolve_icon_name('invite') }}" style="width:26px;height:26px;" />
             </span>
             <div class="jsb-picker-intro-text">
-                <p class="jsb-picker-intro-title">{{ agent.nom }}</p>
+                <p class="jsb-picker-intro-title">{{ beneficiaireNom }}</p>
                 <p id="jsb-rra-picker-desc" class="jsb-picker-intro-desc">
                     Cochez les affaires réglées par ce versement. Seules celles dont la
                     commission a été <strong>encaissée par le cabinet</strong> apparaissent —
@@ -95,7 +95,9 @@
                             <tbody>
                                 {% for l in lignes %}
                                     <tr data-reversement-retro-picker-target="ligne"
-                                        data-avenant-id="{{ l.avenant.id }}">
+                                        {# L'ÉCHÉANCE dit QUAND, l'affaire dit SUR QUOI. #}
+                                        data-tranche-id="{{ l.trancheId }}"
+                                        data-avenant-id="{{ l.avenantId }}">
                                         <td>
                                             <input class="form-check-input" type="checkbox"
                                                    data-reversement-retro-picker-target="coche"
@@ -105,6 +107,7 @@
                                         <td>
                                             <strong>{{ l.client }}</strong>
                                             <div class="text-muted small">{{ l.reference }} · {{ l.risque }}</div>
+                                            <div class="text-muted small">{{ l.trancheNom }}{% if l.echeanceAt %} · échéance {{ l.echeanceAt|date('d/m/Y') }}{% endif %}</div>
                                         </td>
                                         <td class="text-end" style="font-variant-numeric: tabular-nums;">
                                             {{ l.retroAgentExigible|number_format(2, ',', ' ') }} {{ monnaie }}

@@ -217,6 +217,10 @@ export default class extends PickerBase {
             if (!Number.isFinite(montant) || montant <= 0) return;
 
             lignes.push({
+                // L'ÉCHÉANCE est la maille du règlement ; l'affaire l'accompagne pour dire
+                // sur quoi il porte. Le serveur vérifie que les deux relèvent de la même
+                // proposition avant d'écrire.
+                trancheId: parseInt(ligne.dataset.trancheId, 10),
                 avenantId: parseInt(ligne.dataset.avenantId, 10),
                 montant: Math.round(montant * 100) / 100,
             });

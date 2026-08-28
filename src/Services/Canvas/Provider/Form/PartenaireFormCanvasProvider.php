@@ -48,6 +48,31 @@ class PartenaireFormCanvasProvider implements FormCanvasProviderInterface
                 "conditionPartages" => "condition",
                 "documents"         => "document",
             ],
+            // LE RAPPORT DE PRODUCTION D'UN PARTENAIRE, et son règlement.
+            //
+            // Il n'en avait aucun : ses chiffres n'existaient qu'en agrégat sur cette fiche,
+            // et seul l'assistant savait les détailler — alors que le socle sait rendre les
+            // deux familles depuis son extraction. L'agent porte les mêmes deux actions,
+            // pointées sur ses propres routes ; ici ce sont celles du partenaire.
+            //
+            // Sans condition d'exigibilité, contrairement à l'agent : la propriété
+            // `hasRetroAgentExigible` est déclarée sur Invite et n'a pas d'équivalent ici.
+            // Ouvrir un rapport vide n'est pas dommageable — verser sans exigible l'est, et
+            // c'est le picker qui le refuse en ne proposant aucune échéance.
+            "attribute_actions" => [
+                [
+                    "label" => "Voir le rapport de production",
+                    "icon"  => "action:view",
+                    "event" => "ui:retroagent.rapport-request",
+                    "url"   => "/admin/retro-agent/partenaire/%id%/rapport",
+                ],
+                [
+                    "label" => "Signaler un reversement de rétrocommission",
+                    "icon"  => "depense",
+                    "event" => "ui:retroagent.reversement-request",
+                    "url"   => "/admin/retro-agent/partenaire/%id%/reversement-picker",
+                ],
+            ],
         ];
         $layout = $this->buildPartenaireLayout($object, $isParentNew);
 

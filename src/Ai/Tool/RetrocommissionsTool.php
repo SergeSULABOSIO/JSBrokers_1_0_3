@@ -9,14 +9,10 @@ use App\Entity\Invite;
 use App\Entity\Partenaire;
 use App\Repository\InviteRepository;
 use App\Repository\PartenaireRepository;
-use App\Repository\ReversementRetroAgentRepository;
-use App\Service\Retro\AgentRetro;
 use App\Service\Retro\BeneficiaireRetro;
-use App\Service\Retro\PartenaireRetro;
+use App\Service\Retro\BeneficiaireRetroFactory;
 use App\Service\Retro\RapportProductionBuilder;
 use App\Service\Workspace\WorkspaceAccessResolver;
-use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
-use App\Services\Canvas\Indicator\TrancheIndicatorStrategy;
 use App\Services\Search\CotationSouscriptionScope;
 use DateTimeImmutable;
 
@@ -72,10 +68,8 @@ final class RetrocommissionsTool implements AiToolInterface
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly InviteRepository $inviteRepository,
         private readonly PartenaireRepository $partenaireRepository,
-        private readonly ReversementRetroAgentRepository $reversements,
+        private readonly BeneficiaireRetroFactory $beneficiaires,
         private readonly RapportProductionBuilder $rapportBuilder,
-        private readonly IndicatorCalculationHelper $helper,
-        private readonly TrancheIndicatorStrategy $strategieTranche,
     ) {
     }
 
@@ -608,14 +602,14 @@ final class RetrocommissionsTool implements AiToolInterface
         return $beneficiaires;
     }
 
-    private function agentRetro(Invite $agent): AgentRetro
+    private function agentRetro(Invite $agent): BeneficiaireRetro
     {
-        return new AgentRetro($agent, $this->helper, $this->reversements);
+        return $this->beneficiaires->pour($agent);
     }
 
-    private function partenaireRetro(Partenaire $partenaire): PartenaireRetro
+    private function partenaireRetro(Partenaire $partenaire): BeneficiaireRetro
     {
-        return new PartenaireRetro($partenaire, $this->helper, $this->strategieTranche);
+        return $this->beneficiaires->pour($partenaire);
     }
 
     // ===================== Périmètre =====================
@@ -718,12 +712,14 @@ final class RetrocommissionsTool implements AiToolInterface
      * La règle des DEUX circuits, à joindre au tableau qui les mélange. Trois confusions
      * y sont désamorcées d'avance, chacune coûteuse.
      */
-    private const NOTE_DES_DEUX_CIRCUITS = 'DEUX CIRCUITS DISTINCTS. Le PARTENAIRE externe se '
-        . 'sert le premier, sur la commission pure des revenus partageables ; il se facture par '
-        . 'NOTE DE CRÉDIT (SYSCOHADA 632), et son payé se déduit au prorata des règlements, à la '
-        . 'maille de la tranche. L\'AGENT interne partage ensuite le RELIQUAT — la commission pure '
-        . 'moins ce qui est parti chez les partenaires ; il est payé par virement direct, sans '
-        . 'aucune note (SYSCOHADA 6611), à la maille de l\'avenant. '
+    private const NOTE_DES_DEUX_CIRCUITS = 'DEUX ASSIETTES, UN SEUL CIRCUIT DE PAIEMENT. Le '
+        . 'PARTENAIRE externe se sert le premier, sur la commission pure des revenus '
+        . 'partageables ; l\'AGENT interne partage ensuite le RELIQUAT — la commission pure moins '
+        . 'ce qui est parti chez les partenaires. Les DEUX sont réglés de la même façon : un '
+        . 'reversement en clair, justificatif obligatoire, enregistré à la maille de la TRANCHE '
+        . '(la prime et la commission se paient par échéance). Seul le compte change — '
+        . 'SYSCOHADA 632 pour un partenaire (rétrocommissions), 6611 pour un agent (charges de '
+        . 'personnel, l\'agent étant un salarié). '
         . 'Dans les deux cas, le bénéficiaire APPORTE l\'affaire : il n\'en est pas le '
         . 'gestionnaire. « due » naît à la souscription ; « exigible » n\'est réclamable qu\'une '
         . 'fois le cabinet lui-même encaissé — ne propose jamais de verser un montant non exigible.';
