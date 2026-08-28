@@ -2,8 +2,9 @@
 
 namespace App\Service\Workspace;
 
+use App\Entity\ConditionPartage;
 use App\Entity\Piste;
-use App\Service\Partage\EffortCommercialAgent;
+use App\Service\Partage\RattachementDuPartage;
 use App\Ai\Fichier\ConversationFichierResolver;
 use App\Ai\Mutation\ConversationFichierRef;
 use App\Ai\Mutation\MutationAllowlist;
@@ -78,7 +79,7 @@ class WorkspaceMutationService
         // La règle du rattachement d'agent, consultée ICI comme par l'écran : c'est ce
         // qui empêche l'assistant de contourner par le chemin générique ce que son outil
         // nommé refuse (même intention que LiensProteges).
-        private readonly EffortCommercialAgent $effortCommercialAgent,
+        private readonly RattachementDuPartage $rattachement,
     ) {
     }
 
@@ -545,12 +546,18 @@ class WorkspaceMutationService
     /**
      * Le motif s'opposant à une écriture sur `Piste.conditionsPartageAgent`, ou null.
      *
-     * Deux règles, une seule autorité (EffortCommercialAgent) :
-     *  — POSER une condition sur une affaire qui en a déjà une est refusé : une affaire n'a
-     *    qu'un agent bénéficiaire, et le décompte n'aurait plus qu'à choisir « la première
-     *    applicable », ce que personne ne voit à l'écran ;
+     * Deux règles, une seule autorité (RattachementDuPartage) :
+     *  — POSER une condition sur une affaire qui en a déjà une DE LA MÊME FAMILLE est
+     *    refusé : une affaire n'a qu'un bénéficiaire par camp, et le décompte n'aurait plus
+     *    qu'à choisir « la première applicable », ce que personne ne voit à l'écran ;
      *  — RETIRER celle en place après un versement est refusé : on ne réécrit pas l'histoire
      *    d'un décaissement comptabilisé.
+     *
+     * ── LE CHAMP PORTE LES DEUX FAMILLES ────────────────────────────────────────────
+     * La collection accueille désormais les conditions d'agent ET de partenaire (son nom
+     * dit « agent » pour des raisons historiques). Ne gouverner qu'une famille ferait de
+     * `preparer_operations` le contournement de toutes les règles pour l'autre — et c'est
+     * exactement ce que cette garde existe pour empêcher.
      *
      * On ne regarde que les opérations qui TOUCHENT ce champ : tout le reste passe, y compris
      * les éditions d'une piste qui portent d'autres champs.
@@ -569,21 +576,63 @@ class WorkspaceMutationService
             return null;
         }
 
-        $enPlace = $this->effortCommercialAgent->condition($piste);
+        $enPlace = $this->rattachement->conditions($piste);
 
-        // On VIDE le champ : c'est un détachement.
+        // On VIDE le champ : c'est un détachement, et il porte sur TOUT ce qui est
+        // rattaché. Le premier refus arrête le plan — inutile de les énumérer, ils disent
+        // tous la même chose.
         if ($demande === []) {
-            return $enPlace === null ? null : $this->effortCommercialAgent->refusDeDetachement($piste);
-        }
+            foreach ($enPlace as $condition) {
+                $refus = $this->rattachement->refusDeDetachement($piste, $condition);
+                if ($refus !== null) {
+                    return $refus;
+                }
+            }
 
-        // On POSE : autorisé si l'affaire est libre, ou si l'on repose exactement la même
-        // condition (une réécriture à l'identique ne change rien et ne doit pas bloquer un
-        // plan qui touche la piste pour d'autres raisons).
-        if ($enPlace === null || in_array((int) $enPlace->getId(), array_map('intval', $demande), true)) {
             return null;
         }
 
-        return $this->effortCommercialAgent->refusDeRattachement($piste);
+        // On POSE. Chaque condition demandée est jugée dans SA famille : reposer à
+        // l'identique ne change rien et ne doit pas bloquer un plan qui touche la piste pour
+        // d'autres raisons.
+        $conditionsDemandees = $this->conditionsParIdentifiant($demande);
+        foreach ($conditionsDemandees as $condition) {
+            $famille = $this->rattachement->familleDe($condition);
+            $occupante = $enPlace[$famille] ?? null;
+            if ($occupante !== null && (int) $occupante->getId() === (int) $condition->getId()) {
+                continue;
+            }
+
+            $refus = $this->rattachement->refusDeRattachement($piste, $condition);
+            if ($refus !== null) {
+                return $refus;
+            }
+        }
+
+        // UN IDENTIFIANT QUI NE DÉSIGNE RIEN n'est pas jugé ici : c'est au moteur de
+        // formulaire de refuser une relation inexistante. Inventer un motif à sa place
+        // ferait dire à cette garde une chose dont elle ne sait rien.
+        return null;
+    }
+
+    /**
+     * Les conditions de partage désignées par ces identifiants, celles qui existent.
+     *
+     * @param array<int, mixed> $identifiants
+     *
+     * @return array<int, ConditionPartage>
+     */
+    private function conditionsParIdentifiant(array $identifiants): array
+    {
+        $trouvees = [];
+        foreach ($identifiants as $identifiant) {
+            $condition = $this->em->getRepository(ConditionPartage::class)->find((int) $identifiant);
+            if ($condition !== null) {
+                $trouvees[] = $condition;
+            }
+        }
+
+        return $trouvees;
     }
     private function estAutorise(MutationOperation $op, AiScope $scope): bool
     {

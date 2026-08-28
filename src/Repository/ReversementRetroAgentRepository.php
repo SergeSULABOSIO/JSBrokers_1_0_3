@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Entity\Avenant;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Entity\Partenaire;
 use App\Entity\Piste;
 use App\Entity\ReversementRetroAgent;
 use App\Entity\Tranche;
@@ -216,38 +217,66 @@ class ReversementRetroAgentRepository extends ServiceEntityRepository
         );
     }
     /**
-     * A-T-ON DÉJÀ VERSÉ QUELQUE CHOSE À CET AGENT SUR CETTE AFFAIRE ?
+     * A-T-ON DÉJÀ VERSÉ QUELQUE CHOSE À CE BÉNÉFICIAIRE SUR CETTE AFFAIRE ?
      *
      * C'est la question qui SCELLE un rattachement : dès qu'un virement est parti, la
-     * condition de partage ne peut plus être détachée — donc l'agent bénéficiaire ne peut
-     * plus changer. On ne réécrit pas l'histoire d'un décaissement comptabilisé.
+     * condition de partage ne peut plus être détachée — donc le bénéficiaire ne peut plus
+     * changer. On ne réécrit pas l'histoire d'un décaissement comptabilisé.
      *
      * UNE requête, et un total plutôt qu'un booléen : le refus doit pouvoir DIRE combien a
      * déjà été reçu. « Alice a déjà reçu 154,19 USD » se comprend ; « opération impossible »
      * laisse chercher.
      *
-     * On remonte par la cotation : un reversement porte l'avenant, l'avenant sa cotation,
-     * la cotation sa piste. Charger les avenants pour les passer en IN(...) coûterait une
-     * requête de plus et plafonnerait sur les grosses affaires.
+     * ── LES DEUX CHEMINS COMPTENT, ET C'EST UN CORRECTIF ────────────────────────────
+     * Cette requête ne remontait QUE par l'avenant, en jointure INTERNE. Depuis que le
+     * versement se rattache à une TRANCHE et que l'avenant est devenu facultatif, un
+     * reversement porté par la seule échéance était INVISIBLE ici — et le rattachement
+     * qu'il aurait dû sceller se laissait détacher. Un décaissement parti, et la raison
+     * qui le justifie effacée derrière lui : le refus ne se déclenchait simplement pas.
+     *
+     * On remonte donc par les DEUX liens, en jointures externes : la tranche dit QUAND,
+     * l'avenant dit SUR QUOI, et l'un ou l'autre suffit à rattacher le versement à
+     * l'affaire. Charger les avenants pour les passer en IN(...) coûterait une requête de
+     * plus et plafonnerait sur les grosses affaires.
+     *
+     * ── UNE SEULE MÉTHODE POUR LES DEUX FAMILLES ───────────────────────────────────
+     * Un agent et un partenaire se règlent par le même enregistrement depuis que le
+     * partenaire envoie sa note de débit. La règle de scellement est donc la même, et la
+     * dédoubler aurait fait diverger les deux camps au premier ajustement.
      */
-    public function totalVersePourAgentSurPiste(Invite $agent, Piste $piste): float
+    public function totalVersePourBeneficiaireSurPiste(Invite|Partenaire $beneficiaire, Piste $piste): float
     {
-        if ($agent->getId() === null || $piste->getId() === null) {
+        if ($beneficiaire->getId() === null || $piste->getId() === null) {
             return 0.0;
         }
 
+        $colonne = $beneficiaire instanceof Invite ? 'agent' : 'partenaire';
+
         $total = $this->createQueryBuilder('r')
             ->select('SUM(r.montant)')
-            ->join('r.avenant', 'av')
-            ->join('av.cotation', 'c')
-            ->where('r.agent = :agent')
-            ->andWhere('c.piste = :piste')
-            ->setParameter('agent', $agent)
+            ->leftJoin('r.avenant', 'av')
+            ->leftJoin('av.cotation', 'c_av')
+            ->leftJoin('r.tranche', 'tr')
+            ->leftJoin('tr.cotation', 'c_tr')
+            ->where("r.{$colonne} = :beneficiaire")
+            ->andWhere('c_av.piste = :piste OR c_tr.piste = :piste')
+            ->setParameter('beneficiaire', $beneficiaire)
             ->setParameter('piste', $piste)
             ->getQuery()
             ->getSingleScalarResult();
 
         return round((float) $total, 2);
+    }
+
+    /**
+     * L'ancien nom, conservé pour les appelants qui ne connaissent qu'un agent.
+     *
+     * @deprecated Préférer totalVersePourBeneficiaireSurPiste() : la règle vaut pour les
+     *             deux familles depuis que le partenaire se règle par reversement.
+     */
+    public function totalVersePourAgentSurPiste(Invite $agent, Piste $piste): float
+    {
+        return $this->totalVersePourBeneficiaireSurPiste($agent, $piste);
     }
     /**
      * Total déjà reversé à un agent dans l'entreprise, tous avenants confondus.

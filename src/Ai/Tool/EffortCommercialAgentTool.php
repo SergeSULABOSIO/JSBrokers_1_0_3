@@ -8,7 +8,7 @@ use App\Ai\Scope\AiScope;
 use App\Ai\Trousse\AiToolEcriture;
 use App\Entity\ConditionPartage;
 use App\Entity\Piste;
-use App\Service\Partage\EffortCommercialAgent;
+use App\Service\Partage\RattachementDuPartage;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -29,7 +29,7 @@ use Doctrine\ORM\EntityManagerInterface;
  * exécution transactionnelle, journal. Même pattern que SignalerReversementRetroAgentTool.
  *
  * ── LES MÊMES REFUS QUE L'ÉCRAN, ET AVANT LE PLAN ───────────────────────────────────
- * `EffortCommercialAgent` rend les motifs ; on les consulte AVANT de préparer quoi que ce
+ * `RattachementDuPartage` rend les motifs ; on les consulte AVANT de préparer quoi que ce
  * soit. Préparer puis refuser à l'exécution ferait valider à l'utilisateur une écriture qui
  * n'aurait jamais lieu.
  *
@@ -45,7 +45,7 @@ final class EffortCommercialAgentTool implements AiToolProduisantUnPlan, AiToolC
     public function __construct(
         private readonly PreparerOperationsTool $preparer,
         private readonly ResolveurDeReferences $resolveur,
-        private readonly EffortCommercialAgent $effortCommercial,
+        private readonly RattachementDuPartage $rattachement,
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly EntityManagerInterface $em,
     ) {
@@ -58,26 +58,37 @@ final class EffortCommercialAgentTool implements AiToolProduisantUnPlan, AiToolC
 
     public function description(): string
     {
-        return "Déclare qu'une ou PLUSIEURS affaires viennent de l'EFFORT COMMERCIAL d'un agent "
-            . "interne — ou défait cette déclaration. C'est ce rattachement qui rend une "
-            . "rétrocommission due à l'agent : sans lui, l'affaire est réputée gagnée par le cabinet "
-            . "seul et l'agent ne touche rien. "
+        return "Rattache une CONDITION DE PARTAGE à une ou PLUSIEURS affaires — ou défait ce "
+            . "rattachement. C'est lui qui rend une rétrocommission due : sans lui, l'affaire est "
+            . "réputée gagnée par le cabinet seul et personne ne touche rien. "
+            . "LES DEUX FAMILLES passent par ici : une condition d'AGENT interne (« ces affaires "
+            . "viennent de l'effort d'Alice ») comme une condition de PARTENAIRE externe (« ces "
+            . "affaires relèvent de l'accord SUNU 20 % »). Tu ne choisis JAMAIS une famille : tu "
+            . "donnes une condition, et elle porte déjà la sienne. "
             . "Donne `action` (rattacher / detacher), les `cibles` (l'affaire elle-même OU n'importe "
             . "quel objet de son arbre : une police, une proposition, une tranche — le serveur remonte "
-            . "à l'affaire) et, pour rattacher, la `condition` de partage par son NOM. "
+            . "à l'affaire) et la `condition` de partage par son NOM. "
             . "PLUSIEURS cibles à la fois sont permises, et c'est TOUT OU RIEN : si une seule affaire "
-            . "revient déjà à un agent, rien n'est écrit. "
-            . "Une affaire n'a qu'UN agent bénéficiaire : pour en changer, il faut détacher d'abord. "
-            . "Et dès qu'une rétrocommission a été VERSÉE, plus rien ne peut être détaché ni changé. "
+            . "refuse, rien n'est écrit. "
+            . "Une affaire n'a qu'UN bénéficiaire PAR FAMILLE : un apporteur externe ET un agent "
+            . "interne peuvent donc y coexister — c'est la mécanique normale, le partenaire se sert "
+            . "d'abord et l'agent partage le reliquat. Ce qui est refusé, c'est un SECOND bénéficiaire "
+            . "du même camp ; pour en changer, il faut détacher d'abord. "
+            . "Et dès qu'une rétrocommission a été VERSÉE, plus rien ne peut être détaché ni changé, "
+            . "quelle que soit la famille. "
+            . "POUR UN PARTENAIRE, une règle de plus : si l'affaire ne désigne aucun apporteur, le "
+            . "rattachement le DÉSIGNE du même geste — annonce-le, cela change à qui revient l'argent ; "
+            . "si elle en désigne déjà un AUTRE, le geste est refusé en nommant les deux. "
             . "Prépare un PLAN à valider ; n'écrit rien. Pour consulter ce qui est dû ou déjà versé, "
             . "utiliser retrocommissions.";
     }
 
     public function aiguillage(): string
     {
-        return 'RATTACHER une condition de partage d\'agent à une ou plusieurs affaires, depuis n\'importe '
-            . 'quel objet de leur arbre (« cette police vient d\'Alice », « ces trois affaires sont de Bruno »), '
-            . 'ou DÉTACHER celle en place. Ne verse rien et ne calcule aucun montant.';
+        return 'RATTACHER une condition de partage — d\'agent interne OU de partenaire externe — à une '
+            . 'ou plusieurs affaires, depuis n\'importe quel objet de leur arbre (« cette police vient '
+            . 'd\'Alice », « ces trois affaires sont de Bruno », « ces affaires relèvent de l\'accord '
+            . 'SUNU »), ou DÉTACHER celle en place. Ne verse rien et ne calcule aucun montant.';
     }
 
     public function schema(): array
@@ -93,8 +104,9 @@ final class EffortCommercialAgentTool implements AiToolProduisantUnPlan, AiToolC
                 'condition' => [
                     'type' => 'string',
                     'description' => 'La condition de partage, par son NOM (ou son identifiant). '
-                        . 'Obligatoire pour rattacher, inutile pour détacher. Elle doit désigner un '
-                        . 'AGENT interne : une condition de partenaire externe n\'a pas sa place ici.',
+                        . 'Obligatoire pour rattacher, inutile pour détacher. Elle peut désigner un '
+                        . 'AGENT interne comme un PARTENAIRE externe : c\'est ELLE qui porte la '
+                        . 'famille, et le serveur en déduit la place qu\'elle occupe.',
                 ],
                 'cibles' => [
                     'type' => 'array',
@@ -205,7 +217,7 @@ final class EffortCommercialAgentTool implements AiToolProduisantUnPlan, AiToolC
         }
 
         // LES MÊMES REFUS QUE L'ÉCRAN, ET AVANT LE PLAN.
-        $motif = $this->effortCommercial->refusDuLot($pistes);
+        $motif = $this->rattachement->refusDuLot($pistes, $condition);
         if ($motif !== null) {
             return AiToolResult::ok([
                 'pret'     => false,
@@ -215,19 +227,37 @@ final class EffortCommercialAgentTool implements AiToolProduisantUnPlan, AiToolC
             ]);
         }
 
+        $estAgent = $condition->estPourAgent();
+        $beneficiaire = $estAgent ? $condition->getAgent() : $condition->getPartenaire();
+        $nom = $beneficiaire?->getNom() ?: ($estAgent ? 'l\'agent' : 'l\'intermédiaire');
+
         $operations = [];
+        $designations = [];
         foreach ($pistes as $piste) {
-            // On REMPLACE la liste des conditions d'agent de la piste par la nouvelle : le
-            // gating garantit qu'elle était vide, il n'y a donc rien à conserver. Écrire la
-            // liste complète est ce que le FormType attend d'un ManyToMany.
+            // On CONSERVE ce qui est déjà rattaché et l'on ajoute : une affaire peut
+            // porter un apporteur ET un agent. Écraser la liste — ce que faisait ce code
+            // quand une seule famille existait — aurait détaché l'autre en silence, sans
+            // passer par le refus qui protège un versement déjà parti.
+            $champs = ['conditionsPartageAgent' => $this->rattachementsApres($piste, $condition)];
+
+            // LA DÉSIGNATION D'INTERMÉDIAIRE VOYAGE DANS LE MÊME PLAN. Une condition de
+            // partenaire rattachée à une affaire sans apporteur n'aurait AUCUN effet : le
+            // calcul ne retient que les conditions de l'intermédiaire désigné. Le geste la
+            // pose donc — et l'annonce, parce qu'elle change qui touche l'argent.
+            if (!$estAgent && $piste->getPartenaire() === null && $condition->getPartenaire() !== null) {
+                $champs['partenaire'] = $condition->getPartenaire()->getId();
+                $designations[] = $piste->getNom() ?: ('#' . $piste->getId());
+            }
+
             $operations[] = [
                 'op'     => 'edit',
                 'entite' => 'Piste',
                 'id'     => $piste->getId(),
-                'champs' => ['conditionsPartageAgent' => [$condition->getId()]],
+                'champs' => $champs,
                 'etape'  => sprintf(
-                    'Effort commercial de %s — affaire « %s »',
-                    $condition->getAgent()?->getNom() ?: 'l\'agent',
+                    '%s de %s — affaire « %s »',
+                    $estAgent ? 'Effort commercial' : 'Apport',
+                    $nom,
                     $piste->getNom() ?: ('#' . $piste->getId()),
                 ),
             ];
@@ -235,11 +265,45 @@ final class EffortCommercialAgentTool implements AiToolProduisantUnPlan, AiToolC
 
         return $this->preparerEtAnnoncer($operations, $args, $scope, sprintf(
             'Annonce AU FUTUR que %d affaire(s) reviendront à %s, et que sa rétrocommission deviendra '
-            . 'due dès l\'encaissement de la commission. Rien n\'est écrit tant que l\'utilisateur n\'a '
-            . 'pas cliqué sur « Valider et exécuter ».',
+            . 'due dès l\'encaissement de la commission.%s Rien n\'est écrit tant que l\'utilisateur '
+            . 'n\'a pas cliqué sur « Valider et exécuter ».',
             count($pistes),
-            $condition->getAgent()?->getNom() ?: 'l\'agent',
+            $nom,
+            // L'ÉCRITURE IMPLICITE SE DIT. Poser l'apporteur d'une affaire change qui
+            // touche l'argent : la laisser découvrir serait le contraire d'un plan.
+            $designations === [] ? '' : sprintf(
+                ' DIS AUSSI que %s deviendra l\'intermédiaire de %s, qui n\'en avait aucun.',
+                $nom,
+                count($designations) > 1
+                    ? count($designations) . ' de ces affaires'
+                    : '« ' . $designations[0] . ' »',
+            ),
         ));
+    }
+
+    /**
+     * LA LISTE COMPLÈTE DU MANYTOMANY APRÈS RATTACHEMENT — l'existant, plus la nouvelle.
+     *
+     * Le FormType attend la liste entière : écrire la seule condition ajoutée revenait à
+     * DÉTACHER toutes les autres. Tant qu'une affaire ne pouvait porter qu'un agent, cela
+     * ne se voyait pas — le gating garantissait la place vide. Depuis qu'un apporteur et
+     * un agent y coexistent, écraser aurait effacé l'autre famille en silence, et sans
+     * passer par le refus qui protège un versement déjà parti.
+     *
+     * On ne pose que la collection PARTAGÉE : une condition propre à l'affaire
+     * (`ConditionPartage::piste`) n'y figure pas et ne doit pas y être recopiée.
+     *
+     * @return array<int, int> identifiants, la nouvelle comprise
+     */
+    private function rattachementsApres(Piste $piste, ConditionPartage $ajoutee): array
+    {
+        $identifiants = [];
+        foreach ($piste->getConditionsPartageAgent() as $existante) {
+            $identifiants[] = (int) $existante->getId();
+        }
+        $identifiants[] = (int) $ajoutee->getId();
+
+        return array_values(array_unique($identifiants));
     }
 
     /**
@@ -249,13 +313,18 @@ final class EffortCommercialAgentTool implements AiToolProduisantUnPlan, AiToolC
     {
         $operations = [];
         foreach ($pistes as $piste) {
-            $motif = $this->effortCommercial->refusDeDetachement($piste);
-            if ($motif !== null) {
-                return AiToolResult::ok([
-                    'pret'     => false,
-                    'bloquant' => $motif,
-                    'note'     => 'Dis-le en UNE phrase. Ne présente AUCUN plan et n\'annonce AUCUN bouton.',
-                ]);
+            // TOUT CE QUI EST RATTACHÉ EST JUGÉ. Une affaire peut porter un apporteur ET un
+            // agent : ne contrôler qu'une famille laisserait le détachement effacer l'autre
+            // sans passer par le refus qui protège un versement déjà parti.
+            foreach ($this->rattachement->conditions($piste) as $rattachee) {
+                $motif = $this->rattachement->refusDeDetachement($piste, $rattachee);
+                if ($motif !== null) {
+                    return AiToolResult::ok([
+                        'pret'     => false,
+                        'bloquant' => $motif,
+                        'note'     => 'Dis-le en UNE phrase. Ne présente AUCUN plan et n\'annonce AUCUN bouton.',
+                    ]);
+                }
             }
 
             // Liste VIDE : le ManyToMany se défait comme il se pose, par la liste complète.
@@ -291,7 +360,19 @@ final class EffortCommercialAgentTool implements AiToolProduisantUnPlan, AiToolC
             return $resultat;
         }
 
-        return AiToolResult::ok($resultat->data + ['note' => $note], $resultat->uiAction);
+        // ⚠ L'UNION `+` NE REMPLACE PAS UNE CLÉ EXISTANTE, et le plan en porte déjà une :
+        // `note` y explique comment présenter le tableau, les impacts et le budget. La
+        // consigne écrite ici — « annonce AU FUTUR que ces affaires reviendront à X » —
+        // était donc SILENCIEUSEMENT jetée, et ne parvenait jamais au modèle. Même famille
+        // de défaut que l'union qui écrasait `defauts` : rien ne lève, la phrase disparaît.
+        //
+        // Les deux consignes sont NÉCESSAIRES et ne se contredisent pas : l'une dit la
+        // forme, l'autre le fond. On les enchaîne, celle du plan d'abord.
+        $consigne = trim((string) ($resultat->data['note'] ?? ''));
+        $donnees = $resultat->data;
+        $donnees['note'] = $consigne === '' ? $note : $consigne . ' ' . $note;
+
+        return AiToolResult::ok($donnees, $resultat->uiAction);
     }
 
     /**
@@ -322,7 +403,7 @@ final class EffortCommercialAgentTool implements AiToolProduisantUnPlan, AiToolC
             }
 
             $objet = $this->em->find('App\\Entity\\' . $entite, $reference->id);
-            $piste = $this->effortCommercial->piste($objet);
+            $piste = $this->rattachement->piste($objet);
             if ($piste !== null && $piste->getId() !== null
                 && $piste->getEntreprise()?->getId() === $scope->entreprise?->getId()) {
                 $pistes[$piste->getId()] = $piste;
@@ -358,20 +439,12 @@ final class EffortCommercialAgentTool implements AiToolProduisantUnPlan, AiToolC
 
             return null;
         }
-        if (!$condition->estPourAgent()) {
-            $refus = AiToolResult::ok([
-                'pret'     => false,
-                'bloquant' => sprintf(
-                    'La condition « %s » rétrocède à un partenaire EXTERNE, pas à un agent interne. '
-                    . 'Un effort commercial d\'agent se déclare avec une condition qui désigne un agent.',
-                    $condition->getNom(),
-                ),
-                'note' => 'Dis-le en UNE phrase. Ne présente AUCUN plan.',
-            ]);
-
-            return null;
-        }
-
+        // AUCUNE GARDE DE FAMILLE ICI, et c'est le point du lot. Une condition de
+        // PARTENAIRE était refusée — « un effort commercial d'agent se déclare avec une
+        // condition qui désigne un agent » —, ce qui interdisait à Ket un geste que
+        // l'écran ne proposait pas davantage. Les deux savent désormais le faire, et la
+        // famille se LIT sur la condition : l'utilisateur choisit une condition, jamais
+        // une famille. Les refus, eux, restent ceux de l'autorité partagée.
         return $condition;
     }
 

@@ -11,7 +11,11 @@
     suite ne doit pas confirmer vingt fois ; mais il doit savoir, avant le premier clic, ce
     qu'il engage.
 
-    Contexte attendu : entite, ids, pistes, refus, conditions, submitUrl, standalone.
+    Contexte attendu : entite, ids, pistes, mode, occupations, conditions, submitUrl, standalone.
+    `mode` vaut « rattacher » ou « detacher » : le MÊME picker sert les deux gestes.
+    Le détachement était un appel direct — cela ne suffit plus depuis qu'une affaire peut
+    porter DEUX conditions (un apporteur externe, un agent interne) : il faut dire
+    laquelle on retire.
 #}
 <div class="jsb-picker-overlay"
      {% if standalone|default(false) %}data-controller="partage-conditions-picker"{% endif %}
@@ -31,7 +35,7 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('partenaire') }}" style="width:22px;height:22px;color:#0047AB;" />
                 </span>
                 <h5 id="jsb-partage-picker-title" class="modal-title mb-0">
-                    Rattacher une condition de partage
+                    {{ mode == 'detacher' ? 'Détacher une condition de partage' : 'Rattacher une condition de partage' }}
                 </h5>
             </div>
             <button type="button" class="btn-close" data-picker-close aria-label="Fermer la fenêtre de sélection"></button>
@@ -51,31 +55,53 @@
                     {{ pistes|length }} affaire{{ pistes|length > 1 ? 's' : '' }} concernée{{ pistes|length > 1 ? 's' : '' }}
                 </p>
                 <p id="jsb-partage-picker-desc" class="jsb-picker-intro-desc">
-                    Vous déclarez que {{ pistes|length > 1 ? 'ces affaires viennent' : 'cette affaire vient' }} de
-                    l'<strong>effort commercial d'un agent interne</strong>. Sa rétrocommission deviendra
-                    <strong>due</strong> dès que le cabinet aura encaissé la commission de courtage — et une fois
-                    qu'elle lui aura été <strong>versée</strong>, le rattachement ne pourra plus être défait ni
-                    confié à un autre agent.
+                    {% if mode == 'detacher' %}
+                        Vous retirez une condition de partage {{ pistes|length > 1 ? 'de ces affaires' : 'de cette affaire' }}.
+                        La condition n'est pas supprimée — elle sert peut-être ailleurs — et
+                        l'apporteur éventuel de l'affaire reste désigné&nbsp;: seule la règle de
+                        rémunération est défaite.
+                    {% else %}
+                        Vous déclarez à qui revient une part {{ pistes|length > 1 ? 'de ces affaires' : 'de cette affaire' }} —
+                        un <strong>apporteur externe</strong> ou un <strong>agent interne</strong>, selon la
+                        condition choisie. Une affaire n'a qu'un bénéficiaire <strong>par camp</strong>&nbsp;:
+                        les deux peuvent donc y coexister.
+                        Une fois la rétrocommission <strong>versée</strong>, le rattachement ne pourra plus
+                        être défait.
+                    {% endif %}
                     {% if pistes|length > 1 %}
                         Le rattachement s'écrit sur l'affaire&nbsp;: deux lignes d'une même affaire ne comptent
                         que pour une.
                     {% endif %}
                 </p>
 
-                {# LES AFFAIRES VISÉES, NOMMÉES. Agir en lot sans savoir sur quoi serait un
-                   saut dans le vide — d'autant que la sélection portait sur des avenants ou
-                   des tranches, pas sur les affaires elles-mêmes. #}
-                {% if pistes is not empty %}
-                    <p class="jsb-picker-intro-desc mb-0">
-                        <span class="text-muted">Affaires&nbsp;:</span>
-                        {% for p in pistes %}<strong>{{ p.nom ?: '#' ~ p.id }}</strong>{{ not loop.last ? ' · ' : '' }}{% endfor %}
-                    </p>
+                {# LES AFFAIRES VISÉES, NOMMÉES — ET CE QU'ELLES PORTENT DÉJÀ.
+                   Agir en lot sans savoir sur quoi serait un saut dans le vide — d'autant
+                   que la sélection portait sur des avenants ou des tranches, pas sur les
+                   affaires elles-mêmes.
+                   L'occupation est montrée parce que le refus, lui, ne peut plus être
+                   calculé d'avance : il dépend de la FAMILLE de la condition choisie, et
+                   une affaire déjà prise par un agent reste libre pour un apporteur. #}
+                {% if occupations is not empty %}
+                    <ul class="jsb-picker-intro-desc mb-0 list-unstyled">
+                        {% for o in occupations %}
+                            <li>
+                                <strong>{{ o.affaire }}</strong>
+                                {% if o.partage %}
+                                    <span class="text-muted">— {{ o.partage }}</span>
+                                {% elseif o.apporteur %}
+                                    <span class="text-muted">— apportée par {{ o.apporteur }}, sans condition rattachée</span>
+                                {% else %}
+                                    <span class="text-muted">— au cabinet seul</span>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
                 {% endif %}
 
                 <div class="jsb-picker-stats" role="status" aria-live="polite">
                     <span class="jsb-picker-stat">
                         <span class="jsb-picker-stat-num">{{ conditions|length }}</span>
-                        condition(s) d'agent
+                        condition(s) {{ mode == 'detacher' ? 'rattachée(s)' : 'disponible(s)' }}
                     </span>
                     <span class="jsb-picker-stat-sep" aria-hidden="true">·</span>
                     <span class="jsb-picker-stat">
@@ -90,42 +116,45 @@
             <span class="jsb-picker-search-icon" aria-hidden="true">
                 <twig:UX:Icon name="hugeicons:search-01" style="width:16px;height:16px;" />
             </span>
-            <label for="jsb-partage-picker-search-input" class="visually-hidden">Rechercher une condition par nom ou agent</label>
+            <label for="jsb-partage-picker-search-input" class="visually-hidden">Rechercher une condition par nom ou par bénéficiaire</label>
             <input type="text"
                    id="jsb-partage-picker-search-input"
                    class="form-control"
-                   placeholder="Rechercher par condition ou par agent…"
+                   placeholder="Rechercher par condition ou par bénéficiaire…"
                    autocomplete="off"
                    data-picker-search>
         </div>
 
         {# Zone d'erreur API (rendue visible par le JS) — Nielsen 9 : message en langage
            naturel, au-dessus de la liste pour être perçu sans défilement. #}
-        <p class="jsb-picker-empty text-danger" data-picker-error role="alert" {{ refus is null ? 'hidden' : '' }}>
-            {{ refus }}
-        </p>
+        {# LA ZONE D'ERREUR, remplie par le JS au retour du serveur.
+
+           Elle portait aussi le refus calculé À L'AVANCE. Ce n'est plus possible : le
+           refus dépend de la condition CHOISIE — sa famille décide de la place qu'elle
+           prétend occuper, et une affaire déjà prise par un agent reste libre pour un
+           apporteur. On montre donc ce que chaque affaire porte DÉJÀ (ci-dessus), ce qui
+           laisse voir le conflit avant le clic sans prétendre le deviner. #}
+        <p class="jsb-picker-empty text-danger" data-picker-error role="alert" hidden></p>
 
         <div class="jsb-picker-listwrap">
-            {% if refus is not null %}
-                {# LE REFUS EST MONTRÉ AVANT LE CLIC. Laisser choisir une condition pour
-                   refuser ensuite ferait perdre un geste et n'apprendrait rien de plus. #}
+            {% if conditions is empty %}
                 <p class="jsb-picker-empty" role="status">
-                    Retirez de votre sélection {{ pistes|length > 1 ? 'les affaires déjà rattachées' : "l'affaire déjà rattachée" }},
-                    ou détachez d'abord la condition en place.
-                </p>
-            {% elseif conditions is empty %}
-                <p class="jsb-picker-empty" role="status">
-                    Aucune condition de partage ne désigne encore un agent interne.
-                    Créez-en une depuis la rubrique «&nbsp;Conditions de partage&nbsp;» (module Production),
-                    puis relancez le rattachement.
+                    {% if mode == 'detacher' %}
+                        Aucune condition n'est rattachée à {{ pistes|length > 1 ? 'ces affaires' : 'cette affaire' }}&nbsp;:
+                        il n'y a rien à détacher.
+                    {% else %}
+                        Aucune condition de partage n'existe encore.
+                        Créez-en une depuis la rubrique «&nbsp;Conditions de partage&nbsp;» (module Production),
+                        puis relancez le rattachement.
+                    {% endif %}
                 </p>
             {% else %}
                 <table class="jsb-picker-table">
-                    <caption class="visually-hidden">Conditions de partage au profit d'un agent interne</caption>
+                    <caption class="visually-hidden">Conditions de partage — apporteurs externes et agents internes</caption>
                     <thead>
                         <tr>
                             <th scope="col">Condition</th>
-                            <th scope="col">Agent bénéficiaire</th>
+                            <th scope="col">Bénéficiaire</th>
                             <th scope="col" class="text-end">Taux</th>
                             <th scope="col">Affaires couvertes</th>
                             <th scope="col" class="text-end">Action</th>
@@ -135,14 +164,28 @@
                         {% for c in conditions %}
                             <tr data-picker-row
                                 data-condition-id="{{ c.id }}"
-                                data-search="{{ (c.nom ~ ' ' ~ (c.agent ? c.agent.nom : ''))|lower|e('html_attr') }}">
+                                data-search="{{ (c.nom ~ ' ' ~ (c.agent ? c.agent.nom : (c.partenaire ? c.partenaire.nom : '')))|lower|e('html_attr') }}">
                                 <td>
                                     <span class="jsb-picker-client-nom">{{ c.nom }}</span>
                                     {% if c.seuil %}
                                         <span class="jsb-picker-client-mail">Seuil&nbsp;: {{ c.seuil|number_format(2, ',', ' ') }}</span>
                                     {% endif %}
                                 </td>
-                                <td>{{ c.agent ? c.agent.nom : '—' }}</td>
+                                {# LA FAMILLE SE LIT SUR LA CONDITION, et l'écran la dit : rattacher
+                                   un apporteur n'a pas les mêmes conséquences que rattacher un
+                                   agent — le premier désigne aussi l'intermédiaire de l'affaire. #}
+                                <td>
+                                    {% if c.agent %}
+                                        {{ c.agent.nom }}
+                                        <span class="jsb-picker-client-mail">Agent interne</span>
+                                    {% elseif c.partenaire %}
+                                        {{ c.partenaire.nom }}
+                                        <span class="jsb-picker-client-mail">Apporteur externe</span>
+                                    {% else %}
+                                        —
+                                        <span class="jsb-picker-client-mail">Bénéficiaire supprimé</span>
+                                    {% endif %}
+                                </td>
                                 {# Les taux sont en POINTS dans tout le logiciel : 15 se lit 15 %. #}
                                 <td class="text-end">{{ c.taux is not null ? c.taux|number_format(2, ',', ' ') ~ ' %' : '—' }}</td>
                                 <td>{{ c.pistesAffectees|length }} affaire(s)</td>
@@ -151,9 +194,9 @@
                                             class="btn btn-sm btn-primary jsb-picker-btn"
                                             data-picker-affect
                                             data-condition-id="{{ c.id }}"
-                                            aria-label="Rattacher la condition {{ c.nom }} aux {{ pistes|length }} affaire(s) sélectionnée(s)">
-                                        <twig:UX:Icon name="{{ resolve_icon_name('action:add') }}" style="width:15px;height:15px;" aria-hidden="true" />
-                                        Rattacher ici
+                                            aria-label="{{ mode == 'detacher' ? 'Détacher' : 'Rattacher' }} la condition {{ c.nom }} sur les {{ pistes|length }} affaire(s) sélectionnée(s)">
+                                        <twig:UX:Icon name="{{ resolve_icon_name(mode == 'detacher' ? 'action:detach' : 'action:add') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                                        {{ mode == 'detacher' ? 'Détacher ici' : 'Rattacher ici' }}
                                     </button>
                                 </td>
                             </tr>
@@ -165,7 +208,8 @@
 
         <footer class="jsb-picker-foot">
             <span class="jsb-picker-hint text-muted small">
-                Le rattachement s'écrit sur l'affaire, jamais sur la ligne d'où vous partez.
+                {{ mode == 'detacher' ? 'Le détachement' : 'Le rattachement' }} s'écrit sur l'affaire,
+                jamais sur la ligne d'où vous partez.
             </span>
             <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
                 <twig:UX:Icon name="{{ resolve_icon_name('action:cancel') }}" style="width:15px;height:15px;" aria-hidden="true" />

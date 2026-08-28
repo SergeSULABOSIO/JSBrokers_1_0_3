@@ -189,18 +189,32 @@ class Cotation
     #[Groups(['list:read'])]
     public ?float $reserve = null;
 
-    // LE VOYANT « EFFORT COMMERCIAL », ET LE DRAPEAU DES ACTIONS DE PARTAGE.
+    // LE VOYANT DU PARTAGE, ET LES DEUX DRAPEAUX DE SES ACTIONS.
     //
     // Une valeur calculée posée en propriété DYNAMIQUE n'appartient à aucun groupe de
     // sérialisation : elle ne figure pas dans le `data-entity` de la ligne, et une action
     // conditionnée dessus reste INVISIBLE en barre d'outils comme au clic droit — sans la
-    // moindre erreur, la condition valant `undefined`. D'où cette déclaration.
+    // moindre erreur, la condition valant `undefined`. D'où ces déclarations.
     //
-    // UNE SEULE VALEUR POUR DEUX USAGES : elle nomme l'agent sur la ligne secondaire, et
-    // sa présence gouverne « Rattacher » / « Détacher ». Deux champs pour la même
-    // information finiraient par se contredire. `null` = affaire du cabinet seul.
+    // ── POURQUOI TROIS CHAMPS LÀ OÙ UN SUFFISAIT ────────────────────────────────────
+    // Le voyant a longtemps servi aussi de drapeau : sa PRÉSENCE ouvrait « Rattacher »,
+    // son absence « Détacher ». Cela ne tient plus depuis qu'une affaire peut porter DEUX
+    // conditions — un apporteur externe ET un agent interne, qui ne se disputent pas la
+    // même place. « Rattachable » et « détachable » sont désormais deux questions
+    // distinctes, et un libellé non vide ne répond ni à l'une ni à l'autre.
+    //
+    // `partageLibelle` nomme ce qui existe (« Apporteur : SUNU · Effort : Alice »), et
+    // `null` reste le cas NORMAL : l'affaire que le cabinet a gagnée seul.
     #[Groups(['list:read'])]
-    public ?string $effortCommercialAgent = null;
+    public ?string $partageLibelle = null;
+
+    /** Vrai tant qu'une FAMILLE au moins est libre : on ne rattache pas deux agents. */
+    #[Groups(['list:read'])]
+    public bool $partageRattachable = false;
+
+    /** Vrai dès qu'une condition est rattachée, quelle que soit sa famille. */
+    #[Groups(['list:read'])]
+    public bool $partageDetachable = false;
 
     public function __construct()
     {

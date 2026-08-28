@@ -52,11 +52,16 @@ indépendants. Un agent peut apporter dix affaires et n'en gérer aucune. Ne jam
 déduire l'un de l'autre — la colonne `gestionnaire` du décompte est là pour
 rappeler la différence.
 
-## Déclarer qu'une affaire vient de l'effort d'un agent
+## Rattacher une condition de partage à des affaires
 
-Une affaire ne rapporte à un agent que si une **condition de partage à son nom** y est
-rattachée. Sans ce rattachement, l'affaire est réputée gagnée par le **cabinet seul** — c'est
+Une affaire ne rapporte à quelqu'un que si une **condition de partage à son nom** y est
+rattachée. Sans rattachement, l'affaire est réputée gagnée par le **cabinet seul** — c'est
 le cas par défaut, et c'est ce qui explique la plupart des « pourquoi Alice ne touche rien ? ».
+
+**Les DEUX familles se rattachent du même geste.** Tu ne choisis jamais une famille : tu
+choisis une CONDITION, et elle porte déjà la sienne. « Ces trois affaires relèvent de
+l'accord SUNU 20 % » et « ces trois affaires viennent de l'effort d'Alice » sont le même
+appel, avec une condition différente.
 
 Le rattachement s'écrit **sur l'AFFAIRE (la piste)**, toujours. Mais il peut s'ORDONNER
 depuis n'importe quel objet de son arbre : une police, une proposition, une tranche. C'est
@@ -64,20 +69,44 @@ depuis n'importe quel objet de son arbre : une police, une proposition, une tran
 
 Quatre règles, et elles valent pour l'écran comme pour toi :
 
-- **Une affaire, un agent bénéficiaire.** Rattacher à une affaire déjà prise est refusé.
-- **Pour changer d'agent : détacher d'abord**, puis rattacher. Il n'y a pas de remplacement.
+- **Une affaire, un bénéficiaire PAR FAMILLE.** Un apporteur externe ET un agent interne
+  peuvent donc coexister sur la même affaire — c'est même la mécanique normale : le
+  partenaire se sert d'abord, l'agent partage le reliquat. Ce qui est refusé, c'est un
+  SECOND bénéficiaire du même camp.
+- **Pour changer : détacher d'abord**, puis rattacher. Il n'y a pas de remplacement.
 - **Un versement scelle l'affaire.** Dès qu'une rétrocommission a été VERSÉE, plus rien ne
   se détache — donc plus rien ne se change. On ne réécrit pas un décaissement comptabilisé.
-- **En lot, c'est tout ou rien.** Plusieurs affaires d'un geste, mais si une seule est déjà
-  prise, rien n'est écrit — et le refus la nomme.
+  Vaut pour les deux familles, depuis que le partenaire se règle par reversement.
+- **En lot, c'est tout ou rien.** Plusieurs affaires d'un geste, mais si une seule refuse,
+  rien n'est écrit — et le refus la nomme.
+
+**Une règle DE PLUS pour un partenaire, et elle n'a pas d'équivalent côté agent.** L'agent
+est nommé PAR sa condition ; l'apporteur, lui, est désigné par l'AFFAIRE, et la condition ne
+fait que moduler son taux. Donc :
+
+- l'affaire n'a **aucun** apporteur → le rattachement le **DÉSIGNE** du même geste. C'est
+  une écriture de plus dans le plan (`partenaire`), et il faut la **DIRE** : elle change à
+  qui revient l'argent, on ne la laisse pas découvrir ;
+- l'affaire est déjà apportée par **quelqu'un d'autre** → **REFUS**, en nommant les deux.
+  Rattacher la condition d'un autre écrirait une règle que le calcul écarterait en silence.
+
+Détacher ne retire jamais l'apporteur : seule la règle de rémunération est défaite, et sa
+part habituelle reprend ses droits.
 
 N'écris JAMAIS ce rattachement par `preparer_operations` : tu devrais deviner le champ et
-l'affaire, et les règles ci-dessus te refuseraient de toute façon.
+l'affaire, et les règles ci-dessus te refuseraient de toute façon — pour les deux familles.
 ## D'où vient le taux
 
-Pour un partenaire, la cascade est : **condition propre à l'affaire** ▸
-**condition du partenaire** ▸ **sa part habituelle**. Sous son seuil, une
-condition ne partage **rien** — et il n'y a pas de repli sur le taux par défaut.
+Pour un partenaire, la cascade est : **condition propre à l'affaire** ▸ **condition
+RATTACHÉE à l'affaire** ▸ **condition du partenaire** ▸ **sa part habituelle**. Ce qui est
+porté par l'affaire l'emporte sur ce qui est porté par le partenaire ; entre les deux
+étages de l'affaire, la condition propre passe d'abord — elle a été écrite POUR celle-là,
+quand la rattachée sert aussi ailleurs. Sous son seuil, une condition ne partage **rien** —
+et il n'y a pas de repli sur le taux par défaut.
+
+Une condition rattachée ne paie que si elle nomme l'apporteur **du jour** : si
+l'intermédiaire de l'affaire change ensuite, elle cesse de s'appliquer plutôt que de payer
+le nouveau au taux de l'ancien.
 Pour un agent, c'est la **première condition applicable** parmi les siennes.
 
 Le décompte détaillé rend `condition`, `taux`, `origineDuTaux`, `assiette`,
@@ -140,6 +169,9 @@ demande le droit d'écriture sur la rubrique — la même règle qu'à l'écran.
   (`beneficiaire`, `detail: par_ligne`).
 - « Sa rétro par assureur / par mois » → `detail: par_axe`, `axe` au choix.
 - « Et en 2026 seulement ? » → `du` / `au` (bornes sur la date d'effet).
+- « Ces trois affaires viennent de l'accord SUNU » → `effort_commercial_agent`
+  (`action: rattacher`, la condition par son NOM, les `cibles`). Même appel pour un
+  agent : c'est la condition qui porte la famille.
 - « Verse-lui ce qu'on lui doit » → `signaler_reversement_retro_agent`, avec `agentId`
   OU `partenaireId`. Sans `lignes`, tout l'exigible est réglé ; avec, une entrée par
   `trancheId` (l'échéance), ou un `avenantId` pour régler toutes celles d'une police.

@@ -318,7 +318,7 @@ class KetMutationTest extends TestCase
             // Piste.conditionsPartageAgent, qu'aucun de ces tests ne produit. La classe est
             // `final` (donc non doublable) : on en construit une VRAIE sur des dépendances
             // doublées — elle ne sera de toute façon jamais interrogée ici.
-            new \App\Service\Partage\EffortCommercialAgent(
+            new \App\Service\Partage\RattachementDuPartage(
                 $this->createMock(\App\Repository\ReversementRetroAgentRepository::class),
                 $this->createMock(\App\Services\ServiceMonnaies::class),
             ),

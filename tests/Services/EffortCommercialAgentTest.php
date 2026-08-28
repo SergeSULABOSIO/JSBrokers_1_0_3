@@ -3,6 +3,7 @@
 namespace App\Tests\Services;
 
 use App\Entity\Avenant;
+use App\Service\Retro\BeneficiaireRetro;
 use App\Entity\Client;
 use App\Entity\ConditionPartage;
 use App\Entity\Cotation;
@@ -13,7 +14,7 @@ use App\Entity\ReversementRetroAgent;
 use App\Entity\Risque;
 use App\Entity\Tranche;
 use App\Entity\Utilisateur;
-use App\Service\Partage\EffortCommercialAgent;
+use App\Service\Partage\RattachementDuPartage;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -58,9 +59,32 @@ class EffortCommercialAgentTest extends KernelTestCase
         return static::getContainer()->get(EntityManagerInterface::class);
     }
 
-    private function service(): EffortCommercialAgent
+    /** La famille dont ce test parle : il ne connaît que des agents. */
+    private const AGENT = BeneficiaireRetro::TYPE_AGENT;
+
+    /**
+     * Une condition d'agent qui n'est rattachée à RIEN — celle qu'on cherche à poser.
+     *
+     * Les refus se jugent désormais sur la condition VISÉE, et non plus sur la seule
+     * affaire : c'est elle qui porte la famille, et donc la place qu'elle prétend occuper.
+     */
+    private function conditionLibre(array $s): ConditionPartage
     {
-        return static::getContainer()->get(EffortCommercialAgent::class);
+        $condition = (new ConditionPartage())->setNom('Candidate')
+            ->setFormule(ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL)->setSeuil(0.0)
+            ->setTaux(10.0)
+            ->setCritereRisque(ConditionPartage::CRITERE_PAS_RISQUES_CIBLES)
+            ->setAgent($s['agent']);
+        $condition->setEntreprise($s['entreprise']);
+        $this->em()->persist($condition);
+        $this->em()->flush();
+
+        return $condition;
+    }
+
+    private function service(): RattachementDuPartage
+    {
+        return static::getContainer()->get(RattachementDuPartage::class);
     }
 
     private function cleanUp(): void
@@ -223,11 +247,14 @@ class EffortCommercialAgentTest extends KernelTestCase
             $this->conditionPour($s['agent'], $s['entreprise'], $s['piste'], $canal);
 
             $service = $this->service();
-            self::assertNotNull($service->condition($s['piste']), "Canal {$canal} : la condition doit être vue.");
-            self::assertSame('Alice', $service->agent($s['piste'])?->getNom());
-            self::assertSame('Effort commercial : Alice', $service->libelle($s['piste']));
+            self::assertNotNull($service->condition($s['piste'], self::AGENT), "Canal {$canal} : la condition doit être vue.");
+            self::assertSame('Alice', $service->beneficiaire($s['piste'], self::AGENT)?->getNom());
+            // Le voyant nomme désormais la FAMILLE : une affaire peut porter un apporteur
+            // externe ET un agent interne, et « Effort commercial : Alice » ne disait pas
+            // lequel des deux camps était servi.
+            self::assertSame('Effort : Alice', $service->libelle($s['piste']));
             self::assertNotNull(
-                $service->refusDeRattachement($s['piste']),
+                $service->refusDeRattachement($s['piste'], $this->conditionLibre($s)),
                 "Canal {$canal} : un second rattachement doit être refusé.",
             );
 
@@ -240,10 +267,10 @@ class EffortCommercialAgentTest extends KernelTestCase
     {
         $s = $this->semer();
 
-        self::assertNull($this->service()->condition($s['piste']));
-        self::assertNull($this->service()->agent($s['piste']));
+        self::assertNull($this->service()->condition($s['piste'], self::AGENT));
+        self::assertNull($this->service()->beneficiaire($s['piste'], self::AGENT));
         self::assertNull($this->service()->libelle($s['piste']), 'Le cas normal ne doit pas faire de bruit.');
-        self::assertNull($this->service()->refusDeRattachement($s['piste']), 'Rien n\'empêche de rattacher.');
+        self::assertNull($this->service()->refusDeRattachement($s['piste'], $this->conditionLibre($s)), 'Rien n\'empêche de rattacher.');
     }
 
     // ===================== 3. Une affaire, un agent =====================
@@ -254,7 +281,7 @@ class EffortCommercialAgentTest extends KernelTestCase
         $s = $this->semer();
         $this->conditionPour($s['agent'], $s['entreprise'], $s['piste'], 'partagee');
 
-        $motif = $this->service()->refusDeRattachement($s['piste']);
+        $motif = $this->service()->refusDeRattachement($s['piste'], $this->conditionLibre($s));
 
         self::assertNotNull($motif);
         self::assertStringContainsString('Affaire Effort', $motif);
@@ -280,11 +307,11 @@ class EffortCommercialAgentTest extends KernelTestCase
         $this->em()->flush();
 
         // Deux libres : rien ne s'oppose.
-        self::assertNull($this->service()->refusDuLot([$s['piste'], $libre]));
+        self::assertNull($this->service()->refusDuLot([$s['piste'], $libre], $this->conditionLibre($s)));
 
         // L'une des deux devient prise : le lot entier tombe, et elle est nommée.
         $this->conditionPour($s['agent'], $s['entreprise'], $s['piste'], 'partagee');
-        $motif = $this->service()->refusDuLot([$s['piste'], $libre]);
+        $motif = $this->service()->refusDuLot([$s['piste'], $libre], $this->conditionLibre($s));
 
         self::assertNotNull($motif);
         self::assertStringContainsString('Affaire Effort', $motif);
@@ -295,7 +322,9 @@ class EffortCommercialAgentTest extends KernelTestCase
     /** Un lot vide n'est pas un lot valide : la sélection n'a rien donné, et on le dit. */
     public function testUnLotVideEstRefuse(): void
     {
-        self::assertNotNull($this->service()->refusDuLot([]));
+        $s = $this->semer();
+
+        self::assertNotNull($this->service()->refusDuLot([], $this->conditionLibre($s)));
     }
 
     // ===================== 4. Un versement scelle l'affaire =====================
@@ -306,7 +335,7 @@ class EffortCommercialAgentTest extends KernelTestCase
         $s = $this->semer();
         $this->conditionPour($s['agent'], $s['entreprise'], $s['piste'], 'partagee');
 
-        self::assertNull($this->service()->refusDeDetachement($s['piste']));
+        self::assertNull($this->service()->refusDeDetachement($s['piste'], $this->service()->condition($s['piste'], self::AGENT)));
     }
 
     /**
@@ -334,7 +363,7 @@ class EffortCommercialAgentTest extends KernelTestCase
             'Le total remonte par la cotation, sans charger les avenants.',
         );
 
-        $motif = $this->service()->refusDeDetachement($s['piste']);
+        $motif = $this->service()->refusDeDetachement($s['piste'], $this->service()->condition($s['piste'], self::AGENT));
         self::assertNotNull($motif);
         self::assertStringContainsString('Alice', $motif);
         self::assertStringContainsString('154,19', $motif);
@@ -346,9 +375,11 @@ class EffortCommercialAgentTest extends KernelTestCase
     {
         $s = $this->semer();
 
-        $motif = $this->service()->refusDeDetachement($s['piste']);
+        $motif = $this->service()->refusDeDetachement($s['piste'], $this->service()->condition($s['piste'], self::AGENT));
         self::assertNotNull($motif);
-        self::assertStringContainsString('aucun agent', $motif);
+        // « ne revient à personne » plutôt que « aucun agent » : le message vaut pour les
+        // deux familles depuis que l'apporteur se rattache lui aussi.
+        self::assertStringContainsString('ne revient à personne', $motif);
     }
 
     // ===================== 5. Le test croisé =====================
@@ -366,7 +397,7 @@ class EffortCommercialAgentTest extends KernelTestCase
             $s = $this->semer();
             $this->conditionPour($s['agent'], $s['entreprise'], $s['piste'], $canal);
 
-            $duService = $this->service()->condition($s['piste'])?->getId();
+            $duService = $this->service()->condition($s['piste'], self::AGENT)?->getId();
 
             /** @var IndicatorCalculationHelper $helper */
             $helper = static::getContainer()->get(IndicatorCalculationHelper::class);
@@ -381,5 +412,73 @@ class EffortCommercialAgentTest extends KernelTestCase
 
             $this->cleanUp();
         }
+    }
+
+    /**
+     * UN VERSEMENT PORTÉ PAR LA SEULE ÉCHÉANCE SCELLE AUSSI L'AFFAIRE.
+     *
+     * Le total remontait UNIQUEMENT par l'avenant, en jointure interne. Depuis que le
+     * versement se rattache à une TRANCHE et que l'avenant est facultatif, un reversement
+     * porté par la seule échéance devenait INVISIBLE à cette lecture : le rattachement
+     * qu'il aurait dû sceller se laissait détacher, et la raison d'un décaissement déjà
+     * comptabilisé s'effaçait derrière lui.
+     *
+     * Aucune erreur n'était levée — le total valait simplement zéro, et le refus ne se
+     * déclenchait pas. C'est la même famille de défaut que la jointure interne sur `agent`
+     * du lot précédent : une jointure trop stricte, et une règle qui cesse de s'appliquer
+     * sans le dire.
+     */
+    public function testUnVersementSansAvenantScelleQuandMemeLAffaire(): void
+    {
+        $s = $this->semer();
+        $this->conditionPour($s['agent'], $s['entreprise'], $s['piste'], 'partagee');
+
+        // Rattaché à l'ÉCHÉANCE seule : c'est le cas normal depuis que la maille du
+        // versement est la tranche, et le seul possible pour une affaire sans avenant.
+        $reversement = (new ReversementRetroAgent())
+            ->setAgent($s['agent'])->setTranche($s['tranche'])->setMontant(42.50)
+            ->setPaidAt(new \DateTimeImmutable('-1 day'))->setReference('VIR-TRANCHE-SEULE');
+        $reversement->setEntreprise($s['entreprise'])->setInvite($s['piste']->getInvite());
+        $this->em()->persist($reversement);
+        $this->em()->flush();
+
+        self::assertEqualsWithDelta(
+            42.50,
+            $this->service()->montantDejaReverse($s['piste'], $s['agent']),
+            0.001,
+            'Le versement remonte par la TRANCHE quand aucun avenant ne le porte.',
+        );
+
+        $motif = $this->service()->refusDeDetachement($s['piste'], $this->service()->condition($s['piste'], self::AGENT));
+        self::assertNotNull($motif, 'Un versement parti scelle le rattachement, quel que soit son ancrage.');
+        self::assertStringContainsString('42,50', $motif);
+    }
+
+    /**
+     * ET LES DEUX ANCRAGES S'ADDITIONNENT SANS DOUBLER.
+     *
+     * Un versement porte souvent les DEUX liens — la tranche dit quand, l'avenant dit sur
+     * quoi. Une lecture qui unirait les deux chemins sans précaution le compterait deux
+     * fois, et le refus annoncerait un montant qui n'est jamais sorti de la caisse.
+     */
+    public function testUnVersementPortantLesDeuxLiensNEstComptequUneFois(): void
+    {
+        $s = $this->semer();
+        $this->conditionPour($s['agent'], $s['entreprise'], $s['piste'], 'partagee');
+
+        $reversement = (new ReversementRetroAgent())
+            ->setAgent($s['agent'])->setTranche($s['tranche'])->setAvenant($s['avenant'])
+            ->setMontant(100.0)
+            ->setPaidAt(new \DateTimeImmutable('-1 day'))->setReference('VIR-DEUX-LIENS');
+        $reversement->setEntreprise($s['entreprise'])->setInvite($s['piste']->getInvite());
+        $this->em()->persist($reversement);
+        $this->em()->flush();
+
+        self::assertEqualsWithDelta(
+            100.0,
+            $this->service()->montantDejaReverse($s['piste'], $s['agent']),
+            0.001,
+            'Une ligne, un montant : les deux ancrages ne la dédoublent pas.',
+        );
     }
 }

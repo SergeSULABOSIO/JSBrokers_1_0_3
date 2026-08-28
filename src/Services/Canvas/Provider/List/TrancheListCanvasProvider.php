@@ -40,7 +40,7 @@ class TrancheListCanvasProvider implements ListCanvasProviderInterface
                     // ⚠ Code PLAT obligatoire : le rendu d'une ligne fait
                     // `attribute(entity, code)`, où un chemin pointé (« agent.nom ») est lu
                     // comme un nom de propriété et fait tomber la rubrique ENTIÈRE.
-                    ["attribut_code" => "effortCommercialAgent", "icone" => "invite"],
+                    ["attribut_code" => "partageLibelle", "icone" => "partenaire"],
                     ["attribut_prefixe" => "Échéance: ", "attribut_code" => "echeanceAt", "attribut_type" => "date"],
                     ["attribut_prefixe" => "Statut : ", "attribut_code" => "statutPaiement"],
                     ["attribut_prefixe" => "Retard : ", "attribut_code" => "retardPaiement"],
