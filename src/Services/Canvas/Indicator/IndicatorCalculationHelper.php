@@ -1679,6 +1679,14 @@ class IndicatorCalculationHelper implements ResetInterface
         $montant = 0.0;
         foreach ($avenant->getReversementsRetroAgent() as $reversement) {
             $agent = $reversement->getAgent();
+            // LE CÔTÉ AGENT NE COMPTE QUE LES VERSEMENTS AUX AGENTS. Les deux familles
+            // vivent sur le même enregistrement en XOR : sans cette garde, un
+            // reversement de PARTENAIRE (dont `agent` est nul) gonflait le versé des
+            // agents dès qu'aucun agent n'était ciblé — c'est-à-dire dans toutes les
+            // vues du cabinet, et sans jamais lever d'erreur.
+            if ($agent === null) {
+                continue;
+            }
             if ($agentCible !== null && $agent?->getId() !== $agentCible->getId()) {
                 continue;
             }
@@ -1714,6 +1722,14 @@ class IndicatorCalculationHelper implements ResetInterface
         $montant = 0.0;
         foreach ($tranche->getReversementsRetroAgent() as $reversement) {
             $agent = $reversement->getAgent();
+            // LE CÔTÉ AGENT NE COMPTE QUE LES VERSEMENTS AUX AGENTS. Les deux familles
+            // vivent sur le même enregistrement en XOR : sans cette garde, un
+            // reversement de PARTENAIRE (dont `agent` est nul) gonflait le versé des
+            // agents dès qu'aucun agent n'était ciblé — c'est-à-dire dans toutes les
+            // vues du cabinet, et sans jamais lever d'erreur.
+            if ($agent === null) {
+                continue;
+            }
             if ($agentCible !== null && $agent?->getId() !== $agentCible->getId()) {
                 continue;
             }

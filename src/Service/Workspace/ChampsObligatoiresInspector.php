@@ -206,6 +206,20 @@ class ChampsObligatoiresInspector
                 ]];
             }
 
+            // UN VERSEMENT PORTE SUR QUELQUE CHOSE. Les deux champs sont facultatifs pris
+            // un à un — une tranche peut n'avoir aucun avenant, et une affaire peut être
+            // réglée globalement —, mais un versement qui ne désigne NI échéance NI police
+            // ne s'imputerait à rien : ni le solde de l'affaire ni celui de l'échéance ne
+            // le verraient, et il n'apparaîtrait que dans le total du bénéficiaire.
+            if ($entity->getTranche() === null && $entity->getAvenant() === null
+                && ($pilotable('tranche') || $pilotable('avenant'))) {
+                $champ = $pilotable('tranche') ? 'tranche' : 'avenant';
+
+                return [$champ => [
+                    'Désignez ce que ce versement règle : une échéance, ou à défaut la police.',
+                ]];
+            }
+
             // L'ÉCHÉANCE ET L'AFFAIRE DOIVENT RELEVER DE LA MÊME COTATION. Rien dans le
             // schéma ne l'impose — les deux sont enfants de Cotation — et le versement
             // porterait alors sur une affaire tout en s'imputant à l'échéance d'une autre :

@@ -15,7 +15,9 @@
  */
 
 /**
- * @param {{valeurAttendue: string|null, estSelecteur: boolean, libelleDefaut: string}} chip
+ * @param {{valeurAttendue: string|null, estSelecteur: boolean, libelleDefaut: string,
+ *         prefixe?: string}} chip - `prefixe` n'est posé que lorsqu'un même critère
+ *        accepte plusieurs FAMILLES de valeurs (bénéficiaire agent / partenaire).
  * @param {{value?: *, label?: string}|string|number|null|undefined} critere - le critère
  *        courant pour la CLÉ de ce chip (tel que stocké par le cerveau).
  * @returns {{actif: boolean, libelle: string|null}} `libelle` null = ne pas y toucher.
@@ -34,6 +36,16 @@ export function etatChipPreset(chip, critere) {
     // identifiant qu'un intitulé qui ment.
     if (valeur === '') {
         return { actif: false, libelle: chip.libelleDefaut };
+    }
+
+    // DEUX SÉLECTEURS PEUVENT PARTAGER UNE CLÉ. Le bénéficiaire d'un reversement est un
+    // agent OU un partenaire : deux colonnes, un seul filtre, donc deux chips côte à côte.
+    // Sans ce test, choisir un agent allumait AUSSI « Choisir un partenaire… » et le
+    // faisait porter le nom de l'agent — un filtre qui ment sur ce qu'il filtre.
+    if (chip.prefixe) {
+        if (!valeur.startsWith(`${chip.prefixe}:`)) {
+            return { actif: false, libelle: chip.libelleDefaut };
+        }
     }
 
     const libelle = (critere && typeof critere === 'object' && critere.label) ? critere.label : valeur;

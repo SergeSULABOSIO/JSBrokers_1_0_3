@@ -120,11 +120,24 @@ class RetroCommissionAgentToolTest extends KernelTestCase
         self::assertEqualsWithDelta(0.0, $ligne['exigible'], 0.01);
 
         // La règle métier voyage avec les chiffres. Ce tableau-ci mélange les deux camps :
-        // sa note doit donc les DISTINGUER — assiettes, circuits et comptes — sans quoi le
-        // modèle prêterait à l'agent la mécanique du partenaire.
-        self::assertStringContainsString('DEUX CIRCUITS', $data['note']);
+        // sa note doit donc dire ce qui les SÉPARE — l'assiette et le compte comptable —
+        // sans quoi le modèle prêterait à l'agent la mécanique du partenaire.
+        //
+        // Elle disait « DEUX CIRCUITS » et c'était juste : le partenaire se facturait par
+        // note de crédit. Depuis qu'il envoie sa note de DÉBIT, les deux se règlent par un
+        // reversement en clair — le circuit est commun, l'assiette non.
+        self::assertStringContainsString('DEUX ASSIETTES', $data['note']);
         self::assertStringContainsString('AGENT interne partage ensuite le RELIQUAT', $data['note']);
         self::assertStringContainsString('n\'en est pas le gestionnaire', $data['note']);
+        // Les deux comptes SYSCOHADA restent nommés : c'est ce qui reste asymétrique.
+        self::assertStringContainsString('632', $data['note']);
+        self::assertStringContainsString('6611', $data['note']);
+        self::assertStringNotContainsString(
+            'NOTE DE CRÉDIT',
+            $data['note'],
+            'Le circuit de la note de crédit a été retiré : le dire encore enverrait le '
+            . 'modèle vers un geste qui n\'existe plus.',
+        );
     }
 
     public function testLeModeParLigneDetailleAffaireParAffaire(): void

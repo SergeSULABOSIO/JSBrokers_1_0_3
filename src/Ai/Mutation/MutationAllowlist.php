@@ -63,9 +63,10 @@ final class MutationAllowlist
         // d'accès (WorkspaceAccessResolver::MAP), son écriture est gouvernée par le
         // droit « Tranche » via GOUVERNANCE_PARENT — donc jamais top-level en lecture.
         'PaiementPrime',
-        // Reversement d'une rétrocommission à un agent INTERNE. SOUS-entité de l'Avenant
-        // (la ligne d'affaire réglée), dont elle suit le droit — jamais top-level en lecture.
-        // Ne passe par AUCUNE note : le versement est direct, comptabilisé en 6611.
+        // Reversement d'une rétrocommission à un INTERMÉDIAIRE — agent interne OU partenaire
+        // externe, en XOR sur le même enregistrement. Ne passe par AUCUNE note : le versement
+        // est direct, et son compte SYSCOHADA suit le bénéficiaire (6611 pour un salarié,
+        // 632 pour un intermédiaire externe) — jamais le type d'enregistrement.
         'ReversementRetroAgent',
         'RevenuPourCourtier', // « Revenus »
         'Chargement',      // « Types Chargements »

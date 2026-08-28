@@ -87,6 +87,21 @@ class TrancheEntityCanvasProvider implements EntityCanvasProviderInterface
             ["group" => "Partage Partenaire", "code" => "retroCommissionReversee", "intitule" => "Rétro-commission Reversée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Rétro-commission déjà payée sur cette tranche."],
             ["group" => "Partage Partenaire", "code" => "retroCommissionSolde", "intitule" => "Rétro-commission Solde", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Solde de rétro-commission à payer."],
 
+            // LE PARTAGE AVEC LES AGENTS INTERNES, à la maille de l'échéance.
+            //
+            // Ces quatre colonnes n'existaient pas sur la tranche : la stratégie calculait
+            // déjà le dû et l'exigible, mais la fiche ne les montrait pas, et le versé
+            // était indérivable — un reversement se rattachait alors à un AVENANT. Depuis
+            // qu'il s'enregistre par tranche (le rythme réel des paiements de prime et de
+            // commission), le solde de CETTE échéance est exact.
+            //
+            // Ajouter un attribut ici ajoute aussi un champ de RECHERCHE AVANCÉE : ce
+            // canevas sert la fiche et le moteur de recherche.
+            ["group" => "Partage Agent", "code" => "retroAgentDue", "intitule" => "Rétro Agent Due", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Rétrocommission due aux agents internes sur cette tranche — assiette : le RELIQUAT, après les partenaires."],
+            ["group" => "Partage Agent", "code" => "retroAgentReversee", "intitule" => "Rétro Agent Reversée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Somme des reversements enregistrés sur cette échéance — un constat, pas un prorata."],
+            ["group" => "Partage Agent", "code" => "retroAgentSolde", "intitule" => "Rétro Agent Solde", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Reste à verser aux agents sur cette échéance."],
+            ["group" => "Partage Agent", "code" => "retroAgentExigible", "intitule" => "Rétro Agent Exigible", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Part RÉCLAMABLE dès maintenant : le solde dont la commission de cette échéance est déjà encaissée par le cabinet."],
+
             ["group" => "Résultat Final", "code" => "reserve", "intitule" => "Réserve Courtier", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Revenu net final pour le courtier sur cette tranche."],
 
             // NOUVEAU : Groupe Suivi des Encaissements

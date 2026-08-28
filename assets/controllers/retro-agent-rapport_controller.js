@@ -25,6 +25,9 @@ export default class extends Controller {
         pickerUrl: String,
         agentId: Number,
         agentNom: String,
+        // La FAMILLE du bénéficiaire : « agent » ou « partenaire ». Elle décide de la
+        // colonne filtrée dans la rubrique — les deux vivent sur le même enregistrement.
+        agentType: String,
         justificatifsUrl: String,
     };
 
@@ -198,14 +201,19 @@ export default class extends Controller {
         event.preventDefault();
         if (!this.hasAgentIdValue) return;
 
+        // LE CRITÈRE EST CELUI DE ReversementScope, préfixé de la famille : il visait la
+        // colonne `agent` en clair, et le même bouton sur le rapport d'un PARTENAIRE
+        // aurait ouvert la rubrique filtrée sur un agent inexistant — donc vide, sans
+        // rien dire de l'erreur.
+        const famille = this.hasAgentTypeValue && this.agentTypeValue ? this.agentTypeValue : 'agent';
         document.dispatchEvent(new CustomEvent('app:workspace.open-rubrique', {
             bubbles: true,
             detail: {
                 entityName: 'ReversementRetroAgent',
                 criteres: {
-                    agent: {
+                    __beneficiaire_reversement__: {
                         operator: '=',
-                        value: this.agentIdValue,
+                        value: `${famille}:${this.agentIdValue}`,
                         label: this.hasAgentNomValue ? this.agentNomValue : `#${this.agentIdValue}`,
                     },
                 },

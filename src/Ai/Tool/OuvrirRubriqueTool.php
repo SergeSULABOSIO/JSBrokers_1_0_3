@@ -4,7 +4,9 @@ namespace App\Ai\Tool;
 
 use App\Services\Search\ReversementScope;
 use App\Repository\InviteRepository;
+use App\Repository\PartenaireRepository;
 use App\Entity\Invite;
+use App\Entity\Partenaire;
 use App\Ai\Action\TypeAction;
 
 use App\Ai\AiText;
@@ -39,6 +41,7 @@ final class OuvrirRubriqueTool implements AiToolInterface
         private readonly EntiteLibelle $libelleur,
         // Un agent bénéficiaire n'est pas une rubrique : il se cherche à part.
         private readonly InviteRepository $inviteRepository,
+        private readonly PartenaireRepository $partenaireRepository,
     ) {
     }
 
@@ -152,13 +155,15 @@ final class OuvrirRubriqueTool implements AiToolInterface
                     ReversementScope::CLE_TYPE,
                     'REVERSEMENT uniquement : la famille du bénéficiaire — AGENT interne (salarié) '
                         . 'ou PARTENAIRE externe (intermédiaire). Les deux vivent dans la même '
-                        . 'rubrique ; ce paramètre est le seul moyen de lire l\x27une sans l\x27autre.',
+                        . 'rubrique ; ce paramètre est le seul moyen de lire l\'une sans l\'autre.',
                 ),
                 'beneficiaire' => [
                     'type' => 'string',
-                    'description' => 'REVERSEMENT uniquement : le NOM de l\'agent bénéficiaire '
-                        . '(« les versements d\'Alice »). Un agent n\'est pas une rubrique et ne '
-                        . 'se met donc pas dans lieA : c\'est ce paramètre qui le résout.',
+                    'description' => 'REVERSEMENT uniquement : le NOM du bénéficiaire — agent '
+                        . 'interne OU partenaire externe (« les versements d\'Alice », « ce que '
+                        . 'j\'ai versé à SUNU Courtage »). L\'agent est cherché en premier, le '
+                        . 'partenaire ensuite. Ni l\'un ni l\'autre n\'est une rubrique : ils ne '
+                        . 'se mettent donc pas dans lieA, c\'est ce paramètre qui les résout.',
                 ],
             ],
             'required' => ['entite'],
@@ -261,17 +266,31 @@ final class OuvrirRubriqueTool implements AiToolInterface
         // agent n'en est pas une (les invités sont gouvernés à part, délibérément).
         $beneficiaire = trim((string) ($args['beneficiaire'] ?? ''));
         if ($shortName === ReversementScope::ENTITE && $beneficiaire !== '') {
-            $agent = $this->agentNomme($beneficiaire, $scope);
-            if ($agent === null) {
+            // LES DEUX FAMILLES, PAR LE NOM. La rubrique porte les reversements aux agents
+            // internes ET aux partenaires externes : ne chercher que parmi les agents
+            // refusait « ouvre ce que j'ai versé à SUNU Courtage » alors que l'écran, lui,
+            // le propose. L'agent est cherché d'abord — c'est la famille la plus fréquente —
+            // et le partenaire ensuite.
+            $cible = $this->agentNomme($beneficiaire, $scope);
+            $famille = ReversementScope::TYPE_AGENT;
+            if ($cible === null) {
+                $cible = $this->partenaireNomme($beneficiaire, $scope);
+                $famille = ReversementScope::TYPE_PARTENAIRE;
+            }
+            if ($cible === null) {
                 // On n'ouvre SURTOUT pas la liste entière en lot de consolation : ce serait
                 // annoncer les versements d'une personne et en montrer ceux de tout le monde.
                 return AiToolResult::introuvable(
-                    'Agent « ' . $beneficiaire . ' »',
-                    'Aucun agent de cet espace ne porte ce nom. La rubrique n\'a PAS été ouverte.',
+                    'Bénéficiaire « ' . $beneficiaire . ' »',
+                    'Ni agent ni partenaire de cet espace ne porte ce nom. La rubrique n\'a PAS été ouverte.',
                 );
             }
-            $criteresRubrique += ReversementScope::critereBeneficiaire((int) $agent->getId(), (string) $agent->getNom());
-            $filtres[] = sprintf('bénéficiaire « %s »', $agent->getNom());
+            $criteresRubrique += ReversementScope::critereBeneficiaire(
+                (int) $cible->getId(),
+                (string) $cible->getNom(),
+                $famille,
+            );
+            $filtres[] = sprintf('bénéficiaire « %s »', $cible->getNom());
         }
 
         if (isset($criteresRubrique[AvenantEcheanceScope::CRITERION_KEY])) {
@@ -328,10 +347,30 @@ final class OuvrirRubriqueTool implements AiToolInterface
             return $this->inviteRepository->findOneBy(['id' => (int) $terme, 'entreprise' => $scope->entreprise]);
         }
 
-        $candidats = $this->inviteRepository->createQueryBuilder('i')
-            ->andWhere('i.entreprise = :e')->setParameter('e', $scope->entreprise)
-            ->andWhere('LOWER(i.nom) LIKE :t')->setParameter('t', '%' . mb_strtolower($terme) . '%')
-            ->orderBy('i.nom', 'ASC')
+        return $this->parNom($this->inviteRepository, $terme, $scope);
+    }
+
+    /**
+     * Le PARTENAIRE nommé — même règle, autre famille. Un identifiant nu n'est PAS accepté
+     * ici : il aurait désigné l'agent portant ce numéro, la recherche par agent passant en
+     * premier. Un partenaire se demande donc par son nom, ce qui est de toute façon la
+     * façon dont l'utilisateur le nomme.
+     */
+    private function partenaireNomme(string $terme, AiScope $scope): ?Partenaire
+    {
+        return ctype_digit($terme) ? null : $this->parNom($this->partenaireRepository, $terme, $scope);
+    }
+
+    /**
+     * La recherche par nom, une seule fois pour les deux familles : exact d'abord, partiel
+     * ensuite — « SUNU » ne doit pas être écrasé par « SUNU IARD RDC ».
+     */
+    private function parNom(\Doctrine\ORM\EntityRepository $repository, string $terme, AiScope $scope): ?object
+    {
+        $candidats = $repository->createQueryBuilder('x')
+            ->andWhere('x.entreprise = :e')->setParameter('e', $scope->entreprise)
+            ->andWhere('LOWER(x.nom) LIKE :t')->setParameter('t', '%' . mb_strtolower($terme) . '%')
+            ->orderBy('x.nom', 'ASC')
             ->getQuery()->getResult();
 
         foreach ($candidats as $candidat) {

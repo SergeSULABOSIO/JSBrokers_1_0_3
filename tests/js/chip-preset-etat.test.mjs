@@ -74,3 +74,51 @@ test('un chip à valeur ne touche jamais à son libellé', () => {
     // se réécriraient à chaque synchronisation.
     assert.equal(etatChipPreset(aValeur('ce_mois'), { value: 'ce_mois', label: 'Ce mois' }).libelle, null);
 });
+
+// ── DEUX SÉLECTEURS SOUS UNE MÊME CLÉ ───────────────────────────────────────────────
+//
+// Le bénéficiaire d'un reversement est un agent OU un partenaire : deux colonnes, un seul
+// filtre, donc deux chips côte à côte sur la même clé de critère. Sans le préfixe, choisir
+// un agent allumait AUSSI « Choisir un partenaire… » — et le faisait porter le nom de
+// l'agent, un filtre qui mentait sur ce qu'il filtrait.
+
+const selAgent = {
+    valeurAttendue: '', estSelecteur: true, prefixe: 'agent',
+    libelleDefaut: 'Choisir un agent…',
+};
+const selPartenaire = {
+    valeurAttendue: '', estSelecteur: true, prefixe: 'partenaire',
+    libelleDefaut: 'Choisir un partenaire…',
+};
+
+test('seul le sélecteur de la BONNE famille s’allume', () => {
+    const critere = { operator: '=', value: 'agent:12', label: 'Alice' };
+
+    assert.deepEqual(etatChipPreset(selAgent, critere), { actif: true, libelle: 'Alice' });
+    assert.deepEqual(
+        etatChipPreset(selPartenaire, critere),
+        { actif: false, libelle: 'Choisir un partenaire…' },
+    );
+});
+
+test('et réciproquement pour un partenaire', () => {
+    const critere = { operator: '=', value: 'partenaire:12', label: 'SUNU Courtage' };
+
+    assert.equal(etatChipPreset(selPartenaire, critere).actif, true);
+    assert.equal(etatChipPreset(selPartenaire, critere).libelle, 'SUNU Courtage');
+    // Même identifiant, autre famille : l'agent #12 n'est pas le partenaire #12.
+    assert.equal(etatChipPreset(selAgent, critere).actif, false);
+});
+
+test('un préfixe qui n’est pas un préfixe ne compte pas', () => {
+    // « agentX:1 » ne doit pas passer pour la famille « agent » : le séparateur fait
+    // partie du test, sinon deux familles homographes se confondraient.
+    assert.equal(etatChipPreset(selAgent, { value: 'agentX:1' }).actif, false);
+});
+
+test('un sélecteur SANS préfixe garde son comportement (non-régression)', () => {
+    // Les autres rubriques n'ont qu'un sélecteur par critère : leur exiger un préfixe
+    // les aurait toutes éteintes.
+    assert.equal(etatChipPreset(selecteur, { value: 'agent:12', label: 'Alice' }).actif, true);
+    assert.equal(etatChipPreset(selecteur, { value: 12, label: 'Alice' }).actif, true);
+});

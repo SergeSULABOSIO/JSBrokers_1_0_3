@@ -262,7 +262,7 @@ export default class extends BaseController {
             resultats = [];
         }
 
-        this._ouvrirSelecteur(bouton, criterionKey, resultats);
+        this._ouvrirSelecteur(bouton, criterionKey, resultats, bouton.dataset.selecteurPrefixe || '');
     }
 
     /**
@@ -272,7 +272,7 @@ export default class extends BaseController {
      *
      * @private
      */
-    _ouvrirSelecteur(bouton, criterionKey, resultats) {
+    _ouvrirSelecteur(bouton, criterionKey, resultats, prefixe = '') {
         const panneau = document.createElement('div');
         panneau.className = 'jsb-preset-selecteur';
         panneau.setAttribute('role', 'listbox');
@@ -296,12 +296,16 @@ export default class extends BaseController {
             entree.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this._fermerSelecteur(bouton);
-                this.notifyCerveau('ui:filter.preset', { key: criterionKey, value: r.value, label: r.text });
+                // LA FAMILLE VOYAGE AVEC LA VALEUR quand le chip en propose plusieurs :
+                // « agent:12 » n'est pas « partenaire:12 », et le serveur ne pourrait pas
+                // deviner laquelle des deux colonnes filtrer à partir d'un nombre nu.
+                const valeur = prefixe ? `${prefixe}:${r.value}` : r.value;
+                this.notifyCerveau('ui:filter.preset', { key: criterionKey, value: valeur, label: r.text });
                 // Le libellé voyage avec la valeur : sans lui, le chip resterait sur
                 // « Choisir un agent… » jusqu'au retour du cerveau.
                 this._syncPresetChips({
                     ...this._presetCriteria,
-                    [criterionKey]: { value: r.value, label: r.text },
+                    [criterionKey]: { value: valeur, label: r.text },
                 });
             });
             panneau.appendChild(entree);
@@ -424,6 +428,7 @@ export default class extends BaseController {
                 {
                     valeurAttendue: chip.dataset.criterionValue ?? '',
                     estSelecteur: Boolean(chip.dataset.selecteurEntite),
+                    prefixe: chip.dataset.selecteurPrefixe || '',
                     libelleDefaut: chip.dataset.selecteurLibelleDefaut || (texte ? texte.textContent : ''),
                 },
                 criteria[chip.dataset.criterionKey],

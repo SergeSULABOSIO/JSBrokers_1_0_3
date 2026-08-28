@@ -8,52 +8,67 @@ use App\Ai\Fichier\PieceSourceRattachement;
 use App\Ai\Mutation\ConversationFichierRef;
 use App\Ai\Scope\AiScope;
 use App\Ai\Trousse\AiToolEcriture;
-use App\Entity\Avenant;
 use App\Entity\AssistantConversationFichier;
 use App\Entity\Invite;
+use App\Entity\Partenaire;
 use App\Repository\InviteRepository;
+use App\Repository\PartenaireRepository;
 use App\Service\Retro\DefautsDuVersement;
 use App\Service\Retro\JustificatifExige;
 use App\Service\RetroAgent\RapportProductionAgentBuilder;
 use App\Service\Workspace\WorkspaceAccessResolver;
-use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
-use App\Services\JSBDynamicSearchService;
 
 /**
- * Outil d'ÉCRITURE : enregistre le reversement d'une rétrocommission à un AGENT INTERNE —
- * une affaire, ou plusieurs d'un seul geste (LOT).
+ * Outil d'ÉCRITURE : enregistre le reversement d'une rétrocommission à un INTERMÉDIAIRE —
+ * agent interne ou partenaire externe — sur une échéance, ou plusieurs d'un seul geste (LOT).
  *
  * Il n'introduit AUCUNE logique d'écriture : il TRADUIT ses arguments en opérations
  * génériques (create ReversementRetroAgent) et DÉLÈGUE à preparer_operations — donc au même
  * WorkspaceMutationService : validation, budget, plan à valider, exécution transactionnelle,
  * journal. DRY strict, même pattern que SignalerPaiementPrimeTool.
  *
+ * ── DEUX FAMILLES, UN SEUL CIRCUIT ──────────────────────────────────────────────────
+ * Le partenaire externe passait autrefois par une note de crédit ; il facture désormais le
+ * cabinet par sa NOTE DE DÉBIT, et se règle en clair comme un agent, pièce conservée. Les
+ * deux familles écrivent donc le même enregistrement, avec le même justificatif obligatoire
+ * — seuls le champ bénéficiaire (XOR agent/partenaire), la garde d'accès et le compte
+ * SYSCOHADA (6611 pour un salarié, 632 pour un intermédiaire externe) les distinguent.
+ *
+ * ── LA MAILLE EST L'ÉCHÉANCE, PAS L'AFFAIRE ─────────────────────────────────────────
+ * La prime et la commission se paient par TRANCHE : c'est à ce rythme que l'intermédiaire
+ * est rémunéré. L'outil règle donc des échéances. Régler l'affaire aurait obligé à répartir
+ * ensuite le versement sur ses tranches, selon une règle que personne n'a écrite.
+ *
  * ── LE LOT EST NATIF ────────────────────────────────────────────────────────────────
  * `lignes` est une LISTE. Une entrée = un reversement isolé ; N entrées = N opérations dans
  * UN SEUL plan, partageant une référence de lot. L'utilisateur voit les N lignes et le total
  * avant de valider ; un seul budget, une seule confirmation. En comptabilité, le lot
  * n'émettra qu'UNE écriture — celle du virement réel — alors que le solde reste exact
- * affaire par affaire.
+ * échéance par échéance.
  *
  * ── CE QUI EST PROPOSÉ, ET CE QUI EST REFUSÉ ────────────────────────────────────────
- * Le montant par défaut est le solde EXIGIBLE de l'affaire, jamais son simple dû : payer un
- * agent avant que le cabinet ait encaissé sa commission, c'est avancer sa trésorerie sur une
- * créance non recouvrée. Une affaire sans solde exigible est refusée avec la raison — pas
- * écartée en silence.
+ * Le montant par défaut est le solde EXIGIBLE de l'échéance, jamais son simple dû : payer un
+ * intermédiaire avant que le cabinet ait encaissé sa commission, c'est avancer sa trésorerie
+ * sur une créance non recouvrée. Une échéance sans solde exigible est refusée avec la raison
+ * — pas écartée en silence.
  *
  * ── FAIL-CLOSED, ET PLUS STRICT QUE LA LECTURE ──────────────────────────────────────
  * Consulter ses propres rétrocommissions est un droit ; se les VERSER n'en est pas un.
- * L'outil exige donc canManageInvites() — personne ne se paie soi-même. Les avenants sont
- * de surcroît résolus STRICTEMENT dans l'entreprise du scope.
+ * Payer un AGENT exige donc canManageInvites() — personne ne se paie soi-même. Payer un
+ * PARTENAIRE, qui n'est pas un invité, exige le droit d'ÉCRITURE sur la rubrique qui le
+ * gouverne : exactement la garde de l'écran. Les échéances proposées, enfin, ne sont jamais
+ * cherchées librement : elles sortent du rapport DU bénéficiaire, lui-même résolu dans
+ * l'entreprise du scope.
  */
 final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan, AiToolConditionnel, AiToolEcriture
 {
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly InviteRepository $inviteRepository,
-        private readonly JSBDynamicSearchService $searchService,
+        private readonly PartenaireRepository $partenaireRepository,
         private readonly PreparerOperationsTool $preparer,
-        private readonly IndicatorCalculationHelper $calculationHelper,
+        // LA MATIÈRE DU VERSEMENT vient du MÊME service que le picker : les échéances
+        // réglables, leur exigible et leur police. Rien n'est recalculé ici.
         private readonly RapportProductionAgentBuilder $rapportBuilder,
         // PARITÉ AVEC L'ÉCRAN : la référence proposée et le compte débité par défaut
         // ne se recopient pas ici, ils se demandent.
@@ -73,32 +88,39 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
 
     public function description(): string
     {
-        return 'Enregistre le REVERSEMENT d\'une rétrocommission à un AGENT INTERNE du cabinet, '
-            . 'sur une ou PLUSIEURS affaires à la fois. Fournis agentId et `lignes` : une entrée '
-            . 'par affaire réglée, chacune avec son avenantId (obtenu via retrocommissions '
-            . 'en mode par_ligne) et, si l\'utilisateur le précise, son montant — sinon le solde '
-            . 'EXIGIBLE de l\'affaire s\'applique. Plusieurs lignes = UN SEUL virement : elles '
-            . 'partagent une référence de lot, et la comptabilité n\'émettra qu\'une écriture '
-            . '(charges de personnel, SYSCOHADA 6611). '
+        return 'Enregistre le REVERSEMENT d\'une rétrocommission à un intermédiaire du cabinet — '
+            . 'AGENT INTERNE (agentId) ou PARTENAIRE EXTERNE (partenaireId), jamais les deux — '
+            . 'sur une ou PLUSIEURS échéances à la fois. Le partenaire facture le cabinet par sa '
+            . 'NOTE DE DÉBIT : il se règle en clair comme un agent, et le cabinet garde la pièce. '
+            . 'Fournis le bénéficiaire et `lignes` : une entrée par ÉCHÉANCE réglée, chacune avec '
+            . 'son trancheId (ou, à défaut, un avenantId qui règle toutes les échéances exigibles '
+            . 'de la police) et, si l\'utilisateur le précise, son montant — sinon le solde '
+            . 'EXIGIBLE de l\'échéance s\'applique. Omets `lignes` pour tout régler. '
+            . 'C\'est bien par ÉCHÉANCE : la prime et la commission se paient par tranche, donc '
+            . 'l\'intermédiaire est rémunéré à ce rythme. Plusieurs lignes = UN SEUL virement : '
+            . 'elles partagent une référence de lot, et la comptabilité n\'émettra qu\'une écriture '
+            . '— charges de personnel (SYSCOHADA 6611) pour un agent, rétrocommissions (632) pour '
+            . 'un partenaire. '
             . 'Le versement est débité du compte bancaire proposé par défaut — le même que '
             . 'l\'écran de reversement ; précise compteBancaireId pour en choisir un autre, '
             . 'ou 0 si l\'utilisateur dit payer en ESPÈCES. '
             . 'À appeler quand l\'utilisateur veut payer, verser ou régler la rétrocommission d\'un '
-            . 'agent. NE PAS utiliser pour un PARTENAIRE externe : sa rétrocommission se facture '
-            . 'par note de crédit, tout autre circuit. NE PAS utiliser ouvrir_dialogue avec '
+            . 'agent OU d\'un partenaire. NE PAS utiliser ouvrir_dialogue avec '
             . 'l\'entité Paiement : Paiement = encaissement du courtier. L\'outil prépare un PLAN '
             . '+ BUDGET à valider ; après validation, c\'est TOI qui enregistres. Pour seulement '
             . 'CONSULTER ce qui est dû ou déjà versé, utiliser retrocommissions. '
             . 'UN VERSEMENT NE S\'ENREGISTRE PAS SANS JUSTIFICATIF : fournis fichierId, la '
-            . 'pièce de la conversation qui prouve le virement. Si l\'utilisateur n\'en a joint '
-            . 'aucune, demande-la-lui AVANT de m\'appeler — je refuserai sinon.';
+            . 'pièce de la conversation qui prouve le virement (bordereau, reçu, ou la note de '
+            . 'débit du partenaire). Si l\'utilisateur n\'en a joint aucune, demande-la-lui AVANT '
+            . 'de m\'appeler — je refuserai sinon.';
     }
 
     public function aiguillage(): string
     {
-        return 'VERSER une rétrocommission à un agent interne (« paie à Alice ce qu\'on lui doit », « règle les '
-            . 'trois polices en attente de Bruno »). Ne touche ni aux partenaires externes, ni à l\'entité '
-            . 'Paiement.';
+        return 'VERSER une rétrocommission à un intermédiaire — agent interne OU partenaire externe '
+            . '(« paie à Alice ce qu\'on lui doit », « règle les trois polices en attente de Bruno », '
+            . '« reverse à ce partenaire sa commission d\'apport »). Ne touche pas à l\'entité Paiement, '
+            . 'qui est l\'encaissement du courtier.';
     }
 
     public function schema(): array
@@ -109,29 +131,45 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
                 'agentId' => [
                     'type' => 'integer',
                     'minimum' => 1,
-                    'description' => 'Identifiant de l\'agent bénéficiaire (un invité du cabinet).',
+                    'description' => 'Identifiant de l\'AGENT INTERNE bénéficiaire (un invité du '
+                        . 'cabinet). Exclusif de partenaireId : un versement va à l\'un OU à l\'autre.',
+                ],
+                'partenaireId' => [
+                    'type' => 'integer',
+                    'minimum' => 1,
+                    'description' => 'Identifiant du PARTENAIRE EXTERNE bénéficiaire (un intermédiaire '
+                        . 'apporteur). Il facture le cabinet par sa note de débit, le cabinet lui '
+                        . 'reverse et garde la pièce — même circuit que pour un agent. Exclusif de agentId.',
                 ],
                 'lignes' => [
                     'type' => 'array',
                     'minItems' => 1,
-                    'description' => 'Les affaires réglées par ce versement. Une seule entrée pour '
-                        . 'un reversement isolé ; plusieurs pour un virement unique couvrant '
-                        . 'plusieurs affaires. Omets `lignes` pour régler TOUT ce qui est exigible.',
+                    'description' => 'Les ÉCHÉANCES réglées par ce versement. Une seule entrée '
+                        . 'pour un reversement isolé ; plusieurs pour un virement unique en couvrant '
+                        . 'plusieurs. Omets `lignes` pour régler TOUT ce qui est exigible.',
                     'items' => [
                         'type' => 'object',
                         'properties' => [
+                            'trancheId' => [
+                                'type' => 'integer',
+                                'minimum' => 1,
+                                'description' => 'Identifiant de l\'ÉCHÉANCE (tranche) réglée — la '
+                                    . 'maille exacte du versement, celle que propose l\'écran.',
+                            ],
                             'avenantId' => [
                                 'type' => 'integer',
                                 'minimum' => 1,
-                                'description' => 'Identifiant de l\'avenant (la police) réglé.',
+                                'description' => 'À défaut de trancheId : identifiant de l\'avenant '
+                                    . '(la police). Toutes ses échéances exigibles sont alors réglées.',
                             ],
                             'montant' => [
                                 'type' => 'number',
-                                'description' => 'Montant versé sur cette affaire. Omets-le pour '
-                                    . 'le solde exigible (versements partiels possibles).',
+                                'description' => 'Montant versé sur cette échéance. Omets-le pour '
+                                    . 'son solde exigible (versements partiels possibles). Un montant '
+                                    . 'sur un avenantId à plusieurs échéances est refusé : rien ne dit '
+                                    . 'comment le répartir.',
                             ],
                         ],
-                        'required' => ['avenantId'],
                     ],
                 ],
                 'paidAt' => [
@@ -168,62 +206,129 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
                         . 'remplacé. Sinon, tant qu\'un plan attend, la préparation est refusée.',
                 ],
             ],
-            'required' => ['agentId', 'fichierId'],
+            // agentId n'est PAS requis : le bénéficiaire est agentId OU partenaireId, et
+            // JSON Schema ne sait pas exprimer ce OU exclusif. L'outil le vérifie lui-même,
+            // et refuse avec le motif — un schéma qui exigerait agentId aurait purement et
+            // simplement rendu le partenaire inatteignable.
+            'required' => ['fichierId'],
         ];
     }
 
     /**
-     * Chemin simulé : « verse la rétrocommission de l'agent 7 », « paie l'agent 3 ». L'id
-     * doit figurer dans la question (le LLM réel sait le chercher, pas le simulé).
+     * Chemin simulé : « verse la rétrocommission de l'agent 7 », « paie le partenaire 3 ».
+     * L'id doit figurer dans la question (le LLM réel sait le chercher, pas le simulé).
      */
     public function match(string $question, AiScope $scope): ?array
     {
         $normalized = AiText::normalize($question);
 
         $veutVerser = preg_match('/\b(verse[rsz]?|paie|paye[rsz]?|regle[rsz]?|reverse[rsz]?)\b/', $normalized);
-        $parleDeRetroAgent = preg_match('/\b(retrocom\w*|retro\s*commission\w*)\b/', $normalized)
-            && preg_match('/\b(agents?|apporteur\w*|interne\w*)\b/', $normalized);
-        if (!$veutVerser || !$parleDeRetroAgent) {
+        $parleDeRetro = preg_match('/\b(retrocom\w*|retro\s*commission\w*)\b/', $normalized)
+            && preg_match('/\b(agents?|partenaires?|apporteur\w*|interne\w*|externe\w*)\b/', $normalized);
+        if (!$veutVerser || !$parleDeRetro) {
             return null;
         }
 
-        if (!preg_match('/\bagent\s*(?:n[°o]?\s*)?#?(\d+)\b/u', $normalized, $m)) {
-            return null;
+        // Le partenaire est testé D'ABORD : « la rétro du partenaire 3 » nomme aussi
+        // « agent » dans certaines tournures, et le bénéficiaire le plus précis l'emporte.
+        if (preg_match('/\bpartenaires?\s*(?:n[°o]?\s*)?#?(\d+)\b/u', $normalized, $m)) {
+            return ['partenaireId' => (int) $m[1]];
         }
 
-        return ['agentId' => (int) $m[1]];
+        if (preg_match('/\bagent\s*(?:n[°o]?\s*)?#?(\d+)\b/u', $normalized, $m)) {
+            return ['agentId' => (int) $m[1]];
+        }
+
+        return null;
     }
 
-    /** Miroir exact de la garde d'execute() : ne pas décrire un outil qui refusera. */
+    /**
+     * Miroir exact de la garde d'execute() : ne pas décrire un outil qui refusera.
+     *
+     * Deux familles, deux gardes — l'outil est donc offert dès que l'UNE des deux est
+     * satisfaite. Le refuser tant que les DEUX ne le sont pas aurait caché le versement aux
+     * partenaires à quiconque ne gère pas les invités, alors que l'écran, lui, le propose.
+     */
     public function estDisponible(AiScope $scope): bool
     {
-        return $this->accessResolver->canManageInvites($scope->invite);
+        return $this->accessResolver->canManageInvites($scope->invite)
+            || $this->accessResolver->can($scope->invite, 'ReversementRetroAgent', Invite::ACCESS_ECRITURE);
     }
 
     public function execute(array $args, AiScope $scope): AiToolResult
     {
-        // FAIL-CLOSED, et plus strict que la lecture : verser relève de la gestion de
-        // l'espace. Personne ne se paie soi-même.
-        if (!$this->accessResolver->canManageInvites($scope->invite)) {
+        $partenaireId = (int) ($args['partenaireId'] ?? 0);
+        $agentId = (int) ($args['agentId'] ?? 0);
+
+        // LE BÉNÉFICIAIRE EST L'UN OU L'AUTRE, jamais les deux : c'est l'invariant de
+        // l'entité, et le refuser ICI évite de préparer un plan que l'écriture rejettera.
+        if ($agentId <= 0 && $partenaireId <= 0) {
+            return AiToolResult::introuvable(
+                'Bénéficiaire du versement',
+                'Dis À QUI le cabinet reverse : agentId pour un agent interne, partenaireId '
+                . 'pour un partenaire externe. Le schéma ne peut pas exiger l\'un OU l\'autre, '
+                . 'c\'est donc ici que ça se vérifie.',
+            );
+        }
+        if ($agentId > 0 && $partenaireId > 0) {
+            return AiToolResult::introuvable(
+                'Bénéficiaire ambigu',
+                'Un versement va à un agent interne OU à un partenaire externe, pas aux deux : '
+                . 'ne fournis que agentId, ou que partenaireId.',
+            );
+        }
+
+        // LA GARDE SUIT LA FAMILLE, comme à l'écran. Verser à un AGENT relève de la gestion
+        // de l'espace — personne ne se paie soi-même, et l'agent est un salarié. Un
+        // partenaire externe n'est pas un invité : lui régler sa facture relève du droit
+        // d'écriture sur la rubrique, celui-là même qui la gouverne.
+        $gardeSatisfaite = $partenaireId > 0
+            ? $this->accessResolver->can($scope->invite, 'ReversementRetroAgent', Invite::ACCESS_ECRITURE)
+            : $this->accessResolver->canManageInvites($scope->invite);
+        if (!$gardeSatisfaite) {
             return AiToolResult::horsPerimetre('Rétros intermédiaires');
         }
 
-        $agentId = (int) ($args['agentId'] ?? 0);
-        $agent = $agentId > 0
+        $partenaire = $partenaireId > 0
+            ? $this->partenaireRepository->findOneBy(['id' => $partenaireId, 'entreprise' => $scope->entreprise])
+            : null;
+        if ($partenaireId > 0 && $partenaire === null) {
+            return AiToolResult::introuvable('Partenaire #' . $partenaireId);
+        }
+
+        $agent = $partenaire === null && $agentId > 0
             ? $this->inviteRepository->findOneBy(['id' => $agentId, 'entreprise' => $scope->entreprise])
             : null;
-        if ($agent === null) {
+        if ($partenaire === null && $agent === null) {
             return AiToolResult::introuvable('Agent #' . $agentId);
         }
 
-        $lignesDemandees = $this->lignesDemandees($args, $agent);
-        if ($lignesDemandees === []) {
+        $cible = $partenaire ?? $agent;
+        $beneficiaire = $this->rapportBuilder->beneficiaire($cible);
+        $beneficiaireNom = $beneficiaire->nom();
+
+        // LES ÉCHÉANCES RÉGLABLES, à la maille où l'argent circule réellement : la prime et
+        // la commission se paient par TRANCHE, donc l'intermédiaire est rémunéré à ce
+        // rythme. La liste est celle du picker, mot pour mot — c'est la parité écran/Ket.
+        $echeances = $this->rapportBuilder->echeancesAVerser($beneficiaire, $scope->entreprise);
+        if ($echeances === []) {
             return AiToolResult::introuvable(
-                'Affaires à régler pour ' . $agent->getNom(),
-                'Aucune affaire de cet agent n\'a de solde exigible : une rétrocommission ne '
+                'Échéances à régler pour ' . $beneficiaireNom,
+                'Aucune échéance de ce bénéficiaire n\'a de solde exigible : une rétrocommission ne '
                 . 'devient réclamable qu\'une fois la commission de courtage encaissée par le cabinet.',
             );
         }
+
+        $selection = $this->selectionner($args, $echeances);
+        if ($selection['lignes'] === []) {
+            return AiToolResult::introuvable(
+                'Échéances réglables pour ' . $beneficiaireNom,
+                $selection['refus'] === []
+                    ? 'Rien à régler dans ce que tu as demandé.'
+                    : implode(' ', $selection['refus']),
+            );
+        }
+        $lignesDemandees = $selection['lignes'];
 
         // PAS DE VERSEMENT SANS PREUVE — mais APRÈS avoir vérifié qu'il y a de quoi
         // verser. Réclamer un bordereau pour un virement impossible serait absurde : on
@@ -247,34 +352,36 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
         $lotReference = count($lignesDemandees) > 1 ? $reference : null;
 
         $operations = [];
-        $refuses = [];
+        $refuses = $selection['refus'];
         foreach ($lignesDemandees as $ligne) {
-            $avenant = $this->avenantDuPerimetre((int) $ligne['avenantId'], $scope);
-            if ($avenant === null) {
-                $refuses[] = sprintf('Avenant #%d : hors de votre espace de travail.', $ligne['avenantId']);
-                continue;
-            }
-
-            $exigible = round($this->calculationHelper->getAvenantRetroAgentExigible($avenant, $agent), 2);
-            $montant = isset($ligne['montant']) && $ligne['montant'] !== null && $ligne['montant'] !== ''
+            $montant = $ligne['montant'] !== null
                 ? round((float) $ligne['montant'], 2)
-                : $exigible;
+                : $ligne['exigible'];
 
             if ($montant <= 0.0) {
                 $refuses[] = sprintf(
-                    'Police %s : rien d\'exigible (la commission de cette affaire n\'est pas encore encaissée).',
-                    $avenant->getReferencePolice() ?: ('#' . $avenant->getId()),
+                    'Échéance « %s » de la police %s : rien d\'exigible (la commission de cette '
+                    . 'échéance n\'est pas encore encaissée).',
+                    $ligne['trancheNom'],
+                    $ligne['reference'],
                 );
                 continue;
             }
 
+            // LE BÉNÉFICIAIRE EST L'UN OU L'AUTRE — le XOR de l'entité, respecté à la source.
             $champs = [
-                'agent'     => $agent->getId(),
-                'avenant'   => $avenant->getId(),
+                ($partenaire !== null ? 'partenaire' : 'agent') => $cible->getId(),
+                'tranche'   => $ligne['trancheId'],
                 'montant'   => $montant,
                 'paidAt'    => $paidAt,
                 'reference' => $reference,
             ];
+            // L'AFFAIRE dit SUR QUOI porte le versement, l'échéance dit QUAND. Une tranche
+            // sans avenant existe (cotation non encore éditée) : on ne pose le lien que
+            // s'il y en a un, l'invariant de l'entité tolérant l'absence.
+            if ($ligne['avenantId'] !== null) {
+                $champs['avenant'] = $ligne['avenantId'];
+            }
             // Le compte débité manquait ICI, et nulle part ailleurs : tout reversement
             // demandé à Ket partait donc EN CAISSE, quand le même geste à l'écran
             // passait par la banque. Deux comptabilités pour un seul acte.
@@ -295,16 +402,17 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
                 // Une étape par affaire : l'aperçu du plan nomme la police réglée, plutôt
                 // que d'afficher N lignes indiscernables.
                 'etape'  => sprintf(
-                    'Reversement à %s — police %s',
-                    $agent->getNom(),
-                    $avenant->getReferencePolice() ?: ('#' . $avenant->getId()),
+                    'Reversement à %s — police %s, échéance %s',
+                    $beneficiaireNom,
+                    $ligne['reference'],
+                    $ligne['trancheNom'],
                 ),
             ];
         }
 
         if ($operations === []) {
             return AiToolResult::introuvable(
-                'Affaires réglables pour ' . $agent->getNom(),
+                'Échéances réglables pour ' . $beneficiaireNom,
                 implode(' ', $refuses),
             );
         }
@@ -393,48 +501,95 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
         return $operations;
     }
     /**
-     * Les lignes à traiter : celles fournies, ou — à défaut — TOUTES les affaires de
-     * l'agent dont le solde est exigible. « Paie à Alice ce qu'on lui doit » est une
-     * demande légitime qui ne nomme aucune police.
+     * LES ÉCHÉANCES EFFECTIVEMENT VISÉES, choisies dans celles que le bénéficiaire peut
+     * réclamer — jamais construites à côté.
      *
-     * @return array<int, array{avenantId:int, montant?:float}>
+     * C'est le point de scoping : la liste de départ vient des cotations DU bénéficiaire,
+     * lui-même résolu dans l'entreprise du scope. Un identifiant dicté qui n'y figure pas
+     * est refusé AVEC SON MOTIF, pas écarté en silence — l'ancienne version interrogeait le
+     * moteur de recherche avenant par avenant, ce qui laissait passer une police du bon
+     * cabinet mais d'un autre bénéficiaire.
+     *
+     * Trois façons de désigner, toutes ramenées à la même matière :
+     *   - rien du tout  → tout ce qui est exigible (« paie à Alice ce qu'on lui doit ») ;
+     *   - `trancheId`   → cette échéance précise, la maille du picker ;
+     *   - `avenantId`   → toutes les échéances exigibles de cette police.
+     *
+     * @param array<int, array<string, mixed>> $echeances
+     *
+     * @return array{lignes: array<int, array<string, mixed>>, refus: array<int, string>}
      */
-    private function lignesDemandees(array $args, Invite $agent): array
+    private function selectionner(array $args, array $echeances): array
     {
         $fournies = $args['lignes'] ?? null;
-        if (is_array($fournies) && $fournies !== []) {
-            $lignes = [];
-            foreach ($fournies as $ligne) {
-                $avenantId = (int) ($ligne['avenantId'] ?? 0);
-                if ($avenantId > 0) {
-                    $lignes[] = array_filter(
-                        ['avenantId' => $avenantId, 'montant' => $ligne['montant'] ?? null],
-                        static fn ($v) => $v !== null,
-                    );
-                }
-            }
+        if (!is_array($fournies) || $fournies === []) {
+            return ['lignes' => array_map(
+                static fn (array $e) => $e + ['montant' => null],
+                $echeances,
+            ), 'refus' => []];
+        }
 
-            return $lignes;
+        $parTranche = [];
+        $parAvenant = [];
+        foreach ($echeances as $echeance) {
+            $parTranche[(int) $echeance['trancheId']] = $echeance;
+            if ($echeance['avenantId'] !== null) {
+                $parAvenant[(int) $echeance['avenantId']][] = $echeance;
+            }
         }
 
         $lignes = [];
-        foreach ($this->rapportBuilder->lignesAVerser($agent) as $ligne) {
-            $lignes[] = ['avenantId' => (int) $ligne['avenant']->getId()];
+        $refus = [];
+        foreach ($fournies as $ligne) {
+            $montant = isset($ligne['montant']) && $ligne['montant'] !== null && $ligne['montant'] !== ''
+                ? (float) $ligne['montant']
+                : null;
+
+            $trancheId = (int) ($ligne['trancheId'] ?? 0);
+            if ($trancheId > 0) {
+                if (!isset($parTranche[$trancheId])) {
+                    $refus[] = sprintf(
+                        'Échéance #%d : elle n\'est pas réclamable par ce bénéficiaire (hors de son '
+                        . 'périmètre, ou commission pas encore encaissée).',
+                        $trancheId,
+                    );
+                    continue;
+                }
+                $lignes[] = $parTranche[$trancheId] + ['montant' => $montant];
+                continue;
+            }
+
+            $avenantId = (int) ($ligne['avenantId'] ?? 0);
+            if ($avenantId <= 0) {
+                continue;
+            }
+            if (!isset($parAvenant[$avenantId])) {
+                $refus[] = sprintf(
+                    'Police #%d : aucune de ses échéances n\'est réclamable par ce bénéficiaire.',
+                    $avenantId,
+                );
+                continue;
+            }
+
+            $desiree = $parAvenant[$avenantId];
+            // UN MONTANT DICTÉ SUR UNE POLICE À PLUSIEURS ÉCHÉANCES SERAIT AMBIGU : il
+            // faudrait inventer une clé de répartition, et personne n'en a écrit. On
+            // refuse en nommant l'alternative plutôt que de trancher à la place du courtier.
+            if ($montant !== null && count($desiree) > 1) {
+                $refus[] = sprintf(
+                    'Police #%d : elle a %d échéances exigibles, un montant global ne dit pas comment '
+                    . 'les répartir. Indique une ligne par trancheId.',
+                    $avenantId,
+                    count($desiree),
+                );
+                continue;
+            }
+            foreach ($desiree as $echeance) {
+                $lignes[] = $echeance + ['montant' => $montant];
+            }
         }
 
-        return $lignes;
-    }
-
-    /** L'avenant doit exister DANS l'entreprise du scope : scoping strict. */
-    private function avenantDuPerimetre(int $id, AiScope $scope): ?Avenant
-    {
-        if ($id <= 0) {
-            return null;
-        }
-
-        $result = $this->searchService->search(Avenant::class, ['id' => $id], $scope->entreprise, null, 1, 1);
-
-        return ($result['status']['code'] ?? 500) === 200 ? ($result['data'][0] ?? null) : null;
+        return ['lignes' => $lignes, 'refus' => $refus];
     }
 
     /** Date fournie, sinon maintenant — format attendu par DateTimeType single_text. */

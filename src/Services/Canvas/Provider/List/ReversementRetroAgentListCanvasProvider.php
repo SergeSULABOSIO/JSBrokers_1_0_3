@@ -64,6 +64,7 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
                     ["attribut_code" => "virementGroupe", "attribut_type" => "text"],
                     ["attribut_prefixe" => "Versé le : ", "attribut_code" => "paidAt", "attribut_type" => "date"],
                     ["attribut_prefixe" => "Police : ", "attribut_code" => "policeReference", "attribut_type" => "text"],
+                    ["attribut_prefixe" => "Échéance : ", "attribut_code" => "echeanceLibelle", "attribut_type" => "text"],
                     ["attribut_prefixe" => "Débité de : ", "attribut_code" => "compteLibelle", "attribut_type" => "text"],
                 ],
             ],
@@ -132,18 +133,38 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
                     ),
                 ],
                 [
-                    "critere" => ReversementScope::CHAMP_BENEFICIAIRE,
+                    // LE CRITÈRE EST SYNTHÉTIQUE, et il le fallait : le bénéficiaire vit
+                    // tantôt dans `agent`, tantôt dans `partenaire`. Un critère posé sur la
+                    // colonne `agent` ne pouvait filtrer qu'une famille sur deux, alors que
+                    // la rubrique les porte toutes les deux.
+                    "critere" => ReversementScope::CLE_BENEFICIAIRE,
                     "libelle" => "Bénéficiaire",
                     "options" => [
-                        // Une option qui ne porte pas de valeur mais un SÉLECTEUR : au clic,
-                        // la liste des agents est demandée à l'autocomplétion générique —
-                        // déjà scopée au cabinet, et déjà gardée par canManageInvites.
+                        // Deux options qui ne portent pas de valeur mais un SÉLECTEUR : au
+                        // clic, la liste est demandée à l'autocomplétion générique — déjà
+                        // scopée au cabinet, et déjà gardée par les droits de son entité.
+                        // Le `prefixe` dit de quelle famille vient le choix : c'est lui qui
+                        // décide de la colonne filtrée, et qui empêche les deux chips de
+                        // s'allumer ensemble sur un identifiant homonyme.
                         [
-                            "selecteur" => ["entite" => "Invite", "displayField" => "nom"],
+                            "selecteur" => [
+                                "entite" => "Invite",
+                                "displayField" => "nom",
+                                "prefixe" => ReversementScope::TYPE_AGENT,
+                            ],
                             "label" => "Choisir un agent…",
                             "icon" => "invite",
                         ],
-                        ["value" => "", "label" => "Tous les agents", "icon" => "action:filter"],
+                        [
+                            "selecteur" => [
+                                "entite" => "Partenaire",
+                                "displayField" => "nom",
+                                "prefixe" => ReversementScope::TYPE_PARTENAIRE,
+                            ],
+                            "label" => "Choisir un partenaire…",
+                            "icon" => "partenaire",
+                        ],
+                        ["value" => "", "label" => "Tous", "icon" => "action:filter"],
                     ],
                 ],
             ],

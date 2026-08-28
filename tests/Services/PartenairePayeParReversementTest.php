@@ -344,4 +344,39 @@ class PartenairePayeParReversementTest extends KernelTestCase
 
         self::assertEqualsWithDelta(0.0, $this->payee($ids), 0.01);
     }
+
+    /**
+     * ET LA RÉCIPROQUE, qui manquait : UN VERSEMENT DE PARTENAIRE NE COMPTE PAS POUR LES AGENTS.
+     *
+     * La garde n'existait que d'un côté. `getTrancheMontantRetroAgentReversee()` et sa
+     * jumelle par avenant filtraient sur l'agent CIBLE — donc, quand aucun agent n'était
+     * ciblé (toutes les vues du cabinet : la fiche d'une échéance, la liste, les agrégats),
+     * elles additionnaient AUSSI les reversements de partenaires. Le versé des agents
+     * paraissait plus élevé qu'il ne l'était, leur solde plus bas, et rien ne le disait.
+     */
+    public function testUnVersementDePartenaireNeCompteJamaisPourLesAgents(): void
+    {
+        $ids = $this->semer();
+        $this->reverser($ids, 400.0);
+
+        $em = $this->em();
+        $tranche = $em->getRepository(Tranche::class)->find($ids['trancheId']);
+        $avenant = $em->getRepository(Avenant::class)->find($ids['avenantId']);
+
+        // Sans agent ciblé — le cas de toutes les vues du cabinet.
+        self::assertEqualsWithDelta(
+            0.0,
+            $this->helper()->getTrancheMontantRetroAgentReversee($tranche),
+            0.01,
+            'Le versé des AGENTS ne doit rien devoir à un versement de partenaire.',
+        );
+        self::assertEqualsWithDelta(
+            0.0,
+            $this->helper()->getAvenantMontantRetroAgentReversee($avenant),
+            0.01,
+        );
+
+        // Et le partenaire, lui, le voit bien : la garde n'a pas éteint la bonne lecture.
+        self::assertEqualsWithDelta(400.0, $this->payee($ids), 0.01);
+    }
 }

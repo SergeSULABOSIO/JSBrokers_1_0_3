@@ -1,6 +1,6 @@
 # Rétrocommissions : qui se partage la commission
 
-> Deux bénéficiaires, deux assiettes, deux circuits de paiement — et un ordre de service qu'il ne faut jamais inverser.
+> Deux bénéficiaires, deux assiettes, UN seul circuit de paiement — et un ordre de service qu'il ne faut jamais inverser.
 
 Quand une affaire rapporte une commission au cabinet, deux familles de personnes
 peuvent en recevoir une part. Elles ne se ressemblent pas, et les confondre coûte
@@ -11,9 +11,15 @@ cher.
 | Qui | Une société d'intermédiation (l'écran dit « Intermédiaires ») | Un collaborateur du cabinet |
 | Assiette | La commission pure des revenus **partageables** | Ce qui **reste** après les partenaires |
 | Se sert | **En premier** | Sur le reliquat |
-| Paiement | **Note de crédit**, payée au fil des règlements | **Virement direct**, sans aucune note |
+| Paiement | **Reversement direct**, sur sa note de débit | **Reversement direct**, sans aucune note |
 | Comptabilité | SYSCOHADA **632** (rétrocommissions) | SYSCOHADA **6611** (charges de personnel) |
-| Maille du payé | La **tranche** (prorata des notes) | L'**avenant** (lecture directe) |
+| Maille du payé | La **tranche** | La **tranche** |
+
+Le **circuit de paiement est le même pour les deux** : le partenaire envoie sa note de
+débit, le cabinet lui reverse et garde la pièce — exactement comme pour un agent. Seules
+l'assiette et le compte comptable diffèrent. Il en allait autrement avant : le partenaire
+se facturait par note de crédit, et son payé s'en déduisait au prorata. Ce circuit a été
+retiré, et l'historique converti en reversements.
 
 L'ordre est le cœur de la mécanique : le partenaire prélève sa part sur la
 commission pure, puis l'agent applique **son** taux à ce qui subsiste. Un même
@@ -105,28 +111,28 @@ dispensé, sinon « paie Alice » suffirait à s'en affranchir.
 En pratique : `signaler_reversement_retro_agent` exige `fichierId`, la pièce jointe de
 la conversation. Si l'utilisateur n'en a joint aucune, la lui demander AVANT d'appeler
 l'outil — il refusera sinon, et le dira. **Une seule pièce suffit pour tout le
-virement**, même s'il solde plusieurs affaires : elle est enregistrée une fois et
+virement**, même s'il solde plusieurs échéances : elle est enregistrée une fois et
 justifie chacune des lignes.
 
 Pour joindre une pièce à un virement DÉJÀ enregistré, c'est `attacher_fichier` sur le
 reversement (il se désigne par sa référence).
 
-**Où se consultent les versements.** Dans la rubrique « Reversements de
-rétrocommission » (module Finances) — et nulle part ailleurs : le volet du rapport de
-production n'existe plus. `ouvrir_rubrique` sait l'ouvrir FILTRÉE :
-`beneficiaire` (le NOM d'un agent), `justificatif` (avec/sans pièce), `periode` et
-`virement` (groupé/isolé). Ce sont exactement les chips de l'écran, et le même
-vocabulaire : si ta réponse écrite ne porte que sur les versements d'une personne,
-ouvre la rubrique avec le MÊME filtre.
+**Où se consultent les versements.** Dans la rubrique « Rétros intermédiaires »
+(module Finances) — et nulle part ailleurs : le volet du rapport de production n'existe
+plus. Elle porte les DEUX familles. `ouvrir_rubrique` sait l'ouvrir FILTRÉE :
+`beneficiaire` (le NOM d'un agent **ou** d'un partenaire), `type` (agent/partenaire),
+`justificatif` (avec/sans pièce), `periode` et `virement` (groupé/isolé). Ce sont
+exactement les chips de l'écran, et le même vocabulaire : si ta réponse écrite ne porte
+que sur les versements d'une personne, ouvre la rubrique avec le MÊME filtre.
 
 Une pièce compte pour tout son VIREMENT : un bordereau posé sur une ligne d'un lot
 justifie les autres. Ne dis donc jamais d'une ligne d'un virement groupé qu'elle est
 sans justificatif au seul motif que le fichier est accroché à sa voisine.
 
-Côté **partenaire**, il n'y a rien de tel : sa rétrocommission se facture par
-**note de crédit**, et l'application n'a aucun circuit de versement direct — donc
-aucun outil non plus. Le dire, plutôt que de proposer un reversement d'agent pour
-un intermédiaire externe.
+**Le partenaire se règle par le MÊME outil**, avec `partenaireId` au lieu de `agentId` —
+jamais les deux. Son justificatif naturel est **sa note de débit**. La garde diffère : payer
+un agent demande de gérer les invités (personne ne se paie soi-même), payer un partenaire
+demande le droit d'écriture sur la rubrique — la même règle qu'à l'écran.
 ## Recettes
 
 - « À qui dois-je de la rétrocommission ? » → `retrocommissions` sans bénéficiaire.
@@ -134,5 +140,6 @@ un intermédiaire externe.
   (`beneficiaire`, `detail: par_ligne`).
 - « Sa rétro par assureur / par mois » → `detail: par_axe`, `axe` au choix.
 - « Et en 2026 seulement ? » → `du` / `au` (bornes sur la date d'effet).
-- « Verse-lui ce qu'on lui doit » → `signaler_reversement_retro_agent` (agents
-  uniquement ; un partenaire se facture par note de crédit).
+- « Verse-lui ce qu'on lui doit » → `signaler_reversement_retro_agent`, avec `agentId`
+  OU `partenaireId`. Sans `lignes`, tout l'exigible est réglé ; avec, une entrée par
+  `trancheId` (l'échéance), ou un `avenantId` pour régler toutes celles d'une police.

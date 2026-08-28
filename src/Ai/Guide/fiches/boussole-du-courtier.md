@@ -31,10 +31,15 @@ fait l'assistant :
    être **reversées**. Elles vont à DEUX sortes de bénéficiaires, qu'il ne faut jamais
    confondre :
    - un **partenaire EXTERNE** (apporteur hors cabinet) : sa part se calcule sur la
-     commission pure des revenus *partageables*, et se **facture** par note de crédit ;
+     commission pure des revenus *partageables*. Il **facture le cabinet par sa note de
+     débit**, et le cabinet lui **reverse** en clair, en rétrocommissions (632) ;
    - un **agent INTERNE** du cabinet (un invité, apporteur de l'affaire) : sa part se
      calcule sur ce qui **reste au cabinet** — commission pure MOINS les partenaires
-     externes — et se **verse** directement, sans aucune note, en charges de personnel.
+     externes — et se **verse** de la même façon, en charges de personnel (6611).
+
+   Dans les deux cas le versement s'enregistre **par ÉCHÉANCE** (tranche) : c'est par
+   tranche que la prime et la commission sont payées, donc à ce rythme que
+   l'intermédiaire est rémunéré. Et dans les deux cas le **justificatif est exigé**.
 9. Dès la commission encaissée, le courtier a un **devoir fiscal** : s'acquitter des
    **taxes** (TVA) auprès de l'administration.
 10. Chaque **tâche** porte des **feedbacks** au fil des actions planifiées et se
