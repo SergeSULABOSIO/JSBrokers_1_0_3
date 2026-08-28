@@ -4,14 +4,19 @@ namespace App\Controller\Admin;
 
 use App\Ai\Fichier\FichierAttachePolicy;
 use App\Entity\Avenant;
+use App\Entity\Entreprise;
 use App\Entity\CompteBancaire;
 use App\Entity\Invite;
+use App\Entity\Partenaire;
 use App\Entity\ReversementRetroAgent;
 use App\Repository\AvenantRepository;
 use App\Repository\InviteRepository;
+use App\Repository\TrancheRepository;
+use App\Service\Retro\BeneficiaireRetro;
 use App\Service\Retro\DefautsDuVersement;
 use App\Service\Retro\JustificatifExige;
 use App\Service\Retro\LotDeVersement;
+use App\Service\Retro\BeneficiaireRetroFactory;
 use App\Service\RetroAgent\RapportProductionAgentBuilder;
 use App\Service\Soa\SoaPoliceDocumentsCollector;
 use App\Service\Workspace\WorkspaceAccessResolver;
@@ -79,6 +84,10 @@ class RetroAgentController extends AbstractController
         private DefautsDuVersement $defautsDuVersement,
         private JustificatifExige $justificatifExige,
         private LotDeVersement $lotDeVersement,
+        // Les DEUX familles se règlent ici. La fabrique est le seul endroit qui sait de
+        // quoi chacune est faite : le contrôleur n'a plus à porter leurs dépendances.
+        private BeneficiaireRetroFactory $beneficiaires,
+        private TrancheRepository $trancheRepository,
         CanvasBuilder $canvasBuilder,
     ) {
         $this->canvasBuilder = $canvasBuilder;
@@ -184,15 +193,43 @@ class RetroAgentController extends AbstractController
         // et l'insère telle quelle. Une enveloppe JSON lui donnait donc une chaîne sans
         // aucun élément — « Contenu du picker vide » — et le bouton de reversement ne
         // faisait rien d'autre qu'une notification d'erreur.
+        return $this->rendrePicker(
+            $this->beneficiaires->pour($agent),
+            $agent->getEntreprise(),
+            $this->generateUrl('admin.retro_agent.reversement_submit', ['id' => $agent->getId()]),
+            $this->generateUrl('admin.retro_agent.rapport', ['id' => $agent->getId()]),
+        );
+    }
+
+    /**
+     * LE PICKER, POUR L'UNE OU L'AUTRE FAMILLE.
+     *
+     * Un seul corps : les deux bénéficiaires règlent les mêmes ÉCHÉANCES, avec la même
+     * exigence de justificatif et les mêmes défauts de saisie. Deux copies auraient divergé
+     * au premier ajout de colonne — c'est ce qui est arrivé au rapport avant son extraction.
+     */
+    private function rendrePicker(
+        BeneficiaireRetro $beneficiaire,
+        Entreprise $entreprise,
+        string $submitUrl,
+        string $rapportUrl,
+    ): Response {
+        // DU HTML, PAS DU JSON. L'ouvreur de pickers autonomes (`picker-open.js`, partagé
+        // avec le portefeuille, les risques ciblés et les clients) lit la réponse en TEXTE
+        // et l'insère telle quelle. Une enveloppe JSON lui donnait donc une chaîne sans
+        // aucun élément — « Contenu du picker vide » — et le bouton ne faisait rien.
         return $this->render('components/retro_agent/_reversement_picker.html.twig', [
-            'agent'   => $agent,
-            'lignes'  => $this->rapportBuilder->lignesAVerser($agent),
+            'beneficiaireNom' => $beneficiaire->nom(),
+            // LES ÉCHÉANCES, et non les affaires : la prime et la commission se paient par
+            // tranche, donc c'est une échéance qu'on règle. Proposer l'affaire obligerait
+            // ensuite à répartir le versement, règle que personne n'a écrite.
+            'lignes'  => $this->rapportBuilder->echeancesAVerser($beneficiaire, $entreprise),
             'monnaie' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
             // Les comptes viennent d'un SERVICE : Entreprise n'expose aucune collection
             // de comptes bancaires, et surtout l'ordre de cette liste détermine lequel
             // est proposé — Ket doit proposer le même.
-            'comptes' => $this->defautsDuVersement->comptes($agent->getEntreprise()),
-            'compteProposeId' => $this->defautsDuVersement->comptePropose($agent->getEntreprise())?->getId(),
+            'comptes' => $this->defautsDuVersement->comptes($entreprise),
+            'compteProposeId' => $this->defautsDuVersement->comptePropose($entreprise)?->getId(),
             // Pré-remplie à l'instant de l'ouverture : l'utilisateur voit la référence
             // qui sera écrite, et peut la remplacer par celle de son virement réel.
             'referenceParDefaut' => $this->defautsDuVersement->reference(new \DateTimeImmutable('now')),
@@ -210,8 +247,8 @@ class RetroAgentController extends AbstractController
             // s'ouvre aussi depuis le rapport de production, qui n'est pas une liste :
             // on lui donne de quoi le redemander, sans quoi il resterait sur les
             // montants d'avant le versement.
-            'rapportUrl' => $this->generateUrl('admin.retro_agent.rapport', ['id' => $agent->getId()]),
-            'submitUrl' => $this->generateUrl('admin.retro_agent.reversement_submit', ['id' => $agent->getId()]),
+            'rapportUrl' => $rapportUrl,
+            'submitUrl' => $submitUrl,
         ]);
     }
 
@@ -228,6 +265,19 @@ class RetroAgentController extends AbstractController
     {
         $this->assertPeutVerser($agent);
 
+        return $this->enregistrerVersement($agent, $agent->getEntreprise(), $request);
+    }
+
+    /**
+     * L'ENREGISTREMENT D'UN VERSEMENT, POUR L'UNE OU L'AUTRE FAMILLE.
+     *
+     * Le bénéficiaire est un agent interne OU un partenaire externe ; tout le reste — la
+     * garde de justificatif, la référence, le lot, le compte débité, la maille — est
+     * identique. Deux copies auraient divergé, et l'une aurait fini par écrire des lignes
+     * que l'autre ne sait pas lire.
+     */
+    private function enregistrerVersement(Invite|Partenaire $beneficiaire, Entreprise $entreprise, Request $request): JsonResponse
+    {
         $donnees = json_decode($request->getContent(), true);
         $lignes = is_array($donnees['lignes'] ?? null) ? $donnees['lignes'] : [];
         if ($lignes === []) {
@@ -261,7 +311,7 @@ class RetroAgentController extends AbstractController
         if (!empty($donnees['compteBancaireId'])) {
             $compte = $this->em->getRepository(CompteBancaire::class)->findOneBy([
                 'id' => (int) $donnees['compteBancaireId'],
-                'entreprise' => $agent->getEntreprise(),
+                'entreprise' => $entreprise,
             ]);
         }
 
@@ -269,8 +319,17 @@ class RetroAgentController extends AbstractController
         $total = 0.0;
         $ecrits = [];
         foreach ($lignes as $ligne) {
-            $avenant = $this->avenantDuPerimetre($agent, (int) ($ligne['avenantId'] ?? 0));
-            if ($avenant === null) {
+            // LA LIGNE DÉSIGNE UNE ÉCHÉANCE, et porte l'affaire qu'elle solde. Les deux
+            // voyagent ensemble : la tranche dit QUAND, l'avenant dit SUR QUOI.
+            $tranche = $this->trancheDuPerimetre($entreprise, (int) ($ligne['trancheId'] ?? 0));
+            $avenant = $this->avenantDuPerimetre($entreprise, (int) ($ligne['avenantId'] ?? 0));
+            if ($tranche === null && $avenant === null) {
+                continue;
+            }
+            // L'INVARIANT, VÉRIFIÉ AVANT D'ÉCRIRE : une échéance et une affaire de deux
+            // propositions différentes rendraient les deux soldes faux, sans erreur.
+            if ($tranche !== null && $avenant !== null
+                && $tranche->getCotation()?->getId() !== $avenant->getCotation()?->getId()) {
                 continue;
             }
             $montant = round((float) ($ligne['montant'] ?? 0), 2);
@@ -279,7 +338,9 @@ class RetroAgentController extends AbstractController
             }
 
             $reversement = (new ReversementRetroAgent())
-                ->setAgent($agent)
+                ->setAgent($beneficiaire instanceof Invite ? $beneficiaire : null)
+                ->setPartenaire($beneficiaire instanceof Partenaire ? $beneficiaire : null)
+                ->setTranche($tranche)
                 ->setAvenant($avenant)
                 ->setMontant($montant)
                 ->setPaidAt($paidAt)
@@ -287,7 +348,7 @@ class RetroAgentController extends AbstractController
                 ->setLotReference($lotReference)
                 ->setCompteBancaire($compte)
                 ->setDescription($donnees['description'] ?? null);
-            $reversement->setEntreprise($agent->getEntreprise())->setInvite($this->getInvite());
+            $reversement->setEntreprise($entreprise)->setInvite($this->getInvite());
             $this->em->persist($reversement);
 
             $ecrits[] = $reversement;
@@ -322,6 +383,89 @@ class RetroAgentController extends AbstractController
     }
 
     // ===================== Gardes =====================
+
+    /**
+     * LE RAPPORT DE PRODUCTION D'UN PARTENAIRE EXTERNE.
+     *
+     * Il n'en avait aucun : ses chiffres n'existaient qu'en agrégat sur sa fiche, et seul
+     * l'assistant savait les détailler — alors que le socle sait rendre les deux familles
+     * depuis son extraction. C'est le même écran, le même gabarit, les mêmes colonnes.
+     */
+    #[Route('/partenaire/{id}/rapport', name: 'rapport_partenaire', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function rapportPartenaire(Partenaire $partenaire, Request $request): JsonResponse
+    {
+        $this->assertPartenaireDuPerimetre($partenaire);
+
+        $contexte = $this->rapportBuilder->pour(
+            $this->partenaireRetro($partenaire),
+            $partenaire->getEntreprise(),
+            (string) $request->query->get('statut', CotationSouscriptionScope::STATUT_SOUSCRITES),
+        );
+        // La dette de preuve se lit par AVENANT, quel que soit le bénéficiaire.
+        $contexte['piecesParAvenant'] = [];
+
+        return $this->json([
+            'html'  => $this->renderView('admin/retro_agent/rapport.html.twig', $contexte),
+            'title' => 'Rétrocommissions — ' . $partenaire->getNom(),
+        ]);
+    }
+
+    /** Le picker d'un partenaire : mêmes échéances réglables, même gabarit. */
+    #[Route('/partenaire/{id}/reversement-picker', name: 'reversement_picker_partenaire', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function reversementPickerPartenaire(Partenaire $partenaire): Response
+    {
+        $this->assertPeutVerserAuPartenaire($partenaire);
+
+        return $this->rendrePicker(
+            $this->partenaireRetro($partenaire),
+            $partenaire->getEntreprise(),
+            $this->generateUrl('admin.retro_agent.reversement_submit_partenaire', ['id' => $partenaire->getId()]),
+            $this->generateUrl('admin.retro_agent.rapport_partenaire', ['id' => $partenaire->getId()]),
+        );
+    }
+
+    /** L'enregistrement d'un versement à un partenaire : même corps, autre bénéficiaire. */
+    #[Route('/partenaire/{id}/reversement', name: 'reversement_submit_partenaire', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    public function reversementSubmitPartenaire(Partenaire $partenaire, Request $request): JsonResponse
+    {
+        $this->assertPeutVerserAuPartenaire($partenaire);
+
+        return $this->enregistrerVersement($partenaire, $partenaire->getEntreprise(), $request);
+    }
+
+    private function partenaireRetro(Partenaire $partenaire): BeneficiaireRetro
+    {
+        return $this->beneficiaires->pour($partenaire);
+    }
+
+    /** Un partenaire d'un AUTRE cabinet n'existe pas ici : scoping strict, comme l'agent. */
+    private function assertPartenaireDuPerimetre(Partenaire $partenaire): void
+    {
+        $connecte = $this->getInvite();
+        if ($connecte === null || $partenaire->getEntreprise() === null
+            || $partenaire->getEntreprise() !== $connecte->getEntreprise()) {
+            throw $this->createAccessDeniedException("Ce partenaire n'est pas dans votre espace de travail.");
+        }
+    }
+
+    /**
+     * VERSER À UN PARTENAIRE relève du droit de la rubrique, non de la gestion des invités.
+     *
+     * Pour un AGENT, la garde est `canManageInvites` — personne ne se paie soi-même, et
+     * l'agent est un salarié dont la rémunération relève de l'administration de l'espace.
+     * Un partenaire externe n'est pas un invité : lui régler sa facture relève du droit
+     * d'écriture sur les rétros, celui qui gouverne déjà la rubrique.
+     */
+    private function assertPeutVerserAuPartenaire(Partenaire $partenaire): void
+    {
+        $this->assertPartenaireDuPerimetre($partenaire);
+
+        if (!$this->accessResolver->can($this->getInvite(), 'ReversementRetroAgent', Invite::ACCESS_ECRITURE)) {
+            throw $this->createAccessDeniedException(
+                'Enregistrer un reversement exige le droit d\'écriture sur les rétros intermédiaires.',
+            );
+        }
+    }
 
     /**
      * Consultation : soi-même toujours, un autre agent seulement si gestionnaire d'invités.
@@ -367,14 +511,24 @@ class RetroAgentController extends AbstractController
         }
     }
 
-    /** L'avenant doit exister DANS l'entreprise de l'agent : scoping strict. */
-    private function avenantDuPerimetre(Invite $agent, int $id): ?Avenant
+    /** L'échéance doit exister DANS l'entreprise : scoping strict, comme l'avenant. */
+    private function trancheDuPerimetre(Entreprise $entreprise, int $id): ?\App\Entity\Tranche
     {
         if ($id <= 0) {
             return null;
         }
 
-        return $this->avenantRepository->findOneBy(['id' => $id, 'entreprise' => $agent->getEntreprise()]);
+        return $this->trancheRepository->findOneBy(['id' => $id, 'entreprise' => $entreprise]);
+    }
+
+    /** L'avenant doit exister DANS l'entreprise de l'agent : scoping strict. */
+    private function avenantDuPerimetre(Entreprise $entreprise, int $id): ?Avenant
+    {
+        if ($id <= 0) {
+            return null;
+        }
+
+        return $this->avenantRepository->findOneBy(['id' => $id, 'entreprise' => $entreprise]);
     }
 
     /** Date fournie, sinon maintenant. Une date illisible ne fait pas échouer la saisie. */

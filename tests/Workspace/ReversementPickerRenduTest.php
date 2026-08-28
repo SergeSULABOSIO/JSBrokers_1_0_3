@@ -2,7 +2,6 @@
 
 namespace App\Tests\Workspace;
 
-use App\Entity\Invite;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Twig\Environment;
 
@@ -18,15 +17,20 @@ use Twig\Environment;
  */
 class ReversementPickerRenduTest extends KernelTestCase
 {
-    private function rendre(array $comptes = [['id' => 7, 'intitule' => 'AIB RDC', 'banque' => 'Equity BCDC']]): string
-    {
+    private function rendre(
+        array $comptes = [['id' => 7, 'intitule' => 'AIB RDC', 'banque' => 'Equity BCDC']],
+        string $beneficiaireNom = 'Administrateur (Serge SULA)',
+    ): string {
         self::bootKernel();
 
         /** @var Environment $twig */
         $twig = self::getContainer()->get('twig');
 
         return $twig->render('components/retro_agent/_reversement_picker.html.twig', [
-            'agent'   => (new Invite())->setNom('Administrateur (Serge SULA)'),
+            // LE NOM, PAS L'ENTITÉ. Le picker sert les deux familles d'intermédiaires
+            // depuis l'unification : lui passer un `agent` l'aurait rendu incapable
+            // d'annoncer un partenaire, et le gabarit aurait dû tester la famille.
+            'beneficiaireNom' => $beneficiaireNom,
             'monnaie' => 'USD',
             'comptes' => $comptes,
             'submitUrl' => '/admin/retro-agent/1/reversement',
@@ -40,14 +44,39 @@ class ReversementPickerRenduTest extends KernelTestCase
             'limites' => \App\Ai\Fichier\FichierAttachePolicy::limitesFront(),
             'famillesParExtension' => \App\Service\Soa\SoaPoliceDocumentsCollector::famillesParExtension(),
             'attacherUrlPattern' => '/admin/document/api/attacher/reversementRetroAgent/0',
+            // UNE ÉCHÉANCE, pas une affaire : c'est par tranche que la prime et la
+            // commission sont payées, donc à ce rythme que l'intermédiaire est rémunéré.
             'lignes'  => [[
-                'avenant' => ['id' => 3],
+                'trancheId' => 41,
+                'trancheNom' => '1ère échéance',
+                'echeanceAt' => new \DateTimeImmutable('2026-09-30'),
+                'avenantId' => 3,
                 'client' => 'Kibali Goldmines SA',
                 'reference' => '12002-33002-0021-111-00071014-2025',
                 'risque' => 'GIT,MAR,MOC,MARINE',
+                'exigible' => 5.99,
                 'retroAgentExigible' => 5.99,
             ]],
         ]);
+    }
+
+    /**
+     * LE MÊME PICKER ANNONCE UN PARTENAIRE.
+     *
+     * C'est la vérification de l'unification : le gabarit ne connaît plus qu'un NOM de
+     * bénéficiaire. S'il redevenait dépendant d'un agent — une propriété lue sur une
+     * entité Invite, par exemple — ce test le dirait, alors que les autres, tous rendus
+     * avec un nom d'agent, continueraient de passer.
+     */
+    public function testLeMemePickerSertUnPartenaireExterne(): void
+    {
+        $html = $this->rendre(beneficiaireNom: 'SUNU Courtage SARL');
+
+        self::assertStringContainsString('SUNU Courtage SARL', $html);
+        // L'échéance est nommée : c'est elle qu'on règle, et son nom est ce qui permet
+        // au courtier de reconnaître la ligne de son échéancier.
+        self::assertStringContainsString('1ère échéance', $html);
+        self::assertStringContainsString('data-tranche-id="41"', $html);
     }
 
     /**

@@ -243,20 +243,22 @@
    jamais — sans erreur, le clic ne fait simplement rien. #}
 <div class="rpa-container"
      data-controller="retro-agent-rapport"
-     data-retro-agent-rapport-base-url-value="/admin/retro-agent/{{ agent.id }}/rapport"
-     data-retro-agent-rapport-picker-url-value="/admin/retro-agent/{{ agent.id }}/reversement-picker"
+     data-retro-agent-rapport-base-url-value="{{ beneficiaire.prefixe }}/rapport"
+     data-retro-agent-rapport-picker-url-value="{{ beneficiaire.prefixe }}/reversement-picker"
      {# Le bouton « Versements enregistrés » n'ouvre plus un volet à lui : il ouvre la
-        RUBRIQUE, filtrée sur cet agent. Deux écrans pour une même donnée, c'était deux
+        RUBRIQUE, filtrée sur ce bénéficiaire — la famille voyage avec l'identifiant, les
+        deux vivant sur des colonnes distinctes. Deux écrans pour une même donnée, c'était deux
         endroits où corriger un bug et un utilisateur qui ne savait pas lequel fait foi. #}
-     data-retro-agent-rapport-agent-id-value="{{ agent.id }}"
-     data-retro-agent-rapport-agent-nom-value="{{ agent.nom|e('html_attr') }}"
-     data-retro-agent-rapport-justificatifs-url-value="/admin/retro-agent/{{ agent.id }}/affaire/0/justificatifs">
+     data-retro-agent-rapport-agent-id-value="{{ beneficiaire.id }}"
+     data-retro-agent-rapport-agent-nom-value="{{ beneficiaire.nom|e('html_attr') }}"
+     data-retro-agent-rapport-agent-type-value="{{ beneficiaire.type }}"
+     data-retro-agent-rapport-justificatifs-url-value="{{ beneficiaire.prefixe }}/affaire/0/justificatifs">
     <div class="rpa-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
-            <h2>Rétrocommissions de {{ agent.nom }}</h2>
+            <h2>Rétrocommissions de {{ beneficiaire.nom }}</h2>
             <div class="rpa-sub">
-                Production dont cet agent est <strong>bénéficiaire</strong> —
-                distincte des affaires qu'il gère.
+                Production dont {{ beneficiaire.estAgent ? 'cet agent' : 'ce partenaire' }} est
+                <strong>bénéficiaire</strong> — distincte des affaires qu'il gère.
             </div>
         </div>
         {# La devise n'est mentionnée que si elle est CONFIGURÉE : « montants en » suivi de
@@ -344,7 +346,7 @@
                        class="jsb-search-bar__input"
                        name="rpa-recherche"
                        aria-label="Rechercher dans le rapport"
-                       aria-controls="rpa-corps-{{ agent.id }}"
+                       aria-controls="rpa-corps-{{ beneficiaire.id }}"
                        placeholder="Client, police, risque, assureur…"
                        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
                        data-lpignore="true" data-1p-ignore data-form-type="other"
@@ -369,14 +371,14 @@
     {% endif %}
 
     {% if lignes is empty %}
-        <div class="rpa-empty">Aucune affaire dans ce statut pour cet agent.</div>
+        <div class="rpa-empty">Aucune affaire dans ce statut pour {{ beneficiaire.estAgent ? 'cet agent' : 'ce partenaire' }}.</div>
     {% else %}
     <div class="rpa-scroll" data-retro-agent-rapport-target="scroll">
         <table class="table table-sm table-hover rpa-table"
                data-retro-agent-rapport-target="tableau"
-               aria-label="Rétrocommissions de {{ agent.nom }}">
+               aria-label="Rétrocommissions de {{ beneficiaire.nom }}">
             <caption class="visually-hidden">
-                Production de {{ agent.nom }} affaire par affaire : prime du client et son
+                Production de {{ beneficiaire.nom }} affaire par affaire : prime du client et son
                 règlement, commission du cabinet et son encaissement, part des partenaires
                 externes, puis rétrocommission due, versée, restante et exigible.
             </caption>
@@ -421,7 +423,7 @@
                     <th scope="col">État</th>
                 </tr>
             </thead>
-            <tbody class="table-group-divider" id="rpa-corps-{{ agent.id }}">
+            <tbody class="table-group-divider" id="rpa-corps-{{ beneficiaire.id }}">
                 {% for l in lignes %}
                     {# Le texte cherchable est PRÉ-CALCULÉ ici : le filtre du navigateur ne
                        relit pas le DOM ligne par ligne, et cherche exactement sur ce que
