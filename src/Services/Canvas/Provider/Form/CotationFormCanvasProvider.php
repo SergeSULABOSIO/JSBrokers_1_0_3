@@ -49,29 +49,17 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
                 // ligne plus bas est déjà prise. Le contrôle « toutes libres » est SERVEUR,
                 // et c'est là qu'il doit être — ce gating-ci reste cosmétique.
                 [
-                    "label"        => "Rattacher une condition de partage",
+                    "label"        => "Gérer le partage",
                     "icon"         => "partenaire",
                     "groupe"       => "Partage",
                     "groupe_icone" => "partenaire",
                     "event"        => "ui:partage.picker-request",
                     "url"          => "/admin/partage/cotation/conditions-picker",
                     "multi"        => true,
-                    // Vrai tant qu'une famille AU MOINS est libre : une affaire reçoit un
-                    // apporteur ET un agent, mais pas deux du même camp.
-                    "condition"    => ["field" => "partageRattachable", "value" => true],
-                ],
-                [
-                    "label"        => "Détacher la condition de partage",
-                    "icon"         => "action:detach",
-                    "groupe"       => "Partage",
-                    "groupe_icone" => "partenaire",
-                    // LE DÉTACHEMENT PASSE PAR LE MÊME PICKER que le rattachement, en mode
-                    // « détacher » : il était un appel direct, ce qui ne suffit plus depuis
-                    // qu'une affaire peut porter DEUX conditions — il faut dire laquelle.
-                    // Un seul chemin, plutôt qu'un branchement selon leur nombre.
-                    "event"        => "ui:partage.picker-request",
-                    "url"          => "/admin/partage/cotation/conditions-picker?mode=detacher",
-                    "condition"    => ["field" => "partageDetachable", "value" => true],
+                    // AUCUNE CONDITION D'AFFICHAGE. Le picker rattache ce qui est libre et
+                    // détache ce qui est posé : il n'y a plus d'état où l'action n'aurait
+                    // rien à offrir, et lui-même sait dire qu'aucune condition n'existe —
+                    // là où un bouton masqué n'apprend rien.
                 ],
                 [
                     "label" => "Voir les documents",

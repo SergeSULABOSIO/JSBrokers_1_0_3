@@ -4,6 +4,7 @@ namespace App\Form;
 
 use App\Entity\ConditionPartage;
 use App\Entity\Invite;
+use App\Entity\Partenaire;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -217,6 +218,8 @@ class ConditionPartageType extends AbstractType
         // Le choix est donc explicite, et il est APPLIQUÉ (ci-dessous) plutôt que deviné
         // d'un champ laissé vide — c'est cette implicitude qui avait produit la confusion.
         $piste = $condition?->getPiste();
+        $autonome = $this->beneficiaireLibrementChoisi($condition);
+
         if ($piste !== null && $condition?->getPartenaire() === null) {
             $intermediaire = $piste->getPartenaire();
 
@@ -267,7 +270,96 @@ class ConditionPartageType extends AbstractType
                     $entite->setPartenaire(null);
                 },
             );
+
+            return;
         }
+
+        // ── LA CRÉATION AUTONOME : LES DEUX FAMILLES, LIBREMENT ─────────────────────
+        //
+        // Ce formulaire ne déclarait AUCUN champ `partenaire`. Depuis la rubrique
+        // « Conditions de partage », on ne pouvait donc créer que des conditions d'AGENT :
+        // un partenaire n'y était pas désignable, et il fallait passer par sa fiche.
+        // L'agent, lui, se choisissait librement d'un autocomplete — c'était toute
+        // l'asymétrie.
+        if (!$autonome) {
+            return;
+        }
+
+        $builder->add('partenaire', PartenaireAutocompleteField::class, [
+            'label' => 'Intermédiaire bénéficiaire',
+            'help' => "L'apporteur externe à qui cette part est rétrocédée. "
+                . "⚠ Une condition de partenaire s'applique à TOUTES les affaires qu'il apporte, "
+                . "dès son enregistrement — là où celle d'un agent reste sans effet tant qu'on ne "
+                . "l'a pas rattachée à des affaires.",
+            'class' => Partenaire::class,
+            'required' => false,
+            'attr' => ['placeholder' => 'Intermédiaire bénéficiaire'],
+        ]);
+
+        $builder->add('beneficiaireType', ChoiceType::class, [
+            'label' => "Cette part revient à",
+            'help' => "Une condition rétrocède à UN bénéficiaire : un agent du cabinet, ou un "
+                . "intermédiaire externe. Jamais aux deux.",
+            'mapped' => false,
+            'expanded' => true,
+            'required' => true,
+            'placeholder' => false,
+            'choices' => [
+                'Un agent interne' => self::BENEFICIAIRE_AGENT,
+                'Un intermédiaire externe' => self::BENEFICIAIRE_INTERMEDIAIRE,
+            ],
+            'data' => $condition?->getPartenaire() !== null
+                ? self::BENEFICIAIRE_INTERMEDIAIRE
+                : self::BENEFICIAIRE_AGENT,
+        ]);
+
+        $builder->addEventListener(
+            FormEvents::POST_SUBMIT,
+            static function (FormEvent $event): void {
+                /** @var ConditionPartage $entite */
+                $entite = $event->getData();
+                $form = $event->getForm();
+                if ($entite === null || !$form->has('beneficiaireType')) {
+                    return;
+                }
+
+                // ON POSE, ON NE DÉDUIT PAS. L'invariant « exactement un » est satisfait par
+                // construction : le camp non retenu est vidé, quel qu'ait été le contenu du
+                // champ. Sans cela, un agent saisi puis un intermédiaire choisi laisserait
+                // les deux en place, et l'écriture serait refusée en 422 sans explication.
+                if ($form->get('beneficiaireType')->getData() === self::BENEFICIAIRE_INTERMEDIAIRE) {
+                    $entite->setAgent(null);
+
+                    return;
+                }
+
+                $entite->setPartenaire(null);
+            },
+        );
+    }
+
+    /**
+     * LE BÉNÉFICIAIRE EST-IL À CHOISIR, OU DÉJÀ IMPOSÉ ?
+     *
+     * Une condition créée depuis la fiche d'un agent ou d'un partenaire reçoit son
+     * bénéficiaire du parent (`parentFieldName`) : lui redemander serait faire chercher une
+     * réponse que l'écran possède déjà, et lui permettre de la contredire.
+     *
+     * Le choix ne s'ouvre donc que sur une condition AUTONOME — celle de la rubrique — et
+     * sur une condition existante, qu'on doit pouvoir corriger. La distinction tient en un
+     * point : une condition NEUVE qui porte déjà un bénéficiaire l'a reçu de sa fiche
+     * parente.
+     */
+    private function beneficiaireLibrementChoisi(?ConditionPartage $condition): bool
+    {
+        if ($condition === null || $condition->getPiste() !== null) {
+            return false;
+        }
+
+        $injecte = $condition->getId() === null
+            && ($condition->getAgent() !== null || $condition->getPartenaire() !== null);
+
+        return !$injecte;
     }
 
     /**

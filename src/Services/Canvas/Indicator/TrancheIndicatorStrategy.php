@@ -7,6 +7,7 @@ use App\Entity\Tranche;
 use App\Entity\Taxe;
 use App\Entity\Note;
 use App\Repository\TaxeRepository;
+use App\Service\Partage\Exigibilite;
 use App\Service\Partage\Reserve;
 use App\Services\ServiceDates;
 use App\Entity\Entreprise;
@@ -471,35 +472,29 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
             return 0.0;
         }
 
-        $soldeRetro = round(
-            $this->getTrancheRetroCommission($tranche)
-            - $this->calculationHelper->getTrancheMontantRetrocommissionsPayableParCourtierPayee($tranche),
-            2
-        );
-        if ($soldeRetro <= 0) {
-            return 0.0;
-        }
-
         $facteur = $this->calculateTrancheTauxFactor($tranche);
         $duePartageable = round(
             $this->calculationHelper->getCotationMontantCommissionTtc($tranche->getCotation(), -1, true) * $facteur,
             2
         );
-        if ($duePartageable <= 0) {
-            return 0.0;
-        }
-
         $encaisseePartageable = round($this->getTrancheMontantCommissionPartageableEncaissee($tranche), 2);
 
         // Circuit bordereau sans articles : un bordereau de production couvrant la
         // tranche et intégralement encaissé prouve que la commission (partageable
         // comprise) a été perçue — la dette rétro est donc née.
-        if ($encaisseePartageable >= $duePartageable
-            || $this->calculationHelper->isTrancheCouverteParBordereau($tranche, true)) {
-            return $soldeRetro;
+        if ($this->calculationHelper->isTrancheCouverteParBordereau($tranche, true)) {
+            $encaisseePartageable = max($encaisseePartageable, $duePartageable);
         }
 
-        return 0.0;
+        // LA FORMULE EST PARTAGÉE avec l'agent : ce qui est RENTRÉ doit ressortir, à due
+        // proportion. Les deux camps l'appliquaient chacun de leur côté, et ne lisaient
+        // déjà plus le même « encaissé ».
+        return Exigibilite::exigible(
+            round($this->getTrancheRetroCommission($tranche), 2),
+            $duePartageable,
+            $encaisseePartageable,
+            $this->calculationHelper->getTrancheMontantRetrocommissionsPayableParCourtierPayee($tranche),
+        );
     }
 
     /**
@@ -556,6 +551,41 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
                 $proportionPaiement = $this->calculationHelper->getNoteMontantPaye($note) / $montantPayableNote;
                 $montant += $proportionPaiement * $this->calculationHelper->getArticleMontant($article);
             }
+        }
+
+        // ── LE CIRCUIT BORDEREAU COMPTAIT POUR RIEN, ET C'EST UN CORRECTIF ──────────
+        //
+        // Cette lecture n'interrogeait que les ARTICLES de notes. La colonne « Encaissée »
+        // de l'écran, elle, prend `max(articles, allouée)` — ce qu'un bordereau de
+        // production a réellement fait rentrer SUR CETTE ÉCHÉANCE, imputé de la plus
+        // ancienne à la plus récente. Une tranche soldée par un bordereau partiellement
+        // réglé affichait donc « Solde 0,00 » pendant que la rétro du partenaire restait
+        // inexigible : le courtier ne payait pas quelqu'un qu'il devait payer.
+        //
+        // L'agent, lui, lisait déjà la bonne mesure. C'est cette divergence-là que le
+        // correctif ferme.
+        //
+        // ── POURQUOI UN PRORATA, ET PAS LE MONTANT BRUT ─────────────────────────────
+        // Le bordereau ne distingue pas les types de revenus : il fait rentrer de la
+        // commission, partageable ou non. L'imputer en entier rendrait exigible une rétro
+        // sur de l'argent qui n'est pas partageable. On retient donc la même part que
+        // celle du dû — et un `max()` avec le chemin des articles, car les deux décrivent
+        // le même argent, l'un par la note, l'autre par le bordereau qui en tient lieu.
+        $allouee = round($this->calculationHelper->getTrancheCommissionAllouee($tranche), 2);
+        if ($allouee > 0.0) {
+            $facteur = $this->calculateTrancheTauxFactor($tranche);
+            $cotation = $tranche->getCotation();
+            $dueTotale = round(
+                $this->calculationHelper->getCotationMontantCommissionTtc($cotation, -1, false) * $facteur,
+                2,
+            );
+            $duePartageable = round(
+                $this->calculationHelper->getCotationMontantCommissionTtc($cotation, -1, true) * $facteur,
+                2,
+            );
+            $partPartageable = $dueTotale > 0.0 ? min(1.0, $duePartageable / $dueTotale) : 1.0;
+
+            $montant = max($montant, $allouee * $partPartageable);
         }
 
         return $montant;

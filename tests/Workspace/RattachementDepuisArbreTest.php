@@ -441,23 +441,36 @@ class RattachementDepuisArbreTest extends WebTestCase
      * peut porter deux conditions. Offrir la liste entière ferait choisir une condition
      * qui n'y est pas — un geste sans effet, et rien pour l'expliquer.
      */
-    public function testLePickerEnModeDetacherNeProposeQueLeRattache(): void
+    public function testLePickerDonneAChaqueConditionSonPropreVerbe(): void
     {
         $s = $this->semer();
         $this->rattacher([$s['avenantsA'][0]->getId()], $s['condition']->getId());
 
         $this->client->request(
             'GET',
-            '/admin/partage/avenant/conditions-picker?mode=detacher&ids=' . $s['avenantsA'][0]->getId(),
+            '/admin/partage/avenant/conditions-picker?ids=' . $s['avenantsA'][0]->getId(),
         );
 
         self::assertResponseIsSuccessful();
         $html = (string) $this->client->getResponse()->getContent();
 
-        self::assertStringContainsString('Prime Alice', $html, 'La condition rattachée est proposée.');
-        self::assertStringNotContainsString('Prime Bruno', $html, 'Celles qui ne le sont pas, non.');
-        self::assertStringContainsString('Détacher ici', $html);
-        // Et il poste sur la route de détachement, pas sur celle du rattachement.
-        self::assertStringContainsString('/admin/partage/avenant/detacher', $html);
+        // LES DEUX CONDITIONS SONT LÀ, mais elles ne proposent pas le même geste.
+        //
+        // Ce test exigeait l'inverse — le picker s'ouvrait en mode « détacher » et ne
+        // montrait que ce qui était rattaché. Deux vues pour une même liste, et un
+        // paramètre d'URL pour les distinguer : dès lors que chaque ligne porte son verbe,
+        // dire au picker ce qu'on est venu faire devenait redondant, et permettait de le
+        // contredire.
+        self::assertStringContainsString('Prime Alice', $html, 'La condition rattachée est là…');
+        self::assertStringContainsString('Prime Bruno', $html, '…et les autres aussi.');
+
+        // Celle qui est posée ne se rattache pas une seconde fois : elle se détache.
+        self::assertStringContainsString('Déjà rattachée', $html);
+        self::assertStringContainsString('Détacher', $html);
+        self::assertStringContainsString('Rattacher ici', $html);
+
+        // Et chaque bouton porte SA route : c'est ce qui permet un picker unique.
+        self::assertStringContainsString('data-action-url="/admin/partage/avenant/detacher"', $html);
+        self::assertStringContainsString('data-action-url="/admin/partage/avenant/rattacher"', $html);
     }
 }

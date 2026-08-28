@@ -31,6 +31,7 @@ use App\Repository\CotationRepository;
 use App\Repository\NotificationSinistreRepository;
 use App\Repository\TaxeRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Service\Partage\Exigibilite;
 use App\Service\Partage\Reserve;
 use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
@@ -1768,20 +1769,25 @@ class IndicatorCalculationHelper implements ResetInterface
         }
 
         $due = round($this->getCotationMontantCommissionTtc($cotation, -1, false) * $facteur, 2);
-        if ($due <= 0.0) {
-            // Échéance sans commission attendue : rien n'est à percevoir de l'assureur, la
-            // dette interne est donc née dès la souscription.
-            return $solde;
-        }
-
         $encaissee = round($this->getTrancheMontantCommissionEncaissee($tranche), 2);
 
         // Circuit bordereau sans articles : un bordereau couvrant l'échéance et
         // intégralement encaissé prouve que la commission a été perçue — même tolérance
         // que côté partenaire, sans quoi ce circuit ne rendrait jamais rien exigible.
-        return ($encaissee >= $due || $this->isTrancheCouverteParBordereau($tranche, true))
-            ? $solde
-            : 0.0;
+        if ($this->isTrancheCouverteParBordereau($tranche, true)) {
+            $encaissee = max($encaissee, $due);
+        }
+
+        // LA FORMULE EST PARTAGÉE avec le partenaire : ce qui est RENTRÉ doit ressortir, à
+        // due proportion. Elle vivait ici en copie, et les deux camps ne lisaient déjà plus
+        // le même « encaissé » — l'agent devenait exigible là où le partenaire ne l'était
+        // pas, sur la même échéance.
+        return Exigibilite::exigible(
+            round($this->getCotationMontantRetroAgent($cotation, $agentCible) * $facteur, 2),
+            $due,
+            $encaissee,
+            $this->getTrancheMontantRetroAgentReversee($tranche, $agentCible),
+        );
     }
 
     /**
