@@ -155,28 +155,23 @@ final class RattachementDuPartage
     }
 
     /**
-     * LES TROIS VALEURS QUE LES LISTES ATTENDENT, en UNE traversée.
+     * CE QUE LES LISTES ATTENDENT, en UNE traversée.
      *
      * Les quatre rubriques de l'arbre (piste, proposition, avenant, tranche) affichent le
-     * même voyant et gouvernent les mêmes actions. Leur faire appeler trois méthodes, c'est
-     * trois parcours de collections par ligne de liste — le genre de N+1 qui ne se voit
-     * qu'à soixante lignes — et trois occasions pour l'une des rubriques d'en oublier une.
+     * même voyant. Leur faire appeler plusieurs méthodes, c'est autant de parcours de
+     * collections par ligne de liste — le genre de N+1 qui ne se voit qu'à soixante lignes.
      *
-     * `partageRattachable` est vrai tant qu'une famille AU MOINS est libre : une affaire
-     * peut recevoir un apporteur et un agent, mais pas deux du même camp.
+     * Elle rendait aussi deux drapeaux, « rattachable » et « détachable », qui gouvernaient
+     * deux actions de barre d'outils. Il n'y en a plus qu'une, toujours offerte : chaque
+     * ligne du picker porte désormais son propre verbe. La méthode garde sa forme de
+     * tableau — les stratégies l'étalent avec `...` — pour qu'un futur indicateur de partage
+     * s'y ajoute sans toucher aux quatre.
      *
-     * @return array{partageLibelle: ?string, partageRattachable: bool, partageDetachable: bool}
+     * @return array{partageLibelle: ?string}
      */
     public function indicateurs(?object $entite): array
     {
-        $piste = $this->piste($entite);
-        $conditions = $this->conditions($piste);
-
-        return [
-            'partageLibelle'     => $this->libelleDepuis($conditions),
-            'partageRattachable' => $piste !== null && count($conditions) < 2,
-            'partageDetachable'  => $conditions !== [],
-        ];
+        return ['partageLibelle' => $this->libelle($this->piste($entite))];
     }
 
     /**
@@ -225,6 +220,22 @@ final class RattachementDuPartage
 
         $famille = $this->familleDe($condition);
         $existante = $this->condition($piste, $famille);
+
+        // LA REPOSER N'EST PAS UN CONFLIT : la place est occupée par elle-même.
+        //
+        // Le refus se déclenchait quand même, et son message nommait la condition qu'on
+        // venait de choisir : « l'affaire revient déjà à X (condition Y) — détachez la
+        // condition en place avant d'en rattacher une autre », où Y ÉTAIT celle qu'on
+        // rattachait. Il invitait donc à détacher ce qu'on voulait poser.
+        //
+        // C'est un no-op, pas une erreur : en lot, seules les affaires où elle manque
+        // seront écrites. `WorkspaceMutationService` faisait déjà cette distinction ;
+        // les deux chemins la font enfin de la même façon.
+        if ($existante !== null && $existante->getId() !== null
+            && $existante->getId() === $condition->getId()) {
+            return null;
+        }
+
         if ($existante !== null) {
             return sprintf(
                 'L\'affaire « %s » revient déjà à %s (condition « %s »). Une affaire n\'a qu\'un seul '

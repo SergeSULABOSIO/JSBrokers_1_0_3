@@ -11,15 +11,20 @@
     suite ne doit pas confirmer vingt fois ; mais il doit savoir, avant le premier clic, ce
     qu'il engage.
 
-    Contexte attendu : entite, ids, pistes, mode, occupations, conditions, submitUrl, standalone.
-    `mode` vaut « rattacher » ou « detacher » : le MÊME picker sert les deux gestes.
-    Le détachement était un appel direct — cela ne suffit plus depuis qu'une affaire peut
-    porter DEUX conditions (un apporteur externe, un agent interne) : il faut dire
-    laquelle on retire.
+    Contexte attendu : entite, ids, pistes, occupations, conditions, urlRattacher,
+    urlDetacher, standalone.
+
+    CHAQUE LIGNE PORTE SON PROPRE VERBE. `conditions` est une liste d'états — la condition,
+    le nombre d'affaires de la sélection qu'elle couvre déjà, et le total — et c'est cet
+    état qui décide du bouton. Le picker n'a donc plus à savoir ce qu'on est venu faire :
+    il n'y a plus de mode, plus de seconde liste, plus de seconde vue.
 #}
 <div class="jsb-picker-overlay"
      {% if standalone|default(false) %}data-controller="partage-conditions-picker"{% endif %}
-     data-partage-conditions-picker-submit-url-value="{{ submitUrl }}"
+     {# LE REPLI, pas la destination : chaque bouton porte SA route (data-action-url),
+        puisque rattacher et détacher cohabitent dans la même liste. Cette valeur ne sert
+        qu'à un picker qui n'aurait qu'un seul geste à offrir. #}
+     data-partage-conditions-picker-submit-url-value="{{ urlRattacher }}"
      data-partage-conditions-picker-ids-value="{{ ids|join(',') }}"
      data-picker-overlay>
     <div class="jsb-picker-modal"
@@ -35,7 +40,7 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('partenaire') }}" style="width:22px;height:22px;color:#0047AB;" />
                 </span>
                 <h5 id="jsb-partage-picker-title" class="modal-title mb-0">
-                    {{ mode == 'detacher' ? 'Détacher une condition de partage' : 'Rattacher une condition de partage' }}
+                    Gérer le partage de {{ pistes|length > 1 ? 'ces affaires' : 'cette affaire' }}
                 </h5>
             </div>
             <button type="button" class="btn-close" data-picker-close aria-label="Fermer la fenêtre de sélection"></button>
@@ -55,19 +60,12 @@
                     {{ pistes|length }} affaire{{ pistes|length > 1 ? 's' : '' }} concernée{{ pistes|length > 1 ? 's' : '' }}
                 </p>
                 <p id="jsb-partage-picker-desc" class="jsb-picker-intro-desc">
-                    {% if mode == 'detacher' %}
-                        Vous retirez une condition de partage {{ pistes|length > 1 ? 'de ces affaires' : 'de cette affaire' }}.
-                        La condition n'est pas supprimée — elle sert peut-être ailleurs — et
-                        l'apporteur éventuel de l'affaire reste désigné&nbsp;: seule la règle de
-                        rémunération est défaite.
-                    {% else %}
                         Vous déclarez à qui revient une part {{ pistes|length > 1 ? 'de ces affaires' : 'de cette affaire' }} —
                         un <strong>apporteur externe</strong> ou un <strong>agent interne</strong>, selon la
                         condition choisie. Une affaire n'a qu'un bénéficiaire <strong>par camp</strong>&nbsp;:
                         les deux peuvent donc y coexister.
-                        Une fois la rétrocommission <strong>versée</strong>, le rattachement ne pourra plus
-                        être défait.
-                    {% endif %}
+                        Ce qui est <strong>déjà rattaché</strong> se détache d'ici même. Une fois la
+                        rétrocommission <strong>versée</strong>, plus rien ne se défait.
                     {% if pistes|length > 1 %}
                         Le rattachement s'écrit sur l'affaire&nbsp;: deux lignes d'une même affaire ne comptent
                         que pour une.
@@ -101,7 +99,7 @@
                 <div class="jsb-picker-stats" role="status" aria-live="polite">
                     <span class="jsb-picker-stat">
                         <span class="jsb-picker-stat-num">{{ conditions|length }}</span>
-                        condition(s) {{ mode == 'detacher' ? 'rattachée(s)' : 'disponible(s)' }}
+                        condition(s) disponible(s)
                     </span>
                     <span class="jsb-picker-stat-sep" aria-hidden="true">·</span>
                     <span class="jsb-picker-stat">
@@ -139,14 +137,9 @@
         <div class="jsb-picker-listwrap">
             {% if conditions is empty %}
                 <p class="jsb-picker-empty" role="status">
-                    {% if mode == 'detacher' %}
-                        Aucune condition n'est rattachée à {{ pistes|length > 1 ? 'ces affaires' : 'cette affaire' }}&nbsp;:
-                        il n'y a rien à détacher.
-                    {% else %}
-                        Aucune condition de partage n'existe encore.
-                        Créez-en une depuis la rubrique «&nbsp;Conditions de partage&nbsp;» (module Production),
-                        puis relancez le rattachement.
-                    {% endif %}
+                    Aucune condition de partage n'existe encore.
+                    Créez-en une depuis la rubrique «&nbsp;Conditions de partage&nbsp;» (module Production),
+                    puis revenez ici.
                 </p>
             {% else %}
                 <table class="jsb-picker-table">
@@ -156,18 +149,34 @@
                             <th scope="col">Condition</th>
                             <th scope="col">Bénéficiaire</th>
                             <th scope="col" class="text-end">Taux</th>
-                            <th scope="col">Affaires couvertes</th>
+                            <th scope="col">Affaires couvertes<br><small class="text-muted">en tout</small></th>
                             <th scope="col" class="text-end">Action</th>
                         </tr>
                     </thead>
                     <tbody data-picker-tbody>
-                        {% for c in conditions %}
+                        {% for ligne in conditions %}
+                            {% set c = ligne.condition %}
+                            {# LE VERBE SE DÉDUIT DE L'ÉTAT, jamais d'un mode global. Une
+                               condition déjà posée sur toute la sélection ne se rattache pas
+                               une seconde fois : le seul geste qui reste est de la retirer. #}
+                            {% set verbe = ligne.etat == 'rattachee'
+                                ? 'Détacher'
+                                : (ligne.etat == 'partielle'
+                                    ? ((ligne.total - ligne.couvertes) > 1
+                                        ? 'Rattacher aux ' ~ (ligne.total - ligne.couvertes) ~ ' restantes'
+                                        : 'Rattacher à l\'affaire restante')
+                                    : 'Rattacher ici') %}
                             <tr data-picker-row
                                 data-condition-id="{{ c.id }}"
+                                data-etat="{{ ligne.etat }}"
                                 data-search="{{ (c.nom ~ ' ' ~ (c.agent ? c.agent.nom : (c.partenaire ? c.partenaire.nom : '')))|lower|e('html_attr') }}">
                                 <td>
                                     <span class="jsb-picker-client-nom">{{ c.nom }}</span>
-                                    {% if c.seuil %}
+                                    {% if ligne.etat == 'rattachee' %}
+                                        <span class="jsb-picker-client-mail">Déjà rattachée</span>
+                                    {% elseif ligne.etat == 'partielle' %}
+                                        <span class="jsb-picker-client-mail">Rattachée à {{ ligne.couvertes }} sur {{ ligne.total }}</span>
+                                    {% elseif c.seuil %}
                                         <span class="jsb-picker-client-mail">Seuil&nbsp;: {{ c.seuil|number_format(2, ',', ' ') }}</span>
                                     {% endif %}
                                 </td>
@@ -190,13 +199,17 @@
                                 <td class="text-end">{{ c.taux is not null ? c.taux|number_format(2, ',', ' ') ~ ' %' : '—' }}</td>
                                 <td>{{ c.pistesAffectees|length }} affaire(s)</td>
                                 <td class="text-end">
+                                    {# LA DESTINATION VOYAGE AVEC LE BOUTON : le contrôleur poste
+                                       la même charge utile aux deux routes, c'est la ligne qui
+                                       dit laquelle. Sans cela il faudrait deux pickers. #}
                                     <button type="button"
-                                            class="btn btn-sm btn-primary jsb-picker-btn"
+                                            class="btn btn-sm {{ ligne.etat == 'rattachee' ? 'btn-outline-secondary' : 'btn-primary' }} jsb-picker-btn"
                                             data-picker-affect
                                             data-condition-id="{{ c.id }}"
-                                            aria-label="{{ mode == 'detacher' ? 'Détacher' : 'Rattacher' }} la condition {{ c.nom }} sur les {{ pistes|length }} affaire(s) sélectionnée(s)">
-                                        <twig:UX:Icon name="{{ resolve_icon_name(mode == 'detacher' ? 'action:detach' : 'action:add') }}" style="width:15px;height:15px;" aria-hidden="true" />
-                                        {{ mode == 'detacher' ? 'Détacher ici' : 'Rattacher ici' }}
+                                            data-action-url="{{ ligne.etat == 'rattachee' ? urlDetacher : urlRattacher }}"
+                                            aria-label="{{ verbe }} la condition {{ c.nom }} sur les {{ pistes|length }} affaire(s) sélectionnée(s)">
+                                        <twig:UX:Icon name="{{ resolve_icon_name(ligne.etat == 'rattachee' ? 'action:detach' : 'action:add') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                                        {{ verbe }}
                                     </button>
                                 </td>
                             </tr>
@@ -208,8 +221,8 @@
 
         <footer class="jsb-picker-foot">
             <span class="jsb-picker-hint text-muted small">
-                {{ mode == 'detacher' ? 'Le détachement' : 'Le rattachement' }} s'écrit sur l'affaire,
-                jamais sur la ligne d'où vous partez.
+                Rattachement comme détachement s'écrivent sur l'affaire, jamais sur la ligne
+                d'où vous partez.
             </span>
             <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
                 <twig:UX:Icon name="{{ resolve_icon_name('action:cancel') }}" style="width:15px;height:15px;" aria-hidden="true" />

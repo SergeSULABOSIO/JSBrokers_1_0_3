@@ -49,7 +49,11 @@ export default class extends PickerBaseController {
         this._showError(null);
 
         try {
-            const reponse = await fetch(this.submitUrlValue, {
+            // LA DESTINATION VIENT DE LA LIGNE. Chaque bouton porte son verbe — rattacher
+            // ou détacher selon que la condition est déjà posée — et donc sa route. Le
+            // repli sur `submitUrlValue` garde le contrôleur utilisable par un picker qui
+            // n'aurait qu'un seul geste à offrir.
+            const reponse = await fetch(bouton.dataset.actionUrl || this.submitUrlValue, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                 body: JSON.stringify({
@@ -63,7 +67,7 @@ export default class extends PickerBaseController {
             // Le cerveau notifie et rafraîchit la liste : le voyant « Effort commercial »
             // apparaît alors sur chaque ligne concernée, et les deux actions s'inversent.
             this._notifyCerveau('client:partage.updated', {
-                message: data.message || 'Condition de partage rattachée.',
+                message: data.message || 'Le partage de l’affaire a été mis à jour.',
             });
             this.close();
         } catch (error) {

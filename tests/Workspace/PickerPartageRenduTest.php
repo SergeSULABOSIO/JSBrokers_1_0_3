@@ -34,21 +34,42 @@ class PickerPartageRenduTest extends KernelTestCase
             : $condition->setPartenaire($beneficiaire);
     }
 
-    private function rendre(string $mode = 'rattacher', array $occupations = null): string
+    /**
+     * Rend le picker avec DEUX affaires et trois conditions dans les trois états possibles.
+     *
+     * `$couvertures` dit, par condition, combien des deux affaires elle couvre déjà — c'est
+     * cet état, et lui seul, qui décide du verbe de la ligne.
+     */
+    private function rendre(array $couvertures = ['Prime Alice 15%' => 0, 'Apport SUNU 20%' => 2, 'Effort Bruno 10%' => 1], array $occupations = null): string
     {
         self::bootKernel();
         /** @var Environment $twig */
         $twig = self::getContainer()->get('twig');
 
         $alice = (new Invite())->setNom('Alice Apporteuse');
+        $bruno = (new Invite())->setNom('Bruno Kalala');
         $sunu = (new Partenaire())->setNom('SUNU Courtage')->setPart(20.0);
 
-        $conditions = $mode === 'detacher'
-            ? [$this->condition('Apport SUNU 20%', $sunu, 20.0)]
-            : [
-                $this->condition('Prime Alice 15%', $alice, 15.0),
-                $this->condition('Apport SUNU 20%', $sunu, 20.0),
+        $catalogue = [
+            'Prime Alice 15%'   => $this->condition('Prime Alice 15%', $alice, 15.0),
+            'Apport SUNU 20%'   => $this->condition('Apport SUNU 20%', $sunu, 20.0),
+            'Effort Bruno 10%'  => $this->condition('Effort Bruno 10%', $bruno, 10.0),
+        ];
+
+        $total = 2;
+        $lignes = [];
+        foreach ($couvertures as $nom => $couvertes) {
+            $lignes[] = [
+                'condition' => $catalogue[$nom],
+                'couvertes' => $couvertes,
+                'total'     => $total,
+                'etat'      => match (true) {
+                    $couvertes === 0 => 'libre',
+                    $couvertes >= $total => 'rattachee',
+                    default => 'partielle',
+                },
             ];
+        }
 
         return $twig->render('components/partage/_conditions_picker.html.twig', [
             'entite'      => 'avenant',
@@ -57,14 +78,14 @@ class PickerPartageRenduTest extends KernelTestCase
                 (new Piste())->setNom('Affaire Kibali'),
                 (new Piste())->setNom('Affaire Tenke'),
             ],
-            'mode'        => $mode,
             'occupations' => $occupations ?? [
                 ['affaire' => 'Affaire Kibali', 'partage' => null, 'apporteur' => null],
                 ['affaire' => 'Affaire Tenke', 'partage' => 'Apporteur : SUNU Courtage', 'apporteur' => 'SUNU Courtage'],
             ],
-            'conditions'  => $conditions,
-            'submitUrl'   => '/admin/partage/avenant/' . ($mode === 'detacher' ? 'detacher' : 'rattacher'),
-            'standalone'  => true,
+            'conditions'   => $lignes,
+            'urlRattacher' => '/admin/partage/avenant/rattacher',
+            'urlDetacher'  => '/admin/partage/avenant/detacher',
+            'standalone'   => true,
         ]);
     }
 
@@ -81,9 +102,8 @@ class PickerPartageRenduTest extends KernelTestCase
 
         self::assertStringContainsString('Prime Alice 15%', $html);
         self::assertStringContainsString('Apport SUNU 20%', $html);
-        // Et en mode rattacher, le titre et le pied disent CE geste-là.
-        self::assertStringContainsString('Rattacher une condition de partage', $html);
-        self::assertStringContainsString('Le rattachement s', $html);
+        // Le titre ne nomme plus un geste : la vue les porte tous les deux.
+        self::assertStringContainsString('Gérer le partage', $html);
         self::assertStringContainsString('Agent interne', $html);
         self::assertStringContainsString('Apporteur externe', $html);
         // Le taux se lit en POINTS dans tout le logiciel : 20 se lit 20 %.
@@ -119,29 +139,59 @@ class PickerPartageRenduTest extends KernelTestCase
     }
 
     /**
-     * LE MODE « DÉTACHER » CHANGE LE GESTE, PAS LE PICKER.
+     * CHAQUE LIGNE PORTE SON VERBE, ET SA DESTINATION.
      *
-     * Un seul chemin pour les deux : le contrôleur Stimulus poste la même charge utile, et
-     * c'est l'URL de destination qui décide. Deux pickers auraient divergé au premier
-     * ajustement de l'un des deux.
+     * Le picker proposait « Rattacher ici » sur une condition DÉJÀ rattachée à l'affaire.
+     * Le clic revenait avec un refus qui nommait cette même condition — « détachez la
+     * condition en place avant d'en rattacher une autre », où la condition en place ÉTAIT
+     * celle qu'on venait de choisir. Le geste ne doit pas être offert.
+     *
+     * Le mode « détacher » a disparu avec ce défaut : il n'y a plus qu'une vue, et c'est
+     * l'état de chaque ligne qui décide.
      */
-    public function testLeModeDetacherChangeLeGesteEtLaDestination(): void
+    public function testChaqueLignePorteSonVerbeEtSaDestination(): void
     {
-        $html = $this->rendre('detacher');
+        $html = $this->rendre();
 
-        self::assertStringContainsString('Détacher ici', $html);
-        self::assertStringNotContainsString('Rattacher ici', $html);
+        // Libre → rattacher ; déjà posée sur les deux affaires → détacher.
+        self::assertStringContainsString('Rattacher ici', $html);
+        self::assertStringContainsString('Détacher', $html);
+        self::assertStringContainsString('Déjà rattachée', $html);
 
-        // LE TITRE ET LE PIED DISENT LE GESTE. Ils annonçaient « Rattacher » quel que
-        // soit le mode : l'utilisateur cliquait « Détacher » et lisait le contraire dans
-        // l'en-tête de la fenêtre. Défaut invisible à toute assertion de route, et vu
-        // seulement en regardant l'écran.
-        self::assertStringContainsString('Détacher une condition de partage', $html);
-        self::assertStringNotContainsString('Rattacher une condition de partage', $html);
-        self::assertStringContainsString('Le détachement s', $html, 'Le pied aussi.');
-        self::assertStringContainsString('/admin/partage/avenant/detacher', $html);
-        // Et il DIT ce que le détachement ne fait pas : l'apporteur reste désigné.
-        self::assertStringContainsString('reste désigné', $html);
+        // Et chaque bouton porte SA route : c'est ce qui permet un seul picker.
+        self::assertStringContainsString('data-action-url="/admin/partage/avenant/rattacher"', $html);
+        self::assertStringContainsString('data-action-url="/admin/partage/avenant/detacher"', $html);
+    }
+
+    /**
+     * L'ÉTAT PARTIEL PROPOSE DE COMPLÉTER, et dit combien il reste.
+     *
+     * C'est le seul des trois cas qui demandait une décision : une condition posée sur une
+     * partie de la sélection. Compléter est le geste utile — et c'est déjà ce que fait le
+     * serveur, le rattachement étant idempotent affaire par affaire.
+     */
+    public function testUneConditionPartiellementPoseeProposeDeCompleter(): void
+    {
+        $html = $this->rendre();
+
+        // Le SINGULIER a sa propre tournure : « Rattacher aux 1 restante » ne se dit pas.
+        // Twig échappe l'apostrophe en « &#039; » : on décode plutôt que d'écrire
+        // l'entité, qui lierait le test à la stratégie d'échappement.
+        self::assertStringContainsString(
+            'Rattacher à l\'affaire restante',
+            html_entity_decode($html, ENT_QUOTES, 'UTF-8'),
+        );
+        self::assertStringContainsString('Rattachée à 1 sur 2', $html);
+    }
+
+    /** Le picker ne prétend plus faire UN geste : il gère le partage. */
+    public function testLeTitreEtLePiedNAnnoncentPlusUnSeulGeste(): void
+    {
+        $html = $this->rendre();
+
+        self::assertStringContainsString('Gérer le partage', $html);
+        self::assertStringNotContainsString('Détacher une condition de partage', $html);
+        self::assertStringContainsString('Rattachement comme détachement', $html);
     }
 
     /** En mode rattacher, l'intro annonce la règle « un par camp » et la désignation. */
@@ -158,11 +208,13 @@ class PickerPartageRenduTest extends KernelTestCase
         $texte = preg_replace('/\s+/u', ' ', mb_strtolower(strip_tags($this->rendre()), 'UTF-8'));
         $texte = str_replace(" ", ' ', $texte);
         self::assertStringContainsString('un bénéficiaire par camp', $texte);
-        self::assertStringContainsString('ne pourra plus être défait', $texte);
+        self::assertStringContainsString('plus rien ne se défait', $texte);
+        // Et l'intro annonce que le détachement se fait d'ici, sans second écran.
+        self::assertStringContainsString('se détache d\'ici même', $texte);
     }
 
-    /** Sans aucune condition, le picker le dit — différemment selon le geste. */
-    public function testUneListeVideSeDitSelonLeGeste(): void
+    /** Sans aucune condition, le picker le dit — et renvoie là où on en crée. */
+    public function testUneListeVideRenvoieVersLaRubrique(): void
     {
         self::bootKernel();
         /** @var Environment $twig */
@@ -170,14 +222,16 @@ class PickerPartageRenduTest extends KernelTestCase
 
         $contexte = [
             'entite' => 'avenant', 'ids' => [41], 'pistes' => [(new Piste())->setNom('Affaire Kibali')],
-            'occupations' => [], 'conditions' => [], 'submitUrl' => '/x', 'standalone' => true,
+            'occupations' => [], 'conditions' => [],
+            'urlRattacher' => '/admin/partage/avenant/rattacher',
+            'urlDetacher' => '/admin/partage/avenant/detacher',
+            'standalone' => true,
         ];
 
-        $rattacher = $twig->render('components/partage/_conditions_picker.html.twig', $contexte + ['mode' => 'rattacher']);
+        $rattacher = $twig->render('components/partage/_conditions_picker.html.twig', $contexte);
         self::assertStringContainsString('Aucune condition de partage n', $rattacher);
 
-        $detacher = $twig->render('components/partage/_conditions_picker.html.twig', ['mode' => 'detacher'] + $contexte);
-        self::assertStringContainsString('il n', $detacher);
-        self::assertStringContainsString('rien à détacher', $detacher);
+        // Un seul message désormais : il n'y a plus deux vues à distinguer.
+        self::assertStringContainsString('revenez ici', $rattacher);
     }
 }

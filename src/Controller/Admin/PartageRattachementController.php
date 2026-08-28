@@ -100,34 +100,72 @@ class PartageRattachementController extends AbstractController
 
         $pistes = $this->pistesDeLaSelection($classe, $this->idsDemandes($request));
         $entreprise = $this->getInvite()->getEntreprise();
-        $mode = $request->query->get('mode') === 'detacher' ? 'detacher' : 'rattacher';
 
         return $this->render('components/partage/_conditions_picker.html.twig', [
             'entite'     => $entite,
             'ids'        => $this->idsDemandes($request),
             'pistes'     => $pistes,
-            // Le motif s'il y en a un : le picker le montre AVANT de laisser cliquer, plutôt
-            // que de faire découvrir le refus après coup.
-            // EN MODE DÉTACHER, on ne propose que ce qui EST rattaché. Le détachement
-            // était un appel direct : cela ne suffit plus depuis qu'une affaire peut
-            // porter DEUX conditions (un apporteur, un agent) — il faut dire laquelle.
-            // Un seul chemin pour les deux gestes, plutôt qu'un branchement selon leur
-            // nombre : le picker montre une ligne le plus souvent, deux au plus.
-            'mode'       => $mode,
-            // Le refus du LOT dépend de la condition choisie (sa famille décide de la
-            // place qu'elle prétend occuper) : il ne peut plus être calculé d'avance.
-            // Le picker montre en revanche ce que chaque affaire porte DÉJÀ, ce qui
-            // laisse voir le conflit avant de cliquer.
+            // CE QUE CHAQUE AFFAIRE PORTE DÉJÀ. Le refus du lot dépend de la condition
+            // choisie — sa famille décide de la place qu'elle prétend occuper — et ne peut
+            // donc pas être calculé d'avance. Montrer l'occupation laisse voir le conflit
+            // sans prétendre le deviner.
             'occupations' => $this->occupationsDesAffaires($pistes),
-            'conditions' => $mode === 'detacher'
-                ? $this->conditionsRattachees($pistes)
-                : $this->conditionsRattachables($entreprise),
-            'submitUrl'  => $this->generateUrl(
-                $mode === 'detacher' ? 'admin.partage.detacher' : 'admin.partage.rattacher',
-                ['entite' => $entite],
-            ),
+            // CHAQUE LIGNE PORTE SON PROPRE VERBE, et c'est ce qui fait disparaître le mode
+            // « détacher » : le picker n'a plus à savoir ce qu'on est venu faire, chaque
+            // condition le dit d'elle-même selon qu'elle est déjà posée ou non.
+            'conditions' => $this->conditionsAvecLeurEtat($entreprise, $pistes),
+            'urlRattacher' => $this->generateUrl('admin.partage.rattacher', ['entite' => $entite]),
+            'urlDetacher'  => $this->generateUrl('admin.partage.detacher', ['entite' => $entite]),
             'standalone' => true,
         ]);
+    }
+
+    /**
+     * LES CONDITIONS DU CABINET, CHACUNE AVEC SON ÉTAT SUR LA SÉLECTION.
+     *
+     * Le picker proposait « Rattacher ici » sur une condition DÉJÀ rattachée à l'affaire.
+     * Le clic partait au serveur pour revenir avec un refus qui nommait cette même
+     * condition — « détachez la condition en place avant d'en rattacher une autre », où la
+     * condition en place ÉTAIT celle qu'on venait de choisir. Le geste ne doit pas être
+     * offert.
+     *
+     * Trois états, donc trois verbes. Le troisième — rattachée à une PARTIE de la
+     * sélection — est le seul qui demandait une décision : compléter est le geste utile, et
+     * c'est déjà ce que fait le serveur, le rattachement étant idempotent affaire par
+     * affaire.
+     *
+     * @param Piste[] $pistes
+     *
+     * @return array<int, array{condition: ConditionPartage, couvertes: int, total: int, etat: string}>
+     */
+    private function conditionsAvecLeurEtat($entreprise, array $pistes): array
+    {
+        $total = count($pistes);
+
+        // Les identifiants rattachés, par affaire — UNE traversée, pas une par condition.
+        $rattachees = [];
+        foreach ($pistes as $piste) {
+            foreach ($this->rattachement->conditions($piste) as $condition) {
+                $rattachees[(int) $condition->getId()] = ($rattachees[(int) $condition->getId()] ?? 0) + 1;
+            }
+        }
+
+        $lignes = [];
+        foreach ($this->conditionsRattachables($entreprise) as $condition) {
+            $couvertes = $rattachees[(int) $condition->getId()] ?? 0;
+            $lignes[] = [
+                'condition' => $condition,
+                'couvertes' => $couvertes,
+                'total'     => $total,
+                'etat'      => match (true) {
+                    $couvertes === 0 => 'libre',
+                    $couvertes >= $total => 'rattachee',
+                    default => 'partielle',
+                },
+            ];
+        }
+
+        return $lignes;
     }
 
     /**
@@ -343,29 +381,6 @@ class PartageRattachementController extends AbstractController
             ->getResult();
     }
 
-    /**
-     * Les conditions DÉJÀ rattachées aux affaires de la sélection — la matière du mode
-     * « détacher ».
-     *
-     * Dédoublonnées : deux affaires peuvent partager la même règle, et l'offrir deux fois
-     * ferait croire à deux rattachements distincts.
-     *
-     * @param Piste[] $pistes
-     *
-     * @return ConditionPartage[]
-     */
-    private function conditionsRattachees(array $pistes): array
-    {
-        $conditions = [];
-        foreach ($pistes as $piste) {
-            foreach ($this->rattachement->conditions($piste) as $condition) {
-                $conditions[(int) $condition->getId()] = $condition;
-            }
-        }
-        ksort($conditions);
-
-        return array_values($conditions);
-    }
 
     /**
      * CE QUE CHAQUE AFFAIRE PORTE DÉJÀ, pour que le picker le montre AVANT le clic.

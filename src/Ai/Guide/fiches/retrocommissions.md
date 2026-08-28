@@ -41,9 +41,17 @@ chercher leur nom parmi les « Intermédiaires » ne donnera jamais rien.
   n'est qu'une projection : elle ne doit jamais entrer dans un montant dû.
 - **Payé** : ce qui a effectivement été versé (ou réglé, côté partenaire).
 - **Solde** : dû − payé, jamais négatif — un trop-versé n'est pas une dette.
-- **Exigible** : le solde **réclamable**, c'est-à-dire seulement une fois que le
-  cabinet a lui-même encaissé. Ne jamais proposer de verser un montant non
-  exigible : ce serait avancer sa trésorerie sur une créance non recouvrée.
+- **Exigible** : la part du solde **réclamable**, c'est-à-dire née de ce que le
+  cabinet a lui-même **encaissé** — et elle est **PROPORTIONNELLE**. Sur une
+  échéance dont 60 % de la commission est rentrée, 60 % de la rétro est exigible ;
+  le reste suivra à mesure. Ne jamais proposer de verser au-delà de l'exigible :
+  ce serait avancer sa trésorerie sur une créance non recouvrée. Mais dès que
+  l'argent d'une échéance est rentré, **il faut payer** : c'est le sens même de la
+  règle, et l'exigible le dit au centime.
+
+  Ce qui compte est l'encaissement de **l'ÉCHÉANCE**, pas celui de l'affaire
+  entière — et il compte quel que soit le circuit : note réglée, ou bordereau de
+  production imputé sur cette échéance.
 
 ## Le bénéficiaire n'est pas le gestionnaire
 
@@ -107,6 +115,14 @@ et il n'y a pas de repli sur le taux par défaut.
 Une condition rattachée ne paie que si elle nomme l'apporteur **du jour** : si
 l'intermédiaire de l'affaire change ensuite, elle cesse de s'appliquer plutôt que de payer
 le nouveau au taux de l'ancien.
+
+⚠ **UNE PORTÉE QUI DIFFÈRE ENTRE LES DEUX FAMILLES.** Une condition d'AGENT reste sans
+effet tant qu'on ne l'a pas rattachée : c'est le rattachement qui la met en service. Une
+condition d'INTERMÉDIAIRE, elle, s'applique à **toutes** les affaires qu'il apporte dès
+qu'elle le nomme — le rattachement ne la restreint pas. Sur une affaire qui ne désigne
+aucun apporteur, il sert à le DÉSIGNER ; il ne sert pas à choisir « ces trois affaires-ci
+seulement ». Ne promets donc jamais à l'utilisateur qu'un rattachement limitera la portée
+d'une condition de partenaire : ce serait faux.
 Pour un agent, c'est la **première condition applicable** parmi les siennes.
 
 Le décompte détaillé rend `condition`, `taux`, `origineDuTaux`, `assiette`,
@@ -172,6 +188,9 @@ demande le droit d'écriture sur la rubrique — la même règle qu'à l'écran.
 - « Ces trois affaires viennent de l'accord SUNU » → `effort_commercial_agent`
   (`action: rattacher`, la condition par son NOM, les `cibles`). Même appel pour un
   agent : c'est la condition qui porte la famille.
+- « Que puis-je payer maintenant ? » → `retrocommissions` : c'est la colonne
+  **exigible** qui répond, jamais le « dû ». Elle suit l'encaissement échéance par
+  échéance, au prorata.
 - « Verse-lui ce qu'on lui doit » → `signaler_reversement_retro_agent`, avec `agentId`
   OU `partenaireId`. Sans `lignes`, tout l'exigible est réglé ; avec, une entrée par
   `trancheId` (l'échéance), ou un `avenantId` pour régler toutes celles d'une police.

@@ -71,110 +71,116 @@ class RattachementPariteKetTest extends KernelTestCase
      * liste des avenants ou des tranches, presque jamais depuis la piste — devoir remonter
      * l'arbre pour reconnaître un effort, c'est un geste qu'on finit par ne plus faire.
      */
-    public function testLesQuatreEcransOffrentRattacherEtDetacher(): void
+    public function testLesQuatreEcransOffrentLeGesteDePartage(): void
     {
         foreach (array_keys(self::CANEVAS) as $entite) {
             $actions = $this->actionsDePartage($entite);
-            $libelles = array_column($actions, 'label');
 
-            self::assertContains('Rattacher une condition de partage', $libelles, sprintf(
-                'L’écran « %s » doit pouvoir rattacher.',
+            // UNE SEULE ACTION, et toujours offerte. Il y en avait deux — « Rattacher » et
+            // « Détacher » — gouvernées par deux drapeaux. Depuis que chaque ligne du picker
+            // porte SON verbe, la seconde n'avait plus d'objet : le détachement n'est pas un
+            // geste à part, c'est l'autre face du même.
+            self::assertCount(1, $actions, sprintf(
+                'L’écran « %s » ne doit offrir qu’un geste de partage.',
                 $entite,
             ));
-            self::assertContains('Détacher la condition de partage', $libelles, sprintf(
-                'L’écran « %s » doit pouvoir détacher.',
-                $entite,
-            ));
+            self::assertSame('Gérer le partage', $actions[0]['label']);
+            self::assertArrayNotHasKey(
+                'condition',
+                $actions[0],
+                'Le geste est toujours offert : le picker sait dire qu’il n’y a rien à faire, '
+                . 'là où un bouton masqué n’apprend rien.',
+            );
 
-            foreach ($actions as $action) {
-                self::assertNotEmpty($action['url'] ?? null, 'Une action sans URL ne fait rien.');
-                self::assertStringStartsWith('/admin/partage/' . $entite . '/', $action['url']);
-            }
+            self::assertNotEmpty($actions[0]['url'] ?? null, 'Une action sans URL ne fait rien.');
+            self::assertStringStartsWith('/admin/partage/' . $entite . '/', $actions[0]['url']);
         }
     }
 
     /**
-     * LES DEUX GESTES PASSENT PAR LE MÊME PICKER — un seul chemin, pas deux.
+     * UNE SEULE VUE, SANS MODE — c'est l'état de chaque ligne qui décide.
      *
-     * Le détachement était un appel direct. Cela ne suffit plus depuis qu'une affaire peut
-     * porter DEUX conditions : il faut dire laquelle. Brancher selon leur nombre aurait
-     * donné deux comportements pour un même bouton.
+     * Le picker a connu un paramètre `?mode=detacher`, le temps d'une journée. Il n'a pas
+     * survécu : dès lors que chaque ligne porte son verbe, dire au picker ce qu'on est venu
+     * faire devenait redondant — et permettait de le contredire.
      */
-    public function testLeDetachementPasseParLeMemePicker(): void
+    public function testLePickerNAPlusDeMode(): void
     {
         foreach (array_keys(self::CANEVAS) as $entite) {
-            $parLibelle = [];
-            foreach ($this->actionsDePartage($entite) as $action) {
-                $parLibelle[$action['label']] = $action;
-            }
+            $action = $this->actionsDePartage($entite)[0];
 
-            $detacher = $parLibelle['Détacher la condition de partage'];
-            self::assertSame('ui:partage.picker-request', $detacher['event'], sprintf(
-                'Écran « %s » : le détachement doit ouvrir le picker.',
+            self::assertSame('ui:partage.picker-request', $action['event']);
+            self::assertStringEndsWith('/conditions-picker', $action['url'], sprintf(
+                'Écran « %s » : aucune vue ne doit être présélectionnée.',
                 $entite,
             ));
-            self::assertStringContainsString('conditions-picker?mode=detacher', $detacher['url']);
         }
+
+        $controleur = (string) file_get_contents(
+            __DIR__ . '/../../src/Controller/Admin/PartageRattachementController.php',
+        );
+        self::assertStringNotContainsString("query->get('mode')", $controleur, 'Le picker ne lit plus de mode.');
+        self::assertStringNotContainsString('mode=detacher', $controleur, 'Et personne ne lui en passe.');
     }
 
     /**
-     * LES DRAPEAUX DES ACTIONS SONT DEUX, ET DÉCLARÉS.
+     * LE VOYANT EST DÉCLARÉ SUR LES QUATRE ENTITÉS — et il est seul.
      *
-     * Le voyant servait aussi de drapeau : sa présence ouvrait « Détacher », son absence
-     * « Rattacher ». Cela ne tient plus — une affaire portant un apporteur reste
-     * rattachable pour un agent. Et un drapeau non DÉCLARÉ sur l'entité ne figure pas dans
-     * le `data-entity` : l'action resterait invisible, sans la moindre erreur.
+     * Une valeur calculée posée en propriété dynamique n'appartient à aucun groupe de
+     * sérialisation : elle ne figure pas dans le `data-entity` de la ligne, et rien ne le
+     * signale. D'où la déclaration explicite.
+     *
+     * Deux drapeaux l'accompagnaient, « rattachable » et « détachable », qui gouvernaient
+     * deux actions. Ils ont disparu avec la seconde action : un état à gouverner de moins
+     * est un état de moins à faire diverger. Ce test le VÉRIFIE, pour qu'ils ne
+     * réapparaissent pas sans raison.
      */
-    public function testLesDeuxDrapeauxSontDeclaresSurLesQuatreEntites(): void
+    public function testSeulLeVoyantEstDeclareSurLesQuatreEntites(): void
     {
         foreach (self::CANEVAS as $entite => [, $classe]) {
-            foreach (['partageLibelle', 'partageRattachable', 'partageDetachable'] as $drapeau) {
-                self::assertTrue(
-                    property_exists($classe, $drapeau),
-                    sprintf('%s doit DÉCLARER %s, sinon l’action est invisible en silence.', $classe, $drapeau),
-                );
+            self::assertTrue(
+                property_exists($classe, 'partageLibelle'),
+                sprintf('%s doit DÉCLARER partageLibelle, sinon la ligne reste muette.', $classe),
+            );
 
-                $propriete = new \ReflectionProperty($classe, $drapeau);
-                $groupes = $propriete->getAttributes(\Symfony\Component\Serializer\Annotation\Groups::class);
-                self::assertNotEmpty($groupes, sprintf(
-                    '%s::$%s doit porter #[Groups(["list:read"])] pour atteindre le data-entity.',
+            $propriete = new \ReflectionProperty($classe, 'partageLibelle');
+            $groupes = $propriete->getAttributes(\Symfony\Component\Serializer\Annotation\Groups::class);
+            self::assertNotEmpty($groupes, sprintf(
+                '%s::$partageLibelle doit porter #[Groups(["list:read"])].',
+                $classe,
+            ));
+            self::assertContains('list:read', $groupes[0]->getArguments()[0]);
+
+            foreach (['partageRattachable', 'partageDetachable'] as $disparu) {
+                self::assertFalse(property_exists($classe, $disparu), sprintf(
+                    '%s::$%s n’a plus de rôle : une seule action, toujours offerte.',
                     $classe,
-                    $drapeau,
+                    $disparu,
                 ));
-                self::assertContains('list:read', $groupes[0]->getArguments()[0]);
             }
         }
-
-        // Et les actions s'y appuient : un drapeau déclaré mais jamais consulté ne sert à rien.
-        $conditions = [];
-        foreach (array_keys(self::CANEVAS) as $entite) {
-            foreach ($this->actionsDePartage($entite) as $action) {
-                $conditions[] = $action['condition']['field'] ?? null;
-            }
-        }
-        self::assertContains('partageRattachable', $conditions);
-        self::assertContains('partageDetachable', $conditions);
     }
 
 
     /**
-     * LES DRAPEAUX ARRIVENT EN VRAIS BOOLÉENS DANS LE `data-entity`.
+     * LE VOYANT ATTEINT LE `data-entity`, ET C'EST UNE CHAÎNE.
      *
-     * `condition-action.js` compare en égalité SOUPLE (`valeur == condition.value`). Un
-     * booléen sérialisé en CHAÎNE y devient un piège : en JavaScript, `'true' == true` vaut
-     * FALSE — la chaîne passe par un nombre et devient NaN. L'action serait restée
-     * invisible en barre d'outils comme au clic droit, sans la moindre erreur.
+     * Une valeur calculée qui n'appartient à aucun groupe de sérialisation ne figure pas
+     * dans le `data-entity` de la ligne : elle reste muette, sans la moindre erreur. Ce
+     * test emprunte le vrai sérialiseur plutôt que de faire confiance à l'annotation.
      *
-     * Le voyant, lui, doit rester une CHAÎNE ou null : c'est un libellé.
+     * Il vérifiait aussi deux DRAPEAUX booléens, dont le typage importait : en JavaScript,
+     * `'true' == true` vaut FALSE — la chaîne passe par un nombre et devient NaN —, et une
+     * action conditionnée dessus serait restée invisible. Ces drapeaux ont disparu avec la
+     * seconde action de barre d'outils ; le piège, lui, reste écrit ici pour le jour où un
+     * booléen reviendrait.
      */
-    public function testLesDrapeauxArriventEnBooleensDansLeDataEntity(): void
+    public function testLeVoyantAtteintLeDataEntity(): void
     {
         self::bootKernel();
         $serializer = static::getContainer()->get('serializer');
 
         $piste = new Piste();
-        $piste->partageRattachable = true;
-        $piste->partageDetachable = false;
         $piste->partageLibelle = 'Apporteur : SUNU Courtage';
 
         $charge = json_decode(
@@ -182,10 +188,8 @@ class RattachementPariteKetTest extends KernelTestCase
             true,
         );
 
-        self::assertArrayHasKey('partageRattachable', $charge, 'Le drapeau doit atteindre le data-entity.');
-        self::assertTrue($charge['partageRattachable'], 'Un VRAI booléen, pas la chaîne « true ».');
-        self::assertFalse($charge['partageDetachable']);
-        self::assertIsString($charge['partageLibelle']);
+        self::assertArrayHasKey('partageLibelle', $charge, 'Le voyant doit atteindre le data-entity.');
+        self::assertSame('Apporteur : SUNU Courtage', $charge['partageLibelle']);
     }
 
     // ===================== 2. Ket couvre exactement les mêmes cibles =====================
