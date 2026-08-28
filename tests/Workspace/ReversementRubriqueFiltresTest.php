@@ -557,4 +557,177 @@ class ReversementRubriqueFiltresTest extends KernelTestCase
             ReversementScope::CLE_BENEFICIAIRE => ['operator' => '=', 'value' => 'inconnu:3', 'label' => 'x'],
         ]));
     }
+
+    // ===================== 6. Les deux chips s'alignent =====================
+
+    /**
+     * LES SÉLECTEURS DÉCLARENT LEUR CONDITION DE PRÉSENCE ET LEUR IMPLICATION.
+     *
+     * Deux chips racontaient la même chose sans se parler : « Type : Agent » avec
+     * « Bénéficiaire : un partenaire » décrit un ensemble VIDE, et rien à l'écran n'en
+     * disait la cause — l'utilisateur en concluait que la rubrique était vide.
+     *
+     * Ce test lit les déclarations, pas le comportement : le comportement, lui, est
+     * verrouillé côté JavaScript (`tests/js/chip-preset-etat.test.mjs`), où les trois
+     * règles s'éprouvent sans navigateur. Ici on vérifie que le serveur DIT ce qu'il faut,
+     * car une déclaration absente ne lève rien : le chip redevient simplement
+     * inconditionnel, et l'incohérence revient sans bruit.
+     */
+    public function testLesSelecteursDeclarentLeurConditionEtLeurImplication(): void
+    {
+        $chips = static::getContainer()->get(ReversementRetroAgentListCanvasProvider::class)
+            ->getCanvas()['filtres_predefinis'] ?? [];
+
+        $beneficiaire = array_values(array_filter(
+            $chips,
+            static fn (array $g) => $g['critere'] === ReversementScope::CLE_BENEFICIAIRE,
+        ))[0];
+
+        $parPrefixe = [];
+        foreach ($beneficiaire['options'] as $option) {
+            if (isset($option['selecteur']['prefixe'])) {
+                $parPrefixe[$option['selecteur']['prefixe']] = $option;
+            }
+        }
+        self::assertSame(
+            [ReversementScope::TYPE_AGENT, ReversementScope::TYPE_PARTENAIRE],
+            array_keys($parPrefixe),
+        );
+
+        foreach ($parPrefixe as $famille => $option) {
+            // R1 : l'option ne paraît que si le Type la permet — ou si AUCUN type n'est
+            // filtré. La chaîne vide est dans la liste à dessein : elle vaut « Tous », et
+            // sans elle les deux sélecteurs disparaîtraient dès l'ouverture de la rubrique.
+            self::assertSame(
+                [[
+                    'field' => ReversementScope::CLE_TYPE,
+                    'operator' => 'in',
+                    'value' => ['', $famille],
+                ]],
+                $option['visibility_conditions'],
+                sprintf('Condition de présence attendue pour « %s ».', $famille),
+            );
+
+            // R3 : choisir ce bénéficiaire ALIGNE le chip Type, du même geste. Le libellé
+            // voyage avec la valeur : c'est lui que lira le badge de la barre de recherche.
+            self::assertSame(
+                [ReversementScope::CLE_TYPE => [
+                    'value' => $famille,
+                    'label' => ReversementScope::libelle(ReversementScope::CLE_TYPE, $famille),
+                ]],
+                $option['implique'],
+                sprintf('Implication attendue pour « %s ».', $famille),
+            );
+        }
+    }
+
+    /**
+     * « TOUS » NE DÉCLARE RIEN — et c'est ce qui le rend indestructible.
+     *
+     * C'est le seul moyen de retirer le filtre de bénéficiaire. Lui donner une condition,
+     * c'était risquer de le masquer un jour et d'enfermer l'utilisateur dans un filtre
+     * qu'il ne pourrait plus retirer que par la barre de recherche.
+     */
+    public function testLOptionTousNeDeclareAucuneCondition(): void
+    {
+        $chips = static::getContainer()->get(ReversementRetroAgentListCanvasProvider::class)
+            ->getCanvas()['filtres_predefinis'] ?? [];
+
+        $beneficiaire = array_values(array_filter(
+            $chips,
+            static fn (array $g) => $g['critere'] === ReversementScope::CLE_BENEFICIAIRE,
+        ))[0];
+
+        $tous = array_values(array_filter(
+            $beneficiaire['options'],
+            static fn (array $o) => ($o['value'] ?? null) === '',
+        ));
+        self::assertCount(1, $tous);
+        self::assertArrayNotHasKey('visibility_conditions', $tous[0]);
+        self::assertArrayNotHasKey('implique', $tous[0]);
+    }
+
+    /**
+     * AUCUNE AUTRE RUBRIQUE N'EST EMPORTÉE. Les quatre chips à valeur de cette rubrique —
+     * comme les quatre axes des Tranches ou les statuts des Cotations — ne déclarent rien
+     * et restent donc toujours proposés. Une condition qui s'y glisserait masquerait des
+     * filtres qui marchent aujourd'hui, sans erreur pour le dire.
+     */
+    public function testLesChipsAValeurRestentInconditionnels(): void
+    {
+        $chips = static::getContainer()->get(ReversementRetroAgentListCanvasProvider::class)
+            ->getCanvas()['filtres_predefinis'] ?? [];
+
+        foreach ($chips as $groupe) {
+            if ($groupe['critere'] === ReversementScope::CLE_BENEFICIAIRE) {
+                continue;
+            }
+            foreach ($groupe['options'] as $option) {
+                self::assertArrayNotHasKey('visibility_conditions', $option, sprintf(
+                    'Le groupe « %s » ne doit rien conditionner.',
+                    $groupe['libelle'],
+                ));
+            }
+        }
+    }
+
+    /**
+     * LE COUPLE ALIGNÉ FILTRE VRAIMENT, ET IL EST LE SEUL À RAMENER QUELQUE CHOSE.
+     *
+     * C'est la raison d'être de tout le mécanisme : le couple contradictoire ne peut RIEN
+     * ramener, et l'alignement des chips existe pour qu'on ne l'atteigne jamais par accident.
+     * On le vérifie ici en SQL plutôt que de l'affirmer.
+     */
+    public function testLeCoupleAligneFiltreEtLeCoupleContradictoireEstVide(): void
+    {
+        $s = $this->semer();
+        $this->semerUnVersementDePartenaire($s['entreprise']);
+
+        $partenaire = $this->em()->getRepository(Partenaire::class)
+            ->findOneBy(['nom' => 'SUNU Filtres', 'entreprise' => $s['entreprise']]);
+
+        $aligne = ReversementScope::critereBeneficiaire(
+            (int) $partenaire->getId(),
+            'SUNU Filtres',
+            ReversementScope::TYPE_PARTENAIRE,
+        ) + ReversementScope::critereRecherche(
+            ReversementScope::ENTITE,
+            ReversementScope::CLE_TYPE,
+            ReversementScope::TYPE_PARTENAIRE,
+        );
+        self::assertSame(['VIR-PART'], $this->references($s['entreprise'], $aligne));
+
+        $contradictoire = ReversementScope::critereBeneficiaire(
+            (int) $partenaire->getId(),
+            'SUNU Filtres',
+            ReversementScope::TYPE_PARTENAIRE,
+        ) + ReversementScope::critereRecherche(
+            ReversementScope::ENTITE,
+            ReversementScope::CLE_TYPE,
+            ReversementScope::TYPE_AGENT,
+        );
+        self::assertSame(
+            [],
+            $this->references($s['entreprise'], $contradictoire),
+            'Un partenaire nommé sous un type « agent » ne peut rien ramener : c’est '
+            . 'précisément ce couple que l’alignement des chips rend inatteignable.',
+        );
+    }
+
+    /** La compatibilité d'un couple est une règle PURE, partagée avec l'assistant. */
+    public function testLaCompatibiliteDuCoupleEstUneRegleUnique(): void
+    {
+        $agent = ReversementScope::valeurBeneficiaire(ReversementScope::TYPE_AGENT, 12);
+        $partenaire = ReversementScope::valeurBeneficiaire(ReversementScope::TYPE_PARTENAIRE, 12);
+
+        self::assertSame(ReversementScope::TYPE_AGENT, ReversementScope::familleDuBeneficiaire($agent));
+        self::assertSame(ReversementScope::TYPE_PARTENAIRE, ReversementScope::familleDuBeneficiaire($partenaire));
+        self::assertNull(ReversementScope::familleDuBeneficiaire('12'));
+
+        self::assertTrue(ReversementScope::beneficiaireCompatibleAvecType(ReversementScope::TYPE_AGENT, $agent));
+        self::assertFalse(ReversementScope::beneficiaireCompatibleAvecType(ReversementScope::TYPE_AGENT, $partenaire));
+        // Sans type filtré, tout bénéficiaire est tenable — « Tous » ne contredit personne.
+        self::assertTrue(ReversementScope::beneficiaireCompatibleAvecType('', $partenaire));
+        self::assertTrue(ReversementScope::beneficiaireCompatibleAvecType(null, $partenaire));
+    }
 }

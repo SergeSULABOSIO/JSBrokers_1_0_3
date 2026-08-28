@@ -7,6 +7,7 @@ use App\Ai\Tool\AiToolResult;
 use App\Ai\Tool\OuvrirRubriqueTool;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Entity\Partenaire;
 use App\Entity\Utilisateur;
 use App\Services\Search\ReversementScope;
 use Doctrine\ORM\EntityManagerInterface;
@@ -60,16 +61,24 @@ class OuvrirRubriqueReversementsTest extends KernelTestCase
     {
         $conn = $this->em()->getConnection();
         $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email = :e', ['e' => self::OWNER_EMAIL]);
-        $conn->executeStatement(
-            'DELETE t FROM invite t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :nom',
-            ['nom' => self::ENT],
-        );
+        // Les DEUX familles sont semées : la purge doit les couvrir toutes deux, sinon la
+        // suppression de l'entreprise butera sur une clé étrangère et le test suivant
+        // retrouvera les données du précédent.
+        foreach (['invite', 'partenaire'] as $table) {
+            $conn->executeStatement(
+                "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :nom",
+                ['nom' => self::ENT],
+            );
+        }
         $conn->executeStatement('DELETE FROM entreprise WHERE nom = :nom', ['nom' => self::ENT]);
         $conn->executeStatement('DELETE FROM utilisateur WHERE email = :email', ['email' => self::OWNER_EMAIL]);
         $this->em()->clear();
     }
 
-    /** @return array{scope: AiScope, agent: Invite, homonyme: Invite} */
+    /**
+     * @return array{scope: AiScope, agent: Invite, homonyme: Invite, partenaire: Partenaire,
+     *               partenaireHomonyme: Partenaire}
+     */
     private function semer(): array
     {
         $em = $this->em();
@@ -96,9 +105,28 @@ class OuvrirRubriqueReversementsTest extends KernelTestCase
         $homonyme->setEntreprise($ent);
         $em->persist($homonyme);
 
+        // UN PARTENAIRE EXTERNE, et un HOMONYME d'agent parmi les partenaires. La rubrique
+        // porte les deux familles : sans partenaire, ni l'alignement du type ni le refus du
+        // couple contradictoire ne peuvent être éprouvés.
+        $partenaire = (new Partenaire())->setNom('SUNU Courtage')->setPart(20.0);
+        $partenaire->setEntreprise($ent);
+        $em->persist($partenaire);
+
+        // « Alice » existe donc DANS LES DEUX FAMILLES : c'est ce qui rend le paramètre
+        // `type` utile comme désambiguïsateur, et non seulement comme filtre.
+        $partenaireHomonyme = (new Partenaire())->setNom('Alice')->setPart(10.0);
+        $partenaireHomonyme->setEntreprise($ent);
+        $em->persist($partenaireHomonyme);
+
         $em->flush();
 
-        return ['scope' => new AiScope($ent, $gestionnaire), 'agent' => $agent, 'homonyme' => $homonyme];
+        return [
+            'scope' => new AiScope($ent, $gestionnaire),
+            'agent' => $agent,
+            'homonyme' => $homonyme,
+            'partenaire' => $partenaire,
+            'partenaireHomonyme' => $partenaireHomonyme,
+        ];
     }
 
     // ===================== 1. Le même critère que l'écran =====================
@@ -121,8 +149,17 @@ class OuvrirRubriqueReversementsTest extends KernelTestCase
         self::assertSame(AiToolResult::STATUS_OK, $resultat->status);
         $criteres = $resultat->uiAction['criteres'] ?? [];
 
+        // LE CHIP-SÉLECTEUR POSE DEUX CRITÈRES, pas un : le bénéficiaire, et le TYPE que
+        // sa famille implique (R3). Ce test n'en attendait qu'un, et il avait alors raison
+        // — les deux chips ne se parlaient pas encore, au prix d'un couple contradictoire
+        // que rien n'empêchait. La parité se mesure désormais sur les deux.
         self::assertSame(
-            ReversementScope::critereBeneficiaire((int) $s['agent']->getId(), 'Alice'),
+            ReversementScope::critereBeneficiaire((int) $s['agent']->getId(), 'Alice')
+            + ReversementScope::critereRecherche(
+                ReversementScope::ENTITE,
+                ReversementScope::CLE_TYPE,
+                ReversementScope::TYPE_AGENT,
+            ),
             $criteres,
             'Le critère de l’assistant doit être exactement celui du chip-sélecteur.',
         );
@@ -231,5 +268,144 @@ class OuvrirRubriqueReversementsTest extends KernelTestCase
         $criteres = $resultat->uiAction['criteres'] ?? [];
         self::assertArrayNotHasKey(ReversementScope::CLE_JUSTIFICATIF, $criteres);
         self::assertArrayNotHasKey(ReversementScope::CLE_BENEFICIAIRE, $criteres);
+    }
+
+    // ===================== 3. Les deux chips s'alignent =====================
+
+    /**
+     * LE TYPE S'ALIGNE SUR LA FAMILLE DU BÉNÉFICIAIRE — comme à l'écran.
+     *
+     * Choisir un bénéficiaire y pose le chip « Type » du même geste. Sans cet alignement,
+     * la MÊME demande produirait deux états de chips selon qu'elle vient de la souris ou de
+     * Ket : une parité rompue, et rien pour la signaler.
+     */
+    public function testLeTypeSAligneSurLaFamilleDuBeneficiaire(): void
+    {
+        $s = $this->semer();
+
+        $resultat = $this->outil()->execute([
+            'entite' => 'ReversementRetroAgent',
+            'beneficiaire' => 'SUNU Courtage',
+        ], $s['scope']);
+
+        self::assertSame(AiToolResult::STATUS_OK, $resultat->status);
+        $criteres = $resultat->uiAction['criteres'] ?? [];
+
+        self::assertSame(
+            ReversementScope::valeurBeneficiaire(
+                ReversementScope::TYPE_PARTENAIRE,
+                (int) $s['partenaire']->getId(),
+            ),
+            $criteres[ReversementScope::CLE_BENEFICIAIRE]['value'],
+        );
+        self::assertSame(
+            ReversementScope::TYPE_PARTENAIRE,
+            $criteres[ReversementScope::CLE_TYPE]['value'] ?? null,
+            'Le type doit être POSÉ, exactement comme le fait le chip-sélecteur de l’écran.',
+        );
+    }
+
+    /**
+     * LE TYPE DICTÉ DÉSAMBIGUÏSE LE NOM, il ne se contente pas de filtrer.
+     *
+     * « Alice » existe dans les deux familles. Chercher l'agent d'abord en toutes
+     * circonstances aurait fait échouer « les versements de type partenaire à Alice » sur
+     * un homonyme interne — alors que l'utilisateur venait précisément de lever le doute.
+     */
+    public function testLeTypeDicteDesambiguiseUnNomPorteParLesDeuxFamilles(): void
+    {
+        $s = $this->semer();
+
+        $agentDAbord = $this->outil()->execute([
+            'entite' => 'ReversementRetroAgent',
+            'beneficiaire' => 'Alice',
+        ], $s['scope']);
+        self::assertSame(
+            ReversementScope::valeurBeneficiaire(ReversementScope::TYPE_AGENT, (int) $s['agent']->getId()),
+            $agentDAbord->uiAction['criteres'][ReversementScope::CLE_BENEFICIAIRE]['value'],
+            'Sans type dicté, l’agent l’emporte : c’est la famille la plus fréquente.',
+        );
+
+        $partenaireDicte = $this->outil()->execute([
+            'entite' => 'ReversementRetroAgent',
+            'beneficiaire' => 'Alice',
+            'type' => ReversementScope::TYPE_PARTENAIRE,
+        ], $s['scope']);
+        self::assertSame(AiToolResult::STATUS_OK, $partenaireDicte->status);
+        self::assertSame(
+            ReversementScope::valeurBeneficiaire(
+                ReversementScope::TYPE_PARTENAIRE,
+                (int) $s['partenaireHomonyme']->getId(),
+            ),
+            $partenaireDicte->uiAction['criteres'][ReversementScope::CLE_BENEFICIAIRE]['value'],
+            'Le type dicté doit guider la recherche, pas seulement la restreindre après coup.',
+        );
+    }
+
+    /**
+     * LE COUPLE CONTRADICTOIRE EST REFUSÉ, ET LA CONTRADICTION EST NOMMÉE.
+     *
+     * « type : agent » avec le nom d'un partenaire décrit un ensemble VIDE — agent
+     * renseigné ET partenaire = 5 est impossible. Ouvrir la rubrique montrerait zéro ligne
+     * sans que rien n'en dise la cause, et l'utilisateur en conclurait qu'il n'a jamais rien
+     * versé. À l'écran ce couple est inatteignable ; ici il se refuse.
+     */
+    public function testLeCoupleContradictoireEstRefuseEtNommee(): void
+    {
+        $s = $this->semer();
+
+        $resultat = $this->outil()->execute([
+            'entite' => 'ReversementRetroAgent',
+            'beneficiaire' => 'SUNU Courtage',
+            'type' => ReversementScope::TYPE_AGENT,
+        ], $s['scope']);
+
+        self::assertSame(AiToolResult::STATUS_INTROUVABLE, $resultat->status);
+        self::assertNull($resultat->uiAction, 'Aucune rubrique ne doit s’ouvrir sur un ensemble vide.');
+
+        // Le motif doit NOMMER la contradiction : « aucun résultat » enverrait chercher
+        // ailleurs un défaut qui n'existe pas.
+        $motif = json_encode($resultat->data, JSON_UNESCAPED_UNICODE);
+        self::assertStringContainsString('SUNU Courtage', $motif);
+        self::assertStringContainsString('partenaire externe', $motif);
+    }
+
+    /**
+     * UN NOM VRAIMENT INCONNU garde son propre refus, distinct du précédent.
+     *
+     * Les deux messages ne disent pas la même chose : l'un invite à corriger le type,
+     * l'autre le nom. Les confondre, c'était envoyer l'utilisateur sur la mauvaise piste.
+     */
+    public function testUnNomInconnuGardeSonRefusPropre(): void
+    {
+        $s = $this->semer();
+
+        $resultat = $this->outil()->execute([
+            'entite' => 'ReversementRetroAgent',
+            'beneficiaire' => 'Personne Inconnue',
+            'type' => ReversementScope::TYPE_AGENT,
+        ], $s['scope']);
+
+        self::assertSame(AiToolResult::STATUS_INTROUVABLE, $resultat->status);
+        $motif = json_encode($resultat->data, JSON_UNESCAPED_UNICODE);
+        self::assertStringContainsString('Ni agent ni partenaire', $motif);
+    }
+
+    /** Un type dicté COMPATIBLE est conservé tel quel : il reste celui de l'utilisateur. */
+    public function testUnTypeCompatibleEstConserve(): void
+    {
+        $s = $this->semer();
+
+        $resultat = $this->outil()->execute([
+            'entite' => 'ReversementRetroAgent',
+            'beneficiaire' => 'SUNU Courtage',
+            'type' => ReversementScope::TYPE_PARTENAIRE,
+        ], $s['scope']);
+
+        self::assertSame(AiToolResult::STATUS_OK, $resultat->status);
+        self::assertSame(
+            ReversementScope::TYPE_PARTENAIRE,
+            $resultat->uiAction['criteres'][ReversementScope::CLE_TYPE]['value'],
+        );
     }
 }

@@ -269,15 +269,55 @@ final class OuvrirRubriqueTool implements AiToolInterface
             // LES DEUX FAMILLES, PAR LE NOM. La rubrique porte les reversements aux agents
             // internes ET aux partenaires externes : ne chercher que parmi les agents
             // refusait « ouvre ce que j'ai versé à SUNU Courtage » alors que l'écran, lui,
-            // le propose. L'agent est cherché d'abord — c'est la famille la plus fréquente —
-            // et le partenaire ensuite.
-            $cible = $this->agentNomme($beneficiaire, $scope);
-            $famille = ReversementScope::TYPE_AGENT;
+            // le propose.
+            //
+            // LE TYPE DEMANDÉ GUIDE LA RECHERCHE quand il est fourni : il DÉSAMBIGUÏSE le
+            // nom. Chercher l'agent d'abord en toutes circonstances aurait fait échouer
+            // « les versements de type partenaire à Dupont » sur un homonyme interne, alors
+            // que l'utilisateur avait précisément levé le doute.
+            $typeDemande = (string) ($args['type'] ?? '');
+            [$cible, $famille] = match ($typeDemande) {
+                ReversementScope::TYPE_AGENT => [
+                    $this->agentNomme($beneficiaire, $scope),
+                    ReversementScope::TYPE_AGENT,
+                ],
+                ReversementScope::TYPE_PARTENAIRE => [
+                    $this->partenaireNomme($beneficiaire, $scope),
+                    ReversementScope::TYPE_PARTENAIRE,
+                ],
+                // Sans type dicté : l'agent d'abord (la famille la plus fréquente), le
+                // partenaire ensuite.
+                default => ($agentTrouve = $this->agentNomme($beneficiaire, $scope)) !== null
+                    ? [$agentTrouve, ReversementScope::TYPE_AGENT]
+                    : [$this->partenaireNomme($beneficiaire, $scope), ReversementScope::TYPE_PARTENAIRE],
+            };
+
             if ($cible === null) {
-                $cible = $this->partenaireNomme($beneficiaire, $scope);
-                $famille = ReversementScope::TYPE_PARTENAIRE;
-            }
-            if ($cible === null) {
+                // LA CONTRADICTION SE NOMME. « Type : agent » + un nom de partenaire décrit
+                // un ensemble VIDE (agent renseigné ET partenaire = 5 est impossible) :
+                // ouvrir la liste montrerait zéro ligne sans que rien n'en dise la cause.
+                // À l'écran, ce couple est inatteignable ; ici, il faut le refuser en le
+                // désignant plutôt que de le laisser produire un vide inexplicable.
+                $autreFamille = $typeDemande === ReversementScope::TYPE_AGENT
+                    ? $this->partenaireNomme($beneficiaire, $scope)
+                    : ($typeDemande === ReversementScope::TYPE_PARTENAIRE
+                        ? $this->agentNomme($beneficiaire, $scope)
+                        : null);
+                if ($autreFamille !== null) {
+                    return AiToolResult::introuvable(
+                        'Bénéficiaire « ' . $beneficiaire .' » de type ' . $typeDemande,
+                        sprintf(
+                            '%s est %s : le type « %s » l\'exclut, et le couple ne peut rien ramener. '
+                            . 'Précise l\'un OU l\'autre. La rubrique n\'a PAS été ouverte.',
+                            (string) $autreFamille->getNom(),
+                            $typeDemande === ReversementScope::TYPE_AGENT
+                                ? 'un partenaire externe'
+                                : 'un agent interne',
+                            ReversementScope::libelle(ReversementScope::CLE_TYPE, $typeDemande),
+                        ),
+                    );
+                }
+
                 // On n'ouvre SURTOUT pas la liste entière en lot de consolation : ce serait
                 // annoncer les versements d'une personne et en montrer ceux de tout le monde.
                 return AiToolResult::introuvable(
@@ -288,6 +328,16 @@ final class OuvrirRubriqueTool implements AiToolInterface
             $criteresRubrique += ReversementScope::critereBeneficiaire(
                 (int) $cible->getId(),
                 (string) $cible->getNom(),
+                $famille,
+            );
+            // LE TYPE S'ALIGNE, comme à l'écran. Choisir un bénéficiaire y pose le chip
+            // « Type » du même geste : sans cela, la MÊME demande produirait deux états de
+            // chips selon qu'elle vient de la souris ou de Ket — une parité rompue, et
+            // silencieusement. `+=` ne remplace rien : un type dicté reste celui de
+            // l'utilisateur, et il vient d'être vérifié compatible.
+            $criteresRubrique += ReversementScope::critereRecherche(
+                $shortName,
+                ReversementScope::CLE_TYPE,
                 $famille,
             );
             $filtres[] = sprintf('bénéficiaire « %s »', $cible->getNom());

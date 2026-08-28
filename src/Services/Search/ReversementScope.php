@@ -105,6 +105,79 @@ final class ReversementScope
         return [$type, (int) $id];
     }
 
+
+    /**
+     * LA FAMILLE PORTÉE PAR UNE VALEUR DE BÉNÉFICIAIRE — « partenaire:5 » => 'partenaire'.
+     *
+     * Elle se déduit du décodage, jamais d'une seconde lecture du séparateur : deux façons
+     * de lire une même valeur finissent par en désigner deux.
+     */
+    public static function familleDuBeneficiaire(?string $valeur): ?string
+    {
+        return self::decoderBeneficiaire($valeur)[0] ?? null;
+    }
+
+    /**
+     * R1 — LA CONDITION DE PRÉSENCE d'un sélecteur de bénéficiaire.
+     *
+     * « Choisir un partenaire… » n'a rien à proposer quand le chip « Type » est sur Agent :
+     * le filtre rendrait la liste NÉCESSAIREMENT vide (agent IS NOT NULL ET partenaire = 5
+     * est impossible), et l'offrir est déjà un mensonge.
+     *
+     * La chaîne vide est dans la liste À DESSEIN : elle vaut « aucun filtre de type », et
+     * c'est une réponse, pas un silence. Sans elle, il aurait fallu ajouter un opérateur
+     * `empty` au moteur de visibilité que ~39 dialogues partagent.
+     *
+     * Le format est celui de `visibility_conditions` — même grammaire, même évaluateur
+     * (`assets/controllers/visibilite-conditions.js`). Les chips n'en inventent pas une
+     * seconde.
+     *
+     * @return array<int, array{field: string, operator: string, value: array<int, string>}>
+     */
+    public static function conditionsVisibiliteSelecteur(string $type): array
+    {
+        return [[
+            'field' => self::CLE_TYPE,
+            'operator' => 'in',
+            'value' => ['', $type],
+        ]];
+    }
+
+    /**
+     * R3 — CE QU'IMPLIQUE LE CHOIX d'un bénéficiaire de cette famille.
+     *
+     * Choisir « SUNU Courtage » dit déjà que le type est « partenaire » : le chip « Type »
+     * s'aligne du MÊME geste, donc en une seule recherche. Sans cela les deux chips
+     * racontaient la même chose de deux façons, et l'un pouvait contredire l'autre.
+     *
+     * Le LIBELLÉ voyage avec la valeur : c'est lui que lira le badge de la barre de
+     * recherche, où « partenaire » brut serait illisible.
+     *
+     * @return array<string, array{value: string, label: string}>
+     */
+    public static function implicationDuSelecteur(string $type): array
+    {
+        return [self::CLE_TYPE => [
+            'value' => $type,
+            'label' => self::libelle(self::CLE_TYPE, $type),
+        ]];
+    }
+
+    /**
+     * LE COUPLE (type, bénéficiaire) EST-IL TENABLE ?
+     *
+     * Un type qui exclut la famille du bénéficiaire nommé décrit un ensemble vide. À
+     * l'écran, R1 et R2 rendent ce couple inatteignable ; ailleurs — l'assistant, une URL
+     * fabriquée — il faut pouvoir le refuser en le nommant, plutôt que d'ouvrir une liste
+     * vide dont personne ne saura dire la cause.
+     */
+    public static function beneficiaireCompatibleAvecType(?string $type, ?string $valeurBeneficiaire): bool
+    {
+        $famille = self::familleDuBeneficiaire($valeurBeneficiaire);
+
+        return $type === null || $type === '' || $famille === null || $famille === $type;
+    }
+
     /** La colonne de relation qui porte cette famille de bénéficiaire. */
     public static function colonneBeneficiaire(string $type): string
     {

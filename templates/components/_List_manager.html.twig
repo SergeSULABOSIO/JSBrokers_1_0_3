@@ -91,6 +91,20 @@
                                            qu'on ne peut pas lire est un filtre qu'on croit
                                            absent. « Tous les agents » le remet à zéro. #}
                                         data-selecteur-libelle-defaut="{{ option.label }}"
+                                        {# R1 — LA CONDITION DE PRÉSENCE de cette option, dans la
+                                           grammaire du moteur des dialogues (`in`, `any`, `all`,
+                                           `not_empty`). Elle porte sur les CRITÈRES COURANTS de la
+                                           liste, pas sur des champs de formulaire : « Choisir un
+                                           partenaire… » n'a rien à proposer quand le chip « Type »
+                                           est sur Agent — le filtre rendrait la liste vide, et
+                                           l'offrir est déjà un mensonge. #}
+                                        {% if option.visibility_conditions is defined %}data-visibility-conditions="{{ option.visibility_conditions|json_encode }}"{% endif %}
+                                        {# R3 — CE QUE CE CHOIX IMPLIQUE. Choisir « SUNU Courtage »
+                                           dit déjà que le type est « partenaire » : le chip « Type »
+                                           s'aligne du MÊME geste, donc en une seule recherche. Le
+                                           libellé voyage avec la valeur, sinon le badge de la barre
+                                           de recherche afficherait la valeur brute. #}
+                                        {% if option.implique is defined %}data-selecteur-implique="{{ option.implique|json_encode }}"{% endif %}
                                         aria-haspopup="listbox"
                                         aria-expanded="false">
                                     {%- if option.icon is defined and option.icon -%}
@@ -108,6 +122,20 @@
                                     data-criterion-value="{{ option.value }}"
                                     data-criterion-label="{{ option.titre_complet | default(option.label) }}"
                                     {% if option.titre_complet is defined %}aria-label="{{ option.titre_complet }}" title="{{ option.titre_complet }}"{% endif %}
+                                        {# R1 — LA CONDITION DE PRÉSENCE de cette option, dans la
+                                       grammaire du moteur des dialogues (`in`, `any`, `all`,
+                                       `not_empty`). Elle porte sur les CRITÈRES COURANTS de la
+                                       liste, pas sur des champs de formulaire : « Choisir un
+                                       partenaire… » n'a rien à proposer quand le chip « Type »
+                                       est sur Agent — le filtre rendrait la liste vide, et
+                                       l'offrir est déjà un mensonge. #}
+                                    {% if option.visibility_conditions is defined %}data-visibility-conditions="{{ option.visibility_conditions|json_encode }}"{% endif %}
+                                    {# R3 — CE QUE CE CHOIX IMPLIQUE. Choisir « SUNU Courtage »
+                                       dit déjà que le type est « partenaire » : le chip « Type »
+                                       s'aligne du MÊME geste, donc en une seule recherche. Le
+                                       libellé voyage avec la valeur, sinon le badge de la barre
+                                       de recherche afficherait la valeur brute. #}
+                                    {% if option.implique is defined %}data-selecteur-implique="{{ option.implique|json_encode }}"{% endif %}
                                     aria-pressed="false">
                                 {%- if option.icon is defined and option.icon -%}
                                     <span class="jsb-preset-chip__icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(option.icon), {width: '15px', height: '15px'}) }}</span>

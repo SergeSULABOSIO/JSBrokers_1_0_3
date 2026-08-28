@@ -146,6 +146,22 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
                         // Le `prefixe` dit de quelle famille vient le choix : c'est lui qui
                         // décide de la colonne filtrée, et qui empêche les deux chips de
                         // s'allumer ensemble sur un identifiant homonyme.
+                        //
+                        // ET ILS S'ALIGNENT SUR LE CHIP « TYPE ». Deux chips racontaient la
+                        // même chose de deux façons, sans se parler : « Type : Agent » avec
+                        // « Bénéficiaire : un partenaire » décrit un ensemble VIDE — agent
+                        // IS NOT NULL et partenaire = 5 est impossible — et rien à l'écran
+                        // n'en disait la cause. Le pire des deux, car l'utilisateur en
+                        // conclut que la rubrique est vide.
+                        //
+                        //   `visibility_conditions` : l'option ne paraît que si le Type la
+                        //       permet (R1). Elle n'est jamais retirée par surprise : un
+                        //       filtre actif garde son chip visible, cf. `chipVisible`.
+                        //   `implique` : choisir un bénéficiaire ALIGNE le Type sur sa
+                        //       famille, du même geste et en une seule recherche (R3).
+                        //
+                        // Les deux viennent de ReversementScope, comme la traduction SQL et
+                        // le schéma de Ket : une règle, un seul endroit.
                         [
                             "selecteur" => [
                                 "entite" => "Invite",
@@ -154,6 +170,12 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
                             ],
                             "label" => "Choisir un agent…",
                             "icon" => "invite",
+                            "visibility_conditions" => ReversementScope::conditionsVisibiliteSelecteur(
+                                ReversementScope::TYPE_AGENT,
+                            ),
+                            "implique" => ReversementScope::implicationDuSelecteur(
+                                ReversementScope::TYPE_AGENT,
+                            ),
                         ],
                         [
                             "selecteur" => [
@@ -163,7 +185,16 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
                             ],
                             "label" => "Choisir un partenaire…",
                             "icon" => "partenaire",
+                            "visibility_conditions" => ReversementScope::conditionsVisibiliteSelecteur(
+                                ReversementScope::TYPE_PARTENAIRE,
+                            ),
+                            "implique" => ReversementScope::implicationDuSelecteur(
+                                ReversementScope::TYPE_PARTENAIRE,
+                            ),
                         ],
+                        // « TOUS » NE DÉCLARE RIEN, et c'est délibéré : c'est le seul moyen
+                        // de retirer le filtre, il ne peut donc jamais disparaître de
+                        // l'écran — quelle que soit la valeur du chip « Type ».
                         ["value" => "", "label" => "Tous", "icon" => "action:filter"],
                     ],
                 ],
