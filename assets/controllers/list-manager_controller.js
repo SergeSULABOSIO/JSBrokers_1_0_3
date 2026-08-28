@@ -1,5 +1,7 @@
 import BaseController from './base_controller.js';
-import { etatChipPreset } from './chip-preset-etat.js';
+// Les règles de cohérence des chips vivent dans leur module pur — lequel réutilise la
+// grammaire de visibilité des DIALOGUES, sans en inventer une seconde.
+import { etatChipPreset, chipVisible, resoudreClicChip } from './chip-preset-etat.js';
 import { positionnerMenu } from './menu-flottant.js';
 
 /**
@@ -300,12 +302,14 @@ export default class extends BaseController {
                 // « agent:12 » n'est pas « partenaire:12 », et le serveur ne pourrait pas
                 // deviner laquelle des deux colonnes filtrer à partir d'un nombre nu.
                 const valeur = prefixe ? `${prefixe}:${r.value}` : r.value;
-                this.notifyCerveau('ui:filter.preset', { key: criterionKey, value: valeur, label: r.text });
-                // Le libellé voyage avec la valeur : sans lui, le chip resterait sur
-                // « Choisir un agent… » jusqu'au retour du cerveau.
-                this._syncPresetChips({
-                    ...this._presetCriteria,
-                    [criterionKey]: { value: valeur, label: r.text },
+                // MÊME CHEMIN que les chips à valeur : le libellé voyage avec la valeur
+                // (sans lui le chip resterait sur « Choisir un agent… » jusqu'au retour du
+                // cerveau), et le chip transmet son IMPLICATION — choisir un partenaire
+                // aligne le chip « Type » du même geste.
+                this._appliquerClicChip(bouton, {
+                    cle: criterionKey,
+                    valeur,
+                    libelle: r.text,
                 });
             });
             panneau.appendChild(entree);
@@ -387,21 +391,81 @@ export default class extends BaseController {
     applyPresetFilter(event) {
         const { criterionKey, criterionValue, criterionLabel } = event.currentTarget.dataset;
         this._logDebug(`Filtre rapide « ${criterionLabel} » (${criterionKey}=${criterionValue}).`);
-        this.notifyCerveau('ui:filter.preset', {
-            key: criterionKey,
-            value: criterionValue,
-            label: criterionLabel,
+        this._appliquerClicChip(event.currentTarget, {
+            cle: criterionKey,
+            valeur: criterionValue ?? '',
+            libelle: criterionLabel,
         });
-        // Retour visuel immédiat ; l'état de référence reviendra via app:context.changed.
-        // GOTCHA multi-groupes : on FUSIONNE dans les critères courants au lieu de les
-        // remplacer. Une liste peut porter plusieurs groupes de chips indépendants (les
-        // quatre axes de paiement des Tranches, cumulés en ET) ; ne transmettre que le
-        // critère cliqué remettrait visuellement tous les autres groupes sur « Toutes »
-        // jusqu'au retour du Cerveau, alors qu'ils restent bel et bien appliqués.
-        this._syncPresetChips({
-            ...this._presetCriteria,
-            [criterionKey]: { value: criterionValue },
-        });
+    }
+
+    /**
+     * LE CHEMIN UNIQUE D'UN CLIC DE CHIP — chip à valeur comme chip-sélecteur.
+     *
+     * Deux chips d'une même barre peuvent se contredire : « Type : Agent » et
+     * « Bénéficiaire : un partenaire » donnent une liste nécessairement vide. La décision
+     * de ce que devient l'écran appartient au module pur (`resoudreClicChip`), qui rend
+     * d'un seul coup les critères RÉSULTANTS et les CHANGEMENTS à transmettre.
+     *
+     * Les deux viennent de la même source, et c'est le point : les calculer séparément,
+     * c'était accepter que l'aperçu immédiat et la recherche réelle divergent le temps
+     * d'un aller-retour — une divergence qui ne se voit pas, puisqu'elle se corrige
+     * d'elle-même une seconde plus tard.
+     *
+     * @param {HTMLElement} bouton le chip cliqué (il porte son implication déclarée)
+     * @param {{cle: string, valeur: string, libelle?: string}} geste
+     * @private
+     */
+    _appliquerClicChip(bouton, geste) {
+        const { criteres, changements } = resoudreClicChip(
+            this._declarationsDesChips(),
+            this._presetCriteria || {},
+            { ...geste, implique: this._jsonDuChip(bouton.dataset.selecteurImplique) },
+        );
+
+        // UN SEUL envoi, donc UNE seule recherche. Notifier chaque changement à part
+        // aurait relancé la liste deux fois et fait clignoter un état intermédiaire que
+        // personne n'a demandé.
+        this.notifyCerveau('ui:filter.preset', { changements });
+        this._syncPresetChips(criteres);
+    }
+
+    /**
+     * Les déclarations de TOUS les chips de la barre, lues dans le DOM.
+     *
+     * Le module pur ne touche à rien : c'est ici qu'on traduit le DOM en faits, et nulle
+     * part ailleurs. Un chip sans condition déclarée n'en porte aucune — les rubriques
+     * existantes (les quatre axes des Tranches, les statuts des Cotations) restent donc
+     * hors de portée de ce mécanisme.
+     *
+     * @private
+     */
+    _declarationsDesChips() {
+        return Array.from(this.element.querySelectorAll('.jsb-preset-chip')).map((chip) => ({
+            cle: chip.dataset.criterionKey,
+            valeurAttendue: chip.dataset.criterionValue ?? '',
+            estSelecteur: Boolean(chip.dataset.selecteurEntite),
+            prefixe: chip.dataset.selecteurPrefixe || '',
+            conditions: this._jsonDuChip(chip.dataset.visibilityConditions),
+        }));
+    }
+
+    /**
+     * Un attribut JSON du chip, ou null.
+     *
+     * Un JSON illisible ne doit pas emporter la barre entière : le chip perd sa règle et
+     * redevient inconditionnel, ce qui est le repli le moins nuisible — un filtre visible
+     * de trop se remarque, un filtre invisible non.
+     *
+     * @private
+     */
+    _jsonDuChip(brut) {
+        if (!brut) return null;
+        try {
+            return JSON.parse(brut);
+        } catch (e) {
+            this._logDebug(`Déclaration de chip illisible, ignorée : ${brut}`);
+            return null;
+        }
     }
 
     /**
@@ -424,21 +488,26 @@ export default class extends BaseController {
             // La RÈGLE vit dans `chip-preset-etat.js` : c'est une décision, pas un rendu,
             // et elle s'éprouve sans DOM. Ici on ne fait que l'appliquer.
             const texte = chip.querySelector('[data-selecteur-libelle]');
-            const { actif, libelle } = etatChipPreset(
-                {
-                    valeurAttendue: chip.dataset.criterionValue ?? '',
-                    estSelecteur: Boolean(chip.dataset.selecteurEntite),
-                    prefixe: chip.dataset.selecteurPrefixe || '',
-                    libelleDefaut: chip.dataset.selecteurLibelleDefaut || (texte ? texte.textContent : ''),
-                },
-                criteria[chip.dataset.criterionKey],
-            );
+            const declaration = {
+                cle: chip.dataset.criterionKey,
+                valeurAttendue: chip.dataset.criterionValue ?? '',
+                estSelecteur: Boolean(chip.dataset.selecteurEntite),
+                prefixe: chip.dataset.selecteurPrefixe || '',
+                conditions: this._jsonDuChip(chip.dataset.visibilityConditions),
+                libelleDefaut: chip.dataset.selecteurLibelleDefaut || (texte ? texte.textContent : ''),
+            };
+            const { actif, libelle } = etatChipPreset(declaration, criteria[declaration.cle]);
 
             if (libelle !== null && texte) {
                 texte.textContent = libelle;
             }
             chip.classList.toggle('is-active', actif);
             chip.setAttribute('aria-pressed', actif ? 'true' : 'false');
+            // R1 — UN CHIP QUI NE PEUT RIEN RAMENER N'A RIEN À PROPOSER. « Choisir un
+            // partenaire… » sous un Type « Agent » offrait un filtre dont on savait déjà
+            // qu'il rendrait la liste vide. `d-none` est le geste exact du moteur de
+            // visibilité des dialogues : une seule façon de masquer dans le projet.
+            chip.classList.toggle('d-none', !chipVisible(declaration, criteria));
         });
     }
 

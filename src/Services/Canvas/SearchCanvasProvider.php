@@ -190,8 +190,60 @@ class SearchCanvasProvider
             ]);
         }
 
-        return $searchCriteria;
-    }
+        // Critères synthétiques de la rubrique « Rétros intermédiaires ». Ce ne sont pas
+        // des colonnes : ils sont interceptés par le moteur (JSBDynamicSearchService) et
+        // traduits en SQL. Sans cette déclaration, leur BADGE dans la barre de recherche
+        // retombait sur la clé brute — « __type_beneficiaire__ : "agent" » — parce que
+        // `construireResumeFiltres` cherche le libellé dans ce canevas et n'y trouvait rien.
+        //
+        // C'était supportable tant que ces filtres n'étaient posés que par un clic
+        // délibéré. Depuis que choisir un bénéficiaire ALIGNE le chip « Type » du même
+        // geste, la barre passe à deux filtres, bascule sur le volet « Filtres 2 », et y
+        // affiche ces lignes : elles doivent se lire.
+        if ($shortName === \App\Services\Search\ReversementScope::ENTITE) {
+            $iconesSynthetiques = [
+                \App\Services\Search\ReversementScope::CLE_TYPE => 'action:filter',
+                \App\Services\Search\ReversementScope::CLE_JUSTIFICATIF => 'document',
+                \App\Services\Search\ReversementScope::CLE_PERIODE => 'action:calendar',
+                \App\Services\Search\ReversementScope::CLE_VIREMENT => 'action:copy',
+            ];
+            $libellesSynthetiques = [
+                \App\Services\Search\ReversementScope::CLE_TYPE => 'Type de bénéficiaire',
+                \App\Services\Search\ReversementScope::CLE_JUSTIFICATIF => 'Justificatif',
+                \App\Services\Search\ReversementScope::CLE_PERIODE => 'Période du versement',
+                \App\Services\Search\ReversementScope::CLE_VIREMENT => 'Virement',
+            ];
+            foreach ($libellesSynthetiques as $cle => $libelle) {
+                array_unshift($searchCriteria, [
+                    'Nom' => $cle,
+                    'Display' => $libelle,
+                    // 'Boolean' rend un <select> depuis la map de valeurs, badge inclus —
+                    // même patron que l'échéance des Avenants et le statut des Cotations.
+                    'Type' => 'Boolean',
+                    'Valeur' => \App\Services\Search\ReversementScope::GROUPES[$cle],
+                    'isDefault' => false,
+                    'Icone' => $iconesSynthetiques[$cle],
+                ]);
+            }
+
+            // LE BÉNÉFICIAIRE EST HORS DE LA RECHERCHE AVANCÉE — `isDefault` l'en exclut.
+            //
+            // Sa valeur porte la FAMILLE (« agent:12 »), et le dialogue avancé rendrait un
+            // Tom Select qui posterait l'identifiant NU : le critère deviendrait indécodable
+            // et le filtre serait ignoré en silence, sous un badge qui prétendrait l'inverse.
+            // Il se choisit donc là où la famille est connue — son chip-sélecteur —, et
+            // n'est déclaré ici que pour que son badge s'affiche en clair.
+            array_unshift($searchCriteria, [
+                'Nom' => \App\Services\Search\ReversementScope::CLE_BENEFICIAIRE,
+                'Display' => 'Bénéficiaire',
+                // 'Relation' fait lire le LIBELLÉ du critère (le nom) plutôt que sa valeur.
+                'Type' => 'Relation',
+                'isDefault' => true,
+                'Icone' => 'invite',
+            ]);
+        }
+
+        return $searchCriteria;    }
 
     /**
      * Retourne le nom court d'une entité à partir de son FQCN.

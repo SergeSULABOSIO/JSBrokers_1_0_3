@@ -221,20 +221,38 @@ export default class extends Controller {
                 break;
             case 'ui:filter.preset': {
                 // Chip de filtre rapide (ex. statut de paiement des tranches) : pose ou
-                // retire (valeur vide = « Toutes ») le critère synthétique en conservant
+                // retire (valeur vide = « Toutes ») les critères synthétiques en conservant
                 // les autres filtres actifs, puis relance la recherche page 1. Le badge de
                 // la barre de recherche suit via app:context.changed après rafraîchissement.
+                //
+                // UN CLIC PEUT EN CHANGER PLUSIEURS, et ils doivent voyager ENSEMBLE. Deux
+                // chips d'une même barre peuvent se contredire : choisir un partenaire
+                // aligne le chip « Type », et basculer le « Type » retire un bénéficiaire
+                // devenu contradictoire. Envoyer ces changements séparément relancerait la
+                // liste deux fois et ferait clignoter un état intermédiaire — voire, pour
+                // un instant, un couple impossible qui rendrait zéro ligne.
+                //
+                // La forme historique `{key, value, label}` est normalisée en une entrée
+                // unique : un seul chemin de code, et les rubriques à chips indépendants
+                // (les quatre axes des Tranches) continuent sans y toucher.
                 const presetState = this._getActiveTabState();
                 const presetCriteria = { ...(presetState.searchCriteria || {}) };
-                if (payload.value === undefined || payload.value === null || payload.value === '') {
-                    delete presetCriteria[payload.key];
-                } else {
-                    presetCriteria[payload.key] = {
+                const changements = Array.isArray(payload.changements)
+                    ? payload.changements
+                    : [{ key: payload.key, value: payload.value, label: payload.label }];
+
+                changements.forEach(({ key, value, label }) => {
+                    if (!key) return;
+                    if (value === undefined || value === null || value === '') {
+                        delete presetCriteria[key];
+                        return;
+                    }
+                    presetCriteria[key] = {
                         operator: '=',
-                        value: payload.value,
-                        label: payload.label || String(payload.value),
+                        value: value,
+                        label: label || String(value),
                     };
-                }
+                });
                 this._handleSearchRequest(presetCriteria);
                 break;
             }
