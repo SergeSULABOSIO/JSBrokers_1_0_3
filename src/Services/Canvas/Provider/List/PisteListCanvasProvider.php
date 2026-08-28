@@ -32,7 +32,7 @@ class PisteListCanvasProvider implements ListCanvasProviderInterface
                     // ⚠ Code PLAT obligatoire : le rendu d'une ligne fait
                     // `attribute(entity, code)`, où un chemin pointé (« agent.nom ») est lu
                     // comme un nom de propriété et fait tomber la rubrique ENTIÈRE.
-                    ["attribut_code" => "effortCommercialAgent", "icone" => "invite"],
+                    ["attribut_code" => "partageLibelle", "icone" => "partenaire"],
                     ["attribut_code" => "statutTransformation"],
                     ["attribut_code" => "client"],
                     ["attribut_code" => "risqueCode"],

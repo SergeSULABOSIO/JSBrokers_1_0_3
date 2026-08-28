@@ -147,6 +147,22 @@ class EffortCommercialPariteKetTest extends KernelTestCase
         // Sans agent : c'est une condition de PARTENAIRE au sens de estPourAgent().
         $partenaire = $faireCondition('Accord SUNU', null);
 
+        // UN VRAI INTERMÉDIAIRE, et sa condition. La fixture n'en avait aucun : « Accord
+        // SUNU » ne désignait personne, ce qui suffisait à l'ancien refus — mais ne peut
+        // pas servir un rattachement, maintenant qu'il est permis.
+        $sunu = (new \App\Entity\Partenaire())->setNom('SUNU Courtage')->setPart(20.0);
+        $sunu->setEntreprise($ent);
+        $em->persist($sunu);
+
+        $ascoma = (new \App\Entity\Partenaire())->setNom('ASCOMA')->setPart(12.0);
+        $ascoma->setEntreprise($ent);
+        $em->persist($ascoma);
+
+        $conditionSunu = $faireCondition('Apport SUNU 20%', null);
+        $conditionSunu->setPartenaire($sunu);
+        $conditionAscoma = $faireCondition('Accord ASCOMA 12%', null);
+        $conditionAscoma->setPartenaire($ascoma);
+
         $faireAffaire = function (string $nom, string $police) use ($ent, $gestionnaire, $risque, $em): array {
             $client = (new Client())->setNom('Client ' . $nom)->setExonere(false);
             $client->setEntreprise($ent);
@@ -342,19 +358,179 @@ class EffortCommercialPariteKetTest extends KernelTestCase
             'L\'affaire doit être redevenue celle du cabinet seul.',
         );
     }
-    /** Une condition de PARTENAIRE n'a pas sa place ici, et le refus le dit. */
-    public function testUneConditionDePartenaireEstRefusee(): void
+    /**
+     * UNE CONDITION DE PARTENAIRE EST DÉSORMAIS ACCEPTÉE — c'est l'objet du lot.
+     *
+     * Ce test affirmait l'inverse, et il avait alors raison : le rattachement n'existait
+     * que pour l'agent, et laisser passer une condition de partenaire l'aurait écrite en
+     * base sans qu'aucun calcul ne la lise. Les deux familles se rattachent maintenant du
+     * même geste, la famille étant LUE sur la condition choisie.
+     */
+    public function testUneConditionDePartenaireEstDesormaisRattachable(): void
     {
         $s = $this->semer();
 
         $resultat = $this->outil()->execute([
             'action' => 'rattacher',
-            'condition' => 'Accord SUNU',
+            'condition' => 'Apport SUNU 20%',
+            'cibles' => [$this->cible($s['avenantA'])],
+        ], $s['scope']);
+
+        // DIAGNOSTIC : on montre ce que l'outil a répondu, sinon « false n'est pas false »
+        // ne dit rien de la raison.
+        self::assertNotFalse(
+            $resultat->data['pret'] ?? false,
+            'Le plan doit être prêt. Réponse : ' . json_encode($resultat->data, JSON_UNESCAPED_UNICODE),
+        );
+    }
+
+    /**
+     * LA DÉSIGNATION D'INTERMÉDIAIRE VOYAGE DANS LE MÊME PLAN, ET S'ANNONCE.
+     *
+     * Une condition de partenaire rattachée à une affaire sans apporteur n'aurait AUCUN
+     * effet : le calcul ne retient que les conditions de l'intermédiaire désigné. Le geste
+     * pose donc la désignation — et comme elle change qui touche l'argent, la consigne de
+     * rédaction doit le DIRE, jamais la laisser découvrir.
+     */
+    public function testLeRattachementDunPartenaireDesigneLIntermediaireEtLeDit(): void
+    {
+        $s = $this->semer();
+
+        $resultat = $this->outil()->execute([
+            'action' => 'rattacher',
+            'condition' => 'Apport SUNU 20%',
+            'cibles' => [$this->cible($s['avenantA'])],
+        ], $s['scope']);
+
+        $charge = json_encode($resultat->data, JSON_UNESCAPED_UNICODE);
+        self::assertStringContainsString('SUNU Courtage', $charge);
+        self::assertStringContainsString('intermédiaire', $charge, 'La désignation doit être annoncée.');
+    }
+
+    /**
+     * UNE PLACE DÉJÀ PRISE PAR UN AUTRE INTERMÉDIAIRE ARRÊTE KET, comme elle arrête l'écran.
+     *
+     * Rattacher la condition d'un autre apporteur produirait une règle que le calcul
+     * écarterait en silence — il ne retient que les conditions de l'intermédiaire du jour.
+     * Le refus nomme les DEUX, sinon l'utilisateur ne sait pas lequel corriger.
+     */
+    public function testUnIntermediaireDejaEnPlaceArreteLeRattachement(): void
+    {
+        $s = $this->semer();
+
+        // Premier geste : SUNU devient l'apporteur de l'affaire.
+        $this->outil()->execute([
+            'action' => 'rattacher',
+            'condition' => 'Apport SUNU 20%',
+            'cibles' => [$this->cible($s['avenantA'])],
+        ], $s['scope']);
+        $s['pisteA']->setPartenaire(
+            $this->em()->getRepository(\App\Entity\Partenaire::class)->findOneBy(['nom' => 'SUNU Courtage']),
+        );
+        $this->em()->flush();
+
+        $resultat = $this->outil()->execute([
+            'action' => 'rattacher',
+            'condition' => 'Accord ASCOMA 12%',
             'cibles' => [$this->cible($s['avenantA'])],
         ], $s['scope']);
 
         self::assertFalse($resultat->data['pret'] ?? true);
-        self::assertStringContainsString('partenaire', mb_strtolower($resultat->data['bloquant'] ?? '', 'UTF-8'));
+        $motif = $resultat->data['bloquant'] ?? '';
+        // La PLACE est prise : c'est le refus de la règle « un bénéficiaire par famille »,
+        // et il nomme l'occupant et la condition en place — de quoi savoir quoi détacher.
+        self::assertStringContainsString('SUNU Courtage', $motif, 'Le refus nomme l’apporteur en place.');
+        self::assertStringContainsString('Apport SUNU 20%', $motif, 'Et la condition à détacher.');
+    }
+
+    /**
+     * L'AUTRE REFUS : la place est LIBRE, mais l'affaire est déjà apportée par quelqu'un.
+     *
+     * Ce cas n'a pas d'équivalent côté agent, et il vient de la structure : un agent est
+     * nommé PAR sa condition, tandis que l'intermédiaire est désigné par l'AFFAIRE — la
+     * condition ne fait que moduler son taux. Rattacher la condition d'un autre écrirait
+     * une règle que le calcul écarterait en silence, puisqu'il ne retient que les
+     * conditions de l'intermédiaire du jour. Le refus nomme donc les DEUX.
+     */
+    public function testUneConditionDunAutreApporteurEstRefuseeEnNommantLesDeux(): void
+    {
+        $s = $this->semer();
+
+        // L'affaire est apportée par ASCOMA, SANS aucune condition rattachée : la place de
+        // la famille « partenaire » est donc libre.
+        $s['pisteA']->setPartenaire(
+            $this->em()->getRepository(\App\Entity\Partenaire::class)->findOneBy(['nom' => 'ASCOMA']),
+        );
+        $this->em()->flush();
+
+        $resultat = $this->outil()->execute([
+            'action' => 'rattacher',
+            'condition' => 'Apport SUNU 20%',
+            'cibles' => [$this->cible($s['avenantA'])],
+        ], $s['scope']);
+
+        self::assertFalse($resultat->data['pret'] ?? true);
+        $motif = $resultat->data['bloquant'] ?? '';
+        self::assertStringContainsString('ASCOMA', $motif, 'L’apporteur de l’affaire.');
+        self::assertStringContainsString('SUNU Courtage', $motif, 'Celui que la condition visait.');
+    }
+
+    /**
+     * ET SUR UNE AFFAIRE SANS APPORTEUR, LE GESTE PASSE — en posant la désignation.
+     *
+     * C'est la contrepartie du refus ci-dessus : la place libre s'occupe, la place prise se
+     * respecte. Sans cela, rattacher une condition de partenaire aurait exigé de renseigner
+     * l'apporteur d'abord — un geste en deux temps là où celui de l'agent en demande un.
+     */
+    public function testSurUneAffaireSansApporteurLeGestePasse(): void
+    {
+        $s = $this->semer();
+
+        $resultat = $this->outil()->execute([
+            'action' => 'rattacher',
+            'condition' => 'Apport SUNU 20%',
+            'cibles' => [$this->cible($s['avenantB'])],
+        ], $s['scope']);
+
+        self::assertNotFalse($resultat->data['pret'] ?? false);
+        $champs = $resultat->data['plan'][0]['champs'] ?? [];
+        self::assertContains('partenaire', $champs, 'La désignation voyage dans le MÊME plan.');
+        self::assertContains('conditionsPartageAgent', $champs);
+    }
+
+    /**
+     * LES DEUX FAMILLES COEXISTENT : un apporteur ET un agent sur la même affaire.
+     *
+     * C'est la mécanique du cabinet — le partenaire se sert d'abord, l'agent partage le
+     * reliquat. Une règle « une affaire, un bénéficiaire » l'aurait interdite.
+     */
+    public function testUnApporteurEtUnAgentCoexistentSurLaMemeAffaire(): void
+    {
+        $s = $this->semer();
+
+        $premier = $this->outil()->execute([
+            'action' => 'rattacher',
+            'condition' => 'Apport SUNU 20%',
+            'cibles' => [$this->cible($s['avenantA'])],
+        ], $s['scope']);
+        self::assertNotFalse($premier->data['pret'] ?? false);
+
+        // On applique le premier rattachement à la main : le plan n'est pas exécuté ici.
+        $s['pisteA']->addConditionsPartageAgent(
+            $this->em()->getRepository(\App\Entity\ConditionPartage::class)->findOneBy(['nom' => 'Apport SUNU 20%']),
+        );
+        $this->em()->flush();
+
+        $second = $this->outil()->execute([
+            'action' => 'rattacher',
+            'condition' => 'Prime Alice',
+            'cibles' => [$this->cible($s['avenantA'])],
+        ], $s['scope']);
+
+        self::assertNotFalse(
+            $second->data['pret'] ?? false,
+            'La place d’AGENT est libre : l’apporteur ne l’occupe pas.',
+        );
     }
 
     /** Rattacher sans dire quelle condition : on demande, on ne devine pas. */

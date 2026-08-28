@@ -11,7 +11,7 @@
  * l'agent perd sa rétrocommission sans que personne le voie.
  *
  * Ces routes acceptent donc les quatre entités de l'arbre, et remontent elles-mêmes à la
- * PISTE (`EffortCommercialAgent::piste`), où la condition s'écrit — comme avant, au même
+ * PISTE (`RattachementDuPartage::piste`), où la condition s'écrit — comme avant, au même
  * endroit, avec les mêmes conséquences sur le décompte.
  *
  * ── UNE SEULE ROUTE POUR UN LOT COMME POUR UNE LIGNE ────────────────────────────────
@@ -30,7 +30,7 @@ use App\Entity\Tranche;
 use App\Repository\ConditionPartageRepository;
 use App\Repository\EntrepriseRepository;
 use App\Repository\InviteRepository;
-use App\Service\Partage\EffortCommercialAgent;
+use App\Service\Partage\RattachementDuPartage;
 use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -65,7 +65,7 @@ class PartageRattachementController extends AbstractController
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private ConditionPartageRepository $conditionRepository,
-        private EffortCommercialAgent $effortCommercial,
+        private RattachementDuPartage $rattachement,
         CanvasBuilder $canvasBuilder,
     ) {
         $this->canvasBuilder = $canvasBuilder;
@@ -100,6 +100,7 @@ class PartageRattachementController extends AbstractController
 
         $pistes = $this->pistesDeLaSelection($classe, $this->idsDemandes($request));
         $entreprise = $this->getInvite()->getEntreprise();
+        $mode = $request->query->get('mode') === 'detacher' ? 'detacher' : 'rattacher';
 
         return $this->render('components/partage/_conditions_picker.html.twig', [
             'entite'     => $entite,
@@ -107,9 +108,24 @@ class PartageRattachementController extends AbstractController
             'pistes'     => $pistes,
             // Le motif s'il y en a un : le picker le montre AVANT de laisser cliquer, plutôt
             // que de faire découvrir le refus après coup.
-            'refus'      => $this->effortCommercial->refusDuLot($pistes),
-            'conditions' => $this->conditionsDAgent($entreprise),
-            'submitUrl'  => $this->generateUrl('admin.partage.rattacher', ['entite' => $entite]),
+            // EN MODE DÉTACHER, on ne propose que ce qui EST rattaché. Le détachement
+            // était un appel direct : cela ne suffit plus depuis qu'une affaire peut
+            // porter DEUX conditions (un apporteur, un agent) — il faut dire laquelle.
+            // Un seul chemin pour les deux gestes, plutôt qu'un branchement selon leur
+            // nombre : le picker montre une ligne le plus souvent, deux au plus.
+            'mode'       => $mode,
+            // Le refus du LOT dépend de la condition choisie (sa famille décide de la
+            // place qu'elle prétend occuper) : il ne peut plus être calculé d'avance.
+            // Le picker montre en revanche ce que chaque affaire porte DÉJÀ, ce qui
+            // laisse voir le conflit avant de cliquer.
+            'occupations' => $this->occupationsDesAffaires($pistes),
+            'conditions' => $mode === 'detacher'
+                ? $this->conditionsRattachees($pistes)
+                : $this->conditionsRattachables($entreprise),
+            'submitUrl'  => $this->generateUrl(
+                $mode === 'detacher' ? 'admin.partage.detacher' : 'admin.partage.rattacher',
+                ['entite' => $entite],
+            ),
             'standalone' => true,
         ]);
     }
@@ -131,33 +147,52 @@ class PartageRattachementController extends AbstractController
 
         $donnees = json_decode($request->getContent(), true);
         $ids = array_values(array_filter(array_map('intval', (array) ($donnees['ids'] ?? []))));
-        $condition = $this->conditionDAgent((int) ($donnees['conditionId'] ?? 0));
+        $condition = $this->conditionDuCabinet((int) ($donnees['conditionId'] ?? 0));
 
         if ($condition === null) {
             return $this->json(
-                ['message' => 'Cette condition de partage n\'existe pas, ou ne désigne aucun agent interne.'],
+                ['message' => 'Cette condition de partage n\'existe pas dans votre espace de travail.'],
                 Response::HTTP_UNPROCESSABLE_ENTITY,
             );
         }
 
         $pistes = $this->pistesDeLaSelection($classe, $ids);
-        $refus = $this->effortCommercial->refusDuLot($pistes);
+        $refus = $this->rattachement->refusDuLot($pistes, $condition);
         if ($refus !== null) {
             return $this->json(['message' => $refus], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        $designees = [];
         foreach ($pistes as $piste) {
             $piste->addConditionsPartageAgent($condition);
+            // LA DÉSIGNATION D'INTERMÉDIAIRE, quand l'affaire n'en a pas. Sans elle, une
+            // condition de partenaire serait écrite sans jamais rien produire : le calcul
+            // ne retient que les conditions de l'apporteur désigné.
+            if ($this->rattachement->designerIntermediaire($piste, $condition)) {
+                $designees[] = $piste->getNom() ?: ('#' . $piste->getId());
+            }
         }
         $this->em->flush();
 
+        $estAgent = $condition->estPourAgent();
+        $nom = ($estAgent ? $condition->getAgent()?->getNom() : $condition->getPartenaire()?->getNom())
+            ?: ($estAgent ? 'L\'agent' : 'L\'intermédiaire');
+
         return $this->json([
             'message' => sprintf(
-                '%s bénéficie désormais de %d affaire%s (condition « %s »).',
-                $condition->getAgent()?->getNom() ?: 'L\'agent',
+                '%s bénéficie désormais de %d affaire%s (condition « %s »).%s',
+                $nom,
                 count($pistes),
                 count($pistes) > 1 ? 's' : '',
                 $condition->getNom(),
+                // L'ÉCRITURE IMPLICITE SE DIT. Poser l'apporteur change qui touche
+                // l'argent : la laisser découvrir serait pire que de la refuser.
+                $designees === [] ? '' : sprintf(
+                    ' %s devient aussi l\'intermédiaire de %s, qui n\'en avai%s aucun.',
+                    $nom,
+                    count($designees) > 1 ? count($designees) . ' de ces affaires' : '« ' . $designees[0] . ' »',
+                    count($designees) > 1 ? 'ent' : 't',
+                ),
             ),
             'affaires' => count($pistes),
         ]);
@@ -169,38 +204,71 @@ class PartageRattachementController extends AbstractController
      * Le refus est rendu tel quel : c'est ainsi que l'utilisateur apprend POURQUOI c'est
      * trop tard, et qu'il comprend du même coup pourquoi il ne peut pas changer d'agent.
      */
-    #[Route('/{entite}/{id}/detacher', name: 'detacher', requirements: ['id' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function detacher(string $entite, int $id): JsonResponse
+    #[Route('/{entite}/detacher', name: 'detacher', methods: ['POST'])]
+    public function detacher(string $entite, Request $request): JsonResponse
     {
         $classe = $this->classeDe($entite);
         if (!$this->mayAccessEntity($classe, Invite::ACCESS_ECRITURE)) {
             throw $this->createAccessDeniedException('Accès refusé.');
         }
 
-        $pistes = $this->pistesDeLaSelection($classe, [$id]);
-        $piste = $pistes[0] ?? null;
+        $donnees = json_decode($request->getContent(), true);
+        $ids = array_values(array_filter(array_map('intval', (array) ($donnees['ids'] ?? []))));
+        $condition = $this->conditionDuCabinet((int) ($donnees['conditionId'] ?? 0));
 
-        $refus = $this->effortCommercial->refusDeDetachement($piste);
-        if ($refus !== null) {
-            return $this->json(['message' => $refus], Response::HTTP_UNPROCESSABLE_ENTITY);
+        if ($condition === null) {
+            return $this->json(
+                ['message' => 'Cette condition de partage n\'existe pas dans votre espace de travail.'],
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+            );
         }
 
-        $condition = $this->effortCommercial->condition($piste);
-        $agentNom = $condition?->getAgent()?->getNom() ?: 'l\'agent';
+        $pistes = $this->pistesDeLaSelection($classe, $ids);
+
+        // TOUT OU RIEN, comme au rattachement : si une seule affaire est scellée par un
+        // versement, on n'en détache aucune. Défaire la moitié d'un lot laisserait
+        // l'utilisateur croire que tout est fait.
+        foreach ($pistes as $piste) {
+            $refus = $this->rattachement->refusDeDetachement($piste, $condition);
+            if ($refus !== null) {
+                return $this->json(['message' => $refus], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+        }
+        if ($pistes === []) {
+            return $this->json(
+                ['message' => 'Aucune affaire à détacher : la sélection n\'a rien donné.'],
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+            );
+        }
+
+        $estAgent = $condition->estPourAgent();
+        $nom = ($estAgent ? $condition->getAgent()?->getNom() : $condition->getPartenaire()?->getNom())
+            ?: ($estAgent ? 'l\'agent' : 'l\'intermédiaire');
 
         // LES DEUX CANAUX. Une condition exceptionnelle doit pouvoir être défaite comme une
         // réutilisable, sinon le voyant resterait allumé sans qu'on puisse l'éteindre. Elle
         // est DISSOCIÉE, jamais supprimée : c'est peut-être une règle qui sert ailleurs.
-        $piste->removeConditionsPartageAgent($condition);
-        $piste->removeConditionsPartageExceptionnelle($condition);
+        //
+        // ⚠ ON NE RETIRE PAS `Piste::partenaire`. Détacher une condition défait la RÈGLE de
+        // rémunération, pas le fait que cette affaire a été apportée : l'apporteur reste, et
+        // sa part habituelle reprend ses droits. Effacer la désignation supprimerait une
+        // donnée saisie sans le dire — c'est déjà la règle de `setPartenaire(null)`.
+        foreach ($pistes as $piste) {
+            $piste->removeConditionsPartageAgent($condition);
+            $piste->removeConditionsPartageExceptionnelle($condition);
+        }
         $this->em->flush();
 
         return $this->json([
             'message' => sprintf(
-                'L\'affaire « %s » ne revient plus à %s : elle redevient un effort du cabinet seul.',
-                $piste->getNom() ?: ('#' . $piste->getId()),
-                $agentNom,
+                '%d affaire%s ne revien%s plus à %s (condition « %s »).',
+                count($pistes),
+                count($pistes) > 1 ? 's' : '',
+                count($pistes) > 1 ? 'nent' : 't',
+                $nom,
+                $condition->getNom(),
             ),
+            'affaires' => count($pistes),
         ]);
     }
 
@@ -249,7 +317,7 @@ class PartageRattachementController extends AbstractController
                 continue;
             }
 
-            $piste = $this->effortCommercial->piste($objet);
+            $piste = $this->rattachement->piste($objet);
             if ($piste !== null && $piste->getId() !== null) {
                 $pistes[$piste->getId()] = $piste;
             }
@@ -259,32 +327,81 @@ class PartageRattachementController extends AbstractController
     }
 
     /** Les conditions RÉUTILISABLES d'agents du cabinet — jamais celles d'un partenaire. */
-    private function conditionsDAgent($entreprise): array
+    private function conditionsRattachables($entreprise): array
     {
-        $conditions = $this->conditionRepository->createQueryBuilder('c')
-            ->join('c.agent', 'a')->addSelect('a')
+        // LES DEUX FAMILLES, et donc des jointures EXTERNES : une jointure interne sur
+        // l'agent écartait toutes les conditions de partenaire — c'était le filtre qui
+        // rendait le geste agent-only. On garde aussi celles dont le bénéficiaire a été
+        // supprimé : on veut pouvoir les voir pour les corriger.
+        return $this->conditionRepository->createQueryBuilder('c')
+            ->leftJoin('c.agent', 'a')->addSelect('a')
+            ->leftJoin('c.partenaire', 'p')->addSelect('p')
             ->where('c.entreprise = :entreprise')
             ->setParameter('entreprise', $entreprise)
-            ->orderBy('a.nom', 'ASC')
-            ->addOrderBy('c.nom', 'ASC')
+            ->orderBy('c.nom', 'ASC')
             ->getQuery()
             ->getResult();
-
-        return $conditions;
     }
 
-    /** La condition dictée, à condition qu'elle soit du cabinet ET pour un agent. */
-    private function conditionDAgent(int $id): ?ConditionPartage
+    /**
+     * Les conditions DÉJÀ rattachées aux affaires de la sélection — la matière du mode
+     * « détacher ».
+     *
+     * Dédoublonnées : deux affaires peuvent partager la même règle, et l'offrir deux fois
+     * ferait croire à deux rattachements distincts.
+     *
+     * @param Piste[] $pistes
+     *
+     * @return ConditionPartage[]
+     */
+    private function conditionsRattachees(array $pistes): array
+    {
+        $conditions = [];
+        foreach ($pistes as $piste) {
+            foreach ($this->rattachement->conditions($piste) as $condition) {
+                $conditions[(int) $condition->getId()] = $condition;
+            }
+        }
+        ksort($conditions);
+
+        return array_values($conditions);
+    }
+
+    /**
+     * CE QUE CHAQUE AFFAIRE PORTE DÉJÀ, pour que le picker le montre AVANT le clic.
+     *
+     * Le refus dépend maintenant de la condition choisie — sa famille décide de la place
+     * qu'elle prétend occuper — et ne peut donc plus être calculé d'avance. Montrer les
+     * occupations vaut mieux : l'utilisateur voit le conflit au lieu de le découvrir.
+     *
+     * @param Piste[] $pistes
+     *
+     * @return array<int, array{affaire: string, partage: ?string, apporteur: ?string}>
+     */
+    private function occupationsDesAffaires(array $pistes): array
+    {
+        $occupations = [];
+        foreach ($pistes as $piste) {
+            $occupations[] = [
+                'affaire'   => $piste->getNom() ?: ('#' . $piste->getId()),
+                'partage'   => $this->rattachement->libelle($piste),
+                'apporteur' => $piste->getPartenaire()?->getNom(),
+            ];
+        }
+
+        return $occupations;
+    }
+
+    /** La condition dictée, à condition qu'elle soit du cabinet. La FAMILLE ne filtre plus. */
+    private function conditionDuCabinet(int $id): ?ConditionPartage
     {
         if ($id <= 0) {
             return null;
         }
 
-        $condition = $this->conditionRepository->findOneBy([
+        return $this->conditionRepository->findOneBy([
             'id' => $id,
             'entreprise' => $this->getInvite()->getEntreprise(),
         ]);
-
-        return $condition?->estPourAgent() === true ? $condition : null;
     }
 }

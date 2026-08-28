@@ -3,6 +3,8 @@
 namespace App\Services\Canvas\Indicator;
 
 use App\Entity\ConditionPartage;
+use App\Entity\Partenaire;
+use App\Entity\Piste;
 use App\Entity\RevenuPourCourtier;
 use App\Entity\Note;
 use App\Entity\Risque;
@@ -217,10 +219,58 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
         $partenaire = $this->calculationHelper->getCotationPartenaire($revenu->getCotation());
         $risqueActuel = $piste->getRisque();
 
+        // ── L'ÉTAGE DU MILIEU : LA CONDITION RATTACHÉE ──────────────────────────────
+        //
+        // Une condition PARTAGÉE peut désormais être rattachée à des affaires choisies,
+        // exactement comme celle d'un agent — « ces trois affaires-ci relèvent de l'accord
+        // SUNU 20 % ». Sans cet étage, le rattachement serait écrit en base et n'aurait
+        // AUCUN effet sur l'argent : le pire des silences.
+        //
+        // Sa place est dictée par la cascade d'origine, qu'on ne déplace pas : ce qui est
+        // porté par l'AFFAIRE l'emporte sur ce qui est porté par le PARTENAIRE. Entre les
+        // deux étages de l'affaire, l'exceptionnelle passe d'abord — elle a été écrite POUR
+        // cette affaire-là, quand la rattachée sert aussi ailleurs.
+        //
+        // ⚠ ET ELLE DOIT APPARTENIR À L'INTERMÉDIAIRE DE L'AFFAIRE. Le rattachement le
+        // garantit au moment du geste, mais l'intermédiaire peut CHANGER ensuite : une
+        // condition rattachée qui nommerait l'ancien paierait alors le nouveau au taux du
+        // précédent. `Piste::setPartenaire()` recentre les conditions PROPRES de l'affaire
+        // et ne peut pas toucher aux partagées — elles servent d'autres affaires. Le filtre
+        // est donc ici, à la lecture.
         return $this->premiereConditionApplicable($piste->getConditionsPartageExceptionnelles(), $risqueActuel)
+            ?? $this->premiereConditionApplicable(
+                $this->rattacheesDeLIntermediaire($piste, $partenaire),
+                $risqueActuel,
+            )
             ?? ($partenaire !== null
                 ? $this->premiereConditionApplicable($partenaire->getConditionPartages(), $risqueActuel)
                 : null);
+    }
+
+    /**
+     * Les conditions RATTACHÉES à cette affaire qui rétrocèdent bien à son intermédiaire.
+     *
+     * La collection est commune aux deux familles depuis l'unification du rattachement ;
+     * `premiereConditionApplicable()` écarte déjà les conditions d'agent. Ce qu'on ajoute
+     * ici est le second filtre, celui que la collection ne peut pas porter : le
+     * bénéficiaire nommé doit être l'intermédiaire de l'affaire du jour.
+     *
+     * @return array<int, ConditionPartage>
+     */
+    private function rattacheesDeLIntermediaire(Piste $piste, ?Partenaire $partenaire): array
+    {
+        if ($partenaire === null) {
+            return [];
+        }
+
+        $retenues = [];
+        foreach ($piste->getConditionsPartageAgent() as $condition) {
+            if ($this->calculationHelper->isSamePartenaire($condition->getPartenaire(), $partenaire)) {
+                $retenues[] = $condition;
+            }
+        }
+
+        return $retenues;
     }
 
     /**

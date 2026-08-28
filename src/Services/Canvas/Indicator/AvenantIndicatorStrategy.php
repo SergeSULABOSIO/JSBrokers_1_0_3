@@ -2,7 +2,7 @@
 
 namespace App\Services\Canvas\Indicator;
 
-use App\Service\Partage\EffortCommercialAgent;
+use App\Service\Partage\RattachementDuPartage;
 use App\Entity\Avenant;
 use App\Entity\Entreprise;
 use App\Repository\CotationRepository;
@@ -25,7 +25,7 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
         private AvenantRenouvellementResolver $renouvellementResolver,
         // LE VOYANT « effort commercial » : une seule autorité le calcule, pour les
         // quatre écrans de l'arbre d'une affaire.
-        private EffortCommercialAgent $effortCommercial,
+        private RattachementDuPartage $rattachement,
     ) {
     }
 
@@ -115,9 +115,11 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
             // LE VOYANT DE LA LIGNE, et le drapeau des actions de partage : une seule
             // valeur pour une seule information — deux champs finiraient par se
             // contredire. `null` pour une affaire du cabinet seul, qui est le cas normal.
-            'effortCommercialAgent' => $this->effortCommercial->libelle(
-                $this->effortCommercial->piste($entity),
-            ),
+            // LE VOYANT DU PARTAGE et les deux drapeaux de ses actions, en UNE traversée.
+            // Un seul voyant nomme les deux familles : une affaire peut être APPORTÉE par
+            // un partenaire et TRAVAILLÉE par un agent, et deux colonnes auraient été vides
+            // l'une comme l'autre sur la plupart des lignes.
+            ...$this->rattachement->indicateurs($entity),
             // Indicateurs de base de l'avenant
             'statutRenouvellement' => $renouvellement['statut'],
             'suiteDeLaPolice' => $renouvellement['phrase'],

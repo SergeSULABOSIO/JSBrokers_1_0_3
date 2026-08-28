@@ -34,7 +34,7 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
                 // Le rattachement s'ÉCRIT toujours sur la PISTE : c'est la règle métier, et
                 // elle ne bouge pas. Ce qui change, c'est qu'on peut l'ORDONNER d'ici —
                 // parce que c'est d'ici qu'on travaille. Le serveur remonte l'arbre
-                // (EffortCommercialAgent::piste) et écrit au seul endroit légitime.
+                // (RattachementDuPartage::piste) et écrit au seul endroit légitime.
                 //
                 // `multi` sur le rattachement : on couvre une sélection entière d'un geste.
                 // ⚠ La condition d'une action `multi` n'est évaluée que sur la PREMIÈRE
@@ -49,16 +49,22 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
                     "event"        => "ui:partage.picker-request",
                     "url"          => "/admin/partage/tranche/conditions-picker",
                     "multi"        => true,
-                    "condition"    => ["field" => "effortCommercialAgent", "present" => false],
+                    // Vrai tant qu'une famille AU MOINS est libre : une affaire reçoit un
+                    // apporteur ET un agent, mais pas deux du même camp.
+                    "condition"    => ["field" => "partageRattachable", "value" => true],
                 ],
                 [
                     "label"        => "Détacher la condition de partage",
                     "icon"         => "action:detach",
                     "groupe"       => "Partage",
                     "groupe_icone" => "partenaire",
-                    "event"        => "ui:partage.detach-request",
-                    "url"          => "/admin/partage/tranche/%id%/detacher",
-                    "condition"    => ["field" => "effortCommercialAgent", "present" => true],
+                    // LE DÉTACHEMENT PASSE PAR LE MÊME PICKER que le rattachement, en mode
+                    // « détacher » : il était un appel direct, ce qui ne suffit plus depuis
+                    // qu'une affaire peut porter DEUX conditions — il faut dire laquelle.
+                    // Un seul chemin, plutôt qu'un branchement selon leur nombre.
+                    "event"        => "ui:partage.picker-request",
+                    "url"          => "/admin/partage/tranche/conditions-picker?mode=detacher",
+                    "condition"    => ["field" => "partageDetachable", "value" => true],
                 ],
                 [
                     "label" => "Signaler un paiement de prime",

@@ -61,7 +61,8 @@ class RattachementDepuisArbreTest extends WebTestCase
         );
         foreach ([
             'reversement_retro_agent', 'condition_partage', 'avenant', 'cotation', 'piste',
-            'client', 'risque', 'roles_en_production', 'roles_en_administration', 'roles_en_finance', 'invite',
+            'client', 'risque', 'partenaire',
+            'roles_en_production', 'roles_en_administration', 'roles_en_finance', 'invite',
         ] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :nom",
@@ -120,6 +121,18 @@ class RattachementDepuisArbreTest extends WebTestCase
         $this->em->persist($bruno);
         $autre = $faireCondition('Prime Bruno', $bruno);
 
+        // UNE CONDITION DE PARTENAIRE. La fixture n'en avait aucune : le picker ne
+        // proposait que des agents, et rien n'aurait signalé qu'il continue de le faire.
+        $sunu = (new \App\Entity\Partenaire())->setNom('SUNU Courtage')->setPart(20.0);
+        $sunu->setEntreprise($ent);
+        $this->em->persist($sunu);
+
+        $conditionSunu = (new ConditionPartage())->setNom('Accord SUNU 20%')
+            ->setFormule(ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL)->setSeuil(0.0)->setTaux(20.0)
+            ->setCritereRisque(ConditionPartage::CRITERE_PAS_RISQUES_CIBLES)->setPartenaire($sunu);
+        $conditionSunu->setEntreprise($ent);
+        $this->em->persist($conditionSunu);
+
         $faireAffaire = function (string $nom) use ($ent, $proprietaire, $risque): array {
             $client = (new Client())->setNom('Client ' . $nom)->setExonere(false);
             $client->setEntreprise($ent);
@@ -163,6 +176,26 @@ class RattachementDepuisArbreTest extends WebTestCase
         // `getCotations()->first()` rendrait false tant qu'on n'a pas rechargé.
         return compact('agent', 'condition', 'autre', 'pisteA', 'pisteB', 'avenantsA', 'avenantB')
             + ['cotationB' => $cotationB];
+    }
+
+    /**
+     * Détacher une condition d'un lot d'affaires — même forme que rattacher().
+     *
+     * Les deux gestes partagent le picker, donc la même charge utile : c'est ce qui permet
+     * au contrôleur Stimulus de servir les deux sans une ligne de plus.
+     */
+    private function detacher(array $ids, int $conditionId, string $entite = 'avenant'): array
+    {
+        $this->client->request(
+            'POST',
+            '/admin/partage/' . $entite . '/detacher',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode(['ids' => $ids, 'conditionId' => $conditionId]),
+        );
+
+        return json_decode((string) $this->client->getResponse()->getContent(), true) ?: [];
     }
 
     private function rattacher(array $ids, int $conditionId, string $entite = 'avenant'): array
@@ -294,11 +327,14 @@ class RattachementDepuisArbreTest extends WebTestCase
         $s = $this->semer();
         $this->rattacher([$s['avenantsA'][0]->getId()], $s['condition']->getId());
 
-        $this->client->request('DELETE', '/admin/partage/avenant/' . $s['avenantsA'][0]->getId() . '/detacher');
+        // LE DÉTACHEMENT NOMME SA CONDITION. C'était un DELETE sur l'affaire, ce qui
+        // suffisait tant qu'elle n'en portait qu'une ; depuis qu'un apporteur externe et
+        // un agent interne y coexistent, il faut dire LAQUELLE on retire — et le geste
+        // passe donc par le même picker que le rattachement.
+        $reponse = $this->detacher([$s['avenantsA'][0]->getId()], $s['condition']->getId());
 
         self::assertResponseIsSuccessful();
-        $reponse = json_decode((string) $this->client->getResponse()->getContent(), true);
-        self::assertStringContainsString('cabinet seul', $reponse['message']);
+        self::assertStringContainsString('ne revient plus', $reponse['message']);
         self::assertCount(0, $this->conditionsDe($s['pisteA']));
     }
 
@@ -325,9 +361,9 @@ class RattachementDepuisArbreTest extends WebTestCase
         $this->em->flush();
 
         // 1. Le détachement est refusé, en chiffres.
-        $this->client->request('DELETE', '/admin/partage/avenant/' . $s['avenantsA'][0]->getId() . '/detacher');
+        $refusReponse = $this->detacher([$s['avenantsA'][0]->getId()], $s['condition']->getId());
         self::assertResponseStatusCodeSame(422);
-        $refus = json_decode((string) $this->client->getResponse()->getContent(), true)['message'];
+        $refus = $refusReponse['message'];
         self::assertStringContainsString('154,19', $refus);
         self::assertStringContainsString('remplacé par un autre agent', $refus);
 
@@ -342,7 +378,7 @@ class RattachementDepuisArbreTest extends WebTestCase
     // ===================== 4. Le picker =====================
 
     /** Le picker se rend, nomme les affaires visées et ne propose que des conditions d'AGENT. */
-    public function testLePickerNommeLesAffairesEtNeProposeQueDesAgents(): void
+    public function testLePickerNommeLesAffairesEtProposeLesDeuxFamilles(): void
     {
         $s = $this->semer();
 
@@ -365,8 +401,16 @@ class RattachementDepuisArbreTest extends WebTestCase
         self::assertStringContainsString('2 affaires concernées', $html);
 
         // Et les implications sont lisibles AVANT le clic, puisque le clic vaut accord.
-        self::assertStringContainsString('effort commercial', mb_strtolower($html, 'UTF-8'));
+        $minuscules = mb_strtolower($html, 'UTF-8');
+        self::assertStringContainsString('apporteur externe', $minuscules);
+        self::assertStringContainsString('agent interne', $minuscules);
         self::assertStringContainsString('Prime Alice', $html);
+
+        // LES DEUX FAMILLES SONT PROPOSÉES. Ce test exigeait l'inverse — « ne propose que
+        // des agents » — et il avait alors raison : le champ de rattachement filtrait
+        // `agent IS NOT NULL`, ce qui fermait le geste aux partenaires sur TOUS les
+        // chemins à la fois, l'écriture d'un ManyToMany passant toujours par le FormType.
+        self::assertStringContainsString('Accord SUNU', $html, 'Une condition de partenaire doit être proposée.');
     }
 
     /** Un lot déjà pris montre son motif dans le picker, avant qu'on choisisse. */
@@ -380,9 +424,40 @@ class RattachementDepuisArbreTest extends WebTestCase
         self::assertResponseIsSuccessful();
         $html = (string) $this->client->getResponse()->getContent();
         self::assertStringContainsString('Affaire A', $html);
-        // Sans apostrophe dans l'aiguille : Twig échappe « n'a » en « n&#039;a », et une
-        // assertion littérale échouerait sur un texte pourtant bien présent.
-        self::assertStringContainsString('rattaché', $html);
-        self::assertStringContainsString('Retirez de votre sélection', $html);
+
+        // CE QUE L'AFFAIRE PORTE DÉJÀ, à la place du refus calculé d'avance.
+        //
+        // Le picker annonçait le refus avant le clic. Ce n'est plus possible : le refus
+        // dépend de la FAMILLE de la condition choisie, et une affaire déjà prise par un
+        // agent reste libre pour un apporteur. Montrer l'occupation vaut mieux que de
+        // deviner — l'utilisateur voit le conflit au lieu de le subir.
+        self::assertStringContainsString('Effort : Alice', $html);
+    }
+
+    /**
+     * LE MÊME PICKER, EN MODE DÉTACHER, ne propose QUE ce qui est rattaché.
+     *
+     * Le détachement était un appel direct : cela ne suffit plus depuis qu'une affaire
+     * peut porter deux conditions. Offrir la liste entière ferait choisir une condition
+     * qui n'y est pas — un geste sans effet, et rien pour l'expliquer.
+     */
+    public function testLePickerEnModeDetacherNeProposeQueLeRattache(): void
+    {
+        $s = $this->semer();
+        $this->rattacher([$s['avenantsA'][0]->getId()], $s['condition']->getId());
+
+        $this->client->request(
+            'GET',
+            '/admin/partage/avenant/conditions-picker?mode=detacher&ids=' . $s['avenantsA'][0]->getId(),
+        );
+
+        self::assertResponseIsSuccessful();
+        $html = (string) $this->client->getResponse()->getContent();
+
+        self::assertStringContainsString('Prime Alice', $html, 'La condition rattachée est proposée.');
+        self::assertStringNotContainsString('Prime Bruno', $html, 'Celles qui ne le sont pas, non.');
+        self::assertStringContainsString('Détacher ici', $html);
+        // Et il poste sur la route de détachement, pas sur celle du rattachement.
+        self::assertStringContainsString('/admin/partage/avenant/detacher', $html);
     }
 }
