@@ -25,13 +25,17 @@ use App\Services\Canvas\Indicator\TrancheIndicatorStrategy;
  * piste peut en désigner un autre que celui de son client — trancher soi-même aurait
  * attribué à ce partenaire des affaires qui ne le paient pas.
  *
- * ── LE PAYÉ ET L'EXIGIBLE VIENNENT DES NOTES, À LA MAILLE TRANCHE ───────────────────
- * Contrairement à l'agent, rien n'est versé en clair : la rétrocommission d'un partenaire
- * se facture par NOTE DE CRÉDIT, et le payé s'en déduit au prorata des règlements. Son
- * exigibilité se juge tranche par tranche, sur la commission PARTAGEABLE encaissée — pas
- * sur la commission totale. On lit donc l'indicateur de la tranche plutôt que de récrire
- * sa formule : elle tient compte du circuit bordereau, qu'aucune reconstitution naïve
- * n'aurait honoré.
+ * ── LE PAYÉ SE LIT SUR LES REVERSEMENTS, À LA MAILLE TRANCHE ────────────────────────
+ * Le partenaire envoie sa NOTE DE DÉBIT : il facture le cabinet, le cabinet lui reverse et
+ * garde la pièce. Son règlement s'enregistre donc en clair, exactement comme celui d'un
+ * agent — même entité, même justificatif obligatoire, même écriture de trésorerie. Il se
+ * déduisait autrefois d'une note de crédit au prorata des règlements ; ce circuit a été
+ * retiré, et la reprise de l'historique l'a converti en reversements.
+ *
+ * Son exigibilité, elle, n'a pas bougé : elle se juge tranche par tranche, sur la
+ * commission PARTAGEABLE encaissée — pas sur la commission totale. On lit l'indicateur de
+ * la tranche plutôt que de récrire sa formule : elle tient compte du circuit bordereau,
+ * qu'aucune reconstitution naïve n'aurait honoré.
  */
 final class PartenaireRetro implements BeneficiaireRetro
 {
@@ -96,7 +100,11 @@ final class PartenaireRetro implements BeneficiaireRetro
         return $this->helper->getCotationMontantRetrocommissionsPayableParCourtier($cotation, $this->partenaire, -1);
     }
 
-    /** Rien à précharger : le payé se lit dans le graphe des notes déjà en mémoire. */
+    /**
+     * Rien à précharger : le payé d'un partenaire se lit sur les reversements de CHAQUE
+     * tranche, que l'indicateur de tranche parcourt déjà. Précharger par avenant, comme
+     * le fait l'agent, ne servirait donc pas la bonne maille.
+     */
     public function prechargerVersements(array $avenants): void
     {
     }
@@ -170,8 +178,10 @@ final class PartenaireRetro implements BeneficiaireRetro
             . '« due » naît à la souscription ; « exigible » n\'est réclamable qu\'une fois la '
             . 'commission partageable encaissée par le cabinet. Les affaires « en attente » sont '
             . 'des PROJECTIONS : aucun montant n\'y est dû. '
-            . 'Ce circuit passe par une NOTE DE CRÉDIT : le payé s\'en déduit au prorata des '
-            . 'règlements, et se comptabilise en rétrocommissions (SYSCOHADA 632). Le payé et '
+            . 'Le partenaire envoie sa NOTE DE DÉBIT : il facture le cabinet, qui lui reverse en '
+            . 'clair et conserve la pièce — même circuit que pour un agent, avec justificatif '
+            . 'obligatoire. La charge se comptabilise en rétrocommissions (SYSCOHADA 632), et non '
+            . 'en charges de personnel : un partenaire n\'est pas un salarié. Le payé et '
             . 'l\'exigible se lisent à la maille de la TRANCHE, non de l\'avenant.';
     }
 }

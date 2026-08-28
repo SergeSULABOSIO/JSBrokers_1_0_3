@@ -241,16 +241,23 @@ class ReversementJustificatifTest extends WebTestCase
         self::assertStringContainsString('Alice Apporteuse', $html, 'Le bénéficiaire doit paraître.');
         self::assertStringContainsString('POL-JUS-1', $html, 'La police réglée doit paraître.');
 
-        // LE CHIP-SÉLECTEUR ET SES DEUX CROCHETS.
+        // LES CHIPS-SÉLECTEURS ET LEURS CROCHETS.
         //
-        // Le JavaScript remplace le libellé du chip par le NOM de l'agent choisi, et sait
-        // y revenir : il lui faut donc un texte identifiable et le libellé d'origine. Sans
-        // eux, le filtre resterait « Choisir un agent… » quel que soit l'agent retenu — un
-        // filtre qu'on ne peut pas lire est un filtre qu'on croit absent.
+        // Le JavaScript remplace le libellé du chip par le NOM du bénéficiaire choisi, et
+        // sait y revenir : il lui faut donc un texte identifiable et le libellé d'origine.
+        // Sans eux, le filtre resterait « Choisir un agent… » quel que soit l'agent retenu —
+        // un filtre qu'on ne peut pas lire est un filtre qu'on croit absent.
+        //
+        // Il y en a DEUX, un par famille, sous une même clé de critère : le préfixe dit
+        // laquelle, et c'est lui qui décide de la colonne filtrée côté serveur.
         self::assertStringContainsString('data-selecteur-entite="Invite"', $html);
+        self::assertStringContainsString('data-selecteur-entite="Partenaire"', $html);
+        self::assertStringContainsString('data-selecteur-prefixe="agent"', $html);
+        self::assertStringContainsString('data-selecteur-prefixe="partenaire"', $html);
         self::assertStringContainsString('data-selecteur-libelle-defaut="Choisir un agent…"', $html);
+        self::assertStringContainsString('data-selecteur-libelle-defaut="Choisir un partenaire…"', $html);
         self::assertStringContainsString('data-selecteur-libelle', $html);
-        self::assertStringContainsString('Tous les agents', $html, 'On doit pouvoir retirer le filtre.');
+        self::assertStringContainsString('>Tous<', $html, 'On doit pouvoir retirer le filtre.');
     }
     /**
      * LE VOLET A DISPARU — et le bouton du rapport mène désormais à la RUBRIQUE.

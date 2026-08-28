@@ -79,6 +79,13 @@
                                         data-criterion-key="{{ groupe.critere }}"
                                         data-selecteur-entite="{{ option.selecteur.entite }}"
                                         data-selecteur-champ="{{ option.selecteur.displayField | default('nom') }}"
+                                        {# La FAMILLE du choix, quand un même critère en accepte
+                                           plusieurs : le bénéficiaire d'un reversement est un agent
+                                           OU un partenaire, deux colonnes distinctes. Le préfixe
+                                           voyage avec la valeur, ce qui permet à la traduction SQL
+                                           de viser la bonne, et aux deux chips de ne pas s'allumer
+                                           ensemble sur des identifiants homonymes. #}
+                                        {% if option.selecteur.prefixe is defined %}data-selecteur-prefixe="{{ option.selecteur.prefixe }}"{% endif %}
                                         {# Le libellé d'ORIGINE, pour pouvoir y revenir : une fois
                                            un agent choisi, le chip porte son NOM — un filtre
                                            qu'on ne peut pas lire est un filtre qu'on croit

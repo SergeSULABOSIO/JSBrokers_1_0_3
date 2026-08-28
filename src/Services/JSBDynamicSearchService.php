@@ -677,6 +677,24 @@ class JSBDynamicSearchService
                     : "{$rootAlias}.partenaire IS NOT NULL");
                 continue;
             }
+
+            // LE BÉNÉFICIAIRE NOMMÉ, quelle que soit sa famille. La valeur porte la famille
+            // puis l'identifiant, et c'est elle qui désigne la colonne : filtrer en dur sur
+            // `agent` aurait rendu tout partenaire infiltrable, et un identifiant nu aurait
+            // confondu l'agent #3 avec le partenaire #3.
+            if ($field === ReversementScope::CLE_BENEFICIAIRE) {
+                $valeur = is_array($value) ? ($value['value'] ?? null) : $value;
+                $decode = ReversementScope::decoderBeneficiaire(is_string($valeur) ? $valeur : null);
+                if ($decode === null) {
+                    continue; // « Tous » ou valeur illisible : filtre retiré, jamais inventé
+                }
+
+                [$type, $id] = $decode;
+                $colonne = ReversementScope::colonneBeneficiaire($type);
+                $qb->andWhere("{$rootAlias}.{$colonne} = :beneficiaire{$suffix}")
+                    ->setParameter('beneficiaire' . $suffix, $id);
+                continue;
+            }
             // CAS 1 : C'est une plage de dates (recherche avancée pour les champs de type DateTimeRange).
             // La valeur est un tableau comme { from: 'YYYY-MM-DD', to: 'YYYY-MM-DD' }.
             if (is_array($value) && (isset($value['from']) || isset($value['to'])) && !isset($value['operator'])) {

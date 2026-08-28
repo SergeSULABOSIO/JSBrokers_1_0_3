@@ -20,11 +20,15 @@ use App\Entity\Cotation;
  * client, risque, assureur, gestionnaire, tri, totaux, statut de souscription — est
  * strictement identique et vit une seule fois, dans RapportProductionBuilder.
  *
- * ── UNE ASYMÉTRIE QU'IL NE FAUT PAS MAQUILLER ───────────────────────────────────────
- * Le « payé » et l'« exigible » d'un AGENT se lisent à la maille de l'avenant, en clair
- * sur ses reversements. Ceux d'un PARTENAIRE se déduisent des notes de crédit, au prorata,
- * à la maille de la TRANCHE. Les colonnes du rapport sont les mêmes, les grains non : c'est
- * à note() de le dire, plutôt que de laisser croire à une symétrie qui n'existe pas.
+ * ── LE CIRCUIT EST DÉSORMAIS COMMUN, LES ASSIETTES NON ──────────────────────────────
+ * Le « payé » des DEUX familles se lit en clair sur les reversements, à la maille de la
+ * TRANCHE : le partenaire envoie sa note de débit et se règle comme un agent. Il fut un
+ * temps où son payé se déduisait de notes de crédit au prorata, et où celui de l'agent se
+ * lisait par avenant — deux grains pour une même colonne, que note() devait signaler.
+ *
+ * Ce qui reste asymétrique, et qui doit le rester : l'ASSIETTE (le partenaire se sert sur
+ * la commission partageable pleine, l'agent sur le reliquat) et le COMPTE comptable (632
+ * contre 6611). C'est de cela que note() parle maintenant.
  */
 interface BeneficiaireRetro
 {

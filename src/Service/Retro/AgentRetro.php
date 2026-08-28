@@ -128,7 +128,9 @@ final class AgentRetro implements BeneficiaireRetro
             . 'commission encaissée par le cabinet — ne propose jamais de verser un montant non '
             . 'exigible. Les affaires « en attente » sont des PROJECTIONS : aucun montant n\'y est dû. '
             . 'Ce circuit ne passe par AUCUNE note de débit ou de crédit : le versement est direct, '
-            . 'comptabilisé en charges de personnel (SYSCOHADA 6611). Le payé et l\'exigible se '
-            . 'lisent à la maille de l\'AVENANT.';
+            . 'comptabilisé en charges de personnel (SYSCOHADA 6611). Le versement s\'enregistre '
+            . 'à la maille de la TRANCHE — la prime et la commission se paient par échéance, et '
+            . 'l\'agent est rémunéré à ce rythme ; le payé d\'une affaire est la SOMME de ses '
+            . 'échéances, jamais un prorata.';
     }
 }

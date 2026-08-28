@@ -33,7 +33,7 @@ class ReversementRetroAgentFormCanvasProvider implements FormCanvasProviderInter
         $isParentNew = ($object->getId() === null);
 
         $parametres = [
-            "titre_creation" => "Rétro agent",
+            "titre_creation" => "Rétro intermédiaire",
             "titre_modification" => "Reversement #%id%",
             "endpoint_submit_url" => "/admin/reversementretroagent/api/submit",
             "endpoint_delete_url" => "/admin/reversementretroagent/api/delete",
@@ -41,16 +41,21 @@ class ReversementRetroAgentFormCanvasProvider implements FormCanvasProviderInter
             "isCreationMode" => $isParentNew,
             "creation_interdite" => true,
             "creation_interdite_message" => "Un reversement s'enregistre depuis « Voir le rapport de production » "
-                . "de l'agent, ou en le demandant à l'assistant : le justificatif du virement est exigé du même geste.",
+                . "du bénéficiaire — agent interne ou partenaire externe —, ou en le demandant à l'assistant : "
+                . "le justificatif du virement est exigé du même geste.",
             "form_intro" => [
-                "titre" => "Rétro agent",
-                "description" => "La part d'une commission déjà encaissée par le cabinet, reversée à l'agent qui a "
-                    . "apporté l'affaire. La sortie de fonds est réelle : elle se justifie par un bordereau de "
-                    . "virement ou un reçu signé. Plusieurs affaires réglées par un même virement partagent une "
-                    . "référence de lot, et une seule pièce vaut pour tout le lot.",
+                "titre" => "Rétro intermédiaire",
+                "description" => "La part d'une commission déjà encaissée par le cabinet, reversée à l'intermédiaire "
+                    . "qui a apporté l'affaire — un agent interne, ou un partenaire externe qui a facturé par sa "
+                    . "note de débit. Le versement se rattache à l'ÉCHÉANCE réglée : c'est par tranche que la "
+                    . "prime et la commission sont payées. La sortie de fonds est réelle : elle se justifie par "
+                    . "un bordereau de virement ou un reçu signé. Plusieurs échéances réglées par un même "
+                    . "virement partagent une référence de lot, et une seule pièce vaut pour tout le lot.",
             ],
             "field_icons" => [
                 "agent"          => "invite",
+                "partenaire"     => "partenaire",
+                "tranche"        => "tranche",
                 "avenant"        => "avenant",
                 "montant"        => "action:count",
                 "paidAt"         => "action:calendar",
@@ -79,7 +84,7 @@ class ReversementRetroAgentFormCanvasProvider implements FormCanvasProviderInter
                     "url"          => "/admin/retro-agent/reversement/%id%/justificatifs",
                 ],
                 [
-                    "label"        => "Voir le rapport de production de l'agent",
+                    "label"        => "Voir le rapport de production du bénéficiaire",
                     "icon"         => "invite",
                     "groupe"       => "Rétrocommissions",
                     "groupe_icone" => "depense",
@@ -89,6 +94,7 @@ class ReversementRetroAgentFormCanvasProvider implements FormCanvasProviderInter
             ],
             "facts_labels" => [
                 "lotReference" => "Virement groupé (référence de lot)",
+                "tranche" => "Échéance réglée",
             ],
         ];
         $layout = $this->buildReversementLayout($object, $isParentNew);
@@ -103,7 +109,11 @@ class ReversementRetroAgentFormCanvasProvider implements FormCanvasProviderInter
     private function buildReversementLayout(ReversementRetroAgent $object, bool $isParentNew): array
     {
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["agent"], "width" => 6], ["champs" => ["avenant"], "width" => 6]]],
+            // Les DEUX bénéficiaires sont rendus : l'un est vide, et c'est ainsi qu'on
+            // voit lequel porte le versement. Les masquer par condition aurait exigé un
+            // champ de pilotage non mappé pour une fiche qu'on ne CRÉE jamais ici.
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["agent"], "width" => 6], ["champs" => ["partenaire"], "width" => 6]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["tranche"], "width" => 6], ["champs" => ["avenant"], "width" => 6]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["montant"], "width" => 6], ["champs" => ["paidAt"], "width" => 6]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["reference"], "width" => 6], ["champs" => ["compteBancaire"], "width" => 6]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["lotReference"]]]],

@@ -14,6 +14,7 @@ use App\Entity\Invite;
 use App\Entity\Note;
 use App\Entity\Paiement;
 use App\Entity\Piste;
+use App\Entity\ReversementRetroAgent;
 use App\Entity\RevenuPourCourtier;
 use App\Entity\Risque;
 use App\Entity\Tranche;
@@ -245,6 +246,17 @@ class ExigibiliteRetroParTrancheTest extends KernelTestCase
         return (float) ($this->strategieTranche()->calculate($this->tranche($trancheId))['retroAgentDue'] ?? 0.0);
     }
 
+    /** Ce qui a été VERSÉ sur cette échéance : la somme de ses reversements. */
+    private function reverseeDe(int $trancheId): float
+    {
+        return (float) ($this->strategieTranche()->calculate($this->tranche($trancheId))['retroAgentReversee'] ?? -1.0);
+    }
+
+    private function soldeDe(int $trancheId): float
+    {
+        return (float) ($this->strategieTranche()->calculate($this->tranche($trancheId))['retroAgentSolde'] ?? -1.0);
+    }
+
     private function exigibleDe(int $trancheId): float
     {
         return (float) ($this->strategieTranche()->calculate($this->tranche($trancheId))['retroAgentExigible'] ?? 0.0);
@@ -322,5 +334,83 @@ class ExigibiliteRetroParTrancheTest extends KernelTestCase
             0.01,
             'L’affaire ne peut pas dire autre chose que la somme de ses échéances.',
         );
+    }
+
+    // ===================== Le versé et le solde, à la maille de l'échéance =====================
+
+    /**
+     * LE VERSÉ D'UNE ÉCHÉANCE EST UN CONSTAT, PAS UN PRORATA.
+     *
+     * C'est la colonne qui n'existait pas : un reversement se rattachait à un AVENANT, et
+     * la tranche ne pouvait donc rien dire de ce qui avait été payé sur ELLE. Un commentaire
+     * du code défendait même cette position — « un reversement est un fait rattaché à un
+     * avenant, pas une grandeur qu'on découpe ». Le raisonnement tenait ; la prémisse a
+     * changé, puisque le versement s'enregistre maintenant par échéance.
+     *
+     * Ce test verrouille la conséquence utile : verser sur T1 ne bouge RIEN sur T2. Un
+     * prorata, lui, aurait réparti le versement sur les deux et rendu les deux soldes faux.
+     */
+    public function testLeVerseEtLeSoldeSontPropresALEcheance(): void
+    {
+        $ids = $this->semer();
+        $em = $this->em();
+
+        $duT1 = $this->dueDe($ids['t1Id']);
+        $duT2 = $this->dueDe($ids['t2Id']);
+        self::assertGreaterThan(0.0, $duT1);
+        self::assertGreaterThan(0.0, $duT2);
+
+        // Rien de versé : le solde de chaque échéance est son dû.
+        self::assertEqualsWithDelta(0.0, $this->reverseeDe($ids['t1Id']), 0.01);
+        self::assertEqualsWithDelta($duT1, $this->soldeDe($ids['t1Id']), 0.01);
+
+        // UN versement, sur la PREMIÈRE échéance seulement.
+        $verse = round($duT1 / 2, 2);
+        $reversement = (new ReversementRetroAgent())
+            ->setAgent($em->getRepository(Invite::class)->find($ids['agentId']))
+            ->setTranche($this->tranche($ids['t1Id']))
+            ->setAvenant($em->getRepository(Avenant::class)->find($ids['avenantId']))
+            ->setMontant($verse)
+            ->setPaidAt(new \DateTimeImmutable('-1 day'))
+            ->setReference('VIR-EXI-T1');
+        $reversement->setEntreprise($em->getRepository(Entreprise::class)->find($ids['entrepriseId']));
+        $em->persist($reversement);
+        $em->flush();
+        $em->clear();
+
+        self::assertEqualsWithDelta($verse, $this->reverseeDe($ids['t1Id']), 0.01);
+        self::assertEqualsWithDelta($duT1 - $verse, $this->soldeDe($ids['t1Id']), 0.01);
+
+        // ET LA SECONDE ÉCHÉANCE N'A RIEN VU PASSER.
+        self::assertEqualsWithDelta(
+            0.0,
+            $this->reverseeDe($ids['t2Id']),
+            0.01,
+            'Un versement sur T1 ne se répartit pas sur T2 : c’est un fait, pas une grandeur découpée.',
+        );
+        self::assertEqualsWithDelta($duT2, $this->soldeDe($ids['t2Id']), 0.01);
+    }
+
+    /** Verser réduit l'EXIGIBLE de la même échéance, et de rien d'autre. */
+    public function testVerserReduitLExigibleDeLaSeuleEcheanceRegleee(): void
+    {
+        $ids = $this->semer();
+        $em = $this->em();
+
+        $exigibleAvant = $this->exigibleDe($ids['t1Id']);
+        self::assertGreaterThan(0.0, $exigibleAvant, 'T1 est encaissée : sa part est réclamable.');
+
+        $reversement = (new ReversementRetroAgent())
+            ->setAgent($em->getRepository(Invite::class)->find($ids['agentId']))
+            ->setTranche($this->tranche($ids['t1Id']))
+            ->setMontant($exigibleAvant)
+            ->setPaidAt(new \DateTimeImmutable('-1 day'))
+            ->setReference('VIR-EXI-SOLDE');
+        $reversement->setEntreprise($em->getRepository(Entreprise::class)->find($ids['entrepriseId']));
+        $em->persist($reversement);
+        $em->flush();
+        $em->clear();
+
+        self::assertEqualsWithDelta(0.0, $this->exigibleDe($ids['t1Id']), 0.01, 'T1 est soldée.');
     }
 }

@@ -5,7 +5,9 @@ namespace App\Form;
 use App\Entity\Avenant;
 use App\Entity\CompteBancaire;
 use App\Entity\Invite;
+use App\Entity\Partenaire;
 use App\Entity\ReversementRetroAgent;
+use App\Entity\Tranche;
 use App\Services\ServiceMonnaies;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
@@ -51,19 +53,44 @@ class ReversementRetroAgentType extends AbstractType
         }
 
         $builder
+            // LE BÉNÉFICIAIRE : agent interne OU partenaire externe, jamais les deux.
+            //
+            // Aucun des deux n'est `required` au sens du formulaire : l'un DOIT être posé,
+            // mais lequel dépend de l'autre. C'est ChampsObligatoiresInspector qui tient la
+            // règle et rend un 422 nommant le champ — comme pour ConditionPartage, qui
+            // porte le même XOR. Marquer les deux obligatoires aurait rendu tout
+            // enregistrement impossible.
             ->add('agent', InviteAutocompleteField::class, [
                 'label' => 'Agent bénéficiaire',
-                'help' => "L'agent à qui le cabinet reverse une part de sa commission. "
-                    . "Il n'est pas nécessairement le gestionnaire de l'affaire.",
+                'help' => "L'agent interne à qui le cabinet reverse une part de sa commission. "
+                    . "Il n'est pas nécessairement le gestionnaire de l'affaire. Laisser vide "
+                    . "si le bénéficiaire est un partenaire externe.",
                 'class' => Invite::class,
-                'required' => true,
+                'required' => false,
+            ])
+            ->add('partenaire', PartenaireAutocompleteField::class, [
+                'label' => 'Partenaire bénéficiaire',
+                'help' => "L'intermédiaire externe qui a facturé le cabinet par sa note de "
+                    . "débit. Laisser vide si le bénéficiaire est un agent interne.",
+                'class' => Partenaire::class,
+                'required' => false,
+            ])
+            // LA MAILLE DU FAIT : l'échéance dit QUAND, l'affaire dit SUR QUOI. La prime
+            // et la commission se paient par tranche, donc l'intermédiaire est rémunéré à
+            // ce rythme — et sans ce champ, ni l'écran ni l'assistant ne pourraient l'écrire.
+            ->add('tranche', TrancheAutocompleteField::class, [
+                'label' => 'Échéance réglée',
+                'help' => "L'échéance au titre de laquelle ce versement est fait : c'est à "
+                    . "cette maille que le solde du bénéficiaire se suit.",
+                'class' => Tranche::class,
+                'required' => false,
             ])
             ->add('avenant', AvenantAutocompleteField::class, [
                 'label' => 'Affaire réglée',
-                'help' => "La police au titre de laquelle ce versement est fait. "
-                    . "Le solde se suit affaire par affaire.",
+                'help' => "La police au titre de laquelle ce versement est fait. Elle doit "
+                    . "relever de la même proposition que l'échéance.",
                 'class' => Avenant::class,
-                'required' => true,
+                'required' => false,
             ])
             ->add('montant', MoneyType::class, [
                 'label' => 'Montant reversé',

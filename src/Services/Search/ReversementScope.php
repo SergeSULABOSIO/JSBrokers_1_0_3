@@ -59,8 +59,57 @@ final class ReversementScope
     public const TYPE_AGENT = 'agent';
     public const TYPE_PARTENAIRE = 'partenaire';
 
-    /** Le champ de relation du bénéficiaire : un critère ORDINAIRE, pas un synthétique. */
+    // ── Bénéficiaire ────────────────────────────────────────────────────────────────
+    //
+    // DEUX COLONNES, UN SEUL FILTRE. Le bénéficiaire vit tantôt dans `agent`, tantôt dans
+    // `partenaire` — le XOR de l'entité. Un critère ordinaire sur `agent` ne pouvait donc
+    // désigner qu'une famille sur deux, et le chip de l'écran comme `ouvrir_rubrique`
+    // seraient restés aveugles aux partenaires.
+    //
+    // La valeur porte la FAMILLE puis l'identifiant (« agent:12 », « partenaire:5 »), ce qui
+    // permet à un chip unique de proposer les deux sélecteurs et à la traduction SQL de
+    // viser la bonne colonne. La forme est celle des trois autres critères synthétiques de
+    // cette rubrique : rien de nouveau à comprendre.
+    public const CLE_BENEFICIAIRE = '__beneficiaire_reversement__';
+
+    /**
+     * L'ancien nom du critère : la COLONNE `agent`. Conservé parce que la recherche avancée
+     * et la fiche l'exposent toujours comme un champ ordinaire — mais le CHIP, lui, ne
+     * l'utilise plus.
+     */
     public const CHAMP_BENEFICIAIRE = 'agent';
+
+    /** La valeur d'un critère de bénéficiaire : « famille:id ». */
+    public static function valeurBeneficiaire(string $type, int $id): string
+    {
+        return $type . ':' . $id;
+    }
+
+    /**
+     * L'inverse : « agent:12 » => ['agent', 12], ou null si la valeur ne dit rien de bon.
+     * Fail-closed : une valeur illisible retire le filtre plutôt que d'en inventer un.
+     *
+     * @return array{0: string, 1: int}|null
+     */
+    public static function decoderBeneficiaire(?string $valeur): ?array
+    {
+        if ($valeur === null || !str_contains($valeur, ':')) {
+            return null;
+        }
+
+        [$type, $id] = explode(':', $valeur, 2);
+        if (!in_array($type, [self::TYPE_AGENT, self::TYPE_PARTENAIRE], true) || (int) $id <= 0) {
+            return null;
+        }
+
+        return [$type, (int) $id];
+    }
+
+    /** La colonne de relation qui porte cette famille de bénéficiaire. */
+    public static function colonneBeneficiaire(string $type): string
+    {
+        return $type === self::TYPE_PARTENAIRE ? 'partenaire' : 'agent';
+    }
 
     /**
      * @var array<string, array<string, string>> clé de critère => valeur => libellé.
@@ -130,16 +179,19 @@ final class ReversementScope
     }
 
     /**
-     * Le critère de BÉNÉFICIAIRE — une relation, donc la forme ordinaire d'un filtre par
-     * identité, celle que produit déjà `lieA` pour les autres rubriques.
+     * Le critère de BÉNÉFICIAIRE, valable pour les DEUX familles.
      *
-     * @return array<string, array{operator: string, value: int, label: string}>
+     * Il désignait la colonne `agent` en clair, ce qui rendait le filtre inapplicable à un
+     * partenaire — dont les reversements vivent sur l'autre colonne du XOR. La valeur porte
+     * désormais la famille, et c'est la traduction SQL qui choisit la colonne.
+     *
+     * @return array<string, array{operator: string, value: string, label: string}>
      */
-    public static function critereBeneficiaire(int $agentId, string $nom): array
+    public static function critereBeneficiaire(int $id, string $nom, string $type = self::TYPE_AGENT): array
     {
-        return [self::CHAMP_BENEFICIAIRE => [
+        return [self::CLE_BENEFICIAIRE => [
             'operator' => '=',
-            'value' => $agentId,
+            'value' => self::valeurBeneficiaire($type, $id),
             'label' => $nom,
         ]];
     }

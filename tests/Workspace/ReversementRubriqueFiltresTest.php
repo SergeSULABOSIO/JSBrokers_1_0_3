@@ -195,7 +195,7 @@ class ReversementRubriqueFiltresTest extends KernelTestCase
         self::assertContains(ReversementScope::CLE_JUSTIFICATIF, $criteres);
         self::assertContains(ReversementScope::CLE_PERIODE, $criteres);
         self::assertContains(ReversementScope::CLE_VIREMENT, $criteres);
-        self::assertContains(ReversementScope::CHAMP_BENEFICIAIRE, $criteres);
+        self::assertContains(ReversementScope::CLE_BENEFICIAIRE, $criteres);
         self::assertContains(ReversementScope::CLE_TYPE, $criteres, 'La rubrique porte les DEUX familles : il faut pouvoir les distinguer.');
 
         foreach ($groupes as $groupe) {
@@ -206,15 +206,30 @@ class ReversementRubriqueFiltresTest extends KernelTestCase
             ));
         }
 
-        // Le chip-sélecteur : il ne porte pas des valeurs, mais l'entité où aller les
-        // chercher — les canevas de liste sont partagés et ignorent l'entreprise.
+        // LES CHIPS-SÉLECTEURS : ils ne portent pas des valeurs, mais l'entité où aller les
+        // chercher — les canevas de liste sont partagés et ignorent l'entreprise. Il y en a
+        // DEUX, un par famille de bénéficiaire, sous une seule clé de critère : le
+        // bénéficiaire vit tantôt dans `agent`, tantôt dans `partenaire`.
         $beneficiaire = array_values(array_filter(
             $groupes,
-            static fn (array $g) => $g['critere'] === ReversementScope::CHAMP_BENEFICIAIRE,
+            static fn (array $g) => $g['critere'] === ReversementScope::CLE_BENEFICIAIRE,
         ))[0];
-        $selecteurs = array_filter($beneficiaire['options'], static fn (array $o) => isset($o['selecteur']));
-        self::assertCount(1, $selecteurs, 'Le bénéficiaire se choisit, il ne s’énumère pas.');
-        self::assertSame('Invite', reset($selecteurs)['selecteur']['entite']);
+        $selecteurs = array_values(array_filter(
+            $beneficiaire['options'],
+            static fn (array $o) => isset($o['selecteur']),
+        ));
+        self::assertCount(2, $selecteurs, 'Les deux familles se choisissent, elles ne s’énumèrent pas.');
+        self::assertSame(
+            ['Invite', 'Partenaire'],
+            array_column(array_column($selecteurs, 'selecteur'), 'entite'),
+        );
+        // LE PRÉFIXE EST OBLIGATOIRE dès que deux sélecteurs partagent une clé : sans lui,
+        // le serveur ne saurait pas quelle colonne filtrer, et les deux chips s'allumeraient
+        // ensemble sur des identifiants homonymes.
+        self::assertSame(
+            [ReversementScope::TYPE_AGENT, ReversementScope::TYPE_PARTENAIRE],
+            array_column(array_column($selecteurs, 'selecteur'), 'prefixe'),
+        );
     }
 
     // ===================== 2. Chaque valeur filtre vraiment =====================
@@ -461,7 +476,7 @@ class ReversementRubriqueFiltresTest extends KernelTestCase
         ));
 
         self::assertSame(['VIR-PART'], $partenaires);
-        self::assertNotContains('VIR-PART', $agents, 'Un versement de partenaire n\x27est pas celui d\x27un agent.');
+        self::assertNotContains('VIR-PART', $agents, 'Un versement de partenaire n\'est pas celui d\'un agent.');
         self::assertContains('VIR-SOLO', $agents);
     }
 
@@ -475,5 +490,71 @@ class ReversementRubriqueFiltresTest extends KernelTestCase
 
         self::assertContains('VIR-PART', $toutes);
         self::assertContains('VIR-SOLO', $toutes);
+    }
+
+    /**
+     * LE FILTRE DE BÉNÉFICIAIRE VISE LA BONNE COLONNE — le point le plus facile à casser.
+     *
+     * Le bénéficiaire vit tantôt dans `agent`, tantôt dans `partenaire` : c'est le XOR de
+     * l'entité. Un critère posé sur la colonne `agent` en clair ne pouvait donc filtrer
+     * qu'une famille sur deux, et un identifiant NU aurait confondu l'agent #12 avec le
+     * partenaire #12 — le pire des deux cas, puisque la liste serait revenue pleine de
+     * lignes plausibles.
+     */
+    public function testLeFiltreBeneficiaireViseLaColonneDeSaFamille(): void
+    {
+        $s = $this->semer();
+        $this->semerUnVersementDePartenaire($s['entreprise']);
+
+        $partenaire = $this->em()->getRepository(Partenaire::class)
+            ->findOneBy(['nom' => 'SUNU Filtres', 'entreprise' => $s['entreprise']]);
+        self::assertNotNull($partenaire);
+
+        // Le partenaire nommé ne ramène QUE son versement.
+        self::assertSame(['VIR-PART'], $this->references(
+            $s['entreprise'],
+            ReversementScope::critereBeneficiaire(
+                (int) $partenaire->getId(),
+                'SUNU Filtres',
+                ReversementScope::TYPE_PARTENAIRE,
+            ),
+        ));
+
+        // L'agent nommé ne ramène PAS celui du partenaire, même s'ils partagent l'affaire.
+        $duAgent = $this->references(
+            $s['entreprise'],
+            ReversementScope::critereBeneficiaire((int) $s['agent']->getId(), 'Alice'),
+        );
+        self::assertNotContains('VIR-PART', $duAgent);
+        self::assertContains('VIR-SOLO', $duAgent);
+
+        // ET LA FAMILLE COMPTE, PAS SEULEMENT L'IDENTIFIANT : demander « l'agent dont
+        // l'identifiant est celui du partenaire » ne doit RIEN ramener de ce partenaire.
+        self::assertNotContains('VIR-PART', $this->references(
+            $s['entreprise'],
+            ReversementScope::critereBeneficiaire(
+                (int) $partenaire->getId(),
+                'SUNU Filtres',
+                ReversementScope::TYPE_AGENT,
+            ),
+        ));
+    }
+
+    /** Une valeur illisible RETIRE le filtre — elle n'en invente pas un. */
+    public function testUneValeurDeBeneficiaireIllisibleNInventePasDeFiltre(): void
+    {
+        $s = $this->semer();
+
+        foreach (['', '12', 'agent:', 'inconnu:3', 'agent:0'] as $valeur) {
+            self::assertNull(
+                ReversementScope::decoderBeneficiaire($valeur),
+                sprintf('« %s » ne désigne aucun bénéficiaire.', $valeur),
+            );
+        }
+
+        // Et sur la liste : le critère est simplement ignoré, la page reste entière.
+        self::assertCount(4, $this->references($s['entreprise'], [
+            ReversementScope::CLE_BENEFICIAIRE => ['operator' => '=', 'value' => 'inconnu:3', 'label' => 'x'],
+        ]));
     }
 }

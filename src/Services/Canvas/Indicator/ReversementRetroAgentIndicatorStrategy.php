@@ -37,6 +37,14 @@ class ReversementRetroAgentIndicatorStrategy implements IndicatorCalculationStra
             'beneficiaireNom' => $entity->beneficiaireNom(),
             'policeReference' => $entity->getAvenant()?->getReferencePolice()
                 ?: ($entity->getAvenant() !== null ? '#' . $entity->getAvenant()->getId() : 'N/A'),
+            // L'ÉCHÉANCE RÉGLÉE — la maille du versement, et donc l'information qui
+            // distingue deux lignes d'une même police. Sans elle, un virement sur la 1re
+            // échéance et un autre sur la 2e se lisaient à l'identique.
+            //
+            // « Toute la police » plutôt que rien pour les lignes ANTÉRIEURES au passage à
+            // cette maille : elles n'ont pas de tranche, et un blanc aurait laissé croire à
+            // une donnée manquante alors que c'est un versement d'affaire entière.
+            'echeanceLibelle' => $entity->getTranche()?->getNom() ?: 'Toute la police',
             // « Caisse (espèces) » plutôt que rien : un versement sans compte n'est pas un
             // versement sans provenance, c'est une sortie de caisse. Le même libellé qu'au
             // picker, pour que la ligne et le formulaire disent la même chose.

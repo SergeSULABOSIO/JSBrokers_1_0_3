@@ -173,7 +173,7 @@ class OuvrirRubriqueReversementsTest extends KernelTestCase
         ], $s['scope']);
 
         $criteres = $resultat->uiAction['criteres'] ?? [];
-        self::assertArrayHasKey(ReversementScope::CHAMP_BENEFICIAIRE, $criteres);
+        self::assertArrayHasKey(ReversementScope::CLE_BENEFICIAIRE, $criteres);
         self::assertArrayHasKey(ReversementScope::CLE_JUSTIFICATIF, $criteres);
     }
 
@@ -189,9 +189,11 @@ class OuvrirRubriqueReversementsTest extends KernelTestCase
             'beneficiaire' => 'Alice',
         ], $s['scope']);
 
+        // La valeur porte la FAMILLE puis l'identifiant : le bénéficiaire vit tantôt dans
+        // `agent`, tantôt dans `partenaire`, et l'agent #3 n'est pas le partenaire #3.
         self::assertSame(
-            $s['agent']->getId(),
-            $resultat->uiAction['criteres'][ReversementScope::CHAMP_BENEFICIAIRE]['value'],
+            ReversementScope::valeurBeneficiaire(ReversementScope::TYPE_AGENT, (int) $s['agent']->getId()),
+            $resultat->uiAction['criteres'][ReversementScope::CLE_BENEFICIAIRE]['value'],
         );
     }
 
@@ -202,7 +204,7 @@ class OuvrirRubriqueReversementsTest extends KernelTestCase
      * personne et à montrer ceux de tout le monde — exactement la contradiction que le
      * filtrage à l'ouverture corrige.
      */
-    public function testUnAgentInconnuNOuvrePasLaListeEntiere(): void
+    public function testUnBeneficiaireInconnuNOuvrePasLaListeEntiere(): void
     {
         $s = $this->semer();
 
@@ -228,6 +230,6 @@ class OuvrirRubriqueReversementsTest extends KernelTestCase
 
         $criteres = $resultat->uiAction['criteres'] ?? [];
         self::assertArrayNotHasKey(ReversementScope::CLE_JUSTIFICATIF, $criteres);
-        self::assertArrayNotHasKey(ReversementScope::CHAMP_BENEFICIAIRE, $criteres);
+        self::assertArrayNotHasKey(ReversementScope::CLE_BENEFICIAIRE, $criteres);
     }
 }

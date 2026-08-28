@@ -87,6 +87,11 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
         $monnaieCode = $this->serviceMonnaies->getCodeMonnaieAffichage();
         $urgence = $this->getTrancheUrgence($entity);
         $retroExigible = $this->getTrancheRetroExigible($entity);
+        // LE DÛ ET LE VERSÉ DE L'AGENT, calculés UNE fois : le solde est leur différence,
+        // et rappeler les deux méthodes pour l'obtenir aurait fait deux parcours de plus
+        // par ligne de liste — le genre de N+1 qui ne se voit qu'à soixante lignes.
+        $montantRetroAgent = round($this->getTrancheRetroAgent($entity), 2);
+        $retroAgentReversee = round($this->calculationHelper->getTrancheMontantRetroAgentReversee($entity), 2);
         $commissionExigible = $this->getTrancheCommissionExigible($entity);
         return [
             // LE VOYANT DE LA LIGNE, et le drapeau des actions de partage : une seule
@@ -136,7 +141,14 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
             // revenu et les agrégats globaux répondent tous la même chose.
             // Rétrocommission des AGENTS INTERNES, au prorata de la tranche — même
             // traitement que la rétro partenaire, dont elle partage la maille.
-            'retroAgentDue' => round($this->getTrancheRetroAgent($entity), 2),
+            'retroAgentDue' => $montantRetroAgent,
+            // LE VERSÉ D'UNE ÉCHÉANCE, en clair sur ses reversements. Il n'existait pas :
+            // un reversement était rattaché à un AVENANT, et cette colonne était donc
+            // indérivable. Depuis que le versement s'enregistre par tranche — le rythme
+            // réel des paiements de prime et de commission — elle est EXACTE, et ce n'est
+            // pas un prorata : c'est la somme des faits portés par cette échéance.
+            'retroAgentReversee' => $retroAgentReversee,
+            'retroAgentSolde' => round($montantRetroAgent - $retroAgentReversee, 2),
             // La part RÉCLAMABLE de cette échéance : le dû, une fois SA commission
             // encaissée. Même rythme que la rétro partenaire ci-dessus.
             'retroAgentExigible' => round($this->calculationHelper->getTrancheRetroAgentExigible($entity), 2),
@@ -315,10 +327,16 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
     /**
      * Rétrocommission DUE aux agents internes, ramenée à la quote-part de la tranche.
      *
-     * Seul le DÛ est proratisé. Le « versé », lui, ne l'est pas et n'apparaît pas ici :
-     * un reversement est un fait rattaché à un AVENANT (un virement réel, daté, référencé),
-     * pas une grandeur qu'on découpe. L'écran qui répond « combien lui reste-t-il dû ? »
-     * est la fiche de l'avenant et le rapport de production, jamais la tranche.
+     * Seul le DÛ est proratisé — et cela reste vrai. Ce commentaire disait en revanche que
+     * le « versé » n'avait pas sa place ici, « un reversement étant un fait rattaché à un
+     * AVENANT, pas une grandeur qu'on découpe ». Le raisonnement était juste, la prémisse
+     * ne l'est plus : le versement s'enregistre désormais à la maille de la TRANCHE, parce
+     * que c'est par échéance que la prime et la commission sont payées, et donc à ce rythme
+     * que l'intermédiaire est rémunéré.
+     *
+     * Le versé d'une échéance n'est donc toujours PAS un découpage : c'est la SOMME des
+     * faits qu'elle porte. Le dû est proratisé, le versé est constaté — les deux se lisent
+     * maintenant au même endroit, ce qui est la seule façon d'en tirer un solde.
      */
     private function getTrancheRetroAgent(Tranche $tranche): float
     {
