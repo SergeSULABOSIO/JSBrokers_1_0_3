@@ -14,12 +14,16 @@ use App\Services\ServiceMonnaies;
  * de documents. Sans cette rubrique, un bordereau oublié au moment du virement n'avait
  * plus AUCUN endroit où être joint.
  *
- * ⚠ UN VIREMENT QUI SOLDE TROIS AFFAIRES APPARAÎT EN TROIS LIGNES — c'est la vérité de la
- * base, et c'est ce qu'il faut pour retrouver une ligne précise. Le volet « Versements
- * enregistrés » du rapport de production, qui groupait par virement, a été supprimé : le
- * bouton ouvre désormais CETTE rubrique, filtrée sur son agent. La lecture « un
- * décaissement, une ligne » se reconstitue par la chip « Virement : groupé » et la
- * référence de lot portée par chaque ligne.
+ * ── UNE LIGNE = UN VIREMENT ────────────────────────────────────────────────────────
+ * La base tient une ligne par ÉCHÉANCE réglée : un virement qui en solde six y occupe six
+ * lignes, portant six fois la même date, la même référence et le même compte. C'est la
+ * vérité de la base, ce n'est pas la façon dont on lit un relevé. La rubrique REPLIE donc
+ * chaque lot sur son porteur (ReversementScope::estReplie), et chaque ligne annonce les
+ * chiffres du VIREMENT — son total, le nombre d'échéances qu'il règle.
+ *
+ * Le détail par échéance n'est pas perdu : le chip « Virement » le rend sur demande, et la
+ * fenêtre de reversement — ouverte par « Éditer » — montre les lignes du virement et
+ * permet de les corriger.
  */
 class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInterface
 {
@@ -63,6 +67,14 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
                     // décaissement se liraient comme trois virements distincts.
                     ["attribut_code" => "virementGroupe", "attribut_type" => "text"],
                     ["attribut_prefixe" => "Versé le : ", "attribut_code" => "paidAt", "attribut_type" => "date"],
+                    // LES DEUX MAILLES SONT DÉCLARÉES, ET C'EST L'INDICATEUR QUI TRANCHE.
+                    // Une ligne repliée en couvre plusieurs : nommer la police et l'échéance
+                    // du seul porteur aurait désigné une affaire sur six comme si c'était la
+                    // seule réglée — elles rendent donc null, et le nombre d'échéances prend
+                    // leur place. Sur la vue détaillée, c'est l'inverse. Un canevas ne
+                    // pouvant pas connaître le mode, il annonce les deux et laisse le
+                    // silence faire le tri.
+                    ["attribut_code" => "echeancesDuVirement", "attribut_type" => "text", "icone" => "action:count"],
                     ["attribut_prefixe" => "Police : ", "attribut_code" => "policeReference", "attribut_type" => "text"],
                     ["attribut_prefixe" => "Échéance : ", "attribut_code" => "echeanceLibelle", "attribut_type" => "text"],
                     ["attribut_prefixe" => "Débité de : ", "attribut_code" => "compteLibelle", "attribut_type" => "text"],
@@ -121,16 +133,35 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
                     ),
                 ],
                 [
+                    // ── LA MAILLE DE LECTURE, ET RIEN D'AUTRE ────────────────────────
+                    //
+                    // Deux options, et deux seulement : le versement tel qu'il a été fait
+                    // au bénéficiaire, ou sa ventilation par échéance. Les deux portent le
+                    // même argent — la barre des totaux annonce donc le même montant dans
+                    // l'un et l'autre mode.
+                    //
+                    // « GROUPÉ » PORTE LA VALEUR VIDE : c'est la maille naturelle de la
+                    // rubrique, il n'y a pas de critère à poser pour l'obtenir. Il est donc
+                    // aussi l'option qui RETIRE le filtre, ce qui évite un « Tous » de plus
+                    // disant la même chose que lui.
+                    //
+                    // Il y avait ici deux valeurs de plus — « Groupé » au sens « virements
+                    // couvrant plusieurs échéances » et « Isolé » —, qui filtraient au lieu
+                    // de choisir une maille. Deux notions dans un même chip se lisaient
+                    // comme une seule.
                     "critere" => ReversementScope::CLE_VIREMENT,
                     "libelle" => "Virement",
-                    "options" => ReversementScope::optionsChips(
-                        ReversementScope::CLE_VIREMENT,
+                    "options" => [
+                        ["value" => "", "label" => "Groupé", "icon" => "depense"],
                         [
-                            ReversementScope::GROUPE => 'action:copy',
-                            ReversementScope::ISOLE => 'depense',
+                            "value" => ReversementScope::DETAIL,
+                            "label" => ReversementScope::libelle(
+                                ReversementScope::CLE_VIREMENT,
+                                ReversementScope::DETAIL,
+                            ),
+                            "icon" => "action:view",
                         ],
-                        'Tous',
-                    ),
+                    ],
                 ],
                 [
                     // LE CRITÈRE EST SYNTHÉTIQUE, et il le fallait : le bénéficiaire vit
@@ -203,7 +234,10 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
                 [
                     "titre_colonne" => "Montant versé",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "montant",
+                    // CE QUE LA LIGNE REPRÉSENTE : le virement entier sur la vue repliée,
+                    // la seule échéance sur la vue détaillée. La barre des totaux lit le
+                    // MÊME indicateur — c'est la seule façon qu'elles ne divergent jamais.
+                    "attribut_code" => "montantAffiche",
                     "attribut_type" => "nombre",
                 ],
             ],

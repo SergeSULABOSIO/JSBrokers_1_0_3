@@ -216,6 +216,53 @@ class ReversementRetroAgentRepository extends ServiceEntityRepository
             $qb->getQuery()->getScalarResult(),
         );
     }
+
+    /**
+     * LES LIGNES DES VIREMENTS D'UNE PAGE — montant et lot, en UNE requête.
+     *
+     * Depuis que la rubrique replie chaque lot sur son porteur, une ligne à l'écran doit
+     * annoncer le total du VIREMENT et le nombre d'échéances qu'il règle : les frères de
+     * lot ne sont plus affichés, mais leur argent l'est. Même parade au N+1 que
+     * `comptesDeJustificatifs` — les lignes de la page ET leurs frères, d'un coup, le
+     * regroupement se faisant ensuite en mémoire.
+     *
+     * @param int[]    $ids        identifiants des lignes de la page
+     * @param string[] $references références de lot présentes dans la page
+     *
+     * @return array<int, array{id: int, lot: ?string, montant: float}>
+     */
+    public function lignesDeLots(array $ids, array $references): array
+    {
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        $references = array_values(array_filter(array_map('strval', $references), static fn (string $r) => $r !== ''));
+        if ($ids === [] && $references === []) {
+            return [];
+        }
+
+        $qb = $this->createQueryBuilder('r')
+            ->select('r.id AS id', 'r.lotReference AS lot', 'r.montant AS montant');
+
+        $ou = [];
+        if ($ids !== []) {
+            $ou[] = 'r.id IN (:ids)';
+            $qb->setParameter('ids', $ids);
+        }
+        if ($references !== []) {
+            $ou[] = 'r.lotReference IN (:refs)';
+            $qb->setParameter('refs', $references);
+        }
+        $qb->where(implode(' OR ', $ou));
+
+        return array_map(
+            static fn (array $l) => [
+                'id' => (int) $l['id'],
+                'lot' => $l['lot'],
+                'montant' => (float) $l['montant'],
+            ],
+            $qb->getQuery()->getScalarResult(),
+        );
+    }
+
     /**
      * A-T-ON DÉJÀ VERSÉ QUELQUE CHOSE À CE BÉNÉFICIAIRE SUR CETTE AFFAIRE ?
      *

@@ -101,11 +101,12 @@ class CalculationProvider
                 => $this->calculationHelper->preloadCotationRelations($items),
             is_a($entityClass, Avenant::class, true)
                 => $this->calculationHelper->preloadAvenantRelations($items),
-            // Le compte de pièces d'un reversement est celui de son VIREMENT : sans ce
+            // TOUT CE QU'UNE LIGNE DE REVERSEMENT DIT EST CELUI DE SON VIREMENT — le compte
+            // de pièces, le total versé, le nombre d'échéances réglées. Sans ce
             // préchargement, chaque ligne interrogerait son lot, et un lot de trois lignes
             // en coûterait trois de plus.
             is_a($entityClass, \App\Entity\ReversementRetroAgent::class, true)
-                => $this->lotDeVersement->prechargerJustificatifs($items),
+                => $this->prechargerReversements($items),
             is_a($entityClass, Contact::class, true)
                 => $this->preloadCiblesAgregees(
                     array_filter(array_map(static fn (Contact $c) => $c->getClient(), $items)),
@@ -113,6 +114,17 @@ class CalculationProvider
                 ),
             default => $this->preloadRubriqueAgregee($entityClass, $items),
         };
+    }
+
+    /**
+     * Les deux passes d'un reversement : ses pièces, et les chiffres de son virement.
+     *
+     * @param \App\Entity\ReversementRetroAgent[] $items
+     */
+    private function prechargerReversements(array $items): void
+    {
+        $this->lotDeVersement->prechargerJustificatifs($items);
+        $this->lotDeVersement->prechargerVirements($items);
     }
 
     /**

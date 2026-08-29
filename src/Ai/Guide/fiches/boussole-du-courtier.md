@@ -27,9 +27,17 @@ fait l'assistant :
    bordereaux, les analyse/ajuste, puis **facture ses commissions en lot** (note de débit).
 7. Une note de débit transmise à l'assureur ouvre le **recouvrement** : suivre les
    commissions dues par les assureurs jusqu'à leur **encaissement**.
-8. Dès la commission encaissée, les **rétrocommissions** deviennent exigibles et doivent
-   être **reversées**. Elles vont à DEUX sortes de bénéficiaires, qu'il ne faut jamais
-   confondre :
+8. Dès la commission encaissée, tout ce qui est **assis sur elle** devient exigible : les
+   **taxes** qu'elle porte (TVA de l'assureur, ARCA du courtier) et les
+   **rétrocommissions** dues aux intermédiaires. C'est la seconde marche de la chaîne —
+   la première étant « prime réglée par le client → commission exigible » (point 5) — et
+   il ne faut jamais en sauter une : annoncer une rétro exigible parce que la police est
+   souscrite, c'est proposer de payer avec de l'argent qui n'est pas rentré. Chaque marche
+   est **proportionnelle** : une commission encaissée à 60 % ne rend exigibles que 60 %
+   des taxes et des rétros qu'elle porte.
+
+   Les rétrocommissions doivent alors être **reversées**. Elles vont à DEUX sortes de
+   bénéficiaires, qu'il ne faut jamais confondre :
    - un **partenaire EXTERNE** (apporteur hors cabinet) : sa part se calcule sur la
      commission pure des revenus *partageables*. Il **facture le cabinet par sa note de
      débit**, et le cabinet lui **reverse** en clair, en rétrocommissions (632) ;

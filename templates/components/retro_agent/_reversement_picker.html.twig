@@ -24,6 +24,10 @@
      data-reversement-retro-picker-rapport-url-value="{{ rapportUrl }}"
      data-reversement-retro-picker-limites-value="{{ limites|json_encode|e('html_attr') }}"
      data-reversement-retro-picker-familles-value="{{ famillesParExtension|json_encode|e('html_attr') }}"
+     {# UN VIREMENT ROUVERT A DÉJÀ SA PREUVE : sans ce drapeau, le bouton
+        d'enregistrement serait resté inerte tant qu'on n'aurait pas redéposé le même
+        bordereau — et corriger une date serait devenu impossible. #}
+     data-reversement-retro-picker-piece-deja-value="{{ (edition and edition.pieces is not empty) ? 'true' : 'false' }}"
      data-picker-overlay>
     <div class="jsb-picker-modal jsb-picker-modal--large"
          role="dialog"
@@ -38,7 +42,8 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('depense') }}" style="width:22px;height:22px;color:#0047AB;" />
                 </span>
                 <h5 id="jsb-rra-picker-title" class="modal-title mb-0">
-                    Reverser une rétrocommission à&nbsp;«&nbsp;{{ beneficiaireNom }}&nbsp;»
+                    {%- if edition %}Corriger le virement&nbsp;«&nbsp;{{ edition.reference }}&nbsp;»
+                    {%- else %}Reverser une rétrocommission à&nbsp;«&nbsp;{{ beneficiaireNom }}&nbsp;»{% endif -%}
                 </h5>
             </div>
             <button type="button" class="btn-close" data-picker-close aria-label="Fermer la fenêtre"></button>
@@ -55,12 +60,19 @@
             <div class="jsb-picker-intro-text">
                 <p class="jsb-picker-intro-title">{{ beneficiaireNom }}</p>
                 <p id="jsb-rra-picker-desc" class="jsb-picker-intro-desc">
+                    {%- if edition %}
+                        Les échéances <strong>déjà réglées</strong> par ce virement sont cochées.
+                        Décochez-en une pour l'en retirer, cochez-en une autre pour l'y ajouter,
+                        ou corrigez un montant. La pièce justificative déjà déposée reste
+                        valable&nbsp;: vous n'avez pas à la redéposer pour corriger une date.
+                    {% else %}
                     Cochez les affaires réglées par ce versement. Seules celles dont la
                     commission a été <strong>encaissée par le cabinet</strong> apparaissent —
                     les autres ne sont pas encore réclamables.
                     {% if lignes|length > 1 %}
                         En cocher plusieurs enregistre <strong>un seul virement</strong> couvrant
                         toutes ces lignes.
+                    {% endif %}
                     {% endif %}
                 </p>
             </div>
@@ -105,7 +117,11 @@
                                         data-tranche-id="{{ l.trancheId }}"
                                         data-avenant-id="{{ l.avenantId }}">
                                         <td>
+                                            {# La ligne d'un virement rouvert arrive COCHÉE : c'est ce
+                                               qu'il règle. La clé est le couple (échéance, affaire),
+                                               celui-là même que l'écriture rapproche. #}
                                             <input class="form-check-input" type="checkbox"
+                                                   {{ ((l.trancheId ?? 0) ~ ':' ~ (l.avenantId ?? 0)) in cochees ? 'checked' : '' }}
                                                    data-reversement-retro-picker-target="coche"
                                                    data-action="change->reversement-retro-picker#recalculer"
                                                    aria-label="Régler {{ l.client }} — {{ l.reference }}">
@@ -159,7 +175,7 @@
                                     {{ ux_icon(resolve_icon_name('action:calendar'), {width: '16px', height: '16px'}) }}
                                 </span>
                                 <input type="date" id="rra-date" class="form-control"
-                                       value="{{ 'now'|date('Y-m-d') }}"
+                                       value="{{ edition ? edition.paidAt|date('Y-m-d') : 'now'|date('Y-m-d') }}"
                                        data-reversement-retro-picker-target="date"
                                        aria-describedby="rra-date-aide">
                             </div>
@@ -178,7 +194,7 @@
                                 </span>
                                 <input type="text" id="rra-reference" name="reversement_reference"
                                        class="form-control" maxlength="255" autocomplete="off"
-                                       value="{{ referenceParDefaut }}"
+                                       value="{{ edition ? edition.reference : referenceParDefaut }}"
                                        placeholder="Ex.&nbsp;: VIR-2026-0142"
                                        data-reversement-retro-picker-target="reference"
                                        aria-describedby="rra-ref-aide">
@@ -200,9 +216,10 @@
                                 <select id="rra-compte" class="form-select"
                                         data-reversement-retro-picker-target="compte"
                                         aria-describedby="rra-compte-aide">
-                                    <option value=""{{ compteProposeId is null ? ' selected' : '' }}>Caisse (espèces)</option>
+                                    {% set compte_retenu = edition ? edition.compteId : compteProposeId %}
+                                    <option value=""{{ compte_retenu is null ? ' selected' : '' }}>Caisse (espèces)</option>
                                     {% for compte in comptes %}
-                                        <option value="{{ compte.id }}"{{ compte.id == compteProposeId ? ' selected' : '' }}>{{ compte.intitule }} — {{ compte.banque }}</option>
+                                        <option value="{{ compte.id }}"{{ compte.id == compte_retenu ? ' selected' : '' }}>{{ compte.intitule }} — {{ compte.banque }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -224,15 +241,63 @@
                           data-reversement-retro-picker-target="zonePiece">
                     <legend class="fs-6" style="color:#0d2440;">Pièce justificative</legend>
                     <span class="text-muted small d-block mb-2">
+                        {%- if edition and edition.pieces is not empty %}
+                            Ce virement est déjà justifié. Retirez une pièce pour la remplacer
+                            — rien n'est supprimé tant que vous n'avez pas enregistré.
+                        {%- else %}
                         Bordereau de virement ou reçu signé. Une seule pièce suffit&nbsp;: elle
                         vaut pour toutes les affaires réglées par ce versement.
+                        {%- endif %}
                     </span>
+                    {# ── LES PIÈCES DÉJÀ DÉPOSÉES ─────────────────────────────────
+                       Annoncer « 1 pièce » sans la montrer laissait devant un compte
+                       qu'on ne pouvait ni vérifier ni corriger : pour remplacer un
+                       bordereau il fallait sortir de la fenêtre, ouvrir la boîte des
+                       documents, y supprimer la pièce, puis revenir.
+
+                       LE RETRAIT EST DIFFÉRÉ, et c'est délibéré : une pièce détruite
+                       au clic le serait même si l'on annulait ensuite la correction.
+                       On la marque, et l'enregistrement tranche. #}
+                    {% if edition and edition.pieces is not empty %}
+                        {# UN BLOC À PART, ET NON UNE LISTE DE PLUS. Deux listes de fichiers
+                           cohabitent dans cette carte — ce qui est DÉJÀ attaché, et ce qu'on
+                           s'apprête à ajouter. Rendues du même habillage, elles se lisaient
+                           comme une seule, et rien ne disait ce qui était enregistré. #}
+                        <div class="jsb-pieces-deja">
+                            <p class="jsb-pieces-deja__titre">
+                                <span aria-hidden="true" class="d-inline-flex">
+                                    {{ ux_icon(resolve_icon_name('classeur'), {width: '15px', height: '15px'}) }}
+                                </span>
+                                Déjà attachée{{ edition.pieces|length > 1 ? 's' : '' }} à ce virement
+                            </p>
+                            <ul class="jsb-pieces-deja__liste" data-pieces-existantes>
+                                {% for piece in edition.pieces %}
+                                    <li data-piece-id="{{ piece.id }}">
+                                        <span class="jsb-pieces-deja__icone" aria-hidden="true">
+                                            {{ ux_icon(resolve_icon_name('document'), {width: '18px', height: '18px'}) }}
+                                        </span>
+                                        <span class="jsb-pieces-deja__nom" title="{{ piece.nom|e('html_attr') }}">{{ piece.nom }}</span>
+                                        {# Le libellé change avec l'état — l'information ne
+                                           passe jamais par la seule couleur (WCAG 1.4.1). #}
+                                        <button type="button" class="jsb-pieces-deja__action"
+                                                data-action="click->reversement-retro-picker#basculerPiece"
+                                                aria-label="Retirer {{ piece.nom|e('html_attr') }} de ce virement">
+                                            {{ ux_icon(resolve_icon_name('action:delete'), {width: '15px', height: '15px'}) }}
+                                            <span data-libelle>Retirer</span>
+                                        </button>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
                     {# Zone de dépôt HABITUELLE, partagée avec la boîte « Attacher des
                        pièces » d'une fiche — mêmes classes, mêmes refus, mêmes icônes. #}
                     {{ include('components/document/_attach_zone.html.twig', {
                         limites: limites,
                         titre: 'Déposez le justificatif ici',
-                        vide_message: 'Aucune pièce choisie : le versement ne peut pas encore être enregistré.'
+                        vide_message: (edition and edition.pieces is not empty)
+                            ? 'Aucune nouvelle pièce : celles déjà déposées restent attachées.'
+                            : 'Aucune pièce choisie : le versement ne peut pas encore être enregistré.'
                     }, with_context = false) }}
                 </fieldset>
 

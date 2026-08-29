@@ -45,10 +45,25 @@ final class ReversementScope
     public const TRENTE_JOURS = '30j';
     public const EXERCICE = 'exercice';
 
-    // ── Virement ────────────────────────────────────────────────────────────────────
+    // ── Virement : LA MAILLE DE LECTURE, ET RIEN D'AUTRE ────────────────────────────
+    //
+    // Ce chip ne restreint pas la liste — il choisit à quelle maille on la lit :
+    //
+    //   • GROUPÉ (défaut, valeur vide) : une ligne par VERSEMENT effectué au bénéficiaire ;
+    //   • DÉTAIL : la même chose, ventilée par ÉCHÉANCE (tranche).
+    //
+    // Les DEUX modes portent le même argent, et leurs totaux sont donc identiques : c'est
+    // la propriété qui les définit, et elle est vérifiée par un test plutôt que supposée.
+    //
+    // La base tient une ligne par échéance réglée : un virement qui en solde six y occupe
+    // six lignes, portant six fois la même date, la même référence et le même compte. La
+    // rubrique replie donc chaque lot sur son porteur, sauf sous DÉTAIL.
+    //
+    // ⚠ IL Y AVAIT ICI DEUX VALEURS DE PLUS — « groupe » et « isole » —, qui filtraient les
+    // virements selon qu'ils couvrent une ou plusieurs échéances. Elles ont disparu : ce
+    // n'est pas une maille, et deux notions dans un même chip se lisaient comme une seule.
     public const CLE_VIREMENT = '__virement_reversement__';
-    public const GROUPE = 'groupe';
-    public const ISOLE = 'isole';
+    public const DETAIL = 'detail';
 
     // ── Type de bénéficiaire ────────────────────────────────────────────────────────
     //
@@ -199,9 +214,10 @@ final class ReversementScope
             self::TRENTE_JOURS => '30 derniers jours',
             self::EXERCICE => 'Cet exercice',
         ],
+        // UNE SEULE VALEUR NOMMÉE : « Groupé » est le défaut, donc la valeur VIDE — il n'y
+        // a pas de critère à poser pour lire une liste à sa maille naturelle.
         self::CLE_VIREMENT => [
-            self::GROUPE => 'Groupé',
-            self::ISOLE => 'Isolé',
+            self::DETAIL => 'Détail par échéance',
         ],
         self::CLE_TYPE => [
             self::TYPE_AGENT => 'Agent',
@@ -217,6 +233,43 @@ final class ReversementScope
     public static function libelle(string $cle, string $valeur): string
     {
         return self::GROUPES[$cle][$valeur] ?? $valeur;
+    }
+
+    /**
+     * LA RUBRIQUE EST-ELLE REPLIÉE — une ligne par virement plutôt qu'une par échéance ?
+     *
+     * Oui par défaut, et pour toutes les valeurs du chip sauf DETAIL : « Groupé » et
+     * « Isolé » restreignent l'ensemble des virements, ils ne le déplient pas. Un seul
+     * endroit décide, lu par la requête comme par le schéma que l'assistant expose.
+     *
+     * @param array<string, mixed> $criteres les critères de la recherche en cours
+     */
+    public static function estReplie(array $criteres): bool
+    {
+        $valeur = $criteres[self::CLE_VIREMENT] ?? null;
+        if (is_array($valeur)) {
+            $valeur = $valeur['value'] ?? null;
+        }
+
+        return $valeur !== self::DETAIL;
+    }
+
+    /**
+     * Le fragment DQL qui ne garde d'un lot que son PORTEUR.
+     *
+     * La règle du porteur — le plus petit id — est celle de `LotDeVersement::porteurParmi()`,
+     * et elle ne se recopie pas : elle est simplement dite ici dans le dialecte de la
+     * requête. On ne groupe PAS en SQL (`GROUP BY` casserait l'hydratation d'entités dont
+     * dépendent la sélection, les actions et les documents) : on FILTRE.
+     *
+     * Un reversement isolé n'a pas de `lotReference` : il est toujours son propre porteur.
+     */
+    public static function dqlPorteurDuLot(string $alias): string
+    {
+        return "({$alias}.lotReference IS NULL OR {$alias}.lotReference = '' OR {$alias}.id = ("
+            . "SELECT MIN(membre_lot.id) FROM " . \App\Entity\ReversementRetroAgent::class . " membre_lot"
+            . " WHERE membre_lot.lotReference = {$alias}.lotReference"
+            . " AND membre_lot.entreprise = {$alias}.entreprise))";
     }
 
     /**

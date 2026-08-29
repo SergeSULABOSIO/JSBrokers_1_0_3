@@ -53,6 +53,28 @@ chercher leur nom parmi les « Intermédiaires » ne donnera jamais rien.
   entière — et il compte quel que soit le circuit : note réglée, ou bordereau de
   production imputé sur cette échéance.
 
+### La chaîne d'exigibilité, en deux temps
+
+L'argent ne devient réclamable qu'en descendant deux marches, jamais une seule :
+
+1. **La commission du cabinet devient exigible dès que le CLIENT a réglé la prime.**
+   Tant que la prime dort, le cabinet n'a rien à réclamer à l'assureur : sa
+   commission est due, elle n'est pas encore exigible.
+2. **Les TAXES et les RÉTROCOMMISSIONS assises sur cette commission deviennent
+   exigibles dès que le CABINET a encaissé la commission.** Ce sont des charges
+   nées de la commission : elles ne peuvent pas être réclamables avant elle.
+
+Autrement dit : prime réglée → commission encaissable ; commission encaissée →
+taxes et rétros exigibles. Et chaque marche est **proportionnelle** : une prime
+réglée à moitié ne rend exigible que la moitié de la commission, et une commission
+encaissée à 60 % ne rend exigibles que 60 % des rétros qu'elle porte.
+
+⚠ **Ne jamais sauter la première marche.** Dire d'une rétro qu'elle est exigible
+parce que la police est souscrite, ou parce que la prime est facturée, c'est
+proposer au courtier de payer avec de l'argent qu'il n'a pas reçu. Le montant
+**exigible** est le seul qui tienne compte des deux marches : c'est lui qu'il faut
+lire, jamais le « dû ».
+
 ## Le bénéficiaire n'est pas le gestionnaire
 
 Celui qui **apporte** l'affaire et celui qui la **suit** sont deux rôles
@@ -166,9 +188,29 @@ reversement (il se désigne par sa référence).
 (module Finances) — et nulle part ailleurs : le volet du rapport de production n'existe
 plus. Elle porte les DEUX familles. `ouvrir_rubrique` sait l'ouvrir FILTRÉE :
 `beneficiaire` (le NOM d'un agent **ou** d'un partenaire), `type` (agent/partenaire),
-`justificatif` (avec/sans pièce), `periode` et `virement` (groupé/isolé). Ce sont
-exactement les chips de l'écran, et le même vocabulaire : si ta réponse écrite ne porte
-que sur les versements d'une personne, ouvre la rubrique avec le MÊME filtre.
+`justificatif` (avec/sans pièce), `periode` et `virement`. Ce sont exactement les chips
+de l'écran, et le même vocabulaire : si ta réponse écrite ne porte que sur les
+versements d'une personne, ouvre la rubrique avec le MÊME filtre.
+
+⚠ **UNE LIGNE DE CETTE RUBRIQUE EST UN VIREMENT, PAS UNE ÉCHÉANCE.** L'écran replie
+chaque lot sur une seule ligne, qui porte le TOTAL du virement et le nombre d'échéances
+qu'il règle. C'est ce que fait le chip `virement` :
+
+- rien, ou « groupé » (le défaut) : **un versement par ligne**, tel qu'il a été fait
+  au bénéficiaire ;
+- `virement: detail` : la même chose **ventilée par échéance** (tranche).
+
+Les deux modes portent le **même argent** — le total ne change pas d'un mode à l'autre,
+seule la maille change. Ne dis donc jamais « il y a dix versements » en comptant des
+lignes de détail : compte les VIREMENTS, ou précise la maille dont tu parles.
+
+**Corriger un virement** se fait dans la fenêtre de reversement, ouverte par « Éditer »
+sur sa ligne — on y change la date, la référence, le compte, les montants, les échéances
+couvertes et la pièce. « Ouvrir », lui, montre la fiche.
+
+**Supprimer une ligne défait TOUT le virement** : ses N échéances partent ensemble, et
+son écriture comptable est défaite. Ne propose jamais de « supprimer une échéance d'un
+virement » — cela n'existe pas ; on retire l'échéance depuis la fenêtre d'édition.
 
 Une pièce compte pour tout son VIREMENT : un bordereau posé sur une ligne d'un lot
 justifie les autres. Ne dis donc jamais d'une ligne d'un virement groupé qu'elle est

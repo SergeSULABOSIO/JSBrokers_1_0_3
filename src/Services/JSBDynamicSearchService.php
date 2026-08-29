@@ -4,6 +4,7 @@ namespace App\Services;
 
 
 use App\Entity\Entreprise;
+use App\Entity\ReversementRetroAgent;
 use App\Services\Search\AvenantEcheanceScope;
 use App\Services\Search\AvenantSuccessionScope;
 use App\Services\Search\CotationSouscriptionScope;
@@ -11,6 +12,7 @@ use App\Services\Search\ReversementScope;
 use App\Services\Search\PisteTransformationScope;
 use App\Services\Search\PortefeuilleScope;
 use App\Services\Search\TranchePaiementScope;
+use App\Service\Retro\LotDeVersement;
 use App\Services\Tranche\TranchePaiementService;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -106,6 +108,9 @@ class JSBDynamicSearchService
     public function __construct(
         EntityManagerInterface $em,
         private readonly TranchePaiementService $tranchePaiement,
+        // La maille de lecture des reversements se déclare ici et se lit ailleurs : voir
+        // le repli, plus bas.
+        private readonly LotDeVersement $lotDeVersement,
         ?LoggerInterface $logger = null,
     ) {
         $this->em = $em;
@@ -349,6 +354,25 @@ class JSBDynamicSearchService
             $qb->join("{$rootAlias}.invite", $inviteAlias);
             $qb->andWhere("{$inviteAlias}.entreprise = :entrepriseId{$suffix}")
                ->setParameter("entrepriseId{$suffix}", $entreprise->getId());
+        }
+
+        // ── UNE LIGNE = UN VIREMENT ──────────────────────────────────────────────────
+        //
+        // La rubrique des reversements REPLIE chaque lot sur son porteur, sauf quand le
+        // chip demande le détail par échéance. C'est posé ici, avant les critères, pour
+        // deux raisons : la règle ne dépend d'aucun d'eux, et cette méthode sert AUSSI la
+        // requête de comptage — un repli appliqué à la seule page aurait annoncé « 4
+        // affiché(s) sur 10 » sur un écran qui n'en montre que quatre.
+        if ($entityClass === ReversementRetroAgent::class) {
+            $replie = ReversementScope::estReplie($criteria);
+            if ($replie) {
+                $qb->andWhere(ReversementScope::dqlPorteurDuLot($rootAlias));
+            }
+            // LA COLONNE ET LA BARRE DES TOTAUX DOIVENT DIRE LE MÊME NOMBRE. Elles
+            // ne le peuvent que si elles savent à quelle maille la liste est lue :
+            // repliée, une ligne vaut son virement entier ; dépliée, elle ne vaut
+            // qu'elle-même. Le drapeau est posé ICI, là où le repli est décidé.
+            $this->lotDeVersement->marquerReplie($replie);
         }
 
         // NOUVEAU : Filtrer par le parent si le contexte est fourni (recherche dans une collection).
@@ -647,19 +671,10 @@ class JSBDynamicSearchService
                 continue;
             }
 
+            // LE CHIP « VIREMENT » NE FILTRE RIEN : il choisit la MAILLE de lecture, et il a
+            // déjà agi plus haut, là où le repli est décidé. Les deux modes portent donc
+            // exactement le même argent — c'est la propriété qui les définit.
             if ($field === ReversementScope::CLE_VIREMENT) {
-                $valeur = is_array($value) ? ($value['value'] ?? null) : $value;
-                if (!ReversementScope::estValide(ReversementScope::CLE_VIREMENT, is_string($valeur) ? $valeur : null)) {
-                    continue;
-                }
-
-                // Un lot n'existe qu'à partir de DEUX lignes : la référence de lot n'est posée
-                // que dans ce cas (cf. RetroAgentController), et une chaîne vide vaut absence.
-                if ($valeur === ReversementScope::GROUPE) {
-                    $qb->andWhere("{$rootAlias}.lotReference IS NOT NULL AND {$rootAlias}.lotReference <> ''");
-                } else {
-                    $qb->andWhere("{$rootAlias}.lotReference IS NULL OR {$rootAlias}.lotReference = ''");
-                }
                 continue;
             }
 

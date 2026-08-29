@@ -136,9 +136,27 @@ class ReversementRetroAgentController extends AbstractController
         );
     }
 
+    /**
+     * SUPPRIMER UN REVERSEMENT DÉFAIT TOUT SON VIREMENT.
+     *
+     * Depuis que la rubrique replie chaque lot sur son porteur, la ligne sélectionnée
+     * REPRÉSENTE un virement entier : n'en supprimer qu'une échéance aurait fait maigrir le
+     * décaissement d'un montant que l'écran ne montrait même pas, et laissé une écriture
+     * comptable partielle. La règle du lot est celle de `LotDeVersement` — un seul endroit,
+     * partagé avec l'édition et la relecture des pièces.
+     */
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
-    public function deleteApi(ReversementRetroAgent $reversement): Response
+    public function deleteApi(ReversementRetroAgent $reversement, LotDeVersement $lots): Response
     {
+        // LE PORTEUR EN DERNIER : ses frères sont supprimés d'abord, et la réponse — comme
+        // les gardes du socle — porte sur la ligne que l'utilisateur a désignée.
+        foreach ($lots->membresDuLot($reversement) as $membre) {
+            if ($membre === $reversement) {
+                continue;
+            }
+            $this->em->remove($membre);
+        }
+
         return $this->handleDeleteApi($reversement);
     }
 
