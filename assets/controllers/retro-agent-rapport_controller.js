@@ -29,6 +29,10 @@ export default class extends Controller {
         // colonne filtrée dans la rubrique — les deux vivent sur le même enregistrement.
         agentType: String,
         justificatifsUrl: String,
+        // Le statut AFFICHÉ. Il sert à l'actualisation : relire le rapport sans le
+        // reporter reviendrait à retomber sur « Souscrites » à chaque clic, et donc à
+        // perdre en silence le filtre que l'utilisateur venait de poser.
+        statut: String,
     };
 
     connect() {
@@ -124,6 +128,37 @@ export default class extends Controller {
         const statut = event.currentTarget?.dataset?.statut;
         if (!statut) return;
 
+        this._redemanderLeRapport(statut);
+    }
+
+    /**
+     * ACTUALISER : relire les mêmes affaires, avec les montants d'à présent.
+     *
+     * Un rapport de production est un document qu'on garde ouvert pendant qu'on travaille
+     * ailleurs — on encaisse une note, on impute un bordereau, on rattache une condition de
+     * partage. Chacun de ces gestes déplace l'exigible de CE rapport, qui continuait
+     * pourtant d'afficher les montants d'avant sans rien en dire. Le versement, lui, était
+     * déjà couvert (le picker fait redemander le rapport) ; tout le reste ne l'était pas.
+     *
+     * On redemande le rapport AU STATUT AFFICHÉ, par le chemin des chips — donc avec sa
+     * barre de progression et son message d'erreur, plutôt qu'en rechargeant l'onglet à
+     * l'aveugle : un échec y remplacerait le rapport par un message, et le travail en
+     * cours de lecture serait perdu.
+     */
+    actualiser(event) {
+        event?.preventDefault();
+
+        this._redemanderLeRapport(this.hasStatutValue && this.statutValue ? this.statutValue : 'souscrites');
+    }
+
+    /**
+     * Le chemin unique du rechargement — le filtre par statut et l'actualisation ne
+     * diffèrent que par la valeur demandée.
+     *
+     * @param {string} statut
+     * @private
+     */
+    _redemanderLeRapport(statut) {
         // Même événement que l'action de la barre d'outils : le cerveau réinjecte le HTML
         // dans l'onglet existant (tabKey identique), plutôt que d'en empiler un nouveau.
         this.element.dispatchEvent(new CustomEvent('cerveau:event', {
