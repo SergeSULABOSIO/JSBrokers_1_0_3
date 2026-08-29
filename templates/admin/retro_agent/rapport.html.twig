@@ -252,6 +252,8 @@
      data-retro-agent-rapport-agent-id-value="{{ beneficiaire.id }}"
      data-retro-agent-rapport-agent-nom-value="{{ beneficiaire.nom|e('html_attr') }}"
      data-retro-agent-rapport-agent-type-value="{{ beneficiaire.type }}"
+     {# Le statut AFFICHÉ, pour que l'actualisation relise les mêmes affaires. #}
+     data-retro-agent-rapport-statut-value="{{ statut }}"
      data-retro-agent-rapport-justificatifs-url-value="{{ beneficiaire.prefixe }}/affaire/0/justificatifs">
     <div class="rpa-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
@@ -267,7 +269,10 @@
             {# Le NOMBRE de lignes est dit par la barre de contrôles, qui le tient à jour
                quand la recherche restreint l'affichage : l'écrire deux fois, c'est risquer
                de le voir écrit deux fois DIFFÉREMMENT. Ne reste ici que la devise. #}
-            {% if m %}<div class="rpa-sub">Montants en {{ m }}</div>{% endif %}
+            <div class="rpa-sub">
+                {%- if m %}Montants en {{ m }} · lus à {{ 'now'|date('H:i') }}
+                {%- else %}Montants lus à {{ 'now'|date('H:i') }}{% endif -%}
+            </div>
             {# VERSER SE FAIT D'ICI. C'est en lisant ce rapport qu'on décide de payer :
                renvoyer l'utilisateur à la liste des invités pour y retrouver l'agent, le
                sélectionner et rouvrir une action, c'est lui faire refaire le chemin qu'il
@@ -292,6 +297,18 @@
                     {{ ux_icon(resolve_icon_name('classeur'), {width: '16px', height: '16px'}) }}
                 </span>
                 Versements enregistrés
+            </button>
+            {# ACTUALISER. Encaisser une note, imputer un bordereau, rattacher une condition
+               de partage : chacun de ces gestes déplace l'exigible de ce rapport, qui
+               continuait d'afficher les montants d'avant. Le versement était déjà couvert —
+               le picker fait redemander le rapport —, le reste ne l'était pas. #}
+            <button type="button" class="btn btn-sm btn-light d-inline-flex align-items-center gap-2"
+                    data-action="click->retro-agent-rapport#actualiser"
+                    title="Relire les mêmes affaires avec les montants d'à présent">
+                <span aria-hidden="true" class="d-inline-flex">
+                    {{ ux_icon(resolve_icon_name('action:refresh'), {width: '16px', height: '16px'}) }}
+                </span>
+                Actualiser
             </button>
         </div>
     </div>

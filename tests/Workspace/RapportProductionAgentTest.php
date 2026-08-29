@@ -156,6 +156,38 @@ class RapportProductionAgentTest extends WebTestCase
         self::assertStringContainsString('Projection', $html);
     }
 
+    public function testLeRapportSActualiseSansPerdreLeStatutAffiche(): void
+    {
+        $ids = $this->semer(avecProposition: true);
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        // On lit le rapport SOUS UN FILTRE : c'est là que l'actualisation peut mentir.
+        $this->client->request(
+            'GET',
+            '/admin/retro-agent/' . $ids['aliceId'] . '/rapport?statut=' . CotationSouscriptionScope::STATUT_EN_ATTENTE,
+        );
+
+        self::assertResponseIsSuccessful();
+        $html = json_decode($this->client->getResponse()->getContent(), true)['html'];
+
+        // La commande existe, et elle est branchée.
+        self::assertStringContainsString('click->retro-agent-rapport#actualiser', $html);
+        self::assertStringContainsString('Actualiser', $html);
+
+        // ET ELLE RELIT LES MÊMES AFFAIRES. Le statut affiché voyage jusqu'au contrôleur :
+        // sans cette valeur, actualiser redemanderait « Souscrites » et effacerait en
+        // silence le filtre que l'utilisateur venait de poser — un rapport qui change de
+        // contenu sans qu'on le lui ait demandé.
+        self::assertStringContainsString(
+            'data-retro-agent-rapport-statut-value="' . CotationSouscriptionScope::STATUT_EN_ATTENTE . '"',
+            $html,
+        );
+
+        // L'HEURE DE LECTURE est dite : elle est la raison d'être du bouton — sans elle,
+        // rien ne distingue des montants de l'instant de montants vieux d'une heure.
+        self::assertMatchesRegularExpression('/lus? à \d{2}:\d{2}/u', $html);
+    }
+
     public function testUnAgentConsulteSonProprePeriMetreMaisPasCeluiDunCollegue(): void
     {
         $ids = $this->semer();
