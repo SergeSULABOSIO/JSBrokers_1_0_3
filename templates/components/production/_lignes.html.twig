@@ -217,12 +217,22 @@
        Sans cela il était centré sur la largeur TOTALE du tableau — donc hors écran dès
        qu'on ne défilait pas jusqu'à lui. Il se colle au bord gauche visible, et le
        tableau défile derrière. */
-    .rpa-table td.rpa-message { padding: 0; }
-    .rpa-message-boite {
-        position: sticky;
-        left: 0;
-        width: min(100%, 46rem);
+    /* LE MESSAGE OCCUPE LE PANNEAU, et c'est ce qui donne un sens à « centré ».
+       Il prend la hauteur restante (`flex: 1 1 auto`) pour se poser au milieu de ce
+       qui est visible, et non juste sous l'entête. */
+    .rpa-vide {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
     }
+    /* SANS LIGNES, LE TABLEAU N'EST PLUS QU'UNE ENTÊTE : il cesse de réclamer la
+       hauteur, sinon le message serait repoussé hors du champ par une zone de
+       défilement vide. */
+    .rpa-corps:has(.rpa-vide) .rpa-scroll { flex: 0 0 auto; }
+    .rpa-corps:has(.rpa-vide) .rpa-scroll > .rpa-table { flex: 0 0 auto; }
     /* L'ACCUEIL N'EST PAS UN ÉTAT VIDE : il dit ce qu'il reste à faire, et il le dit
        avec l'icône de la rubrique plutôt qu'avec une phrase de plus. */
     .rpa-accueil {

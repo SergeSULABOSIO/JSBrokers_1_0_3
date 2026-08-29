@@ -94,43 +94,6 @@
                 </tr>
             </thead>
             <tbody class="table-group-divider">
-                {# DEUX VIDES QUI NE DISENT PAS LA MÊME CHOSE.
-
-                   Sans bénéficiaire choisi, la rubrique n'a rien CALCULÉ : la production
-                   se détermine affaire par affaire par le moteur de partage, et la
-                   calculer pour tout le cabinet à l'ouverture ferait payer très cher un
-                   écran que personne n'a demandé. L'écran invite donc à choisir — ce
-                   n'est pas « aucun résultat ».
-
-                   Avec un bénéficiaire, un vide est un vrai vide : il n'a rien produit
-                   dans ce statut. Confondre les deux aurait fait chercher une donnée
-                   absente là où il n'y avait qu'un filtre à poser. #}
-                {% if lignes is empty %}
-                    <tr>
-                        <td colspan="25" class="rpa-message">
-                          <div class="rpa-message-boite">
-                            {% if beneficiaire is null %}
-                                <div class="rpa-accueil">
-                                    <span class="rpa-accueil-icone" aria-hidden="true">
-                                        {{ ux_icon(resolve_icon_name('invite'), {height: '34px', width: '34px'}) }}
-                                    </span>
-                                    <p class="rpa-accueil-titre">Choisissez un intermédiaire</p>
-                                    <p class="rpa-accueil-aide">
-                                        Le chip «&nbsp;Bénéficiaire&nbsp;» propose les agents internes
-                                        et les partenaires externes. Sa production s'affichera ici,
-                                        affaire par affaire.
-                                    </p>
-                                </div>
-                            {% else %}
-                                <div class="rpa-empty">
-                                    Aucune affaire dans ce statut pour
-                                    {{ beneficiaire.estAgent ? 'cet agent' : 'ce partenaire' }}.
-                                </div>
-                            {% endif %}
-                          </div>
-                        </td>
-                    </tr>
-                {% endif %}
                 {% for l in lignes %}
                     {# Le texte cherchable est PRÉ-CALCULÉ ici : le filtre du navigateur ne
                        relit pas le DOM ligne par ligne, et cherche exactement sur ce que
@@ -377,7 +340,47 @@
              data-retro-agent-rapport-target="sansResultat">
             Aucune affaire ne correspond à cette recherche.
         </div>
-    </div>
+
+    {# ── DEUX VIDES QUI NE DISENT PAS LA MÊME CHOSE ────────────────────────────────
+       Sans bénéficiaire choisi, la rubrique n'a rien CALCULÉ : la production se
+       détermine affaire par affaire par le moteur de partage, et la calculer pour tout
+       le cabinet à l'ouverture ferait payer très cher un écran que personne n'a demandé.
+       L'écran INVITE donc à choisir — ce n'est pas « aucun résultat ».
+
+       Avec un bénéficiaire, un vide est un vrai vide : il n'a rien produit dans ce
+       statut. Confondre les deux aurait fait chercher une donnée absente là où il n'y
+       avait qu'un filtre à poser.
+
+       ── ET IL VIT SOUS LE TABLEAU, PAS DEDANS ──────────────────────────────────────
+       Dans une cellule couvrant vingt-cinq colonnes, « centré » désigne le milieu du
+       TABLEAU — des milliers de pixels plus loin que ce que l'utilisateur regarde. Le
+       message tombait donc hors du champ, et l'astuce qui l'y ramenait le collait au
+       bord gauche. Ici, « centré » désigne le milieu du panneau.
+
+       Le tableau garde son entête au-dessus : on voit les colonnes qui attendent, et le
+       socle voit un `<tr>` — sans quoi il recouvrirait ces deux messages par son état
+       vide générique, qui n'en dirait ni l'un ni l'autre. #}
+    {% if lignes is empty %}
+        <div class="rpa-vide" role="status">
+            {% if beneficiaire is null %}
+                <div class="rpa-accueil">
+                    <span class="rpa-accueil-icone" aria-hidden="true">
+                        {{ ux_icon(resolve_icon_name('invite'), {height: '34px', width: '34px'}) }}
+                    </span>
+                    <p class="rpa-accueil-titre">Choisissez un intermédiaire</p>
+                    <p class="rpa-accueil-aide">
+                        Le chip «&nbsp;Bénéficiaire&nbsp;» propose les agents internes et les
+                        partenaires externes. Sa production s'affichera ici, affaire par affaire.
+                    </p>
+                </div>
+            {% else %}
+                <div class="rpa-empty">
+                    Aucune affaire dans ce statut pour
+                    {{ beneficiaire.estAgent ? 'cet agent' : 'ce partenaire' }}.
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
 
     {# LE PIED NE PARAÎT QU'AVEC DES LIGNES À TOTALISER. « Totaux (0 ligne(s)) »
        suivi de vingt-cinq zéros donnait à un écran d'accueil l'apparence d'un rapport
