@@ -5515,6 +5515,132 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 }
 .jsb-attach-retirer:hover, .jsb-attach-retirer:focus-visible { background: #fdf4f3; color: #c0392b; }
 
+/* ═════════════════════════════════════════════════════════════════════════════
+   LES PIÈCES DÉJÀ ATTACHÉES — un bloc à part, et il le faut.
+
+   Deux listes de fichiers cohabitent dans la même carte : ce qui est DÉJÀ attaché
+   au virement, et ce qu'on s'apprête à y ajouter. Rendues du même habillage,
+   elles se lisaient comme une seule — impossible de savoir, d'un coup d'œil, ce
+   qui est enregistré et ce qui ne l'est pas encore (Bastien & Scapin > Guidage,
+   Signifiance ; Nielsen 1, visibilité de l'état du système).
+
+   Le bloc porte donc un TITRE qui le nomme, un filet cobalt à gauche — la couleur
+   de marque, pas un état sémantique — et un fond très légèrement grisé. La zone de
+   dépôt, elle, garde son cadre en pointillés : deux natures, deux dessins.
+
+   Toutes les couleurs viennent de la charte, par leurs jetons.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.jsb-pieces-deja {
+    margin: .25rem 0 1rem;
+    padding: .7rem .8rem .8rem;
+    background-color: var(--bg-light, #f8f9fa);
+    border: 1px solid var(--border-light, #dee2e6);
+    border-left: 3px solid var(--cobalt, #0047AB);
+    border-radius: 10px;
+}
+.jsb-pieces-deja__titre {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    margin: 0 0 .55rem;
+    color: var(--text-body, #495057);
+    font-size: .78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+.jsb-pieces-deja__titre svg { color: var(--cobalt, #0047AB); }
+.jsb-pieces-deja__liste { list-style: none; margin: 0; padding: 0; }
+.jsb-pieces-deja__liste li {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .45rem .3rem .45rem .6rem;
+    /* Une ligne fait au moins 44 px de haut : c'est la cible confortable du bouton
+       qu'elle porte (WCAG 2.5.5). */
+    min-height: 44px;
+    margin-bottom: .35rem;
+    background-color: var(--bg-white, #ffffff);
+    border: 1px solid var(--border-light, #dee2e6);
+    border-radius: 8px;
+    font-size: .87rem;
+    transition: background-color .12s ease, border-color .12s ease;
+}
+.jsb-pieces-deja__liste li:last-child { margin-bottom: 0; }
+/* LA LIGNE RÉPOND À LA SOURIS. Sans retour au survol, rien ne dit qu'il se passe
+   quelque chose sous le curseur — et le bouton de retrait se cherche. */
+.jsb-pieces-deja__liste li:hover {
+    background-color: var(--bg-light, #f8f9fa);
+    border-color: var(--text-muted, #6c757d);
+}
+.jsb-pieces-deja__liste li:focus-within {
+    border-color: var(--cobalt, #0047AB);
+    box-shadow: 0 0 0 .18rem var(--cobalt-focus-ring, rgba(0, 71, 171, 0.35));
+}
+.jsb-pieces-deja__icone {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--cobalt, #0047AB);
+}
+.jsb-pieces-deja__nom {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-dark, #212529);
+}
+/* LE BOUTON PORTE SON LIBELLÉ, donc il s'aligne comme une paire icône + mot — et
+   non comme la pastille carrée de `.jsb-attach-retirer`, dont le `justify-content:
+   center` et le `min-width: 32px` écrasaient le texte contre le bord. */
+.jsb-pieces-deja__action {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    flex: 0 0 auto;
+    min-height: 32px;
+    padding: 0 .6rem;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted, #6c757d);
+    font-size: .82rem;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color .12s ease, color .12s ease, border-color .12s ease;
+}
+.jsb-pieces-deja__action svg { flex: 0 0 auto; }
+/* Un geste DESTRUCTEUR se signale au survol — et jamais par la seule couleur : le
+   libellé dit « Retirer », puis « Rétablir ». */
+.jsb-pieces-deja__action:hover {
+    background-color: var(--danger-bg, #f8d7da);
+    border-color: var(--danger-bg, #f8d7da);
+    color: var(--danger-dark, #842029);
+}
+.jsb-pieces-deja__action:focus-visible {
+    outline: none;
+    border-color: var(--cobalt, #0047AB);
+    box-shadow: 0 0 0 .18rem var(--cobalt-focus-ring, rgba(0, 71, 171, 0.35));
+}
+/* MARQUÉE POUR LE RETRAIT — trois signes, jamais la couleur seule : le nom est
+   barré, la ligne s'éteint, et le bouton dit « Rétablir » (WCAG 1.4.1). */
+.jsb-pieces-deja__liste li.is-refuse {
+    background-color: var(--bg-muted, #e9ecef);
+    border-color: var(--border-medium, #ced4da);
+}
+.jsb-pieces-deja__liste li.is-refuse .jsb-pieces-deja__nom {
+    text-decoration: line-through;
+    color: var(--text-muted, #6c757d);
+}
+.jsb-pieces-deja__liste li.is-refuse .jsb-pieces-deja__icone { color: var(--text-muted, #6c757d); }
+.jsb-pieces-deja__liste li.is-refuse .jsb-pieces-deja__action { color: var(--blue-primary, #0d6efd); }
+.jsb-pieces-deja__liste li.is-refuse .jsb-pieces-deja__action:hover {
+    background-color: var(--bg-cobalt-subtle, #e8f0fb);
+    border-color: var(--bg-cobalt-subtle, #e8f0fb);
+    color: var(--cobalt, #0047AB);
+}
+
 
 /* ─────────────────────────────────────────────────────────────────────────────
    COLLECTION EN ATTENTE — les lignes saisies avant l'enregistrement de la fiche.

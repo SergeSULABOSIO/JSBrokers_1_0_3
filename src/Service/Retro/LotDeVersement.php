@@ -42,6 +42,20 @@ final class LotDeVersement
     /** @var array<string, int> clé de lot => pièces, préchargées pour une page. */
     private array $comptesParLot = [];
 
+    /** @var array<string, array{total: float, membres: int}> clé de lot => chiffres du virement. */
+    private array $virementsParLot = [];
+
+    /**
+     * La liste en cours est-elle REPLIÉE — une ligne par virement ?
+     *
+     * Faux par défaut, et posé à vrai par la requête AU MOMENT où elle applique le
+     * repli : le drapeau ne dit donc pas ce qu'on souhaite, il dit ce qui a été fait.
+     * Sans lui, la colonne d'une ligne et la barre des totaux auraient répondu chacune
+     * pour son compte — et le total de l'écran aurait triplé sous « Détail par
+     * échéance », ou chuté au tiers sous la vue repliée.
+     */
+    private bool $replie = false;
+
     public function __construct(
         private readonly ReversementRetroAgentRepository $reversements,
         private readonly EntityManagerInterface $em,
@@ -99,6 +113,65 @@ final class LotDeVersement
     public function membres(Invite $agent, Entreprise $entreprise, string $cle): array
     {
         return $this->grouper($agent, $entreprise)[$cle]['membres'] ?? [];
+    }
+
+    /** La requête déclare ce qu'elle a fait : voir $replie. */
+    public function marquerReplie(bool $replie): void
+    {
+        $this->replie = $replie;
+    }
+
+    /**
+     * CE QUE CETTE LIGNE REPRÉSENTE, en argent.
+     *
+     * Repliée, elle vaut son VIREMENT entier ; dépliée, elle ne vaut qu'elle-même. La
+     * somme des lignes affichées rend donc le décaissement réel dans les deux modes —
+     * ce qui est exactement ce que la barre des totaux additionne.
+     */
+    public function montantAffiche(ReversementRetroAgent $reversement): float
+    {
+        return $this->replie
+            ? $this->montantDuVirement($reversement)
+            : round((float) $reversement->getMontant(), 2);
+    }
+
+    /** La liste est-elle lue à la maille du virement ? */
+    public function litLesVirements(): bool
+    {
+        return $this->replie;
+    }
+
+    /**
+     * LES MEMBRES DU VIREMENT AUQUEL CE REVERSEMENT APPARTIENT — la règle, un seul endroit.
+     *
+     * Elle sert à trois choses qui doivent dire la même : l'édition d'un virement (quelles
+     * lignes rouvrir), sa suppression (un virement se défait en entier), et la relecture de
+     * ses pièces. Trois copies auraient fini par diverger sur le cas du versement isolé.
+     *
+     * Un reversement isolé est un lot d'UN membre : lui-même. C'est la normalisation de
+     * `cle()`, et elle évite à chaque appelant d'avoir deux cas à traiter.
+     *
+     * @return ReversementRetroAgent[] triés par id croissant — le premier est le porteur
+     */
+    public function membresDuLot(ReversementRetroAgent $reversement): array
+    {
+        $lot = trim((string) $reversement->getLotReference());
+        if ($lot === '') {
+            return [$reversement];
+        }
+
+        $membres = $this->reversements->findBy([
+            'lotReference' => $lot,
+            'entreprise' => $reversement->getEntreprise(),
+        ]);
+
+        // Le reversement de départ EN FAIT PARTIE, même si la requête ne l'a pas rendu —
+        // il peut n'être pas encore écrit en base au moment de l'appel.
+        if (!in_array($reversement, $membres, true)) {
+            $membres[] = $reversement;
+        }
+
+        return $this->trier($membres);
     }
 
     /** Le membre qui porte la pièce : le plus petit id. Null si le lot est inconnu. */
@@ -192,18 +265,7 @@ final class LotDeVersement
      */
     public function prechargerJustificatifs(array $reversements): void
     {
-        $ids = [];
-        $references = [];
-        foreach ($reversements as $reversement) {
-            if (!$reversement instanceof ReversementRetroAgent || $reversement->getId() === null) {
-                continue;
-            }
-            $ids[] = $reversement->getId();
-            $lot = trim((string) $reversement->getLotReference());
-            if ($lot !== '') {
-                $references[] = $lot;
-            }
-        }
+        [$ids, $references] = $this->idsEtReferences($reversements);
         if ($ids === []) {
             return;
         }
@@ -220,6 +282,112 @@ final class LotDeVersement
         // requête (pagination, rafraîchissement), et un compte périmé se lirait comme un
         // compte à jour.
         $this->comptesParLot = $comptes;
+    }
+
+    /**
+     * PRÉCHARGE les chiffres du VIREMENT d'une page — total versé et nombre d'échéances.
+     *
+     * Depuis que la rubrique replie chaque lot sur son porteur, une ligne annonce ce que
+     * le virement a coûté et combien d'échéances il règle : les frères de lot ne sont
+     * plus affichés, leur argent l'est. Même passe, même parade au N+1 que les pièces.
+     *
+     * @param ReversementRetroAgent[] $reversements
+     */
+    public function prechargerVirements(array $reversements): void
+    {
+        [$ids, $references] = $this->idsEtReferences($reversements);
+        if ($ids === []) {
+            return;
+        }
+
+        $this->virementsParLot = $this->replierLignes($this->reversements->lignesDeLots($ids, $references));
+    }
+
+    /**
+     * LE TOTAL DU VIREMENT auquel ce reversement appartient.
+     *
+     * C'est lui que porte la colonne numérique d'une ligne repliée : afficher le montant
+     * du seul porteur ferait chuter le total de la barre au tiers de la réalité.
+     */
+    public function montantDuVirement(ReversementRetroAgent $reversement): float
+    {
+        return $this->chiffresDuVirement($reversement)['total'];
+    }
+
+    /** Le nombre d'échéances que ce virement règle. */
+    public function nombreEcheances(ReversementRetroAgent $reversement): int
+    {
+        return $this->chiffresDuVirement($reversement)['membres'];
+    }
+
+    /**
+     * Lus dans le préchargement quand il y en a un ; à défaut — une fiche ouverte seule,
+     * un appel isolé — une requête ciblée. Le repli existe pour que la valeur soit
+     * toujours juste, jamais pour dispenser du préchargement en liste.
+     *
+     * @return array{total: float, membres: int}
+     */
+    private function chiffresDuVirement(ReversementRetroAgent $reversement): array
+    {
+        $cle = $this->cle($reversement);
+        if (array_key_exists($cle, $this->virementsParLot)) {
+            return $this->virementsParLot[$cle];
+        }
+
+        $lot = trim((string) $reversement->getLotReference());
+        $replie = $this->replierLignes($this->reversements->lignesDeLots(
+            $reversement->getId() !== null ? [$reversement->getId()] : [],
+            $lot !== '' ? [$lot] : [],
+        ));
+
+        return $replie[$cle] ?? ['total' => (float) $reversement->getMontant(), 'membres' => 1];
+    }
+
+    /**
+     * Les lignes brutes, repliées par clé de lot. La normalisation d'un versement isolé
+     * est celle de `cle()` : une seule façon de nommer un lot dans tout ce service.
+     *
+     * @param array<int, array{id: int, lot: ?string, montant: float}> $lignes
+     *
+     * @return array<string, array{total: float, membres: int}>
+     */
+    private function replierLignes(array $lignes): array
+    {
+        $replie = [];
+        foreach ($lignes as $ligne) {
+            $lot = trim((string) $ligne['lot']);
+            $cle = $lot !== '' ? $lot : self::PREFIXE_SOLO . $ligne['id'];
+            $replie[$cle] ??= ['total' => 0.0, 'membres' => 0];
+            $replie[$cle]['total'] = round($replie[$cle]['total'] + $ligne['montant'], 2);
+            ++$replie[$cle]['membres'];
+        }
+
+        return $replie;
+    }
+
+    /**
+     * Les identifiants d'une page et les références de lot qu'elle porte.
+     *
+     * @param ReversementRetroAgent[] $reversements
+     *
+     * @return array{0: int[], 1: string[]}
+     */
+    private function idsEtReferences(array $reversements): array
+    {
+        $ids = [];
+        $references = [];
+        foreach ($reversements as $reversement) {
+            if (!$reversement instanceof ReversementRetroAgent || $reversement->getId() === null) {
+                continue;
+            }
+            $ids[] = $reversement->getId();
+            $lot = trim((string) $reversement->getLotReference());
+            if ($lot !== '') {
+                $references[] = $lot;
+            }
+        }
+
+        return [$ids, $references];
     }
 
     /**

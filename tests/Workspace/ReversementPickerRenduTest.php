@@ -35,6 +35,10 @@ class ReversementPickerRenduTest extends KernelTestCase
             // LA FAMILLE, en plus du nom. Le nom seul ne suffit pas : la boîte annonce
             // le COMPTE SYSCOHADA qui sera mouvementé, et il n'est pas le même.
             'beneficiaireEstAgent' => $estAgent,
+            // LE MODE : ce banc rend la fenêtre de CRÉATION. Le mode édition a son propre
+            // test, qui passe par la route et non par le gabarit nu.
+            'cochees' => [],
+            'edition' => null,
             'monnaie' => 'USD',
             'comptes' => $comptes,
             'submitUrl' => '/admin/retro-agent/1/reversement',

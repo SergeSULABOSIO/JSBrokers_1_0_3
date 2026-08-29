@@ -92,6 +92,25 @@ class ReversementRetroAgentFormCanvasProvider implements FormCanvasProviderInter
                     "url"          => "/admin/retro-agent/reversement/%id%/rapport",
                 ],
             ],
+            // ── « ÉDITER » OUVRE LA FENÊTRE DE REVERSEMENT ────────────────────────────
+            //
+            // Une ligne de cette rubrique représente un VIREMENT entier — la rubrique replie
+            // chaque lot sur son porteur. Le dialogue générique n'en aurait montré qu'une
+            // échéance sur six, et laissé corriger un montant sans voir les autres.
+            //
+            // L'aiguillage est DÉCLARATIF, comme les actions ci-dessus : le cerveau lit cette
+            // clé sur `ui:toolbar.edit-request` et émet l'événement au lieu d'ouvrir le
+            // dialogue. Rien ne change pour les entités qui n'en déclarent pas — et
+            // « Ouvrir », lui, continue d'ouvrir la fiche.
+            "edition_personnalisee" => [
+                "event" => "ui:retroagent.reversement-request",
+                "url"   => "/admin/retro-agent/reversement/%id%/editer",
+            ],
+            // UN VIREMENT SE SUPPRIME EN ENTIER, et la boîte de confirmation doit le dire
+            // AVANT : la ligne sélectionnée en représente plusieurs, et l'utilisateur ne
+            // peut pas le deviner d'un écran qui n'en montre qu'une.
+            "suppression_note" => "Un virement se supprime en entier : toutes les échéances "
+                . "qu'il règle sont retirées, et son écriture comptable défaite.",
             "facts_labels" => [
                 "lotReference" => "Virement groupé (référence de lot)",
                 "tranche" => "Échéance réglée",

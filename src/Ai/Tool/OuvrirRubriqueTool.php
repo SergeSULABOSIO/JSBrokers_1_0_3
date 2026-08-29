@@ -149,7 +149,10 @@ final class OuvrirRubriqueTool implements AiToolInterface
                 ),
                 'virement' => ReversementScope::proprieteSchema(
                     ReversementScope::CLE_VIREMENT,
-                    'REVERSEMENT uniquement : virement GROUPÉ (qui solde plusieurs affaires) ou ISOLÉ.',
+                    'REVERSEMENT uniquement : la MAILLE de lecture. Par défaut la rubrique montre '
+                        . 'un VERSEMENT par ligne, tel qu\'il a été fait au bénéficiaire ; « detail » '
+                        . 'le ventile par ÉCHÉANCE (tranche). Les deux portent le même argent : ce '
+                        . 'paramètre ne retire aucune ligne, il change la maille.',
                 ),
                 'type' => ReversementScope::proprieteSchema(
                     ReversementScope::CLE_TYPE,

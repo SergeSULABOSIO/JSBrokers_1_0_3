@@ -244,12 +244,32 @@ class ReversementRubriqueFiltresTest extends KernelTestCase
     {
         $s = $this->semer();
 
+        // UNE LIGNE, PAS DEUX — et c'est le repli, pas le filtre. La rubrique montre
+        // désormais un virement par ligne : ce test attendait « VIR-LOT, VIR-LOT »
+        // quand l'écran en montrait deux, et il avait raison alors. Ce qu'il TIENT est
+        // inchangé : le bordereau posé sur le seul porteur justifie tout le virement.
+        self::assertSame(
+            ['VIR-LOT'],
+            $this->references($s['entreprise'], ReversementScope::critereRecherche(
+                ReversementScope::ENTITE,
+                ReversementScope::CLE_JUSTIFICATIF,
+                ReversementScope::AVEC_PIECE,
+            )),
+            'Le virement du lot est couvert par le bordereau de son porteur.',
+        );
+
+        // ET LE DÉTAIL LE REDIT LIGNE À LIGNE : les deux échéances du lot comptent
+        // pour justifiées, ce qui était l'énoncé d'origine de ce test.
         self::assertSame(
             ['VIR-LOT', 'VIR-LOT'],
             $this->references($s['entreprise'], ReversementScope::critereRecherche(
                 ReversementScope::ENTITE,
                 ReversementScope::CLE_JUSTIFICATIF,
                 ReversementScope::AVEC_PIECE,
+            ) + ReversementScope::critereRecherche(
+                ReversementScope::ENTITE,
+                ReversementScope::CLE_VIREMENT,
+                ReversementScope::DETAIL,
             )),
             'Les deux lignes du lot sont couvertes par le bordereau du porteur.',
         );
@@ -280,33 +300,44 @@ class ReversementRubriqueFiltresTest extends KernelTestCase
             self::assertContains('VIR-SOLO', $refs, sprintf('« %s » doit ramener le versement du jour.', $valeur));
         }
 
-        // « Toutes » : aucune valeur, donc aucun critère — les quatre lignes reviennent.
-        self::assertCount(4, $this->references($s['entreprise'], ReversementScope::critereRecherche(
+        // « Toutes » : aucune valeur, donc aucun critère de PÉRIODE — les TROIS virements
+        // reviennent. Quatre lignes en base, trois décaissements : c'est le repli, pas
+        // un filtre resté allumé.
+        self::assertCount(3, $this->references($s['entreprise'], ReversementScope::critereRecherche(
             ReversementScope::ENTITE,
             ReversementScope::CLE_PERIODE,
             '',
         )));
     }
 
-    /** Groupé / isolé : la référence de lot n'est posée qu'à partir de deux lignes. */
-    public function testLeFiltreVirementSepareLesLotsDesIsoles(): void
+    /**
+     * LE CHIP « VIREMENT » CHOISIT UNE MAILLE, IL NE RETIRE AUCUNE LIGNE.
+     *
+     * « Groupé » montre les versements tels qu'ils ont été faits au bénéficiaire ;
+     * « Détail par échéance » les ventile par tranche. Les deux portent le même argent.
+     *
+     * Ce test attendait deux valeurs de plus — « groupe » au sens « virements couvrant
+     * plusieurs échéances » et « isole ». Elles FILTRAIENT, là où ce chip choisit une
+     * maille : deux notions dans un même chip se lisaient comme une seule, et « Groupé »
+     * pouvait cacher des versements qu'aucun autre chip ne montrait.
+     */
+    public function testLeChipVirementChoisitLaMaille(): void
     {
         $s = $this->semer();
 
+        // GROUPÉ, c'est le défaut : trois versements pour quatre échéances.
         self::assertSame(
-            ['VIR-LOT', 'VIR-LOT'],
-            $this->references($s['entreprise'], ReversementScope::critereRecherche(
-                ReversementScope::ENTITE,
-                ReversementScope::CLE_VIREMENT,
-                ReversementScope::GROUPE,
-            )),
+            ['VIR-LOT', 'VIR-SOLO', 'VIR-VIEUX'],
+            $this->references($s['entreprise'], []),
         );
+
+        // DÉTAIL : les quatre échéances de la base, aucune de moins.
         self::assertSame(
-            ['VIR-SOLO', 'VIR-VIEUX'],
+            ['VIR-LOT', 'VIR-LOT', 'VIR-SOLO', 'VIR-VIEUX'],
             $this->references($s['entreprise'], ReversementScope::critereRecherche(
                 ReversementScope::ENTITE,
                 ReversementScope::CLE_VIREMENT,
-                ReversementScope::ISOLE,
+                ReversementScope::DETAIL,
             )),
         );
     }
@@ -319,10 +350,10 @@ class ReversementRubriqueFiltresTest extends KernelTestCase
     {
         $s = $this->semer();
 
-        self::assertCount(4, $this->references(
+        self::assertCount(3, $this->references(
             $s['entreprise'],
             ReversementScope::critereBeneficiaire((int) $s['agent']->getId(), 'Alice'),
-        ), 'Les quatre versements reviennent à Alice.');
+        ), 'Les trois virements reviennent à Alice — quatre échéances repliées en trois.');
 
         self::assertSame([], $this->references(
             $s['entreprise'],
@@ -553,9 +584,9 @@ class ReversementRubriqueFiltresTest extends KernelTestCase
         }
 
         // Et sur la liste : le critère est simplement ignoré, la page reste entière.
-        self::assertCount(4, $this->references($s['entreprise'], [
+        self::assertCount(3, $this->references($s['entreprise'], [
             ReversementScope::CLE_BENEFICIAIRE => ['operator' => '=', 'value' => 'inconnu:3', 'label' => 'x'],
-        ]));
+        ]), 'Le critère est ignoré : la page reste entière — trois virements.');
     }
 
     // ===================== 6. Les deux chips s'alignent =====================

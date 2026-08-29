@@ -174,7 +174,10 @@ class OuvrirRubriqueReversementsTest extends KernelTestCase
         $cas = [
             ['justificatif', ReversementScope::SANS_PIECE, ReversementScope::CLE_JUSTIFICATIF],
             ['periode', ReversementScope::CE_MOIS, ReversementScope::CLE_PERIODE],
-            ['virement', ReversementScope::GROUPE, ReversementScope::CLE_VIREMENT],
+            // LE CHIP « VIREMENT » CHOISIT UNE MAILLE : « Groupé » en est le défaut et
+            // porte la valeur vide, donc la seule valeur NOMMÉE — celle que l'assistant
+            // peut poser — est le détail par échéance.
+            ['virement', ReversementScope::DETAIL, ReversementScope::CLE_VIREMENT],
         ];
 
         foreach ($cas as [$parametre, $valeur, $cle]) {

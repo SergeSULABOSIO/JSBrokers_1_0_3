@@ -4,6 +4,7 @@ namespace App\Service\RetroAgent;
 
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Entity\ReversementRetroAgent;
 use App\Entity\Partenaire;
 use App\Service\Retro\BeneficiaireRetro;
 use App\Service\Retro\BeneficiaireRetroFactory;
@@ -162,6 +163,102 @@ final class RapportProductionAgentBuilder
         }
 
         return $echeances;
+    }
+
+    /**
+     * LES ÉCHÉANCES D'UN VIREMENT QU'ON ROUVRE — celles qu'il règle, et celles qu'il
+     * pourrait régler.
+     *
+     * Ouvrir un virement en édition demande l'UNION de deux ensembles :
+     *
+     *   — les échéances que ce virement règle DÉJÀ, cochées, au montant enregistré ;
+     *   — celles qui restent exigibles, décochées, comme à la création.
+     *
+     * ⚠ LE PLAFOND D'UNE LIGNE DÉJÀ RÉGLÉE DOIT ÊTRE ROUVERT. Son exigible vaut zéro
+     * précisément PARCE QUE ce virement l'a payée : laisser ce zéro comme maximum aurait
+     * interdit de conserver son propre montant — le champ se serait vidé à la première
+     * validation, et le virement aurait fondu sans que rien ne l'explique. Le plafond
+     * d'une ligne du lot est donc « ce qui reste exigible + ce que CE virement y a déjà
+     * versé ».
+     *
+     * @param ReversementRetroAgent[] $membres les lignes du virement en cours d'édition
+     *
+     * @return array{lignes: array<int, array<string, mixed>>, cochees: array<int, string>}
+     *         `cochees` porte les clés « trancheId:avenantId » des lignes déjà réglées
+     */
+    public function echeancesDuVirement(
+        BeneficiaireRetro $beneficiaire,
+        Entreprise $entreprise,
+        array $membres,
+    ): array {
+        // LA CLÉ D'UNE LIGNE EST LE COUPLE (échéance, affaire) : c'est ce couple que
+        // l'écriture rapproche, et il ne peut y avoir qu'un versement de ce virement pour
+        // un même couple.
+        $verse = [];
+        $porteuses = [];
+        foreach ($membres as $membre) {
+            $cle = self::cleDeLigne($membre->getTranche()?->getId(), $membre->getAvenant()?->getId());
+            $verse[$cle] = round(($verse[$cle] ?? 0.0) + (float) $membre->getMontant(), 2);
+            $porteuses[$cle] = $membre;
+        }
+
+        $lignes = [];
+        $vues = [];
+        foreach ($this->echeancesAVerser($beneficiaire, $entreprise) as $ligne) {
+            $cle = self::cleDeLigne($ligne['trancheId'] ?? null, $ligne['avenantId'] ?? null);
+            $vues[$cle] = true;
+            if (isset($verse[$cle])) {
+                $ligne['retroAgentExigible'] = round($ligne['retroAgentExigible'] + $verse[$cle], 2);
+                $ligne['exigible'] = $ligne['retroAgentExigible'];
+                $ligne['montantVerse'] = $verse[$cle];
+            }
+            $lignes[] = $ligne;
+        }
+
+        // LES ÉCHÉANCES DU VIREMENT QUE L'EXIGIBLE NE RAMÈNE PLUS. Une échéance
+        // intégralement réglée par ce virement n'a plus rien d'exigible : elle sort de
+        // `echeancesAVerser`, et l'oublier ici l'aurait fait disparaître de son propre
+        // virement — donc supprimer à la première validation.
+        foreach ($verse as $cle => $montant) {
+            if (isset($vues[$cle])) {
+                continue;
+            }
+            $lignes[] = $this->ligneDepuisMembre($porteuses[$cle], $montant);
+        }
+
+        return ['lignes' => $lignes, 'cochees' => array_keys($verse)];
+    }
+
+    /** La clé d'une ligne : le couple (échéance, affaire), tel que l'écriture le rapproche. */
+    public static function cleDeLigne(?int $trancheId, ?int $avenantId): string
+    {
+        return ($trancheId ?? 0) . ':' . ($avenantId ?? 0);
+    }
+
+    /**
+     * Une ligne du picker reconstituée depuis un versement déjà écrit — pour les échéances
+     * que ce virement a soldées, et que l'exigible ne ramène donc plus.
+     *
+     * @return array<string, mixed>
+     */
+    private function ligneDepuisMembre(ReversementRetroAgent $membre, float $montant): array
+    {
+        $tranche = $membre->getTranche();
+        $avenant = $membre->getAvenant();
+        $piste = $tranche?->getCotation()?->getPiste() ?? $avenant?->getCotation()?->getPiste();
+
+        return [
+            'trancheId' => $tranche?->getId(),
+            'trancheNom' => $tranche?->getNom() ?? 'Toute la police',
+            'echeanceAt' => $tranche?->getEcheanceAt(),
+            'avenantId' => $avenant?->getId(),
+            'reference' => $avenant?->getReferencePolice() ?: 'Sans référence',
+            'client' => $piste?->getClient()?->getNom() ?? 'N/A',
+            'risque' => $piste?->getRisque()?->getCode() ?? 'N/A',
+            'exigible' => $montant,
+            'retroAgentExigible' => $montant,
+            'montantVerse' => $montant,
+        ];
     }
 
     /**

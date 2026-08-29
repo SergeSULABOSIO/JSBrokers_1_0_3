@@ -256,7 +256,9 @@ class RapportProductionAgentTest extends WebTestCase
 
         // La référence : proposée par le serveur, et le champ NOMMÉ — un champ texte
         // anonyme se fait remplir tout seul par le navigateur.
-        self::assertStringContainsString('value="{{ referenceParDefaut }}"', $gabarit);
+        // La valeur PROPOSÉE reste celle du serveur — le mode édition ne fait que lui
+        // préférer la référence du virement qu'on rouvre.
+        self::assertStringContainsString('edition ? edition.reference : referenceParDefaut', $gabarit);
         self::assertStringContainsString('name="reversement_reference"', $gabarit);
         self::assertStringContainsString('autocomplete="off"', $gabarit);
 
@@ -268,8 +270,13 @@ class RapportProductionAgentTest extends WebTestCase
         // Le compte retenu d'office est celui que le SERVICE propose — pas « le premier
         // de la boucle » : c'est la même règle qui sert Ket, et deux formulations de la
         // même règle finissent par désigner deux comptes différents.
-        self::assertStringContainsString("compte.id == compteProposeId", $gabarit);
-        self::assertStringContainsString("compteProposeId is null ? ' selected' : ''", $gabarit);
+        // Le compte retenu passe par une variable intermédiaire depuis que la fenêtre
+        // s'ouvre aussi en édition : c'est le compte du virement rouvert, ou celui que le
+        // service propose. La RÈGLE — « celui du service, jamais le premier de la boucle »
+        // — est inchangée, et c'est elle que ce test tient.
+        self::assertStringContainsString("edition ? edition.compteId : compteProposeId", $gabarit);
+        self::assertStringContainsString("compte.id == compte_retenu", $gabarit);
+        self::assertStringContainsString("compte_retenu is null ? ' selected' : ''", $gabarit);
         self::assertStringContainsString("'compteProposeId' =>", $controleur);
 
         // Ni le gabarit ni le contrôleur ne portent la formule de référence.

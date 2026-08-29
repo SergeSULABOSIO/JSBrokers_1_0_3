@@ -26,6 +26,11 @@ export default class extends PickerBase {
         rapportUrl: String,
         limites: Object,
         familles: Object,
+        // UN VIREMENT ROUVERT A DÉJÀ SA PREUVE. Sans ce drapeau, la garde de
+        // justificatif — juste à la création — aurait laissé le bouton inerte tant
+        // qu'on n'aurait pas redéposé le même bordereau, et corriger une date serait
+        // devenu impossible.
+        pieceDeja: Boolean,
     };
 
     connect() {
@@ -71,6 +76,62 @@ export default class extends PickerBase {
         this.recalculer();
     }
 
+    /**
+     * RETIRER — ou RÉTABLIR — UNE PIÈCE DÉJÀ DÉPOSÉE.
+     *
+     * Le retrait est DIFFÉRÉ : la pièce est marquée, et c'est l'enregistrement qui
+     * tranche. Détruire au clic aurait effacé un bordereau même si l'utilisateur
+     * annulait ensuite la correction — sur la preuve d'un décaissement, ce n'est pas
+     * une nuance.
+     */
+    basculerPiece(event) {
+        event.preventDefault();
+        const ligne = event.currentTarget.closest('[data-piece-id]');
+        if (!ligne) return;
+
+        const retiree = ligne.classList.toggle('is-refuse');
+        const libelle = ligne.querySelector('[data-libelle]');
+        if (libelle) libelle.textContent = retiree ? 'Rétablir' : 'Retirer';
+
+        // LE LECTEUR D'ÉCRAN ENTEND LE MÊME CHANGEMENT QUE L'ŒIL. Un `aria-label` figé
+        // sur « Retirer » aurait annoncé l'inverse de ce que le bouton fait désormais.
+        const nom = ligne.querySelector('[data-libelle]')?.closest('button');
+        const fichier = ligne.querySelector('.jsb-pieces-deja__nom')?.textContent?.trim() ?? '';
+        if (nom) {
+            nom.setAttribute(
+                'aria-label',
+                retiree ? `Rétablir ${fichier} sur ce virement` : `Retirer ${fichier} de ce virement`,
+            );
+        }
+
+        this.recalculer();
+    }
+
+    /**
+     * Les pièces marquées pour le retrait — ce que l'enregistrement supprimera.
+     *
+     * @returns {number[]}
+     * @private
+     */
+    _piecesRetirees() {
+        return Array.from(this.element.querySelectorAll('[data-piece-id].is-refuse'))
+            .map((li) => parseInt(li.dataset.pieceId, 10))
+            .filter((id) => !Number.isNaN(id));
+    }
+
+    /**
+     * Reste-t-il une preuve à ce virement ? Les pièces déjà là, MOINS celles qu'on
+     * vient de marquer. Retirer la dernière sans en déposer une autre doit refermer
+     * la garde — sinon on enregistrerait un décaissement nu.
+     *
+     * @private
+     */
+    _preuveRestante() {
+        const total = this.element.querySelectorAll('[data-piece-id]').length;
+
+        return total > 0 && this._piecesRetirees().length < total;
+    }
+
     /** La case d'en-tête : coche ou décoche tout, puis recalcule une seule fois. */
     toutCocher(event) {
         const cocher = event.target.checked;
@@ -88,8 +149,9 @@ export default class extends PickerBase {
         const total = lignes.reduce((somme, l) => somme + l.montant, 0);
 
         // PAS DE VERSEMENT SANS PREUVE : la même règle que le serveur, appliquée ici
-        // pour ne pas laisser cliquer sur un bouton qui refusera.
-        const sansPiece = this.selection ? this.selection.estVide() : false;
+        // pour ne pas laisser cliquer sur un bouton qui refusera. Un virement rouvert,
+        // lui, l'a déjà — le serveur fait la même lecture.
+        const sansPiece = this._preuveRestante() ? false : (this.selection ? this.selection.estVide() : false);
 
         if (this.hasExecuterTarget) {
             this.executerTarget.disabled = this.enCours || lignes.length === 0 || total <= 0 || sansPiece;
@@ -121,7 +183,7 @@ export default class extends PickerBase {
             this._showError('Cochez au moins une affaire à régler.');
             return;
         }
-        if (this.selection?.estVide()) {
+        if (!this._preuveRestante() && this.selection?.estVide()) {
             this._showError(
                 'Un reversement ne s\'enregistre pas sans justificatif : déposez le bordereau '
                 + 'de virement (ou le reçu signé) avant de valider.',
@@ -147,6 +209,10 @@ export default class extends PickerBase {
                     // encore. On ANNONCE donc qu'elle suit, et le serveur refuse le
                     // versement si elle n'est pas annoncée — la garde reste côté serveur.
                     avecPiece: !this.selection?.estVide(),
+                    // CE QUI DOIT DISPARAÎTRE. Le serveur supprime ces pièces AVANT de
+                    // vérifier qu'il en reste une : retirer la dernière sans en déposer
+                    // une autre doit être refusé, pas passé sous silence.
+                    piecesRetirees: this._piecesRetirees(),
                 }),
             });
             const result = await response.json();

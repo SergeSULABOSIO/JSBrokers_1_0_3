@@ -270,6 +270,20 @@ export default class extends Controller {
                 });
                 break;
             case 'ui:toolbar.edit-request':
+                // UNE ENTITÉ PEUT S'ÉDITER AILLEURS QUE DANS LE DIALOGUE GÉNÉRIQUE.
+                //
+                // Un reversement de rétrocommission n'est pas une ligne qu'on corrige champ à
+                // champ : c'est un VIREMENT, qui règle plusieurs échéances d'un coup et dont
+                // la pièce justificative vaut pour tout le lot. Le corriger dans le dialogue
+                // générique aurait montré une échéance sur six et laissé écrire des lignes que
+                // le reste de l'application ne sait pas relire.
+                //
+                // L'aiguillage est DÉCLARATIF, comme `attribute_actions` : le canevas de
+                // formulaire annonce l'événement et l'URL, et rien ne change pour les
+                // quarante autres entités, qui n'en déclarent pas.
+                if (this._ouvrirEditionPersonnalisee(payload)) {
+                    break;
+                }
                 // LOGIQUE DÉPLACÉE : Le cerveau gère la sélection unique et prépare le dialogue.
                 this.broadcast('app:loading.start');
                 this._publishSelectionStatus(`Modification de l'élément...`);
@@ -358,7 +372,16 @@ export default class extends Controller {
                     },
                     title: 'Confirmation de suppression',
                     // NOUVEAU : Message de base + détails des éléments pour plus de clarté.
-                    body: `Vous êtes sur le point de supprimer définitivement ${payload.selection.length} élément(s).`,
+                    //
+                    // UNE ENTITÉ PEUT AVERTIR DE CE QUE SA SUPPRESSION ENTRAÎNE. Une ligne de
+                    // rétros intermédiaires représente un VIREMENT entier : « 1 élément » y
+                    // serait un chiffre honnête et une information fausse. Le canevas déclare
+                    // la note, le cerveau la rend — rien ne change pour les entités qui n'en
+                    // déclarent pas.
+                    body: `Vous êtes sur le point de supprimer définitivement ${payload.selection.length} élément(s).`
+                        + (payload.formCanvas?.parametres?.suppression_note
+                            ? `\n${payload.formCanvas.parametres.suppression_note}`
+                            : ''),
                     itemDescriptions: payload.selection.map(s => s.name || `Élément #${s.id}`)
                 };
                 this._requestDeleteConfirmation(deletePayload);
@@ -1468,6 +1491,46 @@ export default class extends Controller {
         } finally {
             this.broadcast('app:loading.stop');
         }
+    }
+
+    /**
+     * L'ÉDITION PERSONNALISÉE D'UNE ENTITÉ, si son canevas en déclare une.
+     *
+     * Le canevas de formulaire annonce `parametres.edition_personnalisee = {event, url}` ;
+     * l'`%id%` de l'URL est remplacé par celui de la ligne sélectionnée, puis l'événement
+     * est émis comme n'importe quel autre. On ne branche donc aucun chemin d'ouverture de
+     * plus : celui du picker de reversement existe déjà et sert les deux cas.
+     *
+     * FAIL-CLOSED : sans déclaration, sans sélection ou sans identifiant, la méthode rend
+     * `false` et le dialogue générique reprend la main. Une entité ne perd jamais son
+     * édition parce que sa déclaration est incomplète.
+     *
+     * @param {object} payload
+     * @returns {boolean} true si l'édition a été détournée
+     * @private
+     */
+    _ouvrirEditionPersonnalisee(payload) {
+        const declaration = payload?.formCanvas?.parametres?.edition_personnalisee;
+        if (!declaration?.event || !declaration?.url) return false;
+
+        const id = payload?.selection?.[0]?.id;
+        if (!id) return false;
+
+        // ON REPASSE PAR LE RÉPARTITEUR, avec la forme qu'il valide — {type, source,
+        // payload, timestamp}. Appeler le gestionnaire en direct aurait lié cet aiguillage
+        // à la liste des événements qu'il connaît ; lui donner un objet incomplet l'aurait
+        // fait refuser en silence (« Événement invalide reçu »), et « Éditer » n'aurait
+        // simplement rien fait.
+        this.handleEvent({
+            detail: {
+                type: declaration.event,
+                source: this.nomControleur,
+                payload: { url: String(declaration.url).replace('%id%', id) },
+                timestamp: Date.now(),
+            },
+        });
+
+        return true;
     }
 
     /**

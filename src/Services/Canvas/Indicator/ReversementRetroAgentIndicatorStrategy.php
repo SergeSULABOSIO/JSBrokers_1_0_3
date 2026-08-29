@@ -35,8 +35,12 @@ class ReversementRetroAgentIndicatorStrategy implements IndicatorCalculationStra
             // l'entité, sinon chaque surface refait le XOR et l'une d'elles n'en traite
             // qu'une moitié — ici, un partenaire se serait affiché « N/A ».
             'beneficiaireNom' => $entity->beneficiaireNom(),
-            'policeReference' => $entity->getAvenant()?->getReferencePolice()
-                ?: ($entity->getAvenant() !== null ? '#' . $entity->getAvenant()->getId() : 'N/A'),
+            // LA POLICE ET L'ÉCHÉANCE NE PARLENT QUE D'UNE LIGNE. Sur une vue repliée, où
+            // une ligne en couvre six, nommer celle du porteur aurait désigné une affaire
+            // sur six comme si c'était la seule réglée. Elles se taisent alors, et le
+            // nombre d'échéances prend leur place.
+            'policeReference' => $this->lots->litLesVirements() ? null : ($entity->getAvenant()?->getReferencePolice()
+                ?: ($entity->getAvenant() !== null ? '#' . $entity->getAvenant()->getId() : 'N/A')),
             // L'ÉCHÉANCE RÉGLÉE — la maille du versement, et donc l'information qui
             // distingue deux lignes d'une même police. Sans elle, un virement sur la 1re
             // échéance et un autre sur la 2e se lisaient à l'identique.
@@ -44,7 +48,9 @@ class ReversementRetroAgentIndicatorStrategy implements IndicatorCalculationStra
             // « Toute la police » plutôt que rien pour les lignes ANTÉRIEURES au passage à
             // cette maille : elles n'ont pas de tranche, et un blanc aurait laissé croire à
             // une donnée manquante alors que c'est un versement d'affaire entière.
-            'echeanceLibelle' => $entity->getTranche()?->getNom() ?: 'Toute la police',
+            'echeanceLibelle' => $this->lots->litLesVirements()
+                ? null
+                : ($entity->getTranche()?->getNom() ?: 'Toute la police'),
             // « Caisse (espèces) » plutôt que rien : un versement sans compte n'est pas un
             // versement sans provenance, c'est une sortie de caisse. Le même libellé qu'au
             // picker, pour que la ligne et le formulaire disent la même chose.
@@ -62,6 +68,22 @@ class ReversementRetroAgentIndicatorStrategy implements IndicatorCalculationStra
             // liraient comme trois virements distincts.
             'virementGroupe' => $entity->getLotReference() !== null && trim($entity->getLotReference()) !== ''
                 ? 'Virement groupé ' . $entity->getLotReference()
+                : null,
+            // ── CE QUE CETTE LIGNE REPRÉSENTE, EN ARGENT ─────────────────────────────
+            //
+            // Repliée, elle vaut son VIREMENT entier ; dépliée, elle ne vaut qu'elle-même.
+            // La somme des lignes affichées rend donc le décaissement réel dans les deux
+            // modes — et c'est exactement ce que la barre des totaux additionne. Rendre
+            // toujours le total du virement l'aurait TRIPLÉ sous « Détail par échéance » ;
+            // rendre toujours celui de la ligne l'aurait fait chuter au sixième sous la
+            // vue repliée. Ni l'un ni l'autre n'aurait produit d'erreur.
+            'montantAffiche' => $this->lots->montantAffiche($entity),
+            // Combien d'échéances ce virement règle — sur une vue repliée seulement, où
+            // c'est l'information qui remplace la police et l'échéance du seul porteur.
+            'echeancesDuVirement' => $this->lots->litLesVirements()
+                ? (($n = $this->lots->nombreEcheances($entity)) > 1
+                    ? $n . ' échéances réglées'
+                    : '1 échéance réglée')
                 : null,
         ];
     }
