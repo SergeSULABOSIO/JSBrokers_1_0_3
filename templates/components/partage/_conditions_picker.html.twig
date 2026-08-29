@@ -27,7 +27,7 @@
      data-partage-conditions-picker-submit-url-value="{{ urlRattacher }}"
      data-partage-conditions-picker-ids-value="{{ ids|join(',') }}"
      data-picker-overlay>
-    <div class="jsb-picker-modal"
+    <div class="jsb-picker-modal jsb-picker-modal--large"
          role="dialog"
          aria-modal="true"
          aria-labelledby="jsb-partage-picker-title"
@@ -148,9 +148,9 @@
                         <tr>
                             <th scope="col">Condition</th>
                             <th scope="col">Bénéficiaire</th>
-                            <th scope="col" class="text-end">Taux</th>
+                            <th scope="col" class="jsb-picker-num">Taux</th>
                             <th scope="col">Affaires couvertes<br><small class="text-muted">en tout</small></th>
-                            <th scope="col" class="text-end">Action</th>
+                            <th scope="col" class="text-end" style="width:15rem;">Action</th>
                         </tr>
                     </thead>
                     <tbody data-picker-tbody>
@@ -196,7 +196,7 @@
                                     {% endif %}
                                 </td>
                                 {# Les taux sont en POINTS dans tout le logiciel : 15 se lit 15 %. #}
-                                <td class="text-end">{{ c.taux is not null ? c.taux|number_format(2, ',', ' ') ~ ' %' : '—' }}</td>
+                                <td class="jsb-picker-num">{{ c.taux is not null ? c.taux|number_format(2, ',', ' ') ~ ' %' : '—' }}</td>
                                 <td>{{ c.pistesAffectees|length }} affaire(s)</td>
                                 <td class="text-end">
                                     {# LA DESTINATION VOYAGE AVEC LE BOUTON : le contrôleur poste

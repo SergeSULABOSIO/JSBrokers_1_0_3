@@ -35,7 +35,7 @@ class PartenaireAutocompleteCanvasProvider
                     <span class="jsb-context-separator">|</span>
                     <span>Part: <strong>%s%%</strong></span>
                 </div>
-                <div class="jsb-autocomplete-indicators" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="jsb-autocomplete-indicators">
                     <div><div><span class="jsb-indicator-label">Com. Pure</span><span class="jsb-indicator-value">%s</span></div></div>
                     <div><div><span class="jsb-indicator-label">Rétro. Dûe</span><span class="jsb-indicator-value">%s</span></div></div>
                     <div><div><span class="jsb-indicator-label">Rétro. Payée</span><span class="jsb-indicator-value text-success">%s</span></div></div>

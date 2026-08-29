@@ -2618,6 +2618,18 @@ thead.sticky-header {
     padding: 0;
     overflow: hidden;
 }
+/* La colonne devient une pile, et sa DERNIÈRE carte occupe ce qui reste : les cartes
+   d'une même rangée se terminent alors sur la même ligne. `d-none` reste prioritaire
+   (l'utilitaire de Bootstrap est en !important), donc une rangée masquée le demeure. */
+.form-column form .row > [class^="col-"],
+.form-column form .row > [class*=" col-"] {
+    display: flex;
+    flex-direction: column;
+}
+.form-column form .row > [class^="col-"] > .dlg-field-card:last-of-type,
+.form-column form .row > [class*=" col-"] > .dlg-field-card:last-of-type {
+    flex: 1 1 auto;
+}
 .form-column .dlg-field-card-head {
     display: flex;
     align-items: center;
@@ -3735,10 +3747,17 @@ tr:hover .list-row-actions-container,
 /* LIGNE 3 : GRILLE DE TUILES KPI */
 .jsb-autocomplete-indicators {
     display: grid;
-    grid-template-columns: repeat(5, 1fr); /* Surchargé en ligne selon l'entité */
+    /* Voir le commentaire ci-dessus : la largeur disponible décide du nombre de
+       colonnes, et non plus un compte écrit en dur par chaque provider. */
+    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
     gap: 8px;
     margin-top: 2px;
 }
+/* Un montant long ne pousse pas la tuile hors de son cadre : il se coupe à la ligne
+   plutôt que d'élargir la piste (`min-width: auto` est la valeur par défaut d'un
+   élément de grille, et c'est elle qui laissait déborder). */
+.jsb-autocomplete-indicators > div { min-width: 0; }
+.jsb-indicator-value { overflow-wrap: anywhere; }
 
 /* Chaque colonne = une tuile KPI autonome (fini la bande grise unique). */
 .jsb-autocomplete-indicators > div {
@@ -4950,6 +4969,18 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     overflow: hidden;
     outline: none;
 }
+/* UNE BOÎTE PLUS GRANDE POUR CELLES QUI FONT SAISIR, PAS SEULEMENT CHOISIR.
+   680 px sur 620 conviennent à une liste qu'on parcourt pour y cocher une ligne. Ils ne
+   conviennent plus dès que la boîte empile un tableau à quatre colonnes, trois champs et
+   une zone de dépôt : les en-têtes de colonnes se coupaient en deux, chaque carte
+   n'exposait qu'une bande de sa hauteur, et la fenêtre se lisait au travers d'une
+   meurtrière alors que l'écran était vide autour (Bastien & Scapin > Charge de travail).
+   Le modificateur reste GÉNÉRIQUE : tout picker de saisie en aura besoin. */
+.jsb-picker-modal--large {
+    max-width: 1040px;
+    height: 88vh;
+    max-height: 880px;
+}
 /* Barre de progression (feedback à chaque ajout/retrait) : rail discret sous l'entête,
    segment cobalt animé quand .is-active. Réserve toujours sa hauteur (pas de saut). */
 .jsb-picker-progress {
@@ -5079,14 +5110,28 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     color: #6c757d;
     pointer-events: none;
 }
-.jsb-picker-search .form-control {
-    padding-left: 2.5rem;
-    background-color: #f8f9fa !important;
-    border: 1px solid #dee2e6;
+.jsb-picker-search .form-control { padding-left: 2.5rem; }
+/* LE CHAMP DE PICKER, DÉCLARÉ UNE FOIS POUR TOUTES SES FAMILLES : la recherche, les
+   champs à icône incrustée, et ceux posés dans une cellule de tableau. */
+.jsb-picker-search .form-control,
+.jsb-picker-field .form-control,
+.jsb-picker-field .form-select,
+.jsb-picker-table .form-control {
+    background-color: var(--bg-light, #f8f9fa) !important;
+    border: 1px solid var(--border-light, #dee2e6);
     border-radius: 8px;
     font-weight: normal;
 }
-.jsb-picker-search .form-control:focus {
+/* Le survol reprend le gris de la règle globale : un champ de picker doit réagir
+   comme n'importe quel champ de l'application. */
+.jsb-picker-search .form-control:hover,
+.jsb-picker-field .form-control:hover,
+.jsb-picker-field .form-select:hover,
+.jsb-picker-table .form-control:hover {
+    border-color: var(--text-muted, #6c757d);
+}
+.jsb-picker-search .form-control:focus,
+.jsb-picker-table .form-control:focus {
     border-color: #0047AB;
     box-shadow: 0 0 0 .2rem rgba(0, 71, 171, 0.15) !important;
 }
@@ -5095,6 +5140,27 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
    `.cs-field`) : l'icône est posée à l'intérieur du champ, à gauche, et l'input
    reçoit un retrait équivalent. Complète `.jsb-picker-search`, qui ne couvre que
    le champ de recherche d'un picker. */
+/* ── LES CHAMPS D'UNE CARTE DE PICKER, EN GRILLE ──────────────────────────────
+   Ils s'empilaient un par ligne. C'était juste tant que la boîte faisait 680 px :
+   côte à côte, chacun sous son propre texte d'aide, ils formaient trois colonnes de
+   prose à lire en travers. Depuis que la boîte de saisie s'élargit, l'empilement
+   laisse au contraire la moitié droite vide et repousse le reste du formulaire hors
+   de l'écran — ce qu'on gagne à ne pas faire lire de travers, on le perd à faire
+   défiler (Bastien & Scapin > Charge de travail).
+
+   DEUX COLONNES, PAS TROIS : deux textes d'aide côte à côte se lisent encore ; au
+   troisième, on relit. Et un champ qui a besoin de toute la largeur le déclare
+   (`--pleine`) plutôt que de se voir comprimé dans une demi-colonne. */
+.jsb-picker-champs {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem 1.5rem;
+}
+@media (min-width: 720px) {
+    .jsb-picker-champs { grid-template-columns: 1fr 1fr; }
+}
+.jsb-picker-champs--pleine { grid-column: 1 / -1; }
+
 .jsb-picker-field {
     position: relative;
 }
@@ -5221,6 +5287,18 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     border-bottom: 1px solid #dee2e6;
 }
 .jsb-picker-table thead th:last-child { text-align: right; }
+/* L'EN-TÊTE S'ALIGNE SUR SA COLONNE, PAS SUR LE HAUT DE LA CELLULE. Une colonne de
+   chiffres alignés à droite sous un libellé aligné à gauche se lit comme deux colonnes
+   superposées ; et un libellé qui se coupe en deux lignes flottait au-dessus de la case
+   à cocher voisine au lieu de lui faire face. */
+.jsb-picker-table thead th { vertical-align: middle; }
+/* Les colonnes de CHIFFRES : même chasse pour tous les caractères, donc des virgules
+   décimales qui tombent les unes sous les autres, et un libellé qui ne se coupe pas. */
+.jsb-picker-num {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
 .jsb-picker-table tbody td {
     vertical-align: middle;
     /* Des lignes qui respirent : à .55rem, le nom, le code et le bouton se touchaient,
@@ -5234,8 +5312,52 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 .jsb-picker-table td:first-child { padding-left: var(--jsb-picker-gouttiere); }
 .jsb-picker-table th:last-child,
 .jsb-picker-table td:last-child { padding-right: var(--jsb-picker-gouttiere); }
+.jsb-picker-table tbody tr { transition: background-color .12s ease, box-shadow .12s ease; }
 .jsb-picker-table tbody tr:hover { background: #f8f9fa; }
 .jsb-picker-table tbody tr:last-child td { border-bottom: none; }
+/* ── UNE LIGNE COCHÉE SE VOIT, ET UNE LIGNE CLIQUABLE LE DIT ──────────────────
+   La case à cocher seule ne suffit pas : sur cinq lignes remplies de chiffres, il faut
+   la chercher pour savoir ce qu'on est en train de régler. La ligne retenue prend donc
+   le fond cobalt pâle de la charte et un filet cobalt à gauche — l'information passe par
+   DEUX canaux, jamais par la couleur seule (WCAG 1.4.1 : la case cochée reste le
+   premier). */
+.jsb-picker-table tbody tr:has(input[type="checkbox"]:checked) {
+    background: var(--bg-cobalt-subtle, #e8f0fb);
+    box-shadow: inset 3px 0 0 var(--cobalt, #0047AB);
+}
+/* Le survol reste perceptible SUR une ligne déjà cochée : sans cette reprise, la
+   règle ci-dessus l'emportait et la ligne cessait de répondre à la souris. */
+.jsb-picker-table tbody tr:has(input[type="checkbox"]:checked):hover {
+    background: #dce9f9;
+}
+/* Le clavier voit ce que la souris survole. */
+.jsb-picker-table tbody tr:focus-within {
+    outline: 2px solid var(--cobalt, #0047AB);
+    outline-offset: -2px;
+}
+/* CURSEUR DE MAIN SEULEMENT LÀ OÙ LA LIGNE EST VRAIMENT CLIQUABLE. Le modificateur est
+   posé par le gabarit dont le contrôleur écoute le clic : promettre le geste sans
+   l'implémenter serait pire que de ne rien promettre. */
+.jsb-picker-table--lignes-cliquables tbody tr { cursor: pointer; }
+/* LA CASE EST LE TÉMOIN D'ÉTAT : elle doit se voir avant qu'on la cherche. À la taille
+   de Bootstrap (1 rem, bordure très pâle) elle se perdait dans une ligne de chiffres.
+   Cochée, elle prend le cobalt de la marque — et non le bleu Bootstrap, qui n'est pas
+   la couleur primaire de JS Brokers. */
+.jsb-picker-table .form-check-input {
+    width: 1.15rem;
+    height: 1.15rem;
+    margin-top: 0;
+    border-color: var(--text-label, #adb5bd);
+    cursor: pointer;
+}
+.jsb-picker-table .form-check-input:checked {
+    background-color: var(--cobalt, #0047AB);
+    border-color: var(--cobalt, #0047AB);
+}
+.jsb-picker-table .form-check-input:focus {
+    border-color: var(--cobalt, #0047AB);
+    box-shadow: 0 0 0 .2rem var(--cobalt-focus-ring, rgba(0, 71, 171, 0.35));
+}
 .jsb-picker-client-nom { display: block; font-weight: 600; color: #212529; }
 .jsb-picker-client-mail { display: block; font-size: .78rem; color: #6c757d; }
 .jsb-picker-btn { display: inline-flex; align-items: center; gap: .3rem; min-height: 32px; white-space: nowrap; }
@@ -5306,6 +5428,12 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
    supprime déjà — et n'affichaient aucune carte, quand la section voisine, elle,
    s'encadrait bien. Un cas où l'utilitaire et le composant disent le contraire. */
 .jsb-picker-carte {
+    /* LA GOUTTIÈRE DU SÉLECTEUR N'A PLUS COURS ICI. Elle sert à aligner un tableau
+       PLEINE LARGEUR sur l'entête et le pied de la boîte ; dans une carte, c'est la
+       carte qui donne le retrait, et l'ajouter une seconde fois repousserait la
+       première colonne d'un pouce vers l'intérieur. On la redéfinit plutôt que
+       d'écrire une exception par sélecteur : la variable est faite pour cela. */
+    --jsb-picker-gouttiere: .35rem;
     margin: 0 0 .85rem;
     padding: .85rem 1rem 1rem;
     background-color: var(--bg-white, #ffffff);

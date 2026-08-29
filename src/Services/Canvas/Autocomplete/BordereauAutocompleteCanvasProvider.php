@@ -63,7 +63,7 @@ class BordereauAutocompleteCanvasProvider
                     <span class="jsb-context-separator">|</span>
                     <span>Période: <strong>%s - %s</strong></span>
                 </div>
-                <div class="jsb-autocomplete-indicators" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="jsb-autocomplete-indicators">
                     <div><div><span class="jsb-indicator-label">Montant TTC</span><span class="jsb-indicator-value">%s %s</span></div></div>
                     <div><div><span class="jsb-indicator-label">Encaissé</span><span class="jsb-indicator-value">%s %s</span></div></div>
                     <div><div><span class="jsb-indicator-label">Solde</span><span class="jsb-indicator-value %s">%s %s</span></div></div>

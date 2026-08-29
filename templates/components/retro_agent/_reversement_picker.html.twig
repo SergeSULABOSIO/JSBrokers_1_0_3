@@ -25,7 +25,7 @@
      data-reversement-retro-picker-limites-value="{{ limites|json_encode|e('html_attr') }}"
      data-reversement-retro-picker-familles-value="{{ famillesParExtension|json_encode|e('html_attr') }}"
      data-picker-overlay>
-    <div class="jsb-picker-modal"
+    <div class="jsb-picker-modal jsb-picker-modal--large"
          role="dialog"
          aria-modal="true"
          aria-labelledby="jsb-rra-picker-title"
@@ -71,7 +71,7 @@
         <div class="jsb-picker-listwrap jsb-picker-cartes">
             {% if lignes is empty %}
                 <p class="jsb-picker-empty text-muted" role="status">
-                    Rien à reverser pour l'instant : aucune affaire de cet agent n'a de solde
+                    Rien à reverser pour l'instant : aucune affaire de ce {{ beneficiaireEstAgent ? 'agent' : 'partenaire' }} n'a de solde
                     exigible. Une rétrocommission ne devient réclamable qu'une fois la
                     commission de courtage encaissée par le cabinet.
                 </p>
@@ -79,8 +79,9 @@
                 <fieldset class="jsb-picker-carte">
                     <legend class="fs-6" style="color:#0d2440;">Affaires à régler</legend>
                     <div class="table-responsive">
-                        <table class="table table-sm align-middle mb-0" aria-label="Affaires avec un solde exigible">
-                            <thead class="table-light">
+                        <table class="jsb-picker-table jsb-picker-table--lignes-cliquables"
+                               aria-label="Affaires avec un solde exigible">
+                            <thead>
                                 <tr>
                                     <th scope="col" style="width:44px;">
                                         <input class="form-check-input" type="checkbox"
@@ -88,13 +89,18 @@
                                                aria-label="Tout cocher">
                                     </th>
                                     <th scope="col">Client / Police</th>
-                                    <th scope="col" class="text-end">Solde exigible</th>
-                                    <th scope="col" class="text-end" style="width:160px;">Montant à verser</th>
+                                    <th scope="col" class="jsb-picker-num">
+                                        Solde exigible{% if monnaie %} <span class="text-muted">({{ monnaie }})</span>{% endif %}
+                                    </th>
+                                    <th scope="col" class="jsb-picker-num" style="width:11rem;">
+                                        Montant à verser{% if monnaie %} <span class="text-muted">({{ monnaie }})</span>{% endif %}
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for l in lignes %}
                                     <tr data-reversement-retro-picker-target="ligne"
+                                        data-action="click->reversement-retro-picker#basculerLigne"
                                         {# L'ÉCHÉANCE dit QUAND, l'affaire dit SUR QUOI. #}
                                         data-tranche-id="{{ l.trancheId }}"
                                         data-avenant-id="{{ l.avenantId }}">
@@ -109,15 +115,15 @@
                                             <div class="text-muted small">{{ l.reference }} · {{ l.risque }}</div>
                                             <div class="text-muted small">{{ l.trancheNom }}{% if l.echeanceAt %} · échéance {{ l.echeanceAt|date('d/m/Y') }}{% endif %}</div>
                                         </td>
-                                        <td class="text-end" style="font-variant-numeric: tabular-nums;">
-                                            {{ l.retroAgentExigible|number_format(2, ',', ' ') }} {{ monnaie }}
+                                        <td class="jsb-picker-num">
+                                            {{ l.retroAgentExigible|number_format(2, ',', ' ') }}
                                         </td>
                                         <td>
                                             {# Pré-rempli au solde exigible : le geste courant est de
                                                solder. Un versement partiel reste possible en corrigeant. #}
                                             <input type="number" class="form-control form-control-sm text-end"
                                                    step="0.01" min="0" max="{{ l.retroAgentExigible }}"
-                                                   value="{{ l.retroAgentExigible }}"
+                                                   value="{{ l.retroAgentExigible|number_format(2, '.', '') }}"
                                                    data-reversement-retro-picker-target="montant"
                                                    data-action="input->reversement-retro-picker#recalculer"
                                                    aria-label="Montant versé pour {{ l.reference }}">
@@ -138,9 +144,11 @@
                        fenêtre ne dit rien de ce qu'on attend de lui ; une date tient en
                        quinze caractères et doit se voir comme telle.
 
-                       Ils s'empilent, un par ligne : côte à côte, chacun sous son propre
-                       texte d'aide, ils faisaient trois colonnes de prose à lire en travers. #}
-                    <div class="d-flex flex-column gap-3">
+                       DEUX PAR LIGNE, et le compte sur toute la largeur. Empilés, ils
+                       laissaient la moitié droite de la boîte vide et repoussaient la pièce
+                       justificative hors de l'écran ; trois par ligne auraient remis trois
+                       textes d'aide à lire en travers, ce que l'empilement corrigeait. #}
+                    <div class="jsb-picker-champs">
                         <div>
                             <label for="rra-date" class="form-label fw-semibold mb-0" style="color:#0d2440;">Date</label>
                             <span class="text-muted small d-block mb-1" id="rra-date-aide">
@@ -176,7 +184,7 @@
                                        aria-describedby="rra-ref-aide">
                             </div>
                         </div>
-                        <div>
+                        <div class="jsb-picker-champs--pleine">
                             <label for="rra-compte" class="form-label fw-semibold mb-0" style="color:#0d2440;">Compte débité</label>
                             <span class="text-muted small d-block mb-1" id="rra-compte-aide">
                                 Le premier compte est retenu d'office. Choisissez la caisse pour un
@@ -239,7 +247,8 @@
 
         <footer class="jsb-picker-foot">
             <span class="jsb-picker-hint text-muted small">
-                L'écriture comptable (charges de personnel) est générée automatiquement.
+                L'écriture comptable ({{ beneficiaireEstAgent ? 'charges de personnel' : 'rétrocommissions' }})
+                est générée automatiquement.
             </span>
             <span class="d-inline-flex gap-2">
                 <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>

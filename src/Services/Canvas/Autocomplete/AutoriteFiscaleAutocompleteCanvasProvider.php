@@ -35,7 +35,7 @@ class AutoriteFiscaleAutocompleteCanvasProvider
                 <div class="jsb-autocomplete-context">
                     <span>Taxe associée: <strong>%s (%s%% IARD / %s%% VIE)</strong></span>
                 </div>
-                <div class="jsb-autocomplete-indicators" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="jsb-autocomplete-indicators">
                     <div><div><span class="jsb-indicator-label">Taxe Dûe</span><span class="jsb-indicator-value">%s</span></div></div>
                     <div><div><span class="jsb-indicator-label">Taxe Payée</span><span class="jsb-indicator-value text-success">%s</span></div></div>
                     <div><div><span class="jsb-indicator-label">Solde</span><span class="jsb-indicator-value text-danger">%s</span></div></div>

@@ -41,7 +41,7 @@ class CompteBancaireAutocompleteCanvasProvider
                     <span class="jsb-context-separator">|</span>
                     <span>SWIFT: <strong>%s</strong></span>
                 </div>
-                <div class="jsb-autocomplete-indicators" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="jsb-autocomplete-indicators">
                     <div><div><span class="jsb-indicator-label">Total Entrées</span><span class="jsb-indicator-value text-success">%s</span></div></div>
                     <div><div><span class="jsb-indicator-label">Total Sorties</span><span class="jsb-indicator-value text-danger">%s</span></div></div>
                     <div><div><span class="jsb-indicator-label">Solde Actuel</span><span class="jsb-indicator-value text-cobalt">%s</span></div></div>
