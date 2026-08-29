@@ -47,6 +47,30 @@ export default class extends PickerBase {
         this.recalculer();
     }
 
+    /**
+     * TOUTE LA LIGNE COCHE.
+     *
+     * Une case à cocher fait seize pixels de côté ; la ligne qui la porte en fait
+     * soixante, et c'est elle que l'œil désigne. Viser la case était un geste de
+     * précision sans contrepartie — d'autant que la ligne entière est déjà l'unité de
+     * décision (une échéance, un montant).
+     *
+     * ON NE TOUCHE À RIEN DE CE QUI EST DÉJÀ INTERACTIF : le champ du montant, la case
+     * elle-même, un libellé ou un bouton gardent leur comportement propre. Sans cette
+     * garde, cliquer dans le champ pour corriger un montant décochait la ligne qu'on
+     * était précisément en train de régler.
+     */
+    basculerLigne(event) {
+        if (event.target.closest('input, select, textarea, label, button, a')) return;
+
+        const ligne = event.currentTarget;
+        const coche = ligne.querySelector('input[type="checkbox"]');
+        if (!coche) return;
+
+        coche.checked = !coche.checked;
+        this.recalculer();
+    }
+
     /** La case d'en-tête : coche ou décoche tout, puis recalcule une seule fois. */
     toutCocher(event) {
         const cocher = event.target.checked;

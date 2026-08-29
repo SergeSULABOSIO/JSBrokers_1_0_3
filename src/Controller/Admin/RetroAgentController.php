@@ -220,6 +220,10 @@ class RetroAgentController extends AbstractController
         // aucun élément — « Contenu du picker vide » — et le bouton ne faisait rien.
         return $this->render('components/retro_agent/_reversement_picker.html.twig', [
             'beneficiaireNom' => $beneficiaire->nom(),
+            // La FAMILLE : elle décide du vocabulaire de la boîte, et surtout du compte
+            // SYSCOHADA qu'elle annonce — 6611 (charges de personnel) pour un agent,
+            // 632 (rétrocommissions) pour un intermédiaire externe.
+            'beneficiaireEstAgent' => $beneficiaire->type() === BeneficiaireRetro::TYPE_AGENT,
             // LES ÉCHÉANCES, et non les affaires : la prime et la commission se paient par
             // tranche, donc c'est une échéance qu'on règle. Proposer l'affaire obligerait
             // ensuite à répartir le versement, règle que personne n'a écrite.

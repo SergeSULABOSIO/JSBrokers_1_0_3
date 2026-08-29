@@ -20,6 +20,7 @@ class ReversementPickerRenduTest extends KernelTestCase
     private function rendre(
         array $comptes = [['id' => 7, 'intitule' => 'AIB RDC', 'banque' => 'Equity BCDC']],
         string $beneficiaireNom = 'Administrateur (Serge SULA)',
+        bool $estAgent = true,
     ): string {
         self::bootKernel();
 
@@ -31,6 +32,9 @@ class ReversementPickerRenduTest extends KernelTestCase
             // depuis l'unification : lui passer un `agent` l'aurait rendu incapable
             // d'annoncer un partenaire, et le gabarit aurait dû tester la famille.
             'beneficiaireNom' => $beneficiaireNom,
+            // LA FAMILLE, en plus du nom. Le nom seul ne suffit pas : la boîte annonce
+            // le COMPTE SYSCOHADA qui sera mouvementé, et il n'est pas le même.
+            'beneficiaireEstAgent' => $estAgent,
             'monnaie' => 'USD',
             'comptes' => $comptes,
             'submitUrl' => '/admin/retro-agent/1/reversement',
@@ -70,9 +74,26 @@ class ReversementPickerRenduTest extends KernelTestCase
      */
     public function testLeMemePickerSertUnPartenaireExterne(): void
     {
-        $html = $this->rendre(beneficiaireNom: 'SUNU Courtage SARL');
+        $html = $this->rendre(beneficiaireNom: 'SUNU Courtage SARL', estAgent: false);
 
         self::assertStringContainsString('SUNU Courtage SARL', $html);
+
+        // ET IL NE LUI PROMET PAS L'ÉCRITURE D'UN SALARIÉ.
+        //
+        // Le pied annonçait une charge de PERSONNEL — SYSCOHADA 6611 — pour les deux
+        // familles, alors qu'un intermédiaire externe se comptabilise en 632
+        // (rétrocommissions). Une boîte qui affirme le faux au moment de sortir des
+        // fonds n'est pas une coquille : c'est ce que l'utilisateur lit pour se
+        // rassurer avant de valider.
+        self::assertStringContainsString('rétrocommissions', $html);
+        self::assertStringNotContainsString('charges de personnel', $html);
+
+        // Et l'AGENT, lui, garde la sienne : sans ce second rendu, la règle serait
+        // vérifiée d'un seul côté, et écrire « rétrocommissions » pour tout le monde
+        // passerait au vert.
+        $pourUnAgent = $this->rendre();
+        self::assertStringContainsString('charges de personnel', $pourUnAgent);
+        self::assertStringNotContainsString('ce partenaire', $pourUnAgent);
         // L'échéance est nommée : c'est elle qu'on règle, et son nom est ce qui permet
         // au courtier de reconnaître la ligne de son échéancier.
         self::assertStringContainsString('1ère échéance', $html);

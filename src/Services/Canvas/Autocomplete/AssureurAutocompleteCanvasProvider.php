@@ -40,7 +40,7 @@ class AssureurAutocompleteCanvasProvider
                     <span class="jsb-context-separator">|</span>
                     <span>Tél: <strong>%s</strong></span>
                 </div>
-                <div class="jsb-autocomplete-indicators" style="grid-template-columns: repeat(5, 1fr);">
+                <div class="jsb-autocomplete-indicators">
                     <div><div><span class="jsb-indicator-label">Prime TTC</span><span class="jsb-indicator-value">%s</span></div></div>
                     <div><div><span class="jsb-indicator-label">Com. TTC</span><span class="jsb-indicator-value">%s</span></div></div>
                     <div><div><span class="jsb-indicator-label">Taxe Courtier</span><span class="jsb-indicator-value">%s</span></div></div>
