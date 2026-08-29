@@ -17,6 +17,7 @@ use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\Search\AvenantEcheanceScope;
 use App\Services\Search\CotationSouscriptionScope;
 use App\Services\Search\PisteTransformationScope;
+use App\Services\Search\ProductionScope;
 use App\Services\Search\TranchePaiementScope;
 
 /**
@@ -81,6 +82,23 @@ final class OuvrirRubriqueTool implements AiToolInterface
             . 'comme une fermeture est un mensonge visible à l\'écran.';
     }
 
+    /**
+     * LE NOM DEMANDÉ EST-IL CELUI DE L'INVITÉ LUI-MÊME ?
+     *
+     * « ma production », « la production d'Alice » quand on EST Alice. On compare sur le
+     * nom normalisé, comme partout ailleurs dans la résolution : c'est le même texte que
+     * l'utilisateur aurait tapé dans le chip-sélecteur.
+     */
+    private function estSonPropreNom(string $nom, AiScope $scope): bool
+    {
+        $nom = trim($nom);
+        if ($nom === '' || $scope->invite === null) {
+            return false;
+        }
+
+        return AiText::normalize($nom) === AiText::normalize((string) $scope->invite->getNom());
+    }
+
     public function schema(): array
     {
         return [
@@ -89,7 +107,14 @@ final class OuvrirRubriqueTool implements AiToolInterface
                 'entite' => [
                     'type' => 'string',
                     'description' => "Nom court de l'entité de la rubrique à ouvrir, ou TableauDeBord.",
-                    'enum' => array_merge(['TableauDeBord'], $this->lexique->nomsCourts()),
+                    // « TableauDeBord » et « ProductionIntermediaire » sont ajoutés À LA MAIN :
+                    // le lexique ne recense que les entités DOCTRINE (garde `class_exists`), et
+                    // ces deux vues n'en sont pas. Sans cette exception, Ket ne pourrait pas
+                    // ouvrir une rubrique que l'écran propose — une parité rompue en silence.
+                    'enum' => array_merge(
+                        ['TableauDeBord', ProductionScope::ENTITE],
+                        $this->lexique->nomsCourts(),
+                    ),
                 ],
                 'lieA' => [
                     'type' => 'object',
@@ -218,7 +243,15 @@ final class OuvrirRubriqueTool implements AiToolInterface
         }
 
         // FAIL-CLOSED : le menu est filtré au périmètre — même contrat ici.
-        if (!$this->accessResolver->canRead($scope->invite, $shortName)) {
+        //
+        // ⚠ UNE EXCEPTION, ET C'EST CELLE DE L'ÉCRAN. « Production intermédiaires » est
+        // gatée sur le droit des Intermédiaires ; un agent ne l'a pas, et pourtant il doit
+        // retrouver SA production depuis SON compte — la rubrique lui est ouverte, elle ne
+        // lui montrera que lui. Refuser ici aurait fermé à Ket ce que la souris permet, et
+        // la parité se serait rompue sur le cas le plus courant.
+        $siennePropreProduction = $shortName === ProductionScope::ENTITE
+            && $this->estSonPropreNom((string) ($args['beneficiaire'] ?? ''), $scope);
+        if (!$siennePropreProduction && !$this->accessResolver->canRead($scope->invite, $shortName)) {
             return AiToolResult::horsPerimetre($labels[$shortName]);
         }
 
@@ -241,7 +274,11 @@ final class OuvrirRubriqueTool implements AiToolInterface
 
         // Filtre TEXTE : le champ de recherche de la rubrique porte sur le libellé.
         $filtre = trim((string) ($args['filtre'] ?? ''));
-        $champLibelle = $this->libelleur->displayField('App\\Entity\\' . $shortName);
+        // UNE PSEUDO-ENTITÉ N'A PAS DE MÉTADONNÉES. Interroger Doctrine sur une classe
+        // absente lève AVANT toute lecture : le filtre texte n'existe simplement pas ici.
+        $champLibelle = class_exists('App\\Entity\\' . $shortName)
+            ? $this->libelleur->displayField('App\\Entity\\' . $shortName)
+            : null;
         if ($filtre !== '' && $champLibelle !== null) {
             $criteres[$champLibelle] = [
                 'operator' => 'LIKE',
@@ -261,14 +298,35 @@ final class OuvrirRubriqueTool implements AiToolInterface
             + TranchePaiementScope::critereRecherche($shortName, $axesTranche)
             + CotationSouscriptionScope::critereRecherche($shortName, $args['validation'] ?? null)
             + PisteTransformationScope::critereRecherche($shortName, $args['transformation'] ?? null)
-            + ReversementScope::criteresDepuisArguments($shortName, $args);
+            + ReversementScope::criteresDepuisArguments($shortName, $args)
+            // LA PRODUCTION SE FILTRE PAR LE MÊME MOT que les propositions —
+            // « validation » porte déjà souscrites / en_attente / caduques. Inventer un
+            // second argument pour la même partition aurait fait deux vocabulaires.
+            + ProductionScope::critereRecherche(
+                $shortName,
+                ProductionScope::CLE_STATUT,
+                $args['validation'] ?? null,
+            );
 
         // LE BÉNÉFICIAIRE : une RELATION, donc un critère d'identité — la même forme que
         // celle du chip-sélecteur de l'écran et du bouton du rapport de production.
         // `lieA` ne pouvait pas servir : il n'accepte que les entités du lexique, et un
         // agent n'en est pas une (les invités sont gouvernés à part, délibérément).
+        // DEUX RUBRIQUES, UN SEUL BLOC. « Rétros intermédiaires » dit ce qu'on a VERSÉ,
+        // « Production intermédiaires » ce que chacun APPORTE : deux questions, un même
+        // geste — désigner quelqu'un par son nom. Écrire ce bloc deux fois aurait garanti
+        // qu'un jour l'une des deux cesse de trouver les partenaires, ce qui est
+        // exactement l'incident que la parité des rétros a dû corriger.
+        //
+        // Les deux scopes exposent les mêmes constructeurs, par construction : seule la
+        // CLÉ du critère les distingue, et c'est ce qui les empêche de se marcher dessus.
+        $scopeRubrique = match ($shortName) {
+            ReversementScope::ENTITE => ReversementScope::class,
+            ProductionScope::ENTITE => ProductionScope::class,
+            default => null,
+        };
         $beneficiaire = trim((string) ($args['beneficiaire'] ?? ''));
-        if ($shortName === ReversementScope::ENTITE && $beneficiaire !== '') {
+        if ($scopeRubrique !== null && $beneficiaire !== '') {
             // LES DEUX FAMILLES, PAR LE NOM. La rubrique porte les reversements aux agents
             // internes ET aux partenaires externes : ne chercher que parmi les agents
             // refusait « ouvre ce que j'ai versé à SUNU Courtage » alors que l'écran, lui,
@@ -328,7 +386,7 @@ final class OuvrirRubriqueTool implements AiToolInterface
                     'Ni agent ni partenaire de cet espace ne porte ce nom. La rubrique n\'a PAS été ouverte.',
                 );
             }
-            $criteresRubrique += ReversementScope::critereBeneficiaire(
+            $criteresRubrique += $scopeRubrique::critereBeneficiaire(
                 (int) $cible->getId(),
                 (string) $cible->getNom(),
                 $famille,
@@ -338,9 +396,9 @@ final class OuvrirRubriqueTool implements AiToolInterface
             // chips selon qu'elle vient de la souris ou de Ket — une parité rompue, et
             // silencieusement. `+=` ne remplace rien : un type dicté reste celui de
             // l'utilisateur, et il vient d'être vérifié compatible.
-            $criteresRubrique += ReversementScope::critereRecherche(
+            $criteresRubrique += $scopeRubrique::critereRecherche(
                 $shortName,
-                ReversementScope::CLE_TYPE,
+                $scopeRubrique::CLE_TYPE,
                 $famille,
             );
             $filtres[] = sprintf('bénéficiaire « %s »', $cible->getNom());
@@ -358,6 +416,13 @@ final class OuvrirRubriqueTool implements AiToolInterface
         foreach ([ReversementScope::CLE_JUSTIFICATIF, ReversementScope::CLE_PERIODE, ReversementScope::CLE_VIREMENT, ReversementScope::CLE_TYPE] as $cleReversement) {
             if (isset($criteresRubrique[$cleReversement])) {
                 $filtres[] = ReversementScope::libelle($cleReversement, (string) $criteresRubrique[$cleReversement]['value']);
+            }
+        }
+        // UN FILTRE QU'ON POSE SANS LE DIRE se lit comme une liste entière : la
+        // production a ses deux chips, et ils s'annoncent comme tous les autres.
+        foreach ([ProductionScope::CLE_STATUT, ProductionScope::CLE_TYPE] as $cleProduction) {
+            if (isset($criteresRubrique[$cleProduction])) {
+                $filtres[] = ProductionScope::libelle($cleProduction, (string) $criteresRubrique[$cleProduction]['value']);
             }
         }
         $criteres += $criteresRubrique;

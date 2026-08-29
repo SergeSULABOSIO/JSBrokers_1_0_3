@@ -15,6 +15,10 @@
 #}
 <div
         id="{{ listId | default('list-controller-' ~ random()) }}" {# CORRECTION : Utiliser un ID prédictible ou un fallback aléatoire. #}
+        {# UNE RUBRIQUE À RENDU PROPRE peut avoir besoin de toute la hauteur — le pied
+           de totaux de la production doit rester au bas du panneau. La classe ouvre la
+           chaîne de hauteurs, et n'est posée que là où elle est demandée. #}
+        class="{{ listeCanvas.rendu_personnalise is defined and listeCanvas.rendu_personnalise ? 'jsb-list-pleine-hauteur' : '' }}"
         data-controller="list-manager"
         data-list-manager-nb-elements-value="{{ data|length }}"
         data-list-manager-entite-value="{{ entite_nom }}"
@@ -150,6 +154,29 @@
         {% endif %}
         {% endif %}
         <div class="table-scroll-wrapper flex-grow-1" data-list-manager-target="listContainer">
+        {# ── UNE RUBRIQUE PEUT APPORTER SON PROPRE TABLEAU ────────────────────────────
+           Presque toutes se contentent du rendu générique ci-dessous : un libellé, ses
+           textes secondaires, ses colonnes numériques. Une seule ne le peut pas — la
+           production d'un intermédiaire, dont les vingt-trois colonnes groupées disent le
+           trajet de l'argent, de la prime du client jusqu'au solde qui lui reste dû. Ce
+           tableau est un document qu'on conteste : il ne se réduit pas à trois textes.
+
+           Le canevas de liste le déclare, et le socle s'efface. Tout le reste de la
+           coquille — barre de contrôles, chips, pagination, totaux, état vide — est rendu
+           à l'identique : c'est justement ce qu'on vient chercher.
+
+           LE GABARIT REÇOIT LE MÊME CONTEXTE que le tableau standard, et doit honorer le
+           même contrat de ligne (data-id, case à cocher `rowCheckbox`) : sans lui, la
+           sélection et la barre des totaux resteraient muettes. #}
+        {% if listeCanvas.rendu_personnalise is defined and listeCanvas.rendu_personnalise %}
+            {{ include(listeCanvas.rendu_personnalise, {
+                'data': data,
+                'entite_nom': entite_nom,
+                'listeCanvas': listeCanvas,
+                'entityCanvas': entityCanvas,
+                'usage': usage|default('generic'),
+            }) }}
+        {% else %}
             <table class="table table-hover table-sm table-enhanced" aria-label="Liste de {{ entite_nom }}">
                 <thead class="table-light sticky-header">
                     <tr class="text-center">
@@ -204,6 +231,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+        {% endif %}
         </div>
         <div data-list-manager-target="emptyStateContainer" class="d-none h-100">
             {% if usage is defined and usage == 'dialog' %}

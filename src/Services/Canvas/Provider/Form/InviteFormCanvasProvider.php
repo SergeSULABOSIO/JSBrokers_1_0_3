@@ -86,10 +86,15 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
                 // de liste, donc jusqu'à la BARRE D'OUTILS et au MENU CONTEXTUEL, et pas
                 // seulement jusqu'à la fiche ouverte.
                 [
-                    "label"     => "Voir le rapport de production",
+                    // LA RUBRIQUE, ET PLUS UN ÉCRAN À PART. Le rapport ne s'ouvrait que
+                    // par cette porte et ne se situait nulle part dans l'arbre du menu ;
+                    // il est devenu « Production intermédiaires », que ce clic ouvre
+                    // pré-filtrée sur l'agent. Le serveur rend le critère tout fait —
+                    // une seule recette, partagée avec le chip et avec l'assistant.
+                    "label"     => "Voir la production",
                     "icon"      => "action:view",
-                    "event"     => "ui:retroagent.rapport-request",
-                    "url"       => "/admin/retro-agent/%id%/rapport",
+                    "event"     => "ui:production.rubrique-request",
+                    "url"       => "/admin/productionintermediaire/ouvrir/agent/%id%",
                     "condition" => ["field" => "hasRetroAgentExigible", "value" => true],
                 ],
                 [

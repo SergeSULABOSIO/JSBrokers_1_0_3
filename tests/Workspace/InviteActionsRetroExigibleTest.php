@@ -282,12 +282,21 @@ class InviteActionsRetroExigibleTest extends KernelTestCase
             ->getCanvas($agent, $ids['entrepriseId']);
         $actions = $canvas['parametres']['attribute_actions'] ?? [];
 
+        // LES DEUX ACTIONS NE PARTAGENT PLUS LA MÊME RACINE D'URL, et c'est le seul
+        // changement : le rapport de production est devenu la rubrique « Production
+        // intermédiaires », le reversement est resté où il était. On les désigne donc par
+        // leur ÉVÉNEMENT — ce qu'elles font — plutôt que par le chemin de leur route, qui
+        // n'était qu'un raccourci commode.
         $retro = array_values(array_filter(
             $actions,
-            static fn (array $a) => str_contains((string) ($a['url'] ?? ''), '/admin/retro-agent/'),
+            static fn (array $a) => in_array(
+                (string) ($a['event'] ?? ''),
+                ['ui:production.rubrique-request', 'ui:retroagent.reversement-request'],
+                true,
+            ),
         ));
 
-        self::assertCount(2, $retro, 'Le rapport et le reversement, et eux seuls.');
+        self::assertCount(2, $retro, 'La production et le reversement, et eux seuls.');
         foreach ($retro as $action) {
             self::assertSame('hasRetroAgentExigible', $action['condition']['field'] ?? null);
             self::assertTrue($action['condition']['value'] ?? null);

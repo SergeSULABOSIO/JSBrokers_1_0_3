@@ -61,10 +61,12 @@ class PartenaireFormCanvasProvider implements FormCanvasProviderInterface
             // c'est le picker qui le refuse en ne proposant aucune échéance.
             "attribute_actions" => [
                 [
-                    "label" => "Voir le rapport de production",
+                    // Voir le commentaire jumeau du canevas d'Invite : le rapport est
+                    // devenu une rubrique, et ce clic l'ouvre pré-filtrée sur le partenaire.
+                    "label" => "Voir la production",
                     "icon"  => "action:view",
-                    "event" => "ui:retroagent.rapport-request",
-                    "url"   => "/admin/retro-agent/partenaire/%id%/rapport",
+                    "event" => "ui:production.rubrique-request",
+                    "url"   => "/admin/productionintermediaire/ouvrir/partenaire/%id%",
                 ],
                 [
                     "label" => "Signaler un reversement de rétrocommission",

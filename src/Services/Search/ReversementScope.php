@@ -71,8 +71,10 @@ final class ReversementScope
     // enregistrement : un agent interne (salarié, charge en 6611) ou un partenaire externe
     // (intermédiaire, charge en 632). Ce chip est le seul moyen de lire l'une sans l'autre.
     public const CLE_TYPE = '__type_beneficiaire__';
-    public const TYPE_AGENT = 'agent';
-    public const TYPE_PARTENAIRE = 'partenaire';
+    // Les deux familles viennent du socle partagé : deux listes de familles auraient
+    // fini par diverger, et l'une des deux rubriques aurait cessé de voir les partenaires.
+    public const TYPE_AGENT = BeneficiaireCritere::TYPE_AGENT;
+    public const TYPE_PARTENAIRE = BeneficiaireCritere::TYPE_PARTENAIRE;
 
     // ── Bénéficiaire ────────────────────────────────────────────────────────────────
     //
@@ -97,7 +99,7 @@ final class ReversementScope
     /** La valeur d'un critère de bénéficiaire : « famille:id ». */
     public static function valeurBeneficiaire(string $type, int $id): string
     {
-        return $type . ':' . $id;
+        return BeneficiaireCritere::valeur($type, $id);
     }
 
     /**
@@ -108,16 +110,7 @@ final class ReversementScope
      */
     public static function decoderBeneficiaire(?string $valeur): ?array
     {
-        if ($valeur === null || !str_contains($valeur, ':')) {
-            return null;
-        }
-
-        [$type, $id] = explode(':', $valeur, 2);
-        if (!in_array($type, [self::TYPE_AGENT, self::TYPE_PARTENAIRE], true) || (int) $id <= 0) {
-            return null;
-        }
-
-        return [$type, (int) $id];
+        return BeneficiaireCritere::decoder($valeur);
     }
 
 
@@ -129,7 +122,7 @@ final class ReversementScope
      */
     public static function familleDuBeneficiaire(?string $valeur): ?string
     {
-        return self::decoderBeneficiaire($valeur)[0] ?? null;
+        return BeneficiaireCritere::famille($valeur);
     }
 
     /**
@@ -151,11 +144,7 @@ final class ReversementScope
      */
     public static function conditionsVisibiliteSelecteur(string $type): array
     {
-        return [[
-            'field' => self::CLE_TYPE,
-            'operator' => 'in',
-            'value' => ['', $type],
-        ]];
+        return BeneficiaireCritere::visibiliteDuSelecteur(self::CLE_TYPE, $type);
     }
 
     /**
@@ -172,10 +161,11 @@ final class ReversementScope
      */
     public static function implicationDuSelecteur(string $type): array
     {
-        return [self::CLE_TYPE => [
-            'value' => $type,
-            'label' => self::libelle(self::CLE_TYPE, $type),
-        ]];
+        return BeneficiaireCritere::implicationDuSelecteur(
+            self::CLE_TYPE,
+            $type,
+            self::libelle(self::CLE_TYPE, $type),
+        );
     }
 
     /**
@@ -188,9 +178,7 @@ final class ReversementScope
      */
     public static function beneficiaireCompatibleAvecType(?string $type, ?string $valeurBeneficiaire): bool
     {
-        $famille = self::familleDuBeneficiaire($valeurBeneficiaire);
-
-        return $type === null || $type === '' || $famille === null || $famille === $type;
+        return BeneficiaireCritere::compatible($type, $valeurBeneficiaire);
     }
 
     /** La colonne de relation qui porte cette famille de bénéficiaire. */

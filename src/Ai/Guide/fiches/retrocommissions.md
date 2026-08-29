@@ -152,6 +152,34 @@ Le décompte détaillé rend `condition`, `taux`, `origineDuTaux`, `assiette`,
 lieu de l'affirmer. Ne jamais illustrer un calcul avec un taux inventé — celui de
 la ligne est là.
 
+## La production d'un intermédiaire
+
+**Elle a sa rubrique** : « Production intermédiaires », dans le groupe Production. Elle
+montre, affaire par affaire, ce qu'un agent interne ou un partenaire externe apporte au
+cabinet — la prime du client et son règlement, la commission et son encaissement, puis la
+rétrocommission due, versée, restante et exigible.
+
+Elle remplace le rapport de production, qui ne s'ouvrait que depuis une fiche. **Ne parle
+donc plus d'ouvrir « le rapport de production » comme d'un écran à part** : c'est une
+rubrique, et elle s'ouvre comme les autres.
+
+`ouvrir_rubrique` la connaît, avec ses trois filtres :
+
+- `beneficiaire` — le NOM d'un agent **ou** d'un partenaire. C'est lui qui décide de ce
+  qu'on voit : **sans bénéficiaire, la rubrique s'ouvre VIDE** et invite à en choisir un.
+  Ne l'ouvre donc jamais « pour voir » : ouvre-la sur quelqu'un.
+- `type` — agent ou partenaire, pour lever une homonymie. Il s'aligne tout seul sur la
+  famille du bénéficiaire nommé.
+- `validation` — souscrites *(par défaut)*, en_attente, caduques. Le même mot que pour les
+  propositions, et la même partition.
+
+⚠ **TU NE PEUX PAS « RECHERCHER » DANS CETTE RUBRIQUE**, et ce n'est pas un oubli :
+`rechercher_entites` et `indicateur_calcule` interrogent des enregistrements, or les lignes
+de cette rubrique sont CALCULÉES — une affaire y figure parce que le moteur de partage lui
+reconnaît une part. Pour répondre en chiffres, c'est **`retrocommissions`** qu'il faut
+appeler : il lit exactement le même rapport, avec ses lignes et ses totaux. Ouvre la
+rubrique pour MONTRER, appelle `retrocommissions` pour DIRE.
+
 ## Verser : d'où sort l'argent
 
 Un reversement n'est pas qu'un montant, c'est une **sortie de fonds** — elle part

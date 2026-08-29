@@ -276,7 +276,10 @@
                                         <span class="jsb-pieces-deja__icone" aria-hidden="true">
                                             {{ ux_icon(resolve_icon_name('document'), {width: '18px', height: '18px'}) }}
                                         </span>
-                                        <span class="jsb-pieces-deja__nom" title="{{ piece.nom|e('html_attr') }}">{{ piece.nom }}</span>
+                                        <a class="jsb-pieces-deja__nom"
+                                           href="/admin/document/api/{{ piece.id }}/download"
+                                           target="_blank" rel="noopener"
+                                           title="Ouvrir {{ piece.nom|e('html_attr') }} dans un nouvel onglet">{{ piece.nom }}</a>
                                         {# Le libellé change avec l'état — l'information ne
                                            passe jamais par la seule couleur (WCAG 1.4.1). #}
                                         <button type="button" class="jsb-pieces-deja__action"

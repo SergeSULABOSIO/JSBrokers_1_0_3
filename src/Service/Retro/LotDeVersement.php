@@ -5,6 +5,7 @@ namespace App\Service\Retro;
 use App\Entity\Document;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Entity\Partenaire;
 use App\Entity\ReversementRetroAgent;
 use App\Repository\ReversementRetroAgentRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -81,10 +82,10 @@ final class LotDeVersement
      *
      * @return array<string, array{cle: string, membres: ReversementRetroAgent[], porteur: ReversementRetroAgent, total: float}>
      */
-    public function grouper(Invite $agent, Entreprise $entreprise): array
+    public function grouper(Invite|Partenaire $beneficiaire, Entreprise $entreprise): array
     {
         $lots = [];
-        foreach ($this->reversements->findPourAgent($agent, $entreprise) as $reversement) {
+        foreach ($this->reversements->findPourBeneficiaire($beneficiaire, $entreprise) as $reversement) {
             $lots[$this->cle($reversement)]['membres'][] = $reversement;
         }
 
@@ -110,9 +111,9 @@ final class LotDeVersement
      *
      * @return ReversementRetroAgent[] vide si le lot n'appartient pas à cet agent
      */
-    public function membres(Invite $agent, Entreprise $entreprise, string $cle): array
+    public function membres(Invite|Partenaire $beneficiaire, Entreprise $entreprise, string $cle): array
     {
-        return $this->grouper($agent, $entreprise)[$cle]['membres'] ?? [];
+        return $this->grouper($beneficiaire, $entreprise)[$cle]['membres'] ?? [];
     }
 
     /** La requête déclare ce qu'elle a fait : voir $replie. */
@@ -175,9 +176,9 @@ final class LotDeVersement
     }
 
     /** Le membre qui porte la pièce : le plus petit id. Null si le lot est inconnu. */
-    public function porteur(Invite $agent, Entreprise $entreprise, string $cle): ?ReversementRetroAgent
+    public function porteur(Invite|Partenaire $beneficiaire, Entreprise $entreprise, string $cle): ?ReversementRetroAgent
     {
-        return $this->grouper($agent, $entreprise)[$cle]['porteur'] ?? null;
+        return $this->grouper($beneficiaire, $entreprise)[$cle]['porteur'] ?? null;
     }
 
     /**
@@ -436,17 +437,16 @@ final class LotDeVersement
      *
      * @return array<int, int> identifiant d'avenant => nombre de pièces
      */
-    public function comptesDePiecesParAvenant(Invite $agent, Entreprise $entreprise): array
+    public function comptesDePiecesParAvenant(Invite|Partenaire $beneficiaire, Entreprise $entreprise): array
     {
-        $lots = $this->grouper($agent, $entreprise);
+        $lots = $this->grouper($beneficiaire, $entreprise);
         $parLot = $this->comptesDePieces($lots);
 
         $parAvenant = [];
         foreach ($lots as $cle => $lot) {
             $nb = $parLot[$cle] ?? 0;
             foreach ($lot['membres'] as $membre) {
-                $avenantId = $membre->getAvenant()?->getId();
-                if ($avenantId !== null) {
+                foreach ($this->avenantsCouvertsPar($membre) as $avenantId) {
                     $parAvenant[$avenantId] = ($parAvenant[$avenantId] ?? 0) + $nb;
                 }
             }
@@ -456,14 +456,48 @@ final class LotDeVersement
     }
 
     /**
+     * LES AFFAIRES QU'UN VERSEMENT JUSTIFIE.
+     *
+     * Un reversement se rattache à une ÉCHÉANCE, à une AFFAIRE, ou aux deux — la maille a
+     * changé le jour où la rémunération a suivi le rythme des paiements de prime. Ne lire
+     * que l'avenant laissait donc hors de l'index tous les versements rattachés à la seule
+     * tranche : leurs affaires s'affichaient « sans pièce » alors que le bordereau était
+     * là. Sur un écran dont c'est la question — qu'ai-je versé sans justificatif ? — c'est
+     * un mensonge, pas une approximation.
+     *
+     * On remonte donc par la tranche jusqu'à sa proposition, puis à ses affaires : c'est le
+     * même chemin que celui du rapport, qui présente une ligne par affaire.
+     *
+     * @return int[] identifiants d'avenants, sans doublon
+     */
+    private function avenantsCouvertsPar(ReversementRetroAgent $reversement): array
+    {
+        $ids = [];
+
+        $direct = $reversement->getAvenant()?->getId();
+        if ($direct !== null) {
+            $ids[$direct] = $direct;
+        }
+
+        foreach ($reversement->getTranche()?->getCotation()?->getAvenants() ?? [] as $avenant) {
+            $id = $avenant->getId();
+            if ($id !== null) {
+                $ids[$id] = $id;
+            }
+        }
+
+        return array_values($ids);
+    }
+
+    /**
      * Les pièces qui justifient UNE affaire : celles de tous les lots l'ayant payée.
      *
      * @return Document[]
      */
-    public function documentsPourAvenant(Invite $agent, Entreprise $entreprise, int $avenantId): array
+    public function documentsPourAvenant(Invite|Partenaire $beneficiaire, Entreprise $entreprise, int $avenantId): array
     {
         $membres = [];
-        foreach ($this->grouper($agent, $entreprise) as $lot) {
+        foreach ($this->grouper($beneficiaire, $entreprise) as $lot) {
             foreach ($lot['membres'] as $membre) {
                 if ($membre->getAvenant()?->getId() === $avenantId) {
                     // Tout le lot, pas seulement la ligne : la pièce vit sur l'un de ses

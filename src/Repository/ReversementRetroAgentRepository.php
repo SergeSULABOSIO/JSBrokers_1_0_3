@@ -158,12 +158,29 @@ class ReversementRetroAgentRepository extends ServiceEntityRepository
      */
     public function findPourAgent(Invite $agent, Entreprise $entreprise): array
     {
+        return $this->findPourBeneficiaire($agent, $entreprise);
+    }
+
+    /**
+     * LES VERSEMENTS D'UN BÉNÉFICIAIRE, QUELLE QUE SOIT SA FAMILLE.
+     *
+     * Les deux vivent sur le même enregistrement, en XOR : un agent dans `agent`, un
+     * partenaire dans `partenaire`. Filtrer en dur sur la première colonne rendait la
+     * dette de preuve d'un partenaire INVISIBLE — ses versements justifiés passaient
+     * pour nus, ce qui est le contraire de ce que l'écran doit dire.
+     *
+     * @return ReversementRetroAgent[]
+     */
+    public function findPourBeneficiaire(Invite|Partenaire $beneficiaire, Entreprise $entreprise): array
+    {
+        $colonne = $beneficiaire instanceof Partenaire ? 'partenaire' : 'agent';
+
         return $this->createQueryBuilder('r')
             ->leftJoin('r.avenant', 'av')->addSelect('av')
             ->leftJoin('r.compteBancaire', 'cb')->addSelect('cb')
-            ->where('r.agent = :agent')
+            ->where("r.{$colonne} = :beneficiaire")
             ->andWhere('r.entreprise = :entreprise')
-            ->setParameter('agent', $agent)
+            ->setParameter('beneficiaire', $beneficiaire)
             ->setParameter('entreprise', $entreprise)
             ->orderBy('r.paidAt', 'DESC')
             ->addOrderBy('r.id', 'ASC')
