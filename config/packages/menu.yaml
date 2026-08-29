@@ -87,6 +87,14 @@ parameters:
                         # l'on audite les taux en vigueur.
                         "Conditions de partage": { icone: 'condition', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\ConditionPartage' }
                         "Propositions": { icone: 'cotation', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Cotation' }
+                        # PSEUDO-entité 'ProductionIntermediaire' (pattern DocumentComptable) :
+                        # la production d'un agent interne ou d'un partenaire externe se
+                        # calcule par le MOTEUR de partage, cotation par cotation — il n'y a
+                        # donc aucune classe Doctrine à lister, et la rubrique n'existe que
+                        # pour le gating du menu et le routage du composant.
+                        # Elle remplace le rapport de production, qui ne s'ouvrait que par la
+                        # porte d'une fiche et ne se situait nulle part dans l'arbre.
+                        "Production intermédiaires": { icone: 'invite', composant_twig: '_view_manager_production.html.twig', entity_name: 'ProductionIntermediaire' }
 
                 Sinistre:
                     icone: 'sinistre'

@@ -1,0 +1,400 @@
+{#
+    LE CORPS RAFRAÎCHISSABLE DE LA RUBRIQUE « PRODUCTION INTERMÉDIAIRES ».
+
+    ── POURQUOI CE FICHIER EXISTE ─────────────────────────────────────────────────────
+    Le socle des listes remplace le contenu de sa cible `donnees` à chaque recherche —
+    c'est ainsi que les trente autres rubriques se rafraîchissent, et le contrôleur de
+    liste EXIGE cette cible pour se connecter. Tout ce qui doit suivre les critères vit
+    donc ici : les lignes, mais AUSSI le pied des totaux. Laisser le pied dehors l'aurait
+    figé sur les chiffres du premier affichage — un total d'apparence normale, et faux.
+
+    Il est rendu de deux façons, et c'est le même fichier : inclus par `_lignes.html.twig`
+    au chargement, renvoyé seul par la route de rafraîchissement.
+#}
+
+{% set m = monnaie %}
+{# LARGEUR PLANCHER DES COLONNES DE CHIFFRES.
+
+   Un total est presque toujours plus large que chacune des lignes qu'il additionne :
+   une colonne dimensionnée sur ses lignes tronquait « 106 000,00 » en « 106 00… », et
+   c'est justement le chiffre qu'on vient lire. Les colonnes numériques prennent donc
+   toutes le gabarit du plus long total — uniforme, comme dans un état comptable. #}
+{% set largeur_totaux = 0 %}
+{% for cle, valeur in totaux %}
+    {% if cle != 'nbLignes' %}
+        {% set largeur_totaux = max(largeur_totaux, (valeur|number_format(2, ',', ' '))|length) %}
+    {% endif %}
+{% endfor %}
+{% set min_num = 'min-width: calc(' ~ largeur_totaux ~ 'ch + 1.7rem);' %}
+    {% if projection %}
+        {# Une projection n'est pas une dette : le dire, sans quoi ces montants seraient
+           lus comme exigibles. #}
+        <div class="alert alert-warning m-3" role="status">
+            <strong>Projection.</strong> Ces affaires ne sont pas encore souscrites : aucun
+            montant n'est dû tant que le client n'a pas validé. Elles servent à piloter
+            l'effort commercial en cours.
+        </div>
+    {% endif %}
+
+    <div class="rpa-scroll">
+        <table class="table table-sm table-hover rpa-table"
+               aria-label="Production {{ beneficiaire ? 'de ' ~ beneficiaire.nom : 'des intermédiaires' }}">
+            <caption class="visually-hidden">
+                Production {{ beneficiaire ? 'de ' ~ beneficiaire.nom : 'des intermédiaires' }} affaire par affaire : prime du client et son
+                règlement, commission du cabinet et son encaissement, part des partenaires
+                externes, puis rétrocommission due, versée, restante et exigible.
+            </caption>
+            <thead>
+                {# Premier rang : les cinq étapes du trajet de l'argent. #}
+                <tr>
+                    <th scope="colgroup" colspan="7">Affaire</th>
+                    <th scope="colgroup" colspan="3" class="rpa-groupe">Prime du client</th>
+                    <th scope="colgroup" colspan="7" class="rpa-groupe">Commission du cabinet</th>
+                    <th scope="colgroup" colspan="3" class="rpa-groupe">Partage</th>
+                    <th scope="colgroup" colspan="5" class="rpa-groupe">Part de l'agent</th>
+                </tr>
+                <tr>
+                    {# LA CASE PREND LA PLACE DU « # », elle ne s'y ajoute pas : le pied des
+                       totaux recopie les largeurs MESURÉES de cette rangée, et une colonne de
+                       plus l'aurait décalé d'un cran sur toute sa longueur. #}
+                    <th scope="col" class="rpa-rang">
+                        <input class="form-check-input" type="checkbox"
+                               data-action="change->list-manager#toggleAll"
+                               data-list-manager-target="selectAllCheckbox"
+                               aria-label="Tout sélectionner">
+                    </th>
+                    <th scope="col">Client</th>
+                    <th scope="col">Police / Proposition</th>
+                    <th scope="col">Mouvement</th>
+                    <th scope="col">Risque</th>
+                    <th scope="col">Assureur</th>
+                    <th scope="col">Gestionnaire</th>
+
+                    <th scope="col" class="rpa-num rpa-groupe" style="{{ min_num }}">Due</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Payée</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Solde</th>
+
+                    <th scope="col" class="rpa-num rpa-groupe" style="{{ min_num }}">TTC</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Encaissée</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Solde</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">HT</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Taxe assureur</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Taxe courtier</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Pure</th>
+
+                    <th scope="col" class="rpa-num rpa-groupe" style="{{ min_num }}">Partageable</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Rétro partenaire</th>
+                    <th scope="col">Condition</th>
+
+                    <th scope="col" class="rpa-num rpa-groupe" style="{{ min_num }}">Due</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Versée</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Solde</th>
+                    <th scope="col" class="rpa-num" style="{{ min_num }}">Exigible</th>
+                    <th scope="col">État</th>
+                </tr>
+            </thead>
+            <tbody class="table-group-divider">
+                {# DEUX VIDES QUI NE DISENT PAS LA MÊME CHOSE.
+
+                   Sans bénéficiaire choisi, la rubrique n'a rien CALCULÉ : la production
+                   se détermine affaire par affaire par le moteur de partage, et la
+                   calculer pour tout le cabinet à l'ouverture ferait payer très cher un
+                   écran que personne n'a demandé. L'écran invite donc à choisir — ce
+                   n'est pas « aucun résultat ».
+
+                   Avec un bénéficiaire, un vide est un vrai vide : il n'a rien produit
+                   dans ce statut. Confondre les deux aurait fait chercher une donnée
+                   absente là où il n'y avait qu'un filtre à poser. #}
+                {% if lignes is empty %}
+                    <tr>
+                        <td colspan="25" class="rpa-message">
+                          <div class="rpa-message-boite">
+                            {% if beneficiaire is null %}
+                                <div class="rpa-accueil">
+                                    <span class="rpa-accueil-icone" aria-hidden="true">
+                                        {{ ux_icon(resolve_icon_name('invite'), {height: '34px', width: '34px'}) }}
+                                    </span>
+                                    <p class="rpa-accueil-titre">Choisissez un intermédiaire</p>
+                                    <p class="rpa-accueil-aide">
+                                        Le chip «&nbsp;Bénéficiaire&nbsp;» propose les agents internes
+                                        et les partenaires externes. Sa production s'affichera ici,
+                                        affaire par affaire.
+                                    </p>
+                                </div>
+                            {% else %}
+                                <div class="rpa-empty">
+                                    Aucune affaire dans ce statut pour
+                                    {{ beneficiaire.estAgent ? 'cet agent' : 'ce partenaire' }}.
+                                </div>
+                            {% endif %}
+                          </div>
+                        </td>
+                    </tr>
+                {% endif %}
+                {% for l in lignes %}
+                    {# Le texte cherchable est PRÉ-CALCULÉ ici : le filtre du navigateur ne
+                       relit pas le DOM ligne par ligne, et cherche exactement sur ce que
+                       le placeholder annonce. #}
+                    {# L'IDENTIFIANT DE LA LIGNE.
+
+                       Sous « Souscrites », toute ligne porte un AVENANT ; sous « En attente »
+                       et « Caduques », aucune n'en a et toutes portent leur PROPOSITION. Le
+                       statut étant à valeur unique, une vue ne mélange jamais les deux
+                       natures : l'identifiant reste un entier, la sélection et la barre des
+                       totaux fonctionnent sans encodage, et « Ouvrir » sait quelle fiche
+                       ouvrir. #}
+                    {% set ligne_id = l.avenant ? l.avenant.id : (l.cotation ? l.cotation.id : 0) %}
+                    <tr data-rpa-ligne
+                        id="liste_row_{{ ligne_id }}"
+                        data-controller="list-row"
+                        data-action="click->list-row#toggleSelection"
+                        data-id="{{ ligne_id }}"
+                        data-item-id="{{ ligne_id }}"
+                        data-list-row-idobjet-value="{{ ligne_id }}"
+                        class="element-a-encadrer parent-a-options context-target align-middle"
+                        data-rpa-texte="{{ (l.client ~ ' ' ~ l.reference ~ ' ' ~ l.risque ~ ' ' ~ l.assureur ~ ' ' ~ l.gestionnaire ~ ' ' ~ (l.conditionNom ?? ''))|lower }}">
+                        {# NUMÉRO D'ORDRE DU RAPPORT, pas un identifiant : il sert à se
+                           désigner une ligne à l'oral (« la 7 ») et à retrouver sa place
+                           après un défilement. Il suit l'ordre SERVEUR et ne se renumérote
+                           pas quand la recherche masque des lignes — sans quoi deux lectures
+                           du même rapport ne parleraient pas de la même ligne. #}
+                        {# Le NUMÉRO D'ORDRE cède sa colonne à la case, et se réfugie dans son
+                           titre : il servait à se désigner une ligne à l'oral (« la 7 ») et à
+                           retrouver sa place après un défilement. #}
+                        <td class="rpa-rang">
+                            {# LE TYPE SUIT LA NATURE DE LA LIGNE : un avenant sous
+                               « Souscrites », une proposition sous les deux autres. C'est
+                               l'identité mixte, et elle vaut aussi pour la sélection. #}
+                            {% set ligne_type = l.avenant ? 'Avenant' : 'Cotation' %}
+                            <input class="form-check-input" type="checkbox"
+                                   data-list-manager-target="rowCheckbox"
+                                   data-list-row-target="checkbox"
+                                   data-action="change->list-manager#handleRowSelection"
+                                   data-list-row-idobjet-value="{{ ligne_id }}"
+                                   data-entity-type="{{ ligne_type }}"
+                                   {# Ce que la ligne EST, en clair : de quoi la nommer dans le
+                                      menu contextuel sans inventer un enregistrement. #}
+                                   data-entity='{{ {
+                                       id: ligne_id,
+                                       nom: l.reference,
+                                       client: l.client,
+                                       risque: l.risque,
+                                       assureur: l.assureur,
+                                   }|json_encode|e('html_attr') }}'
+                                   data-canvas='{{ entityCanvas|default({})|json_encode|e('html_attr') }}'
+                                   title="Ligne {{ loop.index }}"
+                                   aria-label="Sélectionner la ligne {{ loop.index }} — {{ l.client }}">
+                        </td>
+                        <td>
+                            <span class="rpa-cellule">
+                                <span class="rpa-pastille" aria-hidden="true">
+                                    {{ ux_icon(resolve_icon_name('client'), {height: '14px', width: '14px'}) }}
+                                </span>{{ l.client }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="rpa-cellule">
+                                {# La pastille dit d'emblée si la ligne est une POLICE ou une
+                                   simple proposition : deux natures que les montants seuls
+                                   ne distinguent pas. #}
+                                <span class="rpa-pastille" aria-hidden="true">
+                                    {{ ux_icon(resolve_icon_name(l.avenant ? 'avenant' : 'cotation'), {height: '14px', width: '14px'}) }}
+                                </span>
+                                <span>
+                                    {{ l.reference }}
+                                    {% if l.debut %}
+                                        <div class="rpa-secondaire">
+                                            {{ l.debut|date('d/m/Y') }}{% if l.fin %} → {{ l.fin|date('d/m/Y') }}{% endif %}
+                                        </div>
+                                    {% endif %}
+                                </span>
+                            </span>
+                        </td>
+                        {# Le MOUVEMENT : une souscription et un renouvellement ne se discutent
+                           pas de la même façon quand on parle d'une rémunération. #}
+                        <td>
+                            <span class="rpa-cellule">
+                                <span class="rpa-pastille" aria-hidden="true">
+                                    {{ ux_icon(resolve_icon_name('avenant'), {height: '14px', width: '14px'}) }}
+                                </span>{{ l.mouvement }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="rpa-cellule">
+                                <span class="rpa-pastille" aria-hidden="true">
+                                    {{ ux_icon(resolve_icon_name('risque'), {height: '14px', width: '14px'}) }}
+                                </span>{{ l.risque }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="rpa-cellule">
+                                <span class="rpa-pastille" aria-hidden="true">
+                                    {{ ux_icon(resolve_icon_name('assureur'), {height: '14px', width: '14px'}) }}
+                                </span>{{ l.assureur }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="rpa-cellule">
+                                <span class="rpa-pastille" aria-hidden="true">
+                                    {{ ux_icon(resolve_icon_name('utilisateur'), {height: '14px', width: '14px'}) }}
+                                </span>{{ l.gestionnaire }}
+                            </span>
+                        </td>
+
+                        <td class="rpa-num rpa-groupe">{{ l.prime|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.primePayee|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.primeSolde|number_format(2, ',', ' ') }}</td>
+
+                        <td class="rpa-num rpa-groupe">{{ l.commissionTtc|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.commissionEncaissee|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.commissionSolde|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.commissionHt|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.taxeAssureur|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.taxeCourtier|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.commissionPure|number_format(2, ',', ' ') }}</td>
+
+                        <td class="rpa-num rpa-groupe">{{ l.partageable|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">{{ l.retroPartenaire|number_format(2, ',', ' ') }}</td>
+                        <td>
+                            {% if l.conditionNom %}
+                                <span class="rpa-cellule">
+                                    <span class="rpa-pastille" aria-hidden="true">
+                                        {{ ux_icon(resolve_icon_name('condition'), {height: '14px', width: '14px'}) }}
+                                    </span>
+                                    <span>
+                                        {{ l.conditionNom }}
+                                        <span class="rpa-secondaire">({{ l.conditionTaux|number_format(2, ',', ' ') }} %)</span>
+                                    </span>
+                                </span>
+                            {% else %}
+                                <span class="text-muted">&mdash;</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="rpa-num rpa-groupe rpa-focus">{{ l.due|number_format(2, ',', ' ') }}</td>
+                        <td class="rpa-num">
+                            {{ l.payee|number_format(2, ',', ' ') }}
+                            {# On ne l'annonce que si un versement a eu lieu : « 0 pièce » sur une
+                               affaire jamais payée serait un reproche sans objet. #}
+                            {% if l.payee > 0 %}
+                                {% set nb = piecesParAvenant[l.avenant.id]|default(0) %}
+                                {% if nb > 0 %}
+                                    <button type="button" class="rpa-pieces"
+                                            data-action="click->retro-agent-rapport#justificatifs"
+                                            data-avenant-id="{{ l.avenant.id }}"
+                                            title="Voir les justificatifs des versements sur cette affaire">
+                                        {{ nb }} pièce{{ nb > 1 ? 's' : '' }}
+                                    </button>
+                                {% else %}
+                                    <span class="rpa-pieces rpa-pieces--sans"
+                                          title="Ce versement n'a pas de justificatif : joignez-le depuis « Versements enregistrés ».">
+                                        sans pièce
+                                    </span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td class="rpa-num rpa-focus">{{ l.solde|number_format(2, ',', ' ') }}</td>
+                        {# Le seul montant sur lequel on peut agir aujourd'hui. #}
+                        <td class="rpa-num rpa-exigible"
+                            title="Réclamable dès maintenant : la commission de l'affaire est encaissée.">
+                            {{ l.exigible|number_format(2, ',', ' ') }}
+                        </td>
+                        <td>
+                            {# CE QU'ON PEUT FAIRE DE CETTE LIGNE, AUJOURD'HUI.
+
+                               La colonne annonçait le verdict N-1 de l'éligibilité — « Nouvelle
+                               affaire », « Ligne existante » — une information indicative, qui
+                               n'interdit ni n'autorise rien, et qui répétait à l'identique sur
+                               toutes les lignes. Ce que le courtier cherche ici, c'est de
+                               savoir s'il PEUT verser : le dû naît à la souscription, mais il
+                               n'est réclamable qu'une fois la commission encaissée.
+
+                               Le verdict d'éligibilité n'est pas perdu : il reste en infobulle,
+                               là où il ne dispute plus la place à l'essentiel. #}
+                            {# Du TEXTE, pas une pastille : `.badge` est forcé en bleu dans cette
+                               application, et une colonne entière de pilules bleues ne dit plus
+                               rien — sinon que tout se ressemble. C'est la COULEUR du mot qui
+                               porte l'état, et le vert gras ne va qu'à ce sur quoi on peut agir. #}
+                            {% if l.exigible > 0 %}
+                                <span class="rpa-etat rpa-etat--exigible"
+                                      title="La commission de cette affaire est encaissée : cette part est réclamable dès maintenant.">Exigible</span>
+                            {% elseif l.solde > 0 %}
+                                <span class="rpa-etat rpa-etat--attente"
+                                      title="Le montant est dû mais pas encore réclamable : le cabinet n'a pas fini d'encaisser sa commission.">Pas encore exigible</span>
+                            {% else %}
+                                <span class="rpa-etat rpa-etat--soldee"
+                                      title="Rien ne reste dû sur cette affaire.">Soldée</span>
+                            {% endif %}
+                            {% if l.avertissement %}
+                                <span class="rpa-secondaire d-block" title="{{ l.avertissement }}">{{ l.eligibiliteLibelle }}</span>
+                            {% endif %}
+                          </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                {# LA RANGÉE DE REMPLISSAGE — elle n'affiche rien, elle POUSSE. C'est elle
+                   qui absorbe la hauteur restante pour que le pied des totaux tienne le bas
+                   de la zone, que le rapport compte trois affaires ou deux cents. #}
+                {% if lignes is not empty %}<tr class="rpa-remplissage" aria-hidden="true"><td colspan="25"></td></tr>{% endif %}
+            </tbody>
+            {# LE PIED EST UNE RANGÉE DU TABLEAU, et c'est ce qui lui donne son alignement
+               sans une ligne de JavaScript : ses cellules sont celles des colonnes. Il est
+               COLLANT au bas de la zone de défilement, et défile donc horizontalement avec
+               le tableau — c'est le même conteneur. #}
+            {# PAS DE PIED SANS LIGNES À TOTALISER : « Totaux (0 ligne(s)) » suivi de
+               vingt-cinq zéros donnait à un écran d'accueil l'apparence d'un rapport nul. #}
+            {% if lignes is not empty %}
+            <tfoot class="rpa-pied">
+                <tr>
+<td colspan="7">Totaux · {{ totaux.nbLignes }} ligne{{ totaux.nbLignes > 1 ? 's' : '' }}</td>
+
+                    <td class="rpa-num">{{ totaux.prime|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.primePayee|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.primeSolde|number_format(2, ',', ' ') }}</td>
+
+                    <td class="rpa-num">{{ totaux.commissionTtc|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.commissionEncaissee|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.commissionSolde|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.commissionHt|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.taxeAssureur|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.taxeCourtier|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.commissionPure|number_format(2, ',', ' ') }}</td>
+
+                    <td class="rpa-num">{{ totaux.partageable|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.retroPartenaire|number_format(2, ',', ' ') }}</td>
+                    <td></td>
+
+                    <td class="rpa-num">{{ totaux.due|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.payee|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.solde|number_format(2, ',', ' ') }}</td>
+                    <td class="rpa-num">{{ totaux.exigible|number_format(2, ',', ' ') }}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+        <div class="rpa-sans-resultat d-none" role="status"
+             data-retro-agent-rapport-target="sansResultat">
+            Aucune affaire ne correspond à cette recherche.
+        </div>
+    </div>
+
+    {# LE PIED NE PARAÎT QU'AVEC DES LIGNES À TOTALISER. « Totaux (0 ligne(s)) »
+       suivi de vingt-cinq zéros donnait à un écran d'accueil l'apparence d'un rapport
+       nul — deux choses très différentes pour qui lit un état. #}
+    {% if lignes is not empty %}
+    {# ── BARRE DES TOTAUX ──────────────────────────────────────────────────────
+       Hors du tableau, donc toujours au bas de la page — que la liste tienne en six
+       lignes ou en deux cents. Ses colonnes sont alignées et son défilement suivi par
+       le contrôleur : `table-layout: fixed` + des largeurs recopiées du tableau. #}
+
+    {# Les totaux sont aussi énoncés pour les lecteurs d'écran, que la barre visuelle
+       — recopiée et découplée du tableau — ne saurait leur rattacher. #}
+    <p class="visually-hidden">
+        Totaux sur {{ totaux.nbLignes }} affaire(s) : rétrocommission due
+        {{ totaux.due|number_format(2, ',', ' ') }}, versée
+        {{ totaux.payee|number_format(2, ',', ' ') }}, solde
+        {{ totaux.solde|number_format(2, ',', ' ') }}, exigible
+        {{ totaux.exigible|number_format(2, ',', ' ') }}.
+    </p>
+    {% endif %}

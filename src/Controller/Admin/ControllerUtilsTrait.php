@@ -1530,6 +1530,10 @@ trait ControllerUtilsTrait
                 // Rétros agents : rubrique de consultation. L'oublier
                 // ici laisse la rubrique dans le menu et l'onglet vide (404 silencieux).
                 ReversementRetroAgent::class => 'App\Controller\Admin\ReversementRetroAgentController::index',
+                // PSEUDO-entité : la clé est le nom court en clair, sans `::class`, parce
+                // qu'il n'existe aucune classe à nommer. `processDataForShortEntityNames`
+                // garde déjà un `class_exists`, donc ce nom traverse le menu sans dommage.
+                'ProductionIntermediaire' => 'App\Controller\Admin\ProductionIntermediaireController::index',
             ],
             // SINISTRE
             '_view_manager_sinistre.html.twig' => [
@@ -1572,7 +1576,17 @@ trait ControllerUtilsTrait
         if (is_array($controllerAction)) {
             $actionFound = false;
             foreach ($controllerAction as $classFqcn => $action) {
-                if ((new \ReflectionClass($classFqcn))->getShortName() === $entityName) {
+                // UNE CLÉ N'EST PAS FORCÉMENT UNE CLASSE. Les rubriques sans entité Doctrine
+                // — « Production intermédiaires », dont les lignes sont calculées par le
+                // moteur de partage — se déclarent par leur nom court en clair. Passer un
+                // tel nom à ReflectionClass levait une exception AVANT même d'atteindre la
+                // comparaison : la rubrique répondait 500, sans rien dire de la cause.
+                // Même garde que le menu (`processDataForShortEntityNames`).
+                $shortName = class_exists($classFqcn)
+                    ? (new \ReflectionClass($classFqcn))->getShortName()
+                    : $classFqcn;
+
+                if ($shortName === $entityName) {
                     $controllerAction = $action;
                     $actionFound = true;
                     break;

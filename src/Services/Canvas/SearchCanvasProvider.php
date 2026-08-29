@@ -105,7 +105,14 @@ class SearchCanvasProvider
         // via le badge ou le dialogue avancé, le périmètre appliqué par défaut au chargement
         // (cf. ControllerUtilsTrait::getInitialSearchCriteria). Le moteur l'étend au(x)
         // chemin(s) de relation propre(s) à l'entité (cf. JSBDynamicSearchService).
-        $shortName = (new \ReflectionClass($entityClassName))->getShortName();
+        // UNE RUBRIQUE N'A PAS FORCÉMENT DE CLASSE. « Production intermédiaires » liste des
+        // affaires choisies par le moteur de partage, sans entité Doctrine à réfléchir :
+        // passer son nom court à ReflectionClass levait une exception AVANT la moindre
+        // lecture, et la rubrique répondait 500. Même garde que le menu et le routage des
+        // composants (`class_exists`).
+        $shortName = class_exists($entityClassName)
+            ? (new \ReflectionClass($entityClassName))->getShortName()
+            : $entityClassName;
         if (\App\Services\Search\PortefeuilleScope::isScopable($shortName)) {
             array_unshift($searchCriteria, [
                 'Nom' => \App\Services\Search\PortefeuilleScope::CRITERION_KEY,

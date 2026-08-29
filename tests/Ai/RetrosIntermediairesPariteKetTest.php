@@ -55,8 +55,13 @@ class RetrosIntermediairesPariteKetTest extends KernelTestCase
 
         foreach (['agent' => $agent, 'partenaire' => $partenaire] as $famille => $actions) {
             $evenements = array_column($actions, 'event');
-            self::assertContains('ui:retroagent.rapport-request', $evenements, sprintf(
-                'La fiche d’un %s doit ouvrir son rapport de production.',
+            // LE RAPPORT EST DEVENU UNE RUBRIQUE. Il ne s'ouvrait que par cette porte et
+            // ne se situait nulle part dans l'arbre du menu ; le clic ouvre désormais
+            // « Production intermédiaires », pré-filtrée sur le bénéficiaire. Ce qui est
+            // TENU ici n'a pas changé d'un pouce : les DEUX familles doivent y accéder,
+            // et c'est l'oubli du partenaire que ce test avait attrapé.
+            self::assertContains('ui:production.rubrique-request', $evenements, sprintf(
+                'La fiche d’un %s doit ouvrir sa production.',
                 $famille,
             ));
             self::assertContains('ui:retroagent.reversement-request', $evenements, sprintf(

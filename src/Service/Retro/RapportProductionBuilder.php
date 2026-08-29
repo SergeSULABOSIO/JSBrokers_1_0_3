@@ -343,15 +343,27 @@ final class RapportProductionBuilder
      *
      * @return array<string, float|int>
      */
+    /**
+     * LES COLONNES QUE LE PIED TOTALISE — une seule liste, pour le rapport comme pour
+     * son état vide. Deux listes auraient fini par diverger d'une colonne.
+     */
+    public const COLONNES_TOTALISEES = [
+        'prime', 'primePayee', 'primeSolde',
+        'commissionTtc', 'commissionEncaissee', 'commissionSolde',
+        'commissionHt', 'taxeAssureur', 'taxeCourtier',
+        'commissionPure', 'partageable', 'retroPartenaire',
+        'due', 'payee', 'solde', 'exigible',
+    ];
+
+    /** Un rapport sans ligne vaut zéro partout : c'est une réponse, pas une absence. */
+    public static function totauxVides(): array
+    {
+        return array_fill_keys(self::COLONNES_TOTALISEES, 0.0) + ['nbLignes' => 0];
+    }
+
     private function totaux(array $lignes): array
     {
-        $colonnes = [
-            'prime', 'primePayee', 'primeSolde',
-            'commissionTtc', 'commissionEncaissee', 'commissionSolde',
-            'commissionHt', 'taxeAssureur', 'taxeCourtier',
-            'commissionPure', 'partageable', 'retroPartenaire',
-            'due', 'payee', 'solde', 'exigible',
-        ];
+        $colonnes = self::COLONNES_TOTALISEES;
 
         $totaux = array_fill_keys($colonnes, 0.0);
         $totaux['nbLignes'] = count($lignes);

@@ -101,6 +101,11 @@ class WorkspaceAccessResolver
         // (RetrocommissionsTool) : deux surfaces, une seule réponse.
         'ReversementRetroAgent'      => ['Finances', 'getRolesEnFinance', 'getAccessReversementRetroAgent', 'Rétros intermédiaires'],
         'Partenaire'                 => ['Production', 'getRolesEnProduction', 'getAccessPartenaire', 'Intermédiaires'],
+        // Pseudo-entité (production calculée par le moteur de partage, aucune classe
+        // Doctrine) : gate la rubrique « Production intermédiaires » du menu et son
+        // contrôleur. Elle emprunte le droit des INTERMÉDIAIRES, qu'elle met en scène —
+        // aucun droit de plus à régler, donc aucune migration ni reprise de données.
+        'ProductionIntermediaire'    => ['Production', 'getRolesEnProduction', 'getAccessPartenaire', 'Production intermédiaires'],
         // Conditions de partage : RUBRIQUE à part entière depuis qu'elles portent la
         // rémunération nominative d'agents internes — il fallait un écran pour les créer
         // et auditer les taux en vigueur. Elles partagent le droit « Intermédiaires » :
@@ -367,6 +372,9 @@ class WorkspaceAccessResolver
         // « Reversements de rétrocommission » (jusqu'au 2026-08-24), abrégé en
         // « Rétros agents » parce qu'il se tronquait en « Reversements d… » dans un onglet.
         'ReversementRetroAgent' => ['Reversements de rétrocommission', 'Rétros agents'],
+        // L'écran s'appelait « rapport de production » et n'était accessible que depuis
+        // une fiche. Il est devenu une rubrique ; le mot, lui, reste celui des courtiers.
+        'ProductionIntermediaire' => ['Rapport de production', 'Production'],
     ];
 
     /**

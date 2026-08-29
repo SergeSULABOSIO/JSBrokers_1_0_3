@@ -1778,6 +1778,35 @@ textarea:hover,
 .table-scroll-wrapper {
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   RUBRIQUE À RENDU PROPRE : LA PILE VA JUSQU'EN BAS.
+
+   Le rendu générique laisse le tableau couler : sa hauteur est celle de ses lignes,
+   et c'est très bien. Une rubrique qui apporte son propre tableau peut avoir besoin
+   d'autre chose — « Production intermédiaires » porte un PIED DE TOTAUX qui doit
+   rester au bas du panneau, que le rapport tienne en une ligne ou en deux cents.
+
+   Or la chaîne de hauteurs s'arrêtait avant lui : le panneau d'onglet est bien borné,
+   mais ni le panneau de liste ni le conteneur du socle ne transmettaient cette
+   hauteur, et un `height: 100%` posé plus bas se résolvait contre un parent en
+   hauteur automatique — donc contre le contenu lui-même. Le pied se collait sous la
+   dernière ligne, tout le bas du panneau restant vide.
+
+   La classe n'est posée que par les rubriques concernées : rien ne change pour les
+   trente autres.
+   ─────────────────────────────────────────────────────────────────────────── */
+[role="tabpanel"]:has(> .jsb-list-pleine-hauteur) { height: 100%; }
+.jsb-list-pleine-hauteur {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+.jsb-list-pleine-hauteur > .table-scroll-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
 /* Offset du thead quand la barre des contrôles est présente : il colle sous les
    DEUX rangées collantes (contrôles + chips de filtre, hauteurs dynamiques). */
 .list-manager-has-controls thead.sticky-header th {
@@ -1847,12 +1876,39 @@ thead.sticky-header {
     width: 0;          /* Ne contribue pas à la largeur intrinsèque de la colonne (table auto-layout) */
     min-width: 100%;   /* ... mais occupe toute la largeur réelle du <td> au rendu */
 }
-.table-enhanced tbody tr.row-selected {
-    background-color: #e8f0fb;
+/* ─────────────────────────────────────────────────────────────────────────────
+   LA LIGNE SÉLECTIONNÉE, PARTOUT PAREIL.
+
+   La classe `row-selected` est posée par `list-row` et `list-manager` : elle vaut
+   donc pour les trente-quatre rubriques, et pour toute liste qui adopte le même
+   contrat de ligne. La règle est écrite ICI, une fois — une rubrique qui se
+   peindrait ses propres lignes cochées finirait par ne plus ressembler aux autres.
+
+   ⚠ LA COULEUR SE POSE SUR LES CELLULES, pas sur la rangée. Bootstrap colore les
+   `td` depuis `.table > :not(caption) > * > *`, plus spécifique qu'un fond de `tr` :
+   la teinte était donc recouverte dès que la table portait `.table`. On peint donc
+   là où Bootstrap peint.
+
+   DEUX SIGNES, jamais la couleur seule (WCAG 1.4.1) : le fond cobalt pâle de la
+   charte, et un filet cobalt en tête de ligne. La case cochée reste le premier.
+   ─────────────────────────────────────────────────────────────────────────── */
+tr.row-selected > td {
+    background-color: var(--bg-cobalt-subtle, #e8f0fb);
+}
+tr.row-selected > td:first-child {
+    box-shadow: inset 3px 0 0 var(--cobalt, #0047AB);
+}
+/* Le survol reste perceptible SUR une ligne déjà cochée : sans cette reprise, la
+   règle ci-dessus l'emportait et la ligne cessait de répondre à la souris. */
+tr.row-selected:hover > td {
+    background-color: #dce9f9;
 }
 .table-enhanced tbody tr:hover {
     background-color: #f8f9fa;
 }
+/* TOUTE LA LIGNE COCHE (`list-row#toggleSelection`) : le curseur doit le dire, sans
+   quoi le geste ne se découvre qu'au hasard d'un clic. */
+.table-enhanced tbody tr { cursor: pointer; }
 .table-enhanced tbody tr:last-child td {
     border-bottom: none;
 }
@@ -5582,7 +5638,11 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     flex: 0 0 auto;
     color: var(--cobalt, #0047AB);
 }
+/* LE NOM EST UN LIEN : on l'ouvre pour vérifier qu'un bordereau est le bon avant de
+   le remplacer. Il garde l'allure d'un nom de fichier — souligné au survol
+   seulement, pour ne pas transformer la liste en champ de liens bleus. */
 .jsb-pieces-deja__nom {
+    text-decoration: none;
     flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
@@ -5590,6 +5650,7 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     white-space: nowrap;
     color: var(--text-dark, #212529);
 }
+.jsb-pieces-deja__nom:hover { text-decoration: underline; color: var(--cobalt, #0047AB); }
 /* LE BOUTON PORTE SON LIBELLÉ, donc il s'aligne comme une paire icône + mot — et
    non comme la pastille carrée de `.jsb-attach-retirer`, dont le `justify-content:
    center` et le `min-width: 32px` écrasaient le texte contre le bord. */

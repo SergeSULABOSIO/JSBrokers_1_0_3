@@ -1,0 +1,252 @@
+{#
+    LES LIGNES DE LA RUBRIQUE « PRODUCTION INTERMÉDIAIRES ».
+
+    Ce gabarit EST le tableau de l'ancien rapport de production, déplacé sans qu'une
+    colonne ait bougé : il dit, affaire par affaire, le trajet de l'argent — de la prime
+    du client jusqu'au solde qui reste dû à l'intermédiaire, en passant par tout ce qui
+    est prélevé en chemin. C'est un document qu'on conteste ; chaque colonne doit donc
+    rester nommée, et chaque total vérifiable à la main.
+
+    Ce qui a disparu : l'entête sombre, les chips de statut et la recherche rapide, tous
+    dessinés à la main. La rubrique les apporte maintenant, comme aux trente autres.
+
+    ── COMMENT IL EST APPELÉ ──────────────────────────────────────────────────────────
+    Par `_List_manager.html.twig`, quand le canevas de liste déclare `rendu_personnalise`.
+    L'`include` n'utilise PAS `only` : le contexte du contrôleur — `beneficiaire`,
+    `totaux`, `monnaie`, `projection`, `colonnes`, `piecesParAvenant` — traverse donc
+    jusqu'ici. C'est délibéré, et c'est ce qui évite de faire voyager six variables de
+    plus dans une signature partagée par toutes les rubriques.
+
+    ── LE CONTRAT DE LIGNE ────────────────────────────────────────────────────────────
+    Chaque `<tr>` porte `data-id` et une case `data-list-manager-target="rowCheckbox"` :
+    c'est ce que le socle attend pour la sélection et pour la barre des totaux. La case
+    prend la place de la colonne « # » — en AJOUTER une aurait décalé le pied, dont les
+    largeurs sont recopiées de l'entête.
+
+    Toutes les couleurs viennent de la charte JS Brokers, par leurs jetons.
+#}
+
+<style>
+    /* PLEINE LARGEUR, AVEC DES GOUTTIÈRES. Le rapport occupe la place disponible — un
+       tableau de vingt-trois colonnes centré dans une boîte étroite se lisait à travers
+       une meurtrière, et défilait horizontalement alors que l'écran était vide de part
+       et d'autre. La marge, elle, reste : un panneau collé aux bords étouffe. */
+    .rpa-container {
+        /* LA COQUILLE DE LA RUBRIQUE FOURNIT DÉSORMAIS LE CADRE — entête, bordure,
+           ombre et arrondis. Il ne reste ici que la PILE qui garde le pied des
+           totaux au bas de la zone : le tableau défile au milieu, le pied ne bouge
+           pas. Sans cette borne, il suivait la dernière ligne et sortait de l'écran
+           dès dix affaires. */
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+    }
+    /* LA CIBLE DU SOCLE PREND LE RELAIS DE LA PILE. Elle est remplacée à chaque
+       recherche, et porte donc à la fois le tableau qui défile et le pied qui ne
+       défile pas : elle doit être une pile à son tour, sans quoi le pied se
+       remettrait à suivre la dernière ligne. */
+    .rpa-corps {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+    .rpa-container > *:not(.rpa-corps) { flex: 0 0 auto; }
+    /* Aucune ligne ne répond : on le DIT, plutôt que de laisser un tableau vide. */
+
+    /* Défilement PROPRE, dans les deux axes : à vingt-trois colonnes le tableau reste
+       large sur un écran modeste, et long dès qu'un agent produit. Il défile DANS son
+       conteneur — jamais la page entière — et c'est ce défilement qui sert d'ancrage
+       aux en-têtes et au pied collants. */
+    .rpa-scroll {
+        flex: 1 1 auto;
+        overflow: auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    /* LE TABLEAU OCCUPE LA HAUTEUR — voir la rangée de remplissage ci-dessous. */
+    .rpa-scroll > .rpa-table { flex: 1 0 auto; }
+    /* ELLE SEULE ABSORBE L'EXCÉDENT. Sans elle, l'étirement du tableau serait
+       réparti entre toutes les rangées : trois affaires deviendraient trois bandes.
+       Elle n'a pas de contenu, ne se survole pas, et ne compte pas comme une ligne. */
+    .rpa-table tbody tr.rpa-remplissage,
+    .rpa-table tbody tr.rpa-remplissage:hover { background: transparent; cursor: default; }
+    .rpa-table tbody tr.rpa-remplissage td { height: 100%; padding: 0; border: 0; }
+    .rpa-table { font-size: 0.82rem; margin-bottom: 0; white-space: nowrap; }
+    /* ── LES TOTAUX SONT UNE RANGÉE DU TABLEAU, ET COLLANTE ────────────────────
+       Ils doivent tenir le bas de la zone QUELLE QUE SOIT la longueur de la liste, et
+       défiler horizontalement AVEC elle.
+
+       C'était une barre séparée, alignée à la main : le contrôleur mesurait les largeurs
+       de l'entête, les recopiait sur un colgroup, puis reportait le défilement. Trois
+       mécanismes fragiles pour un seul but — et il suffisait qu'un seul ne s'exécute pas
+       (une cible détachée par un rafraîchissement, un tableau absent au premier rendu)
+       pour que le pied garde sa largeur par défaut : colonnes tronquées en « 2 5… », et
+       immobiles pendant que le tableau défilait.
+
+       Dans un `tfoot`, l'alignement est acquis PAR CONSTRUCTION — ce sont les colonnes du
+       tableau — et le défilement est celui du tableau, puisque c'est le même conteneur.
+       Ce qui l'interdisait à l'origine, « un tfoot collant ne descend que si le tableau
+       dépasse sa zone », n'a plus cours : la zone de défilement a désormais une hauteur
+       imposée par la pile. */
+    .rpa-pied td {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        background-color: var(--bg-dark, #212529);
+        color: var(--text-white, #ffffff);
+        font-weight: 600;
+        white-space: nowrap;
+        border: 0;
+        box-shadow: inset 0 2px 0 var(--cobalt, #0047AB);
+    }
+    /* GOUTTIÈRES DES CELLULES. `table-sm` de Bootstrap serre à 0.25rem — acceptable
+       pour une liste qu'on survole, trop peu pour un tableau qu'on ÉPLUCHE : les
+       montants se touchaient d'une colonne à l'autre et l'œil devait s'accrocher au
+       filet pour les séparer. On respire, sans gagner de largeur inutile. */
+    .rpa-table > :not(caption) > * > * { padding: 0.6rem 0.85rem; }
+    /* Et l'on ne colle pas au bord du panneau : premier et dernier de chaque rangée
+       reprennent la gouttière de l'entête. */
+    .rpa-table > :not(caption) > * > *:first-child { padding-left: 1.25rem; }
+    .rpa-table > :not(caption) > * > *:last-child { padding-right: 1.25rem; }
+
+    /* ── DEUX RANGS D'EN-TÊTES, TOUS DEUX COLLANTS ────────────────────────────────
+       En défilant, on garde à la fois le nom de la colonne ET le groupe auquel elle
+       appartient.
+
+       LE GROUPE SE DÉSIGNE PAR UN FILET, PAS PAR UNE COULEUR DE TEXTE. Un rang
+       d'en-têtes écrit en couleur de marque crie plus fort que les chiffres qu'il
+       surmonte, et une bande teintée en travers du tableau fait bannière. Le rang des
+       groupes est donc SOBRE — petites capitales grises, centrées sur leurs colonnes —
+       et c'est un filet cobalt continu qui le sépare du détail : l'accent souligne, il
+       n'occupe pas.
+
+       Hauteur FIXÉE au premier rang : c'est elle qui donne le `top` du second. Une
+       hauteur déduite du contenu ferait chevaucher les deux rangs dès qu'une police
+       change de corps. */
+    .rpa-table thead th {
+        position: sticky; z-index: 2;
+        background-color: var(--bg-light, #f8f9fa);
+        color: var(--text-body, #495057);
+        font-weight: 600;
+    }
+    .rpa-table thead tr:first-child th {
+        top: 0;
+        height: 2.1rem;
+        padding: 0 0.85rem;
+        background-color: var(--bg-white, #ffffff);
+        color: var(--text-muted, #6c757d);
+        font-size: 0.68rem; font-weight: 700;
+        letter-spacing: 0.09em; text-transform: uppercase;
+        text-align: center;
+        border-bottom: 2px solid var(--cobalt, #0047AB);
+    }
+    .rpa-table thead tr:last-child th {
+        top: 2.1rem;
+        color: var(--text-dark-secondary, #343a40);
+        border-bottom: 1px solid var(--border-medium, #ced4da);
+    }
+    /* Un filet vertical sépare les groupes : c'est lui qui fait tenir la lecture par blocs
+       une fois l'œil descendu dans les lignes. */
+    .rpa-table .rpa-groupe { border-left: 2px solid var(--border-light, #dee2e6); }
+    .rpa-table .rpa-rang { color: var(--text-label, #adb5bd); width: 2.5rem; }
+    /* ÉTAT DE LA PART : seul ce sur quoi on peut AGIR porte la couleur de succès.
+       Le reste s'efface — un tableau où tout est coloré ne signale plus rien. */
+    .rpa-etat { font-size: 0.8rem; }
+    .rpa-etat--exigible { color: var(--success, #198754); font-weight: 700; }
+    .rpa-etat--attente  { color: var(--text-muted, #6c757d); }
+    .rpa-etat--soldee   { color: var(--text-label, #adb5bd); }
+    /* LA DETTE DE PREUVE, LÀ OÙ ON LIT LES MONTANTS. Une affaire payée sans
+       justificatif ne se voyait nulle part : il fallait ouvrir un volet pour
+       l'apprendre. Le compte est discret — c'est une indication, pas une colonne. */
+    .rpa-pieces {
+        display: block;
+        font-size: 0.72rem;
+        line-height: 1.2;
+        background: none;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+        text-decoration: underline dotted;
+        color: var(--success, #198754);
+    }
+    .rpa-pieces:hover { color: var(--cobalt, #0047AB); }
+    .rpa-pieces--sans {
+        color: var(--danger, #dc3545);
+        cursor: default;
+        text-decoration: none;
+    }
+
+    .rpa-scroll .rpa-table tbody td { color: var(--text-body, #495057); vertical-align: middle; }
+    .rpa-table tbody tr { transition: background-color .12s ease, box-shadow .12s ease; }
+    /* La ligne cochée est peinte par la règle COMMUNE (`tr.row-selected` dans
+       app.css) : cette rubrique ne se distingue pas des autres sur ce point, et
+       n'a donc pas à s'en écrire une seconde. */
+    /* Toute la ligne coche : le curseur le dit. */
+    .rpa-table tbody tr[data-rpa-ligne] { cursor: pointer; }
+    .rpa-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    /* Pastille d'identité : elle se lit AVANT le texte et distingue un client d'un risque
+       ou d'un assureur sans qu'on relise l'en-tête. Couleur discrète — c'est un repère,
+       pas une alerte. */
+    .rpa-pastille {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 1.35rem; height: 1.35rem; margin-right: 0.4rem; flex: 0 0 auto;
+        border-radius: 6px;
+        background-color: var(--bg-muted, #e9ecef);
+        color: var(--text-muted, #6c757d);
+        vertical-align: middle;
+    }
+    .rpa-cellule { display: inline-flex; align-items: center; min-width: 0; }
+    .rpa-secondaire { font-size: 0.75rem; color: var(--text-muted, #6c757d); }
+
+    /* Les colonnes qui intéressent l'agent : mises en avant sans couleur décorative. */
+    .rpa-table .rpa-focus {
+        background-color: var(--bg-light, #f8f9fa);
+        font-weight: 600;
+        color: var(--text-dark, #212529);
+    }
+    /* L'EXIGIBLE est le seul montant sur lequel on peut AGIR aujourd'hui : il porte donc
+       l'accent de la marque, là où les autres restent neutres. */
+    .rpa-table .rpa-exigible { color: var(--cobalt, #0047AB); font-weight: 700; }
+
+    .rpa-empty { padding: 2rem 1.25rem; text-align: center; color: var(--text-muted, #6c757d); }
+    /* LA CELLULE COUVRE VINGT-CINQ COLONNES ; le message, lui, doit tenir dans la vue.
+       Sans cela il était centré sur la largeur TOTALE du tableau — donc hors écran dès
+       qu'on ne défilait pas jusqu'à lui. Il se colle au bord gauche visible, et le
+       tableau défile derrière. */
+    .rpa-table td.rpa-message { padding: 0; }
+    .rpa-message-boite {
+        position: sticky;
+        left: 0;
+        width: min(100%, 46rem);
+    }
+    /* L'ACCUEIL N'EST PAS UN ÉTAT VIDE : il dit ce qu'il reste à faire, et il le dit
+       avec l'icône de la rubrique plutôt qu'avec une phrase de plus. */
+    .rpa-accueil {
+        display: flex; flex-direction: column; align-items: center; gap: .35rem;
+        padding: 3rem 1.5rem; text-align: center;
+    }
+    .rpa-accueil-icone { display: inline-flex; color: var(--cobalt, #0047AB); }
+    .rpa-accueil-titre {
+        margin: .4rem 0 0; font-size: 1rem; font-weight: 600;
+        color: var(--text-dark-secondary, #343a40);
+    }
+    .rpa-accueil-aide {
+        margin: 0; max-width: 34rem; font-size: .88rem;
+        color: var(--text-muted, #6c757d);
+    }
+</style>
+
+<div class="rpa-container"
+     data-controller="retro-agent-rapport"
+     data-retro-agent-rapport-monnaie-value="{{ monnaie|default('') }}">
+    {# LA CIBLE QUE LE SOCLE REMPLACE. Elle doit exister MÊME VIDE : sans elle, le
+       contrôleur de liste refuse de se connecter, et c'est toute la coquille qui meurt
+       avec lui — recherche, sélection et totaux compris. #}
+    <div data-list-manager-target="donnees" class="rpa-corps">
+        {{ include('components/production/_corps.html.twig') }}
+    </div>
+</div>

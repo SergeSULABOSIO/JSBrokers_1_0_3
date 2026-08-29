@@ -557,8 +557,12 @@ export default class extends Controller {
             case 'ui:invite.resend-request':
                 this.handleInviteResendRequest(payload);
                 break;
-            case 'ui:retroagent.rapport-request': // rapport de production d'un agent interne
-                this.handleRetroAgentRapportRequest(payload);
+            case 'ui:production.rubrique-request': // la production d'un intermédiaire
+                this.handleProductionRubriqueRequest(payload);
+                break;
+            case 'ui:production.reversement-request': // verser au bénéficiaire affiché
+            case 'ui:production.versements-request': // relire ce qu'on lui a versé
+                this.handleProductionBeneficiaireAction(type);
                 break;
             case 'ui:retroagent.reversement-request': // saisie d'un reversement (une ligne ou un lot)
                 this.handleRetroAgentReversementRequest(payload);
@@ -1488,6 +1492,109 @@ export default class extends Controller {
         } catch (error) {
             console.error('[Cerveau] Erreur lors du chargement du SOA :', error);
             this._showNotification(error.message || 'Erreur lors du chargement du relevé de compte.', 'error');
+        } finally {
+            this.broadcast('app:loading.stop');
+        }
+    }
+
+    /**
+     * LES DEUX COMMANDES DE LA RUBRIQUE « PRODUCTION INTERMÉDIAIRES ».
+     *
+     * Verser au bénéficiaire affiché, ou relire ce qu'on lui a déjà versé. Ce sont les
+     * deux boutons que portait l'entête de l'ancien rapport, devenus des actions de la
+     * rubrique — donc disponibles à la barre d'outils comme au menu contextuel.
+     *
+     * ⚠ ELLES PORTENT SUR LE BÉNÉFICIAIRE DU FILTRE, pas sur la ligne cochée : on verse
+     * à quelqu'un, pas à une affaire. Le mécanisme d'actions ne sait transporter que
+     * l'`%id%` d'une ligne ; on lit donc le chip « Bénéficiaire » de l'onglet — la MÊME
+     * source que la liste affichée, jamais une seconde.
+     *
+     * @param {string} type l'événement demandé
+     */
+    handleProductionBeneficiaireAction(type) {
+        const criteres = this._getCurrentWsTabState()[this.getActiveTabId()]?.searchCriteria || {};
+        const valeur = criteres['__beneficiaire_production__']?.value;
+        const libelle = criteres['__beneficiaire_production__']?.label;
+
+        // SANS BÉNÉFICIAIRE, ON NE DEVINE PAS. Ouvrir le picker « de quelqu'un » sans
+        // savoir de qui ferait verser au hasard ; ouvrir la rubrique des versements
+        // entière ferait passer les virements de tout le monde pour les siens.
+        if (!valeur || !valeur.includes(':')) {
+            this._showNotification(
+                'Choisissez d\'abord un intermédiaire avec le chip « Bénéficiaire » : ces deux '
+                + 'commandes portent sur lui, pas sur la ligne cochée.',
+                'warning',
+            );
+            return;
+        }
+
+        const [famille, id] = valeur.split(':');
+
+        if (type === 'ui:production.versements-request') {
+            // LA RUBRIQUE DES RÉTROS, filtrée sur lui — par l'événement que Ket emploie
+            // déjà : écran et assistant ouvrent la même liste par le même chemin.
+            document.dispatchEvent(new CustomEvent('app:workspace.open-rubrique', {
+                bubbles: true,
+                detail: {
+                    entityName: 'ReversementRetroAgent',
+                    criteres: {
+                        __beneficiaire_reversement__: {
+                            operator: '=',
+                            value: valeur,
+                            label: libelle || `#${id}`,
+                        },
+                    },
+                },
+            }));
+            return;
+        }
+
+        // LE PICKER DE REVERSEMENT, celui-là même que la fiche du bénéficiaire ouvre :
+        // une seule écriture, une seule garde de justificatif, un seul chemin.
+        this.handleRetroAgentReversementRequest({
+            url: famille === 'partenaire'
+                ? `/admin/retro-agent/partenaire/${id}/reversement-picker`
+                : `/admin/retro-agent/${id}/reversement-picker`,
+        });
+    }
+
+    /**
+     * OUVRIR « PRODUCTION INTERMÉDIAIRES » SUR UN BÉNÉFICIAIRE.
+     *
+     * Le mécanisme d'actions ne transporte qu'un événement et une URL — jamais un jeu de
+     * critères. On demande donc au SERVEUR le critère tout fait : c'est la même
+     * construction que celle du chip et que celle de l'assistant (`ProductionScope`), et
+     * non une seconde recette écrite en JavaScript qui aurait fini par diverger.
+     *
+     * L'événement d'ouverture, lui, est celui que Ket emploie déjà : écran et assistant
+     * ouvrent la même rubrique par le même chemin, et le critère paraît en badge retirable.
+     *
+     * @param {object} payload
+     * @param {string} payload.url - '/admin/productionintermediaire/ouvrir/{famille}/{id}'
+     */
+    async handleProductionRubriqueRequest(payload) {
+        if (!payload.url) {
+            console.error('[Cerveau] handleProductionRubriqueRequest() : URL manquante.', payload);
+            this._showNotification('Impossible d\'ouvrir la production : URL manquante.', 'error');
+            return;
+        }
+
+        try {
+            this._publishSelectionStatus('Ouverture de la production…');
+            this.broadcast('app:loading.start');
+
+            const response = await fetch(payload.url);
+            const result = await response.json();
+            if (!response.ok) throw result;
+
+            document.dispatchEvent(new CustomEvent('app:workspace.open-rubrique', {
+                bubbles: true,
+                detail: { entityName: result.entityName, criteres: result.criteres },
+            }));
+            this._publishSelectionStatus('Production ouverte.');
+        } catch (error) {
+            console.error('[Cerveau] Erreur à l\'ouverture de la production :', error);
+            this._showNotification(error.message || 'Erreur à l\'ouverture de la production.', 'error');
         } finally {
             this.broadcast('app:loading.stop');
         }

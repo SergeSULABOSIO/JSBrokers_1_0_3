@@ -84,12 +84,15 @@ class ReversementRetroAgentFormCanvasProvider implements FormCanvasProviderInter
                     "url"          => "/admin/retro-agent/reversement/%id%/justificatifs",
                 ],
                 [
-                    "label"        => "Voir le rapport de production du bénéficiaire",
+                    // LA RUBRIQUE, ET PLUS UN ÉCRAN À PART. L'`%id%` est celui de la LIGNE
+                    // — un versement, pas un intermédiaire : la route traduit, comme le
+                    // faisait déjà celle du rapport.
+                    "label"        => "Voir la production du bénéficiaire",
                     "icon"         => "invite",
                     "groupe"       => "Rétrocommissions",
                     "groupe_icone" => "depense",
-                    "event"        => "ui:retroagent.rapport-request",
-                    "url"          => "/admin/retro-agent/reversement/%id%/rapport",
+                    "event"        => "ui:production.rubrique-request",
+                    "url"          => "/admin/productionintermediaire/ouvrir/reversement/%id%",
                 ],
             ],
             // ── « ÉDITER » OUVRE LA FENÊTRE DE REVERSEMENT ────────────────────────────

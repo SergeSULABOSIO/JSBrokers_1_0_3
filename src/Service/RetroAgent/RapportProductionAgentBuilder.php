@@ -262,6 +262,23 @@ final class RapportProductionAgentBuilder
     }
 
     /**
+     * LES TOTAUX D'UN RAPPORT VIDE — des zéros, pas une absence.
+     *
+     * La rubrique rend son pied de totaux même sans bénéficiaire choisi : le tableau est
+     * toujours à l'écran, et ses colonnes attendent. Lui passer un tableau vide le faisait
+     * tomber sur la première clé lue.
+     *
+     * La liste des colonnes est celle du rapport, prise à sa source : la recopier ailleurs
+     * aurait fait deux listes pour un seul pied, et l'une aurait fini par en oublier une.
+     *
+     * @return array<string, float|int>
+     */
+    public static function totauxVides(): array
+    {
+        return RapportProductionBuilder::totauxVides();
+    }
+
+    /**
      * Le bénéficiaire, quelle que soit sa famille — la fabrique est le seul endroit qui
      * sait de quoi chacune est faite.
      */

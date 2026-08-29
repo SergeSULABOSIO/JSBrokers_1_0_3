@@ -18,7 +18,7 @@ import { Controller } from '@hotwired/stimulus';
  * explicitement combien de lignes sont montrées sur combien.
  */
 export default class extends Controller {
-    static targets = ['recherche', 'compteur', 'sansResultat', 'scroll', 'tableau', 'pied', 'colonnesPied'];
+    static targets = ['recherche', 'compteur', 'sansResultat'];
 
     static values = {
         baseUrl: String,
@@ -51,74 +51,26 @@ export default class extends Controller {
         }
         this.chercher();
 
-        // La barre des totaux vit HORS du tableau : c'est ce qui la garde au bas de la
-        // page quelle que soit la longueur de la liste, et ce qui oblige à tenir son
-        // alignement à la main.
-        this._alignerLePied();
-        this._suivreLeDefilement = () => this._reporterLeDefilement();
-        if (this.hasScrollTarget) {
-            this.scrollTarget.addEventListener('scroll', this._suivreLeDefilement, { passive: true });
-        }
-        // Les largeurs bougent avec la fenêtre, avec le repli des colonnes du
-        // workspace, et à l'arrivée des polices de caractères.
-        if (this.hasTableauTarget && typeof ResizeObserver !== 'undefined') {
-            this._observateur = new ResizeObserver(() => this._alignerLePied());
-            this._observateur.observe(this.tableauTarget);
-        }
+        // ── LE TABLEAU EST REMPLACÉ À CHAQUE RECHERCHE ───────────────────────────
+        //
+        // Le socle réécrit le contenu de sa cible `donnees` : les lignes que ce contrôleur
+        // avait mémorisées pour sa recherche rapide n'existent plus. Lui vit sur le
+        // conteneur — il survit, et doit donc se ressaisir.
+        //
+        // Il n'a plus rien d'autre à reprendre : le pied des totaux est devenu une rangée
+        // du tableau, collante au bas de la zone. Son alignement est celui des colonnes et
+        // son défilement celui du tableau — plus rien à mesurer, plus rien à reporter.
+        this._auRendu = () => {
+            requestAnimationFrame(() => {
+                this.lignes = Array.from(this.element.querySelectorAll('[data-rpa-ligne]'));
+            });
+        };
+        document.addEventListener('app:list.rendered', this._auRendu);
     }
 
     disconnect() {
-        this._observateur?.disconnect();
-        if (this.hasScrollTarget && this._suivreLeDefilement) {
-            this.scrollTarget.removeEventListener('scroll', this._suivreLeDefilement);
-        }
-    }
-
-    /**
-     * Recopie sur la barre les largeurs MESURÉES du tableau.
-     *
-     * Vingt-cinq colonnes dont la largeur dépend du contenu : aucune valeur écrite
-     * d'avance ne tiendrait: un nom de client plus long, et tout se décale. On lit donc
-     * la rangée d'en-têtes de détail — celle qui porte une cellule par colonne — et on
-     * la reporte sur les `col` de la barre, qui est en `table-layout: fixed` et les
-     * respecte donc à la lettre.
-     *
-     * @private
-     */
-    _alignerLePied() {
-        if (!this.hasTableauTarget || !this.hasColonnesPiedTarget) {
-            return;
-        }
-        const enTetes = this.tableauTarget.querySelectorAll('thead tr:last-child th');
-        const colonnes = this.colonnesPiedTarget.querySelectorAll('col');
-        if (enTetes.length === 0 || enTetes.length !== colonnes.length) {
-            return;
-        }
-
-        let total = 0;
-        enTetes.forEach((th, i) => {
-            const largeur = th.getBoundingClientRect().width;
-            colonnes[i].style.width = `${largeur}px`;
-            total += largeur;
-        });
-        // La barre doit être aussi large que le tableau, sans quoi son défilement
-        // reporté n'aurait nulle part où aller.
-        const tableauPied = this.piedTarget?.querySelector('table');
-        if (tableauPied) {
-            tableauPied.style.width = `${total}px`;
-        }
-        this._reporterLeDefilement();
-    }
-
-    /**
-     * La barre suit le tableau quand il défile de côté : deux rangées de chiffres qui
-     * ne parlent pas des mêmes colonnes seraient pires qu'un total absent.
-     *
-     * @private
-     */
-    _reporterLeDefilement() {
-        if (this.hasScrollTarget && this.hasPiedTarget) {
-            this.piedTarget.scrollLeft = this.scrollTarget.scrollLeft;
+        if (this._auRendu) {
+            document.removeEventListener('app:list.rendered', this._auRendu);
         }
     }
 
