@@ -66,6 +66,10 @@ export default class extends BaseController {
         // REFACTORING : Écoute l'événement de chargement unifié 'app:loading.start'.
         this.boundHandleLoadingStart = this.handleLoadingStart.bind(this);
         document.addEventListener('app:loading.start', this.boundHandleLoadingStart);
+        // LA SÉLECTION D'AVANT LE RECHARGEMENT : le gestionnaire d'espace la repose une
+        // fois la liste rendue, c'est nous qui cochons.
+        this.boundRestaurerSelection = this.restaurerSelection.bind(this);
+        document.addEventListener('app:selection.restaurer', this.boundRestaurerSelection);
 
         this.boundHandlePaginationClick = this._handlePaginationClick.bind(this);
         this.element.addEventListener('click', this.boundHandlePaginationClick);
@@ -123,6 +127,7 @@ export default class extends BaseController {
         this.element.removeEventListener('list-manager:context-menu-requested', this.boundHandleContextMenuRequest);
         document.removeEventListener('app:assistant.contexte.updated', this.boundHandleAssistantContexteUpdated);
         document.removeEventListener('app:loading.start', this.boundHandleLoadingStart);
+        document.removeEventListener('app:selection.restaurer', this.boundRestaurerSelection);
         this.element.removeEventListener('click', this.boundHandlePaginationClick);
         this.element.removeEventListener('change', this.boundHandlePaginationJump);
         this.element.removeEventListener('keydown', this.boundHandlePaginationJumpKeydown);
@@ -604,15 +609,51 @@ export default class extends BaseController {
             this._syncPresetChips(event.detail.searchCriteria);
         }
 
-        const selectos = event.detail.selection || [];
-        const selectionIds = new Set(selectos.map(s => String(s.id)));
+        this._cocherLesLignes((event.detail.selection || []).map(s => s.id));
+        this.updateSelectAllCheckboxState();
+    }
+
+    /**
+     * REPOSE LES LIGNES COCHÉES AVANT UN RECHARGEMENT.
+     *
+     * ⚠ ON NE RECOCHE QUE CE QUI EST LÀ. Une ligne supprimée entre-temps, ou sortie par
+     * un filtre, ne revient pas — et la barre d'état annonce le compte réel. Prétendre
+     * qu'elle est toujours sélectionnée serait pire que l'oubli : l'utilisateur agirait
+     * en lot sur une ligne qu'il ne voit plus.
+     *
+     * On notifie ensuite par le chemin ORDINAIRE : barre d'état, barre des totaux et
+     * menu contextuel suivent sans qu'on ait à les prévenir un par un.
+     */
+    restaurerSelection(event) {
+        if (this.workspaceTabId && event.detail?.workspaceTabId !== this.workspaceTabId) return;
+
+        const retrouvees = this._cocherLesLignes(event.detail?.ids || []);
+        if (retrouvees === 0) return;
+
+        this._notifySelectionChange();
+    }
+
+    /**
+     * Coche exactement les lignes désignées, décoche les autres, et rend le nombre de
+     * lignes RETROUVÉES — la restauration s'en sert pour ne rien annoncer quand la page
+     * ne contient plus rien de ce qui était sélectionné.
+     *
+     * @param {Array<number|string>} ids
+     * @returns {number}
+     * @private
+     */
+    _cocherLesLignes(ids) {
+        const voulus = new Set((ids || []).map(id => String(id)));
+        let retrouvees = 0;
+
         this.rowCheckboxTargets.forEach(checkbox => {
-            const checkboxId = String(checkbox.dataset.listRowIdobjetValue);
-            checkbox.checked = selectionIds.has(checkboxId);
-            checkbox.closest('tr')?.classList.toggle('row-selected', checkbox.checked);
+            const coche = voulus.has(String(checkbox.dataset.listRowIdobjetValue));
+            checkbox.checked = coche;
+            checkbox.closest('tr')?.classList.toggle('row-selected', coche);
+            if (coche) retrouvees += 1;
         });
 
-        this.updateSelectAllCheckboxState();
+        return retrouvees;
     }
 
     /**
