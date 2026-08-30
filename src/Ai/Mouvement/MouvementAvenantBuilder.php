@@ -484,7 +484,6 @@ final class MouvementAvenantBuilder
     {
         $elements = [];
         $neutralisees = [];
-        $aplaties = [];
 
         foreach ($this->reconductionPartage->champsReconductibles($pisteBase) as $condition) {
             $champs = [
@@ -502,11 +501,19 @@ final class MouvementAvenantBuilder
             if ($condition['partenaire']?->getId()) {
                 $champs['partenaire'] = $condition['partenaire']->getId();
             }
+            // ⚠ LES RISQUES VISÉS NE PEUVENT PAS ENTRER DANS CE PLAN, et il faut dire
+            // pourquoi : `ConditionPartage::produits` est déclaré `mapped: false` dans son
+            // FormType. Le ciblage ne s'écrit PAS par le formulaire — il passe par deux
+            // routes dédiées (`api.attach_risque` / `api.detach_risque`), parce qu'un
+            // risque appartient au CATALOGUE de l'entreprise et se vise, ne se crée pas.
+            //
+            // Les poser ici comme un champ ordinaire faisait refuser tout le plan par la
+            // validation (« Cette valeur n'est pas valide »), donc échouer un
+            // renouvellement entier pour un ciblage. Le plan reconduit ce qu'un formulaire
+            // sait écrire ; le ciblage suit par le chemin qui lui est propre.
 
             if (!$condition['applicable']) {
                 $neutralisees[] = $condition['nom'];
-            } elseif ($condition['ciblageAplati']) {
-                $aplaties[] = $condition['nom'];
             }
 
             $elements[] = ['op' => 'create', 'etape' => $etape, 'champs' => $champs];
@@ -515,17 +522,9 @@ final class MouvementAvenantBuilder
         if ($neutralisees !== []) {
             $avertissements[] = sprintf(
                 'Condition(s) de partage reconduite(s) mais INACTIVE(S) — elles ne s’appliquaient pas au risque de '
-                . 'la police de base : %s. Elles sont enregistrées sur l’opportunité dérivée et peuvent y être '
-                . 're-ciblées à la main.',
+                . 'la police de base : %s. Elles gardent leur ciblage d’origine et restent modifiables sur '
+                . 'l’opportunité dérivée.',
                 implode(', ', $neutralisees),
-            );
-        }
-        if ($aplaties !== []) {
-            $avertissements[] = sprintf(
-                'Condition(s) de partage reconduite(s) en condition GÉNÉRALE, au même taux : %s. Leur ciblage par '
-                . 'risque n’est pas recopiable (un risque n’appartient qu’à une seule condition) ; l’effet sur la '
-                . 'rétrocommission est identique.',
-                implode(', ', $aplaties),
             );
         }
 

@@ -84,7 +84,20 @@ class ReconductionPartageServiceTest extends TestCase
         $this->assertSame($cible, $clone->getPiste());
     }
 
-    public function testConditionCibleeApplicableCloneeEnGenerale(): void
+    /**
+     * UNE CONDITION CIBLÉE RESTE CIBLÉE — ET C'EST L'INVERSE DE CE QUE CE TEST EXIGEAIT.
+     *
+     * Il attendait une reconduction en condition GÉNÉRALE, et il avait raison : sous
+     * l'ancienne cardinalité, `Risque::conditionPartage` était un ManyToOne, et rattacher
+     * le risque au clone l'aurait RETIRÉ de la condition d'origine — cassant la
+     * rétrocommission de la police de base. On préservait donc l'EFFET plutôt que la forme.
+     *
+     * ⚠ MAIS CETTE TRADUCTION COÛTAIT DE L'ARGENT. « Générale » ne veut pas dire « comme
+     * avant » : la condition se mettait à payer sur TOUS les risques de la piste dérivée, y
+     * compris ceux qu'elle n'avait jamais visés. Depuis le passage des risques ciblés en
+     * ManyToMany, la contrainte a disparu et le ciblage se recopie tel quel.
+     */
+    public function testUneConditionCibleeGardeSonCiblage(): void
     {
         // Condition INCLURE ciblant précisément le risque de la piste → applicable.
         $risque = new Risque();
@@ -100,18 +113,22 @@ class ReconductionPartageServiceTest extends TestCase
         /** @var ConditionPartage $clone */
         $clone = $cible->getConditionsPartageExceptionnelles()->first();
         $this->assertSame(0.45, $clone->getTaux());
-        // Reconduite en condition générale : le taux effectif est préservé.
-        $this->assertSame(ConditionPartage::CRITERE_PAS_RISQUES_CIBLES, $clone->getCritereRisque());
+        $this->assertSame(ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES, $clone->getCritereRisque());
+        $this->assertSame([$risque], $clone->getProduits()->toArray(), 'Le risque visé suit le clone.');
+        // ET L'ORIGINALE NE L'A PAS PERDU : c'est ce que le ManyToMany garantit.
+        $this->assertSame([$risque], $cond->getProduits()->toArray());
     }
 
     /**
-     * AUCUNE condition n'est perdue — une rétrocommission promise à un partenaire
-     * est un engagement contractuel, elle doit survivre au changement d'exercice.
-     * Une condition qui ne s'appliquait pas au risque est donc reconduite sous une
-     * forme NEUTRE (« inclure » sans cible, jamais satisfaite) : visible et
-     * ré-armable à la main, sans rien changer aux calculs.
+     * AUCUNE condition n'est perdue — une rétrocommission promise à un partenaire est un
+     * engagement contractuel, elle doit survivre au changement d'exercice.
+     *
+     * Celle qui ne s'appliquait pas au risque de la police de base est reconduite AVEC son
+     * ciblage : elle ne se déclenche pas davantage sur la suite, mais elle reste lisible
+     * telle qu'elle a été écrite. Ce test exigeait auparavant une forme neutre — sans
+     * cible — parce que le ciblage n'était pas recopiable ; il l'est.
      */
-    public function testConditionCibleeNonApplicableReconduiteMaisNeutralisee(): void
+    public function testConditionNonApplicableReconduiteAvecSonCiblage(): void
     {
         $risquePiste = new Risque();
         $autreRisque = new Risque();
@@ -128,17 +145,23 @@ class ReconductionPartageServiceTest extends TestCase
         $clone = $cible->getConditionsPartageExceptionnelles()->first();
         $this->assertSame(0.45, $clone->getTaux(), 'Le taux promis est conservé tel quel.');
         $this->assertSame(ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES, $clone->getCritereRisque());
-        $this->assertCount(0, $clone->getProduits());
+        $this->assertSame([$autreRisque], $clone->getProduits()->toArray(), 'Elle vise ce qu’elle visait.');
         $this->assertFalse(
             $clone->sappliqueAuRisque($risquePiste),
-            'Forme neutre : elle ne doit pas se déclencher, sinon on inventerait une rétrocommission.',
+            'Elle ne se déclenche toujours pas : on n’invente aucune rétrocommission.',
         );
     }
 
     /**
-     * Les risques ciblés ne sont JAMAIS rattachés au clone : Risque::conditionPartage
-     * est un ManyToOne, les y rattacher les retirerait de la condition d'origine et
-     * casserait la rétrocommission de la police de base.
+     * LE CLONE REÇOIT LES RISQUES SANS LES PRENDRE.
+     *
+     * Ce test est né d'une contrainte disparue : `Risque::conditionPartage` était un
+     * ManyToOne, et cibler un risque depuis une seconde condition le retirait de la
+     * première — d'où l'interdiction de recopier le ciblage. Les risques ciblés sont
+     * passés en ManyToMany ; le clone les reçoit désormais, et l'originale les garde.
+     *
+     * Ce qu'il vérifie n'a donc pas changé d'un mot : la police de base ne perd rien. Sa
+     * raison d'être, si — il ne surveille plus une abstention, il surveille un PARTAGE.
      */
     public function testLeCloneNeVolePasLesRisquesCiblesDeLaConditionSource(): void
     {

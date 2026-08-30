@@ -7,6 +7,7 @@ use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Partenaire;
 use App\Entity\Piste;
+use App\Entity\Risque;
 
 /**
  * Reconduit le schéma de partage de revenu avec le(s) partenaire(s) d'une piste
@@ -51,6 +52,13 @@ class ReconductionPartageService
                 ->setPartenaire($champs['partenaire'])
                 ->setCritereRisque($champs['critereRisque']);
 
+            // LES RISQUES VISÉS SUIVENT, un par un. Ils ne se recopiaient pas : la
+            // condition dérivée arrivait « générale » ou inerte, et l'utilisateur
+            // rouvrait chacune pour re-cocher ses risques, exercice après exercice.
+            foreach ($champs['produits'] as $risque) {
+                $clone->addProduit($risque);
+            }
+
             $clone->setEntreprise($entreprise);
             $clone->setInvite($invite);
             // createdAt / updatedAt sont posés par le PrePersist de AuditableTrait.
@@ -68,8 +76,8 @@ class ReconductionPartageService
         // source unique que ce rattachement existe pour offrir.
         //
         // Le clonage des conditions de PARTENAIRE (bloc 2) reste inchange : celles-la
-        // appartiennent a leur piste, et leur ciblage par risque doit etre reinterprete a
-        // chaque exercice (cf. champsReconductibles).
+        // appartiennent a leur piste. Leur ciblage, lui, est desormais RECOPIE tel quel
+        // (cf. champsReconductibles) : rien n'est a redefinir d'un exercice a l'autre.
         //
         // Idempotent : l'adder garde un contains, reconduire deux fois ne double rien.
         foreach ($this->conditionsAgentDe($source) as $condition) {
@@ -140,28 +148,40 @@ class ReconductionPartageService
      *
      * LA RÈGLE : on reconduit TOUTES les conditions de partage, sans exception —
      * aucune ne doit être perdue au passage d'un exercice à l'autre, la
-     * rétrocommission d'un partenaire est un engagement contractuel. Ce qui est
-     * préservé de chacune, c'est son EFFET sur le risque de la piste :
-     *  - condition APPLICABLE au risque => reconduite en condition GÉNÉRALE
-     *    (« pas de risques ciblés ») : elle continue de s'appliquer, au même taux ;
-     *  - condition NON applicable => reconduite sous une forme NEUTRE (« inclure »
-     *    sans aucun risque ciblé, donc jamais satisfaite) : elle reste visible et
-     *    ré-armable à la main sur la piste dérivée, sans rien changer aux calculs.
+     * rétrocommission d'un partenaire est un engagement contractuel. Et on les
+     * reconduit À L'IDENTIQUE : même taux, même formule, MÊMES RISQUES VISÉS.
      *
-     * Pourquoi ne pas recopier les risques ciblés tels quels : Risque::conditionPartage
-     * est un ManyToOne — un risque n'appartient qu'à UNE condition. Rattacher les
-     * mêmes risques au clone les RETIRERAIT de la condition d'origine, cassant la
-     * rétrocommission de la police de base. Le ciblage est donc traduit en effet
-     * équivalent, et `ciblageAplati` le signale à l'appelant, qui en avertit
-     * l'utilisateur plutôt que de le laisser le découvrir.
+     * ── LE CIBLAGE SE RECOPIE, ET C'EST NOUVEAU ─────────────────────────────────
+     * Il était traduit en « effet équivalent » : une condition applicable au risque
+     * de la piste devenait GÉNÉRALE, une condition non applicable devenait inerte.
+     * La raison était bonne — `Risque::conditionPartage` était un ManyToOne, et
+     * rattacher les mêmes risques au clone les aurait RETIRÉS de la condition
+     * d'origine, cassant la rétrocommission de la police de base.
      *
-     * `partenaire` est restitué comme ENTITÉ (et non comme identifiant) : le
-     * chemin formulaire l'injecte tel quel par son setter, le chemin IA n'en
-     * retient que l'id. À chacun son adaptation, la règle reste unique.
+     * Cette raison n'existe plus. Les risques ciblés sont passés en ManyToMany
+     * (`ConditionPartage::produits`, table `condition_partage_risque`) : un risque
+     * appartient désormais à autant de conditions qu'on veut. La prudence est
+     * devenue une perte — l'utilisateur rouvrait chaque condition pour re-cocher
+     * ses risques, exercice après exercice.
+     *
+     * ⚠ ET CELA CHANGE CE QUE PAIENT LES RENOUVELLEMENTS À VENIR. Une condition
+     * ciblée « Incendie », applicable au risque de la piste, était reconduite en
+     * GÉNÉRALE : sur la piste dérivée, elle payait sur TOUS les risques. Elle ne le
+     * fera plus — elle paiera sur ce qu'elle vise, et sur rien d'autre. Ce qui est
+     * déjà écrit n'est pas touché : la reconduction ne joue qu'à la création d'une
+     * piste dérivée.
+     *
+     * `applicable` reste utile et reste rendu : une condition qui ne visait pas le
+     * risque de la police de base ne le vise pas davantage sur sa suite, et
+     * l'appelant en avertit plutôt que de la laisser croire active.
+     *
+     * `partenaire` et `produits` sont restitués comme ENTITÉS (et non comme
+     * identifiants) : le chemin formulaire les injecte tels quels, le chemin IA n'en
+     * retient que les id. À chacun son adaptation, la règle reste unique.
      *
      * @return array<int, array{nom: string, formule: int, seuil: float, taux: ?float,
      *                          uniteMesure: ?int, partenaire: ?Partenaire, critereRisque: int,
-     *                          applicable: bool, ciblageAplati: bool}>
+     *                          produits: Risque[], applicable: bool}>
      */
     public function champsReconductibles(Piste $source): array
     {
@@ -188,14 +208,11 @@ class ReconductionPartageService
                 'taux'          => $condition->getTaux(),
                 'uniteMesure'   => $condition->getUniteMesure(),
                 'partenaire'    => $condition->getPartenaire(),
-                // Applicable => générale (s'applique) ; sinon => « inclure » sans
-                // cible, forme neutre qui ne se déclenche jamais.
-                'critereRisque' => $applicable
-                    ? ConditionPartage::CRITERE_PAS_RISQUES_CIBLES
-                    : ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES,
+                // LE CRITÈRE ET SES RISQUES, TELS QUELS : la condition dérivée vise
+                // exactement ce que visait l'originale, et l'originale les garde.
+                'critereRisque' => $critereSource,
+                'produits'      => $condition->getProduits()->toArray(),
                 'applicable'    => $applicable,
-                // Le ciblage n'a pas pu être recopié à l'identique (cf. docblock).
-                'ciblageAplati' => $critereSource !== ConditionPartage::CRITERE_PAS_RISQUES_CIBLES,
             ];
         }
 
