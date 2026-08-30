@@ -738,6 +738,20 @@ a.company-version:hover {
   box-shadow: 0 0 0 2px var(--cobalt-focus-ring);
 }
 
+/* ONGLET RÉUTILISÉ : le halo dit que le geste a porté.
+   Rouvrir la rubrique de l'onglet déjà actif ne déplace plus rien à l'écran depuis qu'un
+   second onglet n'est plus créé. Sans retour perceptible, le geste passe pour un bug et
+   l'utilisateur re-clique. Le halo emprunte l'anneau de focus cobalt : même couleur, même
+   grammaire visuelle qu'un élément qui prend la main. */
+@keyframes onglet-reutilise {
+  from { box-shadow: inset 0 2px 0 0 var(--cobalt), 0 0 0 3px var(--cobalt-focus-ring); }
+  to   { box-shadow: inset 0 2px 0 0 var(--cobalt), 0 0 0 3px transparent; }
+}
+
+.workspace-tab-item.is-onglet-reutilise {
+  animation: onglet-reutilise 600ms ease-out 1;
+}
+
 .workspace-tab-item.active {
   background-color: var(--bg-white);
   border-color: var(--border-light);
@@ -1429,7 +1443,10 @@ a.company-version:hover {
   }
 
   .description-wrapper,
-  .progress-bar {
+  .progress-bar,
+  /* Le halo de réutilisation se tait ici : l'annonce aria-live, elle, reste émise
+     dans tous les cas — c'est elle qui porte l'information, pas le mouvement. */
+  .workspace-tab-item.is-onglet-reutilise {
     animation: none !important;
   }
 }

@@ -10,6 +10,7 @@ import {
     memoriserSelection,
     selectionARestaurer,
 } from './criteres-persistes.js';
+import { dedoublonnerOnglets, ongletExistantPourRubrique } from './onglets-uniques.js';
 
 /**
  * @class WorkspaceManagerController
@@ -37,6 +38,8 @@ export default class extends Controller {
         "workspaceTabsOverflowPanel",
         "workspaceTabPanels",
         "workspaceTabTemplate",
+        // Zone vocale de la barre : ce qu'un geste change sans rien déplacer à l'écran.
+        "annonceOnglets",
         "col2",
         "col2Handle"
     ];
@@ -1621,6 +1624,62 @@ export default class extends Controller {
 
         this._criteresEnAttente = this._criteresEnAttente || {};
         this._criteresEnAttente[this.pendingWorkspaceTabId] = criteres;
+
+        // ONGLET RÉUTILISÉ ET DÉJÀ CHARGÉ : ON POSE TOUT DE SUITE.
+        //
+        // L'attente décrite plus bas a une raison — l'état de l'onglet n'est pas encore
+        // enregistré au Cerveau — et cette raison ne vaut QUE pour un onglet qui vient de
+        // naître. Un onglet réutilisé, lui, est chargé depuis longtemps : son état existe,
+        // et `_activateWorkspaceTabById` a pris la branche « déjà chargé », qui ne redemande
+        // aucun composant. Aucun `ui:tab.initialized` ne suivra, donc aucun
+        // `app:tab.state-ready` ne viendra jamais poser ce filtre.
+        //
+        // On ne double pas le chemin pour autant : c'est le MÊME `_appliquerCriteresEnAttente`,
+        // avec sa garde « est-ce bien l'onglet actif ? » pour seul juge. Un onglet réutilisé
+        // mais pas encore chargé n'entre pas ici et attend son signal, comme avant.
+        if (this._ongletDejaCharge(this.pendingWorkspaceTabId)) {
+            this._appliquerCriteresEnAttente(this.pendingWorkspaceTabId);
+        }
+    }
+
+    /**
+     * Le panneau de cet onglet porte-t-il déjà son contenu ?
+     * @private
+     */
+    _ongletDejaCharge(tabId) {
+        if (!tabId) return false;
+        const panel = this.workspaceTabPanelsTarget.querySelector(`[data-tab-id="${tabId}"]`);
+        return panel?.dataset.loaded === 'true';
+    }
+
+    /**
+     * Signale qu'un onglet a été RÉUTILISÉ plutôt qu'ouvert.
+     *
+     * POURQUOI CE SIGNAL EXISTE. Rouvrir la rubrique de l'onglet DÉJÀ actif ne déplace plus
+     * rien à l'écran : sans retour perceptible, le geste passe pour un bug et l'utilisateur
+     * re-clique. Le halo dit « ton geste a porté, c'est ici », et la zone vocale le dit aux
+     * lecteurs d'écran — qui, eux, ne voient aucun halo.
+     * @private
+     */
+    _signalerOngletReutilise(tabId) {
+        const tabEl = this.workspaceTabBarTarget.querySelector(`[data-tab-id="${tabId}"]`);
+        if (!tabEl) return;
+
+        // Retirer puis reposer la classe : re-cliquer trois fois de suite doit rejouer
+        // l'animation trois fois, or le navigateur ignore une classe déjà présente.
+        tabEl.classList.remove('is-onglet-reutilise');
+        void tabEl.offsetWidth;
+        tabEl.classList.add('is-onglet-reutilise');
+        tabEl.addEventListener(
+            'animationend',
+            () => tabEl.classList.remove('is-onglet-reutilise'),
+            { once: true }
+        );
+
+        if (this.hasAnnonceOngletsTarget) {
+            const titre = tabEl.querySelector('.workspace-tab-title')?.textContent.trim() || 'demandée';
+            this.annonceOngletsTarget.textContent = `Rubrique ${titre} déjà ouverte — onglet réactivé.`;
+        }
     }
 
     /**
@@ -2302,6 +2361,23 @@ export default class extends Controller {
      * Le contenu est chargé de façon lazy (au premier `activateWorkspaceTab`).
      */
     createWorkspaceTab({ componentName, entityName, groupName, title, iconAlias }) {
+        // UNE SEULE INSTANCE PAR RUBRIQUE. Tous les gestes d'ouverture passent par ici —
+        // clic de rubrique, tuile du tableau de bord, bouton « Voir la production »,
+        // `ouvrir_rubrique` de Ket. C'est donc le seul endroit où la règle a besoin d'exister.
+        //
+        // ET « RÉUTILISER » VEUT DIRE HONORER L'INSTRUCTION D'OUVERTURE DANS CET ONGLET-LÀ.
+        // On pose `pendingWorkspaceTabId` avant d'activer : c'est la clé sur laquelle
+        // `_armerCriteresDeRubrique` range les critères, et les appelants les arment APRÈS
+        // nous. Sans elle, la rubrique se réactiverait sans se filtrer — Ket annoncerait
+        // « voici la production de M. Modogo » au-dessus de la production de tout le monde.
+        const existant = ongletExistantPourRubrique(this.workspaceTabs, { componentName, entityName });
+        if (existant) {
+            this.pendingWorkspaceTabId = existant.id;
+            this._activateWorkspaceTabById(existant.id);
+            this._signalerOngletReutilise(existant.id);
+            return;
+        }
+
         const tabId = `ws-tab-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
         // --- Tab button ---
@@ -2744,8 +2820,17 @@ export default class extends Controller {
         let saved;
         try { saved = JSON.parse(savedJSON); } catch { this._openDefaultTab(); return; }
 
-        const { tabs, activeTabId } = saved;
-        if (!tabs || tabs.length === 0) { this._openDefaultTab(); return; }
+        const { tabs: tabsStockes, activeTabId: actifStocke } = saved;
+
+        // LE STOCKAGE PORTE L'HÉRITAGE D'AVANT LA RÈGLE. Chaque utilisateur y a accumulé des
+        // doublons ; sans ce passage, la barre nettoyée à l'usage se resalirait au premier F5.
+        //
+        // ET LE CONTRÔLE DE VACUITÉ VIENT APRÈS, non avant : le nettoyage écarte aussi les
+        // entrées sans identifiant, qu'une version antérieure a pu laisser. Une liste non
+        // vide peut donc n'en laisser aucune, et la suite lirait alors le dernier onglet
+        // d'un tableau vide.
+        const { onglets: tabs, idActif: activeTabId } = dedoublonnerOnglets(tabsStockes, actifStocke);
+        if (tabs.length === 0) { this._openDefaultTab(); return; }
 
         // Supprimer le squelette initial
         const initialSkeleton = this.workspaceTabPanelsTarget.querySelector('.workspace-initial-skeleton');

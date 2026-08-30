@@ -289,6 +289,13 @@
                 <div class="workspace-tab-bar" role="tablist" aria-label="Onglets de travail"
                      data-workspace-manager-target="workspaceTabBar"></div>
 
+                {# CE QU'UN GESTE CHANGE SANS RIEN DÉPLACER À L'ÉCRAN.
+                   Rouvrir une rubrique déjà ouverte réactive son onglet au lieu d'en créer
+                   un second : à l'œil, un halo bref le signale ; ici, la même chose se dit
+                   aux lecteurs d'écran, qui ne voient aucun halo. #}
+                <span class="visually-hidden" aria-live="polite" aria-atomic="true"
+                      data-workspace-manager-target="annonceOnglets"></span>
+
                 <button type="button"
                         class="list-tabs-more workspace-tabs-more d-none"
                         data-workspace-manager-target="workspaceTabsMore"
