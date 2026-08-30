@@ -14,7 +14,6 @@ use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use App\Services\CanvasBuilder;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
-use App\Services\ReconductionPartageService;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
@@ -44,7 +43,6 @@ class PisteController extends AbstractController
         private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer,
         private IndicatorCalculationHelper $indicatorHelper,
-        private ReconductionPartageService $reconductionPartage,
         CanvasBuilder $canvasBuilder
     ) {
         $this->canvasBuilder = $canvasBuilder;
@@ -163,19 +161,15 @@ class PisteController extends AbstractController
                             $avenant->setPisteDeRenouvellement($piste);
                             $piste->setAvenantDeBase($avenant);
 
-                            // Reconduction du partage partenaire (partenaires + conditions
-                            // exceptionnelles) depuis la piste de l'avenant de base. Fait au
-                            // submit car la collection de conditions n'est ni mappée ni rendue
-                            // sur le formulaire de renouvellement.
-                            $src = $avenant->getCotation()?->getPiste();
-                            if ($src) {
-                                $this->reconductionPartage->reconduire(
-                                    $src,
-                                    $piste,
-                                    $piste->getEntreprise(),
-                                    $inviteConnecte
-                                );
-                            }
+                            // LA RECONDUCTION DU PARTAGE N'EST PLUS APPELÉE ICI.
+                            //
+                            // Elle se déclenche seule, pour toute piste écrite avec un avenant
+                            // de base — quelle que soit la porte ({@see
+                            // \App\EventListener\ReconductionPartageListener}). Deux
+                            // déclencheurs pour une règle, c'était deux endroits où elle
+                            // pouvait diverger : un plan d'écriture générique de l'assistant
+                            // qui posait `avenantDeBase` autrement ne reconduisait rien, et le
+                            // partage d'une police disparaissait au renouvellement sans un mot.
                         }
                     }
                 }
