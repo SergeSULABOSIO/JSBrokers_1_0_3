@@ -4,7 +4,12 @@ import { appliquerTitre, conversationDeLOnglet, editerEnPlace } from './assistan
 import {
     FERME, EPINGLE, etatSuivant, estOuvert, ancreDeReposChange, rubriqueAMarquer, sommetDuFlyout,
 } from './workspace-col2.js';
-import { criteresARestaurer, memoriserCriteres } from './criteres-persistes.js';
+import {
+    criteresARestaurer,
+    memoriserCriteres,
+    memoriserSelection,
+    selectionARestaurer,
+} from './criteres-persistes.js';
 
 /**
  * @class WorkspaceManagerController
@@ -149,6 +154,10 @@ export default class extends Controller {
         // critères ET l'onglet concerné : aucun événement ni requête à ajouter.
         this.boundMemoriserCriteres = this.memoriserCriteresDOnglet.bind(this);
         document.addEventListener('app:context.changed', this.boundMemoriserCriteres);
+        // LA SÉLECTION SE REPOSE APRÈS LE RENDU : c'est le premier instant où les lignes
+        // existent, et donc où l'on peut en cocher.
+        this.boundReposerSelection = this.reposerSelectionDOnglet.bind(this);
+        document.addEventListener('app:list.rendered', this.boundReposerSelection);
 
         this.boundHandleNavigateTo = this.handleNavigateTo.bind(this);
         document.addEventListener('workspace:navigate-to', this.boundHandleNavigateTo);
@@ -268,6 +277,7 @@ export default class extends Controller {
         document.removeEventListener('app:loading.stop', this.boundHandleLoadingStop);
         document.removeEventListener('app:tab.state-ready', this.boundHandleTabStateReady);
         document.removeEventListener('app:context.changed', this.boundMemoriserCriteres);
+        document.removeEventListener('app:list.rendered', this.boundReposerSelection);
         document.removeEventListener('workspace:navigate-to', this.boundHandleNavigateTo);
         document.removeEventListener('cerveau:event', this.boundHandleCerveauEvent);
         window.removeEventListener('resize', this.boundReancrerFlyout);
@@ -2033,6 +2043,39 @@ export default class extends Controller {
     }
 
     /**
+     * REPOSE LES LIGNES COCHÉES, une fois la liste rendue.
+     *
+     * Les onglets survivaient au rechargement, leurs filtres aussi — mais on retrouvait
+     * une sélection vide, sans que rien ne le dise. Le travail commencé était perdu à
+     * chaque F5.
+     *
+     * ── POURQUOI ICI ET PAS AVEC LES FILTRES ───────────────────────────────────────
+     * Les lignes n'existent qu'une fois la liste rendue. Et reposer un filtre déclenche
+     * une recherche, qui VIDE la sélection au passage (cf. cerveau_controller.js) : la
+     * poser plus tôt reviendrait à la faire effacer par le geste suivant.
+     *
+     * ON NE LE FAIT QU'UNE FOIS. La liste se rend à chaque recherche ; recocher à
+     * chaque fois annulerait la moindre décision de l'utilisateur — décocher une ligne
+     * la verrait revenir au rafraîchissement suivant.
+     */
+    reposerSelectionDOnglet(event) {
+        const tabId = event.detail?.workspaceTabId || this.activeWorkspaceTabId;
+        const ids = this._selectionEnAttente?.[tabId];
+        if (!ids || ids.length === 0) return;
+
+        delete this._selectionEnAttente[tabId];
+
+        // On laisse le rendu s'achever : les contrôleurs de ligne ne sont rattachés
+        // qu'après la mutation du DOM, et cocher avant ne notifierait personne.
+        requestAnimationFrame(() => {
+            document.dispatchEvent(new CustomEvent('app:selection.restaurer', {
+                bubbles: true,
+                detail: { workspaceTabId: tabId, ids },
+            }));
+        });
+    }
+
+    /**
      * MÉMORISE LES FILTRES DE L'ONGLET, pour qu'ils survivent au rechargement.
      *
      * Les onglets revenaient après un F5 ; leurs filtres non — ils ne vivaient que dans
@@ -2062,8 +2105,16 @@ export default class extends Controller {
         // sélection, qui ne survit pas au rechargement.
         if ((event.detail?.tabId ?? 'principal') !== 'principal') return;
 
+        // LES DEUX ÉTATS D'UN ONGLET VOYAGENT DANS LE MÊME ÉVÉNEMENT : `app:context.changed`
+        // porte `searchCriteria` ET `selection`. Rien de nouveau à émettre, rien à
+        // demander au serveur — et la sélection ne peut pas se désynchroniser des
+        // critères qui l'ont produite, puisqu'on les enregistre du même geste.
         const avant = this.workspaceTabs;
-        const apres = memoriserCriteres(avant, tabId, event.detail?.searchCriteria);
+        const apres = memoriserSelection(
+            memoriserCriteres(avant, tabId, event.detail?.searchCriteria),
+            tabId,
+            event.detail?.selection,
+        );
         if (apres === avant) return;
 
         this.workspaceTabs = apres;
@@ -2710,6 +2761,12 @@ export default class extends Controller {
         // `ouvrir_rubrique` de l'assistant — restaurer un filtre n'est rien d'autre
         // qu'ouvrir une rubrique filtrée.
         this._criteresEnAttente = { ...(this._criteresEnAttente || {}), ...criteresARestaurer(tabs) };
+        // LA SÉLECTION ATTEND PLUS LONGTEMPS QUE LES FILTRES. Les lignes n'existent
+        // qu'une fois la liste rendue — et la restauration d'un filtre déclenche
+        // justement une recherche, qui VIDE la sélection (cf. cerveau_controller.js,
+        // « la sélection est perdue après un rafraîchissement »). On la repose donc
+        // après le rendu, pas avec les critères.
+        this._selectionEnAttente = { ...(this._selectionEnAttente || {}), ...selectionARestaurer(tabs) };
 
         // LE GROUPEMENT DES ONGLETS EN SURNOMBRE SE RECALCULE ICI AUSSI.
         //
