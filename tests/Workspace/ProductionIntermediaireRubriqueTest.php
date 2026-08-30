@@ -14,9 +14,11 @@ use App\Entity\RevenuPourCourtier;
 use App\Entity\Risque;
 use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
+use App\Services\Search\CotationSouscriptionScope;
 use App\Services\Search\ProductionScope;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -72,6 +74,9 @@ class ProductionIntermediaireRubriqueTest extends WebTestCase
     {
         $conn = $this->em()->getConnection();
         foreach ([
+            // Les pièces AVANT les versements, les versements AVANT les avenants : les clés
+            // étrangères ne se dénouent que dans cet ordre.
+            'document', 'reversement_retro_agent',
             'condition_partage', 'avenant', 'revenu_pour_courtier', 'type_revenu',
             'chargement_pour_prime', 'cotation', 'piste', 'client', 'risque', 'invite',
         ] as $table) {
@@ -194,6 +199,7 @@ class ProductionIntermediaireRubriqueTest extends WebTestCase
 
         $ids = [
             'aliceId' => (int) $alice->getId(),
+            'avenantId' => (int) $avenant->getId(),
             'brunoId' => (int) $bruno->getId(),
             'idInvite' => (int) $gestionnaire->getId(),
             'idEntreprise' => (int) $entreprise->getId(),
@@ -207,6 +213,43 @@ class ProductionIntermediaireRubriqueTest extends WebTestCase
         $em->clear();
 
         return $ids;
+    }
+
+    /**
+     * UN VERSEMENT AVEC SA PIÈCE, par la vraie route — c'est la seule façon d'obtenir
+     * l'état que le bouton « N pièces » attend : une affaire PAYÉE et JUSTIFIÉE.
+     *
+     * On ne fabrique pas ce couple à la main : le compte des pièces se lit par LOT,
+     * et le poser en base à côté de sa règle ferait passer un test que l'écran
+     * échouerait.
+     */
+    private function verser(array $ids): void
+    {
+        $this->client->request(
+            'POST',
+            '/admin/retro-agent/' . $ids['aliceId'] . '/reversement',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode([
+                'reference' => 'VIR-PRD-1',
+                'avecPiece' => true,
+                'lignes' => [['avenantId' => $ids['avenantId'], 'montant' => 50.0]],
+            ]),
+        );
+        self::assertResponseIsSuccessful('Le versement de la fixture doit passer.');
+
+        $porteurId = json_decode((string) $this->client->getResponse()->getContent(), true)['porteurId'] ?? null;
+        self::assertNotNull($porteurId);
+
+        $fichier = sys_get_temp_dir() . '/bordereau-prd.txt';
+        file_put_contents($fichier, 'bordereau');
+        $this->client->request(
+            'POST',
+            '/admin/document/api/attacher/reversementRetroAgent/' . $porteurId,
+            [],
+            ['fichiers' => [new UploadedFile($fichier, 'bordereau.txt', 'text/plain', null, true)]],
+        );
+        self::assertResponseIsSuccessful('La pièce de la fixture doit être acceptée.');
+        $this->em()->clear();
     }
 
     private function connecter(string $email): void
@@ -332,6 +375,103 @@ class ProductionIntermediaireRubriqueTest extends WebTestCase
         self::assertStringNotContainsString('POL-PRD-0', $autre);
     }
 
+    /**
+     * LE CHIP STATUT PARTITIONNE VRAIMENT LES AFFAIRES.
+     *
+     * C'était la garde de l'ancien écran, quand le statut était une commande de sa barre
+     * à lui : demander « En attente » ne devait pas ramener les polices SOUSCRITES. La
+     * règle est serveur (`CotationSouscriptionScope`) et n'a pas changé de nature en
+     * devenant un chip — seule sa porte a changé, et c'est cette porte qu'on vérifie ici.
+     *
+     * Un statut qui ne serait pas transmis rendrait le chip décoratif : l'écran
+     * annoncerait « En attente » en montrant des affaires souscrites, et personne ne
+     * pourrait s'en apercevoir sans recompter à la main.
+     */
+    public function testLeChipStatutNeMelangePasLesAffaires(): void
+    {
+        $ids = $this->semer();
+        $this->connecter(self::OWNER_EMAIL);
+
+        $beneficiaire = ProductionScope::critereBeneficiaire($ids['aliceId'], 'Alice');
+
+        $souscrites = $this->interroger($ids, $beneficiaire + ProductionScope::critereRecherche(
+            ProductionScope::ENTITE,
+            ProductionScope::CLE_STATUT,
+            CotationSouscriptionScope::STATUT_SOUSCRITES,
+        ));
+        self::assertStringContainsString('POL-PRD-0', $souscrites, 'La police souscrite est bien là.');
+
+        $enAttente = $this->interroger($ids, $beneficiaire + ProductionScope::critereRecherche(
+            ProductionScope::ENTITE,
+            ProductionScope::CLE_STATUT,
+            CotationSouscriptionScope::STATUT_EN_ATTENTE,
+        ));
+        self::assertStringNotContainsString(
+            'POL-PRD-0',
+            $enAttente,
+            'Une police souscrite n’est pas « en attente » : le chip serait décoratif.',
+        );
+    }
+
+    /**
+     * ⚠ LE BOUTON « N PIÈCES » A UNE ROUTE À APPELER.
+     *
+     * Il annonçait un compte juste et ne faisait RIEN. L'ancien écran fabriquait son URL
+     * depuis un `beneficiaire.prefixe` qui n'a jamais existé ; la rubrique qui a hérité du
+     * tableau ne posait pas la valeur du tout. Le service qui rassemble ces pièces, lui,
+     * était écrit et n'était appelé de nulle part.
+     *
+     * ⚠ ET L'URL EST SUR LE BOUTON, pas sur le conteneur. Le conteneur n'est rendu
+     * qu'UNE fois — avant qu'un bénéficiaire soit choisi — tandis que ces lignes le sont
+     * à chaque recherche : une URL posée là-haut serait restée vide pour toujours. C'est
+     * exactement le défaut qu'on vient de corriger, et cette assertion l'interdit, puisque
+     * ce qu'elle inspecte est la réponse de recherche.
+     */
+    public function testChaqueBoutonDePiecesPorteSonUrl(): void
+    {
+        $ids = $this->semer();
+        $this->connecter(self::OWNER_EMAIL);
+        // Une affaire PAYÉE : le bouton ne paraît que là où il y a une pièce à montrer.
+        $this->verser($ids);
+
+        $html = $this->interroger($ids, ProductionScope::critereBeneficiaire($ids['aliceId'], 'Alice'));
+
+        self::assertStringContainsString(
+            sprintf(
+                // L'ATTRIBUT EST DANS L'ASSERTION, et il le faut : chercher la seule URL
+                // laisserait passer un attribut renommé — le bouton porterait l'adresse sans
+                // que le contrôleur sache la lire, ce qui est exactement l'état d'avant.
+                'data-url="/admin/productionintermediaire/agent/%d/affaire/%d/justificatifs"',
+                $ids['aliceId'],
+                $ids['avenantId'],
+            ),
+            $html,
+            'Le bouton désigne SON affaire, sans rien à substituer au clic.',
+        );
+    }
+
+    /**
+     * ET LA ROUTE RÉPOND, avec la même garde que les montants.
+     *
+     * Lire les justificatifs d'une affaire, c'est lire la rémunération de quelqu'un : la
+     * règle ne se relâche pas parce qu'on demande des pièces plutôt que des chiffres.
+     */
+    public function testLesJustificatifsDUneAffaireSuiventLeMemeDroitQueLesMontants(): void
+    {
+        $ids = $this->semer();
+
+        $url = sprintf('/admin/productionintermediaire/agent/%d/affaire/%d/justificatifs', $ids['aliceId'], $ids['avenantId']);
+
+        $this->connecter(self::OWNER_EMAIL);
+        $this->client->request('GET', $url);
+        self::assertResponseIsSuccessful('Le gestionnaire lit les pièces.');
+
+        // Bruno n'est pas gestionnaire : la production d'Alice ne lui est pas ouverte, ses
+        // justificatifs non plus.
+        $this->connecter(self::BRUNO_EMAIL);
+        $this->client->request('GET', $url);
+        self::assertResponseStatusCodeSame(404, 'Les pièces d’un collègue ne se lisent pas.');
+    }
     /**
      * ⚠ LE TABLEAU DOIT PARLER À LA BARRE DES TOTAUX.
      *

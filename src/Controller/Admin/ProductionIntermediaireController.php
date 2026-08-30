@@ -10,6 +10,7 @@ use App\Repository\InviteRepository;
 use App\Service\Retro\BeneficiaireRetro;
 use App\Service\Retro\BeneficiaireRetroFactory;
 use App\Service\Retro\LotDeVersement;
+use App\Service\Soa\SoaPoliceDocumentsCollector;
 use App\Service\RetroAgent\RapportProductionAgentBuilder;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\CanvasBuilder;
@@ -128,8 +129,8 @@ class ProductionIntermediaireController extends AbstractController
      *
      * L'`%id%` d'une action de barre d'outils est celui de la LIGNE sélectionnée — ici un
      * versement, pas un intermédiaire. Cette route traduit, exactement comme le faisait
-     * `rapport_depuis_reversement` : sans elle, l'action de la rubrique des rétros
-     * n'aurait plus rien à ouvrir.
+     * l'ancienne route du rapport, aujourd'hui supprimée : sans elle, l'action de la
+     * rubrique des rétros n'aurait plus rien à ouvrir.
      */
     #[Route(
         '/ouvrir/reversement/{id}',
@@ -153,6 +154,58 @@ class ProductionIntermediaireController extends AbstractController
         );
     }
 
+    /**
+     * LES PIÈCES QUI JUSTIFIENT UNE AFFAIRE, depuis sa ligne du tableau.
+     *
+     * ── UN BOUTON QUI NE FAISAIT RIEN ───────────────────────────────────────────────
+     * Le tableau annonce « 2 pièces » sur une affaire réglée, et ce compte est juste. Mais
+     * le bouton n'avait aucune route à appeler : l'ancien écran la fabriquait depuis un
+     * `beneficiaire.prefixe` qui n'a jamais existé, si bien que la page entière échouait au
+     * rendu. Le service qui rassemble ces pièces, lui, était écrit et n'était appelé de
+     * nulle part ({@see LotDeVersement::documentsPourAvenant()}).
+     *
+     * ── LA PREUVE EST CELLE DU VIREMENT, PAS DE LA LIGNE ────────────────────────────
+     * Un bordereau couvre tout un lot : la pièce vit sur l'un de ses membres, pas
+     * nécessairement celui qui porte cette affaire. C'est la règle du service, et elle
+     * n'est pas recopiée ici.
+     *
+     * Le périmètre est celui de la rubrique — même garde que l'affichage des montants
+     * ({@see self::beneficiaireDemande()}) : qui ne peut pas voir la production d'un
+     * collègue ne peut pas davantage en lire les justificatifs.
+     */
+    #[Route(
+        '/{famille}/{id}/affaire/{avenantId}/justificatifs',
+        name: 'admin.productionintermediaire.justificatifs_affaire',
+        requirements: ['famille' => 'agent|partenaire', 'id' => Requirement::DIGITS, 'avenantId' => Requirement::DIGITS],
+        methods: ['GET'],
+    )]
+    public function justificatifsDeLAffaire(
+        string $famille,
+        int $id,
+        int $avenantId,
+        SoaPoliceDocumentsCollector $collector,
+    ): Response {
+        $cible = $this->beneficiaireDemande(
+            ProductionScope::critereBeneficiaire($id, '', $famille),
+        );
+        if ($cible === null) {
+            throw $this->createNotFoundException('Intermédiaire introuvable dans cet espace.');
+        }
+
+        $documents = $this->lotDeVersement->documentsPourAvenant(
+            $cible,
+            $cible->getEntreprise(),
+            $avenantId,
+        );
+        $rubrique = $this->accessResolver->libellesEntites()['ReversementRetroAgent'] ?? 'Reversements';
+
+        return $this->render('components/soa/_documents_picker.html.twig', [
+            'titre'              => 'Justificatifs des versements sur cette affaire',
+            'contexteNom'        => (string) $cible->getNom(),
+            'items'              => $collector->decrire($documents, $rubrique),
+            'downloadUrlPattern' => '/admin/document/api/%did%/download',
+        ]);
+    }
     /** Le corps commun des deux portes d'entrée : une cible, un critère. */
     private function ouverture(string $famille, int $id): JsonResponse
     {

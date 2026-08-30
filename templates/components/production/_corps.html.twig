@@ -242,9 +242,16 @@
                             {% if l.payee > 0 %}
                                 {% set nb = piecesParAvenant[l.avenant.id]|default(0) %}
                                 {% if nb > 0 %}
+                                    {# L'URL EST POSÉE ICI, sur le bouton, et non sur la coquille.
+                                       La coquille est rendue UNE fois — avant qu'un bénéficiaire
+                                       soit choisi — tandis que ce corps est re-rendu à chaque
+                                       recherche. Un gabarit posé là-haut serait resté vide, et le
+                                       bouton inerte sans que rien ne le laisse voir. #}
                                     <button type="button" class="rpa-pieces"
                                             data-action="click->retro-agent-rapport#justificatifs"
-                                            data-avenant-id="{{ l.avenant.id }}"
+                                            data-url="{{ path('admin.productionintermediaire.justificatifs_affaire', {
+                                                famille: beneficiaire.type, id: beneficiaire.id, avenantId: l.avenant.id
+                                            }) }}"
                                             title="Voir les justificatifs des versements sur cette affaire">
                                         {{ nb }} pièce{{ nb > 1 ? 's' : '' }}
                                     </button>

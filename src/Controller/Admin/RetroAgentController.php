@@ -22,7 +22,6 @@ use App\Service\RetroAgent\RapportProductionAgentBuilder;
 use App\Service\Soa\SoaPoliceDocumentsCollector;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\CanvasBuilder;
-use App\Services\Search\CotationSouscriptionScope;
 use App\Services\ServiceMonnaies;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -95,55 +94,6 @@ class RetroAgentController extends AbstractController
     }
 
     /**
-     * Rapport de production d'un agent, rendu dans un onglet de la zone de travail.
-     * Réponse {html, title} — même contrat que le SOA d'un client.
-     */
-    #[Route('/{id}/rapport', name: 'rapport', methods: ['GET'])]
-    public function rapport(Invite $agent, Request $request): JsonResponse
-    {
-        $this->assertPeutConsulter($agent);
-
-        $contexte = $this->rapportBuilder->build(
-            $agent,
-            $agent->getEntreprise(),
-            (string) $request->query->get('statut', CotationSouscriptionScope::STATUT_SOUSCRITES),
-        );
-
-        // LA DETTE DE PREUVE, LÀ OÙ ON LIT LES MONTANTS. Une affaire payée sans
-        // justificatif ne se voyait nulle part : il fallait ouvrir un volet pour
-        // l'apprendre. Le compte est joint au contexte, en UNE agrégation pour tout
-        // le rapport — pas une requête par ligne.
-        $contexte['piecesParAvenant'] = $this->lotDeVersement
-            ->comptesDePiecesParAvenant($agent, $agent->getEntreprise());
-
-        return $this->json([
-            'html'  => $this->renderView('admin/retro_agent/rapport.html.twig', $contexte),
-            'title' => 'Rétrocommissions — ' . $agent->getNom(),
-        ]);
-    }
-
-    /**
-     * LE RAPPORT DE PRODUCTION, DEPUIS UNE LIGNE DE REVERSEMENT.
-     *
-     * L'`%id%` d'une action de barre d'outils est celui de la LIGNE sélectionnée — ici un
-     * reversement, pas un agent. D'où cette route de traduction : elle résout le
-     * bénéficiaire et délègue au rapport, plutôt que d'inventer un `%agentId%` que le
-     * mécanisme d'actions ne sait pas produire.
-     */
-    #[Route('/reversement/{id}/rapport', name: 'rapport_depuis_reversement', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
-    public function rapportDepuisReversement(ReversementRetroAgent $reversement, Request $request): JsonResponse
-    {
-        // LES DEUX FAMILLES, et c'est un correctif : la ligne d'un PARTENAIRE rendait 404
-        // parce que cette route ne lisait que `getAgent()`. Les deux bénéficiaires vivent
-        // sur le même enregistrement depuis l'unification des rétros.
-        $cible = $this->cibleDuReversement($reversement);
-
-        return $cible instanceof Partenaire
-            ? $this->rapportPartenaire($cible, $request)
-            : $this->rapport($cible, $request);
-    }
-
-    /**
      * LE BÉNÉFICIAIRE D'UN REVERSEMENT, quelle que soit sa famille — et le scoping.
      *
      * Le XOR agent / partenaire est celui de l'entité : le lire ici, une fois, évite que
@@ -189,9 +139,6 @@ class RetroAgentController extends AbstractController
             $beneficiaire,
             $entreprise,
             $this->generateUrl('admin.retro_agent.reversement_editer', ['id' => $reversement->getId()]),
-            $cible instanceof Partenaire
-                ? $this->generateUrl('admin.retro_agent.rapport_partenaire', ['id' => $cible->getId()])
-                : $this->generateUrl('admin.retro_agent.rapport', ['id' => $cible->getId()]),
             [
                 'lignes' => $virement['lignes'],
                 'cochees' => $virement['cochees'],
@@ -371,7 +318,6 @@ class RetroAgentController extends AbstractController
             $this->beneficiaires->pour($agent),
             $agent->getEntreprise(),
             $this->generateUrl('admin.retro_agent.reversement_submit', ['id' => $agent->getId()]),
-            $this->generateUrl('admin.retro_agent.rapport', ['id' => $agent->getId()]),
         );
     }
 
@@ -386,7 +332,6 @@ class RetroAgentController extends AbstractController
         BeneficiaireRetro $beneficiaire,
         Entreprise $entreprise,
         string $submitUrl,
-        string $rapportUrl,
         array $surcharges = [],
     ): Response {
         // DU HTML, PAS DU JSON. L'ouvreur de pickers autonomes (`picker-open.js`, partagé
@@ -422,11 +367,6 @@ class RetroAgentController extends AbstractController
                 'parent' => 'reversementRetroAgent',
                 'id' => 0,
             ]),
-            // APRÈS L'ÉCRITURE, IL FAUT RAFRAÎCHIR CE QUI EST À L'ÉCRAN. Le picker
-            // s'ouvre aussi depuis le rapport de production, qui n'est pas une liste :
-            // on lui donne de quoi le redemander, sans quoi il resterait sur les
-            // montants d'avant le versement.
-            'rapportUrl' => $rapportUrl,
             'submitUrl' => $submitUrl,
             // L'ÉDITION N'EST PAS UNE SECONDE FENÊTRE : c'est la même, à qui l'on
             // remplace les lignes proposées et à qui l'on donne les valeurs du virement
@@ -660,32 +600,6 @@ class RetroAgentController extends AbstractController
 
     // ===================== Gardes =====================
 
-    /**
-     * LE RAPPORT DE PRODUCTION D'UN PARTENAIRE EXTERNE.
-     *
-     * Il n'en avait aucun : ses chiffres n'existaient qu'en agrégat sur sa fiche, et seul
-     * l'assistant savait les détailler — alors que le socle sait rendre les deux familles
-     * depuis son extraction. C'est le même écran, le même gabarit, les mêmes colonnes.
-     */
-    #[Route('/partenaire/{id}/rapport', name: 'rapport_partenaire', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
-    public function rapportPartenaire(Partenaire $partenaire, Request $request): JsonResponse
-    {
-        $this->assertPartenaireDuPerimetre($partenaire);
-
-        $contexte = $this->rapportBuilder->pour(
-            $this->partenaireRetro($partenaire),
-            $partenaire->getEntreprise(),
-            (string) $request->query->get('statut', CotationSouscriptionScope::STATUT_SOUSCRITES),
-        );
-        // La dette de preuve se lit par AVENANT, quel que soit le bénéficiaire.
-        $contexte['piecesParAvenant'] = [];
-
-        return $this->json([
-            'html'  => $this->renderView('admin/retro_agent/rapport.html.twig', $contexte),
-            'title' => 'Rétrocommissions — ' . $partenaire->getNom(),
-        ]);
-    }
-
     /** Le picker d'un partenaire : mêmes échéances réglables, même gabarit. */
     #[Route('/partenaire/{id}/reversement-picker', name: 'reversement_picker_partenaire', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
     public function reversementPickerPartenaire(Partenaire $partenaire): Response
@@ -696,7 +610,6 @@ class RetroAgentController extends AbstractController
             $this->partenaireRetro($partenaire),
             $partenaire->getEntreprise(),
             $this->generateUrl('admin.retro_agent.reversement_submit_partenaire', ['id' => $partenaire->getId()]),
-            $this->generateUrl('admin.retro_agent.rapport_partenaire', ['id' => $partenaire->getId()]),
         );
     }
 
