@@ -37,6 +37,23 @@ class ReconductionPartageService
      */
     public function reconduire(Piste $source, Piste $cible, Entreprise $entreprise, ?Invite $invite): void
     {
+        // 0. CE QUI PORTE DÉJÀ UN PARTAGE N'EST PAS RETOUCHÉ.
+        //
+        // Une piste dérivée qui a au moins une condition — clonée ici, rattachée ailleurs,
+        // ou saisie à la main — a déjà son schéma. Le rejouer n'ajouterait pas une règle,
+        // il en ajouterait une COPIE : le clonage des conditions de partenaire ne connaît
+        // aucun `contains`, et deux copies au même taux paieraient deux fois.
+        //
+        // La reconduction devient ainsi rejouable sans précaution, et un ajustement manuel
+        // survit à un second passage, quel qu'il soit.
+        //
+        // L'INTERMÉDIAIRE, LUI, NE COMPTE PAS COMME PREUVE. Le formulaire de renouvellement
+        // peut l'avoir posé de lui-même, sans qu'aucune condition n'ait été décidée : s'en servir
+        // comme garde ferait perdre en silence tout le partage qu'on venait reconduire.
+        if ($this->porteDejaUnPartage($cible)) {
+            return;
+        }
+
         // 1. L'intermédiaire — un seul par affaire, donc une simple affectation.
         $cible->setPartenaire($source->getPartenaire());
 
@@ -80,26 +97,38 @@ class ReconductionPartageService
         // (cf. champsReconductibles) : rien n'est a redefinir d'un exercice a l'autre.
         //
         // Idempotent : l'adder garde un contains, reconduire deux fois ne double rien.
-        foreach ($this->conditionsAgentDe($source) as $condition) {
+        foreach ($this->conditionsRattacheesDe($source) as $condition) {
             $cible->addConditionsPartageAgent($condition);
         }
     }
 
     /**
-     * Identifiants des conditions d'agent a rattacher a la piste derivee — pour le SECOND
-     * consommateur de la regle, le plan d'ecriture de l'assistant (MouvementAvenantBuilder),
-     * qui n'instancie rien et n'a besoin que des identifiants a poser dans la collection
+     * LES CONDITIONS QU'UNE PISTE DÉRIVÉE PORTE DÉJÀ — la garde de reconduire().
+     *
+     * Les deux collections comptent : celle des conditions rattachées et celle des
+     * conditions propres. Une seule suffit à dire « cette piste a son schéma ».
+     */
+    private function porteDejaUnPartage(Piste $cible): bool
+    {
+        return !$cible->getConditionsPartageAgent()->isEmpty()
+            || !$cible->getConditionsPartageExceptionnelles()->isEmpty();
+    }
+
+    /**
+     * Identifiants des conditions à RATTACHER à la piste dérivée — pour le SECOND
+     * consommateur de la règle, le plan d'écriture de l'assistant (MouvementAvenantBuilder),
+     * qui n'instancie rien et n'a besoin que des identifiants à poser dans la collection
      * ManyToMany du plan.
      *
-     * Une regle, deux consommateurs : l'ecran et Ket ne peuvent pas diverger sur ce qui
+     * Une règle, deux consommateurs : l'écran et Ket ne peuvent pas diverger sur ce qui
      * est reconduit.
      *
      * @return int[]
      */
-    public function idsConditionsAgent(Piste $source): array
+    public function idsConditionsRattachees(Piste $source): array
     {
         $ids = [];
-        foreach ($this->conditionsAgentDe($source) as $condition) {
+        foreach ($this->conditionsRattacheesDe($source) as $condition) {
             if ($condition->getId() !== null) {
                 $ids[] = $condition->getId();
             }
@@ -109,17 +138,26 @@ class ReconductionPartageService
     }
 
     /**
-     * Toutes les conditions d'AGENT d'une piste, par l'un OU l'autre rattachement.
+     * TOUTES LES CONDITIONS D'UNE PISTE QUI SE RATTACHENT AU LIEU DE SE CLONER.
      *
-     * La collection partagée est le chemin normal ; le ManyToOne historique reste
-     * possible si la condition a été créée depuis « conditions spéciales de partage ».
-     * Les deux comptent au calcul (cf. IndicatorCalculationHelper::getCotationConditionsAgent),
-     * elles doivent donc aussi suivre au renouvellement — sinon la rémunération de l'agent
-     * disparaîtrait silencieusement au passage d'un exercice à l'autre.
+     * Elles arrivent par deux chemins, et les deux comptent :
+     *   — `Piste::conditionsPartageAgent`, la collection partagée. Son nom dit « agent »
+     *     pour des raisons d'histoire ; depuis l'unification des rétros intermédiaires,
+     *     elle porte les DEUX familles — un agent interne comme un partenaire externe ;
+     *   — les conditions propres à la piste qui désignent un agent, quand elles ont été
+     *     créées depuis « conditions spéciales de partage ».
+     *
+     * Ce qu'elles ont en commun, et qui justifie de les traiter ensemble, c'est d'être
+     * PARTAGÉES : une règle écrite une fois sert à toutes les affaires qu'elle vise. Les
+     * cloner en créerait une copie par renouvellement — dix au bout de dix ans — et
+     * corriger le taux n'en corrigerait qu'une.
+     *
+     * Elles comptent aussi au calcul (cf. IndicatorCalculationHelper::getCotationConditionsAgent) :
+     * les oublier ferait disparaître en silence une rémunération d'un exercice à l'autre.
      *
      * @return ConditionPartage[] dédoublonnées
      */
-    private function conditionsAgentDe(Piste $source): array
+    private function conditionsRattacheesDe(Piste $source): array
     {
         $conditions = [];
         foreach ($source->getConditionsPartageAgent() as $condition) {

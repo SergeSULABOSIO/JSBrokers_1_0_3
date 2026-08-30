@@ -225,7 +225,10 @@ class Invite
      *      BÉNÉFICIAIRE — les règles qui lui rétrocèdent une part de la commission du
      *      cabinet. Navigation seule : la règle vit sur la condition.
      */
-    #[ORM\OneToMany(targetEntity: ConditionPartage::class, mappedBy: 'agent')]
+    // `cascade: persist` : la condition d office que le formulaire attache à un agent
+    // s écrit avec lui. Pas de `remove` — supprimer un agent ne doit pas effacer une règle
+    // de partage dont des affaires peuvent dépendre.
+    #[ORM\OneToMany(targetEntity: ConditionPartage::class, mappedBy: 'agent', cascade: ['persist'])]
     private Collection $conditionsPartageAgent;
 
     /**

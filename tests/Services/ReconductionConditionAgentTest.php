@@ -135,7 +135,7 @@ class ReconductionConditionAgentTest extends TestCase
     {
         // Le plan d'écriture de l'assistant ne pose pas d'entités : il a besoin des
         // identifiants. Les deux chemins doivent désigner exactement les mêmes conditions —
-        // c'est ce que garantit le passage par idsConditionsAgent().
+        // c'est ce que garantit le passage par idsConditionsRattachees().
         $agent = (new Invite())->setNom('Alice');
         $condition = $this->conditionAgent($agent, 15.0);
         // Sans identifiant (entité non persistée), la liste destinée au plan est vide :
@@ -143,6 +143,6 @@ class ReconductionConditionAgentTest extends TestCase
         $source = $this->piste('Police 2025');
         $source->addConditionsPartageAgent($condition);
 
-        self::assertSame([], $this->service->idsConditionsAgent($source));
+        self::assertSame([], $this->service->idsConditionsRattachees($source));
     }
 }
