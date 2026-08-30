@@ -202,6 +202,44 @@ class ReconductionPartageServiceTest extends TestCase
         $this->assertEqualsCanonicalizing([0.30, 0.45], $taux, 'Aucun taux promis ne disparaît.');
     }
 
+    /**
+     * ⚠ UNE PISTE DÉRIVÉE QUI PORTE DÉJÀ UN PARTAGE N'EST PAS RETOUCHÉE.
+     *
+     * Sans cette garde, rejouer la reconduction n'ajoutait pas une règle mais une COPIE :
+     * le clonage des conditions de partenaire ne connaît aucun `contains`, et deux copies
+     * au même taux paieraient deux fois. C'est ce qui rend la reconduction rejouable — et
+     * ce qui protège un ajustement fait à la main sur la piste dérivée.
+     */
+    public function testUnePisteQuiPorteDejaUnPartageNEstPasRetouchee(): void
+    {
+        $risque = new Risque();
+        $source = (new Piste())->setRisque($risque);
+        $source->addConditionsPartageExceptionnelle($this->condition(30.0, ConditionPartage::CRITERE_PAS_RISQUES_CIBLES));
+
+        $cible = (new Piste())->setRisque($risque);
+        $ajustee = $this->condition(12.0, ConditionPartage::CRITERE_PAS_RISQUES_CIBLES);
+        $cible->addConditionsPartageExceptionnelle($ajustee);
+
+        $this->service->reconduire($source, $cible, $this->entreprise, null);
+
+        $this->assertCount(1, $cible->getConditionsPartageExceptionnelles(), 'Rien n’est ajouté.');
+        $this->assertSame($ajustee, $cible->getConditionsPartageExceptionnelles()->first(), 'La décision tient.');
+    }
+
+    /** Et la reconduction complète, rejouée, ne double plus rien non plus. */
+    public function testReconduireDeuxFoisNeDoublePasLesConditionsClonees(): void
+    {
+        $risque = new Risque();
+        $source = (new Piste())->setRisque($risque);
+        $source->addConditionsPartageExceptionnelle($this->condition(30.0, ConditionPartage::CRITERE_PAS_RISQUES_CIBLES));
+        $cible = (new Piste())->setRisque($risque);
+
+        $this->service->reconduire($source, $cible, $this->entreprise, null);
+        $this->service->reconduire($source, $cible, $this->entreprise, null);
+
+        $this->assertCount(1, $cible->getConditionsPartageExceptionnelles());
+    }
+
     public function testPartenairesIdempotents(): void
     {
         $risque = new Risque();

@@ -176,6 +176,12 @@ class InviteType extends AbstractType
                 'disabled' => !$invite->isEnAttente(),
             ]));
         });
+
+        // Un agent repart de son formulaire RATTACHABLE : sans condition de partage, le
+        // geste qui dit « ces affaires-ci relèvent de son accord » n a rien à désigner.
+        // Elle naît SANS TAUX — un agent n a pas de part, et inventer un pourcentage lui
+        // promettrait une rémunération que personne n a décidée.
+        $builder->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->conditionDOffice());
     }
 
     /**

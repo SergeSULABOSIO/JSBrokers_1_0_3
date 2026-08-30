@@ -354,7 +354,7 @@ final class MouvementAvenantBuilder
         // écrire un ManyToMany de cette façon (c'est ainsi que `partenaires` ci-dessus
         // voyage). La règle vient du service de reconduction, unique pour l'écran et pour
         // Ket : ce qui est reconduit ne peut pas différer d'un chemin à l'autre.
-        $conditionsAgent = $this->reconductionPartage->idsConditionsAgent($pisteBase);
+        $conditionsAgent = $this->reconductionPartage->idsConditionsRattachees($pisteBase);
         if ($conditionsAgent !== []) {
             $champs['conditionsPartageAgent'] = $conditionsAgent;
         }

@@ -105,6 +105,9 @@ class PartenaireType extends AbstractType
                 'mapped' => false,
             ])
            ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
+           // Un partenaire repart de son formulaire RATTACHABLE : sans condition, le geste
+           // qui dit « ces affaires-ci relèvent de son accord » n a rien à désigner.
+           ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->conditionDOffice())
         ;
     }
 
