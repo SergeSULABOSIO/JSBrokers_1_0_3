@@ -21,23 +21,21 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * LE RAPPORT DE PRODUCTION D'UN AGENT — contenu, filtres et surtout QUI PEUT LE VOIR.
+ * L'ÉCRITURE D'UN REVERSEMENT DE RÉTROCOMMISSION — qui peut verser, et ce qui est écrit.
  *
- * ── LA RÈGLE D'ACCÈS EST LE CŒUR DE CE TEST ─────────────────────────────────────────
- * L'entité Invite relève de la gestion des invités : sa lecture exige normalement le
- * privilège d'administration de l'espace. Or l'exigence métier veut qu'un agent retrouve
- * SES rétrocommissions depuis SON compte. La règle retenue est donc :
+ * ── VERSER N'EST PAS CONSULTER ──────────────────────────────────────────────────────
+ * Personne ne se paie soi-même : le picker exige le privilège de gestion des invités,
+ * MÊME sur sa propre fiche. Un agent retrouve ses rétrocommissions depuis son compte —
+ * cette règle de LECTURE vit désormais avec l'écran qui la sert, la rubrique
+ * « Production intermédiaires » ({@see ProductionIntermediaireRubriqueTest}) : le
+ * rapport à part qu'on interrogeait ici a été supprimé.
  *
- *      soi-même toujours · un autre agent seulement si gestionnaire d'invités
- *
- * Elle doit tenir dans les deux sens : Alice voit son rapport, mais pas celui de Bruno.
- * Un relâchement ici exposerait la rémunération d'un collègue.
- *
- * ── ET VERSER N'EST PAS CONSULTER ───────────────────────────────────────────────────
- * Personne ne se paie soi-même : le picker de reversement exige le privilège de gestion,
- * même sur sa propre fiche.
+ * ── CE QUI RESTE, ET QUI N'EST NULLE PART AILLEURS ──────────────────────────────────
+ * Le picker ne propose que les soldes EXIGIBLES ; un lot écrit une ligne par affaire
+ * sous une seule référence ; un versement sans justificatif est refusé AVANT toute
+ * écriture ; un avenant hors périmètre est ignoré.
  */
-class RapportProductionAgentTest extends WebTestCase
+class ReversementEcritureTest extends WebTestCase
 {
     private const OWNER_EMAIL = 'phpunit-rpa-owner@test.local';
     private const ALICE_EMAIL = 'phpunit-rpa-alice@test.local';
@@ -112,94 +110,6 @@ class RapportProductionAgentTest extends WebTestCase
             ['emails' => $emails],
             ['emails' => \Doctrine\DBAL\ArrayParameterType::STRING],
         );
-    }
-
-    public function testLeProprietaireOuvreLeRapportAvecSesLignesEtSesTotaux(): void
-    {
-        $ids = $this->semer();
-        $this->client->loginUser($this->user(self::OWNER_EMAIL));
-
-        $this->client->request('GET', '/admin/retro-agent/' . $ids['aliceId'] . '/rapport');
-
-        self::assertResponseIsSuccessful();
-        $charge = json_decode($this->client->getResponse()->getContent(), true);
-        self::assertStringContainsString('Alice', $charge['title']);
-
-        $html = $charge['html'];
-        // Une ligne par police souscrite, la référence en clair.
-        self::assertStringContainsString('POL-RPA-0', $html);
-        self::assertStringContainsString('POL-RPA-1', $html);
-        // Le gestionnaire est nommé : rappel que le bénéficiaire n'est pas celui qui gère.
-        self::assertStringContainsString('Gestionnaire', $html);
-        // Deux affaires à 20 % de 1000 de commission pure : 400 au total.
-        self::assertStringContainsString('Totaux (2 ligne(s))', $html);
-        self::assertStringContainsString('400,00', $html);
-    }
-
-    public function testLeFiltreEnAttenteNeRamenePasLesPolicesSouscrites(): void
-    {
-        $ids = $this->semer(avecProposition: true);
-        $this->client->loginUser($this->user(self::OWNER_EMAIL));
-
-        $this->client->request(
-            'GET',
-            '/admin/retro-agent/' . $ids['aliceId'] . '/rapport?statut=' . CotationSouscriptionScope::STATUT_EN_ATTENTE,
-        );
-
-        self::assertResponseIsSuccessful();
-        $html = json_decode($this->client->getResponse()->getContent(), true)['html'];
-
-        // La proposition apparaît, les polices non.
-        self::assertStringContainsString('Proposition en cours', $html);
-        self::assertStringNotContainsString('POL-RPA-0', $html);
-        // Et l'écran DIT que ce n'est pas un dû.
-        self::assertStringContainsString('Projection', $html);
-    }
-
-    public function testLeRapportSActualiseSansPerdreLeStatutAffiche(): void
-    {
-        $ids = $this->semer(avecProposition: true);
-        $this->client->loginUser($this->user(self::OWNER_EMAIL));
-
-        // On lit le rapport SOUS UN FILTRE : c'est là que l'actualisation peut mentir.
-        $this->client->request(
-            'GET',
-            '/admin/retro-agent/' . $ids['aliceId'] . '/rapport?statut=' . CotationSouscriptionScope::STATUT_EN_ATTENTE,
-        );
-
-        self::assertResponseIsSuccessful();
-        $html = json_decode($this->client->getResponse()->getContent(), true)['html'];
-
-        // La commande existe, et elle est branchée.
-        self::assertStringContainsString('click->retro-agent-rapport#actualiser', $html);
-        self::assertStringContainsString('Actualiser', $html);
-
-        // ET ELLE RELIT LES MÊMES AFFAIRES. Le statut affiché voyage jusqu'au contrôleur :
-        // sans cette valeur, actualiser redemanderait « Souscrites » et effacerait en
-        // silence le filtre que l'utilisateur venait de poser — un rapport qui change de
-        // contenu sans qu'on le lui ait demandé.
-        self::assertStringContainsString(
-            'data-retro-agent-rapport-statut-value="' . CotationSouscriptionScope::STATUT_EN_ATTENTE . '"',
-            $html,
-        );
-
-        // L'HEURE DE LECTURE est dite : elle est la raison d'être du bouton — sans elle,
-        // rien ne distingue des montants de l'instant de montants vieux d'une heure.
-        self::assertMatchesRegularExpression('/lus? à \d{2}:\d{2}/u', $html);
-    }
-
-    public function testUnAgentConsulteSonProprePeriMetreMaisPasCeluiDunCollegue(): void
-    {
-        $ids = $this->semer();
-        $this->client->loginUser($this->user(self::ALICE_EMAIL));
-
-        // Soi-même : toujours autorisé, même sans privilège de gestion.
-        $this->client->request('GET', '/admin/retro-agent/' . $ids['aliceId'] . '/rapport');
-        self::assertResponseIsSuccessful('Un agent doit pouvoir consulter SES rétrocommissions.');
-
-        // Un collègue : refusé.
-        $this->client->request('GET', '/admin/retro-agent/' . $ids['brunoId'] . '/rapport');
-        self::assertResponseStatusCodeSame(403, 'La rémunération d\'un collègue n\'est pas consultable.');
     }
 
     public function testVerserExigeLePrivilegeDeGestionMemeSurSaPropreFiche(): void

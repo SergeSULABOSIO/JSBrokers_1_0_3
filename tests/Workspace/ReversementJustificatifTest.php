@@ -260,29 +260,37 @@ class ReversementJustificatifTest extends WebTestCase
         self::assertStringContainsString('>Tous<', $html, 'On doit pouvoir retirer le filtre.');
     }
     /**
-     * LE VOLET A DISPARU — et le bouton du rapport mène désormais à la RUBRIQUE.
+     * LES DEUX ÉCRANS DOUBLONS ONT DISPARU — et aucune porte ne reste entrouverte.
      *
-     * Il y avait deux écrans pour la même donnée : un volet dédié et la rubrique. Deux
-     * lectures à maintenir, deux endroits où corriger un bug. Ce test empêche le volet de
-     * revenir par mégarde, et vérifie que le rapport porte de quoi ouvrir la rubrique
-     * FILTRÉE sur son agent.
+     * Il y a eu successivement trois lectures de la même donnée : un volet « versements »,
+     * un rapport de production à part, et la rubrique. Trois endroits où corriger un bug,
+     * et deux qui finissaient par mentir — le rapport, lui, ne se rendait même plus.
+     *
+     * Ce test empêche les deux premiers de revenir par mégarde. Il ne vérifie pas une
+     * absence de lien à l'écran, ce qui ne prouverait rien : il vérifie que les ROUTES
+     * n'existent plus, seule preuve qu'aucun chemin — bouton oublié, rafraîchissement
+     * après écriture, URL en favori — ne peut plus y conduire.
      */
-    public function testLeVoletADisparuEtLeRapportOuvreLaRubrique(): void
+    public function testLesAnciensEcransNontPlusDeRoute(): void
     {
         $s = $this->semer();
+        $agentId = $s['agent']->getId();
 
-        // L'ancienne route n'existe plus : un 404, pas un écran fantôme.
-        $this->client->request('GET', '/admin/retro-agent/' . $s['agent']->getId() . '/versements');
-        self::assertResponseStatusCodeSame(404);
+        foreach ([
+            'le volet des versements'          => '/admin/retro-agent/' . $agentId . '/versements',
+            'le rapport de production'         => '/admin/retro-agent/' . $agentId . '/rapport',
+            'le rapport depuis un reversement' => '/admin/retro-agent/reversement/1/rapport',
+        ] as $quoi => $url) {
+            $this->client->request('GET', $url);
+            self::assertResponseStatusCodeSame(404, sprintf('%s ne doit plus répondre.', $quoi));
+        }
 
-        // Et le rapport porte l'agent, de quoi ouvrir la rubrique filtrée sur lui.
-        $this->client->request('GET', '/admin/retro-agent/' . $s['agent']->getId() . '/rapport');
-        self::assertResponseIsSuccessful();
-        $html = json_decode((string) $this->client->getResponse()->getContent(), true)['html'];
-
-        self::assertStringContainsString('Versements enregistrés', $html);
-        self::assertStringContainsString('retro-agent-rapport-agent-id-value', $html);
-        self::assertStringContainsString('Alice Apporteuse', $html, 'Le libellé du filtre doit être le nom de l’agent.');
+        // Et la rubrique, elle, répond : la donnée n'a pas disparu avec ses doublons.
+        $this->client->request(
+            'GET',
+            sprintf('/admin/productionintermediaire/ouvrir/agent/%d', $agentId),
+        );
+        self::assertResponseIsSuccessful('La rubrique est la seule porte, et elle est ouverte.');
     }
 
     /**

@@ -1641,45 +1641,6 @@ export default class extends Controller {
     }
 
     /**
-     * Ouvre le RAPPORT DE PRODUCTION d'un agent interne dans un onglet de la zone de
-     * travail : sa rétrocommission affaire par affaire, ce qui lui a été versé et ce qui
-     * reste dû. Même mécanique que le SOA d'un client — la route rend {html, title} et le
-     * `loadUrl` permet à l'onglet de se recharger seul après une écriture.
-     * @param {object} payload
-     * @param {string} payload.url - URL de type '/admin/retro-agent/{id}/rapport'
-     */
-    async handleRetroAgentRapportRequest(payload) {
-        if (!payload.url) {
-            console.error('[Cerveau] handleRetroAgentRapportRequest() : URL manquante.', payload);
-            this._showNotification('Impossible de charger le rapport : URL manquante.', 'error');
-            return;
-        }
-        try {
-            this._publishSelectionStatus('Chargement du rapport de production…');
-            this.broadcast('app:loading.start');
-
-            const response = await fetch(payload.url);
-            const result = await response.json();
-            if (!response.ok) throw result;
-
-            const agentId = payload.url.split('/').filter(Boolean).at(-2);
-            this.broadcast('app:workspace.inject-html', {
-                html:      result.html,
-                title:     result.title,
-                iconAlias: 'invite',
-                tabKey:    `retro-agent-${agentId}`,
-                loadUrl:   payload.url,
-            });
-            this._publishSelectionStatus('Rapport de production chargé.');
-        } catch (error) {
-            console.error('[Cerveau] Erreur lors du chargement du rapport de production :', error);
-            this._showNotification(error.message || 'Erreur lors du chargement du rapport.', 'error');
-        } finally {
-            this.broadcast('app:loading.stop');
-        }
-    }
-
-    /**
      * Ouvre le picker de reversement : la liste des affaires où l'agent a un solde dû,
      * à cocher ligne à ligne. Un seul envoi crée autant de reversements que de lignes
      * cochées, partageant une référence de LOT — un virement réel, une écriture comptable.
@@ -1702,26 +1663,15 @@ export default class extends Controller {
     _handleRetroAgentReversementEnregistre(payload) {
         this._showNotification(payload.message || 'Reversement enregistré.', 'success');
 
-        // CE QU'IL FAUT RAFRAÎCHIR DÉPEND DE CE QUI EST À L'ÉCRAN.
+        // CE QU'IL FAUT RAFRAÎCHIR EST TOUJOURS UNE LISTE, désormais.
         //
-        // Le picker s'ouvre depuis DEUX endroits : la liste des invités, et le rapport
-        // de production de l'agent. Dans le second cas, l'onglet actif n'est pas une
-        // liste mais un panneau injecté : il n'a pas de `serverRootName`, et la demande
-        // de rafraîchissement échouait en deux erreurs de console — « serverRootName
-        // manquant », puis « URL non trouvée » — pendant que le rapport continuait
-        // d'afficher les montants d'AVANT le versement.
-        //
-        // On redemande donc le RAPPORT quand le picker en vient (il nous donne son
-        // URL), et la liste seulement quand il y en a une.
-        if (payload.rapportUrl) {
-            this.handleRetroAgentRapportRequest({ url: payload.rapportUrl });
-
-            return;
-        }
-
+        // Le picker s'ouvrait aussi depuis l'ancien rapport de production — un panneau
+        // injecté, sans `serverRootName` : il fallait alors lui redemander SA page. Ce
+        // rapport est devenu la rubrique « Production intermédiaires », et toutes les
+        // portes du picker sont désormais des listes — le chemin ordinaire les couvre.
         const tabState = this._getCurrentWsTabState()[this.getActiveTabId()];
         if (!tabState?.serverRootName) {
-            // Ni liste, ni rapport : il n'y a rien à rafraîchir, et se taire vaut mieux
+            // Pas une liste : il n'y a rien à rafraîchir, et se taire vaut mieux
             // qu'une erreur de console pour une opération qui a RÉUSSI.
             return;
         }

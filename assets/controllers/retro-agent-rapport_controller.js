@@ -2,38 +2,25 @@ import { Controller } from '@hotwired/stimulus';
 
 /**
  * @class RetroAgentRapportController
- * @description Les deux commandes du rapport de production d'un agent : le STATUT des
- * affaires (Souscrites, En attente, Caduques) et la RECHERCHE RAPIDE.
+ * @description Ce qui reste du tableau de production quand la coquille de rubrique tient
+ * le reste : la RECHERCHE RAPIDE sur les lignes affichées, et l'accès aux JUSTIFICATIFS
+ * d'une affaire.
  *
- * ── DEUX FILTRES, DEUX NATURES, DEUX CHEMINS ────────────────────────────────────────
- * Le statut est une règle SERVEUR (CotationSouscriptionScope) : les montants d'une
- * projection ne se déduisent pas de ceux d'une affaire souscrite, et rien ici ne saurait
- * les recalculer. Un changement de statut redemande donc la page, dans le MÊME onglet.
+ * ── CE QUI A DISPARU, ET POURQUOI ───────────────────────────────────────────────────
+ * Ce contrôleur pilotait un écran à part — sa barre de commandes, son filtre par statut,
+ * son bouton de reversement, son actualisation. Cet écran est devenu la rubrique
+ * « Production intermédiaires » : les chips portent le statut, la barre d'outils porte le
+ * reversement, et le socle porte l'actualisation. Tout cela vit désormais à UN endroit,
+ * partagé avec les trente autres rubriques, et n'avait plus à être tenu en double ici.
  *
- * La recherche, elle, ne fait que restreindre ce qui est DÉJÀ sous les yeux : un
- * aller-retour serveur pour retrouver un client dans une liste affichée serait une
- * attente sans contrepartie. Elle masque des lignes, elle n'en recalcule aucune — et les
- * TOTAUX restent donc ceux du rapport complet. C'est délibéré : un total qui changerait au
- * gré d'une frappe ne serait plus vérifiable à la main, et le compteur dit alors
- * explicitement combien de lignes sont montrées sur combien.
+ * La recherche rapide, elle, ne fait que restreindre ce qui est DÉJÀ sous les yeux. Elle
+ * masque des lignes, elle n'en recalcule aucune — et les TOTAUX restent donc ceux du
+ * rapport complet. C'est délibéré : un total qui changerait au gré d'une frappe ne serait
+ * plus vérifiable à la main, et le compteur dit alors explicitement combien de lignes sont
+ * montrées sur combien.
  */
 export default class extends Controller {
     static targets = ['recherche', 'compteur', 'sansResultat'];
-
-    static values = {
-        baseUrl: String,
-        pickerUrl: String,
-        agentId: Number,
-        agentNom: String,
-        // La FAMILLE du bénéficiaire : « agent » ou « partenaire ». Elle décide de la
-        // colonne filtrée dans la rubrique — les deux vivent sur le même enregistrement.
-        agentType: String,
-        justificatifsUrl: String,
-        // Le statut AFFICHÉ. Il sert à l'actualisation : relire le rapport sans le
-        // reporter reviendrait à retomber sur « Souscrites » à chaque clic, et donc à
-        // perdre en silence le filtre que l'utilisateur venait de poser.
-        statut: String,
-    };
 
     connect() {
         this.nomControleur = 'RETRO-AGENT-RAPPORT';
@@ -74,139 +61,35 @@ export default class extends Controller {
         }
     }
 
-    /** Statut : règle serveur, la page se redemande. */
-    filtrer(event) {
-        event.preventDefault();
-        const statut = event.currentTarget?.dataset?.statut;
-        if (!statut) return;
-
-        this._redemanderLeRapport(statut);
-    }
-
-    /**
-     * ACTUALISER : relire les mêmes affaires, avec les montants d'à présent.
-     *
-     * Un rapport de production est un document qu'on garde ouvert pendant qu'on travaille
-     * ailleurs — on encaisse une note, on impute un bordereau, on rattache une condition de
-     * partage. Chacun de ces gestes déplace l'exigible de CE rapport, qui continuait
-     * pourtant d'afficher les montants d'avant sans rien en dire. Le versement, lui, était
-     * déjà couvert (le picker fait redemander le rapport) ; tout le reste ne l'était pas.
-     *
-     * On redemande le rapport AU STATUT AFFICHÉ, par le chemin des chips — donc avec sa
-     * barre de progression et son message d'erreur, plutôt qu'en rechargeant l'onglet à
-     * l'aveugle : un échec y remplacerait le rapport par un message, et le travail en
-     * cours de lecture serait perdu.
-     */
-    actualiser(event) {
-        event?.preventDefault();
-
-        this._redemanderLeRapport(this.hasStatutValue && this.statutValue ? this.statutValue : 'souscrites');
-    }
-
-    /**
-     * Le chemin unique du rechargement — le filtre par statut et l'actualisation ne
-     * diffèrent que par la valeur demandée.
-     *
-     * @param {string} statut
-     * @private
-     */
-    _redemanderLeRapport(statut) {
-        // Même événement que l'action de la barre d'outils : le cerveau réinjecte le HTML
-        // dans l'onglet existant (tabKey identique), plutôt que d'en empiler un nouveau.
-        this.element.dispatchEvent(new CustomEvent('cerveau:event', {
-            bubbles: true,
-            detail: {
-                type: 'ui:retroagent.rapport-request',
-                source: this.nomControleur,
-                payload: { url: `${this.baseUrlValue}?statut=${encodeURIComponent(statut)}` },
-                timestamp: Date.now(),
-            },
-        }));
-    }
-
-    /**
-     * Verser, depuis le rapport qu'on est en train de lire.
-     *
-     * Même événement que l'action de la fiche de l'invité : le picker s'ouvre, ne
-     * propose que les affaires dont la part est EXIGIBLE, et l'écriture reste la sienne.
-     * Rien n'est dupliqué ici — seulement le point de départ, là où la décision se prend.
-     */
-    reverser(event) {
-        event.preventDefault();
-        if (!this.hasPickerUrlValue) return;
-
-        this.element.dispatchEvent(new CustomEvent('cerveau:event', {
-            bubbles: true,
-            detail: {
-                type: 'ui:retroagent.reversement-request',
-                source: this.nomControleur,
-                payload: { url: this.pickerUrlValue },
-                timestamp: Date.now(),
-            },
-        }));
-    }
-
     /**
      * LES JUSTIFICATIFS DES VERSEMENTS SUR UNE AFFAIRE, depuis sa ligne.
      *
      * Même boîte que celle d'une fiche : on émet `ui:documents.liste-request`, que le
-     * cerveau traite déjà. Seule la source des lignes change — une affaire peut avoir
-     * été soldée par plusieurs virements, chacun avec sa pièce.
+     * cerveau traite déjà. Seule la source des lignes change — une affaire peut avoir été
+     * soldée par plusieurs virements, chacun avec sa pièce.
+     *
+     * ⚠ L'URL VIENT DU BOUTON, entièrement formée par le serveur. Elle était fabriquée
+     * ici à partir d'un gabarit porté par le CONTENEUR — lequel n'est rendu qu'une fois,
+     * avant qu'un bénéficiaire soit choisi, tandis que les lignes le sont à chaque
+     * recherche. Le gabarit restait donc vide et le bouton annonçait « 2 pièces » sans
+     * rien ouvrir : ni erreur, ni message, rien qui puisse le laisser voir.
      */
     justificatifs(event) {
         event.preventDefault();
-        const avenantId = event.currentTarget?.dataset?.avenantId;
-        if (!avenantId || !this.hasJustificatifsUrlValue) return;
+        const url = event.currentTarget?.dataset?.url;
+        if (!url) return;
 
         this.element.dispatchEvent(new CustomEvent('cerveau:event', {
             bubbles: true,
             detail: {
                 type: 'ui:documents.liste-request',
                 source: this.nomControleur,
-                // Le gabarit d'URL porte un 0 en place de l'affaire : le serveur rend une
-                // page pour tout le rapport, il ne peut pas y écrire chaque identifiant.
-                payload: { url: this.justificatifsUrlValue.replace('/affaire/0/', `/affaire/${avenantId}/`) },
+                payload: { url },
                 timestamp: Date.now(),
             },
         }));
     }
 
-    /**
-     * OUVRIR LA RUBRIQUE DES REVERSEMENTS, filtrée sur cet agent.
-     *
-     * Il y avait ici un volet dédié : un second écran pour la même donnée, à maintenir en
-     * double. La rubrique fait tout ce qu'il faisait, et davantage — recherche, tri, chips,
-     * actions documentaires.
-     *
-     * ON EMPRUNTE L'ÉVÉNEMENT DE L'ASSISTANT, pas un nouveau. `app:workspace.open-rubrique`
-     * est exactement ce que produit `ouvrir_rubrique` de Ket : écran et assistant ouvrent
-     * donc la même liste, avec la même forme de critère, par le même chemin. La parité n'est
-     * pas à construire, elle est structurelle. Et le critère apparaît en badge retirable dans
-     * la barre de recherche, ce qu'un filtre maison n'aurait pas fait.
-     */
-    versements(event) {
-        event.preventDefault();
-        if (!this.hasAgentIdValue) return;
-
-        // LE CRITÈRE EST CELUI DE ReversementScope, préfixé de la famille : il visait la
-        // colonne `agent` en clair, et le même bouton sur le rapport d'un PARTENAIRE
-        // aurait ouvert la rubrique filtrée sur un agent inexistant — donc vide, sans
-        // rien dire de l'erreur.
-        const famille = this.hasAgentTypeValue && this.agentTypeValue ? this.agentTypeValue : 'agent';
-        document.dispatchEvent(new CustomEvent('app:workspace.open-rubrique', {
-            bubbles: true,
-            detail: {
-                entityName: 'ReversementRetroAgent',
-                criteres: {
-                    __beneficiaire_reversement__: {
-                        operator: '=',
-                        value: `${famille}:${this.agentIdValue}`,
-                        label: this.hasAgentNomValue ? this.agentNomValue : `#${this.agentIdValue}`,
-                    },
-                },
-            },
-        }));
-    }
     /**
      * Le champ n'est éditable qu'une fois cliqué : c'est ce qui empêche Chrome d'y
      * écrire de lui-même (il n'écrit jamais dans un champ en lecture seule). Même
