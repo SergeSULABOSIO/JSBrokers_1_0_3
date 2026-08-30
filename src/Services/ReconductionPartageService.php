@@ -107,11 +107,85 @@ class ReconductionPartageService
      *
      * Les deux collections comptent : celle des conditions rattachées et celle des
      * conditions propres. Une seule suffit à dire « cette piste a son schéma ».
+     *
+     * Publique parce que l'abonné de reconduction s'en sert pour choisir entre les deux
+     * gestes qu'il sait faire : tout reconduire, ou seulement compléter le ciblage.
      */
-    private function porteDejaUnPartage(Piste $cible): bool
+    public function porteDejaUnPartage(Piste $cible): bool
     {
         return !$cible->getConditionsPartageAgent()->isEmpty()
             || !$cible->getConditionsPartageExceptionnelles()->isEmpty();
+    }
+
+    /**
+     * LE CIBLAGE QUE LE PLAN DE L'ASSISTANT NE SAIT PAS ÉCRIRE, POSÉ APRÈS COUP.
+     *
+     * ── LE TROU QU'ELLE BOUCHE ──────────────────────────────────────────────────────
+     * `ConditionPartage::produits` est déclaré `mapped: false` dans son FormType : le
+     * ciblage ne s'écrit PAS par formulaire, il passe par deux routes dédiées
+     * (`api.attach_risque` / `api.detach_risque`), parce qu'un risque appartient au
+     * CATALOGUE de l'entreprise et se vise, ne se crée pas. Le plan de Ket reconduit donc
+     * les conditions AVEC leur critère mais SANS leurs risques — et une condition qui dit
+     * « inclure ces risques-ci » sans en nommer aucun est une règle cassée :
+     * {@see ConditionPartage::sappliqueAuRisque()} la rend inerte quand elle inclut, et
+     * universelle quand elle exclut. Dans un cas la rétrocommission disparaît, dans
+     * l'autre elle s'élargit. Les deux en silence.
+     *
+     * ── COMMENT ON RECONNAÎT LA CONDITION À COMPLÉTER ───────────────────────────────
+     * Elle annonce un ciblage et n'en porte aucun. C'est un état qu'aucune saisie normale
+     * ne produit — l'écran attache les risques dans la foulée — et c'est donc une
+     * signature sûre. Le modèle se retrouve dans la piste de base par son NOM, que le plan
+     * recopie tel quel.
+     *
+     * ⚠ ET SI LE NOM NE DÉSIGNE PAS UNE SEULE CONDITION, ON NE COMPLÈTE RIEN. Deux
+     * conditions homonymes dans la police de base, et deviner laquelle a servi de modèle
+     * reviendrait à choisir au hasard sur qui l'argent tombe. Mieux vaut un ciblage vide,
+     * que l'utilisateur voit et corrige, qu'un ciblage faux qui paie sans qu'il le sache.
+     *
+     * @return bool vrai si au moins une condition a été complétée — ce qui dit à
+     *              l'appelant qu'il reste quelque chose à écrire
+     */
+    public function completerLeCiblage(Piste $source, Piste $cible): bool
+    {
+        $complete = false;
+
+        foreach ($cible->getConditionsPartageExceptionnelles() as $condition) {
+            if ($condition->getCritereRisque() === ConditionPartage::CRITERE_PAS_RISQUES_CIBLES) {
+                continue;
+            }
+            if (!$condition->getProduits()->isEmpty()) {
+                continue;
+            }
+
+            $modele = $this->modeleUnique($source, (string) $condition->getNom());
+            if ($modele === null) {
+                continue;
+            }
+
+            foreach ($modele->getProduits() as $risque) {
+                $condition->addProduit($risque);
+            }
+            $complete = true;
+        }
+
+        return $complete;
+    }
+
+    /**
+     * La condition de la police de base qui porte ce nom ET un ciblage — à l'exclusion de
+     * toute autre. Null dès qu'il y en a zéro ou plusieurs : voir l'avertissement
+     * ci-dessus, deviner reviendrait à choisir au hasard sur qui l'argent tombe.
+     */
+    private function modeleUnique(Piste $source, string $nom): ?ConditionPartage
+    {
+        $candidats = [];
+        foreach ($source->getConditionsPartageExceptionnelles() as $condition) {
+            if ($condition->getNom() === $nom && !$condition->getProduits()->isEmpty()) {
+                $candidats[] = $condition;
+            }
+        }
+
+        return count($candidats) === 1 ? $candidats[0] : null;
     }
 
     /**

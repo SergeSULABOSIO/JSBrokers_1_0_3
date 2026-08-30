@@ -511,6 +511,13 @@ final class MouvementAvenantBuilder
             // validation (« Cette valeur n'est pas valide »), donc échouer un
             // renouvellement entier pour un ciblage. Le plan reconduit ce qu'un formulaire
             // sait écrire ; le ciblage suit par le chemin qui lui est propre.
+            //
+            // ET IL SUIT VRAIMENT : une fois le plan écrit, l'abonné de reconduction
+            // ({@see \App\EventListener\ReconductionPartageListener}) reconnaît les
+            // conditions qui annoncent un ciblage sans en porter aucun, et va chercher
+            // leurs risques sur la police de base. Sans lui, la condition arrivait inerte
+            // quand elle incluait, et universelle quand elle excluait — l'écran et Ket
+            // auraient dit deux choses différentes.
 
             if (!$condition['applicable']) {
                 $neutralisees[] = $condition['nom'];
