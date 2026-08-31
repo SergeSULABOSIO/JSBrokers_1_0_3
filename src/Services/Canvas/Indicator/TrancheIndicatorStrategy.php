@@ -7,7 +7,6 @@ use App\Entity\Tranche;
 use App\Entity\Taxe;
 use App\Entity\Note;
 use App\Repository\TaxeRepository;
-use App\Service\Partage\Exigibilite;
 use App\Service\Partage\Reserve;
 use App\Services\ServiceDates;
 use App\Entity\Entreprise;
@@ -467,34 +466,11 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
      */
     private function getTrancheRetroExigible(Tranche $tranche): float
     {
-        // Proposition non validée (aucun avenant) : projet, aucune dette rétro à surveiller.
-        if (!$this->calculationHelper->isCotationBound($tranche->getCotation())) {
-            return 0.0;
-        }
-
-        $facteur = $this->calculateTrancheTauxFactor($tranche);
-        $duePartageable = round(
-            $this->calculationHelper->getCotationMontantCommissionTtc($tranche->getCotation(), -1, true) * $facteur,
-            2
-        );
-        $encaisseePartageable = round($this->getTrancheMontantCommissionPartageableEncaissee($tranche), 2);
-
-        // Circuit bordereau sans articles : un bordereau de production couvrant la
-        // tranche et intégralement encaissé prouve que la commission (partageable
-        // comprise) a été perçue — la dette rétro est donc née.
-        if ($this->calculationHelper->isTrancheCouverteParBordereau($tranche, true)) {
-            $encaisseePartageable = max($encaisseePartageable, $duePartageable);
-        }
-
-        // LA FORMULE EST PARTAGÉE avec l'agent : ce qui est RENTRÉ doit ressortir, à due
-        // proportion. Les deux camps l'appliquaient chacun de leur côté, et ne lisaient
-        // déjà plus le même « encaissé ».
-        return Exigibilite::exigible(
-            round($this->getTrancheRetroCommission($tranche), 2),
-            $duePartageable,
-            $encaisseePartageable,
-            $this->calculationHelper->getTrancheMontantRetrocommissionsPayableParCourtierPayee($tranche),
-        );
+        // LA FORMULE VIT DANS LE HELPER, aux côtés de son miroir agent. Elle était privée
+        // ici, donc invisible des agrégats : la rubrique Intermédiaires ne pouvait pas
+        // dire à un partenaire ce qui lui est exigible. Sans partenaire cible, la réponse
+        // est celle de cet écran — l'échéance, tous bénéficiaires confondus.
+        return $this->calculationHelper->getTrancheRetroExigible($tranche);
     }
 
     /**
@@ -536,59 +512,7 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
      */
     private function getTrancheMontantCommissionPartageableEncaissee(Tranche $tranche): float
     {
-        $montant = 0.0;
-        foreach ($tranche->getArticles() as $article) {
-            $note = $article->getNote();
-            $revenu = $article->getRevenuFacture();
-            if (!$note || !$revenu || !$revenu->getTypeRevenu()?->isShared()) {
-                continue;
-            }
-            if (!in_array($note->getAddressedTo(), [Note::TO_ASSUREUR, Note::TO_CLIENT], true)) {
-                continue;
-            }
-            $montantPayableNote = $this->calculationHelper->getNoteMontantPayable($note);
-            if ($montantPayableNote > 0) {
-                $proportionPaiement = $this->calculationHelper->getNoteMontantPaye($note) / $montantPayableNote;
-                $montant += $proportionPaiement * $this->calculationHelper->getArticleMontant($article);
-            }
-        }
-
-        // ── LE CIRCUIT BORDEREAU COMPTAIT POUR RIEN, ET C'EST UN CORRECTIF ──────────
-        //
-        // Cette lecture n'interrogeait que les ARTICLES de notes. La colonne « Encaissée »
-        // de l'écran, elle, prend `max(articles, allouée)` — ce qu'un bordereau de
-        // production a réellement fait rentrer SUR CETTE ÉCHÉANCE, imputé de la plus
-        // ancienne à la plus récente. Une tranche soldée par un bordereau partiellement
-        // réglé affichait donc « Solde 0,00 » pendant que la rétro du partenaire restait
-        // inexigible : le courtier ne payait pas quelqu'un qu'il devait payer.
-        //
-        // L'agent, lui, lisait déjà la bonne mesure. C'est cette divergence-là que le
-        // correctif ferme.
-        //
-        // ── POURQUOI UN PRORATA, ET PAS LE MONTANT BRUT ─────────────────────────────
-        // Le bordereau ne distingue pas les types de revenus : il fait rentrer de la
-        // commission, partageable ou non. L'imputer en entier rendrait exigible une rétro
-        // sur de l'argent qui n'est pas partageable. On retient donc la même part que
-        // celle du dû — et un `max()` avec le chemin des articles, car les deux décrivent
-        // le même argent, l'un par la note, l'autre par le bordereau qui en tient lieu.
-        $allouee = round($this->calculationHelper->getTrancheCommissionAllouee($tranche), 2);
-        if ($allouee > 0.0) {
-            $facteur = $this->calculateTrancheTauxFactor($tranche);
-            $cotation = $tranche->getCotation();
-            $dueTotale = round(
-                $this->calculationHelper->getCotationMontantCommissionTtc($cotation, -1, false) * $facteur,
-                2,
-            );
-            $duePartageable = round(
-                $this->calculationHelper->getCotationMontantCommissionTtc($cotation, -1, true) * $facteur,
-                2,
-            );
-            $partPartageable = $dueTotale > 0.0 ? min(1.0, $duePartageable / $dueTotale) : 1.0;
-
-            $montant = max($montant, $allouee * $partPartageable);
-        }
-
-        return $montant;
+        return $this->calculationHelper->getTrancheMontantCommissionPartageableEncaissee($tranche);
     }
 
     private function getTrancheDateDernierEncaissement(Tranche $tranche): ?\DateTimeInterface

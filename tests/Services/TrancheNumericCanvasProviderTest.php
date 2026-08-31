@@ -95,4 +95,35 @@ class TrancheNumericCanvasProviderTest extends TestCase
         $this->assertEquals(0, $canvas['commissionExigible']['value']);
         $this->assertEquals(0, $canvas['retroCommissionExigible']['value']);
     }
+
+    /**
+     * LE TRAIT PASSE APRÈS LE PROVIDER, ET PEUT DONC LE RENOMMER SANS BRUIT.
+     *
+     * `getCanvas()` fusionne le tableau du provider avec celui du trait générique
+     * (array_merge, trait en second) : inscrire dans le trait un code que le provider
+     * nomme déjà, avec une description différente, remplace le libellé du sélecteur de la
+     * barre des totaux — d'une rubrique qu'on ne touchait pas, et sans la moindre erreur.
+     * C'est arrivé en ajoutant `retroCommissionExigible` au trait pour la rubrique
+     * Intermédiaires : « Rétro Exigible » est devenu « Rétrocom. exigible » côté Tranches.
+     *
+     * Ket dérive de plus son vocabulaire de ces libellés : les stabiliser n'est pas
+     * cosmétique.
+     */
+    public function testLesLibellesPartagesAvecLeTraitNeSontJamaisRenommes(): void
+    {
+        $canvas = (new TrancheNumericCanvasProvider())->getCanvas(new Tranche());
+
+        foreach ([
+            'retroCommissionExigible' => 'Rétro Exigible',
+            'commissionExigible' => 'Commission Exigible',
+            'montant_du' => 'Montant Dû',
+            'resteAPayer' => 'Reste à Payer',
+        ] as $code => $libelle) {
+            $this->assertSame(
+                $libelle,
+                $canvas[$code]['description'],
+                sprintf('Le libellé de « %s » a changé : le trait générique a-t-il repris ce code ?', $code),
+            );
+        }
+    }
 }

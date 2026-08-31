@@ -28,6 +28,12 @@ trait CalculatedIndicatorsNumericProviderTrait
             'retroCommission' => ['description' => 'Rétrocommission Partenaire', 'is_percentage' => false],
             'retroCommissionReversee' => ['description' => 'Rétrocommission Payée', 'is_percentage' => false],
             'retroCommissionSolde' => ['description' => 'Solde Rétrocommission', 'is_percentage' => false],
+            // ⚠ « Rétro Exigible » — le libellé EXISTANT de TrancheNumericCanvasProvider,
+            // et non un synonyme. Ce tableau est fusionné PAR-DESSUS celui des providers
+            // (array_merge, trait en second) : une description différente pour le même
+            // code renomme silencieusement l'entrée de la barre des totaux d'une rubrique
+            // qu'on ne touchait pas. Ket dérive de plus son vocabulaire de ces libellés.
+            'retroCommissionExigible' => ['description' => 'Rétro Exigible', 'is_percentage' => false],
             // Rétrocommission des AGENTS INTERNES — l'autre bénéficiaire du partage.
             // Les inscrire ici suffit à les rendre totalisables : la barre des totaux
             // (list-summary_controller.js) construit son sélecteur depuis ce dictionnaire,
@@ -35,6 +41,7 @@ trait CalculatedIndicatorsNumericProviderTrait
             'retroAgentDue' => ['description' => 'Rétrocom. agent due', 'is_percentage' => false],
             'retroAgentPayee' => ['description' => 'Rétrocom. agent payée', 'is_percentage' => false],
             'retroAgentSolde' => ['description' => 'Rétrocom. agent solde', 'is_percentage' => false],
+            'retroAgentExigible' => ['description' => 'Rétrocom. agent exigible', 'is_percentage' => false],
             'taxeCourtierMontant' => ['description' => 'Taxe Courtier', 'is_percentage' => false],
             'taxeCourtierPayee' => ['description' => 'Taxe Courtier Payée', 'is_percentage' => false],
             'taxeCourtierSolde' => ['description' => 'Solde Taxe Courtier', 'is_percentage' => false],

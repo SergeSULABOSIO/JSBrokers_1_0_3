@@ -62,6 +62,17 @@ class PartenaireListCanvasProvider implements ListCanvasProviderInterface
                     "attribut_code" => "retroCommissionSolde",
                     "attribut_type" => "nombre",
                 ],
+                [
+                    // ET CE QU'IL FAUT SORTIR MAINTENANT. Le solde dit la dette entière,
+                    // dont une part n'est pas encore réclamable : le cabinet n'a pas
+                    // encaissé la commission qui la justifie. Cette colonne isole ce que
+                    // l'argent rentré rend exigible — c'est elle qu'on lit pour décider
+                    // d'un virement, jamais le solde.
+                    "titre_colonne" => "Rétro. Exigible",
+                    "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    "attribut_code" => "retroCommissionExigible",
+                    "attribut_type" => "nombre",
+                ],
             ],
         ];
     }

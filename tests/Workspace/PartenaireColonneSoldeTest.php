@@ -2,6 +2,7 @@
 
 namespace App\Tests\Workspace;
 
+use App\Entity\Article;
 use App\Entity\Assureur;
 use App\Entity\Avenant;
 use App\Entity\ChargementPourPrime;
@@ -9,6 +10,8 @@ use App\Entity\Client;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Entity\Note;
+use App\Entity\Paiement;
 use App\Entity\Partenaire;
 use App\Entity\Piste;
 use App\Entity\ReversementRetroAgent;
@@ -29,6 +32,13 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  * a gagné (rétro-commission) et ce qu'il a touché (rétro. payée) — mais jamais la
  * différence. Pour savoir ce que le cabinet lui doit ENCORE, il fallait ouvrir sa fiche et
  * soustraire de tête, ligne par ligne. La colonne « Rétro. Solde » ferme cet écart.
+ *
+ * ── ET CE QU'IL FAUT PAYER MAINTENANT ───────────────────────────────────────────────
+ * Le solde ne dit pas s'il faut virer aujourd'hui : une part de la dette n'est pas encore
+ * réclamable, parce que le cabinet n'a pas encaissé la commission qui la justifie. Payer
+ * dessus, c'est avancer sa trésorerie sur une créance non recouvrée. La colonne
+ * « Rétro. Exigible » isole donc la part que l'argent RENTRÉ a fait naître — au prorata,
+ * échéance par échéance (`App\Service\Partage\Exigibilite`).
  *
  * ── DRY : AUCUNE SOUSTRACTION N'EST ÉCRITE DANS LA LISTE ────────────────────────────
  * `IndicatorCalculationHelper` publie déjà `retro_commission_partenaire_solde`, que
@@ -76,6 +86,7 @@ class PartenaireColonneSoldeTest extends KernelTestCase
         $conn = $this->em()->getConnection();
         $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email = :e', ['e' => self::OWNER_EMAIL]);
         foreach ([
+            'paiement', 'article', 'note',
             'reversement_retro_agent', 'tranche', 'avenant', 'revenu_pour_courtier', 'type_revenu',
             'chargement_pour_prime', 'cotation', 'piste', 'client', 'assureur', 'partenaire',
             'risque', 'invite',
@@ -144,6 +155,84 @@ class PartenaireColonneSoldeTest extends KernelTestCase
         );
     }
 
+    // ===================== L'exigible : ce qu'il faut payer MAINTENANT ===============
+
+    /**
+     * RIEN D'ENCAISSÉ, RIEN D'EXIGIBLE — et pourtant la dette existe.
+     *
+     * C'est toute la raison d'être de la colonne : le solde affiche 200, l'exigible 0.
+     * Les confondre ferait virer 200 sur une commission que le cabinet n'a pas perçue.
+     */
+    public function testSansCommissionEncaisseeRienNEstExigible(): void
+    {
+        $ids = $this->semer();
+        $chiffres = $this->indicateurs($ids['partenaireId']);
+
+        self::assertEqualsWithDelta(self::DUE, $chiffres['retroCommissionSolde'], 0.01);
+        self::assertEqualsWithDelta(0.0, $chiffres['retroCommissionExigible'], 0.01);
+    }
+
+    /** Commission intégralement perçue : toute la dette devient réclamable. */
+    public function testCommissionEncaisseeRendToutLeSoldeExigible(): void
+    {
+        $ids = $this->semer();
+        $this->encaisserCommission($ids, self::COMMISSION);
+
+        $chiffres = $this->indicateurs($ids['partenaireId']);
+
+        self::assertEqualsWithDelta(self::DUE, $chiffres['retroCommissionExigible'], 0.01);
+    }
+
+    /**
+     * AU PRORATA, ET NON TOUT-OU-RIEN : la moitié rentrée rend la moitié exigible.
+     * L'ancienne règle exigeait l'encaissement intégral — un cabinet ayant perçu 50 %
+     * gardait alors 100 % de la rétro.
+     */
+    public function testLExigibleSuitLEncaissementAuProrata(): void
+    {
+        $ids = $this->semer();
+        $this->encaisserCommission($ids, self::COMMISSION / 2);
+
+        $chiffres = $this->indicateurs($ids['partenaireId']);
+
+        self::assertEqualsWithDelta(self::DUE / 2, $chiffres['retroCommissionExigible'], 0.01);
+    }
+
+    /** Ce qui est déjà parti ne reste pas exigible : le virement éteint sa part. */
+    public function testLeVersementDeduitDeLExigible(): void
+    {
+        $ids = $this->semer();
+        $this->encaisserCommission($ids, self::COMMISSION);
+        $this->reverser($ids, 120.0);
+
+        $chiffres = $this->indicateurs($ids['partenaireId']);
+
+        self::assertEqualsWithDelta(self::DUE - 120.0, $chiffres['retroCommissionExigible'], 0.01);
+    }
+
+    /**
+     * L'INVARIANT DE LECTURE DES DEUX COLONNES : l'exigible est une PART du solde.
+     * Le voir dépasser signifierait qu'on réclame au cabinet plus qu'il ne doit.
+     */
+    public function testLExigibleNeDepasseJamaisLeSolde(): void
+    {
+        foreach ([0.0, self::COMMISSION / 4, self::COMMISSION] as $encaisse) {
+            $ids = $this->semer();
+            if ($encaisse > 0.0) {
+                $this->encaisserCommission($ids, $encaisse);
+            }
+
+            $chiffres = $this->indicateurs($ids['partenaireId']);
+            self::assertLessThanOrEqual(
+                round($chiffres['retroCommissionSolde'], 2) + 0.01,
+                round($chiffres['retroCommissionExigible'], 2),
+                sprintf('Encaissé %s : l\'exigible dépasse le solde.', $encaisse),
+            );
+
+            $this->cleanUp();
+        }
+    }
+
     // ===================== Le contrat de la liste =====================
 
     /** La colonne est bien DÉCLARÉE dans la rubrique, et lue comme un montant. */
@@ -163,6 +252,23 @@ class PartenaireColonneSoldeTest extends KernelTestCase
         $solde = $canvas['colonnes_numeriques'][array_search('retroCommissionSolde', $codes, true)];
         self::assertSame('nombre', $solde['attribut_type']);
         self::assertNotSame('%', $solde['attribut_unité'], 'Un solde est un montant, pas un taux.');
+    }
+
+    /** L'exigible ferme la ligne : due ▸ payée ▸ reste ▸ reste RÉCLAMABLE. */
+    public function testLaColonneExigibleEstDeclareeApresLeSolde(): void
+    {
+        $canvas = static::getContainer()->get(PartenaireListCanvasProvider::class)->getCanvas();
+        $codes = array_column($canvas['colonnes_numeriques'], 'attribut_code');
+
+        self::assertContains('retroCommissionExigible', $codes);
+        self::assertGreaterThan(
+            array_search('retroCommissionSolde', $codes, true),
+            array_search('retroCommissionExigible', $codes, true),
+        );
+
+        $exigible = $canvas['colonnes_numeriques'][array_search('retroCommissionExigible', $codes, true)];
+        self::assertSame('nombre', $exigible['attribut_type']);
+        self::assertNotSame('%', $exigible['attribut_unité'], 'Un montant à virer, pas un taux.');
     }
 
     /** Chaque colonne déclarée doit être alimentée, sinon la cellule affiche « — » en silence. */
@@ -268,6 +374,37 @@ class PartenaireColonneSoldeTest extends KernelTestCase
         $em->clear();
 
         return $ids;
+    }
+
+    /**
+     * LE CABINET PERÇOIT SA COMMISSION : note à l'assureur, article sur l'échéance,
+     * règlement. C'est cet argent RENTRÉ qui fait naître la dette envers le partenaire.
+     */
+    private function encaisserCommission(array $ids, float $montant): void
+    {
+        $em = $this->em();
+        $entreprise = $em->getRepository(Entreprise::class)->find($ids['entrepriseId']);
+        $tranche = $em->getRepository(Tranche::class)->find($ids['trancheId']);
+        $cotation = $tranche->getCotation();
+
+        $note = (new Note())->setNom('Note commission')->setType(0)
+            ->setAddressedTo(Note::TO_ASSUREUR)->setReference('N-PARTCOL-1')
+            ->setValidated(true)->setSignature('')
+            ->setAssureur($cotation->getAssureur());
+        $note->setEntreprise($entreprise);
+        $em->persist($note);
+
+        $article = (new Article())->setNote($note)->setRevenuFacture($cotation->getRevenus()->first())->setTranche($tranche);
+        $article->setEntreprise($entreprise);
+        $em->persist($article);
+
+        $reglement = (new Paiement())->setMontant($montant)->setReference('ENC-PARTCOL-1')
+            ->setPaidAt(new \DateTimeImmutable('-5 days'))->setNote($note);
+        $reglement->setEntreprise($entreprise);
+        $em->persist($reglement);
+
+        $em->flush();
+        $em->clear();
     }
 
     /** Le cabinet reverse au partenaire, à la maille de l'échéance. */

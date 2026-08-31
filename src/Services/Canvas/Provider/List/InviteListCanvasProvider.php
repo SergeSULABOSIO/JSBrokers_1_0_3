@@ -85,6 +85,18 @@ class InviteListCanvasProvider implements ListCanvasProviderInterface
                     "attribut_code" => "retroAgentSolde",
                     "attribut_type" => "nombre",
                 ],
+                [
+                    // CE QU'IL FAUT VERSER MAINTENANT. Le solde dit la dette entière,
+                    // dont une part n'est pas encore réclamable : le cabinet n'a pas
+                    // encaissé la commission qui la justifie. C'est cette colonne — et
+                    // non le solde — qu'on lit pour décider d'un reversement, et c'est
+                    // elle qui commande déjà l'apparition des actions rapport/versement
+                    // (`hasRetroAgentExigible`).
+                    "titre_colonne" => "Rétrocom. exigible",
+                    "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    "attribut_code" => "retroAgentExigible",
+                    "attribut_type" => "nombre",
+                ],
             ],
         ];
     }

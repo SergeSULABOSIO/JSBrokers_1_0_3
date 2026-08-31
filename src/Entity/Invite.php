@@ -167,6 +167,27 @@ class Invite
     #[Groups(['list:read'])]
     public ?bool $hasRetroAgentExigible = null;
 
+    // LES MONTANTS DE RÉTROCOMMISSION D'AGENT, en colonnes de la rubrique Invités.
+    //
+    // DÉCLARÉS, et pas seulement produits : ils étaient posés en propriétés DYNAMIQUES,
+    // ce que PHP 8.2 déprécie et ce qui les laissait hors de tout groupe de
+    // sérialisation — donc absents du `data-entity` d'une ligne et de toute action
+    // conditionnée dessus. Le drapeau ci-dessus, lui, était déjà déclaré : c'est cette
+    // dissymétrie que l'on ferme ici.
+    #[Groups(['list:read'])]
+    public ?float $retroAgentDue = null;
+
+    #[Groups(['list:read'])]
+    public ?float $retroAgentPayee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $retroAgentSolde = null;
+
+    // Ce que le cabinet doit verser DÈS MAINTENANT : la part du solde dont il a
+    // lui-même encaissé la commission.
+    #[Groups(['list:read'])]
+    public ?float $retroAgentExigible = null;
+
     // Ligne secondaire de la liste : nom du portefeuille géré, ou « Aucun portefeuille ».
     // Contrairement au client (info masquée si absente), l'ABSENCE est ici une information
     // métier à afficher explicitement.

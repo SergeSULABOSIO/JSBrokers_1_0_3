@@ -174,6 +174,11 @@ class Partenaire
     #[Groups(['list:read'])]
     public ?float $retroCommissionSolde = null;
 
+    // La part du solde RÉCLAMABLE aujourd'hui : le cabinet a encaissé la commission qui
+    // la justifie, la dette est donc née.
+    #[Groups(['list:read'])]
+    public ?float $retroCommissionExigible = null;
+
     #[Groups(['list:read'])]
     public ?float $reserve = null;
 
