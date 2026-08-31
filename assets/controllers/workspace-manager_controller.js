@@ -105,9 +105,6 @@ export default class extends Controller {
         this.boundHandleComponentLoaded = this.handleComponentLoaded.bind(this);
         document.addEventListener('workspace:component.loaded', this.boundHandleComponentLoaded);
 
-        // NOUVEAU : Écoute l'ordre du cerveau pour revenir au tableau de bord.
-        this.boundLoadDefault = this.loadDefaultComponent.bind(this);
-        document.addEventListener('app:workspace.load-default', this.boundLoadDefault);
 
         this.boundCloseActiveTab = this.closeActiveWorkspaceTab.bind(this);
         document.addEventListener('app:workspace.close-active-tab', this.boundCloseActiveTab);
@@ -268,7 +265,6 @@ export default class extends Controller {
         document.removeEventListener('app:icon.loaded', this.boundHandleIconLoaded);
         this.workspaceDispositionObserver?.disconnect();
         document.removeEventListener('workspace:component.loaded', this.boundHandleComponentLoaded);
-        document.removeEventListener('app:workspace.load-default', this.boundLoadDefault);
         document.removeEventListener('app:workspace.close-active-tab', this.boundCloseActiveTab);
         document.removeEventListener('app:workspace.inject-html', this.boundInjectHtml);
         document.removeEventListener('app:workspace.open-html-in-visualization', this.boundOpenHtmlInVisualization);
@@ -2121,6 +2117,18 @@ export default class extends Controller {
         const tabId = event.detail?.workspaceTabId || this.activeWorkspaceTabId;
         const ids = this._selectionEnAttente?.[tabId];
         if (!ids || ids.length === 0) return;
+
+        // ⚠ LES FILTRES PASSENT AVANT, ET CE RENDU-CI N'EST PEUT-ÊTRE PAS LE BON.
+        //
+        // Un onglet restauré se rend DEUX fois : une première à son chargement, liste
+        // entière, puis une seconde après que ses filtres ont été posés — car les poser
+        // déclenche une recherche. Recocher au premier rendu revenait donc à faire
+        // effacer la sélection par le geste suivant, et c'est ce qui se passait.
+        //
+        // Le signal est déjà là, il suffit de le lire : `_criteresEnAttente` est vidé au
+        // moment où les filtres sont posés ({@see _appliquerCriteresEnAttente}). Tant
+        // qu'il en reste pour cet onglet, on laisse passer.
+        if (this._criteresEnAttente?.[tabId]) return;
 
         delete this._selectionEnAttente[tabId];
 

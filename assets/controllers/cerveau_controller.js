@@ -432,6 +432,23 @@ export default class extends Controller {
                 this.displayState.pageItemCount = renderedState.pageItemCount;
                 this.displayState.totalItems = renderedState.totalItems;
                 this._publishSelectionStatus();
+
+                // ⚠ ON LE RE-DIFFUSE COMME ÉVÉNEMENT DU DOM, et il le faut.
+                //
+                // `notifyCerveau()` n'émet pas un événement de ce nom : il émet un
+                // `cerveau:event` qui le PORTE dans son `detail.type`. Un contrôleur qui
+                // fait `addEventListener('app:list.rendered', …)` n'est donc jamais appelé —
+                // sans erreur, sans avertissement, sans rien qui puisse le laisser voir. La
+                // survie de la sélection au rechargement en dépendait, et ne fonctionnait pas.
+                //
+                // La règle du projet est simple : ce qui commence par `app:` est un fait
+                // DIFFUSÉ, que n'importe qui peut écouter. Ce nom l'annonçait déjà ; il le
+                // tient maintenant. Aucune boucle possible — le cerveau n'écoute que
+                // `cerveau:event`.
+                this.broadcast('app:list.rendered', {
+                    itemCount: renderedState.pageItemCount,
+                    totalItems: renderedState.totalItems,
+                });
                 this.broadcast('app:loading.stop');
                 break;
             }
