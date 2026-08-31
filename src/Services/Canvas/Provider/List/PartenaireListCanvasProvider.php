@@ -52,6 +52,16 @@ class PartenaireListCanvasProvider implements ListCanvasProviderInterface
                     "attribut_code" => "retroCommissionReversee",
                     "attribut_type" => "nombre",
                 ],
+                [
+                    // CE QUI RESTE DÛ, EN BOUT DE LIGNE : due moins payée. La dette du
+                    // cabinet envers l'apporteur se lit d'un coup d'œil, à côté de ce qui
+                    // l'a produite. Aucun calcul ici : la soustraction appartient à
+                    // IndicatorCalculationHelper, qui la publie déjà.
+                    "titre_colonne" => "Rétro. Solde",
+                    "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    "attribut_code" => "retroCommissionSolde",
+                    "attribut_type" => "nombre",
+                ],
             ],
         ];
     }
