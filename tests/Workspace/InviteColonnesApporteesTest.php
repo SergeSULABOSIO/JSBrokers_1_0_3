@@ -2,6 +2,8 @@
 
 namespace App\Tests\Workspace;
 
+use App\Entity\Article;
+use App\Entity\Assureur;
 use App\Entity\Avenant;
 use App\Entity\ChargementPourPrime;
 use App\Entity\Client;
@@ -9,9 +11,12 @@ use App\Entity\ConditionPartage;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Entity\Note;
+use App\Entity\Paiement;
 use App\Entity\Piste;
 use App\Entity\RevenuPourCourtier;
 use App\Entity\Risque;
+use App\Entity\Tranche;
 use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
 use App\Services\Canvas\Indicator\InviteIndicatorStrategy;
@@ -23,9 +28,9 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  * LES CHIFFRES D'UN INVITÉ SONT CEUX DE SON EFFORT COMMERCIAL, PAS DE SA GESTION.
  *
  * Toutes les colonnes numériques de la rubrique Invités — prime, commission, commission
- * pure, réserve, et les trois de rétrocommission — décrivent les affaires que l'invité a
- * APPORTÉES : celles où une condition de partage le désigne bénéficiaire. Jamais celles
- * qu'il suit comme gestionnaire de compte.
+ * pure, réserve, et les quatre de rétrocommission (due, payée, solde, exigible) —
+ * décrivent les affaires que l'invité a APPORTÉES : celles où une condition de partage le
+ * désigne bénéficiaire. Jamais celles qu'il suit comme gestionnaire de compte.
  *
  * ── POURQUOI CE TEST EXISTE ─────────────────────────────────────────────────────────
  * La première version mêlait les deux périmètres : quatre colonnes sur la production
@@ -78,8 +83,9 @@ class InviteColonnesApporteesTest extends KernelTestCase
             ['nom' => self::ENTREPRISE_NOM],
         );
         foreach ([
+            'paiement', 'article', 'note', 'tranche',
             'condition_partage', 'avenant', 'revenu_pour_courtier', 'type_revenu',
-            'chargement_pour_prime', 'cotation', 'piste', 'client', 'risque', 'invite',
+            'chargement_pour_prime', 'cotation', 'piste', 'client', 'assureur', 'risque', 'invite',
         ] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :nom",
@@ -117,7 +123,7 @@ class InviteColonnesApporteesTest extends KernelTestCase
         // colonne ne doit lui attribuer le résultat commercial d'Alice.
         foreach ([
             'primeTotale', 'montantTTC', 'montantPur', 'reserve',
-            'retroAgentDue', 'retroAgentPayee', 'retroAgentSolde',
+            'retroAgentDue', 'retroAgentPayee', 'retroAgentSolde', 'retroAgentExigible',
         ] as $colonne) {
             self::assertEqualsWithDelta(
                 0.0,
@@ -130,7 +136,47 @@ class InviteColonnesApporteesTest extends KernelTestCase
         self::assertFalse($chiffres['hasRetroAgent']);
     }
 
-    public function testLesSeptColonnesDeclareesSontToutesAlimentees(): void
+    /**
+     * LE SOLDE N'EST PAS L'ORDRE DE VIREMENT — et c'est pourquoi la 8e colonne existe.
+     *
+     * L'affaire d'Alice est souscrite mais sa commission n'est pas encaissée : le cabinet
+     * lui doit 200, et ne peut légitimement en payer aucun. Confondre les deux colonnes
+     * ferait avancer la trésorerie du cabinet sur une créance non recouvrée.
+     */
+    public function testUneDetteNonEncaisseeNEstPasEncoreExigible(): void
+    {
+        $ids = $this->semer();
+        $chiffres = $this->indicateurs($ids['aliceId']);
+
+        self::assertEqualsWithDelta(self::COMMISSION * 0.25, $chiffres['retroAgentSolde'], 0.01);
+        self::assertEqualsWithDelta(0.0, $chiffres['retroAgentExigible'], 0.01);
+        self::assertFalse($chiffres['hasRetroAgentExigible'], 'Rien à verser : pas d\'action de reversement.');
+    }
+
+    /** La commission perçue fait naître la dette : elle devient réclamable, et l'action paraît. */
+    public function testLaCommissionEncaisseeRendLaRetroExigible(): void
+    {
+        $ids = $this->semer(commissionEncaissee: true);
+        $chiffres = $this->indicateurs($ids['aliceId']);
+
+        self::assertEqualsWithDelta(self::COMMISSION * 0.25, $chiffres['retroAgentExigible'], 0.01);
+        self::assertTrue($chiffres['hasRetroAgentExigible']);
+    }
+
+    /** L'exigible ferme la ligne : due ▸ payée ▸ solde ▸ solde RÉCLAMABLE. */
+    public function testLaColonneExigibleEstDeclareeApresLeSolde(): void
+    {
+        $canvas = static::getContainer()->get(InviteListCanvasProvider::class)->getCanvas();
+        $codes = array_column($canvas['colonnes_numeriques'], 'attribut_code');
+
+        self::assertContains('retroAgentExigible', $codes);
+        self::assertGreaterThan(
+            array_search('retroAgentSolde', $codes, true),
+            array_search('retroAgentExigible', $codes, true),
+        );
+    }
+
+    public function testLesHuitColonnesDeclareesSontToutesAlimentees(): void
     {
         $ids = $this->semer();
         $chiffres = $this->indicateurs($ids['aliceId']);
@@ -138,7 +184,7 @@ class InviteColonnesApporteesTest extends KernelTestCase
         $canvas = static::getContainer()->get(InviteListCanvasProvider::class)->getCanvas();
         $codes = array_column($canvas['colonnes_numeriques'], 'attribut_code');
 
-        self::assertCount(7, $codes);
+        self::assertCount(8, $codes);
         foreach ($codes as $code) {
             // Le contrat de la liste : un `attribut_code` déclaré doit exister dans les
             // indicateurs, sinon la cellule affiche « — » sans que rien ne le signale.
@@ -156,7 +202,7 @@ class InviteColonnesApporteesTest extends KernelTestCase
      *
      * @return array{gastonId:int, aliceId:int}
      */
-    private function semer(): array
+    private function semer(bool $commissionEncaissee = false): array
     {
         $em = $this->em();
 
@@ -227,6 +273,41 @@ class InviteColonnesApporteesTest extends KernelTestCase
         $avenant->setEntreprise($entreprise)->setInvite($gaston);
         $cotation->addAvenant($avenant);
         $em->persist($avenant);
+
+        // L'ARGENT QUI RENTRE, quand le cas testé en a besoin. Par défaut il ne rentre
+        // pas : les cas d'origine décrivent une affaire souscrite et non encore encaissée,
+        // et leur décor ne doit pas bouger.
+        if ($commissionEncaissee) {
+            $assureur = (new Assureur())->setNom('Assureur Invité')->setEmail('assureur-invcol@test.local')
+                ->setNumimpot('IMP')->setIdnat('IDNAT')->setRccm('RCCM');
+            $assureur->setEntreprise($entreprise);
+            $em->persist($assureur);
+            $cotation->setAssureur($assureur);
+
+            // L'ARGENT RENTRE PAR ÉCHÉANCE, jamais « sur l'affaire » : c'est la tranche
+            // qui porte l'article facturé, et donc le règlement. Sans elle, l'encaissement
+            // n'est rattaché à rien et l'exigible reste à zéro.
+            $echeance = (new Tranche())->setNom('Échéance unique')->setPourcentage(100.0)
+                ->setPayableAt(new \DateTimeImmutable('-30 days'))
+                ->setEcheanceAt(new \DateTimeImmutable('+30 days'));
+            $echeance->setCotation($cotation)->setEntreprise($entreprise);
+            $em->persist($echeance);
+
+            $note = (new Note())->setNom('Note commission')->setType(0)
+                ->setAddressedTo(Note::TO_ASSUREUR)->setReference('N-INVCOL-1')
+                ->setValidated(true)->setSignature('')->setAssureur($assureur);
+            $note->setEntreprise($entreprise);
+            $em->persist($note);
+
+            $article = (new Article())->setNote($note)->setRevenuFacture($revenu)->setTranche($echeance);
+            $article->setEntreprise($entreprise);
+            $em->persist($article);
+
+            $reglement = (new Paiement())->setMontant(self::COMMISSION)->setReference('ENC-INVCOL-1')
+                ->setPaidAt(new \DateTimeImmutable('-5 days'))->setNote($note);
+            $reglement->setEntreprise($entreprise);
+            $em->persist($reglement);
+        }
 
         $em->flush();
         $ids = ['gastonId' => (int) $gaston->getId(), 'aliceId' => (int) $alice->getId()];

@@ -56,6 +56,10 @@ class PartenaireIndicatorStrategy implements IndicatorCalculationStrategyInterfa
             'retroCommission' => round($stats['retro_commission_partenaire'], 2),
             'retroCommissionReversee' => round($stats['retro_commission_partenaire_payee'], 2),
             'retroCommissionSolde' => round($stats['retro_commission_partenaire_solde'], 2),
+            // CE QUE LE CABINET DOIT PAYER MAINTENANT : la part du solde dont il a
+            // lui-même encaissé la commission. Toujours ≤ au solde — payer au-delà,
+            // c'est avancer sa trésorerie sur une créance non recouvrée.
+            'retroCommissionExigible' => round($stats['retro_commission_partenaire_exigible'] ?? 0.0, 2),
             'reserve' => round($stats['reserve'], 2),
 
             // Sinistralité

@@ -375,7 +375,11 @@ class IndicatorCalculationHelper implements ResetInterface
         $totals = array_fill_keys([
             'prime_totale', 'prime_totale_payee', 'commission_totale', 'commission_totale_encaissee',
             'commission_nette', 'commission_pure', 'prime_nette', 'commission_partageable', 'reserve',
-            'retro_commission_partenaire', 'retro_commission_partenaire_payee', 'taxe_courtier',
+            'retro_commission_partenaire', 'retro_commission_partenaire_payee',
+            // EXIGIBLE côté PARTENAIRE : ce que le cabinet doit sortir MAINTENANT, parce
+            // qu'il a lui-même encaissé la commission qui le justifie. Le pendant agent
+            // existait seul, et la rubrique Intermédiaires n'avait donc rien à afficher.
+            'retro_commission_partenaire_exigible', 'taxe_courtier',
             'taxe_courtier_payee', 'taxe_assureur', 'taxe_assureur_payee', 'sinistre_payable', 'sinistre_paye',
             // Rétrocommission des AGENTS INTERNES — second bénéficiaire du partage.
             'retro_commission_agent', 'retro_commission_agent_payee',
@@ -601,6 +605,13 @@ class IndicatorCalculationHelper implements ResetInterface
 
             $retro_commission_partenaire += $this->getCotationMontantRetrocommissionsPayableParCourtier($cotation, $partenaireCible, -1);
             $retro_commission_partenaire_payee += $this->getCotationMontantRetrocommissionsPayableParCourtierPayee($cotation, $partenaireCible);
+            // L'EXIGIBLE SE LIT À LA MAILLE DE LA TRANCHE, jamais de l'affaire : la prime
+            // et la commission rentrent échéance par échéance, et c'est à ce rythme que la
+            // dette naît. Les tranches sont déjà hydratées par preloadDepuisCotationIds :
+            // cette boucle ne coûte aucune requête.
+            foreach ($cotation->getTranches() as $trancheDeLaCotation) {
+                $retro_commission_partenaire_exigible += $this->getTrancheRetroExigible($trancheDeLaCotation, $partenaireCible);
+            }
 
             $retro_commission_agent += $this->getCotationMontantRetroAgent($cotation, $agentCible);
             foreach ($cotation->getAvenants() as $avenantDeLaCotation) {
@@ -640,6 +651,10 @@ class IndicatorCalculationHelper implements ResetInterface
             $prime_totale_payee = $this->getTranchePrimePayee($trancheCible);
             $commission_totale_encaissee = $this->getTrancheMontantCommissionEncaissee($trancheCible);
             $retro_commission_partenaire_payee = $this->getTrancheMontantRetrocommissionsPayableParCourtierPayee($trancheCible, $partenaireCible);
+            // L'EXIGIBLE EST DE LA MÊME NATURE que le payé : un fait porté par CETTE
+            // échéance. Le laisser à la somme des tranches de l'affaire ferait dire à une
+            // ligne d'échéance ce que le cabinet doit sur toutes les autres.
+            $retro_commission_partenaire_exigible = $this->getTrancheRetroExigible($trancheCible, $partenaireCible);
             $taxe_courtier_payee = $this->getTrancheMontantTaxePayee($trancheCible, false);
             $taxe_assureur_payee = $this->getTrancheMontantTaxePayee($trancheCible, true);
         }
@@ -687,6 +702,7 @@ class IndicatorCalculationHelper implements ResetInterface
             'reserve' => $reserve,
             'retro_commission_partenaire' => $retro_commission_partenaire,
             'retro_commission_partenaire_payee' => $retro_commission_partenaire_payee,
+            'retro_commission_partenaire_exigible' => $retro_commission_partenaire_exigible,
             'retro_commission_partenaire_solde' => $retro_commission_partenaire_solde,
             'retro_commission_agent' => $retro_commission_agent,
             'retro_commission_agent_payee' => $retro_commission_agent_payee,
@@ -1735,6 +1751,107 @@ class IndicatorCalculationHelper implements ResetInterface
                 continue;
             }
             $montant += (float) $reversement->getMontant();
+        }
+
+        return $montant;
+    }
+
+    /**
+     * RÉTROCOMMISSION DE PARTENAIRE EXIGIBLE AU TITRE D'UNE ÉCHÉANCE : ce que le cabinet
+     * doit sortir MAINTENANT, et non un jour.
+     *
+     * ── POURQUOI ELLE A DÉMÉNAGÉ ICI ────────────────────────────────────────────────
+     * Elle vivait en privé dans TrancheIndicatorStrategy, hors de portée des agrégats,
+     * tandis que son miroir côté agent siégeait déjà dans ce helper. D'où la dissymétrie
+     * que ce lot ferme : la rubrique Invités savait dire l'exigible de ses agents, la
+     * rubrique Intermédiaires ne le pouvait pas pour ses partenaires. La stratégie de
+     * tranche délègue désormais ici — une seule formule, deux lecteurs.
+     *
+     * ── LE PARTENAIRE CIBLE N'EST PAS UN DÉTAIL ─────────────────────────────────────
+     * Sans cible, c'est l'exigible de TOUS les partenaires de l'échéance : la lecture de
+     * l'écran d'une tranche, inchangée. Avec une cible, celui de ce partenaire seul —
+     * c'est ce que sa ligne doit montrer. L'omettre lui attribuerait la dette de ses
+     * confrères sur les affaires où plusieurs interviennent.
+     */
+    public function getTrancheRetroExigible(?Tranche $tranche, ?Partenaire $partenaireCible = null): float
+    {
+        $cotation = $tranche?->getCotation();
+        // Proposition non validée (aucun avenant) : projet, aucune dette rétro à surveiller.
+        if (!$tranche || !$cotation || !$this->isCotationBound($cotation)) {
+            return 0.0;
+        }
+
+        $facteur = $this->getTrancheTauxFactor($tranche);
+        $duePartageable = round(
+            $this->getCotationMontantCommissionTtc($cotation, -1, true) * $facteur,
+            2,
+        );
+        $encaisseePartageable = round($this->getTrancheMontantCommissionPartageableEncaissee($tranche), 2);
+
+        // Circuit bordereau sans articles : un bordereau de production couvrant la
+        // tranche et intégralement encaissé prouve que la commission (partageable
+        // comprise) a été perçue — la dette rétro est donc née.
+        if ($this->isTrancheCouverteParBordereau($tranche, true)) {
+            $encaisseePartageable = max($encaisseePartageable, $duePartageable);
+        }
+
+        // LA FORMULE EST PARTAGÉE avec l'agent : ce qui est RENTRÉ doit ressortir, à due
+        // proportion. Les deux camps l'appliquaient chacun de leur côté, et ne lisaient
+        // déjà plus le même « encaissé ».
+        return Exigibilite::exigible(
+            round($this->getCotationMontantRetrocommissionsPayableParCourtier($cotation, $partenaireCible, -1) * $facteur, 2),
+            $duePartageable,
+            $encaisseePartageable,
+            $this->getTrancheMontantRetrocommissionsPayableParCourtierPayee($tranche, $partenaireCible),
+        );
+    }
+
+    /**
+     * LA COMMISSION PARTAGEABLE RÉELLEMENT ENCAISSÉE SUR UNE ÉCHÉANCE.
+     *
+     * Deux chemins décrivent le même argent : les ARTICLES des notes réglées (au prorata
+     * du règlement) et le BORDEREAU de production qui en tient lieu. On retient le plus
+     * grand des deux, jamais leur somme — additionner compterait deux fois.
+     *
+     * ── POURQUOI UN PRORATA SUR LE BORDEREAU, ET PAS LE MONTANT BRUT ────────────────
+     * Le bordereau ne distingue pas les types de revenus : il fait rentrer de la
+     * commission, partageable ou non. L'imputer en entier rendrait exigible une rétro
+     * assise sur de l'argent qui n'est pas partageable.
+     */
+    public function getTrancheMontantCommissionPartageableEncaissee(Tranche $tranche): float
+    {
+        $montant = 0.0;
+        foreach ($tranche->getArticles() as $article) {
+            $note = $article->getNote();
+            $revenu = $article->getRevenuFacture();
+            if (!$note || !$revenu || !$revenu->getTypeRevenu()?->isShared()) {
+                continue;
+            }
+            if (!in_array($note->getAddressedTo(), [Note::TO_ASSUREUR, Note::TO_CLIENT], true)) {
+                continue;
+            }
+            $montantPayableNote = $this->getNoteMontantPayable($note);
+            if ($montantPayableNote > 0) {
+                $proportionPaiement = $this->getNoteMontantPaye($note) / $montantPayableNote;
+                $montant += $proportionPaiement * $this->getArticleMontant($article);
+            }
+        }
+
+        $allouee = round($this->getTrancheCommissionAllouee($tranche), 2);
+        if ($allouee > 0.0) {
+            $facteur = $this->getTrancheTauxFactor($tranche);
+            $cotation = $tranche->getCotation();
+            $dueTotale = round(
+                $this->getCotationMontantCommissionTtc($cotation, -1, false) * $facteur,
+                2,
+            );
+            $duePartageable = round(
+                $this->getCotationMontantCommissionTtc($cotation, -1, true) * $facteur,
+                2,
+            );
+            $partPartageable = $dueTotale > 0.0 ? min(1.0, $duePartageable / $dueTotale) : 1.0;
+
+            $montant = max($montant, $allouee * $partPartageable);
         }
 
         return $montant;
