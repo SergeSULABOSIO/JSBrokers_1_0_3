@@ -167,6 +167,21 @@ class Invite
     #[Groups(['list:read'])]
     public ?bool $hasRetroAgentExigible = null;
 
+    // LA PRODUCTION APPORTÉE, en colonnes de la rubrique Invités.
+    //
+    // Ces trois-là n'étaient déclarées NULLE PART : InviteIndicatorStrategy les posait à
+    // la volée, ce que PHP 8.2 déprécie. La quatrième colonne du même groupe, « Réserve
+    // cabinet », l'était pourtant — par CalculatedIndicatorsTrait. Trois colonnes sur
+    // quatre vivaient donc en marge de l'entité qui les affiche.
+    #[Groups(['list:read'])]
+    public ?float $primeTotale = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantTTC = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantPur = null;
+
     // LES MONTANTS DE RÉTROCOMMISSION D'AGENT, en colonnes de la rubrique Invités.
     //
     // DÉCLARÉS, et pas seulement produits : ils étaient posés en propriétés DYNAMIQUES,
