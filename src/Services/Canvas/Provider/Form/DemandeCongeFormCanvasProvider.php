@@ -94,6 +94,20 @@ class DemandeCongeFormCanvasProvider implements FormCanvasProviderInterface
                     "condition" => ["field" => "peutEtreDecidee", "value" => true],
                 ],
                 [
+                    // LES COMPTEURS NE SONT PAS UNE ACTION SUR UNE LIGNE non plus : ils
+                    // regardent TOUT le cabinet. `multi` les rend cliquables sans
+                    // sélection. Le serveur refuse à qui n'est pas valideur — la grille
+                    // expose les soldes de chacun, et l'ajustement écrit sur le compteur
+                    // d'autrui.
+                    "label"     => "Compteurs de congés",
+                    "icon"      => "action:count",
+                    "groupe"    => "Circuit de validation",
+                    "groupe_icone" => "conge",
+                    "event"     => "ui:conge.compteurs-request",
+                    "url"       => "/admin/compteurconge/api/grille",
+                    "multi"     => true,
+                ],
+                [
                     // LE CALENDRIER N'EST PAS UNE ACTION SUR UNE LIGNE : `multi` le rend
                     // cliquable sans sélection, comme « Ajouter au chat ». Sans lui, il
                     // faudrait cocher une demande au hasard pour voir le mois.

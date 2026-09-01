@@ -1,0 +1,94 @@
+{#
+    LA GRILLE ELLE-MÊME — fragment rechargé au changement d'exercice, et restauré après
+    chaque geste (journal, ajustement, sortie).
+
+    ── ELLE MONTRE TOUT LE MONDE, MÊME À ZÉRO ──────────────────────────────────────────
+    Contrairement au calendrier qui ne liste que les absents : ici, un collaborateur sans
+    aucun mouvement est une information — c'est peut-être quelqu'un qu'on a oublié de doter.
+
+    ── L'ALERTE N'EST PAS QU'UNE COULEUR (WCAG 1.4.1) ──────────────────────────────────
+    Un solde au-delà du seuil porte une pastille ET le mot « report élevé ».
+#}
+<div class="jsb-picker-listwrap" style="padding: .5rem 1.25rem 1rem;">
+
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-cpt-exercice="{{ grille.precedent }}">
+            ‹ {{ grille.precedent }}
+        </button>
+        <strong style="color:#0d2440;">Exercice {{ grille.exercice }}</strong>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-cpt-exercice="{{ grille.suivant }}">
+            {{ grille.suivant }} ›
+        </button>
+    </div>
+
+    {% if grille.lignes|length == 0 %}
+        <p class="jsb-picker-empty">Aucun collaborateur dans ce cabinet.</p>
+    {% else %}
+        <div style="overflow-x:auto;">
+            <table class="table table-sm jsb-picker-table mb-2" style="font-size:.8rem;">
+                <thead>
+                    <tr>
+                        <th scope="col" style="text-align:left;">Collaborateur</th>
+                        <th scope="col" style="text-align:right;">Acquis</th>
+                        <th scope="col" style="text-align:right;">dont report</th>
+                        <th scope="col" style="text-align:right;">Consommé</th>
+                        <th scope="col" style="text-align:right;">Engagé</th>
+                        <th scope="col" style="text-align:right;">Disponible</th>
+                        <th scope="col" style="text-align:right;">Gestes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ligne in grille.lignes %}
+                        <tr>
+                            <th scope="row" style="text-align:left; font-weight:600; color:#0d2440;">
+                                {{ ligne.agent }}
+                                {% if ligne.alerte %}
+                                    <span class="jsb-state-badge jsb-state-badge--elevee" style="margin-left:.35rem;">report élevé</span>
+                                {% endif %}
+                            </th>
+                            <td style="text-align:right; font-variant-numeric:tabular-nums;">{{ ligne.acquis|number_format(1, ',', ' ') }}</td>
+                            <td style="text-align:right; font-variant-numeric:tabular-nums; color:#6c757d;">
+                                {{ ligne.dontReport > 0 ? ligne.dontReport|number_format(1, ',', ' ') : '—' }}
+                            </td>
+                            <td style="text-align:right; font-variant-numeric:tabular-nums;">{{ ligne.consomme|number_format(1, ',', ' ') }}</td>
+                            <td style="text-align:right; font-variant-numeric:tabular-nums;">{{ ligne.engage|number_format(1, ',', ' ') }}</td>
+                            <td style="text-align:right; font-variant-numeric:tabular-nums; font-weight:700;
+                                       color:{{ ligne.disponible < 0 ? '#dc3545' : '#0047AB' }};">
+                                {{ ligne.disponible|number_format(1, ',', ' ') }}
+                                {% if ligne.disponible < 0 %}<span class="visually-hidden">(négatif)</span>{% endif %}
+                            </td>
+                            <td style="text-align:right; white-space:nowrap;">
+                                <button type="button" class="btn btn-sm btn-link p-0 me-2"
+                                        data-cpt-journal="{{ ligne.id }}">Journal</button>
+                                <button type="button" class="btn btn-sm btn-link p-0 me-2"
+                                        data-cpt-ajuster="{{ ligne.id }}" data-cpt-agent="{{ ligne.agent }}">Ajuster</button>
+                                <button type="button" class="btn btn-sm btn-link p-0"
+                                        data-cpt-sortie="{{ ligne.id }}">Sortie</button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr style="border-top:2px solid #dee2e6;">
+                        <th scope="row" style="text-align:left;">Total</th>
+                        <td style="text-align:right; font-weight:700; font-variant-numeric:tabular-nums;">{{ grille.totaux.acquis|number_format(1, ',', ' ') }}</td>
+                        <td></td>
+                        <td style="text-align:right; font-weight:700; font-variant-numeric:tabular-nums;">{{ grille.totaux.consomme|number_format(1, ',', ' ') }}</td>
+                        <td style="text-align:right; font-weight:700; font-variant-numeric:tabular-nums;">{{ grille.totaux.engage|number_format(1, ',', ' ') }}</td>
+                        <td style="text-align:right; font-weight:700; font-variant-numeric:tabular-nums; color:#0047AB;">{{ grille.totaux.disponible|number_format(1, ',', ' ') }}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        {% if grille.seuilReport > 0 %}
+            <p class="text-muted mb-0" style="font-size:.72rem;">
+                « Report élevé » signale un disponible au-delà de
+                <strong>{{ grille.seuilReport|number_format(1, ',', ' ') }}&nbsp;jours</strong>, seuil réglé
+                dans « Paramètres congés ». Un solde qui s'accumule indéfiniment est une dette
+                qui grossit sans que personne ne la regarde.
+            </p>
+        {% endif %}
+    {% endif %}
+</div>
