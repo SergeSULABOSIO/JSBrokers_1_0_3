@@ -124,6 +124,18 @@ class WorkspaceAccessResolver
         // ADMINISTRATION (Invite est géré à part, cf. isRoleManagementEntity)
         'Document'                   => ['Administration', 'getRolesEnAdministration', 'getAccessDocument', 'Documents'],
         'Classeur'                   => ['Administration', 'getRolesEnAdministration', 'getAccessClasseur', 'Classeurs'],
+        // CONGÉS — trois rubriques, DEUX droits. « Congés » porte les demandes ;
+        // « Types d'absence » et « Jours fériés » partagent le droit de PARAMÉTRAGE
+        // (même patron que PieceSinistre, qui suit accessTypePiece).
+        //
+        // Sur cette rubrique, et sur elle seule, le droit n'est pas un simple
+        // interrupteur : le niveau MODIFICATION fait le VALIDEUR — il ouvre la décision
+        // ET la vue sur les demandes de tout le cabinet. En deçà, le collaborateur ne
+        // voit que les siennes (cf. CongeVisibiliteScope). Les données de congé sont des
+        // données personnelles : un arrêt maladie n'est pas une police.
+        'DemandeConge'               => ['Administration', 'getRolesEnAdministration', 'getAccessConge', 'Congés'],
+        'TypeAbsence'                => ['Administration', 'getRolesEnAdministration', 'getAccessCongeParametre', "Types d'absence"],
+        'JourFerie'                  => ['Administration', 'getRolesEnAdministration', 'getAccessCongeParametre', 'Jours fériés'],
         // IA — PSEUDO-entité (pas de classe Doctrine, comme DocumentComptable) :
         // gouverne l'accès au module Assistant IA (chat, conversations). Fail-closed
         // pour les invités ; le propriétaire garde son accès total inconditionnel.
@@ -159,6 +171,16 @@ class WorkspaceAccessResolver
      */
     private const GOUVERNANCE_PARENT = [
         'PaiementPrime' => 'Tranche',
+        // Le journal du compteur et la trace des transitions n'ont pas de rubrique : ce
+        // sont les CONSÉQUENCES d'une décision sur une demande, et elles suivent son
+        // droit. Sans ces deux lignes, elles tomberaient sur le `return true` final de
+        // can() — un fail-open sur des données personnelles.
+        'MouvementConge' => 'DemandeConge',
+        'HistoriqueDemande' => 'DemandeConge',
+        // Le régime de travail se saisit depuis la fiche du collaborateur et relève de
+        // la même administration : il suit donc le droit « Invité », c'est-à-dire
+        // canManageInvites(). Aucun droit de plus à régler.
+        'RegimeTravail' => 'Invite',
     ];
 
     /**
@@ -170,6 +192,9 @@ class WorkspaceAccessResolver
      */
     private const SOUS_ENTITES_LIBELLES = [
         'PaiementPrime' => 'Paiements de prime',
+        'MouvementConge' => 'Mouvements de congé',
+        'HistoriqueDemande' => 'Historique des demandes de congé',
+        'RegimeTravail' => 'Régimes de travail',
     ];
 
     public function __construct(

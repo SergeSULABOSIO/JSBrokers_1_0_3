@@ -608,6 +608,12 @@ export default class extends Controller {
             case 'avenant:mouvement.enregistre': // succès d'un mouvement via le picker
                 this._handleAvenantMouvementEnregistre(payload);
                 break;
+            case 'ui:conge.decision-request': // soumettre / approuver / refuser / annuler un congé
+                this.handleCongeDecisionRequest(payload);
+                break;
+            case 'conge:decision.enregistree': // succès d'un geste du circuit de validation
+                this._handleCongeDecisionEnregistree(payload);
+                break;
             case 'ui:avenant.non-renouvelable-request': // signaler / corriger le motif / rétablir
                 this.handleAvenantNonRenouvelableRequest(payload);
                 break;
@@ -1971,6 +1977,48 @@ export default class extends Controller {
             controllerName: 'non-renouvelable-picker',
             errorLabel: 'le suivi de renouvellement de la police',
         });
+    }
+
+    /**
+     * LES QUATRE GESTES DU CIRCUIT DE VALIDATION DES CONGÉS, par une seule porte.
+     *
+     * Soumettre, approuver, refuser et annuler partagent cet événement ; c'est l'URL qui
+     * porte le geste (`?geste=…`), et le picker n'a donc rien à deviner. Quatre événements
+     * auraient voulu quatre `case`, donc quatre occasions d'en oublier un — et une action
+     * déclarée sans `case` s'affiche, se laisse cliquer et ne produit RIEN.
+     *
+     * L'aperçu (décompte, solde, ce qui empêche encore le geste) vient du SERVEUR, du même
+     * calcul que l'écran et que les e-mails : le navigateur ne fabrique aucun chiffre.
+     * @param {object} payload
+     * @param {string} payload.url - '/admin/demandeconge/api/decision-picker/{id}?geste=…'
+     */
+    async handleCongeDecisionRequest(payload) {
+        await this._openStandalonePicker(payload.url, {
+            controllerName: 'conge-decision-picker',
+            errorLabel: 'la demande de congé',
+        });
+    }
+
+    /**
+     * Geste enregistré : notification puis rafraîchissement de la liste. Le refresh est ce
+     * qui fait basculer les actions offertes (« Approuver » disparaît, « Annuler » apparaît),
+     * bouger le chip de statut, et tomber le solde du collaborateur à sa nouvelle valeur.
+     * @private
+     */
+    _handleCongeDecisionEnregistree(payload) {
+        this._showNotification(payload.message || 'Décision enregistrée.', 'success');
+
+        const tabState = this._getCurrentWsTabState()[this.getActiveTabId()];
+        if (!tabState?.serverRootName) {
+            // Pas une liste (geste lancé depuis une fiche isolée) : se taire vaut mieux
+            // qu'une erreur de console pour une opération qui a RÉUSSI.
+            return;
+        }
+
+        const etat = this._getActiveTabState();
+        this._publishSelectionStatus('Actualisation de la liste...');
+        this.broadcast('app:loading.start', { originatorId: etat.elementId, workspaceTabId: this.currentWorkspaceTabId });
+        this._requestListRefresh(this.getActiveTabId());
     }
 
     /**

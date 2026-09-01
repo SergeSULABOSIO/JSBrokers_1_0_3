@@ -30,8 +30,8 @@ final class MutationAllowlist
      * et (b) dont aucun setter ManyToOne ne maintient de collection inverse en
      * cascade-persist — sinon la validation FormType du dry-run
      * (WorkspaceMutationService::analyserOperation) pourrait rattacher l'entité de
-     * test à un parent géré et la persister au flush suivant. Les 32 entités
-     * ci-dessous ont été vérifiées conformes ; de plus le chemin de dry-run
+     * test à un parent géré et la persister au flush suivant. Les entités
+     * ci-dessous ont été vérifiées conformes une à une ; de plus le chemin de dry-run
      * (PreparerOperationsTool) ne flush jamais — double garde.
      */
     public const MEMBRES = [
@@ -86,6 +86,23 @@ final class MutationAllowlist
         // Administration
         'Document',
         'Classeur',
+        // ── CONGÉS ──────────────────────────────────────────────────────────────────
+        // La demande, son paramétrage, et les trois entités DÉRIVÉES qu'une décision
+        // fait naître. Ces dernières sont hors carte d'accès : leur écriture est
+        // gouvernée par le droit « Congés » (ou « Invité » pour le régime de travail)
+        // via GOUVERNANCE_PARENT — elles ne sont donc jamais interrogeables au premier
+        // plan, seulement mutables au sein d'un plan.
+        //
+        // Garde-fou d'extension re-vérifié pour les six : chacune a son
+        // App\Form\{Nom}Type, et aucun de leurs setters ManyToOne ne maintient de
+        // collection inverse en cascade-persist (DemandeConge::addHistorique() le fait,
+        // mais c'est l'ADDER du parent, jamais le setter de l'enfant).
+        'DemandeConge',
+        'TypeAbsence',
+        'JourFerie',
+        'MouvementConge',
+        'HistoriqueDemande',
+        'RegimeTravail',
     ];
 
     /** Niveaux de mutation gouvernés (lecture exclue : ce n'est pas une mutation). */

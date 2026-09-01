@@ -1,0 +1,56 @@
+{#
+  Bloc « Mes congés » du tableau de bord (workspace courtier) : le bandeau des trois
+  soldes de l'agent connecté, et ses demandes en cours.
+
+  ── AUCUN COÛT EN TOKENS N'EST AFFICHÉ ICI ─────────────────────────────────────────
+  Le collaborateur qui demande un congé n'est pas le payeur, et lui montrer un prix ne
+  peut que le dissuader de poser des jours auxquels il a droit. Le coût se lit côté
+  valideur, avant décision.
+
+  ── LES CHIFFRES VIENNENT DE CalculateurSolde ──────────────────────────────────────
+  Le même service que la liste, la fiche, le picker de décision et les e-mails. Ce
+  template ne calcule rien : il met en forme.
+
+  Charte JS Brokers (cobalt #0047AB) ; l'information n'est jamais portée par la seule
+  couleur (libellés explicites, WCAG 1.4.1).
+#}
+<div class="px-3 py-2 bg-white">
+    <div class="d-flex flex-wrap gap-2">
+        {% for carte in cartes %}
+            <div class="flex-fill" style="flex-basis:150px; min-width:150px; background:#f8f9fa; border:1px solid #dee2e6; border-radius:.5rem; padding:.55rem .7rem; cursor:help;"
+                 title="{{ carte.aide }}">
+                <div class="text-muted" style="font-size:.68rem; text-transform:uppercase; letter-spacing:.03em;">{{ carte.label }}</div>
+                <div class="fw-bold" style="font-size:.95rem; font-variant-numeric:tabular-nums; color:{{ carte.accent ? '#0047AB' : (carte.valeur < 0 ? '#dc3545' : '#212529') }};">
+                    {{ carte.valeur|number_format(1, ',', ' ') }} j
+                    {% if carte.valeur < 0 %}<span class="visually-hidden">(négatif)</span>{% endif %}
+                </div>
+                {% if carte.detail %}
+                    <div class="text-muted" style="font-size:.68rem;">{{ carte.detail }}</div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+
+    {% if demandes|length > 0 %}
+        <ul class="list-unstyled mb-0 mt-2 pt-2" style="border-top:1px solid #f0f0f0;">
+            {% for demande in demandes %}
+                <li class="d-flex align-items-center gap-2 py-1" style="font-size:.78rem;">
+                    <twig:UX:Icon name="{{ resolve_icon_name('conge') }}" style="width:13px;height:13px;color:#0047AB;flex-shrink:0;" />
+                    <span style="color:#212529;">{{ demande.periodeLibelle }}</span>
+                    <span class="text-muted">· {{ demande.typeAbsenceLibelle }}</span>
+                    <span class="ms-auto text-muted">{{ demande.statutLibelle }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-muted mb-0 mt-2 pt-2" style="border-top:1px solid #f0f0f0; font-size:.75rem;">
+            Aucune demande en cours. La rubrique « Congés », dans le groupe Administration, permet d'en poser une.
+        </p>
+    {% endif %}
+
+    <div class="d-flex flex-wrap align-items-center gap-3 mt-2">
+        <span class="text-muted ms-auto" style="font-size:.7rem;">
+            Exercice {{ solde.exercice }} · l'engagé est déjà retranché du disponible
+        </span>
+    </div>
+</div>

@@ -247,6 +247,9 @@ class Invite
         $this->portefeuilles = new ArrayCollection();
         $this->conditionsPartageAgent = new ArrayCollection();
         $this->reversementsRetroAgent = new ArrayCollection();
+        $this->regimesTravail = new ArrayCollection();
+        $this->demandesConge = new ArrayCollection();
+        $this->mouvementsConge = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
     }
 
@@ -272,6 +275,77 @@ class Invite
      */
     #[ORM\OneToMany(targetEntity: ReversementRetroAgent::class, mappedBy: 'agent')]
     private Collection $reversementsRetroAgent;
+
+    // ── CONGÉS ───────────────────────────────────────────────────────────────────────
+    // L'« agent » du module de congés est un Invite : un membre de l'équipe du cabinet.
+    // Ces trois collections sont la face NAVIGATION du module ; les règles, elles, vivent
+    // dans App\Service\Conge.
+
+    /**
+     * @var Collection<int, RegimeTravail> Régimes de travail SUCCESSIFS de ce collaborateur.
+     *      Historisés : un changement crée une ligne, il n'écrase pas la précédente.
+     */
+    // `cascade: persist` : le régime saisi depuis le dialogue de l'invité s'écrit avec lui.
+    // `remove` en base (onDelete CASCADE) : un régime n'a aucun sens sans son agent.
+    #[ORM\OneToMany(targetEntity: RegimeTravail::class, mappedBy: 'agent', cascade: ['persist'])]
+    private Collection $regimesTravail;
+
+    /**
+     * @var Collection<int, DemandeConge> Demandes de congé posées par ce collaborateur.
+     *      Navigation seule : le cycle de vie vit dans DemandeCongeWorkflow.
+     */
+    #[ORM\OneToMany(targetEntity: DemandeConge::class, mappedBy: 'agent')]
+    private Collection $demandesConge;
+
+    /**
+     * @var Collection<int, MouvementConge> Journal du compteur de congés de ce
+     *      collaborateur. Lecture seule : les lignes sont immuables.
+     */
+    #[ORM\OneToMany(targetEntity: MouvementConge::class, mappedBy: 'agent')]
+    private Collection $mouvementsConge;
+
+    /**
+     * @return Collection<int, RegimeTravail>
+     */
+    public function getRegimesTravail(): Collection
+    {
+        return $this->regimesTravail;
+    }
+
+    public function addRegimesTravail(RegimeTravail $regime): static
+    {
+        if (!$this->regimesTravail->contains($regime)) {
+            $this->regimesTravail->add($regime);
+            $regime->setAgent($this);
+        }
+
+        return $this;
+    }
+
+    public function removeRegimesTravail(RegimeTravail $regime): static
+    {
+        if ($this->regimesTravail->removeElement($regime) && $regime->getAgent() === $this) {
+            $regime->setAgent(null);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, DemandeConge>
+     */
+    public function getDemandesConge(): Collection
+    {
+        return $this->demandesConge;
+    }
+
+    /**
+     * @return Collection<int, MouvementConge>
+     */
+    public function getMouvementsConge(): Collection
+    {
+        return $this->mouvementsConge;
+    }
 
     /**
      * @return Collection<int, ConditionPartage>

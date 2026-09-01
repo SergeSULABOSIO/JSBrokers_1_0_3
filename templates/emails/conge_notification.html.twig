@@ -1,0 +1,139 @@
+{#
+    E-MAIL DU CIRCUIT DE VALIDATION DES CONGÉS — soumission, décision, annulation.
+
+    UN SEUL corps pour tous les événements : c'est ce qui garantit que les chiffres sont
+    rigoureusement identiques d'un mail à l'autre et avec l'écran. Ce qui change d'un
+    événement à l'autre — le titre, la phrase d'accroche, les blocs affichés — est décidé
+    par CongeMailer, pas ici.
+
+    ⚠ AUCUN CHIFFRE N'EST CALCULÉ DANS CE TEMPLATE. Tout vient de CongeMailContext, qui
+    le tient de CalculateurSolde — le même service que la liste, la fiche et le picker.
+    Recalculer ici, fût-ce une soustraction, rouvrirait la porte à un mail qui contredit
+    l'écran.
+
+    Structure HTML « bulletproof » (tables + styles inline) héritée de emails/_layout ;
+    charte cobalt #0047AB.
+#}
+{% extends 'emails/_layout.html.twig' %}
+{% import 'emails/_macros.html.twig' as m %}
+
+{% block subject %}JS Brokers — {{ ctx.titre }}{% endblock %}
+
+{% macro ligne(libelle, valeur, fort) %}
+    <tr>
+        <td style="font: 400 14px/1.5 Arial, Helvetica, sans-serif; color: #6c757d; padding: 4px 12px 4px 0; white-space: nowrap;">
+            {{ libelle }}
+        </td>
+        <td style="font: {{ fort|default(false) ? '700' : '400' }} 14px/1.5 Arial, Helvetica, sans-serif; color: {{ fort|default(false) ? '#0047AB' : '#0d2440' }}; padding: 4px 0; text-align: right;">
+            {{ valeur|raw }}
+        </td>
+    </tr>
+{% endmacro %}
+
+{% macro tableau(titre, lignes) %}
+    <tr>
+        <td style="padding: 12px 0 2px; font: 700 14px/1.3 Arial, Helvetica, sans-serif; color: #0d2440;">
+            {{ titre }}
+        </td>
+    </tr>
+    <tr>
+        <td style="padding: 2px 0 8px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="background-color: #f8fafd; border-radius: 6px; padding: 6px 14px;">
+                {{ lignes|raw }}
+            </table>
+        </td>
+    </tr>
+{% endmacro %}
+
+{% block content %}
+    {% import _self as t %}
+    {% set d = ctx.demande %}
+    {% set solde = ctx.solde %}
+    {% set jours = d.nbJours is not null ? d.nbJours|number_format(1, ',', ' ') : '—' %}
+
+    {{ m.heading(ctx.icone, ctx.titre) }}
+    {{ m.paragraph(ctx.intro) }}
+
+    {% if ctx.viaAssistant %}
+        {{ m.paragraph('<em>Geste enregistré via l\'assistant, sous l\'identité de son auteur.</em>') }}
+    {% endif %}
+
+    {# ── BLOC IDENTITÉ ─────────────────────────────────────────────────────────────── #}
+    {% set identite %}
+        {{ t.ligne('Collaborateur', d.agent ? d.agent.nom : 'Non précisé') }}
+        {% if d.valideur %}
+            {{ t.ligne('Valideur', d.valideur.nom) }}
+        {% endif %}
+    {% endset %}
+    {{ t.tableau('Identité', identite) }}
+
+    {# ── BLOC DEMANDE ─────────────────────────────────────────────────────────────── #}
+    {% set bloc %}
+        {{ t.ligne('Référence', '#' ~ d.id) }}
+        {{ t.ligne("Type d'absence", d.typeAbsence ? d.typeAbsence|trim : 'Non précisé') }}
+        {{ t.ligne('Du', d.dateDebut ? d.dateDebut|date('d/m/Y') : '—') }}
+        {{ t.ligne('Au', d.dateFin ? d.dateFin|date('d/m/Y') : '—') }}
+        {% if d.demiJourneeDebut %}{{ t.ligne('Premier jour', 'demi-journée') }}{% endif %}
+        {% if d.demiJourneeFin %}{{ t.ligne('Dernier jour', 'demi-journée') }}{% endif %}
+        {{ t.ligne('Jours ouvrables décomptés', jours ~ '&nbsp;j', true) }}
+        {% if d.motif %}{{ t.ligne('Motif', d.motif) }}{% endif %}
+        {{ t.ligne('Justificatif', d.documents|length > 0 ? 'oui (' ~ d.documents|length ~ ')' : 'aucun') }}
+        {{ t.ligne('Déposée le', d.createdAt ? d.createdAt|date('d/m/Y à H:i') : '—') }}
+    {% endset %}
+    {{ t.tableau('La demande', bloc) }}
+
+    {# ── BLOC COMPTEUR ────────────────────────────────────────────────────────────────
+       Absent pour un type NON décompté : afficher un compteur inchangé sous une demande
+       de maladie laisserait croire qu'elle y touche. #}
+    {% if d.typeAbsence and d.typeAbsence.decompte %}
+        {% set compteur %}
+            {{ t.ligne('Acquis', solde.acquis|number_format(1, ',', ' ') ~ '&nbsp;j'
+                ~ (solde.dontReport > 0 ? ' <span style="color:#6c757d;">(dont ' ~ solde.dontReport|number_format(1, ',', ' ') ~ '&nbsp;j de report)</span>' : '')) }}
+            {{ t.ligne('Consommé', solde.consomme|number_format(1, ',', ' ') ~ '&nbsp;j') }}
+            {{ t.ligne('Engagé', solde.engage|number_format(1, ',', ' ') ~ '&nbsp;j') }}
+            {{ t.ligne('Disponible avant cette demande', ctx.disponibleAvant|number_format(1, ',', ' ') ~ '&nbsp;j') }}
+            {{ t.ligne('Disponible si elle est approuvée', ctx.disponibleApres|number_format(1, ',', ' ') ~ '&nbsp;j', true) }}
+        {% endset %}
+        {{ t.tableau('Compteur ' ~ solde.exercice, compteur) }}
+    {% else %}
+        {{ m.paragraph('Ce type d\'absence <strong>ne touche pas au compteur de congés</strong> : il est enregistré pour le calendrier et l\'historique.') }}
+    {% endif %}
+
+    {# ── BLOC CONTEXTE — sur la soumission uniquement ─────────────────────────────── #}
+    {% if ctx.transition.statutApres == 'SOUMISE' and ctx.collegues|length > 0 %}
+        {% set contexte %}
+            {% for collegue in ctx.collegues %}
+                {{ t.ligne(collegue.nom, collegue.periode) }}
+            {% endfor %}
+        {% endset %}
+        {{ t.tableau('Déjà absents sur tout ou partie de la période', contexte) }}
+    {% endif %}
+
+    {# ── BLOC DÉCISION — sur les mails de décision uniquement ─────────────────────── #}
+    {% if ctx.transition.statutApres != 'SOUMISE' %}
+        {% set decision %}
+            {{ t.ligne('Sens', ctx.titre) }}
+            {{ t.ligne('Auteur', ctx.transition.auteur ? ctx.transition.auteur.nom : '—') }}
+            {{ t.ligne('Rendue le', ctx.transition.createdAt ? ctx.transition.createdAt|date('d/m/Y à H:i') : '—') }}
+            {% if ctx.estAutoApprouvee %}
+                {{ t.ligne('Mention', 'auto-approuvée (seul valideur du cabinet)', true) }}
+            {% endif %}
+            {% if ctx.transition.commentaire %}
+                {{ t.ligne('Commentaire', ctx.transition.commentaire) }}
+            {% endif %}
+        {% endset %}
+        {{ t.tableau('La décision', decision) }}
+    {% endif %}
+
+    {# ── BLOC ACTION ──────────────────────────────────────────────────────────────── #}
+    {% if ctx.lienApplication %}
+        {{ m.button(ctx.lienApplication, 'Ouvrir dans JS Brokers') }}
+    {% endif %}
+
+    {# RG-16 : les soldes portés par ce mail sont un instantané daté, présenté comme tel.
+       Un mail ouvert trois jours plus tard ne reflète plus l'état du compteur. #}
+    {{ m.note('Les soldes ci-dessus sont un <strong>instantané au '
+        ~ ctx.instantaneLe|date('d/m/Y à H:i')
+        ~ '</strong>. Ils ont pu évoluer depuis : l\'état à jour se lit dans la rubrique « Congés » de votre espace de travail.') }}
+{% endblock %}

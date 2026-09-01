@@ -1,0 +1,214 @@
+{#
+    Boîte des QUATRE gestes du circuit de validation des congés — soumettre, approuver,
+    refuser, annuler —, ouverte depuis la barre d'outils, le clic droit ou la fiche.
+
+    UN SEUL picker pour les quatre gestes, comme le picker de mouvement en sert quatre :
+    ils ne diffèrent que par ce qui est demandé et par ce qui est annoncé.
+
+    TOUT CE QUI EST CHIFFRÉ VIENT DU SERVEUR — décompte, compteur, ce qui empêche encore
+    le geste — et du même calcul que la liste, la fiche et les e-mails. Le navigateur ne
+    recalcule rien : c'est la seule manière que l'écran et l'assistant annoncent le même
+    nombre.
+
+    Miroir visuel des pickers jsb-picker-* (/ergonomie-web : role=dialog, aria-modal,
+    fieldset/legend, cibles ≥44px, Échap, restitution du focus, zone d'erreur inline ;
+    /charte-couleurs : cobalt #0047AB). Piloté par le contrôleur Stimulus
+    « conge-decision-picker », auto-connecté à l'insertion par le cerveau.
+#}
+{% set titres = {
+    'soumettre': "Soumettre la demande de congé",
+    'approuver': "Approuver le congé",
+    'refuser':   "Refuser le congé",
+    'annuler':   "Annuler le congé"
+} %}
+{% set icones = {
+    'soumettre': 'action:upload',
+    'approuver': 'action:completed',
+    'refuser':   'action:cancel',
+    'annuler':   'action:annulation'
+} %}
+{% set solde = apercu.solde %}
+<div class="jsb-picker-overlay"
+     data-controller="conge-decision-picker"
+     data-conge-decision-picker-executer-url-value="{{ path('admin.demandeconge.api.decision_executer', {id: demande.id}) }}?geste={{ geste }}"
+     data-conge-decision-picker-geste-value="{{ geste }}"
+     data-conge-decision-picker-commentaire-requis-value="{{ apercu.commentaireRequis ? 'true' : 'false' }}"
+     data-picker-overlay>
+    <div class="jsb-picker-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="jsb-conge-picker-title"
+         aria-describedby="jsb-conge-picker-desc"
+         tabindex="-1">
+
+        <div class="modal-header jsb-picker-header">
+            <div class="d-flex align-items-center">
+                <span class="me-2 d-inline-flex" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name(icones[geste]) }}" style="width:22px;height:22px;color:#0047AB;" />
+                </span>
+                <h5 id="jsb-conge-picker-title" class="modal-title mb-0">
+                    {{ titres[geste] }}
+                </h5>
+            </div>
+            <button type="button" class="btn-close" data-picker-close aria-label="Fermer la fenêtre"></button>
+        </div>
+
+        <div class="jsb-picker-progress" data-picker-progress role="progressbar" aria-hidden="true">
+            <div class="jsb-picker-progress-bar"></div>
+        </div>
+
+        <div class="jsb-picker-intro">
+            <span class="jsb-picker-intro-icon" aria-hidden="true">
+                <twig:UX:Icon name="{{ resolve_icon_name('conge') }}" style="width:26px;height:26px;" />
+            </span>
+            <div class="jsb-picker-intro-text">
+                <p class="jsb-picker-intro-title">
+                    {{ demande.agent ? demande.agent.nom : 'Collaborateur inconnu' }}
+                    {%- if demande.typeAbsence %} · {{ demande.typeAbsence }}{% endif %}
+                </p>
+                <p id="jsb-conge-picker-desc" class="jsb-picker-intro-desc">
+                    {% if demande.dateDebut and demande.dateFin %}
+                        {% if demande.dateDebut == demande.dateFin %}
+                            Le <strong>{{ demande.dateDebut|date('d/m/Y') }}</strong>
+                        {% else %}
+                            Du <strong>{{ demande.dateDebut|date('d/m/Y') }}</strong>
+                            au <strong>{{ demande.dateFin|date('d/m/Y') }}</strong>
+                        {% endif %}
+                        {%- if apercu.jours > 0 %}, soit <strong>{{ apercu.jours|number_format(1, ',', ' ')|trim('0')|trim(',') }}&nbsp;jour(s)</strong> décompté(s){% endif %}.
+                    {% endif %}
+                    {% if demande.typeAbsence and not demande.typeAbsence.decompte %}
+                        Ce type d'absence <strong>ne touche pas au compteur</strong> : il n'est enregistré que pour le calendrier et l'historique.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+        <p class="jsb-picker-empty text-danger" data-picker-error role="alert" hidden></p>
+
+        <div class="jsb-picker-listwrap" style="padding: .25rem 1.25rem 1rem;">
+
+            {# ── CE QUI EMPÊCHE ENCORE LE GESTE ────────────────────────────────────────
+               On ouvre la boîte MÊME quand le geste est impossible, pour en dire la
+               raison : un bouton grisé sans explication laisse chercher. #}
+            {% if not apercu.pret %}
+                <div class="alert alert-warning py-2 px-3 mb-3" role="alert">
+                    <strong class="d-block mb-1">Ce geste n'est pas possible pour l'instant&nbsp;:</strong>
+                    <ul class="mb-0 ps-3">
+                        {% for violation in apercu.violations %}
+                            <li>{{ violation }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            {# ── LE COMPTEUR DU COLLABORATEUR ──────────────────────────────────────────
+               Le valideur décide en le voyant : approuver dix jours à quelqu'un qui n'en
+               a plus que trois se répare mal. Instantané daté — il reflète le compteur au
+               moment où cette boîte s'est ouverte. #}
+            {% if solde %}
+                <section aria-labelledby="conge-compteur-titre" class="mb-3">
+                    <h6 id="conge-compteur-titre" class="fw-semibold mb-2" style="color:#0d2440;">
+                        Compteur {{ solde.exercice }} de {{ demande.agent ? demande.agent.nom : 'ce collaborateur' }}
+                    </h6>
+                    <table class="table table-sm mb-1">
+                        <tbody>
+                            <tr>
+                                <th scope="row" class="fw-normal text-muted">Acquis</th>
+                                <td class="text-end">
+                                    {{ solde.acquis|number_format(1, ',', ' ') }}&nbsp;j
+                                    {%- if solde.dontReport > 0 %}
+                                        <span class="text-muted small">(dont {{ solde.dontReport|number_format(1, ',', ' ') }}&nbsp;j de report)</span>
+                                    {%- endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row" class="fw-normal text-muted">Consommé</th>
+                                <td class="text-end">{{ solde.consomme|number_format(1, ',', ' ') }}&nbsp;j</td>
+                            </tr>
+                            <tr>
+                                <th scope="row" class="fw-normal text-muted">Engagé (en attente de décision)</th>
+                                <td class="text-end">{{ solde.engage|number_format(1, ',', ' ') }}&nbsp;j</td>
+                            </tr>
+                            <tr>
+                                <th scope="row" class="fw-semibold" style="color:#0d2440;">Disponible</th>
+                                <td class="text-end fw-semibold" style="color:#0047AB;">
+                                    {{ solde.disponible|number_format(1, ',', ' ') }}&nbsp;j
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p class="text-muted small mb-0">
+                        Instantané au {{ 'now'|date('d/m/Y à H:i') }}.
+                    </p>
+                </section>
+            {% endif %}
+
+            {# Le motif du collaborateur : ce qu'il a écrit en posant sa demande. #}
+            {% if demande.motif %}
+                <section aria-labelledby="conge-motif-titre" class="mb-3">
+                    <h6 id="conge-motif-titre" class="fw-semibold mb-1" style="color:#0d2440;">Motif du collaborateur</h6>
+                    <p class="mb-0">{{ demande.motif }}</p>
+                </section>
+            {% endif %}
+
+            {# ── COMMENTAIRE DE DÉCISION ───────────────────────────────────────────────
+               Absent à la soumission : le motif de la demande est déjà porté par le
+               formulaire, et redemander la même chose deux fois ne sert personne. #}
+            {% if geste != 'soumettre' %}
+                <fieldset class="border-0 p-0 m-0 mb-2">
+                    <legend class="fs-6 fw-semibold mb-1" style="color:#0d2440;">Commentaire</legend>
+                    <label for="conge-commentaire" class="form-label fw-semibold mb-0" style="color:#0d2440;">
+                        {% if geste == 'refuser' %}
+                            Pourquoi ce congé est-il refusé&nbsp;?
+                        {% elseif geste == 'annuler' %}
+                            Pourquoi ce congé est-il annulé&nbsp;?
+                        {% else %}
+                            Un mot à joindre à votre approbation&nbsp;?
+                        {% endif %}
+                        <span class="fw-normal text-muted small">
+                            ({{ apercu.commentaireRequis ? 'obligatoire' : 'facultatif' }})
+                        </span>
+                    </label>
+                    <span class="text-muted small d-block mb-1" id="conge-commentaire-aide"
+                          data-conge-decision-picker-target="aideCommentaire">
+                        {% if apercu.commentaireRequis %}
+                            Cette absence a déjà commencé&nbsp;: la raison de l'annulation doit rester lisible dans l'historique.
+                        {% else %}
+                            Il sera repris dans l'e-mail adressé au collaborateur et conservé dans l'historique.
+                        {% endif %}
+                    </span>
+                    <textarea id="conge-commentaire" class="form-control" rows="3"
+                              maxlength="1000"
+                              placeholder="Ex.&nbsp;: période de clôture, merci de décaler d'une semaine."
+                              data-conge-decision-picker-target="commentaire"
+                              aria-describedby="conge-commentaire-aide"></textarea>
+                </fieldset>
+            {% endif %}
+        </div>
+
+        <footer class="jsb-picker-foot">
+            <span class="jsb-picker-hint text-muted small">
+                {% if geste == 'soumettre' %}
+                    Vos valideurs en seront informés par e-mail.
+                {% elseif geste == 'annuler' %}
+                    Les jours décomptés seront recrédités immédiatement.
+                {% else %}
+                    Le collaborateur en sera informé par e-mail.
+                {% endif %}
+            </span>
+            <span class="d-inline-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:cancel') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                    Fermer
+                </button>
+                <button type="button" class="btn btn-primary jsb-picker-btn"
+                        data-picker-executer
+                        data-conge-decision-picker-target="executer"
+                        {% if not apercu.pret %}data-bloque-par-le-serveur="1" disabled{% elseif apercu.commentaireRequis %}disabled{% endif %}>
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:save') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                    {{ {'soumettre': 'Soumettre', 'approuver': 'Approuver', 'refuser': 'Refuser', 'annuler': 'Annuler le congé'}[geste] }}
+                </button>
+            </span>
+        </footer>
+    </div>
+</div>

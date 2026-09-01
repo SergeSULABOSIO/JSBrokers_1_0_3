@@ -158,8 +158,11 @@ class RoleFormIntroTest extends WebTestCase
             'rolesenmarketing'      => ['module Marketing', 3],
             // 9 cartes depuis l'ajout du droit dédié « Portefeuilles ».
             'rolesenproduction'     => ['module Production', 9],
-            // 4 cartes depuis l'ajout du droit dédié « Assistant IA » (accessAssistantIa).
-            'rolesenadministration' => ['module Administration', 4],
+            // 6 cartes depuis l'arrivée du module de congés : « Assistant IA »
+            // (accessAssistantIa) puis les deux droits des congés — accessConge, qui fait
+            // le valideur, et accessCongeParametre, qui ouvre les types d'absence et les
+            // jours fériés. Les deux se confient séparément.
+            'rolesenadministration' => ['module Administration', 6],
             'rolesensinistre'       => ['module Sinistre', 3],
         ];
 

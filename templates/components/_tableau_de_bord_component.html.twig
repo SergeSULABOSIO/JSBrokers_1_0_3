@@ -15,6 +15,29 @@
         {# ── Colonne gauche (65%) ── #}
         <div class="col-lg-8">
 
+            {# Mes congés — visible avec la lecture des Congés, que tout collaborateur
+               reçoit d'office. C'est le bandeau des trois soldes : il répond à « où en
+               suis-je ? » sans quitter l'écran d'accueil. #}
+            {% if workspace_can_read('DemandeConge') %}
+            <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block" open>
+                <summary class="card-header border-0 bg-white py-2 px-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <twig:UX:Icon name="{{ resolve_icon_name('conge') }}" style="width:14px;height:14px;color:#0047AB;" />
+                        <span class="fw-semibold" style="font-size:.82rem;color:#0d2440;">Mes congés</span>
+                    </div>
+                </summary>
+                <div data-controller="lazy-block"
+                     data-lazy-block-url-value="/admin/entreprise_dashbord/block/conges/{{ entreprise.id }}">
+                    <div class="db-skeleton-block p-3 d-flex gap-2" style="height:86px;">
+                        <div class="db-skel-line" style="width:24%;"></div>
+                        <div class="db-skel-line" style="width:24%;"></div>
+                        <div class="db-skel-line" style="width:24%;"></div>
+                        <div class="db-skel-line" style="width:24%;"></div>
+                    </div>
+                </div>
+            </details>
+            {% endif %}
+
             {# Bloc KPIs — visible seulement avec la lecture Finance (Notes). #}
             {% if workspace_can_read('Note') %}
             <div data-controller="lazy-block"

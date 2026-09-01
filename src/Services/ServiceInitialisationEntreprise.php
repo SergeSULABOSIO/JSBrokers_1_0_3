@@ -8,9 +8,12 @@ use App\Entity\Entreprise;
 use App\Entity\Groupe;
 use App\Entity\Invite;
 use App\Entity\Monnaie;
+use App\Entity\MouvementConge;
 use App\Entity\Risque;
 use App\Entity\Taxe;
+use App\Entity\TypeAbsence;
 use App\Entity\TypeRevenu;
+use App\Service\Conge\CongeParametres;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
@@ -55,6 +58,23 @@ class ServiceInitialisationEntreprise
         'CAD' => 'Dollar Canadien',
     ];
 
+    /**
+     * LES CINQ TYPES D'ABSENCE semés à la création de tout cabinet.
+     *
+     * Le couple (code, décompté) est la seule chose qui compte vraiment : `decompte`
+     * décide si une demande approuvée retire des jours au compteur. Maladie et événement
+     * familial ne décomptent pas — un arrêt de travail n'est pas un congé.
+     *
+     * @var array<int, array{code: string, libelle: string, decompte: bool, justificatif: bool, demiJournee: bool, couleur: string}>
+     */
+    private const TYPES_ABSENCE_DEFAUT = [
+        ['code' => TypeAbsence::CODE_CONGE_ANNUEL,       'libelle' => 'Congé annuel',       'decompte' => true,  'justificatif' => false, 'demiJournee' => true,  'couleur' => '#0047AB'],
+        ['code' => TypeAbsence::CODE_SANS_SOLDE,         'libelle' => 'Congé sans solde',   'decompte' => false, 'justificatif' => false, 'demiJournee' => true,  'couleur' => '#6c757d'],
+        ['code' => TypeAbsence::CODE_MALADIE,            'libelle' => 'Maladie',            'decompte' => false, 'justificatif' => true,  'demiJournee' => false, 'couleur' => '#c0392b'],
+        ['code' => TypeAbsence::CODE_EVENEMENT_FAMILIAL, 'libelle' => 'Événement familial', 'decompte' => false, 'justificatif' => true,  'demiJournee' => false, 'couleur' => '#8e44ad'],
+        ['code' => TypeAbsence::CODE_RECUPERATION,       'libelle' => 'Récupération',       'decompte' => true,  'justificatif' => false, 'demiJournee' => true,  'couleur' => '#16a085'],
+    ];
+
     public function __construct(
         private EntityManagerInterface $manager,
         private ServiceGeographie $serviceGeographie,
@@ -72,6 +92,148 @@ class ServiceInitialisationEntreprise
         $this->initialiserChargementsEtRevenus($entreprise, $proprietaire);
         $this->initialiserRisques($entreprise, $proprietaire);
         $this->initialiserGroupes($entreprise, $proprietaire);
+        $this->initialiserTypesAbsence($entreprise, $proprietaire);
+        $this->initialiserCongesExerciceCourant($entreprise, $proprietaire);
+    }
+
+    /**
+     * LES CINQ TYPES D'ABSENCE, dès la création du cabinet.
+     *
+     * Un cabinet neuf doit pouvoir poser un congé sans qu'aucun paramétrage manuel ait eu
+     * lieu : sans ces types, le premier collaborateur qui essaie se heurte à une liste
+     * déroulante vide, et rien ne lui dit ce qui manque.
+     *
+     * IDEMPOTENT : un type déjà présent n'est pas recréé — la commande de reprise
+     * `app:conges:provisionner` rejoue exactement ce semis sur les cabinets existants.
+     * On regarde AUSSI les types désactivés : recréer un type que le cabinet a
+     * volontairement retiré de la saisie serait défaire son réglage.
+     */
+    private function initialiserTypesAbsence(Entreprise $entreprise, Invite $proprietaire): void
+    {
+        foreach (self::TYPES_ABSENCE_DEFAUT as $defaut) {
+            if ($this->typeAbsenceExiste($entreprise, $defaut['code'])) {
+                continue;
+            }
+
+            $type = (new TypeAbsence())
+                ->setCode($defaut['code'])
+                ->setLibelle($defaut['libelle'])
+                ->setDecompte($defaut['decompte'])
+                ->setJustificatifRequis($defaut['justificatif'])
+                ->setAutoriseDemiJournee($defaut['demiJournee'])
+                ->setCouleur($defaut['couleur'])
+                ->setActif(true);
+
+            $this->attacher($type, $entreprise, $proprietaire);
+        }
+    }
+
+    /**
+     * LA DOTATION DE L'EXERCICE EN COURS, pour les collaborateurs déjà rattachés.
+     *
+     * Sans elle, la rubrique s'ouvre sur un solde à zéro et la première demande est
+     * refusée par le contrôle de solde — ce qui ressemble à une panne, pas à un
+     * paramétrage manquant.
+     *
+     * Le prorata suit les MOIS ENTIERS de présence (cf. CongeParametres) : c'est la
+     * maille dans laquelle les congés se discutent, et elle évite d'avoir à trancher ce
+     * que vaut une arrivée le 17.
+     *
+     * IDEMPOTENT : un agent qui a déjà une dotation sur cet exercice n'en reçoit pas une
+     * seconde. Rejouer ce semis doublerait sinon, en silence, le droit de chacun.
+     */
+    private function initialiserCongesExerciceCourant(Entreprise $entreprise, Invite $proprietaire): void
+    {
+        $exercice = (int) (new \DateTimeImmutable('now'))->format('Y');
+        $congeAnnuel = $this->typeAbsenceAnnuel($entreprise);
+
+        foreach ($entreprise->getInvites() as $agent) {
+            if ($this->dotationExiste($agent, $exercice)) {
+                continue;
+            }
+
+            // L'entrée du collaborateur est la date de création de sa fiche d'invité :
+            // c'est la seule que le cabinet connaisse à ce stade.
+            $entree = $agent->getCreatedAt() ?? new \DateTimeImmutable('now');
+            $jours = CongeParametres::dotationAuProrata(
+                CongeParametres::DOTATION_ANNUELLE_DEFAUT,
+                $entree,
+                $exercice,
+            );
+
+            if ($jours <= 0.0) {
+                continue;
+            }
+
+            $mouvement = (new MouvementConge())
+                ->setAgent($agent)
+                ->setExercice($exercice)
+                ->setTypeAbsence($congeAnnuel)
+                ->setNature(MouvementConge::NATURE_DOTATION)
+                ->setQuantite(number_format($jours, 1, '.', ''))
+                ->setAuteur($proprietaire)
+                ->setCommentaire(sprintf(
+                    "Dotation %d attribuée à l'ouverture de la rubrique, au prorata des mois de présence.",
+                    $exercice,
+                ));
+
+            $this->attacher($mouvement, $entreprise, $proprietaire);
+        }
+    }
+
+    /** Un type d'absence de ce code existe-t-il déjà dans ce cabinet ? */
+    private function typeAbsenceExiste(Entreprise $entreprise, string $code): bool
+    {
+        if ($entreprise->getId() === null) {
+            return false; // Cabinet pas encore en base : rien ne peut préexister.
+        }
+
+        return $this->manager->getRepository(TypeAbsence::class)
+            ->findOneBy(['entreprise' => $entreprise, 'code' => $code]) !== null;
+    }
+
+    /**
+     * Le type « Congé annuel » du cabinet, celui que la dotation crédite.
+     *
+     * À la CRÉATION d'un cabinet, ce type vient d'être instancié dans le même flux et
+     * n'est pas encore interrogeable en base : on le retrouve alors dans l'unité de
+     * travail. Sans cela, la toute première dotation naîtrait sans type — et le solde
+     * qu'elle crédite serait invisible du calcul, qui ne compte que le congé annuel.
+     */
+    private function typeAbsenceAnnuel(Entreprise $entreprise): ?TypeAbsence
+    {
+        if ($entreprise->getId() !== null) {
+            $type = $this->manager->getRepository(TypeAbsence::class)
+                ->findOneBy(['entreprise' => $entreprise, 'code' => TypeAbsence::CODE_CONGE_ANNUEL]);
+            if ($type instanceof TypeAbsence) {
+                return $type;
+            }
+        }
+
+        foreach ($this->manager->getUnitOfWork()->getScheduledEntityInsertions() as $entite) {
+            if ($entite instanceof TypeAbsence
+                && $entite->getCode() === TypeAbsence::CODE_CONGE_ANNUEL
+                && $entite->getEntreprise() === $entreprise) {
+                return $entite;
+            }
+        }
+
+        return null;
+    }
+
+    /** Cet agent a-t-il déjà reçu sa dotation sur cet exercice ? */
+    private function dotationExiste(Invite $agent, int $exercice): bool
+    {
+        if ($agent->getId() === null) {
+            return false;
+        }
+
+        return $this->manager->getRepository(MouvementConge::class)
+            ->findOneBy([
+                'agent' => $agent,
+                'exercice' => $exercice,
+                'nature' => MouvementConge::NATURE_DOTATION,
+            ]) !== null;
     }
 
     /**

@@ -135,6 +135,19 @@ trait ControllerUtilsTrait
     }
 
     /**
+     * Périmètre de visibilité des demandes de congé. SOURCE UNIQUE partagée avec les
+     * outils de l'assistant : un collaborateur qui n'est pas valideur ne voit que ses
+     * propres demandes, à l'écran comme dans le chat.
+     */
+    private \App\Services\Search\CongeVisibiliteScope $congeVisibiliteScope;
+
+    #[Required]
+    public function setCongeVisibiliteScope(\App\Services\Search\CongeVisibiliteScope $scope): void
+    {
+        $this->congeVisibiliteScope = $scope;
+    }
+
+    /**
      * Cœur de mutation partagé (métrage + persistance / suppression). Injecté par
      * setter autowiré (#[Required]) comme les autres services du trait. Point de
      * passage UNIQUE réutilisé aussi par l'assistant IA (DRY) : le CRUD HTTP et
@@ -1547,6 +1560,11 @@ trait ControllerUtilsTrait
                 Document::class => 'App\Controller\Admin\DocumentController::index',
                 Classeur::class => 'App\Controller\Admin\ClasseurController::index',
                 Invite::class => 'App\Controller\Admin\InviteController::index',
+                // CONGÉS. Oublier une entrée ici laisse la rubrique dans le menu et
+                // l'onglet vide — un 404 silencieux que rien ne signale.
+                \App\Entity\DemandeConge::class => 'App\Controller\Admin\DemandeCongeController::index',
+                \App\Entity\TypeAbsence::class => 'App\Controller\Admin\TypeAbsenceController::index',
+                \App\Entity\JourFerie::class => 'App\Controller\Admin\JourFerieController::index',
             ],
             //PARAMETRES
             '_mon_compte_component.html.twig' => 'App\Controller\RegistrationController::register',
@@ -1680,6 +1698,19 @@ trait ControllerUtilsTrait
                 'value' => \App\Services\Search\PisteTransformationScope::STATUT_EN_COURS,
                 'label' => \App\Services\Search\PisteTransformationScope::libelle(\App\Services\Search\PisteTransformationScope::STATUT_EN_COURS),
             ];
+        }
+
+        // CONGÉS : au premier chargement, un collaborateur qui n'est pas valideur ne voit
+        // QUE ses demandes. Ce n'est pas un confort de lecture comme le périmètre
+        // portefeuille, c'est une frontière : les données de congé sont des données
+        // personnelles. Le critère est reposé à chaque rafraîchissement par
+        // DemandeCongeController::query() (via $extraCriteria, fusionné APRÈS la charge
+        // utile du navigateur) — effacer le badge ne le lève donc pas.
+        if ($shortName === 'DemandeConge') {
+            $invite = $this->inviteRepository->find($idInvite);
+            if ($invite !== null) {
+                $criteria += $this->congeVisibiliteScope->critereFor($invite);
+            }
         }
 
         // Périmètre portefeuille : critère produit par la fabrique partagée avec les outils

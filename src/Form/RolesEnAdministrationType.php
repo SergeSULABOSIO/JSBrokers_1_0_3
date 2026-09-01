@@ -83,6 +83,32 @@ class RolesEnAdministrationType extends AbstractType
                     "Suppression" => Invite::ACCESS_SUPPRESSION,
                 ],
             ])
+            ->add('accessConge', ChoiceType::class, [
+                'label' => "Droit d'accès sur les congés",
+                'help' => "Le niveau « Modification » fait le VALIDEUR : il permet d'approuver, de refuser et d'annuler, et donne la vue sur les demandes de tout le cabinet. Sans lui, le collaborateur ne voit que les siennes.",
+                'multiple' => true,
+                'expanded' => true,
+                'required' => false,
+                'choices'  => [
+                    "Lecture" => Invite::ACCESS_LECTURE,
+                    "Ecriture" => Invite::ACCESS_ECRITURE,
+                    "Modification" => Invite::ACCESS_MODIFICATION,
+                    "Suppression" => Invite::ACCESS_SUPPRESSION,
+                ],
+            ])
+            ->add('accessCongeParametre', ChoiceType::class, [
+                'label' => "Droit d'accès sur le paramétrage des congés",
+                'help' => "Types d'absence et jours fériés. Se confie séparément de la validation.",
+                'multiple' => true,
+                'expanded' => true,
+                'required' => false,
+                'choices'  => [
+                    "Lecture" => Invite::ACCESS_LECTURE,
+                    "Ecriture" => Invite::ACCESS_ECRITURE,
+                    "Modification" => Invite::ACCESS_MODIFICATION,
+                    "Suppression" => Invite::ACCESS_SUPPRESSION,
+                ],
+            ])
             ->add('invite', InviteAutocompleteField::class, [
                 'label' => "Collaborateur",
                 'required' => true,

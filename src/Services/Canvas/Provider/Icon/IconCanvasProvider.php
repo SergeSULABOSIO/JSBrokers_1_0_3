@@ -27,6 +27,18 @@ class IconCanvasProvider
         // fasse un trou dans l'alignement de la colonne d'icônes.
         'collection'      => 'hugeicons:menu-square',
         'condition'       => 'streamline-plump:file-check-alternate',
+        // ── CONGÉS ──────────────────────────────────────────────────────────────────
+        // Quatre icônes DÉJÀ PRÉSENTES dans assets/icons : aucune n'a été téléchargée
+        // pour l'occasion. Le stock local est le seul qui rende — un nom d'icône absent
+        // du disque ne fait pas d'erreur, il laisse un trou dans l'alignement.
+        //
+        // « conge » montre quelqu'un chez soi plutôt qu'un calendrier : le calendrier
+        // est déjà l'icône d'un CHAMP de date (action:calendar), et deux sens pour un
+        // même dessin se lisent mal dans une colonne d'icônes.
+        'conge'           => 'fa-solid:house-user',
+        'type-absence'    => 'gg:list',            // table de paramétrage
+        'jour-ferie'      => 'fluent-mdl2:date-time-mirrored',
+        'regime-travail'  => 'streamline-flex:production-belt-time', // temps de travail
         'contact'         => 'hugeicons:contact-01',
         'cotation'        => 'hugeicons:invoice-02',
         'document'        => 'hugeicons:document-validation',
