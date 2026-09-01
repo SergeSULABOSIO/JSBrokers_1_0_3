@@ -1565,6 +1565,7 @@ trait ControllerUtilsTrait
                 \App\Entity\DemandeConge::class => 'App\Controller\Admin\DemandeCongeController::index',
                 \App\Entity\TypeAbsence::class => 'App\Controller\Admin\TypeAbsenceController::index',
                 \App\Entity\JourFerie::class => 'App\Controller\Admin\JourFerieController::index',
+                \App\Entity\ParametresConge::class => 'App\Controller\Admin\ParametresCongeController::index',
             ],
             //PARAMETRES
             '_mon_compte_component.html.twig' => 'App\Controller\RegistrationController::register',

@@ -84,6 +84,7 @@ class JSBDynamicSearchService
         'OffreIndemnisationSinistre',
         'Paiement',
         'PaiementPrime',
+        'ParametresConge',
         'Partenaire',
         'PieceSinistre',
         'Piste',

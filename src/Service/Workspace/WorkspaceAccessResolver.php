@@ -136,6 +136,10 @@ class WorkspaceAccessResolver
         'DemandeConge'               => ['Administration', 'getRolesEnAdministration', 'getAccessConge', 'Congés'],
         'TypeAbsence'                => ['Administration', 'getRolesEnAdministration', 'getAccessCongeParametre', "Types d'absence"],
         'JourFerie'                  => ['Administration', 'getRolesEnAdministration', 'getAccessCongeParametre', 'Jours fériés'],
+        // Les réglages partagent le droit du paramétrage : on confie le préavis, les
+        // types d'absence et les jours fériés ensemble, ou aucun des trois. Un cabinet
+        // qui laisse régler les types mais pas le préavis n'a pas de sens.
+        'ParametresConge'            => ['Administration', 'getRolesEnAdministration', 'getAccessCongeParametre', 'Paramètres des congés'],
         // IA — PSEUDO-entité (pas de classe Doctrine, comme DocumentComptable) :
         // gouverne l'accès au module Assistant IA (chat, conversations). Fail-closed
         // pour les invités ; le propriétaire garde son accès total inconditionnel.
@@ -181,6 +185,11 @@ class WorkspaceAccessResolver
         // la même administration : il suit donc le droit « Invité », c'est-à-dire
         // canManageInvites(). Aucun droit de plus à régler.
         'RegimeTravail' => 'Invite',
+        // Les périodes de blocage se saisissent dans le dialogue des réglages : ce sont
+        // des réglages, pas des objets métier qu'on cherche au menu. Elles suivent donc
+        // le droit de leur parent — sans cette ligne, elles tomberaient sur le
+        // `return true` final de can(), un fail-open sur une règle du cabinet.
+        'PeriodeBlocage' => 'ParametresConge',
     ];
 
     /**
@@ -195,6 +204,7 @@ class WorkspaceAccessResolver
         'MouvementConge' => 'Mouvements de congé',
         'HistoriqueDemande' => 'Historique des demandes de congé',
         'RegimeTravail' => 'Régimes de travail',
+        'PeriodeBlocage' => 'Périodes de blocage',
     ];
 
     public function __construct(

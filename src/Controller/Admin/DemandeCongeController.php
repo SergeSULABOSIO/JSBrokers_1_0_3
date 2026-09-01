@@ -11,6 +11,7 @@ use App\Repository\DemandeCongeRepository;
 use App\Repository\EntrepriseRepository;
 use App\Repository\InviteRepository;
 use App\Service\Conge\CalculateurSolde;
+use App\Service\Conge\CalendrierEquipe;
 use App\Service\Conge\CongeTransitionException;
 use App\Service\Conge\DemandeCongePolicy;
 use App\Service\Conge\DemandeCongeWorkflow;
@@ -64,6 +65,7 @@ class DemandeCongeController extends AbstractController
         private DemandeCongeWorkflow $workflow,
         private CalculateurSolde $calculateurSolde,
         private CongeVisibiliteScope $visibilite,
+        private CalendrierEquipe $calendrier,
         CanvasBuilder $canvasBuilder,
     ) {
         $this->canvasBuilder = $canvasBuilder;
@@ -220,6 +222,66 @@ class DemandeCongeController extends AbstractController
             'success' => true,
             'message' => $this->messageDuGeste($geste, $demandeConge),
         ]);
+    }
+
+    // ─────────────────────────── LE CALENDRIER D'ÉQUIPE ────────────────────────────
+
+    /**
+     * La grille mensuelle des absences, ouverte depuis la barre d'outils de la rubrique.
+     *
+     * ── POURQUOI PAS UNE RUBRIQUE À PART ────────────────────────────────────────────
+     * Le calendrier illustre les demandes ; l'en séparer aurait allongé le menu du groupe
+     * Administration pour éloigner deux écrans qui se lisent ensemble. Il s'ouvre donc là
+     * où l'on regarde déjà les congés.
+     *
+     * ── CE QU'ON VOIT DÉPEND DE QUI REGARDE ─────────────────────────────────────────
+     * Un valideur voit le cabinet ; un collaborateur ordinaire, seulement son équipe. Les
+     * absences des autres sont des données personnelles, et la grille n'est pas une porte
+     * dérobée vers elles.
+     */
+    #[Route('/api/calendrier', name: 'api.calendrier', methods: ['GET'])]
+    public function calendrier(Request $request): Response
+    {
+        if (!$this->mayAccessEntity(DemandeConge::class, Invite::ACCESS_LECTURE)) {
+            return $this->accessDeniedJson();
+        }
+
+        $acteur = $this->getInvite();
+        $limiterALEquipe = !$this->policy->estValideur($acteur);
+
+        $aujourdhui = new \DateTimeImmutable('today');
+        $annee = (int) $request->query->get('annee', $aujourdhui->format('Y'));
+        $mois = (int) $request->query->get('mois', $aujourdhui->format('n'));
+
+        // Bornes défensives : un mois 13 ou une année 0 venus de l'URL produiraient une
+        // date invalide, donc une erreur là où l'utilisateur attend un calendrier.
+        if ($mois < 1 || $mois > 12) {
+            $mois = (int) $aujourdhui->format('n');
+        }
+        if ($annee < 2000 || $annee > 2100) {
+            $annee = (int) $aujourdhui->format('Y');
+        }
+
+        $grille = $this->calendrier->grille(
+            $this->getEntreprise(),
+            $annee,
+            $mois,
+            $acteur,
+            $limiterALEquipe,
+        );
+
+        $contexte = ['grille' => $grille, 'perimetre' => $limiterALEquipe ? 'equipe' : 'cabinet'];
+
+        // Navigation : on ne renvoie QUE la grille. Recharger la boîte entière ferait
+        // perdre le focus et rejouerait l'animation d'ouverture à chaque clic de flèche.
+        if ($request->query->has('annee') || $request->query->has('mois')) {
+            return $this->json([
+                'libelle' => $grille['libelle'],
+                'html' => $this->renderView('components/conge/_calendrier_grille.html.twig', $contexte),
+            ]);
+        }
+
+        return $this->render('components/conge/_calendrier.html.twig', $contexte);
     }
 
     /**

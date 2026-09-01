@@ -103,6 +103,8 @@ final class MutationAllowlist
         'MouvementConge',
         'HistoriqueDemande',
         'RegimeTravail',
+        'ParametresConge',
+        'PeriodeBlocage',
     ];
 
     /** Niveaux de mutation gouvernés (lecture exclue : ce n'est pas une mutation). */

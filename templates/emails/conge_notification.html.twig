@@ -100,6 +100,18 @@
         {{ m.paragraph('Ce type d\'absence <strong>ne touche pas au compteur de congés</strong> : il est enregistré pour le calendrier et l\'historique.') }}
     {% endif %}
 
+    {# ── CONTRÔLES CONTOURNÉS ──────────────────────────────────────────────────────
+       Ce qu'un valideur a fait franchir à cette demande. Le taire reviendrait à laisser
+       découvrir le contournement le jour où il pose problème. #}
+    {% if d.controlesContournes %}
+        {% set contournes %}
+            {% for regle in d.contournements %}
+                {{ t.ligne('Contrôle franchi', regle) }}
+            {% endfor %}
+        {% endset %}
+        {{ t.tableau('⚠ Règles du cabinet contournées', contournes) }}
+    {% endif %}
+
     {# ── BLOC CONTEXTE — sur la soumission uniquement ─────────────────────────────── #}
     {% if ctx.transition.statutApres == 'SOUMISE' and ctx.collegues|length > 0 %}
         {% set contexte %}

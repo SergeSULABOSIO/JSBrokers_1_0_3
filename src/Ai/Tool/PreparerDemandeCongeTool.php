@@ -201,8 +201,11 @@ final class PreparerDemandeCongeTool implements AiToolProduisantUnPlan, AiToolCo
         $jours = $demande->nbJoursFloat();
 
         // Les contrôles de la soumission sont ceux de l'écran, mot pour mot : un refus par
-        // CTRL-01 ici est un refus par CTRL-01 là-bas, avec le même message.
-        $violations = $this->validator->violationsPourSoumission($demande);
+        // CTRL-01 ici est un refus par CTRL-01 là-bas, avec le même message. Et les trois
+        // contrôles souples se contournent ici comme ailleurs, pour un valideur — le
+        // contournement partant dans le plan, donc sous les yeux de qui valide.
+        $controle = $this->validator->controler($demande, $this->policy->estValideur($scope->invite));
+        $violations = $controle->violations;
         if ($violations !== []) {
             return AiToolResult::ok([
                 'pret' => false,
@@ -237,6 +240,9 @@ final class PreparerDemandeCongeTool implements AiToolProduisantUnPlan, AiToolCo
                     'statut' => DemandeConge::STATUT_SOUMISE,
                     // RG-22 : le canal est tracé, l'auteur reste l'humain.
                     'origine' => DemandeConge::ORIGINE_KET,
+                    // Le contournement voyage avec la demande : sans lui, une demande
+                    // posée par un valideur malgré un blocage n'en garderait aucune trace.
+                    'controlesContournes' => (string) $controle->contournementsEnTexte(),
                 ],
             ]],
             'remplacerPlanEnAttente' => ($args['remplacerPlanEnAttente'] ?? false) === true,
@@ -260,11 +266,19 @@ final class PreparerDemandeCongeTool implements AiToolProduisantUnPlan, AiToolCo
             'decompteDuSolde' => $type->isDecompte(),
             'soldeAvant' => $solde->disponible(),
             'soldeApres' => $type->isDecompte() ? $solde->disponible() - $jours : $solde->disponible(),
+            // Ce que le statut de valideur a permis de franchir. Vide pour tout le monde
+            // d'autre : les mêmes contrôles y sont des refus.
+            'controlesContournes' => $controle->avertissements,
         ];
         $data['consigne'] = "Avant le bouton, ANNONCE le récapitulatif : l'interprétation de la période, "
             . "les dates, le nombre de jours décomptés et le solde avant/après. C'est ce que "
             . "l'utilisateur confirme. N'annonce pas la demande comme enregistrée : elle ne le sera "
-            . "qu'après son clic.";
+            . "qu'après son clic."
+            . ($controle->aDesContournements()
+                ? " ⚠ DIS AUSSI, en toutes lettres, ce que le statut de valideur fait franchir ici : "
+                    . implode(' ', $controle->avertissements)
+                    . " Ce n'est pas un détail — c'est une règle du cabinet que cette demande enfreint."
+                : '');
 
         return AiToolResult::ok($data, $resultat->uiAction);
     }

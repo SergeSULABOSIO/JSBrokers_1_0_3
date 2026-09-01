@@ -125,6 +125,10 @@ parameters:
                         "Congés": { icone: 'conge', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\DemandeConge' }
                         "Types d'absence": { icone: 'type-absence', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\TypeAbsence' }
                         "Jours fériés": { icone: 'jour-ferie', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\JourFerie' }
+                        # Les réglages qui gouvernent les contrôles de la soumission :
+                        # préavis, absents simultanés, périodes de blocage, dotation,
+                        # relances. Même droit que les deux rubriques ci-dessus.
+                        "Paramètres congés": { icone: 'action:settings', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\ParametresConge' }
 
                 IA:
                     icone: 'assistant-ia'
