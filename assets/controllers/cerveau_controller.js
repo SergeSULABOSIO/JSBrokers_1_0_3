@@ -611,6 +611,12 @@ export default class extends Controller {
             case 'ui:conge.decision-request': // soumettre / approuver / refuser / annuler un congé
                 this.handleCongeDecisionRequest(payload);
                 break;
+            case 'ui:conge.compteurs-request': // grille des compteurs, ajustements et sorties
+                this.handleCongeCompteursRequest(payload);
+                break;
+            case 'conge:compteur.modifie': // ajustement ou décompte de sortie enregistré
+                this._showNotification(payload.message || 'Compteur mis à jour.', 'success');
+                break;
             case 'ui:conge.calendrier-request': // grille mensuelle des absences de l'équipe
                 this.handleCongeCalendrierRequest(payload);
                 break;
@@ -1999,6 +2005,26 @@ export default class extends Controller {
         await this._openStandalonePicker(payload.url, {
             controllerName: 'conge-decision-picker',
             errorLabel: 'la demande de congé',
+        });
+    }
+
+    /**
+     * LA GRILLE DES COMPTEURS, ouverte depuis la barre d'outils des congés.
+     *
+     * Elle ne porte sur AUCUNE ligne : l'action est déclarée `multi`, donc cliquable sans
+     * sélection. Le journal, l'ajustement et le décompte de sortie s'ouvrent DANS ce même
+     * panneau, par substitution de fragment — empiler une fenêtre par geste serait
+     * insupportable au moment précis où l'on compare des lignes entre elles.
+     *
+     * Le serveur refuse à qui n'est pas valideur : la grille expose les soldes de tout le
+     * cabinet.
+     * @param {object} payload
+     * @param {string} payload.url - '/admin/compteurconge/api/grille'
+     */
+    async handleCongeCompteursRequest(payload) {
+        await this._openStandalonePicker(payload.url, {
+            controllerName: 'conge-compteurs',
+            errorLabel: 'les compteurs de congés',
         });
     }
 

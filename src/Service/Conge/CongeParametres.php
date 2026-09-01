@@ -61,6 +61,43 @@ final class CongeParametres
         return self::arrondir($dotationAnnuelle * $moisPresents / 12);
     }
 
+    /**
+     * Dotation d'un collaborateur qui QUITTE le cabinet : au prorata des mois entiers
+     * réellement passés dans l'exercice, entrée et sortie prises en compte.
+     *
+     * ── POURQUOI UNE SECONDE FORMULE ────────────────────────────────────────────────
+     * L'entrée seule ne suffit plus : quelqu'un arrivé en mars et parti en juin n'a pas
+     * droit aux dix mois que `dotationAuProrata` lui accorderait. On borne donc des DEUX
+     * côtés — c'est la même règle des mois entiers, appliquée à un intervalle fermé.
+     *
+     * Le mois de sortie compte : partir le 3 juin, c'est avoir travaillé en juin.
+     */
+    public static function dotationAuProrataDeSortie(
+        float $dotationAnnuelle,
+        ?\DateTimeInterface $entree,
+        \DateTimeInterface $sortie,
+        int $exercice,
+    ): float {
+        if ((int) $sortie->format('Y') < $exercice) {
+            return 0.0; // Parti avant l'exercice : aucun droit dessus.
+        }
+
+        // Premier mois de présence dans l'exercice : celui de l'entrée si elle y tombe,
+        // janvier sinon.
+        $premierMois = ($entree !== null && (int) $entree->format('Y') === $exercice)
+            ? (int) $entree->format('n')
+            : 1;
+
+        // Dernier mois : celui de la sortie si elle tombe dans l'exercice, décembre sinon.
+        $dernierMois = (int) $sortie->format('Y') === $exercice ? (int) $sortie->format('n') : 12;
+
+        if ($dernierMois < $premierMois) {
+            return 0.0;
+        }
+
+        return self::arrondir($dotationAnnuelle * ($dernierMois - $premierMois + 1) / 12);
+    }
+
     /** Arrondi au demi-jour supérieur. */
     public static function arrondir(float $jours): float
     {

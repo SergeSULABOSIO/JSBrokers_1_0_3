@@ -1,0 +1,69 @@
+{#
+    LA GRILLE DES COMPTEURS — agents × exercice, ouverte depuis la barre d'outils des
+    congés. Réservée aux valideurs : elle expose les soldes de tout le cabinet.
+
+    ── TROIS GESTES S'Y RATTACHENT ─────────────────────────────────────────────────────
+    Le journal d'un agent (d'où vient son solde), l'ajustement motivé, et le décompte de
+    sortie. Tous les trois remplacent le contenu du panneau par un fragment rendu par le
+    SERVEUR, puis rendent la main à la grille. Une boîte par geste aurait empilé les
+    fenêtres au moment précis où l'on compare des lignes entre elles.
+
+    Miroir visuel des pickers jsb-picker-* ; charte cobalt #0047AB.
+#}
+<div class="jsb-picker-overlay"
+     data-controller="conge-compteurs"
+     data-conge-compteurs-grille-url-value="{{ path('admin.compteurconge.api.grille') }}"
+     data-conge-compteurs-journal-url-value="{{ path('admin.compteurconge.api.journal', {idAgent: 0}) }}"
+     data-conge-compteurs-sortie-url-value="{{ path('admin.compteurconge.api.sortie_apercu', {idAgent: 0}) }}"
+     data-conge-compteurs-ajustement-url-value="{{ path('admin.compteurconge.api.ajustement', {idAgent: 0}) }}"
+     data-conge-compteurs-export-url-value="{{ path('admin.compteurconge.api.export') }}"
+     data-conge-compteurs-exercice-value="{{ grille.exercice }}"
+     data-picker-overlay>
+    <div class="jsb-picker-modal jsb-picker-modal--large"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="jsb-compteurs-title"
+         tabindex="-1">
+
+        <div class="modal-header jsb-picker-header">
+            <div class="d-flex align-items-center">
+                <span class="me-2 d-inline-flex" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:count') }}" style="width:22px;height:22px;color:#0047AB;" />
+                </span>
+                <h5 id="jsb-compteurs-title" class="modal-title mb-0">
+                    Compteurs de congés — exercice {{ grille.exercice }}
+                </h5>
+            </div>
+            <button type="button" class="btn-close" data-picker-close aria-label="Fermer la fenêtre"></button>
+        </div>
+
+        <div class="jsb-picker-progress" data-picker-progress role="progressbar" aria-hidden="true">
+            <div class="jsb-picker-progress-bar"></div>
+        </div>
+
+        <p class="jsb-picker-empty text-danger" data-picker-error role="alert" hidden></p>
+
+        {# Le contenu est SUBSTITUÉ par les gestes (journal, ajustement, sortie) puis
+           restauré : c'est ce qui évite d'empiler des fenêtres. #}
+        <div data-conge-compteurs-target="contenu">
+            {{ include('components/conge/_compteurs_grille.html.twig', {grille: grille}) }}
+        </div>
+
+        <footer class="jsb-picker-foot">
+            <span class="jsb-picker-hint text-muted small">
+                Le « disponible » a déjà l'engagé déduit. Un ajustement ne se corrige jamais :
+                il s'annule par un ajustement inverse, motivé.
+            </span>
+            <span class="d-inline-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-cpt-export>
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:download') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                    Exporter
+                </button>
+                <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                    Fermer
+                </button>
+            </span>
+        </footer>
+    </div>
+</div>

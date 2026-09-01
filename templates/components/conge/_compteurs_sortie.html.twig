@@ -1,0 +1,101 @@
+{#
+    LE DÉCOMPTE DE SORTIE — ce qui reste dû au collaborateur, ou ce qu'il a pris en trop.
+
+    ── ON REGARDE AVANT DE SOLDER ──────────────────────────────────────────────────────
+    En aperçu (`definitif = false`), rien n'est écrit : on change la date, on recalcule.
+    C'est seulement à la validation que la régularisation entre au journal.
+
+    ── ELLE NE SUPPRIME RIEN ───────────────────────────────────────────────────────────
+    La dotation initiale reste au journal ; la régularisation est un mouvement de plus, en
+    sens inverse. C'est ce qui permet d'expliquer, six mois plus tard, pourquoi le solde
+    final n'est pas celui qu'on avait accordé en janvier.
+#}
+<div class="jsb-picker-listwrap" style="padding: .5rem 1.25rem 1rem;">
+
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-cpt-retour>‹ Retour aux compteurs</button>
+        <strong style="color:#0d2440;">Décompte de sortie — {{ agent.nom }}</strong>
+        <span></span>
+    </div>
+
+    {% if not definitif %}
+        <fieldset class="border-0 p-0 m-0 mb-3">
+            <legend class="fs-6 fw-semibold mb-1" style="color:#0d2440;">Fin de contrat</legend>
+            <label for="cpt-date-fin" class="form-label fw-semibold mb-0" style="color:#0d2440;">
+                Dernier jour travaillé
+            </label>
+            <span class="text-muted small d-block mb-1" id="cpt-date-fin-aide">
+                La dotation de l'exercice est ramenée au prorata des mois de présence. Le mois de
+                départ compte&nbsp;: partir le 3 juin, c'est avoir travaillé en juin.
+            </span>
+            <input type="date" id="cpt-date-fin" class="form-control" style="max-width:220px;"
+                   value="{{ dateFin|date('Y-m-d') }}"
+                   data-cpt-date-fin="{{ agent.id }}"
+                   aria-describedby="cpt-date-fin-aide">
+        </fieldset>
+    {% endif %}
+
+    <table class="table table-sm mb-3" style="max-width:520px;">
+        <tbody>
+            <tr>
+                <th scope="row" class="fw-normal text-muted">Dotation créditée sur l'exercice</th>
+                <td class="text-end" style="font-variant-numeric:tabular-nums;">
+                    {{ decompte.dotationInitiale|number_format(1, ',', ' ') }}&nbsp;j
+                </td>
+            </tr>
+            <tr>
+                <th scope="row" class="fw-normal text-muted">Dotation au prorata de présence</th>
+                <td class="text-end" style="font-variant-numeric:tabular-nums;">
+                    {{ decompte.dotationProratisee|number_format(1, ',', ' ') }}&nbsp;j
+                </td>
+            </tr>
+            <tr>
+                <th scope="row" class="fw-normal text-muted">Régularisation</th>
+                <td class="text-end" style="font-variant-numeric:tabular-nums;
+                           color:{{ decompte.regularisation < 0 ? '#dc3545' : '#198754' }};">
+                    {{ decompte.regularisation > 0 ? '+' : '' }}{{ decompte.regularisation|number_format(1, ',', ' ') }}&nbsp;j
+                </td>
+            </tr>
+            <tr>
+                <th scope="row" class="fw-normal text-muted">Solde avant régularisation</th>
+                <td class="text-end" style="font-variant-numeric:tabular-nums;">
+                    {{ decompte.soldeAvant|number_format(1, ',', ' ') }}&nbsp;j
+                </td>
+            </tr>
+            <tr style="border-top:2px solid #dee2e6;">
+                <th scope="row" class="fw-semibold" style="color:#0d2440;">Solde final</th>
+                <td class="text-end fw-bold" style="font-variant-numeric:tabular-nums;
+                           color:{{ decompte.soldeFinal < 0 ? '#dc3545' : '#0047AB' }};">
+                    {{ decompte.soldeFinal|number_format(1, ',', ' ') }}&nbsp;j
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    {# CE QUE LE CHIFFRE VEUT DIRE, en toutes lettres. « −3,5 » ne dit pas à un
+       gestionnaire de paie si le cabinet doit ou récupère. #}
+    <p class="mb-3" style="font-size:.85rem;">
+        {% if decompte.soldeFinal > 0 %}
+            Le cabinet <strong>doit {{ decompte.soldeFinal|number_format(1, ',', ' ') }} jour(s)</strong>
+            à {{ agent.nom }} au titre des congés non pris.
+        {% elseif decompte.soldeFinal < 0 %}
+            {{ agent.nom }} a pris <strong>{{ (decompte.soldeFinal * -1)|number_format(1, ',', ' ') }} jour(s)</strong>
+            de plus qu'il n'en avait acquis.
+        {% else %}
+            Le compte est soldé&nbsp;: ni jours dus, ni jours pris en trop.
+        {% endif %}
+    </p>
+
+    {% if definitif %}
+        <div class="alert alert-success py-2 px-3" role="alert" style="font-size:.85rem;">
+            Régularisation enregistrée au journal du {{ dateFin|date('d/m/Y') }}. La dotation initiale
+            y reste visible&nbsp;: c'est ce qui permettra d'expliquer ce décompte plus tard.
+            <button type="button" class="btn btn-sm btn-link p-0 ms-1" data-cpt-imprimer>Imprimer</button>
+        </div>
+    {% else %}
+        <button type="button" class="btn btn-primary jsb-picker-btn" data-cpt-sortie-executer="{{ agent.id }}">
+            <twig:UX:Icon name="{{ resolve_icon_name('action:save') }}" style="width:15px;height:15px;" aria-hidden="true" />
+            Enregistrer le décompte
+        </button>
+    {% endif %}
+</div>
