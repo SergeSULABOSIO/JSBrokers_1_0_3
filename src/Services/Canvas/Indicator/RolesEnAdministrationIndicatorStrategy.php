@@ -30,7 +30,7 @@ class RolesEnAdministrationIndicatorStrategy implements IndicatorCalculationStra
             'inviteNom' => $inviteNom,
         ];
         
-        $accessFields = ['accessDocument', 'accessClasseur', 'accessInvite'];
+        $accessFields = ['accessDocument', 'accessClasseur', 'accessInvite', 'accessConge', 'accessCongeParametre'];
         
         foreach ($accessFields as $field) {
             if (method_exists($entity, 'get' . ucfirst($field))) {

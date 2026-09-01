@@ -59,7 +59,9 @@ class ConditionDOfficeTest extends WebTestCase
     {
         $conn = $this->em->getConnection();
         $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email = :e', ['e' => self::OWNER]);
-        foreach (['condition_partage', 'partenaire', 'invite'] as $table) {
+        // `roles_en_administration` d'abord : tout invité créé reçoit désormais son
+        // rôle « Congés » d'office, et un invité ne se supprime pas sous ses rôles.
+        foreach (['condition_partage', 'partenaire', 'mouvement_conge', 'type_absence', 'roles_en_administration', 'invite'] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :n",
                 ['n' => self::ENT],

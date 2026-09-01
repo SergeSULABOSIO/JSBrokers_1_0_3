@@ -111,6 +111,93 @@ class EntrepriseDashbordController extends AbstractController
         ]);
     }
 
+    /**
+     * Bloc « Mes congés » : le bandeau des trois soldes de l'agent connecté, et ses
+     * demandes en cours.
+     *
+     * ── C'EST LE TABLEAU DE BORD DE L'AGENT ─────────────────────────────────────────
+     * La spécification décrit un écran dédié ; il n'en fallait pas un. Le solde se lit
+     * là où le collaborateur regarde déjà en arrivant, et l'historique de ses demandes
+     * est la rubrique « Congés » elle-même, déjà filtrée sur lui.
+     *
+     * ── AUCUN COÛT EN TOKENS N'EST AFFICHÉ ──────────────────────────────────────────
+     * Le demandeur n'est pas le payeur, et lui montrer un prix ne peut que le dissuader
+     * de poser des jours auxquels il a droit.
+     *
+     * Gate : lecture des Congés. L'agent y a droit d'office (DroitCongeParDefaut), le
+     * propriétaire par son bypass.
+     */
+    #[Route('/block/conges/{idEntreprise}', name: 'block_conges', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadBlockConges(
+        int $idEntreprise,
+        \App\Service\Conge\CalculateurSolde $calculateurSolde,
+        \App\Services\Canvas\CalculationProvider $calculationProvider,
+        \App\Repository\DemandeCongeRepository $demandeRepository,
+    ): Response {
+        if ($denied = $this->denyBlockIfCannotRead('DemandeConge')) { return $denied; }
+
+        $user = $this->getUser();
+        $invite = $user instanceof Utilisateur ? $this->accessResolver->resolveConnectedInvite($user) : null;
+        if ($invite === null) {
+            return new Response('');
+        }
+
+        $solde = $calculateurSolde->pour($invite);
+
+        // Les demandes NON CLOSES : celles qui attendent une décision et celles qui sont
+        // approuvées mais pas encore passées. Une demande refusée l'an dernier n'a rien
+        // à faire dans un bandeau qui répond à « où en suis-je ? ».
+        $demandes = $demandeRepository->pourAgent($invite, [
+            \App\Entity\DemandeConge::STATUT_SOUMISE,
+            \App\Entity\DemandeConge::STATUT_APPROUVEE,
+        ], 5);
+
+        // Les libellés viennent de la MÊME stratégie d'indicateurs que la liste : période,
+        // type et statut se lisent ici du mot exact qu'ils portent là-bas.
+        foreach ($demandes as $demande) {
+            foreach ($calculationProvider->getIndicateursSpecifics($demande) as $code => $valeur) {
+                $demande->{$code} = $valeur;
+            }
+        }
+
+        return $this->render('components/dashboard/_block_conges.html.twig', [
+            'solde' => $solde,
+            'demandes' => $demandes,
+            'cartes' => [
+                [
+                    'label' => 'Acquis',
+                    'valeur' => $solde->acquis,
+                    'detail' => $solde->dontReport > 0
+                        ? sprintf('dont %s j de report', number_format($solde->dontReport, 1, ',', ' '))
+                        : null,
+                    'accent' => false,
+                    'aide' => "Vos droits de l'exercice : dotation, report de l'an dernier et ajustements.",
+                ],
+                [
+                    'label' => 'Consommé',
+                    'valeur' => $solde->consomme,
+                    'detail' => null,
+                    'accent' => false,
+                    'aide' => 'Jours de vos congés approuvés, passés comme à venir.',
+                ],
+                [
+                    'label' => 'Engagé',
+                    'valeur' => $solde->engage,
+                    'detail' => null,
+                    'accent' => false,
+                    'aide' => "Jours de vos demandes soumises, en attente de décision. Ils sont déjà retenus sur votre disponible.",
+                ],
+                [
+                    'label' => 'Disponible',
+                    'valeur' => $solde->disponible(),
+                    'detail' => null,
+                    'accent' => true,
+                    'aide' => "Ce que vous pouvez encore poser aujourd'hui, engagements déduits.",
+                ],
+            ],
+        ]);
+    }
+
     #[Route('/block/kpis/{idEntreprise}', name: 'block_kpis', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
     public function loadBlockKpis(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): Response
     {

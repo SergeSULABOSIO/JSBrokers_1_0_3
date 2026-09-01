@@ -43,6 +43,33 @@ class RolesEnAdministration implements OwnerAwareInterface
     #[Groups(['list:read'])]
     private array $accessAssistantIa = [];
 
+    /**
+     * Accès à la rubrique « Congés » (demandes de congé du cabinet).
+     *
+     * LE NIVEAU DIT LE RÔLE, et c'est tout ce qu'il y a à paramétrer :
+     *  - Lecture      : consulter (ses propres demandes, cf. CongeVisibiliteScope) ;
+     *  - Écriture     : poser une demande ;
+     *  - Modification : DÉCIDER — approuver, refuser, annuler une absence commencée.
+     *                   C'est ce niveau, et lui seul, qui fait un VALIDEUR, et c'est
+     *                   aussi lui qui ouvre la vue sur les demandes de tout le cabinet ;
+     *  - Suppression  : supprimer une demande.
+     *
+     * Aucune liste de valideurs n'est stockée ailleurs : elle se déduit de ce champ, et
+     * se règle donc dans le gestionnaire de rôles comme n'importe quel autre accès.
+     */
+    #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
+    private array $accessConge = [];
+
+    /**
+     * Accès au PARAMÉTRAGE des congés : types d'absence et jours fériés. Distinct du
+     * précédent — on peut confier la validation des demandes sans ouvrir le réglage des
+     * droits à congé, qui engage le cabinet bien au-delà d'un dossier.
+     */
+    #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
+    private array $accessCongeParametre = [];
+
     public function getId(): ?int
     {
         return $this->id;
@@ -104,6 +131,30 @@ class RolesEnAdministration implements OwnerAwareInterface
     public function setAccessAssistantIa(array $accessAssistantIa): static
     {
         $this->accessAssistantIa = $accessAssistantIa;
+
+        return $this;
+    }
+
+    public function getAccessConge(): array
+    {
+        return $this->accessConge;
+    }
+
+    public function setAccessConge(array $accessConge): static
+    {
+        $this->accessConge = $accessConge;
+
+        return $this;
+    }
+
+    public function getAccessCongeParametre(): array
+    {
+        return $this->accessCongeParametre;
+    }
+
+    public function setAccessCongeParametre(array $accessCongeParametre): static
+    {
+        $this->accessCongeParametre = $accessCongeParametre;
 
         return $this;
     }

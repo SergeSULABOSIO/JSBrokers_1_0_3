@@ -6,6 +6,7 @@ use App\Entity\AssistantMessage;
 use App\Entity\Avenant;
 use App\Entity\ChargeCourtier;
 use App\Entity\Cotation;
+use App\Entity\DemandeConge;
 use App\Entity\DepenseCourtier;
 use App\Entity\Entreprise;
 use App\Entity\Feedback;
@@ -50,6 +51,17 @@ final class TokenPricing
         // écriture (≈ 2 écritures standard — le traitement IA coûte plus qu'un
         // simple enregistrement). Paramétrable en console comme les autres poids.
         AssistantMessage::class => 10,
+        // Demande de congé : la rubrique se facture À L'ACTE, sans abonnement ni
+        // montant par agent — un cabinet qui ne pose pas de congés ne paie rien pour
+        // elle. Le poids est celui d'une proposition, l'acte administratif de
+        // référence du groupe. Paramétrable en console comme les autres.
+        //
+        // Le métrage lui-même est GÉNÉRIQUE : rien à écrire de plus, la demande est
+        // débitée par le même point de passage que toutes les autres écritures
+        // (WorkspaceMutationService::commitWrite). Les lignes dérivées d'une décision
+        // — mouvement de compteur, historique — restent au poids standard : elles ne
+        // sont pas un acte de l'utilisateur, mais la conséquence du sien.
+        DemandeConge::class     => 50,
     ];
 
     /** Poids par défaut en écriture pour toute entité non explicitement listée. */

@@ -41,6 +41,11 @@ class CorporateMailer
      * @param array<int, array{content:string, filename:string, mime?:string}> $attachments
      *        Pièces jointes optionnelles (ex. facture PDF). `mime` par défaut
      *        application/octet-stream.
+     * @param string|string[] $cc Destinataires en COPIE — ceux qui doivent être tenus au
+     *        courant sans que le message leur soit adressé. Un circuit de validation en a
+     *        besoin : la décision s'adresse au collaborateur, les autres valideurs la
+     *        voient passer. Les mettre tous en destinataires principaux ferait croire à
+     *        chacun que la réponse lui revient.
      */
     public function send(
         string|array $to,
@@ -49,6 +54,7 @@ class CorporateMailer
         array $contextData = [],
         ?Address $replyTo = null,
         array $attachments = [],
+        string|array $cc = [],
     ): void {
         $contextData += [
             'logoPath'    => $this->logoPath,
@@ -64,6 +70,10 @@ class CorporateMailer
 
         foreach ((array) $to as $destinataire) {
             $email->addTo($destinataire);
+        }
+
+        foreach (array_filter((array) $cc) as $copie) {
+            $email->addCc($copie);
         }
 
         if ($replyTo !== null) {

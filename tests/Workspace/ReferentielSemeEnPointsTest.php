@@ -55,7 +55,9 @@ class ReferentielSemeEnPointsTest extends WebTestCase
             'DELETE af FROM autorite_fiscale af JOIN taxe t ON af.taxe_id = t.id JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :n',
             ['n' => self::ENT],
         );
-        foreach (['risque', 'type_revenu', 'chargement', 'groupe', 'taxe', 'monnaie'] as $table) {
+        // Le semis d'une entreprise crée aussi ses types d'absence et la dotation de
+        // ses agents : les retirer AVANT l'invité, dont ils dépendent.
+        foreach (['mouvement_conge', 'type_absence', 'roles_en_administration', 'risque', 'type_revenu', 'chargement', 'groupe', 'taxe', 'monnaie'] as $table) {
             $conn->executeStatement("DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :n", ['n' => self::ENT]);
         }
         $conn->executeStatement('DELETE i FROM invite i JOIN entreprise e ON i.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);

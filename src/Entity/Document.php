@@ -107,6 +107,13 @@ class Document
     #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?Contact $contact = null;
 
+    // Justificatif d'une demande de congé (certificat médical, acte…). La relation
+    // suffit : DocumentFichier::parentsPossibles() la découvre par les métadonnées
+    // Doctrine, et les actions « Attacher des pièces » / « Voir les documents »
+    // apparaissent d'elles-mêmes sur la rubrique.
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?DemandeConge $demandeConge = null;
+
     #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?Depense $depense = null;
 
@@ -519,6 +526,18 @@ class Document
     public function setContact(?Contact $contact): static
     {
         $this->contact = $contact;
+
+        return $this;
+    }
+
+    public function getDemandeConge(): ?DemandeConge
+    {
+        return $this->demandeConge;
+    }
+
+    public function setDemandeConge(?DemandeConge $demandeConge): static
+    {
+        $this->demandeConge = $demandeConge;
 
         return $this;
     }

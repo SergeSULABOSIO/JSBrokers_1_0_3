@@ -124,6 +124,10 @@ class PlanTarifaireExtension extends AbstractExtension
         Document::class      => ['fr' => 'Document',       'en' => 'Document',        'icon' => 'document'],
         Classeur::class      => ['fr' => 'Classeur',       'en' => 'Binder',          'icon' => 'classeur'],
         Invite::class        => ['fr' => 'Invité',         'en' => 'Invitee',         'icon' => 'invite'],
+        \App\Entity\DemandeConge::class => ['fr' => 'Demande de congé', 'en' => 'Leave request', 'icon' => 'conge'],
+        \App\Entity\TypeAbsence::class  => ['fr' => "Type d'absence",   'en' => 'Absence type',  'icon' => 'type-absence'],
+        \App\Entity\JourFerie::class    => ['fr' => 'Jour férié',       'en' => 'Public holiday', 'icon' => 'jour-ferie'],
+        \App\Entity\RegimeTravail::class => ['fr' => 'Régime de travail', 'en' => 'Work schedule', 'icon' => 'regime-travail'],
 
         // ── IA ───────────────────────────────────────────────────────────────
         // Chaque message envoyé à l'assistant IA est métré comme une écriture :

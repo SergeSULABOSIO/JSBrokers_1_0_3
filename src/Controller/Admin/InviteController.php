@@ -45,6 +45,7 @@ class InviteController extends AbstractController
         private readonly JSBDynamicSearchService $searchService,
         private readonly SerializerInterface $serializer,
         private readonly EventDispatcherInterface $dispatcher,
+        private readonly \App\Service\Conge\DroitCongeParDefaut $droitCongeParDefaut,
         CanvasBuilder $canvasBuilder
     ) {
         $this->canvasBuilder = $canvasBuilder;
@@ -145,6 +146,18 @@ class InviteController extends AbstractController
                     $invite->setUtilisateur(null);
                     $invite->setEmail($email);
                 }
+
+                // TOUT COLLABORATEUR PEUT DEMANDER UN CONGÉ DÈS SON ARRIVÉE.
+                //
+                // Seule attribution d'office de l'application : poser un congé n'est pas
+                // une faveur qu'on accorde, c'est un droit du contrat de travail. Sans
+                // elle, le nouvel arrivant ne verrait qu'un menu sans la rubrique, et
+                // rien ne lui dirait pourquoi.
+                //
+                // C'est un VRAI rôle, visible et révocable dans le gestionnaire des
+                // rôles — jamais une exception cachée dans le moteur d'accès. Il n'ouvre
+                // ni la validation, ni le paramétrage (cf. DroitCongeParDefaut).
+                $this->droitCongeParDefaut->appliquer($invite);
             }
         );
 

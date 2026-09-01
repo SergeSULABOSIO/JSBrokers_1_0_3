@@ -107,11 +107,24 @@ parameters:
 
                 Administration:
                     icone: 'document'
-                    description: "<p>Organisez vos documents, gérez les accès de vos collaborateurs et sécurisez vos données. Votre cabinet est parfaitement structuré.</p><p>Collaborez en toute sérénité et retrouvez n'importe quelle information en un instant. Votre administration est simplifiée et sécurisée.</p><p><strong>Une administration rigoureuse est le socle de votre conformité et de votre efficacité. Elle protège votre activité.</strong></p>"
+                    description: "<p>Organisez vos documents, gérez les accès et les congés de vos collaborateurs, et sécurisez vos données. Votre cabinet est parfaitement structuré.</p><p>Collaborez en toute sérénité et retrouvez n'importe quelle information en un instant. Votre administration est simplifiée et sécurisée.</p><p><strong>Une administration rigoureuse est le socle de votre conformité et de votre efficacité. Elle protège votre activité.</strong></p>"
                     rubriques:
                         Documents: { icone: 'document', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\Document' }
                         Classeurs: { icone: 'classeur', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\Classeur' }
                         Invités: { icone: 'invite', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\Invite' }
+                        # ── CONGÉS ────────────────────────────────────────────────────
+                        # « Congés » porte les demandes ; les deux rubriques suivantes ne
+                        # sont que son paramétrage et partagent un droit distinct
+                        # (RolesEnAdministration::accessCongeParametre) — on peut confier
+                        # la validation des demandes sans ouvrir le réglage des droits à
+                        # congé, qui engage le cabinet bien au-delà d'un dossier.
+                        #
+                        # Sur « Congés », le niveau MODIFICATION fait le VALIDEUR : il
+                        # ouvre la décision ET la vue sur les demandes de tout le cabinet.
+                        # En deçà, le collaborateur ne voit que les siennes.
+                        "Congés": { icone: 'conge', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\DemandeConge' }
+                        "Types d'absence": { icone: 'type-absence', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\TypeAbsence' }
+                        "Jours fériés": { icone: 'jour-ferie', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\JourFerie' }
 
                 IA:
                     icone: 'assistant-ia'

@@ -33,6 +33,11 @@ class OutilsDePlanTest extends KernelTestCase
         'preparer_mouvement_avenant',
         'modifier_composition_prime',
         'signaler_paiement_prime',
+        // Congés : poser une demande et décider d'une demande font naître la barre de
+        // décision comme tout le reste. Les inscrire ici garantit qu'un futur remaniement
+        // ne leur retirera pas le marqueur sans qu'on le voie.
+        'preparer_demande_conge',
+        'preparer_decision_conge',
     ];
 
     /**

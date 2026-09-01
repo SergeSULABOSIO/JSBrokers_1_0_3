@@ -1,0 +1,299 @@
+<?php
+
+namespace App\Controller\Admin;
+
+use App\Constantes\Constante;
+use App\Entity\DemandeConge;
+use App\Entity\Invite;
+use App\Entity\Traits\HandleChildAssociationTrait;
+use App\Form\DemandeCongeType;
+use App\Repository\DemandeCongeRepository;
+use App\Repository\EntrepriseRepository;
+use App\Repository\InviteRepository;
+use App\Service\Conge\CalculateurSolde;
+use App\Service\Conge\CongeTransitionException;
+use App\Service\Conge\DemandeCongePolicy;
+use App\Service\Conge\DemandeCongeWorkflow;
+use App\Services\Canvas\CalculationProvider;
+use App\Services\CanvasBuilder;
+use App\Services\JSBDynamicSearchService;
+use App\Services\Search\CongeVisibiliteScope;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Requirement\Requirement;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Serializer\SerializerInterface;
+
+/**
+ * CRUD workspace des demandes de congé (module Administration → Congés).
+ *
+ * ── DEUX GARDES, PAS UNE ────────────────────────────────────────────────────────────
+ * 1. La LISTE est restreinte en SQL par CongeVisibiliteScope, réinjecté à chaque requête
+ *    via `$extraCriteria` : le critère est fusionné APRÈS la charge utile du navigateur,
+ *    il n'est donc pas retirable par celui qu'il vise.
+ * 2. Les accès DIRECTS (fiche, soumission, suppression, collections) sont gardés objet
+ *    par objet par DemandeCongePolicy. Masquer une ligne de liste ne protège rien si la
+ *    fiche du collègue reste ouverte à qui devine son identifiant.
+ *
+ * ── LES TRANSITIONS NE SONT PAS DES ÉDITIONS ────────────────────────────────────────
+ * Soumettre, approuver, refuser, annuler ne passent pas par le formulaire : ce sont des
+ * gestes, avec leurs propres règles, et ils appellent DemandeCongeWorkflow — le même
+ * service que l'assistant. C'est ce qui rend les deux canaux rigoureusement équivalents.
+ */
+#[Route("/admin/demandeconge", name: 'admin.demandeconge.')]
+#[IsGranted('ROLE_USER')]
+class DemandeCongeController extends AbstractController
+{
+    use HandleChildAssociationTrait;
+    use ControllerUtilsTrait;
+
+    public function __construct(
+        private EntityManagerInterface $em,
+        private EntrepriseRepository $entrepriseRepository,
+        private InviteRepository $inviteRepository,
+        private DemandeCongeRepository $demandeCongeRepository,
+        private Constante $constante,
+        private JSBDynamicSearchService $searchService,
+        private SerializerInterface $serializer,
+        private CalculationProvider $calculationProvider,
+        private DemandeCongePolicy $policy,
+        private DemandeCongeWorkflow $workflow,
+        private CalculateurSolde $calculateurSolde,
+        private CongeVisibiliteScope $visibilite,
+        CanvasBuilder $canvasBuilder,
+    ) {
+        $this->canvasBuilder = $canvasBuilder;
+    }
+
+    protected function getCollectionMap(): array
+    {
+        return $this->buildCollectionMapFromEntity(DemandeConge::class);
+    }
+
+    protected function getParentAssociationMap(): array
+    {
+        return $this->buildParentAssociationMapFromEntity(DemandeConge::class);
+    }
+
+    #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function index(Request $request)
+    {
+        return $this->renderViewOrListComponent(DemandeConge::class, $request);
+    }
+
+    /**
+     * Rafraîchissement de la liste (recherche, chips, pagination).
+     *
+     * LE PÉRIMÈTRE EST REPOSÉ ICI, à chaque appel. `renderViewOrListComponent` fusionne
+     * `$extraCriteria` après les critères venus du navigateur : un collaborateur qui
+     * efface le badge « Mes demandes » ne l'efface donc que pour l'affichage, jamais pour
+     * la requête.
+     */
+    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
+    public function query(Request $request): Response
+    {
+        return $this->renderViewOrListComponent(
+            DemandeConge::class,
+            $request,
+            true,
+            $this->visibilite->critereFor($this->getInvite()),
+        );
+    }
+
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
+    public function getFormApi(?DemandeConge $demandeConge, Request $request): Response
+    {
+        if ($demandeConge !== null && !$this->policy->peutVoir($this->getInvite(), $demandeConge)) {
+            return $this->accessDeniedJson();
+        }
+
+        return $this->renderFormCanvas(
+            $request,
+            DemandeConge::class,
+            DemandeCongeType::class,
+            $demandeConge,
+            function (DemandeConge $demande, Invite $invite) {
+                $demande->setEntreprise($invite->getEntreprise());
+                // L'agent par défaut, c'est SOI. Un collaborateur pose ses propres congés
+                // neuf fois sur dix ; un valideur qui saisit pour autrui change le champ.
+                $demande->setAgent($invite);
+                $demande->setStatut(DemandeConge::STATUT_BROUILLON);
+                $demande->setOrigine(DemandeConge::ORIGINE_UI);
+                $demande->setDateDebut(new \DateTimeImmutable('today'));
+                $demande->setDateFin(new \DateTimeImmutable('today'));
+            }
+        );
+    }
+
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
+    public function submitApi(Request $request): JsonResponse
+    {
+        return $this->handleFormSubmission($request, DemandeConge::class, DemandeCongeType::class);
+    }
+
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
+    public function deleteApi(DemandeConge $demandeConge): Response
+    {
+        if (!$this->policy->peutVoir($this->getInvite(), $demandeConge)) {
+            return $this->accessDeniedJson();
+        }
+
+        return $this->handleDeleteApi($demandeConge);
+    }
+
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = 'generic'): Response
+    {
+        $demande = $this->demandeCongeRepository->find($id);
+        if ($demande !== null && !$this->policy->peutVoir($this->getInvite(), $demande)) {
+            return $this->accessDeniedJson();
+        }
+
+        return $this->handleCollectionApiRequest($id, $collectionName, DemandeConge::class, $usage);
+    }
+
+    // ─────────────────────────── LES GESTES DU CIRCUIT ─────────────────────────────
+
+    /**
+     * Boîte de décision, ouverte depuis la barre d'outils ou le clic droit.
+     *
+     * Le geste voyage dans l'URL (`?geste=soumettre|approuver|refuser|annuler`) : le
+     * picker n'a rien à deviner. L'aperçu vient du SERVEUR — décompte, solde avant et
+     * après —, du même calcul que celui de l'écran et des mails.
+     */
+    #[Route('/api/decision-picker/{id}', name: 'api.decision_picker', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function decisionPicker(DemandeConge $demandeConge, Request $request): Response
+    {
+        $contexte = $this->contexteDuGeste($demandeConge, $request);
+        if ($contexte instanceof JsonResponse) {
+            return $contexte;
+        }
+
+        return $this->render('components/conge/_decision_picker.html.twig', [
+            'geste' => $contexte,
+            'demande' => $demandeConge,
+            'apercu' => $this->apercuDuGeste($demandeConge, $contexte),
+        ]);
+    }
+
+    /**
+     * ENREGISTRE le geste. Toutes les règles — nul ne valide sa propre demande, motif
+     * obligatoire après le début, écriture du mouvement de compteur, ligne d'historique —
+     * vivent dans DemandeCongeWorkflow, partagé avec l'assistant.
+     */
+    #[Route('/api/decision/{id}', name: 'api.decision_executer', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    public function decisionExecuter(DemandeConge $demandeConge, Request $request): JsonResponse
+    {
+        $contexte = $this->contexteDuGeste($demandeConge, $request);
+        if ($contexte instanceof JsonResponse) {
+            return $contexte;
+        }
+        $geste = $contexte;
+
+        $args = json_decode($request->getContent() ?: '{}', true);
+        $commentaire = is_array($args) ? trim((string) ($args['commentaire'] ?? '')) : '';
+        $acteur = $this->getInvite();
+
+        try {
+            match ($geste) {
+                'soumettre' => $this->workflow->soumettre($demandeConge, $acteur),
+                'approuver' => $this->workflow->decider($demandeConge, $acteur, DemandeCongeWorkflow::DECISION_APPROUVER, $commentaire ?: null),
+                'refuser' => $this->workflow->decider($demandeConge, $acteur, DemandeCongeWorkflow::DECISION_REFUSER, $commentaire ?: null),
+                'annuler' => $this->workflow->annuler($demandeConge, $acteur, $commentaire ?: null),
+            };
+        } catch (CongeTransitionException $e) {
+            return $this->json(
+                ['success' => false, 'message' => implode(' ', $e->violations), 'errors' => $e->violations],
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+            );
+        }
+
+        // Un seul flush pour la demande, sa ligne d'historique et, le cas échéant, son
+        // mouvement de compteur : les trois vivent ou meurent ensemble.
+        $this->em->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => $this->messageDuGeste($geste, $demandeConge),
+        ]);
+    }
+
+    /**
+     * Le geste demandé, une fois vérifié qu'il est possible ici et maintenant.
+     *
+     * Les quatre gestes n'ont pas les mêmes conditions ; on les demande au workflow, qui
+     * les détient, plutôt que de les réécrire ici en plus petit.
+     */
+    private function contexteDuGeste(DemandeConge $demande, Request $request): string|JsonResponse
+    {
+        $acteur = $this->getInvite();
+
+        if ($demande->getEntreprise()?->getId() !== $this->getEntreprise()->getId()) {
+            return $this->json(['message' => 'Demande introuvable dans cet espace de travail.'], Response::HTTP_NOT_FOUND);
+        }
+
+        if (!$this->policy->peutVoir($acteur, $demande)) {
+            return $this->accessDeniedJson();
+        }
+
+        $geste = (string) $request->query->get('geste', 'approuver');
+        if (!in_array($geste, ['soumettre', 'approuver', 'refuser', 'annuler'], true)) {
+            return $this->json(['message' => 'Geste inconnu.'], Response::HTTP_NOT_FOUND);
+        }
+
+        // Le picker s'OUVRE même si le geste est momentanément impossible : il affiche
+        // alors la raison, ce qui vaut mieux qu'un refus brut sans explication. C'est
+        // l'exécution, elle, qui refuse — via le workflow, source unique des règles.
+        return $geste;
+    }
+
+    /**
+     * Ce que le geste changera : décompte, solde avant et après, et ce qui l'empêche
+     * encore. N'écrit rien.
+     *
+     * @return array{pret: bool, violations: string[], jours: float, solde: ?\App\Service\Conge\SoldeConge, commentaireRequis: bool}
+     */
+    private function apercuDuGeste(DemandeConge $demande, string $geste): array
+    {
+        $acteur = $this->getInvite();
+        $agent = $demande->getAgent();
+
+        $violations = match ($geste) {
+            'soumettre' => $this->workflow->verifierSoumission($demande, $acteur),
+            'approuver' => $this->workflow->verifierDecision($demande, $acteur, DemandeCongeWorkflow::DECISION_APPROUVER),
+            'refuser' => $this->workflow->verifierDecision($demande, $acteur, DemandeCongeWorkflow::DECISION_REFUSER),
+            'annuler' => $this->workflow->verifierAnnulation($demande, $acteur, 'aperçu'),
+            default => ['Geste inconnu.'],
+        };
+
+        return [
+            'pret' => $violations === [],
+            'violations' => $violations,
+            'jours' => $demande->nbJoursFloat(),
+            'solde' => $agent !== null ? $this->calculateurSolde->pour($agent, $demande->getExercice()) : null,
+            // Une absence déjà commencée ne s'annule pas sans explication.
+            'commentaireRequis' => $geste === 'annuler' && $demande->aCommence(new \DateTimeImmutable('today')),
+        ];
+    }
+
+    private function messageDuGeste(string $geste, DemandeConge $demande): string
+    {
+        $agent = $demande->getAgent()?->getNom() ?? 'Le collaborateur';
+
+        return match ($geste) {
+            'soumettre' => $demande->getStatut() === DemandeConge::STATUT_APPROUVEE
+                // Le demandeur était le seul valideur : le dire, plutôt que de laisser
+                // croire à une validation par un tiers.
+                ? 'Demande enregistrée et auto-approuvée : vous êtes le seul valideur du cabinet.'
+                : 'Demande soumise. Les valideurs en ont été informés.',
+            'approuver' => sprintf('Congé approuvé. %s en a été informé.', $agent),
+            'refuser' => sprintf('Congé refusé. %s en a été informé.', $agent),
+            'annuler' => 'Congé annulé. Le solde a été recrédité.',
+            default => 'Décision enregistrée.',
+        };
+    }
+}
