@@ -47,6 +47,9 @@ class DemandeCongeEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "dateDecision", "intitule" => "Date de décision", "type" => "Date"],
                 ["code" => "commentaireDecision", "intitule" => "Commentaire de décision", "type" => "Texte"],
                 ["code" => "origine", "intitule" => "Origine", "type" => "Texte"],
+                // Ce qu'un valideur a fait franchir à cette demande : préavis, plafond
+                // d'absents, période de blocage. Vide dans le cas ordinaire.
+                ["code" => "controlesContournes", "intitule" => "Contrôles contournés", "type" => "Texte"],
                 ["code" => "documents", "intitule" => "Justificatifs", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
                 ["code" => "entreprise", "intitule" => "Entreprise", "type" => "Relation", "targetEntity" => Entreprise::class, "displayField" => "nom"],
             ], $this->getSpecificIndicators()),

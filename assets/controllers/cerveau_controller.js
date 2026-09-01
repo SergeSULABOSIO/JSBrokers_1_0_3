@@ -611,6 +611,9 @@ export default class extends Controller {
             case 'ui:conge.decision-request': // soumettre / approuver / refuser / annuler un congé
                 this.handleCongeDecisionRequest(payload);
                 break;
+            case 'ui:conge.calendrier-request': // grille mensuelle des absences de l'équipe
+                this.handleCongeCalendrierRequest(payload);
+                break;
             case 'conge:decision.enregistree': // succès d'un geste du circuit de validation
                 this._handleCongeDecisionEnregistree(payload);
                 break;
@@ -1996,6 +1999,23 @@ export default class extends Controller {
         await this._openStandalonePicker(payload.url, {
             controllerName: 'conge-decision-picker',
             errorLabel: 'la demande de congé',
+        });
+    }
+
+    /**
+     * LE CALENDRIER D'ÉQUIPE, ouvert depuis la barre d'outils des congés.
+     *
+     * Il ne porte sur AUCUNE ligne : l'action est déclarée `multi`, donc cliquable sans
+     * sélection. La grille — jours fériés du cabinet, régimes de travail, absences
+     * approuvées — est calculée et rendue par le serveur ; le navigateur ne fait que
+     * l'afficher et redemander un autre mois.
+     * @param {object} payload
+     * @param {string} payload.url - '/admin/demandeconge/api/calendrier'
+     */
+    async handleCongeCalendrierRequest(payload) {
+        await this._openStandalonePicker(payload.url, {
+            controllerName: 'conge-calendrier',
+            errorLabel: "le calendrier de l'équipe",
         });
     }
 

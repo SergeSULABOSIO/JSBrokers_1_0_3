@@ -128,6 +128,8 @@ class PlanTarifaireExtension extends AbstractExtension
         \App\Entity\TypeAbsence::class  => ['fr' => "Type d'absence",   'en' => 'Absence type',  'icon' => 'type-absence'],
         \App\Entity\JourFerie::class    => ['fr' => 'Jour férié',       'en' => 'Public holiday', 'icon' => 'jour-ferie'],
         \App\Entity\RegimeTravail::class => ['fr' => 'Régime de travail', 'en' => 'Work schedule', 'icon' => 'regime-travail'],
+        \App\Entity\ParametresConge::class => ['fr' => 'Paramètres des congés', 'en' => 'Leave settings', 'icon' => 'action:settings'],
+        \App\Entity\PeriodeBlocage::class => ['fr' => 'Période de blocage', 'en' => 'Blackout period', 'icon' => 'action:resiliation'],
 
         // ── IA ───────────────────────────────────────────────────────────────
         // Chaque message envoyé à l'assistant IA est métré comme une écriture :

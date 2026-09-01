@@ -109,7 +109,14 @@ class DemandeCongeWorkflow
 
         $this->figerLeDecompte($demande);
 
-        return $this->validator->violationsPourSoumission($demande);
+        // TROIS CONTRÔLES SONT CONTOURNABLES PAR UN VALIDEUR — préavis, absents
+        // simultanés, période de blocage. Pour lui ils ne refusent pas : ils signalent,
+        // et le signalement est CONSERVÉ sur la demande puis repris dans le mail. Un
+        // contournement silencieux se découvre toujours trop tard.
+        $controle = $this->validator->controler($demande, $this->policy->estValideur($acteur));
+        $demande->setControlesContournes($controle->contournementsEnTexte());
+
+        return $controle->violations;
     }
 
     /**

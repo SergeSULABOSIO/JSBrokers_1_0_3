@@ -4,9 +4,7 @@ namespace App\Service\Conge;
 
 use App\Entity\Invite;
 use App\Entity\JourFerie;
-use App\Entity\RegimeTravail;
 use App\Repository\JourFerieRepository;
-use App\Repository\RegimeTravailRepository;
 
 /**
  * COMBIEN DE JOURS UNE ABSENCE COÛTE RÉELLEMENT.
@@ -35,7 +33,7 @@ use App\Repository\RegimeTravailRepository;
 class CalculateurJoursOuvrables
 {
     public function __construct(
-        private readonly RegimeTravailRepository $regimeRepository,
+        private readonly RegimeDeLAgent $regimes,
         private readonly JourFerieRepository $jourFerieRepository,
     ) {
     }
@@ -143,20 +141,15 @@ class CalculateurJoursOuvrables
      * régime au milieu d'un congé est un cas que personne n'a rencontré ; s'il survenait,
      * c'est le régime du départ qui s'applique — celui sous lequel la demande a été posée.
      *
+     * La lecture elle-même vit dans RegimeDeLAgent, partagée avec le calendrier d'équipe :
+     * deux réponses possibles à « quels jours travaille-t-il ? » finiraient par diverger,
+     * et la grille cesserait de correspondre au décompte.
+     *
      * @return int[]
      */
     private function joursOuvresDe(?Invite $agent, \DateTimeInterface $debut, \DateTimeInterface $fin): array
     {
-        if ($agent === null) {
-            return RegimeTravail::JOURS_OUVRES_DEFAUT;
-        }
-
-        $regime = $this->regimeRepository->applicableA($agent, $debut);
-        $jours = $regime?->getJoursOuvres() ?? [];
-
-        // Un régime enregistré SANS aucun jour travaillé rendrait toute absence gratuite.
-        // C'est une saisie incomplète, pas une intention : on retombe sur le défaut.
-        return $jours !== [] ? $jours : RegimeTravail::JOURS_OUVRES_DEFAUT;
+        return $this->regimes->joursOuvresDe($agent, $debut);
     }
 
     /**

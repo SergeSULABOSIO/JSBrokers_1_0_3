@@ -9,6 +9,7 @@ use App\Entity\RegimeTravail;
 use App\Repository\JourFerieRepository;
 use App\Repository\RegimeTravailRepository;
 use App\Service\Conge\CalculateurJoursOuvrables;
+use App\Service\Conge\RegimeDeLAgent;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -225,13 +226,16 @@ class CalculateurJoursOuvrablesTest extends TestCase
      */
     private function calculateur(?RegimeTravail $regime = null, array $feries = []): CalculateurJoursOuvrables
     {
+        // On monte le VRAI RegimeDeLAgent sur un repository simulé : c'est lui qui porte
+        // le repli « temps plein du lundi au vendredi », et le tester à travers un double
+        // reviendrait à tester le double.
         $regimeRepository = $this->createMock(RegimeTravailRepository::class);
         $regimeRepository->method('applicableA')->willReturn($regime);
 
         $ferieRepository = $this->createMock(JourFerieRepository::class);
         $ferieRepository->method('pourPeriode')->willReturn($feries);
 
-        return new CalculateurJoursOuvrables($regimeRepository, $ferieRepository);
+        return new CalculateurJoursOuvrables(new RegimeDeLAgent($regimeRepository), $ferieRepository);
     }
 
     private function agent(): Invite

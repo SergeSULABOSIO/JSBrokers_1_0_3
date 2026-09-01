@@ -107,6 +107,21 @@ class DemandeConge implements OwnerAwareInterface
     private string $origine = self::ORIGINE_UI;
 
     /**
+     * Contrôles franchis grâce au statut de valideur, au moment de la soumission :
+     * préavis non respecté, plafond d'absents dépassé, période de blocage.
+     *
+     * UN CONTOURNEMENT NE DOIT PAS ÊTRE SILENCIEUX. Un valideur a le droit de passer
+     * outre ; le cabinet a celui de le savoir — c'est repris dans le mail de soumission,
+     * et cela reste lisible des mois plus tard sur la fiche.
+     *
+     * Conservé plutôt que recalculé : les paramètres du cabinet changent, et un contrôle
+     * recalculé six mois après ne dirait plus ce qui a réellement été contourné.
+     */
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['list:read'])]
+    private ?string $controlesContournes = null;
+
+    /**
      * Justificatifs (certificat médical, acte…) et toute pièce du dossier.
      *
      * @var Collection<int, Document>
@@ -339,6 +354,30 @@ class DemandeConge implements OwnerAwareInterface
         $this->origine = $origine;
 
         return $this;
+    }
+
+    public function getControlesContournes(): ?string
+    {
+        return $this->controlesContournes;
+    }
+
+    public function setControlesContournes(?string $controlesContournes): static
+    {
+        $this->controlesContournes = $controlesContournes;
+
+        return $this;
+    }
+
+    /**
+     * Les contrôles contournés, un par ligne.
+     *
+     * @return string[]
+     */
+    public function contournements(): array
+    {
+        $texte = trim((string) $this->controlesContournes);
+
+        return $texte === '' ? [] : (preg_split('/\r?\n/', $texte) ?: []);
     }
 
     /**

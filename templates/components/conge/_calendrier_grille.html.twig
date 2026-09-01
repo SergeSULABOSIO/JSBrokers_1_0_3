@@ -1,0 +1,102 @@
+{#
+    LA GRILLE ELLE-MÊME — fragment rechargé à chaque changement de mois.
+
+    Il est isolé du reste de la boîte parce que c'est LUI que le serveur renvoie quand on
+    navigue : le navigateur substitue ce bloc et rien d'autre. Recharger la boîte entière
+    ferait perdre le focus et rejouerait l'animation d'ouverture à chaque clic de flèche.
+#}
+<div class="jsb-picker-listwrap" style="padding: .5rem 1.25rem 1rem;">
+
+    {# ── NAVIGATION ─────────────────────────────────────────────────────────────── #}
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary"
+                data-cal-mois="{{ grille.precedent.mois }}" data-cal-annee="{{ grille.precedent.annee }}"
+                aria-label="Mois précédent">
+            ‹ Mois précédent
+        </button>
+        <strong style="color:#0d2440;">{{ grille.libelle }}</strong>
+        <button type="button" class="btn btn-sm btn-outline-secondary"
+                data-cal-mois="{{ grille.suivant.mois }}" data-cal-annee="{{ grille.suivant.annee }}"
+                aria-label="Mois suivant">
+            Mois suivant ›
+        </button>
+    </div>
+
+    {% if grille.lignes|length == 0 %}
+        <p class="jsb-picker-empty">
+            Aucune absence approuvée {{ perimetre == 'equipe' ? 'dans votre équipe' : 'dans le cabinet' }}
+            sur {{ grille.libelle }}.
+        </p>
+    {% else %}
+        {# LA GRILLE DÉFILE DANS SON PROPRE CADRE : trente et une colonnes ne tiennent pas
+           dans un panneau, et laisser la page défiler horizontalement emporterait l'en-tête
+           avec elle. #}
+        <div style="overflow-x:auto;">
+            <table class="table table-sm mb-2" style="border-collapse:separate; border-spacing:0; font-size:.75rem;">
+                <thead>
+                    <tr>
+                        <th scope="col" style="position:sticky; left:0; background:#fff; z-index:2; min-width:160px; text-align:left; color:#0d2440;">
+                            Collaborateur
+                        </th>
+                        {% for jour in grille.jours %}
+                            <th scope="col"
+                                title="{{ jour.ferie ?? '' }}"
+                                style="width:24px; min-width:24px; text-align:center; font-weight:{{ jour.aujourdhui ? '700' : '400' }};
+                                       color:{{ jour.ferie ? '#c0392b' : (jour.weekend ? '#adb5bd' : '#0d2440') }};
+                                       background:{{ jour.aujourdhui ? '#e7f0ff' : 'transparent' }};">
+                                <div>{{ jour.lettre }}</div>
+                                <div>{{ jour.numero }}</div>
+                            </th>
+                        {% endfor %}
+                        <th scope="col" style="min-width:52px; text-align:right; color:#0d2440;">Jours</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ligne in grille.lignes %}
+                        <tr>
+                            <th scope="row" style="position:sticky; left:0; background:#fff; z-index:1; text-align:left; font-weight:600; color:#0d2440; white-space:nowrap;">
+                                {{ ligne.agent }}
+                            </th>
+                            {% for numero, case in ligne.cases %}
+                                {% set jour = grille.jours[numero] %}
+                                <td style="padding:1px; text-align:center;
+                                           background:{{ jour.ferie or jour.weekend ? '#f1f3f5' : 'transparent' }};">
+                                    {% if case.type %}
+                                        {# Le `title` porte le nom et le type : l'information ne
+                                           repose jamais sur la seule couleur. #}
+                                        <span title="{{ case.libelle }}"
+                                              aria-label="{{ case.libelle }}"
+                                              style="display:block; width:100%; height:16px; border-radius:3px;
+                                                     background:{{ case.couleur }};
+                                                     opacity:{{ case.travaille ? '1' : '.35' }};"></span>
+                                    {% else %}
+                                        <span aria-hidden="true" style="display:block; height:16px;"></span>
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                            <td style="text-align:right; font-variant-numeric:tabular-nums; color:#0047AB; font-weight:600;">
+                                {{ ligne.total|number_format(1, ',', ' ') }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {# ── LÉGENDE ────────────────────────────────────────────────────────────────
+           Seuls les types PRÉSENTS ce mois-ci : une légende exhaustive listerait des
+           couleurs qu'on ne voit nulle part, et obligerait à chercher laquelle sert. #}
+        <div class="d-flex flex-wrap align-items-center gap-3" style="font-size:.75rem;">
+            {% for libelle, couleur in grille.legende %}
+                <span class="d-inline-flex align-items-center gap-1">
+                    <span aria-hidden="true" style="display:inline-block; width:12px; height:12px; border-radius:3px; background:{{ couleur }};"></span>
+                    {{ libelle }}
+                </span>
+            {% endfor %}
+            <span class="d-inline-flex align-items-center gap-1 text-muted">
+                <span aria-hidden="true" style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#0047AB; opacity:.35;"></span>
+                jour non travaillé par l'intéressé (non décompté)
+            </span>
+        </div>
+    {% endif %}
+</div>

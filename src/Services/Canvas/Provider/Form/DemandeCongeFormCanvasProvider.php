@@ -62,6 +62,7 @@ class DemandeCongeFormCanvasProvider implements FormCanvasProviderInterface
                 "valideur"            => "invite",
                 "dateDecision"        => "action:calendar",
                 "commentaireDecision" => "action:reply",
+                "controlesContournes" => "action:alert",
                 "documents"           => "document",
             ],
             "attribute_actions" => [
@@ -91,6 +92,18 @@ class DemandeCongeFormCanvasProvider implements FormCanvasProviderInterface
                     "event"     => "ui:conge.decision-request",
                     "url"       => "/admin/demandeconge/api/decision-picker/%id%?geste=refuser",
                     "condition" => ["field" => "peutEtreDecidee", "value" => true],
+                ],
+                [
+                    // LE CALENDRIER N'EST PAS UNE ACTION SUR UNE LIGNE : `multi` le rend
+                    // cliquable sans sélection, comme « Ajouter au chat ». Sans lui, il
+                    // faudrait cocher une demande au hasard pour voir le mois.
+                    "label"     => "Calendrier de l'équipe",
+                    "icon"      => "action:calendar",
+                    "groupe"    => "Circuit de validation",
+                    "groupe_icone" => "conge",
+                    "event"     => "ui:conge.calendrier-request",
+                    "url"       => "/admin/demandeconge/api/calendrier",
+                    "multi"     => true,
                 ],
                 [
                     "label"     => "Annuler le congé",
@@ -131,6 +144,7 @@ class DemandeCongeFormCanvasProvider implements FormCanvasProviderInterface
             ["couleur_fond" => "white", "hidden" => true, "colonnes" => [["champs" => ["valideur"]]]],
             ["couleur_fond" => "white", "hidden" => true, "colonnes" => [["champs" => ["dateDecision"]]]],
             ["couleur_fond" => "white", "hidden" => true, "colonnes" => [["champs" => ["commentaireDecision"]]]],
+            ["couleur_fond" => "white", "hidden" => true, "colonnes" => [["champs" => ["controlesContournes"]]]],
         ];
 
         // Justificatifs : certificat médical, acte, attestation…

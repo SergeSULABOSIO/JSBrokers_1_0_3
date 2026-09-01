@@ -100,6 +100,10 @@ class DemandeCongeType extends AbstractType
                 'input' => 'datetime_immutable',
                 'required' => false,
             ])
+            ->add('controlesContournes', TextareaType::class, [
+                'label' => 'Contrôles contournés',
+                'required' => false,
+            ])
             ->add('commentaireDecision', TextareaType::class, [
                 'label'    => 'Commentaire de décision',
                 'required' => false,

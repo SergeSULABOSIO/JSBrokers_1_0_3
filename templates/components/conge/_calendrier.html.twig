@@ -1,0 +1,67 @@
+{#
+    LE CALENDRIER D'ÉQUIPE — grille mensuelle, ouverte depuis la barre d'outils de la
+    rubrique Congés.
+
+    ── POURQUOI UNE GRILLE ET NON UNE LISTE ────────────────────────────────────────────
+    Une liste de demandes répond à « qui a posé quoi ». Elle ne répond pas à « peut-on se
+    permettre trois absents la semaine du 12 ? », qui est la question d'un responsable —
+    et qu'on ne lit qu'en voyant les absences les unes SOUS les autres, alignées sur les
+    mêmes jours.
+
+    ── AUCUN CALCUL ICI ────────────────────────────────────────────────────────────────
+    Jours, week-ends, fériés et cases viennent de CalendrierEquipe. Un calendrier dont le
+    gabarit recalculerait les cellules finirait par ne plus dire la même chose que la
+    liste, et personne ne saurait lequel a raison.
+
+    ── L'INFORMATION N'EST JAMAIS PORTÉE PAR LA SEULE COULEUR (WCAG 1.4.1) ──────────────
+    Chaque case absente porte un `title` nommant le collaborateur et le type, et la
+    légende associe chaque couleur à son libellé.
+
+    Miroir visuel des pickers jsb-picker-* ; charte cobalt #0047AB.
+#}
+<div class="jsb-picker-overlay"
+     data-controller="conge-calendrier"
+     data-conge-calendrier-url-value="{{ path('admin.demandeconge.api.calendrier') }}"
+     data-picker-overlay>
+    <div class="jsb-picker-modal jsb-picker-modal--large"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="jsb-cal-title"
+         tabindex="-1">
+
+        <div class="modal-header jsb-picker-header">
+            <div class="d-flex align-items-center">
+                <span class="me-2 d-inline-flex" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:calendar') }}" style="width:22px;height:22px;color:#0047AB;" />
+                </span>
+                <h5 id="jsb-cal-title" class="modal-title mb-0">
+                    Absences — {{ grille.libelle }}
+                </h5>
+            </div>
+            <button type="button" class="btn-close" data-picker-close aria-label="Fermer la fenêtre"></button>
+        </div>
+
+        <div class="jsb-picker-progress" data-picker-progress role="progressbar" aria-hidden="true">
+            <div class="jsb-picker-progress-bar"></div>
+        </div>
+
+        {# Le fragment rechargé à chaque changement de mois : le serveur rend la grille,
+           le navigateur substitue le bloc. #}
+        <div data-conge-calendrier-target="grille">
+            {{ include('components/conge/_calendrier_grille.html.twig', {grille: grille, perimetre: perimetre}) }}
+        </div>
+
+        <footer class="jsb-picker-foot">
+            <span class="jsb-picker-hint text-muted small">
+                Seules les absences <strong>approuvées</strong> sont affichées : une demande en attente
+                n'est pas une absence.
+            </span>
+            <span class="d-inline-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                    Fermer
+                </button>
+            </span>
+        </footer>
+    </div>
+</div>
