@@ -111,32 +111,6 @@ class DemandeCongeFormCanvasProvider implements FormCanvasProviderInterface
                     "condition" => ["field" => "peutEtreDecidee", "value" => true],
                 ],
                 [
-                    // LES COMPTEURS NE SONT PAS UNE ACTION SUR UNE LIGNE non plus : ils
-                    // regardent TOUT le cabinet. `multi` les rend cliquables sans
-                    // sélection. Le serveur refuse à qui n'est pas valideur — la grille
-                    // expose les soldes de chacun, et l'ajustement écrit sur le compteur
-                    // d'autrui.
-                    "label"     => "Compteurs de congés",
-                    "icon"      => "action:count",
-                    "groupe"    => "Circuit de validation",
-                    "groupe_icone" => "conge",
-                    "event"     => "ui:conge.compteurs-request",
-                    "url"       => "/admin/compteurconge/api/grille",
-                    "multi"     => true,
-                ],
-                [
-                    // LE CALENDRIER N'EST PAS UNE ACTION SUR UNE LIGNE : `multi` le rend
-                    // cliquable sans sélection, comme « Ajouter au chat ». Sans lui, il
-                    // faudrait cocher une demande au hasard pour voir le mois.
-                    "label"     => "Calendrier de l'équipe",
-                    "icon"      => "action:calendar",
-                    "groupe"    => "Circuit de validation",
-                    "groupe_icone" => "conge",
-                    "event"     => "ui:conge.calendrier-request",
-                    "url"       => "/admin/demandeconge/api/calendrier",
-                    "multi"     => true,
-                ],
-                [
                     "label"     => "Annuler le congé",
                     "icon"      => "action:annulation",
                     "groupe"    => "Circuit de validation",
@@ -144,6 +118,39 @@ class DemandeCongeFormCanvasProvider implements FormCanvasProviderInterface
                     "event"     => "ui:conge.decision-request",
                     "url"       => "/admin/demandeconge/api/decision-picker/%id%?geste=annuler",
                     "condition" => ["field" => "peutEtreAnnulee", "value" => true],
+                ],
+
+                // ── LES DEUX ÉCRANS TRANSVERSES ────────────────────────────────────
+                //
+                // Ils ne portent sur AUCUNE demande : le calendrier montre le mois de
+                // toute l'équipe, la grille montre les compteurs de tout le cabinet. Les
+                // ranger sous « Circuit de validation » les faisait dépendre d'une ligne
+                // qui ne les concerne pas — il fallait cocher une demande au hasard pour
+                // ouvrir un écran qui ne parlait pas d'elle, et le voisinage avec
+                // « Soumettre » laissait croire qu'ils appartenaient au même geste.
+                //
+                // `sans_selection` les affiche donc en permanence, dans leur propre
+                // famille. `multi` ne suffisait pas : il signifie « dès UNE ligne », pas
+                // « sans aucune ».
+                [
+                    "label"     => "Compteurs de congés",
+                    "icon"      => "action:count",
+                    "groupe"    => "Vue d'ensemble",
+                    "groupe_icone" => "conge",
+                    "event"     => "ui:conge.compteurs-request",
+                    "url"       => "/admin/compteurconge/api/grille",
+                    // Le serveur refuse à qui n'est pas valideur : la grille expose les
+                    // soldes de chacun, et l'ajustement écrit sur le compteur d'autrui.
+                    "sans_selection" => true,
+                ],
+                [
+                    "label"     => "Calendrier de l'équipe",
+                    "icon"      => "action:calendar",
+                    "groupe"    => "Vue d'ensemble",
+                    "groupe_icone" => "conge",
+                    "event"     => "ui:conge.calendrier-request",
+                    "url"       => "/admin/demandeconge/api/calendrier",
+                    "sans_selection" => true,
                 ],
             ],
         ];
