@@ -13,18 +13,28 @@
     « Journal » répété sur chaque ligne ne dit rien à qui navigue au lecteur d'écran :
     l'intitulé accessible nomme donc le collaborateur (WCAG 2.4.4).
 #}
+{# ── LA NAVIGATION EST UN PAGINEUR, PAS DEUX BOUTONS AUX EXTRÉMITÉS ─────────────────
+   Écartelés de part et d'autre d'un panneau large de mille pixels, les deux boutons ne
+   se lisaient plus comme un couple : rien ne disait que « 2025 » et « 2027 » font un
+   seul geste, et la bande paraissait vide entre les deux. Regroupés dans la pastille du
+   pagineur de liste — celle qui sert déjà à changer de page —, ils redeviennent un
+   contrôle unique, et le titre reprend la place forte, à gauche.
+   — Nielsen 4 (cohérence : le même geste porte la même forme partout) et 8 (minimalisme). #}
 <div class="jsb-picker-sousentete">
-    <button type="button" class="btn btn-sm btn-outline-secondary jsb-picker-btn"
-            data-cpt-exercice="{{ grille.precedent }}">
-        <span aria-hidden="true">‹</span> {{ grille.precedent }}
-        <span class="visually-hidden">Voir l'exercice précédent</span>
-    </button>
     <p class="jsb-picker-sousentete-titre">Exercice {{ grille.exercice }}</p>
-    <button type="button" class="btn btn-sm btn-outline-secondary jsb-picker-btn"
-            data-cpt-exercice="{{ grille.suivant }}">
-        {{ grille.suivant }} <span aria-hidden="true">›</span>
-        <span class="visually-hidden">Voir l'exercice suivant</span>
-    </button>
+    <nav class="jsb-pagination-nav d-inline-flex align-items-center gap-1"
+         aria-label="Changer d'exercice">
+        <button type="button" class="btn btn-sm btn-outline-secondary"
+                data-cpt-exercice="{{ grille.precedent }}">
+            <span aria-hidden="true">‹</span> {{ grille.precedent }}
+            <span class="visually-hidden">Voir l'exercice {{ grille.precedent }}</span>
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-secondary"
+                data-cpt-exercice="{{ grille.suivant }}">
+            {{ grille.suivant }} <span aria-hidden="true">›</span>
+            <span class="visually-hidden">Voir l'exercice {{ grille.suivant }}</span>
+        </button>
+    </nav>
 </div>
 
 {% if grille.lignes|length == 0 %}
