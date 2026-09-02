@@ -10,16 +10,21 @@
    en bas de la fenêtre. Le poser une seconde fois DANS le fragment le remettait à la
    hauteur du contenu : sur un mois sans absence, la barre d'action remontait au tiers
    de la boîte, avec du vide dessous. #}
+{# Même pagineur que la grille des compteurs : changer de mois et changer d'exercice
+   sont le même geste, ils portent donc la même forme. #}
 <div class="jsb-picker-sousentete">
-    <button type="button" class="btn btn-sm btn-outline-secondary jsb-picker-btn"
-            data-cal-mois="{{ grille.precedent.mois }}" data-cal-annee="{{ grille.precedent.annee }}">
-        <span aria-hidden="true">‹</span> Mois précédent
-    </button>
     <p class="jsb-picker-sousentete-titre">{{ grille.libelle }}</p>
-    <button type="button" class="btn btn-sm btn-outline-secondary jsb-picker-btn"
-            data-cal-mois="{{ grille.suivant.mois }}" data-cal-annee="{{ grille.suivant.annee }}">
-        Mois suivant <span aria-hidden="true">›</span>
-    </button>
+    <nav class="jsb-pagination-nav d-inline-flex align-items-center gap-1"
+         aria-label="Changer de mois">
+        <button type="button" class="btn btn-sm btn-outline-secondary"
+                data-cal-mois="{{ grille.precedent.mois }}" data-cal-annee="{{ grille.precedent.annee }}">
+            <span aria-hidden="true">‹</span> Mois précédent
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-secondary"
+                data-cal-mois="{{ grille.suivant.mois }}" data-cal-annee="{{ grille.suivant.annee }}">
+            Mois suivant <span aria-hidden="true">›</span>
+        </button>
+    </nav>
 </div>
 
 <div class="jsb-cal-corps">
