@@ -166,24 +166,33 @@ class CongeProvisionnementTest extends KernelTestCase
         self::assertFalse($justificatifs[TypeAbsence::CODE_CONGE_ANNUEL]);
     }
 
-    public function testLeProprietaireRecoitSaDotationAuProrata(): void
+    /**
+     * LA DOTATION DE DÉMARRAGE EST L'ANNÉE PLEINE, PAS UN PRORATA.
+     *
+     * Elle l'a été un temps, calculée sur la date de création de la fiche d'invité. Mais
+     * cette date dit quand le collaborateur a été SAISI dans JS Brokers, pas quand il est
+     * arrivé dans le cabinet : un cabinet qui adoptait le module en avril voyait tout son
+     * personnel crédité de neuf mois sur douze — un quart du droit en moins, sans que rien
+     * à l'écran n'en donne la raison.
+     *
+     * Le prorata garde son sens ailleurs : pour une arrivée postérieure, dont la fiche est
+     * créée le jour même, et pour un départ.
+     */
+    public function testLaDotationDeDemarrageEstLAnneePleine(): void
     {
         $c = $this->cabinetNeuf();
         $this->initialisation()->initialiser($c['entreprise'], $c['proprietaire']);
         $this->em()->flush();
 
         $exercice = (int) (new \DateTimeImmutable('now'))->format('Y');
-        $attendu = CongeParametres::dotationAuProrata(
-            CongeParametres::DOTATION_ANNUELLE_DEFAUT,
-            $c['proprietaire']->getCreatedAt() ?? new \DateTimeImmutable('now'),
-            $exercice,
-        );
-
         $solde = static::getContainer()->get(CalculateurSolde::class)->pour($c['proprietaire'], $exercice);
 
-        self::assertGreaterThan(0.0, $solde->acquis, 'Un compteur à zéro ressemble à une panne.');
-        self::assertSame($attendu, $solde->acquis);
-        self::assertSame($attendu, $solde->disponible());
+        self::assertSame(
+            CongeParametres::DOTATION_ANNUELLE_DEFAUT,
+            $solde->acquis,
+            "Un cabinet qui démarre en cours d'année ne doit pas amputer le droit de ceux qui y sont déjà.",
+        );
+        self::assertSame(CongeParametres::DOTATION_ANNUELLE_DEFAUT, $solde->disponible());
     }
 
     /** La dotation est bien rattachée au CONGÉ ANNUEL, sinon elle serait invisible du solde. */

@@ -140,6 +140,36 @@ class CompteurCongeController extends AbstractController
     }
 
     /**
+     * LE FORMULAIRE D'AJUSTEMENT, rendu par le serveur comme le journal et la sortie.
+     *
+     * Il remplaçait deux invites du navigateur enchaînées. On écrivait alors à l'aveugle :
+     * le solde courant n'était plus sous les yeux au moment précis où l'on décide combien
+     * retirer, et annuler la seconde invite jetait la première sans un mot.
+     */
+    #[Route('/api/ajustement/{idAgent}', name: 'api.ajustement_form', requirements: ['idAgent' => Requirement::DIGITS], methods: ['GET'])]
+    public function formulaireDAjustement(int $idAgent, Request $request): Response
+    {
+        if ($refus = $this->refuserSiPasValideur()) {
+            return $refus;
+        }
+
+        $agent = $this->grille->agentDuCabinet($this->getEntreprise(), $idAgent);
+        if ($agent === null) {
+            return $this->json(['message' => 'Collaborateur introuvable dans cet espace de travail.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $exercice = $this->exerciceDemande($request);
+
+        return $this->json([
+            'html' => $this->renderView('components/conge/_compteurs_ajustement.html.twig', [
+                'agent' => $agent,
+                'exercice' => $exercice,
+                'solde' => $this->calculateurSolde->pour($agent, $exercice),
+            ]),
+        ]);
+    }
+
+    /**
      * UN AJUSTEMENT MANUEL, MOTIVÉ.
      *
      * Le motif n'est pas une politesse : un chiffre qui apparaît dans un journal sans

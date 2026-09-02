@@ -5,68 +5,66 @@
     expliquer est un compteur qu'on cesse de croire — et à partir de là, tout le module
     devient suspect.
 
-    Le SIGNE est porté par le nombre lui-même (« −5,0 », « +26,0 ») et non par une
-    couleur : sur un journal qu'on imprime ou qu'on copie, la couleur disparaît.
+    Le SIGNE est porté par le nombre lui-même (« −5,0 », « +26,0 ») et non par la seule
+    couleur : sur un journal qu'on imprime ou qu'on copie, la couleur disparaît
+    (WCAG 1.4.1).
 #}
-<div class="jsb-picker-listwrap" style="padding: .5rem 1.25rem 1rem;">
-
-    <div class="d-flex align-items-center justify-content-between mb-2">
-        <button type="button" class="btn btn-sm btn-outline-secondary" data-cpt-retour>‹ Retour aux compteurs</button>
-        <strong style="color:#0d2440;">{{ agent.nom }} — exercice {{ exercice }}</strong>
-        <span style="font-size:.8rem; color:#0047AB; font-weight:700;">
-            Disponible : {{ solde.disponible|number_format(1, ',', ' ') }}&nbsp;j
-        </span>
-    </div>
-
-    {% if mouvements|length == 0 %}
-        <p class="jsb-picker-empty">
-            Aucun mouvement sur cet exercice. Ce collaborateur n'a peut-être jamais été doté&nbsp;:
-            l'ouverture d'exercice s'en charge.
-        </p>
-    {% else %}
-        <table class="table table-sm jsb-picker-table mb-2" style="font-size:.78rem;">
-            <thead>
-                <tr>
-                    <th scope="col" style="text-align:left;">Date</th>
-                    <th scope="col" style="text-align:left;">Nature</th>
-                    <th scope="col" style="text-align:right;">Jours</th>
-                    <th scope="col" style="text-align:left;">Motif</th>
-                    <th scope="col" style="text-align:left;">Auteur</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for mouvement in mouvements %}
-                    <tr>
-                        <td style="text-align:left; white-space:nowrap;">
-                            {{ mouvement.createdAt ? mouvement.createdAt|date('d/m/Y') : '—' }}
-                        </td>
-                        {# PARENTHÈSES OBLIGATOIRES : MouvementConge porte À LA FOIS une propriété
-                           publique `natureLibelle` (indicateur de liste, nulle hors liste) et une
-                           méthode du même nom. Twig sert la propriété en premier — sans les
-                           parenthèses, la colonne la plus importante du journal sort VIDE. #}
-                        <td style="text-align:left;">{{ mouvement.natureLibelle() }}</td>
-                        <td style="text-align:right; font-variant-numeric:tabular-nums; font-weight:600;
-                                   color:{{ mouvement.quantiteFloat < 0 ? '#dc3545' : '#198754' }};">
-                            {{ mouvement.quantiteFloat > 0 ? '+' : '' }}{{ mouvement.quantiteFloat|number_format(1, ',', ' ') }}
-                        </td>
-                        <td style="text-align:left; color:#495057;">
-                            {{ mouvement.commentaire ?: '—' }}
-                            {% if mouvement.origine == 'KET' %}
-                                <span class="text-muted"> · via l'assistant</span>
-                            {% endif %}
-                        </td>
-                        <td style="text-align:left; color:#6c757d;">
-                            {{ mouvement.auteur ? mouvement.auteur.nom : '—' }}
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-        <p class="text-muted mb-0" style="font-size:.72rem;">
-            Un mouvement est <strong>immuable</strong>&nbsp;: une erreur se corrige par un mouvement
-            inverse motivé, jamais par une modification. C'est ce qui permet de relire ce journal
-            des années plus tard et d'y retrouver le même solde.
-        </p>
-    {% endif %}
+<div class="jsb-picker-sousentete">
+    <button type="button" class="btn btn-sm btn-outline-secondary jsb-picker-btn" data-cpt-retour>
+        <span aria-hidden="true">‹</span> Retour aux compteurs
+    </button>
+    <p class="jsb-picker-sousentete-titre">{{ agent.nom }} — exercice {{ exercice }}</p>
+    <span class="jsb-picker-sousentete-info">
+        Disponible&nbsp;: {{ solde.disponible|number_format(1, ',', ' ') }}&nbsp;j
+    </span>
 </div>
+
+{% if mouvements|length == 0 %}
+    <p class="jsb-picker-empty">
+        Aucun mouvement sur cet exercice. Ce collaborateur n'a peut-être jamais été doté&nbsp;:
+        l'ouverture d'exercice s'en charge.
+    </p>
+{% else %}
+    <table class="jsb-picker-table">
+        <caption class="visually-hidden">
+            Mouvements de congés de {{ agent.nom }} sur l'exercice {{ exercice }}.
+        </caption>
+        <thead>
+            <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Nature</th>
+                <th scope="col" class="jsb-picker-num">Jours</th>
+                <th scope="col">Motif</th>
+                <th scope="col">Auteur</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for mouvement in mouvements %}
+                <tr>
+                    <td class="text-nowrap">{{ mouvement.createdAt ? mouvement.createdAt|date('d/m/Y') : '—' }}</td>
+                    {# PARENTHÈSES OBLIGATOIRES : MouvementConge porte À LA FOIS une propriété
+                       publique `natureLibelle` (indicateur de liste, nulle hors liste) et une
+                       méthode du même nom. Twig sert la propriété en premier — sans les
+                       parenthèses, la colonne la plus importante du journal sort VIDE. #}
+                    <td>{{ mouvement.natureLibelle() }}</td>
+                    <td class="jsb-picker-num fw-semibold {{ mouvement.quantiteFloat < 0 ? 'jsb-picker-num--negatif' : 'jsb-picker-num--positif' }}">
+                        {{ mouvement.quantiteFloat > 0 ? '+' : '' }}{{ mouvement.quantiteFloat|number_format(1, ',', ' ') }}
+                    </td>
+                    <td>
+                        {{ mouvement.commentaire ? mouvement.commentaire|striptags|trim : '—' }}
+                        {% if mouvement.origine == 'KET' %}
+                            <span class="text-muted"> · via l'assistant</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted">{{ mouvement.auteur ? mouvement.auteur.nom : '—' }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <p class="text-muted small mb-0 px-3 py-2">
+        Un mouvement est <strong>immuable</strong>&nbsp;: une erreur se corrige par un mouvement
+        inverse motivé, jamais par une modification. C'est ce qui permet de relire ce journal
+        des années plus tard et d'y retrouver le même solde.
+    </p>
+{% endif %}

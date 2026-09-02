@@ -51,6 +51,15 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 )]
 final class CongesProvisionnerCommand extends Command
 {
+    /**
+     * Le marqueur du rattrapage, en tête de son commentaire.
+     *
+     * C'est lui, et non le montant du solde, qui rend la reprise idempotente : un
+     * valideur peut avoir retiré des jours entre-temps, et une garde fondée sur le total
+     * les lui rendrait à chaque exécution.
+     */
+    private const MARQUEUR_RATTRAPAGE = '[Reprise dotation annuelle]';
+
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly ServiceInitialisationEntreprise $initialisation,
@@ -105,7 +114,7 @@ final class CongesProvisionnerCommand extends Command
             return Command::SUCCESS;
         }
 
-        $totaux = ['types' => 0, 'dotations' => 0, 'droits' => 0];
+        $totaux = ['types' => 0, 'dotations' => 0, 'droits' => 0, 'rattrapages' => 0];
         $lignes = [];
 
         foreach ($entreprises as $entreprise) {
@@ -114,17 +123,19 @@ final class CongesProvisionnerCommand extends Command
             $totaux['types'] += $bilan['types'];
             $totaux['dotations'] += $bilan['dotations'];
             $totaux['droits'] += $bilan['droits'];
+            $totaux['rattrapages'] += $bilan['rattrapages'];
 
             // On ne rapporte QUE les cabinets où il y avait quelque chose à faire : sur
             // un parc de plusieurs centaines, une ligne « rien à faire » par cabinet
             // noierait les trois qui comptent.
-            if ($bilan['types'] + $bilan['dotations'] + $bilan['droits'] > 0) {
+            if (array_sum($bilan) > 0) {
                 $lignes[] = [
                     (string) $entreprise->getId(),
                     (string) $entreprise->getNom(),
                     (string) $bilan['types'],
                     (string) $bilan['dotations'],
                     (string) $bilan['droits'],
+                    (string) $bilan['rattrapages'],
                 ];
             }
         }
@@ -135,17 +146,18 @@ final class CongesProvisionnerCommand extends Command
 
         if ($lignes !== []) {
             $io->table(
-                ['Cabinet', 'Nom', "Types d'absence", 'Dotations', 'Droits accordés'],
+                ['Cabinet', 'Nom', "Types d'absence", 'Dotations', 'Droits accordés', 'Rattrapages'],
                 $lignes,
             );
         }
 
         $io->success(sprintf(
-            '%s : %d type(s) d\'absence, %d dotation(s), %d droit(s) d\'accès sur %d cabinet(s).',
+            '%s : %d type(s) d\'absence, %d dotation(s), %d droit(s) d\'accès, %d rattrapage(s) sur %d cabinet(s).',
             $force ? 'Appliqué' : 'À appliquer',
             $totaux['types'],
             $totaux['dotations'],
             $totaux['droits'],
+            $totaux['rattrapages'],
             count($entreprises),
         ));
 
@@ -157,7 +169,7 @@ final class CongesProvisionnerCommand extends Command
     }
 
     /**
-     * @return array{types: int, dotations: int, droits: int}
+     * @return array{types: int, dotations: int, droits: int, rattrapages: int}
      */
     private function traiterUnCabinet(Entreprise $entreprise, int $exercice, bool $force): array
     {
@@ -165,18 +177,21 @@ final class CongesProvisionnerCommand extends Command
         if ($proprietaire === null) {
             // Sans invité propriétaire, on ne saurait à qui attribuer la paternité des
             // lignes semées. Un cabinet dans cet état a un problème antérieur au nôtre.
-            return ['types' => 0, 'dotations' => 0, 'droits' => 0];
+            return ['types' => 0, 'dotations' => 0, 'droits' => 0, 'rattrapages' => 0];
         }
 
         $bilan = [
             'types' => $this->compterTypesManquants($entreprise),
             'dotations' => 0,
             'droits' => 0,
+            'rattrapages' => 0,
         ];
 
         foreach ($entreprise->getInvites() as $agent) {
             if (!$this->aSaDotation($agent, $exercice)) {
                 $bilan['dotations']++;
+            } elseif ($this->complementDeDemarrage($agent, $exercice) > 0.0) {
+                $bilan['rattrapages']++;
             }
             if (!$this->aUnAccesConge($agent)) {
                 $bilan['droits']++;
@@ -194,9 +209,108 @@ final class CongesProvisionnerCommand extends Command
 
         foreach ($entreprise->getInvites() as $agent) {
             $this->droitConge->appliquer($agent);
+            $this->rattraperLaDotationDeDemarrage($agent, $entreprise, $proprietaire, $exercice);
         }
 
         return $bilan;
+    }
+
+    /**
+     * LE RATTRAPAGE DES COMPTEURS DOTÉS AU PRORATA.
+     *
+     * ── CE QU'IL RÉPARE ─────────────────────────────────────────────────────────────
+     * La première version de ce semis proratisait la dotation de démarrage sur la date de
+     * création de la fiche d'invité. Or cette date dit quand le collaborateur a été SAISI
+     * dans JS Brokers, pas quand il est arrivé dans le cabinet : un cabinet qui a adopté
+     * le module en avril a vu tout son personnel crédité de neuf mois sur douze. Un droit
+     * amputé d'un quart, sans que rien à l'écran n'en donne la raison.
+     *
+     * ── POURQUOI UN AJUSTEMENT ET NON UNE CORRECTION DE LA DOTATION ─────────────────
+     * Parce qu'un mouvement est immuable, et que c'est ce qui rend le journal croyable.
+     * Le complément est donc une ligne DE PLUS, motivée, que l'on pourra relire dans deux
+     * ans pour comprendre pourquoi le compteur a bougé un jour de septembre.
+     *
+     * ── IDEMPOTENT, ET SANS DÉFAIRE LA MAIN DU VALIDEUR ────────────────────────────
+     * La garde n'est pas « le solde vaut-il la dotation ? » — un valideur qui aurait
+     * légitimement retiré trois jours verrait alors ces trois jours revenir à chaque
+     * exécution. Elle est : « ce rattrapage-ci a-t-il déjà été écrit ? », reconnu à son
+     * marqueur. Une fois posé, il ne se repose jamais.
+     */
+    private function rattraperLaDotationDeDemarrage(
+        Invite $agent,
+        Entreprise $entreprise,
+        Invite $proprietaire,
+        int $exercice,
+    ): void {
+        $complement = $this->complementDeDemarrage($agent, $exercice);
+        if ($complement <= 0.0) {
+            return;
+        }
+
+        $mouvement = (new MouvementConge())
+            ->setAgent($agent)
+            ->setExercice($exercice)
+            ->setTypeAbsence($this->congeAnnuelDe($entreprise))
+            ->setNature(MouvementConge::NATURE_AJUSTEMENT)
+            ->setQuantite(number_format($complement, 1, '.', ''))
+            ->setAuteur($proprietaire)
+            ->setCommentaire(sprintf(
+                '%s La dotation de démarrage avait été calculée au prorata de la date de '
+                . "création de la fiche, qui n'est pas la date d'arrivée dans le cabinet : "
+                . 'le droit est ramené à l\'année pleine de %d.',
+                self::MARQUEUR_RATTRAPAGE,
+                $exercice,
+            ));
+
+        $mouvement->setEntreprise($entreprise);
+        $mouvement->setInvite($proprietaire);
+        $this->em->persist($mouvement);
+    }
+
+    /**
+     * Ce qu'il manque à cet agent pour atteindre l'année pleine, ou 0 si le rattrapage a
+     * déjà eu lieu — ou s'il n'a jamais été proratisé.
+     */
+    private function complementDeDemarrage(Invite $agent, int $exercice): float
+    {
+        if ($agent->getId() === null || $this->rattrapageDejaEcrit($agent, $exercice)) {
+            return 0.0;
+        }
+
+        $dotation = (float) $this->em->getConnection()->fetchOne(
+            'SELECT COALESCE(SUM(quantite), 0) FROM mouvement_conge
+             WHERE agent_id = :a AND exercice = :x AND nature = :n',
+            ['a' => $agent->getId(), 'x' => $exercice, 'n' => MouvementConge::NATURE_DOTATION],
+        );
+
+        $manque = CongeParametres::DOTATION_ANNUELLE_DEFAUT - $dotation;
+
+        // Au-delà de l'année pleine, on ne touche à rien : c'est un cabinet qui a réglé
+        // sa propre dotation, et ce n'est pas à une reprise d'en décider.
+        return $manque > 0.001 ? $manque : 0.0;
+    }
+
+    private function rattrapageDejaEcrit(Invite $agent, int $exercice): bool
+    {
+        return (bool) $this->em->getConnection()->fetchOne(
+            'SELECT 1 FROM mouvement_conge
+             WHERE agent_id = :a AND exercice = :x AND nature = :n AND commentaire LIKE :m
+             LIMIT 1',
+            [
+                'a' => $agent->getId(),
+                'x' => $exercice,
+                'n' => MouvementConge::NATURE_AJUSTEMENT,
+                'm' => self::MARQUEUR_RATTRAPAGE . '%',
+            ],
+        );
+    }
+
+    private function congeAnnuelDe(Entreprise $entreprise): ?TypeAbsence
+    {
+        return $this->em->getRepository(TypeAbsence::class)->findOneBy([
+            'entreprise' => $entreprise,
+            'code' => TypeAbsence::CODE_CONGE_ANNUEL,
+        ]);
     }
 
     /**

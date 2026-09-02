@@ -5431,6 +5431,74 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 .jsb-picker-chip--free    { background: #e9ecef; color: #495057; }
 .jsb-picker-chip--current { background: #d1e7dd; color: #0f5132; }
 .jsb-picker-chip--other   { background: #fff3cd; color: #664d03; }
+/* ── SOUS-ÉCRAN D'UN PICKER ──────────────────────────────────────────────────
+   Une boîte qui REMPLACE son contenu (le journal d'un collaborateur, un
+   ajustement, un décompte de sortie) doit toujours dire où l'on est et par où
+   l'on revient. Sans cette bande, le retour se cherche — et l'on referme la
+   fenêtre entière pour retrouver la vue d'où l'on venait.
+
+   Elle est générique parce que rien ici ne concerne les congés : tout picker
+   qui navigue en profondeur plutôt qu'en empilant des fenêtres en aura besoin.
+   — /ergonomie-web : Bastien & Scapin > Guidage, Nielsen 3 (contrôle et liberté). */
+.jsb-picker-sousentete {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: .8rem var(--jsb-picker-gouttiere);
+    border-bottom: 1px solid #f0f0f0;
+}
+.jsb-picker-sousentete-titre {
+    margin: 0;
+    font-size: .95rem;
+    font-weight: 700;
+    color: #212529;
+}
+.jsb-picker-sousentete-info {
+    font-size: .82rem;
+    font-weight: 700;
+    color: #0047AB;
+    white-space: nowrap;
+}
+
+/* ── LA LIGNE DES TOTAUX ─────────────────────────────────────────────────────
+   Elle se lit comme une somme, pas comme une ligne de plus : fond neutre, filet
+   plus marqué, et le même alignement de chiffres que les colonnes du dessus. */
+.jsb-picker-table tfoot th,
+.jsb-picker-table tfoot td {
+    padding: .8rem .9rem;
+    background: #f8f9fa;
+    border-top: 2px solid #dee2e6;
+    font-weight: 700;
+    color: #212529;
+}
+
+/* ── LE SENS D'UN CHIFFRE N'EST PAS PORTÉ PAR SA SEULE COULEUR ───────────────
+   La couleur appuie une information que le nombre dit déjà — son signe, ou le
+   mot qui l'accompagne. Un journal qu'on imprime, ou qu'on lit sans distinguer
+   le vert du rouge, reste exact. — WCAG 1.4.1. */
+.jsb-picker-num--positif { color: #198754; }
+.jsb-picker-num--negatif { color: #dc3545; }
+.jsb-picker-num--accent  { color: #0047AB; font-weight: 700; }
+
+/* Les gestes d'une ligne : des boutons discrets, mais des BOUTONS — hauteur de
+   cible tenue (WCAG 2.5.8) et espacés, pour ne pas déclencher « Sortie » en
+   visant « Ajuster ». */
+.jsb-picker-gestes {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: .35rem;
+    white-space: nowrap;
+}
+.jsb-picker-geste {
+    min-height: 30px;
+    padding: .2rem .55rem;
+    font-size: .8rem;
+    line-height: 1.2;
+}
+
 .jsb-picker-empty {
     padding: 1.5rem .5rem;
     text-align: center;

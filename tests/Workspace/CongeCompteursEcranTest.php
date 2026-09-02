@@ -244,6 +244,32 @@ class CongeCompteursEcranTest extends WebTestCase
 
     // ═══════════════════════ Les gestes qui écrivent ════════════════════════════════
 
+    /**
+     * LE FORMULAIRE D'AJUSTEMENT EST RENDU PAR LE SERVEUR, avec le solde courant sous les
+     * yeux. Il remplace deux invites du navigateur enchaînées, où l'on décidait combien
+     * retirer sans plus voir ce qui restait.
+     */
+    public function testLeFormulaireDAjustementPorteLeSoldeEtExigeUnMotif(): void
+    {
+        $s = $this->semer();
+        $this->entantQue($s['valideur']);
+
+        $this->client->request('GET', sprintf(
+            '/admin/compteurconge/api/ajustement/%d?exercice=%d',
+            $s['agent']->getId(),
+            $s['exercice'],
+        ));
+
+        self::assertResponseIsSuccessful();
+        $charge = json_decode((string) $this->client->getResponse()->getContent(), true);
+
+        self::assertStringContainsString('Ajuster le compteur', $charge['html']);
+        self::assertStringContainsString('26,0', $charge['html'], 'Le solde courant reste sous les yeux.');
+        self::assertStringContainsString('for="cpt-motif"', $charge['html'], 'Le motif est un champ étiqueté (WCAG 3.3.2).');
+        self::assertStringContainsString('aria-required="true"', $charge['html']);
+        self::assertSame(1, $this->compterMouvements($s['entreprise']), "Ouvrir le formulaire n'écrit rien.");
+    }
+
     /** Le motif manquant est refusé par le SERVEUR, pas seulement par le navigateur. */
     public function testUnAjustementSansMotifEstRefuseParLeServeur(): void
     {
