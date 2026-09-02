@@ -38,52 +38,52 @@
         {# LA GRILLE DÉFILE DANS SON PROPRE CADRE : trente et une colonnes ne tiennent pas
            dans un panneau, et laisser la page défiler horizontalement emporterait l'en-tête
            avec elle. #}
-        <div style="overflow-x:auto;">
-            <table class="table table-sm mb-2" style="border-collapse:separate; border-spacing:0; font-size:.75rem;">
+        {# ── LES FONDS SONT DES CLASSES, PLUS DES STYLES ÉCRITS SUR LA BALISE ────────
+           Un style inline l'emporte sur toute règle de feuille : la ligne survolée ne
+           pouvait donc pas repeindre ses cellules, et le survol n'aurait rien fait. Seules
+           restent en ligne les valeurs qui viennent VRAIMENT des données — la couleur d'un
+           type d'absence, qui est choisie par le cabinet. #}
+        <div class="jsb-cal-defilement">
+            <table class="jsb-cal-table">
+                <caption class="visually-hidden">
+                    Absences approuvées de {{ grille.libelle }}, un collaborateur par ligne et un jour par colonne.
+                </caption>
                 <thead>
                     <tr>
-                        <th scope="col" style="position:sticky; left:0; background:#fff; z-index:2; min-width:160px; text-align:left; color:#212529;">
-                            Collaborateur
-                        </th>
+                        <th scope="col" class="jsb-cal-agent">Collaborateur</th>
                         {% for jour in grille.jours %}
                             <th scope="col"
                                 title="{{ jour.ferie ?? '' }}"
-                                style="width:24px; min-width:24px; text-align:center; font-weight:{{ jour.aujourdhui ? '700' : '400' }};
-                                       color:{{ jour.ferie ? '#dc3545' : (jour.weekend ? '#adb5bd' : '#212529') }};
-                                       background:{{ jour.aujourdhui ? '#e8f0fb' : 'transparent' }};">
-                                <div>{{ jour.lettre }}</div>
-                                <div>{{ jour.numero }}</div>
+                                class="jsb-cal-jour
+                                       {{ jour.aujourdhui ? 'is-aujourdhui' : '' }}
+                                       {{ jour.ferie ? 'is-ferie' : (jour.weekend ? 'is-weekend' : '') }}">
+                                <span class="jsb-cal-jour-lettre">{{ jour.lettre }}</span>
+                                <span class="jsb-cal-jour-numero">{{ jour.numero }}</span>
                             </th>
                         {% endfor %}
-                        <th scope="col" style="min-width:52px; text-align:right; color:#212529;">Jours</th>
+                        <th scope="col" class="jsb-cal-total">Jours</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for ligne in grille.lignes %}
                         <tr>
-                            <th scope="row" style="position:sticky; left:0; background:#fff; z-index:1; text-align:left; font-weight:600; color:#212529; white-space:nowrap;">
-                                {{ ligne.agent }}
-                            </th>
+                            <th scope="row" class="jsb-cal-agent">{{ ligne.agent }}</th>
                             {% for numero, case in ligne.cases %}
                                 {% set jour = grille.jours[numero] %}
-                                <td style="padding:1px; text-align:center;
-                                           background:{{ jour.ferie or jour.weekend ? '#f1f3f5' : 'transparent' }};">
+                                <td class="jsb-cal-case {{ jour.ferie or jour.weekend ? 'is-chome' : '' }}">
                                     {% if case.type %}
                                         {# Le `title` porte le nom et le type : l'information ne
                                            repose jamais sur la seule couleur. #}
-                                        <span title="{{ case.libelle }}"
+                                        <span class="jsb-cal-plage {{ case.travaille ? '' : 'is-non-travaille' }}"
+                                              title="{{ case.libelle }}"
                                               aria-label="{{ case.libelle }}"
-                                              style="display:block; width:100%; height:16px; border-radius:3px;
-                                                     background:{{ case.couleur }};
-                                                     opacity:{{ case.travaille ? '1' : '.35' }};"></span>
+                                              style="background:{{ case.couleur }};"></span>
                                     {% else %}
-                                        <span aria-hidden="true" style="display:block; height:16px;"></span>
+                                        <span class="jsb-cal-plage jsb-cal-plage--vide" aria-hidden="true"></span>
                                     {% endif %}
                                 </td>
                             {% endfor %}
-                            <td style="text-align:right; font-variant-numeric:tabular-nums; color:#0047AB; font-weight:600;">
-                                {{ ligne.total|number_format(1, ',', ' ') }}
-                            </td>
+                            <td class="jsb-cal-total">{{ ligne.total|number_format(1, ',', ' ') }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -93,15 +93,15 @@
         {# ── LÉGENDE ────────────────────────────────────────────────────────────────
            Seuls les types PRÉSENTS ce mois-ci : une légende exhaustive listerait des
            couleurs qu'on ne voit nulle part, et obligerait à chercher laquelle sert. #}
-        <div class="d-flex flex-wrap align-items-center gap-3" style="font-size:.75rem;">
+        <div class="jsb-cal-legende">
             {% for libelle, couleur in grille.legende %}
                 <span class="d-inline-flex align-items-center gap-1">
-                    <span aria-hidden="true" style="display:inline-block; width:12px; height:12px; border-radius:3px; background:{{ couleur }};"></span>
+                    <span class="jsb-cal-puce" aria-hidden="true" style="background:{{ couleur }};"></span>
                     {{ libelle }}
                 </span>
             {% endfor %}
             <span class="d-inline-flex align-items-center gap-1 text-muted">
-                <span aria-hidden="true" style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#0047AB; opacity:.35;"></span>
+                <span class="jsb-cal-puce is-non-travaille" aria-hidden="true" style="background:#0047AB;"></span>
                 jour non travaillé par l'intéressé (non décompté)
             </span>
         </div>

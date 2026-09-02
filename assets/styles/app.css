@@ -5568,9 +5568,130 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     color: #6c757d;
 }
 
-/* Le corps du calendrier d'équipe : la gouttière du socle, appliquée à un contenu qui
-   n'est pas un tableau pleine largeur à en-tête collante. */
+/* ── LE CALENDRIER D'ÉQUIPE ──────────────────────────────────────────────────
+   Le corps : la gouttière du socle, appliquée à un contenu qui n'est pas un
+   tableau pleine largeur à en-tête collante. */
 .jsb-cal-corps { padding: .75rem var(--jsb-picker-gouttiere) 1.25rem; }
+
+/* La grille défile dans son propre cadre : trente et une colonnes ne tiennent pas
+   dans un panneau, et laisser la page défiler emporterait l'entête avec elle. */
+.jsb-cal-defilement { overflow-x: auto; }
+
+.jsb-cal-table {
+    width: 100%;
+    margin: 0 0 .5rem;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: .75rem;
+}
+
+/* La colonne des noms reste visible pendant le défilement horizontal : sans elle,
+   on lit une bande de carrés sans savoir de qui il s'agit. */
+.jsb-cal-agent {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    min-width: 160px;
+    padding: .35rem .5rem;
+    background: var(--bg-white, #ffffff);
+    text-align: left;
+    font-weight: 600;
+    color: #212529;
+    white-space: nowrap;
+}
+.jsb-cal-table tbody .jsb-cal-agent { z-index: 1; }
+
+.jsb-cal-jour {
+    width: 24px;
+    min-width: 24px;
+    padding: .3rem 0;
+    text-align: center;
+    font-weight: 400;
+    color: #212529;
+}
+.jsb-cal-jour-lettre,
+.jsb-cal-jour-numero { display: block; }
+.jsb-cal-jour.is-aujourdhui { font-weight: 700; background: #e8f0fb; }
+/* Un férié se distingue du week-end : l'un est chômé par le calendrier du cabinet,
+   l'autre par le rythme de la semaine. Le `title` porte le nom du férié — la
+   couleur ne dit jamais seule (WCAG 1.4.1). */
+.jsb-cal-jour.is-ferie { color: #dc3545; }
+.jsb-cal-jour.is-weekend { color: #adb5bd; }
+
+.jsb-cal-case { padding: 1px; text-align: center; }
+/* Fond intermédiaire de la charte (--bg-subtle) : un jour chômé se creuse
+   légèrement, sans devenir une case pleine. */
+.jsb-cal-case.is-chome { background: var(--bg-subtle, #f0f0f0); }
+
+.jsb-cal-plage {
+    display: block;
+    width: 100%;
+    height: 16px;
+    border-radius: 3px;
+}
+.jsb-cal-plage--vide { background: transparent; }
+/* Un jour que l'intéressé ne travaille pas : la plage s'efface sans disparaître —
+   l'absence court bien, mais ce jour n'est pas décompté. */
+.jsb-cal-plage.is-non-travaille { opacity: .35; }
+
+.jsb-cal-total {
+    min-width: 52px;
+    padding: .35rem .5rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: #0047AB;
+}
+.jsb-cal-table thead .jsb-cal-total { color: #212529; font-weight: 400; }
+
+/* ── LA LIGNE SURVOLÉE SE SUIT DU REGARD ─────────────────────────────────────
+   Trente et une colonnes de carrés de vingt-quatre pixels : sans repère, l'œil
+   perd la ligne entre le nom et le total, et l'on remonte deux fois pour vérifier
+   à qui appartient une absence. Le survol n'ajoute aucune information — il aide à
+   TENIR celle qui est déjà là (Bastien & Scapin > Guidage ; Nielsen 6).
+
+   Aucune action n'est attachée à ces lignes : c'est une aide à la lecture, pas une
+   cible. Rien à rendre accessible au clavier, donc, et rien qui repose sur la
+   couleur seule.
+
+   La teinte est celle que la charte réserve au survol des lignes de grille
+   (--bg-muted #e9ecef) : sur un fond déjà tramé de gris clairs, le #f8f9fa des
+   listes ordinaires se serait confondu avec les cases chômées.
+
+   ⚠ LA CELLULE COLLANTE DOIT SUIVRE, elle aussi. Elle porte son propre fond blanc
+   — c'est ce qui l'empêche d'être traversée par les colonnes qui défilent dessous —
+   et resterait donc seule non surlignée, au beau milieu du geste. */
+.jsb-cal-table tbody tr {
+    transition: background-color .12s ease;
+}
+.jsb-cal-table tbody tr:hover .jsb-cal-agent,
+.jsb-cal-table tbody tr:hover .jsb-cal-case,
+.jsb-cal-table tbody tr:hover .jsb-cal-total {
+    background-color: #e9ecef;
+}
+/* Le nom passe en teinte de marque : on sait d'un coup d'œil quelle ligne on lit. */
+.jsb-cal-table tbody tr:hover .jsb-cal-agent { color: #0047AB; }
+/* LE WEEK-END RESTE UN WEEK-END SUR LA LIGNE SURVOLÉE. Repeindre toute la ligne
+   d'une seule teinte effacerait la trame des jours chômés là précisément où l'on
+   regarde — et l'on compterait un samedi comme un jour ouvré. */
+.jsb-cal-table tbody tr:hover .jsb-cal-case.is-chome {
+    background-color: var(--border-light, #dee2e6);
+}
+
+.jsb-cal-legende {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .75rem;
+    font-size: .75rem;
+}
+.jsb-cal-puce {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+}
+.jsb-cal-puce.is-non-travaille { opacity: .35; }
 
 .jsb-picker-empty {
     padding: 1.5rem .5rem;
