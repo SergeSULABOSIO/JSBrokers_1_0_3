@@ -205,11 +205,16 @@
                             Il sera repris dans l'e-mail adressé au collaborateur et conservé dans l'historique.
                         {% endif %}
                     </span>
-                    <textarea id="conge-commentaire" class="form-control" rows="3"
-                              maxlength="1000"
-                              placeholder="Ex.&nbsp;: période de clôture, merci de décaler d'une semaine."
-                              data-conge-decision-picker-target="commentaire"
-                              aria-describedby="conge-commentaire-aide"></textarea>
+                    <div class="jsb-picker-field jsb-picker-field--top">
+                        <span class="jsb-picker-field-icon" aria-hidden="true">
+                            {{ ux_icon(resolve_icon_name('action:description'), {width: '16px', height: '16px'}) }}
+                        </span>
+                        <textarea id="conge-commentaire" class="form-control" rows="3"
+                                  maxlength="1000"
+                                  placeholder="Ex. : période de clôture, merci de décaler d'une semaine."
+                                  data-conge-decision-picker-target="commentaire"
+                                  aria-describedby="conge-commentaire-aide"></textarea>
+                    </div>
                 </fieldset>
             {% endif %}
         </div>

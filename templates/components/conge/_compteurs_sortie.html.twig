@@ -34,10 +34,15 @@
                 La dotation de l'exercice est ramenée au prorata des mois de présence. Le mois de
                 départ compte&nbsp;: partir le 3 juin, c'est avoir travaillé en juin.
             </span>
-            <input type="date" id="cpt-date-fin" class="form-control" style="max-width:220px;"
-                   value="{{ dateFin|date('Y-m-d') }}"
-                   data-cpt-date-fin="{{ agent.id }}"
-                   aria-describedby="cpt-date-fin-aide">
+            <div class="jsb-picker-field" style="max-width:15rem;">
+                <span class="jsb-picker-field-icon" aria-hidden="true">
+                    {{ ux_icon(resolve_icon_name('action:calendar'), {width: '16px', height: '16px'}) }}
+                </span>
+                <input type="date" id="cpt-date-fin" class="form-control"
+                       value="{{ dateFin|date('Y-m-d') }}"
+                       data-cpt-date-fin="{{ agent.id }}"
+                       aria-describedby="cpt-date-fin-aide">
+            </div>
         </fieldset>
     {% endif %}
 
