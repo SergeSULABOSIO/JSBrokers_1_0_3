@@ -332,6 +332,8 @@ export default class extends Controller {
             targetElement = this.hasSaveIconTarget ? this.saveIconTarget : null;
         } else if (requesterId === this.dialogId + '-close') {
             targetElement = this.hasCloseIconTarget ? this.closeIconTarget : null;
+        } else if (requesterId === this.dialogId + '-geste-de-suite') {
+            targetElement = this.element.querySelector('[data-geste-de-suite-icone]');
         }
         // NOUVEAU : Gérer les icônes pour la barre d'outils des attributs
         else if (requesterId.startsWith(`${this.dialogId}-attr-action-`)) {
@@ -1295,10 +1297,33 @@ export default class extends Controller {
         bouton.className = 'btn btn-primary d-inline-flex align-items-center gap-2';
         bouton.dataset.action = 'click->dialog-instance#executerLeGesteDeSuite';
         bouton.dataset.dialogInstanceTarget = 'gesteDeSuite';
-        bouton.textContent = suite.label || 'Continuer';
+
+        // L'ICÔNE ARRIVE PAR LE CIRCUIT EXISTANT, comme celles des deux autres boutons du
+        // pied. Elle se pose dans un porteur créé d'avance : la réponse est asynchrone, et
+        // sans emplacement réservé elle arriverait sur un bouton déjà rendu — ou nulle
+        // part. Les boutons du pied portent tous une icône ; celui-ci n'avait aucune
+        // raison de faire exception.
+        const porteur = document.createElement('span');
+        porteur.className = 'button-icon d-inline-flex';
+        porteur.dataset.gesteDeSuiteIcone = '1';
+        porteur.setAttribute('aria-hidden', 'true');
+        bouton.appendChild(porteur);
+
+        const libelle = document.createElement('span');
+        libelle.className = 'button-text';
+        libelle.textContent = suite.label || 'Continuer';
+        bouton.appendChild(libelle);
 
         this.submitButtonTarget.classList.add('d-none');
         this.submitButtonTarget.after(bouton);
+
+        if (suite.icon) {
+            this.notifyCerveau('ui:icon.request', {
+                iconName: suite.icon,
+                iconSize: 16,
+                requesterId: this.dialogId + '-geste-de-suite',
+            });
+        }
     }
 
     /**

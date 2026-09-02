@@ -131,10 +131,33 @@ class DemandeCongeController extends AbstractController
         );
     }
 
+    /**
+     * ── LE DÉCOMPTE EST RECALCULÉ À CHAQUE ÉCRITURE, tant que rien n'est décidé ──────
+     *
+     * Une demande posée du 2 au 2 septembre coûte un jour. Corrigée du 2 au 3, elle en
+     * coûte deux — mais la liste continuait d'annoncer « 1 j » à côté de la nouvelle
+     * période : le décompte n'était figé qu'à la SOUMISSION, et changer les dates ensuite
+     * le laissait tel quel. Deux chiffres qui se contredisent sur la même ligne, et un
+     * contrôle de solde qui se prononce sur le mauvais.
+     *
+     * Le crochet `beforePersist` est le bon moment : le formulaire est validé, l'entité
+     * porte ses nouvelles dates, et rien n'est encore parti en base. Le chiffre est donc
+     * juste DÈS la réponse — pas au prochain rafraîchissement.
+     *
+     * Les écritures qui ne passent pas par ici — l'assistant, qui écrit par le moteur
+     * générique de mutation — sont rattrapées en fin de requête par
+     * {@see \App\Service\Conge\DemandeCongeWorkflow::completerLaTrace}. La règle, elle,
+     * n'est écrite qu'une fois.
+     */
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request): JsonResponse
     {
-        return $this->handleFormSubmission($request, DemandeConge::class, DemandeCongeType::class);
+        return $this->handleFormSubmission(
+            $request,
+            DemandeConge::class,
+            DemandeCongeType::class,
+            fn (DemandeConge $demande) => $this->workflow->rafraichirLeDecompteSiNonDecide($demande),
+        );
     }
 
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]

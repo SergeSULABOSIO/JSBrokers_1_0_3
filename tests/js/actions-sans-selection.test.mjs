@@ -57,3 +57,31 @@ for (const [nom, source] of Object.entries(CONTROLEURS)) {
         );
     });
 }
+
+/**
+ * LE MENU D'UNE FAMILLE SE POSE AVEC LA GÉOMÉTRIE PARTAGÉE.
+ *
+ * Il se posait en `absolute` dans la barre, avec une règle CSS qui le rabattait à droite
+ * dès qu'il était le DERNIER bouton — au motif qu'un dernier bouton est en fin de barre.
+ * C'est faux dès que la barre en porte peu : le bouton est alors à gauche, le menu part
+ * vers l'arrière et sort du panneau, qui le rogne. On lisait « …pteurs de congés ».
+ *
+ * `positionnerMenu` est la même géométrie que le menu de bulle, le chip-sélecteur et le
+ * menu contextuel : elle bascule au-dessus s'il n'y a pas la place dessous, et écrête aux
+ * bords du viewport. Aucun menu ne peut plus sortir de l'écran.
+ */
+test("barre d’outils : le menu de famille est posé par la géométrie partagée", () => {
+    const source = CONTROLEURS['barre d’outils'];
+
+    assert.match(
+        source,
+        /import \{ positionnerMenu \} from '\.\/menu-flottant\.js';/,
+        'La géométrie des menus flottants est partagée : la réécrire ici la ferait diverger.',
+    );
+
+    assert.match(
+        source,
+        /_positionnerMenuDeGroupe\(button, menu\) \{[\s\S]*?alignement: 'gauche',/,
+        "Le menu s'ouvre du côté où le bouton commence, dans le sens du geste.",
+    );
+});
