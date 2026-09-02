@@ -106,7 +106,18 @@ class DemandeCongeIndicatorStrategy implements IndicatorCalculationStrategyInter
         return $libelle;
     }
 
-    /** « Du 07/09/2026 au 11/09/2026 · 5 j », avec la mention des demi-journées. */
+    /**
+     * « Du 07/09/2026 au 11/09/2026 · 5 j ouvrables », avec la mention des demi-journées.
+     *
+     * ── POURQUOI « OUVRABLES » EST ÉCRIT ────────────────────────────────────────────
+     * « Du 02/09 au 05/09 · 3 j » se lit comme une erreur quand on compte quatre jours au
+     * calendrier. Il n'y en a pourtant que trois de travaillés : le 5 est un samedi. Les
+     * deux bornes SONT comptées — c'est le week-end qui ne l'est pas.
+     *
+     * Le mot manquait, et son absence transformait un décompte juste en soupçon de bogue.
+     * L'unité s'écrit donc là où le chiffre se lit, et non seulement dans l'intro du
+     * formulaire que l'on ne relit plus. — Bastien & Scapin > Signifiance.
+     */
     private function periodeLibelle(DemandeConge $demande): string
     {
         $debut = $demande->getDateDebut()?->format('d/m/Y') ?? '?';
@@ -118,7 +129,7 @@ class DemandeCongeIndicatorStrategy implements IndicatorCalculationStrategyInter
             : sprintf('Du %s au %s', $debut, $fin);
 
         if ($jours > 0.0) {
-            $libelle .= sprintf(' · %s j', rtrim(rtrim(number_format($jours, 1, ',', ' '), '0'), ','));
+            $libelle .= sprintf(' · %s j ouvrables', rtrim(rtrim(number_format($jours, 1, ',', ' '), '0'), ','));
         }
 
         $demies = [];

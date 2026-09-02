@@ -5502,6 +5502,34 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     gap: .35rem;
     white-space: nowrap;
 }
+
+/* ── LES GESTES NE PARAISSENT QU'AU SURVOL DE LEUR LIGNE ─────────────────────
+   Neuf boutons alignés sur trois lignes tiraient l'œil avant les chiffres, alors
+   que la grille sert d'abord à COMPARER des soldes. Ils s'effacent donc jusqu'à
+   ce qu'on désigne une ligne — et c'est aussi ce qui dit sur QUI l'on va agir.
+
+   ── OPACITÉ, PAS `display: none` ────────────────────────────────────────────
+   Les boutons gardent leur place : la colonne ne change pas de largeur au
+   passage de la souris, et les lignes ne sautent pas les unes sous les autres.
+   `pointer-events` suit l'opacité — un bouton invisible mais cliquable est pire
+   qu'un bouton visible.
+
+   ── ET LE CLAVIER LES ATTEINT TOUJOURS ──────────────────────────────────────
+   `:focus-within` révèle la ligne dès qu'un de ses boutons reçoit le focus au
+   Tab. Sans cela, un utilisateur au clavier tabulerait dans des commandes
+   invisibles, ce qui est exactement la panne que le survol seul fabrique
+   (WCAG 2.4.7 — focus visible). Les lecteurs d'écran, eux, ne sont jamais
+   concernés : l'opacité ne masque rien à l'arbre d'accessibilité. */
+.jsb-picker-table tbody .jsb-picker-gestes {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .12s ease;
+}
+.jsb-picker-table tbody tr:hover .jsb-picker-gestes,
+.jsb-picker-table tbody tr:focus-within .jsb-picker-gestes {
+    opacity: 1;
+    pointer-events: auto;
+}
 .jsb-picker-geste {
     display: inline-flex;
     align-items: center;

@@ -74,7 +74,7 @@
                             Du <strong>{{ demande.dateDebut|date('d/m/Y') }}</strong>
                             au <strong>{{ demande.dateFin|date('d/m/Y') }}</strong>
                         {% endif %}
-                        {%- if apercu.jours > 0 %}, soit <strong>{{ apercu.jours|number_format(1, ',', ' ')|trim('0')|trim(',') }}&nbsp;jour(s)</strong> décompté(s){% endif %}.
+                        {%- if apercu.jours > 0 %}, soit <strong>{{ apercu.jours|number_format(1, ',', ' ')|trim('0')|trim(',') }}&nbsp;jour(s) ouvrable(s)</strong> décompté(s){% endif %}.
                     {% endif %}
                     {% if demande.typeAbsence and not demande.typeAbsence.decompte %}
                         Ce type d'absence <strong>ne touche pas au compteur</strong> : il n'est enregistré que pour le calendrier et l'historique.
