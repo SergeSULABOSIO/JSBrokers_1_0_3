@@ -810,9 +810,18 @@ textarea:hover,
     background-color: rgba(0, 71, 171, 0.12);
 }
 
+/* POSITION FIXE, POSÉE PAR LE CONTRÔLEUR (menu-flottant.js). En `absolute`, le menu
+   restait prisonnier du panneau et s'en faisait rogner ; et la règle qui le rabattait
+   « à droite quand il est le dernier bouton » supposait qu'un dernier bouton est en fin
+   de barre — faux dès que la barre en porte peu, le bouton étant alors à gauche. */
+/* Même règle que le menu contextuel : une entrée par ligne, jamais coupée. */
+.toolbar-groupe-menu li {
+    white-space: nowrap;
+}
+
 .toolbar-groupe-menu {
-    position: absolute;
-    top: calc(100% + 4px);
+    position: fixed;
+    top: 0;
     left: 0;
     z-index: 1050;          /* au-dessus de la liste, sous les modales Bootstrap */
     min-width: 232px;
@@ -825,11 +834,6 @@ textarea:hover,
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
-/* Rabat à droite quand le bouton est en fin de barre (débordement horizontal). */
-.toolbar-groupe:last-child .toolbar-groupe-menu {
-    left: auto;
-    right: 0;
-}
 
 .toolbar-groupe-menu [role="menuitem"] {
     display: flex;
@@ -935,6 +939,12 @@ textarea:hover,
     align-items: center;
     gap: 0.75rem;
     padding: 9px 14px;
+    /* UNE ENTRÉE DE MENU TIENT SUR UNE LIGNE. « Compteurs de congés » se coupait en
+       deux au milieu du groupe nominal, et deux entrées voisines sur deux lignes
+       chacune se lisent comme quatre : on cherche alors où finit l'une et où
+       commence l'autre. La largeur minimale du menu n'est qu'un plancher — le menu
+       s'élargit pour tenir son libellé le plus long. */
+    white-space: nowrap;
     cursor: pointer;
     color: #f8f9fa;              /* contraste 16:1 sur #1e2227 — WCAG AA ✓ */
     border-radius: 4px;

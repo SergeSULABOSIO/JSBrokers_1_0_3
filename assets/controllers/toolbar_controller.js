@@ -1,6 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 import { conditionRemplie } from './condition-action.js';
 import { grouperActions, urlAction } from './actions-groupees.js';
+import { positionnerMenu } from './menu-flottant.js';
 
 /**
  * Nombre maximal d'entrées d'actions spécifiques affichées EN LIGNE dans la barre.
@@ -431,6 +432,27 @@ export default class extends Controller {
         button.setAttribute('aria-expanded', 'true');
         this.menuOuvert = { button, menu };
 
+        // ── OÙ LE MENU SE POSE ─────────────────────────────────────────────────────
+        //
+        // Il se posait en `absolute` dans la barre, avec une règle CSS qui le rabattait
+        // à droite dès qu'il était le DERNIER bouton — au motif qu'un dernier bouton est
+        // en fin de barre. C'est faux dès que la barre en porte peu : le bouton se
+        // trouve alors à GAUCHE, le menu part vers l'arrière, et il sort du panneau, qui
+        // le rogne. On lisait « …pteurs de congés ».
+        //
+        // On mesure donc, et l'on pose en coordonnées viewport avec la géométrie
+        // PARTAGÉE (menu-flottant.js) : celle du menu de bulle, du chip-sélecteur et du
+        // menu contextuel. Elle bascule au-dessus s'il n'y a pas la place dessous et
+        // écrête aux bords — un menu ne peut plus sortir de l'écran, où qu'il s'ouvre.
+        // `fixed` le sort au passage de tout ancêtre à `overflow: hidden`.
+        this._positionnerMenuDeGroupe(button, menu);
+
+        // La barre défile et se réagence (flex-wrap) : le menu doit suivre son bouton,
+        // faute de quoi il resterait posé là où le bouton n'est plus.
+        this.boundSuivreMenu = () => this._positionnerMenuDeGroupe(button, menu);
+        window.addEventListener('resize', this.boundSuivreMenu);
+        window.addEventListener('scroll', this.boundSuivreMenu, true);
+
         this.boundFermerMenu = (event) => {
             if (!menu.contains(event.target)) this._fermerMenuOuvert();
         };
@@ -446,8 +468,31 @@ export default class extends Controller {
         menu.querySelector('[role="menuitem"]')?.focus();
     }
 
+    /**
+     * Pose le menu d'une famille sous son bouton, en coordonnées viewport.
+     * @private
+     */
+    _positionnerMenuDeGroupe(button, menu) {
+        const ancre = button.getBoundingClientRect();
+        const { left, top } = positionnerMenu({
+            ancre,
+            menu: { largeur: menu.offsetWidth, hauteur: menu.offsetHeight },
+            viewport: { largeur: window.innerWidth, hauteur: window.innerHeight },
+            // À GAUCHE : le menu s'ouvre du côté où le bouton commence, dans le sens du
+            // geste. Aligné à droite, il partait vers l'arrière.
+            alignement: 'gauche',
+        });
+        menu.style.left = `${left}px`;
+        menu.style.top = `${top}px`;
+    }
+
     /** Referme le menu de famille ouvert, s'il y en a un. @private */
     _fermerMenuOuvert() {
+        if (this.boundSuivreMenu) {
+            window.removeEventListener('resize', this.boundSuivreMenu);
+            window.removeEventListener('scroll', this.boundSuivreMenu, true);
+            this.boundSuivreMenu = null;
+        }
         if (this.boundFermerMenu) {
             document.removeEventListener('click', this.boundFermerMenu);
             this.boundFermerMenu = null;

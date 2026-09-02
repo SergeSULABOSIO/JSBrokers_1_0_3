@@ -193,6 +193,62 @@ class CongeDecisionPickerTest extends WebTestCase
     }
 
     /**
+     * LE DÉCOMPTE SUIT LA PÉRIODE — deux jours du 2 au 3, et non un.
+     *
+     * ── L'INCIDENT ──────────────────────────────────────────────────────────────────
+     * Une demande posée du 2 au 2 septembre coûte un jour. Corrigée du 2 au 3, elle en
+     * coûte deux — mais la liste continuait d'annoncer « 1 j » à côté de la nouvelle
+     * période, parce que le décompte n'était figé qu'à la SOUMISSION. Deux chiffres qui
+     * se contredisent sur la même ligne : on ne sait plus lequel croire, et le contrôle
+     * de solde se prononce sur le mauvais.
+     */
+    public function testCorrigerLaPeriodeRecalculeLeDecompte(): void
+    {
+        $s = $this->semer();
+        $demande = $s['demande'];
+
+        // Une journée, un mercredi : rien de férié, aucun régime particulier.
+        $demande->setDateDebut(new \DateTimeImmutable('2026-09-02'));
+        $demande->setDateFin(new \DateTimeImmutable('2026-09-02'));
+        $demande->setNbJours('1.0');
+        $this->em()->flush();
+
+        // Le propriétaire : modifier une fiche existante exige le niveau MODIFICATION,
+        // que l'agent n'a pas (Lecture + Écriture d'office).
+        $this->client->loginUser($s['valideur']->getUtilisateur());
+        $this->client->request('POST', '/admin/demandeconge/api/submit', [
+            'id' => (string) $demande->getId(),
+            'idEntreprise' => (string) $s['entreprise']->getId(),
+            'idInvite' => (string) $s['valideur']->getId(),
+            'agent' => (string) $s['agent']->getId(),
+            'typeAbsence' => (string) $demande->getTypeAbsence()->getId(),
+            'dateDebut' => '2026-09-02',
+            'dateFin' => '2026-09-03',
+            'motif' => 'Vacances en famille.',
+        ]);
+
+        self::assertResponseIsSuccessful();
+
+        // LA RÉPONSE ELLE-MÊME porte déjà le bon chiffre. C'est ce que le crochet
+        // `beforePersist` garantit : sans lui, le filet de fin de requête corrigerait bien
+        // la base, mais l'écran qui vient d'enregistrer afficherait une dernière fois
+        // l'ancienne valeur — et l'on douterait de ce qu'on vient de saisir.
+        $charge = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertSame('2.0', (string) ($charge['entity']['nbJours'] ?? ''), 'La réponse doit déjà porter 2 jours.');
+
+        $this->em()->clear();
+        $relue = $this->em()->getRepository(DemandeConge::class)->find($demande->getId());
+
+        self::assertSame('2026-09-03', $relue->getDateFin()->format('Y-m-d'));
+        self::assertSame(
+            2.0,
+            (float) $relue->getNbJours(),
+            'Du mercredi 2 au jeudi 3 septembre, il y a DEUX jours ouvrables. Un décompte '
+            . 'qui reste à 1 contredit la période affichée sur la même ligne.',
+        );
+    }
+
+    /**
      * DIRE CE QUI BLOQUE NE SUFFIT PAS : IL FAUT POUVOIR Y ALLER.
      *
      * Lire « le type est plafonné à 10 jours, celle-ci en compte 46 » puis devoir fermer

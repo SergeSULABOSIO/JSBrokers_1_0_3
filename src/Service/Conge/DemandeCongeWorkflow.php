@@ -83,6 +83,36 @@ class DemandeCongeWorkflow
     }
 
     /**
+     * REMET LE DÉCOMPTE EN ACCORD AVEC LA PÉRIODE, tant que la demande n'est pas décidée.
+     *
+     * ── L'INCIDENT ──────────────────────────────────────────────────────────────────
+     * Une demande posée du 2 au 2 septembre coûte un jour. Corrigée du 2 au 3, elle en
+     * coûte deux — mais la liste continuait d'annoncer « 1 j » à côté de la nouvelle
+     * période. Le décompte n'était calculé qu'à la SOUMISSION ; changer les dates ensuite
+     * le laissait tel quel. Deux chiffres qui se contredisent sur la même ligne : on ne
+     * sait plus lequel croire, et le contrôle de solde se prononce sur le mauvais.
+     *
+     * ── UNE DEMANDE DÉCIDÉE GARDE LE SIEN ───────────────────────────────────────────
+     * C'est lui qui a produit le mouvement de compteur. Le recalculer — parce qu'un jour
+     * férié a été déclaré depuis, par exemple — ferait diverger le solde de la trace qui
+     * l'explique. Le figement garde tout son sens : il commence à la DÉCISION, non à la
+     * soumission.
+     *
+     * @return bool vrai si le décompte a changé (donc s'il reste quelque chose à écrire)
+     */
+    public function rafraichirLeDecompteSiNonDecide(DemandeConge $demande): bool
+    {
+        if (!in_array($demande->getStatut(), [DemandeConge::STATUT_BROUILLON, DemandeConge::STATUT_SOUMISE], true)) {
+            return false;
+        }
+
+        $avant = $demande->getNbJours();
+        $this->figerLeDecompte($demande);
+
+        return $demande->getNbJours() !== $avant;
+    }
+
+    /**
      * Ce qui empêcherait cette demande d'être soumise. Le décompte est figé au passage :
      * on ne peut pas se prononcer sur une demande sans savoir ce qu'elle coûte.
      *
@@ -322,11 +352,17 @@ class DemandeCongeWorkflow
      */
     public function completerLaTrace(DemandeConge $demande): bool
     {
+        // LE FILET DU DÉCOMPTE. L'abonné le rafraîchit déjà pendant le flush, ce qui le
+        // rend juste dès la réponse ; mais il doit renoncer quand l'agent lui-même vient
+        // de naître dans ce flush — interroger la base sur une entité sans identifiant
+        // lève. Ce passage-ci, lui, a tout sous la main.
+        $decompteCorrige = $this->rafraichirLeDecompteSiNonDecide($demande);
+
         $statutTrace = $this->historiqueRepository->dernierStatutTrace($demande);
         $statutReel = $demande->getStatut();
 
         if ($statutTrace === $statutReel) {
-            return false;
+            return $decompteCorrige;
         }
 
         // Une demande créée directement au BROUILLON n'a rien à raconter : elle n'a

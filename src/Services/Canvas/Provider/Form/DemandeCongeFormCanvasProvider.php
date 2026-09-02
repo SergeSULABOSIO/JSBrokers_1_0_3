@@ -62,6 +62,10 @@ class DemandeCongeFormCanvasProvider implements FormCanvasProviderInterface
             // n'a pas de suite obligée.
             "action_apres_creation" => [
                 "label"   => "Soumettre au valideur",
+                // MÊME ICÔNE QUE L'ACTION DE LA BARRE D'OUTILS : c'est le même geste,
+                // atteint par une autre porte. Deux symboles pour un seul acte
+                // obligeraient à réapprendre l'écran à chaque entrée.
+                "icon"    => "action:upload",
                 "message" => "Demande enregistrée en brouillon — elle n'est pas encore partie. Soumettez-la pour que vos valideurs la voient.",
                 "event"   => "ui:conge.decision-request",
                 "url"     => "/admin/demandeconge/api/decision-picker/%id%?geste=soumettre",
