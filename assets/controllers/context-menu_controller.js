@@ -177,12 +177,18 @@ export default class extends Controller {
         }
 
         // Gérer les actions spécifiques avec filtrage conditionnel par état.
-        // Une action déclarée `multi: true` est visible dès 1 sélection (unique ou
-        // multiple) ; les autres restent strictement réservées à la sélection UNIQUE
-        // (comportement historique inchangé).
+        // ── TROIS PORTÉES, ET NON DEUX ─────────────────────────────────────────────
+        // `sans_selection` : l'action ne porte sur AUCUNE ligne — un calendrier d'équipe,
+        //   une grille de compteurs regardent tout le cabinet. Les enfermer derrière une
+        //   sélection obligeait à cocher une ligne au hasard pour ouvrir un écran qui ne
+        //   la concerne pas, et laissait croire qu'ils en dépendaient.
+        // `multi` : visible dès 1 ligne, une ou plusieurs.
+        // sans drapeau : sélection UNIQUE (comportement historique inchangé).
         const rawActions  = this.entityFormCanvas?.parametres?.attribute_actions || [];
         const entityData  = this.entities[0]?.entity || {};
         const specificActions = rawActions.filter(action => {
+            if (action.sans_selection === true) return true;
+
             const countOk = action.multi === true ? hasSelection : isSingleSelection;
             if (!countOk) return false;
             return conditionRemplie(entityData, action.condition);
@@ -251,7 +257,9 @@ export default class extends Controller {
 
         if (actions.length === 0) return;
 
-        const selectedId = this.entities[0].id;
+        // Une action transverse n'a pas de ligne : sans cette précaution, ouvrir le menu
+        // sur une liste sans sélection faisait échouer tout son rendu.
+        const selectedId = this.entities[0]?.id ?? null;
 
         // REGROUPEMENT PAR FAMILLE (même règle que la barre d'outils, cf.
         // actions-groupees.js) : une famille devient UN item qui ouvre un sous-menu.
