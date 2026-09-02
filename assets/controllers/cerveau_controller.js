@@ -527,6 +527,9 @@ export default class extends Controller {
             // NOUVEAU : Gère la demande de fermeture d'une boîte de dialogue.
             case 'ui:dialog.close-request':
                 this.broadcast('app:dialog.do-close', { dialogId: payload.dialogId });
+                // Si l'on venait d'une boîte de décision de congé, on y retourne — que la
+                // demande ait été enregistrée ou non (cf. _handleCongeDecisionEditRequest).
+                this._reouvrirLaDecisionSiAttendue();
                 break;
             case 'ui:note.preview-request':
                 this.handleNotePreviewRequest(payload);
@@ -621,6 +624,9 @@ export default class extends Controller {
                 break;
             case 'ui:conge.calendrier-request': // grille mensuelle des absences de l'équipe
                 this.handleCongeCalendrierRequest(payload);
+                break;
+            case 'conge:decision.edit-request': // aller corriger la demande, puis revenir
+                this._handleCongeDecisionEditRequest(payload);
                 break;
             case 'conge:decision.enregistree': // succès d'un geste du circuit de validation
                 this._handleCongeDecisionEnregistree(payload);
@@ -2047,10 +2053,82 @@ export default class extends Controller {
      * @param {string} payload.url - '/admin/demandeconge/api/decision-picker/{id}?geste=…'
      */
     async handleCongeDecisionRequest(payload) {
+        // On RETIENT l'adresse : elle porte le geste (`?geste=approuver`) et le contexte.
+        // C'est elle que l'on rouvrira si le valideur part corriger la demande — la
+        // reconstruire ailleurs serait une seconde manière de dire la même chose.
+        this.congeDecisionUrl = payload.url || null;
+
         await this._openStandalonePicker(payload.url, {
             controllerName: 'conge-decision-picker',
             errorLabel: 'la demande de congé',
         });
+    }
+
+    /**
+     * « MODIFIER LA DEMANDE » — l'aller, puis le retour.
+     *
+     * ── POURQUOI CE CHEMIN EXISTE ───────────────────────────────────────────────────
+     * La boîte de décision dit ce qui empêche le geste : un plafond dépassé, un solde
+     * insuffisant, des dates qui se chevauchent. Le dire ne suffisait pas — il fallait
+     * ensuite fermer la fenêtre, retrouver la ligne dans la liste, l'ouvrir, corriger,
+     * refermer, resélectionner, relancer le geste. Sept manœuvres pour changer un chiffre
+     * que l'on avait sous les yeux. — Nielsen 9 : aider à CORRIGER, pas seulement à
+     * constater.
+     *
+     * ── LE RETOUR EST INCONDITIONNEL ────────────────────────────────────────────────
+     * La boîte revient que l'on ait enregistré ou renoncé : on est parti d'elle, on y
+     * revient. Rouvrir seulement après un enregistrement laisserait celui qui renonce
+     * devant une liste, sans rien pour reprendre là où il en était.
+     *
+     * Le canevas de formulaire et l'entité viennent de l'ONGLET ACTIF — celui de la liste
+     * des congés, d'où la boîte a été ouverte. C'est la même source que l'action
+     * « Modifier » de la barre d'outils : une seule façon d'ouvrir une fiche.
+     * @param {object} payload
+     * @param {number} payload.id - identifiant de la demande à corriger
+     * @private
+     */
+    _handleCongeDecisionEditRequest(payload) {
+        const etat = this._getActiveTabState();
+        const ligne = (etat?.selectionState || []).find((s) => Number(s.id) === Number(payload.id));
+
+        if (!ligne?.entity || !etat?.activeTabFormCanvas) {
+            // Sans canevas ni entité, on ne saurait ouvrir la fiche. Se taire ferait
+            // croire à un bouton mort : on le dit, et la boîte reste fermée.
+            console.error('[Cerveau] conge:decision.edit-request : contexte de liste absent.', payload);
+            this._showNotification("Impossible d'ouvrir la demande : rouvrez-la depuis la liste.", 'error');
+            this.congeRetourApresEdition = null;
+
+            return;
+        }
+
+        this.congeRetourApresEdition = this.congeDecisionUrl;
+
+        this.broadcast('app:loading.start');
+        this._publishSelectionStatus('Ouverture de la demande...');
+        this.openDialogBox({
+            entity: ligne.entity,
+            entityFormCanvas: etat.activeTabFormCanvas,
+            isCreationMode: false,
+            context: { originatorId: this.getActiveTabId() },
+        });
+    }
+
+    /**
+     * Rouvre la boîte de décision après le passage par la fiche, une seule fois.
+     *
+     * Appelée à la FERMETURE du dialogue — le moment où la fiche disparaît, qu'on ait
+     * enregistré ou renoncé. Le drapeau est vidé avant l'ouverture : l'enregistrement et
+     * la fermeture se suivent, et sans cela la boîte se rouvrirait deux fois.
+     * @private
+     */
+    _reouvrirLaDecisionSiAttendue() {
+        const url = this.congeRetourApresEdition;
+        if (!url) {
+            return;
+        }
+
+        this.congeRetourApresEdition = null;
+        this.handleCongeDecisionRequest({ url });
     }
 
     /**
