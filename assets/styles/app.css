@@ -5499,6 +5499,10 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     line-height: 1.2;
 }
 
+/* Le corps du calendrier d'équipe : la gouttière du socle, appliquée à un contenu qui
+   n'est pas un tableau pleine largeur à en-tête collante. */
+.jsb-cal-corps { padding: .75rem var(--jsb-picker-gouttiere) 1.25rem; }
+
 .jsb-picker-empty {
     padding: 1.5rem .5rem;
     text-align: center;

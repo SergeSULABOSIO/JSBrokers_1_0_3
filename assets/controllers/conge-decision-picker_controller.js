@@ -53,7 +53,27 @@ export default class extends PickerBaseController {
 
     _onActionClick(event) {
         const bouton = event.target.closest('[data-picker-executer]');
-        if (bouton) this._executer(bouton);
+        if (bouton) return this._executer(bouton);
+
+        const modifier = event.target.closest('[data-picker-modifier]');
+        if (modifier) return this._modifierLaDemande(modifier.dataset.pickerModifier);
+
+        return undefined;
+    }
+
+    /**
+     * ALLER CORRIGER LA DEMANDE, ET REVENIR ICI.
+     *
+     * La boîte se ferme, la fiche s'ouvre, et le cerveau rouvre cette même boîte dès que
+     * le dialogue d'édition se referme — qu'on ait enregistré ou renoncé. L'URL de retour
+     * n'est pas transmise d'ici : c'est le cerveau qui a ouvert cette boîte, il connaît
+     * donc déjà l'adresse exacte, geste compris. La recomposer dans le gabarit serait une
+     * seconde manière de dire la même chose, et la première à diverger.
+     * @private
+     */
+    _modifierLaDemande(id) {
+        this._notifyCerveau('conge:decision.edit-request', { id: Number(id) });
+        this.close();
     }
 
     /**

@@ -46,8 +46,14 @@
         </div>
 
         {# Le fragment rechargé à chaque changement de mois : le serveur rend la grille,
-           le navigateur substitue le bloc. #}
-        <div data-conge-calendrier-target="grille">
+           le navigateur substitue le bloc.
+
+           `jsb-picker-listwrap` N'EST PAS DÉCORATIVE : c'est elle qui porte le
+           `flex: 1 1 auto` du socle. Sans elle, ce bloc ne prenait que la hauteur de son
+           contenu, et le pied de la fenêtre — donc son bouton — remontait se coller sous
+           la grille au lieu de rester en bas de la boîte. Sur un mois sans absence, la
+           barre d'action se retrouvait au tiers de la hauteur, avec du vide dessous. #}
+        <div class="jsb-picker-listwrap" data-conge-calendrier-target="grille" aria-live="polite">
             {{ include('components/conge/_calendrier_grille.html.twig', {grille: grille, perimetre: perimetre}) }}
         </div>
 

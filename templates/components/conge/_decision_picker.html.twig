@@ -102,6 +102,20 @@
                             <li>{{ violation }}</li>
                         {% endfor %}
                     </ul>
+
+                    {# ── DIRE CE QUI BLOQUE NE SUFFIT PAS : IL FAUT POUVOIR Y ALLER ─────
+                       Lire « le type est plafonné à 10 jours, celle-ci en compte 46 » puis
+                       devoir fermer la fenêtre, retrouver la ligne, l'ouvrir, corriger,
+                       refermer et relancer le geste — c'est six manœuvres pour une
+                       correction d'un chiffre. Le bouton ouvre la fiche, et la boîte
+                       revient d'elle-même à la fermeture du dialogue, qu'on ait enregistré
+                       ou renoncé. — Bastien & Scapin > Gestion des erreurs (récupération),
+                       Nielsen 9 (aider à corriger, pas seulement à constater). #}
+                    <button type="button" class="btn btn-sm btn-warning jsb-picker-btn mt-2"
+                            data-picker-modifier="{{ demande.id }}">
+                        <twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                        Modifier la demande
+                    </button>
                 </div>
             {% endif %}
 

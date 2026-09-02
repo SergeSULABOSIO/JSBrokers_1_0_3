@@ -193,6 +193,40 @@ class CongeDecisionPickerTest extends WebTestCase
     }
 
     /**
+     * DIRE CE QUI BLOQUE NE SUFFIT PAS : IL FAUT POUVOIR Y ALLER.
+     *
+     * Lire « le type est plafonné à 10 jours, celle-ci en compte 46 » puis devoir fermer
+     * la fenêtre, retrouver la ligne, l'ouvrir, corriger, refermer, resélectionner et
+     * relancer le geste — c'est sept manœuvres pour changer un chiffre qu'on avait sous
+     * les yeux. Le bouton ouvre la fiche, et la boîte revient d'elle-même.
+     */
+    public function testUneBoiteBloqueeOffreDAllerCorrigerLaDemande(): void
+    {
+        $s = $this->semer();
+
+        // On rend le geste impossible : l'agent ne peut pas approuver sa propre demande.
+        $html = $this->ouvrir($s, $s['agent'], 'approuver');
+
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString("Ce geste n'est pas possible pour l'instant", $html);
+        self::assertStringContainsString(
+            sprintf('data-picker-modifier="%d"', $s['demande']->getId()),
+            $html,
+            "La boîte doit offrir d'aller corriger la demande, pas seulement constater le blocage.",
+        );
+        self::assertStringContainsString('Modifier la demande', $html);
+    }
+
+    /** Quand rien ne bloque, il n'y a rien à corriger : le bouton ne paraît pas. */
+    public function testUneBoitePreteNOffrePasDeCorrection(): void
+    {
+        $s = $this->semer();
+        $html = $this->ouvrir($s, $s['valideur'], 'approuver');
+
+        self::assertStringNotContainsString('data-picker-modifier', $html);
+    }
+
+    /**
      * ELLE S'OUVRE MÊME QUAND LE GESTE EST IMPOSSIBLE, et en dit la raison.
      *
      * Ici l'agent tente d'approuver sa propre demande : la boîte s'ouvre, explique, et son

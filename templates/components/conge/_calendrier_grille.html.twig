@@ -5,22 +5,24 @@
     navigue : le navigateur substitue ce bloc et rien d'autre. Recharger la boîte entière
     ferait perdre le focus et rejouerait l'animation d'ouverture à chaque clic de flèche.
 #}
-<div class="jsb-picker-listwrap" style="padding: .5rem 1.25rem 1rem;">
+{# LE CADRE EXTÉRIEUR N'EST PLUS ICI. C'est le conteneur de la boîte qui porte
+   `jsb-picker-listwrap`, donc le `flex: 1 1 auto` qui pousse le pied — et son bouton —
+   en bas de la fenêtre. Le poser une seconde fois DANS le fragment le remettait à la
+   hauteur du contenu : sur un mois sans absence, la barre d'action remontait au tiers
+   de la boîte, avec du vide dessous. #}
+<div class="jsb-picker-sousentete">
+    <button type="button" class="btn btn-sm btn-outline-secondary jsb-picker-btn"
+            data-cal-mois="{{ grille.precedent.mois }}" data-cal-annee="{{ grille.precedent.annee }}">
+        <span aria-hidden="true">‹</span> Mois précédent
+    </button>
+    <p class="jsb-picker-sousentete-titre">{{ grille.libelle }}</p>
+    <button type="button" class="btn btn-sm btn-outline-secondary jsb-picker-btn"
+            data-cal-mois="{{ grille.suivant.mois }}" data-cal-annee="{{ grille.suivant.annee }}">
+        Mois suivant <span aria-hidden="true">›</span>
+    </button>
+</div>
 
-    {# ── NAVIGATION ─────────────────────────────────────────────────────────────── #}
-    <div class="d-flex align-items-center justify-content-between mb-2">
-        <button type="button" class="btn btn-sm btn-outline-secondary"
-                data-cal-mois="{{ grille.precedent.mois }}" data-cal-annee="{{ grille.precedent.annee }}"
-                aria-label="Mois précédent">
-            ‹ Mois précédent
-        </button>
-        <strong style="color:#212529;">{{ grille.libelle }}</strong>
-        <button type="button" class="btn btn-sm btn-outline-secondary"
-                data-cal-mois="{{ grille.suivant.mois }}" data-cal-annee="{{ grille.suivant.annee }}"
-                aria-label="Mois suivant">
-            Mois suivant ›
-        </button>
-    </div>
+<div class="jsb-cal-corps">
 
     {% if grille.lignes|length == 0 %}
         <p class="jsb-picker-empty">
