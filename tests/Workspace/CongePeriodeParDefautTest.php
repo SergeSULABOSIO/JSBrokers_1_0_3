@@ -130,19 +130,47 @@ class CongePeriodeParDefautTest extends KernelTestCase
     }
 
     /**
-     * « Dix jours » se lit comme la LONGUEUR de l'absence, non comme un décalage : du 7 au
-     * 16, et non du 7 au 17.
+     * LA PÉRIODE PROPOSÉE COÛTE EXACTEMENT LA DURÉE RÉGLÉE — dans l'unité du module.
+     *
+     * ── LA CONTRE-EXPERTISE QUI L'A FAIT NAÎTRE ─────────────────────────────────────
+     * La première version proposait « début + 10 jours de calendrier ». Du jeudi 10 au
+     * samedi 19 septembre, cela ne fait que SEPT jours ouvrables : le chiffre réglé par le
+     * cabinet n'apparaissait nulle part dans ce que l'utilisateur allait voir décompté. Et
+     * la période se terminait un samedi — une absence qui s'arrête un jour non travaillé
+     * n'a rien à dire.
      */
-    public function testLaFinProposeeCouvreLaDureeUsuelleBornesIncluses(): void
+    public function testLaPeriodeProposeeCouteExactementLaDureeReglee(): void
     {
-        $debut = new \DateTimeImmutable('2026-09-07');
-        $fin = $this->service()->fin($debut);
+        $invite = $this->cabinet(5);
+        $service = $this->service();
 
-        self::assertSame('2026-09-16', $fin->format('Y-m-d'));
+        // Jeudi 10 septembre 2026 : dix jours ouvrables mènent au mercredi 23.
+        $debut = new \DateTimeImmutable('2026-09-10');
+        $fin = $service->fin($invite, $debut);
+
+        self::assertSame('2026-09-23', $fin->format('Y-m-d'));
+
+        $decompte = static::getContainer()->get(\App\Service\Conge\CalculateurJoursOuvrables::class)
+            ->calculer($invite, $debut, $fin);
+
         self::assertSame(
-            PeriodeParDefaut::DUREE_JOURS,
-            (int) $debut->diff($fin)->days + 1,
-            'La période proposée doit durer exactement la durée usuelle, bornes comprises.',
+            (float) PeriodeParDefaut::DUREE_JOURS_OUVRABLES,
+            $decompte,
+            "Le décompte annoncé à l'enregistrement doit être celui que le cabinet a réglé.",
         );
+    }
+
+    /** Les deux bornes proposées sont des jours TRAVAILLÉS : ni week-end, ni férié. */
+    public function testLesDeuxBornesProposeesSontDesJoursTravailles(): void
+    {
+        $invite = $this->cabinet(5);
+        $service = $this->service();
+        $calculateur = static::getContainer()->get(\App\Service\Conge\CalculateurJoursOuvrables::class);
+
+        $debut = $service->debut($invite);
+        $fin = $service->fin($invite, $debut);
+
+        self::assertSame(1.0, $calculateur->calculer($invite, $debut, $debut), 'Le premier jour doit être travaillé.');
+        self::assertSame(1.0, $calculateur->calculer($invite, $fin, $fin), 'Le dernier jour doit être travaillé.');
     }
 }
