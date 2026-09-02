@@ -24,6 +24,7 @@ export default class extends PickerBaseController {
         journalUrl: String,
         sortieUrl: String,
         ajustementUrl: String,
+        ajustementPostUrl: String,
         exportUrl: String,
         exercice: Number,
     };
@@ -41,7 +42,10 @@ export default class extends PickerBaseController {
         if (sortie) return this._chargerFragment(this._url(this.sortieUrlValue, sortie.dataset.cptSortie));
 
         const ajuster = cible.closest('[data-cpt-ajuster]');
-        if (ajuster) return this._ajuster(ajuster.dataset.cptAjuster, ajuster.dataset.cptAgent);
+        if (ajuster) return this._chargerFragment(this._url(this.ajustementUrlValue, ajuster.dataset.cptAjuster));
+
+        const ajustementExecuter = cible.closest('[data-cpt-ajustement-executer]');
+        if (ajustementExecuter) return this._enregistrerLAjustement(ajustementExecuter.dataset.cptAjustementExecuter);
 
         const executer = cible.closest('[data-cpt-sortie-executer]');
         if (executer) return this._executerLaSortie(executer.dataset.cptSortieExecuter);
@@ -132,38 +136,45 @@ export default class extends PickerBaseController {
     }
 
     /**
-     * L'AJUSTEMENT EXIGE UN MOTIF, et le demande ici plutôt que de laisser le serveur
-     * refuser : un aller-retour pour apprendre qu'il fallait écrire quelque chose est un
-     * aller-retour de trop.
+     * L'AJUSTEMENT S'ENREGISTRE DEPUIS LE FORMULAIRE DU PANNEAU.
+     *
+     * La validation se fait ici AVANT l'aller-retour — apprendre du serveur qu'il fallait
+     * écrire un motif est un aller-retour de trop — mais le serveur la refait : c'est lui
+     * qui garde, la saisie n'est qu'une commodité. Le message se pose SUR le champ fautif
+     * et le focus y va : une erreur affichée loin de sa cause se cherche.
      */
-    async _ajuster(idAgent, nomAgent) {
-        const brut = window.prompt(
-            `Ajustement du compteur de ${nomAgent}\n\nNombre de jours (négatif pour retirer) :`,
-            '',
-        );
-        if (brut === null) return;
+    async _enregistrerLAjustement(idAgent) {
+        const champQuantite = this.element.querySelector('[data-cpt-quantite]');
+        const champMotif = this.element.querySelector('[data-cpt-motif]');
+        if (!champQuantite || !champMotif) return;
 
-        const quantite = parseFloat(String(brut).replace(',', '.'));
+        const quantite = parseFloat(String(champQuantite.value).replace(',', '.'));
         if (!Number.isFinite(quantite) || quantite === 0) {
-            this._showError('Indiquez un nombre de jours différent de zéro.');
-
-            return;
+            return this._signaler(champQuantite, 'Indiquez un nombre de jours différent de zéro.');
         }
 
-        const motif = window.prompt(
-            'Motif de l\'ajustement (obligatoire)\n\nIl restera au journal : un chiffre sans explication\nrend tout le reste douteux.',
-            '',
-        );
-        if (motif === null || motif.trim() === '') {
-            this._showError("Le motif est obligatoire : l'ajustement n'a pas été enregistré.");
-
-            return;
+        const motif = champMotif.value.trim();
+        if (motif === '') {
+            return this._signaler(champMotif, "Le motif est obligatoire : il restera au journal à côté du chiffre.");
         }
 
-        await this._poster(
-            this._url(this.ajustementUrlValue, idAgent),
+        this._signaler(null);
+
+        return this._poster(
+            this._url(this.ajustementPostUrlValue, idAgent),
             { quantite, motif, exercice: this.exerciceValue },
         );
+    }
+
+    /** Marque un champ en défaut, y renvoie le focus, et affiche la raison (WCAG 3.3.1). */
+    _signaler(champ, message = null) {
+        this.element.querySelectorAll('.is-invalid').forEach((el) => el.classList.remove('is-invalid'));
+        this._showError(message);
+
+        if (champ) {
+            champ.classList.add('is-invalid');
+            champ.focus();
+        }
     }
 
     async _executerLaSortie(idAgent) {

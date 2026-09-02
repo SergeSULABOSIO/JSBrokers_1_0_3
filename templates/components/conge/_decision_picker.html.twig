@@ -85,7 +85,11 @@
 
         <p class="jsb-picker-empty text-danger" data-picker-error role="alert" hidden></p>
 
-        <div class="jsb-picker-listwrap" style="padding: .25rem 1.25rem 1rem;">
+        {# LE CORPS EST UNE PILE DE CARTES — le patron des pickers a plusieurs sections
+           (cf. reversement de retrocommission). Trois structures differentes ne doivent
+           pas se lire comme un seul long formulaire : ce qui bloque, le compteur, la
+           decision. Leurs seules legendes ne les separaient pas assez. #}
+        <div class="jsb-picker-listwrap jsb-picker-cartes">
 
             {# ── CE QUI EMPÊCHE ENCORE LE GESTE ────────────────────────────────────────
                On ouvre la boîte MÊME quand le geste est impossible, pour en dire la
@@ -106,15 +110,18 @@
                a plus que trois se répare mal. Instantané daté — il reflète le compteur au
                moment où cette boîte s'est ouverte. #}
             {% if solde %}
-                <section aria-labelledby="conge-compteur-titre" class="mb-3">
-                    <h6 id="conge-compteur-titre" class="fw-semibold mb-2" style="color:#0d2440;">
+                <section class="jsb-picker-carte" aria-labelledby="conge-compteur-titre">
+                    <h6 id="conge-compteur-titre" class="jsb-picker-carte-titre">
                         Compteur {{ solde.exercice }} de {{ demande.agent ? demande.agent.nom : 'ce collaborateur' }}
                     </h6>
-                    <table class="table table-sm mb-1">
+                    <table class="jsb-picker-table">
+                        <caption class="visually-hidden">
+                            Compteur de congés du collaborateur, en jours ouvrables, au moment où cette fenêtre s'est ouverte.
+                        </caption>
                         <tbody>
                             <tr>
                                 <th scope="row" class="fw-normal text-muted">Acquis</th>
-                                <td class="text-end">
+                                <td class="jsb-picker-num">
                                     {{ solde.acquis|number_format(1, ',', ' ') }}&nbsp;j
                                     {%- if solde.dontReport > 0 %}
                                         <span class="text-muted small">(dont {{ solde.dontReport|number_format(1, ',', ' ') }}&nbsp;j de report)</span>
@@ -123,21 +130,23 @@
                             </tr>
                             <tr>
                                 <th scope="row" class="fw-normal text-muted">Consommé</th>
-                                <td class="text-end">{{ solde.consomme|number_format(1, ',', ' ') }}&nbsp;j</td>
+                                <td class="jsb-picker-num">{{ solde.consomme|number_format(1, ',', ' ') }}&nbsp;j</td>
                             </tr>
                             <tr>
                                 <th scope="row" class="fw-normal text-muted">Engagé (en attente de décision)</th>
-                                <td class="text-end">{{ solde.engage|number_format(1, ',', ' ') }}&nbsp;j</td>
+                                <td class="jsb-picker-num">{{ solde.engage|number_format(1, ',', ' ') }}&nbsp;j</td>
                             </tr>
+                        </tbody>
+                        <tfoot>
                             <tr>
-                                <th scope="row" class="fw-semibold" style="color:#0d2440;">Disponible</th>
-                                <td class="text-end fw-semibold" style="color:#0047AB;">
+                                <th scope="row">Disponible</th>
+                                <td class="jsb-picker-num jsb-picker-num--accent">
                                     {{ solde.disponible|number_format(1, ',', ' ') }}&nbsp;j
                                 </td>
                             </tr>
-                        </tbody>
+                        </tfoot>
                     </table>
-                    <p class="text-muted small mb-0">
+                    <p class="text-muted small mb-0 mt-2">
                         Instantané au {{ 'now'|date('d/m/Y à H:i') }}.
                     </p>
                 </section>
@@ -145,9 +154,14 @@
 
             {# Le motif du collaborateur : ce qu'il a écrit en posant sa demande. #}
             {% if demande.motif %}
-                <section aria-labelledby="conge-motif-titre" class="mb-3">
-                    <h6 id="conge-motif-titre" class="fw-semibold mb-1" style="color:#0d2440;">Motif du collaborateur</h6>
-                    <p class="mb-0">{{ demande.motif }}</p>
+                {# `striptags` PARCE QUE LE MOTIF EST SAISI EN TEXTE RICHE. Le champ est
+                   servi par un éditeur qui rend « <p>RAS…</p> » : affiché tel quel, le
+                   valideur lisait les balises au milieu de la phrase. Filtrer plutôt que
+                   rendre le HTML : c'est du texte écrit par un tiers, et cette boîte n'a
+                   aucune raison d'exécuter sa mise en forme. #}
+                <section class="jsb-picker-carte" aria-labelledby="conge-motif-titre">
+                    <h6 id="conge-motif-titre" class="jsb-picker-carte-titre">Motif du collaborateur</h6>
+                    <p class="mb-0">{{ demande.motif|striptags|trim ?: '—' }}</p>
                 </section>
             {% endif %}
 
@@ -155,9 +169,9 @@
                Absent à la soumission : le motif de la demande est déjà porté par le
                formulaire, et redemander la même chose deux fois ne sert personne. #}
             {% if geste != 'soumettre' %}
-                <fieldset class="border-0 p-0 m-0 mb-2">
-                    <legend class="fs-6 fw-semibold mb-1" style="color:#0d2440;">Commentaire</legend>
-                    <label for="conge-commentaire" class="form-label fw-semibold mb-0" style="color:#0d2440;">
+                <fieldset class="jsb-picker-carte">
+                    <legend>Commentaire</legend>
+                    <label for="conge-commentaire" class="form-label fw-semibold mb-0">
                         {% if geste == 'refuser' %}
                             Pourquoi ce congé est-il refusé&nbsp;?
                         {% elseif geste == 'annuler' %}

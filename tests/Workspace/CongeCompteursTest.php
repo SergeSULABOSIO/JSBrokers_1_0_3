@@ -66,10 +66,23 @@ class CongeCompteursTest extends KernelTestCase
             ['nom' => self::ENT],
         );
 
+        // TAXE ET AUTORITÉ FISCALE SE POINTENT MUTUELLEMENT : aucun ordre de suppression
+        // ne peut les départager. On casse le cycle d'abord.
+        $conn->executeStatement(
+            'UPDATE autorite_fiscale a JOIN entreprise e ON a.entreprise_id = e.id SET a.taxe_id = NULL WHERE e.nom = :nom',
+            ['nom' => self::ENT],
+        );
+
+        // La liste couvre AUSSI ce que sème le provisionnement complet (risques, monnaies,
+        // taxes) : `app:conges:provisionner` appelle l'initialisation du cabinet entière,
+        // et un seul enfant oublié fait échouer la purge sur une contrainte — le test se
+        // met alors à parler d'autre chose que de ce qu'il mesure.
         foreach ([
             'mouvement_conge', 'historique_demande', 'demande_conge', 'regime_travail',
             'jour_ferie', 'type_absence', 'periode_blocage', 'parametres_conge',
-            'roles_en_administration', 'invite',
+            'roles_en_administration',
+            'type_revenu', 'chargement', 'taxe', 'autorite_fiscale',
+            'risque', 'groupe', 'monnaie', 'invite',
         ] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :nom",
@@ -413,6 +426,90 @@ class CongeCompteursTest extends KernelTestCase
             'SELECT COUNT(*) FROM mouvement_conge WHERE entreprise_id = :e AND exercice = :x',
             ['e' => $entreprise->getId(), 'x' => $exercice],
         );
+    }
+
+    // ═══════════════ Le rattrapage de la dotation de démarrage ══════════════════════
+
+    private function commandeProvisionnement(): CommandTester
+    {
+        $application = new Application(static::$kernel);
+
+        return new CommandTester($application->find('app:conges:provisionner'));
+    }
+
+    /**
+     * UN COMPTEUR DOTÉ AU PRORATA EST RAMENÉ À L'ANNÉE PLEINE.
+     *
+     * La dotation de démarrage se calculait sur la date de création de la fiche d'invité,
+     * qui dit quand le collaborateur a été SAISI dans le logiciel et non quand il est
+     * arrivé dans le cabinet. Un cabinet ayant adopté le module en avril avait tout son
+     * personnel à neuf mois sur douze. Le complément est un mouvement DE PLUS, motivé :
+     * la dotation d'origine reste au journal, et c'est ce qui permettra d'expliquer, plus
+     * tard, pourquoi le compteur a bougé un jour.
+     */
+    public function testUneDotationProratiseeEstRamèneeALAnneePleine(): void
+    {
+        $c = $this->cabinet();
+        $exercice = (int) (new \DateTimeImmutable('now'))->format('Y');
+        // 19,5 j : ce que l'ancien prorata donnait à une fiche créée en avril.
+        $this->mouvement($c['alice'], $c['type'], $exercice, MouvementConge::NATURE_DOTATION, 19.5);
+        $this->em()->flush();
+
+        $this->commandeProvisionnement()->execute([
+            '--entreprise' => (string) $c['entreprise']->getId(),
+            '--force' => true,
+        ]);
+        $this->em()->clear();
+
+        $alice = $this->em()->getRepository(Invite::class)->find($c['alice']->getId());
+
+        self::assertSame(
+            CongeParametres::DOTATION_ANNUELLE_DEFAUT,
+            static::getContainer()->get(CalculateurSolde::class)->pour($alice, $exercice)->disponible(),
+        );
+
+        $totaux = static::getContainer()->get(MouvementCongeRepository::class)->totauxParNature($alice, $exercice);
+        self::assertSame(19.5, $totaux[MouvementConge::NATURE_DOTATION] ?? 0.0, "La dotation d'origine reste intacte.");
+        self::assertSame(6.5, $totaux[MouvementConge::NATURE_AJUSTEMENT] ?? 0.0);
+    }
+
+    /**
+     * LE RATTRAPAGE NE DÉFAIT PAS LA MAIN DU VALIDEUR.
+     *
+     * Une garde fondée sur « le solde vaut-il la dotation ? » rendrait à chaque exécution
+     * les jours qu'un valideur a légitimement retirés. Elle est donc fondée sur le
+     * marqueur du rattrapage : une fois posé, il ne se repose jamais.
+     */
+    public function testLeRattrapageNeSeRejoueNiNAnnuleUnAjustementDuValideur(): void
+    {
+        $c = $this->cabinet();
+        $exercice = (int) (new \DateTimeImmutable('now'))->format('Y');
+        $this->mouvement($c['alice'], $c['type'], $exercice, MouvementConge::NATURE_DOTATION, 19.5);
+        $this->em()->flush();
+
+        $arguments = ['--entreprise' => (string) $c['entreprise']->getId(), '--force' => true];
+        $this->commandeProvisionnement()->execute($arguments);
+        $this->em()->clear();
+
+        // Le valideur retire ensuite 4 jours, en connaissance de cause.
+        $alice = $this->em()->getRepository(Invite::class)->find($c['alice']->getId());
+        $patron = $this->em()->getRepository(Invite::class)->find($c['patron']->getId());
+        static::getContainer()->get(MouvementDuCompteur::class)
+            ->ajuster($alice, $exercice, -4.0, 'Jours pris en 2025 non déclarés', $patron);
+        $this->em()->flush();
+        $this->em()->clear();
+
+        $rejeu = $this->commandeProvisionnement();
+        $rejeu->execute($arguments);
+        $this->em()->clear();
+
+        $alice = $this->em()->getRepository(Invite::class)->find($c['alice']->getId());
+        self::assertSame(
+            22.0,
+            static::getContainer()->get(CalculateurSolde::class)->pour($alice, $exercice)->disponible(),
+            '19,5 + 6,5 de rattrapage − 4 retirés par le valideur : le rejeu ne rend pas les 4 jours.',
+        );
+        self::assertStringContainsString('0 rattrapage(s)', $rejeu->getDisplay());
     }
 
     // ══════════════════════════ Le décompte de sortie ═══════════════════════════════

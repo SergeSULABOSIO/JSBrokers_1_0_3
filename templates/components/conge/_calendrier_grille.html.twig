@@ -14,7 +14,7 @@
                 aria-label="Mois précédent">
             ‹ Mois précédent
         </button>
-        <strong style="color:#0d2440;">{{ grille.libelle }}</strong>
+        <strong style="color:#212529;">{{ grille.libelle }}</strong>
         <button type="button" class="btn btn-sm btn-outline-secondary"
                 data-cal-mois="{{ grille.suivant.mois }}" data-cal-annee="{{ grille.suivant.annee }}"
                 aria-label="Mois suivant">
@@ -35,26 +35,26 @@
             <table class="table table-sm mb-2" style="border-collapse:separate; border-spacing:0; font-size:.75rem;">
                 <thead>
                     <tr>
-                        <th scope="col" style="position:sticky; left:0; background:#fff; z-index:2; min-width:160px; text-align:left; color:#0d2440;">
+                        <th scope="col" style="position:sticky; left:0; background:#fff; z-index:2; min-width:160px; text-align:left; color:#212529;">
                             Collaborateur
                         </th>
                         {% for jour in grille.jours %}
                             <th scope="col"
                                 title="{{ jour.ferie ?? '' }}"
                                 style="width:24px; min-width:24px; text-align:center; font-weight:{{ jour.aujourdhui ? '700' : '400' }};
-                                       color:{{ jour.ferie ? '#c0392b' : (jour.weekend ? '#adb5bd' : '#0d2440') }};
-                                       background:{{ jour.aujourdhui ? '#e7f0ff' : 'transparent' }};">
+                                       color:{{ jour.ferie ? '#dc3545' : (jour.weekend ? '#adb5bd' : '#212529') }};
+                                       background:{{ jour.aujourdhui ? '#e8f0fb' : 'transparent' }};">
                                 <div>{{ jour.lettre }}</div>
                                 <div>{{ jour.numero }}</div>
                             </th>
                         {% endfor %}
-                        <th scope="col" style="min-width:52px; text-align:right; color:#0d2440;">Jours</th>
+                        <th scope="col" style="min-width:52px; text-align:right; color:#212529;">Jours</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for ligne in grille.lignes %}
                         <tr>
-                            <th scope="row" style="position:sticky; left:0; background:#fff; z-index:1; text-align:left; font-weight:600; color:#0d2440; white-space:nowrap;">
+                            <th scope="row" style="position:sticky; left:0; background:#fff; z-index:1; text-align:left; font-weight:600; color:#212529; white-space:nowrap;">
                                 {{ ligne.agent }}
                             </th>
                             {% for numero, case in ligne.cases %}

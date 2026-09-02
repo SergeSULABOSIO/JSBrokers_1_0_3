@@ -4,18 +4,25 @@
 
     ── TROIS GESTES S'Y RATTACHENT ─────────────────────────────────────────────────────
     Le journal d'un agent (d'où vient son solde), l'ajustement motivé, et le décompte de
-    sortie. Tous les trois remplacent le contenu du panneau par un fragment rendu par le
+    sortie. Tous les trois REMPLACENT le contenu du panneau par un fragment rendu par le
     SERVEUR, puis rendent la main à la grille. Une boîte par geste aurait empilé les
     fenêtres au moment précis où l'on compare des lignes entre elles.
 
-    Miroir visuel des pickers jsb-picker-* ; charte cobalt #0047AB.
+    ── LE CONTENU CHANGE SANS QUE LA PAGE BOUGE ────────────────────────────────────────
+    D'où `aria-live="polite"` : un lecteur d'écran doit apprendre qu'on est passé de la
+    grille au journal, sinon le geste n'a produit aucun retour perceptible pour lui
+    (WCAG 4.1.3, Nielsen 1 — visibilité de l'état du système).
+
+    Socle jsb-picker-* et charte cobalt #0047AB : aucune couleur ni aucun espacement
+    propre à cet écran.
 #}
 <div class="jsb-picker-overlay"
      data-controller="conge-compteurs"
      data-conge-compteurs-grille-url-value="{{ path('admin.compteurconge.api.grille') }}"
      data-conge-compteurs-journal-url-value="{{ path('admin.compteurconge.api.journal', {idAgent: 0}) }}"
      data-conge-compteurs-sortie-url-value="{{ path('admin.compteurconge.api.sortie_apercu', {idAgent: 0}) }}"
-     data-conge-compteurs-ajustement-url-value="{{ path('admin.compteurconge.api.ajustement', {idAgent: 0}) }}"
+     data-conge-compteurs-ajustement-url-value="{{ path('admin.compteurconge.api.ajustement_form', {idAgent: 0}) }}"
+     data-conge-compteurs-ajustement-post-url-value="{{ path('admin.compteurconge.api.ajustement', {idAgent: 0}) }}"
      data-conge-compteurs-export-url-value="{{ path('admin.compteurconge.api.export') }}"
      data-conge-compteurs-exercice-value="{{ grille.exercice }}"
      data-picker-overlay>
@@ -43,9 +50,9 @@
 
         <p class="jsb-picker-empty text-danger" data-picker-error role="alert" hidden></p>
 
-        {# Le contenu est SUBSTITUÉ par les gestes (journal, ajustement, sortie) puis
-           restauré : c'est ce qui évite d'empiler des fenêtres. #}
-        <div data-conge-compteurs-target="contenu">
+        <div class="jsb-picker-listwrap"
+             data-conge-compteurs-target="contenu"
+             aria-live="polite">
             {{ include('components/conge/_compteurs_grille.html.twig', {grille: grille}) }}
         </div>
 

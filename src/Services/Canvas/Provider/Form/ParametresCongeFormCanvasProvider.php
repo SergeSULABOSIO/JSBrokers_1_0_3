@@ -79,8 +79,21 @@ class ParametresCongeFormCanvasProvider implements FormCanvasProviderInterface
 
         // Les périodes de blocage vivent ICI, en collection, et non dans une rubrique à
         // elles : ce sont des réglages, pas des objets métier qu'on cherche.
+        //
+        // `parentRouteName` N'EST PAS FACULTATIF ICI. L'URL de la collection se déduit du
+        // `parentFieldName`, or le champ de PeriodeBlocage qui pointe le parent s'appelle
+        // `parametres` — pas `parametresConge` — parce qu'écrire `getParametres()` sur des
+        // périodes de blocage se lit mieux que `getParametresConge()`. Sans cette
+        // échappatoire, le widget appelle /admin/parametres/api/… : une route qui n'existe
+        // pas, et la collection s'ouvre sur « Impossible de charger la liste ».
         $collections = [
-            ['fieldName' => 'periodesBlocage', 'entityRouteName' => 'periodeblocage', 'formTitle' => 'Période de blocage', 'parentFieldName' => 'parametres'],
+            [
+                'fieldName' => 'periodesBlocage',
+                'entityRouteName' => 'periodeblocage',
+                'formTitle' => 'Période de blocage',
+                'parentFieldName' => 'parametres',
+                'parentRouteName' => 'parametresconge',
+            ],
         ];
 
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);

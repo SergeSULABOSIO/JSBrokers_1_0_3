@@ -135,9 +135,21 @@ class ServiceInitialisationEntreprise
      * refusée par le contrôle de solde — ce qui ressemble à une panne, pas à un
      * paramétrage manquant.
      *
-     * Le prorata suit les MOIS ENTIERS de présence (cf. CongeParametres) : c'est la
-     * maille dans laquelle les congés se discutent, et elle évite d'avoir à trancher ce
-     * que vaut une arrivée le 17.
+     * ── ANNÉE PLEINE, ET NON AU PRORATA ─────────────────────────────────────────────
+     * Ce semis dote les collaborateurs DÉJÀ PRÉSENTS au moment où le module s'active. On
+     * ne sait rien de leur date d'arrivée réelle dans le cabinet : `createdAt` dit quand
+     * leur fiche a été saisie dans JS Brokers, ce qui est une tout autre chose. Un cabinet
+     * qui adopte le module en avril verrait alors TOUT son personnel crédité de neuf mois
+     * sur douze — un droit amputé d'un quart, sans que rien à l'écran n'en donne la
+     * raison, et sur une matière où l'erreur se paie en jours de congé réels.
+     *
+     * Entre sous-doter tout le monde et sur-doter quelqu'un qui viendrait d'arriver, on
+     * choisit l'année pleine : le valideur retire ce qu'il faut par un ajustement motivé,
+     * qui laisse une trace, là où l'amputation silencieuse n'en laisse aucune.
+     *
+     * Le PRORATA garde tout son sens ailleurs — pour une arrivée postérieure à
+     * l'activation, dont la fiche est créée le jour même, et pour un départ
+     * (CongeParametres::dotationAuProrataDeSortie).
      *
      * IDEMPOTENT : un agent qui a déjà une dotation sur cet exercice n'en reçoit pas une
      * seconde. Rejouer ce semis doublerait sinon, en silence, le droit de chacun.
@@ -152,18 +164,7 @@ class ServiceInitialisationEntreprise
                 continue;
             }
 
-            // L'entrée du collaborateur est la date de création de sa fiche d'invité :
-            // c'est la seule que le cabinet connaisse à ce stade.
-            $entree = $agent->getCreatedAt() ?? new \DateTimeImmutable('now');
-            $jours = CongeParametres::dotationAuProrata(
-                CongeParametres::DOTATION_ANNUELLE_DEFAUT,
-                $entree,
-                $exercice,
-            );
-
-            if ($jours <= 0.0) {
-                continue;
-            }
+            $jours = CongeParametres::DOTATION_ANNUELLE_DEFAUT;
 
             $mouvement = (new MouvementConge())
                 ->setAgent($agent)
@@ -173,7 +174,7 @@ class ServiceInitialisationEntreprise
                 ->setQuantite(number_format($jours, 1, '.', ''))
                 ->setAuteur($proprietaire)
                 ->setCommentaire(sprintf(
-                    "Dotation %d attribuée à l'ouverture de la rubrique, au prorata des mois de présence.",
+                    "Dotation annuelle %d, attribuée à l'ouverture de la rubrique.",
                     $exercice,
                 ));
 

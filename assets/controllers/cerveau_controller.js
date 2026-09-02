@@ -265,8 +265,10 @@ export default class extends Controller {
                     entityFormCanvas: payload.formCanvas,
                     isCreationMode: true,
                     context: payload.context,
-                    // NOUVEAU: On passe le contexte parent s'il est fourni (par une collection)
-                    parentContext: payload.parentContext || null
+                    // Le contexte parent vient du widget de collection quand il en est
+                    // l'origine ; sinon de l'ONGLET CONTEXTUEL actif, dont la barre
+                    // d'outils n'en transmet aucun (cf. _getParentContextForCreation).
+                    parentContext: payload.parentContext || this._getParentContextForCreation()
                 });
                 break;
             case 'ui:toolbar.edit-request':
@@ -1210,22 +1212,35 @@ export default class extends Controller {
      * @returns {string|null} Le nom du champ parent (ex: 'notificationSinistre') ou null.
      * @private
      */
-    _findParentFieldName(formCanvas) {
+    _findParentFieldName(formCanvas, collectionCode = null) {
         if (!formCanvas || !Array.isArray(formCanvas.form_layout)) {
             return null;
         }
 
+        let premiere = null;
+
         for (const row of formCanvas.form_layout) {
             for (const col of row.colonnes || []) {
                 for (const field of col.champs || []) {
-                    if (typeof field === 'object' && field.widget === 'collection' && field.options?.parentFieldName) {
-                        // On a trouvé la première collection, on retourne son champ parent.
+                    if (typeof field !== 'object' || field.widget !== 'collection' || !field.options?.parentFieldName) {
+                        continue;
+                    }
+                    // LA COLLECTION DE L'ONGLET, quand on sait laquelle c'est.
+                    //
+                    // Une entité en porte souvent plusieurs (tranches ET documents d'un
+                    // avenant). Se contenter de la première donnerait à l'onglet
+                    // « Documents » le champ parent des tranches : la liste filtrerait sur
+                    // le mauvais lien, et une création s'y rattacherait au mauvais objet.
+                    if (collectionCode && field.field_code === collectionCode) {
                         return field.options.parentFieldName;
                     }
+                    if (premiere === null) premiere = field.options.parentFieldName;
                 }
             }
         }
-        return null; // Pas de champ de collection trouvé.
+
+        // Repli historique : sans code de collection (onglet principal), la première.
+        return collectionCode ? null : premiere;
     }
 
     /**
@@ -1263,8 +1278,9 @@ export default class extends Controller {
      */
     _getParentContextForSearch() {
         // Détermine le contexte parent de manière robuste, en se basant sur l'ID de l'onglet.
-        const parentIdMatch = this.activeTabId.match(/-for-(\d+)$/);
-        const parentId = parentIdMatch ? parentIdMatch[1] : this.activeParentId;
+        // Il porte AUSSI le code de la collection : `collection-periodesBlocage-for-1`.
+        const onglet = this.activeTabId.match(/^collection-(.+)-for-(\d+)$/);
+        const parentId = onglet ? onglet[2] : this.activeParentId;
 
         if (!parentId) {
             return null;
@@ -1274,13 +1290,42 @@ export default class extends Controller {
         // Pour une collection, le nom du champ liant au parent est dans le formCanvas de l'onglet principal.
         const principalState = this._getCurrentWsTabState()['principal'];
         if (principalState) {
-            parentFieldName = this._findParentFieldName(principalState.activeTabFormCanvas);
+            parentFieldName = this._findParentFieldName(principalState.activeTabFormCanvas, onglet ? onglet[1] : null);
         }
 
         return {
             id: parentId,
             fieldName: parentFieldName
         };
+    }
+
+    /**
+     * LE PARENT D'UNE CRÉATION LANCÉE DEPUIS UN ONGLET CONTEXTUEL.
+     *
+     * ── LA PANNE QUE CELA RÉPARE ────────────────────────────────────────────────────
+     * La barre d'outils d'un onglet de collection n'envoie aucun contexte parent : un
+     * enfant créé depuis « Périodes de blocage » naissait donc SANS son parent. Le
+     * formulaire annonçait un succès — il en était un, la ligne existait — mais la liste,
+     * elle, filtre sur ce lien : l'onglet restait désespérément vide, et rien nulle part
+     * ne disait pourquoi. Seul le widget de collection du dialogue posait ce lien.
+     *
+     * Le cerveau connaît pourtant déjà ce parent : c'est celui dont il se sert pour
+     * FILTRER la liste de l'onglet. Créer et filtrer partagent donc la même source.
+     *
+     * Rendu nul hors d'un onglet de collection : sur la liste principale, une création
+     * n'a pas de parent à recevoir.
+     * @private
+     */
+    _getParentContextForCreation() {
+        if (!/^collection-.+-for-\d+$/.test(this.activeTabId || '')) {
+            return null;
+        }
+
+        const contexte = this._getParentContextForSearch();
+
+        // Sans nom de champ, on ne saurait à QUOI rattacher : mieux vaut un enfant
+        // orphelin qu'un enfant rattaché au mauvais objet.
+        return contexte && contexte.fieldName ? contexte : null;
     }
 
     /**

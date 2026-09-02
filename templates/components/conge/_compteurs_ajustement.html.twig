@@ -1,0 +1,79 @@
+{#
+    L'AJUSTEMENT MANUEL D'UN COMPTEUR.
+
+    ── POURQUOI CE N'EST PLUS UNE INVITE DU NAVIGATEUR ─────────────────────────────────
+    Ce geste se demandait par deux `prompt()` enchaînés : le nombre, puis le motif. Trois
+    défauts, tous rédhibitoires sur une écriture qui touche les droits de quelqu'un.
+    D'abord on écrivait à l'aveugle — le solde courant n'était plus visible au moment
+    précis où l'on décide combien retirer. Ensuite, annuler le second prompt jetait le
+    premier sans rien dire. Enfin une boîte du navigateur n'a ni libellé associé, ni aide,
+    ni charte : elle sort de l'application au milieu d'une tâche.
+    — Bastien & Scapin > Guidage, Contrôle explicite, Gestion des erreurs ; Nielsen 3 et 9.
+
+    ── LE MOTIF EST UN CHAMP, PAS UNE POLITESSE ────────────────────────────────────────
+    Il reste au journal. Un chiffre sans explication rend tout le reste douteux six mois
+    plus tard : il est donc obligatoire, et annoncé comme tel avant la saisie plutôt que
+    refusé après.
+#}
+<div class="jsb-picker-sousentete">
+    <button type="button" class="btn btn-sm btn-outline-secondary jsb-picker-btn" data-cpt-retour>
+        <span aria-hidden="true">‹</span> Retour aux compteurs
+    </button>
+    <p class="jsb-picker-sousentete-titre">Ajuster le compteur — {{ agent.nom }}</p>
+    <span class="jsb-picker-sousentete-info">
+        Disponible&nbsp;: {{ solde.disponible|number_format(1, ',', ' ') }}&nbsp;j
+    </span>
+</div>
+
+<div class="jsb-picker-cartes">
+    <fieldset class="jsb-picker-carte">
+        <legend>Mouvement à enregistrer sur l'exercice {{ exercice }}</legend>
+
+        <div class="jsb-picker-champs">
+            <div>
+                <label for="cpt-quantite" class="form-label fw-semibold mb-1">
+                    Nombre de jours <span class="text-danger" aria-hidden="true">*</span>
+                </label>
+                <span class="text-muted small d-block mb-1" id="cpt-quantite-aide">
+                    Positif pour créditer, négatif pour retirer. Par demi-journée&nbsp;: 2,5 ou −0,5.
+                </span>
+                <input type="number" id="cpt-quantite" class="form-control" style="max-width:180px;"
+                       step="0.5" inputmode="decimal" required aria-required="true"
+                       data-cpt-quantite
+                       aria-describedby="cpt-quantite-aide">
+            </div>
+
+            <div class="jsb-picker-champs--pleine">
+                <label for="cpt-motif" class="form-label fw-semibold mb-1">
+                    Motif <span class="text-danger" aria-hidden="true">*</span>
+                </label>
+                <span class="text-muted small d-block mb-1" id="cpt-motif-aide">
+                    Il restera au journal, à côté du chiffre, et c'est lui qui l'expliquera
+                    quand plus personne ne s'en souviendra.
+                </span>
+                <textarea id="cpt-motif" class="form-control" rows="3"
+                          required aria-required="true"
+                          data-cpt-motif
+                          aria-describedby="cpt-motif-aide"
+                          placeholder="Ex. Jours offerts pour ancienneté ; reprise d'un crédit accordé par erreur…"></textarea>
+            </div>
+        </div>
+    </fieldset>
+
+    <p class="text-muted small mb-0">
+        L'écriture est <strong>définitive</strong>&nbsp;: elle ne se modifie pas et ne s'efface
+        pas. Une erreur se corrige par un ajustement inverse, motivé lui aussi — les deux
+        lignes restant visibles au journal.
+    </p>
+
+    <div class="d-flex justify-content-end gap-2 mt-3">
+        <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-cpt-retour>
+            <twig:UX:Icon name="{{ resolve_icon_name('action:cancel') }}" style="width:15px;height:15px;" aria-hidden="true" />
+            Annuler
+        </button>
+        <button type="button" class="btn btn-primary jsb-picker-btn" data-cpt-ajustement-executer="{{ agent.id }}">
+            <twig:UX:Icon name="{{ resolve_icon_name('action:save') }}" style="width:15px;height:15px;" aria-hidden="true" />
+            Enregistrer l'ajustement
+        </button>
+    </div>
+</div>
