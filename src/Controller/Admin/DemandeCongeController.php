@@ -63,6 +63,7 @@ class DemandeCongeController extends AbstractController
         private CalculationProvider $calculationProvider,
         private DemandeCongePolicy $policy,
         private DemandeCongeWorkflow $workflow,
+        private \App\Service\Conge\PeriodeParDefaut $periodeParDefaut,
         private CalculateurSolde $calculateurSolde,
         private CongeVisibiliteScope $visibilite,
         private CalendrierEquipe $calendrier,
@@ -125,8 +126,15 @@ class DemandeCongeController extends AbstractController
                 $demande->setAgent($invite);
                 $demande->setStatut(DemandeConge::STATUT_BROUILLON);
                 $demande->setOrigine(DemandeConge::ORIGINE_UI);
-                $demande->setDateDebut(new \DateTimeImmutable('today'));
-                $demande->setDateFin(new \DateTimeImmutable('today'));
+                // LA PÉRIODE PROPOSÉE DOIT POUVOIR ÊTRE ACCEPTÉE TELLE QUELLE.
+                //
+                // Elle s'ouvrait sur « aujourd'hui à aujourd'hui » : une date que le
+                // contrôle de préavis refuse, et une durée d'un jour que presque personne
+                // ne demande. Chaque saisie commençait donc par corriger les deux champs
+                // que l'écran venait de remplir.
+                $debut = $this->periodeParDefaut->debut($invite);
+                $demande->setDateDebut($debut);
+                $demande->setDateFin($this->periodeParDefaut->fin($debut));
             }
         );
     }

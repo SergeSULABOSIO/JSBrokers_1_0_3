@@ -6,7 +6,9 @@ use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\MouvementConge;
 use App\Entity\TypeAbsence;
+use App\Entity\DemandeConge;
 use App\Service\Conge\CongeParametres;
+use App\Service\Conge\DemandeCongeWorkflow;
 use App\Service\Conge\DroitCongeParDefaut;
 use App\Services\ServiceInitialisationEntreprise;
 use Doctrine\ORM\EntityManagerInterface;
@@ -64,6 +66,7 @@ final class CongesProvisionnerCommand extends Command
         private readonly EntityManagerInterface $em,
         private readonly ServiceInitialisationEntreprise $initialisation,
         private readonly DroitCongeParDefaut $droitConge,
+        private readonly DemandeCongeWorkflow $workflow,
     ) {
         parent::__construct();
     }
@@ -114,7 +117,7 @@ final class CongesProvisionnerCommand extends Command
             return Command::SUCCESS;
         }
 
-        $totaux = ['types' => 0, 'dotations' => 0, 'droits' => 0, 'rattrapages' => 0];
+        $totaux = ['types' => 0, 'dotations' => 0, 'droits' => 0, 'rattrapages' => 0, 'decomptes' => 0];
         $lignes = [];
 
         foreach ($entreprises as $entreprise) {
@@ -124,6 +127,7 @@ final class CongesProvisionnerCommand extends Command
             $totaux['dotations'] += $bilan['dotations'];
             $totaux['droits'] += $bilan['droits'];
             $totaux['rattrapages'] += $bilan['rattrapages'];
+            $totaux['decomptes'] += $bilan['decomptes'];
 
             // On ne rapporte QUE les cabinets où il y avait quelque chose à faire : sur
             // un parc de plusieurs centaines, une ligne « rien à faire » par cabinet
@@ -136,6 +140,7 @@ final class CongesProvisionnerCommand extends Command
                     (string) $bilan['dotations'],
                     (string) $bilan['droits'],
                     (string) $bilan['rattrapages'],
+                    (string) $bilan['decomptes'],
                 ];
             }
         }
@@ -146,18 +151,20 @@ final class CongesProvisionnerCommand extends Command
 
         if ($lignes !== []) {
             $io->table(
-                ['Cabinet', 'Nom', "Types d'absence", 'Dotations', 'Droits accordés', 'Rattrapages'],
+                ['Cabinet', 'Nom', "Types d'absence", 'Dotations', 'Droits accordés', 'Rattrapages', 'Décomptes'],
                 $lignes,
             );
         }
 
         $io->success(sprintf(
-            '%s : %d type(s) d\'absence, %d dotation(s), %d droit(s) d\'accès, %d rattrapage(s) sur %d cabinet(s).',
+            '%s : %d type(s) d\'absence, %d dotation(s), %d droit(s) d\'accès, %d rattrapage(s), '
+            . '%d décompte(s) corrigé(s) sur %d cabinet(s).',
             $force ? 'Appliqué' : 'À appliquer',
             $totaux['types'],
             $totaux['dotations'],
             $totaux['droits'],
             $totaux['rattrapages'],
+            $totaux['decomptes'],
             count($entreprises),
         ));
 
@@ -169,7 +176,7 @@ final class CongesProvisionnerCommand extends Command
     }
 
     /**
-     * @return array{types: int, dotations: int, droits: int, rattrapages: int}
+     * @return array{types: int, dotations: int, droits: int, rattrapages: int, decomptes: int}
      */
     private function traiterUnCabinet(Entreprise $entreprise, int $exercice, bool $force): array
     {
@@ -177,7 +184,7 @@ final class CongesProvisionnerCommand extends Command
         if ($proprietaire === null) {
             // Sans invité propriétaire, on ne saurait à qui attribuer la paternité des
             // lignes semées. Un cabinet dans cet état a un problème antérieur au nôtre.
-            return ['types' => 0, 'dotations' => 0, 'droits' => 0, 'rattrapages' => 0];
+            return ['types' => 0, 'dotations' => 0, 'droits' => 0, 'rattrapages' => 0, 'decomptes' => 0];
         }
 
         $bilan = [
@@ -185,6 +192,7 @@ final class CongesProvisionnerCommand extends Command
             'dotations' => 0,
             'droits' => 0,
             'rattrapages' => 0,
+            'decomptes' => $this->corrigerLesDecomptes($entreprise, $force),
         ];
 
         foreach ($entreprise->getInvites() as $agent) {
@@ -213,6 +221,55 @@ final class CongesProvisionnerCommand extends Command
         }
 
         return $bilan;
+    }
+
+    /**
+     * LA REPRISE DES DÉCOMPTES DEVENUS FAUX.
+     *
+     * ── CE QU'ELLE RÉPARE ───────────────────────────────────────────────────────────
+     * Le nombre de jours d'une demande n'était calculé qu'à la SOUMISSION. Corriger les
+     * dates ensuite le laissait tel quel : une demande passée du 2 au 2 septembre au 2 au
+     * 3 continuait d'annoncer « 1 j » à côté de sa nouvelle période. La règle est
+     * corrigée — le décompte suit désormais la période tant que rien n'est décidé — mais
+     * les lignes ÉCRITES AVANT gardent leur ancien chiffre : une règle neuve ne réécrit
+     * pas le passé.
+     *
+     * ── ELLE NE TOUCHE PAS À CE QUI EST DÉCIDÉ ──────────────────────────────────────
+     * Un congé approuvé garde son décompte : c'est lui qui a produit le mouvement de
+     * compteur, et le recalculer ferait diverger le solde de la trace qui l'explique.
+     * Seules les demandes en brouillon ou en attente sont reprises.
+     *
+     * ── IDEMPOTENTE PAR CONSTRUCTION ────────────────────────────────────────────────
+     * Elle n'écrit que si le chiffre calculé diffère du chiffre stocké. Rejouée, elle ne
+     * trouve plus rien.
+     */
+    private function corrigerLesDecomptes(Entreprise $entreprise, bool $force): int
+    {
+        $demandes = $this->em->getRepository(DemandeConge::class)->findBy([
+            'entreprise' => $entreprise,
+            'statut' => [DemandeConge::STATUT_BROUILLON, DemandeConge::STATUT_SOUMISE],
+        ]);
+
+        $corriges = 0;
+        foreach ($demandes as $demande) {
+            $avant = $demande->getNbJours();
+            $change = $this->workflow->rafraichirLeDecompteSiNonDecide($demande);
+
+            if (!$change) {
+                continue;
+            }
+
+            $corriges++;
+
+            // En lecture seule, on remet la valeur d'origine : la simulation ne doit rien
+            // laisser derrière elle, pas même en mémoire — un flush déclenché ailleurs
+            // écrirait alors ce qu'on avait promis de ne pas écrire.
+            if (!$force) {
+                $demande->setNbJours($avant);
+            }
+        }
+
+        return $corriges;
     }
 
     /**

@@ -512,6 +512,62 @@ class CongeCompteursTest extends KernelTestCase
         self::assertStringContainsString('0 rattrapage(s)', $rejeu->getDisplay());
     }
 
+    /**
+     * LA REPRISE DES DÉCOMPTES ÉCRITS AVANT LA CORRECTION DE LA RÈGLE.
+     *
+     * Le nombre de jours n'était calculé qu'à la soumission : une demande passée du 2 au 2
+     * septembre au 2 au 3 continuait d'annoncer « 1 j » à côté de sa nouvelle période. La
+     * règle est corrigée, mais une règle neuve ne réécrit pas le passé — les lignes déjà
+     * en base gardent leur chiffre tant que personne ne les touche.
+     */
+    public function testLaRepriseCorrigeUnDecompteDevenuFaux(): void
+    {
+        $c = $this->cabinet();
+
+        // Du mercredi 2 au jeudi 3 septembre : deux jours ouvrables, un seul enregistré.
+        $demande = new \App\Entity\DemandeConge();
+        $demande->setAgent($c['alice'])->setTypeAbsence($c['type']);
+        $demande->setDateDebut(new \DateTimeImmutable('2026-09-02'));
+        $demande->setDateFin(new \DateTimeImmutable('2026-09-03'));
+        $demande->setStatut(\App\Entity\DemandeConge::STATUT_SOUMISE);
+        $demande->setNbJours('1.0');
+        $demande->setEntreprise($c['entreprise']);
+        $this->em()->persist($demande);
+        $this->em()->flush();
+
+        // Une demande DÉCIDÉE, elle, garde son décompte : c'est lui qui a produit le
+        // mouvement de compteur, et le recalculer ferait diverger le solde de sa trace.
+        $decidee = new \App\Entity\DemandeConge();
+        $decidee->setAgent($c['bob'])->setTypeAbsence($c['type']);
+        $decidee->setDateDebut(new \DateTimeImmutable('2026-09-02'));
+        $decidee->setDateFin(new \DateTimeImmutable('2026-09-03'));
+        $decidee->setStatut(\App\Entity\DemandeConge::STATUT_APPROUVEE);
+        $decidee->setNbJours('1.0');
+        $decidee->setEntreprise($c['entreprise']);
+        $this->em()->persist($decidee);
+        $this->em()->flush();
+
+        $arguments = ['--entreprise' => (string) $c['entreprise']->getId(), '--force' => true];
+        $this->commandeProvisionnement()->execute($arguments);
+        $this->em()->clear();
+
+        $repo = $this->em()->getRepository(\App\Entity\DemandeConge::class);
+        self::assertSame(
+            2.0,
+            (float) $repo->find($demande->getId())->getNbJours(),
+            'Du mercredi 2 au jeudi 3, il y a deux jours ouvrables.',
+        );
+        self::assertSame(
+            1.0,
+            (float) $repo->find($decidee->getId())->getNbJours(),
+            "Une demande approuvée garde son décompte : il a produit le mouvement de compteur.",
+        );
+
+        $rejeu = $this->commandeProvisionnement();
+        $rejeu->execute($arguments);
+        self::assertStringContainsString('0 décompte(s) corrigé(s)', $rejeu->getDisplay());
+    }
+
     // ══════════════════════════ Le décompte de sortie ═══════════════════════════════
 
     /**
