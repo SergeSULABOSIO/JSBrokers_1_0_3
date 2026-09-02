@@ -226,6 +226,49 @@ export default class extends BaseController {
         // Chips de filtre rapide : reflète le filtre initial fourni par le serveur
         // (ex. « Impayées » de la rubrique Tranches).
         this._syncPresetChips(initialCriteria);
+
+        // ── LA LISTE RENDUE PAR LE SERVEUR S'ANNONCE, ELLE AUSSI ────────────────────
+        //
+        // `app:list.rendered` n'était émis QUE depuis handleListRefreshed(), c'est-à-dire
+        // au rafraîchissement — jamais sur la liste que le serveur a rendue dans le
+        // panneau au chargement. Or c'est ce signal qui déclenche la repose des lignes
+        // cochées après un F5.
+        //
+        // Conséquence : la sélection ne revenait que sur les onglets qui avaient AUSSI
+        // des filtres — les reposer déclenche une recherche, donc un rafraîchissement,
+        // donc l'événement. Sur une rubrique consultée sans filtre, rien ne se produisait
+        // jamais, et le travail commencé était perdu. La moitié qui marchait masquait
+        // l'autre : la fonctionnalité paraissait acquise.
+        //
+        // On l'émet APRÈS `ui:tab.initialized` : cet état-là repose la sélection à vide
+        // (`selectionState: []`), et annoncer le rendu avant ferait écraser ce qu'on
+        // vient de recocher.
+        //
+        // SEULE LA LISTE PRINCIPALE l'annonce. C'est la seule dont la sélection soit
+        // persistée (cf. workspace-manager, memoriserCriteresDOnglet), et une collection
+        // contextuelle partage le `workspaceTabId` de sa rubrique : la laisser annoncer
+        // ferait cocher ses propres lignes avec les identifiants de la liste voisine.
+        if (isPrincipalTab) {
+            this._annoncerLeRendu();
+        }
+    }
+
+    /**
+     * Annonce au cerveau que les lignes sont à l'écran, avec les compteurs de page.
+     *
+     * Deux appelants : le rendu initial (serveur) et chaque rafraîchissement. Le second
+     * l'a toujours fait ; le premier l'a longtemps oublié.
+     * @private
+     */
+    _annoncerLeRendu() {
+        // On compte les lignes réelles (data-item-id) et non les cases à cocher : en
+        // collection embarquée (dialog), la colonne case à cocher n'est pas rendue.
+        const itemCount = this.donneesTarget.querySelectorAll('[data-item-id]').length;
+        const totalItems = (this._lastPagination && this._lastPagination.totalItems != null)
+            ? this._lastPagination.totalItems
+            : itemCount;
+
+        this.notifyCerveau('app:list.rendered', { itemCount, totalItems });
     }
 
     // --- CHIPS DE FILTRE RAPIDE ---
@@ -750,13 +793,7 @@ export default class extends BaseController {
      */
     _postDataLoadActions() {
         // Notifie le cerveau que le rendu est terminé et fournit le nombre d'éléments.
-        // On compte les lignes réelles (data-item-id) et non les cases à cocher : en
-        // collection embarquée (dialog), la colonne case à cocher n'est pas rendue.
-        const itemCount = this.donneesTarget.querySelectorAll('[data-item-id]').length;
-        const totalItems = (this._lastPagination && this._lastPagination.totalItems != null)
-            ? this._lastPagination.totalItems
-            : itemCount;
-        this.notifyCerveau('app:list.rendered', { itemCount, totalItems });
+        this._annoncerLeRendu();
 
         // Les lignes viennent d'être re-rendues (badges masqués côté serveur) :
         // ré-applique l'état « déjà dans le contexte du chat IA » mémorisé.
