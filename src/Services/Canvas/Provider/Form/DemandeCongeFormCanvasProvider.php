@@ -49,6 +49,23 @@ class DemandeCongeFormCanvasProvider implements FormCanvasProviderInterface
                     "statut" => "État de la demande",
                 ],
             ],
+            // ── ENREGISTRER N'EST PAS ENVOYER ──────────────────────────────────────
+            //
+            // Une demande naît en BROUILLON : elle ne part vers personne tant qu'elle
+            // n'est pas soumise. Rien ne le disait sur cet écran. L'utilisateur fermait
+            // la boîte, retrouvait sa ligne dans la liste, la sélectionnait, cherchait
+            // « Soumettre » — quatre gestes pour finir ce qu'il venait de commencer, et
+            // autant d'occasions de croire l'affaire réglée alors qu'elle dormait.
+            //
+            // Le bouton d'enregistrement laisse donc place au geste attendu, dès que la
+            // fiche est née. UNIQUEMENT à la création : corriger une demande existante
+            // n'a pas de suite obligée.
+            "action_apres_creation" => [
+                "label"   => "Soumettre au valideur",
+                "message" => "Demande enregistrée en brouillon — elle n'est pas encore partie. Soumettez-la pour que vos valideurs la voient.",
+                "event"   => "ui:conge.decision-request",
+                "url"     => "/admin/demandeconge/api/decision-picker/%id%?geste=soumettre",
+            ],
             "suppression_note" => "Supprimer une demande efface aussi son historique. Pour revenir en arrière sur un congé déjà décidé, utilisez « Annuler » : le solde est recrédité et la trace reste lisible.",
             "field_icons" => [
                 "agent"               => "invite",

@@ -21,7 +21,7 @@ export default class extends Controller {
     static outlets = ['modal'];
     static targets = [
         'content', 'formRow', 'dynamicFieldContainer', 'header', 'title', 'titleIcon', 
-        'closeButton', 'progressBarContainer', 'footer', 'feedbackContainer', 'submitButton', 'closeFooterButton', // Removed montantHT, montantTaxe
+        'closeButton', 'progressBarContainer', 'footer', 'feedbackContainer', 'submitButton', 'closeFooterButton', 'gesteDeSuite', // Removed montantHT, montantTaxe
         'operationsContainer', // Kept operationsContainer as it's still relevant for other logic if needed.
         'saveIcon', 'closeIcon',
         'addressedTo'
@@ -298,6 +298,13 @@ export default class extends Controller {
             this.feedbackOnNextLoad = null; // On le réinitialise pour la prochaine fois.
         }
 
+        // Le geste de suite, si la fiche vient de naître et que son canevas en déclare un.
+        if (this._suiteApresCreation) {
+            const id = this._suiteApresCreation;
+            this._suiteApresCreation = null;
+            this._poserLeGesteDeSuite(id);
+        }
+
         // On s'assure que les boutons sont réactivés après un rechargement.
         this.toggleLoading(false);
         this.toggleProgressBar(false); // Cacher la barre de progression
@@ -463,7 +470,14 @@ export default class extends Controller {
             this.notifyCerveau('app:entity.saved', {
                 entity: result.entity,
                 originatorId: this.userContext.originatorId,
-                userContext: this.userContext
+                userContext: this.userContext,
+                // L'IDENTITÉ DE CETTE BOÎTE. Sans elle, personne ne peut la refermer de
+                // l'extérieur : `doClose` n'obéit qu'à un ordre qui la nomme. C'est ce qui
+                // permet d'enchaîner sur l'écran suivant sans demander un clic de plus.
+                dialogId: this.dialogId,
+                // Une création vaut d'être distinguée : c'est le seul cas où un geste de
+                // suite est proposé (cf. `action_apres_creation`).
+                creation: this.isCreateMode,
             });
 
             // Dispatch direct depuis document pour le rechargement sidebar du tableau de bord.
@@ -555,6 +569,11 @@ export default class extends Controller {
         if (this.isCreateMode && result.entity) {
             this.entity = result.entity;
             this.isCreateMode = false;
+
+            // LE GESTE DE SUITE SE DÉCIDE ICI, pendant qu'on sait encore que c'était une
+            // création. Deux lignes plus bas, `isCreateMode` vaut déjà false et le
+            // renseignement est perdu.
+            this._suiteApresCreation = result.entity.id ?? null;
         }
 
         // On recharge la vue dans tous les cas de succès (création ou édition).
@@ -1231,6 +1250,70 @@ export default class extends Controller {
         if (this.hasCloseFooterButtonTarget) {
             this.closeFooterButtonTarget.classList.add('d-none');
         }
+    }
+
+    /**
+     * APRÈS UNE CRÉATION, LE BOUTON PROPOSE LA SUITE.
+     *
+     * ── LE PROBLÈME QUE CELA RÈGLE ─────────────────────────────────────────────────
+     * Enregistrer une demande de congé ne l'envoie à personne : elle naît en brouillon,
+     * et il faut ensuite la soumettre. Rien ne le disait sur cet écran. L'utilisateur
+     * fermait la boîte, retrouvait sa ligne dans la liste, la sélectionnait, cherchait
+     * l'action « Soumettre » — quatre gestes pour finir ce qu'il venait de commencer, et
+     * autant d'occasions de croire l'affaire réglée alors qu'elle dormait en brouillon.
+     *
+     * Le bouton « Enregistrer » s'efface donc au profit du geste attendu, avec la phrase
+     * qui dit pourquoi. — Nielsen 1 (visibilité de l'état : une demande enregistrée n'est
+     * pas une demande partie) et Bastien & Scapin > Guidage.
+     *
+     * ── DÉCLARATIF, ET SEULEMENT EN CRÉATION ───────────────────────────────────────
+     * Rien ici ne connaît les congés : le canevas de formulaire annonce le geste par
+     * `parametres.action_apres_creation` = { label, message, event, url }, comme il
+     * annonce déjà ses `attribute_actions`. Une rubrique qui n'en déclare pas ne change
+     * pas d'un pixel. En ÉDITION, ce chemin n'est jamais emprunté : corriger une fiche
+     * existante n'a pas de suite obligée.
+     * @private
+     */
+    _poserLeGesteDeSuite(id) {
+        const suite = this.entityFormCanvas?.parametres?.action_apres_creation;
+        if (!suite || !suite.event || !suite.url || !this.hasSubmitButtonTarget) return;
+
+        this._gesteDeSuite = {
+            event: suite.event,
+            url: String(suite.url).replace('%id%', String(id)),
+        };
+
+        if (suite.message) {
+            this.showFeedback('success', suite.message);
+        }
+
+        // UN BOUTON NEUF PLUTÔT QU'UN LIBELLÉ RÉÉCRIT. `toggleLoading()` réécrit le texte
+        // du bouton d'enregistrement à chaque bascule — « Enregistrer », toujours — et
+        // effacerait donc le nôtre au premier chargement venu.
+        const bouton = document.createElement('button');
+        bouton.type = 'button';
+        bouton.className = 'btn btn-primary d-inline-flex align-items-center gap-2';
+        bouton.dataset.action = 'click->dialog-instance#executerLeGesteDeSuite';
+        bouton.dataset.dialogInstanceTarget = 'gesteDeSuite';
+        bouton.textContent = suite.label || 'Continuer';
+
+        this.submitButtonTarget.classList.add('d-none');
+        this.submitButtonTarget.after(bouton);
+    }
+
+    /**
+     * Part vers la suite : la boîte se ferme et le cerveau ouvre l'écran annoncé.
+     *
+     * On ferme AVANT d'ouvrir : l'écran suivant est lui-même une fenêtre, et deux boîtes
+     * empilées sur la même demande n'apprendraient rien de plus à personne.
+     */
+    executerLeGesteDeSuite() {
+        const geste = this._gesteDeSuite;
+        if (!geste) return;
+
+        this._gesteDeSuite = null;
+        this.close();
+        this.notifyCerveau(geste.event, { url: geste.url });
     }
 
     doClose(event) {

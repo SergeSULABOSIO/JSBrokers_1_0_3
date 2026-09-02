@@ -5493,10 +5493,41 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     white-space: nowrap;
 }
 .jsb-picker-geste {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
     min-height: 30px;
     padding: .2rem .55rem;
     font-size: .8rem;
     line-height: 1.2;
+    transition: color .12s ease, background-color .12s ease, border-color .12s ease;
+}
+/* LE SURVOL DIT QUE C'EST CLIQUABLE, et il le dit en teinte de marque — comme la
+   pastille du pagineur, et non par le gris par défaut de Bootstrap (Règle 4 de la
+   charte). Sur une ligne qui porte trois gestes voisins, c'est aussi ce qui montre
+   lequel on est en train de viser. */
+.jsb-picker-geste:not(:disabled):hover,
+.jsb-picker-geste:not(:disabled):focus-visible {
+    color: #ffffff;
+    background-color: #0047AB;
+    border-color: #0047AB;
+}
+.jsb-picker-geste:focus-visible {
+    box-shadow: 0 0 0 .2rem rgba(0, 71, 171, 0.35);
+}
+/* L'icône suit la couleur du bouton : elle blanchit au survol avec le libellé. */
+.jsb-picker-geste svg { flex: 0 0 auto; }
+
+/* ── NOTE DE BAS DE TABLEAU ──────────────────────────────────────────────────
+   Une phrase d'explication sous une liste doit commencer À LA VERTICALE de sa
+   première colonne. Posée avec un retrait Bootstrap quelconque, elle s'en décale
+   de quelques pixels — assez pour que l'œil lise deux blocs mal empilés plutôt
+   qu'un tableau et son commentaire. */
+.jsb-picker-note {
+    margin: 0;
+    padding: .75rem var(--jsb-picker-gouttiere) 1rem;
+    font-size: .78rem;
+    color: #6c757d;
 }
 
 /* Le corps du calendrier d'équipe : la gouttière du socle, appliquée à un contenu qui
@@ -5532,7 +5563,7 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
    accueillir un tableau pleine largeur à entête collante. Notre contenu n'est pas un
    tableau : il reprend donc l'alignement horizontal de l'entête (1,25 rem), sinon la
    zone de dépôt et les fichiers touchent les bords de la boîte. */
-.jsb-attach-corps { padding: 1rem 1.25rem 1.25rem; }
+.jsb-attach-corps { padding: 1rem var(--jsb-picker-gouttiere) 1.25rem; }
 .jsb-attach-corps .jsb-picker-empty { padding: 1.1rem .5rem 0; }
 
 /* ── CARTES DE SECTION D'UN PICKER ───────────────────────────────────────────
@@ -5547,7 +5578,11 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
    parce que rien ici ne concerne le reversement : tout picker qui alignera
    plusieurs structures en aura besoin. */
 .jsb-picker-cartes {
-    padding: .75rem 1.25rem 1.25rem;
+    /* LA GOUTTIÈRE EST CELLE DE LA BOÎTE, et non une valeur à part. Les cartes se
+       décalaient d'un quart de rem par rapport à l'entête, à la recherche et au pied :
+       assez peu pour ne pas se nommer, assez pour que la fenêtre paraisse bâtie de deux
+       morceaux. C'est exactement ce que la variable existe pour éviter. */
+    padding: .75rem var(--jsb-picker-gouttiere) 1.25rem;
     background-color: var(--bg-light, #f8f9fa);
 }
 /* NE JAMAIS JOINDRE `border-0` À CETTE CLASSE. L'utilitaire de Bootstrap pose

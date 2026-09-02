@@ -76,16 +76,29 @@
                         {% if ligne.disponible < 0 %}<span class="visually-hidden">(négatif)</span>{% endif %}
                     </td>
                     <td>
+                        {# CHAQUE GESTE PORTE SON ICÔNE. Trois libellés courts alignés se
+                           lisent comme un bloc de texte ; l'icône les redevient trois
+                           boutons distincts, et l'on vise « Sortie » sans relire.
+                           Elle est décorative — le mot dit déjà tout (WCAG 1.1.1). #}
                         <span class="jsb-picker-gestes">
                             <button type="button" class="btn btn-sm btn-outline-secondary jsb-picker-geste"
                                     data-cpt-journal="{{ ligne.id }}"
-                                    aria-label="Journal de {{ ligne.agent }}">Journal</button>
+                                    aria-label="Journal de {{ ligne.agent }}">
+                                {{ ux_icon(resolve_icon_name('action:view'), {width: '14px', height: '14px'}) }}
+                                Journal
+                            </button>
                             <button type="button" class="btn btn-sm btn-outline-secondary jsb-picker-geste"
                                     data-cpt-ajuster="{{ ligne.id }}"
-                                    aria-label="Ajuster le compteur de {{ ligne.agent }}">Ajuster</button>
+                                    aria-label="Ajuster le compteur de {{ ligne.agent }}">
+                                {{ ux_icon(resolve_icon_name('action:edit'), {width: '14px', height: '14px'}) }}
+                                Ajuster
+                            </button>
                             <button type="button" class="btn btn-sm btn-outline-secondary jsb-picker-geste"
                                     data-cpt-sortie="{{ ligne.id }}"
-                                    aria-label="Décompte de sortie de {{ ligne.agent }}">Sortie</button>
+                                    aria-label="Décompte de sortie de {{ ligne.agent }}">
+                                {{ ux_icon(resolve_icon_name('action:exit'), {width: '14px', height: '14px'}) }}
+                                Sortie
+                            </button>
                         </span>
                     </td>
                 </tr>
@@ -105,7 +118,7 @@
     </table>
 
     {% if grille.seuilReport > 0 %}
-        <p class="text-muted small mb-0 px-3 py-2">
+        <p class="jsb-picker-note">
             « Report élevé » signale un disponible au-delà de
             <strong>{{ grille.seuilReport|number_format(1, ',', ' ') }}&nbsp;jours</strong>, seuil réglé
             dans « Paramètres congés ». Un solde qui s'accumule indéfiniment est une dette

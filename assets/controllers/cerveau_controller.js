@@ -304,6 +304,9 @@ export default class extends Controller {
                 break;
             case 'app:entity.saved':
                 this._showNotification('Enregistrement réussi !', 'success');
+                // Si l'on était parti d'une boîte de décision pour corriger la demande,
+                // on y retourne sans attendre un clic de fermeture.
+                this._retournerALaDecisionApresCorrection(payload);
                 const originatorId = payload.originatorId;
                 if (originatorId) {
                     // Si l'ID de l'initiateur commence par 'collection-', c'est un widget de collection.
@@ -2111,6 +2114,36 @@ export default class extends Controller {
             isCreationMode: false,
             context: { originatorId: this.getActiveTabId() },
         });
+    }
+
+    /**
+     * LA CORRECTION FAITE, LA FICHE SE REFERME D'ELLE-MÊME.
+     *
+     * ── CE QUE CELA ÉVITE ───────────────────────────────────────────────────────────
+     * On partait de la boîte de décision pour corriger la demande. L'enregistrement
+     * réussissait, le message de succès s'affichait — et la fiche restait là. Il fallait
+     * la refermer à la main pour retrouver l'écran de soumission d'où l'on venait. Un
+     * clic de plus pour rien, au moment précis où l'utilisateur croit avoir fini.
+     *
+     * ── POURQUOI UN DÉLAI, ET NON UNE FERMETURE IMMÉDIATE ──────────────────────────
+     * Le message de succès doit avoir le temps d'être lu : refermer dans la même
+     * milliseconde ferait douter que l'enregistrement ait eu lieu. Deux secondes suffisent
+     * à le voir sans donner l'impression d'attendre. — Nielsen 1 (visibilité de l'état).
+     *
+     * Si la boîte a déjà été refermée à la main entre-temps, l'ordre ne trouve personne :
+     * `doClose` n'obéit qu'à un dialogue qui porte cet identifiant.
+     * @private
+     */
+    _retournerALaDecisionApresCorrection(payload) {
+        if (!this.congeRetourApresEdition || !payload?.dialogId) {
+            return;
+        }
+
+        const dialogId = payload.dialogId;
+        window.setTimeout(() => {
+            this.broadcast('app:dialog.do-close', { dialogId });
+            this._reouvrirLaDecisionSiAttendue();
+        }, 2000);
     }
 
     /**
