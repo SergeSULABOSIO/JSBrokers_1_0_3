@@ -104,7 +104,28 @@ class PeriodeParDefaut
      */
     public function fin(?Invite $agent, \DateTimeImmutable $debut): \DateTimeImmutable
     {
-        $restants = self::DUREE_JOURS_OUVRABLES;
+        return $this->finPourDuree($agent, $debut, self::DUREE_JOURS_OUVRABLES);
+    }
+
+    /**
+     * Le dernier jour travaillé tel que la période dure EXACTEMENT $duree jours ouvrables.
+     *
+     * ── POURQUOI CETTE VARIANTE EXISTE ──────────────────────────────────────────────
+     * Quand l'utilisateur déplace la date de début, la date de fin doit suivre en gardant
+     * la même LONGUEUR d'absence : quelqu'un qui a ramené sa demande à trois jours puis
+     * décale son départ veut toujours trois jours, pas dix. La durée conservée est celle
+     * de la période telle qu'elle était avant le geste.
+     *
+     * Le calcul reste ici, côté serveur : lui seul connaît les jours fériés du cabinet et
+     * le régime de l'intéressé. Le refaire dans le navigateur donnerait une seconde
+     * réponse à « ce jour compte-t-il ? », et l'écran finirait par contredire le décompte
+     * annoncé à l'enregistrement.
+     */
+    public function finPourDuree(?Invite $agent, \DateTimeImmutable $debut, float $duree): \DateTimeImmutable
+    {
+        // Une durée nulle ou négative n'a pas de fin à proposer : la période se réduit à
+        // son premier jour, que l'utilisateur ajustera.
+        $restants = (int) ceil(max(1.0, $duree));
         $jour = $debut;
         $dernier = $debut;
 

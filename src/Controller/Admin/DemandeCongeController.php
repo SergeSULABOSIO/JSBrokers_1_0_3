@@ -11,7 +11,9 @@ use App\Form\DemandeCongeType;
 use App\Repository\DemandeCongeRepository;
 use App\Repository\EntrepriseRepository;
 use App\Repository\InviteRepository;
+use App\Service\Conge\CalculateurJoursOuvrables;
 use App\Service\Conge\CalculateurSolde;
+use App\Service\Conge\PeriodeParDefaut;
 use App\Service\Conge\CalendrierEquipe;
 use App\Service\Conge\CongeTransitionException;
 use App\Service\Conge\DemandeCongePolicy;
@@ -64,7 +66,8 @@ class DemandeCongeController extends AbstractController
         private CalculationProvider $calculationProvider,
         private DemandeCongePolicy $policy,
         private DemandeCongeWorkflow $workflow,
-        private \App\Service\Conge\PeriodeParDefaut $periodeParDefaut,
+        private PeriodeParDefaut $periodeParDefaut,
+        private CalculateurJoursOuvrables $calculateurJours,
         private \App\Repository\TypeAbsenceRepository $typeAbsenceRepository,
         private CalculateurSolde $calculateurSolde,
         private CongeVisibiliteScope $visibilite,
@@ -167,6 +170,90 @@ class DemandeCongeController extends AbstractController
      * {@see \App\Service\Conge\DemandeCongeWorkflow::completerLaTrace}. La règle, elle,
      * n'est écrite qu'une fois.
      */
+    /**
+     * LA DATE DE FIN SUIT LA DATE DE DÉBUT, sans quitter le formulaire.
+     *
+     * ── CE QUE CELA ÉVITE ───────────────────────────────────────────────────────────
+     * Déplacer son départ d'une semaine obligeait à recalculer soi-même la date de retour,
+     * en tenant compte des week-ends, des jours fériés du cabinet et de son propre régime
+     * de travail. Personne ne fait ce calcul de tête : on posait une date approximative,
+     * et l'on découvrait le décompte réel à l'enregistrement.
+     *
+     * ── LA DURÉE EST CONSERVÉE, PAS REMISE À DIX ────────────────────────────────────
+     * Quelqu'un qui a ramené sa demande à trois jours puis décale son départ veut toujours
+     * trois jours. On mesure donc la longueur de la période TELLE QU'ELLE ÉTAIT avant le
+     * geste, et on la reporte sur la nouvelle date.
+     *
+     * ── ET LE CALCUL RESTE ICI ──────────────────────────────────────────────────────
+     * Le serveur seul connaît les jours fériés du cabinet et le régime de l'intéressé. Le
+     * refaire dans le navigateur donnerait une seconde réponse à « ce jour compte-t-il ? »,
+     * et l'écran finirait par contredire le décompte annoncé à l'enregistrement.
+     */
+    #[Route('/api/periode-fin', name: 'api.periode_fin', methods: ['POST'])]
+    public function periodeFin(Request $request): JsonResponse
+    {
+        $args = json_decode($request->getContent() ?: '{}', true);
+        $args = is_array($args) ? $args : [];
+
+        $nouveauDebut = $this->dateOuNull($args['debut'] ?? null);
+        if ($nouveauDebut === null) {
+            return $this->json(['message' => 'Date de début illisible.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        // L'AGENT EST RÉSOLU DANS LE PÉRIMÈTRE, jamais pris tel quel : son régime de
+        // travail décide de ce qui compte, et un identifiant venu du navigateur ne doit
+        // pas traverser les cabinets. À défaut, l'invité connecté.
+        $agent = $this->agentDuCabinet($args['agent'] ?? null) ?? $this->getInvite();
+
+        // La durée à conserver : celle de la période d'avant. Illisible ou incohérente
+        // (fin avant début), on retombe sur la durée usuelle plutôt que de ne rien rendre.
+        $ancienDebut = $this->dateOuNull($args['ancienDebut'] ?? null);
+        $ancienneFin = $this->dateOuNull($args['ancienneFin'] ?? null);
+
+        $duree = ($ancienDebut !== null && $ancienneFin !== null && $ancienneFin >= $ancienDebut)
+            ? $this->calculateurJours->calculer($agent, $ancienDebut, $ancienneFin)
+            : 0.0;
+
+        if ($duree <= 0.0) {
+            $duree = (float) PeriodeParDefaut::DUREE_JOURS_OUVRABLES;
+        }
+
+        $fin = $this->periodeParDefaut->finPourDuree($agent, $nouveauDebut, $duree);
+
+        return $this->json([
+            'fin' => $fin->format('Y-m-d'),
+            'jours' => $this->calculateurJours->calculer($agent, $nouveauDebut, $fin),
+        ]);
+    }
+
+    /** Une date ISO du navigateur, ou null si elle est absente ou illisible. */
+    private function dateOuNull(mixed $brut): ?\DateTimeImmutable
+    {
+        if (!is_string($brut) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $brut)) {
+            return null;
+        }
+
+        try {
+            return new \DateTimeImmutable($brut);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /** L'agent désigné, s'il appartient bien à l'espace de travail courant. */
+    private function agentDuCabinet(mixed $id): ?Invite
+    {
+        if (!is_numeric($id)) {
+            return null;
+        }
+
+        $agent = $this->inviteRepository->find((int) $id);
+
+        return $agent !== null && $agent->getEntreprise()?->getId() === $this->getEntreprise()->getId()
+            ? $agent
+            : null;
+    }
+
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request): JsonResponse
     {

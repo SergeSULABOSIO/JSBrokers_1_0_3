@@ -16,6 +16,7 @@ use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 /**
  * Formulaire de saisie/édition d'une demande de congé.
@@ -45,6 +46,7 @@ class DemandeCongeType extends AbstractType
 {
     public function __construct(
         private readonly FormListenerFactory $ecouteurFormulaire,
+        private readonly UrlGeneratorInterface $router,
     ) {
     }
 
@@ -127,6 +129,16 @@ class DemandeCongeType extends AbstractType
             'data_class'         => DemandeConge::class,
             'csrf_protection'    => false,
             'allow_extra_fields' => true,
+            // LA DATE DE FIN SUIT LA DATE DE DÉBUT (contrôleur Stimulus « conge-periode »
+            // posé sur le <form>, comme « piste-name-sync »). Déplacer son départ d'une
+            // semaine obligeait sinon à recalculer soi-même le retour, week-ends, jours
+            // fériés et régime de travail compris — un calcul que personne ne fait de
+            // tête. L'URL vient du routeur : la coder ici la ferait diverger le jour où la
+            // route bouge.
+            'attr' => [
+                'data-controller' => 'conge-periode',
+                'data-conge-periode-url-value' => $this->router->generate('admin.demandeconge.api.periode_fin'),
+            ],
         ]);
     }
 

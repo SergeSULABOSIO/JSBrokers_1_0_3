@@ -90,3 +90,50 @@ test('le retour à la boîte de décision laisse voir le message de succès', ()
         + 'de décision : ailleurs, refermer la fiche de quelqu\'un serait une surprise.',
     );
 });
+
+/**
+ * LA DATE DE FIN SUIT LA DATE DE DÉBUT — et le navigateur ne refait aucun calendrier.
+ *
+ * Déplacer son départ obligeait à recalculer soi-même le retour, week-ends, jours fériés
+ * et régime de travail compris. Le serveur seul connaît ces trois choses : lui redemander
+ * la date coûte un aller-retour, mais garantit que l'écran et le décompte annoncé à
+ * l'enregistrement disent la même chose. Refaire le calcul ici donnerait une seconde
+ * réponse à « ce jour compte-t-il ? », et les deux finiraient par diverger.
+ *
+ * ⚠ Les champs de DemandeCongeType se nomment SANS PRÉFIXE (`getBlockPrefix()` vide) :
+ * un sélecteur à crochets ne trouverait rien, en silence.
+ */
+test("conge-periode : la date de fin est demandée au serveur, jamais calculée ici", () => {
+    const source = readFileSync(join(RACINE, 'conge-periode_controller.js'), 'utf8');
+
+    assert.match(source, /fetch\(this\.urlValue/, 'La nouvelle fin vient du serveur.');
+    assert.doesNotMatch(
+        source,
+        /getDay\(\)|setDate\(|\+ 86400000/,
+        "Aucune arithmétique de calendrier dans le navigateur : c'est le serveur qui sait "
+        + 'ce qu\'est un samedi, un férié et le régime de chacun.',
+    );
+});
+
+test("conge-periode : les champs sont visés sans préfixe", () => {
+    const source = readFileSync(join(RACINE, 'conge-periode_controller.js'), 'utf8');
+
+    assert.match(source, /\[name="dateDebut"\]/);
+    assert.match(source, /\[name="dateFin"\]/);
+    assert.doesNotMatch(
+        source,
+        /name\^?=?"[a-z_]+\[dateDebut\]"/,
+        'DemandeCongeType rend un prefixe vide : un sélecteur à crochets échoue en silence.',
+    );
+});
+
+test("conge-periode : la durée conservée est celle d'AVANT le geste", () => {
+    const source = readFileSync(join(RACINE, 'conge-periode_controller.js'), 'utf8');
+
+    assert.match(
+        source,
+        /ancienDebut: this\.ancienDebut[\s\S]*?ancienneFin: this\.ancienneFin/,
+        "Au moment du changement, le champ porte DÉJÀ la nouvelle valeur : la période "
+        + "d'avant doit être mémorisée, pas relue.",
+    );
+});

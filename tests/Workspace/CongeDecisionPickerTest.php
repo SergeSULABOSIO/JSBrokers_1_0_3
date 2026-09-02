@@ -193,6 +193,90 @@ class CongeDecisionPickerTest extends WebTestCase
     }
 
     /**
+     * LA DATE DE FIN SUIT LA DATE DE DÉBUT, EN CONSERVANT LA DURÉE.
+     *
+     * Déplacer son départ obligeait à recalculer soi-même le retour, week-ends, jours
+     * fériés et régime de travail compris — un calcul que personne ne fait de tête. Et la
+     * durée doit être CONSERVÉE, non remise au défaut : quelqu'un qui a ramené sa demande
+     * à trois jours puis décale son départ veut toujours trois jours.
+     */
+    public function testDeplacerLeDebutDeplaceLaFinEnGardantLaDuree(): void
+    {
+        $s = $this->semer();
+        $this->client->loginUser($s['valideur']->getUtilisateur());
+
+        // Une période de trois jours ouvrables : mercredi 2, jeudi 3, vendredi 4 septembre.
+        // On la déplace au lundi 14 : elle doit rester de trois jours, donc finir le 16.
+        $this->client->request(
+            'POST',
+            '/admin/demandeconge/api/periode-fin',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode([
+                'debut' => '2026-09-14',
+                'ancienDebut' => '2026-09-02',
+                'ancienneFin' => '2026-09-04',
+                'agent' => $s['agent']->getId(),
+            ]),
+        );
+
+        self::assertResponseIsSuccessful();
+        $charge = json_decode((string) $this->client->getResponse()->getContent(), true);
+
+        self::assertSame('2026-09-16', $charge['fin'], 'Trois jours ouvrables à partir du lundi 14.');
+        self::assertSame(3.0, (float) $charge['jours']);
+    }
+
+    /**
+     * LA FIN PROPOSÉE ENJAMBE LE WEEK-END plutôt que de tomber dedans.
+     *
+     * C'est tout l'intérêt de faire calculer le serveur : trois jours à partir du vendredi
+     * se terminent le mardi, pas le dimanche.
+     */
+    public function testLAjustementEnjambeLeWeekEnd(): void
+    {
+        $s = $this->semer();
+        $this->client->loginUser($s['valideur']->getUtilisateur());
+
+        $this->client->request(
+            'POST',
+            '/admin/demandeconge/api/periode-fin',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode([
+                'debut' => '2026-09-11',   // vendredi
+                'ancienDebut' => '2026-09-02',
+                'ancienneFin' => '2026-09-04',
+                'agent' => $s['agent']->getId(),
+            ]),
+        );
+
+        $charge = json_decode((string) $this->client->getResponse()->getContent(), true);
+
+        self::assertSame('2026-09-15', $charge['fin'], 'Vendredi, lundi, mardi : le week-end ne compte pas.');
+        self::assertSame(3.0, (float) $charge['jours']);
+    }
+
+    /** Sans période d'avant lisible, on retombe sur la durée usuelle plutôt que sur rien. */
+    public function testSansPeriodeDAvantOnRetombeSurLaDureeUsuelle(): void
+    {
+        $s = $this->semer();
+        $this->client->loginUser($s['valideur']->getUtilisateur());
+
+        $this->client->request(
+            'POST',
+            '/admin/demandeconge/api/periode-fin',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['debut' => '2026-09-14', 'agent' => $s['agent']->getId()]),
+        );
+
+        $charge = json_decode((string) $this->client->getResponse()->getContent(), true);
+
+        self::assertSame(
+            (float) \App\Service\Conge\PeriodeParDefaut::DUREE_JOURS_OUVRABLES,
+            (float) $charge['jours'],
+        );
+    }
+
+    /**
      * LE DÉCOMPTE SUIT LA PÉRIODE — deux jours du 2 au 3, et non un.
      *
      * ── L'INCIDENT ──────────────────────────────────────────────────────────────────
