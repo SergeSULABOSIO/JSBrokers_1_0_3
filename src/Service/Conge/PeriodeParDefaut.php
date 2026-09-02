@@ -3,6 +3,7 @@
 namespace App\Service\Conge;
 
 use App\Entity\Invite;
+use App\Entity\ParametresConge;
 use App\Repository\ParametresCongeRepository;
 
 /**
@@ -16,30 +17,44 @@ use App\Repository\ParametresCongeRepository;
  * par corriger les deux champs que l'écran venait de remplir.
  *
  * Un défaut qui doit être effacé avant d'être utilisé n'est pas un défaut : c'est un
- * obstacle poli. — Bastien & Scapin > Charge de travail ; Nielsen 6 (reconnaître plutôt
- * que se rappeler : le préavis du cabinet est proposé, pas à retrouver).
+ * obstacle poli. — Bastien & Scapin > Charge de travail ; Nielsen 6.
  *
- * ── LE DÉBUT RESPECTE LE PRÉAVIS, ET DE LA MÊME FAÇON QUE LE CONTRÔLE ───────────────
- * CTRL-03 compte le préavis en jours OUVRABLES, bornes exclues. La proposition emprunte
- * exactement le même calcul, par le même calculateur : une date proposée qui échouerait
- * au contrôle qui la relit serait pire que pas de proposition du tout.
+ * ── LES DEUX BORNES SONT DES JOURS TRAVAILLÉS ───────────────────────────────────────
+ * Une première version proposait « début + 10 jours de calendrier ». Elle tombait un
+ * samedi une fois sur trois, et la période ainsi proposée ne coûtait que sept jours
+ * ouvrables : le chiffre que le cabinet avait réglé n'apparaissait nulle part dans ce que
+ * l'utilisateur allait voir décompté. Une absence qui commence ou se termine un jour non
+ * travaillé n'a d'ailleurs aucun sens à écrire.
  *
- * ── LA FIN COUVRE UNE DURÉE USUELLE, BORNES INCLUSES ────────────────────────────────
- * « Dix jours » se lit comme la longueur de l'absence, non comme un décalage : du 7 au
- * 16, et non du 7 au 17. Ce sont des jours de CALENDRIER — la période proposée est un
- * point de départ que l'utilisateur ajuste, et son coût réel en jours ouvrables lui est
- * annoncé à l'enregistrement.
+ * ── LA DURÉE EST DONC COMPTÉE EN JOURS OUVRABLES ────────────────────────────────────
+ * Comme tout le reste du module : la dotation de 26 jours, le solde, le préavis, le
+ * décompte lui-même. Une période proposée qui se compterait dans une autre unité que
+ * celle affichée à l'enregistrement obligerait à faire la conversion de tête.
+ *
+ * ── ET LE DÉBUT RESPECTE LE PRÉAVIS, DE LA MÊME FAÇON QUE LE CONTRÔLE ───────────────
+ * CTRL-03 compte le préavis en jours ouvrables, bornes exclues. La proposition emprunte
+ * exactement le même calculateur : une date proposée qui échouerait au contrôle qui la
+ * relit serait pire que pas de proposition du tout.
  */
 class PeriodeParDefaut
 {
     /**
-     * Longueur, en jours de calendrier, de la période proposée — bornes incluses.
+     * Longueur, en jours OUVRABLES, de la période proposée — bornes incluses.
      *
      * Décision produit, comme la dotation annuelle : une constante nommée plutôt qu'un
      * réglage de plus à tenir. Elle deviendra un paramètre du cabinet le jour où deux
      * cabinets voudront deux valeurs différentes, pas avant.
      */
-    public const DUREE_JOURS = 10;
+    public const DUREE_JOURS_OUVRABLES = 10;
+
+    /**
+     * Garde-fou du parcours de calendrier.
+     *
+     * Les deux recherches avancent jour après jour — le seul moyen de tenir compte des
+     * week-ends, des jours fériés et du régime de chacun. Un régime mal saisi (aucun jour
+     * travaillé) ferait tourner la boucle sans fin ; on s'arrête au bout d'un an.
+     */
+    private const PARCOURS_MAX_JOURS = 366;
 
     public function __construct(
         private readonly ParametresCongeRepository $parametresRepository,
@@ -48,51 +63,70 @@ class PeriodeParDefaut
     }
 
     /**
-     * Le premier jour proposé : le plus proche qui respecte encore le préavis du cabinet.
+     * Le premier jour TRAVAILLÉ qui respecte encore le préavis du cabinet.
      *
      * On avance jour après jour plutôt que d'ajouter le préavis d'un coup : le délai se
-     * compte en jours OUVRABLES, et un préavis de cinq jours posé un jeudi tombe le jeudi
-     * suivant, pas le mardi. Le parcours est borné — un préavis absurde ne doit pas faire
-     * tourner la boucle indéfiniment.
+     * compte en jours ouvrables, et un préavis de cinq jours posé un mercredi tombe le
+     * jeudi de la semaine suivante, pas le lundi.
      */
     public function debut(?Invite $agent): \DateTimeImmutable
     {
         $aujourdhui = new \DateTimeImmutable('today');
-        $parametres = $this->parametresPour($agent);
+        $demain = $aujourdhui->modify('+1 day');
+        $preavis = $this->parametresPour($agent)?->getDelaiPreavisJours() ?? 0;
 
-        $preavis = $parametres?->getDelaiPreavisJours() ?? 0;
-        if ($preavis <= 0) {
-            // Sans préavis, on propose DEMAIN : le contrôle refuse une absence qui commence
-            // aujourd'hui, quel que soit le délai réglé.
-            return $aujourdhui->modify('+1 day');
-        }
+        $candidat = $demain;
+        for ($pas = 0; $pas < self::PARCOURS_MAX_JOURS; $pas++, $candidat = $candidat->modify('+1 day')) {
+            // Une absence ne commence pas un jour que l'intéressé ne travaille pas.
+            if (!$this->estTravaille($agent, $candidat)) {
+                continue;
+            }
 
-        $candidat = $aujourdhui->modify('+1 day');
-        $plafond = $aujourdhui->modify(sprintf('+%d days', ($preavis * 3) + 14));
-
-        while ($candidat <= $plafond) {
+            // Le préavis se mesure entre demain et la VEILLE du départ, bornes incluses :
+            // ni le jour même, ni le jour du départ n'y comptent (cf. CTRL-03).
             $veille = $candidat->modify('-1 day');
-            $ouvrables = $veille < $aujourdhui->modify('+1 day')
-                ? 0.0
-                : $this->calculateurJours->calculer($agent, $aujourdhui->modify('+1 day'), $veille);
+            $ouvrables = $veille < $demain ? 0.0 : $this->calculateurJours->calculer($agent, $demain, $veille);
 
             if ($ouvrables >= $preavis) {
                 return $candidat;
             }
-
-            $candidat = $candidat->modify('+1 day');
         }
 
-        return $plafond;
+        return $demain; // Inatteignable en pratique : repli plutôt qu'une boucle sans fin.
     }
 
-    /** Le dernier jour proposé : la durée usuelle à compter du début, bornes incluses. */
-    public function fin(\DateTimeImmutable $debut): \DateTimeImmutable
+    /**
+     * Le dernier jour TRAVAILLÉ tel que la période dure exactement la durée usuelle.
+     *
+     * On compte les jours travaillés en avançant, et l'on s'arrête sur le dernier : la
+     * période proposée coûte donc précisément ce que le cabinet a réglé, dans l'unité même
+     * où le décompte lui sera annoncé.
+     */
+    public function fin(?Invite $agent, \DateTimeImmutable $debut): \DateTimeImmutable
     {
-        return $debut->modify(sprintf('+%d days', self::DUREE_JOURS - 1));
+        $restants = self::DUREE_JOURS_OUVRABLES;
+        $jour = $debut;
+        $dernier = $debut;
+
+        for ($pas = 0; $pas < self::PARCOURS_MAX_JOURS && $restants > 0; $pas++, $jour = $jour->modify('+1 day')) {
+            if (!$this->estTravaille($agent, $jour)) {
+                continue;
+            }
+
+            $restants--;
+            $dernier = $jour;
+        }
+
+        return $dernier;
     }
 
-    private function parametresPour(?Invite $agent): ?\App\Entity\ParametresConge
+    /** Ce jour compte-t-il pour cet agent ? Ni week-end au sens de son régime, ni férié. */
+    private function estTravaille(?Invite $agent, \DateTimeImmutable $jour): bool
+    {
+        return $this->calculateurJours->calculer($agent, $jour, $jour) > 0.0;
+    }
+
+    private function parametresPour(?Invite $agent): ?ParametresConge
     {
         $entreprise = $agent?->getEntreprise();
 

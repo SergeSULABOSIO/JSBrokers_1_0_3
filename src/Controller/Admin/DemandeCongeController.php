@@ -4,6 +4,7 @@ namespace App\Controller\Admin;
 
 use App\Constantes\Constante;
 use App\Entity\DemandeConge;
+use App\Entity\TypeAbsence;
 use App\Entity\Invite;
 use App\Entity\Traits\HandleChildAssociationTrait;
 use App\Form\DemandeCongeType;
@@ -64,6 +65,7 @@ class DemandeCongeController extends AbstractController
         private DemandeCongePolicy $policy,
         private DemandeCongeWorkflow $workflow,
         private \App\Service\Conge\PeriodeParDefaut $periodeParDefaut,
+        private \App\Repository\TypeAbsenceRepository $typeAbsenceRepository,
         private CalculateurSolde $calculateurSolde,
         private CongeVisibiliteScope $visibilite,
         private CalendrierEquipe $calendrier,
@@ -134,7 +136,15 @@ class DemandeCongeController extends AbstractController
                 // que l'écran venait de remplir.
                 $debut = $this->periodeParDefaut->debut($invite);
                 $demande->setDateDebut($debut);
-                $demande->setDateFin($this->periodeParDefaut->fin($debut));
+                $demande->setDateFin($this->periodeParDefaut->fin($invite, $debut));
+
+                // LE TYPE PAR DÉFAUT EST LE CONGÉ ANNUEL. C'est celui de la quasi-totalité
+                // des demandes ; laisser « Choisir un type… » obligeait à ouvrir une liste
+                // pour y désigner l'évidence, à chaque fois. Les autres types — maladie,
+                // événement familial — se choisissent, eux, en connaissance de cause.
+                $demande->setTypeAbsence(
+                    $this->typeAbsenceRepository->parCode($invite->getEntreprise(), TypeAbsence::CODE_CONGE_ANNUEL),
+                );
             }
         );
     }
