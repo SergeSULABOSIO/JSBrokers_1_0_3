@@ -30,7 +30,7 @@ class RolesEnAdministrationFormCanvasProvider implements FormCanvasProviderInter
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Droits d'accès — module Administration",
-                "description" => "Vous définissez ce que ce collaborateur peut consulter et modifier sur l'administration de l'espace de travail (documents, classeurs, collaborateurs invités, assistant IA, congés). Ces droits s'appliquent dès l'enregistrement : n'accordez que le nécessaire.",
+                "description" => "Vous définissez ce que ce collaborateur peut consulter et modifier sur l'administration de l'espace de travail (documents, classeurs, collaborateurs invités, assistant IA, congés, importation / exportation). Ces droits s'appliquent dès l'enregistrement : n'accordez que le nécessaire.",
                 // Libellés des puces de contexte (rappel des champs masqués pré-remplis).
                 "facts_labels" => [
                     "nom"    => "Libellé du rôle",
@@ -45,6 +45,7 @@ class RolesEnAdministrationFormCanvasProvider implements FormCanvasProviderInter
                 "accessAssistantIa" => "assistant-ia",
                 "accessConge"       => "conge",
                 "accessCongeParametre" => "type-absence",
+                "accessEchange"     => "echange",
             ],
         ];
         $layout = $this->buildRolesEnAdministrationLayout();
@@ -75,6 +76,12 @@ class RolesEnAdministrationFormCanvasProvider implements FormCanvasProviderInter
             ["couleur_fond" => "white", "colonnes" => [
                 ["champs" => ["accessConge"]],
                 ["champs" => ["accessCongeParametre"]]
+            ]],
+            // L'échange de données forme sa propre rangée : c'est la seule capacité du
+            // module qui fasse SORTIR les données du cabinet, et la seule dont l'aide
+            // ait besoin d'être lue en entier avant qu'on ne coche quoi que ce soit.
+            ["couleur_fond" => "white", "colonnes" => [
+                ["champs" => ["accessEchange"]]
             ]],
         ];
     }

@@ -43,6 +43,17 @@ class IconCanvasProvider
         'cotation'        => 'hugeicons:invoice-02',
         'document'        => 'hugeicons:document-validation',
         'document-comptable' => 'tabler:report-money', // états comptables OHADA (workspace & rôles)
+        // ── IMPORTATION / EXPORTATION ───────────────────────────────────────────────
+        // Trois icônes DÉJÀ présentes dans assets/icons — aucune n'a été téléchargée
+        // pour l'occasion (un nom absent du disque ne fait pas d'erreur : il laisse
+        // un trou dans l'alignement, ce qui est pire).
+        //
+        // La rubrique porte un classeur Excel plutôt qu'une double flèche d'échange :
+        // le format est CONTRAINT (xlsx et rien d'autre), et le dire dès l'icône évite
+        // la question « puis-je déposer un CSV ? ».
+        'echange'         => 'tabler:file-type-xls',
+        'echange-export'  => 'hugeicons:download-01',
+        'echange-import'  => 'hugeicons:upload-01',
         'entreprise'      => 'hugeicons:building-02',
         'feedback'        => 'tabler:message-chatbot',
         'fournisseur'     => 'tabler:building-store', // opérateur économique (achats / services généraux)

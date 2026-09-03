@@ -109,6 +109,19 @@ class RolesEnAdministrationType extends AbstractType
                     "Suppression" => Invite::ACCESS_SUPPRESSION,
                 ],
             ])
+            ->add('accessEchange', ChoiceType::class, [
+                'label' => "Droit d'accès sur l'importation / exportation",
+                'help' => "« Lecture » suffit pour exporter (l'export ne modifie rien) ; « Écriture » ouvre l'importation. Ce droit n'ouvre que la rubrique : ce qui en sort, comme ce qui y entre, reste limité aux entités que ce collaborateur a déjà le droit de lire et d'écrire.",
+                'multiple' => true,
+                'expanded' => true,
+                'required' => false,
+                'choices'  => [
+                    "Lecture" => Invite::ACCESS_LECTURE,
+                    "Ecriture" => Invite::ACCESS_ECRITURE,
+                    "Modification" => Invite::ACCESS_MODIFICATION,
+                    "Suppression" => Invite::ACCESS_SUPPRESSION,
+                ],
+            ])
             ->add('invite', InviteAutocompleteField::class, [
                 'label' => "Collaborateur",
                 'required' => true,

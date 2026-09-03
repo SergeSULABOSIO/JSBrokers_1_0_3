@@ -74,6 +74,20 @@ class PlateformeParametres
     private ?int $documentCaracteresParPage = null;
 
     /**
+     * Occurrences d'échange offertes à vie par cabinet.
+     * NULL → TokenPricing::ECHANGE_QUOTA_GRATUIT.
+     *
+     * Deux scalaires SÉPARÉS, même raison que pour les documents : régler le quota ne
+     * doit jamais emporter le prix, ni l'inverse.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?int $echangeQuotaGratuit = null;
+
+    /** Coût d'une exportation au-delà du quota. NULL → TokenPricing::ECHANGE_COUT_OCCURRENCE. */
+    #[ORM\Column(nullable: true)]
+    private ?int $echangeCoutOccurrence = null;
+
+    /**
      * Multiplicateurs par format : { "pdf": 1.8, ... }. FUSIONNÉ clé par clé avec
      * TokenPricing::DOCUMENT_FORMATS, jamais substitué en bloc : un format ajouté
      * au CODE doit apparaître même sur une plateforme dont la carte est déjà
@@ -294,6 +308,30 @@ class PlateformeParametres
     public function setDocumentCaracteresParPage(?int $documentCaracteresParPage): static
     {
         $this->documentCaracteresParPage = $documentCaracteresParPage;
+
+        return $this;
+    }
+
+    public function getEchangeQuotaGratuit(): ?int
+    {
+        return $this->echangeQuotaGratuit;
+    }
+
+    public function setEchangeQuotaGratuit(?int $echangeQuotaGratuit): static
+    {
+        $this->echangeQuotaGratuit = $echangeQuotaGratuit;
+
+        return $this;
+    }
+
+    public function getEchangeCoutOccurrence(): ?int
+    {
+        return $this->echangeCoutOccurrence;
+    }
+
+    public function setEchangeCoutOccurrence(?int $echangeCoutOccurrence): static
+    {
+        $this->echangeCoutOccurrence = $echangeCoutOccurrence;
 
         return $this;
     }

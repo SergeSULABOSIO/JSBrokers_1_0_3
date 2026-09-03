@@ -31,7 +31,7 @@ class ParametresTokenService
     }
 
     /**
-     * @return array{packs:array, freeAllowance:int, freeWindowHours:int, readWeight:int, defaultWriteWeight:int, writeWeights:array, usdPerToken:float, documentBase:int, documentParPage:int, documentCaracteresParPage:int, documentFormats:array<string,float>}
+     * @return array{packs:array, freeAllowance:int, freeWindowHours:int, readWeight:int, defaultWriteWeight:int, writeWeights:array, usdPerToken:float, documentBase:int, documentParPage:int, documentCaracteresParPage:int, documentFormats:array<string,float>, echangeQuotaGratuit:int, echangeCoutOccurrence:int}
      */
     private function values(): array
     {
@@ -57,6 +57,11 @@ class ParametresTokenService
             // max(1, …) : garde anti-division par zéro, même esprit que windowSeconds().
             'documentCaracteresParPage' => max(1, $p->getDocumentCaracteresParPage() ?? TokenPricing::DOCUMENT_CARACTERES_PAR_PAGE),
             'documentFormats'           => self::fusionnerFormats($p->getDocumentFormats()),
+
+            // Échange de données. max(0, …) : un quota ou un prix négatif saisi en
+            // console ne doit pas rendre la rubrique gratuite à l'infini, ni créditer.
+            'echangeQuotaGratuit'   => max(0, $p->getEchangeQuotaGratuit()   ?? TokenPricing::ECHANGE_QUOTA_GRATUIT),
+            'echangeCoutOccurrence' => max(0, $p->getEchangeCoutOccurrence() ?? TokenPricing::ECHANGE_COUT_OCCURRENCE),
         ];
     }
 
@@ -87,6 +92,22 @@ class ParametresTokenService
         }
 
         return array_replace(TokenPricing::DOCUMENT_FORMATS, $propres);
+    }
+
+    /**
+     * Occurrences d'échange offertes à vie par cabinet (export et import confondus).
+     * Le DÉCOMPTE, lui, est par cabinet et vit dans EchangeOccurrence — seul le barème
+     * est ici, avec tous les autres tarifs de la plateforme.
+     */
+    public function echangeQuotaGratuit(): int
+    {
+        return $this->values()['echangeQuotaGratuit'];
+    }
+
+    /** Coût en tokens d'une exportation au-delà du quota gratuit. */
+    public function echangeCoutOccurrence(): int
+    {
+        return $this->values()['echangeCoutOccurrence'];
     }
 
     /** Paquets prépayés : { clé: { tokens, price } }. */

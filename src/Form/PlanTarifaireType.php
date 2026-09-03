@@ -57,6 +57,22 @@ class PlanTarifaireType extends AbstractType
                 'label' => 'Documents IA — taille d\'une page (caractères)',
                 'attr'  => ['placeholder' => 'Ex. 2500', 'data-icon' => 'action:description'],
             ])
+            // Échange de données (rubrique « Importation / Exportation »). Le quota est
+            // à VIE par cabinet, pas par fenêtre : il ne se renouvelle jamais.
+            //
+            // Seul l'EXPORT est facturé ici. L'import écrit des enregistrements, et
+            // chacun paie déjà son poids d'écriture ordinaire — lui ajouter un forfait
+            // le ferait payer deux fois pour un seul geste.
+            ->add('echangeQuotaGratuit', IntegerType::class, [
+                'label' => 'Échange de données — opérations offertes par cabinet',
+                'help'  => 'À vie, jamais reconduites. Export et import se partagent ce compteur.',
+                'attr'  => ['placeholder' => 'Ex. 3', 'data-icon' => 'action:count'],
+            ])
+            ->add('echangeCoutOccurrence', IntegerType::class, [
+                'label' => 'Échange de données — coût d\'une exportation (tokens)',
+                'help'  => 'Appliqué au-delà du quota offert. L\'importation n\'est pas facturée ici : elle paie le métrage d\'écriture de chaque ligne.',
+                'attr'  => ['placeholder' => 'Ex. 600', 'data-icon' => 'echange'],
+            ])
             // Paquets prépayés : édités via une collection + boîte de dialogue (contrôleur
             // Stimulus `packs-editor`) qui tient ce champ caché synchronisé en JSON. Le
             // contrôleur PHP décode ce JSON de façon générique (cf. decodeJsonMap).
