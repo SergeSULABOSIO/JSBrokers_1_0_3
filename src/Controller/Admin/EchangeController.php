@@ -4,6 +4,7 @@ namespace App\Controller\Admin;
 
 use App\Echange\Canevas\CanevasDEchange;
 use App\Echange\Service\CompteurDOccurrences;
+use App\Echange\Service\ExportateurJsbx;
 use App\Entity\EchangeOccurrence;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
@@ -51,6 +52,7 @@ class EchangeController extends AbstractController
     public function __construct(
         private readonly CanevasDEchange $canevas,
         private readonly CompteurDOccurrences $compteur,
+        private readonly ExportateurJsbx $exportateur,
         private readonly EchangeOccurrenceRepository $occurrences,
         private readonly EchangeImportRunRepository $importRuns,
         private readonly EntrepriseRepository $entrepriseRepository,
@@ -105,6 +107,60 @@ class EchangeController extends AbstractController
             'historique'    => $this->occurrences->historiquePour($entreprise, 50),
             'typeExport'    => EchangeOccurrence::TYPE_EXPORT,
         ]);
+    }
+
+    /**
+     * EXPORTATION : produit le classeur et le renvoie en téléchargement.
+     *
+     * GET, et non POST, pour rester un simple lien de téléchargement comme les autres
+     * exports de l'application. L'idempotence n'en souffre pas : la clé calculée par le
+     * compteur absorbe le rejeu (double clic, requête relancée), si bien qu'un second
+     * appel identique dans la même minute ne produit ni seconde occurrence ni second
+     * débit.
+     *
+     * `donnees` liste les codes de ressources demandés, séparés par des virgules ;
+     * absent, l'export couvre tout ce que l'invité peut lire.
+     */
+    #[Route('/export/{idEntreprise}', name: 'export', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function exporter(int $idEntreprise, Request $request): Response
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+
+        // Fail-closed, comme à l'entrée de la rubrique : le lien peut être appelé
+        // directement, sans passer par l'écran qui l'a affiché.
+        if ($invite === null || !$this->accessResolver->canRead($invite, self::ENTITY_SHORT_NAME)) {
+            throw $this->createAccessDeniedException(sprintf('« %s » est hors de votre périmètre d\'accès.', self::LIBELLE));
+        }
+
+        $demandes = array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) $request->query->get('donnees', '')),
+        ), static fn (string $code) => $code !== ''));
+
+        try {
+            return $this->exportateur->exporter(
+                $entreprise,
+                $invite,
+                $this->getUser(),
+                $demandes,
+                // Graine d'idempotence : la minute courante, sauf si l'appelant en
+                // fournit une (l'assistant passe la sienne pour que sa proposition et
+                // le clic de l'utilisateur ne comptent qu'une fois).
+                $request->query->get('op'),
+            );
+        } catch (InsufficientTokensException $e) {
+            return new Response(
+                sprintf(
+                    'Solde de tokens insuffisant : cette exportation coûte %d tokens, il en reste %d. '
+                    . 'Rechargez votre solde ou attendez le renouvellement de votre allocation gratuite.',
+                    $e->required,
+                    $e->available,
+                ),
+                Response::HTTP_PAYMENT_REQUIRED,
+            );
+        } catch (\RuntimeException $e) {
+            return new Response($e->getMessage(), Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
     }
 
     /**
