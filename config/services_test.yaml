@@ -1,0 +1,38 @@
+# Services rendus PUBLICS en environnement de test uniquement.
+#
+# Ce fichier n'est chargé QUE dans l'environnement de test (Symfony importe
+# `services_{env}.yaml` après `services.yaml`) : rien ici ne touche la production.
+#
+# POURQUOI IL EXISTE. Symfony « inline » un service privé qui n'a qu'un seul
+# consommateur : il disparaît alors du conteneur, et `static::getContainer()->get(...)`
+# ne le trouve plus. Un test échoue donc pour une raison sans rapport avec ce qu'il
+# vérifie — et, pire, il repasse au vert dès qu'on ajoute ailleurs un second appelant.
+# La panne devient intermittente, et le jour où elle revient, plus personne ne sait
+# pourquoi.
+#
+# Les services de l'échange de données sont exactement dans ce cas : chacun n'est appelé
+# que par le contrôleur de la rubrique ou par son voisin immédiat. Plutôt que de les
+# faire dépendre d'un nombre d'appelants qui varie au fil des lots, on les déclare ici.
+#
+# ⚠ LISTE EXPLICITE, ET NON UN IMPORT DE RÉPERTOIRE. `src/Echange/` contient aussi des
+# OBJETS DE VALEUR (une colonne, une ressource, une ligne lue, une anomalie) dont le
+# constructeur prend des chaînes : les importer en masse fait échouer la compilation du
+# conteneur sur « argument $code type-hinted string, configurez sa valeur ». Seuls les
+# services sont listés — et un service oublié se signale par un test qui ne le trouve
+# pas, message on ne peut plus clair.
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        public: true
+
+    App\Echange\Canevas\CanevasDEchange: ~
+    App\Echange\Canevas\OrdreTopologique: ~
+    App\Echange\Classeur\EcrivainJsbx: ~
+    App\Echange\Classeur\LecteurJsbx: ~
+    App\Echange\Service\CompteurDOccurrences: ~
+    App\Echange\Service\ExportateurJsbx: ~
+    App\Echange\Service\ImportateurJsbx: ~
+    App\Echange\Service\LigneExportable: ~
+    App\Echange\Service\ResolveurDeRenvois: ~
+    App\Echange\Service\TraducteurDeLigne: ~
