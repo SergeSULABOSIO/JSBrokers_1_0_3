@@ -17,7 +17,8 @@
 <div class="jsb-echange"
      data-controller="echange"
      data-echange-url-value="{{ path('admin.echange.workspace', {idEntreprise: idEntreprise}) }}"
-     data-echange-onglet-value="{{ ongletActif }}">
+     data-echange-onglet-value="{{ ongletActif }}"
+     data-echange-export-url-value="{{ path('admin.echange.export', {idEntreprise: idEntreprise}) }}">
     <style>
         .jsb-echange { padding: 1.25rem 1.5rem; }
         .jsb-echange .cs-panel { background:#ffffff; border:1px solid #dee2e6; border-radius:12px; padding:1.1rem 1.25rem; margin-bottom:1rem; }
@@ -75,6 +76,11 @@
         .jsb-echange .ech-chip.is-neutre { background:#f1f3f5; color:#495057; }
 
         .jsb-echange .ech-vide { color:#6c757d; font-size:.9rem; padding:1.25rem 0; text-align:center; }
+        .jsb-echange .ech-actions { display:flex; flex-wrap:wrap; gap:.6rem; align-items:center; justify-content:flex-end; margin-top:1rem; padding-top:1rem; border-top:1px solid #f0f0f0; }
+        .jsb-echange .btn-cobalt { background:#0047AB; border-color:#0047AB; color:#ffffff; }
+        .jsb-echange .btn-cobalt:hover { background:#003380; border-color:#003380; color:#ffffff; }
+        .jsb-echange .btn-cobalt:disabled { background:#9bb3d9; border-color:#9bb3d9; cursor:not-allowed; }
+        .jsb-echange .ech-actions .btn { display:inline-flex; align-items:center; gap:.4rem; white-space:nowrap; min-height:38px; }
         .jsb-echange .ech-note { color:#6c757d; font-size:.82rem; margin:.6rem 0 0; }
     </style>
 
@@ -190,6 +196,29 @@
                     </tbody>
                 </table>
             {% endif %}
+
+            {# Le bouton est DÉSARMÉ pendant l'opération (echange#exporter) : un double
+               clic produirait deux fichiers et, sans la clé d'idempotence, deux
+               occurrences facturées. #}
+            <div class="ech-actions">
+                {% if not facturation.exportFinancable %}
+                    <span class="ech-note" style="margin:0;">
+                        Rechargez votre solde pour exporter : il manque
+                        {{ (facturation.coutExport - facturation.soldeDisponible)|number_format(0, ',', ' ') }} tokens.
+                    </span>
+                {% endif %}
+                <button type="button"
+                        class="btn btn-sm btn-cobalt"
+                        data-echange-target="boutonExport"
+                        data-action="click->echange#exporter"
+                        {{ (ressources is empty or not facturation.exportFinancable) ? 'disabled' : '' }}>
+                    <twig:UX:Icon name="{{ resolve_icon_name('echange-export') }}" style="width:18px;height:18px;" />
+                    <span>
+                        Générer l'export
+                        {%- if facturation.coutExport > 0 %} ({{ facturation.coutExport }} tokens){% endif %}
+                    </span>
+                </button>
+            </div>
         </div>
     {% endif %}
 
