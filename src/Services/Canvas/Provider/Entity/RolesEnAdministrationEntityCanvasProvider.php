@@ -20,6 +20,7 @@ class RolesEnAdministrationEntityCanvasProvider implements EntityCanvasProviderI
             'accessInvite' => 'Collaborateurs',
             'accessConge' => 'Congés',
             'accessCongeParametre' => 'Paramétrage des congés',
+            'accessEchange' => 'Importation / Exportation',
         ];
 
         $calculatedIndicators = [];

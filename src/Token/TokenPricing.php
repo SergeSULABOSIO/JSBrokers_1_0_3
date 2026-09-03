@@ -130,6 +130,32 @@ final class TokenPricing
     /** Poids en tokens d'une entité envoyée vers le frontend (LECTURE / sortie). */
     public const READ_WEIGHT = 2;
 
+    /**
+     * ÉCHANGE DE DONNÉES (rubrique « Importation / Exportation »).
+     *
+     * Occurrences offertes à VIE et par cabinet — pas par fenêtre : ce quota n'est pas
+     * une allocation qui se renouvelle, c'est une mise en bouche. Passé ce seuil, chaque
+     * EXPORT coûte ECHANGE_COUT_OCCURRENCE.
+     *
+     * ⚠ L'IMPORT N'EST PAS FACTURÉ ICI, et ce n'est pas un oubli. Il écrit des
+     * enregistrements, et chacun est déjà métré à son poids ordinaire par
+     * WorkspaceMutationService — exactement comme s'il avait été saisi à l'écran. Lui
+     * ajouter un forfait le ferait payer deux fois pour un seul geste.
+     */
+    public const ECHANGE_QUOTA_GRATUIT = 3;
+
+    /** Coût en tokens d'une exportation au-delà du quota gratuit. */
+    public const ECHANGE_COUT_OCCURRENCE = 600;
+
+    /**
+     * Plafond de lignes d'un fichier d'échange, toutes feuilles confondues. L'écriture
+     * passe par le formulaire de chaque entité, ce qui est lent mais garantit qu'un
+     * import respecte exactement les mêmes règles qu'une saisie. Le plafond est ce qui
+     * tient cette promesse dans une requête synchrone, plutôt que d'introduire une
+     * infrastructure asynchrone pour cette seule rubrique.
+     */
+    public const ECHANGE_PLAFOND_LIGNES = 2000;
+
     /** Allocation gratuite offerte à chaque utilisateur, par fenêtre. */
     public const FREE_ALLOWANCE = 1000;
 

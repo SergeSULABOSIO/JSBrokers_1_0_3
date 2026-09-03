@@ -70,6 +70,28 @@ class RolesEnAdministration implements OwnerAwareInterface
     #[Groups(['list:read'])]
     private array $accessCongeParametre = [];
 
+    /**
+     * Accès à la rubrique « Importation / Exportation » (pseudo-entité « Echange »
+     * de la carte de permissions : elle n'a pas de classe Doctrine, comme
+     * « DocumentComptable » et « AssistantIa »).
+     *
+     * LE NIVEAU DIT LE RÔLE :
+     *  - Lecture  : ouvrir la rubrique, consulter l'historique, et EXPORTER —
+     *               l'export ne mute rien, même décision que pour les documents
+     *               comptables ;
+     *  - Écriture : déposer un fichier, lancer le contrôle à blanc, confirmer
+     *               l'importation.
+     *
+     * Ce droit n'est qu'une PORTE : il ouvre la rubrique, il n'élargit jamais le
+     * périmètre. Ce qui est réellement exporté, comme les lignes réellement écrites,
+     * restent filtrés ressource par ressource par les droits ordinaires du
+     * collaborateur (cf. CanevasDEchange). Sans ce filtrage, la rubrique serait un
+     * contournement propre de toute la matrice de droits.
+     */
+    #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
+    private array $accessEchange = [];
+
     public function getId(): ?int
     {
         return $this->id;
@@ -155,6 +177,18 @@ class RolesEnAdministration implements OwnerAwareInterface
     public function setAccessCongeParametre(array $accessCongeParametre): static
     {
         $this->accessCongeParametre = $accessCongeParametre;
+
+        return $this;
+    }
+
+    public function getAccessEchange(): array
+    {
+        return $this->accessEchange;
+    }
+
+    public function setAccessEchange(array $accessEchange): static
+    {
+        $this->accessEchange = $accessEchange;
 
         return $this;
     }

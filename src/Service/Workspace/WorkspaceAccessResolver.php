@@ -144,6 +144,13 @@ class WorkspaceAccessResolver
         // gouverne l'accès au module Assistant IA (chat, conversations). Fail-closed
         // pour les invités ; le propriétaire garde son accès total inconditionnel.
         'AssistantIa'                => ['IA', 'getRolesEnAdministration', 'getAccessAssistantIa', 'Assistant IA'],
+        // Importation / Exportation — PSEUDO-entité (pas de classe Doctrine, comme
+        // DocumentComptable) : gouverne l'accès à la rubrique d'échange de données.
+        // Ce droit n'est qu'une PORTE. Le périmètre réellement exporté, comme les lignes
+        // réellement écrites à l'import, sont refiltrés ENTITÉ PAR ENTITÉ par les droits
+        // ordinaires du collaborateur (cf. App\Echange\Canevas\CanevasDEchange) : sans
+        // ce second filtrage, la rubrique contournerait proprement toute cette carte.
+        'Echange'                    => ['Administration', 'getRolesEnAdministration', 'getAccessEchange', 'Importation / Exportation'],
     ];
 
     /**

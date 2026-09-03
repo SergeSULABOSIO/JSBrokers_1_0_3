@@ -401,6 +401,48 @@ class TokenAccountService
         );
     }
 
+    /** Nom d'entité porté par les lignes de journal d'une opération d'échange. */
+    public const ENTITE_ECHANGE = 'Echange';
+
+    /**
+     * Métrage d'une OPÉRATION D'ÉCHANGE DE DONNÉES (exportation du classeur JSBX).
+     * Bloquant.
+     *
+     * Même patron que {@see meterDocumentIa()} : le coût n'est PAS linéaire — c'est un
+     * forfait par opération, nul tant que le quota gratuit du cabinet n'est pas épuisé.
+     * Une seule ligne de journal, dont le poids unitaire porte le coût total, parce
+     * qu'aucun poids par ligne exportée ne le reproduirait.
+     *
+     * ⚠ L'IMPORTATION NE PASSE PAS PAR ICI. Elle écrit des enregistrements, et chacun
+     * est déjà métré à son poids ordinaire par meterWrite() via le circuit d'écriture
+     * commun. L'y faire passer la facturerait deux fois pour un seul geste.
+     *
+     * @throws InsufficientTokensException si le solde du propriétaire est insuffisant
+     */
+    public function meterEchange(Entreprise $entreprise, ?Utilisateur $acteur, int $cout): void
+    {
+        if ($cout <= 0) {
+            return;
+        }
+
+        $owner = $entreprise->getUtilisateur();
+        if (!$owner instanceof Utilisateur) {
+            return; // Pas de propriétaire identifiable : on ne facture pas.
+        }
+
+        $this->guardAndConsume($owner, $cout);
+
+        $this->log(
+            $entreprise,
+            $owner,
+            $acteur,
+            self::ENTITE_ECHANGE,
+            TokenConsumption::SENS_SORTIE,
+            1,
+            $cout,
+        );
+    }
+
     /** Vérifie la solvabilité puis débite, ou lève l'exception de blocage. */
     private function guardAndConsume(Utilisateur $owner, int $cost): void
     {

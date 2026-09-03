@@ -129,6 +129,15 @@ parameters:
                         # préavis, absents simultanés, périodes de blocage, dotation,
                         # relances. Même droit que les deux rubriques ci-dessus.
                         "Paramètres congés": { icone: 'action:settings', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\ParametresConge' }
+                        # ── ÉCHANGE DE DONNÉES ────────────────────────────────────────
+                        # Rubrique OUTIL (pas de liste d'entité) : entity_name porte donc un
+                        # nom court EN CLAIR, la pseudo-entité « Echange », comme le font déjà
+                        # « DocumentComptable » et « AssistantIa ». La garde class_exists de
+                        # processDataForShortEntityNames la laisse passer telle quelle.
+                        #
+                        # Le libellé est volontairement court : « Importation / Exportation des
+                        # données » se tronquerait dans un onglet.
+                        "Importation / Exportation": { icone: 'echange', composant_twig: '_echange_component.html.twig', entity_name: 'Echange' }
 
                 IA:
                     icone: 'assistant-ia'

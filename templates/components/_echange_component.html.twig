@@ -1,0 +1,272 @@
+{#
+  Composant « Importation / Exportation des données » de l'espace de travail.
+
+  Aller-retour du portefeuille vers un classeur Excel unique, qui sert à la fois de
+  fichier d'export et de gabarit d'import.
+
+  Le PÉRIMÈTRE affiché ici n'est pas la liste des entités de l'application : c'est ce
+  que CET invité a le droit de lire, ressource par ressource (CanevasDEchange). Deux
+  collaborateurs de droits différents voient donc deux listes différentes — et c'est la
+  même liste que l'assistant restitue, puisqu'ils lisent la même source.
+
+  Langage visuel : charte JS Brokers (cobalt #0047AB), re-scopé sous .jsb-echange, et
+  calqué sur .jsb-doccpt (documents comptables) dont cette rubrique est la voisine
+  structurelle. AUCUN <script> inline (non exécuté dans les partials AJAX du
+  workspace) : l'interactivité est portée par le contrôleur Stimulus `echange`.
+#}
+<div class="jsb-echange"
+     data-controller="echange"
+     data-echange-url-value="{{ path('admin.echange.workspace', {idEntreprise: idEntreprise}) }}"
+     data-echange-onglet-value="{{ ongletActif }}">
+    <style>
+        .jsb-echange { padding: 1.25rem 1.5rem; }
+        .jsb-echange .cs-panel { background:#ffffff; border:1px solid #dee2e6; border-radius:12px; padding:1.1rem 1.25rem; margin-bottom:1rem; }
+
+        /* Entête du composant. */
+        .jsb-echange .ech-head { display:flex; align-items:center; gap:.75rem; margin:0 0 1rem; }
+        .jsb-echange .ech-head-ic {
+            width:44px; height:44px; border-radius:12px; flex:0 0 auto;
+            background:#e8f0fb; color:#0047AB; display:flex; align-items:center; justify-content:center;
+        }
+        .jsb-echange .ech-head h2 { font-size:1.25rem; font-weight:700; color:#212529; margin:0; }
+        .jsb-echange .ech-head p { color:#6c757d; font-size:.88rem; margin:.15rem 0 0; max-width:70ch; }
+
+        /* Sous-onglets : même langage visuel que les documents comptables. */
+        .jsb-echange .cs-tabs { display:flex; flex-wrap:wrap; gap:.25rem; margin:1rem 0; }
+        .jsb-echange .cs-tabs button {
+            display:inline-flex; align-items:center; gap:.4rem;
+            padding:.5rem .85rem; border-radius:8px; cursor:pointer;
+            color:#495057; font-size:.9rem; font-weight:600; white-space:nowrap;
+            border:1px solid #dee2e6; background:#ffffff;
+        }
+        .jsb-echange .cs-tabs button:hover { background:#eef2fb; color:#0047AB; border-color:#cdd8f0; }
+        .jsb-echange .cs-tabs button:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+        .jsb-echange .cs-tabs button.is-active { background:#0047AB; color:#ffffff; border-color:#0047AB; }
+        .jsb-echange .cs-tabs button.is-active svg { color:#ffffff; }
+
+        /* Bandeau de facturation : permanent, sur les trois onglets. */
+        .jsb-echange .ech-billing {
+            display:flex; align-items:center; gap:.7rem; flex-wrap:wrap;
+            border-radius:10px; padding:.75rem 1rem; margin-bottom:1rem;
+            border:1px solid #cdd8f0; background:#eef2fb; color:#12305e; font-size:.88rem;
+        }
+        .jsb-echange .ech-billing.is-payante { border-color:#f0d8a8; background:#fdf6e7; color:#6b4c05; }
+        .jsb-echange .ech-billing.is-bloquee { border-color:#f2c4bf; background:#fdeeec; color:#8a1c11; }
+        .jsb-echange .ech-billing strong { font-weight:700; }
+        .jsb-echange .ech-billing .ech-solde { margin-left:auto; font-variant-numeric:tabular-nums; }
+
+        /* Périmètre : une ligne par ressource échangeable. */
+        .jsb-echange .ech-table { width:100%; border-collapse:collapse; }
+        .jsb-echange .ech-table th, .jsb-echange .ech-table td { padding:.5rem .6rem; border-bottom:1px solid #f0f0f0; font-size:.88rem; vertical-align:top; }
+        .jsb-echange .ech-table th { color:#6c757d; font-weight:600; font-size:.76rem; text-transform:uppercase; letter-spacing:.03em; text-align:left; }
+        .jsb-echange .ech-table td.num, .jsb-echange .ech-table th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+        .jsb-echange .ech-table tbody tr:hover { background:#f8f9fa; }
+        .jsb-echange .ech-res-nom { font-weight:600; color:#212529; }
+        .jsb-echange .ech-res-code { color:#6c757d; font-size:.78rem; font-variant-numeric:tabular-nums; }
+        .jsb-echange .ech-dep { color:#6c757d; font-size:.8rem; }
+
+        /* Pastilles d'état. */
+        .jsb-echange .ech-chip {
+            display:inline-flex; align-items:center; gap:.3rem; padding:.15rem .5rem;
+            border-radius:999px; font-size:.75rem; font-weight:600; white-space:nowrap;
+        }
+        .jsb-echange .ech-chip.is-lecture { background:#eef2fb; color:#12305e; }
+        .jsb-echange .ech-chip.is-ecriture { background:#e6f4ea; color:#12592a; }
+        .jsb-echange .ech-chip.is-neutre { background:#f1f3f5; color:#495057; }
+
+        .jsb-echange .ech-vide { color:#6c757d; font-size:.9rem; padding:1.25rem 0; text-align:center; }
+        .jsb-echange .ech-note { color:#6c757d; font-size:.82rem; margin:.6rem 0 0; }
+    </style>
+
+    {# ── Entête ── #}
+    <div class="ech-head">
+        <div class="ech-head-ic" aria-hidden="true">
+            <twig:UX:Icon name="{{ resolve_icon_name('echange') }}" style="width:24px;height:24px;" />
+        </div>
+        <div>
+            <h2>Importation / Exportation</h2>
+            <p>
+                Exportez vos données dans un classeur Excel, travaillez dessus hors ligne, puis
+                réimportez le même fichier. Format Excel (.xlsx) exclusivement.
+            </p>
+        </div>
+    </div>
+
+    {# ── Bandeau de facturation : le coût s'annonce AVANT, jamais après ── #}
+    {% set billingClass = facturation.gratuitesRestantes > 0
+        ? ''
+        : (facturation.exportFinancable ? 'is-payante' : 'is-bloquee') %}
+    <div class="ech-billing {{ billingClass }}" role="status">
+        <twig:UX:Icon name="{{ resolve_icon_name('action:information') }}" style="width:18px;height:18px;flex:0 0 auto;" />
+        <span>
+            {% if facturation.gratuitesRestantes > 0 %}
+                <strong>{{ facturation.gratuitesRestantes }}</strong>
+                opération{{ facturation.gratuitesRestantes > 1 ? 's' : '' }}
+                gratuite{{ facturation.gratuitesRestantes > 1 ? 's' : '' }}
+                restante{{ facturation.gratuitesRestantes > 1 ? 's' : '' }}
+                sur {{ facturation.quotaGratuit }}.
+            {% elseif facturation.exportFinancable %}
+                La prochaine exportation sera facturée <strong>{{ facturation.coutExport }} tokens</strong>.
+            {% else %}
+                Solde insuffisant : l'exportation coûte <strong>{{ facturation.coutExport }} tokens</strong>.
+            {% endif %}
+            L'importation n'est pas facturée à l'opération : chaque ligne écrite paie le même
+            métrage qu'une saisie à l'écran.
+        </span>
+        <span class="ech-solde">Solde : {{ facturation.soldeDisponible|number_format(0, ',', ' ') }} tokens</span>
+    </div>
+
+    {# ── Sous-onglets (boutons : rechargement AJAX, pas de navigation) ── #}
+    {% set onglets = {'exporter': 'echange-export', 'importer': 'echange-import', 'historique': 'action:ongoing'} %}
+    {% set libelles = {'exporter': 'Exporter', 'importer': 'Importer', 'historique': 'Historique'} %}
+    <nav class="cs-tabs" aria-label="Importation / Exportation">
+        {% for cle, icone in onglets %}
+            {# L'onglet « Importer » n'apparaît pas sans droit d'écriture : proposer une
+               porte qui se refuse est une promesse qu'on ne tient pas. #}
+            {% if cle != 'importer' or peutImporter %}
+                <button type="button"
+                        class="{{ cle == ongletActif ? 'is-active' : '' }}"
+                        data-action="click->echange#changeOnglet"
+                        data-echange-onglet-param="{{ cle }}"
+                        {% if cle == ongletActif %}aria-current="page"{% endif %}>
+                    <twig:UX:Icon name="{{ resolve_icon_name(icone) }}" style="width:17px;height:17px;" />
+                    <span>{{ libelles[cle] }}</span>
+                </button>
+            {% endif %}
+        {% endfor %}
+    </nav>
+
+    {# ── EXPORTER ── #}
+    {% if ongletActif == 'exporter' %}
+        <div class="cs-panel">
+            <h3 style="font-size:1.05rem;font-weight:700;color:#212529;margin:0 0 .25rem;">Périmètre exportable</h3>
+            <p class="ech-note" style="margin:0 0 1rem;">
+                {{ ressources|length }} donnée{{ ressources|length > 1 ? 's' : '' }} à votre portée.
+                Cette liste est celle de <strong>vos</strong> droits : une donnée que vous ne pouvez pas
+                consulter à l'écran ne peut pas sortir dans un fichier.
+                Les feuilles sont ordonnées de façon qu'une donnée référencée précède toujours
+                celle qui la référence.
+            </p>
+
+            {% if ressources is empty %}
+                <p class="ech-vide">Aucune donnée n'est à votre portée : votre périmètre d'accès ne couvre aucune rubrique exportable.</p>
+            {% else %}
+                <table class="ech-table">
+                    <thead>
+                        <tr>
+                            <th style="width:2.5rem;" class="num">#</th>
+                            <th>Donnée</th>
+                            <th>Feuille du classeur</th>
+                            <th class="num">Colonnes</th>
+                            <th>Dépend de</th>
+                            <th>À l'import</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ressource in ressources %}
+                            <tr>
+                                <td class="num ech-res-code">{{ ressource.rang + 1 }}</td>
+                                <td>
+                                    <div class="ech-res-nom">{{ ressource.libelle }}</div>
+                                    <div class="ech-res-code">{{ ressource.code }}</div>
+                                </td>
+                                <td>{{ ressource.feuille }}</td>
+                                <td class="num">
+                                    {{ ressource.colonnes|length }}
+                                    <span class="ech-res-code">({{ ressource.colonnesModifiables|length }} modifiables)</span>
+                                </td>
+                                <td class="ech-dep">
+                                    {{ ressource.dependances is empty ? '—' : ressource.dependances|join(', ') }}
+                                </td>
+                                <td>
+                                    {% if ressource.code in ecrivables %}
+                                        <span class="ech-chip is-ecriture">Modifiable</span>
+                                    {% else %}
+                                        <span class="ech-chip is-lecture">Lecture seule</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    {# ── IMPORTER ── #}
+    {% if ongletActif == 'importer' %}
+        <div class="cs-panel">
+            <h3 style="font-size:1.05rem;font-weight:700;color:#212529;margin:0 0 .25rem;">Importer un classeur</h3>
+            <p class="ech-note" style="margin:0 0 1rem;">
+                Le fichier déposé doit être un classeur produit par cette rubrique. Il est d'abord
+                contrôlé à blanc — gratuitement, sans rien écrire — et vous ne confirmez qu'ensuite,
+                au vu du rapport.
+            </p>
+
+            {% if controleEnCours %}
+                <div class="ech-billing" role="status">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:information') }}" style="width:18px;height:18px;flex:0 0 auto;" />
+                    <span>
+                        Un contrôle est en attente de votre décision :
+                        <strong>{{ controleEnCours.nomFichier }}</strong>,
+                        déposé le {{ controleEnCours.createdAt|date('d/m/Y H:i') }}.
+                    </span>
+                </div>
+            {% endif %}
+
+            <p class="ech-vide">Le dépôt de fichier arrive avec la lecture du classeur.</p>
+        </div>
+    {% endif %}
+
+    {# ── HISTORIQUE ── #}
+    {% if ongletActif == 'historique' %}
+        <div class="cs-panel">
+            <h3 style="font-size:1.05rem;font-weight:700;color:#212529;margin:0 0 .25rem;">Historique des opérations</h3>
+            <p class="ech-note" style="margin:0 0 1rem;">
+                Un export fait sortir du cabinet des données personnelles de prospects et d'assurés.
+                Ce journal n'est pas effaçable depuis cette page — c'est ce qui en fait une trace.
+            </p>
+
+            {% if historique is empty %}
+                <p class="ech-vide">Aucune opération d'échange à ce jour.</p>
+            {% else %}
+                <table class="ech-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Opération</th>
+                            <th>Auteur</th>
+                            <th>Périmètre</th>
+                            <th class="num">Lignes</th>
+                            <th class="num">Coût</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for occurrence in historique %}
+                            <tr>
+                                <td>{{ occurrence.createdAt|date('d/m/Y H:i') }}</td>
+                                <td>
+                                    <span class="ech-chip {{ occurrence.type == typeExport ? 'is-lecture' : 'is-ecriture' }}">
+                                        {{ occurrence.typeLibelle }}
+                                    </span>
+                                </td>
+                                <td>{{ occurrence.invite ? occurrence.invite.nom : '—' }}</td>
+                                <td class="ech-dep">
+                                    {{ occurrence.perimetre is empty ? '—' : occurrence.perimetre|length ~ ' donnée' ~ (occurrence.perimetre|length > 1 ? 's' : '') }}
+                                </td>
+                                <td class="num">{{ occurrence.nbLignes|number_format(0, ',', ' ') }}</td>
+                                <td class="num">
+                                    {% if occurrence.tokensDebites > 0 %}
+                                        {{ occurrence.tokensDebites|number_format(0, ',', ' ') }} tokens
+                                    {% else %}
+                                        <span class="ech-chip is-neutre">Sans forfait</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
