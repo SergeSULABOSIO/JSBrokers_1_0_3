@@ -18,9 +18,21 @@
      data-controller="echange"
      data-echange-url-value="{{ path('admin.echange.workspace', {idEntreprise: idEntreprise}) }}"
      data-echange-onglet-value="{{ ongletActif }}"
-     data-echange-export-url-value="{{ path('admin.echange.export', {idEntreprise: idEntreprise}) }}">
+     data-echange-export-url-value="{{ path('admin.echange.exporter_diffuse', {idEntreprise: idEntreprise}) }}"
+     data-echange-import-url-value="{{ path('admin.echange.controler', {idEntreprise: idEntreprise}) }}"
+     data-echange-id-entreprise-value="{{ idEntreprise }}">
     <style>
         .jsb-echange { padding: 1.25rem 1.5rem; }
+        /* La rangée de chips est COLLANTE dans une liste, où elle suit la barre de
+           contrôles. Cette rubrique n'a pas de liste au-dessus : on la remet dans le
+           flux, sans toucher à la pilule ni aux chips eux-mêmes. */
+        .jsb-echange .jsb-preset-filters-bar {
+            position: static;
+            padding: 0;
+            margin: 1rem 0;
+            border-bottom: 0;
+            background: transparent;
+        }
         .jsb-echange .cs-panel { background:#ffffff; border:1px solid #dee2e6; border-radius:12px; padding:1.1rem 1.25rem; margin-bottom:1rem; }
 
         /* Entête du composant. */
@@ -32,56 +44,129 @@
         .jsb-echange .ech-head h2 { font-size:1.25rem; font-weight:700; color:#212529; margin:0; }
         .jsb-echange .ech-head p { color:#6c757d; font-size:.88rem; margin:.15rem 0 0; max-width:70ch; }
 
-        /* Sous-onglets : même langage visuel que les documents comptables. */
-        .jsb-echange .cs-tabs { display:flex; flex-wrap:wrap; gap:.25rem; margin:1rem 0; }
-        .jsb-echange .cs-tabs button {
-            display:inline-flex; align-items:center; gap:.4rem;
-            padding:.5rem .85rem; border-radius:8px; cursor:pointer;
-            color:#495057; font-size:.9rem; font-weight:600; white-space:nowrap;
-            border:1px solid #dee2e6; background:#ffffff;
-        }
-        .jsb-echange .cs-tabs button:hover { background:#eef2fb; color:#0047AB; border-color:#cdd8f0; }
-        .jsb-echange .cs-tabs button:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
-        .jsb-echange .cs-tabs button.is-active { background:#0047AB; color:#ffffff; border-color:#0047AB; }
-        .jsb-echange .cs-tabs button.is-active svg { color:#ffffff; }
+        /* Les sous-onglets n'ont AUCUN style ici : ils empruntent .jsb-preset-filters
+           et .jsb-preset-chip d'app.css, le composant des filtres rapides des listes.
+           Les redéfinir localement, c'était créer un troisième dialecte visuel pour la
+           même idée. */
 
         /* Bandeau de facturation : permanent, sur les trois onglets. */
         .jsb-echange .ech-billing {
             display:flex; align-items:center; gap:.7rem; flex-wrap:wrap;
             border-radius:10px; padding:.75rem 1rem; margin-bottom:1rem;
-            border:1px solid #cdd8f0; background:#eef2fb; color:#12305e; font-size:.88rem;
+            border:1px solid #dee2e6; background:#e8f0fb; color:#212529; font-size:.88rem;
         }
-        .jsb-echange .ech-billing.is-payante { border-color:#f0d8a8; background:#fdf6e7; color:#6b4c05; }
-        .jsb-echange .ech-billing.is-bloquee { border-color:#f2c4bf; background:#fdeeec; color:#8a1c11; }
+        .jsb-echange .ech-billing.is-payante { border-color:#ffc107; background:#fff3cd; color:#664d03; }
+        .jsb-echange .ech-billing.is-bloquee { border-color:#f8d7da; background:#f8d7da; color:#842029; }
         .jsb-echange .ech-billing strong { font-weight:700; }
         .jsb-echange .ech-billing .ech-solde { margin-left:auto; font-variant-numeric:tabular-nums; }
 
         /* Périmètre : une ligne par ressource échangeable. */
+        .jsb-echange .ech-titre { font-size:1.05rem; font-weight:700; color:#212529; margin:0 0 .25rem; }
         .jsb-echange .ech-table { width:100%; border-collapse:collapse; }
-        .jsb-echange .ech-table th, .jsb-echange .ech-table td { padding:.5rem .6rem; border-bottom:1px solid #f0f0f0; font-size:.88rem; vertical-align:top; }
-        .jsb-echange .ech-table th { color:#6c757d; font-weight:600; font-size:.76rem; text-transform:uppercase; letter-spacing:.03em; text-align:left; }
+        .jsb-echange .ech-caption {
+            caption-side:top; text-align:left; padding:0 0 .5rem;
+            color:#6c757d; font-size:.82rem;
+        }
+        .jsb-echange .ech-table th, .jsb-echange .ech-table td {
+            padding:.55rem .6rem; border-bottom:1px solid #f0f0f0; font-size:.88rem; vertical-align:middle;
+        }
+        .jsb-echange .ech-table thead th {
+            color:#6c757d; font-weight:600; font-size:.76rem; text-transform:uppercase;
+            letter-spacing:.03em; text-align:left; vertical-align:bottom;
+        }
         .jsb-echange .ech-table td.num, .jsb-echange .ech-table th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
         .jsb-echange .ech-table tbody tr:hover { background:#f8f9fa; }
-        .jsb-echange .ech-res-nom { font-weight:600; color:#212529; }
-        .jsb-echange .ech-res-code { color:#6c757d; font-size:.78rem; font-variant-numeric:tabular-nums; }
-        .jsb-echange .ech-dep { color:#6c757d; font-size:.8rem; }
+        /* La ligne survolée ou active se signale aussi par un liseré cobalt : le fond
+           gris seul ne suffit pas à qui distingue mal les nuances. */
+        .jsb-echange .ech-table tbody tr { box-shadow:inset 3px 0 0 transparent; }
+        .jsb-echange .ech-table tbody tr:hover { box-shadow:inset 3px 0 0 #0047AB; }
+        .jsb-echange .ech-table tbody tr:focus-within { box-shadow:inset 3px 0 0 #0047AB; background:#f8f9fa; }
+
+        /* La cellule de nom est un <th scope="row"> : on lui retire son allure d'en-tête. */
+        .jsb-echange .ech-cell-nom { font-weight:400; text-align:left; }
+        .jsb-echange .ech-res-nom {
+            display:inline; font-weight:600; color:#212529; cursor:pointer; margin:0;
+        }
+        .jsb-echange .ech-res-nom:hover { color:#0047AB; }
+        .jsb-echange .ech-res-feuille { display:block; color:#6c757d; font-size:.78rem; margin-top:.1rem; }
+        .jsb-echange .ech-res-nb { font-weight:600; color:#212529; }
+        .jsb-echange .ech-res-detail { display:block; color:#6c757d; font-size:.76rem; }
+        .jsb-echange .ech-dep { color:#495057; font-size:.82rem; }
+
+        /* Réservé aux lecteurs d'écran : un en-tête de colonne existe toujours, même
+           quand la colonne ne porte qu'une case à cocher. */
+        .jsb-echange .ech-sr {
+            position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+            overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+        }
 
         /* Pastilles d'état. */
         .jsb-echange .ech-chip {
             display:inline-flex; align-items:center; gap:.3rem; padding:.15rem .5rem;
             border-radius:999px; font-size:.75rem; font-weight:600; white-space:nowrap;
         }
-        .jsb-echange .ech-chip.is-lecture { background:#eef2fb; color:#12305e; }
-        .jsb-echange .ech-chip.is-ecriture { background:#e6f4ea; color:#12592a; }
-        .jsb-echange .ech-chip.is-neutre { background:#f1f3f5; color:#495057; }
+        .jsb-echange .ech-chip.is-lecture { background:#e8f0fb; color:#212529; }
+        .jsb-echange .ech-chip.is-ecriture { background:#d1e7dd; color:#0f5132; }
+        .jsb-echange .ech-chip.is-neutre { background:#e9ecef; color:#495057; }
 
         .jsb-echange .ech-vide { color:#6c757d; font-size:.9rem; padding:1.25rem 0; text-align:center; }
         .jsb-echange .ech-actions { display:flex; flex-wrap:wrap; gap:.6rem; align-items:center; justify-content:flex-end; margin-top:1rem; padding-top:1rem; border-top:1px solid #f0f0f0; }
         .jsb-echange .btn-cobalt { background:#0047AB; border-color:#0047AB; color:#ffffff; }
         .jsb-echange .btn-cobalt:hover { background:#003380; border-color:#003380; color:#ffffff; }
-        .jsb-echange .btn-cobalt:disabled { background:#9bb3d9; border-color:#9bb3d9; cursor:not-allowed; }
+        .jsb-echange .btn-cobalt:disabled { background:#0047AB; border-color:#0047AB; opacity:.65; cursor:not-allowed; }
         .jsb-echange .ech-actions .btn { display:inline-flex; align-items:center; gap:.4rem; white-space:nowrap; min-height:38px; }
         .jsb-echange .ech-note { color:#6c757d; font-size:.82rem; margin:.6rem 0 0; }
+
+        /* Dépôt de fichier. */
+        .jsb-echange .ech-depot { display:flex; flex-wrap:wrap; gap:.75rem; align-items:center; }
+        .jsb-echange .ech-fichier {
+            display:inline-flex; align-items:center; gap:.5rem; cursor:pointer;
+            padding:.55rem .9rem; border:1px dashed #dee2e6; border-radius:10px;
+            background:#f8f9fa; color:#212529; font-size:.88rem; font-weight:600;
+            min-height:44px;
+        }
+        .jsb-echange .ech-fichier:hover { border-color:#0047AB; background:#e8f0fb; }
+        .jsb-echange .ech-fichier:focus-within { outline:2px solid #0047AB; outline-offset:2px; }
+        .jsb-echange .ech-fichier input[type="file"] { position:absolute; width:1px; height:1px; opacity:0; }
+        .jsb-echange .ech-suppressions { display:inline-flex; align-items:center; gap:.4rem; font-size:.85rem; color:#495057; min-height:44px; }
+
+        /* Sélection du périmètre. */
+        .jsb-echange .ech-selection { display:flex; align-items:center; gap:.5rem; margin-bottom:.6rem; }
+        .jsb-echange .ech-bouton-lien {
+            border:1px solid #dee2e6; background:#ffffff; border-radius:8px;
+            padding:.4rem .8rem; min-height:36px; cursor:pointer;
+            color:#0047AB; font-size:.82rem; font-weight:600; font-family:inherit;
+        }
+        .jsb-echange .ech-bouton-lien:hover { background:#e8f0fb; border-color:#0047AB; color:#003380; }
+        .jsb-echange .ech-bouton-lien:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+        .jsb-echange .ech-compte { margin-left:auto; color:#495057; font-size:.82rem; font-variant-numeric:tabular-nums; }
+
+        /* ⚠ UNE LIGNE EXCLUE NE SE SIGNALE PAS QUE PAR LA COULEUR (WCAG 1.4.1).
+           L'opacité seule est invisible à qui ne perçoit pas les nuances, et disparaît
+           à l'impression. On y ajoute donc un texte, une rayure sur le nom, et un
+           liseré : trois signaux pour un seul état. */
+        .jsb-echange tr.is-exclue { opacity:.55; }
+        .jsb-echange tr.is-exclue { box-shadow:inset 3px 0 0 #dee2e6; }
+        .jsb-echange tr.is-exclue .ech-res-nom { text-decoration:line-through; color:#6c757d; }
+        .jsb-echange tr.is-exclue .ech-res-etat::before {
+            content:'exclue'; display:inline-block; margin-left:.4rem; padding:.05rem .4rem;
+            border-radius:999px; background:#e9ecef; color:#495057;
+            font-size:.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.02em;
+        }
+        /* « Requise » ne s'affiche QUE sur une sélection partielle : quand tout est coché,
+           tout est requis par quelque chose, et le mot ne distinguerait plus rien. */
+        .jsb-echange tr.is-requise .ech-res-etat::before {
+            content:'requise'; display:inline-block; margin-left:.4rem; padding:.05rem .4rem;
+            border-radius:999px; background:#e8f0fb; color:#212529;
+            font-size:.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.02em;
+        }
+
+        /* Rapport de contrôle. */
+        .jsb-echange .ech-rapport { margin-top:1.25rem; padding-top:1rem; border-top:1px solid #f0f0f0; }
+        .jsb-echange .ech-synthese { display:flex; flex-wrap:wrap; gap:1.25rem; font-size:.88rem; color:#495057; }
+        .jsb-echange .ech-synthese strong { color:#212529; font-variant-numeric:tabular-nums; }
+        .jsb-echange .ech-chip.is-erreur { background:#f8d7da; color:#842029; }
+        .jsb-echange .ech-chip.is-avertissement { background:#fff3cd; color:#664d03; }
     </style>
 
     {# ── Entête ── #}
@@ -122,73 +207,129 @@
         <span class="ech-solde">Solde : {{ facturation.soldeDisponible|number_format(0, ',', ' ') }} tokens</span>
     </div>
 
-    {# ── Sous-onglets (boutons : rechargement AJAX, pas de navigation) ── #}
+    {# ── Sous-onglets ──
+       Markup REPRIS TEL QUEL des filtres rapides des listes (_List_manager.html.twig) :
+       rangée `.jsb-preset-filters-bar`, piste `.jsb-preset-filters.jsb-control-pill`,
+       titre TEXTUEL du critère en tête, puis les chips — l'actif en pastille cobalt.
+       Aucune classe propre à la rubrique : c'est le composant de la maison, pas une
+       imitation. Le titre est purement textuel ; l'icône appartient au chip, où elle
+       dit l'état — c'est la règle de toutes les rubriques.
+
+       Des boutons et non des liens : le composant se recharge en AJAX. #}
     {% set onglets = {'exporter': 'echange-export', 'importer': 'echange-import', 'historique': 'action:ongoing'} %}
     {% set libelles = {'exporter': 'Exporter', 'importer': 'Importer', 'historique': 'Historique'} %}
-    <nav class="cs-tabs" aria-label="Importation / Exportation">
-        {% for cle, icone in onglets %}
-            {# L'onglet « Importer » n'apparaît pas sans droit d'écriture : proposer une
-               porte qui se refuse est une promesse qu'on ne tient pas. #}
-            {% if cle != 'importer' or peutImporter %}
-                <button type="button"
-                        class="{{ cle == ongletActif ? 'is-active' : '' }}"
-                        data-action="click->echange#changeOnglet"
-                        data-echange-onglet-param="{{ cle }}"
-                        {% if cle == ongletActif %}aria-current="page"{% endif %}>
-                    <twig:UX:Icon name="{{ resolve_icon_name(icone) }}" style="width:17px;height:17px;" />
-                    <span>{{ libelles[cle] }}</span>
-                </button>
-            {% endif %}
-        {% endfor %}
-    </nav>
+    <div class="jsb-preset-filters-bar">
+        <div class="jsb-preset-filters jsb-control-pill" role="group" aria-label="Vue de la rubrique">
+            <span class="jsb-preset-filters__titre" aria-hidden="true">vue</span>
+            {% for cle, icone in onglets %}
+                {# L'onglet « Importer » n'apparaît pas sans droit d'écriture : proposer
+                   une porte qui se refuse est une promesse qu'on ne tient pas. #}
+                {% if cle != 'importer' or peutImporter %}
+                    <button type="button"
+                            class="jsb-preset-chip{{ cle == ongletActif ? ' is-active' : '' }}"
+                            data-action="click->echange#changeOnglet"
+                            data-echange-onglet-param="{{ cle }}"
+                            aria-pressed="{{ cle == ongletActif ? 'true' : 'false' }}">
+                        <span class="jsb-preset-chip__icon" aria-hidden="true">
+                            {{ ux_icon(resolve_icon_name(icone), {width: '15px', height: '15px'}) }}
+                        </span>
+                        <span>{{ libelles[cle] }}</span>
+                    </button>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
 
     {# ── EXPORTER ── #}
     {% if ongletActif == 'exporter' %}
         <div class="cs-panel">
-            <h3 style="font-size:1.05rem;font-weight:700;color:#212529;margin:0 0 .25rem;">Périmètre exportable</h3>
+            <h3 class="ech-titre" id="ech-perimetre-titre">Que voulez-vous exporter ?</h3>
             <p class="ech-note" style="margin:0 0 1rem;">
-                {{ ressources|length }} donnée{{ ressources|length > 1 ? 's' : '' }} à votre portée.
-                Cette liste est celle de <strong>vos</strong> droits : une donnée que vous ne pouvez pas
-                consulter à l'écran ne peut pas sortir dans un fichier.
-                Les feuilles sont ordonnées de façon qu'une donnée référencée précède toujours
-                celle qui la référence.
+                Cochez les données à inclure. Cette liste est celle de <strong>vos droits</strong> :
+                une donnée que vous ne pouvez pas consulter à l'écran ne peut pas sortir dans un
+                fichier. Certaines en appellent d'autres — cocher une police coche son client,
+                sans quoi le fichier renverrait vers des lignes absentes.
             </p>
 
             {% if ressources is empty %}
                 <p class="ech-vide">Aucune donnée n'est à votre portée : votre périmètre d'accès ne couvre aucune rubrique exportable.</p>
             {% else %}
-                <table class="ech-table">
+                {# Actions de sélection : de vrais boutons — ce sont des ACTIONS, pas des
+                   liens — avec une zone cliquable qui tient les 44 px de WCAG 2.5.5. #}
+                <div class="ech-selection">
+                    <button type="button" class="ech-bouton-lien" data-action="click->echange#toutCocher">
+                        Tout cocher
+                    </button>
+                    <button type="button" class="ech-bouton-lien" data-action="click->echange#toutDecocher">
+                        Tout décocher
+                    </button>
+                    {# role=status : le compteur change sans que l'utilisateur agisse sur lui,
+                       un lecteur d'écran doit donc l'annoncer. #}
+                    <span class="ech-compte" role="status" data-echange-target="compteSelection"></span>
+                </div>
+
+                <table class="ech-table" aria-labelledby="ech-perimetre-titre">
+                    <caption class="ech-caption">
+                        Données exportables, dans l'ordre où elles seront écrites dans le classeur.
+                    </caption>
                     <thead>
                         <tr>
-                            <th style="width:2.5rem;" class="num">#</th>
-                            <th>Donnée</th>
-                            <th>Feuille du classeur</th>
-                            <th class="num">Colonnes</th>
-                            <th>Dépend de</th>
-                            <th>À l'import</th>
+                            <th scope="col" style="width:2.6rem;"><span class="ech-sr">Inclure</span></th>
+                            <th scope="col">Donnée</th>
+                            <th scope="col" class="num">Colonnes</th>
+                            <th scope="col">Nécessite</th>
+                            <th scope="col">À la réimportation</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for ressource in ressources %}
-                            <tr>
-                                <td class="num ech-res-code">{{ ressource.rang + 1 }}</td>
+                            <tr data-echange-code="{{ ressource.code }}">
                                 <td>
-                                    <div class="ech-res-nom">{{ ressource.libelle }}</div>
-                                    <div class="ech-res-code">{{ ressource.code }}</div>
+                                    {# Les dépendances sont portées PAR LA CASE : cocher une donnée
+                                       coche celles dont elle a besoin. Le serveur refait de toute
+                                       façon cette fermeture ; l'écran ne fait que la rendre visible
+                                       AVANT le clic, plutôt que de la faire subir après. #}
+                                    <input type="checkbox"
+                                           id="ech-inc-{{ ressource.code }}"
+                                           class="form-check-input"
+                                           checked
+                                           data-echange-target="donnee"
+                                           data-echange-code-param="{{ ressource.code }}"
+                                           data-echange-dependances-param="{{ ressource.dependances|join(',') }}"
+                                           data-action="change->echange#basculerDonnee">
                                 </td>
-                                <td>{{ ressource.feuille }}</td>
+                                <th scope="row" class="ech-cell-nom">
+                                    {# Le libellé EST le label de la case : cliquer sur le nom coche,
+                                       ce qui multiplie la zone utile par dix (WCAG 2.5.5). #}
+                                    <label for="ech-inc-{{ ressource.code }}" class="ech-res-nom">{{ ressource.libelle }}</label>
+                                    <span class="ech-res-etat"></span>
+                                    <span class="ech-res-feuille">Feuille « {{ ressource.feuille }} »</span>
+                                </th>
                                 <td class="num">
-                                    {{ ressource.colonnes|length }}
-                                    <span class="ech-res-code">({{ ressource.colonnesModifiables|length }} modifiables)</span>
+                                    <span class="ech-res-nb">{{ ressource.colonnes|length }}</span>
+                                    <span class="ech-res-detail">dont {{ ressource.colonnesModifiables|length }} modifiables</span>
                                 </td>
                                 <td class="ech-dep">
-                                    {{ ressource.dependances is empty ? '—' : ressource.dependances|join(', ') }}
+                                    {# Les LIBELLÉS, pas les codes techniques : la colonne voisine
+                                       nomme « Propositions », celle-ci ne peut pas dire « Cotation ».
+                                       Même mot pour la même chose (Bastien & Scapin > Cohérence). #}
+                                    {% set requis = [] %}
+                                    {% for dep in ressource.dependances %}
+                                        {% set requis = requis|merge([ressources[dep] is defined ? ressources[dep].libelle : dep]) %}
+                                    {% endfor %}
+                                    {{ requis is empty ? '—' : requis|join(', ') }}
                                 </td>
                                 <td>
                                     {% if ressource.code in ecrivables %}
-                                        <span class="ech-chip is-ecriture">Modifiable</span>
+                                        <span class="ech-chip is-ecriture">
+                                            <twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" style="width:13px;height:13px;" />
+                                            Modifiable
+                                        </span>
                                     {% else %}
-                                        <span class="ech-chip is-lecture">Lecture seule</span>
+                                        <span class="ech-chip is-neutre">
+                                            <twig:UX:Icon name="{{ resolve_icon_name('action:view') }}" style="width:13px;height:13px;" />
+                                            Lecture seule
+                                        </span>
                                     {% endif %}
                                 </td>
                             </tr>
@@ -232,18 +373,118 @@
                 au vu du rapport.
             </p>
 
-            {% if controleEnCours %}
-                <div class="ech-billing" role="status">
-                    <twig:UX:Icon name="{{ resolve_icon_name('action:information') }}" style="width:18px;height:18px;flex:0 0 auto;" />
-                    <span>
-                        Un contrôle est en attente de votre décision :
-                        <strong>{{ controleEnCours.nomFichier }}</strong>,
-                        déposé le {{ controleEnCours.createdAt|date('d/m/Y H:i') }}.
-                    </span>
-                </div>
-            {% endif %}
+            {# ── Dépôt ── #}
+            <div class="ech-depot">
+                <label class="ech-fichier">
+                    <input type="file"
+                           accept=".xlsx"
+                           data-echange-target="fichier"
+                           data-action="change->echange#fichierChoisi">
+                    <twig:UX:Icon name="{{ resolve_icon_name('echange-import') }}" style="width:20px;height:20px;" />
+                    <span data-echange-target="nomFichier">Choisir un classeur .xlsx</span>
+                </label>
 
-            <p class="ech-vide">Le dépôt de fichier arrive avec la lecture du classeur.</p>
+                {# La case est DÉCOCHÉE par défaut, et le restera : une colonne « Action »
+                   mal recopiée ne doit pas pouvoir vider une feuille entière. #}
+                <label class="ech-suppressions">
+                    <input type="checkbox" data-echange-target="suppressions">
+                    <span>Autoriser les suppressions demandées par le fichier</span>
+                </label>
+
+                <button type="button"
+                        class="btn btn-sm btn-cobalt"
+                        data-echange-target="boutonControle"
+                        data-action="click->echange#controler"
+                        disabled>
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:analyser') }}" style="width:18px;height:18px;" />
+                    <span>Contrôler le fichier</span>
+                </button>
+            </div>
+            <p class="ech-note">
+                Le contrôle est gratuit et n'écrit rien : vous pouvez le relancer autant de fois
+                qu'il le faut pour corriger votre fichier.
+            </p>
+
+            {# ── Contrôle en attente ── #}
+            <div data-echange-target="rapport">
+                {% if controleEnCours %}
+                    {% set rapport = controleEnCours.rapport %}
+                    <div class="ech-rapport" data-echange-run-id="{{ controleEnCours.id }}">
+                        <div class="ech-billing" role="status">
+                            <twig:UX:Icon name="{{ resolve_icon_name('action:information') }}" style="width:18px;height:18px;flex:0 0 auto;" />
+                            <span>
+                                Contrôle en attente de votre décision :
+                                <strong>{{ controleEnCours.nomFichier }}</strong>,
+                                déposé le {{ controleEnCours.createdAt|date('d/m/Y H:i') }}.
+                            </span>
+                        </div>
+
+                        <div class="ech-synthese">
+                            <span><strong>{{ rapport.creations|default(0) }}</strong> création(s)</span>
+                            <span><strong>{{ rapport.modifications|default(0) }}</strong> mise(s) à jour</span>
+                            <span><strong>{{ rapport.suppressions|default(0) }}</strong> suppression(s)</span>
+                            <span><strong>{{ rapport.lignes_lues|default(0) }}</strong> ligne(s) lue(s)</span>
+                        </div>
+
+                        {% if rapport.anomalies|default([])|length %}
+                            <table class="ech-table" style="margin-top:1rem;">
+                                <thead>
+                                    <tr>
+                                        <th style="width:8rem;">Gravité</th>
+                                        <th style="width:16rem;">Où</th>
+                                        <th>Ce qu'il faut corriger</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for anomalie in rapport.anomalies|slice(0, 100) %}
+                                        <tr>
+                                            <td>
+                                                <span class="ech-chip {{ anomalie.gravite == 'ERREUR' ? 'is-erreur' : 'is-avertissement' }}">
+                                                    {{ anomalie.gravite == 'ERREUR' ? 'Erreur' : 'Avertissement' }}
+                                                </span>
+                                            </td>
+                                            <td class="ech-dep">
+                                                {{ [anomalie.feuille, anomalie.ligne ? 'ligne ' ~ anomalie.ligne : null, anomalie.colonne ? 'col. ' ~ anomalie.colonne : null]|filter(v => v)|join(', ') ?: '—' }}
+                                            </td>
+                                            <td>{{ anomalie.message }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% if rapport.anomalies|length > 100 %}
+                                <p class="ech-note">… et {{ rapport.anomalies|length - 100 }} autre(s) anomalie(s).</p>
+                            {% endif %}
+                        {% endif %}
+
+                        <div class="ech-actions">
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-secondary"
+                                    data-action="click->echange#annuler"
+                                    data-echange-run-param="{{ controleEnCours.id }}">
+                                <twig:UX:Icon name="{{ resolve_icon_name('action:cancel') }}" style="width:18px;height:18px;" />
+                                <span>Abandonner</span>
+                            </button>
+                            {# Le bouton n'existe QUE si le rapport est exécutable : il n'y a pas
+                               d'import partiel, et proposer « importer quand même » serait
+                               proposer de laisser la base dans un état que personne n'a décrit. #}
+                            {% if controleEnCours.confirmable %}
+                                <button type="button"
+                                        class="btn btn-sm btn-cobalt"
+                                        data-echange-target="boutonConfirmation"
+                                        data-action="click->echange#confirmer"
+                                        data-echange-run-param="{{ controleEnCours.id }}">
+                                    <twig:UX:Icon name="{{ resolve_icon_name('action:check') }}" style="width:18px;height:18px;" />
+                                    <span>Confirmer l'importation</span>
+                                </button>
+                            {% else %}
+                                <span class="ech-note" style="margin:0;">
+                                    Corrigez les erreurs ci-dessus dans votre fichier, puis redéposez-le.
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
         </div>
     {% endif %}
 

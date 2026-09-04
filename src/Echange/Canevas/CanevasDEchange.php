@@ -276,6 +276,10 @@ final class CanevasDEchange
                 formatExcel: $formatsCanevas[$champ] ?? $this->formatParDefaut($type),
                 aide: $descripteur['aide'] ?? null,
                 pourcentage: (bool) ($descripteur['pourcentage'] ?? false),
+                // Un champ à choix MULTIPLES porte un TABLEAU de codes : l'export les
+                // sépare dans une seule cellule, et la relecture doit les redécouper.
+                // Sans ce drapeau, elle ne verrait qu'une valeur unique introuvable.
+                multiple: (bool) ($descripteur['multiple'] ?? false),
             );
         }
 

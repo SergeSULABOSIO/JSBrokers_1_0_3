@@ -75,6 +75,52 @@ class ExportJsbxTest extends KernelTestCase
         self::assertNotContains('Tranche', $codes, 'Ni sur les échéanciers.');
     }
 
+    /**
+     * LE CHOIX DE L'UTILISATEUR EST RESPECTÉ — et refermé sur ses dépendances.
+     *
+     * Décocher tout sauf les assureurs doit produire un classeur d'assureurs, et rien
+     * d'autre. Mais demander les opportunités doit embarquer leurs clients : un fichier
+     * qui renvoie vers des lignes absentes n'est pas réimportable, et l'utilisateur ne
+     * peut pas deviner cette contrainte depuis une case à cocher.
+     */
+    public function testLeChoixDeLUtilisateurEstRespecteEtReferme(): void
+    {
+        [, $proprietaire] = $this->fixture();
+        $exportateur = $this->service(ExportateurJsbx::class);
+
+        // Une donnée sans dépendance : on obtient exactement ce qu'on a demandé.
+        self::assertSame(
+            ['Assureur'],
+            array_keys($exportateur->perimetre($proprietaire, ['Assureur'])),
+            'Une donnée autonome sort seule.',
+        );
+
+        // Une donnée qui en référence d'autres les emmène, sans qu'on ait à le demander.
+        $avecPiste = array_keys($exportateur->perimetre($proprietaire, ['Piste']));
+        self::assertContains('Piste', $avecPiste);
+        self::assertContains('Client', $avecPiste, 'Une opportunité pend d\'un client.');
+        self::assertContains('Risque', $avecPiste, 'Et d\'un risque.');
+
+        // Et l'ordre topologique tient : la cible précède toujours qui la référence.
+        self::assertLessThan(
+            array_search('Piste', $avecPiste, true),
+            array_search('Client', $avecPiste, true),
+            'Le client doit être écrit avant l\'opportunité qui le désigne.',
+        );
+    }
+
+    /** Ne rien choisir revient à tout prendre : c'est le défaut annoncé à l'écran. */
+    public function testUnChoixVideVautToutLePerimetre(): void
+    {
+        [, $proprietaire] = $this->fixture();
+        $exportateur = $this->service(ExportateurJsbx::class);
+
+        self::assertSame(
+            array_keys($exportateur->perimetre($proprietaire)),
+            array_keys($exportateur->perimetre($proprietaire, [])),
+        );
+    }
+
     /** Le propriétaire, lui, voit tout : son bypass ne doit pas avoir été rompu. */
     public function testLeProprietaireExporteToutLePerimetre(): void
     {
@@ -205,6 +251,76 @@ class ExportJsbxTest extends KernelTestCase
         // serait pas réimportable. La fermeture est donc attendue, pas subie.
         self::assertSame(['Groupe', 'Portefeuille', 'Client'], $manifeste->perimetre);
     }
+
+    /**
+     * AUCUNE CELLULE NE DOIT CONTENIR UN TABLEAU — l'incident du premier export réel.
+     *
+     * Un champ à choix MULTIPLES porte un tableau de codes. Il tombait dans la branche
+     * des listes fermées, qui castait la valeur en chaîne : « Array to string
+     * conversion », et l'export entier échouait en 500 sur une seule colonne, sans dire
+     * laquelle. Aucun test ne l'avait vu, parce qu'aucun cabinet de test ne portait un
+     * tel champ rempli.
+     *
+     * On l'exerce donc sur TOUT le périmètre, avec les avertissements PHP promus en
+     * exceptions : c'est le seul moyen qu'une conversion douteuse s'arrête ici plutôt
+     * que de se glisser dans un fichier.
+     */
+    public function testAucuneColonneNeProduitDeConversionDouteuse(): void
+    {
+        [$entreprise, $proprietaire] = $this->fixture();
+
+        $this->creerClient($entreprise, $proprietaire, 'ACME Multiple');
+        $this->remplirUnChampMultiple($entreprise);
+
+        $ressources = $this->service(CanevasDEchange::class)->ressourcesLisibles($proprietaire);
+
+        set_error_handler(static function (int $n, string $m, string $f, int $l): bool {
+            throw new \ErrorException($m, 0, $n, $f, $l);
+        });
+
+        try {
+            // produire() et non exporter() : on éprouve l'ÉCRITURE du classeur, sans
+            // décompter d'occurrence ni débiter — un test ne facture pas.
+            [$classeur, , $nbLignes] = $this->service(ExportateurJsbx::class)
+                ->produire($entreprise, $proprietaire, $entreprise->getUtilisateur(), $ressources);
+
+            self::assertGreaterThan(0, $classeur->getSheetCount());
+            self::assertGreaterThanOrEqual(1, $nbLignes);
+        } finally {
+            restore_error_handler();
+        }
+    }
+
+    /**
+     * Remplit le premier champ à choix MULTIPLES trouvé dans le périmètre — celui-là
+     * même qui portait un tableau et faisait échouer l'export.
+     */
+    private function remplirUnChampMultiple(Entreprise $entreprise): void
+    {
+        foreach ($this->service(CanevasDEchange::class)->toutes() as $ressource) {
+            foreach ($ressource->colonnes as $colonne) {
+                if (!$colonne->multiple || $colonne->choix === []) {
+                    continue;
+                }
+
+                $entite = $this->em()->getRepository($ressource->fqcn)->findOneBy(['entreprise' => $entreprise]);
+                $setter = 'set' . ucfirst($colonne->code);
+                if ($entite === null || !method_exists($entite, $setter)) {
+                    continue;
+                }
+
+                try {
+                    $entite->{$setter}([array_key_first($colonne->choix)]);
+                    $this->em()->flush();
+
+                    return;
+                } catch (\Throwable) {
+                    // Champ non assignable ainsi : on cherche le suivant.
+                }
+            }
+        }
+    }
+
 
     // ─────────────────────────────────────────────────────────────────────────────
     // 3. Facturation

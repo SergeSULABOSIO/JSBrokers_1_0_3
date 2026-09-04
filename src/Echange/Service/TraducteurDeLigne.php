@@ -327,18 +327,63 @@ final class TraducteurDeLigne
      */
     private function choix(string $texte, LigneLue $ligne, ColonneDEchange $colonne, array &$anomalies): mixed
     {
+        // Champ à choix MULTIPLES : la cellule porte plusieurs libellés séparés par un
+        // point-virgule, tels que l'export les a écrits. Les relire comme UNE valeur
+        // unique ne trouverait jamais de correspondance, et l'utilisateur verrait une
+        // erreur sur une cellule qu'il n'a pas touchée.
+        if ($colonne->multiple) {
+            $valeurs = [];
+            foreach (explode(LigneExportable::SEPARATEUR_MULTIPLE, $texte) as $morceau) {
+                $morceau = trim($morceau);
+                if ($morceau === '') {
+                    continue;
+                }
+                $code = $this->codeDuChoix($morceau, $colonne);
+                if ($code === null) {
+                    $anomalies[] = $this->anomalieChoix($morceau, $ligne, $colonne);
+
+                    return null;
+                }
+                $valeurs[] = $code;
+            }
+
+            return $valeurs;
+        }
+
+        $code = $this->codeDuChoix($texte, $colonne);
+        if ($code === null) {
+            $anomalies[] = $this->anomalieChoix($texte, $ligne, $colonne);
+        }
+
+        return $code;
+    }
+
+    /**
+     * Code correspondant à une valeur saisie : par LIBELLÉ d'abord — c'est ce que
+     * l'export écrit et ce qu'un humain recopie — puis par code brut, qu'un utilisateur
+     * méthodique aura pu relever dans le dictionnaire.
+     */
+    private function codeDuChoix(string $texte, ColonneDEchange $colonne): int|string|null
+    {
+        $cible = $this->comparable($texte);
+
         foreach ($colonne->choix as $code => $libelle) {
-            if ($this->comparable((string) $libelle) === $this->comparable($texte)) {
+            if ($this->comparable((string) $libelle) === $cible) {
                 return $code;
             }
         }
         foreach (array_keys($colonne->choix) as $code) {
-            if ($this->comparable((string) $code) === $this->comparable($texte)) {
+            if ($this->comparable((string) $code) === $cible) {
                 return $code;
             }
         }
 
-        $anomalies[] = Anomalie::erreur(
+        return null;
+    }
+
+    private function anomalieChoix(string $texte, LigneLue $ligne, ColonneDEchange $colonne): Anomalie
+    {
+        return Anomalie::erreur(
             Anomalie::VALEUR_INVALIDE,
             sprintf(
                 '%s : « %s » n\'est pas une valeur acceptée. Choisissez parmi : %s.',
@@ -350,8 +395,6 @@ final class TraducteurDeLigne
             $ligne->numero,
             $ligne->colonne($colonne->code),
         );
-
-        return null;
     }
 
     private function comparable(string $texte): string

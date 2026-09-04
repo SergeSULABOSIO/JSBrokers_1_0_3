@@ -91,6 +91,7 @@ final class ExportateurJsbx
         ?Utilisateur $acteur,
         array $codesDemandes = [],
         ?string $graineIdempotence = null,
+        ?Progression $progression = null,
     ): Response {
         $ressources = $this->perimetre($invite, $codesDemandes);
         if ($ressources === []) {
@@ -102,26 +103,7 @@ final class ExportateurJsbx
         // ── LE COÛT SE CONTRÔLE AVANT DE PRODUIRE QUOI QUE CE SOIT ──────────────────
         $this->compteur->verifierSolvabilite($entreprise, EchangeOccurrence::TYPE_EXPORT);
 
-        $lignes = [];
-        $total = 0;
-        foreach ($ressources as $code => $ressource) {
-            $lignes[$code] = $this->lignesDe($entreprise, $ressource);
-            $total += count($lignes[$code]);
-        }
-
-        $manifeste = new Manifeste(
-            uidCabinet: (string) $entreprise->getId(),
-            nomCabinet: $entreprise->getNom() ?? '',
-            genereLe: new \DateTimeImmutable('now'),
-            generePar: $this->signature($invite, $acteur),
-            // Jamais de numéro en dur : la version vient de la logique de versionnage
-            // de l'application, celle-là même qui s'incrémente à chaque commit.
-            versionSchema: $this->version->getVersion(),
-            perimetre: array_keys($ressources),
-            empreinteEntetes: Manifeste::empreinte($ressources, EcrivainJsbx::COLONNES_TECHNIQUES),
-        );
-
-        $classeur = $this->ecrivain->ecrire($manifeste, $ressources, $lignes);
+        [$classeur, $manifeste, $total] = $this->produire($entreprise, $invite, $acteur, $ressources, $progression);
         $nomFichier = $this->nomFichier($entreprise);
 
         // ── OCCURRENCE ET DÉBIT : un seul geste, et seulement en cas de succès ──────
@@ -155,6 +137,65 @@ final class ExportateurJsbx
     }
 
     /**
+     * PRODUIT le classeur, et rien d'autre : ni contrôle de solde, ni occurrence, ni
+     * débit.
+     *
+     * ⚠ SÉPARER « FABRIQUER » DE « FACTURER » n'est pas un raffinement d'architecture.
+     * La commande de vérification à chaud (app:echange:smoke) empruntait le chemin
+     * complet, faute d'en avoir un autre : une seule passe sur les quarante-deux
+     * ressources d'un cabinet réel a décompté quarante-deux occurrences et débité
+     * 23 400 tokens au propriétaire — pour un contrôle technique que personne n'avait
+     * demandé. Un outil de diagnostic ne doit jamais pouvoir facturer.
+     *
+     * @param array<string, RessourceDEchange> $ressources
+     *
+     * @return array{0: \PhpOffice\PhpSpreadsheet\Spreadsheet, 1: Manifeste, 2: int}
+     */
+    public function produire(
+        Entreprise $entreprise,
+        Invite $invite,
+        ?Utilisateur $acteur,
+        array $ressources,
+        ?Progression $progression = null,
+    ): array {
+        $progression ??= Progression::muette();
+
+        // ⚠ ON COMPTE AVANT DE COMMENCER. Un pourcentage suppose un dénominateur : sans
+        // ce pré-comptage, on ne saurait dire que « la troisième feuille sur
+        // quarante-deux », ce qui ne dit rien du temps restant quand une feuille pèse
+        // trois lignes et la suivante douze mille. Ce sont des COUNT, donc quelques
+        // millisecondes pour un dénominateur juste.
+        $progression->etape('Inventaire des données');
+        $progression->totaliser($this->compterLignes($entreprise, $ressources));
+
+        $lignes = [];
+        $total = 0;
+        foreach ($ressources as $code => $ressource) {
+            $progression->etape($ressource->libelle);
+            $lignes[$code] = $this->lignesDe($entreprise, $ressource, $progression);
+            $total += count($lignes[$code]);
+        }
+
+        // L'écriture du classeur elle-même n'est pas instantanée : on le dit plutôt que
+        // de laisser la barre à 100 % pendant que le fichier se compresse.
+        $progression->etape('Mise en forme du classeur');
+
+        $manifeste = new Manifeste(
+            uidCabinet: (string) $entreprise->getId(),
+            nomCabinet: $entreprise->getNom() ?? '',
+            genereLe: new \DateTimeImmutable('now'),
+            generePar: $this->signature($invite, $acteur),
+            // Jamais de numéro en dur : la version vient de la logique de versionnage
+            // de l'application, celle-là même qui s'incrémente à chaque commit.
+            versionSchema: $this->version->getVersion(),
+            perimetre: array_keys($ressources),
+            empreinteEntetes: Manifeste::empreinte($ressources, EcrivainJsbx::COLONNES_TECHNIQUES),
+        );
+
+        return [$this->ecrivain->ecrire($manifeste, $ressources, $lignes), $manifeste, $total];
+    }
+
+    /**
      * Toutes les lignes d'une ressource pour ce cabinet.
      *
      * ⚠ Le SCOPING PAR ENTREPRISE est ici, et il est inconditionnel : jamais un
@@ -164,7 +205,7 @@ final class ExportateurJsbx
      *
      * @return array<int, array<string, mixed>>
      */
-    private function lignesDe(Entreprise $entreprise, RessourceDEchange $ressource): array
+    private function lignesDe(Entreprise $entreprise, RessourceDEchange $ressource, ?Progression $progression = null): array
     {
         $lignes = [];
         $offset = 0;
@@ -187,6 +228,7 @@ final class ExportateurJsbx
 
             foreach ($lot as $entite) {
                 $lignes[] = $this->traducteur->convertir($entite, $ressource);
+                $progression?->avancer();
             }
 
             $offset += self::LOT;
@@ -196,6 +238,35 @@ final class ExportateurJsbx
         }
 
         return $lignes;
+    }
+
+    /**
+     * Nombre total de lignes à écrire, tous périmètres confondus.
+     *
+     * Des COUNT scopés au cabinet : c'est le dénominateur du pourcentage. Une ressource
+     * dont le comptage échoue est comptée pour zéro plutôt que de faire échouer
+     * l'export — un dénominateur imparfait vaut mieux qu'un export refusé.
+     *
+     * @param array<string, RessourceDEchange> $ressources
+     */
+    private function compterLignes(Entreprise $entreprise, array $ressources): int
+    {
+        $total = 0;
+        foreach ($ressources as $ressource) {
+            try {
+                $total += (int) $this->em->createQueryBuilder()
+                    ->select('COUNT(e.id)')
+                    ->from($ressource->fqcn, 'e')
+                    ->andWhere('e.entreprise = :entreprise')
+                    ->setParameter('entreprise', $entreprise)
+                    ->getQuery()
+                    ->getSingleScalarResult();
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        return $total;
     }
 
     /**
