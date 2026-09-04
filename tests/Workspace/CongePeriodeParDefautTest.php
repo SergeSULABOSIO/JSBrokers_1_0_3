@@ -118,14 +118,41 @@ class CongePeriodeParDefautTest extends KernelTestCase
         );
     }
 
-    /** Sans préavis réglé, on propose demain : commencer aujourd'hui reste refusé. */
-    public function testSansPreavisOnProposeDemain(): void
+    /**
+     * Sans préavis réglé, on propose AU PLUS TÔT : commencer aujourd'hui reste refusé.
+     *
+     * ⚠ « Au plus tôt » n'est pas « demain ». Une absence ne commence pas un jour que
+     * l'intéressé ne travaille pas : demandée un vendredi, elle est proposée pour le
+     * lundi. Ce test affirmait « demain » tout court et tombait donc les vendredis et
+     * samedis — un échec qui n'apprenait rien sur le code et se réparait tout seul le
+     * dimanche, ce qui est le pire des deux mondes.
+     *
+     * On vérifie l'intention exacte : la date proposée est postérieure à aujourd'hui, et
+     * AUCUN jour travaillé n'a été sauté entre demain et elle.
+     */
+    public function testSansPreavisOnProposeAuPlusTot(): void
     {
         $invite = $this->cabinet(0);
 
+        $aujourdhui = new \DateTimeImmutable('today');
+        $demain = $aujourdhui->modify('+1 day');
+        $propose = $this->service()->debut($invite);
+
+        self::assertGreaterThanOrEqual(
+            $demain->format('Y-m-d'),
+            $propose->format('Y-m-d'),
+            'On ne propose jamais de commencer aujourd\'hui.',
+        );
+
+        $sautes = $propose <= $demain
+            ? 0.0
+            : static::getContainer()->get(\App\Service\Conge\CalculateurJoursOuvrables::class)
+                ->calculer($invite, $demain, $propose->modify('-1 day'));
+
         self::assertSame(
-            (new \DateTimeImmutable('today'))->modify('+1 day')->format('Y-m-d'),
-            $this->service()->debut($invite)->format('Y-m-d'),
+            0.0,
+            $sautes,
+            'Aucun jour travaillé ne doit être sauté : sans préavis, on propose la première date possible.',
         );
     }
 
