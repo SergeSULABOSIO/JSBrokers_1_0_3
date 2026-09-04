@@ -33,6 +33,7 @@ final class ColonneDEchange
      * @param string|null               $formatExcel   format de nombre Excel (`#,##0.00`…), null = format général
      * @param string|null               $aide          texte métier repris dans `_DICTIONNAIRE`
      * @param bool                      $pourcentage   PercentType fractionnel : l'écran montre 15, la colonne stocke 0.15
+     * @param bool                      $multiple      plusieurs valeurs cochées : la cellule les sépare par un point-virgule
      */
     public function __construct(
         public readonly string $code,
@@ -46,6 +47,7 @@ final class ColonneDEchange
         public readonly ?string $formatExcel = null,
         public readonly ?string $aide = null,
         public readonly bool $pourcentage = false,
+        public readonly bool $multiple = false,
     ) {
     }
 

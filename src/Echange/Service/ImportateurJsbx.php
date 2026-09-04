@@ -14,10 +14,13 @@ use App\Echange\Classeur\LigneLue;
 use App\Echange\Classeur\Manifeste;
 use App\Entity\EchangeImportRun;
 use App\Entity\Entreprise;
+use App\Entity\Utilisateur;
+use App\Entity\EchangeOccurrence;
 use App\Entity\Invite;
 use App\Service\Workspace\WorkspaceMutationService;
 use App\Token\TokenPricing;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 
 /**
@@ -49,7 +52,9 @@ final class ImportateurJsbx
         private readonly TraducteurDeLigne $traducteur,
         private readonly ResolveurDeRenvois $resolveur,
         private readonly WorkspaceMutationService $mutation,
+        private readonly CompteurDOccurrences $compteur,
         private readonly EntityManagerInterface $em,
+        private readonly ManagerRegistry $registre,
     ) {
     }
 
@@ -67,7 +72,10 @@ final class ImportateurJsbx
         Invite $invite,
         bool $suppressionsAutorisees = false,
         bool $confirmeAutreCabinet = false,
+        ?Progression $progression = null,
     ): EchangeImportRun {
+        $progression ??= Progression::muette();
+        $progression->etape('Lecture du fichier');
         $rapport = new RapportDeControle();
         $this->resolveur->reinitialiser();
 
@@ -98,7 +106,7 @@ final class ImportateurJsbx
         }
 
         // ── PASSE 2 ─────────────────────────────────────────────────────────────────
-        $operations = $this->passeAblanc($classeur, $inventaire['presentes'], $ecrivables, $entreprise, $invite, $rapport);
+        $operations = $this->passeAblanc($classeur, $inventaire['presentes'], $ecrivables, $entreprise, $invite, $rapport, $progression);
 
         $run->setRapport($rapport->toArray() + ['operations' => count($operations)]);
 
@@ -230,7 +238,9 @@ final class ImportateurJsbx
         Entreprise $entreprise,
         Invite $invite,
         RapportDeControle $rapport,
+        ?Progression $progression = null,
     ): array {
+        $progression ??= Progression::muette();
         $scope = new AiScope($entreprise, $invite, null);
 
         // UN SEUL registre de renvois pour toute la passe : c'est lui qui permet à la
@@ -259,6 +269,10 @@ final class ImportateurJsbx
         }
 
         $rapport->compterLignes($total);
+        // Le volume n'est connu qu'ici : un import ne sait pas ce qu'il pèse avant
+        // d'avoir ouvert ses feuilles. Mieux vaut un total posé tard qu'un pourcentage
+        // faux depuis le début.
+        $progression->totaliser($total);
         if ($total > TokenPricing::ECHANGE_PLAFOND_LIGNES) {
             $rapport->ajouter(Anomalie::erreur(
                 Anomalie::PLAFOND_DEPASSE,
@@ -294,11 +308,16 @@ final class ImportateurJsbx
                     ));
                     $rapport->compterErreur($code);
                 }
+                // Ses lignes ne seront pas traitées : on les décompte tout de même, sans
+                // quoi la barre resterait bloquée sur une feuille qu'on a écartée.
+                $progression->avancer(count($lignesParRessource[$code]));
                 continue;
             }
 
+            $progression->etape($ressource->libelle);
             foreach ($lignesParRessource[$code] as $ligne) {
                 $operation = $this->analyserLigne($ligne, $ressource, $entreprise, $scope, $refs, $rapport);
+                $progression->avancer();
                 if ($operation !== null) {
                     $operations[] = ['ressource' => $code, 'operation' => $operation, 'ligne' => $ligne];
                 }
@@ -534,6 +553,337 @@ final class ImportateurJsbx
 
         $this->em->persist($run);
         $this->em->flush();
+
+        return $run;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Passe 3 — écriture
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * PASSE 3 — ÉCRITURE, sur CONFIRMATION EXPLICITE de l'utilisateur.
+     *
+     * ⚠ LE FICHIER EST INTÉGRALEMENT RECONTRÔLÉ ICI, et ce n'est pas une précaution
+     * superflue : entre le contrôle et le clic, un collègue a pu supprimer une ligne
+     * visée, un administrateur a pu retirer un droit, une valeur a pu changer.
+     * Réexécuter un plan mémorisé écrirait sur la foi d'un état qui n'existe plus. C'est
+     * la règle que suit déjà l'exécution des plans de l'assistant : recharger,
+     * revalider, puis seulement écrire.
+     *
+     * ⚠ TRANSACTION UNIQUE, TOUT OU RIEN. Aucun import partiel n'est acceptable : une
+     * erreur en cours de route ramène la base exactement où elle était.
+     *
+     * @throws ImportImpossibleException si le contrôle n'est plus exécutable
+     */
+    public function executer(EchangeImportRun $run, ?Utilisateur $acteur, ?Progression $progression = null): EchangeImportRun
+    {
+        $progression ??= Progression::muette();
+        $progression->etape('Vérification du fichier');
+        $entreprise = $run->getEntreprise();
+        $invite = $run->getInvite();
+
+        if (!$run->estConfirmable()) {
+            throw new ImportImpossibleException(
+                'Ce contrôle n\'est plus en attente de décision : il a expiré, a déjà été exécuté, ou a été '
+                . 'annulé. Redéposez le fichier pour repartir d\'un contrôle à jour.',
+            );
+        }
+        if ($entreprise === null || $invite === null) {
+            throw new ImportImpossibleException('Ce contrôle n\'est rattaché à aucun cabinet identifiable.');
+        }
+
+        $chemin = (string) $run->getCheminFichier();
+        if (!is_file($chemin)) {
+            throw new ImportImpossibleException(
+                'Le fichier déposé n\'est plus disponible sur le serveur. Redéposez-le pour relancer le contrôle.',
+            );
+        }
+
+        // ── RECONTRÔLE INTÉGRAL ─────────────────────────────────────────────────────
+        $rapport = new RapportDeControle();
+        $this->resolveur->reinitialiser();
+
+        $classeur = $this->lecteur->ouvrir($chemin);
+        $inventaire = $this->lecteur->inventaireDesFeuilles($classeur, $this->canevas->toutes());
+        $ecrivables = $this->canevas->ressourcesEcrivables($invite);
+
+        // L'origine étrangère du fichier a déjà été assumée au dépôt : on ne redemande
+        // pas la même confirmation, elle a été donnée une fois.
+        if (!$this->passeStructurelle($classeur, $entreprise, $inventaire, $rapport, true)) {
+            return $this->echouer($run, $rapport);
+        }
+
+        $etapes = $this->passeAblanc($classeur, $inventaire['presentes'], $ecrivables, $entreprise, $invite, $rapport, $progression);
+        if (!$rapport->confirmable()) {
+            return $this->echouer($run, $rapport);
+        }
+
+        // Une suppression non autorisée au dépôt BLOQUE, elle n'est pas ignorée : passée
+        // sous silence, l'utilisateur croirait ses lignes supprimées.
+        if ($rapport->nbSuppressions() > 0 && !$run->isSuppressionsAutorisees()) {
+            $rapport->ajouter(Anomalie::erreur(
+                Anomalie::SUPPRESSION_REFUSEE,
+                sprintf(
+                    'Ce fichier demande %d suppression(s) alors qu\'elles n\'ont pas été autorisées au dépôt. '
+                    . 'Redéposez-le en cochant explicitement l\'autorisation de supprimer.',
+                    $rapport->nbSuppressions(),
+                ),
+            ));
+
+            return $this->echouer($run, $rapport);
+        }
+
+        // ── ÉCRITURE ────────────────────────────────────────────────────────────────
+        $run->setStatut(EchangeImportRun::STATUT_EN_COURS);
+        $this->em->flush();
+
+        // ⚠ ON REPART D'UNE UNITÉ DE TRAVAIL PROPRE.
+        //
+        // Le contrôle à blanc VALIDE en soumettant le formulaire de chaque entité sur une
+        // COPIE. Un formulaire à collection fabrique au passage des enfants rattachés à
+        // cette copie — inoffensifs tant que rien ne flushe, mais l'écriture qui suit,
+        // elle, flushe : Doctrine découvre alors « une entité nouvelle atteinte par
+        // Classeur#client » et refuse tout le lot, y compris les lignes irréprochables.
+        //
+        // Chez l'assistant, le dry-run et l'exécution vivent dans deux requêtes séparées,
+        // ce qui masquait le problème. Ici, ils se suivent dans la même : on vide donc,
+        // puis on recharge ce dont l'écriture a besoin. Les opérations, elles, ne sont que
+        // des identifiants et des scalaires : elles traversent sans dommage.
+        $idRun = (int) $run->getId();
+        $idActeur = $acteur?->getId();
+        $this->em->clear();
+
+        $run = $this->em->find(EchangeImportRun::class, $idRun);
+        if ($run === null) {
+            throw new ImportImpossibleException('Le contrôle a disparu en cours d\'exécution.');
+        }
+        $entreprise = $run->getEntreprise();
+        $invite = $run->getInvite();
+        $acteur = $idActeur === null ? null : $this->em->find(Utilisateur::class, $idActeur);
+
+        $scope = new AiScope($entreprise, $invite, null);
+        $journal = [];
+
+        // L'écriture a son PROPRE dénominateur : les opérations réellement planifiées.
+        // Réutiliser celui du contrôle donnerait une barre qui repart de zéro sans le
+        // dire, ou qui reste bloquée à cent pour cent pendant toute l'écriture.
+        $progression->etape('Enregistrement');
+        $progression->totaliser(count($etapes));
+
+        try {
+            $this->em->wrapInTransaction(function () use ($etapes, $scope, $acteur, $entreprise, $invite, $run, $rapport, $progression, &$journal): void {
+                $refs = MutationReferences::live();
+                $idsParRepere = [];
+
+                // Créations et modifications, dans l'ORDRE TOPOLOGIQUE : une donnée
+                // référencée est écrite avant celle qui la référence.
+                foreach ($etapes as $index => $etape) {
+                    if ($etape['operation']->isDelete()) {
+                        continue;
+                    }
+                    $resultat = $this->mutation->executer($etape['operation'], $scope, $acteur, $refs);
+                    $journal[] = $resultat;
+                    $etapes[$index]['idEcrit'] = $resultat['id'] ?? $etape['operation']->targetId;
+                    $progression->avancer();
+
+                    if ($etape['operation']->ref !== null && isset($resultat['id'])) {
+                        $idsParRepere[mb_strtolower($etape['operation']->ref)] = (int) $resultat['id'];
+                    }
+                }
+
+                // RENVOIS DIFFÉRÉS — la seconde passe qui referme le cycle du modèle.
+                // Une opportunité désigne la police qu'elle fait évoluer, laquelle pend
+                // d'une proposition qui appartient à l'opportunité : aucun ordre ne
+                // permet d'écrire ce lien du premier coup. On le pose maintenant que
+                // les deux extrémités existent, DANS LA MÊME TRANSACTION — un lien
+                // manquant n'est pas un demi-succès acceptable.
+                foreach ($this->renvoisDifferes($etapes, $idsParRepere, $entreprise) as $complement) {
+                    $journal[] = $this->mutation->executer($complement, $scope, $acteur, $refs);
+                }
+
+                // Suppressions en ORDRE INVERSE : l'enfant part avant le parent, sans
+                // quoi la première clé étrangère venue ferait échouer le lot entier.
+                foreach (array_reverse($etapes) as $etape) {
+                    if ($etape['operation']->isDelete()) {
+                        $journal[] = $this->mutation->executer($etape['operation'], $scope, $acteur, $refs);
+                        $progression->avancer();
+                    }
+                }
+
+                // Occurrence dans la MÊME transaction que l'écriture : ou bien l'import
+                // a eu lieu ET a été tracé, ou bien ni l'un ni l'autre. Coût nul —
+                // l'import ne porte pas de forfait, chaque ligne a payé son métrage.
+                $this->compteur->enregistrer(
+                    $entreprise,
+                    $invite,
+                    $acteur,
+                    EchangeOccurrence::TYPE_IMPORT,
+                    array_values(array_unique(array_map(
+                        static fn (array $etape) => $etape['ressource'],
+                        $etapes,
+                    ))),
+                    $rapport->lignesLues(),
+                    $this->compteur->cleIdempotence(
+                        $entreprise,
+                        $invite,
+                        EchangeOccurrence::TYPE_IMPORT,
+                        [],
+                        'run-' . $run->getId(),
+                    ),
+                    $run->getEmpreinteFichier(),
+                    $run->getNomFichier(),
+                );
+                $this->em->flush();
+            });
+        } catch (\Throwable $e) {
+            // Transaction annulée : tout ce qui avait été écrit est revenu en arrière.
+            // On ne laisse donc jamais un rapport qui annoncerait un succès partiel.
+            $rapport->ajouter(Anomalie::erreur(
+                Anomalie::VALEUR_INVALIDE,
+                sprintf(
+                    'L\'importation a été interrompue et AUCUNE modification n\'a été conservée. Motif : %s',
+                    $e->getMessage(),
+                ),
+            ));
+
+            return $this->echouer($run, $rapport);
+        }
+
+        $run->setStatut(EchangeImportRun::STATUT_TERMINE);
+        $run->setRapport($rapport->toArray() + [
+            'execute' => true,
+            'operations_executees' => count($journal),
+        ]);
+
+        // Le dépôt a joué son rôle : on ne garde pas des données personnelles sur le
+        // disque une fois qu'elles sont en base.
+        @unlink($chemin);
+        $run->setCheminFichier(null);
+        $this->em->flush();
+
+        return $run;
+    }
+
+    /** Annule un contrôle en attente. Gratuit, et sans le moindre effet sur les données. */
+    public function annuler(EchangeImportRun $run): EchangeImportRun
+    {
+        if (in_array($run->getStatut(), [EchangeImportRun::STATUT_TERMINE, EchangeImportRun::STATUT_ANNULE], true)) {
+            return $run;
+        }
+
+        $run->setStatut(EchangeImportRun::STATUT_ANNULE);
+
+        $chemin = $run->getCheminFichier();
+        if ($chemin !== null && is_file($chemin)) {
+            @unlink($chemin);
+        }
+        $run->setCheminFichier(null);
+        $this->em->flush();
+
+        return $run;
+    }
+
+    /**
+     * Opérations d'édition posant les renvois qu'aucun ordre d'écriture ne permettait.
+     *
+     * Construites APRÈS les créations, quand les identifiants réels existent enfin.
+     *
+     * @param array<int, array{ressource: string, operation: MutationOperation, ligne: LigneLue, idEcrit?: ?int}> $etapes
+     * @param array<string, int>                                                                                  $idsParRepere
+     *
+     * @return MutationOperation[]
+     */
+    private function renvoisDifferes(array $etapes, array $idsParRepere, Entreprise $entreprise): array
+    {
+        $complements = [];
+
+        foreach ($etapes as $etape) {
+            if ($etape['operation']->isDelete()) {
+                continue;
+            }
+
+            $ressource = $this->canevas->ressource($etape['ressource']);
+            if ($ressource === null || $ressource->renvoisDifferes === []) {
+                continue;
+            }
+
+            $cibleId = $etape['idEcrit'] ?? $etape['operation']->targetId;
+            if ($cibleId === null) {
+                continue;
+            }
+
+            $champs = [];
+            foreach ($ressource->renvoisDifferes as $codeColonne) {
+                $colonne = $ressource->colonne($codeColonne);
+                if ($colonne === null || !array_key_exists($codeColonne, $etape['ligne']->valeurs)) {
+                    continue;
+                }
+
+                $renvoi = $this->resolveur->resoudre($etape['ligne']->valeur($codeColonne), $colonne, $entreprise);
+                if ($renvoi->estRefus() || !$renvoi->estEcrivable() || $renvoi->valeur === null) {
+                    continue;
+                }
+
+                // Un repère local se résout MAINTENANT en identifiant réel : au moment
+                // du contrôle, la ligne visée n'existait pas encore.
+                $valeur = $renvoi->valeur;
+                if ($renvoi->statut === 'repere') {
+                    $cle = mb_strtolower(ltrim((string) $valeur, MutationReferences::PREFIXE));
+                    if (!isset($idsParRepere[$cle])) {
+                        continue;
+                    }
+                    $valeur = $idsParRepere[$cle];
+                }
+
+                $champs[$codeColonne] = $valeur;
+            }
+
+            if ($champs !== []) {
+                $complements[] = new MutationOperation(
+                    op: MutationOperation::OP_EDIT,
+                    entityShortName: $ressource->code,
+                    targetId: (int) $cibleId,
+                    fields: $champs,
+                );
+            }
+        }
+
+        return $complements;
+    }
+
+    /**
+     * Consigne l'échec — et y parvient MÊME quand l'écriture a fait fermer
+     * l'EntityManager.
+     *
+     * ⚠ Doctrine ferme son gestionnaire dès qu'une exception traverse un flush. Le
+     * rollback a bien protégé les données, mais tout appel suivant lève « The
+     * EntityManager is closed » : le chemin d'erreur explosait donc à son tour, et
+     * l'utilisateur recevait une erreur fatale à la place du rapport qui lui aurait dit
+     * quoi corriger. On rouvre un gestionnaire, on y rattache le contrôle, et on écrit
+     * ce que l'on sait.
+     *
+     * Le pire cas — même la réouverture échoue — laisse le contrôle en base tel qu'il
+     * était : jamais un statut « terminé » mensonger.
+     */
+    private function echouer(EchangeImportRun $run, RapportDeControle $rapport): EchangeImportRun
+    {
+        $run->setStatut(EchangeImportRun::STATUT_ECHEC);
+        $run->setRapport($rapport->toArray());
+
+        try {
+            $em = $this->em;
+            if (!$em->isOpen()) {
+                $this->registre->resetManager();
+                $em = $this->registre->getManager();
+                // Le contrôle vient d'un gestionnaire mort : on le rapatrie dans le neuf.
+                $run = $em->merge($run);
+            }
+            $em->flush();
+        } catch (\Throwable) {
+            // Rien de plus à tenter : les données sont saines (rollback), et le statut
+            // en base reste celui d'avant l'écriture, donc jamais « terminé ».
+        }
 
         return $run;
     }

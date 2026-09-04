@@ -145,6 +145,13 @@ export default class extends Controller {
         this.boundHandleLoadingStop = this.handleLoadingStop.bind(this);
         document.addEventListener('app:loading.stop', this.boundHandleLoadingStop);
 
+        // PROGRESSION CHIFFRÉE. Facultative : une opération qui ne sait pas où elle en
+        // est n'émet rien et garde la barre indéterminée, comme avant. Celles qui le
+        // savent — export, import — la renseignent, et l'utilisateur cesse de regarder
+        // un ruban qui glisse sans rien lui dire.
+        this.boundHandleLoadingProgress = this.handleLoadingProgress.bind(this);
+        document.addEventListener('app:loading.progress', this.boundHandleLoadingProgress);
+
         // L'ÉTAT DE L'ONGLET EST PRÊT : c'est SEULEMENT là qu'on peut poser un filtre.
         // Voir _appliquerCriteresEnAttente pour le détail de l'incident que cela corrige.
         this.boundHandleTabStateReady = this.handleTabStateReady.bind(this);
@@ -274,6 +281,7 @@ export default class extends Controller {
         document.removeEventListener('app:workspace.reload-active-tab', this.boundReloadActiveTab);
         document.removeEventListener('app:loading.start', this.boundHandleLoadingStart);
         document.removeEventListener('app:loading.stop', this.boundHandleLoadingStop);
+        document.removeEventListener('app:loading.progress', this.boundHandleLoadingProgress);
         document.removeEventListener('app:tab.state-ready', this.boundHandleTabStateReady);
         document.removeEventListener('app:context.changed', this.boundMemoriserCriteres);
         document.removeEventListener('app:list.rendered', this.boundReposerSelection);
@@ -2200,18 +2208,96 @@ export default class extends Controller {
 
     /**
      * Affiche la barre de progression lors d'une demande d'actualisation de liste.
+     *
+     * Mode INDÉTERMINÉ par défaut : la plupart des chargements ne savent pas où ils en
+     * sont, et feindre un pourcentage serait mentir. Une opération qui SAIT compter
+     * bascule ensuite en mode chiffré par `app:loading.progress`.
      */
     handleLoadingStart() {
-        console.log(this.nomControleur + " - Demande d'actualisation détectée, affichage de la barre de progression.");
         this.progressBarTarget.style.display = 'block';
+        this._reinitialiserProgression();
     }
 
     /**
      * Cache la barre de progression sur ordre du Cerveau.
      */
     handleLoadingStop() {
-        // console.log(this.nomControleur + " - Fin du chargement des données, masquage de la barre de progression.");
         this.progressBarTarget.style.display = 'none';
+        this._reinitialiserProgression();
+    }
+
+    /**
+     * PROGRESSION RÉELLE : `detail = { pct, libelle, restant }`.
+     *
+     * `pct` est un pourcentage MESURÉ par le serveur — jamais une animation déguisée en
+     * chiffre. `restant` est une estimation en secondes, déduite du débit constaté ;
+     * elle n'est affichée que lorsqu'on en a assez vu pour qu'elle veuille dire quelque
+     * chose, sinon elle danserait de « 2 s » à « 4 min » à chaque paquet.
+     */
+    handleLoadingProgress(event) {
+        const detail = event.detail || {};
+        const pct = Math.max(0, Math.min(100, Number(detail.pct) || 0));
+
+        this.progressBarTarget.style.display = 'block';
+        this.progressBarTarget.classList.add('is-determinate');
+        this.progressBarTarget.style.width = `${pct}%`;
+        this.progressBarTarget.setAttribute('aria-valuenow', String(Math.round(pct)));
+
+        const etiquette = this._etiquetteProgression();
+        if (!etiquette) return;
+
+        const morceaux = [];
+        if (detail.libelle) morceaux.push(detail.libelle);
+        morceaux.push(`${Math.round(pct)} %`);
+        if (Number.isFinite(detail.restant) && detail.restant > 0) {
+            morceaux.push(`~${this._duree(detail.restant)}`);
+        }
+
+        etiquette.textContent = morceaux.join(' · ');
+        etiquette.style.display = 'block';
+    }
+
+    /** Remet la barre en mode indéterminé : c'est son état de repos. */
+    _reinitialiserProgression() {
+        this.progressBarTarget.classList.remove('is-determinate');
+        this.progressBarTarget.style.width = '';
+        this.progressBarTarget.removeAttribute('aria-valuenow');
+
+        const etiquette = this._etiquetteProgression(false);
+        if (etiquette) {
+            etiquette.style.display = 'none';
+            etiquette.textContent = '';
+        }
+    }
+
+    /**
+     * Étiquette flottante sous la barre. Créée à la demande : six pixels de haut ne
+     * peuvent porter aucun texte, et l'utilisateur a besoin de savoir CE QUI avance,
+     * pas seulement que quelque chose avance.
+     */
+    _etiquetteProgression(creer = true) {
+        let etiquette = document.getElementById('jsb-progress-label');
+        if (!etiquette && creer) {
+            etiquette = document.createElement('div');
+            etiquette.id = 'jsb-progress-label';
+            etiquette.className = 'jsb-progress-label';
+            etiquette.setAttribute('role', 'status');
+            etiquette.setAttribute('aria-live', 'polite');
+            document.body.appendChild(etiquette);
+        }
+
+        return etiquette;
+    }
+
+    /** Durée lisible : on ne dit pas « 143 s » à quelqu'un qui attend. */
+    _duree(secondes) {
+        const s = Math.ceil(secondes);
+        if (s < 60) return `${s} s`;
+
+        const minutes = Math.floor(s / 60);
+        const reste = s % 60;
+
+        return reste === 0 ? `${minutes} min` : `${minutes} min ${reste} s`;
     }
 
     /**

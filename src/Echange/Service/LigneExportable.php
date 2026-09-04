@@ -31,6 +31,14 @@ use PhpOffice\PhpSpreadsheet\Shared\Date as DateExcel;
  */
 final class LigneExportable
 {
+    /**
+     * Sépare les valeurs d'un champ à choix MULTIPLES dans une cellule.
+     *
+     * Le point-virgule et non la virgule : les libellés métier en contiennent
+     * (« Résiliation, non-paiement »), et on ne coupe pas au milieu d'un libellé.
+     */
+    public const SEPARATEUR_MULTIPLE = ';';
+
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly ChampsObligatoiresInspector $inspecteur,
@@ -102,19 +110,34 @@ final class LigneExportable
             return $brut ? 'OUI' : 'NON';
         }
 
+        // ⚠ LES TABLEAUX PASSENT AVANT TOUT LE RESTE.
+        //
+        // Un champ à choix MULTIPLES porte un tableau de codes. Il entrait ici dans la
+        // branche des listes fermées, qui castait la valeur en chaîne — d'où le
+        // « Array to string conversion » qui faisait échouer l'export entier en 500, sur
+        // une seule colonne, sans dire laquelle. Une cellule ne contient pas un tableau :
+        // on rend les libellés, séparés par un point-virgule.
+        if (is_array($brut)) {
+            $libelles = [];
+            foreach ($brut as $item) {
+                if (is_array($item)) {
+                    continue;
+                }
+                if (is_object($item)) {
+                    $libelles[] = $this->libelleLisible($item);
+                    continue;
+                }
+                $libelles[] = $colonne->choix[$this->cleChoix($item)] ?? (string) $item;
+            }
+
+            return implode(self::SEPARATEUR_MULTIPLE . ' ', $libelles);
+        }
+
         if ($colonne->aUneListe()) {
             // On écrit le LIBELLÉ, pas le code : un fichier plein de 0 et de 2 ne se
             // relit pas. La comparaison au retour est faite sur une forme normalisée
             // (casse et accents ôtés), et accepte aussi le code brut.
-            $cle = is_bool($brut) ? ($brut ? '1' : '0') : (is_int($brut) ? $brut : (string) $brut);
-
-            return $colonne->choix[$cle] ?? $brut;
-        }
-
-        if (is_array($brut)) {
-            // Champ multiple (tableau sérialisé) : une valeur par ligne serait
-            // ingérable en tableur, on les sépare par un point-virgule.
-            return implode('; ', array_map(static fn ($v) => (string) $v, $brut));
+            return $colonne->choix[$this->cleChoix($brut)] ?? $brut;
         }
 
         if (is_object($brut)) {
@@ -202,6 +225,22 @@ final class LigneExportable
     private function dateExcel(?\DateTimeInterface $date): string|float
     {
         return $date === null ? '' : DateExcel::PHPToExcel($date);
+    }
+
+    /**
+     * Clé de tableau utilisable pour retrouver un libellé de choix.
+     *
+     * Les booléens deviendraient 0/1 en silence par simple cast : on les nomme.
+     * Même règle que ChampsObligatoiresInspector, qui a construit la carte des choix —
+     * les deux doivent s'accorder, sinon le libellé n'est jamais trouvé.
+     */
+    private function cleChoix(mixed $valeur): int|string
+    {
+        if (is_bool($valeur)) {
+            return $valeur ? '1' : '0';
+        }
+
+        return is_int($valeur) ? $valeur : (string) $valeur;
     }
 
     /** Classe réelle derrière un éventuel proxy Doctrine. */
