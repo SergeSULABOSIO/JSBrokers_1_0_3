@@ -113,7 +113,31 @@ class CongeDecisionPickerTest extends WebTestCase
         $ca->setEntreprise($ent);
         $em->persist($ca);
 
-        $exercice = (int) (new \DateTimeImmutable('+30 days'))->format('Y');
+        // PÉRIODE ANCRÉE SUR UN JOUR DE SEMAINE CONNU, et non sur un décalage en jours.
+        //
+        // La fixture posait une demande du « +30 days » au « +34 days » puis figeait
+        // « nbJours = 3.0 ». Cinq jours de calendrier ne valent trois jours OUVRÉS que si
+        // la fenêtre tombe bien : lancée un vendredi, elle en contenait quatre. L'abonné
+        // Doctrine corrigeait alors le décompte en fin de requête — à raison — et le test
+        // se retrouvait à affirmer un chiffre que l'application venait de rectifier.
+        //
+        // Un LUNDI vers un MERCREDI vaut exactement trois jours ouvrés, tous les jours de
+        // l'année : le régime par défaut est lundi-vendredi
+        // (RegimeTravail::JOURS_OUVRES_DEFAUT) et ce cabinet ne sème aucun jour férié.
+        //
+        // Le « next monday » après « +30 days » conserve le préavis d'au moins trente
+        // jours que le décalage d'origine assurait : mesuré sur les sept jours de départ
+        // possibles, l'écart va de 30 à 36 jours.
+        //
+        // ⚠ NE PAS « SIMPLIFIER » EN « +30 days » : le test se remettrait à tomber les
+        // vendredis, et se réparerait tout seul le dimanche — le pire des deux mondes.
+        $debutConge = (new \DateTimeImmutable('today'))->modify('+30 days')->modify('next monday');
+        $finConge = $debutConge->modify('+2 days');
+
+        // L'EXERCICE SUIT LA MÊME DATE que la demande : rattacher la dotation à une autre
+        // année civile viderait le compteur, et le test échouerait sur un solde nul sans
+        // dire pourquoi.
+        $exercice = (int) $debutConge->format('Y');
         $dotation = (new MouvementConge())
             ->setAgent($agent)->setExercice($exercice)->setTypeAbsence($ca)
             ->setNature(MouvementConge::NATURE_DOTATION)->setQuantite('20.0');
@@ -122,8 +146,8 @@ class CongeDecisionPickerTest extends WebTestCase
 
         $demande = new DemandeConge();
         $demande->setAgent($agent)->setTypeAbsence($ca);
-        $demande->setDateDebut(new \DateTimeImmutable('+30 days'));
-        $demande->setDateFin(new \DateTimeImmutable('+34 days'));
+        $demande->setDateDebut($debutConge);
+        $demande->setDateFin($finConge);
         $demande->setMotif('Vacances en famille.');
         $demande->setEntreprise($ent);
         $demande->setStatut(DemandeConge::STATUT_SOUMISE);
