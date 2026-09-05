@@ -10,10 +10,6 @@ use App\Ai\Trousse\Trousse;
 use App\Ai\Trousse\TrousseCatalogue;
 use App\Ai\Tool\AiToolInterface;
 use App\Ai\Tool\AiToolProduisantUnPlan;
-use App\Entity\Entreprise;
-use App\Entity\Invite;
-use App\Repository\EntrepriseRepository;
-use App\Repository\InviteRepository;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
@@ -33,13 +29,11 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  */
 class PromptSansOutilFantomeTest extends KernelTestCase
 {
+    use JeuDeTestKetTrait;
+
     private function scope(): AiScope
     {
-        $conteneur = static::getContainer();
-        $entreprise = $conteneur->get(EntrepriseRepository::class)->findOneBy([]);
-        self::assertNotNull($entreprise, 'Le jeu de test doit comporter au moins une entreprise.');
-        $invite = $conteneur->get(InviteRepository::class)->findOneBy(['entreprise' => $entreprise]);
-        self::assertNotNull($invite, 'Le jeu de test doit comporter au moins un invité.');
+        [$entreprise, $invite] = $this->jeuDeTestKet();
 
         return new AiScope($entreprise, $invite);
     }

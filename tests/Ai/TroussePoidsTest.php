@@ -8,8 +8,6 @@ use App\Ai\Scope\AiScope;
 use App\Ai\Trousse\Trousse;
 use App\Ai\Trousse\TrousseCatalogue;
 use App\Entity\AssistantConversation;
-use App\Repository\EntrepriseRepository;
-use App\Repository\InviteRepository;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
@@ -26,6 +24,8 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  */
 class TroussePoidsTest extends KernelTestCase
 {
+    use JeuDeTestKetTrait;
+
     /** La lecture doit rester nettement sous la trousse complète. Marge : 30 %. */
     private const GAIN_MINIMAL = 0.30;
 
@@ -33,8 +33,7 @@ class TroussePoidsTest extends KernelTestCase
     private function poids(Trousse $trousse): array
     {
         $conteneur = static::getContainer();
-        $entreprise = $conteneur->get(EntrepriseRepository::class)->findOneBy([]);
-        $invite = $conteneur->get(InviteRepository::class)->findOneBy(['entreprise' => $entreprise]);
+        [$entreprise, $invite] = $this->jeuDeTestKet();
         $scope = new AiScope($entreprise, $invite);
 
         $builder = $conteneur->get(AiContextBuilder::class);
@@ -93,8 +92,7 @@ class TroussePoidsTest extends KernelTestCase
         static::bootKernel();
         $conteneur = static::getContainer();
 
-        $entreprise = $conteneur->get(EntrepriseRepository::class)->findOneBy([]);
-        $invite = $conteneur->get(InviteRepository::class)->findOneBy(['entreprise' => $entreprise]);
+        [$entreprise, $invite] = $this->jeuDeTestKet();
         $builder = $conteneur->get(AiContextBuilder::class);
         $requete = $builder->build($entreprise, $invite, new AssistantConversation());
 

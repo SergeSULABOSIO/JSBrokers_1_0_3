@@ -7,10 +7,6 @@ use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Trousse\Phase;
 use App\Ai\Trousse\Trousse;
 use App\Entity\AssistantConversation;
-use App\Entity\Entreprise;
-use App\Entity\Invite;
-use App\Repository\EntrepriseRepository;
-use App\Repository\InviteRepository;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
@@ -34,6 +30,8 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  */
 class RedactionSousUnPlanEnAttenteTest extends KernelTestCase
 {
+    use JeuDeTestKetTrait;
+
     /**
      * RÉGIME « DÉCISION EN ATTENTE » : rien n'est écrit, la rédaction doit le dire et
      * employer le futur.
@@ -119,10 +117,7 @@ class RedactionSousUnPlanEnAttenteTest extends KernelTestCase
         static::bootKernel();
         $conteneur = static::getContainer();
 
-        $entreprise = $conteneur->get(EntrepriseRepository::class)->findOneBy([]);
-        self::assertInstanceOf(Entreprise::class, $entreprise, 'Le jeu de test doit comporter au moins une entreprise.');
-        $invite = $conteneur->get(InviteRepository::class)->findOneBy(['entreprise' => $entreprise]);
-        self::assertInstanceOf(Invite::class, $invite, 'Le jeu de test doit comporter au moins un invité.');
+        [$entreprise, $invite] = $this->jeuDeTestKet();
 
         $requete = $conteneur->get(AiContextBuilder::class)
             ->build($entreprise, $invite, new AssistantConversation())

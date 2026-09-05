@@ -148,6 +148,8 @@ final class ExportateurJsbx
      * demandé. Un outil de diagnostic ne doit jamais pouvoir facturer.
      *
      * @param array<string, RessourceDEchange> $ressources
+     * @param bool                             $gabarit    vrai = la STRUCTURE seule, sans aucune
+     *                                                     donnée du cabinet
      *
      * @return array{0: \PhpOffice\PhpSpreadsheet\Spreadsheet, 1: Manifeste, 2: int}
      */
@@ -157,6 +159,7 @@ final class ExportateurJsbx
         ?Utilisateur $acteur,
         array $ressources,
         ?Progression $progression = null,
+        bool $gabarit = false,
     ): array {
         $progression ??= Progression::muette();
 
@@ -166,11 +169,21 @@ final class ExportateurJsbx
         // trois lignes et la suivante douze mille. Ce sont des COUNT, donc quelques
         // millisecondes pour un dénominateur juste.
         $progression->etape('Inventaire des données');
-        $progression->totaliser($this->compterLignes($entreprise, $ressources));
+        $progression->totaliser($gabarit ? 0 : $this->compterLignes($entreprise, $ressources));
 
         $lignes = [];
         $total = 0;
         foreach ($ressources as $code => $ressource) {
+            // UN GABARIT NE LIT RIEN. Il porte les mêmes feuilles, les mêmes deux lignes
+            // d'en-tête, les mêmes formats et les mêmes listes déroulantes — mais aucune
+            // ligne de données. C'est ce qui permet de préparer une reprise hors ligne
+            // sans avoir à exporter puis effacer, geste que personne ne devine et qui
+            // casse le fichier une fois sur deux.
+            $lignes[$code] = [];
+            if ($gabarit) {
+                continue;
+            }
+
             $progression->etape($ressource->libelle);
             $lignes[$code] = $this->lignesDe($entreprise, $ressource, $progression);
             $total += count($lignes[$code]);

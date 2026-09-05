@@ -3,6 +3,8 @@
 namespace App\Controller\Admin;
 
 use App\Echange\Canevas\CanevasDEchange;
+use App\Echange\Classeur\AnnotateurJsbx;
+use App\Echange\Classeur\ClasseurIllisibleException;
 use App\Echange\Service\CompteurDOccurrences;
 use App\Echange\Service\ExportateurJsbx;
 use App\Echange\Service\FluxNdjson;
@@ -64,6 +66,7 @@ class EchangeController extends AbstractController
         private readonly CompteurDOccurrences $compteur,
         private readonly ExportateurJsbx $exportateur,
         private readonly ImportateurJsbx $importateur,
+        private readonly AnnotateurJsbx $annotateur,
         private readonly EchangeOccurrenceRepository $occurrences,
         private readonly EchangeImportRunRepository $importRuns,
         private readonly EntrepriseRepository $entrepriseRepository,
@@ -105,11 +108,16 @@ class EchangeController extends AbstractController
         }
 
         $peutImporter = $this->accessResolver->can($invite, self::ENTITY_SHORT_NAME, Invite::ACCESS_ECRITURE);
+        $ressources = $this->canevas->ressourcesLisibles($invite);
 
         return $this->render('components/_echange_component.html.twig', [
             'idEntreprise'  => $idEntreprise,
             'ongletActif'   => $this->ongletDemande($request, $peutImporter),
-            'ressources'    => $this->canevas->ressourcesLisibles($invite),
+            'ressources'    => $ressources,
+            // Les données GROUPÉES PAR MODULE — le même découpage que le menu de
+            // l'application (Production, Finances, Sinistre…). Cocher « Production » d'un
+            // geste vaut mieux que dix cases à trouver dans une liste de quarante-deux.
+            'parModule'     => $this->grouperParModule($ressources),
             'peutImporter'  => $peutImporter,
             // Ce que l'invité peut réellement ÉCRIRE : afficher le périmètre d'import
             // comme s'il était celui de lecture promettrait une importation qui
@@ -145,10 +153,7 @@ class EchangeController extends AbstractController
             throw $this->createAccessDeniedException(sprintf('« %s » est hors de votre périmètre d\'accès.', self::LIBELLE));
         }
 
-        $demandes = array_values(array_filter(array_map(
-            'trim',
-            explode(',', (string) $request->query->get('donnees', '')),
-        ), static fn (string $code) => $code !== ''));
+        $demandes = $this->codesDemandes((string) $request->query->get('donnees', ''));
 
         try {
             return $this->exportateur->exporter(
@@ -198,10 +203,7 @@ class EchangeController extends AbstractController
     {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
 
-        $demandes = array_values(array_filter(array_map(
-            'trim',
-            explode(',', (string) $request->request->get('donnees', '')),
-        ), static fn (string $code) => $code !== ''));
+        $demandes = $this->codesDemandes((string) $request->request->get('donnees', ''));
 
         $graine = (string) $request->request->get('op', '');
         $acteur = $this->getUser();
@@ -369,7 +371,11 @@ class EchangeController extends AbstractController
         $suppressions = $request->request->getBoolean('suppressions');
         $autreCabinet = $request->request->getBoolean('autreCabinet');
 
-        $reponse = new StreamedResponse(function () use ($chemin, $nomOriginal, $entreprise, $invite, $suppressions, $autreCabinet): void {
+        // Périmètre retenu au dépôt. Vide = tout ce que le fichier contient. Il est
+        // MÉMORISÉ sur le contrôle, car l'écriture recontrôlera le fichier entier.
+        $donnees = $this->codesDemandes((string) $request->request->get('donnees', ''));
+
+        $reponse = new StreamedResponse(function () use ($chemin, $nomOriginal, $entreprise, $invite, $suppressions, $autreCabinet, $donnees): void {
             FluxNdjson::demarrer();
             $progression = new Progression(0, static fn (array $etat) => FluxNdjson::ligne($etat));
 
@@ -382,6 +388,7 @@ class EchangeController extends AbstractController
                     $suppressions,
                     $autreCabinet,
                     $progression,
+                    $donnees,
                 );
 
                 $progression->terminer();
@@ -470,6 +477,135 @@ class EchangeController extends AbstractController
         $this->importateur->annuler($run);
 
         return $this->json(['success' => true, 'message' => 'Contrôle annulé.']);
+    }
+
+    /**
+     * GABARIT VIERGE : la structure du classeur, sans aucune donnée.
+     *
+     * ⚠ JAMAIS FACTURÉ, JAMAIS DÉCOMPTÉ. Il ne contient rien du cabinet — colonnes,
+     * dictionnaire et listes déroulantes sont les mêmes pour tout le monde. Le facturer
+     * reviendrait à faire payer la documentation du format, et à décourager le seul geste
+     * qui évite les fichiers reconstruits à la main, lesquels finissent refusés.
+     *
+     * Il passe donc par `produire()` et non par `exporter()` : la séparation entre
+     * fabriquer et facturer, faite pour la commande de diagnostic, sert ici une seconde
+     * fois.
+     */
+    #[Route('/gabarit/{idEntreprise}', name: 'gabarit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function gabarit(int $idEntreprise, Request $request): Response
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+
+        if ($invite === null || !$this->accessResolver->canRead($invite, self::ENTITY_SHORT_NAME)) {
+            throw $this->createAccessDeniedException(sprintf('« %s » est hors de votre périmètre d\'accès.', self::LIBELLE));
+        }
+
+        // Même périmètre qu'un export : on ne donne pas le gabarit d'une donnée que
+        // l'utilisateur n'aurait pas le droit de lire.
+        $ressources = $this->exportateur->perimetre($invite, $this->codesDemandes((string) $request->query->get('donnees', '')));
+        if ($ressources === []) {
+            return new Response(
+                'Aucune donnée à votre portée : le gabarit serait vide.',
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+            );
+        }
+
+        [$classeur] = $this->exportateur->produire($entreprise, $invite, $this->getUser(), $ressources, null, gabarit: true);
+
+        $slug = preg_replace('/[^A-Za-z0-9_-]+/', '_', $entreprise->getNom() ?? 'cabinet');
+        $nom = sprintf('jsbrokers_gabarit_%s_%s.xlsx', trim((string) $slug, '_') ?: 'cabinet', date('Ymd-Hi'));
+
+        return $this->classeurEnReponse($classeur, $nom);
+    }
+
+    /**
+     * LE FICHIER DÉPOSÉ, RENDU ANNOTÉ : cellules fautives surlignées, commentaire portant
+     * le motif, feuille `_RAPPORT` en tête.
+     *
+     * C'est la réponse à « et maintenant ? ». Lire « feuille Clients, ligne 47, colonne M »
+     * à l'écran, puis retrouver la ligne 47 dans son classeur, et recommencer trois cents
+     * fois, c'est un travail de copiste — et c'est là qu'on abandonne, pas à l'erreur.
+     */
+    #[Route('/importer/{idEntreprise}/{idRun}/anomalies', name: 'anomalies', requirements: ['idEntreprise' => Requirement::DIGITS, 'idRun' => Requirement::DIGITS], methods: ['GET'])]
+    public function anomalies(int $idEntreprise, int $idRun): Response
+    {
+        [$run, $refus] = $this->resoudreRun($idEntreprise, $idRun);
+        if ($refus !== null) {
+            return $refus;
+        }
+
+        $depot = (string) $run->getCheminFichier();
+        if (!is_file($depot)) {
+            throw $this->createNotFoundException(
+                'Le fichier déposé n\'est plus disponible : il a été importé, abandonné, ou a expiré.',
+            );
+        }
+
+        try {
+            // ⚠ On annote une COPIE. Le dépôt est la source que la confirmation relira :
+            // le modifier ferait diverger ce qui a été contrôlé de ce qui sera écrit.
+            $classeur = $this->annotateur->annoter($depot, $run->getRapport());
+        } catch (ClasseurIllisibleException $e) {
+            return new Response($e->getMessage(), Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $base = pathinfo((string) $run->getNomFichier(), PATHINFO_FILENAME) ?: 'import';
+
+        return $this->classeurEnReponse($classeur, sprintf('%s-anomalies.xlsx', $base));
+    }
+
+    /** Téléchargement d'un classeur produit à la volée, sur le patron des autres exports. */
+    private function classeurEnReponse(\PhpOffice\PhpSpreadsheet\Spreadsheet $classeur, string $nom): Response
+    {
+        $reponse = new StreamedResponse(static function () use ($classeur): void {
+            (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($classeur))->save('php://output');
+        });
+        $reponse->headers->set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $reponse->headers->set('Content-Disposition', HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_ATTACHMENT, $nom));
+        $reponse->headers->set('Cache-Control', 'no-store, private');
+
+        return $reponse;
+    }
+
+    /**
+     * Range les données par module, en conservant l'ordre topologique à l'intérieur de
+     * chaque groupe.
+     *
+     * Le module vient de la carte des droits, jamais d'une liste tenue ici : c'est ce qui
+     * garantit qu'un groupe de l'écran contient exactement ce que son nom annonce.
+     *
+     * @param array<string, \App\Echange\Canevas\RessourceDEchange> $ressources
+     *
+     * @return array<string, array<string, \App\Echange\Canevas\RessourceDEchange>>
+     */
+    private function grouperParModule(array $ressources): array
+    {
+        $groupes = [];
+        foreach ($ressources as $code => $ressource) {
+            $groupes[$ressource->module][$code] = $ressource;
+        }
+
+        // Ordre stable : deux affichages successifs ne doivent pas intervertir les groupes.
+        ksort($groupes);
+
+        return $groupes;
+    }
+
+    /**
+     * Codes de données demandés, lus depuis une liste séparée par des virgules.
+     *
+     * Vide = tout, à l'export comme à l'import : c'est le défaut annoncé aux deux écrans,
+     * et il reste juste même si les droits de l'utilisateur changent entre l'affichage et
+     * le clic.
+     *
+     * @return string[]
+     */
+    private function codesDemandes(string $brut): array
+    {
+        return array_values(array_filter(
+            array_map('trim', explode(',', $brut)),
+            static fn (string $code) => $code !== '',
+        ));
     }
 
     /**

@@ -166,6 +166,7 @@ final class CanevasDEchange
     private function construire(): array
     {
         $libelles = $this->accessResolver->libellesEntites();
+        $modules = $this->accessResolver->modulesEntites();
         $feuilles = [];
         $brutes = [];
         $arcs = [];
@@ -194,6 +195,9 @@ final class CanevasDEchange
             $brutes[$code] = new RessourceDEchange(
                 code: $code,
                 libelle: $libelle,
+                // Le module vient de la MEME carte que le libellé : rien de nouveau à
+                // déclarer, et les deux ne peuvent pas diverger.
+                module: $modules[$code] ?? 'Autres',
                 fqcn: $fqcn,
                 feuille: $this->nomDeFeuille($libelle, $code, $feuilles),
                 rang: 0,
@@ -219,6 +223,7 @@ final class CanevasDEchange
             $avecDependances[$code] = new RessourceDEchange(
                 code: $ressource->code,
                 libelle: $ressource->libelle,
+                module: $ressource->module,
                 fqcn: $ressource->fqcn,
                 feuille: $ressource->feuille,
                 rang: 0,

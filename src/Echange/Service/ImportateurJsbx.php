@@ -62,8 +62,10 @@ final class ImportateurJsbx
      * Passes 1 et 2 sur un fichier déposé. N'écrit rien en base métier ; persiste
      * seulement le contrôle et son rapport.
      *
-     * @param bool $confirmeAutreCabinet l'utilisateur a explicitement accepté d'importer
-     *                                   un fichier issu d'un autre cabinet
+     * @param bool     $confirmeAutreCabinet l'utilisateur a explicitement accepté d'importer
+     *                                       un fichier issu d'un autre cabinet
+     * @param string[] $donnees              codes des données à retenir ; vide = tout ce que
+     *                                       le fichier contient
      */
     public function controler(
         string $chemin,
@@ -73,6 +75,7 @@ final class ImportateurJsbx
         bool $suppressionsAutorisees = false,
         bool $confirmeAutreCabinet = false,
         ?Progression $progression = null,
+        array $donnees = [],
     ): EchangeImportRun {
         $progression ??= Progression::muette();
         $progression->etape('Lecture du fichier');
@@ -85,6 +88,7 @@ final class ImportateurJsbx
             ->setEmpreinteFichier(is_file($chemin) ? hash_file('sha256', $chemin) : null)
             ->setStatut(EchangeImportRun::STATUT_CONTROLE)
             ->setSuppressionsAutorisees($suppressionsAutorisees)
+            ->setDonnees($donnees)
             ->setExpireLe(new \DateTimeImmutable('+' . EchangeImportRun::DUREE_DE_VIE_HEURES . ' hours'));
         $run->setEntreprise($entreprise);
         $run->setInvite($invite);
@@ -100,6 +104,7 @@ final class ImportateurJsbx
 
         $ecrivables = $this->canevas->ressourcesEcrivables($invite);
         $inventaire = $this->lecteur->inventaireDesFeuilles($classeur, $this->canevas->toutes());
+        $inventaire = $this->restreindre($inventaire, $donnees);
 
         if (!$this->passeStructurelle($classeur, $entreprise, $inventaire, $rapport, $confirmeAutreCabinet)) {
             return $this->cloturer($run, $rapport, EchangeImportRun::STATUT_ECHEC);
@@ -117,6 +122,44 @@ final class ImportateurJsbx
                 ? EchangeImportRun::STATUT_EN_ATTENTE_CONFIRMATION
                 : EchangeImportRun::STATUT_ECHEC,
         );
+    }
+
+    /**
+     * Ne retient que les données demandées. Vide = tout ce que le fichier contient.
+     *
+     * Une feuille écartée devient exactement une FEUILLE HORS PÉRIMÈTRE — le cas que
+     * l'import sait déjà traiter sans erreur. On ne l'invente donc pas : on réutilise le
+     * chemin qui existe.
+     *
+     * ⚠ CE FILTRE NE MET RIEN À L'ABRI. Écarter les taxes alors qu'une ligne de tranche y
+     * renvoie produit un renvoi irrésolu, donc une erreur bloquante. C'est voulu : le
+     * filtrage échoue bruyamment plutôt que d'écrire des liens vides, et l'utilisateur
+     * apprend que ces deux données ne se séparent pas.
+     *
+     * @param array{presentes: array<string, RessourceDEchange>, absentes: string[], inconnues: string[]} $inventaire
+     * @param string[]                                                                                    $donnees
+     *
+     * @return array{presentes: array<string, RessourceDEchange>, absentes: string[], inconnues: string[]}
+     */
+    private function restreindre(array $inventaire, array $donnees): array
+    {
+        if ($donnees === []) {
+            return $inventaire;
+        }
+
+        $retenues = [];
+        foreach ($inventaire['presentes'] as $code => $ressource) {
+            if (in_array($code, $donnees, true)) {
+                $retenues[$code] = $ressource;
+                continue;
+            }
+            // Écartée par choix : elle rejoint les feuilles hors périmètre, sans bruit.
+            $inventaire['absentes'][] = $ressource->feuille;
+        }
+
+        $inventaire['presentes'] = $retenues;
+
+        return $inventaire;
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -606,6 +649,11 @@ final class ImportateurJsbx
 
         $classeur = $this->lecteur->ouvrir($chemin);
         $inventaire = $this->lecteur->inventaireDesFeuilles($classeur, $this->canevas->toutes());
+        // ⚠ LE PÉRIMÈTRE CHOISI AU DÉPÔT EST RÉAPPLIQUÉ. Le recontrôle repart du fichier
+        // entier : sans cette ligne, confirmer un import volontairement restreint à la
+        // production réécrirait aussi les taxes et les monnaies que l'utilisateur avait
+        // écartées — et rien, ni à l'écran ni au rapport, ne le lui aurait dit.
+        $inventaire = $this->restreindre($inventaire, $run->getDonnees());
         $ecrivables = $this->canevas->ressourcesEcrivables($invite);
 
         // L'origine étrangère du fichier a déjà été assumée au dépôt : on ne redemande
