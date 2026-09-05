@@ -120,6 +120,13 @@ final class GeminiAiEngine implements AiEngineInterface
         private readonly ExecuteurDOutils $executeur,
         #[Autowire(env: 'GEMINI_API_KEY')] private readonly string $apiKey,
         #[Autowire(env: 'GEMINI_MODEL')] private readonly string $model,
+        // MODÈLES DE SECOURS, séparés par des virgules. Vide = aucun repli.
+        //
+        // Ils ne servent QUE sur un 503 : le modèle principal est débordé chez Google,
+        // et aucune attente raisonnable n'y change quoi que ce soit. Le compteur de
+        // débit de Google étant tenu PAR MODÈLE, un modèle de secours arrive avec sa
+        // propre fenêtre — c'est ce qui rend le repli utile et non cosmétique.
+        #[Autowire(env: 'GEMINI_MODELES_REPLI')] private readonly string $modelesDeRepli,
         private readonly LoggerInterface $logger,
         private readonly JournalTokens $journal,
         private readonly BudgetDebit $budget,
@@ -139,7 +146,24 @@ final class GeminiAiEngine implements AiEngineInterface
         // la capacité de PHP à dormir. Une suite qui dort n'est plus une suite.
         private readonly ?\Closure $dormir = null,
     ) {
+        $this->modeleCourant = $model;
+        $this->replisRestants = array_values(array_filter(
+            array_map('trim', explode(',', $modelesDeRepli)),
+            static fn (string $m): bool => $m !== '' && $m !== $model,
+        ));
     }
+
+    /**
+     * LE MODÈLE RÉELLEMENT INTERROGÉ, qui n'est pas toujours celui de la configuration.
+     *
+     * Un 503 le fait basculer sur un modèle de secours, et il y RESTE pour le reste du
+     * message : revenir au principal à chaque tour ferait repayer un échec certain à
+     * chaque appel d'outil, sur un message qui en compte souvent cinq ou six.
+     */
+    private string $modeleCourant;
+
+    /** @var string[] modèles de secours pas encore essayés, dans l'ordre */
+    private array $replisRestants;
 
     public function name(): string
     {
@@ -148,7 +172,7 @@ final class GeminiAiEngine implements AiEngineInterface
 
     public function modelName(): string
     {
-        return $this->model;
+        return $this->modeleCourant;
     }
 
     public function reply(AiRequest $request): AiReply
@@ -288,7 +312,7 @@ final class GeminiAiEngine implements AiEngineInterface
             // plutôt qu'en fin de message est indispensable : le quota est
             // partagé, une autre requête en cours doit voir ce que celle-ci vient
             // de consommer, sans attendre qu'elle se termine.
-            $this->budget->enregistrer($this->model, $tokensDuTour);
+            $this->budget->enregistrer($this->modeleCourant, $tokensDuTour);
 
             $parts = $response['candidates'][0]['content']['parts'] ?? [];
             $functionCalls = array_values(array_filter($parts, static fn (array $p) => isset($p['functionCall'])));
@@ -324,7 +348,7 @@ final class GeminiAiEngine implements AiEngineInterface
             $this->journal->tour(
                 $request,
                 $this->name(),
-                $this->model,
+                $this->modeleCourant,
                 $round + 1,
                 [
                     'entree' => $tokensDuTour,
@@ -495,7 +519,7 @@ final class GeminiAiEngine implements AiEngineInterface
                     + \strlen($this->contextBuilder->toSystemPrompt($request, $trousse, Phase::REDACTION)))
                 / self::OCTETS_PAR_TOKEN,
             );
-            $attente = $this->budget->secondesAvantLiberation($this->model, $estime);
+            $attente = $this->budget->secondesAvantLiberation($this->modeleCourant, $estime);
 
             // Assez de débit tout de suite : on enchaîne, c'est le cas courant.
             if ($attente === 0) {
@@ -511,7 +535,7 @@ final class GeminiAiEngine implements AiEngineInterface
                     'tours'          => $round + 1,
                     'cumulEntree'    => $cumulInput,
                     'estimeProchain' => $estime,
-                    'restant'        => $this->budget->restant($this->model),
+                    'restant'        => $this->budget->restant($this->modeleCourant),
                     'attente'        => $attente,
                     'dernierOutil'   => $outilsDuTour[0] ?? null,
                 ]);
@@ -535,7 +559,7 @@ final class GeminiAiEngine implements AiEngineInterface
 
             // La fenêtre se libère dans quelques secondes : patienter et finir le
             // travail vaut infiniment mieux que jeter les tours déjà payés.
-            $this->journal->attente($request, $this->name(), $this->model, $round + 1, $attente, $estime);
+            $this->journal->attente($request, $this->name(), $this->modeleCourant, $round + 1, $attente, $estime);
             ($this->dormir ?? static fn (int $s) => sleep($s))($attente);
             $attenteCumulee += $attente;
         }
@@ -582,7 +606,7 @@ final class GeminiAiEngine implements AiEngineInterface
         $this->journal->message(
             $request,
             $this->name(),
-            $this->model,
+            $this->modeleCourant,
             $issue,
             $tours,
             $cumulEntree,
@@ -640,6 +664,13 @@ final class GeminiAiEngine implements AiEngineInterface
         try {
             return $this->call($request, $contents, $trousse, $phase);
         } catch (\Throwable $e) {
+            // ⚠ LE 503 NE SE SOIGNE PAS EN ATTENDANT. Il dit que le modèle est débordé
+            // chez Google, pas que nous avons trop consommé : le fournisseur n'annonce
+            // aucun délai, et l'attente n'a rien de prévisible. On change de modèle.
+            if (AiEngineFailure::estMoteurIndisponible($e)) {
+                return $this->basculerSurUnRepli($e, $request, $contents, $trousse, $phase);
+            }
+
             $delai = AiEngineFailure::estLimiteDeDebit($e)
                 ? AiEngineFailure::secondesAvantNouvelEssai($e)
                 : null;
@@ -656,6 +687,59 @@ final class GeminiAiEngine implements AiEngineInterface
 
             return $this->call($request, $contents, $trousse, $phase);
         }
+    }
+
+    /**
+     * Rejoue l'appel sur les modèles de secours, l'un après l'autre.
+     *
+     * ⚠ LE BASCULEMENT EST DÉFINITIF POUR CE MESSAGE. Le modèle retenu le reste pour
+     * tous les tours suivants : un message qui appelle six outils repaierait sinon six
+     * échecs certains avant chaque succès, et l'utilisateur attendrait six fois le
+     * délai réseau pour rien.
+     *
+     * ⚠ ON NE REVIENT PAS AU MODÈLE PRINCIPAL EN COURS DE ROUTE, et on ne réessaie pas
+     * un secours déjà tombé : sans cette mémoire, un fournisseur durablement saturé
+     * ferait tourner la boucle en rond à chaque tour.
+     *
+     * Si tous les secours échouent, c'est l'exception D'ORIGINE qui remonte — celle du
+     * modèle principal. C'est elle qui décrit la panne réelle ; celle du dernier
+     * secours ne parlerait que d'un modèle que l'utilisateur n'a jamais choisi.
+     *
+     * @param array<int, array<string, mixed>> $contents
+     *
+     * @return array{reponse: array, octets: array<string, int>}
+     */
+    private function basculerSurUnRepli(
+        \Throwable $origine,
+        AiRequest $request,
+        array $contents,
+        Trousse $trousse,
+        Phase $phase,
+    ): array {
+        while ($this->replisRestants !== []) {
+            $abandonne = $this->modeleCourant;
+            $this->modeleCourant = array_shift($this->replisRestants);
+
+            $this->logger->warning('Assistant IA (gemini) : modèle surchargé (503), bascule sur un modèle de secours.', [
+                'abandonne' => $abandonne,
+                'repli'     => $this->modeleCourant,
+                'details'   => AiEngineFailure::detailsPourJournal($origine),
+            ]);
+
+            try {
+                return $this->call($request, $contents, $trousse, $phase);
+            } catch (\Throwable $e) {
+                // Le secours est débordé lui aussi : on passe au suivant. Toute autre
+                // panne, en revanche, appartient à ce modèle-là et doit remonter telle
+                // quelle — un 400 sur un modèle qui refuse notre schéma d'outils n'a
+                // rien à voir avec une surcharge, et l'enterrer serait perdre la cause.
+                if (!AiEngineFailure::estMoteurIndisponible($e)) {
+                    throw $e;
+                }
+            }
+        }
+
+        throw $origine;
     }
 
     /**
@@ -677,7 +761,7 @@ final class GeminiAiEngine implements AiEngineInterface
         // payer le catalogue deux fois par message.
         $declarations = $phase->declareDesOutils() ? $this->dialecte->declarations($trousse, $request->scope) : [];
 
-        $response = $this->httpClient->request('POST', sprintf('%s/%s:generateContent', self::API_BASE, $this->model), [
+        $response = $this->httpClient->request('POST', sprintf('%s/%s:generateContent', self::API_BASE, $this->modeleCourant), [
             'headers' => [
                 'x-goog-api-key' => $this->apiKey,
                 'content-type'   => 'application/json',

@@ -114,10 +114,17 @@ export default class extends Controller {
      */
     basculerModule(event) {
         const module = event.params.module;
-        const coche = event.target.checked;
         if (!module) return;
 
-        for (const case_ of this.#casesDuModule(module)) {
+        // ⚠ L'ÉTAT DU CHIP N'EST PAS DANS LE CHIP. C'est un bouton, pas une case : rien
+        // ne le « coche ». Ce qu'il vaut se lit sur ses lignes, à l'instant du clic —
+        // sans quoi un chip devenu partiel par une dépendance tirée d'ailleurs
+        // renverrait l'état d'avant, et le clic ferait l'inverse de ce qu'on voit.
+        const lignes = this.#casesDuModule(module);
+        const entier = lignes.length > 0 && lignes.every((c) => c.checked);
+        const coche = !entier;
+
+        for (const case_ of lignes) {
             const code = case_.dataset.echangeCodeParam;
             if (coche) {
                 this.#cocherAvecDependances(code, new Set());
@@ -127,17 +134,6 @@ export default class extends Controller {
         }
 
         this.#rafraichirSelection();
-    }
-
-    /**
-     * Empêche un clic sur la case d'un module de replier ce module.
-     *
-     * Le <summary> bascule le repli pour TOUT clic qu'il reçoit, y compris celui d'une
-     * case posée à l'intérieur. Cocher « Finances » refermait donc le groupe qu'on
-     * venait d'ouvrir pour le vérifier.
-     */
-    arreter(event) {
-        event.stopPropagation();
     }
 
     /** Les cases d'un module donné. */
@@ -242,25 +238,37 @@ export default class extends Controller {
         // deux de ses données sortiront serait un mensonge d'écran.
         //
         // `indeterminate` existe précisément pour cela : ni tout, ni rien.
-        for (const enTete of this.moduleTargets) {
-            const module = enTete.dataset.echangeModuleParam;
+        for (const chip of this.moduleTargets) {
+            const module = chip.dataset.echangeModuleParam;
             const lignes = this.#casesDuModule(module);
-            const cochees = lignes.filter((c) => c.checked).length;
+            const retenues = lignes.filter((c) => c.checked).length;
+            const entier = retenues === lignes.length;
 
-            enTete.checked = cochees > 0;
-            enTete.indeterminate = cochees > 0 && cochees < lignes.length;
-            enTete.setAttribute(
+            // TROIS ÉTATS. `mixed` n'est pas un raffinement : sans lui, un chip éteint
+            // et un chip à moitié retenu se ressembleraient, et l'utilisateur croirait
+            // avoir écarté une famille dont deux données sortiront quand même.
+            chip.setAttribute('aria-pressed', retenues === 0 ? 'false' : (entier ? 'true' : 'mixed'));
+            chip.classList.toggle('is-active', entier);
+
+            // Le compte porte l'état EN TOUTES LETTRES : « 4 / 10 » se lit sans couleur,
+            // et survit à l'impression comme au daltonisme (WCAG 1.4.1).
+            const badge = chip.querySelector('[data-echange-compte-module]');
+            if (badge) {
+                badge.textContent = entier ? `${lignes.length}` : `${retenues} / ${lignes.length}`;
+            }
+
+            chip.setAttribute(
                 'aria-label',
-                `${module} — ${cochees} donnée${cochees > 1 ? 's' : ''} sur ${lignes.length}`,
+                `${module} — ${retenues} donnée${retenues > 1 ? 's' : ''} retenue${retenues > 1 ? 's' : ''} sur ${lignes.length}`,
             );
 
-            // Le compte est écrit EN TOUTES LETTRES à côté du titre : la couleur du
-            // badge ne fait que doubler ce que le texte dit déjà (WCAG 1.4.1).
-            const badge = this.element.querySelector(`[data-echange-compte-module="${CSS.escape(module)}"]`);
-            if (badge) {
-                badge.textContent = cochees === lignes.length ? `${lignes.length}` : `${cochees} sur ${lignes.length}`;
-                badge.classList.toggle('is-partiel', cochees > 0 && cochees < lignes.length);
-                badge.classList.toggle('is-vide', cochees === 0);
+            // Le détail répété en tête de groupe : on descend dans la liste sans avoir
+            // à remonter aux chips pour savoir où l'on en est.
+            const detail = this.element.querySelector(`[data-echange-detail-module="${CSS.escape(module)}"]`);
+            if (detail) {
+                detail.textContent = entier ? `${lignes.length}` : `${retenues} sur ${lignes.length}`;
+                detail.classList.toggle('is-partiel', retenues > 0 && !entier);
+                detail.classList.toggle('is-vide', retenues === 0);
             }
         }
 

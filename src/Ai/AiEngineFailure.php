@@ -32,8 +32,41 @@ final class AiEngineFailure
                 . ' — votre message a bien été conservé.';
         }
 
+        if (self::estMoteurIndisponible($e)) {
+            return "Le modèle d'intelligence sur lequel je tourne est surchargé chez le "
+                . 'fournisseur, et mes modèles de secours le sont aussi. '
+                . "Ce n'est pas votre demande : réessayez dans une minute — votre message "
+                . 'a bien été conservé.';
+        }
+
         return "Je rencontre un problème technique pour joindre mon moteur d'intelligence. "
             . 'Réessayez dans un instant — votre message a bien été conservé.';
+    }
+
+    /**
+     * L'échec est-il une INDISPONIBILITÉ DU MODÈLE (HTTP 503) ?
+     *
+     * ⚠ À NE PAS CONFONDRE AVEC LE 429. Le 429 dit « vous avez trop consommé » : le
+     * quota est à nous, attendre le libère, et réessayer sur le même modèle a du sens.
+     * Le 503 dit « ce modèle est débordé » — c'est une saturation CHEZ GOOGLE, partagée
+     * par tous ses clients. Attendre n'y change rien de prévisible, et le fournisseur
+     * n'annonce d'ailleurs aucun délai. La seule réponse utile est de changer de modèle.
+     *
+     * C'est la panne du 2026-09-04, où Ket a passé une journée à répondre « je rencontre
+     * un problème technique » alors qu'un autre modèle de la même famille répondait
+     * normalement.
+     */
+    public static function estMoteurIndisponible(\Throwable $e): bool
+    {
+        if (!$e instanceof HttpExceptionInterface) {
+            return false;
+        }
+
+        try {
+            return $e->getResponse()->getStatusCode() === 503;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /** L'échec est-il un HTTP 429 (Too Many Requests) du fournisseur ? */

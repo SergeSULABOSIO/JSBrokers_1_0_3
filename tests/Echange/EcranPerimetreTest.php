@@ -91,7 +91,7 @@ class EcranPerimetreTest extends WebTestCase
         $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=exporter', $entreprise->getId()));
         self::assertResponseIsSuccessful();
 
-        $enTetes = $crawler->filter('input[data-echange-target="module"]');
+        $enTetes = $crawler->filter('button.jsb-preset-chip[data-echange-target="module"]');
         self::assertGreaterThan(0, $enTetes->count());
 
         foreach ($enTetes as $noeud) {
@@ -107,6 +107,36 @@ class EcranPerimetreTest extends WebTestCase
                 $lignes->count(),
                 sprintf('Le groupe « %s » ne commande aucune ligne.', $module),
             );
+        }
+    }
+
+    /**
+     * ⚠ LES CHIPS SONT CEUX DES LISTES, PAS DES SOSIES.
+     *
+     * Un gabarit qui ressemble au modèle sans en être un se met à en diverger dès la
+     * première retouche de la charte, et l'écran finit par avoir sa propre grammaire.
+     * On vérifie donc la structure canonique : barre, pilule, titre purement textuel.
+     */
+    public function testLesFamillesSuiventLeGabaritDeChipsDesListes(): void
+    {
+        [$entreprise] = $this->fixture();
+
+        $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=exporter', $entreprise->getId()));
+        self::assertResponseIsSuccessful();
+
+        $groupe = $crawler->filter('.jsb-preset-filters-bar .jsb-preset-filters.jsb-control-pill[aria-label="Familles de données"]');
+        self::assertCount(1, $groupe, 'La barre de familles doit suivre le gabarit des listes.');
+        self::assertSame('familles', trim($groupe->filter('.jsb-preset-filters__titre')->text()));
+
+        // Trois états possibles, et aucun autre : un chip qui n'annonce rien laisserait
+        // un lecteur d'écran muet sur ce qui va sortir du cabinet.
+        foreach ($groupe->filter('button.jsb-preset-chip[data-echange-target="module"]') as $chip) {
+            self::assertContains(
+                $chip->getAttribute('aria-pressed'),
+                ['true', 'false', 'mixed'],
+                'Un chip de famille doit annoncer son état.',
+            );
+            self::assertNotSame('', trim($chip->textContent));
         }
     }
 
@@ -139,7 +169,10 @@ class EcranPerimetreTest extends WebTestCase
         self::assertResponseIsSuccessful();
 
         self::assertCount(1, $crawler->filter('details.ech-perimetre-import'));
-        self::assertGreaterThan(0, $crawler->filter('details.ech-perimetre-import input[data-echange-target="module"]')->count());
+        self::assertGreaterThan(
+            0,
+            $crawler->filter('details.ech-perimetre-import button.jsb-preset-chip[data-echange-target="module"]')->count(),
+        );
 
         // Le bloc précède le dépôt dans le document : l'ordre de lecture EST l'ordre du
         // geste, et un lecteur d'écran n'a pas d'autre indice.
