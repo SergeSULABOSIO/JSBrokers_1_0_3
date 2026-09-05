@@ -3,6 +3,7 @@
 namespace App\Tests\Ai;
 
 use App\Ai\AiContextBuilder;
+use App\Ai\AiEngineFailure;
 use App\Ai\AiRequest;
 use App\Ai\Comprehension\Comprehenseur;
 use App\Ai\Debit\BudgetDebit;
@@ -534,6 +535,7 @@ class GeminiAiEngineTest extends TestCase
         ?\Closure $dormir = null,
         ?AiContextBuilder $contextBuilder = null,
         ?array $comprehension = null,
+        string $replis = '',
     ): GeminiAiEngine {
         if ($contextBuilder === null) {
             $contextBuilder = $this->createMock(AiContextBuilder::class);
@@ -562,6 +564,7 @@ class GeminiAiEngineTest extends TestCase
             new ExecuteurDOutils($tools),
             'gm-test',
             'gemini-2.5-flash',
+            $replis,
             new NullLogger(),
             $journal,
             $budget ?? $this->makeBudget(),
@@ -599,6 +602,157 @@ class GeminiAiEngineTest extends TestCase
             array_column($this->telemetrie, 'context'),
             static fn (array $c) => ($c['evenement'] ?? null) === 'tour',
         ));
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────────
+    // Surcharge du modèle chez le fournisseur (503) : changer de modèle, pas attendre
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    /** Réponse 503 « model is overloaded », telle que Google la renvoie. */
+    private static function surcharge(): MockResponse
+    {
+        return new MockResponse(
+            json_encode(['error' => ['code' => 503, 'status' => 'UNAVAILABLE', 'message' => 'The model is overloaded.']]),
+            ['http_code' => 503],
+        );
+    }
+
+    /**
+     * LA PANNE DU 2026-09-04 : le modèle principal est débordé, un autre répond.
+     *
+     * Ket a passé une journée à dire « je rencontre un problème technique » alors qu'un
+     * modèle de la même famille répondait normalement. Attendre n'y pouvait rien : le
+     * 503 est une saturation CHEZ GOOGLE, sans délai annoncé.
+     */
+    public function testUn503BasculeSurLeModeleDeSecours(): void
+    {
+        $modelesAppeles = [];
+        $http = new MockHttpClient(function (string $methode, string $url) use (&$modelesAppeles): MockResponse {
+            $modelesAppeles[] = preg_replace('#^.*/models/([^:]+):.*$#', '$1', $url);
+
+            return \count($modelesAppeles) === 1
+                ? self::surcharge()
+                : new MockResponse(json_encode(self::texte('Voici votre portefeuille.')));
+        });
+
+        $reply = $this->makeEngine($http, replis: 'gemini-secours')->reply($this->makeRequest('Où en suis-je ?'));
+
+        self::assertSame('Voici votre portefeuille.', $reply->content, 'Le repli doit rendre une vraie réponse.');
+        self::assertSame(['gemini-2.5-flash', 'gemini-secours'], $modelesAppeles);
+    }
+
+    /**
+     * ⚠ LE REPLI TIENT POUR TOUT LE MESSAGE.
+     *
+     * Un message qui appelle un outil fait plusieurs allers-retours. Revenir au modèle
+     * principal après le premier repaierait un 503 certain à chaque tour, et
+     * l'utilisateur attendrait autant de délais réseau pour rien.
+     */
+    public function testLeRepliTientPourLesToursSuivants(): void
+    {
+        $modelesAppeles = [];
+        $http = new MockHttpClient(function (string $methode, string $url) use (&$modelesAppeles): MockResponse {
+            $modelesAppeles[] = preg_replace('#^.*/models/([^:]+):.*$#', '$1', $url);
+
+            if (\count($modelesAppeles) === 1) {
+                return self::surcharge();
+            }
+
+            // Le premier tour utile appelle l'outil, le second conclut.
+            return new MockResponse(json_encode(\count($modelesAppeles) === 2
+                ? $this->tourAvecOutil(1000)
+                : self::texte('Trois polices arrivent à échéance.')));
+        });
+
+        $tool = $this->makeTool(AiToolResult::ok(['total' => 3]));
+        $reply = $this->makeEngine($http, [$tool], replis: 'gemini-secours')->reply($this->makeRequest('Combien ?'));
+
+        self::assertSame('Trois polices arrivent à échéance.', $reply->content);
+        self::assertSame(
+            ['gemini-2.5-flash', 'gemini-secours', 'gemini-secours'],
+            $modelesAppeles,
+            'Le modèle principal ne doit plus être réessayé une fois le repli engagé.',
+        );
+    }
+
+    /** Les secours sont essayés dans l'ordre, et chacun une seule fois. */
+    public function testLesSecoursSontEssayesDansLOrdreEtUneSeuleFois(): void
+    {
+        $modelesAppeles = [];
+        $http = new MockHttpClient(function (string $methode, string $url) use (&$modelesAppeles): MockResponse {
+            $modelesAppeles[] = preg_replace('#^.*/models/([^:]+):.*$#', '$1', $url);
+
+            return \count($modelesAppeles) < 3
+                ? self::surcharge()
+                : new MockResponse(json_encode(self::texte('Enfin.')));
+        });
+
+        $reply = $this->makeEngine($http, replis: 'secours-a, secours-b')->reply($this->makeRequest('Bonjour'));
+
+        self::assertSame('Enfin.', $reply->content);
+        self::assertSame(['gemini-2.5-flash', 'secours-a', 'secours-b'], $modelesAppeles);
+    }
+
+    /**
+     * Tous surchargés : c'est l'exception D'ORIGINE qui remonte, celle du modèle
+     * principal — la seule qui décrive la panne que l'utilisateur subit.
+     */
+    public function testTousLesSecoursSurchargesRemonteLaPanne(): void
+    {
+        $http = new MockHttpClient(static fn (): MockResponse => self::surcharge());
+
+        $engine = $this->makeEngine($http, replis: 'secours-a');
+
+        try {
+            $engine->reply($this->makeRequest('Bonjour'));
+            self::fail('Une surcharge générale doit remonter, pas être avalée.');
+        } catch (\Throwable $e) {
+            self::assertTrue(AiEngineFailure::estMoteurIndisponible($e));
+            // Et le message rendu à l'utilisateur nomme la vraie cause.
+            self::assertStringContainsString('surchargé', AiEngineFailure::messagePour($e));
+        }
+    }
+
+    /**
+     * ⚠ SEULE LA SURCHARGE FAIT BASCULER. Un 400 appartient au modèle qu'on interroge —
+     * un schéma d'outils qu'il refuse, par exemple. Le rejouer ailleurs masquerait la
+     * cause et ferait payer un second appel pour la même erreur.
+     */
+    public function testUneAutrePanneNeFaitPasBasculer(): void
+    {
+        $modelesAppeles = [];
+        $http = new MockHttpClient(function (string $methode, string $url) use (&$modelesAppeles): MockResponse {
+            $modelesAppeles[] = preg_replace('#^.*/models/([^:]+):.*$#', '$1', $url);
+
+            return new MockResponse(json_encode(['error' => ['code' => 400]]), ['http_code' => 400]);
+        });
+
+        try {
+            $this->makeEngine($http, replis: 'secours-a')->reply($this->makeRequest('Bonjour'));
+        } catch (\Throwable) {
+            // Attendu : la panne remonte telle quelle.
+        }
+
+        self::assertSame(['gemini-2.5-flash'], $modelesAppeles, 'Un 400 ne doit pas déclencher de repli.');
+    }
+
+    /** Sans secours configuré, rien ne change : la panne remonte au premier appel. */
+    public function testSansSecoursConfigureLaPanneRemonteAussitot(): void
+    {
+        $appels = 0;
+        $http = new MockHttpClient(function () use (&$appels): MockResponse {
+            ++$appels;
+
+            return self::surcharge();
+        });
+
+        try {
+            $this->makeEngine($http)->reply($this->makeRequest('Bonjour'));
+        } catch (\Throwable) {
+            // Attendu.
+        }
+
+        self::assertSame(1, $appels);
     }
 
     private static function texte(string $text): array

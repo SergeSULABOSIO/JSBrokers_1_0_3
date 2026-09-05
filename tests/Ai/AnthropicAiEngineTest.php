@@ -328,6 +328,7 @@ class AnthropicAiEngineTest extends TestCase
             new ExecuteurDOutils([]),
             'gm-x',
             'gemini-2.5-flash',
+            '', // aucun modèle de secours : ce test ne lit que name()
             new NullLogger(),
             new JournalTokens(new NullLogger(), new OutilsDePlan([])),
             new BudgetDebit(new ArrayAdapter()),

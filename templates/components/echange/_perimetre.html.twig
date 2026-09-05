@@ -19,11 +19,47 @@
 #}
 {% set estImport = contexte == 'importer' %}
 
-{# Actions de sélection : de vrais boutons — ce sont des ACTIONS, pas des liens — avec
-   une zone cliquable qui tient les 44 px de WCAG 2.5.5. #}
-<div class="ech-selection">
-    <button type="button" class="ech-bouton-lien" data-action="click->echange#toutCocher">Tout cocher</button>
-    <button type="button" class="ech-bouton-lien" data-action="click->echange#toutDecocher">Tout décocher</button>
+{# LES FAMILLES SE CHOISISSENT PAR CHIPS — le contrôle de la rubrique.
+
+   Markup repris tel quel du gabarit de liste (`_List_manager.html.twig`) :
+   `jsb-preset-filters-bar` > `jsb-preset-filters.jsb-control-pill` > titre textuel
+   puis `jsb-preset-chip`. Le titre est PUREMENT TEXTUEL, l'icône appartient au chip où
+   elle dit l'état — c'est la règle de toutes les rubriques.
+
+   ⚠ TROIS ÉTATS, PAS DEUX. Une famille peut être partiellement retenue sans qu'on l'ait
+   voulu : cocher une police tire son client, fût-il rangé dans une autre famille. Un
+   chip à deux états mentirait alors sur ce qui va sortir. `aria-pressed="mixed"` existe
+   exactement pour ça, et le compteur l'écrit en toutes lettres — la couleur ne fait que
+   doubler le texte (WCAG 1.4.1). #}
+<div class="jsb-preset-filters-bar">
+    <div class="jsb-preset-filters jsb-control-pill" role="group" aria-label="Familles de données">
+        <span class="jsb-preset-filters__titre" aria-hidden="true">familles</span>
+        {% for module, ressourcesDuModule in parModule %}
+            <button type="button"
+                    class="jsb-preset-chip is-active"
+                    data-echange-target="module"
+                    data-echange-module-param="{{ module }}"
+                    data-action="click->echange#basculerModule"
+                    aria-pressed="true">
+                <span class="jsb-preset-chip__icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('action:check'), {width: '15px', height: '15px'}) }}</span>
+                <span>{{ module }}</span>
+                <span class="jsb-preset-chip__count" data-echange-compte-module="{{ module }}">{{ ressourcesDuModule|length }}</span>
+            </button>
+        {% endfor %}
+    </div>
+
+    {# Gestes d'ensemble. Ce ne sont pas des états : pas d'`aria-pressed`, sinon un
+       lecteur d'écran annoncerait « non pressé » sur un bouton qui ne retient rien. #}
+    <div class="jsb-preset-filters jsb-control-pill" role="group" aria-label="Sélection d'ensemble">
+        <span class="jsb-preset-filters__titre" aria-hidden="true">tout</span>
+        <button type="button" class="jsb-preset-chip" data-action="click->echange#toutCocher">
+            <span>Tout cocher</span>
+        </button>
+        <button type="button" class="jsb-preset-chip" data-action="click->echange#toutDecocher">
+            <span>Tout décocher</span>
+        </button>
+    </div>
+
     {# role=status : le compteur change sans que l'utilisateur agisse sur lui, un lecteur
        d'écran doit donc l'annoncer. #}
     <span class="ech-compte" role="status" data-echange-target="compteSelection"></span>
@@ -34,19 +70,11 @@
        vérifier. Le repli est là pour ranger, pas pour dissimuler. #}
     <details class="ech-groupe" open>
         <summary class="ech-groupe-tete">
-            {# stopPropagation sur la case : sans cela, la cocher replierait le groupe,
-               puisque tout clic reçu par le <summary> le bascule. #}
-            <span class="ech-groupe-case" data-action="click->echange#arreter">
-                <input type="checkbox"
-                       class="form-check-input"
-                       id="ech-{{ contexte }}-mod-{{ module|lower|replace({' ': '-'}) }}"
-                       checked
-                       data-echange-target="module"
-                       data-echange-module-param="{{ module }}"
-                       data-action="change->echange#basculerModule">
-                <label for="ech-{{ contexte }}-mod-{{ module|lower|replace({' ': '-'}) }}" class="ech-groupe-nom">{{ module }}</label>
-            </span>
-            <span class="ech-groupe-compte" data-echange-compte-module="{{ module }}">{{ ressourcesDuModule|length }}</span>
+            {# Le titre ne commande plus rien : la famille se choisit au chip, en haut.
+               Deux commandes pour un seul état finissaient toujours par diverger, et
+               l'utilisateur ne savait plus laquelle disait vrai. #}
+            <span class="ech-groupe-nom">{{ module }}</span>
+            <span class="ech-groupe-compte" data-echange-detail-module="{{ module }}">{{ ressourcesDuModule|length }}</span>
             {# Chevron en CSS pur : il ne porte aucune information que le repli lui-même
                n'exprime pas, et le marqueur natif du <summary> ne se stylise pas partout. #}
             <span class="ech-groupe-chevron" aria-hidden="true"></span>
