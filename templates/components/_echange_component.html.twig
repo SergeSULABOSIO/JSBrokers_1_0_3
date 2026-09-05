@@ -232,6 +232,9 @@
             display:flex; flex-wrap:wrap; align-items:center; gap:.6rem;
             margin:0 0 1rem;
         }
+        /* Dans la barre d'actions, le gabarit n'est plus un bloc : il s'aligne sur ses
+           voisins et abandonne sa marge. */
+        .jsb-echange .ech-actions .ech-gabarit { margin:0; }
         .jsb-echange .ech-gabarit .btn { display:inline-flex; align-items:center; gap:.4rem; white-space:nowrap; min-height:38px; }
         /* Un lien désarmé (aucune donnée retenue) ne doit pas se donner l'air cliquable. */
         .jsb-echange .ech-gabarit a[aria-disabled="true"] { opacity:.65; pointer-events:none; }
@@ -245,12 +248,14 @@
             font-size:.83rem;
         }
 
-        /* Périmètre d'import : replié par défaut — c'est un réglage, pas une étape. */
-        .jsb-echange .ech-perimetre-import {
+        /* Le volet du périmètre : replié par défaut, dans les DEUX onglets. C'est un
+           réglage, pas une étape — et cinq groupes déroulés d'office faisaient trois
+           écrans de hauteur avant d'atteindre le bouton. */
+        .jsb-echange .ech-perimetre-volet {
             border:1px dashed #dee2e6; border-radius:10px; padding:.25rem .85rem;
             margin-bottom:1rem; background:#ffffff;
         }
-        .jsb-echange .ech-perimetre-import[open] { border-style:solid; border-color:#0047AB; padding-bottom:.85rem; }
+        .jsb-echange .ech-perimetre-volet[open] { border-style:solid; border-color:#0047AB; padding-bottom:.85rem; }
         .jsb-echange .ech-perimetre-tete {
             display:flex; align-items:center; gap:.6rem; cursor:pointer;
             min-height:44px; list-style:none; user-select:none;
@@ -345,11 +350,9 @@
             <h3 class="ech-titre" id="ech-perimetre-titre">Que voulez-vous exporter ?</h3>
             <p class="ech-note" style="margin:0 0 1rem;">
                 Vos <strong>données de production</strong> sont retenues d'office — clients,
-                polices, propositions et ce qu'elles appellent. Cochez les autres familles si
-                vous en avez besoin. Cette liste est celle de <strong>vos droits</strong> : une
-                donnée que vous ne pouvez pas consulter à l'écran ne peut pas sortir dans un
-                fichier. Et certaines en appellent d'autres — cocher une police coche son
-                client, sans quoi le fichier renverrait vers des lignes absentes.
+                polices, propositions et ce qu'elles appellent. C'est ce que demandent la
+                plupart des exports. Pour en emporter davantage, ouvrez le réglage
+                ci-dessous.
             </p>
 
             {# Le bouton est DÉSARMÉ pendant l'opération (echange#exporter) : un double
@@ -374,16 +377,26 @@
                     </span>
                 </button>
 
+                {# LES DEUX SORTIES DU CABINET, CÔTE À CÔTE : le fichier de données et le
+                   classeur vide. Ce sont deux façons d'obtenir un .xlsx à la même barre,
+                   et les séparer obligeait l'œil à chercher la seconde plus bas.
+
+                   Le gabarit reste un LIVRABLE et non un réglage : c'est pourquoi il est
+                   ici, et non dans le volet — un bouton enfermé dans un panneau replié
+                   n'existe pas pour qui ne l'ouvre pas. #}
+                {% if ressources is not empty %}
+                    {% include 'components/echange/_gabarit.html.twig' with {
+                        idEntreprise: idEntreprise,
+                        contexte: 'exporter'
+                    } only %}
+                {% endif %}
             </div>
 
             {% if ressources is empty %}
                 <p class="ech-vide">Aucune donnée n'est à votre portée : votre périmètre d'accès ne couvre aucune rubrique exportable.</p>
             {% else %}
-                {% include 'components/echange/_gabarit.html.twig' with {
-                    idEntreprise: idEntreprise,
-                    contexte: 'exporter'
-                } only %}
-
+                {# Le réglage vient EN DERNIER, et replié : la plupart des exports ne le
+                   touchent pas, la production convenant telle quelle. #}
                 {% include 'components/echange/_perimetre.html.twig' with {
                     parModule: parModule,
                     ecrivables: ecrivables,
@@ -411,53 +424,14 @@
                l'apprendrait qu'au rapport — ou jamais. #}
             <p class="ech-note" style="margin:0 0 1rem;">
                 Par défaut, seules vos <strong>données de production</strong> seront reprises :
-                les autres feuilles du fichier seront ignorées. Ouvrez le réglage ci-dessous
-                pour en reprendre davantage.
+                les autres feuilles du fichier seront ignorées. Pour en reprendre davantage,
+                ouvrez « Choisir ce qu'on reprend du fichier », en bas de ce panneau.
             </p>
 
-            {# ── Ce qu'on reprend ── #}
-            {#
-              Le choix se fait AVANT le dépôt, et pas après le contrôle : le contrôle est
-              déjà le compte rendu de ce qui va être écrit. Décocher ensuite obligerait à
-              tout recontrôler, et l'utilisateur relirait un rapport qui ne décrit plus le
-              geste qu'il s'apprête à faire.
-            #}
+            {# ⚠ LE GABARIT PRÉCÈDE LE DÉPÔT, ET HORS DE TOUT VOLET. On le remplit pour
+               le déposer : le proposer après le dépôt, ou l'enfermer dans un réglage
+               replié, c'est le proposer à qui n'en a plus besoin. #}
             {% if parModule is not empty %}
-                <details class="ech-perimetre-import">
-                    <summary class="ech-perimetre-tete">
-                        <span>Choisir ce qu'on reprend du fichier</span>
-                        {# Décompte tenu par le contrôleur, au même endroit que les compteurs
-                           de familles. C'est ce qui rend la restriction lisible sans ouvrir
-                           le volet — sinon il faudrait l'ouvrir d'office, et il fait deux
-                           écrans de haut. #}
-                        <span class="ech-note" style="margin:0;" data-echange-target="resumePerimetre">
-                            {{ defauts|length }} donnée{{ defauts|length > 1 ? 's' : '' }} sur {{ ressources|length }}
-                        </span>
-                        <span class="ech-groupe-chevron" aria-hidden="true"></span>
-                    </summary>
-
-                    <p class="ech-note" style="margin:.5rem 0 1rem;">
-                        Cochez ce que le fichier doit pouvoir toucher. Une feuille écartée est
-                        simplement ignorée : elle reste dans le classeur, mais rien n'en sera
-                        écrit.
-                        <strong>Attention :</strong> si une donnée retenue renvoie à une donnée
-                        écartée, le contrôle le refusera plutôt que d'écrire un lien vide. Ce
-                        n'est pas une panne : c'est ce qui vous protège de votre propre filtrage.
-                    </p>
-
-                    {% include 'components/echange/_perimetre.html.twig' with {
-                        parModule: parModule,
-                        ecrivables: ecrivables,
-                        ressources: ressources,
-                        defauts: defauts,
-                        contexte: 'importer'
-                    } only %}
-                </details>
-
-                {# ⚠ HORS DU VOLET, ET C'EST TOUT L'OBJET. Un livrable enfermé dans un
-                   réglage replié n'existe pas pour qui n'ouvre pas le réglage — or le
-                   jour de la première reprise, on n'a rien à restreindre et donc aucune
-                   raison d'ouvrir quoi que ce soit. #}
                 {% include 'components/echange/_gabarit.html.twig' with {
                     idEntreprise: idEntreprise,
                     contexte: 'importer'
@@ -495,6 +469,29 @@
                 Le contrôle est gratuit et n'écrit rien : vous pouvez le relancer autant de fois
                 qu'il le faut pour corriger votre fichier.
             </p>
+
+            {# ── Ce qu'on reprend ── #}
+            {#
+              LE RÉGLAGE FERME LA MARCHE, replié, comme à l'export. La plupart des dépôts
+              n'y touchent pas : la production convient telle quelle, et le paragraphe du
+              haut l'annonce déjà. Le laisser en travers du chemin, déroulé, c'était trois
+              écrans à franchir pour atteindre le bouton qu'on venait chercher.
+
+              ⚠ IL RESTE AVANT LE CONTRÔLE, ET C'EST CE QUI COMPTE. Le contrôle est le
+              compte rendu de ce qui va être écrit : décocher après lui obligerait à tout
+              recontrôler, et l'utilisateur relirait un rapport qui ne décrit plus le geste
+              qu'il s'apprête à faire. Sa place dans la page a changé, pas sa place dans
+              l'enchaînement.
+            #}
+            {% if parModule is not empty %}
+                {% include 'components/echange/_perimetre.html.twig' with {
+                    parModule: parModule,
+                    ecrivables: ecrivables,
+                    ressources: ressources,
+                    defauts: defauts,
+                    contexte: 'importer'
+                } only %}
+            {% endif %}
 
             {# ── Contrôle en attente ── #}
             <div data-echange-target="rapport">

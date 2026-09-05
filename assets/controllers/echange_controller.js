@@ -431,10 +431,13 @@ export default class extends Controller {
             this.rappelRestaurationTarget.hidden = false;
             this.#rappelAffiche = true;
 
-            // ⚠ À L'IMPORT, LE PÉRIMÈTRE EST DANS UN VOLET REPLIÉ. Un avertissement
-            // enfermé dedans ne prévient personne : on ouvre le volet, sinon un fichier
-            // se verrait amputé de feuilles sans que rien à l'écran ne l'annonce.
-            this.rappelRestaurationTarget.closest('details')?.setAttribute('open', 'open');
+            // ⚠ ON N'OUVRE PLUS LE VOLET, ET C'EST DÉSORMAIS SANS DANGER.
+            //
+            // Il s'ouvrait pour ne pas cacher une restauration silencieuse. Depuis, son
+            // RÉSUMÉ porte le décompte — « 12 données sur 42 » se lit volet fermé — et
+            // c'est lui qui empêche l'écran de mentir. Forcer l'ouverture par-dessus ne
+            // protégeait plus de rien : cela déroulait trois écrans de réglage à chaque
+            // visite, pour redire ce que la ligne repliée disait déjà.
         }
     }
 

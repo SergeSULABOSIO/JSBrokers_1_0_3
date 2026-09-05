@@ -16,11 +16,46 @@
     defauts    — codes cochés d'office. VIDE = tout est coché, ce qui est le cas à
                  l'import : restreindre un fichier qu'on vient de déposer, sans l'avoir
                  demandé, ferait sauter des feuilles en silence.
-    contexte   — 'exporter' ou 'importer' : préfixe des identifiants, et libellé de la
-                 dernière colonne. Deux jeux de cases peuvent coexister dans la page sans
-                 que les `for=` d'un onglet ne désignent les cases de l'autre.
+    contexte   — 'exporter' ou 'importer' : préfixe des identifiants, libellés du volet
+                 et de la dernière colonne. Deux jeux de cases peuvent coexister dans la
+                 page sans que les `for=` d'un onglet ne désignent les cases de l'autre.
 #}
 {% set estImport = contexte == 'importer' %}
+
+{# ⚠ LE PÉRIMÈTRE EST UN RÉGLAGE, DONC IL EST REPLIÉ.
+
+   Cinq groupes et quarante-deux lignes déroulés d'office, c'était trois écrans de
+   hauteur avant d'atteindre le bouton — pour un réglage que la plupart des exports ne
+   touchent jamais, la production convenant telle quelle. Ce qui doit se voir, ce n'est
+   pas la liste : c'est CE QUI EST RETENU, et le résumé le dit en un mot.
+
+   ⚠ ET LE RÉSUMÉ N'EST PAS DÉCORATIF. C'est lui qui rend la restriction lisible SANS
+   ouvrir le volet ; sans lui il faudrait tout déplier pour ne pas mentir, et l'économie
+   d'espace se paierait d'un écran qui cache ce qu'il fait. #}
+<details class="ech-perimetre-volet">
+    <summary class="ech-perimetre-tete">
+        <span>{{ estImport ? "Choisir ce qu'on reprend du fichier" : "Choisir ce qu'on exporte de la base de données" }}</span>
+        {# Décompte tenu par le contrôleur, au même endroit que les compteurs de familles. #}
+        <span class="ech-note" style="margin:0;" data-echange-target="resumePerimetre">
+            {{ defauts|length }} donnée{{ defauts|length > 1 ? 's' : '' }} sur {{ ressources|length }}
+        </span>
+        <span class="ech-groupe-chevron" aria-hidden="true"></span>
+    </summary>
+
+    <p class="ech-note" style="margin:.5rem 0 1rem;">
+        {% if estImport %}
+            Cochez ce que le fichier doit pouvoir toucher. Une feuille écartée est simplement
+            ignorée : elle reste dans le classeur, mais rien n'en sera écrit.
+            <strong>Attention :</strong> si une donnée retenue renvoie à une donnée écartée,
+            le contrôle le refusera plutôt que d'écrire un lien vide. Ce n'est pas une panne :
+            c'est ce qui vous protège de votre propre filtrage.
+        {% else %}
+            Cochez les données à inclure. Cette liste est celle de <strong>vos droits</strong> :
+            une donnée que vous ne pouvez pas consulter à l'écran ne peut pas sortir dans un
+            fichier. Et certaines en appellent d'autres — cocher une police coche son client,
+            sans quoi le fichier renverrait vers des lignes absentes.
+        {% endif %}
+    </p>
 
 {# Rappel d'un choix VENU D'AILLEURS — d'une session précédente, pas de ce geste-ci.
    Masqué par défaut et démasqué par le contrôleur : rendu côté serveur, il faudrait que
@@ -172,3 +207,4 @@
         </table>
     </details>
 {% endfor %}
+</details>
