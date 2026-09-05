@@ -364,6 +364,39 @@ class EcranPerimetreTest extends WebTestCase
         self::assertStringNotContainsString('_production', $entier);
     }
 
+    /**
+     * ⚠ LE GABARIT N'EST PAS ENFERMÉ DANS LE VOLET DE RÉGLAGE.
+     *
+     * Il y a vécu, et c'était une panne d'usage plus qu'un défaut d'affichage : à
+     * l'import, le périmètre est un panneau replié, et le gabarit disparaissait avec lui.
+     * Or c'est le jour de la PREMIÈRE reprise qu'on en a besoin — quand on n'a encore
+     * rien à restreindre, donc aucune raison d'ouvrir un panneau intitulé « choisir ce
+     * qu'on reprend ». Le seul outil qui rendait la reprise possible était caché derrière
+     * le geste qu'on ne fait pas.
+     */
+    public function testLeGabaritNEstPasEnfermeDansLeVoletDeReglage(): void
+    {
+        [$entreprise] = $this->fixture();
+
+        $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=importer', $entreprise->getId()));
+        self::assertResponseIsSuccessful();
+
+        self::assertCount(1, $crawler->filter('a[data-echange-target="lienGabarit"]'));
+        self::assertCount(
+            0,
+            $crawler->filter('details.ech-perimetre-import a[data-echange-target="lienGabarit"]'),
+            "Un livrable enfermé dans un réglage replié n'existe pas pour qui n'ouvre pas le réglage.",
+        );
+
+        // Et il précède le dépôt : on télécharge le classeur vide AVANT de déposer le sien.
+        $html = (string) $this->client->getResponse()->getContent();
+        self::assertLessThan(
+            strpos($html, '<div class="ech-depot">'),
+            strpos($html, 'data-echange-target="lienGabarit"'),
+            'Le gabarit doit précéder le dépôt : après, on a déjà son fichier.',
+        );
+    }
+
     /** @return iterable<string, array{0: string}> */
     public static function ongletsPortantLePerimetre(): iterable
     {

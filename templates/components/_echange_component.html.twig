@@ -226,6 +226,16 @@
         }
         .jsb-echange .jsb-preset-chip[aria-pressed="false"] .jsb-preset-chip__icon { opacity:.35; }
 
+        /* Le gabarit vierge. Sorti du volet de réglage, il est devenu un élément de
+           premier plan : il ne peut plus se contenter du flux par défaut d'un <p>. */
+        .jsb-echange .ech-gabarit {
+            display:flex; flex-wrap:wrap; align-items:center; gap:.6rem;
+            margin:0 0 1rem;
+        }
+        .jsb-echange .ech-gabarit .btn { display:inline-flex; align-items:center; gap:.4rem; white-space:nowrap; min-height:38px; }
+        /* Un lien désarmé (aucune donnée retenue) ne doit pas se donner l'air cliquable. */
+        .jsb-echange .ech-gabarit a[aria-disabled="true"] { opacity:.65; pointer-events:none; }
+
         /* Rappel d'un périmètre restauré. Ton d'information, pas d'alerte : rien n'est
            en panne, on signale seulement d'où vient l'état affiché. */
         .jsb-echange .ech-rappel {
@@ -369,12 +379,16 @@
             {% if ressources is empty %}
                 <p class="ech-vide">Aucune donnée n'est à votre portée : votre périmètre d'accès ne couvre aucune rubrique exportable.</p>
             {% else %}
+                {% include 'components/echange/_gabarit.html.twig' with {
+                    idEntreprise: idEntreprise,
+                    contexte: 'exporter'
+                } only %}
+
                 {% include 'components/echange/_perimetre.html.twig' with {
                     parModule: parModule,
                     ecrivables: ecrivables,
                     ressources: ressources,
                     defauts: defauts,
-                    idEntreprise: idEntreprise,
                     contexte: 'exporter'
                 } only %}
             {% endif %}
@@ -436,10 +450,18 @@
                         ecrivables: ecrivables,
                         ressources: ressources,
                         defauts: defauts,
-                        idEntreprise: idEntreprise,
                         contexte: 'importer'
                     } only %}
                 </details>
+
+                {# ⚠ HORS DU VOLET, ET C'EST TOUT L'OBJET. Un livrable enfermé dans un
+                   réglage replié n'existe pas pour qui n'ouvre pas le réglage — or le
+                   jour de la première reprise, on n'a rien à restreindre et donc aucune
+                   raison d'ouvrir quoi que ce soit. #}
+                {% include 'components/echange/_gabarit.html.twig' with {
+                    idEntreprise: idEntreprise,
+                    contexte: 'importer'
+                } only %}
             {% endif %}
 
             {# ── Dépôt ── #}

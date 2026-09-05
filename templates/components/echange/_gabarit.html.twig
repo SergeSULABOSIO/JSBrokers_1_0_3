@@ -1,0 +1,41 @@
+{#
+  LE GABARIT VIERGE — un LIVRABLE, pas un réglage.
+
+  Il vivait avec le choix des données, dans `_perimetre.html.twig`. À l'export cela se
+  voyait ; à l'import, où ce périmètre est un volet replié, le bouton disparaissait avec
+  lui — et c'est précisément le jour de la PREMIÈRE reprise, quand on n'a encore rien à
+  restreindre, que personne n'ouvre un panneau intitulé « choisir ce qu'on reprend ». Le
+  seul outil qui rendait la reprise possible était caché derrière le geste qu'on ne fait
+  pas.
+
+  Il est donc à part, et posé par chaque onglet là où le geste commence.
+
+  ⚠ SON LIEN SUIT LES CASES. Le contrôleur le réécrit à chaque changement de sélection
+  (`#accorderLeGabarit`), et le libellé dit ce qu'on va obtenir : un bouton dont le
+  résultat dépend d'un réglage situé ailleurs doit l'annoncer, sinon deux clics
+  identiques rendent deux fichiers différents sans explication.
+
+  Paramètres :
+    idEntreprise — pour l'adresse.
+    contexte     — 'exporter' ou 'importer' : seule la phrase d'accompagnement en dépend.
+#}
+<p class="ech-gabarit">
+    <a class="btn btn-sm btn-outline-secondary"
+       href="{{ path('admin.echange.gabarit', {idEntreprise: idEntreprise}) }}"
+       data-echange-target="lienGabarit"
+       title="Un classeur vide, aux bons en-têtes, à remplir hors ligne puis à déposer dans l'onglet Importer.">
+        <twig:UX:Icon name="{{ resolve_icon_name('action:download') }}" style="width:16px;height:16px;" />
+        <span data-echange-target="libelleGabarit">Télécharger un gabarit vierge</span>
+    </a>
+    {# ⚠ Aucune indication de direction dans ce texte : le bloc ne se trouve plus toujours
+       sous les cases, et un « ci-dessus » faux est pire que pas d'indication du tout. #}
+    <span class="ech-note" style="margin:0;">
+        {% if contexte == 'importer' %}
+            Première reprise ? Téléchargez ce classeur vide, remplissez-le hors ligne, puis
+            déposez-le ci-dessous. Gratuit : il ne contient aucune donnée du cabinet.
+        {% else %}
+            Gratuit : aucune donnée du cabinet — seulement les feuilles et les en-têtes des
+            données retenues.
+        {% endif %}
+    </span>
+</p>

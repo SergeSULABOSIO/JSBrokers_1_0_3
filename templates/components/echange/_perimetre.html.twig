@@ -16,7 +16,6 @@
     defauts    — codes cochés d'office. VIDE = tout est coché, ce qui est le cas à
                  l'import : restreindre un fichier qu'on vient de déposer, sans l'avoir
                  demandé, ferait sauter des feuilles en silence.
-    idEntreprise — pour l'adresse du gabarit vierge.
     contexte   — 'exporter' ou 'importer' : préfixe des identifiants, et libellé de la
                  dernière colonne. Deux jeux de cases peuvent coexister dans la page sans
                  que les `for=` d'un onglet ne désignent les cases de l'autre.
@@ -84,29 +83,6 @@
        d'écran doit donc l'annoncer. #}
     <span class="ech-compte" role="status" data-echange-target="compteSelection"></span>
 </div>
-
-{# LE GABARIT VIERGE, RANGÉ AVEC LE PÉRIMÈTRE QU'IL REFLÈTE.
-
-   Il vit dans les DEUX onglets, parce que c'est un outil d'import : on le remplit pour
-   le déposer. Ne l'offrir que dans « Exporter » obligeait à passer par un écran qui
-   commande autre chose, puis à y régler des chips qui ne servent pas ce geste-là.
-
-   ⚠ SON LIEN SUIT LES CASES, et le contrôleur le réécrit à chaque changement. Un bouton
-   dont le résultat dépend de cases situées en dessous doit dire ce qu'il va rendre,
-   sinon deux clics identiques donnent deux fichiers différents sans explication. #}
-<p class="ech-gabarit">
-    <a class="btn btn-sm btn-outline-secondary"
-       href="{{ path('admin.echange.gabarit', {idEntreprise: idEntreprise}) }}"
-       data-echange-target="lienGabarit"
-       title="Un classeur vide, aux bons en-têtes, à remplir hors ligne puis à déposer dans l'onglet Importer.">
-        <twig:UX:Icon name="{{ resolve_icon_name('action:download') }}" style="width:16px;height:16px;" />
-        <span data-echange-target="libelleGabarit">Télécharger un gabarit vierge</span>
-    </a>
-    <span class="ech-note" style="margin:0;">
-        Gratuit : il ne contient aucune donnée du cabinet, seulement les feuilles et les
-        en-têtes des données retenues ci-dessus.
-    </span>
-</p>
 
 {% for module, ressourcesDuModule in parModule %}
     {# `open` par défaut : on ne cache pas à l'ouverture ce que l'utilisateur doit
