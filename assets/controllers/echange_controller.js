@@ -24,6 +24,7 @@ export default class extends Controller {
     static targets = [
         'boutonExport',
         'donnee',
+        'module',
         'compteSelection',
         'fichier',
         'nomFichier',
@@ -97,6 +98,51 @@ export default class extends Controller {
     toutDecocher() {
         this.donneeTargets.forEach((c) => { c.checked = false; });
         this.#rafraichirSelection();
+    }
+
+    /**
+     * Coche ou décoche tout un module d'un geste — « ma production », « mes finances ».
+     *
+     * ⚠ LE MODULE NE COURT-CIRCUITE PAS LES DÉPENDANCES. Cocher « Production » passe par
+     * le même chemin qu'un clic ligne à ligne, et tire donc les clients dont les polices
+     * ont besoin, fussent-ils rangés dans un autre module. Sans cela, un geste de
+     * confort produirait un fichier renvoyant vers des lignes absentes — exactement ce
+     * que la fermeture par dépendances existe pour empêcher.
+     *
+     * La case du module peut donc finir dans un état que l'utilisateur n'a pas demandé :
+     * c'est #rafraichirSelection qui la remet en accord avec ses lignes, jamais l'inverse.
+     */
+    basculerModule(event) {
+        const module = event.params.module;
+        const coche = event.target.checked;
+        if (!module) return;
+
+        for (const case_ of this.#casesDuModule(module)) {
+            const code = case_.dataset.echangeCodeParam;
+            if (coche) {
+                this.#cocherAvecDependances(code, new Set());
+            } else {
+                this.#decocherLesDependants(code, new Set());
+            }
+        }
+
+        this.#rafraichirSelection();
+    }
+
+    /**
+     * Empêche un clic sur la case d'un module de replier ce module.
+     *
+     * Le <summary> bascule le repli pour TOUT clic qu'il reçoit, y compris celui d'une
+     * case posée à l'intérieur. Cocher « Finances » refermait donc le groupe qu'on
+     * venait d'ouvrir pour le vérifier.
+     */
+    arreter(event) {
+        event.stopPropagation();
+    }
+
+    /** Les cases d'un module donné. */
+    #casesDuModule(module) {
+        return this.donneeTargets.filter((c) => c.dataset.echangeModuleParam === module);
     }
 
     /** Coche une donnée et, de proche en proche, tout ce dont elle a besoin. */
@@ -188,6 +234,36 @@ export default class extends Controller {
             }
         }
 
+        // ── L'ÉTAT DES MODULES EST DÉRIVÉ, JAMAIS SAISI ────────────────────────────
+        //
+        // La case d'un module n'est pas une donnée : c'est un RÉSUMÉ de ses lignes. Une
+        // dépendance tirée depuis un autre groupe peut recocher une ligne sans que
+        // personne n'ait touché à l'en-tête ; le laisser afficher « décoché » alors que
+        // deux de ses données sortiront serait un mensonge d'écran.
+        //
+        // `indeterminate` existe précisément pour cela : ni tout, ni rien.
+        for (const enTete of this.moduleTargets) {
+            const module = enTete.dataset.echangeModuleParam;
+            const lignes = this.#casesDuModule(module);
+            const cochees = lignes.filter((c) => c.checked).length;
+
+            enTete.checked = cochees > 0;
+            enTete.indeterminate = cochees > 0 && cochees < lignes.length;
+            enTete.setAttribute(
+                'aria-label',
+                `${module} — ${cochees} donnée${cochees > 1 ? 's' : ''} sur ${lignes.length}`,
+            );
+
+            // Le compte est écrit EN TOUTES LETTRES à côté du titre : la couleur du
+            // badge ne fait que doubler ce que le texte dit déjà (WCAG 1.4.1).
+            const badge = this.element.querySelector(`[data-echange-compte-module="${CSS.escape(module)}"]`);
+            if (badge) {
+                badge.textContent = cochees === lignes.length ? `${lignes.length}` : `${cochees} sur ${lignes.length}`;
+                badge.classList.toggle('is-partiel', cochees > 0 && cochees < lignes.length);
+                badge.classList.toggle('is-vide', cochees === 0);
+            }
+        }
+
         if (this.hasCompteSelectionTarget) {
             const total = this.donneeTargets.length;
             this.compteSelectionTarget.textContent = retenus.size === total
@@ -196,6 +272,7 @@ export default class extends Controller {
         }
 
         this.#armer(this.hasBoutonExportTarget ? this.boutonExportTarget : null, retenus.size > 0);
+        this.#armerControle();
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -287,7 +364,19 @@ export default class extends Controller {
         if (this.hasNomFichierTarget) {
             this.nomFichierTarget.textContent = fichier ? fichier.name : 'Choisir un classeur .xlsx';
         }
-        this.#armer(this.hasBoutonControleTarget ? this.boutonControleTarget : null, Boolean(fichier));
+        this.#armerControle();
+    }
+
+    /**
+     * Le bouton de contrôle dépend de DEUX conditions — un fichier, et au moins une
+     * donnée retenue. Il n'a pas de sens de contrôler un dépôt dont on a tout écarté.
+     */
+    #armerControle() {
+        if (!this.hasBoutonControleTarget) return;
+
+        const fichier = this.hasFichierTarget ? this.fichierTarget.files[0] : null;
+        const quelqueChose = !this.hasDonneeTarget || this.#selection().length > 0;
+        this.#armer(this.boutonControleTarget, Boolean(fichier) && quelqueChose);
     }
 
     /**
@@ -309,6 +398,18 @@ export default class extends Controller {
             corps.append('fichier', fichier);
             if (this.hasSuppressionsTarget && this.suppressionsTarget.checked) {
                 corps.append('suppressions', '1');
+            }
+
+            // Périmètre retenu. Rien n'est envoyé quand TOUT est coché : le serveur lit
+            // alors « toutes les feuilles du fichier », ce qui reste juste même si le
+            // classeur en contient une que cet écran ne connaît pas.
+            //
+            // ⚠ Ce choix est ENREGISTRÉ SUR LE CONTRÔLE, pas seulement appliqué ici : la
+            // confirmation relit le fichier entier, et sans cette mémoire elle
+            // réécrirait les feuilles qu'on vient d'écarter.
+            const retenues = this.#selection();
+            if (this.hasDonneeTarget && retenues.length < this.donneeTargets.length) {
+                corps.append('donnees', retenues.join(','));
             }
 
             const final = await this.#lireFlux(this.importUrlValue, { method: 'POST', body: corps });

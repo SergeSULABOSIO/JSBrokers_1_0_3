@@ -397,6 +397,56 @@ class WorkspaceAccessResolver
     }
 
     /**
+     * MODULE de rattachement de chaque entité (nom court => « Finances », « Production »,
+     * « Marketing », « Sinistre », « Administration », « IA »).
+     *
+     * Jumeau de {@see libellesEntites()} : le module est le PREMIER élément de chaque
+     * entrée de la carte, il n'y a donc rien à déclarer ailleurs. Sert à regrouper les
+     * données de l'échange — cocher « Production » d'un geste plutôt que ses dix
+     * rubriques une à une.
+     *
+     * ⚠ LES SOUS-ENTITÉS HÉRITENT DE LEUR PARENT. Les cinq entités gouvernées hors carte
+     * (PaiementPrime, MouvementConge, HistoriqueDemande, RegimeTravail, PeriodeBlocage)
+     * n'ont pas de module à elles. Les laisser sans rattachement les ferait tomber dans
+     * un groupe « autres » que personne ne saurait cocher — alors qu'un paiement de prime
+     * appartient aux Finances aussi sûrement que la tranche dont il dépend. On remonte
+     * donc la chaîne de gouvernance, exactement comme le fait can().
+     *
+     * @return array<string, string>
+     */
+    public function modulesEntites(): array
+    {
+        $modules = [];
+        foreach (self::MAP as $entityShortName => [$module]) {
+            $modules[$entityShortName] = $module;
+        }
+
+        foreach (array_keys(self::SOUS_ENTITES_LIBELLES) as $entityShortName) {
+            $parent = $entityShortName;
+            // Chaîne, et non un seul saut : rien n'interdit à une sous-entité d'en
+            // gouverner une autre, et une boucle infinie serait pire qu'un module manquant.
+            for ($saut = 0; $saut < 5 && isset(self::GOUVERNANCE_PARENT[$parent]); ++$saut) {
+                $parent = self::GOUVERNANCE_PARENT[$parent];
+            }
+            if (isset($modules[$parent])) {
+                $modules[$entityShortName] = $modules[$parent];
+                continue;
+            }
+
+            // La chaîne peut aboutir HORS de la carte : le régime de travail suit le droit
+            // « Invité », qui relève de la gestion des rôles et n'a donc pas de module.
+            // Il se règle depuis la fiche du collaborateur, comme les congés : c'est de
+            // l'administration. Sans cette ligne, il resterait la seule donnée du
+            // périmètre qu'aucun groupe ne pourrait cocher.
+            if (in_array($parent, self::ROLE_MANAGEMENT_ENTITIES, true)) {
+                $modules[$entityShortName] = 'Administration';
+            }
+        }
+
+        return $modules;
+    }
+
+    /**
      * ANCIENS NOMS D'UNE RUBRIQUE, encore compris de l'assistant.
      *
      * Renommer une rubrique ne renomme pas le vocabulaire des utilisateurs. Or

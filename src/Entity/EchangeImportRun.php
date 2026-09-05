@@ -95,6 +95,21 @@ class EchangeImportRun implements OwnerAwareInterface
     #[Groups(['list:read'])]
     private bool $suppressionsAutorisees = false;
 
+    /**
+     * Données retenues au dépôt, quand l'utilisateur n'a pas tout pris. Vide = tout ce que
+     * le fichier contient.
+     *
+     * ⚠ CE CHOIX DOIT SURVIVRE JUSQU'À LA CONFIRMATION. L'écriture RECONTRÔLE le fichier
+     * — c'est ce qui la protège d'un état devenu faux entre-temps — et referait donc
+     * l'inventaire complet des feuilles. Sans cette mémoire, confirmer un import
+     * volontairement restreint à la production réécrirait aussi les taxes et les monnaies
+     * que l'utilisateur avait écartées, sans que rien ne le lui dise.
+     *
+     * @var string[]
+     */
+    #[ORM\Column(type: Types::JSON)]
+    private array $donnees = [];
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeImmutable $expireLe = null;
 
@@ -178,6 +193,20 @@ class EchangeImportRun implements OwnerAwareInterface
     public function setSuppressionsAutorisees(bool $suppressionsAutorisees): static
     {
         $this->suppressionsAutorisees = $suppressionsAutorisees;
+
+        return $this;
+    }
+
+    /** @return string[] */
+    public function getDonnees(): array
+    {
+        return $this->donnees;
+    }
+
+    /** @param string[] $donnees */
+    public function setDonnees(array $donnees): static
+    {
+        $this->donnees = array_values($donnees);
 
         return $this;
     }

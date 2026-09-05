@@ -161,6 +161,62 @@
             font-size:.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.02em;
         }
 
+        /* ── Groupes par module ────────────────────────────────────────────────────
+           Le module vient de la carte des droits : ces groupes portent exactement les
+           mêmes noms que le menu de l'application. C'est ce qui permet à l'utilisateur
+           de reconnaître au lieu de se rappeler (Nielsen 6). */
+        .jsb-echange .ech-groupe {
+            border:1px solid #dee2e6; border-radius:10px; background:#ffffff;
+            margin-bottom:.6rem; overflow:hidden;
+        }
+        .jsb-echange .ech-groupe[open] { border-color:#0047AB; }
+        .jsb-echange .ech-groupe-tete {
+            display:flex; align-items:center; gap:.75rem; cursor:pointer;
+            padding:.6rem .85rem; min-height:44px; background:#f8f9fa;
+            font-size:.9rem; font-weight:700; color:#212529;
+            list-style:none; user-select:none;
+        }
+        .jsb-echange .ech-groupe-tete::-webkit-details-marker { display:none; }
+        .jsb-echange .ech-groupe-tete:hover { background:#e8f0fb; }
+        .jsb-echange .ech-groupe-tete:focus-visible { outline:2px solid #0047AB; outline-offset:-2px; }
+        .jsb-echange .ech-groupe-case { display:inline-flex; align-items:center; gap:.5rem; }
+        .jsb-echange .ech-groupe-nom { cursor:pointer; margin:0; }
+        .jsb-echange .ech-groupe-compte {
+            margin-left:auto; padding:.1rem .5rem; border-radius:999px;
+            background:#e9ecef; color:#495057;
+            font-size:.75rem; font-weight:600; font-variant-numeric:tabular-nums;
+        }
+        /* Le compte passe au cobalt dès que le groupe n'est plus entier : la couleur
+           double un texte qui dit déjà « 4 sur 10 » — jamais elle ne le remplace
+           (WCAG 1.4.1). */
+        .jsb-echange .ech-groupe-compte.is-partiel { background:#e8f0fb; color:#0047AB; }
+        .jsb-echange .ech-groupe-compte.is-vide { background:#e9ecef; color:#6c757d; }
+        /* Chevron en CSS : il ne dit rien que l'état ouvert/fermé n'exprime déjà. */
+        .jsb-echange .ech-groupe-chevron {
+            width:9px; height:9px; flex:0 0 auto;
+            border-right:2px solid #6c757d; border-bottom:2px solid #6c757d;
+            transform:rotate(45deg); transform-origin:center;
+            transition:transform .18s ease;
+        }
+        .jsb-echange details[open] > summary .ech-groupe-chevron { transform:rotate(-135deg); }
+        .jsb-echange .ech-groupe .ech-table { border-top:1px solid #dee2e6; }
+        .jsb-echange .ech-groupe .ech-table thead th { background:#ffffff; }
+
+        /* Périmètre d'import : replié par défaut — c'est un réglage, pas une étape. */
+        .jsb-echange .ech-perimetre-import {
+            border:1px dashed #dee2e6; border-radius:10px; padding:.25rem .85rem;
+            margin-bottom:1rem; background:#ffffff;
+        }
+        .jsb-echange .ech-perimetre-import[open] { border-style:solid; border-color:#0047AB; padding-bottom:.85rem; }
+        .jsb-echange .ech-perimetre-tete {
+            display:flex; align-items:center; gap:.6rem; cursor:pointer;
+            min-height:44px; list-style:none; user-select:none;
+            font-size:.88rem; font-weight:600; color:#0047AB;
+        }
+        .jsb-echange .ech-perimetre-tete::-webkit-details-marker { display:none; }
+        .jsb-echange .ech-perimetre-tete:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+        .jsb-echange .ech-perimetre-tete .ech-groupe-chevron { margin-left:auto; }
+
         /* Rapport de contrôle. */
         .jsb-echange .ech-rapport { margin-top:1.25rem; padding-top:1rem; border-top:1px solid #f0f0f0; }
         .jsb-echange .ech-synthese { display:flex; flex-wrap:wrap; gap:1.25rem; font-size:.88rem; color:#495057; }
@@ -254,88 +310,12 @@
             {% if ressources is empty %}
                 <p class="ech-vide">Aucune donnée n'est à votre portée : votre périmètre d'accès ne couvre aucune rubrique exportable.</p>
             {% else %}
-                {# Actions de sélection : de vrais boutons — ce sont des ACTIONS, pas des
-                   liens — avec une zone cliquable qui tient les 44 px de WCAG 2.5.5. #}
-                <div class="ech-selection">
-                    <button type="button" class="ech-bouton-lien" data-action="click->echange#toutCocher">
-                        Tout cocher
-                    </button>
-                    <button type="button" class="ech-bouton-lien" data-action="click->echange#toutDecocher">
-                        Tout décocher
-                    </button>
-                    {# role=status : le compteur change sans que l'utilisateur agisse sur lui,
-                       un lecteur d'écran doit donc l'annoncer. #}
-                    <span class="ech-compte" role="status" data-echange-target="compteSelection"></span>
-                </div>
-
-                <table class="ech-table" aria-labelledby="ech-perimetre-titre">
-                    <caption class="ech-caption">
-                        Données exportables, dans l'ordre où elles seront écrites dans le classeur.
-                    </caption>
-                    <thead>
-                        <tr>
-                            <th scope="col" style="width:2.6rem;"><span class="ech-sr">Inclure</span></th>
-                            <th scope="col">Donnée</th>
-                            <th scope="col" class="num">Colonnes</th>
-                            <th scope="col">Nécessite</th>
-                            <th scope="col">À la réimportation</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for ressource in ressources %}
-                            <tr data-echange-code="{{ ressource.code }}">
-                                <td>
-                                    {# Les dépendances sont portées PAR LA CASE : cocher une donnée
-                                       coche celles dont elle a besoin. Le serveur refait de toute
-                                       façon cette fermeture ; l'écran ne fait que la rendre visible
-                                       AVANT le clic, plutôt que de la faire subir après. #}
-                                    <input type="checkbox"
-                                           id="ech-inc-{{ ressource.code }}"
-                                           class="form-check-input"
-                                           checked
-                                           data-echange-target="donnee"
-                                           data-echange-code-param="{{ ressource.code }}"
-                                           data-echange-dependances-param="{{ ressource.dependances|join(',') }}"
-                                           data-action="change->echange#basculerDonnee">
-                                </td>
-                                <th scope="row" class="ech-cell-nom">
-                                    {# Le libellé EST le label de la case : cliquer sur le nom coche,
-                                       ce qui multiplie la zone utile par dix (WCAG 2.5.5). #}
-                                    <label for="ech-inc-{{ ressource.code }}" class="ech-res-nom">{{ ressource.libelle }}</label>
-                                    <span class="ech-res-etat"></span>
-                                    <span class="ech-res-feuille">Feuille « {{ ressource.feuille }} »</span>
-                                </th>
-                                <td class="num">
-                                    <span class="ech-res-nb">{{ ressource.colonnes|length }}</span>
-                                    <span class="ech-res-detail">dont {{ ressource.colonnesModifiables|length }} modifiables</span>
-                                </td>
-                                <td class="ech-dep">
-                                    {# Les LIBELLÉS, pas les codes techniques : la colonne voisine
-                                       nomme « Propositions », celle-ci ne peut pas dire « Cotation ».
-                                       Même mot pour la même chose (Bastien & Scapin > Cohérence). #}
-                                    {% set requis = [] %}
-                                    {% for dep in ressource.dependances %}
-                                        {% set requis = requis|merge([ressources[dep] is defined ? ressources[dep].libelle : dep]) %}
-                                    {% endfor %}
-                                    {{ requis is empty ? '—' : requis|join(', ') }}
-                                </td>
-                                <td>
-                                    {% if ressource.code in ecrivables %}
-                                        <span class="ech-chip is-ecriture">
-                                            <twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" style="width:13px;height:13px;" />
-                                            Modifiable
-                                        </span>
-                                    {% else %}
-                                        <span class="ech-chip is-neutre">
-                                            <twig:UX:Icon name="{{ resolve_icon_name('action:view') }}" style="width:13px;height:13px;" />
-                                            Lecture seule
-                                        </span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                {% include 'components/echange/_perimetre.html.twig' with {
+                    parModule: parModule,
+                    ecrivables: ecrivables,
+                    ressources: ressources,
+                    contexte: 'exporter'
+                } only %}
             {% endif %}
 
             {# Le bouton est DÉSARMÉ pendant l'opération (echange#exporter) : un double
@@ -359,6 +339,18 @@
                         {%- if facturation.coutExport > 0 %} ({{ facturation.coutExport }} tokens){% endif %}
                     </span>
                 </button>
+
+                {# GABARIT VIERGE : la structure, sans les données. Gratuit, et dit comme tel
+                   — un coût affiché à côté d'un geste qui n'en a aucun ferait hésiter.
+                   Présenté en SECOND et en discret : c'est le geste rare (une reprise, un
+                   fichier monté par un tiers), pas celui du quotidien. #}
+                <a class="btn btn-sm btn-outline-secondary"
+                   href="{{ path('admin.echange.gabarit', {idEntreprise: idEntreprise}) }}"
+                   title="Un classeur vide, aux bons en-têtes, à remplir hors ligne puis à déposer dans l'onglet Importer.">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:download') }}" style="width:16px;height:16px;" />
+                    <span>Télécharger un gabarit vierge</span>
+                </a>
+                <span class="ech-note" style="margin:0;">Gratuit : il ne contient aucune donnée du cabinet.</span>
             </div>
         </div>
     {% endif %}
@@ -372,6 +364,39 @@
                 contrôlé à blanc — gratuitement, sans rien écrire — et vous ne confirmez qu'ensuite,
                 au vu du rapport.
             </p>
+
+            {# ── Ce qu'on reprend ── #}
+            {#
+              Le choix se fait AVANT le dépôt, et pas après le contrôle : le contrôle est
+              déjà le compte rendu de ce qui va être écrit. Décocher ensuite obligerait à
+              tout recontrôler, et l'utilisateur relirait un rapport qui ne décrit plus le
+              geste qu'il s'apprête à faire.
+            #}
+            {% if parModule is not empty %}
+                <details class="ech-perimetre-import">
+                    <summary class="ech-perimetre-tete">
+                        <span>Ne reprendre qu'une partie du fichier</span>
+                        <span class="ech-note" style="margin:0;">Tout est repris par défaut</span>
+                        <span class="ech-groupe-chevron" aria-hidden="true"></span>
+                    </summary>
+
+                    <p class="ech-note" style="margin:.5rem 0 1rem;">
+                        Décochez ce que le fichier ne doit pas toucher — reprendre sa production
+                        sans réécrire ses taxes, par exemple. Une feuille écartée est simplement
+                        ignorée.
+                        <strong>Attention :</strong> si une donnée retenue renvoie à une donnée
+                        écartée, le contrôle le refusera plutôt que d'écrire un lien vide. Ce
+                        n'est pas une panne : c'est ce qui vous protège de votre propre filtrage.
+                    </p>
+
+                    {% include 'components/echange/_perimetre.html.twig' with {
+                        parModule: parModule,
+                        ecrivables: ecrivables,
+                        ressources: ressources,
+                        contexte: 'importer'
+                    } only %}
+                </details>
+            {% endif %}
 
             {# ── Dépôt ── #}
             <div class="ech-depot">
@@ -464,10 +489,26 @@
                                 <twig:UX:Icon name="{{ resolve_icon_name('action:cancel') }}" style="width:18px;height:18px;" />
                                 <span>Abandonner</span>
                             </button>
+
+                            {# LE FICHIER RENDU ANNOTÉ. C'est la réponse à « et maintenant ? » :
+                               lire « feuille Clients, ligne 47, colonne M » à l'écran puis
+                               retrouver la cellule dans son classeur, trois cents fois, est un
+                               travail de copiste — et c'est là qu'on abandonne, pas à l'erreur.
+                               Proposé dès qu'il y a quelque chose à corriger, y compris quand le
+                               contrôle est confirmable : un avertissement mérite d'être vu en
+                               place avant qu'on ne l'accepte (Nielsen 9). #}
+                            {% if rapport.anomalies|default([])|length %}
+                                <a class="btn btn-sm btn-outline-secondary"
+                                   href="{{ path('admin.echange.anomalies', {idEntreprise: idEntreprise, idRun: controleEnCours.id}) }}"
+                                   title="Votre propre classeur, avec les cellules fautives surlignées et le motif en commentaire.">
+                                    <twig:UX:Icon name="{{ resolve_icon_name('action:download') }}" style="width:18px;height:18px;" />
+                                    <span>Télécharger le fichier annoté</span>
+                                </a>
+                            {% endif %}
                             {# Le bouton n'existe QUE si le rapport est exécutable : il n'y a pas
                                d'import partiel, et proposer « importer quand même » serait
                                proposer de laisser la base dans un état que personne n'a décrit. #}
-                            {% if controleEnCours.confirmable %}
+                            {% if controleEnCours.estConfirmable %}
                                 <button type="button"
                                         class="btn btn-sm btn-cobalt"
                                         data-echange-target="boutonConfirmation"

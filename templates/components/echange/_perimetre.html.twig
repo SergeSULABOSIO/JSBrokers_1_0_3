@@ -1,0 +1,125 @@
+{#
+  SÉLECTION DES DONNÉES, GROUPÉE PAR MODULE.
+
+  UN SEUL gabarit pour les deux onglets : l'export choisit ce qui sort, l'import choisit
+  ce qu'on reprend, et c'est exactement le même geste. En écrire deux, c'était se
+  condamner à les voir diverger — et faire réapprendre d'un onglet à l'autre une
+  mécanique déjà connue (Bastien & Scapin > Cohérence).
+
+  Le module vient de la carte des droits, donc du même découpage que le menu de
+  l'application. Cocher « Production » d'un geste vaut mieux que d'aller chercher dix
+  cases dans une liste de quarante-deux (Bastien & Scapin > Charge de travail).
+
+  Paramètres :
+    parModule  — module => { code => ressource }
+    ecrivables — codes réellement modifiables
+    contexte   — 'exporter' ou 'importer' : préfixe des identifiants, et libellé de la
+                 dernière colonne. Deux jeux de cases peuvent coexister dans la page sans
+                 que les `for=` d'un onglet ne désignent les cases de l'autre.
+#}
+{% set estImport = contexte == 'importer' %}
+
+{# Actions de sélection : de vrais boutons — ce sont des ACTIONS, pas des liens — avec
+   une zone cliquable qui tient les 44 px de WCAG 2.5.5. #}
+<div class="ech-selection">
+    <button type="button" class="ech-bouton-lien" data-action="click->echange#toutCocher">Tout cocher</button>
+    <button type="button" class="ech-bouton-lien" data-action="click->echange#toutDecocher">Tout décocher</button>
+    {# role=status : le compteur change sans que l'utilisateur agisse sur lui, un lecteur
+       d'écran doit donc l'annoncer. #}
+    <span class="ech-compte" role="status" data-echange-target="compteSelection"></span>
+</div>
+
+{% for module, ressourcesDuModule in parModule %}
+    {# `open` par défaut : on ne cache pas à l'ouverture ce que l'utilisateur doit
+       vérifier. Le repli est là pour ranger, pas pour dissimuler. #}
+    <details class="ech-groupe" open>
+        <summary class="ech-groupe-tete">
+            {# stopPropagation sur la case : sans cela, la cocher replierait le groupe,
+               puisque tout clic reçu par le <summary> le bascule. #}
+            <span class="ech-groupe-case" data-action="click->echange#arreter">
+                <input type="checkbox"
+                       class="form-check-input"
+                       id="ech-{{ contexte }}-mod-{{ module|lower|replace({' ': '-'}) }}"
+                       checked
+                       data-echange-target="module"
+                       data-echange-module-param="{{ module }}"
+                       data-action="change->echange#basculerModule">
+                <label for="ech-{{ contexte }}-mod-{{ module|lower|replace({' ': '-'}) }}" class="ech-groupe-nom">{{ module }}</label>
+            </span>
+            <span class="ech-groupe-compte" data-echange-compte-module="{{ module }}">{{ ressourcesDuModule|length }}</span>
+            {# Chevron en CSS pur : il ne porte aucune information que le repli lui-même
+               n'exprime pas, et le marqueur natif du <summary> ne se stylise pas partout. #}
+            <span class="ech-groupe-chevron" aria-hidden="true"></span>
+        </summary>
+
+        <table class="ech-table">
+            <caption class="ech-sr">Données du module {{ module }}, dans l'ordre où elles seront écrites dans le classeur.</caption>
+            <thead>
+                <tr>
+                    <th scope="col" style="width:2.6rem;"><span class="ech-sr">Inclure</span></th>
+                    <th scope="col">Donnée</th>
+                    <th scope="col" class="num">Colonnes</th>
+                    <th scope="col">Nécessite</th>
+                    <th scope="col">{{ estImport ? 'Écriture' : 'À la réimportation' }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ressource in ressourcesDuModule %}
+                    <tr data-echange-code="{{ ressource.code }}">
+                        <td>
+                            {# Les dépendances sont portées PAR LA CASE : cocher une donnée coche
+                               celles dont elle a besoin. Le serveur refait de toute façon cette
+                               fermeture ; l'écran ne fait que la rendre visible AVANT le clic,
+                               plutôt que de la faire subir après. #}
+                            <input type="checkbox"
+                                   id="ech-{{ contexte }}-{{ ressource.code }}"
+                                   class="form-check-input"
+                                   checked
+                                   data-echange-target="donnee"
+                                   data-echange-code-param="{{ ressource.code }}"
+                                   data-echange-module-param="{{ ressource.module }}"
+                                   data-echange-dependances-param="{{ ressource.dependances|join(',') }}"
+                                   data-action="change->echange#basculerDonnee">
+                        </td>
+                        <th scope="row" class="ech-cell-nom">
+                            {# Le libellé EST le label de la case : cliquer sur le nom coche,
+                               ce qui multiplie la zone utile par dix (WCAG 2.5.5). #}
+                            <label for="ech-{{ contexte }}-{{ ressource.code }}" class="ech-res-nom">{{ ressource.libelle }}</label>
+                            <span class="ech-res-etat"></span>
+                            <span class="ech-res-feuille">Feuille « {{ ressource.feuille }} »</span>
+                        </th>
+                        <td class="num">
+                            <span class="ech-res-nb">{{ ressource.colonnes|length }}</span>
+                            <span class="ech-res-detail">dont {{ ressource.colonnesModifiables|length }} modifiables</span>
+                        </td>
+                        <td class="ech-dep">
+                            {# Les LIBELLÉS, pas les codes techniques : la colonne voisine nomme
+                               « Propositions », celle-ci ne peut pas dire « Cotation ». Même mot
+                               pour la même chose. Une dépendance peut vivre dans un AUTRE module
+                               que la donnée qui l'appelle : on cherche donc dans tout le
+                               périmètre, pas seulement dans le groupe courant. #}
+                            {% set requis = [] %}
+                            {% for dep in ressource.dependances %}
+                                {% set requis = requis|merge([ressources[dep] is defined ? ressources[dep].libelle : dep]) %}
+                            {% endfor %}
+                            {{ requis is empty ? '—' : requis|join(', ') }}
+                        </td>
+                        <td>
+                            {% if ressource.code in ecrivables %}
+                                <span class="ech-chip is-ecriture">
+                                    <twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" style="width:13px;height:13px;" />
+                                    Modifiable
+                                </span>
+                            {% else %}
+                                <span class="ech-chip is-neutre">
+                                    <twig:UX:Icon name="{{ resolve_icon_name('action:view') }}" style="width:13px;height:13px;" />
+                                    Lecture seule
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </details>
+{% endfor %}

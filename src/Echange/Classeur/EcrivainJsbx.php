@@ -168,7 +168,9 @@ final class EcrivainJsbx
     {
         return match ($code) {
             CanevasDEchange::COL_UID => 'Identifiant de la ligne. Laissez-le tel quel pour modifier une ligne existante ; '
-                . 'laissez-le VIDE pour créer une ligne.',
+                . 'laissez-le VIDE pour créer une ligne. Dans un GABARIT VIERGE, cette colonne est vide '
+                . 'partout : toutes les lignes que vous y saisirez seront donc des CRÉATIONS, jamais des '
+                . 'mises à jour de fiches existantes.',
             CanevasDEchange::COL_ACTION => sprintf(
                 'Laissez vide et l\'action se déduit : identifiant vide = création, identifiant rempli = mise à jour. '
                 . 'Écrivez %s pour supprimer — une suppression ne se déduit jamais.',

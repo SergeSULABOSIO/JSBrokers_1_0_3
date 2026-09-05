@@ -16,6 +16,7 @@ final class RessourceDEchange
     /**
      * @param string                       $code           nom court de l'entité, identifiant de la ressource
      * @param string                       $libelle        libellé de rubrique, lu dans la carte d'accès
+     * @param string                       $module         module de rattachement (Production, Finances…), lu dans la même carte
      * @param class-string                 $fqcn
      * @param string                       $feuille        nom d'onglet Excel (≤ 31 caractères, sans caractère interdit)
      * @param int                          $rang           rang topologique : une ressource référencée précède celle qui la référence
@@ -27,6 +28,7 @@ final class RessourceDEchange
     public function __construct(
         public readonly string $code,
         public readonly string $libelle,
+        public readonly string $module,
         public readonly string $fqcn,
         public readonly string $feuille,
         public readonly int $rang,
@@ -70,6 +72,7 @@ final class RessourceDEchange
         return new self(
             $this->code,
             $this->libelle,
+            $this->module,
             $this->fqcn,
             $this->feuille,
             $rang,
