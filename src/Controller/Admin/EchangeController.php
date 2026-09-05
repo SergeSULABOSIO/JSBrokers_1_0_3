@@ -118,6 +118,11 @@ class EchangeController extends AbstractController
             // l'application (Production, Finances, Sinistre…). Cocher « Production » d'un
             // geste vaut mieux que dix cases à trouver dans une liste de quarante-deux.
             'parModule'     => $this->grouperParModule($ressources),
+            // CE QUI EST COCHÉ D'OFFICE À L'EXPORT : la famille Production, fermée sur
+            // ses dépendances. Calculé ici et non en JavaScript, pour que la page
+            // arrive déjà juste — un écran qui affiche tout coché puis se décoche sous
+            // les yeux fait douter de ce qu'il montre.
+            'defauts'       => $this->canevas->codesParDefaut($ressources),
             'peutImporter'  => $peutImporter,
             // Ce que l'invité peut réellement ÉCRIRE : afficher le périmètre d'import
             // comme s'il était celui de lecture promettrait une importation qui
@@ -513,7 +518,12 @@ class EchangeController extends AbstractController
         [$classeur] = $this->exportateur->produire($entreprise, $invite, $this->getUser(), $ressources, null, gabarit: true);
 
         $slug = preg_replace('/[^A-Za-z0-9_-]+/', '_', $entreprise->getNom() ?? 'cabinet');
-        $nom = sprintf('jsbrokers_gabarit_%s_%s.xlsx', trim((string) $slug, '_') ?: 'cabinet', date('Ymd-Hi'));
+        $nom = sprintf(
+            'jsbrokers_gabarit_%s%s_%s.xlsx',
+            trim((string) $slug, '_') ?: 'cabinet',
+            $this->suffixeDuPerimetre($ressources, $invite),
+            date('Ymd-Hi'),
+        );
 
         return $this->classeurEnReponse($classeur, $nom);
     }
@@ -552,6 +562,60 @@ class EchangeController extends AbstractController
         $base = pathinfo((string) $run->getNomFichier(), PATHINFO_FILENAME) ?: 'import';
 
         return $this->classeurEnReponse($classeur, sprintf('%s-anomalies.xlsx', $base));
+    }
+
+    /**
+     * Ce que le nom du fichier ajoute pour dire son périmètre.
+     *
+     * Deux gabarits du même cabinet posés côte à côte sur un bureau ne se distinguaient
+     * que par l'heure de génération — et l'un contenait les taxes, l'autre non. Le nom
+     * doit dire lequel, sinon on remplit le mauvais.
+     *
+     * ⚠ AUCUNE LISTE N'EST TENUE ICI. Les familles se lisent sur les ressources
+     * elles-mêmes ; on nomme celles qui sont ENTIÈRES, et « partiel » quand la sélection
+     * coupe au milieu de l'une d'elles — annoncer « production » pour trois données sur
+     * dix serait pire que de ne rien annoncer.
+     *
+     * @param array<string, \App\Echange\Canevas\RessourceDEchange> $retenues
+     */
+    private function suffixeDuPerimetre(array $retenues, Invite $invite): string
+    {
+        $lisibles = $this->canevas->ressourcesLisibles($invite);
+        if (\count($retenues) === \count($lisibles)) {
+            return ''; // tout y est : rien à préciser
+        }
+
+        $totalParModule = [];
+        foreach ($lisibles as $ressource) {
+            $totalParModule[$ressource->module] = ($totalParModule[$ressource->module] ?? 0) + 1;
+        }
+
+        $retenuParModule = [];
+        foreach ($retenues as $ressource) {
+            $retenuParModule[$ressource->module] = ($retenuParModule[$ressource->module] ?? 0) + 1;
+        }
+
+        $entiers = [];
+        foreach ($retenuParModule as $module => $nombre) {
+            if ($nombre === ($totalParModule[$module] ?? -1)) {
+                $entiers[] = mb_strtolower($module);
+            }
+        }
+
+        if ($entiers === []) {
+            return '_partiel';
+        }
+
+        sort($entiers);
+
+        // ⚠ LE CAS COURANT EST MIXTE, et le nom doit le dire sans mentir. Le périmètre
+        // proposé d'office est « la production ET CE QU'ELLE APPELLE » : une piste, une
+        // pièce de sinistre, tirées d'autres familles qui restent donc incomplètes. Les
+        // taire donnerait « production » pour un fichier qui contient davantage ; tout
+        // rabattre sur « partiel » perdrait la seule information utile du nom.
+        $incomplet = \count($entiers) !== \count($retenuParModule);
+
+        return '_' . implode('-', $entiers) . ($incomplet ? '-et-liens' : '');
     }
 
     /** Téléchargement d'un classeur produit à la volée, sur le patron des autres exports. */

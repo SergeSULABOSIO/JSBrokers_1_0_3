@@ -111,6 +111,16 @@
 
         .jsb-echange .ech-vide { color:#6c757d; font-size:.9rem; padding:1.25rem 0; text-align:center; }
         .jsb-echange .ech-actions { display:flex; flex-wrap:wrap; gap:.6rem; align-items:center; justify-content:flex-end; margin-top:1rem; padding-top:1rem; border-top:1px solid #f0f0f0; }
+        /* La barre de l'export ouvre le panneau au lieu de le fermer : le geste
+           principal se lit d'abord, le périmètre le précise ensuite. Le trait passe
+           donc DESSOUS, et la barre s'aligne à gauche comme tout ce qui la suit —
+           un bouton isolé à droite, au-dessus d'un contenu aligné à gauche, casse
+           la colonne de lecture. */
+        .jsb-echange .ech-actions.ech-actions--tete {
+            justify-content:flex-start;
+            margin:0 0 1rem; padding:0 0 1rem;
+            border-top:none; border-bottom:1px solid #f0f0f0;
+        }
         .jsb-echange .btn-cobalt { background:#0047AB; border-color:#0047AB; color:#ffffff; }
         .jsb-echange .btn-cobalt:hover { background:#003380; border-color:#003380; color:#ffffff; }
         .jsb-echange .btn-cobalt:disabled { background:#0047AB; border-color:#0047AB; opacity:.65; cursor:not-allowed; }
@@ -216,6 +226,15 @@
         }
         .jsb-echange .jsb-preset-chip[aria-pressed="false"] .jsb-preset-chip__icon { opacity:.35; }
 
+        /* Rappel d'un périmètre restauré. Ton d'information, pas d'alerte : rien n'est
+           en panne, on signale seulement d'où vient l'état affiché. */
+        .jsb-echange .ech-rappel {
+            display:flex; align-items:center; gap:.5rem;
+            margin:0 0 .75rem; padding:.55rem .8rem;
+            border-radius:8px; background:#e8f0fb; color:#212529;
+            font-size:.83rem;
+        }
+
         /* Périmètre d'import : replié par défaut — c'est un réglage, pas une étape. */
         .jsb-echange .ech-perimetre-import {
             border:1px dashed #dee2e6; border-radius:10px; padding:.25rem .85rem;
@@ -315,27 +334,18 @@
         <div class="cs-panel">
             <h3 class="ech-titre" id="ech-perimetre-titre">Que voulez-vous exporter ?</h3>
             <p class="ech-note" style="margin:0 0 1rem;">
-                Cochez les données à inclure. Cette liste est celle de <strong>vos droits</strong> :
-                une donnée que vous ne pouvez pas consulter à l'écran ne peut pas sortir dans un
-                fichier. Certaines en appellent d'autres — cocher une police coche son client,
-                sans quoi le fichier renverrait vers des lignes absentes.
+                Vos <strong>données de production</strong> sont retenues d'office — clients,
+                polices, propositions et ce qu'elles appellent. Cochez les autres familles si
+                vous en avez besoin. Cette liste est celle de <strong>vos droits</strong> : une
+                donnée que vous ne pouvez pas consulter à l'écran ne peut pas sortir dans un
+                fichier. Et certaines en appellent d'autres — cocher une police coche son
+                client, sans quoi le fichier renverrait vers des lignes absentes.
             </p>
-
-            {% if ressources is empty %}
-                <p class="ech-vide">Aucune donnée n'est à votre portée : votre périmètre d'accès ne couvre aucune rubrique exportable.</p>
-            {% else %}
-                {% include 'components/echange/_perimetre.html.twig' with {
-                    parModule: parModule,
-                    ecrivables: ecrivables,
-                    ressources: ressources,
-                    contexte: 'exporter'
-                } only %}
-            {% endif %}
 
             {# Le bouton est DÉSARMÉ pendant l'opération (echange#exporter) : un double
                clic produirait deux fichiers et, sans la clé d'idempotence, deux
                occurrences facturées. #}
-            <div class="ech-actions">
+            <div class="ech-actions ech-actions--tete">
                 {% if not facturation.exportFinancable %}
                     <span class="ech-note" style="margin:0;">
                         Rechargez votre solde pour exporter : il manque
@@ -354,18 +364,21 @@
                     </span>
                 </button>
 
-                {# GABARIT VIERGE : la structure, sans les données. Gratuit, et dit comme tel
-                   — un coût affiché à côté d'un geste qui n'en a aucun ferait hésiter.
-                   Présenté en SECOND et en discret : c'est le geste rare (une reprise, un
-                   fichier monté par un tiers), pas celui du quotidien. #}
-                <a class="btn btn-sm btn-outline-secondary"
-                   href="{{ path('admin.echange.gabarit', {idEntreprise: idEntreprise}) }}"
-                   title="Un classeur vide, aux bons en-têtes, à remplir hors ligne puis à déposer dans l'onglet Importer.">
-                    <twig:UX:Icon name="{{ resolve_icon_name('action:download') }}" style="width:16px;height:16px;" />
-                    <span>Télécharger un gabarit vierge</span>
-                </a>
-                <span class="ech-note" style="margin:0;">Gratuit : il ne contient aucune donnée du cabinet.</span>
             </div>
+
+            {% if ressources is empty %}
+                <p class="ech-vide">Aucune donnée n'est à votre portée : votre périmètre d'accès ne couvre aucune rubrique exportable.</p>
+            {% else %}
+                {% include 'components/echange/_perimetre.html.twig' with {
+                    parModule: parModule,
+                    ecrivables: ecrivables,
+                    ressources: ressources,
+                    defauts: defauts,
+                    idEntreprise: idEntreprise,
+                    contexte: 'exporter'
+                } only %}
+            {% endif %}
+
         </div>
     {% endif %}
 
@@ -378,6 +391,15 @@
                 contrôlé à blanc — gratuitement, sans rien écrire — et vous ne confirmez qu'ensuite,
                 au vu du rapport.
             </p>
+            {# ⚠ ÉCARTER DES FEUILLES SANS LE DIRE SERAIT UNE TRAHISON. Le périmètre arrive
+               restreint à la production ; le volet qui le montre est replié. Sans cette
+               phrase, un classeur complet serait repris à moitié et l'utilisateur ne
+               l'apprendrait qu'au rapport — ou jamais. #}
+            <p class="ech-note" style="margin:0 0 1rem;">
+                Par défaut, seules vos <strong>données de production</strong> seront reprises :
+                les autres feuilles du fichier seront ignorées. Ouvrez le réglage ci-dessous
+                pour en reprendre davantage.
+            </p>
 
             {# ── Ce qu'on reprend ── #}
             {#
@@ -389,15 +411,21 @@
             {% if parModule is not empty %}
                 <details class="ech-perimetre-import">
                     <summary class="ech-perimetre-tete">
-                        <span>Ne reprendre qu'une partie du fichier</span>
-                        <span class="ech-note" style="margin:0;">Tout est repris par défaut</span>
+                        <span>Choisir ce qu'on reprend du fichier</span>
+                        {# Décompte tenu par le contrôleur, au même endroit que les compteurs
+                           de familles. C'est ce qui rend la restriction lisible sans ouvrir
+                           le volet — sinon il faudrait l'ouvrir d'office, et il fait deux
+                           écrans de haut. #}
+                        <span class="ech-note" style="margin:0;" data-echange-target="resumePerimetre">
+                            {{ defauts|length }} donnée{{ defauts|length > 1 ? 's' : '' }} sur {{ ressources|length }}
+                        </span>
                         <span class="ech-groupe-chevron" aria-hidden="true"></span>
                     </summary>
 
                     <p class="ech-note" style="margin:.5rem 0 1rem;">
-                        Décochez ce que le fichier ne doit pas toucher — reprendre sa production
-                        sans réécrire ses taxes, par exemple. Une feuille écartée est simplement
-                        ignorée.
+                        Cochez ce que le fichier doit pouvoir toucher. Une feuille écartée est
+                        simplement ignorée : elle reste dans le classeur, mais rien n'en sera
+                        écrit.
                         <strong>Attention :</strong> si une donnée retenue renvoie à une donnée
                         écartée, le contrôle le refusera plutôt que d'écrire un lien vide. Ce
                         n'est pas une panne : c'est ce qui vous protège de votre propre filtrage.
@@ -407,6 +435,8 @@
                         parModule: parModule,
                         ecrivables: ecrivables,
                         ressources: ressources,
+                        defauts: defauts,
+                        idEntreprise: idEntreprise,
                         contexte: 'importer'
                     } only %}
                 </details>

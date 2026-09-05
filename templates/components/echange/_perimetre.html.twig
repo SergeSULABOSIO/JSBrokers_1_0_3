@@ -13,11 +13,26 @@
   Paramètres :
     parModule  — module => { code => ressource }
     ecrivables — codes réellement modifiables
+    defauts    — codes cochés d'office. VIDE = tout est coché, ce qui est le cas à
+                 l'import : restreindre un fichier qu'on vient de déposer, sans l'avoir
+                 demandé, ferait sauter des feuilles en silence.
+    idEntreprise — pour l'adresse du gabarit vierge.
     contexte   — 'exporter' ou 'importer' : préfixe des identifiants, et libellé de la
                  dernière colonne. Deux jeux de cases peuvent coexister dans la page sans
                  que les `for=` d'un onglet ne désignent les cases de l'autre.
 #}
 {% set estImport = contexte == 'importer' %}
+
+{# Rappel d'un choix VENU D'AILLEURS — d'une session précédente, pas de ce geste-ci.
+   Masqué par défaut et démasqué par le contrôleur : rendu côté serveur, il faudrait que
+   PHP connaisse le stockage du navigateur, ce qu'il ne peut pas. #}
+<p class="ech-rappel" data-echange-target="rappelRestauration" hidden>
+    <twig:UX:Icon name="{{ resolve_icon_name('action:information') }}" style="width:15px;height:15px;" />
+    <span>
+        Votre choix précédent a été repris : certaines données sont écartées.
+        Utilisez « Tout cocher » pour revenir au périmètre complet.
+    </span>
+</p>
 
 {# LES FAMILLES SE CHOISISSENT PAR CHIPS — le contrôle de la rubrique.
 
@@ -35,15 +50,20 @@
     <div class="jsb-preset-filters jsb-control-pill" role="group" aria-label="Familles de données">
         <span class="jsb-preset-filters__titre" aria-hidden="true">familles</span>
         {% for module, ressourcesDuModule in parModule %}
+            {# L'état est calculé DÈS LE RENDU. Le laisser à « tout retenu » en attendant
+               que le JavaScript rectifie ferait clignoter la barre, et mentirait le temps
+               d'un affichage — assez pour qu'on lance un export en croyant tout emporter. #}
+            {% set retenues = defauts is empty ? ressourcesDuModule|length : ressourcesDuModule|filter(r => r.code in defauts)|length %}
+            {% set entier = retenues == ressourcesDuModule|length %}
             <button type="button"
-                    class="jsb-preset-chip is-active"
+                    class="jsb-preset-chip{{ entier ? ' is-active' : '' }}"
                     data-echange-target="module"
                     data-echange-module-param="{{ module }}"
                     data-action="click->echange#basculerModule"
-                    aria-pressed="true">
+                    aria-pressed="{{ retenues == 0 ? 'false' : (entier ? 'true' : 'mixed') }}">
                 <span class="jsb-preset-chip__icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('action:check'), {width: '15px', height: '15px'}) }}</span>
                 <span>{{ module }}</span>
-                <span class="jsb-preset-chip__count" data-echange-compte-module="{{ module }}">{{ ressourcesDuModule|length }}</span>
+                <span class="jsb-preset-chip__count" data-echange-compte-module="{{ module }}">{{ entier ? ressourcesDuModule|length : retenues ~ ' / ' ~ ressourcesDuModule|length }}</span>
             </button>
         {% endfor %}
     </div>
@@ -65,6 +85,29 @@
     <span class="ech-compte" role="status" data-echange-target="compteSelection"></span>
 </div>
 
+{# LE GABARIT VIERGE, RANGÉ AVEC LE PÉRIMÈTRE QU'IL REFLÈTE.
+
+   Il vit dans les DEUX onglets, parce que c'est un outil d'import : on le remplit pour
+   le déposer. Ne l'offrir que dans « Exporter » obligeait à passer par un écran qui
+   commande autre chose, puis à y régler des chips qui ne servent pas ce geste-là.
+
+   ⚠ SON LIEN SUIT LES CASES, et le contrôleur le réécrit à chaque changement. Un bouton
+   dont le résultat dépend de cases situées en dessous doit dire ce qu'il va rendre,
+   sinon deux clics identiques donnent deux fichiers différents sans explication. #}
+<p class="ech-gabarit">
+    <a class="btn btn-sm btn-outline-secondary"
+       href="{{ path('admin.echange.gabarit', {idEntreprise: idEntreprise}) }}"
+       data-echange-target="lienGabarit"
+       title="Un classeur vide, aux bons en-têtes, à remplir hors ligne puis à déposer dans l'onglet Importer.">
+        <twig:UX:Icon name="{{ resolve_icon_name('action:download') }}" style="width:16px;height:16px;" />
+        <span data-echange-target="libelleGabarit">Télécharger un gabarit vierge</span>
+    </a>
+    <span class="ech-note" style="margin:0;">
+        Gratuit : il ne contient aucune donnée du cabinet, seulement les feuilles et les
+        en-têtes des données retenues ci-dessus.
+    </span>
+</p>
+
 {% for module, ressourcesDuModule in parModule %}
     {# `open` par défaut : on ne cache pas à l'ouverture ce que l'utilisateur doit
        vérifier. Le repli est là pour ranger, pas pour dissimuler. #}
@@ -74,7 +117,9 @@
                Deux commandes pour un seul état finissaient toujours par diverger, et
                l'utilisateur ne savait plus laquelle disait vrai. #}
             <span class="ech-groupe-nom">{{ module }}</span>
-            <span class="ech-groupe-compte" data-echange-detail-module="{{ module }}">{{ ressourcesDuModule|length }}</span>
+            {% set retenuesDuGroupe = defauts is empty ? ressourcesDuModule|length : ressourcesDuModule|filter(r => r.code in defauts)|length %}
+            <span class="ech-groupe-compte{{ retenuesDuGroupe == 0 ? ' is-vide' : (retenuesDuGroupe < ressourcesDuModule|length ? ' is-partiel' : '') }}"
+                  data-echange-detail-module="{{ module }}">{{ retenuesDuGroupe == ressourcesDuModule|length ? ressourcesDuModule|length : retenuesDuGroupe ~ ' sur ' ~ ressourcesDuModule|length }}</span>
             {# Chevron en CSS pur : il ne porte aucune information que le repli lui-même
                n'exprime pas, et le marqueur natif du <summary> ne se stylise pas partout. #}
             <span class="ech-groupe-chevron" aria-hidden="true"></span>
@@ -102,7 +147,7 @@
                             <input type="checkbox"
                                    id="ech-{{ contexte }}-{{ ressource.code }}"
                                    class="form-check-input"
-                                   checked
+                                   {{ (defauts is empty or ressource.code in defauts) ? 'checked' : '' }}
                                    data-echange-target="donnee"
                                    data-echange-code-param="{{ ressource.code }}"
                                    data-echange-module-param="{{ ressource.module }}"

@@ -55,6 +55,9 @@ final class CanevasDEchange
      * Colonnes techniques présentes sur CHAQUE feuille de données, avant les colonnes
      * métier. Le préfixe `_` les distingue à l'œil comme au parsing.
      */
+    /** Famille retenue d'office à l'export. Voir codesParDefaut(). */
+    public const MODULE_PAR_DEFAUT = 'Production';
+
     public const COL_UID        = '_uid';
     public const COL_ACTION     = '_action';
     public const COL_REF        = '_ref';
@@ -131,6 +134,47 @@ final class CanevasDEchange
      *
      * @return string[] codes retenus, en ordre topologique
      */
+    /**
+     * LE PÉRIMÈTRE PROPOSÉ D'OFFICE À L'EXPORT : la famille Production, fermée sur ses
+     * dépendances.
+     *
+     * Exporter les quarante-deux données est rarement ce qu'on veut : le geste courant
+     * est de sortir son activité — clients, polices, propositions — et non ses taxes,
+     * ses monnaies ni ses types d'absence, qui ne bougent presque jamais et qu'on
+     * réimporterait par-dessus eux-mêmes. Proposer tout revenait à faire décocher
+     * trente lignes à chaque fois, et donc, en pratique, à ne rien décocher du tout.
+     *
+     * ⚠ RIEN N'EST DÉCLARÉ ICI. La famille vient de la carte des droits, et ce qui
+     * l'accompagne vient de la MÊME fermeture que celle d'un clic : une police tire son
+     * client, et la piste dont elle est née. Tenir une liste de codes « données de
+     * production » aurait créé une seconde vérité, qui aurait divergé au premier ajout
+     * d'entité.
+     *
+     * ⚠ ET CE N'EST QU'UNE PROPOSITION. Tout reste cochable d'un geste ; le choix, une
+     * fois fait, survit au rechargement.
+     *
+     * @param array<string, RessourceDEchange> $lisibles le périmètre de l'invité
+     *
+     * @return string[] codes retenus d'office, dans l'ordre du classeur
+     */
+    public function codesParDefaut(array $lisibles): array
+    {
+        $amorce = [];
+        foreach ($lisibles as $code => $ressource) {
+            if ($ressource->module === self::MODULE_PAR_DEFAUT) {
+                $amorce[] = $code;
+            }
+        }
+
+        // Un invité qui n'a aucun droit en Production n'aurait rien de coché : mieux
+        // vaut alors lui proposer tout ce qu'il peut lire que rien du tout.
+        if ($amorce === []) {
+            return array_keys($lisibles);
+        }
+
+        return $this->fermerSurLesDependances($amorce, $lisibles);
+    }
+
     public function fermerSurLesDependances(array $codes, array $autorisees): array
     {
         $retenus = [];
