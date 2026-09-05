@@ -217,7 +217,7 @@ class EcranPerimetreTest extends WebTestCase
         $canevas = static::getContainer()->get(CanevasDEchange::class);
         $attendus = $canevas->codesParDefaut($canevas->toutes());
 
-        $cases = $crawler->filter('details.ech-perimetre-import input[data-echange-target="donnee"]');
+        $cases = $crawler->filter('details.ech-perimetre-volet input[data-echange-target="donnee"]');
         self::assertGreaterThan(0, $cases->count());
 
         foreach ($cases as $case) {
@@ -373,28 +373,129 @@ class EcranPerimetreTest extends WebTestCase
      * rien à restreindre, donc aucune raison d'ouvrir un panneau intitulé « choisir ce
      * qu'on reprend ». Le seul outil qui rendait la reprise possible était caché derrière
      * le geste qu'on ne fait pas.
+     *
+     * @dataProvider ongletsPortantLePerimetre
      */
-    public function testLeGabaritNEstPasEnfermeDansLeVoletDeReglage(): void
+    public function testLeGabaritNEstPasEnfermeDansLeVoletDeReglage(string $onglet): void
     {
         [$entreprise] = $this->fixture();
 
-        $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=importer', $entreprise->getId()));
+        $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=%s', $entreprise->getId(), $onglet));
         self::assertResponseIsSuccessful();
 
         self::assertCount(1, $crawler->filter('a[data-echange-target="lienGabarit"]'));
         self::assertCount(
             0,
-            $crawler->filter('details.ech-perimetre-import a[data-echange-target="lienGabarit"]'),
+            $crawler->filter('details.ech-perimetre-volet a[data-echange-target="lienGabarit"]'),
             "Un livrable enfermé dans un réglage replié n'existe pas pour qui n'ouvre pas le réglage.",
         );
 
-        // Et il précède le dépôt : on télécharge le classeur vide AVANT de déposer le sien.
+        // ⚠ L'ORDRE PAR RAPPORT AU DÉPÔT NE VAUT QU'À L'IMPORT : l'onglet Exporter n'a
+        // pas de dépôt, et l'y chercher rendrait `false`, qu'une comparaison numérique
+        // avalerait sans rien prouver.
+        if ($onglet === 'importer') {
+            $html = (string) $this->client->getResponse()->getContent();
+            self::assertLessThan(
+                strpos($html, '<div class="ech-depot">'),
+                strpos($html, 'data-echange-target="lienGabarit"'),
+                'Le gabarit doit précéder le dépôt : on le remplit pour le déposer.',
+            );
+        }
+    }
+
+    /**
+     * ⚠ LE RÉGLAGE FERME LA MARCHE, DES DEUX CÔTÉS.
+     *
+     * Il barrait le chemin entre l'annonce et le bouton qu'on venait chercher. Sa place
+     * dans la PAGE a changé ; sa place dans l'ENCHAÎNEMENT, non : il reste avant le
+     * contrôle, qui est le compte rendu de ce qui sera écrit.
+     */
+    public function testLeReglageFermeLaMarcheALImport(): void
+    {
+        [$entreprise] = $this->fixture();
+
+        $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=importer', $entreprise->getId()));
+        self::assertResponseIsSuccessful();
+
         $html = (string) $this->client->getResponse()->getContent();
         self::assertLessThan(
-            strpos($html, '<div class="ech-depot">'),
-            strpos($html, 'data-echange-target="lienGabarit"'),
-            'Le gabarit doit précéder le dépôt : après, on a déjà son fichier.',
+            strpos($html, '<details class="ech-perimetre-volet">'),
+            strpos($html, 'Le contrôle est gratuit'),
+            'Le volet vient après le dépôt et son explication, pas en travers du chemin.',
         );
+    }
+
+    /**
+     * ⚠ LES DEUX SORTIES DU CABINET SONT À LA MÊME BARRE, ET LE RÉGLAGE EST EN DESSOUS.
+     *
+     * « Générer l'export » et « Gabarit vierge » produisent tous deux un .xlsx : les
+     * séparer obligeait l'œil à chercher le second plus bas, au milieu d'un réglage. Le
+     * volet, lui, ferme la marche — c'est ce qu'on ne touche pas la plupart du temps.
+     */
+    public function testLesDeuxSortiesSontALaMemeBarreEtLeReglageEnDessous(): void
+    {
+        [$entreprise] = $this->fixture();
+
+        $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=exporter', $entreprise->getId()));
+        self::assertResponseIsSuccessful();
+
+        $barre = $crawler->filter('.ech-actions.ech-actions--tete');
+        self::assertCount(1, $barre);
+        self::assertCount(1, $barre->filter('[data-echange-target="boutonExport"]'));
+        self::assertCount(
+            1,
+            $barre->filter('a[data-echange-target="lienGabarit"]'),
+            "Le gabarit doit se tenir à la même barre que l'export.",
+        );
+
+        // Le réglage ferme la marche.
+        $html = (string) $this->client->getResponse()->getContent();
+        self::assertLessThan(
+            strpos($html, '<details class="ech-perimetre-volet">'),
+            strpos($html, 'data-echange-target="lienGabarit"'),
+            'Le volet du périmètre vient après les deux boutons, pas entre eux.',
+        );
+    }
+
+    /**
+     * ⚠ LE PÉRIMÈTRE EST REPLIÉ DANS LES DEUX ONGLETS, ET SON RÉSUMÉ DIT L'ESSENTIEL.
+     *
+     * Cinq groupes et quarante-deux lignes déroulés d'office, c'était trois écrans de
+     * hauteur avant d'atteindre le bouton — pour un réglage que la plupart des exports
+     * ne touchent jamais. Mais replier sans résumer aurait été pire : l'écran aurait
+     * caché ce qu'il fait. Les deux vont ensemble, et ce test les tient ensemble.
+     *
+     * @dataProvider ongletsPortantLePerimetre
+     */
+    public function testLeVoletDuPerimetreEstReplieEtResume(string $onglet): void
+    {
+        [$entreprise] = $this->fixture();
+
+        $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=%s', $entreprise->getId(), $onglet));
+        self::assertResponseIsSuccessful();
+
+        $volet = $crawler->filter('details.ech-perimetre-volet');
+        self::assertCount(1, $volet, sprintf('Le périmètre de « %s » doit être un volet.', $onglet));
+        self::assertFalse(
+            $volet->getNode(0)->hasAttribute('open'),
+            "Un réglage que la plupart des exports ne touchent pas ne doit pas occuper l'écran.",
+        );
+
+        // Le résumé porte le décompte : c'est ce qui rend la restriction lisible SANS
+        // ouvrir le volet — sinon l'économie d'espace se paierait d'un écran qui ment.
+        $canevas = static::getContainer()->get(CanevasDEchange::class);
+        $resume = $volet->filter('summary [data-echange-target="resumePerimetre"]');
+        self::assertCount(1, $resume);
+        self::assertStringContainsString(
+            (string) \count($canevas->codesParDefaut($canevas->toutes())),
+            $resume->text(),
+        );
+
+        // Et le titre du volet nomme le geste de CET onglet : « exporte » n'est pas
+        // « reprend », et deux écrans qui disent la même phrase pour deux gestes
+        // différents se confondent.
+        $titre = $volet->filter('summary span')->first()->text();
+        self::assertStringContainsString($onglet === 'importer' ? 'reprend' : 'exporte', $titre);
     }
 
     /** @return iterable<string, array{0: string}> */
@@ -404,7 +505,15 @@ class EcranPerimetreTest extends WebTestCase
         yield 'importer' => ['importer'];
     }
 
-    /** Le choix de ce qu'on reprend est offert AVANT le dépôt, pas après le contrôle. */
+    /**
+     * Le choix de ce qu'on reprend est offert, et ce qu'il vaut est ANNONCÉ avant le dépôt.
+     *
+     * ⚠ CE N'EST PLUS LE VOLET QUI DOIT PRÉCÉDER LE DÉPÔT — il ferme désormais la marche,
+     * pour ne pas barrer le chemin vers le bouton qu'on vient chercher. Ce qui doit le
+     * précéder, c'est l'ANNONCE de ce qui sera repris : sans elle, on déposerait un
+     * classeur complet en ignorant qu'il n'en sera pris qu'une part. Le réglage peut
+     * attendre ; l'information, non.
+     */
     public function testLOngletImporterOffreLeChoixDesDonnees(): void
     {
         [$entreprise] = $this->fixture();
@@ -412,21 +521,19 @@ class EcranPerimetreTest extends WebTestCase
         $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=importer', $entreprise->getId()));
         self::assertResponseIsSuccessful();
 
-        self::assertCount(1, $crawler->filter('details.ech-perimetre-import'));
+        self::assertCount(1, $crawler->filter('details.ech-perimetre-volet'));
         self::assertGreaterThan(
             0,
-            $crawler->filter('details.ech-perimetre-import button.jsb-preset-chip[data-echange-target="module"]')->count(),
+            $crawler->filter('details.ech-perimetre-volet button.jsb-preset-chip[data-echange-target="module"]')->count(),
         );
 
-        // Le bloc précède le dépôt dans le document : l'ordre de lecture EST l'ordre du
-        // geste, et un lecteur d'écran n'a pas d'autre indice.
         // ⚠ On cherche les BALISES, pas les noms de classes : la feuille de style, posée
         // en tête du composant, contient les deux sélecteurs et fausserait la comparaison.
         $html = (string) $this->client->getResponse()->getContent();
         self::assertLessThan(
             strpos($html, '<div class="ech-depot">'),
-            strpos($html, '<details class="ech-perimetre-import">'),
-            'Le choix des données doit précéder le dépôt du fichier.',
+            strpos($html, 'seront reprises'),
+            "L'annonce de ce qui sera repris doit précéder le dépôt.",
         );
     }
 
