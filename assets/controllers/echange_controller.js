@@ -1,4 +1,10 @@
 import { Controller } from '@hotwired/stimulus';
+import {
+    cleDuPerimetre,
+    exclusionsARestaurer,
+    exclusionsDe,
+    meriteMemorisation,
+} from './echange-perimetre-persiste.js';
 
 /**
  * Contrôleur du composant « Importation / Exportation » (espace de travail).
@@ -26,6 +32,10 @@ export default class extends Controller {
         'donnee',
         'module',
         'compteSelection',
+        'rappelRestauration',
+        'lienGabarit',
+        'libelleGabarit',
+        'resumePerimetre',
         'fichier',
         'nomFichier',
         'suppressions',
@@ -49,8 +59,31 @@ export default class extends Controller {
      */
     #occupe = false;
 
+    /**
+     * Le rappel « votre choix précédent a été repris » est-il affiché ?
+     *
+     * Il ne parle QUE d'un choix venu d'une session précédente. Dès que l'utilisateur
+     * revient au périmètre complet, il n'a plus rien à dire — et une phrase qui décrit
+     * un état révolu est pire qu'une phrase absente.
+     */
+    #rappelAffiche = false;
+
+    /**
+     * L'écran a-t-il fini de se poser ?
+     *
+     * ⚠ LE PÉRIMÈTRE D'OFFICE N'EST PAS UN CHOIX. L'export arrive avec la famille
+     * Production cochée ; l'enregistrer au premier affichage reviendrait à figer une
+     * proposition en décision — et le jour où ce défaut changerait, l'ancien
+     * continuerait de s'appliquer à ceux qui n'ont jamais rien demandé.
+     *
+     * On n'écrit donc qu'après un geste.
+     */
+    #initialise = false;
+
     connect() {
+        this.#restaurerLePerimetre();
         this.#rafraichirSelection();
+        this.#initialise = true;
     }
 
     /** Changement d'onglet (chip) : `data-echange-onglet-param`. */
@@ -281,6 +314,149 @@ export default class extends Controller {
 
         this.#armer(this.hasBoutonExportTarget ? this.boutonExportTarget : null, retenus.size > 0);
         this.#armerControle();
+        this.#accorderLeGabarit(retenus.size);
+        this.#resumerLePerimetre(retenus.size);
+        this.#memoriserLePerimetre();
+
+        // Le rappel parle de l'état À L'ARRIVÉE. Dès que l'utilisateur touche une case,
+        // l'état affiché est le sien : la phrase décrirait un passé, ce qui est pire
+        // qu'une phrase absente.
+        if (this.#rappelAffiche && this.#initialise) {
+            this.rappelRestaurationTarget.hidden = true;
+            this.#rappelAffiche = false;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Le gabarit vierge suit le périmètre
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Réécrit l'adresse du gabarit et dit, dans le libellé, ce qu'on va obtenir.
+     *
+     * ⚠ RIEN N'EST ENVOYÉ QUAND TOUT EST COCHÉ. Le serveur lit alors « tout ce que cet
+     * utilisateur peut lire », ce qui reste juste même si ses droits changent entre
+     * l'affichage de l'écran et le clic — c'est déjà la règle de l'export, et deux
+     * conventions pour la même chose finiraient par diverger.
+     *
+     * ⚠ ET RIEN DE COCHÉ DÉSARME LE LIEN. Un gabarit sans feuille n'est pas un gabarit :
+     * la route répondrait 422, et laisser cliquer pour offrir une erreur est une
+     * promesse qu'on sait ne pas tenir.
+     */
+    #accorderLeGabarit(retenues) {
+        if (!this.hasLienGabaritTarget) return;
+
+        const total = this.hasDonneeTarget ? this.donneeTargets.length : 0;
+        const lien = this.lienGabaritTarget;
+
+        if (retenues === 0) {
+            lien.removeAttribute('href');
+            lien.setAttribute('aria-disabled', 'true');
+        } else {
+            const base = this.urlValue.replace(/\/workspace\/\d+$/, '');
+            const choisies = this.#selection();
+            const parametre = choisies.length < total
+                ? `?donnees=${encodeURIComponent(choisies.join(','))}`
+                : '';
+            lien.href = `${base}/gabarit/${this.idEntrepriseValue}${parametre}`;
+            lien.removeAttribute('aria-disabled');
+        }
+
+        if (this.hasLibelleGabaritTarget) {
+            this.libelleGabaritTarget.textContent = retenues === total
+                ? 'Télécharger un gabarit vierge'
+                : `Gabarit vierge des ${retenues} donnée${retenues > 1 ? 's' : ''} retenue${retenues > 1 ? 's' : ''}`;
+        }
+    }
+
+    /**
+     * Le décompte porté par le résumé du volet d'import.
+     *
+     * C'est lui qui rend la restriction lisible SANS OUVRIR LE VOLET. Sans ce chiffre, il
+     * faudrait ouvrir le panneau d'office à chaque visite pour ne pas mentir — et il fait
+     * deux écrans de haut.
+     */
+    #resumerLePerimetre(retenues) {
+        if (!this.hasResumePerimetreTarget) return;
+
+        const total = this.hasDonneeTarget ? this.donneeTargets.length : 0;
+        this.resumePerimetreTarget.textContent = retenues === total
+            ? `les ${total} données du fichier`
+            : `${retenues} donnée${retenues > 1 ? 's' : ''} sur ${total}`;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Le périmètre survit au rechargement
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /** Clé de rangement de CE cabinet et de CET onglet. */
+    #cle() {
+        return cleDuPerimetre(this.idEntrepriseValue, this.ongletValue || 'exporter');
+    }
+
+    /**
+     * Repose les exclusions mémorisées, PAR LE MÊME CHEMIN qu'un clic.
+     *
+     * ⚠ On ne repose pas les cases une à une. Décocher pousse : écarter les clients
+     * écarte les polices qui les nomment. Court-circuiter cette fermeture rendrait un
+     * état que l'utilisateur n'aurait pas pu produire à la main — et un fichier
+     * renvoyant vers des lignes absentes.
+     */
+    #restaurerLePerimetre() {
+        if (!this.hasDonneeTarget) return;
+
+        let memorise = null;
+        try {
+            memorise = JSON.parse(window.localStorage.getItem(this.#cle()) || 'null');
+        } catch (error) {
+            // Navigation privée, stockage refusé, valeur corrompue : on repart de
+            // « tout est coché ». Une commodité perdue ne doit jamais casser l'écran.
+            return;
+        }
+
+        const codes = this.donneeTargets.map((c) => c.dataset.echangeCodeParam);
+        const aReposer = exclusionsARestaurer(memorise, codes);
+        for (const code of aReposer) {
+            this.#decocherLesDependants(code, new Set());
+        }
+
+        // ⚠ UN ÉCRAN QUI RESTREINT SANS LE DIRE EST TROMPEUR.
+        //
+        // Le choix est visible — les chips et le compteur le montrent — mais il a été
+        // fait dans une session précédente, et rien ne signale qu'il vient d'ailleurs.
+        // Quelqu'un qui reprend le poste le lendemain exporterait une partie de son
+        // cabinet en croyant tout exporter. On le DIT, une fois, à l'endroit du geste
+        // (Nielsen 1 : visibilité de l'état du système).
+        if (aReposer.length > 0 && this.hasRappelRestaurationTarget) {
+            this.rappelRestaurationTarget.hidden = false;
+            this.#rappelAffiche = true;
+
+            // ⚠ À L'IMPORT, LE PÉRIMÈTRE EST DANS UN VOLET REPLIÉ. Un avertissement
+            // enfermé dedans ne prévient personne : on ouvre le volet, sinon un fichier
+            // se verrait amputé de feuilles sans que rien à l'écran ne l'annonce.
+            this.rappelRestaurationTarget.closest('details')?.setAttribute('open', 'open');
+        }
+    }
+
+    /** Range les exclusions courantes, ou efface l'entrée quand tout est retenu. */
+    #memoriserLePerimetre() {
+        if (!this.hasDonneeTarget || !this.#initialise) return;
+
+        const exclusions = exclusionsDe(this.donneeTargets.map((c) => ({
+            code: c.dataset.echangeCodeParam,
+            retenu: c.checked,
+        })));
+
+        try {
+            if (meriteMemorisation(exclusions)) {
+                window.localStorage.setItem(this.#cle(), JSON.stringify(exclusions));
+            } else {
+                window.localStorage.removeItem(this.#cle());
+            }
+        } catch (error) {
+            // Quota atteint ou stockage refusé : le périmètre reste juste pour cette
+            // session, ce qui est exactement l'ancien comportement.
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────────

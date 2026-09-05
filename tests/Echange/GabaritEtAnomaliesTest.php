@@ -98,6 +98,79 @@ class GabaritEtAnomaliesTest extends WebTestCase
      * documentation du format, et à décourager le seul geste qui évite les fichiers
      * reconstruits à la main — lesquels finissent refusés.
      */
+    /**
+     * ⚠ LA RESTRICTION TRAVERSE JUSQU'AU FICHIER.
+     *
+     * C'est tout l'objet du chantier : qui prépare de la production hors ligne recevait
+     * un classeur de quarante-cinq feuilles dont trente-neuf ne le concernaient pas. Il
+     * devait deviner lesquelles remplir — et le risque était d'en effacer une dont
+     * l'import a besoin.
+     */
+    public function testLeGabaritRestreintNePorteQueLesFeuillesDemandees(): void
+    {
+        [$entreprise, $proprietaire] = $this->fixture();
+
+        $classeur = $this->gabarit($entreprise, $proprietaire, ['Client']);
+        $canevas = $this->service(CanevasDEchange::class);
+
+        self::assertNotNull(
+            $classeur->getSheetByName($canevas->ressource('Client')->feuille),
+            'La feuille demandée doit être là.',
+        );
+        self::assertNull(
+            $classeur->getSheetByName($canevas->ressource('Taxe')->feuille),
+            'Une donnée non demandée ne doit pas encombrer le gabarit.',
+        );
+    }
+
+    /**
+     * ⚠ MAIS ELLE RESTE FERMÉE SUR SES DÉPENDANCES.
+     *
+     * Une police a besoin de son client. Un gabarit qui porterait la feuille des polices
+     * sans celle des clients produirait, une fois rempli, un fichier renvoyant vers des
+     * lignes absentes — refusé au contrôle, après le travail de saisie. C'est le pire
+     * moment pour l'apprendre.
+     */
+    public function testLeGabaritRestreintTireCeQueSesDonneesAppellent(): void
+    {
+        [$entreprise, $proprietaire] = $this->fixture();
+
+        $canevas = $this->service(CanevasDEchange::class);
+        $classeur = $this->gabarit($entreprise, $proprietaire, ['Avenant']);
+
+        foreach ($canevas->ressource('Avenant')->dependances as $dep) {
+            self::assertNotNull(
+                $classeur->getSheetByName($canevas->ressource($dep)->feuille),
+                sprintf('Une police a besoin de « %s » : sa feuille doit suivre.', $dep),
+            );
+        }
+    }
+
+    /**
+     * Le manifeste d'un gabarit restreint annonce le périmètre RÉDUIT.
+     *
+     * C'est ce qui permet, trois mois plus tard, de savoir ce que contient le fichier
+     * qu'on retrouve sur son bureau — sans avoir à ouvrir chaque onglet.
+     */
+    public function testLeManifesteDUnGabaritRestreintAnnonceSonPerimetre(): void
+    {
+        [$entreprise, $proprietaire] = $this->fixture();
+
+        $classeur = $this->gabarit($entreprise, $proprietaire, ['Client']);
+        $feuille = $classeur->getSheetByName(EcrivainJsbx::FEUILLE_MANIFESTE);
+        self::assertNotNull($feuille);
+
+        $texte = '';
+        foreach ($feuille->toArray(null, false, false, false) as $ligne) {
+            $texte .= implode(' | ', array_map(static fn ($v) => (string) $v, $ligne)) . "
+";
+        }
+
+        self::assertStringContainsString('Client', $texte);
+        self::assertStringNotContainsString('Taxe', $texte, 'Le manifeste annoncerait une feuille absente.');
+    }
+
+    /** ⚠ Gratuit, et donc jamais compté : le vérifier deux fois de suite le prouve. */
     public function testLeGabaritNeDecompteAucuneOccurrence(): void
     {
         [$entreprise, $proprietaire] = $this->fixture();

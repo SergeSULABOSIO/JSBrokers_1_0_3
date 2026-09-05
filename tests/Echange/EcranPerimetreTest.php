@@ -140,24 +140,235 @@ class EcranPerimetreTest extends WebTestCase
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Les trois gestes
-    // ─────────────────────────────────────────────────────────────────────────────
-
-    /** Le gabarit vierge s'atteint depuis l'onglet Exporter, et il est dit gratuit. */
-    public function testLeGabaritEstProposeDansLOngletExporter(): void
+    /**
+     * ⚠ L'EXPORT ARRIVE SUR LA PRODUCTION, PAS SUR TOUT.
+     *
+     * Exporter les quarante-deux données est rarement ce qu'on veut : le geste courant
+     * est de sortir son activité, pas ses taxes ni ses types d'absence. Proposer tout
+     * revenait à faire décocher trente lignes à chaque fois — donc, en pratique, à ne
+     * rien décocher du tout.
+     */
+    public function testLExportArriveSurLesDonneesDeProduction(): void
     {
         [$entreprise] = $this->fixture();
 
         $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=exporter', $entreprise->getId()));
         self::assertResponseIsSuccessful();
 
-        $lien = $crawler->filter(sprintf('a[href="/admin/echange/gabarit/%d"]', $entreprise->getId()));
-        self::assertCount(1, $lien, 'Le lien vers le gabarit vierge doit être présent.');
+        $canevas = static::getContainer()->get(CanevasDEchange::class);
+        $attendus = $canevas->codesParDefaut($canevas->toutes());
+        self::assertNotEmpty($attendus);
+
+        foreach ($canevas->toutes() as $code => $ressource) {
+            $case = $crawler->filter(sprintf('input[data-echange-code-param="%s"]', $code));
+            self::assertSame(
+                \in_array($code, $attendus, true),
+                $case->getNode(0)->hasAttribute('checked'),
+                sprintf('« %s » n%sest pas dans l%sétat attendu à l%sarrivée.', $ressource->libelle, "'", "'", "'"),
+            );
+        }
+
+        // Et ce n'est pas « tout » déguisé : des familles entières restent dehors.
+        self::assertLessThan(\count($canevas->toutes()), \count($attendus));
+    }
+
+    /**
+     * ⚠ LE DÉFAUT EST FERMÉ SUR SES DÉPENDANCES.
+     *
+     * Une police a besoin de la piste dont elle est née, laquelle vit dans une autre
+     * famille. Un défaut qui s'arrêterait au module produirait un fichier renvoyant vers
+     * des lignes absentes — donc un fichier qu'on ne peut pas réimporter.
+     */
+    public function testLeDefautTireCeQueLaProductionAppelle(): void
+    {
+        $canevas = static::getContainer()->get(CanevasDEchange::class);
+        $toutes = $canevas->toutes();
+        $defaut = $canevas->codesParDefaut($toutes);
+
+        foreach ($defaut as $code) {
+            foreach ($toutes[$code]->dependances as $dep) {
+                if (!isset($toutes[$dep])) {
+                    continue; // hors périmètre lisible : le droit prime sur la complétude
+                }
+                self::assertContains(
+                    $dep,
+                    $defaut,
+                    sprintf('« %s » a besoin de « %s », qui n%sest pas retenu.', $code, $dep, "'"),
+                );
+            }
+        }
+    }
+
+    /**
+     * ⚠ L'IMPORT ARRIVE RESTREINT — ET C'EST DIT AVANT LE DÉPÔT.
+     *
+     * Écarter d'office des feuilles d'un fichier que l'utilisateur vient de déposer, sans
+     * le lui dire, ce serait en sauter une part à son insu : le volet du périmètre est
+     * replié, et il n'ouvrirait jamais un réglage dont il ignore qu'il est actif. La
+     * restriction et son annonce ne se séparent pas — ce test les tient ensemble.
+     */
+    public function testLImportArriveSurLaProductionEtLeDit(): void
+    {
+        [$entreprise] = $this->fixture();
+
+        $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=importer', $entreprise->getId()));
+        self::assertResponseIsSuccessful();
+
+        $canevas = static::getContainer()->get(CanevasDEchange::class);
+        $attendus = $canevas->codesParDefaut($canevas->toutes());
+
+        $cases = $crawler->filter('details.ech-perimetre-import input[data-echange-target="donnee"]');
+        self::assertGreaterThan(0, $cases->count());
+
+        foreach ($cases as $case) {
+            $code = $case->getAttribute('data-echange-code-param');
+            self::assertSame(
+                \in_array($code, $attendus, true),
+                $case->hasAttribute('checked'),
+                sprintf('« %s » n%sest pas dans l%sétat attendu au dépôt.', $code, "'", "'"),
+            );
+        }
+
+        // ⚠ L'ANNONCE, AVANT LE DÉPÔT. Sans elle, la restriction serait une trahison.
+        $html = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('seules vos <strong>données de production</strong> seront reprises', $html);
+        self::assertLessThan(
+            strpos($html, '<div class="ech-depot">'),
+            strpos($html, 'seront reprises'),
+            "L'annonce doit précéder le dépôt : après, il est trop tard pour en tenir compte.",
+        );
+    }
+
+    /**
+     * Le décompte du volet se lit VOLET FERMÉ. C'est ce qui permet de ne pas ouvrir
+     * d'office un panneau haut de deux écrans à chaque visite.
+     */
+    public function testLeResumeDuVoletPorteLeDecompte(): void
+    {
+        [$entreprise] = $this->fixture();
+
+        $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=importer', $entreprise->getId()));
+        self::assertResponseIsSuccessful();
+
+        $resume = $crawler->filter('summary.ech-perimetre-tete [data-echange-target="resumePerimetre"]');
+        self::assertCount(1, $resume);
+
+        $canevas = static::getContainer()->get(CanevasDEchange::class);
+        $attendus = \count($canevas->codesParDefaut($canevas->toutes()));
+        self::assertStringContainsString((string) $attendus, $resume->text());
+        self::assertStringContainsString((string) \count($canevas->toutes()), $resume->text());
+    }
+
+    /**
+     * ⚠ LE RAPPEL D'UN CHOIX RESTAURÉ EST PRÉSENT, ET MASQUÉ.
+     *
+     * Il ne peut pas être rendu par le serveur : le choix vit dans le navigateur, et PHP
+     * ne le connaît pas. Le gabarit doit donc le poser masqué pour que le contrôleur ait
+     * quelque chose à démasquer — s'il manque, la restauration se fait en SILENCE, et
+     * quelqu'un qui reprend le poste le lendemain exporte une partie de son cabinet en
+     * croyant tout exporter.
+     */
+    public function testLeRappelDUnChoixRestaureExisteEtEstMasque(): void
+    {
+        [$entreprise] = $this->fixture();
+
+        $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=exporter', $entreprise->getId()));
+        self::assertResponseIsSuccessful();
+
+        $rappel = $crawler->filter('[data-echange-target="rappelRestauration"]');
+        self::assertCount(1, $rappel, "Le contrôleur n'aurait rien à démasquer.");
+        self::assertTrue($rappel->getNode(0)->hasAttribute('hidden'), 'Le rappel doit partir masqué.');
+        self::assertStringContainsString('Tout cocher', $rappel->text());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Les trois gestes
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * ⚠ LE GABARIT VIT DANS LES DEUX ONGLETS, ET SON LIEN SUIT LES CASES.
+     *
+     * C'est un outil d'IMPORT : on le remplit pour le déposer. Ne l'offrir que dans
+     * « Exporter » obligeait à passer par un écran qui commande autre chose. Et son lien
+     * doit porter la cible que le contrôleur réécrit, sinon il rendrait les quarante-deux
+     * feuilles quoi qu'on ait coché — c'est-à-dire le contraire de ce qu'il promet.
+     *
+     * @dataProvider ongletsPortantLePerimetre
+     */
+    public function testLeGabaritEstProposeDansLesDeuxOnglets(string $onglet): void
+    {
+        [$entreprise] = $this->fixture();
+
+        $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=%s', $entreprise->getId(), $onglet));
+        self::assertResponseIsSuccessful();
+
+        $lien = $crawler->filter('a[data-echange-target="lienGabarit"]');
+        self::assertCount(1, $lien, sprintf('Le gabarit doit être atteignable depuis « %s ».', $onglet));
+        self::assertSame(sprintf('/admin/echange/gabarit/%d', $entreprise->getId()), $lien->attr('href'));
+
+        // Le libellé est réécrit par le contrôleur : il lui faut sa cible.
+        self::assertCount(1, $lien->filter('[data-echange-target="libelleGabarit"]'));
 
         // ⚠ Le mot « gratuit » n'est pas décoratif : à côté d'un export facturé, un geste
         // dont on ne dit pas le prix est un geste qu'on n'ose pas faire.
-        self::assertStringContainsString('Gratuit', $crawler->filter('.ech-actions')->text());
+        self::assertStringContainsString('Gratuit', $crawler->filter('.ech-gabarit')->text());
+    }
+
+    /**
+     * ⚠ LE NOM DU FICHIER DIT SON PÉRIMÈTRE.
+     *
+     * Deux gabarits du même cabinet posés côte à côte sur un bureau ne se distinguaient
+     * que par l'heure de génération — et l'un portait les taxes, l'autre non. On remplit
+     * alors le mauvais, et on ne s'en aperçoit qu'au contrôle.
+     */
+    public function testLeNomDuGabaritDitCeQuIlContient(): void
+    {
+        [$entreprise, $invite] = $this->fixture();
+
+        $canevas = static::getContainer()->get(CanevasDEchange::class);
+        $lisibles = $canevas->ressourcesLisibles($invite);
+
+        // Une seule donnée : la famille est coupée en deux, le nom doit le dire.
+        $this->client->request('GET', sprintf('/admin/echange/gabarit/%d?donnees=Client', $entreprise->getId()));
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString(
+            '_partiel',
+            (string) $this->client->getResponse()->headers->get('Content-Disposition'),
+        );
+
+        // Le périmètre d'office : la production ENTIÈRE, plus ce qu'elle appelle
+        // ailleurs. Le nom doit porter les deux — « production » seul mentirait par
+        // omission, « partiel » perdrait la seule information utile.
+        $production = [];
+        foreach ($lisibles as $code => $ressource) {
+            if ($ressource->module === CanevasDEchange::MODULE_PAR_DEFAUT) {
+                $production[] = $code;
+            }
+        }
+        self::assertNotEmpty($production);
+
+        $this->client->request('GET', sprintf(
+            '/admin/echange/gabarit/%d?donnees=%s',
+            $entreprise->getId(),
+            implode(',', $canevas->codesParDefaut($lisibles)),
+        ));
+        self::assertResponseIsSuccessful();
+        $entete = (string) $this->client->getResponse()->headers->get('Content-Disposition');
+        self::assertStringContainsString('production-et-liens', $entete);
+
+        // Tout le périmètre : rien à préciser, le nom reste celui d'avant.
+        $this->client->request('GET', sprintf('/admin/echange/gabarit/%d', $entreprise->getId()));
+        self::assertResponseIsSuccessful();
+        $entier = (string) $this->client->getResponse()->headers->get('Content-Disposition');
+        self::assertStringNotContainsString('_partiel', $entier);
+        self::assertStringNotContainsString('_production', $entier);
+    }
+
+    /** @return iterable<string, array{0: string}> */
+    public static function ongletsPortantLePerimetre(): iterable
+    {
+        yield 'exporter' => ['exporter'];
+        yield 'importer' => ['importer'];
     }
 
     /** Le choix de ce qu'on reprend est offert AVANT le dépôt, pas après le contrôle. */
