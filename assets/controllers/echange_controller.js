@@ -488,13 +488,11 @@ export default class extends Controller {
             const corps = new FormData();
             corps.append('op', graine);
 
-            // Périmètre choisi. On n'envoie rien quand TOUT est coché : le serveur lit
-            // alors « tout ce que cet utilisateur peut lire », ce qui reste juste même
-            // si ses droits changent entre l'affichage de l'écran et le clic.
-            const choisies = this.#selection();
-            if (this.hasDonneeTarget && choisies.length < this.donneeTargets.length) {
-                corps.append('donnees', choisies.join(','));
-            }
+            // ⚠ AUCUN PÉRIMÈTRE N'EST ENVOYÉ. L'export produit désormais l'ÉTAT du
+            // portefeuille — une ligne par tranche, une forme fixe — et non plus un
+            // fichier d'échange à la carte. Les chips ne gouvernent que le gabarit
+            // vierge ; envoyer ici un filtre que le serveur ignore aurait laissé croire
+            // qu'il agit.
 
             const final = await this.#lireFlux(this.exportUrlValue, { method: 'POST', body: corps });
 

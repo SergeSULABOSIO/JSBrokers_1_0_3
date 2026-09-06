@@ -491,11 +491,12 @@ class EcranPerimetreTest extends WebTestCase
             $resume->text(),
         );
 
-        // Et le titre du volet nomme le geste de CET onglet : « exporte » n'est pas
-        // « reprend », et deux écrans qui disent la même phrase pour deux gestes
-        // différents se confondent.
+        // ⚠ LE TITRE DIT CE QUE LE VOLET GOUVERNE VRAIMENT. À l'import, ce qu'on reprend
+        // du fichier. À l'export, PLUS l'export lui-même — l'état a une forme fixe — mais
+        // le seul gabarit vierge. Un titre resté sur « ce qu'on exporte » laisserait
+        // croire que ces cases filtrent un fichier qu'elles ne touchent pas.
         $titre = $volet->filter('summary span')->first()->text();
-        self::assertStringContainsString($onglet === 'importer' ? 'reprend' : 'exporte', $titre);
+        self::assertStringContainsString($onglet === 'importer' ? 'reprend' : 'gabarit', $titre);
     }
 
     /** @return iterable<string, array{0: string}> */
