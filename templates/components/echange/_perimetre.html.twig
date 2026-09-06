@@ -34,7 +34,7 @@
    d'espace se paierait d'un écran qui cache ce qu'il fait. #}
 <details class="ech-perimetre-volet">
     <summary class="ech-perimetre-tete">
-        <span>{{ estImport ? "Choisir ce qu'on reprend du fichier" : "Choisir ce qu'on exporte de la base de données" }}</span>
+        <span>{{ estImport ? "Choisir ce qu'on reprend du fichier" : "Choisir ce que contiendra le gabarit vierge" }}</span>
         {# Décompte tenu par le contrôleur, au même endroit que les compteurs de familles. #}
         <span class="ech-note" style="margin:0;" data-echange-target="resumePerimetre">
             {{ defauts|length }} donnée{{ defauts|length > 1 ? 's' : '' }} sur {{ ressources|length }}
@@ -50,10 +50,11 @@
             le contrôle le refusera plutôt que d'écrire un lien vide. Ce n'est pas une panne :
             c'est ce qui vous protège de votre propre filtrage.
         {% else %}
-            Cochez les données à inclure. Cette liste est celle de <strong>vos droits</strong> :
-            une donnée que vous ne pouvez pas consulter à l'écran ne peut pas sortir dans un
-            fichier. Et certaines en appellent d'autres — cocher une police coche son client,
-            sans quoi le fichier renverrait vers des lignes absentes.
+            Cochez les données que le <strong>gabarit vierge</strong> doit contenir. Ce réglage
+            ne touche pas l'état exporté, qui a une forme fixe. Cette liste est celle de
+            <strong>vos droits</strong> : une donnée que vous ne pouvez pas consulter à l'écran
+            ne peut pas figurer dans un fichier. Et certaines en appellent d'autres — cocher une
+            police coche son client, sans quoi le fichier renverrait vers des lignes absentes.
         {% endif %}
     </p>
 

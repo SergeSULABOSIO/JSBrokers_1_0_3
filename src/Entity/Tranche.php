@@ -206,6 +206,17 @@ class Tranche
     #[Groups(['list:read'])]
     public ?float $retroAgentExigible = null;
 
+    // ⚠ MÊME OMISSION QUE `retroAgentDue`, restée en place : TrancheIndicatorStrategy
+    // posait ces deux-là en propriétés dynamiques. PHP 8.2 le déprécie — la suite de
+    // tests le signalait trente-neuf fois par exécution — et cela les laissait hors de
+    // tout groupe de sérialisation, donc invisibles du `data-entity` d'une ligne. Le
+    // versé et le solde d'un agent ne sont pas moins légitimes que son dû.
+    #[Groups(['list:read'])]
+    public ?float $retroAgentReversee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $retroAgentSolde = null;
+
     #[Groups(['list:read'])]
     public ?string $retroAPayerAffiche = null;
 
