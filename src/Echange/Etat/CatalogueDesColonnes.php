@@ -178,7 +178,7 @@ final class CatalogueDesColonnes
 
             // ── Les intermédiaires ──────────────────────────────────────────────────
             'intermediaire' => ColonneEtat::texte(
-                'Intermédiaire',
+                'Intermédiaire · Nom',
                 'Le partenaire EXTERNE apporteur de l\'affaire, s\'il y en a un.',
             ),
             'intermediairePart' => ColonneEtat::pourcentage(
@@ -202,6 +202,12 @@ final class CatalogueDesColonnes
                 'Date du DERNIER versement au partenaire.',
             ),
 
+            'retroAgentBeneficiaire' => ColonneEtat::texte(
+                'Rétro agent · Bénéficiaire',
+                'L\'agent INTERNE à qui la rétrocommission est due. Lu sur la condition de '
+                . 'partage qui lui donne droit, jamais sur les versements : un agent a droit '
+                . 'dès la souscription, bien avant le premier virement.',
+            ),
             'retroAgentDue' => ColonneEtat::montant(
                 'Rétro agent · Due',
                 'Ce que le cabinet doit à ses agents INTERNES sur cette tranche.',

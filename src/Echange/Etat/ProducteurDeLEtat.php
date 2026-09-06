@@ -49,13 +49,14 @@ final class ProducteurDeLEtat
         Entreprise $entreprise,
         Invite $invite,
         ?Utilisateur $acteur,
+        array $colonnesRetenues = [],
         ?string $graineIdempotence = null,
         ?Progression $progression = null,
     ): Response {
         // ── LE COÛT SE CONTRÔLE AVANT DE PRODUIRE QUOI QUE CE SOIT ──────────────────
         $this->compteur->verifierSolvabilite($entreprise, EchangeOccurrence::TYPE_EXPORT);
 
-        [$classeur, $manifeste, $total] = $this->produire($entreprise, $invite, $acteur, $progression);
+        [$classeur, $manifeste, $total] = $this->produire($entreprise, $invite, $acteur, $colonnesRetenues, $progression);
         $nomFichier = $this->nomFichier($entreprise);
 
         // Le périmètre d'un état est fixe : il n'a qu'une maille, la tranche. On le note
@@ -93,12 +94,15 @@ final class ProducteurDeLEtat
      * FABRIQUE le classeur, et rien d'autre : ni contrôle de solde, ni occurrence, ni
      * débit. C'est le chemin des outils de diagnostic.
      *
+     * @param string[] $colonnesRetenues codes des colonnes demandées ; vide = toutes
+     *
      * @return array{0: Spreadsheet, 1: Manifeste, 2: int}
      */
     public function produire(
         Entreprise $entreprise,
         Invite $invite,
         ?Utilisateur $acteur,
+        array $colonnesRetenues = [],
         ?Progression $progression = null,
     ): array {
         $progression ??= Progression::muette();
@@ -111,7 +115,7 @@ final class ProducteurDeLEtat
         $total = $this->etat->compterLignes($entreprise);
         $progression->totaliser($total);
 
-        $colonnes = $this->etat->colonnes($entreprise);
+        $colonnes = $this->etat->colonnes($entreprise, $colonnesRetenues);
 
         $progression->etape('Lecture du portefeuille');
         $lignes = iterator_to_array($this->etat->lignes($entreprise, $progression), false);

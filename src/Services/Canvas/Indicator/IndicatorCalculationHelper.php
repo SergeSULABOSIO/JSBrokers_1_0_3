@@ -2237,7 +2237,7 @@ class IndicatorCalculationHelper implements ResetInterface
      * Un bordereau analysé AVANT la persistance des montants garde la troisième variante
      * corrigée (imputation globale sur les plus anciennes), en repli.
      *
-     * @return array{couverts: array<int, true>, couvertsSoldes: array<int, true>, allocation: array<int, float>, parAvenant: array<int, array{reclame: float, encaisse: float}>}
+     * @return array{couverts: array<int, true>, couvertsSoldes: array<int, true>, allocation: array<int, float>, parAvenant: array<int, array{reclame: float, encaisse: float}>, bordereauxParTranche: array<int, array<int, true>>}
      */
     private function getCouvertureBordereaux(Entreprise $entreprise): array
     {
@@ -2250,11 +2250,38 @@ class IndicatorCalculationHelper implements ResetInterface
         $couvertsSoldes = [];
         $allocation = [];
         $parAvenant = [];
+        $bordereauxParTranche = [];
+
+        // QUEL BORDEREAU A NOURRI QUELLE TRANCHE.
+        //
+        // On ne recalcule rien : on OBSERVE l'allocation avant et après le passage de
+        // chaque bordereau, et toute tranche qui a grossi lui est attribuée. Refaire
+        // l'imputation pour répondre à cette question aurait dupliqué la règle la plus
+        // délicate du fichier — celle dont l'en-tête ci-dessus raconte trois versions
+        // fausses et un écart constaté de 166 463 $ contre 75 908 $ réellement perçus.
+        //
+        // Sert aux colonnes « payée le », « références de facture » et « compte
+        // bancaire » de l'état du portefeuille : sans elles, une commission encaissée par
+        // bordereau affichait un montant sans aucune pièce en face.
+        $noterOrigine = static function (array $avant, array $apres, ?int $bordereauId) use (&$bordereauxParTranche): void {
+            if ($bordereauId === null) {
+                return;
+            }
+            foreach ($apres as $trancheId => $montant) {
+                if ($montant > ($avant[$trancheId] ?? 0.0) + 0.0001) {
+                    $bordereauxParTranche[$trancheId][$bordereauId] = true;
+                }
+            }
+        };
+
         $bordereaux = $this->em->getRepository(Bordereau::class)->findBy([
             'entreprise' => $entreprise,
             'type' => Bordereau::TYPE_BOREDERAU_PRODUCTION,
         ]);
         foreach ($bordereaux as $bordereau) {
+            // Photographie de l'allocation avant ce bordereau : la comparaison d'après dira
+            // ce qu'il a placé, et où.
+            $allocationAvant = $allocation;
             // Ce que l'assureur déclare régler POUR CHAQUE POLICE, si l'analyse l'a
             // persisté (cf. BordereauController::ligneAnalyseAPersister). Les bordereaux
             // analysés avant cette version n'ont que les clés de repérage : ils gardent
@@ -2339,6 +2366,7 @@ class IndicatorCalculationHelper implements ResetInterface
                 // est imputé sur les plus anciennes tranches couvertes, toutes polices
                 // confondues. Approximation assumée, faute de la déclaration par police.
                 $this->imputerSurLesPlusAnciennes($allocation, $encaisse, $aImputer);
+                $noterOrigine($allocationAvant, $allocation, $bordereau->getId());
                 continue;
             }
 
@@ -2397,6 +2425,8 @@ class IndicatorCalculationHelper implements ResetInterface
                 $parAvenant[$avenantId]['reclame'] = ($parAvenant[$avenantId]['reclame'] ?? 0.0) + $reclame;
                 $parAvenant[$avenantId]['encaisse'] = ($parAvenant[$avenantId]['encaisse'] ?? 0.0) + $reclame * $taux;
             }
+
+            $noterOrigine($allocationAvant, $allocation, $bordereau->getId());
         }
 
         return $this->couvertureBordereauxCache[$entrepriseId] = [
@@ -2404,7 +2434,32 @@ class IndicatorCalculationHelper implements ResetInterface
             'couvertsSoldes' => $couvertsSoldes,
             'allocation' => $allocation,
             'parAvenant' => $parAvenant,
+            'bordereauxParTranche' => $bordereauxParTranche,
         ];
+    }
+
+    /**
+     * LES BORDEREAUX QUI ONT FAIT RENTRER DE L'ARGENT SUR CETTE TRANCHE.
+     *
+     * ⚠ Même source que `getTrancheCommissionAllouee` : la couverture mémoïsée, et elle
+     * seule. Une commission peut être encaissée par la facture d'articles d'une note OU
+     * par un bordereau dont les notes portent les paiements ; ce second circuit n'a
+     * aucune trace sur la tranche elle-même, et c'est ici qu'il se retrouve.
+     *
+     * @return Bordereau[]
+     */
+    public function getBordereauxCouvrantTranche(Tranche $tranche): array
+    {
+        $entreprise = $tranche->getEntreprise();
+        if (!$entreprise || $tranche->getId() === null) {
+            return [];
+        }
+
+        $ids = array_keys(
+            $this->getCouvertureBordereaux($entreprise)['bordereauxParTranche'][(int) $tranche->getId()] ?? [],
+        );
+
+        return $ids === [] ? [] : $this->em->getRepository(Bordereau::class)->findBy(['id' => $ids]);
     }
 
     /**

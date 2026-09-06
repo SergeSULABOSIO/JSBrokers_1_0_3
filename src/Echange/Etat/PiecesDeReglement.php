@@ -3,6 +3,7 @@
 namespace App\Echange\Etat;
 
 use App\Entity\Note;
+use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use App\Entity\Tranche;
 
 /**
@@ -39,6 +40,13 @@ final class PiecesDeReglement
     /** Séparateur des références multiples. Le point-virgule survit à l'ouverture en CSV. */
     public const SEPARATEUR = ' ; ';
 
+    public function __construct(
+        // Lui seul sait quels bordereaux ont fait rentrer de l'argent sur une tranche :
+        // cette attribution est le fruit d'une imputation délicate, mémoïsée par cabinet.
+        private readonly IndicatorCalculationHelper $helper,
+    ) {
+    }
+
     /**
      * Règlements de prime — déclaratifs, portés directement par la tranche.
      *
@@ -66,10 +74,19 @@ final class PiecesDeReglement
     /**
      * Encaissements de commission.
      *
-     * ⚠ MIROIR de `getTrancheMontantCommissionEncaissee` : seules comptent les notes
-     * adressées au CLIENT ou à l'ASSUREUR dont l'article facture un revenu. Sans ce
-     * filtre, un règlement de taxe ou de rétrocession serait présenté comme un
-     * encaissement de commission — c'est la correction que le helper porte déjà.
+     * ⚠ DEUX CIRCUITS, ET C'EST TOUT L'ENJEU.
+     *
+     * Une commission se facture par les ARTICLES d'une note — seules comptent alors les
+     * notes adressées au CLIENT ou à l'ASSUREUR dont l'article facture un revenu, sans
+     * quoi un règlement de taxe passerait pour un encaissement de commission. Mais elle
+     * s'encaisse tout aussi bien par BORDEREAU, dont les notes liées portent les
+     * paiements et dont la note ne porte souvent AUCUN article.
+     *
+     * Ne lire que le premier circuit laissait « payée le », « références de facture » et
+     * « compte bancaire » vides sur toute affaire réglée par bordereau : un montant
+     * encaissé, et pas une pièce en face. On réunit donc les notes des deux, dédoublonnées
+     * — les deux chemins décrivent le même argent, le helper les réconcilie d'ailleurs
+     * par un `max()`.
      *
      * @return array{date: ?\DateTimeImmutable, references: string, comptes: string}
      */
@@ -222,6 +239,12 @@ final class PiecesDeReglement
     private function notesDeCommission(Tranche $tranche): array
     {
         $notes = [];
+
+        // ── CIRCUIT 1 : la facture d'articles ───────────────────────────────────────
+        // ⚠ DEUX FILTRES, ET ILS NE PORTENT PAS SUR LE MÊME OBJET. Le destinataire est
+        // une propriété de la NOTE ; « facture un revenu » est une propriété de
+        // l'ARTICLE. Le helper les applique ensemble, et c'est ce qui empêche de compter
+        // le règlement d'une taxe ou d'une rétrocession comme un encaissement.
         foreach ($tranche->getArticles() as $article) {
             $note = $article->getNote();
             if ($note === null || $article->getRevenuFacture() === null) {
@@ -231,6 +254,17 @@ final class PiecesDeReglement
                 continue;
             }
             $notes[spl_object_id($note)] = $note;
+        }
+
+        // ── CIRCUIT 2 : le bordereau ────────────────────────────────────────────────
+        // La note d'un bordereau ne porte souvent AUCUN article : le circuit 1 ne la voit
+        // pas. C'est le helper qui dit quels bordereaux ont réellement fait rentrer de
+        // l'argent sur CETTE tranche — jamais une recherche refaite ici, l'imputation
+        // étant la règle la plus délicate du calcul d'encaissement.
+        foreach ($this->helper->getBordereauxCouvrantTranche($tranche) as $bordereau) {
+            foreach ($bordereau->getNotes() as $note) {
+                $notes[spl_object_id($note)] = $note;
+            }
         }
 
         return array_values($notes);

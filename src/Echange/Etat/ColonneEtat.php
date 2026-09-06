@@ -53,6 +53,24 @@ final class ColonneEtat
         return new self($libelle, Colonnes::IDENTIFIANT, $explication);
     }
 
+    /**
+     * LE GROUPE DE LA COLONNE, DÉDUIT DE SON LIBELLÉ.
+     *
+     * Les libellés sont écrits en deux temps — « Police · Référence », « Rétro agent ·
+     * Solde ». Le préfixe EST le groupe ; ce qui n'en porte pas rejoint « Général ».
+     *
+     * ⚠ RIEN N'EST DÉCLARÉ, et c'est délibéré. Un champ `groupe` ajouté aux cinquante-deux
+     * entrées du catalogue aurait fait une seconde vérité à tenir en accord avec le
+     * libellé — et le jour où les deux divergent, le chip annonce un nom et la colonne en
+     * porte un autre, sans que rien ne le signale.
+     */
+    public function groupe(): string
+    {
+        $position = mb_strpos($this->libelle, ' · ');
+
+        return $position === false ? 'Général' : mb_substr($this->libelle, 0, $position);
+    }
+
     /** Les montants et les nombres s'alignent à droite, et eux seuls. */
     public function aligneeADroite(): bool
     {

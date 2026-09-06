@@ -488,11 +488,16 @@ export default class extends Controller {
             const corps = new FormData();
             corps.append('op', graine);
 
-            // ⚠ AUCUN PÉRIMÈTRE N'EST ENVOYÉ. L'export produit désormais l'ÉTAT du
-            // portefeuille — une ligne par tranche, une forme fixe — et non plus un
-            // fichier d'échange à la carte. Les chips ne gouvernent que le gabarit
-            // vierge ; envoyer ici un filtre que le serveur ignore aurait laissé croire
-            // qu'il agit.
+            // LES COLONNES RETENUES. On n'envoie rien quand toutes le sont : le serveur
+            // lit alors « tout le catalogue », ce qui reste juste même si une colonne y
+            // est ajoutée entre l'affichage de l'écran et le clic.
+            //
+            // ⚠ Ce sont bien des COLONNES, pas des familles de données : l'état a une
+            // maille fixe — une ligne par tranche — et rien à filtrer de ce côté-là.
+            const retenues = this.#selection();
+            if (this.hasDonneeTarget && retenues.length < this.donneeTargets.length) {
+                corps.append('colonnes', retenues.join(','));
+            }
 
             const final = await this.#lireFlux(this.exportUrlValue, { method: 'POST', body: corps });
 

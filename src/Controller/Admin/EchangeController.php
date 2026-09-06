@@ -6,6 +6,7 @@ use App\Echange\Canevas\CanevasDEchange;
 use App\Echange\Classeur\AnnotateurJsbx;
 use App\Echange\Classeur\ClasseurIllisibleException;
 use App\Echange\Service\CompteurDOccurrences;
+use App\Echange\Etat\EtatDuPortefeuille;
 use App\Echange\Etat\ProducteurDeLEtat;
 use App\Echange\Service\ExportateurJsbx;
 use App\Echange\Service\FluxNdjson;
@@ -70,6 +71,9 @@ class EchangeController extends AbstractController
         // d'échange n'a pas disparu : ExportateurJsbx sert toujours le gabarit vierge,
         // qui reste la voie d'entrée des données.
         private readonly ProducteurDeLEtat $etat,
+        // Le catalogue des colonnes, pour l'écran : c'est lui qui laisse choisir ce que
+        // l'état portera.
+        private readonly EtatDuPortefeuille $catalogueEtat,
         private readonly ImportateurJsbx $importateur,
         private readonly AnnotateurJsbx $annotateur,
         private readonly EchangeOccurrenceRepository $occurrences,
@@ -128,6 +132,12 @@ class EchangeController extends AbstractController
             // arrive déjà juste — un écran qui affiche tout coché puis se décoche sous
             // les yeux fait douter de ce qu'il montre.
             'defauts'       => $this->canevas->codesParDefaut($ressources),
+            // LES COLONNES DE L'ÉTAT, groupées par famille — ce que l'onglet Exporter
+            // laisse choisir. À ne pas confondre avec `parModule`, qui range les DONNÉES
+            // et ne sert plus qu'au gabarit, dans l'onglet Importer.
+            'colonnesParGroupe' => $this->grouperColonnes($entreprise),
+            'colonneIdentite'   => EtatDuPortefeuille::COLONNE_IDENTITE,
+            'colonnesTotal'     => \count($this->catalogueEtat->colonnes($entreprise)),
             'peutImporter'  => $peutImporter,
             // Ce que l'invité peut réellement ÉCRIRE : afficher le périmètre d'import
             // comme s'il était celui de lecture promettrait une importation qui
@@ -164,13 +174,13 @@ class EchangeController extends AbstractController
         }
 
         try {
-            // ⚠ AUCUN PARAMÈTRE `donnees` ICI. L'état a une forme FIXE — une ligne par
-            // tranche, cinquante-deux colonnes — et n'a pas de familles à choisir. Un
-            // filtre accepté puis ignoré serait pire que refusé.
+            // ⚠ CE QU'ON CHOISIT ICI, CE SONT LES COLONNES — jamais des familles de
+            // données : l'état a une maille fixe, la tranche. Vide = toutes les colonnes.
             return $this->etat->exporter(
                 $entreprise,
                 $invite,
                 $this->getUser(),
+                $this->codesDemandes((string) $request->query->get('colonnes', '')),
                 // Graine d'idempotence : la minute courante, sauf si l'appelant en
                 // fournit une (l'assistant passe la sienne pour que sa proposition et
                 // le clic de l'utilisateur ne comptent qu'une fois).
@@ -213,10 +223,11 @@ class EchangeController extends AbstractController
     {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
 
+        $colonnes = $this->codesDemandes((string) $request->request->get('colonnes', ''));
         $graine = (string) $request->request->get('op', '');
         $acteur = $this->getUser();
 
-        $reponse = new StreamedResponse(function () use ($entreprise, $invite, $acteur, $graine): void {
+        $reponse = new StreamedResponse(function () use ($entreprise, $invite, $acteur, $colonnes, $graine): void {
             // Le contrôle de droits est DANS le flux : une réponse diffusée a déjà envoyé
             // son code 200 quand on découvre le refus, et une exception n'aurait plus
             // aucun moyen de le dire. On l'écrit donc comme une ligne de résultat.
@@ -238,6 +249,7 @@ class EchangeController extends AbstractController
                     $entreprise,
                     $invite,
                     $acteur,
+                    $colonnes,
                     $graine !== '' ? $graine : null,
                     $progression,
                 );
@@ -631,6 +643,24 @@ class EchangeController extends AbstractController
         $reponse->headers->set('Cache-Control', 'no-store, private');
 
         return $reponse;
+    }
+
+    /**
+     * Les colonnes de l'état, rangées par groupe, dans l'ordre du catalogue.
+     *
+     * Le groupe se DÉDUIT du libellé (« Police · Référence » → « Police ») : rien n'est
+     * déclaré, donc rien ne peut diverger de ce que la colonne annonce.
+     *
+     * @return array<string, array<string, \App\Echange\Etat\ColonneEtat>>
+     */
+    private function grouperColonnes(Entreprise $entreprise): array
+    {
+        $groupes = [];
+        foreach ($this->catalogueEtat->colonnes($entreprise) as $code => $colonne) {
+            $groupes[$colonne->groupe()][$code] = $colonne;
+        }
+
+        return $groupes;
     }
 
     /**
