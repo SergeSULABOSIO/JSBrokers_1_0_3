@@ -10,8 +10,6 @@ use App\Entity\Tranche;
 use App\Repository\TaxeRepository;
 use App\Service\Retro\BeneficiaireRetroFactory;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
-use App\Service\Partage\Exigibilite;
-use App\Service\Partage\Reserve;
 use App\Services\Tranche\TranchePaiementService;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -26,9 +24,10 @@ use Doctrine\ORM\EntityManagerInterface;
  * près, celui de l'écran. Recalculer ici, fût-ce une soustraction, aurait créé une
  * seconde vérité : le jour où les deux divergent, personne ne sait laquelle croire.
  *
- * Les deux seules opérations faites ici passent par des formules PARTAGÉES et éprouvées :
- * `Reserve::calculer()` pour la réserve du cabinet, `Exigibilite::exigible()` pour la part
- * réclamable d'une taxe.
+ * ⚠ IL NE PROJETTE MÊME PAS : c'est `EconomieTranche` qui nomme les indicateurs, et ce
+ * service la consomme. Deux lectures des mêmes chiffres, c'étaient deux vérités en sursis
+ * — le fichier et le chat auraient fini par se contredire. Ce qui reste ici est ce qui
+ * exige des SERVICES : les pièces de règlement, et les noms.
  *
  * ── CE QU'IL N'EST PAS ──────────────────────────────────────────────────────────────
  * ⚠ CE FICHIER NE SE RÉIMPORTE PAS, et ne le pourra jamais. « Prime payée », « commission
@@ -107,18 +106,33 @@ final class EtatDuPortefeuille
     }
 
     /**
+     * Les exercices présents chez ce cabinet — dérivés des données, jamais énumérés.
+     *
+     * @return int[]
+     */
+    public function exercices(Entreprise $entreprise): array
+    {
+        return ExerciceDesTranches::annees($this->em, $entreprise);
+    }
+
+    /**
      * Nombre de lignes à produire — pour que la barre de progression annonce un reste
      * crédible plutôt qu'une attente indéfinie.
      */
-    public function compterLignes(Entreprise $entreprise): int
+    public function compterLignes(Entreprise $entreprise, ?string $validite = null, string $exercice = ExerciceDesTranches::TOUS): int
     {
-        return (int) $this->em->createQueryBuilder()
+        $qb = $this->em->createQueryBuilder()
             ->select('COUNT(t.id)')
             ->from(Tranche::class, 't')
             ->andWhere('t.entreprise = :entreprise')
-            ->setParameter('entreprise', $entreprise)
-            ->getQuery()
-            ->getSingleScalarResult();
+            ->setParameter('entreprise', $entreprise);
+
+        // ⚠ LE MÊME FILTRE QUE LA LECTURE, sans quoi la barre de progression annoncerait
+        // un reste qui n'arrivera jamais — ou atteindrait 100 % avant la fin.
+        ValiditeDesTranches::appliquer($qb, 't', $validite);
+        ExerciceDesTranches::appliquer($qb, 't', $exercice);
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
     /**
@@ -126,21 +140,24 @@ final class EtatDuPortefeuille
      *
      * @return \Generator<int, array<string, mixed>>
      */
-    public function lignes(Entreprise $entreprise, ?Progression $progression = null): \Generator
+    public function lignes(Entreprise $entreprise, ?Progression $progression = null, ?string $validite = null, string $exercice = ExerciceDesTranches::TOUS): \Generator
     {
         $offset = 0;
 
         while (true) {
-            $lot = $this->em->createQueryBuilder()
+            $qb = $this->em->createQueryBuilder()
                 ->select('t')
                 ->from(Tranche::class, 't')
                 ->andWhere('t.entreprise = :entreprise')
                 ->setParameter('entreprise', $entreprise)
                 ->orderBy('t.id', 'ASC')
                 ->setFirstResult($offset)
-                ->setMaxResults(self::LOT)
-                ->getQuery()
-                ->getResult();
+                ->setMaxResults(self::LOT);
+
+            ValiditeDesTranches::appliquer($qb, 't', $validite);
+            ExerciceDesTranches::appliquer($qb, 't', $exercice);
+
+            $lot = $qb->getQuery()->getResult();
 
             if ($lot === []) {
                 break;
@@ -172,7 +189,7 @@ final class EtatDuPortefeuille
     {
         $cotation = $tranche->getCotation();
         $piste = $cotation?->getPiste();
-        $avenant = $cotation?->getAvenants()->first() ?: null;
+        $avenant = self::policeDe($cotation);
 
         $primes = $this->pieces->prime($tranche);
         $commissions = $this->pieces->commission($tranche);
@@ -181,9 +198,18 @@ final class EtatDuPortefeuille
         $retroPartenaire = $this->pieces->retro($tranche, false);
         $retroAgent = $this->pieces->retro($tranche, true);
 
-        $commissionTtc = $this->nombre($tranche->montantCalculeTTC);
-        $commissionEncaissee = $this->nombre($tranche->montant_paye);
-        $pure = $this->commissionPure($tranche);
+        // ⚠ UNE SEULE PROJECTION DES INDICATEURS, PARTAGÉE AVEC L'ASSISTANT.
+        //
+        // Relire ici les propriétés de la tranche, comme le faisait ce service, c'était
+        // tenir DEUX lectures des mêmes chiffres : elles coïncidaient parce qu'elles
+        // avaient été écrites le même jour, et la première correction portée d'un seul
+        // côté les aurait séparées — le fichier disant un montant, le chat un autre.
+        //
+        // EconomieTranche est cette projection, dans le vocabulaire de Ket. Une clé
+        // ABSENTE y signifie une absence (tranche non hydratée, taxe non paramétrée,
+        // affaire sans partenaire) : on la laisse vide plutôt que d'écrire un zéro, qui
+        // se présenterait comme une valeur.
+        $eco = EconomieTranche::depuis($tranche);
 
         return [
             'id' => $tranche->getId(),
@@ -192,6 +218,7 @@ final class EtatDuPortefeuille
             'policeEcheance' => $avenant?->getEndingAt(),
             'policeReference' => $avenant?->getReferencePolice(),
             'policeNumeroAvenant' => $avenant?->getNumero(),
+            'policeMoisEffet' => self::moisDe($avenant?->getStartingAt()),
 
             'trancheNom' => $tranche->getNom(),
             'tranchePayableAt' => $tranche->getPayableAt(),
@@ -201,111 +228,138 @@ final class EtatDuPortefeuille
             'risque' => $piste?->getRisque()?->getNomComplet() ?: $piste?->getRisque()?->getCode(),
             'assureur' => $cotation?->getAssureur()?->getNom(),
 
-            'primeTotale' => $tranche->primeTranche,
-            'primePayee' => $tranche->primeDeclareePayee,
-            'primeSolde' => $tranche->primeSoldeDue,
+            'primeTotale' => $eco['primeTranche'] ?? null,
+            'primePayee' => $eco['primeSignalee'] ?? null,
+            'primeSolde' => $eco['primeSolde'] ?? null,
             'primeDerniereLe' => $primes['date'],
             'primeReferences' => $primes['references'],
 
-            'commissionTtc' => $tranche->montantCalculeTTC,
-            'commissionHt' => $tranche->montantCalculeHT,
-            'commissionEncaissee' => $tranche->montant_paye,
-            'commissionSolde' => $tranche->solde_restant_du,
-            'commissionExigible' => $tranche->commissionExigible,
+            'commissionTtc' => $eco['commissionTtc'] ?? null,
+            'commissionHt' => $eco['commissionHt'] ?? null,
+            'commissionEncaissee' => $eco['commissionEncaissee'] ?? null,
+            'commissionSolde' => $eco['commissionSolde'] ?? null,
+            'commissionExigible' => $eco['commissionExigible'] ?? null,
             'commissionDerniereLe' => $commissions['date'],
             'commissionReferences' => $commissions['references'],
             'commissionComptes' => $commissions['comptes'],
+            'commissionBordereaux' => $commissions['bordereaux'],
 
-            'taxeCourtierTaux' => $tranche->taxeCourtierTaux,
-            'taxeCourtierMontant' => $tranche->taxeCourtierMontant,
-            'taxeCourtierPayee' => $tranche->taxeCourtierPayee,
-            'taxeCourtierSolde' => $tranche->taxeCourtierSolde,
+            'taxeCourtierTaux' => $eco['tauxTaxeCourtier'] ?? null,
+            'taxeCourtierMontant' => $eco['taxeCourtier'] ?? null,
+            'taxeCourtierPayee' => $eco['taxeCourtierPayee'] ?? null,
+            'taxeCourtierSolde' => $eco['taxeCourtierSolde'] ?? null,
             'taxeCourtierPayeeLe' => $taxeCourtier['date'],
             'taxeCourtierReferences' => $taxeCourtier['references'],
-            'taxeCourtierExigible' => $this->exigibiliteDeLaTaxe(
-                $this->nombre($tranche->taxeCourtierMontant),
-                $commissionTtc,
-                $commissionEncaissee,
-                $this->nombre($tranche->taxeCourtierPayee),
-            ),
+            'taxeCourtierExigible' => $eco['taxeCourtierExigible'] ?? null,
 
-            'taxeAssureurTaux' => $tranche->taxeAssureurTaux,
-            'taxeAssureurMontant' => $tranche->taxeAssureurMontant,
-            'taxeAssureurPayee' => $tranche->taxeAssureurPayee,
-            'taxeAssureurSolde' => $tranche->taxeAssureurSolde,
+            'taxeAssureurTaux' => $eco['tauxTaxeAssureur'] ?? null,
+            'taxeAssureurMontant' => $eco['taxeAssureur'] ?? null,
+            'taxeAssureurPayee' => $eco['taxeAssureurPayee'] ?? null,
+            'taxeAssureurSolde' => $eco['taxeAssureurSolde'] ?? null,
             'taxeAssureurPayeeLe' => $taxeAssureur['date'],
             'taxeAssureurReferences' => $taxeAssureur['references'],
-            'taxeAssureurExigible' => $this->exigibiliteDeLaTaxe(
-                $this->nombre($tranche->taxeAssureurMontant),
-                $commissionTtc,
-                $commissionEncaissee,
-                $this->nombre($tranche->taxeAssureurPayee),
-            ),
+            'taxeAssureurExigible' => $eco['taxeAssureurExigible'] ?? null,
 
-            'commissionPure' => $pure,
-            'reserve' => $pure === null ? null : Reserve::calculer(
-                $pure,
-                $this->nombre($tranche->retroCommission),
-                $this->nombre($tranche->retroAgentDue),
-            ),
+            'commissionPure' => $eco['commissionPure'] ?? null,
+            'reserve' => $eco['reserve'] ?? null,
 
             'intermediaire' => $this->nomDeLIntermediaire($tranche),
             'intermediairePart' => $this->partDeLIntermediaire($tranche),
 
-            'retroPartenaireDue' => $tranche->retroCommission,
-            'retroPartenairePayee' => $tranche->retroCommissionReversee,
-            'retroPartenaireSolde' => $tranche->retroCommissionSolde,
-            'retroPartenaireExigible' => $tranche->retroCommissionExigible,
+            'retroPartenaireDue' => $eco['retroCommission'] ?? null,
+            'retroPartenairePayee' => $eco['retroReversee'] ?? null,
+            'retroPartenaireSolde' => $eco['retroSolde'] ?? null,
+            'retroPartenaireExigible' => $eco['retroAPayer'] ?? null,
             'retroPartenairePayeeLe' => $retroPartenaire['date'],
+            'retroPartenaireReferences' => $retroPartenaire['references'],
+            'retroPartenaireLots' => $retroPartenaire['lots'],
+            'retroPartenaireComptes' => $retroPartenaire['comptes'],
 
             'retroAgentBeneficiaire' => $this->nomDesAgents($tranche),
-            'retroAgentDue' => $tranche->retroAgentDue,
-            'retroAgentPayee' => $tranche->retroAgentReversee,
-            'retroAgentSolde' => $tranche->retroAgentSolde,
-            'retroAgentExigible' => $tranche->retroAgentExigible,
+            'retroAgentDue' => $eco['retroAgentDue'] ?? null,
+            'retroAgentPayee' => $eco['retroAgentReversee'] ?? null,
+            'retroAgentSolde' => $eco['retroAgentSolde'] ?? null,
+            'retroAgentExigible' => $eco['retroAgentExigible'] ?? null,
             'retroAgentPayeeLe' => $retroAgent['date'],
+            'retroAgentReferences' => $retroAgent['references'],
+            'retroAgentLots' => $retroAgent['lots'],
+            'retroAgentComptes' => $retroAgent['comptes'],
         ];
     }
 
     /**
-     * COMMISSION PURE : ce qui reste au cabinet avant tout partage — commission HT moins
-     * la taxe dont il est lui-même redevable. La définition est celle de `Reserve`, dont
-     * l'en-tête fait foi ; on ne la réinvente pas ici, on l'applique.
+     * LES MOIS, DANS L'ORDRE DU CALENDRIER.
      *
-     * Rend null sur une tranche non hydratée, pour ne pas afficher un zéro qui passerait
-     * pour une commission nulle.
+     * Publique parce que la synthèse en a besoin pour TRIER ses lignes : le libellé ne
+     * porte que le nom du mois, si bien que l'ordre ne se déduit plus du texte. Le
+     * calendrier vit ici, une seule fois, et non recopié dans l'écrivain.
      */
-    private function commissionPure(Tranche $tranche): ?float
+    public const MOIS = [
+        'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
+    ];
+
+    /**
+     * LE MOIS DES TRANCHES SANS DATE D'EFFET.
+     *
+     * ⚠ CE LIBELLÉ EST ÉCRIT DANS LES DONNÉES, PAS SEULEMENT DANS LA SYNTHÈSE — et c'est
+     * tout l'intérêt. Laisser la cellule vide et nommer le groupe dans la seule feuille de
+     * synthèse donnait une somme conditionnelle sans correspondance : le groupe affichait
+     * 0,00 quand ces tranches pesaient 4 952,50, et les sous-lignes ne totalisaient plus le
+     * total général. Un critère ne peut chercher que ce que les données portent.
+     */
+    public const SANS_MOIS = "(sans date d'effet)";
+
+    /**
+     * LE MOIS D'UNE DATE : « Janvier », « Février »…
+     *
+     * ⚠ NE JAMAIS Y REMETTRE UN RANG NI UN JOUR — c'est un correctif, pas une préférence.
+     * Écrit « 01 janv », le libellé était RECONNU COMME UNE DATE par `strtotime` (« jan »),
+     * tout comme « 03 mars » (« mar »). Le moteur de formules convertissait alors le critère
+     * en date, ne trouvait plus aucune correspondance, et ces deux mois-là — et eux seuls —
+     * ressortaient à zéro dans la synthèse : janvier annonçait 0,00 quand la somme brute
+     * valait 605 715,10.
+     *
+     * Les douze noms seuls sont inanalysables comme dates ; `MoisDEffetTest` le vérifie.
+     * L'ordre du calendrier est porté par le TRI (cf. `EcrivainEtat::grouper()`), pas par
+     * le texte.
+     */
+    private static function moisDe(?\DateTimeInterface $date): string
     {
-        if ($tranche->montantCalculeHT === null) {
-            return null;
+        if ($date === null) {
+            return self::SANS_MOIS;
         }
 
-        return round($tranche->montantCalculeHT - $this->nombre($tranche->taxeCourtierMontant), 2);
+        return self::MOIS[(int) $date->format('n') - 1];
     }
 
     /**
-     * LA PART DE TAXE DEVENUE RÉCLAMABLE, au rythme de la commission encaissée.
+     * LA POLICE D'UNE TRANCHE : l'avenant à la date d'effet la PLUS ANCIENNE.
      *
-     * ⚠ POURQUOI CE PRORATA EST LÉGITIME, LÀ OÙ CELUI DE LA COMMISSION EST INTERDIT.
-     * `EconomieTranche::NOTE` interdit de proratiser la COMMISSION sur un règlement
-     * partiel de PRIME : la commission n'est réclamable à l'assureur qu'une fois la prime
-     * intégralement payée — c'est une condition contractuelle, pas une proportion. La
-     * taxe, elle, est DUE SUR UN REVENU PERÇU : elle naît avec l'encaissement et croît
-     * avec lui. La proportionnalité n'y est pas un raccourci, elle est la règle.
+     * ⚠ `getAvenants()->first()` n'a AUCUN ordre garanti — la collection ne porte pas
+     * d'`OrderBy`. Sur une cotation à plusieurs avenants, la date d'effet affichée
+     * pouvait donc changer d'une exécution à l'autre, sans que rien ne le signale.
      *
-     * La formule n'est pas écrite ici : `Exigibilite::exigible()` la porte déjà pour les
-     * rétrocommissions, avec ses trois garde-fous éprouvés — ratio plafonné à 1, jamais
-     * de négatif, et ratio de 1 quand aucune commission n'est attendue (sans quoi la taxe
-     * d'une affaire à honoraires purs resterait éternellement inexigible).
+     * C'est aussi la définition qu'emploie le filtre d'exercice : filtrer sur une date
+     * que la colonne n'affiche pas serait un piège.
      */
-    private function exigibiliteDeLaTaxe(float $montant, float $commissionTtc, float $encaissee, float $payee): ?float
+    private static function policeDe(?\App\Entity\Cotation $cotation): ?\App\Entity\Avenant
     {
-        if ($montant <= 0.0) {
-            return null;
+        $retenu = null;
+        foreach ($cotation?->getAvenants() ?? [] as $avenant) {
+            $date = $avenant->getStartingAt();
+            if ($retenu === null) {
+                $retenu = $avenant;
+                continue;
+            }
+            $dateRetenue = $retenu->getStartingAt();
+            // Une date absente ne peut pas gagner : elle ne date rien.
+            if ($date !== null && ($dateRetenue === null || $date < $dateRetenue)) {
+                $retenu = $avenant;
+            }
         }
 
-        return Exigibilite::exigible($montant, $commissionTtc, $encaissee, $payee);
+        return $retenu;
     }
 
     /**
@@ -378,8 +432,4 @@ final class EtatDuPortefeuille
         return (string) ($nom ?: $taxe->getCode() ?: 'Taxe');
     }
 
-    private function nombre(?float $valeur): float
-    {
-        return $valeur ?? 0.0;
-    }
 }

@@ -5,7 +5,10 @@ namespace App\Tests\Echange;
 use App\Ai\Finance\EconomieTranche;
 use App\Echange\Etat\CatalogueDesColonnes;
 use App\Echange\Etat\EtatDuPortefeuille;
+use App\Echange\Etat\InjecteurDeTcd;
 use App\Echange\Etat\ProducteurDeLEtat;
+use App\Echange\Etat\ValiditeDesTranches;
+use App\Services\Search\CotationSouscriptionScope;
 use App\Echange\Classeur\EcrivainJsbx;
 use App\Entity\Assureur;
 use App\Entity\Avenant;
@@ -24,7 +27,9 @@ use App\Entity\Utilisateur;
 use App\Services\Tranche\TranchePaiementService;
 use Doctrine\ORM\EntityManagerInterface;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 
@@ -48,6 +53,44 @@ class EtatDuPortefeuilleTest extends KernelTestCase
     private const TAUX_TVA = 16.0;
     private const TAUX_ARCA = 2.0;
 
+    /**
+     * LA CARTE DE LA PARITÉ : clé de l'état → clé de l'économie de la tranche.
+     *
+     * Les noms diffèrent parce que chaque vocabulaire est le sien — le fichier parle au
+     * courtier, l'économie parle à l'assistant. Les VALEURS, elles, ne peuvent pas
+     * différer : c'est ce que le test vérifie, au centime.
+     */
+    private const CORRESPONDANCES = [
+        'primeTotale' => 'primeTranche',
+        'primePayee' => 'primeSignalee',
+        'primeSolde' => 'primeSolde',
+        'commissionTtc' => 'commissionTtc',
+        'commissionHt' => 'commissionHt',
+        'commissionEncaissee' => 'commissionEncaissee',
+        'commissionSolde' => 'commissionSolde',
+        'commissionExigible' => 'commissionExigible',
+        'taxeCourtierTaux' => 'tauxTaxeCourtier',
+        'taxeCourtierMontant' => 'taxeCourtier',
+        'taxeCourtierPayee' => 'taxeCourtierPayee',
+        'taxeCourtierSolde' => 'taxeCourtierSolde',
+        'taxeCourtierExigible' => 'taxeCourtierExigible',
+        'taxeAssureurTaux' => 'tauxTaxeAssureur',
+        'taxeAssureurMontant' => 'taxeAssureur',
+        'taxeAssureurPayee' => 'taxeAssureurPayee',
+        'taxeAssureurSolde' => 'taxeAssureurSolde',
+        'taxeAssureurExigible' => 'taxeAssureurExigible',
+        'commissionPure' => 'commissionPure',
+        'reserve' => 'reserve',
+        'retroPartenaireDue' => 'retroCommission',
+        'retroPartenairePayee' => 'retroReversee',
+        'retroPartenaireSolde' => 'retroSolde',
+        'retroPartenaireExigible' => 'retroAPayer',
+        'retroAgentDue' => 'retroAgentDue',
+        'retroAgentPayee' => 'retroAgentReversee',
+        'retroAgentSolde' => 'retroAgentSolde',
+        'retroAgentExigible' => 'retroAgentExigible',
+    ];
+
     protected function setUp(): void
     {
         static::bootKernel();
@@ -65,7 +108,7 @@ class EtatDuPortefeuilleTest extends KernelTestCase
     // ─────────────────────────────────────────────────────────────────────────────
 
     /**
-     * ⚠ TROIS FEUILLES, ET PAS UNE DE PLUS.
+     * ⚠ TROIS FEUILLES, ET PAS UNE DE PLUS : le dictionnaire, les données, la synthèse.
      *
      * Le format d'échange en comptait quarante-cinq. L'état n'a rien à faire relire : ni
      * feuille de listes déroulantes, ni ligne de codes techniques masquée. Une feuille de
@@ -79,7 +122,7 @@ class EtatDuPortefeuilleTest extends KernelTestCase
         $classeur = $this->produire($entreprise, $invite);
 
         self::assertSame(
-            [EcrivainJsbx::FEUILLE_DICTIONNAIRE, EtatDuPortefeuille::FEUILLE],
+            [EcrivainJsbx::FEUILLE_DICTIONNAIRE, EtatDuPortefeuille::FEUILLE, InjecteurDeTcd::FEUILLE],
             $classeur->getSheetNames(),
         );
         self::assertNull(
@@ -266,6 +309,429 @@ class EtatDuPortefeuilleTest extends KernelTestCase
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
+    // La synthèse : des FORMULES, et non un tableau croisé
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * ⚠ POURQUOI CES TESTS ONT CHANGÉ DE NATURE — 06/09/2026.
+     *
+     * La synthèse a d'abord été un VRAI tableau croisé, injecté en OOXML brut. Les tests
+     * d'alors vérifiaient le paquet : parties présentes, XML bien formé, relations
+     * résolues, ordre des enfants conforme au schéma. Tout passait — et Excel a refusé le
+     * fichier, puis a PLANTÉ. Ces contrôles disaient que le paquet était cohérent ; ils ne
+     * pouvaient pas dire qu'Excel l'accepterait, et ce poste n'a aucun tableur pour juger.
+     *
+     * Des FORMULES, elles, s'évaluent ici. On relit le classeur produit, on demande le
+     * calcul, et l'on compare. C'est la raison du changement : une synthèse dont ce dépôt
+     * peut prouver qu'elle dit vrai, plutôt qu'une dont l'utilisateur porte la
+     * vérification. `InjecteurDeTcd` reste en place pour le jour où ce sera vérifiable.
+     */
+    public function testLaSyntheseNeCalculeAucunChiffreEnPhp(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+
+        $classeur = $this->produire($entreprise, $invite);
+        $synthese = $classeur->getSheetByName(InjecteurDeTcd::FEUILLE);
+
+        self::assertNotNull($synthese);
+        self::assertSame(
+            [EcrivainJsbx::FEUILLE_DICTIONNAIRE, EtatDuPortefeuille::FEUILLE, InjecteurDeTcd::FEUILLE],
+            $classeur->getSheetNames(),
+        );
+
+        $derniere = $synthese->getHighestDataRow();
+        self::assertSame('Total général', $synthese->getCell('A' . $derniere)->getValue());
+
+        // ⚠ AUCUNE VALEUR FIGÉE. Un nombre écrit en dur mentirait dès la première
+        // correction d'une ligne de données, sans que rien ne le signale.
+        $formules = 0;
+        for ($l = 4; $l <= $derniere; ++$l) {
+            $valeur = $synthese->getCell('B' . $l)->getValue();
+            self::assertIsString($valeur, sprintf('Ligne %d : la valeur doit être une formule.', $l));
+            self::assertStringStartsWith('=', $valeur);
+            ++$formules;
+        }
+
+        self::assertGreaterThan(0, $formules);
+    }
+
+    /**
+     * LA SYNTHÈSE DIT-ELLE LA MÊME CHOSE QUE LES DONNÉES ?
+     *
+     * Deux égalités, et il en faut bien DEUX :
+     *
+     *  1. le total général égale la somme de la colonne — il attrape une plage décalée ;
+     *  2. ⚠ LES GROUPES REFONT CE TOTAL — et lui seul attrape un groupe dont le libellé
+     *     n'existe pas dans les données. C'est le défaut qu'a eu cette feuille : les
+     *     tranches sans date d'effet étaient regroupées sous un nom inventé par la
+     *     synthèse, leur somme conditionnelle ne trouvait rien, et le groupe affichait
+     *     0,00 pour 4 952,50 réels. Le total général, lui, restait juste.
+     */
+    public function testLaSyntheseRefaitLesChiffresDesDonnees(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+
+        $producteur = static::getContainer()->get(ProducteurDeLEtat::class);
+        [$classeur] = $producteur->produire($entreprise, $invite, $entreprise->getUtilisateur());
+
+        $chemin = (string) tempnam(sys_get_temp_dir(), 'jsbx_test_');
+
+        try {
+            $producteur->ecrireSur($classeur, $chemin);
+
+            $relu = IOFactory::createReader('Xlsx')->load($chemin);
+            $synthese = $relu->getSheetByName(InjecteurDeTcd::FEUILLE);
+            $donnees = $relu->getSheetByName(EtatDuPortefeuille::FEUILLE);
+            self::assertNotNull($synthese);
+            self::assertNotNull($donnees);
+
+            $ligneTotal = $synthese->getHighestDataRow();
+            $total = (float) $synthese->getCell('B' . $ligneTotal)->getCalculatedValue();
+
+            // La colonne sommée, retrouvée par son libellé : coder une position se
+            // périmerait au premier export restreint.
+            $libelle = str_replace('Somme de ', '', (string) $synthese->getCell('B3')->getValue());
+            $lettre = $this->colonneParLibelle($donnees, $libelle);
+
+            $somme = 0.0;
+            for ($l = 2; $l < $donnees->getHighestDataRow(); ++$l) {
+                $somme += (float) $donnees->getCell($lettre . $l)->getValue();
+            }
+
+            self::assertEqualsWithDelta($somme, $total, 0.01, 'Le total ne refait pas la colonne.');
+
+            $groupes = 0.0;
+            for ($l = 4; $l < $ligneTotal; ++$l) {
+                if ($synthese->getStyle('A' . $l)->getAlignment()->getIndent() > 0) {
+                    continue; // une sous-ligne, déjà comptée dans son groupe
+                }
+                $groupes += (float) $synthese->getCell('B' . $l)->getCalculatedValue();
+            }
+
+            self::assertEqualsWithDelta($total, $groupes, 0.01, 'Les groupes ne refont pas le total.');
+        } finally {
+            @unlink($chemin);
+        }
+    }
+
+    /**
+     * ⚠ LES PLAGES S'ARRÊTENT AVANT LA LIGNE DE TOTAUX DE `DONNEES`.
+     *
+     * L'y inclure ferait compter une seconde fois chaque montant : la synthèse afficherait
+     * exactement le double, et le chiffre resterait parfaitement plausible.
+     */
+    public function testLesPlagesSarretentAvantLaLigneDeTotaux(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+
+        $classeur = $this->produire($entreprise, $invite);
+        $synthese = $classeur->getSheetByName(InjecteurDeTcd::FEUILLE);
+        $donnees = $classeur->getSheetByName(EtatDuPortefeuille::FEUILLE);
+        self::assertNotNull($synthese);
+
+        $attendue = $donnees->getHighestDataRow() - 1;
+
+        for ($l = 4; $l <= $synthese->getHighestDataRow(); ++$l) {
+            $formule = (string) $synthese->getCell('B' . $l)->getValue();
+            self::assertSame(
+                1,
+                preg_match(
+                    '/' . EtatDuPortefeuille::FEUILLE . '!\$?[A-Z]+\$?2:\$?[A-Z]+\$?(\d+)/',
+                    $formule,
+                    $trouve,
+                ),
+                sprintf('Ligne %d : la formule doit pointer une plage de DONNEES.', $l),
+            );
+            self::assertSame($attendue, (int) $trouve[1], sprintf('Ligne %d : plage trop longue.', $l));
+        }
+    }
+
+    /**
+     * ⚠ AUCUN LIBELLÉ DE MOIS NE DOIT SE LAISSER LIRE COMME UNE DATE.
+     *
+     * Test de non-régression, et il vient d'un défaut réel. Les mois s'écrivaient
+     * « 01 janv », « 02 févr »… : le rang devant servait à les trier. Mais `strtotime`
+     * reconnaît « jan » et « mar », si bien que « 01 janv » et « 03 mars » — et EUX SEULS —
+     * étaient convertis en dates par le moteur de formules. Leur somme conditionnelle ne
+     * trouvait plus rien : janvier annonçait 0,00 quand la somme brute valait 605 715,10.
+     *
+     * Les dix autres mois tombaient juste, ce qui rendait le défaut presque invisible.
+     */
+    public function testAucunLibelleDeMoisNeSeLitCommeUneDate(): void
+    {
+        $libelles = EtatDuPortefeuille::MOIS;
+        $libelles[] = EtatDuPortefeuille::SANS_MOIS;
+
+        foreach ($libelles as $libelle) {
+            self::assertFalse(
+                strtotime($libelle),
+                sprintf('« %s » est lu comme une date : sa somme conditionnelle rendra zéro.', $libelle),
+            );
+        }
+    }
+
+    /**
+     * Les mois se suivent dans l'ordre du calendrier, et l'inconnu passe en queue.
+     *
+     * Le libellé ne porte plus son rang : sans tri explicite, la feuille commencerait par
+     * août et finirait par septembre.
+     */
+    public function testLesMoisSuiventLordreDuCalendrier(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+
+        $synthese = $this->produire($entreprise, $invite)->getSheetByName(InjecteurDeTcd::FEUILLE);
+        self::assertNotNull($synthese);
+
+        $rangs = [];
+        for ($l = 4; $l < $synthese->getHighestDataRow(); ++$l) {
+            if ($synthese->getStyle('A' . $l)->getAlignment()->getIndent() > 0) {
+                continue;
+            }
+            $rang = array_search(
+                (string) $synthese->getCell('A' . $l)->getValue(),
+                EtatDuPortefeuille::MOIS,
+                true,
+            );
+            $rangs[] = $rang === false ? \PHP_INT_MAX : $rang;
+        }
+
+        $ordonnes = $rangs;
+        sort($ordonnes);
+        self::assertSame($ordonnes, $rangs, 'Les mois ne suivent pas le calendrier.');
+    }
+
+    /** La lettre de la colonne de DONNEES qui porte ce libellé. */
+    private function colonneParLibelle(Worksheet $donnees, string $libelle): string
+    {
+        $derniere = Coordinate::columnIndexFromString($donnees->getHighestDataColumn());
+        for ($i = 1; $i <= $derniere; ++$i) {
+            $lettre = Coordinate::stringFromColumnIndex($i);
+            if ((string) $donnees->getCell($lettre . '1')->getValue() === $libelle) {
+                return $lettre;
+            }
+        }
+
+        self::fail(sprintf('Colonne introuvable : %s', $libelle));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Les chips de validité
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * ⚠ LA PARTITION EST COMPLÈTE : souscrites ⊎ en attente ⊎ caduques = toutes.
+     *
+     * C'est ce qui rend les chips honnêtes. Si les trois ne se recomposaient pas en
+     * « toutes », un utilisateur qui les parcourt tous croirait avoir vu son portefeuille
+     * entier alors qu'une part lui échapperait — et rien à l'écran ne le dirait.
+     */
+    public function testLesTroisStatutsPartitionnentLesTranches(): void
+    {
+        ['entreprise' => $entreprise] = $this->seed();
+
+        $etat = static::getContainer()->get(EtatDuPortefeuille::class);
+
+        $toutes = $etat->compterLignes($entreprise, ValiditeDesTranches::TOUTES);
+        $somme = 0;
+        foreach ([
+            CotationSouscriptionScope::STATUT_SOUSCRITES,
+            CotationSouscriptionScope::STATUT_EN_ATTENTE,
+            CotationSouscriptionScope::STATUT_CADUQUES,
+        ] as $statut) {
+            $somme += $etat->compterLignes($entreprise, $statut);
+        }
+
+        self::assertSame($toutes, $somme, 'Les trois statuts doivent recomposer exactement le tout.');
+    }
+
+    /**
+     * ⚠ UNE TRANCHE DE POLICE N'EST PAS UN PROJET, et réciproquement.
+     *
+     * Le fixture pose une proposition AVEC son avenant : c'est une police. Le chip des
+     * projets ne doit donc rien porter — mêler les deux dans un état qu'on présente à un
+     * assureur reviendrait à annoncer un portefeuille qu'on n'a pas.
+     */
+    public function testUnePoliceNestPasUnProjet(): void
+    {
+        ['entreprise' => $entreprise] = $this->seed();
+
+        $etat = static::getContainer()->get(EtatDuPortefeuille::class);
+
+        self::assertSame(
+            1,
+            $etat->compterLignes($entreprise, CotationSouscriptionScope::STATUT_SOUSCRITES),
+            'La proposition porte un avenant : elle est souscrite.',
+        );
+        self::assertSame(
+            0,
+            $etat->compterLignes($entreprise, CotationSouscriptionScope::STATUT_EN_ATTENTE),
+            'Aucun projet : la seule proposition du jeu est devenue une police.',
+        );
+        self::assertSame(
+            0,
+            $etat->compterLignes($entreprise, CotationSouscriptionScope::STATUT_CADUQUES),
+            'Aucune concurrente perdante.',
+        );
+    }
+
+    /**
+     * ⚠ LE FICHIER DIT QUEL PÉRIMÈTRE IL PORTE.
+     *
+     * Un état des seuls projets ressemble trait pour trait à un état de polices : mêmes
+     * colonnes, montants de même allure. Sans cette ligne, on le confondrait avec le
+     * portefeuille réel — et six mois plus tard, personne ne pourrait trancher.
+     */
+    public function testLeDictionnaireAnnonceLePerimetreRetenu(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+
+        [$classeur] = static::getContainer()->get(ProducteurDeLEtat::class)->produire(
+            $entreprise,
+            $invite,
+            $entreprise->getUtilisateur(),
+            [],
+            CotationSouscriptionScope::STATUT_EN_ATTENTE,
+        );
+
+        $dictionnaire = $classeur->getSheetByName(EcrivainJsbx::FEUILLE_DICTIONNAIRE);
+        self::assertSame('PÉRIMÈTRE', $dictionnaire->getCell('A3')->getValue());
+        self::assertStringContainsString('Projets', (string) $dictionnaire->getCell('B3')->getValue());
+        self::assertStringContainsString(
+            'ne sont pas des créances',
+            (string) $dictionnaire->getCell('C3')->getValue(),
+        );
+    }
+
+    /** Le vocabulaire des chips vient de la source unique, jamais d'une liste recopiée. */
+    public function testLeVocabulaireDesChipsVientDeLaSourceUnique(): void
+    {
+        $valeurs = array_keys(ValiditeDesTranches::valeurs());
+
+        self::assertContains(CotationSouscriptionScope::STATUT_SOUSCRITES, $valeurs);
+        self::assertContains(CotationSouscriptionScope::STATUT_EN_ATTENTE, $valeurs);
+        self::assertContains(CotationSouscriptionScope::STATUT_CADUQUES, $valeurs);
+        self::assertContains(ValiditeDesTranches::TOUTES, $valeurs);
+        self::assertCount(4, $valeurs, 'Quatre chips, et pas un de plus.');
+    }
+
+    /**
+     * ⚠ LA RÉFÉRENCE DU BORDEREAU A SA COLONNE, dans la famille Commission.
+     *
+     * Une commission s'encaisse par facture d'articles OU par bordereau ; sans cette
+     * colonne, le second circuit restait invisible même une fois son montant compté.
+     */
+    public function testLaReferenceDuBordereauALaSienne(): void
+    {
+        $catalogue = CatalogueDesColonnes::pour('ARCA', 'TVA');
+
+        self::assertArrayHasKey('commissionBordereaux', $catalogue);
+        self::assertSame('Commission', $catalogue['commissionBordereaux']->groupe());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Parité Ket
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * ⚠ LE TEST QUI FAIT LA PARITÉ, ET QUI DOIT RESTER.
+     *
+     * La doctrine de la rubrique est écrite dans PariteKetImportTest : « une capacité
+     * présente à l'écran et absente du chat est un défaut, au même titre qu'un test
+     * rouge ». Appliquée aux chiffres, elle dit ceci : tout montant que le fichier
+     * affiche, l'assistant doit savoir le dire — et le dire PAREIL.
+     *
+     * On classe donc CHAQUE clé de la ligne d'état. Une clé nouvelle qui ne serait ni
+     * reliée à l'économie de la tranche, ni inscrite dans le hors-économie, fait échouer
+     * ce test : on est forcé de trancher plutôt que d'oublier.
+     */
+    public function testChaqueChiffreDeLEtatEstDisibleParKet(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite, 'tranche' => $tranche] = $this->seed();
+
+        $ligne = $this->ligneBrute($entreprise);
+
+        static::getContainer()->get(TranchePaiementService::class)->chargerIndicateurs([$tranche]);
+        $eco = EconomieTranche::depuis($tranche);
+        self::assertNotEmpty($eco);
+
+        // CE QUI N'EST PAS DE L'ÉCONOMIE : identité, contexte, dates et pièces. Ces
+        // notions n'ont pas leur place dans EconomieTranche — elle est STATIQUE et lit une
+        // tranche hydratée, quand les pièces exigent le helper d'indicateurs (le circuit
+        // bordereau n'a aucune trace sur la tranche elle-même).
+        $horsEconomie = [
+            'id', 'policeDateEffet', 'policeEcheance', 'policeReference', 'policeNumeroAvenant',
+            'policeMoisEffet',
+            'trancheNom', 'tranchePayableAt', 'trancheEcheanceAt',
+            'assure', 'risque', 'assureur',
+            'primeDerniereLe', 'primeReferences',
+            'commissionDerniereLe', 'commissionReferences', 'commissionComptes', 'commissionBordereaux',
+            'taxeCourtierPayeeLe', 'taxeCourtierReferences',
+            'taxeAssureurPayeeLe', 'taxeAssureurReferences',
+            'intermediaire', 'intermediairePart',
+            'retroPartenairePayeeLe', 'retroPartenaireReferences', 'retroPartenaireLots', 'retroPartenaireComptes',
+            'retroAgentBeneficiaire',
+            'retroAgentPayeeLe', 'retroAgentReferences', 'retroAgentLots', 'retroAgentComptes',
+        ];
+
+        // La correspondance clé d'état → clé d'économie. Les noms diffèrent parce que
+        // chaque vocabulaire est le sien ; les VALEURS, elles, ne peuvent pas différer.
+        $correspondances = self::CORRESPONDANCES;
+
+        foreach (array_keys($ligne) as $cle) {
+            self::assertTrue(
+                in_array($cle, $horsEconomie, true) || isset($correspondances[$cle]),
+                sprintf(
+                    "« %s » n'est ni classée hors économie, ni reliée à EconomieTranche : "
+                    . "l'écran saurait la dire, le chat non.",
+                    $cle,
+                ),
+            );
+        }
+
+        // ⚠ ET LES VALEURS COÏNCIDENT, au centime. Une correspondance déclarée sur la
+        // mauvaise clé passerait la vérification ci-dessus sans rien garantir.
+        foreach ($correspondances as $cleEtat => $cleEco) {
+            self::assertEqualsWithDelta(
+                (float) ($eco[$cleEco] ?? 0.0),
+                (float) ($ligne[$cleEtat] ?? 0.0),
+                0.001,
+                sprintf('« %s » diffère entre le fichier et ce que Ket sait dire.', $cleEtat),
+            );
+        }
+    }
+
+    /**
+     * ⚠ LA RÉTROCOMMISSION DES AGENTS, dont Ket ne savait RIEN dire.
+     *
+     * Ses indicateurs existaient depuis longtemps ; la projection de l'assistant les
+     * ignorait. Un courtier qui demandait « combien dois-je à mes agents sur cette
+     * échéance ? » obtenait un silence, alors que l'écran l'affichait.
+     */
+    public function testKetSaitDireLaRetroDesAgents(): void
+    {
+        foreach (['retroAgentDue', 'retroAgentReversee', 'retroAgentSolde', 'retroAgentExigible'] as $cle) {
+            self::assertArrayHasKey(
+                $cle,
+                EconomieTranche::ROLES,
+                sprintf("Sans rôle de présentation, « %s » sortirait sans format ni alignement.", $cle),
+            );
+        }
+    }
+
+    /** Toute clé projetée par l'économie porte un rôle de présentation. */
+    public function testChaqueCleDeLEconomieAUnRole(): void
+    {
+        ['tranche' => $tranche] = $this->seed();
+
+        static::getContainer()->get(TranchePaiementService::class)->chargerIndicateurs([$tranche]);
+
+        foreach (array_keys(EconomieTranche::depuis($tranche)) as $cle) {
+            self::assertArrayHasKey($cle, EconomieTranche::ROLES, sprintf("« %s » n'a pas de rôle.", $cle));
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
     // La ligne de totaux
     // ─────────────────────────────────────────────────────────────────────────────
 
@@ -418,6 +884,21 @@ class EtatDuPortefeuilleTest extends KernelTestCase
         }
 
         return $ligne;
+    }
+
+    /**
+     * La première ligne de données, indexée par CODE de colonne.
+     *
+     * On passe par le service plutôt que par le classeur : les codes sont le langage
+     * commun de l'état et de l'économie, quand les libellés sont ceux de l'écran.
+     */
+    private function ligneBrute(Entreprise $entreprise): array
+    {
+        foreach (static::getContainer()->get(EtatDuPortefeuille::class)->lignes($entreprise) as $ligne) {
+            return $ligne;
+        }
+
+        self::fail('Aucune ligne produite.');
     }
 
     /** La lettre de colonne portant ce libellé exact. */

@@ -40,3 +40,6 @@ services:
     App\Echange\Etat\EcrivainEtat: ~
     App\Echange\Etat\PiecesDeReglement: ~
     App\Echange\Etat\ProducteurDeLEtat: ~
+    App\Echange\Etat\ValiditeDesTranches: ~
+    App\Echange\Etat\InjecteurDeTcd: ~
+    App\Echange\Etat\ExerciceDesTranches: ~

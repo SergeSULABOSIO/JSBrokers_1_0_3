@@ -8,6 +8,7 @@ use App\Echange\Classeur\EcrivainJsbx;
 use App\Echange\Classeur\Manifeste;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
@@ -36,11 +37,12 @@ final class EcrivainEtat
     /** Première ligne de données : l'en-tête n'en occupe qu'une. */
     private const LIGNE_DONNEES = 2;
 
+
     /**
      * @param array<string, ColonneEtat>              $colonnes
      * @param iterable<int, array<string, mixed>>     $lignes
      */
-    public function ecrire(Manifeste $manifeste, array $colonnes, iterable $lignes): Spreadsheet
+    public function ecrire(Manifeste $manifeste, array $colonnes, iterable $lignes, string $validite = ValiditeDesTranches::TOUTES, string $exercice = ExerciceDesTranches::TOUS): Spreadsheet
     {
         $classeur = new Spreadsheet();
         $classeur->removeSheetByIndex(0);
@@ -50,8 +52,9 @@ final class EcrivainEtat
         // CONSTRUIT — son empreinte alimente l'occurrence facturée — mais il n'est plus
         // écrit. Ce qu'il portait d'utile au lecteur (« ce fichier ne se redépose pas »)
         // ouvre désormais le dictionnaire.
-        $this->ecrireDictionnaire($classeur, $colonnes);
+        $this->ecrireDictionnaire($classeur, $colonnes, $validite, $exercice);
         $this->ecrireDonnees($classeur, $colonnes, $lignes);
+        $this->ecrireSynthese($classeur, $colonnes, $lignes);
 
         $classeur->setActiveSheetIndex(0);
 
@@ -59,7 +62,7 @@ final class EcrivainEtat
     }
 
     /** @param array<string, ColonneEtat> $colonnes */
-    private function ecrireDictionnaire(Spreadsheet $classeur, array $colonnes): void
+    private function ecrireDictionnaire(Spreadsheet $classeur, array $colonnes, string $validite, string $exercice): void
     {
         $feuille = $classeur->createSheet();
         $feuille->setTitle(EcrivainJsbx::FEUILLE_DICTIONNAIRE);
@@ -79,7 +82,29 @@ final class EcrivainEtat
         $feuille->getStyle('A2:C2')->getFont()->setBold(true);
         $feuille->getStyle('C2')->getAlignment()->setWrapText(true);
 
-        $numero = 4;
+        // ⚠ QUELLES TRANCHES CE FICHIER PORTE. Un état des seuls PROJETS ressemble trait
+        // pour trait à un état de polices : mêmes colonnes, mêmes montants d'allure. Le
+        // confondre avec le portefeuille réel, c'est annoncer un chiffre d'affaires qu'on
+        // n'a pas. Le fichier doit donc le dire lui-même, et en tête.
+        $feuille->fromArray([
+            'PÉRIMÈTRE',
+            ValiditeDesTranches::libelle($validite),
+            ValiditeDesTranches::explication($validite),
+        ], null, 'A3');
+        $feuille->getStyle('A3:C3')->getFont()->setBold(true);
+        $feuille->getStyle('C3')->getAlignment()->setWrapText(true);
+
+        // Même raison que le périmètre : un état d'un seul exercice a exactement l'allure
+        // d'un état complet, en plus court.
+        $feuille->fromArray([
+            'EXERCICE',
+            ExerciceDesTranches::libelle($exercice),
+            ExerciceDesTranches::explication($exercice),
+        ], null, 'A4');
+        $feuille->getStyle('A4:C4')->getFont()->setBold(true);
+        $feuille->getStyle('C4')->getAlignment()->setWrapText(true);
+
+        $numero = 6;
         foreach ($colonnes as $colonne) {
             $feuille->fromArray(
                 [$colonne->libelle, $colonne->role, $colonne->explication],
@@ -225,6 +250,245 @@ final class EcrivainEtat
         $feuille->getStyle($plage)->getFont()->setBold(true);
         $feuille->getStyle($plage)->getBorders()->getTop()
             ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUM);
+    }
+
+    /**
+     * LA SYNTHÈSE : mois en lignes, assureurs en sous-lignes, sommes en colonnes.
+     *
+     * ── POURQUOI DES FORMULES, ET NON UN TABLEAU CROISÉ ─────────────────────────────
+     * ⚠ UN VRAI TCD A ÉTÉ TENTÉ, ET RETIRÉ — 06/09/2026. PhpSpreadsheet ne sait pas en
+     * écrire ; les parties OOXML posées à la main ont d'abord fait refuser le fichier
+     * (« problème dans le contenu »), puis PLANTER Excel. La cause de fond n'était pas le
+     * XML mais la vérification : ce poste n'a aucun tableur pour juger, si bien que chaque
+     * correctif se validait chez l'utilisateur. `InjecteurDeTcd` reste en place pour le
+     * jour où ce sera vérifiable.
+     *
+     * ── CE QUE CETTE FEUILLE EST, ET CE QU'ELLE N'EST PAS ──────────────────────────
+     * ⚠ AUCUN CHIFFRE N'EST CALCULÉ EN PHP. Chaque cellule porte un SOMME.SI.ENS qui
+     * pointe sur DONNEES : le tableau se recalcule si l'on corrige une ligne, et l'on
+     * vérifie d'un clic d'où sort un montant. Des valeurs figées mentiraient dès la
+     * première retouche, sans que rien ne le signale.
+     *
+     * En contrepartie : pas de champs déplaçables ni de repli natif. La plage de DONNEES
+     * est donc posée en TABLEAU EXCEL nommé, pour que « Insertion › Tableau croisé
+     * dynamique » propose la source d'un clic à qui en veut un vrai.
+     *
+     * @param array<string, ColonneEtat>          $colonnes
+     * @param array<int, array<string, mixed>>    $lignes
+     */
+    private function ecrireSynthese(Spreadsheet $classeur, array $colonnes, array $lignes): void
+    {
+        $codes = array_keys($colonnes);
+        $lettre = static function (string $code) use ($codes): ?string {
+            $rang = array_search($code, $codes, true);
+
+            return $rang === false ? null : Coordinate::stringFromColumnIndex((int) $rang + 1);
+        };
+
+        $colMois = $lettre('policeMoisEffet');
+        $colAssureur = $lettre('assureur');
+
+        // Les sommes de la capture, dans son ordre. Une colonne retirée par l'utilisateur
+        // disparaît d'elle-même : on ne somme jamais ce que le fichier ne porte pas.
+        $mesures = [];
+        foreach ([
+            'primeTotale', 'primePayee', 'primeSolde',
+            'commissionTtc', 'commissionEncaissee', 'commissionSolde', 'commissionExigible',
+        ] as $code) {
+            $col = $lettre($code);
+            if ($col !== null) {
+                $mesures[$code] = ['lettre' => $col, 'titre' => 'Somme de ' . $colonnes[$code]->libelle];
+            }
+        }
+
+        // Sans axe ni mesure, il n'y a rien à synthétiser : on n'ajoute pas une feuille
+        // vide qui laisserait croire à un défaut.
+        if (($colMois === null && $colAssureur === null) || $mesures === [] || $lignes === []) {
+            return;
+        }
+
+        $feuille = $classeur->createSheet();
+        $feuille->setTitle(InjecteurDeTcd::FEUILLE);
+
+        $derniereDonnee = self::LIGNE_DONNEES + \count($lignes) - 1;
+
+        $feuille->setCellValue('A1', 'Synthèse du portefeuille');
+        $feuille->getStyle('A1')->getFont()->setBold(true)->setSize(14)
+            ->getColor()->setARGB('FF' . self::COBALT);
+
+        // ── L'en-tête ───────────────────────────────────────────────────────────────
+        $ligne = 3;
+        $feuille->setCellValue('A' . $ligne, 'Étiquettes de lignes');
+        $rang = 2;
+        foreach ($mesures as $mesure) {
+            $feuille->setCellValue(Coordinate::stringFromColumnIndex($rang) . $ligne, $mesure['titre']);
+            ++$rang;
+        }
+        $derniereColonne = Coordinate::stringFromColumnIndex(\count($mesures) + 1);
+        $this->styleEntete($feuille, 'A3:' . $derniereColonne . '3');
+
+        // ── Les groupes, dans l'ordre du calendrier puis de l'alphabet ──────────────
+        $groupes = $this->grouper($lignes, $colMois === null ? null : 'policeMoisEffet', $colAssureur === null ? null : 'assureur');
+
+        ++$ligne;
+        foreach ($groupes as $mois => $assureurs) {
+            $ligneDuMois = $ligne;
+            $feuille->setCellValue('A' . $ligne, $mois);
+            $this->poserLesSommes($feuille, $ligne, $mesures, $derniereDonnee, [
+                [$colMois, 'A' . $ligneDuMois],
+            ]);
+            $feuille->getStyle('A' . $ligne . ':' . $derniereColonne . $ligne)->getFont()->setBold(true);
+            $feuille->getStyle('A' . $ligne . ':' . $derniereColonne . $ligne)->getFill()
+                ->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE8F0FB');
+            ++$ligne;
+
+            foreach ($assureurs as $assureur) {
+                // L'indentation dit la hiérarchie sans qu'on ait à la répéter en mots.
+                $feuille->setCellValue('A' . $ligne, $assureur);
+                $feuille->getStyle('A' . $ligne)->getAlignment()->setIndent(2);
+                $this->poserLesSommes($feuille, $ligne, $mesures, $derniereDonnee, [
+                    [$colMois, 'A' . $ligneDuMois],
+                    [$colAssureur, 'A' . $ligne],
+                ]);
+                ++$ligne;
+            }
+        }
+
+        // ── Le total général ────────────────────────────────────────────────────────
+        $feuille->setCellValue('A' . $ligne, 'Total général');
+        $rang = 2;
+        foreach ($mesures as $mesure) {
+            $cellule = Coordinate::stringFromColumnIndex($rang) . $ligne;
+            // ⚠ LA PLAGE S'ARRÊTE AVANT LA LIGNE DE TOTAUX DE `DONNEES` : l'y inclure
+            // ferait compter chaque montant deux fois, et le total afficherait le double.
+            $feuille->setCellValue($cellule, sprintf(
+                '=SUM(%s!%s%d:%s%d)',
+                EtatDuPortefeuille::FEUILLE,
+                $mesure['lettre'],
+                self::LIGNE_DONNEES,
+                $mesure['lettre'],
+                $derniereDonnee,
+            ));
+            ++$rang;
+        }
+        $plageTotal = 'A' . $ligne . ':' . $derniereColonne . $ligne;
+        $feuille->getStyle($plageTotal)->getFont()->setBold(true);
+        $feuille->getStyle($plageTotal)->getBorders()->getTop()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUM);
+
+        $feuille->getStyle('B4:' . $derniereColonne . $ligne)->getNumberFormat()->setFormatCode('#,##0.00');
+        $feuille->getStyle('B4:' . $derniereColonne . $ligne)->getAlignment()->setHorizontal('right');
+
+        $feuille->getColumnDimension('A')->setWidth(34);
+        for ($i = 2; $i <= \count($mesures) + 1; ++$i) {
+            $feuille->getColumnDimension(Coordinate::stringFromColumnIndex($i))->setWidth(22);
+        }
+        $feuille->freezePane('B4');
+    }
+
+    /**
+     * Pose une somme conditionnelle par mesure.
+     *
+     * ⚠ LES CRITÈRES POINTENT SUR DES CELLULES, jamais sur du texte recopié : le libellé
+     * du mois vit en colonne A, et la formule le lit là. Écrire « Janvier » en dur dans
+     * sept formules par groupe aurait rendu la feuille infalsifiable — corriger un libellé
+     * n'aurait plus rien recalculé.
+     *
+     * @param array<string, array{lettre: string, titre: string}> $mesures
+     * @param array<int, array{0: ?string, 1: string}>            $criteres
+     */
+    private function poserLesSommes(Worksheet $feuille, int $ligne, array $mesures, int $derniereDonnee, array $criteres): void
+    {
+        $conditions = '';
+        foreach ($criteres as [$colonne, $cellule]) {
+            if ($colonne === null) {
+                continue;
+            }
+            $conditions .= sprintf(
+                ',%s!$%s$%d:$%s$%d,$%s',
+                EtatDuPortefeuille::FEUILLE,
+                $colonne,
+                self::LIGNE_DONNEES,
+                $colonne,
+                $derniereDonnee,
+                ltrim($cellule, '$'),
+            );
+        }
+
+        $rang = 2;
+        foreach ($mesures as $mesure) {
+            $feuille->setCellValue(
+                Coordinate::stringFromColumnIndex($rang) . $ligne,
+                sprintf(
+                    '=SUMIFS(%s!$%s$%d:$%s$%d%s)',
+                    EtatDuPortefeuille::FEUILLE,
+                    $mesure['lettre'],
+                    self::LIGNE_DONNEES,
+                    $mesure['lettre'],
+                    $derniereDonnee,
+                    $conditions,
+                ),
+            );
+            ++$rang;
+        }
+    }
+
+    /**
+     * Les groupes de la synthèse : mois => assureurs, dans l'ordre d'affichage.
+     *
+     * ⚠ LE MOIS NE SE TRIE PAS TOUT SEUL. Son libellé ne porte que son nom — « Janvier » —,
+     * parce qu'un rang collé devant le rendait lisible comme une DATE par les moteurs de
+     * formules, et faisait ressortir janvier et mars à zéro. L'ordre du calendrier est donc
+     * porté ICI, par le rang dans `EtatDuPortefeuille::MOIS`. Un `ksort` remettrait août en
+     * tête et septembre en queue.
+     *
+     * Les assureurs suivent l'alphabet. Une valeur absente devient « (sans) » plutôt que de
+     * disparaître : une ligne qui n'entre dans aucun groupe est une ligne qu'on ne verrait
+     * plus — et son montant manquerait au total sans que rien ne le signale.
+     *
+     * @param array<int, array<string, mixed>> $lignes
+     *
+     * @return array<string, string[]>
+     */
+    private function grouper(array $lignes, ?string $cleMois, ?string $cleAssureur): array
+    {
+        $groupes = [];
+        foreach ($lignes as $ligne) {
+            // ⚠ ON REPREND LA VALEUR TELLE QUELLE, sans jamais lui substituer un libellé de
+            // remplacement : le critère de la somme cherche dans les DONNÉES, et ne trouverait
+            // pas un nom qui n'y figure pas. C'est le défaut qu'a eu cette feuille : le groupe
+            // des tranches sans date d'effet affichait 0,00 quand elles pesaient 4 952,50, et
+            // les sous-lignes ne totalisaient plus le total général. `SANS_MOIS` est donc écrit
+            // dans la colonne elle-même.
+            $mois = $cleMois === null ? 'Toutes périodes' : (string) ($ligne[$cleMois] ?? EtatDuPortefeuille::SANS_MOIS);
+            $assureur = $cleAssureur === null ? null : (string) ($ligne[$cleAssureur] ?? '(sans assureur)');
+
+            $groupes[$mois] ??= [];
+            if ($assureur !== null) {
+                $groupes[$mois][$assureur] = true;
+            }
+        }
+
+        // Ce qui n'est pas un mois — « (sans date d'effet) » — passe en queue plutôt que de
+        // s'intercaler au hasard d'un rang introuvable.
+        uksort($groupes, static function (string $a, string $b): int {
+            $rangA = array_search($a, EtatDuPortefeuille::MOIS, true);
+            $rangB = array_search($b, EtatDuPortefeuille::MOIS, true);
+
+            if ($rangA === false || $rangB === false) {
+                return $rangA === $rangB ? strcmp($a, $b) : ($rangA === false ? 1 : -1);
+            }
+
+            return $rangA <=> $rangB;
+        });
+
+        foreach ($groupes as $mois => $assureurs) {
+            $noms = array_keys($assureurs);
+            sort($noms);
+            $groupes[$mois] = $noms;
+        }
+
+        return $groupes;
     }
 
     /**

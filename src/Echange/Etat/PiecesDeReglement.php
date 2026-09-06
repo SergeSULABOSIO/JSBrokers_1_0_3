@@ -88,13 +88,25 @@ final class PiecesDeReglement
      * — les deux chemins décrivent le même argent, le helper les réconcilie d'ailleurs
      * par un `max()`.
      *
-     * @return array{date: ?\DateTimeImmutable, references: string, comptes: string}
+     * @return array{date: ?\DateTimeImmutable, references: string, comptes: string, bordereaux: string}
      */
     public function commission(Tranche $tranche): array
     {
         $dates = [];
         $references = [];
         $comptes = [];
+
+        // ⚠ LE BORDEREAU EST UNE PIÈCE À PART ENTIÈRE, et il mérite sa colonne : c'est
+        // par lui qu'un courtier retrouve ce que l'assureur a déclaré régler, police par
+        // police. Le mêler aux références de facture aurait fondu deux notions dans une
+        // case — un bordereau n'est pas une facture, il en porte plusieurs.
+        $bordereaux = [];
+        foreach ($this->helper->getBordereauxCouvrantTranche($tranche) as $bordereau) {
+            $reference = trim((string) ($bordereau->getReference() ?: $bordereau->getNom()));
+            if ($reference !== '') {
+                $bordereaux[] = $reference;
+            }
+        }
 
         foreach ($this->notesDeCommission($tranche) as $note) {
             foreach ($note->getPaiements() as $paiement) {
@@ -123,6 +135,7 @@ final class PiecesDeReglement
 
         $assemble = $this->assembler($dates, $references);
         $assemble['comptes'] = $this->lister($comptes);
+        $assemble['bordereaux'] = $this->lister($bordereaux);
 
         return $assemble;
     }
@@ -177,14 +190,16 @@ final class PiecesDeReglement
      * Une date pêchée sans ce filtre afficherait le paiement d'un partenaire en face du
      * solde d'un agent.
      *
-     * @param bool $cotéAgent true = versements aux agents internes ; false = aux partenaires
+     * @param bool $coteAgent true = versements aux agents internes ; false = aux partenaires
      *
-     * @return array{date: ?\DateTimeImmutable, references: string}
+     * @return array{date: ?\DateTimeImmutable, references: string, lots: string, comptes: string}
      */
     public function retro(Tranche $tranche, bool $coteAgent): array
     {
         $dates = [];
         $references = [];
+        $lots = [];
+        $comptes = [];
 
         foreach ($tranche->getReversementsRetroAgent() as $reversement) {
             $estAgent = $reversement->getAgent() !== null;
@@ -196,13 +211,36 @@ final class PiecesDeReglement
             if ($date !== null) {
                 $dates[] = $date;
             }
-            $reference = trim((string) ($reversement->getReference() ?: $reversement->getLotReference()));
+
+            // ⚠ DEUX NOTIONS, DEUX COLONNES. La référence désigne LE VIREMENT — c'est
+            // elle qu'on cherche sur un relevé bancaire ; le lot désigne l'ORDRE DE
+            // PAIEMENT qui en regroupe plusieurs — c'est lui qu'on cherche dans le
+            // dossier de reversement. Les fondre dans une case, avec repli de l'une sur
+            // l'autre, aurait rendu la colonne intotalisable et surtout ambiguë : on ne
+            // saurait plus, en la lisant, laquelle des deux on tient.
+            $reference = trim((string) $reversement->getReference());
             if ($reference !== '') {
                 $references[] = $reference;
             }
+            $lot = trim((string) $reversement->getLotReference());
+            if ($lot !== '') {
+                $lots[] = $lot;
+            }
+
+            $compte = $reversement->getCompteBancaire();
+            if ($compte !== null) {
+                $comptes[] = trim(sprintf('%s %s', (string) $compte->getIntitule(), (string) $compte->getBanque()));
+            }
         }
 
-        return $this->assembler($dates, $references);
+        // ⚠ LE FILTRE XOR VAUT POUR LES TROIS COLONNES, pas seulement pour la date : une
+        // référence de partenaire posée en face du solde d'un agent serait aussi fausse,
+        // et bien plus difficile à repérer qu'un montant.
+        $assemble = $this->assembler($dates, $references);
+        $assemble['lots'] = $this->lister($lots);
+        $assemble['comptes'] = $this->lister($comptes);
+
+        return $assemble;
     }
 
     /**

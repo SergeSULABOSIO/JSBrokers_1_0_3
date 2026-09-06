@@ -489,23 +489,54 @@ class ExportJsbxTest extends KernelTestCase
         }
     }
 
-    /** L'outil d'export ne dicte jamais son URL : elle est générée par le serveur. */
+    /**
+     * L'outil d'export ne dicte jamais son URL : elle est générée par le serveur.
+     *
+     * ⚠ CE QU'IL CHOISIT, CE SONT DES COLONNES. L'export rend l'ÉTAT du portefeuille —
+     * une maille fixe, la tranche — et non plus un fichier d'échange à la carte. Le
+     * paramètre s'appelle donc « colonnes », et il se résout par LIBELLÉ autant que par
+     * code : l'utilisateur dit « la réserve du courtier », pas « reserve ».
+     */
     public function testLOutilDExportEmetUneUrlServeurEtAnnonceLeCout(): void
     {
         [$entreprise, $proprietaire] = $this->fixture();
 
         $resultat = $this->service(EchangeExporterTool::class)
-            ->execute(['donnees' => ['Clients']], new AiScope($entreprise, $proprietaire, null));
+            ->execute(['colonnes' => ['Réserve du courtier']], new AiScope($entreprise, $proprietaire, null));
 
         self::assertSame('OK', $resultat->status);
         self::assertTrue($resultat->data['pret']);
         self::assertNotNull($resultat->uiAction);
         self::assertSame('open-url', $resultat->uiAction['type']);
         self::assertStringContainsString('/admin/echange/export/' . $entreprise->getId(), $resultat->uiAction['url']);
-        self::assertArrayHasKey('cout', $resultat->data, 'Le coût est annoncé AVANT l\'exécution.');
+        self::assertArrayHasKey('cout', $resultat->data, "Le coût est annoncé AVANT l'exécution.");
 
-        // « Clients » (libellé de rubrique) doit être reconnu comme le code « Client ».
-        self::assertContains('Client', explode(',', $this->donneesDeLUrl($resultat->uiAction['url'])));
+        parse_str((string) parse_url($resultat->uiAction['url'], PHP_URL_QUERY), $params);
+        self::assertContains('reserve', explode(',', (string) ($params['colonnes'] ?? '')));
+    }
+
+    /**
+     * ⚠ KET NE PROMET PLUS UNE RÉIMPORTATION IMPOSSIBLE.
+     *
+     * Sa description annonçait « un classeur qui sert aussi de gabarit de réimportation ».
+     * C'était vrai du format d'échange ; c'est faux de l'état, dont les colonnes sont des
+     * RÉSULTATS. On lit la description et le SCHÉMA — pas le prompt : c'est ce que le
+     * modèle reçoit réellement.
+     */
+    public function testLOutilDExportNePrometPlusDeReimportation(): void
+    {
+        $outil = $this->service(EchangeExporterTool::class);
+
+        self::assertStringNotContainsString('gabarit de réimportation', $outil->description());
+        self::assertStringContainsString('ne se redépose PAS', $outil->description());
+
+        $proprietes = $outil->schema()['properties'] ?? [];
+        self::assertArrayHasKey('colonnes', $proprietes);
+        self::assertArrayNotHasKey(
+            'donnees',
+            $proprietes,
+            'Un paramètre que le contrôleur ignore serait accepté puis perdu en silence.',
+        );
     }
 
     /**

@@ -40,6 +40,13 @@ final class CatalogueDesColonnes
             'policeEcheance' => ColonneEtat::date('Police · Échéance', 'Fin de la couverture.'),
             'policeReference' => ColonneEtat::texte('Police · Référence', 'Référence de la police chez l\'assureur.'),
             'policeNumeroAvenant' => ColonneEtat::texte('Police · N° avenant', 'Numéro de l\'avenant.'),
+            'policeMoisEffet' => ColonneEtat::texte(
+                "Police · Mois d'effet",
+                // ⚠ NE PAS Y REMETTRE UN RANG NI UN JOUR : voir `EtatDuPortefeuille::moisDe()`,
+                // un libellé lisible comme une date fait ressortir son mois à zéro en synthèse.
+                "Mois de la date d'effet de la police (« Janvier », « Février »…). C'est l'axe "
+                . "de la feuille SYNTHESE, qui range ses lignes dans l'ordre du calendrier.",
+            ),
 
             // ── La tranche ──────────────────────────────────────────────────────────
             'trancheNom' => ColonneEtat::texte('Tranche · Nom', 'Libellé de l\'échéance de prime.'),
@@ -103,6 +110,12 @@ final class CatalogueDesColonnes
             'commissionComptes' => ColonneEtat::texte(
                 'Commission · Compte(s) bancaire(s)',
                 'Comptes crédités par ces encaissements.',
+            ),
+            'commissionBordereaux' => ColonneEtat::texte(
+                'Commission · Bordereau(x)',
+                "Références des bordereaux de production qui ont fait rentrer de l'argent sur "
+                . "cette tranche. Une commission s'encaisse par facture d'articles OU par "
+                . "bordereau : c'est ici qu'on retrouve le second circuit.",
             ),
 
             // ── Les taxes SUR LA COMMISSION ─────────────────────────────────────────
@@ -201,6 +214,19 @@ final class CatalogueDesColonnes
                 'Rétro intermédiaire · Payée le',
                 'Date du DERNIER versement au partenaire.',
             ),
+            'retroPartenaireReferences' => ColonneEtat::texte(
+                'Rétro intermédiaire · Références',
+                'Références des virements au partenaire, séparées par « ; ». À défaut de '
+                . 'référence propre, celle du lot de versement.',
+            ),
+            'retroPartenaireLots' => ColonneEtat::texte(
+                'Rétro intermédiaire · Lot de versement',
+                "Référence de l'ORDRE DE PAIEMENT qui regroupe ces virements — à ne pas confondre avec la référence d'un virement isolé.",
+            ),
+            'retroPartenaireComptes' => ColonneEtat::texte(
+                'Rétro intermédiaire · Compte(s) bancaire(s)',
+                'Comptes débités par ces versements.',
+            ),
 
             'retroAgentBeneficiaire' => ColonneEtat::texte(
                 'Rétro agent · Bénéficiaire',
@@ -222,6 +248,19 @@ final class CatalogueDesColonnes
                 'Rétro agent · Payée le',
                 'Date du DERNIER versement à un agent. ⚠ Les deux familles vivent sur le même '
                 . 'enregistrement : cette date ne compte QUE les versements aux agents.',
+            ),
+            'retroAgentReferences' => ColonneEtat::texte(
+                'Rétro agent · Références',
+                "Références des virements à l'agent, séparées par « ; ». Comme la date, elles "
+                . 'ne comptent QUE les versements aux agents.',
+            ),
+            'retroAgentLots' => ColonneEtat::texte(
+                'Rétro agent · Lot de versement',
+                "Référence de l'ORDRE DE PAIEMENT qui regroupe ces virements.",
+            ),
+            'retroAgentComptes' => ColonneEtat::texte(
+                'Rétro agent · Compte(s) bancaire(s)',
+                'Comptes débités par ces versements.',
             ),
         ];
     }

@@ -5,8 +5,10 @@ namespace App\Ai\Tool;
 use App\Ai\Action\TypeAction;
 use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
-use App\Echange\Canevas\CanevasDEchange;
-use App\Echange\Canevas\RessourceDEchange;
+use App\Echange\Etat\EtatDuPortefeuille;
+use App\Echange\Etat\ExerciceDesTranches;
+use App\Echange\Etat\ValiditeDesTranches;
+use App\Services\Search\CotationSouscriptionScope;
 use App\Echange\Service\CompteurDOccurrences;
 use App\Entity\EchangeOccurrence;
 use App\Service\Workspace\WorkspaceAccessResolver;
@@ -25,10 +27,16 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
  * toujours une lecture, et l'outil doit être déclaré dans ce tour-là. Il ne produit pas
  * non plus de plan de mutation — il n'écrit rien.
  *
- * LE PÉRIMÈTRE EST RÉSOLU, PAS SUPPOSÉ. Le modèle exprime la demande en langage
- * naturel ; les codes sont retrouvés dans le canevas, et ce que l'utilisateur n'a pas
- * le droit de lire n'y figure tout simplement pas. Une demande « exporte tout » ne
- * donne donc jamais plus que ce que son auteur peut déjà voir à l'écran.
+ * ⚠ CE QUI SORT EST UN ÉTAT DE LECTURE, PAS UN FICHIER D'ÉCHANGE. Une ligne par tranche,
+ * des colonnes qui sont des RÉSULTATS — soldes, encaissements, exigibilités. Il ne se
+ * redépose pas, et l'outil doit le dire : promettre une réimportation coûterait à
+ * l'utilisateur une demi-journée avant qu'il ne le découvre seul. Le gabarit vierge de
+ * l'onglet Importer est l'autre geste, celui qui prépare une saisie.
+ *
+ * LES COLONNES SONT RÉSOLUES, PAS SUPPOSÉES. Le modèle exprime la demande en langage
+ * naturel — « sans les rétros », « juste les primes » — et les codes sont retrouvés dans
+ * le catalogue, par code ou par libellé. Le contenu, lui, reste refiltré par le périmètre
+ * du cabinet à la production : choisir une colonne n'ouvre aucun droit.
  */
 final class EchangeExporterTool implements AiToolInterface
 {
@@ -37,7 +45,8 @@ final class EchangeExporterTool implements AiToolInterface
     private const LIBELLE = 'Importation / Exportation';
 
     public function __construct(
-        private readonly CanevasDEchange $canevas,
+        // Le catalogue de l'état : ce que Ket peut proposer de retenir.
+        private readonly EtatDuPortefeuille $etat,
         private readonly CompteurDOccurrences $compteur,
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly UrlGeneratorInterface $urlGenerator,
@@ -51,12 +60,17 @@ final class EchangeExporterTool implements AiToolInterface
 
     public function description(): string
     {
-        return 'Lance la génération d\'un export Excel des données du cabinet (classeur unique, qui '
-            . 'sert aussi de gabarit de réimportation). Le paramètre « donnees » restreint le '
-            . 'périmètre à certaines données (codes obtenus via echange_consulter) ; laissé vide, '
-            . 'l\'export couvre tout ce que l\'utilisateur a le droit de lire. Les dépendances d\'une '
-            . 'donnée demandée sont ajoutées automatiquement. Le coût est annoncé AVANT le '
-            . 'déclenchement, et le téléchargement reste un geste de l\'utilisateur.';
+        return 'Lance la génération de l\'ÉTAT DU PORTEFEUILLE : un classeur Excel d\'une ligne '
+            . 'par tranche, portant la police, l\'assuré, l\'assureur, la prime et son solde, la '
+            . 'commission, ses taxes, la réserve du courtier et les rétrocommissions. '
+            . '⚠ C\'EST UN ÉTAT DE LECTURE : il ne se redépose PAS, ses colonnes étant des '
+            . 'résultats (soldes, encaissements) et non des champs. Pour préparer des données à '
+            . 'importer, c\'est le GABARIT VIERGE qu\'il faut, dans l\'onglet Importer. '
+            . 'Le paramètre « colonnes » restreint le fichier à certaines colonnes (codes obtenus '
+            . 'via echange_consulter) ; laissé vide, l\'état les porte toutes. Le paramètre '
+            . '« validite » choisit entre les tranches des POLICES, celles des PROJETS et les '
+            . 'CADUQUES ; « exercice » restreint à une année de souscription. Le coût est annoncé '
+            . 'AVANT le déclenchement, et le téléchargement reste un geste de l\'utilisateur.';
     }
 
     public function aiguillage(): string
@@ -70,11 +84,28 @@ final class EchangeExporterTool implements AiToolInterface
         return [
             'type' => 'object',
             'properties' => [
-                'donnees' => [
+                'colonnes' => [
                     'type' => 'array',
                     'items' => ['type' => 'string'],
-                    'description' => 'Codes des données à exporter. Vide ou absent = tout le périmètre '
-                        . 'lisible. Les dépendances sont ajoutées d\'office.',
+                    'description' => 'Codes des colonnes à retenir dans l\'état (obtenus via '
+                        . 'echange_consulter). Vide ou absent = toutes les colonnes. La colonne '
+                        . 'd\'identité de la tranche est toujours présente.',
+                ],
+                'validite' => [
+                    'type' => 'string',
+                    'enum' => ['toutes', 'souscrites', 'en_attente', 'caduques'],
+                    'description' => "Quelles tranches retenir : « souscrites » = celles des "
+                        . "POLICES (le contrat existe) ; « en_attente » = celles des PROJETS non "
+                        . "encore validés par le client ; « caduques » = celles des propositions "
+                        . "perdues au profit d'une concurrente ; « toutes » (défaut) = tout "
+                        . "confondu. ⚠ Un état des seuls projets n'est PAS le portefeuille réel.",
+                ],
+                'exercice' => [
+                    'type' => 'string',
+                    'description' => "Exercice retenu, au format d'une année (« 2026 ») : "
+                        . "celui de la DATE D'EFFET des polices, donc de la souscription. "
+                        . "« tous » (défaut) ne filtre rien. Les exercices réellement présents "
+                        . "chez ce cabinet sont donnés par echange_consulter.",
                 ],
             ],
         ];
@@ -94,7 +125,7 @@ final class EchangeExporterTool implements AiToolInterface
             return null;
         }
 
-        return ['donnees' => []];
+        return ['colonnes' => [], 'validite' => ValiditeDesTranches::normaliser(CotationSouscriptionScope::detecterDepuisTexte($n))];
     }
 
     public function execute(array $args, AiScope $scope): AiToolResult
@@ -104,31 +135,20 @@ final class EchangeExporterTool implements AiToolInterface
             return AiToolResult::horsPerimetre(self::LIBELLE);
         }
 
-        $lisibles = $this->canevas->ressourcesLisibles($scope->invite);
-        if ($lisibles === []) {
+        // ⚠ LE PÉRIMÈTRE DE L'ÉTAT N'EST PLUS UNE AFFAIRE DE FAMILLES DE DONNÉES.
+        // Le fichier a une maille FIXE — une ligne par tranche — et ce qu'on y choisit,
+        // ce sont les COLONNES. Le droit de lecture sur la rubrique suffit donc, et le
+        // contenu est refiltré par le périmètre du cabinet à la production.
+        $catalogue = $this->etat->colonnes($scope->entreprise);
+
+        $retenues = $this->resoudreColonnes($args['colonnes'] ?? [], $catalogue);
+        if ($retenues === null) {
             return AiToolResult::introuvable(
-                self::LIBELLE,
-                'Le périmètre d\'accès de cet utilisateur ne couvre aucune donnée exportable. '
-                . 'Dis-le simplement ; ne propose pas de contourner ses droits.',
+                implode(', ', array_map('strval', (array) ($args['colonnes'] ?? []))),
+                'Ces colonnes ne figurent pas dans l\'état. Appelle echange_consulter pour lui '
+                . 'présenter la liste exacte des colonnes disponibles.',
             );
         }
-
-        $demandes = $this->resoudre($args['donnees'] ?? [], $lisibles);
-        if ($demandes === null) {
-            return AiToolResult::introuvable(
-                implode(', ', array_map('strval', (array) ($args['donnees'] ?? []))),
-                'Ces données ne sont pas au périmètre d\'échange de cet utilisateur. Appelle '
-                . 'echange_consulter pour lui présenter la liste exacte de ce qu\'il peut exporter.',
-            );
-        }
-
-        // Fermeture sur les dépendances : cocher une donnée coche celles dont elle a
-        // besoin, sans quoi le fichier contiendrait des renvois vers des lignes absentes.
-        $retenus = $demandes === []
-            ? array_keys($lisibles)
-            : $this->canevas->fermerSurLesDependances($demandes, $lisibles);
-
-        $ajoutees = array_values(array_diff($retenus, $demandes === [] ? $retenus : $demandes));
 
         // LE COÛT VIENT DU COMPTEUR, jamais d'un calcul refait ici : c'est ce qui garantit
         // que le chiffre annoncé dans le chat est celui que la route débitera.
@@ -148,28 +168,55 @@ final class EchangeExporterTool implements AiToolInterface
             ]);
         }
 
+        // ⚠ LE VOCABULAIRE VIENT DE LA SOURCE UNIQUE, jamais d'une liste recopiée ici :
+        // le chip de l'écran, celui de la rubrique Propositions et ce paramètre désignent
+        // les mêmes ensembles, sous les mêmes noms.
+        $validite = ValiditeDesTranches::normaliser(
+            is_string($args['validite'] ?? null) ? $args['validite'] : null,
+        );
+
+        // ⚠ L'EXERCICE EST VÉRIFIÉ CONTRE LES DONNÉES, jamais accepté sur parole : une
+        // année qu'aucune police ne porte rendrait un fichier vide, et le modèle
+        // conclurait à un portefeuille inexistant plutôt qu'à une année mal comprise.
+        $exercice = ExerciceDesTranches::normaliser(
+            is_string($args['exercice'] ?? null) ? $args['exercice'] : null,
+            $this->etat->exercices($scope->entreprise),
+        );
+
         $parametres = ['idEntreprise' => $scope->entreprise->getId()];
-        if ($demandes !== []) {
-            $parametres['donnees'] = implode(',', $retenus);
+        if ($retenues !== []) {
+            $parametres['colonnes'] = implode(',', $retenues);
+        }
+        if ($validite !== ValiditeDesTranches::TOUTES) {
+            $parametres['validite'] = $validite;
+        }
+        if ($exercice !== ExerciceDesTranches::TOUS) {
+            $parametres['exercice'] = $exercice;
         }
 
         return AiToolResult::ok(
             [
-                'pret'               => true,
-                'donnees_exportees'  => array_values(array_map(
-                    static fn (string $code) => $lisibles[$code]->libelle,
-                    $retenus,
+                'pret'      => true,
+                'maille'    => 'Une ligne par TRANCHE de prime.',
+                'validite'  => ValiditeDesTranches::libelle($validite),
+                'validite_sens' => ValiditeDesTranches::explication($validite),
+                'exercice'  => ExerciceDesTranches::libelle($exercice),
+                'exercice_sens' => ExerciceDesTranches::explication($exercice),
+                'colonnes'  => array_values(array_map(
+                    static fn ($colonne) => $colonne->libelle,
+                    $retenues === [] ? $catalogue : array_intersect_key($catalogue, array_flip($retenues)),
                 )),
-                'nb_donnees'         => count($retenus),
-                'dependances_ajoutees' => array_values(array_map(
-                    static fn (string $code) => $lisibles[$code]->libelle,
-                    array_filter($ajoutees, static fn (string $c) => isset($lisibles[$c])),
-                )),
-                'cout'               => $etat['coutExport'],
+                'nb_colonnes' => $retenues === [] ? \count($catalogue) : \count($retenues),
+                'cout'      => $etat['coutExport'],
                 'gratuites_restantes' => $etat['gratuitesRestantes'],
+                // ⚠ NE JAMAIS PROMETTRE UNE RÉIMPORTATION. Ce fichier porte des
+                // RÉSULTATS — soldes, encaissements, exigibilités — et non des champs :
+                // il ne peut pas revenir dans la base. Le laisser croire coûterait à
+                // l'utilisateur une demi-journée avant qu'il ne le découvre seul.
                 'note' => sprintf(
-                    'Le téléchargement s\'ouvre chez l\'utilisateur. %s Précise-lui que le fichier '
-                    . 'produit sert aussi de gabarit pour réimporter ses modifications.',
+                    'Le téléchargement s\'ouvre chez l\'utilisateur. %s C\'est un ÉTAT DE LECTURE : '
+                    . 'dis-lui bien qu\'il ne se redépose pas, et que pour importer des données '
+                    . 'c\'est le gabarit vierge de l\'onglet Importer qu\'il lui faut.',
                     $etat['coutExport'] > 0
                         ? sprintf('Cette opération lui est facturée %d tokens.', $etat['coutExport'])
                         : sprintf('Elle est gratuite (%d opérations offertes restantes).', $etat['gratuitesRestantes']),
@@ -183,17 +230,16 @@ final class EchangeExporterTool implements AiToolInterface
     }
 
     /**
-     * Codes demandés, ramenés au périmètre lisible.
+     * Colonnes demandées, ramenées au catalogue.
      *
-     * Renvoie [] pour « tout », ou null si RIEN de ce qui est demandé n'existe — un
-     * silence vaudrait ici un export intégral que personne n'a réclamé.
+     * Rend [] pour « toutes », ou null si RIEN de ce qui est demandé n'existe — un
+     * silence vaudrait ici un état complet que personne n'a réclamé.
      *
-     * @param mixed                            $demandes
-     * @param array<string, RessourceDEchange> $lisibles
+     * @param array<string, \App\Echange\Etat\ColonneEtat> $catalogue
      *
      * @return string[]|null
      */
-    private function resoudre(mixed $demandes, array $lisibles): ?array
+    private function resoudreColonnes(mixed $demandes, array $catalogue): ?array
     {
         if (!is_array($demandes) || $demandes === []) {
             return [];
@@ -204,45 +250,18 @@ final class EchangeExporterTool implements AiToolInterface
             if (!is_string($demande) || trim($demande) === '') {
                 continue;
             }
-            $code = $this->reconnaitre(trim($demande), $lisibles);
-            if ($code !== null) {
-                $codes[$code] = true;
+            $demande = trim($demande);
+            // Par le code, ou par le LIBELLÉ : l'utilisateur dit « la réserve », pas
+            // « reserve ». Comparaison insensible à la casse et aux accents.
+            foreach ($catalogue as $code => $colonne) {
+                if ($code === $demande || AiText::normalize($colonne->libelle) === AiText::normalize($demande)) {
+                    $codes[$code] = true;
+                    break;
+                }
             }
         }
 
         return $codes === [] ? null : array_keys($codes);
     }
 
-    /**
-     * Reconnaît un code de ressource, son libellé de rubrique, ou une forme approchante
-     * (casse et accents ôtés) — le modèle rend « Clients » là où le code est « Client ».
-     *
-     * @param array<string, RessourceDEchange> $lisibles
-     */
-    private function reconnaitre(string $demande, array $lisibles): ?string
-    {
-        if (isset($lisibles[$demande])) {
-            return $demande;
-        }
-
-        $cible = AiText::normalize($demande);
-        foreach ($lisibles as $code => $ressource) {
-            if (AiText::normalize($code) === $cible || AiText::normalize($ressource->libelle) === $cible) {
-                return $code;
-            }
-        }
-
-        // Repli sur le préfixe : « client » pour « Clients », « propositions » pour
-        // « Propositions ». Ambigu = refusé, jamais deviné.
-        $candidats = [];
-        foreach ($lisibles as $code => $ressource) {
-            foreach ([AiText::normalize($code), AiText::normalize($ressource->libelle)] as $forme) {
-                if ($forme !== '' && (str_starts_with($forme, $cible) || str_starts_with($cible, $forme))) {
-                    $candidats[$code] = true;
-                }
-            }
-        }
-
-        return count($candidats) === 1 ? array_key_first($candidats) : null;
-    }
 }

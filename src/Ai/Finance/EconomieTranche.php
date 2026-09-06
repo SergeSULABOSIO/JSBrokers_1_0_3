@@ -4,6 +4,8 @@ namespace App\Ai\Finance;
 
 use App\Ai\Presentation\Colonnes;
 use App\Entity\Tranche;
+use App\Service\Partage\Exigibilite;
+use App\Service\Partage\Reserve;
 
 /**
  * L'ÉCONOMIE D'UNE TRANCHE, NOMMÉE UNE SEULE FOIS — prime, commission de courtage,
@@ -65,6 +67,20 @@ final class EconomieTranche
         'commissionExigible' => Colonnes::MONTANT,
         'retroCommission'    => Colonnes::MONTANT,
         'retroAPayer'        => Colonnes::MONTANT,
+        'retroReversee'      => Colonnes::MONTANT,
+        'retroSolde'         => Colonnes::MONTANT,
+        'retroAgentDue'      => Colonnes::MONTANT,
+        'retroAgentReversee' => Colonnes::MONTANT,
+        'retroAgentSolde'    => Colonnes::MONTANT,
+        'retroAgentExigible' => Colonnes::MONTANT,
+        'taxeCourtierPayee'  => Colonnes::MONTANT,
+        'taxeCourtierSolde'  => Colonnes::MONTANT,
+        'taxeCourtierExigible' => Colonnes::MONTANT,
+        'taxeAssureurPayee'  => Colonnes::MONTANT,
+        'taxeAssureurSolde'  => Colonnes::MONTANT,
+        'taxeAssureurExigible' => Colonnes::MONTANT,
+        'commissionPure'     => Colonnes::MONTANT,
+        'reserve'            => Colonnes::MONTANT,
     ];
 
     /**
@@ -120,6 +136,30 @@ final class EconomieTranche
             // partenaire, pour ne pas suggérer une dette inexistante.
             'retroCommission'     => self::positifOuRien($tranche->retroCommission),
             'retroAPayer'         => self::positifOuRien($tranche->retroCommissionExigible),
+            'retroReversee'       => self::positifOuRien($tranche->retroCommissionReversee),
+            'retroSolde'          => self::positifOuRien($tranche->retroCommissionSolde),
+
+            // ── LA RÉTROCOMMISSION DES AGENTS INTERNES ──────────────────────────────
+            // ⚠ ELLE MANQUAIT ENTIÈREMENT, alors que ses indicateurs existent depuis
+            // longtemps : l'assistant ne savait rien dire d'une famille de dettes que
+            // l'écran affiche. Une capacité présente à l'écran et absente du chat est un
+            // défaut — c'est la doctrine de parité de la rubrique d'échange.
+            'retroAgentDue'       => self::positifOuRien($tranche->retroAgentDue),
+            'retroAgentReversee'  => self::positifOuRien($tranche->retroAgentReversee),
+            'retroAgentSolde'     => self::positifOuRien($tranche->retroAgentSolde),
+            'retroAgentExigible'  => self::positifOuRien($tranche->retroAgentExigible),
+
+            // ── LE RÈGLEMENT DES TAXES, ET CE QU'IL EN RESTE ────────────────────────
+            'taxeCourtierPayee'   => self::montant($tranche->taxeCourtierPayee),
+            'taxeCourtierSolde'   => self::solde($tranche->taxeCourtierSolde),
+            'taxeCourtierExigible' => self::exigibiliteTaxe($tranche, $tranche->taxeCourtierMontant, $tranche->taxeCourtierPayee),
+            'taxeAssureurPayee'   => self::montant($tranche->taxeAssureurPayee),
+            'taxeAssureurSolde'   => self::solde($tranche->taxeAssureurSolde),
+            'taxeAssureurExigible' => self::exigibiliteTaxe($tranche, $tranche->taxeAssureurMontant, $tranche->taxeAssureurPayee),
+
+            // ── CE QUI RESTE AU CABINET ────────────────────────────────────────────
+            'commissionPure'      => self::commissionPure($tranche),
+            'reserve'             => self::reserve($tranche),
         ], static fn ($v) => $v !== null && $v !== '' && $v !== 'N/A');
     }
 
@@ -241,5 +281,69 @@ final class EconomieTranche
     private static function positifOuRien(?float $valeur): ?float
     {
         return ($valeur ?? 0.0) > 0 ? round($valeur, 2) : null;
+    }
+
+    /**
+     * COMMISSION PURE : ce qui reste au cabinet avant tout partage — commission HT moins
+     * la taxe dont il est lui-même redevable. La définition est celle de `Reserve`, dont
+     * l'en-tête fait foi ; on l'applique, on ne la réinvente pas.
+     */
+    private static function commissionPure(Tranche $tranche): ?float
+    {
+        if ($tranche->montantCalculeHT === null) {
+            return null;
+        }
+
+        return round($tranche->montantCalculeHT - ($tranche->taxeCourtierMontant ?? 0.0), 2);
+    }
+
+    /**
+     * RÉSERVE DU CABINET : la commission pure, moins ce qui part chez les partenaires
+     * externes ET chez les agents internes.
+     *
+     * ⚠ Le négatif n'est PAS écrêté : une réserve sous zéro signale un cumul de taux mal
+     * paramétré, et le masquer ferait disparaître le seul signe visible de l'anomalie.
+     */
+    private static function reserve(Tranche $tranche): ?float
+    {
+        $pure = self::commissionPure($tranche);
+        if ($pure === null) {
+            return null;
+        }
+
+        return Reserve::calculer(
+            $pure,
+            $tranche->retroCommission ?? 0.0,
+            $tranche->retroAgentDue ?? 0.0,
+        );
+    }
+
+    /**
+     * LA PART DE TAXE DEVENUE RÉCLAMABLE, au rythme de la commission encaissée.
+     *
+     * ⚠ POURQUOI CE PRORATA EST LÉGITIME, LÀ OÙ CELUI DE LA COMMISSION EST INTERDIT.
+     * La NOTE ci-dessus interdit de proratiser la COMMISSION sur un règlement partiel de
+     * PRIME : la commission n'est réclamable à l'assureur qu'une fois la prime
+     * intégralement payée — c'est une condition contractuelle, pas une proportion. La
+     * taxe, elle, est DUE SUR UN REVENU PERÇU : elle naît avec l'encaissement et croît
+     * avec lui. La proportionnalité n'y est pas un raccourci, elle est la règle.
+     *
+     * La formule n'est pas écrite ici : `Exigibilite::exigible()` la porte déjà pour les
+     * rétrocommissions, avec ses trois garde-fous éprouvés — ratio plafonné à 1, jamais
+     * de négatif, et ratio de 1 quand aucune commission n'est attendue (sans quoi la taxe
+     * d'une affaire à honoraires purs resterait éternellement inexigible).
+     */
+    private static function exigibiliteTaxe(Tranche $tranche, ?float $montant, ?float $payee): ?float
+    {
+        if (($montant ?? 0.0) <= 0.0) {
+            return null;
+        }
+
+        return Exigibilite::exigible(
+            $montant,
+            $tranche->montantCalculeTTC ?? 0.0,
+            $tranche->montant_paye ?? 0.0,
+            $payee ?? 0.0,
+        );
     }
 }
