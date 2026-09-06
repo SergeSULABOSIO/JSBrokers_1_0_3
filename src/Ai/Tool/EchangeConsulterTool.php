@@ -6,6 +6,8 @@ use App\Ai\AiText;
 use App\Ai\Presentation\Colonnes;
 use App\Ai\Scope\AiScope;
 use App\Echange\Canevas\CanevasDEchange;
+use App\Echange\Etat\EtatDuPortefeuille;
+use App\Echange\Etat\ValiditeDesTranches;
 use App\Echange\Canevas\RessourceDEchange;
 use App\Echange\Service\CompteurDOccurrences;
 use App\Entity\EchangeOccurrence;
@@ -31,7 +33,7 @@ use App\Service\Workspace\WorkspaceAccessResolver;
  */
 final class EchangeConsulterTool implements AiToolInterface
 {
-    private const SUJETS = ['perimetre', 'facturation', 'historique', 'controle_en_cours', 'tout'];
+    private const SUJETS = ['perimetre', 'colonnes', 'facturation', 'historique', 'controle_en_cours', 'tout'];
 
     /** Nom court de la pseudo-entité gouvernant l'accès à la rubrique. */
     private const ENTITE = 'Echange';
@@ -40,6 +42,8 @@ final class EchangeConsulterTool implements AiToolInterface
 
     public function __construct(
         private readonly CanevasDEchange $canevas,
+        // Le catalogue de l'état : ce que Ket peut proposer de retenir à l'export.
+        private readonly EtatDuPortefeuille $etat,
         private readonly CompteurDOccurrences $compteur,
         private readonly EchangeOccurrenceRepository $occurrences,
         private readonly EchangeImportRunRepository $importRuns,
@@ -133,6 +137,9 @@ final class EchangeConsulterTool implements AiToolInterface
         if ($sujet === 'historique' || $sujet === 'tout') {
             $data += $this->historique($scope);
         }
+        if ($sujet === 'colonnes' || $sujet === 'tout') {
+            $data += $this->colonnesDeLEtat($scope);
+        }
         if ($sujet === 'controle_en_cours' || $sujet === 'tout') {
             $data += $this->controleEnCours($scope);
         }
@@ -172,6 +179,56 @@ final class EchangeConsulterTool implements AiToolInterface
                 'colonnes'   => Colonnes::NOMBRE,
                 'depend_de'  => Colonnes::TEXTE,
                 'a_l_import' => Colonnes::STATUT,
+            ]),
+        ];
+    }
+
+    /**
+     * LES COLONNES DE L'ÉTAT DU PORTEFEUILLE, groupées par famille.
+     *
+     * ⚠ SANS ELLES, LE PARAMÈTRE « colonnes » D'echange_exporter EST INUTILISABLE : le
+     * modèle ne peut pas deviner des codes qu'aucun outil ne lui montre, et il les
+     * inventerait. C'est la contrepartie obligatoire du choix de colonnes — une capacité
+     * offerte sans le moyen de s'en servir n'est pas une capacité.
+     *
+     * ⚠ À NE PAS CONFONDRE AVEC « perimetre », qui liste les DONNÉES (les entités) : ces
+     * dernières ne gouvernent plus que le gabarit vierge d'import. L'état, lui, a une
+     * maille fixe — une ligne par tranche — et ne se règle que par ses colonnes.
+     *
+     * @return array<string, mixed>
+     */
+    private function colonnesDeLEtat(AiScope $scope): array
+    {
+        $lignes = [];
+        foreach ($this->etat->colonnes($scope->entreprise) as $code => $colonne) {
+            $lignes[] = [
+                'groupe'  => $colonne->groupe(),
+                'colonne' => $colonne->libelle,
+                'code'    => $code,
+                'nature'  => $colonne->role,
+                'sens'    => $colonne->explication,
+            ];
+        }
+
+        return [
+            'colonnes_etat' => $lignes,
+            'nb_colonnes' => \count($lignes),
+            // Les deux découpages que l'export accepte, avec leur vocabulaire exact : sans
+            // eux, le modèle ne peut pas renseigner « validite » ni « exercice », et il
+            // les inventerait.
+            'validites' => ValiditeDesTranches::valeurs(),
+            'exercices' => $this->etat->exercices($scope->entreprise),
+            'note_colonnes' => "Ce sont les colonnes de l'ÉTAT DU PORTEFEUILLE, le fichier que "
+                . "produit echange_exporter : une ligne par TRANCHE de prime. Passe leurs « code » "
+                . "au paramètre « colonnes » pour n'en retenir qu'une partie ; vide = toutes. "
+                . "La colonne d'identité de la tranche est toujours présente, même non demandée. "
+                . "⚠ Cet état ne se réimporte pas : ses colonnes sont des résultats, pas des champs.",
+            'presentation' => $lignes === [] ? null : Colonnes::de([
+                'groupe'  => Colonnes::TEXTE,
+                'colonne' => Colonnes::TEXTE,
+                'code'    => Colonnes::TEXTE,
+                'nature'  => Colonnes::STATUT,
+                'sens'    => Colonnes::TEXTE,
             ]),
         ];
     }

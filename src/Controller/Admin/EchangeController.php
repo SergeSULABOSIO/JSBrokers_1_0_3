@@ -7,6 +7,8 @@ use App\Echange\Classeur\AnnotateurJsbx;
 use App\Echange\Classeur\ClasseurIllisibleException;
 use App\Echange\Service\CompteurDOccurrences;
 use App\Echange\Etat\EtatDuPortefeuille;
+use App\Echange\Etat\ExerciceDesTranches;
+use App\Echange\Etat\ValiditeDesTranches;
 use App\Echange\Etat\ProducteurDeLEtat;
 use App\Echange\Service\ExportateurJsbx;
 use App\Echange\Service\FluxNdjson;
@@ -138,6 +140,13 @@ class EchangeController extends AbstractController
             'colonnesParGroupe' => $this->grouperColonnes($entreprise),
             'colonneIdentite'   => EtatDuPortefeuille::COLONNE_IDENTITE,
             'colonnesTotal'     => \count($this->catalogueEtat->colonnes($entreprise)),
+            // Les quatre chips de validité : polices, projets, caduques, toutes.
+            'validites'         => ValiditeDesTranches::valeurs(),
+            'validiteParDefaut' => ValiditeDesTranches::TOUTES,
+            // Les exercices RÉELLEMENT présents : proposer une année vide donnerait un
+            // chip qui ne rend jamais rien, et l'utilisateur croirait à une panne.
+            'exercices'         => $this->catalogueEtat->exercices($entreprise),
+            'exerciceParDefaut' => ExerciceDesTranches::TOUS,
             'peutImporter'  => $peutImporter,
             // Ce que l'invité peut réellement ÉCRIRE : afficher le périmètre d'import
             // comme s'il était celui de lecture promettrait une importation qui
@@ -181,6 +190,8 @@ class EchangeController extends AbstractController
                 $invite,
                 $this->getUser(),
                 $this->codesDemandes((string) $request->query->get('colonnes', '')),
+                (string) $request->query->get('validite', ''),
+                (string) $request->query->get('exercice', ExerciceDesTranches::TOUS),
                 // Graine d'idempotence : la minute courante, sauf si l'appelant en
                 // fournit une (l'assistant passe la sienne pour que sa proposition et
                 // le clic de l'utilisateur ne comptent qu'une fois).
@@ -224,10 +235,14 @@ class EchangeController extends AbstractController
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
 
         $colonnes = $this->codesDemandes((string) $request->request->get('colonnes', ''));
+        // Quelles tranches : polices, projets, caduques — ou toutes.
+        $validite = (string) $request->request->get('validite', '');
+        // Quel exercice : l'année de la date d'effet des polices.
+        $exercice = (string) $request->request->get('exercice', ExerciceDesTranches::TOUS);
         $graine = (string) $request->request->get('op', '');
         $acteur = $this->getUser();
 
-        $reponse = new StreamedResponse(function () use ($entreprise, $invite, $acteur, $colonnes, $graine): void {
+        $reponse = new StreamedResponse(function () use ($entreprise, $invite, $acteur, $colonnes, $validite, $exercice, $graine): void {
             // Le contrôle de droits est DANS le flux : une réponse diffusée a déjà envoyé
             // son code 200 quand on découvre le refus, et une exception n'aurait plus
             // aucun moyen de le dire. On l'écrit donc comme une ligne de résultat.
@@ -250,6 +265,8 @@ class EchangeController extends AbstractController
                     $invite,
                     $acteur,
                     $colonnes,
+                    $validite,
+                    $exercice,
                     $graine !== '' ? $graine : null,
                     $progression,
                 );

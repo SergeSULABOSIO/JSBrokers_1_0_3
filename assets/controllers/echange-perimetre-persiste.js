@@ -40,6 +40,42 @@ export function cleDuPerimetre(idEntreprise, contexte) {
 }
 
 /**
+ * Clé d'un chip à CHOIX UNIQUE — validité, exercice — par cabinet et par onglet.
+ *
+ * ⚠ SÉPARÉE DE CELLE DU PÉRIMÈTRE, et ce n'est pas de la coquetterie : le périmètre
+ * mémorise une LISTE d'exclusions, ces chips-là une SEULE valeur. Les loger ensemble
+ * aurait obligé chaque lecture à deviner ce qu'elle tient.
+ *
+ * @param {number|string} idEntreprise
+ * @param {string} contexte 'exporter' ou 'importer'
+ * @param {string} nom nom du réglage ('validite', 'exercice'…)
+ * @returns {string}
+ */
+export function cleDuChoix(idEntreprise, contexte, nom) {
+    return `echangeChoix_${idEntreprise}_${contexte}_${nom}`;
+}
+
+/**
+ * La valeur mémorisée est-elle encore proposée ?
+ *
+ * ⚠ UN CHOIX PEUT DISPARAÎTRE ENTRE DEUX VISITES. L'exercice 2025 mémorisé n'a plus de
+ * chip le jour où la dernière police de 2025 est supprimée ; le reposer laisserait un
+ * réglage actif que rien à l'écran ne montre, et un fichier vide sans explication. On
+ * retombe alors sur le défaut, ce qui est le comportement le moins surprenant.
+ *
+ * @param {unknown} memorise
+ * @param {string[]} valeursOffertes
+ * @returns {string|null}
+ */
+export function choixARestaurer(memorise, valeursOffertes) {
+    if (typeof memorise !== 'string' || !Array.isArray(valeursOffertes)) {
+        return null;
+    }
+
+    return valeursOffertes.includes(memorise) ? memorise : null;
+}
+
+/**
  * Ce qu'il faut retenir d'une sélection : les codes ÉCARTÉS, triés.
  *
  * Le tri n'est pas cosmétique — il rend la valeur stable, donc comparable d'une

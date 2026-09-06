@@ -358,6 +358,61 @@
                 <strong>les colonnes qui vous servent</strong>.
             </p>
 
+            {# ── QUELLES TRANCHES ────────────────────────────────────────────────────
+               Une tranche naît sur une PROPOSITION, bien avant qu'un contrat existe.
+               Mêler ces projets aux échéances de vraies polices dans un état qu'on
+               présente à un assureur, c'est annoncer un portefeuille qu'on n'a pas.
+
+               Markup repris du gabarit de liste, comme les familles de colonnes : barre,
+               pilule, titre purement textuel, l'icône appartenant au chip où elle dit
+               l'état. #}
+            <div class="jsb-preset-filters-bar">
+                <div class="jsb-preset-filters jsb-control-pill" role="group" aria-label="Tranches retenues">
+                    <span class="jsb-preset-filters__titre" aria-hidden="true">tranches</span>
+                    {% for valeur, libelle in validites %}
+                        <button type="button"
+                                class="jsb-preset-chip{{ valeur == validiteParDefaut ? ' is-active' : '' }}"
+                                data-echange-target="validite"
+                                data-echange-validite-param="{{ valeur }}"
+                                data-action="click->echange#choisirValidite"
+                                aria-pressed="{{ valeur == validiteParDefaut ? 'true' : 'false' }}">
+                            <span class="jsb-preset-chip__icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('action:check'), {width: '15px', height: '15px'}) }}</span>
+                            <span>{{ libelle }}</span>
+                        </button>
+                    {% endfor %}
+                </div>
+                {# ── L'EXERCICE ──────────────────────────────────────────────────────
+                   Les années viennent des DONNÉES : proposer un exercice sans police
+                   donnerait un chip qui ne rend jamais rien, et l'utilisateur croirait à
+                   une panne plutôt qu'à un portefeuille vide. #}
+                {% if exercices is not empty %}
+                    <div class="jsb-preset-filters jsb-control-pill" role="group" aria-label="Exercice">
+                        <span class="jsb-preset-filters__titre" aria-hidden="true">exercice</span>
+                        <button type="button"
+                                class="jsb-preset-chip is-active"
+                                data-echange-target="exercice"
+                                data-echange-exercice-param="{{ exerciceParDefaut }}"
+                                data-action="click->echange#choisirExercice"
+                                aria-pressed="true">
+                            <span>Tous</span>
+                        </button>
+                        {% for annee in exercices %}
+                            <button type="button"
+                                    class="jsb-preset-chip"
+                                    data-echange-target="exercice"
+                                    data-echange-exercice-param="{{ annee }}"
+                                    data-action="click->echange#choisirExercice"
+                                    aria-pressed="false">
+                                <span>{{ annee }}</span>
+                            </button>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {# role=status : le texte change sans que l'utilisateur agisse sur lui. #}
+                <span class="ech-note" style="margin:0;" role="status" data-echange-target="noteValidite"></span>
+            </div>
+
             {# Le bouton est DÉSARMÉ pendant l'opération (echange#exporter) : un double
                clic produirait deux fichiers et, sans la clé d'idempotence, deux
                occurrences facturées. #}

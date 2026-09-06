@@ -1,5 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 import {
+    choixARestaurer,
+    cleDuChoix,
     cleDuPerimetre,
     exclusionsARestaurer,
     exclusionsDe,
@@ -34,6 +36,9 @@ export default class extends Controller {
         'compteSelection',
         'rappelRestauration',
         'lienGabarit',
+        'validite',
+        'exercice',
+        'noteValidite',
         'libelleGabarit',
         'resumePerimetre',
         'fichier',
@@ -81,6 +86,9 @@ export default class extends Controller {
     #initialise = false;
 
     connect() {
+        this.#restaurerLeChoix('validite', this.validiteTargets, 'echangeValiditeParam');
+        this.#restaurerLeChoix('exercice', this.exerciceTargets, 'echangeExerciceParam');
+        this.#rappelerLaValidite();
         this.#restaurerLePerimetre();
         this.#rafraichirSelection();
         this.#initialise = true;
@@ -121,6 +129,137 @@ export default class extends Controller {
         }
 
         this.#rafraichirSelection();
+    }
+
+    /**
+     * QUELLES TRANCHES L'ÉTAT RETIENT : polices, projets, caduques — ou toutes.
+     *
+     * ⚠ UN SEUL CHIP À LA FOIS, et c'est le sens même de la question : la partition est
+     * complète (souscrites ⊎ en attente ⊎ caduques = toutes), donc en cocher deux
+     * reviendrait à en cocher un troisième qui existe déjà. Ce n'est pas un filtre
+     * cumulatif comme les familles de colonnes, c'est un choix.
+     */
+    choisirValidite(event) {
+        // Même précaution que pour l'exercice : on compare des chaînes à des chaînes.
+        const choisie = String(event.params.validite ?? '');
+        if (choisie === '') return;
+
+        for (const chip of this.validiteTargets) {
+            const actif = chip.dataset.echangeValiditeParam === choisie;
+            chip.classList.toggle('is-active', actif);
+            chip.setAttribute('aria-pressed', actif ? 'true' : 'false');
+        }
+
+        this.#memoriserLeChoix('validite', choisie);
+        this.#rappelerLaValidite();
+    }
+
+    /**
+     * ⚠ TOUT CHIP SURVIT AU F5. C'est la règle de la maison, et elle vaut pour ces deux-là
+     * comme pour la sélection des colonnes : un chip est un CHOIX, et refaire un choix à
+     * chaque rechargement finit par dissuader d'en faire.
+     *
+     * Un seul chemin sert la validité et l'exercice — ils ne diffèrent que par leur nom et
+     * leur famille de boutons. En écrire deux, c'était se condamner à ne corriger qu'un
+     * des deux le jour venu.
+     */
+    #memoriserLeChoix(nom, valeur) {
+        if (!this.#initialise) return;
+
+        try {
+            window.localStorage.setItem(cleDuChoix(this.idEntrepriseValue, this.ongletValue || 'exporter', nom), valeur);
+        } catch (error) {
+            // Navigation privée, quota atteint : le choix vaut pour cette session, ce qui
+            // était l'ancien comportement. Une commodité perdue ne casse pas l'écran.
+        }
+    }
+
+    /** Repose un chip mémorisé, s'il est encore proposé. */
+    #restaurerLeChoix(nom, chips, attribut) {
+        if (chips.length === 0) return;
+
+        let memorise = null;
+        try {
+            memorise = window.localStorage.getItem(cleDuChoix(this.idEntrepriseValue, this.ongletValue || 'exporter', nom));
+        } catch (error) {
+            return;
+        }
+
+        const offertes = chips.map((c) => c.dataset[attribut]);
+        const retenu = choixARestaurer(memorise, offertes);
+        if (retenu === null) return;
+
+        for (const chip of chips) {
+            const actif = chip.dataset[attribut] === retenu;
+            chip.classList.toggle('is-active', actif);
+            chip.setAttribute('aria-pressed', actif ? 'true' : 'false');
+        }
+    }
+
+    /**
+     * QUEL EXERCICE : l'année de la date d'effet des polices.
+     *
+     * ⚠ UN SEUL À LA FOIS, comme la validité : ce n'est pas un filtre cumulatif mais un
+     * découpage. « Tous » n'est pas la somme des années — il garde aussi les tranches
+     * sans police, qui n'ont pas d'exercice.
+     */
+    choisirExercice(event) {
+        // ⚠ STIMULUS ANALYSE SES PARAMÈTRES EN JSON. « 2026 » arrive donc en NOMBRE, quand
+        // `dataset` rend toujours une chaîne : la comparaison stricte échouait pour toutes
+        // les années, et aucun chip d'exercice ne s'allumait jamais. Le défaut ne touchait
+        // pas la validité, dont les valeurs ne ressemblent pas à des nombres — c'est
+        // exactement ce qui le rendait difficile à voir.
+        const choisi = String(event.params.exercice ?? '');
+        if (choisi === '') return;
+
+        for (const chip of this.exerciceTargets) {
+            const actif = chip.dataset.echangeExerciceParam === choisi;
+            chip.classList.toggle('is-active', actif);
+            chip.setAttribute('aria-pressed', actif ? 'true' : 'false');
+        }
+
+        this.#memoriserLeChoix('exercice', choisi);
+        this.#rappelerLaValidite();
+    }
+
+    /** L'exercice retenu, ou « tous » à défaut. */
+    #exerciceChoisi() {
+        const actif = this.exerciceTargets.find((c) => c.classList.contains('is-active'));
+
+        return actif?.dataset.echangeExerciceParam || 'tous';
+    }
+
+    /** La validité retenue, ou « toutes » à défaut. */
+    #validiteChoisie() {
+        const actif = this.validiteTargets.find((c) => c.classList.contains('is-active'));
+
+        return actif?.dataset.echangeValiditeParam || 'toutes';
+    }
+
+    /**
+     * ⚠ UN ÉTAT RESTREINT DOIT LE DIRE. Un fichier des seuls PROJETS ressemble trait pour
+     * trait à un état de polices — mêmes colonnes, montants de même allure. Le confondre
+     * avec le portefeuille réel, c'est annoncer un chiffre d'affaires qu'on n'a pas.
+     */
+    #rappelerLaValidite() {
+        if (!this.hasNoteValiditeTarget) return;
+
+        const restrictions = [];
+
+        const validite = this.#validiteChoisie();
+        if (validite !== 'toutes') {
+            const chip = this.validiteTargets.find((c) => c.dataset.echangeValiditeParam === validite);
+            restrictions.push(chip?.textContent.trim() ?? validite);
+        }
+
+        const exercice = this.#exerciceChoisi();
+        if (exercice !== 'tous') {
+            restrictions.push(`exercice ${exercice}`);
+        }
+
+        this.noteValiditeTarget.textContent = restrictions.length === 0
+            ? ''
+            : `L'état ne portera que : ${restrictions.join(', ')}.`;
     }
 
     toutCocher() {
@@ -498,6 +637,12 @@ export default class extends Controller {
             if (this.hasDonneeTarget && retenues.length < this.donneeTargets.length) {
                 corps.append('colonnes', retenues.join(','));
             }
+
+            // Quelles tranches : polices, projets, caduques. « toutes » est le défaut du
+            // serveur : ne rien envoyer revient au même, mais l'envoyer rend l'intention
+            // lisible dans le journal réseau quand on cherche pourquoi un fichier est vide.
+            corps.append('validite', this.#validiteChoisie());
+            corps.append('exercice', this.#exerciceChoisi());
 
             const final = await this.#lireFlux(this.exportUrlValue, { method: 'POST', body: corps });
 

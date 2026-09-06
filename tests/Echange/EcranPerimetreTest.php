@@ -671,14 +671,40 @@ class EcranPerimetreTest extends WebTestCase
         return static::getContainer()->get(EntityManagerInterface::class);
     }
 
-    /** Purge dérivée du schéma — cf. ExportJsbxTest, même raison. */
+    /**
+     * Purge CIBLÉE sur le cabinet de ce test.
+     *
+     * ⚠ ELLE EFFAÇAIT TOUTE LA BASE DE TEST — `DELETE FROM entreprise WHERE 1`, et de
+     * même pour les invités et les utilisateurs. La base d'essais est PARTAGÉE : plusieurs
+     * fichiers y laissent des fixtures dont d'autres se servent, et `tests/Echange`
+     * s'exécute avant `tests/Workspace`. Un test parfaitement juste tombait donc en suite
+     * complète et passait seul, pour une raison sans aucun rapport avec ce qu'il vérifie.
+     *
+     * Une suite ne doit détruire QUE ce qu'elle a créé. Enfants avant parents.
+     */
     private function nettoyer(): void
     {
         $cnx = $this->em()->getConnection();
-        $cnx->executeStatement('SET FOREIGN_KEY_CHECKS = 0');
-        foreach (['echange_import_run', 'echange_occurrence', 'token_consumption', 'roles_en_administration', 'invite', 'entreprise', 'utilisateur'] as $table) {
-            $cnx->executeStatement(sprintf('DELETE FROM `%s` WHERE 1', $table));
+        $noms = [self::ENT];
+
+        foreach (['echange_import_run', 'echange_occurrence', 'token_consumption', 'roles_en_administration', 'invite'] as $table) {
+            $cnx->executeStatement(
+                sprintf('DELETE t FROM `%s` t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom IN (:noms)', $table),
+                ['noms' => $noms],
+                ['noms' => \Doctrine\DBAL\ArrayParameterType::STRING],
+            );
         }
-        $cnx->executeStatement('SET FOREIGN_KEY_CHECKS = 1');
+
+        // Dénoue la clé étrangère utilisateur.connected_to_id avant de retirer le cabinet.
+        $cnx->executeStatement(
+            'UPDATE utilisateur SET connected_to_id = NULL WHERE email = :email',
+            ['email' => self::OWNER_EMAIL],
+        );
+        $cnx->executeStatement(
+            'DELETE FROM entreprise WHERE nom IN (:noms)',
+            ['noms' => $noms],
+            ['noms' => \Doctrine\DBAL\ArrayParameterType::STRING],
+        );
+        $cnx->executeStatement('DELETE FROM utilisateur WHERE email = :email', ['email' => self::OWNER_EMAIL]);
     }
 }
