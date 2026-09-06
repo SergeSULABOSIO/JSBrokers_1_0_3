@@ -354,7 +354,8 @@
                 solde, la commission, ses taxes, votre réserve et les rétrocommissions.
                 <strong>C'est un état de lecture</strong> — il ne se redépose pas, ses colonnes
                 étant des résultats et non des champs. Pour préparer des données à importer,
-                prenez le gabarit vierge.
+                prenez le gabarit vierge de l'onglet Importer. Vous pouvez ne retenir que
+                <strong>les colonnes qui vous servent</strong>.
             </p>
 
             {# Le bouton est DÉSARMÉ pendant l'opération (echange#exporter) : un double
@@ -379,34 +380,21 @@
                     </span>
                 </button>
 
-                {# LES DEUX SORTIES DU CABINET, CÔTE À CÔTE : le fichier de données et le
-                   classeur vide. Ce sont deux façons d'obtenir un .xlsx à la même barre,
-                   et les séparer obligeait l'œil à chercher la seconde plus bas.
-
-                   Le gabarit reste un LIVRABLE et non un réglage : c'est pourquoi il est
-                   ici, et non dans le volet — un bouton enfermé dans un panneau replié
-                   n'existe pas pour qui ne l'ouvre pas. #}
-                {% if ressources is not empty %}
-                    {% include 'components/echange/_gabarit.html.twig' with {
-                        idEntreprise: idEntreprise,
-                        contexte: 'exporter'
-                    } only %}
-                {% endif %}
+                {# ⚠ PLUS DE GABARIT ICI. C'est un outil d'IMPORT : on le remplit pour le
+                   déposer. Il vivait à cette barre parce que l'export produisait, lui
+                   aussi, un fichier d'échange — ce n'est plus le cas. Il est resté dans
+                   l'onglet Importer, où il sert. #}
             </div>
 
-            {% if ressources is empty %}
-                <p class="ech-vide">Aucune donnée n'est à votre portée : votre périmètre d'accès ne couvre aucune rubrique exportable.</p>
-            {% else %}
-                {# Le réglage vient EN DERNIER, et replié : la plupart des exports ne le
-                   touchent pas, la production convenant telle quelle. #}
-                {% include 'components/echange/_perimetre.html.twig' with {
-                    parModule: parModule,
-                    ecrivables: ecrivables,
-                    ressources: ressources,
-                    defauts: defauts,
-                    contexte: 'exporter'
-                } only %}
-            {% endif %}
+            {# ⚠ CE VOLET NE CHOISIT PLUS DES DONNÉES, MAIS DES COLONNES. L'état a une
+               maille fixe — une ligne par tranche — et n'a pas de familles d'entités à
+               retenir. Le gabarit vierge, lui, a quitté cet onglet : c'est un outil
+               d'import, il vit là où on s'en sert. #}
+            {% include 'components/echange/_colonnes.html.twig' with {
+                colonnesParGroupe: colonnesParGroupe,
+                identite: colonneIdentite,
+                total: colonnesTotal
+            } only %}
 
         </div>
     {% endif %}

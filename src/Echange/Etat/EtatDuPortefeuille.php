@@ -46,6 +46,9 @@ final class EtatDuPortefeuille
     /** Nom de l'unique feuille de données. */
     public const FEUILLE = 'DONNEES';
 
+    /** Colonne d'identité de la ligne : jamais retirable. */
+    public const COLONNE_IDENTITE = 'id';
+
     /**
      * Taille des lots d'hydratation.
      *
@@ -74,14 +77,33 @@ final class EtatDuPortefeuille
      * Les libellés des taxes portent le NOM de l'autorité fiscale du cabinet : un montant
      * de taxe sans le nom de la taxe ne se rattache à rien.
      *
+     * @param string[] $retenues codes des colonnes demandées ; vide = toutes
+     *
      * @return array<string, ColonneEtat>
      */
-    public function colonnes(Entreprise $entreprise): array
+    public function colonnes(Entreprise $entreprise, array $retenues = []): array
     {
         $courtier = $this->nomDeLaTaxe($entreprise, Taxe::REDEVABLE_COURTIER);
         $assureur = $this->nomDeLaTaxe($entreprise, Taxe::REDEVABLE_ASSUREUR);
+        $catalogue = CatalogueDesColonnes::pour($courtier, $assureur);
 
-        return CatalogueDesColonnes::pour($courtier, $assureur);
+        if ($retenues === []) {
+            return $catalogue;
+        }
+
+        // ⚠ `id` EST TOUJOURS LÀ, demandée ou non : c'est elle qui identifie la ligne, et
+        // un état dont on ne peut rattacher aucune ligne à sa tranche n'est plus un état.
+        // La garantie est ici et pas seulement à l'écran : une case désactivée n'engage
+        // que le navigateur, jamais l'adresse qu'on tape à la main.
+        $retenues[] = self::COLONNE_IDENTITE;
+
+        // L'ordre reste celui du CATALOGUE, jamais celui de la demande : deux exports du
+        // même périmètre doivent donner deux fichiers superposables.
+        return array_filter(
+            $catalogue,
+            static fn (string $code) => \in_array($code, $retenues, true),
+            ARRAY_FILTER_USE_KEY,
+        );
     }
 
     /**
@@ -236,6 +258,7 @@ final class EtatDuPortefeuille
             'retroPartenaireExigible' => $tranche->retroCommissionExigible,
             'retroPartenairePayeeLe' => $retroPartenaire['date'],
 
+            'retroAgentBeneficiaire' => $this->nomDesAgents($tranche),
             'retroAgentDue' => $tranche->retroAgentDue,
             'retroAgentPayee' => $tranche->retroAgentReversee,
             'retroAgentSolde' => $tranche->retroAgentSolde,
@@ -315,6 +338,27 @@ final class EtatDuPortefeuille
         $condition = $this->beneficiaires->pour($partenaire)->conditionRetenue($tranche->getCotation());
 
         return $condition?->getTaux();
+    }
+
+    /**
+     * LES AGENTS INTERNES À QUI LA TRANCHE DOIT UNE RÉTROCOMMISSION.
+     *
+     * ⚠ Lus sur les CONDITIONS DE PARTAGE, jamais sur les versements. C'est la source qui
+     * décide déjà qui a droit à quoi, et un agent a droit dès la souscription : le déduire
+     * des reversements aurait laissé la colonne vide sur toute affaire pas encore
+     * reversée — c'est-à-dire précisément celles qu'on ouvre ce fichier pour retrouver.
+     */
+    private function nomDesAgents(Tranche $tranche): string
+    {
+        $noms = [];
+        foreach ($this->helper->getCotationConditionsAgent($tranche->getCotation()) as $condition) {
+            $nom = $condition->getAgent()?->getNom();
+            if ($nom !== null && $nom !== '') {
+                $noms[$nom] = true;
+            }
+        }
+
+        return implode(PiecesDeReglement::SEPARATEUR, array_keys($noms));
     }
 
     /**

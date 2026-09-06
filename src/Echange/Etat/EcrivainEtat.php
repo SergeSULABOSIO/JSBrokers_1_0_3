@@ -45,39 +45,17 @@ final class EcrivainEtat
         $classeur = new Spreadsheet();
         $classeur->removeSheetByIndex(0);
 
-        $this->ecrireManifeste($classeur, $manifeste);
+        // ⚠ PAS DE FEUILLE `_MANIFESTE`. L'état ne se relit pas : il n'a besoin ni
+        // d'empreinte ni de périmètre déclaré pour être reconnu. Le manifeste reste
+        // CONSTRUIT — son empreinte alimente l'occurrence facturée — mais il n'est plus
+        // écrit. Ce qu'il portait d'utile au lecteur (« ce fichier ne se redépose pas »)
+        // ouvre désormais le dictionnaire.
         $this->ecrireDictionnaire($classeur, $colonnes);
         $this->ecrireDonnees($classeur, $colonnes, $lignes);
 
         $classeur->setActiveSheetIndex(0);
 
         return $classeur;
-    }
-
-    private function ecrireManifeste(Spreadsheet $classeur, Manifeste $manifeste): void
-    {
-        $feuille = $classeur->createSheet();
-        $feuille->setTitle(EcrivainJsbx::FEUILLE_MANIFESTE);
-
-        $feuille->fromArray(['Clé', 'Information', 'Valeur'], null, 'A1');
-        $this->styleEntete($feuille, 'A1:C1');
-
-        $numero = 2;
-        foreach ($manifeste->lignes() as [$cle, $libelle, $valeur]) {
-            $feuille->fromArray([$cle, $libelle, $valeur], null, 'A' . $numero);
-            ++$numero;
-        }
-
-        // ⚠ CE FICHIER NE SE REDÉPOSE PAS, et il doit le dire lui-même : quelqu'un qui le
-        // retrouve dans six mois n'aura pas l'écran sous les yeux pour l'apprendre.
-        $feuille->fromArray(
-            ['lecture_seule', 'Nature du fichier', 'État de lecture. Il ne peut pas être réimporté : '
-                . 'ses colonnes sont des résultats (soldes, encaissements), pas des champs.'],
-            null,
-            'A' . $numero,
-        );
-
-        $this->ajusterColonnes($feuille, 3);
     }
 
     /** @param array<string, ColonneEtat> $colonnes */
@@ -89,7 +67,19 @@ final class EcrivainEtat
         $feuille->fromArray(['Colonne', 'Nature', 'Ce qu\'elle veut dire'], null, 'A1');
         $this->styleEntete($feuille, 'A1:C1');
 
-        $numero = 2;
+        // ⚠ EN TÊTE, ET PAS AILLEURS : c'est la première chose que doit lire celui qui
+        // retrouve ce fichier dans six mois, sans l'écran sous les yeux.
+        $feuille->fromArray([
+            'LECTURE SEULE',
+            'Nature du fichier',
+            'Cet état ne peut pas être réimporté : ses colonnes sont des RÉSULTATS '
+            . '(soldes, encaissements, exigibilités), pas des champs. Pour préparer des '
+            . 'données à importer, utilisez le gabarit vierge de l\'onglet Importer.',
+        ], null, 'A2');
+        $feuille->getStyle('A2:C2')->getFont()->setBold(true);
+        $feuille->getStyle('C2')->getAlignment()->setWrapText(true);
+
+        $numero = 4;
         foreach ($colonnes as $colonne) {
             $feuille->fromArray(
                 [$colonne->libelle, $colonne->role, $colonne->explication],
@@ -166,14 +156,75 @@ final class EcrivainEtat
             ++$numero;
         }
 
-        $this->appliquerFormats($feuille, $colonnes, max($numero - 1, self::LIGNE_DONNEES));
+        $derniereDonnee = max($numero - 1, self::LIGNE_DONNEES);
+        $this->appliquerFormats($feuille, $colonnes, $derniereDonnee);
+
+        // ⚠ LE FILTRE S'ARRÊTE AVANT LES TOTAUX. Les inclure ferait voyager cette ligne
+        // au milieu des données au premier tri — un total posé entre deux tranches.
+        $feuille->setAutoFilter('A1:' . $derniereLettre . $derniereDonnee);
+
+        $this->ecrireTotaux($feuille, $colonnes, $derniereDonnee, $derniereLettre);
         $this->ajusterColonnes($feuille, \count($codes));
 
         // Le volet fige l'en-tête ET la colonne d'identifiant : sans elle, on perd la
         // ligne qu'on lit dès qu'on fait défiler vers la droite — et il y a cinquante
         // colonnes à parcourir.
         $feuille->freezePane('B2');
-        $feuille->setAutoFilter('A1:' . $derniereLettre . ($numero - 1));
+    }
+
+    /**
+     * LA LIGNE DE TOTAUX — une FORMULE, jamais un nombre écrit.
+     *
+     * ⚠ UN TOTAL FIGÉ MENT DÈS QU'ON TOUCHE AU FICHIER. On corrige une cellule, on
+     * supprime une ligne, et le nombre du bas continue d'afficher l'ancien, sans que rien
+     * ne le signale. Une formule, elle, garde le classeur cohérent avec lui-même — et le
+     * lecteur peut vérifier d'un clic d'où sort le chiffre.
+     *
+     * ⚠ `SUBTOTAL(109;…)` ET NON `SUM(…)` : le code 109 ne somme que les lignes VISIBLES.
+     * L'en-tête portant un filtre automatique, filtrer sur un assureur ou sur les seules
+     * tranches impayées fait SUIVRE les totaux. Avec `SUM`, ils resteraient ceux du
+     * portefeuille entier en face de dix lignes filtrées — le genre de contresens qu'on ne
+     * remarque qu'après l'avoir cité en réunion.
+     *
+     * ⚠ ON NE TOTALISE QUE CE QUI S'ADDITIONNE, et le rôle de la colonne le dit déjà :
+     * montants et nombres. Sommer des taux ou des identifiants de tranche produirait un
+     * nombre parfaitement calculé et parfaitement absurde.
+     *
+     * ⚠ ET CE TOTAL N'EST HONNÊTE QUE PARCE QU'UNE LIGNE EST UNE TRANCHE : chacune
+     * n'apparaît qu'une fois, rien n'est compté deux fois. C'est la raison même pour
+     * laquelle les sinistres, qui vivent à la maille police, ont été écartés de cette
+     * feuille.
+     *
+     * @param array<string, ColonneEtat> $colonnes
+     */
+    private function ecrireTotaux(Worksheet $feuille, array $colonnes, int $derniereDonnee, string $derniereLettre): void
+    {
+        $ligne = $derniereDonnee + 1;
+
+        $feuille->setCellValue('A' . $ligne, 'TOTAUX');
+
+        $index = 0;
+        foreach ($colonnes as $colonne) {
+            ++$index;
+            if (!\in_array($colonne->role, Colonnes::ROLES_SOMMABLES, true)) {
+                continue;
+            }
+
+            $lettre = Coordinate::stringFromColumnIndex($index);
+            $feuille->setCellValue(
+                $lettre . $ligne,
+                sprintf('=SUBTOTAL(109,%s%d:%s%d)', $lettre, self::LIGNE_DONNEES, $lettre, $derniereDonnee),
+            );
+            // Le format de la colonne s'applique au total : une somme de montants
+            // s'affiche comme un montant.
+            $feuille->getStyle($lettre . $ligne)->getNumberFormat()->setFormatCode('#,##0.00');
+            $feuille->getStyle($lettre . $ligne)->getAlignment()->setHorizontal('right');
+        }
+
+        $plage = 'A' . $ligne . ':' . $derniereLettre . $ligne;
+        $feuille->getStyle($plage)->getFont()->setBold(true);
+        $feuille->getStyle($plage)->getBorders()->getTop()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUM);
     }
 
     /**

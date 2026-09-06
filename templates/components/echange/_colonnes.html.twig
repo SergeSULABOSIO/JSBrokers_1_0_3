@@ -1,0 +1,126 @@
+{#
+  CHOIX DES COLONNES DE L'ÉTAT, groupées par famille.
+
+  L'onglet Exporter ne choisit plus des familles de DONNÉES — l'état a une maille fixe,
+  la tranche — mais les COLONNES du fichier. Cinquante-trois, c'est beaucoup pour qui ne
+  suit que ses impayés ou ne discute que de rétrocommissions.
+
+  ⚠ MÊMES CIBLES STIMULUS QUE LE PÉRIMÈTRE DES DONNÉES (`donnee`, `module`). Tout le
+  comportement déjà écrit s'applique alors sans une ligne de JavaScript nouvelle : chips
+  à trois états, compteurs, « tout cocher », survie au F5, rappel d'un choix restauré.
+  Les colonnes n'ont pas de dépendances entre elles : l'attribut part vide, et la
+  fermeture ne fait rien.
+
+  Paramètres :
+    colonnesParGroupe — groupe => { code => ColonneEtat }
+    identite          — code de la colonne qu'on ne peut pas retirer
+#}
+{# Rappel d'un choix VENU D'AILLEURS — d'une session précédente, pas de ce geste-ci. #}
+<p class="ech-rappel" data-echange-target="rappelRestauration" hidden>
+    <twig:UX:Icon name="{{ resolve_icon_name('action:information') }}" style="width:15px;height:15px;" />
+    <span>
+        Votre choix précédent a été repris : certaines colonnes sont écartées.
+        Utilisez « Tout cocher » pour revenir au fichier complet.
+    </span>
+</p>
+
+<details class="ech-perimetre-volet">
+    <summary class="ech-perimetre-tete">
+        <span>Choisir les colonnes à exporter</span>
+        {# Décompte tenu par le contrôleur : c'est lui qui rend la restriction lisible
+           SANS ouvrir le volet, et donc qui permet de le laisser replié. #}
+        <span class="ech-note" style="margin:0;" data-echange-target="resumePerimetre">
+            {{ total }} colonne{{ total > 1 ? 's' : '' }} sur {{ total }}
+        </span>
+        <span class="ech-groupe-chevron" aria-hidden="true"></span>
+    </summary>
+
+    <p class="ech-note" style="margin:.5rem 0 1rem;">
+        Décochez ce dont vous n'avez pas besoin : le fichier n'en portera pas la colonne.
+        Les lignes, elles, ne changent pas — l'état donne toujours <strong>une ligne par
+        tranche</strong> de votre portefeuille.
+    </p>
+
+    <div class="jsb-preset-filters-bar">
+        <div class="jsb-preset-filters jsb-control-pill" role="group" aria-label="Familles de colonnes">
+            <span class="jsb-preset-filters__titre" aria-hidden="true">familles</span>
+            {% for groupe, colonnes in colonnesParGroupe %}
+                <button type="button"
+                        class="jsb-preset-chip is-active"
+                        data-echange-target="module"
+                        data-echange-module-param="{{ groupe }}"
+                        data-action="click->echange#basculerModule"
+                        aria-pressed="true">
+                    <span class="jsb-preset-chip__icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('action:check'), {width: '15px', height: '15px'}) }}</span>
+                    <span>{{ groupe }}</span>
+                    <span class="jsb-preset-chip__count" data-echange-compte-module="{{ groupe }}">{{ colonnes|length }}</span>
+                </button>
+            {% endfor %}
+        </div>
+
+        {# Gestes d'ensemble. Ce ne sont pas des états : pas d'`aria-pressed`, sinon un
+           lecteur d'écran annoncerait « non pressé » sur un bouton qui ne retient rien. #}
+        <div class="jsb-preset-filters jsb-control-pill" role="group" aria-label="Sélection d'ensemble">
+            <span class="jsb-preset-filters__titre" aria-hidden="true">tout</span>
+            <button type="button" class="jsb-preset-chip" data-action="click->echange#toutCocher">
+                <span>Tout cocher</span>
+            </button>
+            <button type="button" class="jsb-preset-chip" data-action="click->echange#toutDecocher">
+                <span>Tout décocher</span>
+            </button>
+        </div>
+
+        <span class="ech-compte" role="status" data-echange-target="compteSelection"></span>
+    </div>
+
+    {% for groupe, colonnes in colonnesParGroupe %}
+        <details class="ech-groupe">
+            <summary class="ech-groupe-tete">
+                <span class="ech-groupe-nom">{{ groupe }}</span>
+                <span class="ech-groupe-compte" data-echange-detail-module="{{ groupe }}">{{ colonnes|length }}</span>
+                <span class="ech-groupe-chevron" aria-hidden="true"></span>
+            </summary>
+
+            <table class="ech-table">
+                <caption class="ech-sr">Colonnes de la famille {{ groupe }}.</caption>
+                <thead>
+                    <tr>
+                        <th scope="col" style="width:2.6rem;"><span class="ech-sr">Inclure</span></th>
+                        <th scope="col">Colonne</th>
+                        <th scope="col">Ce qu'elle veut dire</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for code, colonne in colonnes %}
+                        {% set figee = code == identite %}
+                        <tr data-echange-code="{{ code }}">
+                            <td>
+                                {# ⚠ LA COLONNE D'IDENTITÉ NE SE RETIRE PAS : elle rattache chaque
+                                   ligne à sa tranche. Case cochée et désactivée — et le serveur la
+                                   remet de toute façon, une garantie d'écran n'en étant pas une. #}
+                                <input type="checkbox"
+                                       id="ech-col-{{ code }}"
+                                       class="form-check-input"
+                                       checked
+                                       {{ figee ? 'disabled' : '' }}
+                                       data-echange-target="donnee"
+                                       data-echange-code-param="{{ code }}"
+                                       data-echange-module-param="{{ groupe }}"
+                                       data-echange-dependances-param=""
+                                       data-action="change->echange#basculerDonnee">
+                            </td>
+                            <th scope="row" class="ech-cell-nom">
+                                <label for="ech-col-{{ code }}" class="ech-res-nom">{{ colonne.libelle }}</label>
+                                <span class="ech-res-etat"></span>
+                                {% if figee %}
+                                    <span class="ech-res-feuille">Toujours incluse</span>
+                                {% endif %}
+                            </th>
+                            <td class="ech-dep">{{ colonne.explication }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </details>
+    {% endfor %}
+</details>

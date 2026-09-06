@@ -53,11 +53,11 @@ class EcranPerimetreTest extends WebTestCase
      * groupes serait invisible à l'écran alors qu'elle sortirait dans le fichier — un
      * export qui contient plus que ce qu'on a coché.
      */
-    public function testLExportPresenteLesDonneesGroupeesParModule(): void
+    public function testLImportPresenteLesDonneesGroupeesParModule(): void
     {
         [$entreprise] = $this->fixture();
 
-        $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=exporter', $entreprise->getId()));
+        $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=importer', $entreprise->getId()));
         self::assertResponseIsSuccessful();
 
         $ressources = static::getContainer()->get(CanevasDEchange::class)->toutes();
@@ -88,7 +88,7 @@ class EcranPerimetreTest extends WebTestCase
     {
         [$entreprise] = $this->fixture();
 
-        $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=exporter', $entreprise->getId()));
+        $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=importer', $entreprise->getId()));
         self::assertResponseIsSuccessful();
 
         $enTetes = $crawler->filter('button.jsb-preset-chip[data-echange-target="module"]');
@@ -121,7 +121,7 @@ class EcranPerimetreTest extends WebTestCase
     {
         [$entreprise] = $this->fixture();
 
-        $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=exporter', $entreprise->getId()));
+        $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=importer', $entreprise->getId()));
         self::assertResponseIsSuccessful();
 
         $groupe = $crawler->filter('.jsb-preset-filters-bar .jsb-preset-filters.jsb-control-pill[aria-label="Familles de données"]');
@@ -141,35 +141,59 @@ class EcranPerimetreTest extends WebTestCase
     }
 
     /**
-     * ⚠ L'EXPORT ARRIVE SUR LA PRODUCTION, PAS SUR TOUT.
+     * ⚠ L'EXPORT ARRIVE AVEC TOUTES SES COLONNES.
      *
-     * Exporter les quarante-deux données est rarement ce qu'on veut : le geste courant
-     * est de sortir son activité, pas ses taxes ni ses types d'absence. Proposer tout
-     * revenait à faire décocher trente lignes à chaque fois — donc, en pratique, à ne
-     * rien décocher du tout.
+     * L'état a une maille fixe : ce qu'on y choisit, ce sont les colonnes, et le défaut
+     * est de tout emporter — à charge de retirer ce dont on n'a pas besoin. L'inverse
+     * aurait livré un fichier amputé à qui n'a rien demandé.
      */
-    public function testLExportArriveSurLesDonneesDeProduction(): void
+    public function testLExportArriveAvecToutesSesColonnes(): void
     {
         [$entreprise] = $this->fixture();
 
         $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=exporter', $entreprise->getId()));
         self::assertResponseIsSuccessful();
 
-        $canevas = static::getContainer()->get(CanevasDEchange::class);
-        $attendus = $canevas->codesParDefaut($canevas->toutes());
-        self::assertNotEmpty($attendus);
+        $cases = $crawler->filter('input[data-echange-target="donnee"]');
+        self::assertGreaterThan(0, $cases->count());
 
-        foreach ($canevas->toutes() as $code => $ressource) {
-            $case = $crawler->filter(sprintf('input[data-echange-code-param="%s"]', $code));
+        foreach ($cases as $case) {
+            self::assertTrue($case->hasAttribute('checked'), 'Toute colonne part cochée.');
+        }
+
+        // ⚠ ET LA COLONNE D'IDENTITÉ NE SE DÉCOCHE PAS : elle rattache la ligne à sa
+        // tranche. Un état dont aucune ligne ne se rattache n'est plus un état.
+        $identite = $crawler->filter('input[data-echange-code-param="id"]');
+        self::assertCount(1, $identite);
+        self::assertTrue($identite->getNode(0)->hasAttribute('disabled'));
+    }
+
+    /**
+     * ⚠ NI GABARIT NI FAMILLES DE DONNÉES DANS L'ONGLET EXPORTER.
+     *
+     * C'est la régression que ce chantier corrige : le volet y proposait des familles qui
+     * ne commandaient plus rien de l'export, et le gabarit — un outil d'IMPORT — trônait à
+     * côté du bouton d'export.
+     */
+    public function testLOngletExporterNaPlusNiGabaritNiFamillesDeDonnees(): void
+    {
+        [$entreprise] = $this->fixture();
+
+        $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=exporter', $entreprise->getId()));
+        self::assertResponseIsSuccessful();
+
+        self::assertCount(0, $crawler->filter('a[data-echange-target="lienGabarit"]'));
+        foreach ($crawler->filter('input[data-echange-target="donnee"]') as $case) {
             self::assertSame(
-                \in_array($code, $attendus, true),
-                $case->getNode(0)->hasAttribute('checked'),
-                sprintf('« %s » n%sest pas dans l%sétat attendu à l%sarrivée.', $ressource->libelle, "'", "'", "'"),
+                '',
+                $case->getAttribute('data-echange-dependances-param'),
+                "Une colonne n'appelle aucune autre colonne : l'attribut doit rester vide.",
             );
         }
 
-        // Et ce n'est pas « tout » déguisé : des familles entières restent dehors.
-        self::assertLessThan(\count($canevas->toutes()), \count($attendus));
+        // Le volet nomme ce qu'il gouverne vraiment.
+        $titre = $crawler->filter('details.ech-perimetre-volet summary span')->first()->text();
+        self::assertStringContainsString('colonnes', $titre);
     }
 
     /**
@@ -426,13 +450,17 @@ class EcranPerimetreTest extends WebTestCase
     }
 
     /**
-     * ⚠ LES DEUX SORTIES DU CABINET SONT À LA MÊME BARRE, ET LE RÉGLAGE EST EN DESSOUS.
+     * ⚠ LE GESTE D'ABORD, LE RÉGLAGE EN DESSOUS.
      *
-     * « Générer l'export » et « Gabarit vierge » produisent tous deux un .xlsx : les
-     * séparer obligeait l'œil à chercher le second plus bas, au milieu d'un réglage. Le
-     * volet, lui, ferme la marche — c'est ce qu'on ne touche pas la plupart du temps.
+     * « Générer l'export » ouvre le panneau ; le choix des colonnes ferme la marche,
+     * replié. La plupart des exports ne le touchent pas — on veut tout — et le laisser
+     * en travers du chemin, c'était trois écrans à franchir avant d'atteindre le bouton
+     * qu'on venait chercher.
+     *
+     * ⚠ Le gabarit ne figure plus à cette barre : voir
+     * testLOngletExporterNaPlusNiGabaritNiFamillesDeDonnees.
      */
-    public function testLesDeuxSortiesSontALaMemeBarreEtLeReglageEnDessous(): void
+    public function testLeBoutonPrecedeLeReglageDesColonnes(): void
     {
         [$entreprise] = $this->fixture();
 
@@ -442,18 +470,12 @@ class EcranPerimetreTest extends WebTestCase
         $barre = $crawler->filter('.ech-actions.ech-actions--tete');
         self::assertCount(1, $barre);
         self::assertCount(1, $barre->filter('[data-echange-target="boutonExport"]'));
-        self::assertCount(
-            1,
-            $barre->filter('a[data-echange-target="lienGabarit"]'),
-            "Le gabarit doit se tenir à la même barre que l'export.",
-        );
 
-        // Le réglage ferme la marche.
         $html = (string) $this->client->getResponse()->getContent();
         self::assertLessThan(
             strpos($html, '<details class="ech-perimetre-volet">'),
-            strpos($html, 'data-echange-target="lienGabarit"'),
-            'Le volet du périmètre vient après les deux boutons, pas entre eux.',
+            strpos($html, 'data-echange-target="boutonExport"'),
+            'Le réglage des colonnes vient après le bouton, jamais avant.',
         );
     }
 
@@ -499,10 +521,17 @@ class EcranPerimetreTest extends WebTestCase
         self::assertStringContainsString($onglet === 'importer' ? 'reprend' : 'gabarit', $titre);
     }
 
-    /** @return iterable<string, array{0: string}> */
+    /**
+     * ⚠ SEUL L'IMPORT PORTE ENCORE LE PÉRIMÈTRE DES DONNÉES ET LE GABARIT.
+     *
+     * L'onglet Exporter a changé de matière : il choisit des COLONNES, l'état ayant une
+     * maille fixe. Le gabarit vierge l'a quitté pour l'onglet où il sert. Ce fournisseur
+     * ne rend donc plus qu'un onglet — et les tests qu'il alimente le disent.
+     *
+     * @return iterable<string, array{0: string}>
+     */
     public static function ongletsPortantLePerimetre(): iterable
     {
-        yield 'exporter' => ['exporter'];
         yield 'importer' => ['importer'];
     }
 

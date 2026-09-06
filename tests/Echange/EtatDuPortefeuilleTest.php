@@ -79,13 +79,24 @@ class EtatDuPortefeuilleTest extends KernelTestCase
         $classeur = $this->produire($entreprise, $invite);
 
         self::assertSame(
-            [EcrivainJsbx::FEUILLE_MANIFESTE, EcrivainJsbx::FEUILLE_DICTIONNAIRE, EtatDuPortefeuille::FEUILLE],
+            [EcrivainJsbx::FEUILLE_DICTIONNAIRE, EtatDuPortefeuille::FEUILLE],
             $classeur->getSheetNames(),
         );
         self::assertNull(
             $classeur->getSheetByName(EcrivainJsbx::FEUILLE_LISTES),
             'Un état en lecture seule n\'a aucune liste déroulante à proposer.',
         );
+        self::assertNull(
+            $classeur->getSheetByName(EcrivainJsbx::FEUILLE_MANIFESTE),
+            'L\'état ne se relit pas : il n\'a ni empreinte ni périmètre à déclarer.',
+        );
+
+        // ⚠ L'AVERTISSEMENT NE DOIT PAS DISPARAÎTRE AVEC LE MANIFESTE. Il ouvre désormais
+        // le dictionnaire : c'est la première chose que lira celui qui retrouve ce fichier
+        // dans six mois, sans l'écran sous les yeux.
+        $dictionnaire = $classeur->getSheetByName(EcrivainJsbx::FEUILLE_DICTIONNAIRE);
+        self::assertSame('LECTURE SEULE', $dictionnaire->getCell('A2')->getValue());
+        self::assertStringContainsString('ne peut pas être réimporté', (string) $dictionnaire->getCell('C2')->getValue());
     }
 
     /** Une ligne par tranche du cabinet, et l'en-tête n'en occupe qu'une. */
@@ -95,8 +106,9 @@ class EtatDuPortefeuilleTest extends KernelTestCase
 
         $feuille = $this->produire($entreprise, $invite)->getSheetByName(EtatDuPortefeuille::FEUILLE);
 
-        // Le seed pose UNE tranche pour ce cabinet.
-        self::assertSame(2, $feuille->getHighestDataRow(), 'Un en-tête, une tranche.');
+        // Le seed pose UNE tranche : un en-tête, une donnée, une ligne de totaux.
+        self::assertSame(3, $feuille->getHighestDataRow());
+        self::assertSame('TOTAUX', $feuille->getCell('A3')->getValue());
     }
 
     /**
@@ -254,6 +266,130 @@ class EtatDuPortefeuilleTest extends KernelTestCase
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
+    // La ligne de totaux
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * ⚠ UNE FORMULE, PAS UN NOMBRE ÉCRIT.
+     *
+     * Un total figé ment dès qu'on touche au fichier : on corrige une cellule, on supprime
+     * une ligne, et le bas de page continue d'afficher l'ancien. On vérifie donc la
+     * formule ÉCRITE — c'est elle qu'Excel évaluera, et c'est elle qui peut être fausse —
+     * plutôt qu'une valeur que PhpSpreadsheet recalculerait de son côté.
+     *
+     * `SUBTOTAL(109)` et non `SUM` : 109 ne somme que les lignes VISIBLES, si bien que
+     * filtrer sur un assureur fait suivre les totaux.
+     */
+    public function testLaLigneDeTotauxPorteUneFormuleQuiSuitLeFiltre(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+
+        $feuille = $this->produire($entreprise, $invite)->getSheetByName(EtatDuPortefeuille::FEUILLE);
+        $totaux = $feuille->getHighestDataRow();
+
+        $lettre = $this->lettreDe($feuille, 'Prime · Totale');
+        $formule = (string) $feuille->getCell($lettre . $totaux)->getValue();
+
+        self::assertStringStartsWith('=SUBTOTAL(109,', $formule, 'Le total doit suivre le filtre.');
+        // La plage couvre les données, et RIEN d'autre : ni l'en-tête, ni la ligne
+        // elle-même — une formule qui s'inclut est une référence circulaire.
+        self::assertStringContainsString(
+            sprintf('%s2:%s%d', $lettre, $lettre, $totaux - 1),
+            $formule,
+        );
+    }
+
+    /**
+     * ⚠ ON NE TOTALISE QUE CE QUI S'ADDITIONNE. Sommer des taux, des dates ou des
+     * identifiants de tranche donnerait un nombre parfaitement calculé et parfaitement
+     * absurde. Le rôle de la colonne le dit déjà : on n'invente aucune liste.
+     */
+    public function testSeulesLesColonnesSommablesPortentUnTotal(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+
+        $feuille = $this->produire($entreprise, $invite)->getSheetByName(EtatDuPortefeuille::FEUILLE);
+        $totaux = $feuille->getHighestDataRow();
+
+        foreach (['id', 'Assuré', 'Prime · Dernier règlement le'] as $libelle) {
+            $lettre = $this->lettreDe($feuille, $libelle);
+            $valeur = $feuille->getCell($lettre . $totaux)->getValue();
+            self::assertTrue(
+                $valeur === null || $valeur === '' || $libelle === 'id',
+                sprintf("« %s » ne s'additionne pas et ne doit pas porter de total.", $libelle),
+            );
+        }
+    }
+
+    /**
+     * ⚠ LE FILTRE S'ARRÊTE AVANT LES TOTAUX. L'y inclure ferait voyager cette ligne au
+     * milieu des données au premier tri — un total posé entre deux tranches.
+     */
+    public function testLeFiltreAutomatiqueExclutLaLigneDeTotaux(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+
+        $feuille = $this->produire($entreprise, $invite)->getSheetByName(EtatDuPortefeuille::FEUILLE);
+        $totaux = $feuille->getHighestDataRow();
+
+        $plage = $feuille->getAutoFilter()->getRange();
+        self::assertNotSame('', $plage, "L'en-tête doit porter un filtre.");
+        self::assertStringEndsWith((string) ($totaux - 1), $plage);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Le choix des colonnes
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * ⚠ AUCUNE COLONNE NE RESTE SANS GROUPE.
+     *
+     * Le groupe se déduit du libellé ; une colonne qui n'en aurait pas serait invisible à
+     * l'écran tout en sortant dans le fichier — on exporterait ce qu'on ne peut pas voir.
+     */
+    public function testChaqueColonneAUnGroupe(): void
+    {
+        foreach (CatalogueDesColonnes::pour('ARCA', 'TVA') as $code => $colonne) {
+            self::assertNotSame('', $colonne->groupe(), sprintf("« %s » n'a pas de groupe.", $code));
+        }
+    }
+
+    /**
+     * ⚠ `id` REVIENT MÊME SI ON NE LA DEMANDE PAS.
+     *
+     * Elle rattache chaque ligne à sa tranche ; un état dont aucune ligne ne se rattache
+     * n'est plus un état. La garantie est côté SERVEUR : la case désactivée de l'écran
+     * n'engage que le navigateur, jamais l'adresse qu'on tape à la main.
+     */
+    public function testLaColonneDIdentiteRevientToujours(): void
+    {
+        ['entreprise' => $entreprise] = $this->seed();
+
+        $colonnes = static::getContainer()->get(EtatDuPortefeuille::class)
+            ->colonnes($entreprise, ['primeTotale']);
+
+        self::assertSame(
+            [EtatDuPortefeuille::COLONNE_IDENTITE, 'primeTotale'],
+            array_keys($colonnes),
+            "L'ordre reste celui du catalogue, jamais celui de la demande.",
+        );
+    }
+
+    /** Un état restreint ne porte QUE les colonnes demandées. */
+    public function testUnEtatRestreintNePorteQueSesColonnes(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+
+        [$classeur] = static::getContainer()->get(ProducteurDeLEtat::class)
+            ->produire($entreprise, $invite, $entreprise->getUtilisateur(), ['primeTotale']);
+
+        $feuille = $classeur->getSheetByName(EtatDuPortefeuille::FEUILLE);
+        self::assertSame('id', $feuille->getCell('A1')->getValue());
+        self::assertSame('Prime · Totale', $feuille->getCell('B1')->getValue());
+        self::assertSame('B', $feuille->getHighestDataColumn(), 'Deux colonnes, et pas une de plus.');
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
     // Lecture du classeur
     // ─────────────────────────────────────────────────────────────────────────────
 
@@ -282,6 +418,20 @@ class EtatDuPortefeuilleTest extends KernelTestCase
         }
 
         return $ligne;
+    }
+
+    /** La lettre de colonne portant ce libellé exact. */
+    private function lettreDe($feuille, string $libelle): string
+    {
+        $derniere = Coordinate::columnIndexFromString($feuille->getHighestDataColumn());
+        for ($i = 1; $i <= $derniere; ++$i) {
+            $lettre = Coordinate::stringFromColumnIndex($i);
+            if ((string) $feuille->getCell($lettre . '1')->getValue() === $libelle) {
+                return $lettre;
+            }
+        }
+
+        self::fail(sprintf('Aucune colonne « %s ».', $libelle));
     }
 
     /** La valeur d'une colonne dont on ne connaît que le début et la fin du libellé. */

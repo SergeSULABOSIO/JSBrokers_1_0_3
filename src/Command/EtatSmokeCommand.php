@@ -90,12 +90,15 @@ final class EtatSmokeCommand extends Command
             }
 
             $colonnes = Coordinate::columnIndexFromString($feuille->getHighestDataColumn());
-            $lignes = max(0, $feuille->getHighestDataRow() - 1);
+            // Une ligne d'en-tête, et une ligne de TOTAUX en pied : ni l'une ni l'autre
+            // n'est une donnée. Les compter fausserait la comparaison avec le
+            // pré-comptage, qui ne connaît que des tranches.
+            $lignes = max(0, $feuille->getHighestDataRow() - 2);
 
             $io->section(sprintf('État de « %s »', $entreprise->getNom() ?? '?'));
             $io->listing([
                 sprintf('%d feuille(s) : %s', $classeur->getSheetCount(), implode(', ', $classeur->getSheetNames())),
-                sprintf('%d colonne(s), %d ligne(s) de données', $colonnes, $lignes),
+                sprintf('%d colonne(s), %d ligne(s) de données (+ en-tête et totaux)', $colonnes, $lignes),
                 sprintf('%d tranche(s) annoncée(s) par le pré-comptage', $total),
                 sprintf('produit en %.1f s', $duree),
                 sprintf('empreinte de structure : %s', substr($manifeste->empreinteEntetes, 0, 12)),
