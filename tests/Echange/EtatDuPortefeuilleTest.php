@@ -4,6 +4,7 @@ namespace App\Tests\Echange;
 
 use App\Ai\Finance\EconomieTranche;
 use App\Echange\Etat\CatalogueDesColonnes;
+use App\Echange\Etat\Charte;
 use App\Echange\Etat\EtatDuPortefeuille;
 use App\Echange\Etat\InjecteurDeTcd;
 use App\Echange\Etat\ProducteurDeLEtat;
@@ -29,6 +30,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
@@ -309,6 +311,140 @@ class EtatDuPortefeuilleTest extends KernelTestCase
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Le rendu : charte graphique et lisibilité
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * ⚠ AUCUNE COULEUR HORS CHARTE DANS LE CLASSEUR PRODUIT.
+     *
+     * Ce test rend la charte VÉRIFIABLE plutôt que déclarative. Un bleu choisi à l'œil
+     * dans un écrivain ne se voit pas en relecture de code — il se voit à l'ouverture du
+     * fichier, chez le client, à côté d'une page de l'application qui n'a pas la même
+     * teinte. On lit donc les styles réellement écrits, et l'on exige que chacun soit
+     * l'un des jetons de `Charte`.
+     *
+     * On passe par `getCellXfCollection()` : la collection des styles DISTINCTS du
+     * classeur. Parcourir les cinq mille cellules donnerait le même verdict en cent fois
+     * plus de temps.
+     */
+    public function testAucuneCouleurNEchappeALaCharte(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+
+        $classeur = $this->produire($entreprise, $invite);
+
+        $admises = array_values((new \ReflectionClass(Charte::class))->getConstants());
+        // Le noir et l'absence de fond sont les valeurs par défaut de PhpSpreadsheet :
+        // elles ne sont écrites par personne, et n'ont donc rien à voir avec la charte.
+        $admises[] = 'FF000000';
+
+        $vues = [];
+        foreach ($classeur->getCellXfCollection() as $style) {
+            $vues[] = $style->getFont()->getColor()->getARGB();
+            $vues[] = $style->getFill()->getStartColor()->getARGB();
+            $vues[] = $style->getFill()->getEndColor()->getARGB();
+            foreach (['getTop', 'getBottom', 'getLeft', 'getRight'] as $cote) {
+                $vues[] = $style->getBorders()->{$cote}()->getColor()->getARGB();
+            }
+        }
+
+        $hors = array_values(array_unique(array_filter(
+            $vues,
+            static fn (?string $couleur): bool => $couleur !== null && !\in_array($couleur, $admises, true),
+        )));
+
+        self::assertSame([], $hors, sprintf('Couleurs hors charte : %s', implode(', ', $hors)));
+    }
+
+    /**
+     * ⚠ TOUTE EXPLICATION DU DICTIONNAIRE REVIENT À LA LIGNE.
+     *
+     * Test de non-régression : le retour à la ligne n'était posé que sur les trois
+     * bandeaux de tête. Les soixante entrées, elles, étalaient leur explication sur une
+     * ligne unique de plusieurs milliers de pixels — un texte qu'on ne lit tout
+     * simplement pas, dans la colonne dont c'est pourtant la raison d'être.
+     */
+    public function testChaqueExplicationDuDictionnaireRevientALaLigne(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+
+        $dictionnaire = $this->produire($entreprise, $invite)
+            ->getSheetByName(EcrivainJsbx::FEUILLE_DICTIONNAIRE);
+
+        $sansRetour = [];
+        for ($l = 2; $l <= $dictionnaire->getHighestDataRow(); ++$l) {
+            if ((string) $dictionnaire->getCell('C' . $l)->getValue() === '') {
+                continue;
+            }
+            if (!$dictionnaire->getStyle('C' . $l)->getAlignment()->getWrapText()) {
+                $sansRetour[] = $l;
+            }
+        }
+
+        self::assertSame([], $sansRetour, sprintf(
+            'Explications sur une seule ligne, en %s',
+            implode(', ', array_map(static fn (int $l): string => 'C' . $l, $sansRetour)),
+        ));
+    }
+
+    /**
+     * ⚠ LA HAUTEUR D'EN-TÊTE VA SUR LA LIGNE D'EN-TÊTE, pas sur la ligne 1.
+     *
+     * `styleEntete()` posait ses trente pixels sur la ligne 1 en dur. L'en-tête de la
+     * synthèse étant en ligne 3, le titre recevait la hauteur et l'en-tête restait à
+     * l'étroit, ses libellés sur deux lignes rognés par le bas.
+     */
+    public function testLEnteteDeLaSyntheseRecoitSaHauteur(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+
+        $synthese = $this->produire($entreprise, $invite)->getSheetByName(InjecteurDeTcd::FEUILLE);
+        self::assertNotNull($synthese);
+
+        self::assertSame(30.0, $synthese->getRowDimension(3)->getRowHeight());
+        self::assertSame('Étiquettes de lignes', $synthese->getCell('A3')->getValue());
+    }
+
+    /**
+     * Les trois feuilles sortent à l'imprimante sans perdre leur en-tête.
+     *
+     * Un état du portefeuille se présente, et souvent sur papier. Sans réglage, soixante
+     * colonnes partent sur onze feuilles dont dix n'ont plus de titre de colonne : on
+     * tient une colonne de nombres dont personne ne sait le nom.
+     */
+    public function testChaqueFeuilleEstPreteAImprimer(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+
+        $classeur = $this->produire($entreprise, $invite);
+
+        foreach ($classeur->getAllSheets() as $feuille) {
+            $mise = $feuille->getPageSetup();
+
+            self::assertSame(
+                PageSetup::ORIENTATION_LANDSCAPE,
+                $mise->getOrientation(),
+                sprintf('%s : une table large ne tient pas en portrait.', $feuille->getTitle()),
+            );
+            self::assertSame(1, $mise->getFitToWidth(), $feuille->getTitle());
+            // ⚠ ZÉRO EN HAUTEUR = autant de pages qu'il faut. À 1, mille tranches
+            // seraient tassées sur une page, en corps illisible.
+            self::assertSame(0, $mise->getFitToHeight(), $feuille->getTitle());
+            self::assertNotSame('', (string) $mise->getPrintArea(), $feuille->getTitle());
+        }
+
+        // Les feuilles à en-tête répètent leur ligne de titre sur chaque page.
+        self::assertSame(
+            [1, 1],
+            $classeur->getSheetByName(EtatDuPortefeuille::FEUILLE)->getPageSetup()->getRowsToRepeatAtTop(),
+        );
+        self::assertSame(
+            [1, 3],
+            $classeur->getSheetByName(InjecteurDeTcd::FEUILLE)->getPageSetup()->getRowsToRepeatAtTop(),
+        );
+    }
+
     // La synthèse : des FORMULES, et non un tableau croisé
     // ─────────────────────────────────────────────────────────────────────────────
 

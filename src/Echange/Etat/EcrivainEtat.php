@@ -8,8 +8,11 @@ use App\Echange\Classeur\EcrivainJsbx;
 use App\Echange\Classeur\Manifeste;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Conditional;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 /**
@@ -31,9 +34,6 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
  */
 final class EcrivainEtat
 {
-    /** Cobalt de la marque, comme les autres classeurs de la maison. */
-    private const COBALT = EcrivainJsbx::COBALT;
-
     /** Première ligne de données : l'en-tête n'en occupe qu'une. */
     private const LIGNE_DONNEES = 2;
 
@@ -61,17 +61,37 @@ final class EcrivainEtat
         return $classeur;
     }
 
-    /** @param array<string, ColonneEtat> $colonnes */
+    /**
+     * LE DICTIONNAIRE — trois bandeaux, puis les colonnes rangées par famille.
+     *
+     * ── CE QUE LA MISE EN FORME FAIT ICI, ET QUI N'EST PAS DE L'ORNEMENT ────────────
+     * ⚠ TROIS BANDEAUX AVANT LA PREMIÈRE COLONNE. « Lecture seule », « Périmètre » et
+     * « Exercice » ne décrivent pas une colonne : ils décrivent LE FICHIER. Écrits dans
+     * la même table que les soixante entrées suivantes, ils se lisaient comme trois
+     * colonnes de plus. Un fond, une couleur, et le lecteur sait d'un coup d'œil ce qui
+     * parle du fichier et ce qui parle d'une colonne. (Bastien & Scapin > Signifiance ;
+     * Nielsen > Visibilité de l'état du système.)
+     *
+     * ⚠ ET UNE LIGNE DE FAMILLE TOUS LES CINQ OU SIX POSTES. Soixante et une entrées à
+     * la file forment un mur : on ne cherche plus, on parcourt. Les libellés portent
+     * déjà leur famille (« Prime · Payée ») ; on la donne comme repère plutôt que de la
+     * laisser se répéter sans jamais se voir. (Bastien & Scapin > Charge de travail.)
+     *
+     * @param array<string, ColonneEtat> $colonnes
+     */
     private function ecrireDictionnaire(Spreadsheet $classeur, array $colonnes, string $validite, string $exercice): void
     {
         $feuille = $classeur->createSheet();
         $feuille->setTitle(EcrivainJsbx::FEUILLE_DICTIONNAIRE);
+        $feuille->getTabColor()->setARGB(Charte::COBALT_SOMBRE);
 
         $feuille->fromArray(['Colonne', 'Nature', 'Ce qu\'elle veut dire'], null, 'A1');
         $this->styleEntete($feuille, 'A1:C1');
 
         // ⚠ EN TÊTE, ET PAS AILLEURS : c'est la première chose que doit lire celui qui
-        // retrouve ce fichier dans six mois, sans l'écran sous les yeux.
+        // retrouve ce fichier dans six mois, sans l'écran sous les yeux. Le fond
+        // d'avertissement le dit avant même qu'on ait lu la phrase — c'est de la
+        // PRÉVENTION DE L'ERREUR, pas une décoration.
         $feuille->fromArray([
             'LECTURE SEULE',
             'Nature du fichier',
@@ -79,8 +99,7 @@ final class EcrivainEtat
             . '(soldes, encaissements, exigibilités), pas des champs. Pour préparer des '
             . 'données à importer, utilisez le gabarit vierge de l\'onglet Importer.',
         ], null, 'A2');
-        $feuille->getStyle('A2:C2')->getFont()->setBold(true);
-        $feuille->getStyle('C2')->getAlignment()->setWrapText(true);
+        $this->bandeau($feuille, 2, Charte::AVERTISSEMENT_FOND, Charte::AVERTISSEMENT_TEXTE);
 
         // ⚠ QUELLES TRANCHES CE FICHIER PORTE. Un état des seuls PROJETS ressemble trait
         // pour trait à un état de polices : mêmes colonnes, mêmes montants d'allure. Le
@@ -91,8 +110,7 @@ final class EcrivainEtat
             ValiditeDesTranches::libelle($validite),
             ValiditeDesTranches::explication($validite),
         ], null, 'A3');
-        $feuille->getStyle('A3:C3')->getFont()->setBold(true);
-        $feuille->getStyle('C3')->getAlignment()->setWrapText(true);
+        $this->bandeau($feuille, 3, Charte::COBALT_TRES_CLAIR, Charte::TEXTE);
 
         // Même raison que le périmètre : un état d'un seul exercice a exactement l'allure
         // d'un état complet, en plus court.
@@ -101,29 +119,100 @@ final class EcrivainEtat
             ExerciceDesTranches::libelle($exercice),
             ExerciceDesTranches::explication($exercice),
         ], null, 'A4');
-        $feuille->getStyle('A4:C4')->getFont()->setBold(true);
-        $feuille->getStyle('C4')->getAlignment()->setWrapText(true);
+        $this->bandeau($feuille, 4, Charte::COBALT_TRES_CLAIR, Charte::TEXTE);
 
         $numero = 6;
+        $familleCourante = null;
+
         foreach ($colonnes as $colonne) {
+            $famille = $colonne->groupe();
+            if ($famille !== $familleCourante) {
+                $feuille->setCellValue('A' . $numero, mb_strtoupper($famille));
+                $this->bandeau($feuille, $numero, Charte::GRIS_MUET, Charte::TEXTE_CORPS);
+                $familleCourante = $famille;
+                ++$numero;
+            }
+
             $feuille->fromArray(
-                [$colonne->libelle, $colonne->role, $colonne->explication],
+                [$colonne->libelle, $colonne->natureLisible(), $colonne->explication],
                 null,
                 'A' . $numero,
             );
+
+            // ⚠ LE RETOUR À LA LIGNE MANQUAIT, ET C'ÉTAIT LE PIRE DÉFAUT DE CETTE FEUILLE.
+            // Seuls les trois bandeaux le posaient ; les explications, elles, débordaient
+            // en une seule ligne interminable qu'on ne lisait tout simplement pas.
+            $this->entree($feuille, $numero);
             ++$numero;
         }
 
         // La règle du métier, à la fin, en toutes lettres.
         ++$numero;
         $feuille->setCellValue('A' . $numero, 'RÈGLE DU MÉTIER');
-        $feuille->getStyle('A' . $numero)->getFont()->setBold(true);
         $feuille->setCellValue('C' . $numero, EconomieTranche::NOTE);
-        $feuille->getStyle('C' . $numero)->getAlignment()->setWrapText(true);
+        $this->bandeau($feuille, $numero, Charte::COBALT_TRES_CLAIR, Charte::TEXTE);
+        $feuille->getStyle('C' . $numero)->getAlignment()->setWrapText(true)->setVertical('top');
+        $feuille->getRowDimension($numero)->setRowHeight(-1);
+
+        // ⚠ ET COMMENT LIRE LA LIGNE DE TOTAUX, qui surprend toujours une fois : elle
+        // suit le filtre. Le dire ici évite de citer en réunion un total qui n'était pas
+        // celui du portefeuille.
+        ++$numero;
+        $feuille->setCellValue('A' . $numero, 'LIGNE « TOTAUX »');
+        $feuille->setCellValue('C' . $numero, sprintf(
+            'En bas de la feuille %s, la ligne TOTAUX ne somme que les lignes AFFICHÉES. '
+            . 'Filtrez sur un assureur ou sur un mois, et les totaux suivent le filtre. '
+            . 'Ce sont des formules : elles se recalculent si vous corrigez une valeur.',
+            EtatDuPortefeuille::FEUILLE,
+        ));
+        $this->bandeau($feuille, $numero, Charte::COBALT_TRES_CLAIR, Charte::TEXTE);
+        $feuille->getStyle('C' . $numero)->getAlignment()->setWrapText(true)->setVertical('top');
+        $feuille->getRowDimension($numero)->setRowHeight(-1);
 
         $feuille->getColumnDimension('A')->setWidth(46);
-        $feuille->getColumnDimension('B')->setWidth(16);
-        $feuille->getColumnDimension('C')->setWidth(110);
+        $feuille->getColumnDimension('B')->setWidth(18);
+        $feuille->getColumnDimension('C')->setWidth(96);
+
+        // L'en-tête reste en vue : sans lui, la troisième colonne d'un long dictionnaire
+        // n'a plus de nom dès qu'on a fait défiler.
+        $feuille->freezePane('A2');
+        $this->preparerImpression($feuille, 'A1:C' . $numero, 1);
+    }
+
+    /**
+     * UN BANDEAU : une ligne qui parle du fichier, ou d'une famille, et non d'une colonne.
+     *
+     * ⚠ LE COUPLE FOND / TEXTE VIENT ENSEMBLE. La charte fixe les associations admises
+     * (règle 2) parce que ce sont elles qui portent le contraste : `#664d03` sur
+     * `#fff3cd`, blanc sur cobalt. Les passer d'un bloc empêche d'en changer une moitié.
+     */
+    private function bandeau(Worksheet $feuille, int $ligne, string $fond, string $texte): void
+    {
+        $style = $feuille->getStyle('A' . $ligne . ':C' . $ligne);
+        $style->getFont()->setBold(true)->getColor()->setARGB($texte);
+        $style->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB($fond);
+        $style->getAlignment()->setWrapText(true)->setVertical('top');
+
+        // ⚠ HAUTEUR AUTOMATIQUE (-1) ET NON UNE VALEUR FIXE : ces cellules portent des
+        // paragraphes entiers, dont la longueur dépend du périmètre choisi. Une hauteur
+        // en dur tronquerait la moitié du texte le jour où l'explication s'allonge.
+        $feuille->getRowDimension($ligne)->setRowHeight(-1);
+    }
+
+    /** Une entrée de colonne : le texte respire, et une bordure sépare de la suivante. */
+    private function entree(Worksheet $feuille, int $ligne): void
+    {
+        $style = $feuille->getStyle('A' . $ligne . ':C' . $ligne);
+        $style->getAlignment()->setWrapText(true)->setVertical('top');
+        $style->getFont()->getColor()->setARGB(Charte::TEXTE_CORPS);
+        $style->getBorders()->getBottom()
+            ->setBorderStyle(Border::BORDER_THIN)
+            ->getColor()->setARGB(Charte::BORDURE);
+
+        $feuille->getStyle('A' . $ligne)->getFont()->setBold(true)
+            ->getColor()->setARGB(Charte::TEXTE);
+        $feuille->getStyle('B' . $ligne)->getFont()->getColor()->setARGB(Charte::TEXTE_MUET);
+        $feuille->getRowDimension($ligne)->setRowHeight(-1);
     }
 
     /**
@@ -135,11 +224,14 @@ final class EcrivainEtat
         $feuille = $classeur->createSheet();
         $feuille->setTitle(EtatDuPortefeuille::FEUILLE);
 
+        $feuille->getTabColor()->setARGB(Charte::COBALT);
+
         $codes = array_keys($colonnes);
         $feuille->fromArray(array_map(static fn (ColonneEtat $c) => $c->libelle, array_values($colonnes)), null, 'A1');
 
         $derniereLettre = Coordinate::stringFromColumnIndex(\count($codes));
         $this->styleEntete($feuille, 'A1:' . $derniereLettre . '1');
+        $this->marquerLesFamilles($feuille, $colonnes);
 
         $numero = self::LIGNE_DONNEES;
         foreach ($lignes as $ligne) {
@@ -195,6 +287,127 @@ final class EcrivainEtat
         // ligne qu'on lit dès qu'on fait défiler vers la droite — et il y a cinquante
         // colonnes à parcourir.
         $feuille->freezePane('B2');
+
+        $this->alternerLesLignes($feuille, $derniereLettre, $derniereDonnee);
+        $this->signalerLesNegatifs($feuille, $colonnes, $derniereDonnee);
+        $this->preparerImpression($feuille, 'A1:' . $derniereLettre . ($derniereDonnee + 1), 1);
+    }
+
+    /**
+     * L'EN-TÊTE SE LIT PAR FAMILLES : deux temps du cobalt, alternés.
+     *
+     * ⚠ SOIXANTE ET UNE COLONNES SANS RESPIRATION, C'EST UNE BANDE UNIFORME. On y perd
+     * l'endroit où finit la prime et où commence la commission, et l'on relit trois fois
+     * le libellé pour se resituer. L'alternance rend le découpage visible d'un coup d'œil
+     * pendant qu'on défile. (Bastien & Scapin > Guidage, Charge de travail.)
+     *
+     * ⚠ RIEN N'EST PORTÉ PAR LA SEULE COULEUR. Chaque libellé nomme déjà sa famille
+     * (« Prime · Payée ») : la teinte ne fait que confirmer ce que le texte dit. Un
+     * lecteur qui ne distingue pas les deux bleus — ou qui imprime en noir et blanc — ne
+     * perd aucune information (WCAG 1.4.1).
+     *
+     * ⚠ ET ON N'INVENTE PAS UNE COULEUR PAR FAMILLE. Douze teintes feraient un arc-en-ciel
+     * hors charte, et le fichier ne ressemblerait plus à la maison. Deux temps du même
+     * cobalt suffisent à marquer une frontière.
+     *
+     * @param array<string, ColonneEtat> $colonnes
+     */
+    private function marquerLesFamilles(Worksheet $feuille, array $colonnes): void
+    {
+        $index = 0;
+        $famille = null;
+        $sombre = false;
+
+        foreach ($colonnes as $colonne) {
+            ++$index;
+
+            if ($colonne->groupe() !== $famille) {
+                $famille = $colonne->groupe();
+                $sombre = !$sombre;
+            }
+
+            $feuille->getStyle(Coordinate::stringFromColumnIndex($index) . '1')
+                ->getFill()->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setARGB($sombre ? Charte::COBALT_SOMBRE : Charte::COBALT);
+        }
+    }
+
+    /**
+     * UNE LIGNE SUR DEUX EN GRIS PÂLE — par MISE EN FORME CONDITIONNELLE, et non ligne à
+     * ligne.
+     *
+     * ⚠ LA FORMULE COMPTE LES LIGNES VISIBLES, PAS LES NUMÉROS DE LIGNE. Un banal
+     * `MOD(LIGNE();2)` bande d'après la position absolue : dès qu'on filtre sur un
+     * assureur, il reste trois lignes grises côte à côte et deux blanches, et le repère
+     * visuel se retourne contre le lecteur au moment précis où il en a le plus besoin.
+     * `SOUS.TOTAL(103;…)` ne compte que ce qui s'affiche, si bien que l'alternance reste
+     * vraie sous n'importe quel filtre.
+     *
+     * ⚠ ET C'EST UNE SEULE RÈGLE, PAS MILLE STYLES. Poser un fond ligne par ligne sur
+     * soixante colonnes ferait, sur un gros portefeuille, des dizaines de milliers
+     * d'applications de style — le genre de détail qui fait passer un export de deux
+     * secondes à plusieurs minutes.
+     */
+    private function alternerLesLignes(Worksheet $feuille, string $derniereLettre, int $derniereDonnee): void
+    {
+        if ($derniereDonnee < self::LIGNE_DONNEES) {
+            return;
+        }
+
+        $regle = new Conditional();
+        $regle->setConditionType(Conditional::CONDITION_EXPRESSION);
+        $regle->addCondition(sprintf(
+            'MOD(SUBTOTAL(103,$A$%1$d:$A%2$d),2)=0',
+            self::LIGNE_DONNEES,
+            self::LIGNE_DONNEES,
+        ));
+        $regle->getStyle()->getFill()->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB(Charte::GRIS_PALE);
+
+        $plage = 'A' . self::LIGNE_DONNEES . ':' . $derniereLettre . $derniereDonnee;
+        $feuille->setConditionalStyles($plage, [$regle]);
+    }
+
+    /**
+     * LES MONTANTS NÉGATIFS EN ROUGE — le signe restant écrit.
+     *
+     * ⚠ UN SOLDE NÉGATIF N'EST PAS UNE ERREUR D'AFFICHAGE : une réserve peut l'être, et
+     * l'on ne l'écrête pas. Mais un « − » perdu dans un mur de nombres alignés à droite
+     * se manque, et c'est exactement le chiffre qu'il ne faut pas manquer. La couleur ne
+     * fait que RENFORCER un signe qui reste là (WCAG 1.4.1 : jamais la couleur seule).
+     *
+     * ⚠ ET LE ROUGE EST CELUI DE LA CHARTE, pas celui d'Excel. Le format de nombre
+     * `[Red]` d'Excel impose sa propre teinte ; une règle conditionnelle, elle, prend le
+     * `#dc3545` de la maison. C'est la règle 3 de la charte : le danger ne sert qu'au
+     * sémantique, et il a une valeur précise.
+     *
+     * @param array<string, ColonneEtat> $colonnes
+     */
+    private function signalerLesNegatifs(Worksheet $feuille, array $colonnes, int $derniereDonnee): void
+    {
+        if ($derniereDonnee < self::LIGNE_DONNEES) {
+            return;
+        }
+
+        $index = 0;
+        foreach ($colonnes as $colonne) {
+            ++$index;
+            if ($colonne->role !== Colonnes::MONTANT) {
+                continue;
+            }
+
+            $regle = new Conditional();
+            $regle->setConditionType(Conditional::CONDITION_CELLIS);
+            $regle->setOperatorType(Conditional::OPERATOR_LESSTHAN);
+            $regle->addCondition('0');
+            $regle->getStyle()->getFont()->setBold(true)->getColor()->setARGB(Charte::DANGER);
+
+            $lettre = Coordinate::stringFromColumnIndex($index);
+            $feuille->setConditionalStyles(
+                $lettre . self::LIGNE_DONNEES . ':' . $lettre . $derniereDonnee,
+                [$regle],
+            );
+        }
     }
 
     /**
@@ -246,10 +459,23 @@ final class EcrivainEtat
             $feuille->getStyle($lettre . $ligne)->getAlignment()->setHorizontal('right');
         }
 
+        // ⚠ ELLE DOIT SE VOIR COMME UN PIED DE TABLE, pas comme une soixantième tranche.
+        // Le fond la sort du flux des données, le filet cobalt la referme.
         $plage = 'A' . $ligne . ':' . $derniereLettre . $ligne;
-        $feuille->getStyle($plage)->getFont()->setBold(true);
-        $feuille->getStyle($plage)->getBorders()->getTop()
-            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUM);
+        $style = $feuille->getStyle($plage);
+        $style->getFont()->setBold(true)->getColor()->setARGB(Charte::TEXTE);
+        $style->getFill()->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB(Charte::COBALT_TRES_CLAIR);
+        $style->getBorders()->getTop()
+            ->setBorderStyle(Border::BORDER_MEDIUM)
+            ->getColor()->setARGB(Charte::COBALT);
+
+        // Le comportement de cette ligne surprend une fois : elle suit le filtre. Le
+        // commentaire le dit au point même où la question se pose, et le dictionnaire le
+        // répète pour qui lit le fichier sans jamais survoler une cellule.
+        $feuille->getComment('A' . $ligne)->getText()->createTextRun(
+            'Ces totaux ne comptent que les lignes AFFICHÉES : filtrez, et ils suivent.',
+        );
     }
 
     /**
@@ -312,9 +538,24 @@ final class EcrivainEtat
 
         $derniereDonnee = self::LIGNE_DONNEES + \count($lignes) - 1;
 
+        $feuille->getTabColor()->setARGB(Charte::COBALT_TRES_CLAIR);
+
         $feuille->setCellValue('A1', 'Synthèse du portefeuille');
         $feuille->getStyle('A1')->getFont()->setBold(true)->setSize(14)
-            ->getColor()->setARGB('FF' . self::COBALT);
+            ->getColor()->setARGB(Charte::COBALT);
+
+        // ⚠ DIRE D'OÙ VIENNENT CES CHIFFRES, ET QU'ILS SUIVENT. Sans cette ligne, on lit
+        // un tableau posé là, dont on ne sait ni ce qu'il compte ni s'il se met à jour —
+        // et la première réaction devant un total qui bouge est de croire à une panne.
+        // (Nielsen > Visibilité de l'état du système.)
+        $feuille->setCellValue('A2', sprintf(
+            'Calculée par formules à partir de la feuille %s : corrigez une ligne là-bas, '
+            . 'les totaux d\'ici suivent. Le périmètre retenu est rappelé dans %s.',
+            EtatDuPortefeuille::FEUILLE,
+            EcrivainJsbx::FEUILLE_DICTIONNAIRE,
+        ));
+        $feuille->getStyle('A2')->getFont()->setItalic(true)
+            ->getColor()->setARGB(Charte::TEXTE_MUET);
 
         // ── L'en-tête ───────────────────────────────────────────────────────────────
         $ligne = 3;
@@ -337,15 +578,25 @@ final class EcrivainEtat
             $this->poserLesSommes($feuille, $ligne, $mesures, $derniereDonnee, [
                 [$colMois, 'A' . $ligneDuMois],
             ]);
-            $feuille->getStyle('A' . $ligne . ':' . $derniereColonne . $ligne)->getFont()->setBold(true);
-            $feuille->getStyle('A' . $ligne . ':' . $derniereColonne . $ligne)->getFill()
-                ->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE8F0FB');
+            // Le mois se détache : c'est le niveau qu'on parcourt, les assureurs étant
+            // le détail qu'on ne lit qu'une fois arrivé.
+            $styleMois = $feuille->getStyle('A' . $ligne . ':' . $derniereColonne . $ligne);
+            $styleMois->getFont()->setBold(true)->getColor()->setARGB(Charte::TEXTE);
+            $styleMois->getFill()->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setARGB(Charte::COBALT_TRES_CLAIR);
+            $styleMois->getBorders()->getTop()
+                ->setBorderStyle(Border::BORDER_THIN)
+                ->getColor()->setARGB(Charte::BORDURE);
             ++$ligne;
 
             foreach ($assureurs as $assureur) {
-                // L'indentation dit la hiérarchie sans qu'on ait à la répéter en mots.
+                // L'indentation dit la hiérarchie sans qu'on ait à la répéter en mots ;
+                // le gris la confirme sans crier. Les deux ensemble, parce que le retrait
+                // seul disparaît dès qu'on élargit la colonne.
                 $feuille->setCellValue('A' . $ligne, $assureur);
                 $feuille->getStyle('A' . $ligne)->getAlignment()->setIndent(2);
+                $feuille->getStyle('A' . $ligne . ':' . $derniereColonne . $ligne)
+                    ->getFont()->getColor()->setARGB(Charte::TEXTE_CORPS);
                 $this->poserLesSommes($feuille, $ligne, $mesures, $derniereDonnee, [
                     [$colMois, 'A' . $ligneDuMois],
                     [$colAssureur, 'A' . $ligne],
@@ -372,18 +623,35 @@ final class EcrivainEtat
             ++$rang;
         }
         $plageTotal = 'A' . $ligne . ':' . $derniereColonne . $ligne;
-        $feuille->getStyle($plageTotal)->getFont()->setBold(true);
-        $feuille->getStyle($plageTotal)->getBorders()->getTop()
-            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUM);
+        $styleTotal = $feuille->getStyle($plageTotal);
+        $styleTotal->getFont()->setBold(true)->getColor()->setARGB(Charte::TEXTE);
+        $styleTotal->getFill()->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB(Charte::GRIS_MUET);
+        $styleTotal->getBorders()->getTop()
+            ->setBorderStyle(Border::BORDER_MEDIUM)
+            ->getColor()->setARGB(Charte::COBALT);
 
         $feuille->getStyle('B4:' . $derniereColonne . $ligne)->getNumberFormat()->setFormatCode('#,##0.00');
         $feuille->getStyle('B4:' . $derniereColonne . $ligne)->getAlignment()->setHorizontal('right');
+
+        // Un négatif se signale ici comme dans les données : même règle, même rouge.
+        $negatif = new Conditional();
+        $negatif->setConditionType(Conditional::CONDITION_CELLIS);
+        $negatif->setOperatorType(Conditional::OPERATOR_LESSTHAN);
+        $negatif->addCondition('0');
+        $negatif->getStyle()->getFont()->setBold(true)->getColor()->setARGB(Charte::DANGER);
+        $feuille->setConditionalStyles('B4:' . $derniereColonne . $ligne, [$negatif]);
 
         $feuille->getColumnDimension('A')->setWidth(34);
         for ($i = 2; $i <= \count($mesures) + 1; ++$i) {
             $feuille->getColumnDimension(Coordinate::stringFromColumnIndex($i))->setWidth(22);
         }
+
+        // ⚠ LE VOLET FIGE JUSQU'À LA LIGNE 3 INCLUSE : c'est elle qui nomme les colonnes.
+        // Le figer plus haut laisserait défiler l'en-tête, et l'on lirait des nombres sans
+        // savoir lequel est la prime et lequel la commission.
         $feuille->freezePane('B4');
+        $this->preparerImpression($feuille, 'A1:' . $derniereColonne . $ligne, 3);
     }
 
     /**
@@ -525,14 +793,51 @@ final class EcrivainEtat
         }
     }
 
+    /**
+     * L'EN-TÊTE : blanc sur cobalt, la seule association admise sur ce fond.
+     *
+     * ⚠ LA HAUTEUR SUIT LA PLAGE, ET NE VAUT PLUS « 1 » EN DUR. L'en-tête de la synthèse
+     * est en ligne 3 : la ligne 1 y recevait donc les trente pixels — sur le titre — et
+     * l'en-tête restait à l'étroit, ses libellés sur deux lignes rognés.
+     */
     private function styleEntete(Worksheet $feuille, string $plage): void
     {
         $style = $feuille->getStyle($plage);
-        $style->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
-        $style->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-            ->getStartColor()->setARGB('FF' . self::COBALT);
+        $style->getFont()->setBold(true)->getColor()->setARGB(Charte::BLANC);
+        $style->getFill()->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB(Charte::COBALT);
         $style->getAlignment()->setVertical('center')->setWrapText(true);
-        $feuille->getRowDimension(1)->setRowHeight(30);
+
+        [$depart] = explode(':', $plage);
+        $feuille->getRowDimension((int) Coordinate::coordinateFromString($depart)[1])->setRowHeight(30);
+    }
+
+    /**
+     * CE QU'IL FAUT POUR QUE LA FEUILLE SORTE À L'IMPRIMANTE SANS ÊTRE ILLISIBLE.
+     *
+     * ⚠ UN ÉTAT DU PORTEFEUILLE SE PRÉSENTE, et souvent sur papier — à un assureur, en
+     * comité. Sans réglage, soixante colonnes partent sur onze feuilles dans le désordre,
+     * et les pages 2 à 11 n'ont plus d'en-tête : on tient une colonne de nombres dont
+     * personne ne sait le nom. Le paysage, l'ajustement en largeur et la répétition des
+     * lignes de titre corrigent les trois d'un coup.
+     */
+    private function preparerImpression(Worksheet $feuille, string $zone, int $lignesRepetees): void
+    {
+        $mise = $feuille->getPageSetup();
+        $mise->setOrientation(PageSetup::ORIENTATION_LANDSCAPE);
+        $mise->setFitToWidth(1);
+
+        // ⚠ ZÉRO EN HAUTEUR = « autant de pages qu'il faut ». Le fixer à 1 tasserait mille
+        // tranches sur une seule page, en corps illisible.
+        $mise->setFitToHeight(0);
+        $mise->setPrintArea($zone);
+
+        if ($lignesRepetees > 0) {
+            $mise->setRowsToRepeatAtTopByStartAndEnd(1, $lignesRepetees);
+        }
+
+        $feuille->getHeaderFooter()->setOddFooter('&L&B' . $feuille->getTitle() . '&RPage &P / &N');
+        $feuille->getPageMargins()->setTop(0.6)->setBottom(0.6)->setLeft(0.4)->setRight(0.4);
     }
 
     /**
