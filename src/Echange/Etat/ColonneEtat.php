@@ -71,6 +71,27 @@ final class ColonneEtat
         return $position === false ? 'Général' : mb_substr($this->libelle, 0, $position);
     }
 
+    /**
+     * LA NATURE DE LA COLONNE, ÉCRITE POUR ÊTRE LUE.
+     *
+     * Le rôle est un code interne — « montant », « identifiant ». Le dictionnaire est lu
+     * par un courtier, pas par le programme : il y verra « Montant », « Identifiant ».
+     * C'est le critère de SIGNIFIANCE, et il ne coûte rien à tenir puisque la source reste
+     * le rôle.
+     */
+    public function natureLisible(): string
+    {
+        return match ($this->role) {
+            Colonnes::MONTANT => 'Montant',
+            Colonnes::NOMBRE => 'Nombre',
+            Colonnes::POURCENTAGE => 'Taux (en points)',
+            Colonnes::DATE => 'Date',
+            Colonnes::IDENTIFIANT => 'Identifiant',
+            Colonnes::STATUT => 'Statut',
+            default => 'Texte',
+        };
+    }
+
     /** Les montants et les nombres s'alignent à droite, et eux seuls. */
     public function aligneeADroite(): bool
     {
