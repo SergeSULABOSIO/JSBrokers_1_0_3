@@ -237,6 +237,19 @@ final class EtatDuPortefeuille
             'tranchePart' => $tranche->getPourcentage(),
             'trancheMontantFlat' => $tranche->getMontantFlat(),
 
+            // ⚠ L'OUVERTURE REPREND LE RÉALISÉ, et c'est ce qui rend l'aller-retour fidèle.
+            // Laisser ces colonnes vides à l'export ferait perdre tous les encaissements
+            // d'un fichier réimporté sur une base neuve : le portefeuille se reconstituerait
+            // intégralement impayé. On y écrit donc ce qui EST encaissé ; l'import ne les
+            // relit qu'à la création, si bien qu'un export redéposé sur sa propre base ne
+            // double rien.
+            'ouverturePrimeEncaissee' => $eco['primeSignalee'] ?? null,
+            'ouverturePrimeLe' => $primes['date'],
+            'ouvertureCommissionEncaissee' => $eco['commissionEncaissee'] ?? null,
+            'ouvertureCommissionLe' => $commissions['date'],
+            'ouvertureRetroReversee' => $eco['retroReversee'] ?? null,
+            'ouvertureRetroLe' => $retroPartenaire['date'],
+
             'assure' => $piste?->getClient()?->getNom(),
             'risque' => $piste?->getRisque()?->getNomComplet() ?: $piste?->getRisque()?->getCode(),
             'assureur' => $cotation?->getAssureur()?->getNom(),
