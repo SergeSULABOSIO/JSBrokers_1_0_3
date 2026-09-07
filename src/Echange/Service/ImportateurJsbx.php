@@ -49,6 +49,15 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
  */
 final class ImportateurJsbx
 {
+    /**
+     * Ce qu'une échéance coûte au contrôle, en mémoire non rendue.
+     *
+     * ⚠ MESURÉ, ET MAJORÉ. Sept mégaoctets par ligne sur un portefeuille réel — le
+     * dry-run monte un arbre de formulaires complet par opération, et cette empreinte ne
+     * redescend pas. On compte huit : un plafond optimiste ne protège de rien.
+     */
+    private const MEMOIRE_PAR_LIGNE = 8 * 1024 * 1024;
+
     public function __construct(
         private readonly CanevasDEchange $canevas,
         private readonly LecteurJsbx $lecteur,
@@ -242,6 +251,59 @@ final class ImportateurJsbx
     }
 
     /**
+     * COMBIEN D'ÉCHÉANCES CE SERVEUR PEUT-IL CONTRÔLER SANS MOURIR ?
+     *
+     * ⚠ LE CHIFFRE SE CALCULE, IL NE SE DÉCRÈTE PAS. Un plafond en dur serait faux sur
+     * deux serveurs différents : trop bas sur une machine généreuse — on refuserait un
+     * fichier parfaitement traitable —, trop haut sur une machine contrainte, et l'on
+     * retomberait sur la mort en cours de route que ce plafond existe pour éviter.
+     *
+     * ⚠ ET LA MOITIÉ SEULEMENT EST ENGAGÉE. Le contrôle n'est pas seul à consommer :
+     * le classeur ouvert, le noyau, Doctrine occupent déjà leur part avant la première
+     * ligne. Viser la limite entière, ce serait la dépasser.
+     *
+     * Mesuré sur un portefeuille réel : sept mégaoctets par ligne, linéaire et sans
+     * reflux. Le coût est majoré ici, parce qu'un plafond trop optimiste ne protège de
+     * rien.
+     */
+    private function plafondDeLEtat(): int
+    {
+        $limite = $this->memoireDisponible();
+
+        // Sans limite déclarée (« -1 »), on s'en remet au plafond du format d'échange :
+        // le serveur dit qu'il assume, on ne lui oppose pas un chiffre inventé.
+        if ($limite <= 0) {
+            return TokenPricing::ECHANGE_PLAFOND_LIGNES;
+        }
+
+        $tenable = (int) floor(($limite * 0.5) / self::MEMOIRE_PAR_LIGNE);
+
+        // Jamais moins de dix : au-dessous, la rubrique cesserait d'être utilisable, et
+        // le vrai remède serait d'augmenter la mémoire du serveur — ce que le message
+        // d'erreur doit permettre de comprendre.
+        return max(10, min($tenable, TokenPricing::ECHANGE_PLAFOND_LIGNES));
+    }
+
+    /** La limite mémoire de PHP, en octets. Rend 0 quand elle n'est pas bornée. */
+    private function memoireDisponible(): int
+    {
+        $brut = trim((string) ini_get('memory_limit'));
+        if ($brut === '' || $brut === '-1') {
+            return 0;
+        }
+
+        $unite = strtolower(substr($brut, -1));
+        $nombre = (int) $brut;
+
+        return match ($unite) {
+            'g' => $nombre * 1024 * 1024 * 1024,
+            'm' => $nombre * 1024 * 1024,
+            'k' => $nombre * 1024,
+            default => $nombre,
+        };
+    }
+
+    /**
      * PASSE 2 DE L'ÉTAT : chaque ligne devient une chaîne d'écritures, soumise au dry-run.
      *
      * ⚠ UNE LIGNE PRODUIT PLUSIEURS OPÉRATIONS, ET C'EST TOUTE LA DIFFÉRENCE avec le
@@ -276,6 +338,39 @@ final class ImportateurJsbx
         $rapport->compterLignes(count($lignes));
         $progression->totaliser(count($lignes));
         $rapport->declarerRessource(LecteurDeLEtat::RESSOURCE, 'Échéances de prime');
+
+        // ⚠ LE PLAFOND DE CETTE VOIE EST CELUI DE LA MÉMOIRE, ET NON DES DEUX MILLE
+        // LIGNES DU FORMAT NORMALISÉ.
+        //
+        // `ECHANGE_PLAFOND_LIGNES` a été posé pour le TEMPS — « lent, mais garantit les
+        // mêmes règles qu'une saisie ». Personne n'avait mesuré la MÉMOIRE. Or le contrôle
+        // à blanc en retient environ sept mégaoctets par ligne, sans les rendre : le
+        // dry-run monte un arbre de formulaires complet par opération, et cette empreinte
+        // ne redescend pas. À deux mille lignes il faudrait treize gigaoctets.
+        //
+        // ⚠ ET LE SYMPTÔME DÉSIGNE LE MAUVAIS COUPABLE. Quand PHP atteint sa limite, il
+        // meurt au milieu d'une requête : la connexion tombe, et l'écran affiche « MySQL
+        // server has gone away ». On cherche alors du côté de la base, qui n'y est pour
+        // rien. Mieux vaut un refus qui dit la vérité et la conduite à tenir.
+        $plafond = $this->plafondDeLEtat();
+
+        if (count($lignes) > $plafond) {
+            $rapport->ajouter(Anomalie::erreur(
+                Anomalie::PLAFOND_DEPASSE,
+                sprintf(
+                    'Ce fichier porte %d échéances, au-delà de ce que le contrôle peut tenir en '
+                    . 'mémoire sur ce serveur (%d). Découpez-le : chaque ligne est écrite par le '
+                    . 'même circuit qu\'une saisie à l\'écran, ce qui garantit les mêmes contrôles '
+                    . 'mais coûte cher. Les fichiers déposés successivement se complètent — une '
+                    . 'police déjà reprise n\'est pas recréée.',
+                    count($lignes),
+                    $plafond,
+                ),
+                EtatDuPortefeuille::FEUILLE,
+            ));
+
+            return [];
+        }
 
         if (count($lignes) > TokenPricing::ECHANGE_PLAFOND_LIGNES) {
             $rapport->ajouter(Anomalie::erreur(
@@ -368,6 +463,20 @@ final class ImportateurJsbx
 
             if ($refuse) {
                 $rapport->compterErreur(LecteurDeLEtat::RESSOURCE);
+
+                // ⚠ ET LA LIGNE REFUSÉE N'ENGAGE PAS LES SUIVANTES. Ses repères doivent
+                // être oubliés, sinon la prochaine échéance de la même police croirait la
+                // proposition créée, renverrait à « @cot-… » et échouerait sur « renvoi
+                // inconnu » — un motif qui parle du lien et non de la cause. Le rapport
+                // annoncerait huit erreurs pour une, et la vraie se noierait.
+                $reperes = [];
+                foreach ($operations as $operation) {
+                    if ($operation->ref !== null) {
+                        $reperes[] = $operation->ref;
+                    }
+                }
+                $this->reconstitueur->oublier($reperes);
+
                 continue;
             }
 
@@ -375,6 +484,7 @@ final class ImportateurJsbx
                 $etapes[] = $candidate;
                 $rapport->compter(LecteurDeLEtat::RESSOURCE, $candidate['operation']->op);
             }
+
         }
 
         return $etapes;

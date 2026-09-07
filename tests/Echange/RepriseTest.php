@@ -452,7 +452,14 @@ final class RepriseTest extends KernelTestCase
 
         // ⚠ LA DATE SE REPLIE SUR CELLE DE LA POLICE. Un règlement sans date ne se
         // rattache à aucun exercice : il disparaîtrait des états par période.
-        self::assertSame('2026-01-31', $reglements[0]->fields['paidAt']);
+        //
+        // ⚠ ET LE FORMAT PORTE L'HEURE, ce qui n'est pas un détail : toutes les
+        // propriétés temporelles visées sont des `datetime_immutable`, dont le widget
+        // attend « aaaa-mm-jjThh:mm ». Avoir écrit « aaaa-mm-jj » a fait rejeter les
+        // soixante-dix-neuf lignes d'un export réimporté, sur « Veuillez saisir une date
+        // et une heure valides » — une erreur qui accuse la saisie alors que la faute
+        // était dans la conversion. Ce test est le verrou de ce format.
+        self::assertSame('2026-01-31T00:00', $reglements[0]->fields['paidAt']);
 
         // ⚠ ET IL PORTE SA PROVENANCE. Sans cette référence, un règlement de reprise
         // ressemble trait pour trait à un encaissement réel : impossible, six mois plus
@@ -502,7 +509,7 @@ final class RepriseTest extends KernelTestCase
         self::assertCount(1, $note->collections['articles'] ?? [], 'UN article, et un seul.');
         self::assertCount(1, $note->collections['paiements'] ?? []);
         self::assertSame(1200.0, $note->collections['paiements'][0]->fields['montant']);
-        self::assertSame('2026-03-15', $note->collections['paiements'][0]->fields['paidAt']);
+        self::assertSame('2026-03-15T00:00', $note->collections['paiements'][0]->fields['paidAt']);
 
         // ⚠ L'ARTICLE DOIT ÊTRE LIÉ À LA FOIS À L'ÉCHÉANCE ET AU REVENU. Sans l'un des
         // deux, `getArticleMontant()` rend zéro : la note serait posée, le règlement
