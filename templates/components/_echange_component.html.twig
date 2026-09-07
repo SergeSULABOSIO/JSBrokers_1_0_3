@@ -459,18 +459,31 @@
         <div class="cs-panel">
             <h3 style="font-size:1.05rem;font-weight:700;color:#212529;margin:0 0 .25rem;">Importer un classeur</h3>
             <p class="ech-note" style="margin:0 0 1rem;">
-                Le fichier déposé doit être un classeur produit par cette rubrique. Il est d'abord
-                contrôlé à blanc — gratuitement, sans rien écrire — et vous ne confirmez qu'ensuite,
-                au vu du rapport.
+                Le fichier déposé doit être un classeur produit par cette rubrique — <strong>votre
+                export s'y redépose tel quel</strong>, corrigé ou complété. Il est d'abord contrôlé
+                à blanc — gratuitement, sans rien écrire — et vous ne confirmez qu'ensuite, au vu du
+                rapport.
+            </p>
+            {# ⚠ CE QUI SE RELIT, ET CE QUI NE SE RELIT PAS. Le fichier porte des colonnes de
+               saisie et des colonnes de RÉSULTAT ; rien ne les distingue à l'œil dans un
+               tableur. Sans cette phrase, un courtier corrige « Prime · Solde », redépose, et
+               ne comprend jamais pourquoi l'écran affiche autre chose. Le dictionnaire du
+               fichier le répète colonne par colonne. #}
+            <p class="ech-note" style="margin:0 0 1rem;">
+                Dans la feuille <strong>DONNEES</strong>, une ligne vaut une échéance de prime et
+                porte toute son affaire — client, risque, assureur, police, composition de la prime.
+                Seules les colonnes marquées « Repris à l'import » dans le dictionnaire sont relues ;
+                les autres sont des résultats que l'application recalcule.
             </p>
             {# ⚠ ÉCARTER DES FEUILLES SANS LE DIRE SERAIT UNE TRAHISON. Le périmètre arrive
                restreint à la production ; le volet qui le montre est replié. Sans cette
                phrase, un classeur complet serait repris à moitié et l'utilisateur ne
                l'apprendrait qu'au rapport — ou jamais. #}
             <p class="ech-note" style="margin:0 0 1rem;">
-                Par défaut, seules vos <strong>données de production</strong> seront reprises :
-                les autres feuilles du fichier seront ignorées. Pour en reprendre davantage,
-                ouvrez « Choisir ce qu'on reprend du fichier », en bas de ce panneau.
+                Si vous déposez un <strong>classeur normalisé</strong> — une feuille par donnée,
+                pour les notes, bordereaux ou catalogues — seules vos <strong>données de production</strong> seront reprises par défaut, les autres feuilles étant ignorées.
+                Pour en reprendre davantage, ouvrez « Choisir ce qu'on reprend du fichier », en bas
+                de ce panneau. Ce réglage ne concerne pas la feuille DONNEES, qui a une maille fixe.
             </p>
 
             {# ⚠ LE GABARIT PRÉCÈDE LE DÉPÔT, ET HORS DE TOUT VOLET. On le remplit pour
@@ -529,7 +542,11 @@
               l'enchaînement.
             #}
             {% if parModule is not empty %}
+                {# ⚠ `only` N'EXPOSE QUE CE QU'ON LUI DONNE : le volet porte désormais le
+                   lien du gabarit normalisé, qui a besoin de l'identifiant du cabinet.
+                   L'oublier laisserait passer le lint et casserait à l'affichage. #}
                 {% include 'components/echange/_perimetre.html.twig' with {
+                    idEntreprise: idEntreprise,
                     parModule: parModule,
                     ecrivables: ecrivables,
                     ressources: ressources,

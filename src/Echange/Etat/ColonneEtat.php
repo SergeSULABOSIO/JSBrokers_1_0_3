@@ -137,6 +137,27 @@ final class ColonneEtat
         };
     }
 
+    /**
+     * CE QUE LE LECTEUR DOIT SAVOIR AVANT DE TOUCHER À CETTE COLONNE.
+     *
+     * ⚠ SANS CETTE PHRASE, LE FICHIER MENT PAR OMISSION. Soixante-sept colonnes se
+     * présentent de la même façon ; rien ne distingue à l'œil celle qu'on peut corriger
+     * de celle que l'application recalcule. Un courtier qui rectifie « Prime · Solde »
+     * puis redépose son fichier croira l'avoir corrigée, et ne comprendra jamais pourquoi
+     * l'écran affiche autre chose.
+     *
+     * Le format normalisé porte la même notice, pour la même raison
+     * (voir `ColonneDEchange::noticeDictionnaire()`).
+     */
+    public function notice(): string
+    {
+        if ($this->lectureSeule()) {
+            return 'Calculé par l\'application : exporté pour information, IGNORÉ à l\'import.';
+        }
+
+        return 'Repris à l\'import : corrigez cette colonne, et le dépôt du fichier la réécrira.';
+    }
+
     /** Les montants et les nombres s'alignent à droite, et eux seuls. */
     public function aligneeADroite(): bool
     {

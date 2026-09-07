@@ -34,6 +34,18 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
  */
 final class EcrivainEtat
 {
+    /**
+     * La clé, en colonne A du dictionnaire, sous laquelle vit l'identifiant du cabinet.
+     *
+     * ⚠ ÉCRITE ET RELUE PAR LA MÊME CONSTANTE. La retoucher d'un côté seulement rendrait
+     * tous les fichiers déjà distribués illisibles au dépôt, sans message utile.
+     */
+    public const CLE_CABINET = 'CABINET';
+
+    /** Le bandeau de tête, selon que le classeur porte des données ou attend les vôtres. */
+    public const CLE_REIMPORTABLE = 'CE FICHIER SE REDÉPOSE';
+    public const CLE_GABARIT = 'GABARIT VIERGE';
+
     /** Première ligne de données : l'en-tête n'en occupe qu'une. */
     private const LIGNE_DONNEES = 2;
 
@@ -42,7 +54,14 @@ final class EcrivainEtat
      * @param array<string, ColonneEtat>              $colonnes
      * @param iterable<int, array<string, mixed>>     $lignes
      */
-    public function ecrire(Manifeste $manifeste, array $colonnes, iterable $lignes, string $validite = ValiditeDesTranches::TOUTES, string $exercice = ExerciceDesTranches::TOUS): Spreadsheet
+    public function ecrire(
+        Manifeste $manifeste,
+        array $colonnes,
+        iterable $lignes,
+        string $validite = ValiditeDesTranches::TOUTES,
+        string $exercice = ExerciceDesTranches::TOUS,
+        bool $gabarit = false,
+    ): Spreadsheet
     {
         $classeur = new Spreadsheet();
         $classeur->removeSheetByIndex(0);
@@ -52,9 +71,15 @@ final class EcrivainEtat
         // CONSTRUIT — son empreinte alimente l'occurrence facturée — mais il n'est plus
         // écrit. Ce qu'il portait d'utile au lecteur (« ce fichier ne se redépose pas »)
         // ouvre désormais le dictionnaire.
-        $this->ecrireDictionnaire($classeur, $colonnes, $validite, $exercice);
-        $this->ecrireDonnees($classeur, $colonnes, $lignes);
-        $this->ecrireSynthese($classeur, $colonnes, $lignes);
+        $this->ecrireDictionnaire($classeur, $manifeste, $colonnes, $validite, $exercice, $gabarit);
+        $this->ecrireDonnees($classeur, $colonnes, $lignes, $gabarit);
+
+        // ⚠ PAS DE SYNTHÈSE SUR UN GABARIT. Ses sommes conditionnelles pointeraient une
+        // plage sans données : la feuille annoncerait un portefeuille à zéro, ce qui se
+        // lit comme une panne et non comme un fichier à remplir.
+        if (!$gabarit) {
+            $this->ecrireSynthese($classeur, $colonnes, $lignes);
+        }
 
         $classeur->setActiveSheetIndex(0);
 
@@ -79,7 +104,14 @@ final class EcrivainEtat
      *
      * @param array<string, ColonneEtat> $colonnes
      */
-    private function ecrireDictionnaire(Spreadsheet $classeur, array $colonnes, string $validite, string $exercice): void
+    private function ecrireDictionnaire(
+        Spreadsheet $classeur,
+        Manifeste $manifeste,
+        array $colonnes,
+        string $validite,
+        string $exercice,
+        bool $gabarit,
+    ): void
     {
         $feuille = $classeur->createSheet();
         $feuille->setTitle(EcrivainJsbx::FEUILLE_DICTIONNAIRE);
@@ -92,12 +124,24 @@ final class EcrivainEtat
         // retrouve ce fichier dans six mois, sans l'écran sous les yeux. Le fond
         // d'avertissement le dit avant même qu'on ait lu la phrase — c'est de la
         // PRÉVENTION DE L'ERREUR, pas une décoration.
-        $feuille->fromArray([
-            'LECTURE SEULE',
+        // ⚠ ET CE BANDEAU DISAIT LE CONTRAIRE. Il annonçait « cet état ne peut pas être
+        // réimporté » — vrai tant que le fichier ne portait que des résultats, faux depuis
+        // qu'il porte aussi ce qui les produit. Un fichier qui se trompe sur sa propre
+        // nature est pire qu'un fichier muet : on le range, et on ne le ressort jamais.
+        $feuille->fromArray($gabarit ? [
+            self::CLE_GABARIT,
             'Nature du fichier',
-            'Cet état ne peut pas être réimporté : ses colonnes sont des RÉSULTATS '
-            . '(soldes, encaissements, exigibilités), pas des champs. Pour préparer des '
-            . 'données à importer, utilisez le gabarit vierge de l\'onglet Importer.',
+            'Ce classeur est VIDE : remplissez une ligne par échéance de prime, puis déposez-le '
+            . 'dans l\'onglet Importer. Il a exactement la forme d\'un export, si bien qu\'un '
+            . 'export rempli se redépose de la même façon. Seules les colonnes marquées '
+            . '« Repris à l\'import » sont relues ; les autres sont calculées par l\'application.',
+        ] : [
+            self::CLE_REIMPORTABLE,
+            'Nature du fichier',
+            'Ce fichier SE REDÉPOSE dans l\'onglet Importer : corrigez-le, ajoutez des lignes, '
+            . 'et il sera repris. Seules les colonnes marquées « Repris à l\'import » sont '
+            . 'relues — les autres sont des RÉSULTATS (soldes, encaissements, exigibilités) que '
+            . 'l\'application recalcule, et les modifier n\'a aucun effet.',
         ], null, 'A2');
         $this->bandeau($feuille, 2, Charte::AVERTISSEMENT_FOND, Charte::AVERTISSEMENT_TEXTE);
 
@@ -105,6 +149,26 @@ final class EcrivainEtat
         // pour trait à un état de polices : mêmes colonnes, mêmes montants d'allure. Le
         // confondre avec le portefeuille réel, c'est annoncer un chiffre d'affaires qu'on
         // n'a pas. Le fichier doit donc le dire lui-même, et en tête.
+        // ⚠ L'IDENTITÉ DU CABINET VIT ICI, ET NON DANS UN MANIFESTE. La feuille
+        // `_MANIFESTE` a été retirée de l'état : elle ne disait rien au lecteur. Mais
+        // l'importation, elle, doit savoir d'où vient le fichier — importer les données
+        // d'un cabinet dans un autre est parfois voulu, jamais anodin. La clé est donc
+        // portée par le dictionnaire, à un endroit stable, et lue par
+        // `LecteurDeLEtat::cabinet()`.
+        $feuille->fromArray([
+            self::CLE_CABINET,
+            $manifeste->uidCabinet,
+            sprintf(
+                'Fichier produit par le cabinet « %s » le %s (version %s). Ne modifiez pas '
+                . 'cette ligne : elle permet de vérifier, au dépôt, que le fichier revient '
+                . 'bien dans le cabinet dont il est issu.',
+                $manifeste->nomCabinet,
+                $manifeste->genereLe->format('d/m/Y à H:i'),
+                $manifeste->versionSchema,
+            ),
+        ], null, 'A5');
+        $this->bandeau($feuille, 5, Charte::GRIS_MUET, Charte::TEXTE_CORPS);
+
         $feuille->fromArray([
             'PÉRIMÈTRE',
             ValiditeDesTranches::libelle($validite),
@@ -121,7 +185,7 @@ final class EcrivainEtat
         ], null, 'A4');
         $this->bandeau($feuille, 4, Charte::COBALT_TRES_CLAIR, Charte::TEXTE);
 
-        $numero = 6;
+        $numero = 7;
         $familleCourante = null;
 
         foreach ($colonnes as $colonne) {
@@ -133,8 +197,16 @@ final class EcrivainEtat
                 ++$numero;
             }
 
+            // ⚠ LA NOTICE D'ABORD, L'EXPLICATION ENSUITE. Rien ne distingue à l'œil une
+            // colonne qu'on peut corriger d'une colonne que l'application recalcule : un
+            // courtier qui rectifie « Prime · Solde » puis redépose son fichier croirait
+            // l'avoir corrigée, et ne comprendrait jamais pourquoi l'écran dit autre chose.
             $feuille->fromArray(
-                [$colonne->libelle, $colonne->natureLisible(), $colonne->explication],
+                [
+                    $colonne->libelle,
+                    $colonne->natureLisible(),
+                    $colonne->notice() . ' ' . $colonne->explication,
+                ],
                 null,
                 'A' . $numero,
             );
@@ -219,7 +291,7 @@ final class EcrivainEtat
      * @param array<string, ColonneEtat>          $colonnes
      * @param iterable<int, array<string, mixed>> $lignes
      */
-    private function ecrireDonnees(Spreadsheet $classeur, array $colonnes, iterable $lignes): void
+    private function ecrireDonnees(Spreadsheet $classeur, array $colonnes, iterable $lignes, bool $gabarit = false): void
     {
         $feuille = $classeur->createSheet();
         $feuille->setTitle(EtatDuPortefeuille::FEUILLE);
@@ -280,7 +352,12 @@ final class EcrivainEtat
         // au milieu des données au premier tri — un total posé entre deux tranches.
         $feuille->setAutoFilter('A1:' . $derniereLettre . $derniereDonnee);
 
-        $this->ecrireTotaux($feuille, $colonnes, $derniereDonnee, $derniereLettre);
+        // ⚠ PAS DE TOTAUX SUR UN GABARIT. `SOUS.TOTAL` sur une plage sans données rend
+        // zéro : le pied de feuille annoncerait un portefeuille vide, et l'utilisateur
+        // effacerait cette ligne — cassant les plages du jour où il aura saisi.
+        if (!$gabarit) {
+            $this->ecrireTotaux($feuille, $colonnes, $derniereDonnee, $derniereLettre);
+        }
         $this->ajusterColonnes($feuille, \count($codes));
 
         // Le volet fige l'en-tête ET la colonne d'identifiant : sans elle, on perd la
@@ -288,7 +365,9 @@ final class EcrivainEtat
         // colonnes à parcourir.
         $feuille->freezePane('B2');
 
-        $this->alternerLesLignes($feuille, $derniereLettre, $derniereDonnee);
+        if (!$gabarit) {
+            $this->alternerLesLignes($feuille, $derniereLettre, $derniereDonnee);
+        }
         $this->signalerLesNegatifs($feuille, $colonnes, $derniereDonnee);
         $this->preparerImpression($feuille, 'A1:' . $derniereLettre . ($derniereDonnee + 1), 1);
     }

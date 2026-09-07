@@ -12,6 +12,9 @@ use App\Echange\Classeur\EcrivainJsbx;
 use App\Echange\Classeur\LecteurJsbx;
 use App\Echange\Classeur\LigneLue;
 use App\Echange\Classeur\Manifeste;
+use App\Echange\Etat\EtatDuPortefeuille;
+use App\Echange\Reprise\LecteurDeLEtat;
+use App\Echange\Reprise\ReconstitueurDeTranche;
 use App\Entity\EchangeImportRun;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
@@ -55,6 +58,11 @@ final class ImportateurJsbx
         private readonly CompteurDOccurrences $compteur,
         private readonly EntityManagerInterface $em,
         private readonly ManagerRegistry $registre,
+        // La voie « état du portefeuille » : une feuille à la maille tranche, dont chaque
+        // ligne se reconstitue en une chaîne d'écritures.
+        private readonly LecteurDeLEtat $lecteurDeLEtat,
+        private readonly ReconstitueurDeTranche $reconstitueur,
+        private readonly EtatDuPortefeuille $etat,
     ) {
     }
 
@@ -100,6 +108,28 @@ final class ImportateurJsbx
             $rapport->ajouter(Anomalie::erreur(Anomalie::FICHIER_ILLISIBLE, $e->getMessage()));
 
             return $this->cloturer($run, $rapport, EchangeImportRun::STATUT_ECHEC);
+        }
+
+        // ⚠ UN ORCHESTRATEUR, DEUX TRADUCTEURS. Le classeur de l'état porte une feuille
+        // `DONNEES` à la maille tranche ; le classeur normalisé, une feuille par entité.
+        // Les deux produisent les MÊMES opérations et passent par le MÊME circuit
+        // d'écriture : seule la lecture diffère. Écrire un second importateur aurait
+        // dédoublé le rapport, le décompte d'occurrences et les garde-fous de suppression.
+        if (LecteurDeLEtat::estUnClasseurDEtat($classeur)) {
+            if (!$this->passeStructurelleDeLEtat($classeur, $entreprise, $rapport, $confirmeAutreCabinet)) {
+                return $this->cloturer($run, $rapport, EchangeImportRun::STATUT_ECHEC);
+            }
+
+            $operations = $this->passeAblancDeLEtat($classeur, $entreprise, $invite, $rapport, $progression);
+            $run->setRapport($rapport->toArray() + ['operations' => count($operations)]);
+
+            return $this->cloturer(
+                $run,
+                $rapport,
+                $rapport->confirmable()
+                    ? EchangeImportRun::STATUT_EN_ATTENTE_CONFIRMATION
+                    : EchangeImportRun::STATUT_ECHEC,
+            );
         }
 
         $ecrivables = $this->canevas->ressourcesEcrivables($invite);
@@ -160,6 +190,194 @@ final class ImportateurJsbx
         $inventaire['presentes'] = $retenues;
 
         return $inventaire;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // La voie « état du portefeuille » : une ligne = une tranche et son ascendance
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * PASSE 1 DE L'ÉTAT : ce fichier vient-il bien de ce cabinet ?
+     *
+     * ⚠ IL N'Y A PAS DE `_MANIFESTE` À CONTRÔLER ICI. La feuille a été retirée de l'état
+     * parce qu'elle ne disait rien au lecteur ; son identité utile — de quel cabinet vient
+     * ce fichier — a rejoint le dictionnaire. Le contrôle, lui, reste le même et pour la
+     * même raison : les identifiants d'un autre cabinet ne désignent rien ici, et toutes
+     * les lignes seraient créées en double.
+     *
+     * ⚠ UN FICHIER SANS IDENTITÉ N'EST PAS REFUSÉ. Un gabarit rempli hors ligne, un
+     * classeur recomposé à la main : ils n'ont pas d'identifiant de cabinet, et c'est
+     * légitime. On ne peut alors rien vérifier, donc on ne prétend rien.
+     */
+    private function passeStructurelleDeLEtat(
+        Spreadsheet $classeur,
+        Entreprise $entreprise,
+        RapportDeControle $rapport,
+        bool $confirmeAutreCabinet,
+    ): bool {
+        $cabinet = $this->lecteurDeLEtat->cabinet($classeur);
+
+        if ($cabinet !== '' && $cabinet !== (string) $entreprise->getId()) {
+            if (!$confirmeAutreCabinet) {
+                $rapport->ajouter(Anomalie::erreur(
+                    Anomalie::AUTRE_CABINET,
+                    'Ce fichier a été produit par un AUTRE cabinet. Les identifiants qu\'il '
+                    . 'contient ne désignent rien ici, et chaque ligne serait créée en double. '
+                    . 'Confirmez explicitement si c\'est bien une reprise de données voulue.',
+                    EcrivainJsbx::FEUILLE_DICTIONNAIRE,
+                ));
+
+                return false;
+            }
+
+            $rapport->ajouter(Anomalie::avertissement(
+                Anomalie::AUTRE_CABINET,
+                'Reprise assumée depuis un autre cabinet : les identifiants du fichier ne '
+                . 'désignant rien ici, les lignes sont rattachées par leurs libellés.',
+                EcrivainJsbx::FEUILLE_DICTIONNAIRE,
+            ));
+        }
+
+        return true;
+    }
+
+    /**
+     * PASSE 2 DE L'ÉTAT : chaque ligne devient une chaîne d'écritures, soumise au dry-run.
+     *
+     * ⚠ UNE LIGNE PRODUIT PLUSIEURS OPÉRATIONS, ET C'EST TOUTE LA DIFFÉRENCE avec le
+     * classeur normalisé, où une ligne vaut une écriture. Elles sont soumises DANS L'ORDRE
+     * au circuit commun, avec le même registre de repères : la proposition doit être jugée
+     * après l'opportunité qu'elle désigne, sans quoi son renvoi « @cot-… » ne résoudrait
+     * rien, et l'erreur porterait sur le lien plutôt que sur sa cause.
+     *
+     * ⚠ ET UNE LIGNE EST ATOMIQUE. Si l'une de ses opérations est refusée, on écarte TOUTE
+     * la ligne : écrire le client et la proposition en abandonnant l'échéance laisserait un
+     * dossier à moitié repris, que personne n'a décrit ni voulu — et que le rapport
+     * annoncerait comme un succès partiel.
+     *
+     * @return array<int, array{ressource: string, operation: MutationOperation, ligne: LigneLue}>
+     */
+    private function passeAblancDeLEtat(
+        Spreadsheet $classeur,
+        Entreprise $entreprise,
+        Invite $invite,
+        RapportDeControle $rapport,
+        ?Progression $progression = null,
+    ): array {
+        $progression ??= Progression::muette();
+        $scope = new AiScope($entreprise, $invite, null);
+        $refs = MutationReferences::dryRun();
+
+        $this->reconstitueur->reinitialiser();
+
+        $colonnes = $this->etat->colonnes($entreprise);
+        $lignes = $this->lecteurDeLEtat->lignes($classeur, $colonnes);
+
+        $rapport->compterLignes(count($lignes));
+        $progression->totaliser(count($lignes));
+        $rapport->declarerRessource(LecteurDeLEtat::RESSOURCE, 'Échéances de prime');
+
+        if (count($lignes) > TokenPricing::ECHANGE_PLAFOND_LIGNES) {
+            $rapport->ajouter(Anomalie::erreur(
+                Anomalie::PLAFOND_DEPASSE,
+                sprintf(
+                    'Ce fichier contient %d lignes, au-delà du plafond de %d par import. '
+                    . 'Découpez-le en plusieurs fichiers : chaque ligne est écrite par le même '
+                    . 'circuit qu\'une saisie à l\'écran, ce qui garantit les mêmes contrôles '
+                    . 'mais demande du temps.',
+                    count($lignes),
+                    TokenPricing::ECHANGE_PLAFOND_LIGNES,
+                ),
+            ));
+
+            return [];
+        }
+
+        if ($lignes === []) {
+            $rapport->ajouter(Anomalie::erreur(
+                Anomalie::MANIFESTE_ABSENT,
+                sprintf(
+                    'La feuille « %s » ne contient aucune ligne à reprendre. Si vous partez '
+                    . 'd\'un gabarit, remplissez-y une ligne par échéance de prime avant de le '
+                    . 'déposer.',
+                    EtatDuPortefeuille::FEUILLE,
+                ),
+                EtatDuPortefeuille::FEUILLE,
+            ));
+
+            return [];
+        }
+
+        $progression->etape('Échéances de prime');
+        $etapes = [];
+
+        foreach ($lignes as $ligne) {
+            $anomalies = [];
+            $operations = $this->reconstitueur->pour($ligne, $colonnes, $entreprise, $anomalies);
+            $progression->avancer();
+
+            // ⚠ SEULE UNE ERREUR ÉCARTE LA LIGNE. Un avertissement dit quelque chose
+            // d'utile — « plusieurs types portent ce nom, le premier a été retenu » — sans
+            // empêcher la reprise. Les confondre aurait bloqué tout un portefeuille pour
+            // un catalogue en double, alors que le choix était sans conséquence.
+            $refuse = false;
+            foreach ($anomalies as $anomalie) {
+                if ($anomalie->gravite === Anomalie::ERREUR) {
+                    $refuse = true;
+                    break;
+                }
+            }
+
+            $candidates = [];
+
+            foreach ($operations as $operation) {
+                if (!$operation->isDelete() && !$operation->ecritQuelqueChose()) {
+                    continue;
+                }
+
+                $diagnostic = $this->mutation->analyserOperation($operation, $scope, $refs);
+                if (!$diagnostic['ok']) {
+                    $this->signalerDiagnostic(
+                        $diagnostic,
+                        $ligne,
+                        $operation->entityShortName,
+                        LecteurDeLEtat::RESSOURCE,
+                        $rapport,
+                    );
+                    $refuse = true;
+                    break;
+                }
+
+                // Le repère n'est déclaré qu'une fois l'opération jugée VALIDE : y renvoyer
+                // alors qu'elle ne sera jamais écrite produirait une seconde erreur, en
+                // cascade, qui masquerait la première — la seule qu'il faille corriger.
+                if ($operation->ref !== null) {
+                    $refs->declarer($operation->ref);
+                }
+
+                $candidates[] = [
+                    'ressource' => $operation->entityShortName,
+                    'operation' => $operation,
+                    'ligne' => $ligne,
+                ];
+            }
+
+            foreach ($anomalies as $anomalie) {
+                $rapport->ajouter($anomalie);
+            }
+
+            if ($refuse) {
+                $rapport->compterErreur(LecteurDeLEtat::RESSOURCE);
+                continue;
+            }
+
+            foreach ($candidates as $candidate) {
+                $etapes[] = $candidate;
+                $rapport->compter(LecteurDeLEtat::RESSOURCE, $candidate['operation']->op);
+            }
+        }
+
+        return $etapes;
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -427,7 +645,7 @@ final class ImportateurJsbx
         // import obéisse exactement aux mêmes règles qu'une saisie.
         $diagnostic = $this->mutation->analyserOperation($operation, $scope, $refs);
         if (!$diagnostic['ok']) {
-            $this->signalerDiagnostic($diagnostic, $ligne, $ressource, $rapport);
+            $this->signalerDiagnostic($diagnostic, $ligne, $ressource->libelle, $ressource->code, $rapport);
 
             return null;
         }
@@ -460,7 +678,7 @@ final class ImportateurJsbx
 
         $diagnostic = $this->mutation->analyserOperation($operation, $scope, $refs);
         if (!$diagnostic['ok']) {
-            $this->signalerDiagnostic($diagnostic, $ligne, $ressource, $rapport);
+            $this->signalerDiagnostic($diagnostic, $ligne, $ressource->libelle, $ressource->code, $rapport);
 
             return null;
         }
@@ -545,14 +763,22 @@ final class ImportateurJsbx
     }
 
     /** @param array<string, mixed> $diagnostic */
-    private function signalerDiagnostic(array $diagnostic, LigneLue $ligne, RessourceDEchange $ressource, RapportDeControle $rapport): void
+    /**
+     * ⚠ LE LIBELLÉ ET LE CODE, ET NON UNE `RessourceDEchange`.
+     *
+     * Cette notion appartient au seul classeur normalisé : la voie « état du
+     * portefeuille » n'en a pas, ses lignes produisant des écritures sur cinq entités
+     * différentes. Passer une ressource factice aurait fait dire au rapport « Tranche »
+     * pour une erreur portant sur le client.
+     */
+    private function signalerDiagnostic(array $diagnostic, LigneLue $ligne, string $libelle, string $code, RapportDeControle $rapport): void
     {
         $message = match ($diagnostic['statut']) {
-            'hors_perimetre' => sprintf('« %s » est hors de votre périmètre d\'écriture.', $ressource->libelle),
+            'hors_perimetre' => sprintf('« %s » est hors de votre périmètre d\'écriture.', $libelle),
             'introuvable'    => sprintf(
                 'Aucune ligne de « %s » ne porte cet identifiant dans votre cabinet. '
                 . 'Elle a peut-être été supprimée depuis votre export.',
-                $ressource->libelle,
+                $libelle,
             ),
             'bloque'         => implode(' ', $diagnostic['impacts'] ?: ['Opération impossible.']),
             default          => $this->messageDesManquants($diagnostic['manquants'] ?? []),
@@ -569,7 +795,7 @@ final class ImportateurJsbx
             $ligne->feuille,
             $ligne->numero,
         ));
-        $rapport->compterErreur($ressource->code);
+        $rapport->compterErreur($code);
     }
 
     /** @param array<string, string[]> $manquants */
@@ -648,21 +874,39 @@ final class ImportateurJsbx
         $this->resolveur->reinitialiser();
 
         $classeur = $this->lecteur->ouvrir($chemin);
-        $inventaire = $this->lecteur->inventaireDesFeuilles($classeur, $this->canevas->toutes());
-        // ⚠ LE PÉRIMÈTRE CHOISI AU DÉPÔT EST RÉAPPLIQUÉ. Le recontrôle repart du fichier
-        // entier : sans cette ligne, confirmer un import volontairement restreint à la
-        // production réécrirait aussi les taxes et les monnaies que l'utilisateur avait
-        // écartées — et rien, ni à l'écran ni au rapport, ne le lui aurait dit.
-        $inventaire = $this->restreindre($inventaire, $run->getDonnees());
-        $ecrivables = $this->canevas->ressourcesEcrivables($invite);
 
-        // L'origine étrangère du fichier a déjà été assumée au dépôt : on ne redemande
-        // pas la même confirmation, elle a été donnée une fois.
-        if (!$this->passeStructurelle($classeur, $entreprise, $inventaire, $rapport, true)) {
-            return $this->echouer($run, $rapport);
+        // ⚠ LE RECONTRÔLE EMPRUNTE LA MÊME VOIE QUE LE DÉPÔT. Le lire autrement ici, ce
+        // serait exécuter autre chose que ce que l'utilisateur a vu dans son rapport.
+        //
+        // ⚠ ET LA VOIE SE REJOINT AUSSITÔT. Les deux traducteurs produisent les mêmes
+        // étapes ; tout ce qui suit — garde-fou des suppressions, unité de travail propre,
+        // transaction, journal, décompte d'occurrences — reste COMMUN. Un second chemin
+        // d'écriture serait un second endroit où oublier une de ces protections.
+        if (LecteurDeLEtat::estUnClasseurDEtat($classeur)) {
+            // L'origine étrangère a déjà été assumée au dépôt : on ne la redemande pas.
+            if (!$this->passeStructurelleDeLEtat($classeur, $entreprise, $rapport, true)) {
+                return $this->echouer($run, $rapport);
+            }
+
+            $etapes = $this->passeAblancDeLEtat($classeur, $entreprise, $invite, $rapport, $progression);
+        } else {
+            $inventaire = $this->lecteur->inventaireDesFeuilles($classeur, $this->canevas->toutes());
+            // ⚠ LE PÉRIMÈTRE CHOISI AU DÉPÔT EST RÉAPPLIQUÉ. Le recontrôle repart du
+            // fichier entier : sans cette ligne, confirmer un import volontairement
+            // restreint à la production réécrirait aussi les taxes et les monnaies que
+            // l'utilisateur avait écartées — et rien, ni à l'écran ni au rapport, ne le lui
+            // aurait dit.
+            $inventaire = $this->restreindre($inventaire, $run->getDonnees());
+            $ecrivables = $this->canevas->ressourcesEcrivables($invite);
+
+            // L'origine étrangère du fichier a déjà été assumée au dépôt : on ne redemande
+            // pas la même confirmation, elle a été donnée une fois.
+            if (!$this->passeStructurelle($classeur, $entreprise, $inventaire, $rapport, true)) {
+                return $this->echouer($run, $rapport);
+            }
+
+            $etapes = $this->passeAblanc($classeur, $inventaire['presentes'], $ecrivables, $entreprise, $invite, $rapport, $progression);
         }
-
-        $etapes = $this->passeAblanc($classeur, $inventaire['presentes'], $ecrivables, $entreprise, $invite, $rapport, $progression);
         if (!$rapport->confirmable()) {
             return $this->echouer($run, $rapport);
         }

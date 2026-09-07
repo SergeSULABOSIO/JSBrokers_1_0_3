@@ -1,5 +1,11 @@
 {#
-  LE GABARIT VIERGE — un LIVRABLE, pas un réglage.
+  LE CLASSEUR DE REPRISE VIERGE — un LIVRABLE, pas un réglage.
+
+  ⚠ C'EST LE FICHIER D'EXPORT, SANS SES LIGNES. Il portait auparavant un AUTRE format —
+  une feuille par entité, quand l'export rend une ligne par échéance : on téléchargeait
+  donc un fichier qui ne ressemblait en rien à celui qu'on obtenait en exportant, et
+  l'export, lui, ne se redéposait pas. Un même geste, deux fichiers sans rien de commun.
+
 
   Il vivait avec le choix des données, dans `_perimetre.html.twig`. À l'export cela se
   voyait ; à l'import, où ce périmètre est un volet replié, le bouton disparaissait avec
@@ -19,23 +25,33 @@
     idEntreprise — pour l'adresse.
     contexte     — 'exporter' ou 'importer' : seule la phrase d'accompagnement en dépend.
 #}
+{# ⚠ CE LIEN NE SUIT PLUS AUCUNE CASE, ET C'EST UNE CORRECTION.
+
+   Il portait `data-echange-target="lienGabarit"`, si bien que le contrôleur y écrivait
+   « ?donnees=Client,Cotation » d'après les familles retenues, et annonçait « gabarit des
+   3 données retenues ». Or le classeur de reprise a une MAILLE FIXE — la tranche : ce
+   paramètre y est sans objet, il aurait été ignoré, et le libellé aurait décrit un
+   fichier qu'on ne recevait pas.
+
+   Le pilotage par les cases a donc rejoint le lien auquel il s'applique : celui du
+   classeur normalisé, dans le volet des familles. #}
 <p class="ech-gabarit">
     <a class="btn btn-sm btn-outline-secondary"
        href="{{ path('admin.echange.gabarit', {idEntreprise: idEntreprise}) }}"
-       data-echange-target="lienGabarit"
-       title="Un classeur vide, aux bons en-têtes, à remplir hors ligne puis à déposer dans l'onglet Importer.">
+       title="Le fichier d'export, mais vide : une ligne par échéance de prime à remplir hors ligne, puis à déposer dans l'onglet Importer.">
         <twig:UX:Icon name="{{ resolve_icon_name('action:download') }}" style="width:16px;height:16px;" />
-        <span data-echange-target="libelleGabarit">Télécharger un gabarit vierge</span>
+        <span>Télécharger un classeur de reprise vierge</span>
     </a>
     {# ⚠ Aucune indication de direction dans ce texte : le bloc ne se trouve plus toujours
        sous les cases, et un « ci-dessus » faux est pire que pas d'indication du tout. #}
     <span class="ech-note" style="margin:0;">
         {% if contexte == 'importer' %}
-            Première reprise ? Téléchargez ce classeur vide, remplissez-le hors ligne, puis
+            Première reprise ? Ce classeur a <strong>exactement la forme d'un export</strong>,
+            sans les lignes : une par échéance de prime. Remplissez-le hors ligne, puis
             déposez-le ci-dessous. Gratuit : il ne contient aucune donnée du cabinet.
         {% else %}
-            Gratuit : aucune donnée du cabinet — seulement les feuilles et les en-têtes des
-            données retenues.
+            Gratuit : aucune donnée du cabinet — seulement les colonnes retenues et leur
+            dictionnaire. C'est le même fichier que votre export, vide.
         {% endif %}
     </span>
 </p>

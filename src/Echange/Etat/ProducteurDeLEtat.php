@@ -130,6 +130,7 @@ final class ProducteurDeLEtat
         ?string $validite = null,
         string $exercice = ExerciceDesTranches::TOUS,
         ?Progression $progression = null,
+        bool $gabarit = false,
     ): array {
         $progression ??= Progression::muette();
 
@@ -139,13 +140,21 @@ final class ProducteurDeLEtat
         // millisecondes pour un reste crédible.
         $progression->etape('Inventaire des tranches');
         $exercice = ExerciceDesTranches::normaliser($exercice, $this->etat->exercices($entreprise));
-        $total = $this->etat->compterLignes($entreprise, $validite, $exercice);
+
+        // ⚠ UN GABARIT NE LIT RIEN. Il porte les mêmes colonnes, le même dictionnaire et
+        // les mêmes formats — mais aucune ligne du cabinet. C'est ce qui permet de préparer
+        // une reprise hors ligne sans avoir à exporter puis effacer, geste que personne ne
+        // devine et qui casse le fichier une fois sur deux.
+        $total = $gabarit ? 0 : $this->etat->compterLignes($entreprise, $validite, $exercice);
         $progression->totaliser($total);
 
         $colonnes = $this->etat->colonnes($entreprise, $colonnesRetenues);
 
-        $progression->etape('Lecture du portefeuille');
-        $lignes = iterator_to_array($this->etat->lignes($entreprise, $progression, $validite, $exercice), false);
+        $lignes = [];
+        if (!$gabarit) {
+            $progression->etape('Lecture du portefeuille');
+            $lignes = iterator_to_array($this->etat->lignes($entreprise, $progression, $validite, $exercice), false);
+        }
 
         // L'écriture elle-même n'est pas instantanée : on le dit, plutôt que de laisser la
         // barre à 100 % pendant que le fichier se compresse.
@@ -171,6 +180,7 @@ final class ProducteurDeLEtat
                 $lignes,
                 ValiditeDesTranches::normaliser($validite),
                 $exercice,
+                $gabarit,
             ),
             $manifeste,
             $total,

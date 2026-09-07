@@ -43,3 +43,5 @@ services:
     App\Echange\Etat\ValiditeDesTranches: ~
     App\Echange\Etat\InjecteurDeTcd: ~
     App\Echange\Etat\ExerciceDesTranches: ~
+    App\Echange\Reprise\LecteurDeLEtat: ~
+    App\Echange\Reprise\ReconstitueurDeTranche: ~
