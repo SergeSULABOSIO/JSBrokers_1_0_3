@@ -35,11 +35,9 @@ export default class extends Controller {
         'module',
         'compteSelection',
         'rappelRestauration',
-        'lienGabarit',
         'validite',
         'exercice',
         'noteValidite',
-        'libelleGabarit',
         'resumePerimetre',
         'fichier',
         'nomFichier',
@@ -453,7 +451,6 @@ export default class extends Controller {
 
         this.#armer(this.hasBoutonExportTarget ? this.boutonExportTarget : null, retenus.size > 0);
         this.#armerControle();
-        this.#accorderLeGabarit(retenus.size);
         this.#resumerLePerimetre(retenus.size);
         this.#memoriserLePerimetre();
 
@@ -463,52 +460,6 @@ export default class extends Controller {
         if (this.#rappelAffiche && this.#initialise) {
             this.rappelRestaurationTarget.hidden = true;
             this.#rappelAffiche = false;
-        }
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Le gabarit vierge suit le périmètre
-    // ─────────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Réécrit l'adresse du gabarit et dit, dans le libellé, ce qu'on va obtenir.
-     *
-     * ⚠ RIEN N'EST ENVOYÉ QUAND TOUT EST COCHÉ. Le serveur lit alors « tout ce que cet
-     * utilisateur peut lire », ce qui reste juste même si ses droits changent entre
-     * l'affichage de l'écran et le clic — c'est déjà la règle de l'export, et deux
-     * conventions pour la même chose finiraient par diverger.
-     *
-     * ⚠ ET RIEN DE COCHÉ DÉSARME LE LIEN. Un gabarit sans feuille n'est pas un gabarit :
-     * la route répondrait 422, et laisser cliquer pour offrir une erreur est une
-     * promesse qu'on sait ne pas tenir.
-     */
-    #accorderLeGabarit(retenues) {
-        if (!this.hasLienGabaritTarget) return;
-
-        const total = this.hasDonneeTarget ? this.donneeTargets.length : 0;
-        const lien = this.lienGabaritTarget;
-
-        if (retenues === 0) {
-            lien.removeAttribute('href');
-            lien.setAttribute('aria-disabled', 'true');
-        } else {
-            const base = this.urlValue.replace(/\/workspace\/\d+$/, '');
-            const choisies = this.#selection();
-            // ⚠ LE FORMAT EST TOUJOURS PORTÉ. C'est ce lien-ci qui rend le classeur
-            // NORMALISÉ — une feuille par donnée ; le défaut de la route, lui, est le
-            // classeur de reprise à la maille de l'échéance. L'omettre rendrait un fichier
-            // d'une autre forme, et « ?donnees » y serait ignoré sans que rien ne le dise.
-            const parametre = choisies.length < total
-                ? `?format=normalise&donnees=${encodeURIComponent(choisies.join(','))}`
-                : '?format=normalise';
-            lien.href = `${base}/gabarit/${this.idEntrepriseValue}${parametre}`;
-            lien.removeAttribute('aria-disabled');
-        }
-
-        if (this.hasLibelleGabaritTarget) {
-            this.libelleGabaritTarget.textContent = retenues === total
-                ? 'Télécharger un gabarit normalisé'
-                : `Gabarit normalisé des ${retenues} donnée${retenues > 1 ? 's' : ''} retenue${retenues > 1 ? 's' : ''}`;
         }
     }
 

@@ -475,26 +475,19 @@
                 Seules les colonnes marquées « Repris à l'import » dans le dictionnaire sont relues ;
                 les autres sont des résultats que l'application recalcule.
             </p>
-            {# ⚠ ÉCARTER DES FEUILLES SANS LE DIRE SERAIT UNE TRAHISON. Le périmètre arrive
-               restreint à la production ; le volet qui le montre est replié. Sans cette
-               phrase, un classeur complet serait repris à moitié et l'utilisateur ne
-               l'apprendrait qu'au rapport — ou jamais. #}
-            <p class="ech-note" style="margin:0 0 1rem;">
-                Si vous déposez un <strong>classeur normalisé</strong> — une feuille par donnée,
-                pour les notes, bordereaux ou catalogues — seules vos <strong>données de production</strong> seront reprises par défaut, les autres feuilles étant ignorées.
-                Pour en reprendre davantage, ouvrez « Choisir ce qu'on reprend du fichier », en bas
-                de ce panneau. Ce réglage ne concerne pas la feuille DONNEES, qui a une maille fixe.
-            </p>
+            {# ⚠ LE GABARIT PRÉCÈDE LE DÉPÔT. On le remplit pour le déposer : le proposer
+               après, ou l'enfermer dans un réglage replié, c'est le proposer à qui n'en a
+               plus besoin.
 
-            {# ⚠ LE GABARIT PRÉCÈDE LE DÉPÔT, ET HORS DE TOUT VOLET. On le remplit pour
-               le déposer : le proposer après le dépôt, ou l'enfermer dans un réglage
-               replié, c'est le proposer à qui n'en a plus besoin. #}
-            {% if parModule is not empty %}
-                {% include 'components/echange/_gabarit.html.twig' with {
-                    idEntreprise: idEntreprise,
-                    contexte: 'importer'
-                } only %}
-            {% endif %}
+               ⚠ ET IL NE DÉPEND PLUS D'AUCUNE FAMILLE DE DONNÉES. Il était conditionné à
+               la présence du volet de périmètre — hérité du temps où le gabarit était un
+               classeur normalisé, dont le contenu suivait les cases cochées. Le classeur
+               de reprise, lui, a une maille FIXE : le lier à un réglage disparu l'aurait
+               fait disparaître avec. #}
+            {% include 'components/echange/_gabarit.html.twig' with {
+                idEntreprise: idEntreprise,
+                contexte: 'importer'
+            } only %}
 
             {# ── Dépôt ── #}
             <div class="ech-depot">
@@ -541,19 +534,7 @@
               qu'il s'apprête à faire. Sa place dans la page a changé, pas sa place dans
               l'enchaînement.
             #}
-            {% if parModule is not empty %}
-                {# ⚠ `only` N'EXPOSE QUE CE QU'ON LUI DONNE : le volet porte désormais le
-                   lien du gabarit normalisé, qui a besoin de l'identifiant du cabinet.
-                   L'oublier laisserait passer le lint et casserait à l'affichage. #}
-                {% include 'components/echange/_perimetre.html.twig' with {
-                    idEntreprise: idEntreprise,
-                    parModule: parModule,
-                    ecrivables: ecrivables,
-                    ressources: ressources,
-                    defauts: defauts,
-                    contexte: 'importer'
-                } only %}
-            {% endif %}
+
 
             {# ── Contrôle en attente ── #}
             <div data-echange-target="rapport">
