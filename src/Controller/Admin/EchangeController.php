@@ -61,15 +61,6 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class EchangeController extends AbstractController
 {
     /** Nom court de la pseudo-entité gouvernant l'accès et le métrage. */
-    /**
-     * Le format à demander pour obtenir le classeur NORMALISÉ — une feuille par entité.
-     *
-     * Le défaut est le classeur de REPRISE, à la maille tranche : c'est ce que veut
-     * quelqu'un qui reprend son portefeuille. Le normalisé reste accessible pour les
-     * données qui ne vivent pas à cette maille — notes, bordereaux, catalogues.
-     */
-    public const FORMAT_NORMALISE = 'normalise';
-
     private const ENTITY_SHORT_NAME = 'Echange';
 
     private const LIBELLE = 'Importation / Exportation';
@@ -137,12 +128,10 @@ class EchangeController extends AbstractController
             // Les données GROUPÉES PAR MODULE — le même découpage que le menu de
             // l'application (Production, Finances, Sinistre…). Cocher « Production » d'un
             // geste vaut mieux que dix cases à trouver dans une liste de quarante-deux.
-            'parModule'     => $this->grouperParModule($ressources),
             // CE QUI EST COCHÉ D'OFFICE À L'EXPORT : la famille Production, fermée sur
             // ses dépendances. Calculé ici et non en JavaScript, pour que la page
             // arrive déjà juste — un écran qui affiche tout coché puis se décoche sous
             // les yeux fait douter de ce qu'il montre.
-            'defauts'       => $this->canevas->codesParDefaut($ressources),
             // LES COLONNES DE L'ÉTAT, groupées par famille — ce que l'onglet Exporter
             // laisse choisir. À ne pas confondre avec `parModule`, qui range les DONNÉES
             // et ne sert plus qu'au gabarit, dans l'onglet Importer.
@@ -160,7 +149,6 @@ class EchangeController extends AbstractController
             // Ce que l'invité peut réellement ÉCRIRE : afficher le périmètre d'import
             // comme s'il était celui de lecture promettrait une importation qui
             // échouerait ligne à ligne au contrôle.
-            'ecrivables'    => $peutImporter ? array_keys($this->canevas->ressourcesEcrivables($invite)) : [],
             'facturation'   => $this->compteur->etat($entreprise),
             'controleEnCours' => $this->importRuns->enAttentePour($entreprise, $invite),
             'historique'    => $this->occurrences->historiquePour($entreprise, 50),
@@ -557,43 +545,27 @@ class EchangeController extends AbstractController
         // Désormais le gabarit a EXACTEMENT la forme de l'export : mêmes colonnes, même
         // dictionnaire, sans les lignes. Un export rempli se redépose donc de la même
         // façon, et l'utilisateur n'a qu'un format à connaître.
-        if ($request->query->get('format') !== self::FORMAT_NORMALISE) {
-            [$classeur] = $this->etat->produire(
-                $entreprise,
-                $invite,
-                $this->getUser(),
-                $this->codesDemandes((string) $request->query->get('colonnes', '')),
-                (string) $request->query->get('validite', ''),
-                (string) $request->query->get('exercice', ExerciceDesTranches::TOUS),
-                gabarit: true,
-            );
-
-            return $this->classeurEnReponse($classeur, sprintf('joseara_reprise_%s_%s.xlsx', $slug, date('Ymd-Hi')));
-        }
-
-        // ── Le classeur NORMALISÉ reste disponible, et il a sa raison d'être ─────────
-        // La feuille à la maille tranche couvre la chaîne de production. Les notes, les
-        // bordereaux, les dépenses, les catalogues n'y ont pas de place : une colonne qui
-        // ne s'applique jamais à la ligne qu'on lit est une colonne qui trompe. Pour ces
-        // données, le format normalisé demeure le bon outil — et il continue de s'importer.
-        $ressources = $this->exportateur->perimetre($invite, $this->codesDemandes((string) $request->query->get('donnees', '')));
-        if ($ressources === []) {
-            return new Response(
-                'Aucune donnée à votre portée : le gabarit serait vide.',
-                Response::HTTP_UNPROCESSABLE_ENTITY,
-            );
-        }
-
-        [$classeur] = $this->exportateur->produire($entreprise, $invite, $this->getUser(), $ressources, null, gabarit: true);
-
-        $nom = sprintf(
-            'joseara_gabarit_%s%s_%s.xlsx',
-            $slug,
-            $this->suffixeDuPerimetre($ressources, $invite),
-            date('Ymd-Hi'),
+        //
+        // ⚠ ET IL N'Y A PLUS DE SECOND FORMAT À PRODUIRE. Cette route servait aussi le
+        // classeur NORMALISÉ, sous « ?format=normalise ». C'était le dernier endroit d'où
+        // l'ancien format sortait, et il rétablissait à lui seul la confusion que ce
+        // chantier avait éliminée : deux fichiers pour un même geste, dont un que
+        // l'utilisateur ne savait pas nommer.
+        //
+        // Le paramètre est donc SANS EFFET — il n'ouvre pas de porte dérobée. L'IMPORT du
+        // format normalisé, lui, reste entier : un classeur déjà distribué se redépose,
+        // `ImportateurJsbx` gardant ses deux traducteurs.
+        [$classeur] = $this->etat->produire(
+            $entreprise,
+            $invite,
+            $this->getUser(),
+            $this->codesDemandes((string) $request->query->get('colonnes', '')),
+            (string) $request->query->get('validite', ''),
+            (string) $request->query->get('exercice', ExerciceDesTranches::TOUS),
+            gabarit: true,
         );
 
-        return $this->classeurEnReponse($classeur, $nom);
+        return $this->classeurEnReponse($classeur, sprintf('joseara_reprise_%s_%s.xlsx', $slug, date('Ymd-Hi')));
     }
 
     /**
@@ -632,60 +604,6 @@ class EchangeController extends AbstractController
         return $this->classeurEnReponse($classeur, sprintf('%s-anomalies.xlsx', $base));
     }
 
-    /**
-     * Ce que le nom du fichier ajoute pour dire son périmètre.
-     *
-     * Deux gabarits du même cabinet posés côte à côte sur un bureau ne se distinguaient
-     * que par l'heure de génération — et l'un contenait les taxes, l'autre non. Le nom
-     * doit dire lequel, sinon on remplit le mauvais.
-     *
-     * ⚠ AUCUNE LISTE N'EST TENUE ICI. Les familles se lisent sur les ressources
-     * elles-mêmes ; on nomme celles qui sont ENTIÈRES, et « partiel » quand la sélection
-     * coupe au milieu de l'une d'elles — annoncer « production » pour trois données sur
-     * dix serait pire que de ne rien annoncer.
-     *
-     * @param array<string, \App\Echange\Canevas\RessourceDEchange> $retenues
-     */
-    private function suffixeDuPerimetre(array $retenues, Invite $invite): string
-    {
-        $lisibles = $this->canevas->ressourcesLisibles($invite);
-        if (\count($retenues) === \count($lisibles)) {
-            return ''; // tout y est : rien à préciser
-        }
-
-        $totalParModule = [];
-        foreach ($lisibles as $ressource) {
-            $totalParModule[$ressource->module] = ($totalParModule[$ressource->module] ?? 0) + 1;
-        }
-
-        $retenuParModule = [];
-        foreach ($retenues as $ressource) {
-            $retenuParModule[$ressource->module] = ($retenuParModule[$ressource->module] ?? 0) + 1;
-        }
-
-        $entiers = [];
-        foreach ($retenuParModule as $module => $nombre) {
-            if ($nombre === ($totalParModule[$module] ?? -1)) {
-                $entiers[] = mb_strtolower($module);
-            }
-        }
-
-        if ($entiers === []) {
-            return '_partiel';
-        }
-
-        sort($entiers);
-
-        // ⚠ LE CAS COURANT EST MIXTE, et le nom doit le dire sans mentir. Le périmètre
-        // proposé d'office est « la production ET CE QU'ELLE APPELLE » : une piste, une
-        // pièce de sinistre, tirées d'autres familles qui restent donc incomplètes. Les
-        // taire donnerait « production » pour un fichier qui contient davantage ; tout
-        // rabattre sur « partiel » perdrait la seule information utile du nom.
-        $incomplet = \count($entiers) !== \count($retenuParModule);
-
-        return '_' . implode('-', $entiers) . ($incomplet ? '-et-liens' : '');
-    }
-
     /** Téléchargement d'un classeur produit à la volée, sur le patron des autres exports. */
     private function classeurEnReponse(\PhpOffice\PhpSpreadsheet\Spreadsheet $classeur, string $nom): Response
     {
@@ -713,30 +631,6 @@ class EchangeController extends AbstractController
         foreach ($this->catalogueEtat->colonnes($entreprise) as $code => $colonne) {
             $groupes[$colonne->groupe()][$code] = $colonne;
         }
-
-        return $groupes;
-    }
-
-    /**
-     * Range les données par module, en conservant l'ordre topologique à l'intérieur de
-     * chaque groupe.
-     *
-     * Le module vient de la carte des droits, jamais d'une liste tenue ici : c'est ce qui
-     * garantit qu'un groupe de l'écran contient exactement ce que son nom annonce.
-     *
-     * @param array<string, \App\Echange\Canevas\RessourceDEchange> $ressources
-     *
-     * @return array<string, array<string, \App\Echange\Canevas\RessourceDEchange>>
-     */
-    private function grouperParModule(array $ressources): array
-    {
-        $groupes = [];
-        foreach ($ressources as $code => $ressource) {
-            $groupes[$ressource->module][$code] = $ressource;
-        }
-
-        // Ordre stable : deux affichages successifs ne doivent pas intervertir les groupes.
-        ksort($groupes);
 
         return $groupes;
     }
