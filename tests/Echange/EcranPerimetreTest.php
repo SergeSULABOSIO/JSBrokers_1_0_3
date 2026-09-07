@@ -326,12 +326,16 @@ class EcranPerimetreTest extends WebTestCase
         $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=%s', $entreprise->getId(), $onglet));
         self::assertResponseIsSuccessful();
 
-        $lien = $crawler->filter('a[data-echange-target="lienGabarit"]');
-        self::assertCount(1, $lien, sprintf('Le gabarit doit être atteignable depuis « %s ».', $onglet));
-        self::assertSame(sprintf('/admin/echange/gabarit/%d', $entreprise->getId()), $lien->attr('href'));
-
-        // Le libellé est réécrit par le contrôleur : il lui faut sa cible.
-        self::assertCount(1, $lien->filter('[data-echange-target="libelleGabarit"]'));
+        // ⚠ LE LIEN DU CLASSEUR DE REPRISE NE SUIT PLUS AUCUNE CASE, et il n'a donc plus
+        // de cible Stimulus. Ce n'est pas un oubli : ce classeur a une MAILLE FIXE — une
+        // ligne par échéance —, si bien qu'un « ?donnees=Client,Cotation » y serait sans
+        // objet. Le contrôleur l'écrivait pourtant, et annonçait « gabarit des 3 données
+        // retenues » pour un fichier complet : le libellé décrivait un fichier qu'on ne
+        // recevait pas. Le pilotage a rejoint le lien auquel il s'applique, celui du
+        // classeur NORMALISÉ, dans le volet des familles.
+        $lien = $crawler->filter(sprintf('a[href="/admin/echange/gabarit/%d"]', $entreprise->getId()));
+        self::assertCount(1, $lien, sprintf('Le classeur de reprise doit être atteignable depuis « %s ».', $onglet));
+        self::assertStringContainsString('reprise', $lien->text(), 'Le libellé doit dire ce qu\'on obtient.');
 
         // ⚠ Le mot « gratuit » n'est pas décoratif : à côté d'un export facturé, un geste
         // dont on ne dit pas le prix est un geste qu'on n'ose pas faire.
@@ -352,8 +356,12 @@ class EcranPerimetreTest extends WebTestCase
         $canevas = static::getContainer()->get(CanevasDEchange::class);
         $lisibles = $canevas->ressourcesLisibles($invite);
 
+        // ⚠ LE SUFFIXE DE PÉRIMÈTRE APPARTIENT AU FORMAT NORMALISÉ, et à lui seul : c'est
+        // le seul dont le contenu dépende des familles retenues. Le classeur de reprise a
+        // une maille fixe, donc rien à nommer de ce côté — son nom dit « reprise », et
+        // c'est vérifié plus bas.
         // Une seule donnée : la famille est coupée en deux, le nom doit le dire.
-        $this->client->request('GET', sprintf('/admin/echange/gabarit/%d?donnees=Client', $entreprise->getId()));
+        $this->client->request('GET', sprintf('/admin/echange/gabarit/%d?format=normalise&donnees=Client', $entreprise->getId()));
         self::assertResponseIsSuccessful();
         self::assertStringContainsString(
             '_partiel',
@@ -372,7 +380,7 @@ class EcranPerimetreTest extends WebTestCase
         self::assertNotEmpty($production);
 
         $this->client->request('GET', sprintf(
-            '/admin/echange/gabarit/%d?donnees=%s',
+            '/admin/echange/gabarit/%d?format=normalise&donnees=%s',
             $entreprise->getId(),
             implode(',', $canevas->codesParDefaut($lisibles)),
         ));
@@ -407,22 +415,32 @@ class EcranPerimetreTest extends WebTestCase
         $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=%s', $entreprise->getId(), $onglet));
         self::assertResponseIsSuccessful();
 
-        self::assertCount(1, $crawler->filter('a[data-echange-target="lienGabarit"]'));
-        self::assertCount(
-            0,
-            $crawler->filter('details.ech-perimetre-volet a[data-echange-target="lienGabarit"]'),
-            "Un livrable enfermé dans un réglage replié n'existe pas pour qui n'ouvre pas le réglage.",
-        );
-
+        self::assertCount(1, $crawler->filter(sprintf('a[href="/admin/echange/gabarit/%d"]', $entreprise->getId())));
         // ⚠ L'ORDRE PAR RAPPORT AU DÉPÔT NE VAUT QU'À L'IMPORT : l'onglet Exporter n'a
         // pas de dépôt, et l'y chercher rendrait `false`, qu'une comparaison numérique
         // avalerait sans rien prouver.
         if ($onglet === 'importer') {
             $html = (string) $this->client->getResponse()->getContent();
+
+            // ⚠ C'EST LE CLASSEUR DE REPRISE QU'ON REMPLIT POUR LE DÉPOSER, et c'est donc
+            // LUI qui doit précéder le dépôt. Ce test visait auparavant la cible Stimulus
+            // du gabarit ; elle désigne maintenant le gabarit NORMALISÉ, qui vit dans le
+            // volet des familles, en bas de panneau. La comparaison portait donc sur le
+            // mauvais lien, et aurait laissé passer un classeur de reprise relégué après
+            // le dépôt — précisément le défaut que ce test existe pour attraper.
             self::assertLessThan(
                 strpos($html, '<div class="ech-depot">'),
+                strpos($html, sprintf('href="/admin/echange/gabarit/%d"', $entreprise->getId())),
+                'Le classeur de reprise doit précéder le dépôt : on le remplit pour le déposer.',
+            );
+
+            // Le gabarit NORMALISÉ, lui, a sa place dans le volet des familles : c'est le
+            // seul dont le contenu en dépende, et un outil second n'a pas à occuper le
+            // devant de la scène.
+            self::assertGreaterThan(
+                strpos($html, '<div class="ech-depot">'),
                 strpos($html, 'data-echange-target="lienGabarit"'),
-                'Le gabarit doit précéder le dépôt : on le remplit pour le déposer.',
+                'Le gabarit normalisé accompagne le choix des familles, pas le geste principal.',
             );
         }
     }

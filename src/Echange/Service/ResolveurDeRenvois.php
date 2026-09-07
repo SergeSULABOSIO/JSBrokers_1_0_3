@@ -157,6 +157,104 @@ final class ResolveurDeRenvois
         ));
     }
 
+    /**
+     * RECONNAÎT une entité par son libellé — ou dit qu\'elle n\'existe pas encore.
+     *
+     * ── EN QUOI CE N\'EST PAS `resoudre()` ──────────────────────────────────────────
+     * `resoudre()` REFUSE quand rien ne correspond, et c\'est juste pour une colonne de
+     * renvoi : une police qui désigne un client introuvable est une erreur, pas une
+     * invitation à créer ce client.
+     *
+     * La reconstitution à la maille tranche a le besoin inverse. Sa ligne porte « KIN
+     * AVIA » sans identifiant, et le geste attendu est : rattacher au client existant s\'il
+     * y en a un, le créer sinon. « Introuvable » y est donc une réponse normale, rendue
+     * comme un renvoi VIDE, que l\'appelant traduit en création.
+     *
+     * ⚠ CE QUI NE CHANGE PAS, C\'EST LE REFUS DE L\'AMBIGUÏTÉ. Deux clients nommés « SARL
+     * Martin » ne se départagent pas. Créer un troisième homonyme « parce qu\'on ne savait
+     * pas » serait la pire des issues : le portefeuille se peuplerait de doublons que rien
+     * ne signale. On refuse, en nommant le libellé.
+     */
+    public function reconnaitre(string $codeRessource, ?string $libelle, Entreprise $entreprise): Renvoi
+    {
+        $brut = trim((string) $libelle);
+        if ($brut === '') {
+            return Renvoi::vide();
+        }
+
+        $trouves = $this->parLibelle($codeRessource, $brut, $entreprise);
+
+        if (count($trouves) === 1) {
+            return Renvoi::identifiant($trouves[0]);
+        }
+
+        if (count($trouves) > 1) {
+            return Renvoi::refus(sprintf(
+                '« %s » désigne %d lignes de « %s » : impossible de savoir laquelle, et en créer '
+                . 'une de plus ajouterait un doublon. Renommez l\'une des deux, ou renseignez '
+                . 'l\'identifiant de la ligne visée.',
+                $brut,
+                count($trouves),
+                $codeRessource,
+            ), ambigu: true);
+        }
+
+        return Renvoi::vide();
+    }
+
+    /**
+     * RECONNAÎT LE PREMIER, quand plusieurs lignes portent ce libellé.
+     *
+     * ── POURQUOI CETTE SECONDE PORTE EXISTE ────────────────────────────────────────
+     * ⚠ POUR LES CATALOGUES, ET POUR EUX SEULS. Deux clients nommés « SARL Martin » sont
+     * deux affaires : les confondre rattacherait une police au mauvais. Deux types de
+     * chargement nommés « Prime nette » sont, du point de vue du métier, le même poste
+     * d'assiette.
+     *
+     * ⚠ ET SANS CETTE PORTE, LA REPRISE SERAIT IMPOSSIBLE. Mesuré sur le cabinet réel :
+     * son catalogue porte « Prime nette » SIX fois, « Commission Ordinaire » six fois —
+     * 31 chargements pour cinq noms distincts, séquelles d'une initialisation rejouée.
+     * Les doublons y sont rigoureusement identiques (même fonction, même taux, même
+     * redevable). Refuser aurait bloqué 177 lignes sur 79, c'est-à-dire tout.
+     *
+     * L'appelant qui emprunte cette porte accepte donc de choisir — et doit le DIRE,
+     * en avertissement. `estAmbigu()` lui apprend s'il y avait lieu.
+     */
+    public function reconnaitreLePremier(string $codeRessource, ?string $libelle, Entreprise $entreprise): Renvoi
+    {
+        $brut = trim((string) $libelle);
+        if ($brut === '') {
+            return Renvoi::vide();
+        }
+
+        // L'index retient le PREMIER identifiant rencontré pour un libellé donné, et
+        // marque le doublon à part : on lit donc l'index directement, là où
+        // `parLibelle()` rend des identifiants factices pour forcer un refus.
+        $index = $this->index($codeRessource, $entreprise);
+        $cle = self::normaliser($brut);
+
+        return isset($index[$cle]) ? Renvoi::identifiant($index[$cle]) : Renvoi::vide();
+    }
+
+    /**
+     * Plusieurs lignes portent-elles ce libellé ?
+     *
+     * ⚠ À APPELER APRÈS `reconnaitreLePremier()`, qui construit l'index — et donc le
+     * relevé des doublons. Interrogé avant, ce drapeau serait toujours faux : c'est le
+     * genre d'ordre implicite qui se casse au premier remaniement, d'où ce rappel.
+     */
+    public function estAmbigu(string $codeRessource, ?string $libelle, Entreprise $entreprise): bool
+    {
+        $brut = trim((string) $libelle);
+        if ($brut === '') {
+            return false;
+        }
+
+        $this->index($codeRessource, $entreprise);
+
+        return isset($this->ambigus[$codeRessource . '|' . self::normaliser($brut)]);
+    }
+
     private function existe(string $codeRessource, int $id, Entreprise $entreprise): bool
     {
         $ressource = $this->canevas->ressource($codeRessource);

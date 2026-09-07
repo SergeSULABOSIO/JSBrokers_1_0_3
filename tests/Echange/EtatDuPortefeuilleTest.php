@@ -5,6 +5,7 @@ namespace App\Tests\Echange;
 use App\Ai\Finance\EconomieTranche;
 use App\Echange\Etat\CatalogueDesColonnes;
 use App\Echange\Etat\Charte;
+use App\Echange\Etat\EcrivainEtat;
 use App\Echange\Etat\EtatDuPortefeuille;
 use App\Echange\Etat\InjecteurDeTcd;
 use App\Echange\Etat\ProducteurDeLEtat;
@@ -137,12 +138,31 @@ class EtatDuPortefeuilleTest extends KernelTestCase
             'L\'état ne se relit pas : il n\'a ni empreinte ni périmètre à déclarer.',
         );
 
-        // ⚠ L'AVERTISSEMENT NE DOIT PAS DISPARAÎTRE AVEC LE MANIFESTE. Il ouvre désormais
-        // le dictionnaire : c'est la première chose que lira celui qui retrouve ce fichier
+        // ⚠ LE BANDEAU DE TÊTE NE DOIT PAS DISPARAÎTRE AVEC LE MANIFESTE. Il ouvre le
+        // dictionnaire : c'est la première chose que lira celui qui retrouve ce fichier
         // dans six mois, sans l'écran sous les yeux.
+        //
+        // ⚠ ET IL DISAIT LE CONTRAIRE DE LA VÉRITÉ. Il annonçait « LECTURE SEULE — cet
+        // état ne peut pas être réimporté » : exact tant que le fichier ne portait que des
+        // résultats, faux depuis qu'il porte aussi ce qui les produit. Un fichier qui se
+        // trompe sur sa propre nature est pire qu'un fichier muet — on le range, et on ne
+        // le ressort jamais.
         $dictionnaire = $classeur->getSheetByName(EcrivainJsbx::FEUILLE_DICTIONNAIRE);
-        self::assertSame('LECTURE SEULE', $dictionnaire->getCell('A2')->getValue());
-        self::assertStringContainsString('ne peut pas être réimporté', (string) $dictionnaire->getCell('C2')->getValue());
+        self::assertSame(EcrivainEtat::CLE_REIMPORTABLE, $dictionnaire->getCell('A2')->getValue());
+        self::assertStringContainsString('SE REDÉPOSE', (string) $dictionnaire->getCell('C2')->getValue());
+
+        // ⚠ ET IL DIT AUSSI CE QUI NE SE RELIT PAS. Sans cette réserve, un courtier
+        // corrigerait « Prime · Solde », redéposerait, et ne comprendrait jamais pourquoi
+        // l'écran affiche autre chose.
+        self::assertStringContainsString('RÉSULTATS', (string) $dictionnaire->getCell('C2')->getValue());
+
+        // L'identité du cabinet a rejoint le dictionnaire, faute de manifeste : c'est elle
+        // qui permet de refuser un fichier venu d'un autre cabinet.
+        self::assertSame(EcrivainEtat::CLE_CABINET, $dictionnaire->getCell('A5')->getValue());
+        self::assertSame(
+            (string) $entreprise->getId(),
+            (string) $dictionnaire->getCell('B5')->getValue(),
+        );
     }
 
     /** Une ligne par tranche du cabinet, et l'en-tête n'en occupe qu'une. */

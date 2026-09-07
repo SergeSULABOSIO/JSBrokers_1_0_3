@@ -494,17 +494,21 @@ export default class extends Controller {
         } else {
             const base = this.urlValue.replace(/\/workspace\/\d+$/, '');
             const choisies = this.#selection();
+            // ⚠ LE FORMAT EST TOUJOURS PORTÉ. C'est ce lien-ci qui rend le classeur
+            // NORMALISÉ — une feuille par donnée ; le défaut de la route, lui, est le
+            // classeur de reprise à la maille de l'échéance. L'omettre rendrait un fichier
+            // d'une autre forme, et « ?donnees » y serait ignoré sans que rien ne le dise.
             const parametre = choisies.length < total
-                ? `?donnees=${encodeURIComponent(choisies.join(','))}`
-                : '';
+                ? `?format=normalise&donnees=${encodeURIComponent(choisies.join(','))}`
+                : '?format=normalise';
             lien.href = `${base}/gabarit/${this.idEntrepriseValue}${parametre}`;
             lien.removeAttribute('aria-disabled');
         }
 
         if (this.hasLibelleGabaritTarget) {
             this.libelleGabaritTarget.textContent = retenues === total
-                ? 'Télécharger un gabarit vierge'
-                : `Gabarit vierge des ${retenues} donnée${retenues > 1 ? 's' : ''} retenue${retenues > 1 ? 's' : ''}`;
+                ? 'Télécharger un gabarit normalisé'
+                : `Gabarit normalisé des ${retenues} donnée${retenues > 1 ? 's' : ''} retenue${retenues > 1 ? 's' : ''}`;
         }
     }
 

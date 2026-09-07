@@ -209,3 +209,26 @@
     </details>
 {% endfor %}
 </details>
+
+{# ── LE GABARIT NORMALISÉ, ET C'EST ICI QUE SA PLACE EST ──────────────────────────
+   Une feuille par donnée, pour ce qui ne vit pas à la maille de la tranche : notes,
+   bordereaux, dépenses, catalogues. C'est le SEUL gabarit dont le contenu dépende des
+   familles cochées ci-dessus — d'où son lien piloté par le contrôleur, que le classeur
+   de reprise, lui, n'a pas à subir.
+
+   ⚠ RIEN N'EST ENVOYÉ QUAND TOUT EST COCHÉ : le serveur lit alors « tout ce que cet
+   utilisateur peut lire », ce qui reste juste même si ses droits changent entre
+   l'affichage et le clic. #}
+<p class="ech-gabarit" style="margin-top:.75rem;">
+    <a class="btn btn-sm btn-outline-secondary"
+       href="{{ path('admin.echange.gabarit', {idEntreprise: idEntreprise, format: 'normalise'}) }}"
+       data-echange-target="lienGabarit"
+       title="Un classeur vide à une feuille par donnée, pour ce qui ne se dit pas à la maille de l'échéance.">
+        <twig:UX:Icon name="{{ resolve_icon_name('action:download') }}" style="width:16px;height:16px;" />
+        <span data-echange-target="libelleGabarit">Télécharger un gabarit normalisé</span>
+    </a>
+    <span class="ech-note" style="margin:0;">
+        Une feuille par donnée. À réserver aux données qui ne vivent pas à la maille de
+        l'échéance de prime — notes, bordereaux, dépenses, catalogues.
+    </span>
+</p>

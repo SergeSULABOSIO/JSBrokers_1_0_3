@@ -61,6 +61,15 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class EchangeController extends AbstractController
 {
     /** Nom court de la pseudo-entité gouvernant l'accès et le métrage. */
+    /**
+     * Le format à demander pour obtenir le classeur NORMALISÉ — une feuille par entité.
+     *
+     * Le défaut est le classeur de REPRISE, à la maille tranche : c'est ce que veut
+     * quelqu'un qui reprend son portefeuille. Le normalisé reste accessible pour les
+     * données qui ne vivent pas à cette maille — notes, bordereaux, catalogues.
+     */
+    public const FORMAT_NORMALISE = 'normalise';
+
     private const ENTITY_SHORT_NAME = 'Echange';
 
     private const LIBELLE = 'Importation / Exportation';
@@ -536,8 +545,37 @@ class EchangeController extends AbstractController
             throw $this->createAccessDeniedException(sprintf('« %s » est hors de votre périmètre d\'accès.', self::LIBELLE));
         }
 
-        // Même périmètre qu'un export : on ne donne pas le gabarit d'une donnée que
-        // l'utilisateur n'aurait pas le droit de lire.
+        $slug = trim((string) preg_replace('/[^A-Za-z0-9_-]+/', '_', $entreprise->getNom() ?? 'cabinet'), '_') ?: 'cabinet';
+
+        // ⚠ LE GABARIT EST LE FICHIER D'EXPORT, VIDE — et c'est tout l'objet du chantier.
+        //
+        // Il y avait deux formats sous un même écran : l'export rendait l'état du
+        // portefeuille (une ligne par échéance) et le gabarit un classeur normalisé (une
+        // feuille par entité). Ce qu'on exportait ne se redéposait pas ; ce qu'on déposait
+        // ne s'exportait pas. Un même geste, deux fichiers sans rien de commun.
+        //
+        // Désormais le gabarit a EXACTEMENT la forme de l'export : mêmes colonnes, même
+        // dictionnaire, sans les lignes. Un export rempli se redépose donc de la même
+        // façon, et l'utilisateur n'a qu'un format à connaître.
+        if ($request->query->get('format') !== self::FORMAT_NORMALISE) {
+            [$classeur] = $this->etat->produire(
+                $entreprise,
+                $invite,
+                $this->getUser(),
+                $this->codesDemandes((string) $request->query->get('colonnes', '')),
+                (string) $request->query->get('validite', ''),
+                (string) $request->query->get('exercice', ExerciceDesTranches::TOUS),
+                gabarit: true,
+            );
+
+            return $this->classeurEnReponse($classeur, sprintf('joseara_reprise_%s_%s.xlsx', $slug, date('Ymd-Hi')));
+        }
+
+        // ── Le classeur NORMALISÉ reste disponible, et il a sa raison d'être ─────────
+        // La feuille à la maille tranche couvre la chaîne de production. Les notes, les
+        // bordereaux, les dépenses, les catalogues n'y ont pas de place : une colonne qui
+        // ne s'applique jamais à la ligne qu'on lit est une colonne qui trompe. Pour ces
+        // données, le format normalisé demeure le bon outil — et il continue de s'importer.
         $ressources = $this->exportateur->perimetre($invite, $this->codesDemandes((string) $request->query->get('donnees', '')));
         if ($ressources === []) {
             return new Response(
@@ -548,10 +586,9 @@ class EchangeController extends AbstractController
 
         [$classeur] = $this->exportateur->produire($entreprise, $invite, $this->getUser(), $ressources, null, gabarit: true);
 
-        $slug = preg_replace('/[^A-Za-z0-9_-]+/', '_', $entreprise->getNom() ?? 'cabinet');
         $nom = sprintf(
             'joseara_gabarit_%s%s_%s.xlsx',
-            trim((string) $slug, '_') ?: 'cabinet',
+            $slug,
             $this->suffixeDuPerimetre($ressources, $invite),
             date('Ymd-Hi'),
         );
