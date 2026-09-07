@@ -25,7 +25,52 @@ final class ColonneEtat
         public readonly string $role,
         /** Ce que la colonne veut dire, pour `_DICTIONNAIRE`. */
         public readonly string $explication,
+        /**
+         * OÙ CETTE COLONNE S'ÉCRIT — `null` = elle ne s'écrit pas.
+         *
+         * ⚠ C'EST CE CHAMP QUI REND LE CLASSEUR RÉIMPORTABLE, et c'est pour cela qu'il
+         * vit ICI. La reconstitution a besoin de savoir quelle propriété de quelle
+         * entité une colonne alimente. Le déclarer dans une seconde table, à côté du
+         * catalogue, ce serait deux vérités à tenir en accord — et le jour où elles
+         * divergent, une colonne s'écrit dans le mauvais champ sans que rien ne le dise.
+         *
+         * Forme : `Entite.propriete` (« Avenant.referencePolice »), ou `Entite.collection`
+         * pour une cellule multi-valeurs (« Cotation.chargements »).
+         */
+        public readonly ?string $cible = null,
     ) {
+    }
+
+    /**
+     * LA MÊME COLONNE, MAIS RELUE À L'IMPORT — et sachant où elle s'écrit.
+     *
+     * Décorer plutôt que passer la cible à chaque fabrique : sur soixante et une
+     * colonnes dont une quinzaine se réimporte, le défaut utile est « résultat ». Une
+     * colonne calculée qu'on aurait oublié de marquer resterait ainsi ignorée, quand
+     * l'inverse — une colonne de résultat relue par mégarde — écrirait en base un
+     * chiffre que l'application recalcule.
+     */
+    public function enSaisie(string $cible): self
+    {
+        return new self($this->libelle, $this->role, $this->explication, $cible);
+    }
+
+    /** Exportée pour information, jamais relue : c'est le défaut. */
+    public function lectureSeule(): bool
+    {
+        return $this->cible === null;
+    }
+
+    /** Le nom court de l'entité que cette colonne alimente. */
+    public function entiteCible(): ?string
+    {
+        return $this->cible === null ? null : explode('.', $this->cible, 2)[0];
+    }
+
+    /** La propriété — ou la collection — que cette colonne alimente. */
+    public function proprieteCible(): ?string
+    {
+        return $this->cible === null ? null : (explode('.', $this->cible, 2)[1] ?? null);
     }
 
     public static function montant(string $libelle, string $explication): self

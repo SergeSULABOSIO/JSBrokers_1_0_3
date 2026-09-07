@@ -8,6 +8,7 @@ use App\Echange\Etat\Charte;
 use App\Echange\Etat\EtatDuPortefeuille;
 use App\Echange\Etat\InjecteurDeTcd;
 use App\Echange\Etat\ProducteurDeLEtat;
+use App\Echange\Reprise\ValeursMultiples;
 use App\Echange\Etat\ValiditeDesTranches;
 use App\Services\Search\CotationSouscriptionScope;
 use App\Echange\Classeur\EcrivainJsbx;
@@ -311,6 +312,119 @@ class EtatDuPortefeuilleTest extends KernelTestCase
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────────
+    // La reprise : ce que le fichier doit porter pour se réimporter
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * ⚠ CHAQUE COLONNE DE SAISIE DÉSIGNE UNE CIBLE QUI EXISTE.
+     *
+     * Une colonne de saisie déclare OÙ elle s\'écrit (`Entite.propriete`). Une cible fausse
+     * n\'est pas une erreur bruyante : la colonne s\'écrirait dans le vide, la reprise
+     * rendrait une fiche incomplète, et rien ne le signalerait. Ce test a déjà attrapé deux
+     * cibles fausses à l\'écriture — `ConditionPartage.tauxRetroCommission`, qui s\'appelle
+     * `taux`, et `Piste.portefeuille`, qui n\'existe pas (le portefeuille vit sur le CLIENT).
+     */
+    public function testChaqueColonneDeSaisieDesigneUneCibleQuiExiste(): void
+    {
+        $fautes = [];
+
+        foreach (CatalogueDesColonnes::pour('ARCA', 'TVA') as $code => $colonne) {
+            if ($colonne->lectureSeule()) {
+                continue;
+            }
+
+            $entite = $colonne->entiteCible();
+            $propriete = (string) $colonne->proprieteCible();
+
+            // Les colonnes techniques (`_action`) ne visent aucune propriété : c\'est
+            // l\'opération elle-même qu\'elles décident.
+            if (str_starts_with($propriete, '_')) {
+                continue;
+            }
+
+            $fqcn = 'App' . chr(92) . 'Entity' . chr(92) . $entite;
+            if (!class_exists($fqcn)) {
+                $fautes[] = sprintf('%s : entité inconnue « %s »', $code, (string) $entite);
+                continue;
+            }
+
+            if (!(new \ReflectionClass($fqcn))->hasProperty($propriete)) {
+                $fautes[] = sprintf('%s : « %s » n\'a pas de propriété « %s »', $code, (string) $entite, $propriete);
+            }
+        }
+
+        self::assertSame([], $fautes, implode(' | ', $fautes));
+    }
+
+    /**
+     * ⚠ UNE COLONNE EST UN RÉSULTAT PAR DÉFAUT, ET LA MAJORITÉ LE RESTE.
+     *
+     * Le défaut doit pencher du bon côté : une colonne de saisie qu\'on oublie de marquer
+     * reste ignorée — un désagrément. L\'inverse relirait un chiffre que l\'application
+     * recalcule, et l\'écrirait en base. Ce test tient le rapport de force : l\'état porte
+     * une quarantaine de résultats pour une vingtaine de saisies, et l\'inversion de cette
+     * proportion signalerait qu\'on a marqué en saisie ce qui se calcule.
+     */
+    public function testLesResultatsRestentMajoritairesEtNeSeReimportentPas(): void
+    {
+        $colonnes = CatalogueDesColonnes::pour('ARCA', 'TVA');
+
+        $saisies = 0;
+        foreach ($colonnes as $colonne) {
+            if (!$colonne->lectureSeule()) {
+                ++$saisies;
+            }
+        }
+
+        self::assertGreaterThan($saisies, count($colonnes) - $saisies, 'Les résultats doivent rester majoritaires.');
+
+        // Nommément : ce qui se calcule ne se relit jamais. Un solde réimporté écraserait
+        // une soustraction que l\'application refera de toute façon.
+        foreach (['primeSolde', 'commissionEncaissee', 'commissionSolde', 'reserve', 'taxeCourtierExigible', 'retroAgentSolde'] as $calcule) {
+            self::assertTrue(
+                $colonnes[$calcule]->lectureSeule(),
+                sprintf('« %s » se calcule : elle ne doit pas être relue.', $calcule),
+            );
+        }
+    }
+
+    /**
+     * ⚠ LA COMPOSITION DE LA PRIME SOMME À LA PRIME — c\'est LA propriété qui fonde la reprise.
+     *
+     * La prime ne se saisit nulle part : elle est la SOMME des chargements de la cotation.
+     * Un fichier qui ne porterait que « Prime · Totale » rendrait, réimporté, des cotations
+     * SANS PRIME — et rien ne le signalerait, le total se recalculant à zéro sans erreur.
+     *
+     * Vérifié sur le portefeuille réel du cabinet au moment de l\'écriture : 79 lignes,
+     * aucun écart. Deux défauts ont été trouvés par ce contrôle — un type de chargement
+     * présent DEUX fois sur une même cotation (71 cotations sur 80 en portent), dont
+     * l\'indexation par nom écrasait le premier terme ; et un chargement sans type, écarté
+     * faute de nom alors que son montant compte dans la prime.
+     */
+    public function testLaCompositionDeLaPrimeSommeALaPrimeDeLaCotation(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+
+        $ligne = $this->ligneDe($this->produire($entreprise, $invite));
+
+        $refus = [];
+        $termes = ValeursMultiples::lire((string) $ligne['Prime · Chargements'], $refus);
+
+        self::assertSame([], $refus, 'Notre propre écriture doit se relire sans refus.');
+        self::assertNotSame([], $termes, 'La composition ne peut pas être vide : la prime en sort.');
+
+        $somme = 0.0;
+        foreach ($termes as $terme) {
+            $somme += (float) ($terme['valeur'] ?? 0.0);
+        }
+
+        // La part de la tranche est de 100 % dans le jeu de test : la prime de la tranche
+        // est donc celle de la cotation, et les deux se comparent directement.
+        self::assertSame(100.0, (float) $ligne['Tranche · Part (%)']);
+        self::assertEqualsWithDelta((float) $ligne['Prime · Totale'], $somme, 0.01);
+    }
+
     // ─────────────────────────────────────────────────────────────────────────────
     // Le rendu : charte graphique et lisibilité
     // ─────────────────────────────────────────────────────────────────────────────
@@ -808,6 +922,20 @@ class EtatDuPortefeuilleTest extends KernelTestCase
             'retroPartenairePayeeLe', 'retroPartenaireReferences', 'retroPartenaireLots', 'retroPartenaireComptes',
             'retroAgentBeneficiaire',
             'retroAgentPayeeLe', 'retroAgentReferences', 'retroAgentLots', 'retroAgentComptes',
+
+            // ⚠ ET CE QUI N\'EST PAS UN RÉSULTAT MAIS UNE ENTRÉE. Ces colonnes existent pour
+            // que le classeur se RÉIMPORTE : elles portent ce qui PRODUIT les chiffres — la
+            // composition de la prime, les types de revenu, le poids de l\'échéance — et non
+            // ce que ces chiffres valent. `EconomieTranche` projette une économie CALCULÉE ;
+            // lui demander de dire ses propres entrées serait lui faire remonter le courant.
+            //
+            // Ket ne perd rien au change : la prime, la commission et les taux qui en
+            // sortent, il les dit déjà — par `primeTranche`, `commissionTtc` et les taux de
+            // taxe, tous reliés ci-dessous.
+            '_action',
+            'tranchePart', 'trancheMontantFlat',
+            'portefeuille',
+            'primeChargements', 'commissionRevenus',
         ];
 
         // La correspondance clé d'état → clé d'économie. Les noms diffèrent parce que
