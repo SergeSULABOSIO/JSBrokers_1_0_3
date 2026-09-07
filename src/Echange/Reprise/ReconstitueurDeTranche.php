@@ -2,7 +2,10 @@
 
 namespace App\Echange\Reprise;
 
+use App\Ai\Mutation\DefautsContextuels;
+use App\Ai\Mutation\MutationPlan;
 use App\Ai\Mutation\MutationOperation;
+use App\Ai\Mutation\NormaliseurDeDates;
 use App\Echange\Canevas\CanevasDEchange;
 use App\Echange\Classeur\LigneLue;
 use App\Echange\Etat\ColonneEtat;
@@ -11,6 +14,8 @@ use App\Echange\Service\Anomalie;
 use App\Echange\Service\ResolveurDeRenvois;
 use App\Entity\Entreprise;
 use App\Entity\Note;
+use Doctrine\ORM\EntityManagerInterface;
+use PhpOffice\PhpSpreadsheet\Shared\Date as DateExcel;
 
 /**
  * UNE LIGNE DEVIENT UNE CHAÎNE D'ÉCRITURES : client, opportunité, proposition, police,
@@ -88,8 +93,12 @@ final class ReconstitueurDeTranche
      */
     private array $revenuParProposition = [];
 
-    public function __construct(private readonly ResolveurDeRenvois $resolveur)
-    {
+    public function __construct(
+        private readonly ResolveurDeRenvois $resolveur,
+        private readonly NormaliseurDeDates $dates,
+        private readonly EntityManagerInterface $em,
+        private readonly DefautsContextuels $defauts,
+    ) {
     }
 
     /** Le registre est propre entre deux contrôles — le service est partagé. */
@@ -97,6 +106,34 @@ final class ReconstitueurDeTranche
     {
         $this->registre = [];
         $this->revenuParProposition = [];
+    }
+
+    /**
+     * OUBLIE les repères d'une ligne REFUSÉE.
+     *
+     * ⚠ SANS CELA, UNE SEULE LIGNE FAUTIVE EN ENTRAÎNE TOUTES LES AUTRES — et les accuse à
+     * sa place. Le registre retient « cette proposition est déjà produite », sans savoir
+     * si l'opération a été ACCEPTÉE. Si la première échéance d'une police est rejetée, les
+     * suivantes croient la proposition créée et renvoient à « @cot-… » : elles échouent
+     * toutes sur « renvoi inconnu », un motif qui parle du lien et non de la cause. Le
+     * rapport annonce alors huit erreurs pour une, et la vraie se noie.
+     *
+     * Oubliés, les repères sont reproduits par la ligne suivante — qui échouera pour SA
+     * raison, la bonne, ou passera si elle est correcte.
+     *
+     * @param string[] $reperes
+     */
+    public function oublier(array $reperes): void
+    {
+        foreach ($reperes as $repere) {
+            unset($this->registre[$repere]);
+
+            foreach ($this->revenuParProposition as $proposition => $revenu) {
+                if ($proposition === $repere || $revenu === $repere) {
+                    unset($this->revenuParProposition[$proposition]);
+                }
+            }
+        }
     }
 
     /**
@@ -180,6 +217,21 @@ final class ReconstitueurDeTranche
                 'nom' => $this->nomDeLAffaire($ligne),
                 'client' => $client,
                 'risque' => $risque,
+                // ⚠ L'EXERCICE SUIT LA DATE D'EFFET, PAS L'ANNÉE COURANTE. `PisteType`
+                // propose bien l'année en cours par défaut — juste pour une saisie du
+                // jour, faux pour une reprise : rapatrier en 2027 des polices de 2025 les
+                // rangerait toutes dans le mauvais exercice, et les états par période
+                // deviendraient inexploitables sur toute la reprise.
+                'exercice' => $this->exercice($ligne),
+                // ⚠ LA DESCRIPTION DU RISQUE VIENT DE LA LIGNE, ET NON DU PLAN.
+                // `DefautsContextuels` la déduit du champ `risque` — mais seulement quand
+                // celui-ci est un RENVOI vers un risque créé dans le même plan, sa règle
+                // étant de ne rien poser dont la source ne soit sous ses yeux. Or une
+                // reprise rattache le plus souvent un risque DÉJÀ en base : le champ porte
+                // alors un identifiant, dont le plan ne sait pas lire le nom, et la
+                // déduction n'a pas lieu. La ligne, elle, porte le libellé : c'est la
+                // source la plus proche, et la seule qui ne dépende de rien.
+                'descriptionDuRisque' => $ligne->texte('risque'),
             ];
             if ($intermediaire !== null) {
                 $champs['partenaire'] = $intermediaire;
@@ -255,6 +307,17 @@ final class ReconstitueurDeTranche
                     'nom' => $this->nomDeLAffaire($ligne),
                     'piste' => CleNaturelle::renvoiVers($piste),
                     'assureur' => $assureur,
+                    // ⚠ LA DURÉE SE LIT SUR LA PÉRIODE, elle ne se suppose pas : un contrat
+                    // de vingt-deux jours n'est pas une police annuelle. `DefautsContextuels`
+                    // sait la déduire, mais en allant la chercher sur l'avenant EN
+                    // COLLECTION de la proposition — or la convergence impose ici de le
+                    // garder en opération distincte, une police et son avenant n° 2
+                    // partageant la même proposition. On emprunte donc la formule, sans la
+                    // réécrire.
+                    'duree' => $this->defauts->dureeEnMois(
+                        $this->date($ligne, 'policeDateEffet', 'Avenant', 'startingAt'),
+                        $this->date($ligne, 'policeEcheance', 'Avenant', 'endingAt'),
+                    ),
                 ]),
                 collections: $collections,
                 ref: $cotation,
@@ -270,8 +333,8 @@ final class ReconstitueurDeTranche
                 fields: $this->sansVide([
                     'referencePolice' => $reference,
                     'numero' => $ligne->texte('policeNumeroAvenant'),
-                    'startingAt' => $ligne->texte('policeDateEffet'),
-                    'endingAt' => $ligne->texte('policeEcheance'),
+                    'startingAt' => $this->date($ligne, 'policeDateEffet', 'Avenant', 'startingAt'),
+                    'endingAt' => $this->date($ligne, 'policeEcheance', 'Avenant', 'endingAt'),
                     'cotation' => CleNaturelle::renvoiVers($cotation),
                 ]),
                 ref: $avenant,
@@ -318,7 +381,22 @@ final class ReconstitueurDeTranche
         );
         $this->ouvrirLaRetro($ligne, $repereTranche, $intermediaire, $operations, $anomalies);
 
-        return $operations;
+        // ⚠ LES CHAMPS OBLIGATOIRES DÉDUCTIBLES SONT POSÉS PAR LE SERVICE QUI EXISTE.
+        //
+        // Une opportunité exige un type d'avenant, un nom et une description du risque ;
+        // une proposition, un nom et une durée. Rien de tout cela ne figure dans une ligne
+        // du classeur — et rien n'a besoin d'y figurer : `DefautsContextuels` le DÉDUIT du
+        // dossier lui-même (le nom vient du risque et du client, la durée se lit sur la
+        // période de la police, une création sans police de base est une souscription).
+        //
+        // Faute de l'employer, les soixante-dix-neuf lignes d'une reprise étaient rejetées
+        // sur « typeAvenant : champ obligatoire », et les échéances suivantes de chaque
+        // police en cascade sur un renvoi « @cot-… inconnu » — une erreur qui accusait le
+        // lien au lieu de sa cause. Réécrire ces déductions ici en aurait fait une seconde
+        // version à tenir en accord avec celle de l'assistant.
+        ['plan' => $plan] = $this->defauts->appliquer(new MutationPlan($operations));
+
+        return $plan->operations;
     }
 
     /**
@@ -346,7 +424,8 @@ final class ReconstitueurDeTranche
             entityShortName: 'PaiementPrime',
             fields: $this->sansVide([
                 'montant' => $montant,
-                'paidAt' => $ligne->texte('ouverturePrimeLe') ?: $ligne->texte('policeDateEffet'),
+                'paidAt' => $this->date($ligne, 'ouverturePrimeLe', 'PaiementPrime', 'paidAt')
+                    ?? $this->date($ligne, 'policeDateEffet', 'PaiementPrime', 'paidAt'),
                 'reference' => self::REFERENCE_OUVERTURE,
                 'description' => 'Situation reprise depuis un classeur de reprise.',
             ]),
@@ -399,7 +478,8 @@ final class ReconstitueurDeTranche
             return;
         }
 
-        $date = $ligne->texte('ouvertureCommissionLe') ?: $ligne->texte('policeDateEffet');
+        $date = $this->date($ligne, 'ouvertureCommissionLe', 'Paiement', 'paidAt')
+            ?? $this->date($ligne, 'policeDateEffet', 'Paiement', 'paidAt');
 
         $operations[] = new MutationOperation(
             op: MutationOperation::OP_CREATE,
@@ -479,7 +559,8 @@ final class ReconstitueurDeTranche
                 'partenaire' => $intermediaire,
                 'tranche' => CleNaturelle::renvoiVers($repereTranche),
                 'montant' => $montant,
-                'paidAt' => $ligne->texte('ouvertureRetroLe') ?: $ligne->texte('policeDateEffet'),
+                'paidAt' => $this->date($ligne, 'ouvertureRetroLe', 'ReversementRetroAgent', 'paidAt')
+                    ?? $this->date($ligne, 'policeDateEffet', 'ReversementRetroAgent', 'paidAt'),
                 'reference' => self::REFERENCE_OUVERTURE,
                 'description' => 'Situation reprise depuis un classeur de reprise.',
             ]),
@@ -503,8 +584,8 @@ final class ReconstitueurDeTranche
             'nom' => $ligne->texte('trancheNom'),
             'pourcentage' => $this->nombre($ligne, 'tranchePart'),
             'montantFlat' => $this->nombre($ligne, 'trancheMontantFlat'),
-            'payableAt' => $ligne->texte('tranchePayableAt'),
-            'echeanceAt' => $ligne->texte('trancheEcheanceAt'),
+            'payableAt' => $this->date($ligne, 'tranchePayableAt', 'Tranche', 'payableAt'),
+            'echeanceAt' => $this->date($ligne, 'trancheEcheanceAt', 'Tranche', 'echeanceAt'),
             'cotation' => $renvoiCotation,
         ]);
 
@@ -707,12 +788,110 @@ final class ReconstitueurDeTranche
             : implode(' — ', $morceaux);
     }
 
+    /**
+     * L'EXERCICE DE L'AFFAIRE : l'année de sa date d'effet.
+     *
+     * À défaut de date — un projet non encore lié —, l'année courante, qui est ce que
+     * l'écran propose lui aussi. On ne laisse pas le champ vide : il est obligatoire, et
+     * une question posée à l'utilisateur pour une valeur inscrite au calendrier est une
+     * question de trop.
+     */
+    private function exercice(LigneLue $ligne): int
+    {
+        $date = $this->date($ligne, 'policeDateEffet', 'Avenant', 'startingAt');
+
+        if ($date !== null) {
+            $lue = \DateTimeImmutable::createFromFormat('Y-m-d\TH:i', $date)
+                ?: \DateTimeImmutable::createFromFormat('Y-m-d', substr($date, 0, 10));
+
+            if ($lue !== false) {
+                return (int) $lue->format('Y');
+            }
+        }
+
+        return (int) date('Y');
+    }
+
     /** L'identifiant de tranche porté par la ligne, s'il est utilisable. */
     private function identifiant(LigneLue $ligne): ?int
     {
         $brut = $ligne->texte(EtatDuPortefeuille::COLONNE_IDENTITE);
 
         return ctype_digit($brut) && (int) $brut > 0 ? (int) $brut : null;
+    }
+
+    /**
+     * UNE DATE, AU FORMAT QUE LE FORMULAIRE DE SA CIBLE ATTEND.
+     *
+     * ⚠ LE FORMAT NE SE DEVINE PAS, IL SE DÉRIVE DU TYPE DOCTRINE. Toutes les propriétés
+     * temporelles visées ici sont des `datetime_immutable` : leur widget attend
+     * « aaaa-mm-jjThh:mm », et non « aaaa-mm-jj ». Avoir inventé le second a fait rejeter
+     * les soixante-dix-neuf lignes d'un export réimporté, sur « Veuillez saisir une date
+     * et une heure valides » — une erreur qui accuse la saisie alors que la faute était
+     * dans la conversion.
+     *
+     * ⚠ ET LA NORMALISATION EST EMPRUNTÉE, JAMAIS RÉÉCRITE. `NormaliseurDeDates` est la
+     * source unique du projet : il connaît les formats français, le pivot ISO et les
+     * pièges de l'un et de l'autre. En redire une seconde version ici, ce serait
+     * s'engager à la maintenir deux fois — et divergerait au premier cas limite.
+     *
+     * Une cellule Excel porte une date comme un NOMBRE : on la ramène d'abord à un texte
+     * daté, que le normaliseur sait lire.
+     */
+    private function date(LigneLue $ligne, string $codeColonne, string $entite, string $propriete): ?string
+    {
+        $brut = $ligne->valeur($codeColonne);
+        if ($brut === null || $brut === '') {
+            return null;
+        }
+
+        $texte = (string) (is_scalar($brut) ? $brut : '');
+
+        if (is_numeric($brut)) {
+            try {
+                $texte = DateExcel::excelToDateTimeObject((float) $brut)->format('d/m/Y H:i');
+            } catch (\Throwable) {
+                // Un nombre qui n'est pas une date : le normaliseur le refusera, et la
+                // valeur restera vide plutôt que d'inventer un jour.
+            }
+        }
+
+        $normalise = $this->dates->normaliser($texte, $this->typeTemporel($entite, $propriete));
+
+        // Le normaliseur rend la valeur d'ORIGINE quand il ne reconnaît rien : c'est ce
+        // qui nous dit de ne rien écrire, plutôt que de poser un texte dans un champ de
+        // date et de laisser le formulaire s'en plaindre à notre place.
+        return is_string($normalise) && $normalise !== $texte ? $normalise : ($this->estDeja($normalise) ? (string) $normalise : null);
+    }
+
+    /** Le type Doctrine d'une propriété temporelle — « date » ou « datetime ». */
+    private function typeTemporel(string $entite, string $propriete): string
+    {
+        $fqcn = 'App' . chr(92) . 'Entity' . chr(92) . $entite;
+
+        if (!class_exists($fqcn)) {
+            return 'datetime';
+        }
+
+        $type = (string) $this->em->getClassMetadata($fqcn)->getTypeOfField($propriete);
+
+        return str_starts_with($type, 'date') && !str_contains($type, 'time') ? 'date' : 'datetime';
+    }
+
+    /** La valeur est-elle DÉJÀ au format attendu — cas d'un fichier saisi à la main ? */
+    private function estDeja(mixed $valeur): bool
+    {
+        if (!is_string($valeur)) {
+            return false;
+        }
+
+        foreach (['Y-m-d\TH:i', 'Y-m-d\TH:i:s', 'Y-m-d'] as $format) {
+            if (\DateTimeImmutable::createFromFormat($format, $valeur) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function nombre(LigneLue $ligne, string $codeColonne): ?float

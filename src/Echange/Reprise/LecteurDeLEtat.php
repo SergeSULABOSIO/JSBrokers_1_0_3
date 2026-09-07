@@ -10,7 +10,6 @@ use App\Echange\Etat\ColonneEtat;
 use App\Echange\Etat\EtatDuPortefeuille;
 use App\Echange\Service\ResolveurDeRenvois;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
-use PhpOffice\PhpSpreadsheet\Shared\Date as DateExcel;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 
 /**
@@ -115,7 +114,7 @@ final class LecteurDeLEtat
         for ($numero = self::LIGNE_DONNEES; $numero <= $derniere; ++$numero) {
             $valeurs = [];
             foreach ($lettreParCode as $code => $lettre) {
-                $valeurs[$code] = $this->valeur($feuille, $lettre . $numero, $colonnes[$code] ?? null);
+                $valeurs[$code] = $this->valeur($feuille, $lettre . $numero);
             }
 
             $ligne = new LigneLue(EtatDuPortefeuille::FEUILLE, self::RESSOURCE, $numero, $valeurs, $lettreParCode);
@@ -219,24 +218,23 @@ final class LecteurDeLEtat
     }
 
     /**
-     * La valeur d'une cellule, ramenée à ce que PHP manipule.
+     * La valeur d'une cellule, telle que le classeur la porte.
      *
-     * ⚠ UNE DATE EXCEL EST UN NOMBRE. Lue telle quelle, « 45 292 » deviendrait une chaîne
-     * absurde dans un champ de date ; le format d'échange fait la même conversion, et pour
-     * la même raison.
+     * ⚠ AUCUNE CONVERSION DE DATE ICI, ET C'EST UN CORRECTIF. Ce lecteur convertissait les
+     * dates Excel en « aaaa-mm-jj » — un format que le formulaire a REFUSÉ : les champs
+     * temporels du projet sont des `datetime_immutable`, et leur widget attend
+     * « aaaa-mm-jjThh:mm ». Résultat : les soixante-dix-neuf lignes d'un export réimporté
+     * étaient rejetées sur « Veuillez saisir une date et une heure valides », pour un
+     * format inventé ici.
+     *
+     * La conversion appartient à `ReconstitueurDeTranche`, qui seul connaît la CIBLE de
+     * chaque colonne — donc son type Doctrine, dont le format se dérive. Le format
+     * d'échange normalisé fait de même, et pour la même raison.
      */
-    private function valeur(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $feuille, string $cellule, ?ColonneEtat $colonne): mixed
+    private function valeur(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $feuille, string $cellule): mixed
     {
         $brute = $feuille->getCell($cellule)->getValue();
 
-        if ($brute === null || $brute === '') {
-            return null;
-        }
-
-        if ($colonne !== null && $colonne->role === \App\Ai\Presentation\Colonnes::DATE && is_numeric($brute)) {
-            return DateExcel::excelToDateTimeObject((float) $brute)->format('Y-m-d');
-        }
-
-        return $brute;
+        return $brute === '' ? null : $brute;
     }
 }

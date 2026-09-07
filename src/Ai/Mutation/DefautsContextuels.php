@@ -302,7 +302,16 @@ final class DefautsContextuels
      * Durée en MOIS entamés, déduite de la période. 22 jours font 1 mois : la durée
      * facturée d'une police ne descend pas en dessous du mois entamé.
      */
-    private function dureeEnMois(mixed $debut, mixed $fin): ?int
+    /**
+     * LA DURÉE EN MOIS D'UNE PÉRIODE — publique parce qu'elle doit rester la SEULE.
+     *
+     * La reprise à la maille tranche en a besoin : elle porte l'avenant en opération
+     * distincte — la convergence l'exige, une police et son avenant n° 2 partageant la
+     * proposition — et non en collection, si bien que `dureeDepuisAvenant()` ne le trouve
+     * pas. La formule, elle, ne change pas : la réécrire ailleurs, ce serait deux calculs
+     * de durée à tenir en accord.
+     */
+    public function dureeEnMois(mixed $debut, mixed $fin): ?int
     {
         $d = $this->date($debut);
         $f = $this->date($fin);
