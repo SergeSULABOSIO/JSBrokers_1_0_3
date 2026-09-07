@@ -34,9 +34,49 @@ class CongeCycleDeVieTest extends KernelTestCase
     private const OWNER_EMAIL = 'phpunit-conge-cycle@test.local';
     private const ENT = 'PHPUnit Congés Cycle SARL';
 
-    /** Mercredi 9 septembre 2026 : toutes les périodes du test partent de là. */
-    private const LUNDI_S1 = '2026-09-14';
-    private const VENDREDI_S1 = '2026-09-18';
+    /**
+     * ⚠ LES PÉRIODES DE CE TEST SE CALCULENT, ELLES NE SONT PLUS ÉCRITES.
+     *
+     * Elles étaient figées au 14 septembre 2026, calées sur un « aujourd'hui » supposé du
+     * 9 septembre. Le test a donc marché jusqu'au 6 septembre 2026, puis a échoué pour
+     * toujours : passé cette date, il ne restait plus les cinq jours ouvrables de préavis
+     * que `DemandeCongeValidator` exige — « Préavis insuffisant : 5 jour(s) ouvrable(s)
+     * sont demandés, il en reste 4 ». Cinq erreurs, sur une règle métier intacte.
+     *
+     * ⚠ ET LE PIÈGE EST PIRE QU'UNE SIMPLE PÉREMPTION : un test daté ne se contente pas
+     * de casser, il casse LOIN de sa cause. Rien dans le message n'indique que la faute
+     * est dans le calendrier du test et non dans le préavis lui-même.
+     *
+     * L'ANCRE : le premier lundi de février de l'année SUIVANTE. Trois raisons, et chacune
+     * élimine un mode d'échec :
+     *
+     *  1. toujours dans le futur, quel que soit le jour où l'on exécute — le préavis est
+     *     largement satisfait, y compris un 31 décembre ;
+     *  2. onze mois de marge avant le bord de l'exercice, là où le scénario le plus long
+     *     enchaîne deux périodes de quinze jours ouvrables. Ancrer « dans six semaines »
+     *     aurait fait chevaucher le 31 décembre pour toute exécution de fin d'année, et
+     *     l'exercice d'imputation serait devenu ambigu ;
+     *  3. un lundi, parce que tous les décomptes du test comptent des semaines
+     *     ouvrables pleines.
+     */
+    private function lundi(): \DateTimeImmutable
+    {
+        return new \DateTimeImmutable(sprintf('first monday of february %d', (int) date('Y') + 1));
+    }
+
+    /** Le vendredi de la même semaine : cinq jours ouvrables. */
+    private function vendredi(): \DateTimeImmutable
+    {
+        return $this->lundi()->modify('+4 days');
+    }
+
+    /** Une date de la semaine d'ancrage, au format attendu par `creer()`. */
+    private function jour(string $decalage = ''): string
+    {
+        $date = $this->lundi();
+
+        return ($decalage === '' ? $date : $date->modify($decalage))->format('Y-m-d');
+    }
 
     protected function setUp(): void
     {
@@ -136,7 +176,7 @@ class CongeCycleDeVieTest extends KernelTestCase
     {
         $mouvement = (new MouvementConge())
             ->setAgent($agent)
-            ->setExercice((int) (new \DateTimeImmutable(self::LUNDI_S1))->format('Y'))
+            ->setExercice($this->exercice())
             ->setTypeAbsence($type)
             ->setNature($nature)
             ->setQuantite(number_format($jours, 1, '.', ''));
@@ -160,7 +200,7 @@ class CongeCycleDeVieTest extends KernelTestCase
 
     private function exercice(): int
     {
-        return (int) (new \DateTimeImmutable(self::LUNDI_S1))->format('Y');
+        return (int) $this->lundi()->format('Y');
     }
 
     // ═══════════ Scénario 1 : l'engagé retient les jours dès la soumission ═══════════
@@ -168,7 +208,7 @@ class CongeCycleDeVieTest extends KernelTestCase
     public function testUneDemandeSoumiseRetientLesJoursDesLEngagement(): void
     {
         $s = $this->semer(20.0);
-        $demande = $this->creer($s, self::LUNDI_S1, self::VENDREDI_S1);
+        $demande = $this->creer($s, $this->jour(), $this->jour('+4 days'));
 
         $this->workflow()->soumettre($demande, $s['agent']);
         $this->em()->flush();
@@ -185,7 +225,7 @@ class CongeCycleDeVieTest extends KernelTestCase
     public function testApresApprobationLeDisponibleNeBougePlus(): void
     {
         $s = $this->semer(20.0);
-        $demande = $this->creer($s, self::LUNDI_S1, self::VENDREDI_S1);
+        $demande = $this->creer($s, $this->jour(), $this->jour('+4 days'));
 
         $this->workflow()->soumettre($demande, $s['agent']);
         $this->em()->flush();
@@ -209,7 +249,7 @@ class CongeCycleDeVieTest extends KernelTestCase
     public function testUnRefusRendLesJoursEngages(): void
     {
         $s = $this->semer(20.0);
-        $demande = $this->creer($s, self::LUNDI_S1, self::VENDREDI_S1);
+        $demande = $this->creer($s, $this->jour(), $this->jour('+4 days'));
 
         $this->workflow()->soumettre($demande, $s['agent']);
         $this->em()->flush();
@@ -234,14 +274,18 @@ class CongeCycleDeVieTest extends KernelTestCase
     {
         $s = $this->semer(15.0);
 
-        $premiere = $this->creer($s, '2026-09-14', '2026-10-02'); // 15 jours ouvrables
+        // Du lundi au vendredi de la troisième semaine : quinze jours ouvrables pleins.
+        $premiere = $this->creer($s, $this->jour(), $this->jour('+18 days'));
         $this->workflow()->soumettre($premiere, $s['agent']);
         $this->em()->flush();
 
         self::assertSame(15.0, $premiere->nbJoursFloat());
         self::assertSame(0.0, $this->soldes()->pour($s['agent'], $this->exercice())->disponible());
 
-        $seconde = $this->creer($s, '2026-11-02', '2026-11-20'); // 15 jours de plus
+        // Quinze jours de plus, quatre semaines après la première période : assez loin pour
+        // qu'aucun chevauchement ne brouille le motif du refus, qui doit porter sur le
+        // SOLDE et non sur les dates.
+        $seconde = $this->creer($s, $this->jour('+7 weeks'), $this->jour('+7 weeks +18 days'));
 
         $this->expectException(CongeTransitionException::class);
         $this->workflow()->soumettre($seconde, $s['agent']);
@@ -250,7 +294,7 @@ class CongeCycleDeVieTest extends KernelTestCase
     public function testLeRefusDeSoldeNommeLesChiffres(): void
     {
         $s = $this->semer(3.0);
-        $demande = $this->creer($s, self::LUNDI_S1, self::VENDREDI_S1);
+        $demande = $this->creer($s, $this->jour(), $this->jour('+4 days'));
 
         try {
             $this->workflow()->soumettre($demande, $s['agent']);
@@ -266,7 +310,7 @@ class CongeCycleDeVieTest extends KernelTestCase
     public function testUnTypeNonDecompteNeToucheJamaisAuCompteur(): void
     {
         $s = $this->semer(20.0);
-        $demande = $this->creer($s, self::LUNDI_S1, self::VENDREDI_S1, $s['maladie']);
+        $demande = $this->creer($s, $this->jour(), $this->jour('+4 days'), $s['maladie']);
 
         $this->workflow()->soumettre($demande, $s['agent']);
         $this->em()->flush();
@@ -290,7 +334,8 @@ class CongeCycleDeVieTest extends KernelTestCase
     public function testLAgentAnnuleSaDemandeAvantLeDebutEtRecupereSesJours(): void
     {
         $s = $this->semer(20.0);
-        $demande = $this->creer($s, '2026-11-02', '2026-11-06'); // très à venir
+        // Très à venir, et sur une semaine que nul autre scénario n'occupe.
+        $demande = $this->creer($s, $this->jour('+11 weeks'), $this->jour('+11 weeks +4 days'));
 
         $this->workflow()->soumettre($demande, $s['agent']);
         $this->em()->flush();
@@ -315,7 +360,11 @@ class CongeCycleDeVieTest extends KernelTestCase
     public function testUneAbsenceCommenceeNeSAnnulePasSansValideurNiSansMotif(): void
     {
         $s = $this->semer(20.0);
-        $demande = $this->creer($s, '2020-01-06', '2020-01-10'); // déjà passée
+        // ⚠ CETTE DATE RESTE FIGÉE, ET DOIT LE RESTER. Le scénario exige une période
+        // RÉVOLUE : la dériver du jour d'exécution en ferait, un jour, une période à
+        // venir, et le test cesserait de vérifier ce qu'il annonce sans échouer pour
+        // autant. Une date du passé est intemporellement passée.
+        $demande = $this->creer($s, '2020-01-06', '2020-01-10');
 
         $demande->setStatut(DemandeConge::STATUT_APPROUVEE);
         $demande->setNbJours('5.0');
@@ -352,8 +401,8 @@ class CongeCycleDeVieTest extends KernelTestCase
 
         $demande = new DemandeConge();
         $demande->setAgent($s['valideur'])->setTypeAbsence($s['ca']);
-        $demande->setDateDebut(new \DateTimeImmutable(self::LUNDI_S1));
-        $demande->setDateFin(new \DateTimeImmutable(self::VENDREDI_S1));
+        $demande->setDateDebut($this->lundi());
+        $demande->setDateFin($this->vendredi());
         $demande->setEntreprise($s['entreprise']);
         $demande->setStatut(DemandeConge::STATUT_SOUMISE);
         $demande->setNbJours('5.0');
@@ -382,8 +431,8 @@ class CongeCycleDeVieTest extends KernelTestCase
 
         $demande = new DemandeConge();
         $demande->setAgent($s['valideur'])->setTypeAbsence($s['ca']);
-        $demande->setDateDebut(new \DateTimeImmutable(self::LUNDI_S1));
-        $demande->setDateFin(new \DateTimeImmutable(self::VENDREDI_S1));
+        $demande->setDateDebut($this->lundi());
+        $demande->setDateFin($this->vendredi());
         $demande->setEntreprise($s['entreprise']);
         $this->em()->persist($demande);
 
@@ -404,7 +453,7 @@ class CongeCycleDeVieTest extends KernelTestCase
     public function testChaqueTransitionEcritUneLigneDHistorique(): void
     {
         $s = $this->semer(20.0);
-        $demande = $this->creer($s, '2026-11-09', '2026-11-13');
+        $demande = $this->creer($s, $this->jour('+12 weeks'), $this->jour('+12 weeks +4 days'));
 
         $this->workflow()->soumettre($demande, $s['agent']);
         $this->em()->flush();
@@ -431,7 +480,7 @@ class CongeCycleDeVieTest extends KernelTestCase
     public function testLAnnulationEcritUnMouvementInverseEtNEffaceRien(): void
     {
         $s = $this->semer(20.0);
-        $demande = $this->creer($s, '2026-11-16', '2026-11-20');
+        $demande = $this->creer($s, $this->jour('+13 weeks'), $this->jour('+13 weeks +4 days'));
 
         $this->workflow()->soumettre($demande, $s['agent']);
         $this->em()->flush();
@@ -483,7 +532,7 @@ class CongeCycleDeVieTest extends KernelTestCase
     public function testUneDoubleApprobationNeDecomptePasDeuxFois(): void
     {
         $s = $this->semer(20.0);
-        $demande = $this->creer($s, '2026-11-23', '2026-11-27');
+        $demande = $this->creer($s, $this->jour('+14 weeks'), $this->jour('+14 weeks +4 days'));
 
         $this->workflow()->soumettre($demande, $s['agent']);
         $this->em()->flush();
