@@ -10,6 +10,7 @@ use App\Echange\Etat\EtatDuPortefeuille;
 use App\Echange\Service\Anomalie;
 use App\Echange\Service\ResolveurDeRenvois;
 use App\Entity\Entreprise;
+use App\Entity\Note;
 
 /**
  * UNE LIGNE DEVIENT UNE CHAÎNE D'ÉCRITURES : client, opportunité, proposition, police,
@@ -60,8 +61,32 @@ final class ReconstitueurDeTranche
      */
     private const COLONNE_CLE = 'policeReference';
 
+    /**
+     * La référence portée par toute écriture d'OUVERTURE.
+     *
+     * ⚠ ELLE N'EST PAS DÉCORATIVE. Sans elle, un règlement de reprise ressemble trait pour
+     * trait à un encaissement réel : impossible, six mois plus tard, de distinguer ce que
+     * le cabinet a vraiment reçu de ce qu'on a déclaré en reprenant ses données.
+     */
+    private const REFERENCE_OUVERTURE = 'REPRISE';
+
     /** @var array<string, true> repères déjà produits dans cette passe */
     private array $registre = [];
+
+    /**
+     * @var array<string, string> repère du revenu posé pour chaque proposition
+     *
+     * ⚠ IL FAUT LE RETENIR ENTRE LES LIGNES. La deuxième échéance d'une même police ne
+     * recrée pas la proposition — donc pas ses revenus —, mais elle doit pouvoir ouvrir
+     * sa propre commission, et son article a besoin du revenu à facturer. Sans ce
+     * registre, la première échéance ouvrait sa commission et les suivantes non : un
+     * encaissement perdu sur trois échéances sur quatre.
+     *
+     * ⚠ ET SEULEMENT CE QUE CETTE PASSE A POSÉ. Un revenu déjà en base n'a pas de repère
+     * local : y renvoyer produirait un lien irrésolu. L'absence est donc une réponse
+     * valable, que `ouvrirLaCommission()` traduit en refus nommé.
+     */
+    private array $revenuParProposition = [];
 
     public function __construct(private readonly ResolveurDeRenvois $resolveur)
     {
@@ -71,6 +96,7 @@ final class ReconstitueurDeTranche
     public function reinitialiser(): void
     {
         $this->registre = [];
+        $this->revenuParProposition = [];
     }
 
     /**
@@ -203,10 +229,22 @@ final class ReconstitueurDeTranche
                     $champs[$terme['estTaux'] ? 'tauxExceptionel' : 'montantFlatExceptionel'] = $terme['valeur'];
                 }
 
+                // ⚠ UN REPÈRE SUR L'ENFANT, ET IL SERT. L'écriture d'ouverture de la
+                // commission a besoin de désigner CE revenu : un article sans revenu à
+                // facturer vaut zéro par construction. Le circuit d'écriture déclare le
+                // repère des enfants de collection avec leur identifiant, au dry-run comme
+                // à l'exécution — c'est ce qui rend ce renvoi possible.
+                $this->revenuParProposition[$cotation] ??= (string) CleNaturelle::pourLibelle(
+                    'rev',
+                    $cotation . ' ' . $nom,
+                );
+                $repereRevenu = $this->revenuParProposition[$cotation];
+
                 $collections['revenus'][] = new MutationOperation(
                     op: MutationOperation::OP_CREATE,
                     entityShortName: 'RevenuPourCourtier',
                     fields: $this->sansVide($champs),
+                    ref: $repereRevenu,
                 );
             }
 
@@ -241,12 +279,211 @@ final class ReconstitueurDeTranche
         }
 
         // ── L'échéance elle-même : une par ligne, jamais dédupliquée ────────────────
+        //
+        // ⚠ ELLE PORTE UN REPÈRE, contrairement aux niveaux au-dessus qui convergent : ce
+        // repère ne sert pas à dédupliquer — chaque ligne fait sa tranche — mais à ce que
+        // les écritures d'OUVERTURE puissent la désigner. Il est donc unique par ligne.
+        $repereTranche = (string) CleNaturelle::pourLibelle(
+            'tra',
+            $cle . ' ' . $ligne->numero . ' ' . $ligne->texte('trancheNom'),
+        );
+
         $tranche = $this->tranche($ligne, $colonnes, null, CleNaturelle::renvoiVers($cotation));
-        if ($tranche !== null) {
-            $operations[] = $tranche;
+        if ($tranche === null) {
+            return $operations;
         }
 
+        // La prime déjà réglée devient UNE écriture, imbriquée sous l'échéance.
+        $paiement = $this->ouverturePrime($ligne);
+        if ($paiement !== null) {
+            $tranche = $tranche->withCollections(['paiementsPrime' => [$paiement]]);
+        }
+
+        $operations[] = new MutationOperation(
+            op: $tranche->op,
+            entityShortName: $tranche->entityShortName,
+            targetId: $tranche->targetId,
+            fields: $tranche->fields,
+            collections: $tranche->collections,
+            ref: $repereTranche,
+        );
+
+        $this->ouvrirLaCommission(
+            $ligne,
+            $repereTranche,
+            $this->revenuParProposition[$cotation] ?? null,
+            $assureur,
+            $operations,
+            $anomalies,
+        );
+        $this->ouvrirLaRetro($ligne, $repereTranche, $intermediaire, $operations, $anomalies);
+
         return $operations;
+    }
+
+    /**
+     * L'ÉCRITURE D'OUVERTURE DE LA PRIME : ce que le client avait déjà réglé.
+     *
+     * ⚠ UNE SEULE ÉCRITURE POUR UN SOLDE, ET C'EST ASSUMÉ. Un solde de 8 000 devient un
+     * règlement de 8 000, non les trois versements qui l'ont composé : une ligne plate ne
+     * peut pas porter un journal. C'est la sémantique d'une reprise — on repart d'une
+     * situation juste, pas d'une comptabilité rejouée.
+     *
+     * ⚠ ET SEULEMENT À LA CRÉATION. Cette méthode n'est appelée que sur une échéance
+     * NOUVELLE : la relire sur une échéance existante ajouterait un second règlement à
+     * chaque dépôt du même fichier, et les encaissements doubleraient à chaque
+     * aller-retour.
+     */
+    private function ouverturePrime(LigneLue $ligne): ?MutationOperation
+    {
+        $montant = $this->nombre($ligne, 'ouverturePrimeEncaissee');
+        if ($montant === null || $montant <= 0.0) {
+            return null;
+        }
+
+        return new MutationOperation(
+            op: MutationOperation::OP_CREATE,
+            entityShortName: 'PaiementPrime',
+            fields: $this->sansVide([
+                'montant' => $montant,
+                'paidAt' => $ligne->texte('ouverturePrimeLe') ?: $ligne->texte('policeDateEffet'),
+                'reference' => self::REFERENCE_OUVERTURE,
+                'description' => 'Situation reprise depuis un classeur de reprise.',
+            ]),
+        );
+    }
+
+    /**
+     * L'ÉCRITURE D'OUVERTURE DE LA COMMISSION : une note soldée, et une seule.
+     *
+     * ── POURQUOI UNE NOTE PAR ÉCHÉANCE, ET NON UNE POUR TOUT L'IMPORT ──────────────
+     * ⚠ C'EST UNE CONTRAINTE DU CALCUL, PAS UN CHOIX D'ÉCRITURE.
+     * `IndicatorCalculationHelper::getTrancheMontantCommissionEncaissee()` applique la
+     * proportion payée de la note ENTIÈRE à chacun de ses articles. Une note groupant
+     * plusieurs échéances ne peut donc pas exprimer des taux d'encaissement différents :
+     * une échéance soldée et une autre encaissée à 30 % y sont inexprimables.
+     *
+     * Avec UN article et UN règlement du même montant, la proportion vaut exactement ce
+     * qu'on a versé — et la commission encaissée de l'échéance vaut le montant écrit.
+     *
+     * ── CE QU'ELLE EXIGE ──────────────────────────────────────────────────────────
+     * ⚠ UN REVENU À FACTURER. `getArticleMontant()` rend 0 pour un article qui n'est pas
+     * lié à un revenu ET à une tranche : sans lui, la note serait posée, le règlement
+     * aussi, et la commission encaissée resterait à zéro — un travail invisible et faux.
+     * On refuse donc, en nommant ce qui manque.
+     *
+     * @param array<int, MutationOperation> $operations
+     * @param Anomalie[]                    $anomalies
+     */
+    private function ouvrirLaCommission(
+        LigneLue $ligne,
+        string $repereTranche,
+        ?string $repereRevenu,
+        int|string|null $assureur,
+        array &$operations,
+        array &$anomalies,
+    ): void {
+        $montant = $this->nombre($ligne, 'ouvertureCommissionEncaissee');
+        if ($montant === null || $montant <= 0.0) {
+            return;
+        }
+
+        if ($repereRevenu === null) {
+            $anomalies[] = $this->refus($ligne, 'ouvertureCommissionEncaissee', sprintf(
+                'Une commission encaissée de %s est indiquée, mais la colonne « Commission · '
+                . 'Revenus » est vide : il n\'y a rien à facturer. Une note sans revenu vaudrait '
+                . 'zéro, et l\'encaissement serait perdu sans que rien ne le signale.',
+                number_format($montant, 2, ',', ' '),
+            ));
+
+            return;
+        }
+
+        $date = $ligne->texte('ouvertureCommissionLe') ?: $ligne->texte('policeDateEffet');
+
+        $operations[] = new MutationOperation(
+            op: MutationOperation::OP_CREATE,
+            entityShortName: 'Note',
+            fields: $this->sansVide([
+                'nom' => 'Reprise — ' . ($ligne->texte('policeReference') ?: $this->nomDeLAffaire($ligne)),
+                'reference' => self::REFERENCE_OUVERTURE,
+                // Une note de DÉBIT adressée à l'ASSUREUR : c'est ce que le calcul de la
+                // commission encaissée retient (avec le client), et rien d'autre.
+                'type' => Note::TYPE_NOTE_DE_DEBIT,
+                'addressedTo' => Note::TO_ASSUREUR,
+                'assureur' => $assureur,
+                'description' => 'Situation reprise depuis un classeur de reprise.',
+            ]),
+            collections: [
+                'articles' => [new MutationOperation(
+                    op: MutationOperation::OP_CREATE,
+                    entityShortName: 'Article',
+                    fields: [
+                        // La quantité vaut 1 : l'article facture le revenu de cette
+                        // échéance en entier. Ce qui module l'encaissement, c'est le
+                        // RÈGLEMENT ci-dessous, non la quantité.
+                        'quantite' => 1.0,
+                        'tranche' => CleNaturelle::renvoiVers($repereTranche),
+                        'revenuFacture' => CleNaturelle::renvoiVers($repereRevenu),
+                    ],
+                )],
+                'paiements' => [new MutationOperation(
+                    op: MutationOperation::OP_CREATE,
+                    entityShortName: 'Paiement',
+                    fields: $this->sansVide([
+                        'montant' => $montant,
+                        'paidAt' => $date,
+                        'reference' => self::REFERENCE_OUVERTURE,
+                    ]),
+                )],
+            ],
+        );
+    }
+
+    /**
+     * L'ÉCRITURE D'OUVERTURE DE LA RÉTROCOMMISSION : ce qui avait déjà été reversé.
+     *
+     * ⚠ UN REVERSEMENT SANS BÉNÉFICIAIRE N'A PAS DE SENS. `ReversementRetroAgent` porte un
+     * agent OU un partenaire, en XOR : sans l'un des deux, la ligne serait une somme
+     * versée à personne. On refuse en le disant, plutôt que d'écrire un orphelin.
+     *
+     * @param array<int, MutationOperation> $operations
+     * @param Anomalie[]                    $anomalies
+     */
+    private function ouvrirLaRetro(
+        LigneLue $ligne,
+        string $repereTranche,
+        int|string|null $intermediaire,
+        array &$operations,
+        array &$anomalies,
+    ): void {
+        $montant = $this->nombre($ligne, 'ouvertureRetroReversee');
+        if ($montant === null || $montant <= 0.0) {
+            return;
+        }
+
+        if ($intermediaire === null) {
+            $anomalies[] = $this->refus($ligne, 'ouvertureRetroReversee', sprintf(
+                'Une rétrocommission reversée de %s est indiquée, mais aucun intermédiaire n\'est '
+                . 'nommé : un reversement sans bénéficiaire ne peut pas être écrit.',
+                number_format($montant, 2, ',', ' '),
+            ));
+
+            return;
+        }
+
+        $operations[] = new MutationOperation(
+            op: MutationOperation::OP_CREATE,
+            entityShortName: 'ReversementRetroAgent',
+            fields: $this->sansVide([
+                'partenaire' => $intermediaire,
+                'tranche' => CleNaturelle::renvoiVers($repereTranche),
+                'montant' => $montant,
+                'paidAt' => $ligne->texte('ouvertureRetroLe') ?: $ligne->texte('policeDateEffet'),
+                'reference' => self::REFERENCE_OUVERTURE,
+                'description' => 'Situation reprise depuis un classeur de reprise.',
+            ]),
+        );
     }
 
     /**

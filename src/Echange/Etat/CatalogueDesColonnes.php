@@ -328,6 +328,51 @@ final class CatalogueDesColonnes
                 'Rétro agent · Compte(s) bancaire(s)',
                 'Comptes débités par ces versements.',
             ),
+            // ── Les soldes d'OUVERTURE ──────────────────────────────────────────────
+            // ⚠ CES SIX COLONNES NE SONT LUES QU'À LA CRÉATION D'UNE ÉCHÉANCE, et c'est
+            // capital. Elles portent une SITUATION DE DÉPART : ce qui était déjà encaissé
+            // le jour de la reprise. Les relire sur une échéance qui existe déjà
+            // ajouterait un second règlement à chaque dépôt du même fichier — les
+            // encaissements doubleraient à chaque aller-retour, sans que rien ne le dise.
+            //
+            // ⚠ ET ELLES NE REJOUENT PAS L'HISTORIQUE. Un solde de 8 000 devient UNE
+            // écriture de 8 000, non les trois versements qui l'ont composé : une ligne
+            // plate ne peut pas porter un journal. C'est la sémantique assumée d'une
+            // reprise — on repart d'une situation juste, pas d'une comptabilité rejouée.
+            'ouverturePrimeEncaissee' => ColonneEtat::montant(
+                'Ouverture · Prime encaissée',
+                'Prime DÉJÀ réglée par le client au jour de la reprise. Devient un paiement de '
+                . 'prime unique, à la date ci-contre. ⚠ Lu SEULEMENT si la ligne crée une '
+                . 'échéance : sur une échéance existante, il serait ajouté une seconde fois.',
+            )->enSaisie('PaiementPrime.montant'),
+            'ouverturePrimeLe' => ColonneEtat::date(
+                'Ouverture · Prime encaissée le',
+                'Date de l\'écriture d\'ouverture de la prime. À défaut, la date d\'effet de la police.',
+            )->enSaisie('PaiementPrime.paidAt'),
+
+            'ouvertureCommissionEncaissee' => ColonneEtat::montant(
+                'Ouverture · Commission encaissée',
+                'Commission DÉJÀ encaissée du cabinet au jour de la reprise. Devient une note de '
+                . 'commission soldée par un règlement du même montant. ⚠ Exige qu\'un type de '
+                . 'revenu soit renseigné en « Commission · Revenus » : une note sans revenu à '
+                . 'facturer vaudrait zéro.',
+            )->enSaisie('Paiement.montant'),
+            'ouvertureCommissionLe' => ColonneEtat::date(
+                'Ouverture · Commission encaissée le',
+                'Date de l\'écriture d\'ouverture de la commission.',
+            )->enSaisie('Paiement.paidAt'),
+
+            'ouvertureRetroReversee' => ColonneEtat::montant(
+                'Ouverture · Rétro reversée',
+                'Rétrocommission DÉJÀ versée à l\'intermédiaire au jour de la reprise. ⚠ Exige '
+                . 'qu\'un intermédiaire soit renseigné : un reversement sans bénéficiaire n\'a pas '
+                . 'de sens.',
+            )->enSaisie('ReversementRetroAgent.montant'),
+            'ouvertureRetroLe' => ColonneEtat::date(
+                'Ouverture · Rétro reversée le',
+                'Date de l\'écriture d\'ouverture du reversement.',
+            )->enSaisie('ReversementRetroAgent.paidAt'),
+
         ];
     }
 }

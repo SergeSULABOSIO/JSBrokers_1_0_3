@@ -376,6 +376,245 @@ final class RepriseTest extends KernelTestCase
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
+    // Les soldes d'ouverture
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * ⚠ CE TEST EST LE PLUS IMPORTANT DE LA SECTION : les ouvertures ne se rejouent PAS.
+     *
+     * Un solde d'ouverture décrit une situation de DÉPART. Le relire sur une échéance qui
+     * existe déjà ajouterait un second règlement à chaque dépôt du même fichier : les
+     * encaissements doubleraient à chaque aller-retour — sans erreur, sans avertissement,
+     * et l'on ne s'en apercevrait qu'en constatant une prime réglée deux fois.
+     */
+    public function testLesSoldesDOuvertureNeSontPasRejouesSurUneEcheanceExistante(): void
+    {
+        $entreprise = $this->cabinet();
+        $anomalies = [];
+
+        $operations = $this->reconstitueur()->pour(
+            $this->ligne([
+                'id' => 77,
+                'policeReference' => 'POL/2026/020',
+                'assure' => 'KIN AVIA',
+                'assureur' => 'SFA CONGO',
+                'trancheNom' => 'Prime unique',
+                'commissionRevenus' => 'Commission Ordinaire',
+                'ouverturePrimeEncaissee' => 8000,
+                'ouvertureCommissionEncaissee' => 1200,
+                'ouvertureRetroReversee' => 300,
+            ], 2),
+            CatalogueDesColonnes::pour('ARCA', 'TVA'),
+            $entreprise,
+            $anomalies,
+        );
+
+        self::assertCount(1, $operations, 'Une échéance identifiée ne produit QUE sa mise à jour.');
+        self::assertSame('Tranche', $operations[0]->entityShortName);
+        self::assertSame(MutationOperation::OP_EDIT, $operations[0]->op);
+        self::assertSame([], $operations[0]->collections, 'Aucune écriture d\'ouverture imbriquée.');
+    }
+
+    /**
+     * LA PRIME DÉJÀ RÉGLÉE devient UN règlement, imbriqué sous l'échéance.
+     *
+     * ⚠ UNE SEULE ÉCRITURE POUR UN SOLDE, ET C'EST ASSUMÉ. Un solde de 8 000 devient un
+     * versement de 8 000, non les trois qui l'ont composé : une ligne plate ne peut pas
+     * porter un journal. On reprend une situation, pas une comptabilité.
+     */
+    public function testLaPrimeDejaRegleeDevientUnReglementDeLEcheance(): void
+    {
+        $entreprise = $this->cabinet();
+        $anomalies = [];
+
+        $operations = $this->reconstitueur()->pour(
+            $this->ligne([
+                'policeReference' => 'POL/2026/021',
+                'policeDateEffet' => '2026-01-31',
+                'assure' => 'KIN AVIA',
+                'assureur' => 'SFA CONGO',
+                'trancheNom' => 'Prime unique',
+                'ouverturePrimeEncaissee' => 8000,
+            ], 2),
+            CatalogueDesColonnes::pour('ARCA', 'TVA'),
+            $entreprise,
+            $anomalies,
+        );
+
+        self::assertSame([], $this->erreurs($anomalies));
+
+        $tranche = $this->operation($operations, 'Tranche');
+        self::assertNotNull($tranche);
+
+        $reglements = $tranche->collections['paiementsPrime'] ?? [];
+        self::assertCount(1, $reglements, 'Un solde, un règlement.');
+        self::assertSame(8000.0, $reglements[0]->fields['montant']);
+
+        // ⚠ LA DATE SE REPLIE SUR CELLE DE LA POLICE. Un règlement sans date ne se
+        // rattache à aucun exercice : il disparaîtrait des états par période.
+        self::assertSame('2026-01-31', $reglements[0]->fields['paidAt']);
+
+        // ⚠ ET IL PORTE SA PROVENANCE. Sans cette référence, un règlement de reprise
+        // ressemble trait pour trait à un encaissement réel : impossible, six mois plus
+        // tard, de distinguer ce que le cabinet a reçu de ce qu'on a déclaré.
+        self::assertSame('REPRISE', $reglements[0]->fields['reference']);
+    }
+
+    /**
+     * LA COMMISSION ENCAISSÉE devient une note d'UN article, soldée par UN règlement.
+     *
+     * ⚠ UNE NOTE PAR ÉCHÉANCE, ET C'EST UNE CONTRAINTE DU CALCUL — pas un choix.
+     * `getTrancheMontantCommissionEncaissee()` applique la proportion payée de la note
+     * ENTIÈRE à chacun de ses articles. Une note groupant plusieurs échéances ne peut donc
+     * pas exprimer des taux d'encaissement différents : une échéance soldée et une autre
+     * encaissée à 30 % y sont inexprimables.
+     */
+    public function testLaCommissionEncaisseeDevientUneNoteSoldee(): void
+    {
+        $entreprise = $this->cabinet();
+        $anomalies = [];
+
+        $operations = $this->reconstitueur()->pour(
+            $this->ligne([
+                'policeReference' => 'POL/2026/022',
+                'assure' => 'KIN AVIA',
+                'assureur' => 'SFA CONGO',
+                'trancheNom' => 'Prime unique',
+                'commissionRevenus' => 'Commission Ordinaire',
+                'ouvertureCommissionEncaissee' => 1200,
+                'ouvertureCommissionLe' => '2026-03-15',
+            ], 2),
+            CatalogueDesColonnes::pour('ARCA', 'TVA'),
+            $entreprise,
+            $anomalies,
+        );
+
+        self::assertSame([], $this->erreurs($anomalies));
+
+        $note = $this->operation($operations, 'Note');
+        self::assertNotNull($note, 'Une note doit porter l\'encaissement d\'ouverture.');
+
+        // Une note de DÉBIT adressée à l'ASSUREUR : c'est ce que le calcul de la
+        // commission encaissée retient, avec le client, et rien d'autre.
+        self::assertSame(0, $note->fields['type']);
+        self::assertSame(1, $note->fields['addressedTo']);
+
+        self::assertCount(1, $note->collections['articles'] ?? [], 'UN article, et un seul.');
+        self::assertCount(1, $note->collections['paiements'] ?? []);
+        self::assertSame(1200.0, $note->collections['paiements'][0]->fields['montant']);
+        self::assertSame('2026-03-15', $note->collections['paiements'][0]->fields['paidAt']);
+
+        // ⚠ L'ARTICLE DOIT ÊTRE LIÉ À LA FOIS À L'ÉCHÉANCE ET AU REVENU. Sans l'un des
+        // deux, `getArticleMontant()` rend zéro : la note serait posée, le règlement
+        // aussi, et la commission encaissée resterait à zéro — un travail invisible.
+        $article = $note->collections['articles'][0];
+        self::assertStringStartsWith('@', (string) $article->fields['tranche']);
+        self::assertStringStartsWith('@', (string) $article->fields['revenuFacture']);
+    }
+
+    /**
+     * ⚠ UNE COMMISSION ENCAISSÉE SANS REVENU À FACTURER EST REFUSÉE.
+     *
+     * `getArticleMontant()` rend zéro pour un article qui n'est pas lié à un revenu :
+     * écrire quand même la note et son règlement laisserait la commission encaissée à
+     * zéro. Un travail fait, un chiffre faux, et rien pour le signaler — donc on refuse en
+     * nommant ce qui manque.
+     */
+    public function testUneCommissionEncaisseeSansRevenuEstRefusee(): void
+    {
+        $entreprise = $this->cabinet();
+        $anomalies = [];
+
+        $operations = $this->reconstitueur()->pour(
+            $this->ligne([
+                'policeReference' => 'POL/2026/023',
+                'assure' => 'KIN AVIA',
+                'assureur' => 'SFA CONGO',
+                'trancheNom' => 'Prime unique',
+                'ouvertureCommissionEncaissee' => 1200,
+            ], 2),
+            CatalogueDesColonnes::pour('ARCA', 'TVA'),
+            $entreprise,
+            $anomalies,
+        );
+
+        self::assertNull($this->operation($operations, 'Note'), 'Aucune note ne doit être posée.');
+        $erreurs = $this->erreurs($anomalies);
+        self::assertCount(1, $erreurs);
+        self::assertStringContainsString('rien à facturer', $erreurs[0]->message);
+    }
+
+    /**
+     * ⚠ UN REVERSEMENT SANS BÉNÉFICIAIRE N'A PAS DE SENS.
+     *
+     * `ReversementRetroAgent` porte un agent OU un partenaire : sans l'un des deux, la
+     * ligne serait une somme versée à personne.
+     */
+    public function testUneRetroReverseeSansIntermediaireEstRefusee(): void
+    {
+        $entreprise = $this->cabinet();
+        $anomalies = [];
+
+        $operations = $this->reconstitueur()->pour(
+            $this->ligne([
+                'policeReference' => 'POL/2026/024',
+                'assure' => 'KIN AVIA',
+                'assureur' => 'SFA CONGO',
+                'trancheNom' => 'Prime unique',
+                'ouvertureRetroReversee' => 300,
+            ], 2),
+            CatalogueDesColonnes::pour('ARCA', 'TVA'),
+            $entreprise,
+            $anomalies,
+        );
+
+        self::assertNull($this->operation($operations, 'ReversementRetroAgent'));
+        $erreurs = $this->erreurs($anomalies);
+        self::assertCount(1, $erreurs);
+        self::assertStringContainsString('aucun intermédiaire', $erreurs[0]->message);
+    }
+
+    /**
+     * ⚠ CHAQUE ÉCHÉANCE D'UNE MÊME POLICE OUVRE SA PROPRE COMMISSION.
+     *
+     * La deuxième échéance ne recrée pas la proposition — donc pas ses revenus. Sans
+     * registre, son article n'aurait aucun revenu à facturer : la première échéance
+     * ouvrirait sa commission et les suivantes non, soit un encaissement perdu sur trois
+     * échéances sur quatre.
+     */
+    public function testChaqueEcheanceOuvreSaProprCommission(): void
+    {
+        $entreprise = $this->cabinet();
+        $colonnes = CatalogueDesColonnes::pour('ARCA', 'TVA');
+        $reconstitueur = $this->reconstitueur();
+
+        $notes = 0;
+        foreach ([1, 2] as $rang) {
+            $anomalies = [];
+            $operations = $reconstitueur->pour(
+                $this->ligne([
+                    'policeReference' => 'POL/2026/025',
+                    'assure' => 'KIN AVIA',
+                    'assureur' => 'SFA CONGO',
+                    'trancheNom' => 'Échéance ' . $rang,
+                    'commissionRevenus' => 'Commission Ordinaire',
+                    'ouvertureCommissionEncaissee' => 600,
+                ], $rang + 1),
+                $colonnes,
+                $entreprise,
+                $anomalies,
+            );
+
+            self::assertSame([], $this->erreurs($anomalies), sprintf('Échéance %d refusée.', $rang));
+            if ($this->operation($operations, 'Note') !== null) {
+                ++$notes;
+            }
+        }
+
+        self::assertSame(2, $notes, 'Les DEUX échéances doivent ouvrir leur commission.');
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
     // Les colonnes de résultat
     // ─────────────────────────────────────────────────────────────────────────────
 
@@ -455,6 +694,12 @@ final class RepriseTest extends KernelTestCase
             'commissionRevenus' => 'Commission · Revenus',
             'intermediaire' => 'Intermédiaire · Nom',
             'intermediairePart' => 'Intermédiaire · Part',
+            'ouverturePrimeEncaissee' => 'Ouverture · Prime encaissée',
+            'ouverturePrimeLe' => 'Ouverture · Prime encaissée le',
+            'ouvertureCommissionEncaissee' => 'Ouverture · Commission encaissée',
+            'ouvertureCommissionLe' => 'Ouverture · Commission encaissée le',
+            'ouvertureRetroReversee' => 'Ouverture · Rétro reversée',
+            'ouvertureRetroLe' => 'Ouverture · Rétro reversée le',
         ];
 
         $colonnes = CatalogueDesColonnes::pour('ARCA', 'TVA');
@@ -497,6 +742,22 @@ final class RepriseTest extends KernelTestCase
         }
 
         return $comptes;
+    }
+
+    /**
+     * La PREMIÈRE opération portant sur cette entité, ou null.
+     *
+     * @param array<int, MutationOperation> $operations
+     */
+    private function operation(array $operations, string $entite): ?MutationOperation
+    {
+        foreach ($operations as $operation) {
+            if ($operation->entityShortName === $entite) {
+                return $operation;
+            }
+        }
+
+        return null;
     }
 
     /**

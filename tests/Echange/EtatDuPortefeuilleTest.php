@@ -956,6 +956,14 @@ class EtatDuPortefeuilleTest extends KernelTestCase
             'tranchePart', 'trancheMontantFlat',
             'portefeuille',
             'primeChargements', 'commissionRevenus',
+
+            // Les SOLDES D'OUVERTURE relèvent de la même famille : ils décrivent une
+            // situation de DÉPART qu'on écrit une fois, non un chiffre que l'application
+            // tient à jour. Ce que l'application en fait, elle, Ket le dit déjà — par
+            // `primeSignalee`, `commissionEncaissee` et `retroReversee`, reliés ci-dessous.
+            'ouverturePrimeEncaissee', 'ouverturePrimeLe',
+            'ouvertureCommissionEncaissee', 'ouvertureCommissionLe',
+            'ouvertureRetroReversee', 'ouvertureRetroLe',
         ];
 
         // La correspondance clé d'état → clé d'économie. Les noms diffèrent parce que
