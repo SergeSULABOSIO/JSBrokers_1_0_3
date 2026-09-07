@@ -30,7 +30,7 @@
     /* Feedback au clic : même convention que les toolbars de l'app */
     .soa-actions-bar .btn { transition: transform .1s ease, background-color .15s ease; }
     .soa-actions-bar .btn:active { transform: scale(0.97); }
-    /* Bouton cobalt (charte JS Brokers) : action principale de la barre */
+    /* Bouton cobalt (charte Joseara) : action principale de la barre */
     .soa-actions-bar .btn-cobalt {
         background-color: #0047AB;
         border-color: #0047AB;
@@ -200,15 +200,15 @@
                     <div class="col-7">
                         {% if entreprise and entreprise.thumbnail %}
                             <img src="{{ asset('images/entreprises/' ~ entreprise.thumbnail) }}"
-                                 alt="{{ entreprise.nom|default('JS Brokers') }}"
+                                 alt="{{ entreprise.nom|default('Joseara') }}"
                                  style="max-height: 52px; margin-bottom: .5rem;">
                         {% else %}
                             <img src="{{ asset('images/entreprises/logo.jpg') }}"
-                                 alt="JS Brokers"
+                                 alt="Joseara"
                                  style="max-height: 52px; margin-bottom: .5rem;">
                         {% endif %}
                         <div>
-                            <span class="fw-bold" style="font-size: 1rem;">{{ entreprise.nom|default('JS Brokers') }}</span><br>
+                            <span class="fw-bold" style="font-size: 1rem;">{{ entreprise.nom|default('Joseara') }}</span><br>
                             <small style="opacity:.8;">{{ entreprise.adresse|default('') }}</small>
                         </div>
                     </div>
@@ -931,7 +931,7 @@
 
             {# ── PIED DE PAGE ─────────────────────────────────────────────── #}
             <footer class="soa-footer">
-                <p class="mb-1 fw-bold text-dark">{{ entreprise.nom|default('JS Brokers') }}</p>
+                <p class="mb-1 fw-bold text-dark">{{ entreprise.nom|default('Joseara') }}</p>
                 <p class="text-muted small fst-italic mb-0">
                     {{ entreprise.adresse|default('') }}<br>
                     Tel : {{ entreprise.telephone|default('N/A') }} — {{ entreprise.siteweb|default('') }}<br>

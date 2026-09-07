@@ -460,7 +460,7 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /** Vrai si le compte est un agent JS Brokers (équipe interne), pas un client. */
+    /** Vrai si le compte est un agent Joseara (équipe interne), pas un client. */
     public function isAgent(): bool
     {
         $roles = $this->getRoles();

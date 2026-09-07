@@ -11,7 +11,7 @@ use Doctrine\Migrations\AbstractMigration;
  * Fiscalité — suivi des reversements de TVA à l'autorité fiscale.
  *
  * Crée reglement_taxe : chaque paiement de TVA nette (par période mois/année)
- * dû par JS Brokers à une autorité. Permet d'afficher, dans la Fiscalité, le
+ * dû par Joseara à une autorité. Permet d'afficher, dans la Fiscalité, le
  * montant dû (collectée − déductible), le montant payé et le solde dû, et de
  * générer l'écriture comptable correspondante. Modification additive.
  */

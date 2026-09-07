@@ -7,7 +7,7 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 /**
  * Page publique « Conditions d'utilisation » (route app_terms) :
  *  - elle s'affiche dans les deux langues ;
- *  - elle réutilise le pied de page public JS Brokers ;
+ *  - elle réutilise le pied de page public Joseara ;
  *  - les liens de section du pied de page renvoient vers le portail ;
  *  - la bascule de langue reste sur la page courante et traduit le rendu.
  */

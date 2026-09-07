@@ -8,7 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * @file Profil CRM d'un client (utilisateur propriétaire payant ou prospect).
- * @description Étend l'utilisateur côté équipe JS Brokers UNIQUEMENT (invisible
+ * @description Étend l'utilisateur côté équipe Joseara UNIQUEMENT (invisible
  * du client) : étape du pipeline commercial, score de santé, agent référent,
  * dates de relance. Données plateforme (pas de scope entreprise/invité). Le
  * profil est créé/synchronisé automatiquement (à la connexion + à l'affichage de
@@ -37,7 +37,7 @@ class CrmProfil
     #[ORM\Column(options: ['default' => false])]
     private bool $etapeManuelleForcee = false;
 
-    /** Agent JS Brokers responsable du compte (ROLE_ADMIN). */
+    /** Agent Joseara responsable du compte (ROLE_ADMIN). */
     #[ORM\ManyToOne(targetEntity: Utilisateur::class)]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Utilisateur $agentReferent = null;

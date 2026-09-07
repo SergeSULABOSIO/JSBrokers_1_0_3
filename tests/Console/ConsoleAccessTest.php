@@ -10,7 +10,7 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * Console JS Brokers : contrôle d'accès (ROLE_ADMIN / ROLE_SUPER_ADMIN), rendu
+ * Console Joseara : contrôle d'accès (ROLE_ADMIN / ROLE_SUPER_ADMIN), rendu
  * des pages, création d'un collaborateur avec notification, édition du plan
  * tarifaire et son repli sur les constantes après nettoyage.
  */

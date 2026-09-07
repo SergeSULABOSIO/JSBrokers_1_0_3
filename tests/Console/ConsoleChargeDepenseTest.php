@@ -11,7 +11,7 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * Console JS Brokers : CRUD des rubriques « Charges » (types de charges OHADA) et
+ * Console Joseara : CRUD des rubriques « Charges » (types de charges OHADA) et
  * « Dépenses » (sorties de fonds), plus exposition des KPI Finance/SaaS et du bloc
  * « Dernières dépenses » sur le tableau de bord. Vérifie l'accès (agent vs
  * utilisateur), la création/édition/suppression via formulaires et la persistance.

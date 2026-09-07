@@ -2,6 +2,8 @@
 
 namespace App\Ai\Document;
 
+use App\Marque;
+
 /**
  * La NOTE DE BAS DE PAGE du document : entreprise, utilisateur, titre, date de
  * production.
@@ -26,12 +28,13 @@ final readonly class PiedDePage
     public function ligne(): string
     {
         return sprintf(
-            '%s — %s · %s · Produit le %s par %s (JS Brokers)',
+            '%s — %s · %s · Produit le %s par %s (%s)',
             $this->entreprise,
             $this->utilisateur,
             $this->titre,
             $this->produitLe->format('d/m/Y à H:i'),
             $this->assistantNom,
+            Marque::NOM,
         );
     }
 

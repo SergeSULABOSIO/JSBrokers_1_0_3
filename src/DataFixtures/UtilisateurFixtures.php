@@ -24,9 +24,9 @@ class UtilisateurFixtures extends Fixture
         // Création de l'utilisateur admin
         $adminUser = new Utilisateur();
         $adminUser->setNom('Serge SULA BOSIO');
-        $adminUser->setEmail('admin@js-brokers.com');
+        $adminUser->setEmail('admin@joseara.com');
         $adminUser->setPassword($this->passwordHasher->hashPassword($adminUser, 'admin'));
-        // Collaborateur par défaut (super-admin) : gère la Console JS Brokers,
+        // Collaborateur par défaut (super-admin) : gère la Console Joseara,
         // y compris la tarification et les autres collaborateurs.
         $adminUser->setRoles(['ROLE_SUPER_ADMIN']);
         $adminUser->setVerified(true);
@@ -38,7 +38,7 @@ class UtilisateurFixtures extends Fixture
         // Création de l'utilisateur invité
         $inviteUser = new Utilisateur();
         $inviteUser->setNom('Victor ESAFE');
-        $inviteUser->setEmail('invite@js-brokers.com');
+        $inviteUser->setEmail('invite@joseara.com');
         $inviteUser->setPassword($this->passwordHasher->hashPassword($inviteUser, 'invite'));
         $inviteUser->setRoles(['ROLE_USER']); // Rôle de base
         $inviteUser->setVerified(true);

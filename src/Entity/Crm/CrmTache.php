@@ -7,7 +7,7 @@ use App\Repository\Crm\CrmTacheRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * @file Tâche interne de l'équipe JS Brokers (relance, démo, réactivation…).
+ * @file Tâche interne de l'équipe Joseara (relance, démo, réactivation…).
  * @description To-do des commerciaux / Customer Success, éventuellement rattachée
  * à un client. Créée manuellement OU automatiquement (automatisations). Distincte
  * de App\Entity\Tache (workspace du courtier). L'idempotence des tâches
@@ -44,7 +44,7 @@ class CrmTache
     #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
     private ?Utilisateur $client = null;
 
-    /** Agent JS Brokers à qui la tâche est assignée. */
+    /** Agent Joseara à qui la tâche est assignée. */
     #[ORM\ManyToOne(targetEntity: Utilisateur::class)]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Utilisateur $assigneA = null;

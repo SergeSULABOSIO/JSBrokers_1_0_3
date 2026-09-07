@@ -2,7 +2,7 @@
 
 /**
  * @file Ce fichier contient le contrôleur LegalController.
- * @description Expose les pages légales publiques de JS Brokers. Pour l'instant :
+ * @description Expose les pages légales publiques de Joseara. Pour l'instant :
  * 1. `terms()`: Affiche l'intégralité des Conditions et Termes d'Utilisation.
  *    Route PUBLIQUE (aucune authentification requise) afin que les visiteurs,
  *    les futurs inscrits comme les utilisateurs déjà connectés puissent lire

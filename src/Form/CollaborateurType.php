@@ -17,7 +17,7 @@ use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
 
 /**
- * Formulaire de création/édition d'un collaborateur (agent) JS Brokers.
+ * Formulaire de création/édition d'un collaborateur (agent) Joseara.
  * Le mot de passe et le rôle super-admin sont non mappés : gérés par le contrôleur.
  */
 class CollaborateurType extends AbstractType
@@ -33,7 +33,7 @@ class CollaborateurType extends AbstractType
             ])
             ->add('email', EmailType::class, [
                 'label' => 'Adresse e-mail',
-                'attr'  => ['placeholder' => 'agent@js-brokers.com', 'autocomplete' => 'off', 'data-icon' => 'contact'],
+                'attr'  => ['placeholder' => 'agent@joseara.com', 'autocomplete' => 'off', 'data-icon' => 'contact'],
             ])
             ->add('plainPassword', PasswordType::class, [
                 'label'       => $isEdit ? 'Nouveau mot de passe (laisser vide pour conserver)' : 'Mot de passe',

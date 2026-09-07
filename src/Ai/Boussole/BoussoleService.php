@@ -261,7 +261,7 @@ final class BoussoleService
         // invités habilités « Documents comptables » (gating canRead ci-dessus).
         //
         // CourtierSuiviFiscalService, et surtout PAS SuiviFiscalService : ce dernier
-        // calcule la TVA de la PLATEFORME JS Brokers (ventes de tokens, dépenses de
+        // calcule la TVA de la PLATEFORME Joseara (ventes de tokens, dépenses de
         // l'éditeur) et ne prend aucune entreprise — il annoncerait à chaque courtier
         // un solde qui ne le concerne pas, sur l'axe le plus urgent du barème.
         //

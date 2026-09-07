@@ -151,7 +151,7 @@ class CrmHealthScoreService
         };
     }
 
-    /** Code hexadécimal de la couleur (charte JS Brokers). */
+    /** Code hexadécimal de la couleur (charte Joseara). */
     public function colorHex(string $couleur): string
     {
         return match ($couleur) {

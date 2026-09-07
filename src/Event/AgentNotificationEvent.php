@@ -3,7 +3,7 @@
 namespace App\Event;
 
 /**
- * @file Événement de notification interne destiné aux agents JS Brokers.
+ * @file Événement de notification interne destiné aux agents Joseara.
  * @description Émis aux moments métier clés (création/édition/suppression d'un
  * compte ou d'une entreprise) afin que toute l'équipe soit informée et puisse
  * agir au bon endroit. Un événement unique, paramétré par action/type, évite la

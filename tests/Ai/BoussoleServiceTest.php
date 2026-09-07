@@ -61,7 +61,7 @@ class BoussoleServiceTest extends TestCase
         ]);
 
         // CourtierSuiviFiscalService (le cabinet), et surtout pas SuiviFiscalService
-        // (la plateforme JS Brokers) : sa forme de retour est à DEUX volets, sans
+        // (la plateforme Joseara) : sa forme de retour est à DEUX volets, sans
         // clé `totaux` racine — le mock la reproduit pour verrouiller le contrat.
         $fiscal = $this->createMock(CourtierSuiviFiscalService::class);
         if ($fiscalThrow) {
@@ -157,7 +157,7 @@ class BoussoleServiceTest extends TestCase
 
     /**
      * NON-RÉGRESSION : l'axe fiscal lit la TVA DU CABINET (CourtierSuiviFiscalService,
-     * deux volets) et non celle de la plateforme JS Brokers (SuiviFiscalService, qui
+     * deux volets) et non celle de la plateforme Joseara (SuiviFiscalService, qui
      * ne prend aucune entreprise). Un solde nul côté cabinet doit laisser l'axe au
      * vert quoi qu'il arrive ailleurs — sinon le courtier verrait, sur l'axe le plus
      * urgent du barème, une dette qui ne lui appartient pas.

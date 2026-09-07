@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Repository\TaxeVenteRepository;
 
 /**
- * @file Calculs de fiscalité sur les ventes propres de JS Brokers.
+ * @file Calculs de fiscalité sur les ventes propres de Joseara.
  * @description Lecture seule. À partir des taxes actives (TaxeVente), dégage le
  * revenu hors taxe d'un chiffre d'affaires TTC. Les taxes sont combinées en
  * additif sur base commune : diviseur = 1 + (Σ des taux)/100 (ex. 16 % + 5 %

@@ -13,7 +13,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Translation\LocaleSwitcher;
 
 /**
- * Documents comptables de JS Brokers (journal, grand livre, balance, compte de
+ * Documents comptables de Joseara (journal, grand livre, balance, compte de
  * résultat, tableau de formation du résultat, bilan comparatif, flux de trésorerie),
  * générés à la volée depuis les ventes et dépenses (cf. EcritureComptableService).
  * Une seule rubrique avec sélecteur d'exercice et sous-onglets ; export Excel par
@@ -88,7 +88,7 @@ class DocumentComptableController extends AbstractConsoleController
             'backLabel'   => 'Documents comptables',
             'submitLabel' => 'Enregistrer',
             'description' => 'Renseignez le capital social (apport des actionnaires) et la date de '
-                . 'constitution de JS Brokers. Ces données alimentent l\'écriture d\'ouverture du bilan.',
+                . 'constitution de Joseara. Ces données alimentent l\'écriture d\'ouverture du bilan.',
             'formIcon'    => 'entreprise',
         ]);
     }

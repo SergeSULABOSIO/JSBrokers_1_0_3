@@ -8,7 +8,7 @@ use App\Repository\TokenPurchaseRepository;
 use App\Services\ServiceTaxesVente;
 
 /**
- * @file Suivi des obligations de TVA de JS Brokers vis-à-vis de l'autorité fiscale.
+ * @file Suivi des obligations de TVA de Joseara vis-à-vis de l'autorité fiscale.
  * @description Calcule, par exercice et par mois, la TVA COLLECTÉE (sur les ventes
  * encaissées), la TVA DÉDUCTIBLE (sur les dépenses non annulées), la TVA NETTE DUE
  * (collectée − déductible), le montant REVERSÉ (cf. ReglementTaxe) et le SOLDE DÛ

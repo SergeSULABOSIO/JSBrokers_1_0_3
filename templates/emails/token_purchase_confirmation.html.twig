@@ -5,7 +5,7 @@
    de l'utilisateur, indépendamment du moment d'envoi (rendu différé/async). #}
 {% set lang = locale|default('fr') %}
 
-{% block subject %}JS Brokers — {{ 'email_token_subject'|trans({}, 'messages', lang) }}{% endblock %}
+{% block subject %}Joseara — {{ 'email_token_subject'|trans({}, 'messages', lang) }}{% endblock %}
 
 {% block content %}
     {{ m.heading('action:cart', 'email_token_heading_confirmed'|trans({}, 'messages', lang)) }}

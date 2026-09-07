@@ -74,7 +74,7 @@ final class PreparerDocumentTool implements AiToolInterface
     {
         return 'FABRIQUE un DOCUMENT OFFICIEL téléchargeable (Word, Excel, PDF, Markdown, texte, HTML) '
             . "à partir d'un travail que tu viens de produire : analyse, calcul, état, synthèse. "
-            . "C'est le SEUL outil qui crée un fichier neuf, destiné à un usage HORS JS Brokers "
+            . "C'est le SEUL outil qui crée un fichier neuf, destiné à un usage HORS Joseara "
             . "(l'envoyer à un client, l'archiver, le retoucher). Il ne produit pas tout de suite : il "
             . "présente un PLAN et son BUDGET en tokens ; après validation par l'utilisateur, la "
             . 'plateforme fabrique le fichier et affiche un bouton de téléchargement sous ta réponse. '

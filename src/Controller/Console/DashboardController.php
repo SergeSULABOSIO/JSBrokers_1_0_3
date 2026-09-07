@@ -24,7 +24,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Translation\LocaleSwitcher;
 
 /**
- * Tableau de bord global de la Console JS Brokers.
+ * Tableau de bord global de la Console Joseara.
  *
  * Calqué sur le tableau de bord de l'espace de travail courtiers : une pile de
  * blocs pliables (un par ligne), chacun chargé à la demande puis rafraîchi
@@ -208,7 +208,7 @@ class DashboardController extends AbstractConsoleController
 
     /**
      * Dernières dépenses (les plus récentes d'abord), paginées. Miroir du bloc
-     * Ventes : le décaissement de JS Brokers est le pendant de son produit.
+     * Ventes : le décaissement de Joseara est le pendant de son produit.
      *
      * @return array{dernieresDepenses: \Knp\Component\Pager\Pagination\PaginationInterface}
      */
@@ -384,7 +384,7 @@ class DashboardController extends AbstractConsoleController
     }
 
     /**
-     * Fiscalité JS Brokers : taxes actives ventilées sur le revenu de l'année
+     * Fiscalité Joseara : taxes actives ventilées sur le revenu de l'année
      * civile en cours (même assiette que les KPIs du tableau de bord), avec
      * synthèse TTC / taxes / hors taxe. Bloc statique, sans pagination.
      */

@@ -3,7 +3,7 @@
 namespace App\Legal;
 
 /**
- * @file Référence des Conditions et Termes d'Utilisation (CGU) de JS Brokers.
+ * @file Référence des Conditions et Termes d'Utilisation (CGU) de Joseara.
  * @description Source de vérité pour le versionnage des CGU. La VERSION et la DATE
  * sont affichées sur la page publique des conditions et enregistrées dans le compte
  * de l'utilisateur au moment où il accepte (preuve d'acceptation : qui a accepté
@@ -17,8 +17,8 @@ namespace App\Legal;
 final class Cgu
 {
     /** Version courante des conditions. */
-    public const VERSION = '1.0';
+    public const VERSION = '1.1';
 
     /** Date (format ISO) de la dernière mise à jour des conditions. */
-    public const DATE = '2026-06-18';
+    public const DATE = '2026-09-07';
 }

@@ -11,7 +11,7 @@ use App\Token\TokenAccountService;
 
 /**
  * Outil de COMPTE : solde actuel de tokens de l'entreprise du scope, accompagné
- * d'un rappel de la logique de consommation JS Brokers (valeurs dynamiques du
+ * d'un rappel de la logique de consommation Joseara (valeurs dynamiques du
  * plan tarifaire). La facturation étant rattachée au PROPRIÉTAIRE de
  * l'entreprise, c'est SON solde qui est restitué — l'épuisement bloque le
  * travail de toute l'équipe, le connaître aide chacun à anticiper.
@@ -41,7 +41,7 @@ final class SoldeTokensTool implements AiToolInterface
     {
         return "Donne le solde ACTUEL de tokens de l'entreprise (compte du propriétaire : prépayés, "
             . 'allocation gratuite, total, prochain renouvellement) et rappelle la logique de '
-            . 'consommation des tokens chez JS Brokers. À appeler quand l\'utilisateur demande le '
+            . 'consommation des tokens chez Joseara. À appeler quand l\'utilisateur demande le '
             . 'solde, les crédits/tokens restants ou disponibles, ou comment les tokens se '
             . 'consomment. Aucun paramètre : le solde est toujours celui de l\'entreprise courante.';
     }
@@ -104,7 +104,7 @@ final class SoldeTokensTool implements AiToolInterface
     private function logiqueConsommation(): string
     {
         return sprintf(
-            'Chez JS Brokers, chaque échange de données consomme des tokens, toujours débités du '
+            'Chez Joseara, chaque échange de données consomme des tokens, toujours débités du '
             . 'solde du PROPRIÉTAIRE de l\'entreprise (toute l\'activité de l\'équipe est à sa '
             . 'charge). Lecture : %d token%s par enregistrement affiché ou exporté. Écriture '
             . '(création/modification) : poids variable selon le type de fiche (%d tokens par '

@@ -88,7 +88,7 @@ class AppAuthenticator extends AbstractLoginFormAuthenticator
             return new RedirectResponse($targetPath);
         }
 
-        // Les agents JS Brokers (ROLE_ADMIN/ROLE_SUPER_ADMIN) atterrissent sur la
+        // Les agents Joseara (ROLE_ADMIN/ROLE_SUPER_ADMIN) atterrissent sur la
         // Console d'administration ; les utilisateurs/clients sur leur espace.
         if ($estAgent) {
             return new RedirectResponse($this->urlGenerator->generate('console.dashboard'));

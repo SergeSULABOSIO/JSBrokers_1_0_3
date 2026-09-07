@@ -55,7 +55,7 @@ class SoaClientNotifier
                     'locale'          => $locale,
                     'recipientName'   => $nomDestinataire,
                     'clientNom'       => $client->getNom(),
-                    'entrepriseNom'   => $entreprise?->getNom() ?: 'JS Brokers',
+                    'entrepriseNom'   => $entreprise?->getNom() ?: 'Joseara',
                     'entrepriseTel'   => $entreprise?->getTelephone(),
                     'soaUrl'          => $soaUrl,
                     'expiresAt'       => $token->getExpiresAt(),

@@ -302,7 +302,7 @@ final class ExportateurJsbx
     {
         $slug = preg_replace('/[^A-Za-z0-9_-]+/', '_', $entreprise->getNom() ?? 'cabinet');
 
-        return sprintf('jsbrokers_%s_%s.xlsx', trim((string) $slug, '_') ?: 'cabinet', date('Ymd-Hi'));
+        return sprintf('joseara_%s_%s.xlsx', trim((string) $slug, '_') ?: 'cabinet', date('Ymd-Hi'));
     }
 
     private function signature(Invite $invite, ?Utilisateur $acteur): string

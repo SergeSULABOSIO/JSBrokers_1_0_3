@@ -7,7 +7,7 @@ use App\Repository\Crm\CrmNotificationRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * @file Notification interne (in-app) pour l'équipe JS Brokers.
+ * @file Notification interne (in-app) pour l'équipe Joseara.
  * @description Comble l'absence de notification persistante (jusqu'ici : toasts
  * + e-mail uniquement). Émise par les automatisations (solde bas, churn, ticket
  * en retard…). `agent` null = diffusion à tous les agents. L'état « lu » est

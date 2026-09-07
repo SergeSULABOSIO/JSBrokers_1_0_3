@@ -16,7 +16,7 @@
 #}
 {% set menu = menu_data %}
 <style>
-    /* État d'accueil de l'espace vide (charte cobalt JS Brokers) */
+    /* État d'accueil de l'espace vide (charte cobalt Joseara) */
     .ws-welcome { max-width: 720px; margin: 0 auto; padding: 2.5rem 1.5rem; }
     .ws-welcome-head { text-align: center; margin-bottom: 1.75rem; }
     .ws-welcome-emoji {
@@ -76,7 +76,16 @@
         (function (racine) {
             try {
                 var id = racine.dataset.workspaceManagerIdEntrepriseValue;
-                if (localStorage.getItem('menuCol2Collapsed_' + id) === '1') {
+                // La colonne 2 est repliée soit par CHOIX (préférence mémorisée), soit
+                // par CONTRAINTE (la fenêtre ne la porte plus à côté de l'espace de
+                // travail). Les deux se lisent ici, avant le premier rendu : sur une
+                // tablette, ne lire que la préférence ferait naître la page à trois
+                // colonnes, puis la verrait se réorganiser sous les yeux de
+                // l'utilisateur — exactement le clignotement que ce script évite.
+                // ⚠ Le seuil est le même que `SEUIL_COL2_REPLIEE` du contrôleur et que
+                // la media query de interactive-menu.css (cf. AdaptationEcransEtroitsTest).
+                if (localStorage.getItem('menuCol2Collapsed_' + id) === '1'
+                    || window.matchMedia('(max-width: 1199.98px)').matches) {
                     racine.classList.add('col2-collapsed');
                 }
                 var panneau = JSON.parse(localStorage.getItem('visualizationHtmlTab_' + id) || 'null');
@@ -201,8 +210,8 @@
         <div class="menu-col-2" id="ws-col2"
              data-workspace-manager-target="col2"
              data-action="mouseenter->workspace-manager#annulerFermetureFlyout mouseleave->workspace-manager#quitterFlyout">
-            {# Ligne 1: Marque JS Brokers — version compacte pour laisser de la place aux rubriques #}
-            {# Au survol du nom « JS Brokers » et de la version : infobulle sombre du
+            {# Ligne 1: Marque Joseara — version compacte pour laisser de la place aux rubriques #}
+            {# Au survol du nom « Joseara » et de la version : infobulle sombre du
                DERNIER commit (réf — date + explication), même pattern que les infobulles
                Pistes/chat IA (contrôleur `commit-tip`). Présente seulement si git est
                lisible (repli : rien). Ces deux liens n'ont AUCUN `title` : l'infobulle
@@ -218,7 +227,7 @@
                    AUCUN attribut `title` ici : le navigateur en ferait une infobulle
                    native qui se superposerait à la nôtre (contrôleur `commit-tip`).
                    L'intitulé accessible passe par `aria-label`. #}
-                <a href="{{ path('app_index') }}" class="company-brand" aria-label="JS Brokers — retour à l'accueil"
+                <a href="{{ path('app_index') }}" class="company-brand" aria-label="Joseara — retour à l'accueil"
                    {% if _lc %}data-commit-tip{% endif %}>
                     <img src="{{ asset(menu.colonne_2.logo) }}" alt="Logo" class="company-logo">
                     <h2 class="company-title">{{ menu.colonne_2.titre }}</h2>

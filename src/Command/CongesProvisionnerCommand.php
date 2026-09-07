@@ -278,7 +278,7 @@ final class CongesProvisionnerCommand extends Command
      * ── CE QU'IL RÉPARE ─────────────────────────────────────────────────────────────
      * La première version de ce semis proratisait la dotation de démarrage sur la date de
      * création de la fiche d'invité. Or cette date dit quand le collaborateur a été SAISI
-     * dans JS Brokers, pas quand il est arrivé dans le cabinet : un cabinet qui a adopté
+     * dans Joseara, pas quand il est arrivé dans le cabinet : un cabinet qui a adopté
      * le module en avril a vu tout son personnel crédité de neuf mois sur douze. Un droit
      * amputé d'un quart, sans que rien à l'écran n'en donne la raison.
      *

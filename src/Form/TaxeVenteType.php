@@ -11,7 +11,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 /**
- * Formulaire de création/édition d'une taxe sur les ventes JS Brokers.
+ * Formulaire de création/édition d'une taxe sur les ventes Joseara.
  */
 class TaxeVenteType extends AbstractType
 {

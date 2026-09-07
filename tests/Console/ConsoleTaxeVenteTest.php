@@ -11,7 +11,7 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * Console JS Brokers : CRUD de la rubrique « Fiscalité » (taxes sur les ventes).
+ * Console Joseara : CRUD de la rubrique « Fiscalité » (taxes sur les ventes).
  * Vérifie l'accès (agent vs utilisateur), la création, l'édition et la
  * suppression via les formulaires, ainsi que la persistance en base.
  */

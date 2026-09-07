@@ -23,7 +23,7 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 /**
- * Beaucoup de champs de JS Brokers ne persistent pas du texte libre mais un CODE issu
+ * Beaucoup de champs de Joseara ne persistent pas du texte libre mais un CODE issu
  * d'une constante (`Piste::AVENANT_SOUSCRIPTION = 0`). L'écran le rend en clair, mais la
  * correspondance code ↔ sens n'était transmise à personne d'autre : l'assistant laissait
  * donc ces champs vides, et l'import de fichier les remplissait faux.

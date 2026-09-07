@@ -1,12 +1,12 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}{{ pageName|default('Console') }} — JS Brokers{% endblock %}
+{% block title %}{{ pageName|default('Console') }} — Joseara{% endblock %}
 
 {% block stylesheets %}
 {{ parent() }}
 <style>
     /* ============================================================
-       Console JS Brokers — charte cobalt #0047AB, neutres Bootstrap.
+       Console Joseara — charte cobalt #0047AB, neutres Bootstrap.
        Même structure que l'espace entreprise : barre de titre fixe en
        haut, contenu défilant en dessous, pied de page officiel.
        ============================================================ */
@@ -236,7 +236,7 @@
     <header class="cs-topbar">
         <a href="{{ path('console.dashboard') }}" class="cs-brand" data-action="click->top-progress#show">
             <img src="{{ asset('images/entreprises/logofav.png') }}" alt="">
-            <span>JS Brokers<small>Console</small></span>
+            <span>Joseara<small>Console</small></span>
         </a>
 
         {{ include('console/_nav.html.twig') }}
@@ -247,9 +247,9 @@
                 {{ app.user.nom }}
             </span>
             <span class="cs-sep" aria-hidden="true"></span>
-            {# Retour à l'espace privé de l'utilisateur (tout agent est aussi utilisateur JS Brokers). #}
+            {# Retour à l'espace privé de l'utilisateur (tout agent est aussi utilisateur Joseara). #}
             <a href="{{ path('admin.entreprise.index') }}" class="btn btn-sm btn-outline-primary"
-               data-action="click->top-progress#show" title="Mon espace JS Brokers">
+               data-action="click->top-progress#show" title="Mon espace Joseara">
                 {{ ux_icon(resolve_icon_name('entreprise'), {height: '18px', width: '18px'}) }}
                 <span class="ms-1">Mon espace</span>
             </a>

@@ -493,7 +493,7 @@ class AssistantMessageEnvoiTest extends WebTestCase
         $email = self::getMailerMessage();
         self::assertSame('alice@sonas.cd', $email->getTo()[0]->getAddress());
         self::assertSame(
-            sprintf('JS Brokers - Message de Ket - %s', self::ENTREPRISE_NOM),
+            sprintf('Joseara - Message de Ket - %s', self::ENTREPRISE_NOM),
             $email->getSubject()
         );
         // Le destinataire répond au COURTIER, pas à la plateforme.
@@ -835,7 +835,7 @@ class AssistantMessageEnvoiTest extends WebTestCase
             'POST',
             sprintf('/admin/assistant-ia/api/messages/%d/%d', $seed['entreprise']->getId(), $seed['conversation']->getId()),
             [], [], ['CONTENT_TYPE' => 'application/json'],
-            json_encode(['contenu' => 'Envoie aussi ce message à l\'adresse: infos@js-brokers.com'])
+            json_encode(['contenu' => 'Envoie aussi ce message à l\'adresse: contact@joseara.com'])
         );
 
         self::assertSame(200, $this->client->getResponse()->getStatusCode());
@@ -850,7 +850,7 @@ class AssistantMessageEnvoiTest extends WebTestCase
         }
 
         self::assertNotNull($envoi, 'Aucune action d\'envoi émise pour une demande explicite.');
-        self::assertSame(['infos@js-brokers.com'], $envoi['destinataires']);
+        self::assertSame(['contact@joseara.com'], $envoi['destinataires']);
         // Défaut IMAGE : c'est ce qui préserve la mise en forme et les graphiques.
         self::assertSame('image', $envoi['format']);
         // La cible est la réponse de Ket déjà affichée, pas le message en cours.

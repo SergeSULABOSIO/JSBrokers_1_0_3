@@ -279,7 +279,7 @@ class TokenPurchaseFlowTest extends WebTestCase
 
     /**
      * Modernisation : la barre de titre de l'espace compte affiche le sélecteur
-     * de langue à drapeaux, et le pied de page officiel JS Brokers est présent.
+     * de langue à drapeaux, et le pied de page officiel Joseara est présent.
      */
     public function testAccountPageShowsOfficialFooterAndFlagSwitch(): void
     {
@@ -289,7 +289,7 @@ class TokenPurchaseFlowTest extends WebTestCase
 
         // Pied de page officiel.
         $this->assertGreaterThan(0, $crawler->filter('footer.public-footer')->count(),
-            'Le pied de page officiel JS Brokers doit être présent sur la page compte.');
+            'Le pied de page officiel Joseara doit être présent sur la page compte.');
 
         // Bascule de langue à drapeaux dans la barre de titre (composant unifié .cs-lang).
         $this->assertSame(2, $crawler->filter('.tkp-actions .cs-lang a svg')->count(),
@@ -421,7 +421,7 @@ class TokenPurchaseFlowTest extends WebTestCase
     }
 
     /**
-     * Le pied de page officiel JS Brokers est aussi présent sur la page de
+     * Le pied de page officiel Joseara est aussi présent sur la page de
      * paiement, et sa bascule de langue reste sur cette page.
      */
     public function testBuyPageShowsOfficialFooter(): void
@@ -463,7 +463,7 @@ class TokenPurchaseFlowTest extends WebTestCase
         $body = $this->renderedHtml($email);
         $this->assertStringContainsString('Payment confirmed', $body);
         $this->assertStringNotContainsString('Paiement confirmé', $body);
-        $this->assertStringContainsString('The JS Brokers team', $body);
+        $this->assertStringContainsString('The Joseara team', $body);
     }
 
     /**
@@ -483,14 +483,14 @@ class TokenPurchaseFlowTest extends WebTestCase
         $this->assertStringContainsString('Paiement confirmé', $body);
         $this->assertStringNotContainsString('Payment confirmed', $body);
         // (l'apostrophe est échappée à l'affichage → on teste un fragment sûr)
-        $this->assertStringContainsString('équipe JS Brokers', $body);
+        $this->assertStringContainsString('équipe Joseara', $body);
     }
 
     /**
      * L'e-mail de confirmation adressé à L'ACHETEUR.
      *
      * Un achat met désormais DEUX messages en file : la confirmation du client et
-     * l'alerte de vente diffusée à l'équipe JS Brokers
+     * l'alerte de vente diffusée à l'équipe Joseara
      * (App\EventSubscriber\AgentNotificationSubscriber, branché sur le même
      * TokenPurchaseEvent). Compter les messages ne dit donc plus rien, et prendre
      * le premier venu ferait dépendre ces tests de l'ordre d'appel des écouteurs.

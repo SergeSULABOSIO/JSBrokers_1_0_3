@@ -108,7 +108,7 @@ class AssistantIaController extends AbstractController
 
     /**
      * Plafond d'envois par e-mail d'un MÊME message. Un e-mail sortant porte la
-     * marque JS Brokers vers un tiers, et l'adresse peut être saisie librement :
+     * marque Joseara vers un tiers, et l'adresse peut être saisie librement :
      * ce plafond borne l'abus d'un message donné. Il se lit en O(1) dans
      * meta['envois'], sans table ni requête supplémentaire. (Un quota GLOBAL par
      * entreprise demanderait symfony/rate-limiter, absent du projet.)
@@ -1825,7 +1825,7 @@ class AssistantIaController extends AbstractController
      * deux premières.
      *
      * Une adresse HORS CARNET est acceptée — c'est un besoin réel — mais jamais
-     * sans contrôle, parce que l'e-mail part sous la marque JS Brokers vers un
+     * sans contrôle, parce que l'e-mail part sous la marque Joseara vers un
      * tiers : format validé, plafond par message, marquage `horsCarnet` dans la
      * trace et journalisation nominative. Le `replyTo` porte l'adresse du
      * courtier, de sorte que la réponse lui revienne directement.

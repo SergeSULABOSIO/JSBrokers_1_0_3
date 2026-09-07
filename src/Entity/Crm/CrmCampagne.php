@@ -8,7 +8,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * @file Campagne marketing ciblée (équipe JS Brokers).
+ * @file Campagne marketing ciblée (équipe Joseara).
  * @description Onboarding, recharge, réactivation, upsell. Le segment est défini
  * par des règles (étapes de pipeline / couleurs de santé) évaluées à l'envoi. Les
  * e-mails partent via CorporateMailer ; les cibles et conversions sont tracées.

@@ -16,6 +16,7 @@ use App\Entity\Utilisateur;
 use App\Event\AgentNotificationEvent;
 use App\Form\RegistrationFormType;
 use App\Legal\Cgu;
+use App\Marque;
 use App\Security\EmailVerifier;
 use App\Repository\UtilisateurRepository;
 use App\Services\InvitationLinker;
@@ -85,7 +86,7 @@ class RegistrationController extends AbstractController
 
             // AMÉLIORATION : L'email de confirmation n'est envoyé qu'en mode création.
             if (!$isEditMode) {
-                // Notifie l'équipe JS Brokers de la création d'un nouveau compte.
+                // Notifie l'équipe Joseara de la création d'un nouveau compte.
                 $this->dispatcher->dispatch(new AgentNotificationEvent(
                     AgentNotificationEvent::ACTION_CREATE,
                     AgentNotificationEvent::TYPE_UTILISATEUR,
@@ -102,9 +103,9 @@ class RegistrationController extends AbstractController
                     'app_verify_email',
                     $user,
                     (new TemplatedEmail())
-                        ->from(new Address($this->mailFrom, 'JS Brokers'))
+                        ->from(new Address($this->mailFrom, Marque::NOM))
                         ->to((string) $user->getEmail())
-                        ->subject("JS Brokers - Confirmation d'adresse mail - " . $user->getEmail())
+                        ->subject(Marque::NOM . " - Confirmation d'adresse mail - " . $user->getEmail())
                         ->htmlTemplate('registration/confirmation_email.html.twig')
                 );
 
@@ -191,9 +192,9 @@ class RegistrationController extends AbstractController
                 'app_verify_email',
                 $user,
                 (new TemplatedEmail())
-                    ->from(new Address($this->mailFrom, 'JS Brokers'))
+                    ->from(new Address($this->mailFrom, Marque::NOM))
                     ->to((string) $user->getEmail())
-                    ->subject("JS Brokers - Confirmation d'adresse mail - " . $user->getEmail())
+                    ->subject(Marque::NOM . " - Confirmation d'adresse mail - " . $user->getEmail())
                     ->htmlTemplate('registration/confirmation_email.html.twig')
             );
             $this->addFlash('success', "Nous venons de vous renvoyer un email de vérification. Ouvrez-le et cliquez sur le lien de validation pour activer votre compte.");

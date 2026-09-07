@@ -1,12 +1,12 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}{{ pageName }} — JS Brokers{% endblock %}
+{% block title %}{{ pageName }} — Joseara{% endblock %}
 
 {% block stylesheets %}
 {{ parent() }}
 <style>
     /* ============================================================
-       Liste des entreprises — charte JS Brokers (cobalt #0047AB),
+       Liste des entreprises — charte Joseara (cobalt #0047AB),
        neutres Bootstrap. Aucune couleur hors charte.
        ============================================================ */
     /* Page en pleine hauteur : la barre de titre reste fixe en haut,
@@ -171,7 +171,7 @@
            data-action="click->top-progress#show"
            aria-label="{{ 'entreprise_brand_home' | trans }}" title="{{ 'entreprise_brand_home' | trans }}">
             <img src="{{ asset('images/entreprises/logofav.png') }}" alt="">
-            <span>JS Brokers</span>
+            <span>Joseara</span>
         </a>
         <div class="ent-topbar-user">
             <span class="ent-user-name">
@@ -180,10 +180,10 @@
             </span>
             <span class="ent-topbar-sep" aria-hidden="true"></span>
             <div class="ent-topbar-actions">
-                {# Accès à la Console JS Brokers, réservé aux agents (ROLE_ADMIN). #}
+                {# Accès à la Console Joseara, réservé aux agents (ROLE_ADMIN). #}
                 {% if is_granted('ROLE_ADMIN') %}
                     <a href="{{ path('console.dashboard') }}" class="btn btn-sm btn-outline-primary"
-                       data-action="click->top-progress#show" title="Console JS Brokers">
+                       data-action="click->top-progress#show" title="Console Joseara">
                         {{ ux_icon(resolve_icon_name('dashboard'), {height: '18px', width: '18px'}) }}
                         <span class="ms-1">Console</span>
                     </a>
@@ -356,7 +356,7 @@
 
     </div>
 
-    {# Pied de page public officiel JS Brokers (à l'intérieur de la zone défilante :
+    {# Pied de page public officiel Joseara (à l'intérieur de la zone défilante :
        la page est en hauteur fixe à scroll interne). La bascule de langue y est
        fonctionnelle via ?lang= ; lang = préférence de l'utilisateur connecté. #}
     {% include 'components/_public_footer.html.twig' with { lang: app.user.locale } %}

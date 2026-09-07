@@ -2,7 +2,7 @@ import { Controller } from '@hotwired/stimulus';
 
 /**
  * @class CommitTipController
- * @description Infobulle sombre au survol de la version / du nom « JS Brokers » :
+ * @description Infobulle sombre au survol de la version / du nom « Joseara » :
  * annonce le DERNIER commit effectué (transparence sur les mises à jour).
  *
  * Reprend À L'IDENTIQUE le pattern des infobulles du tableau de bord (bloc Pistes

@@ -12,7 +12,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Translation\LocaleSwitcher;
 
 /**
- * Édition du plan tarifaire global de JS Brokers (paquets, allocation gratuite,
+ * Édition du plan tarifaire global de Joseara (paquets, allocation gratuite,
  * poids d'écriture/lecture, taux USD). Réservé au super-admin.
  */
 #[Route('/console/plan-tarifaire', name: 'console.plan.')]

@@ -70,11 +70,11 @@ class EnvoyerMessageParEmailToolTest extends TestCase
     public function testMatchExtraitLesAdressesDeLaDemande(): void
     {
         $args = $this->tool->match(
-            'Envoie aussi ce message à l\'adresse: infos@js-brokers.com',
+            'Envoie aussi ce message à l\'adresse: contact@joseara.com',
             $this->scopeStandard()
         );
 
-        self::assertSame(['infos@js-brokers.com'], $args['destinataires']);
+        self::assertSame(['contact@joseara.com'], $args['destinataires']);
     }
 
     public function testMatchAcceptePlusieursAdressesEtLesDedoublonne(): void

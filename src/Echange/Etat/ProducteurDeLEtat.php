@@ -311,7 +311,7 @@ final class ProducteurDeLEtat
         $slug = preg_replace('/[^A-Za-z0-9_-]+/', '_', $entreprise->getNom() ?? 'cabinet');
 
         return sprintf(
-            'jsbrokers_etat_%s%s_%s.xlsx',
+            'joseara_etat_%s%s_%s.xlsx',
             trim((string) $slug, '_') ?: 'cabinet',
             // Deux états posés côte à côte sur un bureau — l'un des polices, l'autre des
             // projets — ne se distingueraient que par l'heure de génération.

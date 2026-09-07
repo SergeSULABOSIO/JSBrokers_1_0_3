@@ -7,7 +7,7 @@ use App\Entity\Utilisateur;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * @file Émission de notifications internes (in-app) pour l'équipe JS Brokers.
+ * @file Émission de notifications internes (in-app) pour l'équipe Joseara.
  * @description Persiste une CrmNotification visible dans la Console. `agent` null
  * = diffusion à tous les agents (une seule ligne, lue globalement). Complète les
  * toasts (éphémères) et les e-mails (CorporateMailer) déjà en place.

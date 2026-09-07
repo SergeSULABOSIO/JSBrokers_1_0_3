@@ -44,12 +44,12 @@ class EmailRenderingTest extends KernelTestCase
             'expiresAtMessageKey' => '1 heure',
             'expiresAtMessageData' => [],
             'logoPath' => $this->logoPath(),
-            'senderEmail' => 'contact@jsbrokers.com',
+            'senderEmail' => 'contact@joseara.com',
             'recipientName' => 'Mr. Modogo',
         ]);
 
         // Marque + en-tête + signature.
-        $this->assertStringContainsString('JS Brokers', $html);
+        $this->assertStringContainsString('Joseara', $html);
         // Appel à l'action.
         $this->assertStringContainsString('Confirmer mon adresse e-mail', $html);
         $this->assertStringContainsString('https://example.test/verify/email', $html);
@@ -68,12 +68,12 @@ class EmailRenderingTest extends KernelTestCase
             'expiresAtMessageKey' => '1 heure',
             'expiresAtMessageData' => [],
             'logoPath' => $this->logoPath(),
-            'senderEmail' => 'contact@jsbrokers.com',
+            'senderEmail' => 'contact@joseara.com',
             'recipientName' => 'Mr. Modogo',
         ]);
 
         // Marque + en-tête + signature.
-        $this->assertStringContainsString('JS Brokers', $html);
+        $this->assertStringContainsString('Joseara', $html);
         // Appel à l'action.
         $this->assertStringContainsString('Réinitialiser mon mot de passe', $html);
         $this->assertStringContainsString('https://example.test/mot-de-passe/reinitialiser', $html);
@@ -99,7 +99,7 @@ class EmailRenderingTest extends KernelTestCase
         $html = $this->render('home/mail/message_demande_de_contact.html.twig', [
             'data' => $data,
             'logoPath' => $this->logoPath(),
-            'senderEmail' => 'contact@jsbrokers.com',
+            'senderEmail' => 'contact@joseara.com',
         ]);
 
         $this->assertStringContainsString('Nouvelle demande de contact', $html);
@@ -130,7 +130,7 @@ class EmailRenderingTest extends KernelTestCase
         $html = $this->render('home/mail/accuse_reception_contact.html.twig', [
             'data' => $data,
             'logoPath' => $this->logoPath(),
-            'senderEmail' => 'contact@jsbrokers.com',
+            'senderEmail' => 'contact@joseara.com',
         ]);
 
         // Accusé de réception adressé au visiteur (nom repris, message renvoyé).
@@ -159,7 +159,7 @@ class EmailRenderingTest extends KernelTestCase
             'intro' => 'Bonjour Victor, voici votre périmètre.',
             'icone' => 'role',
             'logoPath' => $this->logoPath(),
-            'senderEmail' => 'contact@jsbrokers.com',
+            'senderEmail' => 'contact@joseara.com',
             'piedNote' => 'Notification automatique.',
             'perimetre' => [
                 'owner' => false,
@@ -174,7 +174,7 @@ class EmailRenderingTest extends KernelTestCase
         ]);
 
         // Marque + icône + logo (chrome partagé).
-        $this->assertStringContainsString('JS Brokers', $html);
+        $this->assertStringContainsString('Joseara', $html);
         $this->assertStringContainsString('<svg', $html);
         $this->assertStringContainsString('cid:', $html);
         // Le module et ses entités apparaissent, avec leurs niveaux en pastilles.
@@ -207,13 +207,13 @@ class EmailRenderingTest extends KernelTestCase
         $html = $this->render('home/mail/accuse_reception_contact.html.twig', [
             'data' => $data,
             'logoPath' => $this->logoPath(),
-            'senderEmail' => 'contact@jsbrokers.com',
+            'senderEmail' => 'contact@joseara.com',
         ]);
 
         // Chrome du layout (tagline + signature) rendu en français par défaut.
         $this->assertStringContainsString('Plateforme de gestion de courtage en assurance', $html);
-        $this->assertStringContainsString('équipe JS Brokers', $html);
+        $this->assertStringContainsString('équipe Joseara', $html);
         // Aucune fuite de la version anglaise.
-        $this->assertStringNotContainsString('The JS Brokers team', $html);
+        $this->assertStringNotContainsString('The Joseara team', $html);
     }
 }

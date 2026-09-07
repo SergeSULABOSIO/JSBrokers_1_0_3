@@ -13,7 +13,7 @@
  *
  * Le fichier ne transite JAMAIS par le serveur : il est téléchargé localement.
  * C'est délibéré — l'application n'accepte aucun binaire fabriqué par le client
- * pour un envoi sous la marque JS Brokers.
+ * pour un envoi sous la marque Joseara.
  */
 
 /** Marge blanche autour de la bulle, en pixels CSS. */

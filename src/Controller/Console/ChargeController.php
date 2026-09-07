@@ -13,7 +13,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Translation\LocaleSwitcher;
 
 /**
- * CRUD des types de charges supportées par JS Brokers (référentiel comptable
+ * CRUD des types de charges supportées par Joseara (référentiel comptable
  * OHADA : compte de classe 6 + axe analytique). Les dépenses réelles s'y rattachent.
  */
 #[Route('/console/charges', name: 'console.charge.')]

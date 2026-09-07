@@ -10,7 +10,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * @file Ticket de support d'un client (équipe JS Brokers).
+ * @file Ticket de support d'un client (équipe Joseara).
  * @description Suivi des demandes : canal, priorité, statut, échéance SLA et
  * satisfaction. Le nombre de tickets ouverts/en retard alimente le critère
  * « Support » du score de santé.

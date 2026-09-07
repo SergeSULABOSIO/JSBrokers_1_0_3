@@ -11,7 +11,7 @@ use App\Entity\Utilisateur;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * @file Service central du modèle de tokens (freemium JS Brokers).
+ * @file Service central du modèle de tokens (freemium Joseara).
  * @description Gère l'allocation gratuite renouvelable, le solde prépayé, le
  * métrage bloquant des lectures/écritures et la journalisation des
  * consommations. Toute la facturation est rattachée au PROPRIÉTAIRE de

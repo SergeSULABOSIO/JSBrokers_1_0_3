@@ -15,6 +15,7 @@ namespace App\Controller;
 
 use App\Entity\Utilisateur;
 use App\Form\ChangePasswordFormType;
+use App\Marque;
 use App\Repository\UtilisateurRepository;
 use App\Security\PasswordResetHelper;
 use Doctrine\ORM\EntityManagerInterface;
@@ -52,9 +53,9 @@ class PasswordResetController extends AbstractController
                 $this->passwordResetHelper->sendPasswordResetEmail(
                     $user,
                     (new TemplatedEmail())
-                        ->from(new Address($this->mailFrom, 'JS Brokers'))
+                        ->from(new Address($this->mailFrom, Marque::NOM))
                         ->to((string) $user->getEmail())
-                        ->subject('JS Brokers - Réinitialisation du mot de passe - ' . $user->getEmail())
+                        ->subject(Marque::NOM . ' - Réinitialisation du mot de passe - ' . $user->getEmail())
                         ->htmlTemplate('emails/reset_password_email.html.twig')
                 );
             }

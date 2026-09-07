@@ -13,6 +13,22 @@ import {
 import { dedoublonnerOnglets, ongletExistantPourRubrique } from './onglets-uniques.js';
 
 /**
+ * LES DEUX SEUILS DE DISPOSITION — écrits ici ET dans `interactive-menu.css`.
+ *
+ * Une media query ne sait pas lire une variable CSS, et le contrôleur doit
+ * connaître le même point de bascule que la feuille de style : sans quoi la
+ * colonne se replierait à une largeur où le CSS la croit encore dépliée, ou
+ * l'inverse. `AdaptationEcransEtroitsTest` vérifie que les nombres concordent.
+ *
+ * - COL2 : en dessous, la colonne 2 ne tient plus à côté de l'espace de travail
+ *   et passe en panneau flottant.
+ * - TIROIR : en dessous, la colonne 1 elle-même quitte le flux — une seule
+ *   colonne est visible à la fois.
+ */
+const SEUIL_COL2_REPLIEE = '(max-width: 1199.98px)';
+const SEUIL_TIROIR = '(max-width: 767.98px)';
+
+/**
  * @class WorkspaceManagerController
  * @extends Controller
  * @description Gère l'espace de travail principal de l'application, y compris la navigation, le chargement dynamique des composants, la gestion des onglets et la persistance de l'état.
@@ -76,7 +92,17 @@ export default class extends Controller {
         // Le script inline du gabarit a déjà posé `col2-collapsed` avant le premier
         // rendu (anti-clignotement). On relit quand même la préférence : le bouton
         // rendu par le serveur ignore l'état, et Turbo peut rejouer connect().
-        this._appliquerEtatCol2(this._lireCol2Pref());
+        this._appliquerEtatCol2(this._col2DoitEtreRepliee());
+
+        // La largeur de la fenêtre décide combien de colonnes tiennent côte à côte.
+        // On écoute les DEUX seuils : franchir l'un ou l'autre change la disposition
+        // sans qu'aucun geste n'ait été fait (rotation d'une tablette, fenêtre
+        // redimensionnée, ouverture du clavier virtuel).
+        this.mqCol2 = window.matchMedia(SEUIL_COL2_REPLIEE);
+        this.mqTiroir = window.matchMedia(SEUIL_TIROIR);
+        this.boundReagirALaLargeur = this._reagirALaLargeur.bind(this);
+        this.mqCol2.addEventListener('change', this.boundReagirALaLargeur);
+        this.mqTiroir.addEventListener('change', this.boundReagirALaLargeur);
 
         // Un panneau flottant épinglé sortirait de l'écran après un redimensionnement.
         this.boundReancrerFlyout = this._reancrerFlyout.bind(this);
@@ -289,6 +315,8 @@ export default class extends Controller {
         document.removeEventListener('cerveau:event', this.boundHandleCerveauEvent);
         window.removeEventListener('resize', this.boundReancrerFlyout);
         document.removeEventListener('click', this.boundClicExterieurFlyout);
+        this.mqCol2?.removeEventListener('change', this.boundReagirALaLargeur);
+        this.mqTiroir?.removeEventListener('change', this.boundReagirALaLargeur);
         this._annulerMinuterieFlyout();
     }
 
@@ -1262,16 +1290,122 @@ export default class extends Controller {
     /**
      * Bascule le repli de la colonne 2. Préférence persistée par entreprise et
      * restaurée au rechargement, sur le modèle exact du plein écran ci-dessus.
+     *
+     * TROIS COMPORTEMENTS SELON LA LARGEUR, une seule commande. Sur téléphone, la
+     * poignée n'a plus de colonne à replier — tout le menu est déjà hors du flux :
+     * elle ouvre et referme le TIROIR. Ailleurs, elle replie comme avant.
      */
     toggleCol2() {
-        const replie = !this._lireCol2Pref();
-        this._ecrireCol2Pref(replie);
+        if (this._ecranTiroir()) {
+            this._basculerTiroir();
+
+            return;
+        }
+
+        // On part de l'état RÉELLEMENT à l'écran, et non de la préférence : sous
+        // contrainte de largeur, la colonne est repliée alors que la préférence dit
+        // le contraire. Partir de la préférence ferait donc « replier » une colonne
+        // déjà repliée — un clic sans effet visible.
+        const replie = !this._replie();
+
+        // La préférence n'enregistre QUE des choix faits librement. Un repli imposé
+        // par la taille de l'écran n'est pas un choix : le mémoriser laisserait la
+        // colonne repliée au retour sur un grand écran, sans que personne ne l'ait
+        // jamais demandé.
+        if (!this._contrainteCol2()) {
+            this._ecrireCol2Pref(replie);
+        }
+
         this._appliquerEtatCol2(replie);
     }
 
     /** La colonne 2 est-elle repliée ? */
     _replie() {
         return this.element.classList.contains('col2-collapsed');
+    }
+
+    /** La fenêtre est-elle trop étroite pour porter la colonne 2 dans le flux ? */
+    _contrainteCol2() {
+        return this.mqCol2 ? this.mqCol2.matches : window.matchMedia(SEUIL_COL2_REPLIEE).matches;
+    }
+
+    /** La fenêtre impose-t-elle le tiroir (une seule colonne visible à la fois) ? */
+    _ecranTiroir() {
+        return this.mqTiroir ? this.mqTiroir.matches : window.matchMedia(SEUIL_TIROIR).matches;
+    }
+
+    /**
+     * L'état de repli EFFECTIF : la contrainte d'écran l'emporte, sinon le choix.
+     * Le choix survit intact sous la contrainte — c'est lui qu'on retrouve dès que
+     * la fenêtre redevient assez large.
+     */
+    _col2DoitEtreRepliee() {
+        return this._contrainteCol2() || this._lireCol2Pref();
+    }
+
+    /**
+     * La fenêtre a franchi un seuil : on recalcule la disposition. Aucun état
+     * persisté n'est touché — seule la traduction à l'écran change.
+     */
+    _reagirALaLargeur() {
+        this._appliquerEtatCol2(this._col2DoitEtreRepliee());
+
+        // Le tiroir n'existe que sur téléphone. Élargir la fenêtre alors qu'il est
+        // ouvert laisserait le voile posé sur un espace de travail redevenu normal.
+        if (!this._ecranTiroir()) {
+            this._fermerTiroir();
+        }
+    }
+
+    /** Le tiroir de navigation (colonne 1 hors du flux) est-il ouvert ? */
+    _tiroirOuvert() {
+        return this.element.classList.contains('ws-tiroir-ouvert');
+    }
+
+    /** Ouvre ou referme le tiroir de navigation. */
+    _basculerTiroir() {
+        if (this._tiroirOuvert()) {
+            this._fermerTiroir();
+
+            return;
+        }
+
+        this.element.classList.add('ws-tiroir-ouvert');
+        this._annoncerEtatTiroir(true);
+    }
+
+    /**
+     * Referme le tiroir, et avec lui le panneau des rubriques : le panneau s'ouvre
+     * CONTRE la colonne 1 sortie — la laisser rentrer sans lui le ferait flotter
+     * seul contre le bord de l'écran, sans rien à quoi se rattacher.
+     */
+    _fermerTiroir() {
+        if (!this._tiroirOuvert()) {
+            return;
+        }
+
+        this.element.classList.remove('ws-tiroir-ouvert');
+        this._appliquerEtatFlyout(etatSuivant(this.etatFlyout, { type: 'exterieur' }));
+        this._annoncerEtatTiroir(false);
+    }
+
+    /**
+     * Dit l'état du tiroir aux lecteurs d'écran. La poignée porte déjà
+     * `aria-expanded` pour le repli de la colonne ; sur téléphone elle commande le
+     * tiroir, c'est donc CE volet qu'elle doit décrire.
+     * @param {boolean} ouvert
+     */
+    _annoncerEtatTiroir(ouvert) {
+        if (!this.hasCol2HandleTarget) {
+            return;
+        }
+
+        const nom = this.entrepriseNomValue ? ` — ${this.entrepriseNomValue}` : '';
+        this.col2HandleTarget.setAttribute('aria-expanded', ouvert ? 'true' : 'false');
+        this.col2HandleTarget.setAttribute(
+            'aria-label',
+            ouvert ? `Masquer le menu${nom}` : `Afficher le menu${nom}`
+        );
     }
 
     _lireCol2Pref() {
@@ -1309,6 +1443,14 @@ export default class extends Controller {
                 replie ? `Afficher le panneau des rubriques${nom}` : `Masquer le panneau des rubriques${nom}`
             );
             this.col2HandleTarget.setAttribute('title', replie ? 'Afficher le panneau' : 'Masquer le panneau');
+        }
+
+        // Sur téléphone, cette poignée ne commande plus le repli d'une colonne mais
+        // l'ouverture du tiroir : elle doit donc annoncer le tiroir, pas la colonne.
+        // La reprise se fait ici, après le libellé générique, pour que le retour sur
+        // un écran large rende à la poignée son sens d'origine sans rien de plus.
+        if (this._ecranTiroir()) {
+            this._annoncerEtatTiroir(this._tiroirOuvert());
         }
     }
 
@@ -1408,6 +1550,10 @@ export default class extends Controller {
 
         this._appliquerEtatFlyout(etatSuivant(this.etatFlyout, { type: 'echap' }));
 
+        // Échap ferme la couche de navigation entière, tiroir compris : c'est la
+        // seule sortie clavier, elle ne peut pas laisser un voile en place.
+        this._fermerTiroir();
+
         // Rendre le focus à son point de départ : sans cela, Échap le laisse dans
         // un panneau devenu invisible (WCAG 2.4.3).
         // `hasCol2Target` et non `this.col2Target?.` : le getter singulier de Stimulus
@@ -1485,10 +1631,6 @@ export default class extends Controller {
 
     /** Clic hors de la navigation : range le panneau épinglé, comme tout menu. */
     _clicExterieurFlyout(event) {
-        if (!this._replie() || !estOuvert(this.etatFlyout)) {
-            return;
-        }
-
         const cible = event.target;
         if (!(cible instanceof Node)) {
             return;
@@ -1501,6 +1643,17 @@ export default class extends Controller {
             || (this.hasCol2HandleTarget && this.col2HandleTarget.contains(cible));
 
         if (dansLaNavigation) {
+            return;
+        }
+
+        // Le tiroir se referme sur un appui à l'extérieur — c'est le geste attendu, et
+        // le voile qu'il pose est précisément là pour le recevoir. Ce test précède
+        // celui du panneau : le tiroir peut être ouvert SANS panneau (on vient de
+        // l'ouvrir, aucun groupe n'a encore été choisi), et l'ancienne sortie
+        // anticipée l'aurait alors laissé ouvert pour toujours.
+        this._fermerTiroir();
+
+        if (!this._replie() || !estOuvert(this.etatFlyout)) {
             return;
         }
 
@@ -1982,6 +2135,9 @@ export default class extends Controller {
         if (this._gesteUtilisateur(event)) {
             this._appliquerEtatFlyout(etatSuivant(this.etatFlyout, { type: 'clicRubrique' }));
             this._annulerMinuterieFlyout();
+            // Sur téléphone, la navigation couvre l'espace de travail : la laisser
+            // ouverte cacherait la rubrique que l'on vient justement de demander.
+            this._fermerTiroir();
         }
 
         // Mettre à jour col-2 (description) uniquement pour les items top-level (pas les rubriques)

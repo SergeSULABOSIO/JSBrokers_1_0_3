@@ -10,7 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * @file Reversement de TVA à l'autorité fiscale (déclaration mensuelle).
- * @description Trace un paiement effectif de TVA nette dû par JS Brokers à une
+ * @description Trace un paiement effectif de TVA nette dû par Joseara à une
  * autorité fiscale, pour une période (mois/année). Le « montant dû » est calculé
  * (TVA collectée − déductible, cf. SuiviFiscalService) ; cette entité enregistre
  * ce qui a été PAYÉ, afin d'en déduire le solde restant dû. Génère une écriture

@@ -8,7 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * @file Feedback (note interne) d'un collaborateur sur un ticket de support.
- * @description Permet aux agents JS Brokers d'échanger sur un ticket tant qu'il
+ * @description Permet aux agents Joseara d'échanger sur un ticket tant qu'il
  * n'est pas clos. On trace l'auteur et l'horodatage de chaque message.
  */
 #[ORM\Entity(repositoryClass: CrmTicketFeedbackRepository::class)]

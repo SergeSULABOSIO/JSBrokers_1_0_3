@@ -13,7 +13,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="ProgId" content="Word.Document">
-    <meta name="Generator" content="JS Brokers">
+    <meta name="Generator" content="Joseara">
     <title>{{ assistantNom }} — message du {{ message.createdAt|date('d/m/Y H:i') }}</title>
     <!--[if gte mso 9]><xml>
         <w:WordDocument>
@@ -29,7 +29,7 @@
 </head>
 <body>
     <div style="border-bottom:2px solid #0047AB;padding-bottom:8px;margin-bottom:14px;">
-        <span style="font-size:14pt;font-weight:700;color:#0047AB;">JS Brokers</span>
+        <span style="font-size:14pt;font-weight:700;color:#0047AB;">Joseara</span>
         <span style="font-size:9pt;color:#6c757d;"> — {{ entreprise.nom }}</span>
         <div style="font-size:9pt;color:#6c757d;">
             {{ estAssistant ? 'Réponse de ' ~ assistantNom : 'Question de l’utilisateur' }},
@@ -40,7 +40,7 @@
     {{ corpsHtml|raw }}{# fragment issu d'un template autoescapé, cf. MessageExporter::corpsHtml() #}
 
     <div style="border-top:1px solid #dee2e6;margin-top:18px;padding-top:6px;font-size:8pt;color:#adb5bd;">
-        Document généré depuis l'assistant IA de JS Brokers — {{ entreprise.nom }}. Usage interne.
+        Document généré depuis l'assistant IA de Joseara — {{ entreprise.nom }}. Usage interne.
     </div>
 </body>
 </html>

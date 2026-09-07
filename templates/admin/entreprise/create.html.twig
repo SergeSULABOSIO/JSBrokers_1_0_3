@@ -1,7 +1,7 @@
 {% extends 'base.html.twig' %}
 {% import 'admin/entreprise/_form_macros.html.twig' as ff %}
 
-{% block title %}{{ pageName }} — JS Brokers{% endblock %}
+{% block title %}{{ pageName }} — Joseara{% endblock %}
 
 {% block stylesheets %}
 {{ parent() }}
@@ -162,7 +162,7 @@
         <a href="{{ path('admin.entreprise.index') }}" class="ent-brand"
            data-action="click->top-progress#show">
             <img src="{{ asset('images/entreprises/logofav.png') }}" alt="">
-            <span>JS Brokers</span>
+            <span>Joseara</span>
         </a>
         <div class="ent-topbar-user">
             <span class="ent-user-name">
@@ -290,7 +290,7 @@
         </div>
     </div>{# /.ent-content #}
 
-    {# Pied de page public officiel JS Brokers : hors de la colonne étroite .ent-content
+    {# Pied de page public officiel Joseara : hors de la colonne étroite .ent-content
        pour occuper 100% de la largeur (même pattern que la liste des entreprises).
        Bascule de langue fonctionnelle via ?lang=. #}
     {% include 'components/_public_footer.html.twig' with { lang: app.user.locale } %}

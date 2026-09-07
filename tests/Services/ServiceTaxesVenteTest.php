@@ -9,7 +9,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
- * Calcul de fiscalité sur les ventes JS Brokers : revenu hors taxe (additif sur
+ * Calcul de fiscalité sur les ventes Joseara : revenu hors taxe (additif sur
  * base commune), montant des taxes et ventilation par autorité.
  */
 class ServiceTaxesVenteTest extends KernelTestCase

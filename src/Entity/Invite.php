@@ -210,7 +210,7 @@ class Invite
     public ?string $portefeuilleNom = null;
 
     // Nullable : une invitation peut exister AVANT que la personne invitée n'ait un
-    // compte JS Brokers (invitation « en attente », identifiée par l'email ci-dessous).
+    // compte Joseara (invitation « en attente », identifiée par l'email ci-dessous).
     // Le lien vers l'Utilisateur est rempli soit immédiatement (compte déjà existant),
     // soit au moment où la personne crée son compte (rattachement via InvitationLinker).
     #[ORM\ManyToOne(inversedBy: 'invites', cascade: ['persist'])]
@@ -874,7 +874,7 @@ class Invite
 
     /**
      * Vrai tant que l'invitation n'est rattachée à aucun compte utilisateur
-     * (la personne invitée n'a pas encore créé son compte JS Brokers).
+     * (la personne invitée n'a pas encore créé son compte Joseara).
      */
     public function isEnAttente(): bool
     {

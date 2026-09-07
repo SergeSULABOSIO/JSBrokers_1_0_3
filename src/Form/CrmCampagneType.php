@@ -41,7 +41,7 @@ class CrmCampagneType extends AbstractType
             ])
             ->add('objet', TextType::class, [
                 'label' => 'Objet de l\'e-mail',
-                'attr'  => ['placeholder' => 'Ex. Bienvenue chez JS Brokers', 'data-icon' => 'note'],
+                'attr'  => ['placeholder' => 'Ex. Bienvenue chez Joseara', 'data-icon' => 'note'],
             ])
             ->add('message', TextareaType::class, [
                 'label' => 'Message (une ligne = un paragraphe)',

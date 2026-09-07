@@ -16,7 +16,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Translation\LocaleSwitcher;
 
 /**
- * CRUD des taxes sur les ventes propres de JS Brokers (fiscalité de la plateforme).
+ * CRUD des taxes sur les ventes propres de Joseara (fiscalité de la plateforme).
  * Distinct de l'Admin\TaxeController (taxes du domaine assurance) : préfixe de
  * route « console.taxe. » dédié, aucune collision de noms.
  */
@@ -67,7 +67,7 @@ class TaxeVenteController extends AbstractConsoleController
             'Nouvelle taxe',
             'Créer la taxe',
             true,
-            'Définissez une taxe due par JS Brokers sur ses ventes et reversée à une autorité fiscale.'
+            'Définissez une taxe due par Joseara sur ses ventes et reversée à une autorité fiscale.'
         );
     }
 

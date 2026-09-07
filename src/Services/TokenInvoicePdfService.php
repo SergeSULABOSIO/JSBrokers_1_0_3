@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Entity\TokenPurchase;
+use App\Marque;
 use App\Repository\PlateformeParametresRepository;
 use App\Token\ParametresTokenService;
 use Dompdf\Dompdf;
@@ -71,7 +72,7 @@ class TokenInvoicePdfService
         return $dompdf->output();
     }
 
-    /** Logo JS Brokers en data URI (embarqué : DomPDF est en mode non-distant). */
+    /** Logo Joseara en data URI (embarqué : DomPDF est en mode non-distant). */
     private function logoDataUri(): ?string
     {
         $path = $this->params->get('kernel.project_dir') . '/public/images/entreprises/logofav.png';
@@ -83,7 +84,7 @@ class TokenInvoicePdfService
     }
 
     /**
-     * QR de contrôle (PNG data URI, aux couleurs JS Brokers) encodant les
+     * QR de contrôle (PNG data URI, aux couleurs Joseara) encodant les
      * éléments vérifiables de la facture : émetteur, n° de facture/avoir,
      * référence d'achat, montant TTC, date et client. Permet un rapprochement
      * rapide au scan (contrôle interne — sans valeur de normalisation fiscale).
@@ -92,7 +93,7 @@ class TokenInvoicePdfService
     {
         $date = ($purchase->getPaidAt() ?? $purchase->getCreatedAt())?->format('Y-m-d H:i') ?? '';
         $payload = implode("\n", [
-            'JS Brokers',
+            Marque::NOM,
             ($isAvoir ? 'AVOIR' : 'FACTURE') . ' ' . ($purchase->getInvoiceNumber() ?? $purchase->getReference()),
             'Ref ' . $purchase->getReference(),
             'TTC ' . number_format($ttc, 2, '.', '') . ' USD',
@@ -105,7 +106,7 @@ class TokenInvoicePdfService
             errorCorrectionLevel: ErrorCorrectionLevel::Medium,
             size: 170,
             margin: 4,
-            foregroundColor: new Color(0, 71, 171), // cobalt JS Brokers #0047AB
+            foregroundColor: new Color(0, 71, 171), // cobalt Joseara #0047AB
         );
 
         return (new PngWriter())->write($qr)->getDataUri();
@@ -120,7 +121,7 @@ class TokenInvoicePdfService
     }
 
     /**
-     * Identité de l'émetteur (JS Brokers). Le capital social provient des
+     * Identité de l'émetteur (Joseara). Le capital social provient des
      * paramètres plateforme (même source que les documents comptables OHADA).
      *
      * @return array{nom:string, email:string, capitalSocial:float}
@@ -128,7 +129,7 @@ class TokenInvoicePdfService
     private function issuer(): array
     {
         return [
-            'nom'           => 'JS Brokers',
+            'nom'           => Marque::NOM,
             'email'         => $this->mailFrom,
             'capitalSocial' => $this->plateformeParametres->getSingleton()->getCapitalSocialFloat(),
         ];

@@ -12,13 +12,13 @@ use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * @file Type de charge supportée par JS Brokers (référentiel comptable OHADA).
+ * @file Type de charge supportée par Joseara (référentiel comptable OHADA).
  * @description Décrit une catégorie de charge récurrente ou ponctuelle de
- * l'entreprise JS Brokers, rattachée à un compte de la classe 6 du plan comptable
+ * l'entreprise Joseara, rattachée à un compte de la classe 6 du plan comptable
  * SYSCOHADA. Porte en plus un axe analytique (exploitation / coût direct /
  * acquisition) qui alimente les indicateurs SaaS (CAC, marge brute), une nature
  * de comportement (fixe / variable) et une périodicité prévisionnelle. Une charge
- * classe les dépenses réelles (cf. Depense). Créée et gérée par l'équipe JS Brokers
+ * classe les dépenses réelles (cf. Depense). Créée et gérée par l'équipe Joseara
  * depuis la Console.
  */
 #[ORM\Entity(repositoryClass: ChargeRepository::class)]

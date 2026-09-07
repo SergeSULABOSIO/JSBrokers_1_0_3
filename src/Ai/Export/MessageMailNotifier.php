@@ -16,7 +16,7 @@ use Symfony\Component\Mime\Address;
  *
  * Deux partis pris qui protègent la marque et l'utilisateur :
  *  - `replyTo` porte l'adresse du COURTIER, jamais celle de la plateforme : le
- *    destinataire répond à la personne qui lui écrit, pas à JS Brokers ;
+ *    destinataire répond à la personne qui lui écrit, pas à Joseara ;
  *  - la pièce jointe est tolérante aux pannes (pattern
  *    MailingSubscriber::factureJointe) — un rendu qui échoue ne doit pas faire
  *    perdre l'envoi, il le prive seulement de son document.

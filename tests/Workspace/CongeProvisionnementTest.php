@@ -170,7 +170,7 @@ class CongeProvisionnementTest extends KernelTestCase
      * LA DOTATION DE DÉMARRAGE EST L'ANNÉE PLEINE, PAS UN PRORATA.
      *
      * Elle l'a été un temps, calculée sur la date de création de la fiche d'invité. Mais
-     * cette date dit quand le collaborateur a été SAISI dans JS Brokers, pas quand il est
+     * cette date dit quand le collaborateur a été SAISI dans Joseara, pas quand il est
      * arrivé dans le cabinet : un cabinet qui adoptait le module en avril voyait tout son
      * personnel crédité de neuf mois sur douze — un quart du droit en moins, sans que rien
      * à l'écran n'en donne la raison.

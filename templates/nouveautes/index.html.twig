@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}{{ pageName }} — JS Brokers{% endblock %}
+{% block title %}{{ pageName }} — Joseara{% endblock %}
 
 {% block stylesheets %}
 {{ parent() }}
@@ -150,9 +150,9 @@
 
     <header class="chg-topbar">
         <a href="{{ path('app_index') }}" class="chg-brand"
-           aria-label="JS Brokers — retour à l'accueil" title="Retour à l'accueil JS Brokers">
+           aria-label="Joseara — retour à l'accueil" title="Retour à l'accueil Joseara">
             <img src="{{ asset('images/entreprises/logofav.png') }}" alt="">
-            <span>JS Brokers</span>
+            <span>Joseara</span>
         </a>
         <div class="chg-topbar-actions chg-no-print">
             {{ include('components/_lang_switch.html.twig', {current: (isEn ? 'en' : 'fr'), route: 'app_changelog', uid: 'lang-chg'}) }}

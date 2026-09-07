@@ -154,7 +154,7 @@ parameters:
 
                 Assistance:
                     icone: 'feedback'
-                    description: "<p>Besoin d'aide ? Ouvrez une demande de support et suivez son traitement par l'équipe JS Brokers, sans quitter votre espace de travail.</p><p>Décrivez votre situation et son urgence : notre équipe la prend en charge et vous tient informé de son avancement.</p><p><strong>Un support réactif, au cœur de votre outil. Vous n'êtes jamais seul.</strong></p>"
+                    description: "<p>Besoin d'aide ? Ouvrez une demande de support et suivez son traitement par l'équipe Joseara, sans quitter votre espace de travail.</p><p>Décrivez votre situation et son urgence : notre équipe la prend en charge et vous tient informé de son avancement.</p><p><strong>Un support réactif, au cœur de votre outil. Vous n'êtes jamais seul.</strong></p>"
                     rubriques:
                         "Support": { icone: 'feedback', composant_twig: '_support_component.html.twig' }
 
@@ -172,6 +172,6 @@ parameters:
                 description: "<p>Cliquez ici pour <strong>fermer l'espace de travail de cette entreprise</strong> et revenir à votre liste d'entreprises.</p><p>Vous restez connecté à l'application : vous pourrez rouvrir cette entreprise ou en ouvrir une autre. Pensez à enregistrer vos modifications en cours avant de partir.</p><p><strong>Pour vous déconnecter complètement, utilisez le bouton « Déconnexion » depuis la liste des entreprises.</strong></p>"
         colonne_2:
             logo: 'images/entreprises/logofav.png'
-            titre: 'JS Brokers'
+            titre: 'Joseara'
             description: "Votre partenaire fiable pour optimiser la gestion de votre porte-feuille client."
             version: '1.1.0'

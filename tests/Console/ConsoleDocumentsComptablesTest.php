@@ -14,7 +14,7 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * Console JS Brokers : rubrique « Documents comptables » (journal, grand livre,
+ * Console Joseara : rubrique « Documents comptables » (journal, grand livre,
  * balance, compte de résultat, TFR, bilan, TFT) générée à la volée depuis les
  * ventes et dépenses. Vérifie l'accès, l'affichage des onglets, la TVA déductible,
  * le capital social, l'export Excel et les invariants comptables (partie double).

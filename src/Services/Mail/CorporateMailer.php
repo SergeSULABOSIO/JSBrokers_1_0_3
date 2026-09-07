@@ -2,23 +2,24 @@
 
 namespace App\Services\Mail;
 
+use App\Marque;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 
 /**
- * @file Point d'envoi unifié des e-mails corporate JS Brokers.
+ * @file Point d'envoi unifié des e-mails corporate Joseara.
  * @description Extrait de MailingSubscriber (DRY) afin d'être réutilisable par
  * tous les émetteurs (confirmations, invitations, notifications aux agents…).
- * Garantit la cohérence corporate : expéditeur « JS Brokers », objet normalisé
- * « JS Brokers - [objet] - [concerné] », priorité haute, logo + adresse de
+ * Garantit la cohérence corporate : expéditeur « Joseara », objet normalisé
+ * « Joseara - [objet] - [concerné] », priorité haute, logo + adresse de
  * contact injectés dans le contexte pour la signature (cf. emails/_layout).
  */
 class CorporateMailer
 {
     /** Nom d'expéditeur affiché dans TOUS les e-mails sortants. */
-    public const SENDER_NAME = 'JS Brokers';
+    public const SENDER_NAME = Marque::NOM;
 
     public function __construct(
         private MailerInterface $mailer,
@@ -27,7 +28,7 @@ class CorporateMailer
     ) {
     }
 
-    /** Construit l'objet normalisé : « JS Brokers - [objet] - [concerné] ». */
+    /** Construit l'objet normalisé : « Joseara - [objet] - [concerné] ». */
     public function buildSubject(string $object, string $concerned): string
     {
         return sprintf('%s - %s - %s', self::SENDER_NAME, $object, $concerned);

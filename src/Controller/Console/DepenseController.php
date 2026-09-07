@@ -15,7 +15,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Translation\LocaleSwitcher;
 
 /**
- * Gestion des dépenses (sorties de fonds) de JS Brokers : liste filtrable avec
+ * Gestion des dépenses (sorties de fonds) de Joseara : liste filtrable avec
  * agrégats (sur le modèle des Ventes) ET saisie/édition/suppression (les dépenses
  * sont enregistrées, contrairement aux ventes issues des achats de tokens).
  */

@@ -13,7 +13,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(
     name: 'app:jsbrokers-demarrer',
-    description: 'Cette commande Démarre les applications / services indispendable au développement de JS Brokers.',
+    description: 'Cette commande Démarre les applications / services indispendable au développement de Joseara.',
 )]
 class JsbrokersDemarrerCommand extends Command
 {

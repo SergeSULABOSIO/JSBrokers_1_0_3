@@ -5,7 +5,7 @@ namespace App\Crm;
 use App\Entity\Crm\CrmProfil;
 
 /**
- * @file Pipeline commercial du cycle de vie client (interne JS Brokers).
+ * @file Pipeline commercial du cycle de vie client (interne Joseara).
  * @description Source de vérité des étapes du pipeline + dérivation automatique
  * depuis les signaux SaaS (inscription, connexions, entreprises, invités, achats,
  * consommation). L'agent peut forcer manuellement une étape relationnelle (démo,

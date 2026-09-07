@@ -1,11 +1,11 @@
 {% extends 'emails/_layout.html.twig' %}
 {% import 'emails/_macros.html.twig' as m %}
 
-{% block subject %}JS Brokers — Demande de contact{% endblock %}
+{% block subject %}Joseara — Demande de contact{% endblock %}
 
 {% block content %}
     {{ m.heading('contact', 'Nouvelle demande de contact') }}
-    {{ m.paragraph('Une nouvelle demande de contact vient d\'être reçue via le site JS Brokers.') }}
+    {{ m.paragraph('Une nouvelle demande de contact vient d\'être reçue via le site Joseara.') }}
 
     {% set wantsCallback = data.wantsPhone and data.phone is not empty %}
 

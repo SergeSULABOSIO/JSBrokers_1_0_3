@@ -17,7 +17,7 @@
 {% extends 'emails/_layout.html.twig' %}
 {% import 'emails/_macros.html.twig' as m %}
 
-{% block subject %}JS Brokers — {{ ctx.titre }}{% endblock %}
+{% block subject %}Joseara — {{ ctx.titre }}{% endblock %}
 
 {% macro ligne(libelle, valeur, fort) %}
     <tr>
@@ -140,7 +140,7 @@
 
     {# ── BLOC ACTION ──────────────────────────────────────────────────────────────── #}
     {% if ctx.lienApplication %}
-        {{ m.button(ctx.lienApplication, 'Ouvrir dans JS Brokers') }}
+        {{ m.button(ctx.lienApplication, 'Ouvrir dans Joseara') }}
     {% endif %}
 
     {# RG-16 : les soldes portés par ce mail sont un instantané daté, présenté comme tel.
