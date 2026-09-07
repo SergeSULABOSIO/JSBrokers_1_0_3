@@ -10,7 +10,7 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
  * Verrouille la scène narrative du bandeau principal :
  *  - le héros est le courtier, adossé à ses assurés (titre H1) ;
  *  - le problème est nommé (administratif éparpillé qui le ralentit) ;
- *  - JS Brokers apparaît comme le guide (empathie + autorité : 10 ans
+ *  - Joseara apparaît comme le guide (empathie + autorité : 10 ans
  *    de courtage) et promet le succès (redevenir le héros de ses assurés) ;
  *  - les deux appels à l'action (plan) restent sous le message ;
  *  - le tout est servi dans les deux langues (FR/EN), sans clé fuitée.
@@ -23,14 +23,14 @@ class HomeHeroStorybrandTest extends WebTestCase
             'français' => [
                 'fr',
                 'Vos assurés comptent sur vous. Pas sur la paperasse.',
-                ['bordereaux en retard', 'JS Brokers', '10 ans de courtage', 'un seul espace de travail', 'leur héros'],
+                ['bordereaux en retard', 'Joseara', '10 ans de courtage', 'un seul espace de travail', 'leur héros'],
                 'Créer un compte',
                 'Voir les tarifs',
             ],
             'anglais' => [
                 'en',
                 'Your clients count on you. Not on your paperwork.',
-                ['late statements', 'JS Brokers', '10 years of brokerage', 'one workspace', 'their hero'],
+                ['late statements', 'Joseara', '10 years of brokerage', 'one workspace', 'their hero'],
                 'Create an account',
                 'View pricing',
             ],

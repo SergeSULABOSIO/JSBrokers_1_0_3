@@ -11,13 +11,13 @@ use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * @file Dépense réelle de JS Brokers (sortie de fonds), classée par type de charge.
+ * @file Dépense réelle de Joseara (sortie de fonds), classée par type de charge.
  * @description Enregistre un décaissement (ou un engagement) de l'entreprise
- * JS Brokers, rattaché à une Charge (compte OHADA + axe analytique). Le montant est
+ * Joseara, rattaché à une Charge (compte OHADA + axe analytique). Le montant est
  * saisi en TTC (devise par défaut USD). Le statut distingue l'engagement comptable
  * (charge du résultat) du paiement effectif (impact trésorerie) : seules les
  * dépenses « payées » décaissent la trésorerie ; toute dépense non « annulée »
- * pèse sur le résultat. Saisie et gérée par l'équipe JS Brokers depuis la Console.
+ * pèse sur le résultat. Saisie et gérée par l'équipe Joseara depuis la Console.
  */
 #[ORM\Entity(repositoryClass: DepenseRepository::class)]
 #[ORM\HasLifecycleCallbacks]

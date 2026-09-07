@@ -138,7 +138,7 @@ class ServiceInitialisationEntreprise
      * ── ANNÉE PLEINE, ET NON AU PRORATA ─────────────────────────────────────────────
      * Ce semis dote les collaborateurs DÉJÀ PRÉSENTS au moment où le module s'active. On
      * ne sait rien de leur date d'arrivée réelle dans le cabinet : `createdAt` dit quand
-     * leur fiche a été saisie dans JS Brokers, ce qui est une tout autre chose. Un cabinet
+     * leur fiche a été saisie dans Joseara, ce qui est une tout autre chose. Un cabinet
      * qui adopte le module en avril verrait alors TOUT son personnel crédité de neuf mois
      * sur douze — un droit amputé d'un quart, sans que rien à l'écran n'en donne la
      * raison, et sur une matière où l'erreur se paie en jours de congé réels.

@@ -1,6 +1,6 @@
 # Cycle de production du courtier
 
-> Comment une affaire naît et vit dans JS Brokers : piste, cotations, avenant, renouvellement et prorogation.
+> Comment une affaire naît et vit dans Joseara : piste, cotations, avenant, renouvellement et prorogation.
 
 Le cycle de production suit l'affaire de la prospection au contrat :
 

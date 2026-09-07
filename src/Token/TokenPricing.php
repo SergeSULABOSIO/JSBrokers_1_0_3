@@ -16,7 +16,7 @@ use App\Entity\Portefeuille;
 use App\Entity\Tache;
 
 /**
- * @file Référence du modèle de facturation à base de TOKENS de JS Brokers.
+ * @file Référence du modèle de facturation à base de TOKENS de Joseara.
  * @description Source de vérité unique pour le métrage et la tarification :
  *  - poids des entités en écriture (entrée) et en lecture (sortie) ;
  *  - allocation gratuite renouvelable ;

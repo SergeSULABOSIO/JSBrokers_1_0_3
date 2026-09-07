@@ -6,6 +6,7 @@ use App\Ai\Document\DocumentFormat;
 use App\Ai\Document\PiedDePage;
 use App\Ai\Document\RapportSpec;
 use App\Ai\Document\ThemeDocument;
+use App\Marque;
 use App\Services\Bordereau\BordereauLigneNormaliseur;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
@@ -54,7 +55,7 @@ final class ExcelRapportRenderer implements RapportRendererInterface
     {
         $classeur = new Spreadsheet();
         $classeur->getProperties()
-            ->setCreator('JS Brokers')
+            ->setCreator(Marque::NOM)
             ->setTitle($spec->titre)
             ->setDescription($spec->problematique);
 

@@ -24,7 +24,7 @@ class UtilisateurRepository extends ServiceEntityRepository implements PasswordU
     }
 
     /**
-     * Agents JS Brokers : tout compte portant ROLE_ADMIN (couvre aussi
+     * Agents Joseara : tout compte portant ROLE_ADMIN (couvre aussi
      * ROLE_SUPER_ADMIN, stocké comme tel dans la colonne roles). Destinataires
      * des notifications internes.
      *
@@ -42,7 +42,7 @@ class UtilisateurRepository extends ServiceEntityRepository implements PasswordU
     }
 
     /**
-     * Requête de base sur les comptes « classiques » (hors agents JS Brokers).
+     * Requête de base sur les comptes « classiques » (hors agents Joseara).
      * Sert d'assise commune au partitionnement Clients (payants) / Utilisateurs
      * (gratuits) afin de ne pas dupliquer le filtre rôles.
      */
@@ -82,7 +82,7 @@ class UtilisateurRepository extends ServiceEntityRepository implements PasswordU
     /**
      * Liste paginée des « clients » : tout compte en mode payant, c.-à-d. disposant
      * encore d'un solde de jetons prépayés (paidTokens > 0). Le rôle n'entre PAS en
-     * ligne de compte : un agent JS Brokers qui a acheté des jetons et en possède
+     * ligne de compte : un agent Joseara qui a acheté des jetons et en possède
      * encore est aussi un client.
      */
     public function paginateClients(int $page): PaginationInterface
@@ -108,7 +108,7 @@ class UtilisateurRepository extends ServiceEntityRepository implements PasswordU
 
     /**
      * Périmètre des comptes suivis par le CRM : tous les utilisateurs classiques
-     * (non agents) PLUS les agents JS Brokers ayant déjà acheté des tokens (donc
+     * (non agents) PLUS les agents Joseara ayant déjà acheté des tokens (donc
      * eux aussi clients). L'équipe interne sans achat reste exclue. Distinct de
      * regularUsersQb() (utilisé par la console historique) pour éviter toute
      * régression.

@@ -45,9 +45,9 @@ class AffectationNotifier
                 $this->corporateMailer->buildSubject('Affectation & rôle', (string) $collaborateur->getNom()),
                 'emails/agent_notification.html.twig',
                 [
-                    'titre'   => 'Votre rôle au sein de JS Brokers',
+                    'titre'   => 'Votre rôle au sein de Joseara',
                     'intro'   => sprintf(
-                        'Bonjour %s, votre rattachement au sein de l\'équipe JS Brokers vient d\'être défini. Voici les détails de votre affectation.',
+                        'Bonjour %s, votre rattachement au sein de l\'équipe Joseara vient d\'être défini. Voici les détails de votre affectation.',
                         $collaborateur->getNom()
                     ),
                     'icone'   => 'role',

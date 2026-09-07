@@ -120,7 +120,7 @@ class EntrepriseRepository extends ServiceEntityRepository
     }
 
     /**
-     * Liste paginée GLOBALE de toutes les entreprises (Console JS Brokers).
+     * Liste paginée GLOBALE de toutes les entreprises (Console Joseara).
      * NB : distinct de getNBEntreprises()/paginateUtilisateur(), volontairement
      * scoppés à l'utilisateur courant.
      */

@@ -4,6 +4,7 @@ namespace App\EventSubscriber;
 
 use App\DTO\DemandeContactDTO;
 use App\Entity\Invite;
+use App\Marque;
 use App\Services\Mail\CorporateMailer;
 use App\Services\TokenInvoicePdfService;
 use Symfony\Component\Mime\Address;
@@ -22,7 +23,7 @@ class MailingSubscriber implements EventSubscriberInterface
     private const SENDER_NAME = CorporateMailer::SENDER_NAME;
 
     /** Boîte interne recevant les demandes de contact du site. */
-    private const CONTACT_INBOX = 'contact@jsbrokers.com';
+    private const CONTACT_INBOX = Marque::CONTACT;
 
     public function __construct(
         private CorporateMailer $corporateMailer,
@@ -38,7 +39,7 @@ class MailingSubscriber implements EventSubscriberInterface
         $data = $event->data;
 
         // 1) E-mail interne (vers la boîte de contact de l'équipe). L'expéditeur reste
-        // « JS Brokers » pour la cohérence ; on positionne l'adresse du visiteur en
+        // « Joseara » pour la cohérence ; on positionne l'adresse du visiteur en
         // « Répondre à » afin de pouvoir lui répondre directement d'un clic.
         $this->envoyerMail(
             self::CONTACT_INBOX,
@@ -192,7 +193,7 @@ class MailingSubscriber implements EventSubscriberInterface
 
     /**
      * Construit l'objet normalisé de tous les e-mails sortants :
-     *   « JS Brokers - [objet] - [destinataire / nom concerné] ».
+     *   « Joseara - [objet] - [destinataire / nom concerné] ».
      */
     private function buildSubject(string $object, string $concerned): string
     {
@@ -200,7 +201,7 @@ class MailingSubscriber implements EventSubscriberInterface
     }
 
     /**
-     * Point d'envoi : délègue au CorporateMailer (expéditeur « JS Brokers »,
+     * Point d'envoi : délègue au CorporateMailer (expéditeur « Joseara »,
      * priorité haute, logo + adresse de contact injectés pour la signature).
      */
     private function envoyerMail(

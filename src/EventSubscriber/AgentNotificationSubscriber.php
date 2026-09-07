@@ -9,7 +9,7 @@ use App\Services\Mail\CorporateMailer;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
- * @file Notifie l'équipe JS Brokers (tous les agents) des événements de gestion.
+ * @file Notifie l'équipe Joseara (tous les agents) des événements de gestion.
  * @description Couvre, comme demandé : création/édition/suppression d'un compte
  * ou d'une entreprise (AgentNotificationEvent) et chaque paiement de tokens
  * (réutilise TokenPurchaseEvent). Chaque agent (ROLE_ADMIN / ROLE_SUPER_ADMIN)
@@ -84,7 +84,7 @@ class AgentNotificationSubscriber implements EventSubscriberInterface
         );
     }
 
-    /** Envoie l'e-mail de notification à tous les agents JS Brokers. */
+    /** Envoie l'e-mail de notification à tous les agents Joseara. */
     private function diffuser(
         string $objet,
         string $concerne,

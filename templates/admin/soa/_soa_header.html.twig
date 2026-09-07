@@ -7,15 +7,15 @@
         <div class="col-7">
             {% if entreprise and entreprise.thumbnail %}
                 <img src="{{ asset('images/entreprises/' ~ entreprise.thumbnail) }}"
-                     alt="{{ entreprise.nom|default('JS Brokers') }}"
+                     alt="{{ entreprise.nom|default('Joseara') }}"
                      style="max-height: 52px; margin-bottom: .5rem;">
             {% else %}
                 <img src="{{ asset('images/entreprises/logo.jpg') }}"
-                     alt="JS Brokers"
+                     alt="Joseara"
                      style="max-height: 52px; margin-bottom: .5rem;">
             {% endif %}
             <div>
-                <span class="fw-bold" style="font-size: 1rem;">{{ entreprise.nom|default('JS Brokers') }}</span><br>
+                <span class="fw-bold" style="font-size: 1rem;">{{ entreprise.nom|default('Joseara') }}</span><br>
                 <small style="opacity:.8;">{{ entreprise.adresse|default('') }}</small>
             </div>
         </div>

@@ -10,7 +10,7 @@ use Symfony\Component\Translation\LocaleSwitcher;
 use Symfony\Contracts\Service\Attribute\Required;
 
 /**
- * @file Base commune aux contrôleurs de la Console JS Brokers.
+ * @file Base commune aux contrôleurs de la Console Joseara.
  * @description Mutualise la bascule de langue persistante (?lang=) — même
  * comportement que l'espace utilisateur — pour rester DRY. L'EntityManager est
  * injecté par setter (#[Required]) afin que les sous-classes gardent un

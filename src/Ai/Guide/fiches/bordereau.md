@@ -6,7 +6,7 @@ Un **bordereau** est un relevé (généralement reçu d'un assureur ou d'un part
 qui récapitule des affaires et des montants sur une période : primes émises,
 commissions dues, etc.
 
-Circuit dans JS Brokers :
+Circuit dans Joseara :
 
 1. **Import** : le fichier du bordereau est importé dans l'espace de travail puis
    analysé ligne à ligne (rapprochement avec les clients, risques et avenants

@@ -14,7 +14,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 /**
  * @file Demande de congé d'un collaborateur (module Administration → Congés).
  * @description L'agent est un Invite — un membre de l'équipe du cabinet —, jamais un
- * Utilisateur ni un salarié JS Brokers.
+ * Utilisateur ni un salarié Joseara.
  *
  * IL N'Y A PAS D'ÉTAT « CONSOMMÉE ». Une demande approuvée dont la date de fin est
  * passée s'affiche simplement comme échue : cela évite une tâche de bascule nocturne et

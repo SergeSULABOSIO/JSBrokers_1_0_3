@@ -10,7 +10,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 /**
- * Paramètres comptables de JS Brokers : capital social (apport des actionnaires)
+ * Paramètres comptables de Joseara : capital social (apport des actionnaires)
  * et date de constitution, édités sur le singleton PlateformeParametres. Alimentent
  * l'écriture fondatrice (D 521 / C 101) des documents comptables.
  */

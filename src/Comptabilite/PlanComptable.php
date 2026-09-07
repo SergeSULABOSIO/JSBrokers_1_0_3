@@ -5,7 +5,7 @@ namespace App\Comptabilite;
 use App\Entity\Charge;
 
 /**
- * @file Référentiel des comptes du plan comptable SYSCOHADA utilisés par JS Brokers.
+ * @file Référentiel des comptes du plan comptable SYSCOHADA utilisés par Joseara.
  * @description Source unique des codes et libellés de comptes mobilisés par la
  * génération des documents comptables (journal, grand livre, balance, résultat,
  * TFR, bilan, TFT). Les comptes de la classe 6 (charges) reprennent les libellés

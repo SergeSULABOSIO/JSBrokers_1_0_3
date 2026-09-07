@@ -1,14 +1,14 @@
 {% extends 'emails/_layout.html.twig' %}
 {% import 'emails/_macros.html.twig' as m %}
 
-{% block subject %}JS Brokers — Confirmation d'adresse e-mail{% endblock %}
+{% block subject %}Joseara — Confirmation d'adresse e-mail{% endblock %}
 
 {% block content %}
     {{ m.heading('hugeicons:mail-send-01', 'Confirmez votre adresse e-mail') }}
 
     {{ m.paragraph(
         'Bonjour' ~ (recipientName is defined and recipientName ? ' <strong>' ~ recipientName ~ '</strong>' : '') ~
-        ',<br>Bienvenue chez JS Brokers&nbsp;! Votre compte vient d\'être créé. Il ne reste plus
+        ',<br>Bienvenue chez Joseara&nbsp;! Votre compte vient d\'être créé. Il ne reste plus
         qu\'une étape&nbsp;: confirmer votre adresse e-mail pour activer votre accès.'
     ) }}
 

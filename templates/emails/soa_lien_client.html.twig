@@ -5,7 +5,7 @@
    `locale` est fourni par SoaClientNotifier → rendu dans la langue du destinataire. #}
 {% set lang = locale|default('fr') %}
 
-{% block subject %}JS Brokers — {{ 'email_soa_subject'|trans({}, 'messages', lang) }}{% endblock %}
+{% block subject %}Joseara — {{ 'email_soa_subject'|trans({}, 'messages', lang) }}{% endblock %}
 
 {% block content %}
     {{ m.heading('document', 'email_soa_heading'|trans({}, 'messages', lang)) }}

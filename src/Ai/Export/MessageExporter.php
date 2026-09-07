@@ -130,7 +130,7 @@ class MessageExporter
         return (string) $dompdf->output();
     }
 
-    /** Logo JS Brokers en data URI (embarqué : DomPDF est en mode non-distant). */
+    /** Logo Joseara en data URI (embarqué : DomPDF est en mode non-distant). */
     private function logoDataUri(): ?string
     {
         $path = $this->params->get('kernel.project_dir') . '/public/images/entreprises/logofav.png';

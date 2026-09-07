@@ -1,25 +1,25 @@
 {% extends 'emails/_layout.html.twig' %}
 {% import 'emails/_macros.html.twig' as m %}
 
-{% block subject %}JS Brokers — Invitation à rejoindre {{ entreprise.nom }}{% endblock %}
+{% block subject %}Joseara — Invitation à rejoindre {{ entreprise.nom }}{% endblock %}
 
 {% block content %}
     {{ m.heading('action:invite', 'Invitation à rejoindre ' ~ entreprise.nom) }}
 
     {{ m.paragraph(
         'Bonjour <strong>' ~ (invite.nom ?: invite.getEmail) ~ '</strong>,<br>
-        JS Brokers a le plaisir de vous informer que <strong>' ~ entreprise.nom ~ '</strong>
+        Joseara a le plaisir de vous informer que <strong>' ~ entreprise.nom ~ '</strong>
         vient de vous inviter à accéder à son espace de travail.'
     ) }}
 
     {% if enAttente %}
         {{ m.heading('utilisateur', 'Créez votre compte') }}
         {{ m.paragraph(
-            'Aucun compte JS Brokers n\'est encore associé à l\'adresse
+            'Aucun compte Joseara n\'est encore associé à l\'adresse
             <strong>' ~ invite.getEmail ~ '</strong>. Pour rejoindre
             <strong>' ~ entreprise.nom ~ '</strong>, commencez par créer votre compte&nbsp;:'
         ) }}
-        {{ m.button(registerUrl, 'Créer mon compte JS Brokers') }}
+        {{ m.button(registerUrl, 'Créer mon compte Joseara') }}
 
         {{ m.heading('action:information', 'Et ensuite ?') }}
         {{ m.paragraph(
@@ -30,10 +30,10 @@
     {% else %}
         {{ m.heading('action:open', 'Connectez-vous') }}
         {{ m.paragraph(
-            'Vous disposez déjà d\'un compte JS Brokers. Connectez-vous pour accéder à
+            'Vous disposez déjà d\'un compte Joseara. Connectez-vous pour accéder à
             <strong>' ~ entreprise.nom ~ '</strong>&nbsp;: elle figure désormais dans la liste
             des entreprises de votre page d\'accueil.'
         ) }}
-        {{ m.button(loginUrl, 'Me connecter à JS Brokers') }}
+        {{ m.button(loginUrl, 'Me connecter à Joseara') }}
     {% endif %}
 {% endblock %}

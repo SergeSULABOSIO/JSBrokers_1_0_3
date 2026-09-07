@@ -5,7 +5,7 @@ namespace App\Services;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Source de vérité unique pour les données géographiques JS Brokers
+ * Source de vérité unique pour les données géographiques Joseara
  * (pays d'Asie, d'Afrique et d'Europe francophone).
  *
  * Charge une seule fois le dataset assets/data/pays_villes.json :

@@ -13,8 +13,8 @@ use App\Services\ServiceTaxesVente;
 use App\Token\ParametresTokenService;
 
 /**
- * @file Génération « à la volée » des écritures comptables de JS Brokers.
- * @description JS Brokers ne tient pas de comptabilité en partie double stockée :
+ * @file Génération « à la volée » des écritures comptables de Joseara.
+ * @description Joseara ne tient pas de comptabilité en partie double stockée :
  * ce service la DÉRIVE des données transactionnelles (ventes de tokens, dépenses,
  * capital social) via un plan comptable SYSCOHADA déterministe (cf. PlanComptable).
  * Source unique de tous les documents financiers (journal, grand livre, balance,

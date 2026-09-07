@@ -116,7 +116,7 @@ class SupportController extends AbstractController
     }
 
     /**
-     * Notifie l'équipe JS Brokers d'un nouveau ticket : notification in-app à tous
+     * Notifie l'équipe Joseara d'un nouveau ticket : notification in-app à tous
      * les agents (CrmNotifier) + e-mail corporate (réutilise le template agent).
      */
     private function notifierEquipe(CrmTicket $ticket, Utilisateur $client): void

@@ -16,7 +16,7 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  * Outil d'ACTION UI : envoie une réponse du fil PAR E-MAIL aux adresses données
  * directement dans la conversation — raccourci du picker de destinataires,
  * quand l'utilisateur connaît déjà l'adresse (« envoie ce message à
- * infos@js-brokers.com »).
+ * contact@joseara.com »).
  *
  * ── Pourquoi cet outil n'envoie pas lui-même ────────────────────────────────
  * Le format par DÉFAUT est l'IMAGE, pour que le destinataire reçoive le message

@@ -7,7 +7,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * @file Paramètres globaux de la plateforme JS Brokers (plan tarifaire des tokens).
+ * @file Paramètres globaux de la plateforme Joseara (plan tarifaire des tokens).
  * @description Ligne UNIQUE (singleton, id=1) éditable depuis la Console par le
  * super-admin. Rend configurable ce qui était figé dans App\Token\TokenPricing :
  * paquets prépayés, allocation gratuite, fenêtre de renouvellement, poids
@@ -97,7 +97,7 @@ class PlateformeParametres
     private ?array $documentFormats = null;
 
     /**
-     * Capital social de JS Brokers (USD). Apport d'ouverture des actionnaires :
+     * Capital social de Joseara (USD). Apport d'ouverture des actionnaires :
      * génère l'écriture fondatrice (D 521 Banques / C 101 Capital social) qui
      * alimente la trésorerie et les capitaux propres dans les documents comptables.
      */

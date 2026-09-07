@@ -1,5 +1,5 @@
 {# ============================================================
-   En-tête public réutilisable (vitrine JS Brokers).
+   En-tête public réutilisable (vitrine Joseara).
    Logo + navigation par ancres + bascule de langue FR/EN + CTA.
    Charte : cobalt #0047AB, neutres Bootstrap. Styles dans _home_styles.html.twig.
    `lang` est fourni par le contrôleur ; on retombe sur la locale courante sinon.
@@ -10,12 +10,13 @@
     <div class="public-topbar__inner">
 
         {# Marque : retour en haut de la vitrine #}
-        <a href="{{ path('app_index') }}" class="public-brand" aria-label="JS Brokers">
+        <a href="{{ path('app_index') }}" class="public-brand" aria-label="Joseara">
             <img src="{{ asset('images/entreprises/logofav.png') }}" alt="" width="36" height="36">
-            <span>JS Brokers</span>
+            <span>Joseara</span>
         </a>
 
-        {# Navigation par ancres (masquée sous 768px pour rester lisible) #}
+        {# Navigation par ancres. Sous 768 px elle passe sur son propre rang (cf. _home_styles) :
+           elle reste atteignable, c'est l'en-tête qui s'organise autrement. #}
         <nav class="public-nav" aria-label="{{ 'security_some_key_fitures' | trans }}">
             <a href="#features">{{ "home_nav_features" | trans }}</a>
             <a href="#guide">{{ "home_nav_guide" | trans }}</a>

@@ -46,11 +46,11 @@ class ComptaExportService
     }
 
     /**
-     * Adaptateur console : documents de la plateforme JS Brokers, préfixe historique.
+     * Adaptateur console : documents de la plateforme Joseara, préfixe historique.
      */
     public function export(string $doc, int $exercice): Response
     {
-        return $this->exportDocuments($this->ecritures->documents($exercice), $doc, 'JSBrokers');
+        return $this->exportDocuments($this->ecritures->documents($exercice), $doc, 'Joseara');
     }
 
     /**

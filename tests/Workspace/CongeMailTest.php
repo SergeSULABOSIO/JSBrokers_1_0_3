@@ -148,7 +148,7 @@ class CongeMailTest extends KernelTestCase
             ->context([
                 'ctx' => $ctx,
                 'logoPath' => '@images/entreprises/logofav.png',
-                'senderEmail' => 'contact@jsbrokers.com',
+                'senderEmail' => 'contact@joseara.com',
             ]);
 
         /** @var BodyRendererInterface $renderer */
@@ -188,7 +188,7 @@ class CongeMailTest extends KernelTestCase
 
         $html = $this->rendre($this->contexte($demande, $transition, $s));
 
-        self::assertStringContainsString('JS Brokers', $html);
+        self::assertStringContainsString('Joseara', $html);
         self::assertStringContainsString('<svg', $html, "L'icône doit être rendue en SVG inline.");
         self::assertStringContainsString('cid:', $html, 'Le logo doit être embarqué (CID).');
         self::assertStringContainsString('Alice Mukendi', $html);

@@ -220,7 +220,7 @@ export default class extends Controller {
         // circuit send() habituel (aucun token supplémentaire, aucun backend).
         this.setupDictation();
 
-        // Infobulle sombre du bouton micro (pattern JS Brokers .jsb-ctx-tip) :
+        // Infobulle sombre du bouton micro (pattern Joseara .jsb-ctx-tip) :
         // ANCRÉE au-dessus du bouton (le composer est au coin inférieur droit de
         // l'écran) plutôt que suiveuse de curseur — réutilise l'infobulle du chat.
         if (this.hasMicTarget) {

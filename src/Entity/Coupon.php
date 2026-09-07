@@ -11,7 +11,7 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
  * @file Coupon / offre de réduction périodique sur l'achat de paquets de tokens.
  * @description Remise en pourcentage ou en montant fixe (USD), valable sur une
  * période donnée, éventuellement limitée en nombre d'usages et ciblant un paquet
- * précis. Créé et géré par l'équipe JS Brokers depuis la Console.
+ * précis. Créé et géré par l'équipe Joseara depuis la Console.
  */
 #[ORM\Entity(repositoryClass: CouponRepository::class)]
 #[ORM\HasLifecycleCallbacks]

@@ -8,7 +8,7 @@ namespace App\Comptabilite;
  * type, lignes:[{compte, libelle, debit, credit}] } — et en dérive les sept états :
  * journal, grand livre, balance, compte de résultat, TFR, bilan et TFT. Aucune
  * dépendance aux repositories : la COLLECTE des écritures reste la responsabilité
- * des services appelants (EcritureComptableService pour la plateforme JS Brokers,
+ * des services appelants (EcritureComptableService pour la plateforme Joseara,
  * CourtierEcritureComptableService pour l'espace de travail du courtier). Les
  * libellés de comptes sont ceux portés par les lignes d'écritures, ce qui permet
  * à chaque contexte d'employer sa terminologie (« Services vendus » vs

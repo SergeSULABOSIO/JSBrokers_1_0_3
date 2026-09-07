@@ -6,7 +6,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Process\Process;
 
 /**
- * @file Version applicative dynamique de JS Brokers.
+ * @file Version applicative dynamique de Joseara.
  * @description Source de vérité UNIQUE de la version affichée. Le numéro est
  * dérivé du nombre de commits git : le dépôt comptait BASELINE_COMMITS commits
  * le jour où l'on a figé la version 1.0 ; chaque commit ajoute +1, et il faut

@@ -1,6 +1,6 @@
 <style>
     /* ============================================================
-       Vitrine publique JS Brokers — en-tête, hero, fonctionnalités,
+       Vitrine publique Joseara — en-tête, hero, fonctionnalités,
        tarifs et pied de page.
        Charte : cobalt #0047AB / #003380, neutres Bootstrap, fond #f3f3f3.
        Aucune couleur hors charte. Styles scopés à la vitrine (non chargés
@@ -559,10 +559,47 @@
         .feature-row__list { grid-template-columns: 1fr; }
     }
     @media (max-width: 767.98px) {
-        .public-nav { display: none; }                 /* on allège l'en-tête sur mobile */
-        /* L'en-tête fixe peut tenir sur deux rangs (marque + actions) : on autorise
-           le retour à la ligne et on réserve une hauteur d'offset plus grande. */
-        .public-shell { --public-topbar-h: 116px; }
+        /* LA NAVIGATION PASSE SUR SON PROPRE RANG, ELLE NE DISPARAÎT PLUS.
+           Elle était simplement masquée « pour alléger l'en-tête » : sur téléphone,
+           les quatre sections de la vitrine — fonctionnalités, guide, tarifs,
+           contact — devenaient donc introuvables autrement qu'en faisant défiler
+           toute la page au jugé. Or ce sont exactement les liens qu'un visiteur
+           mobile vient chercher.
+
+           Pas de menu escamotable : quatre liens courts tiennent sur un rang, et un
+           bouton qui ouvre un panneau pour révéler quatre ancres coûterait un geste
+           de plus et un mécanisme de plus pour montrer moins. Le rang défile
+           horizontalement si la traduction anglaise l'allonge — les liens gardent
+           leur cible de 44 px, et l'en-tête ne grandit pas davantage. */
+        .public-nav {
+            order: 3;
+            width: 100%;
+            margin-left: 0;
+            gap: 0.9rem;
+            justify-content: space-between;
+            overflow-x: auto;
+            /* Les libellés ne se coupent pas en deux quand la place manque : c'est le
+               rang qui défile. */
+            flex-wrap: nowrap;
+            scrollbar-width: none;
+        }
+        .public-nav a { white-space: nowrap; font-size: 0.9rem; }
+        .public-nav::-webkit-scrollbar { display: none; }
+
+        /* L'en-tête fixe s'organise en rangs : marque + actions, puis navigation. On
+           autorise le retour à la ligne et on réserve la hauteur d'offset — c'est elle
+           qui empêche le contenu de passer sous l'en-tête et qui cale l'arrivée des
+           ancres (`scroll-padding-top`).
+
+           160 px = le PIRE CAS, et non la hauteur courante. Mesuré : à 492 px de large
+           l'en-tête fait 116 px (marque et actions sur un rang, navigation sur le
+           second) ; sur un téléphone plus étroit, ou dans une langue aux libellés plus
+           longs, les deux boutons d'action passent à la ligne et ajoutent un rang. La
+           réserve est donc volontairement généreuse : une bande blanche de trop se
+           voit à peine, un en-tête qui recouvre le premier titre se voit tout de
+           suite. C'est déjà le parti que prenait la valeur précédente (116 px pour
+           deux rangs). */
+        .public-shell { --public-topbar-h: 160px; }
         .public-topbar__inner { gap: 0.5rem 0.6rem; flex-wrap: wrap; justify-content: center; }
         .public-brand { margin-right: auto; }
         .feature-row { grid-template-columns: 1fr; padding: 1.5rem; }

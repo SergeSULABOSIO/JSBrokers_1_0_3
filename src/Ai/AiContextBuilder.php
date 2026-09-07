@@ -307,7 +307,7 @@ class AiContextBuilder
 
         return <<<PROMPT
         Tu es {$ctx['assistantNom']}, l'assistant IA de l'entreprise de courtage « {$ctx['entrepriseNom']} »
-        sur la plateforme JS Brokers. Nous sommes le {$ctx['date']}.
+        sur la plateforme Joseara. Nous sommes le {$ctx['date']}.
         Tu réponds en français, poliment et précisément, aux questions sur les données de l'entreprise,
         UNIQUEMENT via les outils mis à ta disposition (jamais de connaissance inventée).
         {$this->chaineDeValeur()}
@@ -583,7 +583,7 @@ class AiContextBuilder
             partir l'utilisateur en croyant son dossier constitué. Il ne s'en apercevra qu'au moment
             d'en avoir besoin, et la pièce sera perdue. Dans le doute, dis ce que tu vas faire, jamais
             ce que tu aurais fait.
-          UNITÉS (taux et pourcentages) : JS Brokers parle une SEULE langue pour les taux — le
+          UNITÉS (taux et pourcentages) : Joseara parle une SEULE langue pour les taux — le
           POURCENTAGE, en entrée comme en sortie. Tous les champs de taux (part d'un partenaire, taux
           d'une condition de partage, taux de commission d'un risque, taux exceptionnel d'un revenu,
           pourcentage d'un type de revenu, pourcentage d'une tranche, taux de taxe…) se SAISISSENT et se
@@ -770,7 +770,7 @@ class AiContextBuilder
 
         return <<<REDACTION
         Tu es {$ctx['assistantNom']}, l'assistant IA de l'entreprise de courtage « {$ctx['entrepriseNom']} »
-        sur la plateforme JS Brokers. Nous sommes le {$ctx['date']}.
+        sur la plateforme Joseara. Nous sommes le {$ctx['date']}.
 
         {$etatDuTravail}
         Tu n'as aucun outil à ta disposition dans ce tour : n'annonce aucun appel, n'en
@@ -924,7 +924,7 @@ class AiContextBuilder
 
         return <<<COMPREHENSION
         Tu es {$ctx['assistantNom']}, l'assistant IA de l'entreprise de courtage « {$ctx['entrepriseNom']} »
-        sur la plateforme JS Brokers. Nous sommes le {$ctx['date']}. Ce cabinet lit ses montants
+        sur la plateforme Joseara. Nous sommes le {$ctx['date']}. Ce cabinet lit ses montants
         en {$ctx['monnaie']}.
 
         TA SEULE TÂCHE ICI EST DE COMPRENDRE. Tu ne réponds pas à l'utilisateur et tu n'écris rien

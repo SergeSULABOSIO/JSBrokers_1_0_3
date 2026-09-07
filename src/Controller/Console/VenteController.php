@@ -88,7 +88,7 @@ class VenteController extends AbstractConsoleController
     }
 
     /**
-     * Consultation par un agent JS Brokers de la facture / avoir effectivement
+     * Consultation par un agent Joseara de la facture / avoir effectivement
      * mise à disposition du client (même PDF). Disponible dès qu'un numéro de
      * facture a été émis (achat encaissé, même remboursé ⇒ avoir).
      */

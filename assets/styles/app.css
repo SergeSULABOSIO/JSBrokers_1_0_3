@@ -150,7 +150,7 @@ a:active {
     background-color: #e0f9ee;
 }
 
-/* NOUVEAU : Couleur Bleu Cobalt JS Brokers */
+/* NOUVEAU : Couleur Bleu Cobalt Joseara */
 .bg-cobalt {
     background-color: #0047AB !important;
 }
@@ -703,7 +703,16 @@ textarea:hover,
     align-items: center;
     gap: 0.5rem;
     padding: 0.25rem;
+    /* La barre passe à la ligne plutôt que de sortir du panneau. Une dizaine de
+       boutons tenaient sur une ligne unique tant que la fenêtre était large ; plus
+       étroite, les derniers — souvent « Supprimer », « Exporter » — quittaient
+       l'écran sans retour possible. Les barres voisines (contrôles de liste, chips
+       de filtre) enroulent déjà : on aligne celle-ci sur elles.
+       `width: fit-content` est conservé : sans lui, la barre s'étirerait sur toute
+       la largeur et ses séparateurs flotteraient loin des boutons. */
+    flex-wrap: wrap;
     width: fit-content;
+    max-width: 100%;
 }
 
 /* --- Base commune de tous les boutons toolbar --- */
@@ -719,7 +728,7 @@ textarea:hover,
     overflow: hidden;
 }
 
-/* --- Focus clavier visible — Cobalt JS Brokers — WCAG 2.4.7 --- */
+/* --- Focus clavier visible — Cobalt Joseara — WCAG 2.4.7 --- */
 .context-toolbar .btn:focus-visible {
     outline: 2px solid #0047AB;
     outline-offset: 2px;
@@ -748,7 +757,7 @@ textarea:hover,
     background-color: rgba(0, 71, 171, 0.08); /* cobalt #0047AB à 8% */
 }
 .context-toolbar .btn-default:hover .toolbar-icon {
-    color: #0047AB; /* Cobalt JS Brokers — identité de marque au survol */
+    color: #0047AB; /* Cobalt Joseara — identité de marque au survol */
 }
 
 /* --- Variante danger : .btn-icon-danger (Quitter, Supprimer) --- */
@@ -957,7 +966,7 @@ textarea:hover,
 .context-menu [role="menuitem"]:hover,
 .context-menu [role="menuitem"]:focus,
 .context-menu li:not(.separator):not(.specific-actions-wrapper):hover {
-    background-color: #0047AB;  /* Cobalt JS Brokers — identité de marque */
+    background-color: #0047AB;  /* Cobalt Joseara — identité de marque */
     color: #ffffff;
 }
 
@@ -1785,7 +1794,19 @@ textarea:hover,
 .h-100 {
     height: 100%;
 }
+/* LE CONTENEUR TIENT ENFIN LA PROMESSE DE SON NOM.
+   La règle était vide : « scroll-wrapper » n'enveloppait aucun défilement. Tant que
+   la fenêtre était large, le tableau générique (quatre colonnes, dont une élastique)
+   ne dépassait jamais et personne ne s'en apercevait. Sur un écran étroit — ou pour
+   une rubrique qui apporte son propre tableau large, comme « Production
+   intermédiaires » — les dernières colonnes sortaient du panneau sans aucun moyen
+   d'aller les chercher, puisque la coquille du workspace ne défile pas.
+
+   Le défilement est confié au conteneur et non au tableau : c'est lui que
+   `.jsb-list-pleine-hauteur` borne déjà en hauteur, et c'est sous lui que
+   `thead.sticky-header` reste collé. */
 .table-scroll-wrapper {
+    overflow-x: auto;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -2485,7 +2506,7 @@ tr.row-selected:hover > td {
  le canevas. Le style s'applique donc dès le rechargement de la feuille de style,
  sans dépendre d'un gabarit recompilé côté serveur.
  Objectif : ergonomie (Bastien & Scapin — Guidage, Signifiance, Charge
- de travail) + charte JS Brokers (cobalt #0047AB). Les champs connus
+ de travail) + charte Joseara (cobalt #0047AB). Les champs connus
  (nom du rôle, collaborateur) sont masqués côté canevas ; chaque groupe
  de droits devient une carte lisible, les cases cochées adoptent le
  cobalt de marque, le focus est visible (WCAG 2.4.7). Entièrement scopé :
@@ -2818,7 +2839,7 @@ tr.row-selected:hover > td {
 /* Puces de contexte : rappel des informations pré-remplies (champs masqués),
    présentées en badges bicolores « libellé | valeur » : le libellé est une
    pastille grise à texte noir, la valeur repose sur le fond blanc du badge
-   en texte gris, le tout encadré en pilule (charte JS Brokers). */
+   en texte gris, le tout encadré en pilule (charte Joseara). */
 .form-column .form-intro-facts {
     display: flex;
     flex-wrap: wrap;
@@ -4999,7 +5020,7 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
  * Sélecteur de clients à rattacher à un portefeuille (injecté dynamiquement par le
  * contrôleur « collection »). Modale accessible superposée AU-DESSUS de la fiche
  * (z-index > modale ~1055). Overlay --overlay-dark, surfaces blanches, reste en
- * classes Bootstrap (charte JS Brokers).
+ * classes Bootstrap (charte Joseara).
  */
 .jsb-picker-overlay {
     position: fixed;
@@ -5408,7 +5429,7 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 /* LA CASE EST LE TÉMOIN D'ÉTAT : elle doit se voir avant qu'on la cherche. À la taille
    de Bootstrap (1 rem, bordure très pâle) elle se perdait dans une ligne de chiffres.
    Cochée, elle prend le cobalt de la marque — et non le bleu Bootstrap, qui n'est pas
-   la couleur primaire de JS Brokers. */
+   la couleur primaire de Joseara. */
 .jsb-picker-table .form-check-input {
     width: 1.15rem;
     height: 1.15rem;
@@ -6028,4 +6049,58 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DIALOGUES SUR ÉCRAN ÉTROIT
+   ══════════════════════════════════════════════════════════════════════════
+   Les 53 formulaires d'entité passent tous par le même dialogue, et leurs CHAMPS
+   étaient déjà adaptatifs : `col-md-*` les empile nativement sous 768 px. Trois
+   choses ne l'étaient pas, et elles suffisaient à rendre l'édition impraticable
+   au doigt.
+
+   Le seuil reprend celui de Bootstrap (`md`), celui-là même que `col-md-*` utilise
+   déjà dans le corps du dialogue : les champs et leur cadre basculent donc au même
+   moment. Un seuil propre les aurait désaccordés — des champs empilés dans deux
+   colonnes encore côte à côte.
+   ══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 767.98px) {
+    /* 1. LES DEUX COLONNES S'EMPILENT.
+       Le corps du dialogue est un conteneur flex en RANGÉE : la colonne sombre des
+       attributs calculés et le formulaire restaient donc côte à côte, à se partager
+       380 px. Deux colonnes de 190 px ne sont pas deux colonnes, ce sont deux
+       gouttières. On les empile, et le corps redevient ce qu'il est ailleurs : une
+       pile qui défile. */
+    .custom-modal-scroll .modal-body {
+        flex-direction: column;
+        /* Le défilement passe au corps : en colonne, ce sont les deux blocs
+           ensemble qui doivent défiler, et non chacun dans sa propre fenêtre —
+           deux ascenseurs imbriqués sur un écran de téléphone sont inutilisables. */
+        overflow-y: auto;
+    }
+
+    .custom-modal-scroll .modal-body > .calculated-attributes-column,
+    .custom-modal-scroll .modal-body > .form-column {
+        overflow-y: visible;
+    }
+
+    /* 2. LE PLANCHER VERTICAL TOMBE.
+       `min-height: 400px` empêchait le tassement quand les colonnes étaient côte à
+       côte. Empilées, il additionne deux fois 400 px de vide avant même le premier
+       champ : la modale s'ouvre sur une carte blanche. */
+    .form-column-skeleton,
+    .form-column {
+        min-height: 0;
+    }
+
+    /* 3. LES GRILLES FIGÉES À DEUX COLONNES SE DÉPLIENT.
+       La matrice des droits et les groupes de cases à cocher imposaient
+       `repeat(2, …)` quelle que soit la largeur. Sur téléphone, chaque case se
+       retrouvait dans une colonne trop étroite pour son libellé, qui passait à la
+       ligne au milieu d'un mot. Une seule colonne rend chaque option lisible et sa
+       rangée entièrement cliquable. */
+    .form-column:has(input[name^="access"]) form,
+    .form-column .dlg-field-card-body > div:has(> .form-check) {
+        grid-template-columns: 1fr;
+    }
 }

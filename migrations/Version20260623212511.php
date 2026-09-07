@@ -14,7 +14,7 @@ final class Version20260623212511 extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return 'Création de la table taxe_vente (fiscalité JS Brokers : taxes dues sur les ventes).';
+        return 'Création de la table taxe_vente (fiscalité Joseara : taxes dues sur les ventes).';
     }
 
     public function up(Schema $schema): void

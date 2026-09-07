@@ -12,13 +12,13 @@ use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * @file Taxe propre à JS Brokers, due sur ses ventes (achats de paquets de tokens).
+ * @file Taxe propre à Joseara, due sur ses ventes (achats de paquets de tokens).
  * @description Distincte de l'entité Taxe (domaine assurance, tauxIARD/tauxVIE,
- * redevable courtier/assureur). Encapsule une taxe que JS Brokers reverse à une
+ * redevable courtier/assureur). Encapsule une taxe que Joseara reverse à une
  * autorité fiscale : nom + abréviation de l'autorité, taux en % appliqué sur la
  * vente totale. Plusieurs taxes peuvent coexister ; combinées en additif sur base
  * commune pour dégager le revenu hors taxe (montant / (1 + Σtaux/100)).
- * Créée et gérée par l'équipe JS Brokers depuis la Console.
+ * Créée et gérée par l'équipe Joseara depuis la Console.
  */
 #[ORM\Entity(repositoryClass: TaxeVenteRepository::class)]
 #[ORM\HasLifecycleCallbacks]

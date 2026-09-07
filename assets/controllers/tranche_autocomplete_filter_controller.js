@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
 /*
- * Contrôleur JS Brokers (Symfony 7.1)
+ * Contrôleur Joseara (Symfony 7.1)
  * Gère la dépendance Revenu -> Tranche et le CALCUL AUTOMATIQUE du montant.
  */
 export default class extends Controller {

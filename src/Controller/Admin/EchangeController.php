@@ -364,7 +364,7 @@ class EchangeController extends AbstractController
     {
         $slug = preg_replace('/[^A-Za-z0-9_-]+/', '_', $entreprise->getNom() ?? 'cabinet');
 
-        return sprintf('jsbrokers_%s_%s.xlsx', trim((string) $slug, '_') ?: 'cabinet', date('Ymd-Hi'));
+        return sprintf('joseara_%s_%s.xlsx', trim((string) $slug, '_') ?: 'cabinet', date('Ymd-Hi'));
     }
 
     /**
@@ -550,7 +550,7 @@ class EchangeController extends AbstractController
 
         $slug = preg_replace('/[^A-Za-z0-9_-]+/', '_', $entreprise->getNom() ?? 'cabinet');
         $nom = sprintf(
-            'jsbrokers_gabarit_%s%s_%s.xlsx',
+            'joseara_gabarit_%s%s_%s.xlsx',
             trim((string) $slug, '_') ?: 'cabinet',
             $this->suffixeDuPerimetre($ressources, $invite),
             date('Ymd-Hi'),

@@ -7,11 +7,11 @@ use App\Repository\Crm\CrmInteractionRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * @file Interaction commerciale entre un agent JS Brokers et un client.
+ * @file Interaction commerciale entre un agent Joseara et un client.
  * @description Journal des échanges (appel, e-mail, démo, réunion, note) saisis
  * par l'équipe interne. Alimente la timeline de la fiche client. Distinct de
  * App\Entity\Feedback, qui est le CRM du courtier sur SES propres assurés
- * (scopé entreprise) : ici, données plateforme JS Brokers.
+ * (scopé entreprise) : ici, données plateforme Joseara.
  */
 #[ORM\Entity(repositoryClass: CrmInteractionRepository::class)]
 #[ORM\Table(name: 'crm_interaction')]
@@ -42,7 +42,7 @@ class CrmInteraction
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?Utilisateur $client = null;
 
-    /** Agent JS Brokers auteur de l'interaction. */
+    /** Agent Joseara auteur de l'interaction. */
     #[ORM\ManyToOne(targetEntity: Utilisateur::class)]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Utilisateur $agent = null;

@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
 /*
- * Contrôleur JS Brokers (Symfony 7.1) — formulaire Entreprise.
+ * Contrôleur Joseara (Symfony 7.1) — formulaire Entreprise.
  *
  * Le champ « Pays » pilote dynamiquement :
  *   - le champ « Ville » : ses options sont rechargées via l'API

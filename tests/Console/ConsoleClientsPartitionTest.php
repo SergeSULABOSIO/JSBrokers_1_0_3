@@ -10,7 +10,7 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * Console JS Brokers : la rubrique « Clients » liste les comptes en mode payant
+ * Console Joseara : la rubrique « Clients » liste les comptes en mode payant
  * (paidTokens > 0) et « Utilisateurs » les comptes gratuits (paidTokens = 0).
  * Les deux listes sont disjointes ; aucune entité assuré (Client) n'intervient.
  */
@@ -19,7 +19,7 @@ class ConsoleClientsPartitionTest extends WebTestCase
     private const ADMIN = 'phpunit-part-admin@test.local';
     private const PAYANT = 'phpunit-part-payant@test.local';
     private const GRATUIT = 'phpunit-part-gratuit@test.local';
-    // Agent JS Brokers qui a aussi acheté des jetons : c'est un client (paidTokens > 0)
+    // Agent Joseara qui a aussi acheté des jetons : c'est un client (paidTokens > 0)
     // malgré son rôle. Verrouille le fait que « client » ne dépend que du solde payant.
     private const ADMIN_PAYANT = 'phpunit-part-admin-payant@test.local';
     private const PASSWORD = 'Test1234!';

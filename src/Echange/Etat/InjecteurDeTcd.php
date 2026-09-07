@@ -2,6 +2,8 @@
 
 namespace App\Echange\Etat;
 
+use App\Marque;
+
 /**
  * INJECTE UN VRAI TABLEAU CROISÉ DYNAMIQUE dans un classeur déjà écrit.
  *
@@ -112,7 +114,7 @@ final class InjecteurDeTcd
         return $this->entete()
             . '<pivotCacheDefinition xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
             . ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
-            . ' r:id="rId1" refreshOnLoad="1" refreshedBy="JS Brokers" recordCount="0"'
+            . ' r:id="rId1" refreshOnLoad="1" refreshedBy="' . Marque::NOM . '" recordCount="0"'
             . ' createdVersion="3" refreshedVersion="3" minRefreshableVersion="3">'
             . sprintf(
                 '<cacheSource type="worksheet"><worksheetSource ref="%s" sheet="%s"/></cacheSource>',

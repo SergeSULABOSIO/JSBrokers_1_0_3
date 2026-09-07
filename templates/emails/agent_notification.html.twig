@@ -1,8 +1,8 @@
 {% extends 'emails/_layout.html.twig' %}
 {% import 'emails/_macros.html.twig' as m %}
 
-{# E-mail interne (équipe JS Brokers) : rédigé en français. #}
-{% block subject %}JS Brokers — {{ titre }}{% endblock %}
+{# E-mail interne (équipe Joseara) : rédigé en français. #}
+{% block subject %}Joseara — {{ titre }}{% endblock %}
 
 {% block content %}
     {{ m.heading(icone, titre) }}
@@ -17,5 +17,5 @@
         {% endfor %}
     {% endif %}
 
-    {{ m.note(piedNote|default('Notification automatique adressée à l\'équipe JS Brokers pour information.')) }}
+    {{ m.note(piedNote|default('Notification automatique adressée à l\'équipe Joseara pour information.')) }}
 {% endblock %}

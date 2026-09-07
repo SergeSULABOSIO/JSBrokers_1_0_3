@@ -3,7 +3,7 @@
 namespace App\Enum;
 
 /**
- * @file Départements internes JS Brokers (organisation des collaborateurs).
+ * @file Départements internes Joseara (organisation des collaborateurs).
  * @description Chaque département regroupe — sans en retirer aucune — les rubriques
  * fonctionnelles existantes de la Console et déclare le périmètre d'accès
  * correspondant (préfixes de noms de routes `console.*`). La Direction Générale a
@@ -65,7 +65,7 @@ enum Departement: string
     {
         return match ($this) {
             self::DIRECTION => [
-                'La Direction Générale porte la vision et la stratégie de croissance de JS Brokers en tant qu\'éditeur SaaS. Elle fixe les objectifs d\'entreprise (OKR), arbitre la feuille de route produit et l\'allocation des ressources, et assure l\'alignement transverse entre les fonctions Produit, Revenu, Finance et Opérations.',
+                'La Direction Générale porte la vision et la stratégie de croissance de Joseara en tant qu\'éditeur SaaS. Elle fixe les objectifs d\'entreprise (OKR), arbitre la feuille de route produit et l\'allocation des ressources, et assure l\'alignement transverse entre les fonctions Produit, Revenu, Finance et Opérations.',
                 'Elle dispose d\'un accès complet à la console et pilote l\'entreprise par les indicateurs SaaS clés : revenu récurrent (MRR/ARR), croissance, acquisition, rétention et trésorerie, via les vues consolidées CFO et CEO. Aucune restriction de périmètre ne lui est appliquée.',
                 'Sa finalité est de sécuriser une croissance rentable et durable : capter les signaux faibles, décider vite sur des données fiables, et entretenir une culture de la performance partagée par tous les départements.',
             ],
@@ -75,7 +75,7 @@ enum Departement: string
                 'Sa finalité est de fiabiliser le chiffre, de protéger l\'unit economics (LTV/CAC, marge) et d\'éclairer les décisions d\'investissement et de pricing par des analyses rigoureuses.',
             ],
             self::COMMERCIAL => [
-                'Le département Commercial & Marketing est le moteur de croissance (Growth/RevOps) de JS Brokers. Il génère la demande, structure le tunnel d\'acquisition et convertit les prospects en clients, dans une logique de revenu prévisible et reproductible.',
+                'Le département Commercial & Marketing est le moteur de croissance (Growth/RevOps) de Joseara. Il génère la demande, structure le tunnel d\'acquisition et convertit les prospects en clients, dans une logique de revenu prévisible et reproductible.',
                 'Son périmètre comprend les ventes, les coupons promotionnels, les campagnes de cycle de vie (onboarding, activation, réactivation, upsell), le pipeline commercial et la connaissance des clients et prospects.',
                 'Sa finalité est d\'optimiser le couple CAC/conversion, d\'activer l\'expansion (upsell, cross-sell) et de maximiser la valeur vie client (LTV) sur l\'ensemble du parcours.',
             ],
@@ -85,7 +85,7 @@ enum Departement: string
                 'Sa finalité est de réduire le churn et de développer la rétention nette du revenu (NRR) : résoudre vite, anticiper les risques de départ et transformer chaque interaction en occasion de fidélisation.',
             ],
             self::RH => [
-                'Le département Ressources Humaines & Administration structure l\'organisation interne (People Ops) de JS Brokers. Dans une entreprise IT où la compétence est la première ressource, il clarifie qui fait quoi en répartissant les collaborateurs par département et par rôle.',
+                'Le département Ressources Humaines & Administration structure l\'organisation interne (People Ops) de Joseara. Dans une entreprise IT où la compétence est la première ressource, il clarifie qui fait quoi en répartissant les collaborateurs par département et par rôle.',
                 'Son périmètre couvre la gestion des collaborateurs, la définition des départements et des rôles d\'accès, et le suivi des évaluations : objectifs (SMART/OKR individuels) et mesure de la performance au fil des périodes.',
                 'Sa finalité est d\'assurer la clarté des responsabilités, la montée en compétences et l\'équité de l\'évaluation — au service de l\'engagement des équipes, sans intervenir sur les comptes clients de la plateforme.',
             ],

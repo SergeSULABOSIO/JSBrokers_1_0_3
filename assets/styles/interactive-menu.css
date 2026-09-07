@@ -56,14 +56,36 @@ html {
   padding: 0;
   height: 100%;
   width: 100%;
-  overflow: hidden; /* Empêche le défilement du body */
   font-family: sans-serif;
+}
+
+/* LE BLOCAGE DU DÉFILEMENT APPARTIENT À L'ESPACE DE TRAVAIL, PAS À TOUT LE SITE.
+   `overflow: hidden` était posé sur `body, html` sans condition, alors que cette
+   feuille est chargée sur CHAQUE page : la vitrine, les CGU et les pages de compte
+   héritaient d'un corps qui ne défile pas, et devaient le défaire à coups de
+   `!important` (cf. home/_home_styles). Surtout, sur un écran étroit, une colonne
+   qui débordait devenait inatteignable — pas de barre de défilement pour aller la
+   chercher. On garde donc la règle là où elle a un sens (l'espace de travail est
+   une coquille d'application : ce sont ses panneaux qui défilent, jamais la page)
+   et on la retire partout ailleurs.
+
+   `:has()` et non une classe sur `<body>` : le gabarit du workspace est inclus par
+   des vues qui ne maîtrisent pas la balise `body`. Le sélecteur est déjà employé
+   ailleurs dans le projet (cf. app.css, `[role="tabpanel"]:has(…)`). */
+body:has(.interactive-menu) {
+  overflow: hidden;
 }
 
 .interactive-menu {
   display: flex;
   width: 100%;
-  height: 100vh; /* ou la hauteur de son conteneur */
+  /* `dvh` et non `vh` : sur mobile, la barre d'URL du navigateur mange une bande
+     que `vh` ignore — la coquille dépassait donc par le bas, et sa dernière rangée
+     (la zone de saisie du chat, le pied d'une liste) restait sous le pli, hors
+     d'atteinte puisque la page ne défile pas. Le `vh` reste en repli pour les
+     navigateurs qui ignorent `dvh`. */
+  height: 100vh;
+  height: 100dvh;
 }
 
 /* Colonne 1 : Navigation */
@@ -289,6 +311,7 @@ a.nav-item-bottom:hover {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   border-right: 1px solid var(--border-light);
 }
 
@@ -512,7 +535,7 @@ a.company-version:hover {
   /* Le panneau épouse son contenu : c'est ce qui donne l'ombre portée « en bas
      du bloc », impossible avec une colonne de 100vh. */
   height: auto;
-  max-height: calc(100vh - 16px);
+  max-height: calc(100dvh - 16px);
   z-index: var(--ws-flyout-z);
   border: 1px solid var(--border-light);
   border-radius: var(--nav-radius);
@@ -1477,5 +1500,187 @@ a.company-version:hover {
      dans tous les cas — c'est elle qui porte l'information, pas le mouvement. */
   .workspace-tab-item.is-onglet-reutilise {
     animation: none !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ADAPTATION AUX ÉCRANS ÉTROITS
+   ══════════════════════════════════════════════════════════════════════════
+   L'espace de travail était bâti pour une seule taille. Les colonnes 1, 2 et 4
+   portaient un `min-width` en pixels : 130 + 350 + 450 = 930 px étaient pris
+   AVANT que la colonne 3 — celle où l'on travaille — reçoive quoi que ce soit.
+   Sous ~1100 px elle était écrasée à zéro, la colonne 4 sortait de l'écran, et
+   comme la coquille ne défile pas, ce qui débordait devenait inatteignable.
+
+   LE PRINCIPE : les seuils ne décident que d'UNE chose — combien de colonnes
+   tiennent côte à côte. Tout ce qui vit À L'INTÉRIEUR d'une colonne s'adapte
+   déjà à la largeur de son conteneur, et non à celle de la fenêtre (barre de
+   recherche en `@container`, cellules de liste via responsive-cell). On ne
+   touche donc pas à ces mécanismes : une colonne rétrécie est, pour eux, une
+   situation déjà connue.
+
+   RIEN DE NEUF N'EST INVENTÉ. Le repli de la colonne 2 en panneau flottant et
+   le plein écran de la colonne 4 existaient déjà, écrits et testés ; ils
+   n'étaient simplement jamais déclenchés par la largeur. On ajoute ici les
+   deux dispositions manquantes et, côté JavaScript, le déclencheur.
+
+   ⚠ LES DEUX SEUILS SONT ÉCRITS EN DOUBLE — ici et dans
+   `workspace-manager_controller.js`. Une media query ne sait pas lire une
+   variable CSS, et le contrôleur doit connaître le même point de bascule pour
+   replier la colonne au bon moment. `AdaptationEcransEtroitsTest` vérifie que
+   les deux fichiers portent les mêmes nombres.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── TABLETTE ET PETIT PORTABLE (≤ 1199.98 px) ─────────────────────────────
+   Deux colonnes de travail : la navigation (repliée en panneau flottant) et
+   l'espace de travail. La colonne 4 cesse d'être une colonne : elle se pose
+   PAR-DESSUS. C'est ce qui rend la largeur de travail indépendante du chat —
+   ouvrir Ket ne rétrécit plus la liste qu'on est en train de lire. */
+@media (max-width: 1199.98px) {
+  /* Le plancher tombe. Le contrôleur replie la colonne, mais si le JavaScript
+     n'a pas encore pris la main (ou pas du tout), elle doit au moins pouvoir
+     céder du terrain plutôt que d'évincer l'espace de travail. */
+  .menu-col-2 {
+    min-width: 0;
+  }
+
+  .menu-col-4 {
+    position: fixed;
+    top: 0;
+    right: 0;
+    /* `dvh` : la barre d'URL mobile ne doit pas rogner la zone de saisie du chat. */
+    height: 100vh;
+    height: 100dvh;
+    /* La largeur nominale tant qu'elle tient, sinon une marge est laissée à
+       gauche : un panneau qui couvre exactement 100 % ne se distingue plus de
+       la page, et l'on perd le repère « ceci est posé par-dessus ». */
+    width: min(var(--ws-col4-width), 88vw);
+    min-width: 0;
+    max-width: none;
+    z-index: var(--ws-flyout-z);
+    box-shadow: var(--shadow-md), 0 12px 28px rgba(0, 0, 0, 0.12);
+  }
+
+  .ws-col4-handle {
+    right: min(var(--ws-col4-width), 88vw);
+  }
+
+  /* LE PLEIN ÉCRAN N'A PLUS D'OBJET quand la colonne flotte déjà au-dessus de
+     tout. Le laisser agir masquerait la colonne 3 (`display: none`) pour ne
+     rien mettre à la place : le fond deviendrait blanc derrière le panneau.
+     On neutralise donc les deux règles, sans toucher à l'état ni au bouton —
+     retrouver un grand écran retrouve le plein écran tel qu'il était. */
+  .chat-fullscreen .menu-col-3 {
+    display: flex;
+  }
+
+  .chat-fullscreen .menu-col-4 {
+    flex: none;
+    width: min(var(--ws-col4-width), 88vw);
+  }
+
+  .chat-fullscreen .ws-col4-handle {
+    left: auto;
+    right: min(var(--ws-col4-width), 88vw);
+    transform: translate(50%, -50%);
+  }
+}
+
+/* ── SMARTPHONE (≤ 767.98 px) : UNE SEULE COLONNE À LA FOIS ────────────────
+   130 px de navigation sur un écran de 390 en prennent le tiers en permanence,
+   pour un usage qui ne dure que le temps de choisir où aller. La colonne 1
+   quitte donc le flux et devient un TIROIR, ouvert par la poignée de bord qui
+   sert déjà à replier la colonne 2 — pas de nouveau bouton, pas de nouveau
+   geste à apprendre. Le panneau des rubriques, lui, reste ce qu'il est déjà :
+   il s'ouvre à droite du tiroir, contre la colonne 1 sortie.
+
+   L'espace de travail occupe alors toute la largeur, et le chat devient une
+   feuille pleine page. Une colonne visible à la fois : celle dont on se sert. */
+@media (max-width: 767.98px) {
+  .menu-col-1 {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    /* Au-dessus du panneau des rubriques ET du voile : le tiroir est la couche
+       de navigation, il ne passe sous rien de ce qu'il commande. */
+    z-index: calc(var(--ws-flyout-z) + 2);
+    transform: translateX(-100%);
+    transition: transform var(--nav-transition);
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.35);
+  }
+
+  .ws-tiroir-ouvert .menu-col-1 {
+    transform: translateX(0);
+  }
+
+  /* Le voile assombrit le travail sans le masquer : on garde le contexte, et
+     un appui n'importe où referme — le geste attendu d'un tiroir. Il est posé
+     en `fixed`, donc sans effet sur la mise en page des colonnes. */
+  .ws-tiroir-ouvert::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.35);
+    z-index: calc(var(--ws-flyout-z) + 1);
+  }
+
+  /* Le panneau des rubriques épouse la place restante à droite du tiroir : à
+     350 px fixes, il déborderait de l'écran sur un téléphone. */
+  .col2-collapsed .menu-col-2 {
+    left: var(--ws-col1-width);
+    width: calc(100vw - var(--ws-col1-width) - 12px);
+    max-width: none;
+    min-width: 0;
+  }
+
+  /* La poignée devient la commande du tiroir. Fermée, elle se tient au bord de
+     l'écran ; ouverte, elle suit le tiroir et se lit alors comme « refermer ».
+     `translate(-25%)` la laisse mordre le bord sans jamais sortir : sur un
+     téléphone, une cible à moitié hors écran n'est pas atteignable. */
+  .ws-col2-handle,
+  .col2-collapsed .ws-col2-handle {
+    left: 0;
+    transform: translate(-25%, -50%);
+  }
+
+  .ws-tiroir-ouvert .ws-col2-handle,
+  .ws-tiroir-ouvert.col2-collapsed .ws-col2-handle {
+    left: var(--ws-col1-width);
+    transform: translate(-50%, -50%);
+  }
+
+  /* Le chat prend toute la page : à cette largeur, une feuille partielle ne
+     laisserait derrière elle qu'une lisière inutilisable. */
+  .menu-col-4 {
+    width: 100%;
+  }
+
+  /* Sa poignée n'a plus de bord droit où se poser (le panneau touche les deux
+     bords) : elle rentre à l'intérieur, contre le bord gauche de la feuille. */
+  .ws-col4-handle,
+  .chat-fullscreen .ws-col4-handle {
+    right: auto;
+    left: 6px;
+    transform: translate(0, -50%);
+  }
+}
+
+/* ── CIBLES TACTILES (WCAG 2.5.5) ──────────────────────────────────────────
+   Les boutons de la barre d'outils mesurent ~35 px : confortables à la souris,
+   trop petits au doigt. On agrandit la ZONE SAISISSABLE sans toucher au dessin
+   — exactement le procédé déjà employé par les poignées de bord, dont le
+   `::after` en retrait négatif porte la cible à 44 px. La charte est donc
+   inchangée : rien ne grossit à l'écran, seule la surface d'appui grandit. */
+@media (pointer: coarse) {
+  .context-toolbar .btn {
+    position: relative;
+  }
+
+  .context-toolbar .btn::after {
+    content: '';
+    position: absolute;
+    /* 35 px de dessin + 2 × 4.5 px = 44 px de cible. */
+    inset: -4.5px;
   }
 }

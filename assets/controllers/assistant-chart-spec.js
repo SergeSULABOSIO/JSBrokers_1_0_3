@@ -16,7 +16,7 @@
 export const CHART_TYPES = ['bar', 'line', 'doughnut', 'pie'];
 
 /**
- * Palette catégorielle JS Brokers (charte cobalt), sans le rouge sémantique
+ * Palette catégorielle Joseara (charte cobalt), sans le rouge sémantique
  * (#dc3545) réservé aux erreurs. Sert dans l'ordre pour les séries / secteurs.
  */
 export const PALETTE_CHART = ['#0047AB', '#0d6efd', '#198754', '#e69500', '#6c757d', '#003380', '#0a58ca'];

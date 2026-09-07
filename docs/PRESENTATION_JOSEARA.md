@@ -1,12 +1,12 @@
-# JS Brokers — Présentation du projet
+# Joseara — Présentation du projet
 
-> **Document interne** — support de présentation destiné aux futurs collaborateurs de la société JS Brokers.
+> **Document interne** — support de présentation destiné aux futurs collaborateurs de la société Joseara.
 
 ---
 
-## 1. JS Brokers en un coup d'œil
+## 1. Joseara en un coup d'œil
 
-**JS Brokers** est une plateforme web de gestion complète destinée aux **cabinets de courtage d'assurance**. Sa promesse tient en une phrase, celle qui accueille chaque visiteur sur notre site :
+**Joseara** est une plateforme web de gestion complète destinée aux **cabinets de courtage d'assurance**. Sa promesse tient en une phrase, celle qui accueille chaque visiteur sur notre site :
 
 > **« Votre courtage, plus rapide et plus simple »**
 > *Un espace de travail digital, né de plus de 10 ans d'expérience en courtage d'assurance.*
@@ -15,7 +15,7 @@
 
 Aujourd'hui, la plupart des cabinets de courtage gèrent leur activité de manière éclatée : des classeurs Excel pour la production, du papier pour les sinistres, des outils disparates pour les finances, et beaucoup de mémoire humaine pour les renouvellements et les échéances. Résultat : perte de temps, erreurs de calcul de commissions, difficulté à produire les états exigés par les régulateurs, et une connaissance du portefeuille qui repose sur quelques personnes clés.
 
-JS Brokers réunit **tout le cycle de vie du courtage** — de la prospection au règlement des sinistres, en passant par la production, la facturation et la comptabilité — dans **un seul espace de travail en ligne**, accessible depuis un navigateur, sans installation.
+Joseara réunit **tout le cycle de vie du courtage** — de la prospection au règlement des sinistres, en passant par la production, la facturation et la comptabilité — dans **un seul espace de travail en ligne**, accessible depuis un navigateur, sans installation.
 
 ### Notre spécificité
 
@@ -28,7 +28,7 @@ Le produit s'organise autour de deux espaces distincts, complétés par une vitr
 | Espace | Pour qui ? | À quoi ça sert ? |
 |---|---|---|
 | **Le Workspace** | Nos clients : les courtiers et leurs équipes | Gérer toute l'activité de leur cabinet au quotidien |
-| **La Console** | Nous : l'équipe JS Brokers | Piloter notre propre entreprise — ventes, clients, finances, RH |
+| **La Console** | Nous : l'équipe Joseara | Piloter notre propre entreprise — ventes, clients, finances, RH |
 | **La vitrine publique** | Les visiteurs et prospects | Découvrir le produit, s'inscrire et acheter en autonomie |
 
 Le reste de ce document présente le modèle économique, puis chacun des deux piliers en détail.
@@ -37,7 +37,7 @@ Le reste de ce document présente le modèle économique, puis chacun des deux p
 
 ## 2. Le modèle économique — un freemium à l'usage (les « tokens »)
 
-JS Brokers ne vend pas d'abonnement mensuel classique. Le modèle est un **paiement à l'usage** basé sur des **tokens** : chaque action sur la plateforme (consulter une fiche, créer un client, enregistrer un avenant…) consomme un petit nombre de tokens.
+Joseara ne vend pas d'abonnement mensuel classique. Le modèle est un **paiement à l'usage** basé sur des **tokens** : chaque action sur la plateforme (consulter une fiche, créer un client, enregistrer un avenant…) consomme un petit nombre de tokens.
 
 ### Le plan BASIC — gratuit
 
@@ -63,7 +63,7 @@ Quand l'activité du courtier grandit, il recharge son compte avec des **paquets
 ### Pourquoi ce modèle ?
 
 1. **Barrière d'entrée nulle** : le courtier essaie le produit complet, gratuitement, sans carte bancaire — décisif sur un marché où l'abonnement logiciel est encore peu ancré dans les habitudes.
-2. **Le prix suit l'usage** : un petit cabinet paie peu, un gros cabinet paie proportionnellement à son activité. Le revenu de JS Brokers croît naturellement avec le succès de ses clients.
+2. **Le prix suit l'usage** : un petit cabinet paie peu, un gros cabinet paie proportionnellement à son activité. Le revenu de Joseara croît naturellement avec le succès de ses clients.
 3. **Pilotage fin** : chaque token consommé est une donnée d'usage, ce qui nous donne une visibilité précise sur l'engagement de chaque client (et alimente directement notre CRM interne — voir la Console).
 
 ---
@@ -158,13 +158,13 @@ Deux garde-fous structurants :
 
 ### 3.8 L'expérience utilisateur
 
-Le Workspace est une application web moderne : formulaires contextuels en dialogues superposables, champs à autocomplétion, sélecteurs dédiés (affectation de clients à un portefeuille en quelques clics), notifications, e-mails à l'identité visuelle JS Brokers, et interface **bilingue français / anglais**. L'ensemble respecte une charte graphique unifiée autour du bleu cobalt JS Brokers (détaillée en annexe, section 8).
+Le Workspace est une application web moderne : formulaires contextuels en dialogues superposables, champs à autocomplétion, sélecteurs dédiés (affectation de clients à un portefeuille en quelques clics), notifications, e-mails à l'identité visuelle Joseara, et interface **bilingue français / anglais**. L'ensemble respecte une charte graphique unifiée autour du bleu cobalt Joseara (détaillée en annexe, section 8).
 
 ---
 
-## 4. Pilier 2 — La Console : le cockpit interne de JS Brokers
+## 4. Pilier 2 — La Console : le cockpit interne de Joseara
 
-La Console est l'espace réservé à **l'équipe JS Brokers** — c'est-à-dire à vous, futurs collaborateurs. C'est l'outil avec lequel nous pilotons notre propre entreprise : nos ventes, nos clients, nos finances et notre organisation. Elle est structurée en six domaines, et **chaque collaborateur y accède selon son département** : un membre de l'équipe Finance voit les rubriques Finance, un membre du Support voit le CRM, la direction voit tout.
+La Console est l'espace réservé à **l'équipe Joseara** — c'est-à-dire à vous, futurs collaborateurs. C'est l'outil avec lequel nous pilotons notre propre entreprise : nos ventes, nos clients, nos finances et notre organisation. Elle est structurée en six domaines, et **chaque collaborateur y accède selon son département** : un membre de l'équipe Finance voit les rubriques Finance, un membre du Support voit le CRM, la direction voit tout.
 
 ### 4.1 Tableau de bord
 
@@ -194,7 +194,7 @@ Un CRM interne complet, alimenté automatiquement par l'activité réelle des co
 
 ### 4.4 Comptes & organisation interne
 
-- **Collaborateurs** : les comptes de l'équipe JS Brokers ;
+- **Collaborateurs** : les comptes de l'équipe Joseara ;
 - **Départements & rôles** : l'organigramme qui détermine qui accède à quoi dans la Console ;
 - **Évaluations** : objectifs **SMART** par collaborateur, fiche d'évaluation calculée, notification au concerné — la performance individuelle est suivie dans l'outil lui-même ;
 - **Utilisateurs**, **Clients** et **Entreprises** : les registres globaux de tous les comptes de la plateforme.
@@ -205,15 +205,15 @@ Un CRM interne complet, alimenté automatiquement par l'activité réelle des co
 - **Plan tarifaire** : les paquets de tokens et leurs prix, **éditables directement depuis la Console** — la page tarifs publique se met à jour instantanément ;
 - **Coupons** : création de codes de réduction, ciblage par paquet, et mise en avant automatique des promotions sur la vitrine publique.
 
-### 4.6 Finance & conformité de JS Brokers
+### 4.6 Finance & conformité de Joseara
 
 Le même moteur comptable OHADA que celui offert aux courtiers, appliqué à notre propre société :
 
 - **Dépenses** et **Charges**, avec un axe analytique qui alimente les indicateurs CFO (CAC, marge) ;
-- **Documents comptables** : Journal, Grand livre, Balance, Résultat, TFR, Bilan, TFT de JS Brokers, générés à la volée, exportables en Excel ;
+- **Documents comptables** : Journal, Grand livre, Balance, Résultat, TFR, Bilan, TFT de Joseara, générés à la volée, exportables en Excel ;
 - **Fiscalité** : TVA collectée moins déductible, reversements, solde dû par exercice et par mois.
 
-**En résumé** : la Console fait de JS Brokers une entreprise pilotée par la donnée dès le premier jour — chaque vente, chaque dépense, chaque interaction client est mesurée, et chaque collaborateur y trouve son poste de travail.
+**En résumé** : la Console fait de Joseara une entreprise pilotée par la donnée dès le premier jour — chaque vente, chaque dépense, chaque interaction client est mesurée, et chaque collaborateur y trouve son poste de travail.
 
 ---
 
@@ -230,7 +230,7 @@ Le troisième maillon est le site public, conçu pour qu'un courtier passe de la
 
 ---
 
-## 6. Ce qui différencie JS Brokers
+## 6. Ce qui différencie Joseara
 
 1. **Le métier encodé dans le produit.** Dix ans de courtage réel se retrouvent dans chaque rubrique : bordereaux, partages de commissions, reconduction des partenaires au renouvellement — des besoins qu'aucun outil généraliste ne couvre.
 2. **La conformité OHADA native.** Les 7 états comptables et le suivi TVA sont générés automatiquement, pour nos clients courtiers comme pour notre propre gestion. Sur le marché africain francophone, c'est un avantage décisif.
@@ -259,22 +259,22 @@ Pour les collaborateurs qui ne viennent pas du monde de l'assurance :
 | **Sinistre** | L'événement dommageable déclaré par le client, que le courtier accompagne jusqu'au règlement par l'assureur. |
 | **OHADA** | Organisation pour l'Harmonisation en Afrique du Droit des Affaires — son référentiel comptable s'impose aux entreprises de 17 pays africains. |
 | **TFR / TFT** | Tableau de Formation du Résultat / Tableau des Flux de Trésorerie — deux états comptables OHADA. |
-| **Token** | L'unité de consommation de la plateforme JS Brokers : chaque action en consomme quelques-uns. |
+| **Token** | L'unité de consommation de la plateforme Joseara : chaque action en consomme quelques-uns. |
 | **Assistant IA** | L'agent conversationnel intégré au Workspace (fonctionnalité premium) : il répond sur les données réelles du cabinet, dans les limites du périmètre d'accès de chacun. |
-| **Workspace** | L'espace de travail d'un cabinet de courtage sur JS Brokers. |
-| **Console** | L'espace interne de pilotage réservé à l'équipe JS Brokers. |
+| **Workspace** | L'espace de travail d'un cabinet de courtage sur Joseara. |
+| **Console** | L'espace interne de pilotage réservé à l'équipe Joseara. |
 
 ---
 
-## 8. Annexe — Charte graphique des couleurs JS Brokers
+## 8. Annexe — Charte graphique des couleurs Joseara
 
-Tout support visuel produit au nom de JS Brokers (présentations, documents, interfaces) doit respecter la charte des couleurs officielle ci-dessous. **Aucune couleur hors de cette palette ne doit être introduite.**
+Tout support visuel produit au nom de Joseara (présentations, documents, interfaces) doit respecter la charte des couleurs officielle ci-dessous. **Aucune couleur hors de cette palette ne doit être introduite.**
 
 ### 8.1 Couleurs de marque
 
 | Couleur | Code hex | Rôle |
 |---|---|---|
-| **Cobalt** | `#0047AB` | **Couleur principale de la marque JS Brokers.** Titres forts, actions primaires, accents de marque, icônes de marque. |
+| **Cobalt** | `#0047AB` | **Couleur principale de la marque Joseara.** Titres forts, actions primaires, accents de marque, icônes de marque. |
 | Cobalt foncé | `#003380` | État survol (hover) des éléments cobalt. |
 | Cobalt hover | `#0a58ca` | Variante hover des éléments bleu standard. |
 | Bleu standard | `#0d6efd` | Interactions courantes : liens, boutons secondaires d'action, éléments de mise en évidence. |
@@ -329,7 +329,7 @@ Réservés aux **retours utilisateur** (succès, erreur, avertissement) — jama
 ### 8.6 Règles d'application
 
 **Priorité des couleurs :**
-1. **Cobalt `#0047AB`** pour tout ce qui porte la marque JS Brokers (titres, actions primaires, accents forts) ;
+1. **Cobalt `#0047AB`** pour tout ce qui porte la marque Joseara (titres, actions primaires, accents forts) ;
 2. **Bleu `#0d6efd`** pour les interactions standard (liens, boutons courants) ;
 3. **Gris neutres** (`#212529`, `#495057`, `#6c757d`, `#adb5bd`) pour les textes ;
 4. **Couleurs sémantiques** (vert / rouge / jaune) uniquement pour les retours d'état.
@@ -364,4 +364,4 @@ Réservés aux **retours utilisateur** (succès, erreur, avertissement) — jama
 
 ---
 
-*Document rédigé pour les réunions de présentation aux futurs collaborateurs — JS Brokers.*
+*Document rédigé pour les réunions de présentation aux futurs collaborateurs — Joseara.*

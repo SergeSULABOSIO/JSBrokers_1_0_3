@@ -17,7 +17,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Translation\LocaleSwitcher;
 
 /**
- * Gestion des collaborateurs (agents) JS Brokers. La création, la suppression et
+ * Gestion des collaborateurs (agents) Joseara. La création, la suppression et
  * l'attribution du rôle super-admin sont réservées au super-admin.
  */
 #[Route('/console/collaborateurs', name: 'console.collaborateur.')]
@@ -37,7 +37,7 @@ class CollaborateurController extends AbstractConsoleController
         $this->applyLangPreference($request, $localeSwitcher);
 
         return $this->render('console/collaborateur/index.html.twig', [
-            'pageName'       => 'Collaborateurs JS Brokers',
+            'pageName'       => 'Collaborateurs Joseara',
             'pageIcon'       => 'action:role',
             'collaborateurs' => $this->utilisateurRepository->findAgents(),
         ]);
@@ -83,7 +83,7 @@ class CollaborateurController extends AbstractConsoleController
             'backUrl'     => $this->generateUrl('console.collaborateur.index'),
             'backLabel'   => 'Collaborateurs',
             'submitLabel' => 'Créer le collaborateur',
-            'description' => 'Créez un compte interne pour un agent JS Brokers. '
+            'description' => 'Créez un compte interne pour un agent Joseara. '
                 . 'Le compte est actif immédiatement (sans vérification e-mail).',
             'formIcon'    => 'utilisateur',
         ]);

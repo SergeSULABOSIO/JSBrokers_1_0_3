@@ -1,7 +1,7 @@
 {% extends 'base.html.twig' %}
 {% import 'admin/entreprise/_form_macros.html.twig' as ff %}
 
-{% block title %}{{ pageName|default('Création du compte') }} — JS Brokers{% endblock %}
+{% block title %}{{ pageName|default('Création du compte') }} — Joseara{% endblock %}
 
 {% block stylesheets %}
 {{ parent() }}
@@ -169,9 +169,9 @@
     <header class="ent-topbar">
         <a href="{{ path('app_index') }}" class="ent-brand"
            data-action="click->top-progress#show"
-           aria-label="JS Brokers — retour à l'accueil" title="Retour à l'accueil JS Brokers">
+           aria-label="Joseara — retour à l'accueil" title="Retour à l'accueil Joseara">
             <img src="{{ asset('images/entreprises/logofav.png') }}" alt="">
-            <span>JS Brokers</span>
+            <span>Joseara</span>
         </a>
         {% if isEdit %}
             <div class="ent-topbar-user">
@@ -219,7 +219,7 @@
                     Mettez à jour les informations de votre compte. Laissez le mot de passe vide pour le conserver.
                 {% else %}
                     Bienvenue&nbsp;! Renseignez le formulaire ci-dessous pour créer votre compte
-                    et accéder à votre espace de travail JS Brokers.
+                    et accéder à votre espace de travail Joseara.
                 {% endif %}
             </p>
         </div>

@@ -12,7 +12,7 @@ use Symfony\Component\Security\Http\Event\LoginSuccessEvent;
  * @description À chaque connexion réussie d'un compte suivi par le CRM, horodate
  * la dernière connexion, incrémente le compteur et resynchronise son profil CRM
  * (étape de pipeline + score de santé). Sont suivis : les utilisateurs classiques
- * (non agents) ET les agents JS Brokers qui sont eux-mêmes clients payants
+ * (non agents) ET les agents Joseara qui sont eux-mêmes clients payants
  * (solde prépayé > 0). Aucune ressaisie : tout vient du SaaS.
  */
 class CrmActivitySubscriber implements EventSubscriberInterface
