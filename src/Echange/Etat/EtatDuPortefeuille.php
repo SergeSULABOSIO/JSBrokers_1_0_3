@@ -3,7 +3,10 @@
 namespace App\Echange\Etat;
 
 use App\Ai\Finance\EconomieTranche;
+use App\Echange\Reprise\ValeursMultiples;
 use App\Echange\Service\Progression;
+use App\Entity\Avenant;
+use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Taxe;
 use App\Entity\Tranche;
@@ -212,6 +215,11 @@ final class EtatDuPortefeuille
         $eco = EconomieTranche::depuis($tranche);
 
         return [
+            // ⚠ VIDE À L'EXPORT, ET C'EST VOULU. La colonne existe pour que l'utilisateur
+            // puisse ÉCRIRE SUPPRIMER ; la pré-remplir d'une action reviendrait à proposer
+            // un geste que personne n'a demandé.
+            '_action' => null,
+
             'id' => $tranche->getId(),
 
             'policeDateEffet' => $avenant?->getStartingAt(),
@@ -223,10 +231,22 @@ final class EtatDuPortefeuille
             'trancheNom' => $tranche->getNom(),
             'tranchePayableAt' => $tranche->getPayableAt(),
             'trancheEcheanceAt' => $tranche->getEcheanceAt(),
+            // ⚠ EN POINTS, comme partout dans l'application : `Tranche::getFraction()` est
+            // la source unique du /100. Exporter la fraction ici ferait lire 0,25 à qui
+            // attend 25, et la ligne réimportée pèserait un quart de pour cent.
+            'tranchePart' => $tranche->getPourcentage(),
+            'trancheMontantFlat' => $tranche->getMontantFlat(),
 
             'assure' => $piste?->getClient()?->getNom(),
             'risque' => $piste?->getRisque()?->getNomComplet() ?: $piste?->getRisque()?->getCode(),
             'assureur' => $cotation?->getAssureur()?->getNom(),
+            'portefeuille' => $piste?->getClient()?->getPortefeuille()?->getNom(),
+
+            // ⚠ CE QUI PRODUIT LES CHIFFRES, ET NON SEULEMENT CE QU'ILS VALENT. Sans ces
+            // deux colonnes, le fichier ne porte que des résultats : réimporté, il rend des
+            // cotations SANS PRIME et SANS COMMISSION — d'aspect normal, et fausses.
+            'primeChargements' => self::chargementsDe($cotation),
+            'commissionRevenus' => self::revenusDe($cotation),
 
             'primeTotale' => $eco['primeTranche'] ?? null,
             'primePayee' => $eco['primeSignalee'] ?? null,
@@ -288,6 +308,111 @@ final class EtatDuPortefeuille
     }
 
     /**
+     * LA COMPOSITION DE LA PRIME, telle que la cotation la porte.
+     *
+     * ⚠ CETTE COLONNE EST CE QUI REND LA PRIME REPRENABLE. La prime ne se saisit nulle
+     * part : elle est la SOMME des chargements de la cotation
+     * (`IndicatorCalculationHelper`, « primeTotale += montantFlatExceptionel »). Un
+     * fichier qui ne porterait que « Prime · Totale » rendrait, réimporté, des cotations
+     * sans prime — et rien ne le signalerait, puisque le total se recalculerait à zéro
+     * sans erreur.
+     *
+     * Le montant d'un chargement n'a qu'une source, `montantFlatExceptionel` : le
+     * catalogue `Chargement` ne porte ni taux ni montant. Un chargement sans montant sort
+     * donc sous son seul nom.
+     */
+    private static function chargementsDe(?Cotation $cotation): ?string
+    {
+        if ($cotation === null) {
+            return null;
+        }
+
+        // ⚠ UN MÊME TYPE PEUT REVENIR, ET SES MONTANTS SE CUMULENT. Constaté sur les
+        // données réelles : une cotation portait DEUX lignes « Frais accessoires », l'une
+        // à 2 056,89 et l'autre à 0. Indexer par nom sans cumuler écrasait la première —
+        // la composition annonçait alors 79 335,25 quand la prime valait 81 392,14, et
+        // l'écart passait pour une erreur de calcul.
+        //
+        // Cumuler, c'est perdre le fait qu'il y avait deux lignes. C'est assumé : ce
+        // classeur reprend une SITUATION, et la situation, c'est la prime. Deux lignes de
+        // même type dont l'une à zéro sont d'ailleurs une scorie de saisie, pas une
+        // intention. Le dictionnaire le dit.
+        // ⚠ UN CHARGEMENT SANS TYPE COMPTE QUAND MÊME DANS LA PRIME. Le type est
+        // nullable, et `primeTotale += montantFlatExceptionel` ne le regarde pas. L'écarter
+        // faute de nom ferait donc une composition qui ne somme plus à la prime — et cette
+        // égalité est la seule propriété qui fasse tenir la reprise. On se replie sur le
+        // nom propre du chargement, puis sur un libellé de secours.
+        $termes = [];
+        foreach ($cotation->getChargements() as $chargement) {
+            $nom = $chargement->getType()?->getNom();
+            if ($nom === null || $nom === '') {
+                $nom = $chargement->getNom();
+            }
+            if ($nom === null || trim($nom) === '') {
+                $nom = 'Chargement sans nom';
+            }
+
+            $montant = (float) ($chargement->getMontantFlatExceptionel() ?? 0.0);
+            $termes[$nom] = ValeursMultiples::montant(
+                ($termes[$nom]['valeur'] ?? 0.0) + $montant,
+            );
+        }
+
+        return $termes === [] ? null : ValeursMultiples::ecrire($termes);
+    }
+
+    /**
+     * LES REVENUS DU COURTIER, et seulement ce qui DÉROGE au type.
+     *
+     * ⚠ ON N'EXPORTE PAS UN TAUX QU'ON N'A PAS ÉCRIT. Le taux d'un revenu se résout à la
+     * lecture, en cascade : un type marqué « pourcentage du risque » va chercher celui du
+     * risque de l'affaire. Le recopier dans le fichier le FIGERAIT — réimporté, il
+     * deviendrait une dérogation, et la commission cesserait de suivre le risque le jour
+     * où son taux change. Voir `App\Ai\Proposition\RevenuCourtierPrescrit`, qui pose la
+     * règle : créer le revenu avec son seul type suffit.
+     *
+     * Sortent donc avec une valeur les seuls revenus qui dérogent — par taux, ou par
+     * montant forfaitaire, ce second cas étant le plus fréquent dans les données réelles.
+     */
+    private static function revenusDe(?Cotation $cotation): ?string
+    {
+        if ($cotation === null) {
+            return null;
+        }
+
+        // Même repli que pour les chargements : un revenu sans type reste un revenu.
+        //
+        // ⚠ EN REVANCHE ON NE CUMULE PAS DEUX REVENUS DE MÊME TYPE. Additionner deux taux
+        // (« 12 % + 12 % = 24 % ») serait faux, et rien ne dirait s'il faut sommer ou
+        // choisir. Les données réelles n'en portent aucun ; si le cas apparaissait, la
+        // colonne ne saurait pas les distinguer, et c'est une limite dite plutôt que
+        // devinée.
+        $termes = [];
+        foreach ($cotation->getRevenus() as $revenu) {
+            $nom = $revenu->getTypeRevenu()?->getNom();
+            if ($nom === null || $nom === '') {
+                $nom = $revenu->getNom();
+            }
+            if ($nom === null || trim($nom) === '') {
+                $nom = 'Revenu sans nom';
+            }
+
+            $taux = $revenu->getTauxExceptionel();
+            $flat = $revenu->getMontantFlatExceptionel();
+
+            if ($taux !== null && $taux != 0.0) {
+                $termes[$nom] = ValeursMultiples::taux($taux);
+            } elseif ($flat !== null && $flat != 0.0) {
+                $termes[$nom] = ValeursMultiples::montant($flat);
+            } else {
+                $termes[$nom] = ValeursMultiples::defaut();
+            }
+        }
+
+        return $termes === [] ? null : ValeursMultiples::ecrire($termes);
+    }
+
+    /**
      * LES MOIS, DANS L'ORDRE DU CALENDRIER.
      *
      * Publique parce que la synthèse en a besoin pour TRIER ses lignes : le libellé ne
@@ -343,7 +468,7 @@ final class EtatDuPortefeuille
      * C'est aussi la définition qu'emploie le filtre d'exercice : filtrer sur une date
      * que la colonne n'affiche pas serait un piège.
      */
-    private static function policeDe(?\App\Entity\Cotation $cotation): ?\App\Entity\Avenant
+    private static function policeDe(?Cotation $cotation): ?Avenant
     {
         $retenu = null;
         foreach ($cotation?->getAvenants() ?? [] as $avenant) {

@@ -29,17 +29,27 @@ final class CatalogueDesColonnes
     {
         return [
             // ── Identité ────────────────────────────────────────────────────────────
+            // ⚠ UNE SUPPRESSION NE SE DÉDUIT JAMAIS, ELLE S'ÉCRIT. Un identifiant effacé
+            // par mégarde en triant le fichier ne doit pas pouvoir vider une échéance.
+            // Même règle et mêmes mots que le classeur normalisé (CanevasDEchange::ACTION_*).
+            '_action' => ColonneEtat::texte(
+                '_action',
+                'Laissez vide : la ligne est créée si « id » est vide, mise à jour sinon. '
+                . 'Écrivez SUPPRIMER pour demander la suppression de cette tranche — cela ne '
+                . 'se déduit jamais, il faut l\'écrire.',
+            )->enSaisie('Tranche._action'),
+
             'id' => ColonneEtat::identifiant(
                 'id',
                 'Identifiant de la TRANCHE. C\'est elle, et non la police, qui fait la ligne : '
                 . 'une police à quatre échéances occupe quatre lignes.',
-            ),
+            )->enSaisie('Tranche.id'),
 
             // ── La police ───────────────────────────────────────────────────────────
-            'policeDateEffet' => ColonneEtat::date('Police · Date d\'effet', 'Début de la couverture.'),
-            'policeEcheance' => ColonneEtat::date('Police · Échéance', 'Fin de la couverture.'),
-            'policeReference' => ColonneEtat::texte('Police · Référence', 'Référence de la police chez l\'assureur.'),
-            'policeNumeroAvenant' => ColonneEtat::texte('Police · N° avenant', 'Numéro de l\'avenant.'),
+            'policeDateEffet' => ColonneEtat::date('Police · Date d\'effet', 'Début de la couverture.')->enSaisie('Avenant.startingAt'),
+            'policeEcheance' => ColonneEtat::date('Police · Échéance', 'Fin de la couverture.')->enSaisie('Avenant.endingAt'),
+            'policeReference' => ColonneEtat::texte('Police · Référence', 'Référence de la police chez l\'assureur.')->enSaisie('Avenant.referencePolice'),
+            'policeNumeroAvenant' => ColonneEtat::texte('Police · N° avenant', 'Numéro de l\'avenant.')->enSaisie('Avenant.numero'),
             'policeMoisEffet' => ColonneEtat::texte(
                 "Police · Mois d'effet",
                 // ⚠ NE PAS Y REMETTRE UN RANG NI UN JOUR : voir `EtatDuPortefeuille::moisDe()`,
@@ -49,22 +59,64 @@ final class CatalogueDesColonnes
             ),
 
             // ── La tranche ──────────────────────────────────────────────────────────
-            'trancheNom' => ColonneEtat::texte('Tranche · Nom', 'Libellé de l\'échéance de prime.'),
+            'trancheNom' => ColonneEtat::texte('Tranche · Nom', 'Libellé de l\'échéance de prime.')->enSaisie('Tranche.nom'),
             'tranchePayableAt' => ColonneEtat::date(
                 'Tranche · Payable à partir du',
                 'Date à partir de laquelle la tranche peut être réglée.',
-            ),
+            )->enSaisie('Tranche.payableAt'),
             'trancheEcheanceAt' => ColonneEtat::date(
                 'Tranche · Échéance de paiement',
                 'Date à laquelle la tranche doit être réglée.',
-            ),
+            )->enSaisie('Tranche.echeanceAt'),
 
             // ── L'affaire ───────────────────────────────────────────────────────────
-            'assure' => ColonneEtat::texte('Assuré', 'Le client couvert.'),
-            'risque' => ColonneEtat::texte('Risque', 'Nature du risque couvert.'),
-            'assureur' => ColonneEtat::texte('Assureur', 'La compagnie qui porte le risque.'),
+// ⚠ DEUX MANIÈRES DE DIRE LE POIDS D'UNE ÉCHÉANCE, ET UNE PRIORITÉ DÉJÀ ÉCRITE.
+            // Une tranche pèse une PART de la prime, ou un MONTANT. La règle n'est pas à
+            // inventer ici : `IndicatorCalculationHelper::getTrancheTauxFactor()` la porte —
+            // la part l'emporte, le montant ne servant que si elle est absente. Mesuré sur
+            // les données réelles, 71 tranches sur 80 renseignent LES DEUX : refuser ces
+            // lignes aurait rejeté presque tout un portefeuille.
+            'tranchePart' => ColonneEtat::pourcentage(
+                'Tranche · Part (%)',
+                'Part de la prime que porte cette échéance, EN POINTS (25 = 25 %) — convention '
+                . 'de toute l\'application. Quatre échéances égales font quatre fois 25. '
+                . '⚠ Renseignée, elle L\'EMPORTE sur le montant fixe.',
+            )->enSaisie('Tranche.pourcentage'),
+            'trancheMontantFlat' => ColonneEtat::montant(
+                'Tranche · Montant fixe',
+                'Montant de prime porté par cette échéance, pour qui préfère le dire en monnaie '
+                . 'plutôt qu\'en part. ⚠ Il n\'est lu QUE si la part est vide : renseigner les '
+                . 'deux n\'est pas une faute, mais le montant sera alors ignoré.',
+            )->enSaisie('Tranche.montantFlat'),
+
+            'assure' => ColonneEtat::texte('Assuré', 'Le client couvert.')->enSaisie('Client.nom'),
+            'risque' => ColonneEtat::texte('Risque', 'Nature du risque couvert.')->enSaisie('Risque.nomComplet'),
+            'assureur' => ColonneEtat::texte('Assureur', 'La compagnie qui porte le risque.')->enSaisie('Assureur.nom'),
 
             // ── La prime ────────────────────────────────────────────────────────────
+            'portefeuille' => ColonneEtat::texte(
+                'Portefeuille',
+                'Portefeuille auquel appartient le client. ⚠ Il se pose sur le CLIENT et non '
+                . 'sur la police : le changer déplace tout ce que ce client porte.',
+            )->enSaisie('Client.portefeuille'),
+
+            // ── La prime ────────────────────────────────────────────────────────────
+            // ⚠ C'EST CETTE COLONNE QUI REND LA PRIME REPRENABLE, ET ELLE MANQUAIT. La
+            // prime ne se saisit pas : elle SORT des chargements de la cotation. Un fichier
+            // qui ne porte que « Prime · Totale » rend, à la réimportation, des cotations
+            // SANS PRIME — et rien ne le signale.
+            //
+            // Plusieurs chargements dans une cellule, séparés par « ; » : c'est la
+            // convention du format (ColonneDEchange::$multiple), et c'est elle qui permet à
+            // UNE ligne de porter les N chargements d'une cotation sans seconde feuille.
+            'primeChargements' => ColonneEtat::texte(
+                'Prime · Chargements',
+                'La prime, décomposée : « Prime nette = 10000 ; Frais accessoires = 500 ». Les '
+                . 'noms sont ceux de vos types de chargement. C\'est de cette décomposition '
+                . 'que SORT la prime totale ; la colonne « Prime · Totale » n\'en est que le '
+                . 'résultat, et n\'est pas relue.',
+            )->enSaisie('Cotation.chargements'),
+
             'primeTotale' => ColonneEtat::montant('Prime · Totale', 'Prime due par le client sur cette tranche.'),
             'primePayee' => ColonneEtat::montant(
                 'Prime · Payée',
@@ -81,6 +133,20 @@ final class CatalogueDesColonnes
             ),
 
             // ── La commission ───────────────────────────────────────────────────────
+            // ⚠ UN TAUX NE SE RECOPIE PAS, IL SE RÉSOUT. Le revenu n'a besoin que de son
+            // TYPE : le taux est trouvé à la lecture, en cascade, un type marqué
+            // « pourcentage du risque » allant chercher celui du risque de l'affaire. C'est
+            // ce qui fait suivre la commission quand un taux de risque change demain — voir
+            // `App\Ai\Proposition\RevenuCourtierPrescrit`. On n'écrit donc une valeur que
+            // pour DÉROGER.
+            'commissionRevenus' => ColonneEtat::texte(
+                'Commission · Revenus',
+                'Ce que rapporte l\'affaire, par type : « Commission ; Frais de gestion ». Le '
+                . 'taux vient de vos types de revenu — ou du risque, quand le type le prescrit. '
+                . 'N\'écrivez une valeur (« Commission = 12 ») que pour DÉROGER à ce taux ; '
+                . 'elle est alors EN POINTS (12 = 12 %).',
+            )->enSaisie('Cotation.revenus'),
+
             'commissionTtc' => ColonneEtat::montant(
                 'Commission · TTC',
                 'Commission HT + taxe de l\'ASSUREUR SEULE. La taxe du courtier n\'y est PAS comprise.',
@@ -193,12 +259,12 @@ final class CatalogueDesColonnes
             'intermediaire' => ColonneEtat::texte(
                 'Intermédiaire · Nom',
                 'Le partenaire EXTERNE apporteur de l\'affaire, s\'il y en a un.',
-            ),
+            )->enSaisie('Partenaire.nom'),
             'intermediairePart' => ColonneEtat::pourcentage(
                 'Intermédiaire · Part',
                 'Taux de la condition de partage retenue, en POINTS. Vide s\'il n\'y a pas de condition unique : '
                 . 'un taux qui ne s\'applique à personne induirait en erreur.',
-            ),
+            )->enSaisie('ConditionPartage.taux'),
 
             'retroPartenaireDue' => ColonneEtat::montant(
                 'Rétro intermédiaire · Due',

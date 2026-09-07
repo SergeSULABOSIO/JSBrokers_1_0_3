@@ -187,7 +187,7 @@ final class ResolveurDeRenvois
     private function parLibelle(string $codeRessource, string $libelle, Entreprise $entreprise): array
     {
         $index = $this->index($codeRessource, $entreprise);
-        $cle = $this->normaliser($libelle);
+        $cle = self::normaliser($libelle);
 
         if (isset($this->ambigus[$codeRessource . '|' . $cle])) {
             // Deux lignes portent ce libellé : on rend deux identifiants factices pour
@@ -240,7 +240,7 @@ final class ResolveurDeRenvois
 
         $index = [];
         foreach ($lignes as $ligne) {
-            $cle = $this->normaliser((string) ($ligne['libelle'] ?? ''));
+            $cle = self::normaliser((string) ($ligne['libelle'] ?? ''));
             if ($cle === '') {
                 continue;
             }
@@ -260,7 +260,18 @@ final class ResolveurDeRenvois
      * Forme comparable d'un libellé : minuscules, sans accents, ponctuation ramenée à
      * une espace. « SUNU IARD RDC » et « sunu-iard-rdc » désignent la même chose.
      */
-    private function normaliser(string $texte): string
+    /**
+     * LA FORME COMPARABLE D\'UN LIBELLÉ — « SFA Congo » et « sfa  congo » sont un seul
+     * assureur.
+     *
+     * ⚠ PUBLIQUE ET STATIQUE PARCE QU\'ELLE DOIT ÊTRE LA SEULE. La reconstitution à la
+     * maille tranche fabrique des repères locaux à partir des mêmes libellés
+     * ({@see \App\Echange\Reprise\CleNaturelle}). Si son découpage différait de cet
+     * index d\'un espace ou d\'un accent, une même valeur serait RÉSOLUE en base pour une
+     * ligne et RECRÉÉE pour la suivante : deux clients pour un, et personne ne verrait
+     * pourquoi.
+     */
+    public static function normaliser(string $texte): string
     {
         static $accents = [
             'à' => 'a', 'á' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a', 'å' => 'a', 'æ' => 'ae',
