@@ -8,6 +8,7 @@ use App\Ai\Mutation\MutationOperation;
 use App\Ai\Mutation\NormaliseurDeDates;
 use App\Echange\Canevas\CanevasDEchange;
 use App\Echange\Classeur\LigneLue;
+use App\Echange\Etat\CatalogueDesColonnes;
 use App\Echange\Etat\ColonneEtat;
 use App\Echange\Etat\EtatDuPortefeuille;
 use App\Echange\Service\Anomalie;
@@ -254,15 +255,14 @@ final class ReconstitueurDeTranche
             // bien qu'une reprise par ce format rend des propositions SANS PRIME. On
             // l'écrit donc en COLLECTION IMBRIQUÉE de la proposition, ce que le circuit
             // d'écriture sait déjà faire.
-            $chargements = $this->termes($ligne, 'primeChargements', $anomalies);
-            foreach ($chargements as $nom => $terme) {
+            foreach ($this->chargementsDeLaLigne($ligne, $colonnes) as $codeColonne => [$nom, $montant]) {
                 $collections['chargements'][] = new MutationOperation(
                     op: MutationOperation::OP_CREATE,
                     entityShortName: 'ChargementPourPrime',
                     fields: $this->sansVide([
                         'nom' => $nom,
-                        'type' => $this->reconnu('Chargement', $nom, $entreprise, $ligne, 'primeChargements', $anomalies),
-                        'montantFlatExceptionel' => $terme['valeur'],
+                        'type' => $this->reconnu('Chargement', $nom, $entreprise, $ligne, $codeColonne, $anomalies),
+                        'montantFlatExceptionel' => $montant,
                     ]),
                 );
             }
@@ -433,23 +433,34 @@ final class ReconstitueurDeTranche
     }
 
     /**
-     * L'ÉCRITURE D'OUVERTURE DE LA COMMISSION : une note soldée, et une seule.
+     * L'ENCAISSEMENT DE COMMISSION N'EST PAS REPRIS — et le fichier le dit.
      *
-     * ── POURQUOI UNE NOTE PAR ÉCHÉANCE, ET NON UNE POUR TOUT L'IMPORT ──────────────
-     * ⚠ C'EST UNE CONTRAINTE DU CALCUL, PAS UN CHOIX D'ÉCRITURE.
-     * `IndicatorCalculationHelper::getTrancheMontantCommissionEncaissee()` applique la
-     * proportion payée de la note ENTIÈRE à chacun de ses articles. Une note groupant
-     * plusieurs échéances ne peut donc pas exprimer des taux d'encaissement différents :
-     * une échéance soldée et une autre encaissée à 30 % y sont inexprimables.
+     * ── POURQUOI, ET CE N'EST PAS UN DÉFAUT DE LA REPRISE ──────────────────────────
+     * ⚠ UNE NOTE NE PEUT PAS ÊTRE CRÉÉE PAR LE CIRCUIT COMMUN. `Note::$validated` et
+     * `Note::$signature` sont NON NULLES en base et ABSENTES de `NoteType` : le contrôle à
+     * blanc les réclame — elles sont obligatoires — sans qu'aucun champ ne permette de les
+     * fournir, un formulaire ignorant ce qu'il ne déclare pas. Constaté le 08/09/2026 sur
+     * un portefeuille réel : CINQUANTE erreurs bloquantes, une par échéance portant une
+     * commission encaissée, rendant toute la reprise inutilisable.
      *
-     * Avec UN article et UN règlement du même montant, la proportion vaut exactement ce
-     * qu'on a versé — et la commission encaissée de l'échéance vaut le montant écrit.
+     * ⚠ ET ON NE FOURNIT PAS CES CHAMPS « POUR FAIRE PASSER » LE DRY-RUN. Le contrôle
+     * cesserait de se plaindre et l'écriture échouerait en SQL sur une contrainte NOT
+     * NULL — précisément le piège que `champsRequisManquants()` existe pour éviter :
+     * « que Ket les demande plutôt que de provoquer une erreur SQL à l'exécution ».
      *
-     * ── CE QU'ELLE EXIGE ──────────────────────────────────────────────────────────
-     * ⚠ UN REVENU À FACTURER. `getArticleMontant()` rend 0 pour un article qui n'est pas
-     * lié à un revenu ET à une tranche : sans lui, la note serait posée, le règlement
-     * aussi, et la commission encaissée resterait à zéro — un travail invisible et faux.
-     * On refuse donc, en nommant ce qui manque.
+     * Ce qu'une note de REPRISE doit porter — est-elle validée ? signée par qui ? — est
+     * une question métier, pas une valeur qu'on invente.
+     *
+     * ── CE QUE LE JOUR VENU IL FAUDRA REFAIRE ─────────────────────────────────────
+     * ⚠ UNE NOTE PAR ÉCHÉANCE, ET C'EST UNE CONTRAINTE DU CALCUL.
+     * `getTrancheMontantCommissionEncaissee()` applique la proportion payée de la note
+     * ENTIÈRE à chacun de ses articles : une note groupant plusieurs échéances ne peut pas
+     * exprimer des taux d'encaissement différents. Avec UN article — lié à la fois à
+     * l'échéance et au revenu, sans quoi `getArticleMontant()` rend zéro — et UN règlement
+     * du même montant, la commission encaissée vaut exactement ce qu'on a versé.
+     *
+     * ⚠ PERDRE UN CHIFFRE EN SILENCE SERAIT PIRE QUE DE NE PAS LE REPRENDRE : d'où
+     * l'avertissement, qui nomme le montant laissé de côté et où le saisir.
      *
      * @param array<int, MutationOperation> $operations
      * @param Anomalie[]                    $anomalies
@@ -467,56 +478,18 @@ final class ReconstitueurDeTranche
             return;
         }
 
-        if ($repereRevenu === null) {
-            $anomalies[] = $this->refus($ligne, 'ouvertureCommissionEncaissee', sprintf(
-                'Une commission encaissée de %s est indiquée, mais la colonne « Commission · '
-                . 'Revenus » est vide : il n\'y a rien à facturer. Une note sans revenu vaudrait '
-                . 'zéro, et l\'encaissement serait perdu sans que rien ne le signale.',
+        $anomalies[] = Anomalie::avertissement(
+            Anomalie::VALEUR_INVALIDE,
+            sprintf(
+                'La commission encaissée (%s) n\'a pas été reprise : une note de commission '
+                . 'exige une validation et une signature que le formulaire de saisie ne '
+                . 'propose pas encore. Tout le reste de la ligne est repris ; enregistrez cet '
+                . 'encaissement depuis la rubrique Notes.',
                 number_format($montant, 2, ',', ' '),
-            ));
-
-            return;
-        }
-
-        $date = $this->date($ligne, 'ouvertureCommissionLe', 'Paiement', 'paidAt')
-            ?? $this->date($ligne, 'policeDateEffet', 'Paiement', 'paidAt');
-
-        $operations[] = new MutationOperation(
-            op: MutationOperation::OP_CREATE,
-            entityShortName: 'Note',
-            fields: $this->sansVide([
-                'nom' => 'Reprise — ' . ($ligne->texte('policeReference') ?: $this->nomDeLAffaire($ligne)),
-                'reference' => self::REFERENCE_OUVERTURE,
-                // Une note de DÉBIT adressée à l'ASSUREUR : c'est ce que le calcul de la
-                // commission encaissée retient (avec le client), et rien d'autre.
-                'type' => Note::TYPE_NOTE_DE_DEBIT,
-                'addressedTo' => Note::TO_ASSUREUR,
-                'assureur' => $assureur,
-                'description' => 'Situation reprise depuis un classeur de reprise.',
-            ]),
-            collections: [
-                'articles' => [new MutationOperation(
-                    op: MutationOperation::OP_CREATE,
-                    entityShortName: 'Article',
-                    fields: [
-                        // La quantité vaut 1 : l'article facture le revenu de cette
-                        // échéance en entier. Ce qui module l'encaissement, c'est le
-                        // RÈGLEMENT ci-dessous, non la quantité.
-                        'quantite' => 1.0,
-                        'tranche' => CleNaturelle::renvoiVers($repereTranche),
-                        'revenuFacture' => CleNaturelle::renvoiVers($repereRevenu),
-                    ],
-                )],
-                'paiements' => [new MutationOperation(
-                    op: MutationOperation::OP_CREATE,
-                    entityShortName: 'Paiement',
-                    fields: $this->sansVide([
-                        'montant' => $montant,
-                        'paidAt' => $date,
-                        'reference' => self::REFERENCE_OUVERTURE,
-                    ]),
-                )],
-            ],
+            ),
+            $ligne->feuille,
+            $ligne->numero,
+            $ligne->colonne('ouvertureCommissionEncaissee'),
         );
     }
 
@@ -751,6 +724,79 @@ final class ReconstitueurDeTranche
         }
 
         return (int) $renvoi->valeur;
+    }
+
+    /**
+     * LES CHARGEMENTS D'UNE LIGNE — une colonne par type, et le prorata REMONTÉ.
+     *
+     * ⚠ LA COLONNE PORTE LA PART DE L'ÉCHÉANCE, LA COTATION PORTE LE TOUT. C'est le prix
+     * d'une colonne totalisable : sans le prorata, une police à quatre échéances
+     * répéterait quatre fois les mêmes montants et la ligne de totaux les compterait
+     * quatre fois. On divise donc par la part pour retrouver ce que la cotation porte —
+     * et les quatre lignes redonnent le même montant, que la convergence n'écrit qu'une
+     * fois.
+     *
+     * ⚠ PART ABSENTE = LA LIGNE VAUT POUR TOUT. Une échéance sans part est une échéance
+     * unique : le montant lu EST celui de la cotation. Supposer autre chose diviserait par
+     * zéro, ou pire, par un nombre inventé. Sur les données réelles, les quatre-vingts
+     * tranches portent une part — le cas est théorique, il doit être écrit.
+     *
+     * ⚠ UN ZÉRO N'EST PAS UNE ABSENCE. Un chargement à 0 existe : c'est un poste ouvert et
+     * non facturé. On ne retient que les cellules VIDES, pour ne pas créer des lignes que
+     * personne n'a écrites.
+     *
+     * @param array<string, ColonneEtat> $colonnes
+     *
+     * @return array<string, array{0: string, 1: float}> code de colonne => [nom du type, montant]
+     */
+    private function chargementsDeLaLigne(LigneLue $ligne, array $colonnes): array
+    {
+        $facteur = $this->partDeLaLigne($ligne);
+        $chargements = [];
+
+        foreach ($colonnes as $code => $colonne) {
+            if (!str_starts_with($code, CatalogueDesColonnes::PREFIXE_CHARGEMENT)) {
+                continue;
+            }
+
+            $brut = $ligne->valeur($code);
+            if ($brut === null || trim((string) (is_scalar($brut) ? $brut : '')) === '') {
+                continue;
+            }
+
+            // Le libellé porte le nom du type : « Prime · Prime nette ».
+            $nom = str_contains($colonne->libelle, ' · ')
+                ? trim(explode(' · ', $colonne->libelle, 2)[1])
+                : $colonne->libelle;
+
+            $chargements[$code] = [$nom, (float) $this->nombreBrut($brut) / $facteur];
+        }
+
+        return $chargements;
+    }
+
+    /**
+     * LA PART DE L'ÉCHÉANCE, en FRACTION — jamais zéro.
+     *
+     * Elle sert à remonter le prorata des chargements. Rendre zéro ferait une division
+     * impossible ; rendre une part inventée ferait une prime fausse. En l'absence de
+     * part, la ligne vaut pour la totalité.
+     */
+    private function partDeLaLigne(LigneLue $ligne): float
+    {
+        $part = $this->nombre($ligne, 'tranchePart');
+
+        // ⚠ EN POINTS, comme partout : `Tranche::getFraction()` est la source unique du
+        // /100, et l'export écrit bien 25 pour un quart.
+        return $part === null || $part <= 0.0 ? 1.0 : $part / 100.0;
+    }
+
+    /** Un nombre de cellule, dont la typographie humaine est admise. */
+    private function nombreBrut(mixed $brut): float
+    {
+        return is_numeric($brut)
+            ? (float) $brut
+            : \App\Services\Bordereau\BordereauLigneNormaliseur::nettoyerNombre((string) $brut);
     }
 
     /**

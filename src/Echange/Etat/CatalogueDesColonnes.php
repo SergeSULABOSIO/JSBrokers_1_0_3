@@ -2,6 +2,8 @@
 
 namespace App\Echange\Etat;
 
+use App\Echange\Service\ResolveurDeRenvois;
+
 /**
  * LES COLONNES DE L'ÉTAT, DÉCLARÉES UNE FOIS.
  *
@@ -19,15 +21,27 @@ namespace App\Echange\Etat;
  */
 final class CatalogueDesColonnes
 {
+    /** Préfixe du code d'une colonne de chargement — voir `codeDynamique()`. */
+    public const PREFIXE_CHARGEMENT = 'chargement_';
+
+    /** Préfixe du code d'une colonne de type de revenu. */
+    public const PREFIXE_REVENU = 'revenu_';
+
     /**
-     * @param string $taxeCourtier nom de la taxe dont le COURTIER est redevable (ARCA…)
-     * @param string $taxeAssureur nom de la taxe dont l'ASSUREUR est redevable (TVA…)
+     * @param string   $taxeCourtier nom de la taxe dont le COURTIER est redevable (ARCA…)
+     * @param string   $taxeAssureur nom de la taxe dont l'ASSUREUR est redevable (TVA…)
+     * @param string[] $chargements  types de chargement du cabinet, dans l'ordre d'affichage
+     * @param string[] $revenus      types de revenu du cabinet
      *
      * @return array<string, ColonneEtat>
      */
-    public static function pour(string $taxeCourtier, string $taxeAssureur): array
-    {
-        return [
+    public static function pour(
+        string $taxeCourtier,
+        string $taxeAssureur,
+        array $chargements = [],
+        array $revenus = [],
+    ): array {
+        $catalogue = [
             // ── Identité ────────────────────────────────────────────────────────────
             // ⚠ UNE SUPPRESSION NE SE DÉDUIT JAMAIS, ELLE S'ÉCRIT. Un identifiant effacé
             // par mégarde en triant le fichier ne doit pas pouvoir vider une échéance.
@@ -101,22 +115,14 @@ final class CatalogueDesColonnes
             )->enSaisie('Client.portefeuille'),
 
             // ── La prime ────────────────────────────────────────────────────────────
-            // ⚠ C'EST CETTE COLONNE QUI REND LA PRIME REPRENABLE, ET ELLE MANQUAIT. La
-            // prime ne se saisit pas : elle SORT des chargements de la cotation. Un fichier
-            // qui ne porte que « Prime · Totale » rend, à la réimportation, des cotations
-            // SANS PRIME — et rien ne le signale.
+            // ⚠ LA COMPOSITION A UNE COLONNE PAR CHARGEMENT, et elle est posée plus bas
+            // par `colonnesDeChargement()` : ces colonnes dépendent du CATALOGUE DU
+            // CABINET, qu'un tableau statique ne peut pas connaître.
             //
-            // Plusieurs chargements dans une cellule, séparés par « ; » : c'est la
-            // convention du format (ColonneDEchange::$multiple), et c'est elle qui permet à
-            // UNE ligne de porter les N chargements d'une cotation sans seconde feuille.
-            'primeChargements' => ColonneEtat::texte(
-                'Prime · Chargements',
-                'La prime, décomposée : « Prime nette = 10000 ; Frais accessoires = 500 ». Les '
-                . 'noms sont ceux de vos types de chargement. C\'est de cette décomposition '
-                . 'que SORT la prime totale ; la colonne « Prime · Totale » n\'en est que le '
-                . 'résultat, et n\'est pas relue.',
-            )->enSaisie('Cotation.chargements'),
-
+            // Elle tenait auparavant dans une seule cellule texte — « Prime nette = 59225 ;
+            // Fronting = 8883.75 ». C'était une entorse à la règle qui ouvre ce fichier :
+            // une case qui empile des montants ne se totalise plus, ne se trie plus, ne se
+            // compare plus d'une ligne à l'autre. Elle redevenait du commentaire.
             'primeTotale' => ColonneEtat::montant('Prime · Totale', 'Prime due par le client sur cette tranche.'),
             'primePayee' => ColonneEtat::montant(
                 'Prime · Payée',
@@ -374,5 +380,156 @@ final class CatalogueDesColonnes
             )->enSaisie('ReversementRetroAgent.paidAt'),
 
         ];
+
+        // ⚠ CHAQUE COLONNE DANS SON GROUPE, ET NON À LA FIN DU FICHIER. Ajoutées par une
+        // simple union, les colonnes dynamiques atterrissaient en queue — à quatre-vingts
+        // colonnes de « Prime · Totale », qu'elles décomposent pourtant. On les aurait
+        // cherchées à l'autre bout de la feuille, et l'alternance des familles en tête
+        // d'export aurait annoncé « Prime » deux fois, séparées par tout le reste.
+        //
+        // Elles précèdent le total qu'elles composent : on lit les termes, puis la somme.
+        $catalogue = self::inserer($catalogue, 'primeTotale', self::colonnesDeChargement($chargements));
+
+        return self::inserer($catalogue, 'commissionTtc', self::colonnesDeRevenu($revenus));
+    }
+
+    /**
+     * Insère des colonnes JUSTE AVANT une autre, en gardant l'ordre du catalogue.
+     *
+     * Si le repère n'existe pas — l'utilisateur a restreint son export —, les colonnes
+     * rejoignent la fin plutôt que de disparaître : mieux vaut une colonne mal placée
+     * qu'une colonne absente.
+     *
+     * @param array<string, ColonneEtat> $catalogue
+     * @param array<string, ColonneEtat> $ajouts
+     *
+     * @return array<string, ColonneEtat>
+     */
+    private static function inserer(array $catalogue, string $avant, array $ajouts): array
+    {
+        if ($ajouts === []) {
+            return $catalogue;
+        }
+
+        if (!isset($catalogue[$avant])) {
+            return $catalogue + $ajouts;
+        }
+
+        $sortie = [];
+        foreach ($catalogue as $code => $colonne) {
+            if ($code === $avant) {
+                foreach ($ajouts as $codeAjout => $ajout) {
+                    $sortie[$codeAjout] = $ajout;
+                }
+            }
+            $sortie[$code] = $colonne;
+        }
+
+        return $sortie;
+    }
+
+    /**
+     * UNE COLONNE PAR TYPE DE CHARGEMENT — et c'est la prime, décomposée.
+     *
+     * ⚠ CES MONTANTS SONT AU PRORATA DE L'ÉCHÉANCE, jamais ceux de la police. Les
+     * chargements vivent sur la cotation ; la ligne, elle, est une TRANCHE. Y écrire le
+     * montant de la police ferait qu'une police à quatre échéances répète quatre fois les
+     * mêmes montants — et la ligne de totaux compterait chaque chargement quatre fois. Le
+     * chiffre resterait plausible, et faux.
+     *
+     * Au prorata, la somme des colonnes de chargement égale « Prime · Totale » de la MÊME
+     * ligne, et le total de la feuille est juste. C'est la propriété que `RepriseTest`
+     * vérifie.
+     *
+     * ⚠ ET CE SONT DES SAISIES : un chargement EST un montant écrit
+     * (`ChargementPourPrime::$montantFlatExceptionel`), au contraire d'un revenu, qui se
+     * calcule d'un taux. La reprise remonte le prorata pour retrouver le montant de la
+     * cotation.
+     *
+     * @param string[] $types
+     *
+     * @return array<string, ColonneEtat>
+     */
+    private static function colonnesDeChargement(array $types): array
+    {
+        $colonnes = [];
+
+        foreach ($types as $nom) {
+            $code = self::codeDynamique(self::PREFIXE_CHARGEMENT, $nom);
+            if ($code === null || isset($colonnes[$code])) {
+                continue;
+            }
+
+            $colonnes[$code] = ColonneEtat::montant(
+                'Prime · ' . $nom,
+                sprintf(
+                    'Part de « %s » revenant à CETTE échéance. La somme des colonnes de '
+                    . 'chargement fait la prime totale de la ligne. Corrigez-la pour reprendre '
+                    . 'une prime : c\'est d\'elles que la prime SORT, « Prime · Totale » n\'en '
+                    . 'étant que le résultat.',
+                    $nom,
+                ),
+            )->enSaisie('Cotation.chargements');
+        }
+
+        return $colonnes;
+    }
+
+    /**
+     * UNE COLONNE PAR TYPE DE REVENU — ce que chacun rapporte sur cette échéance.
+     *
+     * ⚠ CE SONT DES RÉSULTATS, et la dissymétrie avec les chargements est voulue. Un
+     * revenu n'a pas de montant écrit : il se calcule d'un taux, lui-même le plus souvent
+     * hérité du risque de l'affaire. Un montant produit ne permet pas de retrouver ce
+     * taux — c'est « Commission · Revenus » qui dit quels types s'appliquent, et elle
+     * reste la colonne de saisie.
+     *
+     * Au prorata de l'échéance, comme les chargements : leur somme égale
+     * « Commission · Ttc » de la même ligne.
+     *
+     * @param string[] $types
+     *
+     * @return array<string, ColonneEtat>
+     */
+    private static function colonnesDeRevenu(array $types): array
+    {
+        $colonnes = [];
+
+        foreach ($types as $nom) {
+            $code = self::codeDynamique(self::PREFIXE_REVENU, $nom);
+            if ($code === null || isset($colonnes[$code])) {
+                continue;
+            }
+
+            $colonnes[$code] = ColonneEtat::montant(
+                'Commission · ' . $nom,
+                sprintf(
+                    'Commission TTC que « %s » rapporte sur cette échéance. Calculé : la somme '
+                    . 'des colonnes de revenu fait « Commission · Ttc ». Pour qu\'un type '
+                    . 's\'applique, nommez-le dans « Commission · Revenus ».',
+                    $nom,
+                ),
+            );
+        }
+
+        return $colonnes;
+    }
+
+    /**
+     * LE CODE D'UNE COLONNE DYNAMIQUE, stable et sans collision.
+     *
+     * ⚠ LA FORME COMPARABLE EST EMPRUNTÉE, JAMAIS RÉÉCRITE. `ResolveurDeRenvois` en est la
+     * source unique dans tout le projet ; un second découpage — un accent, un espace de
+     * plus — ferait deux colonnes là où l'utilisateur n'en voit qu'une.
+     *
+     * ⚠ ET C'EST ELLE QUI DÉDUPLIQUE. Le catalogue réel porte « Prime nette » SIX fois,
+     * séquelle d'une initialisation rejouée : sans cette normalisation, six colonnes
+     * identiques côte à côte.
+     */
+    public static function codeDynamique(string $prefixe, ?string $nom): ?string
+    {
+        $forme = ResolveurDeRenvois::normaliser((string) $nom);
+
+        return $forme === '' ? null : $prefixe . str_replace(' ', '_', $forme);
     }
 }

@@ -6,10 +6,13 @@ use App\Ai\Finance\EconomieTranche;
 use App\Echange\Reprise\ValeursMultiples;
 use App\Echange\Service\Progression;
 use App\Entity\Avenant;
+use App\Entity\Chargement;
+use App\Entity\ChargementPourPrime;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Taxe;
 use App\Entity\Tranche;
+use App\Entity\TypeRevenu;
 use App\Repository\TaxeRepository;
 use App\Service\Retro\BeneficiaireRetroFactory;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
@@ -87,7 +90,12 @@ final class EtatDuPortefeuille
     {
         $courtier = $this->nomDeLaTaxe($entreprise, Taxe::REDEVABLE_COURTIER);
         $assureur = $this->nomDeLaTaxe($entreprise, Taxe::REDEVABLE_ASSUREUR);
-        $catalogue = CatalogueDesColonnes::pour($courtier, $assureur);
+        $catalogue = CatalogueDesColonnes::pour(
+            $courtier,
+            $assureur,
+            $this->typesDeChargement($entreprise),
+            $this->typesDuCabinet($entreprise, TypeRevenu::class),
+        );
 
         if ($retenues === []) {
             return $catalogue;
@@ -214,6 +222,13 @@ final class EtatDuPortefeuille
         // se présenterait comme une valeur.
         $eco = EconomieTranche::depuis($tranche);
 
+        // ⚠ LE PRORATA DE L'ÉCHÉANCE, ET C'EST TOUT L'ENJEU DES COLONNES QUI SUIVENT.
+        // Les chargements et les revenus vivent sur la COTATION ; la ligne, elle, est une
+        // TRANCHE. Y porter les montants de la police ferait qu'une police à quatre
+        // échéances les répète quatre fois — et la ligne de totaux compterait chaque
+        // chargement quatre fois, pour un chiffre resté parfaitement plausible.
+        $facteur = $this->helper->getTrancheTauxFactor($tranche);
+
         return [
             // ⚠ VIDE À L'EXPORT, ET C'EST VOULU. La colonne existe pour que l'utilisateur
             // puisse ÉCRIRE SUPPRIMER ; la pré-remplir d'une action reviendrait à proposer
@@ -255,10 +270,10 @@ final class EtatDuPortefeuille
             'assureur' => $cotation?->getAssureur()?->getNom(),
             'portefeuille' => $piste?->getClient()?->getPortefeuille()?->getNom(),
 
-            // ⚠ CE QUI PRODUIT LES CHIFFRES, ET NON SEULEMENT CE QU'ILS VALENT. Sans ces
-            // deux colonnes, le fichier ne porte que des résultats : réimporté, il rend des
-            // cotations SANS PRIME et SANS COMMISSION — d'aspect normal, et fausses.
-            'primeChargements' => self::chargementsDe($cotation),
+            // ⚠ CE QUI PRODUIT LES CHIFFRES, ET NON SEULEMENT CE QU'ILS VALENT. Sans cette
+            // colonne, le fichier ne porte que des résultats : réimporté, il rend des
+            // cotations SANS COMMISSION — d'aspect normal, et fausses. La prime, elle, a
+            // désormais une colonne PAR CHARGEMENT (voir `parChargement()`).
             'commissionRevenus' => self::revenusDe($cotation),
 
             'primeTotale' => $eco['primeTranche'] ?? null,
@@ -317,61 +332,80 @@ final class EtatDuPortefeuille
             'retroAgentReferences' => $retroAgent['references'],
             'retroAgentLots' => $retroAgent['lots'],
             'retroAgentComptes' => $retroAgent['comptes'],
-        ];
+        ]
+            + $this->parChargement($cotation, $facteur)
+            + $this->parRevenu($cotation, $facteur);
     }
 
     /**
-     * LA COMPOSITION DE LA PRIME, telle que la cotation la porte.
+     * LA PRIME, DÉCOMPOSÉE — un montant par type de chargement, au prorata de l'échéance.
      *
-     * ⚠ CETTE COLONNE EST CE QUI REND LA PRIME REPRENABLE. La prime ne se saisit nulle
-     * part : elle est la SOMME des chargements de la cotation
-     * (`IndicatorCalculationHelper`, « primeTotale += montantFlatExceptionel »). Un
-     * fichier qui ne porterait que « Prime · Totale » rendrait, réimporté, des cotations
-     * sans prime — et rien ne le signalerait, puisque le total se recalculerait à zéro
-     * sans erreur.
+     * ⚠ LES DOUBLONS DE TYPE SE CUMULENT. Constaté sur les données réelles : 71 cotations
+     * sur 80 portent DEUX lignes du même type — l'une à 2 056,89 et l'autre à 0, par
+     * exemple. Écraser au lieu de cumuler ferait une composition qui ne somme plus à la
+     * prime, et l'écart passerait pour une erreur de calcul.
      *
-     * Le montant d'un chargement n'a qu'une source, `montantFlatExceptionel` : le
-     * catalogue `Chargement` ne porte ni taux ni montant. Un chargement sans montant sort
-     * donc sous son seul nom.
+     * ⚠ UN CHARGEMENT SANS TYPE COMPTE QUAND MÊME. Le type est nullable, et
+     * `primeTotale += montantFlatExceptionel` ne le regarde pas. Faute de colonne où le
+     * ranger, son montant irait grossir le total sans apparaître nulle part : on le range
+     * donc sous son propre nom, qui a sa colonne comme les autres.
+     *
+     * @return array<string, float>
      */
-    private static function chargementsDe(?Cotation $cotation): ?string
+    private function parChargement(?Cotation $cotation, float $facteur): array
     {
         if ($cotation === null) {
-            return null;
+            return [];
         }
 
-        // ⚠ UN MÊME TYPE PEUT REVENIR, ET SES MONTANTS SE CUMULENT. Constaté sur les
-        // données réelles : une cotation portait DEUX lignes « Frais accessoires », l'une
-        // à 2 056,89 et l'autre à 0. Indexer par nom sans cumuler écrasait la première —
-        // la composition annonçait alors 79 335,25 quand la prime valait 81 392,14, et
-        // l'écart passait pour une erreur de calcul.
-        //
-        // Cumuler, c'est perdre le fait qu'il y avait deux lignes. C'est assumé : ce
-        // classeur reprend une SITUATION, et la situation, c'est la prime. Deux lignes de
-        // même type dont l'une à zéro sont d'ailleurs une scorie de saisie, pas une
-        // intention. Le dictionnaire le dit.
-        // ⚠ UN CHARGEMENT SANS TYPE COMPTE QUAND MÊME DANS LA PRIME. Le type est
-        // nullable, et `primeTotale += montantFlatExceptionel` ne le regarde pas. L'écarter
-        // faute de nom ferait donc une composition qui ne somme plus à la prime — et cette
-        // égalité est la seule propriété qui fasse tenir la reprise. On se replie sur le
-        // nom propre du chargement, puis sur un libellé de secours.
-        $termes = [];
+        $valeurs = [];
         foreach ($cotation->getChargements() as $chargement) {
-            $nom = $chargement->getType()?->getNom();
-            if ($nom === null || $nom === '') {
-                $nom = $chargement->getNom();
-            }
-            if ($nom === null || trim($nom) === '') {
-                $nom = 'Chargement sans nom';
+            $code = CatalogueDesColonnes::codeDynamique(
+                CatalogueDesColonnes::PREFIXE_CHARGEMENT,
+                $chargement->getType()?->getNom() ?: $chargement->getNom(),
+            );
+            if ($code === null) {
+                continue;
             }
 
-            $montant = (float) ($chargement->getMontantFlatExceptionel() ?? 0.0);
-            $termes[$nom] = ValeursMultiples::montant(
-                ($termes[$nom]['valeur'] ?? 0.0) + $montant,
-            );
+            $valeurs[$code] = ($valeurs[$code] ?? 0.0)
+                + (float) ($chargement->getMontantFlatExceptionel() ?? 0.0) * $facteur;
         }
 
-        return $termes === [] ? null : ValeursMultiples::ecrire($termes);
+        return $valeurs;
+    }
+
+    /**
+     * CE QUE CHAQUE TYPE DE REVENU RAPPORTE sur cette échéance, taxes comprises.
+     *
+     * ⚠ UN RÉSULTAT, ET NON UNE SAISIE. Un revenu n'a pas de montant écrit : il se calcule
+     * d'un taux, lui-même le plus souvent hérité du risque de l'affaire. Un montant
+     * produit ne permet pas de retrouver ce taux — c'est « Commission · Revenus » qui dit
+     * quels types s'appliquent, et elle reste la colonne relue à l'import.
+     *
+     * @return array<string, float>
+     */
+    private function parRevenu(?Cotation $cotation, float $facteur): array
+    {
+        if ($cotation === null) {
+            return [];
+        }
+
+        $valeurs = [];
+        foreach ($cotation->getRevenus() as $revenu) {
+            $code = CatalogueDesColonnes::codeDynamique(
+                CatalogueDesColonnes::PREFIXE_REVENU,
+                $revenu->getTypeRevenu()?->getNom() ?: $revenu->getNom(),
+            );
+            if ($code === null) {
+                continue;
+            }
+
+            $valeurs[$code] = ($valeurs[$code] ?? 0.0)
+                + $this->helper->getRevenuMontantTTC($revenu) * $facteur;
+        }
+
+        return $valeurs;
     }
 
     /**
@@ -423,6 +457,89 @@ final class EtatDuPortefeuille
         }
 
         return $termes === [] ? null : ValeursMultiples::ecrire($termes);
+    }
+
+    /**
+     * LES TYPES DE CHARGEMENT — le catalogue, ET les orphelins qui n'y figurent pas.
+     *
+     * ⚠ UN CHARGEMENT SANS TYPE COMPTE DANS LA PRIME. `ChargementPourPrime::$type` est
+     * nullable, et `primeTotale += montantFlatExceptionel` ne le regarde pas. S'en tenir
+     * au catalogue laisserait ces montants SANS COLONNE OÙ ÊTRE RANGÉS : ils
+     * disparaîtraient du fichier tout en pesant dans « Prime · Totale », et la somme des
+     * colonnes cesserait de faire la prime — la seule propriété qui fasse tenir cette
+     * décomposition.
+     *
+     * On ajoute donc les noms propres de ces chargements-là. Ils viennent des DONNÉES et
+     * non du catalogue : un gabarit vierge ne les portera pas, ce qui est juste — on ne
+     * propose pas d'écrire dans un poste qui n'existe pas au catalogue.
+     *
+     * @return string[]
+     */
+    private function typesDeChargement(Entreprise $entreprise): array
+    {
+        $noms = $this->typesDuCabinet($entreprise, Chargement::class);
+
+        $orphelins = $this->em->createQueryBuilder()
+            ->select('DISTINCT c.nom')
+            ->from(ChargementPourPrime::class, 'c')
+            ->andWhere('c.entreprise = :entreprise')
+            ->andWhere('c.type IS NULL')
+            ->andWhere('c.nom IS NOT NULL')
+            ->setParameter('entreprise', $entreprise)
+            ->orderBy('c.nom', 'ASC')
+            ->getQuery()
+            ->getScalarResult();
+
+        foreach ($orphelins as $ligne) {
+            $nom = trim((string) ($ligne['nom'] ?? ''));
+            if ($nom !== '') {
+                $noms[] = $nom;
+            }
+        }
+
+        return $noms;
+    }
+
+    /**
+     * LES TYPES DU CATALOGUE DU CABINET, dans l'ordre où on veut les lire.
+     *
+     * ⚠ TOUS LES TYPES DÉCLARÉS, ET NON LES SEULS EMPLOYÉS. Sur les seuls types employés,
+     * un GABARIT VIERGE n'aurait aucune colonne de chargement — or c'est justement là
+     * qu'on doit pouvoir écrire une prime. Le fichier porte donc quelques colonnes vides,
+     * ce qui est le prix d'un gabarit utilisable.
+     *
+     * ⚠ ET LES DOUBLONS SONT LAISSÉS PASSER ICI. Le catalogue réel porte « Prime nette »
+     * six fois ; c'est `CatalogueDesColonnes::codeDynamique()` qui les ramène à une seule
+     * colonne, en un seul endroit — dédupliquer des deux côtés, ce serait deux règles à
+     * tenir en accord.
+     *
+     * @param class-string $entite
+     *
+     * @return string[]
+     */
+    private function typesDuCabinet(Entreprise $entreprise, string $entite): array
+    {
+        $qb = $this->em->createQueryBuilder()
+            ->select('t.nom')
+            ->from($entite, 't')
+            ->andWhere('t.entreprise = :entreprise')
+            ->setParameter('entreprise', $entreprise);
+
+        // L'ordre métier quand il existe : `Chargement::$fonction` range la prime nette
+        // avant le fronting, les frais avant les taxes. Le nom départage le reste.
+        if ($entite === Chargement::class) {
+            $qb->addOrderBy('t.fonction', 'ASC');
+        }
+
+        $noms = [];
+        foreach ($qb->addOrderBy('t.nom', 'ASC')->getQuery()->getScalarResult() as $ligne) {
+            $nom = trim((string) ($ligne['nom'] ?? ''));
+            if ($nom !== '') {
+                $noms[] = $nom;
+            }
+        }
+
+        return $noms;
     }
 
     /**

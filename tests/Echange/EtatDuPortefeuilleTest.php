@@ -3,6 +3,8 @@
 namespace App\Tests\Echange;
 
 use App\Ai\Finance\EconomieTranche;
+use App\Ai\Scope\AiScope;
+use App\Ai\Tool\EchangeConsulterTool;
 use App\Echange\Etat\CatalogueDesColonnes;
 use App\Echange\Etat\Charte;
 use App\Echange\Etat\EcrivainEtat;
@@ -15,6 +17,7 @@ use App\Services\Search\CotationSouscriptionScope;
 use App\Echange\Classeur\EcrivainJsbx;
 use App\Entity\Assureur;
 use App\Entity\Avenant;
+use App\Entity\Chargement;
 use App\Entity\ChargementPourPrime;
 use App\Entity\Client;
 use App\Entity\Cotation;
@@ -319,9 +322,14 @@ class EtatDuPortefeuilleTest extends KernelTestCase
         ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
 
         $entetes = array_keys($this->ligneDe($this->produire($entreprise, $invite)));
+
+        // ⚠ LA RÉFÉRENCE EST LE SERVICE, PAS UN CATALOGUE FABRIQUÉ À CÔTÉ. Les colonnes
+        // dépendent désormais du cabinet — une par type de chargement, une par type de
+        // revenu. Reconstruire ici un catalogue « équivalent » reviendrait à recopier cette
+        // règle, et le test finirait par vérifier la copie plutôt que l'original.
         $catalogue = array_map(
             static fn ($colonne) => $colonne->libelle,
-            array_values(CatalogueDesColonnes::pour('ARCA-ETAT', 'TVA-ETAT')),
+            array_values(static::getContainer()->get(EtatDuPortefeuille::class)->colonnes($entreprise)),
         );
 
         self::assertSame(
@@ -410,39 +418,101 @@ class EtatDuPortefeuilleTest extends KernelTestCase
     }
 
     /**
-     * ⚠ LA COMPOSITION DE LA PRIME SOMME À LA PRIME — c\'est LA propriété qui fonde la reprise.
+     * ⚠ LA SOMME DES COLONNES DE CHARGEMENT ÉGALE « Prime · Totale » — LIGNE À LIGNE.
      *
-     * La prime ne se saisit nulle part : elle est la SOMME des chargements de la cotation.
-     * Un fichier qui ne porterait que « Prime · Totale » rendrait, réimporté, des cotations
-     * SANS PRIME — et rien ne le signalerait, le total se recalculant à zéro sans erreur.
+     * C'est LA propriété du chantier, et elle tient à un détail : les chargements vivent
+     * sur la COTATION, la ligne est une TRANCHE. Y porter les montants de la police ferait
+     * qu'une police à quatre échéances les répète quatre fois — et la ligne de totaux
+     * compterait chaque chargement quatre fois, pour un chiffre resté plausible.
      *
-     * Vérifié sur le portefeuille réel du cabinet au moment de l\'écriture : 79 lignes,
-     * aucun écart. Deux défauts ont été trouvés par ce contrôle — un type de chargement
-     * présent DEUX fois sur une même cotation (71 cotations sur 80 en portent), dont
-     * l\'indexation par nom écrasait le premier terme ; et un chargement sans type, écarté
-     * faute de nom alors que son montant compte dans la prime.
+     * Au prorata de l'échéance, la somme des colonnes fait la prime de SA ligne. Sans ce
+     * test, l'erreur ne se verrait qu'en additionnant un export à la main.
+     *
+     * Vérifié sur le portefeuille réel du cabinet : 79 lignes, aucun écart — ni sur la
+     * prime, ni sur la commission.
      */
-    public function testLaCompositionDeLaPrimeSommeALaPrimeDeLaCotation(): void
+    public function testLaSommeDesColonnesDeChargementFaitLaPrimeDeLaLigne(): void
     {
         ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
 
+        $colonnes = static::getContainer()->get(EtatDuPortefeuille::class)->colonnes($entreprise);
         $ligne = $this->ligneDe($this->produire($entreprise, $invite));
 
-        $refus = [];
-        $termes = ValeursMultiples::lire((string) $ligne['Prime · Chargements'], $refus);
-
-        self::assertSame([], $refus, 'Notre propre écriture doit se relire sans refus.');
-        self::assertNotSame([], $termes, 'La composition ne peut pas être vide : la prime en sort.');
-
         $somme = 0.0;
-        foreach ($termes as $terme) {
-            $somme += (float) ($terme['valeur'] ?? 0.0);
+        $trouvees = 0;
+        foreach ($colonnes as $code => $colonne) {
+            if (!str_starts_with($code, CatalogueDesColonnes::PREFIXE_CHARGEMENT)) {
+                continue;
+            }
+            ++$trouvees;
+            $somme += (float) ($ligne[$colonne->libelle] ?? 0.0);
         }
 
-        // La part de la tranche est de 100 % dans le jeu de test : la prime de la tranche
-        // est donc celle de la cotation, et les deux se comparent directement.
-        self::assertSame(100.0, (float) $ligne['Tranche · Part (%)']);
+        self::assertGreaterThan(0, $trouvees, 'Le cabinet a des types de chargement : ils doivent avoir leurs colonnes.');
         self::assertEqualsWithDelta((float) $ligne['Prime · Totale'], $somme, 0.01);
+    }
+
+    /**
+     * ⚠ ET LA SOMME DES COLONNES DE REVENU FAIT « Commission · TTC », même raison.
+     *
+     * Ces colonnes-là sont des RÉSULTATS : un revenu n'a pas de montant écrit, il se
+     * calcule d'un taux souvent hérité du risque. Elles n'en doivent pas moins se
+     * totaliser juste — c'est tout l'objet d'une colonne numérique.
+     */
+    public function testLaSommeDesColonnesDeRevenuFaitLaCommission(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+
+        $colonnes = static::getContainer()->get(EtatDuPortefeuille::class)->colonnes($entreprise);
+        $ligne = $this->ligneDe($this->produire($entreprise, $invite));
+
+        $somme = 0.0;
+        $trouvees = 0;
+        foreach ($colonnes as $code => $colonne) {
+            if (!str_starts_with($code, CatalogueDesColonnes::PREFIXE_REVENU)) {
+                continue;
+            }
+            ++$trouvees;
+            $somme += (float) ($ligne[$colonne->libelle] ?? 0.0);
+        }
+
+        self::assertGreaterThan(0, $trouvees);
+        self::assertEqualsWithDelta((float) $ligne['Commission · TTC'], $somme, 0.01);
+    }
+
+    /**
+     * ⚠ UN TYPE PRÉSENT PLUSIEURS FOIS AU CATALOGUE NE DONNE QU'UNE COLONNE.
+     *
+     * Le catalogue réel du cabinet porte « Prime nette » SIX fois — séquelle d'une
+     * initialisation rejouée. Sans déduplication, six colonnes identiques côte à côte, et
+     * une prime comptée six fois si l'une d'elles était remplie.
+     */
+    public function testUnTypeEnDoubleNeDonneQuUneColonne(): void
+    {
+        ['entreprise' => $entreprise] = $this->seed();
+
+        $em = $this->em();
+        foreach (['Prime État Doublon', 'PRIME  état   doublon'] as $nom) {
+            $doublon = (new Chargement())->setNom($nom)->setFonction(1);
+            $doublon->setEntreprise($entreprise);
+            $em->persist($doublon);
+        }
+        $em->flush();
+
+        $colonnes = static::getContainer()->get(EtatDuPortefeuille::class)->colonnes($entreprise);
+
+        $codes = [];
+        foreach (array_keys($colonnes) as $code) {
+            if (str_starts_with($code, CatalogueDesColonnes::PREFIXE_CHARGEMENT)) {
+                $codes[] = $code;
+            }
+        }
+
+        self::assertSame($codes, array_unique($codes), 'Deux écritures du même nom font une seule colonne.');
+        self::assertContains(
+            CatalogueDesColonnes::codeDynamique(CatalogueDesColonnes::PREFIXE_CHARGEMENT, 'Prime État Doublon'),
+            $codes,
+        );
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -904,6 +974,48 @@ class EtatDuPortefeuilleTest extends KernelTestCase
     // ─────────────────────────────────────────────────────────────────────────────
 
     /**
+     * ⚠ KET VOIT EXACTEMENT LES COLONNES QUE LE FICHIER PORTE — les dynamiques comprises.
+     *
+     * La doctrine de la rubrique : « une capacité présente à l'écran et absente du chat
+     * est un défaut, au même titre qu'un test rouge ». Elle vaut pour les COLONNES : un
+     * courtier qui lit « Prime · Fronting » dans son export et le demande à Ket doit être
+     * compris.
+     *
+     * ⚠ ET C'EST LE POINT DE PASSAGE UNIQUE QUI LE GARANTIT. Le fichier, le gabarit,
+     * l'écran de choix, l'import et les deux outils de Ket appellent tous
+     * `EtatDuPortefeuille::colonnes($entreprise)` — personne n'appelle le catalogue
+     * directement. Le jour où quelqu'un le ferait, il raterait les colonnes du cabinet
+     * sans s'en apercevoir : ce test le dirait.
+     */
+    public function testKetVoitLesMemesColonnesQueLeFichier(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+
+        $attendues = array_keys(
+            static::getContainer()->get(EtatDuPortefeuille::class)->colonnes($entreprise),
+        );
+
+        $resultat = static::getContainer()->get(EchangeConsulterTool::class)->execute(
+            ['sujet' => 'colonnes'],
+            new AiScope($entreprise, $invite, null),
+        );
+
+        $vues = [];
+        foreach ($resultat->data['colonnes_etat'] ?? [] as $colonne) {
+            $vues[] = $colonne['code'];
+        }
+
+        self::assertSame($attendues, $vues, 'Ket doit énumérer exactement les colonnes du fichier.');
+
+        // Nommément : les colonnes du CABINET, celles qu'un catalogue figé ne connaîtrait pas.
+        $dynamiques = array_filter(
+            $vues,
+            static fn (string $code): bool => str_starts_with($code, CatalogueDesColonnes::PREFIXE_CHARGEMENT),
+        );
+        self::assertNotEmpty($dynamiques, 'Les colonnes de chargement du cabinet doivent en être.');
+    }
+
+    /**
      * ⚠ LE TEST QUI FAIT LA PARITÉ, ET QUI DOIT RESTER.
      *
      * La doctrine de la rubrique est écrite dans PariteKetImportTest : « une capacité
@@ -971,6 +1083,16 @@ class EtatDuPortefeuilleTest extends KernelTestCase
         $correspondances = self::CORRESPONDANCES;
 
         foreach (array_keys($ligne) as $cle) {
+            // ⚠ LES COLONNES DYNAMIQUES SE CLASSENT PAR PRÉFIXE, ET NON NOMMÉMENT. Il y en
+            // a une par type de chargement et par type de revenu du cabinet : les nommer
+            // dans ce test le rendrait faux au premier cabinet qui ajoute un type, et
+            // impossible à tenir. Ce sont des DÉCOMPOSITIONS de « Prime · Totale » et de
+            // « Commission · TTC », que Ket dit déjà — il ne perd rien au change.
+            if (str_starts_with($cle, CatalogueDesColonnes::PREFIXE_CHARGEMENT)
+                || str_starts_with($cle, CatalogueDesColonnes::PREFIXE_REVENU)) {
+                continue;
+            }
+
             self::assertTrue(
                 in_array($cle, $horsEconomie, true) || isset($correspondances[$cle]),
                 sprintf(
@@ -1423,6 +1545,11 @@ class EtatDuPortefeuilleTest extends KernelTestCase
         $tables = [
             'echange_occurrence', 'paiement_prime', 'tranche', 'chargement_pour_prime',
             'revenu_pour_courtier', 'avenant', 'cotation', 'type_revenu', 'assureur',
+            // ⚠ `chargement` MANQUAIT, et son absence a fait tomber vingt-quatre tests d'un
+            // coup : le cabinet ne pouvait plus être supprimé (clé étrangère), et chaque
+            // test suivant échouait à son propre nettoyage. Une table oubliée ici ne casse
+            // pas le test qui l'écrit — elle casse tous ceux d'après.
+            'chargement',
             'piste', 'client', 'invite', 'taxe',
         ];
         foreach ($tables as $table) {
