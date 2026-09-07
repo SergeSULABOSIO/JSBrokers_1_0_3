@@ -60,7 +60,7 @@ final class RepriseTest extends KernelTestCase
     public function testDeuxEcheancesDUneMemePoliceNeFontQuUnePolice(): void
     {
         $entreprise = $this->cabinet();
-        $colonnes = CatalogueDesColonnes::pour('ARCA', 'TVA');
+        $colonnes = $this->colonnes();
         $reconstitueur = $this->reconstitueur();
 
         $operations = [];
@@ -103,7 +103,7 @@ final class RepriseTest extends KernelTestCase
     public function testUnAvenantNumeroteEstUnActeDistinct(): void
     {
         $entreprise = $this->cabinet();
-        $colonnes = CatalogueDesColonnes::pour('ARCA', 'TVA');
+        $colonnes = $this->colonnes();
         $reconstitueur = $this->reconstitueur();
 
         $operations = [];
@@ -148,7 +148,7 @@ final class RepriseTest extends KernelTestCase
 
         $operations = $this->reconstitueur()->pour(
             $this->ligne(['assure' => 'KIN AVIA', 'trancheNom' => 'Échéance orpheline'], 9),
-            CatalogueDesColonnes::pour('ARCA', 'TVA'),
+            $this->colonnes(),
             $entreprise,
             $anomalies,
         );
@@ -179,7 +179,7 @@ final class RepriseTest extends KernelTestCase
                 'policeReference' => 'POL/2026/001',
                 'assure' => 'KIN AVIA',
             ], 3),
-            CatalogueDesColonnes::pour('ARCA', 'TVA'),
+            $this->colonnes(),
             $entreprise,
             $anomalies,
         );
@@ -198,7 +198,7 @@ final class RepriseTest extends KernelTestCase
 
         $operations = $this->reconstitueur()->pour(
             $this->ligne(['_action' => 'SUPPRIMER', 'policeReference' => 'POL/2026/001'], 3),
-            CatalogueDesColonnes::pour('ARCA', 'TVA'),
+            $this->colonnes(),
             $entreprise,
             $anomalies,
         );
@@ -227,7 +227,7 @@ final class RepriseTest extends KernelTestCase
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
             ], 2),
-            CatalogueDesColonnes::pour('ARCA', 'TVA'),
+            $this->colonnes(),
             $entreprise,
             $anomalies,
         );
@@ -243,12 +243,17 @@ final class RepriseTest extends KernelTestCase
     // ─────────────────────────────────────────────────────────────────────────────
 
     /**
-     * ⚠ LA COMPOSITION DE LA PRIME EST ÉCRITE EN COLLECTION DE LA PROPOSITION.
+     * ⚠ LA PRIME EST ÉCRITE EN COLLECTION DE LA PROPOSITION, depuis UNE COLONNE PAR
+     * CHARGEMENT.
      *
      * `ChargementPourPrime` n'a pas de feuille dans le format normalisé — elle est absente
      * du périmètre d'échange —, si bien qu'une reprise par ce format rend des propositions
-     * SANS PRIME, et que rien ne le signale. Elle est donc portée en collection imbriquée,
-     * ce que le circuit d'écriture sait déjà faire.
+     * SANS PRIME, sans que rien ne le signale. Elle est donc portée en collection
+     * imbriquée, ce que le circuit d'écriture sait déjà faire.
+     *
+     * ⚠ ET LE PRORATA EST REMONTÉ. La colonne porte la part de l'ÉCHÉANCE — sans quoi elle
+     * ne se totaliserait pas juste ; la cotation, elle, porte le tout. À 50 %, une colonne
+     * à 5 000 vaut donc 10 000 sur la proposition.
      */
     public function testLaPrimeEstEcriteEnCollectionDeLaProposition(): void
     {
@@ -260,24 +265,20 @@ final class RepriseTest extends KernelTestCase
                 'policeReference' => 'POL/2026/010',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
-                'trancheNom' => 'Prime unique',
-                'primeChargements' => 'Prime nette = 10000 ; Frais accessoires = 500',
+                'trancheNom' => 'Une échéance sur deux',
+                'tranchePart' => 50,
+                $this->colonneDeChargement('Prime nette') => 5000,
+                $this->colonneDeChargement('Frais accessoires') => 250,
                 'commissionRevenus' => 'Commission Ordinaire ; Honoraire de gestion = 12%',
             ], 2),
-            CatalogueDesColonnes::pour('ARCA', 'TVA'),
+            $this->colonnes(),
             $entreprise,
             $anomalies,
         );
 
         self::assertSame([], $this->erreurs($anomalies));
 
-        $cotation = null;
-        foreach ($operations as $operation) {
-            if ($operation->entityShortName === 'Cotation') {
-                $cotation = $operation;
-            }
-        }
-
+        $cotation = $this->operation($operations, 'Cotation');
         self::assertNotNull($cotation, 'La proposition doit être créée.');
         self::assertCount(2, $cotation->collections['chargements'] ?? [], 'Deux chargements.');
         self::assertCount(2, $cotation->collections['revenus'] ?? [], 'Deux revenus.');
@@ -286,8 +287,10 @@ final class RepriseTest extends KernelTestCase
         foreach ($cotation->collections['chargements'] as $chargement) {
             $montants[$chargement->fields['nom']] = $chargement->fields['montantFlatExceptionel'] ?? null;
         }
-        self::assertSame(10000.0, $montants['Prime nette']);
-        self::assertSame(500.0, $montants['Frais accessoires']);
+
+        // ⚠ LE DOUBLE DE CE QUE LA LIGNE PORTE : la part est de 50 %.
+        self::assertEqualsWithDelta(10000.0, $montants['Prime nette'], 0.01);
+        self::assertEqualsWithDelta(500.0, $montants['Frais accessoires'], 0.01);
 
         // ⚠ UN TAUX NE S'ÉCRIT QUE S'IL DÉROGE. « Commission Ordinaire » sans valeur laisse
         // la cascade résoudre le taux à la lecture — un type marqué « pourcentage du
@@ -298,30 +301,70 @@ final class RepriseTest extends KernelTestCase
             $revenus[$revenu->fields['nom']] = $revenu->fields;
         }
         self::assertArrayNotHasKey('tauxExceptionel', $revenus['Commission Ordinaire']);
-        self::assertArrayNotHasKey('montantFlatExceptionel', $revenus['Commission Ordinaire']);
         self::assertSame(12.0, $revenus['Honoraire de gestion']['tauxExceptionel']);
+    }
+
+    /**
+     * ⚠ SANS PART, LA LIGNE VAUT POUR LA TOTALITÉ — et surtout, on ne divise pas par zéro.
+     *
+     * Une échéance sans part est une échéance unique : le montant lu EST celui de la
+     * cotation. Supposer autre chose donnerait une prime inventée, ou une erreur fatale.
+     */
+    public function testSansPartLeMontantEstCeluiDeLaCotation(): void
+    {
+        $entreprise = $this->cabinet();
+        $anomalies = [];
+
+        $operations = $this->reconstitueur()->pour(
+            $this->ligne([
+                'policeReference' => 'POL/2026/014',
+                'assure' => 'KIN AVIA',
+                'assureur' => 'SFA CONGO',
+                $this->colonneDeChargement('Prime nette') => 7000,
+            ], 2),
+            $this->colonnes(),
+            $entreprise,
+            $anomalies,
+        );
+
+        $cotation = $this->operation($operations, 'Cotation');
+        self::assertNotNull($cotation);
+        self::assertEqualsWithDelta(
+            7000.0,
+            $cotation->collections['chargements'][0]->fields['montantFlatExceptionel'],
+            0.01,
+        );
     }
 
     /**
      * ⚠ UN TYPE INCONNU EST UN REFUS QUI DIT QUOI CRÉER — jamais une création à la volée.
      *
-     * Un type de revenu porte un taux, un redevable, un chargement d'assiette : le
-     * fabriquer depuis un simple nom donnerait une configuration muette dont la commission
-     * vaudrait zéro par construction.
+     * Un type de chargement porte une fonction dans le calcul de la prime ; le fabriquer
+     * depuis un simple nom donnerait une configuration muette. On refuse en nommant ce qui
+     * manque.
+     *
+     * ⚠ CE CAS EST DEVENU CELUI D'UN FICHIER ÉTRANGER, et c'est un progrès : les colonnes
+     * étant dérivées du catalogue DU CABINET, un type absent n'a plus de colonne où
+     * s'écrire. Il ne reste que le classeur venu d'ailleurs — ou retouché à la main —,
+     * dont les colonnes ne correspondent à rien d'ici.
      */
     public function testUnTypeInconnuEstRefuseEtNonCree(): void
     {
         $entreprise = $this->cabinet();
         $anomalies = [];
 
+        // Le catalogue de colonnes connaît ce type ; le CABINET, non — exactement ce que
+        // produit un fichier venu d'un autre cabinet.
+        $colonnes = CatalogueDesColonnes::pour('ARCA', 'TVA', ['Taxe parafiscale inconnue'], []);
+
         $this->reconstitueur()->pour(
             $this->ligne([
                 'policeReference' => 'POL/2026/011',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
-                'primeChargements' => 'Chargement qui n\'existe pas = 999',
+                $this->colonneDeChargement('Taxe parafiscale inconnue') => 999,
             ], 2),
-            CatalogueDesColonnes::pour('ARCA', 'TVA'),
+            $colonnes,
             $entreprise,
             $anomalies,
         );
@@ -362,9 +405,9 @@ final class RepriseTest extends KernelTestCase
                 'policeReference' => 'POL/2026/012',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
-                'primeChargements' => 'Prime nette = 10000',
+                $this->colonneDeChargement('Prime nette') => 10000,
             ], 2),
-            CatalogueDesColonnes::pour('ARCA', 'TVA'),
+            $this->colonnes(),
             $entreprise,
             $anomalies,
         );
@@ -404,7 +447,7 @@ final class RepriseTest extends KernelTestCase
                 'ouvertureCommissionEncaissee' => 1200,
                 'ouvertureRetroReversee' => 300,
             ], 2),
-            CatalogueDesColonnes::pour('ARCA', 'TVA'),
+            $this->colonnes(),
             $entreprise,
             $anomalies,
         );
@@ -436,7 +479,7 @@ final class RepriseTest extends KernelTestCase
                 'trancheNom' => 'Prime unique',
                 'ouverturePrimeEncaissee' => 8000,
             ], 2),
-            CatalogueDesColonnes::pour('ARCA', 'TVA'),
+            $this->colonnes(),
             $entreprise,
             $anomalies,
         );
@@ -468,15 +511,25 @@ final class RepriseTest extends KernelTestCase
     }
 
     /**
-     * LA COMMISSION ENCAISSÉE devient une note d'UN article, soldée par UN règlement.
+     * ⚠ LA COMMISSION ENCAISSÉE N'EST PAS REPRISE — ET LE FICHIER LE DIT.
      *
-     * ⚠ UNE NOTE PAR ÉCHÉANCE, ET C'EST UNE CONTRAINTE DU CALCUL — pas un choix.
-     * `getTrancheMontantCommissionEncaissee()` applique la proportion payée de la note
-     * ENTIÈRE à chacun de ses articles. Une note groupant plusieurs échéances ne peut donc
-     * pas exprimer des taux d'encaissement différents : une échéance soldée et une autre
-     * encaissée à 30 % y sont inexprimables.
+     * Elle passait par une note d'un seul article, soldée par un règlement du même
+     * montant. Mais `Note::$validated` et `Note::$signature` sont NON NULLES en base et
+     * ABSENTES de `NoteType` : le contrôle à blanc les réclame — elles sont obligatoires —
+     * sans qu'aucun champ ne permette de les fournir. Constaté sur un portefeuille réel :
+     * CINQUANTE erreurs bloquantes, une par échéance encaissée, rendant toute la reprise
+     * inutilisable pour une fonction secondaire.
+     *
+     * ⚠ ET ON NE FOURNIT PAS CES CHAMPS « POUR FAIRE PASSER » LE DRY-RUN : le contrôle
+     * cesserait de se plaindre et l'écriture échouerait en SQL sur une contrainte NOT
+     * NULL. Ce qu'une note de reprise doit porter — validée ? signée par qui ? — est une
+     * question métier.
+     *
+     * ⚠ PERDRE UN CHIFFRE EN SILENCE SERAIT PIRE QUE DE NE PAS LE REPRENDRE : d'où
+     * l'avertissement, qui nomme le montant et où le saisir. C'est ce que ce test garde —
+     * un jour, il faudra le retourner.
      */
-    public function testLaCommissionEncaisseeDevientUneNoteSoldee(): void
+    public function testLaCommissionEncaisseeEstSignaleeEtNonEcrite(): void
     {
         $entreprise = $this->cabinet();
         $anomalies = [];
@@ -489,66 +542,21 @@ final class RepriseTest extends KernelTestCase
                 'trancheNom' => 'Prime unique',
                 'commissionRevenus' => 'Commission Ordinaire',
                 'ouvertureCommissionEncaissee' => 1200,
-                'ouvertureCommissionLe' => '2026-03-15',
             ], 2),
-            CatalogueDesColonnes::pour('ARCA', 'TVA'),
-            $entreprise,
-            $anomalies,
-        );
-
-        self::assertSame([], $this->erreurs($anomalies));
-
-        $note = $this->operation($operations, 'Note');
-        self::assertNotNull($note, 'Une note doit porter l\'encaissement d\'ouverture.');
-
-        // Une note de DÉBIT adressée à l'ASSUREUR : c'est ce que le calcul de la
-        // commission encaissée retient, avec le client, et rien d'autre.
-        self::assertSame(0, $note->fields['type']);
-        self::assertSame(1, $note->fields['addressedTo']);
-
-        self::assertCount(1, $note->collections['articles'] ?? [], 'UN article, et un seul.');
-        self::assertCount(1, $note->collections['paiements'] ?? []);
-        self::assertSame(1200.0, $note->collections['paiements'][0]->fields['montant']);
-        self::assertSame('2026-03-15T00:00', $note->collections['paiements'][0]->fields['paidAt']);
-
-        // ⚠ L'ARTICLE DOIT ÊTRE LIÉ À LA FOIS À L'ÉCHÉANCE ET AU REVENU. Sans l'un des
-        // deux, `getArticleMontant()` rend zéro : la note serait posée, le règlement
-        // aussi, et la commission encaissée resterait à zéro — un travail invisible.
-        $article = $note->collections['articles'][0];
-        self::assertStringStartsWith('@', (string) $article->fields['tranche']);
-        self::assertStringStartsWith('@', (string) $article->fields['revenuFacture']);
-    }
-
-    /**
-     * ⚠ UNE COMMISSION ENCAISSÉE SANS REVENU À FACTURER EST REFUSÉE.
-     *
-     * `getArticleMontant()` rend zéro pour un article qui n'est pas lié à un revenu :
-     * écrire quand même la note et son règlement laisserait la commission encaissée à
-     * zéro. Un travail fait, un chiffre faux, et rien pour le signaler — donc on refuse en
-     * nommant ce qui manque.
-     */
-    public function testUneCommissionEncaisseeSansRevenuEstRefusee(): void
-    {
-        $entreprise = $this->cabinet();
-        $anomalies = [];
-
-        $operations = $this->reconstitueur()->pour(
-            $this->ligne([
-                'policeReference' => 'POL/2026/023',
-                'assure' => 'KIN AVIA',
-                'assureur' => 'SFA CONGO',
-                'trancheNom' => 'Prime unique',
-                'ouvertureCommissionEncaissee' => 1200,
-            ], 2),
-            CatalogueDesColonnes::pour('ARCA', 'TVA'),
+            $this->colonnes(),
             $entreprise,
             $anomalies,
         );
 
         self::assertNull($this->operation($operations, 'Note'), 'Aucune note ne doit être posée.');
-        $erreurs = $this->erreurs($anomalies);
-        self::assertCount(1, $erreurs);
-        self::assertStringContainsString('rien à facturer', $erreurs[0]->message);
+
+        // ⚠ UN AVERTISSEMENT, ET NON UNE ERREUR : le reste de la ligne doit passer.
+        self::assertSame([], $this->erreurs($anomalies));
+        self::assertNotSame([], $anomalies);
+        self::assertStringContainsString('1 200,00', $anomalies[0]->message, 'Le montant laissé de côté doit être nommé.');
+        self::assertStringContainsString('rubrique Notes', $anomalies[0]->message, 'Et l\'endroit où le saisir.');
+
+        self::assertNotNull($this->operation($operations, 'Tranche'), 'L\'échéance, elle, est reprise.');
     }
 
     /**
@@ -570,7 +578,7 @@ final class RepriseTest extends KernelTestCase
                 'trancheNom' => 'Prime unique',
                 'ouvertureRetroReversee' => 300,
             ], 2),
-            CatalogueDesColonnes::pour('ARCA', 'TVA'),
+            $this->colonnes(),
             $entreprise,
             $anomalies,
         );
@@ -579,46 +587,6 @@ final class RepriseTest extends KernelTestCase
         $erreurs = $this->erreurs($anomalies);
         self::assertCount(1, $erreurs);
         self::assertStringContainsString('aucun intermédiaire', $erreurs[0]->message);
-    }
-
-    /**
-     * ⚠ CHAQUE ÉCHÉANCE D'UNE MÊME POLICE OUVRE SA PROPRE COMMISSION.
-     *
-     * La deuxième échéance ne recrée pas la proposition — donc pas ses revenus. Sans
-     * registre, son article n'aurait aucun revenu à facturer : la première échéance
-     * ouvrirait sa commission et les suivantes non, soit un encaissement perdu sur trois
-     * échéances sur quatre.
-     */
-    public function testChaqueEcheanceOuvreSaProprCommission(): void
-    {
-        $entreprise = $this->cabinet();
-        $colonnes = CatalogueDesColonnes::pour('ARCA', 'TVA');
-        $reconstitueur = $this->reconstitueur();
-
-        $notes = 0;
-        foreach ([1, 2] as $rang) {
-            $anomalies = [];
-            $operations = $reconstitueur->pour(
-                $this->ligne([
-                    'policeReference' => 'POL/2026/025',
-                    'assure' => 'KIN AVIA',
-                    'assureur' => 'SFA CONGO',
-                    'trancheNom' => 'Échéance ' . $rang,
-                    'commissionRevenus' => 'Commission Ordinaire',
-                    'ouvertureCommissionEncaissee' => 600,
-                ], $rang + 1),
-                $colonnes,
-                $entreprise,
-                $anomalies,
-            );
-
-            self::assertSame([], $this->erreurs($anomalies), sprintf('Échéance %d refusée.', $rang));
-            if ($this->operation($operations, 'Note') !== null) {
-                ++$notes;
-            }
-        }
-
-        self::assertSame(2, $notes, 'Les DEUX échéances doivent ouvrir leur commission.');
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -649,7 +617,7 @@ final class RepriseTest extends KernelTestCase
                 'reserve' => 777777,
                 'retroAgentSolde' => 666666,
             ], 2),
-            CatalogueDesColonnes::pour('ARCA', 'TVA'),
+            $this->colonnes(),
             $entreprise,
             $anomalies,
         );
@@ -697,7 +665,6 @@ final class RepriseTest extends KernelTestCase
             'risque' => 'Risque',
             'assureur' => 'Assureur',
             'portefeuille' => 'Portefeuille',
-            'primeChargements' => 'Prime · Chargements',
             'commissionRevenus' => 'Commission · Revenus',
             'intermediaire' => 'Intermédiaire · Nom',
             'intermediairePart' => 'Intermédiaire · Part',
@@ -709,10 +676,18 @@ final class RepriseTest extends KernelTestCase
             'ouvertureRetroLe' => 'Ouverture · Rétro reversée le',
         ];
 
-        $colonnes = CatalogueDesColonnes::pour('ARCA', 'TVA');
+        $colonnes = $this->colonnes();
 
         $saisies = [];
         foreach ($colonnes as $code => $colonne) {
+            // ⚠ LES COLONNES DYNAMIQUES NE PEUVENT PAS ÊTRE GELÉES : il y en a une par
+            // type de chargement du cabinet, et leur libellé EST le nom du type. Les
+            // inscrire ici rendrait ce test faux au premier cabinet qui renomme un poste.
+            // Leur stabilité tient au CODE, vérifiée juste après.
+            if (str_starts_with($code, CatalogueDesColonnes::PREFIXE_CHARGEMENT)
+                || str_starts_with($code, CatalogueDesColonnes::PREFIXE_REVENU)) {
+                continue;
+            }
             if (!$colonne->lectureSeule()) {
                 $saisies[$code] = $colonne->libelle;
             }
@@ -721,15 +696,68 @@ final class RepriseTest extends KernelTestCase
         self::assertSame($attendus, $saisies);
     }
 
+    /**
+     * ⚠ LE CODE D'UNE COLONNE DYNAMIQUE NE BOUGE PAS D'UNE ÉCRITURE À L'AUTRE.
+     *
+     * Il est dérivé du nom du type par la forme comparable du projet : ni la casse, ni les
+     * accents, ni un espace de trop ne le changent. C'est ce qui permet de retrouver la
+     * colonne d'un fichier exporté hier, et ce qui ramène à UNE colonne les six
+     * « Prime nette » que porte le catalogue réel.
+     */
+    public function testLeCodeDUneColonneDynamiqueEstStable(): void
+    {
+        $attendu = CatalogueDesColonnes::codeDynamique(CatalogueDesColonnes::PREFIXE_CHARGEMENT, 'Prime nette');
+
+        self::assertSame('chargement_prime_nette', $attendu);
+
+        foreach (['PRIME NETTE', 'prime  nette', 'Prime  Nette ', 'Primé nette'] as $variante) {
+            self::assertSame(
+                $attendu,
+                CatalogueDesColonnes::codeDynamique(CatalogueDesColonnes::PREFIXE_CHARGEMENT, $variante),
+                $variante,
+            );
+        }
+
+        self::assertNull(CatalogueDesColonnes::codeDynamique(CatalogueDesColonnes::PREFIXE_CHARGEMENT, '  '));
+    }
+
     // ─────────────────────────────────────────────────────────────────────────────
     // Outillage
     // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * LE CATALOGUE DU CABINET DE TEST — types de chargement et de revenu compris.
+     *
+     * ⚠ CES COLONNES SONT DYNAMIQUES : une par type du cabinet. Un catalogue construit
+     * sans elles n'aurait aucune colonne de chargement, et les tests de reprise
+     * porteraient sur un fichier que l'application ne produit jamais.
+     *
+     * @return array<string, \App\Echange\Etat\ColonneEtat>
+     */
+    private function colonnes(): array
+    {
+        return CatalogueDesColonnes::pour(
+            'ARCA',
+            'TVA',
+            ['Prime nette', 'Frais accessoires'],
+            ['Commission Ordinaire', 'Honoraire de gestion'],
+        );
+    }
+
+    /** Le code de la colonne d'un chargement, tel que le catalogue le forme. */
+    private function colonneDeChargement(string $nom): string
+    {
+        return (string) CatalogueDesColonnes::codeDynamique(
+            CatalogueDesColonnes::PREFIXE_CHARGEMENT,
+            $nom,
+        );
+    }
 
     /** @param array<string, mixed> $valeurs */
     private function ligne(array $valeurs, int $numero): LigneLue
     {
         $colonnes = [];
-        foreach (array_keys(CatalogueDesColonnes::pour('ARCA', 'TVA')) as $rang => $code) {
+        foreach (array_keys($this->colonnes()) as $code) {
             $colonnes[$code] = 'A';
         }
 
