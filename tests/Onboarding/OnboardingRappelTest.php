@@ -132,9 +132,9 @@ class OnboardingRappelTest extends WebTestCase
         // Le pourcentage est écrit en clair : l'anneau seul ne porterait l'information
         // que par la couleur et la forme (WCAG 1.4.1).
         $this->assertStringContainsString('ws-jauge-pct', $html);
-        // Et le titre de l'onglet se lit dans `.nav-text` : y mettre le pourcentage
-        // aurait intitulé l'onglet « 0 % ».
-        $this->assertStringContainsString('<span class="nav-text">Démarrage</span>', $html);
+        // L'écran porte le même nom partout où on le nomme : sans quoi l'utilisateur
+        // croirait en avoir trouvé deux.
+        $this->assertStringContainsString('<span class="nav-text">Guide de démarrage</span>', $html);
     }
 
     public function testLInviteNeVoitAucunRappel(): void
@@ -242,8 +242,8 @@ class OnboardingRappelTest extends WebTestCase
                     (string) $noeud->attr('data-action'),
                     sprintf('Le bouton de %s ne déclare aucun geste : le clic ne fera rien.', $ou),
                 );
-                // Et l'onglet doit s'intituler « Démarrage », pas du libellé du bouton.
-                $this->assertSame('Démarrage', $noeud->attr('data-workspace-manager-title-param'));
+                // Et l'onglet doit s'intituler « Guide de démarrage », pas du libellé du bouton.
+                $this->assertSame('Guide de démarrage', $noeud->attr('data-workspace-manager-title-param'));
                 $this->assertSame('Onboarding', $noeud->attr('data-workspace-manager-entity-name-param'));
             }
         }

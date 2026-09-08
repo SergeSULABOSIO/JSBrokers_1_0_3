@@ -48,7 +48,7 @@
         {# Le titre de l'onglet, dit EXPLICITEMENT : sans lui, le contrôleur le déduit du
            texte de l'élément cliqué, et l'onglet ouvert depuis le tableau de bord se
            serait intitulé « Terminer la configuration ». #}
-        data-workspace-manager-title-param="Démarrage"
+        data-workspace-manager-title-param="Guide de démarrage"
         data-workspace-manager-description-param="{{ _description|e('html_attr') }}"
     {% endset %}
 
@@ -61,9 +61,10 @@
            `keydown.enter` s'activerait deux fois (cf. ColonneDeuxRepliableTest), et il n'y
            a de toute façon aucune URL à atteindre — le guide se charge en place.
 
-           ⚠ Le titre de l'onglet est lu par le contrôleur dans `.nav-text` : c'est pourquoi
-           le pourcentage vit dans un span à part. Le mettre dans `.nav-text` aurait
-           intitulé l'onglet « 45 % ».
+           Le libellé tient sur deux lignes dans une colonne de 130 px, comme « Tableau
+           de bord » juste au-dessus : c'est la norme de cette colonne, pas une entorse.
+           On ne l'abrège pas — un écran porte le même nom partout où on le nomme, sans
+           quoi l'utilisateur croit en avoir trouvé deux.
         #}
         <button type="button"
             class="nav-item ws-onboarding-jauge"
@@ -71,14 +72,14 @@
             data-onboarding-jauge-auto-ouvrir-value="{{ autoOuvrir|default(false) ? 'true' : 'false' }}"
             data-action="mouseenter->onboarding-jauge#ouvrir mouseleave->onboarding-jauge#fermerDiffere focus->onboarding-jauge#ouvrir blur->onboarding-jauge#fermerDiffere click->workspace-manager#loadComponent"
             {{ _params|raw }}
-            aria-label="Démarrage du cabinet : {{ bilan.score }} % configuré, {{ _restantes }} étape{{ _restantes > 1 ? 's' : '' }} restante{{ _restantes > 1 ? 's' : '' }}. Ouvrir le guide."
+            aria-label="Guide de démarrage : {{ bilan.score }} % configuré, {{ _restantes }} étape{{ _restantes > 1 ? 's' : '' }} restante{{ _restantes > 1 ? 's' : '' }}. Ouvrir le guide."
         >
             {# L'anneau ne porte AUCUNE information à lui seul : le pourcentage est écrit
                juste à côté, et l'aria-label le redit (WCAG 1.4.1). #}
             <span class="ws-jauge-anneau" aria-hidden="true" style="--ws-jauge-pct: {{ bilan.score }};">
                 <span class="ws-jauge-icone">{{ ux_icon('mdi:rocket-launch-outline', {height: '17px', width: '17px'}) }}</span>
             </span>
-            <span class="nav-text">Démarrage</span>
+            <span class="nav-text">Guide de démarrage</span>
             <span class="ws-jauge-pct">{{ bilan.score }} %</span>
         </button>
 
@@ -87,7 +88,7 @@
            échapper à l'`overflow` de la colonne. #}
         <template data-onboarding-jauge-target="modele">
             <div class="ws-onboarding-detail" role="note">
-                <p class="ws-onboarding-detail-titre">Démarrage du cabinet</p>
+                <p class="ws-onboarding-detail-titre">Guide de démarrage</p>
                 {{ rappel.progression(bilan.score) }}
                 {{ rappel.listeEtapes(bilan) }}
                 {# CE BOUTON NE PORTE PAS DE `data-action`, ET C'EST VOULU : le panneau
