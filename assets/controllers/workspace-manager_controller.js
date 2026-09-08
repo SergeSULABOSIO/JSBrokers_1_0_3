@@ -2156,8 +2156,15 @@ export default class extends Controller {
             this.descriptionContainerTarget.style.display = 'block';
         }
 
-        // Récupérer le titre depuis le texte de l'élément cliqué
-        const title = (clickedElement.querySelector('.rubrique-text, .nav-text')?.textContent?.trim())
+        // Le titre, DIT s'il est dit, déduit sinon.
+        //
+        // La déduction depuis le texte de l'élément ne vaut que pour les items du menu,
+        // dont le libellé EST le nom de la rubrique. Un bouton posé ailleurs — « Terminer
+        // la configuration », sur le tableau de bord — intitulerait l'onglet de sa propre
+        // phrase. Un paramètre explicite tranche, et les appelants du menu, qui n'en
+        // posent pas, ne changent pas de comportement.
+        const title = clickedElement.dataset.workspaceManagerTitleParam
+                   || (clickedElement.querySelector('.rubrique-text, .nav-text')?.textContent?.trim())
                    || entityName || componentName;
 
         if (!isRestoration) {

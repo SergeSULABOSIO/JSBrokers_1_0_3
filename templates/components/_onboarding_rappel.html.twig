@@ -28,17 +28,31 @@
     {% set _description = '<p><strong>La configuration de votre cabinet est incomplète.</strong> Tant qu\'elle l\'est, certaines opérations resteront hors de portée : on ne peut pas coter sans assureur, ni encaisser sans compte bancaire.</p><p>Le guide de démarrage rassemble tout ce qu\'il reste à faire, au même endroit. Chaque étape s\'y règle sans quitter la page, et vous pouvez la reprendre quand vous voulez.</p>' %}
 
     {#
-       Les attributs qui ouvrent le guide. Le composant est chargé par le MÊME chemin que
-       n'importe quelle rubrique (`workspace-manager#loadComponent`) : même onglet unique,
-       même restauration après rechargement.
+       Les PARAMÈTRES qui décrivent le guide. Le composant est chargé par le MÊME chemin
+       que n'importe quelle rubrique (`workspace-manager#loadComponent`) : l'onglet est
+       unique par (composant, entité), donc un second clic le RÉACTIVE au lieu d'en
+       ouvrir un autre.
+
+       ⚠ CE JEU NE CONTIENT PAS `data-action`, ET C'EST DÉLIBÉRÉ : un élément ne peut en
+       porter qu'un seul, et le voyant y déclare aussi son survol. Chaque bouton déclare
+       donc le sien — c'est le prix à payer, et c'est exactement l'oubli qui a rendu le
+       bouton du tableau de bord inerte : tous les paramètres étaient là, il ne manquait
+       que le geste. Un test de gabarit le vérifie désormais sur les deux boutons.
     #}
-    {% set _ouvrir %}
+    {% set _params %}
         data-workspace-manager-component-name-param="_onboarding_component.html.twig"
         data-workspace-manager-entity-name-param="Onboarding"
         data-workspace-manager-group-name-param=""
         data-workspace-manager-icon-param="action:settings"
+        {# Le titre de l'onglet, dit EXPLICITEMENT : sans lui, le contrôleur le déduit du
+           texte de l'élément cliqué, et l'onglet ouvert depuis le tableau de bord se
+           serait intitulé « Terminer la configuration ». #}
+        data-workspace-manager-title-param="Démarrage"
         data-workspace-manager-description-param="{{ _description|e('html_attr') }}"
     {% endset %}
+
+    {# Le geste, pour qui n'a pas d'autre action à déclarer. #}
+    {% set _ouvrir %}data-action="click->workspace-manager#loadComponent" {{ _params }}{% endset %}
 
     {% if variante == 'voyant' %}
         {#
@@ -55,7 +69,7 @@
             data-controller="onboarding-jauge"
             data-onboarding-jauge-auto-ouvrir-value="{{ autoOuvrir|default(false) ? 'true' : 'false' }}"
             data-action="mouseenter->onboarding-jauge#ouvrir mouseleave->onboarding-jauge#fermerDiffere focus->onboarding-jauge#ouvrir blur->onboarding-jauge#fermerDiffere click->workspace-manager#loadComponent"
-            {{ _ouvrir|raw }}
+            {{ _params|raw }}
             aria-label="Démarrage du cabinet : {{ bilan.score }} % configuré, {{ _restantes }} étape{{ _restantes > 1 ? 's' : '' }} restante{{ _restantes > 1 ? 's' : '' }}. Ouvrir le guide."
         >
             {# L'anneau ne porte AUCUNE information à lui seul : le pourcentage est écrit
@@ -81,6 +95,9 @@
                    y seraient inertes — et donc trompeurs. Le contrôleur lui attache un
                    écouteur ordinaire, qui rejoue le clic sur le voyant lui-même. #}
                 <button type="button" class="ws-onboarding-cta" data-onboarding-cta>
+                    <span class="jsb-onboarding-cta-icone" aria-hidden="true">
+                        {{ ux_icon(resolve_icon_name('action:settings'), {height: '16px', width: '16px'}) }}
+                    </span>
                     Reprendre la configuration
                 </button>
             </div>
@@ -111,7 +128,13 @@
                     </p>
                 {% endif %}
             </div>
+            {# L'icône est celle de l'onglet que ce bouton ouvre : le geste annonce sa
+               destination avant même d'être fait (Bastien & Scapin > Signifiance).
+               Décorative, donc masquée aux lecteurs d'écran — le libellé dit déjà tout. #}
             <button type="button" class="jsb-onboarding-cta-primaire" {{ _ouvrir|raw }}>
+                <span class="jsb-onboarding-cta-icone" aria-hidden="true">
+                    {{ ux_icon(resolve_icon_name('action:settings'), {height: '17px', width: '17px'}) }}
+                </span>
                 Terminer la configuration
             </button>
         </div>
