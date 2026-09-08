@@ -59,13 +59,18 @@
         </div>
 
         {# Gestes d'ensemble. Ce ne sont pas des états : pas d'`aria-pressed`, sinon un
-           lecteur d'écran annoncerait « non pressé » sur un bouton qui ne retient rien. #}
+           lecteur d'écran annoncerait « non pressé » sur un bouton qui ne retient rien.
+
+           ⚠ ET CE N'EST PAS NON PLUS L'APPARENCE D'UN CHIP ÉTEINT. Ils la portaient, et
+           dans une pilule dont les voisins s'allument en cobalt quand ils sont actifs,
+           cela se lisait « aucune valeur n'est sélectionnée » — alors que les 81 colonnes
+           l'étaient toutes. `--action` leur donne l'allure d'un bouton : ce qu'ils sont. #}
         <div class="jsb-preset-filters jsb-control-pill" role="group" aria-label="Sélection d'ensemble">
             <span class="jsb-preset-filters__titre" aria-hidden="true">tout</span>
-            <button type="button" class="jsb-preset-chip" data-action="click->echange#toutCocher">
+            <button type="button" class="jsb-preset-chip jsb-preset-chip--action" data-action="click->echange#toutCocher">
                 <span>Tout cocher</span>
             </button>
-            <button type="button" class="jsb-preset-chip" data-action="click->echange#toutDecocher">
+            <button type="button" class="jsb-preset-chip jsb-preset-chip--action" data-action="click->echange#toutDecocher">
                 <span>Tout décocher</span>
             </button>
         </div>
