@@ -308,6 +308,73 @@ class AnthropicAiEngineTest extends TestCase
         $this->assertStringContainsString('périmètre', $reply->content);
     }
 
+    /**
+     * LE MUR DU 2026-09-08, côté Anthropic — et sa sortie.
+     *
+     * Un tour de planification revenu sans texte ni appel d'outil arrêtait le message sur
+     * place, et extractText() servait « Pouvez-vous préciser votre question ? » : notre
+     * silence présenté comme l'imprécision de l'utilisateur. Comme chez Gemini, la
+     * rédaction ne partira jamais dans ce cas — le second des deux appels est donc libre,
+     * et le dépenser à redemander une réponse vaut mieux que de servir un mur.
+     */
+    public function testUnTourMuetEstRejoueUneFois(): void
+    {
+        $muet = ['stop_reason' => 'end_turn', 'content' => []];
+        $bodies = [];
+        $http = new MockHttpClient(function ($method, $url, $options) use (&$bodies, $muet) {
+            $bodies[] = json_decode($options['body'] ?? '{}', true);
+
+            return new MockResponse(json_encode(count($bodies) === 1 ? $muet : [
+                'stop_reason' => 'end_turn',
+                'content'     => [['type' => 'text', 'text' => 'J’enregistre les sept assureurs sous leur nom.']],
+            ]));
+        });
+
+        $reply = $this->makeEngine($http)->reply($this->makeRequest('Invente pour moi des numéros.'));
+
+        $this->assertSame('J’enregistre les sept assureurs sous leur nom.', $reply->content);
+        $this->assertSame(2, $http->getRequestsCount(), 'Deux appels au total : la reprise remplace la rédaction.');
+
+        // La relance est un échafaudage : elle sert à la reprise et ne doit laisser
+        // aucune trace dans le fil que l'utilisateur relira.
+        $contenus = array_column($bodies[1]['messages'] ?? [], 'content');
+        $this->assertTrue(
+            (bool) array_filter($contenus, static fn ($c) => is_string($c) && str_contains($c, 'NI texte NI appel')),
+            'La reprise doit dire au modèle que son tour précédent était muet.',
+        );
+        $this->assertCount(1, $bodies[0]['messages'] ?? [], 'Le premier appel part sans relance.');
+    }
+
+    /**
+     * DEUX TOURS MUETS D'AFFILÉE : il n'y a plus rien à tenter, mais la faute ne se
+     * renvoie pas pour autant. L'outil du tour avait TROUVÉ quelque chose — on le
+     * restitue (RepliPrecis) au lieu de demander à l'utilisateur de préciser.
+     */
+    public function testDeuxToursMuetsRestituentLeTravailDesOutilsEtNonUneQuestion(): void
+    {
+        $reponses = [
+            [
+                'stop_reason' => 'tool_use',
+                'content'     => [['type' => 'tool_use', 'id' => 'tu_1', 'name' => 'compter_entites', 'input' => ['entite' => 'Client']]],
+            ],
+            ['stop_reason' => 'end_turn', 'content' => []],
+            ['stop_reason' => 'end_turn', 'content' => []],
+        ];
+        $i = 0;
+        $http = new MockHttpClient(function () use (&$i, $reponses) {
+            return new MockResponse(json_encode($reponses[$i++]));
+        });
+
+        $tool = $this->makeTool(AiToolResult::ok([
+            'bloquant' => 'Aucun contrat ne porte cette référence dans votre portefeuille.',
+        ]));
+        $reply = $this->makeEngine($http, [$tool])->reply($this->makeRequest('Où en est le contrat MIC-RC0012454 ?'));
+
+        $this->assertStringContainsString('Aucun contrat ne porte cette référence', $reply->content);
+        $this->assertStringNotContainsString('préciser votre question', $reply->content,
+            'Un repli ne doit pas renvoyer à l’utilisateur un travail que les outils ont déjà fait.');
+    }
+
     public function testResolverChoisitLeMoteurSelonLesCles(): void
     {
         $contextBuilder = $this->createMock(AiContextBuilder::class);

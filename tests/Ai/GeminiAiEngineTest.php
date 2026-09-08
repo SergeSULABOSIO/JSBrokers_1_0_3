@@ -773,9 +773,10 @@ class GeminiAiEngineTest extends TestCase
     }
 
     /**
-     * RÉPONSE VIDE : ni texte, ni appel d'outil. Le modèle a brûlé son budget de
-     * sortie sans rien rendre (`finishReason: MAX_TOKENS`, cas classique quand le
-     * raisonnement interne consomme tout).
+     * RÉPONSE VIDE DEUX FOIS DE SUITE : ni texte, ni appel d'outil, ni à la première
+     * tentative ni à la reprise. Le modèle a brûlé son budget de sortie sans rien rendre
+     * (`finishReason: MAX_TOKENS`, cas classique quand le raisonnement interne consomme
+     * tout).
      *
      * L'incident du 11/08/2026 : à « affiche le même tableau, mais ajoute une
      * colonne pour les numéros », l'utilisateur s'est vu répondre « précisez votre
@@ -785,7 +786,7 @@ class GeminiAiEngineTest extends TestCase
     public function testUneReponseVideNeRenvoiePasLaFauteALUtilisateur(): void
     {
         $vide = ['candidates' => [['finishReason' => 'MAX_TOKENS', 'content' => ['role' => 'model', 'parts' => []]]]];
-        $http = new MockHttpClient([new MockResponse(json_encode($vide))]);
+        $http = new MockHttpClient([new MockResponse(json_encode($vide)), new MockResponse(json_encode($vide))]);
 
         $reply = $this->makeEngine($http)->reply($this->makeRequest('Refais ce tableau avec une colonne de numéros'));
 
@@ -793,6 +794,53 @@ class GeminiAiEngineTest extends TestCase
             'Un repli ne doit pas demander à l’utilisateur de préciser une demande déjà précise.');
         self::assertStringContainsString('pas pu aboutir', $reply->content,
             'Le repli doit reconnaître que c’est NOUS qui n’avons pas conclu.');
+    }
+
+    /**
+     * LE MUR DU 2026-09-08 (conversation 68), et sa sortie.
+     *
+     * Sur « Invente pour moi des numéros. », la planification a dépensé 807 jetons de
+     * sortie en raisonnement interne et n'a émis AUCUN mot : pas un outil n'avait tourné,
+     * il n'y avait donc rien à restituer, et l'utilisateur a reçu la phrase de dernier
+     * recours — « redites-la-moi en nommant le point précis » — après l'avoir nommé trois
+     * fois.
+     *
+     * Ce message s'arrête à la planification : la rédaction ne partira jamais, faute de
+     * quoi que ce soit à commenter. Le second des deux appels auxquels un message a droit
+     * est donc libre, et le dépenser à redemander une réponse vaut mieux que de servir un
+     * mur. Deux appels au total : la règle est tenue.
+     */
+    public function testUnTourDePlanificationMuetEstRejoueUneFois(): void
+    {
+        $muet = ['candidates' => [['finishReason' => 'STOP', 'content' => ['role' => 'model', 'parts' => []]]]];
+        $bodies = [];
+        $http = new MockHttpClient(function ($method, $url, $options) use (&$bodies, $muet) {
+            $bodies[] = json_decode($options['body'] ?? '{}', true);
+
+            return new MockResponse(json_encode(count($bodies) === 1
+                ? $muet
+                : self::texte('Je ne fabrique pas de numéro d’impôt, mais j’enregistre les sept assureurs sous leur nom.')));
+        });
+
+        $reply = $this->makeEngine($http)->reply($this->makeRequest('Invente pour moi des numéros.'));
+
+        self::assertStringContainsString('sept assureurs', $reply->content,
+            'La reprise doit servir la réponse du modèle, pas le repli générique.');
+        self::assertStringNotContainsString('pas pu aboutir', $reply->content);
+        self::assertSame(2, $http->getRequestsCount(), 'Deux appels au total : la reprise remplace la rédaction.');
+
+        // La relance est un échafaudage : elle sert à la reprise et ne doit laisser
+        // aucune trace dans le fil que l'utilisateur relira.
+        $textes = [];
+        foreach ($bodies[1]['contents'] ?? [] as $contenu) {
+            foreach ($contenu['parts'] ?? [] as $part) {
+                $textes[] = (string) ($part['text'] ?? '');
+            }
+        }
+        self::assertTrue(
+            (bool) array_filter($textes, static fn (string $t) => str_contains($t, 'NI texte NI appel')),
+            'La reprise doit dire au modèle que son tour précédent était muet.',
+        );
     }
 
     public function testBoucleFunctionCalling(): void

@@ -544,8 +544,25 @@ final class PlanBuilder
             return AiToolResult::ok([
                 'pret'       => false,
                 'manquants'  => $manquants,
+                // CE QUE L'UTILISATEUR A DONNÉ ET QU'ON A JETÉ. Sans cette clé, le refus
+                // « manquants » ne disait que la moitié de la vérité — et c'était la
+                // moitié qui accuse. Le 2026-09-08, un courtier a dicté le numéro d'impôt
+                // de sept assureurs sous un nom que le formulaire ne reconnaissait pas :
+                // la valeur a été écartée en silence, puis le champ lui a été réclamé
+                // comme « manquant ». Il a répondu, à juste titre, qu'il venait de le
+                // donner. Un champ ÉCARTÉ et un champ JAMAIS FOURNI n'appellent pas la
+                // même suite : le premier se reprend sous son nom exact, sans rien
+                // redemander ; le second, et lui seul, est une question.
+                'champsIgnores' => $ignores,
                 'inventaire' => $this->inventairePour($entitesInvalides, $scope),
-                'note'       => 'Informations incomplètes : demande à l\'utilisateur de fournir les champs manquants '
+                'note'       => ($ignores !== []
+                    ? 'ATTENTION : une partie de ce que tu as dicté a été ÉCARTÉE, faute de porter le nom exact '
+                        . 'que le formulaire donne à ce champ. ' . implode(' ', $ignores)
+                        . ' Ces valeurs-là, l\'utilisateur te les a DÉJÀ données : ne les lui redemande pas. '
+                        . 'Reprends-les telles quelles sous le nom exact que « inventaire » ci-dessous te donne, '
+                        . 'et ne compte comme réellement manquant que le reste. '
+                    : '')
+                    . 'Informations incomplètes : demande à l\'utilisateur de fournir les champs manquants '
                     . '— NOMME-les un par un, jamais « il manque un élément » —, puis ARRÊTE-TOI : tu rappelleras '
                     . $outilAppelant . ' au message SUIVANT, avec ses réponses, pas dans ce tour-ci. '
                     . 'N\'appelle PAS inventaire_champs : « inventaire » '

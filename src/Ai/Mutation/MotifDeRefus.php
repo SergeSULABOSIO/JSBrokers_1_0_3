@@ -44,7 +44,21 @@ final class MotifDeRefus
 
         $manquants = $resultat->data['manquants'] ?? [];
         if (is_array($manquants) && $manquants !== []) {
-            return 'Informations manquantes : ' . implode(' ; ', array_map('strval', $manquants));
+            $phrase = 'Informations manquantes : ' . implode(' ; ', array_map('strval', $manquants));
+
+            // ET CE QUI A ÉTÉ ÉCARTÉ, quand il y en a. C'est le motif que le courtier
+            // LIT — dans le rapport d'un programme, et dans le fil quand la prose du
+            // modèle décrit un plan qui n'existe pas. Le 2026-09-08, il y a lu « numéro
+            // d'impôt manquant » pour sept assureurs dont il venait de dicter le numéro :
+            // la valeur avait bien été transmise, sous un nom que le formulaire ne
+            // reconnaissait pas. Taire cette moitié-là, c'est lui affirmer qu'il n'a pas
+            // donné ce qu'il a donné — et le laisser redonner indéfiniment la même chose.
+            $ignores = $resultat->data['champsIgnores'] ?? [];
+            if (is_array($ignores) && $ignores !== []) {
+                $phrase .= ' — et ceci a été écarté : ' . implode(' ', array_map('strval', $ignores));
+            }
+
+            return $phrase;
         }
         // Un nom dicté qui n'a pas pu être identifié : on nomme le terme cherché, sinon
         // l'utilisateur ne peut pas savoir lequel de ses mots n'a pas été compris.
