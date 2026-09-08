@@ -4,6 +4,7 @@ namespace App\Controller\Admin;
 
 use App\Entity\Invite;
 use App\Entity\Partenaire;
+use App\Service\Partage\ConditionDOffice;
 use App\Form\PartenaireType;
 use App\Constantes\Constante;
 use App\Repository\InviteRepository;
@@ -70,8 +71,11 @@ class PartenaireController extends AbstractController
             PartenaireType::class,
             $partenaire,
             function (Partenaire $partenaire, Invite $invite) {
-                // POINTS : 10 = 10 % (cf. Partenaire::getFraction).
-                $partenaire->setPart(10);
+                // LE TAUX DE DÉPART DU CABINET, en POINTS (20 = 20 %, cf.
+                // Partenaire::getFraction). C'est ici la SEULE écriture de ce nombre côté
+                // partenaire : le poser aussi en `data` du FormType aurait fait deux
+                // sources d'un même défaut, dont l'une aurait fini par masquer l'autre.
+                $partenaire->setPart(ConditionDOffice::PART_PARTENAIRE_DEFAUT);
                 $partenaire->setEntreprise($invite->getEntreprise());
             }
         );

@@ -281,6 +281,15 @@ export default class extends Controller {
             mainDialogElement.classList.remove('has-attributes-column');
         }
 
+        // EN CRÉATION, la même colonne porte la DESCRIPTION du paramètre — ce que le
+        // dialogue est en train de créer et pourquoi cela compte. La détection est le
+        // pendant exact de celle ci-dessus : une classe dédiée, et une seule règle CSS
+        // séparée. Un dialogue dont le provider ne déclare pas `description_creation`
+        // ne reçoit rien et garde son comportement d'avant — colonne masquée en
+        // création. C'est ce qui rend l'enrichissement possible dialogue par dialogue.
+        const hasCreationDescription = this.contentTarget.querySelector('.calculated-attributes-column .creation-description');
+        mainDialogElement.classList.toggle('has-creation-description', !!hasCreationDescription);
+
         // Notifier le cerveau que le dialogue est prêt et affiché.
         this.notifyCerveau('ui:dialog.opened', {
             mode: this.isCreateMode ? 'creation' : 'edition',

@@ -26,6 +26,15 @@ class AssureurFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/assureur/api/delete",
             "endpoint_form_url" => "/admin/assureur/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que ce paramètre apporte
+            // au cabinet. Le premier paragraphe sert aussi de « pourquoi » sur la
+            // carte du guide de démarrage — un seul texte, deux surfaces.
+            "description_creation" => [
+                "Sans assureur enregistré, aucune proposition ne peut être adressée ni aucune police émise : c'est la compagnie qui porte le risque, et vous qui le lui présentez.",
+                "Chaque assureur porte ses propres taux de commission par risque. C'est de cette fiche que partent vos cotations, vos avenants et le calcul de ce que la compagnie vous doit.",
+                "L'assureur est aussi le redevable de votre commission, et de la taxe qui s'y applique. Une compagnie mal identifiée, ce sont des encaissements que rien ne rattache.",
+                "Créez-en autant que vous en placez : la plupart des cabinets travaillent avec cinq à quinze compagnies.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Fiche assureur",

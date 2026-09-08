@@ -11,6 +11,7 @@ use App\Entity\Invite;
 use App\Entity\Note;
 use App\Entity\Tache;
 use App\Entity\Tranche;
+use App\Service\Onboarding\OnboardingCompletude;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
 use App\Services\Note\NoteRecouvrementService;
@@ -57,6 +58,26 @@ class PlanDuJourServiceTest extends TestCase
     }
 
     /**
+     * La configuration du cabinet, mockée comme les autres collaborateurs : la section
+     * ne doit dépendre que de ce que le service rend, jamais d'un accès à la base.
+     *
+     * @param array<int, array<string, mixed>> $restantes
+     */
+    private function onboarding(array $restantes, bool $bloquant): OnboardingCompletude
+    {
+        $mock = $this->createMock(OnboardingCompletude::class);
+        $mock->method('scoreSeul')->willReturn([
+            'score' => $restantes === [] ? 100 : 45,
+            'etapes' => $restantes,
+            'restantes' => $restantes,
+            'complet' => $restantes === [],
+        ]);
+        $mock->method('resteDuBloquant')->willReturn($bloquant);
+
+        return $mock;
+    }
+
+    /**
      * @param array<string,bool>                        $droits    canRead par entité
      * @param callable(string, array):array|null        $recherche réponse du moteur par entité
      */
@@ -66,6 +87,8 @@ class PlanDuJourServiceTest extends TestCase
         ?TranchePaiementService $tranchePaiement = null,
         ?NoteRecouvrementService $notes = null,
         bool $rechercheLeve = false,
+        array $restantes = [],
+        bool $bloquant = false,
     ): PlanDuJourService {
         $resolver = $this->createMock(WorkspaceAccessResolver::class);
         $resolver->method('canRead')->willReturnCallback(
@@ -110,6 +133,7 @@ class PlanDuJourServiceTest extends TestCase
             ),
             $tranchePaiement,
             $notes,
+            $this->onboarding($restantes, $bloquant),
         );
     }
 
@@ -334,5 +358,66 @@ class PlanDuJourServiceTest extends TestCase
         $this->assertStringContainsString('cabinet', $section['perimetre']);
         $this->assertSame(2150.0, $section['montant']);
         $this->assertSame(45, $section['lignes'][0]['joursAnciennete']);
+    }
+
+    // ---------------------------------------------- Configuration du cabinet
+
+    /** @return array<int, array<string, mixed>> */
+    private function etapesRestantes(): array
+    {
+        return [
+            ['cle' => 'comptes_bancaires', 'libelle' => 'Comptes bancaires', 'bloc' => 'Finances', 'poids' => 3, 'fait' => false, 'nombre' => 0],
+            ['cle' => 'jours_feries', 'libelle' => 'Jours fériés', 'bloc' => 'Administration', 'poids' => 1, 'fait' => false, 'nombre' => 0],
+        ];
+    }
+
+    public function testConfigurationListeCeQuiResteEnRetard(): void
+    {
+        $entreprise = new Entreprise();
+        $invite = (new Invite())->setProprietaire(true);
+
+        $plan = $this->makeService([], restantes: $this->etapesRestantes(), bloquant: true)
+            ->plan($entreprise, $invite);
+
+        $section = $plan['sections'][0];
+        $this->assertSame('configuration', $section['cle']);
+        $this->assertSame(2, $section['compte']);
+        // Une dette de configuration est en retard PAR NATURE : ces paramètres auraient
+        // dû exister le jour de l'ouverture du cabinet.
+        $this->assertSame(2, $section['enRetard']);
+        $this->assertSame(PlanDuJourService::EN_RETARD, $section['lignes'][0]['statutTemporel']);
+        $this->assertSame('Comptes bancaires', $section['lignes'][0]['libelle']);
+        // Le vocabulaire du domaine : ce ne sont ni des objets ni des échéances.
+        $this->assertSame('Reste à configurer', $section['colonnes']['objet']);
+    }
+
+    public function testConfigurationBloquantePorteLUrgenceMaximale(): void
+    {
+        $invite = (new Invite())->setProprietaire(true);
+
+        $bloquante = $this->makeService([], restantes: $this->etapesRestantes(), bloquant: true)
+            ->plan(new Entreprise(), $invite);
+        $confort = $this->makeService([], restantes: $this->etapesRestantes(), bloquant: false)
+            ->plan(new Entreprise(), $invite);
+
+        $this->assertSame(BoussoleService::URGENCE['configuration'], $bloquante['sections'][0]['urgence']);
+        $this->assertSame(BoussoleService::URGENCE['configuration_confort'], $confort['sections'][0]['urgence']);
+    }
+
+    public function testConfigurationAbsenteQuandToutEstFait(): void
+    {
+        $plan = $this->makeService([], restantes: [])
+            ->plan(new Entreprise(), (new Invite())->setProprietaire(true));
+
+        $this->assertSame([], $plan['sections']);
+        $this->assertTrue($plan['toutAuVert']);
+    }
+
+    public function testConfigurationInvisiblePourUnInvite(): void
+    {
+        $plan = $this->makeService([], restantes: $this->etapesRestantes(), bloquant: true)
+            ->plan(new Entreprise(), new Invite());
+
+        $this->assertSame([], $plan['sections']);
     }
 }

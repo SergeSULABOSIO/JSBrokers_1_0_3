@@ -34,6 +34,14 @@ class PartenaireFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/partenaire/api/delete",
             "endpoint_form_url" => "/admin/partenaire/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que ce paramètre apporte
+            // au cabinet. Le premier paragraphe sert aussi de « pourquoi » sur la
+            // carte du guide de démarrage — un seul texte, deux surfaces.
+            "description_creation" => [
+                "Un intermédiaire est un apporteur d'affaires extérieur au cabinet, rémunéré par une rétrocommission sur les affaires qu'il amène.",
+                "Sa part par défaut est de 20 %, ajustable pour chacun. Elle sert de taux de repli quand aucune condition de partage plus précise ne s'applique.",
+                "Dès sa création, il reçoit une condition de partage d'office : il devient donc rattachable à une affaire sans autre formalité.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Fiche partenaire",

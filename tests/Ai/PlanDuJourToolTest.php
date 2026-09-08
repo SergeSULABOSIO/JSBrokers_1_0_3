@@ -12,6 +12,7 @@ use App\Entity\Invite;
 use App\Entity\Tache;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
+use App\Service\Onboarding\OnboardingCompletude;
 use App\Services\Note\NoteRecouvrementService;
 use App\Services\Search\ChargeInviteCritereFactory;
 use App\Services\Search\PortefeuilleCritereFactory;
@@ -62,12 +63,21 @@ class PlanDuJourToolTest extends TestCase
 
         $portefeuille = new PortefeuilleCritereFactory($this->createMock(EntityManagerInterface::class));
 
+        // Cabinet entièrement configuré : la section « Configuration » ne doit pas
+        // s'inviter dans des tests qui portent sur les autres volets du programme.
+        $onboarding = $this->createMock(OnboardingCompletude::class);
+        $onboarding->method('scoreSeul')->willReturn([
+            'score' => 100, 'etapes' => [], 'restantes' => [], 'complet' => true,
+        ]);
+        $onboarding->method('resteDuBloquant')->willReturn(false);
+
         return new PlanDuJourTool(new PlanDuJourService(
             $resolver,
             $search,
             new ChargeInviteCritereFactory($portefeuille),
             $tranches,
             $notes,
+            $onboarding,
         ));
     }
 

@@ -1,0 +1,43 @@
+{#
+   LA SYNTHÈSE DE CONFIGURATION DU CABINET.
+
+   Envoyée au propriétaire quand le score bouge — c'est-à-dire quand une étape bascule,
+   et jamais à chaque objet créé. Elle dit trois choses, dans cet ordre : où il en est,
+   ce qu'il reste à faire en priorité, et par où reprendre.
+#}
+{% extends 'emails/_layout.html.twig' %}
+{% import 'emails/_macros.html.twig' as m %}
+
+{% block subject %}Joseara — Configuration de {{ entrepriseNom }}{% endblock %}
+
+{% block content %}
+    {% if bilan.complet %}
+        {{ m.heading('action:completed', 'Votre cabinet est prêt') }}
+        {{ m.paragraph('Bonjour ' ~ recipientName ~ ',') }}
+        {{ m.paragraph('La configuration de <strong>' ~ entrepriseNom ~ '</strong> est terminée.
+            Votre cabinet dispose désormais de tout ce qu\'il lui faut pour travailler, de la
+            piste jusqu\'à l\'encaissement des commissions.') }}
+        {{ m.etapes(bilan, []) }}
+        {{ m.note('Vous pouvez revenir à tout moment sur ces paramètres depuis les rubriques
+            concernées — ils vivent avec votre cabinet.') }}
+    {% else %}
+        {{ m.heading('action:settings', 'Où en est la configuration de votre cabinet') }}
+        {{ m.paragraph('Bonjour ' ~ recipientName ~ ',') }}
+        {{ m.paragraph('Votre progression sur <strong>' ~ entrepriseNom ~ '</strong> vient d\'avancer.
+            Voici ce qui est en place, et ce qu\'il reste à régler pour que votre cabinet soit
+            pleinement opérationnel.') }}
+
+        {{ m.etapes(bilan, etapesCitees|default([])) }}
+
+        {% if guideUrl %}
+            {{ m.button(guideUrl, 'Reprendre la configuration') }}
+        {% endif %}
+
+        {# Dire que c'est interruptible RASSURE, et dire que c'est un préalable FAIT AGIR.
+           Les deux tiennent en une phrase, et l'un sans l'autre serait trompeur. #}
+        {{ m.note('Rien ne presse : vous pouvez régler ces paramètres quand vous le souhaitez,
+            et votre progression est conservée. Mais tant qu\'ils manquent, certaines opérations
+            resteront hors de portée — on ne peut pas coter sans assureur, ni encaisser sans
+            compte bancaire.') }}
+    {% endif %}
+{% endblock %}

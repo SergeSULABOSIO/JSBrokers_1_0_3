@@ -195,6 +195,18 @@ class OnboardingFlowTest extends WebTestCase
         $this->client->followRedirect();
         $this->assertResponseIsSuccessful();
         $this->assertSelectorExists('.ws-welcome');
-        $this->assertSelectorExists('.ws-step-card');
+
+        // ── CE QUE CE PANNEAU MONTRE A CHANGÉ, ET POURQUOI ──────────────────────────
+        // Il proposait trois étapes ÉCRITES EN DUR, dont « Taxes » — un catalogue que le
+        // semis pose d'office à la création : on invitait le courtier à faire une chose
+        // déjà faite, et rien ne mesurait sa progression.
+        //
+        // Le propriétaire d'un cabinet incomplet y voit désormais sa dette de
+        // configuration : le pourcentage, les manques nommés, et le bouton qui ouvre le
+        // guide où chaque étape se règle. Les trois cartes suggérées ne subsistent que
+        // pour les invités et pour les cabinets déjà configurés.
+        $this->assertSelectorExists('.jsb-onboarding-bandeau');
+        $this->assertSelectorNotExists('.ws-step-card');
+        $this->assertSelectorTextContains('.jsb-onboarding-bandeau', 'Terminer la configuration');
     }
 }

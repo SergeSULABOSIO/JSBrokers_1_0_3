@@ -25,6 +25,14 @@ class FournisseurFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/fournisseur/api/delete",
             "endpoint_form_url" => "/admin/fournisseur/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que ce paramètre apporte
+            // au cabinet. Le premier paragraphe sert aussi de « pourquoi » sur la
+            // carte du guide de démarrage — un seul texte, deux surfaces.
+            "description_creation" => [
+                "Un fournisseur est l'opérateur économique auprès duquel vous engagez vos dépenses.",
+                "Il identifie le bénéficiaire de vos règlements et permet de retrouver, plus tard, tout ce que vous avez payé à un même prestataire.",
+                "Bailleur, opérateur téléphonique, imprimeur, cabinet comptable : déclarez ceux avec qui vous traitez régulièrement.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Fournisseur professionnel",

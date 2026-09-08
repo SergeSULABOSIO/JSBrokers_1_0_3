@@ -23,6 +23,7 @@ use Symfony\Component\PropertyAccess\PropertyAccess;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Service\Onboarding\OnboardingCompletude;
 use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
 use App\Controller\Admin\ControllerUtilsTrait;
@@ -46,7 +47,8 @@ class EspaceDeTravailComponentController extends AbstractController
         private JSBDynamicSearchService $searchService,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
-        private array $menuData // Injection du paramètre de service
+        private array $menuData, // Injection du paramètre de service
+        private OnboardingCompletude $onboardingCompletude,
     ) {}
 
     protected function getCollectionMap(): array
@@ -104,6 +106,21 @@ class EspaceDeTravailComponentController extends AbstractController
         $welcome = $request->query->getBoolean('welcome')
             || $this->em->getRepository(Client::class)->count(['entreprise' => $access['entreprise']]) === 0;
 
+        // LA DETTE DE CONFIGURATION, rappelée en permanence au propriétaire.
+        //
+        // Mode `scoreSeul` et pas `pour` : ce bilan est calculé À CHAQUE ouverture de
+        // l'espace de travail. Les aperçus de l'existant coûtent une requête par étape et
+        // ne servent qu'au guide lui-même, ouvert à la demande.
+        //
+        // Rien n'est calculé pour un invité : configurer le cabinet est l'affaire de son
+        // propriétaire, et le voyant ne s'affiche que pour lui.
+        $onboardingBilan = null;
+        $onboardingEtapesCitees = [];
+        if ($isEntrepriseAdmin) {
+            $onboardingBilan = $this->onboardingCompletude->scoreSeul($access['entreprise']);
+            $onboardingEtapesCitees = $this->onboardingCompletude->etapesACiter($access['entreprise']);
+        }
+
         return $this->render('espace_de_travail_component/index.html.twig', [
             'menu_data' => $processedMenuData,
             'idEntreprise' => $idEntreprise,
@@ -113,6 +130,12 @@ class EspaceDeTravailComponentController extends AbstractController
             'isEntrepriseAdmin' => $isEntrepriseAdmin,
             'welcome' => $welcome,
             'hasPerimetre' => $hasPerimetre,
+            'onboardingBilan' => $onboardingBilan,
+            'onboardingEtapesCitees' => $onboardingEtapesCitees,
+            // Le lien du courriel de synthèse porte `?onboarding=1` : le voyant s'ouvre
+            // alors de lui-même sur le guide, plutôt que de rendre une seconde fois les
+            // mêmes cartes ailleurs dans la page.
+            'onboardingAutoOuvrir' => $request->query->getBoolean('onboarding'),
         ]);
     }
 

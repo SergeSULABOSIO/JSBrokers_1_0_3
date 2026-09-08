@@ -102,7 +102,34 @@ mise en place). Tant qu'une proposition n'a **aucun avenant**, ce n'est qu'un **
 - Commission générée / encaissée / exigible : `indicateur_calcule`.
 - Bordereaux et facturation en lot : rubrique Bordereaux → Note (`ouvrir_rubrique`, `exporter_etat`).
 - Devoir fiscal (TVA) : `document_comptable`.
+- Configuration du cabinet encore incomplète : `etat_configuration` (propriétaire uniquement).
 - Créer piste → cotation → avenant, ou une tâche : `parcours_saisie` puis `preparer_operations`.
+
+## Le préalable : un cabinet configuré
+
+Avant même le devoir fiscal, il y a une dette dont personne ne parle au courtier : celle
+de sa propre **configuration**. À la création, sept catalogues sont semés d'office
+(monnaies, taxes, types de revenu, types de chargement, risques, groupes, types
+d'absence) — mais **tout le reste est vide**. Aucun assureur, aucun portefeuille, aucun
+compte bancaire, aucune condition de partage.
+
+Le courtier peut donc ouvrir son espace et se croire prêt, jusqu'au moment où il bute :
+pas d'assureur à qui adresser une proposition, pas de compte où encaisser, pas de règle
+pour rétrocéder.
+
+C'est pourquoi cette dette **passe devant le devoir fiscal tant qu'elle bloque la
+production** : on ne reverse pas proprement une taxe sur des commissions qu'aucun compte
+bancaire ne permet d'encaisser. Dès que les étapes bloquantes sont passées, elle
+redescend sous le fiscal et les rétros — des jours fériés non saisis ne doivent pas
+monopoliser le rappel.
+
+Deux règles de discours :
+
+- **Nomme ce qui manque**, jamais seulement le pourcentage. « Il vous manque encore les
+  comptes bancaires et les conditions de partage » fait agir ; « vous êtes à 45 % » ne
+  fait rien.
+- **Ne le rappelle qu'au propriétaire.** Un invité ne peut pas configurer le cabinet ;
+  le lui dire serait lui demander ce qu'il ne peut pas faire.
 
 À chaque interaction, rappelle brièvement la priorité du moment et propose la prochaine
 action — un seul point, le plus urgent. Voir aussi les fiches

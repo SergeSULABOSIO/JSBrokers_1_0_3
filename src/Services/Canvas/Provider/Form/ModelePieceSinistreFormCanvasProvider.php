@@ -28,6 +28,14 @@ class ModelePieceSinistreFormCanvasProvider implements FormCanvasProviderInterfa
             "endpoint_delete_url" => "/admin/modelepiecesinistre/api/delete",
             "endpoint_form_url" => "/admin/modelepiecesinistre/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que ce paramètre apporte
+            // au cabinet. Le premier paragraphe sert aussi de « pourquoi » sur la
+            // carte du guide de démarrage — un seul texte, deux surfaces.
+            "description_creation" => [
+                "Un type de pièce décrit un document à réclamer lors d'un sinistre : constat, facture, rapport d'expertise, procès-verbal.",
+                "Sans cette liste, chaque gestionnaire réclame ce qui lui vient à l'esprit, et un dossier part chez l'assureur incomplet — ce qui retarde l'indemnisation de votre client.",
+                "Ce sont vos modèles maison : adaptez-les aux branches que vous pratiquez réellement.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Modèle de pièce sinistre",

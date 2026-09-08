@@ -40,6 +40,8 @@
   --border-dark: #495057;
 
   /* --- États sémantiques (retours utilisateur uniquement) --- */
+  --success: #198754;
+  --warning: #ffc107;
   --danger: #dc3545;
   --danger-dark: #842029;
   --danger-bg: #f8d7da;
@@ -2460,6 +2462,35 @@ tr.row-selected:hover > td {
 /* On affiche la colonne SEULEMENT si on est en mode édition ET qu'elle a du contenu */
 .app-dialog.is-edit-mode.has-attributes-column .calculated-attributes-column {
     display: block; /* On la rend visible en tant que bloc pour un défilement vertical simple. */
+}
+
+/* EN CRÉATION, la même colonne porte la DESCRIPTION du paramètre.
+
+   Règle DISTINCTE et non fusionnée avec celle du dessus, volontairement : la classe
+   `has-creation-description` n'est posée que si le FormCanvasProvider a déclaré
+   `description_creation`. Un dialogue qui ne l'a pas déclarée reste donc exactement
+   dans son état d'avant — colonne masquée en création —, ce qui permet d'enrichir les
+   dialogues un par un sans toucher aux autres. */
+.app-dialog.has-creation-description .calculated-attributes-column {
+    display: block;
+}
+
+.creation-description p {
+    margin: 0 0 0.85rem;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    color: var(--bg-muted); /* lisible sur le fond sombre #212529 de la colonne */
+}
+
+.creation-description p:last-child {
+    margin-bottom: 0;
+}
+
+/* Le premier paragraphe est la phrase-clé : c'est aussi celle que reprend le guide
+   de démarrage sur ses cartes. On la met en avant plutôt que de la répéter. */
+.creation-description p:first-child {
+    font-weight: 600;
+    color: var(--text-white);
 }
 
 .calculated-attributes-column .column-title {
@@ -6305,4 +6336,354 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     .form-column .dlg-field-card-body > div:has(> .form-check) {
         grid-template-columns: 1fr;
     }
+}
+
+/*
+===================================================================
+ GUIDE DE DÉMARRAGE DU CABINET — barre de progression et bandeau
+===================================================================
+ Trois surfaces partagent la barre (`.jsb-onboarding-barre`) : le bandeau du
+ tableau de bord, l'infobulle du voyant et l'entête du guide. Une seule
+ définition, donc une seule apparence.
+*/
+
+.jsb-onboarding-barre {
+    flex: 1 1 auto;
+    height: 7px;
+    border-radius: 4px;
+    background-color: rgba(0, 71, 171, 0.14);
+    overflow: hidden;
+}
+
+/* Sur fond sombre (infobulle du voyant), le creux doit rester lisible. */
+.ws-onboarding-detail .jsb-onboarding-barre {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.jsb-onboarding-barre-remplie {
+    display: block;
+    height: 100%;
+    border-radius: 4px;
+    background-color: var(--cobalt);
+    transition: width 0.35s ease;
+}
+
+/* --- Le bandeau de dette du tableau de bord ---
+   Pleine largeur, en tête de l'écran d'arrivée. Il NOMME ce qui manque plutôt
+   que de se contenter d'un pourcentage : un chiffre ne dit pas quoi faire. */
+.jsb-onboarding-bandeau {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 1rem;
+    padding: 16px 20px;
+    border-radius: 12px;
+    border-left: 4px solid var(--cobalt);
+    background-color: var(--bg-cobalt-subtle);
+    box-shadow: var(--shadow-sm);
+}
+
+.jsb-onboarding-bandeau-icone {
+    flex: 0 0 auto;
+    display: inline-flex;
+    color: var(--cobalt);
+}
+
+.jsb-onboarding-bandeau-corps {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.jsb-onboarding-bandeau-titre {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0 0 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.jsb-onboarding-bandeau-reste {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--cobalt);
+}
+
+.jsb-onboarding-bandeau-manques {
+    margin: 8px 0 0;
+    font-size: 0.86rem;
+    color: var(--text-body);
+}
+
+.jsb-onboarding-cta-primaire {
+    flex: 0 0 auto;
+    padding: 11px 20px;
+    border: none;
+    border-radius: var(--nav-radius-sm);
+    background-color: var(--cobalt);
+    color: var(--text-white);
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.jsb-onboarding-cta-primaire:hover {
+    background-color: var(--cobalt-dark);
+}
+
+.jsb-onboarding-cta-primaire:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--cobalt-focus-ring);
+}
+
+/* Sur écran étroit, le bouton passe sous le texte plutôt que de l'écraser. */
+@media (max-width: 767.98px) {
+    .jsb-onboarding-bandeau {
+        flex-wrap: wrap;
+    }
+    .jsb-onboarding-cta-primaire {
+        width: 100%;
+    }
+}
+
+/* ===================================================================
+   LE GUIDE — une carte-atelier par étape
+   ===================================================================
+   Chaque carte montre l'existant, laisse ouvrir n'importe quelle ligne pour la
+   corriger, et permet d'en ajouter à volonté. Tout se règle dans un dialogue
+   posé PAR-DESSUS ce panneau : on ne quitte jamais le guide.
+   =================================================================== */
+.jsb-onboarding {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px 24px 40px;
+}
+
+.jsb-onboarding-entete { margin-bottom: 26px; }
+
+.jsb-onboarding-titre {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 6px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.jsb-onboarding-titre-icone { display: inline-flex; color: var(--cobalt); }
+
+.jsb-onboarding-intro {
+    margin: 0 0 14px;
+    font-size: 0.92rem;
+    color: var(--text-muted);
+}
+
+.jsb-onboarding-score { display: flex; align-items: center; gap: 12px; }
+
+.jsb-onboarding-score-valeur {
+    flex: 0 0 auto;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--cobalt);
+}
+
+.jsb-onboarding-section { margin-top: 28px; }
+
+.jsb-onboarding-section-titre {
+    margin: 0 0 3px;
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: var(--text-dark-secondary);
+}
+
+.jsb-onboarding-section-intro {
+    margin: 0 0 14px;
+    font-size: 0.84rem;
+    color: var(--text-muted);
+}
+
+.jsb-onboarding-cartes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap: 14px;
+}
+
+.jsb-onboarding-carte {
+    display: flex;
+    flex-direction: column;
+    padding: 14px 16px;
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    background-color: var(--bg-white);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Une étape à faire s'annonce par sa bordure cobalt : c'est là que le regard
+   doit aller. L'état est aussi écrit en toutes lettres dans l'entête, la
+   couleur ne portant jamais seule l'information (WCAG 1.4.1). */
+.jsb-onboarding-carte.est-a-faire { border-left: 3px solid var(--cobalt); }
+.jsb-onboarding-carte.est-fait { border-left: 3px solid var(--success); }
+
+.jsb-onboarding-carte-entete {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.jsb-onboarding-carte-icone { flex: 0 0 auto; display: inline-flex; color: var(--cobalt); }
+
+.jsb-onboarding-carte-titre {
+    flex: 1 1 auto;
+    margin: 0;
+    font-size: 0.96rem;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.jsb-onboarding-carte-etat {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    background-color: var(--bg-muted);
+    color: var(--text-body);
+}
+
+.jsb-onboarding-carte.est-fait .jsb-onboarding-carte-etat {
+    background-color: #d1e7dd;
+    color: #0f5132;
+}
+
+.jsb-onboarding-carte-pourquoi {
+    margin: 0 0 10px;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+}
+
+/* --- Les lignes de l'existant : chacune ouvre sa fiche en édition --- */
+.jsb-onboarding-lignes {
+    list-style: none;
+    margin: 0 0 10px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.jsb-onboarding-ligne {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    /* Cible tactile : 30 px de haut passaient sous le seuil de 24 px CSS exigé par
+       WCAG 2.5.8 une fois l'espacement compté. On vise confortablement au-dessus. */
+    min-height: 40px;
+    padding: 7px 10px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--nav-radius-sm);
+    background-color: var(--bg-light);
+    font-family: inherit;
+    font-size: 0.82rem;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.jsb-onboarding-ligne:hover:not(:disabled) {
+    background-color: var(--bg-muted);
+    border-color: var(--cobalt);
+}
+
+.jsb-onboarding-ligne:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--cobalt-focus-ring);
+}
+
+.jsb-onboarding-ligne:disabled { opacity: 0.65; pointer-events: none; }
+
+.jsb-onboarding-ligne-libelle {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.jsb-onboarding-ligne-detail {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-muted);
+}
+
+.jsb-onboarding-ligne-crayon { flex: 0 0 auto; display: inline-flex; color: var(--text-muted); }
+.jsb-onboarding-ligne:hover .jsb-onboarding-ligne-crayon { color: var(--cobalt); }
+
+.jsb-onboarding-reste {
+    margin: -4px 0 10px;
+    font-size: 0.76rem;
+    color: var(--text-muted);
+}
+
+/* Le bouton d'ajout est PRIMAIRE tant que l'étape est à faire — c'est l'appel à
+   l'action — puis passe en contour une fois l'étape acquise : il reste
+   disponible à volonté, mais cesse de crier. */
+.jsb-onboarding-ajouter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: auto;
+    padding: 9px 14px;
+    border: 1px solid var(--cobalt);
+    border-radius: var(--nav-radius-sm);
+    background-color: var(--cobalt);
+    color: var(--text-white);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.jsb-onboarding-ajouter:hover:not(:disabled) {
+    background-color: var(--cobalt-dark);
+    border-color: var(--cobalt-dark);
+    color: var(--text-white);
+}
+
+.jsb-onboarding-ajouter:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--cobalt-focus-ring);
+}
+
+.jsb-onboarding-ajouter:disabled { opacity: 0.65; pointer-events: none; }
+
+.jsb-onboarding-ajouter.est-secondaire {
+    background-color: transparent;
+    color: var(--cobalt);
+}
+
+/* Où retrouver l'élément plus tard, une fois le guide fermé.
+   `--text-label` (#adb5bd) est réservé aux labels de formulaire et aux fonds sombres :
+   sur blanc il tombe à 1,9:1, très en deçà des 4,5:1 exigés (WCAG 1.4.3). */
+.jsb-onboarding-carte-ou {
+    margin: 8px 0 0;
+    font-size: 0.72rem;
+    color: var(--text-muted);
 }

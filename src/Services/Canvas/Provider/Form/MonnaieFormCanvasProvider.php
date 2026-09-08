@@ -33,6 +33,14 @@ class MonnaieFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/monnaie/api/delete",
             "endpoint_form_url" => "/admin/monnaie/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que ce paramètre apporte
+            // au cabinet. Le premier paragraphe sert aussi de « pourquoi » sur la
+            // carte du guide de démarrage — un seul texte, deux surfaces.
+            "description_creation" => [
+                "La monnaie locale de votre cabinet a été créée avec un taux de change provisoire de 1,00 : tant qu'il n'est pas ajusté, toute conversion est fausse en silence.",
+                "Le taux exprime combien d'unités de cette monnaie valent un dollar. Il sert à convertir primes, commissions et taxes dès qu'une affaire n'est pas libellée dans la monnaie d'affichage.",
+                "Corrigez-le maintenant, puis à chaque révision sensible : aucun écran ne signale un taux périmé, et un montant converti faux ne se voit qu'au moment de payer.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Monnaie",

@@ -8,6 +8,7 @@ use App\Entity\Utilisateur;
 use App\Form\RechercheDashBordType;
 use App\DTO\CriteresRechercheDashBordDTO;
 use App\Repository\EntrepriseRepository;
+use App\Service\Onboarding\OnboardingCompletude;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\DashboardDataProvider;
 use App\Services\JSBTableauDeBordBuilder;
@@ -32,6 +33,7 @@ class EntrepriseDashbordController extends AbstractController
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
         private WorkspaceAccessResolver $accessResolver,
+        private OnboardingCompletude $onboardingCompletude,
     ) {
     }
 
@@ -105,9 +107,21 @@ class EntrepriseDashbordController extends AbstractController
         $user = $this->getUser();
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
 
+        // LA DETTE DE CONFIGURATION EN TÊTE DU TABLEAU DE BORD.
+        //
+        // C'est l'écran d'arrivée : si le rappel doit se voir quelque part, c'est ici. Il
+        // ne concerne que le PROPRIÉTAIRE — configurer le cabinet n'est pas l'affaire d'un
+        // invité, et le lui rappeler serait lui demander ce qu'il ne peut pas faire.
+        //
+        // Mode `scoreSeul` : aucun aperçu de l'existant n'est construit, donc aucun
+        // surcoût sur un écran ouvert à chaque entrée dans l'espace de travail.
+        $estProprietaire = $entreprise !== null && $entreprise->getUtilisateur() === $user;
+
         return $this->render('components/_tableau_de_bord_component.html.twig', [
             'utilisateur' => $user,
             'entreprise'  => $entreprise,
+            'onboardingBilan' => $estProprietaire ? $this->onboardingCompletude->scoreSeul($entreprise) : null,
+            'onboardingEtapesCitees' => $estProprietaire ? $this->onboardingCompletude->etapesACiter($entreprise) : [],
         ]);
     }
 

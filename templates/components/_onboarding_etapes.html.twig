@@ -1,0 +1,136 @@
+{#
+   LE GUIDE DE DÉMARRAGE — un atelier, pas un couloir.
+
+   Chaque étape est une carte autonome : elle montre ce qui est déjà enregistré, laisse en
+   ouvrir n'importe quelle ligne pour la corriger, et permet d'en ajouter autant qu'il en
+   faut. Tout se fait dans une boîte de dialogue POSÉE PAR-DESSUS ce panneau — on n'ouvre
+   jamais la rubrique complète, sans quoi quinze allers-retours feraient perdre le fil de
+   la progression.
+
+   Aucun formulaire n'est écrit ici : les canevas des dialogues existants voyagent dans un
+   attribut unique, et le contrôleur les passe au Cerveau, qui ouvre exactement le même
+   dialogue que la rubrique.
+
+   Variables attendues : bilan, canvasParEtape, idEntreprise, idInvite, entrepriseNom.
+#}
+
+<div class="jsb-onboarding"
+     data-controller="onboarding-panneau"
+     data-onboarding-panneau-canvas-value="{{ canvasParEtape|json_encode|e('html_attr') }}"
+     data-onboarding-panneau-contexte-value="{{ {idEntreprise: idEntreprise, idInvite: idInvite}|json_encode|e('html_attr') }}"
+     data-onboarding-panneau-url-value="{{ path('admin.onboarding.api.etat', {idEntreprise: idEntreprise, idInvite: idInvite}) }}">
+
+    <header class="jsb-onboarding-entete">
+        <h2 class="jsb-onboarding-titre">
+            <span class="jsb-onboarding-titre-icone" aria-hidden="true">{{ ux_icon('mdi:rocket-launch-outline', {height: '26px', width: '26px'}) }}</span>
+            Démarrage de {{ entrepriseNom }}
+        </h2>
+        {% if bilan.complet %}
+            <p class="jsb-onboarding-intro">
+                Tout est configuré. Votre cabinet dispose de ce qu'il faut pour travailler
+                de la piste jusqu'à l'encaissement des commissions.
+            </p>
+        {% else %}
+            <p class="jsb-onboarding-intro">
+                Réglez ici ce qu'il manque à votre cabinet pour travailler. Vous pouvez
+                partir et revenir à tout moment : votre progression est conservée.
+            </p>
+        {% endif %}
+        <div class="jsb-onboarding-score">
+            <div class="jsb-onboarding-barre" role="progressbar"
+                 aria-valuenow="{{ bilan.score }}" aria-valuemin="0" aria-valuemax="100"
+                 aria-label="Configuration du cabinet">
+                <span class="jsb-onboarding-barre-remplie" style="width: {{ bilan.score }}%;"></span>
+            </div>
+            <span class="jsb-onboarding-score-valeur">{{ bilan.score }} %</span>
+        </div>
+    </header>
+
+    {% for section in sections %}
+        {% set _etapes = bilan.etapes|filter(e => e.poids == section.poids) %}
+        {% if _etapes|length > 0 %}
+            <section class="jsb-onboarding-section">
+                <h3 class="jsb-onboarding-section-titre">{{ section.titre }}</h3>
+                <p class="jsb-onboarding-section-intro">{{ section.intro }}</p>
+
+                <div class="jsb-onboarding-cartes">
+                    {% for etape in _etapes %}
+                        {% set _canvas = canvasParEtape[etape.cle]|default({}) %}
+                        {% set _ouvrable = _canvas.parametres.endpoint_form_url is defined %}
+                        {# LE « POURQUOI » N'EST PAS ÉCRIT ICI : c'est le premier paragraphe
+                           de la description que le dialogue affichera dans sa colonne
+                           gauche. Un seul texte, deux surfaces. #}
+                        {% set _pourquoi = _canvas.parametres.description_creation|default([])|first %}
+
+                        <article class="jsb-onboarding-carte{{ etape.fait ? ' est-fait' : ' est-a-faire' }}">
+                            <header class="jsb-onboarding-carte-entete">
+                                <span class="jsb-onboarding-carte-icone" aria-hidden="true">
+                                    {{ ux_icon(resolve_icon_name(etape.icone), {height: '20px', width: '20px'}) }}
+                                </span>
+                                <h4 class="jsb-onboarding-carte-titre">{{ etape.libelle }}</h4>
+                                {# L'état ne repose pas sur la seule couleur : la pastille
+                                   porte un signe ET un mot (WCAG 1.4.1). #}
+                                <span class="jsb-onboarding-carte-etat">
+                                    <span aria-hidden="true">{{ etape.fait ? '✓' : '○' }}</span>
+                                    {% if etape.fait %}
+                                        {{ etape.nombre > 0 ? etape.nombre ~ ' enregistré' ~ (etape.nombre > 1 ? 's' : '') : 'fait' }}
+                                    {% else %}
+                                        à faire
+                                    {% endif %}
+                                </span>
+                            </header>
+
+                            {% if _pourquoi %}
+                                <p class="jsb-onboarding-carte-pourquoi">{{ _pourquoi }}</p>
+                            {% endif %}
+
+                            {% if etape.apercu|default([])|length > 0 %}
+                                <ul class="jsb-onboarding-lignes">
+                                    {% for item in etape.apercu %}
+                                        <li>
+                                            <button type="button" class="jsb-onboarding-ligne"
+                                                {% if not _ouvrable %}disabled{% endif %}
+                                                data-action="click->onboarding-panneau#ouvrirDialogue"
+                                                data-onboarding-panneau-cle-param="{{ etape.cle }}"
+                                                data-onboarding-panneau-id-param="{{ item.id }}"
+                                                aria-label="Modifier {{ item.libelle }}">
+                                                <span class="jsb-onboarding-ligne-libelle">{{ item.libelle }}</span>
+                                                <span class="jsb-onboarding-ligne-detail">{{ item.detail }}</span>
+                                                <span class="jsb-onboarding-ligne-crayon" aria-hidden="true">
+                                                    {{ ux_icon(resolve_icon_name('action:edit'), {height: '15px', width: '15px'}) }}
+                                                </span>
+                                            </button>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                                {% if etape.reste|default(0) > 0 %}
+                                    {# Une mention, pas un lien : cette carte est une
+                                       consultation simple, et le compte exact est déjà
+                                       affiché dans l'entête. #}
+                                    <p class="jsb-onboarding-reste">et {{ etape.reste }} autre{{ etape.reste > 1 ? 's' : '' }}</p>
+                                {% endif %}
+                            {% endif %}
+
+                            {# Un réglage unique n'a pas de bouton « Ajouter » : sa ligne
+                               ci-dessus est la seule chose à ouvrir. Quand elle n'existe
+                               pas encore en base, le bouton la crée. #}
+                            {% if not etape.singleton or etape.apercu|default([])|length == 0 %}
+                                <button type="button"
+                                    class="jsb-onboarding-ajouter{{ etape.fait ? ' est-secondaire' : '' }}"
+                                    {% if not _ouvrable %}disabled{% endif %}
+                                    data-action="click->onboarding-panneau#ouvrirDialogue"
+                                    data-onboarding-panneau-cle-param="{{ etape.cle }}">
+                                    <span aria-hidden="true">{{ ux_icon(resolve_icon_name('action:add'), {height: '15px', width: '15px'}) }}</span>
+                                    {{ etape.singleton ? 'Régler' : 'Ajouter' }} — {{ etape.libelle|lower }}
+                                </button>
+                            {% endif %}
+
+                            {# Où retrouver cet élément plus tard, une fois le guide fermé. #}
+                            <p class="jsb-onboarding-carte-ou">Rubrique {{ etape.bloc }}</p>
+                        </article>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+    {% endfor %}
+</div>

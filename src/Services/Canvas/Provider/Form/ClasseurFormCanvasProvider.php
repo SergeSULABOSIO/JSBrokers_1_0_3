@@ -34,6 +34,14 @@ class ClasseurFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/classeur/api/delete",
             "endpoint_form_url" => "/admin/classeur/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que ce paramètre apporte
+            // au cabinet. Le premier paragraphe sert aussi de « pourquoi » sur la
+            // carte du guide de démarrage — un seul texte, deux surfaces.
+            "description_creation" => [
+                "Un classeur range les documents du cabinet. Sans lui, les pièces s'accumulent sans ordre et deviennent introuvables au moment où elles comptent.",
+                "Chaque client reçoit automatiquement son propre classeur à sa création. Ceux que vous créez ici servent au reste : documents internes, contrats-cadres, agréments, correspondance avec les compagnies.",
+                "Un document mal classé est un document perdu — et en assurance, une pièce absente lors d'un sinistre coûte cher.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Classeur de documents",

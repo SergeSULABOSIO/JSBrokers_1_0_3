@@ -34,6 +34,14 @@ class ParametresCongeFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/parametresconge/api/delete",
             "endpoint_form_url" => "/admin/parametresconge/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que ce paramètre apporte
+            // au cabinet. Le premier paragraphe sert aussi de « pourquoi » sur la
+            // carte du guide de démarrage — un seul texte, deux surfaces.
+            "description_creation" => [
+                "Les paramètres de congé fixent les règles que toute demande devra respecter : préavis, dotation annuelle, nombre d'absents simultanés, périodes de blocage.",
+                "Tant qu'ils ne sont pas enregistrés, les contrôles s'appuient sur des valeurs implicites que personne dans le cabinet n'a décidées.",
+                "Ces réglages engagent le cabinet bien au-delà d'un dossier : ils gouvernent l'acceptation ou le refus de chaque demande.",
+            ],
             "creation_interdite" => true,
             "creation_interdite_message" => "Un cabinet n'a qu'un seul jeu de réglages, déjà créé. Ouvrez-le pour le modifier.",
             "form_intro" => [

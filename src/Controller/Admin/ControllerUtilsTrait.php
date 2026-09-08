@@ -1570,6 +1570,10 @@ trait ControllerUtilsTrait
             //PARAMETRES
             '_mon_compte_component.html.twig' => 'App\Controller\RegistrationController::register',
             '_licence_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index', // TODO: A remplacer par le bon contrôleur
+            // GUIDE DE DÉMARRAGE (configuration du cabinet, réservé au propriétaire).
+            // Sans cette ligne, le voyant de la colonne 1 ouvrirait un onglet vide : un
+            // 404 silencieux que rien ne signale.
+            '_onboarding_component.html.twig' => 'App\Controller\Admin\OnboardingWorkspaceController::loadWorkspaceComponent',
             // SUPPORT (self-service courtier → file CrmTicket de la console)
             '_support_component.html.twig' => 'App\Controller\Admin\SupportController::loadWorkspaceComponent',
             // DOCUMENTS COMPTABLES (états OHADA du courtier, générés à la volée)

@@ -3,6 +3,7 @@
 namespace App\Form;
 
 use App\Entity\ConditionPartage;
+use App\Service\Partage\ConditionDOffice;
 use App\Entity\Invite;
 use App\Entity\Partenaire;
 use App\Services\FormListenerFactory;
@@ -113,7 +114,10 @@ class ConditionPartageType extends AbstractType
                 'help' => "Ce pourcentage ne s'appliquera que sur les commissions hors taxes (l'assiette partageable).",
                 'required' => false,
                 // Point de départ usuel d'un intéressement, en POINTS (5 = 5 %).
-                'data' => $isCreationMode ? 5.0 : $condition?->getTaux(),
+                // La valeur vient de ConditionDOffice, qui la pose AUSSI sur la condition
+                // créée d'office pour un agent : deux écritures du même nombre finissent
+                // toujours par diverger, et c'est alors le taux qui paie qui gagne.
+                'data' => $isCreationMode ? ConditionDOffice::TAUX_AGENT_DEFAUT : $condition?->getTaux(),
                 // Stockage en POINTS (30 = 30 %), pas en fraction. Calculs via ConditionPartage::getFraction().
                 'type' => 'integer',
                 'scale' => 3,

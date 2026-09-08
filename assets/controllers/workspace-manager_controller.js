@@ -1729,6 +1729,15 @@ export default class extends Controller {
             return;
         }
 
+        // Même cas de figure pour le GUIDE DE DÉMARRAGE : il n'est déclaré dans aucun
+        // groupe du menu (son unique porte d'entrée est le voyant de la colonne 1), et
+        // il n'existe que pour le propriétaire. On rejoue donc le clic sur le voyant —
+        // absent, il n'y a rien à ouvrir, ce qui est le bon comportement pour un invité.
+        if (entityName === 'Onboarding') {
+            this.element.querySelector('.ws-onboarding-jauge')?.click();
+            return;
+        }
+
         const selector = `[data-workspace-manager-entity-name-param='${entityName}']`;
 
         // Cas 1 : la rubrique est déjà visible dans le groupe courant.

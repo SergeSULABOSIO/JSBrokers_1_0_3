@@ -93,6 +93,19 @@ class Entreprise
     #[ORM\JoinColumn(nullable: false)]
     private ?Utilisateur $utilisateur = null;
 
+    /**
+     * Dernier score de configuration ANNONCÉ AU PROPRIÉTAIRE par e-mail.
+     *
+     * Il n'est pas là pour être lu — le score se recalcule à la demande, et c'est lui qui
+     * fait foi. Il ne sert qu'à répondre à une seule question : « a-t-on déjà dit ce
+     * chiffre-là ? ». Sans lui, la synthèse repartirait à chaque écriture et le courtier
+     * recevrait un e-mail par assureur créé.
+     *
+     * `null` = aucune synthèse encore envoyée.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?int $onboardingScoreNotifie = null;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();
@@ -389,6 +402,18 @@ class Entreprise
     public function setUtilisateur(?Utilisateur $utilisateur): static
     {
         $this->utilisateur = $utilisateur;
+
+        return $this;
+    }
+
+    public function getOnboardingScoreNotifie(): ?int
+    {
+        return $this->onboardingScoreNotifie;
+    }
+
+    public function setOnboardingScoreNotifie(?int $onboardingScoreNotifie): static
+    {
+        $this->onboardingScoreNotifie = $onboardingScoreNotifie;
 
         return $this;
     }
