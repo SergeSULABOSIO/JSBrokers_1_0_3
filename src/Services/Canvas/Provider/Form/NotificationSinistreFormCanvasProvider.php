@@ -34,6 +34,15 @@ class NotificationSinistreFormCanvasProvider implements FormCanvasProviderInterf
             "endpoint_delete_url" => "/admin/notificationsinistre/api/delete",
             "endpoint_form_url" => "/admin/notificationsinistre/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Une notification ouvre le dossier de sinistre : c'est l'acte par lequel le cabinet prend acte du malheur de son client et enclenche l'indemnisation.",
+                "Elle nomme l'assuré, l'assureur et le risque touché, relate les faits, les date et évalue les dommages.",
+                "Tout ce qui suivra s'y rattache : les pièces réclamées, l'offre d'indemnisation, les tâches de relance.",
+                "C'est au sinistre que le courtier prouve sa valeur. Un dossier ouvert vite et bien se règle vite et bien.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Notification de sinistre",

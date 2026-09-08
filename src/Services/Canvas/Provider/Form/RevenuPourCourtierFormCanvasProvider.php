@@ -26,6 +26,14 @@ class RevenuPourCourtierFormCanvasProvider implements FormCanvasProviderInterfac
             "endpoint_delete_url" => "/admin/revenupourcourtier/api/delete",
             "endpoint_form_url" => "/admin/revenupourcourtier/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Un revenu est ce que l'affaire vous rapporte : sans lui, une cotation décrit une prime que vous placez sans rien facturer.",
+                "Il s'appuie sur un type de revenu, qui dit comment il se calcule et qui le doit — l'assureur pour une commission, le client pour des honoraires. Un montant ou un taux exceptionnel peut y déroger pour cette affaire seulement.",
+                "C'est ce revenu qui devient facturable, puis encaissable, puis partageable avec les intermédiaires. Le chiffre d'affaires du cabinet se compte sur les commissions réellement encaissées.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Revenu pour courtier",

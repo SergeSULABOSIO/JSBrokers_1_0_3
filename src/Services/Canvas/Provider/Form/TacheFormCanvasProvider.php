@@ -33,6 +33,14 @@ class TacheFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/tache/api/delete",
             "endpoint_form_url" => "/admin/tache/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Une tâche est un engagement daté : c'est elle qui garantit qu'une étape d'un dossier ne restera pas en attente.",
+                "Vous décrivez l'action, désignez qui la mène et fixez son échéance. Elle se rattache au dossier concerné — piste, client, sinistre — et se retrouve donc là où l'on en a besoin.",
+                "Une tâche en retard remonte dans votre programme du jour et dans la boussole de l'assistant, jusqu'à ce qu'elle soit close.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Fiche tâche",

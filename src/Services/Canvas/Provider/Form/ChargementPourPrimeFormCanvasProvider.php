@@ -26,6 +26,14 @@ class ChargementPourPrimeFormCanvasProvider implements FormCanvasProviderInterfa
             "endpoint_delete_url" => "/admin/chargementpourprime/api/delete",
             "endpoint_form_url" => "/admin/chargementpourprime/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Un chargement compose la prime : c'est en les empilant qu'on obtient le montant que le client devra payer.",
+                "Chacun s'appuie sur un type de chargement — prime nette, fronting, frais accessoires, taxes — et peut porter un montant exceptionnel propre à cette affaire.",
+                "Le découpage n'est pas cosmétique : la commission se calcule sur une assiette précise, et changer un chargement change ce que vous facturez.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Chargement sur prime",

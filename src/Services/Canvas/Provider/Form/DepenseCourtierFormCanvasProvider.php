@@ -25,6 +25,15 @@ class DepenseCourtierFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/depensecourtier/api/delete",
             "endpoint_form_url" => "/admin/depensecourtier/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Une dépense est une sortie de fonds du cabinet : c'est elle qui, retranchée de vos commissions, donne votre marge réelle.",
+                "Son statut décide de son effet : « Engagée » pèse sur le résultat sans décaisser, « Payée » sort l'argent de la banque ou de la caisse, « Annulée » l'écarte de la comptabilité.",
+                "Rattachez-la à un fournisseur enregistré, ou nommez un bénéficiaire occasionnel. La TVA déductible alimente votre suivi fiscal.",
+                "Chaque dépense se range sous un type de charge : c'est ce découpage qui rend vos états lisibles.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Dépense du cabinet",

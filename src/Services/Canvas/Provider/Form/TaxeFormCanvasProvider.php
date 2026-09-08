@@ -26,6 +26,15 @@ class TaxeFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/taxe/api/delete",
             "endpoint_form_url" => "/admin/taxe/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Une taxe s'ajoute à la prime ou pèse sur votre commission : dans les deux cas, elle est due à un tiers et vous n'en gardez rien.",
+                "Ses deux taux, IARD et Vie, s'appliquent automatiquement sur les cotations. Son redevable dit qui la supporte : l'assureur ou le courtier.",
+                "Ce sont deux mondes distincts, à ne jamais confondre : la taxe collectée SUR LA PRIME pour le compte de l'assureur, et celle due par le cabinet SUR SA COMMISSION.",
+                "L'autorité fiscale qui la reçoit se rattache ici : c'est elle qui figurera sur la note de reversement.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Taxe",

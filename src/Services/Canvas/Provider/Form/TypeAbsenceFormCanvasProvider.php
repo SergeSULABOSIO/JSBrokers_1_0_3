@@ -25,6 +25,14 @@ class TypeAbsenceFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/typeabsence/api/delete",
             "endpoint_form_url" => "/admin/typeabsence/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Un type d'absence décrit une nature de congé que vos collaborateurs pourront poser.",
+                "La case « Décompté du solde » est celle qui compte : elle seule fait qu'une demande approuvée retire des jours au compteur. Une maladie ou un événement familial se déclarent sans y toucher — un arrêt de travail n'est pas un congé.",
+                "Cinq types sont posés à la création du cabinet. Ajoutez-en si votre convention en prévoit d'autres.",
+            ],
             "form_intro" => [
                 "titre" => "Type d'absence",
                 "description" => "Vous décrivez une nature d'absence que vos collaborateurs pourront poser. La case « Décompté du solde » est celle qui compte : elle seule fait qu'une demande approuvée retire des jours au compteur. Une maladie ou un événement familial se déclarent sans y toucher.",

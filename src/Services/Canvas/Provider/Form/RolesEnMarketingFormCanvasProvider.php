@@ -25,6 +25,14 @@ class RolesEnMarketingFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/rolesenmarketing/api/delete",
             "endpoint_form_url" => "/admin/rolesenmarketing/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Un rôle ouvre une porte : sans lui, ce collaborateur ne voit rien du module Marketing, car l'espace de travail est fermé par défaut.",
+                "Vous décidez ici ce qu'il peut consulter et modifier sur les pistes, les tâches et les feedbacks.",
+                "Les droits s'appliquent dès l'enregistrement. N'accordez que le nécessaire.",
+            ],
             // Rendu dédié « droits d'accès » (grille de cases sur charte cobalt).
             "form_class" => "form-column--roles",
             // Entête contextuel du volet de saisie (pastille + description).

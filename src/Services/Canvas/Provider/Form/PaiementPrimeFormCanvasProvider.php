@@ -25,6 +25,15 @@ class PaiementPrimeFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/paiementprime/api/delete",
             "endpoint_form_url" => "/admin/paiementprime/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Le paiement d'une prime est encaissé par l'ASSUREUR, pas par vous : ce signalement n'entre jamais dans votre trésorerie.",
+                "Il sert à deux choses, et elles comptent : il éteint l'impayé du client, et il rend votre commission de courtage exigible auprès de la compagnie.",
+                "L'information vous vient du client ou de l'assureur ; vous la consignez ici pour que le suivi cesse de réclamer une prime déjà réglée.",
+                "Les rétrocommissions dues aux intermédiaires suivent au prorata de ce qui a été encaissé.",
+            ],
             "form_intro" => [
                 "titre" => "Paiement de prime",
                 "description" => "Vous tracez le règlement de la prime par l'assuré, encaissé par l'ASSUREUR (information reçue du client ou de l'assureur). Ce signalement n'impacte jamais votre trésorerie : il sert au suivi et rend votre commission de courtage exigible.",

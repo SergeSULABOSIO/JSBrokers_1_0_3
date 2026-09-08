@@ -25,6 +25,15 @@ class RolesEnProductionFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/rolesenproduction/api/delete",
             "endpoint_form_url" => "/admin/rolesenproduction/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Un rôle ouvre une porte : sans lui, ce collaborateur ne voit rien du module Production, car l'espace de travail est fermé par défaut.",
+                "Vous décidez ici ce qu'il peut consulter et modifier sur les clients, portefeuilles, assureurs, risques, cotations, avenants et intermédiaires.",
+                "Rattacher un collaborateur à un portefeuille restreint en outre ce qu'il voit aux seuls clients qui s'y trouvent : le rôle dit CE QU'IL PEUT FAIRE, le portefeuille SUR QUI.",
+                "Les droits s'appliquent dès l'enregistrement. N'accordez que le nécessaire.",
+            ],
             // Rendu dédié « droits d'accès » (grille de cases sur charte cobalt).
             "form_class" => "form-column--roles",
             // Entête contextuel du volet de saisie (pastille + description).

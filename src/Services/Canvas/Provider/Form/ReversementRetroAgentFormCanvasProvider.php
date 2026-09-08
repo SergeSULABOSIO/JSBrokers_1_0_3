@@ -39,6 +39,14 @@ class ReversementRetroAgentFormCanvasProvider implements FormCanvasProviderInter
             "endpoint_delete_url" => "/admin/reversementretroagent/api/delete",
             "endpoint_form_url" => "/admin/reversementretroagent/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Un reversement est la part d'une commission déjà encaissée que vous rendez à l'intermédiaire qui a apporté l'affaire.",
+                "Il ne se saisit pas ligne à ligne : un virement règle souvent plusieurs échéances d'un coup, et sa pièce justificative vaut pour tout le lot.",
+                "Il s'enregistre donc depuis le rapport de production ou par l'assistant, avec son justificatif du même geste. Cet écran sert à le consulter et à l'auditer.",
+            ],
             "creation_interdite" => true,
             "creation_interdite_message" => "Un reversement s'enregistre depuis « Voir le rapport de production » "
                 . "du bénéficiaire — agent interne ou partenaire externe —, ou en le demandant à l'assistant : "

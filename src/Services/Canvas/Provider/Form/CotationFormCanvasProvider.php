@@ -34,6 +34,15 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
             'endpoint_submit_url' => '/admin/cotation/api/submit',
             'endpoint_delete_url' => '/admin/cotation/api/delete',
             'isCreationMode' => $isCreateMode,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            'description_creation' => [
+                "Une cotation est la proposition que vous adressez à un assureur : c'est la pièce maîtresse du placement, celle dont découlent la prime, la commission et le contrat.",
+                "Vous y composez la prime chargement par chargement, y déclarez ce que l'affaire vous rapporte, et y découpez le paiement en tranches. Chacun de ces éléments a sa propre fiche, atteignable depuis celle-ci.",
+                "Une cotation validée porte l'avenant : c'est le moment où une proposition devient un contrat.",
+                "La période de couverture est de douze mois par défaut, ajustable — elle sera alignée sur les dates réelles de l'avenant lorsque celui-ci sera émis.",
+            ],
             // Picker de documents générique (client + piste parente + cotation + polices).
             "attribute_actions" => [
                 // ── L'EFFORT COMMERCIAL D'UN AGENT INTERNE ────────────────────────────

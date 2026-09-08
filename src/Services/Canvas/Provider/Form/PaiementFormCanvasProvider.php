@@ -34,6 +34,14 @@ class PaiementFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/paiement/api/delete",
             "endpoint_form_url" => "/admin/paiement/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Un paiement est un encaissement réel : c'est lui qui solde une note et fait entrer l'argent dans votre trésorerie.",
+                "Vous y notez la référence, le montant, la date et le compte bancaire crédité. Le solde de la note se met à jour d'autant.",
+                "Une preuve documentaire s'y joint : le jour d'un désaccord, c'est elle qu'on produira.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Paiement",

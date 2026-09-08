@@ -26,6 +26,14 @@ class AutoriteFiscaleFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/autoritefiscale/api/delete",
             "endpoint_form_url" => "/admin/autoritefiscale/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Une autorité fiscale est l'organisme public à qui les taxes collectées sont reversées : sans elle, une taxe se calcule sans qu'on sache à qui l'envoyer.",
+                "Vous y notez son nom, son abréviation et la taxe qui lui revient.",
+                "C'est à son nom que seront émises les notes de reversement, et c'est sur elle que se solde votre suivi fiscal.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Autorité fiscale",

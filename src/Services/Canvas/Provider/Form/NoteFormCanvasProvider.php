@@ -34,6 +34,14 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/note/api/delete",
             "endpoint_form_url" => "/admin/note/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Une note formalise une créance ou une dette : c'est le document qui transforme un montant calculé en somme réellement réclamée ou reversée.",
+                "Elle s'adresse à un client, à un assureur, à un partenaire ou à une autorité fiscale, et se compose d'articles reprenant les revenus à facturer.",
+                "Tant qu'une note reste impayée, elle apparaît dans le recouvrement. C'est le point de départ de la relance, et l'assistant vous la rappelle.",
+            ],
             // Fields in NoteType but absent from layout: must be suppressed so form_end(render_rest:true)
             // doesn't render them as stray visible widgets at the bottom of the form.
             "suppress_fields" => $isBordereauNote ? ['articles', 'bordereau'] : ['bordereau'],
