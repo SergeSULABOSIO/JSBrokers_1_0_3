@@ -11,8 +11,26 @@ use App\Repository\MonnaieRepository;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Serializer\Annotation\Groups;
 
+/**
+ * ⚠ UN MONNAIE N'EXISTE QU'UNE FOIS PAR CABINET.
+ *
+ * Le catalogue en portait jusqu'à SIX exemplaires identiques : `ServiceInitialisation-
+ * Entreprise` semait sans regarder si le poste existait, et `app:conges:provisionner`
+ * rejouait ce semis en entier à chaque exécution. L'utilisateur voyait alors six lignes
+ * qui se ressemblent, sans pouvoir savoir laquelle sa police employait ni laquelle
+ * modifier le jour où le taux change.
+ *
+ * Le semis est devenu idempotent, mais une règle qui ne vit que dans du PHP est une règle
+ * qu'un import, un script de reprise ou une seconde route peut contourner sans le savoir.
+ * Elle est donc posée LÀ OÙ ELLE NE SE CONTOURNE PAS.
+ *
+ * ⚠ ET ELLE EST INSENSIBLE À LA CASSE, par la collation de la colonne — ce qui est voulu :
+ * « Écart » et « écart » désignent le même poste, et deux lignes qui ne se distinguent que
+ * par une majuscule sont un doublon pour tout le monde sauf pour la machine.
+ */
 #[ORM\Entity(repositoryClass: MonnaieRepository::class)]
 #[ORM\HasLifecycleCallbacks]
+#[ORM\UniqueConstraint(name: 'uniq_monnaie_entreprise_cle', columns: ['entreprise_id', 'code'])]
 class Monnaie
 {
     use AuditableTrait;

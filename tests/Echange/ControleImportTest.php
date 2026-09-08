@@ -312,15 +312,24 @@ class ControleImportTest extends WebTestCase
         self::assertSame(1, $rapport['creations']);
     }
 
-    /** Deux lignes de même nom ne se départagent pas : deviner serait rattacher au hasard. */
+    /**
+     * Deux lignes de même nom ne se départagent pas : deviner serait rattacher au hasard.
+     *
+     * ⚠ SUR DES CLIENTS, ET NON PLUS SUR DES GROUPES. Le catalogue d'un cabinet — groupes,
+     * risques, taxes, chargements, types de revenu — porte désormais un index UNIQUE par
+     * nom : l'homonymie y est devenue impossible, et le cas ne s'y construit plus. Elle
+     * reste entière pour les fiches ORDINAIRES, et c'est la bonne place pour ce test :
+     * deux « SARL Martin » sont deux affaires distinctes, quand deux « Prime nette »
+     * n'étaient qu'un même poste écrit deux fois.
+     */
     public function testUnRenvoiAmbiguEstRefuse(): void
     {
         [$entreprise, $proprietaire] = $this->fixture();
-        $this->creerGroupe($entreprise, $proprietaire, 'Doublon');
-        $this->creerGroupe($entreprise, $proprietaire, 'Doublon');
+        $this->creerClient($entreprise, $proprietaire, 'Doublon');
+        $this->creerClient($entreprise, $proprietaire, 'Doublon');
 
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Groupe', 'Client']);
-        $this->ajouterLigne($chemin, 'Client', ['nom' => 'Client Ambigu', 'groupe' => 'Doublon']);
+        $chemin = $this->exporter($entreprise, $proprietaire, ['Client', 'Piste']);
+        $this->ajouterLigne($chemin, 'Piste', ['nom' => 'Piste Ambiguë', 'client' => 'Doublon']);
 
         $run = $this->importateur()->controler($chemin, 'ambigu.xlsx', $entreprise, $proprietaire);
 
