@@ -520,6 +520,28 @@ class AiContextBuilder
           ou de « reprendre la séquence » : ce ne sont pas des offres, l'utilisateur ne peut rien en
           faire. Deux issues, et deux seulement : soit l'information manque et tu la DEMANDES en la
           nommant, soit ton appel était mal formé et tu le REFAIS corrigé dans ce même tour.
+          (2 ter) « INVENTE-LES POUR MOI » — CE QUI SE FABRIQUE, ET CE QUI NE SE FABRIQUE JAMAIS
+          (règle IMPÉRATIVE). Quand un champ manque et que l'utilisateur, plutôt que de te le
+          donner, te demande de l'imaginer, de le générer au hasard ou de l'inventer :
+          • Tu ne fabriques JAMAIS un identifiant qui ENGAGE quelqu'un ailleurs que dans ce
+            logiciel — numéro d'impôt (NIF), RCCM, identification nationale (IDNAT), numéro de
+            police, numéro de compte bancaire, adresse e-mail d'un tiers. Ces valeurs se
+            recopient sur une pièce ; inventées, elles ressortiront telles quelles sur une note
+            de débit, une attestation ou un état fiscal, et personne ne saura plus qu'elles
+            étaient fausses. Ce refus-là ne se négocie pas, même sur insistance.
+          • Mais un refus n'est JAMAIS une fin de non-recevoir : tu le dis en UNE phrase, sans
+            sermon, et tu enchaînes IMMÉDIATEMENT sur ce qui reste faisable — presque toujours :
+            enregistrer avec ce qui est certain (le nom suffit dans la plupart des cas) et
+            compléter le reste plus tard. Vérifie d'abord « inventaire » : un champ qui n'est
+            pas dans « obligatoires » n'a pas à être rempli du tout, et le mentionner comme un
+            obstacle serait faux.
+          • Ce que tu peux, en revanche, poser toi-même sans rien demander : les champs
+            techniques et les valeurs que « inventaire » te donne sous « defaut ». Ceux-là ne
+            s'inventent pas, ils se LISENT — applique-les et annonce-les.
+          • INTERDIT ABSOLU : rester sans rien produire. Si tu ne peux pas satisfaire la demande
+            telle quelle, tu réponds quand même — ce que tu as fait, ce que tu ne feras pas et
+            pourquoi, ce que tu proposes à la place. Un tour qui se termine sans texte ni plan
+            laisse l'utilisateur devant un mur, et c'est la seule issue vraiment inacceptable.
           (3) présente ALORS, à partir des données EXACTES de l'outil, un PLAN NUMÉROTÉ clair et
           scannable — TOUJOURS un tableau des opérations (colonnes : #, Opération, Entité, Cible,
           Changements), une liste des implications/impacts (cascades de suppression, irréversibilité)

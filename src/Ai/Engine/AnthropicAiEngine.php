@@ -7,6 +7,7 @@ use App\Ai\AiReply;
 use App\Ai\AiRequest;
 use App\Ai\Mutation\MotifDeRefus;
 use App\Ai\Mutation\OutilsDePlan;
+use App\Ai\Redaction\RelanceDuTourMuet;
 use App\Ai\Redaction\RepliPrecis;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
@@ -142,8 +143,25 @@ final class AnthropicAiEngine implements AiEngineInterface
         // une divergence silencieuse, exactement ce que ce chantier corrige.
         $plansRefuses = [];
 
+        // UNE SEULE REPRISE PAR MESSAGE : au-delà, on paierait un troisième appel.
+        // Miroir exact du moteur Gemini — cf. RelanceDuTourMuet pour le pourquoi.
+        $repriseFaite = false;
+
         for ($round = 0; $round <= self::MAX_TOOL_ROUNDS; $round++) {
             $response = $this->call($request, $messages);
+
+            // UN TOUR DE PLANIFICATION QUI NE REND RIEN DU TOUT — ni texte, ni appel
+            // d'outil. Ce moteur y était plus exposé encore que Gemini : faute de bloc de
+            // texte, extractText() servait « Pouvez-vous préciser votre question ? »,
+            // c'est-à-dire notre silence présenté comme l'imprécision de l'utilisateur.
+            // La relance ne rejoint PAS $messages : c'est un échafaudage, pas un tour de
+            // conversation.
+            if ($round === 0 && !$repriseFaite && $this->estTourVide($response)) {
+                $repriseFaite = true;
+                $response = $this->call($request, array_merge($messages, [
+                    ['role' => 'user', 'content' => RelanceDuTourMuet::TEXTE],
+                ]));
+            }
 
             // Garde de sécurité Anthropic : la requête a été déclinée.
             if (($response['stop_reason'] ?? null) === 'refusal') {
@@ -156,7 +174,7 @@ final class AnthropicAiEngine implements AiEngineInterface
 
             if (($response['stop_reason'] ?? null) !== 'tool_use') {
                 return new AiReply(
-                    $this->extractText($response),
+                    $this->extractText($response, $this->repliPrecis->depuis($resultatsOutils)),
                     refused: $refused,
                     toolUsed: $toolUsed,
                     actions: $actions,
@@ -272,8 +290,46 @@ final class AnthropicAiEngine implements AiEngineInterface
         return $blocks;
     }
 
-    /** Concatène les blocs texte de la réponse finale. */
-    private function extractText(array $response): string
+    /**
+     * Le tour n'a-t-il RIEN produit — ni appel d'outil, ni le moindre mot ?
+     *
+     * À ne pas confondre avec un refus : une demande déclinée par les garde-fous
+     * d'Anthropic a son propre chemin juste en dessous, et la rejouer ne ferait que la
+     * faire décliner une seconde fois. Ici, le modèle avait le droit de parler et n'a pas
+     * parlé.
+     *
+     * @param array<string, mixed> $response
+     */
+    private function estTourVide(array $response): bool
+    {
+        if (($response['stop_reason'] ?? null) === 'refusal') {
+            return false;
+        }
+
+        foreach (($response['content'] ?? []) as $block) {
+            if (($block['type'] ?? null) === 'tool_use') {
+                return false;
+            }
+            if (($block['type'] ?? null) === 'text' && trim((string) ($block['text'] ?? '')) !== '') {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Concatène les blocs texte de la réponse.
+     *
+     * @param string|null $repli ce qu'on rend quand le modèle n'a produit aucun texte.
+     *                           Le défaut — « pouvez-vous préciser votre question ? » —
+     *                           renvoyait à l'utilisateur un travail qui était le nôtre :
+     *                           les appelants qui tiennent des résultats d'outils passent
+     *                           donc RepliPrecis, comme le fait le moteur Gemini.
+     *
+     * @param array<string, mixed> $response
+     */
+    private function extractText(array $response, ?string $repli = null): string
     {
         $parts = [];
         foreach (($response['content'] ?? []) as $block) {
@@ -282,8 +338,12 @@ final class AnthropicAiEngine implements AiEngineInterface
             }
         }
 
-        return $parts === []
-            ? "Je n'ai pas de réponse à formuler sur ce point. Pouvez-vous préciser votre question ?"
-            : implode("\n\n", $parts);
+        if ($parts !== []) {
+            return implode("\n\n", $parts);
+        }
+
+        return $repli !== null && trim($repli) !== ''
+            ? $repli
+            : "Je n'ai pas de réponse à formuler sur ce point. Pouvez-vous préciser votre question ?";
     }
 }

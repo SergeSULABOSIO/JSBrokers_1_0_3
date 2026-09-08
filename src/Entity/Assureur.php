@@ -24,7 +24,27 @@ class Assureur
     #[Groups(['list:read'])]
     private ?string $nom = null;
 
-    #[ORM\Column(length: 255)]
+    /**
+     * L'IDENTITÉ ADMINISTRATIVE D'UN ASSUREUR NE SE CONNAÎT PAS LE JOUR OÙ ON L'INSCRIT.
+     *
+     * Ces quatre colonnes — e-mail, NIF, IDNAT, RCCM — étaient les SEULES du périmètre à
+     * être NOT NULL : `Client` et `Partenaire`, qui portent exactement les mêmes champs,
+     * les ont toujours eues nullables. Un courtier qui inscrit ACTIVA, SUNU ou MAYFAIR
+     * connaît leur NOM ; il n'a ni leur numéro d'impôt ni leur RCCM sous la main, et il
+     * n'a aucune raison de les avoir : ce sont des références qu'on relève sur une pièce,
+     * plus tard, quand elle arrive.
+     *
+     * CE QUE CETTE ANOMALIE A COÛTÉ (2026-09-08, conversation 68). « Crée-moi ACTIVA,
+     * ACTIVA LIFE, SUNU, RAWSUR, RAWSUR LIFE, MAYFAIR et SFA. » Ket a dû réclamer quatre
+     * références par assureur, soit vingt-huit valeurs que personne ne possédait ; trois
+     * messages plus tard, aucun des sept n'existait. Le blocage n'était pas dans
+     * l'assistant : `ChampsObligatoiresInspector` dérive fidèlement l'obligation de la
+     * NULLABILITÉ DE LA COLONNE, et l'écran de saisie exigeait les mêmes quatre champs.
+     * C'est le schéma qui exigeait l'impossible, à l'assistant comme au formulaire.
+     *
+     * Seul `nom` reste obligatoire : c'est ce qui fait qu'un assureur EST cet assureur.
+     */
+    #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['list:read'])]
     private ?string $email = null;
 
@@ -58,15 +78,18 @@ class Assureur
     #[ORM\OneToMany(targetEntity: Note::class, mappedBy: 'assureur')]
     private Collection $notes;
 
-    #[ORM\Column(length: 255)]
+    // Référence administrative, relevée plus tard : cf. le commentaire de $email.
+    #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['list:read'])]
     private ?string $numimpot = null;
 
-    #[ORM\Column(length: 255)]
+    // Référence administrative, relevée plus tard : cf. le commentaire de $email.
+    #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['list:read'])]
     private ?string $idnat = null;
 
-    #[ORM\Column(length: 255)]
+    // Référence administrative, relevée plus tard : cf. le commentaire de $email.
+    #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['list:read'])]
     private ?string $rccm = null;
 

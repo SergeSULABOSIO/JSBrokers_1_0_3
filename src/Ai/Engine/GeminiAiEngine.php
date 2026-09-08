@@ -12,6 +12,7 @@ use App\Ai\Debit\BudgetDebit;
 use App\Ai\Mutation\MotifDeRefus;
 use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Mutation\OutilsDePlan;
+use App\Ai\Redaction\RelanceDuTourMuet;
 use App\Ai\Redaction\RepliPrecis;
 use App\Ai\Trousse\Phase;
 use App\Ai\Trousse\SelecteurDeTrousse;
@@ -45,6 +46,7 @@ final class GeminiAiEngine implements AiEngineInterface
     private const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
     /** Assez ample pour restituer une page de liste (rechercher_entites) sans troncature. */
     private const MAX_OUTPUT_TOKENS = 4096;
+
     /**
      * UN SEUL TOUR D'OUTILS PAR MESSAGE. Ce n'est pas un réglage, c'est la règle
      * d'architecture : **le modèle n'orchestre plus rien, PHP orchestre**.
@@ -274,6 +276,10 @@ final class GeminiAiEngine implements AiEngineInterface
             $this->journal->debutDePhase($phase);
             ['reponse' => $response, 'octets' => $octets] = $this->appelerAvecReessai($request, $contents, $trousse, $phase);
 
+            // UNE SEULE REPRISE PAR TOUR, quelle qu'en soit la cause (appel malformé ou
+            // tour muet) : au-delà, on paierait un troisième appel pour ce message.
+            $repriseFaite = false;
+
             // APPEL D'OUTIL MALFORMÉ — le blocage du 2026-08-12, et il ne venait ni du
             // prompt ni du raisonnement du modèle. Sur « Je confirme », Gemini a bien
             // TENTÉ d'émettre preparer_operations, mais son sérialiseur d'appels a
@@ -287,6 +293,7 @@ final class GeminiAiEngine implements AiEngineInterface
             // seule — le quota se compte par minute, et un échec répété relève d'autre
             // chose (un schéma trop profond pour ce modèle) que d'un aléa.
             if ($phase === Phase::PLANIFICATION && $this->estAppelMalforme($response)) {
+                $repriseFaite = true;
                 $this->logger->warning('Assistant IA (gemini) : appel d’outil MALFORMÉ, une reprise.', [
                     'sortie' => (int) ($response['usageMetadata']['candidatesTokenCount'] ?? 0),
                 ]);
@@ -298,6 +305,52 @@ final class GeminiAiEngine implements AiEngineInterface
                         'sortie' => (int) ($response['usageMetadata']['candidatesTokenCount'] ?? 0),
                     ]);
                 }
+            }
+
+            // UN TOUR DE PLANIFICATION QUI NE REND RIEN DU TOUT — ni texte, ni appel
+            // d'outil. C'est le mur du 2026-09-08 (conversation 68) : sur « Invente pour
+            // moi des numéros. », le modèle a dépensé 807 jetons de sortie en raisonnement
+            // interne et n'a émis AUCUN mot. Le moteur n'avait alors rien à rendre, rien à
+            // restituer non plus — pas un outil n'avait tourné —, et l'utilisateur a reçu
+            // la phrase de dernier recours : « redites-la-moi en nommant le point précis ».
+            // Il venait de le nommer trois fois.
+            //
+            // POURQUOI UNE REPRISE, ET POURQUOI ELLE NE COÛTE RIEN DE PLUS. Ce message
+            // s'arrête ICI : la rédaction ne partira jamais, puisqu'elle n'aurait rien à
+            // commenter. Le second des deux appels auxquels un message a droit est donc
+            // libre — le dépenser à redemander une réponse vaut infiniment mieux que de le
+            // laisser tomber pour servir un mur. La règle des DEUX APPELS est tenue, et
+            // `$repriseFaite` garantit qu'on ne reprend qu'une fois par tour, y compris
+            // quand l'appel malformé ci-dessus a déjà consommé la reprise.
+            //
+            // LA RELANCE DIT CE QUI S'EST PASSÉ. Rejouer à l'identique parierait sur le
+            // seul échantillonnage ; on y joint donc une ligne qui nomme le silence et
+            // rappelle les deux seules sorties acceptables — répondre, ou appeler l'outil.
+            if ($phase === Phase::PLANIFICATION && !$repriseFaite && $this->estTourVide($response)) {
+                $repriseFaite = true;
+                // Le tour abandonné a bel et bien été facturé chez le fournisseur : il
+                // entre dans le cumul du message ET dans le compteur de débit par minute,
+                // sans quoi la reprise partirait sur un quota qu'on croit encore libre.
+                $perdus = (int) ($response['usageMetadata']['promptTokenCount'] ?? 0);
+                $cumulInput += $perdus;
+                $cumulSortie += (int) ($response['usageMetadata']['candidatesTokenCount'] ?? 0);
+                $this->budget->enregistrer($this->modeleCourant, $perdus);
+
+                $this->logger->warning('Assistant IA (gemini) : tour de planification VIDE, une reprise.', [
+                    'finishReason' => $response['candidates'][0]['finishReason'] ?? null,
+                    'entree'       => $perdus,
+                    'sortie'       => (int) ($response['usageMetadata']['candidatesTokenCount'] ?? 0),
+                ]);
+
+                // La relance ne rejoint PAS $contents : c'est un échafaudage, pas un tour
+                // de conversation. La rédaction — et le fil que l'utilisateur relira — ne
+                // doivent pas en garder trace.
+                ['reponse' => $response, 'octets' => $octets] = $this->appelerAvecReessai(
+                    $request,
+                    array_merge($contents, [['role' => 'user', 'parts' => [['text' => RelanceDuTourMuet::TEXTE]]]]),
+                    $trousse,
+                    $phase,
+                );
             }
 
             $usage = $response['usageMetadata'] ?? [];
@@ -844,6 +897,31 @@ final class GeminiAiEngine implements AiEngineInterface
         $parts = $response['candidates'][0]['content']['parts'] ?? [];
         foreach ($parts as $part) {
             if (isset($part['functionCall'])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Le tour n'a-t-il RIEN produit — ni appel d'outil, ni le moindre mot ?
+     *
+     * À ne pas confondre avec un refus : une réponse bloquée par les garde-fous du
+     * fournisseur a son propre chemin (estBloquee), et la rejouer ne ferait que la faire
+     * bloquer une seconde fois. Ici, le modèle avait le droit de parler et n'a pas parlé.
+     */
+    private function estTourVide(array $response): bool
+    {
+        if ($this->estBloquee($response)) {
+            return false;
+        }
+
+        foreach ($response['candidates'][0]['content']['parts'] ?? [] as $part) {
+            if (isset($part['functionCall'])) {
+                return false;
+            }
+            if (trim((string) ($part['text'] ?? '')) !== '') {
                 return false;
             }
         }

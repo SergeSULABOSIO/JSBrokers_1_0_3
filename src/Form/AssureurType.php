@@ -14,6 +14,23 @@ use Symfony\Component\Form\Extension\Core\Type\UrlType;
 
 class AssureurType extends AbstractType
 {
+    /**
+     * UN ASSUREUR S'INSCRIT SOUS SON NOM, le reste se complète ensuite.
+     *
+     * Tous les champs sauf « nom » sont facultatifs — en parité EXACTE avec les colonnes,
+     * désormais nullables (cf. le commentaire de Assureur::$email). Laisser `required` à
+     * son défaut ici n'aurait tenu que la moitié de la promesse : l'assistant, qui lit la
+     * nullabilité Doctrine, aurait accepté une création à quatre champs vides que l'écran,
+     * lui, aurait refusée au premier `required` du navigateur. Deux vérités pour une même
+     * fiche, c'est exactement ce que ChampsObligatoiresInspector existe pour empêcher.
+     *
+     * LES LIBELLÉS SONT AUSSI DES NOMS DE CHAMPS, et c'est pour cela qu'on répare ici deux
+     * coquilles anciennes (« Nunméro Impôt », « Nunméro RCCM »). AliasDeChamps rattache un
+     * champ dicté par l'assistant au champ dont le LIBELLÉ porte les mêmes mots :
+     * « numeroImpot » se ramène à « Numéro d'impôt », jamais à « Nunméro Impôt ». La faute
+     * de frappe coupait ce rattachement — la valeur dictée était écartée en silence, puis
+     * le champ réclamé à l'utilisateur qui venait de le donner.
+     */
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -31,37 +48,43 @@ class AssureurType extends AbstractType
                 ],
             ])
             ->add('numimpot', TextType::class, [
-                'label' => "Nunméro Impôt",
+                'label' => "Numéro d'impôt (NIF)",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "NIF",
                 ],
             ])
             ->add('rccm', TextType::class, [
-                'label' => "Nunméro RCCM",
+                'label' => "Numéro RCCM",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "RCCM",
                 ],
             ])
             ->add('idnat', TextType::class, [
-                'label' => "Id. nationale",
+                'label' => "Identification nationale (IDNAT)",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Idnat",
                 ],
             ])
             ->add('email', EmailType::class, [
                 'label' => "Email",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Email",
                 ],
             ])
             ->add('url', UrlType::class, [
                 'label' => "Site Internet",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Site Internet",
                 ],
             ])
             ->add('adressePhysique', TextType::class, [
                 'label' => "Adresse Physique",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Adresse Physique",
                 ],

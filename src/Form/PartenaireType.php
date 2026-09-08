@@ -52,19 +52,19 @@ class PartenaireType extends AbstractType
                 ],
             ])
             ->add('numimpot', TextType::class, [
-                'label' => "Nunméro Impôt (Nif)",
+                'label' => "Numéro d'impôt (NIF)",
                 'attr' => [
                     'placeholder' => "NIF",
                 ],
             ])
             ->add('rccm', TextType::class, [
-                'label' => "Nunméro RCCM (Rccm)",
+                'label' => "Numéro RCCM",
                 'attr' => [
                     'placeholder' => "RCCM",
                 ],
             ])
             ->add('idnat', TextType::class, [
-                'label' => "Nunméro d'Id. nationale (Idnat)",
+                'label' => "Identification nationale (IDNAT)",
                 'attr' => [
                     'placeholder' => "Idnat",
                 ],
