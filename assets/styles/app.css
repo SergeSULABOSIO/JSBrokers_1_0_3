@@ -6543,6 +6543,51 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     border-radius: 12px;
     background-color: var(--bg-white);
     box-shadow: var(--shadow-sm);
+    transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease;
+}
+
+/* ── LE SURVOL DIT « JE TE VOIS », PAS « CLIQUE-MOI » ─────────────────────────
+   La carte n'est PAS cliquable dans son ensemble : seules ses lignes et son
+   bouton le sont. On lui donne donc un accusé de présence — élévation et bord
+   cobalt —, et surtout PAS de `cursor: pointer`, qui promettrait un clic sans
+   effet au milieu de la carte (Bastien & Scapin > Signifiance).
+
+   L'élévation reprend celle des cartes d'entreprise (`.ent-card:hover`) : même
+   geste, même ombre cobalt, d'un écran à l'autre.
+
+   `:focus-within` n'est pas une redite du survol : sans lui, un utilisateur au
+   clavier tabulant vers le bouton d'ajout ne verrait jamais quelle carte il a
+   atteinte (WCAG 2.4.7).
+
+   Les trois côtés sont nommés un par un pour épargner le BORD GAUCHE, qui porte
+   l'état de l'étape — cobalt à faire, vert acquis. Un `border-color` global
+   l'aurait effacé au premier survol. */
+.jsb-onboarding-carte:hover,
+.jsb-onboarding-carte:focus-within {
+    border-top-color: var(--cobalt);
+    border-right-color: var(--cobalt);
+    border-bottom-color: var(--cobalt);
+    box-shadow: 0 8px 24px rgba(0, 71, 171, .12);
+    transform: translateY(-2px);
+}
+
+/* L'icône de l'étape passe du cobalt au cobalt foncé : l'œil trouve d'abord le
+   titre de la carte survolée, avant même d'en lire le contenu. */
+.jsb-onboarding-carte:hover .jsb-onboarding-carte-icone,
+.jsb-onboarding-carte:focus-within .jsb-onboarding-carte-icone {
+    color: var(--cobalt-dark);
+}
+
+/* WCAG 2.3.3 : on retire le MOUVEMENT, pas le retour visuel. L'ombre et le bord
+   restent — ce sont eux qui portent l'information de présence. */
+@media (prefers-reduced-motion: reduce) {
+    .jsb-onboarding-carte {
+        transition: box-shadow .18s ease, border-color .18s ease;
+    }
+    .jsb-onboarding-carte:hover,
+    .jsb-onboarding-carte:focus-within {
+        transform: none;
+    }
 }
 
 /* Une étape à faire s'annonce par sa bordure cobalt : c'est là que le regard
@@ -6558,7 +6603,12 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     margin-bottom: 6px;
 }
 
-.jsb-onboarding-carte-icone { flex: 0 0 auto; display: inline-flex; color: var(--cobalt); }
+.jsb-onboarding-carte-icone {
+    flex: 0 0 auto;
+    display: inline-flex;
+    color: var(--cobalt);
+    transition: color .18s ease;
+}
 
 .jsb-onboarding-carte-titre {
     flex: 1 1 auto;
