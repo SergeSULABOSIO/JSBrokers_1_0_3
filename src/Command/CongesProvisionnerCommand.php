@@ -213,7 +213,19 @@ final class CongesProvisionnerCommand extends Command
         // ÉCRITURE. On réutilise le semeur du provisionnement plutôt que d'en écrire un
         // second : c'est la même règle, et deux implémentations d'une même règle finissent
         // par diverger.
-        $this->initialisation->initialiser($entreprise, $proprietaire);
+        //
+        // ⚠ MAIS SEULEMENT LA PART CONGÉS, et c'est une correction. On appelait
+        // `initialiser()` EN ENTIER, qui sème aussi monnaies, taxes, chargements, types de
+        // revenu, risques et groupes — un semis pensé pour un cabinet NEUF, et qui créait
+        // alors sans regarder si le poste existait déjà. Chaque exécution de cette
+        // commande rejouait donc tout le catalogue des cabinets existants : « Prime
+        // nette » s'y retrouvait six fois, les risques à 228 lignes pour 56 codes.
+        //
+        // Le semis est désormais idempotent, ce qui suffirait à empêcher la rechute. On
+        // restreint quand même l'appel : une commande nommée « provisionner les congés »
+        // n'a pas à toucher au catalogue commercial d'un cabinet, fût-ce sans rien
+        // changer. Ce qu'elle écrit doit se lire dans son nom.
+        $this->initialisation->initialiserLesConges($entreprise, $proprietaire);
 
         foreach ($entreprise->getInvites() as $agent) {
             $this->droitConge->appliquer($agent);

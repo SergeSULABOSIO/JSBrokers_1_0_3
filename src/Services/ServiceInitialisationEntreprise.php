@@ -92,6 +92,25 @@ class ServiceInitialisationEntreprise
         $this->initialiserChargementsEtRevenus($entreprise, $proprietaire);
         $this->initialiserRisques($entreprise, $proprietaire);
         $this->initialiserGroupes($entreprise, $proprietaire);
+        $this->initialiserLesConges($entreprise, $proprietaire);
+    }
+
+    /**
+     * LA SEULE PART CONGÉS DU SEMIS — pour les cabinets qui existent déjà.
+     *
+     * ⚠ ELLE EXISTE PARCE QUE LA REPRISE APPELAIT TOUT. `app:conges:provisionner` installe
+     * les types d'absence et la dotation de l'exercice sur les cabinets EXISTANTS ; elle
+     * passait par `initialiser()` en entier, qui sème aussi monnaies, taxes, chargements,
+     * types de revenu, risques et groupes. Ce semis-là créait sans regarder si le poste
+     * existait — ce qui ne se voit pas sur un cabinet neuf, et qui a fini par donner six
+     * « Prime nette » et 228 risques pour 56 codes.
+     *
+     * `poser()` rend maintenant le semis idempotent, ce qui suffirait. Cette porte étroite
+     * reste néanmoins la bonne : une commande de congés qui ouvre le catalogue commercial,
+     * même sans y toucher, est une commande dont on ne peut plus lire l'effet dans le nom.
+     */
+    public function initialiserLesConges(Entreprise $entreprise, Invite $proprietaire): void
+    {
         $this->initialiserTypesAbsence($entreprise, $proprietaire);
         $this->initialiserCongesExerciceCourant($entreprise, $proprietaire);
     }
@@ -244,13 +263,12 @@ class ServiceInitialisationEntreprise
      */
     private function initialiserMonnaies(Entreprise $entreprise, Invite $proprietaire): void
     {
-        $usd = (new Monnaie())
+        $this->poser(Monnaie::class, 'code', 'USD', $entreprise, $proprietaire, static fn (): Monnaie => (new Monnaie())
             ->setNom(self::NOMS_MONNAIES['USD'])
             ->setCode('USD')
             ->setTauxusd('1.00')
             ->setLocale(false)
-            ->setFonction(Monnaie::FONCTION_SAISIE_ET_AFFICHAGE);
-        $this->attacher($usd, $entreprise, $proprietaire);
+            ->setFonction(Monnaie::FONCTION_SAISIE_ET_AFFICHAGE));
 
         $codeLocal = $entreprise->getPays() !== null
             ? $this->serviceGeographie->getMonnaie($entreprise->getPays())
@@ -258,13 +276,12 @@ class ServiceInitialisationEntreprise
 
         // On n'ajoute la monnaie locale que si elle existe et diffère de l'USD.
         if ($codeLocal !== null && $codeLocal !== 'USD') {
-            $locale = (new Monnaie())
+            $this->poser(Monnaie::class, 'code', $codeLocal, $entreprise, $proprietaire, static fn (): Monnaie => (new Monnaie())
                 ->setNom(self::NOMS_MONNAIES[$codeLocal] ?? $codeLocal)
                 ->setCode($codeLocal)
                 ->setTauxusd('1.00') // placeholder : taux de change à ajuster par le courtier
                 ->setLocale(true)
-                ->setFonction(Monnaie::FONCTION_SAISIE_UNIQUEMENT);
-            $this->attacher($locale, $entreprise, $proprietaire);
+                ->setFonction(Monnaie::FONCTION_SAISIE_UNIQUEMENT));
         }
     }
 
@@ -275,33 +292,29 @@ class ServiceInitialisationEntreprise
      */
     private function initialiserTaxes(Entreprise $entreprise, Invite $proprietaire): void
     {
-        $tva = (new Taxe())
+        $tva = $this->poser(Taxe::class, 'code', 'TVA', $entreprise, $proprietaire, static fn (): Taxe => (new Taxe())
             ->setCode('TVA')
             ->setDescription('Taxe sur la valeur ajoutée')
             ->setTauxIARD('16.00')
             ->setTauxVIE('0.00')
-            ->setRedevable(Taxe::REDEVABLE_ASSUREUR);
-        $this->attacher($tva, $entreprise, $proprietaire);
+            ->setRedevable(Taxe::REDEVABLE_ASSUREUR));
 
-        $dgi = (new AutoriteFiscale())
+        $this->poser(AutoriteFiscale::class, 'abreviation', 'DGI', $entreprise, $proprietaire, static fn (): AutoriteFiscale => (new AutoriteFiscale())
             ->setNom('Direction Générale des Impôts')
             ->setAbreviation('DGI')
-            ->setTaxe($tva);
-        $this->attacher($dgi, $entreprise, $proprietaire);
+            ->setTaxe($tva));
 
-        $arca = (new Taxe())
+        $arca = $this->poser(Taxe::class, 'code', 'ARCA', $entreprise, $proprietaire, static fn (): Taxe => (new Taxe())
             ->setCode('ARCA')
             ->setDescription('Frais de surveillance')
             ->setTauxIARD('2.00')
             ->setTauxVIE('2.00')
-            ->setRedevable(Taxe::REDEVABLE_COURTIER);
-        $this->attacher($arca, $entreprise, $proprietaire);
+            ->setRedevable(Taxe::REDEVABLE_COURTIER));
 
-        $autoriteArca = (new AutoriteFiscale())
+        $this->poser(AutoriteFiscale::class, 'abreviation', 'ARCA', $entreprise, $proprietaire, static fn (): AutoriteFiscale => (new AutoriteFiscale())
             ->setNom("Autorité de Régulation et de Contrôle des Assurances")
             ->setAbreviation('ARCA')
-            ->setTaxe($arca);
-        $this->attacher($autoriteArca, $entreprise, $proprietaire);
+            ->setTaxe($arca));
     }
 
     /**
@@ -310,73 +323,64 @@ class ServiceInitialisationEntreprise
      */
     private function initialiserChargementsEtRevenus(Entreprise $entreprise, Invite $proprietaire): void
     {
-        $primeNette = (new Chargement())
+        $primeNette = $this->poser(Chargement::class, 'nom', 'Prime nette', $entreprise, $proprietaire, static fn (): Chargement => (new Chargement())
             ->setNom('Prime nette')
             ->setFonction(Chargement::FONCTION_PRIME_NETTE)
-            ->setDescription('La part de la prime destinée à couvrir le risque pur.');
-        $this->attacher($primeNette, $entreprise, $proprietaire);
+            ->setDescription('La part de la prime destinée à couvrir le risque pur.'));
 
-        $fronting = (new Chargement())
+        $fronting = $this->poser(Chargement::class, 'nom', 'Fronting', $entreprise, $proprietaire, static fn (): Chargement => (new Chargement())
             ->setNom('Fronting')
             ->setFonction(Chargement::FONCTION_FRONTING)
-            ->setDescription('Frais liés aux opérations de fronting.');
-        $this->attacher($fronting, $entreprise, $proprietaire);
+            ->setDescription('Frais liés aux opérations de fronting.'));
 
-        $frais = (new Chargement())
+        $this->poser(Chargement::class, 'nom', 'Frais accessoires', $entreprise, $proprietaire, static fn (): Chargement => (new Chargement())
             ->setNom('Frais accessoires')
             ->setFonction(Chargement::FONCTION_FRAIS_ADMIN)
-            ->setDescription('Frais de gestion, accessoires ou de police.');
-        $this->attacher($frais, $entreprise, $proprietaire);
+            ->setDescription('Frais de gestion, accessoires ou de police.'));
 
         // Chargements de type taxe : composantes de la prime globale payée par le client.
-        $tvaChargement = (new Chargement())
+        $this->poser(Chargement::class, 'nom', 'TVA', $entreprise, $proprietaire, static fn (): Chargement => (new Chargement())
             ->setNom('TVA')
             ->setFonction(Chargement::FONCTION_TAXE)
-            ->setDescription('Taxe sur la valeur ajoutée.');
-        $this->attacher($tvaChargement, $entreprise, $proprietaire);
+            ->setDescription('Taxe sur la valeur ajoutée.'));
 
-        $arcaChargement = (new Chargement())
+        $this->poser(Chargement::class, 'nom', 'ARCA', $entreprise, $proprietaire, static fn (): Chargement => (new Chargement())
             ->setNom('ARCA')
             ->setFonction(Chargement::FONCTION_TAXE)
-            ->setDescription("Frais de surveillance de l'autorité de régulation (ARCA).");
-        $this->attacher($arcaChargement, $entreprise, $proprietaire);
+            ->setDescription("Frais de surveillance de l'autorité de régulation (ARCA)."));
 
-        $commOrdinaire = (new TypeRevenu())
+        $this->poser(TypeRevenu::class, 'nom', 'Commission Ordinaire', $entreprise, $proprietaire, static fn (): TypeRevenu => (new TypeRevenu())
             ->setNom('Commission Ordinaire')
             ->setAppliquerPourcentageDuRisque(true)
             ->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR)
             ->setShared(true)
             ->setMultipayments(true)
-            ->setTypeChargement($primeNette);
-        $this->attacher($commOrdinaire, $entreprise, $proprietaire);
+            ->setTypeChargement($primeNette));
 
         // Taux en POINTS (30 = 30 %), cf. TypeRevenu::getFraction.
-        $commFronting = (new TypeRevenu())
+        $this->poser(TypeRevenu::class, 'nom', 'Commission sur Fronting', $entreprise, $proprietaire, static fn (): TypeRevenu => (new TypeRevenu())
             ->setNom('Commission sur Fronting')
             ->setPourcentage(30)
             ->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR)
             ->setShared(false)
             ->setMultipayments(true)
-            ->setTypeChargement($fronting);
-        $this->attacher($commFronting, $entreprise, $proprietaire);
+            ->setTypeChargement($fronting));
 
-        $consultance = (new TypeRevenu())
+        $this->poser(TypeRevenu::class, 'nom', 'Frais de consultance', $entreprise, $proprietaire, static fn (): TypeRevenu => (new TypeRevenu())
             ->setNom('Frais de consultance')
             ->setPourcentage(5)
             ->setRedevable(TypeRevenu::REDEVABLE_CLIENT)
             ->setShared(false)
             ->setMultipayments(false)
-            ->setTypeChargement($primeNette);
-        $this->attacher($consultance, $entreprise, $proprietaire);
+            ->setTypeChargement($primeNette));
 
-        $gestion = (new TypeRevenu())
+        $this->poser(TypeRevenu::class, 'nom', 'Honoraire de gestion', $entreprise, $proprietaire, static fn (): TypeRevenu => (new TypeRevenu())
             ->setNom('Honoraire de gestion')
             ->setPourcentage(2)
             ->setRedevable(TypeRevenu::REDEVABLE_CLIENT)
             ->setShared(false)
             ->setMultipayments(true)
-            ->setTypeChargement($primeNette);
-        $this->attacher($gestion, $entreprise, $proprietaire);
+            ->setTypeChargement($primeNette));
     }
 
     /**
@@ -386,14 +390,13 @@ class ServiceInitialisationEntreprise
     private function initialiserRisques(Entreprise $entreprise, Invite $proprietaire): void
     {
         foreach ($this->chargerRisquesDefaut() as $data) {
-            $risque = (new Risque())
+            $this->poser(Risque::class, 'code', $data['code'], $entreprise, $proprietaire, static fn (): Risque => (new Risque())
                 ->setCode($data['code'])
                 ->setNomComplet($data['nom'])
                 ->setBranche((int) $data['branche'])
                 ->setPourcentageCommissionSpecifiqueHT((float) $data['commission'])
                 ->setDescription($data['description'] ?? null)
-                ->setImposable(true);
-            $this->attacher($risque, $entreprise, $proprietaire);
+                ->setImposable(true));
         }
     }
 
@@ -417,10 +420,9 @@ class ServiceInitialisationEntreprise
         ];
 
         foreach ($groupes as [$nom, $description]) {
-            $groupe = (new Groupe())
+            $this->poser(Groupe::class, 'nom', $nom, $entreprise, $proprietaire, static fn (): Groupe => (new Groupe())
                 ->setNom($nom)
-                ->setDescription($description);
-            $this->attacher($groupe, $entreprise, $proprietaire);
+                ->setDescription($description));
         }
     }
 
@@ -439,6 +441,59 @@ class ServiceInitialisationEntreprise
      * Rattache une entité auditable à l'entreprise et à son invité propriétaire,
      * puis la programme pour persistance.
      */
+    /**
+     * POSE UN POSTE DE CATALOGUE — et le retrouve s'il est déjà là.
+     *
+     * ⚠ C'EST LA RÈGLE QUI MANQUAIT, ET ELLE A COÛTÉ CHER. Ce semis créait sans regarder,
+     * ce qui est sans conséquence tant qu'il ne tourne qu'une fois — à la création d'un
+     * cabinet. Mais `app:conges:provisionner` appelait `initialiser()` EN ENTIER pour
+     * installer les types d'absence sur les cabinets existants : chaque exécution rejouait
+     * tout le catalogue. Constaté en base : « Prime nette » six fois, « Commission
+     * Ordinaire » six fois, 228 risques pour 56 codes. Un utilisateur ne pouvait plus
+     * savoir laquelle de ses six copies sa police employait, ni laquelle modifier.
+     *
+     * ⚠ ET ON REND L'EXISTANT PLUTÔT QU'UNE COPIE, ce qui est le point important : les
+     * types de revenu se rattachent à un chargement (`setTypeChargement`). Créer quand
+     * même, en se contentant de ne pas persister, ferait pointer « Commission Ordinaire »
+     * vers une « Prime nette » fantôme — un lien vers rien, plus difficile à voir qu'un
+     * doublon.
+     *
+     * ⚠ ON NE MET PAS À JOUR L'EXISTANT NON PLUS. Un cabinet a pu renommer sa taxe ou
+     * ajuster un taux : repasser les valeurs par défaut effacerait son réglage à chaque
+     * appel. Le semis installe ce qui manque, et ne touche à rien d'autre.
+     *
+     * @template T of object
+     *
+     * @param class-string<T> $classe
+     * @param callable(): T   $construire
+     *
+     * @return T
+     */
+    private function poser(
+        string $classe,
+        string $champ,
+        string $valeur,
+        Entreprise $entreprise,
+        Invite $proprietaire,
+        callable $construire,
+    ): object {
+        // Un cabinet pas encore en base ne peut rien avoir de préexistant — et
+        // l'interroger avec une entreprise sans identifiant ne rendrait rien de fiable.
+        if ($entreprise->getId() !== null) {
+            $existant = $this->manager->getRepository($classe)
+                ->findOneBy(['entreprise' => $entreprise, $champ => $valeur]);
+
+            if ($existant !== null) {
+                return $existant;
+            }
+        }
+
+        $entite = $construire();
+        $this->attacher($entite, $entreprise, $proprietaire);
+
+        return $entite;
+    }
+
     private function attacher(object $entite, Entreprise $entreprise, Invite $proprietaire): void
     {
         $entite->setEntreprise($entreprise);

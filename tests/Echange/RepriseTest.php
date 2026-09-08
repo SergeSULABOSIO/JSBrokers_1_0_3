@@ -12,6 +12,7 @@ use App\Entity\Entreprise;
 use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
 use Doctrine\DBAL\ArrayParameterType;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -267,8 +268,8 @@ final class RepriseTest extends KernelTestCase
                 'assureur' => 'SFA CONGO',
                 'trancheNom' => 'Une échéance sur deux',
                 'tranchePart' => 50,
-                $this->colonneDeChargement('Prime nette') => 5000,
-                $this->colonneDeChargement('Frais accessoires') => 250,
+                $this->colonneDeChargement(Chargement::FONCTION_PRIME_NETTE) => 5000,
+                $this->colonneDeChargement(Chargement::FONCTION_FRAIS_ADMIN) => 250,
                 'commissionRevenus' => 'Commission Ordinaire ; Honoraire de gestion = 12%',
             ], 2),
             $this->colonnes(),
@@ -320,7 +321,7 @@ final class RepriseTest extends KernelTestCase
                 'policeReference' => 'POL/2026/014',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
-                $this->colonneDeChargement('Prime nette') => 7000,
+                $this->colonneDeChargement(Chargement::FONCTION_PRIME_NETTE) => 7000,
             ], 2),
             $this->colonnes(),
             $entreprise,
@@ -337,85 +338,76 @@ final class RepriseTest extends KernelTestCase
     }
 
     /**
-     * ⚠ UN TYPE INCONNU EST UN REFUS QUI DIT QUOI CRÉER — jamais une création à la volée.
+     * ⚠ UNE FONCTION QUE LE CABINET NE POURVOIT PAS EST UN REFUS QUI DIT QUOI CRÉER.
      *
-     * Un type de chargement porte une fonction dans le calcul de la prime ; le fabriquer
-     * depuis un simple nom donnerait une configuration muette. On refuse en nommant ce qui
-     * manque.
+     * La colonne « Prime · Fronting » existe partout — elle vient du modèle et non du
+     * catalogue —, mais le montant qu'on y écrit doit se rattacher à un TYPE du cabinet :
+     * c'est lui qui donne au chargement sa place dans le calcul de la prime. Fabriquer ce
+     * type à la volée donnerait une configuration muette, que personne n'a choisie.
      *
-     * ⚠ CE CAS EST DEVENU CELUI D'UN FICHIER ÉTRANGER, et c'est un progrès : les colonnes
-     * étant dérivées du catalogue DU CABINET, un type absent n'a plus de colonne où
-     * s'écrire. Il ne reste que le classeur venu d'ailleurs — ou retouché à la main —,
-     * dont les colonnes ne correspondent à rien d'ici.
+     * ⚠ ET LE REFUS NOMME LA FONCTION, pas un code de colonne. « Aucun type de chargement
+     * “Fronting” » se corrige ; « colonne chargement_fronting inconnue » ne se corrige pas.
      */
-    public function testUnTypeInconnuEstRefuseEtNonCree(): void
+    public function testUneFonctionNonPourvueEstRefuseeEtNonCreee(): void
     {
         $entreprise = $this->cabinet();
         $anomalies = [];
 
-        // Le catalogue de colonnes connaît ce type ; le CABINET, non — exactement ce que
-        // produit un fichier venu d'un autre cabinet.
-        $colonnes = CatalogueDesColonnes::pour('ARCA', 'TVA', ['Taxe parafiscale inconnue'], []);
-
-        $this->reconstitueur()->pour(
+        // Le cabinet de test porte « Prime nette » et « Frais accessoires » ; le FRONTING,
+        // non. La colonne, elle, est là — c'est tout l'intérêt des quatre colonnes fixes.
+        $operations = $this->reconstitueur()->pour(
             $this->ligne([
                 'policeReference' => 'POL/2026/011',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
-                $this->colonneDeChargement('Taxe parafiscale inconnue') => 999,
-            ], 2),
-            $colonnes,
-            $entreprise,
-            $anomalies,
-        );
-
-        $erreurs = $this->erreurs($anomalies);
-        self::assertCount(1, $erreurs);
-        self::assertStringContainsString('aucun élément de votre configuration', $erreurs[0]->message);
-    }
-
-    /**
-     * ⚠ UN NOM DE CATALOGUE PORTÉ PAR PLUSIEURS TYPES N'EST PAS UN REFUS — mais un
-     * AVERTISSEMENT.
-     *
-     * Mesuré sur le cabinet réel : son catalogue porte « Prime nette » SIX fois et
-     * « Commission Ordinaire » six fois, séquelles d'une initialisation rejouée, et les
-     * doublons y sont rigoureusement identiques. Refuser aurait bloqué toutes les lignes
-     * du portefeuille, pour un choix sans conséquence. On retient donc le premier, et on
-     * le DIT — l'utilisateur apprend qu'il a un catalogue à nettoyer, sans que sa reprise
-     * en dépende.
-     *
-     * La différence avec un client homonyme est de nature : deux « SARL Martin » sont deux
-     * affaires, deux « Prime nette » sont un même poste d'assiette écrit deux fois.
-     */
-    public function testUnCatalogueEnDoubleAvertitSansBloquer(): void
-    {
-        $entreprise = $this->cabinet();
-
-        // Le même nom, une seconde fois : exactement ce que porte le cabinet réel.
-        $em = $this->em();
-        $doublon = (new Chargement())->setNom('Prime nette')->setFonction(1);
-        $doublon->setEntreprise($entreprise);
-        $em->persist($doublon);
-        $em->flush();
-
-        $anomalies = [];
-        $operations = $this->reconstitueur()->pour(
-            $this->ligne([
-                'policeReference' => 'POL/2026/012',
-                'assure' => 'KIN AVIA',
-                'assureur' => 'SFA CONGO',
-                $this->colonneDeChargement('Prime nette') => 10000,
+                $this->colonneDeChargement(Chargement::FONCTION_FRONTING) => 999,
             ], 2),
             $this->colonnes(),
             $entreprise,
             $anomalies,
         );
 
-        self::assertSame([], $this->erreurs($anomalies), 'Un doublon de catalogue ne doit pas bloquer.');
-        self::assertNotSame([], $anomalies, 'Mais il doit être dit.');
-        self::assertStringContainsString('le premier a été retenu', $anomalies[0]->message);
-        self::assertNotSame([], $operations, 'Et la ligne doit tout de même produire ses écritures.');
+        $erreurs = $this->erreurs($anomalies);
+        self::assertCount(1, $erreurs);
+        self::assertStringContainsString('Fronting', $erreurs[0]->message, 'La fonction manquante doit être nommée.');
+
+        // ⚠ ET RIEN N'EST FABRIQUÉ : aucun type inventé, aucun chargement orphelin.
+        $cotation = $this->operation($operations, 'Cotation');
+        self::assertSame([], $cotation?->collections['chargements'] ?? []);
+    }
+
+    /**
+     * ⚠ UN POSTE DE CATALOGUE NE PEUT PLUS EXISTER EN DOUBLE — la base le refuse.
+     *
+     * Ce test en remplace un autre, et le remplacement dit ce qui a changé. Le catalogue
+     * réel portait « Commission Ordinaire » SIX fois et « Prime nette » six fois,
+     * séquelles d'un semis rejoué : la reprise retenait alors le premier et le DISAIT,
+     * plutôt que de bloquer tout le portefeuille pour un choix sans conséquence.
+     *
+     * C'était soigner le symptôme. Le semis est devenu idempotent, les doublons ont été
+     * fusionnés en base, et un index UNIQUE (entreprise, nom) interdit désormais la
+     * rechute — parce qu'une règle qui ne vit que dans du PHP est une règle qu'un import
+     * ou un script de reprise contourne sans le savoir.
+     *
+     * ⚠ ET L'INDEX EST INSENSIBLE À LA CASSE, par la collation de la colonne. C'est voulu :
+     * « Écart » et « écart » désignent le même poste, et deux lignes qui ne se distinguent
+     * que par une majuscule sont un doublon pour tout le monde sauf pour la machine.
+     */
+    public function testUnPosteDeCatalogueNePeutPasExisterEnDouble(): void
+    {
+        $entreprise = $this->cabinet();
+        $em = $this->em();
+
+        $doublon = (new TypeRevenu())
+            ->setNom('Commission Ordinaire')
+            ->setShared(false)
+            ->setMultipayments(true)
+            ->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR);
+        $doublon->setEntreprise($entreprise);
+        $em->persist($doublon);
+
+        $this->expectException(UniqueConstraintViolationException::class);
+        $em->flush();
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -739,18 +731,20 @@ final class RepriseTest extends KernelTestCase
         return CatalogueDesColonnes::pour(
             'ARCA',
             'TVA',
-            ['Prime nette', 'Frais accessoires'],
             ['Commission Ordinaire', 'Honoraire de gestion'],
         );
     }
 
-    /** Le code de la colonne d'un chargement, tel que le catalogue le forme. */
-    private function colonneDeChargement(string $nom): string
+    /**
+     * Le code de la colonne d'une FONCTION de chargement.
+     *
+     * ⚠ D'UNE FONCTION, ET NON D'UN NOM DE TYPE : la prime se décompose en quatre
+     * colonnes — prime nette, fronting, frais accessoires, taxe — quel que soit le nombre
+     * de postes que le cabinet a nommés.
+     */
+    private function colonneDeChargement(int $fonction): string
     {
-        return (string) CatalogueDesColonnes::codeDynamique(
-            CatalogueDesColonnes::PREFIXE_CHARGEMENT,
-            $nom,
-        );
+        return CatalogueDesColonnes::codeDeFonction($fonction);
     }
 
     /** @param array<string, mixed> $valeurs */
