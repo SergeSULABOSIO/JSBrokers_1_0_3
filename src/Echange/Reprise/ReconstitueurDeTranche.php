@@ -13,6 +13,7 @@ use App\Echange\Etat\ColonneEtat;
 use App\Echange\Etat\EtatDuPortefeuille;
 use App\Echange\Service\Anomalie;
 use App\Echange\Service\ResolveurDeRenvois;
+use App\Entity\Chargement;
 use App\Entity\Entreprise;
 use App\Entity\Note;
 use Doctrine\ORM\EntityManagerInterface;
@@ -255,13 +256,24 @@ final class ReconstitueurDeTranche
             // bien qu'une reprise par ce format rend des propositions SANS PRIME. On
             // l'écrit donc en COLLECTION IMBRIQUÉE de la proposition, ce que le circuit
             // d'écriture sait déjà faire.
-            foreach ($this->chargementsDeLaLigne($ligne, $colonnes) as $codeColonne => [$nom, $montant]) {
+            foreach ($this->chargementsDeLaLigne($ligne) as $fonction => $montant) {
+                $type = $this->typePourFonction($entreprise, $fonction);
+                if ($type === null) {
+                    $anomalies[] = $this->refus($ligne, CatalogueDesColonnes::codeDeFonction($fonction), sprintf(
+                        'Votre configuration ne comporte aucun type de chargement « %s ». Créez-en '
+                        . 'un dans la rubrique des types de chargement : c\'est lui qui donne à ce '
+                        . 'montant sa place dans le calcul de la prime.',
+                        CatalogueDesColonnes::FONCTIONS[$fonction],
+                    ));
+                    continue;
+                }
+
                 $collections['chargements'][] = new MutationOperation(
                     op: MutationOperation::OP_CREATE,
                     entityShortName: 'ChargementPourPrime',
                     fields: $this->sansVide([
-                        'nom' => $nom,
-                        'type' => $this->reconnu('Chargement', $nom, $entreprise, $ligne, $codeColonne, $anomalies),
+                        'nom' => CatalogueDesColonnes::FONCTIONS[$fonction],
+                        'type' => $type,
                         'montantFlatExceptionel' => $montant,
                     ]),
                 );
@@ -727,7 +739,7 @@ final class ReconstitueurDeTranche
     }
 
     /**
-     * LES CHARGEMENTS D'UNE LIGNE — une colonne par type, et le prorata REMONTÉ.
+     * LES CHARGEMENTS D'UNE LIGNE — une colonne par FONCTION, et le prorata REMONTÉ.
      *
      * ⚠ LA COLONNE PORTE LA PART DE L'ÉCHÉANCE, LA COTATION PORTE LE TOUT. C'est le prix
      * d'une colonne totalisable : sans le prorata, une police à quatre échéances
@@ -736,43 +748,61 @@ final class ReconstitueurDeTranche
      * et les quatre lignes redonnent le même montant, que la convergence n'écrit qu'une
      * fois.
      *
-     * ⚠ PART ABSENTE = LA LIGNE VAUT POUR TOUT. Une échéance sans part est une échéance
-     * unique : le montant lu EST celui de la cotation. Supposer autre chose diviserait par
-     * zéro, ou pire, par un nombre inventé. Sur les données réelles, les quatre-vingts
-     * tranches portent une part — le cas est théorique, il doit être écrit.
-     *
      * ⚠ UN ZÉRO N'EST PAS UNE ABSENCE. Un chargement à 0 existe : c'est un poste ouvert et
-     * non facturé. On ne retient que les cellules VIDES, pour ne pas créer des lignes que
-     * personne n'a écrites.
+     * non facturé. Mais l'export écritZÉRO dans les quatre colonnes, même celles qu'aucun
+     * chargement n'alimente : les retenir toutes créerait quatre lignes là où le cabinet
+     * n'en a saisi qu'une. On ne garde donc que les montants NON NULS — un poste à zéro ne
+     * change ni la prime ni la commission.
      *
-     * @param array<string, ColonneEtat> $colonnes
-     *
-     * @return array<string, array{0: string, 1: float}> code de colonne => [nom du type, montant]
+     * @return array<int, float> fonction => montant de la cotation
      */
-    private function chargementsDeLaLigne(LigneLue $ligne, array $colonnes): array
+    private function chargementsDeLaLigne(LigneLue $ligne): array
     {
         $facteur = $this->partDeLaLigne($ligne);
         $chargements = [];
 
-        foreach ($colonnes as $code => $colonne) {
-            if (!str_starts_with($code, CatalogueDesColonnes::PREFIXE_CHARGEMENT)) {
-                continue;
-            }
-
-            $brut = $ligne->valeur($code);
+        foreach (array_keys(CatalogueDesColonnes::FONCTIONS) as $fonction) {
+            $brut = $ligne->valeur(CatalogueDesColonnes::codeDeFonction($fonction));
             if ($brut === null || trim((string) (is_scalar($brut) ? $brut : '')) === '') {
                 continue;
             }
 
-            // Le libellé porte le nom du type : « Prime · Prime nette ».
-            $nom = str_contains($colonne->libelle, ' · ')
-                ? trim(explode(' · ', $colonne->libelle, 2)[1])
-                : $colonne->libelle;
+            $montant = $this->nombreBrut($brut) / $facteur;
+            if (abs($montant) < 0.005) {
+                continue;
+            }
 
-            $chargements[$code] = [$nom, (float) $this->nombreBrut($brut) / $facteur];
+            $chargements[$fonction] = $montant;
         }
 
         return $chargements;
+    }
+
+    /**
+     * UN TYPE DE CHARGEMENT DU CABINET pour cette fonction — le premier venu.
+     *
+     * ⚠ LE PREMIER SUFFIT, ET IL LE FAUT. Un cabinet porte plusieurs types pour une même
+     * fonction — « Frais accessoires » et « Sneca » sont tous deux des frais —, et la
+     * colonne les a additionnés : elle ne dit plus lequel. Les redistribuer serait
+     * inventer une ventilation que le fichier ne porte pas. Le montant est donc rattaché à
+     * un type de la bonne fonction, ce qui suffit au calcul de la prime — c'est la
+     * FONCTION qui compte, non le nom.
+     */
+    private function typePourFonction(Entreprise $entreprise, int $fonction): ?int
+    {
+        $id = $this->em->createQueryBuilder()
+            ->select('c.id')
+            ->from(Chargement::class, 'c')
+            ->andWhere('c.entreprise = :entreprise')
+            ->andWhere('c.fonction = :fonction')
+            ->setParameter('entreprise', $entreprise)
+            ->setParameter('fonction', $fonction)
+            ->orderBy('c.id', 'ASC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $id === null ? null : (int) $id['id'];
     }
 
     /**
