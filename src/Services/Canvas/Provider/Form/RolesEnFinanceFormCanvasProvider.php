@@ -53,6 +53,10 @@ class RolesEnFinanceFormCanvasProvider implements FormCanvasProviderInterface
                 "accessDepense"        => "depense",
                 "accessFournisseur"    => "fournisseur",
                 "accessDocumentComptable" => "document-comptable",
+                // L'intermédiaire, et non « depense » : ce dernier illustre déjà le droit
+                // voisin, et deux pastilles identiques dans une même colonne ne
+                // distinguent plus rien. Celle-ci nomme le BÉNÉFICIAIRE du reversement.
+                "accessReversementRetroAgent" => "partenaire",
             ],
         ];
         $layout = $this->buildRolesEnFinanceLayout();
@@ -93,7 +97,12 @@ class RolesEnFinanceFormCanvasProvider implements FormCanvasProviderInterface
             ]],
             ["couleur_fond" => "white", "colonnes" => [
                 ["champs" => ["accessFournisseur"]],
-                ["champs" => ["accessDocumentComptable"]]
+                ["champs" => ["accessDocumentComptable"]],
+                // Le droit sur les rétrocommissions reversées aux intermédiaires. Il
+                // existait dans le FormType sans figurer ici : `form_end(render_rest)`
+                // le rendait donc EN VRAC en fin de dialogue, seul champ nu au milieu de
+                // quatorze droits en cartes illustrées.
+                ["champs" => ["accessReversementRetroAgent"]]
             ]],
         ];
     }

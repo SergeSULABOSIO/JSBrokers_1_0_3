@@ -117,13 +117,17 @@ class OnboardingCatalogueContratTest extends KernelTestCase
             );
         }
 
-        // La monnaie n'est là QUE pour son taux de change, jamais pour en créer une.
+        // LA MONNAIE EST LA SEULE EXCEPTION, et son étape ne porte pas sur le semis :
+        // le taux de la monnaie locale y est posé à 1.00, un placeholder faux dès que le
+        // cabinet ne travaille pas en dollars. La carte, elle, laisse bien ajouter des
+        // devises — un cabinet en encaisse souvent plusieurs.
         $monnaie = array_values(array_filter(
             $this->catalogue->etapes(),
             static fn (array $e): bool => $e['entite'] === Monnaie::class,
         ));
         $this->assertCount(1, $monnaie);
-        $this->assertTrue($monnaie[0]['singleton'], 'Le taux de change est un réglage unique, pas une accumulation.');
+        $this->assertFalse($monnaie[0]['singleton'], 'On doit pouvoir ajouter des monnaies.');
+        $this->assertNull($monnaie[0]['seuil'], "L'achèvement ne se compte pas : il tient au taux de la monnaie locale.");
     }
 
     /**

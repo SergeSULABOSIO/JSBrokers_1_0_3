@@ -52,6 +52,11 @@ class PartenaireFormCanvasProvider implements FormCanvasProviderInterface
                 "nom"               => "action:edit",
                 "email"             => "contact",
                 "telephone"         => "contact",
+                // Mêmes alias que sur la fiche assureur, qui porte les mêmes références.
+                "adressePhysique"   => "contact",
+                "numimpot"          => "taxe",
+                "rccm"              => "action:edit",
+                "idnat"             => "action:edit",
                 "part"              => "action:count",
                 "conditionPartages" => "condition",
                 "documents"         => "document",
@@ -96,9 +101,25 @@ class PartenaireFormCanvasProvider implements FormCanvasProviderInterface
     private function buildPartenaireLayout(Partenaire $object, bool $isParentNew): array
     {
         $partenaireId = $object->getId() ?? 0;
+        // ── TOUS LES CHAMPS DU FORMULAIRE SONT DISPOSÉS ICI ─────────────────────────
+        // `adressePhysique`, `numimpot`, `rccm` et `idnat` manquaient à cette liste. Ils
+        // ne DISPARAISSAIENT pas pour autant : `form_end(render_rest: true)` les rendait
+        // en fin de formulaire, en vrac, sans carte ni pastille — quatre champs nus au
+        // milieu de champs illustrés, ce qui se lit comme une anomalie plutôt que comme
+        // un choix.
+        //
+        // La disposition reprend celle de la fiche ASSUREUR, qui porte exactement les
+        // mêmes références légales : le courtier retrouve les trois numéros au même
+        // endroit et dans le même ordre d'une fiche à l'autre.
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["email"]], ["champs" => ["telephone"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["adressePhysique"]]]],
+            ["couleur_fond" => "white", "colonnes" => [
+                ["champs" => ["numimpot"], "width" => 4],
+                ["champs" => ["rccm"], "width" => 4],
+                ["champs" => ["idnat"], "width" => 4],
+            ]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["part"]]]],
         ];
         $collections = [

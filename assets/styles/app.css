@@ -6355,9 +6355,16 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     overflow: hidden;
 }
 
-/* Sur fond sombre (infobulle du voyant), le creux doit rester lisible. */
+/* SUR FOND SOMBRE (infobulle du voyant), le creux ET le rempli changent.
+   Le cobalt du rempli tombe à 1,83:1 sur #212529 — la barre était pleine sans
+   qu'on puisse voir jusqu'où. L'ambre y monte à 9,46:1, et raccorde l'infobulle
+   à l'anneau du voyant, qui l'utilise pour la même raison. */
 .ws-onboarding-detail .jsb-onboarding-barre {
-    background-color: rgba(255, 255, 255, 0.16);
+    background-color: rgba(255, 255, 255, 0.18);
+}
+
+.ws-onboarding-detail .jsb-onboarding-barre-remplie {
+    background-color: var(--warning);
 }
 
 .jsb-onboarding-barre-remplie {

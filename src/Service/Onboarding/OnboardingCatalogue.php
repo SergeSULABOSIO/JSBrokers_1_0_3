@@ -89,8 +89,13 @@ final class OnboardingCatalogue
             // un taux de 1.00 — un placeholder, faux dès que le cabinet ne travaille pas
             // en dollars. Rien ne le signale, et tous les montants convertis sont faux en
             // silence. C'est le contraire d'un paramètre « déjà fait ».
-            'cle' => 'taux_change', 'libelle' => 'Taux de change de la monnaie locale', 'icone' => 'monnaie',
-            'entite' => Monnaie::class, 'seuil' => null, 'singleton' => true,
+            //
+            // CE N'EST PAS UN RÉGLAGE UNIQUE POUR AUTANT : un cabinet encaisse souvent
+            // dans plusieurs devises, et la carte doit donc laisser en ajouter, comme
+            // celle des conditions de partage. Ce qui est unique, c'est le CRITÈRE
+            // d'achèvement — le taux de la monnaie locale —, pas le nombre de lignes.
+            'cle' => 'taux_change', 'libelle' => 'Monnaies et taux de change', 'icone' => 'monnaie',
+            'entite' => Monnaie::class, 'seuil' => null, 'singleton' => false,
             'bloc' => 'Finances', 'poids' => self::POIDS_BLOQUANT,
         ],
         [

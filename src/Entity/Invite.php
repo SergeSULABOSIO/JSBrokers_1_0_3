@@ -649,6 +649,33 @@ class Invite
         return $this->gestionnaireInvites;
     }
 
+    /**
+     * LE PROPRIÉTAIRE EST TOUJOURS GESTIONNAIRE, ET LA BASE LE DIT.
+     *
+     * `WorkspaceAccessResolver::canManageInvites()` lui accorde ce pouvoir de toute façon,
+     * par son seul statut de propriétaire : le drapeau ne changeait donc rien à ce qu'il
+     * PEUT faire. Il changeait ce que l'écran lui DIT — un propriétaire ouvrant sa propre
+     * fiche y voyait une case décochée en face d'un pouvoir qu'il détient. Un écran qui
+     * contredit la règle est un écran auquel on cesse de se fier.
+     *
+     * L'invariant est posé sur le cycle de vie plutôt que chez les appelants : trois
+     * chemins créent l'invité propriétaire (provisionnement self-service, création admin,
+     * fixtures), et un quatrième finirait par oublier.
+     *
+     * ⚠ `PrePersist` SEULEMENT, et pas `PreUpdate` : Doctrine calcule le changeset AVANT
+     * d'appeler `PreUpdate`, si bien qu'un champ modifié là ne part jamais en base — le
+     * garde-fou aurait eu l'air d'être posé sans rien garder. La modification est donc
+     * couverte autrement : le formulaire rend la case NON MODIFIABLE sur la fiche d'un
+     * propriétaire, et une migration a redressé les enregistrements existants.
+     */
+    #[ORM\PrePersist]
+    public function onProprietaireToujoursGestionnaire(): void
+    {
+        if ($this->proprietaire === true) {
+            $this->gestionnaireInvites = true;
+        }
+    }
+
     public function setGestionnaireInvites(?bool $gestionnaireInvites): static
     {
         $this->gestionnaireInvites = $gestionnaireInvites;

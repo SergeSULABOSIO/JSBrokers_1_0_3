@@ -53,14 +53,20 @@ export default class extends Controller {
         const workspaceLink = card.querySelector('.ent-card-media');
         // Éditer / Supprimer ne sont disponibles que pour une entreprise possédée
         // (le bloc .ent-actions n'existe pas pour les entreprises où l'on est invité).
-        const editLink = card.querySelector('.ent-actions a');
+        // Le raccourci vers le GUIDE DE DÉMARRAGE n'existe sur la carte que tant qu'il
+        // reste quelque chose à configurer : l'option disparaît donc d'elle-même une fois
+        // le cabinet en ordre, sans condition à maintenir ici.
+        const demarrageLink = card.querySelector('.ent-demarrage-link');
+        // `:not()` écarte le raccourci ci-dessus : sans cela, « Éditer » aurait pointé
+        // vers le guide dès que celui-ci est présent, puisqu'il vient en premier.
+        const editLink = card.querySelector('.ent-actions a:not(.ent-demarrage-link)');
         const deleteForm = card.querySelector('.ent-actions form');
-        if (!workspaceLink && !editLink && !deleteForm) return; // carte non actionnable → menu natif
+        if (!workspaceLink && !demarrageLink && !editLink && !deleteForm) return; // carte non actionnable → menu natif
 
         event.preventDefault();
 
         const nom = card.dataset.ecNom || "l'entreprise";
-        this.current = { workspaceLink, editLink, deleteForm };
+        this.current = { workspaceLink, demarrageLink, editLink, deleteForm };
 
         if (this.hasEditLabelTarget) this.editLabelTarget.textContent = this._labelFor('edit', nom);
         if (this.hasDeleteLabelTarget) this.deleteLabelTarget.textContent = this._labelFor('delete', nom);
@@ -70,6 +76,7 @@ export default class extends Controller {
         menu.querySelectorAll('[role="menuitem"]').forEach((item) => {
             const key = item.dataset.menuKey;
             const allowed = (key === 'workspace' && workspaceLink)
+                || (key === 'demarrage' && demarrageLink)
                 || (key === 'edit' && editLink)
                 || (key === 'delete' && deleteForm);
             item.style.display = allowed ? '' : 'none';
@@ -77,7 +84,7 @@ export default class extends Controller {
         // Le séparateur n'a de sens que si l'option destructrice « Supprimer »
         // est précédée d'au moins une autre option.
         const sep = menu.querySelector('[data-menu-key="sep"]');
-        if (sep) sep.style.display = (deleteForm && (workspaceLink || editLink)) ? '' : 'none';
+        if (sep) sep.style.display = (deleteForm && (workspaceLink || demarrageLink || editLink)) ? '' : 'none';
 
         // Positionnement mesuré, borné au viewport.
         menu.style.visibility = 'hidden';
@@ -114,6 +121,10 @@ export default class extends Controller {
         if (key === 'workspace' && current.workspaceLink) {
             // Réutilise le lien vers le tableau de bord (navigation + barre de progression).
             current.workspaceLink.click();
+        } else if (key === 'demarrage' && current.demarrageLink) {
+            // Même patron : on rejoue le lien caché de la carte, qui porte déjà
+            // `?onboarding=1` — le guide s'ouvre donc de lui-même à l'arrivée.
+            current.demarrageLink.click();
         } else if (key === 'edit' && current.editLink) {
             // Réutilise le lien existant (navigation + barre de progression).
             current.editLink.click();

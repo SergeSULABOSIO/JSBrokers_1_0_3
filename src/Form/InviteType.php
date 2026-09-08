@@ -139,10 +139,27 @@ class InviteType extends AbstractType
         // simplement ignorée par Symfony.
         $user = $this->security->getUser();
         if ($user instanceof Utilisateur && $this->accessResolver->isOwnerOfConnected($user)) {
+            // SUR LA FICHE DU PROPRIÉTAIRE, LA CASE NE SE DÉCOCHE PAS.
+            //
+            // Il détient ce pouvoir par son seul statut : `canManageInvites()` le lui
+            // accorde sans regarder le drapeau. Laisser la case décochable lui aurait
+            // permis de retirer une visibilité qu'il garderait quand même — l'écran
+            // aurait alors affiché l'inverse de la règle.
+            //
+            // `disabled` fait les deux : la case est verrouillée à l'écran, ET Symfony
+            // ignore toute valeur soumise pour ce champ, ce qui referme la porte à une
+            // requête forgée.
+            /** @var Invite|null $invite */
+            $invite = $builder->getData();
+            $estFicheDuProprietaire = $invite?->isProprietaire() === true;
+
             $builder->add('gestionnaireInvites', CheckboxType::class, [
                 'label' => "Gestionnaire des invités et des rôles",
-                'help' => "Autorise cet invité à créer, modifier et supprimer les invités et à leur attribuer des rôles. N'accorde aucun accès supplémentaire aux données métier.",
+                'help' => $estFicheDuProprietaire
+                    ? "Le propriétaire du cabinet dispose toujours de cette visibilité : elle découle de son statut et ne peut pas lui être retirée."
+                    : "Autorise cet invité à créer, modifier et supprimer les invités et à leur attribuer des rôles. N'accorde aucun accès supplémentaire aux données métier.",
                 'required' => false,
+                'disabled' => $estFicheDuProprietaire,
             ])
             // PIÈCES JOINTES de cette fiche. `mapped: false` comme les onze autres
             // collections de documents du projet : chaque pièce est créée, modifiée et

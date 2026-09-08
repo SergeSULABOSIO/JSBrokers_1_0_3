@@ -94,6 +94,32 @@
     .ent-info .ent-info-label { display: inline-flex; align-items: center; gap: .4rem; }
     .ent-info strong { color: #212529; font-weight: 600; margin-left: auto; text-align: right; transition: color .15s ease; }
 
+    /* ── LA DETTE DE CONFIGURATION, SUR LA CARTE ──────────────────────────────
+       Un LIEN, pas un bouton : on quitte la page pour entrer dans le workspace.
+       Il se distingue des lignes d'information au-dessus par son fond ambré —
+       la même teinte que le voyant de la colonne 1, pour que le courtier
+       reconnaisse la même dette d'un écran à l'autre. Sur ce fond très clair,
+       le texte reste #664d03, seule association autorisée par la charte. */
+    .ent-onboarding {
+        display: block;
+        margin-top: .75rem;
+        padding: .6rem .75rem;
+        border-radius: 10px;
+        border-left: 3px solid #ffc107;
+        background-color: #fff3cd;
+        color: #664d03;
+        text-decoration: none;
+        transition: background-color .15s ease;
+    }
+    .ent-onboarding:hover, .ent-onboarding:focus-visible { background-color: #ffe8a1; color: #664d03; }
+    .ent-onboarding:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(0, 71, 171, .35); }
+    .ent-onboarding-tete { display: flex; align-items: center; gap: .4rem; margin-bottom: .35rem; }
+    .ent-onboarding-icone { display: inline-flex; flex: 0 0 auto; }
+    .ent-onboarding-titre { flex: 1 1 auto; font-size: .8rem; font-weight: 600; }
+    .ent-onboarding-score { flex: 0 0 auto; font-size: .85rem; font-weight: 700; }
+    /* La barre partagée est cobalt sur fond clair (7:1) : elle reste lisible ici. */
+    .ent-onboarding-manques { display: block; margin-top: .35rem; font-size: .76rem; }
+
     .ent-card-foot {
         margin-top: auto; display: flex; align-items: center; justify-content: space-between;
         gap: .5rem; padding: .65rem 1rem; background-color: #f8f9fa; border-top: 1px solid #f0f0f0;
@@ -281,6 +307,23 @@
                                     <strong>{{ entreprise.createdAt | format_datetime("medium", "short", locale: app.user.locale) }}</strong>
                                 </li>
                             </ul>
+
+                            {# LA DETTE DE CONFIGURATION, sur la carte du cabinet.
+                               Rendue pour les seuls cabinets QU'IL POSSÈDE, et seulement
+                               tant qu'il reste à faire : une carte à 100 % redevient une
+                               carte. #}
+                            {% set _ob = onboarding[entreprise.id]|default(null) %}
+                            {% if _ob and not _ob.complet %}
+                                {% set _lienGuide = path('app_espace_de_travail_component.index', {
+                                    'idInvite': _ob.idInvite, 'idEntreprise': entreprise.id, 'onboarding': 1
+                                }) %}
+                                {% include 'components/_onboarding_rappel.html.twig' with {
+                                    bilan: _ob,
+                                    etapesCitees: _ob.citees,
+                                    variante: 'carte',
+                                    lienGuide: _lienGuide
+                                } only %}
+                            {% endif %}
                         </div>
 
                         <div class="ent-card-foot">
@@ -298,6 +341,19 @@
                                 {# Actions conservées mais masquées : pilotées par le menu contextuel (clic droit).
                                    Le contrôleur entreprise-context-menu délègue à ces éléments. #}
                                 <div class="ent-actions" style="display:none">
+                                    {# RACCOURCI VERS LE GUIDE DE DÉMARRAGE, auquel le menu
+                                       contextuel délègue — même patron que « Éditer » et
+                                       « Supprimer ». Il n'existe que tant qu'il reste
+                                       quelque chose à configurer : proposer d'ouvrir un
+                                       guide vide ferait douter de ce qu'on vient d'annoncer. #}
+                                    {% if _ob and not _ob.complet %}
+                                        <a class="ent-icon-btn ent-demarrage-link" href="{{ _lienGuide }}"
+                                           data-action="click->top-progress#show"
+                                           title="{{ 'entreprise_menu_open_onboarding' | trans }}"
+                                           aria-label="{{ 'entreprise_menu_open_onboarding' | trans }}">
+                                            {{ ux_icon('mdi:rocket-launch-outline', {height: '20px', width: '20px'}) }}
+                                        </a>
+                                    {% endif %}
                                     <a class="ent-icon-btn" href="{{ path('admin.entreprise.edit', {'id': entreprise.id}) }}"
                                        data-action="click->top-progress#show"
                                        title="{{ 'commom_edit' | trans }}" aria-label="{{ 'entreprise_action_edit_aria'|trans({':company': entreprise.nom}) }}">
@@ -379,6 +435,13 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('action:open') }}" style="width:16px;height:16px;" />
                 </span>
                 <span class="flex-grow-1">{{ 'entreprise_menu_open_workspace' | trans }}</span>
+            </li>
+            <li role="menuitem" tabindex="-1" data-menu-key="demarrage"
+                data-action="click->entreprise-context-menu#onItemClick">
+                <span class="context-menu-icon" aria-hidden="true">
+                    <twig:UX:Icon name="mdi:rocket-launch-outline" style="width:16px;height:16px;" />
+                </span>
+                <span class="flex-grow-1">{{ 'entreprise_menu_open_onboarding' | trans }}</span>
             </li>
             <li role="menuitem" tabindex="-1" data-menu-key="edit"
                 data-action="click->entreprise-context-menu#onItemClick">

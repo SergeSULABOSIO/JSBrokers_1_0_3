@@ -153,8 +153,12 @@ class RoleFormIntroTest extends WebTestCase
 
         // [libellé attendu dans la description, nombre de cartes de droits du module]
         $modules = [
-            // 14 cartes depuis l'ajout des droits Charges / Dépenses / Fournisseurs / Documents comptables.
-            'rolesenfinance'        => ['module Finance', 14],
+            // 14 cartes depuis l'ajout des droits Charges / Dépenses / Fournisseurs /
+            // Documents comptables, 15 depuis celui des Rétros intermédiaires : ce
+            // dernier existait dans le FormType sans figurer au gabarit, et se rendait
+            // donc EN VRAC en fin de dialogue — seul champ nu au milieu de cartes
+            // illustrées. Ce compte est justement ce qui l'a fait remarquer.
+            'rolesenfinance'        => ['module Finance', 15],
             'rolesenmarketing'      => ['module Marketing', 3],
             // 9 cartes depuis l'ajout du droit dédié « Portefeuilles ».
             'rolesenproduction'     => ['module Production', 9],
