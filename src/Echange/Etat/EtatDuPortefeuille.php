@@ -7,7 +7,6 @@ use App\Echange\Reprise\ValeursMultiples;
 use App\Echange\Service\Progression;
 use App\Entity\Avenant;
 use App\Entity\Chargement;
-use App\Entity\ChargementPourPrime;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Taxe;
@@ -93,7 +92,6 @@ final class EtatDuPortefeuille
         $catalogue = CatalogueDesColonnes::pour(
             $courtier,
             $assureur,
-            $this->typesDeChargement($entreprise),
             $this->typesDuCabinet($entreprise, TypeRevenu::class),
         );
 
@@ -338,38 +336,50 @@ final class EtatDuPortefeuille
     }
 
     /**
-     * LA PRIME, DÉCOMPOSÉE — un montant par type de chargement, au prorata de l'échéance.
+     * LA PRIME, DÉCOMPOSÉE — un montant par FONCTION de chargement, au prorata.
      *
-     * ⚠ LES DOUBLONS DE TYPE SE CUMULENT. Constaté sur les données réelles : 71 cotations
-     * sur 80 portent DEUX lignes du même type — l'une à 2 056,89 et l'autre à 0, par
-     * exemple. Écraser au lieu de cumuler ferait une composition qui ne somme plus à la
-     * prime, et l'écart passerait pour une erreur de calcul.
+     * ⚠ PAR FONCTION, ET NON PAR NOM. Un cabinet nomme ses chargements librement —
+     * « Sneca », « Tva pour prime », « Frais Arca » —, mais chacun retombe dans l'une des
+     * quatre fonctions que l'écran de saisie propose, et qui seules ont un sens comptable.
+     * Grouper par nom donnait huit colonnes ici et cinq ailleurs : deux exports
+     * incomparables pour une même réalité.
      *
-     * ⚠ UN CHARGEMENT SANS TYPE COMPTE QUAND MÊME. Le type est nullable, et
-     * `primeTotale += montantFlatExceptionel` ne le regarde pas. Faute de colonne où le
-     * ranger, son montant irait grossir le total sans apparaître nulle part : on le range
-     * donc sous son propre nom, qui a sa colonne comme les autres.
+     * ⚠ ET LES MONTANTS D'UNE MÊME FONCTION SE CUMULENT. « Frais accessoires » et
+     * « Sneca » partagent la fonction 3 : leur colonne porte la somme des deux. Un cabinet
+     * réel porte d'ailleurs le MÊME type deux fois sur une cotation — l'un à 2 056,89,
+     * l'autre à 0 —, et écraser au lieu de cumuler ferait une composition qui ne somme
+     * plus à la prime.
+     *
+     * ⚠ UN CHARGEMENT SANS FONCTION CONNUE REJOINT « Frais accessoires ». Il compte dans
+     * la prime (`primeTotale += montantFlatExceptionel` ne regarde ni le type ni la
+     * fonction) : le laisser sans colonne ferait DISPARAÎTRE son montant du fichier tout
+     * en le laissant peser dans le total, et la somme cesserait de faire la prime. Le
+     * repli va au poste fourre-tout du modèle — c'est un repli, non une règle, et il ne
+     * concerne aujourd'hui aucune ligne : la fonction est obligatoire à la saisie.
      *
      * @return array<string, float>
      */
     private function parChargement(?Cotation $cotation, float $facteur): array
     {
-        if ($cotation === null) {
-            return [];
+        // Les quatre colonnes existent TOUJOURS, même vides : un gabarit doit les offrir,
+        // et deux exports du même cabinet doivent être superposables.
+        $valeurs = [];
+        foreach (array_keys(CatalogueDesColonnes::FONCTIONS) as $fonction) {
+            $valeurs[CatalogueDesColonnes::codeDeFonction($fonction)] = 0.0;
         }
 
-        $valeurs = [];
+        if ($cotation === null) {
+            return $valeurs;
+        }
+
         foreach ($cotation->getChargements() as $chargement) {
-            $code = CatalogueDesColonnes::codeDynamique(
-                CatalogueDesColonnes::PREFIXE_CHARGEMENT,
-                $chargement->getType()?->getNom() ?: $chargement->getNom(),
-            );
-            if ($code === null) {
-                continue;
+            $fonction = $chargement->getType()?->getFonction();
+            if (!isset(CatalogueDesColonnes::FONCTIONS[$fonction])) {
+                $fonction = Chargement::FONCTION_FRAIS_ADMIN;
             }
 
-            $valeurs[$code] = ($valeurs[$code] ?? 0.0)
-                + (float) ($chargement->getMontantFlatExceptionel() ?? 0.0) * $facteur;
+            $code = CatalogueDesColonnes::codeDeFonction($fonction);
+            $valeurs[$code] += (float) ($chargement->getMontantFlatExceptionel() ?? 0.0) * $facteur;
         }
 
         return $valeurs;
@@ -460,58 +470,21 @@ final class EtatDuPortefeuille
     }
 
     /**
-     * LES TYPES DE CHARGEMENT — le catalogue, ET les orphelins qui n'y figurent pas.
-     *
-     * ⚠ UN CHARGEMENT SANS TYPE COMPTE DANS LA PRIME. `ChargementPourPrime::$type` est
-     * nullable, et `primeTotale += montantFlatExceptionel` ne le regarde pas. S'en tenir
-     * au catalogue laisserait ces montants SANS COLONNE OÙ ÊTRE RANGÉS : ils
-     * disparaîtraient du fichier tout en pesant dans « Prime · Totale », et la somme des
-     * colonnes cesserait de faire la prime — la seule propriété qui fasse tenir cette
-     * décomposition.
-     *
-     * On ajoute donc les noms propres de ces chargements-là. Ils viennent des DONNÉES et
-     * non du catalogue : un gabarit vierge ne les portera pas, ce qui est juste — on ne
-     * propose pas d'écrire dans un poste qui n'existe pas au catalogue.
-     *
-     * @return string[]
-     */
-    private function typesDeChargement(Entreprise $entreprise): array
-    {
-        $noms = $this->typesDuCabinet($entreprise, Chargement::class);
-
-        $orphelins = $this->em->createQueryBuilder()
-            ->select('DISTINCT c.nom')
-            ->from(ChargementPourPrime::class, 'c')
-            ->andWhere('c.entreprise = :entreprise')
-            ->andWhere('c.type IS NULL')
-            ->andWhere('c.nom IS NOT NULL')
-            ->setParameter('entreprise', $entreprise)
-            ->orderBy('c.nom', 'ASC')
-            ->getQuery()
-            ->getScalarResult();
-
-        foreach ($orphelins as $ligne) {
-            $nom = trim((string) ($ligne['nom'] ?? ''));
-            if ($nom !== '') {
-                $noms[] = $nom;
-            }
-        }
-
-        return $noms;
-    }
-
-    /**
-     * LES TYPES DU CATALOGUE DU CABINET, dans l'ordre où on veut les lire.
+     * LES TYPES DE REVENU DU CATALOGUE DU CABINET, dans l'ordre où on veut les lire.
      *
      * ⚠ TOUS LES TYPES DÉCLARÉS, ET NON LES SEULS EMPLOYÉS. Sur les seuls types employés,
-     * un GABARIT VIERGE n'aurait aucune colonne de chargement — or c'est justement là
-     * qu'on doit pouvoir écrire une prime. Le fichier porte donc quelques colonnes vides,
-     * ce qui est le prix d'un gabarit utilisable.
+     * un GABARIT VIERGE n'aurait aucune colonne de revenu — or c'est justement là qu'on
+     * doit pouvoir en désigner un. Le fichier porte donc quelques colonnes vides, ce qui
+     * est le prix d'un gabarit utilisable.
      *
-     * ⚠ ET LES DOUBLONS SONT LAISSÉS PASSER ICI. Le catalogue réel porte « Prime nette »
-     * six fois ; c'est `CatalogueDesColonnes::codeDynamique()` qui les ramène à une seule
+     * ⚠ ET LES DOUBLONS SONT LAISSÉS PASSER ICI. Un catalogue rejoué porte deux fois le
+     * même nom ; c'est `CatalogueDesColonnes::codeDynamique()` qui les ramène à une seule
      * colonne, en un seul endroit — dédupliquer des deux côtés, ce serait deux règles à
      * tenir en accord.
+     *
+     * ⚠ LES CHARGEMENTS, EUX, NE PASSENT PLUS PAR ICI. Leurs quatre colonnes viennent des
+     * FONCTIONS du modèle et non du catalogue du cabinet : elles existent donc à
+     * l'identique partout, y compris sur un cabinet qui n'a rien saisi.
      *
      * @param class-string $entite
      *
@@ -519,20 +492,17 @@ final class EtatDuPortefeuille
      */
     private function typesDuCabinet(Entreprise $entreprise, string $entite): array
     {
-        $qb = $this->em->createQueryBuilder()
+        $noms = [];
+        $lignes = $this->em->createQueryBuilder()
             ->select('t.nom')
             ->from($entite, 't')
             ->andWhere('t.entreprise = :entreprise')
-            ->setParameter('entreprise', $entreprise);
+            ->setParameter('entreprise', $entreprise)
+            ->addOrderBy('t.nom', 'ASC')
+            ->getQuery()
+            ->getScalarResult();
 
-        // L'ordre métier quand il existe : `Chargement::$fonction` range la prime nette
-        // avant le fronting, les frais avant les taxes. Le nom départage le reste.
-        if ($entite === Chargement::class) {
-            $qb->addOrderBy('t.fonction', 'ASC');
-        }
-
-        $noms = [];
-        foreach ($qb->addOrderBy('t.nom', 'ASC')->getQuery()->getScalarResult() as $ligne) {
+        foreach ($lignes as $ligne) {
             $nom = trim((string) ($ligne['nom'] ?? ''));
             if ($nom !== '') {
                 $noms[] = $nom;

@@ -481,21 +481,41 @@ class EtatDuPortefeuilleTest extends KernelTestCase
     }
 
     /**
-     * ⚠ UN TYPE PRÉSENT PLUSIEURS FOIS AU CATALOGUE NE DONNE QU'UNE COLONNE.
+     * ⚠ DEUX TYPES DE MÊME FONCTION NE FONT QU'UNE COLONNE, ET LEURS MONTANTS S'Y AJOUTENT.
      *
-     * Le catalogue réel du cabinet porte « Prime nette » SIX fois — séquelle d'une
-     * initialisation rejouée. Sans déduplication, six colonnes identiques côte à côte, et
-     * une prime comptée six fois si l'une d'elles était remplie.
+     * C'est la raison d'être des quatre colonnes. Un cabinet nomme ses postes librement —
+     * « Frais accessoires », « Sneca », « Frais Arca » —, et le catalogue réel en porte
+     * huit là où un autre en porte cinq : une colonne par nom donnait deux exports
+     * incomparables pour une même réalité comptable. La FONCTION, elle, est la même
+     * partout.
+     *
+     * ⚠ ET LA SOMME EST LE POINT DÉLICAT. Écraser au lieu d'ajouter est le geste naturel
+     * quand on regroupe : la composition cesserait alors de faire la prime, et l'écart
+     * passerait pour une erreur de calcul.
      */
-    public function testUnTypeEnDoubleNeDonneQuUneColonne(): void
+    public function testDeuxTypesDeMemeFonctionNeFontQuUneColonne(): void
     {
         ['entreprise' => $entreprise] = $this->seed();
 
         $em = $this->em();
-        foreach (['Prime État Doublon', 'PRIME  état   doublon'] as $nom) {
-            $doublon = (new Chargement())->setNom($nom)->setFonction(1);
-            $doublon->setEntreprise($entreprise);
-            $em->persist($doublon);
+        $cotation = $em->getRepository(Cotation::class)->findOneBy(['entreprise' => $entreprise]);
+        self::assertNotNull($cotation);
+
+        // Deux postes DIFFÉRENTS, de la même fonction — le cas du cabinet réel.
+        $avant = 0.0;
+        foreach (['Sneca', 'Frais Arca'] as $rang => $nom) {
+            $type = (new Chargement())->setNom($nom)->setFonction(Chargement::FONCTION_FRAIS_ADMIN);
+            $type->setEntreprise($entreprise);
+            $em->persist($type);
+
+            $charge = (new ChargementPourPrime())
+                ->setNom($nom)
+                ->setType($type)
+                ->setMontantFlatExceptionel(100.0 * ($rang + 1));
+            $charge->setEntreprise($entreprise);
+            $charge->setCotation($cotation);
+            $em->persist($charge);
+            $avant += 100.0 * ($rang + 1);
         }
         $em->flush();
 
@@ -508,10 +528,27 @@ class EtatDuPortefeuilleTest extends KernelTestCase
             }
         }
 
-        self::assertSame($codes, array_unique($codes), 'Deux écritures du même nom font une seule colonne.');
+        // ⚠ QUATRE, JAMAIS PLUS : c'est la demande, et deux types de plus n'y changent rien.
+        self::assertCount(4, $codes, 'La prime se décompose en quatre colonnes, pas une de plus.');
+        self::assertSame($codes, array_unique($codes));
         self::assertContains(
-            CatalogueDesColonnes::codeDynamique(CatalogueDesColonnes::PREFIXE_CHARGEMENT, 'Prime État Doublon'),
+            CatalogueDesColonnes::codeDeFonction(Chargement::FONCTION_FRAIS_ADMIN),
             $codes,
+        );
+
+        // Et les deux montants se retrouvent DANS la même colonne, additionnés.
+        // ⚠ `lignes()` indexe par CODE (le langage commun de l'état et de l'économie),
+        // là où le classeur indexe par LIBELLÉ (le langage de l'écran).
+        $code = CatalogueDesColonnes::codeDeFonction(Chargement::FONCTION_FRAIS_ADMIN);
+
+        $cumul = 0.0;
+        foreach (static::getContainer()->get(EtatDuPortefeuille::class)->lignes($entreprise) as $ligne) {
+            $cumul += (float) ($ligne[$code] ?? 0.0);
+        }
+        self::assertGreaterThanOrEqual(
+            $avant - 0.01,
+            $cumul,
+            'Deux postes de même fonction sʼajoutent dans la colonne, ils ne sʼy écrasent pas.',
         );
     }
 

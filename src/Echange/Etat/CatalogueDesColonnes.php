@@ -3,6 +3,7 @@
 namespace App\Echange\Etat;
 
 use App\Echange\Service\ResolveurDeRenvois;
+use App\Entity\Chargement;
 
 /**
  * LES COLONNES DE L'ÉTAT, DÉCLARÉES UNE FOIS.
@@ -21,8 +22,22 @@ use App\Echange\Service\ResolveurDeRenvois;
  */
 final class CatalogueDesColonnes
 {
-    /** Préfixe du code d'une colonne de chargement — voir `codeDynamique()`. */
+    /** Préfixe du code d'une colonne de chargement. */
     public const PREFIXE_CHARGEMENT = 'chargement_';
+
+    /**
+     * LES QUATRE FONCTIONS D'UN CHARGEMENT, telles que l'écran de saisie les nomme.
+     *
+     * ⚠ LES LIBELLÉS SONT CEUX DE `ChargementType`, mot pour mot. Un fichier qui
+     * appellerait « Frais admin » ce que l'écran appelle « Frais accessoires » obligerait
+     * l'utilisateur à faire la traduction lui-même, à chaque lecture.
+     */
+    public const FONCTIONS = [
+        Chargement::FONCTION_PRIME_NETTE => 'Prime nette',
+        Chargement::FONCTION_FRONTING => 'Fronting',
+        Chargement::FONCTION_FRAIS_ADMIN => 'Frais accessoires',
+        Chargement::FONCTION_TAXE => 'Taxe',
+    ];
 
     /** Préfixe du code d'une colonne de type de revenu. */
     public const PREFIXE_REVENU = 'revenu_';
@@ -30,7 +45,6 @@ final class CatalogueDesColonnes
     /**
      * @param string   $taxeCourtier nom de la taxe dont le COURTIER est redevable (ARCA…)
      * @param string   $taxeAssureur nom de la taxe dont l'ASSUREUR est redevable (TVA…)
-     * @param string[] $chargements  types de chargement du cabinet, dans l'ordre d'affichage
      * @param string[] $revenus      types de revenu du cabinet
      *
      * @return array<string, ColonneEtat>
@@ -38,7 +52,6 @@ final class CatalogueDesColonnes
     public static function pour(
         string $taxeCourtier,
         string $taxeAssureur,
-        array $chargements = [],
         array $revenus = [],
     ): array {
         $catalogue = [
@@ -388,7 +401,7 @@ final class CatalogueDesColonnes
         // d'export aurait annoncé « Prime » deux fois, séparées par tout le reste.
         //
         // Elles précèdent le total qu'elles composent : on lit les termes, puis la somme.
-        $catalogue = self::inserer($catalogue, 'primeTotale', self::colonnesDeChargement($chargements));
+        $catalogue = self::inserer($catalogue, 'primeTotale', self::colonnesDeChargement());
 
         return self::inserer($catalogue, 'commissionTtc', self::colonnesDeRevenu($revenus));
     }
@@ -429,7 +442,18 @@ final class CatalogueDesColonnes
     }
 
     /**
-     * UNE COLONNE PAR TYPE DE CHARGEMENT — et c'est la prime, décomposée.
+     * LES QUATRE COLONNES DE LA PRIME — une par FONCTION de chargement.
+     *
+     * ⚠ PAR FONCTION, ET NON PAR NOM DE TYPE. C'est une correction : le catalogue d'un
+     * cabinet porte des noms libres — « Sneca », « Tva pour prime », « Frais Arca », « ARCA »
+     * —, mais chacun retombe dans l'une des QUATRE fonctions que `ChargementType` propose,
+     * et qui sont les seules qui aient un sens métier. Une colonne par nom en donnait huit
+     * sur un cabinet et cinq sur un autre : deux exports incomparables, pour une même
+     * réalité comptable.
+     *
+     * ⚠ ET LEURS CODES NE DÉPENDENT PLUS DU CABINET. Un fichier exporté ici se relit là,
+     * et les quatre colonnes existent même sur un cabinet qui n'a encore rien saisi — ce
+     * qu'un gabarit vierge exige.
      *
      * ⚠ CES MONTANTS SONT AU PRORATA DE L'ÉCHÉANCE, jamais ceux de la police. Les
      * chargements vivent sur la cotation ; la ligne, elle, est une TRANCHE. Y écrire le
@@ -437,37 +461,22 @@ final class CatalogueDesColonnes
      * mêmes montants — et la ligne de totaux compterait chaque chargement quatre fois. Le
      * chiffre resterait plausible, et faux.
      *
-     * Au prorata, la somme des colonnes de chargement égale « Prime · Totale » de la MÊME
-     * ligne, et le total de la feuille est juste. C'est la propriété que `RepriseTest`
-     * vérifie.
-     *
-     * ⚠ ET CE SONT DES SAISIES : un chargement EST un montant écrit
-     * (`ChargementPourPrime::$montantFlatExceptionel`), au contraire d'un revenu, qui se
-     * calcule d'un taux. La reprise remonte le prorata pour retrouver le montant de la
-     * cotation.
-     *
-     * @param string[] $types
+     * Au prorata, la somme des quatre colonnes égale « Prime · Totale » de la MÊME ligne.
      *
      * @return array<string, ColonneEtat>
      */
-    private static function colonnesDeChargement(array $types): array
+    private static function colonnesDeChargement(): array
     {
         $colonnes = [];
 
-        foreach ($types as $nom) {
-            $code = self::codeDynamique(self::PREFIXE_CHARGEMENT, $nom);
-            if ($code === null || isset($colonnes[$code])) {
-                continue;
-            }
-
-            $colonnes[$code] = ColonneEtat::montant(
-                'Prime · ' . $nom,
+        foreach (self::FONCTIONS as $fonction => $libelle) {
+            $colonnes[self::codeDeFonction($fonction)] = ColonneEtat::montant(
+                'Prime · ' . $libelle,
                 sprintf(
-                    'Part de « %s » revenant à CETTE échéance. La somme des colonnes de '
-                    . 'chargement fait la prime totale de la ligne. Corrigez-la pour reprendre '
-                    . 'une prime : c\'est d\'elles que la prime SORT, « Prime · Totale » n\'en '
-                    . 'étant que le résultat.',
-                    $nom,
+                    'Part de « %s » revenant à CETTE échéance, tous vos types de ce genre '
+                    . 'confondus. La somme des quatre colonnes de prime fait « Prime · Totale ». '
+                    . 'Corrigez-la pour reprendre une prime : c\'est d\'elles qu\'elle SORT.',
+                    $libelle,
                 ),
             )->enSaisie('Cotation.chargements');
         }
@@ -526,6 +535,22 @@ final class CatalogueDesColonnes
      * séquelle d'une initialisation rejouée : sans cette normalisation, six colonnes
      * identiques côte à côte.
      */
+    /**
+     * LE CODE DE LA COLONNE D'UNE FONCTION DE CHARGEMENT — stable partout.
+     *
+     * ⚠ IL NE DÉRIVE PAS DU NOM DU TYPE, mais de la fonction elle-même : c'est ce qui rend
+     * un fichier lisible d'un cabinet à l'autre, et qui permet aux quatre colonnes
+     * d'exister sur un cabinet qui n'a encore rien saisi.
+     */
+    public static function codeDeFonction(int $fonction): string
+    {
+        return self::PREFIXE_CHARGEMENT . str_replace(
+            ' ',
+            '_',
+            ResolveurDeRenvois::normaliser(self::FONCTIONS[$fonction] ?? (string) $fonction),
+        );
+    }
+
     public static function codeDynamique(string $prefixe, ?string $nom): ?string
     {
         $forme = ResolveurDeRenvois::normaliser((string) $nom);
