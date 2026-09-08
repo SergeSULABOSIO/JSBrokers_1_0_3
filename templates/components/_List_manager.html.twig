@@ -15,10 +15,17 @@
 #}
 <div
         id="{{ listId | default('list-controller-' ~ random()) }}" {# CORRECTION : Utiliser un ID prédictible ou un fallback aléatoire. #}
-        {# UNE RUBRIQUE À RENDU PROPRE peut avoir besoin de toute la hauteur — le pied
-           de totaux de la production doit rester au bas du panneau. La classe ouvre la
-           chaîne de hauteurs, et n'est posée que là où elle est demandée. #}
-        class="{{ listeCanvas.rendu_personnalise is defined and listeCanvas.rendu_personnalise ? 'jsb-list-pleine-hauteur' : '' }}"
+        {# LA CHAÎNE DE HAUTEURS, POUR TOUTES LES LISTES DE RUBRIQUE.
+           Elle n'était ouverte que pour les rubriques à rendu propre (le pied de totaux
+           de la production doit rester au bas du panneau). Elle vaut en réalité pour
+           TOUTES : c'est elle qui borne la liste, et donc qui permet au seul CORPS du
+           tableau de défiler pendant que la barre de contrôles, les chips et l'entête
+           restent en place.
+
+           ⚠ SAUF EN DIALOGUE. Une collection embarquée dans un formulaire n'a pas de
+           hauteur à occuper : c'est le corps de la modale qui défile, et lui imposer
+           `height: 100%` la ferait déborder de sa colonne. #}
+        class="{{ usage|default('generic') != 'dialog' ? 'jsb-list-manager' : '' }}"
         data-controller="list-manager"
         data-list-manager-nb-elements-value="{{ data|length }}"
         data-list-manager-entite-value="{{ entite_nom }}"
@@ -269,5 +276,10 @@
 
             {{ include('components/_empty_state.html.twig', emptyStateParams) }}
         </div>
-    </div>
+{# ⚠ UNE SEULE FERMANTE ICI, et c'est celle du socle ouvert tout en haut.
+   Il y en avait DEUX : la première refermait le socle après l'état vide, la seconde
+   s'échappait et refermait le PANNEAU D'ONGLET qui nous contient — lequel voyait à son
+   tour sa propre fermante s'échapper, de proche en proche. Le navigateur ne s'en plaint
+   pas (une fermante orpheline referme l'ancêtre ouvert le plus proche), mais toute
+   hauteur donnée au panneau cessait d'atteindre la liste. #}
 </div>

@@ -1512,16 +1512,18 @@ textarea:hover,
 
 /* Barre de contrôles adaptative : statut, pagination et totaux s'empilent À GAUCHE et se
    replient sur la ligne suivante (le dernier composant d'abord) quand la place manque —
-   plus aucun écrasement ni calage à droite. La hauteur réelle est re-mesurée par le
-   list-manager (--jsb-pgbar-h) pour le décalage du thead sticky. */
+   plus aucun écrasement ni calage à droite.
+
+   ⚠ ELLE N'EST PLUS COLLANTE, ET N'A PLUS À L'ÊTRE : seul le CORPS du tableau défile
+   désormais (voir « SEUL LE TABLEAU DÉFILE » plus bas). Elle est simplement posée
+   au-dessus de la zone défilante, où rien ne peut la faire bouger. Le décalage mesuré
+   (--jsb-pgbar-h) qui servait à décoller l'entête n'a plus d'objet. */
 .jsb-list-controls-bar {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 0.5rem;
-    position: sticky;
-    top: 0;
-    z-index: 25;
+    flex: 0 0 auto;
     background: #ffffff;
     border-bottom: 1px solid #dee2e6;
     padding: 0.25rem 0.75rem;
@@ -1606,11 +1608,9 @@ textarea:hover,
     align-items: center;
     flex-wrap: wrap;
     gap: 0.5rem;
-    /* Collante sous la barre de contrôles (hauteur dynamique --jsb-pgbar-h) :
-       la rangée des chips reste visible pendant le scroll, comme la ligne du dessus. */
-    position: sticky;
-    top: var(--jsb-pgbar-h, 38px);
-    z-index: 24;
+    /* ⚠ PLUS DE `position: sticky` : la rangée est hors de la zone défilante, donc
+       toujours visible sans avoir à se recoller à quoi que ce soit. */
+    flex: 0 0 auto;
     background: #ffffff;
     border-bottom: 1px solid #dee2e6;
     padding: 0.35rem 0.75rem;
@@ -1619,6 +1619,40 @@ textarea:hover,
    cobalt (#0047AB) texte blanc, survol = teinte cobalt + légère élévation.
    Icône optionnelle (clé `icon` des options du canvas) devant le libellé.
    Logique inchangée (is-active/aria-pressed). */
+/* -- QUAND LES CHIPS NE TIENNENT PAS : LES VALEURS DEFILENT ----------------------
+   Une rubrique de liste peut aligner dix chips (« Général, Police, Tranche, Prime,
+   Commission, Taxe courtier, Taxe assureur… »), et l'écran des colonnes de l'Échange
+   autant. Dans une colonne étroite, les derniers sortaient du panneau et le
+   DEFORMAIENT : ni visibles, ni atteignables. Un filtre qu'on ne peut pas voir est un
+   filtre qui n'existe pas.
+
+   Le retour à la ligne — le comportement d'origine — ne convient pas : la pilule
+   devenait un pavé de deux ou trois rangées qui mangeait la liste par le haut, alors
+   que c'est justement la place qui manque.
+
+   -- LA STRUCTURE, ET LES DEUX ERREURS QU'ELLE CORRIGE ----------------------------
+       .jsb-preset-filters-wrap        <- C'EST ELLE, la pilule : fond, arrondi, marge
+            .jsb-preset-filters__titre <- le nom du critere, HORS du defilement
+            .jsb-preset-zone           <- referent des fleches, ne defile pas
+                 .jsb-preset-filters   <- la seule chose qui defile : les valeurs
+                 bouton precedent / suivant, EN SURCOUCHE
+
+   1. LE TITRE EST DEHORS. Il avait d'abord ete laisse dans la zone, COLLE a gauche :
+      les valeurs lui passaient dessous, et ce chevauchement de deux textes etait
+      desagreable a l'oeil autant qu'illisible une fraction de seconde. Dehors, la zone
+      de defilement COMMENCE apres lui : plus rien ne peut passer sous rien.
+
+   2. LES FLECHES SONT EN SURCOUCHE, et c'est ce qui rend le comportement stable. Posees
+      dans le flux, elles prenaient une cinquantaine de pixels — ceux-la memes qu'on
+      mesurait pour decider s'il fallait defiler. Une pilule qui tenait tout juste se
+      mettait donc a defiler A CAUSE de ses propres fleches, et n'en sortait plus : on a
+      vu « Tout decocher » ampute alors que la place ne manquait pas. En surcouche,
+      les afficher ne change aucune largeur, et la boucle n'existe plus.
+
+   /!\ ET CETTE MISE EN PAGE NE VAUT QUE LA OU ON L'A DEMANDEE : elle est portee par
+   `.jsb-preset-filters-wrap`, que `chips-defilement.js` cree autour des groupes qu'il
+   equipe. Ailleurs, une pilule reste une pilule ordinaire qui revient a la ligne. */
+
 .jsb-preset-filters {
     display: inline-flex;
     align-items: center;
@@ -1629,6 +1663,133 @@ textarea:hover,
     gap: 0;
     flex-shrink: 0;
 }
+
+/* L'enveloppe PREND l'aspect de la pilule : titre et valeurs s'y lisent d'un bloc,
+   alors qu'ils appartiennent à deux boîtes différentes. */
+.jsb-preset-filters-wrap {
+    display: inline-flex;
+    align-items: center;
+    /* Elle accepte de rétrécir — c'est la condition même du défilement : un élément qui
+       ne rétrécit jamais ne déborde jamais de lui-même, et `overflow-x` n'aurait rien à
+       faire. */
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    background: #f0f2f5;
+    border-radius: 26px;
+    padding: 4px;
+}
+.jsb-preset-filters-wrap > .jsb-preset-filters__titre {
+    flex: 0 0 auto;
+    margin: 0 3px 0 0;
+}
+
+/* La zone : elle ne défile pas, elle porte les flèches. Sans elle, une flèche posée sur
+   l'enveloppe se calerait sur le bord du TITRE et non sur celui des valeurs. */
+.jsb-preset-zone {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+/* La seule chose qui défile. */
+.jsb-preset-zone > .jsb-preset-filters {
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    /* Le geste ne se propage pas à la liste quand on arrive au bout. */
+    overscroll-behavior-x: contain;
+    /* Au repos, un chip commence toujours au bord : jamais de libellé coupé en deux. */
+    scroll-snap-type: x proximity;
+    background: transparent;
+    border-radius: 0;
+    border-color: transparent;
+    padding: 0;
+}
+.jsb-preset-zone > .jsb-preset-filters > .jsb-preset-chip {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+}
+
+/* LA BARRE DE DEFILEMENT NATIVE EST RETIREE — pas l'accès. Un filet gris de quatre
+   pixels sous des pastilles rondes salissait la pilule sans rien offrir de cliquable ;
+   ce sont les flèches et les fondus qui portent l'information, et le geste tactile,
+   au pavé ou au clavier reste entier. */
+.jsb-preset-zone > .jsb-preset-filters { scrollbar-width: none; -ms-overflow-style: none; }
+.jsb-preset-zone > .jsb-preset-filters::-webkit-scrollbar { display: none; }
+
+/* -- LES FLECHES, EN SURCOUCHE ---------------------------------------------------
+   24 px de côté — la cible minimale du niveau AA (WCAG 2.5.8) —, posées sur le fondu
+   qui les rend lisibles, et absentes tant qu'il n'y a rien à atteindre : une flèche qui
+   ne mène nulle part est un mensonge. */
+.jsb-preset-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 3;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid #dee2e6;
+    border-radius: 50%;
+    background-color: #ffffff;
+    color: #495057;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
+    transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+}
+.jsb-preset-nav--prev { left: 0; }
+.jsb-preset-nav--next { right: 0; }
+.jsb-preset-zone.is-defilable > .jsb-preset-nav { display: inline-flex; }
+.jsb-preset-nav:disabled {
+    opacity: 0;
+    pointer-events: none;
+}
+.jsb-preset-nav:not(:disabled):hover {
+    background-color: #0047AB;
+    border-color: #0047AB;
+    color: #ffffff;
+}
+.jsb-preset-nav:focus-visible {
+    outline: 2px solid #0047AB;
+    outline-offset: 2px;
+}
+.jsb-preset-nav svg { width: 14px; height: 14px; }
+
+/* -- LES FONDUS DE BORD -----------------------------------------------------------
+   Ils disent qu'il y a une suite avant même qu'on ait touché aux flèches, et
+   s'éteignent au bout de la course. Portés par la ZONE et non par le contenu défilant :
+   dessinés dedans, ils défileraient avec lui. Décoratifs, donc transparents au clic. */
+.jsb-preset-zone::before,
+.jsb-preset-zone::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 2;
+    width: 30px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s ease;
+}
+.jsb-preset-zone::before {
+    left: 0;
+    background: linear-gradient(to right, #f0f2f5 40%, rgba(240, 242, 245, 0));
+}
+.jsb-preset-zone::after {
+    right: 0;
+    background: linear-gradient(to left, #f0f2f5 40%, rgba(240, 242, 245, 0));
+}
+.jsb-preset-zone.is-defile-gauche::before,
+.jsb-preset-zone.is-defile-droite::after { opacity: 1; }
+
 /* Titre du groupe : le CRITÈRE écrit une seule fois, en tête de la pilule, au lieu d'être
    répété sur chaque bouton (« Prime payée », « Prime impayée »…). Les chips ne portent plus
    que la valeur, ce qui divise leur largeur par deux et permet d'aligner les quatre groupes
@@ -1742,6 +1903,32 @@ textarea:hover,
     transform: none;
 }
 
+/* -- UN GESTE N'EST PAS UN ETAT --------------------------------------------------
+   « Tout cocher » et « Tout décocher » partageaient l'apparence d'un chip NON
+   sélectionné : gris, plat, sur le même fond. Dans une pilule où les voisins s'allument
+   en cobalt quand ils sont actifs, cela se lit comme « aucune valeur n'est
+   sélectionnée » — alors que les 81 colonnes l'étaient toutes. Le composant mentait sur
+   l'état du système (Nielsen 1), et confondait deux natures que rien ne distinguait
+   (Bastien & Scapin > Signifiance).
+
+   Un geste se donne donc l'allure d'un bouton : surface blanche, contour net, jamais le
+   cobalt plein qui, ici, veut dire « sélectionné ». */
+.jsb-preset-chip--action {
+    background: #ffffff;
+    border: 1px solid #ced4da;
+    color: #495057;
+    font-weight: 600;
+    padding: 3px 12px;
+    /* La pilule colle ses chips (`gap: 0`), ce qui va bien à des pastilles sans contour ;
+       deux boutons bordés s'y toucheraient et se liraient comme un seul. */
+    margin: 0 2px;
+}
+.jsb-preset-chip--action:hover {
+    background: #ffffff;
+    border-color: #0047AB;
+    color: #0047AB;
+}
+
 .jsb-list-summary {
     display: flex;
     align-items: center;
@@ -1794,55 +1981,70 @@ textarea:hover,
 .h-100 {
     height: 100%;
 }
-/* LE CONTENEUR TIENT ENFIN LA PROMESSE DE SON NOM.
-   La règle était vide : « scroll-wrapper » n'enveloppait aucun défilement. Tant que
-   la fenêtre était large, le tableau générique (quatre colonnes, dont une élastique)
-   ne dépassait jamais et personne ne s'en apercevait. Sur un écran étroit — ou pour
-   une rubrique qui apporte son propre tableau large, comme « Production
-   intermédiaires » — les dernières colonnes sortaient du panneau sans aucun moyen
-   d'aller les chercher, puisque la coquille du workspace ne défile pas.
+/* ═══════════════════════════════════════════════════════════════════════════════
+   SEUL LE TABLEAU DÉFILE — tout le reste de la liste reste en place.
 
-   Le défilement est confié au conteneur et non au tableau : c'est lui que
-   `.jsb-list-pleine-hauteur` borne déjà en hauteur, et c'est sous lui que
-   `thead.sticky-header` reste collé. */
-.table-scroll-wrapper {
-    overflow-x: auto;
-}
+   ── CE QUI N'ALLAIT PAS ─────────────────────────────────────────────────────────
+   La coquille du workspace défilait EN ENTIER : barre de contrôles, chips et tableau
+   remontaient ensemble, et l'on rendait la barre et les chips « collantes » pour
+   qu'elles reviennent se poser en haut. L'entête du tableau devait alors se coller
+   SOUS elles, d'où un décalage calculé en JavaScript (--jsb-pgbar-h + --jsb-chipsbar-h)
+   et réappliqué à chaque redimensionnement.
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   RUBRIQUE À RENDU PROPRE : LA PILE VA JUSQU'EN BAS.
+   Ce montage tenait à une condition tacite : que l'entête s'accroche au même conteneur
+   défilant que les deux barres. `.table-scroll-wrapper` a plus tard reçu
+   `overflow-x: auto` pour les tableaux larges — et `overflow-x: auto` fait basculer
+   `overflow-y` de `visible` à `auto`. Le wrapper est ainsi devenu un CONTENEUR DÉFILANT
+   à son tour, sans le vouloir : `position: sticky` s'accroche au plus proche ancêtre
+   défilant, donc à lui. Mais lui ne défile jamais (sa hauteur est celle de son contenu).
+   L'entête ne se collait donc plus à rien : elle restait plantée à 74 px du haut du
+   tableau, RECOUVRANT les deux ou trois premières lignes, et dérivait avec la page —
+   d'où l'impression qu'elle « se déplace ».
 
-   Le rendu générique laisse le tableau couler : sa hauteur est celle de ses lignes,
-   et c'est très bien. Une rubrique qui apporte son propre tableau peut avoir besoin
-   d'autre chose — « Production intermédiaires » porte un PIED DE TOTAUX qui doit
-   rester au bas du panneau, que le rapport tienne en une ligne ou en deux cents.
+   ── CE QU'ON FAIT À LA PLACE ────────────────────────────────────────────────────
+   On arrête de faire défiler la coquille. La liste devient une colonne de hauteur
+   bornée : les barres en haut, à demeure ; le tableau au milieu, SEUL à défiler ; son
+   entête collée à `top: 0` de sa propre zone, sans décalage à calculer.
 
-   Or la chaîne de hauteurs s'arrêtait avant lui : le panneau d'onglet est bien borné,
-   mais ni le panneau de liste ni le conteneur du socle ne transmettaient cette
-   hauteur, et un `height: 100%` posé plus bas se résolvait contre un parent en
-   hauteur automatique — donc contre le contenu lui-même. Le pied se collait sous la
-   dernière ligne, tout le bas du panneau restant vide.
+   Plus de mesure JavaScript, plus de variables à tenir en accord, et une seule chose
+   qui bouge à l'écran — celle qu'on est en train de lire.
+   ═══════════════════════════════════════════════════════════════════════════════ */
 
-   La classe n'est posée que par les rubriques concernées : rien ne change pour les
-   trente autres.
-   ─────────────────────────────────────────────────────────────────────────── */
-[role="tabpanel"]:has(> .jsb-list-pleine-hauteur) { height: 100%; }
-.jsb-list-pleine-hauteur {
+/* Le panneau d'onglet donne sa hauteur à la liste qu'il contient : sans cette borne,
+   `height: 100%` plus bas se résoudrait contre le contenu lui-même, et la colonne
+   s'allongerait indéfiniment au lieu de faire défiler son tableau. */
+[role="tabpanel"]:has(> .jsb-list-manager) { height: 100%; }
+
+.jsb-list-manager {
     display: flex;
     flex-direction: column;
     height: 100%;
     min-height: 0;
 }
-.jsb-list-pleine-hauteur > .table-scroll-wrapper {
+
+/* LA ZONE DÉFILANTE, et la seule. `overflow: auto` sur les DEUX axes : quand les
+   colonnes numériques (nowrap) rendent le tableau plus large que le panneau, le
+   défilement horizontal doit se faire ICI aussi — sinon l'entête s'accrocherait à un
+   ancêtre qui, lui, ne défile pas horizontalement, et les titres se décaleraient des
+   colonnes qu'ils nomment dès qu'on va chercher les dernières. */
+.jsb-list-manager > .table-scroll-wrapper {
     flex: 1 1 auto;
     min-height: 0;
+    overflow: auto;
 }
 
-/* Offset du thead quand la barre des contrôles est présente : il colle sous les
-   DEUX rangées collantes (contrôles + chips de filtre, hauteurs dynamiques). */
-.list-manager-has-controls thead.sticky-header th {
-    top: calc(var(--jsb-pgbar-h, 0px) + var(--jsb-chipsbar-h, 0px));
+/* L'état vide occupe la même place que le tableau qu'il remplace. */
+.jsb-list-manager > [data-list-manager-target="emptyStateContainer"]:not(.d-none) {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
 }
+
+/* ⚠ HORS WORKSPACE — collection embarquée dans un dialogue —, le wrapper n'est PAS
+   borné et ne doit surtout pas devenir défilant : c'est le corps de la modale qui
+   défile, et l'entête doit s'y accrocher. On ne lui donne donc aucun `overflow` ; la
+   règle ci-dessus est réservée aux listes de rubrique. */
+.table-scroll-wrapper { min-width: 0; }
 
 thead.sticky-header {
     z-index: 100;

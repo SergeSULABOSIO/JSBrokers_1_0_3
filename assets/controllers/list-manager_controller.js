@@ -3,6 +3,7 @@ import BaseController from './base_controller.js';
 // grammaire de visibilité des DIALOGUES, sans en inventer une seconde.
 import { etatChipPreset, chipVisible, resoudreClicChip } from './chip-preset-etat.js';
 import { positionnerMenu } from './menu-flottant.js';
+import { DefilementChips } from './chips-defilement.js';
 
 /**
  * @class ListManagerController
@@ -83,16 +84,15 @@ export default class extends BaseController {
         this._lastPagination = this.paginationValue || {}; // méta courante pour les compteurs
         this._renderPagination(this.paginationValue);
 
-        // Barre de contrôles adaptative (flex-wrap) : sa hauteur varie avec la largeur
-        // disponible — on re-mesure --jsb-pgbar-h à chaque redimensionnement pour que
-        // le décalage du thead sticky reste exact (pas seulement au rendu pagination).
-        if (this.hasControlsBarTarget && typeof ResizeObserver !== 'undefined') {
-            this._controlsBarResizeObserver = new ResizeObserver(() => this._updateControlsBarHeight());
-            this._controlsBarResizeObserver.observe(this.controlsBarTarget);
-            // La rangée des chips (collante elle aussi) peut passer sur plusieurs lignes.
-            const chipsBar = this.element.querySelector('.jsb-preset-filters-bar');
-            if (chipsBar) this._controlsBarResizeObserver.observe(chipsBar);
-        }
+        // ⚠ PLUS AUCUNE HAUTEUR À MESURER. L'entête du tableau se collait autrefois SOUS
+        // la barre de contrôles et la rangée des chips, ce qui obligeait à leur mesurer
+        // une hauteur en JavaScript et à la republier en variable CSS à chaque
+        // redimensionnement. Seul le corps du tableau défile désormais : les deux barres
+        // sont hors de la zone défilante, et l'entête colle à `top: 0` de la sienne.
+        //
+        // L'observateur reste, pour une autre raison : les chips d'un groupe se REPLIENT
+        // quand la place manque, et ce qui tient dépend de la largeur disponible.
+        this._brancherLeDefilementDesChips();
 
         document.addEventListener('app:context.changed', this.boundHandleGlobalSelectionUpdate);
         document.addEventListener('app:list.refreshed', this.boundHandleListRefreshed);
@@ -131,7 +131,7 @@ export default class extends BaseController {
         this.element.removeEventListener('click', this.boundHandlePaginationClick);
         this.element.removeEventListener('change', this.boundHandlePaginationJump);
         this.element.removeEventListener('keydown', this.boundHandlePaginationJumpKeydown);
-        this._controlsBarResizeObserver?.disconnect();
+        this._defilementDesChips?.detruire();
         // Le panneau du chip-sélecteur vit dans le <body>, hors de cet élément : fermer
         // l'onglet ne l'emporte donc pas. Sans ce nettoyage, il resterait à l'écran, ancré
         // à une chip qui n'existe plus, avec ses écouteurs de défilement encore actifs.
@@ -139,6 +139,21 @@ export default class extends BaseController {
     }
 
     /** Retire le panneau détaché et ses écouteurs, quel que soit le bouton d'origine. @private */
+    /**
+     * Met les chips de filtre en défilement horizontal quand la place manque.
+     *
+     * ⚠ À REJOUER APRÈS CHAQUE RENDU DE CHIPS : les écouteurs sont posés sur les pilules,
+     * et un rendu de liste peut les remplacer. `DefilementChips.brancher()` est
+     * idempotent, on peut le rappeler sans empiler.
+     * @private
+     */
+    _brancherLeDefilementDesChips() {
+        if (!this.element.querySelector('.jsb-preset-filters')) return;
+
+        this._defilementDesChips ??= new DefilementChips(this.element);
+        this._defilementDesChips.brancher();
+    }
+
     _fermerPanneauSelecteurOrphelin() {
         this._panneauSelecteur?.remove();
         this._panneauSelecteur = null;
@@ -557,6 +572,19 @@ export default class extends BaseController {
             // visibilité des dialogues : une seule façon de masquer dans le projet.
             chip.classList.toggle('d-none', !chipVisible(declaration, criteria));
         });
+
+        // ⚠ LE DÉFILEMENT SE REJOUE APRÈS CHAQUE SYNCHRONISATION. Deux choses viennent
+        // d'en changer la mesure : un chip-sélecteur porte désormais le NOM de ce qu'on a
+        // choisi (« SUNU Courtage » est plus large que « Choisir un partenaire… »), et la
+        // règle R1 vient de masquer ou de rendre des options — la pilule a donc changé de
+        // largeur utile, et les fondus de bord avec elle.
+        this._defilementDesChips?.recalculer();
+
+        // ⚠ ET LE CHIP ACTIF EST RAMENÉ DANS LE CHAMP. Une liste filtrée par une option
+        // qu'on ne voit pas est une liste dont on ne comprend pas le contenu — c'est le
+        // reproche même qu'on faisait au débordement (Nielsen 1 : visibilité de l'état).
+        const actif = this.element.querySelector('.jsb-preset-chip.is-active:not(.d-none)');
+        if (actif) this._defilementDesChips?.montrer(actif);
     }
 
     // --- GESTION DE LA SÉLECTION ---
@@ -860,7 +888,6 @@ export default class extends BaseController {
         if (!meta || !meta.totalPages || (meta.totalPages <= 1 && meta.totalItems <= (meta.itemsPerPage || 20))) {
             this.paginationContainerTarget.innerHTML = '';
             this.element.classList.remove('list-manager-has-pagination');
-            requestAnimationFrame(() => this._updateControlsBarHeight());
             return;
         }
         const { currentPage, totalPages, totalItems, itemsPerPage } = meta;
@@ -909,20 +936,8 @@ export default class extends BaseController {
                 </div>
             </div>`;
         this.element.classList.add('list-manager-has-pagination');
-        requestAnimationFrame(() => this._updateControlsBarHeight());
     }
 
-    _updateControlsBarHeight() {
-        if (this.hasControlsBarTarget) {
-            const h = this.controlsBarTarget.offsetHeight;
-            this.element.style.setProperty('--jsb-pgbar-h', `${h}px`);
-            this.element.classList.add('list-manager-has-controls');
-        }
-        // Rangée des chips de filtre (collante sous la barre de contrôles) : sa hauteur
-        // (variable, flex-wrap) s'ajoute au décalage du thead sticky.
-        const chipsBar = this.element.querySelector('.jsb-preset-filters-bar');
-        this.element.style.setProperty('--jsb-chipsbar-h', `${chipsBar ? chipsBar.offsetHeight : 0}px`);
-    }
 
     /**
      * Gère les clics sur les boutons de pagination via délégation d'événement.

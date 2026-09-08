@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { DefilementChips } from './chips-defilement.js';
 import {
     choixARestaurer,
     cleDuChoix,
@@ -90,6 +91,24 @@ export default class extends Controller {
         this.#restaurerLePerimetre();
         this.#rafraichirSelection();
         this.#initialise = true;
+
+        // ⚠ LES FAMILLES DE COLONNES DÉBORDAIENT L'ÉCRAN DE CHOIX. « Général, Police,
+        // Tranche, Prime, Commission… » : la pilule s'élargissait au-delà du panneau et
+        // le DÉFORMAIT, le dernier chip sortant par la droite. Elle défile désormais,
+        // titre du groupe collé à gauche.
+        //
+        // ⚠ ET LA BARRE D'ACTIONS N'EN SOUFFRE PAS. « Exporter, Importer, Historique »
+        // passe par le même module, qui ne pose le mode défilant QUE sur les pilules qui
+        // débordent réellement : celle-là tient toujours sur une ligne, et ne bouge pas.
+        this._defilementDesChips = new DefilementChips(
+            this.element,
+            '.jsb-preset-filters-bar .jsb-preset-filters',
+        );
+        this._defilementDesChips.brancher();
+    }
+
+    disconnect() {
+        this._defilementDesChips?.detruire();
     }
 
     /** Changement d'onglet (chip) : `data-echange-onglet-param`. */
