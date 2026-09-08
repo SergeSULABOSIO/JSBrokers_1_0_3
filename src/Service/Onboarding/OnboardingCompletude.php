@@ -43,6 +43,9 @@ class OnboardingCompletude
     /** Au-delà, la carte affiche « et N autres » : elle reste une consultation, pas une liste. */
     private const APERCU_MAX = 5;
 
+    /** Longueur au-delà de laquelle un libellé d'aperçu est tronqué. */
+    private const DETAIL_MAX = 80;
+
     /** Le cabinet neuf naît avec son seul propriétaire : il en faut un DE PLUS pour dire « équipe ». */
     private const INVITES_ATTENDUS = 2;
 
@@ -230,12 +233,19 @@ class OnboardingCompletude
     }
 
     /**
-     * LE TAUX DE CHANGE DE LA MONNAIE LOCALE.
+     * LES MONNAIES, ET LE TAUX DE LA MONNAIE LOCALE.
      *
-     * Le semis pose la monnaie du pays à 1.00 — un placeholder. Tant qu'il n'a pas bougé,
-     * toute conversion est fausse en silence. L'étape est faite si le cabinet travaille en
-     * dollars (aucune monnaie locale n'a alors été semée, il n'y a rien à corriger) ou si
-     * le taux a été retouché.
+     * ── LA CARTE COMPTE LES MONNAIES, LE CRITÈRE N'EN REGARDE QU'UNE ────────────────
+     * Un cabinet encaisse souvent dans plusieurs devises : la carte liste donc TOUTES
+     * ses monnaies et laisse en ajouter, comme n'importe quelle autre.
+     *
+     * Ce qui décide de l'achèvement, en revanche, ne porte que sur la monnaie LOCALE :
+     * le semis la pose à 1.00, un placeholder, et tant qu'il n'a pas bougé toute
+     * conversion est fausse en silence. Compter les lignes ne dirait rien de cela — on
+     * aurait une étape « faite » dès la création, avec un taux faux.
+     *
+     * L'étape est donc faite si le cabinet travaille en dollars (aucune monnaie locale
+     * n'a alors été semée, il n'y a rien à corriger) ou si ce taux a été retouché.
      *
      * @return array{fait: bool, nombre: int, apercu: array<int, array<string, mixed>>, reste: int}
      */
@@ -245,19 +255,17 @@ class OnboardingCompletude
         $locale = $this->manager->getRepository(Monnaie::class)
             ->findOneBy(['entreprise' => $entreprise, 'locale' => true]);
 
-        if ($locale === null) {
-            // Cabinet en dollars : pas de seconde monnaie, donc pas de taux à ajuster.
-            return ['fait' => true, 'nombre' => 0, 'apercu' => [], 'reste' => 0];
-        }
+        // Cabinet en dollars : pas de seconde monnaie, donc pas de taux à ajuster.
+        $fait = $locale === null || abs((float) $locale->getTauxusd() - 1.0) > 0.000001;
 
-        $taux = (float) $locale->getTauxusd();
-        $fait = abs($taux - 1.0) > 0.000001;
+        $nombre = $this->compter(Monnaie::class, $entreprise);
+        $apercu = $avecApercu ? $this->apercu(Monnaie::class, $entreprise) : [];
 
         return [
             'fait' => $fait,
-            'nombre' => 1,
-            'apercu' => $avecApercu ? [$this->ligne($locale, Monnaie::class)] : [],
-            'reste' => 0,
+            'nombre' => $nombre,
+            'apercu' => $apercu,
+            'reste' => max(0, $nombre - count($apercu)),
         ];
     }
 
@@ -390,7 +398,7 @@ class OnboardingCompletude
         ];
     }
 
-    /** La valeur d'un attribut, ramenée à du texte affichable — jamais une exception. */
+    /** La valeur d'un attribut, ramenée à du TEXTE affichable — jamais une exception. */
     private function valeur(object $objet, string $attribut): string
     {
         try {
@@ -400,10 +408,37 @@ class OnboardingCompletude
         }
 
         if ($valeur === null || is_array($valeur) || is_object($valeur)) {
-            return $valeur instanceof \Stringable ? trim((string) $valeur) : '';
+            return $valeur instanceof \Stringable ? $this->enTexte((string) $valeur) : '';
         }
 
-        return is_bool($valeur) ? ($valeur ? 'Oui' : 'Non') : trim((string) $valeur);
+        return is_bool($valeur) ? ($valeur ? 'Oui' : 'Non') : $this->enTexte((string) $valeur);
+    }
+
+    /**
+     * DU TEXTE, ET RIEN QUE DU TEXTE.
+     *
+     * Plusieurs attributs d'affichage sont des champs à ÉDITEUR RICHE : la description
+     * d'un type de pièce sinistre est stockée en HTML. Rendue telle quelle sur une ligne
+     * d'aperçu, elle s'affichait balises comprises — « <p>PV de la po… » —, parce que
+     * Twig échappe à juste titre ce qu'il ne sait pas être sûr.
+     *
+     * On ne rend donc PAS ce HTML : une ligne d'aperçu est du texte par nature, et
+     * l'afficher serait ouvrir une surface d'injection pour un gain nul. On en retient
+     * la substance, sans les balises ni les blancs de mise en forme.
+     */
+    private function enTexte(string $brut): string
+    {
+        // Les balises de bloc laissent des mots collés si on les retire sans rien mettre
+        // à la place : « <p>Un</p><p>deux</p> » deviendrait « Undeux ».
+        $texte = strip_tags(str_replace(['<br>', '<br/>', '<br />', '</p>', '</div>', '</li>'], ' ', $brut));
+        $texte = html_entity_decode($texte, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $texte = trim((string) preg_replace('/\s+/u', ' ', $texte));
+
+        // Une ligne d'aperçu ne vaut que par son début : le reste est tronqué par le CSS
+        // de toute façon, et le transporter en entier ne fait que grossir la page.
+        return mb_strlen($texte) > self::DETAIL_MAX
+            ? rtrim(mb_substr($texte, 0, self::DETAIL_MAX)) . '…'
+            : $texte;
     }
 
     /** @param class-string $classe */

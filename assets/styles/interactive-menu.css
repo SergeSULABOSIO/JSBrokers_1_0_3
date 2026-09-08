@@ -1708,7 +1708,19 @@ a.company-version:hover {
 }
 
 /* L'anneau de progression. `--ws-jauge-pct` est posé par le gabarit : la seule
-   valeur qui vient du serveur, et elle vient une fois. */
+   valeur qui vient du serveur, et elle vient une fois.
+
+   ── POURQUOI L'AMBRE ET NON LE COBALT ──────────────────────────────────────
+   L'anneau était cobalt, comme toute la marque. Sur le fond sombre de cette
+   colonne (#343a40), le cobalt tombe à 1,36:1 — très en deçà des 3:1 qu'exige
+   WCAG 1.4.11 pour un composant d'interface porteur de sens. L'arc était donc
+   là sans se voir : du bleu foncé sur du gris foncé.
+   Les autres couleurs sémantiques n'y survivent pas davantage — rouge et vert
+   plafonnent tous deux à 2,54:1. L'ambre (#ffc107) monte à 7,06:1 : c'est la
+   seule couleur VIVE de la charte lisible ici, et elle dit la bonne chose —
+   un reste à faire, pas une erreur.
+   L'information ne repose de toute façon jamais sur la couleur seule : le
+   pourcentage est écrit dessous et repris dans l'`aria-label` (WCAG 1.4.1). */
 .ws-jauge-anneau {
     position: relative;
     display: inline-flex;
@@ -1719,9 +1731,18 @@ a.company-version:hover {
     margin-bottom: 4px;
     border-radius: 50%;
     background: conic-gradient(
-        var(--cobalt) calc(var(--ws-jauge-pct, 0) * 1%),
-        rgba(255, 255, 255, 0.16) 0
+        var(--warning) calc(var(--ws-jauge-pct, 0) * 1%),
+        rgba(255, 255, 255, 0.18) 0
     );
+    /* Un halo très discret : de quoi accrocher l'œil dans une colonne sombre
+       sans ajouter une seconde teinte. */
+    box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.14);
+    transition: box-shadow var(--nav-transition);
+}
+
+.ws-onboarding-jauge:hover .ws-jauge-anneau,
+.ws-onboarding-jauge:focus-visible .ws-jauge-anneau {
+    box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.26);
 }
 
 /* Le disque intérieur : c'est lui qui transforme le camembert en anneau. */
@@ -1741,16 +1762,17 @@ a.company-version:hover {
 }
 
 /* Le pourcentage est écrit en clair : l'anneau seul ne porterait l'information
-   que par la couleur et la forme (WCAG 1.4.1). */
+   que par la couleur et la forme (WCAG 1.4.1).
+
+   Il reprend l'ambre de l'anneau — 7,06:1 sur ce fond, bien au-delà des 4,5:1
+   exigés pour du texte — de sorte que le chiffre et l'arc se lisent comme une
+   seule et même chose. Le libellé « Démarrage », lui, reste blanc : c'est un
+   nom, pas une mesure. */
 .ws-jauge-pct {
-    font-size: 0.72rem;
+    font-size: 0.74rem;
     font-weight: 700;
     line-height: 1.1;
-    color: var(--text-white);
-}
-
-.ws-onboarding-jauge:hover .ws-jauge-pct {
-    color: #fafafa;
+    color: var(--warning);
 }
 
 /* --- L'infobulle, déplacée sous <body> par le contrôleur ------------------

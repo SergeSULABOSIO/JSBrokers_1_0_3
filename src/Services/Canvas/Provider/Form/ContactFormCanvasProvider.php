@@ -39,6 +39,7 @@ class ContactFormCanvasProvider implements FormCanvasProviderInterface
                 "telephone" => "contact",
                 "fonction"  => "role",
                 "type"      => "action:options",
+                "client"    => "client",
             ],
         ];
         $layout = $this->buildContactLayout($contactId, $isParentNew);
@@ -62,6 +63,11 @@ class ContactFormCanvasProvider implements FormCanvasProviderInterface
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["email"]], ["champs" => ["telephone"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["fonction"]], ["champs" => ["type"]]]],
+            // Le client associé manquait à cette liste. Il ne disparaissait pas pour
+            // autant : `form_end(render_rest: true)` le rendait en fin de formulaire, nu,
+            // au milieu de champs en cartes illustrées. Il vient EN DERNIER parce qu'il
+            // est facultatif — un contact peut relever d'un sinistre sans client direct.
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["client"]]]],
         ];
 
         return $layout;

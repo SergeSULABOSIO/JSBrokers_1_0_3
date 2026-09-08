@@ -9,7 +9,8 @@
    Variables attendues :
      - bilan        : sortie d'OnboardingCompletude (score, etapes, restantes, complet)
      - etapesCitees : les étapes restantes les plus lourdes, déjà triées côté PHP
-     - variante     : 'voyant' | 'bandeau'
+     - variante     : 'voyant' | 'bandeau' | 'carte'
+     - lienGuide    : (variante 'carte' uniquement) l'URL qui ouvre le guide
 
    Rien n'est rendu quand la dette est soldée : un voyant bloqué à 100 % n'est plus que du
    bruit, et l'écran redevient un tableau de bord.
@@ -102,6 +103,34 @@
                 </button>
             </div>
         </template>
+
+    {% elseif variante == 'carte' %}
+        {#
+           SUR LA CARTE D'UN CABINET, dans la liste des espaces de travail. C'est le
+           dernier écran avant d'entrer dans un cabinet : le dernier endroit où dire au
+           courtier ce qui lui manque avant qu'il ne bute dessus.
+
+           Ici le rappel est un LIEN, pas un bouton : on quitte la page pour entrer dans
+           le workspace, ce qui est exactement ce que fait un lien. `?onboarding=1` ouvre
+           le guide à l'arrivée.
+        #}
+        <a class="ent-onboarding" href="{{ lienGuide }}"
+           data-action="click->top-progress#show"
+           aria-label="Configuration à {{ bilan.score }} %, {{ _restantes }} étape{{ _restantes > 1 ? 's' : '' }} restante{{ _restantes > 1 ? 's' : '' }}. Ouvrir le guide de démarrage.">
+            <span class="ent-onboarding-tete">
+                <span class="ent-onboarding-icone" aria-hidden="true">
+                    {{ ux_icon('mdi:rocket-launch-outline', {height: '16px', width: '16px'}) }}
+                </span>
+                <span class="ent-onboarding-titre">Configuration</span>
+                <strong class="ent-onboarding-score">{{ bilan.score }} %</strong>
+            </span>
+            {{ rappel.progression(bilan.score) }}
+            {% if etapesCitees|default([])|length > 0 %}
+                <span class="ent-onboarding-manques">
+                    Il manque {% for etape in etapesCitees %}{{ etape.libelle|lower }}{{ loop.last ? '' : ', ' }}{% endfor %}
+                </span>
+            {% endif %}
+        </a>
 
     {% elseif variante == 'bandeau' %}
         {#

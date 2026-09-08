@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Utilisateur;
+use App\Service\Onboarding\OnboardingCompletude;
 use App\Event\AgentNotificationEvent;
 use App\Form\EntrepriseType;
 use App\Services\ServiceGeographie;
@@ -45,6 +46,7 @@ class EntrepriseController extends AbstractController
         private TokenAccountService $tokenAccountService,
         private ParametresTokenService $parametres,
         private \Symfony\Component\EventDispatcher\EventDispatcherInterface $dispatcher,
+        private OnboardingCompletude $onboardingCompletude,
     ) {}
 
     /**
@@ -70,6 +72,7 @@ class EntrepriseController extends AbstractController
         $this->applyLangPreference($request, $user, $localeSwitcher);
 
         $page = $request->query->getInt("page", 1);
+        $entreprises = $this->entrepriseRepository->paginateUtilisateur($user->getId(), $page);
 
         // NB : la vérification de l'e-mail est désormais imposée globalement par
         // App\EventSubscriber\EmailVerificationSubscriber. Un utilisateur non vérifié
@@ -78,7 +81,12 @@ class EntrepriseController extends AbstractController
             'pageName' => $this->translator->trans("entreprise_page_name_list"),
             'utilisateur' => $user,
             'tokenBalance' => $this->tokenAccountService->getBalance($user),
-            'entreprises' => $this->entrepriseRepository->paginateUtilisateur($user->getId(), $page),
+            'entreprises' => $entreprises,
+            // LA DETTE DE CONFIGURATION, RAPPELÉE JUSQUE SUR LA CARTE.
+            //
+            // Le courtier passe par cet écran avant d'entrer dans un cabinet : c'est le
+            // dernier endroit où lui dire ce qu'il lui manque avant qu'il ne bute dessus.
+            'onboarding' => $this->bilansDeConfiguration($entreprises, $user),
             'page' => $request->query->getInt("page", 1),
             // NOUVEAU : On passe l'invité courant pour faciliter l'accès à ses informations
             'invite' => $this->inviteRepository->findOneBy(['utilisateur' => $user]),
@@ -87,6 +95,46 @@ class EntrepriseController extends AbstractController
         ]);
     }
 
+
+    /**
+     * L'état de configuration des cabinets QU'IL POSSÈDE, indexé par identifiant.
+     *
+     * Seulement ceux-là : configurer un cabinet est l'affaire de son propriétaire, et le
+     * rappeler à un invité serait lui demander ce qu'il ne peut pas faire.
+     *
+     * L'identifiant de l'invité propriétaire est joint au bilan : sans lui, le raccourci
+     * de la carte ne saurait pas quelle porte du workspace ouvrir.
+     *
+     * @param iterable<Entreprise> $entreprises
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function bilansDeConfiguration(iterable $entreprises, Utilisateur $user): array
+    {
+        $bilans = [];
+
+        foreach ($entreprises as $entreprise) {
+            if ($entreprise->getUtilisateur() !== $user) {
+                continue;
+            }
+
+            $proprietaire = $this->inviteRepository->findOneBy([
+                'entreprise' => $entreprise,
+                'proprietaire' => true,
+            ]);
+
+            if ($proprietaire === null) {
+                continue;
+            }
+
+            $bilans[$entreprise->getId()] = $this->onboardingCompletude->scoreSeul($entreprise) + [
+                'idInvite' => $proprietaire->getId(),
+                'citees' => $this->onboardingCompletude->etapesACiter($entreprise, 2),
+            ];
+        }
+
+        return $bilans;
+    }
 
     #[Route('/create', name: 'create')]
     public function create(Request $request, LocaleSwitcher $localeSwitcher)
