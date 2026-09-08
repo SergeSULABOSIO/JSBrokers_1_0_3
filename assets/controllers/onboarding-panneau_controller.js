@@ -71,7 +71,14 @@ export default class extends Controller {
                 entity: estCreation ? {} : { id },
                 isCreationMode: estCreation,
                 context: {
-                    originatorId: 'onboarding',
+                    // AUCUN `originatorId`, ET C'EST VOLONTAIRE. Pour le Cerveau, cette clé
+                    // désigne LA LISTE À RAFRAÎCHIR après l'enregistrement — il va chercher
+                    // l'état de l'onglet correspondant et reconstruit sa requête. Le guide
+                    // n'est pas une liste : lui en donner un faisait échouer cette recherche
+                    // et crachait deux erreurs en console à chaque création
+                    // (« serverRootName manquant », « URL non trouvée pour l'onglet
+                    // onboarding »), alors même que le panneau se rafraîchissait très bien
+                    // tout seul. Sans la clé, le Cerveau passe son chemin.
                     idEntreprise: this.contexteValue?.idEntreprise,
                     idInvite: this.contexteValue?.idInvite,
                     _onboardingReload: true,

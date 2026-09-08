@@ -6419,6 +6419,14 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 
 .jsb-onboarding-cta-primaire {
     flex: 0 0 auto;
+    /* Le bouton porte une icône : sans flex, elle se poserait sur la ligne de base du
+       texte au lieu d'être centrée avec lui. */
+    display: inline-flex;
+    align-items: center;
+    /* Centré, parce qu'à l'étroit ce bouton passe pleine largeur (cf. media query) :
+       sans cela, l'icône et le libellé se tasseraient à gauche d'une barre vide. */
+    justify-content: center;
+    gap: 8px;
     padding: 11px 20px;
     border: none;
     border-radius: var(--nav-radius-sm);
@@ -6437,6 +6445,14 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 .jsb-onboarding-cta-primaire:focus-visible {
     outline: none;
     box-shadow: 0 0 0 3px var(--cobalt-focus-ring);
+}
+
+/* L'icône des boutons d'appel à l'action de l'onboarding — celle de l'écran qu'ils
+   ouvrent. Elle vaut sur fond cobalt comme sur fond sombre : c'est le même geste. */
+.jsb-onboarding-cta-icone {
+    display: inline-flex;
+    flex: 0 0 auto;
+    line-height: 0;
 }
 
 /* Sur écran étroit, le bouton passe sous le texte plutôt que de l'écraser. */

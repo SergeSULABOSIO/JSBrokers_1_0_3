@@ -8,6 +8,7 @@ use App\Entity\Utilisateur;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
@@ -206,5 +207,55 @@ class OnboardingRappelTest extends WebTestCase
         // bouton du courriel de synthèse.
         $avec = $this->ouvrirWorkspace($owner, $e, self::OWNER, '?onboarding=1');
         $this->assertStringContainsString('data-onboarding-jauge-auto-ouvrir-value="true"', $avec);
+    }
+
+    /**
+     * LES DEUX BOUTONS OUVRENT VRAIMENT L'ONGLET.
+     *
+     * Le bouton du tableau de bord portait tous ses paramètres — composant, entité,
+     * icône, description — et RIEN NE SE PASSAIT au clic : il lui manquait le
+     * `data-action`. Des paramètres sans geste ne se voient pas à la relecture, et aucun
+     * test ne les regardait. Celui-ci les regarde.
+     *
+     * L'onglet étant unique par (composant, entité), un second clic le réactive au lieu
+     * d'en ouvrir un autre : c'est la même paire qui porte les deux propriétés.
+     */
+    public function testLesDeuxBoutonsPortentLeGesteEtPasSeulementLesParametres(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+
+        $surfaces = [
+            'colonne 1' => $this->ouvrirWorkspace($owner, $e, self::OWNER),
+            'tableau de bord' => $this->composantTableauDeBord($e),
+        ];
+
+        foreach ($surfaces as $ou => $html) {
+            $crawler = new Crawler($html);
+            $boutons = $crawler->filter('[data-workspace-manager-component-name-param="_onboarding_component.html.twig"]');
+
+            $this->assertGreaterThan(0, $boutons->count(), sprintf("Aucun bouton d'ouverture du guide sur %s.", $ou));
+
+            foreach ($boutons as $bouton) {
+                $noeud = new Crawler($bouton);
+                $this->assertStringContainsString(
+                    'click->workspace-manager#loadComponent',
+                    (string) $noeud->attr('data-action'),
+                    sprintf('Le bouton de %s ne déclare aucun geste : le clic ne fera rien.', $ou),
+                );
+                // Et l'onglet doit s'intituler « Démarrage », pas du libellé du bouton.
+                $this->assertSame('Démarrage', $noeud->attr('data-workspace-manager-title-param'));
+                $this->assertSame('Onboarding', $noeud->attr('data-workspace-manager-entity-name-param'));
+            }
+        }
+    }
+
+    /** Le composant du tableau de bord, tel que le workspace le charge. */
+    private function composantTableauDeBord(Entreprise $entreprise): string
+    {
+        $this->client->loginUser($this->user(self::OWNER));
+        $this->client->request('GET', sprintf('/admin/entreprise_dashbord/workspace/%d', $entreprise->getId()));
+        $this->assertResponseIsSuccessful();
+
+        return (string) $this->client->getResponse()->getContent();
     }
 }
