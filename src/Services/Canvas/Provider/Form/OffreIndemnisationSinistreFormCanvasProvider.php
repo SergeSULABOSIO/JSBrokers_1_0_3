@@ -34,6 +34,14 @@ class OffreIndemnisationSinistreFormCanvasProvider implements FormCanvasProvider
             "endpoint_delete_url" => "/admin/offreindemnisationsinistre/api/delete",
             "endpoint_form_url" => "/admin/offreindemnisationsinistre/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Une offre est ce que l'assureur accepte de payer : c'est le moment où le dossier de sinistre devient une somme.",
+                "Elle nomme le bénéficiaire, applique la franchise, arrête le montant payable et désigne le compte à créditer.",
+                "Les règlements en découlent, et la clôture du dossier avec eux.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Offre d'indemnisation",

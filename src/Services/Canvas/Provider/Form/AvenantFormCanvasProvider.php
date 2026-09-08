@@ -34,6 +34,14 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/avenant/api/delete",
             "endpoint_form_url" => "/admin/avenant/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Un avenant matérialise le contrat : c'est lui qui atteste la couverture et rend la prime exigible auprès de l'assuré.",
+                "Il porte son numéro, sa référence et sa période d'effet. Toute modification ultérieure du contrat — incorporation, prorogation, résiliation, annulation — s'inscrit à son tour sous forme d'avenant, si bien que la police se lit comme une suite de mouvements datés.",
+                "Sa date d'échéance gouverne le renouvellement. C'est elle que la vigie surveille pour vous prévenir avant que la couverture ne tombe.",
+            ],
             // Actions « piste dérivée » conditionnelles (pattern Invité→Portefeuille) :
             // condition évaluée côté front contre l'attribut calculé hasPisteDerivee
             // (AvenantIndicatorStrategy). Ajouter/Éditer ouvrent le même endpoint de

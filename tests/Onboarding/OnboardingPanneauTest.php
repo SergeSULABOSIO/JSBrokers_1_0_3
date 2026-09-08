@@ -296,20 +296,40 @@ class OnboardingPanneauTest extends WebTestCase
     }
 
     /**
-     * NON-RÉGRESSION DES DIALOGUES NON TRAITÉS : une entité dont le provider ne déclare
-     * pas de description garde exactement son comportement d'avant — colonne masquée en
-     * création. C'est ce qui permet d'enrichir les dialogues un par un.
+     * LA COLONNE NE MONTRE JAMAIS LES DEUX À LA FOIS.
+     *
+     * ── CE QUE CE TEST VÉRIFIAIT AVANT, ET POURQUOI IL A CHANGÉ ─────────────────────
+     * Il gardait la non-régression des dialogues NON TRAITÉS : une entité sans
+     * description devait garder sa colonne masquée en création. Ce cas n'existe plus —
+     * les cinquante et un dialogues en déclarent une, et DialogueDescriptionCreationTest
+     * l'exige désormais sans exception. Un test dont la prémisse a disparu ne prouve
+     * plus rien : on lui rend la moitié de sa valeur qui, elle, tient toujours.
+     *
+     * Reste donc la symétrie, qui est le vrai contrat : en création, la colonne porte la
+     * description et JAMAIS les attributs calculés — sur une entité neuve, ils valent
+     * tous zéro et n'auraient qu'un tableau de zéros à montrer.
      */
-    public function testUnDialogueSansDescriptionResteInchange(): void
+    public function testLaColonneNeMontreJamaisLesDeuxALaFois(): void
     {
         ['owner' => $owner, 'entreprise' => $e] = $this->seed();
-
         $this->client->loginUser($this->user(self::OWNER));
-        $this->client->request('GET', sprintf('/admin/client/api/get-form?idEntreprise=%d&idInvite=%d', $e->getId(), $owner->getId()));
-        $this->assertResponseIsSuccessful();
-        $html = (string) $this->client->getResponse()->getContent();
 
-        $this->assertStringNotContainsString('creation-description', $html);
-        $this->assertStringNotContainsString('calculated-attributes-item', $html);
+        foreach (['client', 'piste', 'assureur', 'tranche'] as $entite) {
+            $this->client->request('GET', sprintf(
+                '/admin/%s/api/get-form?idEntreprise=%d&idInvite=%d',
+                $entite,
+                $e->getId(),
+                $owner->getId(),
+            ));
+            $this->assertResponseIsSuccessful(sprintf('Le dialogue « %s » doit se rendre.', $entite));
+            $html = (string) $this->client->getResponse()->getContent();
+
+            $this->assertStringContainsString('creation-description', $html, sprintf("Le dialogue %s doit expliquer ce qu'il cree.", $entite));
+            $this->assertStringNotContainsString(
+                'calculated-attributes-item',
+                $html,
+                sprintf("Le dialogue %s ne doit pas montrer d'attributs calcules sur une entite neuve.", $entite),
+            );
+        }
     }
 }

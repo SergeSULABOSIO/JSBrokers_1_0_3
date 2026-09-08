@@ -109,7 +109,28 @@ class PisteController extends AbstractController
                 }
 
                 $idAvenant = (int) $request->query->get('idAvenant', 0);
-                if (!$idAvenant) return;
+                if (!$idAvenant) {
+                    // PISTE NON DÉRIVÉE : c'est une SOUSCRIPTION, et rien d'autre.
+                    //
+                    // Les cinq autres types — incorporation, prorogation, annulation,
+                    // renouvellement, résiliation — présupposent tous une police qui
+                    // existe déjà. Or c'est précisément ce qu'est une piste DÉRIVÉE : une
+                    // piste née d'un avenant de base, ouverte avec `?idAvenant=`. Sans ce
+                    // paramètre, il n'y a pas de police antérieure à faire évoluer.
+                    //
+                    // Ce n'est donc pas deviner à la place du courtier : c'est le seul
+                    // type cohérent dans ce contexte, et le laisser vide l'obligeait à
+                    // cocher chaque fois la même case.
+                    //
+                    // ⚠ LA RÈGLE S'ARRÊTE AU FORMULAIRE. L'inventaire annoncé à
+                    // l'assistant continue de ne déclarer AUCUN défaut sur ce champ
+                    // (« un discriminant ne se devine pas ») : il le lit sur une entité
+                    // NEUVE, sans contexte de dérivation, et n'a donc pas de quoi
+                    // trancher. Le formulaire, lui, sait d'où il est ouvert.
+                    $piste->setTypeAvenant(Piste::AVENANT_SOUSCRIPTION);
+
+                    return;
+                }
 
                 $avenant = $this->em->find(Avenant::class, $idAvenant);
                 if (!$avenant) return;

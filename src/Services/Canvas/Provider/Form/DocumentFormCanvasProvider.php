@@ -26,6 +26,14 @@ class DocumentFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/document/api/delete",
             "endpoint_form_url" => "/admin/document/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Un document est une pièce du dossier : contrat signé, courrier, justificatif. C'est ce qu'on cherchera le jour où quelque chose sera contesté.",
+                "Le classement est automatique : une pièce rattachée à un client rejoint le classeur de ce client. Le champ « classeur » ne sert qu'à la ranger ailleurs.",
+                "Une pièce se dépose sur presque toutes les fiches du cabinet. Mieux vaut la joindre là où elle a un sens que dans un dossier général où plus personne ne la retrouve.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Document du classeur",

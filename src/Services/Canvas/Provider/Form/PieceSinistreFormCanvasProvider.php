@@ -34,6 +34,14 @@ class PieceSinistreFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/piecesinistre/api/delete",
             "endpoint_form_url" => "/admin/piecesinistre/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Une pièce est un justificatif du dossier de sinistre : c'est sur elle que l'assureur fondera son offre, ou son refus.",
+                "Vous notez sa nature, sa provenance et sa date de réception. Le type de pièce dit ce qu'elle est censée établir.",
+                "Un dossier incomplet part quand même chez l'assureur, mais il revient. Chaque pièce manquante retarde l'indemnisation de votre client.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Pièce du dossier sinistre",

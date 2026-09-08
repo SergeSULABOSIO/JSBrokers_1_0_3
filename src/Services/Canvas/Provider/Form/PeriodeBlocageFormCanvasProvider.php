@@ -25,6 +25,14 @@ class PeriodeBlocageFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/periodeblocage/api/delete",
             "endpoint_form_url" => "/admin/periodeblocage/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Une période de blocage est un moment où le cabinet a besoin de tout le monde : clôture d'exercice, campagne de renouvellement.",
+                "Une demande qui y tombe est refusée — sauf à un valideur, qui peut passer outre. Le contournement est alors consigné et signalé.",
+                "Annoncez-les à l'avance : un blocage découvert au moment de poser ses jours se vit comme une brimade.",
+            ],
             "form_intro" => [
                 "titre" => "Période sans congé",
                 "description" => "Clôture d'exercice, campagne de renouvellement : un moment où le cabinet a besoin de tout le monde. Une demande qui y tombe est refusée — sauf à un valideur, qui peut passer outre, le contournement étant alors consigné et signalé.",

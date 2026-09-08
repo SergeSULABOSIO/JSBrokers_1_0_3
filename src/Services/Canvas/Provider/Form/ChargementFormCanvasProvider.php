@@ -26,6 +26,14 @@ class ChargementFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/chargement/api/delete",
             "endpoint_form_url" => "/admin/chargement/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Un type de chargement nomme une composante de la prime : prime nette, fronting, frais accessoires, taxe. C'est le vocabulaire avec lequel toutes vos cotations seront décomposées.",
+                "Sa fonction n'est pas décorative : elle dit au moteur comment traiter la ligne — assiette de commission, taxe à reverser, simple frais.",
+                "Cinq types sont posés à la création du cabinet. N'en ajoutez que si votre pratique l'exige : chaque type ajouté est un choix de plus à faire sur chaque cotation.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Type de chargement",

@@ -34,6 +34,15 @@ class RisqueFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/risque/api/delete",
             "endpoint_form_url" => "/admin/risque/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Un risque est un produit d'assurance de votre catalogue : c'est ce que vous placez, et l'unité dans laquelle se mesure la couverture d'un client.",
+                "Son taux de commission spécifique gouverne ce que l'affaire vous rapporte, et son régime d'imposition ce qui s'y ajoute.",
+                "Quarante-trois risques sont posés à la création du cabinet, du VIE à l'IARD. N'en ajoutez que pour un produit que le catalogue ignore.",
+                "C'est aussi la mesure de la saturation : couvrir un client, c'est lui faire souscrire tous les risques qui le concernent.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Fiche risque",

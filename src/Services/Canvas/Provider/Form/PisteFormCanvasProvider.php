@@ -34,6 +34,15 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/piste/api/delete",
             "endpoint_form_url" => "/admin/piste/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Une piste est une affaire que vous espérez gagner : c'est par elle que tout commence, et rien ne peut être coté sans elle.",
+                "Elle nomme le client et le risque visé, et chiffre ce que l'affaire peut rapporter — prime attendue, commission espérée. Tant qu'elle vit, elle rappelle qu'il y a là quelque chose à conclure.",
+                "C'est aussi ici que se décide le partage : l'intermédiaire qui a apporté l'affaire, les agents du cabinet rémunérés dessus, et les conditions qui remplacent leurs taux habituels pour cette affaire seulement.",
+                "Une piste sans cotation est une opportunité qui dort. L'assistant vous les signale.",
+            ],
             // Picker de documents générique (client + piste + cotations + polices).
             "attribute_actions" => [
                 // ── L'EFFORT COMMERCIAL D'UN AGENT INTERNE ────────────────────────────

@@ -26,6 +26,15 @@ class TypeRevenuFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/typerevenu/api/delete",
             "endpoint_form_url" => "/admin/typerevenu/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Un type de revenu dit COMMENT vous êtes rémunéré : pourcentage d'un chargement ou montant fixe, et par qui — l'assureur pour une commission, le client pour des honoraires.",
+                "Il gouverne tous les revenus qui s'y réfèrent : le modifier change ce que vous facturerez demain, jamais ce qui est déjà facturé.",
+                "Il porte aussi les modalités de paiement et de partage : c'est de là que découle ce qui revient aux intermédiaires.",
+                "Les taux se saisissent en POINTS : 16 signifie 16 %.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Type de revenu",

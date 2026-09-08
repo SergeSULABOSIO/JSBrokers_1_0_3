@@ -26,6 +26,14 @@ class ContactFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/contact/api/delete",
             "endpoint_form_url" => "/admin/contact/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Un contact est la personne à qui l'on parle chez le client : sans lui, chaque échange recommence par la recherche du bon interlocuteur.",
+                "Vous y notez son nom, sa fonction et ses coordonnées. Un même client peut en compter plusieurs — le dirigeant, le responsable des assurances, le comptable — et chacun a son rôle au bon moment.",
+                "Un carnet à jour fait gagner du temps là où il en manque le plus : à la cotation, au renouvellement et surtout au sinistre.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Fiche contact",

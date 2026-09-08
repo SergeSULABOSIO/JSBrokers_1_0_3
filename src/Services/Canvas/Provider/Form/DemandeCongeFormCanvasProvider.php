@@ -41,6 +41,15 @@ class DemandeCongeFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/demandeconge/api/delete",
             "endpoint_form_url" => "/admin/demandeconge/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Une demande de congé est un droit du contrat de travail : elle se pose, elle ne se sollicite pas.",
+                "Choisissez la période : le nombre de jours réellement décompté est calculé à l'enregistrement, week-ends, jours fériés et votre régime de travail retirés.",
+                "Elle part ensuite vers vos valideurs, qui verront votre solde avant de décider.",
+                "Le préavis, les absents simultanés et les périodes de blocage du cabinet sont vérifiés à la soumission : une demande qui les heurte est refusée avec sa raison.",
+            ],
             "form_intro" => [
                 "titre" => "Demander un congé",
                 "description" => "Choisissez la période : le nombre de jours réellement décompté est calculé à l'enregistrement, week-ends, jours fériés et votre régime de travail retirés. La demande part ensuite vers vos valideurs, qui verront votre solde avant de décider.",

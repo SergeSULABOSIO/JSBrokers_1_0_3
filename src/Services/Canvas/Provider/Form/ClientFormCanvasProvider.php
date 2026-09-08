@@ -34,6 +34,15 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/client/api/delete",
             "endpoint_form_url" => "/admin/client/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Un client est celui pour qui vous placez des risques : sans sa fiche, aucune piste ne peut être ouverte, aucune cotation adressée, aucune police émise.",
+                "Elle porte son identité, ses coordonnées et ses références légales. Elle porte aussi ses rattachements — le groupe auquel il appartient, l'intermédiaire qui l'a apporté, ses interlocuteurs : c'est de là que découlent le partage des commissions et le bon destinataire de chaque envoi.",
+                "Un classeur à son nom est créé en même temps que la fiche. Tous ses documents s'y rangent d'eux-mêmes, sans que vous ayez à y penser.",
+                "Le relevé de compte que vous lui enverrez se construit à partir de cette fiche : ce qui y manque manquera aussi sur le relevé.",
+            ],
             "attribute_actions" => [
                 [
                     "label" => "Voir le relevé de compte (SOA)",

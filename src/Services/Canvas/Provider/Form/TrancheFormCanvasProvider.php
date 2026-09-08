@@ -25,6 +25,15 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/tranche/api/delete",
             "endpoint_form_url" => "/admin/tranche/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Une tranche est une échéance de paiement : c'est elle qui rend la prime exigible à une date donnée, et qui cadence vos encaissements.",
+                "Vous la calculez en pourcentage de la prime ou en montant fixe. Une cotation naît avec une tranche unique de 100 %, à ajuster dès que le client paie en plusieurs fois.",
+                "Votre commission suit la tranche : elle devient exigible à mesure que la prime est encaissée, et les rétrocommissions dues aux intermédiaires en suivent le prorata.",
+                "Une tranche échue et impayée apparaît dans le suivi des impayés : c'est de là que part la relance.",
+            ],
             // Action rapide « Signaler un paiement de prime » (menu contextuel, barre
             // d'outils, volet du dialogue) : ouvre le dialogue de création PaiementPrime
             // rattaché à la tranche. Toujours disponible (paiements partiels/correctifs).

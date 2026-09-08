@@ -33,6 +33,14 @@ class OperationFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/operation/api/delete",
             "endpoint_form_url" => "/admin/operation/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Une opération est une ligne du bordereau : c'est le grain auquel se fait le rapprochement avec votre production.",
+                "Elle nomme la police et l'avenant concernés, et porte les montants hors taxe et de taxe déclarés par l'assureur.",
+                "C'est en comparant ces lignes à vos propres avenants qu'on voit ce que la compagnie a oublié de vous verser.",
+            ],
             // Pas d'actions spécifiques pour les opérations pour l'instant
             "attribute_actions" => [],
             // Entête contextuel du volet de saisie (pastille + description).

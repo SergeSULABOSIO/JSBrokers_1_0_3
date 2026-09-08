@@ -26,6 +26,14 @@ class EntrepriseFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/entreprise/api/delete",
             "endpoint_form_url" => "/admin/entreprise/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "L'entreprise est votre cabinet de courtage : c'est l'espace de travail dans lequel vivent vos clients, vos polices et vos commissions.",
+                "Sa dénomination et sa licence l'identifient, et figurent sur tous les documents que la plateforme produit en votre nom.",
+                "Créer une entreprise, c'est ouvrir un espace entièrement cloisonné : rien n'y transite depuis un autre cabinet.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Entreprise de courtage",

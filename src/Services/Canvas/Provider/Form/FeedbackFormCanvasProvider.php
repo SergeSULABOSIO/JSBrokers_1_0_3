@@ -34,6 +34,14 @@ class FeedbackFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/feedback/api/delete",
             "endpoint_form_url" => "/admin/feedback/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Un feedback est le compte rendu de ce qui a été fait : c'est la mémoire du dossier, celle qui survit au départ de celui qui a mené l'échange.",
+                "Vous y consignez ce qui s'est dit, par quel moyen, et ce qu'il en résulte. Il clôt la tâche à laquelle il répond.",
+                "S'il annonce une prochaine action datée, cette promesse devient un engagement que la boussole rappellera jusqu'à son échéance.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Fiche feedback",

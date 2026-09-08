@@ -33,6 +33,14 @@ class BordereauFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/bordereau/api/delete",
             "endpoint_form_url" => "/admin/bordereau/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Un bordereau est le relevé que l'assureur vous transmet : il dit ce qu'il a encaissé, et donc ce qu'il vous doit.",
+                "Vous y déclarez l'assureur, la période couverte et le fichier reçu. L'analyse en extrait les opérations, ligne à ligne.",
+                "De ce rapprochement naît la facturation en lot : une note unique pour toute une période, au lieu d'une par affaire.",
+            ],
             // NOUVEAU : Définition de la barre d'outils pour le volet des attributs.
             // Cette barre ne sera affichée qu'en mode édition.
             "attribute_actions" => [

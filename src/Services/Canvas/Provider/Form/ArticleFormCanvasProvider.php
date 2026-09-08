@@ -38,6 +38,14 @@ class ArticleFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/article/api/delete",
             "endpoint_form_url" => "/admin/article/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que cet objet apporte,
+            // et ce qu'il engage en aval. Le premier paragraphe se suffit à
+            // lui-même — c'est lui qui répond à qui ouvre le dialogue sans savoir.
+            "description_creation" => [
+                "Un article est une ligne de la note : c'est lui qui porte le montant réellement facturé.",
+                "Il rattache un revenu — et la tranche concernée s'il y a lieu — à une quantité. Le total de la note est la somme de ses articles, sans exception.",
+                "Facturer depuis les revenus plutôt qu'à la main garantit que ce qui est réclamé au client est bien ce que l'affaire a produit.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Ligne de facturation",
