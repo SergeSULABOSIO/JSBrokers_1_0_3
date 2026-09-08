@@ -181,9 +181,24 @@
                 {% endif %}
             </div>
 
-            {# Ligne 3: Fermer — revient à la liste des entreprises (sans déconnecter) #}
+            {# Ligne 3: le voyant de démarrage, puis Fermer.
+               Cette rangée est `flex-shrink: 0` et vit HORS de la zone qui défile : le
+               voyant y reste visible quel que soit le nombre de groupes, ce qui est tout
+               l'objet d'un rappel de dette. #}
             {% set deconnexion = menu.colonne_1.deconnexion %}
             <div class="menu-col-1-row-3">
+                {# Le conteneur existe même vide : c'est lui que le guide remplace après un
+                   enregistrement, sans avoir à savoir où le voyant s'insère. #}
+                {% if isEntrepriseAdmin and onboardingBilan is defined and onboardingBilan is not null %}
+                    <div data-onboarding-voyant>
+                        {% include 'components/_onboarding_rappel.html.twig' with {
+                            bilan: onboardingBilan,
+                            etapesCitees: onboardingEtapesCitees|default([]),
+                            variante: 'voyant',
+                            autoOuvrir: onboardingAutoOuvrir|default(false)
+                        } only %}
+                    </div>
+                {% endif %}
                 <a href="{{ path('admin.entreprise.index') }}"
                     class="nav-item nav-item-logout"
                     role="button"
@@ -341,6 +356,21 @@
                                 récapitulant vos accès.
                             </p>
                         </div>
+                    </div>
+                {% elseif welcome|default(false) and isEntrepriseAdmin and onboardingBilan is defined and onboardingBilan is not null and not onboardingBilan.complet %}
+                    {# LE PROPRIÉTAIRE D'UN CABINET INCOMPLET VOIT SA DETTE, pas trois
+                       étapes suggérées.
+
+                       Les cartes du panneau d'accueil ci-dessous sont écrites EN DUR, et
+                       l'une d'elles — « Taxes » — désigne un catalogue que le semis pose
+                       déjà à la création : on invitait le courtier à faire une chose faite.
+                       Le bandeau, lui, nomme ce qui manque réellement et mène au guide. #}
+                    <div class="workspace-initial-skeleton ws-welcome">
+                        {% include 'components/_onboarding_rappel.html.twig' with {
+                            bilan: onboardingBilan,
+                            etapesCitees: onboardingEtapesCitees|default([]),
+                            variante: 'bandeau'
+                        } only %}
                     </div>
                 {% elseif welcome|default(false) %}
                     {# État d'accueil de l'espace vide : panneau de bienvenue + étapes

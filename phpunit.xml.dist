@@ -23,8 +23,18 @@
              mettent à répondre 500 dans des tests sans rapport (l'envoi d'e-mails
              en série, par exemple), qui passent tous en isolation. On monte donc à
              2 Go, ce qui reste un garde-fou contre une fuite réelle. Si ce plafond
-             est atteint de nouveau, chercher d'abord une fuite avant de le lever. -->
-        <ini name="memory_limit" value="2048M" />
+             est atteint de nouveau, chercher d'abord une fuite avant de le lever.
+
+             2 Go ont été franchis à leur tour (2026-09-08), à 97 % de la suite. La
+             fuite a été cherchée avant de lever : le coût s'est révélé PROPORTIONNÉ,
+             pas cumulatif — le dossier ajouté consomme 180 Mo pour 42 tests, du même
+             ordre que les 144 Mo des 70 tests de `tests/Token`, et l'essentiel tient
+             aux kernels bootés par WebTestCase, libérés à chaque test.
+
+             La consigne reste la même pour la prochaine fois : mesurer un dossier
+             isolé, le comparer à un dossier existant de taille voisine, et ne lever
+             ce plafond que si le rapport Mo/test n'a pas bougé. -->
+        <ini name="memory_limit" value="3072M" />
         <server name="APP_ENV" value="test" force="true" />
         <server name="SHELL_VERBOSITY" value="-1" />
         <server name="SYMFONY_PHPUNIT_REMOVE" value="" />

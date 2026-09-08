@@ -1618,18 +1618,43 @@ class AssistantIaWorkspaceTest extends WebTestCase
      * Rien à traiter : le plan est « tout au vert », le contrôleur passe null et
      * l'accueil ordinaire reprend sa place. Non-régression du repli — un invité
      * sans périmètre ne doit jamais tomber sur une bulle vide.
+     *
+     * ⚠ LE TEST S'ADRESSE AU COLLABORATEUR, PLUS AU PROPRIÉTAIRE. Depuis que le
+     * programme du jour porte la section « Configuration du cabinet », un cabinet
+     * fraîchement semé n'est jamais « tout au vert » POUR SON PROPRIÉTAIRE : il lui
+     * reste des assureurs, des portefeuilles et des comptes bancaires à créer, et
+     * c'est précisément ce qu'on veut lui rappeler. Le cas « rien à faire » se teste
+     * donc avec l'invité, qui ne voit pas cette dette — elle ne le concerne pas.
      */
     public function testConversationVideSansRienAFaireGardeLAccueilOrdinaire(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $guest);
+
+        $content = $this->ouvrirChat($e, $conversation, self::GUEST_EMAIL);
+
+        $this->assertStringContainsString("Posez-moi une question sur les données", $content);
+        // Marqueur de MARKUP : les classes aic-plan-* apparaissent aussi dans la
+        // feuille de style inline du chat, elles ne prouvent donc rien.
+        $this->assertStringNotContainsString(self::PLAN_MARKER, $content);
+    }
+
+    /**
+     * LE PENDANT DU TEST PRÉCÉDENT, CÔTÉ PROPRIÉTAIRE : un cabinet neuf n'a rien à
+     * traiter, mais il a tout à configurer. Ket ouvre donc sur la dette, en nommant
+     * ce qui manque — c'est le rappel qui doit se voir partout où c'est possible.
+     */
+    public function testConversationVideOuvreSurLaDetteDeConfiguration(): void
     {
         ['owner' => $owner, 'entreprise' => $e] = $this->seed();
         $conversation = $this->makeConversation($e, $owner);
 
         $content = $this->ouvrirChat($e, $conversation, self::OWNER_EMAIL);
 
-        $this->assertStringContainsString("Posez-moi une question sur les données", $content);
-        // Marqueur de MARKUP : les classes aic-plan-* apparaissent aussi dans la
-        // feuille de style inline du chat, elles ne prouvent donc rien.
-        $this->assertStringNotContainsString(self::PLAN_MARKER, $content);
+        $this->assertStringContainsString(self::PLAN_MARKER, $content, 'La bulle de programme doit être rendue.');
+        $this->assertStringContainsString('Configuration du cabinet', $content);
+        // Nommer ce qui bloque, et pas seulement le mesurer.
+        $this->assertStringContainsString('Assureurs', $content);
     }
 
     /**

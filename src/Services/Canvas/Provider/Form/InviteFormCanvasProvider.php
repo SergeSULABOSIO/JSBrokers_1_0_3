@@ -38,6 +38,15 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/invite/api/delete",
             "endpoint_form_url" => "/admin/invite/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que ce paramètre apporte
+            // au cabinet. Le premier paragraphe sert aussi de « pourquoi » sur la
+            // carte du guide de démarrage — un seul texte, deux surfaces.
+            "description_creation" => [
+                "Inviter un collaborateur ne suffit pas : c'est en lui attribuant des rôles que vous décidez ce qu'il voit et ce qu'il peut faire.",
+                "Sans aucun rôle, l'invité ouvre un espace de travail vide — le modèle est volontairement fermé par défaut. Les rôles se règlent ici même, dans les onglets de cette fiche.",
+                "Un collaborateur peut aussi être un agent interne apporteur d'affaires, et percevoir à ce titre des rétrocommissions sur ce qu'il amène.",
+                "Il reçoit d'office le droit de poser ses congés : demander des jours n'est pas une faveur qu'on accorde.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Invitation d'un collaborateur",

@@ -33,6 +33,14 @@ class PortefeuilleFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/portefeuille/api/delete",
             "endpoint_form_url" => "/admin/portefeuille/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que ce paramètre apporte
+            // au cabinet. Le premier paragraphe sert aussi de « pourquoi » sur la
+            // carte du guide de démarrage — un seul texte, deux surfaces.
+            "description_creation" => [
+                "Un portefeuille rassemble les clients confiés à un gestionnaire de compte : sans lui, aucun client n'a de responsable nommé.",
+                "C'est aussi le périmètre de vos collaborateurs. Un invité rattaché à un portefeuille ne voit que les clients qui s'y trouvent — c'est ainsi que se cloisonne l'information dans un cabinet.",
+                "Les rapports de production et les objectifs se lisent portefeuille par portefeuille. Sans découpage, tout le cabinet ne forme qu'un seul bloc que rien ne permet de piloter.",
+            ],
             // Action spéciale (toolbar, menu contextuel, volet du dialogue d'édition) :
             // ouvre DIRECTEMENT la boîte de sélection de clients à rattacher au
             // portefeuille sélectionné, sans passer par le dialogue d'édition. Le mode

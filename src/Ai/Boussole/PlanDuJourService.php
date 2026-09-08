@@ -9,6 +9,8 @@ use App\Entity\Invite;
 use App\Entity\Note;
 use App\Entity\Tache;
 use App\Entity\Tranche;
+use App\Service\Onboarding\OnboardingCatalogue;
+use App\Service\Onboarding\OnboardingCompletude;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
 use App\Services\Note\NoteRecouvrementService;
@@ -71,6 +73,7 @@ final class PlanDuJourService
         private readonly ChargeInviteCritereFactory $chargeCritere,
         private readonly TranchePaiementService $tranchePaiement,
         private readonly NoteRecouvrementService $noteRecouvrement,
+        private readonly OnboardingCompletude $onboarding,
     ) {
     }
 
@@ -87,6 +90,7 @@ final class PlanDuJourService
         $jour = new \DateTimeImmutable('today');
 
         $sections = array_merge(
+            $this->sectionsConfiguration($entreprise, $invite),
             $this->section($invite, 'Tache', fn (): array => $this->sectionsTaches($entreprise, $invite, $jour)),
             $this->section($invite, 'Feedback', fn (): array => $this->sectionsFeedbacks($entreprise, $invite, $jour)),
             $this->section($invite, 'Avenant', fn (): array => $this->sectionsRenouvellements($entreprise, $invite, $jour)),
@@ -480,6 +484,67 @@ final class PlanDuJourService
             (float) ($resultat['totaux']['totalSolde'] ?? 0),
             ['objet' => 'Note de débit', 'contexte' => 'Assureur', 'date' => 'Émise le', 'montant' => 'Solde'],
         )];
+    }
+
+    // ---------------------------------------------------- Configuration du cabinet
+
+    /**
+     * CE QU'IL RESTE À CONFIGURER, dès l'ouverture du chat et sans consommer un token.
+     *
+     * ── POURQUOI C'EST « EN RETARD » ────────────────────────────────────────────────
+     * Toutes les lignes portent EN_RETARD, et pour date celle de création du cabinet.
+     * Ce n'est pas une facilité : une dette de configuration est en retard par nature —
+     * ces paramètres auraient dû exister le jour de l'ouverture. « À faire depuis le
+     * 12/03/2026 » dit l'ancienneté du manque, ce qu'un pourcentage ne dit pas.
+     *
+     * ── ELLE N'APPARTIENT QU'AU PROPRIÉTAIRE ────────────────────────────────────────
+     * On ne passe donc pas par `section()`, qui filtre sur le droit de lire une entité :
+     * configurer le cabinet n'en est pas une. Le fail-safe, lui, reste identique.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function sectionsConfiguration(Entreprise $entreprise, Invite $invite): array
+    {
+        if ($invite->isProprietaire() !== true) {
+            return [];
+        }
+
+        try {
+            $restantes = $this->onboarding->scoreSeul($entreprise)['restantes'];
+            if ($restantes === []) {
+                return [];
+            }
+
+            $depuis = $entreprise->getCreatedAt()?->format('Y-m-d');
+
+            $lignes = array_map(fn (array $etape): array => [
+                'id' => null,
+                'entite' => 'Onboarding',
+                'libelle' => $etape['libelle'],
+                'contexte' => $etape['bloc'],
+                'detail' => $etape['poids'] === OnboardingCatalogue::POIDS_BLOQUANT ? 'Bloquant' : null,
+                'date' => $depuis,
+                'statutTemporel' => self::EN_RETARD,
+            ], array_slice($restantes, 0, self::MAX_LIGNES_PAR_SECTION));
+
+            $urgence = $this->onboarding->resteDuBloquant($entreprise)
+                ? BoussoleService::URGENCE['configuration']
+                : BoussoleService::URGENCE['configuration_confort'];
+
+            return [$this->composer(
+                'configuration',
+                'Configuration du cabinet',
+                'Cabinet',
+                $urgence,
+                ['lignes' => $lignes, 'compte' => count($restantes), 'echeant' => count($restantes)],
+                null,
+                // Le vocabulaire du domaine : ces lignes ne sont ni des objets ni des
+                // échéances, ce sont des réglages manquants et l'endroit où les poser.
+                ['objet' => 'Reste à configurer', 'contexte' => 'Rubrique', 'date' => 'À faire depuis'],
+            )];
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     // ------------------------------------------------------------------ Outils

@@ -8,6 +8,7 @@ use App\Entity\Entreprise;
 use App\Entity\Feedback;
 use App\Entity\Invite;
 use App\Entity\Tache;
+use App\Service\Onboarding\OnboardingCompletude;
 use App\Service\Saturation\SaturationService;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
@@ -42,6 +43,15 @@ final class BoussoleService
      * affichée à l'ouverture et le rappel de fin de réponse.
      */
     public const URGENCE = [
+        // LA CONFIGURATION PASSE DEVANT LE FISCAL, mais seulement tant qu'elle BLOQUE.
+        //
+        // C'est un préalable et non une obligation parmi d'autres : on ne reverse pas
+        // proprement une taxe sur des commissions qu'aucun compte bancaire ne permet
+        // d'encaisser. Une fois les étapes bloquantes passées, la dette retombe sous le
+        // fiscal et les rétros (`configuration_confort`) — sans quoi des jours fériés non
+        // saisis monopoliseraient le rappel pendant des semaines.
+        'configuration'          => 95,
+        'configuration_confort'  => 60,
         'fiscal'             => 90,
         'retros'             => 85,
         'renouvellements'    => 80, // échus ; 60 si seulement imminents (cf. axeRenouvellements)
@@ -63,6 +73,7 @@ final class BoussoleService
         private readonly PortefeuilleCritereFactory $portefeuilleCritere,
         private readonly ChargeInviteCritereFactory $chargeCritere,
         private readonly NoteRecouvrementService $noteRecouvrement,
+        private readonly OnboardingCompletude $onboarding,
     ) {
     }
 
@@ -75,6 +86,7 @@ final class BoussoleService
     public function etat(Entreprise $entreprise, Invite $invite): array
     {
         $items = array_values(array_filter([
+            $this->axeProprietaire($invite, fn (): array => $this->axeConfiguration($entreprise)),
             $this->axe($invite, 'Client', fn (): array => $this->axeSaturation($entreprise, $invite)),
             $this->axe($invite, 'Avenant', fn (): array => $this->axeRenouvellements($entreprise, $invite)),
             $this->axe($invite, 'Tranche', fn (): array => $this->axePrimesImpayees($entreprise, $invite)),
@@ -95,6 +107,79 @@ final class BoussoleService
         }
 
         return ['items' => $items, 'prioritaire' => $prioritaire];
+    }
+
+    /**
+     * LA DETTE DE CONFIGURATION DU CABINET.
+     *
+     * ── POURQUOI ELLE SIÈGE DANS LA BOUSSOLE ────────────────────────────────────────
+     * Le courtier peut ouvrir son espace et se croire prêt : le semis lui a posé sept
+     * catalogues à la création. Tout le reste est vide, et rien ne le lui dit — jusqu'au
+     * moment où il bute, sans assureur à qui adresser une proposition ni compte où
+     * encaisser. C'est exactement le genre de dette que la boussole existe pour rappeler,
+     * au même titre que le devoir fiscal.
+     *
+     * ── ELLE NOMME CE QUI BLOQUE ────────────────────────────────────────────────────
+     * Un pourcentage seul ne dit pas quoi faire. Le libellé cite donc les étapes
+     * restantes les plus lourdes — c'est la seule information qui fait agir.
+     *
+     * Aucune clé `montant` : une dette de configuration ne se chiffre pas en argent, et
+     * la section de prompt pose déjà le garde-fou « ce sont des COMPTES, jamais des
+     * montants ».
+     */
+    private function axeConfiguration(Entreprise $entreprise): array
+    {
+        $bilan = $this->onboarding->scoreSeul($entreprise);
+        $restantes = $bilan['restantes'];
+        $du = $restantes !== [];
+
+        if (!$du) {
+            return [
+                'axe'         => 'configuration',
+                'libelle'     => 'Cabinet entièrement configuré',
+                'compte'      => 0,
+                'urgence'     => 0,
+                'actionnable' => false,
+            ];
+        }
+
+        $citees = array_column($this->onboarding->etapesACiter($entreprise, 2), 'libelle');
+
+        return [
+            'axe'         => 'configuration',
+            'libelle'     => sprintf(
+                'Configuration du cabinet incomplète (%d %%) — il manque %s',
+                $bilan['score'],
+                implode(' et ', $citees),
+            ),
+            'compte'      => count($restantes),
+            // L'urgence retombe dès que plus rien ne bloque la production : la dette
+            // reste, mais elle cesse de passer devant le devoir fiscal.
+            'urgence'     => $this->onboarding->resteDuBloquant($entreprise)
+                ? self::URGENCE['configuration']
+                : self::URGENCE['configuration_confort'],
+            'actionnable' => true,
+        ];
+    }
+
+    /**
+     * Le pendant de `axe()` pour ce qui n'appartient qu'au PROPRIÉTAIRE.
+     *
+     * `axe()` filtre sur le droit de lire une entité ; configurer le cabinet n'en est
+     * pas une — c'est une prérogative du propriétaire, celle-là même qui gouverne le
+     * voyant du workspace. Le fail-safe, lui, reste identique : une exception fait
+     * disparaître l'axe, jamais tomber la conversation.
+     */
+    private function axeProprietaire(Invite $invite, callable $calcul): ?array
+    {
+        if ($invite->isProprietaire() !== true) {
+            return null;
+        }
+        try {
+            return $calcul();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**

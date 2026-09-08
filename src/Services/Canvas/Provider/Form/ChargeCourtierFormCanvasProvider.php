@@ -25,6 +25,14 @@ class ChargeCourtierFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/chargecourtier/api/delete",
             "endpoint_form_url" => "/admin/chargecourtier/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que ce paramètre apporte
+            // au cabinet. Le premier paragraphe sert aussi de « pourquoi » sur la
+            // carte du guide de démarrage — un seul texte, deux surfaces.
+            "description_creation" => [
+                "Une charge est un poste de dépense de votre cabinet : loyer, salaires, télécommunications, déplacements.",
+                "C'est l'axe analytique qui transforme une sortie d'argent en information : sans lui, vos dépenses forment un total muet, et votre marge reste inconnue.",
+                "Chaque dépense enregistrée se rattache à une charge. Les états comptables et le suivi de trésorerie s'appuient sur ce découpage.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Type de charge (OHADA)",

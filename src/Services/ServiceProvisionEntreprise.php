@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Utilisateur;
+use App\Service\Onboarding\OnboardingCompletude;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -27,6 +28,7 @@ class ServiceProvisionEntreprise
     public function __construct(
         private EntityManagerInterface $manager,
         private ServiceInitialisationEntreprise $serviceInitialisation,
+        private OnboardingCompletude $completude,
     ) {}
 
     /**
@@ -63,6 +65,18 @@ class ServiceProvisionEntreprise
         // Paramètres par défaut : aucun flush interne, un seul flush ci-dessous.
         $this->serviceInitialisation->initialiser($entreprise, $invite);
 
+        $this->manager->flush();
+
+        // LE REPÈRE DE DÉPART DE LA CONFIGURATION.
+        //
+        // La synthèse de configuration part quand le score CHANGE. Sans repère posé ici,
+        // le premier changement observable serait celui de la première écriture du
+        // courtier, quelle qu'elle soit — et la synthèse annoncerait un progrès qui n'a
+        // pas eu lieu. En l'inscrivant maintenant, la première avancée réelle est la
+        // première annoncée.
+        //
+        // Après le flush : le score se compte en base, et rien n'y serait encore.
+        $entreprise->setOnboardingScoreNotifie($this->completude->scoreSeul($entreprise)['score']);
         $this->manager->flush();
 
         return $invite;

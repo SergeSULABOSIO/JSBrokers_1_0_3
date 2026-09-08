@@ -145,11 +145,15 @@ class ReferentielSemeEnPointsTest extends WebTestCase
         $this->em->flush();
         $this->client->loginUser($owner);
 
+        // Le défaut ATTENDU par écran. Ils ne valent pas tous 10 : la part d'un
+        // partenaire est passée à 20 points, l'usage courant d'un apporteur extérieur.
+        // Ce qui se vérifie ici n'est pas le nombre mais l'UNITÉ — un écran qui s'ouvre
+        // sur 0,2 % là où il annonce 20 % est le piège que ce test existe pour attraper.
         foreach ([
-            '/admin/risque/api/get-form',
-            '/admin/partenaire/api/get-form',
-            '/admin/typerevenu/api/get-form',
-        ] as $url) {
+            '/admin/risque/api/get-form' => 10,
+            '/admin/partenaire/api/get-form' => 20,
+            '/admin/typerevenu/api/get-form' => 10,
+        ] as $url => $points) {
             $this->client->request('GET', $url);
             $this->assertResponseIsSuccessful(sprintf('Le formulaire %s s’ouvre.', $url));
 
@@ -157,9 +161,9 @@ class ReferentielSemeEnPointsTest extends WebTestCase
             // nombre de points affiché à l'écran (rendu en locale FR : « 10,00 »).
             $html = (string) $this->client->getResponse()->getContent();
             $this->assertMatchesRegularExpression(
-                '/value="10(?:[.,]0+)?"/',
+                sprintf('/value="%d(?:[.,]0+)?"/', $points),
                 $html,
-                sprintf('Le défaut de %s doit valoir 10 POINTS (10 %%), pas 0,1.', $url),
+                sprintf('Le défaut de %s doit valoir %d POINTS (%d %%), pas 0,%d.', $url, $points, $points, $points),
             );
             $this->assertDoesNotMatchRegularExpression(
                 '/value="0[.,]10*"/',

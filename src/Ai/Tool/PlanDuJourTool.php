@@ -58,6 +58,8 @@ final class PlanDuJourTool implements AiToolInterface
                 'section' => [
                     'type' => 'string',
                     'enum' => [
+                        // Le manque de paramétrage du cabinet, réservé au propriétaire.
+                        'configuration',
                         'taches_assignees',
                         'taches_portefeuille',
                         'feedbacks_actions',

@@ -6,6 +6,7 @@ use App\Ai\Boussole\BoussoleService;
 use App\Comptabilite\CourtierSuiviFiscalService;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Service\Onboarding\OnboardingCompletude;
 use App\Service\Saturation\SaturationService;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
@@ -30,6 +31,8 @@ class BoussoleServiceTest extends TestCase
      * @param float              $soldeFiscal solde de taxe dû PAR LE CABINET
      * @param bool               $fiscalThrow CourtierSuiviFiscalService::suivi lève une exception
      * @param int                $notesDues   notes de débit assureur non encaissées
+     * @param array<int, array<string, mixed>> $restantes étapes de configuration non faites
+     * @param bool               $bloquant    reste-t-il une étape SANS laquelle on ne produit pas
      */
     private function makeService(
         array $droits,
@@ -37,6 +40,8 @@ class BoussoleServiceTest extends TestCase
         float $soldeFiscal = 0.0,
         bool $fiscalThrow = false,
         int $notesDues = 0,
+        array $restantes = [],
+        bool $bloquant = false,
     ): BoussoleService {
         $resolver = $this->createMock(WorkspaceAccessResolver::class);
         $resolver->method('canRead')->willReturnCallback(
@@ -85,6 +90,18 @@ class BoussoleServiceTest extends TestCase
 
         $portefeuille = new PortefeuilleCritereFactory($this->createMock(EntityManagerInterface::class));
 
+        // La configuration du cabinet : le service est mocké comme les autres, l'axe ne
+        // devant dépendre que de ce qu'il rend — jamais d'un accès à la base.
+        $onboarding = $this->createMock(OnboardingCompletude::class);
+        $onboarding->method('scoreSeul')->willReturn([
+            'score' => $restantes === [] ? 100 : 45,
+            'etapes' => $restantes,
+            'restantes' => $restantes,
+            'complet' => $restantes === [],
+        ]);
+        $onboarding->method('etapesACiter')->willReturn(array_slice($restantes, 0, 2));
+        $onboarding->method('resteDuBloquant')->willReturn($bloquant);
+
         return new BoussoleService(
             $resolver,
             $saturation,
@@ -94,6 +111,7 @@ class BoussoleServiceTest extends TestCase
             $portefeuille,
             new ChargeInviteCritereFactory($portefeuille),
             $notes,
+            $onboarding,
         );
     }
 
@@ -218,5 +236,88 @@ class BoussoleServiceTest extends TestCase
         $etat = $this->makeService(['Tache' => true])->etat(new Entreprise(), new Invite());
 
         $this->assertSame(['taches'], $this->axes($etat));
+    }
+
+    // ---------------------------------------------- Configuration du cabinet
+
+    /** Un cabinet dont il manque l'essentiel : la dette passe devant le devoir fiscal. */
+    private function proprietaire(): Invite
+    {
+        return (new Invite())->setProprietaire(true);
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function etapesRestantes(): array
+    {
+        return [
+            ['cle' => 'comptes_bancaires', 'libelle' => 'Comptes bancaires', 'bloc' => 'Finances', 'poids' => 3, 'fait' => false, 'nombre' => 0],
+            ['cle' => 'jours_feries', 'libelle' => 'Jours fériés', 'bloc' => 'Administration', 'poids' => 1, 'fait' => false, 'nombre' => 0],
+        ];
+    }
+
+    public function testConfigurationBloquantePasseDevantLeFiscal(): void
+    {
+        $etat = $this->makeService(
+            ['DocumentComptable' => true],
+            soldeFiscal: 500.0,
+            restantes: $this->etapesRestantes(),
+            bloquant: true,
+        )->etat(new Entreprise(), $this->proprietaire());
+
+        $this->assertContains('configuration', $this->axes($etat));
+        $this->assertContains('fiscal', $this->axes($etat));
+        // 95 contre 90 : on ne reverse pas proprement une taxe sur des commissions
+        // qu'aucun compte bancaire ne permet d'encaisser.
+        $this->assertSame('configuration', $etat['prioritaire']['axe']);
+    }
+
+    public function testConfigurationNommeCeQuiManque(): void
+    {
+        $etat = $this->makeService(
+            [],
+            restantes: $this->etapesRestantes(),
+            bloquant: true,
+        )->etat(new Entreprise(), $this->proprietaire());
+
+        $this->assertStringContainsString('Comptes bancaires', $etat['items'][0]['libelle']);
+        $this->assertStringContainsString('45 %', $etat['items'][0]['libelle']);
+        $this->assertSame(2, $etat['items'][0]['compte']);
+        // Une dette de configuration ne se chiffre pas en argent.
+        $this->assertArrayNotHasKey('montant', $etat['items'][0]);
+    }
+
+    public function testConfigurationDeConfortRepasseDerriereLeFiscal(): void
+    {
+        $etat = $this->makeService(
+            ['DocumentComptable' => true],
+            soldeFiscal: 500.0,
+            restantes: $this->etapesRestantes(),
+            bloquant: false,
+        )->etat(new Entreprise(), $this->proprietaire());
+
+        // Plus rien ne bloque la production : 60 contre 90, le fiscal reprend la tête.
+        $this->assertSame('fiscal', $etat['prioritaire']['axe']);
+    }
+
+    public function testConfigurationCompleteEstAuVert(): void
+    {
+        $etat = $this->makeService([], restantes: [])->etat(new Entreprise(), $this->proprietaire());
+
+        $this->assertSame(['configuration'], $this->axes($etat));
+        $this->assertFalse($etat['items'][0]['actionnable']);
+        $this->assertNull($etat['prioritaire']);
+    }
+
+    public function testConfigurationInvisiblePourUnInvite(): void
+    {
+        // Configurer le cabinet n'est pas l'affaire d'un invité : le lui rappeler serait
+        // lui demander ce qu'il ne peut pas faire.
+        $etat = $this->makeService(
+            [],
+            restantes: $this->etapesRestantes(),
+            bloquant: true,
+        )->etat(new Entreprise(), new Invite());
+
+        $this->assertSame([], $this->axes($etat));
     }
 }

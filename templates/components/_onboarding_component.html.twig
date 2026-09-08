@@ -1,0 +1,11 @@
+{#
+   La coquille d'onglet du guide de démarrage.
+
+   Elle n'existe que pour donner un point d'entrée à `getComponentMap` : tout le contenu
+   vit dans `_onboarding_etapes.html.twig`, que le panneau d'accueil de l'espace de travail
+   et la réponse de rafraîchissement rendent aussi. Un seul gabarit pour trois chemins
+   d'affichage — dupliquer les cartes aurait suffi à les laisser diverger.
+#}
+<div class="jsb-onboarding-onglet">
+    {% include 'components/_onboarding_etapes.html.twig' %}
+</div>

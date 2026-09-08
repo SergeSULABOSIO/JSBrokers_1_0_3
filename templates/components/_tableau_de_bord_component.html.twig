@@ -9,6 +9,18 @@
 
 <div class="container-fluid px-3 py-2">
 
+    {# ── LA DETTE DE CONFIGURATION, EN TÊTE ──────────────────────────────────────
+       Pleine largeur, au-dessus des deux colonnes : c'est le seul endroit du tableau
+       de bord qu'on ne peut pas manquer, et il n'entre en concurrence avec aucun bloc.
+       Il disparaît dès que tout est configuré — rien ne subsiste pour féliciter. #}
+    {% if onboardingBilan is defined and onboardingBilan is not null %}
+        {% include 'components/_onboarding_rappel.html.twig' with {
+            bilan: onboardingBilan,
+            etapesCitees: onboardingEtapesCitees|default([]),
+            variante: 'bandeau'
+        } only %}
+    {% endif %}
+
     {# ── Layout 2 colonnes ── #}
     <div class="row g-3">
 

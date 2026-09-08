@@ -35,6 +35,15 @@ class ConditionPartageFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/conditionpartage/api/delete",
             "endpoint_form_url" => "/admin/conditionpartage/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que ce paramètre apporte
+            // au cabinet. Le premier paragraphe sert aussi de « pourquoi » sur la
+            // carte du guide de démarrage — un seul texte, deux surfaces.
+            "description_creation" => [
+                "Une condition de partage fixe la part de commission qui revient à un intermédiaire — agent interne ou partenaire extérieur — sur les affaires qu'il apporte.",
+                "Sans condition, rien ne décrit l'accord conclu : le calcul retombe sur la part générale du partenaire, et un agent interne ne perçoit tout simplement rien.",
+                "Une condition peut viser certains risques seulement, ou valoir pour tout ce que l'intermédiaire amène. C'est aussi l'écran où auditer les taux réellement en vigueur.",
+                "La rétrocommission suit ensuite l'encaissement au prorata : elle n'est exigible que sur ce qui a été effectivement payé.",
+            ],
             // AUCUNE CRÉATION DEPUIS LA RUBRIQUE. Une condition de partage n'existe que
             // rattachée à quelque chose : un partenaire, un agent, ou une piste. La créer
             // depuis la liste produirait une règle orpheline — sans bénéficiaire, donc

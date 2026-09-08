@@ -181,10 +181,17 @@ class ConditionDOfficeTest extends WebTestCase
     }
 
     /**
-     * UN AGENT N'A PAS DE PART. Sa condition naît sans taux, à saisir : inventer un
-     * pourcentage reviendrait à lui promettre une rémunération que personne n'a décidée.
+     * UN AGENT N'A PAS DE PART : il n'existe, sur sa fiche, aucun pourcentage dont sa
+     * condition pourrait hériter. Elle naissait donc SANS TAUX, et restait sans effet
+     * tant que personne ne la renseignait — ce que rien ne signalait.
+     *
+     * Le cabinet pose désormais son taux de départ (5 %), au même titre que les 20 %
+     * d'un partenaire. Ce n'est pas une rémunération décidée dans le dos du courtier :
+     * c'est une PROPOSITION, visible sur la condition, modifiable et supprimable comme
+     * n'importe quelle autre — et il vaut mieux un usage affiché qu'un zéro silencieux
+     * qui ne verse rien.
      */
-    public function testUnAgentNaitAvecSaConditionSansTaux(): void
+    public function testUnAgentNaitAvecLeTauxDeDepartDuCabinet(): void
     {
         $s = $this->semer();
 
@@ -202,7 +209,11 @@ class ConditionDOfficeTest extends WebTestCase
 
         $conditions = $this->em->getRepository(ConditionPartage::class)->findBy(['agent' => $agent->getId()]);
         self::assertCount(1, $conditions, 'L agent aussi est rattachable dès sa création.');
-        self::assertNull($conditions[0]->getTaux(), 'Le taux reste à saisir.');
+        self::assertSame(
+            ConditionDOffice::TAUX_AGENT_DEFAUT,
+            $conditions[0]->getTaux(),
+            'Le taux de départ du cabinet est proposé, et reste modifiable.',
+        );
         self::assertSame(ConditionDOffice::nomPour('Alice Agent'), $conditions[0]->getNom());
     }
 

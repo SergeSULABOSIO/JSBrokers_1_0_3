@@ -34,6 +34,14 @@ class CompteBancaireFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/comptebancaire/api/delete",
             "endpoint_form_url" => "/admin/comptebancaire/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que ce paramètre apporte
+            // au cabinet. Le premier paragraphe sert aussi de « pourquoi » sur la
+            // carte du guide de démarrage — un seul texte, deux surfaces.
+            "description_creation" => [
+                "Sans compte bancaire, aucun encaissement de prime ni aucun règlement de commission ne peut être rattaché à une destination.",
+                "C'est le compte que vos clients créditent et celui depuis lequel vous reversez les primes aux compagnies. Il apparaît sur vos notes de débit et vos avis d'échéance.",
+                "Déclarez-en un par devise et par banque : un cabinet qui encaisse en dollars et en monnaie locale en tient au moins deux.",
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Compte bancaire",

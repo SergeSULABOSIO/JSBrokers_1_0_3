@@ -25,6 +25,14 @@ class JourFerieFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/jourferie/api/delete",
             "endpoint_form_url" => "/admin/jourferie/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Colonne gauche du dialogue EN CRÉATION : ce que ce paramètre apporte
+            // au cabinet. Le premier paragraphe sert aussi de « pourquoi » sur la
+            // carte du guide de démarrage — un seul texte, deux surfaces.
+            "description_creation" => [
+                "Les jours fériés que vous déclarez ici ne sont pas décomptés des congés de vos collaborateurs.",
+                "Sans eux, une semaine de congé posée sur un pont est facturée en entier au compteur du collaborateur — une erreur qu'il remarquera avant vous.",
+                "Déclarez le calendrier officiel de votre pays, puis complétez-le chaque année.",
+            ],
             "form_intro" => [
                 "titre" => "Jour férié",
                 "description" => "Un jour férié tombant dans une demande n'est pas décompté du solde. Aucun calendrier n'est fourni d'office : les fériés dépendent du pays de votre cabinet, et les dates mobiles changent chaque année. Saisissez les vôtres — un calendrier vide ne fausse rien, il ne retire simplement que les week-ends.",

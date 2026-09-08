@@ -36,6 +36,20 @@ use App\Entity\Partenaire;
  */
 final class ConditionDOffice
 {
+    /**
+     * LES DEUX TAUX DE DÉPART DU CABINET, en POINTS (20 = 20 %).
+     *
+     * Ce ne sont pas des constantes techniques mais un usage du métier : un apporteur
+     * extérieur se rémunère couramment autour de 20 % de la commission, un agent interne
+     * autour de 5 % — il est déjà salarié, sa rétrocommission récompense l'apport, pas la
+     * production.
+     *
+     * Ils sont MODIFIABLES partout où ils apparaissent : ce sont des points de départ
+     * proposés à la saisie, jamais des valeurs imposées.
+     */
+    public const PART_PARTENAIRE_DEFAUT = 20.0;
+    public const TAUX_AGENT_DEFAUT = 5.0;
+
     /** Le libellé proposé — reconnaissable, et qui dit d'où elle vient. */
     public static function nomPour(string $nomDuBeneficiaire): string
     {
@@ -66,10 +80,16 @@ final class ConditionDOffice
         if ($beneficiaire instanceof Partenaire) {
             $condition->setPartenaire($beneficiaire)->setTaux($beneficiaire->getPart());
         } else {
-            // UN AGENT N'A PAS DE PART. Sa condition naît sans taux, à saisir : inventer
-            // un pourcentage reviendrait à lui promettre une rémunération que personne
-            // n'a décidée.
-            $condition->setAgent($beneficiaire);
+            // UN AGENT N'A PAS DE PART : il n'existe, sur sa fiche, aucun pourcentage dont
+            // sa condition pourrait hériter. Elle naissait donc sans taux, et restait sans
+            // effet tant que personne ne la renseignait — ce que rien ne signalait.
+            //
+            // Le cabinet pose désormais son taux de départ (5 %), au même titre que les
+            // 20 % d'un partenaire. Ce n'est pas une rémunération décidée dans le dos du
+            // courtier : c'est une PROPOSITION, visible sur la condition, modifiable et
+            // supprimable comme n'importe quelle autre — et il vaut mieux un usage affiché
+            // qu'un zéro silencieux qui ne verse rien.
+            $condition->setAgent($beneficiaire)->setTaux(self::TAUX_AGENT_DEFAUT);
         }
 
         $condition->setEntreprise($beneficiaire->getEntreprise());
