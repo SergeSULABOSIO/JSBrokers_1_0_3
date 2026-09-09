@@ -20,7 +20,12 @@
      data-echange-onglet-value="{{ ongletActif }}"
      data-echange-export-url-value="{{ path('admin.echange.exporter_diffuse', {idEntreprise: idEntreprise}) }}"
      data-echange-import-url-value="{{ path('admin.echange.controler', {idEntreprise: idEntreprise}) }}"
-     data-echange-id-entreprise-value="{{ idEntreprise }}">
+     data-echange-id-entreprise-value="{{ idEntreprise }}"
+     {# ⚠ UN IMPORT QUI AVANCE ENCORE SE REPREND À L'AFFICHAGE. Le travail se fait par
+        paliers et ne vit plus dans la requête qui l'a lancé : sans ce relais, rafraîchir
+        la page laisserait l'utilisateur devant un écran muet pendant que son portefeuille
+        se reprend — et il redéposerait par doute, c'est-à-dire au pire moment. #}
+     data-echange-reprendre-run-value="{{ travailEnCours is defined and travailEnCours ? travailEnCours.id : 0 }}">
     <style>
         .jsb-echange { padding: 1.25rem 1.5rem; }
         /* La rangée de chips est COLLANTE dans une liste, où elle suit la barre de
@@ -535,6 +540,30 @@
               l'enchaînement.
             #}
 
+
+            {# ── Travail en cours ──
+               ⚠ IL DOIT SE VOIR AVANT MÊME QUE LE JAVASCRIPT NE RÉAGISSE. L'import avance
+               par paliers et ne vit plus dans la requête qui l'a lancé : un écran muet
+               pendant qu'un portefeuille se reprend, et l'utilisateur redépose son fichier
+               par doute — c'est-à-dire au pire moment. #}
+            {% if travailEnCours is defined and travailEnCours %}
+                <div class="ech-billing" role="status" style="margin-bottom:1rem;">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:information') }}" style="width:18px;height:18px;flex:0 0 auto;" />
+                    <span>
+                        {{ travailEnCours.statut == 'EN_COURS' ? 'Importation en cours' : 'Contrôle en cours' }} :
+                        <strong>{{ travailEnCours.nomFichier }}</strong>
+                        {% if travailEnCours.totalLignes > 0 %}
+                            — {{ travailEnCours.curseur }} ligne(s) sur {{ travailEnCours.totalLignes }}.
+                        {% endif %}
+                        {% if travailEnCours.travailAbandonne %}
+                            Le traitement s'est interrompu sans rendre la main : redéposez le fichier,
+                            les lignes déjà écrites ne seront pas recréées.
+                        {% else %}
+                            Vous pouvez quitter cet écran : le travail reprendra à votre retour.
+                        {% endif %}
+                    </span>
+                </div>
+            {% endif %}
 
             {# ── Contrôle en attente ── #}
             <div data-echange-target="rapport">

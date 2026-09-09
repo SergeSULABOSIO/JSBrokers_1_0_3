@@ -2,44 +2,48 @@
 
 namespace App\Tests\Echange;
 
-use App\Echange\Canevas\CanevasDEchange;
-use App\Echange\Classeur\EcrivainJsbx;
+use App\Echange\Etat\EtatDuPortefeuille;
 use App\Echange\Service\Anomalie;
-use App\Echange\Service\ExportateurJsbx;
 use App\Echange\Service\ImportateurJsbx;
-use App\Entity\Client;
 use App\Entity\EchangeImportRun;
 use App\Entity\Entreprise;
-use App\Entity\Groupe;
 use App\Entity\Invite;
 use App\Entity\RolesEnAdministration;
 use App\Entity\RolesEnProduction;
 use App\Entity\Utilisateur;
 use Doctrine\ORM\EntityManagerInterface;
-use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 /**
- * LE CONTRÔLE À BLANC : passes 1 et 2.
+ * LE CONTRÔLE À BLANC : le fichier est-il recevable, et que ferait-il ?
  *
  * Ce qui est vérifié ici tient en une phrase : le contrôle doit être GRATUIT, ne RIEN
  * écrire, et dire exactement ce qui se passerait — y compris quand la réponse est
  * « rien, et voici pourquoi ».
  *
- * Les cas de refus comptent autant que les cas nominaux. Un import qui échoue mal —
- * en silence, ou sans dire où — coûte plus cher qu'un import qui n'existe pas : il
- * fait perdre le travail hors ligne ET la confiance dans l'outil.
+ * Les cas de refus comptent autant que les cas nominaux. Un import qui échoue mal — en
+ * silence, ou sans dire où — coûte plus cher qu'un import qui n'existe pas : il fait
+ * perdre le travail hors ligne ET la confiance dans l'outil.
+ *
+ * ⚠ UN SEUL FORMAT EST DÉSORMAIS ACCEPTÉ, et ces tests l'ont suivi. Ils étaient écrits
+ * sur le classeur « normalisé », à une feuille par entité, que l'importation ne relit
+ * plus : il n'était plus produit nulle part. Les règles, elles, n'ont pas changé de
+ * nature — un fichier illisible, un fichier venu d'ailleurs, un droit manquant, une
+ * anomalie située — et c'est à ce titre qu'elles sont ici, sur la feuille `DONNEES`.
+ *
+ * Ce qui a disparu avec l'ancien format n'a pas été remplacé par du vide : « feuille
+ * inconnue », « colonne technique supprimée », « repère local », « renvoi du mauvais
+ * type » décrivaient des accidents propres à une structure à plusieurs feuilles. Le
+ * refus qui les remplace tous est celui du fichier qui n'est pas un classeur de reprise.
  */
 class ControleImportTest extends WebTestCase
 {
-    private const OWNER_EMAIL = 'phpunit-echange-ctrl@test.local';
-    private const ENT = 'PHPUnit Contrôle SARL';
+    use ClasseurDeRepriseTrait;
 
-    /** @var string[] fichiers temporaires à effacer */
-    private array $temporaires = [];
+    private const OWNER_EMAIL = 'phpunit-echange-ctrl@test.local';
+    private const LECTEUR_EMAIL = 'phpunit-echange-lecteur@test.local';
+    private const ENT = 'PHPUnit Contrôle SARL';
 
     private KernelBrowser $client;
 
@@ -64,16 +68,13 @@ class ControleImportTest extends WebTestCase
 
     protected function tearDown(): void
     {
-        foreach ($this->temporaires as $chemin) {
-            @unlink($chemin);
-        }
-        $this->temporaires = [];
+        $this->effacerLesClasseurs();
         $this->nettoyer();
         parent::tearDown();
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // Passe 1 — structure
+    // Passe 1 — le fichier est-il recevable ?
     // ─────────────────────────────────────────────────────────────────────────────
 
     /** Un fichier qui n'est pas un classeur s'arrête net, sans rien coûter. */
@@ -81,468 +82,210 @@ class ControleImportTest extends WebTestCase
     {
         [$entreprise, $proprietaire] = $this->fixture();
 
-        $chemin = $this->fichierTemporaire('ceci n\'est pas un classeur');
+        $chemin = sys_get_temp_dir() . '/faux-' . bin2hex(random_bytes(6)) . '.xlsx';
+        file_put_contents($chemin, 'ceci n\'est pas un classeur');
+        $this->classeursTemporaires[] = $chemin;
+
         $run = $this->importateur()->controler($chemin, 'faux.xlsx', $entreprise, $proprietaire);
 
         self::assertSame(EchangeImportRun::STATUT_ECHEC, $run->getStatut());
-        self::assertFalse($run->getRapport()['confirmable']);
-        self::assertSame(Anomalie::FICHIER_ILLISIBLE, $run->getRapport()['anomalies'][0]['code']);
+        self::assertSame(Anomalie::FICHIER_ILLISIBLE, $this->premierCode($run));
     }
 
-    /** Un classeur ordinaire, sans feuille d'identité, n'est pas un fichier d'échange. */
-    public function testUnClasseurSansManifesteEstRefuse(): void
+    /**
+     * ⚠ UN CLASSEUR QUELCONQUE EST REFUSÉ, ET LE REFUS DIT QUOI FAIRE.
+     *
+     * C'est le cas le plus fréquent d'une première reprise : le cabinet arrive avec un
+     * fichier à lui — un extrait de son ancien logiciel, un tableau maison. « Feuille
+     * DONNEES absente » serait exact et inutile : il ne sait pas qu'elle devrait s'y
+     * trouver, ni comment l'obtenir. Ce qui lui manque, c'est le gabarit, et le message
+     * doit le nommer.
+     */
+    public function testUnClasseurQuelconqueEstRefuseEtOrienteVersLeGabarit(): void
     {
         [$entreprise, $proprietaire] = $this->fixture();
 
-        $classeur = new Spreadsheet();
-        $classeur->getActiveSheet()->setTitle('Feuille1')->setCellValue('A1', 'Bonjour');
-        $chemin = $this->ecrire($classeur);
-
-        $run = $this->importateur()->controler($chemin, 'quelconque.xlsx', $entreprise, $proprietaire);
+        $run = $this->importateur()->controler(
+            $this->classeurSansDonnees(),
+            'mon-tableau.xlsx',
+            $entreprise,
+            $proprietaire,
+        );
 
         self::assertSame(EchangeImportRun::STATUT_ECHEC, $run->getStatut());
-        self::assertSame(Anomalie::MANIFESTE_ABSENT, $this->premierCode($run));
+
+        $anomalie = $this->anomalieDeCode($run, Anomalie::MANIFESTE_ABSENT);
+        self::assertNotNull($anomalie);
+        self::assertStringContainsString('classeur de reprise', $anomalie['message']);
+        self::assertStringContainsString(EtatDuPortefeuille::FEUILLE, $anomalie['message']);
     }
 
-    /** Un fichier d'un AUTRE cabinet est bloqué, jusqu'à confirmation explicite. */
+    /**
+     * ⚠ UN FICHIER VENU D'UN AUTRE CABINET EST BLOQUÉ, mais l'utilisateur peut lever.
+     *
+     * Les identifiants qu'il contient ne désignent rien ici : chaque ligne serait créée
+     * en double. Importer les données d'un cabinet dans un autre est parfois voulu — une
+     * reprise —, jamais anodin.
+     */
     public function testUnFichierDUnAutreCabinetExigeUneConfirmation(): void
     {
         [$entreprise, $proprietaire] = $this->fixture();
-        $this->creerClient($entreprise, $proprietaire, 'ACME Autre');
 
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Client']);
-        $this->truquerManifeste($chemin, 'uid_cabinet', '999999');
+        $chemin = $this->classeurDeReprise($entreprise, [$this->uneEcheance()], [
+            $this->cleDuCabinet() => '999999',
+        ]);
 
         $run = $this->importateur()->controler($chemin, 'ailleurs.xlsx', $entreprise, $proprietaire);
         self::assertSame(EchangeImportRun::STATUT_ECHEC, $run->getStatut());
         self::assertSame(Anomalie::AUTRE_CABINET, $this->premierCode($run));
 
-        // Confirmé explicitement, il passe — en laissant une trace de la reprise.
+        // Le même fichier, confirmé : l'avertissement subsiste, le contrôle passe.
+        $chemin = $this->classeurDeReprise($entreprise, [$this->uneEcheance()], [
+            $this->cleDuCabinet() => '999999',
+        ]);
+
         $run = $this->importateur()->controler($chemin, 'ailleurs.xlsx', $entreprise, $proprietaire, false, true);
-        self::assertSame(EchangeImportRun::STATUT_EN_ATTENTE_CONFIRMATION, $run->getStatut());
-        self::assertContains(
-            Anomalie::AUTRE_CABINET,
-            array_column($run->getRapport()['anomalies'], 'code'),
-            'La reprise assumée doit rester tracée dans le rapport.',
-        );
+        self::assertSame(EchangeImportRun::STATUT_EN_ATTENTE_CONFIRMATION, $run->getStatut(), $this->motif($run));
+
+        $avertissement = $this->anomalieDeCode($run, Anomalie::AUTRE_CABINET);
+        self::assertNotNull($avertissement);
+        self::assertSame(Anomalie::AVERTISSEMENT, $avertissement['gravite']);
     }
 
-    /**
-     * Supprimer une colonne technique rend le fichier menteur. Le rapport doit NOMMER
-     * la colonne manquante : « la structure a changé » n'aiderait personne à réparer.
-     */
-    public function testUneColonneTechniqueSupprimeeEstNommee(): void
+    /** Un classeur de reprise sans la moindre ligne n'a rien à importer, et le dit. */
+    public function testUnClasseurSansLigneEstRefuse(): void
     {
         [$entreprise, $proprietaire] = $this->fixture();
-        $this->creerClient($entreprise, $proprietaire, 'ACME Structure');
 
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Client']);
-        $this->supprimerColonne($chemin, 'Client', CanevasDEchange::COL_UID);
-
-        $run = $this->importateur()->controler($chemin, 'ampute.xlsx', $entreprise, $proprietaire);
+        $run = $this->importateur()->controler(
+            $this->classeurDeReprise($entreprise, []),
+            'vide.xlsx',
+            $entreprise,
+            $proprietaire,
+        );
 
         self::assertSame(EchangeImportRun::STATUT_ECHEC, $run->getStatut());
-        $anomalie = $this->anomalieDeCode($run, Anomalie::STRUCTURE_ALTEREE);
-        self::assertNotNull($anomalie, 'La structure altérée doit être signalée.');
-        self::assertStringContainsString(CanevasDEchange::COL_UID, $anomalie['message'], 'La colonne manquante doit être nommée.');
-    }
-
-    /** Une feuille inconnue est ignorée sans bloquer, et mentionnée. */
-    public function testUneFeuilleInconnueEstIgnoreeEtMentionnee(): void
-    {
-        [$entreprise, $proprietaire] = $this->fixture();
-        $this->creerClient($entreprise, $proprietaire, 'ACME Brouillon');
-
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Client']);
-        $classeur = IOFactory::load($chemin);
-        $classeur->createSheet()->setTitle('Mon brouillon')->setCellValue('A1', 'notes perso');
-        (new Xlsx($classeur))->save($chemin);
-
-        $run = $this->importateur()->controler($chemin, 'brouillon.xlsx', $entreprise, $proprietaire);
-
-        self::assertSame(EchangeImportRun::STATUT_EN_ATTENTE_CONFIRMATION, $run->getStatut());
-        $anomalie = $this->anomalieDeCode($run, Anomalie::FEUILLE_INCONNUE);
-        self::assertNotNull($anomalie);
-        self::assertSame(Anomalie::AVERTISSEMENT, $anomalie['gravite'], 'Un brouillon ne doit pas bloquer un import.');
+        self::assertStringContainsString('aucune ligne', $this->motif($run));
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // Passe 2 — contrôle à blanc
+    // Passe 2 — le contrôle à blanc
     // ─────────────────────────────────────────────────────────────────────────────
 
     /**
-     * L'ALLER-RETOUR À VIDE, le cas le plus important de tous : exporter, réimporter
-     * sans rien toucher, et n'avoir RIEN à écrire. Si ce test tombe, le format ment
-     * quelque part sur ce qu'il contient.
+     * ⚠ LE CONTRÔLE N'ÉCRIT RIEN. C'est la promesse qui rend la confirmation utile : si
+     * le contrôle écrivait, l'utilisateur déciderait après coup.
      */
-    public function testUnAllerRetourSansModificationNeProposeAucuneEcriture(): void
-    {
-        [$entreprise, $proprietaire] = $this->fixture();
-        $this->creerClient($entreprise, $proprietaire, 'ACME Idempotente');
-        $this->creerClient($entreprise, $proprietaire, 'Deuxième Client');
-
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Client']);
-        $run = $this->importateur()->controler($chemin, 'aller-retour.xlsx', $entreprise, $proprietaire);
-
-        $rapport = $run->getRapport();
-        self::assertTrue($rapport['confirmable'], 'Un aller-retour à vide ne doit produire aucune erreur.');
-        self::assertSame(0, $rapport['creations'], 'Aucune ligne ne doit être créée.');
-        self::assertSame(0, $rapport['suppressions'], 'Aucune ligne ne doit être supprimée.');
-        // Les lignes existantes sont bien vues comme des mises à jour (identifiant
-        // rempli), ce qui est le comportement voulu : elles réécriront les mêmes valeurs.
-        self::assertSame(2, $rapport['lignes_lues']);
-    }
-
-    /** Le contrôle n'écrit RIEN : c'est ce qui le rend gratuit et rejouable. */
     public function testLeControleNecritRienEnBase(): void
     {
         [$entreprise, $proprietaire] = $this->fixture();
-        $this->creerClient($entreprise, $proprietaire, 'ACME Témoin');
-
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Client']);
-        $this->ajouterLigne($chemin, 'Client', ['nom' => 'Client Fantôme']);
-
         $avant = $this->compterClients($entreprise);
-        $run = $this->importateur()->controler($chemin, 'sans-ecriture.xlsx', $entreprise, $proprietaire);
 
-        self::assertSame(1, $run->getRapport()['creations'], 'La création est ANNONCÉE…');
-        self::assertSame($avant, $this->compterClients($entreprise), '…mais rien n\'est écrit tant que rien n\'est confirmé.');
+        $run = $this->importateur()->controler(
+            $this->classeurDeReprise($entreprise, [$this->uneEcheance()]),
+            'sans-ecriture.xlsx',
+            $entreprise,
+            $proprietaire,
+        );
+
+        self::assertSame(EchangeImportRun::STATUT_EN_ATTENTE_CONFIRMATION, $run->getStatut(), $this->motif($run));
+        self::assertSame($avant, $this->compterClients($entreprise), 'Aucun client n\'a été créé.');
     }
 
-    /** Une ligne ajoutée sans identifiant devient une création. */
+    /** Une ligne sans identifiant décrit une affaire nouvelle : le rapport annonce des créations. */
     public function testUneLigneSansIdentifiantDevientUneCreation(): void
     {
         [$entreprise, $proprietaire] = $this->fixture();
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Client']);
-        $this->ajouterLigne($chemin, 'Client', ['nom' => 'Nouveau Client']);
 
-        $rapport = $this->importateur()->controler($chemin, 'creation.xlsx', $entreprise, $proprietaire)->getRapport();
+        $rapport = $this->importateur()->controler(
+            $this->classeurDeReprise($entreprise, [$this->uneEcheance()]),
+            'creation.xlsx',
+            $entreprise,
+            $proprietaire,
+        )->getRapport();
 
-        self::assertTrue($rapport['confirmable']);
-        self::assertSame(1, $rapport['creations']);
-    }
-
-    /** Une suppression ne se déduit JAMAIS : elle doit être écrite noir sur blanc. */
-    public function testUneSuppressionNeSeDeduitJamais(): void
-    {
-        [$entreprise, $proprietaire] = $this->fixture();
-        $client = $this->creerClient($entreprise, $proprietaire, 'ACME À Garder');
-
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Client']);
-
-        // Aucune action écrite : la ligne existante est une mise à jour, pas une
-        // suppression — même si l'utilisateur a vidé toutes ses autres colonnes.
-        $rapport = $this->importateur()->controler($chemin, 'sans-action.xlsx', $entreprise, $proprietaire)->getRapport();
-        self::assertSame(0, $rapport['suppressions']);
-
-        // Écrite explicitement, elle est bien comprise.
-        $this->ecrireCellule($chemin, 'Client', CanevasDEchange::COL_ACTION, 3, CanevasDEchange::ACTION_SUPPRIMER);
-        $rapport = $this->importateur()->controler($chemin, 'avec-action.xlsx', $entreprise, $proprietaire)->getRapport();
-        self::assertSame(1, $rapport['suppressions']);
-    }
-
-    /** Une action inconnue est refusée, et le rapport dit où et quoi écrire. */
-    public function testUneActionInconnueEstRefuseeEtSituee(): void
-    {
-        [$entreprise, $proprietaire] = $this->fixture();
-        $this->creerClient($entreprise, $proprietaire, 'ACME Action');
-
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Client']);
-        $this->ecrireCellule($chemin, 'Client', CanevasDEchange::COL_ACTION, 3, 'EFFACER');
-
-        $run = $this->importateur()->controler($chemin, 'action.xlsx', $entreprise, $proprietaire);
-        $anomalie = $this->anomalieDeCode($run, Anomalie::ACTION_INVALIDE);
-
-        self::assertNotNull($anomalie);
-        self::assertSame(3, $anomalie['ligne'], 'L\'anomalie doit situer la ligne.');
-        self::assertNotNull($anomalie['colonne'], 'Et la colonne.');
-        self::assertStringContainsString(CanevasDEchange::ACTION_SUPPRIMER, $anomalie['message'], 'Le message doit rappeler les valeurs acceptées.');
+        self::assertGreaterThan(0, $rapport['creations'] ?? 0);
+        self::assertSame(0, $rapport['suppressions'] ?? -1, 'Une suppression ne se déduit jamais.');
+        self::assertSame(1, $rapport['lignes_lues'] ?? 0);
     }
 
     /**
-     * LA CASCADE PAR REPÈRE LOCAL : un groupe nouveau et un client qui le désigne, dans
-     * le même fichier. Sans ce niveau de résolution, on ne pourrait créer que des
-     * lignes sans lien.
+     * ⚠ CHAQUE ANOMALIE DE LIGNE EST SITUÉE. Lire « une valeur est invalide » sans savoir
+     * où oblige à relire le fichier entier — et c'est là qu'on abandonne, pas à l'erreur.
      */
-    public function testUnRepereLocalRelieDeuxLignesNouvelles(): void
-    {
-        [$entreprise, $proprietaire] = $this->fixture();
-
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Groupe', 'Client']);
-        $this->ajouterLigne($chemin, 'Groupe', ['nom' => 'Groupe Neuf', 'description' => 'Créé par import'], 'G1');
-        $this->ajouterLigne($chemin, 'Client', ['nom' => 'Client Rattaché', 'groupe' => 'G1']);
-
-        $run = $this->importateur()->controler($chemin, 'cascade.xlsx', $entreprise, $proprietaire);
-        $rapport = $run->getRapport();
-
-        self::assertTrue($rapport['confirmable'], 'Un renvoi vers un repère du même fichier doit être accepté : '
-            . json_encode(array_column($rapport['anomalies'], 'message'), JSON_UNESCAPED_UNICODE));
-        self::assertSame(2, $rapport['creations']);
-    }
-
-    /** Un renvoi qui ne désigne rien est une erreur BLOQUANTE, jamais un silence. */
-    public function testUnRenvoiIrresoluEstUneErreurBloquante(): void
-    {
-        [$entreprise, $proprietaire] = $this->fixture();
-
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Groupe', 'Client']);
-        $this->ajouterLigne($chemin, 'Client', ['nom' => 'Client Orphelin', 'groupe' => 'Groupe Qui N Existe Pas']);
-
-        $run = $this->importateur()->controler($chemin, 'orphelin.xlsx', $entreprise, $proprietaire);
-
-        self::assertFalse($run->getRapport()['confirmable']);
-        $anomalie = $this->anomalieDeCode($run, Anomalie::RENVOI_IRRESOLU);
-        self::assertNotNull($anomalie, 'Un renvoi introuvable doit bloquer.');
-        self::assertNotNull($anomalie['ligne'], 'Et être situé.');
-    }
-
-    /** Un renvoi par NOM d'une ligne existante est accepté : c'est ce qu'un humain tape. */
-    public function testUnRenvoiParNomEstAccepte(): void
-    {
-        [$entreprise, $proprietaire] = $this->fixture();
-        $this->creerGroupe($entreprise, $proprietaire, 'Groupe Existant');
-
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Groupe', 'Client']);
-        $this->ajouterLigne($chemin, 'Client', ['nom' => 'Client Par Nom', 'groupe' => 'groupe existant']);
-
-        $rapport = $this->importateur()->controler($chemin, 'par-nom.xlsx', $entreprise, $proprietaire)->getRapport();
-
-        self::assertTrue($rapport['confirmable'], 'La casse ne doit pas empêcher la reconnaissance : '
-            . json_encode(array_column($rapport['anomalies'], 'message'), JSON_UNESCAPED_UNICODE));
-        self::assertSame(1, $rapport['creations']);
-    }
-
-    /**
-     * Deux lignes de même nom ne se départagent pas : deviner serait rattacher au hasard.
-     *
-     * ⚠ SUR DES CLIENTS, ET NON PLUS SUR DES GROUPES. Le catalogue d'un cabinet — groupes,
-     * risques, taxes, chargements, types de revenu — porte désormais un index UNIQUE par
-     * nom : l'homonymie y est devenue impossible, et le cas ne s'y construit plus. Elle
-     * reste entière pour les fiches ORDINAIRES, et c'est la bonne place pour ce test :
-     * deux « SARL Martin » sont deux affaires distinctes, quand deux « Prime nette »
-     * n'étaient qu'un même poste écrit deux fois.
-     */
-    public function testUnRenvoiAmbiguEstRefuse(): void
-    {
-        [$entreprise, $proprietaire] = $this->fixture();
-        $this->creerClient($entreprise, $proprietaire, 'Doublon');
-        $this->creerClient($entreprise, $proprietaire, 'Doublon');
-
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Client', 'Piste']);
-        $this->ajouterLigne($chemin, 'Piste', ['nom' => 'Piste Ambiguë', 'client' => 'Doublon']);
-
-        $run = $this->importateur()->controler($chemin, 'ambigu.xlsx', $entreprise, $proprietaire);
-
-        self::assertFalse($run->getRapport()['confirmable']);
-        self::assertNotNull($this->anomalieDeCode($run, Anomalie::RENVOI_AMBIGU));
-    }
-
-    /** Un identifiant d'un autre type de donnée est refusé, avec le motif exact. */
-    public function testUnIdentifiantDuMauvaisTypeEstRefuse(): void
-    {
-        [$entreprise, $proprietaire] = $this->fixture();
-        $this->creerClient($entreprise, $proprietaire, 'ACME Type');
-
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Client']);
-        $this->ecrireCellule($chemin, 'Client', CanevasDEchange::COL_UID, 3, 'Avenant:42');
-
-        $run = $this->importateur()->controler($chemin, 'mauvais-type.xlsx', $entreprise, $proprietaire);
-
-        self::assertFalse($run->getRapport()['confirmable']);
-        self::assertNotNull($this->anomalieDeCode($run, Anomalie::UID_INVALIDE));
-    }
-
-    /**
-     * Une feuille qu'on n'a pas le droit d'écrire est SIGNALÉE, pas ignorée : sans
-     * cela, l'utilisateur croirait ses modifications enregistrées.
-     */
-    public function testUneFeuilleHorsDroitDEcritureEstSignalee(): void
-    {
-        [$entreprise, $proprietaire, $lecteurSeul] = $this->fixture();
-        $this->creerClient($entreprise, $proprietaire, 'ACME Lecture');
-
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Client']);
-        $run = $this->importateur()->controler($chemin, 'lecture-seule.xlsx', $entreprise, $lecteurSeul);
-
-        self::assertFalse($run->getRapport()['confirmable']);
-        $anomalie = $this->anomalieDeCode($run, Anomalie::DROIT_INSUFFISANT);
-        self::assertNotNull($anomalie, 'Un import sans droit d\'écriture doit être refusé, et dit.');
-    }
-
-    /**
-     * Une date illisible est refusée EN NOMMANT LA COLONNE, jamais devinée.
-     *
-     * On ne fige pas l'entité visée : la ressource porteuse d'une date modifiable est
-     * cherchée dans le canevas. Un test qui vise « les clients » se met en sommeil le
-     * jour où les clients n'ont plus de date — et un test endormi ne protège rien.
-     */
-    public function testUneDateIllisibleEstRefuseeEtNommee(): void
-    {
-        [$entreprise, $proprietaire] = $this->fixture();
-
-        $cible = null;
-        foreach ($this->canevas()->ressourcesEcrivables($proprietaire) as $ressource) {
-            foreach ($ressource->colonnes as $colonne) {
-                if ($colonne->type === 'date' && $colonne->estModifiable() && !$colonne->obligatoire) {
-                    $cible = [$ressource, $colonne];
-                    break 2;
-                }
-            }
-        }
-        self::assertNotNull($cible, 'Le périmètre doit comporter au moins une date modifiable.');
-        [$ressource, $colonne] = $cible;
-
-        $chemin = $this->exporter($entreprise, $proprietaire, [$ressource->code]);
-        $this->ajouterLigne($chemin, $ressource->code, [$colonne->code => 'la semaine prochaine']);
-
-        $run = $this->importateur()->controler($chemin, 'date.xlsx', $entreprise, $proprietaire);
-
-        self::assertFalse($run->getRapport()['confirmable'], 'Une date illisible doit bloquer.');
-        $anomalie = $this->anomalieDeCode($run, Anomalie::VALEUR_INVALIDE);
-        self::assertNotNull($anomalie, 'Elle doit être signalée comme valeur invalide.');
-        self::assertStringContainsString($colonne->libelle, $anomalie['message'], 'Le champ fautif doit être nommé.');
-        self::assertNotNull($anomalie['ligne'], 'Et la ligne située.');
-    }
-
-    /** Le rapport situe TOUTE anomalie de ligne : feuille, ligne, et colonne si connue. */
     public function testChaqueAnomalieDeLigneEstSituee(): void
     {
         [$entreprise, $proprietaire] = $this->fixture();
 
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Groupe', 'Client']);
-        $this->ajouterLigne($chemin, 'Client', ['nom' => 'Client Perdu', 'groupe' => 'Inexistant']);
+        // Une ligne sans référence de police : rien ne permet de la rattacher.
+        $run = $this->importateur()->controler(
+            $this->classeurDeReprise($entreprise, [['assure' => 'KIN AVIA', 'trancheNom' => 'Prime']]),
+            'sans-cle.xlsx',
+            $entreprise,
+            $proprietaire,
+        );
 
-        $run = $this->importateur()->controler($chemin, 'situe.xlsx', $entreprise, $proprietaire);
+        self::assertSame(EchangeImportRun::STATUT_ECHEC, $run->getStatut());
 
-        foreach ($run->getRapport()['anomalies'] as $anomalie) {
-            if ($anomalie['code'] === Anomalie::RENVOI_IRRESOLU) {
-                self::assertNotNull($anomalie['feuille']);
-                self::assertNotNull($anomalie['ligne']);
-                self::assertNotNull($anomalie['colonne']);
-            }
+        $situees = array_filter(
+            $run->getRapport()['anomalies'] ?? [],
+            static fn (array $a): bool => ($a['gravite'] ?? '') === Anomalie::ERREUR && ($a['ligne'] ?? null) !== null,
+        );
+
+        self::assertNotEmpty($situees, 'Une erreur de ligne doit porter son numéro de ligne.');
+        foreach ($situees as $anomalie) {
+            self::assertSame(EtatDuPortefeuille::FEUILLE, $anomalie['feuille']);
+            self::assertGreaterThanOrEqual(2, $anomalie['ligne'], 'La ligne 1 porte les libellés.');
         }
+    }
+
+    /**
+     * ⚠ UN DROIT MANQUANT SE SIGNALE, IL NE S'IGNORE PAS.
+     *
+     * L'invité n'a que la lecture sur les données de production : il peut ouvrir la
+     * rubrique et déposer un fichier, mais pas en écrire une ligne. Le contrôle doit le
+     * dire — sans quoi il croirait ses données enregistrées.
+     */
+    public function testUnInviteSansDroitDEcritureVoitSesLignesRefusees(): void
+    {
+        [$entreprise, , $lecteur] = $this->fixture();
+
+        $run = $this->importateur()->controler(
+            $this->classeurDeReprise($entreprise, [$this->uneEcheance()]),
+            'sans-droit.xlsx',
+            $entreprise,
+            $lecteur,
+        );
+
+        self::assertSame(EchangeImportRun::STATUT_ECHEC, $run->getStatut());
+        self::assertNotNull(
+            $this->anomalieDeCode($run, Anomalie::DROIT_INSUFFISANT),
+            'Le refus doit nommer le droit qui manque : ' . $this->motif($run),
+        );
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Outillage
     // ─────────────────────────────────────────────────────────────────────────────
 
+    /** Une échéance complète, telle qu'un cabinet la saisirait dans le gabarit. */
+    private function uneEcheance(array $surcharges = []): array
+    {
+        return [
+            'policeReference' => 'POL/2026/001',
+            'policeDateEffet' => '01/01/2026',
+            'policeEcheance' => '31/12/2026',
+            'trancheNom' => 'Prime unique',
+            'tranchePayableAt' => '15/01/2026',
+            'assure' => 'KIN AVIA',
+            'risque' => 'RC Aviation',
+            'assureur' => 'SFA CONGO',
+        ] + $surcharges;
+    }
+
     private function importateur(): ImportateurJsbx
     {
         return static::getContainer()->get(ImportateurJsbx::class);
-    }
-
-    private function canevas(): CanevasDEchange
-    {
-        return static::getContainer()->get(CanevasDEchange::class);
-    }
-
-    /** Exporte réellement, et rend le chemin du fichier produit. */
-    private function exporter(Entreprise $entreprise, Invite $invite, array $codes): string
-    {
-        $reponse = static::getContainer()->get(ExportateurJsbx::class)
-            ->exporter($entreprise, $invite, $entreprise->getUtilisateur(), $codes, uniqid('t', true));
-
-        ob_start();
-        $reponse->sendContent();
-
-        return $this->fichierTemporaire((string) ob_get_clean());
-    }
-
-    private function fichierTemporaire(string $contenu): string
-    {
-        $chemin = tempnam(sys_get_temp_dir(), 'jsbx_test_') . '.xlsx';
-        file_put_contents($chemin, $contenu);
-        $this->temporaires[] = $chemin;
-
-        return $chemin;
-    }
-
-    private function ecrire(Spreadsheet $classeur): string
-    {
-        $chemin = tempnam(sys_get_temp_dir(), 'jsbx_test_') . '.xlsx';
-        (new Xlsx($classeur))->save($chemin);
-        $this->temporaires[] = $chemin;
-
-        return $chemin;
-    }
-
-    /** Ajoute une ligne de données à la fin d'une feuille, par CODE de colonne. */
-    private function ajouterLigne(string $chemin, string $codeRessource, array $valeurs, ?string $repere = null): void
-    {
-        $classeur = IOFactory::load($chemin);
-        $ressource = $this->canevas()->ressource($codeRessource);
-        $feuille = $classeur->getSheetByName($ressource->feuille);
-
-        $lettres = $this->lettresParCode($feuille);
-        $numero = max(3, $feuille->getHighestDataRow() + 1);
-
-        if ($repere !== null) {
-            $feuille->setCellValue($lettres[CanevasDEchange::COL_REF] . $numero, $repere);
-        }
-        foreach ($valeurs as $code => $valeur) {
-            if (isset($lettres[$code])) {
-                $feuille->setCellValue($lettres[$code] . $numero, $valeur);
-            }
-        }
-
-        (new Xlsx($classeur))->save($chemin);
-    }
-
-    private function ecrireCellule(string $chemin, string $codeRessource, string $codeColonne, int $numero, string $valeur): void
-    {
-        $classeur = IOFactory::load($chemin);
-        $ressource = $this->canevas()->ressource($codeRessource);
-        $feuille = $classeur->getSheetByName($ressource->feuille);
-
-        $lettres = $this->lettresParCode($feuille);
-        $feuille->setCellValue($lettres[$codeColonne] . $numero, $valeur);
-
-        (new Xlsx($classeur))->save($chemin);
-    }
-
-    /** Supprime physiquement une colonne — le geste qui rend le fichier menteur. */
-    private function supprimerColonne(string $chemin, string $codeRessource, string $codeColonne): void
-    {
-        $classeur = IOFactory::load($chemin);
-        $ressource = $this->canevas()->ressource($codeRessource);
-        $feuille = $classeur->getSheetByName($ressource->feuille);
-
-        $lettres = $this->lettresParCode($feuille);
-        $feuille->removeColumn($lettres[$codeColonne]);
-
-        (new Xlsx($classeur))->save($chemin);
-    }
-
-    private function truquerManifeste(string $chemin, string $cle, string $valeur): void
-    {
-        $classeur = IOFactory::load($chemin);
-        $feuille = $classeur->getSheetByName(EcrivainJsbx::FEUILLE_MANIFESTE);
-
-        for ($i = 1; $i <= $feuille->getHighestDataRow(); ++$i) {
-            if (trim((string) $feuille->getCell('A' . $i)->getValue()) === $cle) {
-                $feuille->setCellValue('C' . $i, $valeur);
-                break;
-            }
-        }
-
-        (new Xlsx($classeur))->save($chemin);
-    }
-
-    /** @return array<string, string> code technique => lettre de colonne */
-    private function lettresParCode($feuille): array
-    {
-        $lettres = [];
-        $derniere = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($feuille->getHighestDataColumn());
-        for ($i = 1; $i <= $derniere; ++$i) {
-            $lettre = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i);
-            $code = trim((string) $feuille->getCell($lettre . '2')->getValue());
-            if ($code !== '') {
-                $lettres[$code] = $lettre;
-            }
-        }
-
-        return $lettres;
     }
 
     private function premierCode(EchangeImportRun $run): string
@@ -562,42 +305,26 @@ class ControleImportTest extends WebTestCase
         return null;
     }
 
+    /** Ce que le rapport reproche — pour qu'un échec de test dise pourquoi. */
+    private function motif(EchangeImportRun $run): string
+    {
+        $messages = array_map(
+            static fn (array $a): string => sprintf('[%s] %s', $a['gravite'] ?? '?', $a['message'] ?? ''),
+            $run->getRapport()['anomalies'] ?? [],
+        );
+
+        return $messages === [] ? 'aucune anomalie signalée' : implode(' | ', $messages);
+    }
+
     private function compterClients(Entreprise $entreprise): int
     {
-        return (int) $this->em()->createQueryBuilder()
-            ->select('COUNT(c.id)')->from(Client::class, 'c')
-            ->andWhere('c.entreprise = :e')->setParameter('e', $entreprise)
-            ->getQuery()->getSingleScalarResult();
+        return (int) $this->em()->getConnection()->fetchOne(
+            'SELECT COUNT(*) FROM client WHERE entreprise_id = ?',
+            [$entreprise->getId()],
+        );
     }
 
-    private function creerClient(Entreprise $entreprise, Invite $invite, string $nom): Client
-    {
-        $client = (new Client())->setNom($nom);
-        $client->setEntreprise($entreprise);
-        $client->setInvite($invite);
-        $this->em()->persist($client);
-        $this->em()->flush();
-
-        return $client;
-    }
-
-    private function creerGroupe(Entreprise $entreprise, Invite $invite, string $nom): Groupe
-    {
-        $groupe = (new Groupe())->setNom($nom)->setDescription('Groupe de test');
-        $groupe->setEntreprise($entreprise);
-        $groupe->setInvite($invite);
-        $this->em()->persist($groupe);
-        $this->em()->flush();
-
-        return $groupe;
-    }
-
-    /**
-     * Cabinet, propriétaire, et un invité en LECTURE SEULE sur les clients (il a la
-     * porte de la rubrique, pas le droit d'écrire les données).
-     *
-     * @return array{0: Entreprise, 1: Invite, 2: Invite}
-     */
+    /** @return array{0: Entreprise, 1: Invite, 2: Invite} */
     private function fixture(): array
     {
         $em = $this->em();
@@ -619,7 +346,7 @@ class ControleImportTest extends WebTestCase
         $proprietaire->setUtilisateur($owner);
         $em->persist($proprietaire);
 
-        $lecteur = (new Invite())->setNom('Lecteur')->setEmail('phpunit-echange-lecteur@test.local');
+        $lecteur = (new Invite())->setNom('Lecteur')->setEmail(self::LECTEUR_EMAIL);
         $lecteur->setProprietaire(false);
         $lecteur->setEntreprise($entreprise);
         $em->persist($lecteur);
@@ -678,7 +405,7 @@ class ControleImportTest extends WebTestCase
                     $cnx->executeStatement('DELETE FROM entreprise WHERE id = ?', [$id]);
                 }
             }
-            foreach ([self::OWNER_EMAIL, 'phpunit-echange-lecteur@test.local'] as $email) {
+            foreach ([self::OWNER_EMAIL, self::LECTEUR_EMAIL] as $email) {
                 $cnx->executeStatement('DELETE FROM utilisateur WHERE email = ?', [$email]);
             }
         } finally {

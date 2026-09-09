@@ -2,34 +2,32 @@
 
 namespace App\Echange\Service;
 
-use App\Ai\Mutation\MutationReferences;
 use App\Echange\Canevas\CanevasDEchange;
-use App\Echange\Canevas\ColonneDEchange;
 use App\Entity\Entreprise;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * RÉSOUT une valeur de clé étrangère lue dans un classeur, selon trois niveaux et
- * dans cet ordre :
+ * RECONNAÎT une entité du cabinet à partir d'un LIBELLÉ lu dans un classeur.
  *
- *  1. « Ressource:id » — l'identifiant écrit par l'export. Sans ambiguïté possible,
- *     et c'est ce qui rend l'aller-retour fidèle.
- *  2. Une RÉFÉRENCE MÉTIER lisible — le nom d'un client, le code d'un risque. C'est
- *     ce qu'un humain tape naturellement quand il ajoute une ligne hors ligne.
- *  3. Un REPÈRE LOCAL (`_ref`) désignant une ligne NOUVELLE du même fichier. Sans ce
- *     niveau, on ne pourrait pas créer un client et son contrat en un seul import —
- *     le contrat désignerait un identifiant qui n'existe pas encore.
+ * ── CE QU'IL FAISAIT DE PLUS, ET POURQUOI IL NE LE FAIT PLUS ────────────────────────
+ * Ce service résolvait aussi des colonnes de clé étrangère selon trois niveaux —
+ * « Ressource:id », libellé métier, repère local `_ref` du même fichier. Ces trois-là
+ * appartenaient au format « normalisé », à une feuille par entité, que l'importation
+ * n'accepte plus : le classeur de reprise porte toute sa chaîne sur UNE ligne, et c'est
+ * `ReconstitueurDeTranche` qui la rattache.
  *
- * Le niveau 3 ne fabrique aucune mécanique : il se traduit en « @étiquette », le
- * renvoi que le circuit d'écriture de l'espace de travail sait déjà résoudre, au
- * dry-run comme à l'exécution.
+ * ── CE QU'IL FAIT, ET QUI EST VITAL ─────────────────────────────────────────────────
+ * Il répond à « ce nom désigne-t-il quelque chose que le cabinet possède déjà ? ». C'est
+ * ce qui évite qu'une reprise crée un second « KIN AVIA » à côté du premier.
  *
- * ⚠ UNE RÉFÉRENCE NON RÉSOLUE EST UNE ERREUR BLOQUANTE, JAMAIS UN SILENCE. Écrire la
- * ligne en laissant le lien vide produirait une fiche incohérente que personne n'a
- * demandée, et que rien à l'écran ne signalerait.
+ * ⚠ UNE RÉFÉRENCE AMBIGUË EST UNE ERREUR, JAMAIS UN CHOIX AU HASARD. Deux clients nommés
+ * « SARL Martin » ne se départagent pas : deviner, ici, c'est rattacher une police au
+ * mauvais client. La seule exception est nommée et documentée — {@see reconnaitreLePremier()}
+ * pour les catalogues, où deux entrées de même nom sont un doublon de configuration et non
+ * deux affaires distinctes.
  *
- * ⚠ UNE RÉFÉRENCE AMBIGUË EST UNE ERREUR AUSSI. Deux clients nommés « SARL Martin »
- * ne se départagent pas : deviner, ici, c'est rattacher une police au mauvais client.
+ * ⚠ ET L'INDEX SE CHARGE EN UNE FOIS. Une requête par ligne serait ruineuse : un import de
+ * deux mille lignes renvoyant chacune vers un client produirait deux mille requêtes.
  */
 final class ResolveurDeRenvois
 {
@@ -40,9 +38,6 @@ final class ResolveurDeRenvois
      * libellé ne s'appelle pas « nom ».
      */
     private const CHAMPS_LISIBLES = ['nomComplet', 'nom', 'code', 'reference', 'referencePolice', 'numero', 'email', 'libelle'];
-
-    /** @var array<string, true> repères locaux déclarés dans le fichier (minuscules) */
-    private array $reperes = [];
 
     /** @var array<string, array<string, int>> mémoïsation : ressource => libellé normalisé => id */
     private array $index = [];
@@ -59,102 +54,8 @@ final class ResolveurDeRenvois
     /** Réinitialise l'état entre deux contrôles — le service est partagé. */
     public function reinitialiser(): void
     {
-        $this->reperes = [];
         $this->index = [];
         $this->ambigus = [];
-    }
-
-    /**
-     * Déclare un repère local porté par une ligne NOUVELLE.
-     *
-     * Tous les repères du fichier sont déclarés AVANT la résolution : un contrat peut
-     * désigner un client écrit plus bas dans la feuille, ou dans une feuille suivante.
-     * Exiger l'ordre de lecture rendrait le format dépendant d'un tri que l'utilisateur
-     * a parfaitement le droit de changer.
-     */
-    public function declarerRepere(string $repere): void
-    {
-        $repere = mb_strtolower(trim($repere));
-        if ($repere !== '') {
-            $this->reperes[$repere] = true;
-        }
-    }
-
-    public function repereConnu(string $repere): bool
-    {
-        return isset($this->reperes[mb_strtolower(trim($repere))]);
-    }
-
-    /**
-     * Résout une valeur de renvoi.
-     *
-     * @return Renvoi ce qu'il faut écrire dans le champ, ou le motif du refus
-     */
-    public function resoudre(mixed $valeur, ColonneDEchange $colonne, Entreprise $entreprise): Renvoi
-    {
-        $brut = is_scalar($valeur) ? trim((string) $valeur) : '';
-        if ($brut === '') {
-            return Renvoi::vide();
-        }
-
-        $cible = $colonne->referenceCode;
-        if ($cible === null || $colonne->referenceHorsPerimetre) {
-            // Colonne descriptive : elle a été exportée pour information et n'est pas
-            // relue. La signaler serait bruyant ; la lire serait faux.
-            return Renvoi::ignore();
-        }
-
-        // ── Niveau 1 : l'identifiant écrit par l'export ─────────────────────────────
-        $uid = LigneExportable::lireUid($brut);
-        if ($uid !== null) {
-            [$ressource, $id] = $uid;
-            if ($ressource !== $cible) {
-                return Renvoi::refus(sprintf(
-                    'L\'identifiant « %s » désigne une donnée de type « %s » alors que cette colonne attend « %s ».',
-                    $brut,
-                    $ressource,
-                    $cible,
-                ));
-            }
-            if (!$this->existe($cible, $id, $entreprise)) {
-                return Renvoi::refus(sprintf(
-                    'L\'identifiant « %s » ne correspond à aucune ligne de votre cabinet. '
-                    . 'Il provient peut-être d\'un fichier d\'un autre cabinet, ou la ligne a été supprimée depuis l\'export.',
-                    $brut,
-                ));
-            }
-
-            return Renvoi::identifiant($id);
-        }
-
-        // ── Niveau 3 : un repère local du même fichier ──────────────────────────────
-        // Contrôlé AVANT la reconnaissance métier : un utilisateur qui écrit « C1 »
-        // désigne son repère, pas un client qui s'appellerait « C1 ».
-        if ($this->repereConnu($brut)) {
-            return Renvoi::repere(MutationReferences::PREFIXE . mb_strtolower($brut));
-        }
-
-        // ── Niveau 2 : une référence métier lisible ─────────────────────────────────
-        $trouves = $this->parLibelle($cible, $brut, $entreprise);
-        if (count($trouves) === 1) {
-            return Renvoi::identifiant($trouves[0]);
-        }
-        if (count($trouves) > 1) {
-            return Renvoi::refus(sprintf(
-                '« %s » désigne %d lignes différentes : impossible de savoir laquelle. '
-                . 'Utilisez l\'identifiant de la colonne %s de la feuille correspondante.',
-                $brut,
-                count($trouves),
-                CanevasDEchange::COL_UID,
-            ), ambigu: true);
-        }
-
-        return Renvoi::refus(sprintf(
-            '« %s » ne correspond à aucune ligne existante ni à aucun repère de ce fichier. '
-            . 'Vérifiez l\'orthographe, ou renseignez la colonne %s de la ligne visée pour pouvoir y renvoyer.',
-            $brut,
-            CanevasDEchange::COL_REF,
-        ));
     }
 
     /**
@@ -253,28 +154,6 @@ final class ResolveurDeRenvois
         $this->index($codeRessource, $entreprise);
 
         return isset($this->ambigus[$codeRessource . '|' . self::normaliser($brut)]);
-    }
-
-    private function existe(string $codeRessource, int $id, Entreprise $entreprise): bool
-    {
-        $ressource = $this->canevas->ressource($codeRessource);
-        if ($ressource === null) {
-            return false;
-        }
-
-        // ⚠ Le scoping entreprise est ici, et il est inconditionnel : sans lui, un
-        // fichier bricolé pourrait rattacher une police du cabinet voisin.
-        $compte = (int) $this->em->createQueryBuilder()
-            ->select('COUNT(e.id)')
-            ->from($ressource->fqcn, 'e')
-            ->andWhere('e.id = :id')
-            ->andWhere('e.entreprise = :entreprise')
-            ->setParameter('id', $id)
-            ->setParameter('entreprise', $entreprise)
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        return $compte > 0;
     }
 
     /**

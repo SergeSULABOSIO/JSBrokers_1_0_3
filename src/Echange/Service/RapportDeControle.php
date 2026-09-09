@@ -15,8 +15,37 @@ namespace App\Echange\Service;
  */
 final class RapportDeControle
 {
+    /**
+     * Combien d'anomalies on GARDE en toutes lettres.
+     *
+     * ⚠ IL EN FAUT UNE, DEPUIS QUE LE CONTRÔLE AVANCE PAR PALIERS. Le rapport n'est plus
+     * un objet de passage : il vit en base entre deux paliers, et se relit à chaque fois.
+     * Un fichier de deux mille lignes dont chacune porte trois reproches produirait une
+     * colonne JSON de plusieurs mégaoctets, relue et réécrite à chaque palier — le
+     * rapport coûterait plus cher que le travail.
+     *
+     * L'écran n'en affiche de toute façon que cent, et le classeur annoté surligne les
+     * cellules : au-delà, ce qui manque n'est pas la liste, c'est un fichier à reprendre.
+     *
+     * ⚠ LES DÉCOMPTES, EUX, RESTENT EXACTS — voir `$erreursTotales`.
+     */
+    private const ANOMALIES_CONSERVEES = 500;
+
     /** @var Anomalie[] */
     private array $anomalies = [];
+
+    /**
+     * Le nombre d'erreurs VUES, qu'on les ait gardées ou non.
+     *
+     * ⚠ C'EST LUI QUI DÉCIDE DE LA CONFIRMATION, et non la liste. Compter les erreurs
+     * conservées ferait passer pour confirmable un fichier dont les erreurs auraient été
+     * tronquées — la pire des issues : on écrirait sur la foi d'un rapport incomplet, et
+     * l'utilisateur aurait lu « aucune erreur ».
+     */
+    private int $erreursTotales = 0;
+
+    /** Le nombre d'anomalies vues, tronquées comprises. */
+    private int $anomaliesTotales = 0;
 
     /** @var array<string, array{libelle: string, creations: int, modifications: int, suppressions: int, erreurs: int}> */
     private array $synthese = [];
@@ -32,7 +61,22 @@ final class RapportDeControle
      */
     public function ajouter(Anomalie $anomalie): void
     {
-        $this->anomalies[] = $anomalie;
+        ++$this->anomaliesTotales;
+        if ($anomalie->bloque()) {
+            ++$this->erreursTotales;
+        }
+
+        // Au-delà du seuil, on continue de COMPTER sans conserver : le décompte reste
+        // vrai, la confirmation reste fermée, et le rapport cesse de grossir.
+        if (count($this->anomalies) < self::ANOMALIES_CONSERVEES) {
+            $this->anomalies[] = $anomalie;
+        }
+    }
+
+    /** La liste a-t-elle été écourtée ? L'écran doit le dire, sinon il ment par omission. */
+    public function anomaliesTronquees(): bool
+    {
+        return $this->anomaliesTotales > count($this->anomalies);
     }
 
     public function declarerRessource(string $code, string $libelle): void
@@ -101,7 +145,7 @@ final class RapportDeControle
      */
     public function confirmable(): bool
     {
-        return $this->erreurs() === [];
+        return $this->erreursTotales === 0;
     }
 
     public function nbCreations(): int
@@ -133,8 +177,9 @@ final class RapportDeControle
             'creations'      => $this->nbCreations(),
             'modifications'  => $this->nbModifications(),
             'suppressions'   => $this->nbSuppressions(),
-            'nb_erreurs'     => count($this->erreurs()),
-            'nb_anomalies'   => count($this->anomalies),
+            'nb_erreurs'     => $this->erreursTotales,
+            'nb_anomalies'   => $this->anomaliesTotales,
+            'anomalies_tronquees' => $this->anomaliesTronquees(),
             'synthese'       => array_values(array_map(
                 static fn (array $ligne, string $code) => ['code' => $code] + $ligne,
                 $this->synthese,
@@ -174,6 +219,13 @@ final class RapportDeControle
                 $a['colonne'] ?? null,
             );
         }
+
+        // ⚠ LES DÉCOMPTES SE RELISENT, ILS NE SE RECOMPTENT PAS. Un rapport tronqué porte
+        // plus d'erreurs qu'il ne montre d'anomalies : les recompter sur la liste rendrait
+        // « confirmable » un fichier qui ne l'est pas, et un palier repris écrirait sur la
+        // foi de ce mensonge.
+        $rapport->erreursTotales = (int) ($donnees['nb_erreurs'] ?? count($rapport->erreurs()));
+        $rapport->anomaliesTotales = (int) ($donnees['nb_anomalies'] ?? count($rapport->anomalies));
 
         return $rapport;
     }

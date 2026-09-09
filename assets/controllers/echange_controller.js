@@ -8,6 +8,7 @@ import {
     exclusionsDe,
     meriteMemorisation,
 } from './echange-perimetre-persiste.js';
+import { menerAuBout } from './echange-paliers.js';
 
 /**
  * Contrôleur du composant « Importation / Exportation » (espace de travail).
@@ -16,10 +17,20 @@ import {
  *
  * Une barre indéterminée dit « quelque chose se passe » et rien de plus : l'utilisateur
  * ne sait ni ce qui avance, ni combien il en reste, ni s'il a le temps d'aller chercher
- * un café. Le serveur, lui, SAIT : il a compté ses lignes avant de commencer. Il envoie
- * donc son avancement au fil de l'eau, une ligne JSON à la fois, DANS la requête qui
- * travaille — et non dans une seconde requête qui l'interrogerait, car le serveur de
- * développement n'a qu'un processus PHP et se bloquerait lui-même.
+ * un café. Le serveur, lui, SAIT : il a compté ses lignes avant de commencer.
+ *
+ * ⚠ DEUX MÉCANIQUES COEXISTENT, ET CE N'EST PAS UN DOUBLON.
+ *
+ * L'EXPORTATION diffuse son avancement DANS la requête qui travaille, une ligne JSON à la
+ * fois — et non dans une seconde requête qui l'interrogerait, car le serveur de
+ * développement n'a qu'un processus PHP et se bloquerait lui-même. C'est une opération
+ * unique : elle n'a rien à reprendre, et le flux lui va très bien.
+ *
+ * L'IMPORTATION avance par PALIERS, chacun dans un processus neuf — c'est la seule
+ * protection contre la mémoire que le contrôle à blanc retient sans la rendre. Une
+ * requête qui diffuse est par construction un seul processus : elle ne pouvait donc pas
+ * convenir. L'écran pousse ou observe, selon qu'un worker est en marche, et l'état vit en
+ * base — un rafraîchissement retrouve l'import là où il en est.
  *
  * ⚠ RIEN N'EST INVENTÉ ICI. Le pourcentage vient du serveur ; le temps restant est
  * déduit du débit CONSTATÉ. Quand on ne sait pas, on n'affiche pas — c'est plus honnête
@@ -54,6 +65,8 @@ export default class extends Controller {
         exportUrl: String,
         importUrl: String,
         idEntreprise: Number,
+        // L'import à reprendre à l'affichage, 0 s'il n'y en a pas. Cf. `#reprendre()`.
+        reprendreRun: Number,
     };
 
     /**
@@ -105,10 +118,42 @@ export default class extends Controller {
             '.jsb-preset-filters-bar .jsb-preset-filters',
         );
         this._defilementDesChips.brancher();
+
+        this.#reprendre();
     }
 
     disconnect() {
         this._defilementDesChips?.detruire();
+    }
+
+    /**
+     * REPREND UN IMPORT QUI AVANCE ENCORE.
+     *
+     * ⚠ C'EST LA CONTREPARTIE DU TRAVAIL PAR PALIERS. Il ne vit plus dans la requête qui
+     * l'a lancé : rafraîchir la page, changer d'onglet ou revenir le lendemain laissait
+     * l'utilisateur devant un écran muet pendant que son portefeuille se reprenait. Il
+     * redéposait alors son fichier par doute — c'est-à-dire au pire moment.
+     *
+     * Sans worker, c'est aussi ce qui fait REPARTIR le travail : l'écran est le pousseur,
+     * et un import interrompu par une fermeture d'onglet reprend là où il s'était arrêté.
+     */
+    async #reprendre() {
+        const idRun = this.hasReprendreRunValue ? this.reprendreRunValue : 0;
+        if (!idRun || this.#occupe) return;
+
+        this.#occupe = true;
+        this.#demarrer();
+
+        try {
+            await this.#menerAuBout(this.#urlRun(idRun, 'etat'), { method: 'GET' });
+            this.#reload();
+        } catch (error) {
+            console.error('[echange] Reprise de l’import :', error);
+            this.#notifier('error', error.message || "L'importation en cours n'a pas pu reprendre.");
+        } finally {
+            this.#terminer();
+            this.#occupe = false;
+        }
     }
 
     /** Changement d'onglet (chip) : `data-echange-onglet-param`. */
@@ -709,23 +754,12 @@ export default class extends Controller {
                 corps.append('suppressions', '1');
             }
 
-            // Périmètre retenu. Rien n'est envoyé quand TOUT est coché : le serveur lit
-            // alors « toutes les feuilles du fichier », ce qui reste juste même si le
-            // classeur en contient une que cet écran ne connaît pas.
-            //
-            // ⚠ Ce choix est ENREGISTRÉ SUR LE CONTRÔLE, pas seulement appliqué ici : la
-            // confirmation relit le fichier entier, et sans cette mémoire elle
-            // réécrirait les feuilles qu'on vient d'écarter.
-            const retenues = this.#selection();
-            if (this.hasDonneeTarget && retenues.length < this.donneeTargets.length) {
-                corps.append('donnees', retenues.join(','));
-            }
+            // ⚠ IL N'Y A PLUS DE PÉRIMÈTRE À ENVOYER. Ce réglage écartait des FEUILLES,
+            // notion propre au classeur normalisé qui n'est plus importé : le classeur de
+            // reprise n'en a qu'une. Le serveur ne le lit plus ; l'envoyer encore
+            // laisserait croire à un filtre là où il n'y a rien à filtrer.
 
-            const final = await this.#lireFlux(this.importUrlValue, { method: 'POST', body: corps });
-
-            if (final?.type === 'erreur') {
-                throw new Error(final.message);
-            }
+            const final = await this.#menerAuBout(this.importUrlValue, { method: 'POST', body: corps });
 
             this.#notifier(
                 final?.confirmable ? 'success' : 'warning',
@@ -762,15 +796,14 @@ export default class extends Controller {
         this.#demarrer();
 
         try {
-            const final = await this.#lireFlux(this.#urlRun(idRun, 'confirmer'), { method: 'POST' });
-
-            if (final?.type === 'erreur') {
-                throw new Error(final.message);
-            }
+            const final = await this.#menerAuBout(this.#urlRun(idRun, 'confirmer'), { method: 'POST' });
+            const abouti = final?.statut === 'TERMINE';
 
             this.#notifier(
-                final?.success ? 'success' : 'error',
-                final?.message || (final?.success ? 'Importation terminée.' : "L'importation n'a pas abouti."),
+                abouti ? 'success' : 'error',
+                abouti
+                    ? 'Importation terminée.'
+                    : "L'importation n'a pas abouti : consultez le rapport pour savoir où elle s'est arrêtée.",
             );
 
             // Que l'import ait abouti ou échoué, l'écran affiche des chiffres périmés.
@@ -808,7 +841,71 @@ export default class extends Controller {
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // Flux de progression
+    // Paliers d'importation
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * MÈNE UN TRAVAIL D'IMPORT JUSQU'À SON TERME, palier par palier.
+     *
+     * ⚠ POURQUOI L'IMPORT NE SE DIFFUSE PLUS, ALORS QUE L'EXPORT LE FAIT ENCORE.
+     *
+     * Un export est une opération unique : elle réussit ou elle échoue, et la seule chose
+     * à dire pendant qu'elle travaille est où elle en est — d'où le flux NDJSON, qui reste
+     * en place et sert très bien.
+     *
+     * Un import, lui, se compte en paliers, parce que le contrôle à blanc retient
+     * plusieurs mégaoctets par ligne sans les rendre. Chaque palier doit repartir d'un
+     * PROCESSUS NEUF, sans quoi la mémoire s'accumule jusqu'à ce que PHP meure au milieu.
+     * Une requête qui diffuse est, par construction, un seul processus.
+     *
+     * Et l'état vit désormais en base : un rafraîchissement, un changement d'onglet, une
+     * soirée — l'écran retrouve l'import là où il en est. Un flux, lui, meurt avec sa page.
+     *
+     * ── DEUX FAÇONS D'AVANCER, ET LE SERVEUR DIT LAQUELLE ───────────────────────────
+     *   `async: false` — c'est NOUS qui poussons : une requête par palier.
+     *   `async: true`  — un worker travaille ; on se contente de regarder.
+     */
+    async #menerAuBout(url, options) {
+        return menerAuBout(await this.#json(url, options), {
+            avancer: (etat) => this.#json(this.#urlRun(etat.idRun, 'avancer'), { method: 'POST' }),
+            lire: (etat) => this.#json(this.#urlRun(etat.idRun, 'etat'), { method: 'GET' }),
+            publier: (etat) => this.#publierEtat(etat),
+        });
+    }
+
+    /** Une requête JSON dont l'échec porte le message du serveur, pas un code nu. */
+    async #json(url, options) {
+        const reponse = await fetch(url, {
+            ...options,
+            headers: { 'X-Requested-With': 'XMLHttpRequest', ...(options.headers || {}) },
+        });
+
+        const charge = await reponse.json().catch(() => null);
+        if (!reponse.ok) {
+            throw new Error(charge?.message || `Le serveur a répondu ${reponse.status}.`);
+        }
+
+        return charge;
+    }
+
+    /**
+     * Publie l'avancement sur la barre globale.
+     *
+     * ⚠ AUCUN TEMPS RESTANT N'EST ANNONCÉ. Le serveur ne mesure pas de débit d'un palier à
+     * l'autre — ils vivent dans des processus différents —, et l'inventer ici reviendrait
+     * à promettre une échéance qu'on ne connaît pas. Un pourcentage mesuré vaut mieux
+     * qu'une estimation fausse.
+     */
+    #publierEtat(etat) {
+        if (!etat) return;
+
+        document.dispatchEvent(new CustomEvent('app:loading.progress', {
+            detail: { pct: etat.pct ?? 0, libelle: etat.libelle || '', restant: null },
+        }));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Flux de progression (exportation)
     // ─────────────────────────────────────────────────────────────────────────────
 
     /**
