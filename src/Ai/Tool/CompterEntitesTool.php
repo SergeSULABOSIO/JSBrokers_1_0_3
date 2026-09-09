@@ -115,6 +115,13 @@ final class CompterEntitesTool implements AiToolInterface, AiToolDeComprehension
         if (PaiementPrimeIntent::concerne($normalized)) {
             return null;
         }
+        // « compte » est aussi le SUBSTANTIF d'un relevé : « où en est le compte du
+        // client X ? » demande sa position financière, pas un dénombrement. Sans
+        // cette garde, cet outil l'emportait sur lire_soa (les outils sont essayés
+        // par ordre alphabétique) et répondait par un nombre de clients.
+        if (ReleveDeCompteIntent::concerne($normalized)) {
+            return null;
+        }
 
         $shortName = $this->lexique->matchEntite($normalized);
         if ($shortName === null) {

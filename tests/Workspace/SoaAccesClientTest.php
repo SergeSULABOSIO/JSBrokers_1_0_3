@@ -442,6 +442,40 @@ class SoaAccesClientTest extends WebTestCase
         $this->assertStringContainsString('soa-section-solvabilite', $html);
     }
 
+    /**
+     * LA VUE « RELEVÉ » DE L'ESPACE DE TRAVAIL SE REND, ELLE AUSSI.
+     *
+     * Cette route n'était sollicitée que pour vérifier son refus d'un client d'un
+     * autre cabinet : son gabarit (`soa_client_workspace.html.twig`, ~600 lignes)
+     * n'était donc JAMAIS rendu par la suite. Une variable renommée y passait
+     * inaperçue — et c'est exactement ce que le partage des colonnes dérivées
+     * (« payé » et « solde », désormais calculées par SoaContextBuilder) vient de
+     * modifier dans ses deux tableaux.
+     *
+     * L'identité des CHIFFRES entre cette vue, l'aperçu, la page publique et Ket
+     * est garantie ailleurs, structurellement : une seule formule, vérifiée par
+     * `LireSoaToolIntegrationTest`. Ici on vérifie que la vue se rend et qu'elle
+     * lit bien ces colonnes.
+     */
+    public function testSoaWorkspaceViewRendersForOwnClient(): void
+    {
+        ['clientA' => $clientA] = $this->seed();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $this->client->request('GET', sprintf('/admin/soa/client/%d/workspace', $clientA->getId()));
+        $this->assertResponseIsSuccessful();
+
+        $payload = json_decode((string) $this->client->getResponse()->getContent(), true);
+        $this->assertIsArray($payload);
+        $this->assertStringContainsString(self::CLI_NOM, (string) ($payload['title'] ?? ''));
+
+        $html = (string) ($payload['html'] ?? '');
+        $this->assertStringContainsString(self::CLI_NOM, $html);
+        foreach (['soa-section-recap', 'soa-section-polices', 'soa-section-echeancier', 'soa-section-solvabilite'] as $section) {
+            $this->assertStringContainsString($section, $html, sprintf('La section %s doit être rendue.', $section));
+        }
+    }
+
     // ── Boîte de choix du destinataire ────────────────────────────────────────
 
     public function testEnvoiPickerListsClientAndContactEmails(): void
