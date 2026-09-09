@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\AssistantTacheRepository;
+use App\Service\Terminal\Terminal;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -86,6 +87,27 @@ class AssistantTache
 
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $fichiersJoints = null;
+
+    /**
+     * LE TERMINAL DEPUIS LEQUEL LA QUESTION A ÉTÉ POSÉE.
+     *
+     * ── POURQUOI IL EST PORTÉ PAR LA TÂCHE, ET NON LU AU MOMENT DU TRAITEMENT ──
+     * Un téléphone n'a pas d'interface à colonnes : Ket ne doit donc pas y
+     * disposer des outils qui ouvrent une rubrique ou une fiche, sous peine de
+     * promettre un écran qui n'arrivera jamais. Or le traitement peut être
+     * ASYNCHRONE (ASSISTANT_ASYNC, worker Messenger) : quand l'outil s'exécute,
+     * la requête HTTP qui portait le terminal n'existe plus, et le worker n'a
+     * aucun moyen de la retrouver.
+     *
+     * C'est donc un INSTANTANÉ pris à l'envoi, exactement comme
+     * `contexteObjets` : ce que l'appareil était au moment de la question, et
+     * qui ne change pas parce que l'utilisateur a changé d'appareil depuis.
+     *
+     * NULLABLE, et `null` vaut ORDINATEUR : les tâches déjà en file au moment du
+     * déploiement n'en portent pas, et elles doivent se traiter comme avant.
+     */
+    #[ORM\Column(length: 16, nullable: true, enumType: Terminal::class)]
+    private ?Terminal $terminal = null;
 
     /** Le message cité (« Répondre » du menu de bulle), le cas échéant. */
     #[ORM\ManyToOne]
@@ -281,5 +303,22 @@ class AssistantTache
     public function estTerminee(): bool
     {
         return $this->statut === self::STATUT_TERMINEE;
+    }
+
+    /**
+     * Le terminal de la question. Jamais `null` en sortie : une tâche sans
+     * terminal (file antérieure au déploiement) se traite comme un ordinateur,
+     * c'est-à-dire avec toutes les capacités — le repli qui n'enlève rien.
+     */
+    public function getTerminal(): Terminal
+    {
+        return $this->terminal ?? Terminal::ORDINATEUR;
+    }
+
+    public function setTerminal(?Terminal $terminal): static
+    {
+        $this->terminal = $terminal;
+
+        return $this;
     }
 }

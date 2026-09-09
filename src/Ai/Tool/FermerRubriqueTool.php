@@ -34,8 +34,13 @@ use App\Service\Workspace\WorkspaceAccessResolver;
  * l'interface. Refuser de fermer la rubrique d'une entité qu'on n'a pas le
  * droit de LIRE serait absurde — cet onglet ne serait pas ouvert.
  */
-final class FermerRubriqueTool implements AiToolInterface
+final class FermerRubriqueTool implements AiToolInterface, AiToolConditionnel
 {
+    // Cet outil fait BOUGER L'ÉCRAN : il n'est donc pas déclaré au modèle
+    // quand l'appareil n'a pas d'interface à colonnes. Cf. ExigeLesColonnes,
+    // qui porte le pourquoi.
+    use ExigeLesColonnes;
+
     /** Mot-clé de la fermeture totale, accepté partout où une entité est attendue. */
     public const TOUTES = 'Toutes';
 

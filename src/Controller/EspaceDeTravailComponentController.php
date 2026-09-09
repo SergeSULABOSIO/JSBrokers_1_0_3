@@ -15,15 +15,21 @@ namespace App\Controller;
 
 use Twig\Environment;
 use Psr\Log\LoggerInterface;
+use App\Ai\Acces\PorteDeKet;
 use App\Constantes\Constante;
 use App\Entity\Client;
+use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Utilisateur;
 use Symfony\Component\PropertyAccess\PropertyAccess;
+use App\Repository\AssistantConversationRepository;
+use App\Repository\AssistantParametresRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Service\Onboarding\OnboardingCompletude;
+use App\Service\Terminal\DetecteurDeTerminal;
+use App\Service\Terminal\TerminalContext;
 use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
 use App\Controller\Admin\ControllerUtilsTrait;
@@ -49,6 +55,13 @@ class EspaceDeTravailComponentController extends AbstractController
         private InviteRepository $inviteRepository,
         private array $menuData, // Injection du paramètre de service
         private OnboardingCompletude $onboardingCompletude,
+        // LE TERMINAL DÉCIDE DE LA SURFACE. Téléphone et tablette reçoivent la
+        // conversation avec Ket en plein écran ; l'ordinateur garde les quatre
+        // colonnes. Cf. App\Service\Terminal\Terminal::modeKet().
+        private TerminalContext $terminal,
+        private PorteDeKet $porteDeKet,
+        private AssistantConversationRepository $conversationRepository,
+        private AssistantParametresRepository $parametresRepository,
     ) {}
 
     protected function getCollectionMap(): array
@@ -82,6 +95,22 @@ class EspaceDeTravailComponentController extends AbstractController
         if ($user->getConnectedTo() !== $access['entreprise']) {
             $user->setConnectedTo($access['entreprise']);
             $this->em->flush();
+        }
+
+        // ── LE TERMINAL CHOISIT LA SURFACE ──────────────────────────────────────
+        //
+        // Sur téléphone et tablette, on ne travaille pas dans quatre colonnes : on
+        // travaille EN PARLANT à Ket. La bascule est ici, et non dans le gabarit,
+        // parce que tout ce qui suit — traitement du menu, filtrage par périmètre,
+        // bilan de démarrage — ne sert qu'aux colonnes. Le calculer pour ne pas
+        // l'afficher serait payer plein tarif un rendu qu'on jette.
+        //
+        // MÊME ROUTE, MÊME URL, MÊMES GARDES : la validation d'accès et la synchro
+        // de `connectedTo` ci-dessus ont déjà eu lieu. Un lien vers l'espace de
+        // travail reste donc valide d'un appareil à l'autre, et aucune surface de
+        // sécurité n'est ajoutée — seul le gabarit final change.
+        if ($this->terminal->modeKet()) {
+            return $this->renderEspaceKet($access['entreprise'], $access['invite']);
         }
 
         // La logique de transformation du menu est maintenant dans le ControllerUtilsTrait.
@@ -136,6 +165,85 @@ class EspaceDeTravailComponentController extends AbstractController
             // alors de lui-même sur le guide, plutôt que de rendre une seconde fois les
             // mêmes cartes ailleurs dans la page.
             'onboardingAutoOuvrir' => $request->query->getBoolean('onboarding'),
+        ]);
+    }
+
+    /**
+     * L'ESPACE DE TRAVAIL EN MODE KET : la conversation, en plein écran, et rien
+     * d'autre.
+     *
+     * ── LA PORTE D'ABORD ────────────────────────────────────────────────────
+     * Ket est verrouillée par deux conditions (module dans le périmètre de
+     * l'invité, solde de tokens payant du cabinet). Sur ordinateur, un compte qui
+     * n'y a pas droit garde tout le reste de l'application : le refus se lit dans
+     * une seule rubrique. Sur téléphone, il n'y a rien d'autre — un refus muet
+     * donnerait un écran vide sans explication. On sert donc une page qui NOMME la
+     * raison et, pour le propriétaire seul, la façon d'y remédier.
+     *
+     * ── QUELLE CONVERSATION S'OUVRE ─────────────────────────────────────────
+     * La plus récente (`findPourInvite` trie déjà par `updatedAt` décroissant) :
+     * on reprend là où l'on s'était arrêté, ce qui est le geste attendu en
+     * ambulatoire. Aucune n'existe encore ? On n'en crée PAS ici : cette action
+     * répond à un GET, et un GET n'écrit pas. Le gabarit ouvre alors la feuille
+     * des conversations, dont le bouton « Nouvelle conversation » fait le POST —
+     * le même chemin exactement que sur ordinateur.
+     */
+    private function renderEspaceKet(Entreprise $entreprise, ?Invite $invite): Response
+    {
+        // LA SORTIE QUI MARCHE TOUJOURS, calculée ici et non dans le gabarit : elle
+        // a besoin de l'identifiant de l'invité, qu'un gabarit devrait sinon
+        // inventer. `?terminal=ordinateur` est lu par le détecteur PHP puis
+        // mémorisé en cookie (TerminalCookieSubscriber) — le choix survit donc à
+        // la navigation suivante.
+        $versionOrdinateurUrl = $this->generateUrl('app_espace_de_travail_component.index', [
+            'idInvite' => $invite?->getId() ?? 0,
+            'idEntreprise' => $entreprise->getId(),
+            DetecteurDeTerminal::PARAM => 'ordinateur',
+        ]);
+
+        $motif = $this->porteDeKet->motifDeFermeture($invite, $entreprise);
+        if ($motif !== null) {
+            return $this->render('espace_de_travail_component/ket_indisponible.html.twig', [
+                'motif' => $motif,
+                'assistantNom' => $this->parametresRepository->nomPour($entreprise),
+                'entrepriseNom' => (string) $entreprise->getNom(),
+                'estProprietaire' => $this->porteDeKet->estProprietaire($invite, $entreprise),
+                'versionOrdinateurUrl' => $versionOrdinateurUrl,
+                'sortieUrl' => $this->generateUrl('admin.entreprise.index'),
+            ]);
+        }
+
+        /** @var Invite $invite La porte ouverte garantit un invité non nul. */
+        $conversations = $this->conversationRepository->findPourInvite($invite, $entreprise);
+        $derniere = $conversations[0] ?? null;
+
+        return $this->render('espace_de_travail_component/ket.html.twig', [
+            'idEntreprise' => $entreprise->getId(),
+            'idInvite' => $invite->getId(),
+            'entrepriseNom' => (string) $entreprise->getNom(),
+            'assistantNom' => $this->parametresRepository->nomPour($entreprise),
+            // LE CHAT N'EST PAS RENDU ICI, IL EST ADRESSÉ.
+            //
+            // Son partial a besoin de bien plus que d'une conversation : programme du
+            // jour, fiches de contexte, thème de l'utilisateur, plafonds de fichiers.
+            // Tout cela est déjà calculé par `admin.assistantia.chat`, qui re-vérifie
+            // au passage les deux verrous. Recopier ce calcul ici en ferait une
+            // seconde version à tenir à jour — celle qui, un jour, oublierait le
+            // programme du jour.
+            //
+            // Le front va donc chercher le chat à cette URL, exactement comme le
+            // workspace de bureau le fait au rechargement
+            // (`_restoreHtmlVisualizationTab`). Le squelette et la barre de
+            // progression couvrent l'aller-retour.
+            'chatUrl' => $derniere === null ? null : $this->generateUrl('admin.assistantia.chat', [
+                'idEntreprise' => $entreprise->getId(),
+                'idConversation' => $derniere->getId(),
+            ]),
+            'conversationsUrl' => $this->generateUrl('admin.assistantia.workspace', [
+                'idEntreprise' => $entreprise->getId(),
+            ]),
+            'versionOrdinateurUrl' => $versionOrdinateurUrl,
+            'sortieUrl' => $this->generateUrl('admin.entreprise.index'),
         ]);
     }
 

@@ -199,6 +199,29 @@
                         } only %}
                     </div>
                 {% endif %}
+                {# ── RETOUR AU MODE CONVERSATION ─────────────────────────────────
+                   Cette entrée n'apparaît QUE sur un appareil tactile qui a demandé la
+                   version ordinateur. Sur un vrai ordinateur, elle n'aurait aucun sens
+                   et n'encombre donc pas la navigation ; sur une tablette-clavier, elle
+                   est le chemin de retour — sans elle, la bascule serait un aller sans
+                   billet de retour, et le cookie garderait l'utilisateur en version
+                   ordinateur pour un an.
+
+                   `terminal_appareil()` dit ce que l'appareil EST, indépendamment du
+                   mode demandé : c'est ce qui permet de nommer le bon terminal dans le
+                   lien (« mobile » sur un téléphone, « tablette » sur une tablette). #}
+                {% set _appareil = terminal_appareil() %}
+                {% if _appareil != 'ordinateur' %}
+                    <a href="{{ path('app_espace_de_travail_component.index', {idInvite: idInvite, idEntreprise: idEntreprise, (terminal_param()): _appareil}) }}"
+                        class="nav-item"
+                        role="button"
+                        title="Revenir au mode conversation"
+                        data-action="click->workspace-manager#handleLoadingStart"
+                    >
+                        <twig:UX:Icon name="{{ resolve_icon_name('assistant-ia') }}" class="nav-icon" />
+                        <span class="nav-text">Mode conversation</span>
+                    </a>
+                {% endif %}
                 <a href="{{ path('admin.entreprise.index') }}"
                     class="nav-item nav-item-logout"
                     role="button"

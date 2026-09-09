@@ -28,8 +28,13 @@ use App\Services\Search\TranchePaiementScope;
  * FAIL-CLOSED : lecture requise sur l'entité — le menu lui-même est filtré au
  * périmètre, l'assistant respecte le même contrat.
  */
-final class OuvrirRubriqueTool implements AiToolInterface
+final class OuvrirRubriqueTool implements AiToolInterface, AiToolConditionnel
 {
+    // Cet outil fait BOUGER L'ÉCRAN : il n'est donc pas déclaré au modèle
+    // quand l'appareil n'a pas d'interface à colonnes. Cf. ExigeLesColonnes,
+    // qui porte le pourquoi.
+    use ExigeLesColonnes;
+
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly EntiteLexique $lexique,

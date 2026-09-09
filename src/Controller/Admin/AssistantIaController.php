@@ -2,6 +2,7 @@
 
 namespace App\Controller\Admin;
 
+use App\Ai\Acces\PorteDeKet;
 use App\Ai\Comprehension\ClarificationEnAttente;
 use App\Ai\AiContextBuilder;
 use App\Ai\Boussole\PlanDuJourService;
@@ -160,6 +161,11 @@ class AssistantIaController extends AbstractController
         // Source unique de la matérialité d'un Document (nom de téléchargement,
         // chemin, poids), partagée avec la rubrique Documents du workspace.
         private DocumentFichier $documentFichier,
+        // Les DEUX conditions d'ouverture de Ket (module + premium), écrites
+        // une seule fois : l'espace de travail mobile est une seconde porte
+        // sur le même assistant, et deux portes qui recopient la condition
+        // finissent par la lire différemment.
+        private PorteDeKet $porte,
     ) {
     }
 
@@ -2190,7 +2196,7 @@ class AssistantIaController extends AbstractController
      */
     private function moduleAutorise(?Invite $invite): bool
     {
-        return $invite !== null && $this->accessResolver->canRead($invite, 'AssistantIa');
+        return $this->porte->moduleAutorise($invite);
     }
 
     /** Panneau « fonctionnalité premium » (compte sans solde payant), col-3 ou col-4. */
@@ -2200,7 +2206,7 @@ class AssistantIaController extends AbstractController
             'assistantNom'    => $this->parametresRepository->nomPour($entreprise),
             'entrepriseNom'   => (string) $entreprise->getNom(),
             // Seul le propriétaire peut acheter des tokens : le CTA lui est réservé.
-            'estProprietaire' => $entreprise->getUtilisateur()?->getId() === $invite->getUtilisateur()?->getId(),
+            'estProprietaire' => $this->porte->estProprietaire($invite, $entreprise),
         ]);
     }
 

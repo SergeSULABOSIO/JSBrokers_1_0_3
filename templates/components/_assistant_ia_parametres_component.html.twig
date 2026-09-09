@@ -300,9 +300,11 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('action:open') }}" style="width:20px;height:20px;" />
                 </span>
                 <div>
-                    <h5>Naviguer pour vous</h5>
+                    <h5>Naviguer pour vous <em>(sur ordinateur)</em></h5>
                     <p>Ouvre directement la rubrique demandée ou le tableau de bord — et peut
                        proposer la fermeture de l'espace de travail (toujours confirmée par vous).
+                       Sur téléphone et tablette, il n'y a pas de rubrique à ouvrir : l'assistant
+                       montre alors l'information directement dans sa réponse.
                         <span class="aip-doc-ex">« Ouvre la rubrique bordereaux » · « Ouvre le tableau de bord »</span></p>
                 </div>
             </li>
@@ -311,9 +313,26 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('action:view') }}" style="width:20px;height:20px;" />
                 </span>
                 <div>
-                    <h5>Afficher une fiche à l'écran</h5>
+                    <h5>Afficher une fiche à l'écran <em>(sur ordinateur)</em></h5>
                     <p>Ouvre l'enregistrement demandé dans la colonne de visualisation, avec ses indicateurs.
+                       Sur mobile, il en restitue le contenu dans la conversation.
                         <span class="aip-doc-ex">« Visualise le client Kin Avia »</span></p>
+                </div>
+            </li>
+            <li class="aip-doc-card">
+                <span class="aip-doc-card-ic" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('assistant-ia') }}" style="width:20px;height:20px;" />
+                </span>
+                <div>
+                    <h5>Être toute l'application sur téléphone et tablette</h5>
+                    <p>Sur un appareil mobile, l'espace de travail à colonnes n'est pas servi :
+                       la conversation occupe l'écran entier. Consultation, calculs, documents,
+                       téléchargements et <strong>saisie</strong> fonctionnent à l'identique — le
+                       formulaire s'ouvre par-dessus la conversation. Quelques gestes d'atelier
+                       restent réservés à l'ordinateur (rapprochement d'un bordereau, liens
+                       publics de relevé, renvoi d'invitation) ; la liste exacte est tenue par un
+                       test, elle ne peut pas s'allonger sans être écrite.
+                        <span class="aip-doc-ex">« Crée un client » · « Quelles polices arrivent à échéance ? »</span></p>
                 </div>
             </li>
             <li class="aip-doc-card">

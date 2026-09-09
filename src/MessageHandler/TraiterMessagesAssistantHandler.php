@@ -139,7 +139,7 @@ final class TraiterMessagesAssistantHandler
         $this->identite->endosser($conversation->getInvite(), $conversation->getEntreprise());
 
         try {
-            $messageAssistant = $this->traitement->repondre($messageUser);
+            $messageAssistant = $this->traitement->repondre($messageUser, $tache->getTerminal());
 
             $tache->setMessageAssistant($messageAssistant)
                 ->setStatut(AssistantTache::STATUT_TERMINEE)

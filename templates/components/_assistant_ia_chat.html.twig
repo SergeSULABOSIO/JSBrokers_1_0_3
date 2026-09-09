@@ -46,6 +46,14 @@
      data-assistant-chat-id-invite-value="{{ idInvite }}"
      data-assistant-chat-id-conversation-value="{{ conversation.id }}"
      data-assistant-chat-assistant-nom-value="{{ assistantNom }}"
+     {# LE TERMINAL, PUBLIÉ AU CHAT. Sur téléphone et tablette, il n'y a ni menu,
+        ni onglet, ni colonne de fiche : les trois actions qui les visent
+        (open-rubrique, close-rubrique, open-visualization) sont refusées par un
+        message explicite au lieu d'émettre un événement que personne n'écoute.
+        Le serveur ne déclare déjà plus ces outils au modèle dans ce mode
+        (App\Ai\Tool\ExigeLesColonnes) : ceci est le filet, pour la page restée
+        ouverte pendant un déploiement. Ce n'est PAS un droit — cf. AiScope. #}
+     data-assistant-chat-terminal-value="{{ terminal_courant() }}"
      {# URL de renommage de CETTE conversation, lue par le workspace-manager
         quand on double-clique le libellé de l'onglet qui contient ce chat.
 
@@ -560,6 +568,45 @@
         .jsb-ai-chat .aic-msg-menu-btn:focus-visible,
         .jsb-ai-chat .aic-msg-menu-btn[aria-expanded="true"] { opacity:1; }
         .jsb-ai-chat .aic-msg-menu-btn:hover { color:var(--aic-accent); border-color:var(--aic-accent); }
+
+        /* ── AU DOIGT, IL N'Y A PAS DE SURVOL ──────────────────────────────────
+           Le bouton ⋮ d'un message n'est révélé que par `:hover` / `:focus-within`.
+           Sur un appareil tactile, ces deux états n'arrivent jamais avant un appui —
+           et l'appui, lui, va sur le texte. Résultat : tout le menu d'un message
+           (répondre, exporter, ajouter au contexte, envoyer par e-mail) était
+           inatteignable au doigt. Ce n'est pas un détail de finition : depuis que le
+           téléphone reçoit la conversation comme SEULE surface, c'est une famille
+           entière de gestes qui disparaissait.
+
+           On le rend donc PERMANENT sur ces appareils, et on le sort de la bulle :
+           permanent ET superposé, il masquerait le premier mot de chaque message
+           (constaté à 390 px). L'espace existe des deux côtés — la bulle ne prend
+           que 92 % de la largeur, et la place libre est justement du côté opposé à
+           son alignement. */
+        @media (hover: none) {
+            .jsb-ai-chat .aic-msg-menu-btn {
+                opacity: 1;
+                /* Bulle assistant : alignée à gauche, on sort à droite. */
+                top: 0;
+                right: -32px;
+            }
+
+            /* Bulle utilisateur : alignée à droite, on sort à gauche. */
+            .jsb-ai-chat .aic-msg--user .aic-msg-menu-btn {
+                right: auto;
+                left: -32px;
+            }
+
+            /* La bulle cède les 32 px : sans quoi le bouton sortirait du fil, qui
+               ne défile pas horizontalement. */
+            .jsb-ai-chat .aic-msg { max-width: calc(92% - 32px); }
+
+            /* L'aide s'adresse au doigt : ni Entrée, ni Maj, ni clic droit. */
+            .jsb-ai-chat .aic-hint--pointeur { display: none; }
+        }
+
+        /* Par défaut (souris, clavier), c'est l'aide aux raccourcis qui parle. */
+        .jsb-ai-chat .aic-hint--tactile { display: none; }
         .jsb-ai-chat .aic-msg-menu-btn:focus-visible { outline:2px solid var(--aic-accent); outline-offset:2px; }
         /* Tactile : pas de survol possible, le bouton reste donc visible. */
         @media (hover:none) { .jsb-ai-chat .aic-msg-menu-btn { opacity:1; } }
@@ -1555,7 +1602,20 @@ Relisez, corrigez si besoin, puis envoyez. La langue suit l'affichage (français
             </button>
         </div>
         <div class="aic-composer-foot">
-            <span class="aic-hint" id="aic-hint-{{ conversation.id }}">Entrée : envoyer · Maj + Entrée : retour à la ligne · Clic droit sur un message : ses actions</span>
+            {# DEUX AIDES, UNE SEULE MONTRÉE. Les raccourcis clavier et le clic droit
+               ne veulent rien dire au doigt : sur un téléphone, cette ligne
+               enseignait trois gestes dont aucun n'existe. Les deux variantes sont
+               rendues, et c'est le CSS qui tranche selon l'appareil
+               (`@media (hover: none)`) — pas de JavaScript, donc rien à attendre, et
+               une seule des deux est dans l'arbre d'accessibilité à la fois.
+
+               ⚠ L'`id` reste porté par le conteneur : c'est lui que le champ de
+               saisie désigne en `aria-describedby`. Le déplacer sur l'une des
+               variantes rendrait la description muette sur l'autre appareil. #}
+            <span class="aic-hint" id="aic-hint-{{ conversation.id }}">
+                <span class="aic-hint--pointeur">Entrée : envoyer · Maj + Entrée : retour à la ligne · Clic droit sur un message : ses actions</span>
+                <span class="aic-hint--tactile">Appuyez sur ⋮ à côté d'un message pour ses actions</span>
+            </span>
             <span class="aic-count" id="aic-count-{{ conversation.id }}" hidden
                   aria-live="polite" data-assistant-chat-target="count"></span>
         </div>

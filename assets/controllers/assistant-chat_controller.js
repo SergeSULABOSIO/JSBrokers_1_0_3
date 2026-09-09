@@ -134,6 +134,14 @@ export default class extends Controller {
         idInvite: Number,
         idConversation: Number,
         assistantNom: String,
+        /**
+         * Le terminal de l'utilisateur, publié par le serveur (cf.
+         * App\Service\Terminal). Ce n'est PAS un droit : il dit seulement de
+         * quoi l'écran est capable. En mode Ket (téléphone, tablette), il n'y a
+         * ni menu, ni onglet, ni colonne de fiche — les trois actions qui les
+         * visent sont refusées explicitement plus bas.
+         */
+        terminal: String,
     };
 
     connect() {
@@ -795,6 +803,7 @@ export default class extends Controller {
                     await this.openDialogAction(action);
                     break;
                 case 'open-visualization':
+                    if (this._sansColonnes(action.type)) break;
                     await this.openVisualizationAction(action);
                     break;
                 case 'open-rubrique':
@@ -802,6 +811,7 @@ export default class extends Controller {
                     // pose les critères calculés côté serveur. Sans eux, la liste
                     // affichée contredisait la réponse écrite (le chat annonçait les
                     // deux pistes d'un client, l'écran en montrait cinq).
+                    if (this._sansColonnes(action.type)) break;
                     document.dispatchEvent(new CustomEvent('app:workspace.open-rubrique', {
                         detail: { entityName: action.entite, criteres: action.criteres || null },
                     }));
@@ -811,6 +821,7 @@ export default class extends Controller {
                     // chaque onglet nommé. Sans ce case, Ket n'avait aucun moyen de
                     // fermer quoi que ce soit — elle ouvrait le tableau de bord et
                     // annonçait la fermeture (incident du 2026-08-10).
+                    if (this._sansColonnes(action.type)) break;
                     document.dispatchEvent(new CustomEvent('app:workspace.close-rubrique', {
                         detail: { entityNames: action.entites },
                     }));
@@ -3916,6 +3927,49 @@ export default class extends Controller {
     }
 
     /** Bulle système (avertissement 402 / erreur réseau). */
+    /**
+     * REFUS EXPLICITE DES ACTIONS QUI EXIGENT LES COLONNES.
+     *
+     * Trois actions sur quinze font bouger une colonne de l'espace de travail
+     * (`open-rubrique`, `close-rubrique`, `open-visualization`). Sur téléphone et
+     * tablette, la conversation est la seule surface : elles n'ont rien à viser,
+     * et leur événement partirait vers un `workspace-manager` qui n'est pas là.
+     *
+     * ── POURQUOI UN MESSAGE, ET PAS UN SILENCE ────────────────────────────────
+     * Le serveur ne déclare déjà plus ces outils au modèle sur un tel appareil
+     * (cf. App\Ai\Tool\ExigeLesColonnes) : en régime normal, on ne passe donc
+     * jamais ici. Ce garde-fou couvre le cas réel où la page est restée ouverte
+     * pendant un déploiement, ou où une réponse a été préparée depuis un autre
+     * appareil. Dans ce cas, l'utilisateur doit APPRENDRE pourquoi rien ne
+     * s'ouvre — c'est la même règle que le `default` de ce `switch` : jamais
+     * d'échec silencieux.
+     *
+     * ⚠ Les actions qui ne dépendent PAS des colonnes ne passent pas par ici et
+     * ne doivent jamais y passer : `open-dialog` (donc toute la saisie et la
+     * modification), le picker de SOA, les ouvertures d'URL, les téléchargements
+     * et les panneaux `ket-*` reposent sur `cerveau` / `dialog-manager`, qui
+     * vivent sur le `<body>` et sont présents partout.
+     *
+     * @param {string} type Le type d'action, pour nommer la cause en console.
+     * @returns {boolean} `true` si l'action a été refusée (l'appelant doit sortir).
+     */
+    _sansColonnes(type) {
+        // Le mode Ket couvre le téléphone ET la tablette : c'est
+        // `Terminal::modeKet()` côté PHP, et il n'y a qu'un cas à exclure.
+        if (!this.hasTerminalValue || this.terminalValue === '' || this.terminalValue === 'ordinateur') {
+            return false;
+        }
+
+        console.warn(`[Ket] Action « ${type} » impossible sur cet appareil : aucune interface à colonnes.`);
+        this.appendNotice(
+            'warning',
+            "Cette vue demande un ordinateur : sur téléphone et tablette, l'espace de travail se "
+            + "résume à notre conversation. Demandez-moi plutôt de vous montrer l'information ici.",
+        );
+
+        return true;
+    }
+
     appendNotice(kind, texte) {
         const notice = document.createElement('p');
         notice.className = `aic-notice aic-notice--${kind}`;

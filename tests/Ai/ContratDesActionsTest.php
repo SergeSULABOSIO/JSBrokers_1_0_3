@@ -86,6 +86,85 @@ class ContratDesActionsTest extends TestCase
     }
 
     /**
+     * LES ACTIONS QUI EXIGENT LES COLONNES SONT REFUSÉES, ET SEULEMENT ELLES.
+     *
+     * Sur téléphone et tablette, la conversation est la seule surface : trois actions
+     * (ouvrir une rubrique, fermer un onglet, poser une fiche) n'ont rien à viser. Le
+     * chat doit donc les refuser AVANT d'émettre leur événement, et le dire.
+     *
+     * ── CE QUI ARRIVERAIT SANS CE TEST ─────────────────────────────────────────────
+     * Deux dérives symétriques, toutes deux muettes :
+     *  - un refus OUBLIÉ sur l'une des trois : l'événement partirait vers un
+     *    `workspace-manager` absent, Ket annoncerait « j'ouvre la liste » et rien
+     *    n'arriverait — le défaut exact que ce dispositif existe pour empêcher ;
+     *  - un refus AJOUTÉ sur une action qui n'en a pas besoin : `open-dialog`, le
+     *    picker de SOA, les téléchargements et les panneaux `ket-*` reposent sur
+     *    `cerveau` / `dialog-manager`, qui vivent sur le `<body>` et fonctionnent
+     *    partout. Refuser `open-dialog` sur mobile emporterait TOUTE l'écriture
+     *    métier en ambulatoire, c'est-à-dire la raison d'être du mode Ket.
+     */
+    public function testSeulesLesActionsAColonnesSontRefuseesParLeChat(): void
+    {
+        $module = (string) file_get_contents(self::CHAT);
+
+        $debut = strpos($module, 'async executeActions(actions)');
+        self::assertNotFalse($debut);
+        $fin = strpos($module, 'default:', $debut);
+        self::assertNotFalse($fin);
+        $corpsDuSwitch = substr($module, $debut, $fin - $debut);
+
+        // Le refus est écrit une fois, dans une méthode nommée : on repère donc les
+        // `case` qui l'appellent, sans dépendre de la formulation du message.
+        preg_match_all(
+            "/case '([^']+)':(?:(?!case ').)*?_sansColonnes\(/s",
+            $corpsDuSwitch,
+            $trouves,
+        );
+        $refuses = array_values(array_unique($trouves[1]));
+        sort($refuses);
+
+        $attendus = TypeAction::valeursExigeantLesColonnes();
+        sort($attendus);
+
+        self::assertSame($attendus, $refuses, sprintf(
+            "Le chat doit refuser exactement les actions qui exigent l'interface à colonnes.
+"
+            . "Attendu (TypeAction::exigeLesColonnes) : %s
+Refusé par le chat : %s
+"
+            . "Un manque = un événement émis dans le vide sur téléphone ; un excès = une "
+            . "capacité retirée sans raison (open-dialog fonctionne partout).",
+            implode(', ', $attendus),
+            implode(', ', $refuses),
+        ));
+    }
+
+    /**
+     * LE CHAT SAIT DE QUEL APPAREIL IL PARLE.
+     *
+     * Le refus ci-dessus se décide sur une valeur Stimulus, que le gabarit du chat
+     * doit poser depuis le serveur. Sans elle, `_sansColonnes` répondrait toujours
+     * « non » et le mode Ket perdrait son filet — silencieusement, puisque le refus
+     * est justement un chemin qu'on ne prend jamais en régime normal.
+     */
+    public function testLeGabaritDuChatPublieLeTerminal(): void
+    {
+        $gabarit = (string) file_get_contents(__DIR__ . '/../../templates/components/_assistant_ia_chat.html.twig');
+        self::assertStringContainsString(
+            'data-assistant-chat-terminal-value="{{ terminal_courant() }}"',
+            $gabarit,
+            'Le chat doit recevoir le terminal du serveur, jamais le deviner.',
+        );
+
+        $module = (string) file_get_contents(self::CHAT);
+        self::assertStringContainsString(
+            'terminal: String,',
+            $module,
+            'La valeur Stimulus doit être déclarée, sinon `terminalValue` lèvera.',
+        );
+    }
+
+    /**
      * Les constantes historiques du plan ne doivent pas redevenir une seconde vérité :
      * elles sont lues dans le contrôleur, la meta des messages et de nombreux tests.
      */
