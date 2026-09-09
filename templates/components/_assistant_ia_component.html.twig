@@ -78,6 +78,13 @@
             width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center;
         }
         .jsb-ai .ai-conv-rename:hover { color:#0047AB; background:#f8f9fa; }
+
+        /* Aide contextuelle : au doigt, il n'y a pas de menu de rubriques. */
+        .jsb-ai .ai-hint--tactile { display:none; }
+        @media (hover: none) {
+            .jsb-ai .ai-hint--pointeur { display:none; }
+            .jsb-ai .ai-hint--tactile { display:inline; }
+        }
         .jsb-ai .ai-conv-delete:hover { color:#dc3545; background:#f8f9fa; }
         .jsb-ai .ai-conv-rename:focus-visible,
         .jsb-ai .ai-conv-delete:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
@@ -178,9 +185,20 @@
         {% endif %}
 
         {% if peutParametrer %}
+            {# L'ASTUCE DOIT ÊTRE SUIVABLE. Elle envoie vers une rubrique du menu ;
+               sur téléphone et tablette, ce menu n'existe pas — le conseil devenait
+               une impasse. Les deux formulations sont rendues, le CSS tranche selon
+               l'appareil (`@media (hover: none)`) : aucune requête, aucun
+               JavaScript, et une seule des deux dans l'arbre d'accessibilité. #}
             <p class="ai-hint">
-                Astuce : vous pouvez renommer votre assistant dans la rubrique
-                « Paramètres IA » du groupe IA.
+                <span class="ai-hint--pointeur">
+                    Astuce : vous pouvez renommer votre assistant dans la rubrique
+                    « Paramètres IA » du groupe IA.
+                </span>
+                <span class="ai-hint--tactile">
+                    Astuce : le nom de votre assistant se change depuis un ordinateur,
+                    dans la rubrique « Paramètres IA ».
+                </span>
             </p>
         {% endif %}
     </div>

@@ -1,5 +1,12 @@
 <!DOCTYPE html>
-<html lang="{{ app.request.locale|default('fr') }}">
+{# `data-terminal` : LE TERMINAL, PUBLIÉ AU FRONT.
+   Le serveur décide de la surface (conversation plein écran ou espace de travail à
+   colonnes) et l'écrit ici ; CSS et JavaScript obéissent, ils ne devinent pas. Même
+   doctrine que `meta[app-timezone]` juste dessous : une seule source de vérité, posée
+   par PHP, lue partout ailleurs. `data-terminal-fige` dit que ce mode a été CHOISI
+   (bascule ou `?terminal=`) — la sonde ci-dessous se tait alors. #}
+<html lang="{{ app.request.locale|default('fr') }}"
+      data-terminal="{{ terminal_courant() }}"{% if terminal_fige() %} data-terminal-fige="1"{% endif %}>
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,6 +14,61 @@
 		   Lue telle quelle sur l'horloge PHP courante : une seule source de vérité, que le
 		   serveur ET le front suivent pour afficher exactement la même heure. #}
 		<meta name="app-timezone" content="{{ 'now'|date('e') }}">
+		{# ── LA SONDE DU TERMINAL ────────────────────────────────────────────────────
+		   Le serveur a déjà tranché (cf. App\Service\Terminal\DetecteurDeTerminal) et
+		   l'a écrit sur <html data-terminal>. Ce script ne décide rien : il VÉRIFIE, et
+		   ne parle que lorsqu'il contredit le serveur.
+
+		   POURQUOI IL EXISTE. Aucune analyse du `User-Agent` ne peut reconnaître un
+		   iPad moderne : iPadOS se déclare « Macintosh ». Une tablette recevrait donc
+		   l'espace de travail à colonnes, exactement l'inverse de ce qui est voulu. Le
+		   navigateur, lui, sait ce qu'il est — il suffit de le lui demander.
+
+		   POURQUOI IL EST SUR TOUTES LES PAGES, ET PAS SEULEMENT SUR L'ESPACE DE
+		   TRAVAIL. Il corrige en écrivant le cookie, ce qui exige un rechargement. Posé
+		   sur la vitrine et la page de connexion, ce rechargement a lieu bien avant
+		   l'entrée dans le cabinet : quand l'utilisateur y arrive, le cookie est déjà
+		   juste et il ne voit RIEN se recharger.
+
+		   TROIS GARDE-FOUS, chacun contre une panne vécue ailleurs dans ce projet :
+		    - `data-terminal-fige` : un choix explicite (bascule « version ordinateur »,
+		      `?terminal=`) n'est jamais corrigé — sinon la bascule serait un bouton qui
+		      ne tient pas ;
+		    - le marqueur de session : sans lui, un désaccord permanent entre le serveur
+		      et la sonde rechargerait la page à l'infini ;
+		    - on ne compare que le MODE (Ket ou colonnes), pas le nom exact : passer de
+		      « tablette » à « mobile » ne change aucune surface, et ne mérite donc pas
+		      un rechargement.
+
+		   ⚠ Le nom du cookie vient de `terminal_cookie()` : il n'est pas recopié à la
+		   main. Le seuil de 700 px, lui, ne vit QU'ICI — il ne sert qu'à nommer une
+		   tablette pour l'affichage, jamais à choisir une surface. #}
+		<script>
+			(function () {
+				var racine = document.documentElement;
+				if (racine.dataset.terminalFige === '1') return;
+				try {
+					if (sessionStorage.getItem('jsb_terminal_sonde') === '1') return;
+					// `> 0` et non `> 1` : un iPhone déclare 5 points de contact, mais
+					// des appareils tactiles n'en déclarent qu'UN — les exclure les
+					// renverrait à l'interface à colonnes, exactement l'inverse du but.
+					// C'est `hover` qui fait le tri utile : un portable à écran tactile
+					// annonce `hover: hover` et reste donc un ordinateur, quel que soit
+					// son nombre de points de contact.
+					var tactile = (navigator.maxTouchPoints || 0) > 0
+						&& !window.matchMedia('(hover: hover)').matches;
+					var petitCote = Math.min(window.innerWidth, window.innerHeight);
+					var reel = tactile ? (petitCote >= 700 ? 'tablette' : 'mobile') : 'ordinateur';
+					if ((racine.dataset.terminal !== 'ordinateur') === (reel !== 'ordinateur')) return;
+					sessionStorage.setItem('jsb_terminal_sonde', '1');
+					document.cookie = '{{ terminal_cookie() }}=' + reel
+						+ ';path=/;max-age={{ terminal_duree_cookie() }};samesite=lax';
+					window.location.reload();
+				} catch (e) {
+					/* sonde indisponible (stockage bloqué) : le mode servi fait foi */
+				}
+			})();
+		</script>
 		<title>
 			{% block title %}
 				{{ "base_welcome" | trans }}

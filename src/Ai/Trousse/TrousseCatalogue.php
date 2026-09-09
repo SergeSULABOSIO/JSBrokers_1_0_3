@@ -47,7 +47,19 @@ final class TrousseCatalogue
      */
     public function outilsDe(Trousse $trousse, AiScope $scope): array
     {
-        $cle = $trousse->value . '|' . ($scope->invite->getId() ?? 0) . '|' . ($scope->conversation?->getId() ?? 0);
+        // ⚠ LE TERMINAL FAIT PARTIE DE LA CLÉ. Le worker VIT, à la différence d'une
+        // requête HTTP : il enchaîne les tâches dans le même processus, et le même
+        // invité peut très bien poser une question depuis son téléphone puis une
+        // autre depuis son poste. Sans le terminal ici, la seconde question
+        // recevrait la liste d'outils mise en cache pour la première — un
+        // téléphone se verrait offrir les outils d'écran, ou l'inverse, selon
+        // l'ordre d'arrivée. Le défaut serait intermittent et introuvable.
+        $cle = implode('|', [
+            $trousse->value,
+            $scope->invite->getId() ?? 0,
+            $scope->conversation?->getId() ?? 0,
+            $scope->terminal->value,
+        ]);
         if (isset($this->cache[$cle])) {
             return $this->cache[$cle];
         }

@@ -16,6 +16,7 @@ use App\Ai\Programme\ProgrammeEnCours;
 use App\Ai\Programme\ProgrammeRunner;
 use App\Ai\Telemetrie\JournalTokens;
 use App\Entity\AssistantMessage;
+use App\Service\Terminal\Terminal;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
@@ -74,8 +75,16 @@ final class TraitementDuMessage
      * Ne lève jamais pour une panne du moteur : l'échec produit une réponse
      * d'excuse persistée, jamais un 500 — la conversation reste utilisable.
      */
-    public function repondre(AssistantMessage $messageUser): AssistantMessage
-    {
+    /**
+     * @param Terminal $terminal L'appareil d'ou vient la question, instantane pris
+     *   a l'envoi (cf. AssistantTache::$terminal). Il ne decide d'aucun droit :
+     *   il retire au modele les outils qui ouvrent un ecran la ou il n'y en a
+     *   pas. ORDINATEUR par defaut - le mode qui n'enleve rien.
+     */
+    public function repondre(
+        AssistantMessage $messageUser,
+        Terminal $terminal = Terminal::ORDINATEUR,
+    ): AssistantMessage {
         $conversation = $messageUser->getConversation();
         $entreprise = $conversation->getEntreprise();
         $invite = $conversation->getInvite();
@@ -93,7 +102,7 @@ final class TraitementDuMessage
         // « 6,2 s » explique après coup une attente que l'utilisateur a subie.
         $debutMoteur = microtime(true);
         try {
-            $aiRequest = $this->contextBuilder->build($entreprise, $invite, $conversation);
+            $aiRequest = $this->contextBuilder->build($entreprise, $invite, $conversation, $terminal);
             $reply = $this->aiEngine->reply($aiRequest);
         } catch (\Throwable $e) {
             $quotaEpuise = AiEngineFailure::estLimiteDeDebit($e);

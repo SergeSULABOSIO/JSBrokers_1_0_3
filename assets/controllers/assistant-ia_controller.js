@@ -184,6 +184,17 @@ export default class extends Controller {
                 staleTab.click();
             }
 
+            // MÊME BESOIN, AUTRE SURFACE. Le sélecteur ci-dessus ne connaît que
+            // les onglets de la colonne 4 : sur téléphone, où le chat occupe la
+            // page entière et où il n'y a aucun onglet, il ne trouve rien et le
+            // fil supprimé reste affiché — on peut y écrire, et tout envoi
+            // répond 404. On annonce donc la suppression, et chaque coquille en
+            // tire ce qui la concerne. Additif : le chemin de la colonne 4
+            // ci-dessus est inchangé.
+            document.dispatchEvent(new CustomEvent('app:assistant.conversation-supprimee', {
+                detail: { convId },
+            }));
+
             // Mise à jour OPTIMISTE : on retire la ligne localement (zéro
             // aller-retour serveur) ; on ne re-rend le composant que si la liste
             // devient vide (pour afficher l'état d'accueil).

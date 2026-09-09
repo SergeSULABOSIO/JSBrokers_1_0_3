@@ -12,6 +12,7 @@ use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Parcours\ParcoursCatalogue;
 use App\Ai\Programme\ProgrammeEnCours;
 use App\Ai\Scope\AiScope;
+use App\Service\Terminal\Terminal;
 use App\Ai\Trousse\Phase;
 use App\Ai\Trousse\Trousse;
 use App\Ai\Trousse\TrousseCatalogue;
@@ -72,8 +73,12 @@ class AiContextBuilder
     ) {
     }
 
-    public function build(Entreprise $entreprise, Invite $invite, AssistantConversation $conversation): AiRequest
-    {
+    public function build(
+        Entreprise $entreprise,
+        Invite $invite,
+        AssistantConversation $conversation,
+        Terminal $terminal = Terminal::ORDINATEUR,
+    ): AiRequest {
         $messages = [];
         foreach ($conversation->getMessages() as $message) {
             $contenu = (string) $message->getContenu();
@@ -138,7 +143,9 @@ class AiContextBuilder
             messages: $messages,
             // La conversation suit jusqu'aux outils : le verrou anti-empilement de
             // plans a besoin de l'état du fil, pas seulement des droits.
-            scope: new AiScope($entreprise, $invite, $conversation),
+            // Le terminal suit jusqu'aux outils : sur un telephone, ceux qui
+            // ouvrent une rubrique ou une fiche ne sont pas declares au modele.
+            scope: new AiScope($entreprise, $invite, $conversation, $terminal),
             // Pièces jointes lisibles nativement (PDF scannés, images) transmises
             // au moteur multimodal pour lecture par vision.
             piecesNatives: $this->piecesNatives($conversation),
@@ -282,6 +289,13 @@ class AiContextBuilder
         // outil absent. Elle vivait en prose — 107 mentions en dur portant sur 30 des
         // 33 outils —, ce qui devenait un mensonge dès que les déclarations varient.
         $sectionAiguillage = $this->sectionAiguillage($trousse, $request->scope);
+        // L'APPAREIL DE L'UTILISATEUR, dit une seule fois. La section d'aiguillage
+        // ci-dessus ne nomme déjà plus les outils d'écran (ils ne sont pas déclarés
+        // sur un téléphone), mais un modèle privé d'un outil a tendance à s'excuser
+        // de ne pas pouvoir « ouvrir la liste ». Lui dire POURQUOI l'écran n'existe
+        // pas le fait répondre avec ce qu'il a — le tableau — au lieu de regretter
+        // ce qu'il n'a pas.
+        $sectionTerminal = $this->sectionTerminal($request->scope->terminal);
         // Les protocoles d'écriture (procédures A/B, parcours guidé, mouvements de
         // police, programme, codes, relations) ne partent qu'avec la trousse qui porte
         // les outils correspondants : 27 Ko sur 53.
@@ -317,6 +331,7 @@ class AiContextBuilder
         {$this->blocDemandeComprise($request)}
         {$this->regleComprendreAvantDAgir($request->comprise?->aEteEtablie() !== true)}
         {$sectionAiguillage}
+        {$sectionTerminal}
         {$sectionGlossaire}
         {$sectionConcision}
         - BOUSSOLE — RAPPEL À CHAQUE INTERACTION (règle impérative) : à la fin de chaque réponse
@@ -1691,6 +1706,39 @@ class AiContextBuilder
      * ce qu'il soit aiguillé, et le retirer d'une trousse suffit à ce qu'il cesse
      * d'être nommé. Rien n'est amputé au passage : une règle part entière, ou pas.
      */
+    /**
+     * L'APPAREIL DE L'UTILISATEUR — une ligne, et seulement quand elle change
+     * quelque chose.
+     *
+     * Sur ordinateur, rien : le prompt n'a pas à porter une phrase qui décrit le
+     * cas normal, et chaque caractère y est payé à chaque tour.
+     *
+     * En mode Ket (téléphone, tablette), la conversation est la SEULE surface :
+     * pas de menu, pas d'onglet, pas de colonne de visualisation. Les outils
+     * correspondants ne sont pas déclarés (cf. ExigeLesColonnes) — cette ligne
+     * dit au modèle de ne pas les regretter, et de répondre DANS le fil.
+     */
+    private function sectionTerminal(Terminal $terminal): string
+    {
+        if (!$terminal->modeKet()) {
+            return '';
+        }
+
+        $appareil = $terminal === Terminal::TABLETTE ? 'une tablette' : 'un téléphone';
+
+        return <<<TXT
+        - APPAREIL — L'UTILISATEUR TRAVAILLE SUR {$appareil} (règle impérative) : la conversation est
+          la SEULE surface à l'écran. Il n'y a ni menu, ni rubrique, ni onglet, ni colonne de fiche.
+          Ne propose donc JAMAIS d'ouvrir un écran, une liste ou une fiche, et ne dis pas que tu vas
+          « afficher » quelque chose ailleurs : tout ce que tu montres, tu le montres DANS ta réponse
+          (tableau, chiffre, liste écrite). En revanche, les FORMULAIRES de saisie et de modification
+          fonctionnent normalement — ouvrir_dialogue reste ton geste pour faire créer ou corriger un
+          enregistrement, et l'utilisateur enregistre lui-même. Sois plus concis qu'à l'ordinaire :
+          la lecture se fait sur un écran étroit, un tableau de plus de quatre colonnes y devient
+          illisible.
+        TXT;
+    }
+
     private function sectionAiguillage(Trousse $trousse, AiScope $scope): string
     {
         $lignes = [];

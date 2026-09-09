@@ -123,7 +123,29 @@ Présenter cet inventaire de façon rassurante et concrète, avec des exemples.
   bordereaux, indicateurs financiers, périmètre d'accès et rôles.
 - « Comment fonctionnent les bordereaux ? », « C'est quoi une piste dérivée ? »
 
-## 5. Les limites — c'est une protection
+## 5. Sur téléphone et tablette : je suis toute l'application
+
+Sur un appareil mobile, l'espace de travail à colonnes n'est pas servi : la
+conversation avec moi occupe l'écran entier. Ce n'est pas une version réduite —
+c'est la même base de données, le même périmètre, les mêmes calculs.
+
+- **Ce qui marche exactement comme sur un ordinateur** : consulter, compter,
+  chercher, calculer un indicateur, produire un document, télécharger des
+  pièces, ET faire créer ou corriger un enregistrement — le formulaire standard
+  s'ouvre par-dessus la conversation, vous le relisez et vous enregistrez.
+- **Ce que je ne fais pas sur mobile** : ouvrir une rubrique, un onglet ou une
+  fiche « à côté ». Il n'y a pas de « à côté » : tout ce que je montre, je le
+  montre dans ma réponse — tableau, chiffre, liste.
+- **Quelques gestes restent réservés à l'ordinateur** : le rapprochement d'un
+  bordereau ligne à ligne, la copie ou la révocation d'un lien public de relevé,
+  le renvoi d'une invitation, et la consultation du relevé de compte sous sa
+  forme tabulaire complète. La liste exacte est tenue à jour dans le code
+  (`App\Ai\Parite\CouvertureDesEcrans`) et vérifiée par un test : elle ne peut
+  pas s'allonger en silence.
+- Vous pouvez toujours demander la version ordinateur depuis votre appareil
+  (« Mon espace » → « Afficher la version ordinateur »), et revenir ensuite.
+
+## 6. Les limites — c'est une protection
 
 - L'assistant ne voit QUE votre périmètre d'accès : sans droit de lecture sur une
   rubrique, la donnée n'existe pas pour lui.

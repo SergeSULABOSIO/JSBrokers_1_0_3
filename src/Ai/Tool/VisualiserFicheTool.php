@@ -17,8 +17,13 @@ use App\Services\JSBDynamicSearchService;
  * l'événement `app:liste-element:openned` (même circuit que l'ouverture depuis
  * une liste). Lecture seule : pour ÉDITER, c'est ouvrir_dialogue.
  */
-final class VisualiserFicheTool implements AiToolInterface
+final class VisualiserFicheTool implements AiToolInterface, AiToolConditionnel
 {
+    // Cet outil fait BOUGER L'ÉCRAN : il n'est donc pas déclaré au modèle
+    // quand l'appareil n'a pas d'interface à colonnes. Cf. ExigeLesColonnes,
+    // qui porte le pourquoi.
+    use ExigeLesColonnes;
+
     /** Nombre maximal de candidats restitués sur un nom ambigu. */
     private const MAX_CANDIDATS = 6;
 

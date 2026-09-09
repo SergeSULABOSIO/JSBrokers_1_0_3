@@ -6,6 +6,7 @@ use App\Entity\AssistantConversation;
 use App\Entity\AssistantMessage;
 use App\Entity\AssistantTache;
 use App\Message\TraiterMessagesAssistant;
+use App\Service\Terminal\TerminalContext;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Envelope;
@@ -36,6 +37,9 @@ final class FileDeTraitement
         private readonly MessageBusInterface $bus,
         #[Autowire('%env(bool:ASSISTANT_ASYNC)%')]
         private readonly bool $asynchrone,
+        // Le terminal est lu ICI, où la requête HTTP existe encore. Le worker qui
+        // traitera la question, lui, n'en aura plus aucune trace.
+        private readonly TerminalContext $terminal,
     ) {
     }
 
@@ -59,7 +63,12 @@ final class FileDeTraitement
             ->setContenu((string) $question->getContenu())
             ->setContexteObjets($question->getContexteObjets())
             ->setFichiersJoints($question->getFichiersJoints())
-            ->setRepondA($question->getRepondA());
+            ->setRepondA($question->getRepondA())
+            // INSTANTANÉ DU TERMINAL, au même titre que le contexte ci-dessus.
+            // C'est le seul instant où il est connaissable : le traitement peut
+            // avoir lieu dans un worker, plusieurs secondes plus tard, dans un
+            // processus qui n'a jamais vu la requête. Cf. AssistantTache::$terminal.
+            ->setTerminal($this->terminal->courant());
 
         $this->em->persist($tache);
         $this->em->flush();

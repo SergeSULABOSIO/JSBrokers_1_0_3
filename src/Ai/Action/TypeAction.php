@@ -199,6 +199,47 @@ enum TypeAction: string
         };
     }
 
+    /**
+     * CETTE ACTION A-T-ELLE BESOIN DE L'INTERFACE À COLONNES ?
+     *
+     * Trois actions sur quinze font bouger une colonne de l'espace de travail :
+     * ouvrir la rubrique d'une entité, fermer un onglet, poser une fiche dans la
+     * colonne de visualisation. Sur téléphone et tablette, où la conversation est
+     * la seule surface, elles n'ont rien à viser.
+     *
+     * ── CE QUI, À L'INVERSE, MARCHE PARTOUT ────────────────────────────────────
+     * Le réflexe serait de croire que toute action d'interface a besoin du
+     * workspace. C'est faux, et c'est important : `cerveau`, `dialog-manager`,
+     * `notification-manager` et la modale de confirmation vivent sur le `<body>`
+     * de `base.html.twig`, hors de la coquille à colonnes. Donc `open-dialog`
+     * (avec son pré-remplissage), le picker d'envoi de SOA, les ouvertures d'URL,
+     * les téléchargements et les sept panneaux `ket-*` fonctionnent tels quels sur
+     * un téléphone. C'est ce qui garde TOUTE L'ÉCRITURE MÉTIER disponible en
+     * ambulatoire — la neutraliser en bloc l'aurait emportée avec le reste.
+     *
+     * POURQUOI ICI. Cette liste est lue à deux endroits qu'aucun compilateur ne
+     * rapproche : le PHP (qui n'ouvre pas les outils correspondants, cf.
+     * `App\Ai\Tool\ExigeLesColonnes`) et le `switch` du chat côté navigateur (qui
+     * refuse explicitement au lieu d'émettre un événement que personne n'écoute).
+     * `ContratDesActionsTest` vérifie que les deux disent la même chose.
+     */
+    public function exigeLesColonnes(): bool
+    {
+        return match ($this) {
+            self::OUVRIR_RUBRIQUE, self::FERMER_RUBRIQUE, self::VISUALISER_FICHE => true,
+            default => false,
+        };
+    }
+
+    /** @return list<string> les types d'action qu'un appareil sans colonnes ne peut pas honorer */
+    public static function valeursExigeantLesColonnes(): array
+    {
+        return array_values(array_map(
+            static fn (self $type) => $type->value,
+            array_filter(self::cases(), static fn (self $type) => $type->exigeLesColonnes()),
+        ));
+    }
+
     /** Lecture tolérante : null quand la valeur ne correspond à aucun type déclaré. */
     public static function depuis(mixed $valeur): ?self
     {
