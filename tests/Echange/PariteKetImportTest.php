@@ -37,6 +37,8 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
  */
 class PariteKetImportTest extends WebTestCase
 {
+    use ClasseurDeRepriseTrait;
+
     private const OWNER_EMAIL = 'phpunit-echange-parite@test.local';
     private const ENT = 'PHPUnit Parité SARL';
 
@@ -57,6 +59,7 @@ class PariteKetImportTest extends WebTestCase
             @unlink($chemin);
         }
         $this->temporaires = [];
+        $this->effacerLesClasseurs();
         $this->nettoyer();
         parent::tearDown();
     }
@@ -76,8 +79,7 @@ class PariteKetImportTest extends WebTestCase
     {
         [$entreprise, $proprietaire, $conversation] = $this->fixture();
 
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Client']);
-        $this->ajouterLigneClient($chemin, 'Client Que Ket Ne Doit Pas Creer');
+        $chemin = $this->classeurDeReprise($entreprise, [$this->uneEcheance("Client Que Ket Ne Doit Pas Creer")]);
 
         $scope = new AiScope($entreprise, $proprietaire, $conversation);
 
@@ -118,8 +120,7 @@ class PariteKetImportTest extends WebTestCase
     {
         [$entreprise, $proprietaire, $conversation] = $this->fixture();
 
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Client']);
-        $this->ajouterLigneClient($chemin, 'Client En Attente');
+        $chemin = $this->classeurDeReprise($entreprise, [$this->uneEcheance("Client En Attente")]);
         $this->importateur()->controler($chemin, 'ecran.xlsx', $entreprise, $proprietaire);
 
         $resultat = $this->outilImport()->execute(
@@ -145,15 +146,19 @@ class PariteKetImportTest extends WebTestCase
     {
         [$entreprise, $proprietaire, $conversation] = $this->fixture();
 
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Client']);
-        $this->ajouterLigneClient($chemin, 'Client Contrôlé');
+        $chemin = $this->classeurDeReprise($entreprise, [$this->uneEcheance("Client Contrôlé")]);
 
         // L'écran, d'abord.
         $parLEcran = $this->importateur()->controler($chemin, 'ecran.xlsx', $entreprise, $proprietaire);
         $avant = $this->compterClients($entreprise);
 
         self::assertTrue($parLEcran->estConfirmable());
-        self::assertSame(1, $parLEcran->getRapport()['creations']);
+        // ⚠ ON NE FIGE PAS LE NOMBRE, ON COMPARE LES DEUX. Une ligne de reprise porte
+        // toute sa chaîne — client, risque, assureur, opportunité, proposition, police,
+        // échéance — et ce compte suivra le modèle. Ce que ce test garde, c'est que Ket et
+        // l'écran disent la MÊME chose du même fichier.
+        $creations = $parLEcran->getRapport()['creations'];
+        self::assertGreaterThan(0, $creations);
         self::assertSame($avant, $this->compterClients($entreprise), 'Un contrôle n\'écrit rien.');
 
         // Et Ket, sur le même fichier joint.
@@ -164,7 +169,7 @@ class PariteKetImportTest extends WebTestCase
 
         self::assertSame('OK', $resultat->status);
         self::assertTrue($resultat->data['confirmable'], json_encode($resultat->data['anomalies'], JSON_UNESCAPED_UNICODE));
-        self::assertSame(1, $resultat->data['creations'], 'Ket doit annoncer la même création que l\'écran.');
+        self::assertSame($creations, $resultat->data['creations'], 'Ket doit annoncer les mêmes créations que l\'écran.');
         self::assertSame($avant, $this->compterClients($entreprise), 'Le contrôle de Ket n\'écrit rien non plus.');
     }
 
@@ -186,8 +191,7 @@ class PariteKetImportTest extends WebTestCase
     {
         [$entreprise, $proprietaire, $conversation] = $this->fixture();
 
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Client']);
-        $this->ajouterLigneClient($chemin, 'Client Abandonné');
+        $chemin = $this->classeurDeReprise($entreprise, [$this->uneEcheance("Client Abandonné")]);
         $run = $this->importateur()->controler($chemin, 'abandon.xlsx', $entreprise, $proprietaire);
 
         $avant = $this->compterClients($entreprise);
@@ -241,7 +245,7 @@ class PariteKetImportTest extends WebTestCase
             'Sans pièce jointe, l\'outil n\'a rien à lire : il ne doit pas être déclaré.',
         );
 
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Client']);
+        $chemin = $this->classeurDeReprise($entreprise, [$this->uneEcheance('KIN AVIA')]);
         $this->joindre($conversation, $chemin);
 
         self::assertTrue(
@@ -307,6 +311,21 @@ class PariteKetImportTest extends WebTestCase
         return (int) $fichier->getId();
     }
 
+    /** Une échéance complète, telle qu'un cabinet la saisirait dans le gabarit. */
+    private function uneEcheance(string $assure): array
+    {
+        return [
+            'policeReference' => 'POL/2026/' . substr(md5($assure), 0, 4),
+            'policeDateEffet' => '01/01/2026',
+            'policeEcheance' => '31/12/2026',
+            'trancheNom' => 'Prime unique',
+            'tranchePayableAt' => '15/01/2026',
+            'assure' => $assure,
+            'risque' => 'RC Aviation',
+            'assureur' => 'SFA CONGO',
+        ];
+    }
+
     private function exporter(Entreprise $entreprise, Invite $invite, array $codes): string
     {
         $reponse = static::getContainer()->get(ExportateurJsbx::class)
@@ -321,25 +340,6 @@ class PariteKetImportTest extends WebTestCase
         $this->temporaires[] = $chemin;
 
         return $chemin;
-    }
-
-    private function ajouterLigneClient(string $chemin, string $nom): void
-    {
-        $classeur = \PhpOffice\PhpSpreadsheet\IOFactory::load($chemin);
-        $ressource = static::getContainer()->get(\App\Echange\Canevas\CanevasDEchange::class)->ressource('Client');
-        $feuille = $classeur->getSheetByName($ressource->feuille);
-
-        $derniere = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($feuille->getHighestDataColumn());
-        $numero = max(3, $feuille->getHighestDataRow() + 1);
-        for ($i = 1; $i <= $derniere; ++$i) {
-            $lettre = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i);
-            if (trim((string) $feuille->getCell($lettre . '2')->getValue()) === 'nom') {
-                $feuille->setCellValue($lettre . $numero, $nom);
-                break;
-            }
-        }
-
-        (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($classeur))->save($chemin);
     }
 
     private function compterClients(Entreprise $entreprise): int

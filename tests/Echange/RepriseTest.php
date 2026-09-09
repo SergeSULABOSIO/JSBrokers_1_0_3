@@ -7,8 +7,15 @@ use App\Echange\Classeur\LigneLue;
 use App\Echange\Etat\CatalogueDesColonnes;
 use App\Echange\Reprise\ReconstitueurDeTranche;
 use App\Echange\Service\Anomalie;
+use App\Entity\Assureur;
+use App\Entity\Avenant;
 use App\Entity\Chargement;
+use App\Entity\Client;
+use App\Entity\Cotation;
 use App\Entity\Entreprise;
+use App\Entity\Piste;
+use App\Entity\Risque;
+use App\Entity\Tranche;
 use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
 use Doctrine\DBAL\ArrayParameterType;
@@ -113,6 +120,7 @@ final class RepriseTest extends KernelTestCase
             $operations = array_merge($operations, $reconstitueur->pour(
                 $this->ligne([
                     'policeReference' => 'POL/2026/007',
+                    'risque' => 'RC Aviation',
                     'policeNumeroAvenant' => $numero,
                     'trancheNom' => $nom,
                     'assure' => 'KIN AVIA',
@@ -178,6 +186,7 @@ final class RepriseTest extends KernelTestCase
                 'id' => 4242,
                 '_action' => 'SUPPRIMER',
                 'policeReference' => 'POL/2026/001',
+                'risque' => 'RC Aviation',
                 'assure' => 'KIN AVIA',
             ], 3),
             $this->colonnes(),
@@ -224,6 +233,7 @@ final class RepriseTest extends KernelTestCase
             $this->ligne([
                 'id' => 77,
                 'policeReference' => 'POL/2026/001',
+                'risque' => 'RC Aviation',
                 'trancheNom' => 'Échéance corrigée',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
@@ -237,6 +247,160 @@ final class RepriseTest extends KernelTestCase
         self::assertSame('Tranche', $operations[0]->entityShortName);
         self::assertSame(MutationOperation::OP_EDIT, $operations[0]->op);
         self::assertSame(77, $operations[0]->targetId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // La convergence CONTRE LA BASE — un second dépôt n'empile pas
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * ⚠ UNE POLICE DÉJÀ REPRISE N'EST PAS RECRÉÉE PAR UN SECOND DÉPÔT.
+     *
+     * C'est le pendant du premier test de ce fichier, et il manquait. Le registre de la
+     * reconstitution fait converger les lignes d'un MÊME fichier ; il vit en mémoire et
+     * meurt avec la passe. Un portefeuille se reprend pourtant en plusieurs fois — parce
+     * qu'on l'a découpé, parce qu'on corrige une ligne et qu'on redépose, parce qu'on le
+     * complète six mois plus tard. Chacun de ces gestes recréait l'opportunité, la
+     * proposition et la police.
+     *
+     * Rien ne cassait : le portefeuille doublait de volume, les primes se comptaient deux
+     * fois, et cela ne se voyait qu'aux totaux.
+     */
+    public function testUnePoliceDejaEnBaseNestPasRecreee(): void
+    {
+        $entreprise = $this->cabinet();
+        $this->policeEnBase($entreprise, 'POL/2026/001', 'Échéance 1');
+
+        $anomalies = [];
+        $operations = $this->reconstitueur()->pour(
+            $this->ligne([
+                'policeReference' => 'POL/2026/001',
+                'trancheNom' => 'Échéance 2',
+                'tranchePayableAt' => '2026-06-30',
+                'assure' => 'KIN AVIA',
+                'risque' => 'RC Aviation',
+                'assureur' => 'SFA CONGO',
+            ], 2),
+            $this->colonnes(),
+            $entreprise,
+            $anomalies,
+        );
+
+        self::assertSame([], $this->erreurs($anomalies));
+
+        $comptes = $this->comptesParEntite($operations);
+
+        self::assertArrayNotHasKey('Piste', $comptes, 'L\'opportunité existe : rien à créer.');
+        self::assertArrayNotHasKey('Cotation', $comptes, 'La proposition existe : rien à créer.');
+        self::assertArrayNotHasKey('Avenant', $comptes, 'LA POLICE EXISTE : c\'est tout l\'enjeu.');
+        self::assertArrayNotHasKey('Client', $comptes, 'Le client est reconnu par son nom.');
+        self::assertSame(1, $comptes['Tranche'] ?? 0, 'Seule l\'échéance nouvelle est écrite.');
+    }
+
+    /**
+     * ⚠ REDÉPOSER LE MÊME FICHIER NE DOIT RIEN AJOUTER DU TOUT.
+     *
+     * C'est le geste le plus banal de la reprise : on corrige une ligne refusée, et l'on
+     * redépose le classeur entier. Les échéances déjà écrites doivent être RETROUVÉES et
+     * mises à jour, jamais empilées — sans quoi la police porterait deux fois chacune de
+     * ses échéances, et la prime attendue doublerait.
+     *
+     * ⚠ LE REPÈRE LOCAL NE POUVAIT PAS S'EN CHARGER : il porte le numéro de ligne, ce qui
+     * le rend unique DANS le fichier — son seul rôle — et muet sur le portefeuille.
+     */
+    public function testUneEcheanceDejaEnBaseEstMiseAJourEtNonAjoutee(): void
+    {
+        $entreprise = $this->cabinet();
+        $idTranche = $this->policeEnBase($entreprise, 'POL/2026/001', 'Échéance 1');
+
+        $anomalies = [];
+        $operations = $this->reconstitueur()->pour(
+            $this->ligne([
+                'policeReference' => 'POL/2026/001',
+                'risque' => 'RC Aviation',
+                'trancheNom' => 'Échéance 1',
+                'tranchePayableAt' => '2026-01-15',
+                'assure' => 'KIN AVIA',
+                'assureur' => 'SFA CONGO',
+            ], 2),
+            $this->colonnes(),
+            $entreprise,
+            $anomalies,
+        );
+
+        self::assertSame([], $this->erreurs($anomalies));
+        self::assertCount(1, $operations, 'Une seule écriture : la mise à jour de l\'échéance.');
+        self::assertSame('Tranche', $operations[0]->entityShortName);
+        self::assertSame(MutationOperation::OP_EDIT, $operations[0]->op);
+        self::assertSame($idTranche, $operations[0]->targetId);
+    }
+
+    /**
+     * ⚠ UN SOLDE D'OUVERTURE NE SE REJOUE PAS SUR UNE ÉCHÉANCE RETROUVÉE.
+     *
+     * La règle existait déjà pour une ligne portant son identifiant. Elle vaut désormais
+     * pour toute échéance reconnue par ses signes : relire « prime encaissée » à chaque
+     * dépôt ajouterait un règlement de plus à chaque fois. La prime paraîtrait encaissée
+     * deux fois, le solde du client tomberait à zéro, et rien ne le signalerait.
+     */
+    public function testUnSoldeDOuvertureNestPasRejoueSurUneEcheanceRetrouvee(): void
+    {
+        $entreprise = $this->cabinet();
+        $this->policeEnBase($entreprise, 'POL/2026/001', 'Échéance 1');
+
+        $anomalies = [];
+        $operations = $this->reconstitueur()->pour(
+            $this->ligne([
+                'policeReference' => 'POL/2026/001',
+                'risque' => 'RC Aviation',
+                'trancheNom' => 'Échéance 1',
+                'tranchePayableAt' => '2026-01-15',
+                'ouverturePrimeEncaissee' => 250000,
+                'ouverturePrimeLe' => '2026-02-01',
+                'assure' => 'KIN AVIA',
+                'assureur' => 'SFA CONGO',
+            ], 2),
+            $this->colonnes(),
+            $entreprise,
+            $anomalies,
+        );
+
+        self::assertCount(1, $operations);
+        self::assertSame([], $operations[0]->collections, 'Aucun règlement d\'ouverture rejoué.');
+    }
+
+    /**
+     * ⚠ DEUX POLICES DE MÊME RÉFÉRENCE EN BASE : ON REFUSE, ON NE CHOISIT PAS.
+     *
+     * C'est l'héritage des imports d'avant cette correction. Rattacher une échéance à
+     * l'une des deux, ce serait se tromper une fois sur deux en silence ; en créer une
+     * troisième aggraverait le doublon. Le refus nomme la référence et dit quoi faire.
+     */
+    public function testUneReferenceEnDoubleDansLeCabinetEstRefusee(): void
+    {
+        $entreprise = $this->cabinet();
+        $this->policeEnBase($entreprise, 'POL/2026/001', 'Échéance 1');
+        $this->policeEnBase($entreprise, 'POL/2026/001', 'Échéance 1 bis');
+
+        $anomalies = [];
+        $operations = $this->reconstitueur()->pour(
+            $this->ligne([
+                'policeReference' => 'POL/2026/001',
+                'risque' => 'RC Aviation',
+                'trancheNom' => 'Échéance 2',
+                'assure' => 'KIN AVIA',
+                'assureur' => 'SFA CONGO',
+            ], 2),
+            $this->colonnes(),
+            $entreprise,
+            $anomalies,
+        );
+
+        self::assertSame([], $operations, 'Rien n\'est écrit tant que le doublon n\'est pas levé.');
+
+        $erreurs = $this->erreurs($anomalies);
+        self::assertCount(1, $erreurs);
+        self::assertStringContainsString('POL/2026/001', $erreurs[0]->message);
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -264,6 +428,7 @@ final class RepriseTest extends KernelTestCase
         $operations = $this->reconstitueur()->pour(
             $this->ligne([
                 'policeReference' => 'POL/2026/010',
+                'risque' => 'RC Aviation',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
                 'trancheNom' => 'Une échéance sur deux',
@@ -319,6 +484,7 @@ final class RepriseTest extends KernelTestCase
         $operations = $this->reconstitueur()->pour(
             $this->ligne([
                 'policeReference' => 'POL/2026/014',
+                'risque' => 'RC Aviation',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
                 $this->colonneDeChargement(Chargement::FONCTION_PRIME_NETTE) => 7000,
@@ -358,6 +524,7 @@ final class RepriseTest extends KernelTestCase
         $operations = $this->reconstitueur()->pour(
             $this->ligne([
                 'policeReference' => 'POL/2026/011',
+                'risque' => 'RC Aviation',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
                 $this->colonneDeChargement(Chargement::FONCTION_FRONTING) => 999,
@@ -431,6 +598,7 @@ final class RepriseTest extends KernelTestCase
             $this->ligne([
                 'id' => 77,
                 'policeReference' => 'POL/2026/020',
+                'risque' => 'RC Aviation',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
                 'trancheNom' => 'Prime unique',
@@ -465,6 +633,7 @@ final class RepriseTest extends KernelTestCase
         $operations = $this->reconstitueur()->pour(
             $this->ligne([
                 'policeReference' => 'POL/2026/021',
+                'risque' => 'RC Aviation',
                 'policeDateEffet' => '2026-01-31',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
@@ -529,6 +698,7 @@ final class RepriseTest extends KernelTestCase
         $operations = $this->reconstitueur()->pour(
             $this->ligne([
                 'policeReference' => 'POL/2026/022',
+                'risque' => 'RC Aviation',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
                 'trancheNom' => 'Prime unique',
@@ -565,6 +735,7 @@ final class RepriseTest extends KernelTestCase
         $operations = $this->reconstitueur()->pour(
             $this->ligne([
                 'policeReference' => 'POL/2026/024',
+                'risque' => 'RC Aviation',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
                 'trancheNom' => 'Prime unique',
@@ -600,6 +771,7 @@ final class RepriseTest extends KernelTestCase
         $operations = $this->reconstitueur()->pour(
             $this->ligne([
                 'policeReference' => 'POL/2026/013',
+                'risque' => 'RC Aviation',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
                 'trancheNom' => 'Prime unique',
@@ -845,6 +1017,81 @@ final class RepriseTest extends KernelTestCase
         return $entreprise;
     }
 
+    /**
+     * UNE POLICE COMPLÈTE EN BASE — la situation d'un cabinet qui a déjà repris une partie
+     * de son portefeuille.
+     *
+     * Les niveaux nommés (client, risque, assureur) sont RÉUTILISÉS s'ils existent : les
+     * dupliquer ici rendrait leur libellé ambigu et le refus porterait sur eux, masquant
+     * ce que le test veut observer.
+     *
+     * @return int l'identifiant de l'échéance créée
+     */
+    private function policeEnBase(Entreprise $entreprise, string $reference, string $nomTranche): int
+    {
+        $em = $this->em();
+
+        $client = $em->getRepository(Client::class)->findOneBy(['entreprise' => $entreprise, 'nom' => 'KIN AVIA'])
+            ?? $this->attacher((new Client())->setNom('KIN AVIA')->setExonere(false), $entreprise);
+
+        $risque = $em->getRepository(Risque::class)->findOneBy(['entreprise' => $entreprise, 'code' => 'RC Aviation'])
+            ?? $this->attacher(
+                (new Risque())->setCode('RC Aviation')->setNomComplet('RC Aviation')->setImposable(true),
+                $entreprise,
+            );
+
+        $assureur = $em->getRepository(Assureur::class)->findOneBy(['entreprise' => $entreprise, 'nom' => 'SFA CONGO'])
+            ?? $this->attacher((new Assureur())->setNom('SFA CONGO'), $entreprise);
+
+        $piste = $this->attacher(
+            (new Piste())->setNom($reference)->setTypeAvenant(1)->setDescriptionDuRisque('RC Aviation')
+                ->setExercice(2026)->setClient($client)->setRisque($risque),
+            $entreprise,
+        );
+
+        $cotation = $this->attacher(
+            (new Cotation())->setNom($reference)->setDuree(12)->setPiste($piste)->setAssureur($assureur),
+            $entreprise,
+        );
+
+        $this->attacher(
+            (new Avenant())->setReferencePolice($reference)->setDescription($reference)
+                ->setStartingAt(new \DateTimeImmutable('2026-01-01'))
+                ->setEndingAt(new \DateTimeImmutable('2026-12-31'))
+                ->setCotation($cotation),
+            $entreprise,
+        );
+
+        $tranche = $this->attacher(
+            (new Tranche())->setNom($nomTranche)->setPayableAt(new \DateTimeImmutable('2026-01-15'))
+                ->setCotation($cotation),
+            $entreprise,
+        );
+
+        $em->flush();
+
+        return (int) $tranche->getId();
+    }
+
+    /**
+     * Pose le cabinet sur une entité et la persiste — le scoping du trait d'audit est
+     * obligatoire, et l'oublier ferait échouer l'insertion sur une colonne NOT NULL.
+     *
+     * @template T of object
+     *
+     * @param T $entite
+     *
+     * @return T
+     */
+    private function attacher(object $entite, Entreprise $entreprise): object
+    {
+        $entite->setEntreprise($entreprise);
+        $this->em()->persist($entite);
+        $this->em()->flush();
+
+        return $entite;
+    }
+
     private function em(): EntityManagerInterface
     {
         return static::getContainer()->get(EntityManagerInterface::class);
@@ -862,7 +1109,15 @@ final class RepriseTest extends KernelTestCase
         $cnx = $this->em()->getConnection();
         $noms = [self::ENT];
 
-        foreach (['chargement', 'type_revenu', 'invite'] as $table) {
+        // ⚠ L'ORDRE COMPTE : l'enfant part avant le parent, sans quoi la première clé
+        // étrangère venue fait échouer la suppression du cabinet — et le test suivant
+        // hérite d'un portefeuille qu'il croit vide.
+        foreach ([
+            'paiement_prime', 'reversement_retro_agent', 'tranche', 'avenant',
+            'chargement_pour_prime', 'revenu_pour_courtier', 'cotation', 'piste',
+            'client', 'risque', 'assureur',
+            'chargement', 'type_revenu', 'invite',
+        ] as $table) {
             $cnx->executeStatement(
                 sprintf('DELETE t FROM `%s` t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom IN (:noms)', $table),
                 ['noms' => $noms],

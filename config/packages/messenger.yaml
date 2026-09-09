@@ -38,6 +38,14 @@ framework:
             # où le signal ira quand elle passera à 1.
             App\Message\TraiterMessagesAssistant: async
 
+            # Un palier d'importation. Comme ci-dessus, le routage ne décide de rien :
+            # `FileDImport` ne dispatche que si IMPORT_ASYNC vaut 1. À 0, aucun message
+            # n'est émis du tout — c'est le navigateur qui rappelle, palier par palier.
+            # ⚠ ET LE HANDLER SE REDISPATCHE : un message = UN palier. Boucler dans le
+            # worker accumulerait la rétention mémoire du contrôle à blanc, et le ferait
+            # mourir exactement là où mourait la requête qu'on a supprimée.
+            App\Message\AvancerUnPalierDImport: async
+
             # Route your messages to the transports
             # 'App\Message\YourMessage': async
 

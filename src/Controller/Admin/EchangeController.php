@@ -10,7 +10,8 @@ use App\Echange\Etat\EtatDuPortefeuille;
 use App\Echange\Etat\ExerciceDesTranches;
 use App\Echange\Etat\ValiditeDesTranches;
 use App\Echange\Etat\ProducteurDeLEtat;
-use App\Echange\Service\ExportateurJsbx;
+use App\Echange\Service\AvanceurDImport;
+use App\Echange\Service\FileDImport;
 use App\Echange\Service\FluxNdjson;
 use App\Echange\Service\Progression;
 use App\Echange\Service\ImportImpossibleException;
@@ -68,15 +69,22 @@ class EchangeController extends AbstractController
     public function __construct(
         private readonly CanevasDEchange $canevas,
         private readonly CompteurDOccurrences $compteur,
-        private readonly ExportateurJsbx $exportateur,
-        // ⚠ L'EXPORT PRODUIT DÉSORMAIS UN ÉTAT, PAS UN FICHIER D'ÉCHANGE. Le format
-        // d'échange n'a pas disparu : ExportateurJsbx sert toujours le gabarit vierge,
-        // qui reste la voie d'entrée des données.
+        // ⚠ L'EXPORT COMME LE GABARIT SORTENT D'ICI, ET DE NULLE PART AILLEURS.
+        //
+        // Cet écran a longtemps injecté `ExportateurJsbx` en annonçant qu'il « servait
+        // toujours le gabarit vierge » : c'était faux depuis que la route `gabarit` passe
+        // par `produire(gabarit: true)`, et la dépendance n'était plus appelée nulle part.
+        // Un commentaire qui décrit un état révolu coûte plus cher qu'une ligne absente :
+        // il fait chercher au mauvais endroit.
         private readonly ProducteurDeLEtat $etat,
         // Le catalogue des colonnes, pour l'écran : c'est lui qui laisse choisir ce que
         // l'état portera.
         private readonly EtatDuPortefeuille $catalogueEtat,
         private readonly ImportateurJsbx $importateur,
+        // Le moteur des paliers, et le pousseur qui décide QUI l'appelle — le worker
+        // quand il y en a un, le navigateur sinon.
+        private readonly AvanceurDImport $avanceur,
+        private readonly FileDImport $file,
         private readonly AnnotateurJsbx $annotateur,
         private readonly EchangeOccurrenceRepository $occurrences,
         private readonly EchangeImportRunRepository $importRuns,
@@ -151,6 +159,11 @@ class EchangeController extends AbstractController
             // échouerait ligne à ligne au contrôle.
             'facturation'   => $this->compteur->etat($entreprise),
             'controleEnCours' => $this->importRuns->enAttentePour($entreprise, $invite),
+            // ⚠ ET LE TRAVAIL QUI AVANCE ENCORE. Depuis que l'import se fait par paliers,
+            // il ne vit plus dans la requête qui l'a lancé : sans cette ligne, un
+            // rafraîchissement de page le rendrait invisible, et l'utilisateur redéposerait
+            // son fichier par doute — c'est-à-dire au pire moment.
+            'travailEnCours' => $this->importRuns->travailEnCoursPour($entreprise, $invite),
             'historique'    => $this->occurrences->historiquePour($entreprise, 50),
             'typeExport'    => EchangeOccurrence::TYPE_EXPORT,
         ]);
@@ -404,44 +417,130 @@ class EchangeController extends AbstractController
         $suppressions = $request->request->getBoolean('suppressions');
         $autreCabinet = $request->request->getBoolean('autreCabinet');
 
-        // Périmètre retenu au dépôt. Vide = tout ce que le fichier contient. Il est
-        // MÉMORISÉ sur le contrôle, car l'écriture recontrôlera le fichier entier.
-        $donnees = $this->codesDemandes((string) $request->request->get('donnees', ''));
+        // ⚠ IL N'Y A PLUS DE PÉRIMÈTRE À RETENIR AU DÉPÔT. Ce réglage écartait des
+        // FEUILLES, notion propre au classeur normalisé qui n'est plus importé : le
+        // classeur de reprise n'en a qu'une. Le lire encore reviendrait à offrir un
+        // filtre qui ne filtre rien.
 
-        $reponse = new StreamedResponse(function () use ($chemin, $nomOriginal, $entreprise, $invite, $suppressions, $autreCabinet, $donnees): void {
-            FluxNdjson::demarrer();
-            $progression = new Progression(0, static fn (array $etat) => FluxNdjson::ligne($etat));
-
-            try {
-                $run = $this->importateur->controler(
-                    $chemin,
-                    $nomOriginal,
-                    $entreprise,
-                    $invite,
-                    $suppressions,
-                    $autreCabinet,
-                    $progression,
-                    $donnees,
-                );
-
-                $progression->terminer();
-                FluxNdjson::ligne([
-                    'type'        => 'resultat',
-                    'idRun'       => $run->getId(),
-                    'statut'      => $run->getStatut(),
-                    'confirmable' => $run->estConfirmable(),
-                    'rapport'     => $run->getRapport(),
-                ]);
-            } catch (\Throwable $e) {
-                FluxNdjson::ligne(['type' => 'erreur', 'message' => $e->getMessage()]);
-            }
-        });
-
-        foreach (FluxNdjson::entetes() as $nom => $valeur) {
-            $reponse->headers->set($nom, $valeur);
+        // ⚠ LE DÉPÔT NE CONTRÔLE PLUS RIEN, ET CE N'EST PAS UN RENONCEMENT.
+        //
+        // Le contrôle à blanc retient plusieurs mégaoctets par ligne, sans les rendre :
+        // le tenir entier dans cette requête imposait un plafond calculé sur la mémoire du
+        // serveur, qui tombait à une trentaine de lignes. La rubrique refusait donc le
+        // seul cas pour lequel elle existe.
+        //
+        // Cette requête ouvre le dossier et rend la main. Le travail avance ensuite par
+        // paliers — poussés par le worker, ou par le navigateur — chacun dans un processus
+        // neuf, et la rétention ne s'accumule plus.
+        try {
+            $run = $this->importateur->deposer(
+                $chemin,
+                $nomOriginal,
+                $entreprise,
+                $invite,
+                $suppressions,
+                $autreCabinet,
+            );
+        } catch (\Throwable $e) {
+            return $this->json(['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        return $reponse;
+        $this->file->pousser($run);
+
+        return $this->json($this->etatDuRun($run));
+    }
+
+    /**
+     * UN PALIER DE PLUS, à la demande du navigateur.
+     *
+     * ⚠ SANS EFFET QUAND UN WORKER TRAVAILLE. Deux pousseurs sur le même contrôle
+     * traiteraient la même fenêtre de lignes ; le verrou les en empêche déjà, mais autant
+     * ne pas les mettre en concurrence pour rien. L'écran, lui, sait à quoi s'en tenir :
+     * l'état qu'il reçoit porte `async`.
+     */
+    #[Route('/importer/{idEntreprise}/{idRun}/avancer', name: 'avancer', requirements: ['idEntreprise' => Requirement::DIGITS, 'idRun' => Requirement::DIGITS], methods: ['POST'])]
+    public function avancerImport(int $idEntreprise, int $idRun): JsonResponse
+    {
+        [$run, $refus] = $this->resoudreRun($idEntreprise, $idRun);
+        if ($refus !== null) {
+            return $refus;
+        }
+
+        if (!$this->file->estAsynchrone()) {
+            try {
+                $run = $this->avanceur->avancerUnPalier($run);
+            } catch (\Throwable $e) {
+                return $this->json(['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+        }
+
+        return $this->json($this->etatDuRun($run));
+    }
+
+    /**
+     * OÙ EN EST LE TRAVAIL — sans y toucher.
+     *
+     * C'est ce qui permet à l'écran de retrouver un import en cours après un
+     * rafraîchissement, un changement d'onglet, ou une soirée. L'état vit en base : il ne
+     * dépend plus de la requête qui l'a lancé.
+     */
+    #[Route('/importer/{idEntreprise}/{idRun}/etat', name: 'etat', requirements: ['idEntreprise' => Requirement::DIGITS, 'idRun' => Requirement::DIGITS], methods: ['GET'])]
+    public function etatImport(int $idEntreprise, int $idRun): JsonResponse
+    {
+        [$run, $refus] = $this->resoudreRun($idEntreprise, $idRun);
+        if ($refus !== null) {
+            return $refus;
+        }
+
+        return $this->json($this->etatDuRun($run));
+    }
+
+    /**
+     * CE QUE L'ÉCRAN A BESOIN DE SAVOIR — source unique des trois routes qui le rendent.
+     *
+     * ⚠ LE POURCENTAGE EST MESURÉ, JAMAIS ANIMÉ. Il vient du curseur et du volume réels,
+     * tous deux en base. Une barre qui progresse toute seule est pire qu'une barre
+     * indéterminée : elle promet une échéance qu'elle ne connaît pas.
+     *
+     * @return array<string, mixed>
+     */
+    private function etatDuRun(EchangeImportRun $run): array
+    {
+        $total = $run->getTotalLignes();
+        $fait = $run->getCurseur();
+        $enTravail = in_array(
+            $run->getStatut(),
+            [EchangeImportRun::STATUT_CONTROLE, EchangeImportRun::STATUT_EN_COURS],
+            true,
+        );
+
+        return [
+            'idRun' => $run->getId(),
+            'statut' => $run->getStatut(),
+            'phase' => match ($run->getStatut()) {
+                EchangeImportRun::STATUT_CONTROLE => 'controle',
+                EchangeImportRun::STATUT_EN_COURS => 'ecriture',
+                default => 'fini',
+            },
+            // Ce que la barre annonce : l'utilisateur veut savoir CE QUI avance, pas
+            // seulement que quelque chose avance.
+            'libelle' => match ($run->getStatut()) {
+                EchangeImportRun::STATUT_CONTROLE => 'Contrôle des lignes',
+                EchangeImportRun::STATUT_EN_COURS => 'Enregistrement',
+                default => '',
+            },
+            'travaille' => $enTravail,
+            // ⚠ UN PALIER COMMENCÉ QUI N'A JAMAIS RENDU LA MAIN. L'écran doit pouvoir le
+            // dire plutôt que d'afficher « en cours » jusqu'à la fin des temps.
+            'abandonne' => $run->travailAbandonne(),
+            'curseur' => $fait,
+            'total' => $total,
+            'pct' => $total > 0 ? round(min(100.0, ($fait / $total) * 100), 1) : 0.0,
+            'confirmable' => $run->estConfirmable(),
+            'rapport' => $run->getRapport(),
+            // Le navigateur doit-il rappeler lui-même, ou seulement regarder ?
+            'async' => $this->file->estAsynchrone(),
+        ];
     }
 
     /**
@@ -459,43 +558,20 @@ class EchangeController extends AbstractController
             return $refus;
         }
 
-        $acteur = $this->getUser();
-
-        $reponse = new StreamedResponse(function () use ($run, $acteur): void {
-            FluxNdjson::demarrer();
-            $progression = new Progression(0, static fn (array $etat) => FluxNdjson::ligne($etat));
-
-            try {
-                $run = $this->importateur->executer($run, $acteur, $progression);
-                $abouti = $run->getStatut() === EchangeImportRun::STATUT_TERMINE;
-
-                $progression->terminer();
-                FluxNdjson::ligne([
-                    'type'    => 'resultat',
-                    'success' => $abouti,
-                    'statut'  => $run->getStatut(),
-                    'rapport' => $run->getRapport(),
-                    'message' => $abouti
-                        ? 'Importation terminée.'
-                        : 'L\'importation n\'a pas abouti : aucune modification n\'a été conservée.',
-                ]);
-            } catch (ImportImpossibleException $e) {
-                FluxNdjson::ligne(['type' => 'erreur', 'message' => $e->getMessage()]);
-            } catch (\Throwable $e) {
-                // La transaction a été annulée : on le DIT, plutôt que de laisser la
-                // barre à quatre-vingt-dix pour cent sur un import qui n'existe plus.
-                FluxNdjson::ligne([
-                    'type'    => 'erreur',
-                    'message' => 'L\'importation a été interrompue et aucune modification n\'a été conservée : ' . $e->getMessage(),
-                ]);
-            }
-        });
-
-        foreach (FluxNdjson::entetes() as $nom => $valeur) {
-            $reponse->headers->set($nom, $valeur);
+        // ⚠ ELLE OUVRE L'ÉCRITURE, ELLE NE L'EXÉCUTE PAS. Même raison qu'au dépôt : les
+        // paliers suivront, chacun dans son processus. Ce geste-ci ne dit qu'une chose,
+        // « oui », et l'écriture commence.
+        try {
+            $run = $this->importateur->demarrerLEcriture($run, $this->getUser());
+        } catch (ImportImpossibleException $e) {
+            return $this->json(['message' => $e->getMessage()], Response::HTTP_CONFLICT);
+        } catch (\Throwable $e) {
+            return $this->json(['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        return $reponse;
+        $this->file->pousser($run);
+
+        return $this->json($this->etatDuRun($run));
     }
 
     /** Annulation d'un contrôle en attente. Gratuite, sans effet sur les données. */

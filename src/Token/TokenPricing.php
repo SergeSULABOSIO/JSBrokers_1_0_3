@@ -148,11 +148,19 @@ final class TokenPricing
     public const ECHANGE_COUT_OCCURRENCE = 600;
 
     /**
-     * Plafond de lignes d'un fichier d'échange, toutes feuilles confondues. L'écriture
-     * passe par le formulaire de chaque entité, ce qui est lent mais garantit qu'un
-     * import respecte exactement les mêmes règles qu'une saisie. Le plafond est ce qui
-     * tient cette promesse dans une requête synchrone, plutôt que d'introduire une
-     * infrastructure asynchrone pour cette seule rubrique.
+     * ⚠ PLUS APPLIQUÉE DEPUIS QUE L'IMPORT AVANCE PAR PALIERS. Conservée pour mémoire.
+     *
+     * Elle plafonnait un fichier d'échange à deux mille lignes. L'écriture passe par le
+     * formulaire de chaque entité — lent, mais c'est ce qui garantit qu'un import respecte
+     * exactement les mêmes règles qu'une saisie —, et ce plafond était ce qui tenait la
+     * promesse dans une requête synchrone.
+     *
+     * Il n'y a plus de requête synchrone : le travail se découpe en paliers, chacun dans un
+     * processus neuf, dimensionnés par `AvanceurDImport::tailleDuPalier()`. Le seul refus de
+     * volume qui subsiste est celui de l'absurde — voir `LIGNES_MAXIMALES` du même service.
+     *
+     * ⚠ ON NE LA SUPPRIME PAS POUR AUTANT : les barèmes de cette classe se surchargent en
+     * console, et retirer une clé d'un barème publié n'est jamais gratuit.
      */
     public const ECHANGE_PLAFOND_LIGNES = 2000;
 

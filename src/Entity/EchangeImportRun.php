@@ -113,9 +113,138 @@ class EchangeImportRun implements OwnerAwareInterface
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeImmutable $expireLe = null;
 
+    /**
+     * OÙ EN EST LE TRAVAIL — la ligne du fichier après laquelle il reste tout à faire.
+     *
+     * ⚠ SANS CURSEUR, UN IMPORT NE PEUT PAS ÊTRE REPRIS, et c'est ce qui imposait de tout
+     * faire dans une seule requête. Or le contrôle à blanc retient plusieurs mégaoctets
+     * par ligne, sans les rendre : la requête mourait avant la fin sur un portefeuille
+     * réel, et le message accusait la base à la place de PHP.
+     *
+     * Le travail avance donc par PALIERS, chacun dans un processus neuf. Ce nombre est ce
+     * qui permet au suivant de savoir où reprendre — et à l'écran de dire où l'on en est
+     * même quand personne ne regarde.
+     */
+    #[ORM\Column(options: ['default' => 0])]
+    private int $curseur = 0;
+
+    /**
+     * Ce que le fichier porte de lignes, connu dès la première lecture.
+     *
+     * Un pourcentage sans dénominateur n'est pas une progression, c'est une animation.
+     */
+    #[ORM\Column(options: ['default' => 0])]
+    private int $totalLignes = 0;
+
+    /**
+     * DEPUIS QUAND UN PALIER TRAVAILLE — `null` quand personne n'y touche.
+     *
+     * ⚠ C'EST UN VERROU AUTANT QU'UN SIGNE DE VIE, et les deux rôles n'en font qu'un.
+     *
+     * Verrou : deux paliers simultanés sur le même contrôle traiteraient la même fenêtre
+     * de lignes dans deux transactions séparées — chacune créerait « son » client, et
+     * l'idempotence, qui ne voit que ce qui est COMMITÉ, n'y pourrait rien. C'est
+     * exactement le doublon que toute cette reprise existe pour empêcher.
+     *
+     * Signe de vie : un import dont le processus meurt en plein palier — onglet fermé,
+     * worker arrêté, PHP à court de mémoire — restait « en cours » pour toujours : plus
+     * confirmable, plus annulable, invisible du dépôt suivant. L'utilisateur venait de
+     * cliquer « Confirmer » et n'avait aucun moyen de savoir si son portefeuille était
+     * repris. Une date ancienne le dit ; une colonne vide dit qu'on attend un pousseur.
+     */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $travailDepuis = null;
+
+    /**
+     * Au-delà, le palier est réputé mort et le verrou peut être repris.
+     *
+     * Un processus tué net ne relâche rien : sans péremption, le contrôle resterait gelé
+     * pour toujours et l'utilisateur n'aurait aucun moyen de s'en sortir. Cinq minutes,
+     * soit bien plus que le palier le plus lent, et bien moins qu'une pause déjeuner.
+     */
+    public const TRAVAIL_PEREMPTION_SECONDES = 300;
+
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    public function getCurseur(): int
+    {
+        return $this->curseur;
+    }
+
+    public function setCurseur(int $curseur): static
+    {
+        $this->curseur = max(0, $curseur);
+
+        return $this;
+    }
+
+    public function getTotalLignes(): int
+    {
+        return $this->totalLignes;
+    }
+
+    public function setTotalLignes(int $totalLignes): static
+    {
+        $this->totalLignes = max(0, $totalLignes);
+
+        return $this;
+    }
+
+    public function getTravailDepuis(): ?\DateTimeImmutable
+    {
+        return $this->travailDepuis;
+    }
+
+    public function setTravailDepuis(?\DateTimeImmutable $travailDepuis): static
+    {
+        $this->travailDepuis = $travailDepuis;
+
+        return $this;
+    }
+
+    /**
+     * Un palier travaille-t-il en ce moment ?
+     *
+     * Un statut ne suffit pas : il dit ce qu'on a VOULU faire, pas ce qui se passe. Cette
+     * date-ci n'est posée que par un processus qui travaille vraiment, et retirée quand il
+     * a fini — un palier mort la laisse derrière lui, et c'est ainsi qu'on le reconnaît.
+     */
+    public function travailEnCours(?\DateTimeImmutable $maintenant = null): bool
+    {
+        if ($this->travailDepuis === null) {
+            return false;
+        }
+
+        $maintenant ??= new \DateTimeImmutable('now');
+
+        return ($maintenant->getTimestamp() - $this->travailDepuis->getTimestamp())
+            <= self::TRAVAIL_PEREMPTION_SECONDES;
+    }
+
+    /**
+     * Le travail est-il resté en plan ?
+     *
+     * ⚠ C'EST LA QUESTION QUE L'ÉCRAN POSE APRÈS UN INCIDENT. Un palier commencé qui n'a
+     * jamais rendu la main a laissé sa date derrière lui : au-delà de la péremption, il
+     * n'y a plus personne au bout, et le dire vaut mieux que d'afficher « en cours »
+     * jusqu'à la fin des temps.
+     */
+    public function travailAbandonne(?\DateTimeImmutable $maintenant = null): bool
+    {
+        if (!in_array($this->statut, [self::STATUT_CONTROLE, self::STATUT_EN_COURS], true)) {
+            return false;
+        }
+
+        return $this->travailDepuis !== null && !$this->travailEnCours($maintenant);
+    }
+
+    /** Reste-t-il des lignes à traiter dans la phase en cours ? */
+    public function resteAFaire(): bool
+    {
+        return $this->curseur < $this->totalLignes;
     }
 
     public function getNomFichier(): ?string

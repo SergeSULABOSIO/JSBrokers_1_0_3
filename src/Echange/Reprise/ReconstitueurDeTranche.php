@@ -100,6 +100,9 @@ final class ReconstitueurDeTranche
         private readonly NormaliseurDeDates $dates,
         private readonly EntityManagerInterface $em,
         private readonly DefautsContextuels $defauts,
+        // Le registre ci-dessus ne connaît que le fichier en cours. Celui-ci connaît le
+        // portefeuille : sans lui, deux dépôts successifs empilent deux fois la même police.
+        private readonly ChaineExistante $chaine,
     ) {
     }
 
@@ -108,6 +111,16 @@ final class ReconstitueurDeTranche
     {
         $this->registre = [];
         $this->revenuParProposition = [];
+        // ⚠ ET LES DEUX INDEX DE LA BASE AVEC LUI. Une passe d'écriture vient peut-être de
+        // créer des polices, des clients, des risques : un index resté tiède ne les
+        // connaîtrait pas, et la passe suivante les recréerait.
+        //
+        // Mesuré : sans la ligne du résolveur, le second palier d'une écriture butait sur
+        // « Duplicate entry pour uniq_risque_entreprise_cle » — l'index UNIQUE de la base
+        // rattrapait ce que l'application avait laissé passer, et faisait échouer tout le
+        // palier sur une erreur SQL que rien ne préparait à lire.
+        $this->chaine->reinitialiser();
+        $this->resolveur->reinitialiser();
     }
 
     /**
@@ -184,6 +197,39 @@ final class ReconstitueurDeTranche
             return $operation === null ? [] : [$operation];
         }
 
+        // ── CETTE POLICE EST-ELLE DÉJÀ DANS LE PORTEFEUILLE ? ───────────────────────
+        //
+        // ⚠ C'EST LA QUESTION QUE LE REGISTRE NE POSAIT PAS. Il fait converger les lignes
+        // d'un MÊME fichier, et rien de plus : le deuxième dépôt d'un portefeuille —
+        // découpé parce qu'il était trop gros, corrigé après une erreur, ou complété six
+        // mois plus tard — recréait l'opportunité, la proposition et la police. Rien ne
+        // cassait, tout doublait, et cela ne se voyait qu'aux totaux.
+        //
+        // La réponse ne change RIEN au reste de cette méthode : une chaîne trouvée est un
+        // identifiant, exactement comme un client reconnu par `rattacher()`.
+        $numeroAvenant = $ligne->texte('policeNumeroAvenant');
+
+        if ($this->chaine->estAmbigue($reference, $numeroAvenant, $entreprise)) {
+            $anomalies[] = $this->refus(
+                $ligne,
+                self::COLONNE_CLE,
+                sprintf(
+                    'Votre portefeuille porte DÉJÀ plusieurs polices sous la référence « %s » : '
+                    . 'impossible de savoir à laquelle rattacher cette échéance, et en créer une de '
+                    . 'plus aggraverait le doublon. Réunissez-les depuis la rubrique des polices, '
+                    . 'puis redéposez ce fichier.',
+                    $reference,
+                ),
+            );
+
+            return [];
+        }
+
+        $existante = $this->chaine->pour($reference, $numeroAvenant, $entreprise);
+        $idPiste = $existante['piste'] ?? null;
+        $idCotation = $existante['cotation'] ?? null;
+        $idAvenant = $existante['avenant'] ?? null;
+
         $operations = [];
 
         // ── Les niveaux nommés par un libellé ───────────────────────────────────────
@@ -202,6 +248,16 @@ final class ReconstitueurDeTranche
         $risque = $this->rattacher('Risque', $ligne, 'risque', CleNaturelle::RISQUE, $entreprise, $anomalies, $operations, [
             'nomComplet' => $ligne->texte('risque'),
             'code' => $ligne->texte('risque'),
+            // ⚠ « IMPOSABLE » EST OBLIGATOIRE ET N'A PAS DE DÉFAUT DE FORMULAIRE : sans
+            // cette ligne, toute reprise nommant un risque que le cabinet n'a pas encore
+            // échouait sur « imposable : champ obligatoire à renseigner » — un motif
+            // exact, mais qui désigne une case que le classeur ne porte pas et que
+            // l'utilisateur ne peut donc pas remplir.
+            //
+            // La valeur est celle du semis officiel du projet
+            // ({@see \App\Services\ServiceInitialisationEntreprise::initialiserRisques()}) :
+            // en assurance, la prime est taxée, et l'exception se règle à la fiche.
+            'imposable' => true,
         ]);
 
         $assureur = $this->rattacher('Assureur', $ligne, 'assureur', CleNaturelle::ASSUREUR, $entreprise, $anomalies, $operations, [
@@ -212,9 +268,35 @@ final class ReconstitueurDeTranche
             'nom' => $ligne->texte('intermediaire'),
         ]);
 
+        // ⚠ UNE OPPORTUNITÉ SANS RISQUE EST IMPOSSIBLE, ET LE REFUS DOIT LE DIRE ICI.
+        //
+        // `Piste::descriptionDuRisque` est obligatoire et se déduit du risque de la ligne.
+        // Sans lui, le contrôle échouait plus loin sur « descriptionDuRisque : champ
+        // obligatoire à renseigner » — un motif exact qui désigne une colonne que le
+        // classeur ne porte pas sous ce nom, et que l'utilisateur ne peut donc pas
+        // remplir. On nomme la colonne qu'il a sous les yeux.
+        //
+        // Rien de tout cela ne concerne une police DÉJÀ en base : son opportunité existe,
+        // et le risque n'a pas à être redonné.
+        if ($idPiste === null && $risque === null && $ligne->texte('risque') === '') {
+            $anomalies[] = $this->refus(
+                $ligne,
+                'risque',
+                'Cette ligne ne nomme aucun risque : une opportunité ne peut pas être créée sans '
+                . 'lui, car c\'est lui qui décrit ce qui est assuré. Renseignez la colonne du '
+                . 'risque — le nom suffit, il sera créé s\'il n\'existe pas encore.',
+            );
+
+            return [];
+        }
+
         // ── L'opportunité ───────────────────────────────────────────────────────────
+        //
+        // Déjà en base : on s'y rattache par son identifiant et l'on n'écrit rien. Refaire
+        // son ascendance à chaque dépôt produirait des modifications que personne n'a
+        // demandées, et un journal annonçant cinq écritures pour une.
         $piste = (string) CleNaturelle::pourChaine(CleNaturelle::PISTE, $reference);
-        if ($this->neuf($piste)) {
+        if ($idPiste === null && $this->neuf($piste)) {
             $champs = [
                 'nom' => $this->nomDeLAffaire($ligne),
                 'client' => $client,
@@ -246,9 +328,11 @@ final class ReconstitueurDeTranche
             );
         }
 
+        $renvoiPiste = $idPiste ?? CleNaturelle::renvoiVers($piste);
+
         // ── La proposition, et avec elle la PRIME et la RÉMUNÉRATION ────────────────
         $cotation = (string) CleNaturelle::pourChaine(CleNaturelle::COTATION, $reference);
-        if ($this->neuf($cotation)) {
+        if ($idCotation === null && $this->neuf($cotation)) {
             $collections = [];
 
             // ⚠ C'EST ICI QUE LA PRIME REVIENT. `ChargementPourPrime` n'a pas de feuille
@@ -317,7 +401,7 @@ final class ReconstitueurDeTranche
                 entityShortName: 'Cotation',
                 fields: $this->sansVide([
                     'nom' => $this->nomDeLAffaire($ligne),
-                    'piste' => CleNaturelle::renvoiVers($piste),
+                    'piste' => $renvoiPiste,
                     'assureur' => $assureur,
                     // ⚠ LA DURÉE SE LIT SUR LA PÉRIODE, elle ne se suppose pas : un contrat
                     // de vingt-deux jours n'est pas une police annuelle. `DefautsContextuels`
@@ -336,20 +420,33 @@ final class ReconstitueurDeTranche
             );
         }
 
+        $renvoiCotation = $idCotation ?? CleNaturelle::renvoiVers($cotation);
+
         // ── La police ───────────────────────────────────────────────────────────────
-        $avenant = (string) CleNaturelle::pourAvenant($reference, $ligne->texte('policeNumeroAvenant'));
-        if ($this->neuf($avenant)) {
+        $avenant = (string) CleNaturelle::pourAvenant($reference, $numeroAvenant);
+        if ($idAvenant === null && $this->neuf($avenant)) {
             $operations[] = new MutationOperation(
                 op: MutationOperation::OP_CREATE,
                 entityShortName: 'Avenant',
                 fields: $this->sansVide([
                     'referencePolice' => $reference,
-                    'numero' => $ligne->texte('policeNumeroAvenant'),
+                    'numero' => $numeroAvenant,
                     'startingAt' => $this->date($ligne, 'policeDateEffet', 'Avenant', 'startingAt'),
                     'endingAt' => $this->date($ligne, 'policeEcheance', 'Avenant', 'endingAt'),
-                    'cotation' => CleNaturelle::renvoiVers($cotation),
+                    'cotation' => $renvoiCotation,
                 ]),
                 ref: $avenant,
+            );
+        } elseif ($idAvenant !== null && $idCotation === null && $this->neuf($avenant)) {
+            // ⚠ UNE POLICE SANS PROPOSITION EXISTE, et il faut la rattacher plutôt que de
+            // la doubler. Le lien est nullable en base : une police a pu être créée à la
+            // main, ou perdre sa proposition. La recréer violerait l'unicité de sa
+            // référence ; l'ignorer laisserait une proposition neuve sans police.
+            $operations[] = new MutationOperation(
+                op: MutationOperation::OP_EDIT,
+                entityShortName: 'Avenant',
+                targetId: $idAvenant,
+                fields: ['cotation' => $renvoiCotation],
             );
         }
 
@@ -363,13 +460,48 @@ final class ReconstitueurDeTranche
             $cle . ' ' . $ligne->numero . ' ' . $ligne->texte('trancheNom'),
         );
 
-        $tranche = $this->tranche($ligne, $colonnes, null, CleNaturelle::renvoiVers($cotation));
+        // ⚠ ET ELLE NE SE DÉDOUBLE PAS D'UN DÉPÔT À L'AUTRE. Le repère ci-dessus porte le
+        // numéro de ligne — c'est ce qui le rend unique DANS le fichier, et c'est son seul
+        // rôle. Il ne peut donc rien dire du portefeuille : sans la clé ci-dessous, un
+        // redépôt ajoutait une échéance de plus à chaque fois, sous la bonne police.
+        $signes = ChaineExistante::signesDeLEcheance(
+            $ligne->texte('trancheNom'),
+            $this->date($ligne, 'tranchePayableAt', 'Tranche', 'payableAt'),
+            $this->date($ligne, 'trancheEcheanceAt', 'Tranche', 'echeanceAt'),
+        );
+
+        // Rien pour la distinguer, et une proposition qui existe déjà : on le DIT. Écrire
+        // en silence une échéance qu'un second dépôt ajoutera de nouveau, c'est promettre
+        // une idempotence qu'on ne tient pas.
+        if ($signes === [] && $idCotation !== null) {
+            $anomalies[] = Anomalie::avertissement(
+                Anomalie::VALEUR_INVALIDE,
+                'Cette échéance n\'a ni nom, ni date de règlement, ni date d\'échéance : rien ne '
+                . 'la distingue des autres échéances de la même police. Elle sera ajoutée, mais un '
+                . 'nouveau dépôt de ce fichier en ajouterait une de plus. Renseignez au moins une '
+                . 'de ces trois colonnes.',
+                $ligne->feuille,
+                $ligne->numero,
+                $ligne->colonne('trancheNom'),
+            );
+        }
+
+        $idEcheance = $this->chaine->echeance($idCotation, $signes, $entreprise);
+
+        // Retrouvée : on la met à jour. Le rattachement à la proposition n'est alors plus
+        // à écrire — il existe, et le réaffirmer serait une modification de plus au journal.
+        $tranche = $this->tranche($ligne, $colonnes, $idEcheance, $idEcheance === null ? $renvoiCotation : null);
         if ($tranche === null) {
             return $operations;
         }
 
         // La prime déjà réglée devient UNE écriture, imbriquée sous l'échéance.
-        $paiement = $this->ouverturePrime($ligne);
+        //
+        // ⚠ À LA CRÉATION SEULEMENT, et c'est vital depuis que les échéances se
+        // retrouvent en base. Relire un solde d'ouverture sur une échéance existante
+        // ajouterait un second règlement à chaque dépôt, sans rien signaler : la prime
+        // paraîtrait encaissée deux fois, et le solde du client tomberait à zéro.
+        $paiement = $idEcheance === null ? $this->ouverturePrime($ligne) : null;
         if ($paiement !== null) {
             $tranche = $tranche->withCollections(['paiementsPrime' => [$paiement]]);
         }
@@ -391,7 +523,12 @@ final class ReconstitueurDeTranche
             $operations,
             $anomalies,
         );
-        $this->ouvrirLaRetro($ligne, $repereTranche, $intermediaire, $operations, $anomalies);
+        // ⚠ MÊME RÈGLE QUE POUR LA PRIME : un solde d'ouverture ne se relit pas. Rejouer
+        // le reversement sur une échéance déjà reprise en verserait un second à
+        // l'intermédiaire, à chaque dépôt.
+        if ($idEcheance === null) {
+            $this->ouvrirLaRetro($ligne, $repereTranche, $intermediaire, $operations, $anomalies);
+        }
 
         // ⚠ LES CHAMPS OBLIGATOIRES DÉDUCTIBLES SONT POSÉS PAR LE SERVICE QUI EXISTE.
         //

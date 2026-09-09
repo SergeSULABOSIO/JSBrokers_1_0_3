@@ -30,6 +30,8 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
  */
 class GabaritEtAnomaliesTest extends WebTestCase
 {
+    use ClasseurDeRepriseTrait;
+
     private const OWNER_EMAIL = 'phpunit-echange-gab@test.local';
     private const ENT = 'PHPUnit Gabarit SARL';
 
@@ -50,6 +52,7 @@ class GabaritEtAnomaliesTest extends WebTestCase
             @unlink($chemin);
         }
         $this->temporaires = [];
+        $this->effacerLesClasseurs();
         $this->nettoyer();
         parent::tearDown();
     }
@@ -182,31 +185,54 @@ class GabaritEtAnomaliesTest extends WebTestCase
         self::assertSame($avant, $this->compterOccurrences($entreprise), 'Un gabarit ne consomme pas d\'occurrence.');
     }
 
-    /** Un gabarit vierge, réimporté tel quel, ne propose rien : il n'y a rien dedans. */
-    public function testUnGabaritViergeNeProposeAucuneEcriture(): void
+    /**
+     * ⚠ UN GABARIT VIERGE DÉPOSÉ TEL QUEL EST REFUSÉ, et c'est un service rendu.
+     *
+     * Il ne contient aucune ligne : l'accepter en annonçant « zéro création » laisserait
+     * croire à un import réussi, et l'utilisateur chercherait ses données à l'écran. Le
+     * refus, lui, dit ce qui manque — une ligne par échéance.
+     */
+    public function testUnGabaritViergeDeposeTelQuelEstRefuse(): void
     {
         [$entreprise, $proprietaire] = $this->fixture();
 
-        $chemin = $this->ecrire($this->gabarit($entreprise, $proprietaire, ['Client']));
-        $run = $this->importateur()->controler($chemin, 'gabarit.xlsx', $entreprise, $proprietaire);
+        $run = $this->importateur()->controler(
+            $this->gabaritDeReprise($entreprise, $proprietaire),
+            'gabarit.xlsx',
+            $entreprise,
+            $proprietaire,
+        );
 
-        $rapport = $run->getRapport();
-        self::assertTrue($rapport['confirmable'], $this->motifs($run));
-        self::assertSame(0, $rapport['creations']);
-        self::assertSame(0, $rapport['lignes_lues'], 'Un gabarit vierge ne contient aucune ligne à lire.');
+        self::assertSame(EchangeImportRun::STATUT_ECHEC, $run->getStatut());
+        self::assertStringContainsString('aucune ligne', $this->motifs($run));
     }
 
-    /** Rempli, il crée — c'est son usage : préparer des données hors ligne. */
+    /**
+     * ⚠ LE GABARIT QUE LA RUBRIQUE DISTRIBUE SE REDÉPOSE — c'est tout son objet.
+     *
+     * Ce test part du fichier RÉELLEMENT produit, pas d'un classeur fabriqué pour
+     * l'occasion : si ce que le cabinet télécharge ne se relisait pas, le seul geste qui
+     * rend une première reprise possible conduirait à un refus.
+     */
     public function testUnGabaritRempliCreeLesLignesSaisies(): void
     {
         [$entreprise, $proprietaire] = $this->fixture();
 
-        $chemin = $this->ecrire($this->gabarit($entreprise, $proprietaire, ['Client']));
-        $this->ajouterLigne($chemin, 'Client', ['nom' => 'Client Préparé Hors Ligne']);
+        $chemin = $this->gabaritDeReprise($entreprise, $proprietaire);
+        $this->remplirLeGabarit($chemin, $entreprise, [[
+            'policeReference' => 'POL/2026/077',
+            'policeDateEffet' => '01/01/2026',
+            'policeEcheance' => '31/12/2026',
+            'trancheNom' => 'Prime unique',
+            'tranchePayableAt' => '15/01/2026',
+            'assure' => 'Client Préparé Hors Ligne',
+            'risque' => 'RC Aviation',
+            'assureur' => 'SFA CONGO',
+        ]]);
 
         $run = $this->importateur()->controler($chemin, 'gabarit-rempli.xlsx', $entreprise, $proprietaire);
         self::assertTrue($run->estConfirmable(), $this->motifs($run));
-        self::assertSame(1, $run->getRapport()['creations']);
+        self::assertGreaterThan(0, $run->getRapport()['creations']);
 
         $this->importateur()->executer($run, $entreprise->getUtilisateur());
 
@@ -229,8 +255,12 @@ class GabaritEtAnomaliesTest extends WebTestCase
     {
         [$entreprise, $proprietaire] = $this->fixture();
 
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Groupe', 'Client']);
-        $this->ajouterLigne($chemin, 'Client', ['nom' => 'Client Orphelin', 'groupe' => 'Groupe Inexistant']);
+        // Une ligne sans référence de police : rien ne permet de la rattacher, et le
+        // refus vise la cellule qui manque.
+        $chemin = $this->classeurDeReprise($entreprise, [[
+            'assure' => 'Client Orphelin',
+            'trancheNom' => 'Prime unique',
+        ]]);
 
         $run = $this->importateur()->controler($chemin, 'fautif.xlsx', $entreprise, $proprietaire);
         self::assertFalse($run->getRapport()['confirmable'], 'Le test suppose une anomalie.');
@@ -329,85 +359,6 @@ class GabaritEtAnomaliesTest extends WebTestCase
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // Le choix de ce qu'on importe
-    // ─────────────────────────────────────────────────────────────────────────────
-
-    /** Une feuille écartée est ignorée sans erreur : c'est un hors-périmètre, pas une faute. */
-    public function testUnImportRestreintIgnoreLesAutresFeuilles(): void
-    {
-        [$entreprise, $proprietaire] = $this->fixture();
-
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Groupe', 'Client']);
-        $this->ajouterLigne($chemin, 'Groupe', ['nom' => 'Groupe Écarté', 'description' => 'ne doit pas entrer']);
-        $this->ajouterLigne($chemin, 'Client', ['nom' => 'Client Retenu']);
-
-        // On ne retient QUE les clients.
-        $run = $this->importateur()->controler($chemin, 'restreint.xlsx', $entreprise, $proprietaire, false, false, null, ['Client']);
-
-        self::assertTrue($run->estConfirmable(), $this->motifs($run));
-        self::assertSame(1, $run->getRapport()['creations'], 'Seule la ligne de la feuille retenue compte.');
-
-        $this->importateur()->executer($run, $entreprise->getUtilisateur());
-
-        self::assertNotNull($this->em()->getRepository(Client::class)->findOneBy(['nom' => 'Client Retenu']));
-        self::assertNull(
-            $this->em()->getRepository(\App\Entity\Groupe::class)->findOneBy(['nom' => 'Groupe Écarté']),
-            'La feuille écartée ne doit rien avoir écrit.',
-        );
-    }
-
-    /**
-     * ⚠ LE PÉRIMÈTRE CHOISI AU DÉPÔT SURVIT À LA CONFIRMATION.
-     *
-     * L'écriture recontrôle le fichier ENTIER — c'est ce qui la protège d'un état devenu
-     * faux entre-temps. Sans mémoire du choix, elle réécrirait les feuilles écartées, et
-     * rien ne l'aurait annoncé. C'est le test qui protège l'utilisateur d'une surprise
-     * silencieuse.
-     */
-    public function testLeChoixDuDepotEstRespecteALaConfirmation(): void
-    {
-        [$entreprise, $proprietaire] = $this->fixture();
-
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Groupe', 'Client']);
-        $this->ajouterLigne($chemin, 'Groupe', ['nom' => 'Groupe Jamais Écrit', 'description' => 'exclu au dépôt']);
-        $this->ajouterLigne($chemin, 'Client', ['nom' => 'Client Seul Retenu']);
-
-        $run = $this->importateur()->controler($chemin, 'memoire.xlsx', $entreprise, $proprietaire, false, false, null, ['Client']);
-        self::assertSame(['Client'], $run->getDonnees(), 'Le périmètre doit être mémorisé sur le contrôle.');
-
-        $this->importateur()->executer($run, $entreprise->getUtilisateur());
-
-        self::assertNull(
-            $this->em()->getRepository(\App\Entity\Groupe::class)->findOneBy(['nom' => 'Groupe Jamais Écrit']),
-            'La confirmation a réimporté une feuille que l\'utilisateur avait écartée.',
-        );
-    }
-
-    /**
-     * ⚠ LE FILTRAGE NE MET RIEN À L'ABRI, ET C'EST VOULU.
-     *
-     * Écarter une donnée dont une autre dépend produit un renvoi irrésolu, donc une
-     * erreur bloquante. Le filtrage échoue BRUYAMMENT plutôt que d'écrire des liens
-     * vides : mieux vaut un refus qu'une fiche incohérente que personne ne remarquera.
-     */
-    public function testUnFiltrageQuiCasseUnRenvoiEstRefuse(): void
-    {
-        [$entreprise, $proprietaire] = $this->fixture();
-
-        $chemin = $this->exporter($entreprise, $proprietaire, ['Groupe', 'Client']);
-        $this->ajouterLigne($chemin, 'Groupe', ['nom' => 'Groupe Nouveau', 'description' => 'créé ici'], 'G1');
-        $this->ajouterLigne($chemin, 'Client', ['nom' => 'Client Rattaché', 'groupe' => 'G1']);
-
-        // On écarte les groupes : le repère « G1 » ne désigne plus rien.
-        $run = $this->importateur()->controler($chemin, 'casse.xlsx', $entreprise, $proprietaire, false, false, null, ['Client']);
-
-        self::assertFalse(
-            $run->getRapport()['confirmable'],
-            'Écarter une donnée dont une autre dépend doit bloquer, pas écrire un lien vide.',
-        );
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
     // Outillage
     // ─────────────────────────────────────────────────────────────────────────────
 
@@ -440,6 +391,27 @@ class GabaritEtAnomaliesTest extends WebTestCase
         );
 
         return $classeur;
+    }
+
+    /**
+     * LE CLASSEUR DE REPRISE VIERGE, tel que la rubrique le distribue.
+     *
+     * ⚠ IL PASSE PAR `produire()` ET NON PAR `exporter()`, comme la route qui le sert :
+     * le gabarit n'est jamais facturé ni décompté — il ne contient rien du cabinet.
+     */
+    private function gabaritDeReprise(Entreprise $entreprise, Invite $invite): string
+    {
+        [$classeur] = $this->service(\App\Echange\Etat\ProducteurDeLEtat::class)->produire(
+            $entreprise,
+            $invite,
+            $entreprise->getUtilisateur(),
+            [],
+            '',
+            \App\Echange\Etat\ExerciceDesTranches::TOUS,
+            gabarit: true,
+        );
+
+        return $this->ecrire($classeur);
     }
 
     private function exporter(Entreprise $entreprise, Invite $invite, array $codes): string
