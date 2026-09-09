@@ -56,6 +56,7 @@ final class CouvertureDesEcrans
      */
     public const COUVERTES = [
         // ── Relevé de compte client (SOA) ──────────────────────────────────
+        'ui:soa.view-request' => 'lire_soa',
         'ui:soa.send-request' => 'preparer_envoi_soa',
         'ui:soa.docs-picker-request' => 'telecharger_documents',
 
@@ -156,11 +157,6 @@ final class CouvertureDesEcrans
         'ui:invite.resend-request' => "Renvoi d'un courriel d'invitation, donc émission d'un accès "
             . "vers un tiers. Réservé à l'écran pour la même raison que les liens de SOA.",
 
-        // ── Consultation du relevé de compte ───────────────────────────────
-        'ui:soa.view-request' => "Consultation du relevé de compte d'un client sous sa forme "
-            . "tabulaire complète. Ket sait l'ENVOYER (preparer_envoi_soa) et sait répondre sur "
-            . "les impayés (suivi_impayes), mais ne restitue pas encore le relevé lui-même dans "
-            . 'le fil : reste à faire.',
     ];
 
     /** @return list<string> toutes les actions d'écran inventoriées */

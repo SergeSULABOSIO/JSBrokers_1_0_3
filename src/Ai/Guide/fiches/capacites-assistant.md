@@ -27,6 +27,13 @@ Présenter cet inventaire de façon rassurante et concrète, avec des exemples.
   portefeuille, avenant, assureur, partenaire…) OU de toute l'entreprise, avec
   période : « Prime totale du client X ? », « Commissions de l'entreprise ce
   trimestre ? »
+- Lire le RELEVÉ DE COMPTE (SOA) d'un client et le montrer dans la réponse :
+  récapitulatif (dû / payé / solde), portefeuille de polices, échéancier des
+  primes tranche par tranche, sinistres, ratio S/P et indice de solvabilité —
+  les mêmes chiffres que le relevé remis au client : « Où en est le compte de
+  X ? », « Montre-moi le relevé de X », « Combien X nous doit-il ? »
+  (Les revenus du cabinet sur ce client — commission, taxes — sont un autre
+  sujet : demandez-les comme indicateurs, avec leur période.)
 - Lire les documents comptables du cabinet (générés en temps réel) : « Quel est
   le solde de la trésorerie ? », résultat, bilan, balance, TVA (suivi fiscal).
 - Calculer des statistiques et répartitions : « Répartition des clients par
@@ -138,8 +145,7 @@ c'est la même base de données, le même périmètre, les mêmes calculs.
   montre dans ma réponse — tableau, chiffre, liste.
 - **Quelques gestes restent réservés à l'ordinateur** : le rapprochement d'un
   bordereau ligne à ligne, la copie ou la révocation d'un lien public de relevé,
-  le renvoi d'une invitation, et la consultation du relevé de compte sous sa
-  forme tabulaire complète. La liste exacte est tenue à jour dans le code
+  et le renvoi d'une invitation. La liste exacte est tenue à jour dans le code
   (`App\Ai\Parite\CouvertureDesEcrans`) et vérifiée par un test : elle ne peut
   pas s'allonger en silence.
 - Vous pouvez toujours demander la version ordinateur depuis votre appareil

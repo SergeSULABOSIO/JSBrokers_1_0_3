@@ -8,7 +8,6 @@
    vue client, la garde Twig suit donc le contexte.
    La numérotation est dynamique pour rester continue quelle que soit la vue.
 #}
-{% set renewalLabels = {0: 'Perdu', 1: 'Ponctuel', 2: 'Renouvelé', 3: 'Prolongé', 4: 'En cours', 5: 'En renouvellement', 6: 'Résilié'} %}
 {% set feedbackTypeLabels = {0: 'Réunion', 1: 'Appel', 2: 'Email', 3: 'SMS', 4: 'Autre'} %}
 {% set contactTypeLabels = {0: 'Production', 1: 'Sinistre', 2: 'Administration', 3: 'Autres'} %}
 {% set vueClient = vueClient|default(false) %}
@@ -34,7 +33,6 @@
                 </tr>
             </thead>
             <tbody>
-                {% set pctComm = client.montant_du|default(0) > 0 ? (client.montant_paye|default(0) / client.montant_du) : null %}
                 {% set primePayeeAff = client.primePayee|default(0) %}
                 {% set primeSoldeAff = client.primeSoldeDue|default(0) %}
                 <tr>
@@ -145,12 +143,14 @@
                                     {{ renewalLabels[avenant.renewalStatus]|default('—') }}
                                 </span>
                             </td>
-                            {% set aPayee = pctComm is not null ? (avenant.primeTotale|default(0) * pctComm) : 0 %}
-                            {% set aSolde = avenant.primeTotale|default(0) - aPayee %}
+                            {# « Payé » et « Solde » sont des PRORATA du taux de règlement du
+                               client, calculés une seule fois par SoaContextBuilder : les lire
+                               ici est ce qui garantit que l'écran, le relevé public et Ket
+                               annoncent le MÊME solde. #}
                             <td>{{ (avenant.primeTotale|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
-                            <td>{{ aPayee|number_format(2, ',', ' ') }} {{ monnaie }}</td>
-                            <td class="{{ aSolde > 0 ? 'text-solde-due' : 'text-solde-ok' }}">
-                                {{ aSolde|number_format(2, ',', ' ') }} {{ monnaie }}
+                            <td>{{ item.primePayee|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                            <td class="{{ item.primeSolde > 0 ? 'text-solde-due' : 'text-solde-ok' }}">
+                                {{ item.primeSolde|number_format(2, ',', ' ') }} {{ monnaie }}
                             </td>
                             {% if soaDocsUrlPattern is defined %}
                                 <td style="text-align:center;">
@@ -285,9 +285,6 @@
                         {% set tranche = item.tranche %}
                         {% set cotation = item.cotation %}
                         {% set piste = item.piste %}
-                        {% set tPct = client.montant_du|default(0) > 0 ? (client.montant_paye|default(0) / client.montant_du) : null %}
-                        {% set tPayee = tPct is not null ? (tranche.primeTranche|default(0) * tPct) : tranche.primePayee|default(0) %}
-                        {% set tSolde = tranche.primeTranche|default(0) - tPayee %}
                         <tr>
                             <td>{{ cotation.avenants is not empty ? cotation.avenants.first.referencePolice|default('—') : '—' }}</td>
                             <td class="text-start">{{ piste.risque ? piste.risque.nomComplet : '—' }}</td>
@@ -295,9 +292,9 @@
                             <td>{{ tranche.nom }}</td>
                             <td style="white-space:nowrap;">{{ tranche.payableAt ? tranche.payableAt|date('d/m/Y') : '—' }}</td>
                             <td>{{ (tranche.primeTranche|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
-                            <td>{{ tPayee|number_format(2, ',', ' ') }} {{ monnaie }}</td>
-                            <td class="{{ tSolde > 0 ? 'text-solde-due' : 'text-solde-ok' }}">
-                                {{ tSolde|number_format(2, ',', ' ') }} {{ monnaie }}
+                            <td>{{ item.primePayee|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                            <td class="{{ item.primeSolde > 0 ? 'text-solde-due' : 'text-solde-ok' }}">
+                                {{ item.primeSolde|number_format(2, ',', ' ') }} {{ monnaie }}
                             </td>
                             <td>
                                 {% if tranche.retardPaiement and tranche.retardPaiement != 'Non' and tranche.retardPaiement != 'N/A' %}

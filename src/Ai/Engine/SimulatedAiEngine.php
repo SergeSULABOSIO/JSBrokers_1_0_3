@@ -191,6 +191,9 @@ final class SimulatedAiEngine implements AiEngineInterface
                 $data['libelle'],
                 isset($data['cible']) ? sprintf(' pour « %s »', $data['cible']) : '',
             ),
+            'lire_soa' => ($data['ambigu'] ?? false)
+                ? $this->formatCandidats($data)
+                : $this->formatReleve($data),
             'preparer_envoi_soa' => ($data['ambigu'] ?? false)
                 ? $this->formatCandidats($data)
                 : sprintf(
@@ -462,6 +465,64 @@ final class SimulatedAiEngine implements AiEngineInterface
      * est détaillée poste par poste ; les autres états sont restitués en compact
      * (le LLM réel, lui, formule librement à partir des mêmes données).
      */
+    /**
+     * Relevé de compte (lire_soa) : l'entête de la pièce, puis une phrase par
+     * section demandée. Le moteur simulé ne rend PAS les tableaux markdown —
+     * c'est le rôle de la phase de rédaction avec les moteurs réels ; il donne
+     * ici les totaux, qui sont ce qu'on vérifie de bout en bout.
+     */
+    private function formatReleve(array $data): string
+    {
+        $fmt = static fn (float $m) => number_format($m, 2, ',', ' ');
+        $monnaie = (string) ($data['monnaie'] ?? '');
+
+        $lignes = [sprintf(
+            'Relevé de compte %s de « %s », arrêté au %s (montants en %s).',
+            $data['reference'] ?? '',
+            $data['client'] ?? '',
+            $data['arreteAu'] ?? '',
+            $monnaie,
+        )];
+
+        foreach ($data['recapitulatif']['lignes'] ?? [] as $ligne) {
+            $lignes[] = sprintf(
+                '- %s : %s dû, %s payé, solde %s %s.',
+                $ligne['rubrique'],
+                $fmt((float) $ligne['du']),
+                $fmt((float) $ligne['paye']),
+                $fmt((float) $ligne['solde']),
+                $monnaie,
+            );
+        }
+
+        foreach (['polices' => 'police(s)', 'echeancier' => 'tranche(s) de prime', 'sinistres' => 'sinistre(s)'] as $cle => $libelle) {
+            if (!isset($data[$cle]['nombre'])) {
+                continue;
+            }
+            $lignes[] = sprintf(
+                '- %d %s%s.',
+                $data[$cle]['nombre'],
+                $libelle,
+                ($data[$cle]['lignesTronquees'] ?? false) ? ' (liste tronquée)' : '',
+            );
+        }
+
+        if (isset($data['ratios'])) {
+            $lignes[] = sprintf(
+                '- Ratio S/P : %s %% · Indice de solvabilité : %s %%.',
+                $fmt((float) $data['ratios']['tauxSP']),
+                $fmt((float) $data['ratios']['indiceSolvabilite']),
+            );
+        }
+
+        if (isset($data['sectionsNonDemandees'])) {
+            $lignes[] = 'Sections non demandées : ' . implode(', ', $data['sectionsNonDemandees']) . '.';
+        }
+
+        return implode("
+", $lignes);
+    }
+
     private function formatDocumentComptable(array $data): string
     {
         $fmt = static fn (float $m) => number_format($m, 2, ',', ' ');
