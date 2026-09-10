@@ -24,22 +24,38 @@ class EchangeImportRunRepository extends ServiceEntityRepository
     }
 
     /**
-     * Le contrôle en attente de décision de CET invité, s'il y en a un.
+     * LE DERNIER CONTRÔLE QUI ATTEND QUELQUE CHOSE DE CET INVITÉ — une décision, ou une
+     * correction.
      *
-     * Scopé à l'invité et non au seul cabinet : le rapport porte le détail d'un fichier
-     * qu'un collègue a déposé, avec ses erreurs et ses données. Deux personnes peuvent
-     * préparer un import en parallèle sans se voir l'une l'autre.
+     * ⚠ LES ÉCHECS EN FONT PARTIE, ET C'EST TOUT L'OBJET DE CETTE MÉTHODE. Elle ne
+     * rendait que les contrôles confirmables ; un contrôle EN ÉCHEC n'était donc jamais
+     * passé à l'écran, et tout le bloc du rapport — le tableau des anomalies situées, le
+     * lien vers le classeur annoté, le bouton d'abandon — restait invisible.
+     *
+     * L'utilisateur lisait « le fichier comporte des anomalies à corriger » et n'avait
+     * AUCUN moyen de savoir lesquelles, ni où. Le cas le plus utile de toute la rubrique
+     * était le seul que l'écran ne savait pas montrer.
+     *
+     * Les deux statuts appellent la même chose — regarder le rapport — et ne diffèrent
+     * que par ce qu'on peut en faire ensuite : confirmer, ou corriger et redéposer.
+     *
+     * ⚠ SCOPÉ À L'INVITÉ, et non au seul cabinet : le rapport porte le détail d'un fichier
+     * déposé, avec ses données. Deux personnes peuvent préparer un import en parallèle
+     * sans se voir l'une l'autre.
      */
-    public function enAttentePour(Entreprise $entreprise, Invite $invite): ?EchangeImportRun
+    public function aDeciderOuACorrigerPour(Entreprise $entreprise, Invite $invite): ?EchangeImportRun
     {
         $runs = $this->createQueryBuilder('r')
             ->andWhere('r.entreprise = :entreprise')
             ->andWhere('r.invite = :invite')
-            ->andWhere('r.statut = :statut')
+            ->andWhere('r.statut IN (:statuts)')
             ->andWhere('r.expireLe > :maintenant')
             ->setParameter('entreprise', $entreprise)
             ->setParameter('invite', $invite)
-            ->setParameter('statut', EchangeImportRun::STATUT_EN_ATTENTE_CONFIRMATION)
+            ->setParameter('statuts', [
+                EchangeImportRun::STATUT_EN_ATTENTE_CONFIRMATION,
+                EchangeImportRun::STATUT_ECHEC,
+            ])
             ->setParameter('maintenant', new \DateTimeImmutable('now'))
             ->orderBy('r.id', 'DESC')
             ->setMaxResults(1)

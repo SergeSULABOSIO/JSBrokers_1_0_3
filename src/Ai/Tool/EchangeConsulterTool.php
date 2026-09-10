@@ -284,7 +284,7 @@ final class EchangeConsulterTool implements AiToolInterface
             return ['controle_en_cours' => null];
         }
 
-        $run = $this->importRuns->enAttentePour($scope->entreprise, $scope->invite);
+        $run = $this->importRuns->aDeciderOuACorrigerPour($scope->entreprise, $scope->invite);
         if ($run === null) {
             return [
                 'controle_en_cours' => null,

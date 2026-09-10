@@ -158,7 +158,12 @@ class EchangeController extends AbstractController
             // comme s'il était celui de lecture promettrait une importation qui
             // échouerait ligne à ligne au contrôle.
             'facturation'   => $this->compteur->etat($entreprise),
-            'controleEnCours' => $this->importRuns->enAttentePour($entreprise, $invite),
+            // ⚠ LE CONTRÔLE EN ÉCHEC EN FAIT PARTIE, et c'est le cas le plus utile. Tant
+            // que l'écran ne connaissait que les contrôles confirmables, un fichier refusé
+            // n'affichait RIEN : ni le tableau des anomalies, ni le lien vers le classeur
+            // annoté. L'utilisateur lisait « le fichier comporte des anomalies » et
+            // n'avait aucun moyen de savoir lesquelles, ni où.
+            'controleEnCours' => $this->importRuns->aDeciderOuACorrigerPour($entreprise, $invite),
             // ⚠ ET LE TRAVAIL QUI AVANCE ENCORE. Depuis que l'import se fait par paliers,
             // il ne vit plus dans la requête qui l'a lancé : sans cette ligne, un
             // rafraîchissement de page le rendrait invisible, et l'utilisateur redéposerait
@@ -406,7 +411,7 @@ class EchangeController extends AbstractController
 
         // Un contrôle déjà en attente est remplacé : garder les deux ferait deux
         // rapports concurrents pour un même utilisateur, dont un obsolète.
-        $enCours = $this->importRuns->enAttentePour($entreprise, $invite);
+        $enCours = $this->importRuns->aDeciderOuACorrigerPour($entreprise, $invite);
         if ($enCours !== null) {
             $this->importateur->annuler($enCours);
         }

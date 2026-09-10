@@ -182,7 +182,7 @@ final class EchangeImporterTool implements AiToolInterface, AiToolEcriture, AiTo
 
         // Un contrôle déjà en attente est remplacé : deux rapports concurrents pour un
         // même utilisateur, dont un périmé, ne peuvent que tromper.
-        $enCours = $this->importRuns->enAttentePour($scope->entreprise, $scope->invite);
+        $enCours = $this->importRuns->aDeciderOuACorrigerPour($scope->entreprise, $scope->invite);
         if ($enCours !== null) {
             $this->importateur->annuler($enCours);
         }
@@ -212,7 +212,7 @@ final class EchangeImporterTool implements AiToolInterface, AiToolEcriture, AiTo
      */
     private function confirmation(AiScope $scope): AiToolResult
     {
-        $run = $this->importRuns->enAttentePour($scope->entreprise, $scope->invite);
+        $run = $this->importRuns->aDeciderOuACorrigerPour($scope->entreprise, $scope->invite);
         if ($run === null) {
             return AiToolResult::introuvable('', 'Aucun contrôle n\'attend de décision. '
                 . 'Lance d\'abord l\'étape « controle » sur le fichier joint.');
@@ -251,7 +251,7 @@ final class EchangeImporterTool implements AiToolInterface, AiToolEcriture, AiTo
 
     private function annulation(AiScope $scope): AiToolResult
     {
-        $run = $this->importRuns->enAttentePour($scope->entreprise, $scope->invite);
+        $run = $this->importRuns->aDeciderOuACorrigerPour($scope->entreprise, $scope->invite);
         if ($run === null) {
             return AiToolResult::ok(['annule' => false, 'note' => 'Aucun contrôle n\'était en attente.']);
         }

@@ -77,6 +77,8 @@ final class RepriseTest extends KernelTestCase
             $operations = array_merge($operations, $reconstitueur->pour(
                 $this->ligne([
                     'policeReference' => 'POL/2026/001',
+                    'policeDateEffet' => '01/01/2026',
+                    'policeEcheance' => '31/12/2026',
                     'trancheNom' => 'Échéance ' . $rang,
                     'tranchePart' => 50,
                     'assure' => 'KIN AVIA',
@@ -120,6 +122,8 @@ final class RepriseTest extends KernelTestCase
             $operations = array_merge($operations, $reconstitueur->pour(
                 $this->ligne([
                     'policeReference' => 'POL/2026/007',
+                    'policeDateEffet' => '01/01/2026',
+                    'policeEcheance' => '31/12/2026',
                     'risque' => 'RC Aviation',
                     'policeNumeroAvenant' => $numero,
                     'trancheNom' => $nom,
@@ -186,6 +190,8 @@ final class RepriseTest extends KernelTestCase
                 'id' => 4242,
                 '_action' => 'SUPPRIMER',
                 'policeReference' => 'POL/2026/001',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
                 'risque' => 'RC Aviation',
                 'assure' => 'KIN AVIA',
             ], 3),
@@ -233,6 +239,8 @@ final class RepriseTest extends KernelTestCase
             $this->ligne([
                 'id' => 77,
                 'policeReference' => 'POL/2026/001',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
                 'risque' => 'RC Aviation',
                 'trancheNom' => 'Échéance corrigée',
                 'assure' => 'KIN AVIA',
@@ -275,6 +283,8 @@ final class RepriseTest extends KernelTestCase
         $operations = $this->reconstitueur()->pour(
             $this->ligne([
                 'policeReference' => 'POL/2026/001',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
                 'trancheNom' => 'Échéance 2',
                 'tranchePayableAt' => '2026-06-30',
                 'assure' => 'KIN AVIA',
@@ -317,6 +327,8 @@ final class RepriseTest extends KernelTestCase
         $operations = $this->reconstitueur()->pour(
             $this->ligne([
                 'policeReference' => 'POL/2026/001',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
                 'risque' => 'RC Aviation',
                 'trancheNom' => 'Échéance 1',
                 'tranchePayableAt' => '2026-01-15',
@@ -352,6 +364,8 @@ final class RepriseTest extends KernelTestCase
         $operations = $this->reconstitueur()->pour(
             $this->ligne([
                 'policeReference' => 'POL/2026/001',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
                 'risque' => 'RC Aviation',
                 'trancheNom' => 'Échéance 1',
                 'tranchePayableAt' => '2026-01-15',
@@ -386,6 +400,8 @@ final class RepriseTest extends KernelTestCase
         $operations = $this->reconstitueur()->pour(
             $this->ligne([
                 'policeReference' => 'POL/2026/001',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
                 'risque' => 'RC Aviation',
                 'trancheNom' => 'Échéance 2',
                 'assure' => 'KIN AVIA',
@@ -428,6 +444,8 @@ final class RepriseTest extends KernelTestCase
         $operations = $this->reconstitueur()->pour(
             $this->ligne([
                 'policeReference' => 'POL/2026/010',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
                 'risque' => 'RC Aviation',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
@@ -484,6 +502,8 @@ final class RepriseTest extends KernelTestCase
         $operations = $this->reconstitueur()->pour(
             $this->ligne([
                 'policeReference' => 'POL/2026/014',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
                 'risque' => 'RC Aviation',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
@@ -524,6 +544,8 @@ final class RepriseTest extends KernelTestCase
         $operations = $this->reconstitueur()->pour(
             $this->ligne([
                 'policeReference' => 'POL/2026/011',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
                 'risque' => 'RC Aviation',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
@@ -598,6 +620,8 @@ final class RepriseTest extends KernelTestCase
             $this->ligne([
                 'id' => 77,
                 'policeReference' => 'POL/2026/020',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
                 'risque' => 'RC Aviation',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
@@ -635,6 +659,7 @@ final class RepriseTest extends KernelTestCase
                 'policeReference' => 'POL/2026/021',
                 'risque' => 'RC Aviation',
                 'policeDateEffet' => '2026-01-31',
+                'policeEcheance' => '31/12/2026',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
                 'trancheNom' => 'Prime unique',
@@ -698,6 +723,8 @@ final class RepriseTest extends KernelTestCase
         $operations = $this->reconstitueur()->pour(
             $this->ligne([
                 'policeReference' => 'POL/2026/022',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
                 'risque' => 'RC Aviation',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
@@ -716,7 +743,7 @@ final class RepriseTest extends KernelTestCase
         self::assertSame([], $this->erreurs($anomalies));
         self::assertNotSame([], $anomalies);
         self::assertStringContainsString('1 200,00', $anomalies[0]->message, 'Le montant laissé de côté doit être nommé.');
-        self::assertStringContainsString('rubrique Notes', $anomalies[0]->message, 'Et l\'endroit où le saisir.');
+        self::assertStringContainsString('Notes', $anomalies[0]->message, 'Et l\'endroit où le saisir.');
 
         self::assertNotNull($this->operation($operations, 'Tranche'), 'L\'échéance, elle, est reprise.');
     }
@@ -735,6 +762,8 @@ final class RepriseTest extends KernelTestCase
         $operations = $this->reconstitueur()->pour(
             $this->ligne([
                 'policeReference' => 'POL/2026/024',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
                 'risque' => 'RC Aviation',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',
@@ -749,7 +778,9 @@ final class RepriseTest extends KernelTestCase
         self::assertNull($this->operation($operations, 'ReversementRetroAgent'));
         $erreurs = $this->erreurs($anomalies);
         self::assertCount(1, $erreurs);
-        self::assertStringContainsString('aucun intermédiaire', $erreurs[0]->message);
+        // Le reproche doit dire CE QUI MANQUE — l'intermédiaire — et non « bénéficiaire
+        // absent », mot qui n'apparaît nulle part dans le classeur.
+        self::assertStringContainsString('intermédiaire', $erreurs[0]->message);
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -771,6 +802,8 @@ final class RepriseTest extends KernelTestCase
         $operations = $this->reconstitueur()->pour(
             $this->ligne([
                 'policeReference' => 'POL/2026/013',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
                 'risque' => 'RC Aviation',
                 'assure' => 'KIN AVIA',
                 'assureur' => 'SFA CONGO',

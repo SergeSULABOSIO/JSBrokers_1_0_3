@@ -245,7 +245,10 @@ final class AvanceurDImport
         // ⚠ LES INDEX REPARTENT DE ZÉRO À CHAQUE PALIER, et c'est indispensable. Le palier
         // précédent vient peut-être d'écrire des polices : un index resté tiède les
         // ferait recréer par celui-ci.
-        $this->reconstitueur->reinitialiser();
+        //
+        // L'invité voyage avec : c'est lui qui répondra des portefeuilles créés en chemin,
+        // information que le classeur ne porte pas et sans laquelle ils ne peuvent naître.
+        $this->reconstitueur->reinitialiser($invite);
 
         $rapport = RapportDeControle::depuisArray($run->getRapport());
         $rapport->declarerRessource(LecteurDeLEtat::RESSOURCE, 'Échéances de prime');
@@ -342,12 +345,18 @@ final class AvanceurDImport
 
                 $diagnostic = $this->mutation->analyserOperation($operation, $scope, $refs);
                 if (!$diagnostic['ok']) {
+                    // ⚠ LE CATALOGUE SUIT, et c'est lui qui rend le reproche utilisable :
+                    // il permet de retrouver la COLONNE du classeur qui écrit le champ
+                    // manquant. Sans elle, l'utilisateur lit « ligne 2 » et doit parcourir
+                    // soixante colonnes — et le classeur annoté ne surligne rien, faute de
+                    // cellule à désigner.
                     $this->diagnostic->signaler(
                         $diagnostic,
                         $ligne,
                         $operation->entityShortName,
                         LecteurDeLEtat::RESSOURCE,
                         $rapport,
+                        $colonnes,
                     );
                     $refuse = true;
                     break;
