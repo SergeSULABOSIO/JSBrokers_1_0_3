@@ -1370,6 +1370,50 @@ class EtatDuPortefeuilleTest extends KernelTestCase
         self::assertSame('COULEURS DES COLONNES', $dictionnaire->getCell('A6')->getValue());
     }
 
+    /**
+     * ⚠ LA BARRE NE DOIT PAS ATTEINDRE CENT POUR CENT AVANT LA FIN DU TRAVAIL.
+     *
+     * Elle ne mesurait que la LECTURE du portefeuille : arrivée à cent pour cent, elle s'y
+     * figeait pendant la mise en forme du classeur — souvent plus longue que la lecture —,
+     * puis pendant la compression. L'utilisateur regardait « 100 % » sans que rien ne
+     * bouge, ce qui se lit comme une panne et fait recliquer.
+     *
+     * Le budget compte donc deux pas par ligne, lire puis écrire ; et ce test tient la
+     * promesse : au moment où la lecture s'achève, il reste du chemin à parcourir.
+     */
+    public function testLaProgressionDeLExportNeSaturePasAvantLaMiseEnForme(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+
+        $pourcentages = [];
+        $progression = new \App\Echange\Service\Progression(0, static function (array $etat) use (&$pourcentages): void {
+            $pourcentages[] = $etat['pct'];
+        });
+
+        static::getContainer()->get(ProducteurDeLEtat::class)->produire(
+            $entreprise,
+            $invite,
+            $entreprise->getUtilisateur(),
+            [],
+            null,
+            \App\Echange\Etat\ExerciceDesTranches::TOUS,
+            $progression,
+        );
+
+        self::assertNotEmpty($pourcentages, 'La production doit publier son avancement.');
+
+        // ⚠ ON NE VÉRIFIE PAS QU'ELLE FINIT À CENT : c'est `terminer()` qui le fait, et il
+        // appartient à l'appelant. Ce qui compte ici, c'est qu'elle n'y arrive pas TROP TÔT.
+        $avantLaFin = array_slice($pourcentages, 0, -1);
+        foreach ($avantLaFin as $pct) {
+            self::assertLessThan(
+                100.0,
+                $pct,
+                'Un pourcentage de cent pour cent publié avant la fin fige la barre sur le reste du travail.',
+            );
+        }
+    }
+
     private function produire(Entreprise $entreprise, Invite $invite): Spreadsheet
     {
         // ⚠ `produire()` et JAMAIS `exporter()` : le second facture. Un test qui débite

@@ -158,6 +158,15 @@ class EchangeController extends AbstractController
             // comme s'il était celui de lecture promettrait une importation qui
             // échouerait ligne à ligne au contrôle.
             'facturation'   => $this->compteur->etat($entreprise),
+            // ⚠ LE SOLDE EST RELU À CHAQUE AFFICHAGE, et c'est ce qui fait survivre le
+            // parcours au F5 : le propriétaire recharge dans un autre onglet, revient,
+            // rafraîchit — et le bouton de confirmation se rouvre de lui-même. Le COÛT, lui,
+            // est figé dans le rapport : il ne doit pas bouger entre l'annonce et l'accord.
+            //
+            // Le bouton d'achat ne s'affiche qu'au PROPRIÉTAIRE : c'est lui qui paie. Un
+            // collaborateur cliquerait vers une page de recharge qui ne le concerne pas.
+            'estProprietaire' => $invite !== null && $this->accessResolver->isOwner($invite),
+            'urlAchatTokens'  => $this->generateUrl('admin.token.buy'),
             // ⚠ LE CONTRÔLE EN ÉCHEC EN FAIT PARTIE, et c'est le cas le plus utile. Tant
             // que l'écran ne connaissait que les contrôles confirmables, un fichier refusé
             // n'affichait RIEN : ni le tableau des anomalies, ni le lien vers le classeur
@@ -285,6 +294,12 @@ class EchangeController extends AbstractController
                     $graine !== '' ? $graine : null,
                     $progression,
                 );
+
+                // ⚠ QUAND LE POURCENTAGE NE PEUT PLUS BOUGER HONNÊTEMENT, C'EST LE TEXTE
+                // QUI PORTE L'INFORMATION. La compression du classeur et son dépôt sur
+                // disque ne se comptent pas en lignes : plutôt que de laisser la barre
+                // immobile sans un mot — ce qui se lit comme une panne —, on nomme l'étape.
+                $progression->etape('Compression du fichier');
 
                 // Le classeur est déjà produit et l'occurrence enregistrée : il ne reste
                 // qu'à le poser où le téléchargement ira le chercher.
@@ -570,6 +585,23 @@ class EchangeController extends AbstractController
             $run = $this->importateur->demarrerLEcriture($run, $this->getUser());
         } catch (ImportImpossibleException $e) {
             return $this->json(['message' => $e->getMessage()], Response::HTTP_CONFLICT);
+        } catch (InsufficientTokensException $e) {
+            // ⚠ AVANT LE `\Throwable`, sinon il l'absorberait et l'écran recevrait un 422
+            // muet là où il attend de quoi proposer une recharge. Même forme que la garde
+            // de l'assistant : un code qui dit « il manque de l'argent », et l'adresse où
+            // en ajouter.
+            return $this->json([
+                'message' => sprintf(
+                    'Votre solde ne couvre pas cette reprise : il faut %s tokens et il en reste %s. '
+                    . 'Rechargez, puis revenez sur cet onglet et actualisez la page.',
+                    number_format($e->required, 0, ',', ' '),
+                    number_format($e->available, 0, ',', ' '),
+                ),
+                'blocked'         => true,
+                'coutEstime'      => $e->required,
+                'soldeDisponible' => $e->available,
+                'buyUrl'          => $this->generateUrl('admin.token.buy'),
+            ], Response::HTTP_PAYMENT_REQUIRED);
         } catch (\Throwable $e) {
             return $this->json(['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
         }

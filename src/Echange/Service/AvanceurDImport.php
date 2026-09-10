@@ -18,6 +18,7 @@ use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Repository\EchangeImportRunRepository;
 use App\Service\Workspace\WorkspaceMutationService;
+use App\Token\TokenAccountService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -100,6 +101,7 @@ final class AvanceurDImport
         private readonly DiagnosticEnAnomalie $diagnostic,
         private readonly CompteurDOccurrences $compteur,
         private readonly FranchiseDeReprise $franchise,
+        private readonly TokenAccountService $tokens,
         private readonly EchangeImportRunRepository $runs,
         private readonly EntityManagerInterface $em,
         // ⚠ POUR ROUVRIR CE QUE DOCTRINE FERME. Une exception qui traverse un flush ferme
@@ -211,6 +213,13 @@ final class AvanceurDImport
         // sous nos pieds, et le curseur ne désignerait plus la même ligne.
         if ($run->getTotalLignes() !== count($lignes)) {
             $run->setTotalLignes(count($lignes));
+
+            // ⚠ ET ON LE FLUSHE TOUT DE SUITE, sans attendre la fin du palier. Le run naît
+            // à zéro ligne : tant que ce dénominateur n'est pas en base, l'écran interroge
+            // l'état et lit « 0 sur 0 », donc 0 %. Sur un premier palier qui dure — et il
+            // dure, c'est celui qui ouvre le fichier —, l'utilisateur regardait une barre
+            // immobile à zéro en croyant que rien ne se passait.
+            $this->em->flush();
         }
 
         if ($lignes === []) {
@@ -337,6 +346,13 @@ final class AvanceurDImport
             $reprochesDeGroupe[(int) $reproche->ligne][] = $reproche;
         }
 
+        // ⚠ LA BASE DE FRANCHISE SE GÈLE AU PREMIER PALIER. Un import concurrent la
+        // déplacerait au milieu du contrôle : le fichier serait chiffré moitié à un tarif,
+        // moitié à l'autre, et le total annoncé ne correspondrait à rien.
+        $rapport->gelerLaFranchise($this->franchise->dejaConsommees($entreprise));
+        $plafond = $this->franchise->plafond();
+        $base = (int) $rapport->franchiseBase();
+
         foreach ($fenetre as $ligne) {
             $anomalies = $reprochesDeGroupe[$ligne->numero] ?? [];
             $operations = $this->reconstitueur->pour($ligne, $colonnes, $entreprise, $anomalies);
@@ -400,9 +416,26 @@ final class AvanceurDImport
                 continue;
             }
 
+            // ⚠ LE COÛT SE CHIFFRE ICI, ET NULLE PART AILLEURS. Les opérations validées
+            // sont sous la main : `facturablesArbre()` en tire les entités qui seront
+            // écrites, collections comprises, et le barème dit ce qu'elles pèsent. Refaire
+            // ce travail à la confirmation obligerait à relire tout le fichier pour
+            // annoncer un chiffre qu'on tenait déjà.
+            //
+            // ⚠ ET LA LIGNE OFFERTE NE COMPTE RIEN. Additionner son coût gonflerait
+            // l'annonce d'un montant que personne ne paiera — un cabinet qui découvre un
+            // prix là où on lui a promis la gratuité n'y revient pas.
+            $tokensDeLaLigne = 0;
             foreach ($retenues as $operation) {
                 $rapport->compter(LecteurDeLEtat::RESSOURCE, $operation->op);
+                $tokensDeLaLigne += $this->tokens->estimateWriteCost(
+                    $this->mutation->facturablesArbre($operation, $scope),
+                );
             }
+
+            // Le rang ABSOLU dans le fichier : `lignesLues` est cumulatif et persiste d'un
+            // palier à l'autre, ce qui est exactement ce qu'il faut ici.
+            $rapport->compterLigneChiffree($base + $rapport->lignesLues() <= $plafond, $tokensDeLaLigne);
         }
 
         // Un contrôle ne s'arrête jamais en route : son objet est justement de dresser la

@@ -146,7 +146,12 @@ final class ProducteurDeLEtat
         // ligne sans avoir à exporter puis effacer, geste que personne ne devine et qui
         // casse le fichier une fois sur deux.
         $total = $gabarit ? 0 : $this->etat->compterLignes($entreprise, $validite, $exercice);
-        $progression->totaliser($total);
+
+        // ⚠ DEUX PAS PAR LIGNE : LA LIRE, PUIS L'ÉCRIRE. Le dénominateur ne couvrait que la
+        // lecture du portefeuille : la barre atteignait cent pour cent, puis se figeait
+        // pendant la mise en forme du classeur — souvent plus longue que la lecture elle-
+        // même. On lisait « 100 % » sans que rien ne bouge, ce qui se lit comme une panne.
+        $progression->totaliser($total * 2);
 
         $colonnes = $this->etat->colonnes($entreprise, $colonnesRetenues);
 
@@ -199,6 +204,7 @@ final class ProducteurDeLEtat
                 ValiditeDesTranches::normaliser($validite),
                 $exercice,
                 $gabarit,
+                $progression,
             ),
             $manifeste,
             $total,

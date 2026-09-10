@@ -6,6 +6,7 @@ use App\Ai\Finance\EconomieTranche;
 use App\Ai\Presentation\Colonnes;
 use App\Echange\Classeur\EcrivainJsbx;
 use App\Echange\Classeur\Manifeste;
+use App\Echange\Service\Progression;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Border;
@@ -61,6 +62,7 @@ final class EcrivainEtat
         string $validite = ValiditeDesTranches::TOUTES,
         string $exercice = ExerciceDesTranches::TOUS,
         bool $gabarit = false,
+        ?Progression $progression = null,
     ): Spreadsheet
     {
         $classeur = new Spreadsheet();
@@ -72,7 +74,7 @@ final class EcrivainEtat
         // écrit. Ce qu'il portait d'utile au lecteur (« ce fichier ne se redépose pas »)
         // ouvre désormais le dictionnaire.
         $this->ecrireDictionnaire($classeur, $manifeste, $colonnes, $validite, $exercice, $gabarit);
-        $this->ecrireDonnees($classeur, $colonnes, $lignes, $gabarit);
+        $this->ecrireDonnees($classeur, $colonnes, $lignes, $gabarit, $progression);
 
         // ⚠ PAS DE SYNTHÈSE SUR UN GABARIT. Ses sommes conditionnelles pointeraient une
         // plage sans données : la feuille annoncerait un portefeuille à zéro, ce qui se
@@ -325,7 +327,7 @@ final class EcrivainEtat
      * @param array<string, ColonneEtat>          $colonnes
      * @param iterable<int, array<string, mixed>> $lignes
      */
-    private function ecrireDonnees(Spreadsheet $classeur, array $colonnes, iterable $lignes, bool $gabarit = false): void
+    private function ecrireDonnees(Spreadsheet $classeur, array $colonnes, iterable $lignes, bool $gabarit = false, ?Progression $progression = null): void
     {
         $feuille = $classeur->createSheet();
         $feuille->setTitle(EtatDuPortefeuille::FEUILLE);
@@ -376,6 +378,12 @@ final class EcrivainEtat
                 $feuille->setCellValue($cellule, $valeur);
             }
             ++$numero;
+
+            // ⚠ LA BARRE DOIT AVANCER ICI AUSSI. La progression ne couvrait que la LECTURE
+            // du portefeuille : elle atteignait cent pour cent, puis se figeait pendant
+            // l'écriture du classeur — souvent plus longue que la lecture. On voyait « 100 % »
+            // sans que rien ne bouge, ce qui se lit comme une panne.
+            $progression?->avancer();
         }
 
         $derniereDonnee = max($numero - 1, self::LIGNE_DONNEES);
