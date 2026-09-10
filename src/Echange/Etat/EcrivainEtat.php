@@ -132,9 +132,11 @@ final class EcrivainEtat
             self::CLE_GABARIT,
             'Nature du fichier',
             'Ce classeur est VIDE : remplissez une ligne par échéance de prime, puis déposez-le '
-            . 'dans l\'onglet Importer. Il a exactement la forme d\'un export, si bien qu\'un '
-            . 'export rempli se redépose de la même façon. Seules les colonnes marquées '
-            . '« Repris à l\'import » sont relues ; les autres sont calculées par l\'application.',
+            . 'dans l\'onglet Importer. Il ne porte QUE les colonnes qui se reprennent — tout le '
+            . 'reste (primes totales, taxes, commissions) est calculé par l\'application, et '
+            . 'c\'est pourquoi vous ne le trouverez pas ici. Un export de vos données, lui, les '
+            . 'porte toutes et se redépose tout aussi bien : les colonnes calculées y sont '
+            . 'simplement ignorées.',
         ] : [
             self::CLE_REIMPORTABLE,
             'Nature du fichier',

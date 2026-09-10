@@ -13,6 +13,7 @@ use App\Entity\Chargement;
 use App\Entity\Client;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
+use App\Entity\Note;
 use App\Entity\Piste;
 use App\Entity\Risque;
 use App\Entity\Tranche;
@@ -697,25 +698,24 @@ final class RepriseTest extends KernelTestCase
     }
 
     /**
-     * ⚠ LA COMMISSION ENCAISSÉE N'EST PAS REPRISE — ET LE FICHIER LE DIT.
+     * ⚠ LA COMMISSION DÉJÀ ENCAISSÉE EST REPRISE — note, article et règlement.
      *
-     * Elle passait par une note d'un seul article, soldée par un règlement du même
-     * montant. Mais `Note::$validated` et `Note::$signature` sont NON NULLES en base et
-     * ABSENTES de `NoteType` : le contrôle à blanc les réclame — elles sont obligatoires —
-     * sans qu'aucun champ ne permette de les fournir. Constaté sur un portefeuille réel :
-     * CINQUANTE erreurs bloquantes, une par échéance encaissée, rendant toute la reprise
-     * inutilisable pour une fonction secondaire.
+     * ── CE TEST A ÉTÉ RETOURNÉ, ET C'EST TOUT SON INTÉRÊT ─────────────────────────
+     * Il gardait le contraire : « aucune note ne doit être posée ». La reprise renonçait,
+     * parce que `Note::$validated` et `Note::$signature` sont NON NULLES en base et
+     * ABSENTES de `NoteType` — le contrôle à blanc les réclamait sans qu'aucun champ ne
+     * permette de les fournir. Cinquante refus sur un portefeuille réel, un par échéance.
      *
-     * ⚠ ET ON NE FOURNIT PAS CES CHAMPS « POUR FAIRE PASSER » LE DRY-RUN : le contrôle
-     * cesserait de se plaindre et l'écriture échouerait en SQL sur une contrainte NOT
-     * NULL. Ce qu'une note de reprise doit porter — validée ? signée par qui ? — est une
-     * question métier.
+     * On en avait conclu qu'une note de reprise posait une question métier. Elle n'en pose
+     * aucune : l'écran lui-même y met `false` et l'horodatage du moment. Ces valeurs ont
+     * rejoint `ValeursDeNaissance`, appliquée par le circuit d'écriture commun — et le
+     * dernier travail manuel de la reprise a disparu avec elles.
      *
-     * ⚠ PERDRE UN CHIFFRE EN SILENCE SERAIT PIRE QUE DE NE PAS LE REPRENDRE : d'où
-     * l'avertissement, qui nomme le montant et où le saisir. C'est ce que ce test garde —
-     * un jour, il faudra le retourner.
+     * ⚠ LES TROIS PIÈCES SONT INDISSOCIABLES : sans l'article la note ne vaut rien, sans
+     * le règlement rien n'est encaissé, et sans le lien vers le revenu
+     * `getArticleMontant()` rend zéro.
      */
-    public function testLaCommissionEncaisseeEstSignaleeEtNonEcrite(): void
+    public function testLaCommissionEncaisseeDevientUneNoteSoldee(): void
     {
         $entreprise = $this->cabinet();
         $anomalies = [];
@@ -731,19 +731,73 @@ final class RepriseTest extends KernelTestCase
                 'trancheNom' => 'Prime unique',
                 'commissionRevenus' => 'Commission Ordinaire',
                 'ouvertureCommissionEncaissee' => 1200,
+                'ouvertureCommissionLe' => '15/01/2026',
             ], 2),
             $this->colonnes(),
             $entreprise,
             $anomalies,
         );
 
-        self::assertNull($this->operation($operations, 'Note'), 'Aucune note ne doit être posée.');
+        self::assertSame([], $this->erreurs($anomalies), 'La reprise ne réclame plus rien.');
+
+        $note = $this->operation($operations, 'Note');
+        self::assertNotNull($note, 'La note doit être posée : ' . $this->messages($anomalies));
+
+        // Une commission est un DÉBIT, adressé à qui la doit — ici l'assureur, qui
+        // précompte. Le calcul n'accepte que les notes adressées au client ou à l'assureur.
+        self::assertSame(Note::TYPE_NOTE_DE_DEBIT, $note->fields['type']);
+        self::assertSame(Note::TO_ASSUREUR, $note->fields['addressedTo']);
+        self::assertArrayHasKey('assureur', $note->fields);
+
+        // ⚠ L'ARTICLE PORTE LES DEUX LIENS. Sans `revenuFacture`, `getArticleMontant()`
+        // rend zéro et la note ne compte rien — une coquille que l'écran afficherait sans
+        // jamais l'additionner.
+        self::assertCount(1, $note->collections['articles'] ?? [], 'UNE note, UN article.');
+        $article = $note->collections['articles'][0];
+        self::assertArrayHasKey('tranche', $article->fields);
+        self::assertArrayHasKey('revenuFacture', $article->fields);
+
+        // C'est le RÈGLEMENT qui porte le montant encaissé : le calcul en tire la
+        // proportion payée de la note, donc exactement ce qui a été versé.
+        self::assertCount(1, $note->collections['paiements'] ?? [], 'UNE note, UN règlement.');
+        self::assertSame(1200.0, $note->collections['paiements'][0]->fields['montant']);
+    }
+
+    /**
+     * ⚠ SANS COMMISSION NOMMÉE, ON LE DIT PLUTÔT QUE D'ÉCRIRE UNE COQUILLE.
+     *
+     * L'article d'une note tire son montant du revenu qu'il facture. Une ligne qui encaisse
+     * une commission sans dire LAQUELLE produirait une note à zéro : elle s'afficherait au
+     * portefeuille sans jamais entrer dans aucun total. Le refus nomme la colonne à
+     * remplir — c'est le seul cas où la commission reste à la charge de l'utilisateur.
+     */
+    public function testUneCommissionEncaisseeSansRevenuNommeEstSignalee(): void
+    {
+        $entreprise = $this->cabinet();
+        $anomalies = [];
+
+        $operations = $this->reconstitueur()->pour(
+            $this->ligne([
+                'policeReference' => 'POL/2026/023',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
+                'risque' => 'RC Aviation',
+                'assure' => 'KIN AVIA',
+                'assureur' => 'SFA CONGO',
+                'trancheNom' => 'Prime unique',
+                'ouvertureCommissionEncaissee' => 1200,
+            ], 2),
+            $this->colonnes(),
+            $entreprise,
+            $anomalies,
+        );
+
+        self::assertNull($this->operation($operations, 'Note'), 'Une note sans revenu ne compterait rien.');
 
         // ⚠ UN AVERTISSEMENT, ET NON UNE ERREUR : le reste de la ligne doit passer.
         self::assertSame([], $this->erreurs($anomalies));
-        self::assertNotSame([], $anomalies);
-        self::assertStringContainsString('1 200,00', $anomalies[0]->message, 'Le montant laissé de côté doit être nommé.');
-        self::assertStringContainsString('Notes', $anomalies[0]->message, 'Et l\'endroit où le saisir.');
+        self::assertStringContainsString('1 200,00', $this->messages($anomalies), 'Le montant laissé de côté est nommé.');
+        self::assertStringContainsString('Commission · Revenus', $this->messages($anomalies), 'Et la colonne à remplir.');
 
         self::assertNotNull($this->operation($operations, 'Tranche'), 'L\'échéance, elle, est reprise.');
     }
@@ -1005,6 +1059,12 @@ final class RepriseTest extends KernelTestCase
             $anomalies,
             static fn (Anomalie $a): bool => $a->gravite === Anomalie::ERREUR,
         ));
+    }
+
+    /** Tout ce que les anomalies reprochent — pour qu'un echec de test dise pourquoi. */
+    private function messages(array $anomalies): string
+    {
+        return implode(' | ', array_map(static fn (Anomalie $a): string => $a->message, $anomalies));
     }
 
     private function reconstitueur(): ReconstitueurDeTranche

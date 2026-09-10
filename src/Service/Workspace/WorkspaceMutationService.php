@@ -80,6 +80,12 @@ class WorkspaceMutationService
         // qui empêche l'assistant de contourner par le chemin générique ce que son outil
         // nommé refuse (même intention que LiensProteges).
         private readonly RattachementDuPartage $rattachement,
+        // Ce qu'une entité porte en naissant, et qu'aucun formulaire ne déclare.
+        //
+        // ⚠ EN DERNIÈRE POSITION, ET C'EST VOULU. Ce service est construit à la main dans
+        // certains tests, par arguments POSITIONNELS : l'insérer au milieu décalait tout ce
+        // qui suit, et six tests tombaient sur un TypeError qui n'apprenait rien à personne.
+        private readonly ValeursDeNaissance $valeursDeNaissance,
     ) {
     }
 
@@ -1344,6 +1350,17 @@ class WorkspaceMutationService
         if (method_exists($entity, 'setInvite') && method_exists($entity, 'getInvite') && $entity->getInvite() === null) {
             $entity->setInvite($scope->invite);
         }
+
+        // ⚠ ET CE QUE LA BASE EXIGE SANS QUE PERSONNE NE LE SAISISSE. Quelques colonnes
+        // sont NOT NULL sans être des questions — `Note::$signature` n'est qu'un
+        // horodatage, et aucun formulaire ne la propose. Posées ici, elles traversent le
+        // contrôle à blanc comme l'écriture : `scalaireRequis()` cesse de réclamer un
+        // champ dont la valeur est déjà là, et le formulaire ne touche pas à ce qu'il ne
+        // déclare pas.
+        //
+        // C'est le MÊME geste qu'entreprise et invité ci-dessus, pour la même raison :
+        // certaines valeurs appartiennent à la naissance de l'entité, pas à sa saisie.
+        $this->valeursDeNaissance->poser($entity);
 
         return $entity;
     }

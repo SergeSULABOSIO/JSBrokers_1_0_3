@@ -322,6 +322,9 @@ class KetMutationTest extends TestCase
                 $this->createMock(\App\Repository\ReversementRetroAgentRepository::class),
                 $this->createMock(\App\Services\ServiceMonnaies::class),
             ),
+            // Ce qu'une entité porte en naissant. Sans état ni dépendance : la vraie fait
+            // l'affaire, et un double masquerait ce qu'elle pose réellement.
+            new \App\Service\Workspace\ValeursDeNaissance(),
         );
     }
 
