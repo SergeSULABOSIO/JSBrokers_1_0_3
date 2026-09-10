@@ -144,8 +144,35 @@ final class TokenPricing
      */
     public const ECHANGE_QUOTA_GRATUIT = 3;
 
-    /** Coût en tokens d'une exportation au-delà du quota gratuit. */
+    /**
+     * ⚠ PLUS APPLIQUÉE : L'EXPORTATION EST GRATUITE ET ILLIMITÉE. Conservée pour mémoire,
+     * et parce qu'on ne retire jamais une clé d'un barème publié.
+     *
+     * Elle facturait une exportation au-delà du quota. La règle a changé de fond : ce que
+     * le cabinet SORT de la plateforme ne lui coûte rien — c'est la contrepartie de la
+     * réversibilité, et c'est annoncé comme tel sur le site public. Ce qui se paie, c'est
+     * ce qu'on FAIT ÉCRIRE au serveur, donc la reprise au-delà de sa franchise.
+     */
     public const ECHANGE_COUT_OCCURRENCE = 600;
+
+    /**
+     * LIGNES DE REPRISE OFFERTES À CHAQUE CABINET, à vie.
+     *
+     * ⚠ DES LIGNES, ET NON DES OPÉRATIONS. C'est la feuille `DONNEES` du gabarit qui se
+     * compte, quel que soit le nombre d'enregistrements qu'une ligne fait naître — un
+     * assureur, un risque, une piste, une cotation, une échéance… Une ligne qui crée dix
+     * entités consomme UNE ligne de franchise.
+     *
+     * ⚠ ET C'EST UNE FRANCHISE, PAS UN FORFAIT. En deçà, la reprise ne débite rien du
+     * tout : les écritures qu'elle produit sont exonérées de leur métrage ordinaire.
+     * Au-delà, ce métrage reprend son cours, entité par entité, au tarif d'écriture — donc
+     * sans qu'aucun second prix ne s'invente ici.
+     *
+     * ⚠ À VIE, JAMAIS RECONDUITE. Reprendre son historique est un geste qu'un cabinet fait
+     * une fois, à son arrivée ; en offrir mille lignes chaque mois reviendrait à offrir la
+     * reprise tout court.
+     */
+    public const ECHANGE_FRANCHISE_LIGNES = 1000;
 
     /**
      * ⚠ PLUS APPLIQUÉE DEPUIS QUE L'IMPORT AVANCE PAR PALIERS. Conservée pour mémoire.

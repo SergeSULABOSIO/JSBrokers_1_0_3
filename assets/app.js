@@ -3839,6 +3839,38 @@ export function saveCookie(nom, valeur) {
 
     _prodObserveDOM();
 
+    /**
+     * REMET LE BLOC PRODUCTION À NEUF — à appeler après tout rechargement de son HTML.
+     *
+     * ⚠ L'OBSERVATEUR DU DOM NE SERT QU'UNE FOIS : il se désarme dès qu'il a vu le premier
+     * rendu (`obs.disconnect()`). Sans cette fonction, un bloc rechargé — bascule
+     * d'exercice comprise — laissait trois canevas VIDES, sans la moindre erreur.
+     *
+     * ⚠ ET LES ANCIENS GRAPHIQUES DOIVENT MOURIR ICI. Après remplacement du HTML, ils
+     * pointent des canevas détachés du document : `Chart.getChart()` ne les retrouve plus,
+     * donc personne ne les détruirait jamais — écouteurs compris. C'est la fuite.
+     *
+     * ⚠ ET LES CACHES DE MODULE NE CONNAISSENT PAS L'EXERCICE. `_loadProdGroupData()`
+     * court-circuite le réseau dès que `_prodGroupData` est renseigné : sans purge, la
+     * bascule aurait affiché les répartitions de l'exercice précédent sous le titre du
+     * nouveau.
+     */
+    window.dbProdReinit = function () {
+        if (_prodChart)            { _prodChart.destroy();            _prodChart = null; }
+        if (_prodAssureurChart)    { _prodAssureurChart.destroy();    _prodAssureurChart = null; }
+        if (_prodPartenaireChart)  { _prodPartenaireChart.destroy();  _prodPartenaireChart = null; }
+        if (_prodRisqueChart)      { _prodRisqueChart.destroy();      _prodRisqueChart = null; }
+
+        _prodTableData = null;
+        _prodTableUrl  = null;
+        _prodTableEl   = null;
+        _prodGroupData = null;
+
+        if (_prodTimer) { clearTimeout(_prodTimer); _prodTimer = null; }
+
+        _prodObserveDOM();
+    };
+
     window.refreshProduction      = refreshProduction;
     window.dbProdToggleMode       = dbProdToggleMode;
     window.dbProdToggleMonth      = dbProdToggleMonth;

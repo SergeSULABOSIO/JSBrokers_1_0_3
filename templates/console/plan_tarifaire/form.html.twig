@@ -469,4 +469,37 @@
             </div>
         </dialog>
     </fieldset>
+
+    {# ── Échange de données : ce que la reprise offre avant de facturer ──────────
+       ⚠ CES TROIS CHAMPS N'ÉTAIENT RENDUS PAR AUCUN `form_row`. Ils ne sortaient que
+       par le `form_rest` implicite de `form_end()` — donc tout en bas de page, hors
+       encadré et sans style : réglables par accident, introuvables à dessein. #}
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('echange'), {height:'16px', width:'16px'}) }}
+            Échange de données
+        </legend>
+
+        <p class="cs-hint">
+            <strong>L'exportation est gratuite et illimitée</strong> — c'est annoncé aux visiteurs sur la
+            page de tarif, et plus rien ne la facture. Seule la <strong>reprise</strong> est bornée : les
+            premières lignes du gabarit sont offertes à vie, puis chaque ligne paie le métrage
+            d'écriture des enregistrements qu'elle crée.
+        </p>
+
+        <div class="row">
+            <div class="col-md">{{ form_row(form.echangeFranchiseLignes) }}</div>
+        </div>
+
+        <p class="cs-hint">
+            Les deux réglages ci-dessous appartiennent à l'ancien modèle — facturation à l'opération —
+            et ne sont plus lus par l'application. Ils restent visibles pour que personne ne les croie
+            perdus, et modifiables sans effet.
+        </p>
+
+        <div class="row">
+            <div class="col-md">{{ form_row(form.echangeQuotaGratuit) }}</div>
+            <div class="col-md">{{ form_row(form.echangeCoutOccurrence) }}</div>
+        </div>
+    </fieldset>
 {% endblock %}

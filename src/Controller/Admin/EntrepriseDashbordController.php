@@ -11,6 +11,7 @@ use App\Repository\EntrepriseRepository;
 use App\Service\Onboarding\OnboardingCompletude;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\DashboardDataProvider;
+use App\Services\ExercicesDuCabinet;
 use App\Services\JSBTableauDeBordBuilder;
 use App\Services\ServiceMonnaies;
 use Doctrine\ORM\EntityManagerInterface;
@@ -101,7 +102,7 @@ class EntrepriseDashbordController extends AbstractController
     }
 
     #[Route('/workspace/{idEntreprise}', name: 'workspace', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function loadWorkspaceComponent(int $idEntreprise): Response
+    public function loadWorkspaceComponent(int $idEntreprise, ExercicesDuCabinet $exercices): Response
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
@@ -117,9 +118,24 @@ class EntrepriseDashbordController extends AbstractController
         // surcoût sur un écran ouvert à chaque entrée dans l'espace de travail.
         $estProprietaire = $entreprise !== null && $entreprise->getUtilisateur() === $user;
 
+        // ── L'EXERCICE COMPTABLE, ET POURQUOI CE N'EST PAS L'ANNÉE COURANTE ──────────
+        //
+        // ⚠ UN TABLEAU DE BORD QUI AFFICHE ZÉRO SANS DIRE POURQUOI FAIT CROIRE À UNE PANNE.
+        // L'exercice était figé sur `date('Y')` : un cabinet qui venait de reprendre son
+        // historique ouvrait son écran d'arrivée sur une année vide et lisait 0,00 partout
+        // — ses données existaient, elles étaient justes, et rien ne le lui disait.
+        //
+        // On ouvre donc sur le dernier exercice qui porte quelque chose, exactement comme
+        // l'écran des Documents comptables le fait déjà. Les autres années sont à un clic,
+        // et le choix de l'utilisateur prime au rechargement (voir le contrôleur Stimulus).
+        $exercicesOfferts = $entreprise === null ? [] : $exercices->disponibles($entreprise);
+        $exerciceRetenu = $entreprise === null ? (int) date('Y') : $exercices->defaut($entreprise);
+
         return $this->render('components/_tableau_de_bord_component.html.twig', [
             'utilisateur' => $user,
             'entreprise'  => $entreprise,
+            'exercices'   => $exercicesOfferts,
+            'exercice'    => $exerciceRetenu,
             'onboardingBilan' => $estProprietaire ? $this->onboardingCompletude->scoreSeul($entreprise) : null,
             'onboardingEtapesCitees' => $estProprietaire ? $this->onboardingCompletude->etapesACiter($entreprise) : [],
         ]);
@@ -213,15 +229,22 @@ class EntrepriseDashbordController extends AbstractController
     }
 
     #[Route('/block/kpis/{idEntreprise}', name: 'block_kpis', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
-    public function loadBlockKpis(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): Response
-    {
+    public function loadBlockKpis(
+        int $idEntreprise,
+        DashboardDataProvider $provider,
+        ServiceMonnaies $serviceMonnaies,
+        Request $request,
+        ExercicesDuCabinet $exercices,
+    ): Response {
         if ($denied = $this->denyBlockIfCannotRead('Note')) { return $denied; }
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
-        $debut = new DateTimeImmutable("1/1/" . date('Y') . " 00:00");
-        $fin   = new DateTimeImmutable("12/31/" . date('Y') . " 23:59");
+        $exercice = $exercices->retenir($entreprise, $request->query->getInt('exercice') ?: null);
+        $debut = new DateTimeImmutable("1/1/" . $exercice . " 00:00");
+        $fin   = new DateTimeImmutable("12/31/" . $exercice . " 23:59");
 
         return $this->render('components/dashboard/_block_kpis.html.twig', [
             'entreprise'       => $entreprise,
+            'exercice'         => $exercice,
             'paiementsTotaux'  => $provider->getPaiementsTotaux($entreprise, $debut, $fin),
             'policiesActives'  => $provider->getPoliciesActives($entreprise),
             'primesTotales'    => $provider->getPrimesTotales($entreprise),
@@ -229,6 +252,9 @@ class EntrepriseDashbordController extends AbstractController
             'taxes'            => $provider->getTaxesTotales($entreprise),
             'commissions'      => $provider->getCommissionsTotales($entreprise),
             'revenusBreakdown' => $provider->getRevenusPercusBreakdown($entreprise),
+            // Ce que le cabinet a encaissé DEPUIS TOUJOURS : c'est ce qui permet au bandeau
+            // de distinguer « rien encaissé » de « rien encaissé sur CET exercice ».
+            'encaisseTousExercices' => $provider->getTotalEncaisseCommissions($entreprise),
             'deviseCode'       => $serviceMonnaies->getCodeMonnaieAffichage() ?? $serviceMonnaies->getCodeMonnaieLocale(),
         ]);
     }
@@ -248,10 +274,18 @@ class EntrepriseDashbordController extends AbstractController
         \App\Repository\DepenseCourtierRepository $depenseRepository,
         \App\Repository\FournisseurRepository $fournisseurRepository,
         ServiceMonnaies $serviceMonnaies,
+        Request $request,
+        ExercicesDuCabinet $exercices,
     ): Response {
         if ($denied = $this->denyBlockIfCannotRead('DepenseCourtier')) { return $denied; }
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
-        $exercice = (int) date('Y');
+
+        // ⚠ « MÊME SOURCE QUE LES DOCUMENTS COMPTABLES » DEVIENT ENFIN VRAI. La source
+        // l'était déjà, mais pas l'exercice : ce bloc forçait `date('Y')` là où l'écran des
+        // Documents comptables ouvre sur le dernier exercice pourvu. Les deux écrans
+        // affichaient donc des chiffres différents, sous une phrase qui promettait
+        // l'identité.
+        $exercice = $exercices->retenir($entreprise, $request->query->getInt('exercice') ?: null);
 
         $documents = $courtierComptabilite->documents($entreprise, $exercice);
 
@@ -327,9 +361,19 @@ class EntrepriseDashbordController extends AbstractController
                 'calcul' => "Somme des sorties de trésorerie (crédits des comptes Banque 521 et Caisse 571), hors apport en capital.",
             ],
             [
-                'label'  => 'Trésorerie',
+                // ⚠ « CUMUL » N'EST PAS DÉCORATIF. Les quatre indicateurs qui précèdent sont
+                // des FLUX de l'exercice, celui-ci est un STOCK depuis l'origine. Un
+                // « Résultat net : 0,00 » à côté d'une « Trésorerie : 100 030 740,96 » est
+                // juste dans les deux cas, et parfaitement incompréhensible tant que rien
+                // ne dit lequel est lequel. Le report d'ouverture est donc nommé, avec son
+                // montant : c'est lui qui explique tout l'écart.
+                'label'  => 'Trésorerie (cumul)',
                 'valeur' => $tft['cloture'],
-                'intro'  => "Ce dont votre cabinet dispose en banque et en caisse à la clôture de l'exercice.",
+                'intro'  => sprintf(
+                    "Ce dont votre cabinet dispose en banque et en caisse à la clôture — depuis son ORIGINE, "
+                    . "et non sur le seul exercice. Il en reportait %s à l'ouverture.",
+                    number_format((float) ($tft['ouverture'] ?? 0), 2, ',', ' '),
+                ),
                 'calcul' => "Trésorerie d'ouverture + encaissements − décaissements + apports en capital (solde de clôture des comptes 521 et 571).",
             ],
         ];
@@ -598,51 +642,80 @@ class EntrepriseDashbordController extends AbstractController
     }
 
     #[Route('/block/production/{idEntreprise}', name: 'block_production', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
-    public function loadBlockProduction(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): Response
-    {
+    public function loadBlockProduction(
+        int $idEntreprise,
+        DashboardDataProvider $provider,
+        ServiceMonnaies $serviceMonnaies,
+        Request $request,
+        ExercicesDuCabinet $exercices,
+    ): Response {
         if ($denied = $this->denyBlockIfCannotRead('Avenant')) { return $denied; }
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
-        $monthly = $provider->getProductionMensuelle($entreprise);
+        $exercice = $exercices->retenir($entreprise, $request->query->getInt('exercice') ?: null);
+        $monthly = $provider->getProductionMensuelle($entreprise, $exercice);
+
+        // ⚠ LES TROIS URL EMPORTENT L'EXERCICE. Le graphique les rappelle lui-même pour se
+        // rafraîchir ou changer de mode : sans le paramètre, il repartirait sur l'année
+        // courante au premier clic, et l'écran se contredirait sous les yeux.
+        $avecExercice = ['idEntreprise' => $idEntreprise, 'exercice' => $exercice];
 
         return $this->render('components/dashboard/_block_production.html.twig', [
             'entreprise'   => $entreprise,
             'monthly'      => array_values($monthly),
-            'year'         => (int) date('Y'),
+            'year'         => $exercice,
             'deviseCode'   => $serviceMonnaies->getCodeMonnaieAffichage() ?? $serviceMonnaies->getCodeMonnaieLocale(),
-            'prodDataUrl'  => $this->generateUrl('admin.entreprise_dashboard.production_data',   ['idEntreprise' => $idEntreprise]),
-            'tableDataUrl' => $this->generateUrl('admin.entreprise_dashboard.production_table',  ['idEntreprise' => $idEntreprise]),
-            'groupUrl'     => $this->generateUrl('admin.entreprise_dashboard.production_group',  ['idEntreprise' => $idEntreprise]),
+            'prodDataUrl'  => $this->generateUrl('admin.entreprise_dashboard.production_data',   $avecExercice),
+            'tableDataUrl' => $this->generateUrl('admin.entreprise_dashboard.production_table',  $avecExercice),
+            'groupUrl'     => $this->generateUrl('admin.entreprise_dashboard.production_group',  $avecExercice),
         ]);
     }
 
     #[Route('/production-data/{idEntreprise}', name: 'production_data', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
-    public function loadProductionData(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): JsonResponse
-    {
+    public function loadProductionData(
+        int $idEntreprise,
+        DashboardDataProvider $provider,
+        ServiceMonnaies $serviceMonnaies,
+        Request $request,
+        ExercicesDuCabinet $exercices,
+    ): JsonResponse {
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
-        $monthly = $provider->getProductionMensuelle($entreprise);
+        $exercice = $exercices->retenir($entreprise, $request->query->getInt('exercice') ?: null);
+        $monthly = $provider->getProductionMensuelle($entreprise, $exercice);
 
         return new JsonResponse([
             'monthly'  => array_values($monthly),
-            'year'     => (int) date('Y'),
+            'year'     => $exercice,
             'currency' => $serviceMonnaies->getCodeMonnaieAffichage() ?? $serviceMonnaies->getCodeMonnaieLocale(),
             'total'    => array_sum($monthly),
         ]);
     }
 
     #[Route('/production-table/{idEntreprise}', name: 'production_table', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
-    public function loadProductionTableData(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): JsonResponse
-    {
+    public function loadProductionTableData(
+        int $idEntreprise,
+        DashboardDataProvider $provider,
+        ServiceMonnaies $serviceMonnaies,
+        Request $request,
+        ExercicesDuCabinet $exercices,
+    ): JsonResponse {
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
-        $data = $provider->getProductionTableData($entreprise);
+        $exercice = $exercices->retenir($entreprise, $request->query->getInt('exercice') ?: null);
+        $data = $provider->getProductionTableData($entreprise, $exercice);
         $data['currency'] = $serviceMonnaies->getCodeMonnaieAffichage() ?? $serviceMonnaies->getCodeMonnaieLocale();
         return new JsonResponse($data);
     }
 
     #[Route('/production-group/{idEntreprise}', name: 'production_group', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
-    public function productionGroup(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): JsonResponse
-    {
+    public function productionGroup(
+        int $idEntreprise,
+        DashboardDataProvider $provider,
+        ServiceMonnaies $serviceMonnaies,
+        Request $request,
+        ExercicesDuCabinet $exercices,
+    ): JsonResponse {
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
-        $data = $provider->getProductionGroupData($entreprise);
+        $exercice = $exercices->retenir($entreprise, $request->query->getInt('exercice') ?: null);
+        $data = $provider->getProductionGroupData($entreprise, $exercice);
         $data['currency'] = $serviceMonnaies->getCodeMonnaieAffichage() ?? $serviceMonnaies->getCodeMonnaieLocale();
         return new JsonResponse($data);
     }

@@ -41,6 +41,13 @@ class PlanTarifaireController extends AbstractConsoleController
         $params->setDocumentBase($params->getDocumentBase() ?? $this->parametres->documentBase());
         $params->setDocumentParPage($params->getDocumentParPage() ?? $this->parametres->documentParPage());
         $params->setDocumentCaracteresParPage($params->getDocumentCaracteresParPage() ?? $this->parametres->documentCaracteresParPage());
+        // ⚠ LES TROIS RÉGLAGES D'ÉCHANGE MANQUAIENT À CET APPEL. La console les affichait
+        // donc VIDES, et l'enregistrement y écrivait `null` — inoffensif tant que le repli
+        // sur la constante existe, mais déroutant : un agent lisait « aucune valeur » là où
+        // le barème en applique une.
+        $params->setEchangeFranchiseLignes($params->getEchangeFranchiseLignes() ?? $this->parametres->echangeFranchiseLignes());
+        $params->setEchangeQuotaGratuit($params->getEchangeQuotaGratuit() ?? $this->parametres->echangeQuotaGratuit());
+        $params->setEchangeCoutOccurrence($params->getEchangeCoutOccurrence() ?? $this->parametres->echangeCoutOccurrence());
 
         $jsonOpts = JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
         $form = $this->createForm(PlanTarifaireType::class, $params, [

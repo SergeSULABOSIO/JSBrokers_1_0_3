@@ -1310,6 +1310,66 @@ class EtatDuPortefeuilleTest extends KernelTestCase
     // Lecture du classeur
     // ─────────────────────────────────────────────────────────────────────────────
 
+    /**
+     * ⚠ L'EN-TÊTE DIT CE QU'ON PEUT CORRIGER — et c'est la seule chose qui le montrait
+     * nulle part.
+     *
+     * Le dictionnaire l'écrivait déjà de chaque colonne (« Repris à l'import » / « IGNORÉ
+     * à l'import »), mais dans la feuille de données rien ne l'indiquait : sur
+     * soixante-quatorze colonnes dont vingt-cinq se reprennent, il fallait ouvrir le
+     * dictionnaire colonne par colonne. Le fond de l'en-tête le dit désormais d'un coup
+     * d'œil.
+     *
+     * ⚠ ET IL LE DIT AUSSI EN TOUTES LETTRES : la nature ne repose jamais sur la seule
+     * couleur (WCAG 1.4.1). Un bandeau du dictionnaire l'explique, et la notice de chaque
+     * colonne le répète — c'est ce que vérifie la fin de ce test.
+     */
+    public function testLEnteteDistingueLesColonnesRepriseDesColonnesCalculees(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+
+        $classeur = $this->produire($entreprise, $invite);
+        $donnees = $classeur->getSheetByName(EtatDuPortefeuille::FEUILLE);
+        self::assertNotNull($donnees);
+
+        $colonnes = static::getContainer()->get(EtatDuPortefeuille::class)->colonnes($entreprise);
+
+        $vues = ['saisie' => 0, 'calculee' => 0];
+        $index = 0;
+        foreach ($colonnes as $colonne) {
+            ++$index;
+            $fond = $donnees->getStyle(Coordinate::stringFromColumnIndex($index) . '1')
+                ->getFill()->getStartColor()->getARGB();
+
+            if ($colonne->lectureSeule()) {
+                self::assertSame(
+                    Charte::GRIS_MUET,
+                    $fond,
+                    sprintf('« %s » est calculée : son en-tête doit s\'effacer en gris.', $colonne->libelle),
+                );
+                ++$vues['calculee'];
+                continue;
+            }
+
+            self::assertSame(
+                Charte::COBALT,
+                $fond,
+                sprintf('« %s » se reprend à l\'import : son en-tête doit porter la couleur de marque.', $colonne->libelle),
+            );
+            ++$vues['saisie'];
+        }
+
+        // Les deux natures existent réellement dans l'état : sans quoi ce test passerait
+        // en n'ayant rien vérifié du tout.
+        self::assertGreaterThan(0, $vues['saisie']);
+        self::assertGreaterThan(0, $vues['calculee']);
+
+        // ⚠ LA LÉGENDE EST ÉCRITE, pas seulement montrée.
+        $dictionnaire = $classeur->getSheetByName(\App\Echange\Classeur\EcrivainJsbx::FEUILLE_DICTIONNAIRE);
+        self::assertNotNull($dictionnaire);
+        self::assertSame('COULEURS DES COLONNES', $dictionnaire->getCell('A6')->getValue());
+    }
+
     private function produire(Entreprise $entreprise, Invite $invite): Spreadsheet
     {
         // ⚠ `produire()` et JAMAIS `exporter()` : le second facture. Un test qui débite

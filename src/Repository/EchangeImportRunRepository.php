@@ -43,6 +43,25 @@ class EchangeImportRunRepository extends ServiceEntityRepository
      * déposé, avec ses données. Deux personnes peuvent préparer un import en parallèle
      * sans se voir l'une l'autre.
      */
+    /**
+     * LIGNES DE REPRISE OFFERTES DÉJÀ CONSOMMÉES PAR CE CABINET, tous dépôts confondus.
+     *
+     * ⚠ SUR LES RUNS, ET NON SUR LES OCCURRENCES D'ÉCHANGE. Une occurrence n'est écrite
+     * qu'à la fin d'un import réussi : un import interrompu aurait écrit des lignes
+     * gratuites sans laisser de trace, et il aurait suffi de redéposer puis d'échouer pour
+     * obtenir une franchise sans fin. Le run, lui, porte son compteur dès le premier palier
+     * commité.
+     */
+    public function sommeDesLignesFranchisees(Entreprise $entreprise): int
+    {
+        return (int) $this->createQueryBuilder('r')
+            ->select('COALESCE(SUM(r.lignesFranchisees), 0)')
+            ->andWhere('r.entreprise = :entreprise')
+            ->setParameter('entreprise', $entreprise)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
     public function aDeciderOuACorrigerPour(Entreprise $entreprise, Invite $invite): ?EchangeImportRun
     {
         $runs = $this->createQueryBuilder('r')

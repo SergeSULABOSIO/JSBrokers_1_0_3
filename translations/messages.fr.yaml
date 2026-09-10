@@ -189,6 +189,17 @@ security_pricing_basic_option_dashboard: "Accès au tableau de bord"
 security_pricing_basic_option_email: "Envoi d'emails "
 security_pricing_basic_option_email_value: "Illimité"
 security_pricing_basic_option_fonctions: "Accès à toutes les autres fonctions"
+
+# Encart TRANSVERSAL sur vos données : ces règles valent pour tous les plans, gratuit
+# comme payants. Le seuil de reprise vient du paramétrage de la Console (jamais écrit
+# en dur dans le gabarit), afin que le site ne mente jamais après un réglage.
+security_pricing_donnees: "VOS DONNÉES"
+security_pricing_donnees_lead: "Elles vous appartiennent, et elles ressortent quand vous voulez."
+security_pricing_donnees_export: "Exportation de vos données "
+security_pricing_donnees_export_value: "gratuite et illimitée"
+security_pricing_donnees_reprise: "Reprise de votre historique "
+security_pricing_donnees_reprise_value: "%lignes% lignes offertes"
+security_pricing_donnees_surplus: "Au-delà, chaque ligne reprise est facturée au tarif d'écriture des enregistrements qu'elle crée. Le coût vous est annoncé avant que vous ne confirmiez — jamais après."
 # Carte de tarif GÉNÉRIQUE : tout paquet payant de la Console partage ces libellés ;
 # seuls le nom (label), le prix TTC et le volume de tokens varient (données).
 # Le montant est déjà formaté (nombre + symbole placé selon la langue) par le

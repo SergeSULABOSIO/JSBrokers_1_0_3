@@ -2387,6 +2387,20 @@ export default class extends Controller {
      */
     handleLoadingStart() {
         this.progressBarTarget.style.display = 'block';
+
+        // ⚠ UNE PROGRESSION CHIFFRÉE NE SE LAISSE PAS EFFACER PAR UN VOISIN. `app:loading.start`
+        // est émis d'une soixantaine d'endroits — création d'une note, d'une piste, rechargement
+        // d'un bloc… Sans cette garde, le moindre geste concurrent renvoyait la barre au ruban
+        // glissant AU MILIEU d'un export ou d'une bascule d'exercice, et effaçait l'étiquette
+        // « 43 % · ~2 min » que l'utilisateur regardait. Le pourcentage repartait à zéro
+        // visuellement alors que le travail, lui, avançait.
+        //
+        // C'est `app:loading.stop` qui rend la barre à son état de repos — et il vient de
+        // partout lui aussi, si bien que le drapeau ne peut pas rester posé indéfiniment.
+        if (this._progressionChiffree) {
+            return;
+        }
+
         this._reinitialiserProgression();
     }
 
@@ -2395,6 +2409,7 @@ export default class extends Controller {
      */
     handleLoadingStop() {
         this.progressBarTarget.style.display = 'none';
+        this._progressionChiffree = false;
         this._reinitialiserProgression();
     }
 
@@ -2414,6 +2429,10 @@ export default class extends Controller {
         this.progressBarTarget.classList.add('is-determinate');
         this.progressBarTarget.style.width = `${pct}%`;
         this.progressBarTarget.setAttribute('aria-valuenow', String(Math.round(pct)));
+
+        // Dès lors, un `app:loading.start` venu d'ailleurs ne peut plus nous renvoyer au
+        // mode indéterminé — voir la garde de `handleLoadingStart()`.
+        this._progressionChiffree = true;
 
         const etiquette = this._etiquetteProgression();
         if (!etiquette) return;

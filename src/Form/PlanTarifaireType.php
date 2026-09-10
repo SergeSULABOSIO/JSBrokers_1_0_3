@@ -57,20 +57,32 @@ class PlanTarifaireType extends AbstractType
                 'label' => 'Documents IA — taille d\'une page (caractères)',
                 'attr'  => ['placeholder' => 'Ex. 2500', 'data-icon' => 'action:description'],
             ])
-            // Échange de données (rubrique « Importation / Exportation »). Le quota est
-            // à VIE par cabinet, pas par fenêtre : il ne se renouvelle jamais.
+            // ── ÉCHANGE DE DONNÉES (rubrique « Importation / Exportation ») ──────────
             //
-            // Seul l'EXPORT est facturé ici. L'import écrit des enregistrements, et
-            // chacun paie déjà son poids d'écriture ordinaire — lui ajouter un forfait
-            // le ferait payer deux fois pour un seul geste.
+            // ⚠ C'EST LE SEUL RÉGLAGE QUI COMPTE ENCORE ICI, et il est ANNONCÉ SUR LE SITE
+            // PUBLIC : la page de tarif lit ce nombre via `plan_tarifaire()`. Le changer
+            // change ce que lisent les visiteurs — c'est une promesse commerciale, pas un
+            // paramètre technique.
+            ->add('echangeFranchiseLignes', IntegerType::class, [
+                'label' => 'Reprise de données — lignes offertes par cabinet (à vie)',
+                'help'  => 'Comptées sur la feuille DONNEES du gabarit, tous dépôts confondus, quel que soit le nombre '
+                    . 'd\'enregistrements qu\'une ligne fait naître. Au-delà, chaque ligne paie le métrage d\'écriture '
+                    . 'ordinaire des entités qu\'elle crée. Ce nombre est affiché aux visiteurs sur la page de tarif.',
+                'attr'  => ['placeholder' => 'Ex. 1000', 'data-icon' => 'echange'],
+            ])
+            // ⚠ LES DEUX SUIVANTS NE S'APPLIQUENT PLUS, et on ne les retire pas pour
+            // autant : ils vivent dans un barème publié, et une colonne qu'on efface est
+            // une donnée qu'on perd. Ils restent réglables — leur libellé dit simplement
+            // qu'ils dorment, pour qu'aucun agent n'y règle un prix qui ne s'applique nulle
+            // part.
             ->add('echangeQuotaGratuit', IntegerType::class, [
-                'label' => 'Échange de données — opérations offertes par cabinet',
-                'help'  => 'À vie, jamais reconduites. Export et import se partagent ce compteur.',
+                'label' => 'Échange — opérations offertes (sans effet)',
+                'help'  => 'Ancien modèle, conservé pour mémoire : plus aucune opération d\'échange n\'est facturée à l\'unité.',
                 'attr'  => ['placeholder' => 'Ex. 3', 'data-icon' => 'action:count'],
             ])
             ->add('echangeCoutOccurrence', IntegerType::class, [
-                'label' => 'Échange de données — coût d\'une exportation (tokens)',
-                'help'  => 'Appliqué au-delà du quota offert. L\'importation n\'est pas facturée ici : elle paie le métrage d\'écriture de chaque ligne.',
+                'label' => 'Échange — coût d\'une exportation (sans effet)',
+                'help'  => 'L\'exportation est désormais GRATUITE ET ILLIMITÉE, et le site public l\'annonce ainsi. Ce réglage n\'est plus lu.',
                 'attr'  => ['placeholder' => 'Ex. 600', 'data-icon' => 'echange'],
             ])
             // Paquets prépayés : édités via une collection + boîte de dialogue (contrôleur

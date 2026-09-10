@@ -6,6 +6,7 @@
 {% set docBase = plan.documentBase %}
 {% set docParPage = plan.documentParPage %}
 {% set docCarPage = plan.documentCaracteresParPage %}
+{% set franchiseLignes = plan.echangeFranchiseLignes|format_nombre(0, 'en') %}
 
 <p class="cgu-intro">
     On Joseara, the <strong>token</strong> is the unit measuring your usage of the platform.
@@ -147,7 +148,30 @@
 </section>
 
 <section class="cgu-section">
-    <h2>8. Who pays and who consumes?</h2>
+    <h2>8. Importing and exporting your data</h2>
+    <p>
+        <strong>Exporting is free and unlimited.</strong> What you take out of Joseara costs you
+        nothing, and never will: your data is yours, and being able to take it back at any time is
+        part of what you are buying.
+    </p>
+    <p>
+        <strong>Migrating your history</strong> &mdash; uploading a filled-in template &mdash; is
+        included up to <strong>{{ franchiseLignes }} rows</strong> of the <em>DONNEES</em> sheet, for
+        the lifetime of each firm. What counts is <strong>rows</strong>, not the records they
+        produce: a single row that creates a client, a risk, an insurer, a policy and its instalment
+        still uses <strong>one</strong> row.
+    </p>
+    <p>
+        Beyond that, migration carries no flat fee: each row simply pays the
+        <strong>ordinary write metering</strong> of the records it creates &mdash; exactly what the
+        same data entry would have cost on screen, no more. The total is
+        <strong>shown to you before you confirm</strong>, converted into dollars, and the migration
+        will not start if your balance does not cover it.
+    </p>
+</section>
+
+<section class="cgu-section">
+    <h2>9. Who pays and who consumes?</h2>
     <p>
         The <strong>company owner</strong> pays. Any activity performed within a company — by its
         owner <em>or</em> by invited collaborators — is deducted from that company owner's balance.

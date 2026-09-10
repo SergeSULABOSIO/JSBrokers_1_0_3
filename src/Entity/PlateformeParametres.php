@@ -88,6 +88,17 @@ class PlateformeParametres
     private ?int $echangeCoutOccurrence = null;
 
     /**
+     * Lignes de reprise offertes à vie par cabinet, sur la feuille `DONNEES` du gabarit.
+     * NULL → TokenPricing::ECHANGE_FRANCHISE_LIGNES.
+     *
+     * ⚠ C'EST CE SEUIL QUE LE SITE PUBLIC ANNONCE. Il est lu par la page de tarif via
+     * `plan_tarifaire()` : le régler ici change ce que lisent les visiteurs, sans toucher
+     * à un gabarit. Ne jamais réécrire le chiffre en dur dans un template.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?int $echangeFranchiseLignes = null;
+
+    /**
      * Multiplicateurs par format : { "pdf": 1.8, ... }. FUSIONNÉ clé par clé avec
      * TokenPricing::DOCUMENT_FORMATS, jamais substitué en bloc : un format ajouté
      * au CODE doit apparaître même sur une plateforme dont la carte est déjà
@@ -332,6 +343,18 @@ class PlateformeParametres
     public function setEchangeCoutOccurrence(?int $echangeCoutOccurrence): static
     {
         $this->echangeCoutOccurrence = $echangeCoutOccurrence;
+
+        return $this;
+    }
+
+    public function getEchangeFranchiseLignes(): ?int
+    {
+        return $this->echangeFranchiseLignes;
+    }
+
+    public function setEchangeFranchiseLignes(?int $echangeFranchiseLignes): static
+    {
+        $this->echangeFranchiseLignes = $echangeFranchiseLignes;
 
         return $this;
     }

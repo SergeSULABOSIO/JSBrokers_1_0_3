@@ -185,6 +185,270 @@ class EcritureImportTest extends WebTestCase
     }
 
     /**
+     * ⚠ ON N'ENCAISSE JAMAIS PLUS QU'ON NE DOIT — l'assertion qui manquait.
+     *
+     * Le test voisin vérifie la commission encaissée, et il est ARITHMÉTIQUEMENT AVEUGLE au
+     * défaut : l'indicateur calcule `(payé / payable) × montantArticle`, ce qui se simplifie
+     * en `payé` pour TOUTE valeur d'article non nulle. Il restait vert pendant qu'un cabinet
+     * réel lisait « Montant total 5,80 · Montant payé 1 160,00 · Solde −1 154,20 ».
+     *
+     * Celui-ci regarde ce que le courtier voit vraiment : le montant DÛ de la note. Il ne
+     * fige aucun montant absolu — les taxes de la maison changeraient le TTC —, mais il
+     * tient l'invariante qui, elle, ne se négocie pas : une note ne peut pas avoir encaissé
+     * plus qu'elle ne réclame.
+     */
+    public function testLaNoteDeRepriseNAffichePasDeSoldeNegatif(): void
+    {
+        [$entreprise, $invite] = $this->fixture();
+        $this->catalogueDeRevenu($entreprise, $invite);
+
+        $run = $this->importer($entreprise, $invite, [
+            $this->uneEcheance() + [
+                'tranchePart' => 100,
+                'chargement_prime_nette' => 10000,
+                'commissionRevenus' => 'Commission Ordinaire = 10%',
+                'ouvertureCommissionEncaissee' => 750,
+                'ouvertureCommissionLe' => '20/01/2026',
+            ],
+        ]);
+
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $run->getStatut(), $this->motif($run));
+
+        $this->em()->clear();
+        $note = $this->em()->getRepository(\App\Entity\Note::class)->findOneBy(['entreprise' => $entreprise]);
+        self::assertNotNull($note, 'La reprise doit avoir créé la note de commission.');
+
+        $helper = static::getContainer()->get(\App\Services\Canvas\Indicator\IndicatorCalculationHelper::class);
+        $du = $helper->getNoteMontantPayable($note);
+        $paye = $helper->getNoteMontantPaye($note);
+
+        // Le taux vaut 10 % d'une prime de 10 000 : le dû est de l'ordre du millier, jamais
+        // de la dizaine. C'est ce seuil que le défaut franchissait — il rendait 10, ou 11,60
+        // une fois la taxe appliquée.
+        self::assertGreaterThan(
+            100.0,
+            $du,
+            'Le montant dû se calcule SUR la prime : un taux pris pour un forfait le réduirait à quelques unités.',
+        );
+        self::assertGreaterThanOrEqual(
+            $paye,
+            $du,
+            'Une note ne peut pas avoir encaissé plus qu\'elle ne réclame : le solde ne peut pas être négatif.',
+        );
+    }
+
+    /**
+     * ⚠ « 10 » N'EST PAS « 10 % », ET LE CONTRÔLE DOIT LE DIRE.
+     *
+     * Écrit sans son signe pourcent, un taux de commission devient un montant forfaitaire.
+     * C'est licite en soi — un forfait existe —, si bien que rien ne s'y opposait : la
+     * reprise écrivait, et la note affichait un solde négatif. Le fichier porte pourtant de
+     * quoi trancher, sur la même ligne : la commission déjà encaissée.
+     */
+    public function testUnTauxEcritSansPourcentEstRefuseEtExplique(): void
+    {
+        [$entreprise, $invite] = $this->fixture();
+        $this->catalogueDeRevenu($entreprise, $invite);
+
+        $run = $this->importer($entreprise, $invite, [
+            $this->uneEcheance() + [
+                'tranchePart' => 100,
+                'chargement_prime_nette' => 10000,
+                // Le pourcent manque : ceci se lit « dix unités monétaires ».
+                'commissionRevenus' => 'Commission Ordinaire = 10',
+                'ouvertureCommissionEncaissee' => 1000,
+                'ouvertureCommissionLe' => '20/01/2026',
+            ],
+        ]);
+
+        self::assertSame(
+            EchangeImportRun::STATUT_ECHEC,
+            $run->getStatut(),
+            'Un forfait de 10 ne peut pas produire 1 000 d\'encaissement : la reprise doit refuser.',
+        );
+
+        // ⚠ LE REPROCHE DOIT PORTER LA SOLUTION. « Valeur invalide » laisserait l'utilisateur
+        // devant un refus sans savoir quoi corriger — le format à écrire est la seule chose
+        // qu'il lui manque.
+        self::assertStringContainsString('%', $this->motif($run));
+        self::assertStringContainsString('Commission Ordinaire', $this->motif($run));
+    }
+
+    /**
+     * ⚠ LES ÉCHÉANCES D'UNE POLICE PARTAGENT CENT POUR CENT DE SA PRIME.
+     *
+     * Écrire 100 sur chacune est le geste le plus naturel du monde — chaque ligne décrit
+     * « toute » son échéance —, et il rendait la prime de la police multipliée par son
+     * nombre d'échéances. Chaque ligne étant plausible isolément, seul un regard sur la
+     * police entière peut le voir.
+     */
+    public function testLesPartsDUnePoliceDoiventFaireCentPourCent(): void
+    {
+        [$entreprise, $invite] = $this->fixture();
+        $this->catalogueDeRevenu($entreprise, $invite);
+
+        $premiere = $this->uneEcheance() + [
+            'tranchePart' => 100,
+            'chargement_prime_nette' => 10000,
+            'trancheNom' => 'Premier terme',
+            'tranchePayableAt' => '15/01/2026',
+        ];
+        $seconde = $this->uneEcheance() + [
+            'tranchePart' => 100,
+            'chargement_prime_nette' => 10000,
+            'trancheNom' => 'Second terme',
+            'tranchePayableAt' => '15/07/2026',
+        ];
+
+        $run = $this->importer($entreprise, $invite, [$premiere, $seconde]);
+
+        self::assertSame(
+            EchangeImportRun::STATUT_ECHEC,
+            $run->getStatut(),
+            'Deux échéances à 100 % feraient une prime double : la reprise doit refuser.',
+        );
+        self::assertStringContainsString('100', $this->motif($run));
+    }
+
+    /**
+     * ⚠ LE TABLEAU DE BORD DOIT S'OUVRIR SUR L'EXERCICE QUI PORTE LES DONNÉES.
+     *
+     * C'est le trou par lequel le défaut est passé : aucun test ne faisait vivre un
+     * encaissement sur un exercice ANTÉRIEUR, et aucun ne reliait la reprise aux
+     * indicateurs. Un cabinet qui reprenait son historique ouvrait donc son écran d'accueil
+     * sur l'année en cours — vide — et lisait 0,00 partout. Ses données existaient, elles
+     * étaient justes, et rien ne le lui disait : il concluait que la reprise n'avait rien
+     * écrit.
+     *
+     * ⚠ LES DATES SE CALCULENT, ELLES NE SE FIGENT PAS. Écrire « 2025 » ferait passer ce
+     * test jusqu'au 31 décembre, puis mentir pour toujours.
+     */
+    public function testLeTableauDeBordSOuvreSurLExerciceQuiPorteLesDonnees(): void
+    {
+        [$entreprise, $invite] = $this->fixture();
+        $this->catalogueDeRevenu($entreprise, $invite);
+
+        $exercicePasse = (int) date('Y') - 1;
+
+        $run = $this->importer($entreprise, $invite, [
+            $this->uneEcheance() + [
+                'policeDateEffet' => '01/01/' . $exercicePasse,
+                'policeEcheance' => '31/12/' . $exercicePasse,
+                'tranchePayableAt' => '15/01/' . $exercicePasse,
+                'tranchePart' => 100,
+                'chargement_prime_nette' => 10000,
+                'commissionRevenus' => 'Commission Ordinaire = 10%',
+                'ouvertureCommissionEncaissee' => 750,
+                'ouvertureCommissionLe' => '20/01/' . $exercicePasse,
+            ],
+        ]);
+
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $run->getStatut(), $this->motif($run));
+
+        $this->em()->clear();
+        $entreprise = $this->em()->find(Entreprise::class, $entreprise->getId());
+        $exercices = static::getContainer()->get(\App\Services\ExercicesDuCabinet::class);
+
+        self::assertSame(
+            $exercicePasse,
+            $exercices->defaut($entreprise),
+            'On ouvre sur le dernier exercice qui porte quelque chose, jamais sur l\'année de l\'horloge.',
+        );
+
+        // ⚠ ET L'ANNÉE COURANTE RESTE OFFERTE, même vide : c'est l'exercice qu'on ouvre, et
+        // s'en trouver privé enfermerait l'utilisateur dans son passé.
+        $offerts = $exercices->disponibles($entreprise);
+        self::assertContains($exercicePasse, $offerts);
+        self::assertContains((int) date('Y'), $offerts);
+
+        // Une année que ce cabinet n'a jamais connue — un lien partagé, une URL bricolée —
+        // ne doit pas interroger la base sur une plage qui ne rendra rien.
+        self::assertSame(
+            $exercicePasse,
+            $exercices->retenir($entreprise, $exercicePasse - 40),
+            'Un exercice inconnu retombe sur le défaut.',
+        );
+    }
+
+    /**
+     * ⚠ LA FRANCHISE EXONÈRE VRAIMENT — ET ELLE NE FUIT PAS.
+     *
+     * C'est le test qui tient la promesse commerciale faite sur le site public : les
+     * premières lignes de reprise sont offertes, les suivantes paient le métrage
+     * d'écriture ordinaire. Les deux moitiés comptent autant l'une que l'autre : une
+     * exonération qui déborderait rendrait la reprise gratuite pour toujours, et une
+     * franchise qui ne s'appliquerait pas ferait payer ce qu'on a annoncé offert.
+     *
+     * ⚠ ON ABAISSE LE SEUIL PLUTÔT QUE DE FABRIQUER MILLE LIGNES. Le paramètre est en
+     * console précisément pour cela ; un fichier de mille lignes ferait un test de dix
+     * minutes qui ne vérifierait rien de plus.
+     */
+    public function testLesLignesOffertesNeDebitentRienEtLesSuivantesPaient(): void
+    {
+        [$entreprise, $invite] = $this->fixture();
+        $this->catalogueDeRevenu($entreprise, $invite);
+
+        $idProprietaire = (int) $entreprise->getUtilisateur()->getId();
+        $parametres = static::getContainer()->get(\App\Token\ParametresTokenService::class);
+
+        // ⚠ LE SOLDE SE RELIT, IL NE SE RAFRAÎCHIT PAS. L'écriture d'un import vide l'unité
+        // de travail : l'objet gardé d'avant n'y est plus géré, et `refresh()` lèverait
+        // « Entity is not managed » — sur le compte du propriétaire, c'est-à-dire au pire
+        // endroit possible.
+        $solde = fn (): int => (int) $this->em()->find(Utilisateur::class, $idProprietaire)->getPaidTokens();
+
+        // ── Première reprise : UNE ligne offerte ────────────────────────────────────
+        $this->reglerLaFranchise(1);
+
+        $avant = $solde();
+        $run = $this->importer($entreprise, $invite, [$this->uneEcheance()]);
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $run->getStatut(), $this->motif($run));
+
+        self::assertSame(
+            $avant,
+            $solde(),
+            'Une ligne couverte par la franchise ne doit RIEN débiter, quel que soit le nombre '
+            . 'd\'enregistrements qu\'elle fait naître.',
+        );
+        self::assertSame(1, $run->getLignesFranchisees(), 'La ligne offerte est décomptée sur le run.');
+
+        // ── Seconde reprise : la franchise est épuisée ──────────────────────────────
+        $avant = $solde();
+        $run = $this->importer($entreprise, $invite, [
+            $this->uneEcheance() + ['policeReference' => 'POL/2026/002'],
+        ]);
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $run->getStatut(), $this->motif($run));
+
+        self::assertLessThan(
+            $avant,
+            $solde(),
+            'Passé la franchise, chaque ligne paie le métrage d\'écriture de ses enregistrements.',
+        );
+        self::assertSame(0, $run->getLignesFranchisees(), 'Plus rien n\'est offert : le run ne décompte rien.');
+
+        // ⚠ ON REND LE BARÈME COMME ON L'A TROUVÉ. Ce réglage est un SINGLETON de la
+        // plateforme, partagé par toute la suite : le laisser à une ligne offerte ferait
+        // échouer, bien plus tard et sans rapport apparent, n'importe quel test qui
+        // suppose la franchise ordinaire.
+        $this->reglerLaFranchise(null);
+        $parametres->refresh();
+    }
+
+    /** Pose le seuil de franchise en base (null = repli sur le barème), et vide le cache. */
+    private function reglerLaFranchise(?int $lignes): void
+    {
+        $depot = static::getContainer()->get(\App\Repository\PlateformeParametresRepository::class);
+        $params = $depot->getSingleton();
+        $params->setEchangeFranchiseLignes($lignes);
+        $this->em()->flush();
+
+        // ⚠ SANS CE `refresh()`, LE BARÈME RESTERAIT CELUI D'AVANT. `ParametresTokenService`
+        // cache ses valeurs pour la requête : le test tournerait sur mille lignes offertes
+        // et passerait sans rien avoir vérifié.
+        static::getContainer()->get(\App\Token\ParametresTokenService::class)->refresh();
+    }
+
+    /**
      * ⚠ UN REDÉPÔT NE DOUBLE PAS L'ENCAISSEMENT.
      *
      * Un solde d'ouverture ne se relit pas : l'échéance étant retrouvée au second dépôt,

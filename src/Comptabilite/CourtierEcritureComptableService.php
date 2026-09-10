@@ -432,11 +432,18 @@ class CourtierEcritureComptableService
         $locale = $this->serviceMonnaies->getMonnaieLocalePourEntreprise($entreprise);
         $affichage = $this->serviceMonnaies->getMonnaieAffichagePourEntreprise($entreprise);
         if ($locale !== null && $affichage !== null && $locale->getCode() !== $affichage->getCode()) {
+            // ⚠ LE TAUX EMPLOYÉ EST NOMMÉ, ET IL LE FAUT. Le libellé disait « 4 000 000,00
+            // CDF convertis en USD » sans jamais dire à quel cours : un cabinet dont le
+            // taux avait été mal saisi voyait une trésorerie de cent millions sans aucun
+            // moyen de la relier au paramètre fautif. L'aberration doit se lire là où elle
+            // se produit, pas trois écrans plus loin.
             $libelle .= sprintf(
-                ' (%s %s convertis en %s)',
+                ' (%s %s convertis en %s au taux de %s %s pour 1 USD)',
                 number_format($capitalLocal, 2, ',', ' '),
                 $locale->getCode(),
                 $affichage->getCode(),
+                number_format((float) $locale->getTauxusd(), 2, ',', ' '),
+                $locale->getCode(),
             );
         }
 
