@@ -56,6 +56,26 @@ export function cleDuChoix(idEntreprise, contexte, nom) {
 }
 
 /**
+ * Clé de l'ONGLET retenu — la vue de la rubrique, par cabinet.
+ *
+ * ⚠ SANS CONTEXTE, ET C'EST TOUTE LA DIFFÉRENCE avec les deux clés ci-dessus. Elles se
+ * rangent PAR onglet, parce qu'un réglage d'export n'a rien à dire d'un import. Celle-ci
+ * désigne l'onglet lui-même : l'y indexer reviendrait à demander où l'on est pour savoir
+ * où l'on était.
+ *
+ * ⚠ ET C'EST UN CHIP COMME LES AUTRES. Tout chip qu'un utilisateur peut cliquer doit
+ * survivre au rechargement : refaire un choix à chaque F5 finit par dissuader d'en faire.
+ * Celui-ci l'était moins que les autres, alors qu'il est le premier qu'on pose — un
+ * cabinet qui reprend ses données retombait sur « Exporter » à chaque rafraîchissement.
+ *
+ * @param {number|string} idEntreprise
+ * @returns {string}
+ */
+export function cleDeLOnglet(idEntreprise) {
+    return `echangeOnglet_${idEntreprise}`;
+}
+
+/**
  * La valeur mémorisée est-elle encore proposée ?
  *
  * ⚠ UN CHOIX PEUT DISPARAÎTRE ENTRE DEUX VISITES. L'exercice 2025 mémorisé n'a plus de

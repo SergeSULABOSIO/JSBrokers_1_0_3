@@ -13,6 +13,7 @@
  *
  * ── CE QUE CE MODULE POSE ───────────────────────────────────────────────────────────
  *     .jsb-preset-filters-wrap        ← C'EST ELLE, la pilule : fond, arrondi, marge
+ *          + .jsb-control-pill        ← et son contour de survol, repris à l'intérieure
  *          .jsb-preset-filters__titre ← le nom du critère, HORS du défilement
  *          .jsb-preset-zone           ← référent des flèches, ne défile pas
  *               .jsb-preset-filters   ← la seule chose qui défile : les valeurs
@@ -136,6 +137,22 @@ export class DefilementChips {
             // défilement COMMENCE après lui : plus rien ne peut passer sous rien.
             const titre = pilule.querySelector('.jsb-preset-filters__titre');
             if (titre) enveloppe.appendChild(titre);
+
+            // ⚠ LE SOCLE DE CONTRÔLE SUIT LE TITRE, et pour la même raison.
+            //
+            // `.jsb-control-pill` réserve une bordure transparente que le survol révèle :
+            // c'est le retour visuel commun à tous les blocs de contrôle de
+            // l'application. Laissé sur la pilule INTERNE, ce contour se dessinait à
+            // l'intérieur de l'enveloppe — sous le fond de celle-ci, derrière les flèches,
+            // et amputé par le débordement de la zone qui défile. Autant dire nulle part :
+            // les blocs de chips avaient cessé de réagir au survol, seuls de tout l'écran.
+            //
+            // L'enveloppe étant devenue la pilule visible — c'est elle qui porte le fond,
+            // l'arrondi et le titre —, c'est à elle de porter le contour.
+            if (pilule.classList.contains('jsb-control-pill')) {
+                pilule.classList.remove('jsb-control-pill');
+                enveloppe.classList.add('jsb-control-pill');
+            }
 
             zone = document.createElement('div');
             zone.className = 'jsb-preset-zone';

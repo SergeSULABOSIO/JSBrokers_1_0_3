@@ -282,18 +282,70 @@ class EcranPerimetreTest extends WebTestCase
         );
     }
 
+    /**
+     * ⚠ UN CONTRÔLE EN ÉCHEC DOIT MONTRER SON RAPPORT — c'est le cas le plus utile, et
+     * c'était le seul que l'écran ne savait pas afficher.
+     *
+     * La requête qui alimentait cet écran ne rendait que les contrôles CONFIRMABLES : un
+     * fichier refusé n'affichait donc rien du tout. L'utilisateur lisait « le fichier
+     * comporte des anomalies à corriger » dans un toast, et n'avait aucun moyen de savoir
+     * lesquelles, ni où — ni le tableau situé, ni le classeur annoté, ni même le bouton
+     * pour abandonner. Une porte fermée sans serrure.
+     *
+     * ⚠ ET AUCUN BOUTON DE CONFIRMATION N'APPARAÎT : il n'existe pas d'import partiel, et
+     * proposer « importer quand même » serait proposer de laisser la base dans un état que
+     * personne n'a décrit.
+     */
+    public function testUnControleEnEchecMontreSesAnomaliesEtLeClasseurAnnote(): void
+    {
+        [$entreprise, $invite] = $this->fixture();
+
+        $run = $this->controleEnAttente($entreprise, $invite, [
+            'confirmable' => false,
+            'nb_erreurs' => 2,
+            'anomalies' => [
+                ['gravite' => 'ERREUR', 'feuille' => 'DONNEES', 'ligne' => 12, 'colonne' => 'C', 'message' => 'Référence de police absente.'],
+                ['gravite' => 'ERREUR', 'feuille' => 'DONNEES', 'ligne' => 18, 'colonne' => 'H', 'message' => 'Aucun risque nommé.'],
+            ],
+        ], EchangeImportRun::STATUT_ECHEC);
+
+        $crawler = $this->client->request('GET', sprintf('/admin/echange/workspace/%d?onglet=importer', $entreprise->getId()));
+        self::assertResponseIsSuccessful();
+
+        $texte = $crawler->filter('.ech-rapport')->text('');
+        self::assertStringContainsString('Référence de police absente.', $texte, 'Le motif doit se lire à l’écran.');
+        self::assertStringContainsString('ligne 12', $texte, 'Et il doit dire OÙ.');
+        self::assertStringContainsString('2 erreur(s)', $texte, 'Le bandeau nomme le nombre.');
+
+        self::assertCount(
+            1,
+            $crawler->filter(sprintf('a[href="/admin/echange/importer/%d/%d/anomalies"]', $entreprise->getId(), $run->getId())),
+            'Le classeur annoté est le seul moyen de retrouver les cellules dans son propre fichier.',
+        );
+
+        self::assertCount(
+            0,
+            $crawler->filter('[data-echange-target="boutonConfirmation"]'),
+            'Un rapport non confirmable ne propose pas d’importer quand même.',
+        );
+    }
+
     // ─────────────────────────────────────────────────────────────────────────────
     // Fixtures
     // ─────────────────────────────────────────────────────────────────────────────
 
     /** @param array<string, mixed> $rapport */
-    private function controleEnAttente(Entreprise $entreprise, Invite $invite, array $rapport): EchangeImportRun
-    {
+    private function controleEnAttente(
+        Entreprise $entreprise,
+        Invite $invite,
+        array $rapport,
+        string $statut = EchangeImportRun::STATUT_EN_ATTENTE_CONFIRMATION,
+    ): EchangeImportRun {
         $em = $this->em();
 
         $run = new EchangeImportRun();
         $run->setNomFichier('depot.xlsx');
-        $run->setStatut(EchangeImportRun::STATUT_EN_ATTENTE_CONFIRMATION);
+        $run->setStatut($statut);
         $run->setExpireLe(new \DateTimeImmutable('+1 hour'));
         $run->setRapport($rapport);
         $run->setEntreprise($entreprise);

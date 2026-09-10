@@ -143,6 +143,10 @@
         .jsb-echange .ech-fichier:hover { border-color:#0047AB; background:#e8f0fb; }
         .jsb-echange .ech-fichier:focus-within { outline:2px solid #0047AB; outline-offset:2px; }
         .jsb-echange .ech-fichier input[type="file"] { position:absolute; width:1px; height:1px; opacity:0; }
+        /* Le bandeau du rapport quand le contrôle a ÉCHOUÉ : même boîte, autre voix. Un
+           refus annoncé sur le ton d'une information se lit comme une information — et
+           l'utilisateur passe à côté du seul écran qui lui dise quoi corriger. */
+        .jsb-echange .ech-billing--erreur { background:#fdf2f3; border-color:#f5c2c7; color:#842029; }
         .jsb-echange .ech-suppressions { display:inline-flex; align-items:center; gap:.4rem; font-size:.85rem; color:#495057; min-height:44px; }
 
         /* Sélection du périmètre. */
@@ -569,13 +573,28 @@
             <div data-echange-target="rapport">
                 {% if controleEnCours %}
                     {% set rapport = controleEnCours.rapport %}
+                    {# ⚠ UN CONTRÔLE QUI ÉCHOUE S'AFFICHE COMME UN AUTRE, et c'est le cas
+                       le plus utile. Tant que l'écran ne montrait que les contrôles
+                       confirmables, un fichier refusé n'affichait RIEN : ni ce tableau, ni
+                       le lien vers le classeur annoté. On lisait « le fichier comporte des
+                       anomalies » sans aucun moyen de savoir lesquelles, ni où. #}
                     <div class="ech-rapport" data-echange-run-id="{{ controleEnCours.id }}">
-                        <div class="ech-billing" role="status">
-                            <twig:UX:Icon name="{{ resolve_icon_name('action:information') }}" style="width:18px;height:18px;flex:0 0 auto;" />
+                        <div class="ech-billing{{ controleEnCours.estConfirmable ? '' : ' ech-billing--erreur' }}" role="status">
+                            <twig:UX:Icon name="{{ resolve_icon_name(controleEnCours.estConfirmable ? 'action:information' : 'action:alert') }}" style="width:18px;height:18px;flex:0 0 auto;" />
                             <span>
-                                Contrôle en attente de votre décision :
-                                <strong>{{ controleEnCours.nomFichier }}</strong>,
-                                déposé le {{ controleEnCours.createdAt|date('d/m/Y H:i') }}.
+                                {% if controleEnCours.estConfirmable %}
+                                    Contrôle en attente de votre décision :
+                                    <strong>{{ controleEnCours.nomFichier }}</strong>,
+                                    déposé le {{ controleEnCours.createdAt|date('d/m/Y H:i') }}.
+                                {% else %}
+                                    {# On NOMME le nombre et on dit où regarder : « des anomalies »
+                                       laisse l'utilisateur devant un constat sans marche à suivre. #}
+                                    <strong>{{ controleEnCours.nomFichier }}</strong> n'a pas pu être importé :
+                                    <strong>{{ rapport.nb_erreurs|default(0) }} erreur(s)</strong> à corriger.
+                                    Rien n'a été écrit. Le détail est ci-dessous — chaque ligne dit
+                                    <em>où</em> et <em>quoi</em> —, et le classeur annoté vous les montre
+                                    en place, surlignées dans votre propre fichier.
+                                {% endif %}
                             </span>
                         </div>
 

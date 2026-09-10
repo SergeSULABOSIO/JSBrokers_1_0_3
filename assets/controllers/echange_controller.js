@@ -2,6 +2,7 @@ import { Controller } from '@hotwired/stimulus';
 import { DefilementChips } from './chips-defilement.js';
 import {
     choixARestaurer,
+    cleDeLOnglet,
     cleDuChoix,
     cleDuPerimetre,
     exclusionsARestaurer,
@@ -98,6 +99,11 @@ export default class extends Controller {
     #initialise = false;
 
     connect() {
+        // ⚠ L'ONGLET D'ABORD, ET AVANT TOUT LE RESTE. Il décide de ce que le serveur a
+        // rendu : reposer des chips ou brancher le défilement sur une vue qu'on s'apprête
+        // à remplacer serait du travail jeté, et l'écran clignoterait deux fois.
+        if (this.#reprendreLOnglet()) return;
+
         this.#restaurerLeChoix('validite', this.validiteTargets, 'echangeValiditeParam');
         this.#restaurerLeChoix('exercice', this.exerciceTargets, 'echangeExerciceParam');
         this.#rappelerLaValidite();
@@ -111,8 +117,9 @@ export default class extends Controller {
         // titre du groupe collé à gauche.
         //
         // ⚠ ET LA BARRE D'ACTIONS N'EN SOUFFRE PAS. « Exporter, Importer, Historique »
-        // passe par le même module, qui ne pose le mode défilant QUE sur les pilules qui
-        // débordent réellement : celle-là tient toujours sur une ligne, et ne bouge pas.
+        // passe par le même module : il enveloppe TOUTES les pilules — c'est ainsi que le
+        // titre sort du défilement — mais n'allume flèches et fondus que sur celles qui
+        // débordent réellement. Celle-là tient toujours sur une ligne, et reste immobile.
         this._defilementDesChips = new DefilementChips(
             this.element,
             '.jsb-preset-filters-bar .jsb-preset-filters',
@@ -161,7 +168,56 @@ export default class extends Controller {
         const onglet = event.params.onglet;
         if (!onglet || onglet === this.ongletValue) return;
         this.ongletValue = onglet;
+        this.#memoriserLOnglet(onglet);
         this.#reload();
+    }
+
+    /**
+     * REPOSE L'ONGLET RETENU au rechargement de la page.
+     *
+     * ⚠ TOUT CHIP DOIT SURVIVRE AU F5, celui-ci comme les autres — et il était le seul à
+     * ne pas le faire, alors qu'il est le premier qu'on pose. Un cabinet en pleine reprise
+     * retombait sur « Exporter » à chaque rafraîchissement, et devait recliquer avant de
+     * retrouver son import.
+     *
+     * ⚠ L'ONGLET NE SE REPOSE PAS COMME LES AUTRES RÉGLAGES. Validité et exercice vivent
+     * dans le DOM déjà rendu : les restaurer, c'est déplacer une classe. L'onglet, lui,
+     * décide de ce que le SERVEUR a rendu — il faut donc redemander le composant. D'où un
+     * aller-retour, et un seul : au retour, le mémorisé vaut l'onglet courant et rien ne
+     * se redéclenche.
+     *
+     * ⚠ ET ON NE REPOSE QUE CE QUI EST ENCORE OFFERT. « Importer » disparaît de l'écran
+     * quand le droit d'écriture est retiré : le reposer demanderait au serveur une vue
+     * qu'il refuse, et l'utilisateur verrait un aller-retour pour rien.
+     */
+    #reprendreLOnglet() {
+        const chips = this.element.querySelectorAll('[data-echange-onglet-param]');
+        if (chips.length === 0) return false;
+
+        let memorise = null;
+        try {
+            memorise = window.localStorage.getItem(cleDeLOnglet(this.idEntrepriseValue));
+        } catch (error) {
+            return false;
+        }
+
+        const offerts = Array.from(chips, (chip) => chip.dataset.echangeOngletParam);
+        const retenu = choixARestaurer(memorise, offerts);
+        if (retenu === null || retenu === this.ongletValue) return false;
+
+        this.ongletValue = retenu;
+        this.#reload();
+
+        return true;
+    }
+
+    #memoriserLOnglet(onglet) {
+        try {
+            window.localStorage.setItem(cleDeLOnglet(this.idEntrepriseValue), onglet);
+        } catch (error) {
+            // Stockage refusé (navigation privée, quota) : l'écran reste utilisable, il
+            // oublie seulement le choix. Rien à dire à l'utilisateur.
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -761,11 +817,17 @@ export default class extends Controller {
 
             const final = await this.#menerAuBout(this.importUrlValue, { method: 'POST', body: corps });
 
+            // ⚠ UN TOAST QUI CONSTATE NE SERT À RIEN. « Le fichier comporte des anomalies »
+            // laissait l'utilisateur devant un refus sans marche à suivre : combien ?
+            // lesquelles ? où ? On dit le nombre, et l'on renvoie au rapport qui apparaît
+            // juste dessous — c'est lui qui porte le détail situé et le classeur annoté.
+            const erreurs = final?.rapport?.nb_erreurs ?? 0;
+
             this.#notifier(
                 final?.confirmable ? 'success' : 'warning',
                 final?.confirmable
                     ? 'Contrôle terminé : rien n’a encore été écrit.'
-                    : 'Le fichier comporte des anomalies à corriger. Rien n’a été écrit.',
+                    : `${erreurs} erreur(s) à corriger, détaillées ci-dessous. Rien n’a été écrit.`,
             );
 
             // Le rapport est rendu par le serveur : on recharge l'onglet plutôt que de

@@ -13,6 +13,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+    cleDeLOnglet,
     cleDuPerimetre,
     exclusionsARestaurer,
     exclusionsDe,
@@ -29,6 +30,22 @@ test('la clé sépare les cabinets ET les onglets', () => {
     // « Exporter ma production » et « réimporter tout » sont deux intentions : les
     // confondre ferait qu'un choix d'export restreindrait un import, en silence.
     assert.notEqual(cleDuPerimetre(1, 'exporter'), cleDuPerimetre(1, 'importer'));
+});
+
+test('la clé de l’onglet sépare les cabinets — et RIEN d’autre', () => {
+    assert.notEqual(cleDeLOnglet(1), cleDeLOnglet(2), 'Deux cabinets, deux vues retenues.');
+
+    // ⚠ ELLE NE DOIT PAS DÉPENDRE DE L'ONGLET, sous peine d'être inutilisable : on la lit
+    // justement pour savoir DANS QUEL onglet se placer. L'y indexer reviendrait à demander
+    // où l'on est pour savoir où l'on était, et le réglage ne se retrouverait jamais.
+    assert.equal(cleDeLOnglet(1), cleDeLOnglet(1));
+    assert.ok(
+        !cleDeLOnglet(1).includes('exporter') && !cleDeLOnglet(1).includes('importer'),
+        'Aucun nom d’onglet ne doit entrer dans la clé.',
+    );
+
+    // Et elle ne se confond avec aucune autre : trois réglages, trois rangements.
+    assert.notEqual(cleDeLOnglet(1), cleDuPerimetre(1, 'exporter'));
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -264,6 +264,91 @@ class ControleImportTest extends WebTestCase
         );
     }
 
+    /**
+     * ⚠ UN REPROCHE DOIT DÉSIGNER UNE CELLULE, ET PARLER DU CLASSEUR.
+     *
+     * Le rapport disait : « Informations manquantes ou invalides : startingAt (Cette valeur
+     * ne doit pas être vide.) », sans colonne. Trois défauts d'un coup : un nom de propriété
+     * que le classeur n'affiche nulle part, une tournure de validateur, et « ligne 2 » comme
+     * seule adresse — soixante colonnes à parcourir à la main.
+     *
+     * ⚠ ET SANS COLONNE, LE CLASSEUR ANNOTÉ NE SURLIGNE RIEN : l'annotateur a besoin d'une
+     * cellule pour poser sa couleur et son commentaire. Une anomalie sans colonne se
+     * retrouvait reléguée dans la feuille de rapport, loin de la donnée fautive.
+     */
+    public function testUnChampManquantDesigneSaColonneEtParleFrancais(): void
+    {
+        [$entreprise, $proprietaire] = $this->fixture();
+
+        // Une police sans date d'effet : la colonne existe au classeur, elle est vide.
+        $run = $this->importateur()->controler(
+            $this->classeurDeReprise($entreprise, [[
+                'policeReference' => 'POL/2026/001',
+                'trancheNom' => 'Prime unique',
+                'tranchePayableAt' => '15/01/2026',
+                'assure' => 'KIN AVIA',
+                'risque' => 'RC Aviation',
+                'assureur' => 'SFA CONGO',
+            ]]),
+            'sans-date.xlsx',
+            $entreprise,
+            $proprietaire,
+        );
+
+        $anomalie = $this->anomalieDeCode($run, Anomalie::VALEUR_INVALIDE)
+            ?? $this->anomalieDeCode($run, Anomalie::CHAMP_OBLIGATOIRE);
+        self::assertNotNull($anomalie, 'Le test suppose un champ obligatoire absent : ' . $this->motif($run));
+
+        self::assertNotNull($anomalie['colonne'], 'Le reproche doit désigner une CELLULE : ' . $anomalie['message']);
+        self::assertSame(EtatDuPortefeuille::FEUILLE, $anomalie['feuille']);
+
+        // ⚠ CE QUE L'UTILISATEUR LIT NE DOIT CONTENIR AUCUN NOM DE PROPRIÉTÉ. Ceux qui
+        // reprennent leurs données ne sont pas informaticiens : « startingAt » ne leur dit
+        // rien, et « relation obligatoire » encore moins.
+        foreach (['startingAt', 'endingAt', 'Relation obligatoire', 'duree'] as $jargon) {
+            self::assertStringNotContainsString($jargon, $anomalie['message'], sprintf(
+                'Le message ne doit pas parler le langage du modèle : « %s » y figure.',
+                $jargon,
+            ));
+        }
+
+        // Il nomme la colonne telle qu'elle est écrite dans le classeur, et dit quoi faire.
+        self::assertStringContainsString('Remplissez la colonne', $anomalie['message']);
+        self::assertStringContainsString('Police · Date', $anomalie['message']);
+    }
+
+    /**
+     * ⚠ UNE LIGNE QUI NOMME UN PORTEFEUILLE DOIT PASSER — elle bloquait tout.
+     *
+     * Un portefeuille exige un gestionnaire de compte, et le classeur de reprise ne porte
+     * pas cette colonne. Chaque ligne portant un portefeuille était donc refusée sur
+     * « gestionnaire (Relation obligatoire à préciser (identifiant).) » : un nom de
+     * propriété, une tournure de validateur, et aucune case à remplir dans le fichier.
+     * Un cabinet qui range ses clients par portefeuille — c'est-à-dire la plupart — ne
+     * pouvait rien reprendre du tout.
+     *
+     * Celui qui dépose le fichier en répond ; cela se change ensuite d'un clic à l'écran.
+     */
+    public function testUneLigneAvecPortefeuillePasseEtDesigneSonGestionnaire(): void
+    {
+        [$entreprise, $proprietaire] = $this->fixture();
+
+        $run = $this->importateur()->controler(
+            $this->classeurDeReprise($entreprise, [
+                $this->uneEcheance() + ['portefeuille' => 'Grands comptes'],
+            ]),
+            'avec-portefeuille.xlsx',
+            $entreprise,
+            $proprietaire,
+        );
+
+        self::assertSame(
+            EchangeImportRun::STATUT_EN_ATTENTE_CONFIRMATION,
+            $run->getStatut(),
+            'Un portefeuille nommé ne doit plus bloquer la reprise : ' . $this->motif($run),
+        );
+    }
+
     // ─────────────────────────────────────────────────────────────────────────────
     // Outillage
     // ─────────────────────────────────────────────────────────────────────────────

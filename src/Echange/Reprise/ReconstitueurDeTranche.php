@@ -15,6 +15,7 @@ use App\Echange\Service\Anomalie;
 use App\Echange\Service\ResolveurDeRenvois;
 use App\Entity\Chargement;
 use App\Entity\Entreprise;
+use App\Entity\Invite;
 use App\Entity\Note;
 use Doctrine\ORM\EntityManagerInterface;
 use PhpOffice\PhpSpreadsheet\Shared\Date as DateExcel;
@@ -106,9 +107,23 @@ final class ReconstitueurDeTranche
     ) {
     }
 
+    /**
+     * L'invité pour le compte de qui la reprise est faite.
+     *
+     * ⚠ IL SERT DE GESTIONNAIRE PAR DÉFAUT. Un portefeuille exige un gestionnaire de
+     * compte, et le classeur de reprise ne porte pas cette colonne : sans lui, toute
+     * ligne nommant un portefeuille était refusée sur « gestionnaire : relation
+     * obligatoire à préciser » — un motif illisible, désignant une case qui n'existe pas.
+     *
+     * Celui qui dépose le fichier est le choix évident : c'est lui qui prend la reprise en
+     * charge, et le gestionnaire se change ensuite d'un clic à l'écran.
+     */
+    private ?Invite $pourLeCompteDe = null;
+
     /** Le registre est propre entre deux contrôles — le service est partagé. */
-    public function reinitialiser(): void
+    public function reinitialiser(?Invite $pourLeCompteDe = null): void
     {
+        $this->pourLeCompteDe = $pourLeCompteDe;
         $this->registre = [];
         $this->revenuParProposition = [];
         // ⚠ ET LES DEUX INDEX DE LA BASE AVEC LUI. Une passe d'écriture vient peut-être de
@@ -179,10 +194,9 @@ final class ReconstitueurDeTranche
             $anomalies[] = $this->refus(
                 $ligne,
                 self::COLONNE_CLE,
-                'Cette ligne n\'a ni identifiant de tranche ni référence de police : rien ne permet '
-                . 'de savoir si elle décrit une affaire nouvelle ou une échéance d\'une affaire déjà '
-                . 'présente. Renseignez la référence de la police, ou conservez l\'identifiant tel '
-                . 'qu\'il a été exporté.',
+                'Cette ligne ne porte aucune référence de police. Sans elle, impossible de savoir '
+                . 'de quel contrat il s\'agit, ni s\'il existe déjà chez vous. Remplissez la colonne '
+                . 'de la référence — celle qui figure sur la police de votre assureur.',
             );
 
             return [];
@@ -214,10 +228,9 @@ final class ReconstitueurDeTranche
                 $ligne,
                 self::COLONNE_CLE,
                 sprintf(
-                    'Votre portefeuille porte DÉJÀ plusieurs polices sous la référence « %s » : '
-                    . 'impossible de savoir à laquelle rattacher cette échéance, et en créer une de '
-                    . 'plus aggraverait le doublon. Réunissez-les depuis la rubrique des polices, '
-                    . 'puis redéposez ce fichier.',
+                    'Vous avez déjà plusieurs polices portant la référence « %s ». On ne peut pas '
+                    . 'deviner à laquelle rattacher cette échéance. Ouvrez la rubrique des polices, '
+                    . 'gardez-en une seule, puis redéposez ce fichier.',
                     $reference,
                 ),
             );
@@ -243,6 +256,10 @@ final class ReconstitueurDeTranche
         // Le portefeuille se pose sur le CLIENT, et n'est donc renseigné qu'à sa création.
         $portefeuille = $this->rattacher('Portefeuille', $ligne, 'portefeuille', CleNaturelle::PORTEFEUILLE, $entreprise, $anomalies, $operations, [
             'nom' => $ligne->texte('portefeuille'),
+            // ⚠ SANS GESTIONNAIRE, LE PORTEFEUILLE NE PEUT PAS NAÎTRE — et le classeur ne
+            // porte pas cette colonne. Celui qui dépose le fichier en répond ; cela se
+            // change d'un clic à l'écran, alors qu'un refus incompréhensible bloquait tout.
+            'gestionnaire' => $this->pourLeCompteDe?->getId(),
         ]);
 
         $risque = $this->rattacher('Risque', $ligne, 'risque', CleNaturelle::RISQUE, $entreprise, $anomalies, $operations, [
@@ -282,9 +299,9 @@ final class ReconstitueurDeTranche
             $anomalies[] = $this->refus(
                 $ligne,
                 'risque',
-                'Cette ligne ne nomme aucun risque : une opportunité ne peut pas être créée sans '
-                . 'lui, car c\'est lui qui décrit ce qui est assuré. Renseignez la colonne du '
-                . 'risque — le nom suffit, il sera créé s\'il n\'existe pas encore.',
+                'Cette ligne ne dit pas ce qui est assuré. Remplissez la colonne du risque — '
+                . 'par exemple « RC Automobile » ou « Incendie ». Le nom suffit : s\'il n\'existe '
+                . 'pas encore chez vous, il sera créé.',
             );
 
             return [];
@@ -330,6 +347,37 @@ final class ReconstitueurDeTranche
 
         $renvoiPiste = $idPiste ?? CleNaturelle::renvoiVers($piste);
 
+        // ⚠ UNE POLICE SANS DATES N'EN EST PAS UNE, et le refus doit le dire ICI.
+        //
+        // La couverture court d'une date à une autre : les deux sont obligatoires. Sans
+        // elles, le contrôle échouait plus loin sur « Durée (en mois) » — la durée se
+        // DÉDUIT de ces dates — et l'utilisateur cherchait une colonne « durée » que le
+        // classeur ne porte pas, pendant que les deux cases à remplir restaient muettes.
+        //
+        // Rien de tout cela ne concerne une police déjà en base : ses dates y sont.
+        $dateEffet = $this->date($ligne, 'policeDateEffet', 'Avenant', 'startingAt');
+        $dateEcheance = $this->date($ligne, 'policeEcheance', 'Avenant', 'endingAt');
+
+        if ($idAvenant === null) {
+            foreach (['policeDateEffet' => $dateEffet, 'policeEcheance' => $dateEcheance] as $code => $valeur) {
+                if ($valeur !== null) {
+                    continue;
+                }
+
+                $anomalies[] = $this->refus($ligne, $code, sprintf(
+                    'Remplissez la colonne « %s » : une police couvre une période, et cette '
+                    . 'date en marque %s. Écrivez-la comme dans votre tableur, par exemple '
+                    . '01/01/2026.',
+                    $colonnes[$code]->libelle ?? $code,
+                    $code === 'policeDateEffet' ? 'le début' : 'la fin',
+                ));
+            }
+
+            if ($dateEffet === null || $dateEcheance === null) {
+                return [];
+            }
+        }
+
         // ── La proposition, et avec elle la PRIME et la RÉMUNÉRATION ────────────────
         $cotation = (string) CleNaturelle::pourChaine(CleNaturelle::COTATION, $reference);
         if ($idCotation === null && $this->neuf($cotation)) {
@@ -344,9 +392,9 @@ final class ReconstitueurDeTranche
                 $type = $this->typePourFonction($entreprise, $fonction);
                 if ($type === null) {
                     $anomalies[] = $this->refus($ligne, CatalogueDesColonnes::codeDeFonction($fonction), sprintf(
-                        'Votre configuration ne comporte aucun type de chargement « %s ». Créez-en '
-                        . 'un dans la rubrique des types de chargement : c\'est lui qui donne à ce '
-                        . 'montant sa place dans le calcul de la prime.',
+                        'Votre cabinet n\'a pas encore de « %s » dans sa liste des composantes de '
+                        . 'la prime. Créez-la dans la rubrique « Chargements », puis redéposez ce '
+                        . 'fichier : sans elle, ce montant ne saurait pas où se placer.',
                         CatalogueDesColonnes::FONCTIONS[$fonction],
                     ));
                     continue;
@@ -410,10 +458,7 @@ final class ReconstitueurDeTranche
                     // garder en opération distincte, une police et son avenant n° 2
                     // partageant la même proposition. On emprunte donc la formule, sans la
                     // réécrire.
-                    'duree' => $this->defauts->dureeEnMois(
-                        $this->date($ligne, 'policeDateEffet', 'Avenant', 'startingAt'),
-                        $this->date($ligne, 'policeEcheance', 'Avenant', 'endingAt'),
-                    ),
+                    'duree' => $this->defauts->dureeEnMois($dateEffet, $dateEcheance),
                 ]),
                 collections: $collections,
                 ref: $cotation,
@@ -431,8 +476,8 @@ final class ReconstitueurDeTranche
                 fields: $this->sansVide([
                     'referencePolice' => $reference,
                     'numero' => $numeroAvenant,
-                    'startingAt' => $this->date($ligne, 'policeDateEffet', 'Avenant', 'startingAt'),
-                    'endingAt' => $this->date($ligne, 'policeEcheance', 'Avenant', 'endingAt'),
+                    'startingAt' => $dateEffet,
+                    'endingAt' => $dateEcheance,
                     'cotation' => $renvoiCotation,
                 ]),
                 ref: $avenant,
@@ -476,10 +521,10 @@ final class ReconstitueurDeTranche
         if ($signes === [] && $idCotation !== null) {
             $anomalies[] = Anomalie::avertissement(
                 Anomalie::VALEUR_INVALIDE,
-                'Cette échéance n\'a ni nom, ni date de règlement, ni date d\'échéance : rien ne '
-                . 'la distingue des autres échéances de la même police. Elle sera ajoutée, mais un '
-                . 'nouveau dépôt de ce fichier en ajouterait une de plus. Renseignez au moins une '
-                . 'de ces trois colonnes.',
+                'Cette échéance n\'a ni nom, ni date : rien ne la distingue des autres échéances '
+                . 'de la même police. Elle sera bien enregistrée, mais si vous redéposez ce fichier '
+                . 'elle le sera une seconde fois. Remplissez au moins son nom ou une de ses dates '
+                . 'pour l\'éviter.',
                 $ligne->feuille,
                 $ligne->numero,
                 $ligne->colonne('trancheNom'),
@@ -630,10 +675,10 @@ final class ReconstitueurDeTranche
         $anomalies[] = Anomalie::avertissement(
             Anomalie::VALEUR_INVALIDE,
             sprintf(
-                'La commission encaissée (%s) n\'a pas été reprise : une note de commission '
-                . 'exige une validation et une signature que le formulaire de saisie ne '
-                . 'propose pas encore. Tout le reste de la ligne est repris ; enregistrez cet '
-                . 'encaissement depuis la rubrique Notes.',
+                'La commission de %s que vous avez déjà encaissée n\'a pas pu être enregistrée. '
+                . 'Tout le reste de cette ligne l\'a bien été : le client, la police, l\'échéance '
+                . 'et sa prime. Pour enregistrer cet encaissement, allez dans la rubrique '
+                . '« Notes » et créez la note de commission correspondante.',
                 number_format($montant, 2, ',', ' '),
             ),
             $ligne->feuille,
@@ -666,8 +711,9 @@ final class ReconstitueurDeTranche
 
         if ($intermediaire === null) {
             $anomalies[] = $this->refus($ligne, 'ouvertureRetroReversee', sprintf(
-                'Une rétrocommission reversée de %s est indiquée, mais aucun intermédiaire n\'est '
-                . 'nommé : un reversement sans bénéficiaire ne peut pas être écrit.',
+                'Vous indiquez %s de rétrocommission déjà reversée, mais la colonne de '
+                . 'l\'intermédiaire est vide : on ne sait pas à qui cette somme a été versée. '
+                . 'Nommez l\'intermédiaire, ou effacez ce montant.',
                 number_format($montant, 2, ',', ' '),
             ));
 
@@ -848,9 +894,9 @@ final class ReconstitueurDeTranche
 
         if ($renvoi->valeur === null) {
             $anomalies[] = $this->refus($ligne, $codeColonne, sprintf(
-                '« %s » ne correspond à aucun élément de votre configuration. Créez-le d\'abord dans '
-                . 'la rubrique correspondante : un type porte un taux, un redevable et une assiette, '
-                . 'qu\'un simple nom ne suffit pas à définir.',
+                'Votre cabinet n\'a rien qui s\'appelle « %s ». Créez-le d\'abord dans sa rubrique, '
+                . 'puis redéposez ce fichier : un simple nom ne suffit pas ici, il faut aussi son '
+                . 'taux et qui le doit — des informations que ce classeur ne transporte pas.',
                 $nom,
             ));
 
