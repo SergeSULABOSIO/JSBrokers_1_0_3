@@ -46,12 +46,13 @@
        sous les cases, et un « ci-dessus » faux est pire que pas d'indication du tout. #}
     <span class="ech-note" style="margin:0;">
         {% if contexte == 'importer' %}
-            Première reprise ? Ce classeur a <strong>exactement la forme d'un export</strong>,
-            sans les lignes : une par échéance de prime. Remplissez-le hors ligne, puis
-            déposez-le ci-dessous. Gratuit : il ne contient aucune donnée du cabinet.
+            Première reprise ? Ce classeur ne porte <strong>que les colonnes à remplir</strong> —
+            une ligne par échéance de prime. Tout le reste (primes totales, taxes, commissions)
+            est calculé par l'application. Remplissez-le hors ligne, puis déposez-le ci-dessous.
+            Gratuit : il ne contient aucune donnée du cabinet.
         {% else %}
-            Gratuit : aucune donnée du cabinet — seulement les colonnes retenues et leur
-            dictionnaire. C'est le même fichier que votre export, vide.
+            Gratuit : aucune donnée du cabinet — seulement les colonnes à remplir et leur
+            dictionnaire. L'application calcule le reste.
         {% endif %}
     </span>
 </p>

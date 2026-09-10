@@ -106,6 +106,120 @@ class EcritureImportTest extends WebTestCase
         );
     }
 
+    /**
+     * ⚠ LA COMMISSION DÉJÀ ENCAISSÉE ARRIVE EN BASE, ET LE PORTEFEUILLE LA COMPTE.
+     *
+     * C'est le test qui compte vraiment : les autres vérifient les OPÉRATIONS produites,
+     * celui-ci vérifie le CHIFFRE que le courtier lira à l'écran. Entre les deux il y a le
+     * circuit d'écriture complet — le formulaire de la note, celui de son article, celui de
+     * son règlement — et deux colonnes NON NULLES qu'aucun d'eux ne déclare.
+     *
+     * ⚠ ET IL VÉRIFIE UN ENCAISSEMENT PARTIEL, à dessein. Le montant d'un article n'est pas
+     * libre : il se calcule du revenu facturé. Ce qui est repris, c'est le RÈGLEMENT, dont
+     * le calcul tire la proportion payée — la commission encaissée vaut donc exactement ce
+     * qui a été versé, qu'il solde la note ou non.
+     */
+    public function testLaCommissionEncaisseeEstEcriteEtComptee(): void
+    {
+        [$entreprise, $invite] = $this->fixture();
+        $this->catalogueDeRevenu($entreprise, $invite);
+
+        $run = $this->importer($entreprise, $invite, [
+            $this->uneEcheance() + [
+                // ⚠ UNE COMMISSION SE CALCULE D'UN TAUX SUR UNE PRIME : sans l'un ou
+                // l'autre elle vaut zéro, et il n'y aurait rien à encaisser.
+                'tranchePart' => 100,
+                'chargement_prime_nette' => 10000,
+                'commissionRevenus' => 'Commission Ordinaire = 10%',
+                // Encaissement PARTIEL : la commission vaut 1 000, il en est rentré 750.
+                'ouvertureCommissionEncaissee' => 750,
+                'ouvertureCommissionLe' => '20/01/2026',
+            ],
+        ]);
+
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $run->getStatut(), $this->motif($run));
+
+        $cnx = $this->em()->getConnection();
+        $id = $entreprise->getId();
+
+        self::assertSame(
+            1,
+            (int) $cnx->fetchOne('SELECT COUNT(*) FROM note WHERE entreprise_id = ?', [$id]),
+            'Une note, et une seule : le calcul ne saurait pas répartir une note groupée.',
+        );
+        self::assertSame(
+            750.0,
+            (float) $cnx->fetchOne(
+                'SELECT SUM(p.montant) FROM paiement p JOIN note n ON n.id = p.note_id WHERE n.entreprise_id = ?',
+                [$id],
+            ),
+            'Le règlement porte le montant encaissé.',
+        );
+
+        // ⚠ L'ARTICLE DOIT PORTER LES DEUX LIENS : sans `revenu_facture_id`, le montant
+        // vaut zéro et la note ne compte rien, quel que soit son règlement.
+        $article = $cnx->fetchAssociative(
+            'SELECT a.tranche_id, a.revenu_facture_id FROM article a
+             JOIN note n ON n.id = a.note_id WHERE n.entreprise_id = ?',
+            [$id],
+        );
+        self::assertNotFalse($article, 'L\'article doit exister.');
+        self::assertNotNull($article['tranche_id']);
+        self::assertNotNull($article['revenu_facture_id']);
+
+        // LE CHIFFRE QUE L'ÉCRAN AFFICHE — celui pour lequel tout ce qui précède existe.
+        // ⚠ ON REPART D'UNE LECTURE PROPRE. L'écriture a vidé l'unité de travail : une
+        // entité gardée d'avant ne verrait pas les articles qu'on vient de lui rattacher.
+        $this->em()->clear();
+        $tranche = $this->em()->getRepository(\App\Entity\Tranche::class)
+            ->findOneBy(['entreprise' => $entreprise]);
+        self::assertNotNull($tranche);
+
+        self::assertEqualsWithDelta(
+            750.0,
+            static::getContainer()->get(\App\Services\Canvas\Indicator\IndicatorCalculationHelper::class)
+                ->getTrancheMontantCommissionEncaissee($tranche),
+            0.01,
+            'Le portefeuille doit afficher exactement ce qui a été encaissé.',
+        );
+    }
+
+    /**
+     * ⚠ UN REDÉPÔT NE DOUBLE PAS L'ENCAISSEMENT.
+     *
+     * Un solde d'ouverture ne se relit pas : l'échéance étant retrouvée au second dépôt,
+     * aucune écriture d'ouverture n'est rejouée. Sans cette garde, chaque aller-retour du
+     * même fichier ajouterait une note — et la commission encaissée doublerait sans que
+     * rien ne le signale.
+     */
+    public function testUnRedepotNeDoublePasLaCommissionEncaissee(): void
+    {
+        [$entreprise, $invite] = $this->fixture();
+        $this->catalogueDeRevenu($entreprise, $invite);
+
+        $lignes = [
+            $this->uneEcheance() + [
+                'tranchePart' => 100,
+                'chargement_prime_nette' => 10000,
+                'commissionRevenus' => 'Commission Ordinaire = 10%',
+                'ouvertureCommissionEncaissee' => 750,
+            ],
+        ];
+
+        $this->importer($entreprise, $invite, $lignes);
+        $run = $this->importer($entreprise, $invite, $lignes);
+
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $run->getStatut(), $this->motif($run));
+        self::assertSame(
+            1,
+            (int) $this->em()->getConnection()->fetchOne(
+                'SELECT COUNT(*) FROM note WHERE entreprise_id = ?',
+                [$entreprise->getId()],
+            ),
+            'La note d\'ouverture ne se rejoue pas.',
+        );
+    }
+
     // ─────────────────────────────────────────────────────────────────────────────
     // Ce que l'écriture refuse
     // ─────────────────────────────────────────────────────────────────────────────
@@ -284,6 +398,38 @@ class EcritureImportTest extends WebTestCase
         }
 
         return $this->importateur()->executer($run, $invite->getUtilisateur());
+    }
+
+    /**
+     * Le type de revenu que la ligne nomme.
+     *
+     * ⚠ ON NE CRÉE JAMAIS UN TYPE À LA VOLÉE depuis un classeur : il porte un taux et un
+     * redevable qu'un simple nom ne suffit pas à définir. Le cabinet doit donc l'avoir.
+     */
+    private function catalogueDeRevenu(Entreprise $entreprise, Invite $invite): void
+    {
+        $em = $this->em();
+
+        $chargement = (new \App\Entity\Chargement())
+            ->setNom('Prime nette')
+            ->setFonction(\App\Entity\Chargement::FONCTION_PRIME_NETTE);
+        $chargement->setEntreprise($entreprise);
+        $chargement->setInvite($invite);
+        $em->persist($chargement);
+
+        $type = (new \App\Entity\TypeRevenu())
+            ->setNom('Commission Ordinaire')
+            ->setShared(false)
+            ->setMultipayments(true)
+            ->setRedevable(\App\Entity\TypeRevenu::REDEVABLE_ASSUREUR)
+            // ⚠ SON ASSIETTE : une commission se calcule SUR quelque chose. Sans elle,
+            // `getCotationMontantChargementPrime()` rend zéro et la commission avec.
+            ->setTypeChargement($chargement)
+            ->setPourcentage(10.0);
+        $type->setEntreprise($entreprise);
+        $type->setInvite($invite);
+        $em->persist($type);
+        $em->flush();
     }
 
     private function uneEcheance(array $surcharges = []): array

@@ -5,6 +5,9 @@ namespace App\Tests\Echange;
 use App\Echange\Canevas\CanevasDEchange;
 use App\Echange\Classeur\AnnotateurJsbx;
 use App\Echange\Classeur\EcrivainJsbx;
+use App\Echange\Etat\EtatDuPortefeuille;
+use App\Echange\Etat\ExerciceDesTranches;
+use App\Echange\Etat\ProducteurDeLEtat;
 use App\Echange\Service\ExportateurJsbx;
 use App\Echange\Service\ImportateurJsbx;
 use App\Entity\Client;
@@ -241,6 +244,56 @@ class GabaritEtAnomaliesTest extends WebTestCase
         );
     }
 
+    /**
+     * ⚠ LE GABARIT NE PORTE QUE LES COLONNES QU'IL SAIT RELIRE.
+     *
+     * L'état en compte environ soixante-quinze ; vingt-cinq seulement se reprennent. Les
+     * autres sont des résultats que l'application recalcule, et le dictionnaire le dit de
+     * chacune : « exporté pour information, IGNORÉ à l'import ». Les laisser dans un
+     * classeur VIERGE, c'était faire défiler les deux tiers d'un tableau pour trouver les
+     * cases à remplir.
+     *
+     * ⚠ ET L'EXPORT, LUI, LES GARDE TOUTES : c'est la seconde moitié de la promesse. Un
+     * état sert à LIRE son portefeuille — en amputer les totaux et les taxes le viderait
+     * de son sens.
+     */
+    public function testLeGabaritNePorteQueLesColonnesRelues(): void
+    {
+        [$entreprise, $proprietaire] = $this->fixture();
+
+        $catalogue = $this->service(EtatDuPortefeuille::class)->colonnes($entreprise);
+        $relues = array_keys(array_filter($catalogue, static fn ($c): bool => !$c->lectureSeule()));
+        $calculees = array_keys(array_filter($catalogue, static fn ($c): bool => $c->lectureSeule()));
+
+        self::assertNotEmpty($calculees, 'Le test suppose que l\'état porte des colonnes calculées.');
+
+        $libelles = $this->libellesDuGabarit($entreprise, $proprietaire);
+
+        foreach ($relues as $code) {
+            self::assertContains(
+                $catalogue[$code]->libelle,
+                $libelles,
+                sprintf('« %s » se reprend à l\'import : le gabarit doit la porter.', $code),
+            );
+        }
+
+        foreach ($calculees as $code) {
+            self::assertNotContains(
+                $catalogue[$code]->libelle,
+                $libelles,
+                sprintf('« %s » est recalculée : elle n\'a rien à faire dans un gabarit.', $code),
+            );
+        }
+
+        // ⚠ L'EXPORT NE CHANGE PAS D'UNE LIGNE. Le filtrage ne vaut que pour le gabarit.
+        $exporte = $this->libellesDeLEtat($entreprise, $proprietaire);
+        self::assertCount(
+            count($catalogue),
+            $exporte,
+            'Un état exporté garde toutes ses colonnes, totaux et taxes compris.',
+        );
+    }
+
     // ─────────────────────────────────────────────────────────────────────────────
     // Le fichier annoté
     // ─────────────────────────────────────────────────────────────────────────────
@@ -391,6 +444,53 @@ class GabaritEtAnomaliesTest extends WebTestCase
         );
 
         return $classeur;
+    }
+
+    /**
+     * Les libellés de la ligne d'en-tête d'un GABARIT.
+     *
+     * @return string[]
+     */
+    private function libellesDuGabarit(Entreprise $entreprise, Invite $invite): array
+    {
+        return $this->libellesDeLaFeuille($this->gabaritDeReprise($entreprise, $invite));
+    }
+
+    /**
+     * Les libellés de la ligne d'en-tête d'un ÉTAT complet.
+     *
+     * @return string[]
+     */
+    private function libellesDeLEtat(Entreprise $entreprise, Invite $invite): array
+    {
+        [$classeur] = $this->service(ProducteurDeLEtat::class)->produire(
+            $entreprise,
+            $invite,
+            $entreprise->getUtilisateur(),
+            [],
+            '',
+            ExerciceDesTranches::TOUS,
+        );
+
+        return $this->libellesDeLaFeuille($this->ecrire($classeur));
+    }
+
+    /** @return string[] */
+    private function libellesDeLaFeuille(string $chemin): array
+    {
+        $classeur = IOFactory::load($chemin);
+        $feuille = $classeur->getSheetByName(EtatDuPortefeuille::FEUILLE);
+        self::assertNotNull($feuille);
+
+        $libelles = [];
+        foreach ($feuille->getRowIterator(1, 1)->current()->getCellIterator() as $cellule) {
+            $valeur = trim((string) $cellule->getValue());
+            if ($valeur !== '') {
+                $libelles[] = $valeur;
+            }
+        }
+
+        return $libelles;
     }
 
     /**

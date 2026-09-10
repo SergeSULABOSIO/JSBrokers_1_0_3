@@ -141,14 +141,32 @@ final class ProducteurDeLEtat
         $progression->etape('Inventaire des tranches');
         $exercice = ExerciceDesTranches::normaliser($exercice, $this->etat->exercices($entreprise));
 
-        // ⚠ UN GABARIT NE LIT RIEN. Il porte les mêmes colonnes, le même dictionnaire et
-        // les mêmes formats — mais aucune ligne du cabinet. C'est ce qui permet de préparer
-        // une reprise hors ligne sans avoir à exporter puis effacer, geste que personne ne
-        // devine et qui casse le fichier une fois sur deux.
+        // ⚠ UN GABARIT NE LIT RIEN. Il porte le même dictionnaire et les mêmes formats —
+        // mais aucune ligne du cabinet. C'est ce qui permet de préparer une reprise hors
+        // ligne sans avoir à exporter puis effacer, geste que personne ne devine et qui
+        // casse le fichier une fois sur deux.
         $total = $gabarit ? 0 : $this->etat->compterLignes($entreprise, $validite, $exercice);
         $progression->totaliser($total);
 
         $colonnes = $this->etat->colonnes($entreprise, $colonnesRetenues);
+
+        // ⚠ ET IL NE PORTE QUE LES COLONNES QU'IL SAIT RELIRE. L'état en compte environ
+        // soixante-quinze ; vingt-cinq seulement se reprennent. Les autres sont des
+        // résultats que l'application recalcule — « Prime · Totale », les taxes, une
+        // colonne par type de revenu —, et le dictionnaire le disait déjà de chacune :
+        // « exporté pour information, IGNORÉ à l'import ».
+        //
+        // Les laisser dans un classeur VIERGE, c'était faire défiler les deux tiers d'un
+        // tableau pour trouver les cases à remplir, sans autre moyen de les distinguer que
+        // de lire le dictionnaire colonne par colonne — au moment précis où il faut être
+        // guidé.
+        //
+        // ⚠ CELA NE RECRÉE PAS DEUX FORMATS : c'est la même feuille, lue par LIBELLÉ, en
+        // deux tailles. Un export complet continue de se redéposer tel quel — l'import
+        // ignore ce qu'il ne relit pas et n'exige aucune colonne absente.
+        if ($gabarit) {
+            $colonnes = array_filter($colonnes, static fn (ColonneEtat $c): bool => !$c->lectureSeule());
+        }
 
         $lignes = [];
         if (!$gabarit) {

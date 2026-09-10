@@ -17,6 +17,7 @@ use App\Entity\Chargement;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Note;
+use App\Entity\TypeRevenu;
 use Doctrine\ORM\EntityManagerInterface;
 use PhpOffice\PhpSpreadsheet\Shared\Date as DateExcel;
 
@@ -96,6 +97,18 @@ final class ReconstitueurDeTranche
      */
     private array $revenuParProposition = [];
 
+    /**
+     * @var array<string, int|null> qui DOIT la commission de chaque proposition
+     *
+     * ⚠ IL DÉCIDE À QUI LA NOTE DE REPRISE EST ADRESSÉE, et cela ne se devine pas :
+     * `TypeRevenu::$redevable` le dit — l'assureur précompte, ou le client règle. Une note
+     * adressée au mauvais payeur fausserait le relevé de compte de l'un comme de l'autre.
+     *
+     * Retenu en même temps que le repère ci-dessus, et pour la même raison : le type de
+     * revenu n'est connu qu'au moment où la proposition se construit.
+     */
+    private array $redevableParProposition = [];
+
     public function __construct(
         private readonly ResolveurDeRenvois $resolveur,
         private readonly NormaliseurDeDates $dates,
@@ -126,6 +139,7 @@ final class ReconstitueurDeTranche
         $this->pourLeCompteDe = $pourLeCompteDe;
         $this->registre = [];
         $this->revenuParProposition = [];
+        $this->redevableParProposition = [];
         // ⚠ ET LES DEUX INDEX DE LA BASE AVEC LUI. Une passe d'écriture vient peut-être de
         // créer des polices, des clients, des risques : un index resté tiède ne les
         // connaîtrait pas, et la passe suivante les recréerait.
@@ -434,6 +448,9 @@ final class ReconstitueurDeTranche
                     'rev',
                     $cotation . ' ' . $nom,
                 );
+                // Le payeur suit le repère : c'est lui qui dira à qui adresser la note de
+                // reprise d'une commission déjà encaissée.
+                $this->redevableParProposition[$cotation] ??= $this->redevableDuType($type);
                 $repereRevenu = $this->revenuParProposition[$cotation];
 
                 $collections['revenus'][] = new MutationOperation(
@@ -560,18 +577,24 @@ final class ReconstitueurDeTranche
             ref: $repereTranche,
         );
 
-        $this->ouvrirLaCommission(
-            $ligne,
-            $repereTranche,
-            $this->revenuParProposition[$cotation] ?? null,
-            $assureur,
-            $operations,
-            $anomalies,
-        );
         // ⚠ MÊME RÈGLE QUE POUR LA PRIME : un solde d'ouverture ne se relit pas. Rejouer
-        // le reversement sur une échéance déjà reprise en verserait un second à
-        // l'intermédiaire, à chaque dépôt.
+        // ces écritures sur une échéance déjà reprise doublerait les encaissements et les
+        // reversements à chaque dépôt du même fichier.
+        //
+        // ⚠ ELLE MANQUAIT À LA COMMISSION, et c'était sans conséquence tant qu'elle
+        // n'écrivait rien. Maintenant qu'elle écrit, l'oubli coûterait une note de plus par
+        // aller-retour.
         if ($idEcheance === null) {
+            $this->ouvrirLaCommission(
+                $ligne,
+                $repereTranche,
+                $this->revenuParProposition[$cotation] ?? null,
+                $this->redevableParProposition[$cotation] ?? null,
+                $assureur,
+                $client,
+                $operations,
+                $anomalies,
+            );
             $this->ouvrirLaRetro($ligne, $repereTranche, $intermediaire, $operations, $anomalies);
         }
 
@@ -627,34 +650,35 @@ final class ReconstitueurDeTranche
     }
 
     /**
-     * L'ENCAISSEMENT DE COMMISSION N'EST PAS REPRIS — et le fichier le dit.
+     * L'ENCAISSEMENT DE COMMISSION DEVIENT UNE NOTE, SON ARTICLE ET SON RÈGLEMENT.
      *
-     * ── POURQUOI, ET CE N'EST PAS UN DÉFAUT DE LA REPRISE ──────────────────────────
-     * ⚠ UNE NOTE NE PEUT PAS ÊTRE CRÉÉE PAR LE CIRCUIT COMMUN. `Note::$validated` et
-     * `Note::$signature` sont NON NULLES en base et ABSENTES de `NoteType` : le contrôle à
-     * blanc les réclame — elles sont obligatoires — sans qu'aucun champ ne permette de les
-     * fournir, un formulaire ignorant ce qu'il ne déclare pas. Constaté le 08/09/2026 sur
-     * un portefeuille réel : CINQUANTE erreurs bloquantes, une par échéance portant une
-     * commission encaissée, rendant toute la reprise inutilisable.
+     * ── POURQUOI CELA A LONGTEMPS ÉTÉ REFUSÉ, ET POURQUOI C'ÉTAIT UNE ERREUR ────────
+     * ⚠ DEUX COLONNES NON NULLES ABSENTES DU FORMULAIRE bloquaient toute création de note
+     * par le circuit commun : `Note::$validated` et `Note::$signature`. Le contrôle à blanc
+     * les réclamait — elles sont obligatoires — sans qu'aucun champ ne permette de les
+     * fournir. Constaté le 08/09/2026 : cinquante refus, un par échéance encaissée.
      *
-     * ⚠ ET ON NE FOURNIT PAS CES CHAMPS « POUR FAIRE PASSER » LE DRY-RUN. Le contrôle
-     * cesserait de se plaindre et l'écriture échouerait en SQL sur une contrainte NOT
-     * NULL — précisément le piège que `champsRequisManquants()` existe pour éviter :
-     * « que Ket les demande plutôt que de provoquer une erreur SQL à l'exécution ».
+     * On en avait conclu qu'une note de reprise posait une question métier — validée par
+     * qui, signée par qui ? Elle n'en pose aucune : l'écran lui-même y met `false` et
+     * l'horodatage du moment, depuis toujours. Ces valeurs ont rejoint
+     * {@see \App\Service\Workspace\ValeursDeNaissance}, que le circuit commun applique
+     * à toute création — et le blocage a disparu avec elles.
      *
-     * Ce qu'une note de REPRISE doit porter — est-elle validée ? signée par qui ? — est
-     * une question métier, pas une valeur qu'on invente.
+     * ── CE QUE LE CALCUL EXIGE, ET RIEN DE PLUS ───────────────────────────────────
+     * `getTrancheMontantCommissionEncaissee()` applique à chaque article la proportion
+     * payée de la note ENTIÈRE. Avec UNE note par échéance, UN article et UN règlement, la
+     * commission encaissée vaut donc exactement ce qui a été versé — que l'encaissement
+     * soit complet ou partiel, sans qu'aucun montant ne soit forcé.
      *
-     * ── CE QUE LE JOUR VENU IL FAUDRA REFAIRE ─────────────────────────────────────
-     * ⚠ UNE NOTE PAR ÉCHÉANCE, ET C'EST UNE CONTRAINTE DU CALCUL.
-     * `getTrancheMontantCommissionEncaissee()` applique la proportion payée de la note
-     * ENTIÈRE à chacun de ses articles : une note groupant plusieurs échéances ne peut pas
-     * exprimer des taux d'encaissement différents. Avec UN article — lié à la fois à
-     * l'échéance et au revenu, sans quoi `getArticleMontant()` rend zéro — et UN règlement
-     * du même montant, la commission encaissée vaut exactement ce qu'on a versé.
+     * ⚠ UNE NOTE PAR ÉCHÉANCE, ET C'EST UNE CONTRAINTE DU CALCUL : une note qui grouperait
+     * plusieurs échéances ne saurait pas exprimer des taux d'encaissement différents.
      *
-     * ⚠ PERDRE UN CHIFFRE EN SILENCE SERAIT PIRE QUE DE NE PAS LE REPRENDRE : d'où
-     * l'avertissement, qui nomme le montant laissé de côté et où le saisir.
+     * ⚠ L'ARTICLE EXIGE `tranche` ET `revenuFacture`, sinon `getArticleMontant()` rend zéro
+     * et la note ne compte rien. C'est pourquoi le repère du revenu voyage jusqu'ici.
+     *
+     * ⚠ ET LE DESTINATAIRE SE DÉDUIT, IL NE SE DEVINE PAS. `TypeRevenu::$redevable` dit qui
+     * doit la commission ; le calcul n'accepte d'ailleurs que les notes adressées au client
+     * ou à l'assureur.
      *
      * @param array<int, MutationOperation> $operations
      * @param Anomalie[]                    $anomalies
@@ -663,7 +687,9 @@ final class ReconstitueurDeTranche
         LigneLue $ligne,
         string $repereTranche,
         ?string $repereRevenu,
+        ?int $redevable,
         int|string|null $assureur,
+        int|string|null $client,
         array &$operations,
         array &$anomalies,
     ): void {
@@ -672,19 +698,100 @@ final class ReconstitueurDeTranche
             return;
         }
 
-        $anomalies[] = Anomalie::avertissement(
-            Anomalie::VALEUR_INVALIDE,
-            sprintf(
-                'La commission de %s que vous avez déjà encaissée n\'a pas pu être enregistrée. '
-                . 'Tout le reste de cette ligne l\'a bien été : le client, la police, l\'échéance '
-                . 'et sa prime. Pour enregistrer cet encaissement, allez dans la rubrique '
-                . '« Notes » et créez la note de commission correspondante.',
-                number_format($montant, 2, ',', ' '),
-            ),
-            $ligne->feuille,
-            $ligne->numero,
-            $ligne->colonne('ouvertureCommissionEncaissee'),
+        // ⚠ SANS REVENU, LA NOTE NE COMPTERAIT RIEN. `getArticleMontant()` se calcule du
+        // revenu facturé : un article qui n'en désigne aucun vaut zéro, et la note serait
+        // une coquille que le portefeuille afficherait sans jamais l'additionner. Mieux
+        // vaut le dire que d'écrire un chiffre qui ne comptera pas.
+        if ($repereRevenu === null) {
+            $anomalies[] = Anomalie::avertissement(
+                Anomalie::VALEUR_INVALIDE,
+                sprintf(
+                    'La commission de %s que vous avez déjà encaissée n\'a pas pu être '
+                    . 'enregistrée : cette ligne ne dit pas de quelle commission il s\'agit. '
+                    . 'Remplissez la colonne « Commission · Revenus » — par exemple '
+                    . '« Commission Ordinaire » — et l\'encaissement suivra.',
+                    number_format($montant, 2, ',', ' '),
+                ),
+                $ligne->feuille,
+                $ligne->numero,
+                $ligne->colonne('ouvertureCommissionEncaissee'),
+            );
+
+            return;
+        }
+
+        // Le payeur décide de l'adressage : le calcul ne retient que les notes adressées au
+        // client ou à l'assureur, et le relevé de compte de chacun en dépend.
+        $auClient = $redevable === TypeRevenu::REDEVABLE_CLIENT;
+        $destinataire = $auClient ? $client : $assureur;
+
+        if ($destinataire === null) {
+            $anomalies[] = Anomalie::avertissement(
+                Anomalie::VALEUR_INVALIDE,
+                sprintf(
+                    'La commission de %s que vous avez déjà encaissée n\'a pas pu être '
+                    . 'enregistrée : on ne sait pas qui vous l\'a versée. Renseignez la '
+                    . 'colonne « %s » de cette ligne.',
+                    number_format($montant, 2, ',', ' '),
+                    $auClient ? 'Assuré' : 'Assureur',
+                ),
+                $ligne->feuille,
+                $ligne->numero,
+                $ligne->colonne('ouvertureCommissionEncaissee'),
+            );
+
+            return;
+        }
+
+        $date = $this->date($ligne, 'ouvertureCommissionLe', 'Paiement', 'paidAt')
+            ?? $this->date($ligne, 'policeDateEffet', 'Paiement', 'paidAt');
+
+        $operations[] = new MutationOperation(
+            op: MutationOperation::OP_CREATE,
+            entityShortName: 'Note',
+            fields: $this->sansVide([
+                'nom' => 'Commission encaissée — reprise',
+                // Une commission est un DÉBIT : le courtier réclame ce qui lui revient.
+                'type' => Note::TYPE_NOTE_DE_DEBIT,
+                'addressedTo' => $auClient ? Note::TO_CLIENT : Note::TO_ASSUREUR,
+                $auClient ? 'client' : 'assureur' => $destinataire,
+                // ⚠ PAS DE RÉFÉRENCE ICI : le formulaire de la note désactive ce champ —
+                // « générée automatiquement » — et ignore donc toute valeur soumise. Elle
+                // est posée à la naissance de l'entité, comme la signature et la
+                // validation ({@see \App\Service\Workspace\ValeursDeNaissance}).
+                'description' => 'Situation reprise depuis un classeur de reprise.',
+            ]),
+            collections: [
+                // ⚠ L'ARTICLE PORTE LES DEUX LIENS, sans quoi son montant vaut zéro.
+                'articles' => [new MutationOperation(
+                    op: MutationOperation::OP_CREATE,
+                    entityShortName: 'Article',
+                    fields: [
+                        'tranche' => CleNaturelle::renvoiVers($repereTranche),
+                        'revenuFacture' => CleNaturelle::renvoiVers($repereRevenu),
+                        'quantite' => 1,
+                    ],
+                )],
+                // Le règlement : c'est LUI qui porte le montant encaissé, et le calcul en
+                // tire la proportion payée de la note.
+                'paiements' => [new MutationOperation(
+                    op: MutationOperation::OP_CREATE,
+                    entityShortName: 'Paiement',
+                    fields: $this->sansVide([
+                        'montant' => $montant,
+                        'paidAt' => $date,
+                        'reference' => self::REFERENCE_OUVERTURE,
+                        'description' => 'Situation reprise depuis un classeur de reprise.',
+                    ]),
+                )],
+            ],
         );
+    }
+
+    /** Qui doit la commission de ce type de revenu — l'assureur précompte, ou le client règle. */
+    private function redevableDuType(int $idType): ?int
+    {
+        return $this->em->find(TypeRevenu::class, $idType)?->getRedevable();
     }
 
     /**

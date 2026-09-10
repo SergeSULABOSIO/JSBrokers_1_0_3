@@ -19,6 +19,7 @@ use App\Services\Canvas\CalculationProvider;
 use setasign\Fpdi\Tcpdf\Fpdi;
 use setasign\Fpdi\PdfParser\StreamReader;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Service\Workspace\ValeursDeNaissance;
 use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
 use App\Controller\Admin\ControllerUtilsTrait;
@@ -49,6 +50,9 @@ class NoteController extends AbstractController
         private CalculationProvider $calculationProvider,
         private ServiceMonnaies $serviceMonnaies, // NOUVEAU : Injection du service des monnaies
         private BordereauAnalysisPdfService $bordereauPdfService,
+        // Ce qu'une note porte en naissant — partagé avec le circuit d'écriture commun,
+        // pour qu'une note importée soit en tout point une note créée d'un clic.
+        private ValeursDeNaissance $valeursDeNaissance,
         CanvasBuilder $canvasBuilder
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait
@@ -94,10 +98,10 @@ class NoteController extends AbstractController
             // mais DÉDUITS : facturer un bordereau validé, c'est émettre une note de
             // débit à l'assureur.
             function (Note $note, Invite $invite) use ($request) {
-                $note->setSignature((string)time());
+                // Même règle qu'à la soumission, et qu'à l'écriture par le circuit commun :
+                // signature, validation et date d'émission ont un seul endroit.
+                $this->valeursDeNaissance->poser($note);
                 $note->setInvite($invite);
-                $note->setValidated(false);
-                $note->setSentAt(new \DateTimeImmutable());
 
                 // Pré-remplissage depuis un bordereau parent (parentContext du dialog-instance)
                 $bordereauId = $request->query->get('parent_id');
@@ -296,16 +300,20 @@ class NoteController extends AbstractController
                     if (!$note->getReference()) {
                         $note->setReference("N" . time());
                     }
-                    if (!$note->getSignature()) {
-                        $note->setSignature((string)time());
-                    }
-                    if ($note->isValidated() === null) {
-                        $note->setValidated(false);
-                    }
+                    // ⚠ SIGNATURE, VALIDATION ET DATE D'ÉMISSION VIENNENT D'UN SEUL ENDROIT.
+                    //
+                    // Ces trois valeurs étaient posées ici, et une seconde fois plus haut
+                    // dans ce contrôleur — donc nulle part ailleurs. Tout ce qui écrit
+                    // AUTREMENT que par cet écran (l'assistant, la reprise de données)
+                    // butait alors sur des colonnes NOT NULL qu'aucun formulaire ne
+                    // propose : la reprise renonçait à enregistrer les commissions déjà
+                    // encaissées, une par échéance.
+                    //
+                    // Elles vivent désormais dans `ValeursDeNaissance`, que le circuit
+                    // d'écriture commun applique aussi. Une note née d'un import est en
+                    // tout point une note née d'un clic.
+                    $this->valeursDeNaissance->poser($note);
                     $note->setInvite($inviteConnecte);
-                    if (!$note->getSentAt()) {
-                        $note->setSentAt(new \DateTimeImmutable());
-                    }
 
                     // The 'bordereau' field is suppressed from the form layout (to avoid Twig double-render),
                     // so the form binding sets it to null. Restore it from the parentContext sent by dialog-instance.

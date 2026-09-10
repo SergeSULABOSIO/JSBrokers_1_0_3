@@ -288,7 +288,13 @@ final class AvanceurDImport
 
         while ($this->travaille($run)) {
             $avant = $run->getCurseur();
-            $this->avancerUnPalier($run);
+            // ⚠ ON RÉASSIGNE, et ce n'est pas une coquetterie : un palier qui échoue rouvre
+            // le gestionnaire que Doctrine a fermé et RECHARGE le contrôle. L'objet d'avant
+            // est alors détaché, figé sur l'état d'avant l'échec — la boucle lirait un
+            // curseur qui n'a pas bougé, conclurait au blocage et rendrait la main en
+            // laissant le statut « en cours », c'est-à-dire un import qui paraît suspendu
+            // alors qu'il a échoué et l'a dit.
+            $run = $this->avancerUnPalier($run);
 
             $progression->totaliser($run->getTotalLignes());
             $progression->avancer(max(0, $run->getCurseur() - $avant));
