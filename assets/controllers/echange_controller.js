@@ -62,6 +62,12 @@ export default class extends Controller {
         'boutonControle',
         'boutonConfirmation',
         'rapport',
+        // Le bandeau du travail en cours : il était rendu une fois puis figé, alors que la
+        // barre du haut avançait. Deux indicateurs du même travail qui se contredisent.
+        'travailPhase',
+        'travailCompte',
+        'travailBarre',
+        'travailJauge',
     ];
 
     static values = {
@@ -974,6 +980,36 @@ export default class extends Controller {
         document.dispatchEvent(new CustomEvent('app:loading.progress', {
             detail: { pct: etat.pct ?? 0, libelle: etat.libelle || '', restant: null },
         }));
+
+        this.#rafraichirLeBandeau(etat);
+    }
+
+    /**
+     * Le bandeau du travail suit le même rythme que la barre du haut.
+     *
+     * ⚠ IL NE SE RECONSTRUIT PAS, IL SE MET À JOUR. Recharger la rubrique à chaque palier
+     * ferait clignoter tout l'écran plusieurs fois par minute, et le rapport déjà affiché
+     * disparaîtrait sous les yeux de celui qui le lit.
+     */
+    #rafraichirLeBandeau(etat) {
+        if (this.hasTravailPhaseTarget && etat.libelle) {
+            this.travailPhaseTarget.textContent = etat.libelle;
+        }
+
+        const total = Number(etat.total) || 0;
+        const fait = Number(etat.curseur) || 0;
+
+        if (this.hasTravailCompteTarget) {
+            this.travailCompteTarget.textContent = total > 0 ? `${fait} / ${total} lignes` : '';
+        }
+
+        const pct = Math.max(0, Math.min(100, Number(etat.pct) || 0));
+        if (this.hasTravailJaugeTarget) {
+            this.travailJaugeTarget.style.width = `${pct}%`;
+        }
+        if (this.hasTravailBarreTarget) {
+            this.travailBarreTarget.setAttribute('aria-valuenow', String(Math.round(pct)));
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────────

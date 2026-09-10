@@ -544,15 +544,21 @@
                par paliers et ne vit plus dans la requête qui l'a lancé : un écran muet
                pendant qu'un portefeuille se reprend, et l'utilisateur redépose son fichier
                par doute — c'est-à-dire au pire moment. #}
+            {# ── LE TRAVAIL EN COURS ─────────────────────────────────────────────────
+               ⚠ CE BANDEAU ÉTAIT DU TEXTE MORT : rendu une fois par le serveur, jamais
+               rafraîchi ensuite. Pendant une reprise de plusieurs minutes, il affichait
+               « 0 ligne sur 512 » du début à la fin, pendant que la barre du haut, elle,
+               avançait — deux indicateurs du même travail qui se contredisaient.
+
+               Il porte désormais ses propres cibles, que le contrôleur met à jour au même
+               rythme que la barre globale. Le compte est aligné par `.ech-solde`, dont les
+               chiffres à chasse fixe évitent que le nombre ne danse à chaque palier. #}
             {% if travailEnCours is defined and travailEnCours %}
-                <div class="ech-billing" role="status" style="margin-bottom:1rem;">
+                <div class="ech-billing" role="status" style="margin-bottom:1rem;flex-wrap:wrap;">
                     <twig:UX:Icon name="{{ resolve_icon_name('action:information') }}" style="width:18px;height:18px;flex:0 0 auto;" />
                     <span>
-                        {{ travailEnCours.statut == 'EN_COURS' ? 'Importation en cours' : 'Contrôle en cours' }} :
-                        <strong>{{ travailEnCours.nomFichier }}</strong>
-                        {% if travailEnCours.totalLignes > 0 %}
-                            — {{ travailEnCours.curseur }} ligne(s) sur {{ travailEnCours.totalLignes }}.
-                        {% endif %}
+                        <strong data-echange-target="travailPhase">{{ travailEnCours.statut == 'EN_COURS' ? 'Importation en cours' : 'Contrôle en cours' }}</strong> :
+                        <strong>{{ travailEnCours.nomFichier }}</strong>.
                         {% if travailEnCours.travailAbandonne %}
                             Le traitement s'est interrompu sans rendre la main : redéposez le fichier,
                             les lignes déjà écrites ne seront pas recréées.
@@ -560,6 +566,21 @@
                             Vous pouvez quitter cet écran : le travail reprendra à votre retour.
                         {% endif %}
                     </span>
+                    <span class="ech-solde" data-echange-target="travailCompte">
+                        {%- if travailEnCours.totalLignes > 0 -%}
+                            {{ travailEnCours.curseur }} / {{ travailEnCours.totalLignes }} lignes
+                        {%- endif -%}
+                    </span>
+
+                    {# La piste et son remplissage : mêmes teintes que la barre du haut,
+                       aucune classe nouvelle — c'est le même geste, à un autre endroit. #}
+                    <div style="flex:0 0 100%;height:6px;border-radius:999px;background:#e9ecef;overflow:hidden;margin-top:.5rem;"
+                         role="progressbar" aria-label="Avancement de la reprise"
+                         aria-valuemin="0" aria-valuemax="100"
+                         data-echange-target="travailBarre">
+                        <div style="height:100%;width:{{ travailEnCours.totalLignes > 0 ? (travailEnCours.curseur / travailEnCours.totalLignes * 100)|round : 0 }}%;background:#0047AB;transition:width .25s ease-out;"
+                             data-echange-target="travailJauge"></div>
+                    </div>
                 </div>
             {% endif %}
 
