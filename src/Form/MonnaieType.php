@@ -29,11 +29,25 @@ class MonnaieType extends AbstractType
                     'placeholder' => "Code ISO (ex: USD)",
                 ],
             ])
+            // ⚠ UN TAUX DE CHANGE SE LIT DANS DEUX SENS, ET LE CHAMP NE DISAIT PAS LEQUEL.
+            // « Taux USD » et « Taux de change » laissaient le choix entre « combien de
+            // francs pour un dollar » (2 800) et « combien de dollars pour un franc »
+            // (0,00036). Devant cette question muette, un cabinet a saisi 0,04 : son
+            // capital de 4 000 000 CDF est devenu 100 000 000 USD dans les états
+            // comptables, et personne n'a pu relier ce chiffre au champ qui l'avait
+            // produit. La question se pose donc en toutes lettres, avec son exemple.
+            //
+            // ⚠ ET DEUX DÉCIMALES, PAS QUATRE. La colonne est un DECIMAL(10,2) : `scale`
+            // à 4 promettait une précision que la base ne garde pas, et une saisie de
+            // 0,0004 y était arrondie à zéro — la conversion se désarmant alors en
+            // silence, sans le moindre message.
             ->add('tauxusd', NumberType::class, [
-                'label' => "Taux USD",
-                'scale' => 4,
+                'label' => "Combien vaut 1 USD dans cette monnaie ?",
+                'help' => "Le nombre d'unités de cette monnaie qu'il faut pour faire 1 dollar américain. "
+                    . "Pour le dollar lui-même : 1. Pour le franc congolais : environ 2 800.",
+                'scale' => 2,
                 'attr' => [
-                    'placeholder' => "Taux de change",
+                    'placeholder' => "Ex. 2800 pour le franc congolais",
                 ],
             ])
             ->add('fonction', ChoiceType::class, [

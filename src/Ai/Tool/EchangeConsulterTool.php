@@ -242,9 +242,12 @@ final class EchangeConsulterTool implements AiToolInterface
 
         return [
             'facturation' => $etat,
-            'note_facturation' => 'Seule l\'EXPORTATION porte un forfait, et seulement une fois le quota '
-                . 'gratuit épuisé. L\'importation n\'en porte aucun : chaque ligne écrite paie le même '
-                . 'métrage qu\'une saisie à l\'écran.',
+            'note_facturation' => 'L\'EXPORTATION est GRATUITE ET ILLIMITÉE : ne parle jamais d\'un coût '
+                . 'à son sujet. La REPRISE est offerte jusqu\'à `lignesOffertes` lignes du gabarit, à vie '
+                . 'et par cabinet (`lignesRestantes` dit ce qu\'il en reste) ; au-delà, chaque ligne paie '
+                . 'le métrage d\'écriture ordinaire des enregistrements qu\'elle crée, et le total est '
+                . 'annoncé avant confirmation. Parle en LIGNES, jamais en opérations : c\'est ce que '
+                . 'l\'utilisateur voit dans son fichier.',
         ];
     }
 

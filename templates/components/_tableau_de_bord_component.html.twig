@@ -21,6 +21,40 @@
         } only %}
     {% endif %}
 
+    {# ── L'EXERCICE COMPTABLE ────────────────────────────────────────────────────
+       Les années viennent des DONNÉES — écritures comptables et dates d'effet des
+       polices —, jamais d'une plage énumérée : proposer un exercice qu'aucun chiffre
+       n'habite donnerait un chip qui ne rend jamais rien, et l'utilisateur croirait à
+       une panne plutôt qu'à un portefeuille vide.
+
+       ⚠ ET LE DÉFAUT N'EST PAS L'ANNÉE COURANTE. Un cabinet qui vient de reprendre son
+       historique ouvrait ici sur un exercice vide et lisait 0,00 partout. On ouvre sur
+       le dernier exercice qui porte quelque chose ; le reste est à un clic.
+
+       Une seule année offerte : pas de rangée. Il n'y aurait rien à choisir, et le
+       bandeau des revenus nomme déjà l'exercice. #}
+    {% if exercices is defined and exercices|length > 1 %}
+        <div data-controller="dashboard-exercice"
+             data-dashboard-exercice-id-entreprise-value="{{ entreprise.id }}"
+             data-dashboard-exercice-exercice-value="{{ exercice }}">
+            <div class="jsb-preset-filters-bar" style="border-radius:10px;margin-bottom:.75rem;">
+                <div class="jsb-preset-filters jsb-control-pill" role="group" aria-label="Exercice comptable">
+                    <span class="jsb-preset-filters__titre" aria-hidden="true">exercice</span>
+                    {% for annee in exercices %}
+                        <button type="button"
+                                class="jsb-preset-chip{{ annee == exercice ? ' is-active' : '' }}"
+                                data-dashboard-exercice-target="chip"
+                                data-dashboard-exercice-exercice-param="{{ annee }}"
+                                data-action="click->dashboard-exercice#choisir"
+                                aria-pressed="{{ annee == exercice ? 'true' : 'false' }}">
+                            <span>{{ annee }}</span>
+                        </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
     {# ── Layout 2 colonnes ── #}
     <div class="row g-3">
 

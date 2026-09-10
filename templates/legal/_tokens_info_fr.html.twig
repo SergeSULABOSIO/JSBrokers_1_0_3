@@ -6,6 +6,7 @@
 {% set docBase = plan.documentBase %}
 {% set docParPage = plan.documentParPage %}
 {% set docCarPage = plan.documentCaracteresParPage %}
+{% set franchiseLignes = plan.echangeFranchiseLignes|format_nombre(0, 'fr') %}
 
 <p class="cgu-intro">
     Sur Joseara, le <strong>token</strong> est l'unité de mesure de votre usage de la plateforme.
@@ -148,7 +149,30 @@
 </section>
 
 <section class="cgu-section">
-    <h2>8. Qui paie et qui consomme ?</h2>
+    <h2>8. Importer et exporter vos données</h2>
+    <p>
+        <strong>L'exportation est gratuite et illimitée.</strong> Ce que vous sortez de Joseara ne
+        vous coûte rien, et ne vous coûtera jamais rien : vos données vous appartiennent, et pouvoir
+        les reprendre à tout moment fait partie de ce que vous achetez.
+    </p>
+    <p>
+        <strong>La reprise de votre historique</strong> — le dépôt d'un gabarit rempli — est offerte
+        jusqu'à <strong>{{ franchiseLignes }} lignes</strong> de la feuille <em>DONNEES</em>, à vie et
+        par cabinet. Ce sont bien des <strong>lignes</strong> qui se comptent, et non les
+        enregistrements qu'elles produisent : une ligne qui crée à elle seule un client, un risque,
+        un assureur, une police et son échéance ne consomme qu'<strong>une</strong> ligne.
+    </p>
+    <p>
+        Au-delà, la reprise n'a pas de forfait : chaque ligne paie simplement le
+        <strong>métrage d'écriture ordinaire</strong> des enregistrements qu'elle crée — exactement
+        ce qu'aurait coûté la même saisie à l'écran, ni plus ni moins. Le total vous est
+        <strong>annoncé avant que vous ne confirmiez</strong>, converti en dollars, et la reprise ne
+        démarre pas si votre solde ne le couvre pas.
+    </p>
+</section>
+
+<section class="cgu-section">
+    <h2>9. Qui paie et qui consomme ?</h2>
     <p>
         C'est le <strong>propriétaire de l'entreprise</strong> qui paie. Toute activité réalisée
         dans une entreprise — par son propriétaire <em>ou</em> par ses collaborateurs invités —

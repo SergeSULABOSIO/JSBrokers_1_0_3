@@ -150,23 +150,11 @@ final class EchangeExporterTool implements AiToolInterface
             );
         }
 
-        // LE COÛT VIENT DU COMPTEUR, jamais d'un calcul refait ici : c'est ce qui garantit
-        // que le chiffre annoncé dans le chat est celui que la route débitera.
+        // ⚠ PLUS AUCUNE GARDE DE SOLDE : L'EXPORTATION EST GRATUITE ET ILLIMITÉE. Ce que le
+        // cabinet sort de la plateforme ne lui coûte rien — c'est la contrepartie de la
+        // réversibilité, et c'est annoncé comme tel sur le site public. L'état du compteur
+        // reste lu pour ce qu'il dit encore : le solde, et la franchise de reprise.
         $etat = $this->compteur->etat($scope->entreprise);
-        if (!$etat['exportFinancable']) {
-            return AiToolResult::ok([
-                'pret' => false,
-                'motif' => 'solde_insuffisant',
-                'cout' => $etat['coutExport'],
-                'solde' => $etat['soldeDisponible'],
-                'note' => sprintf(
-                    'Cette exportation coûte %d tokens et le solde du cabinet est de %d. Annonce-le '
-                    . 'et propose de recharger : ne déclenche pas l\'export.',
-                    $etat['coutExport'],
-                    $etat['soldeDisponible'],
-                ),
-            ]);
-        }
 
         // ⚠ LE VOCABULAIRE VIENT DE LA SOURCE UNIQUE, jamais d'une liste recopiée ici :
         // le chip de l'écran, celui de la rubrique Propositions et ce paramètre désignent
@@ -207,20 +195,17 @@ final class EchangeExporterTool implements AiToolInterface
                     $retenues === [] ? $catalogue : array_intersect_key($catalogue, array_flip($retenues)),
                 )),
                 'nb_colonnes' => $retenues === [] ? \count($catalogue) : \count($retenues),
-                'cout'      => $etat['coutExport'],
-                'gratuites_restantes' => $etat['gratuitesRestantes'],
+                'cout'      => 0,
+                'lignes_reprise_restantes' => $etat['lignesRestantes'],
                 // ⚠ NE JAMAIS PROMETTRE UNE RÉIMPORTATION. Ce fichier porte des
                 // RÉSULTATS — soldes, encaissements, exigibilités — et non des champs :
                 // il ne peut pas revenir dans la base. Le laisser croire coûterait à
                 // l'utilisateur une demi-journée avant qu'il ne le découvre seul.
-                'note' => sprintf(
-                    'Le téléchargement s\'ouvre chez l\'utilisateur. %s C\'est un ÉTAT DE LECTURE : '
-                    . 'dis-lui bien qu\'il ne se redépose pas, et que pour importer des données '
-                    . 'c\'est le gabarit vierge de l\'onglet Importer qu\'il lui faut.',
-                    $etat['coutExport'] > 0
-                        ? sprintf('Cette opération lui est facturée %d tokens.', $etat['coutExport'])
-                        : sprintf('Elle est gratuite (%d opérations offertes restantes).', $etat['gratuitesRestantes']),
-                ),
+                'note' => 'Le téléchargement s\'ouvre chez l\'utilisateur. L\'exportation est '
+                    . 'GRATUITE ET ILLIMITÉE : ne parle d\'aucun coût, et ne l\'invite pas à '
+                    . 'recharger. C\'est un ÉTAT DE LECTURE : dis-lui bien qu\'il ne se redépose '
+                    . 'pas, et que pour importer des données c\'est le gabarit vierge de l\'onglet '
+                    . 'Importer qu\'il lui faut.',
             ],
             uiAction: [
                 'type' => TypeAction::OUVRIR_URL->value,

@@ -79,6 +79,17 @@ final class ReconstitueurDeTranche
      */
     private const REFERENCE_OUVERTURE = 'REPRISE';
 
+    /**
+     * De combien la commission encaissée peut dépasser un revenu FORFAITAIRE avant qu'on
+     * y voie un taux écrit sans son signe pourcent.
+     *
+     * ⚠ DEUX, ET NON UN VIRGULE DEUX. Les taxes n'ajoutent qu'une fraction au forfait
+     * (seize pour cent ici), mais un cabinet peut avoir arrondi, ou porté sur une échéance
+     * un encaissement qui en couvre deux. Serrer la marge ferait reprocher à des fichiers
+     * justes ; on ne veut attraper que l'absurde — cinq contre mille cent soixante.
+     */
+    private const MARGE_DU_FORFAIT = 2.0;
+
     /** @var array<string, true> repères déjà produits dans cette passe */
     private array $registre = [];
 
@@ -431,6 +442,17 @@ final class ReconstitueurDeTranche
             foreach ($this->termes($ligne, 'commissionRevenus', $anomalies) as $nom => $terme) {
                 $type = $this->reconnu('TypeRevenu', $nom, $entreprise, $ligne, 'commissionRevenus', $anomalies);
                 if ($type === null) {
+                    continue;
+                }
+
+                // ⚠ « 5 » ET « 5% » NE DISENT PAS LA MÊME CHOSE. Écrit sans le signe
+                // pourcent, un taux de commission devient un forfait de cinq unités
+                // monétaires : la note de reprise affiche alors 5,80 de dû pour 1 160,00
+                // encaissés, et un solde négatif de −1 154,20. Le contrôle laissait passer,
+                // parce qu'un forfait de cinq est une valeur licite en soi.
+                $reproche = $this->ambiguiteDuRevenu($ligne, $nom, $terme);
+                if ($reproche !== null) {
+                    $anomalies[] = $reproche;
                     continue;
                 }
 
@@ -1319,6 +1341,62 @@ final class ReconstitueurDeTranche
             $champs,
             static fn ($valeur) => $valeur !== null && $valeur !== '',
         );
+    }
+
+    /**
+     * LE TERME DE REVENU SE CONTREDIT-IL AVEC LA COMMISSION ENCAISSÉE DE LA MÊME LIGNE ?
+     *
+     * ⚠ UN NOMBRE NU EST UN MONTANT, ET C'EST LE PIÈGE. `ValeursMultiples` distingue le
+     * taux du forfait au signe pourcent, et rien ne le rappelle à qui remplit le gabarit à
+     * la main. L'export, lui, écrit toujours le pourcent quand il en va d'un taux : le
+     * fichier ne se corrige donc jamais tout seul, et l'erreur se recopie d'un
+     * aller-retour à l'autre.
+     *
+     * ⚠ ON NE DEVINE PAS : ON CONFRONTE. Basculer d'office un nombre nu en taux ferait
+     * exactement la faute inverse le jour d'un vrai forfait. Ici, deux colonnes de la même
+     * ligne se contredisent, et c'est CELA qu'on reproche : un forfait ne peut pas produire
+     * beaucoup plus que lui-même — les taxes n'y ajoutent qu'une fraction —, si bien qu'une
+     * commission encaissée qui dépasse le double du forfait ne peut pas en venir.
+     *
+     * ⚠ LA MARGE EST LARGE À DESSEIN. Mieux vaut laisser passer un cas tordu que refuser un
+     * fichier juste : le reproche doit rester rare, sans quoi on apprend à l'ignorer.
+     *
+     * @param array{valeur: float|null, estTaux: bool} $terme
+     */
+    private function ambiguiteDuRevenu(LigneLue $ligne, string $nom, array $terme): ?Anomalie
+    {
+        if ($terme['estTaux'] || $terme['valeur'] === null || $terme['valeur'] <= 0.0) {
+            return null;
+        }
+
+        $encaissee = $this->nombre($ligne, 'ouvertureCommissionEncaissee');
+        if ($encaissee === null || $encaissee <= $terme['valeur'] * self::MARGE_DU_FORFAIT) {
+            return null;
+        }
+
+        $valeur = $this->nombreLisible($terme['valeur']);
+
+        return $this->refus($ligne, 'commissionRevenus', sprintf(
+            'Vous avez écrit « %s: %s », ce qui se lit comme un MONTANT FIXE de %s. Or la '
+            . 'même ligne annonce %s de commission déjà encaissée — un montant fixe de %s ne '
+            . 'peut pas produire cela. S\'il s\'agit d\'un TAUX, ajoutez le signe pourcent : '
+            . '« %s: %s%% ». Sinon, c\'est la commission encaissée qu\'il faut corriger.',
+            $nom,
+            $valeur,
+            $valeur,
+            $this->nombreLisible($encaissee),
+            $valeur,
+            $nom,
+            $valeur,
+        ));
+    }
+
+    /** Un nombre tel qu'on l'écrit dans une phrase : sans décimales inutiles. */
+    private function nombreLisible(float $valeur): string
+    {
+        $texte = number_format($valeur, 2, ',', ' ');
+
+        return str_ends_with($texte, ',00') ? substr($texte, 0, -3) : $texte;
     }
 
     private function refus(LigneLue $ligne, string $codeColonne, string $motif): Anomalie

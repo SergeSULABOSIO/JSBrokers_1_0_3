@@ -31,7 +31,7 @@ class ParametresTokenService
     }
 
     /**
-     * @return array{packs:array, freeAllowance:int, freeWindowHours:int, readWeight:int, defaultWriteWeight:int, writeWeights:array, usdPerToken:float, documentBase:int, documentParPage:int, documentCaracteresParPage:int, documentFormats:array<string,float>, echangeQuotaGratuit:int, echangeCoutOccurrence:int}
+     * @return array{packs:array, freeAllowance:int, freeWindowHours:int, readWeight:int, defaultWriteWeight:int, writeWeights:array, usdPerToken:float, documentBase:int, documentParPage:int, documentCaracteresParPage:int, documentFormats:array<string,float>, echangeQuotaGratuit:int, echangeCoutOccurrence:int, echangeFranchiseLignes:int}
      */
     private function values(): array
     {
@@ -62,6 +62,11 @@ class ParametresTokenService
             // console ne doit pas rendre la rubrique gratuite à l'infini, ni créditer.
             'echangeQuotaGratuit'   => max(0, $p->getEchangeQuotaGratuit()   ?? TokenPricing::ECHANGE_QUOTA_GRATUIT),
             'echangeCoutOccurrence' => max(0, $p->getEchangeCoutOccurrence() ?? TokenPricing::ECHANGE_COUT_OCCURRENCE),
+
+            // La franchise de reprise, en LIGNES de la feuille DONNEES. C'est elle que le
+            // site public annonce au visiteur : la régler en console change ce que lisent
+            // les visiteurs, sans toucher à un gabarit.
+            'echangeFranchiseLignes' => max(0, $p->getEchangeFranchiseLignes() ?? TokenPricing::ECHANGE_FRANCHISE_LIGNES),
         ];
     }
 
@@ -108,6 +113,18 @@ class ParametresTokenService
     public function echangeCoutOccurrence(): int
     {
         return $this->values()['echangeCoutOccurrence'];
+    }
+
+    /**
+     * Lignes de reprise offertes à vie par cabinet.
+     *
+     * ⚠ LUE PAR LE SITE PUBLIC. La page de tarif l'affiche via `plan_tarifaire()` : c'est
+     * une promesse faite aux visiteurs, et elle doit venir d'ici — jamais d'un nombre
+     * recopié dans un gabarit, qui mentirait au premier réglage.
+     */
+    public function echangeFranchiseLignes(): int
+    {
+        return $this->values()['echangeFranchiseLignes'];
     }
 
     /** Paquets prépayés : { clé: { tokens, price } }. */

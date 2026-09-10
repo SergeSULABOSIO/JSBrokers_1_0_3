@@ -1,7 +1,11 @@
 import { Controller } from '@hotwired/stimulus';
 import { DefilementChips } from './chips-defilement.js';
+// `choixARestaurer` sert aussi au tableau de bord : elle a déménagé dans un module
+// générique, et on l'importe DE SA SOURCE. Passer par la ré-exportation du module voisin
+// masquerait la dépendance réelle — et un jour où ce voisin cesserait de la ré-exporter,
+// elle vaudrait `undefined` sans que rien ne l'ait annoncé.
+import { choixARestaurer } from './choix-persiste.js';
 import {
-    choixARestaurer,
     cleDeLOnglet,
     cleDuChoix,
     cleDuPerimetre,
@@ -733,7 +737,11 @@ export default class extends Controller {
 
             // L'opération vient de consommer une occurrence : le bandeau de facturation
             // et l'historique affichent des chiffres désormais faux.
-            this.#reload();
+            //
+            // ⚠ ON L'ATTEND. Sans `await`, le `finally` enchaînait aussitôt son
+            // `app:loading.stop` et ÉTEIGNAIT la barre que le rechargement venait de
+            // rallumer : l'écran se figeait, sans barre, pendant qu'il se reconstruisait.
+            await this.#reload();
         } catch (error) {
             console.error('[echange] Échec de l’export :', error);
             this.#notifier('error', error.message || "L'export n'a pas pu être généré.");
@@ -832,7 +840,8 @@ export default class extends Controller {
 
             // Le rapport est rendu par le serveur : on recharge l'onglet plutôt que de
             // le reconstruire en JavaScript, ce qui ferait un second gabarit à tenir.
-            this.#reload();
+            // ⚠ ATTENDU, pour que le `finally` n'éteigne pas la barre en plein rechargement.
+            await this.#reload();
         } catch (error) {
             console.error('[echange] Échec du contrôle :', error);
             this.#notifier('error', error.message || "Le contrôle n'a pas pu être effectué.");
@@ -869,7 +878,8 @@ export default class extends Controller {
             );
 
             // Que l'import ait abouti ou échoué, l'écran affiche des chiffres périmés.
-            this.#reload();
+            // ⚠ ATTENDU, pour que le `finally` n'éteigne pas la barre en plein rechargement.
+            await this.#reload();
         } catch (error) {
             console.error('[echange] Échec de la confirmation :', error);
             this.#notifier('error', error.message || "L'importation n'a pas pu être lancée.");

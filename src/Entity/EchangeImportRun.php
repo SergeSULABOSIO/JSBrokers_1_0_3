@@ -137,6 +137,23 @@ class EchangeImportRun implements OwnerAwareInterface
     private int $totalLignes = 0;
 
     /**
+     * LIGNES DE FRANCHISE RÉELLEMENT CONSOMMÉES PAR CE RUN — le compteur de la gratuité.
+     *
+     * ⚠ IL VIT ICI, ET NON SUR L'OCCURRENCE, parce que l'occurrence n'est écrite qu'à la
+     * fin d'une écriture RÉUSSIE. Un import interrompu — solde épuisé, onglet fermé,
+     * processus tué — laisse pourtant derrière lui des paliers déjà commités, donc des
+     * lignes gratuites bel et bien écrites. Les compter sur l'occurrence les aurait rendues
+     * invisibles : il aurait suffi de redéposer et de faire échouer pour obtenir une
+     * franchise sans fin.
+     *
+     * ⚠ ET IL S'INCRÉMENTE DANS LA TRANSACTION DU PALIER, jamais après elle : le compteur
+     * est ainsi atomique avec les écritures qu'il paie. Si le palier est annulé, rien n'a
+     * été écrit et rien n'a été décompté.
+     */
+    #[ORM\Column(options: ['default' => 0])]
+    private int $lignesFranchisees = 0;
+
+    /**
      * DEPUIS QUAND UN PALIER TRAVAILLE — `null` quand personne n'y touche.
      *
      * ⚠ C'EST UN VERROU AUTANT QU'UN SIGNE DE VIE, et les deux rôles n'en font qu'un.
@@ -189,6 +206,22 @@ class EchangeImportRun implements OwnerAwareInterface
     public function setTotalLignes(int $totalLignes): static
     {
         $this->totalLignes = max(0, $totalLignes);
+
+        return $this;
+    }
+
+    public function getLignesFranchisees(): int
+    {
+        return $this->lignesFranchisees;
+    }
+
+    /**
+     * ⚠ ON AJOUTE, ON NE POSE PAS. Un run avance par paliers : chacun ajoute les lignes
+     * qu'il vient d'écrire gratuitement. Écraser reviendrait à ne compter que le dernier.
+     */
+    public function ajouterLignesFranchisees(int $lignes): static
+    {
+        $this->lignesFranchisees += max(0, $lignes);
 
         return $this;
     }

@@ -187,6 +187,29 @@ final class EcrivainEtat
         ], null, 'A4');
         $this->bandeau($feuille, 4, Charte::COBALT_TRES_CLAIR, Charte::TEXTE);
 
+        // ── LA LÉGENDE DES COULEURS ─────────────────────────────────────────────────
+        // ⚠ LA COULEUR NE PORTE JAMAIS L'INFORMATION SEULE (WCAG 1.4.1). L'en-tête de la
+        // feuille DONNEES distingue désormais les colonnes qu'on relit de celles que
+        // l'application recalcule ; ce bandeau le dit en toutes lettres, et la colonne A
+        // de chaque entrée ci-dessous le DÉMONTRE en portant la teinte de sa nature. Un
+        // lecteur qui ne distingue pas les fonds — ou qui imprime en noir et blanc — lit
+        // la même chose.
+        $feuille->fromArray([
+            'COULEURS DES COLONNES',
+            $gabarit ? 'Tout est à remplir' : 'Bleu = à vous',
+            $gabarit
+                ? 'Ce gabarit ne porte QUE des colonnes à remplir : leur en-tête est bleu cobalt, '
+                    . 'comme la pastille en regard de chaque ligne ci-dessous. Tout le reste — primes '
+                    . 'totales, commissions, taxes — est calculé par l\'application, qui ne vous le '
+                    . 'demande pas.'
+                : 'Dans la feuille DONNEES, un en-tête BLEU COBALT signale une colonne reprise à '
+                    . 'l\'import : c\'est là, et là seulement, que vos corrections seront relues. Un '
+                    . 'en-tête GRIS signale une valeur calculée par l\'application : elle est exportée '
+                    . 'pour information, et modifiée elle serait ignorée. Chaque ligne ci-dessous porte '
+                    . 'la même pastille en colonne A, et le dit aussi en toutes lettres.',
+        ], null, 'A6');
+        $this->bandeau($feuille, 6, Charte::COBALT_TRES_CLAIR, Charte::TEXTE);
+
         $numero = 7;
         $familleCourante = null;
 
@@ -217,6 +240,15 @@ final class EcrivainEtat
             // Seuls les trois bandeaux le posaient ; les explications, elles, débordaient
             // en une seule ligne interminable qu'on ne lisait tout simplement pas.
             $this->entree($feuille, $numero);
+
+            // La pastille de nature, en regard du libellé : la légende n'est plus seulement
+            // décrite en tête de feuille, elle se vérifie ligne à ligne. Même teinte que
+            // l'en-tête de la colonne dans DONNEES.
+            $feuille->getStyle('A' . $numero)->getFill()->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setARGB($colonne->lectureSeule() ? Charte::GRIS_MUET : Charte::COBALT);
+            $feuille->getStyle('A' . $numero)->getFont()->setBold(true)
+                ->getColor()->setARGB($colonne->lectureSeule() ? Charte::TEXTE_CORPS : Charte::BLANC);
+
             ++$numero;
         }
 
@@ -305,7 +337,6 @@ final class EcrivainEtat
 
         $derniereLettre = Coordinate::stringFromColumnIndex(\count($codes));
         $this->styleEntete($feuille, 'A1:' . $derniereLettre . '1');
-        $this->marquerLesFamilles($feuille, $colonnes);
 
         $numero = self::LIGNE_DONNEES;
         foreach ($lignes as $ligne) {
@@ -350,6 +381,12 @@ final class EcrivainEtat
         $derniereDonnee = max($numero - 1, self::LIGNE_DONNEES);
         $this->appliquerFormats($feuille, $colonnes, $derniereDonnee);
 
+        // ⚠ APRÈS `appliquerFormats()`, ET PAS AVANT L'ÉCRITURE DES LIGNES : le filet de
+        // famille descend jusqu'à la dernière donnée, dont le numéro n'existe qu'ici. Rien
+        // entre-temps ne touche l'en-tête, si bien que la surcharge du fond posé par
+        // `styleEntete()` reste celle d'avant.
+        $this->habillerLesColonnes($feuille, $colonnes, $derniereDonnee);
+
         // ⚠ LE FILTRE S'ARRÊTE AVANT LES TOTAUX. Les inclure ferait voyager cette ligne
         // au milieu des données au premier tri — un total posé entre deux tranches.
         $feuille->setAutoFilter('A1:' . $derniereLettre . $derniereDonnee);
@@ -375,41 +412,76 @@ final class EcrivainEtat
     }
 
     /**
-     * L'EN-TÊTE SE LIT PAR FAMILLES : deux temps du cobalt, alternés.
+     * L'EN-TÊTE DIT LA NATURE DE SA COLONNE ; UN FILET SÉPARE LES FAMILLES.
      *
-     * ⚠ SOIXANTE ET UNE COLONNES SANS RESPIRATION, C'EST UNE BANDE UNIFORME. On y perd
-     * l'endroit où finit la prime et où commence la commission, et l'on relit trois fois
-     * le libellé pour se resituer. L'alternance rend le découpage visible d'un coup d'œil
-     * pendant qu'on défile. (Bastien & Scapin > Guidage, Charge de travail.)
+     * ── CE QUE LE FOND PORTE, ET POURQUOI CE N'EST PLUS LA FAMILLE ──────────────────
+     * Le dictionnaire dit de chaque colonne si elle se relit — « Repris à l'import » ou
+     * « Calculé par l'application : IGNORÉ à l'import » —, mais la feuille de données ne
+     * le montrait nulle part. Sur soixante-quatorze colonnes dont vingt-cinq se
+     * reprennent, il fallait ouvrir le dictionnaire colonne par colonne pour savoir
+     * laquelle on pouvait corriger.
      *
-     * ⚠ RIEN N'EST PORTÉ PAR LA SEULE COULEUR. Chaque libellé nomme déjà sa famille
-     * (« Prime · Payée ») : la teinte ne fait que confirmer ce que le texte dit. Un
-     * lecteur qui ne distingue pas les deux bleus — ou qui imprime en noir et blanc — ne
-     * perd aucune information (WCAG 1.4.1).
+     * ⚠ ET LE FOND NE PEUT PORTER QU'UNE CHOSE. Il revenait à l'alternance des familles ;
+     * la nature l'emporte, parce qu'elle répond à une question que l'utilisateur se pose
+     * — « que puis-je corriger ? » — quand l'alternance ne disait même pas LAQUELLE était
+     * la famille, seulement où elle changeait. Le filet le dit aussi bien, et il descend
+     * le long des données au lieu de s'arrêter à la première ligne.
      *
-     * ⚠ ET ON N'INVENTE PAS UNE COULEUR PAR FAMILLE. Douze teintes feraient un arc-en-ciel
-     * hors charte, et le fichier ne ressemblerait plus à la maison. Deux temps du même
-     * cobalt suffisent à marquer une frontière.
+     * ⚠ LE CORPS EST INTERDIT À CE SIGNAL. `alternerLesLignes()` zèbre la plage de données
+     * en mise en forme CONDITIONNELLE, laquelle l'emporte sur le format direct dans Excel :
+     * une teinte posée sur une colonne n'apparaîtrait qu'une ligne sur deux, en damier —
+     * pire que pas de signal du tout.
+     *
+     * ⚠ RIEN N'EST PORTÉ PAR LA SEULE COULEUR (WCAG 1.4.1). Le dictionnaire porte la phrase
+     * en toutes lettres pour chaque colonne, et un bandeau y explique les deux fonds. Un
+     * lecteur qui ne distingue pas les teintes — ou qui imprime en noir et blanc — ne perd
+     * aucune information.
+     *
+     * ⚠ ET AUCUNE COULEUR N'EST INVENTÉE. Les quatre teintes sont déjà dans la charte, et
+     * les deux couples respectent ses associations obligatoires (contrastes de 8,6:1 et
+     * 7,4:1, au-delà du 4,5:1 exigé).
      *
      * @param array<string, ColonneEtat> $colonnes
      */
-    private function marquerLesFamilles(Worksheet $feuille, array $colonnes): void
+    private function habillerLesColonnes(Worksheet $feuille, array $colonnes, int $derniereLigne): void
     {
         $index = 0;
         $famille = null;
-        $sombre = false;
 
         foreach ($colonnes as $colonne) {
             ++$index;
+            $lettre = Coordinate::stringFromColumnIndex($index);
 
+            // ── LA NATURE, SUR L'EN-TÊTE ────────────────────────────────────────────
+            // Ce qui est actionnable porte la couleur de marque ; ce que l'application
+            // recalcule s'efface. Sur soixante-quatorze colonnes, les vingt-cinq qu'on
+            // peut corriger ressortent en bleu au milieu du gris.
+            $calculee = $colonne->lectureSeule();
+            $entete = $feuille->getStyle($lettre . '1');
+            $entete->getFill()->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setARGB($calculee ? Charte::GRIS_MUET : Charte::COBALT);
+            $entete->getFont()->getColor()->setARGB($calculee ? Charte::TEXTE_CORPS : Charte::BLANC);
+
+            // ── LA FAMILLE, AU FILET ────────────────────────────────────────────────
+            // Le fond ne peut porter qu'une chose, et la nature prime : elle répond à
+            // « que puis-je corriger ? », quand l'alternance ne disait même pas LAQUELLE
+            // était la famille. Un filet qui descend sépare mieux, d'ailleurs, que deux
+            // bleus qu'on ne distingue qu'à l'œil aiguisé.
             if ($colonne->groupe() !== $famille) {
                 $famille = $colonne->groupe();
-                $sombre = !$sombre;
-            }
 
-            $feuille->getStyle(Coordinate::stringFromColumnIndex($index) . '1')
-                ->getFill()->setFillType(Fill::FILL_SOLID)
-                ->getStartColor()->setARGB($sombre ? Charte::COBALT_SOMBRE : Charte::COBALT);
+                // ⚠ JAMAIS SUR LA PREMIÈRE COLONNE : un filet au bord gauche de la
+                // feuille ne sépare rien, il encadre.
+                // ⚠ ET IL S'ARRÊTE À LA DERNIÈRE DONNÉE, jamais à la ligne de totaux :
+                // celle-ci porte son propre habillage, et la traverser d'un trait
+                // vertical la ferait lire comme une ligne de données.
+                if ($index > 1) {
+                    $feuille->getStyle($lettre . '1:' . $lettre . $derniereLigne)
+                        ->getBorders()->getLeft()
+                        ->setBorderStyle(Border::BORDER_MEDIUM)
+                        ->getColor()->setARGB(Charte::COBALT);
+                }
+            }
         }
     }
 

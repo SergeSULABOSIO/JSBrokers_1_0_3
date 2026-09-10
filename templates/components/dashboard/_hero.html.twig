@@ -3,9 +3,24 @@
 
     <summary class="d-flex justify-content-between align-items-center p-4">
         <div>
-            <p class="mb-1 small text-uppercase fw-semibold" style="opacity:.65;">Revenus perçus {{ 'now'|date('Y') }}</p>
+            {# ⚠ L'EXERCICE AFFICHÉ EST CELUI QU'ON REGARDE, pas l'année de l'horloge. Le
+               bandeau annonçait « Revenus perçus 2026 » alors que les chiffres pouvaient
+               porter sur un autre exercice : le titre démentait le montant. #}
+            <p class="mb-1 small text-uppercase fw-semibold" style="opacity:.65;">Revenus perçus {{ exercice|default('now'|date('Y')) }}</p>
             <h2 class="fw-bold mb-1">{{ paiementsTotaux|number_format(2, ',', ' ') }} $</h2>
-            <p class="mb-0 small" style="opacity:.65;">Total des paiements encaissés sur l'exercice en cours</p>
+            {# ⚠ UN ZÉRO MUET FAIT CROIRE À UNE PANNE. Quand l'exercice regardé ne porte
+               rien mais que le cabinet a bien encaissé ailleurs, on le DIT et on nomme le
+               montant : sans cela, un cabinet qui vient de reprendre son historique conclut
+               que la reprise n'a rien écrit. #}
+            {% if paiementsTotaux == 0 and encaisseTousExercices|default(0) > 0 %}
+                <p class="mb-0 small" style="opacity:.85;">
+                    Aucun encaissement sur {{ exercice|default('now'|date('Y')) }}.
+                    Votre portefeuille porte <strong>{{ encaisseTousExercices|number_format(2, ',', ' ') }} $</strong>
+                    encaissés sur les autres exercices — choisissez-en un ci-dessus.
+                </p>
+            {% else %}
+                <p class="mb-0 small" style="opacity:.65;">Total des paiements encaissés sur l'exercice retenu</p>
+            {% endif %}
         </div>
         <div class="d-flex align-items-center gap-2">
             <div class="opacity-25">

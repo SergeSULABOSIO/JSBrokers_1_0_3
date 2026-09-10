@@ -326,26 +326,35 @@ class ExportJsbxTest extends KernelTestCase
     // 3. Facturation
     // ─────────────────────────────────────────────────────────────────────────────
 
-    /** Les premières opérations sont offertes, les suivantes facturées. */
-    public function testLesPremieresOperationsSontOffertesPuisFacturees(): void
+    /**
+     * ⚠ L'EXPORTATION EST GRATUITE ET ILLIMITÉE — et c'est une promesse PUBLIQUE.
+     *
+     * La page de tarif du site l'annonce aux visiteurs. Ce test est donc ce qui empêche le
+     * site de mentir : si un forfait revenait sur le chemin d'export, il tomberait ici.
+     *
+     * Ce que le cabinet SORT de la plateforme ne lui coûte rien, quel que soit le nombre
+     * d'opérations déjà faites — c'est la contrepartie de la réversibilité.
+     */
+    public function testLExportationEstGratuiteEtIllimitee(): void
     {
         [$entreprise] = $this->fixture();
         $compteur = $this->service(CompteurDOccurrences::class);
 
-        $quota = $compteur->etat($entreprise)['quotaGratuit'];
-        self::assertSame($quota, $compteur->gratuitesRestantes($entreprise));
         self::assertSame(0, $compteur->coutProchaine($entreprise, EchangeOccurrence::TYPE_EXPORT));
 
-        // On consomme le quota.
-        for ($i = 0; $i < $quota; ++$i) {
+        // On enchaîne largement au-delà de l'ancien quota : rien ne doit devenir payant.
+        for ($i = 0; $i < 12; ++$i) {
             $this->enregistrerOccurrence($entreprise, 'graine-' . $i);
         }
 
-        self::assertSame(0, $compteur->gratuitesRestantes($entreprise));
-        self::assertGreaterThan(
+        self::assertSame(
             0,
             $compteur->coutProchaine($entreprise, EchangeOccurrence::TYPE_EXPORT),
-            'Passé le quota, l\'exportation devient payante.',
+            'Aucune exportation ne devient payante, jamais.',
+        );
+        self::assertTrue(
+            $compteur->etat($entreprise)['exportFinancable'],
+            'Un export gratuit est toujours finançable, quel que soit le solde.',
         );
     }
 
@@ -384,17 +393,20 @@ class ExportJsbxTest extends KernelTestCase
         self::assertSame(1, $compteur->consommees($entreprise), 'Une seule occurrence a été comptée.');
     }
 
-    /** Solde insuffisant : refus AVANT génération, et aucune occurrence. */
-    public function testSoldeInsuffisantRefuseAvantDeGenerer(): void
+    /**
+     * ⚠ UN SOLDE À ZÉRO N'EMPÊCHE PLUS D'EXPORTER, et c'est tout le point.
+     *
+     * Ce test exigeait l'inverse — un refus avant génération. La règle a changé de fond :
+     * retenir les données d'un cabinet parce qu'il n'a plus de tokens reviendrait à les
+     * prendre en otage au moment précis où il en a le plus besoin. On le retourne donc, et
+     * il devient la garantie que ce refus ne peut pas revenir par mégarde.
+     */
+    public function testUnSoldeEpuiseNEmpechePasDExporter(): void
     {
         [$entreprise, $proprietaire] = $this->fixture();
         $compteur = $this->service(CompteurDOccurrences::class);
         $em = $this->em();
 
-        // On épuise le quota gratuit, puis le solde de tokens du propriétaire.
-        for ($i = 0; $i < $compteur->etat($entreprise)['quotaGratuit']; ++$i) {
-            $this->enregistrerOccurrence($entreprise, 'solde-graine-' . $i);
-        }
         $owner = $entreprise->getUtilisateur();
         $owner->setPaidTokens(0);
         $owner->setFreeTokens(0);
@@ -402,12 +414,14 @@ class ExportJsbxTest extends KernelTestCase
 
         $avant = $compteur->consommees($entreprise);
 
-        $this->expectException(\App\Token\InsufficientTokensException::class);
-        try {
-            $this->service(ExportateurJsbx::class)->exporter($entreprise, $proprietaire, $owner, ['Client']);
-        } finally {
-            self::assertSame($avant, $compteur->consommees($entreprise), 'Un refus ne compte aucune occurrence.');
-        }
+        $reponse = $this->service(ExportateurJsbx::class)->exporter($entreprise, $proprietaire, $owner, ['Client']);
+
+        self::assertSame(200, $reponse->getStatusCode(), 'Un cabinet sans le moindre token doit pouvoir sortir ses données.');
+        self::assertSame(
+            $avant + 1,
+            $compteur->consommees($entreprise),
+            'L\'opération reste tracée : la gratuité ne dispense pas de l\'historique.',
+        );
     }
 
     /** Un export abouti laisse exactement une occurrence, avec son périmètre réel. */

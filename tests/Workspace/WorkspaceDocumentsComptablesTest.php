@@ -527,6 +527,16 @@ class WorkspaceDocumentsComptablesTest extends WebTestCase
         $this->assertStringContainsString('CDF', $capital['libelle'], 'Le libellé doit tracer la monnaie d\'origine.');
         $this->assertStringContainsString('USD', $capital['libelle'], 'Le libellé doit tracer la monnaie de conversion.');
 
+        // ⚠ ET LE TAUX EMPLOYÉ, sans quoi un cours mal saisi reste introuvable. Un cabinet
+        // réel portait 0,04 au lieu de 2 800 : son capital de 4 000 000 pesait cent
+        // millions dans la trésorerie, et rien à l'écran ne reliait ce chiffre au
+        // paramètre qui l'avait produit.
+        $this->assertStringContainsString(
+            '2 800,00',
+            $capital['libelle'],
+            'Le libellé doit nommer le taux employé : c\'est le seul endroit où un cours aberrant se voit.',
+        );
+
         // Le bilan porte le capital converti — et reste équilibré.
         $passif = $documents['bilan']['passif'];
         $this->assertEqualsWithDelta(1000.0, $passif[0]['cloture'], 0.01, 'Le poste Capital social du bilan doit être en monnaie d\'affichage.');

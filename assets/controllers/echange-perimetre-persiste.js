@@ -76,24 +76,15 @@ export function cleDeLOnglet(idEntreprise) {
 }
 
 /**
- * La valeur mémorisée est-elle encore proposée ?
+ * ⚠ `choixARestaurer()` A DÉMÉNAGÉ dans `./choix-persiste.js`, et n'est PAS ré-exportée
+ * ici. Le tableau de bord mémorise lui aussi un exercice et se posait exactement la même
+ * question — un choix peut disparaître entre deux visites —, alors la règle est devenue
+ * générique.
  *
- * ⚠ UN CHOIX PEUT DISPARAÎTRE ENTRE DEUX VISITES. L'exercice 2025 mémorisé n'a plus de
- * chip le jour où la dernière police de 2025 est supprimée ; le reposer laisserait un
- * réglage actif que rien à l'écran ne montre, et un fichier vide sans explication. On
- * retombe alors sur le défaut, ce qui est le comportement le moins surprenant.
- *
- * @param {unknown} memorise
- * @param {string[]} valeursOffertes
- * @returns {string|null}
+ * Elle n'est pas ré-exportée à dessein : un ré-export masque la dépendance réelle de celui
+ * qui s'en sert, et le jour où ce fichier cesserait de la relayer, elle vaudrait
+ * `undefined` chez lui sans que rien ne l'ait annoncé. Chacun l'importe de sa source.
  */
-export function choixARestaurer(memorise, valeursOffertes) {
-    if (typeof memorise !== 'string' || !Array.isArray(valeursOffertes)) {
-        return null;
-    }
-
-    return valeursOffertes.includes(memorise) ? memorise : null;
-}
 
 /**
  * Ce qu'il faut retenir d'une sélection : les codes ÉCARTÉS, triés.

@@ -615,7 +615,15 @@ class DashboardDataProvider
      * Total des paiements reçus sur les notes de commission (adressées au client ou à l'assureur),
      * toutes années confondues — sert au calcul du solde restant dû.
      */
-    private function getTotalEncaisseCommissions(Entreprise $entreprise): float
+    /**
+     * Les commissions encaissées depuis toujours, TOUS EXERCICES CONFONDUS.
+     *
+     * ⚠ PUBLIQUE PARCE QUE L'ÉCRAN EN A BESOIN. C'est elle qui permet de distinguer
+     * « ce cabinet n'a rien encaissé » de « ce cabinet n'a rien encaissé SUR CET
+     * EXERCICE » — deux situations que le tableau de bord rendait identiquement par un
+     * 0,00 muet, et dont la seconde faisait conclure à une panne.
+     */
+    public function getTotalEncaisseCommissions(Entreprise $entreprise): float
     {
         $result = $this->em->createQuery(
             'SELECT COALESCE(SUM(p.montant), 0)
@@ -955,11 +963,17 @@ class DashboardDataProvider
         $tauxCourtier = (float) ($taxeCourtierEntity?->getTauxIARD() ?? 0);
 
         // ── Étape 1 : Paiements de l'année sur notes de commission (TO_CLIENT=0, TO_ASSUREUR=1) ──
+        // ⚠ LEFT JOIN SUR L'ASSUREUR, ET C'EST UNE CORRECTION. Une note de commission est
+        // adressée SOIT à l'assureur, SOIT au client : `Note::$assureur` est donc vide
+        // chaque fois que la commission est due par le client. Un INNER JOIN écartait
+        // silencieusement toutes ces notes du tableau de production et du graphique par
+        // assureur — un cabinet dont les honoraires sont facturés aux clients n'y voyait
+        // rien. Le même piège est déjà documenté ailleurs dans ce fichier.
         $paiements = $this->em->createQuery(
             'SELECT p, n, ass
              FROM App\Entity\Paiement p
              JOIN p.note n
-             JOIN n.assureur ass
+             LEFT JOIN n.assureur ass
              WHERE p.entreprise = :e
                AND p.paidAt >= :debut AND p.paidAt <= :fin
                AND n.addressedTo IN (0, 1)'
@@ -1583,9 +1597,12 @@ class DashboardDataProvider
         return array_values($byTarget);
     }
 
-    public function getProductionMensuelle(Entreprise $entreprise): array
+    public function getProductionMensuelle(Entreprise $entreprise, ?int $annee = null): array
     {
-        $year  = (int) date('Y');
+        // Ses trois voisines acceptaient déjà l'exercice ; elle seule l'ignorait, si bien
+        // que basculer d'année aurait redessiné la courbe mensuelle de l'année courante à
+        // côté de répartitions d'un autre exercice.
+        $year  = $annee ?? (int) date('Y');
         $debut = new \DateTimeImmutable($year . '-01-01 00:00:00');
         $fin   = new \DateTimeImmutable($year . '-12-31 23:59:59');
 

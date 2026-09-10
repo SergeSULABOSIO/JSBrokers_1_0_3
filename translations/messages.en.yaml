@@ -189,6 +189,17 @@ security_pricing_basic_option_dashboard: "Dashboard access"
 security_pricing_basic_option_email: "Sending emails "
 security_pricing_basic_option_email_value: "Unlimited"
 security_pricing_basic_option_fonctions: "Access to all other features"
+
+# Cross-plan panel about your data: these rules apply to every plan, free and paid
+# alike. The migration allowance comes from the Console settings (never hard-coded in
+# the template), so the site never lies after a change.
+security_pricing_donnees: "YOUR DATA"
+security_pricing_donnees_lead: "It belongs to you, and it comes back out whenever you want."
+security_pricing_donnees_export: "Exporting your data "
+security_pricing_donnees_export_value: "free and unlimited"
+security_pricing_donnees_reprise: "Migrating your history "
+security_pricing_donnees_reprise_value: "%lignes% rows included"
+security_pricing_donnees_surplus: "Beyond that, each migrated row is charged at the write rate of the records it creates. The cost is shown to you before you confirm — never after."
 # GENERIC pricing card: every paid Console pack shares these labels; only the name
 # (label), the price and the token volume change (data-driven).
 # The amount already carries its number formatting and currency symbol (placed

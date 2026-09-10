@@ -32,6 +32,7 @@ services:
     App\Echange\Classeur\LecteurJsbx: ~
     App\Echange\Service\CompteurDOccurrences: ~
     App\Echange\Service\ExportateurJsbx: ~
+    App\Echange\Service\FranchiseDeReprise: ~
     App\Echange\Service\ImportateurJsbx: ~
     App\Echange\Service\LigneExportable: ~
     App\Echange\Service\ResolveurDeRenvois: ~

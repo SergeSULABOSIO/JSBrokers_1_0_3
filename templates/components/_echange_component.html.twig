@@ -296,26 +296,26 @@
         </div>
     </div>
 
-    {# ── Bandeau de facturation : le coût s'annonce AVANT, jamais après ── #}
-    {% set billingClass = facturation.gratuitesRestantes > 0
-        ? ''
-        : (facturation.exportFinancable ? 'is-payante' : 'is-bloquee') %}
+    {# ── Bandeau de facturation : le coût s'annonce AVANT, jamais après ──
+       ⚠ ON PARLE DE LIGNES, PAS D'OPÉRATIONS NI DE TOKENS. C'est ce que l'utilisateur voit
+       dans son fichier, donc la seule unité qu'il peut vérifier lui-même. Un solde en
+       tokens ne lui dirait pas ce qu'il peut encore reprendre. #}
+    {% set billingClass = facturation.lignesRestantes > 0 ? '' : 'is-payante' %}
     <div class="ech-billing {{ billingClass }}" role="status">
         <twig:UX:Icon name="{{ resolve_icon_name('action:information') }}" style="width:18px;height:18px;flex:0 0 auto;" />
         <span>
-            {% if facturation.gratuitesRestantes > 0 %}
-                <strong>{{ facturation.gratuitesRestantes }}</strong>
-                opération{{ facturation.gratuitesRestantes > 1 ? 's' : '' }}
-                gratuite{{ facturation.gratuitesRestantes > 1 ? 's' : '' }}
-                restante{{ facturation.gratuitesRestantes > 1 ? 's' : '' }}
-                sur {{ facturation.quotaGratuit }}.
-            {% elseif facturation.exportFinancable %}
-                La prochaine exportation sera facturée <strong>{{ facturation.coutExport }} tokens</strong>.
+            <strong>L'exportation est gratuite et illimitée.</strong>
+            {% if facturation.lignesRestantes > 0 %}
+                Il vous reste
+                <strong>{{ facturation.lignesRestantes|number_format(0, ',', ' ') }}</strong>
+                ligne{{ facturation.lignesRestantes > 1 ? 's' : '' }}
+                de reprise offerte{{ facturation.lignesRestantes > 1 ? 's' : '' }}
+                sur {{ facturation.lignesOffertes|number_format(0, ',', ' ') }}.
             {% else %}
-                Solde insuffisant : l'exportation coûte <strong>{{ facturation.coutExport }} tokens</strong>.
+                Vos {{ facturation.lignesOffertes|number_format(0, ',', ' ') }} lignes de reprise offertes
+                sont épuisées : les suivantes sont facturées au tarif d'écriture des enregistrements
+                qu'elles créent. Le coût vous est annoncé avant confirmation.
             {% endif %}
-            L'importation n'est pas facturée à l'opération : chaque ligne écrite paie le même
-            métrage qu'une saisie à l'écran.
         </span>
         <span class="ech-solde">Solde : {{ facturation.soldeDisponible|number_format(0, ',', ' ') }} tokens</span>
     </div>
@@ -425,23 +425,17 @@
             {# Le bouton est DÉSARMÉ pendant l'opération (echange#exporter) : un double
                clic produirait deux fichiers et, sans la clé d'idempotence, deux
                occurrences facturées. #}
+            {# ⚠ PLUS AUCUNE CONDITION DE SOLDE ICI. L'exportation est gratuite et illimitée :
+               la subordonner à un solde reviendrait à retenir en otage les données du
+               cabinet. Seule l'absence de périmètre lisible désarme encore le bouton. #}
             <div class="ech-actions ech-actions--tete">
-                {% if not facturation.exportFinancable %}
-                    <span class="ech-note" style="margin:0;">
-                        Rechargez votre solde pour exporter : il manque
-                        {{ (facturation.coutExport - facturation.soldeDisponible)|number_format(0, ',', ' ') }} tokens.
-                    </span>
-                {% endif %}
                 <button type="button"
                         class="btn btn-sm btn-cobalt"
                         data-echange-target="boutonExport"
                         data-action="click->echange#exporter"
-                        {{ (ressources is empty or not facturation.exportFinancable) ? 'disabled' : '' }}>
+                        {{ ressources is empty ? 'disabled' : '' }}>
                     <twig:UX:Icon name="{{ resolve_icon_name('echange-export') }}" style="width:18px;height:18px;" />
-                    <span>
-                        Générer l'export
-                        {%- if facturation.coutExport > 0 %} ({{ facturation.coutExport }} tokens){% endif %}
-                    </span>
+                    <span>Générer l'export</span>
                 </button>
 
                 {# ⚠ PLUS DE GABARIT ICI. C'est un outil d'IMPORT : on le remplit pour le

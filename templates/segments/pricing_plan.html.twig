@@ -42,6 +42,43 @@
         {% endfor %}
     </div>
 
+    {# ── VOS DONNÉES : CE QUI EST OFFERT, QUEL QUE SOIT LE PLAN ──────────────────────
+       Un encart TRANSVERSAL, et non deux lignes dans la carte « Basic » : ces deux
+       règles ne dépendent d'aucun paquet, et les loger dans l'offre gratuite laisserait
+       croire qu'un plan payant y change quelque chose.
+
+       ⚠ LE SEUIL VIENT DE LA CONSOLE, JAMAIS DU GABARIT. `plan_tarifaire()` lit le
+       paramétrage : recopier « 1 000 » ici ferait mentir le site au premier réglage. #}
+    <div class="row justify-content-center mt-4">
+        <div class="col-lg-8">
+            <article class="pp-card" aria-labelledby="pp-donnees-name">
+                <header class="pp-head">
+                    <span class="pp-name" id="pp-donnees-name">{{ "security_pricing_donnees" | trans }}</span>
+                    <p class="pp-lead">{{ "security_pricing_donnees_lead" | trans }}</p>
+                </header>
+
+                <ul class="pp-features">
+                    <li class="pp-feature">
+                        {{ ux_icon('mdi:check-circle', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
+                        <span>{{ "security_pricing_donnees_export" | trans }}
+                            <strong class="pp-value">{{ "security_pricing_donnees_export_value" | trans }}</strong></span>
+                    </li>
+                    <li class="pp-feature">
+                        {{ ux_icon('mdi:check-circle', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
+                        <span>{{ "security_pricing_donnees_reprise" | trans }}
+                            <strong class="pp-value">{{ "security_pricing_donnees_reprise_value" | trans({
+                                '%lignes%': plan_tarifaire().echangeFranchiseLignes|format_nombre(0, lang|default(app.request.locale)),
+                            }) }}</strong></span>
+                    </li>
+                    <li class="pp-feature">
+                        {{ ux_icon('mdi:information-outline', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
+                        <span>{{ "security_pricing_donnees_surplus" | trans }}</span>
+                    </li>
+                </ul>
+            </article>
+        </div>
+    </div>
+
     <div class="text-center mt-4">
         <a href="{{ path('app_tokens_info', {'lang': lang|default(app.request.locale)}) }}"
            class="d-inline-flex align-items-center gap-2 text-decoration-none">

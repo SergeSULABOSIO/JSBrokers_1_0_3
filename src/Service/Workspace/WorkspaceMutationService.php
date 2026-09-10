@@ -97,9 +97,23 @@ class WorkspaceMutationService
      *
      * @throws \App\Token\InsufficientTokensException si le solde du propriétaire est épuisé.
      */
-    public function commitWrite(object $entity, Entreprise $entreprise, ?Utilisateur $acteur): void
+    public function commitWrite(object $entity, Entreprise $entreprise, ?Utilisateur $acteur, bool $metrer = true): void
     {
-        $this->tokenAccountService->meterWrite($entity, $entreprise, $acteur);
+        // ⚠ `$metrer` EST UN PARAMÈTRE, ET NON UN DRAPEAU D'INSTANCE. La reprise de données
+        // exonère ses premières lignes (voir FranchiseDeReprise) et avait besoin de couper
+        // le métrage ; le faire par un interrupteur posé sur le service aurait été un piège
+        // à retardement : les paliers d'import sont traités par un worker Messenger de
+        // longue durée, où ce service est un singleton qui SURVIT d'un message à l'autre.
+        // Un drapeau resté posé y aurait rendu gratuites les écritures suivantes — celles
+        // d'un AUTRE cabinet compris.
+        //
+        // ⚠ ET LE DÉFAUT EST `true`. Cinq appelants ne connaissent pas cette notion et ne
+        // doivent pas avoir à la connaître : oublier d'y penser ne peut pas rendre une
+        // écriture gratuite.
+        if ($metrer) {
+            $this->tokenAccountService->meterWrite($entity, $entreprise, $acteur);
+        }
+
         $this->em->persist($entity);
         $this->em->flush();
     }
@@ -358,7 +372,7 @@ class WorkspaceMutationService
      *
      * @return array{op: string, entite: string, libelle: string, cible: ?string, id: ?int}
      */
-    public function executer(MutationOperation $op, AiScope $scope, ?Utilisateur $acteur, ?MutationReferences $refs = null): array
+    public function executer(MutationOperation $op, AiScope $scope, ?Utilisateur $acteur, ?MutationReferences $refs = null, bool $metrer = true): array
     {
         $refs ??= MutationReferences::live();
         $labels = $this->accessResolver->libellesEntites();
@@ -410,7 +424,7 @@ class WorkspaceMutationService
             if (!$form->isValid()) {
                 throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelle), $this->erreurs($form));
             }
-            $this->commitWrite($entity, $scope->entreprise, $acteur);
+            $this->commitWrite($entity, $scope->entreprise, $acteur, $metrer);
             // L'id existe : les opérations suivantes du plan peuvent y renvoyer.
             $refs->declarer($op->ref, method_exists($entity, 'getId') ? $entity->getId() : null);
         } else {
@@ -424,14 +438,14 @@ class WorkspaceMutationService
                 if (!$form->isValid()) {
                     throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelle), $this->erreurs($form));
                 }
-                $this->commitWrite($entity, $scope->entreprise, $acteur);
+                $this->commitWrite($entity, $scope->entreprise, $acteur, $metrer);
             }
         }
 
         // Collections imbriquées (récursif) : chaque nœud écrit est métré et persisté
         // exactement comme via son propre formulaire dans l'UI.
         $enfants = [];
-        $this->executerCollections($entity, $op, $scope, $acteur, $op->entityShortName, 0, $enfants, $refs);
+        $this->executerCollections($entity, $op, $scope, $acteur, $op->entityShortName, 0, $enfants, $refs, $metrer);
 
         return [
             'op'      => $op->op,
@@ -461,6 +475,7 @@ class WorkspaceMutationService
         int $profondeur,
         array &$enfants,
         ?MutationReferences $refs = null,
+        bool $metrer = true,
     ): void {
         $refs ??= MutationReferences::live();
         if ($parentOp->collections === [] || $profondeur >= FormTreeInspector::PROFONDEUR_MAX) {
@@ -525,14 +540,14 @@ class WorkspaceMutationService
                     if (!$form->isValid()) {
                         throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelleEnfant), $this->erreurs($form));
                     }
-                    $this->commitWrite($entiteEnfant, $scope->entreprise, $acteur);
+                    $this->commitWrite($entiteEnfant, $scope->entreprise, $acteur, $metrer);
                 }
                 if ($enfantOp->isCreate()) {
                     $refs->declarer($enfantOp->ref, method_exists($entiteEnfant, 'getId') ? $entiteEnfant->getId() : null);
                 }
 
                 $petitsEnfants = [];
-                $this->executerCollections($entiteEnfant, $enfantOp, $scope, $acteur, $ce->childShortName, $profondeur + 1, $petitsEnfants, $refs);
+                $this->executerCollections($entiteEnfant, $enfantOp, $scope, $acteur, $ce->childShortName, $profondeur + 1, $petitsEnfants, $refs, $metrer);
 
                 $enfants[] = [
                     'op'      => $enfantOp->op,

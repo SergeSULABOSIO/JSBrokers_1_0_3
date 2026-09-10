@@ -55,7 +55,19 @@ class EntrepriseEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "rccm", "intitule" => "RCCM", "type" => "Texte"],
                 ["code" => "idnat", "intitule" => "ID.NAT", "type" => "Texte"],
                 ["code" => "numimpot", "intitule" => "N° Impôt", "type" => "Texte"],
-                ["code" => "capitalSociale", "intitule" => "Capital Social", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
+                // ⚠ LE CAPITAL SE SAISIT EN MONNAIE LOCALE, ET SE LIT DANS LA MÊME. C'est
+                // l'exception de l'application : partout ailleurs les montants sont
+                // convertis vers la monnaie d'affichage, mais celui-ci est un montant
+                // STATUTAIRE, écrit tel quel dans les statuts du cabinet. L'afficher en
+                // monnaie d'affichage sans l'avoir converti donnait « 4 000 000 USD » pour
+                // 4 000 000 CDF — un facteur de deux mille huit cents, sans le moindre
+                // signe. Le formulaire de saisie, le menu latéral et l'en-tête des PDF
+                // tenaient déjà la bonne règle ; cette fiche était seule à s'en écarter.
+                //
+                // ⚠ LA COMPTABILITÉ, ELLE, LE CONVERTIT — et c'est normal : des états ne
+                // s'additionnent que dans une monnaie unique. C'est la règle comptable qui
+                // y décide, pas celle-ci.
+                ["code" => "capitalSociale", "intitule" => "Capital Social", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieLocale()],
                 ["code" => "siteweb", "intitule" => "Site Web", "type" => "Texte"],
                 ["code" => "utilisateur", "intitule" => "Créateur", "type" => "Relation", "targetEntity" => Utilisateur::class, "displayField" => "nom"],
                 ["code" => "createdAt", "intitule" => "Créée le", "type" => "Date"],

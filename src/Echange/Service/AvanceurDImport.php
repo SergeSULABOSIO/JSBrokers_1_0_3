@@ -9,6 +9,7 @@ use App\Echange\Classeur\LecteurJsbx;
 use App\Echange\Classeur\LigneLue;
 use App\Echange\Etat\EtatDuPortefeuille;
 use App\Echange\Reprise\ChaineExistante;
+use App\Echange\Reprise\CoherenceDesParts;
 use App\Echange\Reprise\LecteurDeLEtat;
 use App\Echange\Reprise\ReconstitueurDeTranche;
 use App\Entity\EchangeImportRun;
@@ -98,6 +99,7 @@ final class AvanceurDImport
         private readonly WorkspaceMutationService $mutation,
         private readonly DiagnosticEnAnomalie $diagnostic,
         private readonly CompteurDOccurrences $compteur,
+        private readonly FranchiseDeReprise $franchise,
         private readonly EchangeImportRunRepository $runs,
         private readonly EntityManagerInterface $em,
         // ⚠ POUR ROUVRIR CE QUE DOCTRINE FERME. Une exception qui traverse un flush ferme
@@ -255,7 +257,7 @@ final class AvanceurDImport
 
         $aboutit = $run->getStatut() === EchangeImportRun::STATUT_CONTROLE
             ? $this->controlerLaFenetre($fenetre, $entreprise, $invite, $rapport)
-            : $this->ecrireLaFenetre($fenetre, $entreprise, $invite, $rapport);
+            : $this->ecrireLaFenetre($fenetre, $entreprise, $invite, $rapport, $run);
 
         $curseur = $run->getCurseur() + count($fenetre);
 
@@ -326,8 +328,17 @@ final class AvanceurDImport
         $refs = MutationReferences::dryRun();
         $colonnes = $this->etat->colonnes($entreprise);
 
+        // ⚠ LA COHÉRENCE D'UNE POLICE NE SE VOIT PAS LIGNE À LIGNE. Les parts d'échéance ne
+        // se jugent qu'ENSEMBLE — quatre lignes à cent pour cent sont chacune plausible, et
+        // leur somme absurde. La fenêtre est justement l'endroit où c'est possible : une
+        // police y tient toujours entière, c'est ce que garantit `fenetre()`.
+        $reprochesDeGroupe = [];
+        foreach (CoherenceDesParts::verifier($fenetre) as $reproche) {
+            $reprochesDeGroupe[(int) $reproche->ligne][] = $reproche;
+        }
+
         foreach ($fenetre as $ligne) {
-            $anomalies = [];
+            $anomalies = $reprochesDeGroupe[$ligne->numero] ?? [];
             $operations = $this->reconstitueur->pour($ligne, $colonnes, $entreprise, $anomalies);
             $rapport->compterLignes(1);
 
@@ -410,17 +421,30 @@ final class AvanceurDImport
      *
      * @param LigneLue[] $fenetre
      */
-    private function ecrireLaFenetre(array $fenetre, Entreprise $entreprise, Invite $invite, RapportDeControle $rapport): bool
+    private function ecrireLaFenetre(array $fenetre, Entreprise $entreprise, Invite $invite, RapportDeControle $rapport, EchangeImportRun $run): bool
     {
         $scope = new AiScope($entreprise, $invite, null);
         $acteur = $invite->getUtilisateur();
         $colonnes = $this->etat->colonnes($entreprise);
 
+        // ⚠ LE SOLDE DE FRANCHISE SE LIT UNE FOIS PAR PALIER, PAS UNE FOIS PAR LIGNE. Une
+        // requête par écriture serait ruineuse ; et surtout le compteur du run n'est flushé
+        // qu'en fin de transaction, si bien qu'une relecture en cours de palier rendrait une
+        // valeur périmée — donc un décompte qui dérive.
+        $couvertes = $this->franchise->couvertesDansCePalier(
+            $entreprise,
+            $run->getLignesFranchisees(),
+            count($fenetre),
+        );
+        $offertesCePalier = 0;
+
         try {
-            $this->em->wrapInTransaction(function () use ($fenetre, $colonnes, $scope, $acteur, $entreprise): void {
+            $this->em->wrapInTransaction(function () use ($fenetre, $colonnes, $scope, $acteur, $entreprise, $couvertes, &$offertesCePalier): void {
                 $refs = MutationReferences::live();
+                $rang = 0;
 
                 foreach ($fenetre as $ligne) {
+                    ++$rang;
                     $anomalies = [];
                     $operations = $this->reconstitueur->pour($ligne, $colonnes, $entreprise, $anomalies);
 
@@ -434,14 +458,29 @@ final class AvanceurDImport
                         }
                     }
 
+                    // ⚠ LA FRANCHISE EXONÈRE, ELLE N'AJOUTE PAS DE FORFAIT. L'import débite
+                    // déjà, entité par entité, par le circuit d'écriture commun : facturer
+                    // un prix au-delà du seuil ferait payer deux fois le même geste. On
+                    // coupe donc le métrage sur les lignes offertes, et on le laisse faire
+                    // sur les suivantes — au tarif d'écriture ordinaire, sans rien inventer.
+                    $offerte = $rang <= $couvertes;
+
                     foreach ($operations as $operation) {
                         if (!$operation->isDelete() && !$operation->ecritQuelqueChose()) {
                             continue;
                         }
-                        $this->mutation->executer($operation, $scope, $acteur, $refs);
+                        $this->mutation->executer($operation, $scope, $acteur, $refs, metrer: !$offerte);
+                    }
+
+                    if ($offerte) {
+                        ++$offertesCePalier;
                     }
                 }
             });
+
+            // ⚠ APRÈS LA TRANSACTION, ET SEULEMENT SI ELLE A ABOUTI. Un palier annulé n'a
+            // rien écrit : lui décompter des lignes gratuites les ferait perdre pour rien.
+            $run->ajouterLignesFranchisees($offertesCePalier);
         } catch (\Throwable $e) {
             // La transaction du palier est annulée : rien de CE palier n'a été conservé.
             // Les paliers précédents, eux, le sont — et on le dit, parce que l'utilisateur
