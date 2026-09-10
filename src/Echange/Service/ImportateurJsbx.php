@@ -13,6 +13,8 @@ use App\Entity\Invite;
 use App\Entity\Utilisateur;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
+use App\Token\InsufficientTokensException;
+use App\Token\TokenAccountService;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 
 /**
@@ -62,6 +64,7 @@ final class ImportateurJsbx
         // Le moteur des paliers. Cet orchestrateur ouvre et referme le dossier ; c'est lui
         // qui fait le travail, un lot de lignes à la fois.
         private readonly AvanceurDImport $avanceur,
+        private readonly TokenAccountService $tokens,
     ) {
     }
 
@@ -301,6 +304,32 @@ final class ImportateurJsbx
             ));
 
             return $this->echouer($run, $controle);
+        }
+
+        // ── LE VERROU RÉEL DU BUDGET ────────────────────────────────────────────────
+        //
+        // ⚠ UN BOUTON DÉSACTIVÉ N'EST PAS UNE GARDE. La route de confirmation est
+        // appelable directement, et le solde a pu fondre entre l'annonce et l'accord —
+        // un autre onglet, un import parallèle. On revérifie donc ICI, en dernier
+        // recours, contre le coût FIGÉ dans le rapport.
+        //
+        // ⚠ ET ON LIT LE RAPPORT AVANT LE `clear()` QUI SUIT : après lui, `$run` n'est
+        // plus géré et sa colonne JSON n'est plus lisible.
+        $tokensEstimes = (int) ($run->getRapport()['tokens_estimes'] ?? 0);
+        $entreprise = $run->getEntreprise();
+        if ($tokensEstimes > 0 && $entreprise !== null) {
+            $disponible = $this->tokens->availableFor($entreprise);
+            if ($disponible < $tokensEstimes) {
+                $proprietaire = $entreprise->getUtilisateur();
+
+                throw new InsufficientTokensException(
+                    required: $tokensEstimes,
+                    available: $disponible,
+                    nextRenewalAt: $proprietaire instanceof Utilisateur
+                        ? $this->tokens->nextRenewalAt($proprietaire)
+                        : null,
+                );
+            }
         }
 
         // ⚠ ON REPART D'UNE UNITÉ DE TRAVAIL PROPRE. Le contrôle à blanc valide en

@@ -599,6 +599,79 @@
                             <span><strong>{{ rapport.lignes_lues|default(0) }}</strong> ligne(s) lue(s)</span>
                         </div>
 
+                        {# ── CE QUE LA REPRISE VA COÛTER, AVANT DE LA CONFIRMER ──────────
+                           ⚠ LE PRIX S'ANNONCE AVANT, JAMAIS APRÈS. C'est la règle de toute
+                           la rubrique, et c'est ici qu'elle se joue vraiment : on montre ce
+                           qui est offert, ce qui est facturé, en tokens ET en dollars, et
+                           l'on n'ouvre le bouton que si le solde suit. #}
+                        {% set tokensEstimes = rapport.tokens_estimes|default(0) %}
+                        {% set lignesOffertes = rapport.lignes_offertes|default(0) %}
+                        {% set lignesFacturees = rapport.lignes_facturees|default(0) %}
+                        {% set solde = facturation.soldeDisponible %}
+                        {% set finançable = tokensEstimes <= solde %}
+
+                        {% if controleEnCours.estConfirmable %}
+                            <table class="ech-table" style="margin-top:1rem;">
+                                <caption class="ech-note" style="caption-side:top;margin:0 0 .4rem;text-align:left;">
+                                    Ce que cette reprise va coûter — estimation calculée sur votre fichier.
+                                </caption>
+                                <tbody>
+                                    <tr>
+                                        <td>Lignes offertes</td>
+                                        <td style="text-align:right;font-variant-numeric:tabular-nums;">
+                                            <strong>{{ lignesOffertes|number_format(0, ',', ' ') }}</strong>
+                                        </td>
+                                        <td class="ech-dep">sur {{ facturation.lignesOffertes|number_format(0, ',', ' ') }} offertes à votre cabinet</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Lignes facturées</td>
+                                        <td style="text-align:right;font-variant-numeric:tabular-nums;">
+                                            <strong>{{ lignesFacturees|number_format(0, ',', ' ') }}</strong>
+                                        </td>
+                                        <td class="ech-dep">au tarif d'écriture des enregistrements créés</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Coût estimé</strong></td>
+                                        <td style="text-align:right;font-variant-numeric:tabular-nums;">
+                                            <strong>{{ tokensEstimes|number_format(0, ',', ' ') }} tokens</strong>
+                                        </td>
+                                        <td class="ech-dep">
+                                            soit environ {{ plan_tarifaire().costUsd(tokensEstimes)|number_format(2, ',', ' ') }} USD
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Votre solde</td>
+                                        <td style="text-align:right;font-variant-numeric:tabular-nums;">
+                                            {{ solde|number_format(0, ',', ' ') }} tokens
+                                        </td>
+                                        <td class="ech-dep">
+                                            {% if finançable %}
+                                                il restera {{ (solde - tokensEstimes)|number_format(0, ',', ' ') }} tokens après la reprise
+                                            {% else %}
+                                                il manque <strong>{{ (tokensEstimes - solde)|number_format(0, ',', ' ') }} tokens</strong>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            {% if not finançable %}
+                                <div class="ech-billing ech-billing--erreur" role="alert" style="margin-top:.75rem;">
+                                    <twig:UX:Icon name="{{ resolve_icon_name('action:alert') }}" style="width:18px;height:18px;flex:0 0 auto;" />
+                                    <span>
+                                        Votre solde ne couvre pas cette reprise : rien n'a été écrit, et le bouton de
+                                        confirmation reste fermé.
+                                        {% if estProprietaire|default(false) %}
+                                            Rechargez vos tokens, puis revenez sur cet onglet et actualisez la page —
+                                            la confirmation se rouvrira d'elle-même.
+                                        {% else %}
+                                            Prévenez le propriétaire du cabinet : c'est lui qui recharge les tokens.
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+
                         {% if rapport.anomalies|default([])|length %}
                             <table class="ech-table" style="margin-top:1rem;">
                                 <thead>
@@ -657,14 +730,32 @@
                                d'import partiel, et proposer « importer quand même » serait
                                proposer de laisser la base dans un état que personne n'a décrit. #}
                             {% if controleEnCours.estConfirmable %}
+                                {# ⚠ LE BOUTON EST RENDU MAIS DÉSARMÉ, jamais retiré. Un bouton
+                                   absent se lit comme une panne ; un bouton grisé à côté d'un
+                                   chiffre explique de lui-même ce qui manque et combien. #}
                                 <button type="button"
                                         class="btn btn-sm btn-cobalt"
                                         data-echange-target="boutonConfirmation"
                                         data-action="click->echange#confirmer"
-                                        data-echange-run-param="{{ controleEnCours.id }}">
+                                        data-echange-run-param="{{ controleEnCours.id }}"
+                                        {{ finançable ? '' : 'disabled' }}
+                                        {{ finançable ? '' : 'title="Votre solde ne couvre pas cette reprise."' }}>
                                     <twig:UX:Icon name="{{ resolve_icon_name('action:check') }}" style="width:18px;height:18px;" />
                                     <span>Confirmer l'importation</span>
                                 </button>
+
+                                {# L'APPEL À L'ACTION : il ouvre la recharge dans un AUTRE onglet,
+                                   pour que le rapport reste ouvert derrière — on revient, on
+                                   actualise, et la confirmation se rouvre. #}
+                                {% if not finançable and estProprietaire|default(false) %}
+                                    <a class="btn btn-sm btn-outline-secondary"
+                                       href="{{ urlAchatTokens|default(path('admin.token.buy')) }}"
+                                       target="_blank" rel="noopener"
+                                       aria-label="Ajouter des tokens (s'ouvre dans un nouvel onglet)">
+                                        <twig:UX:Icon name="{{ resolve_icon_name('action:cart') }}" style="width:18px;height:18px;" />
+                                        <span>Ajouter des tokens</span>
+                                    </a>
+                                {% endif %}
                             {% else %}
                                 <span class="ech-note" style="margin:0;">
                                     Corrigez les erreurs ci-dessus dans votre fichier, puis redéposez-le.

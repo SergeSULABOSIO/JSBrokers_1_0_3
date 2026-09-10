@@ -434,6 +434,66 @@ class EcritureImportTest extends WebTestCase
         $parametres->refresh();
     }
 
+    /**
+     * ⚠ UN BOUTON DÉSACTIVÉ N'EST PAS UNE GARDE.
+     *
+     * L'écran ferme la confirmation quand le solde ne suit pas, mais la route reste
+     * appelable directement — et le solde a pu fondre entre l'annonce et l'accord, dans un
+     * autre onglet. Le verrou réel vit au serveur, contre le coût FIGÉ dans le rapport, et
+     * il refuse AVANT d'avoir écrit la moindre ligne.
+     */
+    public function testLaConfirmationEstRefuseeSiLeSoldeNeCouvrePas(): void
+    {
+        [$entreprise, $invite] = $this->fixture();
+        $this->catalogueDeRevenu($entreprise, $invite);
+
+        // Plus une seule ligne offerte : tout ce fichier est facturable.
+        $this->reglerLaFranchise(0);
+
+        $run = $this->importateur()->controler(
+            $this->classeurDeReprise($entreprise, [$this->uneEcheance()]),
+            'reprise.xlsx',
+            $entreprise,
+            $invite,
+        );
+        self::assertSame(EchangeImportRun::STATUT_EN_ATTENTE_CONFIRMATION, $run->getStatut(), $this->motif($run));
+        self::assertGreaterThan(
+            0,
+            (int) ($run->getRapport()['tokens_estimes'] ?? 0),
+            'Le contrôle doit avoir chiffré la reprise : c\'est ce chiffre que la garde compare.',
+        );
+
+        // On vide le compte du propriétaire APRÈS l'annonce — exactement le cas que la
+        // garde existe pour attraper.
+        $proprietaire = $this->em()->find(Utilisateur::class, (int) $entreprise->getUtilisateur()->getId());
+        $proprietaire->setPaidTokens(0);
+        $proprietaire->setFreeTokens(0);
+        // ⚠ ET ON FIGE LA FENÊTRE GRATUITE. Sans cela, `getBalance()` la trouve périmée,
+        // la renouvelle, et rend mille tokens : le compte qu'on croyait vide ne l'est pas,
+        // et le test passerait sans avoir rien éprouvé.
+        $proprietaire->setFreeWindowStartedAt(new \DateTimeImmutable());
+        $this->em()->flush();
+
+        $avant = $this->portefeuille($entreprise);
+
+        try {
+            $this->importateur()->demarrerLEcriture($run, $proprietaire);
+            self::fail('La confirmation devait être refusée : le solde ne couvre pas la reprise.');
+        } catch (\App\Token\InsufficientTokensException $e) {
+            self::assertGreaterThan(0, $e->required);
+            self::assertSame(0, $e->available);
+        }
+
+        self::assertSame(
+            $avant,
+            $this->portefeuille($entreprise),
+            'Un refus de budget n\'écrit RIEN : il tombe avant le premier palier.',
+        );
+
+        $this->reglerLaFranchise(null);
+        static::getContainer()->get(\App\Token\ParametresTokenService::class)->refresh();
+    }
+
     /** Pose le seuil de franchise en base (null = repli sur le barème), et vide le cache. */
     private function reglerLaFranchise(?int $lignes): void
     {

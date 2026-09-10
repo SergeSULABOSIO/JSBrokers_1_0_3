@@ -53,6 +53,30 @@ final class RapportDeControle
     private int $lignesLues = 0;
 
     /**
+     * CE QUE LA REPRISE COÛTERA — chiffré pendant le contrôle, annoncé avant la
+     * confirmation.
+     *
+     * ⚠ IL SE CUMULE PENDANT LE CONTRÔLE PARCE QUE C'EST LÀ QU'ON SAIT. Le contrôle
+     * construit déjà, ligne par ligne, les opérations qui seront exécutées : leur coût s'y
+     * lit sans un second parcours du fichier. Le refaire à la confirmation obligerait à
+     * tout relire pour annoncer un chiffre qu'on avait sous la main.
+     */
+    private int $tokensEstimes = 0;
+
+    /** Lignes couvertes par la franchise, et lignes qui la dépassent. */
+    private int $lignesOffertes = 0;
+    private int $lignesFacturees = 0;
+
+    /**
+     * Ce que le cabinet avait déjà consommé de sa franchise quand le contrôle a commencé.
+     *
+     * ⚠ GELÉ AU PREMIER PALIER. Sans cela, un import concurrent déplacerait la base au
+     * milieu du contrôle : le fichier serait chiffré moitié à un tarif, moitié à l'autre,
+     * et le total annoncé ne correspondrait à rien.
+     */
+    private ?int $franchiseBase = null;
+
+    /**
      * Enregistre une anomalie, et rien de plus.
      *
      * Le décompte par ressource passe par {@see compterErreur()}, appelé par qui sait
@@ -124,6 +148,51 @@ final class RapportDeControle
         return $this->lignesLues;
     }
 
+    /**
+     * Enregistre le sort d'une ligne : offerte, ou facturée pour tel coût.
+     *
+     * ⚠ LE COÛT N'EST COMPTÉ QUE SUR LES LIGNES FACTURÉES. Additionner celui des lignes
+     * offertes gonflerait l'annonce d'un montant que personne ne paiera — et un cabinet
+     * qui découvre un prix là où on lui a promis la gratuité n'y revient pas.
+     */
+    public function compterLigneChiffree(bool $offerte, int $tokens): void
+    {
+        if ($offerte) {
+            ++$this->lignesOffertes;
+
+            return;
+        }
+
+        ++$this->lignesFacturees;
+        $this->tokensEstimes += max(0, $tokens);
+    }
+
+    /** La base de franchise, gelée au premier palier de contrôle. */
+    public function gelerLaFranchise(int $dejaConsommees): void
+    {
+        $this->franchiseBase ??= max(0, $dejaConsommees);
+    }
+
+    public function franchiseBase(): ?int
+    {
+        return $this->franchiseBase;
+    }
+
+    public function tokensEstimes(): int
+    {
+        return $this->tokensEstimes;
+    }
+
+    public function lignesOffertes(): int
+    {
+        return $this->lignesOffertes;
+    }
+
+    public function lignesFacturees(): int
+    {
+        return $this->lignesFacturees;
+    }
+
     /** @return Anomalie[] */
     public function anomalies(): array
     {
@@ -174,6 +243,14 @@ final class RapportDeControle
         return [
             'confirmable'    => $this->confirmable(),
             'lignes_lues'    => $this->lignesLues,
+            // ⚠ CES CLÉS VIVENT ICI, ET NON DANS `supplement()`. `AvanceurDImport` compose
+            // `$rapport->toArray() + $this->supplement($run)` : c'est l'union de tableaux,
+            // où la GAUCHE gagne. Une clé posée à droite serait masquée dès le second
+            // palier, et le coût annoncé retomberait à zéro sans prévenir.
+            'tokens_estimes'   => $this->tokensEstimes,
+            'lignes_offertes'  => $this->lignesOffertes,
+            'lignes_facturees' => $this->lignesFacturees,
+            'franchise_base'   => $this->franchiseBase,
             'creations'      => $this->nbCreations(),
             'modifications'  => $this->nbModifications(),
             'suppressions'   => $this->nbSuppressions(),
@@ -194,6 +271,14 @@ final class RapportDeControle
     {
         $rapport = new self();
         $rapport->lignesLues = (int) ($donnees['lignes_lues'] ?? 0);
+
+        // ⚠ DÉFAUT À ZÉRO, ET NON À `null` : des rapports écrits avant l'arrivée du
+        // chiffrage vivent déjà en base, et un palier repris doit pouvoir les relire sans
+        // lever. `franchise_base` fait exception — `null` y signifie « pas encore gelée ».
+        $rapport->tokensEstimes = (int) ($donnees['tokens_estimes'] ?? 0);
+        $rapport->lignesOffertes = (int) ($donnees['lignes_offertes'] ?? 0);
+        $rapport->lignesFacturees = (int) ($donnees['lignes_facturees'] ?? 0);
+        $rapport->franchiseBase = isset($donnees['franchise_base']) ? (int) $donnees['franchise_base'] : null;
 
         foreach ($donnees['synthese'] ?? [] as $ligne) {
             $code = (string) ($ligne['code'] ?? '');
