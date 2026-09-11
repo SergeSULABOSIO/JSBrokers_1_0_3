@@ -479,22 +479,68 @@ class EchangeController extends AbstractController
      * l'état qu'il reçoit porte `async`.
      */
     #[Route('/importer/{idEntreprise}/{idRun}/avancer', name: 'avancer', requirements: ['idEntreprise' => Requirement::DIGITS, 'idRun' => Requirement::DIGITS], methods: ['POST'])]
-    public function avancerImport(int $idEntreprise, int $idRun): JsonResponse
+    public function avancerImport(int $idEntreprise, int $idRun, Request $request): Response
     {
         [$run, $refus] = $this->resoudreRun($idEntreprise, $idRun);
         if ($refus !== null) {
             return $refus;
         }
 
-        if (!$this->file->estAsynchrone()) {
+        // ── LE PALIER SE RACONTE PENDANT QU'IL TRAVAILLE ────────────────────────────
+        //
+        // ⚠ LA BARRE N'AVANÇAIT QU'ENTRE DEUX PALIERS. Le palier est la requête : elle ne
+        // rendait la main qu'une fois ses trente lignes écrites, et l'écran restait
+        // immobile plusieurs secondes d'affilée. Sur un fichier de plusieurs centaines de
+        // lignes, l'utilisateur passait l'essentiel du temps devant un écran qui ne bougeait
+        // pas — et rien ne distingue cela d'une panne.
+        //
+        // On diffuse donc la progression DANS la requête qui travaille, exactement comme
+        // l'export : une ligne JSON par pulsation, une ligne d'état pour finir.
+        //
+        // ⚠ ET SEULEMENT SI LE CLIENT LE DEMANDE. L'assistant, les commandes et les tests
+        // appellent cette même route et attendent un objet JSON : leur imposer un flux les
+        // casserait tous. L'en-tête `Accept` tranche, et l'ancien contrat reste intact.
+        $veutLeFlux = str_contains((string) $request->headers->get('Accept', ''), 'application/x-ndjson');
+
+        if ($this->file->estAsynchrone()) {
+            // Un worker fait le travail : il n'y a rien à diffuser, seulement à constater.
+            return $this->json($this->etatDuRun($run));
+        }
+
+        if (!$veutLeFlux) {
             try {
                 $run = $this->avanceur->avancerUnPalier($run);
             } catch (\Throwable $e) {
                 return $this->json(['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
+
+            return $this->json($this->etatDuRun($run));
         }
 
-        return $this->json($this->etatDuRun($run));
+        return new StreamedResponse(function () use ($run): void {
+            FluxNdjson::demarrer();
+
+            // ⚠ LE DÉNOMINATEUR EST CELUI DU FICHIER, PAS DU PALIER. Compter sur le seul
+            // palier ferait repartir la barre de zéro toutes les trente lignes — une
+            // progression qui recommence sans cesse est pire qu'aucune.
+            $progression = new Progression(
+                $run->getTotalLignes(),
+                static fn (array $etat) => FluxNdjson::ligne($etat),
+            );
+            // On se cale sur ce qui est déjà fait : le palier reprend là où le précédent
+            // s'est arrêté, et la barre doit en dire autant.
+            $progression->avancer($run->getCurseur());
+
+            try {
+                $run = $this->avanceur->avancerUnPalier($run, $progression);
+            } catch (\Throwable $e) {
+                FluxNdjson::ligne(['type' => 'erreur', 'message' => $e->getMessage()]);
+
+                return;
+            }
+
+            FluxNdjson::ligne(['type' => 'etat'] + $this->etatDuRun($run));
+        }, Response::HTTP_OK, FluxNdjson::entetes());
     }
 
     /**

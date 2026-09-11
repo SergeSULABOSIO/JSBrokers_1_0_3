@@ -494,6 +494,79 @@ class EcritureImportTest extends WebTestCase
         static::getContainer()->get(\App\Token\ParametresTokenService::class)->refresh();
     }
 
+    /**
+     * ⚠ SUPPRIMER UNE PISTE REPRISE NE DOIT PAS RENDRE UNE ERREUR 500 MUETTE.
+     *
+     * Depuis que la reprise enregistre la commission déjà encaissée, elle crée une note et
+     * son article — lequel référence le revenu du courtier. Supprimer la piste fait donc
+     * remonter la cascade jusqu'à ce revenu, que la base refuse d'effacer tant qu'une
+     * facture s'y rattache. C'est un REFUS, pas une panne : et il vaut mieux qu'il en soit
+     * ainsi, car détruire la note en cascade détruirait une pièce comptable.
+     *
+     * L'écran rendait « Erreur lors de la suppression » en 500, sans dire ni pourquoi ni
+     * quoi faire. Il dit désormais ce qui bloque.
+     */
+    public function testSupprimerUnePisteRepriseExpliqueCeQuiLaRetient(): void
+    {
+        [$entreprise, $invite] = $this->fixture();
+        $this->catalogueDeRevenu($entreprise, $invite);
+
+        $run = $this->importer($entreprise, $invite, [
+            $this->uneEcheance() + [
+                'tranchePart' => 100,
+                'chargement_prime_nette' => 10000,
+                'commissionRevenus' => 'Commission Ordinaire = 10%',
+                'ouvertureCommissionEncaissee' => 750,
+                'ouvertureCommissionLe' => '20/01/2026',
+            ],
+        ]);
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $run->getStatut(), $this->motif($run));
+
+        $idPiste = (int) $this->em()->getConnection()->fetchOne(
+            'SELECT id FROM piste WHERE entreprise_id = ?',
+            [$entreprise->getId()],
+        );
+        self::assertGreaterThan(0, $idPiste, 'La reprise doit avoir créé une opportunité.');
+
+        $this->client->request('DELETE', '/admin/piste/api/delete/' . $idPiste);
+
+        self::assertSame(
+            409,
+            $this->client->getResponse()->getStatusCode(),
+            'Un élément encore utilisé se REFUSE (409), il ne fait pas planter le serveur (500).',
+        );
+
+        // ⚠ LE REFUS DOIT NOMMER CE QUI BLOQUE, sans quoi l'utilisateur reclique et conclut
+        // à une panne. On ne fige pas LAQUELLE des contraintes saute la première — cela
+        // dépend de l'ordre dans lequel Doctrine démonte la cascade, qui ne nous appartient
+        // pas —, mais le message doit désigner quelque chose et dire quoi faire.
+        // ⚠ ON DÉCODE AVANT DE COMPARER : `json_encode` échappe l'apostrophe en `'`,
+        // et une recherche sur la charge brute ne trouverait jamais un texte français.
+        $message = (string) (json_decode(
+            (string) $this->client->getResponse()->getContent(),
+            true,
+        )['message'] ?? '');
+
+        self::assertStringContainsString("s'y rattache encore", $message);
+        self::assertStringContainsString("Supprimez-la d'abord", $message);
+        self::assertStringNotContainsString(
+            'Erreur lors de la suppression',
+            $message,
+            'Le message générique ne dit ni pourquoi ni quoi faire : c\'est lui qu\'on remplace.',
+        );
+
+        // ⚠ ET RIEN N'A ÉTÉ DÉTRUIT AU PASSAGE. Un refus qui aurait déjà emporté les
+        // chargements ou les revenus laisserait un dossier à moitié démantelé.
+        self::assertSame(
+            1,
+            (int) $this->em()->getConnection()->fetchOne(
+                'SELECT COUNT(*) FROM note WHERE entreprise_id = ?',
+                [$entreprise->getId()],
+            ),
+            'La pièce comptable survit au refus.',
+        );
+    }
+
     /** Pose le seuil de franchise en base (null = repli sur le barème), et vide le cache. */
     private function reglerLaFranchise(?int $lignes): void
     {

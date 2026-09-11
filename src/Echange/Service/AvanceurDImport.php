@@ -161,7 +161,7 @@ final class AvanceurDImport
      * Rend le contrôle tel qu'il est après ce palier. `resteAFaire()` dit s'il faut
      * rappeler ; le statut dit si c'est encore la peine.
      */
-    public function avancerUnPalier(EchangeImportRun $run): EchangeImportRun
+    public function avancerUnPalier(EchangeImportRun $run, ?Progression $progression = null): EchangeImportRun
     {
         if ($run->getId() === null || !$this->travaille($run)) {
             return $run;
@@ -177,7 +177,7 @@ final class AvanceurDImport
         }
 
         try {
-            return $this->travailler($run);
+            return $this->travailler($run, $progression);
         } finally {
             // ⚠ TOUJOURS, MÊME SUR ÉCHEC. Un verrou oublié gèle le contrôle jusqu'à sa
             // péremption, et l'utilisateur ne comprendrait pas pourquoi son import ne
@@ -187,7 +187,7 @@ final class AvanceurDImport
     }
 
     /** Le palier lui-même, une fois le verrou obtenu. */
-    private function travailler(EchangeImportRun $run): EchangeImportRun
+    private function travailler(EchangeImportRun $run, ?Progression $progression = null): EchangeImportRun
     {
         $entreprise = $run->getEntreprise();
         $invite = $run->getInvite();
@@ -265,8 +265,8 @@ final class AvanceurDImport
         $rapport->declarerRessource(LecteurDeLEtat::RESSOURCE, 'Échéances de prime');
 
         $aboutit = $run->getStatut() === EchangeImportRun::STATUT_CONTROLE
-            ? $this->controlerLaFenetre($fenetre, $entreprise, $invite, $rapport)
-            : $this->ecrireLaFenetre($fenetre, $entreprise, $invite, $rapport, $run);
+            ? $this->controlerLaFenetre($fenetre, $entreprise, $invite, $rapport, $progression)
+            : $this->ecrireLaFenetre($fenetre, $entreprise, $invite, $rapport, $run, $progression);
 
         $curseur = $run->getCurseur() + count($fenetre);
 
@@ -331,7 +331,7 @@ final class AvanceurDImport
      *
      * @return bool faux = le palier n'a pas abouti et le travail s'arrête
      */
-    private function controlerLaFenetre(array $fenetre, Entreprise $entreprise, Invite $invite, RapportDeControle $rapport): bool
+    private function controlerLaFenetre(array $fenetre, Entreprise $entreprise, Invite $invite, RapportDeControle $rapport, ?Progression $progression = null): bool
     {
         $scope = new AiScope($entreprise, $invite, null);
         $refs = MutationReferences::dryRun();
@@ -357,6 +357,12 @@ final class AvanceurDImport
             $anomalies = $reprochesDeGroupe[$ligne->numero] ?? [];
             $operations = $this->reconstitueur->pour($ligne, $colonnes, $entreprise, $anomalies);
             $rapport->compterLignes(1);
+
+            // ⚠ UNE PULSATION PAR LIGNE, ET NON PAR PALIER. La barre n'avançait qu'entre
+            // deux paliers — une trentaine de lignes d'un coup, puis plus rien pendant
+            // plusieurs secondes. Sur un fichier qui en compte des centaines, l'écran
+            // paraissait bloqué la plupart du temps.
+            $progression?->avancer();
 
             // ⚠ SEULE UNE ERREUR ÉCARTE LA LIGNE. Un avertissement dit quelque chose
             // d'utile — « plusieurs types portent ce nom, le premier a été retenu » — sans
@@ -454,7 +460,7 @@ final class AvanceurDImport
      *
      * @param LigneLue[] $fenetre
      */
-    private function ecrireLaFenetre(array $fenetre, Entreprise $entreprise, Invite $invite, RapportDeControle $rapport, EchangeImportRun $run): bool
+    private function ecrireLaFenetre(array $fenetre, Entreprise $entreprise, Invite $invite, RapportDeControle $rapport, EchangeImportRun $run, ?Progression $progression = null): bool
     {
         $scope = new AiScope($entreprise, $invite, null);
         $acteur = $invite->getUtilisateur();
@@ -472,7 +478,7 @@ final class AvanceurDImport
         $offertesCePalier = 0;
 
         try {
-            $this->em->wrapInTransaction(function () use ($fenetre, $colonnes, $scope, $acteur, $entreprise, $couvertes, &$offertesCePalier): void {
+            $this->em->wrapInTransaction(function () use ($fenetre, $colonnes, $scope, $acteur, $entreprise, $couvertes, $progression, &$offertesCePalier): void {
                 $refs = MutationReferences::live();
                 $rang = 0;
 
@@ -508,6 +514,10 @@ final class AvanceurDImport
                     if ($offerte) {
                         ++$offertesCePalier;
                     }
+
+                    // Même raison qu'au contrôle : l'écriture est la phase la plus lente,
+                    // et c'est celle où l'on regarde le plus la barre.
+                    $progression?->avancer();
                 }
             });
 

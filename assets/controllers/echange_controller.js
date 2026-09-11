@@ -945,7 +945,18 @@ export default class extends Controller {
      */
     async #menerAuBout(url, options) {
         return menerAuBout(await this.#json(url, options), {
-            avancer: (etat) => this.#json(this.#urlRun(etat.idRun, 'avancer'), { method: 'POST' }),
+            // ⚠ LE PALIER SE LIT EN FLUX, PAS EN UNE RÉPONSE. Le palier EST la requête :
+            // en attendre l'objet JSON, c'était n'apprendre où l'on en est qu'une fois ses
+            // trente lignes écrites — donc laisser l'écran immobile plusieurs secondes
+            // d'affilée, ce que rien ne distingue d'une panne. Le serveur diffuse
+            // désormais une pulsation par ligne, et la dernière ligne porte l'état.
+            //
+            // L'en-tête `Accept` est ce qui le demande : sans lui, la route répond comme
+            // avant — c'est ce qui laisse l'assistant, les commandes et les tests intacts.
+            avancer: (etat) => this.#lireFlux(this.#urlRun(etat.idRun, 'avancer'), {
+                method: 'POST',
+                headers: { Accept: 'application/x-ndjson' },
+            }),
             lire: (etat) => this.#json(this.#urlRun(etat.idRun, 'etat'), { method: 'GET' }),
             publier: (etat) => this.#publierEtat(etat),
         });
@@ -997,7 +1008,9 @@ export default class extends Controller {
         }
 
         const total = Number(etat.total) || 0;
-        const fait = Number(etat.curseur) || 0;
+        // `curseur` vient de l'état du run, `fait` de la progression diffusée pendant un
+        // palier : c'est la même grandeur, sous deux noms, et le bandeau sert les deux.
+        const fait = Number(etat.curseur ?? etat.fait) || 0;
 
         if (this.hasTravailCompteTarget) {
             this.travailCompteTarget.textContent = total > 0 ? `${fait} / ${total} lignes` : '';
@@ -1083,8 +1096,18 @@ export default class extends Controller {
 
         if (charge.type === 'progres') {
             this.#publierProgression(charge);
+            // La progression d'un palier nomme `fait` ce que l'état du run nomme
+            // `curseur` : le bandeau accepte les deux, et suit donc les deux sources.
+            this.#rafraichirLeBandeau(charge);
 
             return;
+        }
+
+        // ⚠ UNE ERREUR DIFFUSÉE DOIT INTERROMPRE. Rendue comme un résultat ordinaire, elle
+        // ferait sortir la boucle de paliers en silence : le travail s'arrêterait sans que
+        // personne ne sache pourquoi.
+        if (charge.type === 'erreur') {
+            throw new Error(charge.message || "Le palier n'a pas abouti.");
         }
 
         garderResultat(charge);
