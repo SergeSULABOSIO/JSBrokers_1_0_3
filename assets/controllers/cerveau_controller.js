@@ -1139,9 +1139,22 @@ export default class extends Controller {
         const deletePromises = ids.map(id => {
             const deleteUrl = `${url}/${id}`; // Construit l'URL finale pour chaque ID.
             return fetch(deleteUrl, { method: 'DELETE' })
-                .then(response => {
-                    if (!response.ok) throw new Error(`Erreur lors de la suppression de l'élément ${id}.`);
-                    return response.json();
+                .then(async (response) => {
+                    if (response.ok) return response.json();
+
+                    // ⚠ LE SERVEUR SAIT POURQUOI, ET ON LE JETAIT. « Erreur lors de la
+                    // suppression de l'élément 117 » remplaçait un message qui disait, lui,
+                    // ce qui bloquait et quoi faire — par exemple qu'une facture se rattache
+                    // encore à cet élément. L'utilisateur recliquait, obtenait le même
+                    // constat, et concluait à une panne.
+                    let motif = null;
+                    try {
+                        motif = (await response.json())?.message ?? null;
+                    } catch (erreurDeLecture) {
+                        // Réponse vide ou non-JSON : on retombe sur le message générique.
+                    }
+
+                    throw new Error(motif || `La suppression de l'élément ${id} a échoué.`);
                 });
         });
 

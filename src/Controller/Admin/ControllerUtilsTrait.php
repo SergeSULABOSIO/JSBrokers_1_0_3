@@ -1253,8 +1253,77 @@ trait ControllerUtilsTrait
             // Using (e) to be more generic with gender.
             return $this->json(['message' => ucfirst($entityName) . ' supprimé(e) avec succès.']);
         } catch (\Exception $e) {
+            // ⚠ UN ÉLÉMENT ENCORE UTILISÉ N'EST PAS UNE PANNE DU SERVEUR. La base refuse
+            // de couper un lien qu'une autre donnée entretient — c'est elle qui protège la
+            // cohérence du portefeuille, et c'est un REFUS, pas une erreur. Rendu en 500
+            // avec « Erreur lors de la suppression », il ne disait ni pourquoi ni quoi
+            // faire : l'utilisateur recliquait, obtenait la même chose, et concluait que
+            // l'application était cassée.
+            $bloquant = $this->tableQuiBloqueLaSuppression($e);
+            if ($bloquant !== null) {
+                return $this->json([
+                    'message' => sprintf(
+                        'Impossible de supprimer cet élément : %s s\'y rattache encore. '
+                        . 'Supprimez-la d\'abord, puis réessayez.',
+                        $bloquant,
+                    ),
+                ], Response::HTTP_CONFLICT);
+            }
+
             return $this->json(['message' => 'Erreur lors de la suppression.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    /**
+     * Une contrainte d'intégrité a-t-elle refusé la suppression, et au profit de QUOI ?
+     *
+     * ⚠ ON NOMME CE QUI BLOQUE, sans quoi le refus ne sert à rien. « Cet élément est
+     * utilisé ailleurs » laisse l'utilisateur devant un constat sans marche à suivre ;
+     * « une facture s'y rattache encore » lui dit où aller.
+     *
+     * ⚠ ET ON REMONTE TOUTE LA CHAÎNE D'EXCEPTIONS. Doctrine enveloppe l'erreur du pilote
+     * dans ses propres couches : ne regarder que l'exception de surface laisserait passer
+     * exactement le cas qu'on veut attraper.
+     *
+     * @return string|null le libellé métier de ce qui bloque, ou null si autre chose a échoué
+     */
+    private function tableQuiBloqueLaSuppression(\Throwable $e): ?string
+    {
+        // Libellés MÉTIER des tables qui protègent le plus souvent une suppression. Une
+        // table absente de cette carte reste nommée génériquement : mieux vaut un refus
+        // compréhensible qu'un nom de table jeté à l'écran.
+        $libelles = [
+            'article'                => 'une facture (note de débit ou de crédit)',
+            'paiement'               => 'un règlement',
+            'note'                   => 'une note de débit ou de crédit',
+            'tranche'                => 'une échéance de prime',
+            'avenant'                => 'une police',
+            'cotation'               => 'une proposition',
+            'revenu_pour_courtier'   => 'une commission',
+            'chargement_pour_prime'  => 'une composante de prime',
+            'sinistre'               => 'un sinistre',
+            'bordereau'              => 'un bordereau',
+        ];
+
+        for ($courant = $e; $courant !== null; $courant = $courant->getPrevious()) {
+            $message = $courant->getMessage();
+            if (!str_contains($message, 'foreign key constraint fails')
+                && !str_contains($message, 'FOREIGN KEY')
+                && !$courant instanceof \Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException) {
+                continue;
+            }
+
+            foreach ($libelles as $table => $libelle) {
+                // Le message du pilote cite la table entre accents graves : `bdm`.`article`.
+                if (str_contains($message, '`' . $table . '`')) {
+                    return $libelle;
+                }
+            }
+
+            return 'une autre donnée de votre cabinet';
+        }
+
+        return null;
     }
 
     /**

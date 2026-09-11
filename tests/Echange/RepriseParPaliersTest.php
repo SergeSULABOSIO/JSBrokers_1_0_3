@@ -364,6 +364,85 @@ class RepriseParPaliersTest extends WebTestCase
      *
      * @return array<string, mixed>
      */
+    /**
+     * ⚠ UN PALIER SE RACONTE PENDANT QU'IL TRAVAILLE — sans casser ceux qui l'appelaient.
+     *
+     * Le palier EST la requête : en attendre l'objet JSON, c'était n'apprendre où l'on en
+     * est qu'une fois ses lignes écrites, donc laisser l'écran immobile plusieurs secondes
+     * d'affilée. Il diffuse désormais une pulsation par ligne.
+     *
+     * ⚠ MAIS SEULEMENT À QUI LE DEMANDE. L'assistant, les commandes et le test voisin
+     * appellent la MÊME route et attendent un objet : leur imposer un flux les casserait
+     * tous. C'est l'en-tête `Accept` qui tranche, et ce test tient les deux bouts du
+     * contrat.
+     */
+    public function testLePalierSeDiffuseSansCasserLAncienContrat(): void
+    {
+        [$entreprise, $invite] = $this->fixture();
+        $base = sprintf('/admin/echange/importer/%d', $entreprise->getId());
+
+        $this->client->request('POST', $base, [], [
+            'fichier' => new UploadedFile($this->classeur($entreprise, $this->troisPolices()), 'reprise.xlsx', null, null, true),
+        ]);
+        self::assertResponseIsSuccessful();
+        $idRun = $this->charge()['idRun'];
+
+        // ── Sans en-tête : l'ancien contrat, un objet JSON ───────────────────────────
+        $this->client->request('POST', sprintf('%s/%d/avancer', $base, $idRun));
+        self::assertResponseIsSuccessful();
+        $etat = $this->charge();
+        self::assertArrayHasKey('statut', $etat, 'Sans Accept, la route rend l\'état comme avant.');
+
+        // ── Avec l'en-tête : un flux de lignes JSON ──────────────────────────────────
+        // ⚠ ON MÉMORISE LE NIVEAU DE TAMPON. `FluxNdjson::demarrer()` les ferme TOUS —
+        // c'est ce qui fait qu'une ligne part vers le navigateur au lieu d'attendre la fin
+        // —, y compris ceux de PHPUnit, qui déclare alors le test « risqué ». On les lui
+        // rend : le comportement testé est correct, c'est l'outil qu'il faut ménager.
+        $niveauAvant = ob_get_level();
+
+        $this->client->request(
+            'POST',
+            sprintf('%s/%d/avancer', $base, $idRun),
+            [], [], ['HTTP_ACCEPT' => 'application/x-ndjson'],
+        );
+        self::assertResponseIsSuccessful();
+
+        while (ob_get_level() < $niveauAvant) {
+            ob_start();
+        }
+
+        // ⚠ ON N'INSPECTE PAS LE CORPS D'UN VRAI FLUX ICI. `FluxNdjson::demarrer()` vide
+        // TOUS les niveaux de tampon — c'est ce qui fait qu'une ligne part immédiatement
+        // vers le navigateur au lieu d'attendre la fin —, et il emporterait donc aussi le
+        // `ob_start()` d'un test. Ce qui se vérifie à ce niveau, c'est le CONTRAT : la
+        // réponse est diffusée, et elle s'annonce comme du NDJSON.
+        $reponse = $this->client->getResponse();
+        self::assertStringContainsString(
+            'application/x-ndjson',
+            (string) $reponse->headers->get('Content-Type'),
+            'Le palier demandé en flux doit s\'annoncer comme tel.',
+        );
+
+        // Le CONTENU du flux — une pulsation par ligne, puis l'état — se vérifie au niveau
+        // du service, là où il se produit et où rien ne vide les tampons.
+        $collectees = [];
+        $progression = new \App\Echange\Service\Progression(
+            0,
+            static function (array $etat) use (&$collectees): void { $collectees[] = $etat; },
+        );
+
+        $run = $this->em()->find(EchangeImportRun::class, $idRun);
+        self::assertNotNull($run);
+        static::getContainer()->get(\App\Echange\Service\AvanceurDImport::class)
+            ->avancerUnPalier($run, $progression);
+
+        $pulsations = array_filter($collectees, static fn (array $e) => ($e['type'] ?? null) === 'progres');
+        self::assertNotEmpty(
+            $pulsations,
+            'Le palier doit publier son avancement PENDANT qu\'il travaille, et non seulement à la fin.',
+        );
+    }
+
     private function pousserParHttp(string $base, int $idRun): array
     {
         $etat = [];
