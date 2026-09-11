@@ -24,8 +24,16 @@
             </div>
             <div class="dialog-progress-container" data-confirmation-dialog-target="progressBarContainer"
                  role="progressbar" aria-label="Traitement en cours" aria-valuemin="0" aria-valuemax="100">
-                <div class="dialog-progress-bar" aria-hidden="true"></div>
+                <div class="dialog-progress-bar" data-confirmation-dialog-target="progressBar" aria-hidden="true"></div>
             </div>
+            {#
+                CE QUI AVANCE, ET PAS SEULEMENT QU'IL SE PASSE QUELQUE CHOSE. Un pourcentage
+                seul ne dit pas laquelle des cent lignes prend du temps ; l'étape nommée
+                (« Suppression : Propositions », « Enregistrement définitif ») le dit.
+                Annoncé en zone vive pour les lecteurs d'écran, qui n'ont pas la barre.
+            #}
+            <div class="dialog-progress-label" data-confirmation-dialog-target="progressLabel"
+                 role="status" aria-live="polite" hidden></div>
             <div class="modal-body pb-0" data-confirmation-dialog-target="body">
                 <p>Êtes-vous sûr de vouloir continuer ?</p>
             </div>

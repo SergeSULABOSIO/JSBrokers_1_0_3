@@ -12,6 +12,7 @@ use App\Ai\Mutation\MutationOperation;
 use App\Ai\Mutation\MutationPlan;
 use App\Ai\Mutation\MutationReferences;
 use App\Ai\Scope\AiScope;
+use App\Echange\Service\Progression;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
 use App\Token\TokenAccountService;
@@ -86,6 +87,9 @@ class WorkspaceMutationService
         // certains tests, par arguments POSITIONNELS : l'insérer au milieu décalait tout ce
         // qui suit, et six tests tombaient sur un TypeError qui n'apprenait rien à personne.
         private readonly ValeursDeNaissance $valeursDeNaissance,
+        // Le moteur qui emporte toute la chaîne d'une donnée sans toucher aux objets
+        // transversaux. Même raison d'être en dernier que son voisin du dessus.
+        private readonly SuppressionEnCascade $suppression,
     ) {
     }
 
@@ -118,11 +122,37 @@ class WorkspaceMutationService
         $this->em->flush();
     }
 
-    /** Suppression + flush — point de passage unique (contrôle d'accès à la charge de l'appelant). */
-    public function commitDelete(object $entity): void
+    /**
+     * Suppression de TOUTE LA CHAÎNE de cette donnée — point de passage unique (contrôle
+     * d'accès à la charge de l'appelant).
+     *
+     * ⚠ CE POINT COUVRE D'UN SEUL GESTE LES 52 ROUTES, L'ASSISTANT ET LA REPRISE. C'est
+     * la raison pour laquelle la connaissance des liens protégés est posée ICI et non dans
+     * un contrôleur : elle n'avait atteint qu'`AvenantController`, si bien qu'effacer une
+     * opportunité de renouvellement depuis une liste emportait la POLICE qu'elle fait
+     * évoluer. Un `remove()` nu ne suffit pas — la base refuse presque toutes les
+     * cascades, et Doctrine en déclare trois qui REMONTENT vers le parent.
+     *
+     * @param Progression|null $progression rapporteur d'avancement, ou null pour ne rien publier
+     *
+     * @return array{detruits: int, detaches: int, conservations: string[], parNature: array<int, array{entite: string, libelle: string, count: int}>}
+     *
+     * @throws MutationException si le plan est refusé (le motif est en langage métier)
+     */
+    public function commitDelete(object $entity, ?Progression $progression = null): array
     {
-        $this->em->remove($entity);
-        $this->em->flush();
+        $plan = $this->suppression->planifier($entity);
+        if ($plan->estBloque()) {
+            throw MutationException::bloque(implode(' ', $plan->refus));
+        }
+
+        return $this->suppression->executer($plan, $progression);
+    }
+
+    /** La portée d'une suppression, telle qu'elle sera exécutée — pour l'annoncer d'abord. */
+    public function planifierSuppression(object $entity): PlanDeSuppression
+    {
+        return $this->suppression->planifier($entity);
     }
 
     // ───────────────────────────── Chemin IA ──────────────────────────────────
@@ -398,9 +428,20 @@ class WorkspaceMutationService
             // (cf. LiensProteges). Supprimer une opportunité dérivée emporterait
             // sinon la POLICE qu'elle fait évoluer — l'inverse exact de l'intention.
             LiensProteges::dissocier($cible);
-            $this->commitDelete($cible);
+            $rapport = $this->commitDelete($cible);
 
-            return ['op' => $op->op, 'entite' => $op->entityShortName, 'libelle' => $libelle, 'cible' => $cibleLabel, 'id' => null];
+            // ⚠ KET DOIT RENDRE COMPTE COMME L'ÉCRAN. La suppression emporte toute la
+            // chaîne : dire « Opportunité supprimée » sans dire que la facture et son
+            // règlement sont partis avec — ou qu'une facture a été CONSERVÉE parce qu'elle
+            // couvre encore une autre affaire — serait taire l'essentiel à celui qui ne
+            // voit que la conversation.
+            return [
+                'op' => $op->op, 'entite' => $op->entityShortName, 'libelle' => $libelle,
+                'cible' => $cibleLabel, 'id' => null,
+                'lies' => max(0, (int) ($rapport['detruits'] ?? 1) - 1),
+                'portee' => $rapport['parNature'] ?? [],
+                'conservations' => $rapport['conservations'] ?? [],
+            ];
         }
 
         // Renvois vers les créations DÉJÀ exécutées de ce plan : résolus en id réels

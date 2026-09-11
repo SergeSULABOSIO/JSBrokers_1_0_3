@@ -5,6 +5,10 @@ import { DefilementChips } from './chips-defilement.js';
 // masquerait la dépendance réelle — et un jour où ce voisin cesserait de la ré-exporter,
 // elle vaudrait `undefined` sans que rien ne l'ait annoncé.
 import { choixARestaurer } from './choix-persiste.js';
+// Le lecteur de flux NDJSON est le MÊME que celui de la suppression en chaîne : sa
+// subtilité — une ligne JSON peut arriver coupée en deux paquets — ne doit exister qu'à
+// un seul endroit.
+import { lireFluxNdjson } from './flux-ndjson.js';
 import {
     cleDeLOnglet,
     cleDuChoix,
@@ -1037,63 +1041,11 @@ export default class extends Controller {
      * ce qu'on cherche à éviter.
      */
     async #lireFlux(url, options) {
-        const response = await fetch(url, {
-            ...options,
-            headers: { 'X-Requested-With': 'XMLHttpRequest', ...(options.headers || {}) },
-        });
-
-        if (!response.ok) {
-            // Un refus survient AVANT le flux (droits, format) : le corps est alors du
-            // JSON ordinaire, et son message vaut mieux qu'un code HTTP nu.
-            const texte = (await response.text()).trim();
-            let message = texte;
-            try {
-                message = JSON.parse(texte).message || texte;
-            } catch {
-                // Corps non JSON : on relaie le texte brut.
-            }
-            throw new Error(message || `HTTP ${response.status}`);
-        }
-
-        const lecteur = response.body.getReader();
-        const decodeur = new TextDecoder();
-        let tampon = '';
-        let dernier = null;
-
-        for (;;) {
-            const { done, value } = await lecteur.read();
-            if (done) break;
-
-            tampon += decodeur.decode(value, { stream: true });
-
-            // Une ligne peut arriver coupée en deux paquets : on ne traite que celles
-            // qui sont complètes, et on garde le reste pour le tour suivant.
-            const lignes = tampon.split('\n');
-            tampon = lignes.pop() ?? '';
-
-            for (const ligne of lignes) {
-                this.#consommer(ligne, (charge) => { dernier = charge; });
-            }
-        }
-
-        // Dernière ligne éventuellement restée dans le tampon.
-        this.#consommer(tampon, (charge) => { dernier = charge; });
-
-        return dernier;
+        return lireFluxNdjson(url, options, (charge) => this.#consommer(charge));
     }
 
-    /** Traite une ligne du flux : progression publiée, résultat mémorisé. */
-    #consommer(ligne, garderResultat) {
-        const texte = (ligne || '').trim();
-        if (!texte) return;
-
-        let charge;
-        try {
-            charge = JSON.parse(texte);
-        } catch {
-            return; // Ligne illisible : on ne casse pas le flux pour autant.
-        }
-
+    /** Traite une ligne du flux : progression publiée, erreur levée, résultat retenu par le lecteur. */
+    #consommer(charge) {
         if (charge.type === 'progres') {
             this.#publierProgression(charge);
             // La progression d'un palier nomme `fait` ce que l'état du run nomme
@@ -1109,8 +1061,6 @@ export default class extends Controller {
         if (charge.type === 'erreur') {
             throw new Error(charge.message || "Le palier n'a pas abouti.");
         }
-
-        garderResultat(charge);
     }
 
     /** Bascule la barre globale en mode chiffré. */

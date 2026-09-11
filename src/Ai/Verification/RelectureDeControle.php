@@ -98,7 +98,16 @@ final class RelectureDeControle
             if (($lignJournal['op'] ?? '') === 'delete') {
                 // Une suppression est vérifiée par l'ABSENCE : l'id journalisé est
                 // nul par construction, il n'y a plus rien à relire.
-                $resultat['constats'][] = sprintf('Suppression effectuée : %s.', (string) ($lignJournal['libelle'] ?? ''));
+                //
+                // ⚠ MAIS LA PORTÉE, ELLE, SE DIT. Effacer une opportunité emporte ses
+                // propositions, ses échéances, sa facture et son règlement : annoncer la
+                // seule tête, c'est taire l'essentiel à quelqu'un qui ne voit que la
+                // conversation — alors que l'écran, lui, l'affiche. Même geste, même
+                // compte rendu.
+                $resultat['constats'][] = $this->constatDeSuppression($lignJournal);
+                foreach ((array) ($lignJournal['conservations'] ?? []) as $conservation) {
+                    $resultat['constats'][] = (string) $conservation;
+                }
                 continue;
             }
 
@@ -169,6 +178,37 @@ final class RelectureDeControle
         $resultat['conforme'] = $resultat['ecarts'] === [];
 
         return $resultat;
+    }
+
+    /**
+     * CE QUI EST PARTI, ET AVEC QUOI.
+     *
+     * « Suppression effectuée : Pistes » était vrai et inutile. Le cabinet a besoin de
+     * savoir que la proposition, l'échéancier, la facture et son règlement ont suivi —
+     * c'est ce que la corbeille de l'écran affiche depuis toujours, et ce que la
+     * conversation taisait.
+     *
+     * @param array<string, mixed> $ligne ligne de journal d'une suppression
+     */
+    private function constatDeSuppression(array $ligne): string
+    {
+        $libelle = trim((string) ($ligne['libelle'] ?? ''));
+        $cible = trim((string) ($ligne['cible'] ?? ''));
+        $entete = $cible !== '' ? sprintf('%s « %s »', $libelle, $cible) : $libelle;
+
+        $portee = [];
+        foreach ((array) ($ligne['portee'] ?? []) as $nature) {
+            $nombre = (int) ($nature['count'] ?? 0);
+            if ($nombre > 0) {
+                $portee[] = sprintf('%d %s', $nombre, (string) ($nature['libelle'] ?? ''));
+            }
+        }
+
+        if ($portee === []) {
+            return sprintf('Suppression effectuée : %s.', $entete);
+        }
+
+        return sprintf('Suppression effectuée : %s, et avec elle %s.', $entete, implode(', ', $portee));
     }
 
     /**

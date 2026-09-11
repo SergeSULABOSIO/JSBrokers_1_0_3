@@ -297,6 +297,7 @@ class KetMutationTest extends TestCase
         ?CascadeImpactAnalyzer $cascade = null,
         ?EntityManagerInterface $em = null,
         ?FormFactoryInterface $forms = null,
+        ?\App\Service\Workspace\SuppressionEnCascade $suppression = null,
     ): WorkspaceMutationService {
         $emResolved = $em ?? $this->createMock(EntityManagerInterface::class);
         $formsResolved = $forms ?? $this->formFactoryJamaisAppele();
@@ -325,6 +326,10 @@ class KetMutationTest extends TestCase
             // Ce qu'une entité porte en naissant. Sans état ni dépendance : la vraie fait
             // l'affaire, et un double masquerait ce qu'elle pose réellement.
             new \App\Service\Workspace\ValeursDeNaissance(),
+            // Le moteur de suppression en chaîne. La plupart de ces tests portent sur le
+            // fail-closed et le périmètre : un double suffit, sauf à celui qui éprouve
+            // justement la suppression.
+            $suppression ?? $this->createMock(\App\Service\Workspace\SuppressionEnCascade::class),
         );
     }
 
@@ -414,9 +419,18 @@ class KetMutationTest extends TestCase
     {
         $cible = (new Client())->setNom('Client à supprimer');
 
-        $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects($this->once())->method('remove')->with($cible);
-        $em->expects($this->once())->method('flush');
+        // La suppression ne se fait plus par un `remove()` nu : elle passe par le moteur
+        // de chaîne, qui planifie puis exécute. C'est le MÊME point de passage que les
+        // 48 routes de l'écran — si Ket l'empruntait autrement, elle contournerait les
+        // liens protégés et détruirait une police en supprimant son renouvellement.
+        $plan = new \App\Service\Workspace\PlanDeSuppression(Client::class, 5);
+        $suppression = $this->createMock(\App\Service\Workspace\SuppressionEnCascade::class);
+        $suppression->expects($this->once())->method('planifier')->with($cible)->willReturn($plan);
+        $suppression->expects($this->once())->method('executer')->willReturn([
+            'detruits' => 3, 'detaches' => 1,
+            'conservations' => ['Note ND-1 conservée : 2 de ses 5 lignes se rattachent encore à une autre affaire.'],
+            'parNature' => [['entite' => 'Contact', 'libelle' => 'Contacts', 'count' => 2]],
+        ]);
 
         $cascade = $this->createMock(CascadeImpactAnalyzer::class);
         $cascade->method('analyserSuppression')->willReturn(new CascadeImpact());
@@ -425,7 +439,9 @@ class KetMutationTest extends TestCase
             $this->resolver(true),
             $this->searchRetournant($cible),
             $cascade,
-            $em,
+            null,
+            null,
+            $suppression,
         );
 
         $step = $service->executer(new MutationOperation('delete', 'Client', 5), $this->makeScope(), null);
@@ -435,6 +451,14 @@ class KetMutationTest extends TestCase
         // Contrat du journal (rejoué en clair par le front, renderMutationJournal) :
         // chaque ligne porte `entite` = short name de l'entité touchée.
         $this->assertSame('Client', $step['entite']);
+
+        // ⚠ ET LE JOURNAL DIT CE QUI EST PARTI AVEC, ET CE QUI A ÉTÉ CONSERVÉ. Annoncer
+        // « Client supprimé » en taisant les deux contacts emportés et la facture gardée,
+        // c'est cacher l'essentiel à qui ne voit que la conversation — alors que l'écran,
+        // lui, l'affiche.
+        $this->assertSame(2, $step['lies'], 'La racine ne compte pas parmi les éléments liés.');
+        $this->assertSame([['entite' => 'Contact', 'libelle' => 'Contacts', 'count' => 2]], $step['portee']);
+        $this->assertStringContainsString('conservée', $step['conservations'][0] ?? '');
     }
 
     /**

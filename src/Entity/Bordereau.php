@@ -52,7 +52,10 @@ class Bordereau implements OwnerAwareInterface // Implémente OwnerAwareInterfac
     #[ORM\JoinColumn(nullable: false)]
     private ?Invite $invite = null;
 
-    #[ORM\ManyToOne(inversedBy: 'bordereaus')]
+    // `inversedBy: 'bordereaus'` désignait un champ absent d'`Entreprise` : le cabinet ne
+    // tient aucune collection de ses bordereaux (cf. EntrepriseType réaligné). La colonne
+    // ne change pas, aucune migration — seule la déclaration cesse de mentir.
+    #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     private ?Entreprise $entreprise = null;
 

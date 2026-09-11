@@ -197,6 +197,20 @@ class WorkspaceAccessResolver
         // le droit de leur parent — sans cette ligne, elles tomberaient sur le
         // `return true` final de can(), un fail-open sur une règle du cabinet.
         'PeriodeBlocage' => 'ParametresConge',
+        // ⚠ CES QUATRE-LÀ ONT UNE ROUTE DE SUPPRESSION À ELLES, et n'étaient gouvernées
+        // par personne : `can()` retombait sur son repli permissif, si bien qu'un invité
+        // SANS AUCUN RÔLE pouvait effacer une ligne de facture. Le repli est fait pour
+        // les nœuds qu'on n'atteint qu'à travers le formulaire d'un parent déjà
+        // contrôlé ; une route dédiée ne passe par aucun parent.
+        //
+        // Chacune suit le droit de l'objet dont elle est une ligne : une ligne de facture
+        // suit sa facture, une composante de prime suit sa proposition, une autorité
+        // fiscale suit sa taxe, une ligne de bordereau suit son bordereau. Aucun champ de
+        // rôle créé, aucune migration.
+        'Article' => 'Note',
+        'ChargementPourPrime' => 'Cotation',
+        'AutoriteFiscale' => 'Taxe',
+        'Operation' => 'Bordereau',
     ];
 
     /**
@@ -212,6 +226,12 @@ class WorkspaceAccessResolver
         'HistoriqueDemande' => 'Historique des demandes de congé',
         'RegimeTravail' => 'Régimes de travail',
         'PeriodeBlocage' => 'Périodes de blocage',
+        // ⚠ CETTE CARTE EST LIÉE À `MutationAllowlist` PAR UN TEST DE PARITÉ, et la liste
+        // d'écriture sert elle-même à construire les rubriques du gabarit d'échange. Y
+        // ajouter un nom ajoute donc une feuille au classeur : les quatre sous-entités
+        // rattachées récemment à un parent (ligne de facture, composante de prime,
+        // autorité fiscale, ligne de bordereau) sont volontairement absentes d'ici, et
+        // leurs libellés vivent avec le moteur qui en a besoin (SuppressionEnCascade).
     ];
 
     public function __construct(
@@ -271,6 +291,24 @@ class WorkspaceAccessResolver
     public function isRoleManagementEntity(string $entityShortName): bool
     {
         return in_array($entityShortName, self::ROLE_MANAGEMENT_ENTITIES, true);
+    }
+
+    /**
+     * CETTE ENTITÉ EST-ELLE GOUVERNÉE PAR UN DROIT — le sien, celui d'un parent déclaré,
+     * ou la gestion des invités ?
+     *
+     * ⚠ CE QUI N'EST PAS GOUVERNÉ TOMBE SUR LE REPLI PERMISSIF de {@see can()}. Ce repli
+     * existe pour les nœuds qu'on n'atteint qu'à travers le formulaire d'un parent DÉJÀ
+     * contrôlé ; une route de suppression dédiée, elle, ne passe par aucun parent. Quatre
+     * entités s'y trouvaient — dont la ligne de facture, qu'un invité sans aucun rôle
+     * pouvait donc effacer. Un test du routeur rend désormais le trou impossible à
+     * rouvrir : la 53ᵉ route créée sans droit fera rougir la suite.
+     */
+    public function estGouvernee(string $entityShortName): bool
+    {
+        return isset(self::MAP[$entityShortName])
+            || isset(self::GOUVERNANCE_PARENT[$entityShortName])
+            || $this->isRoleManagementEntity($entityShortName);
     }
 
     /**

@@ -88,11 +88,23 @@ class TypeRevenu
     #[Groups(['list:read'])]
     private ?Chargement $typeChargement = null;
 
-    #[ORM\ManyToOne(inversedBy: 'revenus')]
+    /**
+     * ⚠ DEUX LIENS SANS CÔTÉ INVERSE, ET C'EST VOULU.
+     *
+     * Ils annonçaient `inversedBy: 'revenus'` et `inversedBy: 'typeRevenu'` — deux champs
+     * qui n'ont jamais existé sur `Note` ni sur `Article`. `doctrine:schema:validate` le
+     * signalait, et le moteur de suppression en chaîne, qui lit les métadonnées pour
+     * savoir ce qui appartient à quoi, y voyait une collection à suivre.
+     *
+     * ⚠ ET ON NE CRÉE SURTOUT PAS CES COLLECTIONS. Un type de revenu est un élément du
+     * CATALOGUE du cabinet : le déclarer enfant d'une facture le ferait détruire avec
+     * elle. Ces colonnes sont nullables, le lien se coupe donc tout seul.
+     */
+    #[ORM\ManyToOne]
     #[Groups(['list:read'])]
     private ?Note $note = null;
 
-    #[ORM\ManyToOne(inversedBy: 'typeRevenu')]
+    #[ORM\ManyToOne]
     #[Groups(['list:read'])]
     private ?Article $article = null;
 
