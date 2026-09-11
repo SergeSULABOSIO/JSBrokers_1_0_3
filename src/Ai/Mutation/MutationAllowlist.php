@@ -69,6 +69,18 @@ final class MutationAllowlist
         // 632 pour un intermédiaire externe) — jamais le type d'enregistrement.
         'ReversementRetroAgent',
         'RevenuPourCourtier', // « Revenus »
+        // ⚠ CETTE LISTE N'EST PAS QUE CELLE DE KET : `CanevasDEchange` la parcourt pour
+        // construire les rubriques du gabarit d'import/export. Y inscrire une entité lui
+        // ajoute donc une FEUILLE au classeur, avec ses colonnes, son entrée de
+        // dictionnaire et ses couleurs — ce qui ne s'improvise pas au détour d'un autre
+        // chantier. Ligne de facture, composante de prime, autorité fiscale et ligne de
+        // bordereau restent donc dehors : elles s'écrivent par le formulaire de leur
+        // parent, et leur SUPPRESSION est désormais gouvernée par le droit de ce parent
+        // (WorkspaceAccessResolver::GOUVERNANCE_PARENT), ce qui était le vrai trou.
+        //
+        // ⚠ ET « Operation » NE POURRAIT PAS Y ENTRER : elle n'a pas de colonne
+        // `entreprise`, alors que toute ressource d'échange est filtrée par cabinet. L'y
+        // mettre a rendu une erreur sémantique DQL au premier export.
         'Chargement',      // « Types Chargements »
         'TypeRevenu',
         'Taxe',

@@ -151,7 +151,9 @@ class AvenantController extends AbstractController
      * Le gating Suppression + le métrage sont délégués à handleDeleteApi (trait).
      */
     #[Route('/api/delete-piste-derivee/{id}', name: 'api.delete_piste_derivee', requirements: ['id' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function deletePisteDerivee(Avenant $avenant): JsonResponse
+    // `Response` et non `JsonResponse` : le socle DIFFUSE l'avancement quand le client le
+    // demande (`Accept: application/x-ndjson`), et rend alors un flux — jamais un objet.
+    public function deletePisteDerivee(Avenant $avenant): Response
     {
         // Scoping : l'avenant doit appartenir à l'espace de travail courant.
         if ($avenant->getEntreprise()?->getId() !== $this->getEntreprise()->getId()) {

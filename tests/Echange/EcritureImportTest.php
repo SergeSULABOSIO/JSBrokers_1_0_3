@@ -495,18 +495,19 @@ class EcritureImportTest extends WebTestCase
     }
 
     /**
-     * ⚠ SUPPRIMER UNE PISTE REPRISE NE DOIT PAS RENDRE UNE ERREUR 500 MUETTE.
+     * ⚠ SUPPRIMER UNE PISTE REPRISE EMPORTE SA FACTURE.
      *
      * Depuis que la reprise enregistre la commission déjà encaissée, elle crée une note et
-     * son article — lequel référence le revenu du courtier. Supprimer la piste fait donc
-     * remonter la cascade jusqu'à ce revenu, que la base refuse d'effacer tant qu'une
-     * facture s'y rattache. C'est un REFUS, pas une panne : et il vaut mieux qu'il en soit
-     * ainsi, car détruire la note en cascade détruirait une pièce comptable.
+     * son article, lequel référence le revenu du courtier. La base refusait donc la
+     * suppression, et l'écran renvoyait l'utilisateur à un travail manuel qu'il ne pouvait
+     * pas mener à bien : effacer à la main la note, ses lignes, son règlement, ses
+     * chargements, ses commissions, ses échéances, dans le bon ordre. Personne ne le fait.
      *
-     * L'écran rendait « Erreur lors de la suppression » en 500, sans dire ni pourquoi ni
-     * quoi faire. Il dit désormais ce qui bloque.
+     * ⚠ LA NOTE NE PART QUE PARCE QU'ELLE SE VIDE ENTIÈREMENT. Une facture à cheval sur
+     * deux affaires est CONSERVÉE, amputée de ses seules lignes concernées
+     * (cf. SuppressionEnChaineTest).
      */
-    public function testSupprimerUnePisteRepriseExpliqueCeQuiLaRetient(): void
+    public function testSupprimerUnePisteRepriseEmporteToutSonDossier(): void
     {
         [$entreprise, $invite] = $this->fixture();
         $this->catalogueDeRevenu($entreprise, $invite);
@@ -527,43 +528,43 @@ class EcritureImportTest extends WebTestCase
             [$entreprise->getId()],
         );
         self::assertGreaterThan(0, $idPiste, 'La reprise doit avoir créé une opportunité.');
+        self::assertSame(1, $this->compter('note', $entreprise), 'La reprise a bien créé une facture.');
 
         $this->client->request('DELETE', '/admin/piste/api/delete/' . $idPiste);
 
         self::assertSame(
-            409,
+            200,
             $this->client->getResponse()->getStatusCode(),
-            'Un élément encore utilisé se REFUSE (409), il ne fait pas planter le serveur (500).',
+            'La suppression emporte toute la chaîne, sans violer aucune contrainte.',
         );
 
-        // ⚠ LE REFUS DOIT NOMMER CE QUI BLOQUE, sans quoi l'utilisateur reclique et conclut
-        // à une panne. On ne fige pas LAQUELLE des contraintes saute la première — cela
-        // dépend de l'ordre dans lequel Doctrine démonte la cascade, qui ne nous appartient
-        // pas —, mais le message doit désigner quelque chose et dire quoi faire.
-        // ⚠ ON DÉCODE AVANT DE COMPARER : `json_encode` échappe l'apostrophe en `'`,
-        // et une recherche sur la charge brute ne trouverait jamais un texte français.
+        // ⚠ ON DÉCODE AVANT DE COMPARER : `json_encode` échappe l'apostrophe, et une
+        // recherche sur la charge brute ne trouverait jamais un texte français.
         $message = (string) (json_decode(
             (string) $this->client->getResponse()->getContent(),
             true,
         )['message'] ?? '');
 
-        self::assertStringContainsString("s'y rattache encore", $message);
-        self::assertStringContainsString("Supprimez-la d'abord", $message);
+        self::assertStringContainsString('lié', $message, 'Le compte rendu dit ce qui est parti avec.');
         self::assertStringNotContainsString(
             'Erreur lors de la suppression',
             $message,
-            'Le message générique ne dit ni pourquoi ni quoi faire : c\'est lui qu\'on remplace.',
+            'Le message générique ne dit ni pourquoi ni quoi faire.',
         );
 
-        // ⚠ ET RIEN N'A ÉTÉ DÉTRUIT AU PASSAGE. Un refus qui aurait déjà emporté les
-        // chargements ou les revenus laisserait un dossier à moitié démantelé.
-        self::assertSame(
-            1,
-            (int) $this->em()->getConnection()->fetchOne(
-                'SELECT COUNT(*) FROM note WHERE entreprise_id = ?',
-                [$entreprise->getId()],
-            ),
-            'La pièce comptable survit au refus.',
+        // ⚠ TOUTE LA CHAÎNE EST PARTIE, facture et règlement compris : c'est la demande
+        // d'origine — « il faut détruire la note aussi ».
+        foreach (['piste', 'cotation', 'avenant', 'tranche', 'revenu_pour_courtier', 'article', 'note'] as $table) {
+            self::assertSame(0, $this->compter($table, $entreprise), sprintf('La table %s est vide.', $table));
+        }
+    }
+
+    /** Nombre de lignes d'une table pour ce cabinet. */
+    private function compter(string $table, \App\Entity\Entreprise $entreprise): int
+    {
+        return (int) $this->em()->getConnection()->fetchOne(
+            sprintf('SELECT COUNT(*) FROM `%s` WHERE entreprise_id = ?', $table),
+            [$entreprise->getId()],
         );
     }
 

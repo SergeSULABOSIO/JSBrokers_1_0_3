@@ -26,6 +26,8 @@ export default class extends Controller {
         "confirmButton",
         "feedback",
         "progressBarContainer",
+        "progressBar",
+        "progressLabel",
         "header",
         "irreversibleAlert",
         "itemDetailsContainer",
@@ -69,6 +71,15 @@ export default class extends Controller {
         this.boundHandleCerveauEvent = this.handleCerveauEvent.bind(this);
         document.addEventListener('ui:confirmation.request', this.boundHandleCerveauEvent);
         document.addEventListener('ui:confirmation.error', this.boundHandleCerveauEvent); // NOUVEAU
+        // L'avancement d'une opération longue confirmée ici (suppression en chaîne).
+        //
+        // ⚠ LA BARRE DE CETTE MODALE PORTE LA VÉRITÉ DE L'OPÉRATION, et pas la barre
+        // globale du haut : celle-ci vit et meurt avec la boîte, donc aucun voisin — un
+        // onglet qui finit de charger, une liste qui se rafraîchit — ne peut l'éteindre
+        // au milieu du travail.
+        document.addEventListener('ui:confirmation.progress', this.boundHandleCerveauEvent);
+        // Ce que la suppression emporte, calculé par le serveur et affiché avant de confirmer.
+        document.addEventListener('ui:confirmation.impacts', this.boundHandleCerveauEvent);
 
         this.boundClose = this.close.bind(this);
         document.addEventListener('ui:confirmation.close', this.boundClose);
@@ -91,6 +102,8 @@ export default class extends Controller {
         document.removeEventListener('ui:confirmation.request', this.boundHandleCerveauEvent);
         document.removeEventListener('ui:confirmation.close', this.boundClose);
         document.removeEventListener('ui:confirmation.error', this.boundHandleCerveauEvent); // NOUVEAU
+        document.removeEventListener('ui:confirmation.progress', this.boundHandleCerveauEvent);
+        document.removeEventListener('ui:confirmation.impacts', this.boundHandleCerveauEvent);
         this.element.removeEventListener('shown.bs.modal', this.boundArm);
         this.element.removeEventListener('hidden.bs.modal', this.boundRestoreBackdrops);
     }
@@ -114,6 +127,75 @@ export default class extends Controller {
             case 'ui:confirmation.error': // NOUVEAU : Gère l'erreur spécifique de confirmation
                 this.handleError(event.detail);
                 break;
+            case 'ui:confirmation.progress':
+                this.setProgress(event.detail || {});
+                break;
+            case 'ui:confirmation.impacts':
+                this.showImpacts(event.detail || {});
+                break;
+        }
+    }
+
+    /**
+     * Complète la boîte avec CE QUE LA SUPPRESSION EMPORTE, tel que le serveur l'a calculé.
+     *
+     * ⚠ CES LIGNES ARRIVENT APRÈS L'OUVERTURE, et c'est voulu : faire attendre la boîte
+     * le temps d'interroger le serveur rendrait le clic mou sans rien apprendre de plus.
+     * Elles se distinguent des éléments sélectionnés par leur icône.
+     *
+     * @param {{lignes?: string[], bloquant?: boolean}} payload
+     */
+    showImpacts(payload) {
+        const lignes = Array.isArray(payload.lignes) ? payload.lignes.filter(Boolean) : [];
+        if (lignes.length === 0 || !this.hasItemListTarget) return;
+
+        lignes.forEach((ligne) => {
+            const item = document.createElement('li');
+            item.className = 'list-group-item py-1 px-0 border-0 d-flex align-items-center bg-transparent text-muted';
+            const icone = document.createElement('i');
+            icone.className = 'bi bi-diagram-3 me-2';
+            item.appendChild(icone);
+            // textContent : ces lignes citent des données du cabinet (référence de facture,
+            // nom de client). Un nom contenant du balisage s'exécuterait.
+            item.appendChild(document.createTextNode(ligne));
+            this.itemListTarget.appendChild(item);
+        });
+
+        if (this.hasItemDetailsContainerTarget) {
+            this.itemDetailsContainerTarget.style.display = 'block';
+        }
+        // Un refus connu d'avance : inutile de laisser croire que le geste va aboutir.
+        if (payload.bloquant === true && this.hasConfirmButtonTarget) {
+            this.confirmButtonTarget.disabled = true;
+        }
+    }
+
+    /**
+     * Publie l'avancement MESURÉ de l'opération en cours.
+     *
+     * ⚠ RIEN N'EST ANIMÉ ICI. Le pourcentage vient du serveur, qui connaît son
+     * dénominateur avant de commencer. Une barre qui progresse toute seule est pire
+     * qu'une barre indéterminée : elle promet une échéance qu'elle ne connaît pas.
+     *
+     * @param {{pct?: number, libelle?: string}} etat
+     */
+    setProgress(etat) {
+        if (!this.hasProgressBarContainerTarget) return;
+
+        this.toggleProgressBar(true);
+        this.progressBarContainerTarget.classList.add('is-determinate');
+
+        const pct = Math.max(0, Math.min(100, Number(etat.pct) || 0));
+        this.progressBarContainerTarget.style.setProperty('--dialog-progress', `${pct}%`);
+        this.progressBarContainerTarget.setAttribute('aria-valuenow', String(Math.round(pct)));
+
+        if (this.hasProgressLabelTarget) {
+            const libelle = (etat.libelle || '').trim();
+            // textContent, JAMAIS innerHTML : ce libellé porte des données du cabinet
+            // (référence de facture, nom de client), et un nom contenant du balisage
+            // s'exécuterait.
+            this.progressLabelTarget.textContent = libelle;
+            this.progressLabelTarget.hidden = libelle === '';
         }
     }
 
@@ -161,6 +243,10 @@ export default class extends Controller {
         if (this.hasConfirmButtonTarget) {
             const base = confirmClass || 'btn btn-danger';
             this.confirmButtonTarget.className = base;
+            // Une ouverture précédente a pu transformer ce bouton en « Fermer » après un
+            // échec partiel : on lui rend son rôle, sans quoi la boîte suivante
+            // s'ouvrirait avec un bouton qui ne confirme plus rien.
+            this.confirmButtonTarget.setAttribute('data-action', 'click->confirmation-dialog#confirm');
         }
 
         // Alerte "irréversible" masquable
@@ -182,8 +268,15 @@ export default class extends Controller {
         }
 
         // NOUVEAU : Gère l'affichage des descriptions des éléments concernés.
+        //
+        // ⚠ LA LISTE SE VIDE DANS TOUS LES CAS. Elle ne l'était qu'en présence de
+        // descriptions : la portée annoncée par le serveur au tour précédent (« 2
+        // Propositions seront supprimées avec ») serait réapparue sur une confirmation
+        // sans rapport, et aurait parlé d'éléments qui ne sont plus à l'écran.
+        if (this.hasItemListTarget) {
+            this.itemListTarget.innerHTML = '';
+        }
         if (itemDescriptions && itemDescriptions.length > 0) {
-            this.itemListTarget.innerHTML = ''; // Vide la liste précédente
             itemDescriptions.forEach(description => {
                 const li = document.createElement('li');
                 li.className = 'list-group-item py-1 px-0 border-0 d-flex align-items-center bg-transparent';
@@ -324,10 +417,50 @@ export default class extends Controller {
      * @param {object} payload - Le payload de l'événement d'erreur.
      * @param {string} payload.error - Le message d'erreur.
      */
+    /**
+     * Gère un échec — total ou PARTIEL — survenu pendant la confirmation.
+     *
+     * ⚠ CHAQUE ÉCHEC EST NOMMÉ, ET LA BOÎTE RESTE OUVERTE POUR LE DIRE. Sur dix éléments
+     * dont trois refusent de partir, un toast unique de dix secondes ne laisse à personne
+     * le temps de lire trois motifs — et cette boîte est la seule surface qui les porte.
+     *
+     * ⚠ ET RIEN N'EST INJECTÉ EN HTML BRUT. Ces motifs viennent du serveur et citent des
+     * données du cabinet (« Note ND-2026-014 conservée… ») : un nom de client contenant
+     * du balisage s'exécuterait.
+     *
+     * @param {{error?: string, motifs?: string[], fermer?: boolean}} payload
+     */
     handleError(payload) {
         this.toggleLoading(false); // Stoppe le spinner
         this.toggleProgressBar(false);
-        this.feedbackTarget.innerHTML = payload.error || "Une erreur est survenue.";
+        this.feedbackTarget.replaceChildren();
+
+        const entete = document.createElement('div');
+        entete.className = 'fw-semibold';
+        entete.textContent = payload.error || 'Une erreur est survenue.';
+        this.feedbackTarget.appendChild(entete);
+
+        const motifs = Array.isArray(payload.motifs) ? payload.motifs.filter(Boolean) : [];
+        if (motifs.length > 0) {
+            const liste = document.createElement('ul');
+            liste.className = 'mb-0 mt-1 ps-3 small';
+            motifs.forEach((motif) => {
+                const item = document.createElement('li');
+                item.textContent = motif;
+                liste.appendChild(item);
+            });
+            this.feedbackTarget.appendChild(liste);
+        }
+
+        // Plus rien à confirmer : le bouton ne doit pas inviter à recommencer un geste
+        // dont une partie a déjà abouti.
+        if (payload.fermer === true && this.hasConfirmButtonTarget) {
+            this.onConfirmDetail = null;
+            const texte = this.confirmButtonTarget.querySelector('.button-text');
+            if (texte) texte.textContent = 'Fermer';
+            this.confirmButtonTarget.className = 'btn btn-secondary';
+            this.confirmButtonTarget.setAttribute('data-action', 'click->confirmation-dialog#close');
+        }
     }
 
     // Gère l'affichage du spinner et l'état du bouton de confirmation.
@@ -405,6 +538,18 @@ export default class extends Controller {
     toggleProgressBar(isLoading) {
         if (this.hasProgressBarContainerTarget) {
             this.progressBarContainerTarget.classList.toggle('is-loading', isLoading);
+            if (!isLoading) {
+                // On repart INDÉTERMINÉ : le prochain travail n'a pas forcément de
+                // dénominateur, et une barre restée à 100 % lui ferait annoncer une fin
+                // avant même son début.
+                this.progressBarContainerTarget.classList.remove('is-determinate');
+                this.progressBarContainerTarget.style.removeProperty('--dialog-progress');
+                this.progressBarContainerTarget.removeAttribute('aria-valuenow');
+            }
+        }
+        if (!isLoading && this.hasProgressLabelTarget) {
+            this.progressLabelTarget.textContent = '';
+            this.progressLabelTarget.hidden = true;
         }
     }
 

@@ -44,6 +44,7 @@ use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
 use App\Token\InsufficientTokensException;
 use App\Token\TokenAccountService;
+use App\Service\Workspace\MutationException;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Service\Workspace\WorkspaceMutationService;
 use App\Service\Workspace\ChampsObligatoiresInspector;
@@ -54,9 +55,13 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use App\Repository\EntrepriseRepository;
 use App\Repository\InviteRepository;
+use App\Echange\Service\FluxNdjson;
+use App\Echange\Service\Progression;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -159,6 +164,22 @@ trait ControllerUtilsTrait
     public function setWorkspaceMutationService(WorkspaceMutationService $workspaceMutationService): void
     {
         $this->workspaceMutationService = $workspaceMutationService;
+    }
+
+    /**
+     * La requête en cours, pour savoir si le client veut SUIVRE une suppression ou
+     * seulement en connaître l'issue.
+     *
+     * ⚠ EN SETTER, ET NON EN ARGUMENT DE MÉTHODE. Ajouter un paramètre `Request` à
+     * handleDeleteApi() aurait obligé à toucher les 48 contrôleurs qui l'appellent, pour
+     * une information dont aucun d'eux n'a à se soucier.
+     */
+    private ?RequestStack $requestStack = null;
+
+    #[Required]
+    public function setRequestStack(RequestStack $requestStack): void
+    {
+        $this->requestStack = $requestStack;
     }
 
     /**
@@ -1225,12 +1246,19 @@ trait ControllerUtilsTrait
     }
 
     /**
-     * Handles the API deletion of any given entity.
+     * Supprime une donnée ET TOUTE SA CHAÎNE — socle partagé par les 48 routes de
+     * suppression de l'espace de travail.
+     *
+     * ⚠ LA RÉPONSE EST DIFFUSÉE SI, ET SEULEMENT SI, LE CLIENT LE DEMANDE. Effacer une
+     * opportunité peut emporter cent lignes : l'écran doit voir l'avancement du début à la
+     * fin, comme la reprise de données sait déjà le faire. Mais l'assistant, les tests et
+     * tout appelant programmatique attendent un objet JSON — leur imposer un flux les
+     * casserait tous. L'en-tête `Accept` tranche, et l'ancien contrat reste intact, au mot
+     * près.
      *
      * @param object $entity The entity instance to delete.
-     * @return JsonResponse
      */
-    private function handleDeleteApi(object $entity): JsonResponse
+    private function handleDeleteApi(object $entity): Response
     {
         // CONTRÔLE D'ACCÈS (suppression) : exige le droit de Suppression sur l'entité
         // (ou la gestion des invités pour Invite / RolesEn*).
@@ -1241,18 +1269,72 @@ trait ControllerUtilsTrait
         // On mémorise l'invité cible AVANT suppression (pour l'e-mail de périmètre si
         // c'est un rôle RolesEn* — après remove(), la relation n'est plus lisible).
         $roleInvite = $this->roleTargetInvite($entity);
+        $entityName = $this->getEntityName($entity);
 
+        if (!$this->clientVeutLeFluxDeSuppression()) {
+            ['statut' => $statut, 'corps' => $corps] = $this->executerLaSuppression($entity, $entityName, $roleInvite, null);
+
+            return $this->json($corps, $statut);
+        }
+
+        return new StreamedResponse(function () use ($entity, $entityName, $roleInvite): void {
+            FluxNdjson::demarrer();
+
+            // ⚠ LE REFUS VOYAGE EN LIGNE, PAS EN CODE HTTP. Une réponse diffusée a déjà
+            // envoyé son 200 quand on découvre l'échec : le motif doit donc être écrit dans
+            // le flux, sans quoi l'écran verrait une suppression réussie qui n'a pas eu lieu.
+            $resultat = $this->executerLaSuppression($entity, $entityName, $roleInvite, new Progression(
+                0,
+                static fn (array $etat) => FluxNdjson::ligne($etat),
+            ));
+
+            FluxNdjson::ligne([
+                'type'   => 'resultat',
+                'ok'     => $resultat['statut'] === Response::HTTP_OK,
+                'statut' => $resultat['statut'],
+            ] + $resultat['corps']);
+        }, Response::HTTP_OK, FluxNdjson::entetes());
+    }
+
+    /** Le client a-t-il demandé à suivre l'avancement, plutôt qu'un simple verdict ? */
+    private function clientVeutLeFluxDeSuppression(): bool
+    {
+        $requete = $this->requestStack?->getCurrentRequest();
+
+        return $requete !== null
+            && str_contains((string) $requete->headers->get('Accept', ''), 'application/x-ndjson');
+    }
+
+    /**
+     * LE GESTE LUI-MÊME, et son verdict — source unique des deux formes de réponse.
+     *
+     * @return array{statut: int, corps: array<string, mixed>}
+     */
+    private function executerLaSuppression(object $entity, string $entityName, ?Invite $roleInvite, ?Progression $progression): array
+    {
         try {
-            $entityName = $this->getEntityName($entity);
-            // Suppression via le point de passage unique partagé (DRY).
-            $this->workspaceMutationService->commitDelete($entity);
+            // Suppression de TOUTE LA CHAÎNE via le point de passage unique partagé (DRY) :
+            // c'est lui qui coupe les liens protégés, détruit ce qui n'appartient qu'à
+            // cette donnée et détache ce qui appartient aussi à quelqu'un d'autre.
+            $rapport = $this->workspaceMutationService->commitDelete($entity, $progression);
 
             // Périmètre réduit : on notifie l'invité concerné le cas échéant.
             $this->notifyPerimetreIfRoleEntity($roleInvite);
 
             // Using (e) to be more generic with gender.
-            return $this->json(['message' => ucfirst($entityName) . ' supprimé(e) avec succès.']);
-        } catch (\Exception $e) {
+            return ['statut' => Response::HTTP_OK, 'corps' => [
+                'message' => $this->compteRenduDeSuppression($entityName, $rapport),
+                'rapport' => $rapport,
+            ]];
+        } catch (MutationException $e) {
+            // Refus MÉTIER énoncé par le moteur (le cabinet lui-même, une donnée qu'on ne
+            // peut pas atteindre…). Il est déjà rédigé pour l'utilisateur : on le relaie.
+            return ['statut' => Response::HTTP_CONFLICT, 'corps' => ['message' => $e->getMessage()]];
+        } catch (\Throwable $e) {
+            // ⚠ ON ATTRAPE `Throwable`, PAS SEULEMENT `Exception`. Sur le chemin diffusé, la
+            // réponse a déjà commencé : une erreur qui s'échappe ne peut plus être rendue en
+            // page d'erreur, et l'écran resterait sur un flux coupé sans un mot.
+            //
             // ⚠ UN ÉLÉMENT ENCORE UTILISÉ N'EST PAS UNE PANNE DU SERVEUR. La base refuse
             // de couper un lien qu'une autre donnée entretient — c'est elle qui protège la
             // cohérence du portefeuille, et c'est un REFUS, pas une erreur. Rendu en 500
@@ -1261,17 +1343,39 @@ trait ControllerUtilsTrait
             // l'application était cassée.
             $bloquant = $this->tableQuiBloqueLaSuppression($e);
             if ($bloquant !== null) {
-                return $this->json([
-                    'message' => sprintf(
-                        'Impossible de supprimer cet élément : %s s\'y rattache encore. '
-                        . 'Supprimez-la d\'abord, puis réessayez.',
-                        $bloquant,
-                    ),
-                ], Response::HTTP_CONFLICT);
+                return ['statut' => Response::HTTP_CONFLICT, 'corps' => ['message' => sprintf(
+                    'Impossible de supprimer cet élément : %s s\'y rattache encore. '
+                    . 'Supprimez-la d\'abord, puis réessayez.',
+                    $bloquant,
+                )]];
             }
 
-            return $this->json(['message' => 'Erreur lors de la suppression.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return ['statut' => Response::HTTP_INTERNAL_SERVER_ERROR, 'corps' => ['message' => 'Erreur lors de la suppression.']];
         }
+    }
+
+    /**
+     * CE QUI EST PARTI, ET CE QUI EST RESTÉ — en une phrase.
+     *
+     * « Supprimé avec succès » ne dit rien à quelqu'un qui vient d'effacer une opportunité
+     * portant une facture et un règlement : il ignore si sa comptabilité a bougé. La
+     * phrase énonce donc le nombre d'éléments liés emportés, puis — s'il y en a — ce qui a
+     * été délibérément CONSERVÉ, avec son motif.
+     *
+     * @param array{detruits: int, detaches: int, conservations: string[], parNature: array<int, array{entite: string, libelle: string, count: int}>} $rapport
+     */
+    private function compteRenduDeSuppression(string $entityName, array $rapport): string
+    {
+        $lies = max(0, ((int) ($rapport['detruits'] ?? 1)) - 1);
+        $message = ucfirst($entityName) . ' supprimé(e) avec succès.';
+        if ($lies > 0) {
+            $message .= sprintf(' %d élément(s) lié(s) ont été supprimés avec.', $lies);
+        }
+        foreach (($rapport['conservations'] ?? []) as $conservation) {
+            $message .= ' ' . $conservation;
+        }
+
+        return $message;
     }
 
     /**

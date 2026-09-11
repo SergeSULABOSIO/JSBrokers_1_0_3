@@ -2420,6 +2420,28 @@ tr.row-selected:hover > td {
     100% { transform: translateX(500%); }
 }
 
+/* 4.2.b Mode CHIFFRÉ : le serveur connaît son dénominateur, la barre le montre.
+   Une barre qui glisse indéfiniment dit « ça travaille » ; celle-ci dit « on en est là ».
+   La différence compte quand la suppression d'un dossier emporte cent lignes. */
+.dialog-progress-container.is-determinate .dialog-progress-bar {
+    animation: none;
+    transform: none;
+    width: var(--dialog-progress, 0%);
+    background: #0047AB;
+    transition: width .2s linear;
+}
+
+/* L'étape en cours, sous la barre. Jamais la couleur seule pour porter l'information
+   (WCAG 1.4.1) : c'est le TEXTE qui nomme ce qui avance. */
+.dialog-progress-label {
+    padding: .25rem .75rem;
+    font-size: .75rem;
+    color: #495057;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    flex-shrink: 0;
+}
+
 /* 2. On dit au corps de prendre tout l'espace restant et d'organiser les colonnes */
 .custom-modal-scroll .modal-body {
     flex: 1;

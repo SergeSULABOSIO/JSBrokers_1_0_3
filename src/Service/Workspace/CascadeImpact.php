@@ -13,10 +13,16 @@ final class CascadeImpact
     /**
      * @param array<int, array{entite: string, libelle: string, count: int}> $enfants
      * @param string[]                                                        $blocages
+     * @param string[]                                                        $conservations
      */
     public function __construct(
         public readonly array $enfants = [],
         public readonly array $blocages = [],
+        // CE QUI SURVIT, ET POURQUOI. Une facture qui couvre aussi d'autres affaires n'est
+        // pas détruite : seules ses lignes concernées partent. Le taire laisserait croire
+        // qu'elle a disparu — et personne n'irait vérifier une pièce comptable qu'on lui
+        // a annoncée détruite.
+        public readonly array $conservations = [],
     ) {
     }
 
@@ -40,6 +46,6 @@ final class CascadeImpact
             }
         }
 
-        return array_merge($lignes, $this->blocages);
+        return array_merge($lignes, $this->conservations, $this->blocages);
     }
 }

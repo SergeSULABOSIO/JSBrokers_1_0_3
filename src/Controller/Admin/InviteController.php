@@ -262,7 +262,9 @@ class InviteController extends AbstractController
      * Le gating Suppression + le métrage sont délégués à handleDeleteApi (trait).
      */
     #[Route('/api/delete-portefeuille/{id}', name: 'api.delete_portefeuille', requirements: ['id' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function deletePortefeuille(Invite $invite): JsonResponse
+    // `Response` et non `JsonResponse` : le socle DIFFUSE l'avancement quand le client le
+    // demande (`Accept: application/x-ndjson`), et rend alors un flux — jamais un objet.
+    public function deletePortefeuille(Invite $invite): Response
     {
         // Scoping : l'invité doit appartenir à l'espace de travail courant.
         if ($invite->getEntreprise()?->getId() !== $this->getEntreprise()->getId()) {

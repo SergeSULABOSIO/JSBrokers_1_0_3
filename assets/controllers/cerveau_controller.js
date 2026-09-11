@@ -2,6 +2,14 @@ import { Controller } from '@hotwired/stimulus';
 import { } from './base_controller.js';
 import { ouvrirPickerAutonome } from './picker-open.js';
 import { estDelegue, proprietaireDe } from './cerveau-delegations.js';
+// Le même lecteur que la reprise de données : une suppression en chaîne peut emporter
+// cent lignes, et l'écran doit voir l'avancement du début à la fin.
+import { lireFluxNdjson } from './flux-ndjson.js';
+// La règle du lot — séquentielle, et qui nomme CHAQUE refus — vit dans un module pur :
+// ce contrôleur dépend de Stimulus et d'un DOM que la suite JS n'a pas, la règle non.
+import { supprimerEnLot, verdictDuLot } from './suppression-en-lot.js';
+// Ce que la suppression emporte, annoncé AVANT de la confirmer.
+import { annoncerLaPortee } from './apercu-suppression.js';
 
 /**
  * @file Ce fichier contient le contrôleur Stimulus 'cerveau'.
@@ -365,6 +373,7 @@ export default class extends Controller {
                 // NOUVEAU : On détermine si la requête vient d'un widget collection ou d'une liste/onglet.
                 const isFromCollectionWidget = !!payload.context?.originatorId;
 
+                const descriptionsASupprimer = payload.selection.map(s => s.name || `Élément #${s.id}`);
                 const deletePayload = {
                     onConfirm: {
                         type: 'app:api.delete-request',
@@ -372,7 +381,11 @@ export default class extends Controller {
                             ids: payload.selection.map(s => s.id), // On extrait les IDs
                             url: payload.formCanvas.parametres.endpoint_delete_url, // On extrait l'URL du canvas
                             originatorId: payload.context?.originatorId || this.getActiveTabId(),
-                            isFromCollectionWidget: isFromCollectionWidget // On transmet l'info
+                            isFromCollectionWidget: isFromCollectionWidget, // On transmet l'info
+                            // Les mêmes libellés servent à l'annonce ET au motif d'échec :
+                            // « Renouvellement — POL-2026-14 : une facture s'y rattache »
+                            // se comprend, « Élément #117 » non.
+                            descriptions: descriptionsASupprimer,
                         }
                     },
                     title: 'Confirmation de suppression',
@@ -387,9 +400,16 @@ export default class extends Controller {
                         + (payload.formCanvas?.parametres?.suppression_note
                             ? `\n${payload.formCanvas.parametres.suppression_note}`
                             : ''),
-                    itemDescriptions: payload.selection.map(s => s.name || `Élément #${s.id}`)
+                    itemDescriptions: descriptionsASupprimer
                 };
                 this._requestDeleteConfirmation(deletePayload);
+                // La boîte s'ouvre TOUT DE SUITE, et se complète quand le serveur a dit ce
+                // que la suppression emporte : faire attendre l'ouverture rendrait le clic
+                // mou sans rien apprendre de plus.
+                this._annoncerLaPortee(
+                    payload.formCanvas?.parametres?.endpoint_delete_url,
+                    deletePayload.onConfirm.payload.ids,
+                );
                 break;
             case 'ui:status.notify':
                 this.broadcast('app:status.updated', payload);
@@ -1132,58 +1152,83 @@ export default class extends Controller {
      * @param {string} [payload.originatorId] - L'ID du composant qui a initié la demande (pour un rafraîchissement ciblé).
      * @private
      */
-    _handleApiDeleteRequest(payload) {
-        const { ids, url, originatorId, isFromCollectionWidget } = payload;
+    /**
+     * Demande au serveur ce que la suppression emporte, et l'affiche dans la boîte.
+     *
+     * ⚠ C'EST LE MÊME PLAN QUI ANNONCE ET QUI EXÉCUTE. Un second calcul, côté écran,
+     * aurait fini par promettre une portée que l'exécution dément — ce qui est pire que
+     * de ne rien annoncer.
+     *
+     * Un aperçu indisponible ne bloque rien et ne dit rien : la suppression, elle,
+     * expliquera ce qui la retient.
+     * @private
+     */
+    async _annoncerLaPortee(url, ids) {
+        try {
+            const resume = await annoncerLaPortee({
+                url,
+                ids,
+                lire: async (adresse) => {
+                    const reponse = await fetch(adresse, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
 
-        // On crée un tableau de promesses, une pour chaque requête de suppression.
-        const deletePromises = ids.map(id => {
-            const deleteUrl = `${url}/${id}`; // Construit l'URL finale pour chaque ID.
-            return fetch(deleteUrl, { method: 'DELETE' })
-                .then(async (response) => {
-                    if (response.ok) return response.json();
+                    return reponse.ok ? reponse.json() : null;
+                },
+            });
+            if (resume.lignes.length > 0) {
+                this.broadcast('ui:confirmation.impacts', resume);
+            }
+        } catch (erreur) {
+            console.debug(`${this.nomControleur} - Aperçu de suppression indisponible.`, erreur);
+        }
+    }
 
-                    // ⚠ LE SERVEUR SAIT POURQUOI, ET ON LE JETAIT. « Erreur lors de la
-                    // suppression de l'élément 117 » remplaçait un message qui disait, lui,
-                    // ce qui bloquait et quoi faire — par exemple qu'une facture se rattache
-                    // encore à cet élément. L'utilisateur recliquait, obtenait le même
-                    // constat, et concluait à une panne.
-                    let motif = null;
-                    try {
-                        motif = (await response.json())?.message ?? null;
-                    } catch (erreurDeLecture) {
-                        // Réponse vide ou non-JSON : on retombe sur le message générique.
-                    }
+    async _handleApiDeleteRequest(payload) {
+        const { ids, url, originatorId, isFromCollectionWidget, descriptions } = payload;
 
-                    throw new Error(motif || `La suppression de l'élément ${id} a échoué.`);
-                });
+        const issue = await supprimerEnLot({
+            ids,
+            descriptions,
+            publier: (pct, libelle) => this.broadcast('ui:confirmation.progress', { pct, libelle }),
+            supprimer: (id, surProgres) => lireFluxNdjson(`${url}/${id}`, {
+                method: 'DELETE',
+                // ⚠ C'EST CET EN-TÊTE QUI DEMANDE LE FLUX. Sans lui, la route répond comme
+                // avant, d'un seul objet JSON — ce qui laisse intact le contrat des 48
+                // routes pour l'assistant, les commandes et les tests.
+                headers: { Accept: 'application/x-ndjson' },
+            }, (ligne) => {
+                if (ligne.type === 'progres') surProgres(ligne.pct, ligne.libelle);
+            }),
         });
 
-        // On attend que toutes les promesses de suppression soient résolues.
-        Promise.all(deletePromises)
-            .then(results => {
-                const message = results.length > 1 ? `${results.length} éléments supprimés avec succès.` : 'Élément supprimé avec succès.';
-                console.log(`${this.nomControleur} - SUCCÈS: Suppression(s) réussie(s).`, results);
-                this._showNotification(message, 'success');
-                // On réinitialise l'état de la sélection et on notifie tout le monde (toolbar, etc.)
-                this._setSelectionState([]);
+        // La liste est rafraîchie DÈS QU'UNE suppression a abouti, succès partiel compris :
+        // laisser à l'écran des lignes qui n'existent plus est une seconde erreur.
+        if (issue.reussites > 0) {
+            this._setSelectionState([]);
+            if (isFromCollectionWidget) {
+                this.broadcast('app:list.refresh-request', { originatorId });
+            } else {
+                this._requestListRefresh(originatorId);
+            }
+        }
 
-                // NOUVEAU : Logique de rafraîchissement intelligente basée sur l'origine.
-                if (isFromCollectionWidget) {
-                    // C'est un widget de collection (dans un formulaire), on diffuse un événement simple.
-                    this.broadcast('app:list.refresh-request', { originatorId });
-                } else {
-                    // C'est une liste principale ou un onglet de collection, on utilise la logique de rafraîchissement d'onglet.
-                    this._requestListRefresh(originatorId);
-                }
+        const verdict = verdictDuLot(issue);
+        if (verdict.succes) {
+            this._showNotification(verdict.message, 'success');
+            this.broadcast('ui:confirmation.close');
 
-                this.broadcast('ui:confirmation.close');
-            })
-            .catch(error => {
-                console.error("-> ERREUR: Échec de la suppression API.", error);
-                // Notifie la boîte de dialogue de confirmation de l'erreur pour qu'elle l'affiche.
-                this.broadcast('ui:confirmation.error', { error: error.message || "La suppression a échoué." });
-                // La boîte de dialogue de confirmation gérera sa propre fermeture après affichage de l'erreur.
-            });
+            return;
+        }
+
+        console.error(`${this.nomControleur} - Suppression incomplète.`, issue.echecs);
+        this.broadcast('ui:confirmation.error', {
+            error: verdict.message,
+            motifs: verdict.motifs,
+            fermer: verdict.fermer,
+        });
+        this._showNotification(
+            `${issue.echecs.length} suppression(s) refusée(s) — le détail est affiché dans la boîte.`,
+            'warning',
+        );
     }
 
 
@@ -1223,7 +1268,12 @@ export default class extends Controller {
         this.broadcast('ui:confirmation.request', {
             title: payload.title,
             body: payload.body,
-            onConfirm: payload.onConfirm
+            onConfirm: payload.onConfirm,
+            // ⚠ LA LISTE DE CE QU'ON S'APPRÊTE À SUPPRIMER ÉTAIT CONSTRUITE PUIS JETÉE.
+            // Tous les appelants la fournissaient, la boîte savait l'afficher, et elle
+            // s'arrêtait ici : on demandait de confirmer « 3 élément(s) » sans jamais
+            // dire lesquels — et un échec s'annonçait « Élément #117 ».
+            itemDescriptions: payload.itemDescriptions,
         });
     }
 
