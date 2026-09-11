@@ -78,8 +78,22 @@ class MonnaieFormCanvasProvider implements FormCanvasProviderInterface
                 "couleur_fond" => "white",
                 "colonnes" => [
                     ["width" => 8, "champs" => ["nom"]],
-                    ["width" => 2, "champs" => ["code"]],
-                    ["width" => 2, "champs" => ["tauxusd"]],
+                    ["width" => 4, "champs" => ["code"]],
+                ]
+            ],
+            // ⚠ LE TAUX PREND TOUTE LA LARGEUR, ET CE N'EST PAS DU CONFORT. Il tenait sur
+            // deux douzièmes, à côté du nom et du code : sa question — « Combien vaut 1 USD
+            // dans cette monnaie ? » — s'y repliait sur cinq lignes, et l'aide qui donne
+            // l'exemple du franc congolais débordait sous le champ, illisible.
+            //
+            // Or c'est le seul champ de cette fiche qui se trompe SILENCIEUSEMENT : un nom
+            // ou un code faux se voient, un taux faux ne se voit qu'au moment de payer. Un
+            // cabinet y a saisi 0,04 au lieu de 2 800, et sa trésorerie a affiché cent
+            // millions. La place qu'on lui donne ici est celle de son explication.
+            [
+                "couleur_fond" => "white",
+                "colonnes" => [
+                    ["width" => 12, "champs" => ["tauxusd"]],
                 ]
             ],
             [
