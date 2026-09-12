@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Echange\Reprise\CommissionOrdinaire;
 use App\Entity\AutoriteFiscale;
 use App\Entity\Chargement;
 use App\Entity\Entreprise;
@@ -349,8 +350,11 @@ class ServiceInitialisationEntreprise
             ->setFonction(Chargement::FONCTION_TAXE)
             ->setDescription("Frais de surveillance de l'autorité de régulation (ARCA)."));
 
-        $this->poser(TypeRevenu::class, 'nom', 'Commission Ordinaire', $entreprise, $proprietaire, static fn (): TypeRevenu => (new TypeRevenu())
-            ->setNom('Commission Ordinaire')
+        // Le nom est emprunté, jamais recopié : la reprise reconnaît « Commission » au
+        // libellé que CE semis installe ({@see CommissionOrdinaire}). Deux littéraux pour
+        // un seul nom, et le renommer ici ferait taire le rapprochement là-bas.
+        $this->poser(TypeRevenu::class, 'nom', CommissionOrdinaire::NOM, $entreprise, $proprietaire, static fn (): TypeRevenu => (new TypeRevenu())
+            ->setNom(CommissionOrdinaire::NOM)
             ->setAppliquerPourcentageDuRisque(true)
             ->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR)
             ->setShared(true)

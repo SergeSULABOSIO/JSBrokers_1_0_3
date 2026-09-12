@@ -165,8 +165,12 @@ class WorkspaceMutationService
      *     cible: ?string, manquants: array<string,string[]>, impacts: string[], bloque: bool
      * }
      */
-    public function analyserOperation(MutationOperation $op, AiScope $scope, ?MutationReferences $refs = null): array
-    {
+    public function analyserOperation(
+        MutationOperation $op,
+        AiScope $scope,
+        ?MutationReferences $refs = null,
+        bool $peutDemanderLePortefeuille = true,
+    ): array {
         $refs ??= MutationReferences::dryRun();
         $labels = $this->accessResolver->libellesEntites();
         $libelle = $labels[$op->entityShortName] ?? $op->entityShortName;
@@ -237,7 +241,7 @@ class WorkspaceMutationService
 
         if ($manquants === [] && $op->isCreate()) {
             // Portefeuille (auto si unique, sinon à demander) + champs obligatoires.
-            $manquants = $this->resoudrePortefeuille($copie, $op, $scope)
+            $manquants = $this->resoudrePortefeuille($copie, $op, $scope, $peutDemanderLePortefeuille)
                 + $this->champsRequisManquants($copie, $op, [], $resolution);
             if ($manquants === [] && method_exists($copie, 'getPortefeuille') && $copie->getPortefeuille() !== null) {
                 $base['portefeuille'] = $this->libelleInstance($copie->getPortefeuille());
@@ -402,8 +406,14 @@ class WorkspaceMutationService
      *
      * @return array{op: string, entite: string, libelle: string, cible: ?string, id: ?int}
      */
-    public function executer(MutationOperation $op, AiScope $scope, ?Utilisateur $acteur, ?MutationReferences $refs = null, bool $metrer = true): array
-    {
+    public function executer(
+        MutationOperation $op,
+        AiScope $scope,
+        ?Utilisateur $acteur,
+        ?MutationReferences $refs = null,
+        bool $metrer = true,
+        bool $peutDemanderLePortefeuille = true,
+    ): array {
         $refs ??= MutationReferences::live();
         $labels = $this->accessResolver->libellesEntites();
         $libelle = $labels[$op->entityShortName] ?? $op->entityShortName;
@@ -456,7 +466,7 @@ class WorkspaceMutationService
             $entity = $this->nouvelleEntite($op, $scope);
             // Portefeuille (auto/à demander) + champs obligatoires => 422 propre
             // si incomplet (jamais d'erreur SQL, jamais d'enregistrement « perdu »).
-            $manquants = $this->resoudrePortefeuille($entity, $op, $scope)
+            $manquants = $this->resoudrePortefeuille($entity, $op, $scope, $peutDemanderLePortefeuille)
                 + $this->champsRequisManquants($entity, $op, [], $resolution);
             if ($manquants !== []) {
                 throw MutationException::invalide(sprintf('Informations obligatoires manquantes pour « %s ».', $libelle), $manquants);
@@ -1347,9 +1357,26 @@ class WorkspaceMutationService
      * Effet de bord assumé : l'auto-affectation est posée sur l'entité (rejouée
      * à l'identique au dry-run et à l'exécution).
      *
+     * ⚠ LA DEUXIÈME BRANCHE SUPPOSE UN INTERLOCUTEUR, et c'est ce que dit
+     * `$peutDemander`. « Renvoyer un manquant pour qu'on demande » n'a de sens
+     * que dans une conversation : celui qui DÉPOSE UN CLASSEUR n'est pas là pour
+     * répondre ligne à ligne, et la question devenait un mur — « Remplissez la
+     * colonne « Portefeuille » : sans elle, « Clients » ne peut pas être repris »,
+     * sur chacune des lignes d'un portefeuille entier. Or la colonne laissée vide
+     * EST une réponse : ce client n'a pas encore de portefeuille, et on le range
+     * d'un clic à l'écran ensuite. Le classeur fait alors autorité, et la reprise
+     * passe `false` ({@see \App\Echange\Service\AvanceurDImport}).
+     *
+     * ⚠ CE DRAPEAU NE TOUCHE PAS À L'AUTO-AFFECTATION. Un déposant qui ne gère
+     * qu'un seul portefeuille y range toujours ses clients : ce n'est pas une
+     * question, c'est la seule réponse possible.
+     *
+     * @param bool $peutDemander l'appelant peut-il poser la question à un humain
+     *                           avant d'écrire ? Faux pour un dépôt de fichier.
+     *
      * @return array<string, string[]> manquants éventuels (clé « portefeuille »)
      */
-    private function resoudrePortefeuille(object $entity, MutationOperation $op, AiScope $scope): array
+    private function resoudrePortefeuille(object $entity, MutationOperation $op, AiScope $scope, bool $peutDemander = true): array
     {
         if (!$op->isCreate()
             || !method_exists($entity, 'getPortefeuille')
@@ -1369,7 +1396,7 @@ class WorkspaceMutationService
 
             return [];
         }
-        if (count($geres) >= 2) {
+        if (count($geres) >= 2 && $peutDemander) {
             return ['portefeuille' => ['Précisez le portefeuille de destination (vous en gérez plusieurs).']];
         }
 

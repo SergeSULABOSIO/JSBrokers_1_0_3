@@ -382,7 +382,18 @@ final class AvanceurDImport
                     continue;
                 }
 
-                $diagnostic = $this->mutation->analyserOperation($operation, $scope, $refs);
+                // ⚠ LE PORTEFEUILLE NE SE DEMANDE PAS À UN FICHIER. Le circuit d'écriture
+                // réclame un portefeuille de destination quand le déposant en gère
+                // plusieurs — juste dans une conversation, où Ket peut poser la question ;
+                // ici, cela refusait chaque ligne dont la colonne « Portefeuille » était
+                // vide, c'est-à-dire tout un portefeuille repris. La colonne vide est une
+                // réponse : le client naît sans portefeuille, et se range ensuite.
+                $diagnostic = $this->mutation->analyserOperation(
+                    $operation,
+                    $scope,
+                    $refs,
+                    peutDemanderLePortefeuille: false,
+                );
                 if (!$diagnostic['ok']) {
                     // ⚠ LE CATALOGUE SUIT, et c'est lui qui rend le reproche utilisable :
                     // il permet de retrouver la COLONNE du classeur qui écrit le champ
@@ -508,7 +519,16 @@ final class AvanceurDImport
                         if (!$operation->isDelete() && !$operation->ecritQuelqueChose()) {
                             continue;
                         }
-                        $this->mutation->executer($operation, $scope, $acteur, $refs, metrer: !$offerte);
+                        // Le drapeau du portefeuille est celui du contrôle, et il le doit :
+                        // une passe qui jugerait autrement promettrait ce que l'autre refuse.
+                        $this->mutation->executer(
+                            $operation,
+                            $scope,
+                            $acteur,
+                            $refs,
+                            metrer: !$offerte,
+                            peutDemanderLePortefeuille: false,
+                        );
                     }
 
                     if ($offerte) {

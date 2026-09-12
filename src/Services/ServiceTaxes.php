@@ -4,6 +4,9 @@ namespace App\Services;
 
 use App\Entity\AutoriteFiscale;
 use App\Entity\Entreprise;
+use App\Entity\Client;
+use App\Entity\Cotation;
+use App\Entity\Risque;
 use App\Entity\Taxe;
 use App\Entity\Utilisateur;
 use Doctrine\ORM\EntityManagerInterface;
@@ -113,6 +116,67 @@ class ServiceTaxes implements ResetInterface
         return $gross;
     }
 
+
+    /**
+     * LA TAXE SUR UNE COMMISSION — ZÉRO QUAND L'AFFAIRE EN EST EXONÉRÉE.
+     *
+     * ⚠ PASSAGE OBLIGÉ DE TOUT CALCUL DE TAXE SUR COMMISSION. `getMontantTaxe()` ignore
+     * le contexte : il applique le barème, point. Or deux réglages excluent la taxe, et
+     * ils étaient lus NULLE PART — `Client::$exonere` et `Risque::$imposable` existaient
+     * dans les formulaires, dans les fiches, et dans aucun calcul. Le cabinet cochait
+     * « exonere » et l'application facturait ses seize pour cent quand meme.
+     *
+     * ⚠ LES DEUX TAXES TOMBENT ENSEMBLE. Une affaire exonérée ne porte aucune TVA : ni
+     * l'assureur n'en précompte, ni le cabinet n'en reverse. N'en neutraliser qu'une
+     * laisserait le courtier provisionner une dette fiscale sur une commission qui n'a
+     * jamais été taxée.
+     *
+     * ⚠ ET C'EST ICI, PAS CHEZ L'APPELANT. Une vingtaine de sites calculent cette taxe —
+     * l'écran, les indicateurs, les écritures comptables OHADA, le suivi fiscal. Une garde
+     * recopiée vingt fois, c'est dix-neuf occasions d'en oublier une, et une comptabilité
+     * qui ne dirait pas la même chose que l'écran.
+     */
+    public function getMontantTaxeSurCommission(
+        $montantNet,
+        bool $tauxIARD,
+        bool $taxeAssureur,
+        ?Cotation $cotation,
+        ?Entreprise $entreprise = null,
+    ): float {
+        if ($this->commissionExonereePour($cotation)) {
+            return 0.0;
+        }
+
+        return (float) $this->getMontantTaxe($montantNet, $tauxIARD, $taxeAssureur, $entreprise);
+    }
+
+    /** La commission de cette affaire échappe-t-elle à la taxe ? */
+    public function commissionExonereePour(?Cotation $cotation): bool
+    {
+        $piste = $cotation?->getPiste();
+
+        return $this->commissionExoneree($piste?->getClient(), $piste?->getRisque());
+    }
+
+    /**
+     * LA RÈGLE, ET ELLE N'A QU'UN SEUL ENDROIT.
+     *
+     * Deux reglages l'emportent, et il suffit de l'un : un CLIENT exonéré de taxes, ou un
+     * RISQUE déclaré non imposable.
+     *
+     * ⚠ SUR LE RISQUE, C'EST UN ÉLARGISSEMENT ASSUMÉ. `Risque::$imposable` décrivait la
+     * taxation de la PRIME — le semis officiel l'affirme (« en assurance, la prime est
+     * taxée ») —, et le projet sépare soigneusement les deux mondes : taxe SUR LA PRIME
+     * (un chargement saisi) et taxe SUR LA COMMISSION (calculée ici). Le drapeau sert
+     * désormais aux deux, par décision explicite : un risque que le fisc n'impose pas ne
+     * fait pas naître de TVA sur la rémunération qu'il génère.
+     *
+     * Ne le « corrigez » donc pas en le croyant egare : il est la ou on l'a voulu.
+     */
+    public function commissionExoneree(?Client $client, ?Risque $risque): bool
+    {
+        return $client?->isExonere() === true || $risque?->isImposable() === false;
+    }
 
     public function getMontantTaxeAutorite($montantNet, ?bool $tauxIARD, ?AutoriteFiscale $autoriteFiscale, ?Entreprise $entreprise = null)
     {

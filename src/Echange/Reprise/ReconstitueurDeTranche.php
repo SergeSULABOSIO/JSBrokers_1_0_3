@@ -14,10 +14,14 @@ use App\Echange\Etat\EtatDuPortefeuille;
 use App\Echange\Service\Anomalie;
 use App\Echange\Service\ResolveurDeRenvois;
 use App\Entity\Chargement;
+use App\Entity\Client;
+use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Note;
+use App\Entity\Risque;
 use App\Entity\TypeRevenu;
+use App\Services\ServiceTaxes;
 use Doctrine\ORM\EntityManagerInterface;
 use PhpOffice\PhpSpreadsheet\Shared\Date as DateExcel;
 
@@ -90,6 +94,26 @@ final class ReconstitueurDeTranche
      */
     private const MARGE_DU_FORFAIT = 2.0;
 
+    /**
+     * Au-delà de ce nombre de POINTS, une valeur n'est plus un taux de commission.
+     *
+     * ⚠ CENT, PARCE QUE C'EST LA PRIME ELLE-MÊME. Un courtier commissionne entre cinq et
+     * trente pour cent ; personne ne prend cent fois la prime. Ce plafond n'est pas là
+     * pour juger les taux du cabinet, mais pour attraper les classeurs écrits sous
+     * l'ANCIENNE convention, où « Commission = 5000 » désignait un forfait de cinq mille —
+     * et vaudrait aujourd'hui cinq mille pour cent.
+     */
+    private const TAUX_PLAFOND = 100.0;
+
+    /**
+     * De combien la commission encaissée peut dépasser ce que le taux produit.
+     *
+     * ⚠ UN POUR CENT, ET PAS DAVANTAGE. Assez pour absorber une décimale perdue entre le
+     * logiciel d'origine et le classeur ; trop peu pour laisser passer un taux faux, qui
+     * se trompe toujours d'un ordre de grandeur et non d'un centime.
+     */
+    private const MARGE_D_ARRONDI = 0.01;
+
     /** @var array<string, true> repères déjà produits dans cette passe */
     private array $registre = [];
 
@@ -120,6 +144,21 @@ final class ReconstitueurDeTranche
      */
     private array $redevableParProposition = [];
 
+    /**
+     * @var array<string, true> ce qui a déjà été dit dans ce palier
+     *
+     * ⚠ UN REPROCHE RÉPÉTÉ CENT FOIS N'EST PLUS UN REPROCHE. Trois constats de ce
+     * service valent pour le FICHIER et non pour la ligne — « vos clients naissent sans
+     * portefeuille », « "Commission" a été lu comme "Commission Ordinaire" », « aucun
+     * revenu déclaré, la commission ordinaire a été posée ». Émis ligne à ligne, ils
+     * remplissaient le rapport à eux seuls et poussaient les VRAIES erreurs au-delà de
+     * la troncature ({@see \App\Echange\Service\RapportDeControle::anomaliesTronquees()}).
+     *
+     * Un par palier, donc : assez rare pour rester lisible, assez fréquent pour qu'on ne
+     * puisse pas terminer une reprise sans l'avoir vu.
+     */
+    private array $ditUneFois = [];
+
     public function __construct(
         private readonly ResolveurDeRenvois $resolveur,
         private readonly NormaliseurDeDates $dates,
@@ -128,6 +167,10 @@ final class ReconstitueurDeTranche
         // Le registre ci-dessus ne connaît que le fichier en cours. Celui-ci connaît le
         // portefeuille : sans lui, deux dépôts successifs empilent deux fois la même police.
         private readonly ChaineExistante $chaine,
+        // Une commission ENCAISSÉE est TTC ; le taux du classeur en donne le HT. Sans le
+        // barème du cabinet, les deux ne sont pas comparables — et c'est cette comparaison
+        // qui dit si le taux fourni tient debout ({@see commissionInsuffisante()}).
+        private readonly ServiceTaxes $taxes,
     ) {
     }
 
@@ -151,6 +194,7 @@ final class ReconstitueurDeTranche
         $this->registre = [];
         $this->revenuParProposition = [];
         $this->redevableParProposition = [];
+        $this->ditUneFois = [];
         // ⚠ ET LES DEUX INDEX DE LA BASE AVEC LUI. Une passe d'écriture vient peut-être de
         // créer des polices, des clients, des risques : un index resté tiède ne les
         // connaîtrait pas, et la passe suivante les recréerait.
@@ -286,6 +330,25 @@ final class ReconstitueurDeTranche
             // change d'un clic à l'écran, alors qu'un refus incompréhensible bloquait tout.
             'gestionnaire' => $this->pourLeCompteDe?->getId(),
         ]);
+
+        // ⚠ UN CLIENT SANS PORTEFEUILLE EST REPRIS, ET ON LE DIT. Le circuit d'écriture
+        // réclamait le portefeuille dès que le déposant en gérait plusieurs — question
+        // juste dans une conversation, mur absolu sur un fichier. La colonne vide est
+        // désormais une réponse ({@see \App\Service\Workspace\WorkspaceMutationService::resoudrePortefeuille()}),
+        // mais elle a une conséquence visible : ces clients n'apparaîtront pas dans la vue
+        // « Mon portefeuille » tant qu'on ne les y aura pas rangés. Se taire là-dessus,
+        // c'est laisser croire à une reprise incomplète.
+        if ($portefeuille === null && $ligne->texte('portefeuille') === '' && is_string($client)) {
+            $this->direUneFois(
+                'client-sans-portefeuille',
+                $ligne,
+                'portefeuille',
+                'Des clients de ce fichier ne portent aucun portefeuille : ils sont repris '
+                . 'quand même, mais sans portefeuille. Ouvrez la rubrique « Clients » pour les '
+                . 'y ranger — la colonne « Portefeuille » vous évitera ce geste au prochain dépôt.',
+                $anomalies,
+            );
+        }
 
         $risque = $this->rattacher('Risque', $ligne, 'risque', CleNaturelle::RISQUE, $entreprise, $anomalies, $operations, [
             'nomComplet' => $ligne->texte('risque'),
@@ -439,26 +502,74 @@ final class ReconstitueurDeTranche
             // ⚠ ET LE TAUX N'EST ÉCRIT QUE S'IL DÉROGE. Un type marqué « pourcentage du
             // risque » va chercher le sien à la LECTURE : le recopier le figerait, et la
             // commission cesserait de suivre le risque le jour où son taux change.
-            foreach ($this->termes($ligne, 'commissionRevenus', $anomalies) as $nom => $terme) {
-                $type = $this->reconnu('TypeRevenu', $nom, $entreprise, $ligne, 'commissionRevenus', $anomalies);
-                if ($type === null) {
+            //
+            // ⚠ ET UNE PROPOSITION SANS REVENU N'EN EST PAS UNE. La colonne laissée vide
+            // produisait une proposition muette : chiffre d'affaires, part partenaire et
+            // taxes sur commission à zéro — un portefeuille repris qui ne rapporte rien.
+            // Or il n'existe pas d'affaire d'assurance sans commission de courtage : c'est
+            // sa raison d'être. On pose donc la commission ordinaire d'office, exactement
+            // comme l'assistant le fait pour toute proposition qu'il crée
+            // ({@see \App\Ai\Proposition\RevenuCourtierPrescrit}) — sans taux, puisque
+            // celui du risque se résout à la lecture.
+            $termesRevenus = $this->termes($ligne, 'commissionRevenus', $anomalies);
+
+            if ($termesRevenus === []) {
+                $termesRevenus = [CommissionOrdinaire::NOM => ['valeur' => null, 'estTaux' => false]];
+                $this->direUneFois(
+                    'revenu-d-office',
+                    $ligne,
+                    'commissionRevenus',
+                    sprintf(
+                        'Des lignes de ce fichier ne disent pas ce que l\'affaire rapporte : elles '
+                        . 'reçoivent « %s », dont le taux est celui du risque. Renseignez la colonne '
+                        . '« Commission · Revenus » si une autre rémunération s\'applique.',
+                        CommissionOrdinaire::NOM,
+                    ),
+                    $anomalies,
+                );
+            }
+
+            // Ce que les taux de la ligne produisent vraiment, taxe de l'assureur
+            // comprise : c'est cela qu'on confrontera à la commission déjà encaissée.
+            $commissionTtc = 0.0;
+            $toutEstTarife = true;
+
+            foreach ($termesRevenus as $nom => $terme) {
+                $revenu = $this->typeDeRevenu($nom, $entreprise, $ligne, $anomalies, $operations);
+                if ($revenu === null) {
                     continue;
                 }
 
-                // ⚠ « 5 » ET « 5% » NE DISENT PAS LA MÊME CHOSE. Écrit sans le signe
-                // pourcent, un taux de commission devient un forfait de cinq unités
-                // monétaires : la note de reprise affiche alors 5,80 de dû pour 1 160,00
-                // encaissés, et un solde négatif de −1 154,20. Le contrôle laissait passer,
-                // parce qu'un forfait de cinq est une valeur licite en soi.
+                // ⚠ UN TAUX ABERRANT TRAHIT UN FORFAIT ÉCRIT À L'ANCIENNE, quand un nombre
+                // nu valait un montant. « Commission = 5000 » vaudrait aujourd'hui cinq
+                // mille pour cent : on le refuse en nommant « (forfait) ».
                 $reproche = $this->ambiguiteDuRevenu($ligne, $nom, $terme);
                 if ($reproche !== null) {
                     $anomalies[] = $reproche;
                     continue;
                 }
 
-                $champs = ['nom' => $nom, 'typeRevenu' => $type];
-                if ($terme['valeur'] !== null) {
+                $rendement = $this->rendementTtc($revenu['id'], $terme, $ligne, $entreprise, $client, $risque);
+                if ($rendement === null) {
+                    $toutEstTarife = false;
+                } else {
+                    $commissionTtc += $rendement;
+                }
+
+                $champs = ['nom' => $revenu['nom'], 'typeRevenu' => $revenu['id']];
+
+                // ⚠ UNE VALEUR HÉRITÉE NE SE RECOPIE PAS. L'export écrit désormais le taux
+                // EFFECTIF de chaque revenu — sans quoi le courtier exportait son
+                // portefeuille et n'y lisait aucun taux —, mais il MARQUE celui qui vient
+                // du risque ou du type. Le réécrire en dérogation le figerait : la
+                // commission cesserait de suivre le risque le jour où son taux change, et
+                // un simple aller-retour aurait scellé tout un portefeuille.
+                if ($terme['valeur'] !== null && !ValeursMultiples::estInformatif($terme)) {
                     $champs[$terme['estTaux'] ? 'tauxExceptionel' : 'montantFlatExceptionel'] = $terme['valeur'];
+                } elseif ($terme['valeur'] === null) {
+                    // Une valeur MARQUÉE, elle, prouve qu'un tarif est prescrit : il n'y a
+                    // rien à reprocher. Seule une cellule muette laisse la question ouverte.
+                    $this->signalerUnTauxNonPrescrit($revenu['id'], $risque, $ligne, $anomalies);
                 }
 
                 // ⚠ UN REPÈRE SUR L'ENFANT, ET IL SERT. L'écriture d'ouverture de la
@@ -468,11 +579,11 @@ final class ReconstitueurDeTranche
                 // à l'exécution — c'est ce qui rend ce renvoi possible.
                 $this->revenuParProposition[$cotation] ??= (string) CleNaturelle::pourLibelle(
                     'rev',
-                    $cotation . ' ' . $nom,
+                    $cotation . ' ' . $revenu['nom'],
                 );
                 // Le payeur suit le repère : c'est lui qui dira à qui adresser la note de
                 // reprise d'une commission déjà encaissée.
-                $this->redevableParProposition[$cotation] ??= $this->redevableDuType($type);
+                $this->redevableParProposition[$cotation] ??= $revenu['redevable'];
                 $repereRevenu = $this->revenuParProposition[$cotation];
 
                 $collections['revenus'][] = new MutationOperation(
@@ -481,6 +592,13 @@ final class ReconstitueurDeTranche
                     fields: $this->sansVide($champs),
                     ref: $repereRevenu,
                 );
+            }
+
+            // ⚠ LA LIGNE SE CONTREDIT-ELLE ELLE-MÊME ? C'est ici, et nulle part ailleurs,
+            // qu'on peut le savoir : la même ligne porte le TAUX et l'ENCAISSEMENT.
+            $reproche = $this->commissionInsuffisante($ligne, $commissionTtc, $toutEstTarife);
+            if ($reproche !== null) {
+                $anomalies[] = $reproche;
             }
 
             $operations[] = new MutationOperation(
@@ -493,7 +611,7 @@ final class ReconstitueurDeTranche
                     // ⚠ LA DURÉE SE LIT SUR LA PÉRIODE, elle ne se suppose pas : un contrat
                     // de vingt-deux jours n'est pas une police annuelle. `DefautsContextuels`
                     // sait la déduire, mais en allant la chercher sur l'avenant EN
-                    // COLLECTION de la proposition — or la convergence impose ici de le
+                    // COLLECTION de la proposition — or la convergence imposé ici de le
                     // garder en opération distincte, une police et son avenant n° 2
                     // partageant la même proposition. On emprunte donc la formule, sans la
                     // réécrire.
@@ -607,11 +725,19 @@ final class ReconstitueurDeTranche
         // n'écrivait rien. Maintenant qu'elle écrit, l'oubli coûterait une note de plus par
         // aller-retour.
         if ($idEcheance === null) {
+            // ⚠ LE REGISTRE LOCAL NE CONNAÎT QUE CETTE PASSE. Une échéance neuve sous une
+            // police déjà reprise n'y trouve rien : son revenu est en base depuis le dépôt
+            // précédent, et c'est là qu'il faut aller le chercher — sinon l'encaissement
+            // était perdu à chaque dépôt complémentaire.
+            $dejaEnBase = !isset($this->revenuParProposition[$cotation]) && $idCotation !== null
+                ? $this->revenuExistant($idCotation)
+                : null;
+
             $this->ouvrirLaCommission(
                 $ligne,
                 $repereTranche,
-                $this->revenuParProposition[$cotation] ?? null,
-                $this->redevableParProposition[$cotation] ?? null,
+                $this->revenuParProposition[$cotation] ?? $dejaEnBase['id'] ?? null,
+                $this->redevableParProposition[$cotation] ?? $dejaEnBase['redevable'] ?? null,
                 $assureur,
                 $client,
                 $operations,
@@ -708,7 +834,7 @@ final class ReconstitueurDeTranche
     private function ouvrirLaCommission(
         LigneLue $ligne,
         string $repereTranche,
-        ?string $repereRevenu,
+        int|string|null $revenuAFacturer,
         ?int $redevable,
         int|string|null $assureur,
         int|string|null $client,
@@ -724,15 +850,16 @@ final class ReconstitueurDeTranche
         // revenu facturé : un article qui n'en désigne aucun vaut zéro, et la note serait
         // une coquille que le portefeuille afficherait sans jamais l'additionner. Mieux
         // vaut le dire que d'écrire un chiffre qui ne comptera pas.
-        if ($repereRevenu === null) {
+        if ($revenuAFacturer === null) {
             $anomalies[] = Anomalie::avertissement(
                 Anomalie::VALEUR_INVALIDE,
                 sprintf(
                     'La commission de %s que vous avez déjà encaissée n\'a pas pu être '
-                    . 'enregistrée : cette ligne ne dit pas de quelle commission il s\'agit. '
-                    . 'Remplissez la colonne « Commission · Revenus » — par exemple '
-                    . '« Commission Ordinaire » — et l\'encaissement suivra.',
+                    . 'enregistrée : la proposition de cette police ne porte aucun revenu à '
+                    . 'facturer. Ouvrez-la et ajoutez-lui un revenu — « %s », par exemple — '
+                    . 'puis redéposez ce fichier.',
                     number_format($montant, 2, ',', ' '),
+                    CommissionOrdinaire::NOM,
                 ),
                 $ligne->feuille,
                 $ligne->numero,
@@ -790,7 +917,11 @@ final class ReconstitueurDeTranche
                     entityShortName: 'Article',
                     fields: [
                         'tranche' => CleNaturelle::renvoiVers($repereTranche),
-                        'revenuFacture' => CleNaturelle::renvoiVers($repereRevenu),
+                        // Un entier est un revenu DÉJÀ en base (proposition reprise à un
+                        // dépôt précédent) ; une chaîne est un repère de cette passe.
+                        'revenuFacture' => is_int($revenuAFacturer)
+                            ? $revenuAFacturer
+                            : CleNaturelle::renvoiVers($revenuAFacturer),
                         'quantite' => 1,
                     ],
                 )],
@@ -1017,18 +1148,21 @@ final class ReconstitueurDeTranche
      *
      * @param Anomalie[] $anomalies
      */
-    private function reconnu(string $entite, string $nom, Entreprise $entreprise, LigneLue $ligne, string $codeColonne, array &$anomalies): ?int
-    {
+    private function reconnu(
+        string $entite,
+        string $nom,
+        Entreprise $entreprise,
+        LigneLue $ligne,
+        string $codeColonne,
+        array &$anomalies,
+    ): ?int {
         $renvoi = $this->resolveur->reconnaitreLePremier($entite, $nom, $entreprise);
 
         if ($renvoi->valeur === null) {
-            $anomalies[] = $this->refus($ligne, $codeColonne, sprintf(
-                'Votre cabinet n\'a rien qui s\'appelle « %s ». Créez-le d\'abord dans sa rubrique, '
-                . 'puis redéposez ce fichier : un simple nom ne suffit pas ici, il faut aussi son '
-                . 'taux et qui le doit — des informations que ce classeur ne transporte pas.',
-                $nom,
-            ));
-
+            // ⚠ INTROUVABLE N'EST PLUS UN REFUS, ET C'EST LE CŒUR DU CHANGEMENT. Le
+            // catalogue du cabinet ne dicte plus ce qu'un classeur a le droit de nommer :
+            // l'appelant replie sur la commission par défaut ({@see typeDeRevenu()}). Rien
+            // n'est reproché ici, et rien n'est créé non plus.
             return null;
         }
 
@@ -1048,6 +1182,345 @@ final class ReconstitueurDeTranche
         }
 
         return (int) $renvoi->valeur;
+    }
+
+    /**
+     * UN REVENU QUE RIEN NE TARIFE VAUT ZÉRO — et il faut le dire AVANT de le découvrir
+     * dans les totaux.
+     *
+     * ⚠ C'EST LA PROMESSE DE LA COMMISSION ORDINAIRE, ET ELLE A UNE CONDITION. Son taux
+     * « vient du risque » : un risque qui n'en prescrit aucun la ramène à zéro. Or la
+     * reprise CRÉE les risques qu'elle ne connaît pas, et un risque neuf n'a évidemment pas
+     * de taux. La ligne passerait, la commission serait nulle, et une commission déjà
+     * encaissée sur la même ligne afficherait un solde NÉGATIF — le symptôme exact que le
+     * garde-fou du taux écrit sans pourcent combat par ailleurs.
+     *
+     * ⚠ ET ON NE DÉDUIT RIEN D'UNE DIVISION. Le classeur porte bien la commission HT et
+     * l'assiette : leur rapport donnerait un taux plausible, et faux dès que la ligne porte
+     * un arrondi ou couvre deux échéances. Un taux se LIT sur le paramétrage, il ne se
+     * calcule pas — la même règle vaut pour les taxes. On nomme donc la case à remplir,
+     * exactement comme l'assistant le fait
+     * ({@see \App\Ai\Proposition\RevenuCourtierPrescrit::questionTaux()}).
+     *
+     * ⚠ UN AVERTISSEMENT, ET NON UN REFUS. Ce qui est encaissé est encaissé : le bloquer
+     * ferait perdre une information juste pour une information manquante. L'utilisateur
+     * pose le taux sur la fiche du risque, et tout le portefeuille repris suit d'un coup.
+     *
+     * @param int|string      $type   identifiant, ou repère d'un type créé par cette passe
+     * @param int|string|null $risque idem pour le risque de l'affaire
+     * @param Anomalie[]      $anomalies
+     */
+    private function signalerUnTauxNonPrescrit(
+        int|string $type,
+        int|string|null $risque,
+        LigneLue $ligne,
+        array &$anomalies,
+    ): void {
+        // Un type créé par cette passe est la commission ordinaire, et elle s'adosse au
+        // risque par construction. Un type déjà en base, on le lit.
+        if (is_int($type)) {
+            $enBase = $this->em->find(TypeRevenu::class, $type);
+            if ($enBase === null) {
+                return;
+            }
+
+            if ($enBase->isAppliquerPourcentageDuRisque() !== true) {
+                // Le type porte son propre tarif : rien à signaler s'il en a un.
+                if ((float) ($enBase->getPourcentage() ?? 0.0) !== 0.0
+                    || (float) ($enBase->getMontantflat() ?? 0.0) !== 0.0) {
+                    return;
+                }
+
+                $this->direUneFois('revenu-sans-tarif', $ligne, 'commissionRevenus', sprintf(
+                    'Le revenu « %s » ne porte ni taux ni montant forfaitaire : la commission '
+                    . 'du courtier resterait à 0 sur les lignes qui le nomment. Renseignez-le '
+                    . 'dans la rubrique « Types Revenus ».',
+                    (string) $enBase->getNom(),
+                ), $anomalies);
+
+                return;
+            }
+        }
+
+        // Le taux vient du risque : reste à savoir si ce risque en prescrit un. Un risque
+        // que cette passe vient de créer n'en a aucun — c'est le cas le plus fréquent
+        // d'une première reprise.
+        $taux = is_int($risque)
+            ? (float) ($this->em->find(Risque::class, $risque)?->getPourcentageCommissionSpecifiqueHT() ?? 0.0)
+            : 0.0;
+
+        if ($taux !== 0.0) {
+            return;
+        }
+
+        $this->direUneFois('risque-sans-taux', $ligne, 'risque', sprintf(
+            'Le risque « %s » ne prescrit aucun taux de commission, et la rémunération du '
+            . 'courtier s\'y adosse : elle resterait à 0 sur toutes les lignes qui le portent. '
+            . 'Ouvrez sa fiche et renseignez « %% commission spécifique HT » — ce que vous avez '
+            . 'déjà encaissé, lui, est bien enregistré.',
+            $ligne->texte('risque'),
+        ), $anomalies);
+    }
+
+    /**
+     * LE TYPE DE REVENU D'UN TERME DE LA COLONNE « Commission · Revenus ».
+     *
+     * ── DEUX ISSUES, ET PLUS AUCUN REFUS ───────────────────────────────────────────
+     *   1. le cabinet a un type portant ce nom → on s'y rattache ;
+     *   2. il n'en a pas → la COMMISSION PAR DÉFAUT ({@see CommissionOrdinaire}).
+     *
+     * ⚠ LA REPRISE NE CRÉE PAS DE TYPES DE REVENU, ELLE CRÉE DES REVENUS. C'est la
+     * distinction qui débloque tout. Un TYPE porte un taux, un redevable, une assiette :
+     * le fabriquer depuis un simple nom donnerait une configuration muette, et un
+     * catalogue encombré d'entrées que personne n'a réglées. Un REVENU, lui, porte un nom
+     * LIBRE, un type et son propre taux — et c'est exactement ce qu'une ligne décrit.
+     *
+     * D'où le repli universel : « Frais de gestion = 5 » ne fabrique pas un type « Frais
+     * de gestion ». Il crée un revenu NOMMÉ « Frais de gestion », rattaché à la commission
+     * par défaut, et facturé à 5 %. Le libellé du courtier est conservé, le calcul est
+     * juste, et rien n'est ajouté à la configuration du cabinet.
+     *
+     * @param array<int, MutationOperation> $operations
+     * @param Anomalie[]                    $anomalies
+     *
+     * @return array{id: int|string, nom: string, redevable: ?int}|null
+     */
+    private function typeDeRevenu(
+        string $nom,
+        Entreprise $entreprise,
+        LigneLue $ligne,
+        array &$anomalies,
+        array &$operations,
+    ): ?array {
+        $connu = $this->reconnu('TypeRevenu', $nom, $entreprise, $ligne, 'commissionRevenus', $anomalies);
+
+        if ($connu !== null) {
+            return ['id' => $connu, 'nom' => $nom, 'redevable' => $this->redevableDuType($connu)];
+        }
+
+        $id = $this->commissionOrdinaire($entreprise, $ligne, $anomalies, $operations);
+        if ($id === null) {
+            return null;
+        }
+
+        // On le DIT quand le nom du classeur n'est pas celui d'un type du cabinet :
+        // l'utilisateur doit pouvoir vérifier à quoi son revenu a été rattaché.
+        if (ResolveurDeRenvois::normaliser($nom) !== ResolveurDeRenvois::normaliser(CommissionOrdinaire::NOM)) {
+            $this->direUneFois(
+                'repli-commission-ordinaire',
+                $ligne,
+                'commissionRevenus',
+                sprintf(
+                    'Votre cabinet n\'a aucun type de revenu nommé « %s » : ce revenu a été '
+                    . 'rattaché à « %s », la commission par défaut — due par l\'assureur. Le nom '
+                    . 'que vous avez écrit est conservé, et le taux de la ligne s\'applique. '
+                    . 'Vérifiez le type dans la rubrique « Types Revenus » si une autre '
+                    . 'rémunération devait s\'appliquer.',
+                    $nom,
+                    CommissionOrdinaire::NOM,
+                ),
+                $anomalies,
+            );
+        }
+
+        // ⚠ LE NOM DU CLASSEUR EST CONSERVÉ, SEUL LE TYPE EST SUBSTITUÉ. Un revenu porte
+        // un libellé LIBRE et un TYPE qui porte la configuration : les confondre — comme
+        // on l'a fait un temps, en renommant le revenu « Commission Ordinaire » — faisait
+        // perdre l'information que le classeur portait, et pour rien.
+        return ['id' => $id, 'nom' => $nom, 'redevable' => TypeRevenu::REDEVABLE_ASSUREUR];
+    }
+
+    /**
+     * LA COMMISSION ORDINAIRE DU CABINET — retrouvée, ou installée à l'identique du semis.
+     *
+     * ⚠ ELLE EXISTE PRESQUE TOUJOURS : `ServiceInitialisationEntreprise` la pose à la
+     * naissance de chaque cabinet. Ce qui suit est le filet pour ceux qui l'ont renommée
+     * ou supprimée — sans lui, la reprise leur opposerait « créez-la d'abord », alors
+     * qu'on sait exactement ce qu'elle doit être.
+     *
+     * ⚠ ET AUCUN CIRCUIT D'ÉCRITURE NOUVEAU. C'est une `MutationOperation` comme les
+     * autres : droits, formulaire, métrage et dry-run restent ceux de tout le monde. Un
+     * déposant sans droit de création sur « Types Revenus » reçoit le refus « hors
+     * périmètre » habituel, qui nomme le droit à demander.
+     *
+     * @param array<int, MutationOperation> $operations
+     * @param Anomalie[]                    $anomalies
+     *
+     * @return int|string|null identifiant, repère local, ou null si le repère est illisible
+     */
+    private function commissionOrdinaire(
+        Entreprise $entreprise,
+        LigneLue $ligne,
+        array &$anomalies,
+        array &$operations,
+    ): int|string|null {
+        $existant = $this->resolveur->reconnaitreLePremier('TypeRevenu', CommissionOrdinaire::NOM, $entreprise);
+        if ($existant->valeur !== null) {
+            return (int) $existant->valeur;
+        }
+
+        $repere = CleNaturelle::pourLibelle('typrev', CommissionOrdinaire::NOM);
+        if ($repere === null) {
+            return null;
+        }
+
+        if ($this->neuf($repere)) {
+            // ⚠ L'ASSIETTE S'EMPILE AVANT, ET DANS UNE INSTRUCTION À PART. Calculée au
+            // milieu du tableau `fields`, elle dépendrait de l'ordre d'évaluation que PHP
+            // choisit pour un `$operations[] = …` — et un renvoi qui part en avant n'est
+            // jamais résolu.
+            $assiette = $this->assietteDeCommission($entreprise, $operations);
+
+            $operations[] = new MutationOperation(
+                op: MutationOperation::OP_CREATE,
+                entityShortName: 'TypeRevenu',
+                // ⚠ MOT POUR MOT LE SEMIS OFFICIEL
+                // ({@see \App\Services\ServiceInitialisationEntreprise::initialiserChargementsEtRevenus()}) :
+                // un taux pris sur le risque, dû par l'assureur, partageable avec un
+                // partenaire et réglable en plusieurs fois. Deux définitions pour un même
+                // type, et le cabinet repris ne calculerait pas comme le cabinet neuf.
+                fields: [
+                    'nom' => CommissionOrdinaire::NOM,
+                    'modeCalcul' => TypeRevenu::MODE_CALCUL_POURCENTAGE_CHARGEMENT,
+                    'typeChargement' => $assiette,
+                    'appliquerPourcentageDuRisque' => true,
+                    'redevable' => TypeRevenu::REDEVABLE_ASSUREUR,
+                    'shared' => true,
+                    'multipayments' => true,
+                ],
+                ref: $repere,
+            );
+
+            $this->direUneFois(
+                'creation-commission-ordinaire',
+                $ligne,
+                'commissionRevenus',
+                sprintf(
+                    'Votre cabinet n\'avait pas de « %s » : elle a été créée, due par l\'assureur '
+                    . 'et au taux de commission du risque concerné. Vérifiez-la dans la rubrique '
+                    . '« Types Revenus » avant de vous y fier.',
+                    CommissionOrdinaire::NOM,
+                ),
+                $anomalies,
+            );
+        }
+
+        return CleNaturelle::renvoiVers($repere);
+    }
+
+    /**
+     * L'ASSIETTE DE LA COMMISSION : la prime nette du cabinet.
+     *
+     * ⚠ `TypeRevenuType` l'exige, et le calcul aussi : un type de revenu sans
+     * chargement cible rend une commission nulle par construction —
+     * `getCotationMontantChargementPrime()` apparie sur le TYPE, jamais sur le nom.
+     * Absente, on la crée : c'est le même poste que le semis installe, et un cabinet sans
+     * prime nette n'aurait de toute façon pas de prime à reprendre.
+     *
+     * ⚠ ET L'OPÉRATION PART AVANT CELLE DU TYPE. Cette méthode est appelée depuis la
+     * construction des champs du `TypeRevenu`, donc AVANT que celui-ci ne soit empile :
+     * un renvoi ne va jamais en avant, et l'ordre en dépend.
+     *
+     * @param array<int, MutationOperation> $operations
+     */
+    private function assietteDeCommission(Entreprise $entreprise, array &$operations): int|string
+    {
+        $id = $this->typePourFonction($entreprise, Chargement::FONCTION_PRIME_NETTE);
+        if ($id !== null) {
+            return $id;
+        }
+
+        $libelle = CatalogueDesColonnes::FONCTIONS[Chargement::FONCTION_PRIME_NETTE];
+        $repere = (string) CleNaturelle::pourLibelle('chg', $libelle);
+
+        if ($this->neuf($repere)) {
+            $operations[] = new MutationOperation(
+                op: MutationOperation::OP_CREATE,
+                entityShortName: 'Chargement',
+                fields: [
+                    'nom' => $libelle,
+                    'fonction' => Chargement::FONCTION_PRIME_NETTE,
+                ],
+                ref: $repere,
+            );
+        }
+
+        return CleNaturelle::renvoiVers($repere);
+    }
+
+    /**
+     * LE REVENU D'UNE PROPOSITION DÉJÀ EN BASE — celui que l'écriture d'ouverture facture.
+     *
+     * ⚠ SANS LUI, LE SECOND DÉPÔT PERDAIT LES COMMISSIONS. Le registre local ne connaît
+     * que les revenus que CETTE passe a posés ; une échéance neuve sous une police déjà
+     * reprise n'en a donc aucun, et l'encaissement était refusé — « cette ligne ne dit
+     * pas de quelle commission il s'agit » — alors que la proposition en portait un
+     * depuis le premier dépôt.
+     *
+     * La commission ordinaire est préférée quand la proposition en porte plusieurs : c'est
+     * celle qu'une colonne laissée vide désigne, et celle que l'assureur précompte.
+     *
+     * @return array{id: int, redevable: ?int}|null
+     */
+    private function revenuExistant(int $idCotation): ?array
+    {
+        $cotation = $this->em->find(Cotation::class, $idCotation);
+        if ($cotation === null) {
+            return null;
+        }
+
+        $premier = null;
+
+        foreach ($cotation->getRevenus() as $revenu) {
+            $id = $revenu->getId();
+            if ($id === null) {
+                continue;
+            }
+
+            $type = $revenu->getTypeRevenu();
+            $candidat = ['id' => (int) $id, 'redevable' => $type?->getRedevable()];
+            $premier ??= $candidat;
+
+            if ($type !== null
+                && ResolveurDeRenvois::normaliser((string) $type->getNom())
+                    === ResolveurDeRenvois::normaliser(CommissionOrdinaire::NOM)) {
+                return $candidat;
+            }
+        }
+
+        return $premier;
+    }
+
+    /**
+     * UN CONSTAT QUI VAUT POUR LE FICHIER, dit UNE FOIS par palier.
+     *
+     * ⚠ VOIR {@see $ditUneFois} : répété ligne à ligne, un avertissement juste devient
+     * du bruit, remplit le rapport et pousse les VRAIES erreurs au-delà de la troncature.
+     * Il se pose sur la première cellule concernée, que le classeur annoté saura
+     * surligner.
+     *
+     * @param Anomalie[] $anomalies
+     */
+    private function direUneFois(
+        string $cle,
+        LigneLue $ligne,
+        string $codeColonne,
+        string $message,
+        array &$anomalies,
+    ): void {
+        if (isset($this->ditUneFois[$cle])) {
+            return;
+        }
+
+        $this->ditUneFois[$cle] = true;
+
+        $anomalies[] = Anomalie::avertissement(
+            Anomalie::VALEUR_INVALIDE,
+            $message,
+            $ligne->feuille,
+            $ligne->numero,
+            $ligne->colonne($codeColonne),
+        );
     }
 
     /**
@@ -1344,29 +1817,223 @@ final class ReconstitueurDeTranche
     }
 
     /**
-     * LE TERME DE REVENU SE CONTREDIT-IL AVEC LA COMMISSION ENCAISSÉE DE LA MÊME LIGNE ?
+     * CE QUE CE REVENU RAPPORTE VRAIMENT SUR CETTE ÉCHÉANCE, TAXE COMPRISE.
      *
-     * ⚠ UN NOMBRE NU EST UN MONTANT, ET C'EST LE PIÈGE. `ValeursMultiples` distingue le
-     * taux du forfait au signe pourcent, et rien ne le rappelle à qui remplit le gabarit à
-     * la main. L'export, lui, écrit toujours le pourcent quand il en va d'un taux : le
-     * fichier ne se corrige donc jamais tout seul, et l'erreur se recopie d'un
-     * aller-retour à l'autre.
+     * ⚠ UNE COMMISSION ENCAISSÉE EST TTC, UN TAUX DONNE DU HT. Les deux ne sont pas
+     * comparables tels quels : l'assureur precompte sa taxe — seize pour cent au barème
+     * courant — et c'est le montant TTC qui arrive sur le compte du cabinet. Confronter
+     * 518,40 encaisses a un HT de 500 ferait crier a l'erreur sur une ligne juste.
      *
-     * ⚠ ON NE DEVINE PAS : ON CONFRONTE. Basculer d'office un nombre nu en taux ferait
-     * exactement la faute inverse le jour d'un vrai forfait. Ici, deux colonnes de la même
-     * ligne se contredisent, et c'est CELA qu'on reproche : un forfait ne peut pas produire
-     * beaucoup plus que lui-même — les taxes n'y ajoutent qu'une fraction —, si bien qu'une
-     * commission encaissée qui dépasse le double du forfait ne peut pas en venir.
+     * ⚠ LE BARÈME SE LIT, IL NE SE RECOPIE PAS. `ServiceTaxes` est la source unique du
+     * projet ; en redire une seconde version ici, ce serait s'engager a la maintenir deux
+     * fois, et à expliquer un jour pourquoi la reprise et l'ecran ne taxent pas pareil.
      *
-     * ⚠ LA MARGE EST LARGE À DESSEIN. Mieux vaut laisser passer un cas tordu que refuser un
-     * fichier juste : le reproche doit rester rare, sans quoi on apprend à l'ignorer.
+     * ⚠ ET LE TAUX IARD N'EST PAS DEVINE : ON PREND LE PLUS GENEREUX. La branche du
+     * risque décide du taux applicable, et un risque que cette passe vient de creer n'en a
+     * aucune. Retenir le plus élevé des deux maximise le TTC admissible, donc MINIMISE les
+     * reproches : mieux vaut laisser passer une ligne tordue que refuser une ligne juste.
      *
-     * @param array{valeur: float|null, estTaux: bool} $terme
+     * ⚠ ET TOUTE AFFAIRE N'EST PAS TAXÉE. Un client exonéré, un risque non imposable :
+     * l'assureur ne précompte alors rien, et ce qui est encaissé EST le hors-taxes.
+     * Ajouter seize pour cent au plafond laisserait passer un taux faux d'un sixième sur
+     * précisément les affaires où la marge est nulle.
+     *
+     * @param int|string      $type   identifiant du type de revenu, ou repère de cette passe
+     * @param int|string|null $client idem pour l'assuré ; un repère désigne un client que
+     *                                cette passe crée, donc non exonéré (défaut de l'entité)
+     * @param int|string|null $risque idem pour le risque, que la reprise crée IMPOSABLE
+     * @param array{valeur: float|null, estTaux: bool, source?: string} $terme
+     *
+     * @return float|null null quand la ligne ne permet pas de conclure — assiette absente,
+     *                    taux hérité, type pas encore en base
+     */
+    private function rendementTtc(
+        int|string $type,
+        array $terme,
+        LigneLue $ligne,
+        Entreprise $entreprise,
+        int|string|null $client,
+        int|string|null $risque,
+    ): ?float {
+        // Un taux hérité ou absent ne se confronte à rien : c'est le classeur qu'on juge,
+        // pas la configuration du cabinet.
+        if ($terme['valeur'] === null || ValeursMultiples::estInformatif($terme)) {
+            return null;
+        }
+
+        $assiette = $this->assietteDeLaLigne($type, $ligne);
+        if ($assiette === null) {
+            return null;
+        }
+
+        $ht = $terme['estTaux']
+            ? $assiette * ($terme['valeur'] / 100.0)
+            : (float) $terme['valeur'];
+
+        if (!$this->affaireTaxee($client, $risque)) {
+            return $ht;
+        }
+
+        return $ht + max(
+            $this->taxes->getMontantTaxe($ht, true, true, $entreprise),
+            $this->taxes->getMontantTaxe($ht, false, true, $entreprise),
+        );
+    }
+
+    /**
+     * L'ASSUREUR PRÉCOMPTE-T-IL UNE TAXE SUR CETTE AFFAIRE ?
+     *
+     * Deux réglages l'excluent, et il suffit de l'un : un CLIENT exonéré de taxes, ou un
+     * RISQUE déclaré non imposable. Dans ces cas, la commission encaissée ne contient
+     * aucune taxe, et le plafond du contrôle est le hors-taxes tout sec.
+     *
+     * ⚠ UN REPÈRE VAUT « TAXÉE », ET CE N'EST PAS UN RACCOURCI. Une chaîne désigne une
+     * entité que CETTE passe est en train de créer : le client naît non exonéré (défaut de
+     * `Client::$exonere`) et le risque naît imposable (la reprise le pose explicitement).
+     * Les interroger en base n'aurait aucun sens — ils n'y sont pas encore — et le cas est
+     * donc tranché par construction, pas par défaut de mieux.
+     *
+     * ⚠ LA RÈGLE EST EMPRUNTÉE, PAS REDITE. `ServiceTaxes::commissionExoneree()` la porte
+     * pour tout le projet — l'écran, les indicateurs, la comptabilité. En écrire ici une
+     * seconde version, ce serait promettre que la reprise juge comme le moteur calcule, et
+     * manquer à cette promesse au premier réglage retouché d'un seul côté.
+     */
+    private function affaireTaxee(int|string|null $client, int|string|null $risque): bool
+    {
+        return !$this->taxes->commissionExoneree(
+            is_int($client) ? $this->em->find(Client::class, $client) : null,
+            is_int($risque) ? $this->em->find(Risque::class, $risque) : null,
+        );
+    }
+
+    /**
+     * L'ASSIETTE SUR LAQUELLE CE REVENU SE CALCULE, TELLE QUE LA LIGNE LA PORTE.
+     *
+     * ⚠ LA COLONNE PORTE LA PART DE L'ECHEANCE, ET C'EST CE QU'ON VEUT ICI. Ailleurs on
+     * la divise par la part pour remonter au total de la cotation
+     * ({@see chargementsDeLaLigne()}) ; la commission encaissée, elle, est celle de
+     * l'echeance. Les deux grandeurs doivent se comparer a la meme maille, sans quoi une
+     * police à quatre échéances paraîtrait encaisser quatre fois trop.
+     *
+     * ⚠ ET L'ASSIETTE SUIT LE TYPE, PAS UNE HABITUDE. Une « Commission sur Fronting » se
+     * calcule sur le fronting : la mesurer sur la prime nette sous-estimerait son
+     * rendement, et ferait reprocher une ligne parfaitement juste. Un type que cette passe
+     * vient de créer est la commission par défaut, assise sur la prime nette.
+     *
+     * @param int|string $type identifiant du type de revenu, ou repère de cette passe
+     */
+    private function assietteDeLaLigne(int|string $type, LigneLue $ligne): ?float
+    {
+        $fonction = Chargement::FONCTION_PRIME_NETTE;
+
+        if (is_int($type)) {
+            $cible = $this->em->find(TypeRevenu::class, $type)?->getTypeChargement()?->getFonction();
+            if ($cible === null || !isset(CatalogueDesColonnes::FONCTIONS[$cible])) {
+                return null;
+            }
+            $fonction = $cible;
+        }
+
+        $brut = $ligne->valeur(CatalogueDesColonnes::codeDeFonction($fonction));
+        if ($brut === null || trim((string) (is_scalar($brut) ? $brut : '')) === '') {
+            return null;
+        }
+
+        $montant = $this->nombreBrut($brut);
+
+        return $montant > 0.0 ? $montant : null;
+    }
+
+    /**
+     * LE CABINET A-T-IL ENCAISSÉ PLUS QUE CE QUE SON TAUX PEUT PRODUIRE ?
+     *
+     * ⚠ C'EST UN POINT DE BLOCAGE, ET IL DOIT LE RESTER. Toutes les autres deductions de
+     * ce service arrangent la ligne : un nom inconnu se rattache, une colonne vide prend
+     * un defaut. Celle-ci ne s'arrange pas. Si le taux fourni, une fois la taxe de
+     * l'assureur ajoutee, ne suffit pas a produire ce que le cabinet dit avoir encaisse,
+     * alors l'une des deux valeurs est fausse — et RIEN dans le fichier ne dit laquelle.
+     *
+     * Deviner ici coûterait cher dans les deux sens : retenir le taux ferait une note
+     * éternellement en solde négatif, retenir l'encaissement inventerait un taux que le
+     * cabinet n'a jamais pratique. On refuse donc, on montre les deux chiffres, et
+     * l'utilisateur tranche dans SON classeur — l'erreur vient souvent de ses donnees
+     * d'origine, et c'est la qu'il faut la corriger.
+     *
+     * ⚠ UNE MARGE, PARCE QUE LES ARRONDIS EXISTENT. Un pour cent : assez pour absorber
+     * une décimale perdue en chemin, trop peu pour laisser passer un taux faux.
+     */
+    private function commissionInsuffisante(LigneLue $ligne, float $commissionTtc, bool $toutEstTarife): ?Anomalie
+    {
+        $encaissee = $this->nombre($ligne, 'ouvertureCommissionEncaissee');
+
+        // Rien d'encaisse, ou un rendement qu'on ne sait pas calculer : il n'y a pas de
+        // contradiction à montrer, et un reproche sans chiffres ne se corrige pas.
+        if ($encaissee === null || $encaissee <= 0.0 || !$toutEstTarife || $commissionTtc <= 0.0) {
+            return null;
+        }
+
+        if ($encaissee <= $commissionTtc * (1.0 + self::MARGE_D_ARRONDI)) {
+            return null;
+        }
+
+        return $this->refus($ligne, 'ouvertureCommissionEncaissee', sprintf(
+            'Cette ligne annonce %s de commission déjà encaissée, mais le taux qu\'elle donne '
+            . 'ne peut en produire que %s au maximum — taxe de l\'assureur comprise. L\'un des '
+            . 'deux est faux, et le fichier ne dit pas lequel : corrigez le taux dans '
+            . '« Commission · Revenus », ou le montant dans « Ouverture · Commission '
+            . 'encaissée ». Cette ligne ne sera pas reprise tant que les deux ne '
+            . 's\'accordent pas.',
+            $this->nombreLisible($encaissee),
+            $this->nombreLisible($commissionTtc),
+        ));
+    }
+
+    /**
+     * LE TERME DE REVENU DIT-IL AUTRE CHOSE QUE CE QU'IL PARAÎT ?
+     *
+     * ⚠ DEUX PIÈGES, ET ILS SONT SYMÉTRIQUES.
+     *
+     * Le premier vient des classeurs d'AVANT : un nombre nu y valait un MONTANT, et
+     * « Commission = 5000 » désignait un forfait. Relu sous la règle d'aujourd'hui, il
+     * deviendrait un taux de cinq mille pour cent — une commission cinquante fois la
+     * prime, écrite sans que rien ne bronche. Aucun taux de courtage n'atteint cent :
+     * au-delà, ce n'est pas un taux, et on le dit.
+     *
+     * Le second est celui d'un FORFAIT déclaré qui se contredit avec la commission déjà
+     * encaissée sur la même ligne. Un forfait ne produit pas beaucoup plus que lui-même —
+     * les taxes n'y ajoutent qu'une fraction —, si bien qu'un encaissement qui dépasse le
+     * double du forfait ne peut pas en venir.
+     *
+     * ⚠ ON NE DEVINE PAS : ON CONFRONTE. Basculer d'office la valeur d'une forme à l'autre
+     * ferait la faute inverse le jour d'un cas légitime. On refuse en nommant la
+     * correction — le signe pourcent, ou le marqueur « (forfait) » — et l'utilisateur
+     * tranche.
+     *
+     * ⚠ LES SEUILS SONT LARGES À DESSEIN. Mieux vaut laisser passer un cas tordu que
+     * refuser un fichier juste : le reproche doit rester rare, sans quoi on l'ignore.
+     *
+     * @param array{valeur: float|null, estTaux: bool, source?: string} $terme
      */
     private function ambiguiteDuRevenu(LigneLue $ligne, string $nom, array $terme): ?Anomalie
     {
-        if ($terme['estTaux'] || $terme['valeur'] === null || $terme['valeur'] <= 0.0) {
+        if ($terme['valeur'] === null || $terme['valeur'] <= 0.0 || ValeursMultiples::estInformatif($terme)) {
             return null;
+        }
+
+        if ($terme['estTaux']) {
+            return $terme['valeur'] <= self::TAUX_PLAFOND
+                ? null
+                : $this->refus($ligne, 'commissionRevenus', sprintf(
+                    'Vous avez écrit « %s = %s », ce qui se lit comme un TAUX de %s %% — soit '
+                    . 'bien plus que la prime elle-même. Aucune commission de courtage n\'atteint '
+                    . 'ce niveau. S\'il s\'agit d\'un MONTANT FIXE, écrivez « %s = %s (forfait) ». '
+                    . 'Sinon, corrigez le taux.',
+                    $nom,
+                    $this->nombreLisible($terme['valeur']),
+                    $this->nombreLisible($terme['valeur']),
+                    $nom,
+                    $this->nombreLisible($terme['valeur']),
+                ));
         }
 
         $encaissee = $this->nombre($ligne, 'ouvertureCommissionEncaissee');
@@ -1377,16 +2044,17 @@ final class ReconstitueurDeTranche
         $valeur = $this->nombreLisible($terme['valeur']);
 
         return $this->refus($ligne, 'commissionRevenus', sprintf(
-            'Vous avez écrit « %s: %s », ce qui se lit comme un MONTANT FIXE de %s. Or la '
-            . 'même ligne annonce %s de commission déjà encaissée — un montant fixe de %s ne '
-            . 'peut pas produire cela. S\'il s\'agit d\'un TAUX, ajoutez le signe pourcent : '
-            . '« %s: %s%% ». Sinon, c\'est la commission encaissée qu\'il faut corriger.',
+            'Vous avez écrit « %s = %s (forfait) », soit un MONTANT FIXE de %s. Or la même '
+            . 'ligne annonce %s de commission déjà encaissée — un montant fixe de %s ne peut '
+            . 'pas produire cela. S\'il s\'agit d\'un TAUX, retirez « (forfait) » : « %s = %s » '
+            . 'vaut %s %%. Sinon, c\'est la commission encaissée qu\'il faut corriger.',
             $nom,
             $valeur,
             $valeur,
             $this->nombreLisible($encaissee),
             $valeur,
             $nom,
+            $valeur,
             $valeur,
         ));
     }

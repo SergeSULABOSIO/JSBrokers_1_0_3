@@ -295,8 +295,8 @@ class ControleImportTest extends WebTestCase
             $proprietaire,
         );
 
-        $anomalie = $this->anomalieDeCode($run, Anomalie::VALEUR_INVALIDE)
-            ?? $this->anomalieDeCode($run, Anomalie::CHAMP_OBLIGATOIRE);
+        $anomalie = $this->anomalieDeCode($run, Anomalie::VALEUR_INVALIDE, Anomalie::ERREUR)
+            ?? $this->anomalieDeCode($run, Anomalie::CHAMP_OBLIGATOIRE, Anomalie::ERREUR);
         self::assertNotNull($anomalie, 'Le test suppose un champ obligatoire absent : ' . $this->motif($run));
 
         self::assertNotNull($anomalie['colonne'], 'Le reproche doit désigner une CELLULE : ' . $anomalie['message']);
@@ -379,12 +379,25 @@ class ControleImportTest extends WebTestCase
     }
 
     /** @return array<string, mixed>|null */
-    private function anomalieDeCode(EchangeImportRun $run, string $code): ?array
+    /**
+     * @param string|null $gravite restreint aux anomalies de cette gravité, s'il est donné
+     *
+     * ⚠ UN CODE NE SUFFIT PLUS À DÉSIGNER UN REFUS. `VALEUR_INVALIDE` porte aussi des
+     * AVERTISSEMENTS — le catalogue en double, le client repris sans portefeuille — et le
+     * premier venu n'est pas forcément celui que le test observe. Un test qui vérifie la
+     * rédaction d'un refus doit donc dire qu'il veut un refus.
+     */
+    private function anomalieDeCode(EchangeImportRun $run, string $code, ?string $gravite = null): ?array
     {
         foreach ($run->getRapport()['anomalies'] ?? [] as $anomalie) {
-            if (($anomalie['code'] ?? '') === $code) {
-                return $anomalie;
+            if (($anomalie['code'] ?? '') !== $code) {
+                continue;
             }
+            if ($gravite !== null && ($anomalie['gravite'] ?? '') !== $gravite) {
+                continue;
+            }
+
+            return $anomalie;
         }
 
         return null;

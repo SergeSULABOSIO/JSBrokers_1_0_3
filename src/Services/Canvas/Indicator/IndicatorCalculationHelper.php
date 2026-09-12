@@ -933,7 +933,7 @@ class IndicatorCalculationHelper implements ResetInterface
     {
         if (!$cotation) return 0;
         $net = $this->getCotationMontantCommissionHt($cotation, TypeRevenu::REDEVABLE_ASSUREUR, $onlySharable);
-        $taxe = $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($cotation), true);
+        $taxe = $this->serviceTaxes->getMontantTaxeSurCommission($net, $this->isIARD($cotation), true, $cotation);
         return $net + $taxe;
     }
 
@@ -941,7 +941,7 @@ class IndicatorCalculationHelper implements ResetInterface
     {
         if (!$cotation) return 0;
         $net = $this->getCotationMontantCommissionHt($cotation, TypeRevenu::REDEVABLE_CLIENT, $onlySharable);
-        $taxe = $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($cotation), true);
+        $taxe = $this->serviceTaxes->getMontantTaxeSurCommission($net, $this->isIARD($cotation), true, $cotation);
         return $net + $taxe;
     }
 
@@ -1149,14 +1149,14 @@ class IndicatorCalculationHelper implements ResetInterface
     {
         if (!$cotation) return 0;
         $net = $this->getCotationMontantCommissionHt($cotation, -1, $onlySharable);
-        return $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($cotation), false);
+        return $this->serviceTaxes->getMontantTaxeSurCommission($net, $this->isIARD($cotation), false, $cotation);
     }
 
     public function getCotationMontantTaxeAssureur(?Cotation $cotation, bool $onlySharable): float
     {
         if (!$cotation) return 0;
         $net = $this->getCotationMontantCommissionHt($cotation, -1, $onlySharable);
-        return $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($cotation), true);
+        return $this->serviceTaxes->getMontantTaxeSurCommission($net, $this->isIARD($cotation), true, $cotation);
     }
 
     /**
@@ -1481,7 +1481,7 @@ class IndicatorCalculationHelper implements ResetInterface
         }
 
         $montantHT = $this->getRevenuMontantHtAddressedTo($addressedTo, $revenu);
-        $taxeCourtier = $this->serviceTaxes->getMontantTaxe($montantHT, $this->isIARD($revenu->getCotation()), false);
+        $taxeCourtier = $this->serviceTaxes->getMontantTaxeSurCommission($montantHT, $this->isIARD($revenu->getCotation()), false, $revenu->getCotation());
         return $montantHT - $taxeCourtier;
     }
 
@@ -1494,7 +1494,7 @@ class IndicatorCalculationHelper implements ResetInterface
     public function getRevenuMontantTaxeCourtier(RevenuPourCourtier $revenu): float
     {
         $montantHT = $this->getRevenuMontantHt($revenu);
-        return $this->serviceTaxes->getMontantTaxe($montantHT, $this->isIARD($revenu->getCotation()), false); // false = Taxe Courtier
+        return $this->serviceTaxes->getMontantTaxeSurCommission($montantHT, $this->isIARD($revenu->getCotation()), false, $revenu->getCotation()); // false = Taxe Courtier
     }
 
     /**
@@ -1503,7 +1503,7 @@ class IndicatorCalculationHelper implements ResetInterface
     public function getRevenuMontantTaxeAssureur(RevenuPourCourtier $revenu): float
     {
         $montantHT = $this->getRevenuMontantHt($revenu);
-        return $this->serviceTaxes->getMontantTaxe($montantHT, $this->isIARD($revenu->getCotation()), true); // true = Taxe Assureur
+        return $this->serviceTaxes->getMontantTaxeSurCommission($montantHT, $this->isIARD($revenu->getCotation()), true, $revenu->getCotation()); // true = Taxe Assureur
     }
 
     /**
@@ -2543,7 +2543,7 @@ class IndicatorCalculationHelper implements ResetInterface
         $net_payable_par_assureur = $this->getCotationMontantCommissionHt($cotation, TypeRevenu::REDEVABLE_ASSUREUR, $onlySharable);
         $net_payable_par_client = $this->getCotationMontantCommissionHt($cotation, TypeRevenu::REDEVABLE_CLIENT, $onlySharable);
         $net_total = $net_payable_par_assureur + $net_payable_par_client;
-        return $this->serviceTaxes->getMontantTaxe($net_total, $isIARD, $isTaxAssureur);
+        return $this->serviceTaxes->getMontantTaxeSurCommission($net_total, $isIARD, $isTaxAssureur, $cotation);
     }
 
     // --- NOUVELLES MÉTHODES UTILITAIRES POUR LES STRATÉGIES ---
@@ -2666,7 +2666,7 @@ class IndicatorCalculationHelper implements ResetInterface
     {
         $ht = $this->getRevenuMontantHt($revenu);
         $isIARD = $this->isIARD($revenu->getCotation());
-        $taxe = $this->serviceTaxes->getMontantTaxe($ht, $isIARD, true); // Taxe Assureur sur TTC
+        $taxe = $this->serviceTaxes->getMontantTaxeSurCommission($ht, $isIARD, true, $revenu->getCotation()); // Taxe Assureur sur TTC
         return $ht + $taxe;
     }
 

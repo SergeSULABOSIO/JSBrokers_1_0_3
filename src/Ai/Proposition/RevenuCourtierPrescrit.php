@@ -277,6 +277,16 @@ final class RevenuCourtierPrescrit
      * de Constante::Revenu_getMontant_ht() — source unique du calcul réel. Renvoie
      * null quand rien n'est prescrit : c'est alors une question, pas un défaut.
      *
+     * ⚠ LA PREMIÈRE BRANCHE DE LA CASCADE N'EST PAS ICI, ET ELLE NE PEUT PAS Y ÊTRE. Le
+     * calcul commence par le `tauxExceptionel` DU REVENU, qui l'emporte désormais sur le
+     * taux du risque. Or ce revenu n'existe pas encore : cette méthode dit ce que la
+     * configuration prescrit À DÉFAUT de dérogation. C'est `deriver()` qui porte la
+     * première branche — quand l'utilisateur DICTE un taux, l'élément part avec son
+     * `tauxExceptionel` sans jamais passer par ici.
+     *
+     * Ce n'est donc pas un écart : les deux moitiés, ensemble, suivent la cascade dans son
+     * ordre. `RevenuCourtierPrescritPariteTest` le vérifie, valeur par valeur.
+     *
      * @return array{libelle: string, taux: ?Pourcentage}|null
      */
     private function prescription(TypeRevenu $type, ?Risque $risque): ?array
