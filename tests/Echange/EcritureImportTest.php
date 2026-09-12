@@ -976,15 +976,15 @@ class EcritureImportTest extends WebTestCase
     }
 
     /**
-     * ⚠ UN CLIENT SANS PORTEFEUILLE EST REPRIS QUAND MÊME.
+     * ⚠ UN CLIENT SANS PORTEFEUILLE REJOINT LE PLUS ANCIEN PORTEFEUILLE DU PROPRIÉTAIRE.
      *
      * Le circuit d'écriture réclamait le portefeuille de destination dès que le déposant en
-     * gérait plusieurs — juste dans une conversation, où l'assistant peut poser la
-     * question ; mur absolu sur un fichier, où chaque ligne à colonne vide se voyait
-     * opposer « Remplissez la colonne "Portefeuille" ». Un cabinet qui ne range pas encore
-     * ses clients ne pouvait rien reprendre du tout.
+     * gérait plusieurs — juste dans une conversation, mur absolu sur un fichier. Laissé
+     * ensuite sans portefeuille, le client n'apparaissait dans aucune vue « Mon
+     * portefeuille ». Le propriétaire du cabinet le reçoit désormais, dans le plus ancien
+     * des siens : le seul choix qui ne dépende ni d'un nom ni de l'ordre d'affichage.
      */
-    public function testUnClientSansPortefeuilleEstReprisQuandMeme(): void
+    public function testUnClientSansPortefeuilleRejointLePlusAncienDuProprietaire(): void
     {
         [$entreprise, $proprietaire] = $this->fixture();
         $this->deuxPortefeuillesGeres($entreprise, $proprietaire);
@@ -994,18 +994,184 @@ class EcritureImportTest extends WebTestCase
         self::assertSame(EchangeImportRun::STATUT_TERMINE, $run->getStatut(), $this->motif($run));
 
         $cnx = $this->em()->getConnection();
+        $plusAncien = (int) $cnx->fetchOne(
+            'SELECT MIN(id) FROM portefeuille WHERE entreprise_id = ?',
+            [$entreprise->getId()],
+        );
         $portefeuilleDuClient = $cnx->fetchOne(
             'SELECT portefeuille_id FROM client WHERE entreprise_id = ? AND nom = ?',
             [$entreprise->getId(), 'KIN AVIA'],
         );
 
         self::assertNotFalse($portefeuilleDuClient, 'Le client doit être repris : ' . $this->motif($run));
-        self::assertNull($portefeuilleDuClient, 'Colonne vide = aucun portefeuille, et non un refus.');
+        self::assertSame($plusAncien, (int) $portefeuilleDuClient);
 
-        // ⚠ ET ON LE DIT, une fois : ces clients n'apparaîtront pas dans « Mon
-        // portefeuille » tant qu'on ne les y aura pas rangés. Se taire laisserait croire à
-        // une reprise incomplète.
-        self::assertStringContainsString('sans portefeuille', $this->motif($run));
+        // ⚠ ET ON DIT OÙ, une fois : sans quoi on chercherait ces clients ailleurs.
+        self::assertStringContainsString('Grands comptes', $this->motif($run));
+    }
+
+    /**
+     * ⚠ UN PROPRIÉTAIRE SANS PORTEFEUILLE EN REÇOIT UN — UN SEUL, POUR TOUT LE FICHIER.
+     *
+     * La convergence par repère est ce qui l'empêche d'en créer un par client : deux
+     * clients, deux polices, un portefeuille.
+     */
+    public function testUnProprietaireSansPortefeuilleEnRecoitUnSeul(): void
+    {
+        [$entreprise, $proprietaire] = $this->fixture();
+
+        $run = $this->importer($entreprise, $proprietaire, [
+            $this->uneEcheance(),
+            array_replace($this->uneEcheance(), ['policeReference' => 'POL/2026/002', 'assure' => 'SARL MARTIN']),
+        ]);
+
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $run->getStatut(), $this->motif($run));
+
+        $cnx = $this->em()->getConnection();
+        $portefeuilles = $cnx->fetchAllAssociative(
+            'SELECT id, nom, gestionnaire_id FROM portefeuille WHERE entreprise_id = ?',
+            [$entreprise->getId()],
+        );
+
+        self::assertCount(1, $portefeuilles, 'Un seul portefeuille pour tout le fichier.');
+        self::assertSame('Portefeuille de Le Patron', $portefeuilles[0]['nom']);
+        self::assertSame((int) $proprietaire->getId(), (int) $portefeuilles[0]['gestionnaire_id']);
+
+        $rangés = (int) $cnx->fetchOne(
+            'SELECT COUNT(*) FROM client WHERE entreprise_id = ? AND portefeuille_id = ?',
+            [$entreprise->getId(), $portefeuilles[0]['id']],
+        );
+        self::assertSame(2, $rangés, 'Les deux clients y sont rangés.');
+    }
+
+    /**
+     * ⚠ UN INTERMÉDIAIRE INCONNU NAÎT AVEC LA PART QUE LE FICHIER LUI DONNE LE PLUS SOUVENT.
+     *
+     * La reprise le créait sans part — colonne obligatoire —, et chaque ligne le nommant
+     * était refusée sur « Part du partenaire, que le classeur ne transporte pas ». La
+     * colonne « Intermédiaire · Part » la transporte : 30, 30 et 0 font une fiche à 30, et
+     * UNE condition à 0 propre à la seule affaire qui s'en écarte.
+     */
+    public function testUnIntermediaireInconnuPrendLaPartLaPlusFrequente(): void
+    {
+        [$entreprise, $proprietaire] = $this->fixture();
+
+        $run = $this->importer($entreprise, $proprietaire, [
+            array_replace($this->uneEcheance(), ['intermediaire' => 'MARSH', 'intermediairePart' => 30]),
+            array_replace($this->uneEcheance(), ['policeReference' => 'POL/2026/002', 'intermediaire' => 'MARSH', 'intermediairePart' => 0]),
+            array_replace($this->uneEcheance(), ['policeReference' => 'POL/2026/003', 'intermediaire' => 'MARSH', 'intermediairePart' => 30]),
+        ]);
+
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $run->getStatut(), $this->motif($run));
+
+        $cnx = $this->em()->getConnection();
+        $partenaire = $cnx->fetchAssociative(
+            'SELECT id, part FROM partenaire WHERE entreprise_id = ? AND nom = ?',
+            [$entreprise->getId(), 'MARSH'],
+        );
+        self::assertNotFalse($partenaire, 'L\'intermédiaire doit être créé : ' . $this->motif($run));
+        self::assertEqualsWithDelta(30.0, (float) $partenaire['part'], 0.001);
+
+        self::assertSame(
+            ['0'],
+            $this->tauxDesConditionsPropres($partenaire['id']),
+            'Une seule condition propre, à 0 %, sur l\'affaire qui s\'écarte de la part.',
+        );
+        self::assertSame(3, (int) $cnx->fetchOne(
+            'SELECT COUNT(*) FROM piste WHERE entreprise_id = ? AND partenaire_id = ?',
+            [$entreprise->getId(), $partenaire['id']],
+        ), 'Les trois affaires désignent l\'intermédiaire.');
+    }
+
+    /**
+     * ⚠ SANS AUCUNE PART, LA FICHE PREND 20 % ET CHAQUE AFFAIRE REÇOIT UN ARRANGEMENT À 0 %.
+     *
+     * La fiche ne peut pas naître sans part — la colonne est obligatoire —, d'où l'usage du
+     * cabinet. Mais une ligne qui nomme l'intermédiaire sans lui donner de part dit que rien
+     * ne lui revient sur cette affaire : c'est écrit en condition propre à 0 %.
+     */
+    public function testUnIntermediaireSansAucunePartNaitAVingtEtChaqueAffaireAZero(): void
+    {
+        [$entreprise, $proprietaire] = $this->fixture();
+
+        $run = $this->importer($entreprise, $proprietaire, [
+            array_replace($this->uneEcheance(), ['intermediaire' => 'SUNU']),
+            array_replace($this->uneEcheance(), ['policeReference' => 'POL/2026/002', 'intermediaire' => 'SUNU']),
+        ]);
+
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $run->getStatut(), $this->motif($run));
+
+        $partenaire = $this->em()->getConnection()->fetchAssociative(
+            'SELECT id, part FROM partenaire WHERE entreprise_id = ? AND nom = ?',
+            [$entreprise->getId(), 'SUNU'],
+        );
+        self::assertNotFalse($partenaire, $this->motif($run));
+        self::assertEqualsWithDelta(20.0, (float) $partenaire['part'], 0.001);
+        self::assertSame(['0', '0'], $this->tauxDesConditionsPropres($partenaire['id']));
+    }
+
+    /**
+     * ⚠ UN PARTENAIRE EXISTANT GARDE SA FICHE ; L'ÉCART DEVIENT UNE CONDITION DE L'AFFAIRE.
+     *
+     * Trois affaires : l'une au taux habituel (rien à écrire), l'une à 30 (condition à 30),
+     * l'une sans part (condition à 0). Et le redépôt du même fichier n'en ajoute aucune :
+     * une affaire déjà en base ne se réécrit pas.
+     */
+    public function testUnPartenaireExistantRecoitUneConditionPropreSeulementSurLEcart(): void
+    {
+        [$entreprise, $proprietaire] = $this->fixture();
+        $idPartenaire = $this->partenaireExistant($entreprise, $proprietaire, 'MARSH', 20.0);
+
+        $lignes = [
+            array_replace($this->uneEcheance(), ['intermediaire' => 'MARSH', 'intermediairePart' => 20]),
+            array_replace($this->uneEcheance(), ['policeReference' => 'POL/2026/002', 'intermediaire' => 'MARSH', 'intermediairePart' => 30]),
+            array_replace($this->uneEcheance(), ['policeReference' => 'POL/2026/003', 'intermediaire' => 'MARSH']),
+        ];
+
+        $run = $this->importer($entreprise, $proprietaire, $lignes);
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $run->getStatut(), $this->motif($run));
+
+        $conditions = $this->tauxDesConditionsPropres($idPartenaire);
+        sort($conditions);
+        self::assertSame(['0', '30'], $conditions);
+
+        self::assertEqualsWithDelta(20.0, (float) $this->em()->getConnection()->fetchOne(
+            'SELECT part FROM partenaire WHERE id = ?',
+            [$idPartenaire],
+        ), 0.001, 'La fiche du partenaire n\'est pas touchée.');
+
+        $redepot = $this->importer($entreprise, $proprietaire, $lignes);
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $redepot->getStatut(), $this->motif($redepot));
+        self::assertCount(2, $this->tauxDesConditionsPropres($idPartenaire), 'Le redépôt n\'empile rien.');
+    }
+
+    /**
+     * ⚠ UNE RÉFÉRENCE QUI COUVRE DEUX RISQUES FAIT DEUX AFFAIRES — ET CHACUNE FAIT 100 %.
+     *
+     * Le cas réel : « incendie » et « pertes d'exploitation » sous un seul numéro de police,
+     * chacun en prime unique. Le contrôle y lisait deux échéances d'une même police
+     * totalisant 200 %, et même corrigé, la convergence sur la seule référence aurait perdu
+     * le second risque — sa prime et sa commission n'étaient jamais écrites.
+     */
+    public function testUneReferenceSurDeuxRisquesFaitDeuxAffaires(): void
+    {
+        [$entreprise, $proprietaire] = $this->fixture();
+        $this->catalogueDeRevenu($entreprise, $proprietaire);
+
+        $lignes = [
+            array_replace($this->uneEcheance(), ['risque' => 'FAP', 'tranchePart' => 100, 'chargement_prime_nette' => 1000]),
+            array_replace($this->uneEcheance(), ['risque' => 'PDBI', 'tranchePart' => 100, 'chargement_prime_nette' => 2000]),
+        ];
+
+        $run = $this->importer($entreprise, $proprietaire, $lignes);
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $run->getStatut(), $this->motif($run));
+
+        $attendu = ['pistes' => 2, 'cotations' => 2, 'avenants' => 2, 'tranches' => 2];
+        self::assertSame($attendu, $this->volumesDeLaChaine($entreprise));
+
+        $redepot = $this->importer($entreprise, $proprietaire, $lignes);
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $redepot->getStatut(), $this->motif($redepot));
+        self::assertSame($attendu, $this->volumesDeLaChaine($entreprise), 'Le redépôt ne duplique aucun des deux risques.');
     }
 
     /**
@@ -1250,6 +1416,58 @@ class EcritureImportTest extends WebTestCase
     {
         $this->portefeuilleGere($entreprise, $invite, 'Grands comptes');
         $this->portefeuilleGere($entreprise, $invite, 'Particuliers');
+    }
+
+    /**
+     * Un partenaire DÉJÀ en base, sans aucune condition — le cas d'une fiche ancienne.
+     *
+     * ⚠ SANS CONDITION D'OFFICE, À DESSEIN : c'est la situation où une condition propre à
+     * une affaire, mal filtrée, devenait la règle de tout le partenaire.
+     */
+    private function partenaireExistant(Entreprise $entreprise, Invite $invite, string $nom, float $part): int
+    {
+        $em = $this->em();
+
+        $partenaire = (new \App\Entity\Partenaire())->setNom($nom)->setPart($part);
+        $partenaire->setEntreprise($em->find(Entreprise::class, $entreprise->getId()));
+        $partenaire->setInvite($em->find(Invite::class, $invite->getId()));
+        $em->persist($partenaire);
+        $em->flush();
+
+        return (int) $partenaire->getId();
+    }
+
+    /**
+     * Les taux des conditions PROPRES À UNE AFFAIRE qui nomment ce partenaire.
+     *
+     * @return string[] taux arrondis à l'unité, dans l'ordre de création
+     */
+    private function tauxDesConditionsPropres(int|string $idPartenaire): array
+    {
+        return array_map(
+            static fn (mixed $taux): string => (string) round((float) $taux),
+            $this->em()->getConnection()->fetchFirstColumn(
+                'SELECT taux FROM condition_partage WHERE partenaire_id = ? AND piste_id IS NOT NULL ORDER BY id',
+                [$idPartenaire],
+            ),
+        );
+    }
+
+    /** @return array{pistes: int, cotations: int, avenants: int, tranches: int} */
+    private function volumesDeLaChaine(Entreprise $entreprise): array
+    {
+        $cnx = $this->em()->getConnection();
+        $compter = static fn (string $table): int => (int) $cnx->fetchOne(
+            sprintf('SELECT COUNT(*) FROM %s WHERE entreprise_id = ?', $table),
+            [$entreprise->getId()],
+        );
+
+        return [
+            'pistes' => $compter('piste'),
+            'cotations' => $compter('cotation'),
+            'avenants' => $compter('avenant'),
+            'tranches' => $compter('tranche'),
+        ];
     }
 
     /** La TVA que l'ASSUREUR précompte sur la commission du courtier. */

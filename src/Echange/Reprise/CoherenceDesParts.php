@@ -4,9 +4,10 @@ namespace App\Echange\Reprise;
 
 use App\Echange\Classeur\LigneLue;
 use App\Echange\Service\Anomalie;
+use App\Echange\Service\ResolveurDeRenvois;
 
 /**
- * LES PARTS D'ÉCHÉANCE D'UNE MÊME POLICE DOIVENT FAIRE UN TOUT.
+ * LES PARTS D'ÉCHÉANCE D'UNE MÊME AFFAIRE DOIVENT FAIRE UN TOUT.
  *
  * La prime d'une police est la somme de ses composantes ; la prime d'une échéance vaut
  * cette somme multipliée par la PART de l'échéance. Les deux ne coïncident donc que si les
@@ -21,7 +22,13 @@ use App\Echange\Service\Anomalie;
  * remonte le prorata en divisant par elle : une part fausse ne se contente pas de fausser
  * l'échéance, elle fausse la prime de la police entière.
  *
- * ⚠ ON NE JUGE QUE CE QUE LE FICHIER MONTRE. Une police dont une seule échéance figure au
+ * ⚠ LE RISQUE FAIT PARTIE DE L'AFFAIRE. Une référence de police peut couvrir plusieurs
+ * risques, dont chacun est une affaire à part avec son propre échéancier
+ * ({@see CleNaturelle::pourChaine()}). « Incendie, prime unique, 100 » et « Pertes
+ * d'exploitation, prime unique, 100 » sous un même contrat sont deux échéanciers justes —
+ * les additionner reprochait 200 % à un fichier irréprochable.
+ *
+ * ⚠ ON NE JUGE QUE CE QUE LE FICHIER MONTRE. Une affaire dont une seule échéance figure au
  * dépôt n'est pas contrôlable : il manque les autres, et rien ne dit si c'est un oubli ou
  * une reprise partielle voulue. Le silence est ici la seule réponse honnête.
  */
@@ -50,8 +57,8 @@ final class CoherenceDesParts
     {
         $anomalies = [];
 
-        foreach (self::grouperParPolice($lignes) as $reference => $groupe) {
-            // Une police d'une seule ligne ne dit rien de sa répartition : la part absente
+        foreach (self::grouperParAffaire($lignes) as ['reference' => $reference, 'risque' => $risque, 'lignes' => $groupe]) {
+            // Une affaire d'une seule ligne ne dit rien de sa répartition : la part absente
             // y vaut la totalité, ce qui est le comportement de la reprise depuis toujours.
             if (count($groupe) < 2) {
                 continue;
@@ -72,11 +79,12 @@ final class CoherenceDesParts
             if ($sansPart !== []) {
                 foreach ($sansPart as $ligne) {
                     $anomalies[] = self::refus($ligne, sprintf(
-                        'Cette police compte %d échéances dans votre fichier, mais celle-ci '
+                        'Cette police compte %d échéances dans votre fichier%s, mais celle-ci '
                         . 'n\'indique pas quelle part de la prime elle représente. Indiquez-la '
                         . 'en pourcentage — par exemple 25 pour un quart —, et faites en sorte '
                         . 'que les %d échéances totalisent 100.',
                         count($groupe),
+                        self::surLeRisque($risque),
                         count($groupe),
                     ));
                 }
@@ -93,12 +101,13 @@ final class CoherenceDesParts
             // qu'on ne sait pas laquelle est fautive.
             foreach ($groupe as $ligne) {
                 $anomalies[] = self::refus($ligne, sprintf(
-                    'Les %d échéances de la police « %s » totalisent %s %% de la prime, au '
+                    'Les %d échéances de la police « %s »%s totalisent %s %% de la prime, au '
                     . 'lieu de 100. Chaque échéance doit porter la part qui lui revient : '
                     . 'quatre échéances égales font 25 chacune, deux font 50. Tant qu\'elles '
                     . 'ne font pas 100, la prime de la police sera fausse.',
                     count($groupe),
                     $reference,
+                    self::surLeRisque($risque),
                     self::lisible($somme),
                 ));
             }
@@ -108,11 +117,13 @@ final class CoherenceDesParts
     }
 
     /**
+     * Les lignes rangées par AFFAIRE : référence, numéro d'avenant et risque.
+     *
      * @param LigneLue[] $lignes
      *
-     * @return array<string, LigneLue[]>
+     * @return array<int, array{reference: string, risque: string, lignes: LigneLue[]}>
      */
-    private static function grouperParPolice(array $lignes): array
+    private static function grouperParAffaire(array $lignes): array
     {
         $groupes = [];
 
@@ -123,19 +134,25 @@ final class CoherenceDesParts
             }
 
             // L'avenant fait partie de l'identité : deux avenants d'une même police sont
-            // deux échéanciers, et leurs parts ne s'additionnent pas.
-            $cle = $reference . '|' . trim($ligne->texte('policeNumeroAvenant'));
-            $groupes[$cle][] = $ligne;
+            // deux échéanciers, et leurs parts ne s'additionnent pas. Le risque aussi, normalisé
+            // comme dans la clé de convergence : « PDBI » et « pdbi » sont un même risque.
+            $cle = $reference
+                . '|' . trim($ligne->texte('policeNumeroAvenant'))
+                . '|' . ResolveurDeRenvois::normaliser($ligne->texte('risque'));
+
+            // Le reproche, lui, nomme la police et le risque tels que l'utilisateur les a écrits.
+            $groupes[$cle]['reference'] ??= $reference;
+            $groupes[$cle]['risque'] ??= $ligne->texte('risque');
+            $groupes[$cle]['lignes'][] = $ligne;
         }
 
-        // La clé technique porte l'avenant ; le reproche, lui, nomme la police telle que
-        // l'utilisateur l'a écrite.
-        $parReference = [];
-        foreach ($groupes as $cle => $groupe) {
-            $parReference[explode('|', $cle)[0]] = $groupe;
-        }
+        return array_values($groupes);
+    }
 
-        return $parReference;
+    /** « sur le risque « PDBI » », ou rien quand la ligne ne le nomme pas. */
+    private static function surLeRisque(string $risque): string
+    {
+        return $risque === '' ? '' : sprintf(' sur le risque « %s »', $risque);
     }
 
     private static function part(LigneLue $ligne): ?float

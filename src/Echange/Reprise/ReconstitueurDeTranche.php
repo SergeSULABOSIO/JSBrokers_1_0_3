@@ -15,12 +15,18 @@ use App\Echange\Service\Anomalie;
 use App\Echange\Service\ResolveurDeRenvois;
 use App\Entity\Chargement;
 use App\Entity\Client;
+use App\Entity\ConditionPartage;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Note;
+use App\Entity\Partenaire;
+use App\Entity\Portefeuille;
 use App\Entity\Risque;
 use App\Entity\TypeRevenu;
+use App\Form\ConditionPartageType;
+use App\Service\Partage\ConditionDOffice;
+use App\Services\Canvas\Indicator\RevenuPourCourtierIndicatorStrategy;
 use App\Services\ServiceTaxes;
 use Doctrine\ORM\EntityManagerInterface;
 use PhpOffice\PhpSpreadsheet\Shared\Date as DateExcel;
@@ -172,7 +178,22 @@ final class ReconstitueurDeTranche
         // qui dit si le taux fourni tient debout ({@see commissionInsuffisante()}).
         private readonly ServiceTaxes $taxes,
     ) {
+        $this->parts = PartsDesIntermediaires::aucune();
     }
+
+    /**
+     * LA PART DE CHAQUE INTERMÉDIAIRE QUE LE FICHIER CRÉE, lue sur TOUT le fichier.
+     *
+     * ⚠ PAS SUR LE PALIER : voir {@see PartsDesIntermediaires}. Un apporteur qui paraît sur
+     * cent lignes naît une seule fois, et sa part ne doit pas dépendre du découpage.
+     */
+    private PartsDesIntermediaires $parts;
+
+    /**
+     * @var array{id: int, nom: string, portefeuille: ?array{id: int, nom: string}}|null|false
+     *      le propriétaire du cabinet et son plus ancien portefeuille ; `false` = pas encore lu
+     */
+    private array|null|false $proprietaire = false;
 
     /**
      * L'invité pour le compte de qui la reprise est faite.
@@ -188,9 +209,12 @@ final class ReconstitueurDeTranche
     private ?Invite $pourLeCompteDe = null;
 
     /** Le registre est propre entre deux contrôles — le service est partagé. */
-    public function reinitialiser(?Invite $pourLeCompteDe = null): void
+    public function reinitialiser(?Invite $pourLeCompteDe = null, ?PartsDesIntermediaires $parts = null): void
     {
         $this->pourLeCompteDe = $pourLeCompteDe;
+        $this->parts = $parts ?? PartsDesIntermediaires::aucune();
+        // Relu à chaque palier : le précédent a peut-être créé le portefeuille du propriétaire.
+        $this->proprietaire = false;
         $this->registre = [];
         $this->revenuParProposition = [];
         $this->redevableParProposition = [];
@@ -292,22 +316,32 @@ final class ReconstitueurDeTranche
         // identifiant, exactement comme un client reconnu par `rattacher()`.
         $numeroAvenant = $ligne->texte('policeNumeroAvenant');
 
-        if ($this->chaine->estAmbigue($reference, $numeroAvenant, $entreprise)) {
-            $anomalies[] = $this->refus(
-                $ligne,
-                self::COLONNE_CLE,
-                sprintf(
-                    'Vous avez déjà plusieurs polices portant la référence « %s ». On ne peut pas '
-                    . 'deviner à laquelle rattacher cette échéance. Ouvrez la rubrique des polices, '
-                    . 'gardez-en une seule, puis redéposez ce fichier.',
+        // ⚠ LE RISQUE FAIT PARTIE DE L'IDENTITÉ DE L'AFFAIRE. Une même référence peut couvrir
+        // plusieurs risques — incendie et pertes d'exploitation sous un seul contrat —, et
+        // chacun est une affaire à part : sa prime, sa commission, sa part d'intermédiaire.
+        // Converger sur la seule référence faisait perdre le second risque en entier
+        // ({@see CleNaturelle::pourChaine()}).
+        $libelleRisque = $ligne->texte('risque');
+
+        if ($this->chaine->estAmbigue($reference, $numeroAvenant, $libelleRisque, $entreprise)) {
+            $anomalies[] = $libelleRisque === ''
+                ? $this->refus($ligne, 'risque', sprintf(
+                    'Vous avez déjà plusieurs polices « %s », sur des risques différents. Remplissez '
+                    . 'la colonne du risque pour dire à laquelle cette échéance appartient.',
                     $reference,
-                ),
-            );
+                ))
+                : $this->refus($ligne, self::COLONNE_CLE, sprintf(
+                    'Vous avez déjà plusieurs polices portant la référence « %s » sur le risque '
+                    . '« %s ». On ne peut pas deviner à laquelle rattacher cette échéance. Ouvrez la '
+                    . 'rubrique des polices, gardez-en une seule, puis redéposez ce fichier.',
+                    $reference,
+                    $libelleRisque,
+                ));
 
             return [];
         }
 
-        $existante = $this->chaine->pour($reference, $numeroAvenant, $entreprise);
+        $existante = $this->chaine->pour($reference, $numeroAvenant, $libelleRisque, $entreprise);
         $idPiste = $existante['piste'] ?? null;
         $idCotation = $existante['cotation'] ?? null;
         $idAvenant = $existante['avenant'] ?? null;
@@ -315,14 +349,10 @@ final class ReconstitueurDeTranche
         $operations = [];
 
         // ── Les niveaux nommés par un libellé ───────────────────────────────────────
-        $client = $this->rattacher('Client', $ligne, 'assure', CleNaturelle::CLIENT, $entreprise, $anomalies, $operations, [
-            'nom' => $ligne->texte('assure'),
-        ]);
-        if ($client === null) {
-            return [];
-        }
-
-        // Le portefeuille se pose sur le CLIENT, et n'est donc renseigné qu'à sa création.
+        // ⚠ LE PORTEFEUILLE D'ABORD, PARCE QUE LE CLIENT S'Y RANGE. Il se pose sur le CLIENT,
+        // à sa création : l'opération qui le crée doit donc précéder celle du client, un
+        // renvoi ne partant jamais en avant. Rattaché après, comme il l'a été longtemps, il
+        // naissait bien — mais aucun client n'y était jamais rangé.
         $portefeuille = $this->rattacher('Portefeuille', $ligne, 'portefeuille', CleNaturelle::PORTEFEUILLE, $entreprise, $anomalies, $operations, [
             'nom' => $ligne->texte('portefeuille'),
             // ⚠ SANS GESTIONNAIRE, LE PORTEFEUILLE NE PEUT PAS NAÎTRE — et le classeur ne
@@ -331,23 +361,32 @@ final class ReconstitueurDeTranche
             'gestionnaire' => $this->pourLeCompteDe?->getId(),
         ]);
 
-        // ⚠ UN CLIENT SANS PORTEFEUILLE EST REPRIS, ET ON LE DIT. Le circuit d'écriture
-        // réclamait le portefeuille dès que le déposant en gérait plusieurs — question
-        // juste dans une conversation, mur absolu sur un fichier. La colonne vide est
-        // désormais une réponse ({@see \App\Service\Workspace\WorkspaceMutationService::resoudrePortefeuille()}),
-        // mais elle a une conséquence visible : ces clients n'apparaîtront pas dans la vue
-        // « Mon portefeuille » tant qu'on ne les y aura pas rangés. Se taire là-dessus,
-        // c'est laisser croire à une reprise incomplète.
-        if ($portefeuille === null && $ligne->texte('portefeuille') === '' && is_string($client)) {
-            $this->direUneFois(
-                'client-sans-portefeuille',
-                $ligne,
-                'portefeuille',
-                'Des clients de ce fichier ne portent aucun portefeuille : ils sont repris '
-                . 'quand même, mais sans portefeuille. Ouvrez la rubrique « Clients » pour les '
-                . 'y ranger — la colonne « Portefeuille » vous évitera ce geste au prochain dépôt.',
-                $anomalies,
-            );
+        // ⚠ UN CLIENT SANS PORTEFEUILLE REJOINT CELUI DU PROPRIÉTAIRE DU CABINET. Laissé
+        // sans portefeuille, il n'apparaissait dans aucune vue « Mon portefeuille » et
+        // attendait qu'on le range à la main, client par client.
+        //
+        // Les champs sont une FONCTION, évaluée seulement si le client naît : un client déjà
+        // en base garde son rangement, et le portefeuille par défaut n'est créé que s'il sert.
+        $client = $this->rattacher(
+            'Client',
+            $ligne,
+            'assure',
+            CleNaturelle::CLIENT,
+            $entreprise,
+            $anomalies,
+            $operations,
+            function () use ($ligne, $portefeuille, $entreprise, &$operations, &$anomalies): array {
+                return [
+                    'nom' => $ligne->texte('assure'),
+                    'portefeuille' => $portefeuille
+                        ?? ($ligne->texte('portefeuille') === ''
+                            ? $this->portefeuilleParDefaut($ligne, $entreprise, $operations, $anomalies)
+                            : null),
+                ];
+            },
+        );
+        if ($client === null) {
+            return [];
         }
 
         $risque = $this->rattacher('Risque', $ligne, 'risque', CleNaturelle::RISQUE, $entreprise, $anomalies, $operations, [
@@ -371,6 +410,12 @@ final class ReconstitueurDeTranche
 
         $intermediaire = $this->rattacher('Partenaire', $ligne, 'intermediaire', CleNaturelle::PARTENAIRE, $entreprise, $anomalies, $operations, [
             'nom' => $ligne->texte('intermediaire'),
+            // ⚠ LA PART EST OBLIGATOIRE, ET LE FICHIER LA DONNE. Sans elle, chaque ligne
+            // nommant un apporteur inconnu était refusée sur « Part du partenaire, que le
+            // classeur de reprise ne transporte pas » — alors qu'il la transporte, colonne
+            // « Intermédiaire · Part ». On retient la plus fréquente du fichier ; les écarts
+            // deviennent des conditions propres à l'affaire ({@see conditionPropreALAffaire()}).
+            'part' => $this->parts->partDeCreation($ligne->texte('intermediaire')),
         ]);
 
         // ⚠ UNE OPPORTUNITÉ SANS RISQUE EST IMPOSSIBLE, ET LE REFUS DOIT LE DIRE ICI.
@@ -400,7 +445,7 @@ final class ReconstitueurDeTranche
         // Déjà en base : on s'y rattache par son identifiant et l'on n'écrit rien. Refaire
         // son ascendance à chaque dépôt produirait des modifications que personne n'a
         // demandées, et un journal annonçant cinq écritures pour une.
-        $piste = (string) CleNaturelle::pourChaine(CleNaturelle::PISTE, $reference);
+        $piste = (string) CleNaturelle::pourChaine(CleNaturelle::PISTE, $reference, $libelleRisque);
         if ($idPiste === null && $this->neuf($piste)) {
             $champs = [
                 'nom' => $this->nomDeLAffaire($ligne),
@@ -422,13 +467,20 @@ final class ReconstitueurDeTranche
                 // source la plus proche, et la seule qui ne dépende de rien.
                 'descriptionDuRisque' => $ligne->texte('risque'),
             ];
+            $collectionsDeLAffaire = [];
             if ($intermediaire !== null) {
                 $champs['partenaire'] = $intermediaire;
+
+                $condition = $this->conditionPropreALAffaire($ligne, $intermediaire, $risque, $anomalies);
+                if ($condition !== null) {
+                    $collectionsDeLAffaire['conditionsPartageExceptionnelles'] = [$condition];
+                }
             }
             $operations[] = new MutationOperation(
                 op: MutationOperation::OP_CREATE,
                 entityShortName: 'Piste',
                 fields: $this->sansVide($champs),
+                collections: $collectionsDeLAffaire,
                 ref: $piste,
             );
         }
@@ -467,7 +519,7 @@ final class ReconstitueurDeTranche
         }
 
         // ── La proposition, et avec elle la PRIME et la RÉMUNÉRATION ────────────────
-        $cotation = (string) CleNaturelle::pourChaine(CleNaturelle::COTATION, $reference);
+        $cotation = (string) CleNaturelle::pourChaine(CleNaturelle::COTATION, $reference, $libelleRisque);
         if ($idCotation === null && $this->neuf($cotation)) {
             $collections = [];
 
@@ -625,7 +677,7 @@ final class ReconstitueurDeTranche
         $renvoiCotation = $idCotation ?? CleNaturelle::renvoiVers($cotation);
 
         // ── La police ───────────────────────────────────────────────────────────────
-        $avenant = (string) CleNaturelle::pourAvenant($reference, $numeroAvenant);
+        $avenant = (string) CleNaturelle::pourAvenant($reference, $numeroAvenant, $libelleRisque);
         if ($idAvenant === null && $this->neuf($avenant)) {
             $operations[] = new MutationOperation(
                 op: MutationOperation::OP_CREATE,
@@ -941,6 +993,221 @@ final class ReconstitueurDeTranche
         );
     }
 
+    /**
+     * LE PORTEFEUILLE OÙ RANGER UN CLIENT QUE LE FICHIER NE RANGE PAS : celui du propriétaire.
+     *
+     * ── TROIS SITUATIONS ─────────────────────────────────────────────────────────────
+     *   1. le propriétaire gère un ou plusieurs portefeuilles → le PLUS ANCIEN, le seul
+     *      choix qui ne dépende ni du nom ni de l'humeur du jour ;
+     *   2. il n'en gère aucun → on lui en crée un, « Portefeuille de … », une fois ;
+     *   3. le cabinet n'a pas de propriétaire désigné → le client reste sans portefeuille,
+     *      et on le dit, comme avant.
+     *
+     * ⚠ UN CONSTAT PAR PALIER, JAMAIS PAR LIGNE : le rangement vaut pour le fichier entier.
+     * Il nomme le portefeuille retenu, pour qu'on sache où chercher ses clients.
+     *
+     * @param array<int, MutationOperation> $operations
+     * @param Anomalie[]                    $anomalies
+     */
+    private function portefeuilleParDefaut(LigneLue $ligne, Entreprise $entreprise, array &$operations, array &$anomalies): int|string|null
+    {
+        $proprietaire = $this->proprietaireDuCabinet($entreprise);
+
+        if ($proprietaire === null) {
+            $this->direUneFois(
+                'client-sans-portefeuille',
+                $ligne,
+                'portefeuille',
+                'Des clients de ce fichier ne portent aucun portefeuille : ils sont repris '
+                . 'quand même, mais sans portefeuille. Ouvrez la rubrique « Clients » pour les '
+                . 'y ranger — la colonne « Portefeuille » vous évitera ce geste au prochain dépôt.',
+                $anomalies,
+            );
+
+            return null;
+        }
+
+        if ($proprietaire['portefeuille'] !== null) {
+            $nom = $proprietaire['portefeuille']['nom'];
+            $valeur = $proprietaire['portefeuille']['id'];
+        } else {
+            $nom = $proprietaire['nom'] === ''
+                ? 'Portefeuille du propriétaire'
+                : sprintf('Portefeuille de %s', $proprietaire['nom']);
+            $repere = (string) CleNaturelle::pourLibelle(CleNaturelle::PORTEFEUILLE, $nom);
+
+            if ($this->neuf($repere)) {
+                $operations[] = new MutationOperation(
+                    op: MutationOperation::OP_CREATE,
+                    entityShortName: 'Portefeuille',
+                    fields: ['nom' => $nom, 'gestionnaire' => $proprietaire['id']],
+                    ref: $repere,
+                );
+            }
+
+            $valeur = CleNaturelle::renvoiVers($repere);
+        }
+
+        $this->direUneFois(
+            'portefeuille-par-defaut',
+            $ligne,
+            'portefeuille',
+            sprintf(
+                'Des clients de ce fichier ne nomment aucun portefeuille : ils ont été rangés dans '
+                . '« %s », celui du propriétaire du cabinet. Renseignez la colonne « Portefeuille » '
+                . 'pour en choisir un autre.',
+                $nom,
+            ),
+            $anomalies,
+        );
+
+        return $valeur;
+    }
+
+    /**
+     * Le propriétaire du cabinet et son plus ancien portefeuille — lus une fois par palier.
+     *
+     * ⚠ PAR REQUÊTE, PAS PAR `Invite::getPortefeuilles()`. La collection inverse, déjà
+     * chargée, ne verrait pas le portefeuille qu'un palier précédent vient de créer : le
+     * suivant en recréerait un second.
+     *
+     * @return array{id: int, nom: string, portefeuille: ?array{id: int, nom: string}}|null
+     */
+    private function proprietaireDuCabinet(Entreprise $entreprise): ?array
+    {
+        if ($this->proprietaire !== false) {
+            return $this->proprietaire;
+        }
+
+        $invite = $this->em->getRepository(Invite::class)->findOneBy(
+            ['entreprise' => $entreprise, 'proprietaire' => true],
+            ['id' => 'ASC'],
+        );
+        if ($invite === null) {
+            return $this->proprietaire = null;
+        }
+
+        $portefeuille = $this->em->getRepository(Portefeuille::class)->findOneBy(
+            ['entreprise' => $entreprise, 'gestionnaire' => $invite],
+            ['id' => 'ASC'],
+        );
+
+        return $this->proprietaire = [
+            'id' => (int) $invite->getId(),
+            'nom' => trim((string) $invite->getNom()),
+            'portefeuille' => $portefeuille === null
+                ? null
+                : ['id' => (int) $portefeuille->getId(), 'nom' => (string) $portefeuille->getNom()],
+        ];
+    }
+
+    /**
+     * LA CONDITION PROPRE À L'AFFAIRE, quand la part écrite n'est pas celle qui paierait.
+     *
+     * ── LA RÈGLE ───────────────────────────────────────────────────────────────────────
+     * La fiche d'un intermédiaire porte son taux habituel. Une ligne qui en écrit un autre
+     * dit qu'EXCEPTIONNELLEMENT, pour cette affaire, c'est ce taux-là qui a été agréé : on
+     * l'écrit en condition propre à l'affaire — l'étage que la cascade consulte en premier
+     * ({@see RevenuPourCourtierIndicatorStrategy::conditionRetenue()}). La fiche n'est pas
+     * touchée : les autres affaires du même apporteur continuent de suivre sa règle.
+     *
+     * ⚠ UNE CELLULE VIDE EST UN ARRANGEMENT À 0 %. La ligne nomme l'intermédiaire sans lui
+     * donner de part : rien ne lui revient sur cette affaire. La condition à 0 % est écrite
+     * même quand sa part habituelle est déjà nulle — c'est une décision propre au dossier,
+     * et elle doit survivre à un changement de la fiche.
+     *
+     * ⚠ UNE COLONNE ABSENTE N'EST PAS UNE CELLULE VIDE. Un fichier exporté sans cette
+     * colonne ne dit rien de la part : y lire zéro supprimerait la rétrocommission de tout
+     * un portefeuille pour une colonne qu'on n'a simplement pas cochée.
+     *
+     * ⚠ À LA CRÉATION DE L'AFFAIRE SEULEMENT — l'appelant ne l'invoque que là. Une affaire
+     * déjà en base ne se réécrit pas : un redépôt n'empile pas une seconde condition.
+     *
+     * @param int|string      $intermediaire identifiant, ou repère d'un partenaire que cette passe crée
+     * @param int|string|null $risque        idem pour le risque de l'affaire
+     * @param Anomalie[]      $anomalies
+     */
+    private function conditionPropreALAffaire(
+        LigneLue $ligne,
+        int|string $intermediaire,
+        int|string|null $risque,
+        array &$anomalies,
+    ): ?MutationOperation {
+        if ($ligne->colonne(PartsDesIntermediaires::COLONNE_PART) === null) {
+            return null;
+        }
+
+        $vide = PartsDesIntermediaires::celluleVide($ligne);
+        $part = PartsDesIntermediaires::partDeLaLigne($ligne);
+
+        if (!$vide && ($part === null || $part < 0.0 || $part > self::TAUX_PLAFOND)) {
+            $anomalies[] = $this->refus($ligne, PartsDesIntermediaires::COLONNE_PART, sprintf(
+                'La part de l\'intermédiaire « %s » doit être un pourcentage entre 0 et 100 — par '
+                . 'exemple 20 pour vingt pour cent. Vous avez écrit « %s ». Corrigez la colonne '
+                . '« Intermédiaire · Part », ou videz-la si cette affaire ne lui rapporte rien.',
+                $ligne->texte(PartsDesIntermediaires::COLONNE_NOM),
+                $ligne->texte(PartsDesIntermediaires::COLONNE_PART),
+            ));
+
+            return null;
+        }
+
+        $taux = $part ?? 0.0;
+
+        if (!$vide && ConditionDOffice::memeTaux($taux, $this->tauxHabituel($ligne, $intermediaire, $risque))) {
+            return null;
+        }
+
+        return new MutationOperation(
+            op: MutationOperation::OP_CREATE,
+            entityShortName: 'ConditionPartage',
+            fields: [
+                'nom' => ConditionDOffice::nomPour($ligne->texte(PartsDesIntermediaires::COLONNE_NOM)) . ' (reprise)',
+                'formule' => ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL,
+                'seuil' => 0,
+                'taux' => $taux,
+                'critereRisque' => ConditionPartage::CRITERE_PAS_RISQUES_CIBLES,
+                'uniteMesure' => ConditionPartage::UNITE_SOMME_COMMISSION_PURE_RISQUE,
+                'partenaire' => $intermediaire,
+                // ⚠ LE BÉNÉFICIAIRE EST DIT, IL NE SE DÉDUIT PAS. Le formulaire d'une
+                // condition choisit entre l'intermédiaire et un agent, et son défaut change
+                // selon qu'il voit ou non l'affaire parente — au contrôle à blanc, il ne la
+                // voit pas. Nommer l'intermédiaire rend le résultat identique aux deux passes.
+                'beneficiaireType' => ConditionPartageType::BENEFICIAIRE_INTERMEDIAIRE,
+            ],
+        );
+    }
+
+    /**
+     * LE TAUX QUI PAIERAIT DÉJÀ CET INTERMÉDIAIRE, sans condition propre à l'affaire.
+     *
+     * Un partenaire que cette passe crée prend la part du fichier. Un partenaire en base
+     * suit la cascade : la première condition de sa FICHE qui vise ce risque, sinon sa
+     * « Part % ». La règle est empruntée au calcul de l'argent, jamais redite.
+     *
+     * ⚠ LE SEUIL D'UNE CONDITION N'EST PAS JUGÉ ICI : il dépend de volumes que la reprise
+     * n'a pas encore écrits. On compare le taux affiché, celui que le cabinet a négocié.
+     *
+     * @param int|string      $intermediaire
+     * @param int|string|null $risque
+     */
+    private function tauxHabituel(LigneLue $ligne, int|string $intermediaire, int|string|null $risque): float
+    {
+        $partenaire = is_int($intermediaire) ? $this->em->find(Partenaire::class, $intermediaire) : null;
+        if ($partenaire === null) {
+            return $this->parts->partDeCreation($ligne->texte(PartsDesIntermediaires::COLONNE_NOM));
+        }
+
+        $condition = RevenuPourCourtierIndicatorStrategy::premiereConditionApplicable(
+            RevenuPourCourtierIndicatorStrategy::conditionsDuPartenaire($partenaire),
+            is_int($risque) ? $this->em->find(Risque::class, $risque) : null,
+        );
+
+        return $condition !== null
+            ? (float) ($condition->getTaux() ?? 0.0)
+            : (float) ($partenaire->getPart() ?? 0.0);
+    }
+
     /** Qui doit la commission de ce type de revenu — l'assureur précompte, ou le client règle. */
     private function redevableDuType(int $idType): ?int
     {
@@ -1078,7 +1345,9 @@ final class ReconstitueurDeTranche
      * identifiant, une création devient « @cli-kin-avia »), ou `null` si le libellé est
      * vide ou refusé.
      *
-     * @param array<string, mixed>          $champsDeCreation
+     * @param array<string, mixed>|\Closure $champsDeCreation une fonction n'est évaluée que
+     *                                                     si l'entité naît — et ce qu'elle
+     *                                                     empile précède alors la création
      * @param Anomalie[]                    $anomalies
      * @param array<int, MutationOperation> $operations
      */
@@ -1090,7 +1359,7 @@ final class ReconstitueurDeTranche
         Entreprise $entreprise,
         array &$anomalies,
         array &$operations,
-        array $champsDeCreation,
+        array|\Closure $champsDeCreation,
     ): int|string|null {
         $libelle = $ligne->texte($codeColonne);
         if ($libelle === '') {
@@ -1116,10 +1385,14 @@ final class ReconstitueurDeTranche
         }
 
         if ($this->neuf($repere)) {
+            // ⚠ DANS UNE INSTRUCTION À PART, comme l'assiette de la commission : ce que la
+            // fonction empile (un portefeuille à créer) doit précéder l'entité qui y renvoie.
+            $champs = $champsDeCreation instanceof \Closure ? $champsDeCreation() : $champsDeCreation;
+
             $operations[] = new MutationOperation(
                 op: MutationOperation::OP_CREATE,
                 entityShortName: $entite,
-                fields: $this->sansVide($champsDeCreation),
+                fields: $this->sansVide($champs),
                 ref: $repere,
             );
         }
