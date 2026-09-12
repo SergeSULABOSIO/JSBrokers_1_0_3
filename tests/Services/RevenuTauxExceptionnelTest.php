@@ -66,18 +66,16 @@ class RevenuTauxExceptionnelTest extends KernelTestCase
     }
 
     /**
-     * ⚠ L'ASYMÉTRIE EST VOULUE, ET CE TEST LA VERROUILLE.
+     * ⚠ ET LE FORFAIT DÉROGATOIRE L'EMPORTE AUSSI, PAR SYMÉTRIE.
      *
-     * Le forfait du revenu, lui, n'a PAS été remonté au-dessus du taux du risque. Le
-     * classeur de reprise ne transporte jamais de forfait — il ne porte que des taux —, et
-     * mesuré sur le cabinet réel, 85 revenus sur 150 en portent un en base. Le remonter
-     * réveillerait d'un coup 85 valeurs dormantes et déplacerait des commissions que
-     * personne n'a demandé de changer.
-     *
-     * Ne « corrigez » donc pas cette asymétrie sans avoir d'abord compté, sur les données
-     * réelles, combien de montants elle déplace.
+     * Il est resté un temps derrière le taux du risque : le classeur de reprise ne
+     * transporte que des taux, et 85 revenus sur 150 du cabinet réel portent un forfait en
+     * base — les réveiller d'un coup déplaçait des commissions que personne n'avait
+     * demandé de changer. Décision prise en connaissance de cet effet : rien ne justifiait
+     * qu'une dérogation compte selon la FORME qu'elle prend, et un forfait saisi puis
+     * ignoré est aussi déroutant qu'un taux saisi puis ignoré.
      */
-    public function testUnForfaitDeRevenuNeDetronePasLeTauxDuRisque(): void
+    public function testUnForfaitDeRevenuLEmporteSurLeTauxDuRisque(): void
     {
         $revenu = $this->revenu(
             typeAdosseAuRisque: true,
@@ -87,10 +85,34 @@ class RevenuTauxExceptionnelTest extends KernelTestCase
         );
 
         self::assertSame(
-            1000.0,
+            5000.0,
             $this->constante()->Revenu_getMontant_ht($revenu),
-            'Le risque garde la main sur un forfait : asymétrie assumée, cf. le docbloc.',
+            'Le forfait est facturé tel quel, et le taux du risque n\'est plus consulté.',
         );
+
+        // Et le tarif ANNONCÉ suit : sans cela, l'écran afficherait 10 % sur une
+        // commission facturée au forfait.
+        $tarif = $this->constante()->Revenu_getTarif_effectif($revenu);
+        self::assertSame(5000.0, $tarif['forfait']);
+        self::assertNull($tarif['taux']);
+        self::assertSame('revenu', $tarif['origine']);
+    }
+
+    /**
+     * ⚠ MAIS LE TAUX PASSE AVANT LE FORFAIT. Rien n'interdit en base de renseigner les
+     * deux sur un même revenu — aucune contrainte ne s'y oppose —, et il faut alors un
+     * ordre, sans quoi le montant dépendrait de l'humeur du moteur.
+     */
+    public function testEntreDeuxDerogationsLeTauxPasseAvantLeForfait(): void
+    {
+        $revenu = $this->revenu(
+            typeAdosseAuRisque: true,
+            tauxDuRisque: 10.0,
+            tauxExceptionnel: 17.5,
+            forfaitExceptionnel: 5000.0,
+        );
+
+        self::assertSame(1750.0, $this->constante()->Revenu_getMontant_ht($revenu));
     }
 
     /**
