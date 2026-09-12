@@ -26,6 +26,8 @@ class PlanDeSuppression
      * @param string[]                                                $conservations ce qui survit, expliqué
      * @param string[]                                                $refus         ce qui empêche, expliqué
      * @param array<class-string, string>                             $libelles      classe => libellé métier
+     * @param array<class-string, array<int, string>>                 $provenance    identifiant => « ClasseParent#id »
+     * @param array<int, array{classe: class-string, champ: string, ids: int[], parents: array<int,int>, motif: string}> $verrous
      */
     public function __construct(
         public readonly string $racineClasse,
@@ -35,7 +37,28 @@ class PlanDeSuppression
         public readonly array $conservations = [],
         public readonly array $refus = [],
         private readonly array $libelles = [],
+        // ⚠ EN DERNIÈRE POSITION, ET C'EST VOULU — comme partout ailleurs dans ce projet.
+        // Les tests de périmètre de l'assistant construisent ce plan par arguments
+        // POSITIONNELS : insérer au milieu décalerait tout ce qui suit.
+        //
+        // La PROVENANCE dit de quel parent chaque ligne a été atteinte : c'est elle qui
+        // transforme un décompte à plat (« 12 échéances ») en chaîne lisible (« ces
+        // 12 échéances-là, sous cette proposition-ci »).
+        public readonly array $provenance = [],
+        // Les VERROUS localisent ce que `refus` ne fait que nommer. Les deux coexistent :
+        // `refus` garde sa forme et ses quatre consommateurs, `verrous` ajoute l'endroit.
+        public readonly array $verrous = [],
     ) {
+    }
+
+    /**
+     * Le parent d'une ligne, sous la forme « ClasseCourte#id », ou null pour la racine.
+     *
+     * @param class-string $classe
+     */
+    public function parentDe(string $classe, int $id): ?string
+    {
+        return $this->provenance[$classe][$id] ?? null;
     }
 
     /** Plan vide et refusé, pour les cas où la cible ne peut pas être analysée. */

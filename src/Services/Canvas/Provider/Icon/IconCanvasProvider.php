@@ -138,6 +138,12 @@ class IconCanvasProvider
         'action:reload'       => 'ci:arrows-reload-01',
         'action:renew'        => 'carbon:renew',
         'action:reply'        => 'lucide:reply',        // répondre à un message du chat Ket
+        // Déplier / replier une branche d'arborescence. Un DOSSIER plutôt qu'un chevron :
+        // dans un arbre de suppression, la branche fermée cache du contenu, et un dossier
+        // ouvert dit bien mieux « ce qu'il y a dedans est visible » qu'une flèche, qui
+        // n'indique qu'un sens. Les deux dessins viennent du même set que « classeur ».
+        'action:replier'      => 'hugeicons:folder-01',
+        'action:deplier'      => 'hugeicons:folder-open',
         'action:resiliation'  => 'gravity-ui:hand-stop',
         'action:reset'        => 'bx:reset',
         'action:resend-invitation' => 'mdi:email-sync-outline',

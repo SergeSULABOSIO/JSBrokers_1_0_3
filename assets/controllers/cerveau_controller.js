@@ -9,7 +9,7 @@ import { lireFluxNdjson } from './flux-ndjson.js';
 // ce contrôleur dépend de Stimulus et d'un DOM que la suite JS n'a pas, la règle non.
 import { supprimerEnLot, verdictDuLot } from './suppression-en-lot.js';
 // Ce que la suppression emporte, annoncé AVANT de la confirmer.
-import { annoncerLaPortee } from './apercu-suppression.js';
+import { annoncerLaPortee, rubriqueDeSuppression } from './apercu-suppression.js';
 
 /**
  * @file Ce fichier contient le contrôleur Stimulus 'cerveau'.
@@ -374,6 +374,27 @@ export default class extends Controller {
                 const isFromCollectionWidget = !!payload.context?.originatorId;
 
                 const descriptionsASupprimer = payload.selection.map(s => s.name || `Élément #${s.id}`);
+
+                // ⚠ LA SUPPRESSION PASSE DÉSORMAIS PAR L'ARBRE DU DOSSIER. L'ancienne boîte
+                // annonçait la portée en trois phrases et effaçait tout d'un bloc : elle ne
+                // permettait ni de voir la chaîne, ni d'en épargner une branche, ni de
+                // comprendre ce qui résistait. Le nouvel écran fait les trois, avec le même
+                // moteur — et il n'y a pas deux gestes de suppression, il n'y en a qu'un.
+                //
+                // ⚠ SAUF DANS UN WIDGET DE COLLECTION, où l'on retire une ligne d'un
+                // formulaire ouvert : elle n'est souvent même pas encore enregistrée, et il
+                // n'y a donc aucun arbre à montrer. L'ancien chemin reste le bon, là.
+                const rubriqueASupprimer = rubriqueDeSuppression(
+                    payload.formCanvas?.parametres?.endpoint_delete_url,
+                );
+                if (!isFromCollectionWidget && rubriqueASupprimer) {
+                    this.handleSuppressionDossierRequest({
+                        url: `/admin/suppression/dossier/${rubriqueASupprimer}`
+                            + `?ids=${payload.selection.map(s => s.id).join(',')}`,
+                    });
+                    break;
+                }
+
                 const deletePayload = {
                     onConfirm: {
                         type: 'app:api.delete-request',
@@ -608,6 +629,12 @@ export default class extends Controller {
             case 'ui:production.reversement-request': // verser au bénéficiaire affiché
             case 'ui:production.versements-request': // relire ce qu'on lui a versé
                 this.handleProductionBeneficiaireAction(type);
+                break;
+            case 'ui:suppression.dossier-request': // l'arbre du dossier, pour trier avant d'effacer
+                this.handleSuppressionDossierRequest(payload);
+                break;
+            case 'suppression:dossier.termine': // le tri est exécuté : on rafraîchit la liste
+                this.handleSuppressionDossierTerminee(payload);
                 break;
             case 'ui:retroagent.reversement-request': // saisie d'un reversement (une ligne ou un lot)
                 this.handleRetroAgentReversementRequest(payload);
@@ -1801,6 +1828,58 @@ export default class extends Controller {
             controllerName: 'reversement-retro-picker',
             errorLabel: 'le reversement de rétrocommission',
         });
+    }
+
+    /**
+     * Ouvre l'arbre d'un dossier à supprimer : propositions, échéances, polices, factures
+     * et pièces, tout coché d'office, à décocher branche par branche.
+     *
+     * ⚠ CE N'EST PAS LA CORBEILLE DE LA LISTE, et les deux coexistent. La corbeille efface
+     * la chaîne d'un bloc — c'est le bon geste quand on veut tout. Cette boîte-ci sert à
+     * ARBITRER : garder une pièce jointe, épargner une proposition, voir ce qui résiste
+     * avant de valider. Le plan qu'elle montre EST le récapitulatif : aucune seconde boîte
+     * de confirmation ne vient derrière elle.
+     *
+     * @param {object} payload
+     * @param {string} payload.url - URL de type '/admin/suppression/dossier/piste/{id}'
+     */
+    async handleSuppressionDossierRequest(payload) {
+        await this._openStandalonePicker(payload.url, {
+            controllerName: 'suppression-dossier',
+            errorLabel: 'la suppression du dossier',
+        });
+    }
+
+    /**
+     * Le tri du dossier a été exécuté : la liste ne doit plus montrer ce qui n'existe plus.
+     *
+     * ⚠ ET LES REFUS SONT DITS À PART, EN AVERTISSEMENT. Noyés dans le message de succès,
+     * ils passeraient inaperçus — or ce sont eux qui appellent une action. La boîte, elle,
+     * reste ouverte et les nomme un par un : ce toast n'est qu'un rappel.
+     *
+     * @param {object} payload
+     * @param {number} payload.detruits
+     * @param {number} payload.echecs
+     */
+    handleSuppressionDossierTerminee(payload) {
+        const detruits = Number(payload?.detruits) || 0;
+        if (detruits > 0) {
+            this._showNotification(
+                detruits === 1 ? '1 objet supprimé.' : `${detruits} objets supprimés.`,
+                'success',
+            );
+        }
+        const echecs = Number(payload?.echecs) || 0;
+        if (echecs > 0) {
+            this._showNotification(
+                echecs === 1
+                    ? "Une partie du dossier a résisté : le détail est dans la fenêtre."
+                    : `${echecs} parties du dossier ont résisté : le détail est dans la fenêtre.`,
+                'warning',
+            );
+        }
+        this._setSelectionState([]);
+        this._requestListRefresh();
     }
 
     /**
