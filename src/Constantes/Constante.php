@@ -4814,12 +4814,13 @@ class Constante
 
             $montantChargementPrime = $this->Cotation_getMontant_chargement_prime($cotation, $revenu->getTypeRevenu());
 
-            // ⚠ UN TAUX SAISI SUR LE REVENU L'EMPORTE SUR CELUI DU RISQUE, TOUJOURS.
+            // ⚠ CE QUI EST SAISI SUR LE REVENU L'EMPORTE SUR LE TAUX DU RISQUE, TOUJOURS.
             //
-            // Il passait APRÈS `isAppliquerPourcentageDuRisque()`, donc jamais : sur un type
-            // adossé au risque — « Commission Ordinaire » en tête —, un taux exceptionnel
-            // était enregistré puis ignoré au calcul. L'utilisateur le voyait à la fiche et
-            // ne le retrouvait dans aucun montant.
+            // Les deux dérogations — taux ET montant forfaitaire — passaient APRÈS
+            // `isAppliquerPourcentageDuRisque()`, donc jamais : sur un type adossé au
+            // risque — « Commission Ordinaire » en tête —, une dérogation était enregistrée
+            // puis ignorée au calcul. L'utilisateur la voyait à la fiche et ne la
+            // retrouvait dans aucun montant.
             //
             // ⚠ TROIS TÉMOINS DISAIENT DÉJÀ CETTE RÈGLE, ET LE CODE SEUL DISAIT L'INVERSE :
             //  - le formulaire — « Privilégier le taux du risque ? Oui, s'il existe ET
@@ -4839,24 +4840,21 @@ class Constante
             // La reprise en dépend entièrement : chaque ligne de classeur apporte son taux.
             if ($revenu->getTauxExceptionel() != 0) {
                 $montant += $montantChargementPrime * $revenu->getFraction();
+            } else if ($revenu->getMontantFlatExceptionel() != 0) {
+                // ⚠ ET LE FORFAIT SUIT LE TAUX, PAR SYMÉTRIE VOULUE.
+                //
+                // Il a un temps été laissé derrière le risque, le classeur de reprise ne
+                // transportant que des taux. Mais rien ne justifiait qu'une dérogation
+                // compte selon la forme qu'elle prend : « exceptionnel » veut dire la même
+                // chose des deux côtés, et un forfait saisi puis ignoré est aussi
+                // déroutant qu'un taux saisi puis ignoré.
+                $montant += $revenu->getMontantFlatExceptionel();
             } else if ($typeRevenu->isAppliquerPourcentageDuRisque()) {
                 /** @var Risque $couverture */
                 $couverture = $this->Cotation_getRisque($cotation);
                 if ($couverture != null) {
                     $montant += $montantChargementPrime * $couverture->getFraction();
                 }
-            } else if ($revenu->getMontantFlatExceptionel() != 0) {
-                // ⚠ LE FORFAIT DU REVENU, LUI, N'A PAS ÉTÉ REMONTÉ, ET C'EST DÉLIBÉRÉ.
-                //
-                // Le classeur de reprise ne transporte JAMAIS de forfait — il ne porte que
-                // des taux. Et mesuré sur le cabinet réel, 85 revenus sur 150 en portent un
-                // en base : le remonter au-dessus du risque réveillerait d'un coup 85
-                // valeurs aujourd'hui dormantes, et déplacerait des commissions que
-                // personne n'a demandé de changer.
-                //
-                // L'asymétrie est donc voulue. Ne pas la « corriger » sans avoir d'abord
-                // compté, sur les données réelles, combien de montants elle déplace.
-                $montant += $revenu->getMontantFlatExceptionel();
             } else {
                 //Auncune formule définie sur le revenu situé dans la cotation
                 //On doit appliquer la formule par défaut pour ce type de revenu
@@ -4914,6 +4912,13 @@ class Constante
             return ['taux' => (float) $revenu->getTauxExceptionel(), 'forfait' => null, 'origine' => 'revenu'];
         }
 
+        // ⚠ LES DEUX DÉROGATIONS D'ABORD, DANS L'ORDRE DE LA CASCADE. Intervertir avec le
+        // risque ferait annoncer un taux que la facture ne porte pas — c'est précisément
+        // ce que cette méthode existe pour empêcher.
+        if ($revenu->getMontantFlatExceptionel() != 0) {
+            return ['taux' => null, 'forfait' => (float) $revenu->getMontantFlatExceptionel(), 'origine' => 'revenu'];
+        }
+
         if ($typeRevenu->isAppliquerPourcentageDuRisque()) {
             $couverture = $this->Cotation_getRisque($revenu->getCotation());
             $taux = (float) ($couverture?->getPourcentageCommissionSpecifiqueHT() ?? 0.0);
@@ -4923,10 +4928,6 @@ class Constante
             return $taux == 0.0
                 ? $rien
                 : ['taux' => $taux, 'forfait' => null, 'origine' => 'risque'];
-        }
-
-        if ($revenu->getMontantFlatExceptionel() != 0) {
-            return ['taux' => null, 'forfait' => (float) $revenu->getMontantFlatExceptionel(), 'origine' => 'revenu'];
         }
 
         if ($typeRevenu->getPourcentage() != 0) {
