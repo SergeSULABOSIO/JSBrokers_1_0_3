@@ -148,6 +148,122 @@ final class RepriseTest extends KernelTestCase
         self::assertSame([], \App\Echange\Reprise\CoherenceDesParts::verifier($lignes));
     }
 
+    /**
+     * ⚠ UNE ÉCHÉANCE SANS DATE D'ÉCHÉANCE PREND CELLE DE LA POLICE.
+     *
+     * Le classeur porte rarement les deux : le cabinet écrit la fin de couverture sur la
+     * police et laisse la colonne de l'échéance vide. Sans date, la tranche n'échoit jamais
+     * — elle sort de tous les pipelines d'échéance, et le portefeuille repris paraît sans
+     * terme.
+     */
+    public function testUneEcheanceSansDatePrendCelleDeLaPolice(): void
+    {
+        $entreprise = $this->cabinet();
+        $reconstitueur = $this->reconstitueur();
+
+        $anomalies = [];
+        $operations = $reconstitueur->pour(
+            $this->ligne([
+                'policeReference' => 'POL/2026/001',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
+                'trancheNom' => 'Prime unique',
+                'tranchePart' => 100,
+                'assure' => 'KIN AVIA',
+                'risque' => 'RC Aviation',
+                'assureur' => 'SFA CONGO',
+            ], 2),
+            $this->colonnes(),
+            $entreprise,
+            $anomalies,
+        );
+
+        self::assertSame([], $this->erreurs($anomalies), $this->messages($anomalies));
+
+        $tranche = $this->operation($operations, 'Tranche');
+        self::assertNotNull($tranche);
+        self::assertStringStartsWith(
+            '2026-12-31',
+            (string) ($tranche->fields['echeanceAt'] ?? ''),
+            'La date d\'échéance de la police devient celle de la tranche.',
+        );
+    }
+
+    /** ⚠ MAIS UNE DATE ÉCRITE RESTE LA SIENNE : le défaut ne s'applique qu'à défaut. */
+    public function testUneEcheanceDateeGardeSaDate(): void
+    {
+        $entreprise = $this->cabinet();
+        $reconstitueur = $this->reconstitueur();
+
+        $anomalies = [];
+        $operations = $reconstitueur->pour(
+            $this->ligne([
+                'policeReference' => 'POL/2026/001',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
+                'trancheNom' => 'Premier terme',
+                'tranchePart' => 100,
+                'trancheEcheanceAt' => '30/06/2026',
+                'assure' => 'KIN AVIA',
+                'risque' => 'RC Aviation',
+                'assureur' => 'SFA CONGO',
+            ], 2),
+            $this->colonnes(),
+            $entreprise,
+            $anomalies,
+        );
+
+        self::assertSame([], $this->erreurs($anomalies), $this->messages($anomalies));
+        self::assertStringStartsWith(
+            '2026-06-30',
+            (string) ($this->operation($operations, 'Tranche')->fields['echeanceAt'] ?? ''),
+        );
+    }
+
+    /**
+     * ⚠ UNE POLICE SANS NUMÉRO D'AVENANT EST L'AVENANT ZÉRO.
+     *
+     * C'est le langage du métier : le contrat d'origine porte le numéro 0, ses modifications
+     * viennent ensuite. La colonne vide laissait la police sans numéro du tout.
+     */
+    public function testUnePoliceSansNumeroEstLAvenantZero(): void
+    {
+        $entreprise = $this->cabinet();
+        $reconstitueur = $this->reconstitueur();
+
+        $anomalies = [];
+        $operations = $reconstitueur->pour(
+            $this->ligne([
+                'policeReference' => 'POL/2026/001',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
+                'trancheNom' => 'Prime unique',
+                'tranchePart' => 100,
+                'assure' => 'KIN AVIA',
+                'risque' => 'RC Aviation',
+                'assureur' => 'SFA CONGO',
+            ], 2),
+            $this->colonnes(),
+            $entreprise,
+            $anomalies,
+        );
+
+        self::assertSame([], $this->erreurs($anomalies), $this->messages($anomalies));
+        self::assertSame('0', $this->operation($operations, 'Avenant')?->fields['numero'] ?? null);
+
+        // ⚠ ET LES DEUX CLÉS LISENT PAREIL : une police écrite sous « 0 » doit être
+        // RETROUVÉE par une ligne qui laisse la colonne vide, sans quoi chaque dépôt la
+        // recréerait. Les deux sources de clé sont donc comparées ici même.
+        self::assertSame(
+            \App\Echange\Reprise\ChaineExistante::cle('POL/2026/001', '0'),
+            \App\Echange\Reprise\ChaineExistante::cle('POL/2026/001', ''),
+        );
+        self::assertSame(
+            \App\Echange\Reprise\CleNaturelle::pourAvenant('POL/2026/001', '0', 'RC Aviation'),
+            \App\Echange\Reprise\CleNaturelle::pourAvenant('POL/2026/001', '', 'RC Aviation'),
+        );
+    }
+
     /** Deux échéances à 100 % d'un MÊME risque restent une faute — la règle n'est pas levée. */
     public function testDeuxEcheancesDUnMemeRisqueDoiventToujoursFaireCent(): void
     {

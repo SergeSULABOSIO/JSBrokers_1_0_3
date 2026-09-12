@@ -684,7 +684,10 @@ final class ReconstitueurDeTranche
                 entityShortName: 'Avenant',
                 fields: $this->sansVide([
                     'referencePolice' => $reference,
-                    'numero' => $numeroAvenant,
+                    // ⚠ PAS DE NUMÉRO = AVENANT ZÉRO, le contrat d'origine. La colonne vide
+                    // laissait la police sans numéro : elle ne se distinguait alors de ses
+                    // propres avenants que par l'absence, et l'écran n'avait rien à afficher.
+                    'numero' => CleNaturelle::numeroOuDefaut($numeroAvenant),
                     'startingAt' => $dateEffet,
                     'endingAt' => $dateEcheance,
                     'cotation' => $renvoiCotation,
@@ -1293,6 +1296,22 @@ final class ReconstitueurDeTranche
             'tranchePayableAt' => 'payableAt',
             'trancheEcheanceAt' => 'echeanceAt',
         ]) + ['cotation' => 'cotation']);
+
+        // ⚠ UNE ÉCHÉANCE SANS DATE D'ÉCHÉANCE PREND CELLE DE LA POLICE. Le classeur ne la
+        // porte pas toujours — une prime unique se règle à une date et la couverture finit
+        // à une autre, mais la plupart des cabinets n'écrivent que la seconde. Laissée
+        // vide, la tranche n'apparaissait dans aucun pipeline d'échéance : elle n'avait pas
+        // de date à laquelle échoir, et le portefeuille repris paraissait sans terme.
+        //
+        // ⚠ À LA CRÉATION SEULEMENT. Sur une échéance déjà en base, la colonne vide veut
+        // dire « je n'y touche pas » : y écrire la date de la police remplacerait une
+        // valeur que le cabinet a peut-être saisie à la main.
+        if ($id === null && !isset($champs['echeanceAt'])) {
+            $deLaPolice = $this->date($ligne, 'policeEcheance', 'Tranche', 'echeanceAt');
+            if ($deLaPolice !== null) {
+                $champs['echeanceAt'] = $deLaPolice;
+            }
+        }
 
         if ($champs === []) {
             return null;

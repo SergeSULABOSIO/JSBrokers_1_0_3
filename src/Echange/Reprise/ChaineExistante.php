@@ -97,7 +97,10 @@ final class ChaineExistante
             return null;
         }
 
-        return $reference . '|' . ResolveurDeRenvois::normaliser((string) $numeroAvenant);
+        // ⚠ UNE POLICE SANS NUMÉRO EST L'AVENANT ZÉRO, ici comme à l'écriture : c'est la
+        // même règle, et elle n'a qu'une source ({@see CleNaturelle::numeroOuDefaut()}).
+        // Une police reprise sous « 0 » et cherchée sous « » serait recréée à chaque dépôt.
+        return $reference . '|' . CleNaturelle::numeroOuDefaut($numeroAvenant);
     }
 
     /**
