@@ -34,11 +34,23 @@ export default class extends PickerBaseController {
 
     static values = { rubrique: String, ids: Array };
 
+    /**
+     * Temps pendant lequel chaque lot reste visible avant le suivant.
+     *
+     * ⚠ IL EST DELIBERE. Le serveur repond plus vite que l'oeil sur un petit dossier :
+     * sans ce rythme, tout arrive dans la meme image et la suppression ne se VOIT pas.
+     */
+    static RYTHME_MS = 420;
+
     connect() {
         super.connect();
         this.arbre = null;
         this.etat = null;
         this.deplies = new Set();
+        this.etatsNoeuds = new Map();
+        this.fileDesLots = [];
+        this.peintreActif = false;
+        this.aRafraichirLaListe = false;
         this._chargerLArbre();
     }
 
@@ -248,7 +260,32 @@ export default class extends PickerBaseController {
             rangee.appendChild(motif);
             li.setAttribute('aria-describedby', `${this._idDe(cle)}-motif`);
             motif.id = `${this._idDe(cle)}-motif`;
-        } else if (noeud.total > 1) {
+        }
+
+        // ── L'ÉTAT DE CETTE LIGNE PENDANT L'EXÉCUTION ─────────────────────────────
+        //
+        // ⚠ CHAQUE OBJET DIT OÙ IL EN EST, et pas seulement le dossier. Sans cela, une
+        // suppression de vingt objets est un écran figé suivi d'un « terminé » : rien ne
+        // s'est passé sous les yeux de l'utilisateur, et il ne sait pas ce qui est parti.
+        //
+        // ⚠ ET LA LIGNE RESTE, BARRÉE. La faire disparaître effacerait la preuve de ce
+        // qu'on vient de faire — c'est-à-dire précisément ce qu'on vient lire.
+        const marche = this.etatsNoeuds?.get(cle);
+        if (marche) {
+            li.classList.add(`est-${marche}`);
+            if (marche === 'encours') {
+                const rouet = document.createElement('span');
+                rouet.className = 'jsb-purge-rouet';
+                rouet.setAttribute('aria-hidden', 'true');
+                rangee.appendChild(rouet);
+            }
+            const etat = document.createElement('span');
+            etat.className = 'jsb-purge-etat-ligne';
+            etat.textContent = {
+                file: 'en file', encours: 'en cours', parti: 'supprimé', echoue: 'échec',
+            }[marche] ?? '';
+            rangee.appendChild(etat);
+        } else if (!verrouille && noeud.total > 1) {
             // ⚠ « 1 OBJET » SUR CHAQUE FEUILLE EST DU BRUIT. Répété vingt fois, il noie les
             // deux ou trois branches qui, elles, en emportent des dizaines — c'est-à-dire
             // la seule information que ce chiffre avait à donner.
@@ -361,7 +398,13 @@ export default class extends PickerBaseController {
 
     // ────────────────────────────── Rafraîchissement ──────────────────────────
 
-    _rafraichir() {
+    /**
+     * Reflète l'état des cases sur les lignes peintes — et RIEN d'autre.
+     *
+     * Séparé de {@see _rafraichir()} parce que pendant l'exécution le panneau de droite
+     * porte le journal : y relancer l'inventaire du plan l'effacerait à chaque pulsation.
+     */
+    _refleterLesCases() {
         // Le tri-état est DÉRIVÉ à chaque rendu, jamais mémorisé : un état stocké finit
         // toujours par afficher « partiel » sur une branche entièrement cochée.
         for (const li of this.arbreTarget.querySelectorAll('[role="treeitem"]')) {
@@ -372,6 +415,10 @@ export default class extends PickerBaseController {
             li.classList.toggle('est-partiel', valeur === 'mixed');
             li.classList.toggle('est-conserve', valeur === 'false');
         }
+    }
+
+    _rafraichir() {
+        this._refleterLesCases();
 
         const { retenus, conserves, total, verrous } = compterLesObjets(this.arbre, this.etat);
         const morceaux = [`${this._nombre(retenus)} objets seront supprimés`];
@@ -590,24 +637,27 @@ export default class extends PickerBaseController {
             this._showError(erreur.message || "La suppression s'est interrompue.");
         } finally {
             this.enCours = false;
+            await this._conclure();
             this._progress(false);
-            this._conclure();
         }
     }
 
     /** Une ligne du flux : pulsation, issue d'un lot, refus, ou résultat final. */
     _consommer(ligne) {
         if (ligne.type === 'progres') {
-            this._jauger(ligne.pct);
-            this._peindreLeJournal(ligne.libelle);
+            this.dernierLibelle = ligne.libelle;
+            this.dernierPct = ligne.pct;
 
             return;
         }
         if (ligne.type === 'lot') {
-            if (ligne.etat === 'en-cours') ouvrirLot(this.journal, ligne.cle, ligne.nom);
-            if (ligne.etat === 'fait') terminerLot(this.journal, ligne.cle, ligne);
-            if (ligne.etat === 'echec') echouerLot(this.journal, ligne.cle, ligne.nom, ligne.motif);
-            this._peindreLeJournal();
+            // ⚠ ON N'AFFICHE PAS DEPUIS LE FLUX, ON MET EN FILE. Sur un dossier de vingt
+            // objets, le serveur répond plus vite que l'œil : tout arrivait dans la même
+            // image, et l'écran passait de « rien » à « terminé » sans que la suppression
+            // se soit VUE. Le peintre ci-dessous rejoue la file à un rythme lisible — même
+            // parti pris que le journal de l'assistant, qui espace ses étapes exprès.
+            this.fileDesLots.push(ligne);
+            this._peindreAuRythme();
 
             return;
         }
@@ -622,20 +672,82 @@ export default class extends PickerBaseController {
         }
     }
 
+    /**
+     * Rejoue la file des lots à un rythme que l'œil suit.
+     *
+     * ⚠ CE DÉLAI N'EST PAS UNE ANIMATION DÉCORATIVE. La suppression est définitive : voir
+     * chaque dossier passer « en cours » puis « supprimé » est ce qui transforme un écran
+     * figé en une opération dont on peut rendre compte. Le journal de l'assistant espace
+     * ses étapes pour la même raison.
+     */
+    async _peindreAuRythme() {
+        if (this.peintreActif) return;
+        this.peintreActif = true;
+
+        while (this.fileDesLots.length > 0) {
+            const ligne = this.fileDesLots.shift();
+            if (ligne.etat === 'en-cours') {
+                ouvrirLot(this.journal, ligne.cle, ligne.nom);
+                this._marquerLeSousArbre(ligne.cle, 'encours');
+            }
+            if (ligne.etat === 'fait') {
+                terminerLot(this.journal, ligne.cle, ligne);
+                this._marquerLeSousArbre(ligne.cle, 'parti');
+            }
+            if (ligne.etat === 'echec') {
+                echouerLot(this.journal, ligne.cle, ligne.nom, ligne.motif);
+                this._marquerLeSousArbre(ligne.cle, 'echoue');
+            }
+
+            this._jauger(this.dernierPct ?? 0);
+            this._peindre();
+            this._refleterLesCases();
+            this._peindreLeJournal(this.dernierLibelle);
+            await new Promise((suite) => setTimeout(suite, this.constructor.RYTHME_MS));
+        }
+
+        this.peintreActif = false;
+    }
+
+    /** Attend que la file soit vidée : le rapport ne s'affiche pas avant le récit. */
+    async _attendreLePeintre() {
+        let garde = 0;
+        while ((this.fileDesLots.length > 0 || this.peintreActif) && garde++ < 600) {
+            await new Promise((suite) => setTimeout(suite, 50));
+        }
+    }
+
+    /** Marque un lot et tout ce qui pend de lui — c'est la maille que le serveur honore. */
+    _marquerLeSousArbre(cle, etat) {
+        const file = [cle];
+        let garde = 0;
+        while (file.length > 0 && garde++ < 5000) {
+            const courant = file.shift();
+            if (!this.arbre.parCle.has(courant)) continue;
+            this.etatsNoeuds.set(courant, etat);
+            for (const enfant of this.arbre.enfants.get(courant) ?? []) file.push(enfant);
+        }
+    }
+
     /** Fin de course : soit il reste des lots (budget atteint), soit on dresse le bilan. */
-    _conclure() {
+    async _conclure() {
         if ((this.restants ?? []).length > 0 && this.journal) {
             // Le serveur a rendu la main sur son budget de temps. On repart sans rien
             // demander : ce n'est pas la décision de l'utilisateur, c'est notre découpage.
             const suite = this.restants;
             this.restants = [];
-            this._lancer(suite);
+            await this._lancer(suite);
 
             return;
         }
 
+        // Le rapport ne s'affiche pas avant que le recit soit fini de se derouler.
+        await this._attendreLePeintre();
+
         this._etape('rapport');
         this._gelerLArbre(false);
+        this._peindre();
+        this._refleterLesCases();
         this._peindreLeJournal();
 
         const journal = this.journal ?? creerJournal();
@@ -645,25 +757,54 @@ export default class extends PickerBaseController {
             : `${b.echecs.length} partie(s) ont résisté`;
         this.piedTarget.textContent = phraseDuBilan(journal);
 
-        // ⚠ LE BOUTON CHANGE DE MÉTIER, IL NE DISPARAÎT PAS. Après un échec partiel, la seule
-        // action utile est de réessayer ce qui a résisté ; après un succès, c'est de fermer.
-        // Laisser « Supprimer » armé relancerait une suppression déjà faite.
+        // ⚠ UNE FOIS LE GESTE FAIT, « ANNULER » N'A PLUS DE SENS — et un bouton « Supprimé »
+        // grisé à côté n'en a pas davantage. Rien ne s'annule : la seule action qui reste
+        // est de fermer. Le pied se réduit donc à UN bouton, et il dit ce qu'il fait.
         if (b.succes) {
-            this.executerTarget.disabled = true;
-            this.executerTexteTarget.textContent = 'Supprimé';
+            this.executerTarget.hidden = true;
+            this._changerLeBouton(this.fermerTarget, 'Fermer', 'btn btn-primary jsb-picker-btn');
         } else {
+            // Échec partiel : réessayer ce qui a résisté est la seule action utile, et
+            // « Fermer » remplace « Annuler » — les réussites, elles, sont acquises.
             this.executerTexteTarget.textContent = `Réessayer ${b.echecs.length} partie(s)`;
             this.executerTarget.disabled = false;
             this.executerTarget.dataset.action = 'click->suppression-dossier#rejouer';
+            this._changerLeBouton(this.fermerTarget, 'Fermer', 'btn btn-outline-secondary jsb-picker-btn');
         }
 
-        this._notifyCerveau('suppression:dossier.termine', {
-            rubrique: this.rubriqueValue,
-            ids: this.idsValue,
-            detruits: b.detruits,
-            detaches: b.detaches,
-            echecs: b.echecs.length,
-        });
+        // ⚠ LA LISTE NE SE RAFRAÎCHIT QU'À LA FERMETURE, et c'est ce qui rendait la boîte
+        // impossible à fermer : le rafraîchissement remplace le conteneur où le picker a été
+        // inséré, et emportait avec lui les écouteurs de fermeture. Rafraîchir sous une
+        // fenêtre encore ouverte ne servait de toute façon à rien.
+        this.aRafraichirLaListe = true;
+        this.bilanFinal = { detruits: b.detruits, detaches: b.detaches, echecs: b.echecs.length };
+    }
+
+    /** Remplace le libellé d'un bouton du pied sans toucher à son icône. */
+    _changerLeBouton(bouton, texte, classes) {
+        if (!bouton) return;
+        bouton.className = classes;
+        const libelle = [...bouton.childNodes].find((n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim() !== '');
+        if (libelle) libelle.textContent = ` ${texte}`;
+        else bouton.append(` ${texte}`);
+    }
+
+    /**
+     * Ferme la boîte — et c'est SEULEMENT ici que la liste se rafraîchit.
+     *
+     * Le socle ferme et rend le focus ; on prévient le cerveau juste avant, pour qu'il
+     * remplace la liste quand plus rien n'en dépend à l'écran.
+     */
+    close() {
+        if (this.aRafraichirLaListe) {
+            this.aRafraichirLaListe = false;
+            this._notifyCerveau('suppression:dossier.termine', {
+                rubrique: this.rubriqueValue,
+                ids: this.idsValue,
+                ...(this.bilanFinal ?? { detruits: 0, detaches: 0, echecs: 0 }),
+            });
+        }
+        super.close();
     }
 
     // ───────────────────────── Rendu pendant l'exécution ──────────────────────
@@ -725,6 +866,9 @@ export default class extends PickerBaseController {
     _jauger(pct) {
         if (!this.hasJaugeTarget) return;
         const borne = Math.max(0, Math.min(100, Number(pct) || 0));
+        // ⚠ SANS `est-chiffree`, LA BARRE RESTE INDETERMINEE : son animation glisse une
+        // echarpe en `transform`, et une largeur posee par-dessus ne se voit jamais.
+        this.element.querySelector('[data-picker-progress]')?.classList.add('est-chiffree');
         this.jaugeTarget.style.width = `${borne}%`;
         this.element.querySelector('[data-picker-progress]')
             ?.setAttribute('aria-valuenow', String(Math.round(borne)));

@@ -7207,3 +7207,61 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 }
 .jsb-purge-arbre > .jsb-preset-filters-bar::-webkit-scrollbar { display: none; }
 .jsb-purge-arbre > .jsb-preset-filters-bar > .jsb-preset-filters { flex: 0 0 auto; }
+
+/* ⚠ LA BARRE DU PICKER EST INDETERMINEE PAR DEFAUT : `.is-active` anime un `transform`
+   qui glisse une echarpe de 40 %. Y poser une largeur en pourcentage ne montrait donc
+   RIEN — les deux se battaient sur le meme pixel, et l'animation gagnait.
+
+   `est-chiffree` coupe l'animation et rend la barre a sa largeur, comme le fait deja
+   `.is-determinate` sur la barre de la boite de confirmation. Meme raison la-bas : un
+   ruban qui glisse ET une largeur qui avance donnent deux informations contradictoires. */
+.jsb-picker-progress.est-chiffree .jsb-picker-progress-bar {
+    animation: none;
+    transform: none;
+    width: 0;
+    transition: width .25s ease-out;
+}
+
+/* Une ligne deja supprimee reste VISIBLE, barree, avec le mot « supprime » a cote : la
+   faire disparaitre effacerait la preuve de ce qu'on vient de faire, et c'est
+   exactement ce que l'utilisateur vient lire. Gris de charte, jamais une opacite. */
+.jsb-purge-noeud.est-parti > .jsb-purge-rangee { background: transparent; }
+.jsb-purge-noeud.est-parti > .jsb-purge-rangee .jsb-purge-nom {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+.jsb-purge-noeud.est-parti > .jsb-purge-rangee .jsb-purge-case::before {
+    border-color: var(--border-medium);
+    background: var(--bg-muted);
+}
+.jsb-purge-noeud.est-parti > .jsb-purge-rangee .jsb-purge-case::after { content: none; }
+.jsb-purge-etat-ligne {
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding-left: 0.5rem;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--success);
+    white-space: nowrap;
+}
+.jsb-purge-noeud.est-encours > .jsb-purge-rangee .jsb-purge-etat-ligne { color: var(--cobalt); }
+.jsb-purge-noeud.est-echoue > .jsb-purge-rangee .jsb-purge-etat-ligne { color: var(--danger-dark); }
+
+/* Le rouet d'une ligne en cours : il tourne pendant que le serveur travaille sur ce
+   lot. Masque aux lecteurs d'ecran — c'est la mention « en cours » qui les informe. */
+.jsb-purge-rouet {
+    flex: 0 0 auto;
+    width: 12px;
+    height: 12px;
+    margin-left: auto;
+    border: 2px solid var(--bg-muted);
+    border-top-color: var(--cobalt);
+    border-radius: 50%;
+    animation: jsbPurgeRouet .7s linear infinite;
+}
+@keyframes jsbPurgeRouet { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+    .jsb-purge-rouet { animation: none; border-top-color: var(--cobalt); }
+}
+.jsb-purge-rouet + .jsb-purge-etat-ligne { margin-left: 0.4rem; }
