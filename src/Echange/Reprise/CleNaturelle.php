@@ -61,6 +61,9 @@ final class CleNaturelle
     public const AVENANT = 'ave';
     public const CONDITION = 'cond';
 
+    /** Le numéro d'une police que rien ne numérote : le contrat d'origine ({@see numeroOuDefaut()}). */
+    public const NUMERO_DEFAUT = '0';
+
     /**
      * LE REPÈRE D'UN NIVEAU NOMMÉ PAR SON LIBELLÉ — client, risque, assureur…
      *
@@ -105,9 +108,29 @@ final class CleNaturelle
             return null;
         }
 
+        return self::repere(
+            self::AVENANT,
+            self::avecRisque($cle . ' ' . self::numeroOuDefaut($numeroAvenant), $risque),
+        );
+    }
+
+    /**
+     * LE NUMÉRO D'AVENANT D'UNE LIGNE — « 0 » quand elle n'en donne pas.
+     *
+     * ⚠ ZÉRO EST LE CONTRAT D'ORIGINE, pas une absence. Une police sans avenant EST
+     * l'avenant zéro : c'est le langage du métier, et le classeur laisse la colonne vide
+     * dans l'immense majorité des lignes.
+     *
+     * ⚠ ET LA CLÉ DOIT LIRE PAREIL DES DEUX CÔTÉS. Écrire « 0 » en base tout en cherchant
+     * sous une clé vide ferait manquer la police au dépôt suivant : la reprise la recréerait
+     * à chaque fois, sans que rien ne le signale. D'où cette source unique, partagée avec
+     * {@see ChaineExistante::cle()}.
+     */
+    public static function numeroOuDefaut(?string $numeroAvenant): string
+    {
         $numero = ResolveurDeRenvois::normaliser((string) $numeroAvenant);
 
-        return self::repere(self::AVENANT, self::avecRisque($numero === '' ? $cle : $cle . ' ' . $numero, $risque));
+        return $numero === '' ? self::NUMERO_DEFAUT : $numero;
     }
 
     /**
