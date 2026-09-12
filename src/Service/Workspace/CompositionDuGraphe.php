@@ -3,8 +3,11 @@
 namespace App\Service\Workspace;
 
 use App\Entity\Article;
+use App\Entity\Document;
 use App\Entity\Entreprise;
+use App\Entity\Paiement;
 use App\Entity\ReversementRetroAgent;
+use App\Entity\Tache;
 use App\Entity\Utilisateur;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
@@ -161,6 +164,28 @@ final class CompositionDuGraphe
         Utilisateur::class => true,
     ];
 
+    /**
+     * CE QU'ON PEUT ÉPARGNER SANS DÉFAIRE LE DOSSIER.
+     *
+     * Une proposition ne survit pas à son affaire, ni une échéance à sa proposition : ce
+     * sont des MAILLONS, et la base le dit. Une pièce jointe, un règlement, une tâche, eux,
+     * existent très bien seuls — leur clé est nullable et leur perte n'est la conséquence de
+     * rien. Ce sont donc les seuls que l'écran propose de garder, en coupant le lien plutôt
+     * qu'en détruisant la ligne.
+     *
+     * ⚠ C'EST UNE CARTE D'INTENTION MÉTIER, PAS UNE DÉDUCTION DU SCHÉMA. Beaucoup de
+     * colonnes sont nullables sans que garder l'enfant ait le moindre sens : une ligne de
+     * facture sans sa facture n'est pas une pièce épargnée, c'est un débris. On nomme donc
+     * les trois familles où l'arbitrage individuel a un sens, et rien d'autre.
+     *
+     * @var array<class-string, true>
+     */
+    private const DETACHABLES_A_ECRAN = [
+        Document::class  => true,
+        Paiement::class  => true,
+        Tache::class     => true,
+    ];
+
     /** @var array<class-string, array<int, array{source: class-string, champ: string, nature: string}>>|null */
     private ?array $entrantes = null;
 
@@ -218,6 +243,17 @@ final class CompositionDuGraphe
     }
 
     /** Cette classe EST le cabinet (ou son propriétaire) : on ne la prend jamais pour racine. */
+    /**
+     * L'utilisateur peut-il épargner une ligne de cette classe sans défaire le dossier ?
+     *
+     * Détermine, à l'écran, si décocher un nœud le DÉTACHE (il survit, son lien coupé) ou
+     * s'il faut au contraire renoncer à supprimer tout ce qui le porte.
+     */
+    public function estDetachableAEcran(string $classe): bool
+    {
+        return isset(self::DETACHABLES_A_ECRAN[$classe]);
+    }
+
     public function estFrontiere(string $classe): bool
     {
         return isset(self::FRONTIERES[$classe]);

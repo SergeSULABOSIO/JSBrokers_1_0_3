@@ -1,0 +1,193 @@
+{#
+    SUPPRIMER UN DOSSIER — l'arbre montre l'état, le panneau écrit l'histoire.
+
+    Deux colonnes : à gauche l'arbre de ce qui va partir, tout coché d'office ; à droite le
+    panneau qui dit ce que la validation fera, puis ce qu'elle a fait. Le plan EST le
+    récapitulatif : il n'y a pas de seconde boîte de confirmation derrière celle-ci.
+
+    Miroir visuel des pickers `jsb-picker-*` (/charte-couleurs : cobalt #0047AB, aucune
+    couleur hors charte ; blocage et échec en famille `--danger`).
+
+    /ergonomie-web :
+      - `role="dialog" aria-modal`, piège de focus, Échap, focus rendu au déclencheur ;
+      - l'arbre est un vrai `role="tree"` : `treeitem`, `group`, `aria-level`,
+        `aria-checked="mixed"` pour l'état partiel, clavier complet ;
+      - la LIGNE ENTIÈRE est cliquable (≥ 32 px, 44 px au doigt) — une case de 14 px ne
+        remplit pas le critère 2.5.8 ;
+      - jamais l'information par la seule couleur : un verrou porte son icône ET son motif ;
+      - les compteurs sont écrits en toutes lettres (« 1 847 objets · 12 conservés »).
+#}
+<div class="jsb-picker-overlay"
+     data-controller="suppression-dossier"
+     data-suppression-dossier-rubrique-value="{{ rubrique }}"
+     data-suppression-dossier-ids-value="{{ ids|json_encode }}"
+     data-picker-overlay>
+    <div class="jsb-picker-modal jsb-picker-modal--large jsb-purge"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="jsb-purge-titre"
+         aria-describedby="jsb-purge-intro"
+         tabindex="-1">
+
+        {# ⚠ L'ENTÊTE EST ROUGE, comme celui de la confirmation de suppression qu'il remplace.
+           C'est le seul écran de l'application qui détruit des données sans retour possible :
+           il doit s'annoncer comme tel dès la première seconde, et se distinguer de tous les
+           autres pickers, qui eux enregistrent. Rouge de charte (`--danger`), texte blanc. #}
+        <div class="modal-header jsb-picker-header jsb-purge-entete">
+            <div class="d-flex align-items-center">
+                <span class="me-2 d-inline-flex" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:delete') }}" style="width:22px;height:22px;" />
+                </span>
+                <h5 id="jsb-purge-titre" class="modal-title mb-0">{{ titre }}</h5>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-picker-close aria-label="Fermer la fenêtre"></button>
+        </div>
+
+        <div class="jsb-picker-progress" data-picker-progress role="progressbar"
+             aria-valuemin="0" aria-valuemax="100" aria-hidden="true">
+            <div class="jsb-picker-progress-bar" data-suppression-dossier-target="jauge"></div>
+        </div>
+
+        <p id="jsb-purge-intro" class="jsb-purge-intro">
+            Tout est coché. <strong>Décochez ce que vous souhaitez conserver.</strong>
+            Décocher une proposition ou une échéance renonce aussi à supprimer ce qui la porte.
+        </p>
+
+        <div class="jsb-purge-corps">
+            {# ── COLONNE GAUCHE : l'arbre ────────────────────────────────────────── #}
+            <section class="jsb-purge-arbre" aria-labelledby="jsb-purge-arbre-titre">
+                <div class="jsb-purge-compte">
+                    <div class="jsb-purge-compte-texte">
+                        <h6 id="jsb-purge-arbre-titre" class="jsb-purge-compte-titre">Ce qui va être supprimé</h6>
+                        <p class="jsb-purge-volume" role="status" aria-live="polite"
+                           data-suppression-dossier-target="volume">Analyse du dossier en cours…</p>
+                    </div>
+                </div>
+
+                {# La RANGÉE DE PILULES, telle que l'écran du choix des colonnes la monte :
+                   une barre à elle, hors de la zone qui défile, fond blanc et filet en bas.
+
+                   ⚠ LES LIBELLÉS SONT AU PARTICIPE, PAS À L'INFINITIF. Ces chips ne sont pas
+                   des boutons d'action : ils DISENT l'état courant, et s'allument quand il est
+                   atteint. « tout · Coché » se lit comme un constat, « tout · Cocher » comme un
+                   ordre — et un ordre allumé en cobalt ne veut rien dire.
+
+                   ⚠ ET ILS SONT COURTS PARCE QUE LE TITRE DE LA PILULE LES PORTE DÉJÀ.
+                   « tout · Tout cocher » répétait le mot, et les deux pilules débordaient sur
+                   une seconde ligne dans une colonne qui n'en fait que les deux tiers. « tout ·
+                   Cocher · Décocher » dit la même chose et tient sur une ligne. #}
+                <div class="jsb-preset-filters-bar">
+                    {# LA PILULE DE CHIPS DU CHOIX DES COLONNES, montée à l'identique :
+                       `jsb-preset-filters jsb-control-pill`, un `__titre` qui nomme la
+                       famille de gestes, et des chips dont le libellé est dans un `<span>`.
+
+                       ⚠ DEUX PILULES, PAS UNE SÉPARÉE PAR UN FILET. C'est ainsi que l'écran
+                       des colonnes groupe ses gestes, et le titre de chacune dit ce qu'elle
+                       gouverne — ce qu'un simple séparateur laissait deviner.
+
+                       ⚠ LE CHIP NU, PAS LA VARIANTE `--action`. Celle-ci dessine un bouton
+                       blanc borde, et l'ecran des colonnes s'en sert pour distinguer un geste
+                       d'un etat au sein d'une MEME pilule, ou les voisins s'allument. Ici
+                       aucune pilule ne porte d'etat : les quatre chips sont des gestes, et
+                       rien ne les oppose a quoi que ce soit. Le style de reference est donc
+                       celui de la liste des pistes — chip plat, icone puis libelle.
+
+                       ⚠ ET ILS PORTENT BIEN `aria-pressed`, PARCE QU'ILS DISENT UN ETAT.
+                       Un chip qui reste eteint alors que tout est coche laisse croire que
+                       rien ne l'est : le composant mentirait sur l'etat du systeme (Nielsen 1)
+                       au moment precis ou l'utilisateur decide d'effacer. « Cocher » s'allume
+                       donc quand TOUT est coche, « Decocher » quand plus rien ne l'est, et ni
+                       l'un ni l'autre entre les deux — ou le tri-etat de l'arbre repond deja. #}
+                    <div class="jsb-preset-filters jsb-control-pill" role="group" aria-label="Sélection d’ensemble">
+                        <span class="jsb-preset-filters__titre" aria-hidden="true">tout</span>
+                        <button type="button" class="jsb-preset-chip"
+                                data-suppression-dossier-target="chipCocher"
+                                aria-pressed="false"
+                                data-action="click->suppression-dossier#toutCocher">
+                            <span class="jsb-preset-chip__icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('action:check'), {width: '15px', height: '15px'}) }}</span>
+                            <span>Coché</span>
+                        </button>
+                        <button type="button" class="jsb-preset-chip"
+                                data-suppression-dossier-target="chipDecocher"
+                                aria-pressed="false"
+                                data-action="click->suppression-dossier#toutDecocher">
+                            <span class="jsb-preset-chip__icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('action:cancel'), {width: '15px', height: '15px'}) }}</span>
+                            <span>Décoché</span>
+                        </button>
+                    </div>
+                    <div class="jsb-preset-filters jsb-control-pill" role="group" aria-label="Affichage de l’arbre">
+                        <span class="jsb-preset-filters__titre" aria-hidden="true">arbre</span>
+                        <button type="button" class="jsb-preset-chip"
+                                data-suppression-dossier-target="chipDeplier"
+                                aria-pressed="false"
+                                data-action="click->suppression-dossier#toutDeplier">
+                            <span class="jsb-preset-chip__icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('action:deplier'), {width: '15px', height: '15px'}) }}</span>
+                            <span>Déplié</span>
+                        </button>
+                        <button type="button" class="jsb-preset-chip"
+                                data-suppression-dossier-target="chipReplier"
+                                aria-pressed="false"
+                                data-action="click->suppression-dossier#toutReplier">
+                            <span class="jsb-preset-chip__icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('action:replier'), {width: '15px', height: '15px'}) }}</span>
+                            <span>Replié</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="jsb-picker-listwrap jsb-purge-listwrap">
+                    <ul class="jsb-purge-tree"
+                        role="tree"
+                        aria-label="Contenu du dossier à supprimer"
+                        aria-busy="true"
+                        data-suppression-dossier-target="arbre"
+                        data-action="keydown->suppression-dossier#auClavier"></ul>
+                    <p class="jsb-picker-empty" data-suppression-dossier-target="vide" hidden>
+                        Ce dossier ne contient rien d’autre que lui-même.
+                    </p>
+                </div>
+            </section>
+
+            {# ── COLONNE DROITE : le panneau ─────────────────────────────────────── #}
+            <section class="jsb-purge-panneau" aria-labelledby="jsb-purge-panneau-titre">
+                <ol class="jsb-purge-etapes" data-suppression-dossier-target="etapes">
+                    <li class="jsb-purge-etape is-active" data-etape="plan">
+                        <span class="jsb-purge-etape-num">01</span> Plan
+                    </li>
+                    <li class="jsb-purge-etape" data-etape="execution">
+                        <span class="jsb-purge-etape-num">02</span> Exécution
+                    </li>
+                    <li class="jsb-purge-etape" data-etape="rapport">
+                        <span class="jsb-purge-etape-num">03</span> Rapport
+                    </li>
+                </ol>
+
+                <h6 id="jsb-purge-panneau-titre" class="jsb-purge-panneau-titre"
+                    data-suppression-dossier-target="panneauTitre">Ce qui va partir</h6>
+
+                <div class="jsb-purge-panneau-corps" data-suppression-dossier-target="panneau"
+                     role="status" aria-live="polite"></div>
+            </section>
+        </div>
+
+        <footer class="jsb-picker-foot">
+            <span class="jsb-picker-hint" data-suppression-dossier-target="pied">
+                Cette action est définitive.
+            </span>
+            <span class="d-inline-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close
+                        data-suppression-dossier-target="fermer">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:cancel') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                    Annuler
+                </button>
+                <button type="button" class="btn btn-danger jsb-picker-btn"
+                        data-action="click->suppression-dossier#executer"
+                        data-suppression-dossier-target="executer" disabled>
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:delete') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                    <span data-suppression-dossier-target="executerTexte">Supprimer</span>
+                </button>
+            </span>
+        </footer>
+
+        <div class="jsb-picker-erreur" data-picker-error role="alert" hidden></div>
+    </div>
+</div>

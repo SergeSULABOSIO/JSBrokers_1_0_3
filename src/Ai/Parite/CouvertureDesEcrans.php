@@ -157,6 +157,12 @@ final class CouvertureDesEcrans
         'ui:invite.resend-request' => "Renvoi d'un courriel d'invitation, donc émission d'un accès "
             . "vers un tiers. Réservé à l'écran pour la même raison que les liens de SOA.",
 
+        // ⚠ LA SUPPRESSION N'A PAS D'ENTRÉE ICI, ET C'EST NORMAL : ce n'est pas une
+        // action de canevas mais le geste intégré de la barre d'outils, piloté par
+        // `endpoint_delete_url`. Il ouvre désormais l'arbre du dossier ; Ket, elle,
+        // supprime par `preparer_operations` en annonçant la même portée, calculée
+        // par le même moteur.
+
     ];
 
     /** @return list<string> toutes les actions d'écran inventoriées */

@@ -6782,3 +6782,428 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     font-size: 0.72rem;
     color: var(--text-muted);
 }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   SUPPRIMER UN DOSSIER — l'arbre à gauche, le récit à droite.
+
+   Transposition du système visuel décrit dans la spécification (accent, cadres,
+   étapes numérotées) dans la charte de l'application. AUCUNE couleur nouvelle :
+   l'accent est le cobalt de marque, le blocage et l'échec sont la famille
+   `--danger`, et chaque valeur ci-dessous vient de `:root`.
+
+   ⚠ LE CONTRASTE EST LE PIÈGE DE CE BLOC, et il a été vérifié :
+     - une ligne conservée est en `--text-muted` (4,69:1 sur blanc) et JAMAIS en
+       opacité réduite — 45 % d'opacité tombe à ~2,1:1, sous le seuil AA ;
+     - un échec est `--danger-dark` sur `--danger-bg` (7,0:1). `--danger` sur ce
+       même fond ne donne que 3,40:1 : il ne sert donc qu'aux filets et aux icônes ;
+     - le pied est sur `--bg-light`, où `--text-muted` retombe à 4,45:1 : il
+       utilise `--text-body` (7,9:1).
+
+   ⚠ ET LA CIBLE CLIQUABLE EST LA LIGNE ENTIÈRE. La case fait 16 px : à elle seule
+   elle échouerait au critère 2.5.8. La rangée porte donc 32 px de haut, et 44 px
+   dès que le pointeur est grossier (doigt).
+   ═════════════════════════════════════════════════════════════════════════════ */
+.jsb-purge-intro {
+    margin: 0;
+    padding: 0.75rem var(--jsb-picker-gouttiere) 0.5rem;
+    font-size: 0.86rem;
+    color: var(--text-body);
+}
+
+.jsb-purge-corps {
+    display: grid;
+    /* `minmax(0, …)` à gauche : sans lui, un long libellé élargit la colonne et fait
+       respirer le panneau de droite à chaque frappe. */
+    grid-template-columns: minmax(0, 65fr) minmax(320px, 35fr);
+    gap: 0;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.jsb-purge-arbre {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-right: 1px solid var(--border-light);
+}
+
+.jsb-purge-compte {
+    padding: 0.6rem var(--jsb-picker-gouttiere) 0.5rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+.jsb-purge-compte-titre {
+    margin: 0;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+}
+.jsb-purge-volume {
+    margin: 0.15rem 0 0;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    font-variant-numeric: tabular-nums;
+}
+
+.jsb-purge-listwrap { padding: 0.35rem 0 0.75rem; }
+
+.jsb-purge-tree,
+.jsb-purge-groupe {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.jsb-purge-rangee {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 32px;
+    padding: 0.15rem var(--jsb-picker-gouttiere) 0.15rem 0.5rem;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+}
+.jsb-purge-rangee:hover { background: var(--bg-light); }
+.jsb-purge-noeud:focus-visible > .jsb-purge-rangee {
+    outline: 2px solid var(--cobalt);
+    outline-offset: -2px;
+}
+@media (pointer: coarse) {
+    .jsb-purge-rangee { min-height: 44px; }
+}
+
+.jsb-purge-fleche {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    line-height: 1;
+    cursor: pointer;
+}
+.jsb-purge-fleche svg { width: 15px; height: 15px; }
+.jsb-purge-fleche:hover { background: var(--bg-muted); color: var(--cobalt); }
+.jsb-purge-fleche:focus-visible { outline: 2px solid var(--cobalt); outline-offset: 1px; }
+.jsb-purge-fleche--vide { cursor: default; }
+
+/* La case : 16 px de glyphe dans une boîte de 24, pour que le dessin reste fin
+   sans que la cible le devienne. */
+.jsb-purge-case {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    position: relative;
+}
+.jsb-purge-case::before {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--border-medium);
+    border-radius: 3px;
+    background: var(--bg-white);
+}
+.est-coche > .jsb-purge-rangee .jsb-purge-case::before {
+    border-color: var(--cobalt);
+    background: var(--cobalt);
+}
+.est-coche > .jsb-purge-rangee .jsb-purge-case::after {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 8px;
+    border: solid var(--text-white);
+    border-width: 0 2px 2px 0;
+    transform: translateY(-1px) rotate(45deg);
+}
+.est-partiel > .jsb-purge-rangee .jsb-purge-case::before { border-color: var(--cobalt); }
+.est-partiel > .jsb-purge-rangee .jsb-purge-case::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 2px;
+    background: var(--cobalt);
+}
+
+.est-coche > .jsb-purge-rangee { background: var(--bg-cobalt-subtle); border-left-color: var(--cobalt); }
+.est-coche > .jsb-purge-rangee:hover { background: var(--bg-cobalt-subtle); }
+
+.jsb-purge-nom {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.82rem;
+    color: var(--text-dark);
+}
+/* ⚠ « Conservé » se voit au TEXTE autant qu'à la teinte : la case décochée et le
+   libellé de type restent lisibles, et rien n'est transmis par la seule couleur. */
+.est-conserve > .jsb-purge-rangee .jsb-purge-nom { color: var(--text-muted); }
+
+.jsb-purge-type {
+    flex: 0 0 auto;
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-label);
+}
+.jsb-purge-volume-noeud {
+    flex: 0 0 auto;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.jsb-purge-rangee.is-verrouille {
+    background: var(--danger-bg);
+    border-left-color: var(--danger);
+    cursor: not-allowed;
+}
+.jsb-purge-rangee.is-verrouille .jsb-purge-nom,
+.jsb-purge-motif { color: var(--danger-dark); }
+.jsb-purge-rangee.is-verrouille .jsb-purge-case::before { border-color: var(--danger); }
+.jsb-purge-motif {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.72rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Le panneau de droite ────────────────────────────────────────────────── */
+.jsb-purge-panneau {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0.6rem 1rem 1rem;
+    background: var(--bg-light);
+}
+
+.jsb-purge-etapes {
+    display: flex;
+    gap: 0.35rem;
+    list-style: none;
+    margin: 0 0 0.75rem;
+    padding: 0;
+}
+.jsb-purge-etape {
+    flex: 1 1 0;
+    padding: 0.3rem 0.4rem;
+    border-radius: var(--nav-radius-sm);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    background: var(--bg-muted);
+    white-space: nowrap;
+}
+.jsb-purge-etape.is-active {
+    color: var(--cobalt-dark);
+    background: var(--bg-cobalt-subtle);
+    font-weight: 600;
+}
+.jsb-purge-etape.is-faite { color: var(--success); background: var(--bg-white); }
+.jsb-purge-etape-num { font-variant-numeric: tabular-nums; opacity: 0.75; }
+
+.jsb-purge-panneau-titre {
+    margin: 0 0 0.5rem;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+.jsb-purge-panneau-section {
+    margin: 0.85rem 0 0.3rem;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+}
+.jsb-purge-panneau-liste {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.jsb-purge-panneau-liste li {
+    padding: 0.25rem 0 0.25rem 0.6rem;
+    border-left: 2px solid var(--border-light);
+    font-size: 0.8rem;
+    color: var(--text-body);
+}
+.jsb-purge-panneau-liste.est-refus li {
+    border-left-color: var(--danger);
+    color: var(--danger-dark);
+}
+
+/* ── Dispositions étroites : les deux seuils du projet, pas un de plus ────── */
+@media (max-width: 1199.98px) {
+    .jsb-purge-corps { grid-template-columns: minmax(0, 1fr); }
+    .jsb-purge-arbre { border-right: 0; border-bottom: 1px solid var(--border-light); }
+    .jsb-purge-panneau { max-height: 38vh; }
+}
+@media (max-width: 767.98px) {
+    .jsb-purge-type { display: none; }
+    .jsb-purge-etape { font-size: 0.62rem; }
+}
+
+/* L'entete de la boite de suppression : rouge de charte, texte blanc. Elle remplace la
+   confirmation de suppression et en garde le signal — c'est le seul ecran qui detruit. */
+.jsb-purge-entete {
+    background: var(--danger);
+    color: var(--text-white);
+    border-bottom: 0;
+}
+.jsb-purge-entete .modal-title { color: var(--text-white); }
+
+/* Arbre gele pendant l'execution : il temoigne, il ne se manoeuvre plus. */
+.jsb-purge-tree.est-gele .jsb-purge-rangee { cursor: default; }
+.jsb-purge-tree.est-gele .jsb-purge-rangee:hover { background: transparent; }
+.jsb-purge-tree.est-gele .est-coche > .jsb-purge-rangee:hover { background: var(--bg-cobalt-subtle); }
+
+/* Le journal : l'etat se lit au signe et au mot, la teinte ne fait que le souligner. */
+.jsb-purge-panneau-liste li.est-echec {
+    border-left-color: var(--danger);
+    color: var(--danger-dark);
+}
+.jsb-purge-panneau-liste li.est-fait { border-left-color: var(--success); }
+.jsb-purge-panneau-liste li.est-en-cours { border-left-color: var(--cobalt); }
+
+/* L'icone de rubrique dans l'arbre : un repere, jamais l'information. Le type est ecrit
+   a cote, et l'icone est masquee aux lecteurs d'ecran (aria-hidden). */
+.jsb-purge-icone {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    color: var(--text-muted);
+}
+.est-coche > .jsb-purge-rangee .jsb-purge-icone { color: var(--cobalt); }
+.is-verrouille .jsb-purge-icone { color: var(--danger-dark); }
+.jsb-purge-icone svg { width: 16px; height: 16px; }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   SUPPRIMER UN DOSSIER — reprise d'ergonomie (Bastien & Scapin > Guidage,
+   Groupement/Distinction ; Nielsen 1, 6 et 8).
+
+   Ce que la première version ratait, et qui se voyait à l'usage :
+     - la PROFONDEUR ne se lisait qu'au décalage. Sur cinq niveaux, l'œil perdait
+       la branche qu'il suivait. Un filet par niveau traversé la rend continue.
+     - « 1 objet » était répété sur chaque feuille : vingt fois le même chiffre
+       noyait les deux branches qui en emportaient réellement des dizaines.
+     - le TYPE flottait en colonne au milieu de la ligne, comme un tableau qui
+       n'existe pas. Il suit désormais le nom, en étiquette.
+     - rien ne permettait de tout décocher, ni de survoler puis de se concentrer.
+   ═════════════════════════════════════════════════════════════════════════════ */
+
+/* La gouttière de l'arbre : un cran par niveau, une seule valeur à régler. */
+.jsb-purge-tree { --purge-cran: 18px; }
+
+.jsb-purge-compte { display: block; }
+.jsb-purge-compte-texte { min-width: 0; }
+/* La rangee de pilules s'inscrit dans la colonne de gauche : elle ne defile pas avec
+   l'arbre, et garde la gouttiere commune de la boite. */
+.jsb-purge-arbre > .jsb-preset-filters-bar {
+    padding: 0.4rem var(--jsb-picker-gouttiere);
+    border-top: 1px solid var(--border-subtle);
+}
+
+/* ⚠ AUCUNE REGLE SUR LA PILULE NI SUR SES CHIPS, ET C'EST LE POINT. Les deux pilules
+   sont celles du choix des colonnes — memes classes, meme montage, meme rangee
+   `jsb-preset-filters-bar`. Les redimensionner « un cran plus compact » les desalignait
+   de tous les autres ecrans : c'est exactement ce qu'un composant partage existe pour
+   eviter. Ce qui doit s'adapter, c'est la boite autour, pas le composant. */
+
+/* ── La rangée : indentation par cran, guides continus ────────────────────── */
+.jsb-purge-rangee {
+    position: relative;
+    padding-left: calc(0.4rem + var(--purge-niveau, 0) * var(--purge-cran));
+}
+/* Les guides : un filet vertical par niveau traversé, posé en fond. Ils tiennent
+   la lecture de la branche là où le seul décalage la perdait. */
+.jsb-purge-groupe { position: relative; }
+.jsb-purge-groupe::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(0.4rem + var(--purge-guide, 0) * var(--purge-cran));
+    width: 1px;
+    background: var(--border-subtle);
+    pointer-events: none;
+}
+
+/* ── L'étiquette de type : elle qualifie la ligne, elle ne la compare pas ─── */
+.jsb-purge-type {
+    flex: 0 0 auto;
+    font-size: 0.64rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-body);
+    background: var(--bg-muted);
+    border-radius: 999px;
+    padding: 0.08rem 0.45rem;
+    white-space: nowrap;
+}
+.est-coche > .jsb-purge-rangee .jsb-purge-type {
+    color: var(--cobalt-dark);
+    background: var(--bg-white);
+}
+.is-verrouille .jsb-purge-type { color: var(--danger-dark); background: var(--bg-white); }
+
+/* Le volume ne s'affiche que lorsqu'il APPREND quelque chose (> 1 objet). */
+.jsb-purge-volume-noeud {
+    margin-left: auto;
+    padding-left: 0.5rem;
+    font-weight: 600;
+}
+
+/* ── L'étape active : elle doit se voir d'un coup d'œil ───────────────────── */
+.jsb-purge-etape {
+    border: 1px solid transparent;
+    text-align: center;
+}
+.jsb-purge-etape.is-active {
+    border-color: var(--cobalt);
+    box-shadow: inset 0 -2px 0 var(--cobalt);
+}
+.jsb-purge-etape.is-faite { border-color: var(--border-light); }
+
+/* ── Le pied : il porte l'avertissement, il doit donc se lire ─────────────── */
+.jsb-picker-foot .jsb-picker-hint { color: var(--text-body); font-size: 0.82rem; }
+
+/* ── Dispositions étroites ────────────────────────────────────────────────── */
+@media (max-width: 767.98px) {
+    .jsb-purge-tree { --purge-cran: 12px; }
+    /* La rangée de pilules se replie d'elle-même (`flex-wrap` de
+       `jsb-preset-filters-bar`) : rien à forcer ici. */
+}
+
+/* La rangee de pilules de cette boite tient sur UNE ligne : la colonne de gauche n'en
+   fait que les deux tiers, et un repli y couperait la lecture entre le titre d'une
+   pilule et ses chips. Si la fenetre devient vraiment etroite, elle defile plutot que
+   de se replier — aucun geste n'est perdu.
+
+   ⚠ C'EST LA SEULE REGLE QUE CETTE BOITE ECRIT SUR LA PILULE, et elle porte sur la
+   RANGEE, pas sur les chips : ceux-ci sont exactement ceux de la liste des pistes, et
+   les retoucher les desalignerait de toutes les rubriques. */
+.jsb-purge-arbre > .jsb-preset-filters-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.jsb-purge-arbre > .jsb-preset-filters-bar::-webkit-scrollbar { display: none; }
+.jsb-purge-arbre > .jsb-preset-filters-bar > .jsb-preset-filters { flex: 0 0 auto; }

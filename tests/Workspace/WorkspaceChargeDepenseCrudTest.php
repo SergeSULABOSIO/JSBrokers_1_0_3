@@ -223,6 +223,15 @@ class WorkspaceChargeDepenseCrudTest extends WebTestCase
         $this->assertResponseIsSuccessful('La liste des charges doit se recharger avec des lignes.');
         $html = (string) $this->client->getResponse()->getContent();
         $this->assertStringContainsString('Loyer du bureau', $html);
+        // ⚠ CHAQUE LIGNE PORTE SON NOM, ET PAS SEULEMENT SON NUMÉRO. La sélection transmise
+        // aux actions groupées ne véhiculait que l'identifiant : la corbeille et la boîte de
+        // confirmation annonçaient « Élément #117 » au lieu de nommer ce qu'on efface. Le
+        // gabarit pose donc l'étiquette sur la ligne, et c'est elle que lit le contrôleur.
+        $this->assertStringContainsString(
+            'data-label="Loyer du bureau"',
+            $html,
+            'La ligne doit porter son nom affiché, sans quoi toute action groupée parle par numéros.',
+        );
         // Barre des totaux active : les attributs totalisables (NumericCanvasProvider)
         // doivent être embarqués dans le list-manager (sinon « Aucune valeur numérique »).
         $this->assertStringContainsString('Budget mensuel', $html, 'La barre des totaux doit proposer le budget mensuel des charges.');

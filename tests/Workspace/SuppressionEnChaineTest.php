@@ -84,9 +84,14 @@ class SuppressionEnChaineTest extends WebTestCase
         $conn->executeStatement('UPDATE avenant a JOIN entreprise e ON a.entreprise_id = e.id SET a.piste_de_renouvellement_id = NULL WHERE e.nom = :nom', ['nom' => $nom]);
         $conn->executeStatement('UPDATE piste p JOIN entreprise e ON p.entreprise_id = e.id SET p.avenant_de_base_id = NULL WHERE e.nom = :nom', ['nom' => $nom]);
 
+        // ⚠ `portefeuille` PRÉCÈDE `invite` : sa colonne `gestionnaire_id` est NON NULLABLE,
+        // c'est d'ailleurs ce qui en fait le cas d'école du refus nommé. Oublier de le
+        // ranger ici laissait un portefeuille orphelin qui bloquait le nettoyage — et les
+        // dix tests suivants tombaient sur l'échec du décor, pas sur le leur.
         $tables = [
             'reversement_retro_agent', 'paiement', 'article', 'note', 'tranche',
-            'revenu_pour_courtier', 'avenant', 'cotation', 'piste', 'risque', 'client', 'invite',
+            'revenu_pour_courtier', 'avenant', 'cotation', 'piste', 'risque', 'client',
+            'portefeuille', 'invite',
         ];
         foreach ($tables as $table) {
             $conn->executeStatement(
@@ -281,6 +286,48 @@ class SuppressionEnChaineTest extends WebTestCase
         ];
     }
 
+    /** @return array<string, mixed> la projection en arbre rendue par la route */
+    private function arbreDe(string $rubrique, int $id): array
+    {
+        $this->client->request('GET', sprintf('/admin/suppression/arbre/%s/%d', $rubrique, $id));
+        $this->assertResponseIsSuccessful('L’arbre du dossier doit se lire.');
+
+        return json_decode((string) $this->client->getResponse()->getContent(), true) ?? [];
+    }
+
+    /**
+     * Exécute le tri SANS demander le flux : le contrat JSON de la route reste testable
+     * sans avoir à lire du NDJSON ligne à ligne.
+     *
+     * @return array<string, mixed>
+     */
+    private function executerLeDossier(string $rubrique, int $id, array $charge): array
+    {
+        $this->client->request(
+            'POST',
+            sprintf('/admin/suppression/executer/%s/%d', $rubrique, $id),
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode($charge, JSON_THROW_ON_ERROR),
+        );
+        $this->assertResponseIsSuccessful('L’exécution du tri doit aboutir.');
+
+        return json_decode((string) $this->client->getResponse()->getContent(), true) ?? [];
+    }
+
+    /** @return array<string, mixed>|null */
+    private function noeudDe(array $arbre, string $cle): ?array
+    {
+        foreach ($arbre['noeuds'] ?? [] as $noeud) {
+            if ($noeud['cle'] === $cle) {
+                return $noeud;
+            }
+        }
+
+        return null;
+    }
+
     private function existe(string $classe, ?int $id): bool
     {
         if ($id === null) {
@@ -292,6 +339,329 @@ class SuppressionEnChaineTest extends WebTestCase
     }
 
     // ──────────────────────────────── Les tests ───────────────────────────────
+
+    /**
+     * CHAQUE LIGNE DU PLAN DIT DE QUI ELLE PEND.
+     *
+     * Le plan ne savait compter que par classe : « 12 échéances », sans jamais dire
+     * desquelles ni sous quelle proposition. On ne peut pas dessiner un arbre avec un
+     * décompte à plat, ni demander à quelqu'un d'épargner une branche qu'on ne sait pas
+     * nommer. La provenance vient de la colonne de jointure, qui était DÉJÀ dans le `WHERE`
+     * de la requête d'arête — une colonne de plus au `SELECT`, pas une requête de plus.
+     */
+    public function testChaqueLigneDuPlanDitDeQuiElleDepend(): void
+    {
+        $cabinet = $this->cabinet();
+        $d = $this->dossierComplet($cabinet, 'PROV');
+
+        $moteur = static::getContainer()->get(\App\Service\Workspace\SuppressionEnCascade::class);
+        $plan = $moteur->planifier($this->em()->find(Piste::class, $d['piste']->getId()));
+
+        $this->assertSame(
+            'Piste#' . $d['piste']->getId(),
+            $plan->parentDe(Cotation::class, $d['cotation']->getId()),
+            'La proposition pend de son affaire.',
+        );
+        $this->assertSame(
+            'Cotation#' . $d['cotation']->getId(),
+            $plan->parentDe(Tranche::class, $d['tranche']->getId()),
+            'L’échéance pend de sa proposition.',
+        );
+        $this->assertNotNull(
+            $plan->parentDe(Article::class, $d['article']->getId()),
+            'La ligne de facture est atteinte à la profondeur 4 et doit connaître son parent.',
+        );
+        $this->assertNull(
+            $plan->parentDe(Piste::class, $d['piste']->getId()),
+            'La racine ne pend de rien.',
+        );
+
+        // ⚠ LA FACTURE QUI SE VIDE N'A AUCUNE ARÊTE ENTRANTE : elle entre au plan au second
+        // tour, parce qu'elle a perdu toutes ses lignes. Sans rattachement explicite à la
+        // racine, elle serait un nœud orphelin que l'écran laisse tomber en silence.
+        $this->assertSame(
+            'Piste#' . $d['piste']->getId(),
+            $plan->parentDe(Note::class, $d['note']->getId()),
+            'La facture vidée se rattache à la racine, sinon elle disparaît de l’arbre.',
+        );
+    }
+
+    /**
+     * UN REFUS DIT AUSSI **OÙ** ÇA BLOQUE.
+     *
+     * `refus` ne porte qu'une phrase : « 3 Dépenses en dépendent ». L'écran ne peut donc ni
+     * peindre la branche fautive, ni laisser le reste du dossier partir. Les verrous
+     * ajoutent l'endroit sans rien changer à `refus` ni à `estBloque()`, dont quatre
+     * appelants dépendent.
+     */
+    public function testUnRefusNommeLaBrancheQuiBloque(): void
+    {
+        $cabinet = $this->cabinet();
+        $portefeuille = (new \App\Entity\Portefeuille())->setNom('Portefeuille verrou');
+        $portefeuille->setGestionnaire($cabinet['invite']);
+        $portefeuille->setEntreprise($cabinet['entreprise']);
+        $this->em()->persist($portefeuille);
+        $this->em()->flush();
+
+        $moteur = static::getContainer()->get(\App\Service\Workspace\SuppressionEnCascade::class);
+        $plan = $moteur->planifier($this->em()->find(Invite::class, $cabinet['invite']->getId()));
+
+        $this->assertTrue($plan->estBloque(), 'Un gestionnaire de portefeuille ne peut pas disparaître ainsi.');
+        $this->assertNotSame([], $plan->verrous, 'Le refus doit être localisé, pas seulement énoncé.');
+
+        $verrou = $plan->verrous[0];
+        $this->assertArrayHasKey('parents', $verrou, 'Le verrou dit sous quel nœud il pend.');
+        $this->assertContains($portefeuille->getId(), $verrou['ids']);
+        $this->assertContains($verrou['motif'], $plan->refus, 'Le motif reste celui que `refus` porte déjà.');
+    }
+
+    /**
+     * NOMMER TROIS MILLE LIGNES NE DOIT PAS COÛTER TROIS MILLE REQUÊTES.
+     *
+     * L'arbre nomme chaque nœud. Le faire en hydratant une entité par ligne — ce que le
+     * rapport fait pour la poignée de factures qu'il cite — remettrait sur l'écran le coût
+     * qu'on vient de retirer du moteur.
+     */
+    public function testLesNomsSeLisentParClasseEtNonParLigne(): void
+    {
+        $cabinet = $this->cabinet();
+        $d = $this->dossierComplet($cabinet, 'NOMS');
+
+        // Construit à la main : ce service n'a qu'une dépendance, et tant qu'aucun autre ne
+        // l'injecte, le conteneur de test l'inline. Le rendre public pour le seul confort
+        // d'un test serait payer en production une commodité de test.
+        $noms = (new \App\Service\Workspace\NomsDesNoeuds($this->em()))->pour([
+            Piste::class    => [$d['piste']->getId()],
+            Cotation::class => [$d['cotation']->getId()],
+            Avenant::class  => [$d['avenant']->getId()],
+            Article::class  => [$d['article']->getId()],
+        ], [Article::class => 'Lignes de facture']);
+
+        $this->assertSame('Affaire NOMS', $noms[Piste::class][$d['piste']->getId()]);
+        $this->assertSame('Proposition NOMS', $noms[Cotation::class][$d['cotation']->getId()]);
+        $this->assertSame(
+            'POL-SEC-NOMS',
+            $noms[Avenant::class][$d['avenant']->getId()],
+            'Une police se reconnaît à sa référence, pas à sa description.',
+        );
+        // ⚠ `Article` N'A AUCUN CHAMP TEXTE. Une case muette dans un arbre de suppression,
+        // c'est une case qu'on demande de cocher sans dire ce qu'elle emporte.
+        $this->assertSame(
+            'Lignes de facture n° ' . $d['article']->getId(),
+            $noms[Article::class][$d['article']->getId()],
+        );
+    }
+
+    /**
+     * LE TRI S'EXÉCUTE : ce qui est retenu part, ce qui est épargné est DÉTACHÉ.
+     *
+     * Épargner une pièce ne peut pas vouloir dire « l'ignorer » : son dossier disparaît, et
+     * la base refuserait de laisser un lien pendre dans le vide. La seule façon de tenir la
+     * promesse de l'écran est de couper ce lien.
+     */
+    public function testLeTriExecuteDetruitEtDetacheCommeAnnonce(): void
+    {
+        $cabinet = $this->cabinet();
+        $d = $this->dossierComplet($cabinet, 'EXEC');
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $idPiste = (int) $d['piste']->getId();
+        $idPaiement = (int) $d['paiement']->getId();
+
+        $rapport = $this->executerLeDossier('piste', $idPiste, [
+            'lots'      => ['Piste#' . $idPiste],
+            'conserver' => ['Paiement' => [$idPaiement]],
+        ]);
+
+        $this->assertSame([], $rapport['echecs'], 'Aucune partie ne devait résister.');
+        $this->assertGreaterThan(0, $rapport['detruits']);
+
+        $this->assertFalse($this->existe(Piste::class, $idPiste), 'L’affaire est partie.');
+        $this->assertFalse($this->existe(Cotation::class, $d['cotation']->getId()));
+        $this->assertFalse($this->existe(Tranche::class, $d['tranche']->getId()));
+
+        // La pièce épargnée survit, son lien coupé — pas ignorée, DÉTACHÉE.
+        $paiement = $this->em()->find(Paiement::class, $idPaiement);
+        $this->assertNotNull($paiement, 'Le règlement épargné doit survivre à son dossier.');
+        $this->assertNull($paiement->getNote(), 'Et son lien à la facture disparue doit être coupé.');
+
+        // Les transversaux n'ont pas bougé.
+        $this->assertTrue($this->existe(Client::class, $cabinet['client']->getId()));
+        $this->assertTrue($this->existe(Risque::class, $cabinet['risque']->getId()));
+    }
+
+    /**
+     * ÉPARGNER UN MAILLON STRUCTUREL EST REFUSÉ PAR LE SERVEUR.
+     *
+     * L'écran ne le propose pas : décocher une échéance décoche son affaire. Mais une
+     * garantie d'écran n'en est pas une — une requête forgée, ou un onglet resté ouvert sur
+     * une version antérieure, arriverait ici. On refuse en le NOMMANT.
+     */
+    public function testEpargnerUnMaillonStructurelEstRefuse(): void
+    {
+        $cabinet = $this->cabinet();
+        $d = $this->dossierComplet($cabinet, 'FORGE');
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $idPiste = (int) $d['piste']->getId();
+        $rapport = $this->executerLeDossier('piste', $idPiste, [
+            'lots'      => ['Piste#' . $idPiste],
+            'conserver' => ['Tranche' => [$d['tranche']->getId()]],
+        ]);
+
+        $this->assertCount(1, $rapport['echecs'], 'Le lot doit échouer plutôt que de deviner une intention.');
+        $this->assertStringContainsString('ne peut pas exister seule', $rapport['echecs'][0]['motif']);
+        $this->assertTrue($this->existe(Piste::class, $idPiste), 'Et rien n’a été touché : la transaction a tout rendu.');
+    }
+
+    /** Un lot qui n'appartient pas au dossier affiché est refusé, pas exécuté. */
+    public function testUnLotEtrangerAuDossierEstRefuse(): void
+    {
+        $cabinet = $this->cabinet();
+        $ici = $this->dossierComplet($cabinet, 'ICI');
+        $ailleurs = $this->dossierComplet($cabinet, 'AILLEURS');
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $rapport = $this->executerLeDossier('piste', (int) $ici['piste']->getId(), [
+            'lots' => ['Cotation#' . $ailleurs['cotation']->getId()],
+        ]);
+
+        $this->assertCount(1, $rapport['echecs']);
+        $this->assertStringContainsString('ne fait pas partie du dossier', $rapport['echecs'][0]['motif']);
+        $this->assertTrue(
+            $this->existe(Cotation::class, $ailleurs['cotation']->getId()),
+            '⚠ La proposition d’un AUTRE dossier ne doit pas pouvoir être effacée par une charge forgée.',
+        );
+    }
+
+    /**
+     * L'ARBRE SE LIT D'UN SEUL PASSAGE : LE PARENT PRÉCÈDE TOUJOURS SES ENFANTS.
+     *
+     * L'écran construit l'arbre au fil de la lecture. Recevoir une échéance avant la
+     * proposition qui la porte l'obligerait à garder des nœuds en attente — ou, plus
+     * probablement, à les perdre en silence.
+     */
+    public function testLArbreDonneLeParentAvantSesEnfants(): void
+    {
+        $cabinet = $this->cabinet();
+        $d = $this->dossierComplet($cabinet, 'ARBRE');
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $donnees = $this->arbreDe('piste', (int) $d['piste']->getId());
+
+        $this->assertSame('Affaire ARBRE', $donnees['racine']['nom']);
+        $this->assertGreaterThan(1, $donnees['total'], 'Le dossier emporte plus que sa seule racine.');
+
+        $vus = [$donnees['racine']['cle'] => true];
+        foreach ($donnees['noeuds'] as $noeud) {
+            $this->assertArrayHasKey(
+                $noeud['parent'],
+                $vus,
+                sprintf('Le nœud « %s » arrive avant son parent « %s ».', $noeud['cle'], (string) $noeud['parent']),
+            );
+            $vus[$noeud['cle']] = true;
+        }
+
+        // Le total d'un nœud comprend ce qui pend de lui : la proposition porte son
+        // échéance, sa police et sa commission.
+        $cotation = $this->noeudDe($donnees, 'Cotation#' . $d['cotation']->getId());
+        $this->assertNotNull($cotation, 'La proposition doit figurer dans l’arbre.');
+        // ⚠ L'ICÔNE VIENT DU FOURNISSEUR COMMUN, pas d'une carte recopiée ici : un avenant
+        // porte le même dessin dans l'arbre que sur sa fiche et dans le menu.
+        $this->assertSame(
+            static::getContainer()->get(\App\Services\Canvas\Provider\Icon\IconCanvasProvider::class)->resolveIconName('cotation'),
+            $cotation['icone'],
+        );
+        $this->assertGreaterThan(1, $cotation['total'], 'Une proposition emporte au moins son échéance.');
+        $this->assertSame('structurel', $cotation['nature'], 'Une proposition ne survit pas à son affaire.');
+    }
+
+    /**
+     * LA BOÎTE S'OUVRE, ET ELLE EST MANŒUVRABLE AUTREMENT QU'À LA SOURIS.
+     *
+     * Un arbre à cases qui n'est pas un vrai `role="tree"` n'existe pas pour un lecteur
+     * d'écran : il s'annonce comme une liste à puces, sans niveau, sans état de case, sans
+     * moyen de déplier. Ces attributs ne sont pas une décoration — ce sont eux qui font que
+     * l'arbitrage est possible sans souris.
+     */
+    public function testLaBoiteDeSuppressionSOuvreEtEstAccessible(): void
+    {
+        $cabinet = $this->cabinet();
+        $d = $this->dossierComplet($cabinet, 'BOITE');
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $this->client->request('GET', sprintf('/admin/suppression/dossier/piste?ids=%d', $d['piste']->getId()));
+        $this->assertResponseIsSuccessful('La boîte de suppression du dossier doit s’ouvrir.');
+        $html = (string) $this->client->getResponse()->getContent();
+
+        $this->assertStringContainsString('data-controller="suppression-dossier"', $html);
+        $this->assertStringContainsString('Affaire BOITE', $html, 'La boîte nomme le dossier qu’elle s’apprête à effacer.');
+        $this->assertStringContainsString('role="dialog"', $html);
+        $this->assertStringContainsString('aria-modal="true"', $html);
+        $this->assertStringContainsString('role="tree"', $html, 'L’arbre doit s’annoncer comme un arbre.');
+        $this->assertStringContainsString('aria-busy="true"', $html, 'L’arbre se remplit après coup : il le dit.');
+        $this->assertStringContainsString('keydown->suppression-dossier#auClavier', $html, 'L’arbre se manœuvre au clavier.');
+
+        // ⚠ LES CHIPS SONT CEUX DE LA LISTE, montés à l'identique — pilule `jsb-control-pill`,
+        // titre de famille, chip nu à icône. Les redessiner « un peu » ici les désalignerait
+        // de toutes les rubriques, ce qu'un composant partagé existe pour empêcher.
+        $this->assertStringContainsString('jsb-preset-filters jsb-control-pill', $html);
+        $this->assertStringContainsString('jsb-preset-filters__titre', $html);
+        $this->assertStringContainsString('jsb-preset-chip__icon', $html);
+        $this->assertStringNotContainsString(
+            'jsb-preset-chip--action',
+            $html,
+            'La variante bordée sert à opposer un geste à un état DANS une même pilule : ici aucune n’en porte.',
+        );
+        // Et ils DISENT l'état : un chip éteint alors que tout est coché mentirait au moment
+        // précis où l'on décide d'effacer.
+        $this->assertStringContainsString('data-suppression-dossier-target="chipCocher"', $html);
+        $this->assertStringContainsString('aria-pressed="false"', $html);
+    }
+
+    /** Un invité sans aucun rôle ne peut ni lire l’arbre d’un dossier, ni ouvrir la boîte. */
+    public function testUnInviteSansRoleNeVoitPasLArbreDuDossier(): void
+    {
+        $cabinet = $this->cabinet();
+        $d = $this->dossierComplet($cabinet, 'DROITS');
+        $this->inviteSansRole($cabinet);
+        $this->client->loginUser($this->user(self::INVITE_EMAIL));
+
+        foreach (['arbre', 'dossier'] as $chemin) {
+            $this->client->request('GET', $chemin === 'dossier'
+                    ? sprintf('/admin/suppression/dossier/piste?ids=%d', $d['piste']->getId())
+                    : sprintf('/admin/suppression/arbre/piste/%d', $d['piste']->getId()));
+            $this->assertSame(
+                403,
+                $this->client->getResponse()->getStatusCode(),
+                sprintf('La route « %s » doit exiger le droit de suppression.', $chemin),
+            );
+        }
+    }
+
+    /**
+     * CE QU'ON PEUT ÉPARGNER EST MARQUÉ COMME TEL.
+     *
+     * L'arbre promet un arbitrage : décocher une ligne pour la garder. Cette promesse n'est
+     * tenable que pour les pièces qui savent vivre seules. Le marquer dans les données,
+     * plutôt que de le laisser deviner à l'écran, évite qu'un jour l'un dise oui quand
+     * l'autre dit non.
+     */
+    public function testSeulesLesPiecesQuiViventSeulesSontDetachables(): void
+    {
+        $cabinet = $this->cabinet();
+        $d = $this->dossierComplet($cabinet, 'DETACH');
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $donnees = $this->arbreDe('piste', (int) $d['piste']->getId());
+
+        $reglement = $this->noeudDe($donnees, 'Paiement#' . $d['paiement']->getId());
+        $this->assertNotNull($reglement, 'Le règlement de la facture doit figurer dans l’arbre.');
+        $this->assertSame('detachable', $reglement['nature'], 'Un règlement survit très bien sans sa facture.');
+
+        $tranche = $this->noeudDe($donnees, 'Tranche#' . $d['tranche']->getId());
+        $this->assertSame('structurel', $tranche['nature'], 'Une échéance n’existe pas sans sa proposition.');
+    }
 
     /**
      * LA POLICE SURVIT À LA SUPPRESSION DE SON RENOUVELLEMENT.

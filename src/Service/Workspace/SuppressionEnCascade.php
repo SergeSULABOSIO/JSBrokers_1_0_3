@@ -62,7 +62,7 @@ class SuppressionEnCascade
      * identifiant) : les identifiants d'un niveau alimentent le filtre du suivant. Une
      * opportunité réelle tient en une vingtaine de requêtes, quel que soit son volume.
      */
-    public function planifier(object $racine): PlanDeSuppression
+    public function planifier(object $racine, ?ExclusionsDeSuppression $exclusions = null): PlanDeSuppression
     {
         $libelles = $this->libelles();
 
@@ -93,10 +93,14 @@ class SuppressionEnCascade
         $aDetacher = [];
         $conservations = [];
         $refus = [];
+        $provenance = [];
+        $verrous = [];
+        $aretes = [];
         $file = [[$classe, [$id]]];
+        $racine = sprintf('%s#%d', $this->court($classe), $id);
 
         for ($tour = 0; $tour < self::TOURS_MAX; ++$tour) {
-            $this->parcourir($file, $aDetruire, $aDetacher, $refus, $libelles);
+            $this->parcourir($file, $aDetruire, $aDetacher, $refus, $libelles, $provenance, $verrous, $aretes);
 
             // Les factures qui se vident rejoignent le plan comme racines secondaires, et
             // emportent alors leurs règlements et leurs pièces. Celles qui couvrent encore
@@ -105,7 +109,21 @@ class SuppressionEnCascade
             if ($nouvelles === []) {
                 break;
             }
+
+            // ⚠ CES RACINES SECONDAIRES N'ONT AUCUNE ARÊTE ENTRANTE DEPUIS LA CIBLE. Une
+            // facture entre au plan parce qu'elle s'est VIDÉE, pas parce que quelque chose
+            // la désigne : sans rattachement explicite, elle deviendrait un nœud orphelin que
+            // l'écran laisse tomber en silence — et le volume annoncé serait faux.
+            foreach ($nouvelles as [$classeVidee, $idsVides]) {
+                foreach ($idsVides as $idVide) {
+                    $provenance[$classeVidee][$idVide] ??= $racine;
+                }
+            }
             $file = $nouvelles;
+        }
+
+        if ($exclusions !== null && !$exclusions->estVide()) {
+            $this->epargner($aDetruire, $aDetacher, $aretes, $refus, $libelles, $exclusions);
         }
 
         return new PlanDeSuppression(
@@ -116,6 +134,8 @@ class SuppressionEnCascade
             conservations: $conservations,
             refus: array_values(array_unique($refus)),
             libelles: $libelles,
+            provenance: $provenance,
+            verrous: $verrous,
         );
     }
 
@@ -172,9 +192,20 @@ class SuppressionEnCascade
      * @param array<int, array{classe: class-string, champ: string, ids: int[]}> $aDetacher
      * @param string[]                                                           $refus
      * @param array<class-string, string>                                        $libelles
+     * @param array<class-string, array<int, string>>                            $provenance enfant => « ClasseParent#id »
+     * @param array<int, array{classe: class-string, champ: string, ids: int[], parents: array<int,int>, motif: string}> $verrous
+     * @param array<class-string, array<int, string>>                            $aretes     enfant => champ emprunté
      */
-    private function parcourir(array $file, array &$aDetruire, array &$aDetacher, array &$refus, array $libelles): void
-    {
+    private function parcourir(
+        array $file,
+        array &$aDetruire,
+        array &$aDetacher,
+        array &$refus,
+        array $libelles,
+        array &$provenance = [],
+        array &$verrous = [],
+        array &$aretes = [],
+    ): void {
         while ($file !== []) {
             [$classe, $ids] = array_shift($file);
 
@@ -183,17 +214,29 @@ class SuppressionEnCascade
                     continue; // la base applique sa propre règle : pas même une requête
                 }
 
-                $trouves = $this->idsQuiPointent($arete['source'], $arete['champ'], $ids);
-                if ($trouves === []) {
+                $couples = $this->couplesQuiPointent($arete['source'], $arete['champ'], $ids);
+                if ($couples === []) {
                     continue;
                 }
+                $trouves = array_keys($couples);
 
                 if ($arete['nature'] === CompositionDuGraphe::REFUS) {
                     // ⚠ ON REFUSE PLUTÔT QUE DE DÉTRUIRE CE QUE PERSONNE N'A DEMANDÉ. La
                     // colonne est NON NULLABLE : ces lignes ne peuvent pas survivre
                     // détachées, et les emporter en silence effacerait une dépense
                     // comptabilisée ou un portefeuille entier. On nomme ce qui retient.
-                    $refus[] = $this->phraseDeRefus($arete['source'], count($trouves), $libelles);
+                    $motif = $this->phraseDeRefus($arete['source'], count($trouves), $libelles);
+                    $refus[] = $motif;
+                    // ⚠ ET ON RETIENT SOUS QUOI ÇA BLOQUE. Le motif seul dit « 3 Dépenses en
+                    // dépendent » sans dire de quelle échéance : l'écran ne peut alors ni
+                    // peindre la branche fautive, ni laisser le reste du dossier partir.
+                    $verrous[] = [
+                        'classe'  => $arete['source'],
+                        'champ'   => $arete['champ'],
+                        'ids'     => $trouves,
+                        'parents' => $couples,
+                        'motif'   => $motif,
+                    ];
                     continue;
                 }
 
@@ -210,6 +253,20 @@ class SuppressionEnCascade
                     if (!isset($connus[$trouve])) {
                         $connus[$trouve] = $trouve;
                         $nouveaux[] = $trouve;
+                        // ⚠ LA PROVENANCE SE POSE ICI, DANS LE DÉDOUBLONNAGE, ET NULLE PART
+                        // AILLEURS. Une ligne de facture pend à la fois de son échéance et de
+                        // la commission qu'elle liquide : le parcours est en LARGEUR, donc le
+                        // premier parent rencontré est le plus court chemin. L'écrire deux fois
+                        // ferait boucler l'arbre et compterait la ligne en double.
+                        $provenance[$arete['source']][$trouve] = sprintf(
+                            '%s#%d',
+                            $this->court($classe),
+                            $couples[$trouve],
+                        );
+                        // Le CHAMP par lequel on l'a atteinte : c'est lui qu'il faudra mettre
+                        // à nul si l'utilisateur choisit d'épargner cette ligne plutôt que de
+                        // la détruire. Sans lui, « conserver » n'aurait aucun lien à couper.
+                        $aretes[$arete['source']][$trouve] = $arete['champ'];
                     }
                 }
                 if ($nouveaux === []) {
@@ -222,22 +279,29 @@ class SuppressionEnCascade
     }
 
     /**
-     * Les identifiants de $source dont le champ $champ pointe l'un de $ids.
+     * Les identifiants de $source dont le champ $champ pointe l'un de $ids, ET le parent
+     * que chacun désigne.
+     *
+     * ⚠ LE PARENT EST DANS LE `WHERE` DEPUIS TOUJOURS : le mettre aussi dans le `SELECT` ne
+     * coûte rien. C'est ce qui permet à l'écran de montrer la chaîne — quelle échéance pend
+     * de quelle proposition — au lieu d'un décompte à plat qui dit « 12 échéances » sans
+     * jamais dire desquelles. Une colonne de plus, pas une requête de plus.
      *
      * @param int[] $ids
      *
-     * @return int[]
+     * @return array<int, int> identifiant de l'enfant => identifiant de son parent
      */
-    private function idsQuiPointent(string $source, string $champ, array $ids): array
+    private function couplesQuiPointent(string $source, string $champ, array $ids): array
     {
         $trouves = [];
         foreach (array_chunk($ids, self::TAILLE_DE_LOT) as $lot) {
             try {
                 $lignes = $this->em->createQueryBuilder()
                     ->select('o.id')
-                    ->from($source, 'o')
                     // IDENTITY() lit la colonne de jointure SANS joindre la table cible :
                     // la requête reste à une table, même sur les arêtes les plus peuplées.
+                    ->addSelect(sprintf('IDENTITY(o.%s) AS parent', $champ))
+                    ->from($source, 'o')
                     ->where(sprintf('IDENTITY(o.%s) IN (:cibles)', $champ))
                     ->setParameter('cibles', $lot)
                     ->getQuery()
@@ -248,7 +312,7 @@ class SuppressionEnCascade
                 continue;
             }
             foreach ($lignes as $ligne) {
-                $trouves[] = (int) $ligne['id'];
+                $trouves[(int) $ligne['id']] = (int) $ligne['parent'];
             }
         }
 
@@ -364,6 +428,58 @@ class SuppressionEnCascade
             $nombre,
             $libelle,
         );
+    }
+
+    /**
+     * ÉPARGNE LES LIGNES QUE L'UTILISATEUR A DÉCOCHÉES : elles ne sont plus détruites, leur
+     * lien au dossier est coupé.
+     *
+     * ⚠ ET SEULEMENT CELLES QUI SAVENT VIVRE SEULES. Épargner une échéance tout en
+     * supprimant sa proposition est impossible — la base refuserait, ou la ligne serait un
+     * débris. L'écran ne le propose pas ; si la demande arrive quand même (requête forgée,
+     * écran désynchronisé), on REFUSE en le nommant plutôt que de deviner une intention.
+     *
+     * @param array<class-string, array<int, int>>                               $aDetruire
+     * @param array<int, array{classe: class-string, champ: string, ids: int[]}> $aDetacher
+     * @param array<class-string, array<int, string>>                            $aretes
+     * @param string[]                                                           $refus
+     * @param array<class-string, string>                                        $libelles
+     */
+    private function epargner(
+        array &$aDetruire,
+        array &$aDetacher,
+        array $aretes,
+        array &$refus,
+        array $libelles,
+        ExclusionsDeSuppression $exclusions,
+    ): void {
+        foreach ($aDetruire as $classe => $ids) {
+            $court = $this->court($classe);
+            foreach ($ids as $id) {
+                if (!$exclusions->contient($court, (int) $id)) {
+                    continue;
+                }
+
+                if (!$this->graphe->estDetachableAEcran($classe)) {
+                    $refus[] = sprintf(
+                        'Impossible de conserver « %s » tout en supprimant ce qui la porte : '
+                        . 'cette ligne ne peut pas exister seule. Décochez plutôt l\'élément parent.',
+                        $libelles[$classe] ?? $court,
+                    );
+                    continue;
+                }
+
+                $champ = $aretes[$classe][$id] ?? null;
+                if ($champ === null) {
+                    continue; // atteinte sans arête connue (racine) : rien à couper
+                }
+                unset($aDetruire[$classe][$id]);
+                $aDetacher[] = ['classe' => $classe, 'champ' => $champ, 'ids' => [(int) $id]];
+            }
+            if (($aDetruire[$classe] ?? []) === []) {
+                unset($aDetruire[$classe]);
+            }
+        }
     }
 
     private function court(string $fqcn): string

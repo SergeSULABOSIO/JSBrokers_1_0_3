@@ -12,9 +12,19 @@
     - `listeCanvas`: La configuration d'affichage de la liste.
     - `entityCanvas`: La configuration du formulaire de l'entité.
 #}
+{# LE NOM DE LA LIGNE, TEL QUE L'ÉCRAN L'AFFICHE.
+   Il est calculé ICI, avant le `<tr>`, et réutilisé plus bas par la cellule principale —
+   une seule lecture du canevas, deux usages.
+
+   ⚠ SANS LUI, TOUTE ACTION GROUPÉE PARLE PAR NUMÉROS. La sélection transmise au cerveau ne
+   portait que l'identifiant : la corbeille, le menu contextuel et la boîte de confirmation
+   annonçaient « Élément #117 » au lieu de nommer l'affaire qu'on s'apprête à effacer. On ne
+   peut pas demander à quelqu'un de valider ce qu'on ne lui nomme pas. #}
+{% set valeur_principale = attribute(entity, listeCanvas.colonne_principale.texte_principal.attribut_code) %}
 <tr
     id="liste_row_{{ entity.id }}"
     data-controller="list-row"
+    data-label="{{ valeur_principale }}"
     data-id="{{ entity.id }}"
     data-item-id="{{ entity.id }}" {# NOUVEAU : Ajout pour le comptage dans collection_controller #}
     data-list-row-idobjet-value="{{ entity.id }}"
@@ -78,8 +88,8 @@
 
             {# Valeur formatée et tronquée si nécessaire #}
             {% set texte_principal = col_principale.texte_principal %}
-            {% set valeur_principale = attribute(entity, texte_principal.attribut_code) %}
-            
+            {# `valeur_principale` est posée en tête du fichier (cf. data-label du <tr>). #}
+
             {% if texte_principal.attribut_taille_max is defined and texte_principal.attribut_taille_max is not null and valeur_principale|length > texte_principal.attribut_taille_max %}
                 "{{ valeur_principale|slice(0, texte_principal.attribut_taille_max) ~ '...' }}"
             {% else %}
