@@ -124,7 +124,9 @@ final class CatalogueDesColonnes
             'portefeuille' => ColonneEtat::texte(
                 'Portefeuille',
                 'Portefeuille auquel appartient le client. ⚠ Il se pose sur le CLIENT et non '
-                . 'sur la police : le changer déplace tout ce que ce client porte.',
+                . 'sur la police : le changer déplace tout ce que ce client porte. Facultatif : '
+                . 'laissée vide, elle reprend quand même le client — vous le rangerez ensuite '
+                . 'depuis la rubrique « Clients ».',
             )->enSaisie('Client.portefeuille'),
 
             // ── La prime ────────────────────────────────────────────────────────────
@@ -152,18 +154,28 @@ final class CatalogueDesColonnes
             ),
 
             // ── La commission ───────────────────────────────────────────────────────
-            // ⚠ UN TAUX NE SE RECOPIE PAS, IL SE RÉSOUT. Le revenu n'a besoin que de son
-            // TYPE : le taux est trouvé à la lecture, en cascade, un type marqué
-            // « pourcentage du risque » allant chercher celui du risque de l'affaire. C'est
-            // ce qui fait suivre la commission quand un taux de risque change demain — voir
-            // `App\Ai\Proposition\RevenuCourtierPrescrit`. On n'écrit donc une valeur que
-            // pour DÉROGER.
+            // ⚠ CETTE COLONNE DIT LE TAUX RÉEL, ET C'EST NOUVEAU. Elle n'écrivait que les
+            // DÉROGATIONS : un revenu au taux du risque en sortait nu, et le courtier
+            // exportait son portefeuille sans y lire aucun taux. Une colonne qui tait ce
+            // qu'elle sait n'aide personne.
+            //
+            // ⚠ MAIS UN TAUX HÉRITÉ NE SE RECOPIE PAS. Réimporté tel quel, il deviendrait
+            // une dérogation et cesserait de suivre sa source le jour où elle change. D'où
+            // les marqueurs « (du risque) » et « (du type) » : la valeur est ÉCRITE pour
+            // être lue, et MARQUÉE pour n'être pas reprise
+            // (voir `App\Echange\Reprise\ValeursMultiples`).
             'commissionRevenus' => ColonneEtat::texte(
                 'Commission · Revenus',
-                'Ce que rapporte l\'affaire, par type : « Commission ; Frais de gestion ». Le '
-                . 'taux vient de vos types de revenu — ou du risque, quand le type le prescrit. '
-                . 'N\'écrivez une valeur (« Commission = 12 ») que pour DÉROGER à ce taux ; '
-                . 'elle est alors EN POINTS (12 = 12 %).',
+                'Ce que rapporte l\'affaire, revenu par revenu : « Commission = 17,5 ; Frais de '
+                . 'gestion = 5 ». ⚠ LA VALEUR EST UN TAUX, EN POINTS — 17,5 vaut 17,5 %, et le '
+                . 'signe pourcent est facultatif. Ce taux l\'emporte sur celui de vos réglages. '
+                . 'Un nom sans valeur (« Commission ») laisse jouer le taux configuré. Un nom '
+                . 'que votre cabinet ne connaît pas est conservé tel quel et rattaché à '
+                . '« Commission Ordinaire ». ⚠ Laissée VIDE, la case vaut « Commission '
+                . 'Ordinaire » : une proposition sans revenu compterait zéro partout. '
+                . 'Écrivez « = 5000 (forfait) » pour un montant fixe ; les valeurs marquées '
+                . '« (du risque) » ou « (du type) » sont là pour information — les redéposer '
+                . 'ne fige rien.',
             )->enSaisie('Cotation.revenus'),
 
             'commissionTtc' => ColonneEtat::montant(
@@ -372,9 +384,9 @@ final class CatalogueDesColonnes
             'ouvertureCommissionEncaissee' => ColonneEtat::montant(
                 'Ouverture · Commission encaissée',
                 'Commission DÉJÀ encaissée du cabinet au jour de la reprise. Devient une note de '
-                . 'commission soldée par un règlement du même montant. ⚠ Exige qu\'un type de '
-                . 'revenu soit renseigné en « Commission · Revenus » : une note sans revenu à '
-                . 'facturer vaudrait zéro.',
+                . 'commission soldée par un règlement du même montant. Le revenu à facturer est '
+                . 'celui de « Commission · Revenus » ; à défaut, celui que la proposition porte '
+                . 'déjà, ou « Commission Ordinaire ».',
             )->enSaisie('Paiement.montant'),
             'ouvertureCommissionLe' => ColonneEtat::date(
                 'Ouverture · Commission encaissée le',

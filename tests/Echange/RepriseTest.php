@@ -764,14 +764,16 @@ final class RepriseTest extends KernelTestCase
     }
 
     /**
-     * ⚠ SANS COMMISSION NOMMÉE, ON LE DIT PLUTÔT QUE D'ÉCRIRE UNE COQUILLE.
+     * ⚠ UNE COLONNE VIDE N'EST PAS UNE AFFAIRE SANS COMMISSION.
      *
-     * L'article d'une note tire son montant du revenu qu'il facture. Une ligne qui encaisse
-     * une commission sans dire LAQUELLE produirait une note à zéro : elle s'afficherait au
-     * portefeuille sans jamais entrer dans aucun total. Le refus nomme la colonne à
-     * remplir — c'est le seul cas où la commission reste à la charge de l'utilisateur.
+     * L'article d'une note tire son montant du revenu qu'il facture : sans revenu, la note
+     * valait zéro, et la reprise renonçait en le disant. C'était exact et inutile — il
+     * n'existe pas de proposition d'assurance sans commission de courtage, et le classeur
+     * ne portait cette colonne que par redondance. La commission ordinaire se pose donc
+     * d'office, comme l'assistant le fait pour toute proposition qu'il crée : le taux vient
+     * du risque, et rien n'est inventé.
      */
-    public function testUneCommissionEncaisseeSansRevenuNommeEstSignalee(): void
+    public function testUneCommissionEncaisseeSansRevenuNommeSuitLaCommissionOrdinaire(): void
     {
         $entreprise = $this->cabinet();
         $anomalies = [];
@@ -792,14 +794,215 @@ final class RepriseTest extends KernelTestCase
             $anomalies,
         );
 
-        self::assertNull($this->operation($operations, 'Note'), 'Une note sans revenu ne compterait rien.');
+        self::assertSame([], $this->erreurs($anomalies), $this->messages($anomalies));
 
-        // ⚠ UN AVERTISSEMENT, ET NON UNE ERREUR : le reste de la ligne doit passer.
-        self::assertSame([], $this->erreurs($anomalies));
-        self::assertStringContainsString('1 200,00', $this->messages($anomalies), 'Le montant laissé de côté est nommé.');
-        self::assertStringContainsString('Commission · Revenus', $this->messages($anomalies), 'Et la colonne à remplir.');
+        // La proposition reçoit LE revenu par défaut du cabinet, et sans taux : celui du
+        // risque se résout à la lecture, le recopier ici le figerait.
+        $cotation = $this->operation($operations, 'Cotation');
+        self::assertNotNull($cotation);
+        $revenus = $cotation->collections['revenus'] ?? [];
+        self::assertCount(1, $revenus, 'Une proposition, un revenu par défaut.');
+        self::assertSame('Commission Ordinaire', $revenus[0]->fields['nom']);
+        self::assertArrayNotHasKey('tauxExceptionel', $revenus[0]->fields);
+
+        // ⚠ ET L'ENCAISSEMENT SUIT, ce qui était tout l'enjeu : la note existe, son
+        // article désigne un revenu, et le règlement porte le montant.
+        $note = $this->operation($operations, 'Note');
+        self::assertNotNull($note, 'La commission déjà encaissée doit être enregistrée.');
+        self::assertArrayHasKey('revenuFacture', $note->collections['articles'][0]->fields);
+        self::assertSame(1200.0, $note->collections['paiements'][0]->fields['montant']);
+
+        // On le DIT quand même : l'utilisateur doit pouvoir corriger s'il voulait autre chose.
+        self::assertStringContainsString('Commission Ordinaire', $this->messages($anomalies));
 
         self::assertNotNull($this->operation($operations, 'Tranche'), 'L\'échéance, elle, est reprise.');
+    }
+
+    /**
+     * ⚠ « COMMISSION » EST LE MOT QUE LES COURTIERS ÉCRIVENT, et le cabinet nomme la
+     * sienne « Commission Ordinaire ». Refuser sur cet écart bloquait des portefeuilles
+     * entiers pour une orthographe — alors que les deux désignent la même chose.
+     */
+    public function testUnSynonymeDeCommissionRejointLaCommissionOrdinaire(): void
+    {
+        $entreprise = $this->cabinet();
+        $anomalies = [];
+
+        $operations = $this->reconstitueur()->pour(
+            $this->ligne([
+                'policeReference' => 'POL/2026/024',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
+                'risque' => 'RC Aviation',
+                'assure' => 'KIN AVIA',
+                'assureur' => 'SFA CONGO',
+                'trancheNom' => 'Prime unique',
+                'commissionRevenus' => 'Commission',
+            ], 2),
+            $this->colonnes(),
+            $entreprise,
+            $anomalies,
+        );
+
+        self::assertSame([], $this->erreurs($anomalies), $this->messages($anomalies));
+
+        $revenus = $this->operation($operations, 'Cotation')->collections['revenus'] ?? [];
+        self::assertCount(1, $revenus);
+
+        // ⚠ LE NOM DU CLASSEUR EST CONSERVÉ, SEUL LE TYPE EST SUBSTITUÉ. On a un temps
+        // renommé le revenu « Commission Ordinaire » : c'était perdre, pour rien, le
+        // libellé que le courtier avait écrit. Un revenu porte un nom LIBRE et un TYPE qui
+        // porte la configuration — le modèle sépare déjà les deux.
+        self::assertSame('Commission', $revenus[0]->fields['nom']);
+
+        // Aucun type n'est créé : le cabinet a déjà le sien.
+        self::assertNull($this->operation($operations, 'TypeRevenu'));
+
+        self::assertStringContainsString('« Commission »', $this->messages($anomalies));
+    }
+
+    /**
+     * ⚠ LE REPLI EST UNIVERSEL : AUCUN LIBELLÉ NE REFUSE PLUS UNE LIGNE.
+     *
+     * Ce test verrouillait l'inverse — « Frais de gestion », inconnu du cabinet, était
+     * refusé. La distinction qui débloque tout : la reprise ne crée pas de TYPES de
+     * revenu, elle crée des REVENUS. Un type porte un taux, un redevable, une assiette, et
+     * le fabriquer depuis un simple nom donnerait une configuration muette. Un REVENU, lui,
+     * porte un nom libre, un type et son propre taux — exactement ce qu'une ligne décrit.
+     *
+     * « Frais de gestion = 5 » ne fabrique donc rien dans le catalogue : il crée un revenu
+     * NOMMÉ « Frais de gestion », rattaché à la commission par défaut, et facturé à 5 %.
+     */
+    public function testUnRevenuInconnuDevientUnRevenuSurLaCommissionParDefaut(): void
+    {
+        $entreprise = $this->cabinet();
+        $anomalies = [];
+
+        $operations = $this->reconstitueur()->pour(
+            $this->ligne([
+                'policeReference' => 'POL/2026/025',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
+                'risque' => 'RC Aviation',
+                'assure' => 'KIN AVIA',
+                'assureur' => 'SFA CONGO',
+                'trancheNom' => 'Prime unique',
+                'commissionRevenus' => 'Frais de gestion = 5',
+            ], 2),
+            $this->colonnes(),
+            $entreprise,
+            $anomalies,
+        );
+
+        self::assertSame([], $this->erreurs($anomalies), $this->messages($anomalies));
+
+        // ⚠ RIEN N'EST AJOUTÉ AU CATALOGUE DU CABINET.
+        self::assertNull($this->operation($operations, 'TypeRevenu'));
+
+        $revenus = $this->operation($operations, 'Cotation')->collections['revenus'] ?? [];
+        self::assertCount(1, $revenus);
+        self::assertSame('Frais de gestion', $revenus[0]->fields['nom'], 'Le libellé du courtier est gardé.');
+        self::assertSame(5.0, $revenus[0]->fields['tauxExceptionel'], 'Et « 5 » vaut cinq POINTS.');
+
+        // On le dit quand même : le rattachement est une déduction, pas une certitude.
+        self::assertStringContainsString('Frais de gestion', $this->messages($anomalies));
+        self::assertStringContainsString('Commission Ordinaire', $this->messages($anomalies));
+    }
+
+    /**
+     * ⚠ LE TAUX VIENT DU RISQUE — ENCORE FAUT-IL QUE LE RISQUE EN AIT UN.
+     *
+     * La reprise CRÉE les risques qu'elle ne connaît pas, et un risque neuf ne prescrit
+     * rien : la commission ordinaire y vaudrait zéro, pendant qu'une commission déjà
+     * encaissée sur la même ligne afficherait un solde négatif. On ne devine pas le taux
+     * pour autant — le rapport entre la commission HT et l'assiette serait faux au premier
+     * arrondi. On nomme la case à remplir, et la ligne passe.
+     */
+    public function testUnRisqueSansTauxEstSignaleSansBloquerLaLigne(): void
+    {
+        $entreprise = $this->cabinet();
+        $anomalies = [];
+
+        $operations = $this->reconstitueur()->pour(
+            $this->ligne([
+                'policeReference' => 'POL/2026/027',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
+                // Un risque que le cabinet n'a pas : il sera créé, donc sans taux.
+                'risque' => 'Tous Risques Chantier',
+                'assure' => 'KIN AVIA',
+                'assureur' => 'SFA CONGO',
+                'trancheNom' => 'Prime unique',
+                'ouvertureCommissionEncaissee' => 518.40,
+            ], 2),
+            $this->colonnes(),
+            $entreprise,
+            $anomalies,
+        );
+
+        // ⚠ LA LIGNE PASSE : ce qui est encaissé est encaissé, et le bloquer ferait
+        // perdre une information juste pour une information manquante.
+        self::assertSame([], $this->erreurs($anomalies), $this->messages($anomalies));
+        self::assertNotNull($this->operation($operations, 'Note'));
+
+        $messages = $this->messages($anomalies);
+        self::assertStringContainsString('Tous Risques Chantier', $messages);
+        self::assertStringContainsString('commission spécifique HT', $messages);
+    }
+
+    /**
+     * ⚠ LE FILET : UN CABINET QUI N'A PLUS SA COMMISSION ORDINAIRE.
+     *
+     * Elle est posée à la naissance de chaque cabinet, mais elle a pu être renommée ou
+     * supprimée. On l'installe alors à l'identique du semis — due par l'assureur, au taux
+     * du risque — plutôt que d'opposer « créez-la d'abord » à quelqu'un dont on sait
+     * exactement ce qu'il lui manque.
+     */
+    public function testLaCommissionOrdinaireEstCreeeQuandLeCabinetNeLAPlus(): void
+    {
+        $entreprise = $this->cabinet();
+        $em = $this->em();
+
+        foreach ($em->getRepository(TypeRevenu::class)->findBy(['entreprise' => $entreprise]) as $type) {
+            $em->remove($type);
+        }
+        $em->flush();
+
+        $this->reconstitueur()->reinitialiser();
+        $anomalies = [];
+
+        $operations = $this->reconstitueur()->pour(
+            $this->ligne([
+                'policeReference' => 'POL/2026/026',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
+                'risque' => 'RC Aviation',
+                'assure' => 'KIN AVIA',
+                'assureur' => 'SFA CONGO',
+                'trancheNom' => 'Prime unique',
+                'commissionRevenus' => 'Commission',
+            ], 2),
+            $this->colonnes(),
+            $entreprise,
+            $anomalies,
+        );
+
+        self::assertSame([], $this->erreurs($anomalies), $this->messages($anomalies));
+
+        $type = $this->operation($operations, 'TypeRevenu');
+        self::assertNotNull($type, 'Le type manquant doit être installé.');
+        self::assertSame('Commission Ordinaire', $type->fields['nom']);
+        self::assertTrue($type->fields['appliquerPourcentageDuRisque'], 'Le taux vient du risque.');
+        self::assertSame(TypeRevenu::REDEVABLE_ASSUREUR, $type->fields['redevable']);
+
+        // ⚠ ET IL PART AVANT LA PROPOSITION QUI S'Y RÉFÈRE : un renvoi ne va jamais en
+        // avant, et l'ordre des opérations est ce qui le garantit.
+        $rangs = array_map(static fn ($op): string => $op->entityShortName, $operations);
+        self::assertLessThan(
+            array_search('Cotation', $rangs, true),
+            array_search('TypeRevenu', $rangs, true),
+            'Le type doit être écrit avant la proposition qui le désigne.',
+        );
     }
 
     /**
@@ -1100,6 +1303,13 @@ final class RepriseTest extends KernelTestCase
                 ->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR);
             if ($taux !== null) {
                 $type->setPourcentage($taux);
+            } else {
+                // ⚠ COMME LE SEMIS OFFICIEL : la commission ordinaire n'a pas de taux à
+                // elle, elle prend celui du risque
+                // ({@see \App\Services\ServiceInitialisationEntreprise::initialiserChargementsEtRevenus()}).
+                // Sans cette ligne, la fixture décrivait un cabinet qui n'existe pas, et les
+                // tests du taux non prescrit tombaient sur la mauvaise branche.
+                $type->setAppliquerPourcentageDuRisque(true);
             }
             $type->setEntreprise($entreprise);
             $em->persist($type);

@@ -47,6 +47,17 @@ final class ValeursMultiplesTest extends TestCase
             'Commission' => ValeursMultiples::montant(5000.0),
             'Consultance' => ValeursMultiples::taux(12.0),
         ]];
+        // ⚠ LES CINQ FORMES DOIVENT SURVIVRE À L'ALLER-RETOUR, marqueurs compris : c'est
+        // ce qui garantit qu'un taux hérité réimporté ne se fige pas en dérogation.
+        yield 'un taux hérité du risque' => [['Commission' => ValeursMultiples::tauxDuRisque(12.0)]];
+        yield 'un taux hérité du type' => [['Commission' => ValeursMultiples::tauxDuType(10.0)]];
+        yield 'les cinq formes ensemble' => [[
+            'Propre' => ValeursMultiples::taux(17.5),
+            'Forfait' => ValeursMultiples::montant(5000.0),
+            'Du risque' => ValeursMultiples::tauxDuRisque(12.0),
+            'Du type' => ValeursMultiples::tauxDuType(10.0),
+            'Sans rien' => ValeursMultiples::defaut(),
+        ]];
         yield 'un grand nombre' => [['Prime nette' => ValeursMultiples::montant(1234567.89)]];
         yield 'un zéro, qui est une valeur' => [['Frais accessoires' => ValeursMultiples::montant(0.0)]];
         yield 'un négatif — un ajustement en déduit' => [['Écart' => ValeursMultiples::montant(-0.52)]];
@@ -54,24 +65,76 @@ final class ValeursMultiplesTest extends TestCase
     }
 
     /**
-     * ⚠ LE SIGNE « % » PORTE LA NATURE, ET RIEN D'AUTRE NE PEUT LA PORTER.
+     * ⚠ UN NOMBRE NU EST UN TAUX ; C'EST LE FORFAIT QUI SE DÉCLARE.
      *
-     * Un revenu déroge soit par son taux, soit par un montant forfaitaire, et le nombre
-     * seul ne dit pas lequel : « 12 » est un taux plausible autant qu'un montant. Sur les
-     * données réelles du cabinet, la dérogation par MONTANT est même le cas dominant —
-     * 85 revenus sur 150, contre un seul par taux. Deviner d'après l'ordre de grandeur
-     * aurait donc échoué sur la majorité des lignes, et silencieusement.
+     * La règle était l'inverse, et elle a coûté cher : l'aide de la colonne enseignait
+     * « Commission = 12 » pour douze pour cent pendant que la lecture en faisait un
+     * forfait de douze unités. Un courtier qui remplit ce gabarit y écrit le taux de sa
+     * commission, jamais un montant — les 85 forfaits mesurés sur le cabinet réel
+     * viennent de l'EXPORT, et c'est à lui de les déclarer.
+     *
+     * Le signe pourcent reste accepté : tous les classeurs déjà exportés le portent, et
+     * les relire comme des forfaits les détruirait.
      */
-    public function testLeSigneDePourcentageDistingueUnTauxDUnMontant(): void
+    public function testUnNombreNuEstUnTauxEtLeForfaitSeDeclare(): void
     {
         $refus = [];
-        $lu = ValeursMultiples::lire('Commission = 12% ; Consultance = 12', $refus);
+        $lu = ValeursMultiples::lire(
+            'Commission = 12% ; Consultance = 12 ; Gestion = 5000 (forfait)',
+            $refus,
+        );
 
         self::assertSame([], $refus);
         self::assertTrue($lu['Commission']['estTaux'], '« 12% » est un taux.');
-        self::assertFalse($lu['Consultance']['estTaux'], '« 12 » est un montant.');
+        self::assertTrue($lu['Consultance']['estTaux'], '« 12 » nu est un TAUX, désormais.');
+        self::assertFalse($lu['Gestion']['estTaux'], 'Seul « (forfait) » dit le montant fixe.');
+
         self::assertSame(12.0, $lu['Commission']['valeur']);
         self::assertSame(12.0, $lu['Consultance']['valeur']);
+        self::assertSame(5000.0, $lu['Gestion']['valeur']);
+    }
+
+    /**
+     * ⚠ UNE VALEUR MARQUÉE EST INFORMATIVE, ET NE SE RECOPIE PAS.
+     *
+     * L'export écrit le taux EFFECTIF de chaque revenu — sans quoi le courtier exporte son
+     * portefeuille et n'y lit aucun taux. Mais un taux hérité du risque, réimporté tel
+     * quel, deviendrait une dérogation : la commission cesserait de suivre le risque le
+     * jour où son taux change, et un simple aller-retour aurait scellé tout un
+     * portefeuille. Le marqueur porte cette différence.
+     *
+     * @dataProvider valeursHeritees
+     */
+    public function testUneValeurHeriteeSeLitSansDevenirUneDerogation(string $cellule, string $source): void
+    {
+        $refus = [];
+        $lu = ValeursMultiples::lire($cellule, $refus);
+
+        self::assertSame([], $refus);
+        self::assertSame(12.0, $lu['Commission']['valeur'], 'La valeur est lue : elle informe.');
+        self::assertSame($source, $lu['Commission']['source']);
+        self::assertTrue(
+            ValeursMultiples::estInformatif($lu['Commission']),
+            'Marquée, elle ne doit jamais être écrite comme une dérogation.',
+        );
+    }
+
+    public static function valeursHeritees(): iterable
+    {
+        yield 'du risque' => ['Commission = 12% (du risque)', ValeursMultiples::SOURCE_RISQUE];
+        yield 'du type' => ['Commission = 12% (du type)', ValeursMultiples::SOURCE_TYPE];
+        yield 'la casse est tolérée' => ['Commission = 12% (Du Risque)', ValeursMultiples::SOURCE_RISQUE];
+    }
+
+    /** Une valeur propre au revenu, elle, DÉROGE : c'est elle qu'on écrira. */
+    public function testUneValeurPropreNEstPasInformative(): void
+    {
+        $refus = [];
+        $lu = ValeursMultiples::lire('Commission = 17,5', $refus);
+
+        self::assertSame([], $refus);
+        self::assertFalse(ValeursMultiples::estInformatif($lu['Commission']));
+        self::assertSame(17.5, $lu['Commission']['valeur']);
     }
 
     /**

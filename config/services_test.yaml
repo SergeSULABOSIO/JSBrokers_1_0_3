@@ -36,7 +36,6 @@ services:
     App\Echange\Service\ImportateurJsbx: ~
     App\Echange\Service\LigneExportable: ~
     App\Echange\Service\ResolveurDeRenvois: ~
-    App\Echange\Service\TraducteurDeLigne: ~
     App\Echange\Etat\EtatDuPortefeuille: ~
     App\Echange\Etat\EcrivainEtat: ~
     App\Echange\Etat\PiecesDeReglement: ~

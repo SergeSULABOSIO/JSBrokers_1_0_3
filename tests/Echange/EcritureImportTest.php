@@ -238,14 +238,14 @@ class EcritureImportTest extends WebTestCase
     }
 
     /**
-     * ⚠ « 10 » N'EST PAS « 10 % », ET LE CONTRÔLE DOIT LE DIRE.
+     * ⚠ « 10 » EST « 10 % », ET LA REPRISE DOIT L'ÉCRIRE AINSI.
      *
-     * Écrit sans son signe pourcent, un taux de commission devient un montant forfaitaire.
-     * C'est licite en soi — un forfait existe —, si bien que rien ne s'y opposait : la
-     * reprise écrivait, et la note affichait un solde négatif. Le fichier porte pourtant de
-     * quoi trancher, sur la même ligne : la commission déjà encaissée.
+     * C'était l'inverse : écrit sans son signe pourcent, un taux devenait un montant
+     * forfaitaire, et la reprise refusait la ligne. Or l'aide de la colonne dictait
+     * exactement cette saisie — « Commission = 12 » … « elle est alors EN POINTS » — et
+     * c'est ce qu'un courtier écrit naturellement. Le gabarit ne transporte que des taux.
      */
-    public function testUnTauxEcritSansPourcentEstRefuseEtExplique(): void
+    public function testUnTauxEcritSansPourcentEstUnTaux(): void
     {
         [$entreprise, $invite] = $this->fixture();
         $this->catalogueDeRevenu($entreprise, $invite);
@@ -254,23 +254,50 @@ class EcritureImportTest extends WebTestCase
             $this->uneEcheance() + [
                 'tranchePart' => 100,
                 'chargement_prime_nette' => 10000,
-                // Le pourcent manque : ceci se lit « dix unités monétaires ».
                 'commissionRevenus' => 'Commission Ordinaire = 10',
                 'ouvertureCommissionEncaissee' => 1000,
                 'ouvertureCommissionLe' => '20/01/2026',
             ],
         ]);
 
-        self::assertSame(
-            EchangeImportRun::STATUT_ECHEC,
-            $run->getStatut(),
-            'Un forfait de 10 ne peut pas produire 1 000 d\'encaissement : la reprise doit refuser.',
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $run->getStatut(), $this->motif($run));
+
+        $taux = $this->em()->getConnection()->fetchOne(
+            'SELECT taux_exceptionel FROM revenu_pour_courtier WHERE entreprise_id = ?',
+            [$entreprise->getId()],
         );
 
-        // ⚠ LE REPROCHE DOIT PORTER LA SOLUTION. « Valeur invalide » laisserait l'utilisateur
-        // devant un refus sans savoir quoi corriger — le format à écrire est la seule chose
-        // qu'il lui manque.
-        self::assertStringContainsString('%', $this->motif($run));
+        self::assertEquals(10.0, (float) $taux, '« 10 » vaut dix POINTS, pas dix unités monétaires.');
+    }
+
+    /**
+     * ⚠ ET LE GARDE-FOU S'EST RETOURNÉ, POUR LES CLASSEURS D'AVANT.
+     *
+     * Sous l'ancienne convention, « Commission Ordinaire = 5000 » désignait un forfait de
+     * cinq mille. Relu sous la règle d'aujourd'hui, il vaudrait cinq mille POUR CENT — une
+     * commission cinquante fois la prime, écrite sans que rien ne bronche. Aucun taux de
+     * courtage n'approche cent : au-delà, ce n'est pas un taux, et le refus nomme la
+     * correction.
+     */
+    public function testUnTauxAberrantTrahitUnForfaitEcritALAncienne(): void
+    {
+        [$entreprise, $invite] = $this->fixture();
+        $this->catalogueDeRevenu($entreprise, $invite);
+
+        $run = $this->importer($entreprise, $invite, [
+            $this->uneEcheance() + [
+                'tranchePart' => 100,
+                'chargement_prime_nette' => 10000,
+                'commissionRevenus' => 'Commission Ordinaire = 5000',
+            ],
+        ]);
+
+        self::assertSame(EchangeImportRun::STATUT_ECHEC, $run->getStatut(), $this->motif($run));
+
+        // ⚠ LE REPROCHE DOIT PORTER LA SOLUTION. « Valeur invalide » laisserait
+        // l'utilisateur devant un refus sans savoir quoi corriger — la forme à écrire est
+        // la seule chose qui lui manque.
+        self::assertStringContainsString('(forfait)', $this->motif($run));
         self::assertStringContainsString('Commission Ordinaire', $this->motif($run));
     }
 
@@ -766,6 +793,344 @@ class EcritureImportTest extends WebTestCase
         );
     }
 
+    /**
+     * ⚠ UN TAUX QUI NE PEUT PAS PRODUIRE CE QUI A ÉTÉ ENCAISSÉ EST UN POINT DE BLOCAGE.
+     *
+     * Toutes les autres déductions de la reprise ARRANGENT la ligne : un nom inconnu se
+     * rattache, une colonne vide prend un défaut. Celle-ci ne s\'arrange pas. Le taux dit
+     * une chose, l\'encaissement en dit une autre, et RIEN dans le fichier ne départage.
+     *
+     * Deviner coûterait cher des deux côtés : retenir le taux ferait une note
+     * éternellement en solde négatif, retenir l\'encaissement inventerait un taux que le
+     * cabinet n\'a jamais pratiqué. On montre donc les deux chiffres et on rend la main —
+     * l\'erreur vient souvent des données d\'origine, et c\'est là qu\'il faut la corriger.
+     */
+    public function testUnEncaissementSuperieurAuTauxEstUnPointDeBlocage(): void
+    {
+        [$entreprise, $invite] = $this->fixture();
+        $this->catalogueDeRevenu($entreprise, $invite);
+
+        $run = $this->importer($entreprise, $invite, [
+            $this->uneEcheance() + [
+                'tranchePart' => 100,
+                'chargement_prime_nette' => 10000,
+                // 1 % de 10 000 = 100 HT, soit 116 TTC au plus. On en annonce 5 000.
+                'commissionRevenus' => 'Commission Ordinaire = 1',
+                'ouvertureCommissionEncaissee' => 5000,
+            ],
+        ]);
+
+        self::assertSame(EchangeImportRun::STATUT_ECHEC, $run->getStatut(), $this->motif($run));
+
+        // ⚠ LE REPROCHE MONTRE LES DEUX CHIFFRES. Sans eux, l\'utilisateur sait qu\'il y a
+        // un problème sans savoir de quel ordre de grandeur il se trompe.
+        self::assertStringContainsString('5 000', $this->motif($run));
+        self::assertStringContainsString('Commission · Revenus', $this->motif($run));
+    }
+
+    /**
+     * ⚠ ET LA TAXE DE L\'ASSUREUR FAIT PARTIE DU PLAFOND.
+     *
+     * Ce qui arrive sur le compte du cabinet est TTC : l\'assureur précompte sa taxe — seize
+     * pour cent au barème courant — et la verse avec la commission. Comparer un
+     * encaissement TTC à un hors-taxes ferait refuser toutes les lignes justes dont le
+     * courtier a correctement noté ce qu\'il a reçu.
+     */
+    public function testLaTaxeDeLAssureurEntreDansLePlafond(): void
+    {
+        [$entreprise, $invite] = $this->fixture();
+        $this->catalogueDeRevenu($entreprise, $invite);
+        $this->tvaAssureur($entreprise, $invite, 16.0);
+
+        $run = $this->importer($entreprise, $invite, [
+            $this->uneEcheance() + [
+                'tranchePart' => 100,
+                'chargement_prime_nette' => 10000,
+                // 5 % de 10 000 = 500 HT ; avec 16 % de taxe, 580 TTC.
+                'commissionRevenus' => 'Commission Ordinaire = 5',
+                // 540 dépasse le HT, mais pas le TTC : la ligne est juste.
+                'ouvertureCommissionEncaissee' => 540,
+            ],
+        ]);
+
+        self::assertSame(
+            EchangeImportRun::STATUT_TERMINE,
+            $run->getStatut(),
+            'Un encaissement TTC ne doit pas se comparer à un hors-taxes : ' . $this->motif($run),
+        );
+    }
+
+    /**
+     * ⚠ UNE AFFAIRE EXONÉRÉE N\'A PAS DE TAXE À ENCAISSER, DONC PAS DE MARGE.
+     *
+     * Un client exonéré, ou un risque non imposable : l\'assureur ne précompte rien, et ce
+     * qui est encaissé EST le hors-taxes. Accorder quand même les seize pour cent
+     * laisserait passer un taux faux d\'un sixième sur précisément les affaires où la marge
+     * est nulle.
+     */
+    public function testUneAffaireExonereeNAccordeAucuneMargeDeTaxe(): void
+    {
+        [$entreprise, $invite] = $this->fixture();
+        $this->catalogueDeRevenu($entreprise, $invite);
+        $this->tvaAssureur($entreprise, $invite, 16.0);
+
+        // Le client existe DÉJÀ, et il est exonéré : la reprise s\'y rattache et lit son
+        // réglage. Un client que la passe crée, lui, naîtrait non exonéré.
+        $this->clientExonere($entreprise, $invite, 'KIN AVIA');
+
+        $run = $this->importer($entreprise, $invite, [
+            $this->uneEcheance() + [
+                'tranchePart' => 100,
+                'chargement_prime_nette' => 10000,
+                'commissionRevenus' => 'Commission Ordinaire = 5',
+                // 540 passait grâce aux 16 % de taxe ; exonéré, le plafond est 500.
+                'ouvertureCommissionEncaissee' => 540,
+            ],
+        ]);
+
+        self::assertSame(EchangeImportRun::STATUT_ECHEC, $run->getStatut(), $this->motif($run));
+        self::assertStringContainsString('540', $this->motif($run));
+    }
+
+    /**
+     * ⚠ LA LIGNE 586 DU CABINET RÉEL, DE BOUT EN BOUT.
+     *
+     * Elle portait TROIS reproches à la fois, et un seul comptait :
+     *
+     *   1. avertissement — « Commission » lu comme « Commission Ordinaire » ;
+     *   2. ERREUR — « Commission: 17,50 » lu comme un MONTANT FIXE de 17,50, contredit
+     *      par 518,40 déjà encaissés ;
+     *   3. avertissement — la commission de 518,40 n'a pas pu être enregistrée.
+     *
+     * Le deuxième était faux : 17,50 est un TAUX. Et le troisieme n'en était que la
+     * conséquence — le terme ayant été refusé, aucun revenu n'était posé, donc
+     * l'encaissement n'avait rien à facturer. Ce test tient les trois ensemble : c'est
+     * leur enchaînement, et non chacun pris à part, qui rendait la reprise impossible.
+     */
+    public function testLaLigneQuiPortaitTroisReprochesNEnPortePlusQuUn(): void
+    {
+        [$entreprise, $invite] = $this->fixture();
+        $this->catalogueDeRevenu($entreprise, $invite);
+
+        $run = $this->importer($entreprise, $invite, [
+            $this->uneEcheance() + [
+                'tranchePart' => 100,
+                'chargement_prime_nette' => 10000,
+                // Le nom que le courtier écrit, et le taux tel qu'il le tape : sans signe
+                // pourcent, avec la virgule décimale française.
+                'commissionRevenus' => 'Commission = 17,50',
+                'ouvertureCommissionEncaissee' => 518.40,
+                'ouvertureCommissionLe' => '20/01/2026',
+            ],
+        ]);
+
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $run->getStatut(), $this->motif($run));
+
+        $cnx = $this->em()->getConnection();
+        $id = $entreprise->getId();
+
+        // ⚠ LE NOM DU CLASSEUR EST GARDÉ, LE TYPE EST DÉDUIT. Le cabinet n'a pas de
+        // revenu nommé « Commission » ; il a « Commission Ordinaire ». Renommer le
+        // revenu ferait perdre le libellé du courtier, et pour rien : le modèle sépare le
+        // nom libre du type qui porte la configuration.
+        $revenu = $cnx->fetchAssociative(
+            'SELECT r.nom, r.taux_exceptionel, r.montant_flat_exceptionel, t.nom AS type
+             FROM revenu_pour_courtier r JOIN type_revenu t ON t.id = r.type_revenu_id
+             WHERE r.entreprise_id = ?',
+            [$id],
+        );
+
+        self::assertNotFalse($revenu, 'Un revenu doit avoir été créé : ' . $this->motif($run));
+        self::assertSame('Commission', $revenu['nom']);
+        self::assertSame('Commission Ordinaire', $revenu['type']);
+        self::assertEquals(17.5, (float) $revenu['taux_exceptionel'], '17,50 est un TAUX.');
+        self::assertNull($revenu['montant_flat_exceptionel'], 'Et surtout pas un forfait.');
+
+        // ⚠ ET CE TAUX COMPTE VRAIMENT. C'est tout l'enjeu : écrit mais ignoré au
+        // calcul, il donnerait une note à zéro soldée par un règlement positif — le solde
+        // négatif de départ, simplement deplace d'un cran.
+        $this->em()->clear();
+        $note = $this->em()->getRepository(\App\Entity\Note::class)->findOneBy(['entreprise' => $entreprise]);
+        self::assertNotNull($note, 'La commission encaissée doit être enregistrée.');
+
+        $helper = static::getContainer()->get(\App\Services\Canvas\Indicator\IndicatorCalculationHelper::class);
+        $du = $helper->getNoteMontantPayable($note);
+
+        self::assertGreaterThan(
+            500.0,
+            $du,
+            '17,5 % de 10 000 vaut 1 750 : un dû de quelques unités trahirait un taux lu comme un forfait.',
+        );
+        self::assertGreaterThanOrEqual(
+            $helper->getNoteMontantPaye($note),
+            $du,
+            'Une note ne peut pas avoir encaissé plus qu\'elle ne réclame : pas de solde négatif.',
+        );
+
+        // ⚠ IL RESTE UN SEUL REPROCHE, ET C'EST UN AVERTISSEMENT : le rattachement au
+        // type est une déduction, pas une certitude, et l'utilisateur doit pouvoir la
+        // vérifier. Les deux autres ont disparu.
+        self::assertStringContainsString('Commission Ordinaire', $this->motif($run));
+        self::assertStringNotContainsString('MONTANT FIXE', $this->motif($run));
+        self::assertStringNotContainsString('n\'a pas pu être', $this->motif($run));
+    }
+
+    /**
+     * ⚠ UN CLIENT SANS PORTEFEUILLE EST REPRIS QUAND MÊME.
+     *
+     * Le circuit d'écriture réclamait le portefeuille de destination dès que le déposant en
+     * gérait plusieurs — juste dans une conversation, où l'assistant peut poser la
+     * question ; mur absolu sur un fichier, où chaque ligne à colonne vide se voyait
+     * opposer « Remplissez la colonne "Portefeuille" ». Un cabinet qui ne range pas encore
+     * ses clients ne pouvait rien reprendre du tout.
+     */
+    public function testUnClientSansPortefeuilleEstReprisQuandMeme(): void
+    {
+        [$entreprise, $proprietaire] = $this->fixture();
+        $this->deuxPortefeuillesGeres($entreprise, $proprietaire);
+
+        $run = $this->importer($entreprise, $proprietaire, [$this->uneEcheance()]);
+
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $run->getStatut(), $this->motif($run));
+
+        $cnx = $this->em()->getConnection();
+        $portefeuilleDuClient = $cnx->fetchOne(
+            'SELECT portefeuille_id FROM client WHERE entreprise_id = ? AND nom = ?',
+            [$entreprise->getId(), 'KIN AVIA'],
+        );
+
+        self::assertNotFalse($portefeuilleDuClient, 'Le client doit être repris : ' . $this->motif($run));
+        self::assertNull($portefeuilleDuClient, 'Colonne vide = aucun portefeuille, et non un refus.');
+
+        // ⚠ ET ON LE DIT, une fois : ces clients n'apparaîtront pas dans « Mon
+        // portefeuille » tant qu'on ne les y aura pas rangés. Se taire laisserait croire à
+        // une reprise incomplète.
+        self::assertStringContainsString('sans portefeuille', $this->motif($run));
+    }
+
+    /**
+     * ⚠ ET LE DÉPOSANT MONO-PORTEFEUILLE N'A RIEN PERDU. Quand il n'en gère qu'un, la
+     * colonne vide n'est pas une question : il n'y a qu'une réponse possible, et le client
+     * y est rangé comme avant. C'est la moitié de la règle qu'il ne fallait PAS toucher.
+     */
+    public function testUnClientRejointLUniquePortefeuilleDuDeposant(): void
+    {
+        [$entreprise, $proprietaire] = $this->fixture();
+        $unique = $this->portefeuilleGere($entreprise, $proprietaire, 'Grands comptes');
+
+        $run = $this->importer($entreprise, $proprietaire, [$this->uneEcheance()]);
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $run->getStatut(), $this->motif($run));
+
+        $portefeuilleDuClient = $this->em()->getConnection()->fetchOne(
+            'SELECT portefeuille_id FROM client WHERE entreprise_id = ? AND nom = ?',
+            [$entreprise->getId(), 'KIN AVIA'],
+        );
+
+        self::assertSame($unique, (int) $portefeuilleDuClient);
+    }
+
+    /**
+     * ⚠ LA COMMISSION ORDINAIRE MANQUANTE EST INSTALLÉE UNE SEULE FOIS.
+     *
+     * C'est la faute la plus coûteuse de toute la reprise, et elle ne casse rien : elle
+     * DUPLIQUE. Un type par ligne, et le catalogue du cabinet devient illisible — six
+     * « Commission Ordinaire » dont personne ne sait laquelle ses polices emploient.
+     * La convergence par repère est ce qui l'empêche ; ce test la tient.
+     */
+    public function testLaCommissionOrdinaireManquanteNEstInstalleeQuUneFois(): void
+    {
+        [$entreprise, $proprietaire] = $this->fixture();
+
+        // Le cabinet n'a NI type de revenu NI prime nette : le filet doit poser les deux.
+        //
+        // ⚠ DEUX POLICES DISTINCTES, ET LES LIGNES SONT ÉCRITES EN ENTIER. `uneEcheance()`
+        // AJOUTE des clés, elle n'en remplace aucune : une surcharge de `policeReference` y
+        // serait silencieusement ignorée, et les deux lignes deviendraient deux échéances
+        // d'une même police — ce qui exige des parts, et fait échouer sur autre chose.
+        $run = $this->importer($entreprise, $proprietaire, [
+            $this->uneEcheance(['commissionRevenus' => 'Commission']),
+            [
+                'policeReference' => 'POL/2026/002',
+                'policeDateEffet' => '01/02/2026',
+                'policeEcheance' => '31/01/2027',
+                'trancheNom' => 'Prime unique',
+                'tranchePayableAt' => '15/02/2026',
+                'assure' => 'CONGO AIRWAYS',
+                'risque' => 'RC Aviation',
+                'assureur' => 'SFA CONGO',
+                'commissionRevenus' => 'Commissions',
+            ],
+        ]);
+
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $run->getStatut(), $this->motif($run));
+
+        self::assertSame(1, $this->compter('type_revenu', $entreprise), 'UN type, pas un par ligne.');
+        self::assertSame(1, $this->compter('chargement', $entreprise), 'UNE prime nette, pas une par ligne.');
+
+        $type = $this->em()->getConnection()->fetchAssociative(
+            'SELECT nom, redevable, appliquer_pourcentage_du_risque FROM type_revenu WHERE entreprise_id = ?',
+            [$entreprise->getId()],
+        );
+
+        self::assertSame('Commission Ordinaire', $type['nom']);
+        self::assertSame(\App\Entity\TypeRevenu::REDEVABLE_ASSUREUR, (int) $type['redevable']);
+        self::assertSame(1, (int) $type['appliquer_pourcentage_du_risque'], 'Le taux vient du risque.');
+    }
+
+    /**
+     * ⚠ UNE ÉCHÉANCE AJOUTÉE PLUS TARD ENCAISSE SA COMMISSION.
+     *
+     * Le registre de la reprise ne connaît que la passe en cours : une échéance neuve sous
+     * une police reprise au dépôt précédent n'y trouvait aucun revenu, et l'encaissement
+     * était refusé — « cette ligne ne dit pas de quelle commission il s'agit » — alors que
+     * la proposition en portait un depuis le premier dépôt. C'est le cas du cabinet qui
+     * reprend en plusieurs fois, c'est-à-dire de tous.
+     */
+    public function testUneEcheanceAjouteeApresCoupEncaisseSurLeRevenuDejaEnBase(): void
+    {
+        [$entreprise, $proprietaire] = $this->fixture();
+        $this->catalogueDeRevenu($entreprise, $proprietaire);
+
+        $premier = $this->importer($entreprise, $proprietaire, [
+            $this->uneEcheance(['commissionRevenus' => 'Commission Ordinaire']),
+        ]);
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $premier->getStatut(), $this->motif($premier));
+
+        $notesAvant = $this->compter('note', $entreprise);
+
+        // Même police, deuxième échéance — et la colonne des revenus reste vide, puisque
+        // la proposition existe déjà.
+        //
+        // ⚠ LE NOM ET LA DATE DOIVENT DIFFÉRER, sans quoi l'échéance est RETROUVÉE en
+        // base et son solde d'ouverture n'est pas relu : c'est la règle qui empêche un
+        // redépôt de doubler les encaissements, et elle masquerait ce que ce test observe.
+        $second = $this->importer($entreprise, $proprietaire, [
+            [
+                'policeReference' => 'POL/2026/001',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
+                'trancheNom' => 'Deuxième tranche',
+                'tranchePayableAt' => '15/07/2026',
+                'assure' => 'KIN AVIA',
+                'risque' => 'RC Aviation',
+                'assureur' => 'SFA CONGO',
+                'ouvertureCommissionEncaissee' => 518.40,
+            ],
+        ]);
+        self::assertSame(EchangeImportRun::STATUT_TERMINE, $second->getStatut(), $this->motif($second));
+
+        self::assertSame($notesAvant + 1, $this->compter('note', $entreprise), $this->motif($second));
+
+        // ⚠ ET L'ARTICLE DÉSIGNE BIEN UN REVENU : sans lui la note vaudrait zéro et ne
+        // compterait dans aucun total — une coquille que l'écran afficherait sans jamais
+        // l'additionner.
+        $sansRevenu = (int) $this->em()->getConnection()->fetchOne(
+            'SELECT COUNT(*) FROM article WHERE entreprise_id = ? AND revenu_facture_id IS NULL',
+            [$entreprise->getId()],
+        );
+        self::assertSame(0, $sansRevenu, 'Un article sans revenu facturé vaut zéro.');
+    }
+
     // ─────────────────────────────────────────────────────────────────────────────
     // Outillage
     // ─────────────────────────────────────────────────────────────────────────────
@@ -801,8 +1166,10 @@ class EcritureImportTest extends WebTestCase
     /**
      * Le type de revenu que la ligne nomme.
      *
-     * ⚠ ON NE CRÉE JAMAIS UN TYPE À LA VOLÉE depuis un classeur : il porte un taux et un
-     * redevable qu'un simple nom ne suffit pas à définir. Le cabinet doit donc l'avoir.
+     * ⚠ ON NE CRÉE PAS UN TYPE QUELCONQUE À LA VOLÉE depuis un classeur : il porte un
+     * taux et un redevable qu'un simple nom ne suffit pas à définir. Le cabinet doit donc
+     * l'avoir — à la seule exception de la commission ordinaire, dont on sait exactement
+     * ce qu'elle est ({@see \App\Echange\Reprise\CommissionOrdinaire}).
      */
     private function catalogueDeRevenu(Entreprise $entreprise, Invite $invite): void
     {
@@ -856,6 +1223,65 @@ class EcritureImportTest extends WebTestCase
             'propositions' => (int) $cnx->fetchOne('SELECT COUNT(*) FROM cotation WHERE entreprise_id = ?', [$id]),
             'echeances' => (int) $cnx->fetchOne('SELECT COUNT(*) FROM tranche WHERE entreprise_id = ?', [$id]),
         ];
+    }
+
+    /** Un portefeuille dont le déposant est le gestionnaire. */
+    private function portefeuilleGere(Entreprise $entreprise, Invite $invite, string $nom): int
+    {
+        $em = $this->em();
+
+        $portefeuille = (new \App\Entity\Portefeuille())->setNom($nom);
+        $portefeuille->setGestionnaire($em->find(Invite::class, $invite->getId()));
+        $portefeuille->setEntreprise($em->find(Entreprise::class, $entreprise->getId()));
+        $em->persist($portefeuille);
+        $em->flush();
+
+        return (int) $portefeuille->getId();
+    }
+
+    /**
+     * DEUX portefeuilles gérés : la situation qui bloquait tout.
+     *
+     * ⚠ C'EST LE NOMBRE QUI COMPTE, pas les noms. À un seul, le circuit d'écriture range
+     * le client d'office ; à deux, il n'a plus de réponse évidente — et c'est là qu'il
+     * posait une question à un fichier.
+     */
+    private function deuxPortefeuillesGeres(Entreprise $entreprise, Invite $invite): void
+    {
+        $this->portefeuilleGere($entreprise, $invite, 'Grands comptes');
+        $this->portefeuilleGere($entreprise, $invite, 'Particuliers');
+    }
+
+    /** La TVA que l'ASSUREUR précompte sur la commission du courtier. */
+    private function tvaAssureur(Entreprise $entreprise, Invite $invite, float $taux): void
+    {
+        $em = $this->em();
+
+        $taxe = (new \App\Entity\Taxe())->setCode('TVA')->setDescription('TVA sur commission');
+        $taxe->setRedevable(\App\Entity\Taxe::REDEVABLE_ASSUREUR);
+        $taxe->setTauxIARD((string) $taux);
+        $taxe->setTauxVIE((string) $taux);
+        $taxe->setEntreprise($em->find(Entreprise::class, $entreprise->getId()));
+        $taxe->setInvite($em->find(Invite::class, $invite->getId()));
+        $em->persist($taxe);
+        $em->flush();
+
+        // ⚠ LE BARÈME EST MÉMOÏSÉ PAR ENTREPRISE le temps d'une requête : sans redémarrage
+        // du conteneur, la taxe qu'on vient de poser resterait invisible au calcul.
+        static::getContainer()->get(\App\Services\ServiceTaxes::class)->reset();
+    }
+
+    /** Un client DÉJÀ en base, exonéré de taxes — que la reprise retrouvera par son nom. */
+    private function clientExonere(Entreprise $entreprise, Invite $invite, string $nom): void
+    {
+        $em = $this->em();
+
+        $client = (new \App\Entity\Client())->setNom($nom);
+        $client->setExonere(true);
+        $client->setEntreprise($em->find(Entreprise::class, $entreprise->getId()));
+        $client->setInvite($em->find(Invite::class, $invite->getId()));
+        $em->persist($client);
+        $em->flush();
     }
 
     private function importateur(): ImportateurJsbx

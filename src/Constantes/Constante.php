@@ -588,7 +588,12 @@ class Constante
                                     Risque::BRANCHE_IARD_OU_NON_VIE => true,
                                     Risque::BRANCHE_VIE => false,
                                 };
-                                $montant = $this->serviceTaxes->getMontantTaxeAutorite($net, $isIARD, $autorite);
+                                // ⚠ ET RIEN N'EST DÛ AU FISC SUR UNE AFFAIRE EXONÉRÉE.
+                                // Facturer la taxe à l'autorité fiscale sur une commission
+                                // qui n'en porte pas créerait une dette sortie de nulle part.
+                                $montant = $this->serviceTaxes->commissionExonereePour($tranche->getCotation())
+                                    ? 0
+                                    : $this->serviceTaxes->getMontantTaxeAutorite($net, $isIARD, $autorite);
 
                                 /**
                                  * Analyse des possibles paiements antérieurs et éventuellement des montants payés
@@ -3966,7 +3971,7 @@ class Constante
     public function Revenu_getMontant_ttc(?RevenuPourCourtier $revenu): float
     {
         $net = $this->Revenu_getMontant_ht($revenu);
-        $taxe = $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($revenu->getCotation()), true);
+        $taxe = $this->serviceTaxes->getMontantTaxeSurCommission($net, $this->isIARD($revenu->getCotation()), true, $revenu->getCotation());
         return $net + $taxe;
     }
 
@@ -4035,12 +4040,12 @@ class Constante
             if ($revenu->getTypeRevenu()->isShared() == true) {
                 // dd($revenu->getTypeRevenu()->isShared(), $revenu);
                 $comNette = $this->Revenu_getMontant_ht($revenu);
-                $taxeCourtier = $this->serviceTaxes->getMontantTaxe($comNette, $isIARD, $taxeAssureur);
+                $taxeCourtier = $this->serviceTaxes->getMontantTaxeSurCommission($comNette, $isIARD, $taxeAssureur, $revenu->getCotation());
                 $commissionPure = $comNette - $taxeCourtier;
             }
         } else {
             $comNette = $this->Revenu_getMontant_ht($revenu);
-            $taxeCourtier = $this->serviceTaxes->getMontantTaxe($comNette, $isIARD, $taxeAssureur);
+            $taxeCourtier = $this->serviceTaxes->getMontantTaxeSurCommission($comNette, $isIARD, $taxeAssureur, $revenu->getCotation());
             $commissionPure = $comNette - $taxeCourtier;
         }
         return $commissionPure;
@@ -4049,13 +4054,13 @@ class Constante
     public function Revenu_getMontant_taxe_payable_par_assureur(?RevenuPourCourtier $revenu): float
     {
         $netRev = $this->Revenu_getMontant_ht($revenu);
-        return $this->serviceTaxes->getMontantTaxe($netRev, $this->isIARD($revenu->getCotation()), true);
+        return $this->serviceTaxes->getMontantTaxeSurCommission($netRev, $this->isIARD($revenu->getCotation()), true, $revenu->getCotation());
     }
 
     public function Revenu_getMontant_taxe_payable_par_courtier(?RevenuPourCourtier $revenu): float
     {
         $netRev = $this->Revenu_getMontant_ht($revenu);
-        return $this->serviceTaxes->getMontantTaxe($netRev, $this->isIARD($revenu->getCotation()), false);
+        return $this->serviceTaxes->getMontantTaxeSurCommission($netRev, $this->isIARD($revenu->getCotation()), false, $revenu->getCotation());
     }
 
     public function Revenu_getMontant_taxe_payable_par_assureur_payee(RevenuPourCourtier $revenu): float
@@ -4440,7 +4445,7 @@ class Constante
         $net_payable_par_assureur = $this->Cotation_getMontant_commission_ht($cotation, TypeRevenu::REDEVABLE_ASSUREUR, $onlySharable);
         $net_payable_par_client = $this->Cotation_getMontant_commission_ht($cotation, TypeRevenu::REDEVABLE_CLIENT, $onlySharable);
         $net_total = $net_payable_par_assureur + $net_payable_par_client;
-        return $this->serviceTaxes->getMontantTaxe($net_total, $isIARD, $isTaxAssureur);
+        return $this->serviceTaxes->getMontantTaxeSurCommission($net_total, $isIARD, $isTaxAssureur, $cotation);
     }
 
     public function Cotation_getMontant_taxe_payable_par_assureur_payee(?Cotation $cotation): float
@@ -4741,14 +4746,14 @@ class Constante
     public function Cotation_getMontant_commission_ttc_payable_par_client(?Cotation $cotation, bool $onlySharable): float
     {
         $net = $this->Cotation_getMontant_commission_ht($cotation, TypeRevenu::REDEVABLE_CLIENT, $onlySharable);
-        $taxe = $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($cotation), true);
+        $taxe = $this->serviceTaxes->getMontantTaxeSurCommission($net, $this->isIARD($cotation), true, $cotation);
         return $net + $taxe;
     }
 
     public function Cotation_getMontant_commission_ttc_payable_par_assureur(?Cotation $cotation, bool $onlySharable): float
     {
         $net = $this->Cotation_getMontant_commission_ht($cotation, TypeRevenu::REDEVABLE_ASSUREUR, $onlySharable);
-        $taxe = $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($cotation), true);
+        $taxe = $this->serviceTaxes->getMontantTaxeSurCommission($net, $this->isIARD($cotation), true, $cotation);
         return $net + $taxe;
     }
 
@@ -4808,33 +4813,131 @@ class Constante
             $cotation = $revenu->getCotation();
 
             $montantChargementPrime = $this->Cotation_getMontant_chargement_prime($cotation, $revenu->getTypeRevenu());
-            //Comment s'applique le taux sur de commission sur le montant du chargement / composant?
-            if ($typeRevenu->isAppliquerPourcentageDuRisque()) {
+
+            // ⚠ UN TAUX SAISI SUR LE REVENU L'EMPORTE SUR CELUI DU RISQUE, TOUJOURS.
+            //
+            // Il passait APRÈS `isAppliquerPourcentageDuRisque()`, donc jamais : sur un type
+            // adossé au risque — « Commission Ordinaire » en tête —, un taux exceptionnel
+            // était enregistré puis ignoré au calcul. L'utilisateur le voyait à la fiche et
+            // ne le retrouvait dans aucun montant.
+            //
+            // ⚠ TROIS TÉMOINS DISAIENT DÉJÀ CETTE RÈGLE, ET LE CODE SEUL DISAIT L'INVERSE :
+            //  - le formulaire — « Privilégier le taux du risque ? Oui, s'il existe ET
+            //    QU'IL EST DIFFÉRENT DU POURCENTAGE DE CE REVENU »
+            //    ({@see \App\Form\TypeRevenuType}) ;
+            //  - le parcours de saisie de l'assistant — « À défaut de taux exceptionnel, le
+            //    taux prescrit par la configuration du RISQUE s'applique, puis celui du
+            //    type » ({@see \App\Ai\Parcours\ParcoursCatalogue}), que Ket récite à
+            //    l'utilisateur depuis toujours ;
+            //  - `RevenuCourtierPrescrit`, qui écrit un `tauxExceptionel` quand un taux est
+            //    DICTÉ — et le voyait ignoré.
+            //
+            // Ket annonçait donc « taux exceptionnel dicté de 17,50 % » pendant que
+            // l'application facturait les 10 % du risque. La parité est tenue par
+            // `RevenuCourtierPrescritPariteTest`, et non plus par un commentaire.
+            //
+            // La reprise en dépend entièrement : chaque ligne de classeur apporte son taux.
+            if ($revenu->getTauxExceptionel() != 0) {
+                $montant += $montantChargementPrime * $revenu->getFraction();
+            } else if ($typeRevenu->isAppliquerPourcentageDuRisque()) {
                 /** @var Risque $couverture */
                 $couverture = $this->Cotation_getRisque($cotation);
                 if ($couverture != null) {
                     $montant += $montantChargementPrime * $couverture->getFraction();
                 }
+            } else if ($revenu->getMontantFlatExceptionel() != 0) {
+                // ⚠ LE FORFAIT DU REVENU, LUI, N'A PAS ÉTÉ REMONTÉ, ET C'EST DÉLIBÉRÉ.
+                //
+                // Le classeur de reprise ne transporte JAMAIS de forfait — il ne porte que
+                // des taux. Et mesuré sur le cabinet réel, 85 revenus sur 150 en portent un
+                // en base : le remonter au-dessus du risque réveillerait d'un coup 85
+                // valeurs aujourd'hui dormantes, et déplacerait des commissions que
+                // personne n'a demandé de changer.
+                //
+                // L'asymétrie est donc voulue. Ne pas la « corriger » sans avoir d'abord
+                // compté, sur les données réelles, combien de montants elle déplace.
+                $montant += $revenu->getMontantFlatExceptionel();
             } else {
-                //On cherche à appliquer d'abord le taux du revenu sur la cotation
-                if ($revenu->getTauxExceptionel() != 0) {
-                    $montant += $montantChargementPrime * $revenu->getFraction();
-                } else if ($revenu->getMontantFlatExceptionel() != 0) {
-                    $montant += $revenu->getMontantFlatExceptionel();
-                } else {
-                    //Auncune formule définie sur le revenu situé dans la cotation
-                    //On doit appliquer la formule par défaut pour ce type de revenu
-                    if ($typeRevenu->getPourcentage() != 0) {
-                        // dd("On applique le pourcentage spécifique à " . $revenuPourCourtier->getNom(),);
-                        $montant += $montantChargementPrime * $typeRevenu->getFraction();
-                    } else if ($typeRevenu->getMontantflat() != 0) {
-                        // dd("On applique le montant flat qui est de " . $revenuPourCourtier->getMontantFlatExceptionel());
-                        $montant += $montantChargementPrime * $typeRevenu->getMontantflat();
-                    }
+                //Auncune formule définie sur le revenu situé dans la cotation
+                //On doit appliquer la formule par défaut pour ce type de revenu
+                if ($typeRevenu->getPourcentage() != 0) {
+                    $montant += $montantChargementPrime * $typeRevenu->getFraction();
+                } else if ($typeRevenu->getMontantflat() != 0) {
+                    // ⚠ UN MONTANT FIXE S'AJOUTE, IL NE SE MULTIPLIE PAS. Cette ligne
+                    // faisait `assiette × forfait` : un type « montant fixe » à 5 000 sur
+                    // une prime de 10 000 facturait 50 000 000. Le cas jumeau du revenu
+                    // (ci-dessus) l'ajoute tel quel, et
+                    // {@see \App\Ai\Proposition\RevenuCourtierPrescrit::prescription()}
+                    // annonce « montant forfaitaire de X » sans multiplier : c'est lui qui
+                    // disait la bonne lecture.
+                    $montant += $typeRevenu->getMontantflat();
                 }
             }
         }
         return $montant;
+    }
+
+    /**
+     * LE TARIF EFFECTIF D'UN REVENU, ET D'OÙ IL VIENT.
+     *
+     * ⚠ JUMELLE DE `Revenu_getMontant_ht()`, ET ELLE DOIT LE RESTER. Le classeur d'échange
+     * doit dire à quel taux une affaire tourne réellement — sans quoi un courtier exporte
+     * son portefeuille et n'y lit rien. Mais un taux affiché qui ne serait pas celui qui
+     * calcule serait pire que pas de taux du tout : on lirait 10 % sur une commission
+     * facturée à 17,5.
+     *
+     * Les deux méthodes suivent donc la MÊME cascade, dans le MÊME ordre, et toute
+     * retouche de l'une appelle la retouche de l'autre. C'est le prix d'une colonne qui
+     * dit la vérité ; le payer une fois vaut mieux que laisser l'export deviner.
+     *
+     * `origine` dit si la valeur DÉROGE (elle appartient au revenu) ou si elle est
+     * HÉRITÉE — auquel cas la réimporter la figerait, et la commission cesserait de
+     * suivre sa source ({@see \App\Echange\Reprise\ValeursMultiples}).
+     *
+     * @return array{taux: ?float, forfait: ?float, origine: string}
+     *         `taux` en POINTS (12 = 12 %) ; `origine` vaut 'revenu', 'risque' ou 'type'
+     */
+    public function Revenu_getTarif_effectif(?RevenuPourCourtier $revenu): array
+    {
+        $rien = ['taux' => null, 'forfait' => null, 'origine' => 'revenu'];
+
+        if ($revenu === null) {
+            return $rien;
+        }
+
+        $typeRevenu = $revenu->getTypeRevenu();
+        if ($typeRevenu === null) {
+            return $rien;
+        }
+
+        if ($revenu->getTauxExceptionel() != 0) {
+            return ['taux' => (float) $revenu->getTauxExceptionel(), 'forfait' => null, 'origine' => 'revenu'];
+        }
+
+        if ($typeRevenu->isAppliquerPourcentageDuRisque()) {
+            $couverture = $this->Cotation_getRisque($revenu->getCotation());
+            $taux = (float) ($couverture?->getPourcentageCommissionSpecifiqueHT() ?? 0.0);
+
+            // Un risque sans taux prescrit ne tarife rien : le dire vaut mieux que
+            // d'écrire un zéro qui se lirait comme une commission nulle voulue.
+            return $taux == 0.0
+                ? $rien
+                : ['taux' => $taux, 'forfait' => null, 'origine' => 'risque'];
+        }
+
+        if ($revenu->getMontantFlatExceptionel() != 0) {
+            return ['taux' => null, 'forfait' => (float) $revenu->getMontantFlatExceptionel(), 'origine' => 'revenu'];
+        }
+
+        if ($typeRevenu->getPourcentage() != 0) {
+            return ['taux' => (float) $typeRevenu->getPourcentage(), 'forfait' => null, 'origine' => 'type'];
+        }
+
+        if ($typeRevenu->getMontantflat() != 0) {
+            return ['taux' => null, 'forfait' => (float) $typeRevenu->getMontantflat(), 'origine' => 'type'];
+        }
+
+        return $rien;
     }
 
     private function isSamePartenaire(?Partenaire $partenaire, ?Partenaire $partenaireCible): bool

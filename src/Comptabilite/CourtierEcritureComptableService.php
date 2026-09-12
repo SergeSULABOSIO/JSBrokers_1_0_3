@@ -5,6 +5,7 @@ namespace App\Comptabilite;
 use App\Entity\Entreprise;
 use App\Entity\DepenseCourtier;
 use App\Entity\Depense;
+use App\Entity\Cotation;
 use App\Entity\Note;
 use App\Entity\Paiement;
 use App\Entity\Taxe;
@@ -176,7 +177,10 @@ class CourtierEcritureComptableService
                 // dans la note, elle n'entre en comptabilité qu'au reversement (641).
                 // Entreprise explicite : ce service tourne aussi hors requête HTTP
                 // (suivi fiscal), où l'utilisateur connecté n'est pas disponible.
-                'taxeCourtierDue' => round($this->serviceTaxes->getMontantTaxe($htPart, $this->isIARD($note), false, $note->getEntreprise()), 2),
+                // ⚠ ET L'EXONÉRATION VAUT AUSSI ICI. Une affaire exonérée ne fait naître
+                // aucune dette fiscale sur sa commission : la provisionner quand même
+                // ferait payer au cabinet une taxe que personne ne lui a versée.
+                'taxeCourtierDue' => round($this->serviceTaxes->getMontantTaxeSurCommission($htPart, $this->isIARD($note), false, $this->cotationDe($note), $note->getEntreprise()), 2),
             ];
         }
 
@@ -490,6 +494,25 @@ class CourtierEcritureComptableService
      * détectée via la cotation du premier article facturant un revenu ; les notes
      * de bordereau (sans articles) sont réputées IARD (branche non-vie, cas général).
      */
+    /**
+     * L'AFFAIRE QUE CETTE NOTE FACTURE — celle qui dit si la commission est taxée.
+     *
+     * Même chemin que {@see isIARD()} : une note porte des articles, un article facture un
+     * revenu, et le revenu appartient à une cotation. Une note qui n'en désigne aucune
+     * (avoir manuel, ajustement) rend null, et la taxe s'applique alors normalement.
+     */
+    private function cotationDe(Note $note): ?Cotation
+    {
+        foreach ($note->getArticles() as $article) {
+            $cotation = $article->getRevenuFacture()?->getCotation();
+            if ($cotation !== null) {
+                return $cotation;
+            }
+        }
+
+        return null;
+    }
+
     private function isIARD(Note $note): bool
     {
         foreach ($note->getArticles() as $article) {

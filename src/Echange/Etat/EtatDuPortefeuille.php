@@ -3,6 +3,7 @@
 namespace App\Echange\Etat;
 
 use App\Ai\Finance\EconomieTranche;
+use App\Constantes\Constante;
 use App\Echange\Reprise\ValeursMultiples;
 use App\Echange\Service\Progression;
 use App\Entity\Avenant;
@@ -72,6 +73,10 @@ final class EtatDuPortefeuille
         private readonly IndicatorCalculationHelper $helper,
         // La condition retenue pour un bénéficiaire : source unique du taux affiché.
         private readonly BeneficiaireRetroFactory $beneficiaires,
+        // Le TARIF EFFECTIF d'un revenu se lit sur la cascade qui le CALCULE, jamais sur
+        // une seconde version écrite ici : deux lectures qui divergent afficheraient un
+        // taux que la commission ne suit pas.
+        private readonly Constante $constante,
     ) {
     }
 
@@ -272,7 +277,7 @@ final class EtatDuPortefeuille
             // colonne, le fichier ne porte que des résultats : réimporté, il rend des
             // cotations SANS COMMISSION — d'aspect normal, et fausses. La prime, elle, a
             // désormais une colonne PAR CHARGEMENT (voir `parChargement()`).
-            'commissionRevenus' => self::revenusDe($cotation),
+            'commissionRevenus' => $this->revenusDe($cotation),
 
             'primeTotale' => $eco['primeTranche'] ?? null,
             'primePayee' => $eco['primeSignalee'] ?? null,
@@ -419,19 +424,23 @@ final class EtatDuPortefeuille
     }
 
     /**
-     * LES REVENUS DU COURTIER, et seulement ce qui DÉROGE au type.
+     * LES REVENUS DU COURTIER, ET LE TARIF AUQUEL CHACUN TOURNE VRAIMENT.
      *
-     * ⚠ ON N'EXPORTE PAS UN TAUX QU'ON N'A PAS ÉCRIT. Le taux d'un revenu se résout à la
-     * lecture, en cascade : un type marqué « pourcentage du risque » va chercher celui du
-     * risque de l'affaire. Le recopier dans le fichier le FIGERAIT — réimporté, il
-     * deviendrait une dérogation, et la commission cesserait de suivre le risque le jour
-     * où son taux change. Voir `App\Ai\Proposition\RevenuCourtierPrescrit`, qui pose la
-     * règle : créer le revenu avec son seul type suffit.
+     * ⚠ CETTE COLONNE N'ÉCRIVAIT QUE LES DÉROGATIONS, ET C'ÉTAIT UNE DEMI-VÉRITÉ. Un
+     * revenu au taux du risque en sortait nu : le courtier exportait son portefeuille et
+     * n'y lisait aucun taux. Une colonne qui tait ce qu'elle sait n'aide personne.
      *
-     * Sortent donc avec une valeur les seuls revenus qui dérogent — par taux, ou par
-     * montant forfaitaire, ce second cas étant le plus fréquent dans les données réelles.
+     * ⚠ MAIS UN TAUX HÉRITÉ NE SE RECOPIE PAS. Réimporté tel quel, il deviendrait une
+     * dérogation, et la commission cesserait de suivre le risque le jour où son taux
+     * change — c'est le motif qui justifiait le silence d'avant, et il reste juste. D'où
+     * le marqueur : la valeur est ÉCRITE pour être lue, et MARQUÉE pour n'être pas
+     * reprise ({@see \App\Echange\Reprise\ValeursMultiples}).
+     *
+     * ⚠ ET LE TARIF SE LIT SUR LA CASCADE QUI CALCULE. `Revenu_getTarif_effectif()` est
+     * la jumelle de `Revenu_getMontant_ht()` : en réécrire une seconde version ici
+     * afficherait tôt ou tard un taux que la commission ne suit pas.
      */
-    private static function revenusDe(?Cotation $cotation): ?string
+    private function revenusDe(?Cotation $cotation): ?string
     {
         if ($cotation === null) {
             return null;
@@ -446,21 +455,33 @@ final class EtatDuPortefeuille
         // devinée.
         $termes = [];
         foreach ($cotation->getRevenus() as $revenu) {
-            $nom = $revenu->getTypeRevenu()?->getNom();
-            if ($nom === null || $nom === '') {
-                $nom = $revenu->getNom();
+            // ⚠ LE NOM DU REVENU PASSE AVANT CELUI DE SON TYPE, et c'est l'aller-retour
+            // qui l'exige. Une reprise rattache « Commission » au type « Commission
+            // Ordinaire » : exporter le nom du TYPE effacerait le libellé que le courtier
+            // avait écrit, et le fichier ne rendrait plus ce qu'il avait reçu.
+            $nom = $revenu->getNom();
+            if ($nom === null || trim($nom) === '') {
+                $nom = $revenu->getTypeRevenu()?->getNom();
             }
             if ($nom === null || trim($nom) === '') {
                 $nom = 'Revenu sans nom';
             }
 
-            $taux = $revenu->getTauxExceptionel();
-            $flat = $revenu->getMontantFlatExceptionel();
+            $tarif = $this->constante->Revenu_getTarif_effectif($revenu);
+            $herite = $tarif['origine'] !== 'revenu';
 
-            if ($taux !== null && $taux != 0.0) {
-                $termes[$nom] = ValeursMultiples::taux($taux);
-            } elseif ($flat !== null && $flat != 0.0) {
-                $termes[$nom] = ValeursMultiples::montant($flat);
+            if ($tarif['taux'] !== null) {
+                $termes[$nom] = match (true) {
+                    !$herite => ValeursMultiples::taux($tarif['taux']),
+                    $tarif['origine'] === 'risque' => ValeursMultiples::tauxDuRisque($tarif['taux']),
+                    default => ValeursMultiples::tauxDuType($tarif['taux']),
+                };
+            } elseif ($tarif['forfait'] !== null) {
+                // Un forfait hérité du type reste le défaut de ce type : le réimporter
+                // n'ajouterait rien, et le marquer comme une dérogation serait faux.
+                $termes[$nom] = $herite
+                    ? ValeursMultiples::defaut()
+                    : ValeursMultiples::montant($tarif['forfait']);
             } else {
                 $termes[$nom] = ValeursMultiples::defaut();
             }
