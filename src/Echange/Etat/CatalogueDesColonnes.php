@@ -293,8 +293,9 @@ final class CatalogueDesColonnes
             )->enSaisie('Partenaire.nom'),
             'intermediairePart' => ColonneEtat::pourcentage(
                 'Intermédiaire · Part',
-                'Taux de la condition de partage retenue, en POINTS. Vide s\'il n\'y a pas de condition unique : '
-                . 'un taux qui ne s\'applique à personne induirait en erreur.',
+                'Taux appliqué à l\'intermédiaire sur cette affaire, en POINTS : celui de la condition de partage '
+                . 'retenue, sinon sa part habituelle. À la reprise, un taux différent de sa part devient une condition '
+                . 'propre à l\'affaire, et une cellule VIDE vaut 0 % pour cette affaire.',
             )->enSaisie('ConditionPartage.taux'),
 
             'retroPartenaireDue' => ColonneEtat::montant(

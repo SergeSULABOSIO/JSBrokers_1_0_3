@@ -147,12 +147,13 @@ final class RepriseSmokeCommand extends Command
         }
 
         $io->section('Reconstitution');
-        $this->reconstitueur->reinitialiser();
+        $this->reconstitueur->reinitialiser(null, \App\Echange\Reprise\PartsDesIntermediaires::depuis($lignes));
 
         $parEntite = [];
         $refus = [];
         $policesVues = [];
         $actesVus = [];
+        $affairesVues = [];
         $acceptees = 0;
 
         $sansIdentifiants = (bool) $input->getOption('sans-identifiants');
@@ -180,9 +181,17 @@ final class RepriseSmokeCommand extends Command
                 // ⚠ LE NUMÉRO D'AVENANT FAIT PARTIE DE LA CLÉ DE LA POLICE. Une police et
                 // son avenant n° 2 partagent la référence : compter les seules références
                 // ferait croire à une duplication là où il y a deux actes distincts.
+                // ⚠ ET UNE AFFAIRE, C'EST LA RÉFÉRENCE PLUS LE RISQUE : une police multirisque
+                // se suit en autant de propositions qu'elle couvre de risques.
+                $affairesVues[(string) CleNaturelle::pourChaine(
+                    CleNaturelle::COTATION,
+                    $ligne->texte('policeReference'),
+                    $ligne->texte('risque'),
+                )] = true;
                 $actesVus[(string) CleNaturelle::pourAvenant(
                     $ligne->texte('policeReference'),
                     $ligne->texte('policeNumeroAvenant'),
+                    $ligne->texte('risque'),
                 )] = true;
             }
 
@@ -210,6 +219,7 @@ final class RepriseSmokeCommand extends Command
         // distincts (référence + numéro). Si l'un dépasse l'autre, une affaire a été
         // dupliquée — et rien d'autre ne le dirait.
         $distinctes = \count($policesVues);
+        $affaires = \count($affairesVues);
         $actes = \count($actesVus);
         $avenants = $parEntite['Avenant · create'] ?? 0;
         $cotations = $parEntite['Cotation · create'] ?? 0;
@@ -218,8 +228,8 @@ final class RepriseSmokeCommand extends Command
         $repetees = \count(array_filter($policesVues, static fn (int $n): bool => $n > 1));
 
         $controles = [
-            'une police distincte = une proposition' => $cotations <= $distinctes,
-            'une police distincte = une opportunité' => $pistes <= $distinctes,
+            'une affaire distincte (référence + risque) = une proposition' => $cotations <= $affaires,
+            'une affaire distincte (référence + risque) = une opportunité' => $pistes <= $affaires,
             'un acte distinct = un avenant' => $avenants <= $actes,
             // Une ligne refusée ne produit rien : on compare donc aux lignes ACCEPTÉES,
             // et non au total. Sur le cabinet réel, quatre tranches sont des projets sans

@@ -29,6 +29,9 @@ use App\Echange\Service\ResolveurDeRenvois;
  * quatre valeurs, c'est fusionner deux affaires distinctes — et l'inverse, les séparer
  * quand elles n'en font qu'une, c'est dupliquer.
  *
+ * ⚠ ET LE RISQUE LA COMPLÈTE, sans la remplacer : une référence peut couvrir plusieurs
+ * risques, dont chacun est une affaire à part ({@see pourChaine()}).
+ *
  * Une ligne sans référence de police n'a donc pas de clé, et {@see cleDeLaPolice()} rend
  * `null` : le reconstitueur en fait un refus nommé. Un projet non encore lié n'a pas de
  * référence, et c'est bien pour cela qu'on ne peut pas l'inventer.
@@ -87,13 +90,15 @@ final class CleNaturelle
     }
 
     /**
-     * Le repère de la POLICE elle-même — référence et numéro d'avenant.
+     * Le repère de la POLICE elle-même — référence, numéro d'avenant et risque.
      *
      * ⚠ LE NUMÉRO D'AVENANT FAIT PARTIE DE LA CLÉ. Une police et son avenant n° 2
      * partagent la référence : les confondre écraserait l'un par l'autre, et la police
      * porterait les dates de son avenant.
+     *
+     * ⚠ LE RISQUE AUSSI : voir {@see pourChaine()}.
      */
-    public static function pourAvenant(?string $referencePolice, ?string $numeroAvenant): ?string
+    public static function pourAvenant(?string $referencePolice, ?string $numeroAvenant, ?string $risque = null): ?string
     {
         $cle = self::cleDeLaPolice($referencePolice);
         if ($cle === null) {
@@ -102,15 +107,35 @@ final class CleNaturelle
 
         $numero = ResolveurDeRenvois::normaliser((string) $numeroAvenant);
 
-        return self::repere(self::AVENANT, $numero === '' ? $cle : $cle . ' ' . $numero);
+        return self::repere(self::AVENANT, self::avecRisque($numero === '' ? $cle : $cle . ' ' . $numero, $risque));
     }
 
-    /** Le repère de la piste, de la cotation ou d'une condition : la clé de police suffit. */
-    public static function pourChaine(string $prefixe, ?string $referencePolice): ?string
+    /**
+     * Le repère de la piste ou de la cotation : la clé de police ET le risque.
+     *
+     * ⚠ UNE MÊME RÉFÉRENCE PEUT COUVRIR PLUSIEURS RISQUES. Un contrat « incendie et pertes
+     * d'exploitation » porte un seul numéro chez l'assureur, mais le cabinet le suit en deux
+     * affaires : chaque risque a sa prime, son taux de commission, sa part d'intermédiaire.
+     * Sans le risque dans la clé, la seconde ligne convergeait sur la première — sa prime et
+     * sa commission n'étaient jamais écrites, et le contrôle des parts lui reprochait un
+     * échéancier à 200 % qui n'existait pas.
+     *
+     * Deux lignes du MÊME risque restent deux échéances d'une même affaire : c'est la règle
+     * d'avant, intacte.
+     */
+    public static function pourChaine(string $prefixe, ?string $referencePolice, ?string $risque = null): ?string
     {
         $cle = self::cleDeLaPolice($referencePolice);
 
-        return $cle === null ? null : self::repere($prefixe, $cle);
+        return $cle === null ? null : self::repere($prefixe, self::avecRisque($cle, $risque));
+    }
+
+    /** La forme d'une clé complétée du risque, s'il est nommé. */
+    private static function avecRisque(string $forme, ?string $risque): string
+    {
+        $risque = ResolveurDeRenvois::normaliser((string) $risque);
+
+        return $risque === '' ? $forme : $forme . ' ' . $risque;
     }
 
     /**

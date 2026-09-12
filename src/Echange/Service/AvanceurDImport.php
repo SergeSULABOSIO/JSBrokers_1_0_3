@@ -10,6 +10,7 @@ use App\Echange\Classeur\LigneLue;
 use App\Echange\Etat\EtatDuPortefeuille;
 use App\Echange\Reprise\ChaineExistante;
 use App\Echange\Reprise\CoherenceDesParts;
+use App\Echange\Reprise\PartsDesIntermediaires;
 use App\Echange\Reprise\LecteurDeLEtat;
 use App\Echange\Reprise\ReconstitueurDeTranche;
 use App\Entity\EchangeImportRun;
@@ -259,7 +260,11 @@ final class AvanceurDImport
         //
         // L'invité voyage avec : c'est lui qui répondra des portefeuilles créés en chemin,
         // information que le classeur ne porte pas et sans laquelle ils ne peuvent naître.
-        $this->reconstitueur->reinitialiser($invite);
+        //
+        // ⚠ LES PARTS DES INTERMÉDIAIRES SE LISENT SUR TOUT LE FICHIER, pas sur la fenêtre :
+        // un apporteur créé ici prend la part que le fichier lui donne le plus souvent, et
+        // elle ne doit pas changer selon l'endroit où tombe le découpage.
+        $this->reconstitueur->reinitialiser($invite, PartsDesIntermediaires::depuis($lignes));
 
         $rapport = RapportDeControle::depuisArray($run->getRapport());
         $rapport->declarerRessource(LecteurDeLEtat::RESSOURCE, 'Échéances de prime');

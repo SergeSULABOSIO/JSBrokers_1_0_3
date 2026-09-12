@@ -243,8 +243,29 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
                 $risqueActuel,
             )
             ?? ($partenaire !== null
-                ? $this->premiereConditionApplicable($partenaire->getConditionPartages(), $risqueActuel)
+                ? $this->premiereConditionApplicable(self::conditionsDuPartenaire($partenaire), $risqueActuel)
                 : null);
+    }
+
+    /**
+     * Les conditions QUI VALENT POUR TOUT LE PARTENAIRE — celles de sa fiche.
+     *
+     * ⚠ PAS CELLES QUE SES AFFAIRES PORTENT EN PROPRE. Une condition exceptionnelle nomme
+     * aussi l'intermédiaire (`ConditionPartage::$partenaire`) : c'est ce qui la fait payer
+     * le bon bénéficiaire sur SON affaire. Mais elle figurait du même coup dans
+     * `Partenaire::getConditionPartages()`, et l'étage « condition du partenaire » la
+     * retenait sur TOUTES ses autres affaires. Un arrangement à 0 % négocié pour un seul
+     * dossier devenait la règle du portefeuille entier dès que le partenaire n'avait pas
+     * de condition de fiche plus ancienne — sans que rien ne le signale.
+     *
+     * @return array<int, ConditionPartage>
+     */
+    public static function conditionsDuPartenaire(Partenaire $partenaire): array
+    {
+        return array_values(array_filter(
+            $partenaire->getConditionPartages()->toArray(),
+            static fn (ConditionPartage $condition): bool => $condition->getPiste() === null,
+        ));
     }
 
     /**
@@ -276,9 +297,12 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
     /**
      * La première condition de la collection qui vise ce risque, ou null.
      *
+     * PUBLIQUE ET STATIQUE : la reprise de données en a besoin pour savoir quel taux
+     * paierait déjà un partenaire, et ne doit pas en écrire une seconde version.
+     *
      * @param iterable<ConditionPartage> $conditions
      */
-    private function premiereConditionApplicable(iterable $conditions, ?Risque $risque): ?ConditionPartage
+    public static function premiereConditionApplicable(iterable $conditions, ?Risque $risque): ?ConditionPartage
     {
         foreach ($conditions as $condition) {
             // UNE CONDITION D'AGENT NE PAIE PAS UN PARTENAIRE.

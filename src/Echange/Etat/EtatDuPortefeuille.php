@@ -637,7 +637,11 @@ final class EtatDuPortefeuille
 
         $condition = $this->beneficiaires->pour($partenaire)->conditionRetenue($tranche->getCotation());
 
-        return $condition?->getTaux();
+        // ⚠ SANS CONDITION, C'EST SA PART QUI PAIE — et la cellule doit le dire. Laissée
+        // vide, elle se relisait à la reprise comme un arrangement à 0 % : un simple
+        // aller-retour vers un autre cabinet aurait supprimé la rétrocommission de tous
+        // les partenaires qui n'ont que leur « Part % ».
+        return $condition !== null ? $condition->getTaux() : $partenaire->getPart();
     }
 
     /**

@@ -106,6 +106,68 @@ final class RepriseTest extends KernelTestCase
     }
 
     /**
+     * ⚠ UNE RÉFÉRENCE QUI COUVRE DEUX RISQUES FAIT DEUX AFFAIRES.
+     *
+     * « Incendie » et « Pertes d'exploitation » sous un même numéro de police : chacun a sa
+     * prime et sa commission. Convergées sur la seule référence, la seconde ligne se
+     * renvoyait à la première et son risque disparaissait de la reprise.
+     */
+    public function testUneReferenceSurDeuxRisquesFaitDeuxAffaires(): void
+    {
+        $entreprise = $this->cabinet();
+        $colonnes = $this->colonnes();
+        $reconstitueur = $this->reconstitueur();
+
+        $operations = [];
+        $lignes = [];
+        foreach (['FAP', 'PDBI'] as $rang => $risque) {
+            $lignes[] = $ligne = $this->ligne([
+                'policeReference' => 'POL/2026/001',
+                'policeDateEffet' => '01/01/2026',
+                'policeEcheance' => '31/12/2026',
+                'trancheNom' => 'Prime unique',
+                'tranchePart' => 100,
+                'assure' => 'KIN AVIA',
+                'risque' => $risque,
+                'assureur' => 'SFA CONGO',
+            ], $rang + 2);
+
+            $anomalies = [];
+            $operations = array_merge($operations, $reconstitueur->pour($ligne, $colonnes, $entreprise, $anomalies));
+            self::assertSame([], $this->erreurs($anomalies), $this->messages($anomalies));
+        }
+
+        $comptes = $this->comptesParEntite($operations);
+
+        self::assertSame(1, $comptes['Client'] ?? 0, 'Un seul client.');
+        self::assertSame(2, $comptes['Piste'] ?? 0, 'Une opportunité par risque.');
+        self::assertSame(2, $comptes['Cotation'] ?? 0, 'Une proposition par risque.');
+        self::assertSame(2, $comptes['Avenant'] ?? 0, 'Une police par risque, sous la même référence.');
+
+        // ⚠ ET CHACUN FAIT SES 100 % : le contrôle ne les additionne plus.
+        self::assertSame([], \App\Echange\Reprise\CoherenceDesParts::verifier($lignes));
+    }
+
+    /** Deux échéances à 100 % d'un MÊME risque restent une faute — la règle n'est pas levée. */
+    public function testDeuxEcheancesDUnMemeRisqueDoiventToujoursFaireCent(): void
+    {
+        $lignes = [];
+        foreach ([1, 2] as $rang) {
+            $lignes[] = $this->ligne([
+                'policeReference' => 'POL/2026/001',
+                'trancheNom' => 'Échéance ' . $rang,
+                'tranchePart' => 100,
+                'risque' => 'PDBI',
+            ], $rang + 1);
+        }
+
+        $reproches = \App\Echange\Reprise\CoherenceDesParts::verifier($lignes);
+
+        self::assertCount(2, $reproches);
+        self::assertStringContainsString('sur le risque « PDBI »', $reproches[0]->message);
+    }
+
+    /**
      * ⚠ UNE POLICE ET SON AVENANT N° 2 SONT DEUX ACTES, PAS UN DOUBLON.
      *
      * Ils partagent la référence : les confondre écraserait l'un par l'autre, et la

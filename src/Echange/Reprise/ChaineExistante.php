@@ -36,17 +36,21 @@ use Doctrine\ORM\EntityManagerInterface;
  * ces trois-là découpaient différemment, « POL/2024-17 » serait retrouvée en base pour
  * une ligne et recréée pour la suivante — le doublon reviendrait par la porte qu'on
  * croyait fermer.
+ *
+ * ── UNE RÉFÉRENCE, PLUSIEURS RISQUES ────────────────────────────────────────────────
+ * ⚠ LE RISQUE DÉPARTAGE LES POLICES D'UNE MÊME RÉFÉRENCE. Un contrat multirisque est suivi
+ * en autant d'affaires qu'il couvre de risques ({@see CleNaturelle::pourChaine()}) : deux
+ * polices de même référence et de même numéro ne sont plus une anomalie dès qu'elles
+ * portent des risques différents. L'index range donc, sous chaque clé de police, TOUTES
+ * les chaînes trouvées, et c'est le risque de la ligne qui choisit.
  */
 final class ChaineExistante
 {
     /**
-     * @var array<int, array<string, array{avenant: int, cotation: ?int, piste: ?int}>>
-     *      entreprise => clé de police => la chaîne trouvée
+     * @var array<int, array<string, array<int, array{avenant: int, cotation: ?int, piste: ?int, risques: string[]}>>>
+     *      entreprise => clé de police => les chaînes qui la portent
      */
     private array $chaines = [];
-
-    /** @var array<int, array<string, true>> entreprise => clés portées par PLUSIEURS polices */
-    private array $ambigues = [];
 
     /**
      * @var array<int, array<int, array<int, array{id: int, nom: string, payableAt: ?string, echeanceAt: ?string}>>>
@@ -69,7 +73,6 @@ final class ChaineExistante
     public function reinitialiser(): void
     {
         $this->chaines = [];
-        $this->ambigues = [];
         $this->echeances = [];
     }
 
@@ -79,6 +82,10 @@ final class ChaineExistante
      * ⚠ LE NUMÉRO EN FAIT PARTIE, comme dans {@see CleNaturelle::pourAvenant()}. Une
      * police et son avenant n° 2 partagent la référence : les confondre ferait porter à la
      * police les dates de son avenant.
+     *
+     * ⚠ LE RISQUE N'Y EST PAS, et c'est voulu : cette clé sert aussi à grouper les lignes
+     * d'un palier, qui ne doit jamais couper un contrat — tous risques confondus. Le
+     * risque départage ensuite les chaînes rangées sous elle.
      *
      * Rend `null` sans référence : il n'y a alors rien à rapprocher, et une clé vide
      * ferait converger vers une même police tout ce qui n'en porte pas.
@@ -94,7 +101,8 @@ final class ChaineExistante
     }
 
     /**
-     * LA CHAÎNE DÉJÀ EN BASE pour cette clé — police, proposition, opportunité.
+     * LA CHAÎNE DÉJÀ EN BASE pour cette police et ce risque — police, proposition,
+     * opportunité.
      *
      * Rend `null` quand rien ne correspond : c'est une reprise neuve, et l'appelant crée.
      * Rend `null` AUSSI quand la clé est ambiguë — voir {@see estAmbigue()}, que l'appelant
@@ -102,36 +110,31 @@ final class ChaineExistante
      *
      * @return array{avenant: int, cotation: ?int, piste: ?int}|null
      */
-    public function pour(?string $referencePolice, ?string $numeroAvenant, Entreprise $entreprise): ?array
+    public function pour(?string $referencePolice, ?string $numeroAvenant, ?string $risque, Entreprise $entreprise): ?array
     {
-        $cle = self::cle($referencePolice, $numeroAvenant);
-        if ($cle === null) {
+        $candidates = $this->candidates($referencePolice, $numeroAvenant, $risque, $entreprise);
+        if (count($candidates) !== 1) {
             return null;
         }
 
-        $index = $this->indexDesPolices($entreprise);
+        $chaine = $candidates[0];
+        unset($chaine['risques']);
 
-        return $index[$cle] ?? null;
+        return $chaine;
     }
 
     /**
-     * Plusieurs polices du cabinet portent-elles cette clé ?
+     * Plusieurs polices du cabinet répondent-elles à cette ligne ?
      *
-     * ⚠ C'EST UN REFUS, PAS UN CHOIX AU HASARD. Deux polices de même référence et de même
-     * numéro sont une anomalie du portefeuille — probablement le doublon d'une reprise
-     * antérieure. Y rattacher des échéances, ce serait décider laquelle des deux est la
-     * bonne, et se tromper une fois sur deux en silence.
+     * ⚠ C'EST UN REFUS, PAS UN CHOIX AU HASARD. Deux polices de même référence, de même
+     * numéro et de même risque sont une anomalie du portefeuille — probablement le doublon
+     * d'une reprise antérieure. Y rattacher des échéances, ce serait décider laquelle des
+     * deux est la bonne, et se tromper une fois sur deux en silence. Même chose pour une
+     * ligne qui ne nomme pas son risque, face à une référence qui en couvre plusieurs.
      */
-    public function estAmbigue(?string $referencePolice, ?string $numeroAvenant, Entreprise $entreprise): bool
+    public function estAmbigue(?string $referencePolice, ?string $numeroAvenant, ?string $risque, Entreprise $entreprise): bool
     {
-        $cle = self::cle($referencePolice, $numeroAvenant);
-        if ($cle === null) {
-            return false;
-        }
-
-        $this->indexDesPolices($entreprise);
-
-        return isset($this->ambigues[(int) $entreprise->getId()][$cle]);
+        return count($this->candidates($referencePolice, $numeroAvenant, $risque, $entreprise)) > 1;
     }
 
     /**
@@ -192,12 +195,62 @@ final class ChaineExistante
     }
 
     /**
-     * Les polices du cabinet, indexées par leur clé.
+     * Les chaînes en base qui répondent à cette ligne.
      *
-     * Une seule requête, en tableau : on ne veut que des identifiants et deux textes, et
-     * hydrater des milliers d'avenants pour les lire coûterait sans rien apporter.
+     * ── TROIS CAS, ET LE RISQUE DÉCIDE ─────────────────────────────────────────────
+     *   1. la ligne ne nomme pas son risque → toutes les polices de la référence : une
+     *      seule est une réponse, plusieurs sont une question qu'on ne tranche pas ;
+     *   2. elle le nomme, et des polices portent ce risque → celles-là ;
+     *   3. aucune ne le porte → les polices SANS risque connu, et elles seules.
      *
-     * @return array<string, array{avenant: int, cotation: ?int, piste: ?int}>
+     * ⚠ LE TROISIÈME CAS PROTÈGE L'EXISTANT. Une police créée à la main, ou une police
+     * qui a perdu sa proposition, n'a pas de risque en base : elle reste retrouvable par sa
+     * seule référence, comme avant. Une police qui porte un AUTRE risque, en revanche,
+     * n'est pas celle-ci — c'est un autre risque du même contrat, et la ligne crée le sien.
+     *
+     * @return array<int, array{avenant: int, cotation: ?int, piste: ?int, risques: string[]}>
+     */
+    private function candidates(?string $referencePolice, ?string $numeroAvenant, ?string $risque, Entreprise $entreprise): array
+    {
+        $cle = self::cle($referencePolice, $numeroAvenant);
+        if ($cle === null) {
+            return [];
+        }
+
+        $toutes = $this->indexDesPolices($entreprise)[$cle] ?? [];
+        $voulu = ResolveurDeRenvois::normaliser((string) $risque);
+
+        if ($voulu === '') {
+            return $toutes;
+        }
+
+        $memeRisque = array_values(array_filter(
+            $toutes,
+            static fn (array $chaine): bool => in_array($voulu, $chaine['risques'], true),
+        ));
+
+        if ($memeRisque !== []) {
+            return $memeRisque;
+        }
+
+        return array_values(array_filter(
+            $toutes,
+            static fn (array $chaine): bool => $chaine['risques'] === [],
+        ));
+    }
+
+    /**
+     * Les polices du cabinet, rangées sous leur clé.
+     *
+     * Une seule requête, en tableau : on ne veut que des identifiants et quelques textes,
+     * et hydrater des milliers d'avenants pour les lire coûterait sans rien apporter.
+     *
+     * ⚠ LE RISQUE SE RECONNAÎT PAR SON NOM OU PAR SON CODE — les deux libellés que
+     * {@see ResolveurDeRenvois} accepte pour le retrouver. « FAP » et « Fire and allied
+     * perils » désignent le même risque : n'en retenir qu'un ferait recréer l'affaire au
+     * premier classeur écrit avec l'autre.
+     *
+     * @return array<string, array<int, array{avenant: int, cotation: ?int, piste: ?int, risques: string[]}>>
      */
     private function indexDesPolices(Entreprise $entreprise): array
     {
@@ -213,9 +266,13 @@ final class ChaineExistante
                 'a.numero AS numero',
                 'IDENTITY(a.cotation) AS cotation',
                 'IDENTITY(c.piste) AS piste',
+                'r.nomComplet AS risqueNom',
+                'r.code AS risqueCode',
             )
             ->from(Avenant::class, 'a')
             ->leftJoin('a.cotation', 'c')
+            ->leftJoin('c.piste', 'p')
+            ->leftJoin('p.risque', 'r')
             ->andWhere('a.entreprise = :entreprise')
             ->setParameter('entreprise', $entreprise)
             ->orderBy('a.id', 'ASC')
@@ -229,17 +286,16 @@ final class ChaineExistante
                 continue;
             }
 
-            if (isset($index[$cle])) {
-                // Deux polices pour une clé : on le retient pour refuser explicitement,
-                // plutôt que de rattacher à la première venue.
-                $this->ambigues[$idEntreprise][$cle] = true;
-                continue;
-            }
+            $risques = array_values(array_unique(array_filter([
+                ResolveurDeRenvois::normaliser((string) ($ligne['risqueNom'] ?? '')),
+                ResolveurDeRenvois::normaliser((string) ($ligne['risqueCode'] ?? '')),
+            ], static fn (string $forme): bool => $forme !== '')));
 
-            $index[$cle] = [
+            $index[$cle][] = [
                 'avenant' => (int) $ligne['id'],
                 'cotation' => isset($ligne['cotation']) ? (int) $ligne['cotation'] : null,
                 'piste' => isset($ligne['piste']) ? (int) $ligne['piste'] : null,
+                'risques' => $risques,
             ];
         }
 

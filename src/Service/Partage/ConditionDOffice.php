@@ -113,6 +113,11 @@ final class ConditionDOffice
     public static function suivantLaPart(Partenaire $partenaire, ?float $partPrecedente): ?ConditionPartage
     {
         foreach ($partenaire->getConditionPartages() as $condition) {
+            // Une condition PROPRE À UNE AFFAIRE n'est jamais la condition d'office : elle
+            // a été écrite pour ce dossier-là, et la part de la fiche ne la gouverne pas.
+            if ($condition->getPiste() !== null) {
+                continue;
+            }
             if ($condition->getCritereRisque() !== ConditionPartage::CRITERE_PAS_RISQUES_CIBLES) {
                 continue;
             }
