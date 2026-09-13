@@ -88,6 +88,18 @@ Options -Indexes -MultiViews
     Require all denied
 </FilesMatch>
 
+# Journaux d'erreurs PHP. Ils n'ont PAS d'extension, et échappaient donc à la
+# règle ci-dessus — vérifié le 2026-09-13 sur joseara.com, où « public/error_log »
+# est apparu tout seul dès la première requête.
+# Ce n'est pas un détail : ce fichier contient des traces d'exécution, les chemins
+# absolus du serveur, et parfois des fragments de requêtes. Servi en clair, il
+# donne à un visiteur la carte du terrain.
+# PHP l'écrit dans le répertoire du script courant, donc ICI, quoi qu'on fasse :
+# on interdit le nom plutôt que d'espérer qu'il n'apparaisse pas.
+<FilesMatch "^(error_log|php_errorlog|error\.log)$">
+    Require all denied
+</FilesMatch>
+
 <IfModule mod_headers.c>
     # ---- 4. CACHE DES RESSOURCES HACHÉES ------------------------------------
     # AssetMapper nomme les fichiers « app-3f8a2b9c1d.js » : leur contenu ne peut
