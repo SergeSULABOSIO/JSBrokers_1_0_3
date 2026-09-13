@@ -204,7 +204,17 @@ MAINTENANCE_OUVERTE=0
 sortie_propre() {
   local code=$?
   if [ "$code" -ne 0 ]; then
-    ko "ECHEC (code $code). Journal complet : $JOURNAL"
+    ko "ECHEC (code $code)."
+    # Montrer l'erreur ICI, et pas seulement le chemin d'un journal.
+    # « executer » range la sortie de chaque commande dans le journal : sans ce
+    # rappel, l'écran n'affiche que « ECHEC » et un chemin de fichier, ce qui
+    # oblige à une seconde commande pour savoir ce qui s'est passé — et fait
+    # perdre, chaque fois, le temps d'un aller-retour.
+    if [ -s "$JOURNAL" ]; then
+      ko "Dernieres lignes du journal :"
+      tail -n 25 "$JOURNAL" | sed 's/^/      /' >&2
+    fi
+    ko "Journal complet : $JOURNAL"
     if [ "$MAINTENANCE_OUVERTE" -eq 1 ]; then
       ko "Le site est reste EN MAINTENANCE, deliberement."
       ko "Corrigez puis relancez, ou revenez en arriere :"
@@ -419,10 +429,31 @@ fi
 # ⚠ TANT QUE .env.local.php EXISTE, .env.local EST IGNORÉ. Toute modification
 #   des secrets exige donc de rejouer ceci — c'est pour cela que l'étape est
 #   INCONDITIONNELLE et vit dans le script de déploiement, et nulle part ailleurs.
+#
+# ── CETTE ÉTAPE NE DOIT PAS POUVOIR FAIRE ÉCHOUER UN DÉPLOIEMENT ────────────
+# C'est une OPTIMISATION, pas une nécessité : sans .env.local.php, Symfony lit
+# les fichiers .env à chaque requête, exactement comme en développement. Un peu
+# plus lent, rigoureusement identique par ailleurs.
+# La faire échouer bloquerait une mise en production pour une question de
+# performance — et laisserait le site en maintenance pour cela. On avertit, on
+# explique, et on continue.
 if [ -n "$COMPOSER_CMD" ]; then
-  executer "APP_ENV=prod $COMPOSER_CMD dump-env prod"
-  executer "chmod 600 '$APP_DIR/.env.local.php'"
-  ok "Environnement compile (.env.local.php)"
+  if APP_ENV=prod eval "$COMPOSER_CMD dump-env prod" >>"$JOURNAL" 2>&1; then
+    executer "chmod 600 '$APP_DIR/.env.local.php'"
+    ok "Environnement compile (.env.local.php)"
+  else
+    ko "dump-env a echoue — SANS GRAVITE, on continue."
+    ko "Symfony lira les fichiers .env a chaque requete : un peu plus lent,"
+    ko "strictement equivalent. Detail de l'echec :"
+    tail -n 12 "$JOURNAL" | sed 's/^/      /'
+    # Un .env.local.php ancien serait PIRE que pas de fichier du tout : tant
+    # qu'il existe, .env.local est ignoré, et la production tournerait sur des
+    # secrets périmés sans que rien ne le signale.
+    if [ -f "$APP_DIR/.env.local.php" ]; then
+      ko "Un .env.local.php PERIME existe : il est retire (il masquerait .env.local)."
+      executer "rm -f '$APP_DIR/.env.local.php'"
+    fi
+  fi
 fi
 
 # Le contrôle de base reporté par l'étape 1 en première installation. Il a lieu
