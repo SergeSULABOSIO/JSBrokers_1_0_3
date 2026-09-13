@@ -251,7 +251,29 @@ ok "Extensions PHP : toutes presentes"
 
 [ -f "$APP_DIR/.env.local" ] || { ko ".env.local absent : les secrets de production n'existent pas"; exit 1; }
 grep -q '^APP_ENV=prod' "$APP_DIR/.env.local" || { ko ".env.local ne pose pas APP_ENV=prod"; exit 1; }
-ok ".env.local present, APP_ENV=prod"
+
+# ── SYNTAXE DE .env.local ───────────────────────────────────────────────────
+# Un .env.local mal formé ne fait pas seulement échouer « dump-env » : Symfony
+# le relit à CHAQUE requête, et l'application entière répond 500.
+#
+# Le cas vécu le 2026-09-13 : une ligne de commentaire longue s'est coupée en
+# deux à la saisie dans l'éditeur. La seconde moitié ne commençait plus par
+# « # » — Symfony a tenté d'y lire un nom de variable et a rendu « Invalid
+# character in variable name », en désignant un décalage d'octets que personne
+# ne sait traduire en numéro de ligne.
+#
+# On vérifie donc ici, où le message peut encore NOMMER la ligne fautive.
+# Toute ligne doit être : vide, un commentaire, ou CLE=valeur.
+LIGNES_FAUTIVES="$(grep -nvE '^[[:space:]]*(#.*)?$|^[[:space:]]*(export[[:space:]]+)?[A-Za-z_][A-Za-z0-9_]*=' "$APP_DIR/.env.local" || true)"
+if [ -n "$LIGNES_FAUTIVES" ]; then
+  ko ".env.local contient des lignes que Symfony ne sait pas lire :"
+  printf '%s\n' "$LIGNES_FAUTIVES" | sed 's/^/      /' | tee -a "$JOURNAL"
+  ko "Chaque ligne doit etre vide, commencer par # , ou valoir CLE=valeur."
+  ko "Le plus souvent : un commentaire long coupe en deux par l'editeur."
+  ko "Corrigez avec :  nano $APP_DIR/.env.local"
+  exit 1
+fi
+ok ".env.local present, APP_ENV=prod, syntaxe valide"
 
 if [ "$SKIP_GIT" -eq 0 ]; then
   # Un fichier SUIVI modifié à la main sur le serveur sera écrasé par le reset.
