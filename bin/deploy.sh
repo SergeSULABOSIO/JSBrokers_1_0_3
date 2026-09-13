@@ -311,27 +311,19 @@ if [ ! -f "$APP_DIR/vendor/autoload_runtime.php" ]; then
   info "sont reportés après l'installation des dépendances."
 fi
 
-if [ "$PREMIERE_INSTALLATION" -eq 0 ]; then
-  # Le message de Doctrine NOMME la cause : identifiants refusés, base inconnue,
-  # hôte injoignable, socket absente. Le jeter pour afficher « Base injoignable »
-  # à la place, c'est remplacer un diagnostic par un constat — et renvoyer
-  # quelqu'un chercher à l'aveugle ce que la machine venait de lui dire.
-  if ! ERREUR_BASE="$("$PHP" bin/console dbal:run-sql "SELECT 1" --env=prod 2>&1)"; then
-    ko "Base injoignable. Ce que Doctrine repond :"
-    printf '%s\n' "$ERREUR_BASE" | tail -n 12 | sed 's/^/      /' | tee -a "$JOURNAL"
-    ko "DATABASE_URL lue (mot de passe masque) :"
-    grep -m1 '^DATABASE_URL' "$APP_DIR/.env.local" 2>/dev/null \
-      | sed -E 's#(//[^:]*:)[^@]*@#\1***@#' | sed 's/^/      /'
-    # Piège classique : ce fichier compilé prime sur .env.local. Tant qu'il
-    # existe, corriger .env.local ne change RIEN, et on tourne en rond.
-    if [ -f "$APP_DIR/.env.local.php" ]; then
-      ko "ATTENTION : .env.local.php existe et MASQUE .env.local."
-      ko "            Supprimez-le :  rm $APP_DIR/.env.local.php"
-    fi
-    exit 1
-  fi
-  ok "Base de donnees joignable"
-fi
+# ── LE CONTRÔLE DE BASE N'A PAS SA PLACE ICI ────────────────────────────────
+# Il l'avait, et c'était une erreur. Joindre la base exige de démarrer la
+# console, donc de construire le conteneur, donc un autoloader À JOUR — ce que
+# cette étape ne peut pas garantir : la carte des classes date du déploiement
+# PRÉCÉDENT, et ne connaît pas encore le code qu'on s'apprête à poser.
+#
+# Vécu le 2026-09-13 : le contrôle a rapporté « Base injoignable » alors que la
+# base allait parfaitement. La console échouait sur une classe absente de la
+# carte, et le script a accusé la base parce que c'est tout ce qu'il savait dire.
+#
+# Le contrôle a donc lieu à l'étape 6, une fois la carte reconstruite — toujours
+# AVANT la moindre migration, ce qui est la seule chose qui compte vraiment.
+info "Controle de la base : reporte apres la reconstruction de l'autoloader (etape 6)."
 
 ESPACE_MO=$(df -Pm "$APP_DIR" | awk 'NR==2{print $4}')
 [ "${ESPACE_MO:-0}" -gt 500 ] || { ko "Moins de 500 Mo libres (${ESPACE_MO} Mo)"; exit 1; }
@@ -363,7 +355,22 @@ fi
 
 if [ "$PREMIERE_INSTALLATION" -eq 0 ]; then
   titre "      Migrations en attente"
-  "$PHP" bin/console doctrine:migrations:up-to-date --env=prod 2>&1 | tee -a "$JOURNAL" || true
+  # Purement INFORMATIF, et faillible pour la même raison que le contrôle de
+  # base : la console démarre sur l'autoloader du déploiement précédent. Quand
+  # elle n'y parvient pas, on le dit en une ligne au lieu de déverser une trace
+  # qui ferait croire à une panne — l'étape 9 appliquera les migrations de toute
+  # façon, sur un conteneur, lui, reconstruit.
+  if ! MIGRATIONS_EN_ATTENTE="$("$PHP" bin/console doctrine:migrations:up-to-date --env=prod 2>&1)"; then
+    if printf '%s' "$MIGRATIONS_EN_ATTENTE" | grep -q 'not up to date\|migration'; then
+      printf '%s\n' "$MIGRATIONS_EN_ATTENTE" | sed 's/^/   /' | tee -a "$JOURNAL"
+    else
+      info "(inconsultables pour l'instant : la console demarre sur l'autoloader"
+      info " du deploiement precedent. Sans consequence — voir l'etape 9.)"
+      printf '%s\n' "$MIGRATIONS_EN_ATTENTE" >>"$JOURNAL"
+    fi
+  else
+    printf '%s\n' "$MIGRATIONS_EN_ATTENTE" | sed 's/^/   /' | tee -a "$JOURNAL"
+  fi
 else
   titre "      Migrations en attente"
   info "(non consultables avant l'installation des dependances — les 76"
@@ -462,6 +469,28 @@ else
   info "vendor/ conserve (composer.lock inchange)"
 fi
 
+# ── LA CARTE DES CLASSES, À CHAQUE FOIS ─────────────────────────────────────
+# « --classmap-authoritative » rend l'autoloader AVEUGLE au disque : il ne
+# consulte QUE la carte pré-générée. C'est ce qui le rend rapide — et c'est ce
+# qui le rend faux dès que le code bouge.
+#
+# Sauter composer quand composer.lock n'a pas changé était juste pour les
+# DÉPENDANCES, et faux pour le CODE : une classe ajoutée, renommée ou déplacée
+# dans src/ n'entre jamais dans la carte, et reste introuvable — y compris
+# lorsqu'elle est là, sous le bon nom, dans le bon fichier.
+#
+# Vérifié le 2026-09-13 : après avoir corrigé la casse d'un fichier, l'erreur
+# « Expected to find class … but it was not found » a persisté à l'identique,
+# en désignant un fichier qui existait pourtant. Elle décrivait la carte, pas
+# le disque.
+#
+# Reconstruire la carte prend quelques secondes. On le fait donc TOUJOURS,
+# install ou pas : c'est l'étape qui rend le nouveau code réellement chargeable.
+if [ -n "$COMPOSER_CMD" ]; then
+  executer "APP_ENV=prod $COMPOSER_CMD dump-autoload --no-dev --optimize --classmap-authoritative --no-interaction"
+  ok "Carte des classes reconstruite"
+fi
+
 # Compile .env + .env.local en un seul tableau PHP : plus aucun fichier .env
 # n'est analysé à chaque requête.
 # ⚠ TANT QUE .env.local.php EXISTE, .env.local EST IGNORÉ. Toute modification
@@ -494,11 +523,13 @@ if [ -n "$COMPOSER_CMD" ]; then
   fi
 fi
 
-# Le contrôle de base reporté par l'étape 1 en première installation. Il a lieu
-# ICI, c'est-à-dire dès que la console est utilisable et AVANT toute migration :
-# découvrir un DATABASE_URL fautif au moment d'écrire dans le schéma serait le
-# découvrir trop tard.
-if [ "$PREMIERE_INSTALLATION" -eq 1 ]; then
+# ── LE CONTRÔLE DE BASE, AU SEUL ENDROIT OÙ IL EST FIABLE ───────────────────
+# Ici, et pas à l'étape 1 : la console démarre, donc le conteneur se construit,
+# donc l'autoloader vient d'être refait. Un échec à ce point est donc VRAIMENT
+# un problème de base, et non un reste de la carte des classes précédente.
+# Et toujours AVANT la moindre migration — découvrir un DATABASE_URL fautif au
+# moment d'écrire dans le schéma serait le découvrir trop tard.
+if true; then
   # Le message de Doctrine NOMME la cause : identifiants refusés, base inconnue,
   # hôte injoignable, socket absente. Le jeter pour afficher « Base injoignable »
   # à la place, c'est remplacer un diagnostic par un constat — et renvoyer
