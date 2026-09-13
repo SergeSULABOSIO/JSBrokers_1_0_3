@@ -77,11 +77,25 @@ CANDIDATS_PHP="$(command -v php 2>/dev/null)
 /opt/cpanel/ea-php83/root/usr/bin/php
 /opt/cpanel/ea-php82/root/usr/bin/php"
 
+# Vrai si le binaire est un PHP en ligne de commande (SAPI « cli »).
+#
+# ⚠ CE CONTRÔLE N'EST PAS DÉCORATIF. Sur joseara.com, le « php » du PATH est un
+#   binaire **CGI** : il ne connaît pas l'option -r, et répond par son mode
+#   d'emploi — SUR LA SORTIE STANDARD. Une substitution de commande avale donc ce
+#   mode d'emploi et le prend pour un chemin. C'est ce qui s'est produit le
+#   2026-09-13 : le script a cru avoir trouvé un binaire nommé « Usage: php-cgi
+#   [-q] [-h]… ». D'où la double précaution — on vérifie la SAPI, et on jette
+#   stdout de chaque sonde.
+est_php_cli() {
+  "$1" -v 2>/dev/null | head -1 | grep -q '(cli)'
+}
+
 trouver_php() {
   local candidat
   while IFS= read -r candidat; do
     [ -n "$candidat" ] && [ -x "$candidat" ] || continue
-    "$candidat" -r 'exit(PHP_VERSION_ID >= 80200 ? 0 : 1);' 2>/dev/null || continue
+    est_php_cli "$candidat" || continue
+    "$candidat" -r 'exit(PHP_VERSION_ID >= 80200 ? 0 : 1);' >/dev/null 2>&1 || continue
     [ -z "$(extensions_manquantes "$candidat")" ] || continue
     echo "$candidat"
     return 0
@@ -100,8 +114,10 @@ if [ -z "$PHP" ]; then
   echo "Aucun PHP utilisable trouve. Etat de chaque candidat :" >&2
   while IFS= read -r c; do
     [ -n "$c" ] && [ -x "$c" ] || continue
-    v="$("$c" -r 'echo PHP_VERSION;' 2>/dev/null)"
-    if ! "$c" -r 'exit(PHP_VERSION_ID >= 80200 ? 0 : 1);' 2>/dev/null; then
+    v="$("$c" -v 2>/dev/null | head -1 | awk '{print $2}')"
+    if ! est_php_cli "$c"; then
+      printf '  %-46s %-9s pas un PHP en ligne de commande (SAPI cgi)\n' "$c" "$v" >&2
+    elif ! "$c" -r 'exit(PHP_VERSION_ID >= 80200 ? 0 : 1);' >/dev/null 2>&1; then
       printf '  %-46s %-9s trop ancien (8.2 minimum)\n' "$c" "$v" >&2
     else
       printf '  %-46s %-9s manque :%s\n' "$c" "$v" "$(extensions_manquantes "$c")" >&2
