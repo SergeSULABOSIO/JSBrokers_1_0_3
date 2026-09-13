@@ -46,6 +46,55 @@ final class PretPourLaProductionTest extends KernelTestCase
     }
 
     /**
+     * Rien de ce qui n'est pas destine au navigateur ne doit sortir de la
+     * racine web.
+     *
+     * Le piege verifie ici : les journaux d'erreurs PHP n'ont PAS d'extension.
+     * « error_log » echappait donc a la regle qui bloque *.log, et PHP l'ecrit
+     * dans le repertoire du script courant — c'est-a-dire dans public/, quoi
+     * qu'on fasse. Constate le 2026-09-13 sur joseara.com : le fichier est
+     * apparu tout seul des la premiere requete. Servi en clair, il donne les
+     * traces d'execution, les chemins absolus du serveur, et parfois des
+     * fragments de requetes.
+     */
+    public function testLaRacineWebNeLaisseFuirNiConfigurationNiJournaux(): void
+    {
+        $htaccess = (string) file_get_contents(self::racine() . '/public/.htaccess');
+
+        // Les motifs declares dans le .htaccess, extraits tels quels : on teste
+        // ce que le serveur appliquera, pas une regle recopiee a cote.
+        preg_match_all('/<FilesMatch\s+"([^"]+)"\s*>\s*Require all denied/i', $htaccess, $trouves);
+        $motifs = $trouves[1] ?? [];
+
+        self::assertNotEmpty($motifs, 'Le .htaccess doit refuser explicitement des familles de fichiers.');
+
+        $interdits = ['.env', '.env.local', 'error_log', 'php_errorlog', 'prod.log', 'services.yaml', 'composer.lock'];
+
+        foreach ($interdits as $nom) {
+            $bloque = false;
+            foreach ($motifs as $motif) {
+                if (preg_match('/' . str_replace('/', '\/', $motif) . '/i', $nom)) {
+                    $bloque = true;
+                    break;
+                }
+            }
+            self::assertTrue($bloque, sprintf('« %s » serait servi en clair depuis la racine web.', $nom));
+        }
+
+        // Et l'inverse : les fichiers que le navigateur DOIT pouvoir lire.
+        // asset-map:compile ecrit ces deux-la, et sans eux aucun script ne charge.
+        foreach (['manifest.json', 'importmap.json', 'app-3f8a2b9c1d.js'] as $nom) {
+            foreach ($motifs as $motif) {
+                self::assertDoesNotMatchRegularExpression(
+                    '/' . str_replace('/', '\/', $motif) . '/i',
+                    $nom,
+                    sprintf('« %s » doit rester accessible : le front en depend.', $nom)
+                );
+            }
+        }
+    }
+
+    /**
      * Les dossiers qui reçoivent des fichiers TÉLÉVERSÉS doivent refuser de les
      * exécuter : un document nommé « facture.php » y deviendrait sinon un
      * interpréteur de commandes à distance, ouvert à quiconque peut joindre une

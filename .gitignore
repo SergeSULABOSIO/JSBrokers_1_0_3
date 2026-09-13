@@ -63,6 +63,12 @@
 # Drapeau de maintenance posé et retiré par bin/deploy.sh.
 /public/maintenance.flag
 
+# Journal d'erreurs que PHP écrit dans le répertoire du script — donc dans la
+# racine web. Le .htaccess en interdit la lecture ; il n'a rien à faire ici pour
+# autant, et surtout rien à faire dans un commit.
+/public/error_log
+/public/php_errorlog
+
 # Sessions : par définition propres à une machine et à un instant.
 /var/sessions/
 ###< déploiement ###
