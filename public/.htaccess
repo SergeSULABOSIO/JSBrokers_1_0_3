@@ -112,6 +112,11 @@ Options -Indexes -MultiViews
 </IfModule>
 
 # ---- 6. COMPRESSION ---------------------------------------------------------
+# ⚠ SANS EFFET SUR LITESPEED — le serveur de joseara.com. LiteSpeed lit bien ce
+#   fichier (il est compatible .htaccess), mais il ignore les directives
+#   mod_deflate : sa compression se règle côté serveur, et elle est active par
+#   défaut chez la plupart des hébergeurs. Le bloc est conservé pour qu'un
+#   éventuel Apache en tire parti, et parce qu'il ne coûte rien.
 <IfModule mod_deflate.c>
     AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml \
         text/javascript application/javascript application/json \

@@ -40,9 +40,36 @@ APP_DIR="${JOSEARA_APP_DIR:-$HOME/joseara}"
 # « $HOME/public_html » si la racine de document n'a pas pu être déplacée.
 PUBLIC_DIR="${JOSEARA_PUBLIC_DIR:-$APP_DIR/public}"
 
-# Chemin ABSOLU du binaire PHP. Le « php » du PATH d'un cron n'est PAS celui du
-# site : version et extensions peuvent différer. Le diagnostic donne le bon.
-PHP="${JOSEARA_PHP:-/opt/cpanel/ea-php82/root/usr/bin/php}"
+# ── LE BINAIRE PHP ──────────────────────────────────────────────────────────
+# Le « php » du PATH d'un cron n'est PAS forcément celui qui sert le site :
+# version et extensions peuvent différer, et c'est alors le cron qui tombe, seul,
+# la nuit, sans que personne ne le voie.
+#
+# On ne devine donc pas : on CHERCHE, et on retient le premier candidat qui a la
+# bonne version. L'ordre suit ce qu'on rencontre en pratique — CloudLinux
+# (alt-php, le cas de joseara.com), puis EasyApache, puis le PATH en dernier
+# recours. JOSEARA_PHP force la main si aucun ne convient.
+trouver_php() {
+  local candidat
+  for candidat in \
+    /opt/alt/php83/usr/bin/php \
+    /opt/alt/php82/usr/bin/php \
+    /opt/cpanel/ea-php83/root/usr/bin/php \
+    /opt/cpanel/ea-php82/root/usr/bin/php \
+    "$(command -v php 2>/dev/null)"
+  do
+    [ -n "$candidat" ] && [ -x "$candidat" ] || continue
+    "$candidat" -r 'exit(PHP_VERSION_ID >= 80200 ? 0 : 1);' 2>/dev/null && { echo "$candidat"; return 0; }
+  done
+  return 1
+}
+
+PHP="${JOSEARA_PHP:-$(trouver_php || true)}"
+if [ -z "$PHP" ]; then
+  echo "Aucun PHP >= 8.2 trouve. Indiquez-le a la main :" >&2
+  echo "  JOSEARA_PHP=/chemin/vers/php bash bin/deploy.sh" >&2
+  exit 1
+fi
 
 # Composer : composer.phar déposé dans ~/bin, ou le binaire du système.
 COMPOSER_PHAR="${JOSEARA_COMPOSER:-$HOME/bin/composer.phar}"

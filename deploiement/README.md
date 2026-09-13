@@ -15,7 +15,28 @@ ensuite, seule la section **« Publier une mise à jour »** sert au quotidien.
 
 ---
 
-## Étape 1 — Interroger le serveur *(à faire en tout premier)*
+## Ce que le serveur a répondu — diagnostic du 2026-09-13
+
+| | |
+|---|---|
+| Compte | `josearac` · `/home/josearac` |
+| PHP | **8.2.28**, 64 bits, SAPI **litespeed**, CloudLinux **alt-php** (`/opt/alt/php82/usr/bin/php`) |
+| Serveur web | **LiteSpeed** — il lit les `.htaccess` comme Apache, mais ignore les directives `mod_deflate` (il compresse lui-même) |
+| `open_basedir` | **aucun** → le code peut vivre hors de la racine web : **plan A possible** |
+| `disable_functions` | **aucune** → `proc_open` disponible, donc `sendmail://` utilisable |
+| Réseau sortant | packagist 95 ms · github 75 ms · googleapis 54 ms → **`composer install` et Gemini fonctionneront sur le serveur** |
+| OPcache | actif, `validate_timestamps = true` → **les déploiements seront bien pris en compte** |
+| Disque | 2,5 To libres |
+| HTTPS | actif |
+| Horloge | serveur en **UTC**, Kinshasa à **UTC+1** → tout cron s'écrit **une heure plus tôt** |
+| ICU (intl) | **64.2** — ancienne. Sans conséquence connue ici, mais à garder en tête si un format de date ou de montant paraît inattendu |
+
+**Aucun blocage.** Sept réglages à corriger, tous dans cPanel, tous sans risque —
+voir l'étape 2. La base de données restait à créer au moment du diagnostic.
+
+---
+
+## Étape 1 — Interroger le serveur *(à refaire après chaque changement de réglage)*
 
 Quatre inconnues décident de la suite, et aucune ne se devine depuis le poste.
 
@@ -47,9 +68,9 @@ Ce qu'il faut en retenir, dans l'ordre d'importance :
 
 | Où | Quoi |
 |---|---|
-| **MultiPHP Manager** | `joseara.com` → `ea-php82` (ou 83) |
-| **Select PHP Version → Extensions** | cocher tout ce que le diagnostic a signalé manquant, plus `opcache` |
-| **MultiPHP INI Editor** | `memory_limit` 512M · `max_execution_time` 120 · `upload_max_filesize` 32M · `post_max_size` 36M · **`max_input_vars` 5000** · `opcache.validate_timestamps` 1 |
+| **Select PHP Version → Extensions** | cocher **`fileinfo`** — la seule manquante au 2026-09-13. VichUploader s'en sert pour reconnaître le type des fichiers téléversés : sans elle, tout dépôt de document échoue |
+| **Select PHP Version → Options** | `memory_limit` **128M → 512M** · `max_execution_time` **30 → 120** · `upload_max_filesize` **2M → 32M** · `post_max_size` **8M → 36M** · `max_input_vars` **1000 → 5000** · `max_input_time` **60 → 120** |
+| **Réglages OPcache** *(confort, pas bloquant)* | `opcache.memory_consumption` 128 → 192 · `opcache.max_accelerated_files` 10000 → 20000. Symfony compte plus de 10 000 fichiers : au plafond actuel, OPcache en évince en permanence et le gain retombe |
 | **MySQL Databases** | créer la base, créer l'utilisateur, puis **Add User To Database → ALL PRIVILEGES**. cPanel **préfixe** les noms du compte et les tronque : recopier le nom exact qu'il affiche |
 | **Email Accounts** | créer `contact@joseara.com` |
 | **Email Deliverability** | → **Repair** jusqu'à SPF, DKIM et PTR en vert. Sans cela, chaque e-mail d'inscription part en indésirable et l'inscription *paraît* cassée |
@@ -64,25 +85,25 @@ Ce qu'il faut en retenir, dans l'ordre d'importance :
 ### Arborescence visée
 
 ```
-/home/<compte>/
+/home/josearac/
 ├── joseara/            ← le dépôt git, HORS racine web
 │   ├── .env.local      ← les secrets, chmod 600, jamais versionné
 │   ├── public/         ← la racine web réelle
 │   └── var/            ⚠ contient des DONNÉES (voir plus bas)
-├── public_html  →  /home/<compte>/joseara/public
+├── public_html  →  /home/josearac/joseara/public
 ├── backups/            dumps SQL horodatés, hors web
 └── logs/               journaux de déploiement et de crons, hors web
 ```
 
 ```bash
 git clone --depth 1 --branch master \
-  https://github.com/SergeSULABOSIO/JSBrokers_1_0_3.git /home/<compte>/joseara
+  https://github.com/SergeSULABOSIO/JSBrokers_1_0_3.git /home/josearac/joseara
 ```
 
 ### Faire pointer la racine de document sur `public/`
 
 **Plan A — déplacer la racine (le mieux).** cPanel → **Domains** → `joseara.com`
-→ *Manage* → **Document Root** → `/home/<compte>/joseara/public`.
+→ *Manage* → **Document Root** → `/home/josearac/joseara/public`.
 
 **Plan B — lien symbolique**, si le champ est grisé :
 
@@ -92,7 +113,7 @@ mv ~/public_html ~/public_html.orig && ln -s ~/joseara/public ~/public_html
 
 **Plan C — la racine est immuable**, ou `open_basedir` interdit le hors-docroot.
 `public_html` devient alors la racine réelle : y déposer un `index.php` qui
-appelle `/home/<compte>/joseara/vendor/autoload_runtime.php`, et faire recopier
+appelle `/home/josearac/joseara/vendor/autoload_runtime.php`, et faire recopier
 `public/assets`, `public/bundles`, `public/images` et `.htaccess` par le script
 de déploiement. Ce plan demande une demi-journée de plus : ne l'adopter que si
 les plans A et B sont réellement impossibles.
@@ -106,7 +127,7 @@ les plans A et B sont réellement impossibles.
 
 ## Étape 4 — Les secrets, sur le serveur uniquement
 
-### `/home/<compte>/joseara/.env.local` — `chmod 600`, jamais versionné
+### `/home/josearac/joseara/.env.local` — `chmod 600`, jamais versionné
 
 ```bash
 APP_ENV=prod
@@ -129,9 +150,12 @@ DATABASE_URL="mysql://<user>:<mdp>@127.0.0.1:3306/<base>?serverVersion=<10.6.21-
 # Base des liens fabriqués hors requête HTTP (crons, commandes, e-mails).
 DEFAULT_URI=https://www.joseara.com
 
-# « private_ranges » si le diagnostic a montré un mandataire inverse
-# (en-têtes X-Forwarded-*). Vide sinon.
-TRUSTED_PROXIES=private_ranges
+# VIDE, et c'est voulu. Le diagnostic du 2026-09-13 n'a trouvé AUCUNE en-tête
+# X-Forwarded-* : LiteSpeed sert joseara.com directement, sans mandataire
+# inverse devant lui. Déclarer des mandataires de confiance qui n'existent pas
+# reviendrait à faire confiance à des en-têtes que n'importe quel visiteur peut
+# forger — c'est-à-dire à se laisser dicter son propre nom d'hôte.
+TRUSTED_PROXIES=
 
 # ── E-MAIL ───────────────────────────────────────────────────────────────
 # Boîte cPanel. Noter le %40 : c'est le « @ » de l'identifiant, encodé — sans
@@ -163,7 +187,7 @@ IMPORT_PALIER=25
 > modification des secrets, relancer `composer dump-env prod` — ou simplement
 > `bin/deploy.sh`, qui le fait à chaque passage.
 
-### `/home/<compte>/.my.cnf` — `chmod 600`
+### `/home/josearac/.my.cnf` — `chmod 600`
 
 Sert à `mysqldump` pour que le mot de passe n'apparaisse jamais dans `ps` ni
 dans l'historique du shell. `mysqldump` **refuse** ce fichier s'il est lisible
@@ -182,7 +206,7 @@ default-character-set = utf8mb4
 ## Étape 5 — La première mise en ligne
 
 ```bash
-cd /home/<compte>/joseara
+cd /home/josearac/joseara
 
 # Renseigner une fois le nom de la base, pour que la sauvegarde fonctionne
 export JOSEARA_DB=<base>
@@ -280,7 +304,7 @@ sauvegarde, et les migrations dépourvues de `down()`.
 3. **Les heures sont celles du serveur**, pas de Kinshasa. Le diagnostic donne
    l'écart à appliquer.
 
-Dans les lignes ci-dessous, remplacer `<compte>` et vérifier le chemin PHP.
+Dans les lignes ci-dessous, remplacer `josearac` et vérifier le chemin PHP.
 Les heures sont exprimées **en heure de Kinshasa**.
 
 ```cron
@@ -288,49 +312,49 @@ Les heures sont exprimées **en heure de Kinshasa**.
 # ⚠ LA PREMIÈRE SEMAINE, RETIRER « --force » : sans lui la commande est en
 #   répétition à blanc par construction et rapporte qui SERAIT relancé. On lit
 #   sept jours avant d'écrire à de vrais valideurs.
-30 6 * * * cd /home/<compte>/joseara && /opt/cpanel/ea-php82/root/usr/bin/php -d memory_limit=512M bin/console app:conges:rappels --force --env=prod --no-interaction >> /home/<compte>/logs/conges-rappels.log 2>&1
+30 5 * * * cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=512M bin/console app:conges:rappels --force --env=prod --no-interaction >> /home/josearac/logs/conges-rappels.log 2>&1
 
 # 01:15 — Synchronisation CRM.
-15 1 * * * cd /home/<compte>/joseara && /opt/cpanel/ea-php82/root/usr/bin/php -d memory_limit=512M bin/console app:crm:sync --env=prod --no-interaction >> /home/<compte>/logs/crm-sync.log 2>&1
+15 0 * * * cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=512M bin/console app:crm:sync --env=prod --no-interaction >> /home/josearac/logs/crm-sync.log 2>&1
 
 # 01:45 — Automatisations CRM. Trente minutes APRÈS le sync, délibérément :
 # elles lisent les instantanés de santé qu'il vient d'écrire.
-45 1 * * * cd /home/<compte>/joseara && /opt/cpanel/ea-php82/root/usr/bin/php -d memory_limit=512M bin/console app:crm:run-automations --env=prod --no-interaction >> /home/<compte>/logs/crm-automations.log 2>&1
+45 0 * * * cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=512M bin/console app:crm:run-automations --env=prod --no-interaction >> /home/josearac/logs/crm-automations.log 2>&1
 
 # 02:30 — Purge des dépôts d'import expirés.
 # ENJEU DE CONFIDENTIALITÉ, pas d'espace disque : ces dépôts contiennent des
 # données de clients, et leur expiration est une promesse faite aux cabinets.
 # Première semaine avec « --simuler ». Ensuite, SURVEILLER que ce cron tourne :
 # son silence ressemble à un succès.
-30 2 * * * cd /home/<compte>/joseara && /opt/cpanel/ea-php82/root/usr/bin/php -d memory_limit=512M bin/console app:echange:purger --env=prod --no-interaction >> /home/<compte>/logs/echange-purge.log 2>&1
+30 1 * * * cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=512M bin/console app:echange:purger --env=prod --no-interaction >> /home/josearac/logs/echange-purge.log 2>&1
 
 # 1er janvier — Ouverture de l'exercice de congés.
 # Un cron annuel est un cron dont on découvre la panne un an trop tard : le
 # 15 décembre, le lancer À LA MAIN sans « --force » et lire le résultat.
-5 0 1 1 * cd /home/<compte>/joseara && /opt/cpanel/ea-php82/root/usr/bin/php -d memory_limit=512M bin/console app:conges:ouvrir-exercice --force --env=prod --no-interaction >> /home/<compte>/logs/conges-exercice.log 2>&1
+5 23 31 12 * cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=512M bin/console app:conges:ouvrir-exercice --force --env=prod --no-interaction >> /home/josearac/logs/conges-exercice.log 2>&1
 
 # 03:00 — LE CRON LE PLUS IMPORTANT DE LA LISTE.
 # Ne pas se reposer sur les sauvegardes de l'hébergeur : leur rétention et leur
 # délai de restauration ne sont pas sous votre contrôle. Et descendre une copie
 # HORS du serveur une fois par mois — une sauvegarde qui vit sur la machine
 # qu'elle protège n'en est pas une.
-0 3 * * * /usr/bin/mysqldump --defaults-file=/home/<compte>/.my.cnf --single-transaction --quick --routines --triggers --default-character-set=utf8mb4 <base> | /usr/bin/gzip -9 > /home/<compte>/backups/auto-$(date +\%Y\%m\%d).sql.gz 2>> /home/<compte>/logs/backup.log
+0 2 * * * /usr/bin/mysqldump --defaults-file=/home/josearac/.my.cnf --single-transaction --quick --routines --triggers --default-character-set=utf8mb4 <base> | /usr/bin/gzip -9 > /home/josearac/backups/auto-$(date +\%Y\%m\%d).sql.gz 2>> /home/josearac/logs/backup.log
 
 # 03:30 — Rétention des sauvegardes de base à 30 jours.
-30 3 * * * /usr/bin/find /home/<compte>/backups -name 'auto-*.sql.gz' -mtime +30 -delete
+30 2 * * * /usr/bin/find /home/josearac/backups -name 'auto-*.sql.gz' -mtime +30 -delete
 
 # 03:45 dimanche — SAUVEGARDE DES FICHIERS. Un dump de base SEUL est une
 # demi-sauvegarde : les documents vivent sur le DISQUE, la base ne contient que
 # leurs noms. Restaurer l'un sans l'autre donne une application qui liste des
 # pièces jointes introuvables — et personne ne s'en aperçoit avant d'en ouvrir
 # une. Environ 215 Mo au 2026-09-13, d'où la cadence hebdomadaire.
-45 3 * * 0 cd /home/<compte>/joseara && /usr/bin/tar czf /home/<compte>/backups/fichiers-$(date +\%Y\%m\%d).tar.gz var/uploads/assistant var/uploads/assistant-documents public/uploads/documents public/images/entreprises 2>> /home/<compte>/logs/backup.log
+45 2 * * 0 cd /home/josearac/joseara && /usr/bin/tar czf /home/josearac/backups/fichiers-$(date +\%Y\%m\%d).tar.gz var/uploads/assistant var/uploads/assistant-documents public/uploads/documents public/images/entreprises 2>> /home/josearac/logs/backup.log
 
 # 04:15 dimanche — Rétention des sauvegardes de fichiers à 60 jours.
-15 4 * * 0 /usr/bin/find /home/<compte>/backups -name 'fichiers-*.tar.gz' -mtime +60 -delete
+15 3 * * 0 /usr/bin/find /home/josearac/backups -name 'fichiers-*.tar.gz' -mtime +60 -delete
 
 # Dimanche 04:00 — Entretien des journaux de crons (que personne ne borne).
-0 4 * * 0 /usr/bin/find /home/<compte>/logs -name '*.log' -size +20M -exec /usr/bin/truncate -s 0 {} \; ; /usr/bin/find /home/<compte>/logs -name 'deploy-*.log' -mtime +60 -delete
+0 3 * * 0 /usr/bin/find /home/josearac/logs -name '*.log' -size +20M -exec /usr/bin/truncate -s 0 {} \; ; /usr/bin/find /home/josearac/logs -name 'deploy-*.log' -mtime +60 -delete
 ```
 
 ### Worker Messenger : inutile au premier déploiement
@@ -343,7 +367,7 @@ Le cron ci-dessous n'est à créer que le jour d'un passage à
 `ASSISTANT_ASYNC=1` :
 
 ```cron
-*/5 * * * * /usr/bin/flock -n /home/<compte>/joseara/var/worker.lock -c "cd /home/<compte>/joseara && /opt/cpanel/ea-php82/root/usr/bin/php -d memory_limit=256M bin/console messenger:consume async --time-limit=280 --memory-limit=200M --limit=100 --env=prod --no-interaction -q" >> /home/<compte>/logs/worker.log 2>&1
+*/5 * * * * /usr/bin/flock -n /home/josearac/joseara/var/worker.lock -c "cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=256M bin/console messenger:consume async --time-limit=280 --memory-limit=200M --limit=100 --env=prod --no-interaction -q" >> /home/josearac/logs/worker.log 2>&1
 ```
 
 `flock -n` empêche deux workers de se superposer · `--time-limit=280` fait
