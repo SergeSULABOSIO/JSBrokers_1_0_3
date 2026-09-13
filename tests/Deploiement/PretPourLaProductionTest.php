@@ -245,6 +245,53 @@ final class PretPourLaProductionTest extends KernelTestCase
     }
 
     /**
+     * Le jeu de caractères des tables ne doit dépendre d'AUCUN serveur.
+     *
+     * Le « charset » de DATABASE_URL ne règle que la connexion. Ce qu'une table
+     * adopte à sa création vient du défaut de la BASE — donc de l'hébergeur.
+     * Celui de joseara.com annonce latin1 : sans cette déclaration, les 27
+     * CREATE TABLE écrits à la main (crm_*, demande_conge, assistant_document,
+     * les congés) seraient nés en latin1 à côté de 26 autres en utf8mb4.
+     *
+     * Et la panne n'aurait pas ressemblé à un problème d'encodage : une
+     * jointure entre deux tables de collations différentes échoue sur
+     * « Illegal mix of collations », à un endroit qui ne dit rien de la cause.
+     */
+    public function testLeJeuDeCaracteresDesTablesNeDependDAucunServeur(): void
+    {
+        $doctrine = (string) file_get_contents(self::racine() . '/config/packages/doctrine.yaml');
+
+        self::assertMatchesRegularExpression(
+            '/default_table_options:\s+charset:\s*utf8mb4/',
+            $doctrine,
+            'doctrine.yaml doit imposer utf8mb4 aux tables créées, sinon elles héritent du défaut de l\'hébergeur.'
+        );
+
+        self::assertMatchesRegularExpression(
+            '/collate:\s*utf8mb4_unicode_ci/',
+            $doctrine,
+            'La collation doit être utf8mb4_unicode_ci — celle des tables déjà créées, et la seule qui trie correctement les accents.'
+        );
+
+        // Et la déclaration doit ABOUTIR jusqu'à la connexion : c'est Doctrine
+        // qu'on interroge, pas le fichier. Une clé mal placée dans le YAML
+        // serait acceptée sans broncher et n'aurait aucun effet.
+        self::bootKernel();
+        $parametres = self::getContainer()->get('doctrine.dbal.default_connection')->getParams();
+
+        self::assertSame(
+            'utf8mb4',
+            $parametres['defaultTableOptions']['charset'] ?? null,
+            'Le charset par défaut n\'atteint pas la connexion Doctrine.'
+        );
+        self::assertSame(
+            'utf8mb4_unicode_ci',
+            $parametres['defaultTableOptions']['collate'] ?? null,
+            'La collation par défaut n\'atteint pas la connexion Doctrine.'
+        );
+    }
+
+    /**
      * L'application doit DÉCLARER ses exigences PHP, et pas seulement compter
      * sur un panneau d'hébergeur.
      *

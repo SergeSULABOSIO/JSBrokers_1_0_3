@@ -9,6 +9,27 @@ doctrine:
         profiling_collect_backtrace: '%kernel.debug%'
         use_savepoints: true
 
+        # ── JEU DE CARACTÈRES DES TABLES CRÉÉES ─────────────────────────────
+        # Le « charset » de DATABASE_URL ne règle que la CONNEXION. Ce qu'une
+        # table adopte à sa création, lui, vient du défaut de la BASE — donc du
+        # serveur, donc de l'hébergeur.
+        #
+        # Vérifié le 2026-09-13 sur joseara.com : character_set_server = latin1.
+        # Or 27 de nos 53 CREATE TABLE sont écrits à la main et ne déclarent
+        # aucun charset (crm_*, demande_conge, assistant_document, conges…).
+        # Ils seraient nés en latin1, à côté de 26 autres en utf8mb4 — et la
+        # panne n'aurait pas ressemblé à un problème d'encodage : une jointure
+        # entre deux tables de collations différentes échoue sur « Illegal mix
+        # of collations », loin de la table fautive.
+        #
+        # Déclaré ici, le jeu de caractères ne dépend plus de personne : il
+        # voyage avec l'application, sur n'importe quel hébergeur.
+        # utf8mb4_unicode_ci, et non general_ci : c'est déjà la collation des 26
+        # tables existantes, et la seule qui trie correctement les accents.
+        default_table_options:
+            charset: utf8mb4
+            collate: utf8mb4_unicode_ci
+
         # PAS de schema_filter sur messenger_messages. On a cru en avoir besoin
         # pour empêcher `migrations:diff` de proposer un DROP TABLE sur une table
         # sans entité ; vérifié le 2026-08-15, c'est faux : symfony/doctrine-messenger
