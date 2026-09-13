@@ -1,8 +1,19 @@
 framework:
     router:
-        # Configure how to generate URLs in non-HTTP contexts, such as CLI commands.
-        # See https://symfony.com/doc/current/routing.html#generating-urls-in-commands
-        #default_uri: http://localhost
+        # URL de base des URL fabriquées HORS requête HTTP : commandes de console,
+        # crons, gestionnaires de messages. Sans elle, Symfony suppose
+        # « http://localhost » — c'est-à-dire le poste du DESTINATAIRE.
+        #
+        # Trois chemins du code en dépendent, et aucun ne pouvait le signaler :
+        #   · src/Crm/CrmCampagneService.php        — lien de campagne envoyé aux clients
+        #   · src/Service/Conge/CongeMailer.php     — bouton de la relance de congé
+        #   · src/Service/Onboarding/OnboardingNotifier.php — bouton de la synthèse
+        # Les deux derniers se replient proprement sur « pas de bouton » ; le premier
+        # envoyait bel et bien « http://localhost/login » à de vraies personnes.
+        #
+        # Valeur en dev : http://localhost:8000 (.env). En production :
+        # https://www.joseara.com, posé dans .env.local du serveur.
+        default_uri: '%env(DEFAULT_URI)%'
 
 when@prod:
     framework:

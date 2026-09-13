@@ -1,0 +1,51 @@
+---
+# =============================================================================
+#  JOSEARA — DÉPLOIEMENT SANS SSH, par cPanel → Git Version Control
+# -----------------------------------------------------------------------------
+#  Ces tâches sont exécutées par un shell, sous l'identité du compte cPanel,
+#  quand on clique sur « Deploy HEAD Commit » dans l'interface. C'est la porte
+#  d'entrée « shell » du jour où SSH n'est pas disponible — et elle exécute
+#  EXACTEMENT le même bin/deploy.sh que la voie SSH. La piste sans SSH n'est
+#  donc pas une version dégradée : seule la lecture interactive de la sortie est
+#  perdue (elle se retrouve dans le journal de déploiement de cPanel et dans
+#  ~/logs/deploy-*.log).
+#
+#  ── MODE D'EMPLOI ───────────────────────────────────────────────────────────
+#    1. cPanel → Git Version Control → Create
+#         Clone URL : https://github.com/SergeSULABOSIO/JSBrokers_1_0_3.git
+#         Repository Path : /home/<compte>/repositories/joseara
+#    2. À chaque publication : « Update from Remote », puis « Deploy HEAD Commit ».
+#
+#  ── POURQUOI UN rsync, ET PAS UN DÉPLOIEMENT SUR PLACE ──────────────────────
+#  cPanel clone dans son propre répertoire (~/repositories/joseara), qu'il gère
+#  lui-même. On n'y touche pas : on SYNCHRONISE vers le dossier de production,
+#  puis on lance le script habituel. Les exclusions ci-dessous sont l'essentiel
+#  de la sécurité de l'opération — ce sont les dossiers qui contiennent des
+#  DONNÉES, et que « --delete » effacerait sans le moindre avertissement.
+# =============================================================================
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/joseara/joseara
+    - /bin/mkdir -p $DEPLOYPATH
+    # --delete est volontaire sur le CODE (un fichier supprimé dans le dépôt
+    # doit disparaître du serveur), mais chaque exclusion ci-dessous protège
+    # soit une donnée utilisateur, soit un secret, soit un artefact que
+    # bin/deploy.sh régénère lui-même.
+    - >
+      /usr/bin/rsync -a --delete
+      --exclude '.git'
+      --exclude 'var/'
+      --exclude 'vendor/'
+      --exclude '.env.local'
+      --exclude '.env.local.php'
+      --exclude 'public/uploads/'
+      --exclude 'public/pdfs/'
+      --exclude 'public/images/entreprises/'
+      --exclude 'public/assets/'
+      --exclude 'public/bundles/'
+      --exclude 'public/maintenance.flag'
+      ./ $DEPLOYPATH/
+    # --skip-git : le code vient d'être posé par le rsync ci-dessus, il n'y a
+    # rien à tirer. Le reste du script — sauvegarde, maintenance, composer,
+    # cache, assets, migrations, contrôle — s'exécute normalement.
+    - /bin/bash $DEPLOYPATH/bin/deploy.sh --skip-git 2>&1 | tail -100

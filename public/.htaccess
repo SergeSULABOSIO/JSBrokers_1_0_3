@@ -1,0 +1,119 @@
+# =============================================================================
+#  JOSEARA — RÈGLES APACHE DE LA RACINE WEB
+# -----------------------------------------------------------------------------
+#  CE FICHIER EST INDISPENSABLE. Sans lui, Apache cherche un fichier réel pour
+#  chaque URL : « /connexion » ne correspond à rien sur le disque, et TOUTES les
+#  routes de l'application répondent 404. Seule « / » fonctionnerait, par le
+#  DirectoryIndex ci-dessous.
+#
+#  Écrit à la main plutôt qu'installé par « symfony/apache-pack » : le bloc de
+#  réécriture est celui, officiel, de ce paquet, mais le fichier porte aussi la
+#  maintenance, les en-têtes de sécurité et le cache — qu'il aurait fallu y
+#  ajouter de toute façon. Une dépendance de moins à résoudre sur le serveur.
+# =============================================================================
+
+DirectoryIndex index.php
+
+# Pas de listage de répertoire, pas de négociation de contenu (MultiViews ferait
+# répondre « /note » pour « /note.php », ce qui brouille le routage Symfony).
+Options -Indexes -MultiViews
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # ---- 0. PAGE DE MAINTENANCE --------------------------------------------
+    # bin/deploy.sh crée « maintenance.flag » avant de toucher au code et le
+    # supprime après les migrations. Tant qu'il est là, tout le monde reçoit la
+    # page d'attente — sauf l'adresse IP de l'administrateur, qui peut vérifier
+    # le résultat AVANT de rouvrir.
+    #
+    # Le code 503 (et non un 200 « site en travaux ») est ce qui empêche les
+    # moteurs de recherche de désindexer les pages : il dit « revenez », pas
+    # « cette page n'existe plus ».
+    #
+    # ⚠ Remplacer 203.0.113.7 par votre adresse IP publique (https://ifconfig.me)
+    #   pour pouvoir consulter le site pendant une maintenance.
+    RewriteCond %{DOCUMENT_ROOT}/maintenance.flag -f
+    RewriteCond %{REMOTE_ADDR} !^203\.0\.113\.7$
+    RewriteCond %{REQUEST_URI} !^/maintenance\.html$
+    RewriteRule ^ /maintenance.html [R=503,L]
+    ErrorDocument 503 /maintenance.html
+
+    # ---- 1. NOM CANONIQUE ET HTTPS -----------------------------------------
+    # ⚠ NE DÉCOMMENTER QUE SI l'option « Force HTTPS Redirect » de cPanel
+    #   (Domaines → joseara.com) est LAISSÉE ÉTEINTE. Les deux ensemble
+    #   produisent une boucle de redirection infinie.
+    # RewriteCond %{HTTPS} !=on
+    # RewriteRule ^ https://www.joseara.com%{REQUEST_URI} [L,R=301]
+    # RewriteCond %{HTTP_HOST} !^www\.joseara\.com$ [NC]
+    # RewriteRule ^ https://www.joseara.com%{REQUEST_URI} [L,R=301]
+
+    # ---- 2. RÉÉCRITURE SYMFONY (bloc officiel symfony/apache-pack) ----------
+    # Détermine le préfixe d'URL réel du dossier, même servi depuis un
+    # sous-répertoire.
+    RewriteCond %{REQUEST_URI}::$0 ^(/.+)/(.*)::\2$
+    RewriteRule .* - [E=BASE:%1]
+
+    # Certaines configurations FastCGI/CGI n'exposent pas l'en-tête
+    # Authorization à PHP : on la réinjecte explicitement.
+    RewriteCond %{HTTP:Authorization} .+
+    RewriteRule ^ - [E=HTTP_AUTHORIZATION:%0]
+
+    # Une seule URL canonique : « /index.php/foo » redirige vers « /foo ».
+    RewriteCond %{ENV:REDIRECT_STATUS} =""
+    RewriteRule ^index\.php(?:/(.*)|$) %{ENV:BASE}/$1 [R=301,L]
+
+    # Tout ce qui ne correspond pas à un fichier réel part vers Symfony.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ %{ENV:BASE}/index.php [L]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    # Filet : si mod_rewrite venait à manquer, on dirige au moins la racine vers
+    # le contrôleur frontal plutôt que d'afficher une liste de fichiers.
+    <IfModule mod_alias.c>
+        RedirectMatch 307 ^/$ /index.php/
+    </IfModule>
+</IfModule>
+
+# ---- 3. RIEN NE FUIT --------------------------------------------------------
+# Refuse tout fichier caché (.env, .git, .htpasswd…) et toute extension qui n'a
+# rien à faire dans une réponse HTTP.
+# ⚠ NE PAS ajouter « .json » ici : asset-map:compile écrit manifest.json et
+#   importmap.json dans /assets, et le navigateur DOIT pouvoir les lire.
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+<FilesMatch "\.(ya?ml|twig|dist|lock|sql|log|sh|ps1|bak|ini|sqlite|db|md)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+    # ---- 4. CACHE DES RESSOURCES HACHÉES ------------------------------------
+    # AssetMapper nomme les fichiers « app-3f8a2b9c1d.js » : leur contenu ne peut
+    # pas changer sans que leur nom change. On peut donc les figer un an, ce qui
+    # supprime la quasi-totalité des requêtes conditionnelles — précieux sur un
+    # mutualisé, où chaque requête PHP coûte.
+    <FilesMatch "-[0-9a-zA-Z_]{7,}\.(js|css|png|jpe?g|gif|svg|webp|woff2?|ico|map)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+
+    # ---- 5. EN-TÊTES DE SÉCURITÉ --------------------------------------------
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+
+    # HSTS : à n'activer QU'APRÈS avoir vérifié que HTTPS répond sur
+    # joseara.com ET www.joseara.com. Une fois l'en-tête envoyée, un navigateur
+    # REFUSERA le HTTP pendant toute la durée annoncée — y compris si le
+    # certificat expire.
+    # Header always set Strict-Transport-Security "max-age=15768000; includeSubDomains"
+</IfModule>
+
+# ---- 6. COMPRESSION ---------------------------------------------------------
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml \
+        text/javascript application/javascript application/json \
+        application/xml image/svg+xml application/wasm
+</IfModule>

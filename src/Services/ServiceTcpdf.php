@@ -7,7 +7,9 @@ use App\Constantes\MyPDFHeaderAndFooter;
 use App\Controller\Admin\EtatsController;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
+use App\Marque;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use TCPDF;
 
 class ServiceTcpdf
@@ -17,6 +19,13 @@ class ServiceTcpdf
 
     public function __construct(
         private Security $security,
+        /**
+         * Racine publique, en chemin ABSOLU. Le logo etait designe par un chemin
+         * relatif - donc resolu contre le repertoire courant du PROCESSUS, qui
+         * n'est pas le meme sous « symfony serve », sous Apache et sous un cron.
+         */
+        #[Autowire('%kernel.project_dir%/public')]
+        private readonly string $publicDir,
     ) {}
 
     public function getTcpdf(?string $page_orientation, ?string $titre, bool $withHeader = true, bool $withFooter = true): TCPDF
@@ -68,18 +77,29 @@ class ServiceTcpdf
     public function setLogo(?Entreprise $entreprise)
     {
         // $image_file = K_PATH_IMAGES . 'logo_example.jpg';
-        $image_file = "./images/entreprises/logo.jpg";
+        // Chemin ABSOLU : « ./images/... » se resolvait contre le repertoire
+        // courant du processus. Cela tombait juste sous le serveur de
+        // developpement, ou ce repertoire est public/ - et faux partout ailleurs.
+        $image_file = $this->publicDir . '/images/entreprises/logo.jpg';
         $image_width = 15;
         $image_height = 15;
         $image_x = 15;
         $image_y = 10;
         $image_type = 'JPG';
-        $image_link = 'http://www.aib-brokers.com';
+        // Marque COURANTE, et en HTTPS. « aib-brokers.com » etait l'ancien nom,
+        // pose en clair sur le logo de tous les documents produits par TCPDF.
+        $image_link = 'https://www.' . Marque::DOMAINE;
         $image_align = "N"; //$align Indicates the alignment of the pointer next to image insertion relative to image height. The value can be:<ul><li>T: top-right for LTR or top-left for RTL</li><li>M: middle-right for LTR or middle-left for RTL</li><li>B: bottom-right for LTR or bottom-left for RTL</li><li>N: next line</li></ul>
         $image_resize = false;
         $image_dpi = 300;
         $image_palign = "C"; //$palign Allows to center or align the image on the current line. Possible values are:<ul><li>L : left align</li><li>C : center</li><li>R : right align</li><li>'' : empty string : left for LTR or right for RTL</li></ul>
-        $this->tcpdf->Image($image_file, $image_x, $image_y, $image_width, $image_height, $image_type, $image_link, $image_align, $image_resize, $image_dpi, $image_palign, false, false, 0, false, false, false);
+        // Un logo absent - fichier non televerse, dossier vide apres un premier
+        // deploiement - ne doit pas faire echouer le document entier : TCPDF
+        // leve une exception sur une image introuvable. On imprime le PDF sans
+        // logo plutot que de ne rien imprimer du tout.
+        if (is_file($image_file)) {
+            $this->tcpdf->Image($image_file, $image_x, $image_y, $image_width, $image_height, $image_type, $image_link, $image_align, $image_resize, $image_dpi, $image_palign, false, false, 0, false, false, false);
+        }
 
         // Set font
         $font_family = 'helvetica';

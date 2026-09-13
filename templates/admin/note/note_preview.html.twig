@@ -6,7 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aperçu — {{ note.typeString }} {{ note.reference }} | {{ entreprise.nom|default('Joseara') }}</title>
     <link rel="icon" href="{{ asset('images/entreprises/logofav.png') }}" type="image/png">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    {# ── FEUILLE DE STYLE LOCALE, PAS DE CDN ─────────────────────────────────
+       Ce gabarit sert DEUX usages : l'aperçu à l'écran (NoteController::preview)
+       et le rendu PDF par DomPDF (NoteController::downloadPdf). Dans le second,
+       un <link> distant déclenche un téléchargement HTTPS SYNCHRONE depuis le
+       SERVEUR, à chaque PDF produit — c'est-à-dire un délai d'expiration quasi
+       certain sur un hébergement mutualisé, et un PDF sans aucun style dans le
+       meilleur des cas.
+       On incorpore donc la feuille locale : aucun réseau, aucun délai, et le
+       même rendu à l'écran et sur le papier. Bootstrap est déjà une dépendance
+       déclarée d'importmap.php, présente dans assets/vendor/ et versionnée. #}
+    <style>{{ source('@assetsvendor/bootstrap/dist/css/bootstrap.min.css') }}</style>
     <style>
         @page {
             size: A4 portrait;

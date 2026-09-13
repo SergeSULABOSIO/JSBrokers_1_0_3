@@ -65,3 +65,42 @@ when@dev:
                 # du profiler Symfony — aucun worker à lancer. Couplé à MAILER_DSN=null://null
                 # (.env.dev), l'envoi est un no-op inoffensif (pas de SMTP requis, pas d'échec).
                 Symfony\Component\Mailer\Messenger\SendEmailMessage: sync
+
+when@prod:
+    framework:
+        messenger:
+            routing:
+                # ── POURQUOI « sync » ET NON « async » EN PRODUCTION ─────────────────
+                # L'hébergement est MUTUALISÉ : aucun superviseur (systemd, supervisor)
+                # n'y maintient de worker vivant. Le seul substitut possible est un cron
+                # périodique — ce qui ferait attendre PLUSIEURS MINUTES le lien de
+                # vérification d'une inscription, une invitation de collaborateur, un
+                # lien de relevé envoyé à un client. Pour ces messages-là, c'est
+                # inacceptable : l'utilisateur est devant son écran et conclut que
+                # l'inscription est cassée.
+                #
+                # Pire encore : sans worker du tout — l'état par défaut d'un mutualisé —
+                # « async » ne retarde pas les e-mails, il les PERD DE VUE. Ils
+                # s'accumulent indéfiniment dans messenger_messages, sans erreur, sans
+                # trace, sans que personne ne s'en aperçoive.
+                #
+                # En « sync », l'e-mail part PENDANT la requête : s'il échoue, on le sait
+                # tout de suite, au bon endroit, avec la bonne exception.
+                #
+                # ── CE QUE ÇA COÛTE ─────────────────────────────────────────────────
+                # La requête qui déclenche un envoi porte la latence SMTP. Les actions
+                # concernées sont rares (inscription, invitation, envoi de relevé) et
+                # l'utilisateur les vit comme des actions « lourdes » de toute façon.
+                #
+                # ── COMMENT REVENIR EN ARRIÈRE ──────────────────────────────────────
+                # Le jour où un worker fiable existera (VPS, systemd, supervisor), il
+                # suffira de SUPPRIMER ce bloc entier : le routage « async » déclaré
+                # plus haut reprendra la main, sans aucun autre changement.
+                Symfony\Component\Mailer\Messenger\SendEmailMessage: sync
+                Symfony\Component\Notifier\Message\ChatMessage: sync
+                Symfony\Component\Notifier\Message\SmsMessage: sync
+
+                # Esquisse non implementee (voir EntreprisePDFMessageHandler). En
+                # « async » sans worker, ce message s'empilerait indefiniment dans
+                # messenger_messages sans que personne ne s'en apercoive.
+                App\Message\EntreprisePDFMessage: sync

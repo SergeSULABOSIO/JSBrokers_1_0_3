@@ -1,0 +1,12 @@
+# Normalisation des fins de ligne.
+#
+# Par défaut, git convertit en CRLF à l'extraction sur Windows. Pour les
+# dépendances front VERSIONNÉES (assets/vendor), cela produirait un contenu
+# différent sur le poste et sur le serveur Linux — donc des empreintes
+# différentes après « asset-map:compile », et un cache navigateur invalidé sans
+# raison à chaque déploiement. On les fige en LF, comme leur éditeur les publie.
+/assets/vendor/** text eol=lf
+
+# Les scripts exécutés par le serveur Linux ne tolèrent pas le CRLF : un
+# « \r » en fin de shebang fait répondre « bad interpreter » à bash.
+*.sh text eol=lf

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Joseara — mise à jour en cours</title>
+    <style>
+        /* Page volontairement AUTONOME : aucune dépendance à /assets, puisqu'elle
+           doit s'afficher précisément pendant que ces fichiers sont reconstruits.
+           Aucune police distante non plus — le serveur peut être coupé du réseau. */
+        :root {
+            --fond: #f4f6f9;
+            --carte: #ffffff;
+            --encre: #16213e;
+            --encre-douce: #5a6478;
+            --cobalt: #0047AB;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --fond: #10131a;
+                --carte: #1a1f2b;
+                --encre: #e8ecf4;
+                --encre-douce: #9aa4b8;
+                --cobalt: #6ea8ff;
+            }
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: var(--fond);
+            color: var(--encre);
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.6;
+        }
+
+        .carte {
+            max-width: 33rem;
+            width: 100%;
+            padding: 2.75rem 2.5rem;
+            background: var(--carte);
+            border-radius: 14px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, .08);
+            text-align: center;
+        }
+
+        .marque {
+            font-size: 1.05rem;
+            font-weight: 700;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--cobalt);
+            margin-bottom: 1.75rem;
+        }
+
+        h1 {
+            font-size: 1.45rem;
+            margin: 0 0 1rem;
+            font-weight: 600;
+        }
+
+        p {
+            margin: .6rem 0;
+            color: var(--encre-douce);
+        }
+
+        .rassurance {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(128, 128, 128, .18);
+            font-size: .9rem;
+        }
+
+        a {
+            color: var(--cobalt);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        a:hover,
+        a:focus-visible {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <main class="carte">
+        <div class="marque">Joseara</div>
+        <h1>Nous revenons dans quelques minutes</h1>
+        <p>Une mise à jour de la plateforme est en cours d'installation.</p>
+        <p>
+            <strong>Aucune donnée n'est perdue.</strong> Reconnectez-vous d'ici une
+            dizaine de minutes&nbsp;: vous retrouverez tout exactement là où vous
+            l'aviez laissé.
+        </p>
+        <p class="rassurance">
+            Une question&nbsp;? <a href="mailto:contact@joseara.com">contact@joseara.com</a>
+        </p>
+    </main>
+</body>
+</html>

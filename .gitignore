@@ -20,8 +20,19 @@
 ###< symfony/phpunit-bridge ###
 
 ###> symfony/asset-mapper ###
+# Artefact recalculé à chaque déploiement par « asset-map:compile » : copie et
+# hachage de fichiers déjà présents, aucun réseau. Rien à versionner.
 /public/assets/
-/assets/vendor/
+
+# ⚠ « /assets/vendor/ » N'EST PLUS IGNORÉ — C'EST DÉLIBÉRÉ, pas l'oubli d'une
+# recette Symfony. Ce sont les dépendances front figées d'importmap.php
+# (Bootstrap, Stimulus, Turbo, TinyMCE, Chart.js, Tom Select…).
+#
+# Les versionner supprime la dépendance du DÉPLOIEMENT à un accès HTTPS sortant
+# vers cdn.jsdelivr.net — accès qu'un hébergement mutualisé ne garantit pas, et
+# dont l'échec laisserait le site à moitié à jour, sans JS ni CSS.
+# Elles se rafraîchissent EN LOCAL, par « php bin/console importmap:install »,
+# étape intégrée à bin/publier.ps1.
 ###< symfony/asset-mapper ###
 
 ###> vich/uploader-bundle ###
@@ -30,3 +41,29 @@
 /public/uploads/documents/*
 !/public/uploads/documents/.gitkeep
 ###< vich/uploader-bundle ###
+
+###> déploiement ###
+# Outil de développement Windows : 50 Mo de binaires dans CHAQUE clone, y
+# compris celui du serveur de production, où ils ne servent à rien.
+/bin/mailpit.exe
+/bin/mailpit-windows-amd64/
+/bin/mailpit-windows-amd64.zip
+
+# 1508 fichiers, 18 Mo, pour deux dépendances que le front n'utilise pas : les
+# ressources passent par importmap.php et l'Asset Mapper, pas par un empaqueteur.
+/node_modules/
+
+# Sorties du gestionnaire de messages : des DONNÉES, pas du code. Le .gitkeep
+# préserve le dossier au clone — sans lui, l'écriture échoue sur un dossier
+# inexistant.
+/public/pdfs/*
+!/public/pdfs/.gitkeep
+!/public/pdfs/.htaccess
+
+# Drapeau de maintenance posé et retiré par bin/deploy.sh.
+/public/maintenance.flag
+
+# Sessions : par définition propres à une machine et à un instant.
+/var/sessions/
+###< déploiement ###
+
