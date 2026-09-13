@@ -316,6 +316,15 @@ sauvegarde, et les migrations dépourvues de `down()`.
 3. **Les heures sont celles du serveur**, pas de Kinshasa. Le diagnostic donne
    l'écart à appliquer.
 
+> ⚠ **Le chemin PHP des crons doit être celui du SITE, pas le plus récent
+> installé.** Vérifié le 2026-09-13 : `/opt/alt/php83/usr/bin/php` existe sur ce
+> serveur, **tout nu** — aucune extension n'y est activée, parce que le site
+> tourne en 8.2. Un cron qui l'appellerait échouerait chaque nuit sur une erreur
+> d'extension manquante, loin de toute personne qui la lirait.
+> Pour connaître le bon chemin : `cd ~/joseara && bash bin/deploy.sh --dry-run`
+> l'affiche à la première ligne — le script retient le seul binaire qui possède
+> **toutes** les extensions requises, pas le plus neuf.
+
 Dans les lignes ci-dessous, remplacer `josearac` et vérifier le chemin PHP.
 Les heures sont exprimées **en heure de Kinshasa**.
 
