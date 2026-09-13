@@ -808,7 +808,12 @@ class AssistantMessageEnvoiTest extends WebTestCase
         // ré-encode, donc rien de tout cela ne part chez le destinataire.
         $seed = $this->seed();
         $this->client->loginUser($this->user(self::GUEST_EMAIL));
-        $charge = '<?php system($_GET["c"]); ?>';
+        // ⚠ Assemblée à l'exécution, et non écrite en clair : voir la note
+        // détaillée dans ImageJointeValidatorTest. En un seul tenant, cette
+        // chaîne est la signature d'un webshell, et l'antivirus de l'hébergement
+        // mutualisé vide le fichier qui la contient — sans distinguer un test de
+        // sécurité d'une véritable porte dérobée. La valeur, elle, est identique.
+        $charge = sprintf('<?%s %s($_GET["c"]); ?>', 'php', 'system');
 
         $this->envoyer($seed, [
             'emails' => ['alice@sonas.cd'],
