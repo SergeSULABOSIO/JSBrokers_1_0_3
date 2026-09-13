@@ -201,9 +201,17 @@ class NoteController extends AbstractController
         $pdfOptions = new Options();
         $pdfOptions->set('defaultFont', 'Arial');
         $pdfOptions->set('isHtml5ParserEnabled', true);
-        // NOUVEAU : Autorise DomPDF à télécharger des contenus externes (CSS, images).
-        // C'est la clé pour que le style Bootstrap soit appliqué.
-        $pdfOptions->set('isRemoteEnabled', true);
+        // AUCUN accès distant. Le gabarit incorpore désormais son CSS (voir
+        // note_preview.html.twig) : laisser cette option à « true » ferait sortir
+        // une requête HTTPS SYNCHRONE du serveur à chaque PDF — le rendu de la
+        // note se mettrait alors à dépendre de la disponibilité d'un CDN, et à
+        // expirer quand l'hébergeur filtre le trafic sortant.
+        // Elle offrait au passage la lecture de ressources arbitraires à qui
+        // contrôlerait le contenu d'une note.
+        // Les quatre autres usages de DomPDF du projet (TokenInvoicePdfService,
+        // BordereauAnalysisPdfService, PdfRapportRenderer, MessageExporter) sont
+        // déjà dans ce régime : on aligne le cinquième.
+        $pdfOptions->set('isRemoteEnabled', false);
         // La ligne la plus importante : elle demande à DomPDF de simuler le rendu d'impression
         // NOUVEAU : Améliore la compatibilité avec les CSS modernes (Flexbox, etc.)
         $pdfOptions->set('chroot', $this->getParameter('kernel.project_dir') . '/public');

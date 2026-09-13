@@ -1,0 +1,11 @@
+# =============================================================================
+#  CE DOSSIER N'EST PAS UNE RACINE WEB.
+# -----------------------------------------------------------------------------
+#  La racine web de Joseara est « public/ ». Si ce dossier-ci devait devenir
+#  une racine par accident — racine de document mal réglée, domaine de test
+#  pointé trop haut, lien symbolique malheureux — tout est refusé plutôt que
+#  servi : .env.local, src/, config/, var/ et vendor/ compris.
+#
+#  Inerte en fonctionnement normal, puisque Apache ne regarde jamais ici.
+# =============================================================================
+Require all denied

@@ -5,6 +5,11 @@ twig:
         # Namespace permettant d'embarquer les images (logo) dans les e-mails via
         # email.image('@images/...') : la fonction résout le fichier par le loader Twig.
         '%kernel.project_dir%/public/images': images
+        # Dépendances front téléchargées par « importmap:install » et VERSIONNÉES
+        # (voir le commentaire du .gitignore). Déclarées en chemin Twig pour
+        # pouvoir en INCORPORER le contenu dans les documents produits côté
+        # serveur — un PDF ne doit jamais dépendre d'un CDN au moment du rendu.
+        '%kernel.project_dir%/assets/vendor': assetsvendor
 
 when@test:
     twig:

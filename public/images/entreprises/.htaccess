@@ -1,0 +1,22 @@
+# =============================================================================
+#  DOSSIER DE DONNÉES TÉLÉVERSÉES — AUCUNE EXÉCUTION
+# -----------------------------------------------------------------------------
+#  Les fichiers déposés ici viennent des utilisateurs. Ils doivent rester
+#  TÉLÉCHARGEABLES, mais ne jamais être EXÉCUTÉS : un document nommé
+#  « facture.php » deviendrait sinon un interpréteur de commandes à distance,
+#  ouvert à quiconque peut téléverser une pièce jointe.
+#
+#  Trois verrous plutôt qu'un, parce qu'ils ne tombent pas de la même façon
+#  selon la configuration de l'hébergeur : refus explicite, retrait du
+#  gestionnaire PHP, et requalification en texte brut.
+# =============================================================================
+
+<FilesMatch "\.(php|phar|phtml|php[0-9]|phps|cgi|pl|py|rb|shtml|htaccess)$">
+    Require all denied
+</FilesMatch>
+
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
+RemoveType .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
+AddType text/plain .php .phtml .phar
+
+Options -Indexes -ExecCGI

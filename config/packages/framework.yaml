@@ -3,12 +3,62 @@ framework:
     secret: '%env(APP_SECRET)%'
     #csrf_protection: true
 
-    # Note that the session will be started ONLY if you read or write from it.
-    session: true
-
-    #esi: true
-    #fragments: true
     http_method_override: true
+
+    # ── MANDATAIRES DE CONFIANCE ────────────────────────────────────────────
+    # Beaucoup d'hébergements cPanel placent un nginx de cache devant Apache.
+    # Vu de PHP, toute requête vient alors de 127.0.0.1 et arrive en « http »,
+    # même quand le visiteur est en HTTPS. Sans cette déclaration, Symfony
+    # fabrique les URL absolues en http:// — liens d'e-mails compris — et
+    # journalise l'adresse du mandataire au lieu de celle du visiteur.
+    #
+    # La valeur vient de l'environnement (.env / .env.local) : vide en
+    # développement, « private_ranges » en production. « private_ranges » ne
+    # fait confiance qu'aux plages d'adresses privées : un mandataire local,
+    # jamais une machine venue d'Internet.
+    trusted_proxies: '%env(TRUSTED_PROXIES)%'
+    trusted_headers: ['x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port', 'x-forwarded-prefix']
+
+    # ── SESSIONS ────────────────────────────────────────────────────────────
+    # Note that the session will be started ONLY if you read or write from it.
+    session:
+        handler_id: null
+
+        # save_path EXPLICITE, ET HORS DE var/cache.
+        #
+        # Par défaut, Symfony range les sessions dans var/cache/<env>/sessions.
+        # Or « cache:clear » a lieu à CHAQUE déploiement : la valeur par défaut
+        # revient donc à déconnecter TOUS les utilisateurs à chaque mise à jour,
+        # et aucun ordre d'opérations dans le script de déploiement n'y change
+        # quoi que ce soit — c'est le dossier lui-même qui disparaît.
+        # Ici, les sessions survivent au déploiement.
+        save_path: '%kernel.project_dir%/var/sessions'
+
+        # « auto » : cookie marqué Secure quand la requête est en HTTPS, et pas
+        # en HTTP. C'est ce qui permet au même réglage de valoir en dev (http)
+        # et en production (https).
+        cookie_secure: auto
+        cookie_samesite: lax
+        cookie_httponly: true
+
+        # RAMASSE-MIETTES EXPLICITE. Avec un save_path personnalisé, le nettoyage
+        # périodique fait par le système sur le dossier par défaut ne passe plus :
+        # les fichiers de session s'accumuleraient jusqu'à épuiser le quota
+        # d'INODES — la limite qui sature en premier sur un hébergement mutualisé,
+        # bien avant l'espace disque.
+        gc_probability: 1
+        gc_divisor: 100
+        gc_maxlifetime: 1209600   # 14 jours, au-delà du remember_me de 7 jours
+
+when@prod:
+    framework:
+        # ── HÔTES AUTORISÉS ─────────────────────────────────────────────────
+        # Refuse toute requête dont l'en-tête Host n'est pas le nôtre. C'est la
+        # parade à l'empoisonnement d'en-tête Host : sans elle, un attaquant
+        # déclenche un « mot de passe oublié » en envoyant « Host: chez-moi.tld »,
+        # et Symfony fabrique le lien de réinitialisation sur CE domaine — le
+        # lien arrive dans la boîte de la victime, et pointe chez l'attaquant.
+        trusted_hosts: ['^(www\.)?joseara\.com$']
 
 when@test:
     framework:
