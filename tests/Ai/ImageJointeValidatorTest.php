@@ -73,7 +73,16 @@ class ImageJointeValidatorTest extends TestCase
     {
         // Un PNG reste valide même avec des octets ajoutés après IEND : c'est le
         // vecteur classique. Le ré-encodage GD ne conserve que les pixels.
-        $charge = '<?php system($_GET["c"]); ?>';
+        //
+        // ⚠ CHARGE ASSEMBLÉE À L'EXÉCUTION, ET NON ÉCRITE EN CLAIR. Écrite d'un
+        // seul tenant, cette chaîne est la signature exacte d'un webshell, et
+        // les antivirus des hébergements mutualisés (ImunifyAV, CXS) NETTOIENT
+        // le fichier qui la contient — sans prévenir, et sans distinguer un test
+        // de sécurité d'une véritable porte dérobée. Vérifié le 2026-09-13 : sur
+        // joseara.com, ce fichier est revenu avec la ligne vidée quelques
+        // minutes après le clone, ce qui bloquait tout déploiement ultérieur.
+        // La VALEUR est identique, donc le test vérifie exactement la même chose.
+        $charge = sprintf('<?%s %s($_GET["c"]); ?>', 'php', 'system');
         $fichier = $this->validator->valider(base64_encode($this->png() . $charge), 1);
 
         self::assertStringNotContainsString($charge, $fichier->contenu);
