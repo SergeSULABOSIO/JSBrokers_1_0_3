@@ -249,10 +249,20 @@ if [ "$SKIP_GIT" -eq 0 ]; then
   if ! git diff --quiet || ! git diff --cached --quiet; then
     ko "Des fichiers SUIVIS ont ete modifies sur le serveur :"
     git status --porcelain | grep -v '^??' | tee -a "$JOURNAL"
-    ko "Ils seront ECRASES. Sauvegardez-les d'abord."
-    [ "$DRY_RUN" -eq 1 ] || exit 1
+    ko "Ils seront ECRASES par « git reset --hard »."
+    ko "Pour voir ce qui differe :  git diff --stat && git diff"
+    ko "Pour les abandonner         :  git checkout -- <fichier>"
+    if [ "$DRY_RUN" -eq 1 ]; then
+      # La répétition à blanc ne modifie rien : elle CONTINUE pour montrer le
+      # reste des contrôles. Mais elle doit dire clairement que le passage réel,
+      # lui, s'arrêtera ici — sinon on croit l'avertissement sans conséquence.
+      ko "(repetition a blanc : on continue, mais le passage REEL refusera)"
+    else
+      exit 1
+    fi
+  else
+    ok "Copie de travail propre"
   fi
-  ok "Copie de travail propre"
 fi
 
 # ── PREMIÈRE INSTALLATION ? ─────────────────────────────────────────────────
