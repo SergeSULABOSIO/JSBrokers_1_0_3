@@ -312,8 +312,24 @@ if [ ! -f "$APP_DIR/vendor/autoload_runtime.php" ]; then
 fi
 
 if [ "$PREMIERE_INSTALLATION" -eq 0 ]; then
-  "$PHP" bin/console dbal:run-sql "SELECT 1" --env=prod >/dev/null 2>&1 \
-    || { ko "Base injoignable — verifiez DATABASE_URL dans .env.local"; exit 1; }
+  # Le message de Doctrine NOMME la cause : identifiants refusés, base inconnue,
+  # hôte injoignable, socket absente. Le jeter pour afficher « Base injoignable »
+  # à la place, c'est remplacer un diagnostic par un constat — et renvoyer
+  # quelqu'un chercher à l'aveugle ce que la machine venait de lui dire.
+  if ! ERREUR_BASE="$("$PHP" bin/console dbal:run-sql "SELECT 1" --env=prod 2>&1)"; then
+    ko "Base injoignable. Ce que Doctrine repond :"
+    printf '%s\n' "$ERREUR_BASE" | tail -n 12 | sed 's/^/      /' | tee -a "$JOURNAL"
+    ko "DATABASE_URL lue (mot de passe masque) :"
+    grep -m1 '^DATABASE_URL' "$APP_DIR/.env.local" 2>/dev/null \
+      | sed -E 's#(//[^:]*:)[^@]*@#\1***@#' | sed 's/^/      /'
+    # Piège classique : ce fichier compilé prime sur .env.local. Tant qu'il
+    # existe, corriger .env.local ne change RIEN, et on tourne en rond.
+    if [ -f "$APP_DIR/.env.local.php" ]; then
+      ko "ATTENTION : .env.local.php existe et MASQUE .env.local."
+      ko "            Supprimez-le :  rm $APP_DIR/.env.local.php"
+    fi
+    exit 1
+  fi
   ok "Base de donnees joignable"
 fi
 
@@ -483,8 +499,24 @@ fi
 # découvrir un DATABASE_URL fautif au moment d'écrire dans le schéma serait le
 # découvrir trop tard.
 if [ "$PREMIERE_INSTALLATION" -eq 1 ]; then
-  "$PHP" bin/console dbal:run-sql "SELECT 1" --env=prod >/dev/null 2>&1 \
-    || { ko "Base injoignable — verifiez DATABASE_URL dans .env.local"; exit 1; }
+  # Le message de Doctrine NOMME la cause : identifiants refusés, base inconnue,
+  # hôte injoignable, socket absente. Le jeter pour afficher « Base injoignable »
+  # à la place, c'est remplacer un diagnostic par un constat — et renvoyer
+  # quelqu'un chercher à l'aveugle ce que la machine venait de lui dire.
+  if ! ERREUR_BASE="$("$PHP" bin/console dbal:run-sql "SELECT 1" --env=prod 2>&1)"; then
+    ko "Base injoignable. Ce que Doctrine repond :"
+    printf '%s\n' "$ERREUR_BASE" | tail -n 12 | sed 's/^/      /' | tee -a "$JOURNAL"
+    ko "DATABASE_URL lue (mot de passe masque) :"
+    grep -m1 '^DATABASE_URL' "$APP_DIR/.env.local" 2>/dev/null \
+      | sed -E 's#(//[^:]*:)[^@]*@#\1***@#' | sed 's/^/      /'
+    # Piège classique : ce fichier compilé prime sur .env.local. Tant qu'il
+    # existe, corriger .env.local ne change RIEN, et on tourne en rond.
+    if [ -f "$APP_DIR/.env.local.php" ]; then
+      ko "ATTENTION : .env.local.php existe et MASQUE .env.local."
+      ko "            Supprimez-le :  rm $APP_DIR/.env.local.php"
+    fi
+    exit 1
+  fi
   ok "Base de donnees joignable (controle reporte de l'etape 1)"
 fi
 
