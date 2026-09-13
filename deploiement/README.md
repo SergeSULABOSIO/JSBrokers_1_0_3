@@ -29,6 +29,8 @@ ensuite, seule la section **« Publier une mise à jour »** sert au quotidien.
 | Disque | 2,5 To libres |
 | HTTPS | actif |
 | Horloge | serveur en **UTC**, Kinshasa à **UTC+1** → tout cron s'écrit **une heure plus tôt** |
+| Base | **MariaDB 10.11.10-MariaDB-cll-lve** — à recopier tel quel dans `serverVersion=` · droits DDL confirmés par un vrai CREATE/ALTER/DROP · base vierge |
+| ⚠ Jeu de caractères | `character_set_server` = **latin1**. `doctrine.yaml` impose désormais utf8mb4 aux tables créées, mais **la base elle-même doit être convertie** — voir l'étape 2 |
 | ICU (intl) | **64.2** — ancienne. Sans conséquence connue ici, mais à garder en tête si un format de date ou de montant paraît inattendu |
 
 **Aucun blocage.** Sept réglages à corriger, tous dans cPanel, tous sans risque —
@@ -72,6 +74,7 @@ Ce qu'il faut en retenir, dans l'ordre d'importance :
 | **Select PHP Version → Options** | `memory_limit` **512M** · `max_execution_time` **120** · `max_input_time` **120** · `upload_max_filesize` **32M** · `post_max_size` **48M ou plus** — il doit DÉPASSER `upload_max_filesize`, la requête transportant le fichier *plus* les champs du formulaire |
 | **Réglages OPcache** *(confort, pas bloquant)* | `opcache.memory_consumption` 128 → 192 · `opcache.max_accelerated_files` 10000 → 20000. Symfony compte plus de 10 000 fichiers : au plafond actuel, OPcache en évince en permanence et le gain retombe |
 | **`max_input_vars`** | **Absent du sélecteur PHP de CloudLinux** — et c'est sans importance : `public/.user.ini`, versionné avec l'application, le pose à 5000. PHP lit ce fichier en CGI/FastCGI/LSAPI, ce qui est le cas ici. Compter jusqu'à **5 minutes** avant effet (`user_ini.cache_ttl`). Si **MultiPHP INI Editor** existe dans votre cPanel, on peut aussi l'y poser — mais ce n'est pas nécessaire |
+| **phpMyAdmin → SQL** | **`ALTER DATABASE \`josearac_joseara\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`** — le serveur est en latin1. Sans cela, les tables créées sans charset explicite naîtraient en latin1, et toute jointure avec une table utf8mb4 échouerait sur « Illegal mix of collations », à un endroit qui ne dit rien de la cause. À faire **avant** le premier déploiement, pendant que la base est vide |
 | **MySQL Databases** | créer la base, créer l'utilisateur, puis **Add User To Database → ALL PRIVILEGES**. cPanel **préfixe** les noms du compte et les tronque : recopier le nom exact qu'il affiche |
 | **Email Accounts** | créer `contact@joseara.com` |
 | **Email Deliverability** | → **Repair** jusqu'à SPF, DKIM et PTR en vert. Sans cela, chaque e-mail d'inscription part en indésirable et l'inscription *paraît* cassée |
