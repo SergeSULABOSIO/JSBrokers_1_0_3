@@ -3,6 +3,12 @@
 /.env.local
 /.env.local.php
 /.env.*.local
+# Toute copie de .env.local — sauvegarde avant modification, variante d'essai.
+# Le motif d'origine ne couvrait que le nom EXACT : « .env.local.sauvegarde »,
+# créé au moment de réparer le fichier sur le serveur, serait apparu comme un
+# fichier à committer. Un secret ne devient pas inoffensif parce qu'on l'a
+# renommé.
+/.env.local.*
 /config/secrets/prod/prod.decrypt.private.php
 /public/bundles/
 /var/
