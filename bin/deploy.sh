@@ -150,8 +150,22 @@ URL_SANTE="${JOSEARA_URL_SANTE:-https://www.joseara.com/}"
 
 # Nom de la base, pour le dump. Les identifiants vivent dans ~/.my.cnf (chmod
 # 600) : jamais sur la ligne de commande, où « ps » les rendrait visibles.
-DB_NAME="${JOSEARA_DB:-}"
+#
+# Il est DÉDUIT de DATABASE_URL, et non demandé. Une variable d'environnement à
+# exporter à la main est une variable qu'on oublie — et ce qui saute alors, sans
+# un bruit, c'est la SAUVEGARDE. Vécu le 2026-09-13 : deux déploiements de suite
+# ont affiché « SAUVEGARDE SAUTEE » sans que cela retienne l'attention, parce
+# que la base était encore vide. Elle ne le restera pas.
+# JOSEARA_DB reste prioritaire, pour les cas où l'URL ne se laisse pas lire
+# (un mot de passe contenant un « / », par exemple).
 MY_CNF="${JOSEARA_MY_CNF:-$HOME/.my.cnf}"
+DB_NAME="${JOSEARA_DB:-}"
+if [ -z "$DB_NAME" ] && [ -f "$APP_DIR/.env.local" ]; then
+  DB_NAME="$(grep -m1 '^DATABASE_URL' "$APP_DIR/.env.local" \
+    | sed -E 's#.*://[^/]+/([^?"]+).*#\1#')"
+  # Une extraction ratée rend la ligne entière : on préfère alors ne rien avoir.
+  case "$DB_NAME" in *DATABASE_URL*|*/*|'') DB_NAME="" ;; esac
+fi
 
 # ---------------------------------------------------------------------------
 #  ARGUMENTS
@@ -580,8 +594,23 @@ titre "9/11  Migrations de la base"
 if [ "$SKIP_MIGRATIONS" -eq 0 ]; then
   # APRÈS cache:clear : les métadonnées Doctrine utilisées ici doivent être
   # celles du NOUVEAU code, pas celles que l'ancien cache avait figées.
+  #
+  # ⚠ PAS DE « --all-or-nothing ». L'option enveloppe toutes les migrations dans
+  # UNE transaction, ce qui suppose que la base sache annuler du DDL. MySQL et
+  # MariaDB ne le savent pas : elles VALIDENT IMPLICITEMENT à chaque CREATE TABLE
+  # et à chaque ALTER TABLE. La transaction est donc détruite dès la première
+  # migration, et la suivante échoue sur « SAVEPOINT DOCTRINE_2 does not exist »
+  # — un message qui ne dit rien de sa cause. Vécu le 2026-09-13.
+  #
+  # L'option promettait une atomicité que le moteur ne peut pas tenir. Sans elle,
+  # Doctrine applique les migrations UNE À UNE et inscrit chacune dans
+  # doctrine_migration_versions : un échec à mi-parcours laisse un état CONNU et
+  # REPRENABLE — on relance, et ça repart où ça s'était arrêté.
+  #
+  # Le vrai filet contre une migration fautive n'est pas une transaction que le
+  # moteur ignore : c'est le dump de l'étape 2.
   executer "APP_ENV=prod $PHP -d memory_limit=512M bin/console doctrine:migrations:migrate \
-            --no-interaction --allow-no-migration --all-or-nothing"
+            --no-interaction --allow-no-migration"
   ok "Schema a jour"
 else
   ko "Migrations SAUTEES a la demande"
