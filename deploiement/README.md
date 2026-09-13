@@ -100,9 +100,17 @@ Ce qu'il faut en retenir, dans l'ordre d'importance :
 ```
 
 ```bash
-git clone --depth 1 --branch master \
+git clone --branch master \
   https://github.com/SergeSULABOSIO/JSBrokers_1_0_3.git /home/josearac/joseara
 ```
+
+> **Clone COMPLET, surtout pas `--depth 1`.** Un clone superficiel économiserait
+> une centaine de mégaoctets une seule fois, et coûterait à chaque publication :
+> `bin/deploy.sh` compare `HEAD..origin/master` pour montrer ce qui va changer,
+> et surtout pour décider de **sauter `composer install`** quand `composer.lock`
+> n'a pas bougé — ce qui fait passer une mise à jour courante de quatre minutes
+> à vingt secondes. Sur un historique tronqué, ces comparaisons sont fausses ou
+> impossibles.
 
 ### Faire pointer la racine de document sur `public/`
 
