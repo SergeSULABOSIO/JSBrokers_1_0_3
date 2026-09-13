@@ -405,7 +405,8 @@ fi
 # ===========================================================================
 titre "2/11  Sauvegarde"
 # ===========================================================================
-if [ "$NO_BACKUP" -eq 0 ] && [ -n "$DB_NAME" ] && [ -f "$MY_CNF" ]; then
+if [ "$NO_BACKUP" -eq 0 ] && [ -n "$DB_NAME" ] && [ -f "$MY_CNF" ] \
+   && command -v mysqldump >/dev/null 2>&1; then
   executer "mysqldump --defaults-file='$MY_CNF' --single-transaction --quick \
      --routines --triggers --default-character-set=utf8mb4 '$DB_NAME' \
      | gzip -9 > '$BACKUP_DIR/db-$HORODATAGE.sql.gz'"
@@ -415,8 +416,34 @@ if [ "$NO_BACKUP" -eq 0 ] && [ -n "$DB_NAME" ] && [ -f "$MY_CNF" ]; then
   ok "Dump : $BACKUP_DIR/db-$HORODATAGE.sql.gz"
   executer "find '$BACKUP_DIR' -name 'db-*.sql.gz' -mtime +$RETENTION_JOURS -delete"
 else
+  # ── DIRE LAQUELLE DES TROIS CONDITIONS MANQUE ─────────────────────────────
+  # « SAUVEGARDE SAUTEE » tout court est un constat, pas un diagnostic : on sait
+  # qu'on n'a pas de filet, pas pourquoi ni quoi faire. Et une sauvegarde qui
+  # manque ne se rappelle jamais à vous au moment où elle manque — elle se
+  # rappelle à vous le jour où vous la cherchez.
   ko "SAUVEGARDE SAUTEE — aucun retour arriere possible sur les donnees"
-  [ -z "$DB_NAME" ] && ko "   (JOSEARA_DB n'est pas renseigne dans ce script)"
+  if [ "$NO_BACKUP" -eq 1 ]; then
+    ko "   Raison : --no-backup a ete demande explicitement."
+  elif [ -z "$DB_NAME" ]; then
+    ko "   Raison : nom de la base introuvable."
+    ko "   DATABASE_URL de .env.local n'a pas pu etre lue (mot de passe"
+    ko "   contenant un « / » ?). Contournement :"
+    ko "     JOSEARA_DB=le_nom_de_la_base bash bin/deploy.sh"
+  elif [ ! -f "$MY_CNF" ]; then
+    ko "   Raison : $MY_CNF est absent."
+    ko "   mysqldump y lit ses identifiants, pour qu'ils n'apparaissent jamais"
+    ko "   sur la ligne de commande — ou « ps » les montrerait a tout le monde."
+    ko "   A creer une seule fois (mysqldump REFUSE un fichier lisible par"
+    ko "   d'autres, d'ou le chmod 600) :"
+    ko ""
+    ko "     printf '[client]\\nuser=%s\\npassword=VOTRE_MOT_DE_PASSE\\nhost=127.0.0.1\\n' \\"
+    ko "       \"\$(grep -m1 '^DATABASE_URL' $APP_DIR/.env.local | sed -E 's#.*//([^:]+):.*#\\1#')\" \\"
+    ko "       > $MY_CNF && chmod 600 $MY_CNF"
+  elif ! command -v mysqldump >/dev/null 2>&1; then
+    ko "   Raison : mysqldump est introuvable sur ce serveur."
+    ko "   Repli : sauvegarder par cPanel -> Assistant de sauvegarde, ou"
+    ko "   exporter la base depuis phpMyAdmin avant chaque publication."
+  fi
 fi
 
 # ===========================================================================
