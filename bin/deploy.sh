@@ -45,29 +45,74 @@ PUBLIC_DIR="${JOSEARA_PUBLIC_DIR:-$APP_DIR/public}"
 # version et extensions peuvent différer, et c'est alors le cron qui tombe, seul,
 # la nuit, sans que personne ne le voie.
 #
-# On ne devine donc pas : on CHERCHE, et on retient le premier candidat qui a la
-# bonne version. L'ordre suit ce qu'on rencontre en pratique — CloudLinux
-# (alt-php, le cas de joseara.com), puis EasyApache, puis le PATH en dernier
-# recours. JOSEARA_PHP force la main si aucun ne convient.
+# ⚠ ON NE CHERCHE PAS LE PLUS RÉCENT. Une machine mutualisée propose souvent
+#   plusieurs versions installées côte à côte, mais les extensions ne sont
+#   activées que pour CELLE QUE LE SITE UTILISE. Retenir la plus neuve, c'est
+#   retenir celle qui n'a rien — vérifié le 2026-09-13 sur joseara.com, où
+#   alt-php83 existe, tout nu, à côté d'un alt-php82 complet.
+#
+# Le bon critère n'est donc pas la version, c'est : « ce PHP peut-il faire
+# tourner l'application ? ». On exige la version MINIMALE et TOUTES les
+# extensions. Le premier candidat qui satisfait les deux gagne.
+#
+# L'ordre place « php » du PATH en tête : sur CloudLinux, c'est un lien vers la
+# version SÉLECTIONNÉE pour le compte — donc celle du site, par construction.
+EXTENSIONS_REQUISES="ctype curl dom fileinfo filter gd iconv intl json libxml \
+mbstring openssl pdo pdo_mysql session simplexml tokenizer xml xmlreader \
+xmlwriter zip zlib"
+
+# Rend la liste des extensions manquantes pour un binaire donné (vide = aucune).
+extensions_manquantes() {
+  local binaire="$1" ext presentes manquantes=""
+  presentes="$("$binaire" -m 2>/dev/null | tr 'A-Z' 'a-z')"
+  for ext in $EXTENSIONS_REQUISES; do
+    printf '%s\n' "$presentes" | grep -qx "$ext" || manquantes="$manquantes $ext"
+  done
+  printf '%s' "$manquantes"
+}
+
+CANDIDATS_PHP="$(command -v php 2>/dev/null)
+/opt/alt/php83/usr/bin/php
+/opt/alt/php82/usr/bin/php
+/opt/cpanel/ea-php83/root/usr/bin/php
+/opt/cpanel/ea-php82/root/usr/bin/php"
+
 trouver_php() {
   local candidat
-  for candidat in \
-    /opt/alt/php83/usr/bin/php \
-    /opt/alt/php82/usr/bin/php \
-    /opt/cpanel/ea-php83/root/usr/bin/php \
-    /opt/cpanel/ea-php82/root/usr/bin/php \
-    "$(command -v php 2>/dev/null)"
-  do
+  while IFS= read -r candidat; do
     [ -n "$candidat" ] && [ -x "$candidat" ] || continue
-    "$candidat" -r 'exit(PHP_VERSION_ID >= 80200 ? 0 : 1);' 2>/dev/null && { echo "$candidat"; return 0; }
-  done
+    "$candidat" -r 'exit(PHP_VERSION_ID >= 80200 ? 0 : 1);' 2>/dev/null || continue
+    [ -z "$(extensions_manquantes "$candidat")" ] || continue
+    echo "$candidat"
+    return 0
+  done <<EOF_CANDIDATS
+$CANDIDATS_PHP
+EOF_CANDIDATS
   return 1
 }
 
 PHP="${JOSEARA_PHP:-$(trouver_php || true)}"
 if [ -z "$PHP" ]; then
-  echo "Aucun PHP >= 8.2 trouve. Indiquez-le a la main :" >&2
-  echo "  JOSEARA_PHP=/chemin/vers/php bash bin/deploy.sh" >&2
+  # Aucun candidat complet : on ne se contente pas de le dire, on montre POURQUOI
+  # chacun a été écarté. C'est la différence entre « ça ne marche pas » et « voici
+  # quelle case cocher, dans quel onglet, pour quelle version ».
+  echo "" >&2
+  echo "Aucun PHP utilisable trouve. Etat de chaque candidat :" >&2
+  while IFS= read -r c; do
+    [ -n "$c" ] && [ -x "$c" ] || continue
+    v="$("$c" -r 'echo PHP_VERSION;' 2>/dev/null)"
+    if ! "$c" -r 'exit(PHP_VERSION_ID >= 80200 ? 0 : 1);' 2>/dev/null; then
+      printf '  %-46s %-9s trop ancien (8.2 minimum)\n' "$c" "$v" >&2
+    else
+      printf '  %-46s %-9s manque :%s\n' "$c" "$v" "$(extensions_manquantes "$c")" >&2
+    fi
+  done <<EOF_DIAG
+$CANDIDATS_PHP
+EOF_DIAG
+  echo "" >&2
+  echo "-> cPanel -> Select PHP Version : verifiez que la version choisie est bien" >&2
+  echo "   celle du site, et cochez les extensions manquantes DANS CETTE VERSION." >&2
+  echo "-> Ou imposez le binaire : JOSEARA_PHP=/chemin/vers/php bash bin/deploy.sh" >&2
   exit 1
 fi
 
@@ -164,18 +209,16 @@ titre "1/11  Verifications prealables"
   || { ko "PHP trop ancien : $("$PHP" -r 'echo PHP_VERSION;') — 8.2 minimum"; exit 1; }
 ok "PHP $("$PHP" -r 'echo PHP_VERSION;')"
 
-# Même liste que composer.json. Vérifiée ici AUSSI, parce que le PHP du CLI
-# n'est pas forcément celui qu'Apache sert : une extension peut manquer d'un
-# côté et pas de l'autre, et c'est le cron qui tomberait.
-MANQUANTES=""
-for e in ctype curl dom fileinfo filter gd iconv intl json libxml mbstring \
-         openssl pdo pdo_mysql session simplexml tokenizer xml xmlreader \
-         xmlwriter zip zlib; do
-  "$PHP" -m | grep -qix "$e" || MANQUANTES="$MANQUANTES $e"
-done
+# La détection ci-dessus n'a retenu qu'un binaire COMPLET : ce contrôle est donc
+# normalement déjà acquis. Il reste utile dans un seul cas, mais un cas réel —
+# quand JOSEARA_PHP impose un binaire à la main, en sautant la détection. Une
+# seule liste (EXTENSIONS_REQUISES) sert aux deux : deux listes finiraient par
+# diverger, et c'est la plus indulgente qui ferait foi.
+MANQUANTES="$(extensions_manquantes "$PHP")"
 if [ -n "$MANQUANTES" ]; then
-  ko "Extensions PHP manquantes :$MANQUANTES"
-  ko "-> cPanel -> Select PHP Version -> onglet Extensions"
+  ko "Extensions PHP manquantes dans $PHP :$MANQUANTES"
+  ko "-> cPanel -> Select PHP Version -> onglet Extensions,"
+  ko "   en verifiant d'abord que la version selectionnee est celle du SITE."
   exit 1
 fi
 ok "Extensions PHP : toutes presentes"
