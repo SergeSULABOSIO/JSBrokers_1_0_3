@@ -592,6 +592,38 @@ ok "public/assets et public/bundles a jour"
 titre "9/11  Migrations de la base"
 # ===========================================================================
 if [ "$SKIP_MIGRATIONS" -eq 0 ]; then
+  # ── UNE BASE VIERGE NE SE CONSTRUIT PAS EN REJOUANT LES MIGRATIONS ────────
+  # La chaîne de migrations de ce projet ne part PAS de zéro : la première,
+  # Version20260428083357, est un « ALTER TABLE note ADD bordereau_id ». Elle
+  # suppose un schéma déjà là. C'est le cas ordinaire d'un projet dont les
+  # migrations ont commencé sur une base existante — et cela reste sans
+  # conséquence pendant des années, jusqu'au jour de la première installation
+  # neuve, où plus rien ne s'applique.
+  #
+  # Sur une base VIDE, on construit donc le schéma à partir des ENTITÉS, qui
+  # sont la source de vérité de l'ORM, puis on inscrit les 76 migrations comme
+  # déjà appliquées. Les déploiements suivants ne joueront que les nouvelles.
+  #
+  # La bascule tient à une seule question : y a-t-il des tables ? Aucune place
+  # pour un drapeau à poser à la main, qu'on oublierait dans un sens comme dans
+  # l'autre — et dont l'oubli, ici, effacerait une base en service.
+  NB_TABLES="$("$PHP" bin/console dbal:run-sql \
+    "SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = DATABASE()" \
+    --env=prod 2>/dev/null | grep -oE '\b[0-9]+\b' | head -1)"
+
+  if [ "${NB_TABLES:-inconnu}" = "0" ]; then
+    info "Base VIDE : le schema est construit depuis les entites, puis les"
+    info "migrations sont inscrites comme deja appliquees (voir le commentaire)."
+    executer "APP_ENV=prod $PHP -d memory_limit=512M bin/console doctrine:schema:create --no-interaction"
+    # Le registre des migrations n'appartient PAS au schéma de l'ORM :
+    # « schema:create » ne crée donc pas doctrine_migration_versions, et l'étape
+    # suivante échouerait sur « The metadata storage is not initialized ».
+    executer "APP_ENV=prod $PHP -d memory_limit=512M bin/console doctrine:migrations:sync-metadata-storage --no-interaction"
+    executer "APP_ENV=prod $PHP -d memory_limit=512M bin/console doctrine:migrations:version --add --all --no-interaction"
+    ok "Schema cree et 76 migrations inscrites comme appliquees"
+  else
+    info "Base existante (${NB_TABLES} tables) : migrations incrementales."
+
   # APRÈS cache:clear : les métadonnées Doctrine utilisées ici doivent être
   # celles du NOUVEAU code, pas celles que l'ancien cache avait figées.
   #
@@ -609,9 +641,10 @@ if [ "$SKIP_MIGRATIONS" -eq 0 ]; then
   #
   # Le vrai filet contre une migration fautive n'est pas une transaction que le
   # moteur ignore : c'est le dump de l'étape 2.
-  executer "APP_ENV=prod $PHP -d memory_limit=512M bin/console doctrine:migrations:migrate \
-            --no-interaction --allow-no-migration"
-  ok "Schema a jour"
+    executer "APP_ENV=prod $PHP -d memory_limit=512M bin/console doctrine:migrations:migrate \
+              --no-interaction --allow-no-migration"
+    ok "Schema a jour"
+  fi
 else
   ko "Migrations SAUTEES a la demande"
 fi
