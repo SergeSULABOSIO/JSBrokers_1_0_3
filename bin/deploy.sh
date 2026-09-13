@@ -196,9 +196,25 @@ if [ "$SKIP_GIT" -eq 0 ]; then
   ok "Copie de travail propre"
 fi
 
-"$PHP" bin/console dbal:run-sql "SELECT 1" --env=prod >/dev/null 2>&1 \
-  || { ko "Base injoignable — verifiez DATABASE_URL dans .env.local"; exit 1; }
-ok "Base de donnees joignable"
+# ── PREMIÈRE INSTALLATION ? ─────────────────────────────────────────────────
+# « bin/console » a besoin de vendor/autoload_runtime.php. Sur un dépôt tout
+# juste cloné, ce fichier n'existe pas encore : toute vérification qui passe par
+# la console échouerait ici, AVANT l'étape 6 qui l'aurait rendue possible.
+# On distingue donc les deux situations, plutôt que d'imposer une installation
+# manuelle préalable dont personne ne se souviendrait la fois suivante.
+PREMIERE_INSTALLATION=0
+if [ ! -f "$APP_DIR/vendor/autoload_runtime.php" ]; then
+  PREMIERE_INSTALLATION=1
+  info "vendor/ absent : PREMIÈRE INSTALLATION."
+  info "Les contrôles qui passent par la console (base, migrations en attente)"
+  info "sont reportés après l'installation des dépendances."
+fi
+
+if [ "$PREMIERE_INSTALLATION" -eq 0 ]; then
+  "$PHP" bin/console dbal:run-sql "SELECT 1" --env=prod >/dev/null 2>&1 \
+    || { ko "Base injoignable — verifiez DATABASE_URL dans .env.local"; exit 1; }
+  ok "Base de donnees joignable"
+fi
 
 ESPACE_MO=$(df -Pm "$APP_DIR" | awk 'NR==2{print $4}')
 [ "${ESPACE_MO:-0}" -gt 500 ] || { ko "Moins de 500 Mo libres (${ESPACE_MO} Mo)"; exit 1; }
@@ -228,11 +244,23 @@ if [ "$SKIP_GIT" -eq 0 ]; then
   fi
 fi
 
-titre "      Migrations en attente"
-"$PHP" bin/console doctrine:migrations:up-to-date --env=prod 2>&1 | tee -a "$JOURNAL" || true
+if [ "$PREMIERE_INSTALLATION" -eq 0 ]; then
+  titre "      Migrations en attente"
+  "$PHP" bin/console doctrine:migrations:up-to-date --env=prod 2>&1 | tee -a "$JOURNAL" || true
+else
+  titre "      Migrations en attente"
+  info "(non consultables avant l'installation des dependances — les 76"
+  info " migrations s'appliqueront a l'etape 9)"
+fi
 
 if [ "$DRY_RUN" -eq 1 ]; then
   titre "REPETITION A BLANC TERMINEE — rien n'a ete modifie"
+  if [ "$PREMIERE_INSTALLATION" -eq 1 ]; then
+    info ""
+    info "PREMIERE INSTALLATION : cette repetition n'a PAS pu verifier la base,"
+    info "faute de dependances installees. C'est le passage reel qui le fera,"
+    info "juste apres composer install, et avant toute migration."
+  fi
   exit 0
 fi
 
@@ -326,6 +354,16 @@ if [ -n "$COMPOSER_CMD" ]; then
   executer "APP_ENV=prod $COMPOSER_CMD dump-env prod"
   executer "chmod 600 '$APP_DIR/.env.local.php'"
   ok "Environnement compile (.env.local.php)"
+fi
+
+# Le contrôle de base reporté par l'étape 1 en première installation. Il a lieu
+# ICI, c'est-à-dire dès que la console est utilisable et AVANT toute migration :
+# découvrir un DATABASE_URL fautif au moment d'écrire dans le schéma serait le
+# découvrir trop tard.
+if [ "$PREMIERE_INSTALLATION" -eq 1 ]; then
+  "$PHP" bin/console dbal:run-sql "SELECT 1" --env=prod >/dev/null 2>&1 \
+    || { ko "Base injoignable — verifiez DATABASE_URL dans .env.local"; exit 1; }
+  ok "Base de donnees joignable (controle reporte de l'etape 1)"
 fi
 
 # ===========================================================================
