@@ -607,13 +607,28 @@ if [ "$SKIP_MIGRATIONS" -eq 0 ]; then
   # La bascule tient à une seule question : y a-t-il des tables ? Aucune place
   # pour un drapeau à poser à la main, qu'on oublierait dans un sens comme dans
   # l'autre — et dont l'oubli, ici, effacerait une base en service.
+  # ⚠ ON NE COMPTE PAS TOUTES LES TABLES, mais les tables APPLICATIVES.
+  # « doctrine_migration_versions » et « messenger_messages » sont de la
+  # comptabilité interne : la première est créée par la moindre tentative de
+  # migration, même avortée. Les compter revient à déclarer « base existante »
+  # une base qui ne contient rien — et à repartir sur le chemin incrémental, qui
+  # échouera exactement comme la fois précédente. Vécu le 2026-09-13 : « Base
+  # existante (1 tables) », alors qu'il n'y avait pas une seule donnée.
   NB_TABLES="$("$PHP" bin/console dbal:run-sql \
-    "SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = DATABASE()" \
+    "SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = DATABASE() \
+     AND table_name NOT IN ('doctrine_migration_versions', 'messenger_messages')" \
     --env=prod 2>/dev/null | grep -oE '\b[0-9]+\b' | head -1)"
 
   if [ "${NB_TABLES:-inconnu}" = "0" ]; then
-    info "Base VIDE : le schema est construit depuis les entites, puis les"
-    info "migrations sont inscrites comme deja appliquees (voir le commentaire)."
+    info "Aucune table applicative : INSTALLATION NEUVE."
+    info "Le schema est construit depuis les entites, puis les migrations sont"
+    info "inscrites comme deja appliquees (voir le commentaire ci-dessus)."
+    # Les restes d'une tentative précédente feraient échouer schema:create sur
+    # « table already exists ». On ne retire QUE ces deux-là, et seulement parce
+    # qu'on vient d'établir qu'aucune table applicative n'existe : le contenu
+    # d'une base en service n'est jamais en jeu ici.
+    executer "APP_ENV=prod $PHP bin/console dbal:run-sql 'DROP TABLE IF EXISTS doctrine_migration_versions' --env=prod"
+    executer "APP_ENV=prod $PHP bin/console dbal:run-sql 'DROP TABLE IF EXISTS messenger_messages' --env=prod"
     executer "APP_ENV=prod $PHP -d memory_limit=512M bin/console doctrine:schema:create --no-interaction"
     # Le registre des migrations n'appartient PAS au schéma de l'ORM :
     # « schema:create » ne crée donc pas doctrine_migration_versions, et l'étape
