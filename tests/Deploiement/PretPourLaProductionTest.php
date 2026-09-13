@@ -245,6 +245,47 @@ final class PretPourLaProductionTest extends KernelTestCase
     }
 
     /**
+     * L'application doit DÉCLARER ses exigences PHP, et pas seulement compter
+     * sur un panneau d'hébergeur.
+     *
+     * « max_input_vars » n'est pas exposé par le sélecteur PHP de CloudLinux —
+     * or c'est le réglage le plus traître de l'installation : au-delà de la
+     * limite, PHP tronque le POST EN SILENCE et l'enregistrement perd des
+     * champs, sans erreur nulle part. Le poser dans un fichier versionné, c'est
+     * le faire survivre au changement d'hébergeur, à la réinitialisation du
+     * panneau, et à l'oubli de celui qui installera la prochaine instance.
+     */
+    public function testLApplicationDeclareSesExigencesPhp(): void
+    {
+        $userIni = self::racine() . '/public/.user.ini';
+
+        self::assertFileExists($userIni, 'public/.user.ini porte les exigences PHP que le panneau de l\'hébergeur n\'expose pas toutes.');
+
+        $contenu = (string) file_get_contents($userIni);
+
+        self::assertMatchesRegularExpression(
+            '/^\s*max_input_vars\s*=\s*([5-9]\d{3}|\d{5,})/m',
+            $contenu,
+            'max_input_vars doit valoir au moins 5000 : en dessous, les formulaires canevas perdent des champs sans le dire.'
+        );
+
+        // post_max_size doit DÉPASSER upload_max_filesize : la requête
+        // transporte le fichier PLUS les champs du formulaire. À valeur égale,
+        // un fichier à la taille maximale est rejeté — et le message d'erreur
+        // parle du POST, pas du fichier, ce qui envoie chercher au mauvais endroit.
+        preg_match('/^\s*post_max_size\s*=\s*(\d+)M/m', $contenu, $post);
+        preg_match('/^\s*upload_max_filesize\s*=\s*(\d+)M/m', $contenu, $upload);
+
+        self::assertNotEmpty($post, 'post_max_size doit être déclarée.');
+        self::assertNotEmpty($upload, 'upload_max_filesize doit être déclarée.');
+        self::assertGreaterThan(
+            (int) $upload[1],
+            (int) $post[1],
+            'post_max_size doit dépasser upload_max_filesize, sinon un fichier à la taille maximale est refusé.'
+        );
+    }
+
+    /**
      * Les dépendances front doivent être VERSIONNÉES. C'est ce qui supprime la
      * dépendance du déploiement à cdn.jsdelivr.net — un accès qu'un mutualisé
      * ne garantit pas, et dont l'échec laisse le site sans JS ni CSS.

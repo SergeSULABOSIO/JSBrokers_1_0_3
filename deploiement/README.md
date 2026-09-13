@@ -69,8 +69,9 @@ Ce qu'il faut en retenir, dans l'ordre d'importance :
 | Où | Quoi |
 |---|---|
 | **Select PHP Version → Extensions** | cocher **`fileinfo`** — la seule manquante au 2026-09-13. VichUploader s'en sert pour reconnaître le type des fichiers téléversés : sans elle, tout dépôt de document échoue |
-| **Select PHP Version → Options** | `memory_limit` **128M → 512M** · `max_execution_time` **30 → 120** · `upload_max_filesize` **2M → 32M** · `post_max_size` **8M → 36M** · `max_input_vars` **1000 → 5000** · `max_input_time` **60 → 120** |
+| **Select PHP Version → Options** | `memory_limit` **512M** · `max_execution_time` **120** · `max_input_time` **120** · `upload_max_filesize` **32M** · `post_max_size` **48M ou plus** — il doit DÉPASSER `upload_max_filesize`, la requête transportant le fichier *plus* les champs du formulaire |
 | **Réglages OPcache** *(confort, pas bloquant)* | `opcache.memory_consumption` 128 → 192 · `opcache.max_accelerated_files` 10000 → 20000. Symfony compte plus de 10 000 fichiers : au plafond actuel, OPcache en évince en permanence et le gain retombe |
+| **`max_input_vars`** | **Absent du sélecteur PHP de CloudLinux** — et c'est sans importance : `public/.user.ini`, versionné avec l'application, le pose à 5000. PHP lit ce fichier en CGI/FastCGI/LSAPI, ce qui est le cas ici. Compter jusqu'à **5 minutes** avant effet (`user_ini.cache_ttl`). Si **MultiPHP INI Editor** existe dans votre cPanel, on peut aussi l'y poser — mais ce n'est pas nécessaire |
 | **MySQL Databases** | créer la base, créer l'utilisateur, puis **Add User To Database → ALL PRIVILEGES**. cPanel **préfixe** les noms du compte et les tronque : recopier le nom exact qu'il affiche |
 | **Email Accounts** | créer `contact@joseara.com` |
 | **Email Deliverability** | → **Repair** jusqu'à SPF, DKIM et PTR en vert. Sans cela, chaque e-mail d'inscription part en indésirable et l'inscription *paraît* cassée |
