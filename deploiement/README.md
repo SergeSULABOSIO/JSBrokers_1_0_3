@@ -1,8 +1,12 @@
 # Mise en production de Joseara — mode d'emploi
 
 Tout ce qui concerne le déploiement de `www.joseara.com` sur l'hébergement
-mutualisé cPanel. À lire une fois en entier avant la première mise en ligne ;
-ensuite, seule la section **« Publier une mise à jour »** sert au quotidien.
+mutualisé cPanel.
+
+**Si vous cherchez juste à publier une mise à jour**, la section suivante suffit :
+« Où nous en sommes ». Le reste est le dossier complet de l'installation — utile
+le jour d'un changement d'hébergeur, d'une reprise par quelqu'un d'autre, ou d'une
+panne dont la cause ne saute pas aux yeux.
 
 | Fichier | Rôle |
 |---|---|
@@ -12,6 +16,61 @@ ensuite, seule la section **« Publier une mise à jour »** sert au quotidien.
 | `.cpanel.yml` | La même chose, **sans SSH**, par cPanel → Git Version Control. |
 | `public/.htaccess` | Réécriture des URL, maintenance, sécurité, cache. |
 | `public/maintenance.html` | Page d'attente affichée pendant un déploiement. |
+
+---
+
+## Où nous en sommes — au 2026-09-14
+
+**Joseara est EN LIGNE** sur `https://www.joseara.com`, mais **pas encore
+diffusée** : voir « Avant d'ouvrir au public » plus bas.
+
+| Ce qui fonctionne | |
+|---|---|
+| Site, HTTPS, assets compilés servis par LiteSpeed | ✅ |
+| Inscription, vérification d'adresse, liens en `https://www.joseara.com` | ✅ |
+| E-mails par le relais local (`sendmail://default`), SPF et DKIM valides | ✅ |
+| Base `josearac_joseara` en utf8mb4, schéma créé, 76 migrations inscrites | ✅ |
+| Sauvegarde à chaque déploiement + sauvegarde quotidienne par cron | ✅ |
+| 8 tâches cron, erreurs envoyées à `technique@joseara.com` | ✅ |
+| Assistant Ket sur Gemini (`gemini-3.1-flash-lite`, épinglé) | ✅ |
+| Déploiement en une commande, 20 à 40 s | ✅ |
+
+### Publier une mise à jour
+
+Dans **cPanel → Terminal** :
+
+```bash
+cd ~/joseara && git pull origin master && bash bin/deploy.sh
+```
+
+Un raccourci évite de s'en souvenir — à créer une seule fois :
+
+```bash
+echo "alias publier='cd ~/joseara && git pull origin master && bash bin/deploy.sh'" >> ~/.bashrc && source ~/.bashrc
+```
+
+Ensuite, il suffit de taper `publier`.
+
+### Avant d'ouvrir au public
+
+| Ce qui reste | Pourquoi c'est bloquant |
+|---|---|
+| **Brancher un vrai prestataire de paiement** | `config/services.yaml` désigne `SimulatedGateway`. La page Tarifs affiche deux boutons « Payer maintenant » qui mènent à un parcours d'achat **simulé**. Tant que c'est le cas, le site ne doit pas être diffusé |
+| **Monter de version** | Symfony 7.1 est en **fin de vie** : ses correctifs de sécurité ont cessé. `composer audit` remonte un avis **critique** sur Twig et plusieurs **élevés** sur `symfony/security-http` — l'authentification. À mener comme un chantier propre, tests à l'appui, pas dans la foulée d'un déploiement |
+
+### Bonnes pratiques d'exploitation
+
+- **Descendre une sauvegarde hors du serveur** une fois par mois. Une sauvegarde
+  qui vit sur la machine qu'elle protège n'en est pas tout à fait une.
+- **Le silence des crons est normal** — seules les erreurs partent par e-mail.
+  Mais il ne prouve rien : c'est la date du dernier fichier de `~/backups/` qui
+  prouve qu'une tâche a tourné.
+- **Retirer `--simuler`** du cron de purge (`app:echange:purger`) et **ajouter
+  `--force`** à celui des relances de congés (`app:conges:rappels`) après avoir
+  lu leurs journaux pendant une semaine. Tant que ces options sont là, les deux
+  tâches rapportent ce qu'elles feraient sans rien faire.
+- **Le 15 décembre**, lancer à blanc l'ouverture de l'exercice de congés : un
+  cron annuel est un cron dont on découvre la panne un an trop tard.
 
 ---
 
@@ -254,7 +313,13 @@ types d'absence…) est semé automatiquement. **Aucune fixture ne doit jamais
 
 ---
 
-## Publier une mise à jour *(le geste quotidien)*
+## Publier depuis le poste Windows *(voie alternative)*
+
+> **Ce n'est PAS la voie retenue.** Le geste quotidien est celui du haut :
+> `publier` dans le Terminal cPanel. Celui-ci demande un accès SSH configuré
+> depuis Windows, ce qui n'a pas été mis en place — il est décrit pour le jour
+> où on le voudrait, et parce qu'il ajoute une chose que la voie Terminal n'a
+> pas : **il lance la suite de tests avant de pousser**.
 
 ```powershell
 cd C:\JSBrokers_1_0_3
