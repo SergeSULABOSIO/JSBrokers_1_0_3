@@ -80,7 +80,7 @@ Ce qu'il faut en retenir, dans l'ordre d'importance :
 | **Email Deliverability** | → **Repair** jusqu'à SPF, DKIM et PTR en vert. Sans cela, chaque e-mail d'inscription part en indésirable et l'inscription *paraît* cassée |
 | **SSL/TLS Status** | AutoSSL sur `joseara.com`, `www.` et `mail.` |
 | **Domains** | « Force HTTPS Redirect ». ⚠ **Soit** cet interrupteur, **soit** le bloc HTTPS commenté du `.htaccess` — jamais les deux, sinon boucle de redirection |
-| **Cron Jobs** | renseigner « Cron Email » avec une adresse réellement relevée |
+| **Cron Jobs** | renseigner « Cron Email ». Préférer une adresse de RÔLE — `technique@joseara.com`, redirigée vers la boîte réellement consultée — plutôt qu'une adresse personnelle : le jour où quelqu'un d'autre reprend l'exploitation, il n'y a rien à changer, et les alertes techniques ne se mélangent pas aux demandes de clients. **Ne pas utiliser `contact@joseara.com`** : c'est la boîte que le formulaire du site alimente |
 
 ---
 
@@ -316,6 +316,18 @@ sauvegarde, et les migrations dépourvues de `down()`.
 3. **Les heures sont celles du serveur**, pas de Kinshasa. Le diagnostic donne
    l'écart à appliquer.
 
+> **La sortie normale va dans un journal, les ERREURS partent par e-mail.** C'est
+> pour cela que les lignes ci-dessous se terminent par `>> …log` et **non** par
+> `>> …log 2>&1` : le second renvoie *aussi* les erreurs dans le fichier, et le
+> cron n'envoie plus jamais rien. L'adresse « Cron Email » ne servirait alors
+> jamais, et une tâche cassée pourrait le rester des semaines sans que personne
+> ne l'apprenne — un cron qui échoue est silencieux par nature.
+>
+> Conséquence à connaître : **recevoir un e-mail de cron signifie qu'une tâche a
+> échoué.** Le silence est l'état normal. Il ne prouve pas que la tâche tourne :
+> pour cela, on regarde la date de la dernière ligne du journal, ou celle du
+> dernier fichier de `~/backups/`.
+
 > ⚠ **Le chemin PHP des crons doit être celui du SITE, pas le plus récent
 > installé.** Vérifié le 2026-09-13 : `/opt/alt/php83/usr/bin/php` existe sur ce
 > serveur, **tout nu** — aucune extension n'y est activée, parce que le site
@@ -333,33 +345,33 @@ Les heures sont exprimées **en heure de Kinshasa**.
 # ⚠ LA PREMIÈRE SEMAINE, RETIRER « --force » : sans lui la commande est en
 #   répétition à blanc par construction et rapporte qui SERAIT relancé. On lit
 #   sept jours avant d'écrire à de vrais valideurs.
-30 5 * * * cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=512M bin/console app:conges:rappels --force --env=prod --no-interaction >> /home/josearac/logs/conges-rappels.log 2>&1
+30 5 * * * cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=512M bin/console app:conges:rappels --force --env=prod --no-interaction >> /home/josearac/logs/conges-rappels.log
 
 # 01:15 — Synchronisation CRM.
-15 0 * * * cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=512M bin/console app:crm:sync --env=prod --no-interaction >> /home/josearac/logs/crm-sync.log 2>&1
+15 0 * * * cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=512M bin/console app:crm:sync --env=prod --no-interaction >> /home/josearac/logs/crm-sync.log
 
 # 01:45 — Automatisations CRM. Trente minutes APRÈS le sync, délibérément :
 # elles lisent les instantanés de santé qu'il vient d'écrire.
-45 0 * * * cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=512M bin/console app:crm:run-automations --env=prod --no-interaction >> /home/josearac/logs/crm-automations.log 2>&1
+45 0 * * * cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=512M bin/console app:crm:run-automations --env=prod --no-interaction >> /home/josearac/logs/crm-automations.log
 
 # 02:30 — Purge des dépôts d'import expirés.
 # ENJEU DE CONFIDENTIALITÉ, pas d'espace disque : ces dépôts contiennent des
 # données de clients, et leur expiration est une promesse faite aux cabinets.
 # Première semaine avec « --simuler ». Ensuite, SURVEILLER que ce cron tourne :
 # son silence ressemble à un succès.
-30 1 * * * cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=512M bin/console app:echange:purger --env=prod --no-interaction >> /home/josearac/logs/echange-purge.log 2>&1
+30 1 * * * cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=512M bin/console app:echange:purger --env=prod --no-interaction >> /home/josearac/logs/echange-purge.log
 
 # 1er janvier — Ouverture de l'exercice de congés.
 # Un cron annuel est un cron dont on découvre la panne un an trop tard : le
 # 15 décembre, le lancer À LA MAIN sans « --force » et lire le résultat.
-5 23 31 12 * cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=512M bin/console app:conges:ouvrir-exercice --force --env=prod --no-interaction >> /home/josearac/logs/conges-exercice.log 2>&1
+5 23 31 12 * cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=512M bin/console app:conges:ouvrir-exercice --force --env=prod --no-interaction >> /home/josearac/logs/conges-exercice.log
 
 # 03:00 — LE CRON LE PLUS IMPORTANT DE LA LISTE.
 # Ne pas se reposer sur les sauvegardes de l'hébergeur : leur rétention et leur
 # délai de restauration ne sont pas sous votre contrôle. Et descendre une copie
 # HORS du serveur une fois par mois — une sauvegarde qui vit sur la machine
 # qu'elle protège n'en est pas une.
-0 2 * * * /usr/bin/mysqldump --defaults-file=/home/josearac/.my.cnf --single-transaction --quick --routines --triggers --default-character-set=utf8mb4 <base> | /usr/bin/gzip -9 > /home/josearac/backups/auto-$(date +\%Y\%m\%d).sql.gz 2>> /home/josearac/logs/backup.log
+0 2 * * * /usr/bin/mysqldump --defaults-file=/home/josearac/.my.cnf --single-transaction --quick --routines --triggers --default-character-set=utf8mb4 <base> | /usr/bin/gzip -9 > /home/josearac/backups/auto-$(date +\%Y\%m\%d).sql.gz
 
 # 03:30 — Rétention des sauvegardes de base à 30 jours.
 30 2 * * * /usr/bin/find /home/josearac/backups -name 'auto-*.sql.gz' -mtime +30 -delete
@@ -369,7 +381,7 @@ Les heures sont exprimées **en heure de Kinshasa**.
 # leurs noms. Restaurer l'un sans l'autre donne une application qui liste des
 # pièces jointes introuvables — et personne ne s'en aperçoit avant d'en ouvrir
 # une. Environ 215 Mo au 2026-09-13, d'où la cadence hebdomadaire.
-45 2 * * 0 cd /home/josearac/joseara && /usr/bin/tar czf /home/josearac/backups/fichiers-$(date +\%Y\%m\%d).tar.gz var/uploads/assistant var/uploads/assistant-documents public/uploads/documents public/images/entreprises 2>> /home/josearac/logs/backup.log
+45 2 * * 0 cd /home/josearac/joseara && /usr/bin/tar czf /home/josearac/backups/fichiers-$(date +\%Y\%m\%d).tar.gz var/uploads/assistant var/uploads/assistant-documents public/uploads/documents public/images/entreprises
 
 # 04:15 dimanche — Rétention des sauvegardes de fichiers à 60 jours.
 15 3 * * 0 /usr/bin/find /home/josearac/backups -name 'fichiers-*.tar.gz' -mtime +60 -delete
@@ -388,7 +400,7 @@ Le cron ci-dessous n'est à créer que le jour d'un passage à
 `ASSISTANT_ASYNC=1` :
 
 ```cron
-*/5 * * * * /usr/bin/flock -n /home/josearac/joseara/var/worker.lock -c "cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=256M bin/console messenger:consume async --time-limit=280 --memory-limit=200M --limit=100 --env=prod --no-interaction -q" >> /home/josearac/logs/worker.log 2>&1
+*/5 * * * * /usr/bin/flock -n /home/josearac/joseara/var/worker.lock -c "cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=256M bin/console messenger:consume async --time-limit=280 --memory-limit=200M --limit=100 --env=prod --no-interaction -q" >> /home/josearac/logs/worker.log
 ```
 
 `flock -n` empêche deux workers de se superposer · `--time-limit=280` fait
