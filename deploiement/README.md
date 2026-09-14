@@ -306,6 +306,13 @@ sauvegarde, et les migrations dépourvues de `down()`.
 
 ## Les crons cPanel
 
+> **Le formulaire cPanel DÉCOUPE l'horaire en cinq champs** — Minute, Heure, Jour,
+> Mois, Jour (de la semaine) — et ne reçoit dans « Commande » que ce qui suit.
+> Les lignes ci-dessous sont écrites d'un seul tenant, pour `crontab -e` : dans
+> l'interface, reporter les cinq premiers termes dans les cinq champs, et coller
+> le reste dans « Commande ». Y coller la ligne entière ferait tenter d'exécuter
+> « 0 2 * * * /usr/bin/mysqldump… » comme un nom de programme.
+
 **Trois pièges, avant de coller quoi que ce soit :**
 
 1. **Le `%` est un saut de ligne pour cron.** `date +%F` coupe la commande en
