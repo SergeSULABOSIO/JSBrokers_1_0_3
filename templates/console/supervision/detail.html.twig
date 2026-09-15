@@ -1,0 +1,93 @@
+{% extends 'console/base.html.twig' %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    .sv-faits { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: .75rem 1.5rem; }
+    .sv-fait { min-width: 0; }
+    .sv-fait dt { font-size: .76rem; font-weight: 600; color: #6c757d; margin-bottom: .15rem; }
+    .sv-fait dd { margin: 0; font-size: .9rem; word-break: break-word; }
+    /* La trace est longue et n'a pas à être relue en entier : elle défile dans
+       son propre cadre, sans jamais élargir la page. */
+    .sv-trace { max-height: 460px; overflow: auto; background: #1e1e1e; color: #e6e6e6;
+        padding: 1rem; border-radius: .5rem; font-size: .76rem; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
+</style>
+{% endblock %}
+
+{% block console_subtitle %}<p>Le contexte décrit la <strong>dernière</strong> occurrence : c'est celle qu'on a une chance de reproduire.</p>{% endblock %}
+
+{% block console_actions %}
+    <a href="{{ path('console.supervision.index') }}" class="btn btn-outline-secondary btn-sm" data-action="click->top-progress#show">
+        {{ ux_icon('mdi:arrow-left', {height:'16px', width:'16px'}) }}
+        <span class="ms-1">Retour à la liste</span>
+    </a>
+{% endblock %}
+
+{% block console_body %}
+    {% set badgeStatut = {
+        'nouvelle': 'cs-badge--danger',
+        'en_cours': 'cs-badge--warn',
+        'resolue':  'cs-badge--ok',
+        'ignoree':  'cs-badge--muted'
+    } %}
+
+    <div class="cs-panel" style="margin-bottom:1.25rem;">
+        <h2 style="font-size:1.05rem; margin:0 0 .35rem;">{{ erreur.type }}</h2>
+        <p style="color:#6c757d; margin:0 0 1rem;">{{ erreur.message }}</p>
+
+        <dl class="sv-faits">
+            <div class="sv-fait"><dt>Côté</dt><dd><span class="cs-badge {{ erreur.cote == 'serveur' ? 'cs-badge--cobalt' : 'cs-badge--muted' }}">{{ ('supervision_cote.' ~ erreur.cote)|trans }}</span></dd></div>
+            <div class="sv-fait"><dt>Branche touchée</dt><dd><span class="cs-badge cs-badge--muted">{{ ('supervision_branche.' ~ erreur.branche)|trans }}</span></dd></div>
+            <div class="sv-fait"><dt>Statut</dt><dd><span class="cs-badge {{ badgeStatut[erreur.statut]|default('cs-badge--muted') }}">{{ ('supervision_statut.' ~ erreur.statut)|trans }}</span></dd></div>
+            <div class="sv-fait"><dt>Occurrences</dt><dd><strong style="font-size:1.1rem;">{{ erreur.nombreOccurrences|number_format(0, ',', ' ') }}</strong></dd></div>
+            <div class="sv-fait"><dt>Première fois</dt><dd>{{ erreur.premiereOccurrenceAt|format_datetime('medium', 'short', locale: app.user.locale) }}</dd></div>
+            <div class="sv-fait"><dt>Dernière fois</dt><dd>{{ erreur.derniereOccurrenceAt|format_datetime('medium', 'short', locale: app.user.locale) }}</dd></div>
+            <div class="sv-fait"><dt>Lieu dans le code</dt><dd>{% if erreur.fichier %}<code>{{ erreur.fichier }}{% if erreur.ligne %}:{{ erreur.ligne }}{% endif %}</code>{% else %}—{% endif %}</dd></div>
+            <div class="sv-fait"><dt>Page</dt><dd>{{ erreur.url ?: '—' }}</dd></div>
+            <div class="sv-fait"><dt>Cabinet</dt><dd>{{ erreur.dernierCabinet ?: '—' }}</dd></div>
+            <div class="sv-fait"><dt>Utilisateur</dt><dd>{{ erreur.dernierUtilisateurEmail ?: '—' }}</dd></div>
+            <div class="sv-fait"><dt>Navigateur</dt><dd style="font-size:.78rem;">{{ erreur.navigateur ?: '—' }}</dd></div>
+            <div class="sv-fait"><dt>Pris en charge par</dt><dd>{{ erreur.assigneA ? erreur.assigneA.nom : 'Personne' }}</dd></div>
+        </dl>
+    </div>
+
+    {# ── Trancher ──
+       ⚠ « Résolue » n'est pas un rangement : c'est ce statut qui ARME la
+       détection de régression (une réapparition enverra un e-mail) et qui
+       autorise la purge à effacer la ligne au bout de 90 jours. #}
+    <div class="cs-panel" style="margin-bottom:1.25rem;">
+        <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:center;">
+            {% for s in statuts|filter(s => s != erreur.statut) %}
+                <form method="post" action="{{ path('console.supervision.statut', {id: erreur.id}) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('supervision-' ~ erreur.id) }}">
+                    <input type="hidden" name="statut" value="{{ s }}">
+                    <button type="submit" class="btn btn-sm {{ s == 'resolue' ? 'btn-cobalt' : 'btn-outline-secondary' }}">
+                        {{ ('supervision_action.' ~ s)|trans }}
+                    </button>
+                </form>
+            {% endfor %}
+
+            <form method="post" action="{{ path('console.supervision.assignation', {id: erreur.id}) }}" style="margin-left:auto;">
+                <input type="hidden" name="_token" value="{{ csrf_token('supervision-' ~ erreur.id) }}">
+                <input type="hidden" name="prendre" value="{{ erreur.assigneA and erreur.assigneA.id == app.user.id ? '0' : '1' }}">
+                <button type="submit" class="btn btn-sm btn-outline-secondary">
+                    {{ erreur.assigneA and erreur.assigneA.id == app.user.id ? 'Me retirer' : 'Me l\'attribuer' }}
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {# ── La trace ── #}
+    <div class="cs-panel">
+        <h2 style="font-size:.95rem; margin:0 0 .75rem;">Trace</h2>
+        {% if erreur.trace %}
+            <pre class="sv-trace">{{ erreur.trace }}</pre>
+        {% else %}
+            <div class="cs-empty">
+                Pas de trace. C'est le cas des erreurs journalisées sans exception
+                (un <code>$logger-&gt;error()</code> du code métier) : le canal tient
+                alors lieu de lieu, et c'est le message qui renseigne.
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

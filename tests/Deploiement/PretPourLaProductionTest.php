@@ -490,4 +490,94 @@ final class PretPourLaProductionTest extends KernelTestCase
 
         return false;
     }
+
+    /**
+     * L'ALERTE PAR E-MAIL EST ARMÉE, ET NE PEUT PAS S'AUTO-ALIMENTER.
+     *
+     * ── CE QUE CE TEST PROTÈGE ──────────────────────────────────────────────
+     * La chaîne d'alerte ne vit que dans `when@prod` : elle ne s'exécute donc
+     * JAMAIS en développement ni en test. Aucune exécution ne peut révéler
+     * qu'elle a été cassée — seule une lecture du fichier le peut, et c'est ce
+     * que fait ce test.
+     *
+     * Trois invariants, trois pannes distinctes s'ils tombent :
+     *
+     * 1. LE HANDLER `symfony_mailer` EXISTE. Sans lui, plus rien ne part, et le
+     *    silence ressemble en tout point à l'absence d'erreurs.
+     *
+     * 2. LA DÉDUPLICATION RANGE SA MÉMOIRE HORS DE `cache_dir`. C'est le défaut
+     *    de Monolog, et il est piégeux ici : `cache:clear` a lieu à CHAQUE
+     *    déploiement. La mémoire des alertes déjà envoyées serait effacée à
+     *    chaque publication — donc un e-mail de plus, à chaque fois, pour une
+     *    erreur déjà connue. On cesserait vite de les lire.
+     *
+     * 3. LE CANAL `mailer` EST EXCLU. En production, l'envoi d'e-mail est
+     *    SYNCHRONE : un échec de transport est journalisé pendant la requête.
+     *    Sans cette exclusion, l'échec d'une alerte déclencherait une alerte,
+     *    qui échouerait à son tour — une boucle qui s'auto-alimente à la
+     *    vitesse du serveur de messagerie.
+     */
+    public function testLaChaineDAlerteEstArmeeEtNePeutPasSAutoAlimenter(): void
+    {
+        $monolog = (string) file_get_contents(self::racine() . '/config/packages/monolog.yaml');
+
+        $apresWhenProd = strstr($monolog, 'when@prod:');
+        self::assertIsString($apresWhenProd, 'config/packages/monolog.yaml doit porter un bloc when@prod.');
+
+        self::assertMatchesRegularExpression(
+            '/type:\s*symfony_mailer/',
+            $apresWhenProd,
+            'Sans handler symfony_mailer sous when@prod, AUCUNE erreur de production ne part par e-mail — et le silence ressemble à l\'absence d\'erreurs.'
+        );
+
+        self::assertMatchesRegularExpression(
+            '/store:\s*\'%kernel\.logs_dir%/',
+            $apresWhenProd,
+            'La déduplication doit ranger sa mémoire dans logs_dir : dans cache_dir, cache:clear l\'effacerait à chaque déploiement, et chaque publication rejouerait les alertes déjà envoyées.'
+        );
+
+        self::assertStringNotContainsString(
+            'store: \'%kernel.cache_dir%',
+            $apresWhenProd,
+            'La mémoire des alertes ne doit jamais vivre dans le cache : il est vidé à chaque déploiement.'
+        );
+
+        // L'anti-récursion, sur la chaîne d'alerte ET sur le comptage.
+        self::assertMatchesRegularExpression(
+            '/channels:\s*\[[^\]]*"!mailer"[^\]]*\]/',
+            $apresWhenProd,
+            'La chaîne d\'alerte doit exclure le canal « mailer » : l\'envoi étant synchrone en production, un échec d\'alerte produirait une alerte.'
+        );
+
+        $handler = (string) file_get_contents(self::racine() . '/src/Supervision/HandlerDeSupervision.php');
+        foreach (['mailer', 'messenger'] as $canal) {
+            self::assertStringContainsString(
+                "'" . $canal . "'",
+                $handler,
+                sprintf('Le handler de comptage doit exclure le canal « %s » : même boucle, côté base de données.', $canal)
+            );
+        }
+    }
+
+    /**
+     * L'ADRESSE D'ALERTE EST DÉCLARÉE DANS LE DÉPÔT, ET NON DANS LES SECRETS.
+     *
+     * Adresse de RÔLE, non secrète : la laisser à `.env.local` la rendrait
+     * tributaire d'un oubli au moment d'écrire les secrets du serveur. Et une
+     * supervision muette est pire que pas de supervision, puisqu'on la croit
+     * active — c'est le seul cas où l'on préfère une valeur versionnée.
+     */
+    public function testLAdresseDesAlertesEstDeclaree(): void
+    {
+        $env = (string) file_get_contents(self::racine() . '/.env');
+
+        self::assertSame(
+            1,
+            preg_match('/^ALERTE_EMAIL=(.+)$/m', $env, $declaration),
+            '.env doit déclarer ALERTE_EMAIL, sinon les alertes n\'ont pas de destinataire.'
+        );
+
+        self::assertNotSame('', trim($declaration[1]), 'ALERTE_EMAIL ne doit pas être vide.');
+        self::assertStringContainsString('@', $declaration[1], 'ALERTE_EMAIL doit être une adresse e-mail.');
+    }
 }

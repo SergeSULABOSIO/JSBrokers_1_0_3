@@ -1,0 +1,41 @@
+{# Fragment AJAX : les défauts OUVERTS les plus récents.
+
+   Le tableau de bord ne remplace pas la rubrique : il ne montre que ce qui
+   appelle une action (nouvelle ou en cours), pour que l'équipe voie en ouvrant
+   sa page qu'il y a quelque chose à traiter — sans avoir à y penser.
+
+   Le compteur d'occurrences est repris ici : sans lui, six lignes se
+   ressemblent toutes et rien ne dit par laquelle commencer. #}
+<div class="px-3 pt-3 pb-1 d-flex align-items-center gap-3 flex-wrap" style="font-size:.78rem;">
+    <span><strong style="font-size:1.05rem; color:#b3261e;">{{ totaux.ouverts }}</strong> <span class="text-muted">à traiter</span></span>
+    <span><strong style="font-size:1.05rem;">{{ totaux.occurrences24h }}</strong> <span class="text-muted">actifs sur 24 h</span></span>
+    <span><strong style="font-size:1.05rem;">{{ totaux.occurrences|number_format(0, ',', ' ') }}</strong> <span class="text-muted">occurrences cumulées</span></span>
+</div>
+
+<div class="px-3 pb-3" style="max-height:340px; overflow:auto;">
+{% if defauts|length > 0 %}
+    <table class="cs-table">
+        <thead><tr><th>Source</th><th>Défaut</th><th>Vu</th><th>Dernière fois</th></tr></thead>
+        <tbody>
+        {% for e in defauts %}
+            <tr>
+                <td>
+                    <span class="cs-badge {{ e.cote == 'serveur' ? 'cs-badge--cobalt' : 'cs-badge--muted' }}">{{ ('supervision_cote.' ~ e.cote)|trans }}</span>
+                    <span class="cs-badge cs-badge--muted">{{ ('supervision_branche.' ~ e.branche)|trans }}</span>
+                </td>
+                <td>
+                    <a href="{{ path('console.supervision.detail', {id: e.id}) }}" data-action="click->top-progress#show">
+                        <strong>{{ e.type }}</strong>
+                    </a>
+                    <br><small class="text-muted">{{ e.message|length > 80 ? e.message|slice(0, 79) ~ '…' : e.message }}</small>
+                </td>
+                <td><strong style="font-variant-numeric:tabular-nums;{{ e.nombreOccurrences >= 10 ? ' color:#b3261e;' }}">{{ e.nombreOccurrences }}</strong></td>
+                <td><small>{{ e.derniereOccurrenceAt|format_datetime('short', 'short', locale: app.user.locale) }}</small></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <div class="cs-empty">Aucun défaut ouvert.</div>
+{% endif %}
+</div>
