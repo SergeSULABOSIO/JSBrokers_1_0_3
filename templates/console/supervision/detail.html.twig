@@ -18,7 +18,7 @@
 
 {% block console_actions %}
     <a href="{{ path('console.supervision.index') }}" class="btn btn-outline-secondary btn-sm" data-action="click->top-progress#show">
-        {{ ux_icon('mdi:arrow-left', {height:'16px', width:'16px'}) }}
+        {{ ux_icon(resolve_icon_name('action:reset'), {height:'16px', width:'16px'}) }}
         <span class="ms-1">Retour à la liste</span>
     </a>
 {% endblock %}

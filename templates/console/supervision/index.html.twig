@@ -147,7 +147,7 @@
                                 {% endif %}
                                 {% if e.statut != 'resolue' %}
                                     {{ include('console/supervision/_action_statut.html.twig', {
-                                        erreur: e, statut: 'resolue', libelle: 'Marquer résolue', icone: 'action:valider'
+                                        erreur: e, statut: 'resolue', libelle: 'Marquer résolue', icone: 'action:completed'
                                     }, with_context: false) }}
                                 {% endif %}
                                 {% if e.statut != 'ignoree' %}

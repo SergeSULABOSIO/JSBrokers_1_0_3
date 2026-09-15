@@ -108,6 +108,7 @@ class IconCanvasProvider
         'action:cancel'       => 'hugeicons:cancel-01',
         'action:cart'         => 'pepicons-print:cart',
         'action:check'        => 'material-symbols:check-box',
+        'action:chevron-down' => 'lucide:chevron-down', // caret des blocs pliables (icône VENDUE : aucun appel sortant au rendu)
         'action:close'        => 'hugeicons:cancel-01', // Alias pour 'cancel'
         'action:completed'    => 'fluent-mdl2:completed',
         'action:copy'         => 'hugeicons:copy-01',
