@@ -398,4 +398,96 @@ final class PretPourLaProductionTest extends KernelTestCase
 
         self::assertFileExists(self::racine() . '/assets/vendor/installed.php');
     }
+
+    /**
+     * Permissions-Policy : une liste VIDE ferme la fonctionnalité À LA PAGE
+     * ELLE-MÊME, et pas seulement aux cadres tiers comme on le croit en
+     * recopiant l'en-tête. « microphone=() » a donc coupé la dictée vocale de
+     * Ket sur joseara.com le 2026-09-13 : le navigateur refusait la capture
+     * sans même afficher sa demande d'autorisation, et l'utilisateur lisait
+     * « Micro indisponible » sans aucun moyen d'y remédier. Rien, en
+     * développement, ne pouvait le révéler : le serveur local ne lit pas le
+     * .htaccess, donc l'en-tête n'y existe pas.
+     *
+     * Le test ne juge pas la valeur dans l'absolu : il confronte la POLITIQUE
+     * DÉCLARÉE à ce que l'INTERFACE UTILISE VRAIMENT. Le jour où un écran se
+     * met à demander la caméra ou la position, ce test tombe et rappelle
+     * d'ouvrir la porte correspondante — plutôt que de laisser la
+     * fonctionnalité échouer chez l'utilisateur, loin d'ici.
+     */
+    public function testLaPolitiqueDePermissionsNeFermePasUneFonctionnaliteUtilisee(): void
+    {
+        $htaccess = (string) file_get_contents(self::racine() . '/public/.htaccess');
+
+        // La VALEUR de l'en-tête, et elle seule : les commentaires du .htaccess
+        // citent les valeurs qu'ils déconseillent, et un test qui lit le
+        // fichier entier se ferait piéger par sa propre documentation.
+        self::assertSame(
+            1,
+            preg_match('/^\s*Header always set Permissions-Policy\s+"([^"]*)"/mi', $htaccess, $declaration),
+            'La politique de permissions doit rester déclarée : elle ferme ce que nous n\'utilisons pas.'
+        );
+
+        $politique = $declaration[1];
+
+        // Les signatures par lesquelles NOTRE code demande chaque permission.
+        $usages = [
+            'microphone' => ['SpeechRecognition', 'getUserMedia'],
+            'camera' => ['facingMode', 'video: true'],
+            'geolocation' => ['navigator.geolocation'],
+        ];
+
+        foreach ($usages as $permission => $signatures) {
+            if (!self::lInterfaceUtilise($signatures)) {
+                continue;
+            }
+
+            self::assertDoesNotMatchRegularExpression(
+                sprintf('/%s\s*=\s*\(\s*\)/', $permission),
+                $politique,
+                sprintf(
+                    'Un écran utilise « %1$s », mais la politique le ferme avec « %1$s=() » : '
+                    . 'une liste vide vaut AUSSI pour notre propre page, et la fonctionnalité '
+                    . 'échoue sans que le navigateur demande quoi que ce soit. Écrivez « %1$s=(self) ».',
+                    $permission
+                )
+            );
+        }
+    }
+
+    /**
+     * Cherche une signature d'API navigateur dans le code de l'interface.
+     *
+     * Ne lit que NOS sources — contrôleurs Stimulus et gabarits, où vivent les
+     * scripts inline de l'espace de travail. Les dépendances d'assets/vendor
+     * embarquent des API qu'aucun de nos écrans n'appelle : les inclure ferait
+     * répondre « oui » à tout.
+     *
+     * @param list<string> $signatures
+     */
+    private static function lInterfaceUtilise(array $signatures): bool
+    {
+        foreach (['/assets/controllers', '/templates'] as $dossier) {
+            $chemin = self::racine() . $dossier;
+            if (!is_dir($chemin)) {
+                continue;
+            }
+
+            $fichiers = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($chemin));
+            foreach ($fichiers as $fichier) {
+                if (!$fichier->isFile() || !\in_array($fichier->getExtension(), ['js', 'twig'], true)) {
+                    continue;
+                }
+
+                $contenu = (string) file_get_contents($fichier->getPathname());
+                foreach ($signatures as $signature) {
+                    if (str_contains($contenu, $signature)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
 }
