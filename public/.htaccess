@@ -114,7 +114,16 @@ Options -Indexes -MultiViews
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-Frame-Options "SAMEORIGIN"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
-    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    # « microphone=(self) » et non « microphone=() » : la liste vide ferme la
+    # fonctionnalite A LA PAGE ELLE-MEME, pas seulement aux cadres tiers. Ket
+    # propose la dictee vocale (bouton micro du chat) : avec la liste vide, le
+    # navigateur refusait la capture SANS MEME demander l'autorisation, et
+    # l'utilisateur lisait « Micro indisponible » sans pouvoir rien y faire.
+    # Constate sur joseara.com le 2026-09-15. « (self) » n'ouvre rien a
+    # l'exterieur : seule notre propre origine peut demander le micro, et
+    # l'utilisateur garde le dernier mot via la boite du navigateur.
+    # Geolocalisation et camera restent fermees : aucun ecran ne les utilise.
+    Header always set Permissions-Policy "geolocation=(), microphone=(self), camera=()"
 
     # HSTS : à n'activer QU'APRÈS avoir vérifié que HTTPS répond sur
     # joseara.com ET www.joseara.com. Une fois l'en-tête envoyée, un navigateur

@@ -42,6 +42,27 @@ const ICONE_TELECHARGEMENT = '<svg xmlns="http://www.w3.org/2000/svg" width="15"
 const ICONE_ARCHIVE = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>';
 
 /**
+ * Ce que la dictée dit à l'utilisateur, PAR CAUSE. Les codes de l'API Web
+ * Speech désignent des situations sans rapport entre elles, et le remède n'est
+ * le même dans aucune : les confondre coûte cher. « Micro indisponible :
+ * autorisez l'accès » a été affiché à un utilisateur à qui le navigateur ne
+ * demandait rien et ne demanderait jamais rien — c'était l'en-tête
+ * Permissions-Policy du site qui fermait le micro (cf. public/.htaccess), et
+ * aucune manipulation de sa part ne pouvait y changer quoi que ce soit.
+ * Un message doit donc nommer la cause, et n'exiger que ce qui est faisable.
+ *
+ * Les codes absents de cette table sont le cours normal des choses
+ * (« no-speech » : rien n'a été dit ; « aborted » : l'utilisateur a arrêté) :
+ * ils ne méritent aucun message.
+ */
+const CAUSES_DICTEE = {
+    'not-allowed': "Le navigateur a refusé le micro. Autorisez-le pour ce site (icône à gauche de l'adresse). Si aucune demande n'apparaît, le micro est fermé par la configuration du site : signalez-le à votre administrateur.",
+    'service-not-allowed': "La reconnaissance vocale du navigateur est indisponible. Vérifiez qu'elle est activée dans ses paramètres, ou écrivez votre message.",
+    'audio-capture': 'Aucun microphone détecté. Branchez-en un, puis réessayez.',
+    'network': "La dictée transcrit votre voix en ligne : la connexion n'a pas répondu.",
+};
+
+/**
  * @class AssistantChatController
  * @description Chat de l'assistant IA (panneau de la colonne 4). Envoi des
  * messages en JSON, bulle utilisateur optimiste, indicateur contextuel
@@ -282,9 +303,11 @@ export default class extends Controller {
             this.onInput(); // réutilise autoGrow + état du bouton + compteur
         };
         recognition.onerror = (event) => {
-            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-                this.appendNotice('warning', "Micro indisponible : autorisez l'accès au microphone pour dicter votre message.");
-            }
+            const message = CAUSES_DICTEE[event.error];
+            // « no-speech » et « aborted » sont le cours normal des choses :
+            // l'utilisateur n'a rien dit, ou a recliqué pour arrêter. Rien à
+            // signaler — le bouton reprend simplement son état de repos.
+            if (message) this.appendNotice('warning', message);
             this.stopDictationUi();
         };
         recognition.onend = () => this.stopDictationUi();
