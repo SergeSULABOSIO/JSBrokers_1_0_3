@@ -1,0 +1,17 @@
+{# Un bouton de changement de statut, reflété dans le menu contextuel.
+
+   Fragment plutôt que quatre blocs recopiés : les quatre actions ne diffèrent
+   que par le statut visé et son libellé, et c'est le JETON CSRF qu'on ne veut
+   surtout pas voir diverger d'une copie à l'autre.
+
+   « retour » ramène à la vue filtrée exacte d'où vient l'agent — la cible est
+   revérifiée côté serveur (SupervisionController::retour). #}
+<form method="post" action="{{ path('console.supervision.statut', {id: erreur.id}) }}" style="display:inline;">
+    <input type="hidden" name="_token" value="{{ csrf_token('supervision-' ~ erreur.id) }}">
+    <input type="hidden" name="statut" value="{{ statut }}">
+    <input type="hidden" name="retour" value="{{ app.request.requestUri }}">
+    <button type="submit" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center">
+        {{ ux_icon(resolve_icon_name(icone), {height:'16px', width:'16px'}) }}
+        <span class="ms-1">{{ libelle }}</span>
+    </button>
+</form>

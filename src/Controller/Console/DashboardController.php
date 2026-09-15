@@ -7,6 +7,7 @@ use App\Entity\Utilisateur;
 use App\Repository\CouponRepository;
 use App\Repository\DepenseRepository;
 use App\Repository\EntrepriseRepository;
+use App\Repository\ErreurApplicativeRepository;
 use App\Repository\TokenConsumptionRepository;
 use App\Repository\ObjectifRepository;
 use App\Repository\TokenPurchaseRepository;
@@ -50,6 +51,7 @@ class DashboardController extends AbstractConsoleController
         private ConsoleAccessResolver $accessResolver,
         private FicheEvaluationBuilder $ficheBuilder,
         private ObjectifRepository $objectifRepository,
+        private ErreurApplicativeRepository $erreurRepository,
     ) {}
 
     #[Route('', name: 'console.dashboard', methods: ['GET'])]
@@ -405,6 +407,28 @@ class DashboardController extends AbstractConsoleController
             'revenuHorsTaxe' => $this->taxesVente->revenuHorsTaxe($revenu),
             'montantTaxes'   => $this->taxesVente->montantTaxes($revenu),
             'annee'          => $annee,
+        ]);
+    }
+
+    /**
+     * Les défauts applicatifs encore OUVERTS, les plus récents en tête.
+     *
+     * Ce bloc existe pour une raison précise : une erreur dont personne n'a été
+     * témoin n'est signalée que par un e-mail, et un e-mail se classe. Le
+     * tableau de bord est la page que l'équipe ouvre de toute façon — c'est donc
+     * le seul endroit où une panne se fait remarquer sans qu'on l'ait cherchée.
+     *
+     * Les totaux sont calculés SANS filtre : ce bloc dit l'état de la
+     * plateforme entière, pas celui d'une vue.
+     */
+    #[Route('/dashboard/block/supervision', name: 'console.dashboard.block_supervision', methods: ['GET'])]
+    public function blockSupervision(): Response
+    {
+        $this->assertDomaine('console.supervision.index');
+
+        return $this->render('console/dashboard/_block_supervision.html.twig', [
+            'defauts' => $this->erreurRepository->ouvertsRecents(6),
+            'totaux'  => $this->erreurRepository->totaux([]),
         ]);
     }
 }

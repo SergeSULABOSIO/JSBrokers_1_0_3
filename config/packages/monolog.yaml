@@ -8,6 +8,11 @@ monolog:
         # sur « error », donc ces lignes de niveau info n'y seraient JAMAIS
         # écrites. Exploité par app:assistant:tokens:rapport.
         - assistant_tokens
+        # Erreurs remontées par le NAVIGATEUR d'un utilisateur, via la route de
+        # collecte. Canal séparé pour qu'on puisse, si le front s'avérait trop
+        # bavard, le retirer des alertes d'un mot — sans rien perdre de sa
+        # journalisation ni de son comptage dans la Console.
+        - navigateur
 
 when@dev:
     monolog:
@@ -100,3 +105,62 @@ when@prod:
                 channels: [assistant_tokens]
                 max_files: 14
                 formatter: monolog.formatter.json
+
+            # ── L'ALERTE PAR E-MAIL ─────────────────────────────────────────
+            # Chaîne PARALLÈLE à « main », et non greffée dessus : un échec
+            # d'envoi ne doit jamais empêcher l'écriture dans prod.log. Les
+            # handlers ont « bubble: true » par défaut, donc « main » continue
+            # de tout recevoir quoi qu'il arrive ici.
+            #
+            # C'est le filet GARANTI : il ne dépend d'AUCUNE base de données, et
+            # prévient donc même quand c'est MariaDB qui est tombée. Le comptage
+            # de la Console, lui, suppose une base debout — les deux mécanismes
+            # existent précisément parce qu'ils ne tombent pas ensemble.
+            alerte:
+                type: fingers_crossed
+                action_level: error
+                handler: alerte_protegee
+                excluded_http_codes: [404, 405]
+                buffer_size: 30
+                # ANTI-RÉCURSION. En production, SendEmailMessage est routé
+                # « sync » : un échec d'envoi est journalisé PENDANT la requête.
+                # Sans ces exclusions, l'échec d'une alerte déclencherait une
+                # alerte, qui échouerait à son tour.
+                channels: ["!assistant_tokens", "!deprecation", "!mailer", "!messenger"]
+
+            alerte_protegee:
+                # Avale toute exception venue de la chaîne d'alerte : une panne
+                # de messagerie ne doit pas transformer une erreur lisible en
+                # une erreur qui parle d'autre chose.
+                type: whatfailuregroup
+                members: [alerte_deduplication]
+
+            alerte_deduplication:
+                type: deduplication
+                handler: alerte_email
+                time: 300
+                # PAS le défaut (%kernel.cache_dir%) : cache:clear a lieu à
+                # CHAQUE déploiement, et la mémoire des alertes serait perdue à
+                # chaque fois — donc un e-mail de plus, à chaque publication,
+                # pour une erreur déjà connue.
+                store: '%kernel.logs_dir%/alertes-envoyees.log'
+
+            alerte_email:
+                type: symfony_mailer
+                from_email: '%env(MAILER_FROM)%'
+                to_email: '%env(ALERTE_EMAIL)%'
+                subject: '[Joseara] %%level_name%% : %%message%%'
+                level: error
+                formatter: monolog.formatter.html
+                content_type: text/html
+
+            # ── LE COMPTAGE ─────────────────────────────────────────────────
+            # Enregistre le défaut dans la table de supervision, visible dans la
+            # Console. Déclaré en SERVICE pour capter tout ce qui est journalisé
+            # en erreur — et pas seulement les exceptions non rattrapées, que
+            # seul un écouteur de kernel.exception verrait. Une bonne part des
+            # défauts de ce projet sont rattrapés puis journalisés ; ils comptent
+            # autant.
+            supervision:
+                type: service
+                id: App\Supervision\HandlerDeSupervision

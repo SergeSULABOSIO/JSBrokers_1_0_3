@@ -1,3 +1,7 @@
+// AVANT bootstrap.js, donc avant que Stimulus démarre : une erreur survenue
+// pendant le démarrage de l'application est justement de celles qu'on veut
+// voir, et la veille doit déjà être en place pour l'attraper.
+import './veille-erreurs.js';
 import './bootstrap.js';
 /*
  * Welcome to your app's main JavaScript file!

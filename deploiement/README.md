@@ -19,7 +19,7 @@ panne dont la cause ne saute pas aux yeux.
 
 ---
 
-## Où nous en sommes — au 2026-09-14
+## Où nous en sommes — au 2026-09-15
 
 **Joseara est EN LIGNE** sur `https://www.joseara.com`, mais **pas encore
 diffusée** : voir « Avant d'ouvrir au public » plus bas.
@@ -31,7 +31,9 @@ diffusée** : voir « Avant d'ouvrir au public » plus bas.
 | E-mails par le relais local (`sendmail://default`), SPF et DKIM valides | ✅ |
 | Base `josearac_joseara` en utf8mb4, schéma créé, 76 migrations inscrites | ✅ |
 | Sauvegarde à chaque déploiement + sauvegarde quotidienne par cron | ✅ |
-| 8 tâches cron, erreurs envoyées à `technique@joseara.com` | ✅ |
+| 10 tâches cron, erreurs envoyées à `technique@joseara.com` | ✅ |
+| Supervision : erreurs serveur **et** navigateur, comptées par défaut, visibles dans `/console/supervision` | ✅ |
+| Alertes e-mail à `technique@joseara.com` — première apparition, aggravation (10/100/1000), régression | ✅ |
 | Assistant Ket sur Gemini (`gemini-3.1-flash-lite`, épinglé) | ✅ |
 | Déploiement en une commande, 20 à 40 s | ✅ |
 
@@ -432,6 +434,19 @@ Les heures sont exprimées **en heure de Kinshasa**.
 # Première semaine avec « --simuler ». Ensuite, SURVEILLER que ce cron tourne :
 # son silence ressemble à un succès.
 30 1 * * * cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=512M bin/console app:echange:purger --env=prod --no-interaction >> /home/josearac/logs/echange-purge.log
+
+# Toutes les heures à H+10 — LES PANNES QUE SYMFONY NE VOIT JAMAIS.
+# Mémoire épuisée, erreur de syntaxe PHP, base injoignable au démarrage : le
+# processus meurt AVANT d'avoir pu journaliser, donc ni e-mail Monolog, ni ligne
+# dans la Console. Seul PHP écrit encore, dans error_log — et ce script shell
+# (jamais une commande bin/console, qui échouerait dans ces cas-là précisément)
+# en envoie les lignes nouvelles sur stderr, donc par e-mail de cron.
+10 * * * * /bin/bash /home/josearac/joseara/bin/veille-erreurs-fatales.sh
+
+# 01:45 dimanche — Purge des défauts applicatifs tranchés depuis 90 jours.
+# N'efface QUE ce qui est résolu ou ignoré : un défaut ouvert reste, si vieux
+# soit-il. Première semaine avec « --simuler ».
+45 0 * * 0 cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=512M bin/console app:supervision:purger --env=prod --no-interaction >> /home/josearac/logs/supervision-purge.log
 
 # 1er janvier — Ouverture de l'exercice de congés.
 # Un cron annuel est un cron dont on découvre la panne un an trop tard : le
