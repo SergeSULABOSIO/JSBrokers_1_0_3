@@ -93,6 +93,9 @@ mise en place). Tant qu'une proposition n'a **aucun avenant**, ce n'est qu'un **
 ## Comment mesurer et agir (outils)
 
 - Saturation / risques manquants : `saturation_portefeuille` (client ou portefeuille).
+- Conseil en couverture (« que couvre X », « quels risques proposer à un client du secteur Y ») :
+  `catalogue_des_risques` — le catalogue COMPLET, descriptions et taux configurés compris ; avec
+  un client nommé, il signale les risques déjà souscrits.
 - Renouvellements à venir : `vigie_echeances` (volet renouvellements).
 - Primes impayées, commissions à recouvrer, rétros de PARTENAIRES à reverser : `suivi_impayes`.
 - Rétrocommissions des AGENTS internes ET des PARTENAIRES externes (dues, payées, solde,

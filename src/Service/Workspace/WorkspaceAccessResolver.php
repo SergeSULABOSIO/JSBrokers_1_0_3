@@ -505,6 +505,17 @@ class WorkspaceAccessResolver
         // L'écran s'appelait « rapport de production » et n'était accessible que depuis
         // une fiche. Il est devenu une rubrique ; le mot, lui, reste celui des courtiers.
         'ProductionIntermediaire' => ['Rapport de production', 'Production'],
+        // Les courtiers disent « risque », « couverture d'assurance », « type d'assurance »
+        // ou « produit » pour le MÊME objet : un mot par interlocuteur ne doit pas faire
+        // un sens par réponse. Expressions COMPOSÉES seulement : « couverture » seul
+        // désigne aussi la période de couverture d'une police et « taux de couverture »
+        // la saturation. Le singulier est écrit : la variante automatique ne fait
+        // qu'ajouter ou retirer un « s » final.
+        'Risque' => [
+            'Couverture d\'assurance', 'Couvertures d\'assurance',
+            'Type d\'assurance', 'Types d\'assurance',
+            'Produit d\'assurance', 'Produits d\'assurance',
+        ],
     ];
 
     /**

@@ -93,6 +93,27 @@ class SaturationService
     }
 
     /**
+     * Identifiants des risques du catalogue que le client a effectivement souscrits
+     * (au moins une police ni perdue ni résiliée) — la même règle que le taux de
+     * couverture, pour que le conseil et la saturation ne se contredisent jamais.
+     *
+     * @return array<int, true>
+     */
+    public function risquesSouscrits(Client $client, ?Entreprise $entreprise): array
+    {
+        if ($entreprise === null) {
+            return [];
+        }
+
+        $catalogueIds = [];
+        foreach ($this->risqueRepository->findCatalogueForEntreprise($entreprise) as $risque) {
+            $catalogueIds[$risque->getId()] = true;
+        }
+
+        return $this->risquesCouverts($client, $catalogueIds);
+    }
+
+    /**
      * Couverture agrégée d'un PORTEFEUILLE (par défaut celui de l'invité, comme la
      * rubrique à l'écran ; entreprise entière sur demande) : taux moyen, nombre de
      * clients pleinement saturés et non saturés, et les risques manquants chez le
