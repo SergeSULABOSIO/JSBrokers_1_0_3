@@ -570,6 +570,32 @@
         .jsb-ai-chat .aic-msg-menu-btn[aria-expanded="true"] { opacity:1; }
         .jsb-ai-chat .aic-msg-menu-btn:hover { color:var(--aic-accent); border-color:var(--aic-accent); }
 
+        /* ── Écouter une réponse de Ket ── TOUJOURS visible (à la différence du ⋮) :
+           l'option doit se trouver sans chercher. Même gabarit que le ⋮, juste à sa
+           gauche ; pendant la lecture, accent et pulsation lente. */
+        .jsb-ai-chat .aic-msg-ecouter {
+            position:absolute; top:-4px; right:26px; z-index:1;
+            display:flex; align-items:center; justify-content:center;
+            width:26px; height:26px; padding:0; border-radius:8px;
+            background:var(--aic-surface); border:1px solid var(--aic-border);
+            color:var(--aic-muted); cursor:pointer;
+            transition:color .12s ease, border-color .12s ease;
+        }
+        .jsb-ai-chat .aic-msg-ecouter[hidden] { display:none; }
+        .jsb-ai-chat .aic-msg-ecouter:hover { color:var(--aic-accent); border-color:var(--aic-accent); }
+        .jsb-ai-chat .aic-msg-ecouter:focus-visible { outline:2px solid var(--aic-accent); outline-offset:2px; }
+        .jsb-ai-chat .aic-msg-ecouter[aria-pressed="true"] {
+            color:var(--aic-accent); border-color:var(--aic-accent);
+            animation:aic-ecoute-pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes aic-ecoute-pulse { 0%, 100% { opacity:1; } 50% { opacity:.55; } }
+        @media (prefers-reduced-motion:reduce) { .jsb-ai-chat .aic-msg-ecouter[aria-pressed="true"] { animation:none; } }
+        /* Au doigt : le ⋮ sort de la bulle à droite, le haut-parleur se range dessous,
+           en cible de 32 px. */
+        @media (hover:none) {
+            .jsb-ai-chat .aic-msg-ecouter { top:34px; right:-32px; width:30px; height:30px; }
+        }
+
         /* ── AU DOIGT, IL N'Y A PAS DE SURVOL ──────────────────────────────────
            Le bouton ⋮ d'un message n'est révélé que par `:hover` / `:focus-within`.
            Sur un appareil tactile, ces deux états n'arrivent jamais avant un appui —
@@ -1679,6 +1705,15 @@ Le texte est alors mis au propre (hésitations retirées, ponctuation, questions
          aria-label="Actions du message"
          data-assistant-chat-target="menuBulle"
          data-action="click->assistant-chat#fermerMenuBulle keydown->assistant-chat#naviguerMenu">
+        {# Lecture à voix haute (synthèse vocale du navigateur) : réservée aux
+           réponses de Ket ; le libellé devient « Arrêter la lecture » pendant la
+           lecture de la bulle visée. #}
+        <button type="button" class="aic-msg-menu-item" role="menuitem" tabindex="-1"
+                data-menu-key="ecouter" data-menu-roles="assistant"
+                data-action="click->assistant-chat#ecouterMessage">
+            {{ ux_icon(resolve_icon_name('action:listen'), {height: '15px', width: '15px'}) }}
+            <span data-libelle-ecoute>Écouter</span>
+        </button>
         <button type="button" class="aic-msg-menu-item" role="menuitem" tabindex="-1"
                 data-menu-key="repondre" data-action="click->assistant-chat#repondreAuMessage">
             {{ ux_icon(resolve_icon_name('action:reply'), {height: '15px', width: '15px'}) }}
@@ -1732,6 +1767,15 @@ Le texte est alors mis au propre (hésitations retirées, ponctuation, questions
                 aria-controls="aic-msg-menu-{{ conversation.id }}"
                 data-action="click->assistant-chat#ouvrirMenuBulle keydown->assistant-chat#toucheKebab">
             {{ ux_icon(resolve_icon_name('action:options'), {height: '14px', width: '14px'}) }}
+        </button>
+    </template>
+    {# Bouton « écouter », posé sur les seules bulles de Ket : un clic lit la
+       réponse à voix haute, un second l'arrête. #}
+    <template data-assistant-chat-target="tplEcouter">
+        <button type="button" class="aic-msg-ecouter"
+                aria-label="Écouter la réponse" title="Écouter la réponse" aria-pressed="false"
+                data-action="click->assistant-chat#basculerEcoute">
+            {{ ux_icon(resolve_icon_name('action:listen'), {height: '14px', width: '14px'}) }}
         </button>
     </template>
     <template data-assistant-chat-target="tplCitation">

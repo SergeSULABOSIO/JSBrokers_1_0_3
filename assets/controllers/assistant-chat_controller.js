@@ -12,6 +12,7 @@ import {
 } from './assistant-theme.js';
 import { positionnerMenu, indexApresTouche } from './menu-flottant.js';
 import { fusionnerTranscripts } from './dictee-transcript.js';
+import { DEBIT, HAUTEUR, choisirVoix, decouperEnPhrases, texteAPrononcer } from './assistant-lecture-vocale.js';
 import {
     DICTEE_DUREE_MAX_MS,
     assemblerTexte,
@@ -86,7 +87,7 @@ export default class extends Controller {
         'messages', 'input', 'send', 'typing', 'typingLabel', 'typingTokens', 'count', 'contextBar', 'mic', 'micTimer',
         'fichierBar', 'fichierInput',
         // Actions de bulle : menu unique ancré, gabarits clonés, bandeau de citation.
-        'menuBulle', 'tplKebab', 'tplCitation', 'citationBar', 'citationQui', 'citationExtrait',
+        'menuBulle', 'tplKebab', 'tplEcouter', 'tplCitation', 'citationBar', 'citationQui', 'citationExtrait',
         // Menu ⋮ de l'entête : thème, plein écran, nouvelle conversation.
         'menuEntete',
     ];
@@ -3627,6 +3628,9 @@ export default class extends Controller {
      * réponse assistant passe par ici (DRY).
      */
     rendreAssistant(el, source) {
+        // La source reste sur la bulle, live comme historique : la lecture à voix
+        // haute part d'elle, jamais du rendu HTML.
+        el.dataset.mdSource = source;
         el.innerHTML = renderAssistantMarkdown(source);
         // Le thème est résolu en tête de connect() : un graphique naît donc
         // toujours déjà habillé, jamais repeint après coup.
@@ -3673,6 +3677,7 @@ export default class extends Controller {
     }
 
     teardownMenuBulle() {
+        this.arreterLecture();
         if (this.hasMessagesTarget && this._onClicDroit) {
             this.messagesTarget.removeEventListener('contextmenu', this._onClicDroit);
         }
@@ -3694,11 +3699,17 @@ export default class extends Controller {
      * l'attribut `class`.
      */
     equiperBulle(bulle) {
-        if (!bulle?.dataset.messageId || bulle.querySelector('.aic-msg-menu-btn')) return;
-        if (!this.hasTplKebabTarget) return;
+        if (!bulle?.dataset.messageId) return;
         const corps = bulle.querySelector('.aic-msg-body');
         if (!corps) return;
-        corps.appendChild(this.tplKebabTarget.content.firstElementChild.cloneNode(true));
+        if (this.hasTplKebabTarget && !corps.querySelector('.aic-msg-menu-btn')) {
+            corps.appendChild(this.tplKebabTarget.content.firstElementChild.cloneNode(true));
+        }
+        // Haut-parleur : réponses de Ket seulement, et seulement si le navigateur sait parler.
+        if (bulle.dataset.messageRole === 'assistant' && this.hasTplEcouterTarget
+            && this.lectureDisponible() && !corps.querySelector('.aic-msg-ecouter')) {
+            corps.appendChild(this.tplEcouterTarget.content.firstElementChild.cloneNode(true));
+        }
     }
 
     /** Ouverture par le bouton ⋮ : l'ancre est le bouton lui-même. */
@@ -3786,6 +3797,12 @@ export default class extends Controller {
             const roles = item.dataset.menuRoles;
             item.hidden = roles !== undefined && !roles.split(' ').includes(role);
         });
+        const ecouter = this.menuBulleTarget.querySelector('[data-menu-key="ecouter"]');
+        if (ecouter) {
+            if (!this.lectureDisponible()) ecouter.hidden = true;
+            const libelle = ecouter.querySelector('[data-libelle-ecoute]');
+            if (libelle) libelle.textContent = this._bulleLue === bulle ? 'Arrêter la lecture' : 'Écouter';
+        }
     }
 
     /** Items navigables : ceux que le filtrage laisse visibles. */
@@ -3879,6 +3896,119 @@ export default class extends Controller {
         noeud.querySelector('.aic-msg-quote-qui').textContent = citation.qui;
         noeud.querySelector('.aic-msg-quote-extrait').textContent = citation.extrait;
         corps.appendChild(noeud);
+    }
+
+    // ── Écouter ───────────────────────────────────────────────────────────────
+    // Synthèse vocale NATIVE du navigateur : gratuite, sans serveur ni token. Ce
+    // qui est dit et la voix qui le dit viennent du cœur pur
+    // assistant-lecture-vocale.js ; ici, seulement l'orchestration. Une seule
+    // lecture à la fois, déclenchée et arrêtée par l'utilisateur, jamais d'office.
+
+    lectureDisponible() {
+        return typeof window.speechSynthesis !== 'undefined' && typeof window.SpeechSynthesisUtterance === 'function';
+    }
+
+    /** Entrée « Écouter » du menu ⋮ / clic droit. */
+    ecouterMessage() {
+        const actif = this.messageActif();
+        if (actif) this._lire(actif.bulle);
+    }
+
+    /** Bouton haut-parleur de la bulle : lit, ou arrête si c'est déjà elle. */
+    basculerEcoute(event) {
+        this._lire(event.currentTarget.closest('.aic-msg'));
+    }
+
+    /** Chemin UNIQUE des deux gestes. */
+    async _lire(bulle) {
+        if (!bulle || !this.lectureDisponible()) return;
+        const dejaLue = this._bulleLue === bulle;
+        this.arreterLecture();
+        if (dejaLue) return;
+
+        const source = bulle.querySelector('.aic-msg-text')?.dataset.mdSource ?? '';
+        const segments = decouperEnPhrases(texteAPrononcer(source));
+        if (segments.length === 0) return;
+
+        // Le jeton date la lecture : un arrêt, ou une autre bulle lancée entre-temps,
+        // rend muets les rappels de celle-ci.
+        const jeton = {};
+        this._lecture = jeton;
+        this._bulleLue = bulle;
+        this._marquerLecture(bulle, true);
+
+        const voix = await this._voixDeKet();
+        if (this._lecture !== jeton) return;
+
+        const langue = documentLocale() === 'en' ? 'en-US' : 'fr-FR';
+        segments.forEach((segment, index) => {
+            const enonce = new window.SpeechSynthesisUtterance(segment);
+            enonce.lang = voix?.lang || langue;
+            if (voix) enonce.voice = voix;
+            enonce.rate = DEBIT;
+            enonce.pitch = HAUTEUR;
+            if (index === segments.length - 1) {
+                enonce.onend = () => { if (this._lecture === jeton) this.arreterLecture(); };
+            }
+            enonce.onerror = (event) => {
+                // « interrupted » / « canceled » : c'est notre propre arrêt.
+                if (this._lecture === jeton && !['interrupted', 'canceled'].includes(event?.error)) {
+                    this.arreterLecture();
+                }
+            };
+            window.speechSynthesis.speak(enonce);
+        });
+    }
+
+    /** Coupe la lecture en cours, s'il y en a une, et rend la bulle au repos. */
+    arreterLecture() {
+        const enCours = this._lecture !== undefined && this._lecture !== null;
+        this._lecture = null;
+        if (this._bulleLue) this._marquerLecture(this._bulleLue, false);
+        this._bulleLue = null;
+        if (enCours && this.lectureDisponible()) window.speechSynthesis.cancel();
+    }
+
+    _marquerLecture(bulle, active) {
+        bulle.classList.toggle('aic-msg--lecture', active);
+        const bouton = bulle.querySelector('.aic-msg-ecouter');
+        if (!bouton) return;
+        const libelle = active ? 'Arrêter la lecture' : 'Écouter la réponse';
+        bouton.setAttribute('aria-pressed', active ? 'true' : 'false');
+        bouton.setAttribute('aria-label', libelle);
+        bouton.title = libelle;
+    }
+
+    /**
+     * La voix de Ket, choisie une fois. `getVoices()` est souvent vide au premier
+     * appel (Chrome la charge en différé) : on attend `voiceschanged`, avec une garde
+     * pour ne jamais rester muet. Un choix nul n'est pas mémorisé.
+     */
+    _voixDeKet() {
+        if (this._voixPromesse) return this._voixPromesse;
+        const synthese = window.speechSynthesis;
+        const langue = documentLocale() === 'en' ? 'en' : 'fr';
+        const choisir = () => choisirVoix(synthese.getVoices() || [], langue);
+
+        this._voixPromesse = new Promise((resolve) => {
+            if ((synthese.getVoices() || []).length > 0) {
+                resolve(choisir());
+                return;
+            }
+            let garde = null;
+            const conclure = () => {
+                clearTimeout(garde);
+                synthese.removeEventListener?.('voiceschanged', conclure);
+                resolve(choisir());
+            };
+            garde = setTimeout(conclure, 1500);
+            synthese.addEventListener?.('voiceschanged', conclure);
+        }).then((voix) => {
+            if (!voix) this._voixPromesse = null;
+            return voix;
+        });
+
+        return this._voixPromesse;
     }
 
     // ── Exporter ──────────────────────────────────────────────────────────────
