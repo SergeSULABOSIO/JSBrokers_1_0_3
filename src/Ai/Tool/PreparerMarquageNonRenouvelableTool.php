@@ -300,6 +300,8 @@ final class PreparerMarquageNonRenouvelableTool implements AiToolProduisantUnPla
                 'motifActuel' => $base->getNonRenouvelableMotif(),
                 'decideeLe'   => $base->getNonRenouvelableLe()?->format('d/m/Y'),
                 'decideePar'  => $base->getNonRenouvelablePar()?->getNom(),
+                'bloquant'    => 'Cette police est déjà signalée comme non renouvelable : il n’y a rien à '
+                    . 'enregistrer. Dites-moi si vous voulez en changer la raison, ou la remettre dans les échéances.',
                 'note' => 'Cette police est DÉJÀ signalée comme non renouvelable : il n’y a rien à écrire. Ne '
                     . 'prépare AUCUN plan et n’annonce aucun bouton. Dis-le en une phrase en citant le motif, sa '
                     . 'date et son auteur. Si l’utilisateur veut CHANGER la raison, rappelle cet outil avec '
@@ -312,6 +314,8 @@ final class PreparerMarquageNonRenouvelableTool implements AiToolProduisantUnPla
                 'pret'      => false,
                 'nonMarquee' => true,
                 'police'    => $base->getReferencePolice(),
+                'bloquant'  => 'Cette police n’est pas signalée comme non renouvelable : il n’y a rien à '
+                    . 'corriger ni à lever. Dites-moi si vous vouliez au contraire la signaler, et pour quelle raison.',
                 'note' => 'Cette police n’est PAS signalée comme non renouvelable : il n’y a rien à corriger ni à '
                     . 'lever. Ne prépare AUCUN plan et n’annonce aucun bouton. Dis-le en une phrase. Si '
                     . 'l’utilisateur voulait au contraire la signaler, rappelle cet outil avec mode="marquer" et '

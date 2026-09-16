@@ -216,6 +216,8 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcrit
         if ($scope->conversation === null) {
             return AiToolResult::ok([
                 'pret' => false,
+                'bloquant' => 'Je ne peux conduire une série d’enregistrements qu’au fil d’une conversation. '
+                    . 'Rien n’a été enregistré.',
                 'note' => 'Un programme ne peut être conduit qu\'au fil d\'une conversation.',
             ]);
         }
@@ -227,6 +229,7 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcrit
             if ($courant === null) {
                 return AiToolResult::ok([
                     'pret' => false,
+                    'bloquant' => 'Aucune série d’enregistrements n’est en cours : il n’y a rien à poursuivre.',
                     'note' => 'Aucun programme n\'est en cours : il n\'y a rien à poursuivre. Si l\'utilisateur '
                         . 'veut traiter plusieurs objets, prépare un NOUVEAU programme avec toutes ses étapes.',
                 ]);
@@ -236,6 +239,8 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcrit
                 return AiToolResult::ok([
                     'pret'      => false,
                     'programme' => $courant->getReference(),
+                    'bloquant'  => 'Toutes les étapes de cette série sont tranchées : il n’y a plus rien à '
+                        . 'vous présenter. Le récapitulatif vous sera remis automatiquement.',
                     'note'      => 'Toutes les étapes de ce programme sont tranchées : il n\'y a plus rien à présenter. '
                         . 'Le rapport final sera établi automatiquement.',
                 ]);
@@ -248,6 +253,10 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcrit
         if (!is_array($etapesBrutes) || count($etapesBrutes) < self::MIN_ETAPES) {
             return AiToolResult::ok([
                 'pret' => false,
+                'bloquant' => sprintf(
+                    'Une série demande au moins %d enregistrements. Pour un seul, je prépare directement le plan.',
+                    self::MIN_ETAPES,
+                ),
                 'note' => sprintf(
                     'Un programme demande au moins %d étapes. Pour un seul objet, appelle directement l\'outil de plan.',
                     self::MIN_ETAPES,
@@ -257,6 +266,12 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcrit
         if (count($etapesBrutes) > self::MAX_ETAPES) {
             return AiToolResult::ok([
                 'pret' => false,
+                'bloquant' => sprintf(
+                    'Cette série compte %d enregistrements, au-delà des %d que je peux enchaîner d’un seul tenant. '
+                    . 'Traitons-la en plusieurs fois.',
+                    count($etapesBrutes),
+                    self::MAX_ETAPES,
+                ),
                 'note' => sprintf(
                     'Ce programme compte %d étapes, au-delà du maximum de %d. Propose à l\'utilisateur de traiter '
                     . 'la série en plusieurs missions successives.',
@@ -272,6 +287,12 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcrit
                 return AiToolResult::ok([
                     'pret'              => false,
                     'programmeEnCours'  => $courant->getReference(),
+                    'bloquant'          => sprintf(
+                        'Une série est déjà en cours (%d étapes sur %d tranchées). Tranchez l’étape affichée, '
+                        . 'ou dites-moi que vous changez de mission.',
+                        $courant->nbTranchees(),
+                        $courant->nbEtapes(),
+                    ),
                     'note'              => sprintf(
                         'REFUSÉ : le programme %s est en cours (%d étapes sur %d tranchées). Ne prépare pas une '
                         . 'seconde série. Invite l\'utilisateur à trancher l\'étape affichée ; s\'il veut CHANGER '
@@ -295,6 +316,8 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcrit
             if (!$this->outilsDeProgramme->estEligible($outil)) {
                 return AiToolResult::ok([
                     'pret' => false,
+                    'bloquant' => 'Une des étapes demandées ne correspond à rien que je sache enchaîner. '
+                        . 'Rien n’a été enregistré. Reformulez cette étape et je reprends la série.',
                     'note' => sprintf(
                         'L\'outil « %s » ne peut pas être piloté par une étape de programme. Outils possibles : %s.',
                         $outil,
@@ -302,7 +325,8 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcrit
                     ),
                 ]);
             }
-            $arguments = $this->outilsDeProgramme->arguments($outil, $brut);
+            $motifEtape = null;
+            $arguments = $this->outilsDeProgramme->arguments($outil, $brut, $motifEtape);
             // Une étape dont les arguments n'ont pas pu être assemblés (entité hors
             // périmètre, édition sans cible, création sans champ) est REFUSÉE ICI, en
             // nommant l'étape. La laisser passer produirait un programme qui échoue à
@@ -329,13 +353,22 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcrit
 
                 return AiToolResult::ok([
                     'pret' => false,
+                    // LE MOTIF PRÉCIS, pour l'utilisateur ET pour le modèle. Ce message
+                    // récitait auparavant `aideParametres()` — le catalogue entier des
+                    // outils, nom et arguments de chacun — faute de savoir laquelle des
+                    // quatre causes avait joué. Il le sait désormais ; le catalogue n'a
+                    // plus de raison d'être ici, et il n'y reviendra pas.
+                    'bloquant' => $motifEtape
+                        ?? sprintf('Je n’ai pas pu préparer l’étape « %s », et rien n’a été enregistré.',
+                            (string) ($brut['libelle'] ?? 'sans libellé')),
                     'note' => sprintf(
-                        'L\'étape « %s » est inexploitable pour %s : je n\'ai pas pu en dériver d\'arguments. '
-                        . 'Vérifie qu\'elle porte tout ce que cet outil attend — %s. N\'affiche AUCUN plan : '
+                        '%s Corrige CETTE étape et rappelle-moi le programme complet. N\'affiche AUCUN plan : '
                         . 'aucun bouton n\'apparaîtra.',
-                        (string) ($brut['libelle'] ?? 'sans libellé'),
-                        $outil,
-                        $this->outilsDeProgramme->aideParametres(),
+                        $motifEtape ?? sprintf(
+                            'L\'étape « %s » est inexploitable pour %s.',
+                            (string) ($brut['libelle'] ?? 'sans libellé'),
+                            $outil,
+                        ),
                     ),
                 ]);
             }
@@ -350,6 +383,8 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcrit
         if (count($etapes) < self::MIN_ETAPES) {
             return AiToolResult::ok([
                 'pret' => false,
+                'bloquant' => 'Je n’ai pas pu retenir assez d’étapes exploitables pour former une série. '
+                    . 'Rien n’a été enregistré. Redites-moi, une par une, ce que chaque étape doit enregistrer.',
                 'note' => 'Les étapes fournies sont inexploitables : redonne-les avec, pour chacune, un libellé, '
                     . 'un outil et l\'identifiant de l\'objet visé.',
             ]);
@@ -370,6 +405,8 @@ final class PreparerProgrammeTool implements AiToolProduisantUnPlan, AiToolEcrit
             return AiToolResult::ok([
                 'pret'    => false,
                 'refusees' => $this->motifs($programme),
+                'bloquant' => 'Aucune étape de cette série n’a pu être préparée : rien n’a été enregistré. '
+                    . 'Le détail de chaque refus est repris ci-dessous.',
                 'note'    => 'Aucune étape de ce programme n\'a pu être préparée. Explique à l\'utilisateur, '
                     . 'étape par étape, la raison donnée dans « refusees ». N\'affiche AUCUN plan.',
             ]);

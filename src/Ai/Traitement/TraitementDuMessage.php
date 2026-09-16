@@ -58,6 +58,7 @@ final class TraitementDuMessage
         // journalise : sans lui, elles partaient pour être ignorées en silence.
         private readonly ValidateurDActions $validateurDActions,
         private readonly ProgrammeEnCours $programmeEnCours,
+        private readonly PlanEnAttente $planEnAttente,
         private readonly ProgrammeRunner $programmeRunner,
         private readonly JournalTokens $journalTokens,
         private readonly EntityManagerInterface $em,
@@ -88,6 +89,17 @@ final class TraitementDuMessage
         $conversation = $messageUser->getConversation();
         $entreprise = $conversation->getEntreprise();
         $invite = $conversation->getInvite();
+
+        // AVANT TOUT LE RESTE. Un plan que personne n'a tranché depuis deux messages
+        // est abandonné ici, et pas plus tard : trois consommateurs lisent l'état du
+        // plan pendant la construction du contexte — le marqueur d'historique, le
+        // choix de la trousse, le court-circuit de compréhension — et tous trois
+        // travailleraient sur un plan mort si la péremption arrivait après eux.
+        // Une série en cours en est exemptée : elle a son propre vocabulaire de fin.
+        $this->planEnAttente->perimerSiOublie(
+            $conversation,
+            $this->programmeEnCours->courant($conversation) !== null,
+        );
 
         // Le moteur réel (API Claude/Gemini) peut échouer (réseau, quota, clé) :
         // la conversation reste utilisable — réponse d'excuse persistée (honnête

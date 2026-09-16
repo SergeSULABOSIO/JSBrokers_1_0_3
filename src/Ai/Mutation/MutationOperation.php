@@ -2,6 +2,8 @@
 
 namespace App\Ai\Mutation;
 
+use App\Ai\AiText;
+
 use App\Entity\Invite;
 
 /**
@@ -37,6 +39,58 @@ final class MutationOperation
     public const OP_DELETE = 'delete';
 
     public const OPS = [self::OP_CREATE, self::OP_EDIT, self::OP_DELETE];
+
+    /**
+     * Les VERBES que le modèle peut dicter, ramenés au contrat. Clés normalisées
+     * par AiText::normalize() — donc minuscules et sans accents.
+     *
+     * Pourquoi cette table existe : l'écran affiche « Création », jamais « create ».
+     * Un modèle qui relit le tableau de son propre plan redit ce qu'il y a lu, et
+     * son étape était rejetée pour un mot. L'entité bénéficiait de cette tolérance
+     * depuis EntiteCanonique, les champs depuis ChampsDictes ; l'opération, non.
+     */
+    private const VERBES = [
+        'create'       => self::OP_CREATE,
+        'creation'     => self::OP_CREATE,
+        'creer'        => self::OP_CREATE,
+        'ajout'        => self::OP_CREATE,
+        'ajouter'      => self::OP_CREATE,
+        'nouveau'      => self::OP_CREATE,
+        'nouvelle'     => self::OP_CREATE,
+        'edit'         => self::OP_EDIT,
+        'edition'      => self::OP_EDIT,
+        'modifier'     => self::OP_EDIT,
+        'modification' => self::OP_EDIT,
+        'mise a jour'  => self::OP_EDIT,
+        'maj'          => self::OP_EDIT,
+        'delete'       => self::OP_DELETE,
+        'suppression'  => self::OP_DELETE,
+        'supprimer'    => self::OP_DELETE,
+        'retrait'      => self::OP_DELETE,
+    ];
+
+    /**
+     * Le verbe dicté, ramené au contrat — ou null (FAIL-CLOSED).
+     *
+     * ⚠ LA TOLÉRANCE PORTE SUR LE MOT, JAMAIS SUR L'INTENTION. Un verbe inconnu ne
+     * prend AUCUNE valeur par défaut : le mettre à « create » ferait écrire ce que
+     * personne n'a demandé, et le mettre à « delete » détruirait. Un refus qui
+     * nomme le mot incompris coûte un tour ; une opération devinée coûte des
+     * données. C'est le même arbitrage qu'EntiteCanonique, pour la même raison.
+     */
+    public static function canoniserOp(?string $dicte): ?string
+    {
+        $dicte = trim((string) $dicte);
+        if ($dicte === '') {
+            return null;
+        }
+        // Chemin nominal : le modèle a écrit le verbe du contrat. Coût nul.
+        if (in_array($dicte, self::OPS, true)) {
+            return $dicte;
+        }
+
+        return self::VERBES[AiText::normalize($dicte)] ?? null;
+    }
 
     /**
      * @param array<string, scalar|array|null>   $fields

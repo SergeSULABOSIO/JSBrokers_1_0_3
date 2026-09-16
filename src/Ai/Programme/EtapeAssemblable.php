@@ -40,11 +40,22 @@ interface EtapeAssemblable extends AiToolInterface
      *     champs?: array<int, array{cle?: string, valeur?: mixed}>
      * } $etape
      *
+     * @param ?string $motif RENSEIGNÉ quand l'étape est inexploitable, et lui seul
+     *                        dit LAQUELLE des causes a joué : entité irrésoluble,
+     *                        verbe incompris, cible absente, aucune valeur. Sans
+     *                        lui, les quatre sortaient par le même `[]` muet et
+     *                        l'appelant ne pouvait que réciter le catalogue des
+     *                        outils en espérant que le modèle devine — c'est
+     *                        exactement ce qui a fui dans la bulle du courtier le
+     *                        2026-09-14. Le motif est écrit POUR ÊTRE LU, et nomme
+     *                        l'étape en défaut : dans une série, savoir laquelle
+     *                        est la moitié de l'information.
+     *
      * @return array<string, mixed> vide si l'étape est inexploitable — le programme
      *                              la traversera alors avec son motif, sans figer
      *                              la série
      */
-    public function argumentsDepuisEtape(array $etape): array;
+    public function argumentsDepuisEtape(array $etape, ?string &$motif = null): array;
 
     /**
      * Une ligne d'aide destinée à la description de `preparer_programme` : comment

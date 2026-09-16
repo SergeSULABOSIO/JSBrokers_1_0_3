@@ -77,6 +77,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Vich\UploaderBundle\Handler\DownloadHandler;
+use App\Ai\Mutation\FinDePlan;
 
 /**
  * @file Assistant IA de l'espace de travail du courtier.
@@ -911,8 +912,20 @@ class AssistantIaController extends AbstractController
         if (PlanEnAttente::estExecute($meta)) {
             return $this->json(['message' => 'Ce plan a déjà été exécuté.'], Response::HTTP_CONFLICT);
         }
+        // UN CLIC TARDIF NE REQUALIFIE PAS UNE MORT DÉJÀ SURVENUE. Un onglet resté
+        // ouvert garde à l'écran la barre d'un plan que le serveur a depuis remplacé
+        // ou laissé périmer. Accepter ce clic réécrirait le motif, et le fil se
+        // mettrait à raconter après coup une décision que l'utilisateur n'a pas
+        // prise. On refuse, comme on refuse déjà d'annuler un plan exécuté.
+        if (($finExistante = FinDePlan::depuisMeta($meta)) !== null) {
+            return $this->json(
+                ['message' => $finExistante->libelle()],
+                Response::HTTP_CONFLICT,
+            );
+        }
 
         $meta['mutationPlanCancelled'] = true;
+        $meta[FinDePlan::CLE_META] = FinDePlan::UTILISATEUR->value;
         $message->setMeta($meta);
         $this->em->flush();
 

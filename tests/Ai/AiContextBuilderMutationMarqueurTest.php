@@ -127,6 +127,114 @@ class AiContextBuilderMutationMarqueurTest extends KernelTestCase
         $this->assertStringContainsString('remplacerPlanEnAttente', $messages[0]['content']);
     }
 
+    /** Un plan en attente, portant les valeurs déjà dictées par l'utilisateur. */
+    private function planAvecValeurs(array $enPlus = []): array
+    {
+        return $enPlus + ['mutationPlan' => ['plan' => [[
+            'op'     => 'create',
+            'entite' => 'Contact',
+            'fields' => ['nom' => 'Joëlle Fama Sona', 'telephone' => '+243828727706'],
+        ]]]];
+    }
+
+    /**
+     * CE QUE L'UTILISATEUR A DÉJÀ DONNÉ NE SE REDEMANDE PAS.
+     *
+     * Le plan en attente porte les valeurs dictées, mais le marqueur ne parlait que
+     * de la barre et du remplacement : le modèle ne les voyait nulle part. À chaque
+     * tour il recollectait donc le nom, puis le téléphone, puis l'e-mail — et le
+     * 2026-09-14 le courtier a redonné trois fois les mêmes informations pour un
+     * enregistrement qui n'a jamais eu lieu.
+     */
+    public function testUnPlanEnAttenteRappelleLesValeursDejaDictees(): void
+    {
+        [$ent, $inv] = $this->seed();
+        $conv = $this->conversationAvecPlan($ent, $inv, $this->planAvecValeurs());
+
+        $contenu = $this->build($ent, $inv, $conv)[0]['content'];
+
+        $this->assertStringContainsString('Joëlle Fama Sona', $contenu, 'Les valeurs déjà dictées doivent '
+            . 'être rappelées au modèle : sans elles, il les redemande à chaque tour.');
+        $this->assertStringContainsString('+243828727706', $contenu);
+    }
+
+    /**
+     * LA FRONTIÈRE, ET ELLE NE BOUGE PAS. Un refus EXPLICITE ne se recycle pas :
+     * réinjecter les valeurs d'un plan que l'utilisateur vient d'écarter ferait
+     * ressusciter par Ket ce qu'il venait de refuser.
+     */
+    public function testUnPlanRefuseParLUtilisateurNeRessuscitePasSesValeurs(): void
+    {
+        [$ent, $inv] = $this->seed();
+        $conv = $this->conversationAvecPlan($ent, $inv, $this->planAvecValeurs([
+            'mutationPlanCancelled' => true,
+            'mutationPlanFin'       => 'utilisateur',
+        ]));
+
+        $contenu = $this->build($ent, $inv, $conv)[0]['content'];
+
+        $this->assertStringNotContainsString('Joëlle Fama Sona', $contenu, 'Un plan que l’utilisateur a '
+            . 'REFUSÉ ne doit pas voir ses valeurs remises devant le modèle.');
+    }
+
+    /**
+     * UN PLAN PÉRIMÉ N'A ÉTÉ REFUSÉ PAR PERSONNE. Ses valeurs restent acquises —
+     * l'utilisateur les a bel et bien dictées — et le marqueur ne doit pas lui
+     * attribuer une décision qu'il n'a pas prise.
+     */
+    public function testUnPlanPerimeGardeSesValeursEtNAccusePersonne(): void
+    {
+        [$ent, $inv] = $this->seed();
+        $conv = $this->conversationAvecPlan($ent, $inv, $this->planAvecValeurs([
+            'mutationPlanCancelled' => true,
+            'mutationPlanFin'       => 'perime',
+        ]));
+
+        $contenu = $this->build($ent, $inv, $conv)[0]['content'];
+
+        $this->assertStringContainsString('Joëlle Fama Sona', $contenu);
+        $this->assertStringNotContainsString('ANNULÉ par l\'utilisateur', $contenu, 'Personne n’a annulé '
+            . 'ce plan : le dire au modèle lui ferait raconter au courtier une décision inexistante.');
+    }
+
+    /** Un plan REMPLACÉ non plus : c'est Ket qui l'a chassé, pas l'utilisateur. */
+    public function testUnPlanRemplaceNEstPasPresenteCommeUnRefus(): void
+    {
+        [$ent, $inv] = $this->seed();
+        $conv = $this->conversationAvecPlan($ent, $inv, $this->planAvecValeurs([
+            'mutationPlanCancelled' => true,
+            'mutationPlanFin'       => 'remplace',
+        ]));
+
+        $contenu = $this->build($ent, $inv, $conv)[0]['content'];
+
+        $this->assertStringNotContainsString('ANNULÉ par l\'utilisateur', $contenu);
+    }
+
+    /**
+     * L'INTERDICTION DE RECOPIER PORTE SUR NOS ARTEFACTS, PAS SUR LA PAROLE DE
+     * L'UTILISATEUR. Le tableau et le budget périment avec le plan ; les valeurs
+     * qu'il a dictées, jamais. Sans cette délimitation, la consigne qui empêche le
+     * plan fantôme empêche aussi la reprise légitime.
+     */
+    public function testLInterdictionDeRecopierDistingueLesArtefactsDesValeurs(): void
+    {
+        [$ent, $inv] = $this->seed();
+        $conv = $this->conversationAvecPlan($ent, $inv, $this->planAvecValeurs([
+            'mutationPlanExecuted' => true,
+        ]));
+
+        $contenu = $this->build($ent, $inv, $conv)[0]['content'];
+
+        $this->assertStringContainsString('NE RECOPIE JAMAIS le tableau', $contenu);
+        $this->assertMatchesRegularExpression(
+            '/jamais sur les VALEURS|jamais sur la parole|valeurs que l’utilisateur/u',
+            $contenu,
+            'L’interdiction doit dire ce qu’elle NE couvre pas, sinon elle interdit aussi de reprendre '
+            . 'ce que l’utilisateur vient de donner.',
+        );
+    }
+
     /**
      * Le garde-fou contre l'affirmation de complaisance : après exécution, le
      * moteur ne reçoit PAS un simple « succès » (dont il pourrait déduire que tout

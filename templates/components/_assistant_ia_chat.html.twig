@@ -804,6 +804,12 @@
         .jsb-ai-chat .aic-plan-status svg { width:14px; height:14px; flex:0 0 auto; }
         .jsb-ai-chat .aic-plan-status--done { color:var(--aic-success-fg); background:var(--aic-success-bg); }
         .jsb-ai-chat .aic-plan-status--cancelled { color:var(--aic-text-2); background:var(--aic-surface-raised); }
+        /* REMPLACÉ : le plan a cédé la place à une version corrigée, juste en dessous.
+           Teinte d'accent atténuée — c'est une CONTINUITÉ, pas un échec. */
+        .jsb-ai-chat .aic-plan-status--replaced { color:var(--aic-on-subtle); background:var(--aic-accent-subtle); }
+        /* PÉRIMÉ : personne n'a tranché et la conversation est passée à autre chose.
+           Le plus discret des trois : c'est un constat, pas une décision. */
+        .jsb-ai-chat .aic-plan-status--lapsed { color:var(--aic-muted); background:var(--aic-surface-raised); }
 
         /* Indicateur « réfléchit… ». */
         .jsb-ai-chat .aic-typing { flex:0 0 auto; display:flex; align-items:center; gap:.45rem; padding:.25rem 1rem .5rem; color:var(--aic-muted); font-size:.82rem; }
@@ -1378,10 +1384,31 @@
                     <span>Plan exécuté — les données ont été enregistrées.</span>
                 </p>
             {% elseif planAnnule %}
-                <p class="aic-plan-status aic-plan-status--cancelled" role="status">
-                    {{ ux_icon(resolve_icon_name('lucide:x'), {height: '14px', width: '14px'}) }}
-                    <span>Plan annulé — aucune donnée n’a été modifiée.</span>
-                </p>
+                {# TROIS FAÇONS DE MOURIR, TROIS PHRASES. Ce bloc n'en connaissait qu'une —
+                   « Plan annulé » — et la posait aussi bien sous un plan que l'utilisateur
+                   avait refusé que sous un plan que Ket venait de remplacer par une version
+                   complétée. Le courtier lisait donc qu'il avait annulé ce qu'il venait, au
+                   contraire, de préciser. Les libellés sont le miroir exact de
+                   App\Ai\Mutation\FinDePlan, et BandeauFinDePlanTest les tient identiques. #}
+                {% set finDuPlan = message.meta.mutationPlanFin ?? null %}
+                {% if finDuPlan == 'remplace' %}
+                    <p class="aic-plan-status aic-plan-status--replaced" role="status">
+                        {{ ux_icon(resolve_icon_name('lucide:x'), {height: '14px', width: '14px'}) }}
+                        <span>Plan remplacé par la version ci-dessous — rien n’a été enregistré.</span>
+                    </p>
+                {% elseif finDuPlan == 'perime' %}
+                    <p class="aic-plan-status aic-plan-status--lapsed" role="status">
+                        {{ ux_icon(resolve_icon_name('lucide:x'), {height: '14px', width: '14px'}) }}
+                        <span>Plan non tranché, abandonné — rien n’a été enregistré.</span>
+                    </p>
+                {% else %}
+                    {# Sans motif : les plans morts AVANT ce correctif. On garde la phrase
+                       générique plutôt que d'inventer après coup une cause qu'on ignore. #}
+                    <p class="aic-plan-status aic-plan-status--cancelled" role="status">
+                        {{ ux_icon(resolve_icon_name('lucide:x'), {height: '14px', width: '14px'}) }}
+                        <span>Plan annulé — aucune donnée n’a été modifiée.</span>
+                    </p>
+                {% endif %}
             {% endif %}
             {# DOCUMENT PRODUIT : le bouton est rendu CÔTÉ SERVEUR — un simple lien,
                qui survit donc au rechargement sans une ligne de JavaScript. Miroir
