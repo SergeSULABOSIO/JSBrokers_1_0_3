@@ -40,6 +40,7 @@
      data-assistant-chat-visual-context-url-value="{{ path('admin.assistantia.api.visual_context', {idEntreprise: idEntreprise}) }}"
      data-assistant-chat-contexte-url-value="{{ path('admin.assistantia.api.contexte.attach', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
      data-assistant-chat-fichier-url-value="{{ path('admin.assistantia.api.fichier.attach', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
+     data-assistant-chat-dictee-url-value="{{ path('admin.assistantia.api.dictee.finir', {idEntreprise: idEntreprise}) }}"
      data-assistant-chat-fichier-limits-value="{{ fichierLimits|default(attached_file_limits())|json_encode|e('html_attr') }}"
      data-assistant-chat-theme-url-value="{{ path('admin.assistantia.api.theme') }}"
      data-assistant-chat-id-entreprise-value="{{ idEntreprise }}"
@@ -1085,9 +1086,17 @@
             0%, 100% { box-shadow:0 0 0 0 var(--aic-mic-pulse); }
             50%      { box-shadow:0 0 0 .35rem var(--aic-mic-fade); }
         }
+        /* Mise au propre du texte dicté en cours : le micro patiente, sans pulsation. */
+        .jsb-ai-chat .aic-mic--finition { cursor:progress; opacity:.6; }
         @media (prefers-reduced-motion: reduce) {
             .jsb-ai-chat .aic-mic--recording { animation:none; }
         }
+        /* Compteur de la dictée, chiffres à chasse fixe pour ne pas faire danser la barre. */
+        .jsb-ai-chat .aic-mic-timer {
+            flex:0 0 auto; align-self:center; font-size:.75rem; font-variant-numeric:tabular-nums;
+            color:var(--aic-muted); min-width:2.2em; text-align:right;
+        }
+        .jsb-ai-chat .aic-mic-timer[hidden] { display:none; }
         .jsb-ai-chat .aic-send {
             flex:0 0 auto; width:44px; height:44px; border-radius:10px; border:none; cursor:pointer;
             background:var(--aic-accent-solid); color:var(--aic-on-accent); display:flex; align-items:center; justify-content:center;
@@ -1604,14 +1613,17 @@
                     <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
                 </svg>
             </button>
+            {# Durée de la dictée en cours : l'utilisateur voit qu'il a la parole, et
+               combien de temps il lui reste avant le plafond de trois minutes. #}
+            <span class="aic-mic-timer" data-assistant-chat-target="micTimer" aria-hidden="true" hidden></span>
             <button type="button" class="aic-mic"
                     data-assistant-chat-target="mic"
                     data-action="click->assistant-chat#toggleDictation"
                     aria-pressed="false"
                     aria-label="Dicter le message vocalement"
                     data-mic-tip-title="Dicter votre message"
-                    data-mic-tip-body="Parlez au lieu d'écrire : votre voix est transcrite en texte dans la zone de saisie.
-Relisez, corrigez si besoin, puis envoyez. La langue suit l'affichage (français ou anglais).">
+                    data-mic-tip-body="Parlez librement, pauses comprises : la dictée continue jusqu'à ce que vous cliquiez à nouveau sur le micro (ou Échap), 3 minutes au plus.
+Le texte est alors mis au propre (hésitations retirées, ponctuation, questions, listes) dans la zone de saisie. Relisez, puis envoyez.">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
                      fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                      stroke-linejoin="round" aria-hidden="true">
