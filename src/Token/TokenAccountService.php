@@ -401,6 +401,55 @@ class TokenAccountService
         );
     }
 
+    /** Nom d'entité porté par les lignes de journal d'une finition de dictée. */
+    public const ENTITE_DICTEE_IA = 'DicteeIa';
+
+    /** Coût d'une finition de dictée (20 % du poids message, arrondi au supérieur). */
+    public function coutDicteeIa(): int
+    {
+        return (int) ceil(
+            TokenPricing::DICTEE_IA_RATIO * $this->parametres->weightFor(AssistantMessage::class),
+        );
+    }
+
+    /**
+     * Le cabinet peut-il payer une finition de dictée ? Vérifié AVANT l'appel au modèle,
+     * débité APRÈS (meterDicteeIa) et seulement si la finition a eu lieu.
+     */
+    public function peutFinirUneDictee(Entreprise $entreprise): bool
+    {
+        $owner = $entreprise->getUtilisateur();
+
+        return !$owner instanceof Utilisateur || $this->canAfford($owner, $this->coutDicteeIa());
+    }
+
+    /**
+     * Métrage d'une FINITION DE DICTÉE réussie. Même patron que {@see meterDocumentIa()} :
+     * un forfait, une ligne de journal, jamais pour un rendu qui a échoué.
+     *
+     * @throws InsufficientTokensException si le solde du propriétaire est insuffisant
+     */
+    public function meterDicteeIa(Entreprise $entreprise, ?Utilisateur $acteur): void
+    {
+        $cout = $this->coutDicteeIa();
+        $owner = $entreprise->getUtilisateur();
+        if ($cout <= 0 || !$owner instanceof Utilisateur) {
+            return;
+        }
+
+        $this->guardAndConsume($owner, $cout);
+
+        $this->log(
+            $entreprise,
+            $owner,
+            $acteur,
+            self::ENTITE_DICTEE_IA,
+            TokenConsumption::SENS_ENTREE,
+            1,
+            $cout,
+        );
+    }
+
     /** Nom d'entité porté par les lignes de journal d'une opération d'échange. */
     public const ENTITE_ECHANGE = 'Echange';
 

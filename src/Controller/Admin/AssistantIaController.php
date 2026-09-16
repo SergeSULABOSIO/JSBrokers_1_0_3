@@ -6,6 +6,7 @@ use App\Ai\Acces\PorteDeKet;
 use App\Ai\Comprehension\ClarificationEnAttente;
 use App\Ai\AiContextBuilder;
 use App\Ai\Boussole\PlanDuJourService;
+use App\Ai\Dictee\FinisseurDeDictee;
 use App\Ai\Document\DocumentEnAttente;
 use App\Ai\Document\DocumentFormat;
 use App\Ai\Document\DocumentProducteur;
@@ -338,6 +339,59 @@ class AssistantIaController extends AbstractController
         $this->em->flush();
 
         return $this->json(['success' => true, 'theme' => $theme]);
+    }
+
+    /**
+     * FINITION D'UNE DICTÉE VOCALE : le texte dicté revient mis au propre (hésitations
+     * retirées, ponctuation, « ? » des questions, listes).
+     *
+     * Appelée par le chat quand l'utilisateur ARRÊTE de dicter, jamais pendant. Rien
+     * n'est envoyé à Ket : le texte retourne dans la zone de saisie, où l'utilisateur
+     * le relit avant d'envoyer. Mêmes gardes que l'envoi d'un message ; facturée au
+     * forfait, et seulement si la finition a réellement eu lieu — un texte rendu brut
+     * (panne, garde-fou, moteur simulé) ne coûte rien.
+     */
+    #[Route('/api/dictee/{idEntreprise}', name: 'api.dictee.finir', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['POST'])]
+    public function finirDictee(int $idEntreprise, Request $request, FinisseurDeDictee $finisseur): JsonResponse
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        if ($blocage = $this->blocagePremium($entreprise)) {
+            return $blocage;
+        }
+
+        $payload = json_decode($request->getContent(), true) ?: [];
+        $texte = trim((string) ($payload['texte'] ?? ''));
+        if ($texte === '') {
+            return $this->json(['message' => 'Le texte dicté est vide.'], Response::HTTP_BAD_REQUEST);
+        }
+        if (mb_strlen($texte) > self::MAX_MESSAGE_LENGTH) {
+            return $this->json([
+                'message' => sprintf('Le texte dicté dépasse la taille maximale (%d caractères).', self::MAX_MESSAGE_LENGTH),
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        if (!$this->tokenAccountService->peutFinirUneDictee($entreprise)) {
+            return $this->json([
+                'message'  => 'Solde de tokens insuffisant pour mettre la dictée au propre : le texte reste tel que dicté.',
+                'blocked'  => true,
+                'required' => $this->tokenAccountService->coutDicteeIa(),
+            ], Response::HTTP_PAYMENT_REQUIRED);
+        }
+
+        $finition = $finisseur->finir($texte);
+        if ($finition->finie) {
+            try {
+                $this->tokenAccountService->meterDicteeIa($entreprise, $this->currentUser());
+            } catch (InsufficientTokensException) {
+                // Le solde a changé entre la vérification et le débit : on rend le brut.
+                return $this->json(['texte' => $texte, 'finie' => false]);
+            }
+        }
+
+        return $this->json(['texte' => $finition->texte, 'finie' => $finition->finie]);
     }
 
     /** Crée une conversation vide pour l'invité courant. */

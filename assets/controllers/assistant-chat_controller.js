@@ -13,6 +13,14 @@ import {
 import { positionnerMenu, indexApresTouche } from './menu-flottant.js';
 import { fusionnerTranscripts } from './dictee-transcript.js';
 import {
+    DICTEE_DUREE_MAX_MS,
+    assemblerTexte,
+    decisionApresFin,
+    formaterDuree,
+    remplacerSegment,
+    segmentDicte,
+} from './dictee-session.js';
+import {
     FORMAT_IMAGE,
     CLE_EXPORT,
     urlExportMessage,
@@ -75,7 +83,7 @@ const CAUSES_DICTEE = {
  */
 export default class extends Controller {
     static targets = [
-        'messages', 'input', 'send', 'typing', 'typingLabel', 'typingTokens', 'count', 'contextBar', 'mic',
+        'messages', 'input', 'send', 'typing', 'typingLabel', 'typingTokens', 'count', 'contextBar', 'mic', 'micTimer',
         'fichierBar', 'fichierInput',
         // Actions de bulle : menu unique ancré, gabarits clonés, bandeau de citation.
         'menuBulle', 'tplKebab', 'tplCitation', 'citationBar', 'citationQui', 'citationExtrait',
@@ -150,6 +158,7 @@ export default class extends Controller {
         visualContextUrl: String,
         contexteUrl: String,
         fichierUrl: String,
+        dicteeUrl: String,
         fichierLimits: Object,
         themeUrl: String,
         idEntreprise: Number,
@@ -268,9 +277,17 @@ export default class extends Controller {
      * langue suit l'interface (source unique : documentLocale()). Si le
      * navigateur ne la supporte pas, le bouton micro est masqué (amélioration
      * progressive : l'UI reste identique à l'existant).
+     *
+     * C'EST L'UTILISATEUR QUI DÉCIDE QUAND IL A FINI. Le navigateur clôt la
+     * reconnaissance au premier silence ; une dictée VOULUE est alors relancée
+     * (dictee-session.js) et ne s'arrête que sur un clic du micro, Échap, l'envoi,
+     * la limite du champ ou le plafond de trois minutes. À l'arrêt, le segment
+     * dicté part en finition (hésitations, ponctuation, questions, listes) puis
+     * revient dans la zone de saisie : rien n'est envoyé à Ket sans relecture.
      */
     setupDictation() {
         this.listening = false;
+        this._dicteeVoulue = false;
         this._dictationBase = '';
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
@@ -286,42 +303,113 @@ export default class extends Controller {
 
         recognition.onstart = () => {
             this.listening = true;
-            if (this.hasMicTarget) {
-                this.micTarget.classList.add('aic-mic--recording');
-                this.micTarget.setAttribute('aria-pressed', 'true');
-            }
+            this._dicteeSessionDebut = Date.now();
         };
         recognition.onresult = (event) => {
+            // Un texte déjà ENVOYÉ ne doit pas se voir recopier les derniers mots que la
+            // reconnaissance livre après l'arrêt.
+            if (this._dicteeRaison === 'envoi' || this._dicteeRaison === 'deconnexion') return;
             // Fusion et non concaténation : Chrome Android renvoie chaque
             // hypothèse comme un résultat reprenant toute la phrase.
             const transcript = fusionnerTranscripts(
                 Array.from(event.results, (resultat) => resultat[0].transcript),
             );
-            const base = this._dictationBase;
             const max = Number(this.inputTarget.getAttribute('maxlength')) || 4000;
-            const separateur = base !== '' && transcript !== '' ? ' ' : '';
-            this.inputTarget.value = (base + separateur + transcript).slice(0, max);
+            this.inputTarget.value = assemblerTexte(this._dictationBase, transcript, max);
             this.onInput(); // réutilise autoGrow + état du bouton + compteur
+            if (this.inputTarget.value.length >= max) this.arreterDictee('limite');
         };
         recognition.onerror = (event) => {
             const message = CAUSES_DICTEE[event.error];
-            // « no-speech » et « aborted » sont le cours normal des choses :
-            // l'utilisateur n'a rien dit, ou a recliqué pour arrêter. Rien à
-            // signaler — le bouton reprend simplement son état de repos.
-            if (message) this.appendNotice('warning', message);
-            this.stopDictationUi();
+            // « no-speech » et « aborted » sont le cours normal des choses : un
+            // silence, ou un arrêt demandé. La fin de session (onend) décide seule
+            // de relancer ou non. Les autres causes arrêtent la dictée.
+            if (message) {
+                this.appendNotice('warning', message);
+                this._dicteeVoulue = false;
+                this._dicteeRaison = 'erreur';
+            }
         };
-        recognition.onend = () => this.stopDictationUi();
+        recognition.onend = () => this._apresFinDeSession();
 
         this.recognition = recognition;
+    }
+
+    /** Le navigateur vient de clore une session : relancer, ou conclure la dictée. */
+    _apresFinDeSession() {
+        this.listening = false;
+        const maintenant = Date.now();
+        const voulue = this._dicteeVoulue;
+        const decision = decisionApresFin({
+            voulue,
+            dureeTotaleMs: maintenant - (this._dicteeDebut || maintenant),
+            dureeSessionMs: maintenant - (this._dicteeSessionDebut || maintenant),
+            finsEclair: this._dicteeFinsEclair || 0,
+        });
+        this._dicteeFinsEclair = decision.finsEclair;
+
+        if (decision.relancer) {
+            // Chaque session repart d'une liste de résultats VIDE : le texte déjà
+            // dicté devient le socle, sinon la relance l'effacerait.
+            this._dictationBase = this.inputTarget.value.trim();
+            try {
+                this.recognition.start();
+                return;
+            } catch (error) {
+                console.warn('AssistantChat - relance de la dictée impossible :', error);
+            }
+        }
+        this._terminerDictee(voulue ? (decision.raison || 'erreur') : (this._dicteeRaison || 'utilisateur'));
+    }
+
+    /** Demande l'arrêt (geste de l'utilisateur, plafond, envoi, limite du champ). */
+    arreterDictee(raison = 'utilisateur') {
+        if (!this._dicteeVoulue) return;
+        this._dicteeVoulue = false;
+        this._dicteeRaison = raison;
+        if (!this.listening) {
+            this._terminerDictee(raison);
+            return;
+        }
+        try {
+            this.recognition.stop(); // onend → _terminerDictee
+        } catch (error) {
+            this._terminerDictee(raison);
+        }
+    }
+
+    /** Fin effective : interface au repos, message éventuel, puis finition du texte. */
+    _terminerDictee(raison) {
+        if (this._dicteeTerminee) return;
+        this._dicteeTerminee = true;
+        this._dicteeVoulue = false;
+        this.stopDictationUi();
+
+        if (raison === 'plafond') {
+            this.appendNotice('warning', `Dictée arrêtée au bout de ${formaterDuree(DICTEE_DUREE_MAX_MS)} min. Relisez le texte, puis reprenez la dictée ou envoyez.`);
+        } else if (raison === 'boucle') {
+            this.appendNotice('warning', "La reconnaissance vocale s'interrompt sans cesse. Vérifiez le micro, puis réessayez.");
+        }
+        // Envoi en cours ou panneau fermé : il n'y a plus de texte à finir.
+        if (raison !== 'envoi' && raison !== 'deconnexion') {
+            this._finirTexteDicte();
+        }
     }
 
     /** Réinitialise l'état visuel du micro (fin d'écoute ou erreur). */
     stopDictationUi() {
         this.listening = false;
+        if (this._dicteeMinuteur) {
+            clearInterval(this._dicteeMinuteur);
+            this._dicteeMinuteur = null;
+        }
         if (this.hasMicTarget) {
             this.micTarget.classList.remove('aic-mic--recording');
             this.micTarget.setAttribute('aria-pressed', 'false');
+        }
+        if (this.hasMicTimerTarget) {
+            this.micTimerTarget.hidden = true;
+            this.micTimerTarget.textContent = '';
         }
         if (this.hasInputTarget) this.inputTarget.focus();
     }
@@ -333,16 +421,94 @@ export default class extends Controller {
      */
     toggleDictation() {
         if (!this.recognition) return;
-        if (this.listening) {
-            this.recognition.stop();
+        if (this._dicteeVoulue) {
+            this.arreterDictee('utilisateur');
             return;
         }
-        this._dictationBase = this.inputTarget.value.trim();
+        if (this._finitionEnCours) return; // la dictée précédente se met encore au propre
+
+        this._dicteeSocle = this.inputTarget.value.trim();
+        this._dictationBase = this._dicteeSocle;
+        this._dicteeDebut = Date.now();
+        this._dicteeSessionDebut = this._dicteeDebut;
+        this._dicteeFinsEclair = 0;
+        this._dicteeRaison = null;
+        this._dicteeTerminee = false;
+        this._dicteeVoulue = true;
         try {
             this.recognition.start();
         } catch (error) {
-            // start() lève si une reconnaissance est déjà en cours : on ignore.
+            // start() lève si une reconnaissance est déjà en cours : elle continue.
             console.warn('AssistantChat - dictée déjà active :', error);
+        }
+
+        // L'état « enregistre » suit la VOLONTÉ de l'utilisateur, pas les sessions du
+        // navigateur : sans cela, le micro clignoterait à chaque relance.
+        if (this.hasMicTarget) {
+            this.micTarget.classList.add('aic-mic--recording');
+            this.micTarget.setAttribute('aria-pressed', 'true');
+        }
+        const majCompteur = () => {
+            const ecoule = Date.now() - this._dicteeDebut;
+            if (this.hasMicTimerTarget) {
+                this.micTimerTarget.hidden = false;
+                this.micTimerTarget.textContent = formaterDuree(ecoule);
+            }
+            if (ecoule >= DICTEE_DUREE_MAX_MS) this.arreterDictee('plafond');
+        };
+        majCompteur();
+        this._dicteeMinuteur = setInterval(majCompteur, 500);
+    }
+
+    /**
+     * FINITION : le segment dicté part au serveur et revient mis au propre.
+     * Fail-open : panne, délai, solde insuffisant ou texte retouché entre-temps →
+     * le texte dicté reste exactement tel qu'il est.
+     */
+    async _finirTexteDicte() {
+        if (!this.hasDicteeUrlValue || !this.dicteeUrlValue || !this.hasInputTarget) return;
+        const socle = this._dicteeSocle ?? '';
+        const valeur = this.inputTarget.value;
+        const segment = segmentDicte(valeur, socle);
+        if (segment === null || segment.length < 3) return;
+
+        const controleur = new AbortController();
+        const delai = setTimeout(() => controleur.abort(), 12000);
+        // Une frappe pendant la finition l'annule : ce que l'utilisateur écrit prime.
+        const annuler = (event) => {
+            if (event.key && event.key.length === 1) controleur.abort();
+        };
+        this._finitionEnCours = true;
+        this.inputTarget.addEventListener('keydown', annuler);
+        this.inputTarget.setAttribute('aria-busy', 'true');
+        if (this.hasMicTarget) this.micTarget.classList.add('aic-mic--finition');
+
+        try {
+            const response = await fetch(this.dicteeUrlValue, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify({ texte: segment }),
+                signal: controleur.signal,
+            });
+            const data = await response.json().catch(() => null);
+            if (response.status === 402) {
+                this.appendNotice('warning', data?.message || 'Solde insuffisant : le texte reste tel que dicté.');
+                return;
+            }
+            // Le texte a bougé pendant l'appel : on ne remplace rien.
+            if (!response.ok || !data?.finie || this.inputTarget.value !== valeur) return;
+
+            const max = Number(this.inputTarget.getAttribute('maxlength')) || 4000;
+            this.inputTarget.value = remplacerSegment(socle, data.texte, max);
+            this.onInput();
+        } catch (error) {
+            if (error?.name !== 'AbortError') console.warn('AssistantChat - finition de la dictée :', error);
+        } finally {
+            clearTimeout(delai);
+            this._finitionEnCours = false;
+            this.inputTarget.removeEventListener('keydown', annuler);
+            this.inputTarget.removeAttribute('aria-busy');
+            if (this.hasMicTarget) this.micTarget.classList.remove('aic-mic--finition');
         }
     }
 
@@ -372,8 +538,15 @@ export default class extends Controller {
         }
         // Coupe une éventuelle dictée en cours quand le panneau col-4 est re-rendu.
         if (this.recognition) {
+            this._dicteeVoulue = false;
+            this._dicteeRaison = 'deconnexion';
+            this.recognition.onend = null;
             try { this.recognition.stop(); } catch (error) { /* déjà arrêtée */ }
             this.recognition = null;
+        }
+        if (this._dicteeMinuteur) {
+            clearInterval(this._dicteeMinuteur);
+            this._dicteeMinuteur = null;
         }
         if (this.hasMicTarget && this._onMicTipOver) {
             this.micTarget.removeEventListener('mouseenter', this._onMicTipOver);
@@ -529,11 +702,17 @@ export default class extends Controller {
         }
     }
 
-    /** Entrée = envoyer, Maj+Entrée = retour à la ligne, Échap = annuler la citation. */
+    /** Entrée = envoyer, Maj+Entrée = retour à la ligne, Échap = arrêter la dictée ou annuler la citation. */
     keydown(event) {
         if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
             this.send();
+            return;
+        }
+        // Échap termine d'abord une dictée en cours, puis sort d'une citation.
+        if (event.key === 'Escape' && this._dicteeVoulue) {
+            event.preventDefault();
+            this.arreterDictee('utilisateur');
             return;
         }
         // Seule sortie clavier immédiate du mode « réponse à un message ».
@@ -552,6 +731,9 @@ export default class extends Controller {
 
     /** Envoi depuis la zone de saisie (bouton, ou Entrée). */
     async send() {
+        // Envoyer, c'est avoir fini de parler : la dictée s'arrête sans finition,
+        // le texte part tel que l'utilisateur l'a relu.
+        this.arreterDictee('envoi');
         const contenu = this.inputTarget.value.trim();
         if (contenu === '') return;
         await this._envoyer(contenu);

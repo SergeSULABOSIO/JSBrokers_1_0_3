@@ -84,6 +84,14 @@ final class TokenPricing
     public const FICHIER_IA_RATIO = 1.0;
 
     /**
+     * Assistant IA : coût de la FINITION d'une dictée vocale (mise au propre du texte
+     * dicté quand l'utilisateur arrête de parler), en RATIO du poids d'un message
+     * (décision produit : 20 % — un petit appel sur le modèle léger, sans outil ni
+     * historique). Facturé seulement si le texte a réellement été mis au propre.
+     */
+    public const DICTEE_IA_RATIO = 0.2;
+
+    /**
      * Assistant IA — DOCUMENT téléchargeable produit par Ket (Word, Excel, PDF,
      * Markdown, texte, HTML). Coût FIXE d'une production, indépendant de la
      * longueur : il couvre l'assemblage, la mise en page, le rendu et le stockage.
