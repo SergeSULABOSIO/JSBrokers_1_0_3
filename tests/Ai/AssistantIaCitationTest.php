@@ -411,6 +411,10 @@ class AssistantIaCitationTest extends WebTestCase
             'data-menu-key="export-markdown"',
             'data-menu-key="export-image"',
             'data-menu-key="envoyer-email"',
+            // Lecture à voix haute : réservée aux réponses de Ket.
+            'data-menu-key="ecouter" data-menu-roles="assistant"',
+            'assistant-chat-target="tplEcouter"',
+            'data-action="click->assistant-chat#basculerEcoute"',
             'assistant-chat-target="tplKebab"',
             'assistant-chat-target="tplCitation"',
             'assistant-chat-target="citationBar"',

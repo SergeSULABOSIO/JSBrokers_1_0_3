@@ -125,6 +125,7 @@ class IconCanvasProvider
         'action:incorporation'=> 'material-symbols:add-ad-outline-rounded',
         'action:information'  => 'hugeicons:ai-idea',
         'action:invite'       => 'mingcute:invite-fill',
+        'action:listen'       => 'lucide:volume-2',     // écouter une réponse de Ket à voix haute
         'action:markdown'     => 'tabler:markdown',     // export en Markdown (texte simple)
         'action:ongoing'      => 'mdi:progress-download',
         'action:open'         => 'fad:open',
