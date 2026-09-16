@@ -4,6 +4,7 @@ namespace App\Ai\Engine;
 
 use App\Ai\AiContextBuilder;
 use App\Ai\AiEngineFailure;
+use App\Ai\AiText;
 use App\Ai\AiReply;
 use App\Ai\AiRequest;
 use App\Ai\Comprehension\ClarificationEnAttente;
@@ -814,21 +815,31 @@ final class GeminiAiEngine implements AiEngineInterface
         // payer le catalogue deux fois par message.
         $declarations = $phase->declareDesOutils() ? $this->dialecte->declarations($trousse, $request->scope) : [];
 
+        $charge = [
+            'systemInstruction' => ['parts' => [['text' => $promptSysteme]]],
+            'contents'          => $contents,
+            'generationConfig'  => ['maxOutputTokens' => self::MAX_OUTPUT_TOKENS],
+        ] + ($declarations === []
+            // Aucun outil à déclarer : on OMET la clé au lieu d'envoyer une
+            // liste vide. Un « tools » vide reste une invitation à en chercher,
+            // et la phase de rédaction ne doit en trouver aucun.
+            ? []
+            : ['tools' => [['functionDeclarations' => $declarations]]]);
+
+        // Un seul octet invalide rend TOUT le JSON inencodable, et Ket ne répond plus
+        // (incident du 2026-09-16). On répare, et on dit d'où venait le texte.
+        $repares = [];
+        $charge = AiText::utf8Profond($charge, $repares);
+        if ($repares !== []) {
+            $this->logger->warning('Assistant IA : texte non UTF-8 réparé avant l\'envoi au modèle.', ['chemins' => $repares]);
+        }
+
         $response = $this->httpClient->request('POST', sprintf('%s/%s:generateContent', self::API_BASE, $this->modeleCourant), [
             'headers' => [
                 'x-goog-api-key' => $this->apiKey,
                 'content-type'   => 'application/json',
             ],
-            'json' => [
-                'systemInstruction' => ['parts' => [['text' => $promptSysteme]]],
-                'contents'          => $contents,
-                'generationConfig'  => ['maxOutputTokens' => self::MAX_OUTPUT_TOKENS],
-            ] + ($declarations === []
-                // Aucun outil à déclarer : on OMET la clé au lieu d'envoyer une
-                // liste vide. Un « tools » vide reste une invitation à en chercher,
-                // et la phase de rédaction ne doit en trouver aucun.
-                ? []
-                : ['tools' => [['functionDeclarations' => $declarations]]]),
+            'json'    => $charge,
             'timeout' => 90,
         ]);
 

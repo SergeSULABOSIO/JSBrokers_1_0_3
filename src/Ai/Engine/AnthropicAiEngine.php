@@ -235,13 +235,14 @@ final class AnthropicAiEngine implements AiEngineInterface
                 'anthropic-version' => self::API_VERSION,
                 'content-type'      => 'application/json',
             ],
-            'json' => [
+            // Texte non UTF-8 (fichier joint, troncature) : réparé, sinon le JSON ne part pas.
+            'json' => \App\Ai\AiText::utf8Profond([
                 'model'      => $this->model,
                 'max_tokens' => self::MAX_OUTPUT_TOKENS,
                 'system'     => $this->contextBuilder->toSystemPrompt($request),
                 'tools'      => $this->toolDefinitions($request->scope),
                 'messages'   => $messages,
-            ],
+            ]),
             'timeout' => 90,
         ]);
 

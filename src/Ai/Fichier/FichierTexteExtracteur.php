@@ -2,6 +2,7 @@
 
 namespace App\Ai\Fichier;
 
+use App\Ai\AiText;
 use PhpOffice\PhpSpreadsheet\IOFactory as SpreadsheetIOFactory;
 use Smalot\PdfParser\Parser as PdfParser;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -107,6 +108,11 @@ class FichierTexteExtracteur
         if ($texte === null) {
             return null;
         }
+        // UTF-8 D'ABORD. La lecture d'un .txt/.csv est bornée en OCTETS (elle peut couper
+        // un « é » en deux) et Excel enregistre ses CSV en Windows-1252. Sur un texte
+        // invalide, toute regex /u rend null — le `?? $texte` qui suit gardait alors le
+        // texte invalide tel quel, et l'appel au modèle tombait (incident du 2026-09-16).
+        $texte = AiText::utf8($texte);
         // Retire les caractères de contrôle (hors tab/CR/LF) et compacte les espaces.
         $texte = preg_replace('/[^\P{C}\t\r\n]+/u', '', $texte) ?? $texte;
         $texte = preg_replace("/[ \t]+/", ' ', $texte) ?? $texte;

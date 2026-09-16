@@ -3,6 +3,7 @@
 namespace App\Ai\Comprehension;
 
 use App\Ai\AiContextBuilder;
+use App\Ai\AiText;
 use App\Ai\AiRequest;
 use App\Ai\Debit\BudgetDebit;
 use App\Ai\Engine\DialecteGemini;
@@ -270,7 +271,8 @@ final class Comprehenseur
                 'x-goog-api-key' => $this->apiKey,
                 'content-type'   => 'application/json',
             ],
-            'json' => [
+            // Texte non UTF-8 (fichier joint, troncature) : réparé, sinon le JSON ne part pas.
+            'json' => AiText::utf8Profond([
                 'systemInstruction' => ['parts' => [['text' => $prompt]]],
                 'contents'          => $contents,
                 'generationConfig'  => [
@@ -281,7 +283,7 @@ final class Comprehenseur
                 ] + $sortie,
             ] + ($declarations === []
                 ? []
-                : ['tools' => [['functionDeclarations' => $declarations]]]),
+                : ['tools' => [['functionDeclarations' => $declarations]]])),
             'timeout' => self::TIMEOUT_SECONDES,
         ])->toArray();
     }
