@@ -29,7 +29,7 @@ class RisqueAutocompleteField extends AbstractType
                     '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">Code: %s. %s</div></div>',
                     htmlspecialchars($risque->getNomComplet()),
                     htmlspecialchars($risque->getCode()),
-                    htmlspecialchars(substr($risque->getDescription() ?? '', 0, 50) . (strlen($risque->getDescription() ?? '') > 50 ? '...' : ''))
+                    htmlspecialchars(mb_substr($risque->getDescription() ?? '', 0, 50) . (mb_strlen($risque->getDescription() ?? '') > 50 ? '...' : ''))
                 );
             },
         ]);

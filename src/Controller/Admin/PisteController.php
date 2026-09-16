@@ -103,7 +103,7 @@ class PisteController extends AbstractController
                     $piste->setTypeAvenant(Piste::AVENANT_SOUSCRIPTION);
                     $piste->setExercice((int) date('Y'));
                     if ($piste->getRisque() && $piste->getClient()) {
-                        $piste->setNom(substr($piste->getRisque()->getNomComplet() . ' — ' . $piste->getClient()->getNom(), 0, 255));
+                        $piste->setNom(mb_substr($piste->getRisque()->getNomComplet() . ' — ' . $piste->getClient()->getNom(), 0, 255));
                     }
                     return;
                 }
@@ -147,7 +147,7 @@ class PisteController extends AbstractController
                     $piste->setCommissionPotentielle($this->indicatorHelper->getCotationMontantCommissionTtc($cotation, -1, false) ?: $src->getCommissionPotentielle());
                     $piste->setRenewalCondition($src->getRenewalCondition() ?? Piste::RENEWAL_CONDITION_RENEWABLE);
                     $piste->setPartenaire($src->getPartenaire());
-                    $piste->setNom(substr('Renouvellement — ' . $src->getNom(), 0, 255));
+                    $piste->setNom(mb_substr('Renouvellement — ' . $src->getNom(), 0, 255));
                 }
 
                 $piste->setTypeAvenant(Piste::AVENANT_RENOUVELLEMENT);

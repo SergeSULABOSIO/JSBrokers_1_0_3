@@ -53,4 +53,62 @@ final class AiText
     {
         return trim((string) preg_replace('/[^a-z0-9]+/', ' ', self::normalize(trim($text))));
     }
+
+    /**
+     * Un texte TOUJOURS en UTF-8 valide.
+     *
+     * L'INCIDENT DU 2026-09-16 (production). « Invalid value for "json" option: Malformed
+     * UTF-8 characters » : l'appel à Gemini tombait avant même de partir, et Ket ne
+     * répondait plus du tout. Un texte invalide suffit à rendre tout le JSON inencodable.
+     * Deux fabriques connues : une lecture bornée en OCTETS qui coupe un caractère
+     * accentué en deux, et un fichier CSV/TXT enregistré en Windows-1252 par Excel.
+     *
+     * - déjà valide : rendu tel quel ;
+     * - seule la FIN est invalide (troncature) : le caractère coupé est retiré ;
+     * - sinon : lu comme du Windows-1252 (sur-ensemble de l'ISO-8859-1), l'encodage
+     *   des fichiers produits par Excel et le Bloc-notes sous Windows.
+     */
+    public static function utf8(string $texte): string
+    {
+        if (mb_check_encoding($texte, 'UTF-8')) {
+            return $texte;
+        }
+        $sansFinCoupee = (string) preg_replace('/[\xC0-\xFF][\x80-\xBF]*$/', '', $texte);
+        if (mb_check_encoding($sansFinCoupee, 'UTF-8')) {
+            return $sansFinCoupee;
+        }
+
+        return mb_convert_encoding($texte, 'UTF-8', 'Windows-1252');
+    }
+
+    /**
+     * Répare en profondeur les chaînes (clés comprises) d'une charge utile avant son
+     * encodage JSON. Les chemins réparés sont rendus dans `$repares` : une réparation
+     * signale une source qui produit du texte invalide, et il faut la retrouver.
+     *
+     * @param array<mixed>  $donnees
+     * @param list<string>  $repares
+     *
+     * @return array<mixed>
+     */
+    public static function utf8Profond(array $donnees, array &$repares = [], string $chemin = ''): array
+    {
+        $propre = [];
+        foreach ($donnees as $cle => $valeur) {
+            $ici = $chemin === '' ? (string) $cle : $chemin . '.' . $cle;
+            if (is_string($cle) && !mb_check_encoding($cle, 'UTF-8')) {
+                $cle = self::utf8($cle);
+                $repares[] = $ici . ' (clé)';
+            }
+            if (is_string($valeur) && !mb_check_encoding($valeur, 'UTF-8')) {
+                $valeur = self::utf8($valeur);
+                $repares[] = $ici;
+            } elseif (is_array($valeur)) {
+                $valeur = self::utf8Profond($valeur, $repares, $ici);
+            }
+            $propre[$cle] = $valeur;
+        }
+
+        return $propre;
+    }
 }

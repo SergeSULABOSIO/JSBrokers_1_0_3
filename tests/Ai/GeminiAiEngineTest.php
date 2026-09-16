@@ -150,6 +150,32 @@ class GeminiAiEngineTest extends TestCase
      * précède, tourne sur un autre modèle et son propre client : c'est justement ce
      * que ce compteur-ci ne doit PAS voir bouger.)
      */
+    /**
+     * L'INCIDENT DU 2026-09-16 (production) : « Malformed UTF-8 characters » — un
+     * résultat d'outil portait du texte non UTF-8 (fichier Excel en Windows-1252,
+     * troncature en octets). L'encodage JSON levait AVANT l'envoi, et Ket ne
+     * répondait plus du tout. Le texte est désormais réparé, et l'appel part.
+     */
+    public function testUnResultatDOutilNonUtf8NEmpechePlusLAppel(): void
+    {
+        $corps = [];
+        $http = new MockHttpClient(function (string $methode, string $url, array $options) use (&$corps) {
+            $corps[] = (string) ($options['body'] ?? '');
+
+            return new MockResponse(json_encode($this->tourAvecOutil(1000)));
+        });
+
+        // « Prime réglée » en Windows-1252, et un « é » coupé en deux en fin de chaîne.
+        $tool = $this->makeTool(AiToolResult::ok(['statut' => "Prime r\xE9gl\xE9e", 'note' => "Caution \xC3"]));
+        $this->makeEngine($http, [$tool])->reply($this->makeRequest('Analyse tout mon portefeuille'));
+
+        $this->assertCount(2, $corps, 'la planification ET la rédaction doivent partir');
+        $this->assertTrue(mb_check_encoding($corps[1], 'UTF-8'));
+        $this->assertStringContainsString('Prime réglée', json_decode($corps[1], false)
+            ? (string) json_encode(json_decode($corps[1], true), JSON_UNESCAPED_UNICODE)
+            : '');
+    }
+
     public function testUnMessageNeCoutteJamaisPlusDeDeuxAppelsDeTravail(): void
     {
         $appels = 0;
