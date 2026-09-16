@@ -202,35 +202,82 @@ final class PreparerOperationsTool implements AiToolProduisantUnPlan, AiToolEcri
      * qui les résout, une fois l'étape précédente réellement écrite (à ce moment-là
      * l'identifiant existe).
      */
-    public function argumentsDepuisEtape(array $etape): array
+    public function argumentsDepuisEtape(array $etape, ?string &$motif = null): array
     {
+        $motif = null;
+        $libelle = trim((string) ($etape['libelle'] ?? '')) ?: 'sans libellé';
+
         // Le modèle désigne volontiers l'entité par le LIBELLÉ DE L'ÉCRAN, au pluriel
         // (« Risques », « Paiements de prime ») : c'est le vocabulaire qu'on lui
         // montre partout. La canonisation vit dans EntiteCanonique, qui reste
         // fail-closed sur le périmètre.
         $entite = $this->entiteCanonique->resoudre($etape['entite'] ?? null);
         if ($entite === null) {
+            $motif = sprintf(
+                'Étape « %s » : je ne sais pas enregistrer « %s ». Ce terme ne désigne aucune rubrique '
+                . 'que je peux écrire.',
+                $libelle,
+                trim((string) ($etape['entite'] ?? '')) ?: 'sans entité',
+            );
+
             return [];
         }
 
-        $op = trim((string) ($etape['operation'] ?? MutationOperation::OP_CREATE));
-        if (!in_array($op, MutationOperation::OPS, true)) {
+        // Le VERBE se canonise comme l'entité, et pour la même raison : l'écran
+        // affiche « Création », jamais « create », et le modèle relit l'écran.
+        $dicte = $etape['operation'] ?? MutationOperation::OP_CREATE;
+        $op = MutationOperation::canoniserOp(is_string($dicte) ? $dicte : null);
+        if ($op === null) {
+            $motif = sprintf(
+                'Étape « %s » : je n\'ai pas compris ce qu\'il faut faire de « %s ». Dites créer, '
+                . 'modifier ou supprimer.',
+                $libelle,
+                trim((string) $dicte) ?: 'sans opération',
+            );
+
             return [];
         }
 
         // Les DEUX dialectes de champs sont acceptés (map et paires) : le modèle voit
         // les deux schémas dans le même tour et les intervertit. Cf. ChampsDictes.
         $champs = ChampsDictes::normaliser($etape['champs'] ?? null);
+        // ET LA TROISIÈME CONFUSION, celle que le schéma lui-même provoque. Dans le
+        // même tour, on montre au modèle DEUX conventions d'étape : une étape de
+        // programme ordinaire porte ses paramètres en paires sous « arguments »
+        // (c'est ce que lit OutilsDeProgramme pour les outils non assemblables),
+        // tandis qu'une étape d'écriture doit les porter sous « champs ». Il les
+        // intervertit — exactement comme il intervertit map et paires.
+        //
+        // On lit donc « arguments » EN DERNIER RECOURS, jamais avant : « champs »
+        // reste la convention, et doit faire foi quand les deux sont présents, sinon
+        // le repli deviendrait une seconde source de vérité. Rien n'est deviné pour
+        // autant — la forme passe par le même normaliseur fail-closed, et l'entité
+        // comme le verbe continuent de se résoudre ou de refuser.
+        if ($champs === []) {
+            $champs = ChampsDictes::normaliser($etape['arguments'] ?? null);
+        }
 
         $cibleId = isset($etape['cibleId']) ? (int) $etape['cibleId'] : 0;
         // Une modification ou une suppression SANS cible n'a pas de sens : mieux vaut
         // rendre l'étape inexploitable (elle sera traversée avec son motif) que de la
         // transformer en création silencieuse.
         if ($op !== MutationOperation::OP_CREATE && $cibleId <= 0) {
+            $motif = sprintf(
+                'Étape « %s » : je ne sais pas SUR QUEL enregistrement agir. Précisez lequel, par son nom '
+                . 'ou sa référence.',
+                $libelle,
+            );
+
             return [];
         }
         // Une création sans aucun champ n'écrirait rien : même raisonnement.
         if ($op === MutationOperation::OP_CREATE && $champs === []) {
+            $motif = sprintf(
+                'Étape « %s » : aucune valeur à enregistrer ne m\'est parvenue. Dites-moi ce que cette '
+                . 'étape doit contenir.',
+                $libelle,
+            );
+
             return [];
         }
 
@@ -271,6 +318,11 @@ final class PreparerOperationsTool implements AiToolProduisantUnPlan, AiToolEcri
         if ($inconnu !== null) {
             return AiToolResult::ok([
                 'pret' => false,
+                'bloquant' => sprintf(
+                    'Je ne sais pas enregistrer « %s » : cela ne correspond à aucune rubrique que je peux écrire. '
+                    . 'Rien n’a été enregistré. Dites-moi dans quelle rubrique cet enregistrement doit aller.',
+                    $inconnu,
+                ),
                 'note' => sprintf(
                     'L\'entité « %s » n\'existe pas. Écris le NOM COURT de l\'entité, jamais le libellé de '
                     . 'l\'écran. Entités que je peux écrire : %s.',

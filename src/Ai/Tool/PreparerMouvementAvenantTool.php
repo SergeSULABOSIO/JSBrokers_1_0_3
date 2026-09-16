@@ -241,6 +241,8 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
                 'motif'            => $base->getNonRenouvelableMotif(),
                 'decideeLe'        => $base->getNonRenouvelableLe()?->format('d/m/Y'),
                 'decideePar'       => $base->getNonRenouvelablePar()?->getNom(),
+                'bloquant'         => 'Cette police a été signalée comme non renouvelable : je ne peux pas lui '
+                    . 'donner de suite tant que ce marquage tient. Rien n’a été enregistré. Voulez-vous le lever ?',
                 'note' => 'Cette police a été SIGNALÉE comme non renouvelable. Ne prépare AUCUN plan et n’annonce '
                     . 'aucun bouton. Dis-le en une phrase en citant le motif, sa date et son auteur, puis DEMANDE '
                     . 'à l’utilisateur s’il veut lever ce marquage — si oui, appelle '
@@ -438,6 +440,11 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
 
         if (AvenantSuccessionScope::estScelle($suite['code'])) {
             return AiToolResult::ok($commun + [
+                'bloquant' => sprintf(
+                    '%s Il n’y a donc plus rien à enregistrer sur cette police. Ouvrez sa fiche si vous '
+                    . 'voulez la modifier.',
+                    $suite['phrase'],
+                ),
                 'note' => 'Le sort de cette police est SCELLÉ : il n’y a plus rien à écrire. Ne prépare AUCUN '
                     . 'plan et n’annonce aucun bouton. Dis à l’utilisateur ce que la police est DEVENUE, en '
                     . 'reprenant « suiteDeLaPolice » : si un avenant lui succède, NOMME-le (numéro et période). '
@@ -477,6 +484,12 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
             'mouvementAmorce'       => true,
             'propositionsEnAttente' => $propositions,
             'prochaineEtape'        => $etape,
+            'bloquant' => sprintf(
+                '%s Cette reconduction est engagée mais pas encore aboutie : rien de plus n’a été '
+                . 'enregistré. %s',
+                $suite['phrase'],
+                $etape,
+            ),
             'note' => 'Ce mouvement est AMORCÉ MAIS PAS ABOUTI : la police n’est PAS reconduite, et cet outil '
                 . 'ne peut pas en préparer un second (ce serait un doublon). Ne dis donc PAS que c’est fait, et '
                 . 'n’annonce SURTOUT pas un bouton ici. Mais ne t’arrête pas là : énonce « prochaineEtape » en '

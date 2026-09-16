@@ -570,7 +570,20 @@ class ProgrammeKetTest extends WebTestCase
         ], $scope);
 
         $this->assertFalse($resultat->data['pret']);
-        $this->assertStringContainsString('inexploitable', (string) $resultat->data['note']);
+
+        // ON ASSERTE LE CONTRAT, PAS LA PHRASE. Ce test exigeait le mot
+        // « inexploitable » — le terme générique de l'ancien refus, qui ne disait
+        // RIEN de plus : quatre causes distinctes en sortaient par le même message,
+        // suivi du catalogue entier des outils. Le refus nomme désormais l'étape en
+        // défaut ET le terme incompris, ce qui est précisément ce que le docblock
+        // ci-dessus réclame. Figer le mot d'hier aurait empêché cette amélioration.
+        $note = (string) $resultat->data['note'];
+        $this->assertStringContainsString('Une licorne', $note, 'Le refus doit nommer l’étape en défaut : '
+            . 'dans une série, savoir LAQUELLE est la moitié de l’information.');
+        $this->assertStringContainsString('Licorne', $note, 'Le refus doit nommer le terme incompris, '
+            . 'pour que le tour suivant se corrige seul.');
+        $this->assertStringNotContainsString('signaler_paiement_prime', $note, 'Le refus ne récite plus le '
+            . 'catalogue des outils : c’est ce texte qui a fui dans la bulle du courtier.');
     }
 
     /**

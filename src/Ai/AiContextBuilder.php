@@ -9,6 +9,7 @@ use App\Ai\Fichier\FichierAttachePolicy;
 use App\Ai\Guide\GuideRepository;
 use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\Mutation\PlanEnAttente;
+use App\Ai\Parite\CouvertureDesEcrans;
 use App\Ai\Parcours\ParcoursCatalogue;
 use App\Ai\Programme\ProgrammeEnCours;
 use App\Ai\Scope\AiScope;
@@ -25,6 +26,7 @@ use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
 use App\Services\ServiceMonnaies;
 use Vich\UploaderBundle\Storage\StorageInterface;
+use App\Ai\Mutation\FinDePlan;
 
 /**
  * Construit la requête normalisée adressée au moteur IA : nom du personnage
@@ -296,6 +298,11 @@ class AiContextBuilder
         // pas le fait répondre avec ce qu'il a — le tableau — au lieu de regretter
         // ce qu'il n'a pas.
         $sectionTerminal = $this->sectionTerminal($request->scope->terminal);
+        // LA FRONTIÈRE, dans les DEUX trousses — volontairement hors du ternaire
+        // ci-dessous. « Enregistre-moi un collaborateur » arrive en écriture ;
+        // « sais-tu créer un collaborateur ? » arrive en consultation. Une frontière
+        // connue un tour sur deux laisserait passer l'autre moitié.
+        $sectionFrontiere = $this->sectionFrontiere();
         // Les protocoles d'écriture (procédures A/B, parcours guidé, mouvements de
         // police, programme, codes, relations) ne partent qu'avec la trousse qui porte
         // les outils correspondants : 27 Ko sur 53.
@@ -332,6 +339,7 @@ class AiContextBuilder
         {$this->regleComprendreAvantDAgir($request->comprise?->aEteEtablie() !== true)}
         {$sectionAiguillage}
         {$sectionTerminal}
+        {$sectionFrontiere}
         {$sectionGlossaire}
         {$sectionConcision}
         - BOUSSOLE — RAPPEL À CHAQUE INTERACTION (règle impérative) : à la fin de chaque réponse
@@ -459,7 +467,10 @@ class AiContextBuilder
           remplir/éditer/valider moi-même » => B. SINON, ne lance NI l'une NI l'autre : POSE-LUI
           D'ABORD LA QUESTION — préfère-t-il que tu t'en charges entièrement (A), ou qu'il remplisse
           et enregistre le formulaire lui-même (B) ? Attends sa réponse avant de continuer. Ne dis
-          jamais que tu ne peux pas créer/modifier/supprimer : tu le peux (procédure A).
+          jamais que tu ne peux pas créer/modifier/supprimer : tu le peux (procédure A). SAUF ce que
+          la FRONTIÈRE réserve à l'écran (bloc plus haut) : là, et là seulement, tu dis en une phrase
+          que ce geste se fait à l'écran, tu DONNES LE CHEMIN, et tu t'arrêtes. N'écris JAMAIS dans
+          une entité voisine à la place, et n'invente aucun champ obligatoire pour la justifier.
           {$blocProposition}
           PARCOURS GUIDÉ (règle IMPÉRATIVE, procédure A) : une création un peu structurante ne se
           limite presque jamais à une seule entité — un client appelle ses interlocuteurs
@@ -1781,6 +1792,33 @@ class AiContextBuilder
             . "\n          à l'utilisateur de quel client ou de quelle période il parle.";
     }
 
+    /**
+     * CE QUI SE FAIT À L'ÉCRAN, ET PAR QUEL CHEMIN — dérivé du manifeste de parité.
+     *
+     * POURQUOI CE BLOC EXISTE. Le prompt interdit par ailleurs, deux fois et avec
+     * emphase, de répondre « je ne peux pas créer ». C'est une bonne règle : sans
+     * elle, le modèle s'excusait de ne pas savoir enregistrer alors qu'il le sait.
+     * Mais une interdiction sans exception nommée ne rend pas le modèle honnête,
+     * elle le rend inventif — sommée d'enregistrer un collaborateur le 2026-09-14,
+     * Ket a créé un CONTACT DE CLIENT, puis réclamé un téléphone obligatoire qui n'a
+     * aucun sens pour un collaborateur. Huit messages, aucune écriture.
+     *
+     * Le texte DÉRIVE de CouvertureDesEcrans : le manifeste que le test de parité
+     * tient à jour est le même que celui que Ket récite. Une frontière ajoutée là
+     * est dite ici sans que personne ait à y penser.
+     */
+    private function sectionFrontiere(): string
+    {
+        return "- FRONTIÈRE — CE QUE TU N'ENREGISTRES PAS, ET OÙ CELA SE FAIT (règle impérative) :\n"
+            . "          ces rubriques se tiennent à l'écran, et toi tu ne les écris jamais. Quand\n"
+            . "          l'utilisateur en demande une : dis-le en UNE phrase, DONNE LE CHEMIN, et\n"
+            . "          arrête-toi. N'écris JAMAIS dans une entité voisine à la place — un\n"
+            . "          collaborateur n'est pas un contact de client — et n'invente aucun champ\n"
+            . "          obligatoire pour justifier une substitution. Ce n'est pas une faiblesse de\n"
+            . "          ta part : c'est une garde, et la dire clairement fait gagner du temps.\n"
+            . CouvertureDesEcrans::frontierePourLePrompt();
+    }
+
     private function sectionSansEcriture(): string
     {
         return <<<'LECTURE'
@@ -1792,7 +1830,9 @@ class AiContextBuilder
           que tu as, puis PROPOSE l'écriture en une phrase et invite-le à te le confirmer
           (« Voulez-vous que je l'enregistre ? »). Sa confirmation ouvrira une nouvelle
           demande, où tu disposeras des outils voulus.
-          Ne dis JAMAIS que tu ne peux pas créer, modifier ou supprimer : c'est faux. Et
+          Ne dis JAMAIS que tu ne peux pas créer, modifier ou supprimer : c'est faux — SAUF ce que la
+          FRONTIÈRE réserve à l'écran (bloc plus haut), où tu nommes la rubrique et donnes le chemin
+          sans jamais écrire dans une entité voisine. Et
           n'invente ni tableau de plan, ni budget, ni bouton de validation — seul un outil
           d'écriture en produit, et aucun n'a été appelé ici.
         LECTURE;
@@ -2285,18 +2325,54 @@ class AiContextBuilder
                 . $this->reutiliserLesIdentifiants()
                 . $this->interdictionDeRecopier() . ']';
         }
+        // TROIS MORTS, TROIS RÉCITS. Cette méthode n'en connaissait qu'un : « ANNULÉ
+        // par l'utilisateur ». Elle le servait donc aussi pour un plan que Ket venait
+        // de remplacer, et pour un plan que personne n'avait tranché — si bien que le
+        // modèle apprenait un refus qui n'avait pas eu lieu, et le répétait au
+        // courtier. Cf. App\Ai\Mutation\FinDePlan.
+        $fin = FinDePlan::depuisMeta($meta);
+
+        if ($fin === FinDePlan::PERIME) {
+            $acquis = $this->champsDejaCollectes($meta['mutationPlan'] ?? []);
+
+            return "\n\n[SYSTÈME — ce plan d'écriture a EXPIRÉ faute de décision : personne ne l'a refusé, "
+                . 'il n\'a PAS été exécuté, et rien n\'a été enregistré.'
+                . ($acquis === '' ? '' : "\nCES VALEURS RESTENT ACQUISES — l'utilisateur te les a données :"
+                    . $acquis . "\nS'il revient sur ce sujet, REPRENDS-les dans un NOUVEL appel d'outil ; "
+                    . 'ne les lui redemande pas.')
+                . $this->interdictionDeRecopier() . ']';
+        }
+
+        if ($fin === FinDePlan::REMPLACE) {
+            return "\n\n[SYSTÈME — ce plan d'écriture a été REMPLACÉ par la version présentée ensuite : il "
+                . 'n\'a PAS été exécuté et rien n\'a été enregistré. L\'utilisateur ne l\'a PAS refusé — ne '
+                . 'lui prête aucune décision à son sujet ; c\'est toi qui l\'as remplacé.'
+                . $this->interdictionDeRecopier() . ']';
+        }
+
         if (PlanEnAttente::estAnnule($meta)) {
+            // REFUS EXPLICITE : aucune valeur n'est réinjectée ici, et c'est la
+            // frontière qui tient tout l'édifice. Remettre devant le modèle ce que
+            // l'utilisateur vient d'écarter le ferait ressusciter ce refus en
+            // proposition.
             return "\n\n[SYSTÈME — ce plan d'écriture a été ANNULÉ par l'utilisateur : il n'a PAS été "
                 . 'exécuté, rien n\'a été enregistré.'
                 . $this->interdictionDeRecopier() . ']';
         }
         if (PlanEnAttente::estEnAttente($meta)) {
+            $acquis = $this->champsDejaCollectes($meta['mutationPlan'] ?? []);
+
             return "\n\n[SYSTÈME — ce plan d'écriture ATTEND ENCORE la décision de l'utilisateur : la barre "
                 . '« Valider et exécuter / Annuler » est toujours affichée sous ce message. Tant qu\'il n\'a '
                 . 'pas tranché, tu ne peux PAS préparer un autre plan (l\'outil te le refusera) : renvoie-le '
                 . 'vers cette barre. S\'il veut MODIFIER ce plan, rappelle l\'outil d\'écriture qui l\'a '
                 . 'préparé avec remplacerPlanEnAttente=true — le plan en attente sera alors annulé et '
-                . 'remplacé.]';
+                . 'remplacé.'
+                . ($acquis === '' ? '' : "\nCE QUE L'UTILISATEUR T'A DÉJÀ DONNÉ pour ce plan :" . $acquis
+                    . "\nS'il apporte maintenant l'élément qui manquait, ne redemande RIEN de cette liste : "
+                    . 'rappelle l\'outil avec remplacerPlanEnAttente=true en REPRENANT ces valeurs telles '
+                    . 'quelles, et en y ajoutant la nouvelle.')
+                . ']';
         }
 
         return '';
@@ -2373,7 +2449,62 @@ class AiContextBuilder
         return ' NE RECOPIE JAMAIS le tableau ni le budget de ce message pour une demande suivante, même '
             . 'similaire ou répétitive (« le suivant », « pareil pour l\'autre ») : ce plan est tranché, sa '
             . 'barre de décision a disparu, et son budget n\'est plus d\'actualité. Toute nouvelle écriture '
-            . 'exige un NOUVEL appel d\'outil dans le tour où tu présentes son plan.';
+            . 'exige un NOUVEL appel d\'outil dans le tour où tu présentes son plan.'
+            // CE QUE CETTE INTERDICTION NE COUVRE PAS, dit au même endroit qu'elle —
+            // sinon la règle qui empêche le plan fantôme empêche aussi la reprise
+            // légitime, et l'utilisateur redicte à chaque tour ce qu'il vient de dire.
+            . ' Elle porte sur le TABLEAU et sur le BUDGET, qui périment avec le plan ;'
+            . ' jamais sur les VALEURS que l\'utilisateur t\'a données. Celles-là se reprennent'
+            . ' telles quelles dans un NOUVEL appel d\'outil, sans lui être redemandées.';
+    }
+
+    /**
+     * CE QUE L'UTILISATEUR A DÉJÀ DICTÉ pour un plan, une ligne par enregistrement.
+     *
+     * Sœur de {@see self::journalLisible()}, et pour la raison inverse : celui-là dit
+     * ce qui a été ÉCRIT, celle-ci dit ce qui a été DONNÉ mais pas encore écrit.
+     *
+     * ⚠ ON LIT « fields », ET LUI SEUL. La structure d'affichage du plan ne conserve
+     * que les NOMS des champs — elle ne dispenserait donc d'aucune re-dictée. Ce sont
+     * les valeurs qu'il faut, puisque c'est la parole de l'utilisateur qu'on lui
+     * épargne de répéter.
+     *
+     * Chaîne vide quand il n'y a rien à rappeler : le cas ordinaire ne coûte rien.
+     *
+     * @param array<string, mixed> $mutationPlan
+     */
+    private function champsDejaCollectes(array $mutationPlan): string
+    {
+        $verbes = ['create' => 'création', 'edit' => 'modification', 'delete' => 'suppression'];
+        $lignes = [];
+
+        foreach (($mutationPlan['plan'] ?? []) as $operation) {
+            if (!is_array($operation) || !is_array($champs = $operation['fields'] ?? null)) {
+                continue;
+            }
+
+            $paires = [];
+            foreach ($champs as $champ => $valeur) {
+                // Les listes d'identifiants et les booléens techniques ne sont pas de
+                // la parole d'utilisateur : les rappeler ajouterait du bruit là où on
+                // cherche à lui épargner une répétition.
+                if (!is_scalar($valeur) || is_bool($valeur) || trim((string) $valeur) === '') {
+                    continue;
+                }
+                $paires[] = sprintf('%s = « %s »', $champ, (string) $valeur);
+            }
+
+            if ($paires !== []) {
+                $lignes[] = sprintf(
+                    '  - %s (%s) : %s',
+                    $operation['entite'] ?? '?',
+                    $verbes[$operation['op'] ?? ''] ?? 'écriture',
+                    implode(', ', $paires),
+                );
+            }
+        }
+
+        return $lignes === [] ? '' : "\n" . implode("\n", $lignes);
     }
 
     /**

@@ -425,9 +425,15 @@ final class ProgrammeRunner
     }
 
     /**
-     * Motif LISIBLE d'un refus d'outil, tiré de ce que l'outil a réellement dit
-     * (champs manquants, blocages, note). Jamais une phrase générique inventée :
-     * le rapport final doit pouvoir citer la cause exacte.
+     * Motif LISIBLE d'un refus d'outil, tiré de ce que l'outil a écrit POUR
+     * L'UTILISATEUR (champs manquants, blocages, candidats ambigus, « bloquant »).
+     * Jamais « note », qui est le brouillon adressé au modèle — la retombée sur
+     * cette clé a déversé le catalogue des outils dans le fil du courtier les
+     * 2026-08-12 et 2026-09-14, et MotifDeRefus l'a fermée depuis.
+     *
+     * Un refus qu'aucun outil n'a su rédiger donne donc une phrase neutre, et le
+     * rapport final la cite telle quelle : mieux vaut un motif pauvre et vrai qu'un
+     * motif riche écrit pour quelqu'un d'autre.
      *
      * La traduction elle-même appartient à MotifDeRefus : le fil de conversation
      * affiche désormais le MÊME motif quand la prose du modèle décrit un plan que

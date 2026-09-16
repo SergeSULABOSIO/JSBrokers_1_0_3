@@ -23,6 +23,15 @@ use Doctrine\ORM\EntityManagerInterface;
 final class PlanEnAttente
 {
     /**
+     * Messages de l'utilisateur après lesquels un plan non tranché est abandonné.
+     *
+     * DEUX, et non un : le premier message qui suit un plan est presque toujours
+     * une réponse à ce plan. Deux, c'est le moment où la conversation a visiblement
+     * tourné la page.
+     */
+    private const MESSAGES_AVANT_PEREMPTION = 2;
+
+    /**
      * Directive UI qui fait apparaître la barre de décision d'un plan.
      *
      * La valeur vient du registre {@see TypeAction}, seule source des types d'action :
@@ -594,8 +603,75 @@ final class PlanEnAttente
      * pourrait se retrouver avec l'ancienne barre encore active alors que Ket la
      * croit annulée — exactement les deux plans concurrents qu'on veut interdire.
      */
-    public function annulerLePlanEnAttente(?AssistantConversation $conversation): ?string
+    /**
+     * FAIT MOURIR UN PLAN QUE PERSONNE N'A TRANCHÉ, quand la conversation est
+     * manifestement passée à autre chose.
+     *
+     * ── POURQUOI CE GESTE EXISTE ────────────────────────────────────────────
+     * Aucun code ne tuait un plan en attente : il survivait indéfiniment. Or tant
+     * qu'il vit, il verrouille tout — l'outil refuse d'en préparer un second, la
+     * trousse reste bloquée sur ÉCRITURE (la plus lourde), et la phase de
+     * COMPRÉHENSION est court-circuitée, c'est-à-dire que la seule phase capable de
+     * voir l'enlisement est éteinte précisément pendant l'enlisement. Le 2026-09-14,
+     * cette boucle a coûté ~490 000 jetons d'entrée pour zéro écriture.
+     *
+     * ── LE CRITÈRE, ET POURQUOI IL EST JUSTE ────────────────────────────────
+     * Il ne devine aucune intention : il CONSTATE l'état du fil. DEUX messages de
+     * l'utilisateur depuis la présentation du plan, et non un seul — car le message
+     * qui SUIT un plan est presque toujours une réponse AU plan (« oui », « ajoute
+     * son téléphone », « change le montant »). Périmer là détruirait la complétion
+     * elle-même.
+     *
+     * ── CE QUE LA PÉREMPTION NE FAIT PAS ────────────────────────────────────
+     * Elle ne supprime rien : `mutationPlan` reste en base, et le marqueur d'un plan
+     * PÉRIMÉ rappelle au modèle les valeurs déjà dictées. Se tromper de seuil coûte
+     * donc peu — l'utilisateur ne redicte rien —, ce qui autorise un réglage prudent
+     * plutôt que timide.
+     *
+     * @param bool $programmeEnCours UNE SÉRIE NE PÉRIME JAMAIS. Une étape de
+     *   programme est portée par un message qui contient un plan ; la faire mourir
+     *   ici laisserait l'étape « proposée » sans barre, la série ne se clôturerait
+     *   jamais, et le verrou de trousse resterait armé pour toujours. On aurait
+     *   remplacé un plan immortel par un programme immortel. Le fait est passé en
+     *   paramètre plutôt que déduit ici : la règle reste d'un seul tenant, et
+     *   testable sans monter tout un programme.
+     */
+    public function perimerSiOublie(?AssistantConversation $conversation, bool $programmeEnCours): void
     {
+        if ($conversation === null || $programmeEnCours) {
+            return;
+        }
+
+        $message = $this->messageEnAttente($conversation);
+        if ($message === null) {
+            return;
+        }
+
+        // Les messages sont ordonnés par identifiant croissant (cf. AssistantConversation) :
+        // « après le plan » se lit donc simplement dans l'ordre de la collection.
+        $apres = false;
+        $depuis = 0;
+        foreach ($conversation->getMessages() as $courant) {
+            if ($courant === $message) {
+                $apres = true;
+                continue;
+            }
+            if ($apres && $courant->getRole() === AssistantMessage::ROLE_USER) {
+                $depuis++;
+            }
+        }
+
+        if ($depuis < self::MESSAGES_AVANT_PEREMPTION) {
+            return;
+        }
+
+        $this->annulerLePlanEnAttente($conversation, FinDePlan::PERIME);
+    }
+
+    public function annulerLePlanEnAttente(
+        ?AssistantConversation $conversation,
+        FinDePlan $fin = FinDePlan::REMPLACE,
+    ): ?string {
         $message = $this->messageEnAttente($conversation);
         if ($message === null) {
             return null;
@@ -603,6 +679,15 @@ final class PlanEnAttente
 
         $meta = $message->getMeta() ?? [];
         $meta['mutationPlanCancelled'] = true;
+        // LE MOTIF, ET PAS SEULEMENT LE FAIT. « mutationPlanCancelled » disait
+        // seulement que le plan ne attend plus ; il servait aussi bien au refus de
+        // l'utilisateur qu'au remplacement par une version corrigee, et le fil
+        // affichait « Plan annule » dans les deux cas. Cf. FinDePlan.
+        //
+        // Le defaut est REMPLACE parce que les deux appelants de cette methode sont
+        // des remplacements : l'annulation par l'utilisateur, elle, passe par le
+        // controleur et se declare explicitement.
+        $meta[FinDePlan::CLE_META] = $fin->value;
         $message->setMeta($meta);
         $this->em->flush();
 

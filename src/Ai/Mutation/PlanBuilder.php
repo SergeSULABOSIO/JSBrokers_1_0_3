@@ -347,7 +347,7 @@ final class PlanBuilder
         $resume = $this->planEnAttente->resume(($message->getMeta() ?? [])['mutationPlan'] ?? []);
 
         if ($remplacer) {
-            $this->planEnAttente->annulerLePlanEnAttente($scope->conversation);
+            $this->planEnAttente->annulerLePlanEnAttente($scope->conversation, FinDePlan::REMPLACE);
 
             return null;
         }

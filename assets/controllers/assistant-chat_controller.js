@@ -1440,6 +1440,31 @@ export default class extends Controller {
             }));
         }
 
+        // UN NOUVEAU PLAN CHASSE L'ANCIEN — ET LE DIT AUTREMENT QU'EN ACCUSANT.
+        //
+        // Quand l'utilisateur apporte un renseignement de plus, Ket rappelle l'outil
+        // avec « remplacerPlanEnAttente » : le serveur clôt l'ancien plan et présente
+        // le nouveau. Jusqu'ici l'ancienne barre restait à l'écran jusqu'au F5, où
+        // elle réapparaissait sous le libellé « Plan annulé » — un geste attribué à
+        // quelqu'un qui n'avait rien annulé, et qui venait au contraire de préciser
+        // ce qu'il voulait (constaté le 2026-09-14).
+        //
+        // Le libellé est le miroir exact de FinDePlan::REMPLACE, et
+        // BandeauFinDePlanTest le tient identique au gabarit.
+        //
+        // UNIQUEMENT EN DIRECT : sur une restauration après F5 (`anchor` fourni), le
+        // gabarit a déjà rendu le statut de chaque plan mort depuis sa meta — le
+        // refaire ici poserait un second bandeau sous le même message.
+        if (!anchor && this.hasMessagesTarget) {
+            const barrePrecedente = this.messagesTarget.querySelector('.aic-mutation-actions');
+            if (barrePrecedente) {
+                this._replaceBar(
+                    barrePrecedente,
+                    this._planStatusNote('replaced', 'Plan remplacé par la version ci-dessous — rien n’a été enregistré.'),
+                );
+            }
+        }
+
         // Live : la barre suit le dernier message (append). Restauration après F5 :
         // on l'insère juste après le message qui porte le plan.
         if (anchor && anchor.parentNode) {

@@ -14,6 +14,7 @@ use App\Ai\Scope\AiScope;
 use App\Entity\AssistantMessage;
 use App\Repository\AssistantDocumentRepository;
 use App\Repository\AssistantParametresRepository;
+use App\Ai\Mutation\FinDePlan;
 
 /**
  * PRODUIRE UN DOCUMENT TÉLÉCHARGEABLE — Word, Excel, PDF, Markdown, texte, HTML.
@@ -351,7 +352,7 @@ final class PreparerDocumentTool implements AiToolInterface
 
         if (($args['remplacerPlanEnAttente'] ?? false) === true) {
             $this->documentEnAttente->annulerLePlanEnAttente($scope->conversation);
-            $this->planEnAttente->annulerLePlanEnAttente($scope->conversation);
+            $this->planEnAttente->annulerLePlanEnAttente($scope->conversation, FinDePlan::REMPLACE);
 
             return null;
         }

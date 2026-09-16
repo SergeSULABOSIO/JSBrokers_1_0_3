@@ -161,14 +161,17 @@ final class OutilsDeProgramme
      *
      * @return array<string, mixed>
      */
-    public function arguments(string $nom, array $etape): array
+    public function arguments(string $nom, array $etape, ?string &$motif = null): array
     {
+        $motif = null;
         $outil = $this->catalogue()[$nom] ?? null;
         if ($outil === null) {
+            $motif = sprintf('Étape « %s » : cet enchaînement ne fait pas partie de ce que je sais faire.', $nom);
+
             return [];
         }
         if ($outil instanceof EtapeAssemblable) {
-            return $outil->argumentsDepuisEtape($etape);
+            return $outil->argumentsDepuisEtape($etape, $motif);
         }
 
         $cibleId = isset($etape['cibleId']) ? (int) $etape['cibleId'] : null;

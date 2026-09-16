@@ -183,6 +183,171 @@ class PlanEnAttenteVerrouTest extends WebTestCase
         );
     }
 
+    /**
+     * UN PLAN REMPLACÉ N'EST PAS UN PLAN QUE L'UTILISATEUR A REFUSÉ.
+     *
+     * Les deux posaient `mutationPlanCancelled`, et le fil ne connaissait qu'un
+     * libellé : « Plan annulé ». Le 2026-09-14, un courtier a donc vu ce bandeau
+     * apparaître sous des plans qu'il n'avait jamais annulés — Ket venait d'en
+     * présenter une version complétée après qu'il eut donné un renseignement de
+     * plus. Le fil lui attribuait un refus là où il avait précisé sa demande.
+     */
+    public function testUnPlanRemplaceNeSeDitPasAnnuleParLUtilisateur(): void
+    {
+        [$ent, $inv, $conversation] = $this->seed();
+        $ancien = $this->seedPlan($conversation);
+
+        $this->preparer($ent, $inv, $conversation, ['remplacerPlanEnAttente' => true]);
+
+        $this->em->refresh($ancien);
+        $this->assertSame(
+            \App\Ai\Mutation\FinDePlan::REMPLACE,
+            \App\Ai\Mutation\FinDePlan::depuisMeta($ancien->getMeta()),
+            'Un plan chassé par sa propre version corrigée doit être marqué REMPLACÉ : c’est ce qui '
+            . 'empêche le fil de dire au courtier qu’il a annulé ce qu’il venait de préciser.',
+        );
+    }
+
+    /**
+     * ET RÉCIPROQUEMENT : le clic sur « Annuler » est la SEULE fin qui s'annonce
+     * comme une annulation. C'est le seul geste que l'utilisateur ait réellement fait.
+     */
+    public function testLAnnulationParLUtilisateurEstTagueeCommeTelle(): void
+    {
+        [$ent, , $conversation] = $this->seed();
+        $message = $this->seedPlan($conversation);
+
+        $this->client->request('POST', sprintf(
+            '/admin/assistant-ia/api/mutation/%d/%d/%d/cancel',
+            $ent->getId(),
+            $conversation->getId(),
+            $message->getId(),
+        ));
+
+        $this->assertResponseIsSuccessful();
+        $this->em->refresh($message);
+        $this->assertSame(
+            \App\Ai\Mutation\FinDePlan::UTILISATEUR,
+            \App\Ai\Mutation\FinDePlan::depuisMeta($message->getMeta()),
+        );
+    }
+
+    /**
+     * UN CLIC TARDIF NE REQUALIFIE PAS UNE MORT DÉJÀ SURVENUE.
+     *
+     * Un onglet resté ouvert garde à l'écran la barre d'un plan que le serveur a
+     * depuis remplacé ou laissé périmer. Le clic qui arrive alors ne doit pas
+     * réécrire le motif : cela transformerait après coup une péremption en refus de
+     * l'utilisateur, et le fil se mettrait à raconter une décision qui n'a pas eu
+     * lieu. On refuse, comme on refuse déjà d'annuler un plan exécuté.
+     */
+    public function testUnClicTardifSurUnPlanDejaMortEstRefuse(): void
+    {
+        [$ent, , $conversation] = $this->seed();
+        $message = $this->seedPlan($conversation, 'mutationPlanCancelled');
+        $meta = $message->getMeta();
+        $meta[\App\Ai\Mutation\FinDePlan::CLE_META] = \App\Ai\Mutation\FinDePlan::PERIME->value;
+        $message->setMeta($meta);
+        $this->em->flush();
+
+        $this->client->request('POST', sprintf(
+            '/admin/assistant-ia/api/mutation/%d/%d/%d/cancel',
+            $ent->getId(),
+            $conversation->getId(),
+            $message->getId(),
+        ));
+
+        $this->assertResponseStatusCodeSame(409);
+        $this->em->refresh($message);
+        $this->assertSame(
+            \App\Ai\Mutation\FinDePlan::PERIME,
+            \App\Ai\Mutation\FinDePlan::depuisMeta($message->getMeta()),
+            'Le motif d’origine doit survivre au clic tardif.',
+        );
+    }
+
+    /** Ajoute n messages d'utilisateur au fil, après le plan. */
+    private function messagesUtilisateur(AssistantConversation $conversation, int $combien): void
+    {
+        for ($i = 0; $i < $combien; $i++) {
+            $conversation->addMessage((new AssistantMessage())
+                ->setRole(AssistantMessage::ROLE_USER)
+                ->setContenu('Question sans rapport n°' . ($i + 1)));
+        }
+        $this->em->flush();
+    }
+
+    /**
+     * UN PLAN QUE PERSONNE NE TRANCHE FINIT PAR MOURIR.
+     *
+     * Rien, jusqu'ici, ne tuait un plan en attente : il survivait indéfiniment. Or
+     * tant qu'il vit, il force la trousse d'ÉCRITURE — la plus lourde — et
+     * court-circuite la phase de compréhension, c'est-à-dire la seule qui pourrait
+     * remarquer l'enlisement. Le 2026-09-14, cette boucle a coûté ~490 000 jetons
+     * pour zéro écriture.
+     *
+     * Le critère ne devine aucune intention : il CONSTATE l'état du fil.
+     */
+    public function testUnPlanQuePersonneNeTrancheFinitParPerimer(): void
+    {
+        [, , $conversation] = $this->seed();
+        $message = $this->seedPlan($conversation);
+        $this->messagesUtilisateur($conversation, 2);
+
+        $this->planEnAttente->perimerSiOublie($conversation, false);
+
+        $this->em->refresh($message);
+        $this->assertNull(
+            $this->planEnAttente->messageEnAttente($conversation),
+            'Deux messages plus loin, l’utilisateur est passé à autre chose : le plan ne doit plus '
+            . 'verrouiller la conversation.',
+        );
+        $this->assertSame(
+            \App\Ai\Mutation\FinDePlan::PERIME,
+            \App\Ai\Mutation\FinDePlan::depuisMeta($message->getMeta()),
+        );
+    }
+
+    /**
+     * MAIS PAS AU PREMIER MESSAGE. Celui qui suit un plan est presque toujours une
+     * réponse AU plan — « oui », « ajoute son téléphone », « change le montant ».
+     * Le faire périr là détruirait précisément la complétion qu'on vient d'ajouter.
+     */
+    public function testUnPlanSurvitAuMessageQuiLeComplete(): void
+    {
+        [, , $conversation] = $this->seed();
+        $this->seedPlan($conversation);
+        $this->messagesUtilisateur($conversation, 1);
+
+        $this->planEnAttente->perimerSiOublie($conversation, false);
+
+        $this->assertNotNull(
+            $this->planEnAttente->messageEnAttente($conversation),
+            'Un plan ne meurt pas du message qui vient le préciser.',
+        );
+    }
+
+    /**
+     * UN PROGRAMME EN COURS NE PÉRIME JAMAIS. Une étape de série est portée par un
+     * message qui contient un plan ; la faire mourir laisserait l'étape « proposée »
+     * sans barre, la série ne se clôturerait jamais, et le verrou de trousse
+     * resterait armé pour toujours. On aurait remplacé un plan immortel par un
+     * programme immortel.
+     */
+    public function testUnPlanDeProgrammeNePerimeJamais(): void
+    {
+        [, , $conversation] = $this->seed();
+        $this->seedPlan($conversation);
+        $this->messagesUtilisateur($conversation, 5);
+
+        $this->planEnAttente->perimerSiOublie($conversation, true);
+
+        $this->assertNotNull(
+            $this->planEnAttente->messageEnAttente($conversation),
+            'Une étape de programme ne se termine que par un geste de son propre vocabulaire.',
+        );
+    }
+
     /** Hors conversation (exécution différée, test), le verrou est simplement inopérant. */
     public function testScopeSansConversationNeVerrouillePas(): void
     {
