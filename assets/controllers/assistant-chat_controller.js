@@ -11,6 +11,7 @@ import {
     themeOppose,
 } from './assistant-theme.js';
 import { positionnerMenu, indexApresTouche } from './menu-flottant.js';
+import { fusionnerTranscripts } from './dictee-transcript.js';
 import {
     FORMAT_IMAGE,
     CLE_EXPORT,
@@ -291,11 +292,11 @@ export default class extends Controller {
             }
         };
         recognition.onresult = (event) => {
-            let transcript = '';
-            for (let i = 0; i < event.results.length; i++) {
-                transcript += event.results[i][0].transcript;
-            }
-            transcript = transcript.trim();
+            // Fusion et non concaténation : Chrome Android renvoie chaque
+            // hypothèse comme un résultat reprenant toute la phrase.
+            const transcript = fusionnerTranscripts(
+                Array.from(event.results, (resultat) => resultat[0].transcript),
+            );
             const base = this._dictationBase;
             const max = Number(this.inputTarget.getAttribute('maxlength')) || 4000;
             const separateur = base !== '' && transcript !== '' ? ' ' : '';
