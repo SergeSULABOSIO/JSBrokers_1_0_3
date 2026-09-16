@@ -18,6 +18,7 @@ import {
     CLE_EXPORT,
     urlExportMessage,
     urlDestinatairesMessage,
+    urlVoixMessage,
     nomFichierImage,
 } from '../../assets/controllers/assistant-message-menu.js';
 
@@ -39,6 +40,11 @@ test('les constructeurs d\'URL absorbent un slash final', () => {
     // « // » dans le chemin, qui ne matcherait aucune route.
     assert.equal(urlExportMessage(`${SEND_URL}/`, 99, FORMAT_PDF), '/admin/assistant-ia/api/messages/7/42/99/export/pdf');
     assert.equal(urlDestinatairesMessage(`${SEND_URL}///`, 99), '/admin/assistant-ia/api/messages/7/42/99/destinataires');
+    assert.equal(urlVoixMessage(`${SEND_URL}/`, 99), '/admin/assistant-ia/api/messages/7/42/99/voix');
+});
+
+test('urlVoixMessage cible la voix de Ket du message', () => {
+    assert.equal(urlVoixMessage(SEND_URL, 99), '/admin/assistant-ia/api/messages/7/42/99/voix');
 });
 
 test('les constructeurs d\'URL acceptent un id numérique comme textuel', () => {

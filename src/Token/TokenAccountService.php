@@ -401,6 +401,46 @@ class TokenAccountService
         );
     }
 
+    /** Nom d'entité porté par les lignes de journal de la voix de Ket. */
+    public const ENTITE_VOIX_IA = 'VoixIa';
+
+    /** Coût de la voix de Ket pour un texte prononcé de $nbCaracteres (au prorata, 1 au minimum). */
+    public function coutVoixIa(int $nbCaracteres): int
+    {
+        return max(1, (int) ceil(
+            TokenPricing::VOIX_IA_RATIO_PAR_1000_CARACTERES
+            * $this->parametres->weightFor(AssistantMessage::class)
+            * max(0, $nbCaracteres) / 1000,
+        ));
+    }
+
+    /** Le cabinet peut-il payer la voix de ce texte ? Vérifié AVANT la génération. */
+    public function peutEcouter(Entreprise $entreprise, int $nbCaracteres): bool
+    {
+        $owner = $entreprise->getUtilisateur();
+
+        return !$owner instanceof Utilisateur || $this->canAfford($owner, $this->coutVoixIa($nbCaracteres));
+    }
+
+    /**
+     * Métrage de la VOIX de Ket, une fois l'audio généré EN ENTIER. Une ligne de journal,
+     * jamais pour un rendu échoué ni pour une réécoute servie par le cache.
+     *
+     * @throws InsufficientTokensException si le solde du propriétaire est insuffisant
+     */
+    public function meterVoixIa(Entreprise $entreprise, ?Utilisateur $acteur, int $nbCaracteres): void
+    {
+        $owner = $entreprise->getUtilisateur();
+        if (!$owner instanceof Utilisateur) {
+            return;
+        }
+        $cout = $this->coutVoixIa($nbCaracteres);
+
+        $this->guardAndConsume($owner, $cout);
+
+        $this->log($entreprise, $owner, $acteur, self::ENTITE_VOIX_IA, TokenConsumption::SENS_ENTREE, 1, $cout);
+    }
+
     /** Nom d'entité porté par les lignes de journal d'une finition de dictée. */
     public const ENTITE_DICTEE_IA = 'DicteeIa';
 

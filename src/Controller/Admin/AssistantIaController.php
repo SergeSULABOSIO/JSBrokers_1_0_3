@@ -7,6 +7,8 @@ use App\Ai\Comprehension\ClarificationEnAttente;
 use App\Ai\AiContextBuilder;
 use App\Ai\Boussole\PlanDuJourService;
 use App\Ai\Dictee\FinisseurDeDictee;
+use App\Ai\Voix\CacheAudio;
+use App\Ai\Voix\SyntheseVocaleGemini;
 use App\Ai\Document\DocumentEnAttente;
 use App\Ai\Document\DocumentFormat;
 use App\Ai\Document\DocumentProducteur;
@@ -70,6 +72,7 @@ use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -1841,6 +1844,119 @@ class AssistantIaController extends AbstractController
                 HeaderUtils::DISPOSITION_ATTACHMENT,
                 $fichier->nomFichier
             ),
+        ]);
+    }
+
+    /**
+     * LA VOIX DE KET : une réponse lue à voix haute par la synthèse Gemini.
+     *
+     * Le corps porte le texte À PRONONCER, déjà préparé par le navigateur
+     * (assistant-lecture-vocale.js, source unique de cette préparation). Il ne peut pas
+     * être plus long que le message lui-même — le texte oral est toujours plus court que
+     * son Markdown — ce qui interdit de faire lire autre chose que la réponse.
+     *
+     * - Déjà généré : l'audio du cache (WAV), sans génération ni jeton.
+     * - Sinon : l'audio PCM 24 kHz EN FLUX, au fil de la génération ; mise en cache et
+     *   débit au prorata de la longueur seulement quand l'audio est complet.
+     * - Pas de voix Gemini (quota gratuit épuisé, moteur simulé, panne avant le premier
+     *   son) : 503 `{repli}`, et le navigateur lit avec sa propre voix. Solde insuffisant :
+     *   402, même repli.
+     */
+    #[Route('/api/messages/{idEntreprise}/{idConversation}/{idMessage}/voix', name: 'api.message.voix', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS, 'idMessage' => Requirement::DIGITS], methods: ['POST'])]
+    public function voixMessage(
+        int $idEntreprise,
+        int $idConversation,
+        int $idMessage,
+        Request $request,
+        SyntheseVocaleGemini $synthese,
+        CacheAudio $cacheAudio,
+    ): Response {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        if ($blocage = $this->blocagePremium($entreprise)) {
+            return $blocage;
+        }
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        $message = $this->trouverMessage($conversation, $idMessage);
+        if ($message === null || $message->getRole() !== AssistantMessage::ROLE_ASSISTANT) {
+            return $this->json(['message' => 'Réponse introuvable.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $payload = json_decode($request->getContent(), true) ?: [];
+        $texte = trim((string) ($payload['texte'] ?? ''));
+        if ($texte === '' || mb_strlen($texte) > mb_strlen((string) $message->getContenu())) {
+            return $this->json(['message' => 'Le texte à lire ne correspond pas à cette réponse.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $voix = $synthese->voix();
+        $enCache = $cacheAudio->lire((int) $entreprise->getId(), $voix, $texte);
+        if ($enCache !== null) {
+            return new Response($enCache, Response::HTTP_OK, [
+                'Content-Type'  => 'audio/wav',
+                'Cache-Control' => 'private, max-age=86400',
+                'X-Ket-Voix'    => 'cache',
+            ]);
+        }
+
+        if (!$synthese->estDisponible()) {
+            return $this->json(['repli' => SyntheseVocaleGemini::INDISPONIBLE], Response::HTTP_SERVICE_UNAVAILABLE);
+        }
+        $nbCaracteres = mb_strlen($texte);
+        if (!$this->tokenAccountService->peutEcouter($entreprise, $nbCaracteres)) {
+            return $this->json([
+                'message'  => 'Solde de tokens insuffisant pour la voix de Ket.',
+                'blocked'  => true,
+                'required' => $this->tokenAccountService->coutVoixIa($nbCaracteres),
+            ], Response::HTTP_PAYMENT_REQUIRED);
+        }
+
+        // Le PREMIER son est attendu avant de répondre : c'est lui qui décide entre le flux
+        // audio et le repli sur la voix du navigateur (503).
+        $flux = $synthese->flux($texte);
+        if (!$flux->valid()) {
+            return $this->json(['repli' => $flux->getReturn()], Response::HTTP_SERVICE_UNAVAILABLE);
+        }
+
+        // Une lecture dure plusieurs secondes : la session ne doit pas bloquer, pendant ce
+        // temps, les autres requêtes du même utilisateur (verrou de fichier de session).
+        if ($request->hasSession() && $request->getSession()->isStarted()) {
+            $request->getSession()->save();
+        }
+        $acteur = $this->currentUser();
+
+        return new StreamedResponse(function () use ($flux, $cacheAudio, $entreprise, $voix, $texte, $nbCaracteres, $acteur): void {
+            // Sur le serveur web, les tampons de sortie (output_buffering de php.ini)
+            // retiendraient l'audio jusqu'à la fin : on les ferme. En ligne de commande
+            // (client de test), le tampon ouvert est celui qui CAPTURE la réponse.
+            if (\PHP_SAPI !== 'cli') {
+                while (ob_get_level() > 0) {
+                    ob_end_flush();
+                }
+            }
+            $pcm = '';
+            for (; $flux->valid(); $flux->next()) {
+                $morceau = (string) $flux->current();
+                $pcm .= $morceau;
+                echo $morceau;
+                flush();
+            }
+            if ($flux->getReturn() !== SyntheseVocaleGemini::COMPLET) {
+                return; // Audio partiel : ni cache, ni facture.
+            }
+            $cacheAudio->ecrire((int) $entreprise->getId(), $voix, $texte, $pcm);
+            try {
+                $this->tokenAccountService->meterVoixIa($entreprise, $acteur, $nbCaracteres);
+            } catch (InsufficientTokensException) {
+                // Le solde a changé pendant la lecture : l'écoute a eu lieu, on n'interrompt rien.
+            }
+        }, Response::HTTP_OK, [
+            'Content-Type'      => 'audio/L16; rate=' . SyntheseVocaleGemini::TAUX_ECHANTILLONNAGE . '; channels=1',
+            'Cache-Control'     => 'no-cache, no-store',
+            'X-Accel-Buffering' => 'no',
+            'X-Ket-Voix'        => 'gemini',
         ]);
     }
 

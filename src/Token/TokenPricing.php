@@ -92,6 +92,14 @@ final class TokenPricing
     public const DICTEE_IA_RATIO = 0.2;
 
     /**
+     * Assistant IA : coût de la VOIX de Ket (lecture à voix haute d'une réponse par la
+     * synthèse Gemini), en RATIO du poids d'un message PAR TRANCHE DE 1 000 CARACTÈRES
+     * prononcés (décision produit : 50 %, au prorata de la longueur). Facturé à la
+     * première génération seulement : réécouter sert l'audio mis en cache, gratuitement.
+     */
+    public const VOIX_IA_RATIO_PAR_1000_CARACTERES = 0.5;
+
+    /**
      * Assistant IA — DOCUMENT téléchargeable produit par Ket (Word, Excel, PDF,
      * Markdown, texte, HTML). Coût FIXE d'une production, indépendant de la
      * longueur : il couvre l'assemblage, la mise en page, le rendu et le stockage.

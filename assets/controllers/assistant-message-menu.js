@@ -68,6 +68,16 @@ export function urlDestinatairesMessage(sendUrl, idMessage) {
 }
 
 /**
+ * URL de la voix de Ket pour un message (audio Gemini, en flux ou depuis le cache).
+ * @param {string} sendUrl
+ * @param {number|string} idMessage
+ * @returns {string}
+ */
+export function urlVoixMessage(sendUrl, idMessage) {
+    return `${baseMessage(sendUrl, idMessage)}/voix`;
+}
+
+/**
  * Nom de fichier d'une capture PNG. Miroir du nommage serveur
  * (`MessageExporter::nomFichier`) : aucune donnée utilisateur, donc rien à
  * assainir.
