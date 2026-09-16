@@ -374,8 +374,34 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
             }
         }
 
+        // TROISIÈME ESSAI : LA DESCRIPTION. « construction » ne figure dans le nom d'aucun
+        // risque, mais dans la description de celui qui couvre les chantiers (incident du
+        // 2026-09-16 : « aucun élément dans Risques avec filtre construction »). Tenté
+        // seulement quand l'entité PERSISTE une description distincte de son libellé, et
+        // annoncé comme les deux autres détours.
+        $filtreDescription = null;
+        if ($filtre !== '' && $filtreIdentifiant === null && (int) $result['totalItems'] === 0
+            && $displayField !== 'description' && $this->em->getClassMetadata($fqcn)->hasField('description')) {
+            $parDescription = $this->searchService->search(
+                $fqcn,
+                ['description' => ['operator' => 'LIKE', 'value' => $filtre, 'mode' => 'contains']] + $lienCriteria + $criteresRubrique + $criterePortefeuille,
+                $scope->entreprise,
+                null,
+                $page,
+                self::PAGE_SIZE,
+            );
+            if (($parDescription['status']['code'] ?? 500) === 200 && (int) $parDescription['totalItems'] > 0) {
+                $result = $parDescription;
+                $filtreDescription = sprintf(
+                    '« %s » ne figure dans aucun libellé de cette rubrique, mais dans la DESCRIPTION des '
+                    . 'enregistrements listés : dis-le.',
+                    $filtre,
+                );
+            }
+        }
+
         $filtreLien = null;
-        if ($filtre !== '' && $filtreIdentifiant === null && $lien === null && (int) $result['totalItems'] === 0) {
+        if ($filtre !== '' && $filtreIdentifiant === null && $filtreDescription === null && $lien === null && (int) $result['totalItems'] === 0) {
             $rattachement = $this->rattachementDepuisNom($fqcn, $filtre, $scope);
 
             if (isset($rattachement['ambigu'])) {
@@ -492,6 +518,7 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
             'filtreIgnore' => ($filtre !== '' && $displayField === null) ? true : null,
             'filtreInterpreteCommeIdentifiant' => $filtreIdentifiant,
             'filtreInterpreteCommeLien' => $filtreLien,
+            'filtreTrouveDansLaDescription' => $filtreDescription,
             'filtreRubrique' => $filtreRubrique,
             'perimetre'    => PortefeuilleScope::libellePerimetre($perimetreEntreprise, $criterePortefeuille),
             'lien'         => $lien,

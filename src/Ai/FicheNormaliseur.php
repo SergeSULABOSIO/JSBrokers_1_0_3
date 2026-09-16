@@ -2,6 +2,7 @@
 
 namespace App\Ai;
 
+use App\Entity\Risque;
 use App\Services\Canvas\CalculationProvider;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 
@@ -111,7 +112,48 @@ final class FicheNormaliseur
         }
 
         // Les attributs stockés priment : un calcul ne masque jamais une valeur réelle.
-        return $fiche + $this->nettoyer($calcules);
+        return $this->desambiguiser($entity, $fiche + $this->nettoyer($calcules));
+    }
+
+    /**
+     * Calculés dont le nom se confond avec un champ saisi, renommés côté IA seulement
+     * (les écrans gardent leur clé).
+     *
+     * L'INCIDENT DU 2026-09-16. Interrogée sur le taux de la Caution, Ket annonce 0 %,
+     * puis 15 %. La fiche portait `pourcentageCommissionSpecifiqueHT: 15` — le taux
+     * CONFIGURÉ — et, juste à côté, le calculé `tauxCommission: 0` : la moyenne
+     * CONSTATÉE sur les polices, nulle faute de production. Rien ne les distinguait,
+     * et le nom le plus court ressemblait le plus à « le » taux.
+     */
+    private const CALCULES_RENOMMES = [
+        Risque::class => ['tauxCommission' => 'tauxCommissionMoyenConstate'],
+    ];
+
+    /**
+     * @param array<string, mixed> $fiche
+     *
+     * @return array<string, mixed>
+     */
+    private function desambiguiser(object $entity, array $fiche): array
+    {
+        foreach (self::CALCULES_RENOMMES[$entity::class] ?? [] as $ancien => $nouveau) {
+            if (array_key_exists($ancien, $fiche)) {
+                $fiche[$nouveau] = $fiche[$ancien];
+                unset($fiche[$ancien]);
+            }
+        }
+
+        if ($entity instanceof Risque) {
+            // Un taux absent se DIT : un champ vide laissait lire la moyenne constatée à sa place.
+            $fiche['tauxCommissionConfigure'] = $entity->getPourcentageCommissionSpecifiqueHT()
+                ?? 'non configuré sur ce risque';
+            $fiche['lectureDesTaux'] = 'tauxCommissionConfigure (en points : 15 = 15 %) est le taux '
+                . 'CONTRACTUEL du risque, celui qui se facture et qui s\'annonce. '
+                . 'tauxCommissionMoyenConstate est une moyenne observée sur les polices souscrites : '
+                . 'elle vaut 0 sans production et ne dit rien du taux convenu.';
+        }
+
+        return $fiche;
     }
 
     /**

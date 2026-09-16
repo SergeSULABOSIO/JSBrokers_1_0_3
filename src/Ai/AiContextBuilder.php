@@ -1061,9 +1061,15 @@ class AiContextBuilder
     private function vocabulaireDesEcrans(AiScope $scope): string
     {
         $libelles = [];
+        $alias = $this->accessResolver->aliasEntites();
         foreach ($this->accessResolver->libellesEntites() as $shortName => $label) {
             if ($this->accessResolver->canRead($scope->invite, $shortName)) {
-                $libelles[] = sprintf('%s (%s)', $label, $shortName);
+                // Les autres mots de l'utilisateur pour la même rubrique : sans eux, « type
+                // d'assurance » n'était rattaché à rien et chaque tournure recevait sa réponse.
+                $aussi = $alias[$shortName] ?? [];
+                $libelles[] = $aussi === []
+                    ? sprintf('%s (%s)', $label, $shortName)
+                    : sprintf('%s (%s — aussi : %s)', $label, $shortName, implode(', ', array_map('mb_strtolower', $aussi)));
             }
         }
 
@@ -1314,6 +1320,16 @@ class AiContextBuilder
             d'expiration. Mettre FIN à une couverture est un acte D'ÉCRITURE distinct — une
             annulation ou une résiliation, qui produit un avenant à une date d'effet — et ce
             marquage n'en tient jamais lieu.
+          • RÈGLE « RISQUE = COUVERTURE = TYPE D'ASSURANCE = PRODUIT ». Ces mots désignent le MÊME
+            objet : un risque du CATALOGUE du cabinet (rubrique Risques). « Que couvre l'assurance
+            X ? », « quels risques / quelles couvertures proposer à un client du secteur Y ? »,
+            « quelle assurance pour… » sont des demandes de CONSEIL : lis le catalogue complet et
+            fonde la réponse sur les DESCRIPTIONS saisies par le cabinet, en les citant. Ne réponds
+            jamais par une recherche du secteur dans les NOMS des risques (« construction » n'est le
+            nom d'aucun risque). Le taux de commission d'un risque est son taux CONFIGURÉ
+            (tauxCommissionConfigure), jamais la moyenne constatée sur les polices, nulle sans
+            production. Une couverture utile mais absente du catalogue se dit « non configurée au
+            cabinet » — jamais proposée comme si elle existait.
         REGLES;
     }
 
