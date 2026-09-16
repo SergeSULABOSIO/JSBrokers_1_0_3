@@ -26,8 +26,18 @@ import {
     CLE_EXPORT,
     urlExportMessage,
     urlDestinatairesMessage,
+    urlVoixMessage,
     nomFichierImage,
 } from './assistant-message-menu.js';
+import {
+    DELAI_PREMIER_SON_MS,
+    ENTETE_WAV,
+    SEGMENT_VOIX_MAX,
+    TAUX_VOIX,
+    modeDeLecture,
+    pcm16VersFloat32,
+    sauterOctets,
+} from './assistant-voix-pcm.js';
 import {
     COLONNES,
     fichiersValides,
@@ -3927,8 +3937,8 @@ export default class extends Controller {
         if (dejaLue) return;
 
         const source = bulle.querySelector('.aic-msg-text')?.dataset.mdSource ?? '';
-        const segments = decouperEnPhrases(texteAPrononcer(source));
-        if (segments.length === 0) return;
+        const texte = texteAPrononcer(source);
+        if (texte === '') return;
 
         // Le jeton date la lecture : un arrêt, ou une autre bulle lancée entre-temps,
         // rend muets les rappels de celle-ci.
@@ -3937,6 +3947,124 @@ export default class extends Controller {
         this._bulleLue = bulle;
         this._marquerLecture(bulle, true);
 
+        // LA VOIX DE KET (Gemini) d'abord. Le contexte audio est ouvert ICI, avant tout
+        // await : hors du geste de l'utilisateur, les navigateurs mobiles le bloquent.
+        const audio = this._ouvrirAudio();
+        if (audio && await this._lireAvecGemini(bulle, texte, jeton, audio)) return;
+        if (this._lecture !== jeton) return;
+
+        // REPLI : la voix du navigateur (quota Gemini épuisé, solde insuffisant, panne).
+        this._fermerAudio();
+        this._marquerLecture(bulle, true, true);
+        await this._lireAvecNavigateur(decouperEnPhrases(texte), jeton);
+    }
+
+    /**
+     * Contexte audio de la lecture en cours, créé dans le geste de l'utilisateur.
+     * Null si la Web Audio API manque : la voix du navigateur lira.
+     */
+    _ouvrirAudio() {
+        const Contexte = window.AudioContext || window.webkitAudioContext;
+        if (!Contexte) return null;
+        try {
+            this._audio = new Contexte();
+            this._audio.resume?.();
+            return this._audio;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    _fermerAudio() {
+        this._voixAbort?.abort();
+        this._voixAbort = null;
+        if (this._audio) {
+            try { this._audio.close(); } catch (error) { /* déjà fermé */ }
+            this._audio = null;
+        }
+    }
+
+    /**
+     * Lit le texte avec la voix Gemini, au fil de la génération. Rend true si la voix
+     * de Ket a parlé (ou a été interrompue par l'utilisateur), false s'il faut replier
+     * sur la voix du navigateur — ce qui n'arrive qu'AVANT le premier son : une panne
+     * en cours de route arrête la lecture plutôt que de la reprendre à zéro.
+     */
+    async _lireAvecGemini(bulle, texte, jeton, audio) {
+        const idMessage = bulle.dataset.messageId;
+        if (!idMessage || !this.sendUrlValue) return false;
+        const url = urlVoixMessage(this.sendUrlValue, idMessage);
+        const lecteur = { prochain: 0 };
+        let aParle = false;
+
+        for (const morceau of decouperEnPhrases(texte, SEGMENT_VOIX_MAX)) {
+            const controleur = new AbortController();
+            this._voixAbort = controleur;
+            const garde = setTimeout(() => controleur.abort(), DELAI_PREMIER_SON_MS);
+            try {
+                const reponse = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ texte: morceau }),
+                    signal: controleur.signal,
+                });
+                clearTimeout(garde);
+                if (this._lecture !== jeton) return true;
+                const mode = modeDeLecture(reponse.status, reponse.headers.get('Content-Type'));
+                if (mode === 'repli' || !reponse.body) {
+                    if (!aParle) return false;
+                    break; // ce qui a déjà été dit se termine normalement
+                }
+
+                const flux = reponse.body.getReader();
+                let aSauter = mode === 'wav' ? ENTETE_WAV : 0;
+                let reste = null;
+                for (;;) {
+                    const { value, done } = await flux.read();
+                    if (this._lecture !== jeton) {
+                        flux.cancel().catch(() => {});
+                        return true;
+                    }
+                    if (done) break;
+                    const sans = sauterOctets(value, aSauter);
+                    aSauter = sans.aSauter;
+                    const conversion = pcm16VersFloat32(sans.octets, reste);
+                    reste = conversion.reste;
+                    if (conversion.echantillons.length) {
+                        this._programmer(audio, lecteur, conversion.echantillons);
+                        aParle = true;
+                    }
+                }
+            } catch (error) {
+                clearTimeout(garde);
+                if (this._lecture !== jeton) return true;
+                if (!aParle) return false;
+                break;
+            }
+        }
+        if (!aParle) return false;
+
+        // Tout est programmé : on rend la bulle au repos quand le dernier son se termine.
+        const restant = Math.max(0, (lecteur.prochain - audio.currentTime) * 1000);
+        setTimeout(() => { if (this._lecture === jeton) this.arreterLecture(); }, restant + 150);
+        return true;
+    }
+
+    /** Programme des échantillons à la suite des précédents, sans blanc ni chevauchement. */
+    _programmer(audio, lecteur, echantillons) {
+        const tampon = audio.createBuffer(1, echantillons.length, TAUX_VOIX);
+        tampon.getChannelData(0).set(echantillons);
+        const source = audio.createBufferSource();
+        source.buffer = tampon;
+        source.connect(audio.destination);
+        const debut = Math.max(lecteur.prochain, audio.currentTime + 0.05);
+        source.start(debut);
+        lecteur.prochain = debut + tampon.duration;
+    }
+
+    /** La voix du navigateur (speechSynthesis) : le repli, gratuit et toujours là. */
+    async _lireAvecNavigateur(segments, jeton) {
+        if (segments.length === 0) return;
         const voix = await this._voixDeKet();
         if (this._lecture !== jeton) return;
 
@@ -3966,14 +4094,17 @@ export default class extends Controller {
         this._lecture = null;
         if (this._bulleLue) this._marquerLecture(this._bulleLue, false);
         this._bulleLue = null;
+        this._fermerAudio();
         if (enCours && this.lectureDisponible()) window.speechSynthesis.cancel();
     }
 
-    _marquerLecture(bulle, active) {
+    _marquerLecture(bulle, active, secours = false) {
         bulle.classList.toggle('aic-msg--lecture', active);
         const bouton = bulle.querySelector('.aic-msg-ecouter');
         if (!bouton) return;
-        const libelle = active ? 'Arrêter la lecture' : 'Écouter la réponse';
+        const libelle = active
+            ? (secours ? 'Arrêter la lecture (voix de secours)' : 'Arrêter la lecture')
+            : 'Écouter la réponse';
         bouton.setAttribute('aria-pressed', active ? 'true' : 'false');
         bouton.setAttribute('aria-label', libelle);
         bouton.title = libelle;
