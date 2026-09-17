@@ -8,7 +8,8 @@ use App\Ai\AiContextBuilder;
 use App\Ai\Boussole\PlanDuJourService;
 use App\Ai\Dictee\FinisseurDeDictee;
 use App\Ai\Voix\CacheAudio;
-use App\Ai\Voix\SyntheseVocaleGemini;
+use App\Ai\Voix\FournisseurDeVoix;
+use App\Ai\Voix\VoixDeKet;
 use App\Ai\Document\DocumentEnAttente;
 use App\Ai\Document\DocumentFormat;
 use App\Ai\Document\DocumentProducteur;
@@ -1848,7 +1849,7 @@ class AssistantIaController extends AbstractController
     }
 
     /**
-     * LA VOIX DE KET : une réponse lue à voix haute par la synthèse Gemini.
+     * LA VOIX DE KET : une réponse lue à voix haute (ElevenLabs, Gemini… cf. VoixDeKet).
      *
      * Le corps porte le texte À PRONONCER, déjà préparé par le navigateur
      * (assistant-lecture-vocale.js, source unique de cette préparation). Il ne peut pas
@@ -1868,7 +1869,7 @@ class AssistantIaController extends AbstractController
         int $idConversation,
         int $idMessage,
         Request $request,
-        SyntheseVocaleGemini $synthese,
+        VoixDeKet $voixDeKet,
         CacheAudio $cacheAudio,
     ): Response {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
@@ -1891,18 +1892,21 @@ class AssistantIaController extends AbstractController
             return $this->json(['message' => 'Le texte à lire ne correspond pas à cette réponse.'], Response::HTTP_BAD_REQUEST);
         }
 
-        $voix = $synthese->voix();
-        $enCache = $cacheAudio->lire((int) $entreprise->getId(), $voix, $texte);
-        if ($enCache !== null) {
-            return new Response($enCache, Response::HTTP_OK, [
-                'Content-Type'  => 'audio/wav',
-                'Cache-Control' => 'private, max-age=86400',
-                'X-Ket-Voix'    => 'cache',
-            ]);
+        // Déjà dit par l'une des voix configurées, dans l'ordre de préférence : la réécoute
+        // ne génère rien et ne coûte rien.
+        foreach ($voixDeKet->fournisseurs() as $fournisseur) {
+            $enCache = $cacheAudio->lire((int) $entreprise->getId(), VoixDeKet::identite($fournisseur), $texte);
+            if ($enCache !== null) {
+                return new Response($enCache, Response::HTTP_OK, [
+                    'Content-Type'  => 'audio/wav',
+                    'Cache-Control' => 'private, max-age=86400',
+                    'X-Ket-Voix'    => 'cache',
+                ]);
+            }
         }
 
-        if (!$synthese->estDisponible()) {
-            return $this->json(['repli' => SyntheseVocaleGemini::INDISPONIBLE], Response::HTTP_SERVICE_UNAVAILABLE);
+        if (!$voixDeKet->estDisponible()) {
+            return $this->json(['repli' => FournisseurDeVoix::INDISPONIBLE], Response::HTTP_SERVICE_UNAVAILABLE);
         }
         $nbCaracteres = mb_strlen($texte);
         if (!$this->tokenAccountService->peutEcouter($entreprise, $nbCaracteres)) {
@@ -1915,10 +1919,13 @@ class AssistantIaController extends AbstractController
 
         // Le PREMIER son est attendu avant de répondre : c'est lui qui décide entre le flux
         // audio et le repli sur la voix du navigateur (503).
-        $flux = $synthese->flux($texte);
+        $flux = $voixDeKet->flux($texte);
         if (!$flux->valid()) {
             return $this->json(['repli' => $flux->getReturn()], Response::HTTP_SERVICE_UNAVAILABLE);
         }
+        // Le fournisseur qui vient de produire le premier son : c'est son audio qui se met en cache.
+        $identite = VoixDeKet::identite($voixDeKet->dernierFournisseur());
+        $nomFournisseur = $voixDeKet->dernierFournisseur()->nom();
 
         // Une lecture dure plusieurs secondes : la session ne doit pas bloquer, pendant ce
         // temps, les autres requêtes du même utilisateur (verrou de fichier de session).
@@ -1927,7 +1934,7 @@ class AssistantIaController extends AbstractController
         }
         $acteur = $this->currentUser();
 
-        return new StreamedResponse(function () use ($flux, $cacheAudio, $entreprise, $voix, $texte, $nbCaracteres, $acteur): void {
+        return new StreamedResponse(function () use ($flux, $cacheAudio, $entreprise, $identite, $texte, $nbCaracteres, $acteur): void {
             // Sur le serveur web, les tampons de sortie (output_buffering de php.ini)
             // retiendraient l'audio jusqu'à la fin : on les ferme. En ligne de commande
             // (client de test), le tampon ouvert est celui qui CAPTURE la réponse.
@@ -1943,20 +1950,20 @@ class AssistantIaController extends AbstractController
                 echo $morceau;
                 flush();
             }
-            if ($flux->getReturn() !== SyntheseVocaleGemini::COMPLET) {
+            if ($flux->getReturn() !== FournisseurDeVoix::COMPLET) {
                 return; // Audio partiel : ni cache, ni facture.
             }
-            $cacheAudio->ecrire((int) $entreprise->getId(), $voix, $texte, $pcm);
+            $cacheAudio->ecrire((int) $entreprise->getId(), $identite, $texte, $pcm);
             try {
                 $this->tokenAccountService->meterVoixIa($entreprise, $acteur, $nbCaracteres);
             } catch (InsufficientTokensException) {
                 // Le solde a changé pendant la lecture : l'écoute a eu lieu, on n'interrompt rien.
             }
         }, Response::HTTP_OK, [
-            'Content-Type'      => 'audio/L16; rate=' . SyntheseVocaleGemini::TAUX_ECHANTILLONNAGE . '; channels=1',
+            'Content-Type'      => 'audio/L16; rate=' . FournisseurDeVoix::TAUX_ECHANTILLONNAGE . '; channels=1',
             'Cache-Control'     => 'no-cache, no-store',
             'X-Accel-Buffering' => 'no',
-            'X-Ket-Voix'        => 'gemini',
+            'X-Ket-Voix'        => $nomFournisseur,
         ]);
     }
 

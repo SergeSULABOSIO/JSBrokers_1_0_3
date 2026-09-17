@@ -4,6 +4,7 @@ namespace App\Tests\Ai;
 
 use App\Ai\Debit\BudgetDebit;
 use App\Ai\Voix\CacheAudio;
+use App\Ai\Voix\MemoireDEpuisement;
 use App\Ai\Voix\SyntheseVocaleGemini;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -31,7 +32,7 @@ class SyntheseVocaleGeminiTest extends TestCase
         return new SyntheseVocaleGemini(
             $http,
             new BudgetDebit(new ArrayAdapter()),
-            $cache ?? new ArrayAdapter(),
+            new MemoireDEpuisement($cache ?? new ArrayAdapter()),
             new NullLogger(),
             'cle-test',
             self::MODELES,
