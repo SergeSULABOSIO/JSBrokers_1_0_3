@@ -3,7 +3,6 @@
 namespace App\Ai\Voix;
 
 use App\Ai\Debit\BudgetDebit;
-use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -28,28 +27,18 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * La consigne de style va DANS le texte : le modèle refuse l'instruction système
  * (« Developer instruction is not enabled for this model »).
  */
-final class SyntheseVocaleGemini
+final class SyntheseVocaleGemini implements FournisseurDeVoix
 {
-    public const COMPLET = 'complet';
-    public const QUOTA = 'quota';
-    public const INDISPONIBLE = 'indisponible';
-    public const ECHEC = 'echec';
-
-    /** Format de sortie du modèle : PCM 16 bits signé, petit-boutiste, mono. */
-    public const TAUX_ECHANTILLONNAGE = 24000;
-
     /** Une génération qui ne commence pas dans ce délai n'aidera personne. */
     private const TIMEOUT_SECONDES = 60;
 
     private const CONSIGNE = 'Lis en français, d\'une voix de jeune femme chaleureuse, posée et professionnelle, '
         . 'au débit naturel d\'une conseillère en assurance : ';
 
-    private const PREFIXE_CACHE_QUOTA = 'ket_voix_quota_';
-
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly BudgetDebit $budget,
-        #[Autowire(service: 'cache.app')] private readonly CacheItemPoolInterface $cache,
+        private readonly MemoireDEpuisement $epuisement,
         private readonly LoggerInterface $logger,
         #[Autowire(env: 'GEMINI_API_KEY')] private readonly string $apiKey,
         #[Autowire(env: 'GEMINI_MODELES_VOIX')] private readonly string $modeles,
@@ -57,6 +46,11 @@ final class SyntheseVocaleGemini
         // Les tests forcent le moteur simulé : aucune API réelle.
         #[Autowire(env: 'AI_ENGINE')] private readonly string $moteurForce = '',
     ) {
+    }
+
+    public function nom(): string
+    {
+        return 'gemini';
     }
 
     public function voix(): string
@@ -90,7 +84,7 @@ final class SyntheseVocaleGemini
 
         $quota = false;
         foreach ($this->listeModeles() as $modele) {
-            if ($this->estEpuise($modele)) {
+            if ($this->epuisement->estEpuise('gemini:' . $modele)) {
                 $quota = true;
                 continue;
             }
@@ -118,7 +112,10 @@ final class SyntheseVocaleGemini
 
                 $statut = $reponse->getStatusCode();
                 if ($statut === 429) {
-                    $this->marquerEpuise($modele);
+                    // Quota JOURNALIER (10 générations au palier gratuit) : épuisé jusqu'à minuit
+                    // heure du Pacifique, et le modèle suivant prend la main.
+                    $this->epuisement->marquer('gemini:' . $modele, MemoireDEpuisement::jusquAMinuitPacifique());
+                    $this->logger->notice('Voix de Ket : quota journalier gratuit atteint, modèle suivant.', ['modele' => $modele]);
                     $quota = true;
                     continue;
                 }
@@ -195,22 +192,5 @@ final class SyntheseVocaleGemini
     private function listeModeles(): array
     {
         return array_values(array_filter(array_map('trim', explode(',', $this->modeles))));
-    }
-
-    private function estEpuise(string $modele): bool
-    {
-        return $this->cache->getItem(self::PREFIXE_CACHE_QUOTA . md5($modele))->isHit();
-    }
-
-    /** Épuisé jusqu'à la remise à zéro du quota journalier : minuit, heure du Pacifique. */
-    private function marquerEpuise(string $modele): void
-    {
-        $maintenant = new \DateTimeImmutable('now', new \DateTimeZone('America/Los_Angeles'));
-        $minuit = $maintenant->modify('tomorrow');
-        $item = $this->cache->getItem(self::PREFIXE_CACHE_QUOTA . md5($modele));
-        $item->set(true)->expiresAfter(max(60, $minuit->getTimestamp() - $maintenant->getTimestamp()));
-        $this->cache->save($item);
-
-        $this->logger->notice('Voix de Ket : quota journalier gratuit atteint, modèle suivant.', ['modele' => $modele]);
     }
 }

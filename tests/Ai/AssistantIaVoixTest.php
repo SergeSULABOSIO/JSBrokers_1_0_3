@@ -4,7 +4,11 @@ namespace App\Tests\Ai;
 
 use App\Ai\Debit\BudgetDebit;
 use App\Ai\Voix\CacheAudio;
+use App\Ai\Voix\FournisseurDeVoix;
+use App\Ai\Voix\MemoireDEpuisement;
+use App\Ai\Voix\SyntheseVocaleElevenLabs;
 use App\Ai\Voix\SyntheseVocaleGemini;
+use App\Ai\Voix\VoixDeKet;
 use App\Entity\AssistantConversation;
 use App\Entity\AssistantMessage;
 use App\Entity\Entreprise;
@@ -20,9 +24,9 @@ use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 /**
- * Route de la voix de Ket : gardes, borne du texte, repli (503/402) et, avec une
- * synthèse factice, audio en flux mis en cache et facturé UNE fois — la réécoute est
- * servie par le cache, sans génération ni jeton.
+ * Route de la voix de Ket : gardes, borne du texte, repli (503/402), ordre des voix
+ * (ElevenLabs puis Gemini) et, avec des fournisseurs réels sur HTTP factice, audio en
+ * flux mis en cache et facturé UNE fois — la réécoute est servie par le cache.
  */
 class AssistantIaVoixTest extends WebTestCase
 {
@@ -126,23 +130,39 @@ class AssistantIaVoixTest extends WebTestCase
         return compact('owner', 'guest', 'conversation', 'reponse', 'question') + ['entreprise' => $e];
     }
 
-    /** Remplace la synthèse et le cache du conteneur par des doublures déterministes. */
-    private function doublures(?MockHttpClient $http = null, string $moteur = ''): void
+    /**
+     * Remplace les voix et le cache du conteneur par des doublures déterministes. Sans
+     * fournisseur : aucune voix disponible (cas du moteur simulé).
+     *
+     * @param list<FournisseurDeVoix> $fournisseurs
+     */
+    private function doublures(array $fournisseurs = []): void
     {
         $conteneur = static::getContainer();
         $conteneur->set(CacheAudio::class, new CacheAudio($this->racineCache));
-        if ($http !== null) {
-            $conteneur->set(SyntheseVocaleGemini::class, new SyntheseVocaleGemini(
-                $http,
-                new BudgetDebit(new ArrayAdapter()),
-                new ArrayAdapter(),
-                new NullLogger(),
-                'cle-test',
-                'modele-test',
-                'Aoede',
-                $moteur,
-            ));
-        }
+        $conteneur->set(VoixDeKet::class, new VoixDeKet($fournisseurs, 'elevenlabs,gemini'));
+    }
+
+    /** Le vrai fournisseur ElevenLabs, sur un client HTTP factice. */
+    private function elevenLabs(MockHttpClient $http): SyntheseVocaleElevenLabs
+    {
+        return new SyntheseVocaleElevenLabs($http, new MemoireDEpuisement(new ArrayAdapter()), new NullLogger(), 'xi-test', 'voix-test', 'eleven_flash_v2_5');
+    }
+
+    /** Le vrai fournisseur Gemini, sur un client HTTP factice. */
+    private function gemini(MockHttpClient $http): SyntheseVocaleGemini
+    {
+        return new SyntheseVocaleGemini($http, new BudgetDebit(new ArrayAdapter()), new MemoireDEpuisement(new ArrayAdapter()), new NullLogger(), 'cle-test', 'modele-test', 'Aoede');
+    }
+
+    private static function sseGemini(string $pcm): string
+    {
+        return 'data: ' . json_encode(['candidates' => [['content' => ['parts' => [['inlineData' => ['data' => base64_encode($pcm)]]]]]]]) . "\n\n";
+    }
+
+    private static function quotaElevenLabs(): MockHttpClient
+    {
+        return new MockHttpClient(static fn (): MockResponse => new MockResponse('{"detail":{"status":"quota_exceeded"}}', ['http_code' => 401]));
     }
 
     private function poster(Entreprise $e, AssistantConversation $c, AssistantMessage $m, string $texte): void
@@ -166,7 +186,7 @@ class AssistantIaVoixTest extends WebTestCase
         );
     }
 
-    public function testMoteurSimuleRenvoieLeRepli(): void
+    public function testAucuneVoixDisponibleRenvoieLeRepli(): void
     {
         ['entreprise' => $e, 'owner' => $owner, 'conversation' => $c, 'reponse' => $m] = $this->semer();
         $this->client->loginUser($owner);
@@ -175,25 +195,24 @@ class AssistantIaVoixTest extends WebTestCase
         $this->poster($e, $c, $m, self::TEXTE_ORAL);
 
         self::assertResponseStatusCodeSame(503);
-        self::assertSame(['repli' => SyntheseVocaleGemini::INDISPONIBLE], json_decode((string) $this->client->getResponse()->getContent(), true));
+        self::assertSame(['repli' => FournisseurDeVoix::INDISPONIBLE], json_decode((string) $this->client->getResponse()->getContent(), true));
         self::assertSame(0, $this->lignesVoix());
     }
 
-    public function testFluxPuisReecouteDepuisLeCacheFactureUneSeuleFois(): void
+    public function testElevenLabsParleEnFluxPuisReecouteDepuisLeCacheFactureUneSeuleFois(): void
     {
         ['entreprise' => $e, 'owner' => $owner, 'conversation' => $c, 'reponse' => $m] = $this->semer();
         $this->client->loginUser($owner);
         // Même conteneur pour les deux requêtes : les doublures (et le cache) survivent.
         $this->client->disableReboot();
-        $pcm ="\x01\x00\x02\x00\x03\x00";
-        $http = new MockHttpClient(static fn (): MockResponse => new MockResponse([
-            'data: ' . json_encode(['candidates' => [['content' => ['parts' => [['inlineData' => ['data' => base64_encode($pcm)]]]]]]]) . "\n\n",
-        ]));
-        $this->doublures($http);
+        $pcm = "\x01\x00\x02\x00\x03\x00";
+        $http = new MockHttpClient(static fn (): MockResponse => new MockResponse([substr($pcm, 0, 3), substr($pcm, 3)]));
+        $this->doublures([$this->elevenLabs($http)]);
 
         $this->poster($e, $c, $m, self::TEXTE_ORAL);
         self::assertResponseIsSuccessful();
         self::assertStringStartsWith('audio/L16', (string) $this->client->getResponse()->headers->get('Content-Type'));
+        self::assertSame('elevenlabs', $this->client->getResponse()->headers->get('X-Ket-Voix'));
         self::assertSame($pcm, $this->client->getInternalResponse()->getContent());
         self::assertSame(1, $this->lignesVoix(), 'première génération facturée');
 
@@ -204,6 +223,39 @@ class AssistantIaVoixTest extends WebTestCase
         self::assertSame(44 + \strlen($pcm), \strlen((string) $this->client->getResponse()->getContent()));
         self::assertSame(1, $http->getRequestsCount(), 'aucune nouvelle génération');
         self::assertSame(1, $this->lignesVoix(), 'aucun nouveau débit');
+    }
+
+    public function testElevenLabsEpuiseGeminiPrendLaMain(): void
+    {
+        ['entreprise' => $e, 'owner' => $owner, 'conversation' => $c, 'reponse' => $m] = $this->semer();
+        $this->client->loginUser($owner);
+        $eleven = self::quotaElevenLabs();
+        $gemini = new MockHttpClient(static fn (): MockResponse => new MockResponse([self::sseGemini("\x07\x00")]));
+        $this->doublures([$this->elevenLabs($eleven), $this->gemini($gemini)]);
+
+        $this->poster($e, $c, $m, self::TEXTE_ORAL);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('gemini', $this->client->getResponse()->headers->get('X-Ket-Voix'));
+        self::assertSame("\x07\x00", $this->client->getInternalResponse()->getContent());
+        self::assertSame(1, $eleven->getRequestsCount());
+        self::assertSame(1, $this->lignesVoix(), 'facturé une fois, quel que soit le fournisseur');
+    }
+
+    public function testToutesLesVoixEpuiseesRenvoientLeRepli(): void
+    {
+        ['entreprise' => $e, 'owner' => $owner, 'conversation' => $c, 'reponse' => $m] = $this->semer();
+        $this->client->loginUser($owner);
+        $this->doublures([
+            $this->elevenLabs(self::quotaElevenLabs()),
+            $this->gemini(new MockHttpClient(static fn (): MockResponse => new MockResponse('{}', ['http_code' => 429]))),
+        ]);
+
+        $this->poster($e, $c, $m, self::TEXTE_ORAL);
+
+        self::assertResponseStatusCodeSame(503);
+        self::assertSame(['repli' => FournisseurDeVoix::QUOTA], json_decode((string) $this->client->getResponse()->getContent(), true));
+        self::assertSame(0, $this->lignesVoix());
     }
 
     public function testUnTexteQuiNEstPasLaReponseEstRefuse(): void
@@ -232,7 +284,7 @@ class AssistantIaVoixTest extends WebTestCase
     {
         ['entreprise' => $e, 'owner' => $owner, 'conversation' => $c, 'reponse' => $m] = $this->semer(1);
         $this->client->loginUser($owner);
-        $this->doublures(new MockHttpClient([]));
+        $this->doublures([$this->elevenLabs(new MockHttpClient([]))]);
 
         $this->poster($e, $c, $m, self::TEXTE_ORAL);
 
