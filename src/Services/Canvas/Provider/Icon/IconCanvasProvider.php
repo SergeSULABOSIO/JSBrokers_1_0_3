@@ -125,7 +125,13 @@ class IconCanvasProvider
         'action:incorporation'=> 'material-symbols:add-ad-outline-rounded',
         'action:information'  => 'hugeicons:ai-idea',
         'action:invite'       => 'mingcute:invite-fill',
+        'action:attach'       => 'lucide:plus',         // joindre un fichier au chat (＋ de la barre de saisie)
         'action:listen'       => 'lucide:volume-2',     // écouter une réponse de Ket à voix haute
+        // Mode LIVE : les trois barres du signal sonore, celle du milieu plus haute.
+        // Un micro aurait dit « dicter », ce que fait déjà le bouton voisin ; ces barres
+        // disent « la voix circule », c'est-à-dire une conversation, pas une dictée.
+        'action:live'         => 'lucide:audio-lines',
+        'action:mic'          => 'lucide:mic',          // dictée vocale (barre de saisie du chat)
         'action:markdown'     => 'tabler:markdown',     // export en Markdown (texte simple)
         'action:ongoing'      => 'mdi:progress-download',
         'action:open'         => 'fad:open',
@@ -154,6 +160,7 @@ class IconCanvasProvider
         'action:search'       => 'hugeicons:search-01',
         'action:send-email'   => 'hugeicons:mail-send-01',
         'action:settings'     => 'material-symbols:settings',
+        'action:stop'         => 'lucide:square',       // terminer le mode Live (carré, convention des lecteurs)
         'action:transfer'     => 'mdi:swap-horizontal', // transfert vers un autre rattachement
         'action:upload'       => 'hugeicons:upload-01',
         'action:view'         => 'hugeicons:view',

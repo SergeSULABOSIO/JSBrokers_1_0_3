@@ -100,6 +100,14 @@ final class TokenPricing
     public const VOIX_IA_RATIO_PAR_1000_CARACTERES = 0.5;
 
     /**
+     * Assistant IA : coût des OREILLES de Ket en mode Live (transcription d'une phrase
+     * dite), en RATIO du poids d'un message PAR TRANCHE DE 30 SECONDES d'audio (décision
+     * produit : 30 %). Facturé seulement quand la transcription a rendu du texte ; le
+     * repli sur la reconnaissance du navigateur, lui, ne coûte rien.
+     */
+    public const OREILLE_IA_RATIO_PAR_30_SECONDES = 0.3;
+
+    /**
      * Assistant IA — DOCUMENT téléchargeable produit par Ket (Word, Excel, PDF,
      * Markdown, texte, HTML). Coût FIXE d'une production, indépendant de la
      * longueur : il couvre l'assemblage, la mise en page, le rendu et le stockage.

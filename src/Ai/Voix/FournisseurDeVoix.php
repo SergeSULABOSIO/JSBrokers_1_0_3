@@ -2,6 +2,7 @@
 
 namespace App\Ai\Voix;
 
+use App\Ai\Fournisseur\Fournisseur;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
@@ -15,7 +16,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Un fournisseur ne fait que PRONONCER : le texte vient toujours d'une bulle de Ket.
  */
 #[AutoconfigureTag('app.fournisseur_voix')]
-interface FournisseurDeVoix
+interface FournisseurDeVoix extends Fournisseur
 {
     public const COMPLET = 'complet';
     public const QUOTA = 'quota';
@@ -25,14 +26,8 @@ interface FournisseurDeVoix
     /** Format commun à tous : PCM 16 bits signé, petit-boutiste, mono, 24 kHz. */
     public const TAUX_ECHANTILLONNAGE = 24000;
 
-    /** Identifiant court, celui de KET_VOIX_FOURNISSEURS (« gemini », « elevenlabs »). */
-    public function nom(): string;
-
     /** La voix utilisée : elle entre dans la clé du cache audio. */
     public function voix(): string;
-
-    /** Clé présente et moteur réel : le fournisseur peut être appelé. */
-    public function estDisponible(): bool;
 
     /**
      * Le texte en voix, morceau PCM par morceau PCM. Valeur de retour (`getReturn()`) :

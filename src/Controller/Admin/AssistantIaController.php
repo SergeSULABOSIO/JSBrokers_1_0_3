@@ -7,6 +7,10 @@ use App\Ai\Comprehension\ClarificationEnAttente;
 use App\Ai\AiContextBuilder;
 use App\Ai\Boussole\PlanDuJourService;
 use App\Ai\Dictee\FinisseurDeDictee;
+use App\Ai\Live\IntermedesDeKet;
+use App\Ai\Oreille\FournisseurDOreille;
+use App\Ai\Oreille\OreilleDeKet;
+use App\Ai\Oreille\Transcription;
 use App\Ai\Voix\CacheAudio;
 use App\Ai\Voix\FournisseurDeVoix;
 use App\Ai\Voix\VoixDeKet;
@@ -108,6 +112,15 @@ use App\Ai\Mutation\FinDePlan;
 class AssistantIaController extends AbstractController
 {
     private const MAX_MESSAGE_LENGTH = 4000;
+
+    /** Mode Live : une phrase dite, au plus ~60 s de WAV 16 kHz mono. */
+    private const MAX_OCTETS_PAROLE = 2_000_000;
+
+    /**
+     * Cabinet « 0 » du cache audio : les intermèdes de Ket ne disent rien d'un cabinet
+     * en particulier, ils sont donc générés une fois pour toute la plateforme.
+     */
+    private const CABINET_COMMUN = 0;
 
 
     /** Nombre maximal d'objets attachés au contexte d'une même conversation. */
@@ -1964,6 +1977,125 @@ class AssistantIaController extends AbstractController
             'Cache-Control'     => 'no-cache, no-store',
             'X-Accel-Buffering' => 'no',
             'X-Ket-Voix'        => $nomFournisseur,
+        ]);
+    }
+
+    /**
+     * LES OREILLES DE KET (mode Live) : une phrase dite devient du texte.
+     *
+     * Le navigateur détecte la fin de phrase et poste le WAV. Le texte rendu repart
+     * ensuite par le circuit ORDINAIRE d'un message — le moteur de Ket, sa base de
+     * connaissance et sa facturation ne changent pas d'un iota. Ici, on ne fait
+     * qu'entendre.
+     *
+     * Aucune oreille disponible (quota, clé absente, panne) : 503 `{repli}`, et le
+     * navigateur écoute avec sa propre reconnaissance vocale, gratuite.
+     */
+    #[Route('/api/live/{idEntreprise}/transcrire', name: 'api.live.transcrire', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['POST'])]
+    public function transcrireParole(int $idEntreprise, Request $request, OreilleDeKet $oreilles): JsonResponse
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        if ($blocage = $this->blocagePremium($entreprise)) {
+            return $blocage;
+        }
+
+        $wav = $request->getContent();
+        if ($wav === '' || \strlen($wav) > self::MAX_OCTETS_PAROLE) {
+            return $this->json(['message' => 'Parole absente ou trop longue.'], Response::HTTP_BAD_REQUEST);
+        }
+        // WAV PCM 16 bits mono 16 kHz, en-tête de 44 octets : la durée se déduit de la taille.
+        $secondes = max(0.0, (\strlen($wav) - 44) / (FournisseurDOreille::TAUX_ECHANTILLONNAGE * 2));
+
+        if (!$oreilles->estDisponible()) {
+            return $this->json(['repli' => Transcription::INDISPONIBLE], Response::HTTP_SERVICE_UNAVAILABLE);
+        }
+        if (!$this->tokenAccountService->peutTranscrire($entreprise, $secondes)) {
+            return $this->json([
+                'message'  => 'Solde de tokens insuffisant pour la transcription.',
+                'blocked'  => true,
+                'required' => $this->tokenAccountService->coutOreilleIa($secondes),
+            ], Response::HTTP_PAYMENT_REQUIRED);
+        }
+
+        $transcription = $oreilles->transcrire($wav, substr($request->getLocale(), 0, 2) ?: 'fr');
+        if ($transcription->statut !== Transcription::COMPLET) {
+            return $this->json(['repli' => $transcription->statut], Response::HTTP_SERVICE_UNAVAILABLE);
+        }
+        // Un silence ne se facture pas : il n'y avait rien à entendre.
+        if ($transcription->texte !== '') {
+            try {
+                $this->tokenAccountService->meterOreilleIa($entreprise, $this->currentUser(), $secondes);
+            } catch (InsufficientTokensException) {
+                // Le solde a changé pendant la transcription : la parole est déjà entendue.
+            }
+        }
+
+        return $this->json(['texte' => $transcription->texte, 'fournisseur' => $transcription->fournisseur]);
+    }
+
+    /**
+     * UN INTERMÈDE : la petite phrase que Ket dit pendant qu'il réfléchit (« Hum…
+     * laissez-moi vérifier »), avec sa voix habituelle.
+     *
+     * Le texte vient d'un CATALOGUE FERMÉ (IntermedesDeKet) : le navigateur ne choisit
+     * qu'une clé, jamais un texte. L'audio est généré UNE FOIS par voix, puis servi à
+     * tout le monde depuis le cache commun — d'où l'absence de débit de jetons : ces
+     * phrases ne disent rien du cabinet.
+     */
+    #[Route('/api/live/{idEntreprise}/intermede/{cle}', name: 'api.live.intermede', requirements: ['idEntreprise' => Requirement::DIGITS, 'cle' => '[a-z]+-[0-9]+'], methods: ['GET'])]
+    public function intermedeDeKet(
+        int $idEntreprise,
+        string $cle,
+        VoixDeKet $voixDeKet,
+        CacheAudio $cacheAudio,
+    ): Response {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        if ($blocage = $this->blocagePremium($entreprise)) {
+            return $blocage;
+        }
+
+        $phrase = IntermedesDeKet::phrase($cle);
+        if ($phrase === null) {
+            return $this->json(['message' => 'Intermède inconnu.'], Response::HTTP_NOT_FOUND);
+        }
+
+        foreach ($voixDeKet->fournisseurs() as $fournisseur) {
+            $wav = $cacheAudio->lire(self::CABINET_COMMUN, VoixDeKet::identite($fournisseur), $phrase);
+            if ($wav !== null) {
+                return $this->wavDIntermede($wav);
+            }
+        }
+        if (!$voixDeKet->estDisponible()) {
+            return $this->json(['repli' => FournisseurDeVoix::INDISPONIBLE], Response::HTTP_SERVICE_UNAVAILABLE);
+        }
+
+        // Génération complète AVANT de répondre : un intermède dure deux secondes, et il
+        // doit pouvoir être rejoué à l'identique ; le flux n'apporterait rien ici.
+        $flux = $voixDeKet->flux($phrase);
+        $pcm = '';
+        foreach ($flux as $morceau) {
+            $pcm .= $morceau;
+        }
+        if ($flux->getReturn() !== FournisseurDeVoix::COMPLET) {
+            return $this->json(['repli' => $flux->getReturn()], Response::HTTP_SERVICE_UNAVAILABLE);
+        }
+
+        $cacheAudio->ecrire(self::CABINET_COMMUN, VoixDeKet::identite($voixDeKet->dernierFournisseur()), $phrase, $pcm);
+
+        return $this->wavDIntermede(CacheAudio::wav($pcm));
+    }
+
+    private function wavDIntermede(string $wav): Response
+    {
+        return new Response($wav, Response::HTTP_OK, [
+            'Content-Type'  => 'audio/wav',
+            'Cache-Control' => 'private, max-age=86400',
         ]);
     }
 
