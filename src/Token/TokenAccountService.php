@@ -401,6 +401,46 @@ class TokenAccountService
         );
     }
 
+    /** Nom d'entité porté par les lignes de journal des oreilles de Ket (mode Live). */
+    public const ENTITE_OREILLE_IA = 'OreilleIa';
+
+    /** Coût d'une transcription de $secondes d'audio (au prorata, 1 au minimum). */
+    public function coutOreilleIa(float $secondes): int
+    {
+        return max(1, (int) ceil(
+            TokenPricing::OREILLE_IA_RATIO_PAR_30_SECONDES
+            * $this->parametres->weightFor(AssistantMessage::class)
+            * max(0.0, $secondes) / 30,
+        ));
+    }
+
+    /** Le cabinet peut-il payer cette transcription ? Vérifié AVANT l'appel au fournisseur. */
+    public function peutTranscrire(Entreprise $entreprise, float $secondes): bool
+    {
+        $owner = $entreprise->getUtilisateur();
+
+        return !$owner instanceof Utilisateur || $this->canAfford($owner, $this->coutOreilleIa($secondes));
+    }
+
+    /**
+     * Métrage des OREILLES de Ket, une fois la parole transcrite. Une ligne de journal,
+     * jamais pour une transcription vide ou en échec.
+     *
+     * @throws InsufficientTokensException si le solde du propriétaire est insuffisant
+     */
+    public function meterOreilleIa(Entreprise $entreprise, ?Utilisateur $acteur, float $secondes): void
+    {
+        $owner = $entreprise->getUtilisateur();
+        if (!$owner instanceof Utilisateur) {
+            return;
+        }
+        $cout = $this->coutOreilleIa($secondes);
+
+        $this->guardAndConsume($owner, $cout);
+
+        $this->log($entreprise, $owner, $acteur, self::ENTITE_OREILLE_IA, TokenConsumption::SENS_ENTREE, 1, $cout);
+    }
+
     /** Nom d'entité porté par les lignes de journal de la voix de Ket. */
     public const ENTITE_VOIX_IA = 'VoixIa';
 

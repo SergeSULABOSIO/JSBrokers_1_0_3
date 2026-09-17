@@ -415,6 +415,13 @@ class AssistantIaCitationTest extends WebTestCase
             'data-menu-key="ecouter" data-menu-roles="assistant"',
             'assistant-chat-target="tplEcouter"',
             'data-action="click->assistant-chat#basculerEcoute"',
+            // Mode Live : bouton principal qui bascule, panneau et couche dédiée.
+            'data-controller="assistant-chat ket-live"',
+            'data-action="click->assistant-chat#actionPrincipale"',
+            'assistant-chat-target="iconeLive"',
+            'assistant-chat-target="iconeEnvoi"',
+            'data-ket-live-target="panneau"',
+            'data-action="click->ket-live#arreter"',
             'assistant-chat-target="tplKebab"',
             'assistant-chat-target="tplCitation"',
             'assistant-chat-target="citationBar"',

@@ -33,7 +33,10 @@
 {% import _self as aic %}
 <div class="jsb-ai-chat"
      data-aic-theme="{{ themeAssistant|default('auto') }}"
-     data-controller="assistant-chat"
+     data-controller="assistant-chat ket-live"
+     data-ket-live-transcrire-url-value="{{ path('admin.assistantia.api.live.transcrire', {idEntreprise: idEntreprise}) }}"
+     data-ket-live-intermede-url-value="{{ path('admin.assistantia.api.live.intermede', {idEntreprise: idEntreprise, cle: 'remplacer-0'}) }}"
+     data-ket-live-intermedes-value="{{ intermedes_de_ket()|json_encode|e('html_attr') }}"
      data-assistant-chat-send-url-value="{{ path('admin.assistantia.api.message.send', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
      data-assistant-chat-etat-url-value="{{ path('admin.assistantia.api.message.etat', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
      data-assistant-chat-dialog-context-url-value="{{ path('admin.assistantia.api.dialog_context', {idEntreprise: idEntreprise}) }}"
@@ -1077,14 +1080,74 @@
             border:1px solid var(--aic-border-strong); background:var(--aic-input-bg); color:var(--aic-input-text);
         }
         .jsb-ai-chat .aic-doc-format select:focus-visible { outline:none; box-shadow:0 0 0 3px var(--aic-ring); border-color:var(--aic-accent); }
+        /* ── BARRE DE SAISIE À DEUX LIGNES ────────────────────────────────────
+           Le texte sur toute la largeur, les actions dessous. Le rayon généreux et
+           l'ombre légère détachent la carte du fil sans ajouter de couleur. */
         .jsb-ai-chat .aic-inputbox {
-            display:flex; align-items:flex-end; gap:.5rem;
-            border:1px solid var(--aic-border-strong); border-radius:12px; background:var(--aic-input-bg);
-            padding:.3rem .35rem .3rem .7rem;
+            display:flex; flex-direction:column; gap:.15rem;
+            border:1px solid var(--aic-border-strong); border-radius:20px; background:var(--aic-input-bg);
+            padding:.55rem .6rem .45rem;
+            box-shadow:0 1px 2px rgba(0,0,0,.05);
             transition: border-color .15s ease, box-shadow .15s ease;
         }
         .jsb-ai-chat .aic-inputbox:focus-within { border-color:var(--aic-accent); box-shadow:0 0 0 .25rem var(--aic-ring); }
-        .jsb-ai-chat .aic-input-ic { flex:0 0 auto; align-self:center; display:flex; color:var(--aic-muted); }
+        .jsb-ai-chat .aic-actions { display:flex; align-items:center; gap:.25rem; }
+        .jsb-ai-chat .aic-actions-espace { flex:1 1 auto; }
+
+        /* LE BOUTON PRINCIPAL : Live quand le champ est vide, Envoyer dès qu'on écrit.
+           Cobalt de la marque, icône blanche — le seul point de couleur de la barre,
+           donc le seul endroit où l'œil va d'abord. */
+        .jsb-ai-chat .aic-principal {
+            flex:0 0 auto; width:44px; height:44px; border-radius:50%; border:none; cursor:pointer;
+            background:var(--aic-accent-solid); color:var(--aic-on-accent);
+            display:flex; align-items:center; justify-content:center;
+            transition: background-color .15s ease, transform .1s ease;
+        }
+        .jsb-ai-chat .aic-principal:hover { background:var(--aic-accent-hover); }
+        .jsb-ai-chat .aic-principal:active { transform:scale(.96); }
+        .jsb-ai-chat .aic-principal:focus-visible { outline:2px solid var(--aic-accent); outline-offset:2px; }
+        .jsb-ai-chat .aic-principal[disabled] { opacity:.65; cursor:not-allowed; }
+        .jsb-ai-chat .aic-principal-ic { display:flex; }
+        .jsb-ai-chat .aic-principal-ic[hidden] { display:none; }
+
+        /* ── PANNEAU DU MODE LIVE ─────────────────────────────────────────────
+           Il remplace la barre de saisie pendant la conversation orale. L'état est
+           ÉCRIT : les barres animées ne font que doubler l'information (WCAG 1.3.3). */
+        .jsb-ai-chat .aic-live {
+            display:flex; align-items:center; gap:.7rem;
+            border:1px solid var(--aic-accent); border-radius:20px; background:var(--aic-input-bg);
+            padding:.6rem .7rem;
+        }
+        .jsb-ai-chat .aic-live[hidden] { display:none; }
+        .jsb-ai-chat .aic-live-barres { flex:0 0 auto; display:flex; align-items:center; gap:3px; height:24px; }
+        .jsb-ai-chat .aic-live-barres > span {
+            display:block; width:3px; height:8px; border-radius:2px; background:var(--aic-accent-solid);
+            animation: aic-live-onde 1s ease-in-out infinite;
+        }
+        .jsb-ai-chat .aic-live-barres > span:nth-child(2) { height:18px; animation-delay:.15s; }
+        .jsb-ai-chat .aic-live-barres > span:nth-child(3) { animation-delay:.3s; }
+        @keyframes aic-live-onde { 0%, 100% { transform:scaleY(.6); } 50% { transform:scaleY(1.4); } }
+        /* Ket réfléchit : les barres se calment, la voix ne circule plus. */
+        .jsb-ai-chat .aic-live--reflexion .aic-live-barres > span { animation-duration:2.2s; opacity:.6; }
+        /* Ket parle : c'est sa voix, on la distingue par la teinte du texte accentué. */
+        .jsb-ai-chat .aic-live--parole .aic-live-barres > span { background:var(--aic-accent); }
+        @media (prefers-reduced-motion: reduce) {
+            .jsb-ai-chat .aic-live-barres > span { animation:none; }
+        }
+        .jsb-ai-chat .aic-live-textes { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:.1rem; }
+        .jsb-ai-chat .aic-live-etat { font-size:.85rem; font-weight:600; color:var(--aic-text); }
+        .jsb-ai-chat .aic-live-parole {
+            font-size:.78rem; color:var(--aic-muted);
+            overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+        }
+        .jsb-ai-chat .aic-live-fin {
+            flex:0 0 auto; display:flex; align-items:center; gap:.35rem;
+            min-height:44px; padding:0 .8rem; border-radius:12px; cursor:pointer;
+            border:1px solid var(--aic-border-strong); background:var(--aic-surface); color:var(--aic-text);
+            font-size:.8rem;
+        }
+        .jsb-ai-chat .aic-live-fin:hover { background:var(--aic-accent-subtle); color:var(--aic-on-subtle); }
+        .jsb-ai-chat .aic-live-fin:focus-visible { outline:2px solid var(--aic-accent); outline-offset:2px; }
         .jsb-ai-chat .aic-input {
             flex:1 1 auto; resize:none; min-height:40px; max-height:160px;
             border:none; background:transparent; padding:.5rem .25rem;
@@ -1123,14 +1186,6 @@
             color:var(--aic-muted); min-width:2.2em; text-align:right;
         }
         .jsb-ai-chat .aic-mic-timer[hidden] { display:none; }
-        .jsb-ai-chat .aic-send {
-            flex:0 0 auto; width:44px; height:44px; border-radius:10px; border:none; cursor:pointer;
-            background:var(--aic-accent-solid); color:var(--aic-on-accent); display:flex; align-items:center; justify-content:center;
-            transition: background-color .15s ease, opacity .15s ease;
-        }
-        .jsb-ai-chat .aic-send:hover { background:var(--aic-accent-hover); }
-        .jsb-ai-chat .aic-send:focus-visible { outline:2px solid var(--aic-accent); outline-offset:2px; }
-        .jsb-ai-chat .aic-send:disabled { opacity:.65; pointer-events:none; }
         /* Pied du composer : indice de raccourcis + compteur près de la limite. */
         .jsb-ai-chat .aic-composer-foot {
             display:flex; justify-content:space-between; gap:.75rem;
@@ -1609,10 +1664,15 @@
                data-assistant-chat-target="fichierInput"
                data-action="change->assistant-chat#onFichiersChoisis"
                aria-hidden="true" tabindex="-1">
+        {# ══ BARRE DE SAISIE, deux lignes ═══════════════════════════════════════
+           Le texte au-dessus, les actions en dessous : c'est la disposition des
+           assistants que les utilisateurs connaissent, et elle laisse la phrase
+           respirer sur toute la largeur.
+
+           UN SEUL BOUTON PRINCIPAL à droite : « Live » quand le champ est vide,
+           « Envoyer » dès qu'on écrit. Deux boutons permanents se disputaient le
+           regard — et sur un téléphone, la place. #}
         <div class="aic-inputbox">
-            <span class="aic-input-ic" aria-hidden="true">
-                <twig:UX:Icon name="{{ resolve_icon_name('feedback') }}" style="width:20px;height:20px;" />
-            </span>
             <label class="visually-hidden" for="aic-input-{{ conversation.id }}">Votre message à {{ assistantNom }}</label>
             <textarea id="aic-input-{{ conversation.id }}" class="aic-input" rows="1"
                       placeholder="Posez votre question à {{ assistantNom }}…"
@@ -1620,50 +1680,68 @@
                       aria-describedby="aic-hint-{{ conversation.id }} aic-count-{{ conversation.id }}"
                       data-assistant-chat-target="input"
                       data-action="keydown->assistant-chat#keydown input->assistant-chat#onInput"></textarea>
-            {# Dictée vocale : parler plutôt qu'écrire. Masqué par le contrôleur si
-               le navigateur ne supporte pas l'API Web Speech. SVG micro inline
-               (auto-porté) — pas d'ux_icon serveur pour éviter tout appel au
-               circuit d'icônes (cf. correctif 500 du commit 456208af). #}
-            {# Infobulle sombre (pattern Joseara .jsb-ctx-tip.commit-tip) au lieu
-               du title natif : titre blanc + explication grise. Copie posée en
-               data-* et rendue par le contrôleur. #}
-            {# Joindre un fichier : déclenche le champ fichier caché. SVG trombone
-               inline (auto-porté) — pas d'ux_icon serveur dans ce partial injecté. #}
-            <button type="button" class="aic-attach"
-                    data-action="click->assistant-chat#ouvrirSelecteurFichier"
-                    aria-label="Joindre un ou plusieurs fichiers"
-                    title="Joindre un fichier">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                     stroke-linejoin="round" aria-hidden="true">
-                    <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-                </svg>
-            </button>
-            {# Durée de la dictée en cours : l'utilisateur voit qu'il a la parole, et
-               combien de temps il lui reste avant le plafond de trois minutes. #}
-            <span class="aic-mic-timer" data-assistant-chat-target="micTimer" aria-hidden="true" hidden></span>
-            <button type="button" class="aic-mic"
-                    data-assistant-chat-target="mic"
-                    data-action="click->assistant-chat#toggleDictation"
-                    aria-pressed="false"
-                    aria-label="Dicter le message vocalement"
-                    data-mic-tip-title="Dicter votre message"
-                    data-mic-tip-body="Parlez librement, pauses comprises : la dictée continue jusqu'à ce que vous cliquiez à nouveau sur le micro (ou Échap), 3 minutes au plus.
+            <div class="aic-actions">
+                {# Joindre un fichier : déclenche le champ fichier caché. #}
+                <button type="button" class="aic-attach"
+                        data-action="click->assistant-chat#ouvrirSelecteurFichier"
+                        aria-label="Joindre un ou plusieurs fichiers"
+                        title="Joindre un fichier">
+                    {{ ux_icon(resolve_icon_name('action:attach'), {height: '20px', width: '20px'}) }}
+                </button>
+                <span class="aic-actions-espace"></span>
+                {# Durée de la dictée en cours : l'utilisateur voit qu'il a la parole, et
+                   combien de temps il lui reste avant le plafond de trois minutes. #}
+                <span class="aic-mic-timer" data-assistant-chat-target="micTimer" aria-hidden="true" hidden></span>
+                {# Dictée vocale : parler plutôt qu'écrire. Masqué par le contrôleur si
+                   le navigateur ne supporte pas l'API Web Speech.
+                   Infobulle sombre (pattern Joseara .jsb-ctx-tip.commit-tip) au lieu
+                   du title natif : titre blanc + explication grise. #}
+                <button type="button" class="aic-mic"
+                        data-assistant-chat-target="mic"
+                        data-action="click->assistant-chat#toggleDictation"
+                        aria-pressed="false"
+                        aria-label="Dicter le message vocalement"
+                        data-mic-tip-title="Dicter votre message"
+                        data-mic-tip-body="Parlez librement, pauses comprises : la dictée continue jusqu'à ce que vous cliquiez à nouveau sur le micro (ou Échap), 3 minutes au plus.
 Le texte est alors mis au propre (hésitations retirées, ponctuation, questions, listes) dans la zone de saisie. Relisez, puis envoyez.">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                     stroke-linejoin="round" aria-hidden="true">
-                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                    <line x1="12" x2="12" y1="19" y2="22"/>
-                </svg>
-            </button>
-            <button type="button" class="aic-send" disabled
-                    data-assistant-chat-target="send"
-                    data-action="click->assistant-chat#send"
-                    aria-label="Envoyer le message"
-                    title="Envoyer le message">
-                <twig:UX:Icon name="{{ resolve_icon_name('action:send-email') }}" style="width:20px;height:20px;" />
+                    {{ ux_icon(resolve_icon_name('action:mic'), {height: '20px', width: '20px'}) }}
+                </button>
+                {# LE BOUTON PRINCIPAL. Son libellé et son icône changent avec l'état du
+                   champ : le contrôleur bascule les deux dans onInput(). Jamais désactivé
+                   quand il porte « Live » — c'est justement quand le champ est vide qu'on
+                   veut parler. #}
+                <button type="button" class="aic-principal"
+                        data-assistant-chat-target="send"
+                        data-action="click->assistant-chat#actionPrincipale"
+                        aria-label="Parler avec {{ assistantNom }} (mode Live)"
+                        title="Parler avec {{ assistantNom }} (mode Live)">
+                    <span class="aic-principal-ic" data-assistant-chat-target="iconeLive">
+                        {{ ux_icon(resolve_icon_name('action:live'), {height: '20px', width: '20px'}) }}
+                    </span>
+                    <span class="aic-principal-ic" data-assistant-chat-target="iconeEnvoi" hidden>
+                        {{ ux_icon(resolve_icon_name('action:send-email'), {height: '20px', width: '20px'}) }}
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        {# ══ PANNEAU DU MODE LIVE ═══════════════════════════════════════════════
+           Il remplace la barre de saisie pendant la conversation orale. L'état est
+           écrit EN TOUTES LETTRES (et annoncé) : l'animation des barres ne porte
+           jamais l'information à elle seule. #}
+        <div class="aic-live" hidden data-ket-live-target="panneau">
+            <span class="aic-live-barres" data-ket-live-target="barres" aria-hidden="true">
+                <span></span><span></span><span></span>
+            </span>
+            <span class="aic-live-textes">
+                <span class="aic-live-etat" aria-live="polite" data-ket-live-target="etat">Ket vous écoute…</span>
+                <span class="aic-live-parole" data-ket-live-target="parole"></span>
+            </span>
+            <button type="button" class="aic-live-fin"
+                    data-action="click->ket-live#arreter"
+                    aria-label="Terminer le mode Live (Échap)">
+                {{ ux_icon(resolve_icon_name('action:stop'), {height: '14px', width: '14px'}) }}
+                <span>Terminer</span>
             </button>
         </div>
         <div class="aic-composer-foot">

@@ -97,6 +97,7 @@ export default class extends Controller {
         'messages', 'input', 'send', 'typing', 'typingLabel', 'typingTokens', 'count', 'contextBar', 'mic', 'micTimer',
         'fichierBar', 'fichierInput',
         // Actions de bulle : menu unique ancré, gabarits clonés, bandeau de citation.
+        'iconeLive', 'iconeEnvoi',
         'menuBulle', 'tplKebab', 'tplEcouter', 'tplCitation', 'citationBar', 'citationQui', 'citationExtrait',
         // Menu ⋮ de l'entête : thème, plein écran, nouvelle conversation.
         'menuEntete',
@@ -269,6 +270,22 @@ export default class extends Controller {
         // du navigateur, transcrite dans la zone de saisie puis envoyée par le
         // circuit send() habituel (aucun token supplémentaire, aucun backend).
         this.setupDictation();
+
+        // LE MODE LIVE PARLE AU CHAT PAR ÉVÉNEMENTS. Il ne connaît ni _envoyer ni _lire :
+        // il demande, et c'est le chat — seul propriétaire de son circuit d'envoi et de
+        // lecture — qui exécute. Le moteur de Ket, lui, ne voit aucune différence.
+        this._onLiveQuestion = (event) => {
+            const texte = String(event.detail?.texte ?? '').trim();
+            if (texte !== '') this._envoyer(texte);
+        };
+        this._onLiveLire = (event) => {
+            const bulle = event.detail?.bulle;
+            if (bulle) this._lire(bulle);
+        };
+        this._onLiveInterrompre = () => this.arreterLecture();
+        this.element.addEventListener('ket-live:question', this._onLiveQuestion);
+        this.element.addEventListener('ket-live:lire', this._onLiveLire);
+        this.element.addEventListener('ket-live:interrompre', this._onLiveInterrompre);
 
         // Infobulle sombre du bouton micro (pattern Joseara .jsb-ctx-tip) :
         // ANCRÉE au-dessus du bouton (le composer est au coin inférieur droit de
@@ -543,6 +560,11 @@ export default class extends Controller {
             this.messagesTarget.removeEventListener('mouseout', this._onCtxTipOut);
         }
         document.removeEventListener('mousemove', this._onCtxTipMove);
+        if (this._onLiveQuestion) {
+            this.element.removeEventListener('ket-live:question', this._onLiveQuestion);
+            this.element.removeEventListener('ket-live:lire', this._onLiveLire);
+            this.element.removeEventListener('ket-live:interrompre', this._onLiveInterrompre);
+        }
         if (this._ctxTip) {
             this._ctxTip.remove();
             this._ctxTip = null;
@@ -692,13 +714,38 @@ export default class extends Controller {
     }
 
     /**
-     * Le bouton ne dépend plus QUE du champ. Il se désactivait aussi pendant un
-     * traitement, ce qui revenait à interdire la rafale — et le faisait sans le
-     * dire, puisque la touche Entrée, elle, ne signalait rien du tout.
+     * LE BOUTON PRINCIPAL A DEUX VISAGES : « Live » quand le champ est vide, « Envoyer »
+     * dès qu'on écrit. Un champ vide n'est plus un bouton mort — c'est l'invitation à
+     * parler.
+     *
+     * Il ne se désactive plus jamais pendant un traitement : cela revenait à interdire la
+     * rafale, sans le dire, puisque la touche Entrée ne signalait rien.
      */
     updateSendState() {
         if (!this.hasSendTarget || !this.hasInputTarget) return;
-        this.sendTarget.disabled = this.inputTarget.value.trim() === '';
+        const aDuTexte = this.inputTarget.value.trim() !== '';
+        const libelle = aDuTexte
+            ? 'Envoyer le message'
+            : `Parler avec ${this.assistantNomValue || 'l’assistant'} (mode Live)`;
+
+        this.sendTarget.setAttribute('aria-label', libelle);
+        this.sendTarget.title = libelle;
+        this.sendTarget.disabled = false;
+        if (this.hasIconeLiveTarget) this.iconeLiveTarget.hidden = aDuTexte;
+        if (this.hasIconeEnvoiTarget) this.iconeEnvoiTarget.hidden = !aDuTexte;
+    }
+
+    /**
+     * Le clic sur le bouton principal : envoyer ce qui est écrit, ou — champ vide —
+     * demander le mode Live. Le chat ne sait rien du Live : il le DEMANDE, et la couche
+     * dédiée (ket-live) répond si elle est là.
+     */
+    actionPrincipale() {
+        if (this.inputTarget?.value.trim() !== '') {
+            this.send();
+            return;
+        }
+        this.element.dispatchEvent(new CustomEvent('ket-live:demarrer', { bubbles: true }));
     }
 
     updateCount() {
@@ -858,6 +905,9 @@ export default class extends Controller {
         const bulle = await this.typeMessage(data.assistant.contenu, data.assistant.refus === true, data.assistant.id);
         this.renderActivite(bulle, activite);
         await this.executeActions(data.assistant.actions);
+        // Le mode Live attend ce signal pour faire lire la réponse. Émis pour TOUTE
+        // réponse : le chat n'a pas à savoir si une session Live est ouverte.
+        this.element.dispatchEvent(new CustomEvent('assistant-chat:reponse-affichee', { bubbles: true, detail: { bulle } }));
     }
 
     /**
@@ -4096,6 +4146,10 @@ export default class extends Controller {
         this._bulleLue = null;
         this._fermerAudio();
         if (enCours && this.lectureDisponible()) window.speechSynthesis.cancel();
+        if (enCours) {
+            // Fin de la lecture : en mode Live, c'est le tour de l'utilisateur.
+            this.element.dispatchEvent(new CustomEvent('assistant-chat:lecture-terminee', { bubbles: true }));
+        }
     }
 
     _marquerLecture(bulle, active, secours = false) {

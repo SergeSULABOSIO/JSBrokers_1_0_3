@@ -2,6 +2,7 @@
 
 namespace App\Ai\Voix;
 
+use App\Ai\Fournisseur\OrdreDesFournisseurs;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
@@ -26,16 +27,9 @@ final class VoixDeKet
         #[AutowireIterator('app.fournisseur_voix')] iterable $fournisseurs,
         #[Autowire(env: 'KET_VOIX_FOURNISSEURS')] string $ordre = 'elevenlabs,gemini',
     ) {
-        $parNom = [];
-        foreach ($fournisseurs as $fournisseur) {
-            $parNom[$fournisseur->nom()] = $fournisseur;
-        }
-        $this->ordonnes = [];
-        foreach (array_filter(array_map('trim', explode(',', $ordre))) as $nom) {
-            if (isset($parNom[$nom])) {
-                $this->ordonnes[] = $parNom[$nom];
-            }
-        }
+        // L'ordre et le filtre de disponibilité sont les mêmes pour la bouche et pour les
+        // oreilles : ils vivent dans OrdreDesFournisseurs, jamais en double.
+        $this->ordonnes = OrdreDesFournisseurs::ordonner($fournisseurs, $ordre);
     }
 
     /**
@@ -45,7 +39,7 @@ final class VoixDeKet
      */
     public function fournisseurs(): array
     {
-        return array_values(array_filter($this->ordonnes, static fn (FournisseurDeVoix $f): bool => $f->estDisponible()));
+        return OrdreDesFournisseurs::disponibles($this->ordonnes);
     }
 
     public function estDisponible(): bool
