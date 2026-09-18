@@ -33,9 +33,16 @@ export const PHRASE_MAX_MS = 30000;
 /** Le seuil ne descend jamais sous ce plancher : un micro muet n'est pas de la parole. */
 export const PLANCHER = 0.012;
 
-/** Multiples du bruit de fond : pour parler, et pour couper Ket. */
+/**
+ * Multiples du bruit de fond : pour parler, et pour couper Ket.
+ *
+ * L'interruption était à 4,5 — soit, dans une pièce calme (plancher 0,012), une énergie
+ * de 0,054, ce qu'une voix ordinaire atteint à peine : il fallait HAUSSER LE TON pour
+ * couper Ket. Trois fois le fond reste très au-dessus d'un bruit de bureau, et se
+ * franchit en parlant normalement.
+ */
 export const FACTEUR_PAROLE = 2.2;
-export const FACTEUR_INTERRUPTION = 4.5;
+export const FACTEUR_INTERRUPTION = 3;
 
 /** Énergie (valeur efficace) d'une trame d'échantillons. */
 export function energie(trame) {
@@ -80,7 +87,15 @@ export function creerDetecteur(options = {}) {
 
             // Le bruit de fond suit LENTEMENT les silences, et jamais la parole : sinon une
             // longue phrase ferait monter le seuil jusqu'à s'effacer elle-même.
-            if (!auDessus && !parle) {
+            //
+            // ET SURTOUT PAS PENDANT QUE KET PARLE. C'était le défaut qui rendait
+            // l'interruption IMPOSSIBLE : le haut-parleur revient toujours un peu dans le
+            // micro, sous le seuil relevé ; cette fuite était donc apprise comme du bruit
+            // ambiant, le fond montait le temps d'une réponse, et le seuil d'interruption
+            // — un multiple de ce fond — grimpait avec lui. Plus Ket parlait longtemps,
+            // plus il fallait crier pour la couper. Le fond se gèle donc pendant sa
+            // parole : c'est celui de la pièce, pas celui du haut-parleur.
+            if (!auDessus && !parle && !ketParle) {
                 fond = fond * 0.95 + niveau * 0.05;
             }
 

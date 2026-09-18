@@ -297,13 +297,38 @@ class AssistantIaVoixTest extends WebTestCase
         self::assertSame(0, $this->lignesVoix());
     }
 
+    /**
+     * UNE RÉPONSE AVEC TABLEAU RESTAIT MUETTE (400), et c'était la moitié des réponses
+     * en conversation. Le garde-fou supposait que l'oral raccourcit toujours le
+     * Markdown ; or rendre un tableau prononçable répète l'en-tête à chaque ligne —
+     * mesuré jusqu'à 1,56× sur des réponses réelles.
+     */
+    public function testUnTableauLuAVoixHauteEstPlusLongQueSonMarkdownEtPasseQuandMeme(): void
+    {
+        ['entreprise' => $e, 'owner' => $owner, 'conversation' => $c, 'reponse' => $m] = $this->semer();
+        $this->client->loginUser($owner);
+        $http = new MockHttpClient(static fn (): MockResponse => new MockResponse([" "]));
+        $this->doublures([$this->elevenLabs($http)]);
+
+        // 1,5 fois la réponse : l'ordre de grandeur mesuré d'un tableau prononcé.
+        $oral = str_repeat('a', (int) round(1.5 * mb_strlen(self::REPONSE)));
+        $this->poster($e, $c, $m, $oral);
+        self::assertResponseIsSuccessful();
+
+        // Au-delà, ce n'est plus une mise en voix : c'est un autre texte.
+        $this->poster($e, $c, $m, str_repeat('a', 4 * mb_strlen(self::REPONSE)));
+        self::assertResponseStatusCodeSame(400);
+    }
+
     public function testUnTexteQuiNEstPasLaReponseEstRefuse(): void
     {
         ['entreprise' => $e, 'owner' => $owner, 'conversation' => $c, 'reponse' => $m] = $this->semer();
         $this->client->loginUser($owner);
         $this->doublures();
 
-        $this->poster($e, $c, $m, self::TEXTE_ORAL . str_repeat(' Et encore autre chose à faire lire.', 5));
+        // Très au-delà de l'expansion d'un tableau prononcé (mesurée à 1,56× au pire) :
+        // ce n'est plus la réponse mise en voix, c'est un autre texte.
+        $this->poster($e, $c, $m, self::TEXTE_ORAL . str_repeat(' Et encore autre chose à faire lire.', 50));
 
         self::assertResponseStatusCodeSame(400);
     }

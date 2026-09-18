@@ -60,6 +60,33 @@ test('pendant que Ket parle, il faut une voix plus forte pour l’interrompre', 
     assert.ok(d.seuil(true) > d.seuil(false));
 });
 
+/**
+ * LE DÉFAUT QUI RENDAIT L'INTERRUPTION IMPOSSIBLE (signalé le 2026-09-19 : « elle
+ * continue à parler pendant que moi aussi je parle »).
+ *
+ * Le haut-parleur revient toujours un peu dans le micro, sous le seuil relevé. Cette
+ * fuite était apprise comme du bruit ambiant : le fond montait pendant toute la réponse,
+ * et le seuil d'interruption — un multiple de ce fond — montait avec lui. Il fallait
+ * crier, et de plus en plus fort à mesure que Ket parlait.
+ */
+test('la voix de Ket n’est jamais apprise comme du bruit de fond', () => {
+    const d = creerDetecteur();
+    let t = 0;
+    for (; t < 3000; t += 50) d.pousser(0.001, t); // pièce calme : le fond descend
+    const seuilAvant = d.seuil(true);
+
+    // Ket parle deux secondes : sa fuite dans le micro reste sous le seuil relevé.
+    for (let i = 0; i < 40; i++, t += 50) {
+        assert.equal(d.pousser(0.008, t, true), null, 'le haut-parleur ne se coupe pas lui-même');
+    }
+    assert.equal(d.seuil(true), seuilAvant, 'le seuil d’interruption n’a pas bougé d’un iota');
+
+    // L'utilisateur parle par-dessus, sans hausser le ton : la coupure a lieu.
+    assert.equal(d.pousser(0.02, t, true), null);
+    t += 200;
+    assert.equal(d.pousser(0.02, t, true), 'debut', 'une voix ordinaire suffit à couper Ket');
+});
+
 test('une phrase interminable est transcrite sans attendre le silence', () => {
     const d = creerDetecteur({ phraseMaxMs: 2000 });
     let t = 0;

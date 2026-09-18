@@ -407,6 +407,13 @@ export default class extends Controller {
             if (complets.length === 0 || this.session.etat === ETATS.REFLEXION) return;
             const texte = fusionnerTranscripts(complets.map((r) => r[0].transcript));
             if (texte.trim() === '') return;
+
+            // PARLER PENDANT QUE KET PARLE, C'EST L'INTERROMPRE — et la phrase ne doit pas
+            // se perdre pour autant. Le micro analysé le voit d'ordinaire le premier, mais
+            // il peut manquer une voix douce ; ici, la reconnaissance a compris une phrase
+            // ENTIÈRE : le doute n'est plus permis, on coupe et on enchaîne.
+            if (this.session.etat === ETATS.PAROLE) this._evenement('voix-detectee');
+
             this._evenement('texte-entendu', { texte });
         };
         reconnaissance.onend = () => {
