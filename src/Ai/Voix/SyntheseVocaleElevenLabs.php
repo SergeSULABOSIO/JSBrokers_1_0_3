@@ -34,6 +34,10 @@ final class SyntheseVocaleElevenLabs implements FournisseurDeVoix
         #[Autowire(env: 'ELEVENLABS_API_KEY')] private readonly string $apiKey,
         #[Autowire(env: 'ELEVENLABS_VOIX_KET')] private readonly string $voix,
         #[Autowire(env: 'ELEVENLABS_MODELE')] private readonly string $modele,
+        // MODE LIVE : le modèle rapide. Mesuré le 2026-09-17 sur la voix Bella —
+        // premier son à 1,2 s contre 2,3 s, et deux fois moins de crédits. Dans une
+        // conversation parlée, cette seconde compte plus que la richesse de diction.
+        #[Autowire(env: 'ELEVENLABS_MODELE_LIVE')] private readonly string $modeleLive,
         #[Autowire(env: 'AI_ENGINE')] private readonly string $moteurForce = '',
     ) {
     }
@@ -54,7 +58,12 @@ final class SyntheseVocaleElevenLabs implements FournisseurDeVoix
             && strtolower(trim($this->moteurForce)) !== 'simulated';
     }
 
-    public function flux(string $texte): \Generator
+    public function modele(bool $vitesse = false): string
+    {
+        return $vitesse && trim($this->modeleLive) !== '' ? $this->modeleLive : $this->modele;
+    }
+
+    public function flux(string $texte, bool $vitesse = false): \Generator
     {
         $texte = trim($texte);
         if ($texte === '' || !$this->estDisponible()) {
@@ -70,7 +79,7 @@ final class SyntheseVocaleElevenLabs implements FournisseurDeVoix
                 'headers' => ['xi-api-key' => $this->apiKey, 'content-type' => 'application/json', 'accept' => 'audio/pcm'],
                 'json'    => [
                     'text'           => $texte,
-                    'model_id'       => $this->modele,
+                    'model_id'       => $this->modele($vitesse),
                     'language_code'  => 'fr',
                     'voice_settings' => self::REGLAGES,
                 ],

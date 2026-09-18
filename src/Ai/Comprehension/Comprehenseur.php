@@ -54,6 +54,17 @@ final class Comprehenseur
     private const TIMEOUT_SECONDES = 20;
 
     /**
+     * DURÉE TOTALE de l'appel, et pas seulement délai d'inactivité.
+     *
+     * Le `timeout` d'HttpClient ne compte que les silences du réseau : un flux qui
+     * trickle indéfiniment ne l'atteint jamais. Mesuré sur les journaux du
+     * 2026-09-17 : des appels coupés à 20, 34, 35 secondes — pour une phase qui
+     * n'améliore qu'une reformulation, et dont l'échec est sans conséquence. Au-delà
+     * de huit secondes, elle coûte plus qu'elle ne rapporte.
+     */
+    private const DUREE_MAX_SECONDES = 8;
+
+    /**
      * Réponses par lesquelles un utilisateur ACQUIESCE. Elles ne veulent rien dire
      * seules, et tout dire après le tour précédent : les soumettre au comprenant,
      * c'est lui garantir une fausse ambiguïté sur le message le plus clair du fil.
@@ -284,7 +295,8 @@ final class Comprehenseur
             ] + ($declarations === []
                 ? []
                 : ['tools' => [['functionDeclarations' => $declarations]]])),
-            'timeout' => self::TIMEOUT_SECONDES,
+            'timeout'      => self::TIMEOUT_SECONDES,
+            'max_duration' => self::DUREE_MAX_SECONDES,
         ])->toArray();
     }
 

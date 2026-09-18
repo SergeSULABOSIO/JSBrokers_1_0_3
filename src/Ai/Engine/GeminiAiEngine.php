@@ -9,6 +9,7 @@ use App\Ai\AiReply;
 use App\Ai\AiRequest;
 use App\Ai\Comprehension\ClarificationEnAttente;
 use App\Ai\Comprehension\Comprehenseur;
+use App\Ai\Comprehension\DemandeComprise;
 use App\Ai\Debit\BudgetDebit;
 use App\Ai\Mutation\MotifDeRefus;
 use App\Ai\Mutation\PlanEnAttente;
@@ -202,8 +203,13 @@ final class GeminiAiEngine implements AiEngineInterface
         // Demande ambiguë => on s'arrête ICI. Ni planification ni rédaction : le
         // message aura coûté un seul appel, le plus léger des trois, au lieu de deux
         // appels pleins pour une réponse à côté suivie d'une relance.
+        // MODE LIVE : pas de phase de compréhension. Elle coûte 8 s en médiane et
+        // n'aboutit qu'une fois sur deux ; à l'oral, ce silence est intenable et son
+        // apport — reformuler une demande ambiguë — se règle d'un mot de l'utilisateur.
         $this->journal->debutDePhase(Phase::COMPREHENSION);
-        $comprise = $this->comprehenseur->comprendre($request, $contents);
+        $comprise = $request->modeLive
+            ? DemandeComprise::claire($request->lastUserMessage(), DemandeComprise::ORIGINE_COURT_CIRCUIT)
+            : $this->comprehenseur->comprendre($request, $contents);
         if (!$comprise->claire) {
             return $this->conclure(
                 $request,

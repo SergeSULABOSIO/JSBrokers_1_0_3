@@ -115,6 +115,11 @@ final class TraitementDuMessage
         $debutMoteur = microtime(true);
         try {
             $aiRequest = $this->contextBuilder->build($entreprise, $invite, $conversation, $terminal);
+            // Le mode Live voyage dans le meta du message : c'est le navigateur qui sait
+            // si la question a été DITE, et lui seul.
+            if (($messageUser->getMeta()['live'] ?? false) === true) {
+                $aiRequest = $aiRequest->enModeLive();
+            }
             $reply = $this->aiEngine->reply($aiRequest);
         } catch (\Throwable $e) {
             $quotaEpuise = AiEngineFailure::estLimiteDeDebit($e);

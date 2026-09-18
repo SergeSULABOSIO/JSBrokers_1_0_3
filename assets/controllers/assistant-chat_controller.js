@@ -157,6 +157,14 @@ export default class extends Controller {
     static SCRUTIN_MS = 1000;
 
     /**
+     * Cadence pendant une session Live. Une seconde d'attente supplémentaire ne se voit
+     * pas dans un chat écrit ; à l'oral, elle s'entend — c'est un blanc dans la
+     * conversation. Mesuré le 2026-09-18 : le scrutin ajoutait jusqu'à 1 s à chaque
+     * tour, pour rien. 400 ms restent très loin de saturer l'unique worker de dev.
+     */
+    static SCRUTIN_LIVE_MS = 400;
+
+    /**
      * Au-delà, sans la moindre réponse, on cesse de scruter et on le dit. Sans
      * cette borne, un worker jamais démarré ferait tourner l'onglet indéfiniment
      * en promettant une réponse qui ne viendrait pas.
@@ -274,9 +282,18 @@ export default class extends Controller {
         // LE MODE LIVE PARLE AU CHAT PAR ÉVÉNEMENTS. Il ne connaît ni _envoyer ni _lire :
         // il demande, et c'est le chat — seul propriétaire de son circuit d'envoi et de
         // lecture — qui exécute. Le moteur de Ket, lui, ne voit aucune différence.
+        // UNE SESSION LIVE CHANGE TROIS RYTHMES, jamais le fond : la réponse s'affiche
+        // d'un coup, le scrutin s'accélère, et la voix passe au modèle rapide. Le chat
+        // l'apprend par cet événement — il ne connaît toujours pas la couche Live.
+        this._live = false;
+        this._onLiveSession = (event) => { this._live = event.detail?.actif === true; };
+        this.element.addEventListener('ket-live:session', this._onLiveSession);
+
         this._onLiveQuestion = (event) => {
             const texte = String(event.detail?.texte ?? '').trim();
-            if (texte !== '') this._envoyer(texte);
+            // `live: true` dit au serveur de sauter la phase de compréhension : à l'oral,
+            // l'utilisateur reformule lui-même, et cette phase coûtait 8 s médianes.
+            if (texte !== '') this._envoyer(texte, { live: true });
         };
         this._onLiveLire = (event) => {
             const bulle = event.detail?.bulle;
@@ -560,6 +577,9 @@ export default class extends Controller {
             this.messagesTarget.removeEventListener('mouseout', this._onCtxTipOut);
         }
         document.removeEventListener('mousemove', this._onCtxTipMove);
+        if (this._onLiveSession) {
+            this.element.removeEventListener('ket-live:session', this._onLiveSession);
+        }
         if (this._onLiveQuestion) {
             this.element.removeEventListener('ket-live:question', this._onLiveQuestion);
             this.element.removeEventListener('ket-live:lire', this._onLiveLire);
@@ -902,7 +922,15 @@ export default class extends Controller {
             compteurEtape({ tokensCumul: activite ? activite.jetonsIa : 0 }),
         );
         this.typingTarget.hidden = false;
-        const bulle = await this.typeMessage(data.assistant.contenu, data.assistant.refus === true, data.assistant.id);
+        const bulle = await this.typeMessage(
+            data.assistant.contenu,
+            data.assistant.refus === true,
+            data.assistant.id,
+            // EN LIVE, PAS DE MACHINE À ÉCRIRE : la voix ne peut être demandée qu'une
+            // fois la bulle rendue, et le déploiement mot à mot retardait ce moment de
+            // six secondes. À l'écrit il fait patienter ; à l'oral il fait attendre.
+            { instantane: this._live },
+        );
         this.renderActivite(bulle, activite);
         await this.executeActions(data.assistant.actions);
         // Le mode Live attend ce signal pour faire lire la réponse. Émis pour TOUTE
@@ -923,9 +951,14 @@ export default class extends Controller {
      * setTimeout récursif et JAMAIS setInterval : une réponse lente ne doit pas
      * faire s'empiler les requêtes suivantes.
      */
-    _planifierScrutin(delai = this.constructor.SCRUTIN_MS) {
+    _planifierScrutin(delai = this.cadenceDuScrutin()) {
         if (this._scrutinTimer) clearTimeout(this._scrutinTimer);
         this._scrutinTimer = setTimeout(() => this._scruter(), delai);
+    }
+
+    /** Le rythme du scrutin : accéléré tant qu'une session Live est ouverte. */
+    cadenceDuScrutin() {
+        return this._live ? this.constructor.SCRUTIN_LIVE_MS : this.constructor.SCRUTIN_MS;
     }
 
     async _scruter() {
@@ -3652,9 +3685,16 @@ export default class extends Controller {
      * Markdown partiel (ex. « **gras » non fermé) reste affiché tel quel
      * jusqu'à ce que sa fermeture arrive dans un mot suivant — pas de crash.
      */
-    async typeMessage(texte, refus = false, idMessage = null) {
+    async typeMessage(texte, refus = false, idMessage = null, options = {}) {
         const bubble = this.appendMessage('assistant', '', refus, null, null, { idMessage });
         const content = bubble.querySelector('.aic-msg-text');
+        // Posé d'un coup : ni boucle, ni attente, ni masquage au lecteur d'écran.
+        if (options.instantane === true) {
+            this.rendreAssistant(content, texte);
+            this.scrollToBottom();
+
+            return bubble;
+        }
         // Le fil est une zone aria-live : on masque la bulle pendant le
         // déploiement pour éviter une annonce du lecteur d'écran à chaque mot,
         // puis on la révèle entière (une seule annonce).
@@ -4055,7 +4095,9 @@ export default class extends Controller {
                 const reponse = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ texte: morceau }),
+                    // `vitesse` en Live : le modèle rapide rend le premier son en ~1 s
+                    // au lieu de 2,4 s, pour la moitié des crédits.
+                    body: JSON.stringify({ texte: morceau, vitesse: this._live === true }),
                     signal: controleur.signal,
                 });
                 clearTimeout(garde);

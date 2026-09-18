@@ -68,7 +68,11 @@ final class FileDeTraitement
             // C'est le seul instant où il est connaissable : le traitement peut
             // avoir lieu dans un worker, plusieurs secondes plus tard, dans un
             // processus qui n'a jamais vu la requête. Cf. AssistantTache::$terminal.
-            ->setTerminal($this->terminal->courant());
+            ->setTerminal($this->terminal->courant())
+            // MODE LIVE : instantane lui aussi. Le message porteur est transitoire (le
+            // vrai nait au drainage), le drapeau doit donc voyager par la tache - sinon
+            // il se perdrait entre l'acceptation et le worker.
+            ->setLive(($question->getMeta()['live'] ?? false) === true);
 
         $this->em->persist($tache);
         $this->em->flush();

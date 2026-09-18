@@ -211,7 +211,7 @@ class AssistantRafaleTest extends WebTestCase
         return (int) $conversation->getId();
     }
 
-    private function envoyer(int $idEntreprise, int $idConversation, string $contenu): array
+    private function envoyer(int $idEntreprise, int $idConversation, string $contenu, array $extra = []): array
     {
         $this->client->request(
             'POST',
@@ -219,7 +219,7 @@ class AssistantRafaleTest extends WebTestCase
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
-            json_encode(['contenu' => $contenu])
+            json_encode(['contenu' => $contenu] + $extra)
         );
 
         return json_decode((string) $this->client->getResponse()->getContent(), true) ?: [];
@@ -313,6 +313,39 @@ class AssistantRafaleTest extends WebTestCase
             $this->fil($conversation),
             "Le fil reste VIDE : rien n'y entre avant son tour, ni question ni réponse."
         );
+    }
+
+    /**
+     * UNE QUESTION DITE À VOIX HAUTE RESTE DITE, JUSQU'AU WORKER.
+     *
+     * Le message accepté est transitoire : le vrai naît au drainage, éventuellement
+     * dans un autre processus, des secondes plus tard. Sans cette colonne sur la tâche,
+     * le mode Live se perdait exactement là — la compréhension repartait, et les huit
+     * secondes qu'on vient de supprimer revenaient sans que rien ne le signale.
+     */
+    public function testLeModeLiveVoyageDeLAcceptationJusquAuFil(): void
+    {
+        $seed = $this->seed();
+        $conversation = $this->conversation($seed);
+
+        $this->envoyer($seed['entreprise'], $conversation, 'Quel est le taux de la Caution ?', ['live' => true]);
+        $this->envoyer($seed['entreprise'], $conversation, 'Et pour la RC Pro ?');
+
+        $taches = $this->tachesDe($conversation);
+        self::assertTrue($taches[0]->estLive(), 'La question dite est marquée dès l’acceptation.');
+        self::assertFalse($taches[1]->estLive(), 'Une question TAPÉE ne l’est jamais : elle garde sa compréhension.');
+
+        $this->drainer($conversation);
+
+        $questions = array_values(array_filter(
+            $this->em()->getRepository(AssistantMessage::class)->findBy(
+                ['conversation' => $conversation],
+                ['id' => 'ASC'],
+            ),
+            static fn (AssistantMessage $m) => $m->getRole() === AssistantMessage::ROLE_USER,
+        ));
+        self::assertSame(true, $questions[0]->getMeta()['live'] ?? null, 'Le drapeau doit survivre au drainage.');
+        self::assertNull($questions[1]->getMeta()['live'] ?? null);
     }
 
     /**

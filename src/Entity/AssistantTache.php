@@ -109,6 +109,22 @@ class AssistantTache
     #[ORM\Column(length: 16, nullable: true, enumType: Terminal::class)]
     private ?Terminal $terminal = null;
 
+    /**
+     * LA QUESTION A-T-ELLE ÉTÉ DITE À VOIX HAUTE ?
+     *
+     * Instantané pris à l'envoi, pour la même raison que le terminal ci-dessus : le
+     * traitement peut avoir lieu dans un worker, plusieurs secondes plus tard, dans un
+     * processus qui n'a jamais vu la requête — et seul le navigateur sait qu'une session
+     * Live était ouverte.
+     *
+     * Ce que cela change, et rien d'autre : la phase de compréhension est sautée (cf.
+     * AiRequest::modeLive). Mêmes outils, mêmes prompts, même boussole, même
+     * facturation. `false` par défaut : les tâches déjà en file au moment du
+     * déploiement se traitent comme avant.
+     */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $live = false;
+
     /** Le message cité (« Répondre » du menu de bulle), le cas échéant. */
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
@@ -318,6 +334,18 @@ class AssistantTache
     public function setTerminal(?Terminal $terminal): static
     {
         $this->terminal = $terminal;
+
+        return $this;
+    }
+
+    public function estLive(): bool
+    {
+        return $this->live;
+    }
+
+    public function setLive(bool $live): static
+    {
+        $this->live = $live;
 
         return $this;
     }

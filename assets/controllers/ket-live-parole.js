@@ -20,8 +20,12 @@
 /** Durée de voix continue avant de déclarer que la phrase commence. */
 export const DEBUT_MS = 150;
 
-/** Silence qui clôt une phrase : assez long pour laisser respirer. */
-export const FIN_MS = 900;
+/**
+ * Silence qui clôt une phrase : assez long pour laisser respirer, assez court pour ne
+ * pas ajouter d'attente. Ramené de 900 à 700 ms le 2026-09-18, dans la campagne qui a
+ * fait tomber le tour de 25 s à une dizaine.
+ */
+export const FIN_MS = 700;
 
 /** Une phrase ne dépasse pas cette durée : au-delà, on transcrit ce qui a été dit. */
 export const PHRASE_MAX_MS = 30000;

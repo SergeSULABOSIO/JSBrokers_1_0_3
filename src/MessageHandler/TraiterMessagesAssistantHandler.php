@@ -114,7 +114,10 @@ final class TraiterMessagesAssistantHandler
             // Instantané pris à l'ENVOI, recopié tel quel : ce que l'utilisateur
             // détache pendant l'attente ne réécrit pas ce qu'il a envoyé.
             ->setContexteObjets($tache->getContexteObjets())
-            ->setFichiersJoints($tache->getFichiersJoints());
+            ->setFichiersJoints($tache->getFichiersJoints())
+            // Le mode Live redevient ce qu'il etait a l'envoi : c'est TraitementDuMessage
+            // qui le lira, et la trace reste lisible sur le message apres coup.
+            ->setMeta($tache->estLive() ? ['live' => true] : null);
         $conversation->addMessage($messageUser);
 
         $tache->setMessageUtilisateur($messageUser)

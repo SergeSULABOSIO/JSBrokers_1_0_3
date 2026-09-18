@@ -29,9 +29,17 @@ export const LIBELLES = {
     [ETATS.PAROLE]: 'Ket parle — parlez pour l’interrompre.',
 };
 
-/** Session neuve. */
-export function sessionInitiale() {
-    return { etat: ETATS.ARRET, oreille: 'serveur', derniereParole: '', secours: false };
+/**
+ * Session neuve.
+ *
+ * L'OREILLE PAR DÉFAUT EST CELLE DU NAVIGATEUR quand il en a une. Mesuré le
+ * 2026-09-18 : la transcription serveur coûte à peu près la durée de la phrase (3,2 s
+ * pour 3,2 s) et des crédits, là où la reconnaissance du navigateur travaille PENDANT
+ * qu'on parle — le texte est prêt à la seconde où l'on se tait. Les oreilles du
+ * serveur restent le repli : Firefox, navigateurs sans reconnaissance, ou panne.
+ */
+export function sessionInitiale(oreille = 'navigateur') {
+    return { etat: ETATS.ARRET, oreille, derniereParole: '', secours: false };
 }
 
 /**
@@ -45,15 +53,21 @@ export function sessionInitiale() {
  * @returns {{etat: string, oreille: string, derniereParole: string, secours: boolean, actions: string[]}}
  */
 export function transition(session, evenement, charge = {}) {
-    const s = { ...sessionInitiale(), ...session, actions: [] };
+    const s = { ...sessionInitiale(session?.oreille), ...session, actions: [] };
     const avec = (etat, actions = [], champs = {}) => ({ ...s, ...champs, etat, actions });
 
     switch (evenement) {
         case 'demarrer':
-            return s.etat === ETATS.ARRET ? avec(ETATS.ECOUTE, ['ouvrir-micro', 'precharger-intermedes']) : s;
+            if (s.etat !== ETATS.ARRET) return s;
+            return avec(ETATS.ECOUTE, [
+                'ouvrir-micro',
+                'precharger-intermedes',
+                'garder-ecran-allume',
+                ...(s.oreille === 'navigateur' ? ['oreille-navigateur'] : []),
+            ]);
 
         case 'arreter':
-            return s.etat === ETATS.ARRET ? s : avec(ETATS.ARRET, ['fermer-micro', 'couper-voix']);
+            return s.etat === ETATS.ARRET ? s : avec(ETATS.ARRET, ['fermer-micro', 'couper-voix', 'liberer-ecran']);
 
         // L'utilisateur parle : pendant que Ket parle, c'est une INTERRUPTION.
         case 'voix-detectee':
@@ -62,24 +76,34 @@ export function transition(session, evenement, charge = {}) {
             }
             return s;
 
+        // Le serveur écoute : la phrase part en transcription, et un intermède comble
+        // ce temps-là aussi. Avec l'oreille du navigateur, le texte arrive directement
+        // (« texte-entendu ») et cet état ne dure pas.
         case 'phrase-terminee':
-            return s.etat === ETATS.ECOUTE ? avec(ETATS.TRANSCRIPTION, ['transcrire']) : s;
+            return s.etat === ETATS.ECOUTE ? avec(ETATS.TRANSCRIPTION, ['transcrire', 'programmer-intermedes']) : s;
 
         // Rien n'a été compris : on réécoute, sans déranger Ket.
         case 'silence':
-            return s.etat === ETATS.TRANSCRIPTION ? avec(ETATS.ECOUTE) : s;
+            return s.etat === ETATS.TRANSCRIPTION ? avec(ETATS.ECOUTE, ['couper-intermedes']) : s;
 
+        // L'oreille du navigateur rend le texte sans passer par la transcription serveur :
+        // l'écoute mène donc directement à la réflexion.
         case 'texte-entendu': {
-            if (s.etat !== ETATS.TRANSCRIPTION) return s;
+            if (s.etat !== ETATS.TRANSCRIPTION && s.etat !== ETATS.ECOUTE) return s;
             const texte = String(charge.texte ?? '').trim();
-            if (texte === '') return avec(ETATS.ECOUTE);
+            if (texte === '') return avec(ETATS.ECOUTE, ['couper-intermedes']);
             return avec(ETATS.REFLEXION, ['envoyer-question', 'programmer-intermedes'], { derniereParole: texte });
         }
 
         // Les oreilles du serveur ne répondent pas : le navigateur écoute lui-même.
         case 'oreille-indisponible':
             if (s.etat !== ETATS.TRANSCRIPTION) return s;
-            return avec(ETATS.ECOUTE, ['oreille-navigateur'], { oreille: 'navigateur', secours: true });
+            return avec(ETATS.ECOUTE, ['oreille-navigateur', 'couper-intermedes'], { oreille: 'navigateur', secours: true });
+
+        // La reconnaissance du navigateur manque ou refuse : les oreilles du serveur
+        // prennent le relais, phrase par phrase.
+        case 'oreille-serveur':
+            return s.etat === ETATS.ARRET ? s : avec(s.etat, [], { oreille: 'serveur' });
 
         case 'reponse-affichee':
             return s.etat === ETATS.REFLEXION ? avec(ETATS.PAROLE, ['couper-intermedes', 'lire-reponse']) : s;

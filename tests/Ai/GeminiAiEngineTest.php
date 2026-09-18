@@ -232,6 +232,46 @@ class GeminiAiEngineTest extends TestCase
     }
 
     /**
+     * LE MODE LIVE NE PAIE PAS LA COMPRÉHENSION.
+     *
+     * Mesuré sur les journaux du 2026-09-17 (15 messages) : médiane 8,2 s, maximum
+     * 34,8 s, et 8 appels sur 15 coupés par un « Idle timeout » — du temps mort pur,
+     * qui s'entend dans une conversation parlée. Cette phase ne fait que REFORMULER une
+     * demande ambiguë : à l'oral, l'utilisateur se corrige lui-même à la phrase
+     * suivante, sans attendre. Les outils, les prompts et la boussole, eux, ne changent
+     * pas d'une ligne — c'est bien la MÊME Ket qui répond.
+     */
+    public function testEnModeLiveLaComprehensionEstSautee(): void
+    {
+        $appelsDeComprehension = 0;
+        $travail = 0;
+        $http = new MockHttpClient(function () use (&$travail) {
+            ++$travail;
+
+            return new MockResponse(json_encode(self::texte('La Caution est à 15 %.')));
+        });
+
+        $moteur = $this->makeEngine($http, appelsDeComprehension: $appelsDeComprehension);
+        $reply = $moteur->reply($this->makeRequest('Quel est le taux de la Caution ?')->enModeLive());
+
+        self::assertSame(0, $appelsDeComprehension, 'Aucune compréhension ne doit être demandée en Live.');
+        self::assertSame(1, $travail, 'Le travail, lui, a bien lieu : ici une réponse directe, sans outil.');
+        self::assertStringContainsString('La Caution est à 15 %.', $reply->content);
+    }
+
+    /** À L'ÉCRIT, RIEN NE CHANGE : la compréhension est toujours demandée. */
+    public function testHorsModeLiveLaComprehensionEstToujoursDemandee(): void
+    {
+        $appelsDeComprehension = 0;
+        $http = new MockHttpClient(fn () => new MockResponse(json_encode(self::texte('Réponse.'))));
+
+        $this->makeEngine($http, appelsDeComprehension: $appelsDeComprehension)
+            ->reply($this->makeRequest('Quel est le taux de la Caution ?'));
+
+        self::assertSame(1, $appelsDeComprehension);
+    }
+
+    /**
      * L'intention part vers la PLANIFICATION, à côté du message d'origine — jamais à
      * sa place. Le prompt est construit par le contextBuilder, on vérifie donc que la
      * requête qui lui est passée porte bien ce qui a été compris.
@@ -531,11 +571,18 @@ class GeminiAiEngineTest extends TestCase
         JournalTokens $journal,
         BudgetDebit $budget,
         array $sortie = ['claire' => true, 'intention' => 'Question de test'],
+        ?int &$appels = null,
     ): Comprehenseur {
-        $http = new MockHttpClient(static fn (): MockResponse => new MockResponse(json_encode([
-            'candidates'    => [['content' => ['parts' => [['text' => json_encode($sortie, JSON_THROW_ON_ERROR)]]]]],
-            'usageMetadata' => ['promptTokenCount' => 300],
-        ], JSON_THROW_ON_ERROR)));
+        $http = new MockHttpClient(static function () use ($sortie, &$appels): MockResponse {
+            if ($appels !== null) {
+                ++$appels;
+            }
+
+            return new MockResponse(json_encode([
+                'candidates'    => [['content' => ['parts' => [['text' => json_encode($sortie, JSON_THROW_ON_ERROR)]]]]],
+                'usageMetadata' => ['promptTokenCount' => 300],
+            ], JSON_THROW_ON_ERROR));
+        });
 
         return new Comprehenseur(
             $http,
@@ -562,6 +609,7 @@ class GeminiAiEngineTest extends TestCase
         ?AiContextBuilder $contextBuilder = null,
         ?array $comprehension = null,
         string $replis = '',
+        ?int &$appelsDeComprehension = null,
     ): GeminiAiEngine {
         if ($contextBuilder === null) {
             $contextBuilder = $this->createMock(AiContextBuilder::class);
@@ -598,8 +646,8 @@ class GeminiAiEngineTest extends TestCase
             new AppelDOutilEnTexte(),
             new OutilsDePlan([]),
             $comprehension === null
-                ? $this->comprehenseurFige($contextBuilder, $journal, $budget ?? $this->makeBudget())
-                : $this->comprehenseurFige($contextBuilder, $journal, $budget ?? $this->makeBudget(), $comprehension),
+                ? $this->comprehenseurFige($contextBuilder, $journal, $budget ?? $this->makeBudget(), appels: $appelsDeComprehension)
+                : $this->comprehenseurFige($contextBuilder, $journal, $budget ?? $this->makeBudget(), $comprehension, $appelsDeComprehension),
             function (int $secondes) use ($dormir): void {
                 $this->attentes[] = $secondes;
                 if ($dormir !== null) {
