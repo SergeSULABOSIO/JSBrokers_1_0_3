@@ -75,7 +75,13 @@ final class SyntheseVocaleGemini implements FournisseurDeVoix
      *
      * @return \Generator<int, string, mixed, string>
      */
-    public function flux(string $texte): \Generator
+    /** Gemini n'a qu'un enchaînement de modèles : la demande de vitesse ne change rien. */
+    public function modele(bool $vitesse = false): string
+    {
+        return $this->listeModeles()[0] ?? '';
+    }
+
+    public function flux(string $texte, bool $vitesse = false): \Generator
     {
         $texte = trim($texte);
         if ($texte === '' || !$this->estDisponible()) {

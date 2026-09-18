@@ -41,6 +41,21 @@ final class AiRequest
          * n'a aucun autre moyen de la connaître : elle ne voit que le fil.
          */
         public readonly bool $decisionEnAttente = false,
+        /**
+         * Le tour vient-il du MODE LIVE (conversation orale) ?
+         *
+         * Une seule conséquence, et elle est de rythme : la phase de compréhension est
+         * sautée. Mesuré sur les journaux du 2026-09-17 : 8,2 s en médiane, jusqu'à
+         * 34,8 s, et un échec une fois sur deux (« Idle timeout » vers Google) — une
+         * éternité dans une conversation parlée, pour une phase conçue « fail-open »,
+         * dont l'absence ne change PAS la réponse. À l'oral, l'utilisateur corrige
+         * lui-même de vive voix, ce qui est plus rapide que n'importe quelle
+         * reformulation.
+         *
+         * Rien d'autre ne bouge : mêmes outils, mêmes prompts, même boussole, même
+         * facturation. La connaissance métier de Ket est intacte.
+         */
+        public readonly bool $modeLive = false,
     ) {
     }
 
@@ -53,7 +68,7 @@ final class AiRequest
      */
     public function withComprehension(DemandeComprise $comprise): self
     {
-        return new self($this->systemContext, $this->messages, $this->scope, $this->piecesNatives, $comprise, $this->decisionEnAttente);
+        return new self($this->systemContext, $this->messages, $this->scope, $this->piecesNatives, $comprise, $this->decisionEnAttente, $this->modeLive);
     }
 
     /**
@@ -67,7 +82,13 @@ final class AiRequest
      */
     public function withDecisionEnAttente(bool $enAttente = true): self
     {
-        return new self($this->systemContext, $this->messages, $this->scope, $this->piecesNatives, $this->comprise, $enAttente);
+        return new self($this->systemContext, $this->messages, $this->scope, $this->piecesNatives, $this->comprise, $enAttente, $this->modeLive);
+    }
+
+    /** La même requête, sachant qu'elle vient d'une conversation orale. */
+    public function enModeLive(bool $live = true): self
+    {
+        return new self($this->systemContext, $this->messages, $this->scope, $this->piecesNatives, $this->comprise, $this->decisionEnAttente, $live);
     }
 
     /** Dernier message de l'utilisateur (celui auquel le moteur doit répondre). */

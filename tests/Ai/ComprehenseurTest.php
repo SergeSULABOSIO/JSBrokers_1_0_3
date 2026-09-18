@@ -45,6 +45,9 @@ class ComprehenseurTest extends TestCase
 
     /** Appels HTTP réellement émis par la phase — la mesure qui compte ici. */
     private int $appelsHttp = 0;
+    
+    /** @var list<array> options vues par le client HTTP factice */
+    private array $optionsHttp = [];
 
     private function scope(?AssistantConversation $conversation = null): AiScope
     {
@@ -131,9 +134,10 @@ class ComprehenseurTest extends TestCase
     private function comprehenseur(array $reponses, array $outils = []): Comprehenseur
     {
         $this->appelsHttp = 0;
-        $http = new MockHttpClient(function () use ($reponses): MockResponse {
+        $http = new MockHttpClient(function (string $methode, string $url, array $options) use ($reponses): MockResponse {
             $reponse = $reponses[$this->appelsHttp] ?? throw new \RuntimeException('Appel HTTP non prévu par le test.');
             ++$this->appelsHttp;
+            $this->optionsHttp[] = $options;
 
             return $reponse;
         });
@@ -156,6 +160,23 @@ class ComprehenseurTest extends TestCase
             'gm-test',
             'gemini-flash-lite-test',
         );
+    }
+
+    /**
+     * LA COMPRÉHENSION NE S'ÉTERNISE PLUS. Relevé sur les journaux du 2026-09-17 : des
+     * appels coupés à 34,8 s, huit fois sur quinze en « Idle timeout ». Le `timeout`
+     * d'HttpClient ne compte que les SILENCES du réseau — un flux lent mais régulier
+     * passe au travers ; seule une durée maximale borne vraiment l'attente. Au-delà de
+     * huit secondes, cette phase coûte plus qu'elle ne rapporte.
+     */
+    public function testLaComprehensionEstBorneeDansLeTemps(): void
+    {
+        $this->comprehenseur([
+            self::json(['claire' => true, 'intention' => 'Compter les clients']),
+        ])->comprendre($this->requete('combien de clients ?'));
+
+        self::assertEqualsWithDelta(8, $this->optionsHttp[0]['max_duration'] ?? null, 0.01, 'la durée totale doit être bornée');
+        self::assertEqualsWithDelta(20, $this->optionsHttp[0]['timeout'] ?? null, 0.01, 'le silence réseau garde sa propre borne');
     }
 
     public function testUneDemandeClaireTransmetSonIntention(): void

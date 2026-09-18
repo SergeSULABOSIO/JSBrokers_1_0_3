@@ -147,7 +147,15 @@ class AssistantIaLiveTest extends WebTestCase
 
     private function voixElevenLabs(MockHttpClient $http): SyntheseVocaleElevenLabs
     {
-        return new SyntheseVocaleElevenLabs($http, new MemoireDEpuisement(new ArrayAdapter()), new NullLogger(), 'xi-test', 'voix-test', 'eleven_flash_v2_5');
+        return new SyntheseVocaleElevenLabs(
+            $http,
+            new MemoireDEpuisement(new ArrayAdapter()),
+            new NullLogger(),
+            'xi-test',
+            'voix-test',
+            'eleven_multilingual_v2',
+            'eleven_flash_v2_5',
+        );
     }
 
     private function transcrire(Entreprise $e, string $wav): array

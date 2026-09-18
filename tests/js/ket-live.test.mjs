@@ -6,7 +6,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { creerDetecteur, energie, PLANCHER } from '../../assets/controllers/ket-live-parole.js';
+import { creerDetecteur, energie, FIN_MS, PLANCHER } from '../../assets/controllers/ket-live-parole.js';
+import { jalon, nouveauTour, resumeDuTour, totalDuTour } from '../../assets/controllers/ket-live-chrono.js';
 import { assembler, duree, encoderWav, reechantillonner, TAUX_OREILLE } from '../../assets/controllers/ket-live-wav.js';
 import { ENTETE_WAV } from '../../assets/controllers/assistant-voix-pcm.js';
 import { ETATS, libelleEtatLive, sessionInitiale, transition } from '../../assets/controllers/ket-live-etat.js';
@@ -103,16 +104,16 @@ test('les trames d’une phrase se mettent bout à bout, et la durée se déduit
 
 // ── Machine d'états ──────────────────────────────────────────────────────────
 
-test('un tour complet : écouter, transcrire, réfléchir, parler, réécouter', () => {
-    let s = sessionInitiale();
+test('un tour complet avec les oreilles du serveur : transcrire, réfléchir, parler, réécouter', () => {
+    let s = sessionInitiale('serveur');
     assert.equal(s.etat, ETATS.ARRET);
 
     s = transition(s, 'demarrer');
     assert.equal(s.etat, ETATS.ECOUTE);
-    assert.deepEqual(s.actions, ['ouvrir-micro', 'precharger-intermedes']);
+    assert.deepEqual(s.actions, ['ouvrir-micro', 'precharger-intermedes', 'garder-ecran-allume']);
 
     s = transition(s, 'phrase-terminee');
-    assert.deepEqual([s.etat, s.actions], [ETATS.TRANSCRIPTION, ['transcrire']]);
+    assert.deepEqual([s.etat, s.actions], [ETATS.TRANSCRIPTION, ['transcrire', 'programmer-intermedes']]);
 
     s = transition(s, 'texte-entendu', { texte: 'Quel est le taux de la Caution ?' });
     assert.equal(s.etat, ETATS.REFLEXION);
@@ -138,9 +139,36 @@ test('une transcription vide ou un silence ramènent simplement à l’écoute',
 });
 
 test('sans oreilles serveur, la session passe en écoute de secours', () => {
-    const s = transition({ ...sessionInitiale(), etat: ETATS.TRANSCRIPTION }, 'oreille-indisponible');
-    assert.deepEqual([s.etat, s.oreille, s.secours, s.actions], [ETATS.ECOUTE, 'navigateur', true, ['oreille-navigateur']]);
+    const s = transition({ ...sessionInitiale('serveur'), etat: ETATS.TRANSCRIPTION }, 'oreille-indisponible');
+    assert.deepEqual(
+        [s.etat, s.oreille, s.secours, s.actions],
+        [ETATS.ECOUTE, 'navigateur', true, ['oreille-navigateur', 'couper-intermedes']],
+    );
     assert.match(libelleEtatLive(s), /secours/);
+});
+
+test('par défaut, c’est le navigateur qui écoute — et il écoute dès le démarrage', () => {
+    assert.equal(sessionInitiale().oreille, 'navigateur');
+    const s = transition(sessionInitiale(), 'demarrer');
+    assert.deepEqual(
+        s.actions,
+        ['ouvrir-micro', 'precharger-intermedes', 'garder-ecran-allume', 'oreille-navigateur'],
+        'le micro reste ouvert : il sert à entendre l’interruption',
+    );
+});
+
+test('le texte du navigateur mène droit à la réflexion, sans étape de transcription', () => {
+    const ecoute = transition(sessionInitiale(), 'demarrer');
+    const s = transition(ecoute, 'texte-entendu', { texte: 'Quelles garanties pour la RC Pro ?' });
+    assert.equal(s.etat, ETATS.REFLEXION);
+    assert.deepEqual(s.actions, ['envoyer-question', 'programmer-intermedes']);
+    assert.equal(s.derniereParole, 'Quelles garanties pour la RC Pro ?');
+});
+
+test('un navigateur sans reconnaissance bascule sur les oreilles du serveur', () => {
+    const s = transition(transition(sessionInitiale(), 'demarrer'), 'oreille-serveur');
+    assert.deepEqual([s.etat, s.oreille], [ETATS.ECOUTE, 'serveur']);
+    assert.equal(transition(sessionInitiale(), 'oreille-serveur').etat, ETATS.ARRET, 'hors session, rien ne bouge');
 });
 
 test('un événement hors de propos ne dérègle pas la session', () => {
@@ -154,7 +182,7 @@ test('un événement hors de propos ne dérègle pas la session', () => {
 test('arrêter ferme le micro et coupe la voix, depuis n’importe quel état', () => {
     for (const etat of [ETATS.ECOUTE, ETATS.REFLEXION, ETATS.PAROLE]) {
         const s = transition({ ...sessionInitiale(), etat }, 'arreter');
-        assert.deepEqual([s.etat, s.actions], [ETATS.ARRET, ['fermer-micro', 'couper-voix']]);
+        assert.deepEqual([s.etat, s.actions], [ETATS.ARRET, ['fermer-micro', 'couper-voix', 'liberer-ecran']]);
     }
 });
 
@@ -166,6 +194,29 @@ test('une panne ne met pas fin à la session : Ket réécoute', () => {
 test('les libellés d’état sont du texte lisible, jamais une couleur seule', () => {
     assert.match(libelleEtatLive({ etat: ETATS.REFLEXION }), /réfléchit/);
     assert.match(libelleEtatLive({ etat: ETATS.PAROLE }), /interrompre/);
+});
+
+// ── Chrono d'un tour ─────────────────────────────────────────────────────────
+
+test('le silence qui clôt une phrase n’ajoute pas une seconde d’attente', () => {
+    assert.ok(FIN_MS <= 700, 'au-delà, le blanc s’entend dans la conversation');
+});
+
+test('le chrono répartit l’attente entre les étapes, sans en perdre une milliseconde', () => {
+    let tour = nouveauTour(1000);
+    tour = jalon(tour, 'transcription', 1200);
+    tour = jalon(tour, 'reflexion', 9600);
+
+    assert.deepEqual(tour.etapes, { transcription: 200, reflexion: 8400 });
+    assert.equal(totalDuTour(tour), 8600, 'la somme des étapes fait le tour');
+    assert.match(resumeDuTour(tour), /^8,6 s|^8\.6 s/);
+    assert.match(resumeDuTour(tour), /reflexion 8\.4|reflexion 8,4/);
+});
+
+test('une même étape revue s’ajoute, et un tour vide reste lisible', () => {
+    const tour = jalon(jalon(nouveauTour(0), 'parole', 500), 'parole', 800);
+    assert.deepEqual(tour.etapes, { parole: 800 });
+    assert.equal(resumeDuTour(nouveauTour(0)), '0.0 s');
 });
 
 // ── Intermèdes ───────────────────────────────────────────────────────────────

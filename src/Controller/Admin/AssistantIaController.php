@@ -549,6 +549,10 @@ class AssistantIaController extends AbstractController
             // tels qu'ils étaient à l'envoi (agrafe sur la bulle + annotation de
             // l'historique moteur) — la liste courante de la conversation, elle,
             // continuera d'évoluer sans réécrire ce cliché.
+            // Le mode LIVE voyage dans le meta : seul le navigateur sait si la question a
+            // été dite à voix haute, et c'est la seule chose qui change pour le moteur
+            // (la phase de compréhension est sautée, cf. AiRequest::modeLive).
+            ->setMeta(($payload['live'] ?? false) === true ? ['live' => true] : null)
             ->setContexteObjets($this->instantaneContexte($conversation))
             // Même logique pour les pièces jointes attachées à l'envoi.
             ->setFichiersJoints($this->instantaneFichiers($conversation));
@@ -1905,10 +1909,14 @@ class AssistantIaController extends AbstractController
             return $this->json(['message' => 'Le texte à lire ne correspond pas à cette réponse.'], Response::HTTP_BAD_REQUEST);
         }
 
+        // MODE LIVE : la vitesse prime sur la richesse de diction (modèle rapide,
+        // premier son en ~1 s au lieu de 2,4 s). Le modèle entre dans la clé du cache.
+        $vitesse = ($payload['vitesse'] ?? false) === true;
+
         // Déjà dit par l'une des voix configurées, dans l'ordre de préférence : la réécoute
         // ne génère rien et ne coûte rien.
         foreach ($voixDeKet->fournisseurs() as $fournisseur) {
-            $enCache = $cacheAudio->lire((int) $entreprise->getId(), VoixDeKet::identite($fournisseur), $texte);
+            $enCache = $cacheAudio->lire((int) $entreprise->getId(), VoixDeKet::identite($fournisseur, $vitesse), $texte);
             if ($enCache !== null) {
                 return new Response($enCache, Response::HTTP_OK, [
                     'Content-Type'  => 'audio/wav',
@@ -1932,12 +1940,12 @@ class AssistantIaController extends AbstractController
 
         // Le PREMIER son est attendu avant de répondre : c'est lui qui décide entre le flux
         // audio et le repli sur la voix du navigateur (503).
-        $flux = $voixDeKet->flux($texte);
+        $flux = $voixDeKet->flux($texte, $vitesse);
         if (!$flux->valid()) {
             return $this->json(['repli' => $flux->getReturn()], Response::HTTP_SERVICE_UNAVAILABLE);
         }
         // Le fournisseur qui vient de produire le premier son : c'est son audio qui se met en cache.
-        $identite = VoixDeKet::identite($voixDeKet->dernierFournisseur());
+        $identite = VoixDeKet::identite($voixDeKet->dernierFournisseur(), $vitesse);
         $nomFournisseur = $voixDeKet->dernierFournisseur()->nom();
 
         // Une lecture dure plusieurs secondes : la session ne doit pas bloquer, pendant ce

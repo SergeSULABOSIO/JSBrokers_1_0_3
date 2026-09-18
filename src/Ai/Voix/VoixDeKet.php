@@ -51,9 +51,9 @@ final class VoixDeKet
      * L'identité d'une voix dans le cache audio : deux fournisseurs, ou deux voix d'un même
      * fournisseur, ne partagent jamais un enregistrement.
      */
-    public static function identite(FournisseurDeVoix $fournisseur): string
+    public static function identite(FournisseurDeVoix $fournisseur, bool $vitesse = false): string
     {
-        return $fournisseur->nom() . ':' . $fournisseur->voix();
+        return $fournisseur->nom() . ':' . $fournisseur->voix() . ':' . $fournisseur->modele($vitesse);
     }
 
     /** Le fournisseur qui a parlé lors du dernier flux (celui dont l'audio se met en cache). */
@@ -65,12 +65,12 @@ final class VoixDeKet
     /**
      * @return \Generator<int, string, mixed, string>
      */
-    public function flux(string $texte): \Generator
+    public function flux(string $texte, bool $vitesse = false): \Generator
     {
         $this->dernier = null;
         $statuts = [];
         foreach ($this->fournisseurs() as $fournisseur) {
-            $flux = $fournisseur->flux($texte);
+            $flux = $fournisseur->flux($texte, $vitesse);
             $aParle = false;
             foreach ($flux as $morceau) {
                 if (!$aParle) {

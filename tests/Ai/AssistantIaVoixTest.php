@@ -146,7 +146,15 @@ class AssistantIaVoixTest extends WebTestCase
     /** Le vrai fournisseur ElevenLabs, sur un client HTTP factice. */
     private function elevenLabs(MockHttpClient $http): SyntheseVocaleElevenLabs
     {
-        return new SyntheseVocaleElevenLabs($http, new MemoireDEpuisement(new ArrayAdapter()), new NullLogger(), 'xi-test', 'voix-test', 'eleven_flash_v2_5');
+        return new SyntheseVocaleElevenLabs(
+            $http,
+            new MemoireDEpuisement(new ArrayAdapter()),
+            new NullLogger(),
+            'xi-test',
+            'voix-test',
+            'eleven_multilingual_v2',
+            'eleven_flash_v2_5',
+        );
     }
 
     /** Le vrai fournisseur Gemini, sur un client HTTP factice. */
@@ -165,7 +173,7 @@ class AssistantIaVoixTest extends WebTestCase
         return new MockHttpClient(static fn (): MockResponse => new MockResponse('{"detail":{"status":"quota_exceeded"}}', ['http_code' => 401]));
     }
 
-    private function poster(Entreprise $e, AssistantConversation $c, AssistantMessage $m, string $texte): void
+    private function poster(Entreprise $e, AssistantConversation $c, AssistantMessage $m, string $texte, bool $vitesse = false): void
     {
         $this->client->request(
             'POST',
@@ -173,7 +181,7 @@ class AssistantIaVoixTest extends WebTestCase
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
-            json_encode(['texte' => $texte]),
+            json_encode(['texte' => $texte, 'vitesse' => $vitesse]),
         );
     }
 
@@ -223,6 +231,37 @@ class AssistantIaVoixTest extends WebTestCase
         self::assertSame(44 + \strlen($pcm), \strlen((string) $this->client->getResponse()->getContent()));
         self::assertSame(1, $http->getRequestsCount(), 'aucune nouvelle génération');
         self::assertSame(1, $this->lignesVoix(), 'aucun nouveau débit');
+    }
+
+    /**
+     * EN LIVE, LA VOIX RAPIDE — ET SON PROPRE ENREGISTREMENT. Le modèle fait partie de
+     * l'identité de la voix : sans cela, la phrase lue en conversation et la même
+     * phrase écoutée à l'écrit se partageraient une entrée de cache, et l'on entendrait
+     * l'une à la place de l'autre.
+     */
+    public function testEnModeVitesseLeModeleRapideEstDemandeEtLEnregistrementEstDistinct(): void
+    {
+        ['entreprise' => $e, 'owner' => $owner, 'conversation' => $c, 'reponse' => $m] = $this->semer();
+        $this->client->loginUser($owner);
+        $this->client->disableReboot();
+        $modeles = [];
+        $http = new MockHttpClient(function (string $methode, string $url, array $options) use (&$modeles): MockResponse {
+            $modeles[] = json_decode($options['body'], true)['model_id'] ?? null;
+
+            return new MockResponse([" "]);
+        });
+        $this->doublures([$this->elevenLabs($http)]);
+
+        $this->poster($e, $c, $m, self::TEXTE_ORAL, true);
+        self::assertResponseIsSuccessful();
+        $this->poster($e, $c, $m, self::TEXTE_ORAL, true);
+        self::assertResponseIsSuccessful();
+        self::assertSame(['eleven_flash_v2_5'], $modeles, 'la réécoute en Live vient du cache');
+
+        // La même phrase à l'écrit : un autre modèle, donc une autre génération.
+        $this->poster($e, $c, $m, self::TEXTE_ORAL);
+        self::assertResponseIsSuccessful();
+        self::assertSame(['eleven_flash_v2_5', 'eleven_multilingual_v2'], $modeles);
     }
 
     public function testElevenLabsEpuiseGeminiPrendLaMain(): void

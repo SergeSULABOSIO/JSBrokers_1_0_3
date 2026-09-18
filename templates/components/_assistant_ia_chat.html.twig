@@ -37,6 +37,7 @@
      data-ket-live-transcrire-url-value="{{ path('admin.assistantia.api.live.transcrire', {idEntreprise: idEntreprise}) }}"
      data-ket-live-intermede-url-value="{{ path('admin.assistantia.api.live.intermede', {idEntreprise: idEntreprise, cle: 'remplacer-0'}) }}"
      data-ket-live-intermedes-value="{{ intermedes_de_ket()|json_encode|e('html_attr') }}"
+     data-ket-live-capteur-url-value="{{ asset('controllers/ket-live-capteur.worklet.js') }}"
      data-assistant-chat-send-url-value="{{ path('admin.assistantia.api.message.send', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
      data-assistant-chat-etat-url-value="{{ path('admin.assistantia.api.message.etat', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
      data-assistant-chat-dialog-context-url-value="{{ path('admin.assistantia.api.dialog_context', {idEntreprise: idEntreprise}) }}"
@@ -1140,6 +1141,8 @@
             font-size:.78rem; color:var(--aic-muted);
             overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
         }
+        .jsb-ai-chat .aic-live-astuce { font-size:.72rem; color:var(--aic-muted); }
+        .jsb-ai-chat .aic-live-astuce[hidden] { display:none; }
         .jsb-ai-chat .aic-live-fin {
             flex:0 0 auto; display:flex; align-items:center; gap:.35rem;
             min-height:44px; padding:0 .8rem; border-radius:12px; cursor:pointer;
@@ -1736,6 +1739,12 @@ Le texte est alors mis au propre (hésitations retirées, ponctuation, questions
             <span class="aic-live-textes">
                 <span class="aic-live-etat" aria-live="polite" data-ket-live-target="etat">Ket vous écoute…</span>
                 <span class="aic-live-parole" data-ket-live-target="parole"></span>
+                {# Montrée UNIQUEMENT si le navigateur ne sait pas garder l'écran allumé
+                   (Firefox, iOS ancien) : sans cela, l'écran se verrouille au milieu
+                   d'une phrase et l'utilisateur croit à une panne. #}
+                <span class="aic-live-astuce" hidden data-ket-live-target="astuce">
+                    Gardez l’écran allumé : ce navigateur ne sait pas l’en empêcher.
+                </span>
             </span>
             <button type="button" class="aic-live-fin"
                     data-action="click->ket-live#arreter"

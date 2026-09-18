@@ -30,7 +30,15 @@ interface FournisseurDeVoix extends Fournisseur
     public function voix(): string;
 
     /**
-     * Le texte en voix, morceau PCM par morceau PCM. Valeur de retour (`getReturn()`) :
+     * Le modèle réellement utilisé pour cette demande. Il entre dans la clé du cache :
+     * la même phrase dite par deux modèles donne deux enregistrements distincts.
+     */
+    public function modele(bool $vitesse = false): string;
+
+    /**
+     * Le texte en voix, morceau PCM par morceau PCM. `$vitesse` demande le modèle le
+     * plus rapide (mode Live : premier son en ~1 s au lieu de 2,4 s). Valeur de retour
+     * (`getReturn()`) :
      * COMPLET si du son est sorti et que le flux s'est terminé normalement ; QUOTA si le
      * fournisseur est épuisé avant le premier son ; INDISPONIBLE s'il ne peut pas être
      * appelé ; ECHEC sinon — y compris une panne APRÈS le premier son, dont l'audio
@@ -38,5 +46,5 @@ interface FournisseurDeVoix extends Fournisseur
      *
      * @return \Generator<int, string, mixed, string>
      */
-    public function flux(string $texte): \Generator;
+    public function flux(string $texte, bool $vitesse = false): \Generator;
 }
