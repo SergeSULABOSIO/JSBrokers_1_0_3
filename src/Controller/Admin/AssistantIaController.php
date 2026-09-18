@@ -117,6 +117,15 @@ class AssistantIaController extends AbstractController
     private const MAX_OCTETS_PAROLE = 2_000_000;
 
     /**
+     * Combien de fois le texte à PRONONCER peut dépasser le Markdown de la réponse.
+     *
+     * Rendre un tableau prononçable répète son en-tête à chaque ligne : mesuré à 1,56×
+     * au pire sur des réponses réelles. Trois laisse la marge des tableaux les plus
+     * larges sans permettre de faire lire un texte étranger à la réponse.
+     */
+    private const EXPANSION_ORALE_MAX = 3;
+
+    /**
      * Cabinet « 0 » du cache audio : les intermèdes de Ket ne disent rien d'un cabinet
      * en particulier, ils sont donc générés une fois pour toute la plateforme.
      */
@@ -1869,9 +1878,17 @@ class AssistantIaController extends AbstractController
      * LA VOIX DE KET : une réponse lue à voix haute (ElevenLabs, Gemini… cf. VoixDeKet).
      *
      * Le corps porte le texte À PRONONCER, déjà préparé par le navigateur
-     * (assistant-lecture-vocale.js, source unique de cette préparation). Il ne peut pas
-     * être plus long que le message lui-même — le texte oral est toujours plus court que
-     * son Markdown — ce qui interdit de faire lire autre chose que la réponse.
+     * (assistant-lecture-vocale.js, source unique de cette préparation). Il est borné à
+     * quelques fois la longueur du message, ce qui interdit de faire lire autre chose que
+     * la réponse.
+     *
+     * POURQUOI « QUELQUES FOIS » ET NON « PAS PLUS LONG ». La borne était « pas plus long
+     * que le Markdown », en supposant que l'oral raccourcit toujours. C'est FAUX dès
+     * qu'il y a un tableau : le rendre prononçable répète l'en-tête à chaque ligne
+     * (« Libellé : X, Prime Totale : Y… »). Mesuré le 2026-09-19 sur quatre réponses
+     * réelles du fil 72 : rapports 1,23 / 1,31 / 1,39 / 1,56. Résultat, toute réponse
+     * avec tableau était refusée en 400 et restait muette — en conversation Live, une
+     * réponse sur deux.
      *
      * - Déjà généré : l'audio du cache (WAV), sans génération ni jeton.
      * - Sinon : l'audio PCM 24 kHz EN FLUX, au fil de la génération ; mise en cache et
@@ -1905,7 +1922,7 @@ class AssistantIaController extends AbstractController
 
         $payload = json_decode($request->getContent(), true) ?: [];
         $texte = trim((string) ($payload['texte'] ?? ''));
-        if ($texte === '' || mb_strlen($texte) > mb_strlen((string) $message->getContenu())) {
+        if ($texte === '' || mb_strlen($texte) > self::EXPANSION_ORALE_MAX * mb_strlen((string) $message->getContenu())) {
             return $this->json(['message' => 'Le texte à lire ne correspond pas à cette réponse.'], Response::HTTP_BAD_REQUEST);
         }
 

@@ -815,6 +815,7 @@ class AiContextBuilder
         // les voyaient déjà : c'est cette ASYMÉTRIE qui produisait le démenti.
         $ligneFichiers = $this->ligneFichiersDuFil($ctx['fichiersAttaches'] ?? []);
         $etatDuTravail = $this->etatDuTravail($request->decisionEnAttente);
+        $consigneOrale = $this->consigneOrale($request->modeLive);
 
         return <<<REDACTION
         Tu es {$ctx['assistantNom']}, l'assistant IA de l'entreprise de courtage « {$ctx['entrepriseNom']} »
@@ -835,9 +836,44 @@ class AiContextBuilder
         et sous-totaux se CALCULENT à partir des lignes affichées — additionne-les et donne le
         résultat, ne dis jamais que tu ne peux pas le faire.{$ligneFichiers}
         {$this->glossaireFinancier()}
-        {$this->reglesDeStyle($ctx['monnaie'] ?? null)}
+        {$this->reglesDeStyle($ctx['monnaie'] ?? null)}{$consigneOrale}
         {$sectionBoussole}
         REDACTION;
+    }
+
+    /**
+     * CETTE RÉPONSE-LÀ SERA ÉCOUTÉE, PAS LUE — et cela ne change que la FORME.
+     *
+     * Rien ici ne touche au métier : ni les outils, ni les chiffres, ni la boussole. On
+     * dit seulement à la plume qu'elle parle à l'oreille. Un tableau de dix-neuf clients
+     * se lit en trente secondes à l'écran et se subit pendant trois minutes à voix
+     * haute : l'utilisateur a entendu, le 2026-09-19, une énumération de colonnes cellule
+     * par cellule là où il attendait « dix-neuf clients, dont trois sans police ».
+     *
+     * LE DÉTAIL RESTE DISPONIBLE, IL EST SEULEMENT DEMANDÉ. C'est le propre d'une
+     * conversation : on répond court, et l'autre relance.
+     */
+    private function consigneOrale(bool $modeLive): string
+    {
+        if (!$modeLive) {
+            return '';
+        }
+
+        return "
+
+" . <<<'ORAL'
+        TU ES ÉCOUTÉE, PAS LUE. Cette réponse sera dite à voix haute dans une conversation.
+        - DEUX À QUATRE PHRASES. Une synthèse, pas un rapport : le fait saillant, le chiffre
+          qui compte, et ce que l'utilisateur peut en faire.
+        - AUCUN TABLEAU, aucune liste numérotée, aucun titre, aucune puce : tout cela se lit
+          cellule par cellule à l'oreille et devient inécoutable. Les quelques chiffres qui
+          comptent se disent DANS la phrase.
+        - PAS D'ÉNUMÉRATION LONGUE. « Dix-neuf clients, dont les trois plus importants sont A,
+          B et C » — jamais les dix-neuf.
+        - LE DÉTAIL SEULEMENT S'IL EST DEMANDÉ. Si l'utilisateur demande la liste, le tableau
+          ou « les détails », donne-les : c'est alors sa demande, et elle prime sur la
+          brièveté. Sinon, propose-les en une courte phrase et attends qu'il les réclame.
+        ORAL;
     }
 
     /**
