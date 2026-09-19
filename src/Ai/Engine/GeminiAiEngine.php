@@ -51,30 +51,38 @@ final class GeminiAiEngine implements AiEngineInterface
     private const MAX_OUTPUT_TOKENS = 4096;
 
     /**
-     * UN SEUL TOUR D'OUTILS PAR MESSAGE. Ce n'est pas un réglage, c'est la règle
-     * d'architecture : **le modèle n'orchestre plus rien, PHP orchestre**.
+     * DEUX APPELS PAR MESSAGE, TROIS QUAND LE PREMIER REGARD A BUTÉ.
      *
-     * Un message coûte donc DEUX appels, et deux seulement :
-     *  1. le modèle reçoit la bulle et émet ses appels d'outils — plusieurs à la
-     *     fois s'il le veut, ce qui est du PARALLÈLE, pas de l'orchestration ;
+     * Ce n'est pas un réglage mais la règle d'architecture : **le modèle n'orchestre
+     * rien, PHP orchestre**. Le déroulé ordinaire coûte DEUX appels :
+     *  1. le modèle reçoit la bulle et émet ses appels d'outils — plusieurs à la fois
+     *     s'il le veut, ce qui est du PARALLÈLE, pas de l'orchestration ;
      *  2. le serveur exécute tout, puis un dernier appel sert à FORMULER la réponse.
      *
-     * POURQUOI ON NE PEUT PAS SE CONTENTER D'UN PLAFOND PLUS HAUT. L'API étant sans
-     * mémoire, chaque tour réexpédie l'intégralité du contexte. Mesuré le
+     * LE TROISIÈME APPEL SE MÉRITE (cf. meriteUnSecondRegard). « Quelle police porte la
+     * plus grosse prime ? », « quel assureur ? » se répondent en deux temps : chercher,
+     * lire, chercher à nouveau. Sans ce second regard, Ket répondait « je n'ai pas
+     * trouvé » ou « précisez », et l'utilisateur relançait à la main — au prix d'un
+     * message entier, donc de deux appels de plus. On paie donc un tour supplémentaire
+     * LÀ OÙ L'ON ÉCHOUAIT : recherche vide, candidats ambigus, question à trancher,
+     * refus. Jamais ailleurs.
+     *
+     * POURQUOI PAS UN PLAFOND LIBRE. L'API étant sans mémoire, chaque tour réexpédie
+     * l'intégralité du contexte, déclarations d'outils comprises (~72 Ko). Mesuré le
      * 2026-08-10 sur une conversation réelle : un message a enchaîné CINQ tours de
-     * rechercher_entites à 37 700 tokens et consommé 188 000 tokens — presque toute
-     * la fenêtre d'une minute (212 500). Les messages suivants, « salut » compris,
-     * se sont tous heurtés à une fenêtre vide. Un seul message peut donc rendre la
-     * conversation entière inutilisable : le nombre de tours n'est pas un curseur de
-     * performance, c'est un risque de panne.
+     * rechercher_entites à 37 700 tokens et consommé 188 000 tokens — presque toute la
+     * fenêtre d'une minute (212 500). Les messages suivants, « salut » compris, se sont
+     * tous heurtés à une fenêtre vide. Un seul message peut ainsi rendre la conversation
+     * entière inutilisable : le nombre de tours n'est pas un curseur de performance,
+     * c'est un risque de panne. Trois appels au maximum, et la séquence des phases le
+     * garantit par construction — il n'y a pas de boucle à borner.
      *
      * CE QUI REND CE PLAFOND TENABLE : les outils résolvent eux-mêmes les noms en
-     * identifiants (cf. ResolveurDeReferences). Le modèle n'a plus d'identifiant à
-     * aller chercher, donc plus de raison d'enchaîner. Quand le serveur ne peut pas
-     * trancher, l'outil renvoie « aDemander » et Ket pose UNE question groupée —
-     * un tour de conversation vaut mieux que cinq tours de moteur.
+     * identifiants (cf. ResolveurDeReferences). Le modèle n'a pas d'identifiant à aller
+     * chercher, donc peu de raisons d'enchaîner. Quand le serveur ne peut pas trancher,
+     * l'outil renvoie « aDemander » et Ket pose UNE question groupée — un tour de
+     * conversation vaut mieux que cinq tours de moteur.
      */
-    private const MAX_TOOL_ROUNDS = 1;
 
     /**
      * Attente maximale AVANT DE RELANCER UN TOUR, quand la fenêtre d'une minute
@@ -275,9 +283,17 @@ final class GeminiAiEngine implements AiEngineInterface
             0,
         );
 
-        // DEUX PHASES, JAMAIS TROIS. Planification (les outils sont déclarés), puis
-        // rédaction (ils ne le sont plus : on commente un travail déjà fait).
-        foreach ([Phase::PLANIFICATION, Phase::REDACTION] as $round => $phase) {
+        // DEUX PHASES, ET UNE TROISIÈME QUI SE MÉRITE. Planification (les outils sont
+        // déclarés), puis rédaction (ils ne le sont plus : on commente un travail déjà
+        // fait). Entre les deux, un SECOND REGARD — un appel d'outils de plus — mais
+        // seulement là où le premier a buté : cf. meriteUnSecondRegard().
+        foreach ([Phase::PLANIFICATION, Phase::PLANIFICATION, Phase::REDACTION] as $round => $phase) {
+            // Le second regard ne se paie que s'il sert. Sans cette porte, CHAQUE message
+            // réexpédierait les 72 Ko de déclarations d'outils une fois de plus, pour un
+            // tour que le modèle n'a pas demandé.
+            if ($round === 1 && !self::meriteUnSecondRegard($resultatsOutils)) {
+                continue;
+            }
             // La phase est annoncée AVANT de partir : c'est pendant l'appel que
             // l'utilisateur attend, pas après. Tout le reste de ce journal se
             // mesure au retour, et arriverait donc une phase trop tard.
@@ -670,6 +686,45 @@ final class GeminiAiEngine implements AiEngineInterface
      *
      * @param list<string> $sequenceOutils
      */
+    /**
+     * LE PREMIER REGARD A-T-IL BUTÉ ? Alors un second vaut la peine d'être payé.
+     *
+     * « Quelle police a généré la prime la plus élevée ? », « quel assureur ? », « le
+     * client de cette police ? » : toutes ces questions se répondent en deux temps —
+     * chercher, lire, puis chercher à nouveau. Le moteur n'en accordait qu'un, et Ket
+     * répondait « je n'ai pas trouvé » ou « précisez » là où un second appel aurait
+     * suffi. L'utilisateur, lui, relançait à la main — au prix d'un message entier.
+     *
+     * MAIS PAS À CHAQUE FOIS. L'API est sans mémoire : un tour de plus réexpédie tout le
+     * contexte, déclarations d'outils comprises (~72 Ko). Mesuré le 2026-08-10, cinq
+     * tours ont consommé 188 000 jetons et vidé la fenêtre d'une minute pour toute la
+     * conversation. Le second regard est donc RÉSERVÉ aux résultats qui appellent une
+     * suite : une recherche vide, une question à trancher, des candidats ambigus, un
+     * refus. Quand les données sont là, on écrit — comme avant, en deux appels.
+     *
+     * @param list<array{outil: string, data: array}> $resultats
+     */
+    private static function meriteUnSecondRegard(array $resultats): bool
+    {
+        foreach ($resultats as $resultat) {
+            $data = $resultat['data'] ?? [];
+            if (($data['aDemander'] ?? null) || ($data['ambigu'] ?? null) || ($data['refus'] ?? null)) {
+                return true;
+            }
+            // Une liste vide ou un compte nul : la donnée existe peut-être ailleurs, sous
+            // un autre nom, dans un autre périmètre. C'est exactement là que Ket rendait
+            // les armes.
+            if (array_key_exists('totalItems', $data) && (int) $data['totalItems'] === 0) {
+                return true;
+            }
+            if (array_key_exists('count', $data) && (int) $data['count'] === 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function conclure(
         AiRequest $request,
         string $issue,
