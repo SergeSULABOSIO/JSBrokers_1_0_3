@@ -468,6 +468,9 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
         // 30 %. La source est le canevas de liste — ajouter une colonne à un écran
         // l'offre désormais du même coup au chat. Un seul préchargement pour la page.
         $ecran = $this->colonnesDeLEcran->projeter($result['data'], $fqcn);
+        // De QUI et de QUEL assureur parle chaque police — en UNE requête pour toute la
+        // page, jamais trois par ligne (cf. l'incident des indicateurs de liste).
+        $rattachements = $shortName === 'Avenant' ? $this->rattachementsDesAvenants($result['data']) : [];
 
         $items = [];
         foreach ($result['data'] as $entity) {
@@ -500,6 +503,21 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
             // pourtant DÉJÀ donné naissance à un avenant. Source unique partagée avec les
             // indicateurs calculés et le badge des listes (AvenantRenouvellementResolver).
             if ($entity instanceof Avenant) {
+                // LE CLIENT ET L'ASSUREUR, sur chaque ligne. Sans eux, à « quel assureur ? »
+                // posé sur une liste de polices, Ket répondait « le nom du client rattaché à
+                // cet avenant n'est pas directement accessible » — puis improvisait une
+                // recherche absurde. Le libellé d'une police nomme son risque, pas ses deux
+                // parties : c'est pourtant par elles qu'un courtier la désigne.
+                $item += array_filter($rattachements[(int) $entity->getId()] ?? []);
+                // ET SON ÉCHÉANCE, dite en toutes lettres. Le 2026-09-19, Ket a présenté
+                // comme « échéance lointaine » des contrats expirés depuis huit mois, puis
+                // s'est contredite au message suivant en affirmant qu'aucune police n'allait
+                // au-delà de 60 jours — ce qui était vrai. Une ligne qui porte « Échu » ne
+                // peut plus être qualifiée de lointaine.
+                $echeance = AvenantEcheanceScope::classifier($entity->getEndingAt(), new \DateTimeImmutable('today'));
+                if ($echeance !== null) {
+                    $item['echeance'] = $echeance['libelle'];
+                }
                 $suite = $this->renouvellementResolver->resoudre($entity);
                 $item['statutRenouvellement'] = $suite['statut'];
                 if ($suite['avenantsIssus'] !== [] || $suite['pisteDeriveeId'] !== null) {
@@ -651,6 +669,45 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
     {
         return $this->chemins->parCible($fqcn);
     }
+    /**
+     * Le client et l'assureur de chaque police, en UNE requête.
+     *
+     * @param list<object> $entites
+     *
+     * @return array<int, array{client: ?string, assureur: ?string}>
+     */
+    private function rattachementsDesAvenants(array $entites): array
+    {
+        $ids = [];
+        foreach ($entites as $entite) {
+            if ($entite instanceof Avenant && $entite->getId() !== null) {
+                $ids[] = (int) $entite->getId();
+            }
+        }
+        if ($ids === []) {
+            return [];
+        }
+
+        $rattachements = [];
+        $lignes = $this->em->createQuery(
+            'SELECT a.id AS id, cl.nom AS client, ass.nom AS assureur
+             FROM App\Entity\Avenant a
+             LEFT JOIN a.cotation cot
+             LEFT JOIN cot.assureur ass
+             LEFT JOIN cot.piste p
+             LEFT JOIN p.client cl
+             WHERE a.id IN (:ids)'
+        )->setParameter('ids', $ids)->getArrayResult();
+        foreach ($lignes as $ligne) {
+            $rattachements[(int) $ligne['id']] = [
+                'client'   => $ligne['client'] ?: null,
+                'assureur' => $ligne['assureur'] ?: null,
+            ];
+        }
+
+        return $rattachements;
+    }
+
     /**
      * Un MONTANT, et non un nom : « 2 784,61 », « 2 784,61 $ », « 1 358,22 ».
      *
