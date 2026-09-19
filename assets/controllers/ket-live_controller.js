@@ -494,7 +494,7 @@ export default class extends Controller {
                 headers: { 'Content-Type': 'audio/wav' },
                 body: encoderWav(phrase),
             });
-            if (reponse.status === 503 || reponse.status === 402) {
+            if (reponse.status === 402) {
                 this._evenement('oreille-indisponible');
                 return;
             }
@@ -503,6 +503,13 @@ export default class extends Controller {
                 return;
             }
             const data = await reponse.json();
+            // PAS D'OREILLE ICI, ET CE N'EST PAS UNE PANNE : quota épuisé, clé absente.
+            // Le serveur le dit par un `repli` dans une réponse normale — une 5xx aurait
+            // noirci la console à chaque phrase pour un cas prévu.
+            if (typeof data.repli === 'string') {
+                this._evenement('oreille-indisponible');
+                return;
+            }
             const texte = String(data.texte ?? '').trim();
             // Rien d'entendu, ou rien qui vous soit adressé : on réécoute sans rien dire.
             if (texte === '' || !this._retenirOuIgnorer(texte)) this._evenement('silence');
