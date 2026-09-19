@@ -94,6 +94,35 @@ test('Ket ne se coupe jamais elle-même, si fort que soit son haut-parleur', () 
     assert.ok(d.seuil(true) > 0.05, 'le seuil d’interruption est passé AU-DESSUS de sa propre voix');
 });
 
+/**
+ * LE CAS RÉEL, ET CELUI QUI L'A RENDUE TOTALEMENT MUETTE (2026-09-19, seconde alerte :
+ * « Ket ne parle PLUS »).
+ *
+ * Ket est tenue pour « audible » dès sa RÉFLEXION, parce que ses intermèdes y sortent
+ * du haut-parleur. Mais quand aucun intermède n'est disponible — quota épuisé —, ce
+ * qu'on mesure pendant cette réflexion est le SILENCE de la pièce. La barre retombait
+ * au plancher, et sa réponse, bien plus forte, la franchissait dès le premier mot :
+ * elle se coupait elle-même en 150 ms. Aucun son ne sortait plus, et l'attente
+ * paraissait interminable.
+ *
+ * D'où la règle : on recalibre au moment où un son COMMENCE, pas au changement d'état.
+ */
+test('une réflexion silencieuse ne fait pas taire la réponse qui suit', () => {
+    const d = creerDetecteur();
+    let t = 0;
+    for (; t < 3000; t += 50) d.pousser(0.001, t); // pièce calme
+
+    // Réflexion : Ket est « audible », mais aucun intermède ne sort (quota épuisé).
+    for (let i = 0; i < 40; i++, t += 50) d.pousser(0.001, t, true);
+
+    // Elle prend la parole : le contrôleur recalibre sur CE son-là.
+    d.recalibrer(t);
+    const evenements = [];
+    for (let i = 0; i < 100; i++, t += 50) evenements.push(d.pousser(0.05, t, true));
+
+    assert.deepEqual([...new Set(evenements)], [null], 'elle dit sa réponse en entier, sans se couper');
+});
+
 test('l’utilisateur coupe Ket en parlant par-dessus son haut-parleur', () => {
     const d = creerDetecteur();
     let t = 0;

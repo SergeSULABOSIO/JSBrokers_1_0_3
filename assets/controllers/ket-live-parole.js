@@ -105,6 +105,22 @@ export function creerDetecteur(options = {}) {
         fuiteMesuree() {
             return fuite;
         },
+        /**
+         * À APPELER CHAQUE FOIS QU'UN NOUVEAU SON DE KET COMMENCE : sa réponse, un
+         * intermède. C'est le seul instant où l'on peut mesurer ce que ce son-là renvoie
+         * dans le micro, et chaque source a sa propre force.
+         *
+         * Le faire au seul changement d'état ne suffit PAS : Ket est « audible » dès sa
+         * réflexion, mais quand aucun intermède n'est disponible, ce qu'on mesure alors
+         * est le SILENCE. La barre retombait donc au plancher, et sa réponse — bien plus
+         * forte — la franchissait aussitôt : elle se coupait elle-même en 150 ms, et ne
+         * disait plus un mot.
+         */
+        recalibrer(instantMs) {
+            calibreJusqua = instantMs + calibrationMs;
+            fuite = 0;
+            this.reinitialiser();
+        },
         /** Remise à zéro entre deux phrases (le bruit de fond appris, lui, est gardé). */
         reinitialiser() {
             parle = false;

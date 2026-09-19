@@ -128,6 +128,11 @@ export default class extends Controller {
                 case 'programmer-intermedes': this._programmerIntermedes(); break;
                 case 'couper-intermedes': this._couperIntermedes(); break;
                 case 'lire-reponse':
+                    // Ket va parler : on écoute d'abord ce que SA VOIX renvoie dans le
+                    // micro. Sans cela, la mesure prise pendant la réflexion (souvent le
+                    // silence) laisserait la barre au plancher, et elle se couperait
+                    // elle-même dès son premier mot.
+                    this._detecteur?.recalibrer(performance.now());
                     if (charge.bulle) this._emettre('ket-live:lire', { bulle: charge.bulle });
                     else this._evenement('lecture-terminee');
                     break;
@@ -516,6 +521,8 @@ export default class extends Controller {
         this._ditsPendantLAttente.push(cle);
         this._enCours = audio;
         audio.currentTime = 0;
+        // Un intermède est un son de Ket comme un autre : il a sa propre force.
+        this._detecteur?.recalibrer(performance.now());
         audio.play().catch(() => { /* son refusé par le navigateur : le texte reste affiché */ });
     }
 
