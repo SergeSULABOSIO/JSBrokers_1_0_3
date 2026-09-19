@@ -45,6 +45,9 @@ export default class extends Controller {
     /** Taille des trames analysées : ~85 ms à 48 kHz, assez fin pour la détection. */
     static TAILLE_TRAME = 4096;
 
+    /** Délai avant de rouvrir l'oreille : le temps que le haut-parleur se taise. */
+    static REPRISE_OREILLE_MS = 300;
+
     connect() {
         this.session = sessionInitiale(this._oreilleParDefaut());
         this._audios = new Map(); // clé d'intermède → Audio préchargé
@@ -104,6 +107,11 @@ export default class extends Controller {
         if ((avant.etat === ETATS.ARRET) !== (this.session.etat === ETATS.ARRET)) {
             this._emettre('ket-live:session', { actif: this.session.etat !== ETATS.ARRET });
         }
+
+        // L'OREILLE SUIT L'ÉTAT, TOUJOURS. C'est posé ici, après chaque transition et
+        // avant toute action, parce qu'une seule règle vaut : on n'écoute que lorsque
+        // Ket se tait. Voir _accorderLOreille.
+        this._accorderLOreille();
 
         for (const action of this.session.actions ?? []) {
             switch (action) {
@@ -295,7 +303,10 @@ export default class extends Controller {
     _trame(donnees) {
         if (this.session.etat === ETATS.ARRET) return;
         const instant = performance.now();
-        const ketParle = this.session.etat === ETATS.PAROLE;
+        // KET EST AUDIBLE DÈS LA RÉFLEXION : ses intermèdes sortent du haut-parleur
+        // pendant qu'elle cherche. Le seuil doit y être relevé comme pendant sa réponse,
+        // sinon c'est sa propre voix qui ouvre une phrase.
+        const ketParle = this.session.etat === ETATS.PAROLE || this.session.etat === ETATS.REFLEXION;
         const evenement = this._detecteur.pousser(energie(donnees), instant, ketParle);
 
         // QUAND LE NAVIGATEUR ÉCOUTE, ce micro ne sert plus qu'à entendre l'utilisateur
@@ -376,6 +387,42 @@ export default class extends Controller {
         }
     }
 
+    /**
+     * QUI ÉCOUTE, ET QUAND. La reconnaissance du navigateur ne tourne que dans l'état
+     * ÉCOUTE — jamais pendant que Ket réfléchit (ses intermèdes sont audibles), jamais
+     * pendant qu'elle parle.
+     *
+     * L'INCIDENT (2026-09-19), et il faisait boucler la conversation à l'infini : cette
+     * reconnaissance a sa PROPRE captation du micro, sur laquelle nos contraintes
+     * d'annulation d'écho ne s'appliquent pas — contrairement au flux getUserMedia du
+     * détecteur. Elle entendait donc Ket, transcrivait ses intermèdes (« Hum, laisse-moi
+     * vérifier… ») et les renvoyait comme des questions de l'utilisateur. Ket répondait à
+     * sa propre voix, indéfiniment ; il fallait recharger la page pour en sortir.
+     *
+     * Ignorer ces résultats ne suffisait pas : en mode `continuous`, le navigateur GARDE
+     * les phrases finalisées et les relivre à l'événement suivant. C'est pourquoi on
+     * ARRÊTE l'oreille — une instance neuve ne traîne aucun passé — au lieu de filtrer.
+     *
+     * L'interruption, elle, ne passe pas par là : c'est le micro analysé qui l'entend,
+     * avec son annulation d'écho (cf. ket-live-parole.js).
+     */
+    _accorderLOreille() {
+        const doitEcouter = this.session.oreille === 'navigateur' && this.session.etat === ETATS.ECOUTE;
+        clearTimeout(this._repriseOreille);
+
+        if (!doitEcouter) {
+            this._arreterReconnaissance();
+            return;
+        }
+        // Un court délai avant de rouvrir l'oreille : la fin d'un intermède ou d'une
+        // phrase de Ket met un instant à sortir du haut-parleur, et serait entendue.
+        this._repriseOreille = setTimeout(() => {
+            if (this.session.oreille === 'navigateur' && this.session.etat === ETATS.ECOUTE) {
+                this._ecouterAvecLeNavigateur();
+            }
+        }, this.constructor.REPRISE_OREILLE_MS);
+    }
+
     /** La reconnaissance du navigateur existe-t-elle ici ? */
     _oreilleParDefaut() {
         return (window.SpeechRecognition || window.webkitSpeechRecognition) ? 'navigateur' : 'serveur';
@@ -403,22 +450,20 @@ export default class extends Controller {
         reconnaissance.interimResults = true;
 
         reconnaissance.onresult = (event) => {
+            // HORS ÉCOUTE, ON N'ENTEND QUE KET. Ce garde double l'arrêt de l'oreille : un
+            // résultat peut arriver juste après une transition, et une seule phrase
+            // reprise à Ket suffit à lancer la boucle infinie.
+            if (this.session.etat !== ETATS.ECOUTE) return;
             const complets = Array.from(event.results).filter((r) => r.isFinal);
-            if (complets.length === 0 || this.session.etat === ETATS.REFLEXION) return;
+            if (complets.length === 0) return;
             const texte = fusionnerTranscripts(complets.map((r) => r[0].transcript));
             if (texte.trim() === '') return;
-
-            // PARLER PENDANT QUE KET PARLE, C'EST L'INTERROMPRE — et la phrase ne doit pas
-            // se perdre pour autant. Le micro analysé le voit d'ordinaire le premier, mais
-            // il peut manquer une voix douce ; ici, la reconnaissance a compris une phrase
-            // ENTIÈRE : le doute n'est plus permis, on coupe et on enchaîne.
-            if (this.session.etat === ETATS.PAROLE) this._evenement('voix-detectee');
 
             this._evenement('texte-entendu', { texte });
         };
         reconnaissance.onend = () => {
-            // Le navigateur clôt sa session au silence : tant que le Live dure, on relance.
-            if (this.session.etat !== ETATS.ARRET) {
+            // Le navigateur clôt sa session au silence : on relance TANT QU'ON ÉCOUTE.
+            if (this.session.etat === ETATS.ECOUTE && this.session.oreille === 'navigateur') {
                 try { reconnaissance.start(); } catch (e) { /* déjà démarrée */ }
             }
         };
@@ -427,6 +472,7 @@ export default class extends Controller {
     }
 
     _arreterReconnaissance() {
+        clearTimeout(this._repriseOreille);
         if (!this._reconnaissance) return;
         this._reconnaissance.onend = null;
         try { this._reconnaissance.stop(); } catch (e) { /* déjà arrêtée */ }
