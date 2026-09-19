@@ -4064,7 +4064,12 @@ export default class extends Controller {
 
         // LA VOIX DE KET (Gemini) d'abord. Le contexte audio est ouvert ICI, avant tout
         // await : hors du geste de l'utilisateur, les navigateurs mobiles le bloquent.
-        const audio = this._ouvrirAudio();
+        //
+        // SAUF SI ELLE S'EST DÉJÀ TUE. Une fois le quota du cabinet épuisé, la route
+        // répondra « repli » à chaque phrase : redemander à chaque fois n'apporte rien et
+        // coûte un aller-retour avant le premier son. On retient le refus pour la durée
+        // de la page — une recharge suffit à réessayer, le jour où le quota repart.
+        const audio = this._voixServeurMuette ? null : this._ouvrirAudio();
         if (audio && await this._lireAvecGemini(bulle, texte, jeton, audio)) return;
         if (this._lecture !== jeton) return;
 
@@ -4129,7 +4134,11 @@ export default class extends Controller {
                 if (this._lecture !== jeton) return true;
                 const mode = modeDeLecture(reponse.status, reponse.headers.get('Content-Type'));
                 if (mode === 'repli' || !reponse.body) {
-                    if (!aParle) return false;
+                    if (!aParle) {
+                        this._voixServeurMuette = true;
+
+                        return false;
+                    }
                     break; // ce qui a déjà été dit se termine normalement
                 }
 

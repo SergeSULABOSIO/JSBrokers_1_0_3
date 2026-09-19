@@ -24,7 +24,7 @@ use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 /**
- * Route de la voix de Ket : gardes, borne du texte, repli (503/402), ordre des voix
+ * Route de la voix de Ket : gardes, borne du texte, repli (200 {repli} / 402), ordre des voix
  * (ElevenLabs puis Gemini) et, avec des fournisseurs réels sur HTTP factice, audio en
  * flux mis en cache et facturé UNE fois — la réécoute est servie par le cache.
  */
@@ -202,7 +202,7 @@ class AssistantIaVoixTest extends WebTestCase
 
         $this->poster($e, $c, $m, self::TEXTE_ORAL);
 
-        self::assertResponseStatusCodeSame(503);
+        self::assertResponseIsSuccessful(); // un quota épuisé n’est pas une panne
         self::assertSame(['repli' => FournisseurDeVoix::INDISPONIBLE], json_decode((string) $this->client->getResponse()->getContent(), true));
         self::assertSame(0, $this->lignesVoix());
     }
@@ -292,7 +292,7 @@ class AssistantIaVoixTest extends WebTestCase
 
         $this->poster($e, $c, $m, self::TEXTE_ORAL);
 
-        self::assertResponseStatusCodeSame(503);
+        self::assertResponseIsSuccessful(); // un quota épuisé n’est pas une panne
         self::assertSame(['repli' => FournisseurDeVoix::QUOTA], json_decode((string) $this->client->getResponse()->getContent(), true));
         self::assertSame(0, $this->lignesVoix());
     }

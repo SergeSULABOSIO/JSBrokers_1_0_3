@@ -1894,8 +1894,15 @@ class AssistantIaController extends AbstractController
      * - Sinon : l'audio PCM 24 kHz EN FLUX, au fil de la génération ; mise en cache et
      *   débit au prorata de la longueur seulement quand l'audio est complet.
      * - Pas de voix Gemini (quota gratuit épuisé, moteur simulé, panne avant le premier
-     *   son) : 503 `{repli}`, et le navigateur lit avec sa propre voix. Solde insuffisant :
-     *   402, même repli.
+     *   son) : 200 `{repli}`, et le navigateur lit avec sa propre voix. Solde
+     *   insuffisant : 402, même repli.
+     *
+     * POURQUOI 200 ET NON 503. Un quota épuisé n'est pas une panne : c'est un cas PRÉVU,
+     * doté d'un repli qui fonctionne. Or le navigateur écrit en rouge dans la console
+     * toute réponse 5xx — à chaque phrase, pendant toute une conversation. L'utilisateur
+     * y lisait des dizaines d'erreurs pour un comportement nominal, et les vraies pannes
+     * s'y noyaient. La requête a bien abouti ; sa réponse est « pas de voix ici, prenez
+     * la vôtre ».
      */
     #[Route('/api/messages/{idEntreprise}/{idConversation}/{idMessage}/voix', name: 'api.message.voix', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS, 'idMessage' => Requirement::DIGITS], methods: ['POST'])]
     public function voixMessage(
@@ -1944,7 +1951,7 @@ class AssistantIaController extends AbstractController
         }
 
         if (!$voixDeKet->estDisponible()) {
-            return $this->json(['repli' => FournisseurDeVoix::INDISPONIBLE], Response::HTTP_SERVICE_UNAVAILABLE);
+            return $this->json(['repli' => FournisseurDeVoix::INDISPONIBLE]);
         }
         $nbCaracteres = mb_strlen($texte);
         if (!$this->tokenAccountService->peutEcouter($entreprise, $nbCaracteres)) {
@@ -1959,7 +1966,7 @@ class AssistantIaController extends AbstractController
         // audio et le repli sur la voix du navigateur (503).
         $flux = $voixDeKet->flux($texte, $vitesse);
         if (!$flux->valid()) {
-            return $this->json(['repli' => $flux->getReturn()], Response::HTTP_SERVICE_UNAVAILABLE);
+            return $this->json(['repli' => $flux->getReturn()]);
         }
         // Le fournisseur qui vient de produire le premier son : c'est son audio qui se met en cache.
         $identite = VoixDeKet::identite($voixDeKet->dernierFournisseur(), $vitesse);
@@ -2013,7 +2020,7 @@ class AssistantIaController extends AbstractController
      * connaissance et sa facturation ne changent pas d'un iota. Ici, on ne fait
      * qu'entendre.
      *
-     * Aucune oreille disponible (quota, clé absente, panne) : 503 `{repli}`, et le
+     * Aucune oreille disponible (quota, clé absente, panne) : 200 `{repli}`, et le
      * navigateur écoute avec sa propre reconnaissance vocale, gratuite.
      */
     #[Route('/api/live/{idEntreprise}/transcrire', name: 'api.live.transcrire', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['POST'])]
@@ -2035,7 +2042,7 @@ class AssistantIaController extends AbstractController
         $secondes = max(0.0, (\strlen($wav) - 44) / (FournisseurDOreille::TAUX_ECHANTILLONNAGE * 2));
 
         if (!$oreilles->estDisponible()) {
-            return $this->json(['repli' => Transcription::INDISPONIBLE], Response::HTTP_SERVICE_UNAVAILABLE);
+            return $this->json(['repli' => Transcription::INDISPONIBLE]);
         }
         if (!$this->tokenAccountService->peutTranscrire($entreprise, $secondes)) {
             return $this->json([
@@ -2047,7 +2054,7 @@ class AssistantIaController extends AbstractController
 
         $transcription = $oreilles->transcrire($wav, substr($request->getLocale(), 0, 2) ?: 'fr');
         if ($transcription->statut !== Transcription::COMPLET) {
-            return $this->json(['repli' => $transcription->statut], Response::HTTP_SERVICE_UNAVAILABLE);
+            return $this->json(['repli' => $transcription->statut]);
         }
         // Un silence ne se facture pas : il n'y avait rien à entendre.
         if ($transcription->texte !== '') {
@@ -2097,7 +2104,7 @@ class AssistantIaController extends AbstractController
             }
         }
         if (!$voixDeKet->estDisponible()) {
-            return $this->json(['repli' => FournisseurDeVoix::INDISPONIBLE], Response::HTTP_SERVICE_UNAVAILABLE);
+            return $this->wavDIntermede($this->silence());
         }
 
         // Génération complète AVANT de répondre : un intermède dure deux secondes, et il
@@ -2108,12 +2115,31 @@ class AssistantIaController extends AbstractController
             $pcm .= $morceau;
         }
         if ($flux->getReturn() !== FournisseurDeVoix::COMPLET) {
-            return $this->json(['repli' => $flux->getReturn()], Response::HTTP_SERVICE_UNAVAILABLE);
+            return $this->wavDIntermede($this->silence());
         }
 
         $cacheAudio->ecrire(self::CABINET_COMMUN, VoixDeKet::identite($voixDeKet->dernierFournisseur()), $phrase, $pcm);
 
         return $this->wavDIntermede(CacheAudio::wav($pcm));
+    }
+
+    /**
+     * UN INTERMÈDE SANS VOIX EST UN SILENCE, pas une erreur.
+     *
+     * Ce son-là est chargé par un élément <audio> : lui répondre autre chose que de
+     * l'audio le fait échouer, et le navigateur l'écrit en rouge dans la console — pour
+     * un cas parfaitement prévu (quota de voix épuisé). Cent millisecondes de silence
+     * coûtent cinq kilo-octets, ne s'entendent pas, et ne se plaignent jamais. L'état
+     * écrit du panneau, lui, continue de dire que Ket cherche.
+     */
+    private const SILENCE_MS = 100;
+
+    /** Cent millisecondes de PCM muet, au format que la voix de Ket produit. */
+    private function silence(): string
+    {
+        $octets = (int) (FournisseurDeVoix::TAUX_ECHANTILLONNAGE * self::SILENCE_MS / 1000) * 2;
+
+        return CacheAudio::wav(str_repeat(" ", $octets));
     }
 
     private function wavDIntermede(string $wav): Response

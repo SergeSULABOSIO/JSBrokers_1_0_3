@@ -225,7 +225,10 @@ class AssistantIaLiveTest extends WebTestCase
 
         $data = $this->transcrire($e, self::wav());
 
-        self::assertResponseStatusCodeSame(503);
+        // 200, ET NON 503 : un quota épuisé est un cas prévu, doté d'un repli qui
+        // marche. Le navigateur écrit en rouge toute réponse 5xx — à chaque phrase,
+        // pendant toute une conversation —, et les vraies pannes s'y noyaient.
+        self::assertResponseIsSuccessful();
         self::assertSame(['repli' => Transcription::INDISPONIBLE], $data);
         self::assertSame(0, $this->lignes(TokenAccountService::ENTITE_OREILLE_IA));
     }
@@ -322,8 +325,14 @@ class AssistantIaLiveTest extends WebTestCase
 
         $this->intermede($e, 'relance-1');
 
-        self::assertResponseStatusCodeSame(503);
-        self::assertSame(['repli' => FournisseurDeVoix::INDISPONIBLE], json_decode((string) $this->client->getResponse()->getContent(), true));
+        // UN INTERMÈDE SANS VOIX EST UN SILENCE. Il est chargé par un élément <audio> :
+        // lui répondre du JSON le ferait échouer, et le navigateur s'en plaindrait à
+        // l'écran. Cent millisecondes de silence ne s'entendent pas et ne coûtent rien.
+        self::assertResponseIsSuccessful();
+        self::assertSame('audio/wav', $this->client->getResponse()->headers->get('Content-Type'));
+        $wav = (string) $this->client->getResponse()->getContent();
+        self::assertSame('RIFF', substr($wav, 0, 4));
+        self::assertSame(str_repeat(" ", \strlen($wav) - 44), substr($wav, 44), 'du silence, et rien d’autre');
     }
 
     public function testLeCatalogueDesIntermedesEstUtilisable(): void
