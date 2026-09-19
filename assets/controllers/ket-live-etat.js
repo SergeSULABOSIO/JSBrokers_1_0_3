@@ -100,13 +100,27 @@ export function transition(session, evenement, charge = {}) {
         case 'silence':
             return s.etat === ETATS.TRANSCRIPTION ? avec(ETATS.ECOUTE, ['couper-intermedes']) : s;
 
-        // L'oreille du navigateur rend le texte sans passer par la transcription serveur :
-        // l'écoute mène donc directement à la réflexion.
+        /**
+         * ON N'IGNORE JAMAIS CE QUE DIT L'UTILISATEUR — quoi que Ket soit en train de
+         * faire. Une question posée pendant qu'elle cherche était perdue ; une question
+         * posée pendant qu'elle parle l'était aussi. Elles s'empilent désormais : le
+         * serveur traite les messages d'un fil dans l'ordre où ils arrivent, et répond à
+         * chacun. C'est lui la file d'attente, pas nous.
+         */
         case 'texte-entendu': {
-            if (s.etat !== ETATS.TRANSCRIPTION && s.etat !== ETATS.ECOUTE) return s;
+            if (s.etat === ETATS.ARRET) return s;
             const texte = String(charge.texte ?? '').trim();
-            if (texte === '') return avec(ETATS.ECOUTE, ['couper-intermedes'], referme);
-            return avec(ETATS.REFLEXION, ['envoyer-question', 'programmer-intermedes'], { derniereParole: texte, ...referme });
+            if (texte === '') {
+                return s.etat === ETATS.ECOUTE || s.etat === ETATS.TRANSCRIPTION
+                    ? avec(ETATS.ECOUTE, ['couper-intermedes'], referme)
+                    : s;
+            }
+            // Elle parlait : votre parole prime sur la sienne, elle se tait et écoute.
+            const actions = s.etat === ETATS.PAROLE
+                ? ['couper-voix', 'envoyer-question', 'programmer-intermedes']
+                : ['envoyer-question', 'programmer-intermedes'];
+
+            return avec(ETATS.REFLEXION, actions, { derniereParole: texte, ...referme });
         }
 
         // Les oreilles du serveur ne répondent pas : le navigateur écoute lui-même.
@@ -136,10 +150,18 @@ export function transition(session, evenement, charge = {}) {
             return avec(ETATS.ECOUTE, [], { micDemande: !s.micDemande });
 
         case 'reponse-affichee':
-            return s.etat === ETATS.REFLEXION ? avec(ETATS.PAROLE, ['couper-intermedes', 'lire-reponse']) : s;
+            if (s.etat === ETATS.REFLEXION) return avec(ETATS.PAROLE, ['couper-intermedes', 'lire-reponse']);
+            // Elle parle déjà la réponse précédente : celle-ci attend son tour plutôt que
+            // de se perdre. À plusieurs questions, plusieurs réponses — toutes dites.
+            if (s.etat === ETATS.PAROLE) return avec(ETATS.PAROLE, ['empiler-reponse']);
+            return s;
+
+        // Une réponse tirée de la pile : on la dit à la suite de la précédente.
+        case 'reponse-suivante':
+            return s.etat === ETATS.ARRET ? s : avec(ETATS.PAROLE, ['couper-intermedes', 'lire-reponse']);
 
         case 'lecture-terminee':
-            return s.etat === ETATS.PAROLE ? avec(ETATS.ECOUTE) : s;
+            return s.etat === ETATS.PAROLE ? avec(ETATS.ECOUTE, ['lire-la-suivante']) : s;
 
         // Une panne ne met jamais fin à la session : on réécoute.
         case 'erreur':

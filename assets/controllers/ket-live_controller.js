@@ -50,6 +50,14 @@ export default class extends Controller {
     static REPRISE_OREILLE_MS = 300;
 
     /**
+     * Combien de trames on garde AVANT qu'une phrase soit déclarée — six, soit un peu
+     * plus d'une demi-seconde à 48 kHz. C'est ce qu'il faut pour que la première syllabe
+     * survive : la prise de parole n'est reconnue qu'après 150 ms de voix, et tout ce qui
+     * précède était perdu.
+     */
+    static TRAMES_AVANT_PHRASE = 6;
+
+    /**
      * Combien de faux bruits, et sur quelle durée, avant que Ket cesse d'écouter en
      * continu. Trois en une minute : une fois est un accident, trois de suite est un
      * environnement — et continuer d'écouter n'y changerait rien.
@@ -60,6 +68,7 @@ export default class extends Controller {
     connect() {
         this.session = sessionInitiale(this._oreilleParDefaut());
         this._audios = new Map(); // clé d'intermède → Audio préchargé
+        this._aLire = [];         // réponses arrivées pendant qu'elle parlait encore
         this._ditsPendantLAttente = [];
         this._minuteurs = [];
 
@@ -145,6 +154,14 @@ export default class extends Controller {
                     if (charge.bulle) this._emettre('ket-live:lire', { bulle: charge.bulle });
                     else this._evenement('lecture-terminee');
                     break;
+                case 'empiler-reponse':
+                    if (charge.bulle) (this._aLire ??= []).push(charge.bulle);
+                    break;
+                case 'lire-la-suivante': {
+                    const suivante = (this._aLire ??= []).shift();
+                    if (suivante) this._evenement('reponse-suivante', { bulle: suivante });
+                    break;
+                }
                 case 'couper-voix':
                     this._couperIntermedes();
                     this._emettre('ket-live:interrompre');
@@ -311,6 +328,7 @@ export default class extends Controller {
         this._source = this._contexte.createMediaStreamSource(this._flux);
         this._detecteur = creerDetecteur();
         this._trames = [];
+        this._avantPhrase = [];
         this._analyse = await this._brancherCapteur();
         if (this.session.etat === ETATS.ARRET) {
             this._fermerMicro();
@@ -369,17 +387,24 @@ export default class extends Controller {
             return;
         }
 
+        // LE DÉBUT DE LA PHRASE ÉTAIT MANGÉ. Une prise de parole n'est déclarée qu'après
+        // 150 ms de voix confirmée — et l'enregistrement ne commençait qu'à cet instant :
+        // la première syllabe partait au serveur amputée, quand elle partait. On garde
+        // donc en permanence les dernières trames, et la phrase s'ouvre avec elles.
+        const copie = Float32Array.from(donnees);
         if (evenement === 'debut') {
-            this._trames = [];
+            this._trames = this._avantPhrase.slice();
             this._evenement('voix-detectee');
         }
-        // On garde le son dès que la phrase a commencé (une copie : le tampon est réutilisé).
-        if (this._trames.length > 0 || evenement === 'debut') {
-            this._trames.push(Float32Array.from(donnees));
+        if (this._trames.length > 0) {
+            this._trames.push(copie);
         }
+        this._avantPhrase.push(copie);
+        if (this._avantPhrase.length > this.constructor.TRAMES_AVANT_PHRASE) this._avantPhrase.shift();
         if (evenement === 'fin' || evenement === 'trop-long') {
             this._phrase = reechantillonner(assembler(this._trames), this._contexte.sampleRate, TAUX_OREILLE);
             this._trames = [];
+            this._avantPhrase = [];
             this._evenement('phrase-terminee');
         }
     }
@@ -492,36 +517,31 @@ export default class extends Controller {
      * ÉCOUTE — jamais pendant que Ket réfléchit (ses intermèdes sont audibles), jamais
      * pendant qu'elle parle.
      *
-     * L'INCIDENT (2026-09-19), et il faisait boucler la conversation à l'infini : cette
-     * reconnaissance a sa PROPRE captation du micro, sur laquelle nos contraintes
-     * d'annulation d'écho ne s'appliquent pas — contrairement au flux getUserMedia du
-     * détecteur. Elle entendait donc Ket, transcrivait ses intermèdes (« Hum, laisse-moi
-     * vérifier… ») et les renvoyait comme des questions de l'utilisateur. Ket répondait à
-     * sa propre voix, indéfiniment ; il fallait recharger la page pour en sortir.
+     * ELLE ÉCOUTE TOUT LE TEMPS, ET C'EST VOULU. Fermer l'oreille dès que Ket réfléchit
+     * protégeait de sa voix, mais au prix de trois défauts que l'utilisateur a payés :
+     * une question posée pendant qu'elle cherchait était PERDUE, le début d'une phrase
+     * était mangé par le délai de réouverture, et il fallait attendre son tour pour
+     * parler. Ce qui protège désormais n'est plus la surdité mais la PROVENANCE : le
+     * micro, lui, a l'annulation d'écho, et il sait qu'un intermède vient du
+     * haut-parleur et non de vous (ket-live-tri.js).
      *
-     * Ignorer ces résultats ne suffisait pas : en mode `continuous`, le navigateur GARDE
-     * les phrases finalisées et les relivre à l'événement suivant. C'est pourquoi on
-     * ARRÊTE l'oreille — une instance neuve ne traîne aucun passé — au lieu de filtrer.
-     *
-     * L'interruption, elle, ne passe pas par là : c'est le micro analysé qui l'entend,
-     * avec son annulation d'écho (cf. ket-live-parole.js).
+     * L'INCIDENT DE FOND (2026-09-19) reste à connaître : cette reconnaissance a sa
+     * PROPRE captation, sur laquelle nos contraintes d'écho ne s'appliquent PAS. Elle
+     * entend donc Ket. Et en mode `continuous`, elle GARDE ses phrases finalisées et les
+     * relivre à chaque événement — d'où, jadis, une question qui repartait en
+     * s'allongeant à chaque tour. On ne lit donc QUE les finales nouvelles (cf.
+     * `_finalesLues`), au lieu de tout refusionner.
      */
     _accorderLOreille() {
         const invitee = this.session.ecoute !== 'demande' || this.session.micDemande === true;
-        const doitEcouter = this.session.oreille === 'navigateur' && this.session.etat === ETATS.ECOUTE && invitee;
+        const doitEcouter = this.session.oreille === 'navigateur' && this.session.etat !== ETATS.ARRET && invitee;
         clearTimeout(this._repriseOreille);
 
         if (!doitEcouter) {
             this._arreterReconnaissance();
             return;
         }
-        // Un court délai avant de rouvrir l'oreille : la fin d'un intermède ou d'une
-        // phrase de Ket met un instant à sortir du haut-parleur, et serait entendue.
-        this._repriseOreille = setTimeout(() => {
-            if (this.session.oreille === 'navigateur' && this.session.etat === ETATS.ECOUTE) {
-                this._ecouterAvecLeNavigateur();
-            }
-        }, this.session.micDemande ? 0 : this.constructor.REPRISE_OREILLE_MS);
+        this._ecouterAvecLeNavigateur();
     }
 
     /** La reconnaissance du navigateur existe-t-elle ici ? */
@@ -545,17 +565,24 @@ export default class extends Controller {
             return;
         }
         if (this._reconnaissance) return;
+        this._finalesLues = 0;
         const reconnaissance = new Reconnaissance();
         reconnaissance.lang = documentLocale() === 'en' ? 'en-US' : 'fr-FR';
         reconnaissance.continuous = true;
         reconnaissance.interimResults = true;
 
         reconnaissance.onresult = (event) => {
-            // HORS ÉCOUTE, ON N'ENTEND QUE KET. Ce garde double l'arrêt de l'oreille : un
-            // résultat peut arriver juste après une transition, et une seule phrase
-            // reprise à Ket suffit à lancer la boucle infinie.
-            if (this.session.etat !== ETATS.ECOUTE) return;
-            const complets = Array.from(event.results).filter((r) => r.isFinal);
+            if (this.session.etat === ETATS.ARRET) return;
+
+            // SEULEMENT CE QUI VIENT D'ÊTRE DIT. La liste des résultats grossit à chaque
+            // événement et garde tout le passé de la session : la refusionner entière
+            // renverrait la question précédente, allongée du nouveau.
+            const complets = [];
+            for (let i = this._finalesLues ?? 0; i < event.results.length; i++) {
+                if (!event.results[i].isFinal) continue;
+                complets.push(event.results[i]);
+                this._finalesLues = i + 1;
+            }
             if (complets.length === 0) return;
             const texte = fusionnerTranscripts(complets.map((r) => r[0].transcript));
             if (texte.trim() === '') return;
@@ -566,8 +593,10 @@ export default class extends Controller {
             this._retenirOuIgnorer(texte, confiances.length > 0 ? Math.min(...confiances) : null);
         };
         reconnaissance.onend = () => {
-            // Le navigateur clôt sa session au silence : on relance TANT QU'ON ÉCOUTE.
-            if (this.session.etat === ETATS.ECOUTE && this.session.oreille === 'navigateur') {
+            // Le navigateur clôt sa session au silence : on relance SANS ATTENDRE, tant
+            // que la session dure. Un délai ici, c'est le début d'une phrase mangé.
+            if (this.session.etat !== ETATS.ARRET && this.session.oreille === 'navigateur') {
+                this._finalesLues = 0;
                 try { reconnaissance.start(); } catch (e) { /* déjà démarrée */ }
             }
         };
