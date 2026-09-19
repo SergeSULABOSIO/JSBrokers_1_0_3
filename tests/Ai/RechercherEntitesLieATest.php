@@ -234,6 +234,43 @@ class RechercherEntitesLieATest extends KernelTestCase
         ];
     }
 
+    /**
+     * UN MONTANT N'EST PAS UN NOM (incident du 2026-09-19, fil 74).
+     *
+     * À « quel assureur ? », posé sur une réponse qui citait « une prime totale de
+     * 2 784,61 $ », Ket a cherché les avenants dont le LIBELLÉ contient « 2 784,61 » —
+     * puis a conclu : « Je n'ai trouvé aucun élément dans Avenants avec filtre
+     * 2 784,61 ». L'utilisateur y lit que la donnée n'existe pas, alors que c'est la
+     * recherche qui n'avait aucun sens. Mieux vaut le dire, et nommer ce qui se cherche.
+     */
+    public function testUnFiltreQuiEstUnMontantEstRefuseAvecLaRaison(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $scope = new AiScope($e, $owner);
+
+        foreach (['2 784,61', '2 784,61 $', '1358.22', '2784,61$'] as $montant) {
+            $result = $this->tool()->execute(['entite' => 'Avenant', 'filtre' => $montant], $scope);
+
+            self::assertArrayHasKey('refus', $result->data, sprintf('« %s » est un montant', $montant));
+            self::assertStringContainsString('MONTANT', $result->data['refus']);
+            self::assertStringContainsString('lire_fiche', $result->data['refus'], 'la sortie est nommée');
+            self::assertArrayNotHasKey('items', $result->data, 'aucune liste trompeuse n’est rendue');
+        }
+    }
+
+    /** Une référence de police, elle, se cherche : tirets et longueur la distinguent. */
+    public function testUneReferenceDePoliceResteCherchable(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $scope = new AiScope($e, $owner);
+
+        foreach (['12005-31002-0014-13001-00013061-2024', 'AGL-2025', '42'] as $reference) {
+            $result = $this->tool()->execute(['entite' => 'Avenant', 'filtre' => $reference], $scope);
+
+            self::assertArrayNotHasKey('refus', $result->data, sprintf('« %s » doit rester cherchable', $reference));
+        }
+    }
+
     public function testListeLesTachesDUnePiste(): void
     {
         ['owner' => $owner, 'entreprise' => $e, 'piste' => $piste, 'tachesPiste' => $ids] = $this->seed();

@@ -271,6 +271,26 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
         }
 
         $filtre = trim((string) ($args['filtre'] ?? ''));
+
+        // UN MONTANT N'EST PAS UN NOM. Le 2026-09-19, à « quel assureur ? » posé sur une
+        // réponse citant « une prime totale de 2 784,61 $ », Ket a cherché les avenants
+        // dont le LIBELLÉ contient « 2 784,61 » — et a conclu qu'il n'y avait rien.
+        // L'utilisateur, lui, lit « cette donnée n'existe pas » là où il n'y a qu'une
+        // recherche absurde. On le dit franchement, en nommant ce qui se cherche : la
+        // réponse est alors utilisable, au lieu d'être fausse.
+        if (self::estUnMontant($filtre)) {
+            return AiToolResult::ok([
+                'entite'  => $shortName,
+                'libelle' => $labels[$shortName],
+                'refus'   => sprintf(
+                    'Le filtre « %s » est un MONTANT, pas un nom : la recherche porte sur le libellé '
+                    . "d'un enregistrement (nom de client, référence de police, numéro). Reprends avec "
+                    . "le nom ou la référence de l'élément visé, ou consulte sa fiche par lire_fiche.",
+                    $filtre,
+                ),
+            ]);
+        }
+
         $page = max(1, (int) ($args['page'] ?? 1));
         $displayField = $this->libelleur->displayField($fqcn);
 
@@ -631,4 +651,19 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
     {
         return $this->chemins->parCible($fqcn);
     }
+    /**
+     * Un MONTANT, et non un nom : « 2 784,61 », « 2 784,61 $ », « 1 358,22 ».
+     *
+     * Un numéro de police en est exclu : il porte des tirets ou des lettres
+     * (« 12005-31002-0014-13001-00013061-2024 »). Un identifiant nu (« 42 ») l'est aussi,
+     * et c'est voulu : l'outil sait déjà le chercher comme identifiant, détour utile. Ce
+     * qu'on écarte ici est la forme propre à l'argent — deux décimales.
+     */
+    private static function estUnMontant(string $filtre): bool
+    {
+        $nu = trim((string) preg_replace('/\s|\x{00A0}|\x{202F}|[$€]|USD|CDF|FC/u', '', $filtre));
+
+        return $nu !== '' && preg_match('/^\d+[.,]\d{2}$/', $nu) === 1;
+    }
+
 }
