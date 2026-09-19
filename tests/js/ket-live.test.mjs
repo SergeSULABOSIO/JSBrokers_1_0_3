@@ -57,34 +57,91 @@ test('le seuil s’adapte au bruit de fond et ne descend jamais sous le plancher
 
 test('pendant que Ket parle, il faut une voix plus forte pour l’interrompre', () => {
     const d = creerDetecteur();
-    assert.ok(d.seuil(true) > d.seuil(false));
+    let t = 0;
+    for (; t < 3000; t += 50) d.pousser(0.001, t);
+    const seuilAuRepos = d.seuil(false);
+
+    // La barre ne monte qu'une fois la fuite du haut-parleur ÉCOUTÉE : avant de l'avoir
+    // entendue, on ne sait pas de combien il faut l'élever.
+    for (let i = 0; i < 20; i++, t += 50) d.pousser(0.05, t, true);
+
+    assert.ok(d.seuil(true) > seuilAuRepos, 'la barre monte à la hauteur du haut-parleur');
+    assert.equal(d.seuil(false), seuilAuRepos, 'celle de l’écoute ordinaire, elle, ne bouge pas');
+});
+
+/**
+ * KET SE COUPAIT ELLE-MÊME (signalé le 2026-09-19 : « elle commence juste à parler et
+ * coupe une seconde après, elle n'était qu'au début de sa phrase »).
+ *
+ * Le micro reste ouvert pendant qu'elle parle, pour entendre l'utilisateur la couper.
+ * Mais ce qui revient alors dans le micro n'est pas le silence du bureau : c'est SA
+ * VOIX. Comparée au bruit de la pièce, elle franchissait le seuil, se prenait pour
+ * l'utilisateur, et se taisait au bout d'une seconde — toujours au même moment,
+ * puisqu'il faut 150 ms de voix continue pour déclarer une prise de parole.
+ */
+test('Ket ne se coupe jamais elle-même, si fort que soit son haut-parleur', () => {
+    const d = creerDetecteur();
+    let t = 0;
+    for (; t < 3000; t += 50) d.pousser(0.001, t); // pièce calme
+
+    // Elle parle : son haut-parleur renvoie 0,05 dans le micro — quatre fois le
+    // plancher, et bien au-dessus de ce qu'une pièce calme produit.
+    let evenements = [];
+    for (let i = 0; i < 120; i++, t += 50) evenements.push(d.pousser(0.05, t, true));
+
+    assert.deepEqual([...new Set(evenements)], [null], 'six secondes de sa propre voix, et aucune prise de parole détectée');
+    assert.ok(d.fuiteMesuree() >= 0.04, 'la fuite du haut-parleur a bien été mesurée');
+    assert.ok(d.seuil(true) > 0.05, 'le seuil d’interruption est passé AU-DESSUS de sa propre voix');
+});
+
+test('l’utilisateur coupe Ket en parlant par-dessus son haut-parleur', () => {
+    const d = creerDetecteur();
+    let t = 0;
+    for (; t < 3000; t += 50) d.pousser(0.001, t);
+    // Calibration de la fuite, puis elle continue de parler.
+    for (let i = 0; i < 40; i++, t += 50) d.pousser(0.05, t, true);
+
+    // L'utilisateur parle par-dessus : sa voix couvre le haut-parleur.
+    assert.equal(d.pousser(0.15, t, true), null);
+    t += 200;
+    assert.equal(d.pousser(0.15, t, true), 'debut', 'une voix qui couvre le haut-parleur coupe Ket');
+});
+
+test('la première demi-seconde de Ket est protégée, le temps d’écouter sa fuite', () => {
+    const d = creerDetecteur();
+    let t = 0;
+    for (; t < 3000; t += 50) d.pousser(0.001, t);
+
+    // Pendant la calibration, rien n'est interprété — pas même une voix forte.
+    for (let i = 0; i < 8; i++, t += 50) {
+        assert.equal(d.pousser(0.3, t, true), null, 'aucune décision pendant la calibration');
+    }
 });
 
 /**
  * LE DÉFAUT QUI RENDAIT L'INTERRUPTION IMPOSSIBLE (signalé le 2026-09-19 : « elle
  * continue à parler pendant que moi aussi je parle »).
  *
- * Le haut-parleur revient toujours un peu dans le micro, sous le seuil relevé. Cette
- * fuite était apprise comme du bruit ambiant : le fond montait pendant toute la réponse,
- * et le seuil d'interruption — un multiple de ce fond — montait avec lui. Il fallait
- * crier, et de plus en plus fort à mesure que Ket parlait.
+ * La fuite du haut-parleur était apprise comme le BRUIT DE LA PIÈCE. Le fond montait
+ * donc pendant toute la réponse et ne redescendait que lentement : une fois Ket
+ * silencieuse, il fallait encore crier pour être entendu. Les deux mesures sont
+ * désormais séparées — la pièce d'un côté, le haut-parleur de l'autre.
  */
-test('la voix de Ket n’est jamais apprise comme du bruit de fond', () => {
+test('la voix de Ket n’entre jamais dans la mesure du bruit de la pièce', () => {
     const d = creerDetecteur();
     let t = 0;
-    for (; t < 3000; t += 50) d.pousser(0.001, t); // pièce calme : le fond descend
-    const seuilAvant = d.seuil(true);
+    for (; t < 3000; t += 50) d.pousser(0.001, t); // pièce calme
+    const seuilDeLaPiece = d.seuil(false);
 
-    // Ket parle deux secondes : sa fuite dans le micro reste sous le seuil relevé.
-    for (let i = 0; i < 40; i++, t += 50) {
-        assert.equal(d.pousser(0.008, t, true), null, 'le haut-parleur ne se coupe pas lui-même');
-    }
-    assert.equal(d.seuil(true), seuilAvant, 'le seuil d’interruption n’a pas bougé d’un iota');
+    for (let i = 0; i < 60; i++, t += 50) d.pousser(0.05, t, true); // Ket parle fort
 
-    // L'utilisateur parle par-dessus, sans hausser le ton : la coupure a lieu.
-    assert.equal(d.pousser(0.02, t, true), null);
+    assert.equal(d.seuil(false), seuilDeLaPiece, 'la pièce est restée aussi calme qu’avant');
+
+    // Elle se tait : une voix ordinaire est entendue TOUT DE SUITE, sans délai de
+    // redescente.
+    assert.equal(d.pousser(0.02, t), null);
     t += 200;
-    assert.equal(d.pousser(0.02, t, true), 'debut', 'une voix ordinaire suffit à couper Ket');
+    assert.equal(d.pousser(0.02, t), 'debut', 'une voix ordinaire est entendue dès qu’elle se tait');
 });
 
 test('une phrase interminable est transcrite sans attendre le silence', () => {
