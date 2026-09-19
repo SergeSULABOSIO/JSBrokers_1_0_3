@@ -30,6 +30,7 @@ final class AnalysePortefeuilleTool implements AiToolInterface
 {
     /** analyse => [méthode du provider (tops), entités dont la lecture est exigée]. */
     private const ANALYSES = [
+        'top_polices'               => ['getTopPolicesAvecIndicateurs',        ['Avenant']],
         'top_assureurs'             => ['getTopAssureursAvecIndicateurs',      ['Avenant', 'Assureur']],
         'top_clients'               => ['getTopAssuresAvecIndicateurs',        ['Avenant', 'Client']],
         'top_risques'               => ['getTopRisquesAvecIndicateurs',        ['Avenant', 'Risque']],
@@ -86,7 +87,10 @@ final class AnalysePortefeuilleTool implements AiToolInterface
 
     public function aiguillage(): string
     {
-        return '« chiffre d\'affaires / CA VENTILÉ par assureur / risque / client / portefeuille / partenaire » '
+        return '« quelle POLICE / quel AVENANT porte la prime (ou la commission) la plus '
+            . 'élevée » (analyse=top_polices : le classement descend à l’affaire elle-même, '
+            . 'là où les autres tops agrègent par assureur, client, risque ou intermédiaire) ; '
+            . '« chiffre d\'affaires / CA VENTILÉ par assureur / risque / client / portefeuille / partenaire » '
             . '(analyse=chiffre_affaires, dimension=<axe>) ; « CA par mois / mensuel » '
             . '(chiffre_affaires_mensuel : HT et TTC, mois par mois) ; « compensations / indemnisations '
             . 'SINISTRES ventilées » (analyse=sinistres, dimension=<axe> : montants payable / payé / solde).';
@@ -132,6 +136,7 @@ final class AnalysePortefeuilleTool implements AiToolInterface
 
         $tops = [
             'top_assureurs'      => '/\btop\b.*\bassureurs?\b|\bmeilleurs?\s+assureurs?\b',
+            'top_polices'        => '/\b(polices?|avenants?|contrats?)\b.*\bprimes?\b|\btop\b.*\b(polices?|avenants?|contrats?)\b',
             'top_clients'        => '/\btop\b.*\b(clients?|assures?)\b|\bmeilleurs?\s+clients?\b',
             'top_risques'        => '/\btop\b.*\brisques?\b|\bmeilleurs?\s+risques?\b',
             'top_intermediaires' => '/\btop\b.*\b(intermediaires?|partenaires?)\b|\bmeilleurs?\s+(intermediaires?|partenaires?)\b',
@@ -239,6 +244,11 @@ final class AnalysePortefeuilleTool implements AiToolInterface
             static function (array $row) use ($avecSinistralite): array {
                 $ligne = [
                     'nom'            => $row['nom'],
+                    // Un classement de POLICES nomme aussi leurs deux parties : c'est par
+                    // elles qu'un courtier reconnaît une affaire, et cela évite un second
+                    // tour d'outil pour demander « de qui est-elle ? ».
+                    'client'         => $row['client'] ?? null,
+                    'assureur'       => $row['assureur'] ?? null,
                     'nbPolices'      => $row['nbPolices'],
                     'primesTotales'  => round((float) $row['primesTotales'], 2),
                     'commissionsTtc' => round((float) $row['commissionsTtc'], 2),
@@ -270,6 +280,8 @@ final class AnalysePortefeuilleTool implements AiToolInterface
         // de polices sont totalisables, et on les nomme explicitement.
         $roles = [
             'nom'            => Colonnes::TEXTE,
+            'client'         => Colonnes::TEXTE,
+            'assureur'       => Colonnes::TEXTE,
             'nbPolices'      => Colonnes::NOMBRE,
             'primesTotales'  => Colonnes::MONTANT,
             'commissionsTtc' => Colonnes::MONTANT,
@@ -279,6 +291,19 @@ final class AnalysePortefeuilleTool implements AiToolInterface
         if ($avecSinistralite) {
             $roles['sinistresIndemnises'] = Colonnes::MONTANT;
             $roles['ratioSP'] = Colonnes::POURCENTAGE;
+        }
+
+        // Les colonnes vides (client/assureur hors classement de polices) ne sont pas
+        // envoyées : une colonne de tirets ne dit rien et coûte des tokens à chaque ligne.
+        $lignes = array_map(static fn (array $l): array => array_filter(
+            $l,
+            static fn ($v, string $c) => !\in_array($c, ['client', 'assureur'], true) || ($v !== null && $v !== ''),
+            ARRAY_FILTER_USE_BOTH,
+        ), $lignes);
+        foreach (['client', 'assureur'] as $colonne) {
+            if (!array_filter(array_column($lignes, $colonne))) {
+                unset($roles[$colonne]);
+            }
         }
 
         return AiToolResult::ok(array_filter([
