@@ -4,7 +4,8 @@ import { assembler, duree, encoderWav, reechantillonner, TAUX_OREILLE } from './
 import { ETATS, libelleEtatLive, sessionInitiale, transition } from './ket-live-etat.js';
 import { choisir, programmeDesIntermedes } from './ket-live-intermedes.js';
 import { jalon, nouveauTour, resumeDuTour } from './ket-live-chrono.js';
-import { phraseRecevable, priseRecevable } from './ket-live-tri.js';
+import { phraseRecevable, priseRecevable, retirerLaVoixDeKet } from './ket-live-tri.js';
+import { texteAPrononcer } from './assistant-lecture-vocale.js';
 import { fusionnerTranscripts } from './dictee-transcript.js';
 import { documentLocale } from '../locale.js';
 
@@ -45,6 +46,9 @@ export default class extends Controller {
 
     /** Taille des trames analysées : ~85 ms à 48 kHz, assez fin pour la détection. */
     static TAILLE_TRAME = 4096;
+
+    /** Combien de phrases de Ket on garde pour reconnaître son écho. */
+    static PHRASES_RETENUES = 4;
 
     /** Délai avant de rouvrir l'oreille : le temps que le haut-parleur se taise. */
     static REPRISE_OREILLE_MS = 300;
@@ -146,6 +150,7 @@ export default class extends Controller {
                 case 'programmer-intermedes': this._programmerIntermedes(); break;
                 case 'couper-intermedes': this._couperIntermedes(); break;
                 case 'lire-reponse':
+                    this._retenirCeQuElleDit(charge.bulle);
                     // Ket va parler : on écoute d'abord ce que SA VOIX renvoie dans le
                     // micro. Sans cela, la mesure prise pendant la réflexion (souvent le
                     // silence) laisserait la barre au plancher, et elle se couperait
@@ -223,6 +228,29 @@ export default class extends Controller {
     mainsLibres() {
         this._rejets = [];
         this._evenement('ecoute-continue');
+    }
+
+    /**
+     * GARDE EN MÉMOIRE CE QUE KET VIENT DE DIRE — sa réponse lue, ses intermèdes joués.
+     *
+     * Quelques phrases suffisent : passé deux ou trois tours, un écho n'a plus aucune
+     * chance de revenir du haut-parleur, et garder davantage risquerait de retrancher des
+     * mots qu'un utilisateur a le droit de reprendre.
+     */
+    _retenirCeQuElleDit(bulle = null, phrase = null) {
+        const dit = phrase ?? (bulle ? texteAPrononcer(bulle.querySelector('.aic-msg-text')?.dataset.mdSource ?? '') : '');
+        if (String(dit).trim() === '') return;
+
+        this._phrasesDeKet = [...(this._phrasesDeKet ?? []), dit].slice(-this.constructor.PHRASES_RETENUES);
+    }
+
+    /** Le texte d'un intermède, tel que le serveur le déclare (source unique). */
+    _phraseDeLIntermede(cle) {
+        for (const parMoment of Object.values(this.intermedesValue ?? {})) {
+            if (!Array.isArray(parMoment) && parMoment?.[cle]) return String(parMoment[cle]);
+        }
+
+        return null;
     }
 
     _emettre(nom, detail = {}) {
@@ -441,7 +469,13 @@ export default class extends Controller {
      * rien à l'état : on continue d'écouter, en silence, comme si rien n'avait été dit —
      * ce qui est le cas.
      */
-    _retenirOuIgnorer(texte, confiance = null) {
+    _retenirOuIgnorer(texteEntendu, confiance = null) {
+        // CE QUE KET VIENT DE DIRE NE VOUS APPARTIENT PAS. La reconnaissance du
+        // navigateur entend aussi le haut-parleur : quand on parle PENDANT qu'elle parle,
+        // elle fond les deux voix en une seule phrase, et l'écho entrait dans le fil sous
+        // le nom de l'utilisateur. Le juge de provenance ne pouvait rien : quelqu'un
+        // parlait bel et bien tout près du micro.
+        const texte = retirerLaVoixDeKet(texteEntendu, this._phrasesDeKet ?? []);
         const verdict = phraseRecevable({
             texte,
             confiance,
@@ -624,7 +658,10 @@ export default class extends Controller {
     /** Préchargés au démarrage : un intermède qui se ferait attendre ne servirait à rien. */
     _prechargerIntermedes() {
         if (!this.hasIntermedeUrlValue || this._audios.size > 0) return;
-        for (const cles of Object.values(this.intermedesValue ?? {})) {
+        for (const parMoment of Object.values(this.intermedesValue ?? {})) {
+            // Le serveur rend « clé => phrase » ; une ancienne page peut encore rendre une
+            // simple liste de clés. Les deux formes se préchargent pareil.
+            const cles = Array.isArray(parMoment) ? parMoment : Object.keys(parMoment ?? {});
             for (const cle of cles) {
                 // L'URL est fabriquée par Twig avec une clé factice, qui respecte la
                 // contrainte de la route : on ne la remplace que par une vraie clé.
@@ -654,6 +691,7 @@ export default class extends Controller {
         const audio = cle ? this._audios.get(cle) : null;
         if (!audio) return;
         this._ditsPendantLAttente.push(cle);
+        this._retenirCeQuElleDit(null, this._phraseDeLIntermede(cle));
         this._enCours = audio;
         audio.currentTime = 0;
         // Un intermède est un son de Ket comme un autre : il a sa propre force.

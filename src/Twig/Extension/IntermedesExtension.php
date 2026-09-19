@@ -8,11 +8,18 @@ use Twig\TwigFunction;
 
 /**
  * Expose au mode Live le catalogue des intermèdes de Ket (`intermedes_de_ket()`) :
- * les clés des petites phrases qu'il dit pendant qu'il réfléchit.
+ * les petites phrases qu'elle dit pendant qu'elle réfléchit, clé PUIS texte.
  *
- * Le navigateur ne reçoit que des CLÉS et les précharge ; le TEXTE, lui, ne quitte
- * jamais le serveur (source unique IntermedesDeKet). Une phrase reformulée ne
- * demande donc aucune modification du JavaScript.
+ * LE TEXTE NE SERVAIT À RIEN AU NAVIGATEUR — jusqu'à ce qu'il doive reconnaître la voix
+ * de Ket dans ce qu'il entend. Le 2026-09-19, un intermède est entré dans la bulle de
+ * l'utilisateur, collé au début de sa propre phrase : « aucun avenant ne répertorié avec
+ * une date VA VOIR AUSSI DANS LES PROCHAINS 90 JOURS ». Le micro avait raison — une
+ * personne parlait bien tout près —, mais la reconnaissance avait fondu les deux voix en
+ * une seule phrase. Pour retrancher ce que Ket vient de dire, encore faut-il le
+ * connaître (cf. ket-live-tri.js).
+ *
+ * La source reste unique (IntermedesDeKet) : une phrase reformulée ne demande toujours
+ * aucune modification du JavaScript.
  */
 class IntermedesExtension extends AbstractExtension
 {
@@ -23,14 +30,9 @@ class IntermedesExtension extends AbstractExtension
         ];
     }
 
-    /** @return array<string, list<string>> moment => clés */
+    /** @return array<string, array<string, string>> moment => clé => phrase */
     public function cles(): array
     {
-        $cles = [];
-        foreach (IntermedesDeKet::catalogue() as $moment => $phrases) {
-            $cles[$moment] = array_keys($phrases);
-        }
-
-        return $cles;
+        return IntermedesDeKet::catalogue();
     }
 }

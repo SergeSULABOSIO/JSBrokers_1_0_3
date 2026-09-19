@@ -12,7 +12,7 @@ import { assembler, duree, encoderWav, reechantillonner, TAUX_OREILLE } from '..
 import { ENTETE_WAV } from '../../assets/controllers/assistant-voix-pcm.js';
 import { ETATS, libelleEtatLive, sessionInitiale, transition } from '../../assets/controllers/ket-live-etat.js';
 import { choisir, programmeDesIntermedes, RELANCES_MAX } from '../../assets/controllers/ket-live-intermedes.js';
-import { MARGE_PROCHE, nEstQueDesTics, phraseRecevable } from '../../assets/controllers/ket-live-tri.js';
+import { MARGE_PROCHE, nEstQueDesTics, phraseRecevable, retirerLaVoixDeKet } from '../../assets/controllers/ket-live-tri.js';
 
 // ── Détection de parole ──────────────────────────────────────────────────────
 
@@ -379,6 +379,54 @@ test('une confiance basse durcit l’exigence, une confiance absente ne condamne
     assert.equal(sansAvis.recevable, true, 'sans confiance annoncée, la marge seule décide');
     assert.equal(sure.recevable, true);
     assert.equal(hesitante.recevable, false, 'mal reconnu ET à la limite : on se tait');
+});
+
+// ── La voix de Ket ne s'attribue pas vos phrases ─────────────────────────────
+
+/**
+ * L'INCIDENT (2026-09-19). Dans la bulle de l'utilisateur : « aucun avenant ne
+ * répertorié avec une date VA VOIR AUSSI DANS LES PROCHAINS 90 JOURS ». Le début est de
+ * Ket, la fin est bien de l'utilisateur — la reconnaissance du navigateur, qui entend
+ * aussi le haut-parleur, avait fondu les deux voix en une seule phrase. Le juge de
+ * provenance ne pouvait rien : quelqu'un parlait vraiment tout près du micro.
+ */
+test('l’écho de Ket est retranché, la phrase de l’utilisateur reste', () => {
+    const ket = ['Aucun avenant n’est répertorié avec une date d’expiration future se situant dans les 31 à 60 prochains jours.'];
+    const entendu = 'aucun avenant ne répertorié avec une date va voir aussi dans les prochains 90 jours';
+
+    assert.equal(retirerLaVoixDeKet(entendu, ket), 'voir aussi dans les prochains 90 jours');
+});
+
+test('un intermède entendu en entier ne laisse rien', () => {
+    assert.equal(retirerLaVoixDeKet('Hum laissez-moi vérifier', ['Hum… laissez-moi vérifier.']), '');
+    // Vidé, il est écarté par le juge — sans jamais atteindre le fil.
+    assert.equal(phraseRecevable({ texte: '', priseDeParole: prise(9), instantMs: 1500 }).motif, 'vide');
+});
+
+test('une question qui ne doit rien à Ket traverse intacte', () => {
+    const ket = ['Aucun avenant n’est répertorié avec une date d’expiration future.'];
+
+    assert.equal(retirerLaVoixDeKet('quel est le taux de la Caution ?', ket), 'quel est le taux de la Caution ?');
+    assert.equal(retirerLaVoixDeKet('donne-moi le top 5 des clients', ket), 'donne-moi le top 5 des clients');
+});
+
+/** Reprendre les mots de Ket est permis : seule leur RÉPÉTITION de tête s'efface. */
+test('l’utilisateur peut reprendre les mots de Ket et garder sa suite', () => {
+    const ket = ['Vous avez trente polices échues à anticiper.'];
+
+    assert.equal(
+        retirerLaVoixDeKet('vous avez trente polices échues oui je veux les voir', ket),
+        'oui je veux les voir',
+    );
+});
+
+test('trois mots communs ne suffisent pas à retrancher quoi que ce soit', () => {
+    const ket = ['Est-ce que vous voulez que je prépare le renouvellement ?'];
+
+    assert.equal(
+        retirerLaVoixDeKet('est-ce que vous parlez du client Kibali ?', ket),
+        'est-ce que vous parlez du client Kibali ?',
+    );
 });
 
 // ── Rien de ce que dit l'utilisateur ne se perd ──────────────────────────────
