@@ -31,6 +31,17 @@ final class AiReply
         public readonly ?string $toolUsed = null,
         public readonly array $actions = [],
         public readonly array $plansRefuses = [],
+        /**
+         * TOUS LES NOMBRES rapportés par les outils de ce tour.
+         *
+         * Ils ne servent pas à écrire la réponse — ils servent à la VÉRIFIER : un
+         * montant inscrit dans un tableau et absent d'ici n'a aucune source
+         * (cf. App\Ai\Controle\ChiffreFantome). C'est la seule chose que le serveur
+         * puisse opposer à une prose écrite par un modèle.
+         *
+         * @var list<float>
+         */
+        public readonly array $chiffresDesOutils = [],
     ) {
     }
 }

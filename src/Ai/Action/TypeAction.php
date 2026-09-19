@@ -73,6 +73,23 @@ enum TypeAction: string
     case FICHIER_PRESENT = 'ket-fichier.present';
 
     /**
+     * Mise au point autoritaire : un MONTANT d'un tableau ne vient d'aucune donnée.
+     *
+     * Quatrième de la même famille, et la plus coûteuse en confiance : les autres
+     * portent sur un geste (un plan, une exécution, une pièce jointe), celle-ci porte
+     * sur un CHIFFRE — et un chiffre se recopie dans un dossier, se transmet à un
+     * assureur, se facture à un client. Le 2026-09-19, un tableau de clients portait une
+     * colonne RÉSERVE entièrement fabriquée et des commissions majorées de 16 % ; il a
+     * fallu que l'utilisateur mette Ket en doute pour que la vérité sorte.
+     *
+     * Le serveur SAIT ce que les outils ont rendu. Quand un montant du tableau ne s'y
+     * trouve pas — et qu'il n'est pas davantage le total d'une colonne —, il le dit,
+     * sans rien réécrire : corriger demanderait de savoir ce que Ket voulait dire, et on
+     * ne le sait pas. Nommer ce qui n'a pas de source suffit à protéger le courtier.
+     */
+    case CHIFFRE_ABSENT = 'ket-chiffre.absent';
+
+    /**
      * Barre de décision d'un DOCUMENT à produire (« Valider et produire » / « Annuler »).
      *
      * Voisine du plan d'écriture, et volontairement distincte : ce qu'on valide ici
