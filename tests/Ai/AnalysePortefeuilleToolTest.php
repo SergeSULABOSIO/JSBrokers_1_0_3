@@ -31,7 +31,7 @@ class AnalysePortefeuilleToolTest extends TestCase
 
     private const TOP_ROW = [
         'id' => 7, 'nom' => 'Assureur Alpha', 'nbPolices' => 12,
-        'primesTotales' => 1000.456, 'commissionsTtc' => 150.0,
+        'primesTotales' => 1000.456, 'commissionsTtc' => 150.0, 'reserve' => 120.339,
         'sinistresIndemnises' => 200.0, 'ratioSP' => 20.0, 'partMarche' => 45.5,
     ];
 
@@ -96,6 +96,44 @@ class AnalysePortefeuilleToolTest extends TestCase
 
         $this->assertSame(AiToolResult::STATUS_HORS_PERIMETRE, $result->status);
         $this->assertSame('Assureurs', $result->data['libelle']);
+    }
+
+    /**
+     * LA RÉSERVE FAISAIT DÉFAUT, ET KET L'A INVENTÉE.
+     *
+     * Le 2026-09-19, à « donne-moi le top 5 des clients avec leur réserve », elle a rendu
+     * un tableau dont la colonne RÉSERVE ne venait de nulle part : trois zéros et deux
+     * montants sans rapport avec les écritures. Le chiffre existait pourtant — le tableau
+     * de bord l'agrège ligne à ligne depuis la formule unique du projet — mais l'outil ne
+     * le transmettait pas. Demander à un modèle une colonne qu'il n'a pas, c'est le
+     * mettre en tentation : on la lui donne.
+     */
+    public function testLesClassementsPortentLaReserveDuCabinet(): void
+    {
+        $dashboard = $this->createMock(DashboardDataProvider::class);
+        $dashboard->method('getTopAssuresAvecIndicateurs')->willReturn([self::TOP_ROW]);
+
+        $tool = $this->makeTool(['Avenant' => true, 'Client' => true], $dashboard);
+        $result = $tool->execute(['analyse' => 'top_clients'], $this->makeScope());
+
+        $ligne = $result->data['lignes'][0];
+        $this->assertArrayHasKey('reserve', $ligne, 'la réserve doit figurer dans chaque ligne');
+        $this->assertSame(120.34, $ligne['reserve'], 'arrondie au centime, comme les autres montants');
+        $this->assertContains('reserve', $result->data['presentation']['totaliser'] ?? [], 'et elle se totalise');
+    }
+
+    /** Une ligne sans réserve connue vaut zéro, jamais un trou ni une invention. */
+    public function testUneLigneSansReserveVautZero(): void
+    {
+        $sansReserve = self::TOP_ROW;
+        unset($sansReserve['reserve']);
+        $dashboard = $this->createMock(DashboardDataProvider::class);
+        $dashboard->method('getTopAssuresAvecIndicateurs')->willReturn([$sansReserve]);
+
+        $tool = $this->makeTool(['Avenant' => true, 'Client' => true], $dashboard);
+        $result = $tool->execute(['analyse' => 'top_clients'], $this->makeScope());
+
+        $this->assertSame(0.0, $result->data['lignes'][0]['reserve']);
     }
 
     public function testLimiteClampee(): void

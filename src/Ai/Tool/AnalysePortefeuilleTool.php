@@ -73,7 +73,9 @@ final class AnalysePortefeuilleTool implements AiToolInterface
     public function description(): string
     {
         return 'Analyses agrégées du portefeuille du cabinet : classements « top » des assureurs, '
-            . 'clients, risques ou intermédiaires ; CHIFFRE D\'AFFAIRES (commissions encaissées, '
+            . 'clients, risques ou intermédiaires — chaque ligne porte le nombre de polices, les '
+            . 'primes totales, les commissions TTC, la RÉSERVE du cabinet (ce qui lui reste après '
+            . 'rétrocessions) et la part de marché ; CHIFFRE D\'AFFAIRES (commissions encaissées, '
             . 'HT et TTC) VENTILÉ par assureur, risque, client/assuré, portefeuille, partenaire '
             . 'OU par mois ; COMPENSATIONS SINISTRES (indemnisations payable/payé/solde) ventilées '
             . 'selon les mêmes axes ; production encaissée par mois ; derniers encaissements. '
@@ -240,6 +242,16 @@ final class AnalysePortefeuilleTool implements AiToolInterface
                     'nbPolices'      => $row['nbPolices'],
                     'primesTotales'  => round((float) $row['primesTotales'], 2),
                     'commissionsTtc' => round((float) $row['commissionsTtc'], 2),
+                    // LA RÉSERVE MANQUAIT, et c'est ce qui a fait inventer une colonne.
+                    // Le 2026-09-19, à une demande de « top 5 des clients avec leur
+                    // réserve », Ket a rendu un tableau dont la colonne RÉSERVE était
+                    // fabriquée de toutes pièces — trois zéros et deux montants qui ne
+                    // correspondaient à rien. Le chiffre existait pourtant, calculé par
+                    // la formule unique du projet (App\Service\Partage\Reserve) et
+                    // agrégé ligne à ligne par le tableau de bord : il n'était
+                    // simplement pas transmis. Un modèle à qui l'on demande une colonne
+                    // qu'il n'a pas est un modèle qu'on met en tentation.
+                    'reserve'        => round((float) ($row['reserve'] ?? 0), 2),
                     'partMarche'     => $row['partMarche'] ?? 0.0,
                 ];
                 if ($avecSinistralite) {
@@ -261,6 +273,7 @@ final class AnalysePortefeuilleTool implements AiToolInterface
             'nbPolices'      => Colonnes::NOMBRE,
             'primesTotales'  => Colonnes::MONTANT,
             'commissionsTtc' => Colonnes::MONTANT,
+            'reserve'        => Colonnes::MONTANT,
             'partMarche'     => Colonnes::POURCENTAGE,
         ];
         if ($avecSinistralite) {
@@ -274,8 +287,8 @@ final class AnalysePortefeuilleTool implements AiToolInterface
             'presentation' => $lignes === [] ? null : Colonnes::de(
                 $roles,
                 $avecSinistralite
-                    ? ['nbPolices', 'primesTotales', 'commissionsTtc', 'sinistresIndemnises']
-                    : ['nbPolices', 'primesTotales', 'commissionsTtc'],
+                    ? ['nbPolices', 'primesTotales', 'commissionsTtc', 'reserve', 'sinistresIndemnises']
+                    : ['nbPolices', 'primesTotales', 'commissionsTtc', 'reserve'],
             ),
             'note'    => $avecSinistralite ? null
                 : 'Sinistralité omise : les sinistres sont hors du périmètre de l\'utilisateur.',
