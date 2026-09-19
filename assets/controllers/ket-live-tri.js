@@ -54,6 +54,13 @@ export const TICS = [
     'bah', 'ben', 'bon ben', 'voila', 'voilà', 'enfin bref', 'du coup', 'genre',
 ];
 
+/**
+ * Combien de mots consécutifs de Ket il faut reconnaître avant de retrancher quoi que
+ * ce soit. Quatre : en deçà, deux phrases françaises partagent trop facilement un début
+ * (« est-ce que vous », « dans les trois ») et l'on mutilerait une vraie question.
+ */
+export const MOTS_AVANT_RETRAIT = 4;
+
 /** Forme de comparaison : minuscules, sans accents, sans ponctuation, espaces réduits. */
 const cle = (texte) => String(texte ?? '')
     .normalize('NFD')
@@ -98,6 +105,69 @@ export function priseRecevable(prise, instantMs = 0, margeProche = MARGE_PROCHE)
     if (marge < margeProche) return verdict(false, 'loin');
 
     return verdict(true, 'recevable');
+}
+
+/**
+ * RETRANCHE DE CE QU'ON ENTEND LES MOTS QUE KET VIENT DE DIRE.
+ *
+ * L'INCIDENT (2026-09-19). Dans la bulle de l'utilisateur : « aucun avenant ne répertorié
+ * avec une date VA VOIR AUSSI DANS LES PROCHAINS 90 JOURS ». Les premiers mots sont ceux
+ * de Ket, la fin est bien celle de l'utilisateur. Le juge de provenance ne peut rien
+ * ici : quelqu'un parlait VRAIMENT tout près du micro — c'est la reconnaissance du
+ * navigateur, qui entend aussi le haut-parleur, qui a fondu les deux voix en une phrase.
+ *
+ * On ne compare donc pas des phrases entières (la reconnaissance déforme : « n'est » →
+ * « ne »), mais des MOTS, dans l'ordre, depuis le début. Tant que le mot entendu se
+ * retrouve dans ce que Ket disait, il lui appartient. Au premier mot qui n'y est pas,
+ * l'utilisateur a pris la parole, et tout le reste est à lui.
+ *
+ * CONSERVATEUR : on ne retranche qu'à partir de quatre mots reconnus, et jamais au
+ * milieu d'une phrase — seul un DÉBUT d'écho se retire. Si l'utilisateur reprend les
+ * mots de Ket à dessein (« les trente polices échues, oui »), sa suite lui reste.
+ *
+ * @param {string} texte
+ * @param {string[]} phrasesDeKet ce qu'elle vient de dire (réponse lue, intermèdes joués)
+ * @returns {string} le texte sans son écho de tête
+ */
+export function retirerLaVoixDeKet(texte, phrasesDeKet = []) {
+    const mots = String(texte ?? '').trim().split(/\s+/).filter((m) => m !== '');
+    if (mots.length === 0) return '';
+
+    let meilleur = 0;
+    for (const phrase of phrasesDeKet) {
+        const motsDeKet = cle(phrase).split(' ').filter((m) => m !== '');
+        if (motsDeKet.length === 0) continue;
+
+        let curseur = 0;
+        let reconnus = 0;
+        for (const mot of mots) {
+            // Un « mot » entendu peut en valoir deux une fois normalisé : « laissez-moi »
+            // devient « laissez moi ». On les compare donc tous, dans l'ordre.
+            const morceaux = cle(mot).split(' ').filter((m) => m !== '');
+            let tousTrouves = morceaux.length > 0;
+            let curseurLocal = curseur;
+            for (const morceau of morceaux) {
+                // Les mots outils très courts (« n », « d », « ne ») sont des artefacts de
+                // transcription : ils ne prouvent rien, mais ils ne cassent pas la série.
+                if (morceau.length <= 2) continue;
+                const trouve = motsDeKet.indexOf(morceau, curseurLocal);
+                if (trouve === -1) { tousTrouves = false; break; }
+                curseurLocal = trouve + 1;
+            }
+            if (!tousTrouves) break;
+            curseur = curseurLocal;
+            reconnus++;
+        }
+        meilleur = Math.max(meilleur, reconnus);
+    }
+
+    if (meilleur < MOTS_AVANT_RETRAIT || meilleur >= mots.length) {
+        // Rien de reconnu, ou TOUT l'est : dans le second cas c'est un écho pur, et le
+        // texte vidé sera écarté par phraseRecevable (motif « vide »).
+        return meilleur >= mots.length ? '' : String(texte ?? '').trim();
+    }
+
+    return mots.slice(meilleur).join(' ');
 }
 
 /**
