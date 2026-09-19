@@ -33,16 +33,33 @@ export const PHRASE_MAX_MS = 30000;
 /** Le seuil ne descend jamais sous ce plancher : un micro muet n'est pas de la parole. */
 export const PLANCHER = 0.012;
 
-/**
- * Multiples du bruit de fond : pour parler, et pour couper Ket.
- *
- * L'interruption était à 4,5 — soit, dans une pièce calme (plancher 0,012), une énergie
- * de 0,054, ce qu'une voix ordinaire atteint à peine : il fallait HAUSSER LE TON pour
- * couper Ket. Trois fois le fond reste très au-dessus d'un bruit de bureau, et se
- * franchit en parlant normalement.
- */
+/** Il faut dépasser ce multiple du bruit de la pièce pour que ce soit une voix. */
 export const FACTEUR_PAROLE = 2.2;
-export const FACTEUR_INTERRUPTION = 3;
+
+/**
+ * Il faut dépasser ce multiple de LA FUITE DU HAUT-PARLEUR pour couper Ket.
+ *
+ * Ce n'est pas un multiple du bruit de la pièce, et c'est tout l'enjeu : pendant que
+ * Ket parle, ce qui revient dans le micro n'est pas le silence du bureau, c'est SA
+ * VOIX. Comparer la voix de l'utilisateur au bruit de la pièce revenait à comparer
+ * Ket elle-même à ce bruit — elle franchissait le seuil, se prenait pour
+ * l'utilisateur, et se coupait au bout d'une seconde.
+ *
+ * Deux fois la fuite mesurée : une voix humaine, à trente centimètres du micro, est
+ * très au-dessus du haut-parleur qu'elle recouvre ; Ket, elle, reste à une fois.
+ */
+export const FACTEUR_INTERRUPTION = 2;
+
+/**
+ * Temps d'écoute de la fuite au début de chaque prise de parole de Ket.
+ *
+ * On ne peut pas connaître d'avance ce que le haut-parleur renvoie : cela dépend du
+ * volume, de l'appareil, de la pièce, d'un casque branché ou non. On l'ÉCOUTE donc, une
+ * demi-seconde, avant d'autoriser la moindre interruption. Pendant ce court instant,
+ * Ket ne peut pas être coupée — c'est le prix à payer pour qu'elle ne se coupe jamais
+ * elle-même, et personne n'interrompt quelqu'un dans sa première demi-seconde.
+ */
+export const CALIBRATION_MS = 600;
 
 /** Énergie (valeur efficace) d'une trame d'échantillons. */
 export function energie(trame) {
@@ -63,16 +80,30 @@ export function creerDetecteur(options = {}) {
     const finMs = options.finMs ?? FIN_MS;
     const phraseMaxMs = options.phraseMaxMs ?? PHRASE_MAX_MS;
 
-    let fond = PLANCHER;
+    const calibrationMs = options.calibrationMs ?? CALIBRATION_MS;
+
+    let fond = PLANCHER;   // le bruit de la pièce, Ket silencieuse
+    let fuite = 0;         // ce que le haut-parleur de Ket renvoie dans le micro
+    let calibreJusqua = null;
+    let ketParlaitAvant = false;
     let parle = false;
     let depuis = null; // début de la salve de voix en cours
     let silenceDepuis = null;
     let debutPhrase = null;
 
+    /** Le seuil du moment : la pièce quand Ket se tait, sa fuite quand elle parle. */
+    const seuilPour = (ketParle) => (ketParle
+        ? Math.max(PLANCHER, fuite * FACTEUR_INTERRUPTION, fond * FACTEUR_PAROLE)
+        : Math.max(PLANCHER, fond * FACTEUR_PAROLE));
+
     return {
         /** Le seuil courant, utile aux tests et à l'affichage du niveau. */
         seuil(ketParle = false) {
-            return Math.max(PLANCHER, fond * (ketParle ? FACTEUR_INTERRUPTION : FACTEUR_PAROLE));
+            return seuilPour(ketParle);
+        },
+        /** La fuite mesurée pendant la dernière prise de parole de Ket (diagnostic). */
+        fuiteMesuree() {
+            return fuite;
         },
         /** Remise à zéro entre deux phrases (le bruit de fond appris, lui, est gardé). */
         reinitialiser() {
@@ -82,7 +113,26 @@ export function creerDetecteur(options = {}) {
             debutPhrase = null;
         },
         pousser(niveau, instantMs, ketParle = false) {
-            const seuil = Math.max(PLANCHER, fond * (ketParle ? FACTEUR_INTERRUPTION : FACTEUR_PAROLE));
+            // KET VIENT DE PRENDRE LA PAROLE : on écoute d'abord ce que son haut-parleur
+            // renvoie, sans rien interpréter. Une phrase commencée avant ne se poursuit
+            // pas à travers sa voix.
+            if (ketParle && !ketParlaitAvant) {
+                ketParlaitAvant = true;
+                calibreJusqua = instantMs + calibrationMs;
+                fuite = 0;
+                this.reinitialiser();
+            }
+            if (!ketParle) {
+                ketParlaitAvant = false;
+                calibreJusqua = null;
+            }
+            if (calibreJusqua !== null && instantMs < calibreJusqua) {
+                fuite = Math.max(fuite, niveau);
+
+                return null;
+            }
+
+            const seuil = seuilPour(ketParle);
             const auDessus = niveau > seuil;
 
             // Le bruit de fond suit LENTEMENT les silences, et jamais la parole : sinon une
@@ -95,8 +145,14 @@ export function creerDetecteur(options = {}) {
             // — un multiple de ce fond — grimpait avec lui. Plus Ket parlait longtemps,
             // plus il fallait crier pour la couper. Le fond se gèle donc pendant sa
             // parole : c'est celui de la pièce, pas celui du haut-parleur.
-            if (!auDessus && !parle && !ketParle) {
-                fond = fond * 0.95 + niveau * 0.05;
+            if (!auDessus && !parle) {
+                if (ketParle) {
+                    // La fuite suit le haut-parleur (qui monte et descend avec la
+                    // diction), jamais la voix de l'utilisateur — elle, est au-dessus.
+                    fuite = fuite * 0.9 + niveau * 0.1;
+                } else {
+                    fond = fond * 0.95 + niveau * 0.05;
+                }
             }
 
             if (!parle) {

@@ -4155,9 +4155,13 @@ export default class extends Controller {
     }
 
     /** La voix du navigateur (speechSynthesis) : le repli, gratuit et toujours là. */
-    async _lireAvecNavigateur(segments, jeton) {
+    /**
+     * @param {SpeechSynthesisVoice|null} voixImposee voix de repli, après une panne de la
+     *   première : un seul repli, jamais deux (sinon on tournerait en rond).
+     */
+    async _lireAvecNavigateur(segments, jeton, voixImposee = null) {
         if (segments.length === 0) return;
-        const voix = await this._voixDeKet();
+        const voix = voixImposee ?? await this._voixDeKet();
         if (this._lecture !== jeton) return;
 
         const langue = documentLocale() === 'en' ? 'en-US' : 'fr-FR';
@@ -4171,10 +4175,22 @@ export default class extends Controller {
                 enonce.onend = () => { if (this._lecture === jeton) this.arreterLecture(); };
             }
             enonce.onerror = (event) => {
+                const cause = event?.error;
                 // « interrupted » / « canceled » : c'est notre propre arrêt.
-                if (this._lecture === jeton && !['interrupted', 'canceled'].includes(event?.error)) {
-                    this.arreterLecture();
+                if (this._lecture !== jeton || ['interrupted', 'canceled'].includes(cause)) return;
+                console.debug('Ket — la voix du navigateur a échoué :', cause, voix?.name);
+
+                // LES MEILLEURES VOIX SONT EN LIGNE (« Denise Online (Natural) ») : elles
+                // demandent le réseau à chaque énoncé, et une coupure les fait taire au
+                // milieu d'une phrase. Plutôt que de laisser Ket muette, on reprend ce
+                // qu'il restait à dire avec une voix LOCALE, qui ne dépend de rien.
+                const locale = voixImposee ? null : this._voixLocale();
+                if (locale) {
+                    window.speechSynthesis.cancel();
+                    this._lireAvecNavigateur(segments.slice(index), jeton, locale);
+                    return;
                 }
+                this.arreterLecture();
             };
             window.speechSynthesis.speak(enonce);
         });
@@ -4211,6 +4227,16 @@ export default class extends Controller {
      * appel (Chrome la charge en différé) : on attend `voiceschanged`, avec une garde
      * pour ne jamais rester muet. Un choix nul n'est pas mémorisé.
      */
+    /**
+     * La meilleure voix féminine INSTALLÉE SUR LA MACHINE, s'il y en a une. Elle sert
+     * de filet quand la voix en ligne tombe : moins belle, mais elle, elle parle.
+     */
+    _voixLocale() {
+        const disponibles = (window.speechSynthesis?.getVoices() || []).filter((v) => v.localService);
+
+        return choisirVoix(disponibles, documentLocale() === 'en' ? 'en' : 'fr');
+    }
+
     _voixDeKet() {
         if (this._voixPromesse) return this._voixPromesse;
         const synthese = window.speechSynthesis;
