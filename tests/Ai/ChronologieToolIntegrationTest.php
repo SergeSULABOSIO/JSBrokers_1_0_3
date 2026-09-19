@@ -4,6 +4,7 @@ namespace App\Tests\Ai;
 
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
+use App\Ai\Tool\RechercherEntitesTool;
 use App\Ai\Tool\ChronologieTool;
 use App\Entity\Assureur;
 use App\Entity\Avenant;
@@ -226,6 +227,32 @@ class ChronologieToolIntegrationTest extends KernelTestCase
      * trouve une réponse, et la chronologie raconte le dossier dans l'ordre des dates
      * MÉTIER — pas dans celui des saisies.
      */
+    /**
+     * UNE POLICE DIT CHEZ QUEL ASSUREUR ELLE EST — et de quel client.
+     *
+     * Le 2026-09-19 (fil 74), à « quel assureur ? » posé sur une liste de polices, Ket a
+     * répondu que le nom du client « n'est pas directement accessible dans les résultats
+     * actuels », puis a cherché un MONTANT comme s'il s'agissait d'un nom. Le libellé
+     * d'une police nomme son risque ; ses deux parties, elles, n'étaient nulle part —
+     * alors que c'est par elles qu'un courtier la désigne.
+     *
+     * Ce jeu d'essai porte un assureur réel : la liste doit le rendre.
+     */
+    public function testUnePoliceListeeDitSonClientEtSonAssureur(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+
+        $liste = static::getContainer()->get(RechercherEntitesTool::class)
+            ->execute(['entite' => 'Avenant', 'perimetre' => 'entreprise'], new AiScope($entreprise, $invite));
+
+        $this->assertSame(AiToolResult::STATUS_OK, $liste->status);
+        $this->assertNotEmpty($liste->data['items']);
+        $ligne = $liste->data['items'][0];
+        $this->assertSame('MIC-RC', $ligne['client'] ?? null, 'de qui est cette police');
+        $this->assertSame('SFA Assurances', $ligne['assureur'] ?? null, 'chez quel assureur');
+        $this->assertArrayHasKey('echeance', $ligne, 'et où elle en est de son échéance');
+    }
+
     public function testLaChronologieDUnClientRacontLeDossierDansLOrdreMetier(): void
     {
         ['entreprise' => $entreprise, 'invite' => $invite, 'client' => $client] = $this->seed();

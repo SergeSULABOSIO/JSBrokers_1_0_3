@@ -347,6 +347,46 @@ class CoherenceChipsAssistantTest extends KernelTestCase
      * chaque valeur de chaque axe SEULE, puis les paires qui remplacent les anciens statuts
      * composites — c'est là que la parité chip ⇔ Ket peut le plus facilement casser.
      */
+    /**
+     * CHAQUE POLICE DIT DE QUI ELLE EST, CHEZ QUI, ET OÙ EN EST SON ÉCHÉANCE.
+     *
+     * Deux incohérences du 2026-09-19 (fil 74) tenaient à ce que ces trois données
+     * manquaient de la liste :
+     *  - à « quel assureur ? » posé sur une liste de polices, Ket répondait « le nom du
+     *    client rattaché à cet avenant n'est pas directement accessible », puis cherchait
+     *    un MONTANT comme s'il s'agissait d'un nom ;
+     *  - elle a présenté comme « échéance lointaine » des contrats expirés depuis huit
+     *    mois, avant de se contredire au message suivant. Une ligne qui porte « Échu » ne
+     *    peut plus être qualifiée de lointaine.
+     *
+     * Le libellé d'une police nomme son RISQUE — jamais ses deux parties, alors que c'est
+     * par elles qu'un courtier la désigne.
+     */
+    public function testChaquePoliceDitSonClientSonAssureurEtSonEcheance(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+        $scope = new AiScope($entreprise, $invite);
+
+        $liste = $this->rechercher()->execute(['entite' => 'Avenant'], $scope);
+
+        self::assertSame(AiToolResult::STATUS_OK, $liste->status);
+        self::assertNotEmpty($liste->data['items']);
+        foreach ($liste->data['items'] as $item) {
+            self::assertArrayHasKey('client', $item, 'de qui est cette police');
+            self::assertNotSame('', trim((string) $item['client']));
+            // La PHRASE du badge de la rubrique, pas le nom de la fenêtre : « Expiré
+            // depuis 262 j » ne peut pas se raconter comme une échéance lointaine.
+            self::assertArrayHasKey('echeance', $item, 'où en est son échéance');
+            self::assertMatchesRegularExpression(
+                "/^(Expiré depuis \d+ j|Échéance dans \d+ j|Échéance aujourd'hui)$/u",
+                (string) $item['echeance'],
+                'le libellé vient du MÊME scope que le badge de la rubrique',
+            );
+            self::assertArrayNotHasKey('assureur', $item, 'sans assureur, pas de clé vide');
+        }
+
+    }
+
     public function testTranchesChaqueChipCoincideAvecLAssistant(): void
     {
         ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
