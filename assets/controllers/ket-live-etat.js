@@ -39,7 +39,17 @@ export const LIBELLES = {
  * serveur restent le repli : Firefox, navigateurs sans reconnaissance, ou panne.
  */
 export function sessionInitiale(oreille = 'navigateur') {
-    return { etat: ETATS.ARRET, oreille, derniereParole: '', secours: false };
+    return {
+        etat: ETATS.ARRET,
+        oreille,
+        derniereParole: '',
+        secours: false,
+        // COMMENT ON ÉCOUTE. « continue » : les mains libres, la promesse du mode Live.
+        // « demande » : Ket n'écoute que sur appui, parce que trop de bruit alentour
+        // entrait dans la conversation. Elle y bascule d'elle-même, et le dit.
+        ecoute: 'continue',
+        micDemande: false,
+    };
 }
 
 /**
@@ -54,6 +64,8 @@ export function sessionInitiale(oreille = 'navigateur') {
  */
 export function transition(session, evenement, charge = {}) {
     const s = { ...sessionInitiale(session?.oreille), ...session, actions: [] };
+    // Le micro à la demande se referme à chaque tour : un appui vaut UNE phrase.
+    const referme = { micDemande: false };
     const avec = (etat, actions = [], champs = {}) => ({ ...s, ...champs, etat, actions });
 
     switch (evenement) {
@@ -67,7 +79,9 @@ export function transition(session, evenement, charge = {}) {
             ]);
 
         case 'arreter':
-            return s.etat === ETATS.ARRET ? s : avec(ETATS.ARRET, ['fermer-micro', 'couper-voix', 'liberer-ecran']);
+            return s.etat === ETATS.ARRET
+                ? s
+                : avec(ETATS.ARRET, ['fermer-micro', 'couper-voix', 'liberer-ecran'], referme);
 
         // L'utilisateur parle : pendant que Ket parle, c'est une INTERRUPTION.
         case 'voix-detectee':
@@ -91,8 +105,8 @@ export function transition(session, evenement, charge = {}) {
         case 'texte-entendu': {
             if (s.etat !== ETATS.TRANSCRIPTION && s.etat !== ETATS.ECOUTE) return s;
             const texte = String(charge.texte ?? '').trim();
-            if (texte === '') return avec(ETATS.ECOUTE, ['couper-intermedes']);
-            return avec(ETATS.REFLEXION, ['envoyer-question', 'programmer-intermedes'], { derniereParole: texte });
+            if (texte === '') return avec(ETATS.ECOUTE, ['couper-intermedes'], referme);
+            return avec(ETATS.REFLEXION, ['envoyer-question', 'programmer-intermedes'], { derniereParole: texte, ...referme });
         }
 
         // Les oreilles du serveur ne répondent pas : le navigateur écoute lui-même.
@@ -104,6 +118,22 @@ export function transition(session, evenement, charge = {}) {
         // prennent le relais, phrase par phrase.
         case 'oreille-serveur':
             return s.etat === ETATS.ARRET ? s : avec(s.etat, [], { oreille: 'serveur' });
+
+        // TROP DE BRUIT AUTOUR : Ket cesse d'écouter en continu. Ce n'est pas une panne,
+        // c'est un aveu — mieux vaut un appui de plus que des phrases qui ne lui étaient
+        // pas adressées.
+        case 'ecoute-a-la-demande':
+            if (s.etat === ETATS.ARRET || s.ecoute === 'demande') return s;
+            return avec(s.etat, [], { ecoute: 'demande', micDemande: false });
+
+        case 'ecoute-continue':
+            if (s.etat === ETATS.ARRET || s.ecoute === 'continue') return s;
+            return avec(s.etat, [], { ecoute: 'continue', micDemande: false });
+
+        // L'appui sur « Parler » : le micro s'ouvre pour UNE phrase.
+        case 'parler':
+            if (s.etat !== ETATS.ECOUTE || s.ecoute !== 'demande') return s;
+            return avec(ETATS.ECOUTE, [], { micDemande: !s.micDemande });
 
         case 'reponse-affichee':
             return s.etat === ETATS.REFLEXION ? avec(ETATS.PAROLE, ['couper-intermedes', 'lire-reponse']) : s;
@@ -123,6 +153,15 @@ export function transition(session, evenement, charge = {}) {
 /** Le texte d'état affiché et annoncé. */
 export function libelleEtatLive(session) {
     const base = LIBELLES[session?.etat] ?? LIBELLES[ETATS.ARRET];
+    if (session?.etat !== ETATS.ECOUTE) return base;
 
-    return session?.secours && session?.etat === ETATS.ECOUTE ? `${base} (écoute de secours)` : base;
+    // À LA DEMANDE, l'état ne peut pas dire « Ket vous écoute » : ce serait faux, et
+    // l'utilisateur attendrait en vain qu'elle réponde.
+    if (session?.ecoute === 'demande') {
+        return session?.micDemande
+            ? 'Parlez, je vous écoute…'
+            : 'Trop de bruit autour : appuyez pour me parler.';
+    }
+
+    return session?.secours ? `${base} (écoute de secours)` : base;
 }

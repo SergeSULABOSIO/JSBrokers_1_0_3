@@ -1143,12 +1143,20 @@
         }
         .jsb-ai-chat .aic-live-astuce { font-size:.72rem; color:var(--aic-muted); }
         .jsb-ai-chat .aic-live-astuce[hidden] { display:none; }
-        .jsb-ai-chat .aic-live-fin {
+        .jsb-ai-chat .aic-live-fin,
+        .jsb-ai-chat .aic-live-parler {
             flex:0 0 auto; display:flex; align-items:center; gap:.35rem;
             min-height:44px; padding:0 .8rem; border-radius:12px; cursor:pointer;
             border:1px solid var(--aic-border-strong); background:var(--aic-surface); color:var(--aic-text);
             font-size:.8rem;
         }
+        .jsb-ai-chat .aic-live-fin[hidden],
+        .jsb-ai-chat .aic-live-parler[hidden] { display:none; }
+        /* L'action attendue porte la couleur de la marque ; l'appui se voit et s'entend
+           (aria-pressed), jamais par la seule teinte. */
+        .jsb-ai-chat .aic-live-parler { border-color:var(--aic-accent-solid); background:var(--aic-accent-solid); color:var(--aic-on-accent); }
+        .jsb-ai-chat .aic-live-parler[aria-pressed="true"] { background:var(--aic-accent-subtle); color:var(--aic-on-subtle); }
+        .jsb-ai-chat .aic-live-parler:focus-visible { outline:2px solid var(--aic-accent); outline-offset:2px; }
         .jsb-ai-chat .aic-live-fin:hover { background:var(--aic-accent-subtle); color:var(--aic-on-subtle); }
         .jsb-ai-chat .aic-live-fin:focus-visible { outline:2px solid var(--aic-accent); outline-offset:2px; }
         .jsb-ai-chat .aic-input {
@@ -1746,6 +1754,23 @@ Le texte est alors mis au propre (hésitations retirées, ponctuation, questions
                     Gardez l’écran allumé : ce navigateur ne sait pas l’en empêcher.
                 </span>
             </span>
+            {# MICRO À LA DEMANDE. Ces deux boutons n'apparaissent QUE lorsque Ket a
+               renoncé à l'écoute continue, faute d'avoir pu distinguer votre voix du
+               bruit alentour. Libellés en toutes lettres : l'état ne se devine pas à
+               une couleur. #}
+            <button type="button" class="aic-live-parler" hidden
+                    data-ket-live-target="parler"
+                    data-action="click->ket-live#parler"
+                    aria-pressed="false">
+                {{ ux_icon(resolve_icon_name('action:mic'), {height: '14px', width: '14px'}) }}
+                <span>Appuyez pour parler</span>
+            </button>
+            <button type="button" class="aic-live-fin" hidden
+                    data-ket-live-target="mainsLibres"
+                    data-action="click->ket-live#mainsLibres"
+                    aria-label="Revenir à l’écoute en continu, sans appui">
+                <span>Mains libres</span>
+            </button>
             <button type="button" class="aic-live-fin"
                     data-action="click->ket-live#arreter"
                     aria-label="Terminer le mode Live (Échap)">
