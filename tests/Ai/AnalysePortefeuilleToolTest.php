@@ -136,6 +136,49 @@ class AnalysePortefeuilleToolTest extends TestCase
         $this->assertSame(0.0, $result->data['lignes'][0]['reserve']);
     }
 
+    /**
+     * LA POLICE ELLE-MÊME, ET NON SON CLIENT (incident du 2026-09-19, fil 74).
+     *
+     * « Dans mon portefeuille, donne-moi la police qui a généré la prime la plus
+     * élevée. » Ket : « La police ayant généré la prime la plus élevée n'a pas pu être
+     * isolée directement par le système de statistiques. » C'était exact — les quatre
+     * classements agrégeaient par assureur, client, risque ou intermédiaire, jamais à la
+     * maille de l'affaire. Une question d'une ligne restait sans réponse.
+     */
+    public function testLeClassementDesPolicesNommeLAffaireEtSesDeuxParties(): void
+    {
+        $dashboard = $this->createMock(DashboardDataProvider::class);
+        $dashboard->method('getTopPolicesAvecIndicateurs')->willReturn([[
+            'id' => 12, 'nom' => '12005-31002-0014', 'client' => 'CHEMAF', 'assureur' => 'RAWSUR LIFE',
+            'nbPolices' => 1, 'primesTotales' => 442930.82, 'commissionsTtc' => 20869.20,
+            'reserve' => 20869.20, 'partMarche' => 28.4,
+        ]]);
+
+        $tool = $this->makeTool(['Avenant' => true], $dashboard);
+        $result = $tool->execute(['analyse' => 'top_polices'], $this->makeScope());
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $ligne = $result->data['lignes'][0];
+        $this->assertSame('12005-31002-0014', $ligne['nom']);
+        $this->assertSame('CHEMAF', $ligne['client'], 'de qui est cette police');
+        $this->assertSame('RAWSUR LIFE', $ligne['assureur'], 'chez quel assureur');
+        $this->assertSame(442930.82, $ligne['primesTotales']);
+    }
+
+    /** Ailleurs, la ligne EST le client ou l'assureur : pas de colonne de tirets. */
+    public function testLesAutresClassementsNePortentPasDeColonnesVides(): void
+    {
+        $dashboard = $this->createMock(DashboardDataProvider::class);
+        $dashboard->method('getTopAssuresAvecIndicateurs')->willReturn([self::TOP_ROW]);
+
+        $tool = $this->makeTool(['Avenant' => true, 'Client' => true], $dashboard);
+        $result = $tool->execute(['analyse' => 'top_clients'], $this->makeScope());
+
+        $this->assertArrayNotHasKey('client', $result->data['lignes'][0]);
+        $this->assertArrayNotHasKey('assureur', $result->data['lignes'][0]);
+        $this->assertArrayNotHasKey('client', $result->data['presentation']['colonnes']);
+    }
+
     public function testLimiteClampee(): void
     {
         $rows = array_map(

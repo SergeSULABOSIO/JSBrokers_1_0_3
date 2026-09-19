@@ -329,6 +329,59 @@ class DashboardDataProvider
         return $indexed;
     }
 
+    /**
+     * LES POLICES ELLES-MÊMES, classées par prime — la maille qui manquait.
+     *
+     * Les quatre autres classements agrègent (par assureur, client, risque,
+     * intermédiaire). À « quelle police a généré la prime la plus élevée ? », posée le
+     * 2026-09-19, Ket a répondu qu'elle « n'a pas pu être isolée directement par le
+     * système de statistiques » — et c'était vrai : aucun outil ne descendait à
+     * l'affaire. Une question d'une ligne restait sans réponse faute d'une maille.
+     *
+     * Chaque ligne nomme sa police ET ses deux parties : c'est ainsi qu'un courtier la
+     * reconnaît, et cela évite le second tour d'outil pour demander « de qui est-elle ? ».
+     */
+    public function getTopPolicesAvecIndicateurs(Entreprise $entreprise): array
+    {
+        $lignes = [];
+        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
+            $cotation = $avenant->getCotation();
+            $piste = $cotation?->getPiste();
+            $lignes[] = [
+                'id'              => $avenant->getId(),
+                'nom'             => $this->nomDeLaPolice($avenant),
+                'client'          => $piste?->getClient()?->getNom(),
+                'assureur'        => $cotation?->getAssureur()?->getNom(),
+                'nbPolices'       => 1,
+                'primesTotales'   => (float) ($avenant->primeTotale ?? 0),
+                'commissionsTtc'  => (float) ($avenant->montantTTC ?? 0),
+                'reserve'         => (float) ($avenant->reserve ?? 0),
+            ];
+        }
+
+        $totalPrimes = $this->getPrimesTotales($entreprise);
+        foreach ($lignes as &$ligne) {
+            $ligne['partMarche'] = $totalPrimes > 0 ? round($ligne['primesTotales'] / $totalPrimes * 100, 1) : 0.0;
+        }
+        unset($ligne);
+
+        usort($lignes, static fn (array $a, array $b) => $b['primesTotales'] <=> $a['primesTotales']);
+
+        return $this->sliceAvecRestes($lignes);
+    }
+
+    /** Ce par quoi un courtier désigne une police : sa référence, sinon son risque. */
+    private function nomDeLaPolice(Avenant $avenant): string
+    {
+        $reference = trim((string) $avenant->getReferencePolice());
+        if ($reference !== '') {
+            return $reference;
+        }
+        $risque = $avenant->getCotation()?->getPiste()?->getRisque()?->getNom();
+
+        return trim((string) ($risque ?? '')) !== '' ? (string) $risque : 'Police n° ' . $avenant->getId();
+    }
+
     public function getTopAssureursAvecIndicateurs(Entreprise $entreprise): array
     {
         $parAssureur = $this->getAvenantsParAssureur($entreprise);
