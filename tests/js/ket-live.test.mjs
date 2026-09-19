@@ -381,6 +381,51 @@ test('une confiance basse durcit l’exigence, une confiance absente ne condamne
     assert.equal(hesitante.recevable, false, 'mal reconnu ET à la limite : on se tait');
 });
 
+// ── Rien de ce que dit l'utilisateur ne se perd ──────────────────────────────
+
+/**
+ * « ELLE NE DOIT RIEN JETER NI IGNORER QUI VIENNE DE MOI » (2026-09-19).
+ *
+ * Une question posée pendant que Ket cherchait était perdue : la machine n'acceptait un
+ * texte qu'en écoute ou en transcription. Or on ne parle pas en attendant son tour — on
+ * enchaîne, on précise, on corrige. Les questions s'empilent donc, et c'est le serveur
+ * qui les traite dans l'ordre : un fil rend « Q1 A1 Q2 A2 ».
+ */
+test('une question posée pendant qu’elle réfléchit n’est pas perdue', () => {
+    const reflexion = transition(
+        transition(transition(sessionInitiale(), 'demarrer'), 'texte-entendu', { texte: 'Le top 5 des clients ?' }),
+        'texte-entendu',
+        { texte: 'Et leur réserve ?' },
+    );
+
+    assert.equal(reflexion.etat, ETATS.REFLEXION);
+    assert.ok(reflexion.actions.includes('envoyer-question'), 'la seconde question part aussi');
+    assert.equal(reflexion.derniereParole, 'Et leur réserve ?');
+});
+
+test('parler pendant qu’elle parle la coupe ET pose la question', () => {
+    const parole = { ...sessionInitiale(), etat: ETATS.PAROLE };
+    const s = transition(parole, 'texte-entendu', { texte: 'Non, je voulais les assureurs.' });
+
+    assert.equal(s.etat, ETATS.REFLEXION);
+    assert.deepEqual(s.actions, ['couper-voix', 'envoyer-question', 'programmer-intermedes']);
+});
+
+test('deux réponses arrivées coup sur coup sont dites l’une après l’autre', () => {
+    let s = transition({ ...sessionInitiale(), etat: ETATS.REFLEXION }, 'reponse-affichee');
+    assert.deepEqual([s.etat, s.actions], [ETATS.PAROLE, ['couper-intermedes', 'lire-reponse']]);
+
+    // La seconde arrive pendant qu'elle dit la première : elle attend, elle ne se perd pas.
+    s = transition(s, 'reponse-affichee');
+    assert.deepEqual([s.etat, s.actions], [ETATS.PAROLE, ['empiler-reponse']]);
+
+    s = transition(s, 'lecture-terminee');
+    assert.deepEqual([s.etat, s.actions], [ETATS.ECOUTE, ['lire-la-suivante']]);
+
+    s = transition(s, 'reponse-suivante');
+    assert.deepEqual([s.etat, s.actions], [ETATS.PAROLE, ['couper-intermedes', 'lire-reponse']]);
+});
+
 // ── Micro à la demande ───────────────────────────────────────────────────────
 
 test('trop de bruit : Ket n’écoute plus qu’à la demande, et le dit', () => {
