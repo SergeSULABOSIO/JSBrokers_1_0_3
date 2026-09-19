@@ -4164,6 +4164,11 @@ export default class extends Controller {
         const voix = voixImposee ?? await this._voixDeKet();
         if (this._lecture !== jeton) return;
 
+        // UN SEUL REPLI, MÊME SI PLUSIEURS ÉNONCÉS TOMBENT ENSEMBLE. Les énoncés sont
+        // tous remis à la file d'un coup : une coupure réseau les fait échouer les uns
+        // après les autres, et chaque échec relançait sa propre lecture de secours —
+        // d'où DEUX VOIX DE KET par-dessus l'autre, déroutantes au possible.
+        let repliEngage = false;
         const langue = documentLocale() === 'en' ? 'en-US' : 'fr-FR';
         segments.forEach((segment, index) => {
             const enonce = new window.SpeechSynthesisUtterance(segment);
@@ -4184,12 +4189,14 @@ export default class extends Controller {
                 // demandent le réseau à chaque énoncé, et une coupure les fait taire au
                 // milieu d'une phrase. Plutôt que de laisser Ket muette, on reprend ce
                 // qu'il restait à dire avec une voix LOCALE, qui ne dépend de rien.
-                const locale = voixImposee ? null : this._voixLocale();
+                const locale = voixImposee || repliEngage ? null : this._voixLocale();
                 if (locale) {
+                    repliEngage = true;
                     window.speechSynthesis.cancel();
                     this._lireAvecNavigateur(segments.slice(index), jeton, locale);
                     return;
                 }
+                if (repliEngage) return; // le repli parle déjà : ne le coupons pas
                 this.arreterLecture();
             };
             window.speechSynthesis.speak(enonce);
