@@ -194,6 +194,69 @@ class GeminiAiEngineTest extends TestCase
     }
 
     /**
+     * UN SECOND REGARD, QUAND LE PREMIER A BUTÉ.
+     *
+     * « Quelle police a généré la prime la plus élevée ? », « quel assureur ? » : ces
+     * questions se répondent en deux temps — chercher, lire, chercher à nouveau. Le
+     * moteur n'accordait qu'un tour d'outils, et Ket répondait « je n'ai pas trouvé » là
+     * où un second appel suffisait. L'utilisateur relançait alors à la main, au prix d'un
+     * message entier.
+     */
+    public function testUneRechercheVideOuvreUnSecondTourDOutils(): void
+    {
+        $appels = 0;
+        $http = new MockHttpClient(function () use (&$appels) {
+            ++$appels;
+
+            // Les deux premiers tours réclament un outil ; le troisième écrit.
+            return new MockResponse(json_encode(
+                $appels <= 2 ? $this->tourAvecOutil(1000) : self::texte('Voici ce que j’ai trouvé.'),
+            ));
+        });
+
+        // L'outil ne trouve rien : c'est exactement là que Ket rendait les armes.
+        $tool = $this->makeTool(AiToolResult::ok(['totalItems' => 0, 'items' => []]));
+        $reply = $this->makeEngine($http, [$tool])->reply($this->makeRequest('quelle police porte la plus grosse prime ?'));
+
+        self::assertSame(3, $appels, 'un tour d’outils de plus, puis la rédaction');
+        self::assertStringContainsString('Voici ce que j’ai trouvé.', $reply->content);
+    }
+
+    /** QUAND LA DONNÉE EST LÀ, ON ÉCRIT : le second regard ne se paie pas pour rien. */
+    public function testUnPremierRegardFructueuxNeCoutePasUnTourDePlus(): void
+    {
+        $appels = 0;
+        $http = new MockHttpClient(function () use (&$appels) {
+            ++$appels;
+
+            return new MockResponse(json_encode(
+                $appels === 1 ? $this->tourAvecOutil(1000) : self::texte('Trois clients.'),
+            ));
+        });
+
+        $tool = $this->makeTool(AiToolResult::ok(['totalItems' => 3, 'items' => [1, 2, 3]]));
+        $this->makeEngine($http, [$tool])->reply($this->makeRequest('combien de clients ?'));
+
+        self::assertSame(2, $appels, 'planification puis rédaction, comme avant');
+    }
+
+    /** ET JAMAIS UN QUATRIÈME, même si le second regard échoue à son tour. */
+    public function testLeSecondRegardNeSeRepeteJamais(): void
+    {
+        $appels = 0;
+        $http = new MockHttpClient(function () use (&$appels) {
+            ++$appels;
+
+            return new MockResponse(json_encode($this->tourAvecOutil(1000)));
+        });
+
+        $tool = $this->makeTool(AiToolResult::ok(['totalItems' => 0, 'items' => []]));
+        $this->makeEngine($http, [$tool])->reply($this->makeRequest('introuvable'));
+
+        self::assertSame(3, $appels, 'trois appels de travail au maximum, quoi qu’il arrive');
+    }
+
+    /**
      * L'ÉCONOMIE QUI JUSTIFIE LA TROISIÈME PHASE : une demande ambiguë ne paie PLUS
      * la planification ni la rédaction.
      *
