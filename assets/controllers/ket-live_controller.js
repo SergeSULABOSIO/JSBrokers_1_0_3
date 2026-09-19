@@ -505,7 +505,11 @@ export default class extends Controller {
     }
 
     _direIntermede(moment) {
-        if (this.session.etat !== ETATS.REFLEXION) return;
+        // Les deux attentes que l'utilisateur SUBIT : pendant que le serveur transcrit sa
+        // phrase, et pendant que Ket cherche. La machine d'états programme les intermèdes
+        // dans les deux cas ; les restreindre à la réflexion les rendait muets sur la
+        // première, alors que c'est justement là que le silence commence.
+        if (this.session.etat !== ETATS.REFLEXION && this.session.etat !== ETATS.TRANSCRIPTION) return;
         const cle = choisir(this.intermedesValue ?? {}, moment, this._ditsPendantLAttente);
         const audio = cle ? this._audios.get(cle) : null;
         if (!audio) return;
