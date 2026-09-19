@@ -1161,6 +1161,9 @@ export default class extends Controller {
                 case 'ket-fichier.present':
                     this.renderFichierPresent(action);
                     break;
+                case 'ket-chiffre.absent':
+                    this.renderChiffreAbsent(action);
+                    break;
                 case 'ket-document.review':
                     this.renderDocumentReview(action);
                     break;
@@ -2223,6 +2226,28 @@ export default class extends Controller {
             `Votre fichier est bien là. ${pluriel ? 'Les pièces jointes suivantes sont attachées' : 'La pièce jointe suivante est attachée'}`
             + ` à cette conversation : ${noms.join(', ')}. Inutile de ${pluriel ? 'les' : 'le'} téléverser à nouveau —`
             + ` redemandez simplement à Ket de ${pluriel ? 'les' : 'l’'}attacher à l’enregistrement voulu.`,
+        );
+    }
+
+    /**
+     * UN MONTANT DU TABLEAU NE VIENT D'AUCUNE DONNÉE.
+     *
+     * On ne réécrit pas la réponse : corriger demanderait de savoir ce que Ket voulait
+     * dire, et personne ne le sait. On NOMME les montants sans source — c'est ce qu'il
+     * faut pour qu'un courtier ne les recopie pas dans un dossier.
+     */
+    renderChiffreAbsent(action = null) {
+        const montants = Array.isArray(action?.montants) ? action.montants.filter(Boolean) : [];
+        if (montants.length === 0) return;
+
+        const total = Number(action?.total) || montants.length;
+        const pluriel = total > 1;
+        const reste = total > montants.length ? ` (et ${total - montants.length} autre${total - montants.length > 1 ? 's' : ''})` : '';
+        this.appendNotice(
+            'warning',
+            `À vérifier avant de vous en servir : ${pluriel ? 'ces montants du tableau ne viennent' : 'ce montant du tableau ne vient'}`
+            + ` d’aucune donnée consultée — ${montants.join(', ')}${reste}.`
+            + ` Redemandez-${pluriel ? 'les' : 'le'} à Ket en le${pluriel ? 's' : ''} nommant, ou ouvrez la fiche concernée.`,
         );
     }
 

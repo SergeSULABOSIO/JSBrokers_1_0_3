@@ -1599,6 +1599,22 @@
                     à Ket de {{ fichiersNies|length > 1 ? 'les' : 'l’' }}attacher à l’enregistrement voulu.
                 </p>
             {% endif %}
+            {# MONTANT SANS SOURCE : un chiffre du tableau ne vient d'aucun outil. Il
+               DOIT survivre au rechargement plus encore que les autres mises au point —
+               le tableau, lui, y survit, et il serait relu sans son avertissement. #}
+            {% set montantsSansSource = estAssistant
+                ? (message.meta.chiffreAbsent.montants ?? []) : [] %}
+            {% if montantsSansSource|length > 0 %}
+                {% set totalSansSource = message.meta.chiffreAbsent.total ?? montantsSansSource|length %}
+                <p class="aic-notice aic-notice--warning" role="status">
+                    ⚠ À VÉRIFIER AVANT DE VOUS EN SERVIR.
+                    {{ totalSansSource > 1 ? 'Ces montants du tableau ne viennent' : 'Ce montant du tableau ne vient' }}
+                    d’aucune donnée consultée : {{ montantsSansSource|join(', ') }}{% if totalSansSource > montantsSansSource|length %}
+                        (et {{ totalSansSource - montantsSansSource|length }} autre{{ totalSansSource - montantsSansSource|length > 1 ? 's' : '' }}){% endif %}.
+                    Redemandez-{{ totalSansSource > 1 ? 'les' : 'le' }} à Ket en {{ totalSansSource > 1 ? 'les' : 'le' }} nommant,
+                    ou ouvrez la fiche concernée.
+                </p>
+            {% endif %}
             {# RELECTURE DE CONTRÔLE : le plan a bien été exécuté, mais la base ne
                porte pas ce qu'il annonçait. Le bandeau du fil, lui, vit dans une
                bulle éphémère créée au moment du clic — un F5 laisserait donc le

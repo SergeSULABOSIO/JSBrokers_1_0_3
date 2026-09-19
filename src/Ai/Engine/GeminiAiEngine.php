@@ -10,6 +10,7 @@ use App\Ai\AiRequest;
 use App\Ai\Comprehension\ClarificationEnAttente;
 use App\Ai\Comprehension\Comprehenseur;
 use App\Ai\Comprehension\DemandeComprise;
+use App\Ai\Controle\ChiffreFantome;
 use App\Ai\Debit\BudgetDebit;
 use App\Ai\Mutation\MotifDeRefus;
 use App\Ai\Mutation\PlanEnAttente;
@@ -488,7 +489,14 @@ final class GeminiAiEngine implements AiEngineInterface
                     $cumulInput,
                     $cumulSortie,
                     $sequenceOutils,
-                    new AiReply($texte, refused: $refused, toolUsed: $toolUsed, actions: $actions, plansRefuses: $plansRefuses),
+                    new AiReply(
+                        $texte,
+                        refused: $refused,
+                        toolUsed: $toolUsed,
+                        actions: $actions,
+                        plansRefuses: $plansRefuses,
+                        chiffresDesOutils: ChiffreFantome::nombresDe($resultatsOutils),
+                    ),
                 );
             }
 
@@ -512,7 +520,14 @@ final class GeminiAiEngine implements AiEngineInterface
                     $cumulInput,
                     $cumulSortie,
                     $sequenceOutils,
-                    new AiReply($texte, refused: $refused, toolUsed: $toolUsed, actions: $actions, plansRefuses: $plansRefuses),
+                    new AiReply(
+                        $texte,
+                        refused: $refused,
+                        toolUsed: $toolUsed,
+                        actions: $actions,
+                        plansRefuses: $plansRefuses,
+                        chiffresDesOutils: ChiffreFantome::nombresDe($resultatsOutils),
+                    ),
                 );
             }
 
@@ -642,6 +657,7 @@ final class GeminiAiEngine implements AiEngineInterface
                 toolUsed: $toolUsed,
                 actions: $actions,
                 plansRefuses: $plansRefuses,
+                chiffresDesOutils: ChiffreFantome::nombresDe($resultatsOutils),
             ),
         );
     }
