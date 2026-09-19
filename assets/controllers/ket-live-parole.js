@@ -90,6 +90,8 @@ export function creerDetecteur(options = {}) {
     let depuis = null; // début de la salve de voix en cours
     let silenceDepuis = null;
     let debutPhrase = null;
+    let salve = null;          // la prise de parole en cours, observée
+    let derniereSalve = null;  // la dernière achevée
 
     /** Le seuil du moment : la pièce quand Ket se tait, sa fuite quand elle parle. */
     const seuilPour = (ketParle) => (ketParle
@@ -104,6 +106,34 @@ export function creerDetecteur(options = {}) {
         /** La fuite mesurée pendant la dernière prise de parole de Ket (diagnostic). */
         fuiteMesuree() {
             return fuite;
+        },
+        /**
+         * CE QUE LE MICRO A RÉELLEMENT ENTENDU en dernier — la pièce à conviction qui
+         * manquait pour trier les faux bruits.
+         *
+         * La reconnaissance du navigateur rend du texte sans jamais dire d'où il vient :
+         * une question dite à trente centimètres et une télévision à trois mètres lui
+         * paraissent identiques. Le micro, lui, fait la différence — encore fallait-il
+         * qu'il en garde la trace.
+         *
+         * `marge` est le rapport de la CRÊTE au seuil de parole du moment : 1 signifie
+         * « tout juste assez fort pour être une voix », 5 « manifestement tout près ».
+         * C'est un rapport, jamais un niveau absolu : le gain automatique du micro
+         * interdit de raisonner en décibels.
+         *
+         * @returns {{crete: number, marge: number, dureeMs: number, finMs: number, enCours: boolean}|null}
+         */
+        dernierePriseDeParole() {
+            const observee = salve ?? derniereSalve;
+            if (observee === null) return null;
+
+            return {
+                crete: observee.crete,
+                marge: observee.seuil > 0 ? observee.crete / observee.seuil : 0,
+                dureeMs: Math.max(0, observee.finMs - observee.debutMs),
+                finMs: observee.finMs,
+                enCours: observee === salve,
+            };
         },
         /**
          * À APPELER CHAQUE FOIS QU'UN NOUVEAU SON DE KET COMMENCE : sa réponse, un
@@ -123,6 +153,13 @@ export function creerDetecteur(options = {}) {
         },
         /** Remise à zéro entre deux phrases (le bruit de fond appris, lui, est gardé). */
         reinitialiser() {
+            // La salve qui s'achève devient la pièce à conviction de la phrase qu'on
+            // vient d'entendre : le texte reconnu arrivera après, et c'est elle qu'on
+            // interrogera pour savoir s'il venait d'assez près.
+            if (salve !== null) {
+                derniereSalve = salve;
+                salve = null;
+            }
             parle = false;
             depuis = null;
             silenceDepuis = null;
@@ -181,9 +218,20 @@ export function creerDetecteur(options = {}) {
                     parle = true;
                     debutPhrase = depuis;
                     silenceDepuis = null;
+                    // Le seuil est figé ICI : c'est celui de la pièce juste avant qu'on
+                    // parle, et c'est à lui que la crête sera comparée.
+                    salve = { crete: niveau, seuil, debutMs: depuis, finMs: instantMs };
                     return 'debut';
                 }
                 return null;
+            }
+
+            if (salve !== null && auDessus) {
+                // La durée ne compte que la VOIX : le silence de fin de phrase (700 ms)
+                // n'allonge pas la prise de parole, sinon un claquement de porte suivi
+                // d'un silence passerait pour une phrase.
+                salve.crete = Math.max(salve.crete, niveau);
+                salve.finMs = instantMs;
             }
 
             if (auDessus) {

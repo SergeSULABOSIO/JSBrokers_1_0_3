@@ -12,6 +12,7 @@ import { assembler, duree, encoderWav, reechantillonner, TAUX_OREILLE } from '..
 import { ENTETE_WAV } from '../../assets/controllers/assistant-voix-pcm.js';
 import { ETATS, libelleEtatLive, sessionInitiale, transition } from '../../assets/controllers/ket-live-etat.js';
 import { choisir, programmeDesIntermedes, RELANCES_MAX } from '../../assets/controllers/ket-live-intermedes.js';
+import { MARGE_PROCHE, nEstQueDesTics, phraseRecevable } from '../../assets/controllers/ket-live-tri.js';
 
 // ── Détection de parole ──────────────────────────────────────────────────────
 
@@ -307,6 +308,105 @@ test('une panne ne met pas fin à la session : Ket réécoute', () => {
 test('les libellés d’état sont du texte lisible, jamais une couleur seule', () => {
     assert.match(libelleEtatLive({ etat: ETATS.REFLEXION }), /réfléchit/);
     assert.match(libelleEtatLive({ etat: ETATS.PAROLE }), /interrompre/);
+});
+
+// ── Trier les faux bruits ────────────────────────────────────────────────────
+
+/** Une prise de parole telle que le détecteur la rapporte. */
+const prise = (marge, dureeMs = 900, finMs = 1000, enCours = false) => ({ crete: 0.1, marge, dureeMs, finMs, enCours });
+
+test('le détecteur rapporte la crête, la durée et la marge de ce qu’il a entendu', () => {
+    const d = creerDetecteur();
+    let t = 0;
+    for (; t < 3000; t += 50) d.pousser(0.001, t);        // pièce calme
+    assert.equal(d.dernierePriseDeParole(), null, 'rien n’a encore été dit');
+
+    const seuil = d.seuil();
+    for (let i = 0; i < 20; i++, t += 50) d.pousser(0.2, t); // une phrase, tout près
+    const enCours = d.dernierePriseDeParole();
+    assert.ok(enCours.enCours, 'la prise en cours est visible');
+    assert.ok(Math.abs(enCours.marge - 0.2 / seuil) < 0.01, 'la marge compare la crête au seuil de parole');
+
+    for (let i = 0; i < 20; i++, t += 50) d.pousser(0.0005, t); // on se tait
+    const achevee = d.dernierePriseDeParole();
+    assert.equal(achevee.enCours, false);
+    assert.ok(achevee.dureeMs >= 900 && achevee.dureeMs <= 1100, `durée de la VOIX seule (${achevee.dureeMs} ms)`);
+});
+
+/**
+ * LE FILTRE QUI COMPTE. Une voix à trente centimètres écrase le bruit de la pièce ; une
+ * télévision à trois mètres le frôle. Les deux donnent du texte à la reconnaissance du
+ * navigateur, qui ne dit jamais d'où il vient.
+ */
+test('une phrase dite de près passe, la même venue de loin est ignorée', () => {
+    const proche = phraseRecevable({ texte: 'Quel est le taux de la Caution ?', priseDeParole: prise(MARGE_PROCHE + 2), instantMs: 1500 });
+    const lointaine = phraseRecevable({ texte: 'Quel est le taux de la Caution ?', priseDeParole: prise(MARGE_PROCHE - 1), instantMs: 1500 });
+
+    assert.deepEqual([proche.recevable, proche.motif], [true, 'recevable']);
+    assert.deepEqual([lointaine.recevable, lointaine.motif], [false, 'loin']);
+});
+
+test('un texte qu’aucune voix n’accompagne n’entre jamais dans la conversation', () => {
+    const rien = phraseRecevable({ texte: 'la télévision parle', priseDeParole: null, instantMs: 1500 });
+    const vieux = phraseRecevable({ texte: 'la télévision parle', priseDeParole: prise(9, 900, 1000), instantMs: 9000 });
+
+    assert.deepEqual([rien.recevable, rien.motif], [false, 'muet']);
+    assert.deepEqual([vieux.recevable, vieux.motif], [false, 'muet'], 'une salve d’il y a huit secondes n’est pas un alibi');
+});
+
+test('un bruit bref n’est pas une phrase', () => {
+    const bref = phraseRecevable({ texte: 'ça', priseDeParole: prise(9, 120), instantMs: 1500 });
+    assert.deepEqual([bref.recevable, bref.motif], [false, 'souffle']);
+});
+
+test('les hésitations ne partent pas, les réponses courtes si', () => {
+    for (const tic of ['euh', 'Euh...', 'hum hum', 'ah', 'Ben… euh', 'voilà']) {
+        assert.ok(nEstQueDesTics(tic), `« ${tic} » est un bruit de parole`);
+    }
+    for (const vrai of ['oui', 'non', 'arrête', 'continue', 'oui merci', 'ah oui je vois']) {
+        assert.ok(!nEstQueDesTics(vrai), `« ${vrai} » est une vraie réponse`);
+    }
+    assert.equal(phraseRecevable({ texte: 'euh', priseDeParole: prise(9), instantMs: 1500 }).motif, 'tic');
+    assert.equal(phraseRecevable({ texte: 'oui', priseDeParole: prise(9), instantMs: 1500 }).motif, 'recevable');
+});
+
+test('une confiance basse durcit l’exigence, une confiance absente ne condamne pas', () => {
+    const marge = MARGE_PROCHE + 0.5;
+    const sansAvis = phraseRecevable({ texte: 'Combien de clients ?', priseDeParole: prise(marge), instantMs: 1500 });
+    const hesitante = phraseRecevable({ texte: 'Combien de clients ?', confiance: 0.3, priseDeParole: prise(marge), instantMs: 1500 });
+    const sure = phraseRecevable({ texte: 'Combien de clients ?', confiance: 0.95, priseDeParole: prise(marge), instantMs: 1500 });
+
+    assert.equal(sansAvis.recevable, true, 'sans confiance annoncée, la marge seule décide');
+    assert.equal(sure.recevable, true);
+    assert.equal(hesitante.recevable, false, 'mal reconnu ET à la limite : on se tait');
+});
+
+// ── Micro à la demande ───────────────────────────────────────────────────────
+
+test('trop de bruit : Ket n’écoute plus qu’à la demande, et le dit', () => {
+    const ecoute = transition(sessionInitiale(), 'demarrer');
+    assert.equal(ecoute.ecoute, 'continue');
+
+    const surDemande = transition(ecoute, 'ecoute-a-la-demande');
+    assert.deepEqual([surDemande.ecoute, surDemande.micDemande], ['demande', false]);
+    assert.match(libelleEtatLive(surDemande), /appuyez/i, 'l’état écrit dit quoi faire');
+
+    const enParole = transition(surDemande, 'parler');
+    assert.equal(enParole.micDemande, true);
+    assert.match(libelleEtatLive(enParole), /Parlez/i);
+
+    // Une phrase entendue referme le micro : un appui vaut UNE phrase.
+    const apres = transition(enParole, 'texte-entendu', { texte: 'Combien de clients ?' });
+    assert.deepEqual([apres.etat, apres.micDemande], [ETATS.REFLEXION, false]);
+
+    const revenue = transition(apres, 'ecoute-continue');
+    assert.equal(revenue.ecoute, 'continue');
+});
+
+test('« parler » ne veut rien dire hors du mode à la demande', () => {
+    const ecoute = transition(sessionInitiale(), 'demarrer');
+    assert.equal(transition(ecoute, 'parler').micDemande, false);
+    assert.equal(transition(sessionInitiale(), 'ecoute-a-la-demande').etat, ETATS.ARRET, 'hors session, rien ne bouge');
 });
 
 // ── Chrono d'un tour ─────────────────────────────────────────────────────────

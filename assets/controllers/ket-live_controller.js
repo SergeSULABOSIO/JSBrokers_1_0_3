@@ -4,6 +4,7 @@ import { assembler, duree, encoderWav, reechantillonner, TAUX_OREILLE } from './
 import { ETATS, libelleEtatLive, sessionInitiale, transition } from './ket-live-etat.js';
 import { choisir, programmeDesIntermedes } from './ket-live-intermedes.js';
 import { jalon, nouveauTour, resumeDuTour } from './ket-live-chrono.js';
+import { phraseRecevable, priseRecevable } from './ket-live-tri.js';
 import { fusionnerTranscripts } from './dictee-transcript.js';
 import { documentLocale } from '../locale.js';
 
@@ -26,7 +27,7 @@ import { documentLocale } from '../locale.js';
  * ici, il ne reste que le branchement aux API du navigateur.
  */
 export default class extends Controller {
-    static targets = ['panneau', 'etat', 'parole', 'barres', 'astuce'];
+    static targets = ['panneau', 'etat', 'parole', 'barres', 'astuce', 'parler', 'mainsLibres'];
 
     static values = {
         transcrireUrl: String,
@@ -47,6 +48,14 @@ export default class extends Controller {
 
     /** Délai avant de rouvrir l'oreille : le temps que le haut-parleur se taise. */
     static REPRISE_OREILLE_MS = 300;
+
+    /**
+     * Combien de faux bruits, et sur quelle durée, avant que Ket cesse d'écouter en
+     * continu. Trois en une minute : une fois est un accident, trois de suite est un
+     * environnement — et continuer d'écouter n'y changerait rien.
+     */
+    static REJETS_AVANT_DEMANDE = 3;
+    static FENETRE_REJETS_MS = 60000;
 
     connect() {
         this.session = sessionInitiale(this._oreilleParDefaut());
@@ -170,6 +179,35 @@ export default class extends Controller {
         }
     }
 
+    /**
+     * TROIS FAUX BRUITS EN UNE MINUTE, ET KET SE TAIT D'ELLE-MÊME.
+     *
+     * Le filtre écarte ce qui ne lui était pas adressé, mais il ne rend pas la pièce
+     * silencieuse : dans un environnement durablement bruyant, l'utilisateur ne voit
+     * qu'une chose — Ket ne répond plus, sans qu'il sache pourquoi. Mieux vaut qu'elle
+     * le dise et demande un appui.
+     */
+    _noterUnRejet() {
+        const maintenant = Date.now();
+        this._rejets = (this._rejets ?? []).filter((t) => maintenant - t < this.constructor.FENETRE_REJETS_MS);
+        this._rejets.push(maintenant);
+        if (this._rejets.length >= this.constructor.REJETS_AVANT_DEMANDE) {
+            this._rejets = [];
+            this._evenement('ecoute-a-la-demande');
+        }
+    }
+
+    /** Le bouton « Parler » du panneau : ouvre le micro pour une phrase. */
+    parler() {
+        this._evenement('parler');
+    }
+
+    /** Le bouton « Mains libres » : on refait confiance à l'écoute continue. */
+    mainsLibres() {
+        this._rejets = [];
+        this._evenement('ecoute-continue');
+    }
+
     _emettre(nom, detail = {}) {
         this.element.dispatchEvent(new CustomEvent(nom, { bubbles: true, detail }));
     }
@@ -188,6 +226,15 @@ export default class extends Controller {
         if (this.hasEtatTarget) this.etatTarget.textContent = libelleEtatLive(this.session);
         if (this.hasParoleTarget) this.paroleTarget.textContent = this.session.derniereParole;
         if (this.hasAstuceTarget) this.astuceTarget.hidden = !(actif && this._sansVerrou === true);
+
+        // À LA DEMANDE : deux boutons, l'un pour parler, l'autre pour revenir aux mains
+        // libres. Ils n'existent que dans ce mode — une commande inutile est un piège.
+        const aLaDemande = actif && this.session.ecoute === 'demande';
+        if (this.hasParlerTarget) {
+            this.parlerTarget.hidden = !aLaDemande;
+            this.parlerTarget.setAttribute('aria-pressed', this.session.micDemande ? 'true' : 'false');
+        }
+        if (this.hasMainsLibresTarget) this.mainsLibresTarget.hidden = !aLaDemande;
     }
 
     // ── L'écran allumé ───────────────────────────────────────────────────────
@@ -361,11 +408,57 @@ export default class extends Controller {
 
     // ── Les oreilles ─────────────────────────────────────────────────────────
 
+    /**
+     * CE QUI A ÉTÉ COMPRIS VOUS ÉTAIT-IL ADRESSÉ ? Passage obligé des DEUX oreilles.
+     *
+     * Le texte n'entre dans la conversation que s'il s'appuie sur une vraie prise de
+     * parole, entendue de près par ce micro-ci (cf. ket-live-tri.js). Un rejet ne change
+     * rien à l'état : on continue d'écouter, en silence, comme si rien n'avait été dit —
+     * ce qui est le cas.
+     */
+    _retenirOuIgnorer(texte, confiance = null) {
+        const verdict = phraseRecevable({
+            texte,
+            confiance,
+            priseDeParole: this._detecteur?.dernierePriseDeParole() ?? null,
+            instantMs: performance.now(),
+        });
+
+        return this._suivreLeVerdict(verdict, texte);
+    }
+
+    /** Ce qu'on fait d'un verdict, qu'il porte sur le son seul ou sur le texte. */
+    _suivreLeVerdict(verdict, texte) {
+        if (verdict.recevable) {
+            this._evenement('texte-entendu', { texte });
+
+            return true;
+        }
+
+        // Journalisé avec ses chiffres : c'est ce qui permettra de régler les seuils sur
+        // des mesures réelles plutôt qu'au jugé.
+        console.debug(`Mode Live — ignoré (${verdict.motif}, marge ${verdict.marge.toFixed(1)}) : « ${texte} »`);
+        this._emettre('ket-live:ignore', { motif: verdict.motif, marge: verdict.marge, texte });
+        this._noterUnRejet();
+
+        return false;
+    }
+
     /** La phrase part au serveur ; s'il n'a pas d'oreilles, le navigateur prend le relais. */
     async _transcrire() {
         const phrase = this._phrase ?? new Float32Array(0);
         this._phrase = null;
         if (duree(phrase) < 0.3) {
+            this._evenement('silence');
+            return;
+        }
+
+        // ON NE FAIT PAS TRANSCRIRE UNE TÉLÉVISION. Ce que le micro sait de la salve
+        // suffit à l'écarter, et l'écarter ICI épargne la requête, l'attente et les
+        // crédits — le texte n'apprendrait rien de plus sur sa provenance.
+        const surLeSon = priseRecevable(this._detecteur?.dernierePriseDeParole(), performance.now());
+        if (!surLeSon.recevable) {
+            this._suivreLeVerdict(surLeSon, '(non transcrit)');
             this._evenement('silence');
             return;
         }
@@ -385,7 +478,9 @@ export default class extends Controller {
                 return;
             }
             const data = await reponse.json();
-            this._evenement('texte-entendu', { texte: data.texte ?? '' });
+            const texte = String(data.texte ?? '').trim();
+            // Rien d'entendu, ou rien qui vous soit adressé : on réécoute sans rien dire.
+            if (texte === '' || !this._retenirOuIgnorer(texte)) this._evenement('silence');
         } catch (error) {
             console.warn('Mode Live : transcription impossible.', error);
             this._evenement('oreille-indisponible');
@@ -412,7 +507,8 @@ export default class extends Controller {
      * avec son annulation d'écho (cf. ket-live-parole.js).
      */
     _accorderLOreille() {
-        const doitEcouter = this.session.oreille === 'navigateur' && this.session.etat === ETATS.ECOUTE;
+        const invitee = this.session.ecoute !== 'demande' || this.session.micDemande === true;
+        const doitEcouter = this.session.oreille === 'navigateur' && this.session.etat === ETATS.ECOUTE && invitee;
         clearTimeout(this._repriseOreille);
 
         if (!doitEcouter) {
@@ -425,7 +521,7 @@ export default class extends Controller {
             if (this.session.oreille === 'navigateur' && this.session.etat === ETATS.ECOUTE) {
                 this._ecouterAvecLeNavigateur();
             }
-        }, this.constructor.REPRISE_OREILLE_MS);
+        }, this.session.micDemande ? 0 : this.constructor.REPRISE_OREILLE_MS);
     }
 
     /** La reconnaissance du navigateur existe-t-elle ici ? */
@@ -464,7 +560,10 @@ export default class extends Controller {
             const texte = fusionnerTranscripts(complets.map((r) => r[0].transcript));
             if (texte.trim() === '') return;
 
-            this._evenement('texte-entendu', { texte });
+            // La confiance du navigateur n'est qu'un second témoin : elle vaut zéro, ou
+            // rien du tout, sur bien des versions. Le juge en tient compte sans s'y fier.
+            const confiances = complets.map((r) => r[0].confidence).filter((c) => typeof c === 'number' && c > 0);
+            this._retenirOuIgnorer(texte, confiances.length > 0 ? Math.min(...confiances) : null);
         };
         reconnaissance.onend = () => {
             // Le navigateur clôt sa session au silence : on relance TANT QU'ON ÉCOUTE.
