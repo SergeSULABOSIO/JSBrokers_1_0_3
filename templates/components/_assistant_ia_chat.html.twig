@@ -1114,12 +1114,19 @@
         /* ── PANNEAU DU MODE LIVE ─────────────────────────────────────────────
            Il remplace la barre de saisie pendant la conversation orale. L'état est
            ÉCRIT : les barres animées ne font que doubler l'information (WCAG 1.3.3). */
+        /* Deux lignes, exactement comme .aic-inputbox : l'état se lit en haut, les
+           commandes se cliquent en bas. Sur une seule ligne, trois boutons recouvraient
+           le texte d'état dès que la colonne se resserrait. */
         .jsb-ai-chat .aic-live {
-            display:flex; align-items:center; gap:.7rem;
+            display:flex; flex-direction:column; gap:.35rem;
             border:1px solid var(--aic-accent); border-radius:20px; background:var(--aic-input-bg);
-            padding:.6rem .7rem;
+            padding:.55rem .6rem .45rem;
         }
         .jsb-ai-chat .aic-live[hidden] { display:none; }
+        .jsb-ai-chat .aic-live-ligne { display:flex; align-items:center; gap:.7rem; min-width:0; }
+        /* La colonne du chat est étroite : trois commandes y passent à la ligne plutôt
+           que de déborder ou de se chevaucher. */
+        .jsb-ai-chat .aic-live .aic-actions { flex-wrap:wrap; row-gap:.35rem; justify-content:flex-end; }
         .jsb-ai-chat .aic-live-barres { flex:0 0 auto; display:flex; align-items:center; gap:3px; height:24px; }
         .jsb-ai-chat .aic-live-barres > span {
             display:block; width:3px; height:8px; border-radius:2px; background:var(--aic-accent-solid);
@@ -1740,43 +1747,50 @@ Le texte est alors mis au propre (hésitations retirées, ponctuation, questions
            Il remplace la barre de saisie pendant la conversation orale. L'état est
            écrit EN TOUTES LETTRES (et annoncé) : l'animation des barres ne porte
            jamais l'information à elle seule. #}
+        {# DEUX LIGNES, comme la barre de saisie qu'il remplace : ce qui se lit en haut,
+           ce qui se clique en bas. Sur une seule ligne, les boutons mangeaient l'état
+           écrit — or c'est lui qui dit ce que Ket est en train de faire. #}
         <div class="aic-live" hidden data-ket-live-target="panneau">
-            <span class="aic-live-barres" data-ket-live-target="barres" aria-hidden="true">
-                <span></span><span></span><span></span>
-            </span>
-            <span class="aic-live-textes">
-                <span class="aic-live-etat" aria-live="polite" data-ket-live-target="etat">Ket vous écoute…</span>
-                <span class="aic-live-parole" data-ket-live-target="parole"></span>
-                {# Montrée UNIQUEMENT si le navigateur ne sait pas garder l'écran allumé
-                   (Firefox, iOS ancien) : sans cela, l'écran se verrouille au milieu
-                   d'une phrase et l'utilisateur croit à une panne. #}
-                <span class="aic-live-astuce" hidden data-ket-live-target="astuce">
-                    Gardez l’écran allumé : ce navigateur ne sait pas l’en empêcher.
+            <div class="aic-live-ligne">
+                <span class="aic-live-barres" data-ket-live-target="barres" aria-hidden="true">
+                    <span></span><span></span><span></span>
                 </span>
-            </span>
-            {# MICRO À LA DEMANDE. Ces deux boutons n'apparaissent QUE lorsque Ket a
-               renoncé à l'écoute continue, faute d'avoir pu distinguer votre voix du
-               bruit alentour. Libellés en toutes lettres : l'état ne se devine pas à
-               une couleur. #}
-            <button type="button" class="aic-live-parler" hidden
-                    data-ket-live-target="parler"
-                    data-action="click->ket-live#parler"
-                    aria-pressed="false">
-                {{ ux_icon(resolve_icon_name('action:mic'), {height: '14px', width: '14px'}) }}
-                <span>Appuyez pour parler</span>
-            </button>
-            <button type="button" class="aic-live-fin" hidden
-                    data-ket-live-target="mainsLibres"
-                    data-action="click->ket-live#mainsLibres"
-                    aria-label="Revenir à l’écoute en continu, sans appui">
-                <span>Mains libres</span>
-            </button>
-            <button type="button" class="aic-live-fin"
-                    data-action="click->ket-live#arreter"
-                    aria-label="Terminer le mode Live (Échap)">
-                {{ ux_icon(resolve_icon_name('action:stop'), {height: '14px', width: '14px'}) }}
-                <span>Terminer</span>
-            </button>
+                <span class="aic-live-textes">
+                    <span class="aic-live-etat" aria-live="polite" data-ket-live-target="etat">Ket vous écoute…</span>
+                    <span class="aic-live-parole" data-ket-live-target="parole"></span>
+                    {# Montrée UNIQUEMENT si le navigateur ne sait pas garder l'écran allumé
+                       (Firefox, iOS ancien) : sans cela, l'écran se verrouille au milieu
+                       d'une phrase et l'utilisateur croit à une panne. #}
+                    <span class="aic-live-astuce" hidden data-ket-live-target="astuce">
+                        Gardez l’écran allumé : ce navigateur ne sait pas l’en empêcher.
+                    </span>
+                </span>
+            </div>
+            <div class="aic-actions">
+                {# MICRO À LA DEMANDE. Ces deux boutons n'apparaissent QUE lorsque Ket a
+                   renoncé à l'écoute continue, faute d'avoir pu distinguer votre voix du
+                   bruit alentour. Libellés en toutes lettres : l'état ne se devine pas à
+                   une couleur. #}
+                <button type="button" class="aic-live-parler" hidden
+                        data-ket-live-target="parler"
+                        data-action="click->ket-live#parler"
+                        aria-pressed="false">
+                    {{ ux_icon(resolve_icon_name('action:mic'), {height: '14px', width: '14px'}) }}
+                    <span>Appuyez pour parler</span>
+                </button>
+                <button type="button" class="aic-live-fin" hidden
+                        data-ket-live-target="mainsLibres"
+                        data-action="click->ket-live#mainsLibres"
+                        aria-label="Revenir à l’écoute en continu, sans appui">
+                    <span>Mains libres</span>
+                </button>
+                <button type="button" class="aic-live-fin"
+                        data-action="click->ket-live#arreter"
+                        aria-label="Terminer le mode Live (Échap)">
+                    {{ ux_icon(resolve_icon_name('action:stop'), {height: '14px', width: '14px'}) }}
+                    <span>Terminer</span>
+                </button>
+            </div>
         </div>
         <div class="aic-composer-foot">
             {# DEUX AIDES, UNE SEULE MONTRÉE. Les raccourcis clavier et le clic droit
