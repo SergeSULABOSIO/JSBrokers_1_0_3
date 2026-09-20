@@ -54,6 +54,25 @@ export default class extends Controller {
      */
     static SILENCE_MICRO_MS = 2000;
 
+    /**
+     * Pourquoi la reconnaissance du navigateur a renoncé, dit à l'utilisateur.
+     *
+     * « no-speech » et « aborted » n'y sont pas : ce sont le cours normal des choses.
+     */
+    static CAUSES_OREILLE = {
+        'not-allowed': 'Le navigateur a refusé le micro. Autorisez-le pour ce site, puis relancez le mode Live.',
+        'service-not-allowed': 'La reconnaissance vocale de ce navigateur est indisponible.',
+        'audio-capture': 'Aucun micro utilisable ici.',
+        network: 'La reconnaissance vocale passe par Internet : la connexion n’a pas répondu.',
+    };
+
+    /**
+     * Combien de phrases entendues par le MICRO sans qu'un seul mot n'en sorte avant de
+     * soupçonner le conflit de micro. Deux : une peut être un silence mal interprété,
+     * deux d'affilée ne le sont pas.
+     */
+    static PHRASES_MUETTES_AVANT_SOUPCON = 2;
+
     /** Combien de phrases de Ket on garde pour reconnaître son écho. */
     static PHRASES_RETENUES = 4;
 
@@ -277,7 +296,15 @@ export default class extends Controller {
         if (saisie) saisie.hidden = actif;
         if (this.hasEtatTarget) this.etatTarget.textContent = libelleEtatLive(this.session);
         if (this.hasParoleTarget) this.paroleTarget.textContent = this.session.derniereParole;
-        if (this.hasAstuceTarget) this.astuceTarget.hidden = !(actif && this._sansVerrou === true);
+        // POURQUOI ELLE N'ENTEND PAS, écrit noir sur blanc. Une session muette qui
+        // affiche « Ket vous écoute… » est la pire des réponses.
+        if (this.hasAstuceTarget) {
+            const raison = this._raisonSourde ?? (this._sansVerrou === true
+                ? 'Gardez l’écran allumé : ce navigateur ne sait pas l’en empêcher.'
+                : null);
+            this.astuceTarget.hidden = !(actif && raison !== null);
+            if (raison !== null) this.astuceTarget.textContent = raison;
+        }
 
         // À LA DEMANDE : deux boutons, l'un pour parler, l'autre pour revenir aux mains
         // libres. Ils n'existent que dans ce mode — une commande inutile est un piège.
@@ -427,6 +454,16 @@ export default class extends Controller {
         // COUPER Ket : le son n'est ni gardé ni envoyé, la reconnaissance a déjà le texte.
         if (this.session.oreille === 'navigateur') {
             if (evenement === 'debut' && ketParle) this._evenement('voix-detectee');
+            // LE MICRO A ENTENDU UNE PHRASE ENTIÈRE, ET LA RECONNAISSANCE N'EN A RIEN
+            // TIRÉ. Deux fois de suite, ce n'est plus un silence : c'est qu'elle n'a pas
+            // le micro. On le lui laisse — quitte à perdre la détection d'interruption,
+            // qui ne vaut rien si l'on n'entend plus l'utilisateur.
+            if (evenement === 'fin' && !ketParle) {
+                this._phrasesMuettes = (this._textesRecus ?? 0) > 0 ? 0 : (this._phrasesMuettes ?? 0) + 1;
+                if (this._phrasesMuettes >= this.constructor.PHRASES_MUETTES_AVANT_SOUPCON) {
+                    this._laisserLeMicroALaReconnaissance();
+                }
+            }
 
             return;
         }
@@ -605,6 +642,14 @@ export default class extends Controller {
      */
     _accorderLOreille() {
         const invitee = this.session.ecoute !== 'demande' || this.session.micDemande === true;
+        // Une oreille qui a prouvé sa surdité ne revient pas : on tournerait en rond
+        // entre elle et le serveur, sans que rien ne soit jamais entendu.
+        if (this._navigateurSourd && this.session.oreille === 'navigateur') {
+            this._arreterReconnaissance();
+            this._evenement('oreille-serveur');
+
+            return;
+        }
         const doitEcouter = this.session.oreille === 'navigateur' && this.session.etat !== ETATS.ARRET && invitee;
         clearTimeout(this._repriseOreille);
 
@@ -657,11 +702,36 @@ export default class extends Controller {
             if (complets.length === 0) return;
             const texte = fusionnerTranscripts(complets.map((r) => r[0].transcript));
             if (texte.trim() === '') return;
+            // La preuve que cette oreille FONCTIONNE : elle rend des mots.
+            this._textesRecus = (this._textesRecus ?? 0) + 1;
 
             // La confiance du navigateur n'est qu'un second témoin : elle vaut zéro, ou
             // rien du tout, sur bien des versions. Le juge en tient compte sans s'y fier.
             const confiances = complets.map((r) => r[0].confidence).filter((c) => typeof c === 'number' && c > 0);
             this._retenirOuIgnorer(texte, confiances.length > 0 ? Math.min(...confiances) : null);
+        };
+        reconnaissance.onerror = (event) => {
+            const cause = event?.error;
+            // Le cours normal des choses : personne n'a parlé, ou c'est nous qui arrêtons.
+            if (cause === 'no-speech' || cause === 'aborted') return;
+            console.debug('Mode Live — la reconnaissance a renoncé :', cause);
+
+            // LE MICRO EST DÉJÀ PRIS, et c'est le défaut propre au téléphone : la
+            // reconnaissance et notre flux d'analyse se disputent le micro ; celui qui
+            // arrive second n'entend rien, et se tait sans rien dire. Entendre
+            // l'utilisateur prime sur détecter son interruption : on lâche le micro.
+            if (cause === 'audio-capture' && this._flux) {
+                this._laisserLeMicroALaReconnaissance();
+                return;
+            }
+            if (this.constructor.CAUSES_OREILLE[cause] === undefined) return;
+
+            // Cette oreille-ci ne fonctionnera pas : on passe à celles du serveur, et on
+            // DIT pourquoi. Une session qui affiche « Ket vous écoute… » sans entendre
+            // quoi que ce soit est la pire des réponses.
+            this._navigateurSourd = true;
+            this._raisonSourde = this.constructor.CAUSES_OREILLE[cause];
+            this._evenement('oreille-serveur');
         };
         reconnaissance.onend = () => {
             // Le navigateur clôt sa session au silence : on relance SANS ATTENDRE, tant
@@ -673,6 +743,48 @@ export default class extends Controller {
         };
         this._reconnaissance = reconnaissance;
         try { reconnaissance.start(); } catch (e) { /* déjà démarrée */ }
+    }
+
+    /**
+     * LÂCHER LE MICRO POUR QUE LA RECONNAISSANCE L'AIT.
+     *
+     * Sur ordinateur, les deux cohabitent. Sur téléphone, le flux d'analyse que nous
+     * ouvrons peut priver la reconnaissance du micro : elle ne rend alors plus un mot,
+     * sans erreur ni message, et le panneau affiche « Ket vous écoute… » pendant que
+     * personne n'écoute. On abandonne donc l'analyse — donc la détection d'interruption
+     * et le tri par provenance, qui se désactive de lui-même faute de trames — pour
+     * garder l'essentiel : entendre l'utilisateur.
+     *
+     * UNE SEULE FOIS par session : si la reconnaissance reste muette après cela, le
+     * micro n'est pas le problème.
+     */
+    _laisserLeMicroALaReconnaissance() {
+        if (this._microLache) return;
+        this._microLache = true;
+        console.debug('Mode Live — le micro est laissé à la reconnaissance (conflit de capture).');
+        this._emettre('ket-live:micro-lache', {});
+
+        if (this._analyse) {
+            this._analyse.onaudioprocess = null;
+            if (this._analyse.port) this._analyse.port.onmessage = null;
+            try { this._analyse.disconnect(); } catch (e) { /* déjà déconnecté */ }
+            this._analyse = null;
+        }
+        if (this._source) {
+            try { this._source.disconnect(); } catch (e) { /* déjà déconnecté */ }
+            this._source = null;
+        }
+        if (this._contexte) {
+            try { this._contexte.close(); } catch (e) { /* déjà fermé */ }
+            this._contexte = null;
+        }
+        if (this._flux) {
+            this._flux.getTracks().forEach((piste) => piste.stop());
+            this._flux = null;
+        }
+        // La reconnaissance repart sur un micro désormais libre.
+        this._arreterReconnaissance();
+        this._ecouterAvecLeNavigateur();
     }
 
     _arreterReconnaissance() {
