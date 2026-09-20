@@ -180,6 +180,12 @@ export function retirerLaVoixDeKet(texte, phrasesDeKet = []) {
  */
 export function phraseRecevable(demande = {}) {
     const texte = String(demande.texte ?? '').trim();
+    // SANS MICRO FIABLE, ON NE JUGE PAS DE LA PROVENANCE. L'absence de preuve n'est pas
+    // une preuve d'absence : sur un téléphone, le contexte audio peut démarrer suspendu,
+    // et aucune trame n'arrive alors au détecteur. Appliquer la règle de proximité dans
+    // ces conditions revient à tout rejeter — Ket devient sourde, ce qui est bien pire
+    // que de laisser passer un bruit. On garde le seul filtre qui ne dépend que du texte.
+    const microFiable = demande.microFiable !== false;
     const prise = demande.priseDeParole ?? null;
     const instantMs = demande.instantMs ?? 0;
     const margeProche = demande.margeProche ?? MARGE_PROCHE;
@@ -188,6 +194,7 @@ export function phraseRecevable(demande = {}) {
 
     if (texte === '') return verdict(false, 'vide');
     if (nEstQueDesTics(texte)) return verdict(false, 'tic');
+    if (!microFiable) return verdict(true, 'sans-micro');
 
     // Une reconnaissance elle-même hésitante durcit l'exigence de preuve — jamais
     // l'inverse, et jamais seule : sur bien des navigateurs la confiance vaut zéro ou
