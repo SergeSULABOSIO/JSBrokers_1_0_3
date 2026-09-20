@@ -47,6 +47,13 @@ export default class extends Controller {
     /** Taille des trames analysées : ~85 ms à 48 kHz, assez fin pour la détection. */
     static TAILLE_TRAME = 4096;
 
+    /**
+     * Au-delà de ce silence du MICRO (pas de la pièce : aucune trame reçue), on cesse de
+     * juger de la provenance. Deux secondes : un micro vivant livre une trame toutes les
+     * 85 ms, et ce délai laisse passer une hésitation du navigateur sans ouvrir la porte.
+     */
+    static SILENCE_MICRO_MS = 2000;
+
     /** Combien de phrases de Ket on garde pour reconnaître son écho. */
     static PHRASES_RETENUES = 4;
 
@@ -353,6 +360,13 @@ export default class extends Controller {
 
         const Contexte = window.AudioContext || window.webkitAudioContext;
         this._contexte = new Contexte();
+        // SUR TÉLÉPHONE, UN CONTEXTE NAÎT SUSPENDU. Sans ce réveil, aucune trame n'arrive
+        // jamais : plus de détection d'interruption, et surtout plus rien pour juger de
+        // la provenance de ce qu'on entend. On est ici dans le geste de l'utilisateur
+        // (le bouton Live), le seul moment où le réveil est accordé.
+        // `resume()` rend une promesse sur les navigateurs récents, rien du tout sur les
+        // anciens : on enveloppe, sinon un « .catch » sur undefined fait tout tomber.
+        Promise.resolve(this._contexte.resume?.()).catch(() => { /* déjà éveillé, ou refusé */ });
         this._source = this._contexte.createMediaStreamSource(this._flux);
         this._detecteur = creerDetecteur();
         this._trames = [];
@@ -401,6 +415,8 @@ export default class extends Controller {
     _trame(donnees) {
         if (this.session.etat === ETATS.ARRET) return;
         const instant = performance.now();
+        // Le micro donne signe de vie : c'est ce qui autorise à juger de la provenance.
+        this._derniereTrame = instant;
         // KET EST AUDIBLE DÈS LA RÉFLEXION : ses intermèdes sortent du haut-parleur
         // pendant qu'elle cherche. Le seuil doit y être relevé comme pendant sa réponse,
         // sinon c'est sa propre voix qui ouvre une phrase.
@@ -469,6 +485,19 @@ export default class extends Controller {
      * rien à l'état : on continue d'écouter, en silence, comme si rien n'avait été dit —
      * ce qui est le cas.
      */
+    /**
+     * LE MICRO PARLE-T-IL ENCORE ? Sans lui, aucune provenance ne peut être jugée.
+     *
+     * Un téléphone dont le contexte audio n'a pas démarré ne livre aucune trame : le
+     * détecteur reste vierge, et la règle de proximité rejetterait TOUT. Mieux vaut alors
+     * faire confiance à la reconnaissance, comme avant ce filtre — une Ket qui n'écoute
+     * plus est un défaut bien pire qu'un bruit qui passe.
+     */
+    _microFiable() {
+        return this._derniereTrame !== undefined
+            && performance.now() - this._derniereTrame < this.constructor.SILENCE_MICRO_MS;
+    }
+
     _retenirOuIgnorer(texteEntendu, confiance = null) {
         // CE QUE KET VIENT DE DIRE NE VOUS APPARTIENT PAS. La reconnaissance du
         // navigateur entend aussi le haut-parleur : quand on parle PENDANT qu'elle parle,
@@ -481,6 +510,7 @@ export default class extends Controller {
             confiance,
             priseDeParole: this._detecteur?.dernierePriseDeParole() ?? null,
             instantMs: performance.now(),
+            microFiable: this._microFiable(),
         });
 
         return this._suivreLeVerdict(verdict, texte);
@@ -516,7 +546,7 @@ export default class extends Controller {
         // suffit à l'écarter, et l'écarter ICI épargne la requête, l'attente et les
         // crédits — le texte n'apprendrait rien de plus sur sa provenance.
         const surLeSon = priseRecevable(this._detecteur?.dernierePriseDeParole(), performance.now());
-        if (!surLeSon.recevable) {
+        if (this._microFiable() && !surLeSon.recevable) {
             this._suivreLeVerdict(surLeSon, '(non transcrit)');
             this._evenement('silence');
             return;

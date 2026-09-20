@@ -346,6 +346,33 @@ test('une phrase dite de près passe, la même venue de loin est ignorée', () =
     assert.deepEqual([lointaine.recevable, lointaine.motif], [false, 'loin']);
 });
 
+/**
+ * SANS MICRO, KET N'EST PAS SOURDE (signalé le 2026-09-20 : « sur le smartphone Ket
+ * n'écoute plus »).
+ *
+ * Sur un téléphone, le contexte audio naît SUSPENDU : aucune trame n'atteint le
+ * détecteur, qui reste vierge. La règle de proximité rejetait alors TOUT en « muet » —
+ * l'absence de preuve prise pour une preuve d'absence. Une Ket qui n'écoute plus est un
+ * défaut bien pire qu'un bruit qui passe : quand le micro se tait, on fait confiance à
+ * la reconnaissance, comme avant ce filtre.
+ */
+test('quand le micro ne donne rien, la phrase entendue passe quand même', () => {
+    const sansMicro = phraseRecevable({
+        texte: 'Quel est le taux de la Caution ?',
+        priseDeParole: null,
+        instantMs: 1500,
+        microFiable: false,
+    });
+
+    assert.deepEqual([sansMicro.recevable, sansMicro.motif], [true, 'sans-micro']);
+});
+
+test('même sans micro, une hésitation seule ne part pas', () => {
+    const tic = phraseRecevable({ texte: 'euh', priseDeParole: null, instantMs: 1500, microFiable: false });
+
+    assert.equal(tic.motif, 'tic', 'le seul filtre qui ne dépend pas du micro reste actif');
+});
+
 test('un texte qu’aucune voix n’accompagne n’entre jamais dans la conversation', () => {
     const rien = phraseRecevable({ texte: 'la télévision parle', priseDeParole: null, instantMs: 1500 });
     const vieux = phraseRecevable({ texte: 'la télévision parle', priseDeParole: prise(9, 900, 1000), instantMs: 9000 });
