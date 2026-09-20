@@ -4,7 +4,7 @@ import { assembler, duree, encoderWav, reechantillonner, TAUX_OREILLE } from './
 import { ETATS, libelleEtatLive, sessionInitiale, transition } from './ket-live-etat.js';
 import { choisir, programmeDesIntermedes } from './ket-live-intermedes.js';
 import { jalon, nouveauTour, resumeDuTour } from './ket-live-chrono.js';
-import { phraseRecevable, priseRecevable, retirerLaVoixDeKet } from './ket-live-tri.js';
+import { finalesNouvelles, phraseRecevable, priseRecevable, retirerLaVoixDeKet } from './ket-live-tri.js';
 import { texteAPrononcer } from './assistant-lecture-vocale.js';
 import { fusionnerTranscripts } from './dictee-transcript.js';
 import { documentLocale } from '../locale.js';
@@ -681,6 +681,7 @@ export default class extends Controller {
             return;
         }
         if (this._reconnaissance) return;
+        // Instance NEUVE : sa liste de résultats part vide.
         this._finalesLues = 0;
         const reconnaissance = new Reconnaissance();
         reconnaissance.lang = documentLocale() === 'en' ? 'en-US' : 'fr-FR';
@@ -690,15 +691,10 @@ export default class extends Controller {
         reconnaissance.onresult = (event) => {
             if (this.session.etat === ETATS.ARRET) return;
 
-            // SEULEMENT CE QUI VIENT D'ÊTRE DIT. La liste des résultats grossit à chaque
-            // événement et garde tout le passé de la session : la refusionner entière
-            // renverrait la question précédente, allongée du nouveau.
-            const complets = [];
-            for (let i = this._finalesLues ?? 0; i < event.results.length; i++) {
-                if (!event.results[i].isFinal) continue;
-                complets.push(event.results[i]);
-                this._finalesLues = i + 1;
-            }
+            // SEULEMENT CE QUI VIENT D'ÊTRE DIT (cf. finalesNouvelles) : la liste cumule
+            // tout le passé de la session, et sur Android elle recommence à chaque phrase.
+            const { finales: complets, lues } = finalesNouvelles(event.results, this._finalesLues ?? 0);
+            this._finalesLues = lues;
             if (complets.length === 0) return;
             const texte = fusionnerTranscripts(complets.map((r) => r[0].transcript));
             if (texte.trim() === '') return;
@@ -736,8 +732,12 @@ export default class extends Controller {
         reconnaissance.onend = () => {
             // Le navigateur clôt sa session au silence : on relance SANS ATTENDRE, tant
             // que la session dure. Un délai ici, c'est le début d'une phrase mangé.
+            // SURTOUT PAS DE REMISE À ZÉRO ICI. Sur Android, la reconnaissance clôt sa
+            // session après CHAQUE phrase : remettre le compteur à zéro à chaque reprise
+            // faisait relire toutes les finales déjà posées — d'où les mêmes phrases
+            // transcrites plusieurs fois, et les réponses qui s'emmêlaient. C'est la
+            // liste elle-même qui dira qu'elle a recommencé (finalesNouvelles).
             if (this.session.etat !== ETATS.ARRET && this.session.oreille === 'navigateur') {
-                this._finalesLues = 0;
                 try { reconnaissance.start(); } catch (e) { /* déjà démarrée */ }
             }
         };
