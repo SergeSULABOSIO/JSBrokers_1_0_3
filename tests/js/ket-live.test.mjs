@@ -12,7 +12,7 @@ import { assembler, duree, encoderWav, reechantillonner, TAUX_OREILLE } from '..
 import { ENTETE_WAV } from '../../assets/controllers/assistant-voix-pcm.js';
 import { ETATS, libelleEtatLive, sessionInitiale, transition } from '../../assets/controllers/ket-live-etat.js';
 import { choisir, programmeDesIntermedes, RELANCES_MAX } from '../../assets/controllers/ket-live-intermedes.js';
-import { MARGE_PROCHE, nEstQueDesTics, phraseRecevable, retirerLaVoixDeKet } from '../../assets/controllers/ket-live-tri.js';
+import { finalesNouvelles, MARGE_PROCHE, nEstQueDesTics, phraseRecevable, retirerLaVoixDeKet } from '../../assets/controllers/ket-live-tri.js';
 
 // ── Détection de parole ──────────────────────────────────────────────────────
 
@@ -406,6 +406,45 @@ test('une confiance basse durcit l’exigence, une confiance absente ne condamne
     assert.equal(sansAvis.recevable, true, 'sans confiance annoncée, la marge seule décide');
     assert.equal(sure.recevable, true);
     assert.equal(hesitante.recevable, false, 'mal reconnu ET à la limite : on se tait');
+});
+
+// ── On ne lit jamais deux fois la même phrase ────────────────────────────────
+
+const finale = (texte) => ({ isFinal: true, 0: { transcript: texte } });
+
+/**
+ * L'INCIDENT (2026-09-20) : « elle transcrit plusieurs fois les mêmes textes, et répond
+ * en désordre ». Sur Android, la reconnaissance CLÔT sa session après chaque phrase et
+ * repart. Le compteur de finales était remis à zéro à chaque reprise — et relisait donc
+ * tout le passé de la liste quand, elle, ne recommençait pas.
+ */
+test('une liste qui grossit ne rend que ses nouvelles finales', () => {
+    const premier = finalesNouvelles([finale('bonjour')], 0);
+    assert.deepEqual([premier.finales.length, premier.lues], [1, 1]);
+
+    // La même liste, allongée : seule la nouvelle phrase ressort.
+    const second = finalesNouvelles([finale('bonjour'), finale('quel est le taux ?')], premier.lues);
+    assert.equal(second.finales.length, 1);
+    assert.equal(second.finales[0][0].transcript, 'quel est le taux ?');
+    assert.equal(second.lues, 2);
+
+    // Et rien de neuf ne rend rien du tout.
+    assert.equal(finalesNouvelles([finale('bonjour'), finale('quel est le taux ?')], second.lues).finales.length, 0);
+});
+
+test('une session qui recommence repart de sa première phrase', () => {
+    // Android : la liste redevient courte parce qu'une NOUVELLE session a commencé.
+    const apresReprise = finalesNouvelles([finale('et pour la RC Pro ?')], 5);
+
+    assert.equal(apresReprise.finales.length, 1, 'la phrase de la nouvelle session est lue');
+    assert.equal(apresReprise.lues, 1);
+});
+
+test('les résultats non finalisés ne comptent pas', () => {
+    const resultats = [finale('bonjour'), { isFinal: false, 0: { transcript: 'quel est' } }];
+
+    assert.deepEqual(finalesNouvelles(resultats, 0).finales.length, 1);
+    assert.equal(finalesNouvelles(resultats, 0).lues, 1, 'l’interim ne fait pas avancer le curseur');
 });
 
 // ── La voix de Ket ne s'attribue pas vos phrases ─────────────────────────────

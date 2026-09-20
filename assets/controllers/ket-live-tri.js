@@ -20,11 +20,16 @@
  * Combien de fois le seuil de parole il faut dépasser pour être tenu pour proche.
  *
  * Le seuil de parole vaut déjà 2,2 fois le bruit appris de la pièce : une voix qui
- * l'atteint tout juste est, par construction, à la limite de l'audible. Le triple est le
- * point de départ retenu, à confirmer sur des mesures réelles — chaque rejet journalise
- * sa marge, précisément pour pouvoir régler ce nombre sur des chiffres et non au jugé.
+ * l'atteint tout juste est, par construction, à la limite de l'audible.
+ *
+ * RAMENÉ DE 3 À 2 LE 2026-09-20 : « il faut crier pour qu'elle écoute ». Trois fois le
+ * seuil, soit près de sept fois le bruit de la pièce, exigeait une voix forte — et un
+ * téléphone tenu à bout de bras n'y arrive pas. Deux reste très au-dessus d'une
+ * télévision lointaine, qui frôle le seuil sans le doubler. Ce nombre n'a rien d'une
+ * vérité : chaque rejet journalise sa marge, précisément pour le régler sur des chiffres
+ * réels plutôt qu'au jugé.
  */
-export const MARGE_PROCHE = 3;
+export const MARGE_PROCHE = 2;
 
 /** En deçà, ce n'est pas une phrase : un claquement, une porte, une chaise. */
 export const DUREE_MIN_MS = 300;
@@ -60,6 +65,34 @@ export const TICS = [
  * (« est-ce que vous », « dans les trois ») et l'on mutilerait une vraie question.
  */
 export const MOTS_AVANT_RETRAIT = 4;
+
+/**
+ * LES FINALES QU'ON N'A PAS ENCORE LUES, et elles seules.
+ *
+ * `event.results` est la liste CUMULÉE de la session de reconnaissance : la relire en
+ * entier renvoie les phrases déjà posées. Un compteur suffit — à une condition, apprise
+ * en production le 2026-09-20 : sur Android, la reconnaissance CLÔT sa session à chaque
+ * phrase et repart. Quand elle repart, la liste recommence à zéro, et un compteur resté
+ * en l'état ne lirait plus rien ; quand elle ne repart pas, le remettre à zéro relirait
+ * TOUT. D'où la règle : c'est la liste qui dit si elle a recommencé, pas nous.
+ *
+ * @param {{length: number}} resultats la liste de l'événement
+ * @param {number} dejaLues combien de ses éléments ont déjà été traités
+ * @returns {{finales: object[], lues: number}}
+ */
+export function finalesNouvelles(resultats, dejaLues = 0) {
+    const total = resultats?.length ?? 0;
+    // La liste a rétréci : une nouvelle session a commencé, tout y est neuf.
+    let curseur = total < dejaLues ? 0 : dejaLues;
+    const finales = [];
+    for (let i = curseur; i < total; i++) {
+        if (!resultats[i]?.isFinal) continue;
+        finales.push(resultats[i]);
+        curseur = i + 1;
+    }
+
+    return { finales, lues: curseur };
+}
 
 /** Forme de comparaison : minuscules, sans accents, sans ponctuation, espaces réduits. */
 const cle = (texte) => String(texte ?? '')
