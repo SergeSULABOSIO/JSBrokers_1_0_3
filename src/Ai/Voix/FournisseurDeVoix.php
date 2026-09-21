@@ -36,6 +36,20 @@ interface FournisseurDeVoix extends Fournisseur
     public function modele(bool $vitesse = false): string;
 
     /**
+     * CE FOURNISSEUR S'EST-IL DÉJÀ DÉCLARÉ À SEC ? Sans appel réseau : c'est la mémoire
+     * d'épuisement qu'on interroge, celle-là même qui évite de refaire un aller-retour
+     * perdu à chaque écoute.
+     *
+     * POURQUOI LE CONTRAT LE DEMANDE. Savoir d'avance qu'aucune voix ne parlera permet à
+     * la page de brancher DIRECTEMENT la synthèse du navigateur, sans payer la requête
+     * qui ne rendra qu'un refus. Mesuré le 2026-09-21 : crédits ElevenLabs du mois
+     * épuisés depuis le 17/09, les trois modèles Gemini épuisés depuis le 19/09 — toutes
+     * les lectures passaient donc déjà par le navigateur, mais chacune commençait par
+     * attendre un « non ».
+     */
+    public function estEpuise(): bool;
+
+    /**
      * Le texte en voix, morceau PCM par morceau PCM. `$vitesse` demande le modèle le
      * plus rapide (mode Live : premier son en ~1 s au lieu de 2,4 s). Valeur de retour
      * (`getReturn()`) :

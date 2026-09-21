@@ -81,6 +81,18 @@ final class SyntheseVocaleGemini implements FournisseurDeVoix
         return $this->listeModeles()[0] ?? '';
     }
 
+    /** À sec seulement quand TOUTE la chaîne l'est : chaque modèle a son propre compteur. */
+    public function estEpuise(): bool
+    {
+        foreach ($this->listeModeles() as $modele) {
+            if (!$this->epuisement->estEpuise('gemini:' . $modele)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public function flux(string $texte, bool $vitesse = false): \Generator
     {
         $texte = trim($texte);

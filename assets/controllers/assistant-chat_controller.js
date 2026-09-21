@@ -186,6 +186,13 @@ export default class extends Controller {
         idConversation: Number,
         assistantNom: String,
         /**
+         * Reste-t-il une voix de SERVEUR qui parlera ? Décidé au rendu de la page (cf.
+         * voix_serveur_disponible). « false » = toutes les voix payantes sont à sec, et
+         * la synthèse du navigateur prend la main SANS qu'on demande d'abord au serveur
+         * un refus connu d'avance. Par défaut « true » : on demande, comme avant.
+         */
+        voixServeur: { type: Boolean, default: true },
+        /**
          * Le terminal de l'utilisateur, publié par le serveur (cf.
          * App\Service\Terminal). Ce n'est PAS un droit : il dit seulement de
          * quoi l'écran est capable. En mode Ket (téléphone, tablette), il n'y a
@@ -202,6 +209,13 @@ export default class extends Controller {
         // en clair. Stimulus connecte via MutationObserver (microtâche), donc
         // cette écriture précède le premier paint : pas de flash clair.
         this.setupTheme();
+
+        // LA VOIX EST DÉJÀ DÉCIDÉE. Quand le serveur annonce que toutes ses voix sont à
+        // sec, on ne lui demande rien : la synthèse du navigateur lit, dès la première
+        // phrase. C'est le régime dans lequel se trouve un cabinet dont les paliers
+        // gratuits sont consommés — et il n'y a aucune raison d'y payer, à chaque
+        // lecture, l'aller-retour d'un refus connu d'avance.
+        this._voixServeurMuette = this.voixServeurValue === false;
 
         // Les questions dont on attend encore la réponse : identifiant de tâche →
         // bulle. Vide, le scrutin ne tourne pas et aucune requête ne part.
