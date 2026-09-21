@@ -10,6 +10,13 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * à chaque écoute. Partagé par tous les fournisseurs : seule la durée change (minuit
  * heure du Pacifique pour le quota journalier de Gemini, le mois suivant pour celui
  * d'ElevenLabs, une minute pour une saturation passagère).
+ *
+ * ⚠ SON DÉPÔT N'EST PAS « cache.app », ET CE N'EST PAS UN DÉTAIL. Ce pool-là vit sous
+ * var/cache/<env>/pools, que « cache:clear » emporte à CHAQUE déploiement : la mémoire
+ * repartait vide, et la première lecture qui suivait une mise en ligne repayait quatre
+ * refus réseau avant le premier mot. Le service est donc rangé sous var/ket-voix/, chez
+ * les enregistrements, que le déploiement ne touche jamais (cf. config/services.yaml).
+ * Même piège, même remède que le store de déduplication de la supervision.
  */
 final class MemoireDEpuisement
 {

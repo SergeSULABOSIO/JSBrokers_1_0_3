@@ -91,6 +91,30 @@ services:
     # alias dessus — aucun autre changement applicatif.
     App\Payment\Gateway\PaymentGatewayInterface: '@App\Payment\Gateway\SimulatedGateway'
 
+    # ── LA MÉMOIRE D'ÉPUISEMENT DES VOIX NE VIT PAS DANS var/cache ───────────
+    #
+    # Elle retient qu'une voix s'est déclarée à sec (crédits du mois ElevenLabs,
+    # quota du jour Gemini) pour ne pas lui refaire un aller-retour perdu à chaque
+    # écoute. Rangée dans « cache.app », elle disparaissait à chaque DÉPLOIEMENT :
+    # « cache:clear » est la première chose que fait bin/deploy.sh, et le pool
+    # « app » vit sous var/cache/<env>/pools. Après chaque mise en ligne, la
+    # première lecture repayait donc quatre refus réseau avant le premier mot.
+    #
+    # C'est exactement le piège n°2 de la supervision (son store de déduplication
+    # a dû quitter cache_dir pour la même raison) : une mémoire dont la perte ne
+    # casse rien et ne se voit pas. Elle rejoint donc var/ket-voix/, où vivent
+    # déjà les enregistrements — un dossier que le déploiement ne touche jamais.
+    ket.voix.memoire_epuisement:
+        class: Symfony\Component\Cache\Adapter\FilesystemAdapter
+        arguments:
+            - 'ket_voix_epuise'
+            - 0
+            - '%kernel.project_dir%/var/ket-voix/epuisement/%kernel.environment%'
+
+    App\Ai\Voix\MemoireDEpuisement:
+        arguments:
+            $cache: '@ket.voix.memoire_epuisement'
+
     # NOUVEAU : Décorateur pour le PropertyAccessor du Sérialiseur.
     # Cela permet d'intercepter les exceptions Doctrine (EntityNotFoundException)
     # lors de la sérialisation de relations rompues, sans faire planter l'application.

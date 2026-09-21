@@ -51,6 +51,12 @@
      data-assistant-chat-id-invite-value="{{ idInvite }}"
      data-assistant-chat-id-conversation-value="{{ conversation.id }}"
      data-assistant-chat-assistant-nom-value="{{ assistantNom }}"
+     {# LA VOIX QUI LIRA, DÉCIDÉE AVANT LA PREMIÈRE LECTURE. « false » veut dire que
+        toutes les voix du serveur sont à sec (crédits du mois, quota du jour) : la
+        synthèse du navigateur prend la main directement, sans payer l'aller-retour
+        d'un refus connu d'avance. Ce n'est pas un verrou — si un quota se libère,
+        une page rechargée redemandera. #}
+     data-assistant-chat-voix-serveur-value="{{ voix_serveur_disponible() ? 'true' : 'false' }}"
      {# LE TERMINAL, PUBLIÉ AU CHAT. Sur téléphone et tablette, il n'y a ni menu,
         ni onglet, ni colonne de fiche : les trois actions qui les visent
         (open-rubrique, close-rubrique, open-visualization) sont refusées par un

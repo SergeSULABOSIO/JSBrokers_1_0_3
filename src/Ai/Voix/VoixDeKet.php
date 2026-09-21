@@ -48,6 +48,26 @@ final class VoixDeKet
     }
 
     /**
+     * RESTE-T-IL UNE VOIX QUI PARLERA ? Configurée, appelable, ET pas encore à sec.
+     *
+     * C'est cette réponse que la page reçoit à l'ouverture : quand elle est « non », la
+     * synthèse du navigateur prend la main SANS qu'on demande d'abord au serveur un
+     * refus qu'on connaît déjà. La lecture démarre alors sur l'API native, ce qui est
+     * exactement le régime dans lequel le cabinet se trouve dès que les paliers gratuits
+     * sont consommés.
+     */
+    public function uneVoixPeutParler(): bool
+    {
+        foreach ($this->fournisseurs() as $fournisseur) {
+            if (!$fournisseur->estEpuise()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * L'identité d'une voix dans le cache audio : deux fournisseurs, ou deux voix d'un même
      * fournisseur, ne partagent jamais un enregistrement.
      */

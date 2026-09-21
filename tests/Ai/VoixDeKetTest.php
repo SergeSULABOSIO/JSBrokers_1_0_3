@@ -17,9 +17,14 @@ class VoixDeKetTest extends TestCase
      *
      * @param list<string> $morceaux
      */
-    public static function faux(string $nom, array $morceaux, string $statut, bool $disponible = true): FournisseurDeVoix
-    {
-        return new class($nom, $morceaux, $statut, $disponible) implements FournisseurDeVoix {
+    public static function faux(
+        string $nom,
+        array $morceaux,
+        string $statut,
+        bool $disponible = true,
+        bool $epuise = false,
+    ): FournisseurDeVoix {
+        return new class($nom, $morceaux, $statut, $disponible, $epuise) implements FournisseurDeVoix {
             public int $appels = 0;
 
             public bool $vitesse = false;
@@ -29,7 +34,13 @@ class VoixDeKetTest extends TestCase
                 private readonly array $morceaux,
                 private readonly string $statut,
                 private readonly bool $disponible,
+                private readonly bool $epuise = false,
             ) {
+            }
+
+            public function estEpuise(): bool
+            {
+                return $this->epuise;
             }
 
             public function nom(): string
@@ -63,6 +74,36 @@ class VoixDeKetTest extends TestCase
                 return $this->statut;
             }
         };
+    }
+
+    /**
+     * SAVOIR D'AVANCE QU'AUCUNE VOIX NE PARLERA — c'est ce qui permet à la page de
+     * brancher la synthèse du navigateur sans commencer par demander un refus.
+     *
+     * Relevé le 2026-09-21 : crédits ElevenLabs du mois épuisés, trois modèles Gemini
+     * épuisés. Toutes les lectures passaient déjà par le navigateur, mais chacune
+     * attendait d'abord un « non » du serveur.
+     */
+    public function testToutesLesVoixASecSeDitAvantDAppeler(): void
+    {
+        $voix = new VoixDeKet([
+            self::faux('elevenlabs', [], FournisseurDeVoix::QUOTA, epuise: true),
+            self::faux('gemini', [], FournisseurDeVoix::QUOTA, epuise: true),
+        ], 'elevenlabs,gemini');
+
+        self::assertTrue($voix->estDisponible(), 'les fournisseurs restent configurés');
+        self::assertFalse($voix->uneVoixPeutParler(), 'mais aucun ne parlera : inutile de l’appeler');
+    }
+
+    /** ⚠ ET IL SUFFIT D'UNE SEULE qui ait encore du souffle pour que l'on demande. */
+    public function testUneSeuleVoixEncoreDisponibleSuffit(): void
+    {
+        $voix = new VoixDeKet([
+            self::faux('elevenlabs', [], FournisseurDeVoix::QUOTA, epuise: true),
+            self::faux('gemini', ['son'], FournisseurDeVoix::COMPLET),
+        ], 'elevenlabs,gemini');
+
+        self::assertTrue($voix->uneVoixPeutParler());
     }
 
     /** @return array{0: string, 1: string} audio concaténé et statut */

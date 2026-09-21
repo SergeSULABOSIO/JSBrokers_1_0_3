@@ -63,6 +63,11 @@ final class SyntheseVocaleElevenLabs implements FournisseurDeVoix
         return $vitesse && trim($this->modeleLive) !== '' ? $this->modeleLive : $this->modele;
     }
 
+    public function estEpuise(): bool
+    {
+        return $this->epuisement->estEpuise('elevenlabs');
+    }
+
     public function flux(string $texte, bool $vitesse = false): \Generator
     {
         $texte = trim($texte);
