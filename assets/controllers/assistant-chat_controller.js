@@ -4059,6 +4059,9 @@ export default class extends Controller {
         // rend muets les rappels de celle-ci.
         const jeton = {};
         this._lecture = jeton;
+        // L'horloge du PREMIER SON part d'ici : c'est le moment où l'utilisateur, lui,
+        // commence à attendre (cf. _premierSon).
+        this._lectureDebutMs = performance.now();
         this._bulleLue = bulle;
         this._marquerLecture(bulle, true);
 
@@ -4077,6 +4080,30 @@ export default class extends Controller {
         this._fermerAudio();
         this._marquerLecture(bulle, true, true);
         await this._lireAvecNavigateur(decouperEnPhrases(texte), jeton);
+    }
+
+    /**
+     * L'INSTANT OÙ KET SE MET VRAIMENT À PARLER — et qui manquait à toutes nos mesures.
+     *
+     * Le chrono du mode Live s'arrêtait à l'AFFICHAGE de la réponse : il annonçait
+     * « attente avant la voix » alors que la voix, elle, n'avait pas encore commencé.
+     * Tout ce qui se passe ensuite — l'aller-retour au serveur, la synthèse, le repli sur
+     * la voix du navigateur quand les quotas sont épuisés — se déroulait donc hors de
+     * toute mesure. C'est précisément l'intervalle que l'utilisateur a signalé le
+     * 2026-09-20 : « +/- 8 secondes avant de parler ».
+     *
+     * On ne peut pas régler ce qu'on ne mesure pas : cet événement le rend visible, et
+     * dit par QUELLE voix le son est sorti.
+     */
+    _premierSon(jeton, source) {
+        if (this._lecture !== jeton || this._sonAnnonce === jeton) return;
+        this._sonAnnonce = jeton;
+        const delaiMs = Math.round(performance.now() - (this._lectureDebutMs ?? performance.now()));
+        console.debug(`Ket — premier son (${source}) après ${delaiMs} ms.`);
+        this.element.dispatchEvent(new CustomEvent('assistant-chat:voix-premiere', {
+            bubbles: true,
+            detail: { source, delaiMs },
+        }));
     }
 
     /**
@@ -4158,6 +4185,7 @@ export default class extends Controller {
                     reste = conversion.reste;
                     if (conversion.echantillons.length) {
                         this._programmer(audio, lecteur, conversion.echantillons);
+                        if (!aParle) this._premierSon(jeton, 'serveur');
                         aParle = true;
                     }
                 }
@@ -4210,6 +4238,8 @@ export default class extends Controller {
             if (voix) enonce.voice = voix;
             enonce.rate = DEBIT;
             enonce.pitch = HAUTEUR;
+            // Le son sort ICI, et pas quand on a demandé à parler : `speak()` met en file.
+            enonce.onstart = () => this._premierSon(jeton, 'navigateur');
             if (index === segments.length - 1) {
                 enonce.onend = () => { if (this._lecture === jeton) this.arreterLecture(); };
             }

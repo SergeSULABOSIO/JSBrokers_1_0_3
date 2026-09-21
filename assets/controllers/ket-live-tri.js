@@ -80,10 +80,25 @@ export const MOTS_AVANT_RETRAIT = 4;
  * @param {number} dejaLues combien de ses éléments ont déjà été traités
  * @returns {{finales: object[], lues: number}}
  */
-export function finalesNouvelles(resultats, dejaLues = 0) {
+export function finalesNouvelles(resultats, dejaLues = 0, depuis = null) {
     const total = resultats?.length ?? 0;
-    // La liste a rétréci : une nouvelle session a commencé, tout y est neuf.
-    let curseur = total < dejaLues ? 0 : dejaLues;
+    // LE NAVIGATEUR DIT LUI-MÊME OÙ SA LISTE A CHANGÉ : `resultIndex` est fait pour ça,
+    // il fait donc autorité, et notre compteur ne sert que de secours.
+    //
+    // POURQUOI PAS LE MAXIMUM DES DEUX — c'est ce que j'avais écrit, et un test l'a
+    // démenti le 2026-09-21. Sur Android, chaque phrase a sa session et sa liste d'UN
+    // élément : le compteur valait 1, la nouvelle liste comptait 1, et prendre le maximum
+    // sautait la phrase. Une sur deux disparaissait sans un mot. `resultIndex`, lui, dit
+    // « ce résultat-ci est neuf » sans rien savoir de ce qui a précédé — et c'est
+    // exactement ce qu'il faut savoir.
+    //
+    // ⚠ CE QUI RESTE À SA CHARGE : si un navigateur rejouait deux fois le MÊME événement,
+    // la phrase repartirait deux fois. Jamais observé, et le prix de l'erreur inverse —
+    // une question perdue en silence — est bien plus lourd.
+    let curseur = typeof depuis === 'number' && depuis >= 0
+        ? Math.min(depuis, total)
+        // Sans `resultIndex` (moteurs anciens), on ne peut que constater un rétrécissement.
+        : (total < dejaLues ? 0 : dejaLues);
     const finales = [];
     for (let i = curseur; i < total; i++) {
         if (!resultats[i]?.isFinal) continue;
@@ -138,6 +153,53 @@ export function priseRecevable(prise, instantMs = 0, margeProche = MARGE_PROCHE)
     if (marge < margeProche) return verdict(false, 'loin');
 
     return verdict(true, 'recevable');
+}
+
+/** En deçà, un mot est trop courant pour témoigner de quoi que ce soit (« et », « le »). */
+export const LETTRES_SIGNIFIANTES = 4;
+
+/** Il en faut au moins deux : une seule coïncidence n'est pas une ressemblance. */
+export const MOTS_SIGNIFIANTS_MIN = 2;
+
+/** Au-delà de cette part de mots retrouvés chez Ket, la phrase est la sienne. */
+export const PART_RESSEMBLANCE = 0.6;
+
+/**
+ * CETTE PHRASE EST-ELLE CELLE QUE KET VIENT DE DIRE ?
+ *
+ * POURQUOI {@see retirerLaVoixDeKet} NE SUFFIT PAS. Il compare les mots dans l'ORDRE et
+ * s'arrête au premier écart : or la reconnaissance déforme (« laissez-moi » devient
+ * « laisse-moi »), et l'écart arrive dès le deuxième mot. Mesuré au harnais le
+ * 2026-09-21 : l'intermède « Hum, laisse-moi vérifier cela… » ressortait INTACT du
+ * retranchement, puis passait le juge de provenance — car il portait les références de la
+ * salve de l'utilisateur, celle de sa vraie question quatre secondes plus tôt. Une seule
+ * prise de parole cautionnait ainsi tout ce que la reconnaissance rendait ensuite.
+ *
+ * ⚠ POURQUOI PAS « UNE SALVE, UNE PHRASE » — c'est la règle que j'avais écrite d'abord,
+ * et le harnais l'a démentie : elle jetait la question posée PENDANT que Ket cherchait,
+ * qui réutilise la même salve. Jeter une question de l'utilisateur est pire que tout ce
+ * qu'on cherchait à empêcher.
+ *
+ * ON NE COMPTE QUE LES MOTS QUI SIGNIFIENT (quatre lettres au moins) : « et », « du »,
+ * « la » se retrouvent partout et feraient ressembler n'importe quoi à n'importe quoi. Et
+ * un mot compte pour retrouvé s'il est le DÉBUT d'un mot de Ket, ou l'inverse : c'est
+ * exactement la déformation qu'on observe.
+ *
+ * @param {string} texte ce que la reconnaissance a rendu
+ * @param {string[]} phrasesDeKet ce que Ket vient de dire (réponses et intermèdes)
+ */
+export function ressembleAKet(texte, phrasesDeKet = []) {
+    const siens = cle(phrasesDeKet.join(' ')).split(' ').filter((m) => m.length >= LETTRES_SIGNIFIANTES);
+    if (siens.length === 0) return false;
+
+    const mots = cle(texte).split(' ').filter((m) => m.length >= LETTRES_SIGNIFIANTES);
+    if (mots.length < MOTS_SIGNIFIANTS_MIN) return false;
+
+    const retrouves = mots.filter(
+        (mot) => siens.some((sien) => sien.startsWith(mot) || mot.startsWith(sien)),
+    ).length;
+
+    return retrouves / mots.length >= PART_RESSEMBLANCE;
 }
 
 /**

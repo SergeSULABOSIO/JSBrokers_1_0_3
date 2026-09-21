@@ -298,7 +298,48 @@ final class GeminiAiEngine implements AiEngineInterface
             // l'utilisateur attend, pas après. Tout le reste de ce journal se
             // mesure au retour, et arriverait donc une phase trop tard.
             $this->journal->debutDePhase($phase);
-            ['reponse' => $response, 'octets' => $octets] = $this->appelerAvecReessai($request, $contents, $trousse, $phase);
+            try {
+                ['reponse' => $response, 'octets' => $octets] = $this->appelerAvecReessai($request, $contents, $trousse, $phase);
+            } catch (\Throwable $e) {
+                // UN QUOTA ÉPUISÉ N'EST PAS UNE PANNE DE L'APPLICATION. Relevé en
+                // production le 2026-09-20 : 21 exceptions « HTTP/2 429 returned for
+                // gemini-3.1-flash-lite » remontées jusqu'au contrôleur en dix-sept
+                // minutes. L'utilisateur perdait son message, recevait une erreur 500, et
+                // la supervision classait comme défaut à corriger une limite de débit du
+                // fournisseur — sur laquelle il n'y a rien à corriger.
+                //
+                // Tous les modèles étant saturés, on CONCLUT proprement : ce que les
+                // outils ont déjà rapporté est restitué en PHP (coût nul), et à défaut Ket
+                // explique la saturation et le délai. Le fil reste intact.
+                if (!AiEngineFailure::estLimiteDeDebit($e)) {
+                    throw $e;
+                }
+                $delai = AiEngineFailure::secondesAvantNouvelEssai($e);
+                $this->logger->warning('Assistant IA (gemini) : quota du fournisseur épuisé, message conclu sans erreur.', [
+                    'phase'   => $phase->name,
+                    'modele'  => $this->modeleCourant,
+                    'delai'   => $delai,
+                    'details' => AiEngineFailure::detailsPourJournal($e),
+                ]);
+                $restitution = $this->repliPrecis->depuis($resultatsOutils);
+
+                return $this->conclure(
+                    $request,
+                    JournalTokens::ISSUE_BUDGET_ATTEINT,
+                    $round + 1,
+                    $cumulInput,
+                    $cumulSortie,
+                    $sequenceOutils,
+                    new AiReply(
+                        $restitution === RepliPrecis::GENERIQUE ? $this->messageQuotaEpuise($delai) : $restitution,
+                        refused: $refused,
+                        toolUsed: $toolUsed,
+                        actions: $actions,
+                        plansRefuses: $plansRefuses,
+                        chiffresDesOutils: ChiffreFantome::nombresDe($resultatsOutils),
+                    ),
+                );
+            }
 
             // UNE SEULE REPRISE PAR TOUR, quelle qu'en soit la cause (appel malformé ou
             // tour muet) : au-delà, on paierait un troisième appel pour ce message.
@@ -563,7 +604,10 @@ final class GeminiAiEngine implements AiEngineInterface
                 $result = $this->executeur->executer($name, $args, $request->scope);
                 $toolUsed = $name;
                 $sequenceOutils[] = $name;
-                $resultatsOutils[] = ['outil' => $name, 'data' => $result->data];
+                // L'ACTION D'INTERFACE VOYAGE AVEC LE RÉSULTAT : quand un outil ne
+                // rapporte aucune donnée, c'est elle — et elle seule — qui dit ce qui a
+                // été fait. Sans cela, le repli ne pouvait que nier le geste.
+                $resultatsOutils[] = ['outil' => $name, 'data' => $result->data, 'action' => $result->uiAction];
                 if ($result->status === AiToolResult::STATUS_HORS_PERIMETRE) {
                     $refused = true;
                 }
@@ -777,6 +821,27 @@ final class GeminiAiEngine implements AiEngineInterface
     }
 
     /**
+     * CE QUE KET DIT QUAND LE FOURNISSEUR A DIT NON, et qu'aucun modèle ne reste.
+     *
+     * ⚠ NE PAS RÉUTILISER messageDebitSature(null) ICI — c'est l'erreur qu'un test a
+     * attrapée le 2026-09-20. Sans délai annoncé, ce message-là accuse LE POIDS DU FIL
+     * et invite à ouvrir une nouvelle conversation : un diagnostic faux, et un conseil
+     * inutile. Notre compteur local, lui, sait qu'une fenêtre vide ne suffirait pas ;
+     * un 429 sans RetryInfo ne dit rien de tel — seulement que le quota du moment est
+     * consommé.
+     */
+    private function messageQuotaEpuise(?int $delai): string
+    {
+        if ($delai !== null) {
+            return $this->messageDebitSature($delai);
+        }
+
+        return 'Mon moteur a épuisé son quota pour le moment — une limite partagée par tout le '
+            . 'cabinet, pas un défaut de votre demande. Reposez-moi la question dans quelques '
+            . 'minutes : ce que j’ai déjà rassemblé reste dans le fil.';
+    }
+
+    /**
      * Appel HTTP, avec UN réessai si le fournisseur répond 429 en annonçant un
      * délai court.
      *
@@ -807,6 +872,15 @@ final class GeminiAiEngine implements AiEngineInterface
                 : null;
 
             if ($delai === null || $delai > self::MAX_ATTENTE_SECONDES) {
+                // LE QUOTA SE COMPTE PAR MODÈLE. Un 429 qu'on ne peut pas attendre ne dit
+                // rien des modèles de secours, qui ont leur propre fenêtre : les essayer
+                // coûte un aller-retour et sauve le message. C'est ce que fait déjà la
+                // VOIX de Ket avec sa chaîne de modèles ; il n'y avait aucune raison que
+                // le texte abandonne là où la voix continue.
+                if (AiEngineFailure::estLimiteDeDebit($e) && $this->replisRestants !== []) {
+                    return $this->basculerSurUnRepli($e, $request, $contents, $trousse, $phase);
+                }
+
                 throw $e;
             }
 
@@ -851,7 +925,7 @@ final class GeminiAiEngine implements AiEngineInterface
             $abandonne = $this->modeleCourant;
             $this->modeleCourant = array_shift($this->replisRestants);
 
-            $this->logger->warning('Assistant IA (gemini) : modèle surchargé (503), bascule sur un modèle de secours.', [
+            $this->logger->warning('Assistant IA (gemini) : modèle indisponible (503) ou saturé (429), bascule sur un modèle de secours.', [
                 'abandonne' => $abandonne,
                 'repli'     => $this->modeleCourant,
                 'details'   => AiEngineFailure::detailsPourJournal($origine),
@@ -864,7 +938,7 @@ final class GeminiAiEngine implements AiEngineInterface
                 // panne, en revanche, appartient à ce modèle-là et doit remonter telle
                 // quelle — un 400 sur un modèle qui refuse notre schéma d'outils n'a
                 // rien à voir avec une surcharge, et l'enterrer serait perdre la cause.
-                if (!AiEngineFailure::estMoteurIndisponible($e)) {
+                if (!AiEngineFailure::estMoteurIndisponible($e) && !AiEngineFailure::estLimiteDeDebit($e)) {
                     throw $e;
                 }
             }

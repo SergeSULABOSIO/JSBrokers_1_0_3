@@ -4,7 +4,7 @@ import { assembler, duree, encoderWav, reechantillonner, TAUX_OREILLE } from './
 import { ETATS, libelleEtatLive, sessionInitiale, transition } from './ket-live-etat.js';
 import { choisir, programmeDesIntermedes } from './ket-live-intermedes.js';
 import { jalon, nouveauTour, resumeDuTour } from './ket-live-chrono.js';
-import { finalesNouvelles, phraseRecevable, priseRecevable, retirerLaVoixDeKet } from './ket-live-tri.js';
+import { finalesNouvelles, phraseRecevable, priseRecevable, ressembleAKet, retirerLaVoixDeKet } from './ket-live-tri.js';
 import { texteAPrononcer } from './assistant-lecture-vocale.js';
 import { fusionnerTranscripts } from './dictee-transcript.js';
 import { documentLocale } from '../locale.js';
@@ -73,6 +73,21 @@ export default class extends Controller {
      */
     static PHRASES_MUETTES_AVANT_SOUPCON = 2;
 
+    /**
+     * Temps laissé à une phrase pour se TERMINER avant qu'elle ne parte au moteur.
+     *
+     * SUR ANDROID, LA RECONNAISSANCE HACHE. Elle clôt sa session à chaque respiration et
+     * rend des finales très courtes — « donne-moi », « le top 5 », « des clients ».
+     * Parties séparément, elles devenaient autant de questions : d'où les réponses en
+     * désordre, et l'impression que Ket ne retient « que la dernière phrase ou le dernier
+     * mot ». On les recoud donc, en attendant un vrai silence.
+     *
+     * NEUF CENTS MILLISECONDES : un peu plus que le silence de fin de phrase du détecteur
+     * (FIN_MS = 700), assez peu pour ne pas se sentir dans la conversation. Chaque
+     * nouveau morceau relance l'attente — tant que vous enchaînez, rien ne part.
+     */
+    static REGROUPEMENT_MS = 900;
+
     /** Combien de phrases de Ket on garde pour reconnaître son écho. */
     static PHRASES_RETENUES = 4;
 
@@ -105,6 +120,13 @@ export default class extends Controller {
         this._onDemarrer = () => this.demarrer();
         this._onReponse = (event) => this._evenement('reponse-affichee', { bulle: event.detail?.bulle });
         this._onLectureTerminee = () => this._evenement('lecture-terminee');
+        // LE TOUR NE FINIT PAS QUAND LA RÉPONSE S'AFFICHE, MAIS QUAND ELLE SE FAIT
+        // ENTENDRE. Le chrono s'arrêtait à l'affichage et annonçait « attente avant la
+        // voix » : tout l'aller-retour de synthèse — et le repli sur la voix du
+        // navigateur quand les quotas sont épuisés — se déroulait hors de toute mesure.
+        // C'est exactement l'intervalle signalé le 2026-09-20 (« 8 secondes avant de
+        // parler »), et on ne peut pas régler ce qu'on ne mesure pas.
+        this._onPremierSon = (event) => this._noterLePremierSon(event.detail ?? {});
         this._onTouche = (event) => {
             if (event.key === 'Escape' && this.session.etat !== ETATS.ARRET) {
                 event.preventDefault();
@@ -115,6 +137,7 @@ export default class extends Controller {
         this.element.addEventListener('ket-live:demarrer', this._onDemarrer);
         this.element.addEventListener('assistant-chat:reponse-affichee', this._onReponse);
         this.element.addEventListener('assistant-chat:lecture-terminee', this._onLectureTerminee);
+        this.element.addEventListener('assistant-chat:voix-premiere', this._onPremierSon);
         document.addEventListener('keydown', this._onTouche);
     }
 
@@ -123,6 +146,7 @@ export default class extends Controller {
         this.element.removeEventListener('ket-live:demarrer', this._onDemarrer);
         this.element.removeEventListener('assistant-chat:reponse-affichee', this._onReponse);
         this.element.removeEventListener('assistant-chat:lecture-terminee', this._onLectureTerminee);
+        this.element.removeEventListener('assistant-chat:voix-premiere', this._onPremierSon);
         document.removeEventListener('keydown', this._onTouche);
     }
 
@@ -164,7 +188,15 @@ export default class extends Controller {
         for (const action of this.session.actions ?? []) {
             switch (action) {
                 case 'ouvrir-micro': this._ouvrirMicro(); break;
-                case 'fermer-micro': this._fermerMicro(); break;
+                case 'fermer-micro':
+                    // Ce qui est déjà entendu part AVANT que l'oreille ne se ferme : une
+                    // phrase retenue dans le tampon serait perdue sans un mot. SAUF si la
+                    // session s'arrête — envoyer une question après qu'on a quitté le mode
+                    // Live serait répondre à quelqu'un qui est parti.
+                    if (this.session.etat === ETATS.ARRET) this._morceaux = [];
+                    else this._envoyerLesMorceaux();
+                    this._fermerMicro();
+                    break;
                 case 'precharger-intermedes': this._prechargerIntermedes(); break;
                 case 'transcrire': this._transcrire(); break;
                 case 'oreille-navigateur': this._ecouterAvecLeNavigateur(); break;
@@ -208,6 +240,24 @@ export default class extends Controller {
      * cette mesure côté navigateur, on optimiserait d'après les journaux du serveur,
      * qui ignorent le réseau, l'affichage et le premier son.
      */
+    /**
+     * CE QUE L'ATTENTE A VRAIMENT DURÉ, et par quelle voix elle s'est terminée.
+     *
+     * La source compte autant que le délai : un premier son « navigateur » signifie que
+     * TOUTES les voix du serveur ont refusé (crédits ElevenLabs du mois épuisés, quota
+     * journalier Gemini atteint), et que chaque lecture paie d'abord ces refus. Sans
+     * cette distinction, on chercherait la lenteur dans le réseau ou dans la synthèse,
+     * alors qu'elle est dans une file de fournisseurs à bout de souffle.
+     */
+    _noterLePremierSon({ source = 'inconnue', delaiMs = 0 } = {}) {
+        const total = this._tour ? Math.round(performance.now() - this._tour.debut) : null;
+        console.debug(
+            `Mode Live — PREMIER SON par la voix « ${source} » : ${delaiMs} ms après la demande de lecture`
+            + (total === null ? '.' : `, ${total} ms après votre phrase.`),
+        );
+        this._emettre('ket-live:premier-son', { source, delaiMs, depuisLaPhraseMs: total });
+    }
+
     _chronometrer(avant, apres) {
         if (avant.etat === apres.etat) return;
         const instant = performance.now();
@@ -542,6 +592,15 @@ export default class extends Controller {
         // le nom de l'utilisateur. Le juge de provenance ne pouvait rien : quelqu'un
         // parlait bel et bien tout près du micro.
         const texte = retirerLaVoixDeKet(texteEntendu, this._phrasesDeKet ?? []);
+        // ET QUAND LE RETRANCHEMENT NE PEUT RIEN, LA RESSEMBLANCE TRANCHE. La
+        // reconnaissance déforme (« laissez-moi » → « laisse-moi ») : le retrait mot à mot
+        // s'arrête au premier écart et rend la phrase entière. Le harnais l'a montré le
+        // 2026-09-21 — l'intermède « Hum, laisse-moi vérifier cela… » repartait au moteur
+        // comme une question de l'utilisateur, avec les références de sa VRAIE salve
+        // précédente. C'est la porte d'entrée de la boucle infinie.
+        if (ressembleAKet(texte, this._phrasesDeKet ?? [])) {
+            return this._suivreLeVerdict({ recevable: false, motif: 'echo', marge: 0 }, texte);
+        }
         const verdict = phraseRecevable({
             texte,
             confiance,
@@ -553,10 +612,43 @@ export default class extends Controller {
         return this._suivreLeVerdict(verdict, texte);
     }
 
+    /**
+     * RECOUD LES MORCEAUX D'UNE MÊME PRISE DE PAROLE, puis les envoie d'un bloc.
+     *
+     * Rien n'est jamais jeté : chaque morceau reçu est gardé dans l'ordre où il a été
+     * dit, et c'est le SILENCE qui décide que la phrase est finie. C'est la règle posée
+     * par l'utilisateur — « elle ne doit rien jeter ni ignorer qui vienne de moi » —,
+     * tenue ici sans rien demander au moteur.
+     */
+    _deposerLeTexte(texte) {
+        // ⚠ ON NE FAIT ATTENDRE PERSONNE SANS RAISON. Une oreille qui ne hache pas —
+        // celle d'un ordinateur, qui tient sa session ouverte — rend une phrase entière
+        // d'un coup : la retenir ajouterait REGROUPEMENT_MS à CHAQUE tour, et le harnais
+        // Live l'a mesuré (2104 ms au lieu de 1200). On n'attend donc que là où le
+        // hachage est PROUVÉ : la session s'est refermée toute seule (cf. _oreilleHachee).
+        if (this._oreilleHachee !== true) {
+            this._evenement('texte-entendu', { texte });
+
+            return;
+        }
+        this._morceaux = [...(this._morceaux ?? []), texte];
+        clearTimeout(this._regroupement);
+        this._regroupement = setTimeout(() => this._envoyerLesMorceaux(), this.constructor.REGROUPEMENT_MS);
+    }
+
+    /** La phrase entière prend la route — une seule question, dans l'ordre dit. */
+    _envoyerLesMorceaux() {
+        clearTimeout(this._regroupement);
+        this._regroupement = null;
+        const phrase = (this._morceaux ?? []).join(' ').replace(/\s+/g, ' ').trim();
+        this._morceaux = [];
+        if (phrase !== '') this._evenement('texte-entendu', { texte: phrase });
+    }
+
     /** Ce qu'on fait d'un verdict, qu'il porte sur le son seul ou sur le texte. */
     _suivreLeVerdict(verdict, texte) {
         if (verdict.recevable) {
-            this._evenement('texte-entendu', { texte });
+            this._deposerLeTexte(texte);
 
             return true;
         }
@@ -693,7 +785,11 @@ export default class extends Controller {
 
             // SEULEMENT CE QUI VIENT D'ÊTRE DIT (cf. finalesNouvelles) : la liste cumule
             // tout le passé de la session, et sur Android elle recommence à chaque phrase.
-            const { finales: complets, lues } = finalesNouvelles(event.results, this._finalesLues ?? 0);
+            const { finales: complets, lues } = finalesNouvelles(
+                event.results,
+                this._finalesLues ?? 0,
+                typeof event.resultIndex === 'number' ? event.resultIndex : null,
+            );
             this._finalesLues = lues;
             if (complets.length === 0) return;
             const texte = fusionnerTranscripts(complets.map((r) => r[0].transcript));
@@ -738,6 +834,19 @@ export default class extends Controller {
             // transcrites plusieurs fois, et les réponses qui s'emmêlaient. C'est la
             // liste elle-même qui dira qu'elle a recommencé (finalesNouvelles).
             if (this.session.etat !== ETATS.ARRET && this.session.oreille === 'navigateur') {
+                // LA PREUVE DU HACHAGE, et elle vaut mieux qu'un test de navigateur :
+                // cette oreille vient de refermer sa session alors qu'on écoutait
+                // toujours. C'est la signature d'Android, qui clôt à chaque respiration
+                // et fait partir une question par bout de phrase. Désormais on recoud
+                // (cf. _deposerLeTexte) — et seulement ici.
+                this._oreilleHachee = true;
+                // LA SESSION EST FINIE : son décompte aussi. C'est `resultIndex` — le
+                // repère du navigateur — qui empêchera de relire une liste qui, elle,
+                // aurait continué (cf. finalesNouvelles). Garder le compteur d'une
+                // session close faisait PERDRE la phrase suivante quand la nouvelle liste
+                // avait la même longueur : « il faut répéter plusieurs fois pour qu'elle
+                // réponde », et « elle ne considère que la dernière phrase ».
+                this._finalesLues = 0;
                 try { reconnaissance.start(); } catch (e) { /* déjà démarrée */ }
             }
         };
