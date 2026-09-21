@@ -192,7 +192,8 @@ final class AnthropicAiEngine implements AiEngineInterface
                 }
                 $result = $this->executeur->executer((string) $block['name'], (array) ($block['input'] ?? []), $request->scope);
                 $toolUsed = (string) $block['name'];
-                $resultatsOutils[] = ['outil' => $toolUsed, 'data' => $result->data];
+                // Cf. GeminiAiEngine : les deux moteurs doivent se replier à l'identique.
+                $resultatsOutils[] = ['outil' => $toolUsed, 'data' => $result->data, 'action' => $result->uiAction];
                 if ($result->status === AiToolResult::STATUS_HORS_PERIMETRE) {
                     $refused = true;
                 }

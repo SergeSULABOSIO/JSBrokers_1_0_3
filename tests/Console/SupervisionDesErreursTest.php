@@ -7,7 +7,14 @@ use App\Repository\ErreurApplicativeRepository;
 use App\Supervision\EnregistreurDErreurs;
 use App\Supervision\OrigineErreur;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Supervision\HandlerDeSupervision;
+use Monolog\Level;
+use Monolog\LogRecord;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * La supervision des erreurs : regroupement, comptage, régression, paliers.
@@ -174,6 +181,64 @@ class SupervisionDesErreursTest extends KernelTestCase
         self::assertSame(ErreurApplicative::BRANCHE_CONSOLE, $origine->depuisUrl('https://www.joseara.com/console/supervision'));
         self::assertSame(ErreurApplicative::BRANCHE_WORKSPACE, $origine->depuisUrl('https://www.joseara.com/espacedetravail/1/1'));
         self::assertSame(ErreurApplicative::BRANCHE_PORTAIL, $origine->depuisUrl('https://www.joseara.com/'));
+    }
+
+    /**
+     * UNE ADRESSE QUI N'EXISTE PAS N'EST PAS UN DÉFAUT DE L'APPLICATION.
+     *
+     * Relevé en production le 2026-09-20 : « No route found for GET
+     * /wp-admin/install.php », 546 occurrences, PREMIÈRE LIGNE du tableau des défauts.
+     * Ce ne sont pas nos utilisateurs, ce sont des robots qui cherchent un WordPress.
+     * Symfony journalise les 404 au niveau ERROR, le même que les vraies pannes : les
+     * compter reléguait les défauts réels plus bas dans une liste triée par fréquence.
+     * Une supervision qu'on cesse de lire ne supervise plus rien.
+     */
+    public function testUneAdresseInconnueNEstPasUnDefaut(): void
+    {
+        $this->handler()->handle($this->enregistrementDe(
+            new NotFoundHttpException('No route found for "GET /wp-admin/install.php"'),
+        ));
+        $this->em->clear();
+
+        self::assertSame([], $this->depot->findAll(), 'Un 404 de robot n’a rien à faire dans la liste des défauts.');
+    }
+
+    /**
+     * ⚠ ET SEULEMENT LE 404. Un 400, un 403, un 409 viennent de NOS routes, qui ont bel
+     * et bien répondu : une poussée de ces statuts est un signal — c'est ainsi qu'on a
+     * trouvé le refus de la voix sur les réponses à tableau.
+     */
+    public function testUnRefusDeNosPropresRoutesResteUnDefaut(): void
+    {
+        $this->handler()->handle($this->enregistrementDe(
+            new BadRequestHttpException('Le texte à lire ne correspond pas à cette réponse.'),
+        ));
+        $this->em->clear();
+
+        self::assertCount(1, $this->depot->findAll(), 'Un 400 de nos routes reste un défaut à regarder.');
+    }
+
+    private function handler(): HandlerDeSupervision
+    {
+        $conteneur = static::getContainer();
+
+        return new HandlerDeSupervision(
+            $this->enregistreur,
+            $conteneur->get(OrigineErreur::class),
+            $conteneur->get(RequestStack::class),
+            $conteneur->get(Security::class),
+        );
+    }
+
+    private function enregistrementDe(\Throwable $exception): LogRecord
+    {
+        return new LogRecord(
+            new \DateTimeImmutable(),
+            'request',
+            Level::Error,
+            $exception->getMessage(),
+            ['exception' => $exception],
+        );
     }
 
     private function enregistrer(

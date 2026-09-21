@@ -850,6 +850,65 @@ class GeminiAiEngineTest extends TestCase
         }
     }
 
+    // ──────────────────────────────────────────────────────────────────────────────
+    // Quota du fournisseur épuisé (429) : changer de modèle, puis le DIRE
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    /** Réponse 429 SANS délai exploitable : un quota journalier, qu'on ne peut pas attendre. */
+    private static function quotaEpuise(): MockResponse
+    {
+        return new MockResponse(
+            json_encode(['error' => ['code' => 429, 'status' => 'RESOURCE_EXHAUSTED', 'message' => 'Quota exceeded.']]),
+            ['http_code' => 429],
+        );
+    }
+
+    /**
+     * LE QUOTA SE COMPTE PAR MODÈLE : un secours a sa propre fenêtre.
+     *
+     * Relevé en production le 2026-09-20 : 21 exceptions « HTTP/2 429 » en dix-sept
+     * minutes, remontées jusqu'au contrôleur. Ket abandonnait sur le modèle principal
+     * alors qu'un autre pouvait répondre — ce que sa VOIX faisait déjà.
+     */
+    public function testUn429EssayeLesModelesDeSecours(): void
+    {
+        $modelesAppeles = [];
+        $http = new MockHttpClient(function (string $methode, string $url) use (&$modelesAppeles): MockResponse {
+            $modelesAppeles[] = preg_replace('#^.*/models/([^:]+):.*$#', '$1', $url);
+
+            return \count($modelesAppeles) === 1
+                ? self::quotaEpuise()
+                : new MockResponse(json_encode(self::texte('Voici votre portefeuille.')));
+        });
+
+        $reply = $this->makeEngine($http, replis: 'gemini-secours')->reply($this->makeRequest('Où en suis-je ?'));
+
+        self::assertSame('Voici votre portefeuille.', $reply->content);
+        self::assertSame(['gemini-2.5-flash', 'gemini-secours'], $modelesAppeles);
+    }
+
+    /**
+     * TOUT EST SATURÉ : Ket l'explique, elle ne plante pas.
+     *
+     * C'est la demande explicite de l'utilisateur — « Ket doit éviter de générer des
+     * erreurs quand un quota est épuisé ». Une exception remontait jusqu'au contrôleur :
+     * le message était perdu, la réponse était un 500, et la supervision inscrivait
+     * comme DÉFAUT À CORRIGER une limite de débit sur laquelle il n'y a rien à corriger.
+     */
+    public function testTousLesQuotasEpuisesDonnentUneExplication(): void
+    {
+        $http = new MockHttpClient(static fn (): MockResponse => self::quotaEpuise());
+
+        $reply = $this->makeEngine($http, replis: 'secours-a')->reply($this->makeRequest('Bonjour'));
+
+        self::assertStringContainsString('épuisé son quota', $reply->content);
+        self::assertStringNotContainsString('429', $reply->content);
+        // ⚠ ET SURTOUT PAS LE MESSAGE DU FIL TROP LOURD : un 429 sans délai annoncé ne dit
+        // rien du poids de la conversation, et envoyer l'utilisateur en ouvrir une autre
+        // est un conseil faux. Cette assertion a attrapé exactement cette confusion.
+        self::assertStringNotContainsString('trop lourd', $reply->content);
+    }
+
     /**
      * ⚠ SEULE LA SURCHARGE FAIT BASCULER. Un 400 appartient au modèle qu'on interroge —
      * un schéma d'outils qu'il refuse, par exemple. Le rejouer ailleurs masquerait la

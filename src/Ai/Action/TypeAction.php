@@ -257,6 +257,45 @@ enum TypeAction: string
         ));
     }
 
+    /**
+     * CE QUE CETTE ACTION A FAIT, en toutes lettres — pour le jour où c'est TOUT ce
+     * qu'il y a à dire.
+     *
+     * LE SYMPTÔME (2026-09-20, production). « affiche-moi la liste des tranches » : la
+     * planification ouvre la rubrique Tranches — l'écran obéit, la liste est là —, puis
+     * la rédaction réclame un outil de plus au lieu d'écrire. Aucun résultat ne portait
+     * de données, {@see \App\Ai\Redaction\RepliPrecis} n'avait donc rien à restituer,
+     * et Ket servait sa phrase de dernier recours : « je n'ai pas pu aboutir, redites-le
+     * en nommant le point précis ». Deux fois de suite, pour une demande qu'elle venait
+     * d'exécuter sous les yeux de l'utilisateur.
+     *
+     * NIER SON PROPRE GESTE EST LE PIRE DES REPLIS. Le serveur SAIT ce qu'il a fait
+     * faire au navigateur : il n'a pas à le demander au modèle, ni à l'oublier. Un récit
+     * ne coûte aucun token et ne peut pas être faux.
+     *
+     * NULL POUR TOUT LE RESTE, et c'est délibéré. Les actions « autoritaires »
+     * (PLAN_ABSENT, CHIFFRE_ABSENT…) sont des démentis greffés sur une réponse existante,
+     * jamais une réponse ; un plan à valider se raconte dans sa propre barre. Seule la
+     * NAVIGATION peut, à elle seule, constituer la réponse entière.
+     *
+     * @param string|null $sujet ce sur quoi l'action a porté, tel que l'utilisateur le
+     *                           lit à l'écran (« Tranches ») — jamais un nom technique
+     */
+    public function recit(?string $sujet = null): ?string
+    {
+        $nom = trim((string) $sujet);
+
+        return match ($this) {
+            self::OUVRIR_RUBRIQUE => $nom === ''
+                ? 'J’ai ouvert la rubrique demandée dans votre espace de travail.'
+                : sprintf('J’ai ouvert la rubrique **%s** dans votre espace de travail : la liste y est affichée.', $nom),
+            self::FERMER_RUBRIQUE => $nom === ''
+                ? 'J’ai fermé la rubrique demandée.'
+                : sprintf('J’ai fermé la rubrique **%s**.', $nom),
+            default => null,
+        };
+    }
+
     /** Lecture tolérante : null quand la valeur ne correspond à aucun type déclaré. */
     public static function depuis(mixed $valeur): ?self
     {

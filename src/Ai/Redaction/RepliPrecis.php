@@ -2,6 +2,7 @@
 
 namespace App\Ai\Redaction;
 
+use App\Ai\Action\TypeAction;
 use App\Ai\Presentation\TableauMarkdown;
 
 /**
@@ -56,7 +57,7 @@ final class RepliPrecis
         . 'période), et je la traite entièrement.';
 
     /**
-     * @param array<int, array{outil: string, data: array<string, mixed>}> $resultats
+     * @param array<int, array{outil: string, data: array<string, mixed>, action?: array<string, mixed>|null}> $resultats
      *        résultats des outils exécutés pendant la planification, dans l'ordre
      */
     public function depuis(array $resultats): string
@@ -69,6 +70,15 @@ final class RepliPrecis
             }
         }
 
+        // RIEN À DIRE, MAIS QUELQUE CHOSE A ÉTÉ FAIT. Un outil d'ACTION ne rapporte
+        // aucune donnée : c'est l'écran qui porte le résultat. Sans ce recours, « affiche-
+        // moi la liste des tranches » ouvrait bel et bien la rubrique Tranches, puis Ket
+        // répondait qu'elle n'avait pas abouti et demandait de reformuler — un démenti de
+        // son propre geste, sous les yeux de l'utilisateur (2026-09-20, production).
+        if ($morceaux === []) {
+            $morceaux = $this->recits($resultats);
+        }
+
         if ($morceaux === []) {
             return self::GENERIQUE;
         }
@@ -76,6 +86,36 @@ final class RepliPrecis
         // Une invitation à répondre, une seule fois et à la fin : sans elle, un
         // constat reste un constat et l'utilisateur ne sait pas ce qu'on attend de lui.
         return implode("\n\n", $morceaux);
+    }
+
+    /**
+     * CE QUE LES ACTIONS D'INTERFACE ONT FAIT, en toutes lettres.
+     *
+     * Le récit appartient à {@see TypeAction} — source unique des actions —, et le NOM
+     * de ce qui a été ouvert vient de l'outil, qui rend déjà le libellé d'écran. Un
+     * récit ne peut donc contredire ni l'écran ni le menu.
+     *
+     * @param array<int, array{outil?: string, data?: array<string, mixed>, action?: array<string, mixed>|null}> $resultats
+     *
+     * @return list<string>
+     */
+    private function recits(array $resultats): array
+    {
+        $recits = [];
+        foreach ($resultats as $resultat) {
+            $action = $resultat['action'] ?? null;
+            $type = is_array($action) ? TypeAction::depuis($action['type'] ?? null) : null;
+            if ($type === null) {
+                continue;
+            }
+            $data = (array) ($resultat['data'] ?? []);
+            $recit = $type->recit((string) ($data['libelle'] ?? $data['entite'] ?? ''));
+            if ($recit !== null && !in_array($recit, $recits, true)) {
+                $recits[] = $recit;
+            }
+        }
+
+        return $recits;
     }
 
     /**

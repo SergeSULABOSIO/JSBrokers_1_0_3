@@ -12,7 +12,7 @@ import { assembler, duree, encoderWav, reechantillonner, TAUX_OREILLE } from '..
 import { ENTETE_WAV } from '../../assets/controllers/assistant-voix-pcm.js';
 import { ETATS, libelleEtatLive, sessionInitiale, transition } from '../../assets/controllers/ket-live-etat.js';
 import { choisir, programmeDesIntermedes, RELANCES_MAX } from '../../assets/controllers/ket-live-intermedes.js';
-import { finalesNouvelles, MARGE_PROCHE, nEstQueDesTics, phraseRecevable, retirerLaVoixDeKet } from '../../assets/controllers/ket-live-tri.js';
+import { finalesNouvelles, MARGE_PROCHE, nEstQueDesTics, phraseRecevable, ressembleAKet, retirerLaVoixDeKet } from '../../assets/controllers/ket-live-tri.js';
 
 // ── Détection de parole ──────────────────────────────────────────────────────
 
@@ -440,11 +440,96 @@ test('une session qui recommence repart de sa première phrase', () => {
     assert.equal(apresReprise.lues, 1);
 });
 
+/**
+ * LA PHRASE PERDUE (relevé au harnais le 2026-09-21).
+ *
+ * Sur Android, chaque phrase a sa propre session et sa propre liste d'UN élément. Le
+ * compteur valait 1, la nouvelle liste comptait 1 : « la liste a rétréci » était donc
+ * faux, et la phrase était sautée. Une sur deux disparaissait sans un mot — « il faut
+ * répéter plusieurs fois pour qu'elle réponde », et « elle ne considère que la dernière
+ * phrase ». C'est `resultIndex`, que tout navigateur fournit, qui tranche.
+ */
+test('une nouvelle session de même longueur ne perd pas sa phrase', () => {
+    const apres = finalesNouvelles([finale('et pour la RC Pro ?')], 1, 0);
+    // `resultIndex` vaut 0 : cette liste commence, quoi qu'ait compté la session close.
+
+    assert.equal(apres.finales.length, 1, 'la phrase de la nouvelle session est lue');
+    assert.equal(apres.finales[0][0].transcript, 'et pour la RC Pro ?');
+});
+
+/**
+ * ⚠ ET L'INVERSE RESTE VRAI. La session s'est refermée, mais la LISTE, elle, a
+ * continué : le compteur repart à zéro et seul `resultIndex` empêche alors de relire
+ * les phrases déjà posées — le doublon d'origine.
+ */
+test('une liste qui continue après une session close ne se relit pas', () => {
+    const suite = finalesNouvelles([finale('bonjour'), finale('quel est le taux ?')], 0, 1);
+
+    assert.equal(suite.finales.length, 1);
+    assert.equal(suite.finales[0][0].transcript, 'quel est le taux ?');
+    assert.equal(suite.lues, 2);
+});
+
+/** Sans `resultIndex`, le compteur reprend son rôle : on ne relit pas une liste connue. */
+test('sans resultIndex, le compteur évite encore la relecture', () => {
+    const resultats = [finale('bonjour')];
+
+    assert.equal(finalesNouvelles(resultats, 0).finales.length, 1);
+    assert.equal(finalesNouvelles(resultats, 1).finales.length, 0);
+});
+
 test('les résultats non finalisés ne comptent pas', () => {
     const resultats = [finale('bonjour'), { isFinal: false, 0: { transcript: 'quel est' } }];
 
     assert.deepEqual(finalesNouvelles(resultats, 0).finales.length, 1);
     assert.equal(finalesNouvelles(resultats, 0).lues, 1, 'l’interim ne fait pas avancer le curseur');
+});
+
+// ── Reconnaître sa propre voix, même déformée ────────────────────────────────
+
+const INTERMEDES = ['Hum… laissez-moi vérifier.', 'D’accord… une seconde, je vérifie cela.'];
+
+/**
+ * LE CAS DU HARNAIS (2026-09-21). L'intermède de Ket, renvoyé par la reconnaissance
+ * pendant qu'elle parlait, ressortait INTACT du retranchement mot à mot — « laisse-moi »
+ * n'est pas « laissez-moi », et la comparaison s'arrête au premier écart. Il repartait
+ * alors au moteur comme une question, avec les références de la vraie salve précédente.
+ */
+test('un intermède déformé par la reconnaissance reste la voix de Ket', () => {
+    assert.equal(ressembleAKet('Hum, laisse-moi vérifier cela…', INTERMEDES), true);
+});
+
+/** ⚠ ET SURTOUT : une vraie question de l'utilisateur n'y ressemble jamais. */
+test('les questions de l’utilisateur ne ressemblent pas à Ket', () => {
+    assert.equal(ressembleAKet('Et celle du client suivant ?', INTERMEDES), false);
+    assert.equal(ressembleAKet('Quelle est la réserve de ce client ?', INTERMEDES), false);
+    assert.equal(ressembleAKet('Quel est le taux de la Caution ?', INTERMEDES), false);
+});
+
+/**
+ * Deux mots au moins, et seulement ceux qui SIGNIFIENT : « oui », « non », « arrête »
+ * sont des réponses légitimes, et les mots courts se retrouvent partout.
+ */
+test('une phrase trop courte ne peut pas être jugée par ressemblance', () => {
+    assert.equal(ressembleAKet('oui', INTERMEDES), false);
+    assert.equal(ressembleAKet('vérifier', INTERMEDES), false, 'un seul mot ne fait pas une ressemblance');
+    assert.equal(ressembleAKet('Et le taux ?', INTERMEDES), false, 'les mots courts ne comptent pas');
+});
+
+/**
+ * ⚠ LA RAISON D'ÊTRE DES QUATRE LETTRES, et elle n'est pas théorique. Ket vient de dire
+ * « Je vais voir cela. » ; l'utilisateur répond « oui, va voir ». En comptant les petits
+ * mots, « va » (début de « vais ») et « voir » font les deux tiers de sa phrase : son
+ * accord serait pris pour un écho et jeté en silence. En ne comptant que les mots qui
+ * signifient, il ne reste que « voir » — un seul mot ne fait pas une ressemblance.
+ */
+test('un accord bref de l’utilisateur n’est pas confondu avec l’écho', () => {
+    assert.equal(ressembleAKet('oui, va voir', ['Je vais voir cela.']), false);
+});
+
+/** Sans rien dont se souvenir, on n'accuse personne. */
+test('sans phrase de Ket, rien ne lui ressemble', () => {
+    assert.equal(ressembleAKet('Hum, laisse-moi vérifier cela…', []), false);
 });
 
 // ── La voix de Ket ne s'attribue pas vos phrases ─────────────────────────────

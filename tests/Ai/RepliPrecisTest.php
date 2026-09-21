@@ -41,6 +41,70 @@ class RepliPrecisTest extends TestCase
     }
 
     /**
+     * KET NE NIE PLUS SON PROPRE GESTE (incident du 2026-09-20, production).
+     *
+     * « affiche-moi la liste des tranches » : la planification OUVRE la rubrique
+     * Tranches — l'écran obéit, la liste est là —, puis la rédaction réclame un outil
+     * inexistant au lieu d'écrire. Aucun résultat ne portait de données : Ket répondait
+     * « je n'ai pas pu aboutir, redites-la-moi en nommant le point précis ». Deux fois
+     * de suite, pour une demande qu'elle venait d'exécuter sous les yeux du courtier.
+     *
+     * Le serveur SAIT ce qu'il a fait faire au navigateur. Le récit ne coûte aucun jeton
+     * et ne peut pas être faux.
+     */
+    public function testUneRubriqueOuverteEstRacontee(): void
+    {
+        $texte = $this->repli()->depuis([[
+            'outil'  => 'ouvrir_rubrique',
+            'data'   => ['entite' => 'Tranche', 'libelle' => 'Tranches', 'note' => 'La rubrique s’ouvre ENTIÈRE.'],
+            'action' => ['type' => 'open-rubrique', 'entite' => 'Tranche'],
+        ]]);
+
+        $this->assertStringContainsString('Tranches', $texte);
+        $this->assertStringContainsString('ouvert', $texte);
+        $this->assertNotSame(RepliPrecis::GENERIQUE, $texte);
+    }
+
+    /**
+     * ⚠ LE RÉCIT NE PASSE JAMAIS DEVANT LES DONNÉES. Il est un DERNIER recours, pas un
+     * raccourci : quand l'outil a rapporté des lignes, c'est le tableau que l'utilisateur
+     * doit lire — l'ouverture d'écran n'est qu'un geste de plus.
+     */
+    public function testLeRecitNEcrasePasCeQuUnOutilARapporte(): void
+    {
+        $texte = $this->repli()->depuis([
+            [
+                'outil'  => 'ouvrir_rubrique',
+                'data'   => ['entite' => 'Tranche', 'libelle' => 'Tranches'],
+                'action' => ['type' => 'open-rubrique', 'entite' => 'Tranche'],
+            ],
+            [
+                'outil' => 'rechercher_entites',
+                'data'  => ['lignes' => [['Police' => 'P-1', 'Montant' => 1000]]],
+            ],
+        ]);
+
+        $this->assertStringContainsString('P-1', $texte);
+        $this->assertStringNotContainsString('J’ai ouvert la rubrique', $texte);
+    }
+
+    /**
+     * ⚠ UNE ACTION SANS RÉCIT RESTE MUETTE. Les actions « autoritaires » (plan absent,
+     * chiffre sans source…) sont des démentis greffés sur une réponse, jamais une
+     * réponse : les raconter ferait dire à Ket qu'elle a « fait » un avertissement.
+     */
+    public function testUneActionSansRecitNInventeRien(): void
+    {
+        $texte = $this->repli()->depuis([[
+            'outil'  => 'preparer_operations',
+            'data'   => [],
+            'action' => ['type' => 'ket-mutation.absent'],
+        ]]);
+
+        $this->assertSame(RepliPrecis::GENERIQUE, $texte);
+    }
+
+    /**
      * LE CAS DE L'INCIDENT. Une question déjà formulée par l'outil est exactement ce
      * que la phrase générique écrasait — alors qu'elle est la seule chose utile.
      */

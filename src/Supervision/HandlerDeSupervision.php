@@ -7,6 +7,7 @@ use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Level;
 use Monolog\LogRecord;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 
@@ -59,6 +60,9 @@ final class HandlerDeSupervision extends AbstractProcessingHandler
         }
 
         $exception = $record->context['exception'] ?? null;
+        if (self::estUneAdresseQuiNExistePas($exception)) {
+            return;
+        }
 
         [$type, $message, $fichier, $ligne, $trace] = $exception instanceof \Throwable
             ? $this->depuisException($exception)
@@ -81,6 +85,28 @@ final class HandlerDeSupervision extends AbstractProcessingHandler
                 'cabinet' => $this->cabinetCourant($utilisateur),
             ],
         );
+    }
+
+    /**
+     * UNE ADRESSE QUI N'EXISTE PAS N'EST PAS UN DÉFAUT DE L'APPLICATION.
+     *
+     * Symfony journalise les 404 au niveau ERROR — le même que les vraies pannes —, et
+     * la supervision les comptait donc comme des défauts à corriger. Relevé le
+     * 2026-09-20 en production : « No route found for GET /wp-admin/install.php », 546
+     * occurrences, PREMIÈRE LIGNE du tableau. Ce ne sont pas nos utilisateurs, ce sont
+     * des robots qui cherchent un WordPress sur joseara.com ; il n'y a rien à corriger,
+     * et le seul effet de les compter est de reléguer les défauts réels plus bas dans
+     * une liste triée par fréquence. Une supervision qu'on cesse de lire ne supervise
+     * plus rien.
+     *
+     * ⚠ SEULEMENT LE 404, ET C'EST VOLONTAIRE. Un 400, un 403, un 409 viennent de NOS
+     * routes, qui ont bel et bien répondu : une poussée de ces statuts est un signal, et
+     * c'est ainsi qu'on a trouvé le refus de la voix sur les réponses à tableau. Seule
+     * l'adresse inconnue est, par construction, hors de notre code.
+     */
+    private static function estUneAdresseQuiNExistePas(mixed $exception): bool
+    {
+        return $exception instanceof HttpExceptionInterface && $exception->getStatusCode() === 404;
     }
 
     /**
