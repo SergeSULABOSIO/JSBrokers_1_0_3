@@ -212,6 +212,51 @@ class ConsoleKetFournisseursTest extends WebTestCase
         self::assertFalse($memoire->estEpuise($cle));
     }
 
+    /**
+     * LE BOUTON « ENREGISTRER » DOIT APPARTENIR AU FORMULAIRE.
+     *
+     * Incident du 2026-09-22 : le formulaire de réarmement avait été posé DANS le
+     * corps du formulaire principal. Un `<form>` imbriqué est du HTML invalide, et
+     * le navigateur le traite d'une façon qu'aucun test de ce projet ne reproduisait
+     * jusqu'ici : il IGNORE la balise ouvrante du second formulaire, mais HONORE sa
+     * fermante — qui referme donc le PREMIER. Tout ce qui suit, y compris le bouton
+     * d'envoi et la barre de progression, se retrouvait hors formulaire : un clic ne
+     * partait nulle part, sans message, sans erreur en console, sans rien.
+     *
+     * POURQUOI LE CRAWLER NE L'A PAS VU. `$crawler->filter('form')->form()` s'appuie
+     * sur un analyseur permissif qui, lui, crée bien le formulaire imbriqué : les six
+     * tests ci-dessus soumettaient un formulaire que le navigateur, lui, n'avait pas.
+     * D'où cette assertion sur le HTML BRUT, la seule qui parle le même langage que
+     * la règle d'analyse du navigateur.
+     */
+    public function testAucunFormulaireImbriqueNeCoupeLeBoutonDEnvoi(): void
+    {
+        $this->client->loginUser($this->user(self::SUPER));
+        $this->client->request('GET', self::URL);
+
+        $html = (string) $this->client->getResponse()->getContent();
+
+        // Un point de départ à coup sûr DANS le formulaire principal : son premier
+        // champ. Et un point d'arrivée : le bouton qui doit l'envoyer.
+        $debut = strpos($html, 'name="ket_fournisseurs[moteurJson]"');
+        self::assertNotFalse($debut, 'Le champ de la famille « moteur » a disparu de la page.');
+
+        $bouton = strpos($html, '<button type="submit"', $debut);
+        self::assertNotFalse($bouton, 'Le bouton d’envoi ne suit plus les champs.');
+
+        $entreDeux = substr($html, $debut, $bouton - $debut);
+        self::assertStringNotContainsString(
+            '</form>',
+            $entreDeux,
+            'Une balise </form> referme le formulaire AVANT son bouton d’envoi : le bouton sera inerte.',
+        );
+        self::assertStringNotContainsString(
+            '<form',
+            $entreDeux,
+            'Un formulaire imbriqué : le navigateur refermera le formulaire principal avant son bouton.',
+        );
+    }
+
     /** Un réarmement sans jeton CSRF valide ne doit rien effacer. */
     public function testUnRearmementSansJetonNeFaitRien(): void
     {

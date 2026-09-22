@@ -93,9 +93,13 @@
             </div>
         </fieldset>
     {% endfor %}
+{% endblock %}
 
-    {# Le réarmement est une action à part : il ne passe pas par l'enregistrement de
-       la politique, puisqu'il ne change rien à la politique — il efface une marque. #}
+{# Le réarmement est une action à part : il ne passe pas par l'enregistrement de la
+   politique, puisqu'il ne change rien à la politique — il efface une marque. Il vit
+   donc DEHORS du formulaire principal : imbriqué, il refermait celui-ci avant son
+   bouton « Enregistrer », qui ne faisait plus rien. #}
+{% block console_form_after %}
     <form method="post" action="{{ path('console.ket.fournisseurs.rearmer') }}" id="kf-rearmer-form">
         <input type="hidden" name="_token" value="{{ csrf_token('ket_rearmer') }}">
         <input type="hidden" name="cle" id="kf-rearmer-cle">
