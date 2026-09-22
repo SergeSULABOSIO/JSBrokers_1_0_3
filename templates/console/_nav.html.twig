@@ -60,7 +60,10 @@
            collaborateur courant (même règle que le blocage serveur). #}
         {% set vItems = g.items|filter(it => console_can_access(it.p)) %}
         {% if vItems|length > 0 %}
-        {% set gActive = (isVentes and route starts with 'console.plan.') or (isCrm and route starts with 'console.crm.parametres.') %}
+        {% set isPilotage = g.label == 'Pilotage' %}
+        {% set gActive = (isVentes and route starts with 'console.plan.')
+            or (isCrm and route starts with 'console.crm.parametres.')
+            or (isPilotage and route starts with 'console.ket.fournisseurs.') %}
         {% for it in vItems %}
             {% if route starts with it.r %}{% set gActive = true %}{% endif %}
         {% endfor %}
@@ -86,6 +89,14 @@
                        data-action="click->top-progress#show" {% if planActive %}aria-current="page"{% endif %}>
                         {{ ux_icon(resolve_icon_name('action:settings'), {height: '18px', width: '18px'}) }}
                         <span>Plan tarifaire</span>
+                    </a>
+                {% endif %}
+                {% if isPilotage and is_granted('ROLE_SUPER_ADMIN') %}
+                    {% set ketActive = route starts with 'console.ket.fournisseurs.' %}
+                    <a href="{{ path('console.ket.fournisseurs.index') }}" class="{{ ketActive ? 'is-active' }}"
+                       data-action="click->top-progress#show" {% if ketActive %}aria-current="page"{% endif %}>
+                        {{ ux_icon(resolve_icon_name('action:settings'), {height: '18px', width: '18px'}) }}
+                        <span>Fournisseurs de Ket</span>
                     </a>
                 {% endif %}
                 {% if isCrm and is_granted('ROLE_SUPER_ADMIN') %}

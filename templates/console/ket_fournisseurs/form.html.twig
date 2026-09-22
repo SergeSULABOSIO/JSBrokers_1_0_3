@@ -1,0 +1,103 @@
+{% extends 'console/form.html.twig' %}
+
+{% set libelles = {
+    'moteur':        {titre: 'Moteur de texte', aide: 'Qui rédige les réponses de Ket et choisit ses outils.'},
+    'comprehension': {titre: 'Compréhension',   aide: 'Le premier appel : établir ce que l’utilisateur veut dire.'},
+    'dictee':        {titre: 'Finition de dictée', aide: 'Met au propre le texte dicté avant de l’envoyer à Ket.'},
+    'voix':          {titre: 'Voix',            aide: 'Lecture à voix haute des réponses.'},
+    'oreille':       {titre: 'Oreilles',        aide: 'Transcription de la parole en mode Live.'}
+} %}
+
+{% block console_form_body %}
+    <style>
+        .cs-help { border:1px solid #d7e2f7; background:#f5f8ff; border-radius:12px; margin-bottom:1.5rem; }
+        .cs-help > summary { cursor:pointer; list-style:none; padding:.85rem 1.1rem; font-weight:700; color:#0047AB;
+            display:flex; align-items:center; gap:.5rem; }
+        .cs-help > summary::-webkit-details-marker { display:none; }
+        .cs-help > summary::after { content:"▸"; margin-left:auto; transition:transform .2s ease; color:#6c757d; }
+        .cs-help[open] > summary::after { transform:rotate(90deg); }
+        .cs-help__body { padding:0 1.1rem 1rem; color:#333; font-size:.9rem; }
+        .cs-help__body h3 { font-size:.9rem; font-weight:700; color:#0047AB; margin:1rem 0 .35rem; }
+        .cs-help__note { margin-top:.9rem; padding:.6rem .8rem; background:#fff3cd; color:#7a5b00; border-radius:8px; }
+
+        .kf-famille { margin-bottom:1.1rem; }
+        .kf-famille__aide { color:#6c757d; font-size:.85rem; margin:-.25rem 0 .7rem; }
+        .kf-mode { display:flex; gap:.4rem; margin-bottom:.7rem; }
+        .kf-mode button { flex:0 0 auto; border:1px solid #d7e2f7; background:#fff; color:#0047AB;
+            border-radius:999px; padding:.3rem .9rem; font-size:.82rem; font-weight:600; cursor:pointer; }
+        .kf-mode button[aria-pressed="true"] { background:#0047AB; color:#fff; border-color:#0047AB; }
+        .kf-liste { list-style:none; margin:0; padding:0; }
+        .kf-item { display:flex; align-items:center; gap:.6rem; padding:.55rem .7rem; border:1px solid #e6ecf7;
+            border-radius:10px; background:#fff; margin-bottom:.45rem; }
+        .kf-item[data-actif="0"] { opacity:.5; }
+        .kf-item__nom { font-weight:600; flex:1 1 auto; }
+        .kf-item__reglage { flex:0 0 auto; }
+        .kf-item__reglage input { border:1px solid #d7e2f7; border-radius:8px; padding:.2rem .5rem; font-size:.82rem; width:16rem; }
+        .kf-fleches { display:flex; gap:.2rem; }
+        .kf-fleches button, .kf-actif { border:1px solid #d7e2f7; background:#fff; border-radius:8px;
+            padding:.15rem .5rem; cursor:pointer; font-size:.85rem; color:#0047AB; }
+        .kf-voyant { font-size:.76rem; padding:.15rem .5rem; border-radius:999px; white-space:nowrap; }
+        .kf-voyant--ok { background:#e6f5ec; color:#1b6b3a; }
+        .kf-voyant--absent { background:#f1f3f5; color:#6c757d; }
+        .kf-voyant--sec { background:#fff3cd; color:#7a5b00; }
+        .kf-rearmer { border:none; background:none; color:#0047AB; text-decoration:underline; cursor:pointer;
+            font-size:.76rem; padding:0; }
+    </style>
+
+    <details class="cs-help">
+        <summary>
+            {{ ux_icon(resolve_icon_name('action:information'), {height:'18px', width:'18px'}) }}
+            Comment cette page décide qui répond
+        </summary>
+        <div class="cs-help__body">
+            <p>Ket s'appuie sur <strong>cinq familles de fournisseurs</strong>. Pour chacune, la liste
+               ci-dessous dit <strong>qui est essayé, et dans quel ordre</strong>.</p>
+
+            <h3>Chaîné ou épinglé</h3>
+            <p><strong>Chaîné</strong> : la liste est parcourue de haut en bas, et le premier fournisseur
+               utilisable répond. <strong>Épinglé</strong> : seul le premier est appelé, sans repli.</p>
+
+            <h3>Un fournisseur décoché n'est jamais appelé</h3>
+            <p>C'est ainsi qu'on coupe un fournisseur sans toucher au code. En revanche, tout décocher
+               dans une famille ne la coupe pas : la configuration du serveur reprend la main, pour
+               qu'une case oubliée ne laisse jamais Ket sans réponse.</p>
+
+            <h3>« Clé absente » et « à sec » ne veulent pas dire la même chose</h3>
+            <p><strong>Clé absente</strong> : le fournisseur n'est pas configuré sur ce serveur — rien à
+               faire ici, cela se règle dans la configuration. <strong>À sec</strong> : il s'est lui-même
+               déclaré épuisé (quota du jour, crédits du mois, plafond de dépense) et sera réessayé
+               automatiquement à l'heure indiquée. Le lien <em>Réarmer</em> le rend interrogeable tout de
+               suite — utile seulement si vous pensez que la marque est erronée.</p>
+
+            <div class="cs-help__note">
+                Les <strong>clés d'API ne se saisissent pas ici</strong> : elles restent dans la
+                configuration du serveur. Cette page ne fait qu'indiquer si elles sont présentes.
+            </div>
+        </div>
+    </details>
+
+    {% for famille, meta in libelles %}
+        <fieldset class="cs-fieldset kf-famille">
+            <legend class="cs-legend">
+                {{ ux_icon(resolve_icon_name('action:settings'), {height:'18px', width:'18px'}) }}
+                {{ meta.titre }}
+            </legend>
+            <p class="kf-famille__aide">{{ meta.aide }}</p>
+
+            <div data-controller="fournisseurs-editor"
+                 data-fournisseurs-editor-famille-value="{{ famille }}"
+                 data-fournisseurs-editor-etat-value="{{ (etat[famille] ?? [])|json_encode }}">
+                <div class="kf-mode" data-fournisseurs-editor-target="mode"></div>
+                <ul class="kf-liste" data-fournisseurs-editor-target="liste"></ul>
+                {{ form_widget(attribute(form, famille ~ 'Json'), {'attr': {'data-fournisseurs-editor-target': 'champ'}}) }}
+            </div>
+        </fieldset>
+    {% endfor %}
+
+    {# Le réarmement est une action à part : il ne passe pas par l'enregistrement de
+       la politique, puisqu'il ne change rien à la politique — il efface une marque. #}
+    <form method="post" action="{{ path('console.ket.fournisseurs.rearmer') }}" id="kf-rearmer-form">
+        <input type="hidden" name="_token" value="{{ csrf_token('ket_rearmer') }}">
+        <input type="hidden" name="cle" id="kf-rearmer-cle">
+    </form>
+{% endblock %}

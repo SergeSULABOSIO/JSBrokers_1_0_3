@@ -5,347 +5,190 @@ namespace App\Ai\Engine;
 use App\Ai\AiContextBuilder;
 use App\Ai\AiReply;
 use App\Ai\AiRequest;
-use App\Ai\Mutation\MotifDeRefus;
+use App\Ai\Comprehension\Comprehenseur;
+use App\Ai\Debit\BudgetDebit;
+use App\Ai\Fournisseur\MemoireDEpuisement;
+use App\Ai\Engine\Socle\DialecteAnthropicDuFil;
+use App\Ai\Engine\Socle\OrchestrateurDeMessage;
 use App\Ai\Mutation\OutilsDePlan;
-use App\Ai\Redaction\RelanceDuTourMuet;
 use App\Ai\Redaction\RepliPrecis;
-use App\Ai\Scope\AiScope;
-use App\Ai\Tool\AiToolResult;
+use App\Ai\Telemetrie\JournalTokens;
 use App\Ai\Tool\ExecuteurDOutils;
+use App\Ai\Trousse\Phase;
+use App\Ai\Trousse\SelecteurDeTrousse;
 use App\Ai\Trousse\Trousse;
 use App\Ai\Trousse\TrousseCatalogue;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * Moteur RÉEL de l'assistant : API Claude (Anthropic Messages API) via
- * symfony/http-client, avec tool-calling natif — le modèle décide lui-même
- * d'appeler nos outils métier pour répondre aux questions de données.
+ * Moteur réel : API Claude (Anthropic Messages API) via symfony/http-client,
+ * avec tool-calling natif.
  *
- * Adaptateur direct (sans SDK) : le projet est verrouillé en Symfony 7.1.*,
- * incompatible avec les paquets symfony/ai-* (qui exigent clock ^7.3 et
- * phpdoc-parser ^2). Le jour où le socle passera en 7.3+, un adaptateur
- * Symfony AI pourra remplacer celui-ci par simple repointage d'alias.
+ * CE FICHIER NE CONTIENT PLUS LE TRAVAIL, seulement le câblage. Comprendre la
+ * demande, choisir la trousse, mener les phases, exécuter les outils, mesurer,
+ * conclure : tout cela vit dans Socle\OrchestrateurDeMessage, le MÊME que celui
+ * du moteur Gemini. Le format du fil et le transport vivent dans
+ * Socle\DialecteAnthropicDuFil.
  *
- * SÉCURITÉ : le périmètre ne dépend PAS du modèle — chaque outil re-vérifie
- * canRead() dans execute() (fail-closed). Le prompt système ne fait qu'énoncer
- * la politesse du refus ; la garde est dans le code.
+ * CE QUE CE BRANCHEMENT RÉPARE. Tant que ce moteur menait sa propre boucle, il
+ * lui manquait onze choses que l'autre avait : les phases (il envoyait le prompt
+ * PLEIN et TOUS les outils aux deux appels), la compréhension, le choix de la
+ * trousse, la télémétrie, le compteur de débit, le mode Live, les chiffres des
+ * outils — donc le garde-fou anti-montant inventé —, la décision en attente, et
+ * le rattrapage de l'appel écrit en prose. Aucun de ces écarts n'était visible :
+ * ce moteur ne tournait pas. Mais ANTHROPIC_API_KEY est PRIORITAIRE dans
+ * AiEngineResolver, et une simple clé posée suffisait à tous les ouvrir d'un coup.
+ *
+ * SÉCURITÉ : inchangée — le périmètre ne dépend PAS du modèle, chaque outil
+ * re-vérifie canRead() dans execute() (fail-closed). Le prompt système ne fait
+ * qu'énoncer la politesse du refus ; la garde est dans le code.
  */
-final class AnthropicAiEngine implements AiEngineInterface
+final class AnthropicAiEngine implements MoteurDeTexte
 {
-    private const API_URL = 'https://api.anthropic.com/v1/messages';
-    private const API_VERSION = '2023-06-01';
-    /** Assez ample pour restituer une page de liste (rechercher_entites) sans troncature. */
-    private const MAX_OUTPUT_TOKENS = 4096;
     /**
-     * UN SEUL TOUR D'OUTILS, comme chez Gemini : le modèle n'orchestre pas, PHP
-     * orchestre. Un message = deux appels (les outils, puis la formulation).
-     * Les deux moteurs doivent se comporter à l'identique, sinon comparer leurs
-     * mesures n'a plus de sens et un défaut ne se reproduit que sur l'un des deux.
+     * Plafond de SORTIE par appel.
+     *
+     * 4 096 auparavant, calé sur Gemini. Deux raisons de le relever ici, aucune
+     * de le laisser bas : le plafond de sortie par minute d'Anthropic (400 000)
+     * n'est jamais le facteur limitant pour deux ou trois appels par message, et
+     * « max_tokens » n'entre PAS dans le calcul de ce plafond — une valeur haute
+     * ne coûte donc rien tant que le modèle n'écrit pas jusque-là. Ce qu'on
+     * gagne, c'est de ne plus tronquer une page de liste au milieu d'une phrase.
      */
-    private const MAX_TOOL_ROUNDS = 1;
+    private const MAX_OUTPUT_TOKENS = 16000;
+
+    /**
+     * Attente maximale avant de renoncer à un réessai, sur un délai annoncé par le
+     * fournisseur. Même borne que chez Gemini, et pour la même raison : au-delà
+     * d'une quinzaine de secondes, l'utilisateur préfère une réponse honnête à un
+     * silence.
+     */
+    private const MAX_ATTENTE_SECONDES = 15;
+
+    /**
+     * Attente après un refus de SURCHARGE (5xx / 529), où le fournisseur n'annonce
+     * aucun délai. Court : ces épisodes sont brefs, et si celui-ci ne l'est pas, un
+     * second échec le dira mieux qu'une longue attente.
+     */
+    private const ATTENTE_SURCHARGE_SECONDES = 2;
+
+    private readonly OrchestrateurDeMessage $orchestrateur;
+
+    private readonly DialecteAnthropicDuFil $fil;
+
+    private readonly bool $cleEstPosee;
+
+    private readonly ?MemoireDEpuisement $epuisement;
+
+    private readonly string $cleDEpuisement;
 
     public function __construct(
-        private readonly HttpClientInterface $httpClient,
-        private readonly AiContextBuilder $contextBuilder,
+        HttpClientInterface $httpClient,
+        AiContextBuilder $contextBuilder,
         // Même source que le prompt système : les deux doivent être dérivés du même
         // tableau d'outils, sans quoi une consigne peut nommer un outil non déclaré.
-        private readonly TrousseCatalogue $trousseCatalogue,
-        // Partagé avec le moteur Gemini et la phase de compréhension.
-        private readonly ExecuteurDOutils $executeur,
-        #[Autowire(env: 'ANTHROPIC_API_KEY')] private readonly string $apiKey,
-        #[Autowire(env: 'ANTHROPIC_MODEL')] private readonly string $model,
+        TrousseCatalogue $trousseCatalogue,
+        SelecteurDeTrousse $selecteur,
+        // Le seul chemin vers le code métier, partagé avec l'autre moteur et avec la
+        // phase de compréhension.
+        ExecuteurDOutils $executeur,
+        #[Autowire(env: 'ANTHROPIC_API_KEY')] string $apiKey,
+        #[Autowire(env: 'ANTHROPIC_MODEL')] string $model,
+        LoggerInterface $logger,
+        JournalTokens $journal,
+        BudgetDebit $budget,
         // Rédige en PHP, à coût nul, ce que le modèle n'a pas rédigé.
-        private readonly RepliPrecis $repliPrecis,
-        // Source unique des outils qui produisent un plan — la même que celle du
-        // prompt et du moteur Gemini.
-        private readonly OutilsDePlan $outilsDePlan,
+        RepliPrecis $repliPrecis,
+        // Rattrape l'appel d'outil que le modèle a ÉCRIT au lieu de l'émettre.
+        AppelDOutilEnTexte $appelEnTexte,
+        // Source unique des outils qui produisent un plan.
+        OutilsDePlan $outilsDePlan,
+        Comprehenseur $comprehenseur,
+        // Interrupteur du cache de prompt — voir DialecteAnthropicDuFil pour ce
+        // qu'il coûte et ce qu'il rapporte.
+        #[Autowire(env: 'bool:ANTHROPIC_CACHE')] bool $cacheActif = true,
+        // Injectable pour les tests : ils vérifient la DÉCISION d'attendre, pas la
+        // capacité de PHP à dormir. Une suite qui dort n'est plus une suite.
+        ?\Closure $dormir = null,
+        // LA MÉMOIRE D'ÉPUISEMENT, en dernier et facultative : sans elle, ce moteur
+        // n'est jamais « à sec » et se comporte exactement comme avant. C'est ce qui
+        // permet aux harnais de test de l'ignorer sans rien perdre du reste.
+        ?MemoireDEpuisement $epuisement = null,
     ) {
+        $this->cleEstPosee = trim($apiKey) !== '';
+        $this->epuisement = $epuisement;
+        $this->cleDEpuisement = MemoireDEpuisement::cle('moteur', 'anthropic', $model);
+        $this->fil = new DialecteAnthropicDuFil(
+            $httpClient,
+            // EN DEUX MORCEAUX, contrairement à Gemini : le cache d'Anthropic est
+            // explicite, il faut donc savoir où s'arrête l'invariant pour y poser le
+            // point de rupture. Gemini, dont le cache est implicite, n'a que faire de
+            // cette distinction et reçoit le prompt d'un bloc.
+            static fn (AiRequest $r, Trousse $t, Phase $p): array => $contextBuilder->promptSystemeEnDeux($r, $t, $p),
+            $trousseCatalogue,
+            $apiKey,
+            $model,
+            $logger,
+            self::MAX_OUTPUT_TOKENS,
+            self::MAX_ATTENTE_SECONDES,
+            self::ATTENTE_SURCHARGE_SECONDES,
+            $cacheActif,
+            $dormir,
+            $epuisement,
+            $this->cleDEpuisement,
+        );
+
+        $this->orchestrateur = new OrchestrateurDeMessage(
+            $contextBuilder,
+            $trousseCatalogue,
+            $selecteur,
+            $executeur,
+            $logger,
+            $journal,
+            $budget,
+            $repliPrecis,
+            $appelEnTexte,
+            $outilsDePlan,
+            $comprehenseur,
+            $dormir,
+        );
     }
 
     public function name(): string
     {
-        return 'anthropic';
+        return $this->fil->nom();
+    }
+
+    public function nom(): string
+    {
+        return $this->fil->nom();
+    }
+
+    /** Une clé posée, et rien d'autre : la garde de périmètre est ailleurs. */
+    public function estDisponible(): bool
+    {
+        return $this->cleEstPosee;
+    }
+
+    /**
+     * Ce moteur s'est-il déjà déclaré à sec ? Sans appel réseau : c'est la mémoire
+     * qu'on interroge, et c'est ce qui évite de repayer une attente pour un refus
+     * connu d'avance. La chaîne va alors droit au moteur qui a du solde.
+     */
+    public function estEpuise(): bool
+    {
+        return $this->epuisement?->estEpuise($this->cleDEpuisement) ?? false;
     }
 
     public function modelName(): string
     {
-        return $this->model;
-    }
-
-    /**
-     * Joint les pièces lisibles nativement (images, PDF scannés) au DERNIER tour
-     * utilisateur, en blocs de contenu Messages API — miroir exact de l'inlineData
-     * de GeminiAiEngine.
-     *
-     * Sans cela, le prompt affirmait au modèle que ces pièces lui « sont transmises
-     * DIRECTEMENT pour lecture visuelle » alors que ce moteur ne les envoyait pas :
-     * une image ou un PDF sans couche texte était invisible, et le modèle, sommé de
-     * le lire, n'avait d'autre issue que d'inventer. L'écart était sans effet tant
-     * que Gemini restait le moteur actif — mais ANTHROPIC_API_KEY est PRIORITAIRE
-     * dans AiEngineResolver, donc une simple clé posée suffisait à l'ouvrir.
-     *
-     * @param list<array{role:string, content:mixed}>                               $messages
-     * @param list<array{mimeType:string, donneesBase64:string, nom:string}>        $pieces
-     *
-     * @return list<array{role:string, content:mixed}>
-     */
-    private function joindrePiecesNatives(array $messages, array $pieces): array
-    {
-        if ($pieces === []) {
-            return $messages;
-        }
-
-        for ($i = count($messages) - 1; $i >= 0; $i--) {
-            if (($messages[$i]['role'] ?? null) !== 'user') {
-                continue;
-            }
-            // Le tour devient une liste de blocs : le texte d'abord, les pièces ensuite.
-            $contenu = $messages[$i]['content'];
-            $blocs = is_array($contenu) ? $contenu : [['type' => 'text', 'text' => (string) $contenu]];
-
-            foreach ($pieces as $piece) {
-                $mime = (string) $piece['mimeType'];
-                // Une image et un PDF ne portent pas le même type de bloc chez Anthropic.
-                $blocs[] = [
-                    'type'   => $mime === 'application/pdf' ? 'document' : 'image',
-                    'source' => [
-                        'type'       => 'base64',
-                        'media_type' => $mime,
-                        'data'       => (string) $piece['donneesBase64'],
-                    ],
-                ];
-            }
-            $messages[$i]['content'] = $blocs;
-            break;
-        }
-
-        return $messages;
+        return $this->fil->modeleCourant();
     }
 
     public function reply(AiRequest $request): AiReply
     {
-        $messages = array_map(
-            static fn (array $m) => ['role' => $m['role'], 'content' => $m['content']],
-            $request->messages,
-        );
-        $messages = $this->joindrePiecesNatives($messages, $request->piecesNatives);
-
-        $refused = false;
-        $toolUsed = null;
-        $actions = [];
-        // Ce que les outils ont réellement rapporté : la matière du repli si la boucle
-        // s'achève sans réponse rédigée (même règle que le moteur Gemini).
-        $resultatsOutils = [];
-        // Outils de plan ayant REFUSÉ : le garde-fou anti-plan fantôme du contrôleur
-        // s'appuie sur ce signal. Le renseigner ici aussi n'est pas une précaution de
-        // confort — un garde-fou qui ne s'appliquerait qu'à un moteur sur deux serait
-        // une divergence silencieuse, exactement ce que ce chantier corrige.
-        $plansRefuses = [];
-
-        // UNE SEULE REPRISE PAR MESSAGE : au-delà, on paierait un troisième appel.
-        // Miroir exact du moteur Gemini — cf. RelanceDuTourMuet pour le pourquoi.
-        $repriseFaite = false;
-
-        for ($round = 0; $round <= self::MAX_TOOL_ROUNDS; $round++) {
-            $response = $this->call($request, $messages);
-
-            // UN TOUR DE PLANIFICATION QUI NE REND RIEN DU TOUT — ni texte, ni appel
-            // d'outil. Ce moteur y était plus exposé encore que Gemini : faute de bloc de
-            // texte, extractText() servait « Pouvez-vous préciser votre question ? »,
-            // c'est-à-dire notre silence présenté comme l'imprécision de l'utilisateur.
-            // La relance ne rejoint PAS $messages : c'est un échafaudage, pas un tour de
-            // conversation.
-            if ($round === 0 && !$repriseFaite && $this->estTourVide($response)) {
-                $repriseFaite = true;
-                $response = $this->call($request, array_merge($messages, [
-                    ['role' => 'user', 'content' => RelanceDuTourMuet::TEXTE],
-                ]));
-            }
-
-            // Garde de sécurité Anthropic : la requête a été déclinée.
-            if (($response['stop_reason'] ?? null) === 'refusal') {
-                return new AiReply(
-                    "Je ne peux pas traiter cette demande. Reformulez votre question sur les données "
-                    . 'de votre espace de travail et je vous aiderai volontiers.',
-                    refused: true,
-                );
-            }
-
-            if (($response['stop_reason'] ?? null) !== 'tool_use') {
-                return new AiReply(
-                    $this->extractText($response, $this->repliPrecis->depuis($resultatsOutils)),
-                    refused: $refused,
-                    toolUsed: $toolUsed,
-                    actions: $actions,
-                    plansRefuses: $plansRefuses,
-                );
-            }
-
-            // Tool-calling : exécuter TOUS les appels demandés (fail-closed dans
-            // chaque outil) et renvoyer tous les résultats dans UN SEUL message user.
-            $messages[] = ['role' => 'assistant', 'content' => $this->preserverInputsObjets($response['content'])];
-            $toolResults = [];
-            foreach ($response['content'] as $block) {
-                if (($block['type'] ?? null) !== 'tool_use') {
-                    continue;
-                }
-                $result = $this->executeur->executer((string) $block['name'], (array) ($block['input'] ?? []), $request->scope);
-                $toolUsed = (string) $block['name'];
-                // Cf. GeminiAiEngine : les deux moteurs doivent se replier à l'identique.
-                $resultatsOutils[] = ['outil' => $toolUsed, 'data' => $result->data, 'action' => $result->uiAction];
-                if ($result->status === AiToolResult::STATUS_HORS_PERIMETRE) {
-                    $refused = true;
-                }
-                if ($result->uiAction !== null) {
-                    $actions[] = $result->uiAction;
-                }
-                if ($this->outilsDePlan->estOutilDePlan($toolUsed) && MotifDeRefus::estUnRefus($result)) {
-                    $plansRefuses[] = ['outil' => $toolUsed, 'motif' => MotifDeRefus::depuis($result)];
-                }
-                $toolResults[] = [
-                    'type'        => 'tool_result',
-                    'tool_use_id' => (string) $block['id'],
-                    'content'     => json_encode(
-                        ['status' => $result->status] + $result->data,
-                        JSON_UNESCAPED_UNICODE,
-                    ),
-                ];
-            }
-            $messages[] = ['role' => 'user', 'content' => $toolResults];
-        }
-
-        // Les tours sont épuisés sans réponse rédigée. On ne renvoie pas l'utilisateur à
-        // sa question : on lui restitue ce que les outils ont trouvé — la question
-        // précise qui reste, le blocage, ou les candidats à départager (cf. RepliPrecis).
-        return new AiReply(
-            $this->repliPrecis->depuis($resultatsOutils),
-            refused: $refused,
-            toolUsed: $toolUsed,
-            actions: $actions,
-            plansRefuses: $plansRefuses,
-        );
-    }
-
-    /** Appel HTTP Messages API (synchrone, sans streaming). */
-    private function call(AiRequest $request, array $messages): array
-    {
-        $response = $this->httpClient->request('POST', self::API_URL, [
-            'headers' => [
-                'x-api-key'         => $this->apiKey,
-                'anthropic-version' => self::API_VERSION,
-                'content-type'      => 'application/json',
-            ],
-            // Texte non UTF-8 (fichier joint, troncature) : réparé, sinon le JSON ne part pas.
-            'json' => \App\Ai\AiText::utf8Profond([
-                'model'      => $this->model,
-                'max_tokens' => self::MAX_OUTPUT_TOKENS,
-                'system'     => $this->contextBuilder->toSystemPrompt($request),
-                'tools'      => $this->toolDefinitions($request->scope),
-                'messages'   => $messages,
-            ]),
-            'timeout' => 90,
-        ]);
-
-        return $response->toArray(); // lève une exception explicite sur 4xx/5xx
-    }
-
-    /**
-     * Définitions de tools au format Messages API (name/description/input_schema),
-     * filtrées comme chez Gemini : les deux moteurs doivent présenter au modèle
-     * exactement le même jeu d'outils, sinon comparer leurs mesures n'aurait plus
-     * de sens et un bug ne se reproduirait que sur l'un des deux.
-     */
-    private function toolDefinitions(AiScope $scope): array
-    {
-        $definitions = [];
-        // Même source que le prompt système (TrousseCatalogue) : c'est ce qui
-        // interdit qu'une consigne nomme un outil non déclaré. Ce moteur reste sur
-        // la trousse COMPLÈTE — le routage n'est implémenté que côté Gemini, et un
-        // moteur qui déclarerait moins d'outils que son prompt n'en nomme serait
-        // exactement le défaut qu'on cherche à éliminer.
-        foreach ($this->trousseCatalogue->outilsDe(Trousse::ECRITURE, $scope) as $tool) {
-            $definitions[] = [
-                'name'         => $tool->name(),
-                'description'  => $tool->description(),
-                'input_schema' => $tool->schema(),
-            ];
-        }
-
-        return $definitions;
-    }
-
-    /**
-     * PHP décode « input: {} » (objet JSON vide) en TABLEAU vide ; ré-encodé
-     * tel quel dans l'écho du tour assistant, il redeviendrait [] (une liste),
-     * rejetée par l'API (input d'un tool_use = objet). On restitue l'objet
-     * vide — cas de tout outil SANS paramètre (solde_tokens, quitter_workspace).
-     */
-    private function preserverInputsObjets(array $blocks): array
-    {
-        foreach ($blocks as $i => $block) {
-            if (($block['type'] ?? null) === 'tool_use' && ($block['input'] ?? null) === []) {
-                $blocks[$i]['input'] = new \stdClass();
-            }
-        }
-
-        return $blocks;
-    }
-
-    /**
-     * Le tour n'a-t-il RIEN produit — ni appel d'outil, ni le moindre mot ?
-     *
-     * À ne pas confondre avec un refus : une demande déclinée par les garde-fous
-     * d'Anthropic a son propre chemin juste en dessous, et la rejouer ne ferait que la
-     * faire décliner une seconde fois. Ici, le modèle avait le droit de parler et n'a pas
-     * parlé.
-     *
-     * @param array<string, mixed> $response
-     */
-    private function estTourVide(array $response): bool
-    {
-        if (($response['stop_reason'] ?? null) === 'refusal') {
-            return false;
-        }
-
-        foreach (($response['content'] ?? []) as $block) {
-            if (($block['type'] ?? null) === 'tool_use') {
-                return false;
-            }
-            if (($block['type'] ?? null) === 'text' && trim((string) ($block['text'] ?? '')) !== '') {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Concatène les blocs texte de la réponse.
-     *
-     * @param string|null $repli ce qu'on rend quand le modèle n'a produit aucun texte.
-     *                           Le défaut — « pouvez-vous préciser votre question ? » —
-     *                           renvoyait à l'utilisateur un travail qui était le nôtre :
-     *                           les appelants qui tiennent des résultats d'outils passent
-     *                           donc RepliPrecis, comme le fait le moteur Gemini.
-     *
-     * @param array<string, mixed> $response
-     */
-    private function extractText(array $response, ?string $repli = null): string
-    {
-        $parts = [];
-        foreach (($response['content'] ?? []) as $block) {
-            if (($block['type'] ?? null) === 'text' && trim((string) $block['text']) !== '') {
-                $parts[] = trim((string) $block['text']);
-            }
-        }
-
-        if ($parts !== []) {
-            return implode("\n\n", $parts);
-        }
-
-        return $repli !== null && trim($repli) !== ''
-            ? $repli
-            : "Je n'ai pas de réponse à formuler sur ce point. Pouvez-vous préciser votre question ?";
+        return $this->orchestrateur->traiter($this->fil, $request);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Ai\Voix;
 
 use App\Ai\Debit\BudgetDebit;
+use App\Ai\Fournisseur\MemoireDEpuisement;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -85,7 +86,7 @@ final class SyntheseVocaleGemini implements FournisseurDeVoix
     public function estEpuise(): bool
     {
         foreach ($this->listeModeles() as $modele) {
-            if (!$this->epuisement->estEpuise('gemini:' . $modele)) {
+            if (!$this->epuisement->estEpuise(MemoireDEpuisement::cle('voix', 'gemini', $modele))) {
                 return false;
             }
         }
@@ -102,7 +103,7 @@ final class SyntheseVocaleGemini implements FournisseurDeVoix
 
         $quota = false;
         foreach ($this->listeModeles() as $modele) {
-            if ($this->epuisement->estEpuise('gemini:' . $modele)) {
+            if ($this->epuisement->estEpuise(MemoireDEpuisement::cle('voix', 'gemini', $modele))) {
                 $quota = true;
                 continue;
             }
@@ -132,7 +133,7 @@ final class SyntheseVocaleGemini implements FournisseurDeVoix
                 if ($statut === 429) {
                     // Quota JOURNALIER (10 générations au palier gratuit) : épuisé jusqu'à minuit
                     // heure du Pacifique, et le modèle suivant prend la main.
-                    $this->epuisement->marquer('gemini:' . $modele, MemoireDEpuisement::jusquAMinuitPacifique());
+                    $this->epuisement->marquer(MemoireDEpuisement::cle('voix', 'gemini', $modele), MemoireDEpuisement::jusquAMinuitPacifique());
                     $this->logger->notice('Voix de Ket : quota journalier gratuit atteint, modèle suivant.', ['modele' => $modele]);
                     $quota = true;
                     continue;

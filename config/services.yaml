@@ -86,16 +86,47 @@ services:
     # pattern d'alias swappable que le PSP de paiement ci-dessous.
     App\Ai\Engine\AiEngineInterface: '@App\Ai\Engine\AiEngineResolver'
 
+    # La phase de COMPRÉHENSION suit le même fournisseur que le moteur de texte.
+    # Elle parlait à Google en direct quelle que soit la clé posée : une
+    # « alternative à Gemini » qui exige quand même une clé Gemini n'en est pas une.
+    App\Ai\Comprehension\AppelDeComprehension: '@App\Ai\Comprehension\AppelResolver'
+
+    # La FINITION DE DICTÉE suit la même règle : un cabinet qui tourne sur Claude
+    # n'a aucune raison de garder une clé Gemini pour que sa dictée soit mise au
+    # propre.
+    App\Ai\Dictee\AppelDeFinition: '@App\Ai\Dictee\FinitionResolver'
+
+    # ── LE DÉBIT NE SE COMPTE PAS PAREIL CHEZ LES DEUX FOURNISSEURS ──────────
+    #
+    # BudgetDebit tire son plafond de GEMINI_TPM_PLAFOND — une variable que les
+    # deux commandes de mesure lisent telle quelle, et qu'on ne renomme donc pas.
+    # Mais Anthropic ne compte ni la même chose ni au même endroit : deux plafonds
+    # séparés (entrée et sortie), et les tokens LUS EN CACHE exclus du décompte,
+    # ce qui rend son plafond d'entrée huit fois plus haut. Lui opposer celui de
+    # Google ferait patienter Ket devant une porte grande ouverte.
+    #
+    # Le compteur porte donc un préfixe dans sa clé, et c'est le préfixe qui
+    # choisit le plafond. Une clé sans préfixe connu — tous les modèles Gemini —
+    # retombe sur le défaut : rien ne change pour l'existant.
+    App\Ai\Debit\BudgetDebit:
+        arguments:
+            $plafondsParPrefixe:
+                'anthropic:in:': '%env(int:ANTHROPIC_ITPM_PLAFOND)%'
+                'anthropic:out:': '%env(int:ANTHROPIC_OTPM_PLAFOND)%'
+
     # PSP de paiement : implémentation par défaut = simulateur (repli/tests). Le
     # jour où un PSP réel est choisi, on ajoute son adaptateur et on repointe cet
     # alias dessus — aucun autre changement applicatif.
     App\Payment\Gateway\PaymentGatewayInterface: '@App\Payment\Gateway\SimulatedGateway'
 
-    # ── LA MÉMOIRE D'ÉPUISEMENT DES VOIX NE VIT PAS DANS var/cache ───────────
+    # ── LA MÉMOIRE D'ÉPUISEMENT NE VIT PAS DANS var/cache ────────────────────
     #
-    # Elle retient qu'une voix s'est déclarée à sec (crédits du mois ElevenLabs,
-    # quota du jour Gemini) pour ne pas lui refaire un aller-retour perdu à chaque
-    # écoute. Rangée dans « cache.app », elle disparaissait à chaque DÉPLOIEMENT :
+    # Elle retient qu'un fournisseur s'est déclaré à sec — crédits du mois
+    # ElevenLabs, quota du jour Gemini, plafond de dépense mensuel Anthropic — pour
+    # ne pas lui refaire un aller-retour perdu à chaque tour. Née pour la voix, elle
+    # sert désormais les CINQ familles ; l'identifiant du service et le dossier
+    # gardent leur nom d'origine, parce que le renommer effacerait les marques en
+    # cours. Rangée dans « cache.app », elle disparaissait à chaque DÉPLOIEMENT :
     # « cache:clear » est la première chose que fait bin/deploy.sh, et le pool
     # « app » vit sous var/cache/<env>/pools. Après chaque mise en ligne, la
     # première lecture repayait donc quatre refus réseau avant le premier mot.
@@ -111,7 +142,7 @@ services:
             - 0
             - '%kernel.project_dir%/var/ket-voix/epuisement/%kernel.environment%'
 
-    App\Ai\Voix\MemoireDEpuisement:
+    App\Ai\Fournisseur\MemoireDEpuisement:
         arguments:
             $cache: '@ket.voix.memoire_epuisement'
 

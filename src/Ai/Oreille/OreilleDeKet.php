@@ -3,6 +3,7 @@
 namespace App\Ai\Oreille;
 
 use App\Ai\Fournisseur\OrdreDesFournisseurs;
+use App\Ai\Fournisseur\PolitiqueDesFournisseurs;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
@@ -16,21 +17,26 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
  */
 final class OreilleDeKet
 {
-    /** @var list<FournisseurDOreille> */
-    private array $ordonnes;
-
     /** @param iterable<FournisseurDOreille> $fournisseurs */
     public function __construct(
-        #[AutowireIterator('app.fournisseur_oreille')] iterable $fournisseurs,
-        #[Autowire(env: 'KET_OREILLE_FOURNISSEURS')] string $ordre = 'elevenlabs,gemini',
+        #[AutowireIterator('app.fournisseur_oreille')] private readonly iterable $fournisseurs,
+        #[Autowire(env: 'KET_OREILLE_FOURNISSEURS')] private readonly string $ordreParDefaut = 'elevenlabs,gemini',
+        private readonly ?PolitiqueDesFournisseurs $politique = null,
     ) {
-        $this->ordonnes = OrdreDesFournisseurs::ordonner($fournisseurs, $ordre);
     }
 
-    /** @return list<FournisseurDOreille> */
+    /**
+     * ⚠ L'ORDRE SE RÉSOUT À CHAQUE APPEL — cf. VoixDeKet::fournisseurs() pour le
+     * pourquoi : calculé au constructeur, il ne relirait jamais une politique
+     * changée en console, et le réglage semblerait pris sans rien changer.
+     *
+     * @return list<FournisseurDOreille>
+     */
     public function fournisseurs(): array
     {
-        return OrdreDesFournisseurs::disponibles($this->ordonnes);
+        $ordre = $this->politique?->ordre('oreille') ?? $this->ordreParDefaut;
+
+        return OrdreDesFournisseurs::disponibles(OrdreDesFournisseurs::ordonner($this->fournisseurs, $ordre));
     }
 
     public function estDisponible(): bool

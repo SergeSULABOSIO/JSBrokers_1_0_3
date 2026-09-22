@@ -47,33 +47,80 @@ final class BudgetDebit
     /** Fenêtre du quota, en secondes. */
     public const FENETRE_SECONDES = 60;
 
-    /** Part du plafond gardée en réserve (courses entre processus, imprécision d'estimation). */
-    private const MARGE = 0.15;
+    /**
+     * Part du plafond gardée en réserve (courses entre processus, imprécision
+     * d'estimation).
+     *
+     * PUBLIQUE parce qu'elle est partagée : le dialecte Anthropic s'en sert pour
+     * décider à partir de quel solde ANNONCÉ il faut écarter le fournisseur. Deux
+     * prudences différentes sur la même question donneraient deux comportements
+     * qu'on ne saurait plus expliquer.
+     */
+    public const MARGE = 0.15;
 
     /** @var \Closure(): int horloge injectable — les tests ne doivent pas dormir */
     private readonly \Closure $horloge;
 
+    /**
+     * @param array<string, int> $plafondsParPrefixe plafonds propres à certains
+     *                                               compteurs, indexés par préfixe de clé
+     */
     public function __construct(
         #[Autowire(service: 'cache.app')] private readonly CacheItemPoolInterface $cache,
         #[Autowire(env: 'int:GEMINI_TPM_PLAFOND')] private readonly int $plafondParMinute = self::PLAFOND_DEFAUT_PAR_MINUTE,
         private readonly float $marge = self::MARGE,
         ?\Closure $horloge = null,
+        // 5ᵉ POSITION, ET C'EST VOULU : les onze tests existants passent des arguments
+        // positionnels 1 à 4. Un paramètre glissé avant eux les aurait tous cassés,
+        // pour un enrichissement qui ne les concerne pas.
+        private readonly array $plafondsParPrefixe = [],
     ) {
         $this->horloge = $horloge ?? static fn (): int => time();
     }
 
-    /** Plafond réellement opposable, marge de sécurité déduite. */
-    public function plafondUtile(): int
+    /**
+     * Plafond réellement opposable, marge de sécurité déduite.
+     *
+     * POURQUOI UN PLAFOND PAR PRÉFIXE plutôt qu'un seul réglage. Cette classe est
+     * restée mono-fournisseur tant qu'un seul moteur l'utilisait : son plafond vient
+     * de GEMINI_TPM_PLAFOND, et cette variable est lue telle quelle par les deux
+     * commandes de mesure — la renommer les casserait sans rien apporter.
+     *
+     * Or les fournisseurs ne se ressemblent pas. Gemini compte un seul quota de
+     * tokens d'entrée, cache inclus. Anthropic en tient DEUX (entrée et sortie,
+     * plafonds distincts) et n'y compte PAS les tokens lus en cache — son plafond
+     * d'entrée est huit fois plus haut. Opposer le plafond de Google au compteur
+     * d'Anthropic ferait patienter Ket devant une porte grande ouverte.
+     *
+     * La clé du compteur porte donc son préfixe (« anthropic:in: »), et c'est le
+     * préfixe qui décide du plafond. Une clé inconnue retombe sur le défaut : aucun
+     * appelant existant ne change de comportement.
+     */
+    public function plafondUtile(?string $compteur = null): int
     {
-        $plafond = $this->plafondParMinute > 0 ? $this->plafondParMinute : self::PLAFOND_DEFAUT_PAR_MINUTE;
+        $plafond = $this->plafondPour($compteur);
 
         return max(1, (int) floor($plafond * (1.0 - $this->marge)));
     }
 
-    /** Tokens d'entrée encore disponibles sur la minute glissante, pour ce modèle. */
+    /** Le plafond BRUT applicable à ce compteur, marge non déduite. */
+    private function plafondPour(?string $compteur): int
+    {
+        if ($compteur !== null) {
+            foreach ($this->plafondsParPrefixe as $prefixe => $plafond) {
+                if ($plafond > 0 && str_starts_with($compteur, (string) $prefixe)) {
+                    return $plafond;
+                }
+            }
+        }
+
+        return $this->plafondParMinute > 0 ? $this->plafondParMinute : self::PLAFOND_DEFAUT_PAR_MINUTE;
+    }
+
+    /** Tokens d'entrée encore disponibles sur la minute glissante, pour ce compteur. */
     public function restant(string $modele): int
     {
-        return max(0, $this->plafondUtile() - $this->consomme($this->fenetre($modele)));
+        return max(0, $this->plafondUtile($modele) - $this->consomme($this->fenetre($modele)));
     }
 
     /** Enregistre les tokens d'entrée facturés par un aller-retour (cache inclus). */
@@ -98,7 +145,7 @@ final class BudgetDebit
      */
     public function secondesAvantLiberation(string $modele, int $tokensVoulus): ?int
     {
-        $utile = $this->plafondUtile();
+        $utile = $this->plafondUtile($modele);
         if ($tokensVoulus > $utile) {
             return null;
         }

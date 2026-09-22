@@ -4,6 +4,8 @@ namespace App\Tests\Ai;
 
 use App\Ai\Debit\BudgetDebit;
 use App\Ai\Dictee\FinisseurDeDictee;
+use App\Ai\Dictee\FinitionGemini;
+use App\Ai\Fournisseur\MemoireDEpuisement;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Utilisateur;
@@ -144,14 +146,18 @@ class AssistantIaDicteeTest extends WebTestCase
         ['entreprise' => $e, 'owner' => $owner] = $this->semer();
         $this->client->loginUser($owner);
         static::getContainer()->set(FinisseurDeDictee::class, new FinisseurDeDictee(
-            new MockHttpClient([new MockResponse(json_encode([
-                'candidates' => [['content' => ['parts' => [['text' => json_encode(['texte' => 'Bonjour Ket, liste mes clients.'])]]]]],
-            ]))]),
+            new FinitionGemini(
+                new MockHttpClient([new MockResponse(json_encode([
+                    'candidates' => [['content' => ['parts' => [['text' => json_encode(['texte' => 'Bonjour Ket, liste mes clients.'])]]]]],
+                ]))]),
+                new BudgetDebit(new ArrayAdapter()),
+                new MemoireDEpuisement(new ArrayAdapter()),
+                'gm-test',
+                'gemini-flash-lite-test',
+                '',
+            ),
             new BudgetDebit(new ArrayAdapter()),
             new NullLogger(),
-            'gm-test',
-            'gemini-flash-lite-test',
-            '',
         ));
 
         $data = $this->poster($e, 'euh bonjour Ket euh liste mes clients');

@@ -94,7 +94,7 @@ final class JournalTokens
      * Ce journal est le SEUL endroit par où passent déjà toutes les mesures : y
      * greffer l'abonné évite de recâbler quoi que ce soit ailleurs, et surtout donne
      * la bonne dégradation sans écrire une seule garde — un moteur qui ne sollicite
-     * pas le journal (le simulé, Anthropic) n'émet rien, et l'affichage retombe de
+     * pas le journal (le simulé) n'émet rien, et l'affichage retombe de
      * lui-même sur l'indicateur d'avant.
      *
      * Nul par défaut : hors requête en flux, tout ce mécanisme est inerte.
@@ -200,8 +200,10 @@ final class JournalTokens
     /**
      * Ce que le message aura coûté, tel qu'on peut le montrer sous la réponse.
      *
-     * Null quand rien n'a été annoncé : le moteur simulé et Anthropic ne passent pas
-     * par ici, et il vaut mieux ne rien afficher qu'afficher des zéros.
+     * Null quand rien n'a été annoncé. Le moteur simulé n'appelle pas ce journal, et
+     * le moteur Anthropic, s'il le mesure bien, ne découpe pas encore son message en
+     * phases — il n'annonce donc aucune étape. Mieux vaut alors ne rien afficher
+     * qu'afficher des zéros.
      *
      * @return array{appels: int, jetonsIa: int, etapes: list<array{cle: string, jetons: int}>}|null
      */
@@ -290,10 +292,20 @@ final class JournalTokens
             'tour'             => $tour,
             'tokensEntree'     => $tokens['entree'] ?? 0,
             'tokensSortie'     => $tokens['sortie'] ?? 0,
-            // > 0 quand le cache implicite du fournisseur s'est activé. Ces
-            // tokens comptent MALGRÉ TOUT dans le quota (le cache allège la
-            // facture, jamais la limite de débit) : la colonne sert à mesurer
-            // l'économie financière, pas à espérer un desserrement du plafond.
+            // > 0 quand le cache du fournisseur s'est activé. ⚠ CE QUE CES TOKENS
+            // PÈSENT DÉPEND DU FOURNISSEUR, et c'est la nuance la plus facile à
+            // se raconter à l'envers :
+            //   - GEMINI : ils comptent MALGRÉ TOUT dans le quota. Le cache
+            //     implicite allège la facture, jamais la limite de débit — le 429
+            //     du 2026-08-08 est survenu alors que 77 % de la minute était en
+            //     cache. La colonne y mesure une économie financière, pas un
+            //     desserrement du plafond.
+            //   - ANTHROPIC : ils sont EXCLUS du plafond par minute (seuls
+            //     input_tokens et cache_creation_input_tokens comptent). La
+            //     colonne y mesure les deux à la fois.
+            // Dans les deux cas « tokensEntree » reste le prompt ENTIER, cache
+            // compris : c'est ce qui rend les deux moteurs comparables. Ce qui est
+            // déclaré au compteur de débit, lui, est calculé par le moteur.
             'tokensCache'      => $tokens['cache'] ?? 0,
             'octetsSysteme'    => $octets['systeme'] ?? 0,
             'octetsOutils'     => $octets['outils'] ?? 0,

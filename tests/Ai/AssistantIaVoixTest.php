@@ -5,7 +5,7 @@ namespace App\Tests\Ai;
 use App\Ai\Debit\BudgetDebit;
 use App\Ai\Voix\CacheAudio;
 use App\Ai\Voix\FournisseurDeVoix;
-use App\Ai\Voix\MemoireDEpuisement;
+use App\Ai\Fournisseur\MemoireDEpuisement;
 use App\Ai\Voix\SyntheseVocaleElevenLabs;
 use App\Ai\Voix\SyntheseVocaleGemini;
 use App\Ai\Voix\VoixDeKet;

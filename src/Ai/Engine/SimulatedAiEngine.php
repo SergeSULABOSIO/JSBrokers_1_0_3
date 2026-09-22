@@ -17,8 +17,30 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
  * données via un outil, refus poli hors périmètre, repli guidé) — c'est aussi
  * le moteur des tests fonctionnels une fois le bridge réel branché.
  */
-final class SimulatedAiEngine implements AiEngineInterface
+final class SimulatedAiEngine implements MoteurDeTexte
 {
+    public function nom(): string
+    {
+        return $this->name();
+    }
+
+    /**
+     * TOUJOURS disponible, et c'est sa raison d'être : il ferme la chaîne. Il
+     * n'interroge personne, ne demande aucune clé, et garantit qu'il y a toujours
+     * un moteur — sans quoi une plateforme sans cle n'aurait plus d'assistant du
+     * tout au lieu d'en avoir un déterministe.
+     */
+    public function estDisponible(): bool
+    {
+        return true;
+    }
+
+    /** Il n'interroge personne : il n'a aucun quota à épuiser. */
+    public function estEpuise(): bool
+    {
+        return false;
+    }
+
     /** Libellés courts des mois (index 1..12), pour les labels de graphiques. */
     private const MOIS_COURTS = [
         1 => 'Jan', 2 => 'Fév', 3 => 'Mar', 4 => 'Avr', 5 => 'Mai', 6 => 'Juin',

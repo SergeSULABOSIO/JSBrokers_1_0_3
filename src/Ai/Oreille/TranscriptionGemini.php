@@ -3,7 +3,7 @@
 namespace App\Ai\Oreille;
 
 use App\Ai\Debit\BudgetDebit;
-use App\Ai\Voix\MemoireDEpuisement;
+use App\Ai\Fournisseur\MemoireDEpuisement;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -44,6 +44,17 @@ final class TranscriptionGemini implements FournisseurDOreille
         return 'gemini';
     }
 
+    /** Sa propre famille et son propre modèle : l'oreille n'est pas la voix. */
+    public function cleDEpuisement(): string
+    {
+        return MemoireDEpuisement::cle('oreille', 'gemini', $this->modele);
+    }
+
+    public function estEpuise(): bool
+    {
+        return $this->epuisement->estEpuise($this->cleDEpuisement());
+    }
+
     public function estDisponible(): bool
     {
         return trim($this->apiKey) !== '' && trim($this->modele) !== ''
@@ -55,7 +66,7 @@ final class TranscriptionGemini implements FournisseurDOreille
         if ($wav === '' || !$this->estDisponible()) {
             return Transcription::refus(Transcription::INDISPONIBLE);
         }
-        $cle = 'oreille-gemini:' . $this->modele;
+        $cle = $this->cleDEpuisement();
         if ($this->epuisement->estEpuise($cle)) {
             return Transcription::refus(Transcription::QUOTA);
         }

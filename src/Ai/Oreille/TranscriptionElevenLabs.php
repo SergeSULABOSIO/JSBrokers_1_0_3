@@ -2,7 +2,7 @@
 
 namespace App\Ai\Oreille;
 
-use App\Ai\Voix\MemoireDEpuisement;
+use App\Ai\Fournisseur\MemoireDEpuisement;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mime\Part\DataPart;
@@ -42,6 +42,23 @@ final class TranscriptionElevenLabs implements FournisseurDOreille
         return 'elevenlabs';
     }
 
+    /**
+     * CRÉDITS PARTAGÉS, ET C'EST VOULU. ElevenLabs facture la voix et la
+     * transcription sur la MÊME réserve mensuelle : quand elle est vide, les deux
+     * le sont. La famille « credits » le dit explicitement, là où la clé « elevenlabs »
+     * d'avant le laissait arriver par accident — ce qui rendait le comportement juste
+     * pour la mauvaise raison, et faux le jour où les réserves se sépareraient.
+     */
+    public function cleDEpuisement(): string
+    {
+        return MemoireDEpuisement::cle('credits', 'elevenlabs');
+    }
+
+    public function estEpuise(): bool
+    {
+        return $this->epuisement->estEpuise($this->cleDEpuisement());
+    }
+
     public function estDisponible(): bool
     {
         return trim($this->apiKey) !== '' && strtolower(trim($this->moteurForce)) !== 'simulated';
@@ -53,7 +70,7 @@ final class TranscriptionElevenLabs implements FournisseurDOreille
             return Transcription::refus(Transcription::INDISPONIBLE);
         }
         // Le quota est celui de la voix : un mois épuisé l'est pour les deux.
-        if ($this->epuisement->estEpuise('elevenlabs')) {
+        if ($this->estEpuise()) {
             return Transcription::refus(Transcription::QUOTA);
         }
 
@@ -90,13 +107,13 @@ final class TranscriptionElevenLabs implements FournisseurDOreille
         $cause = \is_array($detail) ? (string) ($detail['code'] ?? $detail['status'] ?? '') : '';
 
         if ($cause === 'quota_exceeded') {
-            $this->epuisement->marquer('elevenlabs', MemoireDEpuisement::jusquAuMoisProchain());
+            $this->epuisement->marquer($this->cleDEpuisement(), MemoireDEpuisement::jusquAuMoisProchain());
             $this->logger->notice('Oreilles de Ket (ElevenLabs) : crédits du mois épuisés, oreille suivante.');
 
             return Transcription::QUOTA;
         }
         if ($statut === 429 || \in_array($cause, ['too_many_concurrent_requests', 'system_busy'], true)) {
-            $this->epuisement->marquer('elevenlabs', 60);
+            $this->epuisement->marquer($this->cleDEpuisement(), 60);
 
             return Transcription::QUOTA;
         }

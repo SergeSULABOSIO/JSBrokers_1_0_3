@@ -268,20 +268,67 @@ class AiContextBuilder
 
     public function toSystemPrompt(AiRequest $request, ?Trousse $trousse = null, ?Phase $phase = null): string
     {
+        $deux = $this->promptSystemeEnDeux($request, $trousse, $phase);
+
+        return $deux['stable'] . $deux['volatil'];
+    }
+
+    /**
+     * LE MÊME PROMPT, EN DEUX MORCEAUX : ce qui ne bouge pas, puis ce qui bouge.
+     *
+     * POURQUOI. Le cache de prompt d'Anthropic est un PRÉFIXE : on marque un point
+     * de rupture, et tout ce qui le précède se relit à un dixième du prix — et sort
+     * du décompte du plafond par minute. Encore faut-il que ce préfixe soit
+     * identique OCTET POUR OCTET d'un message à l'autre. Un seul élément volatil
+     * placé en tête, et plus rien ne se cache : sans erreur, sans log, avec pour
+     * tout symptôme une facture qui double.
+     *
+     * OÙ PASSE LA COUPE, ET POURQUOI LÀ. Juste avant l'état de la boussole. Tout ce
+     * qui suit change à chaque message — la boussole, le programme en cours, les
+     * objets attachés, les pièces jointes, les reprises — et tout ce qui précède est
+     * stable pour un interlocuteur et une trousse donnés : identité, aiguillage,
+     * glossaire, règles de conduite, protocoles d'écriture, catalogue des fiches.
+     *
+     * ⚠ CE QUE « STABLE » VEUT DIRE ICI, exactement. Le bloc dépend encore du
+     * cabinet (son nom est dans la première phrase), du terminal et des droits de
+     * l'invité : il est donc cachable PAR INTERLOCUTEUR, pas partagé par toute la
+     * plateforme — c'est le bloc des déclarations d'outils, rendu AVANT celui-ci,
+     * qui l'est. Cela suffit à ce qui compte : dès le deuxième message d'une même
+     * conversation, l'invariant se relit au lieu d'être repayé. La date du jour, en
+     * tête, coûte un défaut de cache par jour ; c'est le prix assumé de la garder
+     * là où le modèle la lit.
+     *
+     * LE BLOC « DEMANDE COMPRISE » A DÛ DESCENDRE. Il vivait en deuxième ligne des
+     * règles de conduite et change à chaque message : là, il rendait tout le reste
+     * non cachable. Il est désormais juste avant la boussole — une place qui n'est
+     * pas un pis-aller, puisqu'elle met l'intention à côté de l'état du cabinet et
+     * juste avant la question. Le déplacement vaut pour les DEUX moteurs, afin
+     * qu'ils envoient les mêmes octets et que le cache implicite de Gemini en
+     * profite aussi.
+     *
+     * La concaténation des deux morceaux rend exactement ce que cette méthode
+     * rendait avant, à ce déplacement près : c'est ce que vérifie
+     * testLeProchainPromptEstLaConcatenationDesDeuxBlocs.
+     *
+     * @return array{stable: string, volatil: string}
+     */
+    public function promptSystemeEnDeux(AiRequest $request, ?Trousse $trousse = null, ?Phase $phase = null): array
+    {
         $trousse ??= Trousse::ECRITURE;
 
         // PHASE DE RÉDACTION : le travail est fait, il reste à le dire. Ni règles
         // d'aiguillage (aucun outil n'est déclaré), ni protocoles d'écriture (aucun
         // plan ne sera préparé ici) — seulement de quoi nommer juste et écrire bien.
         // C'est la moitié de l'économie du chantier : ce second appel passe de
-        // ~130 Ko à quelques Ko.
+        // ~130 Ko à quelques Ko. Rien à cacher : ce prompt est court et entièrement
+        // dépendant du message en cours.
         if ($phase === Phase::REDACTION) {
-            return $this->promptDeRedaction($request);
+            return ['stable' => '', 'volatil' => $this->promptDeRedaction($request)];
         }
         // PHASE DE COMPRÉHENSION : rien n'est encore décidé, et surtout rien n'est
         // encore fait. Le seul travail est de savoir ce que l'utilisateur veut.
         if ($phase === Phase::COMPREHENSION) {
-            return $this->promptDeComprehension($request, $trousse ?? Trousse::COMPREHENSION);
+            return ['stable' => '', 'volatil' => $this->promptDeComprehension($request, $trousse ?? Trousse::COMPREHENSION)];
         }
         $ctx = $request->systemContext;
         $perimetre = json_encode($ctx['perimetre'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
@@ -325,8 +372,14 @@ class AiContextBuilder
         $sectionGlossaire = $this->glossaireFinancier();
         $sectionConcision = $this->reglesDeConcision();
         $sectionMiseEnForme = $this->reglesDeMiseEnForme($ctx['monnaie'] ?? null);
+        // Descendu de la tête des règles de conduite vers le bloc volatil : il change
+        // à chaque message, et en tête il empêchait tout le reste d'être caché.
+        // Le saut de ligne est porté ICI plutôt que dans le gabarit, pour qu'un bloc
+        // vide n'y laisse pas une ligne blanche de plus qu'avant.
+        $blocComprise = $this->blocDemandeComprise($request);
+        $blocComprise = $blocComprise === '' ? '' : $blocComprise . "\n";
 
-        return <<<PROMPT
+        $stable = <<<PROMPT
         Tu es {$ctx['assistantNom']}, l'assistant IA de l'entreprise de courtage « {$ctx['entrepriseNom']} »
         sur la plateforme Joseara. Nous sommes le {$ctx['date']}.
         Tu réponds en français, poliment et précisément, aux questions sur les données de l'entreprise,
@@ -335,7 +388,6 @@ class AiContextBuilder
         Tu PARTAGES cet objectif et tu GUIDES
         l'utilisateur vers la prochaine étape la plus utile (cf. « ÉTAT DE LA BOUSSOLE » plus bas).
         Règles de conduite :
-        {$this->blocDemandeComprise($request)}
         {$this->regleComprendreAvantDAgir($request->comprise?->aEteEtablie() !== true)}
         {$sectionAiguillage}
         {$sectionTerminal}
@@ -420,12 +472,28 @@ class AiContextBuilder
           présente l'inventaire COMPLET avec des exemples : facultés d'analyse et de rédaction,
           consultation des données, ouverture de formulaires, fiches métier, et les limites qui
           protègent les données — un ton rassurant, jamais une liste de restrictions sèche.
-        {$sectionBoussole}{$sectionProgramme}
+
+        PROMPT;
+
+        // ── LA COUPE ─────────────────────────────────────────────────────────────
+        // Tout ce qui suit change à chaque message : l'intention comprise, l'état de
+        // la boussole, le programme en cours, le périmètre de l'invité, les objets
+        // attachés, les pièces jointes, les reprises. Aucun point de rupture de cache
+        // ne doit être posé ici — ce serait payer une écriture à chaque tour pour une
+        // relecture qui n'arriverait jamais.
+        $volatil = <<<VOLATIL
+        {$blocComprise}{$sectionBoussole}{$sectionProgramme}
         Le périmètre d'accès de ton interlocuteur est strictement limité à :
         {$perimetre}
         Pour toute demande hors de ce périmètre, refuse poliment en expliquant tes limitations techniques
         liées aux droits d'accès, sans révéler la moindre donnée.{$sectionObjets}{$sectionFichiers}{$sectionReprises}
-        PROMPT;
+        VOLATIL;
+
+        // Le bloc stable se termine par une LIGNE VIDE dans son gabarit, et non par
+        // un "\n" ajouté ici : c'est ainsi qu'il garde la fin de ligne du fichier
+        // (CRLF) plutôt que d'en introduire une autre au seul point de couture. Sans
+        // elle, « …restrictions sèche. » se collerait à l'état de la boussole.
+        return ['stable' => $stable, 'volatil' => $volatil];
     }
 
     /**
