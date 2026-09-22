@@ -1,0 +1,106 @@
+<?php
+
+namespace App\Ai\Fournisseur;
+
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
+
+/**
+ * CE QUE VALENT LES FOURNISSEURS, MAINTENANT — pour la console et pour la page.
+ *
+ * Deux consommateurs, deux besoins qui n'en font qu'un.
+ *
+ * LA PAGE, à l'ouverture du chat : savoir d'avance qu'aucune voix ne parlera lui
+ * permet de brancher DIRECTEMENT la synthèse du navigateur, au lieu de commencer
+ * chaque lecture par un aller-retour qui ne rendra qu'un refus. Mesuré le
+ * 2026-09-21 : crédits ElevenLabs épuisés depuis le 17/09, trois modèles Gemini
+ * depuis le 19/09 — toutes les lectures passaient déjà par le navigateur, mais
+ * chacune attendait d'abord un « non ».
+ *
+ * LA CONSOLE : un agent doit voir, famille par famille, qui est configuré, qui a
+ * du solde, et jusqu'à quand les autres sont écartés. Sans cette vue, une marque
+ * posée à tort — un 429 mal interprété, une clé changée — met un fournisseur hors
+ * jeu jusqu'à minuit heure du Pacifique sans que personne ne sache pourquoi.
+ *
+ * AUCUN APPEL RÉSEAU ICI : tout se lit dans la mémoire d'épuisement et dans la
+ * configuration. Cette classe doit rester gratuite, sans quoi la page paierait à
+ * l'ouverture ce qu'elle cherche justement à éviter.
+ */
+final class EtatDesFournisseurs
+{
+    /**
+     * @param iterable<Fournisseur> $moteurs
+     * @param iterable<Fournisseur> $voix
+     * @param iterable<Fournisseur> $oreilles
+     * @param iterable<Fournisseur> $comprenants
+     * @param iterable<Fournisseur> $finisseurs
+     */
+    public function __construct(
+        #[AutowireIterator('app.fournisseur_moteur')] private readonly iterable $moteurs,
+        #[AutowireIterator('app.fournisseur_voix')] private readonly iterable $voix,
+        #[AutowireIterator('app.fournisseur_oreille')] private readonly iterable $oreilles,
+        #[AutowireIterator('app.fournisseur_comprehension')] private readonly iterable $comprenants,
+        #[AutowireIterator('app.fournisseur_finition')] private readonly iterable $finisseurs,
+        private readonly MemoireDEpuisement $epuisement,
+    ) {
+    }
+
+    /**
+     * L'état de TOUTES les familles, prêt à afficher.
+     *
+     * @return array<string, list<array{nom: string, disponible: bool, epuise: bool, cle: string|null, echeance: string|null}>>
+     */
+    public function tout(): array
+    {
+        return [
+            'moteur'        => $this->famille($this->moteurs),
+            'voix'          => $this->famille($this->voix),
+            'oreille'       => $this->famille($this->oreilles),
+            'comprehension' => $this->famille($this->comprenants),
+            'dictee'        => $this->famille($this->finisseurs),
+        ];
+    }
+
+    /**
+     * Reste-t-il, dans cette famille, un fournisseur qui rendra quelque chose ?
+     *
+     * C'est la question que la page pose à l'ouverture, et la seule dont elle a
+     * besoin : « oui » et elle demande, « non » et elle se replie sans attendre.
+     */
+    public function quelquUnPeutRepondre(string $famille): bool
+    {
+        foreach ($this->tout()[$famille] ?? [] as $fournisseur) {
+            if ($fournisseur['disponible'] && !$fournisseur['epuise']) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param iterable<Fournisseur> $fournisseurs
+     *
+     * @return list<array{nom: string, disponible: bool, epuise: bool, cle: string|null, echeance: string|null}>
+     */
+    private function famille(iterable $fournisseurs): array
+    {
+        $etat = [];
+        foreach ($fournisseurs as $fournisseur) {
+            // Jamais d'échéance inventée : seuls les fournisseurs qui savent nommer
+            // leur marque en ont une (cf. FournisseurDatable). La clé accompagne
+            // l'échéance parce que c'est elle que le bouton « Réarmer » efface —
+            // sans elle, l'écran saurait dire « à sec » sans pouvoir y remédier.
+            $cle = $fournisseur instanceof FournisseurDatable ? $fournisseur->cleDEpuisement() : null;
+
+            $etat[] = [
+                'nom'        => $fournisseur->nom(),
+                'disponible' => $fournisseur->estDisponible(),
+                'epuise'     => $fournisseur->estEpuise(),
+                'cle'        => $cle,
+                'echeance'   => $cle !== null ? $this->epuisement->echeance($cle)?->format(\DateTimeInterface::ATOM) : null,
+            ];
+        }
+
+        return $etat;
+    }
+}

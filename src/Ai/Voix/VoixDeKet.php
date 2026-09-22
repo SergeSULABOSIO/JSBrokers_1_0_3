@@ -3,6 +3,7 @@
 namespace App\Ai\Voix;
 
 use App\Ai\Fournisseur\OrdreDesFournisseurs;
+use App\Ai\Fournisseur\PolitiqueDesFournisseurs;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
@@ -17,29 +18,37 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
  */
 final class VoixDeKet
 {
-    /** @var list<FournisseurDeVoix> */
-    private array $ordonnes;
-
     private ?FournisseurDeVoix $dernier = null;
 
     /** @param iterable<FournisseurDeVoix> $fournisseurs */
     public function __construct(
-        #[AutowireIterator('app.fournisseur_voix')] iterable $fournisseurs,
-        #[Autowire(env: 'KET_VOIX_FOURNISSEURS')] string $ordre = 'elevenlabs,gemini',
+        #[AutowireIterator('app.fournisseur_voix')] private readonly iterable $fournisseurs,
+        #[Autowire(env: 'KET_VOIX_FOURNISSEURS')] private readonly string $ordreParDefaut = 'elevenlabs,gemini',
+        // Facultative : sans elle, l'ordre reste celui du .env, exactement comme
+        // avant l'existence de l'écran de console.
+        private readonly ?PolitiqueDesFournisseurs $politique = null,
     ) {
-        // L'ordre et le filtre de disponibilité sont les mêmes pour la bouche et pour les
-        // oreilles : ils vivent dans OrdreDesFournisseurs, jamais en double.
-        $this->ordonnes = OrdreDesFournisseurs::ordonner($fournisseurs, $ordre);
     }
 
     /**
      * Les fournisseurs appelables, dans l'ordre de préférence.
      *
+     * ⚠ L'ORDRE SE RÉSOUT À CHAQUE APPEL, et ce n'est pas un détail de style. Il
+     * était calculé dans le CONSTRUCTEUR : un service partagé, construit une fois
+     * par processus, n'aurait jamais relu une politique changée en console — le
+     * réglage aurait semblé pris en compte et n'aurait rien fait jusqu'au
+     * redémarrage du worker. Le coût est nul : ordonner cinq noms ne se mesure pas.
+     *
+     * L'ordre et le filtre sont les mêmes pour la bouche et pour les oreilles :
+     * ils vivent dans OrdreDesFournisseurs, jamais en double.
+     *
      * @return list<FournisseurDeVoix>
      */
     public function fournisseurs(): array
     {
-        return OrdreDesFournisseurs::disponibles($this->ordonnes);
+        $ordre = $this->politique?->ordre('voix') ?? $this->ordreParDefaut;
+
+        return OrdreDesFournisseurs::disponibles(OrdreDesFournisseurs::ordonner($this->fournisseurs, $ordre));
     }
 
     public function estDisponible(): bool

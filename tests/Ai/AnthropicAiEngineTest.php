@@ -2,17 +2,16 @@
 
 namespace App\Tests\Ai;
 
+use App\Ai\Fournisseur\MemoireDEpuisement;
 use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\AiContextBuilder;
 use App\Ai\AiRequest;
+use App\Ai\Comprehension\AppelGemini;
 use App\Ai\Comprehension\Comprehenseur;
 use App\Ai\Debit\BudgetDebit;
-use App\Ai\Engine\AiEngineResolver;
 use App\Ai\Engine\AnthropicAiEngine;
 use App\Ai\Engine\AppelDOutilEnTexte;
 use App\Ai\Engine\DialecteGemini;
-use App\Ai\Engine\GeminiAiEngine;
-use App\Ai\Engine\SimulatedAiEngine;
 use App\Ai\Presentation\TableauMarkdown;
 use App\Ai\Redaction\RepliPrecis;
 use App\Ai\Programme\ProgrammeEnCours;
@@ -29,6 +28,7 @@ use App\Repository\AssistantProgrammeRepository;
 use App\Services\ServiceNombres;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\AbstractLogger;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -36,10 +36,16 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\Translation\LocaleSwitcher;
 
 /**
- * Adaptateur API Claude (Messages API + tool-calling) testé avec un client
- * HTTP mocké — aucun appel réseau. Vérifie : réponse texte simple, boucle de
- * tool-calling (résultats renvoyés dans UN message user), refus périmètre
- * propagé, et sélection du moteur par le résolveur selon la clé API.
+ * CE QUI EST PROPRE À L'ADAPTATEUR CLAUDE, et rien d'autre.
+ *
+ * Le comportement que les DEUX moteurs doivent partager — nombre d'appels,
+ * relance du tour muet, plans refusés, chiffres des outils, bilan de message —
+ * vit dans ContratDesMoteursTest, qui le joue contre l'un comme contre l'autre.
+ * Ici ne restent que les particularités du fournisseur : le format du fil, les
+ * pièces natives en blocs image/document, l'écho des inputs vides, les points de
+ * rupture du cache, la lecture de l'« usage », et sa politique de réessai.
+ *
+ * Le choix du moteur, lui, est devenu une chaîne : cf. AiEngineResolverChaineTest.
  */
 class AnthropicAiEngineTest extends TestCase
 {
@@ -106,12 +112,172 @@ class AnthropicAiEngineTest extends TestCase
         return new RepliPrecis(new TableauMarkdown(new ServiceNombres(new LocaleSwitcher('fr', []))));
     }
 
-    private function makeEngine(MockHttpClient $http, array $tools = []): AnthropicAiEngine
+    /** Le modèle de test, le même partout : les clés de compteur en dépendent. */
+    private const MODELE = 'claude-haiku-4-5';
+
+    /** Plafond du compteur de débit des tests, pour en déduire ce qui a été déclaré. */
+    private const PLAFOND = 2000000;
+
+    /** @var list<array{message: string, context: array}> lignes de télémétrie captées */
+    private array $telemetrie = [];
+
+    /** Le compteur de débit du dernier moteur construit, pour l'interroger après coup. */
+    private ?BudgetDebit $budget = null;
+
+    /** @var list<int> secondes que le moteur a DEMANDÉ d'attendre (jamais dormies) */
+    private array $attentes = [];
+
+    /**
+     * Compteur vierge, horloge figée, marge neutralisée : ce qu'on vérifie ici est
+     * ce que le moteur DÉCLARE au compteur, pas l'arithmétique de la fenêtre
+     * glissante — celle-ci a sa propre suite.
+     */
+    private function makeBudget(int $plafond = self::PLAFOND, int $instant = 1_000_000): BudgetDebit
     {
+        return new BudgetDebit(new ArrayAdapter(), $plafond, 0.0, static fn (): int => $instant);
+    }
+
+    private function selecteurFige(): SelecteurDeTrousse
+    {
+        return new SelecteurDeTrousse(
+            new ProgrammeEnCours(
+                $this->createMock(AssistantProgrammeRepository::class),
+                $this->createMock(EntityManagerInterface::class),
+            ),
+            new TrousseCatalogue([]),
+        );
+    }
+
+    /**
+     * COMPRENANT NEUTRE : il conclut toujours « claire », sur son PROPRE client HTTP.
+     *
+     * La phase de compréhension parle encore à Google en direct, quel que soit le
+     * moteur de texte : elle a donc son client à elle, et les appels comptés sur le
+     * client du moteur restent ceux du moteur. C'est aussi ce qui rend lisible le
+     * test « un message ne coûte jamais plus de deux appels de travail ».
+     */
+    private function comprehenseurFige(AiContextBuilder $contextBuilder, JournalTokens $journal, BudgetDebit $budget): Comprehenseur
+    {
+        $http = new MockHttpClient(static fn (): MockResponse => new MockResponse(json_encode([
+            'candidates'    => [['content' => ['parts' => [['text' => json_encode(
+                ['claire' => true, 'intention' => 'Question de test'],
+                JSON_THROW_ON_ERROR,
+            )]]]]],
+            'usageMetadata' => ['promptTokenCount' => 300],
+        ], JSON_THROW_ON_ERROR)));
+
+        return new Comprehenseur(
+            new AppelGemini(
+                $http,
+                $contextBuilder,
+                new DialecteGemini(new TrousseCatalogue([])),
+                new ExecuteurDOutils([]),
+                $budget,
+                new MemoireDEpuisement(new ArrayAdapter()),
+                'gm-test',
+                'gemini-flash-lite-test',
+            ),
+            new ProgrammeEnCours(
+                $this->createMock(AssistantProgrammeRepository::class),
+                $this->createMock(EntityManagerInterface::class),
+            ),
+            $budget,
+            $journal,
+            new NullLogger(),
+        );
+    }
+
+    private function makeEngine(
+        MockHttpClient $http,
+        array $tools = [],
+        bool $cacheActif = true,
+        ?BudgetDebit $budget = null,
+    ): AnthropicAiEngine {
         $contextBuilder = $this->createMock(AiContextBuilder::class);
         $contextBuilder->method('toSystemPrompt')->willReturn('SYSTEM');
+        // Le moteur Claude lit le prompt EN DEUX MORCEAUX : il lui faut savoir où
+        // s'arrête l'invariant pour y poser le point de rupture du cache.
+        $contextBuilder->method('promptSystemeEnDeux')->willReturn(['stable' => 'STABLE', 'volatil' => 'VOLATIL']);
 
-        return new AnthropicAiEngine($http, $contextBuilder, new TrousseCatalogue($tools), new ExecuteurDOutils($tools), 'sk-ant-test', 'claude-opus-4-8', $this->repliPrecis(), new OutilsDePlan([]));
+        $espion = new class($this->telemetrie) extends AbstractLogger {
+            public function __construct(private array &$lignes)
+            {
+            }
+
+            public function log($level, $message, array $context = []): void
+            {
+                $this->lignes[] = ['message' => (string) $message, 'context' => $context];
+            }
+        };
+
+        $this->budget = $budget ?? $this->makeBudget();
+        $journal = new JournalTokens($espion, new OutilsDePlan([]));
+
+        return new AnthropicAiEngine(
+            $http,
+            $contextBuilder,
+            new TrousseCatalogue($tools),
+            $this->selecteurFige(),
+            new ExecuteurDOutils($tools),
+            'sk-ant-test',
+            self::MODELE,
+            new NullLogger(),
+            $journal,
+            $this->budget,
+            $this->repliPrecis(),
+            new AppelDOutilEnTexte(),
+            new OutilsDePlan([]),
+            $this->comprehenseurFige($contextBuilder, $journal, $this->budget),
+            $cacheActif,
+            function (int $secondes): void {
+                $this->attentes[] = $secondes;
+            },
+        );
+    }
+
+    /** Le bilan du message : il doit exister quel que soit le chemin de sortie. */
+    private function bilanDuMessage(): ?array
+    {
+        foreach ($this->telemetrie as $ligne) {
+            if (($ligne['context']['evenement'] ?? null) === 'message') {
+                return $ligne['context'];
+            }
+        }
+
+        return null;
+    }
+
+    /** @return list<array> lignes « tour » captées */
+    private function lignesDeTour(): array
+    {
+        return array_values(array_filter(
+            array_column($this->telemetrie, 'context'),
+            static fn (array $c) => ($c['evenement'] ?? null) === 'tour',
+        ));
+    }
+
+    /** Ce que le moteur a déclaré au compteur de débit depuis le début du test. */
+    private function debitDeclare(): int
+    {
+        return self::PLAFOND - $this->budget->restant('anthropic:in:' . self::MODELE);
+    }
+
+    /**
+     * Une réponse texte ordinaire, avec le bloc « usage » que l'API renvoie
+     * toujours — et que ce moteur est désormais censé lire.
+     */
+    private static function reponseTexte(string $texte, array $usage = []): MockResponse
+    {
+        return new MockResponse(json_encode([
+            'content'     => [['type' => 'text', 'text' => $texte]],
+            'stop_reason' => 'end_turn',
+            'usage'       => $usage + [
+                'input_tokens'                => 0,
+                'output_tokens'               => 0,
+                'cache_creation_input_tokens' => 0,
+                'cache_read_input_tokens'     => 0,
+            ],
+        ]));
     }
 
     public function testReponseTexteSimple(): void
@@ -237,7 +403,12 @@ class AnthropicAiEngineTest extends TestCase
         $this->assertSame(['entite' => 'Client'], $tool->receivedArgs);
 
         // 1re requête : outils déclarés + prompt système.
-        $this->assertSame('SYSTEM', $bodies[0]['system']);
+        // Le prompt part en DEUX blocs : l'invariant, marqué pour le cache, puis ce
+        // qui change à chaque message. Leur concaténation reste le prompt entier.
+        $this->assertSame(
+            ['STABLE', 'VOLATIL'],
+            array_column($bodies[0]['system'], 'text'),
+        );
         $this->assertSame('compter_entites', $bodies[0]['tools'][0]['name']);
 
         // 2e requête : le tool_result est renvoyé dans UN message user, lié au bon id.
@@ -375,67 +546,321 @@ class AnthropicAiEngineTest extends TestCase
             'Un repli ne doit pas renvoyer à l’utilisateur un travail que les outils ont déjà fait.');
     }
 
-    public function testResolverChoisitLeMoteurSelonLesCles(): void
+    // ──────────────────────────────────────────────────────────────────────────────
+    // Robustesse réseau : ce qu'on rejoue, et surtout ce qu'on ne rejoue jamais
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    /** 429 de débit, avec le délai que le fournisseur annonce lui-même. */
+    private static function saturation(int $retryAfter): MockResponse
     {
-        $contextBuilder = $this->createMock(AiContextBuilder::class);
-        $simulated = new SimulatedAiEngine([]);
-        $anthropic = $this->makeEngine(new MockHttpClient([]));
-        $gemini = new GeminiAiEngine(
-            new MockHttpClient([]),
-            $contextBuilder,
-            new TrousseCatalogue([]),
-            new DialecteGemini(new TrousseCatalogue([])),
-            new SelecteurDeTrousse(
-                new ProgrammeEnCours(
-                    $this->createMock(AssistantProgrammeRepository::class),
-                    $this->createMock(EntityManagerInterface::class),
-                ),
-                new TrousseCatalogue([]),
-            ),
-            new ExecuteurDOutils([]),
-            'gm-x',
-            'gemini-2.5-flash',
-            '', // aucun modèle de secours : ce test ne lit que name()
-            new NullLogger(),
-            new JournalTokens(new NullLogger(), new OutilsDePlan([])),
-            new BudgetDebit(new ArrayAdapter()),
-            $this->repliPrecis(),
-            new AppelDOutilEnTexte(),
-            new OutilsDePlan([]),
-            // Ce test ne fait que lire name() : le comprenant n'est jamais sollicité.
-            new Comprehenseur(
-                new MockHttpClient([]),
-                $contextBuilder,
-                new ProgrammeEnCours(
-                    $this->createMock(AssistantProgrammeRepository::class),
-                    $this->createMock(EntityManagerInterface::class),
-                ),
-                new DialecteGemini(new TrousseCatalogue([])),
-                new ExecuteurDOutils([]),
-                new BudgetDebit(new ArrayAdapter()),
-                new JournalTokens(new NullLogger(), new OutilsDePlan([])),
-                new NullLogger(),
-                'gm-x',
-                'gemini-flash-lite-test',
-            ),
+        return new MockResponse(
+            json_encode(['type' => 'error', 'error' => ['type' => 'rate_limit_error', 'message' => 'Rate limit.']]),
+            ['http_code' => 429, 'response_headers' => ['content-type' => 'application/json', 'retry-after' => (string) $retryAfter]],
+        );
+    }
+
+    /**
+     * Le 429 du PLAFOND DE DÉPENSE mensuel, tel qu'Anthropic le renvoie : même code
+     * HTTP que la saturation, aucun en-tête « retry-after », et une date de
+     * réouverture écrite en toutes lettres dans le message.
+     */
+    private static function plafondDeDepense(): MockResponse
+    {
+        return new MockResponse(json_encode(['type' => 'error', 'error' => [
+            'type'    => 'rate_limit_error',
+            'message' => 'You have reached your API usage limits: your organization has crossed its '
+                . 'monthly API usage threshold. You will regain access on 2026-10-01 at 00:00 UTC.',
+            'details' => ['error_code' => 'enforced_spend_limit_reached'],
+        ]]), ['http_code' => 429, 'response_headers' => ['content-type' => 'application/json']]);
+    }
+
+    public function testUneSaturationAvecDelaiCourtEstRejoueeUneFois(): void
+    {
+        $http = new MockHttpClient([self::saturation(3), self::reponseTexte('34 clients.')]);
+
+        $reply = $this->makeEngine($http)->reply($this->makeRequest('Combien de clients ?'));
+
+        $this->assertSame('34 clients.', $reply->content);
+        $this->assertSame(2, $http->getRequestsCount(), 'Un refus rattrapable vaut un second essai, pas une excuse.');
+        $this->assertSame([3], $this->attentes, 'On attend le délai ANNONCÉ par le fournisseur, jamais un délai deviné.');
+    }
+
+    public function testUneSaturationAuDelaiTropLongNEstPasRejouee(): void
+    {
+        $http = new MockHttpClient([self::saturation(120)]);
+
+        try {
+            $this->makeEngine($http)->reply($this->makeRequest('Combien de clients ?'));
+            $this->fail('Le refus aurait dû remonter au point de repli du contrôleur.');
+        } catch (\Throwable) {
+        }
+
+        $this->assertSame(1, $http->getRequestsCount());
+        $this->assertSame([], $this->attentes,
+            'Deux minutes de silence puis le même refus : mieux vaut une réponse honnête avec la bonne durée.');
+    }
+
+    /**
+     * LE CAS QUI JUSTIFIE TOUTE LA MÉTHODE. Le plafond de dépense arrive en 429,
+     * comme une saturation, mais aucune attente ne le rouvre : le rejouer, c'est
+     * payer un aller-retour pour reproduire à l'identique un refus déjà certain.
+     */
+    public function testLePlafondDeDepenseNEstJamaisRejoue(): void
+    {
+        $http = new MockHttpClient([self::plafondDeDepense()]);
+
+        $reply = $this->makeEngine($http)->reply($this->makeRequest('Combien de clients ?'));
+
+        $this->assertSame(1, $http->getRequestsCount(), 'Un seul appel : rien ne sert de réessayer.');
+        $this->assertSame([], $this->attentes);
+
+        // Le message ne doit PAS promettre un retour dans quelques minutes : il doit
+        // nommer la vraie cause et la date que le fournisseur annonce. C'est la
+        // confusion que l'extraction du socle a mise au jour — le chemin commun
+        // traitait ce 429 comme une saturation ordinaire.
+        $this->assertStringContainsString('plafond de dépense mensuel', $reply->content);
+        $this->assertStringContainsString('2026-10-01', $reply->content);
+        $this->assertStringNotContainsString('quelques minutes', $reply->content);
+        $this->assertStringNotContainsString('Relancez-la dans', $reply->content);
+
+        // Et le message est CONCLU, pas jeté : un quota du fournisseur n'est pas une
+        // panne de l'application, le fil doit rester intact.
+        $this->assertSame('budget_atteint', $this->bilanDuMessage()['issue'] ?? null);
+    }
+
+    public function testUnModeleSurchargeEstRejoueUneFois(): void
+    {
+        $surcharge = new MockResponse(
+            json_encode(['type' => 'error', 'error' => ['type' => 'overloaded_error', 'message' => 'Overloaded']]),
+            ['http_code' => 529, 'response_headers' => ['content-type' => 'application/json']],
+        );
+        $http = new MockHttpClient([$surcharge, self::reponseTexte('34 clients.')]);
+
+        $reply = $this->makeEngine($http)->reply($this->makeRequest('Combien de clients ?'));
+
+        $this->assertSame('34 clients.', $reply->content);
+        $this->assertSame(2, $http->getRequestsCount());
+        $this->assertSame([2], $this->attentes, 'Aucun délai annoncé sur une surcharge : on attend brièvement.');
+    }
+
+    public function testUneRequeteInvalideNEstJamaisRejouee(): void
+    {
+        $http = new MockHttpClient([new MockResponse(
+            json_encode(['type' => 'error', 'error' => ['type' => 'invalid_request_error', 'message' => 'bad schema']]),
+            ['http_code' => 400, 'response_headers' => ['content-type' => 'application/json']],
+        )]);
+
+        try {
+            $this->makeEngine($http)->reply($this->makeRequest('Combien de clients ?'));
+            $this->fail('Un 400 aurait dû remonter.');
+        } catch (\Throwable) {
+        }
+
+        $this->assertSame(1, $http->getRequestsCount(),
+            'Un 400 est un défaut de NOTRE requête : le rejouer produirait exactement la même erreur.');
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────────
+    // Le cache de prompt : la moitié de la facture, et un échec parfaitement muet
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    public function testLesOutilsPortentUnPointDeRuptureDeCache(): void
+    {
+        $bodies = [];
+        $http = new MockHttpClient(function ($method, $url, $options) use (&$bodies) {
+            $bodies[] = json_decode($options['body'], true);
+
+            return self::reponseTexte('Bonjour.');
+        });
+
+        $this->makeEngine($http, [$this->makeTool(AiToolResult::ok(['total' => 1]))])
+            ->reply($this->makeRequest('Bonjour'));
+
+        $outils = $bodies[0]['tools'];
+        $this->assertSame(
+            ['type' => 'ephemeral'],
+            $outils[array_key_last($outils)]['cache_control'] ?? null,
+            'La marque va sur la DERNIÈRE déclaration : le cache est un préfixe, elle couvre tout le bloc.',
         );
 
-        // Aucune clé → simulateur.
-        $aucune = new AiEngineResolver($simulated, $anthropic, $gemini, '', '');
-        $this->assertSame('simulated', $aucune->name());
+        $marques = array_filter($outils, static fn (array $o) => isset($o['cache_control']));
+        $this->assertCount(1, $marques,
+            'Un seul point de rupture : en poser plusieurs ne cache rien de plus et multiplie les invalidations.');
+    }
 
-        // Clé Gemini seule → Gemini.
-        $geminiSeul = new AiEngineResolver($simulated, $anthropic, $gemini, '', 'gm-xxx');
-        $this->assertSame('gemini', $geminiSeul->name());
+    public function testSansCacheAucunPointDeRuptureNEstPose(): void
+    {
+        $bodies = [];
+        $http = new MockHttpClient(function ($method, $url, $options) use (&$bodies) {
+            $bodies[] = json_decode($options['body'], true);
 
-        // Les deux clés → priorité à Anthropic.
-        $lesDeux = new AiEngineResolver($simulated, $anthropic, $gemini, 'sk-ant-xxx', 'gm-xxx');
-        $this->assertSame('anthropic', $lesDeux->name());
+            return self::reponseTexte('Bonjour.');
+        });
 
-        // Forçage AI_ENGINE : prioritaire sur les clés (c'est la garde de .env.test).
-        $force = new AiEngineResolver($simulated, $anthropic, $gemini, 'sk-ant-xxx', 'gm-xxx', 'simulated');
-        $this->assertSame('simulated', $force->name());
-        $forceGemini = new AiEngineResolver($simulated, $anthropic, $gemini, 'sk-ant-xxx', 'gm-xxx', 'gemini');
-        $this->assertSame('gemini', $forceGemini->name());
+        $this->makeEngine($http, [$this->makeTool(AiToolResult::ok([]))], cacheActif: false)
+            ->reply($this->makeRequest('Bonjour'));
+
+        foreach ($bodies[0]['tools'] as $outil) {
+            $this->assertArrayNotHasKey('cache_control', $outil,
+                'ANTHROPIC_CACHE=0 doit vraiment tout renvoyer plein tarif, sinon comparer les deux régimes ne vaut rien.');
+        }
+    }
+
+    /**
+     * LE TEST QUI VAUT LE PLUS CHER DE CETTE SUITE.
+     *
+     * Le cache ne tient que si le bloc des outils est identique OCTET POUR OCTET
+     * d'un appel à l'autre. Le jour où il cesse de l'être — une description() qui
+     * daterait l'heure, un schéma dont les clés se sérialiseraient dans un ordre
+     * instable — rien ne casse : les requêtes passent, aucune exception n'est
+     * levée, aucune ligne de log n'apparaît. Seule la facture double.
+     */
+    public function testDeuxMessagesEnvoientDesDeclarationsOctetAOctetIdentiques(): void
+    {
+        $bodies = [];
+        $http = new MockHttpClient(function ($method, $url, $options) use (&$bodies) {
+            $bodies[] = json_decode($options['body'], true);
+
+            return self::reponseTexte('Bonjour.');
+        });
+
+        $moteur = $this->makeEngine($http, [$this->makeTool(AiToolResult::ok(['total' => 1]))]);
+        $moteur->reply($this->makeRequest('Combien de clients ?'));
+        $moteur->reply($this->makeRequest('Et de polices ?'));
+
+        $this->assertSame(
+            json_encode($bodies[0]['tools'], JSON_UNESCAPED_UNICODE),
+            json_encode($bodies[1]['tools'], JSON_UNESCAPED_UNICODE),
+            'Le bloc des outils doit être stable octet à octet, sinon le cache ne prend jamais — en silence.',
+        );
+    }
+
+    public function testLeBlocStableDuSystemePorteLePointDeRupture(): void
+    {
+        $bodies = [];
+        $http = new MockHttpClient(function ($method, $url, $options) use (&$bodies) {
+            $bodies[] = json_decode($options['body'], true);
+
+            return self::reponseTexte('Bonjour.');
+        });
+
+        $this->makeEngine($http)->reply($this->makeRequest('Bonjour'));
+
+        $systeme = $bodies[0]['system'];
+        $this->assertSame(['type' => 'ephemeral'], $systeme[0]['cache_control'] ?? null,
+            "L'invariant du prompt (~15 400 tokens) doit être caché : c'est la seconde moitié de l'économie.");
+        $this->assertArrayNotHasKey('cache_control', $systeme[1],
+            'Le bloc volatil ne doit JAMAIS porter de marque : on paierait une écriture par tour pour une relecture qui n’arrive jamais.');
+    }
+
+    public function testSansCacheLeSystemePartDUnSeulBloc(): void
+    {
+        $bodies = [];
+        $http = new MockHttpClient(function ($method, $url, $options) use (&$bodies) {
+            $bodies[] = json_decode($options['body'], true);
+
+            return self::reponseTexte('Bonjour.');
+        });
+
+        $this->makeEngine($http, cacheActif: false)->reply($this->makeRequest('Bonjour'));
+
+        $this->assertSame('STABLEVOLATIL', $bodies[0]['system'],
+            'Cache coupé : le prompt repart d’un bloc, exactement comme avant le découpage.');
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────────
+    // La mesure : ce qui va au journal, et ce qui va au compteur de débit
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * « input_tokens » n'est PAS la taille du prompt : c'est le seul reliquat situé
+     * après le dernier point de rupture. Le lire seul afficherait 100 là où le
+     * prompt en fait 600, et rendrait la campagne incomparable avec celle de Gemini,
+     * dont le promptTokenCount, lui, inclut les tokens cachés.
+     */
+    public function testLeTotalDEntreeAdditionneLesTroisCompteurs(): void
+    {
+        $http = new MockHttpClient([self::reponseTexte('Bonjour.', [
+            'input_tokens'                => 100,
+            'output_tokens'               => 50,
+            'cache_creation_input_tokens' => 200,
+            'cache_read_input_tokens'     => 300,
+        ])]);
+
+        $this->makeEngine($http)->reply($this->makeRequest('Bonjour'));
+
+        $tour = $this->lignesDeTour()[0] ?? null;
+        $this->assertNotNull($tour, 'Chaque aller-retour avec le fournisseur doit laisser une ligne de tour.');
+        $this->assertSame(600, $tour['tokensEntree'], 'Le prompt entier : 100 + 200 + 300.');
+        $this->assertSame(50, $tour['tokensSortie']);
+        $this->assertSame(300, $tour['tokensCache'], 'Le sous-ensemble servi depuis le cache.');
+    }
+
+    /**
+     * Chez Anthropic, les tokens LUS en cache sont exclus du plafond par minute :
+     * n'entrent au compteur que le reliquat et ce qu'on vient d'écrire dans le
+     * cache. Y déclarer le total ferait croire la fenêtre pleine six fois trop tôt,
+     * et ferait patienter Ket devant une porte grande ouverte.
+     */
+    public function testLeDebitNEnregistrePasLesTokensLusEnCache(): void
+    {
+        $http = new MockHttpClient([self::reponseTexte('Bonjour.', [
+            'input_tokens'                => 100,
+            'output_tokens'               => 50,
+            'cache_creation_input_tokens' => 200,
+            'cache_read_input_tokens'     => 300,
+        ])]);
+
+        $this->makeEngine($http)->reply($this->makeRequest('Bonjour'));
+
+        $this->assertSame(300, $this->debitDeclare(),
+            'Seuls input_tokens + cache_creation comptent au plafond ; les 300 lus en cache, non.');
+    }
+
+    /**
+     * Ce sont les sorties ANORMALES qui intéressent le plus la campagne : si l'une
+     * d'elles oublie de conclure, c'est précisément la mesure qu'on cherchait qui
+     * manque. D'où le point de sortie unique.
+     */
+    public function testChaqueCheminDeSortieProduitUnBilanDeMessage(): void
+    {
+        $refus = static fn (): MockResponse => new MockResponse(json_encode([
+            'content'     => [],
+            'stop_reason' => 'refusal',
+            'usage'       => ['input_tokens' => 10, 'output_tokens' => 0],
+        ]));
+
+        $appelDOutil = static fn (): MockResponse => new MockResponse(json_encode([
+            'content' => [[
+                'type'  => 'tool_use',
+                'id'    => 'tu_1',
+                'name'  => 'compter_entites',
+                'input' => ['entite' => 'Client'],
+            ]],
+            'stop_reason' => 'tool_use',
+            'usage'       => ['input_tokens' => 10, 'output_tokens' => 5],
+        ]));
+
+        $outil = $this->makeTool(AiToolResult::ok(['total' => 34]));
+
+        $cas = [
+            'reponse'          => [[self::reponseTexte('34 clients.')], []],
+            'blocage_securite' => [[$refus()], []],
+            // Un outil tourne, puis le fournisseur refuse la rédaction faute de quota :
+            // le message est conclu proprement, jamais jeté au contrôleur.
+            'budget_atteint'   => [[$appelDOutil(), self::saturation(600)], [$outil]],
+        ];
+
+        foreach ($cas as $issueAttendue => [$reponses, $outils]) {
+            $this->telemetrie = [];
+            $this->makeEngine(new MockHttpClient($reponses), $outils)
+                ->reply($this->makeRequest('Combien de clients ?'));
+
+            $bilan = $this->bilanDuMessage();
+            $this->assertNotNull($bilan, sprintf('Le chemin « %s » ne conclut pas.', $issueAttendue));
+            $this->assertSame($issueAttendue, $bilan['issue']);
+            $this->assertSame('anthropic', $bilan['moteur']);
+            $this->assertSame(self::MODELE, $bilan['modele']);
+        }
     }
 }

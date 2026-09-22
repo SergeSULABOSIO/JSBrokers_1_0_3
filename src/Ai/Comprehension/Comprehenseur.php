@@ -2,20 +2,12 @@
 
 namespace App\Ai\Comprehension;
 
-use App\Ai\AiContextBuilder;
-use App\Ai\AiText;
 use App\Ai\AiRequest;
 use App\Ai\Debit\BudgetDebit;
-use App\Ai\Engine\DialecteGemini;
 use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Programme\ProgrammeEnCours;
 use App\Ai\Telemetrie\JournalTokens;
-use App\Ai\Tool\ExecuteurDOutils;
-use App\Ai\Trousse\Phase;
-use App\Ai\Trousse\Trousse;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * LE PREMIER DES TROIS APPELS : établir ce que l'utilisateur veut dire, avant de
@@ -50,20 +42,6 @@ final class Comprehenseur
      */
     private const MAX_OUTPUT_TOKENS = 700;
 
-    /** Un comprenant lent est un comprenant inutile : mieux vaut passer outre. */
-    private const TIMEOUT_SECONDES = 20;
-
-    /**
-     * DURÉE TOTALE de l'appel, et pas seulement délai d'inactivité.
-     *
-     * Le `timeout` d'HttpClient ne compte que les silences du réseau : un flux qui
-     * trickle indéfiniment ne l'atteint jamais. Mesuré sur les journaux du
-     * 2026-09-17 : des appels coupés à 20, 34, 35 secondes — pour une phase qui
-     * n'améliore qu'une reformulation, et dont l'échec est sans conséquence. Au-delà
-     * de huit secondes, elle coûte plus qu'elle ne rapporte.
-     */
-    private const DUREE_MAX_SECONDES = 8;
-
     /**
      * Réponses par lesquelles un utilisateur ACQUIESCE. Elles ne veulent rien dire
      * seules, et tout dire après le tour précédent : les soumettre au comprenant,
@@ -73,141 +51,59 @@ final class Comprehenseur
         . 'vas.?y|allez.?y|go|c\'est bon|parfait|exact|tout à fait|continue|poursuis)[\s.!]*$/iu';
 
     public function __construct(
-        private readonly HttpClientInterface $httpClient,
-        // Source unique du prompt : la compréhension est une PHASE, au même titre
-        // que la planification et la rédaction, et son texte vit avec les leurs.
-        private readonly AiContextBuilder $contextBuilder,
+        // LE FOURNISSEUR, derrière un contrat : cette classe ne sait plus à qui elle
+        // parle. Tout ce qu'elle garde — les cas où le serveur sait déjà, le garde-fou
+        // anti-chiffre inventé, la lecture de la conclusion, le journal, le fail-open —
+        // n'a jamais rien eu de gémino-spécifique.
+        private readonly AppelDeComprehension $appel,
         private readonly ProgrammeEnCours $programmeEnCours,
-        // Les particularités du proto Gemini, partagées avec le moteur.
-        private readonly DialecteGemini $dialecte,
-        // Le seul chemin vers le code métier, partagé avec les deux moteurs. La garde
-        // de périmètre reste dans chaque execute() : comprendre ne donne aucun droit.
-        private readonly ExecuteurDOutils $executeur,
         private readonly BudgetDebit $budget,
         private readonly JournalTokens $journal,
         private readonly LoggerInterface $logger,
-        #[Autowire(env: 'GEMINI_API_KEY')] private readonly string $apiKey,
-        #[Autowire(env: 'GEMINI_MODELE_COMPREHENSION')] private readonly string $modele,
     ) {
     }
 
     public function modelName(): string
     {
-        return $this->modele;
+        return $this->appel->modele();
     }
 
-    /**
-     * @param array<int, array>|null $contents historique au dialecte Gemini. Le moteur
-     *                                         l'a déjà construit et le passe : le refaire
-     *                                         ici en ferait deux vérités d'une même
-     *                                         conversation. Les appelants qui n'en ont
-     *                                         pas (commande de diagnostic) laissent null.
-     */
-    public function comprendre(AiRequest $request, ?array $contents = null): DemandeComprise
+    public function comprendre(AiRequest $request): DemandeComprise
     {
         $debut = microtime(true);
         $brut = $request->lastUserMessage();
-        $contents ??= array_map(
-            static fn (array $m) => [
-                'role'  => ($m['role'] ?? '') === 'assistant' ? 'model' : 'user',
-                'parts' => [['text' => (string) ($m['content'] ?? '')]],
-            ],
-            $request->messages,
-        );
 
         if ($this->serveurSaitDeja($request)) {
             return $this->journaliser($request, DemandeComprise::claire($brut, DemandeComprise::ORIGINE_COURT_CIRCUIT), 0, $debut);
+        }
+
+        // Aucune clé pour ce fournisseur : la phase n'existe pas, et c'est tout. La
+        // demande part telle quelle, exactement comme avant qu'on l'invente.
+        if (!$this->appel->estDisponible()) {
+            return $this->journaliser($request, DemandeComprise::claire($brut, DemandeComprise::ORIGINE_REPLI), 0, $debut);
         }
 
         // On ne PATIENTE jamais avant cet appel. « symfony serve » n'a qu'un worker
         // php-cgi : une requête qui dort fige toute l'application. Et faire attendre
         // l'utilisateur pour une phase qui ne fait qu'améliorer sa réponse serait un
         // marché perdant.
-        if ($this->budget->secondesAvantLiberation($this->modele, self::MAX_OUTPUT_TOKENS) !== 0) {
+        if ($this->budget->secondesAvantLiberation($this->appel->cleDeDebit(), self::MAX_OUTPUT_TOKENS) !== 0) {
             return $this->journaliser($request, DemandeComprise::claire($brut, DemandeComprise::ORIGINE_REPLI), 0, $debut);
         }
 
         try {
-            [$reponse, $tokens] = $this->conclure($request, $contents);
+            ['texte' => $texte, 'tokens' => $tokens] = $this->appel->conclure($request);
         } catch (\Throwable $e) {
             $this->logger->warning('Assistant IA : la phase de compréhension a échoué, la demande passe telle quelle.', [
-                'exception' => $e,
-                'modele'    => $this->modele,
+                'exception'   => $e,
+                'fournisseur' => $this->appel->nom(),
+                'modele'      => $this->appel->modele(),
             ]);
 
             return $this->journaliser($request, DemandeComprise::claire($brut, DemandeComprise::ORIGINE_REPLI), 0, $debut);
         }
 
-        return $this->journaliser($request, $this->interpreter($reponse, $request), $tokens, $debut);
-    }
-
-    /**
-     * Le ou les appels de la phase, et le total des tokens d'entrée consommés.
-     *
-     * UN SEUL TOUR D'OUTILS, exactement comme la planification. Le comprenant peut
-     * vérifier en base — « ce client existe-t-il ? », « y a-t-il plusieurs polices à
-     * ce nom ? » — parce que sans cela il poserait une question là où une recherche
-     * aurait tranché, ou reformulerait vers un objet inexistant. Mais il ne CHAÎNE
-     * pas : c'est l'enchaînement, et lui seul, qui a saturé le quota le 2026-08-10.
-     *
-     * POURQUOI DEUX APPELS QUAND IL CHERCHE. Gemini refuse `tools` et
-     * `responseMimeType: application/json` dans la même requête. Le premier appel
-     * porte donc les outils sans schéma de sortie, le second le schéma sans les
-     * outils. Quand le modèle n'appelle aucun outil — le cas courant —, il n'y a
-     * qu'un seul appel et son texte est lu tel quel.
-     *
-     * @param array<int, array> $contents
-     *
-     * @return array{0: array<string, mixed>, 1: int}
-     */
-    private function conclure(AiRequest $request, array $contents): array
-    {
-        $reponse = $this->appeler($request, $contents, avecOutils: true);
-        $tokens = $this->facturer($reponse);
-
-        $parts = $reponse['candidates'][0]['content']['parts'] ?? [];
-        $appels = array_values(array_filter($parts, static fn (array $p) => isset($p['functionCall'])));
-        if ($appels === []) {
-            return [$reponse, $tokens];
-        }
-
-        // Les outils sont exécutés localement, tous ceux du tour, en fail-closed dans
-        // leur propre execute(). Ils ne coûtent aucun token.
-        $resultats = [];
-        foreach ($appels as $part) {
-            $nom = (string) $part['functionCall']['name'];
-            $resultat = $this->executeur->executer($nom, (array) ($part['functionCall']['args'] ?? []), $request->scope);
-            $resultats[] = ['functionResponse' => [
-                'name'     => $nom,
-                'response' => ['status' => $resultat->status] + $resultat->data,
-            ]];
-        }
-
-        $contents[] = ['role' => 'model', 'parts' => DialecteGemini::preserverArgsObjets($parts)];
-        $contents[] = ['role' => 'user', 'parts' => $resultats];
-
-        // Second et DERNIER appel : plus d'outils, un schéma de sortie strict.
-        $reponse = $this->appeler($request, $contents, avecOutils: false);
-
-        return [$reponse, $tokens + $this->facturer($reponse)];
-    }
-
-    /**
-     * Déclare au compteur de débit ce que ce tour vient de consommer, et le rend.
-     *
-     * Sur le compteur du modèle de COMPRÉHENSION, distinct de celui de la
-     * planification chez le fournisseur : c'est toute la raison d'utiliser un modèle
-     * à part, et l'oublier ferait de cette phase une ponction sur la fenêtre qu'elle
-     * est censée épargner.
-     *
-     * @param array<string, mixed> $reponse
-     */
-    private function facturer(array $reponse): int
-    {
-        $tokens = (int) ($reponse['usageMetadata']['promptTokenCount'] ?? 0);
-        $this->budget->enregistrer($this->modele, $tokens);
-
-        return $tokens;
+        return $this->journaliser($request, $this->interpreter($texte, $request), $tokens, $debut);
     }
 
     /**
@@ -244,78 +140,18 @@ final class Comprehenseur
     }
 
     /**
-     * @param array<int, array> $contents
-     *
-     * @return array<string, mixed>
+     * Lit la conclusion du fournisseur : un JSON, quel qu'en soit l'emballage.
      */
-    private function appeler(AiRequest $request, array $contents, bool $avecOutils): array
-    {
-        $prompt = $this->contextBuilder->toSystemPrompt($request, Trousse::COMPREHENSION, Phase::COMPREHENSION);
-
-        // Les outils de LEVÉE D'AMBIGUÏTÉ, et eux seuls (cf. AiToolDeComprehension) :
-        // de quoi savoir de qui l'on parle, jamais de quoi répondre à sa place.
-        $declarations = $avecOutils ? $this->dialecte->declarations(Trousse::COMPREHENSION, $request->scope) : [];
-
-        // Gemini refuse « tools » et « responseMimeType: application/json » ensemble
-        // (400). Le tour qui porte les outils demande donc son JSON par le prompt ;
-        // celui qui conclut l'impose par le schéma. Aucun des deux n'a le choix.
-        $sortie = $declarations === []
-            ? [
-                'responseMimeType' => 'application/json',
-                'responseSchema'   => [
-                    'type'       => 'OBJECT',
-                    'properties' => [
-                        'claire'    => ['type' => 'BOOLEAN'],
-                        'intention' => ['type' => 'STRING'],
-                        'questions' => ['type' => 'ARRAY', 'items' => ['type' => 'STRING']],
-                    ],
-                    'required' => ['claire', 'intention'],
-                ],
-            ]
-            : [];
-
-        return $this->httpClient->request('POST', sprintf(
-            'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent',
-            $this->modele,
-        ), [
-            'headers' => [
-                'x-goog-api-key' => $this->apiKey,
-                'content-type'   => 'application/json',
-            ],
-            // Texte non UTF-8 (fichier joint, troncature) : réparé, sinon le JSON ne part pas.
-            'json' => AiText::utf8Profond([
-                'systemInstruction' => ['parts' => [['text' => $prompt]]],
-                'contents'          => $contents,
-                'generationConfig'  => [
-                    'maxOutputTokens' => self::MAX_OUTPUT_TOKENS,
-                    // Comprendre n'est pas une tâche créative : à température nulle, la
-                    // même demande reçoit la même lecture d'un jour sur l'autre.
-                    'temperature'     => 0.0,
-                ] + $sortie,
-            ] + ($declarations === []
-                ? []
-                : ['tools' => [['functionDeclarations' => $declarations]]])),
-            'timeout'      => self::TIMEOUT_SECONDES,
-            'max_duration' => self::DUREE_MAX_SECONDES,
-        ])->toArray();
-    }
-
-    /**
-     * @param array<string, mixed> $reponse
-     */
-    private function interpreter(array $reponse, AiRequest $request): DemandeComprise
+    private function interpreter(string $texte, AiRequest $request): DemandeComprise
     {
         $brut = $request->lastUserMessage();
 
-        $texte = '';
-        foreach ($reponse['candidates'][0]['content']['parts'] ?? [] as $part) {
-            $texte .= (string) ($part['text'] ?? '');
-        }
-
-        // Le tour qui porte les outils ne peut pas imposer de schéma de sortie
-        // (Gemini refuse les deux ensemble) : quand il conclut directement, son JSON
-        // arrive parfois enveloppé dans une clôture markdown. On la retire — refuser
-        // une réponse juste pour trois caractères de décoration serait absurde.
+        // Chez Google, le tour qui porte les outils ne peut pas imposer de schéma de
+        // sortie (le proto refuse les deux ensemble) : quand il conclut directement,
+        // son JSON arrive parfois enveloppé dans une clôture markdown. On la retire —
+        // refuser une réponse juste pour trois caractères de décoration serait
+        // absurde. Chez Anthropic la sortie est structurée par un outil et n'a jamais
+        // cet emballage ; le nettoyage ne lui coûte rien.
         $texte = trim($texte);
         if (str_starts_with($texte, '```')) {
             $texte = trim((string) preg_replace('/^```(?:json)?\s*|\s*```$/i', '', $texte));
@@ -377,7 +213,7 @@ final class Comprehenseur
     {
         $this->journal->comprehension(
             $request,
-            $this->modele,
+            $this->appel->modele(),
             $comprise->claire ? 'claire' : 'a_clarifier',
             $comprise->origine,
             $tokens,

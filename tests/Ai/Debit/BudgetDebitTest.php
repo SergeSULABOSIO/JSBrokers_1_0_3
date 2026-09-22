@@ -29,9 +29,73 @@ class BudgetDebitTest extends TestCase
         );
     }
 
+    /**
+     * Compteur avec des plafonds propres à certains préfixes de clé — ce qui
+     * permet à deux fournisseurs qui ne comptent pas la même chose de partager la
+     * même fenêtre glissante.
+     */
+    private function budgetMultiFournisseur(): BudgetDebit
+    {
+        return new BudgetDebit(
+            new ArrayAdapter(),
+            250000, // Gemini, palier gratuit
+            0.0,
+            function (): int { return $this->instant; },
+            ['anthropic:in:' => 2000000, 'anthropic:out:' => 400000],
+        );
+    }
+
     public function testUneFenetreVideOffreLePlafondEntier(): void
     {
         $this->assertSame(250000, $this->budget()->restant('gemini-flash-latest'));
+    }
+
+    /**
+     * LE PLAFOND SUIT LE FOURNISSEUR, PAS LE CODE. Anthropic n'inclut pas les
+     * tokens lus en cache dans son décompte : son plafond d'entrée est huit fois
+     * celui du palier gratuit de Google. Lui opposer celui de Google ferait
+     * patienter Ket devant une porte grande ouverte.
+     */
+    public function testUnPrefixeConnuUtiliseSonProprePlafond(): void
+    {
+        $budget = $this->budgetMultiFournisseur();
+
+        $this->assertSame(2000000, $budget->restant('anthropic:in:claude-haiku-4-5'));
+        $this->assertSame(400000, $budget->restant('anthropic:out:claude-haiku-4-5'));
+    }
+
+    public function testUnPrefixeInconnuRetombeSurLePlafondParDefaut(): void
+    {
+        // Tous les modèles Gemini : aucun préfixe, donc rien ne change pour eux.
+        $this->assertSame(250000, $this->budgetMultiFournisseur()->restant('gemini-3.1-flash-lite'));
+    }
+
+    /**
+     * Entrée et sortie sont DEUX fenêtres : consommer l'une ne doit pas entamer
+     * l'autre, sans quoi une réponse longue ferait croire l'entrée saturée.
+     */
+    public function testEntreeEtSortieSontDeuxFenetresIndependantes(): void
+    {
+        $budget = $this->budgetMultiFournisseur();
+        $budget->enregistrer('anthropic:in:claude-haiku-4-5', 1_500_000);
+
+        $this->assertSame(500000, $budget->restant('anthropic:in:claude-haiku-4-5'));
+        $this->assertSame(400000, $budget->restant('anthropic:out:claude-haiku-4-5'),
+            'La fenêtre de sortie est intacte : elle a son propre plafond et son propre compteur.');
+    }
+
+    /**
+     * Le plafond par préfixe doit aussi gouverner l'ATTENTE, pas seulement le
+     * solde affiché — sinon le moteur patienterait sur un quota qui n'est pas le
+     * sien.
+     */
+    public function testLAttenteSeCalculeSurLePlafondDuPrefixe(): void
+    {
+        $budget = $this->budgetMultiFournisseur();
+        $budget->enregistrer('anthropic:in:claude-haiku-4-5', 300000);
+
+        // 300 000 consommés dépasseraient le plafond de Google, pas celui d'Anthropic.
+        $this->assertSame(0, $budget->secondesAvantLiberation('anthropic:in:claude-haiku-4-5', 100000));
     }
 
     public function testLaMargeEstDeduiteDuPlafond(): void

@@ -4,10 +4,12 @@ namespace App\Tests\Ai;
 
 use App\Ai\AiContextBuilder;
 use App\Ai\AiRequest;
+use App\Ai\Comprehension\AppelGemini;
 use App\Ai\Comprehension\Comprehenseur;
 use App\Ai\Comprehension\DemandeComprise;
 use App\Ai\Debit\BudgetDebit;
 use App\Ai\Engine\DialecteGemini;
+use App\Ai\Fournisseur\MemoireDEpuisement;
 use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\Programme\ProgrammeEnCours;
@@ -146,19 +148,23 @@ class ComprehenseurTest extends TestCase
         $contextBuilder->method('toSystemPrompt')->willReturn('SYSTEM');
 
         return new Comprehenseur(
-            $http,
-            $contextBuilder,
+            new AppelGemini(
+                $http,
+                $contextBuilder,
+                new DialecteGemini(new TrousseCatalogue($outils)),
+                new ExecuteurDOutils($outils),
+                new BudgetDebit(new ArrayAdapter()),
+                new MemoireDEpuisement(new ArrayAdapter()),
+                'gm-test',
+                'gemini-flash-lite-test',
+            ),
             new ProgrammeEnCours(
                 $this->createMock(AssistantProgrammeRepository::class),
                 $this->createMock(EntityManagerInterface::class),
             ),
-            new DialecteGemini(new TrousseCatalogue($outils)),
-            new ExecuteurDOutils($outils),
             new BudgetDebit(new ArrayAdapter()),
             new JournalTokens(new NullLogger(), new OutilsDePlan([])),
             new NullLogger(),
-            'gm-test',
-            'gemini-flash-lite-test',
         );
     }
 

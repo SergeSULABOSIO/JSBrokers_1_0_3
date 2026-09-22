@@ -20,6 +20,101 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  */
 class AiContextBuilderSystemPromptFormatTest extends KernelTestCase
 {
+    /** Une requête minimale, suffisante : toSystemPrompt() ne lit que systemContext. */
+    private function requete(array $contexteEnPlus = []): AiRequest
+    {
+        return new AiRequest(
+            systemContext: $contexteEnPlus + [
+                'assistantNom'   => 'Ket',
+                'entrepriseNom'  => 'PHPUnit Format SARL',
+                'perimetre'      => [],
+                'date'           => '2026-07-20',
+                'objetsAttaches' => [],
+                // La phase de rédaction lit la monnaie du cabinet sans repli : sans
+                // elle, le gabarit court tombe sur une clé absente.
+                'monnaie'        => null,
+            ],
+            messages: [],
+            scope: new AiScope(new Entreprise(), new Invite()),
+        );
+    }
+
+    /**
+     * LA COUTURE EST INVISIBLE DANS LE PROMPT RENDU.
+     *
+     * ⚠ Ne pas se contenter de comparer toSystemPrompt() à la concaténation des deux
+     * morceaux : depuis la découpe, la première est DÉFINIE comme la seconde, et
+     * l'égalité serait vraie quoi qu'on casse. On vérifie donc ce que cette égalité
+     * ne dit pas — que le point de jonction retombe exactement sur une fin de ligne,
+     * sans en perdre ni en ajouter. C'est le seul endroit où le découpage pouvait
+     * abîmer le texte, et l'abîmer sans bruit.
+     */
+    public function testLaCoutureTombeSurUneFinDeLigne(): void
+    {
+        static::bootKernel();
+        $builder = static::getContainer()->get(AiContextBuilder::class);
+
+        $deux = $builder->promptSystemeEnDeux($this->requete());
+
+        $this->assertNotSame('', trim($deux['stable']), 'Un bloc stable vide ne cacherait rien.');
+        $this->assertNotSame('', trim($deux['volatil']));
+        $this->assertMatchesRegularExpression('/sèche\.\R$/u', $deux['stable'],
+            'Le bloc stable doit finir juste après la dernière règle, fin de ligne comprise.');
+        $this->assertDoesNotMatchRegularExpression('/^\R/u', $deux['volatil'],
+            'Le bloc volatil ne doit pas rouvrir sur une ligne vide : la fin de ligne est déjà portée par le bloc stable.');
+    }
+
+    /**
+     * CE QUI REND LE CACHE MUET QUAND ON SE TROMPE. Le bloc marqué comme stable est
+     * relu tel quel d'un message à l'autre ; qu'un seul élément changeant s'y glisse
+     * et plus rien ne se cache — sans erreur, sans log, avec pour tout symptôme une
+     * facture qui double. Ce test nomme donc, un par un, les éléments qui doivent
+     * rester DEHORS.
+     */
+    public function testLeBlocStableNeContientAucunElementVolatil(): void
+    {
+        static::bootKernel();
+        $builder = static::getContainer()->get(AiContextBuilder::class);
+
+        $deux = $builder->promptSystemeEnDeux($this->requete([
+            'perimetre'        => ['portefeuilles' => ['Kinshasa Nord']],
+            'objetsAttaches'   => [],
+            'fichiersAttaches' => [],
+        ]));
+
+        // Le périmètre change d'un invité à l'autre : dans le bloc stable, il
+        // condamnerait le cache de tous les autres.
+        $this->assertStringNotContainsString('Kinshasa Nord', $deux['stable']);
+        $this->assertStringContainsString('Kinshasa Nord', $deux['volatil']);
+
+        // La PHRASE qui introduit le périmètre doit descendre avec lui, sinon la
+        // coupe passerait au milieu d'une consigne.
+        $this->assertStringNotContainsString("Le périmètre d'accès de ton interlocuteur", $deux['stable']);
+        $this->assertStringContainsString("Le périmètre d'accès de ton interlocuteur", $deux['volatil']);
+
+        // Le bloc « DEMANDE COMPRISE » a été descendu exprès : c'est lui qui, en
+        // tête, rendait tout le reste non cachable.
+        $this->assertStringNotContainsString('DEMANDE COMPRISE', $deux['stable']);
+    }
+
+    /**
+     * Les phases courtes n'ont rien à cacher : leur prompt tient en quelques Ko et
+     * dépend entièrement du message en cours. Marquer un préfixe qu'on ne relira
+     * jamais coûterait 1,25× le plein tarif pour rien.
+     */
+    public function testLesPhasesCourtesNOntPasDeBlocStable(): void
+    {
+        static::bootKernel();
+        $builder = static::getContainer()->get(AiContextBuilder::class);
+        $request = $this->requete();
+
+        foreach ([Phase::REDACTION, Phase::COMPREHENSION] as $phase) {
+            $deux = $builder->promptSystemeEnDeux($request, Trousse::ECRITURE, $phase);
+            $this->assertSame('', $deux['stable'], sprintf('La phase %s ne doit rien marquer.', $phase->libelle()));
+            $this->assertSame($builder->toSystemPrompt($request, Trousse::ECRITURE, $phase), $deux['volatil']);
+        }
+    }
+
     public function testPromptAutoriseMarkdownEtEnseigneLaConventionPastille(): void
     {
         static::bootKernel();

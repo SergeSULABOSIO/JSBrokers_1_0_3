@@ -4,6 +4,8 @@ namespace App\Tests\Ai;
 
 use App\Ai\Debit\BudgetDebit;
 use App\Ai\Dictee\FinisseurDeDictee;
+use App\Ai\Dictee\FinitionGemini;
+use App\Ai\Fournisseur\MemoireDEpuisement;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -33,12 +35,16 @@ class FinisseurDeDicteeTest extends TestCase
         $http = new MockHttpClient($reponses);
 
         return new FinisseurDeDictee(
-            $http,
+            new FinitionGemini(
+                $http,
+                new BudgetDebit(new ArrayAdapter()),
+                new MemoireDEpuisement(new ArrayAdapter()),
+                'gm-test',
+                'gemini-flash-lite-test',
+                $moteur,
+            ),
             new BudgetDebit(new ArrayAdapter()),
             new NullLogger(),
-            'gm-test',
-            'gemini-flash-lite-test',
-            $moteur,
         );
     }
 

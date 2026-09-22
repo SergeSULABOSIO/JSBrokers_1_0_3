@@ -21,6 +21,18 @@ final class AiEngineFailure
 {
     public static function messagePour(\Throwable $e): string
     {
+        // AVANT le 429 ordinaire, dont il partage le code HTTP — et à qui il ne
+        // ressemble en rien : ici, aucune attente ne rouvre la porte.
+        if (self::estPlafondDeDepense($e)) {
+            return "Mon moteur d'intelligence est suspendu : le plafond de dépense mensuel "
+                . 'du compte est atteint. '
+                . (self::dateDeReouverture($e) !== null
+                    ? sprintf('Il rouvrira le %s. ', self::dateDeReouverture($e))
+                    : '')
+                . "Ce n'est pas une saturation passagère — réessayer n'y changera rien : "
+                . "prévenez l'administrateur de la plateforme. Votre message a bien été conservé.";
+        }
+
         if (self::estLimiteDeDebit($e)) {
             $secondes = self::secondesAvantNouvelEssai($e);
 
@@ -63,10 +75,32 @@ final class AiEngineFailure
         }
 
         try {
-            return $e->getResponse()->getStatusCode() === 503;
+            // 503 chez Google, 529 « overloaded_error » chez Anthropic : même
+            // situation, même remède — ce n'est pas notre quota, c'est leur charge.
+            return in_array($e->getResponse()->getStatusCode(), [503, 529], true);
         } catch (\Throwable) {
             return false;
         }
+    }
+
+    /**
+     * L'échec est-il le PLAFOND DE DÉPENSE MENSUEL du compte (Anthropic) ?
+     *
+     * Il arrive en HTTP 429, comme une saturation de débit — et c'est tout ce
+     * qu'ils ont en commun. Celui-ci n'a PAS d'en-tête « retry-after », aucune
+     * attente ne le libère, et les réessais automatiques des clients HTTP y
+     * échouent en boucle jusqu'au premier du mois suivant. Lui servir le message
+     * « réessayez dans N secondes » serait un mensonge, et faire patienter le
+     * moteur devant une porte fermée à clé.
+     *
+     * Le fournisseur le signe explicitement pour qu'on puisse le distinguer :
+     * error.details.error_code = « enforced_spend_limit_reached ».
+     */
+    public static function estPlafondDeDepense(\Throwable $e): bool
+    {
+        $details = self::corpsErreur($e)['details'] ?? null;
+
+        return \is_array($details) && ($details['error_code'] ?? null) === 'enforced_spend_limit_reached';
     }
 
     /** L'échec est-il un HTTP 429 (Too Many Requests) du fournisseur ? */
@@ -92,9 +126,17 @@ final class AiEngineFailure
      */
     public static function secondesAvantNouvelEssai(\Throwable $e): ?int
     {
+        // Le plafond de dépense est un 429 SANS délai : rien à annoncer, et surtout
+        // pas l'en-tête d'une autre requête ni une durée inventée.
+        if (self::estPlafondDeDepense($e)) {
+            return null;
+        }
+
         $erreur = self::corpsErreur($e);
+        // « details » est une LISTE d'objets chez Google et un OBJET chez Anthropic :
+        // le is_array() par élément évite de traiter une chaîne comme un tableau.
         foreach ($erreur['details'] ?? [] as $detail) {
-            $delai = $detail['retryDelay'] ?? null;
+            $delai = \is_array($detail) ? ($detail['retryDelay'] ?? null) : null;
             if (\is_string($delai) && preg_match('/^([\d.]+)s$/', $delai, $m)) {
                 return max(1, (int) ceil((float) $m[1]));
             }
@@ -106,6 +148,21 @@ final class AiEngineFailure
         }
 
         return null;
+    }
+
+    /**
+     * La date de réouverture annoncée dans le message du plafond de dépense.
+     *
+     * Le fournisseur l'écrit en toutes lettres — « You will regain access on
+     * 2026-09-01 at 00:00 UTC » — et c'est la seule information utile à rendre à
+     * l'utilisateur, puisqu'aucun délai n'est fourni par ailleurs. Null si le
+     * libellé change : mieux vaut une phrase sans date qu'une date inventée.
+     */
+    public static function dateDeReouverture(\Throwable $e): ?string
+    {
+        $message = (string) (self::corpsErreur($e)['message'] ?? '');
+
+        return preg_match('/regain access on (\d{4}-\d{2}-\d{2})/', $message, $m) === 1 ? $m[1] : null;
     }
 
     /**
@@ -121,15 +178,39 @@ final class AiEngineFailure
         $erreur = self::corpsErreur($e);
         $details = array_filter([
             'message'    => isset($erreur['message']) ? mb_substr((string) $erreur['message'], 0, 400) : null,
-            'statut'     => $erreur['status'] ?? null,
+            // « status » chez Google (RESOURCE_EXHAUSTED), « type » chez Anthropic
+            // (rate_limit_error) : deux noms pour la même information.
+            'statut'     => $erreur['status'] ?? $erreur['type'] ?? null,
             'retryApres' => self::secondesAvantNouvelEssai($e),
         ], static fn ($v) => $v !== null);
 
+        // Structure google.rpc.QuotaFailure : le quota violé est nommé dans le corps.
         foreach ($erreur['details'] ?? [] as $detail) {
+            if (!\is_array($detail)) {
+                continue;
+            }
             foreach ($detail['violations'] ?? [] as $violation) {
                 $details['quotaId'] = $violation['quotaId'] ?? $violation['quotaMetric'] ?? '?';
                 $details['quotaPlafond'] = $violation['quotaValue'] ?? '?';
                 $details['quotaModele'] = $violation['quotaDimensions']['model'] ?? '?';
+            }
+        }
+
+        // Anthropic ne nomme pas le quota dans le corps : il le publie en EN-TÊTES,
+        // et sur chaque réponse — y compris celles qui réussissent. Le code d'erreur,
+        // lui, distingue la saturation de débit du plafond de dépense mensuel.
+        if (($erreur['details']['error_code'] ?? null) !== null) {
+            $details['quotaId'] = (string) $erreur['details']['error_code'];
+        }
+        foreach ([
+            'quotaEntreeRestante' => 'anthropic-ratelimit-input-tokens-remaining',
+            'quotaEntreePlafond'  => 'anthropic-ratelimit-input-tokens-limit',
+            'quotaEntreeReset'    => 'anthropic-ratelimit-input-tokens-reset',
+            'quotaSortieRestante' => 'anthropic-ratelimit-output-tokens-remaining',
+        ] as $cle => $entete) {
+            $valeur = self::entete($e, $entete);
+            if ($valeur !== null) {
+                $details[$cle] = $valeur;
             }
         }
 

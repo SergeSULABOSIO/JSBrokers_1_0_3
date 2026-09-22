@@ -10,7 +10,7 @@ use App\Ai\Oreille\TranscriptionElevenLabs;
 use App\Ai\Oreille\TranscriptionGemini;
 use App\Ai\Voix\CacheAudio;
 use App\Ai\Voix\FournisseurDeVoix;
-use App\Ai\Voix\MemoireDEpuisement;
+use App\Ai\Fournisseur\MemoireDEpuisement;
 use App\Ai\Voix\SyntheseVocaleElevenLabs;
 use App\Ai\Voix\VoixDeKet;
 use App\Entity\Entreprise;

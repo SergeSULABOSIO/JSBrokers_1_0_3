@@ -2,6 +2,7 @@
 
 namespace App\Ai\Voix;
 
+use App\Ai\Fournisseur\MemoireDEpuisement;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -52,6 +53,18 @@ final class SyntheseVocaleElevenLabs implements FournisseurDeVoix
         return $this->voix;
     }
 
+    /**
+     * CRÉDITS PARTAGÉS, ET C'EST VOULU. ElevenLabs facture la voix et la
+     * transcription sur la MÊME réserve mensuelle : quand elle est vide, les deux
+     * le sont. La famille « credits » le dit explicitement, là où la clé « elevenlabs »
+     * d'avant le laissait arriver par accident — ce qui rendait le comportement juste
+     * pour la mauvaise raison, et faux le jour où les réserves se sépareraient.
+     */
+    public function cleDEpuisement(): string
+    {
+        return MemoireDEpuisement::cle('credits', 'elevenlabs');
+    }
+
     public function estDisponible(): bool
     {
         return trim($this->apiKey) !== '' && trim($this->voix) !== ''
@@ -65,7 +78,7 @@ final class SyntheseVocaleElevenLabs implements FournisseurDeVoix
 
     public function estEpuise(): bool
     {
-        return $this->epuisement->estEpuise('elevenlabs');
+        return $this->epuisement->estEpuise($this->cleDEpuisement());
     }
 
     public function flux(string $texte, bool $vitesse = false): \Generator
@@ -74,7 +87,7 @@ final class SyntheseVocaleElevenLabs implements FournisseurDeVoix
         if ($texte === '' || !$this->estDisponible()) {
             return self::INDISPONIBLE;
         }
-        if ($this->epuisement->estEpuise('elevenlabs')) {
+        if ($this->estEpuise()) {
             return self::QUOTA;
         }
 
@@ -127,13 +140,13 @@ final class SyntheseVocaleElevenLabs implements FournisseurDeVoix
         $cause = \is_array($detail) ? (string) ($detail['code'] ?? $detail['status'] ?? '') : '';
 
         if ($cause === 'quota_exceeded') {
-            $this->epuisement->marquer('elevenlabs', MemoireDEpuisement::jusquAuMoisProchain());
+            $this->epuisement->marquer($this->cleDEpuisement(), MemoireDEpuisement::jusquAuMoisProchain());
             $this->logger->notice('Voix de Ket (ElevenLabs) : crédits du mois épuisés, voix suivante.');
 
             return self::QUOTA;
         }
         if ($statut === 429 || \in_array($cause, ['too_many_concurrent_requests', 'system_busy'], true)) {
-            $this->epuisement->marquer('elevenlabs', 60);
+            $this->epuisement->marquer($this->cleDEpuisement(), 60);
 
             return self::QUOTA;
         }

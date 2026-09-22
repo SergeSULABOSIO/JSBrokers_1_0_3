@@ -9,7 +9,7 @@ use App\Ai\Oreille\OreilleDeKet;
 use App\Ai\Oreille\Transcription;
 use App\Ai\Oreille\TranscriptionElevenLabs;
 use App\Ai\Oreille\TranscriptionGemini;
-use App\Ai\Voix\MemoireDEpuisement;
+use App\Ai\Fournisseur\MemoireDEpuisement;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -91,8 +91,12 @@ class OreilleDeKetTest extends TestCase
         $cache = new ArrayAdapter();
 
         self::assertSame(Transcription::QUOTA, $this->elevenLabs($http, 'xi-test', $cache)->transcrire(self::WAV, 'fr')->statut);
-        // La mémoire d'épuisement est la même que celle de la voix : la clé « elevenlabs ».
-        self::assertTrue((new MemoireDEpuisement($cache))->estEpuise('elevenlabs'));
+        // CRÉDITS PARTAGÉS AVEC LA VOIX, et désormais dit explicitement : ElevenLabs
+        // facture la synthèse et la transcription sur la MÊME réserve mensuelle, d'où
+        // une famille « credits » commune. La clé « elevenlabs » d'avant produisait le
+        // bon comportement, mais par accident — et elle serait devenue fausse le jour
+        // où les deux réserves se sépareraient.
+        self::assertTrue((new MemoireDEpuisement($cache))->estEpuise(MemoireDEpuisement::cle('credits', 'elevenlabs')));
         self::assertSame(Transcription::QUOTA, $this->elevenLabs($http, 'xi-test', $cache)->transcrire(self::WAV, 'fr')->statut);
         self::assertSame(1, $http->getRequestsCount(), 'plus aucun appel une fois le mois épuisé');
     }

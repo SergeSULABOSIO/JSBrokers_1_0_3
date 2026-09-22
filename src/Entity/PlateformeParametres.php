@@ -422,6 +422,41 @@ class PlateformeParametres
         return $this;
     }
 
+    /**
+     * LA POLITIQUE DES FOURNISSEURS DE KET, une famille par clé.
+     *
+     * Forme : { "moteur": { "mode": "chaine", "ordre": ["anthropic","gemini"],
+     * "reglages": { "anthropic": { "modele": "claude-haiku-4-5" } } }, "voix": … }.
+     *
+     * UNE SEULE COLONNE, pas cinq : c'est déjà le parti pris de `packs`,
+     * `writeWeights` et `documentFormats`. Une famille absente retombe sur son
+     * défaut `.env` — la fusion se fait clé par clé, jamais en bloc, sinon un
+     * fournisseur ajouté au CODE resterait invisible sur une plateforme déjà
+     * personnalisée.
+     *
+     * NULL = rien de personnalisé : le comportement est alors exactement celui
+     * des variables d'environnement, comme avant l'existence de cet écran.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?array $ketFournisseurs = null;
+
+    public function getKetFournisseurs(): ?array
+    {
+        return $this->ketFournisseurs;
+    }
+
+    /**
+     * Une carte vide redevient NULL — « rien de personnalisé » se dit par
+     * l'absence, jamais par un tableau vide qui signifierait « aucun fournisseur ».
+     * Même normalisation que setDocumentFormats().
+     */
+    public function setKetFournisseurs(?array $ketFournisseurs): static
+    {
+        $this->ketFournisseurs = ($ketFournisseurs === null || $ketFournisseurs === []) ? null : $ketFournisseurs;
+
+        return $this;
+    }
+
     public function getUpdatedAt(): ?\DateTimeImmutable
     {
         return $this->updatedAt;

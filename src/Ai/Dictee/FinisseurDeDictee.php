@@ -4,8 +4,6 @@ namespace App\Ai\Dictee;
 
 use App\Ai\Debit\BudgetDebit;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * LA FINITION D'UNE DICTÉE : du parlé brut au texte qu'on aurait écrit.
@@ -28,9 +26,6 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  */
 final class FinisseurDeDictee
 {
-    /** Une finition lente fait attendre quelqu'un qui a fini de parler. */
-    private const TIMEOUT_SECONDES = 10;
-
     /** Bornes de longueur de la sortie, en proportion de l'entrée. */
     private const RATIO_MIN = 0.4;
     private const RATIO_MAX = 1.3;
@@ -76,21 +71,20 @@ final class FinisseurDeDictee
     CONSIGNE;
 
     public function __construct(
-        private readonly HttpClientInterface $httpClient,
+        // LE FOURNISSEUR, derrière un contrat : cette classe ne sait plus à qui elle
+        // parle. Tout ce qu'elle garde — le plancher de longueur, le contrôle de
+        // fidélité, la remise en liste, le repli sur le texte brut — n'a jamais rien
+        // eu de gémino-spécifique.
+        private readonly AppelDeFinition $appel,
         private readonly BudgetDebit $budget,
         private readonly LoggerInterface $logger,
-        #[Autowire(env: 'GEMINI_API_KEY')] private readonly string $apiKey,
-        #[Autowire(env: 'GEMINI_MODELE_COMPREHENSION')] private readonly string $modele,
-        // Les tests forcent le moteur simulé : aucune API réelle, même avec une clé
-        // posée en variable d'environnement du poste.
-        #[Autowire(env: 'AI_ENGINE')] private readonly string $moteurForce = '',
     ) {
     }
 
     /** La finition est-elle possible dans cet environnement (clé présente, moteur réel) ? */
     public function estDisponible(): bool
     {
-        return trim($this->apiKey) !== '' && strtolower(trim($this->moteurForce)) !== 'simulated';
+        return $this->appel->estDisponible();
     }
 
     public function finir(string $brut): FinitionDeDictee
@@ -102,29 +96,21 @@ final class FinisseurDeDictee
 
         $plafondSortie = $this->plafondSortie($brut);
         // Jamais d'attente : quelqu'un vient de finir de parler.
-        if ($this->budget->secondesAvantLiberation($this->modele, $plafondSortie) !== 0) {
+        if ($this->budget->secondesAvantLiberation($this->appel->cleDeDebit(), $plafondSortie) !== 0) {
             return FinitionDeDictee::inchangee($brut);
         }
 
         try {
-            $reponse = $this->appeler($brut, $plafondSortie);
+            ['texte' => $propre] = $this->appel->finir(self::CONSIGNE, $brut, $plafondSortie);
         } catch (\Throwable $e) {
             $this->logger->warning('Dictée : la finition a échoué, le texte brut est conservé.', [
-                'exception' => $e,
-                'modele'    => $this->modele,
+                'exception'   => $e,
+                'fournisseur' => $this->appel->nom(),
+                'modele'      => $this->appel->modele(),
             ]);
 
             return FinitionDeDictee::inchangee($brut);
         }
-
-        $this->budget->enregistrer($this->modele, (int) ($reponse['usageMetadata']['promptTokenCount'] ?? 0));
-
-        $texte = '';
-        foreach ($reponse['candidates'][0]['content']['parts'] ?? [] as $part) {
-            $texte .= (string) ($part['text'] ?? '');
-        }
-        $json = json_decode(trim($texte), true);
-        $propre = is_array($json) ? trim((string) ($json['texte'] ?? '')) : '';
 
         $propre = $this->listesSurDesLignes($propre);
         if ($propre === '' || !$this->fidele($brut, $propre)) {
@@ -206,34 +192,5 @@ final class FinisseurDeDictee
     private function plafondSortie(string $brut): int
     {
         return min(3000, 200 + (int) ceil(mb_strlen($brut) / 2));
-    }
-
-    /** @return array<string, mixed> */
-    private function appeler(string $brut, int $plafondSortie): array
-    {
-        return $this->httpClient->request('POST', sprintf(
-            'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent',
-            $this->modele,
-        ), [
-            'headers' => [
-                'x-goog-api-key' => $this->apiKey,
-                'content-type'   => 'application/json',
-            ],
-            'json' => [
-                'systemInstruction' => ['parts' => [['text' => self::CONSIGNE]]],
-                'contents'          => [['role' => 'user', 'parts' => [['text' => $brut]]]],
-                'generationConfig'  => [
-                    'maxOutputTokens'  => $plafondSortie,
-                    'temperature'      => 0.0,
-                    'responseMimeType' => 'application/json',
-                    'responseSchema'   => [
-                        'type'       => 'OBJECT',
-                        'properties' => ['texte' => ['type' => 'STRING']],
-                        'required'   => ['texte'],
-                    ],
-                ],
-            ],
-            'timeout' => self::TIMEOUT_SECONDES,
-        ])->toArray();
     }
 }

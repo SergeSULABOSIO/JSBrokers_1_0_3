@@ -4,7 +4,7 @@ namespace App\Tests\Ai;
 
 use App\Ai\Debit\BudgetDebit;
 use App\Ai\Voix\CacheAudio;
-use App\Ai\Voix\MemoireDEpuisement;
+use App\Ai\Fournisseur\MemoireDEpuisement;
 use App\Ai\Voix\SyntheseVocaleGemini;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
