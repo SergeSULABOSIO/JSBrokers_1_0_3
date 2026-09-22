@@ -3,6 +3,7 @@
 namespace App\Tests\Console;
 
 use App\Ai\Engine\AiEngineInterface;
+use App\Ai\Engine\AnthropicAiEngine;
 use App\Ai\Fournisseur\MemoireDEpuisement;
 use App\Ai\Fournisseur\PolitiqueDesFournisseurs;
 use App\Entity\Utilisateur;
@@ -254,6 +255,85 @@ class ConsoleKetFournisseursTest extends WebTestCase
             '<form',
             $entreDeux,
             'Un formulaire imbriqué : le navigateur refermera le formulaire principal avant son bouton.',
+        );
+    }
+
+    /**
+     * LE TEST QUI REND LE CHAMP « MODÈLE » HONNÊTE.
+     *
+     * Avant ce lot, la console enregistrait un modèle que personne ne relisait :
+     * l'agent le voyait affiché, et Ket continuait d'appeler l'ancien jusqu'au
+     * redémarrage du serveur. L'assertion décisive porte sur la MÊME INSTANCE de
+     * moteur, interrogée avant puis après l'enregistrement — c'est la seule façon
+     * de prouver qu'aucun redémarrage n'est nécessaire.
+     */
+    public function testUnModeleEnregistreEstUtiliseDesLAppelSuivant(): void
+    {
+        $moteur = static::getContainer()->get(AnthropicAiEngine::class);
+        $avant = $moteur->modelName();
+        self::assertNotSame('claude-sonnet-5', $avant, 'Le test doit partir d’un autre modèle.');
+
+        $this->client->loginUser($this->user(self::SUPER));
+        $crawler = $this->client->request('GET', self::URL);
+        $form = $crawler->filter('form')->form();
+        $form['ket_fournisseurs[moteurJson]'] = json_encode([
+            'mode'     => 'chaine',
+            'ordre'    => ['anthropic', 'gemini'],
+            'reglages' => ['anthropic' => ['modele' => 'claude-sonnet-5']],
+        ]);
+        $this->client->submit($form);
+        self::assertResponseRedirects(self::URL);
+
+        // AUCUN redémarrage, AUCUNE reconstruction : le même objet, interrogé à nouveau.
+        self::assertSame('claude-sonnet-5', $moteur->modelName());
+    }
+
+    /**
+     * LA MARQUE D'ÉPUISEMENT SUIT LE MODÈLE. Les quotas ne sont pas les mêmes d'un
+     * modèle à l'autre : garder l'ancienne clé laisserait Ket muet sur un modèle
+     * tout neuf, au motif que le précédent était à sec.
+     */
+    public function testLaCleDEpuisementSuitLeModeleChoisi(): void
+    {
+        $moteur = static::getContainer()->get(AnthropicAiEngine::class);
+
+        $this->client->loginUser($this->user(self::SUPER));
+        $crawler = $this->client->request('GET', self::URL);
+        $form = $crawler->filter('form')->form();
+        $form['ket_fournisseurs[moteurJson]'] = json_encode([
+            'ordre'    => ['anthropic'],
+            'reglages' => ['anthropic' => ['modele' => 'claude-opus-5']],
+        ]);
+        $this->client->submit($form);
+
+        self::assertSame('moteur:anthropic:claude-opus-5', $moteur->cleDEpuisement());
+    }
+
+    /**
+     * UNE SAISIE ABERRANTE EST REFUSÉE À L'ENREGISTREMENT.
+     *
+     * Un nom de modèle inventé vaut un refus du fournisseur à CHAQUE message. Le
+     * refuser ici, c'est l'apprendre à l'agent au moment où il agit plutôt que de
+     * le laisser chercher, une heure plus tard, pourquoi Ket ne répond plus.
+     */
+    public function testUnModeleAberrantEstRefuseAvecUneExplication(): void
+    {
+        $this->client->loginUser($this->user(self::SUPER));
+        $crawler = $this->client->request('GET', self::URL);
+        $form = $crawler->filter('form')->form();
+        $form['ket_fournisseurs[moteurJson]'] = json_encode([
+            'ordre'    => ['anthropic'],
+            'reglages' => ['anthropic' => ['modele' => 'le plus rapide svp']],
+        ]);
+        $reponse = $this->client->submit($form);
+
+        self::assertResponseStatusCodeSame(422);
+        $texte = $reponse->filter('form')->text();
+        self::assertStringContainsString('ne ressemble pas à un nom de modèle', $texte);
+        self::assertStringContainsString('claude-haiku-4-5', $texte, 'L’erreur doit montrer un exemple correct.');
+        self::assertNull(
+            $this->em()->getConnection()->fetchOne('SELECT ket_fournisseurs FROM plateforme_parametres') ?: null,
+            'Une saisie refusée ne doit rien laisser en base.',
         );
     }
 

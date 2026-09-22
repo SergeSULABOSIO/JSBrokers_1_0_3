@@ -38,7 +38,11 @@ final class DialecteAnthropicDuFil implements DialecteDuFil
         private readonly \Closure $promptSysteme,
         private readonly TrousseCatalogue $trousseCatalogue,
         private readonly string $apiKey,
-        private readonly string $model,
+        // DEUX RÉSOLVEURS, PAS DEUX CHAÎNES. Le modèle peut changer entre deux
+        // messages — un agent l'a modifié depuis la console — et la clé
+        // d'épuisement le contient. Les figer ici, c'est promettre à l'écran un
+        // effet qu'il n'aurait qu'après un redémarrage du serveur.
+        private readonly \Closure $modele,
         private readonly LoggerInterface $logger,
         private readonly int $maxOutputTokens,
         private readonly int $maxAttenteSecondes,
@@ -46,7 +50,7 @@ final class DialecteAnthropicDuFil implements DialecteDuFil
         private readonly bool $cacheActif,
         private readonly ?\Closure $dormir = null,
         private readonly ?MemoireDEpuisement $epuisement = null,
-        private readonly string $cleDEpuisement = '',
+        private readonly ?\Closure $cleDEpuisement = null,
     ) {
     }
 
@@ -58,7 +62,13 @@ final class DialecteAnthropicDuFil implements DialecteDuFil
     /** Aucun repli de modèle ici : le remède d'Anthropic est le réessai, pas la bascule. */
     public function modeleCourant(): string
     {
-        return $this->model;
+        return ($this->modele)();
+    }
+
+    /** La marque d'épuisement du modèle COURANT — vide quand rien ne la nomme. */
+    private function cle(): string
+    {
+        return $this->cleDEpuisement === null ? '' : ($this->cleDEpuisement)();
     }
 
     /**
@@ -70,7 +80,7 @@ final class DialecteAnthropicDuFil implements DialecteDuFil
      */
     public function cleDeDebit(): string
     {
-        return 'anthropic:in:' . $this->model;
+        return 'anthropic:in:' . $this->modeleCourant();
     }
 
     public function filInitial(AiRequest $request): array
@@ -217,7 +227,7 @@ final class DialecteAnthropicDuFil implements DialecteDuFil
         $declarations = $phase->declareDesOutils() ? $this->declarations($trousse, $request) : [];
 
         $charge = [
-            'model'      => $this->model,
+            'model'      => $this->modeleCourant(),
             'max_tokens' => $this->maxOutputTokens,
             'system'     => $this->blocsSysteme($stable, $volatil),
             'messages'   => $fil,
@@ -287,7 +297,7 @@ final class DialecteAnthropicDuFil implements DialecteDuFil
      */
     private function marquerSiASec(\Throwable $e): void
     {
-        if ($this->epuisement === null || $this->cleDEpuisement === '') {
+        if ($this->epuisement === null || $this->cle() === '') {
             return;
         }
 
@@ -296,7 +306,7 @@ final class DialecteAnthropicDuFil implements DialecteDuFil
             $secondes = $date !== null
                 ? MemoireDEpuisement::jusqua(new \DateTimeImmutable($date . ' 00:00:00', new \DateTimeZone('UTC')))
                 : MemoireDEpuisement::jusquAuMoisProchain();
-            $this->epuisement->marquer($this->cleDEpuisement, $secondes);
+            $this->epuisement->marquer($this->cle(), $secondes);
             $this->logger->notice('Assistant IA (anthropic) : plafond de dépense atteint, moteur écarté de la chaîne.', [
                 'reouverture' => $date,
             ]);
@@ -305,7 +315,7 @@ final class DialecteAnthropicDuFil implements DialecteDuFil
         }
 
         if (AiEngineFailure::estLimiteDeDebit($e)) {
-            $this->epuisement->marquer($this->cleDEpuisement, AiEngineFailure::secondesAvantNouvelEssai($e) ?? 60);
+            $this->epuisement->marquer($this->cle(), AiEngineFailure::secondesAvantNouvelEssai($e) ?? 60);
         }
     }
 
@@ -324,7 +334,7 @@ final class DialecteAnthropicDuFil implements DialecteDuFil
      */
     private function lireLeSoldeDeclare(array $entetes): void
     {
-        if ($this->epuisement === null || $this->cleDEpuisement === '') {
+        if ($this->epuisement === null || $this->cle() === '') {
             return;
         }
 
@@ -348,7 +358,7 @@ final class DialecteAnthropicDuFil implements DialecteDuFil
             }
         }
 
-        $this->epuisement->marquer($this->cleDEpuisement, $secondes);
+        $this->epuisement->marquer($this->cle(), $secondes);
         $this->logger->notice('Assistant IA (anthropic) : solde annoncé sous la marge, moteur écarté avant son premier refus.', [
             'restant' => $restant,
             'plafond' => $plafond,

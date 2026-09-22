@@ -4,6 +4,7 @@ namespace App\Ai\Fournisseur;
 
 use App\Repository\PlateformeParametresRepository;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * QUI RÉPOND, DANS QUEL ORDRE, AVEC QUEL MODÈLE — décidé en console, plus en
@@ -33,7 +34,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * La politique ne ressuscite jamais un fournisseur sans clé : `estDisponible()`
  * reste le garde. Un fournisseur épinglé mais sans clé cède au maillon suivant.
  */
-final class PolitiqueDesFournisseurs
+final class PolitiqueDesFournisseurs implements ResetInterface
 {
     public const MODE_CHAINE = 'chaine';
     public const MODE_EPINGLE = 'epingle';
@@ -58,6 +59,25 @@ final class PolitiqueDesFournisseurs
     public function refresh(): void
     {
         $this->cache = null;
+    }
+
+    /**
+     * LE MÊME OUBLI, MAIS ENTRE DEUX MESSAGES D'UN PROCESSUS QUI DURE.
+     *
+     * Le cache ci-dessus vaut pour la durée d'une requête, et c'est exactement ce
+     * qu'il faut tant que Ket répond PENDANT la requête d'envoi (`ASSISTANT_ASYNC=0`
+     * en production) : chaque message part d'un processus neuf, qui relit la base.
+     *
+     * Le jour où le worker asynchrone tournera, ce processus-là vivra des heures :
+     * sans ce `reset()`, la politique resterait celle du démarrage POUR TOUJOURS, et
+     * un agent verrait son réglage enregistré, affiché… et sans effet. Symfony
+     * réarme les services qui portent `ResetInterface` entre deux messages —
+     * l'autoconfiguration pose le tag `kernel.reset` (FrameworkExtension, l. 622).
+     * La même mécanique couvre les runtimes persistants (FrankenPHP, RoadRunner).
+     */
+    public function reset(): void
+    {
+        $this->refresh();
     }
 
     /**
