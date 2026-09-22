@@ -169,6 +169,14 @@
                 </a>
             </div>
         {{ form_end(form) }}
+
+        {# LES ACTIONS À PART VONT ICI, ET NULLE PART AILLEURS. Un second
+           formulaire placé dans `console_form_body` y serait IMBRIQUÉ : le
+           navigateur ignore alors sa balise ouvrante mais honore sa fermante,
+           ce qui referme le formulaire principal AVANT son bouton d’envoi --
+           lequel devient inerte, sans le moindre message. Constaté le
+           2026-09-22 sur l’écran des fournisseurs de Ket. #}
+        {% block console_form_after %}{% endblock %}
     </div>
 </div>
 {% endblock %}
