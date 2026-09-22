@@ -7,9 +7,13 @@ use App\Ai\AiReply;
 use App\Ai\AiRequest;
 use App\Ai\Comprehension\Comprehenseur;
 use App\Ai\Debit\BudgetDebit;
+use App\Ai\Fournisseur\FournisseurAModele;
+use App\Ai\Fournisseur\FournisseurDatable;
 use App\Ai\Fournisseur\MemoireDEpuisement;
 use App\Ai\Engine\Socle\DialecteAnthropicDuFil;
 use App\Ai\Engine\Socle\OrchestrateurDeMessage;
+use App\Ai\Fournisseur\ModeleChoisi;
+use App\Ai\Fournisseur\PolitiqueDesFournisseurs;
 use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\Redaction\RepliPrecis;
 use App\Ai\Telemetrie\JournalTokens;
@@ -45,7 +49,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * re-vérifie canRead() dans execute() (fail-closed). Le prompt système ne fait
  * qu'énoncer la politesse du refus ; la garde est dans le code.
  */
-final class AnthropicAiEngine implements MoteurDeTexte
+final class AnthropicAiEngine implements MoteurDeTexte, FournisseurAModele, FournisseurDatable
 {
     /**
      * Plafond de SORTIE par appel.
@@ -82,7 +86,8 @@ final class AnthropicAiEngine implements MoteurDeTexte
 
     private readonly ?MemoireDEpuisement $epuisement;
 
-    private readonly string $cleDEpuisement;
+    /** Le modèle du `.env` — la console peut en décider autrement, à tout moment. */
+    private readonly string $modeleParDefaut;
 
     public function __construct(
         HttpClientInterface $httpClient,
@@ -116,10 +121,12 @@ final class AnthropicAiEngine implements MoteurDeTexte
         // n'est jamais « à sec » et se comporte exactement comme avant. C'est ce qui
         // permet aux harnais de test de l'ignorer sans rien perdre du reste.
         ?MemoireDEpuisement $epuisement = null,
+        // LA POLITIQUE DE LA CONSOLE, après la mémoire et tout aussi facultative.
+        private readonly ?PolitiqueDesFournisseurs $politique = null,
     ) {
         $this->cleEstPosee = trim($apiKey) !== '';
         $this->epuisement = $epuisement;
-        $this->cleDEpuisement = MemoireDEpuisement::cle('moteur', 'anthropic', $model);
+        $this->modeleParDefaut = $model;
         $this->fil = new DialecteAnthropicDuFil(
             $httpClient,
             // EN DEUX MORCEAUX, contrairement à Gemini : le cache d'Anthropic est
@@ -129,7 +136,7 @@ final class AnthropicAiEngine implements MoteurDeTexte
             static fn (AiRequest $r, Trousse $t, Phase $p): array => $contextBuilder->promptSystemeEnDeux($r, $t, $p),
             $trousseCatalogue,
             $apiKey,
-            $model,
+            fn (): string => $this->modelName(),
             $logger,
             self::MAX_OUTPUT_TOKENS,
             self::MAX_ATTENTE_SECONDES,
@@ -137,7 +144,7 @@ final class AnthropicAiEngine implements MoteurDeTexte
             $cacheActif,
             $dormir,
             $epuisement,
-            $this->cleDEpuisement,
+            fn (): string => $this->cleDEpuisement(),
         );
 
         $this->orchestrateur = new OrchestrateurDeMessage(
@@ -179,16 +186,51 @@ final class AnthropicAiEngine implements MoteurDeTexte
      */
     public function estEpuise(): bool
     {
-        return $this->epuisement?->estEpuise($this->cleDEpuisement) ?? false;
+        return $this->epuisement?->estEpuise($this->cleDEpuisement()) ?? false;
     }
 
+    /**
+     * LE MODÈLE À APPELER, RELU À CHAQUE MESSAGE.
+     *
+     * Il ne passe plus par le dialecte — c'est le dialecte qui vient le chercher
+     * ici. Sans cela, le modèle resterait celui du démarrage et l'écran de console
+     * promettrait un effet qui n'arriverait qu'au prochain redémarrage.
+     */
     public function modelName(): string
     {
-        return $this->fil->modeleCourant();
+        return ModeleChoisi::pour($this->politique, 'moteur', 'anthropic', $this->modeleParDefaut);
     }
 
     public function reply(AiRequest $request): AiReply
     {
         return $this->orchestrateur->traiter($this->fil, $request);
+    }
+
+    /**
+     * Le modèle que la console affiche en filigrane du champ « Modèle ».
+     *
+     * Un nom de modèle n'est pas un secret : la console est réservée aux agents
+     * Joseara, et ce nom figure dans la documentation publique du fournisseur.
+     */
+    public function modeleEnVigueur(): string
+    {
+        return $this->modelName();
+    }
+
+    /**
+     * LA CLÉ QUE LE BOUTON « RÉARMER » DE LA CONSOLE EFFACE.
+     *
+     * Sans elle, l'écran savait dire d'un moteur qu'il était à sec, mais pas
+     * jusqu'à quand ni comment y remédier : la marque tenait alors jusqu'à son
+     * échéance, sans autre recours qu'un accès serveur.
+     */
+    /**
+     * LA MARQUE SUIT LE MODÈLE, et c'est important : changer de modèle depuis la
+     * console doit rendre la parole à Ket même si l'ancien était marqué à sec.
+     * Les quotas ne sont pas les mêmes d'un modèle à l'autre.
+     */
+    public function cleDEpuisement(): string
+    {
+        return MemoireDEpuisement::cle('moteur', 'anthropic', $this->modelName());
     }
 }

@@ -47,7 +47,7 @@ final class EtatDesFournisseurs
     /**
      * L'état de TOUTES les familles, prêt à afficher.
      *
-     * @return array<string, list<array{nom: string, disponible: bool, epuise: bool, cle: string|null, echeance: string|null}>>
+     * @return array<string, list<array{nom: string, disponible: bool, epuise: bool, modele: string|null, cle: string|null, echeance: string|null}>>
      */
     public function tout(): array
     {
@@ -80,7 +80,7 @@ final class EtatDesFournisseurs
     /**
      * @param iterable<Fournisseur> $fournisseurs
      *
-     * @return list<array{nom: string, disponible: bool, epuise: bool, cle: string|null, echeance: string|null}>
+     * @return list<array{nom: string, disponible: bool, epuise: bool, modele: string|null, cle: string|null, echeance: string|null}>
      */
     private function famille(iterable $fournisseurs): array
     {
@@ -92,10 +92,16 @@ final class EtatDesFournisseurs
             // sans elle, l'écran saurait dire « à sec » sans pouvoir y remédier.
             $cle = $fournisseur instanceof FournisseurDatable ? $fournisseur->cleDEpuisement() : null;
 
+            // LE MODÈLE EST AFFICHÉ EN CLAIR. Ce n'est pas un secret — la console est
+            // réservée aux agents Joseara et ce nom est public — et sans lui le champ
+            // « Modèle » de l'écran ne disait pas ce qu'il remplacerait.
+            $modele = $fournisseur instanceof FournisseurAModele ? trim($fournisseur->modeleEnVigueur()) : '';
+
             $etat[] = [
                 'nom'        => $fournisseur->nom(),
                 'disponible' => $fournisseur->estDisponible(),
                 'epuise'     => $fournisseur->estEpuise(),
+                'modele'     => $modele !== '' ? $modele : null,
                 'cle'        => $cle,
                 'echeance'   => $cle !== null ? $this->epuisement->echeance($cle)?->format(\DateTimeInterface::ATOM) : null,
             ];

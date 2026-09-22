@@ -6,7 +6,10 @@ use App\Ai\AiContextBuilder;
 use App\Ai\AiRequest;
 use App\Ai\AiText;
 use App\Ai\Debit\BudgetDebit;
+use App\Ai\Fournisseur\FournisseurAModele;
 use App\Ai\Fournisseur\MemoireDEpuisement;
+use App\Ai\Fournisseur\ModeleChoisi;
+use App\Ai\Fournisseur\PolitiqueDesFournisseurs;
 use App\Ai\Tool\ExecuteurDOutils;
 use App\Ai\Trousse\Phase;
 use App\Ai\Trousse\Trousse;
@@ -30,7 +33,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * délibérément court et passe en dessous. Y poser un point de rupture coûterait
  * 1,25× le plein tarif pour une relecture qui n'arriverait jamais.
  */
-final class AppelAnthropic implements FournisseurDeComprehension
+final class AppelAnthropic implements FournisseurDeComprehension, FournisseurAModele
 {
     private const API_URL = 'https://api.anthropic.com/v1/messages';
     private const API_VERSION = '2023-06-01';
@@ -53,7 +56,11 @@ final class AppelAnthropic implements FournisseurDeComprehension
         private readonly BudgetDebit $budget,
         private readonly MemoireDEpuisement $epuisement,
         #[Autowire(env: 'ANTHROPIC_API_KEY')] private readonly string $apiKey,
-        #[Autowire(env: 'ANTHROPIC_MODELE_COMPREHENSION')] private readonly string $modele,
+        #[Autowire(env: 'ANTHROPIC_MODELE_COMPREHENSION')] private readonly string $modeleParDefaut,
+        // LA POLITIQUE DE LA CONSOLE, en dernier et facultative : sans elle, ce
+        // fournisseur se comporte exactement comme avant, sur le seul `.env`.
+        // C'est ce qui permet aux harnais de test de l'ignorer sans rien perdre.
+        private readonly ?PolitiqueDesFournisseurs $politique = null,
     ) {
     }
 
@@ -62,9 +69,17 @@ final class AppelAnthropic implements FournisseurDeComprehension
         return 'anthropic';
     }
 
+    /**
+     * LE MODÈLE À APPELER, RELU À CHAQUE FOIS.
+     *
+     * Jamais mis en cache ni figé au constructeur : c'est ce qui fait qu'un
+     * changement enregistré depuis la console part avec le MESSAGE SUIVANT, sans
+     * redémarrage. Une saisie qui ne ressemble pas à un nom de modèle est ignorée
+     * au profit du défaut du serveur — cf. ModeleChoisi.
+     */
     public function modele(): string
     {
-        return $this->modele;
+        return ModeleChoisi::pour($this->politique, 'comprehension', 'anthropic', $this->modeleParDefaut);
     }
 
     public function estDisponible(): bool
@@ -75,7 +90,7 @@ final class AppelAnthropic implements FournisseurDeComprehension
     /** La clé de ce fournisseur dans la mémoire d'épuisement — famille comprise. */
     public function cleDEpuisement(): string
     {
-        return MemoireDEpuisement::cle('comprehension', 'anthropic', $this->modele);
+        return MemoireDEpuisement::cle('comprehension', 'anthropic', $this->modele());
     }
 
     public function estEpuise(): bool
@@ -89,7 +104,7 @@ final class AppelAnthropic implements FournisseurDeComprehension
      */
     public function cleDeDebit(): string
     {
-        return 'anthropic:in:' . $this->modele;
+        return 'anthropic:in:' . $this->modele();
     }
 
     public function conclure(AiRequest $request): array
@@ -214,7 +229,7 @@ final class AppelAnthropic implements FournisseurDeComprehension
                 'content-type'      => 'application/json',
             ],
             'json' => AiText::utf8Profond([
-                'model'      => $this->modele,
+                'model'      => $this->modele(),
                 'max_tokens' => self::MAX_OUTPUT_TOKENS,
                 // Comprendre n'est pas une tâche créative : à température nulle, la
                 // même demande reçoit la même lecture d'un jour sur l'autre.
@@ -266,5 +281,16 @@ final class AppelAnthropic implements FournisseurDeComprehension
                 'additionalProperties' => false,
             ],
         ];
+    }
+
+    /**
+     * Le modèle que la console affiche en filigrane du champ « Modèle ».
+     *
+     * Un nom de modèle n'est pas un secret : la console est réservée aux agents
+     * Joseara, et ce nom figure dans la documentation publique du fournisseur.
+     */
+    public function modeleEnVigueur(): string
+    {
+        return $this->modele();
     }
 }

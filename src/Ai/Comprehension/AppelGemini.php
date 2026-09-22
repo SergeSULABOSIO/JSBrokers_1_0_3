@@ -6,8 +6,11 @@ use App\Ai\AiContextBuilder;
 use App\Ai\AiRequest;
 use App\Ai\AiText;
 use App\Ai\Debit\BudgetDebit;
+use App\Ai\Fournisseur\FournisseurAModele;
 use App\Ai\Fournisseur\MemoireDEpuisement;
 use App\Ai\Engine\DialecteGemini;
+use App\Ai\Fournisseur\ModeleChoisi;
+use App\Ai\Fournisseur\PolitiqueDesFournisseurs;
 use App\Ai\Tool\ExecuteurDOutils;
 use App\Ai\Trousse\Phase;
 use App\Ai\Trousse\Trousse;
@@ -23,7 +26,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * l'impose par le schéma. Quand le modèle n'appelle aucun outil — le cas
  * courant —, il n'y a qu'un appel et son texte est lu tel quel.
  */
-final class AppelGemini implements FournisseurDeComprehension
+final class AppelGemini implements FournisseurDeComprehension, FournisseurAModele
 {
     /**
      * Assez pour une intention de trois phrases et quelques questions courtes. Le
@@ -59,7 +62,11 @@ final class AppelGemini implements FournisseurDeComprehension
         private readonly BudgetDebit $budget,
         private readonly MemoireDEpuisement $epuisement,
         #[Autowire(env: 'GEMINI_API_KEY')] private readonly string $apiKey,
-        #[Autowire(env: 'GEMINI_MODELE_COMPREHENSION')] private readonly string $modele,
+        #[Autowire(env: 'GEMINI_MODELE_COMPREHENSION')] private readonly string $modeleParDefaut,
+        // LA POLITIQUE DE LA CONSOLE, en dernier et facultative : sans elle, ce
+        // fournisseur se comporte exactement comme avant, sur le seul `.env`.
+        // C'est ce qui permet aux harnais de test de l'ignorer sans rien perdre.
+        private readonly ?PolitiqueDesFournisseurs $politique = null,
     ) {
     }
 
@@ -68,15 +75,23 @@ final class AppelGemini implements FournisseurDeComprehension
         return 'gemini';
     }
 
+    /**
+     * LE MODÈLE À APPELER, RELU À CHAQUE FOIS.
+     *
+     * Jamais mis en cache ni figé au constructeur : c'est ce qui fait qu'un
+     * changement enregistré depuis la console part avec le MESSAGE SUIVANT, sans
+     * redémarrage. Une saisie qui ne ressemble pas à un nom de modèle est ignorée
+     * au profit du défaut du serveur — cf. ModeleChoisi.
+     */
     public function modele(): string
     {
-        return $this->modele;
+        return ModeleChoisi::pour($this->politique, 'comprehension', 'gemini', $this->modeleParDefaut);
     }
 
     /** Le compteur de Google est tenu par modèle : la clé est le nom du modèle. */
     public function cleDeDebit(): string
     {
-        return $this->modele;
+        return $this->modele();
     }
 
     public function estDisponible(): bool
@@ -87,7 +102,7 @@ final class AppelGemini implements FournisseurDeComprehension
     /** La clé de ce fournisseur dans la mémoire d'épuisement — famille comprise. */
     public function cleDEpuisement(): string
     {
-        return MemoireDEpuisement::cle('comprehension', 'gemini', $this->modele);
+        return MemoireDEpuisement::cle('comprehension', 'gemini', $this->modele());
     }
 
     public function estEpuise(): bool
@@ -163,7 +178,7 @@ final class AppelGemini implements FournisseurDeComprehension
     private function facturer(array $reponse): int
     {
         $tokens = (int) ($reponse['usageMetadata']['promptTokenCount'] ?? 0);
-        $this->budget->enregistrer($this->modele, $tokens);
+        $this->budget->enregistrer($this->modele(), $tokens);
 
         return $tokens;
     }
@@ -212,7 +227,7 @@ final class AppelGemini implements FournisseurDeComprehension
 
         return $this->httpClient->request('POST', sprintf(
             'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent',
-            $this->modele,
+            $this->modele(),
         ), [
             'headers' => [
                 'x-goog-api-key' => $this->apiKey,
@@ -234,5 +249,16 @@ final class AppelGemini implements FournisseurDeComprehension
             'timeout'      => self::TIMEOUT_SECONDES,
             'max_duration' => self::DUREE_MAX_SECONDES,
         ])->toArray();
+    }
+
+    /**
+     * Le modèle que la console affiche en filigrane du champ « Modèle ».
+     *
+     * Un nom de modèle n'est pas un secret : la console est réservée aux agents
+     * Joseara, et ce nom figure dans la documentation publique du fournisseur.
+     */
+    public function modeleEnVigueur(): string
+    {
+        return $this->modele();
     }
 }

@@ -3,8 +3,11 @@
 namespace App\Ai\Dictee;
 
 use App\Ai\Debit\BudgetDebit;
+use App\Ai\Fournisseur\FournisseurAModele;
 use App\Ai\Fournisseur\MemoireDEpuisement;
 use App\Ai\Engine\Usage;
+use App\Ai\Fournisseur\ModeleChoisi;
+use App\Ai\Fournisseur\PolitiqueDesFournisseurs;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -18,7 +21,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * de fidélité et l'utilisateur récupérerait sa dictée brute sans comprendre
  * pourquoi.
  */
-final class FinitionAnthropic implements FournisseurDeFinition
+final class FinitionAnthropic implements FournisseurDeFinition, FournisseurAModele
 {
     private const API_URL = 'https://api.anthropic.com/v1/messages';
     private const API_VERSION = '2023-06-01';
@@ -34,8 +37,12 @@ final class FinitionAnthropic implements FournisseurDeFinition
         private readonly BudgetDebit $budget,
         private readonly MemoireDEpuisement $epuisement,
         #[Autowire(env: 'ANTHROPIC_API_KEY')] private readonly string $apiKey,
-        #[Autowire(env: 'ANTHROPIC_MODELE_COMPREHENSION')] private readonly string $modele,
+        #[Autowire(env: 'ANTHROPIC_MODELE_COMPREHENSION')] private readonly string $modeleParDefaut,
         #[Autowire(env: 'AI_ENGINE')] private readonly string $moteurForce = '',
+        // LA POLITIQUE DE LA CONSOLE, en dernier et facultative : sans elle, ce
+        // fournisseur se comporte exactement comme avant, sur le seul `.env`.
+        // C'est ce qui permet aux harnais de test de l'ignorer sans rien perdre.
+        private readonly ?PolitiqueDesFournisseurs $politique = null,
     ) {
     }
 
@@ -44,14 +51,22 @@ final class FinitionAnthropic implements FournisseurDeFinition
         return 'anthropic';
     }
 
+    /**
+     * LE MODÈLE À APPELER, RELU À CHAQUE FOIS.
+     *
+     * Jamais mis en cache ni figé au constructeur : c'est ce qui fait qu'un
+     * changement enregistré depuis la console part avec le MESSAGE SUIVANT, sans
+     * redémarrage. Une saisie qui ne ressemble pas à un nom de modèle est ignorée
+     * au profit du défaut du serveur — cf. ModeleChoisi.
+     */
     public function modele(): string
     {
-        return $this->modele;
+        return ModeleChoisi::pour($this->politique, 'dictee', 'anthropic', $this->modeleParDefaut);
     }
 
     public function cleDeDebit(): string
     {
-        return 'anthropic:in:' . $this->modele;
+        return 'anthropic:in:' . $this->modele();
     }
 
     public function estDisponible(): bool
@@ -62,7 +77,7 @@ final class FinitionAnthropic implements FournisseurDeFinition
     /** La clé de ce fournisseur dans la mémoire d'épuisement — famille comprise. */
     public function cleDEpuisement(): string
     {
-        return MemoireDEpuisement::cle('dictee', 'anthropic', $this->modele);
+        return MemoireDEpuisement::cle('dictee', 'anthropic', $this->modele());
     }
 
     public function estEpuise(): bool
@@ -79,7 +94,7 @@ final class FinitionAnthropic implements FournisseurDeFinition
                 'content-type'      => 'application/json',
             ],
             'json' => [
-                'model'       => $this->modele,
+                'model'       => $this->modele(),
                 'max_tokens'  => $plafondSortie,
                 'temperature' => 0.0,
                 'system'      => $consigne,
@@ -112,5 +127,16 @@ final class FinitionAnthropic implements FournisseurDeFinition
         }
 
         return ['texte' => $texte, 'tokens' => $usage->entree];
+    }
+
+    /**
+     * Le modèle que la console affiche en filigrane du champ « Modèle ».
+     *
+     * Un nom de modèle n'est pas un secret : la console est réservée aux agents
+     * Joseara, et ce nom figure dans la documentation publique du fournisseur.
+     */
+    public function modeleEnVigueur(): string
+    {
+        return $this->modele();
     }
 }

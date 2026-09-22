@@ -7,9 +7,13 @@ use App\Ai\AiReply;
 use App\Ai\AiRequest;
 use App\Ai\Comprehension\Comprehenseur;
 use App\Ai\Debit\BudgetDebit;
+use App\Ai\Fournisseur\FournisseurAModele;
+use App\Ai\Fournisseur\FournisseurDatable;
 use App\Ai\Fournisseur\MemoireDEpuisement;
 use App\Ai\Engine\Socle\DialecteGeminiDuFil;
 use App\Ai\Engine\Socle\OrchestrateurDeMessage;
+use App\Ai\Fournisseur\ModeleChoisi;
+use App\Ai\Fournisseur\PolitiqueDesFournisseurs;
 use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\Redaction\RepliPrecis;
 use App\Ai\Telemetrie\JournalTokens;
@@ -48,7 +52,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * SÉCURITÉ : inchangée — le périmètre ne dépend PAS du modèle, chaque outil
  * re-vérifie canRead() dans execute() (fail-closed).
  */
-final class GeminiAiEngine implements MoteurDeTexte
+final class GeminiAiEngine implements MoteurDeTexte, FournisseurAModele, FournisseurDatable
 {
     /** Assez ample pour restituer une page de liste (rechercher_entites) sans troncature. */
     private const MAX_OUTPUT_TOKENS = 4096;
@@ -69,7 +73,10 @@ final class GeminiAiEngine implements MoteurDeTexte
 
     private readonly ?MemoireDEpuisement $epuisement;
 
-    private readonly string $cleDEpuisement;
+    /** Le modèle du `.env` et sa chaîne de secours — la console peut en décider autrement. */
+    private readonly string $modeleParDefaut;
+
+    private readonly string $replisParDefaut;
 
     public function __construct(
         HttpClientInterface $httpClient,
@@ -112,23 +119,28 @@ final class GeminiAiEngine implements MoteurDeTexte
         // n'est jamais « à sec » et se comporte exactement comme avant. C'est ce qui
         // permet aux harnais de test de l'ignorer sans rien perdre du reste.
         ?MemoireDEpuisement $epuisement = null,
+        // LA POLITIQUE DE LA CONSOLE, après la mémoire et tout aussi facultative.
+        private readonly ?PolitiqueDesFournisseurs $politique = null,
     ) {
         $this->cleEstPosee = trim($apiKey) !== '';
         $this->epuisement = $epuisement;
-        $this->cleDEpuisement = MemoireDEpuisement::cle('moteur', 'gemini', $model);
+        // Posés AVANT le dialecte : celui-ci interroge ces résolveurs dès sa
+        // construction, pour s'accorder au réglage en vigueur.
+        $this->modeleParDefaut = $model;
+        $this->replisParDefaut = $modelesDeRepli;
         $this->fil = new DialecteGeminiDuFil(
             $httpClient,
             static fn (AiRequest $r, Trousse $t, Phase $p): string => $contextBuilder->toSystemPrompt($r, $t, $p),
             $dialecte,
             $apiKey,
-            $model,
-            $modelesDeRepli,
+            fn (): string => $this->modeleConfigure(),
+            fn (): string => ModeleChoisi::liste($this->politique, 'moteur', 'gemini', $this->replisParDefaut, 'modelesRepli'),
             $logger,
             self::MAX_OUTPUT_TOKENS,
             self::MAX_ATTENTE_SECONDES,
             $dormir,
             $epuisement,
-            $this->cleDEpuisement,
+            fn (): string => $this->cleDEpuisement(),
         );
 
         // L'orchestrateur est CONSTRUIT ICI et non injecté : le faire entrer par le
@@ -173,7 +185,7 @@ final class GeminiAiEngine implements MoteurDeTexte
      */
     public function estEpuise(): bool
     {
-        return $this->epuisement?->estEpuise($this->cleDEpuisement) ?? false;
+        return $this->epuisement?->estEpuise($this->cleDEpuisement()) ?? false;
     }
 
     /**
@@ -188,5 +200,43 @@ final class GeminiAiEngine implements MoteurDeTexte
     public function reply(AiRequest $request): AiReply
     {
         return $this->orchestrateur->traiter($this->fil, $request);
+    }
+
+    /**
+     * Le modèle que la console affiche en filigrane du champ « Modèle ».
+     *
+     * Un nom de modèle n'est pas un secret : la console est réservée aux agents
+     * Joseara, et ce nom figure dans la documentation publique du fournisseur.
+     */
+    public function modeleEnVigueur(): string
+    {
+        return $this->modelName();
+    }
+
+    /**
+     * LA CLÉ QUE LE BOUTON « RÉARMER » DE LA CONSOLE EFFACE.
+     *
+     * Sans elle, l'écran savait dire d'un moteur qu'il était à sec, mais pas
+     * jusqu'à quand ni comment y remédier : la marque tenait alors jusqu'à son
+     * échéance, sans autre recours qu'un accès serveur.
+     */
+    /**
+     * LA MARQUE SUIT LE MODÈLE CONFIGURÉ, pas celui de secours en cours d'usage :
+     * c'est le modèle principal dont on constate le quota. Changer ce modèle depuis
+     * la console rend donc la parole à Ket même si l'ancien était marqué à sec —
+     * les quotas de Google sont tenus par modèle.
+     */
+    public function cleDEpuisement(): string
+    {
+        return MemoireDEpuisement::cle('moteur', 'gemini', $this->modeleConfigure());
+    }
+
+    /**
+     * Le modèle DEMANDÉ, relu à chaque fois — à distinguer de `modelName()`, qui
+     * rend celui réellement interrogé, éventuellement un modèle de secours.
+     */
+    private function modeleConfigure(): string
+    {
+        return ModeleChoisi::pour($this->politique, 'moteur', 'gemini', $this->modeleParDefaut);
     }
 }

@@ -3,7 +3,10 @@
 namespace App\Ai\Voix;
 
 use App\Ai\Debit\BudgetDebit;
+use App\Ai\Fournisseur\FournisseurAModele;
 use App\Ai\Fournisseur\MemoireDEpuisement;
+use App\Ai\Fournisseur\ModeleChoisi;
+use App\Ai\Fournisseur\PolitiqueDesFournisseurs;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -28,7 +31,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * La consigne de style va DANS le texte : le modèle refuse l'instruction système
  * (« Developer instruction is not enabled for this model »).
  */
-final class SyntheseVocaleGemini implements FournisseurDeVoix
+final class SyntheseVocaleGemini implements FournisseurDeVoix, FournisseurAModele
 {
     /** Une génération qui ne commence pas dans ce délai n'aidera personne. */
     private const TIMEOUT_SECONDES = 60;
@@ -42,10 +45,13 @@ final class SyntheseVocaleGemini implements FournisseurDeVoix
         private readonly MemoireDEpuisement $epuisement,
         private readonly LoggerInterface $logger,
         #[Autowire(env: 'GEMINI_API_KEY')] private readonly string $apiKey,
-        #[Autowire(env: 'GEMINI_MODELES_VOIX')] private readonly string $modeles,
-        #[Autowire(env: 'GEMINI_VOIX_KET')] private readonly string $voix,
+        #[Autowire(env: 'GEMINI_MODELES_VOIX')] private readonly string $modelesParDefaut,
+        #[Autowire(env: 'GEMINI_VOIX_KET')] private readonly string $voixParDefaut,
         // Les tests forcent le moteur simulé : aucune API réelle.
         #[Autowire(env: 'AI_ENGINE')] private readonly string $moteurForce = '',
+        // LA POLITIQUE DE LA CONSOLE, en dernier et facultative : sans elle, cette
+        // voix se comporte exactement comme avant, sur le seul `.env`.
+        private readonly ?PolitiqueDesFournisseurs $politique = null,
     ) {
     }
 
@@ -56,7 +62,7 @@ final class SyntheseVocaleGemini implements FournisseurDeVoix
 
     public function voix(): string
     {
-        return $this->voix;
+        return ModeleChoisi::pour($this->politique, 'voix', 'gemini', $this->voixParDefaut, 'voix');
     }
 
     public function estDisponible(): bool
@@ -122,7 +128,7 @@ final class SyntheseVocaleGemini implements FournisseurDeVoix
                         'contents'         => [['role' => 'user', 'parts' => [['text' => self::CONSIGNE . $texte]]]],
                         'generationConfig' => [
                             'responseModalities' => ['AUDIO'],
-                            'speechConfig'       => ['voiceConfig' => ['prebuiltVoiceConfig' => ['voiceName' => $this->voix]]],
+                            'speechConfig'       => ['voiceConfig' => ['prebuiltVoiceConfig' => ['voiceName' => $this->voix()]]],
                         ],
                     ],
                     'timeout' => self::TIMEOUT_SECONDES,
@@ -210,6 +216,23 @@ final class SyntheseVocaleGemini implements FournisseurDeVoix
     /** @return list<string> */
     private function listeModeles(): array
     {
-        return array_values(array_filter(array_map('trim', explode(',', $this->modeles))));
+        // RELUE À CHAQUE APPEL : la console peut poser sa propre chaîne de modèles
+        // TTS, séparés par des virgules. Une liste dont un seul nom est douteux est
+        // écartée en entier — un appel sur deux qui échoue se diagnostique bien plus
+        // mal qu'un réglage visiblement sans effet (cf. ModeleChoisi::liste).
+        $liste = ModeleChoisi::liste($this->politique, 'voix', 'gemini', $this->modelesParDefaut);
+
+        return array_values(array_filter(array_map('trim', explode(',', $liste))));
+    }
+
+    /**
+     * Le modèle que la console affiche en filigrane du champ « Modèle ».
+     *
+     * Un nom de modèle n'est pas un secret : la console est réservée aux agents
+     * Joseara, et ce nom figure dans la documentation publique du fournisseur.
+     */
+    public function modeleEnVigueur(): string
+    {
+        return $this->modele();
     }
 }

@@ -4,6 +4,7 @@ namespace App\Controller\Console;
 
 use App\Ai\Fournisseur\EtatDesFournisseurs;
 use App\Ai\Fournisseur\MemoireDEpuisement;
+use App\Ai\Fournisseur\ModeleChoisi;
 use App\Ai\Fournisseur\PolitiqueDesFournisseurs;
 use App\Form\KetFournisseursType;
 use App\Repository\PlateformeParametresRepository;
@@ -68,6 +69,24 @@ class KetFournisseursController extends AbstractConsoleController
                     $valide = false;
                     continue;
                 }
+                // UNE SAISIE DOUTEUSE EST REFUSÉE ICI, PAS PLUS TARD. Un nom de modèle
+                // inventé vaut un refus du fournisseur à CHAQUE message : mieux vaut
+                // que l'agent l'apprenne au moment où il enregistre que de le laisser
+                // chercher ensuite pourquoi Ket ne répond plus. `ModeleChoisi` ignore
+                // aussi ces valeurs au moment d'appeler — ceinture et bretelles, parce
+                // qu'une politique peut aussi arriver d'un import ou d'un script.
+                foreach (self::reglagesDouteux($decode) as $fautif) {
+                    $form->addError(new FormError(sprintf(
+                        'Réglage « %s » de %s : « %s » ne ressemble pas à un nom de modèle. '
+                        . 'Lettres, chiffres, tiret, souligné, point et deux-points seulement — '
+                        . 'par exemple claude-haiku-4-5. Laissez vide pour garder celui du serveur.',
+                        $fautif['clef'],
+                        $fautif['fournisseur'],
+                        mb_substr($fautif['valeur'], 0, 60),
+                    )));
+                    $valide = false;
+                }
+
                 if ($decode !== []) {
                     $familles[$famille] = $decode;
                 }
@@ -116,6 +135,51 @@ class KetFournisseursController extends AbstractConsoleController
         }
 
         return $this->redirectToRoute('console.ket.fournisseurs.index');
+    }
+
+    /**
+     * LES RÉGLAGES QUI NE RESSEMBLENT PAS À UN NOM DE MODÈLE.
+     *
+     * On inspecte TOUTES les valeurs textuelles des réglages, sans présumer des
+     * clés : `modele` aujourd'hui, `modeleLive`, `voix`, `modelesRepli` selon les
+     * familles, et celles qu'un lot suivant ajoutera. Une liste séparée par des
+     * virgules est acceptée si chacun de ses noms tient debout.
+     *
+     * @param array<string, mixed> $politique
+     *
+     * @return list<array{fournisseur: string, clef: string, valeur: string}>
+     */
+    private static function reglagesDouteux(array $politique): array
+    {
+        $fautifs = [];
+        $reglages = $politique['reglages'] ?? [];
+        if (!\is_array($reglages)) {
+            return [];
+        }
+
+        foreach ($reglages as $fournisseur => $valeurs) {
+            if (!\is_array($valeurs)) {
+                continue;
+            }
+            foreach ($valeurs as $clef => $valeur) {
+                if (!\is_string($valeur) || trim($valeur) === '') {
+                    continue;
+                }
+                $noms = array_filter(array_map('trim', explode(',', $valeur)), static fn (string $n): bool => $n !== '');
+                foreach ($noms as $nom) {
+                    if (!ModeleChoisi::estPlausible($nom)) {
+                        $fautifs[] = [
+                            'fournisseur' => (string) $fournisseur,
+                            'clef'        => (string) $clef,
+                            'valeur'      => $valeur,
+                        ];
+                        continue 2;
+                    }
+                }
+            }
+        }
+
+        return $fautifs;
     }
 
     /**

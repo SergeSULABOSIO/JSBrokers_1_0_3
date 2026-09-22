@@ -2,7 +2,11 @@
 
 namespace App\Ai\Oreille;
 
+use App\Ai\Fournisseur\FournisseurAModele;
+use App\Ai\Fournisseur\FournisseurDatable;
 use App\Ai\Fournisseur\MemoireDEpuisement;
+use App\Ai\Fournisseur\ModeleChoisi;
+use App\Ai\Fournisseur\PolitiqueDesFournisseurs;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mime\Part\DataPart;
@@ -18,7 +22,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * mois suivant. Sans clé — cas de la production tant que le plan gratuit n'a pas de
  * licence commerciale — ce fournisseur est simplement indisponible.
  */
-final class TranscriptionElevenLabs implements FournisseurDOreille
+final class TranscriptionElevenLabs implements FournisseurDOreille, FournisseurAModele, FournisseurDatable
 {
     private const URL = 'https://api.elevenlabs.io/v1/speech-to-text';
 
@@ -32,8 +36,12 @@ final class TranscriptionElevenLabs implements FournisseurDOreille
         private readonly MemoireDEpuisement $epuisement,
         private readonly LoggerInterface $logger,
         #[Autowire(env: 'ELEVENLABS_API_KEY')] private readonly string $apiKey,
-        #[Autowire(env: 'ELEVENLABS_MODELE_OREILLE')] private readonly string $modele,
+        #[Autowire(env: 'ELEVENLABS_MODELE_OREILLE')] private readonly string $modeleParDefaut,
         #[Autowire(env: 'AI_ENGINE')] private readonly string $moteurForce = '',
+        // LA POLITIQUE DE LA CONSOLE, en dernier et facultative : sans elle, ce
+        // fournisseur se comporte exactement comme avant, sur le seul `.env`.
+        // C'est ce qui permet aux harnais de test de l'ignorer sans rien perdre.
+        private readonly ?PolitiqueDesFournisseurs $politique = null,
     ) {
     }
 
@@ -49,6 +57,19 @@ final class TranscriptionElevenLabs implements FournisseurDOreille
      * d'avant le laissait arriver par accident — ce qui rendait le comportement juste
      * pour la mauvaise raison, et faux le jour où les réserves se sépareraient.
      */
+    /**
+     * LE MODÈLE À APPELER, RELU À CHAQUE FOIS.
+     *
+     * Jamais mis en cache ni figé au constructeur : c'est ce qui fait qu'un
+     * changement enregistré depuis la console part avec le MESSAGE SUIVANT, sans
+     * redémarrage. Une saisie qui ne ressemble pas à un nom de modèle est ignorée
+     * au profit du défaut du serveur — cf. ModeleChoisi.
+     */
+    public function modele(): string
+    {
+        return ModeleChoisi::pour($this->politique, 'oreille', 'elevenlabs', $this->modeleParDefaut);
+    }
+
     public function cleDEpuisement(): string
     {
         return MemoireDEpuisement::cle('credits', 'elevenlabs');
@@ -76,7 +97,7 @@ final class TranscriptionElevenLabs implements FournisseurDOreille
 
         try {
             $formulaire = new FormDataPart([
-                'model_id'      => $this->modele,
+                'model_id'      => $this->modele(),
                 'language_code' => self::LANGUES[$langue] ?? 'fra',
                 'file'          => new DataPart($wav, 'parole.wav', 'audio/wav'),
             ]);
@@ -125,5 +146,16 @@ final class TranscriptionElevenLabs implements FournisseurDOreille
         ]);
 
         return Transcription::ECHEC;
+    }
+
+    /**
+     * Le modèle que la console affiche en filigrane du champ « Modèle ».
+     *
+     * Un nom de modèle n'est pas un secret : la console est réservée aux agents
+     * Joseara, et ce nom figure dans la documentation publique du fournisseur.
+     */
+    public function modeleEnVigueur(): string
+    {
+        return $this->modele();
     }
 }

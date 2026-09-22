@@ -45,25 +45,27 @@ final class DialecteGeminiDuFil implements DialecteDuFil
     /** @var string[] modèles de secours pas encore essayés, dans l'ordre */
     private array $replisRestants;
 
+    /** Le modèle que le RÉGLAGE demandait la dernière fois qu'on a regardé. */
+    private string $modeleRegle;
+
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly \Closure $promptSysteme,
         private readonly DialecteGemini $dialecte,
         private readonly string $apiKey,
-        private readonly string $model,
-        string $modelesDeRepli,
+        // DEUX RÉSOLVEURS, PAS DEUX CHAÎNES : la console peut changer le modèle
+        // principal et la chaîne de secours entre deux messages. Ils sont donc
+        // relus, pas figés — voir `accorderAuReglage()`.
+        private readonly \Closure $modeleConfigure,
+        private readonly \Closure $replisConfigures,
         private readonly LoggerInterface $logger,
         private readonly int $maxOutputTokens,
         private readonly int $maxAttenteSecondes,
         private readonly ?\Closure $dormir = null,
         private readonly ?MemoireDEpuisement $epuisement = null,
-        private readonly string $cleDEpuisement = '',
+        private readonly ?\Closure $cleDEpuisement = null,
     ) {
-        $this->modeleCourant = $model;
-        $this->replisRestants = array_values(array_filter(
-            array_map('trim', explode(',', $modelesDeRepli)),
-            static fn (string $m): bool => $m !== '' && $m !== $model,
-        ));
+        $this->accorderAuReglage();
     }
 
     public function nom(): string
@@ -74,6 +76,43 @@ final class DialecteGeminiDuFil implements DialecteDuFil
     public function modeleCourant(): string
     {
         return $this->modeleCourant;
+    }
+
+    /**
+     * REMETTRE L'ÉTAT D'ACCORD AVEC LE RÉGLAGE EN VIGUEUR.
+     *
+     * Deux exigences qui se contredisent, et c'est tout l'objet de cette méthode.
+     *
+     * D'UN CÔTÉ, la bascule de secours ne doit PAS être remise à zéro entre deux
+     * messages : un modèle qui vient de rendre un 503 le rendra encore, et y
+     * revenir à chaque message ferait repayer un échec certain.
+     *
+     * DE L'AUTRE, un agent qui change le modèle depuis la console doit voir son
+     * choix appliqué AU MESSAGE SUIVANT — y compris, et surtout, quand le modèle
+     * courant est justement celui qui posait problème.
+     *
+     * On ne remet donc l'état à zéro que lorsque le RÉGLAGE a changé, jamais
+     * autrement. Appelée à chaque début de message, par `filInitial()`.
+     */
+    private function accorderAuReglage(): void
+    {
+        $configure = ($this->modeleConfigure)();
+        if (isset($this->modeleRegle) && $this->modeleRegle === $configure) {
+            return;
+        }
+
+        $this->modeleRegle = $configure;
+        $this->modeleCourant = $configure;
+        $this->replisRestants = array_values(array_filter(
+            array_map('trim', explode(',', (string) ($this->replisConfigures)())),
+            static fn (string $m): bool => $m !== '' && $m !== $configure,
+        ));
+    }
+
+    /** La marque d'épuisement du modèle configuré — vide quand rien ne la nomme. */
+    private function cle(): string
+    {
+        return $this->cleDEpuisement === null ? '' : ($this->cleDEpuisement)();
     }
 
     /**
@@ -88,6 +127,12 @@ final class DialecteGeminiDuFil implements DialecteDuFil
 
     public function filInitial(AiRequest $request): array
     {
+        // DÉBUT DE MESSAGE : c'est ici, et nulle part ailleurs, qu'on regarde si le
+        // réglage a changé depuis la dernière fois. `filInitial()` est appelée une
+        // fois par message par l'orchestrateur — jamais entre deux tours d'outils,
+        // ce qui laisse la bascule de secours tranquille pendant un message.
+        $this->accorderAuReglage();
+
         // Historique : notre rôle « assistant » devient « model » chez Gemini.
         return array_map(
             static fn (array $m) => [
@@ -201,12 +246,12 @@ final class DialecteGeminiDuFil implements DialecteDuFil
      */
     private function marquerASec(?int $secondes): void
     {
-        if ($this->epuisement === null || $this->cleDEpuisement === '') {
+        if ($this->epuisement === null || $this->cle() === '') {
             return;
         }
 
         $this->epuisement->marquer(
-            $this->cleDEpuisement,
+            $this->cle(),
             $secondes ?? MemoireDEpuisement::jusquAMinuitPacifique(),
         );
         $this->logger->notice('Assistant IA (gemini) : moteur marqué à sec, il sera écarté de la chaîne.', [

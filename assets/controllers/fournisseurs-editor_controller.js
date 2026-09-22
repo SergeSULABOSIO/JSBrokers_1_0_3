@@ -16,13 +16,37 @@ import { Controller } from '@hotwired/stimulus';
  * la politique, et les voyants ne font que refléter ce que le serveur a constaté
  * — clé présente, fournisseur à sec, et jusqu'à quand.
  *
+ * ── CE QUE L'AUDIT D'ERGONOMIE DU 2026-09-22 A CHANGÉ ────────────────────────
+ *
+ * DES COMMANDES NATIVES, PAS DES GLYPHES. La première version dessinait ☑ / ☐
+ * dans un `<button>` : personne n'y reconnaissait une case à cocher, et un lecteur
+ * d'écran annonçait « bouton ☑ » (WCAG 4.1.2, Bastien & Scapin > Signifiance).
+ * On utilise donc les commandes du navigateur — `<input type="checkbox">` pour
+ * l'activation, `<input type="radio">` pour le mode — avec le nom du fournisseur
+ * en étiquette CLIQUABLE. Gratuit et non négociable : rôle correct, navigation
+ * clavier, groupe de radios parcourable aux flèches, anneau de focus.
+ *
+ * LE MODE EST UN CHOIX EXCLUSIF, donc deux radios et non deux bascules.
+ * `aria-pressed` sur une paire dont exactement une est active est un contresens :
+ * le mapping naturel d'un choix exclusif, c'est le groupe de radios
+ * (Bastien & Scapin > Compatibilité).
+ *
+ * L'ÉTIQUETTE N'EST PAS UN PLACEHOLDER. « Modèle » est écrit à côté du champ ;
+ * le filigrane, lui, sert à autre chose : montrer le modèle RÉELLEMENT en vigueur
+ * (WCAG 3.3.2 — un placeholder ne remplace jamais un label, et « modèle par
+ * défaut » ne disait même pas LEQUEL).
+ *
+ * CHAQUE GESTE S'ANNONCE. Réordonner ou décocher ne changeait rien de perceptible
+ * pour qui n'a pas la liste sous les yeux : une région `aria-live` dit désormais
+ * ce qui vient de se passer (WCAG 4.1.3).
+ *
  * DES FLÈCHES, PAS DU GLISSER-DÉPOSER. Une liste de deux à trois éléments se
  * réordonne plus vite avec deux boutons qu'avec un glisser-déposer, et les
  * flèches restent utilisables au clavier et sur un écran tactile — la console
  * s'ouvre aussi sur une tablette.
  */
 export default class extends Controller {
-    static targets = ['champ', 'liste', 'mode'];
+    static targets = ['champ', 'liste', 'mode', 'aide', 'annonce'];
 
     static values = { famille: String, etat: Array };
 
@@ -73,30 +97,72 @@ export default class extends Controller {
         return this.etatValue.find((f) => f.nom === nom) || {};
     }
 
-    render() {
+    /**
+     * Ce qui vient de se passer, dit à voix haute pour les lecteurs d'écran.
+     * Rendre la liste ne suffit pas : un changement silencieux du DOM ne s'annonce
+     * pas tout seul (WCAG 4.1.3 Messages d'état).
+     */
+    annoncer(phrase) {
+        if (this.hasAnnonceTarget) {
+            this.annonceTarget.textContent = phrase;
+        }
+    }
+
+    render(annonce = '') {
         this.renderMode();
         this.renderListe();
         this.ecrire();
+        if (annonce !== '') { this.annoncer(annonce); }
     }
 
     renderMode() {
         this.modeTarget.innerHTML = '';
+        // Un vrai groupe de radios : le navigateur fournit le rôle, le parcours aux
+        // flèches et l'exclusivité. Le `name` porte le préfixe `kf-` et reste donc
+        // HORS de l'espace de noms `ket_fournisseurs[…]` du formulaire : Symfony
+        // l'ignore, seul le champ caché compte.
+        const groupe = `kf-mode-${this.familleValue}`;
+
         [['chaine', 'Chaîné'], ['epingle', 'Épinglé']].forEach(([valeur, libelle]) => {
-            const bouton = document.createElement('button');
-            bouton.type = 'button';
-            bouton.textContent = libelle;
-            bouton.setAttribute('aria-pressed', String(this.politique.mode === valeur));
-            bouton.addEventListener('click', () => {
+            const label = document.createElement('label');
+            label.className = 'kf-mode__choix';
+
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = groupe;
+            radio.value = valeur;
+            radio.checked = this.politique.mode === valeur;
+            radio.addEventListener('change', () => {
                 this.politique.mode = valeur;
-                this.render();
+                this.render(`Mode ${libelle} : ${this.phraseDuMode(valeur)}`);
             });
-            this.modeTarget.appendChild(bouton);
+
+            const texte = document.createElement('span');
+            texte.textContent = libelle;
+
+            label.appendChild(radio);
+            label.appendChild(texte);
+            this.modeTarget.appendChild(label);
         });
+
+        // Ce que le mode choisi VEUT DIRE, sous les deux pastilles : deux mots ne
+        // suffisent pas à s'en souvenir d'un écran à l'autre (Nielsen 6,
+        // reconnaissance plutôt que rappel).
+        if (this.hasAideTarget) {
+            this.aideTarget.textContent = this.phraseDuMode(this.politique.mode);
+        }
+    }
+
+    phraseDuMode(mode) {
+        return mode === 'epingle'
+            ? 'seul le premier fournisseur coché est appelé — aucun repli s’il ne peut pas répondre.'
+            : 'les fournisseurs cochés sont essayés de haut en bas ; le premier qui peut répondre répond.';
     }
 
     renderListe() {
         this.listeTarget.innerHTML = '';
         const rangs = this.rangs();
+        const actifs = rangs.filter((r) => r.actif).length;
 
         rangs.forEach((rang, index) => {
             const etat = this.etatDe(rang.nom);
@@ -104,55 +170,121 @@ export default class extends Controller {
             li.className = 'kf-item';
             li.dataset.actif = rang.actif ? '1' : '0';
 
-            li.appendChild(this.boutonActif(rang));
-            li.appendChild(this.nom(rang, index));
-            li.appendChild(this.reglage(rang.nom));
-            li.appendChild(this.voyant(etat));
-            li.appendChild(this.fleches(rang, index, rangs.length));
+            // TOUJOURS CINQ ENFANTS, quoi qu'il arrive : la ligne est une grille, et
+            // c'est ce qui aligne les champs d'une ligne à l'autre. Un enfant en
+            // moins décalerait toute la ligne d'une colonne.
+            li.appendChild(this.position(rang, index));
+            li.appendChild(this.bascule(rang, index));
+            li.appendChild(this.reglage(rang.nom, etat));
+            li.appendChild(this.etat(etat, rang.nom));
+            li.appendChild(this.fleches(rang, index, actifs));
 
             this.listeTarget.appendChild(li);
         });
     }
 
-    boutonActif(rang) {
-        const bouton = document.createElement('button');
-        bouton.type = 'button';
-        bouton.className = 'kf-actif';
-        bouton.textContent = rang.actif ? '☑' : '☐';
-        bouton.title = rang.actif ? 'Retirer de la liste : il ne sera plus appelé' : 'Remettre dans la liste';
-        bouton.addEventListener('click', () => {
-            if (rang.actif) {
-                this.politique.ordre = this.politique.ordre.filter((n) => n !== rang.nom);
-            } else {
-                this.politique.ordre.push(rang.nom);
-            }
-            this.render();
-        });
+    /**
+     * LA CELLULE D'ÉTAT : le voyant, et l'action quand il y en a une.
+     *
+     * Le réarmement est une ACTION, pas un état — il sort donc de la pastille qui
+     * décrit l'état, sans quoi on lisait « à sec jusqu’à 10:05 Réarmer » d'un seul
+     * tenant et le bouton passait inaperçu.
+     */
+    etat(etat, nom) {
+        const cellule = document.createElement('span');
+        cellule.className = 'kf-item__etat';
+        cellule.appendChild(this.voyant(etat, nom));
+        if (etat.disponible && etat.epuise && etat.cle) {
+            cellule.appendChild(this.rearmer(etat, nom));
+        }
 
-        return bouton;
+        return cellule;
     }
 
-    nom(rang, index) {
+    /** Le rang d'appel, en clair : « chaîné » comme « épinglé » parlent d'ordre. */
+    position(rang, index) {
         const span = document.createElement('span');
-        span.className = 'kf-item__nom';
-        // En mode épinglé, seul le premier ACTIF répond : le dire ici évite de
-        // laisser croire que les suivants servent de repli.
-        const epingle = this.politique.mode === 'epingle' && rang.actif && index === 0;
-        span.textContent = rang.nom + (epingle ? ' — seul appelé' : '');
+        span.className = 'kf-item__position';
+        span.textContent = rang.actif ? String(index + 1) : '–';
+        // Décoratif pour les lecteurs d'écran : le rang est déjà porté par l'ordre
+        // de la liste et par l'annonce qui suit chaque déplacement.
+        span.setAttribute('aria-hidden', 'true');
+        span.title = rang.actif ? `Essayé en position ${index + 1}` : 'Hors liste : jamais appelé';
 
         return span;
     }
 
-    reglage(nom) {
+    /** La vraie case à cocher, avec le nom du fournisseur pour étiquette cliquable. */
+    bascule(rang, index) {
+        const label = document.createElement('label');
+        label.className = 'kf-item__bascule';
+
+        const caseACocher = document.createElement('input');
+        caseACocher.type = 'checkbox';
+        caseACocher.className = 'form-check-input';
+        caseACocher.checked = rang.actif;
+        caseACocher.addEventListener('change', () => {
+            this.politique.ordre = rang.actif
+                ? this.politique.ordre.filter((n) => n !== rang.nom)
+                : [...this.politique.ordre, rang.nom];
+            this.render(rang.actif
+                ? `${rang.nom} est écarté : il ne sera plus appelé.`
+                : `${rang.nom} est remis dans la liste.`);
+        });
+        label.appendChild(caseACocher);
+
+        const nom = document.createElement('span');
+        nom.className = 'kf-item__nom';
+        nom.textContent = rang.nom;
+        label.appendChild(nom);
+
+        const mention = this.mention(rang, index);
+        if (mention !== '') {
+            const etiquette = document.createElement('span');
+            etiquette.className = 'kf-item__mention';
+            etiquette.textContent = mention;
+            label.appendChild(etiquette);
+        }
+
+        return label;
+    }
+
+    /** Ce qui arrivera vraiment à cette ligne, compte tenu du mode et du rang. */
+    mention(rang, index) {
+        if (!rang.actif) { return 'écarté'; }
+        if (this.politique.mode !== 'epingle') { return ''; }
+
+        return index === 0 ? 'seul appelé' : 'jamais atteint';
+    }
+
+    reglage(nom, etat) {
         const conteneur = document.createElement('span');
         conteneur.className = 'kf-item__reglage';
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.placeholder = 'modèle par défaut';
-        input.value = (this.politique.reglages[nom] && this.politique.reglages[nom].modele) || '';
-        input.setAttribute('aria-label', `Modèle de ${nom}`);
-        input.addEventListener('input', () => {
-            const valeur = input.value.trim();
+
+        const champ = document.createElement('input');
+        champ.type = 'text';
+        champ.id = `kf-modele-${this.familleValue}-${nom}`;
+
+        // UNE ÉTIQUETTE VISIBLE, liée au champ. Un filigrane n'est pas une
+        // étiquette : il disparaît à la saisie et n'est pas toujours restitué
+        // (WCAG 3.3.2, Bastien & Scapin > Guidage).
+        const intitule = document.createElement('label');
+        intitule.className = 'kf-item__reglage-nom';
+        intitule.textContent = 'Modèle';
+        intitule.setAttribute('for', champ.id);
+        conteneur.appendChild(intitule);
+
+        // Le filigrane sert alors à ce qu'il sait faire de mieux : montrer la valeur
+        // RÉELLEMENT en vigueur, celle qu'on garde en laissant le champ vide.
+        champ.placeholder = etat.modele || 'modèle du serveur';
+        champ.value = (this.politique.reglages[nom] && this.politique.reglages[nom].modele) || '';
+        champ.setAttribute('aria-label', `Modèle de ${nom}`);
+        champ.setAttribute('aria-describedby', `kf-aide-modele-${this.familleValue}`);
+        champ.title = etat.modele
+            ? `Laissez vide pour garder le modèle du serveur (${etat.modele}).`
+            : 'Laissez vide pour garder le modèle du serveur.';
+        champ.addEventListener('input', () => {
+            const valeur = champ.value.trim();
             if (valeur === '') {
                 // Vider le champ REND le défaut du serveur : on retire la clé plutôt
                 // que d'enregistrer une chaîne vide, qui serait un modèle inexistant.
@@ -173,39 +305,52 @@ export default class extends Controller {
             }
             this.ecrire();
         });
-        conteneur.appendChild(input);
+        conteneur.appendChild(champ);
 
         return conteneur;
     }
 
-    voyant(etat) {
+    /**
+     * L'état constaté par le serveur. Le MOT porte l'information, jamais la seule
+     * couleur (WCAG 1.4.1) ; la pastille ne fait que la redire plus vite.
+     */
+    voyant(etat, nom) {
         const span = document.createElement('span');
         if (!etat.disponible) {
             span.className = 'kf-voyant kf-voyant--absent';
-            span.textContent = 'clé absente';
+            // « non configuré » et non « clé absente » : la disponibilité ne tient pas
+            // qu'à la clé. Une voix ElevenLabs sans identifiant de voix, une oreille
+            // Gemini sans modèle, un moteur forcé sur le simulé sont tout aussi
+            // indisponibles — et « clé absente » aurait envoyé chercher au mauvais
+            // endroit. Vérifié dans les cinq `estDisponible()` le 2026-09-22.
+            span.textContent = 'non configuré';
+            span.title = `${nom} n’est pas configuré sur ce serveur (clé d’API, voix ou modèle manquant) : cela se règle dans la configuration du serveur, pas ici.`;
 
             return span;
         }
         if (etat.epuise) {
             span.className = 'kf-voyant kf-voyant--sec';
             span.textContent = etat.echeance ? `à sec jusqu’à ${this.heure(etat.echeance)}` : 'à sec';
-            span.appendChild(document.createTextNode(' '));
-            span.appendChild(this.rearmer(etat));
+            span.title = `${nom} s’est déclaré épuisé : il n’est plus interrogé jusqu’à cette heure.`;
 
             return span;
         }
         span.className = 'kf-voyant kf-voyant--ok';
         span.textContent = 'prêt';
+        span.title = `${nom} a sa clé et aucun quota épuisé : il peut répondre.`;
 
         return span;
     }
 
-    rearmer(etat) {
+    rearmer(etat, nom) {
         const bouton = document.createElement('button');
         bouton.type = 'button';
         bouton.className = 'kf-rearmer';
         bouton.textContent = 'Réarmer';
-        bouton.title = 'Rendre ce fournisseur interrogeable tout de suite';
+        // L'intitulé visible reste court, mais hors contexte « Réarmer » ne dit pas
+        // QUOI : le nom du fournisseur est donné au lecteur d'écran (WCAG 2.4.4).
+        bouton.setAttribute('aria-label', `Réarmer ${nom} maintenant`);
+        bouton.title = `Effacer la marque d’épuisement de ${nom} et le rendre interrogeable tout de suite`;
         bouton.addEventListener('click', () => {
             const formulaire = document.getElementById('kf-rearmer-form');
             const cle = document.getElementById('kf-rearmer-cle');
@@ -227,6 +372,11 @@ export default class extends Controller {
             : date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     }
 
+    /**
+     * `total` compte les ACTIFS, pas les lignes : les décochés sont rendus après
+     * eux et n'ont pas de flèches. Le compter sur les lignes laissait la flèche du
+     * bas cliquable sur le dernier actif — pour un geste sans effet.
+     */
     fleches(rang, index, total) {
         const conteneur = document.createElement('span');
         conteneur.className = 'kf-fleches';
@@ -236,7 +386,8 @@ export default class extends Controller {
             const bouton = document.createElement('button');
             bouton.type = 'button';
             bouton.textContent = glyphe;
-            bouton.title = titre;
+            bouton.setAttribute('aria-label', `${titre} ${rang.nom}`);
+            bouton.title = `${titre} ${rang.nom}`;
             bouton.disabled = (pas < 0 && index === 0) || (pas > 0 && index >= total - 1);
             bouton.addEventListener('click', () => {
                 const position = this.politique.ordre.indexOf(rang.nom);
@@ -244,7 +395,7 @@ export default class extends Controller {
                 if (position < 0 || cible < 0 || cible >= this.politique.ordre.length) { return; }
                 const ordre = this.politique.ordre;
                 [ordre[position], ordre[cible]] = [ordre[cible], ordre[position]];
-                this.render();
+                this.render(`${rang.nom} passe en position ${cible + 1}.`);
             });
             conteneur.appendChild(bouton);
         });

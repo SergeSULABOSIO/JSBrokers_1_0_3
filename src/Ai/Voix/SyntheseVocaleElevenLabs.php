@@ -2,7 +2,11 @@
 
 namespace App\Ai\Voix;
 
+use App\Ai\Fournisseur\FournisseurAModele;
+use App\Ai\Fournisseur\FournisseurDatable;
 use App\Ai\Fournisseur\MemoireDEpuisement;
+use App\Ai\Fournisseur\ModeleChoisi;
+use App\Ai\Fournisseur\PolitiqueDesFournisseurs;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -19,7 +23,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * commerciale — il sert aux tests. En production, la clé n'est posée qu'avec un plan
  * payant (Starter) ; sans clé, ce fournisseur est simplement indisponible.
  */
-final class SyntheseVocaleElevenLabs implements FournisseurDeVoix
+final class SyntheseVocaleElevenLabs implements FournisseurDeVoix, FournisseurAModele, FournisseurDatable
 {
     private const URL = 'https://api.elevenlabs.io/v1/text-to-speech/%s/stream?output_format=pcm_24000';
 
@@ -33,13 +37,16 @@ final class SyntheseVocaleElevenLabs implements FournisseurDeVoix
         private readonly MemoireDEpuisement $epuisement,
         private readonly LoggerInterface $logger,
         #[Autowire(env: 'ELEVENLABS_API_KEY')] private readonly string $apiKey,
-        #[Autowire(env: 'ELEVENLABS_VOIX_KET')] private readonly string $voix,
-        #[Autowire(env: 'ELEVENLABS_MODELE')] private readonly string $modele,
+        #[Autowire(env: 'ELEVENLABS_VOIX_KET')] private readonly string $voixParDefaut,
+        #[Autowire(env: 'ELEVENLABS_MODELE')] private readonly string $modeleParDefaut,
         // MODE LIVE : le modèle rapide. Mesuré le 2026-09-17 sur la voix Bella —
         // premier son à 1,2 s contre 2,3 s, et deux fois moins de crédits. Dans une
         // conversation parlée, cette seconde compte plus que la richesse de diction.
-        #[Autowire(env: 'ELEVENLABS_MODELE_LIVE')] private readonly string $modeleLive,
+        #[Autowire(env: 'ELEVENLABS_MODELE_LIVE')] private readonly string $modeleLiveParDefaut,
         #[Autowire(env: 'AI_ENGINE')] private readonly string $moteurForce = '',
+        // LA POLITIQUE DE LA CONSOLE, en dernier et facultative : sans elle, cette
+        // voix se comporte exactement comme avant, sur le seul `.env`.
+        private readonly ?PolitiqueDesFournisseurs $politique = null,
     ) {
     }
 
@@ -50,7 +57,7 @@ final class SyntheseVocaleElevenLabs implements FournisseurDeVoix
 
     public function voix(): string
     {
-        return $this->voix;
+        return ModeleChoisi::pour($this->politique, 'voix', 'elevenlabs', $this->voixParDefaut, 'voix');
     }
 
     /**
@@ -67,13 +74,19 @@ final class SyntheseVocaleElevenLabs implements FournisseurDeVoix
 
     public function estDisponible(): bool
     {
-        return trim($this->apiKey) !== '' && trim($this->voix) !== ''
+        return trim($this->apiKey) !== '' && trim($this->voix()) !== ''
             && strtolower(trim($this->moteurForce)) !== 'simulated';
     }
 
     public function modele(bool $vitesse = false): string
     {
-        return $vitesse && trim($this->modeleLive) !== '' ? $this->modeleLive : $this->modele;
+        // RELU À CHAQUE APPEL, jamais figé au constructeur : un modèle changé depuis
+        // la console part avec la lecture suivante, sans redémarrage.
+        $live = ModeleChoisi::pour($this->politique, 'voix', 'elevenlabs', $this->modeleLiveParDefaut, 'modeleLive');
+
+        return $vitesse && trim($live) !== ''
+            ? $live
+            : ModeleChoisi::pour($this->politique, 'voix', 'elevenlabs', $this->modeleParDefaut);
     }
 
     public function estEpuise(): bool
@@ -93,7 +106,7 @@ final class SyntheseVocaleElevenLabs implements FournisseurDeVoix
 
         $emis = 0;
         try {
-            $reponse = $this->httpClient->request('POST', sprintf(self::URL, rawurlencode($this->voix)), [
+            $reponse = $this->httpClient->request('POST', sprintf(self::URL, rawurlencode($this->voix())), [
                 'headers' => ['xi-api-key' => $this->apiKey, 'content-type' => 'application/json', 'accept' => 'audio/pcm'],
                 'json'    => [
                     'text'           => $texte,
@@ -158,5 +171,16 @@ final class SyntheseVocaleElevenLabs implements FournisseurDeVoix
         ]);
 
         return self::ECHEC;
+    }
+
+    /**
+     * Le modèle que la console affiche en filigrane du champ « Modèle ».
+     *
+     * Un nom de modèle n'est pas un secret : la console est réservée aux agents
+     * Joseara, et ce nom figure dans la documentation publique du fournisseur.
+     */
+    public function modeleEnVigueur(): string
+    {
+        return $this->modele();
     }
 }
