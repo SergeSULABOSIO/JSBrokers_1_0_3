@@ -337,6 +337,33 @@ class ConsoleKetFournisseursTest extends WebTestCase
         );
     }
 
+    /**
+     * LES RÉGLAGES VOYAGENT COMME UN DICTIONNAIRE, JAMAIS COMME UNE LISTE.
+     *
+     * `json_encode([])` rend `[]`. L'éditeur relit ce JSON et y range les réglages
+     * par nom de fournisseur : en JavaScript, poser une propriété nommée sur un
+     * TABLEAU fonctionne, mais `JSON.stringify` la jette EN SILENCE. Un modèle
+     * saisi dans la console repartait donc vide, sans la moindre erreur — et comme
+     * `reglages` est vide sur toute plateforme qui n'a rien personnalisé, c'était
+     * le cas GÉNÉRAL. Constaté le 2026-09-22 en relisant la politique réellement
+     * enregistrée en base.
+     */
+    public function testLesReglagesSontUnDictionnaireMemeQuandIlsSontVides(): void
+    {
+        $this->client->loginUser($this->user(self::SUPER));
+        $crawler = $this->client->request('GET', self::URL);
+
+        foreach (['moteur', 'comprehension', 'dictee', 'voix', 'oreille'] as $famille) {
+            $brut = $crawler->filter(sprintf('input[name="ket_fournisseurs[%sJson]"]', $famille))->attr('value');
+            self::assertStringNotContainsString(
+                '"reglages": []',
+                (string) $brut,
+                sprintf('Famille « %s » : des réglages en TABLEAU perdent en silence tout modèle saisi.', $famille),
+            );
+            self::assertStringContainsString('"reglages": {', (string) $brut, sprintf('Famille « %s ».', $famille));
+        }
+    }
+
     /** Un réarmement sans jeton CSRF valide ne doit rien effacer. */
     public function testUnRearmementSansJetonNeFaitRien(): void
     {

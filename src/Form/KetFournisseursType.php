@@ -31,11 +31,38 @@ class KetFournisseursType extends AbstractType
             $builder->add($famille . 'Json', HiddenType::class, [
                 'mapped' => false,
                 'data'   => json_encode(
-                    $options['politique'][$famille] ?? [],
+                    self::lisiblePourLEditeur($options['politique'][$famille] ?? []),
                     JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
                 ),
             ]);
         }
+    }
+
+    /**
+     * UN DICTIONNAIRE VIDE DOIT RESTER UN DICTIONNAIRE, PAS DEVENIR UNE LISTE.
+     *
+     * `json_encode([])` rend `[]`. Or l'éditeur relit ce JSON et y range les
+     * réglages par nom de fournisseur : en JavaScript, poser une propriété nommée
+     * sur un TABLEAU fonctionne… mais `JSON.stringify` la jette en silence. Un
+     * modèle saisi dans la console repartait donc vide, sans la moindre erreur —
+     * et comme `reglages` est vide sur toute plateforme qui n'a rien personnalisé,
+     * c'était le cas GÉNÉRAL. Constaté le 2026-09-22 en relisant la politique
+     * réellement enregistrée en base.
+     *
+     * Le forcer en objet ici règle la question à la source. L'éditeur s'en protège
+     * aussi de son côté : deux gardes valent mieux qu'une pour un défaut muet.
+     *
+     * @param array<string, mixed> $famille
+     *
+     * @return array<string, mixed>
+     */
+    private static function lisiblePourLEditeur(array $famille): array
+    {
+        if (($famille['reglages'] ?? null) === []) {
+            $famille['reglages'] = new \stdClass();
+        }
+
+        return $famille;
     }
 
     public function configureOptions(OptionsResolver $resolver): void
