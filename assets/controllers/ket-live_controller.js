@@ -30,7 +30,7 @@ import { veilleDeLEcoute } from './ket-live-veille.js';
  * ici, il ne reste que le branchement aux API du navigateur.
  */
 export default class extends Controller {
-    static targets = ['panneau', 'etat', 'parole', 'barres', 'astuce', 'parler', 'mainsLibres'];
+    static targets = ['panneau', 'etat', 'parole', 'barres', 'astuce', 'avis', 'parler', 'mainsLibres'];
 
     static values = {
         transcrireUrl: String,
@@ -365,12 +365,17 @@ export default class extends Controller {
     /** L'interface : panneau visible, état écrit (et annoncé), dernière phrase entendue. */
     _rendre() {
         const actif = this.session.etat !== ETATS.ARRET;
-        // UNE RAISON SURVIT À L'ARRÊT. Sans cela, une session qui s'arrête FAUTE DE
-        // POUVOIR ENTENDRE emporte avec elle la seule ligne qui l'explique : le
-        // panneau se referme, et l'utilisateur n'a plus rien à lire. C'est
-        // exactement le « aucun retour, ni message » signalé le 2026-09-23.
+        // UNE RAISON SURVIT À L'ARRÊT — mais PAS dans le panneau. L'y garder ouvert
+        // laissait DEUX zones de saisie superposées : celle du chat, qui revient dès
+        // que la session s'arrête, et le panneau du Live par-dessus. Constaté le
+        // 2026-09-23. La raison passe donc dans un avis d'une ligne, au-dessus du
+        // champ, là où elle se lit sans rien encombrer.
         const explique = !actif && typeof this._raisonSourde === 'string' && this._raisonSourde !== '';
-        const visible = actif || explique;
+        if (this.hasAvisTarget) {
+            this.avisTarget.hidden = !explique;
+            if (explique) this.avisTarget.textContent = this._raisonSourde;
+        }
+        const visible = actif;
         if (this.hasPanneauTarget) {
             this.panneauTarget.hidden = !visible;
             this.panneauTarget.classList.toggle('aic-live--reflexion', this.session.etat === ETATS.REFLEXION);
