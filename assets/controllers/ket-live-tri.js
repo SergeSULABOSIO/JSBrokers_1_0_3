@@ -141,8 +141,20 @@ export function priseRecevable(prise, instantMs = 0, margeProche = MARGE_PROCHE)
     const marge = prise?.marge ?? 0;
     const verdict = (recevable, motif) => ({ recevable, motif, marge });
 
-    // AUCUNE VOIX N'A ÉTÉ ENTENDUE devant ce micro-ci.
-    if (!prise) return verdict(false, 'muet');
+    // ⚠ ON NE REJETTE QUE SUR UNE PREUVE, JAMAIS SUR SON ABSENCE.
+    //
+    // Le coût des deux erreurs n'a rien de comparable. Laisser passer un bruit, c'est
+    // une réponse inutile de Ket. Écarter une vraie question, c'est la faire
+    // DISPARAÎTRE : l'utilisateur répète, plus fort, puis renonce — trois questions
+    // perdues dans une seule session courte, relevées en production le 2026-09-23
+    // (« est-ce que tu comprends parfaitement ce que j'ai dit », « vérifie si je n'ai
+    // pas de sinistre en 2026 »).
+    //
+    // AUCUNE SALVE N'A ÉTÉ ENTENDUE devant ce micro-ci : cela ne prouve rien. Notre
+    // détecteur peut n'avoir rien vu passer — seuil trop haut pour un micro discret,
+    // parole pendant que Ket parlait, capture rendue à la reconnaissance. On accepte,
+    // et l'on nomme cette ignorance pour ce qu'elle est.
+    if (!prise) return verdict(true, 'sans-preuve');
 
     // UNE VOIX A BIEN ÉTÉ ENTENDUE, MAIS IL Y A LONGTEMPS — ce n'est pas la même chose,
     // et les confondre a coûté cher. Relevé en production le 2026-09-23 :
@@ -150,13 +162,18 @@ export function priseRecevable(prise, instantMs = 0, margeProche = MARGE_PROCHE)
     // micro avait parfaitement capté une voix forte et proche ; seule la reconnaissance
     // avait tardé à finaliser son texte. Dire « le micro n'a rien capté » était faux, et
     // envoyait chercher au mauvais endroit.
-    if (!prise.enCours && instantMs - prise.finMs > FENETRE_MS) return verdict(false, 'tardif');
+    // UNE SALVE ANCIENNE NE PROUVE RIEN NON PLUS. La reconnaissance finalise quand
+    // elle veut : dix secondes de retard ont été mesurées, et rien ne garantit que
+    // c'est un maximum. Rejeter là-dessus revenait à punir une lenteur du navigateur.
+    if (!prise.enCours && instantMs - prise.finMs > FENETRE_MS) return verdict(true, 'tardif');
 
     // Une salve trop brève n'est pas une phrase. Une salve EN COURS y échappe : la
     // reconnaissance peut finaliser un premier mot avant que la phrase soit finie.
     if (!prise.enCours && prise.dureeMs < DUREE_MIN_MS) return verdict(false, 'souffle');
 
-    // LE FILTRE QUI COMPTE : de trop loin, ce n'était pas pour Ket.
+    // LE SEUL FILTRE QUI REJETTE ENCORE, ET C'EST UNE PREUVE POSITIVE : une salve a
+    // bien été entendue, FRAÎCHE, et elle venait de loin. C'est la signature d'une
+    // télévision ou d'une conversation voisine — pas de quelqu'un qui parle à Ket.
     if (marge < margeProche) return verdict(false, 'loin');
 
     return verdict(true, 'recevable');
@@ -349,12 +366,10 @@ export function phraseRecevable(demande = {}) {
  * avertissements qui comptent.
  */
 export const MESSAGES_DE_REJET = {
-    muet: 'Entendu, mais le micro n’a rien capté de votre voix : rapprochez-vous, ou rechargez la page.',
     loin: 'Entendu, mais jugé trop loin du micro : rapprochez-vous et répétez.',
     souffle: 'Trop bref pour être une phrase : parlez un peu plus longuement.',
     tic: 'Seulement un bruit de bouche — rien à transmettre.',
     echo: 'C’était la voix de Ket que le micro a reprise, pas la vôtre.',
-    tardif: 'Entendu, mais trop longtemps après que vous ayez parlé : répétez.',
 };
 
 /**

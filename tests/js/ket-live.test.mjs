@@ -386,11 +386,21 @@ test('un texte qu’aucune voix n’accompagne n’entre jamais dans la conversa
     // Et les deux cas sont désormais nommés séparément — « muet » quand rien n'a été
     // entendu, « tardif » quand ça l'a été trop tôt : l'écran ne dira plus « le micro
     // n'a rien capté » alors qu'il a capté.
+    // ⚠ CE TEST A CHANGÉ DE CAMP LE 2026-09-23, ET C'EST ASSUMÉ. Il exigeait qu'une
+    // phrase sans salve fraîche soit ÉCARTÉE. Trois vraies questions perdues dans une
+    // seule session de production ont montré le prix de cette exigence : l'utilisateur
+    // répète, plus fort, puis renonce. On ne rejette donc plus que sur une PREUVE
+    // POSITIVE — une salve fraîche, mais lointaine (cf. « loin »). L'absence de salve
+    // ne prouve rien : notre détecteur peut simplement n'avoir rien vu passer.
     const rien = phraseRecevable({ texte: 'la télévision parle', priseDeParole: null, instantMs: 1500 });
     const vieux = phraseRecevable({ texte: 'la télévision parle', priseDeParole: prise(9, 900, 1000), instantMs: 18000 });
 
-    assert.deepEqual([rien.recevable, rien.motif], [false, 'muet']);
-    assert.deepEqual([vieux.recevable, vieux.motif], [false, 'tardif'], 'une salve d’il y a dix-sept secondes n’est pas un alibi');
+    assert.deepEqual([rien.recevable, rien.motif], [true, 'sans-preuve']);
+    assert.deepEqual([vieux.recevable, vieux.motif], [true, 'tardif']);
+
+    // CE QUI PROTÈGE ENCORE DE LA TÉLÉVISION : une salve fraîche et LOINTAINE.
+    const loin = phraseRecevable({ texte: 'la télévision parle', priseDeParole: prise(1, 900), instantMs: 1500 });
+    assert.deepEqual([loin.recevable, loin.motif], [false, 'loin']);
 });
 
 test('un bruit bref n’est pas une phrase', () => {
@@ -858,13 +868,15 @@ test('chaque motif de rejet a un message qui dit quoi FAIRE', () => {
     // Le défaut du 2026-09-23 : une phrase parfaitement reconnue puis écartée EN
     // SILENCE. L'utilisateur répète, plus fort, puis conclut que Ket est sourde.
     // Un motif sans message, c'est ce silence-là qui revient.
-    for (const motif of ['muet', 'loin', 'souffle', 'tic', 'echo']) {
+    for (const motif of ['loin', 'souffle', 'tic', 'echo']) {
         const message = messageDeRejet(motif);
         assert.ok(message.length > 20, `« ${motif} » doit être expliqué`);
     }
     // Les deux motifs les plus fréquents doivent proposer un geste, pas un constat.
     assert.match(messageDeRejet('loin'), /rapprochez-vous/i);
-    assert.match(messageDeRejet('muet'), /rapprochez-vous|rechargez/i);
+    // Un motif ACCEPTÉ n'a pas de message : on ne reproche rien à qui a été entendu.
+    assert.equal(messageDeRejet('sans-preuve'), '');
+    assert.equal(messageDeRejet('tardif'), '');
 });
 
 test('un silence ne se reproche pas', () => {
@@ -955,13 +967,16 @@ test('une salve forte mais ancienne n’est plus déclarée « muette »', () =>
     // rien capté » était faux, et envoyait chercher au mauvais endroit.
     const forte = { enCours: false, finMs: 0, dureeMs: 1200, marge: 17.9 };
     const verdict = juger(forte, FENETRE_MS + 1);
+    assert.equal(verdict.recevable, true, 'une lenteur de la reconnaissance ne se punit pas');
     assert.equal(verdict.motif, 'tardif');
-    assert.notEqual(verdict.motif, 'muet');
-    assert.match(messageDeRejet('tardif'), /trop longtemps après/);
 });
 
-test('« muet » reste réservé au cas où RIEN n’a été entendu', () => {
-    assert.equal(juger(null, 1000).motif, 'muet');
+test('sans la moindre salve, on accepte et on le dit', () => {
+    // « sans-preuve » n'est pas un reproche : c'est l'aveu que notre micro n'a rien
+    // vu passer, ce qui ne dit RIEN de ce que la reconnaissance, elle, a entendu.
+    const verdict = juger(null, 1000);
+    assert.equal(verdict.recevable, true);
+    assert.equal(verdict.motif, 'sans-preuve');
 });
 
 test('la fenêtre laisse à la reconnaissance le temps de finaliser', () => {
@@ -970,7 +985,7 @@ test('la fenêtre laisse à la reconnaissance le temps de finaliser', () => {
     // aléatoire » selon l'utilisateur — selon que la reconnaissance avait été rapide.
     const salve = { enCours: false, finMs: 0, dureeMs: 1200, marge: 17.9 };
     assert.equal(juger(salve, 8000).recevable, true, 'huit secondes de latence restent acceptables');
-    assert.ok(FENETRE_MS >= 10000, 'la latence de finalisation d’Android se compte en secondes');
+    assert.equal(juger(salve, 60000).recevable, true, 'une minute non plus ne se punit plus');
 });
 
 /* ──── Une longue phrase n'est pas un écho ─────────────────────────────────── */
