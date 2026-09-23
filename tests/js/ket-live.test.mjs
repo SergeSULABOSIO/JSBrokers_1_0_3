@@ -15,6 +15,7 @@ import { choisir, programmeDesIntermedes, RELANCES_MAX } from '../../assets/cont
 import { finalesNouvelles, MARGE_PROCHE, messageDeRejet, nEstQueDesTics, phraseRecevable, ressembleAKet, retirerLaVoixDeKet } from '../../assets/controllers/ket-live-tri.js';
 import { CAUSE_INCONNUE, CAUSES_MICRO, renoncementAuMicro } from '../../assets/controllers/ket-live-micro.js';
 import { RIEN_ENTENDU, SANS_TRAME_AVANT_DE_LACHER_MS, SILENCE_AVANT_DE_LE_DIRE_MS, veilleDeLEcoute } from '../../assets/controllers/ket-live-veille.js';
+import { fusionnerTranscripts } from '../../assets/controllers/dictee-transcript.js';
 
 // ── Détection de parole ──────────────────────────────────────────────────────
 
@@ -847,4 +848,41 @@ test('un silence ne se reproche pas', () => {
     assert.equal(messageDeRejet('vide'), '');
     assert.equal(messageDeRejet('motif-jamais-vu'), '');
     assert.equal(messageDeRejet(undefined), '');
+});
+
+/* ──── Le recollage des reprises d'Android : fusionner, jamais concatener ──── */
+
+test('les reprises d’Android ne multiplient plus la phrase', () => {
+    // RELEVÉ RÉEL, production, téléphone, 2026-09-23. La reconnaissance clôt sa
+    // session à chaque respiration et REDONNE toute la phrase en cours. Mises bout
+    // à bout, ces reprises donnaient « tout tout va tout va bien tout va bien chez
+    // tout va bien chez toi » — l'utilisateur a écrit : « elle multiplie ce que je
+    // dis ». Fusionnées, elles redonnent la phrase, une seule fois.
+    const reprises = ['tout', 'tout va', 'tout va bien', 'tout va bien chez', 'tout va bien chez toi'];
+    assert.equal(fusionnerTranscripts(reprises), 'tout va bien chez toi');
+});
+
+test('une phrase longue reprise mot à mot ne ressort qu’une fois', () => {
+    // Le second relevé du même échange, plus long et donc plus cruel : dix reprises.
+    const reprises = [
+        'parler', 'parler la', 'parler la dernière', 'parler la dernière fois',
+        'parler la dernière fois ici', 'parler la dernière fois ici rappelle-moi',
+        'parler la dernière fois ici rappelle-moi s’il',
+        'parler la dernière fois ici rappelle-moi s’il te plaît',
+    ];
+    assert.equal(fusionnerTranscripts(reprises), 'parler la dernière fois ici rappelle-moi s’il te plaît');
+});
+
+test('deux phrases VRAIMENT distinctes se suivent toujours', () => {
+    // LE GARDE-FOU DE LA CORRECTION. Fusionner ne doit pas avaler une seconde
+    // question : seule une reprise — un segment qui COMMENCE par le précédent —
+    // remplace. Deux phrases sans rapport restent deux phrases.
+    const dites = ['bonjour Ket', 'combien de clients avons-nous'];
+    assert.equal(fusionnerTranscripts(dites), 'bonjour Ket combien de clients avons-nous');
+});
+
+test('une reprise plus COURTE que la précédente ne l’efface pas', () => {
+    // La reconnaissance se ravise parfois vers une hypothèse plus courte. Garder la
+    // plus complète évite de perdre la fin d'une question.
+    assert.equal(fusionnerTranscripts(['bonjour Ket comment vas-tu', 'bonjour Ket']), 'bonjour Ket comment vas-tu');
 });
