@@ -69,21 +69,42 @@ final class SelecteurDeTrousse
     ) {
     }
 
+    /**
+     * LE DÉCLENCHEUR DU DERNIER AIGUILLAGE, pour le journal — et pour rien d'autre.
+     *
+     * On ne resserre pas des règles qu'on n'a pas mesurées. Le rapport de campagne dit
+     * COMBIEN coûte la trousse d'écriture (cinquante-deux outils au lieu de
+     * trente-trois, plus vingt-sept kilo-octets de protocoles) mais pas LEQUEL des six
+     * déclencheurs la réclame, ni si l'écriture a seulement eu lieu. Sans ces deux
+     * chiffres, resserrer revient à parier.
+     */
+    private string $dernierDeclencheur = 'aucun';
+
+    public function dernierDeclencheur(): string
+    {
+        return $this->dernierDeclencheur;
+    }
+
     public function trousseDe(AiRequest $requete): Trousse
     {
         $conversation = $requete->scope->conversation;
+        $retenir = function (string $declencheur, Trousse $trousse): Trousse {
+            $this->dernierDeclencheur = $declencheur;
+
+            return $trousse;
+        };
 
         // Un plan attend une décision, ou une série est en cours : la suite est
         // forcément une écriture. Rien à deviner.
         if (PlanEnAttente::aUnPlanEnAttente($conversation)) {
-            return Trousse::ECRITURE;
+            return $retenir('plan-en-attente', Trousse::ECRITURE);
         }
         if ($this->programmeEnCours->courant($conversation) !== null) {
-            return Trousse::ECRITURE;
+            return $retenir('programme-en-cours', Trousse::ECRITURE);
         }
         // Une pièce jointe dans le fil sert presque toujours à saisir quelque chose.
         if ($conversation !== null && \count($conversation->getFichiers()) > 0) {
-            return Trousse::ECRITURE;
+            return $retenir('piece-jointe', Trousse::ECRITURE);
         }
 
         // SIGNAL STRUCTUREL, et non lexical : le tour précédent a utilisé un outil
@@ -92,7 +113,7 @@ final class SelecteurDeTrousse
         // d'action là-dedans, et pourtant l'écriture continue. Mesuré : ce signal
         // n'ouvre aucun faux positif de plus, il est donc gratuit.
         if ($this->dernierTourAEcrit($conversation)) {
-            return Trousse::ECRITURE;
+            return $retenir('dernier-tour-a-ecrit', Trousse::ECRITURE);
         }
 
         // SIGNAL STRUCTUREL DÉCISIF : au tour précédent, Ket a PROPOSÉ d'écrire.
@@ -108,7 +129,7 @@ final class SelecteurDeTrousse
         // posée engage celui qui l'a posée : si Ket a offert d'écrire, elle doit
         // pouvoir tenir l'offre au tour suivant.
         if ($this->dernierTourAProposeDEcrire($conversation)) {
-            return Trousse::ECRITURE;
+            return $retenir('a-propose-d-ecrire', Trousse::ECRITURE);
         }
 
         // L'intention vit souvent dans le FIL et non dans la bulle (« vas y »,
@@ -119,7 +140,9 @@ final class SelecteurDeTrousse
             $recent .= ' ' . (string) ($message['content'] ?? '');
         }
 
-        return preg_match(self::VERBES_ACTION, $recent) === 1 ? Trousse::ECRITURE : Trousse::LECTURE;
+        return preg_match(self::VERBES_ACTION, $recent) === 1
+            ? $retenir('verbe-action', Trousse::ECRITURE)
+            : $retenir('aucun', Trousse::LECTURE);
     }
 
     /**

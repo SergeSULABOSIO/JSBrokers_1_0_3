@@ -31,6 +31,16 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  */
 final class DialecteGeminiDuFil implements DialecteDuFil
 {
+    /**
+     * Durée TOTALE accordée à un appel au modèle, réessais non compris.
+     *
+     * Généreuse à dessein : la sortie est plafonnée à quelques milliers de jetons
+     * et une génération normale tient en quelques secondes — les mesures de
+     * production donnent 3,0 et 3,8 secondes. Quarante-cinq secondes laissent donc
+     * toute la marge nécessaire, tout en divisant par deux le pire cas observé.
+     */
+    private const DUREE_MAX_SECONDES = 45;
+
     private const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
     /**
@@ -358,6 +368,22 @@ final class DialecteGeminiDuFil implements DialecteDuFil
             ],
             'json'    => $charge,
             'timeout' => 90,
+            // ⚠ LA DURÉE TOTALE, ET PAS SEULEMENT LE SILENCE DU RÉSEAU.
+            //
+            // Le `timeout` ci-dessus ne compte que les INACTIVITÉS : un flux qui
+            // trickle indéfiniment ne l'atteint jamais. La leçon avait déjà été
+            // payée le 2026-09-17 sur la phase de compréhension, qui porte depuis
+            // un `max_duration` (cf. AppelGemini) — mais elle n'avait jamais été
+            // appliquée ICI, là où se joue la vraie réponse.
+            //
+            // Relevé en production le 2026-09-24 : « 1 appel · 63 501 jetons IA ·
+            // 95,8 s » pour une phrase de politesse, quand deux appels du même
+            // volume tenaient en 3,0 et 3,8 secondes. La latence n'était corrélée
+            // ni au volume ni au quota : c'était un appel qui traînait.
+            //
+            // Un dépassement lève une exception de transport, donc emprunte le
+            // chemin déjà écrit : réessai unique, puis modèle de secours.
+            'max_duration' => self::DUREE_MAX_SECONDES,
         ]);
 
         $reponse = $response->toArray(); // lève une exception explicite sur 4xx/5xx
