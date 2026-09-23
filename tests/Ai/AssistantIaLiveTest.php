@@ -323,7 +323,7 @@ class AssistantIaLiveTest extends WebTestCase
         $this->client->loginUser($owner);
         $this->doublures();
 
-        $this->intermede($e, 'relance-1');
+        $this->intermede($e, 'debut-1');
 
         // UN INTERMÈDE SANS VOIX EST UN SILENCE. Il est chargé par un élément <audio> :
         // lui répondre du JSON le ferait échouer, et le navigateur s'en plaindrait à
@@ -341,8 +341,14 @@ class AssistantIaLiveTest extends WebTestCase
 
         self::assertArrayHasKey(IntermedesDeKet::DEBUT, $catalogue);
         self::assertArrayHasKey(IntermedesDeKet::RELANCE, $catalogue);
+        // LE MOMENT « RELANCE » EST VIDE, ET C'EST UNE DÉCISION — pas un oubli. Ket
+        // accuse réception une fois puis se tait : meubler une attente, c'est occuper
+        // la parole au moment où l'utilisateur pourrait la reprendre (2026-09-23). Le
+        // moment reste déclaré pour que la rouvrir ne demande qu'une ligne.
+        self::assertSame([], $catalogue[IntermedesDeKet::RELANCE], 'les relances sont éteintes, pas supprimées');
+
         $cles = [];
-        foreach ($catalogue as $moment => $phrases) {
+        foreach (array_filter($catalogue) as $moment => $phrases) {
             self::assertGreaterThanOrEqual(3, \count($phrases), sprintf('le moment « %s » doit offrir du choix', $moment));
             foreach ($phrases as $cle => $phrase) {
                 self::assertMatchesRegularExpression('/^[a-z]+-[0-9]+$/', $cle, 'la clé sert d’URL et de nom de fichier');
