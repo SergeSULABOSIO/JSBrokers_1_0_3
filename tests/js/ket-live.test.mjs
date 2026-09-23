@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { creerDetecteur, energie, FIN_MS, PLANCHER } from '../../assets/controllers/ket-live-parole.js';
+import { creerDetecteur, energie, FIN_MS, PLANCHER, SILENCE_NUMERIQUE, trameVivante } from '../../assets/controllers/ket-live-parole.js';
 import { jalon, nouveauTour, resumeDuTour, totalDuTour } from '../../assets/controllers/ket-live-chrono.js';
 import { assembler, duree, encoderWav, reechantillonner, TAUX_OREILLE } from '../../assets/controllers/ket-live-wav.js';
 import { ENTETE_WAV } from '../../assets/controllers/assistant-voix-pcm.js';
@@ -885,4 +885,37 @@ test('une reprise plus COURTE que la précédente ne l’efface pas', () => {
     // La reconnaissance se ravise parfois vers une hypothèse plus courte. Garder la
     // plus complète évite de perdre la fin d'une question.
     assert.equal(fusionnerTranscripts(['bonjour Ket comment vas-tu', 'bonjour Ket']), 'bonjour Ket comment vas-tu');
+});
+
+/* ──── Un micro qui livre du vide n'est pas un micro fiable ────────────────── */
+
+test('une trame de zéros n’atteste rien', () => {
+    // L'INCIDENT DU 2026-09-23. Sur téléphone, quand la reconnaissance prend le
+    // micro, le système continue de livrer des trames AU RYTHME NORMAL — mais
+    // vides. Les compter faisait passer un micro mort pour un témoin valable, et le
+    // juge de provenance écartait chaque phrase : « Entendu, mais le micro n'a rien
+    // capté de votre voix », dans un bureau silencieux, en parlant fort.
+    assert.equal(trameVivante(energie(new Float32Array(4096))), false);
+    assert.equal(trameVivante(0), false);
+});
+
+test('le souffle d’une pièce vide, lui, atteste un micro vivant', () => {
+    // Le seuil doit séparer un micro MORT d'un micro SILENCIEUX — pas une voix d'un
+    // murmure. Un micro réel rend toujours un peu de souffle, bien en dessous du
+    // plancher de parole.
+    const souffle = Float32Array.from({ length: 512 }, () => 0.003);
+    assert.ok(trameVivante(energie(souffle)), 'un souffle de 0,003 doit compter comme vivant');
+    assert.ok(energie(souffle) < PLANCHER, 'et rester sous le plancher de PAROLE');
+});
+
+test('le seuil de vie est très en dessous du plancher de parole', () => {
+    // S'ils se rapprochaient, un micro vivant mais discret serait déclaré mort — et
+    // Ket cesserait de juger la provenance là où elle le pouvait encore.
+    assert.ok(SILENCE_NUMERIQUE < PLANCHER / 10);
+});
+
+test('une valeur absente ou aberrante n’atteste rien', () => {
+    assert.equal(trameVivante(undefined), false);
+    assert.equal(trameVivante(null), false);
+    assert.equal(trameVivante('fort'), false);
 });

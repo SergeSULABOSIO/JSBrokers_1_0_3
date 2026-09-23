@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { creerDetecteur, energie } from './ket-live-parole.js';
+import { creerDetecteur, energie, trameVivante } from './ket-live-parole.js';
 import { assembler, duree, encoderWav, reechantillonner, TAUX_OREILLE } from './ket-live-wav.js';
 import { ETATS, libelleEtatLive, sessionInitiale, transition } from './ket-live-etat.js';
 import { choisir, programmeDesIntermedes } from './ket-live-intermedes.js';
@@ -55,6 +55,15 @@ export default class extends Controller {
      * 85 ms, et ce délai laisse passer une hésitation du navigateur sans ouvrir la porte.
      */
     static SILENCE_MICRO_MS = 2000;
+
+    /**
+     * Sans UNE SEULE trame porteuse de son passé ce délai, ce micro ne capte rien.
+     *
+     * Plus généreux que SILENCE_MICRO_MS : on ne cherche pas à suivre le rythme des
+     * trames mais à constater une surdité, et un micro à réduction de bruit agressive
+     * peut rendre quelques trames strictement vides entre deux phrases.
+     */
+    static MICRO_MUET_MS = 4000;
 
     /**
      * Pourquoi la reconnaissance du navigateur a renoncé, dit à l'utilisateur.
@@ -167,6 +176,8 @@ export default class extends Controller {
         this._raisonSourde = null;
         this._textesRecus = 0;
         this._tramesRecues = 0;
+        this._tramesVivantes = 0;
+        this._derniereTrameSonore = undefined;
         this._microLache = false;
         this._microRenonce = false;
         this._phrasesMuettes = 0;
@@ -572,7 +583,10 @@ export default class extends Controller {
         const { action, raison } = veilleDeLEcoute({
             depuisMs: performance.now() - (this._debutDEcoute ?? performance.now()),
             textesRecus: this._textesRecus ?? 0,
-            tramesRecues: this._tramesRecues ?? 0,
+            // LES TRAMES VIVANTES, pas les trames tout court : un micro qui livre du
+            // vide est aussi aveugle qu'un micro qui ne livre rien, et appelle le même
+            // remède — le rendre à la reconnaissance, qui, elle, entend.
+            tramesRecues: this._tramesVivantes ?? 0,
             microLache: this._microLache === true,
         });
 
@@ -621,14 +635,20 @@ export default class extends Controller {
         const instant = performance.now();
         // Le micro donne signe de vie : c'est ce qui autorise à juger de la provenance.
         this._derniereTrame = instant;
-        // Compté pour la veille : ZÉRO trame après plusieurs secondes est la
-        // signature d'un contexte audio qui n'a jamais démarré (cf. ket-live-veille).
+        const niveau = energie(donnees);
+        // ⚠ « DES TRAMES ARRIVENT » N'EST PAS « LE MICRO CAPTE ». Sur téléphone, quand
+        // la reconnaissance prend le micro, le système continue de livrer des trames au
+        // rythme normal — mais VIDES. Compter les trames faisait alors passer un micro
+        // mort pour un micro fiable, et le juge de provenance écartait chaque phrase.
+        // Seule une trame qui PORTE quelque chose atteste que ce micro capte.
+        if (trameVivante(niveau)) this._derniereTrameSonore = instant;
         this._tramesRecues = (this._tramesRecues ?? 0) + 1;
+        this._tramesVivantes = (this._tramesVivantes ?? 0) + (trameVivante(niveau) ? 1 : 0);
         // KET EST AUDIBLE DÈS LA RÉFLEXION : ses intermèdes sortent du haut-parleur
         // pendant qu'elle cherche. Le seuil doit y être relevé comme pendant sa réponse,
         // sinon c'est sa propre voix qui ouvre une phrase.
         const ketParle = this.session.etat === ETATS.PAROLE || this.session.etat === ETATS.REFLEXION;
-        const evenement = this._detecteur.pousser(energie(donnees), instant, ketParle);
+        const evenement = this._detecteur.pousser(niveau, instant, ketParle);
 
         // QUAND LE NAVIGATEUR ÉCOUTE, ce micro ne sert plus qu'à entendre l'utilisateur
         // COUPER Ket : le son n'est ni gardé ni envoyé, la reconnaissance a déjà le texte.
@@ -711,8 +731,13 @@ export default class extends Controller {
      * plus est un défaut bien pire qu'un bruit qui passe.
      */
     _microFiable() {
-        return this._derniereTrame !== undefined
-            && performance.now() - this._derniereTrame < this.constructor.SILENCE_MICRO_MS;
+        // ON NE JUGE DE LA PROVENANCE QUE SI CE MICRO CAPTE VRAIMENT. Se fier à
+        // l'arrivée des trames laissait un micro mort — celui qu'Android nous laisse
+        // quand la reconnaissance a pris la source — passer pour un témoin valable :
+        // il ne « voyait » personne parler, et chaque phrase était écartée.
+        // L'absence de preuve n'est pas une preuve d'absence.
+        return this._derniereTrameSonore !== undefined
+            && performance.now() - this._derniereTrameSonore < this.constructor.MICRO_MUET_MS;
     }
 
     _retenirOuIgnorer(texteEntendu, confiance = null) {
