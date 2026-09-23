@@ -299,3 +299,49 @@ export function phraseRecevable(demande = {}) {
 
     return priseRecevable(prise, instantMs, exigence);
 }
+
+/**
+ * POURQUOI UNE PHRASE ENTENDUE N'A PAS ÉTÉ RETENUE, dit à qui vient de parler.
+ *
+ * ── CE QUE CE MODULE COÛTAIT EN SILENCE ─────────────────────────────────────
+ *
+ * Ce juge protège Ket du bruit alentour : la télévision de la pièce d'à côté, une
+ * conversation qui ne lui était pas adressée, sa propre voix renvoyée par le
+ * haut-parleur. Utile — mais quand il se trompe, il se trompe SANS UN MOT. La
+ * phrase était parfaitement reconnue, elle est écartée, et l'écran continue
+ * d'afficher « Ket vous écoute… ». L'utilisateur répète, plus fort, puis conclut
+ * que Ket est sourde. Signalé en production le 2026-09-23 sur ordinateur ET sur
+ * téléphone ; le seul témoin existant était un `console.debug`, invisible tant
+ * qu'on n'a pas activé le niveau « Verbose » de la console.
+ *
+ * Or le projet applique partout la règle inverse : on DIT ce qui se passe.
+ *
+ * ── CE QUE CHAQUE MOTIF DOIT APPRENDRE ──────────────────────────────────────
+ *
+ * Un message n'est utile que s'il dit quoi FAIRE. « Rejeté (loin) » n'aide
+ * personne ; « rapprochez-vous du micro » se règle en une seconde. On nomme donc
+ * le constat, puis le geste.
+ *
+ * `vide` n'a pas de message : il n'y avait rien à retenir, et reprocher un
+ * silence à quelqu'un qui se tait est le meilleur moyen de faire ignorer les
+ * avertissements qui comptent.
+ */
+export const MESSAGES_DE_REJET = {
+    muet: 'Entendu, mais le micro n’a rien capté de votre voix : rapprochez-vous, ou rechargez la page.',
+    loin: 'Entendu, mais jugé trop loin du micro : rapprochez-vous et répétez.',
+    souffle: 'Trop bref pour être une phrase : parlez un peu plus longuement.',
+    tic: 'Seulement un bruit de bouche — rien à transmettre.',
+    echo: 'C’était la voix de Ket que le micro a reprise, pas la vôtre.',
+};
+
+/**
+ * Le message à afficher pour un motif de rejet, ou une chaîne vide s'il n'y a
+ * rien à dire.
+ *
+ * @param {string} motif
+ *
+ * @returns {string}
+ */
+export function messageDeRejet(motif) {
+    return MESSAGES_DE_REJET[motif] ?? '';
+}

@@ -4,7 +4,7 @@ import { assembler, duree, encoderWav, reechantillonner, TAUX_OREILLE } from './
 import { ETATS, libelleEtatLive, sessionInitiale, transition } from './ket-live-etat.js';
 import { choisir, programmeDesIntermedes } from './ket-live-intermedes.js';
 import { jalon, nouveauTour, resumeDuTour } from './ket-live-chrono.js';
-import { finalesNouvelles, phraseRecevable, priseRecevable, ressembleAKet, retirerLaVoixDeKet } from './ket-live-tri.js';
+import { finalesNouvelles, messageDeRejet, phraseRecevable, priseRecevable, ressembleAKet, retirerLaVoixDeKet } from './ket-live-tri.js';
 import { texteAPrononcer } from './assistant-lecture-vocale.js';
 import { fusionnerTranscripts } from './dictee-transcript.js';
 import { documentLocale } from '../locale.js';
@@ -778,6 +778,11 @@ export default class extends Controller {
     /** Ce qu'on fait d'un verdict, qu'il porte sur le son seul ou sur le texte. */
     _suivreLeVerdict(verdict, texte) {
         if (verdict.recevable) {
+            // ON A ÉTÉ ENTENDU : le reproche précédent n'a plus lieu d'être.
+            if (this._raisonSourde !== null && this._raisonSourde !== undefined) {
+                this._raisonSourde = null;
+                this._rendre();
+            }
             this._deposerLeTexte(texte);
 
             return true;
@@ -787,6 +792,17 @@ export default class extends Controller {
         // des mesures réelles plutôt qu'au jugé.
         console.debug(`Mode Live — ignoré (${verdict.motif}, marge ${verdict.marge.toFixed(1)}) : « ${texte} »`);
         this._emettre('ket-live:ignore', { motif: verdict.motif, marge: verdict.marge, texte });
+
+        // ET DIT À L'ÉCRAN. Une phrase parfaitement reconnue puis écartée en silence
+        // laisse croire à une surdité : l'utilisateur répète, plus fort, puis renonce.
+        // Le seul témoin était jusqu'ici un `console.debug`, invisible tant qu'on n'a
+        // pas activé le niveau « Verbose ». Constaté en production le 2026-09-23.
+        const message = messageDeRejet(verdict.motif);
+        if (message !== '' && this._raisonSourde !== message) {
+            this._raisonSourde = message;
+            this._rendre();
+        }
+
         this._noterUnRejet();
 
         return false;

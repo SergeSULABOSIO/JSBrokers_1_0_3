@@ -12,7 +12,7 @@ import { assembler, duree, encoderWav, reechantillonner, TAUX_OREILLE } from '..
 import { ENTETE_WAV } from '../../assets/controllers/assistant-voix-pcm.js';
 import { ETATS, libelleEtatLive, sessionInitiale, transition } from '../../assets/controllers/ket-live-etat.js';
 import { choisir, programmeDesIntermedes, RELANCES_MAX } from '../../assets/controllers/ket-live-intermedes.js';
-import { finalesNouvelles, MARGE_PROCHE, nEstQueDesTics, phraseRecevable, ressembleAKet, retirerLaVoixDeKet } from '../../assets/controllers/ket-live-tri.js';
+import { finalesNouvelles, MARGE_PROCHE, messageDeRejet, nEstQueDesTics, phraseRecevable, ressembleAKet, retirerLaVoixDeKet } from '../../assets/controllers/ket-live-tri.js';
 import { CAUSE_INCONNUE, CAUSES_MICRO, renoncementAuMicro } from '../../assets/controllers/ket-live-micro.js';
 import { RIEN_ENTENDU, SANS_TRAME_AVANT_DE_LACHER_MS, SILENCE_AVANT_DE_LE_DIRE_MS, veilleDeLEcoute } from '../../assets/controllers/ket-live-veille.js';
 
@@ -823,4 +823,28 @@ test('on laisse le temps de réfléchir avant de reprocher un silence', () => {
 test('un état vide ne fait rien dire', () => {
     assert.equal(veilleDeLEcoute().action, 'rien');
     assert.equal(veilleDeLEcoute({}).action, 'rien');
+});
+
+/* ───────── Un rejet se dit, et dit quoi faire ─────────────────────────────── */
+
+test('chaque motif de rejet a un message qui dit quoi FAIRE', () => {
+    // Le défaut du 2026-09-23 : une phrase parfaitement reconnue puis écartée EN
+    // SILENCE. L'utilisateur répète, plus fort, puis conclut que Ket est sourde.
+    // Un motif sans message, c'est ce silence-là qui revient.
+    for (const motif of ['muet', 'loin', 'souffle', 'tic', 'echo']) {
+        const message = messageDeRejet(motif);
+        assert.ok(message.length > 20, `« ${motif} » doit être expliqué`);
+    }
+    // Les deux motifs les plus fréquents doivent proposer un geste, pas un constat.
+    assert.match(messageDeRejet('loin'), /rapprochez-vous/i);
+    assert.match(messageDeRejet('muet'), /rapprochez-vous|rechargez/i);
+});
+
+test('un silence ne se reproche pas', () => {
+    // « vide » veut dire qu'il n'y avait rien à retenir. Reprocher son silence à
+    // quelqu'un qui se tait est le meilleur moyen de faire ignorer les
+    // avertissements qui comptent.
+    assert.equal(messageDeRejet('vide'), '');
+    assert.equal(messageDeRejet('motif-jamais-vu'), '');
+    assert.equal(messageDeRejet(undefined), '');
 });
