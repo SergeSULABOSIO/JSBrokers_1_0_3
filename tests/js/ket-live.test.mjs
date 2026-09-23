@@ -1003,6 +1003,13 @@ test('un vrai écho — court et repris du haut-parleur — reste écarté', () 
     // LE GARDE-FOU DE LA CORRECTION : desserrer ne doit pas rouvrir la boucle
     // infinie où Ket se répond à elle-même.
     const deKet = ['Hum, laissez-moi vérifier cela dans le portefeuille…'];
-    assert.equal(ressembleAKet('laisse-moi vérifier cela', deKet), true);
+    assert.equal(ressembleAKet('laissez-moi vérifier cela', deKet), true, 'repris mot pour mot');
+
+    // ET DEUX VRAIES RÉPONSES QUI REPRENAIENT SES MOTS, relevées en production :
+    // écartées, elles emportaient AUSSI l'interruption — Ket continuait de parler
+    // par-dessus l'utilisateur, puisque « couper-voix » n'était jamais donné.
+    const saReponse = ['Je n’ai trouvé aucun sinistre pour l’exercice 2025 dans votre portefeuille.'];
+    assert.equal(ressembleAKet('non je parle de l’exercice 2026', saReponse), false);
+    assert.equal(ressembleAKet('je parle de l’exercice 2026', saReponse), false);
     assert.ok(MOTS_ECHO_MAX >= 4 && MOTS_ECHO_MAX <= 10);
 });

@@ -364,6 +364,52 @@ class ConsoleKetFournisseursTest extends WebTestCase
         }
     }
 
+    /**
+     * L'ÉCRAN DIT LA SITUATION, PAS SEULEMENT LE DISPOSITIF.
+     *
+     * Le navigateur figure dans les familles VOIX et OREILLES comme repli — il prend
+     * la main tout seul dès que plus aucun fournisseur du serveur ne peut répondre.
+     * Mais un agent qui ouvre la console un jour de quota épuisé doit LIRE que c'est
+     * le navigateur qui parle, et pas seulement qu'un repli existe quelque part.
+     *
+     * En environnement de test, aucune voix du serveur n'est configurée : le repli est
+     * donc réellement en service, et l'écran doit le dire.
+     */
+    public function testLEcranDitQueLeRepliEstEnService(): void
+    {
+        $etat = static::getContainer()->get(\App\Ai\Fournisseur\EtatDesFournisseurs::class)->tout();
+
+        foreach (['voix', 'oreille'] as $famille) {
+            $navigateur = null;
+            foreach ($etat[$famille] as $fournisseur) {
+                if (($fournisseur['repli'] ?? false) === true) {
+                    $navigateur = $fournisseur;
+                }
+            }
+
+            self::assertNotNull($navigateur, sprintf('le navigateur manque à la famille « %s »', $famille));
+            self::assertTrue($navigateur['disponible'], 'toute page sait lire et écouter');
+            self::assertFalse($navigateur['epuise'], 'il ne consomme ni clé ni quota');
+            self::assertTrue(
+                $navigateur['enService'],
+                sprintf('aucun fournisseur du serveur ne répond pour « %s » : le repli parle', $famille),
+            );
+        }
+    }
+
+    /**
+     * ET IL NE FAUSSE PAS LA QUESTION QUE LA PAGE POSE. « Quelqu'un peut-il répondre »
+     * veut dire « le SERVEUR peut-il répondre » : compter le navigateur rendrait la
+     * réponse toujours oui, et la page cesserait de savoir qu'elle doit se replier.
+     */
+    public function testLeRepliNeFaussePasLaQuestionPoseeParLaPage(): void
+    {
+        $etat = static::getContainer()->get(\App\Ai\Fournisseur\EtatDesFournisseurs::class);
+
+        self::assertFalse($etat->quelquUnPeutRepondre('voix'), 'aucune voix de serveur en test');
+        self::assertFalse($etat->quelquUnPeutRepondre('oreille'), 'aucune oreille de serveur en test');
+    }
+
     /** Un réarmement sans jeton CSRF valide ne doit rien effacer. */
     public function testUnRearmementSansJetonNeFaitRien(): void
     {

@@ -268,6 +268,7 @@ export default class extends Controller {
             // recours. Exigence de l'exploitant, 2026-09-23.
             if (etat.repli === true) {
                 etiquette.classList.add('kf-item__mention--repli');
+                if (etat.enService === true) { etiquette.classList.add('kf-item__mention--actif'); }
                 if (this.hasIconeTarget) {
                     etiquette.appendChild(this.iconeTarget.content.cloneNode(true));
                 }
@@ -289,6 +290,14 @@ export default class extends Controller {
      */
     mention(rang, index, etat = {}) {
         if (etat.repli === true) {
+            // L'ÉCRAN DIT LA SITUATION, PAS LE DISPOSITIF. Écrire « repli automatique »
+            // pendant que le repli PARLE, c'est décrire un mécanisme au lieu de décrire
+            // ce qui se passe : l'agent qui ouvre la console un jour de quota épuisé
+            // doit lire que c'est le navigateur qui répond.
+            if (etat.enService === true) {
+                return rang.actif ? 'en service' : 'en service — le serveur est à sec';
+            }
+
             return rang.actif ? 'toujours appelé en premier' : 'repli automatique';
         }
         if (!rang.actif) { return 'écarté'; }
@@ -376,7 +385,7 @@ export default class extends Controller {
             return span;
         }
         span.className = 'kf-voyant kf-voyant--ok';
-        span.textContent = 'prêt';
+        span.textContent = etat.repli === true && etat.enService === true ? 'en service' : 'prêt';
         span.title = `${nom} a sa clé et aucun quota épuisé : il peut répondre.`;
 
         return span;
