@@ -182,11 +182,17 @@ export function priseRecevable(prise, instantMs = 0, margeProche = MARGE_PROCHE)
 /** En deçà, un mot est trop courant pour témoigner de quoi que ce soit (« et », « le »). */
 export const LETTRES_SIGNIFIANTES = 4;
 
-/** Il en faut au moins deux : une seule coïncidence n'est pas une ressemblance. */
-export const MOTS_SIGNIFIANTS_MIN = 2;
+/** Il en faut au moins trois : deux coïncidences ne sont pas une ressemblance. */
+export const MOTS_SIGNIFIANTS_MIN = 3;
 
-/** Au-delà de cette part de mots retrouvés chez Ket, la phrase est la sienne. */
-export const PART_RESSEMBLANCE = 0.6;
+/**
+ * TOUS les mots, sans exception : un écho n'apporte rien qui ne vienne de Ket.
+ *
+ * Conservée comme constante exportée pour les tests et pour la mémoire de ce qui a
+ * été essayé : à 0,6, une réponse de l'utilisateur qui reprenait son vocabulaire
+ * passait pour son écho (2026-09-23).
+ */
+export const PART_RESSEMBLANCE = 1;
 
 /**
  * Au-delà de tant de mots significatifs, une phrase n'est plus un écho.
@@ -234,11 +240,25 @@ export function ressembleAKet(texte, phrasesDeKet = []) {
     // le 2026-09-23 : une question de quinze mots écartée pour « echo ».
     if (mots.length > MOTS_ECHO_MAX) return false;
 
-    const retrouves = mots.filter(
-        (mot) => siens.some((sien) => sien.startsWith(mot) || mot.startsWith(sien)),
-    ).length;
+    // ⚠ UN ÉCHO NE CONTIENT QUE DES MOTS DE KET. C'est la seule chose qui le sépare
+    // d'une réponse : répondre, c'est reprendre SES mots et y ajouter LES SIENS.
+    //
+    // Le seuil était de 60 % : « non je parle de l'exercice 2026 » — relevé en
+    // production le 2026-09-23 — en partageait assez avec sa réponse pour passer pour
+    // son écho. Et le prix était double : la phrase écartée n'atteignait pas la
+    // machine d'états, donc l'ordre « couper-voix » n'était jamais donné et Ket
+    // continuait de parler PAR-DESSUS l'utilisateur. Le filtre supprimait la question
+    // ET l'interruption.
+    //
+    // À 100 %, un seul mot étranger suffit à rendre la phrase à son auteur. Le
+    // rapprochement reste par PRÉFIXE, parce que la reconnaissance déforme
+    // (« laissez-moi » → « laisse-moi ») et que c'est par là qu'était entrée la boucle
+    // infinie du 2026-09-21.
+    const etranger = mots.some(
+        (mot) => !siens.some((sien) => sien.startsWith(mot) || mot.startsWith(sien)),
+    );
 
-    return retrouves / mots.length >= PART_RESSEMBLANCE;
+    return !etranger;
 }
 
 /**

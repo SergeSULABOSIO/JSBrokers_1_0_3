@@ -60,8 +60,8 @@ final class EtatDesFournisseurs
             // jamais à sec : il ne consomme ni clé ni quota. Le placer devant les
             // voix du serveur, depuis la console, c'est choisir de parler TOUT DE
             // SUITE plutôt que joliment.
-            'voix'          => [...$this->famille($this->voix), self::leNavigateur()],
-            'oreille'       => [...$this->famille($this->oreilles), self::leNavigateur()],
+            'voix'          => self::avecLeNavigateur($this->famille($this->voix)),
+            'oreille'       => self::avecLeNavigateur($this->famille($this->oreilles)),
             'comprehension' => $this->famille($this->comprenants),
             'dictee'        => $this->famille($this->finisseurs),
         ];
@@ -87,9 +87,36 @@ final class EtatDesFournisseurs
      *
      * @return array{nom: string, disponible: bool, epuise: bool, modele: string|null, cle: string|null, echeance: string|null, repli: bool}
      */
-    private static function leNavigateur(): array
+    /**
+     * La famille, suivie du navigateur — qui SAIT S'IL EST DÉJÀ EN SERVICE.
+     *
+     * L'ÉCRAN DOIT DIRE LA VÉRITÉ. Afficher « repli automatique » quand le repli est
+     * en train de parler, c'est décrire un dispositif au lieu de décrire la situation :
+     * l'agent qui ouvre la console un jour de quota épuisé doit LIRE que c'est le
+     * navigateur qui parle, et pourquoi. Exigence de l'exploitant, 2026-09-23.
+     *
+     * @param list<array{nom: string, disponible: bool, epuise: bool, modele: string|null, cle: string|null, echeance: string|null}> $duServeur
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function avecLeNavigateur(array $duServeur): array
+    {
+        // EN SERVICE quand PLUS AUCUN fournisseur du serveur ne peut répondre : ni
+        // configuré, ni avec du souffle. C'est exactement la condition qui déclenche
+        // la bascule côté page (VoixDeKet::uneVoixPeutParler).
+        $unServeurPeutRepondre = false;
+        foreach ($duServeur as $fournisseur) {
+            $unServeurPeutRepondre = $unServeurPeutRepondre
+                || ($fournisseur['disponible'] && !$fournisseur['epuise']);
+        }
+
+        return [...$duServeur, self::leNavigateur(!$unServeurPeutRepondre)];
+    }
+
+    private static function leNavigateur(bool $enService = false): array
     {
         return [
+            'enService'  => $enService,
             'nom'        => VoixDeKet::NAVIGATEUR,
             // Toujours prêt : toute page sait lire un texte et écouter un micro.
             'disponible' => true,
@@ -111,6 +138,12 @@ final class EtatDesFournisseurs
     public function quelquUnPeutRepondre(string $famille): bool
     {
         foreach ($this->tout()[$famille] ?? [] as $fournisseur) {
+            // Le navigateur ne compte pas : la question posée ici est « le SERVEUR
+            // peut-il répondre ? ». Le compter rendrait la réponse toujours oui, et
+            // la page cesserait de savoir qu'elle doit se replier.
+            if (($fournisseur['repli'] ?? false) === true) {
+                continue;
+            }
             if ($fournisseur['disponible'] && !$fournisseur['epuise']) {
                 return true;
             }
