@@ -96,6 +96,46 @@ class VoixDeKetTest extends TestCase
     }
 
     /**
+     * ⚠ LA RÈGLE INTANGIBLE : À SEC, LE NAVIGATEUR PREND LA MAIN — SANS RIEN DEMANDER.
+     *
+     * Elle ne dépend d'AUCUN réglage. Que « navigateur » soit coché dans la console
+     * ou non, qu'il figure dans la chaîne ou pas : dès que plus aucune voix du serveur
+     * n'a de souffle, la page lit elle-même. Un quota épuisé est un fait, pas une
+     * décision — et demander son avis à l'utilisateur au moment où Ket devrait parler
+     * serait lui faire payer deux fois le même incident.
+     *
+     * Ce test existe parce que l'écran de console affiche « écarté » à côté du
+     * navigateur tant qu'on ne l'a pas coché : il ne faudrait pas qu'un jour quelqu'un
+     * en conclue que le repli se configure. Il ne se configure pas. Ce qui se
+     * configure, c'est de le mettre en PREMIER — donc de ne plus jamais appeler le
+     * serveur, même quand il a du souffle.
+     */
+    public function testAUnQuotaEpuiseLeNavigateurPrendLaMainSansEtreConfigure(): void
+    {
+        $voix = new VoixDeKet([
+            self::faux('elevenlabs', [], FournisseurDeVoix::QUOTA, epuise: true),
+            self::faux('gemini', [], FournisseurDeVoix::QUOTA, epuise: true),
+        ], 'elevenlabs,gemini');
+
+        self::assertFalse($voix->leNavigateurDAbord(), 'il n’est même pas nommé dans la chaîne');
+        self::assertFalse(
+            $voix->uneVoixPeutParler(),
+            'et pourtant la page lit elle-même : le repli ne se demande pas, il s’applique',
+        );
+    }
+
+    /** Une seule voix encore vivante suffit à garder la parole au serveur. */
+    public function testLeRepliNeSeDeclencheQueQuandPlusRienNeRepond(): void
+    {
+        $voix = new VoixDeKet([
+            self::faux('elevenlabs', [], FournisseurDeVoix::QUOTA, epuise: true),
+            self::faux('gemini', ['son'], FournisseurDeVoix::COMPLET),
+        ], 'elevenlabs,gemini');
+
+        self::assertTrue($voix->uneVoixPeutParler(), 'gemini a encore du souffle');
+    }
+
+    /**
      * LE NAVIGATEUR EN TÊTE : on ne dérange plus le serveur du tout.
      *
      * Ce n'est pas une panne, c'est un CHOIX d'exploitant, posé depuis la console :

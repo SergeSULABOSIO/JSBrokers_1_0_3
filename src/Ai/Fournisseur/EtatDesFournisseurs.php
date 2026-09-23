@@ -60,17 +60,45 @@ final class EtatDesFournisseurs
             // jamais à sec : il ne consomme ni clé ni quota. Le placer devant les
             // voix du serveur, depuis la console, c'est choisir de parler TOUT DE
             // SUITE plutôt que joliment.
-            'voix'          => [...$this->famille($this->voix), [
-                'nom'        => VoixDeKet::NAVIGATEUR,
-                'disponible' => true,
-                'epuise'     => false,
-                'modele'     => null,
-                'cle'        => null,
-                'echeance'   => null,
-            ]],
-            'oreille'       => $this->famille($this->oreilles),
+            'voix'          => [...$this->famille($this->voix), self::leNavigateur()],
+            'oreille'       => [...$this->famille($this->oreilles), self::leNavigateur()],
             'comprehension' => $this->famille($this->comprenants),
             'dictee'        => $this->famille($this->finisseurs),
+        ];
+    }
+
+    /**
+     * LE NAVIGATEUR : un fournisseur qui n'est pas un service, et une RÈGLE.
+     *
+     * ⚠ LE REPLI NE SE CONFIGURE PAS. Dès que plus aucun fournisseur du serveur n'a
+     * de souffle, le navigateur prend la main — sans rien demander à personne, qu'il
+     * soit coché ici ou non. Un quota épuisé est un fait, pas une décision, et
+     * demander son avis à l'utilisateur au moment où Ket devrait parler lui ferait
+     * payer deux fois le même incident. C'est verrouillé par
+     * `VoixDeKetTest::testAUnQuotaEpuiseLeNavigateurPrendLaMainSansEtreConfigure`.
+     *
+     * CE QUI SE CONFIGURE, C'EST DE LE METTRE EN PREMIER — donc de ne plus jamais
+     * appeler le serveur, même quand il répond. C'est un choix de latence contre
+     * timbre, et il appartient au cabinet.
+     *
+     * Le drapeau `repli` porte cette différence jusqu'à l'écran : sans lui, l'éditeur
+     * affichait « écarté » à côté du navigateur, ce qui laissait croire que le repli
+     * était désactivé.
+     *
+     * @return array{nom: string, disponible: bool, epuise: bool, modele: string|null, cle: string|null, echeance: string|null, repli: bool}
+     */
+    private static function leNavigateur(): array
+    {
+        return [
+            'nom'        => VoixDeKet::NAVIGATEUR,
+            // Toujours prêt : toute page sait lire un texte et écouter un micro.
+            'disponible' => true,
+            // Jamais à sec : il ne consomme ni clé, ni crédit, ni quota.
+            'epuise'     => false,
+            'modele'     => null,
+            'cle'        => null,
+            'echeance'   => null,
+            'repli'      => true,
         ];
     }
 

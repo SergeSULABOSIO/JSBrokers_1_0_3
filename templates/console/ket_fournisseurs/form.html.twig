@@ -86,6 +86,11 @@
         .kf-item[data-actif="0"] .kf-item__nom { color:#495057; }
         .kf-item__mention { font-size:.73rem; color:#495057; background:#eef1f4;
             border-radius:999px; padding:.1rem .45rem; white-space:nowrap; }
+        /* LE REPLI SE VOIT. Il ne se configure pas — il s'applique dès que plus rien
+           ne répond — et un badge terne à côté de « écarté » laissait croire l'inverse. */
+        .kf-item__mention--repli { display:inline-flex; align-items:center; gap:.25rem;
+            background:#e6f5ec; color:#1b6b3a; font-weight:600; }
+        .kf-item__mention--repli svg { flex:0 0 auto; }
 
         .kf-item__reglage { display:flex; align-items:center; gap:.4rem; min-width:0; }
         .kf-item__reglage-nom { font-size:.73rem; color:#495057; text-transform:uppercase;
@@ -203,6 +208,10 @@
             <div class="kf-editeur" data-controller="fournisseurs-editor"
                  data-fournisseurs-editor-famille-value="{{ famille }}"
                  data-fournisseurs-editor-etat-value="{{ (etat[famille] ?? [])|json_encode }}">
+                {# L'ICÔNE DU BADGE « REPLI », clonée par l'éditeur. Elle vit ici parce que
+                   c'est Twig qui sait résoudre un alias d'icône, et nulle part ailleurs. #}
+                <template data-fournisseurs-editor-target="icone">{{ ux_icon(resolve_icon_name('action:transfer'), {height:'13px', width:'13px'}) }}</template>
+
                 <div class="kf-mode" role="group" aria-label="Mode d’appel — {{ meta.titre }}"
                      data-fournisseurs-editor-target="mode"></div>
                 <p class="kf-mode-aide" data-fournisseurs-editor-target="aide"></p>
