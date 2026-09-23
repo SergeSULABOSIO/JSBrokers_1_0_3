@@ -46,7 +46,7 @@ import { Controller } from '@hotwired/stimulus';
  * s'ouvre aussi sur une tablette.
  */
 export default class extends Controller {
-    static targets = ['champ', 'liste', 'mode', 'aide', 'annonce'];
+    static targets = ['champ', 'liste', 'mode', 'aide', 'annonce', 'icone'];
 
     static values = { famille: String, etat: Array };
 
@@ -245,19 +245,52 @@ export default class extends Controller {
         nom.textContent = rang.nom;
         label.appendChild(nom);
 
-        const mention = this.mention(rang, index);
+        const etat = this.etatDe(rang.nom);
+
+        // ⚠ LE REPLI NE SE DÉCOCHE PAS, et l'infobulle doit le dire. Le navigateur
+        // prend la main dès que plus aucun fournisseur du serveur n'a de souffle, coché
+        // ou non. Le cocher ne l'ACTIVE pas : cela le fait passer AVANT le serveur,
+        // même quand celui-ci répond — un choix de latence contre timbre.
+        label.title = etat.repli === true
+            ? (rang.actif
+                ? 'Le navigateur parle toujours en premier. Décochez pour rendre la main au serveur : il restera le repli automatique quand plus rien ne répond.'
+                : 'Le navigateur prend déjà la main tout seul dès que plus aucun fournisseur du serveur n’a de souffle. Cochez-le pour qu’il passe AVANT le serveur, sans attendre.')
+            : (rang.actif
+                ? 'Décochez pour retirer ce fournisseur de la liste : il ne sera plus appelé.'
+                : 'Cochez pour le remettre dans la liste.');
+
+        const mention = this.mention(rang, index, etat);
         if (mention !== '') {
             const etiquette = document.createElement('span');
             etiquette.className = 'kf-item__mention';
-            etiquette.textContent = mention;
+            // LE REPLI PORTE UNE ICÔNE DE BASCULE, et une couleur qui le distingue d'un
+            // fournisseur écarté : ce n'en est pas un, c'est la garantie de dernier
+            // recours. Exigence de l'exploitant, 2026-09-23.
+            if (etat.repli === true) {
+                etiquette.classList.add('kf-item__mention--repli');
+                if (this.hasIconeTarget) {
+                    etiquette.appendChild(this.iconeTarget.content.cloneNode(true));
+                }
+            }
+            etiquette.appendChild(document.createTextNode(mention));
             label.appendChild(etiquette);
         }
 
         return label;
     }
 
-    /** Ce qui arrivera vraiment à cette ligne, compte tenu du mode et du rang. */
-    mention(rang, index) {
+    /**
+     * Ce qui arrivera vraiment à cette ligne, compte tenu du mode et du rang.
+     *
+     * LE NAVIGATEUR N'EST JAMAIS « ÉCARTÉ ». Il reprend la main tout seul dès que plus
+     * aucun fournisseur du serveur ne peut répondre — c'est une règle du produit, pas
+     * un réglage. Le mot « écarté » à côté de lui laissait croire qu'on pouvait la
+     * désactiver ; on ne peut pas.
+     */
+    mention(rang, index, etat = {}) {
+        if (etat.repli === true) {
+            return rang.actif ? 'toujours appelé en premier' : 'repli automatique';
+        }
         if (!rang.actif) { return 'écarté'; }
         if (this.politique.mode !== 'epingle') { return ''; }
 
