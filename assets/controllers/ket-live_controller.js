@@ -8,6 +8,7 @@ import { finalesNouvelles, phraseRecevable, priseRecevable, ressembleAKet, retir
 import { texteAPrononcer } from './assistant-lecture-vocale.js';
 import { fusionnerTranscripts } from './dictee-transcript.js';
 import { documentLocale } from '../locale.js';
+import { renoncementAuMicro } from './ket-live-micro.js';
 
 /**
  * @class KetLiveController
@@ -419,15 +420,14 @@ export default class extends Controller {
     // ── Le micro et la détection de fin de phrase ────────────────────────────
 
     async _ouvrirMicro() {
-        if (this._flux) return;
+        if (this._flux || this._microRenonce) return;
         try {
             // L'annulation d'écho évite que Ket s'entende parler et se coupe elle-même.
             this._flux = await navigator.mediaDevices.getUserMedia({
                 audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
             });
         } catch (error) {
-            console.warn('Mode Live : micro refusé.', error);
-            this._evenement('arreter');
+            this._renoncerAuFluxDAnalyse(error);
             return;
         }
         if (this.session.etat === ETATS.ARRET) {
@@ -460,6 +460,59 @@ export default class extends Controller {
         muet.gain.value = 0;
         this._analyse.connect(muet);
         muet.connect(this._contexte.destination);
+    }
+
+    /**
+     * LE FLUX D'ANALYSE EST REFUSÉ — ET CE N'EST PAS UNE RAISON DE TOUT ARRÊTER.
+     *
+     * L'ERREUR QUE CETTE MÉTHODE RÉPARE (constatée en production le 2026-09-23, et
+     * invisible en développement). Le flux que nous ouvrons ici ne sert QU'À DEUX
+     * CHOSES : entendre l'utilisateur couper Ket, et juger de la provenance d'un son
+     * (ket-live-tri). La reconnaissance du navigateur, elle, a sa PROPRE captation
+     * et n'en a aucun besoin — le projet le savait déjà, puisque
+     * `_laisserLeMicroALaReconnaissance()` abandonne délibérément ce flux sur
+     * téléphone pour lui rendre le micro.
+     *
+     * Or, jusqu'ici, un refus de `getUserMedia` arrêtait la SESSION ENTIÈRE, avec un
+     * simple `console.warn` que personne ne lit. Le panneau se refermait, et avec lui
+     * la seule ligne capable d'expliquer pourquoi. Résultat : on appuie sur Live, il
+     * ne se passe rien, et rien ne dit quoi faire.
+     *
+     * POURQUOI LA PRODUCTION SEULE EN SOUFFRAIT. La permission du micro est accordée
+     * PAR ORIGINE. Sur le poste de développement elle l'est depuis longtemps pour
+     * `127.0.0.1` ; sur un domaine de production, c'est une première demande — et il
+     * suffit de la fermer d'un clic, ou que le micro soit pris par une autre
+     * application, pour retomber ici. Même code, même configuration, comportement
+     * opposé.
+     *
+     * CE QU'ON FAIT DÉSORMAIS : on renonce au flux, on le DIT, et on laisse la
+     * conversation continuer si la reconnaissance du navigateur peut entendre. On ne
+     * perd que la détection d'interruption et le tri par provenance. On n'arrête que
+     * lorsque plus rien ne peut entendre — et là encore, en le disant.
+     */
+    _renoncerAuFluxDAnalyse(error) {
+        this._microRenonce = true;
+        // `_microLache` interdit à `_laisserLeMicroALaReconnaissance()` de s'exécuter :
+        // il n'y a plus rien à lâcher, et il relancerait la reconnaissance pour rien.
+        this._microLache = true;
+
+        const cause = error?.name ?? '';
+        const { raison, continuer } = renoncementAuMicro(cause, this._oreilleParDefaut());
+        this._raisonSourde = raison;
+        console.warn('Mode Live : flux d’analyse indisponible —', cause, error);
+        this._emettre('ket-live:micro-refuse', { cause, continuer });
+
+        if (continuer) {
+            // La reconnaissance entend toujours : la session continue, amputée de la
+            // détection d'interruption. L'astuce du panneau dit ce qui manque.
+            this._rendre();
+
+            return;
+        }
+
+        // Ni flux, ni reconnaissance : plus personne ne peut entendre. On s'arrête,
+        // mais la raison a été posée avant, et le panneau l'affiche jusqu'au bout.
+        this._evenement('arreter');
     }
 
     /**
