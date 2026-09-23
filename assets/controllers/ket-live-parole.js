@@ -33,6 +33,41 @@ export const PHRASE_MAX_MS = 30000;
 /** Le seuil ne descend jamais sous ce plancher : un micro muet n'est pas de la parole. */
 export const PLANCHER = 0.012;
 
+/**
+ * EN DESSOUS DE QUOI UNE TRAME NE CONTIENT RIEN — pas même le souffle d'une pièce
+ * vide, pas même le bruit de fond d'un micro d'ordinateur portable.
+ *
+ * Trente fois sous le plancher de parole, à dessein : il ne s'agit pas de
+ * distinguer une voix d'un murmure, mais un micro VIVANT d'un micro MORT. Un
+ * micro réel, dans le silence le plus complet, rend toujours un peu de souffle ;
+ * un flux dont le système a retiré la source rend des zéros exacts.
+ */
+export const SILENCE_NUMERIQUE = 0.0005;
+
+/**
+ * CETTE TRAME PORTE-T-ELLE QUOI QUE CE SOIT ?
+ *
+ * ── POURQUOI CETTE QUESTION EXISTE (incident du 2026-09-23, sur téléphone) ──
+ *
+ * « Entendu, mais le micro n'a rien capté de votre voix » — dans un bureau
+ * silencieux, en parlant fort. La reconnaissance du navigateur entendait
+ * parfaitement ; notre flux d'analyse, lui, ne recevait que du vide.
+ *
+ * SUR ANDROID, LA RECONNAISSANCE PREND LE MICRO. Le système continue alors de
+ * livrer des trames à notre flux — au rythme normal, ce qui le faisait passer
+ * pour vivant — mais elles sont VIDES. Le juge de provenance en concluait que
+ * personne n'avait parlé près de ce micro, et écartait chaque phrase. La
+ * détection d'interruption tombait avec lui : Ket continuait de parler
+ * par-dessus l'utilisateur, faute d'entendre qu'il la coupait.
+ *
+ * COMPTER LES TRAMES NE SUFFIT DONC PAS : il faut regarder si elles portent
+ * quelque chose. « Des trames arrivent » et « le micro capte » sont deux
+ * questions différentes, et c'est la seconde qui compte.
+ */
+export function trameVivante(niveau) {
+    return typeof niveau === 'number' && niveau > SILENCE_NUMERIQUE;
+}
+
 /** Il faut dépasser ce multiple du bruit de la pièce pour que ce soit une voix. */
 export const FACTEUR_PAROLE = 2.2;
 
