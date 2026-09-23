@@ -67,7 +67,14 @@ export default class extends Controller {
         return {
             mode: brut.mode === 'epingle' ? 'epingle' : 'chaine',
             ordre: Array.isArray(brut.ordre) ? brut.ordre.slice() : [],
-            reglages: (brut.reglages && typeof brut.reglages === 'object') ? brut.reglages : {},
+            // UN TABLEAU N'EST PAS UN DICTIONNAIRE. `json_encode([])` rend `[]`, et
+            // poser une propriété nommée sur un tableau JavaScript marche… jusqu'à
+            // `JSON.stringify`, qui la jette EN SILENCE. Un modèle saisi repartait
+            // donc vide. Le serveur force désormais un objet ; on s'en assure quand
+            // même ici, parce qu'un défaut muet mérite deux gardes.
+            reglages: (brut.reglages && typeof brut.reglages === 'object' && !Array.isArray(brut.reglages))
+                ? brut.reglages
+                : {},
         };
     }
 
