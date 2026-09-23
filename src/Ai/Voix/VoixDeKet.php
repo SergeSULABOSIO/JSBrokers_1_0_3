@@ -65,8 +65,56 @@ final class VoixDeKet
      * exactement le régime dans lequel le cabinet se trouve dès que les paliers gratuits
      * sont consommés.
      */
+    /**
+     * LE NAVIGATEUR EST UN FOURNISSEUR DE VOIX COMME UN AUTRE — simplement, il n'est
+     * pas ici. Il vit dans la page, il ne coûte rien, il ne s'épuise jamais, et il
+     * PARLE TOUT DE SUITE là où une voix de serveur demande un aller-retour. Mesuré
+     * en production le 2026-09-23 : jusqu'à dix secondes avant le premier son.
+     *
+     * On ne peut donc pas l'instancier comme service, mais on peut le NOMMER dans la
+     * chaîne. Placé devant les voix du serveur, il les court-circuite : la page ne
+     * demande plus rien et lit elle-même. C'est un réglage de console, pas une
+     * décision figée dans le code — certains cabinets préféreront la plus belle voix,
+     * d'autres la plus rapide.
+     */
+    public const NAVIGATEUR = 'navigateur';
+
+    /**
+     * Le navigateur est-il placé DEVANT toute voix de serveur utilisable ?
+     *
+     * On compare des rangs, pas des présences : `navigateur` placé en dernier reste
+     * ce qu'il a toujours été, le filet de sécurité quand plus rien ne répond.
+     */
+    public function leNavigateurDAbord(): bool
+    {
+        $ordre = array_values(array_filter(array_map(
+            'trim',
+            explode(',', $this->politique?->ordre('voix') ?? $this->ordreParDefaut),
+        )));
+
+        $rang = array_search(self::NAVIGATEUR, $ordre, true);
+        if ($rang === false) {
+            return false;
+        }
+
+        foreach ($this->fournisseurs() as $fournisseur) {
+            $rangDuServeur = array_search($fournisseur->nom(), $ordre, true);
+            if ($rangDuServeur !== false && $rangDuServeur < $rang) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public function uneVoixPeutParler(): bool
     {
+        // Le navigateur passe devant : inutile de déranger le serveur, et surtout
+        // inutile d'attendre sa réponse avant le premier mot.
+        if ($this->leNavigateurDAbord()) {
+            return false;
+        }
+
         foreach ($this->fournisseurs() as $fournisseur) {
             if (!$fournisseur->estEpuise()) {
                 return true;
