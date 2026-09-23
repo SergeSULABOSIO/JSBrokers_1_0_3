@@ -362,7 +362,23 @@ class AiContextBuilder
         // donnée à reprendre est presque toujours plus haut dans le fil que la
         // fenêtre ne va (cf. sectionReprises).
         $sectionReprises = $this->sectionReprises($ctx['reprises'] ?? []);
-        $sectionBoussole = $this->sectionBoussole($ctx['boussole'] ?? []);
+// LA CONSIGNE ORALE VAUT AUSSI ICI, ET C'EST LE CŒUR DE LA CORRECTION.
+        //
+        // Un tour qui n'appelle AUCUN outil se termine dès la planification
+        // (OrchestrateurDeMessage : « une question de pure conversation … se termine
+        // donc dès la planification, en UN seul appel »). C'est le cas le plus
+        // fréquent d'une conversation parlée — « explique-moi », « et pour l'an
+        // dernier ? », une reformulation. Ces tours-là ne voyaient JAMAIS la consigne
+        // de brièveté, posée en rédaction seule : d'où les cent-soixante-et-onze
+        // secondes de parole mesurées le 2026-09-23.
+        //
+        // ⚠ ELLE N'Y PORTE QUE SUR LA FORME. L'intention d'origine reste intacte et
+        // verrouillée par ReponseParleeBreveTest : une consigne orale ne doit jamais
+        // toucher au CHOIX DES OUTILS ni à ce qui est cherché — l'y glisser ferait
+        // chercher moins au lieu de dire plus court. Le bloc de planification le dit
+        // donc en toutes lettres.
+        $consigneOrale = $this->consigneOrale($request->modeLive, enPlanification: true);
+                $sectionBoussole = $this->sectionBoussole($ctx['boussole'] ?? [], $request->modeLive);
         // État RÉEL de la série en cours (rien quand il n'y en a pas) : c'est la
         // seule chose qui empêche le modèle de croire une mission terminée parce
         // qu'il en a annoncé la fin, ou de reproposer une étape déjà écrite.
@@ -371,7 +387,13 @@ class AiContextBuilder
         // deux phases finiraient par ne plus dire la même chose des mêmes notions.
         $sectionGlossaire = $this->glossaireFinancier();
         $sectionConcision = $this->reglesDeConcision();
-        $sectionMiseEnForme = $this->reglesDeMiseEnForme($ctx['monnaie'] ?? null);
+        // MÊME RÈGLE QU'EN RÉDACTION : à l'oral, rien de ce que ces quatre-vingt-dix
+        // lignes décrivent n'existe pour une oreille — et un tour sans appel d'outil se
+        // conclut ICI. Les y laisser, c'est laisser le mode d'emploi du tableau juste à
+        // côté de l'ordre de n'en faire aucun.
+        $sectionMiseEnForme = $request->modeLive
+            ? $this->regleMonnaie($ctx['monnaie'] ?? null)
+            : $this->reglesDeMiseEnForme($ctx['monnaie'] ?? null);
         // Descendu de la tête des règles de conduite vers le bloc volatil : il change
         // à chaque message, et en tête il empêchait tout le reste d'être caché.
         // Le saut de ligne est porté ICI plutôt que dans le gabarit, pour qu'un bloc
@@ -486,7 +508,7 @@ class AiContextBuilder
         Le périmètre d'accès de ton interlocuteur est strictement limité à :
         {$perimetre}
         Pour toute demande hors de ce périmètre, refuse poliment en expliquant tes limitations techniques
-        liées aux droits d'accès, sans révéler la moindre donnée.{$sectionObjets}{$sectionFichiers}{$sectionReprises}
+        liées aux droits d'accès, sans révéler la moindre donnée.{$sectionObjets}{$sectionFichiers}{$sectionReprises}{$consigneOrale}
         VOLATIL;
 
         // Le bloc stable se termine par une LIGNE VIDE dans son gabarit, et non par
@@ -873,7 +895,7 @@ class AiContextBuilder
     private function promptDeRedaction(AiRequest $request): string
     {
         $ctx = $request->systemContext;
-        $sectionBoussole = $this->sectionBoussole($ctx['boussole'] ?? []);
+        $sectionBoussole = $this->sectionBoussole($ctx['boussole'] ?? [], $request->modeLive);
         // LA PHASE QUI ÉCRIT DOIT SAVOIR QU'IL Y A DES FICHIERS. Sans cette ligne, la
         // bulle finale était rédigée par un modèle qui ne voyait aucune pièce jointe :
         // quand la planification n'avait rien rapporté à leur sujet, il concluait de
@@ -904,8 +926,8 @@ class AiContextBuilder
         et sous-totaux se CALCULENT à partir des lignes affichées — additionne-les et donne le
         résultat, ne dis jamais que tu ne peux pas le faire.{$ligneFichiers}
         {$this->glossaireFinancier()}
-        {$this->reglesDeStyle($ctx['monnaie'] ?? null)}{$consigneOrale}
-        {$sectionBoussole}
+        {$this->reglesDeStyle($ctx['monnaie'] ?? null, $request->modeLive)}
+        {$sectionBoussole}{$consigneOrale}
         REDACTION;
     }
 
@@ -921,11 +943,26 @@ class AiContextBuilder
      * LE DÉTAIL RESTE DISPONIBLE, IL EST SEULEMENT DEMANDÉ. C'est le propre d'une
      * conversation : on répond court, et l'autre relance.
      */
-    private function consigneOrale(bool $modeLive): string
+    private function consigneOrale(bool $modeLive, bool $enPlanification = false): string
     {
         if (!$modeLive) {
             return '';
         }
+
+        // EN PLANIFICATION, ON NE DIT QUE LA FORME — et on dit expressément que le
+        // travail, lui, ne change pas. Sans cette phrase, une consigne de brièveté
+        // posée au moment où le modèle CHOISIT SES OUTILS l'inciterait à en appeler
+        // moins, donc à chercher moins : ce serait toucher au métier de Ket sous
+        // prétexte de régler sa diction.
+        $garde = $enPlanification
+            ? "
+
+" . <<<'GARDE'
+                CELA NE CHANGE RIEN À TON TRAVAIL : mêmes outils, mêmes recherches, mêmes chiffres.
+                Cherche exactement autant que d'habitude — c'est seulement la façon de DIRE le
+                résultat qui change.
+                GARDE
+            : '';
 
         return "
 
@@ -941,7 +978,7 @@ class AiContextBuilder
         - LE DÉTAIL SEULEMENT S'IL EST DEMANDÉ. Si l'utilisateur demande la liste, le tableau
           ou « les détails », donne-les : c'est alors sa demande, et elle prime sur la
           brièveté. Sinon, propose-les en une courte phrase et attends qu'il les réclame.
-        ORAL;
+        ORAL . $garde;
     }
 
     /**
@@ -1652,8 +1689,31 @@ class AiContextBuilder
     }
 
     /** Tout ce qui gouverne la FORME d'une réponse, réuni pour la rédaction. */
-    private function reglesDeStyle(?string $monnaie = null): string
+    /**
+     * ON NE RENFORCE PAS UNE CONSIGNE EN LA RÉPÉTANT — ON SUPPRIME CELLES QUI LA
+     * CONTREDISENT.
+     *
+     * En conversation orale, la consigne de brièveté tenait six lignes ; les règles de
+     * mise en forme en tenaient quatre-vingt-dix, et toutes poussaient à l'inverse :
+     * « TABLEAUX — six règles obligatoires », dont « vingt lignes au plus », les listes,
+     * les émojis en tête de réponse, les graphiques, les titres « réservés aux réponses
+     * longues ». Le modèle recevait donc, dans le même prompt, « AUCUN TABLEAU » et le
+     * mode d'emploi pour en faire un de vingt lignes. Il suivait le plus bavard.
+     *
+     * À l'oral, on ne les envoie plus du tout : rien de ce qu'elles décrivent n'existe
+     * pour une oreille. On garde `reglesDeConcision()` — elle vaut partout — et
+     * `regleMonnaie()`, parce qu'un montant se dit mal autant qu'il s'écrit mal.
+     */
+    private function reglesDeStyle(?string $monnaie = null, bool $modeLive = false): string
     {
+        if ($modeLive) {
+            return $this->reglesDeConcision() . "\n" . $this->regleMonnaie($monnaie) . "\n" . <<<'ORALFORME'
+            - AUCUNE MISE EN FORME : ni tableau, ni liste, ni titre, ni émoji, ni graphique. Rien
+              de tout cela ne s'entend — une oreille ne voit ni les colonnes ni les puces. Les
+              chiffres qui comptent se disent DANS la phrase.
+            ORALFORME;
+        }
+
         return $this->reglesDeConcision() . "\n" . $this->reglesDeMiseEnForme($monnaie);
     }
 
@@ -2264,7 +2324,20 @@ class AiContextBuilder
      * actuelle). Alimente le rappel de fin de réponse (règle de cadence). Chaîne
      * de repli explicite quand aucun axe n'est accessible.
      */
-    private function sectionBoussole(array $boussole): string
+    /**
+     * ⚠ EN CONVERSATION ORALE, PAS DE RAPPEL DE FIN DE RÉPONSE.
+     *
+     * La boussole réclame « un rappel de fin de réponse », et les relevés de
+     * production le montrent tenu : chaque réponse se terminait par « Priorité
+     * actuelle : une commission exigible à recouvrer… ». À l'écrit c'est une ligne
+     * utile qu'on survole ; à l'oral c'est une phrase entière, à chaque tour, qui
+     * retarde d'autant le moment où l'utilisateur peut reprendre la parole.
+     *
+     * L'état de la boussole reste envoyé — Ket doit toujours SAVOIR où sont les
+     * priorités et pouvoir en parler si on l'interroge. Seule l'obligation de le
+     * RÉCITER à chaque fin de réponse disparaît.
+     */
+    private function sectionBoussole(array $boussole, bool $modeLive = false): string
     {
         $items = $boussole['items'] ?? [];
         if ($items === []) {
@@ -2280,8 +2353,9 @@ class AiContextBuilder
         }
 
         $prioritaire = $boussole['prioritaire']['libelle'] ?? null;
+        $rappel = $modeLive ? '' : ' (base de ton rappel de fin de réponse)';
         $tete = $prioritaire !== null
-            ? "\n        PRIORITÉ ACTUELLE (base de ton rappel de fin de réponse) : {$prioritaire}."
+            ? "\n        PRIORITÉ ACTUELLE{$rappel} : {$prioritaire}."
             : "\n        Tout est au vert dans ton périmètre : encourage simplement à saturer davantage (cross-selling) et à sécuriser les renouvellements.";
 
         // Le PROGRAMME DU JOUR est affiché par le serveur à l'ouverture d'une

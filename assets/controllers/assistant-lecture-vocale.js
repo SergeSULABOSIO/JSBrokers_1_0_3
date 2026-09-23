@@ -98,11 +98,33 @@ export function choisirVoix(voix, langue = 'fr') {
 /** Une ligne de tableau Markdown → ses cellules. */
 const cellules = (ligne) => ligne.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
 
+/** Ce que Ket dit d'un tableau lorsqu'elle ne le récite pas. */
+export const TABLEAU_ANNONCE = 'Le tableau est affiché à l’écran.';
+
 /**
  * Tableaux Markdown → une phrase par ligne : « En-tête : valeur, En-tête : valeur. »
  * Lu cellule par cellule, un tableau devient une suite de nombres sans repère.
+ *
+ * ── OU BIEN : ON NE LE RÉCITE PAS DU TOUT ───────────────────────────────────
+ *
+ * En conversation orale, cette mise en phrases est le MULTIPLICATEUR du monologue.
+ * Un tableau de dix-neuf lignes sur cinq colonnes produit dix-neuf phrases portant
+ * chacune cinq intitulés et cinq valeurs — près de deux cents segments verbaux.
+ * Mesuré en production le 2026-09-23 : cent-soixante-et-onze secondes de parole
+ * d'affilée sur un seul tour.
+ *
+ * Avec `mode = 'annoncer'`, le tableau est donc REMPLACÉ par une phrase qui dit où
+ * le trouver. Ce n'est pas une invention : les blocs de graphique suivent cette
+ * règle depuis toujours, quelques lignes plus bas — « Graphique affiché à
+ * l'écran. » On l'étend, voilà tout.
+ *
+ * ⚠ CE N'EST PAS UNE TRONCATURE. Le tableau reste ENTIER à l'écran ; seule sa
+ * lecture à voix haute est remplacée par son annonce.
+ *
+ * @param {string} texte
+ * @param {'lire'|'annoncer'} mode
  */
-function tableauxEnPhrases(texte) {
+function tableauxEnPhrases(texte, mode = 'lire') {
     const lignes = texte.split('\n');
     const sortie = [];
     for (let i = 0; i < lignes.length; i++) {
@@ -114,7 +136,10 @@ function tableauxEnPhrases(texte) {
         }
         const entetes = cellules(lignes[i]);
         i += 2; // en-tête + séparateur
+        const annoncer = mode === 'annoncer';
+        if (annoncer) { sortie.push(TABLEAU_ANNONCE); }
         for (; i < lignes.length && /^\s*\|.*\|\s*$/.test(lignes[i]); i++) {
+            if (annoncer) { continue; }
             const valeurs = cellules(lignes[i]);
             const paires = valeurs
                 .map((valeur, k) => (valeur === '' ? '' : (entetes[k] ? `${entetes[k]} : ${valeur}` : valeur)))
@@ -130,9 +155,14 @@ function tableauxEnPhrases(texte) {
  * Le Markdown d'une réponse → le texte à prononcer.
  *
  * @param {string} markdown source de la bulle (data-md-source)
+ * @param {{tableaux?: 'lire'|'annoncer'}} options `annoncer` en conversation orale :
+ *        un tableau se dit en une phrase au lieu de se réciter ligne par ligne.
+ *        Le défaut reste `lire`, parce que le bouton « Écouter » d'une réponse écrite
+ *        est un geste DÉLIBÉRÉ sur une bulle précise : celui qui le presse peut vouloir
+ *        le contenu du tableau, et rien ne l'y force autrement.
  * @returns {string}
  */
-export function texteAPrononcer(markdown) {
+export function texteAPrononcer(markdown, options = {}) {
     let texte = String(markdown ?? '').replace(/\r\n?/g, '\n');
 
     // Graphiques : leur JSON ne se lit pas ; on dit qu'il y en a un.
@@ -140,7 +170,7 @@ export function texteAPrononcer(markdown) {
     // Autres blocs de code : le contenu seul, sans les clôtures.
     texte = texte.replace(/```[a-z]*\n?([\s\S]*?)```/gi, '$1');
 
-    texte = tableauxEnPhrases(texte);
+    texte = tableauxEnPhrases(texte, options.tableaux === 'annoncer' ? 'annoncer' : 'lire');
 
     texte = texte
         .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1') // images

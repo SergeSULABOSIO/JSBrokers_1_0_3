@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+    TABLEAU_ANNONCE,
     choisirVoix,
     decouperEnPhrases,
     noteVoix,
@@ -122,4 +123,50 @@ test('interface anglaise : voix anglaise féminine, jamais une voix française',
 test('aucune voix de la langue : null', () => {
     assert.equal(choisirVoix([], 'fr'), null);
     assert.equal(choisirVoix([{ name: 'Google Deutsch', lang: 'de-DE' }], 'fr'), null);
+});
+
+/* ───── En conversation orale, un tableau s'annonce au lieu de se réciter ───── */
+
+const TABLEAU_19 = ['| Client | Prime | Commission |', '| --- | --- | --- |']
+    .concat(Array.from({ length: 19 }, (_, i) => `| Client ${i + 1} | ${i + 1}00 $ | ${i + 1}0 $ |`))
+    .join(String.fromCharCode(10));
+
+test('en mode oral, un tableau de dix-neuf lignes tient en une phrase', () => {
+    // LE MULTIPLICATEUR DU MONOLOGUE. Récité, ce tableau produit dix-neuf phrases
+    // portant chacune trois intitulés et trois valeurs — c'est ce qui a donné
+    // cent-soixante-et-onze secondes de parole d'affilée en production le
+    // 2026-09-23. Annoncé, il tient en une phrase.
+    const dit = texteAPrononcer(TABLEAU_19, { tableaux: 'annoncer' });
+
+    assert.equal(dit, TABLEAU_ANNONCE);
+    assert.ok(!dit.includes('Commission'), 'aucun intitulé de colonne ne doit être prononcé');
+    assert.ok(!dit.includes('Client 7'), 'aucune valeur non plus');
+});
+
+test('le tableau reste ENTIER à l’écran : seule sa lecture change', () => {
+    // Ce test dit ce que la correction n'est PAS. Rien n'est tronqué : le texte
+    // qui entoure le tableau est prononcé normalement.
+    const saut = String.fromCharCode(10) + String.fromCharCode(10);
+    const reponse = 'Voici la situation.' + saut + TABLEAU_19 + saut + 'Je reste à votre disposition.';
+    const dit = texteAPrononcer(reponse, { tableaux: 'annoncer' });
+
+    assert.ok(dit.startsWith('Voici la situation.'));
+    assert.ok(dit.includes(TABLEAU_ANNONCE));
+    assert.ok(dit.endsWith('Je reste à votre disposition.'));
+});
+
+test('⚠ sans l’option, le comportement de l’écrit est INCHANGÉ', () => {
+    // LE GARDE-FOU. Presser « Écouter » sur une réponse écrite est un geste
+    // délibéré sur une bulle précise : celui qui le fait peut vouloir le contenu du
+    // tableau. On ajoute une option, on ne change pas le défaut.
+    const dit = texteAPrononcer(TABLEAU_19);
+
+    assert.ok(dit.includes('Client : Client 1, Prime : 100 $, Commission : 10 $.'));
+    assert.ok(!dit.includes(TABLEAU_ANNONCE));
+});
+
+test('une option inconnue retombe sur la lecture, jamais sur le silence', () => {
+    // Un réglage mal orthographié ne doit pas faire disparaître le contenu.
+    assert.ok(texteAPrononcer(TABLEAU_19, { tableaux: 'nimporte-quoi' }).includes('Prime : 100 $'));
+    assert.ok(texteAPrononcer(TABLEAU_19, {}).includes('Prime : 100 $'));
 });
