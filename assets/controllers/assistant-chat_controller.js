@@ -4066,7 +4066,15 @@ export default class extends Controller {
         if (dejaLue) return;
 
         const source = bulle.querySelector('.aic-msg-text')?.dataset.mdSource ?? '';
-        const texte = texteAPrononcer(source);
+        // EN CONVERSATION ORALE, UN TABLEAU S'ANNONCE, IL NE SE RÉCITE PAS. Lu ligne
+        // par ligne avec l'intitulé de chaque colonne répété, un tableau de dix-neuf
+        // lignes tient près de deux cents segments verbaux — c'est le multiplicateur
+        // des cent-soixante-et-onze secondes de parole mesurées le 2026-09-23. Le
+        // tableau reste ENTIER à l'écran : seule sa lecture est remplacée.
+        //
+        // À l'écrit, rien ne change : presser « Écouter » sur une bulle est un geste
+        // délibéré, et celui qui le fait peut vouloir le contenu.
+        const texte = texteAPrononcer(source, { tableaux: this._live === true ? 'annoncer' : 'lire' });
         if (texte === '') return;
 
         // Le jeton date la lecture : un arrêt, ou une autre bulle lancée entre-temps,
