@@ -695,11 +695,28 @@ const CATALOGUE = {
     relance: { 'relance-1': 'Encore un peu…', 'relance-2': 'Ça vient…' },
 };
 
+test('Ket accuse réception une seule fois, puis se tait', () => {
+    // DÉCISION DE L'EXPLOITANT, 2026-09-23 : « Quand je parle, Ket doit dire Hmmm…
+    // ou Ok, entendu… C'est tout. » Meubler une attente, c'est occuper la parole au
+    // moment où l'utilisateur pourrait la reprendre.
+    assert.equal(programmeDesIntermedes().length, 1, 'un seul intermède, au début');
+    assert.equal(programmeDesIntermedes()[0].moment, 'debut');
+});
+
+test('le mécanisme de relance reste entier, simplement éteint', () => {
+    // On n'a pas SUPPRIMÉ les relances, on les a mises à zéro : les rallumer ne doit
+    // demander qu'un chiffre, pas une réécriture.
+    const avecRelances = programmeDesIntermedes({ relancesMax: 2 });
+    assert.equal(avecRelances.length, 3);
+    assert.equal(avecRelances[1].moment, 'relance');
+    assert.ok(avecRelances[2].delaiMs - avecRelances[1].delaiMs >= 5000, 'les relances ne se bousculent pas');
+});
+
 test('le programme parle après un court délai, puis espace ses relances', () => {
-    const etapes = programmeDesIntermedes();
+    const etapes = programmeDesIntermedes({ relancesMax: 3 });
     assert.equal(etapes[0].moment, 'debut');
     assert.ok(etapes[0].delaiMs >= 500 && etapes[0].delaiMs <= 1500, 'rien avant ~0,6 s : une réponse rapide se passe d’intermède');
-    assert.equal(etapes.length, RELANCES_MAX + 1);
+    assert.equal(etapes.length, 4);
     for (let i = 1; i < etapes.length; i++) {
         assert.equal(etapes[i].moment, 'relance');
         assert.ok(etapes[i].delaiMs - etapes[i - 1].delaiMs >= 5000, 'les relances ne se bousculent pas');

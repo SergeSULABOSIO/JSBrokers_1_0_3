@@ -6,10 +6,11 @@
  * (App\Ai\Live\IntermedesDeKet) et le navigateur ne manipule que des CLÉS. Ici, on ne
  * décide que du RYTHME : quand parler, quoi choisir, et quand se taire.
  *
- * Deux règles tiennent tout :
+ * Trois règles tiennent tout :
  *  - une réponse rapide ne mérite aucun intermède (parler pour ne rien dire est pire
  *    qu'un court silence) ;
- *  - on ne répète pas la même phrase dans une même attente.
+ *  - on ne répète pas la même phrase dans une même attente ;
+ *  - on n'accuse réception qu'UNE FOIS, et on se tait ensuite (cf. RELANCES_MAX).
  */
 
 /** Sous ce délai, Ket a répondu assez vite : on se tait. */
@@ -18,8 +19,18 @@ export const AVANT_PREMIER_MS = 600;
 /** Espacement des relances tant que la réflexion dure. */
 export const ENTRE_RELANCES_MS = 9000;
 
-/** Au-delà, mieux vaut laisser le silence que meubler sans fin. */
-export const RELANCES_MAX = 3;
+/**
+ * AUCUNE RELANCE : Ket accuse réception UNE FOIS, puis se tait jusqu'à sa réponse.
+ *
+ * Il en allait autrement — une relance toutes les neuf secondes, trois fois. Mais
+ * meubler une attente, c'est occuper la parole au moment où l'utilisateur pourrait
+ * la reprendre, et repousser d'autant le moment où Ket l'entendra. Décision de
+ * l'exploitant, 2026-09-23 : « Quand je parle, Ket doit dire Hmmm… ou Ok,
+ * entendu… C'est tout. »
+ *
+ * Le mécanisme reste entier : passer cette constante à 1 le rallume.
+ */
+export const RELANCES_MAX = 0;
 
 /**
  * Le programme d'une attente : à quels instants parler, et avec quel moment du

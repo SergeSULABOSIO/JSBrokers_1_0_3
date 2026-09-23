@@ -30,21 +30,24 @@ final class IntermedesDeKet
      * @var array<string, array<string, string>> moment => clé => phrase
      */
     private const PHRASES = [
+        // UN ACCUSÉ DE RÉCEPTION, ET RIEN D'AUTRE. Ce que Ket doit dire quand on vient
+        // de lui parler tient en deux syllabes : « je t'ai entendu, je m'en occupe ».
+        // Les formules plus longues — « Bonne question, je consulte ma base de
+        // connaissances… » — annonçaient un travail au lieu d'accuser réception, et
+        // occupaient la parole au moment précis où l'utilisateur vient de la rendre.
+        // Décision de l'exploitant, 2026-09-23.
         self::DEBUT => [
-            'debut-1' => 'Hum… laissez-moi vérifier.',
-            'debut-2' => 'D’accord… une seconde, je vérifie cela.',
-            'debut-3' => 'Bonne question, je consulte ma base de connaissances…',
-            'debut-4' => 'Très bien, un petit instant…',
-            'debut-5' => 'Hum… je regarde tout de suite.',
-            'debut-6' => 'Entendu. Je vais chercher cela.',
+            'debut-1' => 'Hmm…',
+            'debut-2' => 'Ok, entendu…',
+            'debut-3' => 'Okay…',
         ],
-        self::RELANCE => [
-            'relance-1' => 'Encore un petit instant…',
-            'relance-2' => 'Je rassemble les éléments…',
-            'relance-3' => 'J’y suis presque…',
-            'relance-4' => 'Je vérifie les derniers détails…',
-            'relance-5' => 'Voilà, ça vient…',
-        ],
+
+        // VIDE, ET C'EST VOULU. Ket ne meuble plus une attente qui dure : elle accuse
+        // réception une fois, puis se tait jusqu'à sa réponse. Les relances toutes les
+        // neuf secondes parlaient pour ne rien dire, et repoussaient d'autant le moment
+        // où l'utilisateur pouvait reprendre la parole. La constante et le moment
+        // restent en place : rouvrir cette porte ne demande que d'écrire une ligne.
+        self::RELANCE => [],
     ];
 
     /**
