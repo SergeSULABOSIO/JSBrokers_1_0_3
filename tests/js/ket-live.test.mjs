@@ -13,6 +13,7 @@ import { ENTETE_WAV } from '../../assets/controllers/assistant-voix-pcm.js';
 import { ETATS, libelleEtatLive, sessionInitiale, transition } from '../../assets/controllers/ket-live-etat.js';
 import { choisir, programmeDesIntermedes, RELANCES_MAX } from '../../assets/controllers/ket-live-intermedes.js';
 import { finalesNouvelles, MARGE_PROCHE, nEstQueDesTics, phraseRecevable, ressembleAKet, retirerLaVoixDeKet } from '../../assets/controllers/ket-live-tri.js';
+import { CAUSE_INCONNUE, CAUSES_MICRO, renoncementAuMicro } from '../../assets/controllers/ket-live-micro.js';
 
 // ── Détection de parole ──────────────────────────────────────────────────────
 
@@ -717,4 +718,46 @@ test('le catalogue du serveur, qui n’envoie que des clés, est compris tel que
 test('un moment inconnu ou vide ne fait rien dire', () => {
     assert.equal(choisir(CATALOGUE, 'inconnu'), null);
     assert.equal(choisir({}, 'debut'), null);
+});
+
+/* ───────────────── Le micro refusé ne doit pas tuer la session ───────────── */
+
+test('un micro refusé n’arrête PAS la session quand le navigateur sait écouter', () => {
+    // L'INCIDENT DU 2026-09-23, en une assertion. Le flux d'analyse ne sert qu'à
+    // entendre une interruption et à juger la provenance d'un son ; la
+    // reconnaissance du navigateur, elle, a sa propre captation. Arrêter toute la
+    // session parce que ce flux est refusé, c'était rendre Ket muette sur un
+    // domaine où la permission n'avait jamais été accordée — alors qu'elle pouvait
+    // parfaitement entendre.
+    const { continuer, raison } = renoncementAuMicro('NotAllowedError', 'navigateur');
+    assert.equal(continuer, true);
+    assert.match(raison, /Autorisez-le/);
+});
+
+test('sans reconnaissance du navigateur, il n’y a plus rien pour entendre : on arrête', () => {
+    // Les oreilles du serveur transcrivent CE QU'ON LEUR ENVOIE. Sans flux, elles
+    // n'ont rien à transcrire : continuer afficherait « Ket vous écoute… » devant
+    // quelqu'un que personne n'écoute.
+    assert.equal(renoncementAuMicro('NotAllowedError', 'serveur').continuer, false);
+    assert.equal(renoncementAuMicro('NotReadableError', 'serveur').continuer, false);
+});
+
+test('chaque cause connue est dite en français, et une cause inconnue ne reste pas muette', () => {
+    // Une session qui n'entend pas SANS dire pourquoi est la pire des réponses :
+    // l'utilisateur ne peut ni comprendre, ni agir.
+    for (const nom of Object.keys(CAUSES_MICRO)) {
+        const { raison } = renoncementAuMicro(nom, 'navigateur');
+        assert.ok(raison.length > 20, `« ${nom} » doit être expliqué`);
+    }
+    assert.equal(renoncementAuMicro('ErreurJamaisVue', 'navigateur').raison, CAUSE_INCONNUE);
+    assert.equal(renoncementAuMicro(undefined, 'navigateur').raison, CAUSE_INCONNUE);
+    assert.equal(renoncementAuMicro(null, 'serveur').raison, CAUSE_INCONNUE);
+});
+
+test('un contexte non sécurisé est nommé pour ce qu’il est', () => {
+    // `navigator.mediaDevices` n'existe pas hors HTTPS : l'appel lève un TypeError
+    // avant d'avoir commencé. C'est LE premier soupçon quand un poste marche et un
+    // serveur non — le message doit donc le dire, pas parler de micro.
+    assert.match(renoncementAuMicro('TypeError', 'navigateur').raison, /https/);
+    assert.match(renoncementAuMicro('SecurityError', 'navigateur').raison, /https/);
 });
