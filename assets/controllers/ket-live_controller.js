@@ -9,6 +9,7 @@ import { texteAPrononcer } from './assistant-lecture-vocale.js';
 import { fusionnerTranscripts } from './dictee-transcript.js';
 import { documentLocale } from '../locale.js';
 import { renoncementAuMicro } from './ket-live-micro.js';
+import { veilleDeLEcoute } from './ket-live-veille.js';
 
 /**
  * @class KetLiveController
@@ -144,6 +145,10 @@ export default class extends Controller {
 
     disconnect() {
         this.arreter();
+        // `arreter()` éteint déjà la veille en franchissant l'arrêt ; on le refait
+        // ici sans condition, parce qu'un intervalle survivant à la page est une
+        // fuite qui ne se voit qu'en production.
+        this._eteindreLaVeille();
         this.element.removeEventListener('ket-live:demarrer', this._onDemarrer);
         this.element.removeEventListener('assistant-chat:reponse-affichee', this._onReponse);
         this.element.removeEventListener('assistant-chat:lecture-terminee', this._onLectureTerminee);
@@ -156,6 +161,16 @@ export default class extends Controller {
     /** Démarre le mode Live. Appelé par le bouton principal du chat (champ vide). */
     demarrer() {
         if (this.session.etat !== ETATS.ARRET) return;
+        // TOUT REPART À ZÉRO. Garder la raison d'une session précédente ferait lire
+        // un reproche périmé ; garder les compteurs ferait croire la veille déjà
+        // rassurée, ou déjà alarmée, avant qu'un seul mot n'ait été dit.
+        this._raisonSourde = null;
+        this._textesRecus = 0;
+        this._tramesRecues = 0;
+        this._microLache = false;
+        this._microRenonce = false;
+        this._phrasesMuettes = 0;
+        this._navigateurSourd = false;
         this._evenement('demarrer');
     }
 
@@ -179,6 +194,8 @@ export default class extends Controller {
         // ce qui lui fait afficher la réponse d'un coup et demander la voix rapide.
         if ((avant.etat === ETATS.ARRET) !== (this.session.etat === ETATS.ARRET)) {
             this._emettre('ket-live:session', { actif: this.session.etat !== ETATS.ARRET });
+            if (this.session.etat === ETATS.ARRET) this._eteindreLaVeille();
+            else this._allumerLaVeille();
         }
 
         // L'OREILLE SUIT L'ÉTAT, TOUJOURS. C'est posé ici, après chaque transition et
@@ -337,8 +354,14 @@ export default class extends Controller {
     /** L'interface : panneau visible, état écrit (et annoncé), dernière phrase entendue. */
     _rendre() {
         const actif = this.session.etat !== ETATS.ARRET;
+        // UNE RAISON SURVIT À L'ARRÊT. Sans cela, une session qui s'arrête FAUTE DE
+        // POUVOIR ENTENDRE emporte avec elle la seule ligne qui l'explique : le
+        // panneau se referme, et l'utilisateur n'a plus rien à lire. C'est
+        // exactement le « aucun retour, ni message » signalé le 2026-09-23.
+        const explique = !actif && typeof this._raisonSourde === 'string' && this._raisonSourde !== '';
+        const visible = actif || explique;
         if (this.hasPanneauTarget) {
-            this.panneauTarget.hidden = !actif;
+            this.panneauTarget.hidden = !visible;
             this.panneauTarget.classList.toggle('aic-live--reflexion', this.session.etat === ETATS.REFLEXION);
             this.panneauTarget.classList.toggle('aic-live--parole', this.session.etat === ETATS.PAROLE);
         }
@@ -353,7 +376,7 @@ export default class extends Controller {
             const raison = this._raisonSourde ?? (this._sansVerrou === true
                 ? 'Gardez l’écran allumé : ce navigateur ne sait pas l’en empêcher.'
                 : null);
-            this.astuceTarget.hidden = !(actif && raison !== null);
+            this.astuceTarget.hidden = !(visible && raison !== null);
             if (raison !== null) this.astuceTarget.textContent = raison;
         }
 
@@ -515,6 +538,57 @@ export default class extends Controller {
         this._evenement('arreter');
     }
 
+    // ── La veille de l'écoute ────────────────────────────────────────────────
+
+    /**
+     * SURVEILLER QU'ON ENTEND VRAIMENT QUELQUE CHOSE.
+     *
+     * Le garde-fou historique (deux phrases muettes) ne s'arme que si NOTRE micro
+     * détecte une phrase entière. Quand aucune trame n'arrive — un `AudioContext`
+     * resté suspendu sur téléphone —, il ne s'arme jamais : le micro n'est jamais
+     * rendu à la reconnaissance, qui reste sourde, et la session tourne dans le
+     * vide en affichant « Ket vous écoute… ». C'est exactement l'impasse constatée
+     * en production le 2026-09-23. Cette veille-ci ne dépend pas des trames, donc
+     * elle en sort. Voir ket-live-veille.js pour la règle et ses seuils.
+     */
+    _allumerLaVeille() {
+        this._eteindreLaVeille();
+        this._debutDEcoute = performance.now();
+        this._veille = setInterval(() => this._veiller(), 1000);
+    }
+
+    _eteindreLaVeille() {
+        clearInterval(this._veille);
+        this._veille = null;
+    }
+
+    _veiller() {
+        if (this.session.etat === ETATS.ARRET) {
+            this._eteindreLaVeille();
+
+            return;
+        }
+
+        const { action, raison } = veilleDeLEcoute({
+            depuisMs: performance.now() - (this._debutDEcoute ?? performance.now()),
+            textesRecus: this._textesRecus ?? 0,
+            tramesRecues: this._tramesRecues ?? 0,
+            microLache: this._microLache === true,
+        });
+
+        if (action === 'lacher-le-micro') {
+            console.debug('Mode Live — aucune trame reçue : le micro est rendu à la reconnaissance.');
+            this._laisserLeMicroALaReconnaissance();
+
+            return;
+        }
+
+        if (action === 'le-dire' && this._raisonSourde !== raison) {
+            this._raisonSourde = raison;
+            this._rendre();
+        }
+    }
+
     /**
      * LE CAPTEUR DE TRAMES. AudioWorklet d'abord : il tourne sur le thread audio, alors
      * que ScriptProcessorNode — déprécié — partage le fil principal avec le rendu du
@@ -547,6 +621,9 @@ export default class extends Controller {
         const instant = performance.now();
         // Le micro donne signe de vie : c'est ce qui autorise à juger de la provenance.
         this._derniereTrame = instant;
+        // Compté pour la veille : ZÉRO trame après plusieurs secondes est la
+        // signature d'un contexte audio qui n'a jamais démarré (cf. ket-live-veille).
+        this._tramesRecues = (this._tramesRecues ?? 0) + 1;
         // KET EST AUDIBLE DÈS LA RÉFLEXION : ses intermèdes sortent du haut-parleur
         // pendant qu'elle cherche. Le seuil doit y être relevé comme pendant sa réponse,
         // sinon c'est sa propre voix qui ouvre une phrase.

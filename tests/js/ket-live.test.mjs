@@ -14,6 +14,7 @@ import { ETATS, libelleEtatLive, sessionInitiale, transition } from '../../asset
 import { choisir, programmeDesIntermedes, RELANCES_MAX } from '../../assets/controllers/ket-live-intermedes.js';
 import { finalesNouvelles, MARGE_PROCHE, nEstQueDesTics, phraseRecevable, ressembleAKet, retirerLaVoixDeKet } from '../../assets/controllers/ket-live-tri.js';
 import { CAUSE_INCONNUE, CAUSES_MICRO, renoncementAuMicro } from '../../assets/controllers/ket-live-micro.js';
+import { RIEN_ENTENDU, SANS_TRAME_AVANT_DE_LACHER_MS, SILENCE_AVANT_DE_LE_DIRE_MS, veilleDeLEcoute } from '../../assets/controllers/ket-live-veille.js';
 
 // ── Détection de parole ──────────────────────────────────────────────────────
 
@@ -760,4 +761,66 @@ test('un contexte non sécurisé est nommé pour ce qu’il est', () => {
     // serveur non — le message doit donc le dire, pas parler de micro.
     assert.match(renoncementAuMicro('TypeError', 'navigateur').raison, /https/);
     assert.match(renoncementAuMicro('SecurityError', 'navigateur').raison, /https/);
+});
+
+/* ─────────── La veille : sortir du silence où deux mécanismes s'attendent ─── */
+
+test('rien à signaler tant que la reconnaissance rend quelque chose', () => {
+    // Le cas normal, et de loin le plus fréquent : la veille doit se taire.
+    const veille = veilleDeLEcoute({ depuisMs: 120000, textesRecus: 3, tramesRecues: 0 });
+    assert.equal(veille.action, 'rien');
+});
+
+test('rien à signaler tant que les trames arrivent : le garde-fou des phrases muettes suffit', () => {
+    // UN POSTE OÙ TOUT VA BIEN NE DOIT JAMAIS VOIR CETTE VEILLE AGIR. Les trames
+    // arrivent, donc le micro entend, donc c'est au garde-fou historique — qui sait
+    // qu'une phrase ENTIÈRE a été dite — de juger. Lâcher le micro ici ferait perdre
+    // la détection d'interruption pour rien.
+    const veille = veilleDeLEcoute({ depuisMs: 60000, textesRecus: 0, tramesRecues: 400 });
+    assert.notEqual(veille.action, 'lacher-le-micro');
+});
+
+test('aucune trame passé le seuil : on rend le micro à la reconnaissance', () => {
+    // L'IMPASSE DU 2026-09-23, en une assertion. Zéro trame, c'est un contexte audio
+    // qui n'a jamais démarré : notre capture est aveugle ET tient peut-être le micro
+    // de la reconnaissance. On le lui rend — geste gratuit, puisqu'on n'en tirait rien.
+    const juste = veilleDeLEcoute({ depuisMs: SANS_TRAME_AVANT_DE_LACHER_MS, textesRecus: 0, tramesRecues: 0 });
+    assert.equal(juste.action, 'lacher-le-micro');
+
+    // Pas avant : on laisse au contexte le temps de démarrer.
+    const trop = veilleDeLEcoute({ depuisMs: SANS_TRAME_AVANT_DE_LACHER_MS - 1, textesRecus: 0, tramesRecues: 0 });
+    assert.equal(trop.action, 'rien');
+});
+
+test('le micro n’est rendu qu’une fois', () => {
+    // Sans cela, la veille relancerait la reconnaissance à chaque seconde et lui
+    // couperait la parole en boucle.
+    const veille = veilleDeLEcoute({ depuisMs: 60000, textesRecus: 0, tramesRecues: 0, microLache: true });
+    assert.notEqual(veille.action, 'lacher-le-micro');
+});
+
+test('si le silence persiste malgré tout, on le DIT', () => {
+    // Une session qui affiche « Ket vous écoute… » devant quelqu'un que personne
+    // n'écoute est la pire des réponses.
+    const veille = veilleDeLEcoute({
+        depuisMs: SILENCE_AVANT_DE_LE_DIRE_MS,
+        textesRecus: 0,
+        tramesRecues: 0,
+        microLache: true,
+    });
+    assert.equal(veille.action, 'le-dire');
+    assert.equal(veille.raison, RIEN_ENTENDU);
+    assert.match(veille.raison, /rechargez la page/);
+});
+
+test('on laisse le temps de réfléchir avant de reprocher un silence', () => {
+    // Quelqu'un qui ouvre le Live et se tait dix secondes ne doit voir aucun
+    // avertissement : un faux reproche apprend à ignorer les vrais.
+    const veille = veilleDeLEcoute({ depuisMs: 10000, textesRecus: 0, tramesRecues: 120, microLache: false });
+    assert.equal(veille.action, 'rien');
+});
+
+test('un état vide ne fait rien dire', () => {
+    assert.equal(veilleDeLEcoute().action, 'rien');
+    assert.equal(veilleDeLEcoute({}).action, 'rien');
 });
