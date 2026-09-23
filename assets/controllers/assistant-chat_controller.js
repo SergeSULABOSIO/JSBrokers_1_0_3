@@ -4237,7 +4237,18 @@ export default class extends Controller {
      */
     async _lireAvecNavigateur(segments, jeton, voixImposee = null) {
         if (segments.length === 0) return;
-        const voix = voixImposee ?? await this._voixDeKet();
+        // EN CONVERSATION ORALE, LA LATENCE PRIME SUR LE TIMBRE. Les plus belles voix
+        // du navigateur sont EN LIGNE : elles demandent un aller-retour réseau à
+        // chaque énoncé. Mesuré en production le 2026-09-23 : 1 655 ms, 4 004 ms, et
+        // jusqu'à 10 552 ms avant le premier son. Dans un échange parlé, ce silence
+        // se lit comme une panne — alors qu'une voix installée sur la machine démarre
+        // instantanément. Elle est moins belle ; elle parle tout de suite.
+        //
+        // À L'ÉCRIT, RIEN NE CHANGE : on lit une réponse déjà affichée, et une seconde
+        // d'attente s'y paie volontiers pour une diction plus riche.
+        const voix = voixImposee
+            ?? (this._live === true ? this._voixLocale() : null)
+            ?? await this._voixDeKet();
         if (this._lecture !== jeton) return;
 
         // UN SEUL REPLI, MÊME SI PLUSIEURS ÉNONCÉS TOMBENT ENSEMBLE. Les énoncés sont
