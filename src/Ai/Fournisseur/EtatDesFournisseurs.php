@@ -2,6 +2,7 @@
 
 namespace App\Ai\Fournisseur;
 
+use App\Ai\Voix\VoixDeKet;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
@@ -53,7 +54,20 @@ final class EtatDesFournisseurs
     {
         return [
             'moteur'        => $this->famille($this->moteurs),
-            'voix'          => $this->famille($this->voix),
+            // LE NAVIGATEUR FIGURE DANS LA LISTE DES VOIX, bien qu'il ne soit pas un
+            // service : il est une vraie option, et un écran qui ne la montre pas la
+            // rend inexistante. Toujours prêt — toute page sait lire un texte — et
+            // jamais à sec : il ne consomme ni clé ni quota. Le placer devant les
+            // voix du serveur, depuis la console, c'est choisir de parler TOUT DE
+            // SUITE plutôt que joliment.
+            'voix'          => [...$this->famille($this->voix), [
+                'nom'        => VoixDeKet::NAVIGATEUR,
+                'disponible' => true,
+                'epuise'     => false,
+                'modele'     => null,
+                'cle'        => null,
+                'echeance'   => null,
+            ]],
             'oreille'       => $this->famille($this->oreilles),
             'comprehension' => $this->famille($this->comprenants),
             'dictee'        => $this->famille($this->finisseurs),

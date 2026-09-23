@@ -95,6 +95,68 @@ class VoixDeKetTest extends TestCase
         self::assertFalse($voix->uneVoixPeutParler(), 'mais aucun ne parlera : inutile de l’appeler');
     }
 
+    /**
+     * LE NAVIGATEUR EN TÊTE : on ne dérange plus le serveur du tout.
+     *
+     * Ce n'est pas une panne, c'est un CHOIX d'exploitant, posé depuis la console :
+     * une voix de serveur demande un aller-retour — jusqu'à dix secondes mesurées en
+     * production le 2026-09-23 — là où le navigateur parle instantanément. Certains
+     * cabinets préféreront la plus belle voix, d'autres la plus rapide.
+     */
+    public function testLeNavigateurEnTeteCourtCircuiteLeServeur(): void
+    {
+        $voix = new VoixDeKet([
+            self::faux('elevenlabs', ['son'], FournisseurDeVoix::COMPLET),
+            self::faux('gemini', ['son'], FournisseurDeVoix::COMPLET),
+        ], 'navigateur,elevenlabs,gemini');
+
+        self::assertTrue($voix->leNavigateurDAbord());
+        self::assertFalse(
+            $voix->uneVoixPeutParler(),
+            'la page lit elle-même : inutile d’attendre une réponse du serveur',
+        );
+        self::assertTrue($voix->estDisponible(), 'les voix du serveur restent configurées');
+    }
+
+    /**
+     * LE NAVIGATEUR EN DERNIER RESTE CE QU'IL A TOUJOURS ÉTÉ : le filet de sécurité.
+     * On compare des RANGS, pas des présences — sans quoi le nommer quelque part
+     * dans la liste suffirait à couper les voix du serveur.
+     */
+    public function testLeNavigateurEnDernierNeChangeRien(): void
+    {
+        $voix = new VoixDeKet([
+            self::faux('elevenlabs', ['son'], FournisseurDeVoix::COMPLET),
+            self::faux('gemini', ['son'], FournisseurDeVoix::COMPLET),
+        ], 'elevenlabs,gemini,navigateur');
+
+        self::assertFalse($voix->leNavigateurDAbord());
+        self::assertTrue($voix->uneVoixPeutParler(), 'le serveur parle, comme avant');
+    }
+
+    /** Sans le nommer, rien ne change : c'est le comportement par défaut. */
+    public function testSansLeNommerRienNeChange(): void
+    {
+        $voix = new VoixDeKet([self::faux('gemini', ['son'], FournisseurDeVoix::COMPLET)], 'elevenlabs,gemini');
+
+        self::assertFalse($voix->leNavigateurDAbord());
+        self::assertTrue($voix->uneVoixPeutParler());
+    }
+
+    /**
+     * Devant une voix ÉCARTÉE de la chaîne, le navigateur l'emporte quand même :
+     * ce qui compte est le rang des fournisseurs RÉELLEMENT retenus.
+     */
+    public function testUneVoixHorsChaineNeProtegePasLeServeur(): void
+    {
+        $voix = new VoixDeKet([
+            self::faux('elevenlabs', ['son'], FournisseurDeVoix::COMPLET),
+            self::faux('gemini', ['son'], FournisseurDeVoix::COMPLET),
+        ], 'navigateur,gemini');
+
+        self::assertTrue($voix->leNavigateurDAbord(), 'elevenlabs n’est pas dans la chaîne');
+    }
+
     /** ⚠ ET IL SUFFIT D'UNE SEULE qui ait encore du souffle pour que l'on demande. */
     public function testUneSeuleVoixEncoreDisponibleSuffit(): void
     {
