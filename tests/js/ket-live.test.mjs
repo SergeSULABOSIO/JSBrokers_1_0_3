@@ -12,7 +12,7 @@ import { assembler, duree, encoderWav, reechantillonner, TAUX_OREILLE } from '..
 import { ENTETE_WAV } from '../../assets/controllers/assistant-voix-pcm.js';
 import { ETATS, libelleEtatLive, sessionInitiale, transition } from '../../assets/controllers/ket-live-etat.js';
 import { choisir, programmeDesIntermedes, RELANCES_MAX } from '../../assets/controllers/ket-live-intermedes.js';
-import { finalesNouvelles, MARGE_PROCHE, messageDeRejet, nEstQueDesTics, phraseRecevable, ressembleAKet, retirerLaVoixDeKet } from '../../assets/controllers/ket-live-tri.js';
+import { FENETRE_MS, finalesNouvelles, MARGE_PROCHE, messageDeRejet, MOTS_ECHO_MAX, nEstQueDesTics, phraseRecevable, priseRecevable as juger, ressembleAKet, retirerLaVoixDeKet } from '../../assets/controllers/ket-live-tri.js';
 import { CAUSE_INCONNUE, CAUSES_MICRO, renoncementAuMicro } from '../../assets/controllers/ket-live-micro.js';
 import { RIEN_ENTENDU, SANS_TRAME_AVANT_DE_LACHER_MS, SILENCE_AVANT_DE_LE_DIRE_MS, veilleDeLEcoute } from '../../assets/controllers/ket-live-veille.js';
 import { fusionnerTranscripts } from '../../assets/controllers/dictee-transcript.js';
@@ -377,11 +377,20 @@ test('même sans micro, une hésitation seule ne part pas', () => {
 });
 
 test('un texte qu’aucune voix n’accompagne n’entre jamais dans la conversation', () => {
+    // ⚠ LE SEUIL A CHANGÉ LE 2026-09-23, PAS L'INTENTION. Il était de quatre secondes,
+    // et une mesure de production l'a démenti : « ignoré (muet, marge 17.9) » sur une
+    // vraie question — neuf fois le seuil de proximité exigé, donc une voix forte et
+    // proche parfaitement captée. Seule la reconnaissance avait tardé à finaliser son
+    // texte, ce qu'elle fait couramment plusieurs secondes après la fin de la phrase.
+    // Ce que le test protège reste identique : une salve ANCIENNE n'est pas un alibi.
+    // Et les deux cas sont désormais nommés séparément — « muet » quand rien n'a été
+    // entendu, « tardif » quand ça l'a été trop tôt : l'écran ne dira plus « le micro
+    // n'a rien capté » alors qu'il a capté.
     const rien = phraseRecevable({ texte: 'la télévision parle', priseDeParole: null, instantMs: 1500 });
-    const vieux = phraseRecevable({ texte: 'la télévision parle', priseDeParole: prise(9, 900, 1000), instantMs: 9000 });
+    const vieux = phraseRecevable({ texte: 'la télévision parle', priseDeParole: prise(9, 900, 1000), instantMs: 18000 });
 
     assert.deepEqual([rien.recevable, rien.motif], [false, 'muet']);
-    assert.deepEqual([vieux.recevable, vieux.motif], [false, 'muet'], 'une salve d’il y a huit secondes n’est pas un alibi');
+    assert.deepEqual([vieux.recevable, vieux.motif], [false, 'tardif'], 'une salve d’il y a dix-sept secondes n’est pas un alibi');
 });
 
 test('un bruit bref n’est pas une phrase', () => {
@@ -918,4 +927,50 @@ test('une valeur absente ou aberrante n’atteste rien', () => {
     assert.equal(trameVivante(undefined), false);
     assert.equal(trameVivante(null), false);
     assert.equal(trameVivante('fort'), false);
+});
+
+/* ──── « Entendu il y a longtemps » n'est pas « rien entendu » ──────────────── */
+
+test('une salve forte mais ancienne n’est plus déclarée « muette »', () => {
+    // RELEVÉ RÉEL, production, 2026-09-23 : « ignoré (muet, marge 17.9) ». Neuf fois
+    // le seuil de proximité exigé : le micro avait parfaitement capté une voix forte
+    // et proche. Seule la reconnaissance avait tardé à finaliser. Dire « le micro n'a
+    // rien capté » était faux, et envoyait chercher au mauvais endroit.
+    const forte = { enCours: false, finMs: 0, dureeMs: 1200, marge: 17.9 };
+    const verdict = juger(forte, FENETRE_MS + 1);
+    assert.equal(verdict.motif, 'tardif');
+    assert.notEqual(verdict.motif, 'muet');
+    assert.match(messageDeRejet('tardif'), /trop longtemps après/);
+});
+
+test('« muet » reste réservé au cas où RIEN n’a été entendu', () => {
+    assert.equal(juger(null, 1000).motif, 'muet');
+});
+
+test('la fenêtre laisse à la reconnaissance le temps de finaliser', () => {
+    // Sur Android, le texte final arrive plusieurs secondes après la fin de la salve.
+    // Une fenêtre de quatre secondes rejetait une phrase sur deux, « de manière très
+    // aléatoire » selon l'utilisateur — selon que la reconnaissance avait été rapide.
+    const salve = { enCours: false, finMs: 0, dureeMs: 1200, marge: 17.9 };
+    assert.equal(juger(salve, 8000).recevable, true, 'huit secondes de latence restent acceptables');
+    assert.ok(FENETRE_MS >= 10000, 'la latence de finalisation d’Android se compte en secondes');
+});
+
+/* ──── Une longue phrase n'est pas un écho ─────────────────────────────────── */
+
+test('répondre à Ket en reprenant ses mots n’est pas un écho', () => {
+    // RELEVÉ RÉEL : Ket propose « numéro de téléphone, numéro de police ou secteur
+    // d'activité ? ». L'utilisateur répond en reprenant ces termes — la chose la plus
+    // naturelle du monde — et sa question de quinze mots partait à la poubelle.
+    const deKet = ['Souhaitez-vous que je recherche par une autre information : numéro de téléphone, numéro de police ou secteur d’activité ?'];
+    const reponse = 'bon le numéro de police tu n’es pas le numéro de police je n’ai pas numéro de téléphone mais essaie de vérifier par secteur d’activité';
+    assert.equal(ressembleAKet(reponse, deKet), false);
+});
+
+test('un vrai écho — court et repris du haut-parleur — reste écarté', () => {
+    // LE GARDE-FOU DE LA CORRECTION : desserrer ne doit pas rouvrir la boucle
+    // infinie où Ket se répond à elle-même.
+    const deKet = ['Hum, laissez-moi vérifier cela dans le portefeuille…'];
+    assert.equal(ressembleAKet('laisse-moi vérifier cela', deKet), true);
+    assert.ok(MOTS_ECHO_MAX >= 4 && MOTS_ECHO_MAX <= 10);
 });

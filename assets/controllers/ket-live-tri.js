@@ -41,7 +41,7 @@ export const DUREE_MIN_MS = 300;
  * secondes laissent de la marge sans permettre à une salve d'il y a une minute de servir
  * d'alibi à un bruit d'aujourd'hui.
  */
-export const FENETRE_MS = 4000;
+export const FENETRE_MS = 10000;
 
 /** Sous cette confiance, la reconnaissance elle-même doute — mais elle ne condamne pas seule. */
 export const CONFIANCE_DOUTEUSE = 0.6;
@@ -143,7 +143,14 @@ export function priseRecevable(prise, instantMs = 0, margeProche = MARGE_PROCHE)
 
     // AUCUNE VOIX N'A ÉTÉ ENTENDUE devant ce micro-ci.
     if (!prise) return verdict(false, 'muet');
-    if (!prise.enCours && instantMs - prise.finMs > FENETRE_MS) return verdict(false, 'muet');
+
+    // UNE VOIX A BIEN ÉTÉ ENTENDUE, MAIS IL Y A LONGTEMPS — ce n'est pas la même chose,
+    // et les confondre a coûté cher. Relevé en production le 2026-09-23 :
+    // « ignoré (muet, marge 17.9) », soit neuf fois le seuil de proximité exigé. Le
+    // micro avait parfaitement capté une voix forte et proche ; seule la reconnaissance
+    // avait tardé à finaliser son texte. Dire « le micro n'a rien capté » était faux, et
+    // envoyait chercher au mauvais endroit.
+    if (!prise.enCours && instantMs - prise.finMs > FENETRE_MS) return verdict(false, 'tardif');
 
     // Une salve trop brève n'est pas une phrase. Une salve EN COURS y échappe : la
     // reconnaissance peut finaliser un premier mot avant que la phrase soit finie.
@@ -163,6 +170,14 @@ export const MOTS_SIGNIFIANTS_MIN = 2;
 
 /** Au-delà de cette part de mots retrouvés chez Ket, la phrase est la sienne. */
 export const PART_RESSEMBLANCE = 0.6;
+
+/**
+ * Au-delà de tant de mots significatifs, une phrase n'est plus un écho.
+ *
+ * Huit : les intermèdes de Ket et les bribes que le haut-parleur renvoie tiennent
+ * tous en deçà ; une question construite les dépasse.
+ */
+export const MOTS_ECHO_MAX = 8;
 
 /**
  * CETTE PHRASE EST-ELLE CELLE QUE KET VIENT DE DIRE ?
@@ -194,6 +209,13 @@ export function ressembleAKet(texte, phrasesDeKet = []) {
 
     const mots = cle(texte).split(' ').filter((m) => m.length >= LETTRES_SIGNIFIANTES);
     if (mots.length < MOTS_SIGNIFIANTS_MIN) return false;
+    // UNE LONGUE PHRASE N'EST PAS UN ÉCHO. Un écho capté au haut-parleur est un
+    // FRAGMENT : quelques mots de ce que Ket vient de dire. Une phrase longue qui
+    // reprend son vocabulaire, c'est au contraire la marque d'une VRAIE RÉPONSE —
+    // répondre à « numéro de téléphone, numéro de police ou secteur d'activité ? » en
+    // reprenant ces mots est la chose la plus naturelle du monde. Relevé en production
+    // le 2026-09-23 : une question de quinze mots écartée pour « echo ».
+    if (mots.length > MOTS_ECHO_MAX) return false;
 
     const retrouves = mots.filter(
         (mot) => siens.some((sien) => sien.startsWith(mot) || mot.startsWith(sien)),
@@ -332,6 +354,7 @@ export const MESSAGES_DE_REJET = {
     souffle: 'Trop bref pour être une phrase : parlez un peu plus longuement.',
     tic: 'Seulement un bruit de bouche — rien à transmettre.',
     echo: 'C’était la voix de Ket que le micro a reprise, pas la vôtre.',
+    tardif: 'Entendu, mais trop longtemps après que vous ayez parlé : répétez.',
 };
 
 /**
