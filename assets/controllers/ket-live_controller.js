@@ -770,7 +770,16 @@ export default class extends Controller {
     _envoyerLesMorceaux() {
         clearTimeout(this._regroupement);
         this._regroupement = null;
-        const phrase = (this._morceaux ?? []).join(' ').replace(/\s+/g, ' ').trim();
+        // FUSIONNER, JAMAIS CONCATÉNER — la règle que la dictée applique depuis
+        // toujours, et que le recollage du Live avait perdue.
+        //
+        // Sur Android, la reconnaissance clôt sa session après chaque respiration et
+        // REDONNE toute la phrase en cours à chaque reprise : « tout », puis
+        // « tout va », puis « tout va bien »… Les mettre bout à bout produisait
+        // « tout tout va tout va bien tout va bien chez tout va bien chez toi » —
+        // relevé en production le 2026-09-23. `fusionnerTranscripts` sait qu'un
+        // segment qui COMMENCE PAR le précédent le remplace au lieu de s'y ajouter.
+        const phrase = fusionnerTranscripts(this._morceaux ?? []).replace(/\s+/g, ' ').trim();
         this._morceaux = [];
         if (phrase !== '') this._evenement('texte-entendu', { texte: phrase });
     }
