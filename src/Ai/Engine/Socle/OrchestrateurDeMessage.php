@@ -188,6 +188,12 @@ final class OrchestrateurDeMessage
         // Un appel de routage était un TROISIÈME appel — la règle n'en tolère que
         // deux, et c'est la planification elle-même qui choisit les outils.
         $trousse = $this->selecteur->trousseDe($request);
+        // Retenue pour le bilan de fin de message : la recalculer là-bas coûterait une
+        // seconde lecture du fil, et pourrait rendre AUTRE CHOSE si l'état a bougé
+        // entre-temps — un journal qui décrit un aiguillage qui n'a pas eu lieu est
+        // pire qu'un journal muet.
+        $this->trousseDuMessage = $trousse;
+        $this->declencheurDuMessage = $this->selecteur->dernierDeclencheur();
         $this->journal->routage(
             $request,
             $dialecte->nom(),
@@ -667,6 +673,31 @@ final class OrchestrateurDeMessage
      *
      * @param list<string> $sequenceOutils
      */
+    /**
+     * UN OUTIL D'ÉCRITURE A-T-IL RÉELLEMENT ÉTÉ APPELÉ pendant ce message ?
+     *
+     * C'est la moitié qui manque au diagnostic : armer l'écriture n'est un gaspillage
+     * que si elle n'a pas servi. L'appartenance se lit dans le catalogue — jamais dans
+     * une liste recopiée ici, comme partout ailleurs dans ce code.
+     *
+     * @param list<string> $sequenceOutils
+     */
+    /** La trousse retenue pour le message en cours, et ce qui l'a imposée. */
+    private ?\App\Ai\Trousse\Trousse $trousseDuMessage = null;
+
+    private string $declencheurDuMessage = 'aucun';
+
+    private function uneEcritureAEuLieu(array $sequenceOutils): bool
+    {
+        foreach ($sequenceOutils as $nom) {
+            if ($this->trousseCatalogue->estOutilDEcriture((string) $nom)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function conclure(
         DialecteDuFil $dialecte,
         AiRequest $request,
@@ -686,6 +717,22 @@ final class OrchestrateurDeMessage
             $cumulEntree,
             $cumulSortie,
             $sequenceOutils,
+            // ── DE QUOI JUGER L'AIGUILLAGE SUR PIÈCES ───────────────────────────
+            //
+            // La trousse d'ÉCRITURE coûte cinquante-deux déclarations d'outils au lieu
+            // de trente-trois, plus vingt-sept kilo-octets de protocoles d'écriture :
+            // plus de la moitié du payload d'un tour. Le rapport de campagne dit ce
+            // que cela COÛTE, mais ni QUEL déclencheur l'a réclamée, ni si une écriture
+            // a seulement eu lieu.
+            //
+            // Ces trois champs répondent aux deux questions qui manquent. Croisés sur
+            // quelques jours, ils diront quel déclencheur arme l'écriture pour rien —
+            // et resserrer cessera d'être un pari.
+            [
+                'trousse'            => $this->trousseDuMessage?->libelle() ?? '?',
+                'declencheur'        => $this->declencheurDuMessage,
+                'ecriture_effective' => $this->uneEcritureAEuLieu($sequenceOutils),
+            ],
         );
 
         return $reply;

@@ -120,6 +120,33 @@ class SelecteurDeTrousseTest extends TestCase
     }
 
     /**
+     * CHAQUE AIGUILLAGE DIT CE QUI L'A DÉCIDÉ — sans quoi on ne peut pas le resserrer.
+     *
+     * La trousse d'ÉCRITURE coûte cinquante-deux déclarations d'outils au lieu de
+     * trente-trois, plus vingt-sept kilo-octets de protocoles : plus de la moitié du
+     * payload d'un tour. Six déclencheurs peuvent la réclamer, et le journal ne disait
+     * pas lequel. Resserrer sans cela, c'est parier.
+     *
+     * Le nom du déclencheur part désormais dans `assistant_tokens*.log`, à côté de
+     * « une écriture a-t-elle eu lieu » — les deux moitiés du diagnostic.
+     */
+    public function testChaqueAiguillageNommeSonDeclencheur(): void
+    {
+        $selecteur = $this->selecteur();
+
+        // Avant tout aiguillage, rien à raconter.
+        self::assertSame('aucun', $selecteur->dernierDeclencheur());
+
+        // Une consultation : aucun déclencheur d'écriture ne s'est armé.
+        $selecteur->trousseDe($this->requete($this->bulles(['combien de clients ?'])));
+        self::assertSame('aucun', $selecteur->dernierDeclencheur());
+
+        // Une demande de saisie : c'est le filet lexical qui a tranché, et il le dit.
+        $selecteur->trousseDe($this->requete($this->bulles(['enregistre ce paiement'])));
+        self::assertSame('verbe-action', $selecteur->dernierDeclencheur());
+    }
+
+    /**
      * @dataProvider demandesDeConsultation
      */
     public function testUneConsultationResteEnLecture(string $question): void
