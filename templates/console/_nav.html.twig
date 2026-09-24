@@ -3,7 +3,16 @@
    accessible bâti sur <details>/<summary> (état exposé nativement) et piloté par
    le contrôleur Stimulus `nav-menu` (un seul ouvert, fermeture clic-dehors/Échap).
    L'état actif est déduit du préfixe de la route courante (un groupe est actif si
-   l'une de ses rubriques l'est). #}
+   l'une de ses rubriques l'est).
+
+   DEUX FAÇONS D'ENTRER DANS CE MENU, et il ne faut pas les confondre :
+     · dans `groups.items` — la rubrique est filtrée par DÉPARTEMENT
+       (`console_can_access`, même resolver que le blocage serveur) ;
+     · dans un bloc `is_granted('ROLE_SUPER_ADMIN')` en bas de groupe — la rubrique
+       est réservée, quel que soit le département (plan tarifaire, fournisseurs de
+       Ket, paramètres CRM).
+   « Réglages de Ket » est dans les items : son inventaire se CONSULTE, et seuls les
+   interrupteurs qu'il portera seront réservés au super-administrateur. #}
 {% set route = app.request.attributes.get('_route')|default('') %}
 {% set groups = [
     { label: 'CRM', icon: 'piste', items: [
@@ -22,6 +31,7 @@
         { r: 'console.crm.ceo',     p: 'console.crm.ceo',            icon: 'dashboard', label: 'CEO' },
         { r: 'console.crm.rapport.', p: 'console.crm.rapport.index', icon: 'document',  label: 'Rapports' },
         { r: 'console.supervision.', p: 'console.supervision.index', icon: 'action:alert', label: 'Supervision' },
+        { r: 'console.ket.reglages.', p: 'console.ket.reglages.index', icon: 'assistant-ia-parametres', label: 'Réglages de Ket' },
     ] },
     { label: 'Comptes', icon: 'client', items: [
         { r: 'console.collaborateur.', p: 'console.collaborateur.index', icon: 'action:role', label: 'Collaborateurs' },

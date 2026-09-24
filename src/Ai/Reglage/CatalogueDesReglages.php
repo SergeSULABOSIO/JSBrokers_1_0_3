@@ -1,0 +1,274 @@
+<?php
+
+namespace App\Ai\Reglage;
+
+use App\Ai\Tool\AiToolConditionnel;
+use App\Ai\Tool\AiToolInterface;
+use App\Ai\Trousse\AiToolDeComprehension;
+use App\Ai\Trousse\AiToolEcriture;
+use App\Ai\Trousse\Trousse;
+use App\Ai\Trousse\TrousseCatalogue;
+
+/**
+ * L'INVENTAIRE DE CE QUE KET SAIT FAIRE, tel que la console l'affiche.
+ *
+ * ── CE QUI EST DÉRIVÉ, ET CE QUI EST DÉCLARÉ ────────────────────────────────
+ * Tout ce que le code sait dire est DÉRIVÉ : la liste des outils vient de
+ * `TrousseCatalogue::tous()`, l'appartenance aux trousses des marqueurs
+ * `AiToolEcriture` / `AiToolDeComprehension`, la condition d'affichage de
+ * `AiToolConditionnel`, le poids de la déclaration elle-même. Rien de tout cela
+ * n'est recopié ici : un outil ajouté au projet apparaît sans qu'on y touche.
+ *
+ * Deux choses ne se dérivent pas et sont donc DÉCLARÉES dans `FICHES` :
+ *  - le NOM COURTIER. `description()` est écrite pour le modèle — longue, technique,
+ *    parfois deux paragraphes. Un agent qui ouvre l'écran a besoin d'une ligne.
+ *  - la CLASSE. « Indispensable » veut dire « le prompt le nomme en dur, le couper
+ *    produirait un outil fantôme ». Cela se constate en lisant AiContextBuilder, pas
+ *    en interrogeant l'outil.
+ *
+ * ── LE GARDE-FOU ────────────────────────────────────────────────────────────
+ * `ReglagesDeKetManifesteTest` échoue si un outil du conteneur n'a pas de fiche, ou
+ * si une fiche nomme un outil qui n'existe plus. Ajouter un outil oblige donc à dire
+ * ce qu'il fait et dans quelle classe il tombe — sinon la suite est rouge. C'est la
+ * même discipline que `CouvertureDesEcrans` pour la parité écran ↔ Ket.
+ *
+ * ── LA FACTURATION ──────────────────────────────────────────────────────────
+ * `facture` signale les outils dont l'usage DÉBITE des jetons au cabinet
+ * (`meterDocumentIa`, `meterEchange`, `meterRead`, `meterFichierIa`). Ce drapeau est
+ * CURATÉ : le métrage est déclenché par le contrôleur ou par le service appelé, pas
+ * par l'outil, et rien dans le code ne permet de le déduire depuis ici. Il existe
+ * parce que couper un tel outil ne retire pas seulement une capacité — il supprime
+ * une recette, et cela doit se lire AVANT de cliquer.
+ */
+final class CatalogueDesReglages
+{
+    /**
+     * Les outils que le prompt système NOMME EN DUR, hors des blocs dérivés du
+     * catalogue. Les couper laisserait Ket promettre une capacité absente du tour.
+     *
+     * La trousse de COMPRÉHENSION y est en entier : c'est une liste blanche de trois
+     * outils (TrousseCatalogue), et sans eux la phase qui lève les ambiguïtés de
+     * référence partirait sans aucun outil.
+     *
+     * ⚠ CETTE LISTE EST UNE HYPOTHÈSE JUSQU'AU TEST. `OutilDesactiveTest` (lot
+     * suivant) coupe chaque outil DÉSACTIVABLE à tour de rôle et vérifie que son nom
+     * disparaît du prompt. Tout outil qui échoue appartient ici — ou bien le bloc de
+     * prompt qui le nomme doit devenir conditionnel.
+     */
+    private const INDISPENSABLES = [
+        'compter_entites',
+        'consulter_guide',
+        'inventaire_champs',
+        'lire_fiche',
+        'ouvrir_dialogue',
+        'parcours_saisie',
+        'preparer_operations',
+        'preparer_programme',
+        'rechercher_entites',
+    ];
+
+    /**
+     * Outils dont l'usage DÉBITE des jetons au cabinet. Cf. le docblock de classe :
+     * drapeau curaté, parce que le métrage n'est pas déclenché par l'outil.
+     */
+    private const FACTURENT = [
+        'preparer_document'     => 'meterDocumentIa',
+        'echange_exporter'      => 'meterEchange',
+        'echange_importer'      => 'meterEchange',
+        'lire_fiche'            => 'meterRead',
+        'telecharger_documents' => 'meterRead',
+        'attacher_fichier'      => 'meterFichierIa',
+    ];
+
+    /**
+     * Nom courtier et une phrase, par outil. L'ordre n'a aucune importance : la
+     * liste est triée à l'affichage.
+     *
+     * @var array<string, array{0: string, 1: string}>
+     */
+    private const FICHES = [
+        'analyse_portefeuille'               => ['Classements du portefeuille', 'Les meilleurs assureurs, clients, risques et intermédiaires, et la production mois par mois.'],
+        'analyser_fichier_pour_saisie'       => ['Saisir depuis un fichier joint', 'Lit une pièce jointe et en tire les éléments d’un enregistrement à créer.'],
+        'attacher_fichier'                   => ['Rattacher une pièce', 'Conserve une pièce jointe du chat sur un enregistrement du portefeuille.'],
+        'catalogue_des_risques'              => ['Catalogue des couvertures', 'Le catalogue complet des risques configurés, descriptions et taux compris — la base du conseil.'],
+        'chronologie'                        => ['Chronologie d’un dossier', 'Ce qui s’est passé sur un client, dans l’ordre.'],
+        'compter_entites'                    => ['Compter', 'Combien de clients, de polices, d’échéances — par catégorie.'],
+        'conges'                             => ['Congés d’un collaborateur', 'Solde, demandes et absences à venir.'],
+        'consulter_guide'                    => ['Consulter une fiche métier', 'Charge une fiche de connaissance (boussole, cycle de production, rétrocommissions…).'],
+        'detail_depenses'                    => ['Détail des dépenses', 'Dépenses et charges ligne à ligne, au plan comptable OHADA.'],
+        'document_comptable'                 => ['États comptables', 'Trésorerie, résultat, TVA et les autres états SYSCOHADA, à l’instant.'],
+        'echange_consulter'                  => ['Renseigner sur l’import/export', 'Explique la rubrique d’échange et le format du classeur attendu.'],
+        'echange_exporter'                   => ['Exporter le portefeuille', 'Produit le classeur Excel de l’état du portefeuille.'],
+        'echange_importer'                   => ['Importer un classeur', 'Contrôle puis reprend un classeur Excel joint à la conversation.'],
+        'effort_commercial_agent'            => ['Rattacher un partage', 'Rattache ou détache une condition de partage à des affaires.'],
+        'envoyer_message_par_email'          => ['Envoyer la réponse par e-mail', 'Expédie la réponse précédente à un destinataire.'],
+        'etat_configuration'                 => ['Complétude du cabinet', 'Ce qui manque encore pour que le cabinet soit opérationnel (propriétaire seulement).'],
+        'exporter_etat'                      => ['Télécharger un état', 'Déclenche le téléchargement d’un état, d’un PDF ou d’un classeur.'],
+        'fermer_rubrique'                    => ['Fermer un onglet', 'Ferme des onglets de rubrique dans l’espace de travail.'],
+        'indicateur_calcule'                 => ['Indicateur financier', 'La valeur d’un indicateur calculé : commission générée, exigible, encaissée…'],
+        'inventaire_champs'                  => ['Champs d’un formulaire', 'Décrit les champs d’une rubrique avant une création ou une édition.'],
+        'lire_fiche'                         => ['Lire une fiche', 'La fiche complète d’un enregistrement.'],
+        'lire_soa'                           => ['Relevé de compte client', 'Le relevé (SOA) d’un client : dû, payé, solde.'],
+        'modifier_composition_prime'         => ['Corriger la composition d’une prime', 'Rectifie la ventilation de prime d’une cotation.'],
+        'ouvrir_dialogue'                    => ['Ouvrir un formulaire', 'Ouvre chez l’utilisateur un formulaire de création ou d’édition, prérempli.'],
+        'ouvrir_rubrique'                    => ['Ouvrir une rubrique', 'Ouvre une liste ou le tableau de bord dans l’espace de travail.'],
+        'paiements_prime'                    => ['Paiements de prime signalés', 'Les signalements de règlement de prime déjà enregistrés.'],
+        'parcours_saisie'                    => ['Parcours de saisie', 'La trame métier à suivre avant une création structurante.'],
+        'plan_du_jour'                       => ['Programme du jour', 'Ce que le courtier a de plus urgent à traiter aujourd’hui.'],
+        'preparer_decision_conge'            => ['Décider d’un congé', 'Prépare l’approbation, le refus ou l’annulation d’une demande.'],
+        'preparer_demande_conge'             => ['Demander un congé', 'Prépare et soumet une demande de congé.'],
+        'preparer_document'                  => ['Produire un document', 'Fabrique un document officiel : Word, Excel, PDF, Markdown ou HTML.'],
+        'preparer_envoi_soa'                 => ['Envoyer un relevé de compte', 'Ouvre la boîte d’envoi du relevé, destinataires déjà ciblés.'],
+        'preparer_marquage_non_renouvelable' => ['Signaler une police non renouvelable', 'Marque une police comme sans suite, avec son motif.'],
+        'preparer_mouvement_avenant'         => ['Mouvement de police', 'Renouvellement, prorogation, annulation, résiliation.'],
+        'preparer_operations'                => ['Créer, modifier, supprimer', 'Le chemin général de toute écriture préparée par Ket.'],
+        'preparer_programme'                 => ['Enchaîner plusieurs plans', 'Une série d’écritures à valider l’une après l’autre.'],
+        'quitter_workspace'                  => ['Quitter l’espace de travail', 'Propose de fermer l’espace de travail.'],
+        'rechercher_entites'                 => ['Rechercher', 'Listes et recherches filtrées dans tout le portefeuille.'],
+        'retrocommissions'                   => ['Rétrocommissions', 'Ce qui est dû aux agents internes et aux partenaires externes : dû, payé, solde, exigible.'],
+        'saisir_proposition'                 => ['Saisir une cotation', 'Enregistre une proposition complète en une fois.'],
+        'saturation_portefeuille'            => ['Saturation du portefeuille', 'Le taux de couverture et les risques qui manquent encore à chaque client.'],
+        'signaler_paiement_prime'            => ['Signaler un paiement de prime', 'Trace le règlement d’une prime par le client.'],
+        'signaler_reversement_retro_agent'   => ['Signaler un reversement', 'Enregistre le versement d’une rétrocommission à un agent.'],
+        'simuler_conge'                      => ['Simuler un congé', 'Calcule les jours ouvrables d’une période d’absence.'],
+        'solde_tokens'                       => ['Solde de jetons', 'Le solde de jetons du cabinet.'],
+        'souscrire_cotation'                 => ['Souscrire une cotation', 'Transforme une proposition acceptée en police (avenant).'],
+        'statistiques'                       => ['Statistiques', 'Sommes, moyennes et regroupements sur les champs enregistrés.'],
+        'suivi_impayes'                      => ['Suivi des impayés', 'Primes, commissions et rétrocommissions restant dues, par échéance.'],
+        'telecharger_documents'              => ['Chercher un document', 'Retrouve des fichiers dans un dossier et propose leur téléchargement.'],
+        'telecharger_fichiers'               => ['Reprendre une pièce jointe', 'Propose au téléchargement les pièces jointes de la conversation.'],
+        'vigie_echeances'                    => ['Vigie des échéances', 'Polices échues, polices à renouveler, tâches en retard.'],
+        'visualiser_fiche'                   => ['Afficher une fiche à l’écran', 'Ouvre une fiche dans la colonne de visualisation.'],
+    ];
+
+    public function __construct(
+        private readonly TrousseCatalogue $trousseCatalogue,
+    ) {
+    }
+
+    /**
+     * L'inventaire complet, trié par nom courtier — outils désactivés compris, c'est
+     * tout l'intérêt d'un inventaire.
+     *
+     * @return list<array{
+     *     nom: string, libelle: string, resume: string, classe: Classe,
+     *     trousses: list<string>, conditionnel: bool, facture: ?string,
+     *     octets: int, jetons: int, description: string, aiguillage: string,
+     *     source: string
+     * }>
+     */
+    public function outils(): array
+    {
+        $lignes = [];
+
+        foreach ($this->trousseCatalogue->tous() as $outil) {
+            $nom = $outil->name();
+            [$libelle, $resume] = self::FICHES[$nom] ?? [$nom, ''];
+            $octets = PoidsDesDeclarations::octetsDe($outil);
+
+            $lignes[] = [
+                'nom'          => $nom,
+                'libelle'      => $libelle,
+                'resume'       => $resume,
+                'classe'       => self::classeDe($nom),
+                'trousses'     => self::troussesDe($outil),
+                'conditionnel' => $outil instanceof AiToolConditionnel,
+                'facture'      => self::FACTURENT[$nom] ?? null,
+                'octets'       => $octets,
+                'jetons'       => PoidsDesDeclarations::jetons($octets),
+                'description'  => $outil->description(),
+                'aiguillage'   => $outil->aiguillage(),
+                'source'       => self::sourceDe($outil),
+            ];
+        }
+
+        usort($lignes, static fn (array $a, array $b): int => strcoll($a['libelle'], $b['libelle']));
+
+        return $lignes;
+    }
+
+    /**
+     * Ce que pèsent les déclarations d'une trousse, TOUTES CONDITIONS RÉUNIES.
+     *
+     * ⚠ C'EST UN PLAFOND, ET L'ÉCRAN LE DIT. `AiToolConditionnel` écarte des outils
+     * selon l'invité, ses droits et son terminal : le payload réel d'un tour est donc
+     * toujours inférieur ou égal à ce chiffre, et varie d'un cabinet à l'autre.
+     *
+     * On ne peut pas faire mieux ici, et il ne FAUT pas essayer : la console n'a aucun
+     * périmètre — pas d'entreprise, pas d'invité. Choisir un cabinet au hasard pour
+     * « avoir un vrai chiffre » donnerait un nombre exact… pour quelqu'un d'autre que
+     * celui qui regarde, ce qui est pire qu'un plafond annoncé comme tel. Le plafond,
+     * lui, répond à la question que se pose l'administrateur : combien la PLATEFORME
+     * envoie-t-elle au maximum, et combien économise-t-on en coupant cet outil.
+     *
+     * @return array<string, array{octets: int, jetons: int, outils: int}>
+     */
+    public function poidsDesTrousses(): array
+    {
+        $poids = [];
+
+        foreach ([Trousse::LECTURE, Trousse::ECRITURE] as $trousse) {
+            $outils = [];
+            foreach ($this->trousseCatalogue->tous() as $outil) {
+                if (!$trousse->estEcriture() && $outil instanceof AiToolEcriture) {
+                    continue;
+                }
+                $outils[] = $outil;
+            }
+
+            $octets = PoidsDesDeclarations::octetsDeLaListe($outils);
+
+            $poids[$trousse->value] = [
+                'octets' => $octets,
+                'jetons' => PoidsDesDeclarations::jetons($octets),
+                'outils' => \count($outils),
+            ];
+        }
+
+        return $poids;
+    }
+
+    /** Les noms techniques déclarés dans les fiches — pour le test de couverture. */
+    public static function nomsDecrits(): array
+    {
+        return array_keys(self::FICHES);
+    }
+
+    public static function classeDe(string $nom): Classe
+    {
+        return \in_array($nom, self::INDISPENSABLES, true)
+            ? Classe::INDISPENSABLE
+            : Classe::DESACTIVABLE;
+    }
+
+    /**
+     * Dans quelles trousses l'outil peut être déclaré — dérivé des marqueurs, jamais
+     * d'une liste tenue à la main.
+     *
+     * @return list<string>
+     */
+    private static function troussesDe(AiToolInterface $outil): array
+    {
+        if ($outil instanceof AiToolDeComprehension) {
+            // La compréhension est une liste BLANCHE : y figurer n'exclut pas les
+            // deux autres trousses, où ces outils de lecture restent déclarés.
+            return ['Compréhension', 'Lecture', 'Écriture'];
+        }
+
+        return $outil instanceof AiToolEcriture ? ['Écriture'] : ['Lecture', 'Écriture'];
+    }
+
+    /** Chemin du fichier, relatif à la racine du projet. */
+    private static function sourceDe(AiToolInterface $outil): string
+    {
+        $chemin = (new \ReflectionClass($outil))->getFileName();
+        if ($chemin === false) {
+            return '';
+        }
+
+        $chemin = str_replace('\\', '/', $chemin);
+        $position = strpos($chemin, '/src/');
+
+        return $position === false ? basename($chemin) : ltrim(substr($chemin, $position + 1), '/');
+    }
+}

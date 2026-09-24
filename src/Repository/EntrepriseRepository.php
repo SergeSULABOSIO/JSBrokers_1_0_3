@@ -142,6 +142,30 @@ class EntrepriseRepository extends ServiceEntityRepository
             ->getSingleScalarResult();
     }
 
+    /**
+     * Combien de cabinets remplissent la condition d'accès à Ket, côté SOLDE.
+     *
+     * ⚠ CE N'EST QUE LA MOITIÉ DE LA PORTE. `PorteDeKet` exige aussi que l'invité
+     * ait le module « Assistant IA » dans son périmètre — mais cela se juge par
+     * INVITÉ, pas par cabinet : un même cabinet peut avoir dix invités dont trois
+     * seulement y ont droit. Le chiffre affiché en console répond donc à la question
+     * qui a un sens à l'échelle de la plateforme : combien de cabinets PEUVENT ouvrir
+     * Ket. L'écran le dit en ces termes, plutôt que de laisser croire à un décompte
+     * d'utilisateurs.
+     *
+     * Une seule requête, jointure sur le propriétaire : compter en PHP aurait
+     * hydraté toutes les entreprises pour n'en garder qu'un entier.
+     */
+    public function countAvecSoldePayant(): int
+    {
+        return (int) $this->createQueryBuilder('e')
+            ->select('COUNT(e.id)')
+            ->join('e.utilisateur', 'u')
+            ->andWhere('u.paidTokens > 0')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
     //    public function findOneBySomeField($value): ?Entreprise
     //    {
     //        return $this->createQueryBuilder('e')
