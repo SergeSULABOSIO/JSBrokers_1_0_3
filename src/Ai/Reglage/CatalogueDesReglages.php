@@ -81,64 +81,79 @@ final class CatalogueDesReglages
     ];
 
     /**
-     * Nom courtier et une phrase, par outil. L'ordre n'a aucune importance : la
-     * liste est triée à l'affichage.
+     * Nom courtier, une phrase, et l'ALIAS D'ICÔNE, par outil. L'ordre n'a aucune
+     * importance : la liste est triée à l'affichage.
      *
-     * @var array<string, array{0: string, 1: string}>
+     * ── L'ICÔNE EST CHOISIE, PAS DÉCORATIVE ─────────────────────────────────
+     * Sur une liste de cinquante-deux lignes, c'est elle que l'œil attrape avant le
+     * nom. Chaque outil reprend donc l'icône de l'OBJET MÉTIER qu'il touche quand
+     * elle existe — `risque` pour le catalogue des couvertures, `avenant` pour les
+     * mouvements de police, `conge` pour les congés — de sorte que l'écran parle la
+     * même langue que les rubriques de l'espace de travail. À défaut d'objet, c'est
+     * le GESTE qui est dessiné : une loupe pour chercher, un pied pour un parcours,
+     * une alerte pour les impayés.
+     *
+     * Les alias viennent tous de `IconCanvasProvider` et rien d'autre : un nom
+     * absent de cette carte ne lève AUCUNE erreur, il laisse un trou dans
+     * l'alignement — ce qui se lit comme une anomalie de la ligne, pas comme un
+     * oubli de configuration. `ManifesteDesOutilsTest` vérifie donc que chaque alias
+     * se résout.
+     *
+     * @var array<string, array{0: string, 1: string, 2: string}>
      */
     private const FICHES = [
-        'analyse_portefeuille'               => ['Classements du portefeuille', 'Les meilleurs assureurs, clients, risques et intermédiaires, et la production mois par mois.'],
-        'analyser_fichier_pour_saisie'       => ['Saisir depuis un fichier joint', 'Lit une pièce jointe et en tire les éléments d’un enregistrement à créer.'],
-        'attacher_fichier'                   => ['Rattacher une pièce', 'Conserve une pièce jointe du chat sur un enregistrement du portefeuille.'],
-        'catalogue_des_risques'              => ['Catalogue des couvertures', 'Le catalogue complet des risques configurés, descriptions et taux compris — la base du conseil.'],
-        'chronologie'                        => ['Chronologie d’un dossier', 'Ce qui s’est passé sur un client, dans l’ordre.'],
-        'compter_entites'                    => ['Compter', 'Combien de clients, de polices, d’échéances — par catégorie.'],
-        'conges'                             => ['Congés d’un collaborateur', 'Solde, demandes et absences à venir.'],
-        'consulter_guide'                    => ['Consulter une fiche métier', 'Charge une fiche de connaissance (boussole, cycle de production, rétrocommissions…).'],
-        'detail_depenses'                    => ['Détail des dépenses', 'Dépenses et charges ligne à ligne, au plan comptable OHADA.'],
-        'document_comptable'                 => ['États comptables', 'Trésorerie, résultat, TVA et les autres états SYSCOHADA, à l’instant.'],
-        'echange_consulter'                  => ['Renseigner sur l’import/export', 'Explique la rubrique d’échange et le format du classeur attendu.'],
-        'echange_exporter'                   => ['Exporter le portefeuille', 'Produit le classeur Excel de l’état du portefeuille.'],
-        'echange_importer'                   => ['Importer un classeur', 'Contrôle puis reprend un classeur Excel joint à la conversation.'],
-        'effort_commercial_agent'            => ['Rattacher un partage', 'Rattache ou détache une condition de partage à des affaires.'],
-        'envoyer_message_par_email'          => ['Envoyer la réponse par e-mail', 'Expédie la réponse précédente à un destinataire.'],
-        'etat_configuration'                 => ['Complétude du cabinet', 'Ce qui manque encore pour que le cabinet soit opérationnel (propriétaire seulement).'],
-        'exporter_etat'                      => ['Télécharger un état', 'Déclenche le téléchargement d’un état, d’un PDF ou d’un classeur.'],
-        'fermer_rubrique'                    => ['Fermer un onglet', 'Ferme des onglets de rubrique dans l’espace de travail.'],
-        'indicateur_calcule'                 => ['Indicateur financier', 'La valeur d’un indicateur calculé : commission générée, exigible, encaissée…'],
-        'inventaire_champs'                  => ['Champs d’un formulaire', 'Décrit les champs d’une rubrique avant une création ou une édition.'],
-        'lire_fiche'                         => ['Lire une fiche', 'La fiche complète d’un enregistrement.'],
-        'lire_soa'                           => ['Relevé de compte client', 'Le relevé (SOA) d’un client : dû, payé, solde.'],
-        'modifier_composition_prime'         => ['Corriger la composition d’une prime', 'Rectifie la ventilation de prime d’une cotation.'],
-        'ouvrir_dialogue'                    => ['Ouvrir un formulaire', 'Ouvre chez l’utilisateur un formulaire de création ou d’édition, prérempli.'],
-        'ouvrir_rubrique'                    => ['Ouvrir une rubrique', 'Ouvre une liste ou le tableau de bord dans l’espace de travail.'],
-        'paiements_prime'                    => ['Paiements de prime signalés', 'Les signalements de règlement de prime déjà enregistrés.'],
-        'parcours_saisie'                    => ['Parcours de saisie', 'La trame métier à suivre avant une création structurante.'],
-        'plan_du_jour'                       => ['Programme du jour', 'Ce que le courtier a de plus urgent à traiter aujourd’hui.'],
-        'preparer_decision_conge'            => ['Décider d’un congé', 'Prépare l’approbation, le refus ou l’annulation d’une demande.'],
-        'preparer_demande_conge'             => ['Demander un congé', 'Prépare et soumet une demande de congé.'],
-        'preparer_document'                  => ['Produire un document', 'Fabrique un document officiel : Word, Excel, PDF, Markdown ou HTML.'],
-        'preparer_envoi_soa'                 => ['Envoyer un relevé de compte', 'Ouvre la boîte d’envoi du relevé, destinataires déjà ciblés.'],
-        'preparer_marquage_non_renouvelable' => ['Signaler une police non renouvelable', 'Marque une police comme sans suite, avec son motif.'],
-        'preparer_mouvement_avenant'         => ['Mouvement de police', 'Renouvellement, prorogation, annulation, résiliation.'],
-        'preparer_operations'                => ['Créer, modifier, supprimer', 'Le chemin général de toute écriture préparée par Ket.'],
-        'preparer_programme'                 => ['Enchaîner plusieurs plans', 'Une série d’écritures à valider l’une après l’autre.'],
-        'quitter_workspace'                  => ['Quitter l’espace de travail', 'Propose de fermer l’espace de travail.'],
-        'rechercher_entites'                 => ['Rechercher', 'Listes et recherches filtrées dans tout le portefeuille.'],
-        'retrocommissions'                   => ['Rétrocommissions', 'Ce qui est dû aux agents internes et aux partenaires externes : dû, payé, solde, exigible.'],
-        'saisir_proposition'                 => ['Saisir une cotation', 'Enregistre une proposition complète en une fois.'],
-        'saturation_portefeuille'            => ['Saturation du portefeuille', 'Le taux de couverture et les risques qui manquent encore à chaque client.'],
-        'signaler_paiement_prime'            => ['Signaler un paiement de prime', 'Trace le règlement d’une prime par le client.'],
-        'signaler_reversement_retro_agent'   => ['Signaler un reversement', 'Enregistre le versement d’une rétrocommission à un agent.'],
-        'simuler_conge'                      => ['Simuler un congé', 'Calcule les jours ouvrables d’une période d’absence.'],
-        'solde_tokens'                       => ['Solde de jetons', 'Le solde de jetons du cabinet.'],
-        'souscrire_cotation'                 => ['Souscrire une cotation', 'Transforme une proposition acceptée en police (avenant).'],
-        'statistiques'                       => ['Statistiques', 'Sommes, moyennes et regroupements sur les champs enregistrés.'],
-        'suivi_impayes'                      => ['Suivi des impayés', 'Primes, commissions et rétrocommissions restant dues, par échéance.'],
-        'telecharger_documents'              => ['Chercher un document', 'Retrouve des fichiers dans un dossier et propose leur téléchargement.'],
-        'telecharger_fichiers'               => ['Reprendre une pièce jointe', 'Propose au téléchargement les pièces jointes de la conversation.'],
-        'vigie_echeances'                    => ['Vigie des échéances', 'Polices échues, polices à renouveler, tâches en retard.'],
-        'visualiser_fiche'                   => ['Afficher une fiche à l’écran', 'Ouvre une fiche dans la colonne de visualisation.'],
+        'analyse_portefeuille'               => ['Classements du portefeuille', 'Les meilleurs assureurs, clients, risques et intermédiaires, et la production mois par mois.', 'action:analyser'],
+        'analyser_fichier_pour_saisie'       => ['Saisir depuis un fichier joint', 'Lit une pièce jointe et en tire les éléments d’un enregistrement à créer.', 'piece-sinistre'],
+        'attacher_fichier'                   => ['Rattacher une pièce', 'Conserve une pièce jointe du chat sur un enregistrement du portefeuille.', 'action:attach'],
+        'catalogue_des_risques'              => ['Catalogue des couvertures', 'Le catalogue complet des risques configurés, descriptions et taux compris — la base du conseil.', 'risque'],
+        'chronologie'                        => ['Chronologie d’un dossier', 'Ce qui s’est passé sur un client, dans l’ordre.', 'jour-ferie'],
+        'compter_entites'                    => ['Compter', 'Combien de clients, de polices, d’échéances — par catégorie.', 'action:count'],
+        'conges'                             => ['Congés d’un collaborateur', 'Solde, demandes et absences à venir.', 'conge'],
+        'consulter_guide'                    => ['Consulter une fiche métier', 'Charge une fiche de connaissance (boussole, cycle de production, rétrocommissions…).', 'action:information'],
+        'detail_depenses'                    => ['Détail des dépenses', 'Dépenses et charges ligne à ligne, au plan comptable OHADA.', 'depense'],
+        'document_comptable'                 => ['États comptables', 'Trésorerie, résultat, TVA et les autres états SYSCOHADA, à l’instant.', 'document-comptable'],
+        'echange_consulter'                  => ['Renseigner sur l’import/export', 'Explique la rubrique d’échange et le format du classeur attendu.', 'echange'],
+        'echange_exporter'                   => ['Exporter le portefeuille', 'Produit le classeur Excel de l’état du portefeuille.', 'echange-export'],
+        'echange_importer'                   => ['Importer un classeur', 'Contrôle puis reprend un classeur Excel joint à la conversation.', 'echange-import'],
+        'effort_commercial_agent'            => ['Rattacher un partage', 'Rattache ou détache une condition de partage à des affaires.', 'condition'],
+        'envoyer_message_par_email'          => ['Envoyer la réponse par e-mail', 'Expédie la réponse précédente à un destinataire.', 'action:send-email'],
+        'etat_configuration'                 => ['Complétude du cabinet', 'Ce qui manque encore pour que le cabinet soit opérationnel (propriétaire seulement).', 'action:settings'],
+        'exporter_etat'                      => ['Télécharger un état', 'Déclenche le téléchargement d’un état, d’un PDF ou d’un classeur.', 'action:download'],
+        'fermer_rubrique'                    => ['Fermer un onglet', 'Ferme des onglets de rubrique dans l’espace de travail.', 'action:close'],
+        'indicateur_calcule'                 => ['Indicateur financier', 'La valeur d’un indicateur calculé : commission générée, exigible, encaissée…', 'revenu'],
+        'inventaire_champs'                  => ['Champs d’un formulaire', 'Décrit les champs d’une rubrique avant une création ou une édition.', 'collection'],
+        'lire_fiche'                         => ['Lire une fiche', 'La fiche complète d’un enregistrement.', 'action:description'],
+        'lire_soa'                           => ['Relevé de compte client', 'Le relevé (SOA) d’un client : dû, payé, solde.', 'note'],
+        'modifier_composition_prime'         => ['Corriger la composition d’une prime', 'Rectifie la ventilation de prime d’une cotation.', 'tranche'],
+        'ouvrir_dialogue'                    => ['Ouvrir un formulaire', 'Ouvre chez l’utilisateur un formulaire de création ou d’édition, prérempli.', 'action:edit'],
+        'ouvrir_rubrique'                    => ['Ouvrir une rubrique', 'Ouvre une liste ou le tableau de bord dans l’espace de travail.', 'action:open'],
+        'paiements_prime'                    => ['Paiements de prime signalés', 'Les signalements de règlement de prime déjà enregistrés.', 'paiement'],
+        'parcours_saisie'                    => ['Parcours de saisie', 'La trame métier à suivre avant une création structurante.', 'piste'],
+        'plan_du_jour'                       => ['Programme du jour', 'Ce que le courtier a de plus urgent à traiter aujourd’hui.', 'tache'],
+        'preparer_decision_conge'            => ['Décider d’un congé', 'Prépare l’approbation, le refus ou l’annulation d’une demande.', 'action:check'],
+        'preparer_demande_conge'             => ['Demander un congé', 'Prépare et soumet une demande de congé.', 'action:calendar'],
+        'preparer_document'                  => ['Produire un document', 'Fabrique un document officiel : Word, Excel, PDF, Markdown ou HTML.', 'document'],
+        'preparer_envoi_soa'                 => ['Envoyer un relevé de compte', 'Ouvre la boîte d’envoi du relevé, destinataires déjà ciblés.', 'contact'],
+        'preparer_marquage_non_renouvelable' => ['Signaler une police non renouvelable', 'Marque une police comme sans suite, avec son motif.', 'action:no-renew'],
+        'preparer_mouvement_avenant'         => ['Mouvement de police', 'Renouvellement, prorogation, annulation, résiliation.', 'avenant'],
+        'preparer_operations'                => ['Créer, modifier, supprimer', 'Le chemin général de toute écriture préparée par Ket.', 'action:add'],
+        'preparer_programme'                 => ['Enchaîner plusieurs plans', 'Une série d’écritures à valider l’une après l’autre.', 'groupe'],
+        'quitter_workspace'                  => ['Quitter l’espace de travail', 'Propose de fermer l’espace de travail.', 'action:exit'],
+        'rechercher_entites'                 => ['Rechercher', 'Listes et recherches filtrées dans tout le portefeuille.', 'action:search'],
+        'retrocommissions'                   => ['Rétrocommissions', 'Ce qui est dû aux agents internes et aux partenaires externes : dû, payé, solde, exigible.', 'partenaire'],
+        'saisir_proposition'                 => ['Saisir une cotation', 'Enregistre une proposition complète en une fois.', 'cotation'],
+        'saturation_portefeuille'            => ['Saturation du portefeuille', 'Le taux de couverture et les risques qui manquent encore à chaque client.', 'portefeuille'],
+        'signaler_paiement_prime'            => ['Signaler un paiement de prime', 'Trace le règlement d’une prime par le client.', 'action:completed'],
+        'signaler_reversement_retro_agent'   => ['Signaler un reversement', 'Enregistre le versement d’une rétrocommission à un agent.', 'action:transfer'],
+        'simuler_conge'                      => ['Simuler un congé', 'Calcule les jours ouvrables d’une période d’absence.', 'regime-travail'],
+        'solde_tokens'                       => ['Solde de jetons', 'Le solde de jetons du cabinet.', 'monnaie'],
+        'souscrire_cotation'                 => ['Souscrire une cotation', 'Transforme une proposition acceptée en police (avenant).', 'assureur'],
+        'statistiques'                       => ['Statistiques', 'Sommes, moyennes et regroupements sur les champs enregistrés.', 'dashboard'],
+        'suivi_impayes'                      => ['Suivi des impayés', 'Primes, commissions et rétrocommissions restant dues, par échéance.', 'action:alert'],
+        'telecharger_documents'              => ['Chercher un document', 'Retrouve des fichiers dans un dossier et propose leur téléchargement.', 'classeur'],
+        'telecharger_fichiers'               => ['Reprendre une pièce jointe', 'Propose au téléchargement les pièces jointes de la conversation.', 'fichier:autre'],
+        'vigie_echeances'                    => ['Vigie des échéances', 'Polices échues, polices à renouveler, tâches en retard.', 'action:renew'],
+        'visualiser_fiche'                   => ['Afficher une fiche à l’écran', 'Ouvre une fiche dans la colonne de visualisation.', 'action:view'],
     ];
 
     public function __construct(
@@ -151,7 +166,7 @@ final class CatalogueDesReglages
      * tout l'intérêt d'un inventaire.
      *
      * @return list<array{
-     *     nom: string, libelle: string, resume: string, classe: Classe,
+     *     nom: string, libelle: string, resume: string, icone: string, classe: Classe,
      *     trousses: list<string>, conditionnel: bool, facture: ?string,
      *     octets: int, jetons: int, description: string, aiguillage: string,
      *     source: string
@@ -163,13 +178,14 @@ final class CatalogueDesReglages
 
         foreach ($this->trousseCatalogue->tous() as $outil) {
             $nom = $outil->name();
-            [$libelle, $resume] = self::FICHES[$nom] ?? [$nom, ''];
+            [$libelle, $resume, $icone] = self::FICHES[$nom] ?? [$nom, '', 'default'];
             $octets = PoidsDesDeclarations::octetsDe($outil);
 
             $lignes[] = [
                 'nom'          => $nom,
                 'libelle'      => $libelle,
                 'resume'       => $resume,
+                'icone'        => $icone,
                 'classe'       => self::classeDe($nom),
                 'trousses'     => self::troussesDe($outil),
                 'conditionnel' => $outil instanceof AiToolConditionnel,
@@ -232,6 +248,17 @@ final class CatalogueDesReglages
     public static function nomsDecrits(): array
     {
         return array_keys(self::FICHES);
+    }
+
+    /**
+     * Les alias d'icône déclarés, par outil — pour le test qui vérifie qu'ils se
+     * résolvent tous.
+     *
+     * @return array<string, string>
+     */
+    public static function iconesDecrites(): array
+    {
+        return array_map(static fn (array $f): string => $f[2], self::FICHES);
     }
 
     public static function classeDe(string $nom): Classe
