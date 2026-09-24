@@ -53,6 +53,16 @@ final class JournalTokens
     public const ISSUE_ECHEC_TECHNIQUE = 'echec_technique';
 
     /**
+     * Le message a dépassé son budget de DURÉE : on a conclu avec ce qui était déjà
+     * rassemblé plutôt que d'engager un appel de plus.
+     *
+     * Distincte de budget_atteint, qui parle de JETONS. Les deux disent « on s'arrête
+     * avant la fin », mais pas pour la même raison et pas avec le même remède : l'un
+     * se règle en attendant la minute suivante, l'autre en cherchant ce qui traîne.
+     */
+    public const ISSUE_DUREE_DEPASSEE = 'duree_depassee';
+
+    /**
      * La phase de compréhension a jugé la demande ambiguë : le message s'arrête sur
      * une reformulation à confirmer, sans planification ni rédaction.
      *
@@ -353,6 +363,39 @@ final class JournalTokens
             'origine'       => $origine,
             'tokens'        => $tokens,
             'millisecondes' => $millisecondes,
+        ]);
+    }
+
+    /**
+     * UNE BASCULE DE SECOURS, ET CE QU'ELLE A COÛTÉ.
+     *
+     * Un 503 ou un 429 fait changer de modèle en cours de message. Jusqu'ici cela ne
+     * laissait qu'un `warning` dans le journal général — invisible pour
+     * `app:assistant:tokens:rapport`, qui ne lit que ce canal. On savait donc qu'un
+     * message avait coûté cher, jamais qu'il avait changé de modèle en route.
+     *
+     * Or la bascule fausse TOUTE lecture de la campagne : les tours d'un même message
+     * peuvent venir de deux modèles aux tarifs et aux quotas distincts, et le rapport
+     * avertit déjà qu'il ne sait pas comparer des modèles mélangés. Sans cette ligne,
+     * il ne pouvait même pas dire QUAND le mélange a eu lieu.
+     *
+     * @param string $motif « indisponible » (503) ou « debit » (429)
+     */
+    public function repli(
+        AiRequest $request,
+        string $moteur,
+        string $abandonne,
+        string $pris,
+        string $motif,
+        Phase $phase,
+    ): void {
+        $this->assistantTokensLogger->info('repli', $this->identite($request) + [
+            'evenement'  => 'repli',
+            'moteur'     => $moteur,
+            'abandonne'  => $abandonne,
+            'pris'       => $pris,
+            'motif'      => $motif,
+            'phase'      => $phase->name,
         ]);
     }
 

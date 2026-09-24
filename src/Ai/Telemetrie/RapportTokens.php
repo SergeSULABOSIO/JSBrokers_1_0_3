@@ -65,6 +65,35 @@ final class RapportTokens
     }
 
     /**
+     * LES BASCULES DE SECOURS, comptées par couple « modèle quitté → modèle pris ».
+     *
+     * Elles expliquent l’avertissement en tête de rapport : un message qui change de
+     * modèle en route mélange deux tarifs et deux quotas. Sans ce compte, on voyait
+     * que les mesures n’étaient pas comparables, jamais POURQUOI ni COMBIEN de fois.
+     *
+     * @return array<string, int> « quitté → pris (motif) » => occurrences
+     */
+    public function replis(): array
+    {
+        $replis = [];
+        foreach ($this->lignes as $ligne) {
+            if (($ligne['evenement'] ?? null) !== 'repli') {
+                continue;
+            }
+            $cle = sprintf(
+                '%s → %s (%s)',
+                $ligne['abandonne'] ?? '?',
+                $ligne['pris'] ?? '?',
+                $ligne['motif'] ?? '?',
+            );
+            $replis[$cle] = ($replis[$cle] ?? 0) + 1;
+        }
+        arsort($replis);
+
+        return $replis;
+    }
+
+    /**
      * Ratio octets→tokens RÉELLEMENT observé, plutôt qu'une constante devinée :
      * le fournisseur compte lui-même les tokens, on connaît les octets envoyés.
      * Sert à convertir une réduction d'octets en économie de tokens.
