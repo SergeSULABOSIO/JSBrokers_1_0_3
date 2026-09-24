@@ -89,6 +89,17 @@ class KetReglagesController extends AbstractConsoleController
 
         $cabinets = $this->entrepriseRepository->countAllGlobal();
 
+        // L'ONGLET QUI S'OUVRE, DÉCIDÉ ICI ET NON DANS LE NAVIGATEUR.
+        //
+        // Le contrôleur Stimulus sait ouvrir un onglet depuis le fragment d'URL, et
+        // c'est par là que reviennent les actions POST. Mais un FILTRE est un GET :
+        // il ne peut pas porter de fragment. Sans cette ligne, chercher « tranche »
+        // dans les outils renverrait l'agent sur l'onglet des déclarations, devant
+        // un résultat qu'il ne voit pas — le pire des retours possibles.
+        $ongletActif = ($classe !== null && $classe !== '') || $recherche !== ''
+            ? 'outils'
+            : 'mesures';
+
         return $this->render('console/ket_reglages/index.html.twig', [
             'pageName'      => 'Réglages de Ket',
             'pageIcon'      => 'assistant-ia-parametres',
@@ -109,6 +120,10 @@ class KetReglagesController extends AbstractConsoleController
             'historique'    => $this->journal->derniers(),
             'gainCoupe'     => $this->catalogue->gainDesOutilsCoupes($this->reglages->outilsCoupes()),
             'familles'      => ManifesteDesRegles::familles(),
+            'reglesTotal'   => \count(ManifesteDesRegles::CODE)
+                + \count(ManifesteDesRegles::RESTITUTION)
+                + \count(ManifesteDesRegles::BOUSSOLE),
+            'ongletActif'   => $ongletActif,
         ]);
     }
 
@@ -147,7 +162,10 @@ class KetReglagesController extends AbstractConsoleController
             $this->addFlash('error', $e->getMessage());
         }
 
-        return $this->redirectToRoute('console.ket.reglages.index');
+        // ON REVIENT D'OÙ L'ON VIENT. Le fragment rouvre l'onglet des outils : sans
+        // lui, l'agent qui vient de couper un outil atterrit sur les déclarations et
+        // doit retrouver sa ligne parmi cinquante-deux.
+        return $this->redirectToRoute('console.ket.reglages.index', ['_fragment' => 'tab-outils']);
     }
 
     #[Route('/parametre/{clef}', name: 'parametre', requirements: ['clef' => '[a-z_.]+'], methods: ['POST'])]
@@ -170,7 +188,7 @@ class KetReglagesController extends AbstractConsoleController
             $this->addFlash('error', $e->getMessage());
         }
 
-        return $this->redirectToRoute('console.ket.reglages.index');
+        return $this->redirectToRoute('console.ket.reglages.index', ['_fragment' => 'tab-seuils']);
     }
 
     #[Route('/reinitialiser', name: 'reinitialiser', methods: ['POST'])]
@@ -188,7 +206,8 @@ class KetReglagesController extends AbstractConsoleController
             $this->addFlash('error', $e->getMessage());
         }
 
-        return $this->redirectToRoute('console.ket.reglages.index');
+        // Vers l'HISTORIQUE : c'est là que se lit ce qui vient d'être annulé.
+        return $this->redirectToRoute('console.ket.reglages.index', ['_fragment' => 'tab-historique']);
     }
 
     private function utilisateurCourant(): ?Utilisateur
