@@ -670,6 +670,69 @@ class GeminiAiEngineTest extends TestCase
         );
     }
 
+    /**
+     * UN MESSAGE NE PEUT PLUS DURER INDÉFINIMENT — ET CE QUI EST PAYÉ EST RENDU.
+     *
+     * DUREE_MAX_SECONDES borne UN appel à 45 s. Elle ne bornait pas le MESSAGE :
+     * trois appels bornés tiennent 135 s, et le journal en portait un à 159 s. Le
+     * budget de durée vérifie le temps écoulé AVANT d'engager un appel de plus.
+     *
+     * Ce test pose le cas qui compte : la planification a eu lieu et l'outil a
+     * rapporté, puis l'horloge franchit le plafond. La rédaction ne part pas — mais
+     * le résultat de l'outil est restitué en PHP, à coût nul. On ne jette pas ce
+     * qu'on a payé, et on ne coupe jamais un appel en vol.
+     */
+    public function testUnMessageTropLongEstConcluAvecCeQuIlADejaRassemble(): void
+    {
+        $appels = 0;
+        $http = new MockHttpClient(function () use (&$appels) {
+            ++$appels;
+
+            return new MockResponse(json_encode($this->tourAvecOutil(1000)));
+        });
+
+        // L'horloge est lue une fois au DÉPART du message, puis une fois avant CHAQUE
+        // phase. On la fait donc franchir le plafond au deuxième contrôle seulement :
+        // la planification part normalement, la rédaction ne part plus. La dernière
+        // valeur vaut pour toutes les lectures suivantes.
+        $instants = [0.0, 10.0, 1000.0];
+        $horloge = static function () use (&$instants): float {
+            return count($instants) > 1 ? array_shift($instants) : $instants[0];
+        };
+
+        $tool = $this->makeTool(AiToolResult::ok(['count' => 3]));
+        $reponse = $this->makeEngine($http, [$tool], horloge: $horloge)
+            ->reply($this->makeRequest('Combien de clients ?'));
+
+        $this->assertSame(1, $appels, 'La rédaction ne doit pas partir une fois le budget dépassé.');
+        $this->assertNotSame('', trim($reponse->content), 'L’utilisateur reçoit une réponse, jamais une bulle vide.');
+        $this->assertSame('duree_depassee', $this->bilanDuMessage()['issue'] ?? null);
+    }
+
+    /**
+     * LE BUDGET NE DOIT PAS MORDRE SUR LE TRAVAIL NORMAL. Mesuré sur 241 messages :
+     * médiane 6 s, p95 26 s. Une horloge qui n'avance pas laisse donc le message se
+     * dérouler entièrement — planification puis rédaction, les deux appels de la règle.
+     */
+    public function testUnMessageDansLeBudgetSeDerouleEntierement(): void
+    {
+        $appels = 0;
+        $http = new MockHttpClient(function () use (&$appels) {
+            ++$appels;
+
+            return $appels === 1
+                ? new MockResponse(json_encode($this->tourAvecOutil(1000)))
+                : new MockResponse(json_encode(self::texte('Vous avez 3 clients.')));
+        });
+
+        $tool = $this->makeTool(AiToolResult::ok(['count' => 3]));
+        $reponse = $this->makeEngine($http, [$tool], horloge: static fn (): float => 5.0)
+            ->reply($this->makeRequest('Combien de clients ?'));
+
+        $this->assertSame(2, $appels, 'Sous le plafond, le message garde ses deux appels.');
+        $this->assertSame('reponse', $this->bilanDuMessage()['issue'] ?? null);
+    }
+
     private function makeEngine(
         MockHttpClient $http,
         array $tools = [],
@@ -679,6 +742,7 @@ class GeminiAiEngineTest extends TestCase
         ?array $comprehension = null,
         string $replis = '',
         ?int &$appelsDeComprehension = null,
+        ?\Closure $horloge = null,
     ): GeminiAiEngine {
         if ($contextBuilder === null) {
             $contextBuilder = $this->createMock(AiContextBuilder::class);
@@ -723,6 +787,8 @@ class GeminiAiEngineTest extends TestCase
                     $dormir($secondes);
                 }
             },
+            // Nommé : $epuisement et $politique restent à leur défaut.
+            horloge: $horloge,
         );
     }
 

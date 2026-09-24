@@ -8,6 +8,7 @@ use App\Ai\AiText;
 use App\Ai\Engine\DialecteGemini;
 use App\Ai\Engine\Usage;
 use App\Ai\Fournisseur\MemoireDEpuisement;
+use App\Ai\Telemetrie\JournalTokens;
 use App\Ai\Trousse\Phase;
 use App\Ai\Trousse\Trousse;
 use Psr\Log\LoggerInterface;
@@ -74,6 +75,10 @@ final class DialecteGeminiDuFil implements DialecteDuFil
         private readonly ?\Closure $dormir = null,
         private readonly ?MemoireDEpuisement $epuisement = null,
         private readonly ?\Closure $cleDEpuisement = null,
+        // LE JOURNAL DE CAMPAGNE, en dernier et facultatif : sans lui ce dialecte se
+        // comporte exactement comme avant, et les harnais qui le construisent à la main
+        // n'ont rien à changer. Il ne sert qu'à COMPTER les bascules de secours.
+        private readonly ?JournalTokens $journal = null,
     ) {
         $this->accorderAuReglage();
     }
@@ -306,6 +311,19 @@ final class DialecteGeminiDuFil implements DialecteDuFil
                 'repli'     => $this->modeleCourant,
                 'details'   => AiEngineFailure::detailsPourJournal($origine),
             ]);
+
+            // ⚠ DANS LE CANAL DE CAMPAGNE, pas seulement dans le journal général : c'est
+            // le seul que `app:assistant:tokens:rapport` relit. Un message qui change de
+            // modèle en route mélange deux tarifs et deux quotas ; le rapport sait le
+            // dire, à condition qu'on le lui écrive.
+            $this->journal?->repli(
+                $request,
+                $this->nom(),
+                $abandonne,
+                $this->modeleCourant,
+                AiEngineFailure::estLimiteDeDebit($origine) ? 'debit' : 'indisponible',
+                $phase,
+            );
 
             try {
                 return $this->call($request, $fil, $trousse, $phase);

@@ -177,7 +177,24 @@ class AssistantTokensRapportCommand extends Command
         }
 
         // ── La projection qui tranche ────────────────────────────────────────
-        $io->section('5. Projection — que rapporterait un allègement du bloc invariant ?');
+        // ── LES BASCULES DE SECOURS ─────────────────────────────────────────────
+        // Placées AVANT la projection, et ce n’est pas cosmétique : une projection
+        // calculée sur des tours issus de deux modèles différents ne vaut rien. Le
+        // lecteur doit savoir, à cet endroit précis, si la fenêtre en contient.
+        $replis = $rapport->replis();
+        if ($replis !== []) {
+            $io->section('5. Bascules sur un modèle de secours');
+            $io->writeln(sprintf(' <fg=yellow>%d bascule(s)</> dans la fenêtre : le message a changé de modèle en cours de route.', array_sum($replis)));
+            $io->writeln(' Un même message peut donc relever de deux tarifs et de deux quotas.');
+            $io->newLine();
+            $io->table(['Bascule', 'Occurrences'], array_map(
+                static fn (string $cle, int $n): array => [$cle, $n],
+                array_keys($replis),
+                array_values($replis),
+            ));
+        }
+
+        $io->section('6. Projection — que rapporterait un allègement du bloc invariant ?');
         $rangees = [[
             'tel quel',
             number_format($observe['pic'], 0, ',', ' '),

@@ -114,8 +114,38 @@ final class OrchestrateurDeMessage
         // Injectable pour les tests : ils vérifient la DÉCISION d'attendre, pas
         // la capacité de PHP à dormir. Une suite qui dort n'est plus une suite.
         private readonly ?\Closure $dormir = null,
+        // L'HORLOGE, injectable pour la même raison que $dormir : un test doit pouvoir
+        // vérifier la DÉCISION de renoncer sans attendre quatre-vingt-dix secondes.
+        // Absente, c'est le temps réel — le comportement en production est inchangé.
+        private readonly ?\Closure $horloge = null,
     ) {
     }
+
+    /** Secondes écoulées depuis le début du message, au temps réel ou à celui du test. */
+    private function maintenant(): float
+    {
+        return $this->horloge === null ? microtime(true) : (float) ($this->horloge)();
+    }
+
+    /**
+     * LE TEMPS DE L'UTILISATEUR EST UN BUDGET, LUI AUSSI.
+     *
+     * DUREE_MAX_SECONDES borne UN appel (45 s). Elle ne borne pas le MESSAGE : trois
+     * appels bornés chacun peuvent tenir 135 s, auxquelles s'ajoute la compréhension.
+     * Mesuré sur les 241 messages du journal : médiane 6 s, p95 26 s — et un maximum
+     * à 159 s. Près de trois minutes de silence, sans que rien ne s'y oppose.
+     *
+     * QUATRE-VINGT-DIX SECONDES, soit deux appels pleins. Rejoué sur la campagne, ce
+     * seuil n'aurait touché que 2 messages sur 241 (0,8 %) : il ne coupe pas le
+     * travail normal, il coupe la queue pathologique. Au-delà, l'utilisateur préfère
+     * une réponse honnête à une attente muette — c'est déjà le raisonnement qui a fixé
+     * la borne par appel.
+     *
+     * ⚠ ON NE COUPE JAMAIS UN APPEL EN VOL : le budget est vérifié AVANT d'en engager
+     * un de plus. Ce qui est payé est utilisé, et ce qui est déjà rassemblé est rendu
+     * par RepliPrecis, à coût nul.
+     */
+    private const DUREE_MAX_MESSAGE_SECONDES = 90;
 
     public function traiter(DialecteDuFil $dialecte, AiRequest $request): AiReply
     {
@@ -123,6 +153,10 @@ final class OrchestrateurDeMessage
         // et permet au contrôleur de savoir combien de tours ont été payés si un
         // 429 interrompt la boucle.
         $this->journal->nouveauMessage();
+
+        // L'horloge du message démarre AVANT la compréhension : elle fait partie de
+        // l'attente, même quand elle tourne sur un autre modèle.
+        $debutDuMessage = $this->maintenant();
 
         $fil = $dialecte->filInitial($request);
 
@@ -214,6 +248,37 @@ final class OrchestrateurDeMessage
             if ($round === 1 && !self::meriteUnSecondRegard($resultatsOutils)) {
                 continue;
             }
+            // LE BUDGET DE DURÉE DU MESSAGE, vérifié avant d'engager un appel de plus.
+            // Un appel déjà parti va au bout : on ne jette pas ce qui est payé.
+            $ecoulees = $this->maintenant() - $debutDuMessage;
+            if ($ecoulees >= self::DUREE_MAX_MESSAGE_SECONDES) {
+                $this->logger->warning(sprintf('Assistant IA (%s) : budget de durée du message dépassé, conclusion anticipée.', $dialecte->nom()), [
+                    'phase'    => $phase->name,
+                    'secondes' => round($ecoulees, 1),
+                    'plafond'  => self::DUREE_MAX_MESSAGE_SECONDES,
+                ]);
+
+                $restitution = $this->repliPrecis->depuis($resultatsOutils);
+
+                return $this->conclure(
+                    $dialecte,
+                    $request,
+                    JournalTokens::ISSUE_DUREE_DEPASSEE,
+                    $round,
+                    $cumulInput,
+                    $cumulSortie,
+                    $sequenceOutils,
+                    new AiReply(
+                        $restitution === RepliPrecis::GENERIQUE ? self::TROP_LONG : $restitution,
+                        refused: $refused,
+                        toolUsed: $toolUsed,
+                        actions: $actions,
+                        plansRefuses: $plansRefuses,
+                        chiffresDesOutils: ChiffreFantome::nombresDe($resultatsOutils),
+                    ),
+                );
+            }
+
             // La phase est annoncée AVANT de partir : c'est pendant l'appel que
             // l'utilisateur attend, pas après. Tout le reste de ce journal se
             // mesure au retour, et arriverait donc une phase trop tard.
@@ -776,6 +841,17 @@ final class OrchestrateurDeMessage
      * un 429 sans RetryInfo ne dit rien de tel — seulement que le quota du moment est
      * consommé.
      */
+    /**
+     * CE QU'ON DIT QUAND ON A RENONCÉ À ATTENDRE PLUS LONGTEMPS.
+     *
+     * Ni excuse ni jargon : l'utilisateur n'a pas à savoir ce qu'est un budget de
+     * durée. Et surtout, pas un mot qui rejette la faute sur sa demande — c'est notre
+     * moteur qui a traîné, pas sa question qui était mauvaise.
+     */
+    private const TROP_LONG = 'Mon moteur met trop de temps à répondre en ce moment. Je préfère '
+        . 'vous le dire plutôt que de vous laisser attendre : reposez-moi la question, '
+        . 'elle devrait aboutir normalement.';
+
     private function messageQuotaEpuise(?int $delai): string
     {
         if ($delai !== null) {

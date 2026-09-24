@@ -47,6 +47,38 @@ class RapportTokensTest extends TestCase
         ];
     }
 
+    /**
+     * LES BASCULES DE SECOURS SONT COMPTÉES, ET GROUPÉES PAR COUPLE.
+     *
+     * Un 503 ou un 429 fait changer de modèle EN COURS de message. Jusqu’ici cela ne
+     * laissait qu’un avertissement dans le journal général, que ce rapport ne lit pas :
+     * on savait qu’une fenêtre mélangeait plusieurs modèles, jamais quand ni pourquoi.
+     *
+     * Le groupement par « quitté → pris (motif) » est ce qui rend le compte utile : dix
+     * bascules vers le même secours disent une panne durable du modèle principal, dix
+     * bascules éparpillées disent tout autre chose.
+     */
+    public function testLesBasculesDeSecoursSontCompteesParCouple(): void
+    {
+        $rapport = new RapportTokens([
+            ['evenement' => 'repli', 'abandonne' => 'flash', 'pris' => 'flash-lite', 'motif' => 'indisponible'],
+            ['evenement' => 'repli', 'abandonne' => 'flash', 'pris' => 'flash-lite', 'motif' => 'indisponible'],
+            ['evenement' => 'repli', 'abandonne' => 'flash', 'pris' => 'pro', 'motif' => 'debit'],
+            ['evenement' => 'tour', 'tour' => 1],
+        ]);
+
+        self::assertSame([
+            'flash → flash-lite (indisponible)' => 2,
+            'flash → pro (debit)'          => 1,
+        ], $rapport->replis());
+    }
+
+    /** Sans bascule, rien à signaler : la section du rapport reste muette. */
+    public function testSansBasculeLeCompteEstVide(): void
+    {
+        self::assertSame([], (new RapportTokens([['evenement' => 'tour', 'tour' => 1]]))->replis());
+    }
+
     public function testSepareLesToursDesMessages(): void
     {
         $rapport = new RapportTokens([

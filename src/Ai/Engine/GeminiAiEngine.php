@@ -121,6 +121,10 @@ final class GeminiAiEngine implements MoteurDeTexte, FournisseurAModele, Fournis
         ?MemoireDEpuisement $epuisement = null,
         // LA POLITIQUE DE LA CONSOLE, après la mémoire et tout aussi facultative.
         private readonly ?PolitiqueDesFournisseurs $politique = null,
+        // L'HORLOGE DU BUDGET DE DURÉE, en dernier et facultative : rien à passer en
+        // production, et les appels existants de ce constructeur restent valides — ce
+        // qui est la condition posée en tête de ce fichier.
+        ?\Closure $horloge = null,
     ) {
         $this->cleEstPosee = trim($apiKey) !== '';
         $this->epuisement = $epuisement;
@@ -141,6 +145,9 @@ final class GeminiAiEngine implements MoteurDeTexte, FournisseurAModele, Fournis
             $dormir,
             $epuisement,
             fn (): string => $this->cleDEpuisement(),
+            // Le MÊME journal que l'orchestrateur : une bascule de secours doit figurer
+            // dans la campagne, à côté des tours qu'elle a fait changer de modèle.
+            $journal,
         );
 
         // L'orchestrateur est CONSTRUIT ICI et non injecté : le faire entrer par le
@@ -159,6 +166,7 @@ final class GeminiAiEngine implements MoteurDeTexte, FournisseurAModele, Fournis
             $outilsDePlan,
             $comprehenseur,
             $dormir,
+            $horloge,
         );
     }
 
