@@ -117,6 +117,30 @@ class SelecteurDeTrousseTest extends TestCase
         yield 'une ventilation' => ['Donne-moi le chiffre d’affaires par assureur.'];
         yield 'une explication' => ['Explique-moi ma trésorerie du mois dernier.'];
         yield 'une salutation' => ['salut'];
+
+        // ── LES PIÈGES DE SOUS-CHAÎNE, MESURÉS LE 2026-09-23 ────────────────────
+        //
+        // Ces dix questions sont de pures consultations, et toutes armaient la
+        // trousse d'ÉCRITURE : le filet lexical lisait un verbe d'action à
+        // l'INTÉRIEUR d'un mot du métier. « commission » contient « mission »,
+        // « crédit » contient « édit », « échange » contient « change »,
+        // « traitement » contient « traite », « accordée » contient « accord »,
+        // « remarque » contient « marque ».
+        //
+        // Sur 241 messages journalisés, 202 (84 %) partaient ainsi en écriture sans
+        // jamais écrire, pour 27,7 % des jetons d'entrée de la période. Le mot
+        // « commission » étant le plus fréquent du courtage, il pesait à lui seul
+        // l'essentiel du gâchis.
+        yield 'commission d’une police' => ['Quelle est la commission sur la police de Marlette ?'];
+        yield 'commissions du mois' => ['Montre-moi les commissions du mois'];
+        yield 'total des commissions' => ['Quel est le total des commissions perçues cette année ?'];
+        yield 'rétrocommissions dues' => ['Quelles sont les retrocommissions dues à Olea ?'];
+        yield 'un crédit' => ['Quel est le crédit restant sur ce compte ?'];
+        yield 'un échange' => ['Montre l’échange avec SUNU'];
+        yield 'des changements' => ['Y a-t-il des changements sur ce dossier ?'];
+        yield 'un traitement fiscal' => ['Quel est le traitement fiscal de cette prime ?'];
+        yield 'une commission accordée' => ['Quelle commission m’a été accordée sur ce contrat ?'];
+        yield 'une remarque' => ['Je remarque une erreur dans ce tableau'];
     }
 
     /**
@@ -176,6 +200,19 @@ class SelecteurDeTrousseTest extends TestCase
         // — une liste, là où l'utilisateur demandait un formulaire.
         yield 'un formulaire demandé de biais' => ['Ouvre moi par exemple le formulaire d’édition pour Olea'];
         yield 'un formulaire par pronom' => ['ouvre son formulaire d’édition'];
+
+        // ── LE REVERS DE L'ANCRAGE À DROITE ─────────────────────────────────────
+        //
+        // « chang » et « trait » sont désormais fermés à droite, pour que
+        // « changement » et « traitement » cessent d'armer l'écriture. Ces cas
+        // vérifient que les formes VERBALES, elles, passent toujours : c'est
+        // exactement ce qu'un ancrage trop zélé casserait, et un faux négatif coûte
+        // bien plus cher qu'un faux positif — il prive l'utilisateur d'une capacité.
+        yield 'changer un montant' => ['change le montant de la prime'];
+        yield 'changer à l’infinitif' => ['changer le bénéficiaire de cette police'];
+        yield 'traiter un dossier' => ['traite ce dossier'];
+        yield 'traiter à l’infinitif' => ['peux-tu traiter ce sinistre ?'];
+        yield 'un accord donné' => ['je suis d’accord, fais-le'];
     }
 
     /**
