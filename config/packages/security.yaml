@@ -45,7 +45,19 @@ security:
     # Easy way to control access for large sections of your site
     # Note: Only the *first* access control that matches will be used
     access_control:
-        # - { path: ^/admin, roles: ROLE_ADMIN }
+        # LA CONSOLE, FERMÉE DEUX FOIS PLUTÔT QU'UNE.
+        #
+        # Chaque contrôleur de `src/Controller/Console` porte déjà son
+        # `#[IsGranted('ROLE_ADMIN')]`, et AccesReserveAuxAgentsTest fait échouer la
+        # suite si l'un d'eux est livré sans. C'était néanmoins un rempart UNIQUE :
+        # un attribut oublié ouvrait la page à tout utilisateur connecté — donc au
+        # courtier client, qui y aurait lu les données de ses concurrents — et rien
+        # ne l'aurait signalé, la page s'affichant normalement pour tout le monde.
+        #
+        # Cette ligne ne remplace pas les attributs : elle les double. Elle ne coûte
+        # rien (une comparaison de préfixe par requête) et elle transforme une
+        # omission silencieuse en 403.
+        - { path: ^/console, roles: ROLE_ADMIN }
         # - { path: ^/profile, roles: ROLE_USER }
 
 when@test:

@@ -7,6 +7,7 @@ use App\Event\AgentNotificationEvent;
 use App\Form\CollaborateurType;
 use App\Repository\UtilisateurRepository;
 use App\Service\Console\AffectationNotifier;
+use App\Service\Console\GardeDesComptes;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -29,6 +30,7 @@ class CollaborateurController extends AbstractConsoleController
         private UserPasswordHasherInterface $passwordHasher,
         private EventDispatcherInterface $dispatcher,
         private AffectationNotifier $affectationNotifier,
+        private GardeDesComptes $gardeDesComptes,
     ) {}
 
     #[Route('', name: 'index')]
@@ -95,6 +97,17 @@ class CollaborateurController extends AbstractConsoleController
         $this->applyLangPreference($request, $localeSwitcher);
 
         $canGrantSuper = $this->isGranted('ROLE_SUPER_ADMIN');
+
+        // LA CIBLE COMPTE AUTANT QUE L'ACTEUR. `#[IsGranted('ROLE_ADMIN')]` dit qui
+        // entre, jamais sur QUI. Le champ de mot de passe ci-dessous s'applique au
+        // compte désigné par {id} : sans cette ligne, un agent le posait sur un
+        // super-administrateur et se connectait avec. Le garde `$canGrantSuper`
+        // n'y suffisait pas — il ne protège que le champ de RÔLE.
+        if (!$this->gardeDesComptes->peutAgirSurAgent($collaborateur, $canGrantSuper)) {
+            throw $this->createAccessDeniedException(
+                'Seul un super-administrateur peut modifier le compte d’un super-administrateur.'
+            );
+        }
         // Affectation initiale, pour ne notifier le concerné qu'en cas de changement.
         $ancienDepartement = $collaborateur->getDepartement();
         $ancienneFonction = $collaborateur->getFonction();
@@ -156,8 +169,7 @@ class CollaborateurController extends AbstractConsoleController
 
             return $this->redirectToRoute('console.collaborateur.index');
         }
-        if (in_array('ROLE_SUPER_ADMIN', $collaborateur->getRoles(), true)
-            && count($this->superAdmins()) <= 1) {
+        if ($this->gardeDesComptes->estLeDernierSuperAdmin($collaborateur)) {
             $this->addFlash('error', 'Impossible de supprimer le dernier super-administrateur.');
 
             return $this->redirectToRoute('console.collaborateur.index');
@@ -176,15 +188,6 @@ class CollaborateurController extends AbstractConsoleController
         $this->addFlash('success', sprintf('Collaborateur « %s » supprimé.', $nom));
 
         return $this->redirectToRoute('console.collaborateur.index');
-    }
-
-    /** @return Utilisateur[] */
-    private function superAdmins(): array
-    {
-        return array_filter(
-            $this->utilisateurRepository->findAgents(),
-            static fn (Utilisateur $u) => in_array('ROLE_SUPER_ADMIN', $u->getRoles(), true)
-        );
     }
 
     private function notifier(string $action, Utilisateur $collaborateur): void

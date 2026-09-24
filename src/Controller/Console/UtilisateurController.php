@@ -6,6 +6,7 @@ use App\Entity\Utilisateur;
 use App\Event\AgentNotificationEvent;
 use App\Form\CollaborateurType;
 use App\Repository\UtilisateurRepository;
+use App\Service\Console\GardeDesComptes;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -26,6 +27,7 @@ class UtilisateurController extends AbstractConsoleController
         private UtilisateurRepository $utilisateurRepository,
         private UserPasswordHasherInterface $passwordHasher,
         private EventDispatcherInterface $dispatcher,
+        private GardeDesComptes $gardeDesComptes,
     ) {}
 
     #[Route('', name: 'index')]
@@ -43,6 +45,7 @@ class UtilisateurController extends AbstractConsoleController
     #[Route('/{id}/edit', name: 'edit', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function edit(Utilisateur $utilisateur, Request $request, LocaleSwitcher $localeSwitcher): Response
     {
+        $this->refuserSiCeNestPasUnClient($utilisateur);
         $this->applyLangPreference($request, $localeSwitcher);
 
         $form = $this->createForm(CollaborateurType::class, $utilisateur, [
@@ -84,6 +87,8 @@ class UtilisateurController extends AbstractConsoleController
     #[Route('/{id}', name: 'delete', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     public function delete(Utilisateur $utilisateur, Request $request): Response
     {
+        $this->refuserSiCeNestPasUnClient($utilisateur);
+
         if (!$this->isCsrfTokenValid('delete-utilisateur-' . $utilisateur->getId(), (string) $request->request->get('_token'))) {
             throw $this->createAccessDeniedException('Jeton CSRF invalide.');
         }
@@ -101,5 +106,33 @@ class UtilisateurController extends AbstractConsoleController
         $this->addFlash('success', sprintf('Utilisateur « %s » supprimé.', $nom));
 
         return $this->redirectToRoute('console.utilisateur.index');
+    }
+
+    /**
+     * CET ÉCRAN NE GÈRE QUE DES COMPTES CLIENTS — la route doit le dire autant que
+     * la liste.
+     *
+     * `index()` pagine `paginateRegularUsers()`, donc aucun agent n’y apparaît. Mais
+     * `edit` et `delete` résolvent leur cible par `{id}` : l’identifiant d’un agent,
+     * voire du dernier super-administrateur, passait. On y réécrivait alors un mot de
+     * passe (escalade), ou l’on supprimait le compte — en contournant au passage le
+     * garde-fou du dernier super-administrateur, qui n’existait que dans l’écran des
+     * collaborateurs.
+     *
+     * Le second appel est une ceinture : un agent ne devrait jamais arriver ici, et si
+     * la première garde venait à tomber, le dernier super-administrateur resterait
+     * protégé.
+     */
+    private function refuserSiCeNestPasUnClient(Utilisateur $utilisateur): void
+    {
+        if ($utilisateur->isAgent()) {
+            throw $this->createAccessDeniedException(
+                'Cet écran ne gère que les comptes clients. Les collaborateurs Joseara se modifient dans la rubrique Collaborateurs.'
+            );
+        }
+
+        if ($this->gardeDesComptes->estLeDernierSuperAdmin($utilisateur)) {
+            throw $this->createAccessDeniedException('Impossible de toucher au dernier super-administrateur.');
+        }
     }
 }

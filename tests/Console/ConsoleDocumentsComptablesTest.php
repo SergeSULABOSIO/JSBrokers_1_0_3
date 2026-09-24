@@ -7,6 +7,7 @@ use App\Entity\Charge;
 use App\Entity\Depense;
 use App\Entity\TokenPurchase;
 use App\Entity\Utilisateur;
+use App\Enum\Departement;
 use App\Services\ServiceTaxesVente;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -47,6 +48,8 @@ class ConsoleDocumentsComptablesTest extends WebTestCase
             $u->setVerified(true);
             $u->setLocale('fr');
             $u->setRoles($roles);
+            // Un agent non affecté n'atteint plus que son tableau de bord.
+            $u->setDepartement($roles === [] ? null : Departement::DIRECTION);
             $u->setPassword($hasher->hashPassword($u, self::PASSWORD));
             $em->persist($u);
         }

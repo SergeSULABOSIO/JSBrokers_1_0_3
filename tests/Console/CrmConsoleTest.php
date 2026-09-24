@@ -10,6 +10,7 @@ use App\Entity\Entreprise;
 use App\Entity\TokenConsumption;
 use App\Entity\TokenPurchase;
 use App\Entity\Utilisateur;
+use App\Enum\Departement;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -40,6 +41,10 @@ class CrmConsoleTest extends WebTestCase
         $em = $this->em();
 
         $admin = (new Utilisateur())->setEmail(self::ADMIN)->setNom('Agent CRM')->setVerified(true)->setRoles(['ROLE_ADMIN']);
+        // L'agent doit désormais être AFFECTÉ pour atteindre une rubrique : le
+        // fail-open « sans département = accès complet » est fermé
+        // (ConsoleAccessResolver). DIRECTION = périmètre « toute la console ».
+        $admin->setDepartement(Departement::DIRECTION);
         $admin->setPassword($hasher->hashPassword($admin, self::PASSWORD));
         $em->persist($admin);
 

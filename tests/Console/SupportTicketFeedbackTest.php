@@ -5,6 +5,7 @@ namespace App\Tests\Console;
 use App\Entity\Crm\CrmTicket;
 use App\Entity\Crm\CrmTicketFeedback;
 use App\Entity\Utilisateur;
+use App\Enum\Departement;
 use App\Repository\Crm\CrmTicketRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -33,6 +34,10 @@ class SupportTicketFeedbackTest extends WebTestCase
         $em = $this->em();
 
         $admin = (new Utilisateur())->setEmail(self::ADMIN)->setNom('Agent Support')->setVerified(true)->setRoles(['ROLE_ADMIN']);
+        // L'agent doit désormais être AFFECTÉ pour atteindre une rubrique : le
+        // fail-open « sans département = accès complet » est fermé
+        // (ConsoleAccessResolver). DIRECTION = périmètre « toute la console ».
+        $admin->setDepartement(Departement::DIRECTION);
         $admin->setPassword($hasher->hashPassword($admin, self::PASSWORD));
         $em->persist($admin);
         $em->flush();

@@ -5,6 +5,7 @@ namespace App\Tests\Console;
 use App\Entity\TaxeVente;
 use App\Entity\TokenPurchase;
 use App\Entity\Utilisateur;
+use App\Enum\Departement;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -40,6 +41,11 @@ class ConsoleTaxeVenteTest extends WebTestCase
             $u->setVerified(true);
             $u->setLocale('fr');
             $u->setRoles($roles);
+            // Un agent doit désormais être AFFECTÉ pour voir autre chose que son
+            // tableau de bord (fail-open fermé dans ConsoleAccessResolver). La
+            // Direction Générale est le département dont le périmètre vaut « toute la
+            // console » : c'est lui qui préserve ce que ce test voulait dire.
+            $u->setDepartement($roles === [] ? null : Departement::DIRECTION);
             $u->setPassword($hasher->hashPassword($u, self::PASSWORD));
             $em->persist($u);
         }
