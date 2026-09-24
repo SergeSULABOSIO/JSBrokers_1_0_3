@@ -35,9 +35,32 @@ final class SelecteurDeTrousse
      * pas à l'être : ce qu'elle rate part en trousse de lecture, et une demande
      * d'écriture mal aiguillée se rattrape par un nouveau message, pas par un
      * troisième appel.
+     *
+     * ⚠ CHAQUE ALTERNATIVE EST ANCRÉE SUR UNE FRONTIÈRE DE MOT, et ce n'est pas
+     * une coquetterie. Sans le \b de tête, « mission » se trouvait à l'intérieur de
+     * COMMISSION — le mot le plus fréquent du courtage. « Quelle est la commission
+     * sur la police de Marlette ? », une pure consultation, armait donc la trousse
+     * d'écriture : cinquante kilo-octets de déclarations et vingt-sept de protocoles,
+     * payés pour rien. Même piège pour « édit » dans CRÉDIT, « change » dans ÉCHANGE,
+     * « traite » dans TRAITEMENT, « accord » dans ACCORDÉE et « marque » dans REMARQUE.
+     *
+     * MESURÉ sur les 241 messages du journal (30 j) : 202 d'entre eux — 84 % —
+     * partaient en trousse d'écriture sans appeler le moindre outil d'écriture, pour
+     * 27,7 % des jetons d'entrée de la période. Rejouée sur 26 questions de pure
+     * consultation, l'ancienne liste en détournait 10 ; la nouvelle, aucune, et sans
+     * perdre un seul des 48 cas d'écriture du corpus (zéro faux négatif, cf.
+     * SelecteurDeTrousseTest). Le compromis du docblock ci-dessus est donc INTACT :
+     * on n'a pas resserré le jugement, on a cessé de lire des mots qui n'y sont pas.
+     *
+     * Les radicaux restent ouverts À DROITE (« enregistr », « modifi », « souscri »)
+     * pour couvrir les flexions ; seuls « chang », « trait » et « accord » sont aussi
+     * fermés à droite, parce que leur forme longue est un NOM de consultation.
+     * (*UCP) rend \b sensible aux accents quelle que soit la compilation de PCRE :
+     * sans lui, « é » cesse d'être une lettre sur certains serveurs et CRÉDIT
+     * redeviendrait un déclencheur d'écriture en production seulement.
      */
-    private const VERBES_ACTION = '/(cr[ée]e|cr[ée]er|ajoute|ajouter|enregistr|saisi|sauvegard|rempli|'
-        . 'modifi|corrig|rectifi|change|mets? à jour|supprim|efface|renouvel|reconduis|reconduir|'
+    private const VERBES_ACTION = '/(*UCP)\b(cr[ée]e|cr[ée]er|ajoute|ajouter|enregistr|saisi|sauvegard|rempli|'
+        . 'modifi|corrig|rectifi|chang(?:e|es|ez|er|eons|[ée]e?)\b|mets? à jour|supprim|efface|renouvel|reconduis|reconduir|'
         . 'prorog|prolong|annul|r[ée]sili|marque|signale|affecte|attribue|valide|valider|souscri|'
         . 'fais-le|fais le|vas.?y|essaie|essaye|refais|r[ée]essaie|continue|poursui|'
         // « Je veux que tu t'en charges » — la réponse la plus naturelle à la question
@@ -58,8 +81,8 @@ final class SelecteurDeTrousse
         // SFA. Que faire ? » ne contient aucun verbe d'action, et annonce pourtant
         // une saisie. Ces trois mots — offre, cotation, proposition — ouvraient les
         // seuls faux négatifs du corpus.
-        . 'offre|cotation|proposition|devis|accord|mission|que faire|comment (faire|proc[ée]der)|'
-        . 'r[ée]ponds|traite|prends en charge)/iu';
+        . 'offre|cotation|proposition|devis|accord\b|mission|que faire|comment (faire|proc[ée]der)|'
+        . 'r[ée]ponds|trait(?:e|es|ez|er)\b|prends en charge)/iu';
 
     public function __construct(
         private readonly ProgrammeEnCours $programmeEnCours,
