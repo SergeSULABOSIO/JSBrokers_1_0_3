@@ -224,9 +224,22 @@ final class BoussoleService
 
         return [
             'axe'         => 'renouvellements',
-            'libelle'     => $total > 0
-                ? sprintf('%d renouvellement(s) à anticiper (%d échu(s), %d sous 30 j)', $total, $echus, $imminents)
-                : 'Aucun renouvellement imminent',
+            // ON N'ANNONCE PAS UN ZÉRO. « 30 renouvellements (30 échus, 0 sous 30 j) »
+            // fait lire un chiffre pour apprendre qu'il n'y a rien à cet endroit : la
+            // parenthèse ne détaille alors plus rien, elle répète le total et ajoute
+            // un vide. On ne cite que la part qui existe, et la ventilation complète
+            // seulement quand les DEUX en valent la peine.
+            'libelle'     => match (true) {
+                $echus > 0 && $imminents > 0 => sprintf(
+                    '%d renouvellement(s) à anticiper (%d échu(s), %d sous 30 j)',
+                    $total,
+                    $echus,
+                    $imminents,
+                ),
+                $echus > 0     => sprintf('%d renouvellement(s) échu(s) à traiter', $echus),
+                $imminents > 0 => sprintf('%d renouvellement(s) à échéance sous 30 jours', $imminents),
+                default        => 'Aucun renouvellement imminent',
+            },
             'compte'      => $total,
             'urgence'     => $echus > 0 ? self::URGENCE['renouvellements'] : ($imminents > 0 ? 60 : 0),
             'actionnable' => $total > 0,

@@ -8,6 +8,7 @@ use App\Ai\AiRequest;
 use App\Ai\Comprehension\Comprehenseur;
 use App\Ai\Debit\BudgetDebit;
 use App\Ai\Fournisseur\FournisseurAModele;
+use App\Ai\Fournisseur\FournisseurAReplis;
 use App\Ai\Fournisseur\FournisseurDatable;
 use App\Ai\Fournisseur\MemoireDEpuisement;
 use App\Ai\Engine\Socle\DialecteGeminiDuFil;
@@ -52,7 +53,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * SÉCURITÉ : inchangée — le périmètre ne dépend PAS du modèle, chaque outil
  * re-vérifie canRead() dans execute() (fail-closed).
  */
-final class GeminiAiEngine implements MoteurDeTexte, FournisseurAModele, FournisseurDatable
+final class GeminiAiEngine implements MoteurDeTexte, FournisseurAModele, FournisseurAReplis, FournisseurDatable
 {
     /** Assez ample pour restituer une page de liste (rechercher_entites) sans troncature. */
     private const MAX_OUTPUT_TOKENS = 4096;
@@ -237,6 +238,33 @@ final class GeminiAiEngine implements MoteurDeTexte, FournisseurAModele, Fournis
     public function cleDEpuisement(): string
     {
         return MemoireDEpuisement::cle('moteur', 'gemini', $this->modeleConfigure());
+    }
+
+    /**
+     * LA CHAÎNE DE SECOURS, TELLE QU'ELLE SERA PARCOURUE.
+     *
+     * Ce moteur ne s'arrête pas au modèle principal : un 503 ou un quota atteint le
+     * fait basculer sur le suivant, et il continue de répondre. Tant que la console
+     * n'affichait que le premier, elle nommait la mauvaise chose — on cherchait la
+     * cause d'une réponse lente ou médiocre du côté d'un modèle qui n'avait pas
+     * parlé. Relu à chaque appel, comme le modèle principal.
+     *
+     * @return list<string>
+     */
+    public function modelesDeRepli(): array
+    {
+        $liste = ModeleChoisi::liste($this->politique, 'moteur', 'gemini', $this->replisParDefaut, 'modelesRepli');
+
+        return array_values(array_filter(
+            array_map('trim', explode(',', $liste)),
+            static fn (string $nom): bool => $nom !== '',
+        ));
+    }
+
+    /** La marque d'épuisement d'un modèle PRÉCIS de ce moteur. */
+    public function cleDEpuisementDe(string $modele): string
+    {
+        return MemoireDEpuisement::cle('moteur', 'gemini', $modele);
     }
 
     /**

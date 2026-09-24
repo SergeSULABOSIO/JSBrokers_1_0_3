@@ -38,6 +38,25 @@
             font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; font-weight:700;
             color:#0047AB; margin-bottom:1rem; padding:0; width:auto; float:none;
         }
+        /* ── CHAÎNE DE MODÈLES ────────────────────────────────────────────
+           Un moteur peut enchaîner plusieurs modèles ; l'écran doit dire LEQUEL
+           répond, pas seulement lequel est configuré. L'état est écrit à côté du
+           nom — « (répond) », « (à sec) » — et jamais porté par la seule couleur
+           (WCAG 1.4.1). */
+        .kf-chaine {
+            display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .45rem;
+            margin: .5rem 0 0; font-size: .78rem; color: #6c757d;
+        }
+        .kf-chaine__titre { font-weight: 600; }
+        .kf-chaine__modele {
+            padding: .1rem .5rem; border-radius: 999px;
+            background: #e9ecef; color: #495057;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .74rem;
+        }
+        .kf-chaine__modele.is-actif { background: #d1e7dd; color: #0f5132; font-weight: 700; }
+        .kf-chaine__modele.is-epuise { background: #f8d7da; color: #842029; text-decoration: line-through; }
+        .kf-chaine__alerte { color: #842029; font-weight: 600; }
+
         /* Les champs (blancs) ressortent sur le fond clair du panneau. */
         .cs-fieldset .form-control,
         .cs-fieldset .form-select { background:#fff; height:48px; font-size:1rem; color:#000; }

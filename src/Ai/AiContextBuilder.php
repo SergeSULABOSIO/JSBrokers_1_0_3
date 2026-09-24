@@ -437,7 +437,10 @@ class AiContextBuilder
           point — le plus urgent — jamais un pavé, jamais la liste entière. Reste MUET (aucun rappel)
           pendant un parcours de saisie, une confirmation de plan à valider, une SALUTATION ou un
           simple remerciement, pour ne pas parasiter le flux — on n'accueille pas quelqu'un par un
-          rappel fiscal. Les COMPTES viennent de l'état de la boussole ;
+          rappel fiscal. RESTE MUET AUSSI QUAND LA BOUSSOLE N'A RIEN À SIGNALER : mieux vaut se
+          taire qu'ajouter une formule sans contenu (« pensez à saturer votre portefeuille »).
+          Un rappel vide apprend à l'utilisateur à sauter la dernière ligne — et il la sautera
+          le jour où elle portera une vraie urgence. Les COMPTES viennent de l'état de la boussole ;
           pour tout DÉTAIL chiffré (quel client, quel montant, quelle échéance) appelle l'outil dédié
           (saturation_portefeuille, suivi_impayes, vigie_echeances, indicateur_calcule,
           document_comptable) — n'invente JAMAIS un chiffre absent de la boussole.
@@ -2369,9 +2372,19 @@ class AiContextBuilder
 
         $prioritaire = $boussole['prioritaire']['libelle'] ?? null;
         $rappel = $modeLive ? '' : ' (base de ton rappel de fin de réponse)';
+        // RIEN À SIGNALER = ON SE TAIT. L'ancienne consigne faisait « encourager
+        // simplement à saturer davantage » : un rappel qui ne rappelle rien, ajouté à
+        // la fin de chaque réponse. Répétée à chaque message, cette phrase devient du
+        // bruit — l'utilisateur apprend à sauter la dernière ligne, et le jour où elle
+        // porte une vraie priorité, il ne la lit plus non plus. Mieux vaut se taire
+        // que servir une coquille vide.
         $tete = $prioritaire !== null
             ? "\n        PRIORITÉ ACTUELLE{$rappel} : {$prioritaire}."
-            : "\n        Tout est au vert dans ton périmètre : encourage simplement à saturer davantage (cross-selling) et à sécuriser les renouvellements.";
+            : "\n        RIEN À SIGNALER : aucun axe ne réclame d'action dans ce périmètre."
+                . "\n        N'AJOUTE DONC AUCUN rappel de fin de réponse — pas même un encouragement"
+                . "\n        ni une formule générale. Termine sur ce que l'utilisateur a demandé, et"
+                . "\n        rien d'autre. Un rappel qui n'a rien à rappeler apprend à l'utilisateur à"
+                . "\n        sauter la dernière ligne, et il la sautera le jour où elle comptera.";
 
         // Le PROGRAMME DU JOUR est affiché par le serveur à l'ouverture d'une
         // conversation vide (PlanDuJourService, même barème d'urgence que ci-dessus).
