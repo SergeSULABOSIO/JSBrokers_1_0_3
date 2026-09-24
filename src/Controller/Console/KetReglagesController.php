@@ -2,8 +2,13 @@
 
 namespace App\Controller\Console;
 
+use App\Ai\Reglage\ApplicationDesReglages;
 use App\Ai\Reglage\CatalogueDesReglages;
 use App\Ai\Reglage\Classe;
+use App\Ai\Reglage\ManifesteDesRegles;
+use App\Ai\Reglage\ReglagesDeKet;
+use App\Entity\Utilisateur;
+use App\Repository\KetReglageJournalRepository;
 use App\Repository\EntrepriseRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -12,10 +17,10 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Translation\LocaleSwitcher;
 
 /**
- * CE QUE KET SAIT FAIRE, ET CE QUE CELA COÛTE — en lecture seule.
+ * CE QUE KET SAIT FAIRE, CE QUE CELA COÛTE, ET CE QU'ON PEUT EN COUPER.
  *
  * ── POURQUOI CET ÉCRAN EXISTE ───────────────────────────────────────────────
- * Cinquante-trois outils partent au fournisseur à chaque tour, et personne dans
+ * Cinquante-deux outils partent au fournisseur à chaque tour, et personne dans
  * l'équipe ne disposait de leur liste ailleurs que dans le code. Le support répond
  * pourtant tous les jours à « Ket sait-elle faire X ? », et le commercial construit
  * son argumentaire sur la réponse. Aller la chercher dans `src/Ai/Tool` n'est pas un
@@ -31,11 +36,18 @@ use Symfony\Component\Translation\LocaleSwitcher;
  * Direction, le Commercial et la Relation client portent le préfixe
  * `console.ket.reglages.` dans leur périmètre. Finance et RH n'ont rien à y faire.
  *
- * ── CE QU'IL NE FAIT PAS ENCORE ─────────────────────────────────────────────
- * Aucune écriture. Les interrupteurs arrivent au lot suivant, et les trois familles
- * de règles (code, restitution, boussole) au dernier — leur numérotation n'étant pas
- * encore arrêtée, les afficher maintenant reviendrait à graver un identifiant que
- * l'on changerait ensuite.
+ * ── DEUX NIVEAUX DE DROIT SUR LE MÊME ÉCRAN ─────────────────────────────────
+ * Consulter : ROLE_ADMIN, filtré par département. Régler : ROLE_SUPER_ADMIN, posé
+ * méthode par méthode. Un agent du support voit donc l'inventaire entier et
+ * l'historique des changements, sans aucun interrupteur — ce qui est exactement ce
+ * dont il a besoin pour répondre « Ket ne le fait plus depuis le 12 ».
+ *
+ * ── LES RÈGLES SONT LÀ, MAIS EN LECTURE SEULE ───────────────────────────────
+ * Les trois familles (R = appliquées par le code, K = de restitution, B = boussole)
+ * s'affichent avec leur source. Aucune n'est modifiable, et ce n'est pas une
+ * précaution : une règle d'intégrité comptable ou de cloisonnement ne se règle pas
+ * depuis un écran. Ce que l'écran apporte, c'est de pouvoir les CITER — elles
+ * n'avaient jusqu'ici aucun identifiant stable.
  */
 #[Route('/console/ket/reglages', name: 'console.ket.reglages.')]
 #[IsGranted('ROLE_ADMIN')]
@@ -44,6 +56,9 @@ class KetReglagesController extends AbstractConsoleController
     public function __construct(
         private CatalogueDesReglages $catalogue,
         private EntrepriseRepository $entrepriseRepository,
+        private ReglagesDeKet $reglages,
+        private ApplicationDesReglages $application,
+        private KetReglageJournalRepository $journal,
     ) {
     }
 
@@ -85,6 +100,101 @@ class KetReglagesController extends AbstractConsoleController
             'poids'         => $this->catalogue->poidsDesTrousses(),
             'cabinets'      => $cabinets,
             'cabinetsAvecKet' => $this->entrepriseRepository->countAvecSoldePayant(),
+            'coupes'        => $this->reglages->outilsCoupes(),
+            'parametres'    => ReglagesDeKet::PARAMETRES,
+            'valeurs'       => $this->reglages->parametres(),
+            'peutRegler'    => $this->isGranted('ROLE_SUPER_ADMIN'),
+            'vierge'        => $this->reglages->estVierge(),
+            'dernierChangement' => $this->journal->dernierParElement(),
+            'historique'    => $this->journal->derniers(),
+            'gainCoupe'     => $this->catalogue->gainDesOutilsCoupes($this->reglages->outilsCoupes()),
+            'familles'      => ManifesteDesRegles::familles(),
         ]);
+    }
+
+    /**
+     * BASCULER UN OUTIL, pour toute la plateforme.
+     *
+     * SUPER-ADMIN AU NIVEAU MÉTHODE, et non de la classe : la consultation reste
+     * ouverte au support et au commercial (cf. docblock de classe), seule l'écriture
+     * est réservée. La garde de fond — un INVARIANT ou un INDISPENSABLE ne se coupe
+     * pas — vit dans ApplicationDesReglages, sur le chemin d'écriture : un appel
+     * direct à cette route échoue donc exactement comme un clic.
+     */
+    #[Route('/outil/{nom}', name: 'outil', requirements: ['nom' => '[a-z_]+'], methods: ['POST'])]
+    #[IsGranted('ROLE_SUPER_ADMIN')]
+    public function basculerOutil(string $nom, Request $request): Response
+    {
+        if (!$this->isCsrfTokenValid('ket_reglage', (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Jeton CSRF invalide.');
+        }
+
+        $actif = $request->request->getBoolean('actif');
+
+        try {
+            $this->application->basculerOutil(
+                $nom,
+                $actif,
+                (string) $request->request->get('motif'),
+                $this->utilisateurCourant(),
+            );
+            $this->addFlash('success', sprintf(
+                '« %s » est désormais %s pour tous les cabinets.',
+                $nom,
+                $actif ? 'actif' : 'coupé',
+            ));
+        } catch (\DomainException $e) {
+            $this->addFlash('error', $e->getMessage());
+        }
+
+        return $this->redirectToRoute('console.ket.reglages.index');
+    }
+
+    #[Route('/parametre/{clef}', name: 'parametre', requirements: ['clef' => '[a-z_.]+'], methods: ['POST'])]
+    #[IsGranted('ROLE_SUPER_ADMIN')]
+    public function reglerParametre(string $clef, Request $request): Response
+    {
+        if (!$this->isCsrfTokenValid('ket_reglage', (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Jeton CSRF invalide.');
+        }
+
+        try {
+            $this->application->reglerParametre(
+                $clef,
+                $request->request->getInt('valeur'),
+                (string) $request->request->get('motif'),
+                $this->utilisateurCourant(),
+            );
+            $this->addFlash('success', 'Seuil enregistré : il s’applique au prochain message de chaque cabinet.');
+        } catch (\DomainException $e) {
+            $this->addFlash('error', $e->getMessage());
+        }
+
+        return $this->redirectToRoute('console.ket.reglages.index');
+    }
+
+    #[Route('/reinitialiser', name: 'reinitialiser', methods: ['POST'])]
+    #[IsGranted('ROLE_SUPER_ADMIN')]
+    public function reinitialiser(Request $request): Response
+    {
+        if (!$this->isCsrfTokenValid('ket_reglage', (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Jeton CSRF invalide.');
+        }
+
+        try {
+            $this->application->reinitialiser((string) $request->request->get('motif'), $this->utilisateurCourant());
+            $this->addFlash('success', 'Tous les réglages sont revenus aux valeurs d’origine.');
+        } catch (\DomainException $e) {
+            $this->addFlash('error', $e->getMessage());
+        }
+
+        return $this->redirectToRoute('console.ket.reglages.index');
+    }
+
+    private function utilisateurCourant(): ?Utilisateur
+    {
+        $user = $this->getUser();
+
+        return $user instanceof Utilisateur ? $user : null;
     }
 }

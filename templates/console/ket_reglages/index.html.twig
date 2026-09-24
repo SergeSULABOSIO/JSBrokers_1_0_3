@@ -98,6 +98,69 @@
 
     .kr-compte { color: #6c757d; font-size: .85rem; margin: 0 0 .5rem; }
 
+    /* Interrupteur : une case à cocher NATIVE, redessinée. Le clavier, le focus et
+       l'annonce au lecteur d'écran fonctionnent alors sans une ligne de script, et
+       le libellé texte à côté dit l'état — jamais la couleur seule (WCAG 1.4.1). */
+    .kr-switch { display: inline-flex; align-items: center; gap: .45rem; cursor: pointer; }
+    .kr-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .kr-switch-piste {
+        width: 38px; height: 22px; border-radius: 999px; background: #adb5bd;
+        position: relative; transition: background .15s ease; flex: 0 0 auto;
+    }
+    .kr-switch-piste::after {
+        content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+        border-radius: 50%; background: #fff; transition: transform .15s ease;
+    }
+    .kr-switch input:checked + .kr-switch-piste { background: #198754; }
+    .kr-switch input:checked + .kr-switch-piste::after { transform: translateX(16px); }
+    .kr-switch input:focus-visible + .kr-switch-piste { box-shadow: 0 0 0 .2rem rgba(0, 71, 171, .35); }
+
+    /* Formulaire de bascule : caché tant qu'on n'a pas déplié la fiche. */
+    .kr-agir { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dee2e6; }
+    .kr-agir h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; color: #6c757d; margin: 0 0 .6rem; font-weight: 700; }
+    .kr-impact { background: #fff3cd; border: 1px solid #dee2e6; border-radius: 8px; padding: .7rem .85rem; margin-bottom: .75rem; }
+    .kr-impact p { margin: 0 0 .25rem; color: #664d03; font-size: .85rem; }
+    .kr-impact p:last-child { margin-bottom: 0; }
+    .kr-agir label { display: block; font-size: .8rem; color: #6c757d; margin-bottom: .25rem; }
+    .kr-agir textarea, .kr-agir input[type="number"] {
+        width: 100%; max-width: 46rem; min-height: 44px; padding: .5rem .65rem;
+        border: 1px solid #ced4da; border-radius: 8px; color: #212529; font-size: .9rem; font-family: inherit;
+    }
+    .kr-agir input[type="number"] { max-width: 9rem; }
+    .kr-agir textarea:focus, .kr-agir input:focus {
+        outline: 0; border-color: #0047AB; box-shadow: 0 0 0 .2rem rgba(0, 71, 171, .35);
+    }
+    .kr-agir .kr-boutons { margin-top: .75rem; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+    .kr-btn {
+        min-height: 44px; padding: .5rem 1.1rem; border: 0; border-radius: 8px;
+        background: #0047AB; color: #fff; font-weight: 600; cursor: pointer; font-size: .9rem;
+    }
+    .kr-btn:hover { background: #003380; }
+    .kr-btn--danger { background: #dc3545; }
+    .kr-btn--danger:hover { background: #b02a37; }
+
+    /* Seuils métier. */
+    .kr-seuil { border-bottom: 1px solid #f0f0f0; padding: .9rem .2rem; }
+    .kr-seuil:last-child { border-bottom: 0; }
+    .kr-seuil h3 { margin: 0 0 .15rem; font-size: .95rem; color: #212529; }
+    .kr-seuil p { margin: 0 0 .6rem; color: #6c757d; font-size: .85rem; }
+    .kr-seuil-ligne { display: flex; gap: .6rem; align-items: flex-end; flex-wrap: wrap; }
+    .kr-bornes { color: #6c757d; font-size: .8rem; padding-bottom: .7rem; }
+
+    /* Historique. */
+    /* Règles : une ligne par identifiant, l'identifiant en tête comme une cote. */
+    .kr-regle { display: grid; grid-template-columns: 3.5rem 1fr; gap: .25rem .9rem; padding: .6rem .2rem; border-bottom: 1px solid #f0f0f0; }
+    .kr-regle:last-child { border-bottom: 0; }
+    .kr-regle-id { font-weight: 700; color: #0047AB; font-size: .9rem; }
+    .kr-regle-titre { color: #212529; font-size: .9rem; }
+    .kr-regle-meta { grid-column: 2; color: #6c757d; font-size: .8rem; }
+    .kr-regle-meta code { font-size: .78rem; }
+    .kr-regle-risque { grid-column: 2; color: #664d03; font-size: .8rem; }
+
+    .kr-histo td { vertical-align: top; }
+    .kr-histo .kr-motif { color: #495057; }
+    .kr-histo time { color: #6c757d; white-space: nowrap; }
+
     /* Même raison pour le sous-titre de page : `console/base.html.twig` plafonne
        `.cs-head p` à 70ch. On ne lève la contrainte QUE sur cette page — la changer
        dans le socle toucherait les dix-neuf autres rubriques de la console, ce qui
@@ -151,6 +214,14 @@
                 </div>
             {% endfor %}
         </dl>
+        {% if gainCoupe.outils > 0 %}
+            <p class="kr-compte" style="margin-top:1rem">
+                <strong>{{ gainCoupe.outils }} outil{{ gainCoupe.outils > 1 ? 's' : '' }} coupé{{ gainCoupe.outils > 1 ? 's' : '' }}</strong>
+                épargne{{ gainCoupe.outils > 1 ? 'nt' : '' }} déjà
+                ≈ {{ gainCoupe.jetons|number_format(0, ',', ' ') }} jetons
+                ({{ (gainCoupe.octets / 1024)|number_format(1, ',', ' ') }} Ko) à chaque échange.
+            </p>
+        {% endif %}
         <p class="kr-compte" style="margin-top:1rem">
             Ce sont des <strong>plafonds</strong> : selon les droits de l’invité et son appareil,
             certains outils ne sont pas déclarés, et l’échange réel pèse moins. Les jetons sont
@@ -209,11 +280,14 @@
                         {# Le statut n'est JAMAIS porté par la seule couleur (WCAG 1.4.1) :
                            pastille, icône et libellé disent la même chose. #}
                         <span class="kr-etat">
-                            {% if o.classe.estModifiable %}
-                                <span class="cs-badge cs-badge--ok">Actif</span>
-                            {% else %}
+                            {% if not o.classe.estModifiable %}
                                 {{ ux_icon(resolve_icon_name('action:password'), {height:'15px', width:'15px'}) }}
                                 <span class="cs-badge cs-badge--cobalt">Verrouillé</span>
+                            {% elseif o.nom in coupes %}
+                                {{ ux_icon(resolve_icon_name('action:hide'), {height:'15px', width:'15px'}) }}
+                                <span class="cs-badge cs-badge--warn">Coupé</span>
+                            {% else %}
+                                <span class="cs-badge cs-badge--ok">Actif</span>
                             {% endif %}
                         </span>
                     </summary>
@@ -255,10 +329,192 @@
 
                             <dt>Source</dt>
                             <dd><code>{{ o.source }}</code></dd>
+
+                            {% set change = dernierChangement['outil:' ~ o.nom]|default(null) %}
+                            {% if change %}
+                                <dt>Dernier changement</dt>
+                                <dd>
+                                    {{ change.ancienneValeur }} → <strong>{{ change.nouvelleValeur }}</strong>,
+                                    le {{ change.effectueLe|date('d/m/Y à H:i') }} par {{ change.auteurNom }}.<br>
+                                    <em>« {{ change.motif }} »</em>
+                                </dd>
+                            {% endif %}
                         </dl>
+
+                        {% if peutRegler and o.classe.estModifiable %}
+                            {% set coupe = o.nom in coupes %}
+                            <form method="post" action="{{ path('console.ket.reglages.outil', {nom: o.nom}) }}" class="kr-agir">
+                                <h3>{{ coupe ? 'Réactiver cet outil' : 'Couper cet outil' }}</h3>
+
+                                {# L'IMPACT EST MONTRÉ AVANT LE BOUTON, jamais après : une
+                                   confirmation qui n'apprend rien ne protège de rien. #}
+                                <div class="kr-impact">
+                                    <p><strong>{{ cabinetsAvecKet }} cabinet{{ cabinetsAvecKet > 1 ? 's' : '' }}</strong>
+                                       {{ cabinetsAvecKet > 1 ? 'disposent' : 'dispose' }} de Ket aujourd’hui
+                                       (sur {{ cabinets }} au total). Le changement vaut pour tous.</p>
+                                    <p>{{ coupe ? 'Réactiver' : 'Couper' }} cet outil
+                                       {{ coupe ? 'ajoute' : 'épargne' }}
+                                       <strong>≈ {{ o.jetons|number_format(0, ',', ' ') }} jetons</strong> par échange.</p>
+                                    {% if o.facture and not coupe %}
+                                        <p>⚠ Cet outil <strong>débite des jetons</strong> au cabinet qui l’utilise :
+                                           le couper supprime aussi cette recette.</p>
+                                    {% endif %}
+                                    <p>Prise d’effet : au prochain message de chaque cabinet.</p>
+                                </div>
+
+                                <label for="motif-{{ o.nom }}">Motif (obligatoire)</label>
+                                <textarea id="motif-{{ o.nom }}" name="motif" rows="2" required minlength="5"
+                                          placeholder="Pourquoi ce changement ? Sans motif, l’historique ne permet pas de savoir s’il faut le défaire."></textarea>
+
+                                <input type="hidden" name="_token" value="{{ csrf_token('ket_reglage') }}">
+                                <input type="hidden" name="actif" value="{{ coupe ? 1 : 0 }}">
+                                <div class="kr-boutons">
+                                    <button type="submit" class="kr-btn {{ coupe ? '' : 'kr-btn--danger' }}">
+                                        {{ coupe ? 'Réactiver pour toute la plateforme' : 'Couper pour toute la plateforme' }}
+                                    </button>
+                                </div>
+                            </form>
+                        {% endif %}
                     </div>
                 </details>
             {% endfor %}
+        {% endif %}
+    </div>
+
+    <div class="cs-panel">
+        <h2 class="cs-panel-title">Seuils métier</h2>
+        <p class="kr-compte">
+            Quatre valeurs, bornées. Une valeur hors bornes est refusée à la saisie —
+            et ignorée si elle arrive en base par un autre chemin : c’est alors la valeur
+            d’origine qui reprend la main.
+        </p>
+
+        {% for clef, regle in parametres %}
+            <div class="kr-seuil">
+                <h3>{{ regle.libelle }}</h3>
+                <p>{{ regle.explication }}</p>
+
+                {% if peutRegler %}
+                    <form method="post" action="{{ path('console.ket.reglages.parametre', {clef: clef}) }}" class="kr-seuil-ligne">
+                        <div>
+                            <label for="v-{{ clef }}">Valeur ({{ regle.unite }})</label>
+                            <input type="number" id="v-{{ clef }}" name="valeur"
+                                   value="{{ valeurs[clef] }}" min="{{ regle.min }}" max="{{ regle.max }}" required>
+                        </div>
+                        <div style="flex:1 1 20rem">
+                            <label for="m-{{ clef }}">Motif (obligatoire)</label>
+                            <input type="text" id="m-{{ clef }}" name="motif" required minlength="5"
+                                   style="width:100%;min-height:44px;padding:.5rem .65rem;border:1px solid #ced4da;border-radius:8px;font-size:.9rem"
+                                   placeholder="Pourquoi ce changement ?">
+                        </div>
+                        <span class="kr-bornes">entre {{ regle.min }} et {{ regle.max }} · d’origine : {{ regle.defaut }}</span>
+                        <input type="hidden" name="_token" value="{{ csrf_token('ket_reglage') }}">
+                        <button type="submit" class="kr-btn" style="margin-bottom:.35rem">Enregistrer</button>
+                    </form>
+                {% else %}
+                    <p><strong>{{ valeurs[clef] }} {{ regle.unite }}</strong>
+                       <span class="kr-bornes">· entre {{ regle.min }} et {{ regle.max }} · d’origine : {{ regle.defaut }}</span></p>
+                {% endif %}
+
+                {% set change = dernierChangement['parametre:' ~ clef]|default(null) %}
+                {% if change %}
+                    <p class="kr-compte" style="margin:.5rem 0 0">
+                        {{ change.ancienneValeur }} → <strong>{{ change.nouvelleValeur }}</strong>,
+                        le {{ change.effectueLe|date('d/m/Y') }} par {{ change.auteurNom }} —
+                        <em>« {{ change.motif }} »</em>
+                    </p>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="cs-panel">
+        <h2 class="cs-panel-title">Règles et boussole</h2>
+        <p class="kr-compte">
+            Ce qui tient Ket, et que <strong>personne ne peut modifier depuis la console</strong> —
+            pas même un super-administrateur. Une règle d’intégrité comptable, de cloisonnement
+            entre cabinets ou de réglementation ne se règle pas depuis un écran. Ce qui change
+            ici, c’est qu’elles portent enfin un identifiant stable, et qu’on peut donc les citer.
+        </p>
+
+        {% for cle, famille in familles %}
+            <h3 style="font-size:.95rem;color:#212529;margin:1.4rem 0 .3rem">{{ famille.libelle }}</h3>
+            <p class="kr-compte">
+                {% if cle == 'code' %}
+                    Appliquées par le CODE : un service en est la source unique, et elles valent
+                    aussi pour les formulaires de l’espace de travail. Les enfreindre corrompt
+                    des données.
+                {% elseif cle == 'restitution' %}
+                    Appliquées par les instructions de Ket : elles régissent son DISCOURS.
+                    Les enfreindre produit une réponse fausse, pas une donnée fausse.
+                {% else %}
+                    Ce que le cabinet poursuit, et l’ordre de la chaîne de valeur.
+                {% endif %}
+            </p>
+
+            {% for id, regle in famille.entrees %}
+                <div class="kr-regle">
+                    <span class="kr-regle-id">{{ id }}</span>
+                    <span class="kr-regle-titre">{{ regle.titre }}</span>
+                    <span class="kr-regle-meta">Source : <code>{{ regle.source }}</code></span>
+                    {% if regle.risque is defined %}
+                        <span class="kr-regle-risque">Si elle saute : {{ regle.risque }}</span>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% endfor %}
+    </div>
+
+    <div class="cs-panel">
+        <h2 class="cs-panel-title">Historique des changements</h2>
+
+        {% if historique is empty %}
+            <div class="cs-empty">Aucun réglage n’a encore été modifié : la plateforme tourne sur les valeurs d’origine.</div>
+        {% else %}
+            <div style="overflow-x:auto">
+                <table class="cs-table kr-histo">
+                    <caption class="visually-hidden">Derniers changements de réglages de Ket</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Date</th>
+                            <th scope="col">Administrateur</th>
+                            <th scope="col">Élément</th>
+                            <th scope="col">Avant → après</th>
+                            <th scope="col">Motif</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ligne in historique %}
+                            <tr>
+                                <td><time datetime="{{ ligne.effectueLe|date('c') }}">{{ ligne.effectueLe|date('d/m/Y H:i') }}</time></td>
+                                <td>{{ ligne.auteurNom }}</td>
+                                <td><code>{{ ligne.nomCourt }}</code></td>
+                                <td>{{ ligne.ancienneValeur }} → <strong>{{ ligne.nouvelleValeur }}</strong></td>
+                                <td class="kr-motif">{{ ligne.motif }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+
+        {% if peutRegler and not vierge %}
+            <form method="post" action="{{ path('console.ket.reglages.reinitialiser') }}" class="kr-agir">
+                <h3>Rétablir les réglages d’origine</h3>
+                <div class="kr-impact">
+                    <p>Tous les outils coupés redeviennent actifs et tous les seuils reprennent
+                       leur valeur d’origine, pour l’ensemble de la plateforme.</p>
+                    <p>L’état actuel est inscrit à l’historique avant d’être effacé : rien n’est perdu,
+                       vous pourrez relire ce qui a été annulé.</p>
+                </div>
+                <label for="motif-reset">Motif (obligatoire)</label>
+                <textarea id="motif-reset" name="motif" rows="2" required minlength="5"
+                          placeholder="Pourquoi rétablir les valeurs d’origine ?"></textarea>
+                <input type="hidden" name="_token" value="{{ csrf_token('ket_reglage') }}">
+                <div class="kr-boutons">
+                    <button type="submit" class="kr-btn kr-btn--danger">Rétablir les réglages d’origine</button>
+                </div>
+            </form>
         {% endif %}
     </div>
 

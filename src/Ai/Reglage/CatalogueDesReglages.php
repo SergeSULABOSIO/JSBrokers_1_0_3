@@ -50,12 +50,17 @@ final class CatalogueDesReglages
      * outils (TrousseCatalogue), et sans eux la phase qui lève les ambiguïtés de
      * référence partirait sans aucun outil.
      *
-     * ⚠ CETTE LISTE EST UNE HYPOTHÈSE JUSQU'AU TEST. `OutilDesactiveTest` (lot
-     * suivant) coupe chaque outil DÉSACTIVABLE à tour de rôle et vérifie que son nom
-     * disparaît du prompt. Tout outil qui échoue appartient ici — ou bien le bloc de
-     * prompt qui le nomme doit devenir conditionnel.
+     * ⚠ CETTE LISTE N'EST PLUS UNE HYPOTHÈSE : `OutilDesactiveTest` l'ARBITRE. Il
+     * coupe chaque outil DÉSACTIVABLE à tour de rôle et vérifie que son nom disparaît
+     * du prompt. Tout outil qui y laisse une trace appartient ici, et la suite
+     * devient rouge tant qu'il n'y est pas.
      */
     private const INDISPENSABLES = [
+        // ── LE SOCLE : sans eux, Ket cesse de fonctionner ───────────────────────
+        // La trousse de COMPRÉHENSION en entier (liste blanche de trois outils) :
+        // sans elle, la phase qui lève les ambiguïtés de référence part sans aucun
+        // outil. Puis le moteur générique d'écriture et ses compagnons, que les
+        // protocoles nomment à chaque tour.
         'compter_entites',
         'consulter_guide',
         'inventaire_champs',
@@ -65,6 +70,42 @@ final class CatalogueDesReglages
         'preparer_operations',
         'preparer_programme',
         'rechercher_entites',
+
+        // ── LA TOILE DE RENVOIS : les couper produirait un outil fantôme ─────────
+        //
+        // Ceux-là ne sont pas vitaux au sens strict — Ket tournerait sans
+        // `chronologie`. Mais son nom est écrit EN DUR à deux endroits : dans la
+        // prose du prompt (glossaire financier, règle de boussole, périmètre), et
+        // surtout dans la règle d'aiguillage D'AUTRES outils, qui s'y réfèrent pour
+        // se distinguer — « ne confonds pas avec suivi_impayes », « pour un montant
+        // par période, passe par indicateur_calcule ».
+        //
+        // C'est une bonne chose : cette toile de renvois est ce qui empêche le
+        // modèle de choisir l'outil voisin. Mais elle interdit d'en retirer un
+        // arbitrairement : le prompt continuerait de le nommer, le modèle croirait
+        // pouvoir l'appeler, et l'on retomberait exactement sur le plan fantôme que
+        // PromptSansOutilFantomeTest existe pour empêcher.
+        //
+        // LES LIBÉRER EST UN CHANTIER À PART, outil par outil : il faut réécrire
+        // chaque règle qui le nomme du côté où elle appartient — ce que le message
+        // d'échec de PromptSansOutilFantomeTest prescrit déjà — puis retirer le nom
+        // d'ici et laisser le test confirmer. Le faire en bloc reviendrait à
+        // remanier le prompt entier d'un seul geste, sur l'artefact le plus sensible
+        // du projet.
+        'analyse_portefeuille',
+        'chronologie',
+        'document_comptable',
+        'fermer_rubrique',
+        'indicateur_calcule',
+        'modifier_composition_prime',
+        'ouvrir_rubrique',
+        'paiements_prime',
+        'plan_du_jour',
+        'preparer_envoi_soa',
+        'retrocommissions',
+        'saturation_portefeuille',
+        'suivi_impayes',
+        'vigie_echeances',
     ];
 
     /**
@@ -242,6 +283,36 @@ final class CatalogueDesReglages
         }
 
         return $poids;
+    }
+
+    /**
+     * Ce que la plateforme épargne à chaque échange grâce aux outils coupés.
+     *
+     * Mesuré comme le reste : la différence entre la liste complète et la liste
+     * amputée, sérialisées l'une et l'autre. On ne somme pas les poids un à un — un
+     * tableau JSON porte ses virgules, et l'écran annonce un gain de PAYLOAD.
+     *
+     * @param list<string> $coupes
+     *
+     * @return array{octets: int, jetons: int, outils: int}
+     */
+    public function gainDesOutilsCoupes(array $coupes): array
+    {
+        if ($coupes === []) {
+            return ['octets' => 0, 'jetons' => 0, 'outils' => 0];
+        }
+
+        $tous = $this->trousseCatalogue->tous();
+        $restants = array_filter($tous, static fn ($o): bool => !\in_array($o->name(), $coupes, true));
+
+        $octets = PoidsDesDeclarations::octetsDeLaListe($tous)
+            - PoidsDesDeclarations::octetsDeLaListe($restants);
+
+        return [
+            'octets' => $octets,
+            'jetons' => PoidsDesDeclarations::jetons($octets),
+            'outils' => \count($tous) - \count($restants),
+        ];
     }
 
     /** Les noms techniques déclarés dans les fiches — pour le test de couverture. */

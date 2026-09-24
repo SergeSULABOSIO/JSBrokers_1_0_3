@@ -4,6 +4,7 @@ namespace App\Ai\Tool;
 
 use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
+use App\Ai\Reglage\ReglagesDeKet;
 use App\Entity\DemandeConge;
 use App\Entity\Invite;
 use App\Repository\DemandeCongeRepository;
@@ -47,7 +48,21 @@ final class CongesTool implements AiToolInterface, AiToolConditionnel
         private readonly DemandeCongeRepository $demandeRepository,
         private readonly ResolveurDAgent $resolveurAgent,
         private readonly WorkspaceAccessResolver $accessResolver,
+        /**
+         * LE SEUIL EST RÉGLABLE EN CONSOLE, la constante reste sa VALEUR DE NAISSANCE.
+         *
+         * Facultatif, comme pour TrousseCatalogue et pour la même raison : des tests
+         * construisent cette classe à la main, hors conteneur. `null` vaut « aucun
+         * réglage » — donc exactement le comportement d'avant l'écran.
+         */
+        private readonly ?ReglagesDeKet $reglages = null,
     ) {
+    }
+
+    /** La fenêtre effective de l'agenda d'équipe : console, ou code. */
+    private function horizonEquipe(): int
+    {
+        return $this->reglages?->parametre('conges.horizon_equipe_jours') ?? self::HORIZON_EQUIPE;
     }
 
     public function name(): string
@@ -198,7 +213,7 @@ final class CongesTool implements AiToolInterface, AiToolConditionnel
                 $this->demandeRepository->absencesApprouveesSurPeriode(
                     $scope->entreprise,
                     new \DateTimeImmutable('today'),
-                    (new \DateTimeImmutable('today'))->modify(sprintf('+%d days', self::HORIZON_EQUIPE)),
+                    (new \DateTimeImmutable('today'))->modify(sprintf('+%d days', $this->horizonEquipe())),
                     $agent,
                 ),
             );

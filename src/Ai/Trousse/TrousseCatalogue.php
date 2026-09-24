@@ -2,6 +2,7 @@
 
 namespace App\Ai\Trousse;
 
+use App\Ai\Reglage\ReglagesDeKet;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolConditionnel;
 use App\Ai\Tool\AiToolInterface;
@@ -16,10 +17,13 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
  * chantier — le prompt ne peut pas nommer un outil absent du tour, puisque les deux
  * sont dérivés du MÊME tableau.
  *
- * Trois filtres, dans cet ordre :
+ * Quatre filtres, dans cet ordre :
  *  1. la TROUSSE (lecture / écriture) — économie de débit ;
- *  2. AiToolConditionnel — l'outil a-t-il un sens dans ce périmètre et ce fil ;
- *  3. rien d'autre : la sécurité reste dans execute(), fail-closed.
+ *  2. les RÉGLAGES DE PLATEFORME — un outil coupé en console n'existe plus pour
+ *     personne, et il disparaît des déclarations ET du prompt d'un seul geste,
+ *     puisque les deux dérivent de ce tableau ;
+ *  3. AiToolConditionnel — l'outil a-t-il un sens dans ce périmètre et ce fil ;
+ *  4. rien d'autre : la sécurité reste dans execute(), fail-closed.
  *
  * ORDRE DÉTERMINISTE. L'ordre d'itération d'un tag de conteneur ne l'est pas, or le
  * préfixe envoyé au fournisseur doit être stable d'un tour à l'autre : c'est lui qui
@@ -36,6 +40,18 @@ final class TrousseCatalogue
 
     public function __construct(
         #[AutowireIterator('app.ai_tool')] iterable $outils,
+        /**
+         * FACULTATIF, ET SEULEMENT POUR LES TESTS UNITAIRES. Sept fichiers de tests
+         * construisent le moteur à la main, sans conteneur, pour éprouver un
+         * dialecte ou une boucle de function calling : leur imposer un service de
+         * réglages n'apprendrait rien et alourdirait vingt-trois appels.
+         *
+         * `null` vaut « aucune personnalisation », c'est-à-dire exactement le
+         * comportement d'avant cet écran — tous les outils actifs. Dans
+         * l'application, l'autowiring injecte toujours le vrai service, et
+         * OutilDesactiveTest le prouve en passant par le conteneur.
+         */
+        private readonly ?ReglagesDeKet $reglages = null,
     ) {
         $this->outils = $outils;
     }
@@ -54,11 +70,18 @@ final class TrousseCatalogue
         // recevrait la liste d'outils mise en cache pour la première — un
         // téléphone se verrait offrir les outils d'écran, ou l'inverse, selon
         // l'ordre d'arrivée. Le défaut serait intermittent et introuvable.
+        // ⚠ LES OUTILS COUPÉS FONT PARTIE DE LA CLÉ, pour la même raison que le
+        // terminal juste en dessous : le worker VIT. Un agent qui coupe un outil
+        // pendant qu'un processus tourne verrait sa décision ignorée jusqu'au
+        // redémarrage — `reset()` vide bien le cache du service de réglages entre
+        // deux messages, mais ce cache-ci lui survivrait. Le défaut serait
+        // intermittent, donc introuvable.
         $cle = implode('|', [
             $trousse->value,
             $scope->invite->getId() ?? 0,
             $scope->conversation?->getId() ?? 0,
             $scope->terminal->value,
+            implode(',', $this->reglages?->outilsCoupes() ?? []),
         ]);
         if (isset($this->cache[$cle])) {
             return $this->cache[$cle];
@@ -75,6 +98,14 @@ final class TrousseCatalogue
                     continue;
                 }
             } elseif (!$trousse->estEcriture() && $outil instanceof AiToolEcriture) {
+                continue;
+            }
+            // COUPÉ EN CONSOLE : l'outil n'est déclaré à personne, sur toute la
+            // plateforme. Posé ICI et nulle part ailleurs, il disparaît du même
+            // coup des déclarations envoyées au fournisseur, de la section
+            // d'aiguillage du prompt et des blocs de protocole qui le nomment —
+            // c'est la propriété que ce fichier garantit depuis son origine.
+            if ($this->reglages !== null && !$this->reglages->outilActif($outil->name())) {
                 continue;
             }
             if ($outil instanceof AiToolConditionnel && !$outil->estDisponible($scope)) {

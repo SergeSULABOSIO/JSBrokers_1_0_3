@@ -17,6 +17,7 @@ use App\Service\Terminal\Terminal;
 use App\Ai\Trousse\Phase;
 use App\Ai\Trousse\Trousse;
 use App\Ai\Trousse\TrousseCatalogue;
+use App\Ai\Reglage\ReglagesDeKet;
 use App\Entity\AssistantConversation;
 use App\Entity\AssistantMessage;
 use App\Entity\Entreprise;
@@ -72,7 +73,21 @@ class AiContextBuilder
         // graphique : Ket a fini par libeller en euros un budget qui n'a pas de
         // monnaie, chez un courtier congolais qui travaille en dollars.
         private readonly ServiceMonnaies $serviceMonnaies,
+        /**
+         * LE SEUIL EST RÉGLABLE EN CONSOLE, la constante reste sa VALEUR DE NAISSANCE.
+         *
+         * Facultatif, comme pour TrousseCatalogue et pour la même raison : des tests
+         * construisent cette classe à la main, hors conteneur. `null` vaut « aucun
+         * réglage » — donc exactement le comportement d'avant l'écran.
+         */
+        private readonly ?ReglagesDeKet $reglages = null,
     ) {
+    }
+
+    /** La profondeur effective du fil : celle de la console, ou celle du code. */
+    private function profondeurDuFil(): int
+    {
+        return $this->reglages?->parametre('fil.max_messages') ?? self::MAX_MESSAGES;
     }
 
     public function build(
@@ -112,7 +127,7 @@ class AiContextBuilder
                 'content' => $contenu,
             ];
         }
-        $messages = array_slice($messages, -self::MAX_MESSAGES);
+        $messages = array_slice($messages, -$this->profondeurDuFil());
 
         return new AiRequest(
             systemContext: [
