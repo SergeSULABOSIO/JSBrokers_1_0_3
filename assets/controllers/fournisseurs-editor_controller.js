@@ -356,6 +356,49 @@ export default class extends Controller {
         });
         conteneur.appendChild(champ);
 
+        // ── LA VÉRITÉ SUR LE MODÈLE QUI RÉPOND ────────────────────────────────
+        // Ce moteur ne s'arrête pas à son modèle principal : un 503 ou un quota
+        // atteint le fait basculer sur le suivant, et il continue de répondre. Tant
+        // que l'écran n'affichait que le premier, il nommait la mauvaise chose : on
+        // cherchait la cause d'une réponse lente, chère ou médiocre du côté d'un
+        // modèle qui n'avait pas parlé.
+        //
+        // On montre donc la CHAÎNE entière, chaque maillon marqué s'il est à sec, et
+        // l'on DÉSIGNE celui auquel Ket est réellement branchée à cet instant.
+        const chaine = Array.isArray(etat.chaine) ? etat.chaine : [];
+        if (chaine.length > 1) {
+            const bloc = document.createElement('p');
+            bloc.className = 'kf-chaine';
+
+            const titre = document.createElement('span');
+            titre.className = 'kf-chaine__titre';
+            titre.textContent = 'Modèles tentés, dans l’ordre :';
+            bloc.appendChild(titre);
+
+            chaine.forEach((maillon, rang) => {
+                const puce = document.createElement('span');
+                const repond = maillon.nom === etat.repondAvec;
+                puce.className = `kf-chaine__modele${repond ? ' is-actif' : ''}${maillon.epuise ? ' is-epuise' : ''}`;
+                // L'état n'est JAMAIS porté par la seule couleur (WCAG 1.4.1) : il
+                // est écrit, entre parenthèses, à côté du nom.
+                puce.textContent = maillon.nom
+                    + (repond ? ' (répond)' : (maillon.epuise ? ' (à sec)' : ''));
+                puce.title = maillon.principal ? 'Modèle principal' : `Secours n° ${rang}`;
+                bloc.appendChild(puce);
+            });
+
+            if (!etat.repondAvec) {
+                const alerte = document.createElement('span');
+                alerte.className = 'kf-chaine__alerte';
+                // Le dire en toutes lettres : « aucun modèle disponible » n'est pas
+                // une absence d'information, c'en est une — et elle explique tout.
+                alerte.textContent = 'Toute la chaîne est à sec : ce fournisseur ne répond plus.';
+                bloc.appendChild(alerte);
+            }
+
+            conteneur.appendChild(bloc);
+        }
+
         return conteneur;
     }
 

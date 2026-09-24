@@ -2,6 +2,7 @@
 
 namespace App\Ai\Fournisseur;
 
+use App\Ai\Engine\GeminiAiEngine;
 use App\Ai\Voix\VoixDeKet;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
@@ -123,6 +124,8 @@ final class EtatDesFournisseurs
             // Jamais à sec : il ne consomme ni clé, ni crédit, ni quota.
             'epuise'     => false,
             'modele'     => null,
+            'repondAvec' => null,
+            'chaine'     => [],
             'cle'        => null,
             'echeance'   => null,
             'repli'      => true,
@@ -172,11 +175,43 @@ final class EtatDesFournisseurs
             // « Modèle » de l'écran ne disait pas ce qu'il remplacerait.
             $modele = $fournisseur instanceof FournisseurAModele ? trim($fournisseur->modeleEnVigueur()) : '';
 
+            // LA CHAÎNE DE SECOURS, ET LE MODÈLE QUI RÉPONDRAIT VRAIMENT.
+            //
+            // Le moteur Gemini ne s'arrête pas à son modèle principal : un 503 ou un
+            // quota atteint le fait basculer sur le suivant, et il continue de
+            // répondre. L'écran n'affichait que le premier et le présentait comme LE
+            // modèle : on cherchait alors la cause d'une réponse lente ou médiocre
+            // du côté d'un modèle qui n'avait pas parlé.
+            //
+            // On rend donc la chaîne ENTIÈRE, chaque maillon avec son état, et le
+            // premier qui a du souffle — celui auquel Ket est RÉELLEMENT branchée.
+            // Aucun appel réseau : on interroge la mémoire d'épuisement, modèle par
+            // modèle, exactement comme le fait le moteur avant de choisir.
+            $chaine = [];
+            $repondAvec = null;
+            if ($modele !== '') {
+                $chaine[] = ['nom' => $modele, 'principal' => true, 'epuise' => $fournisseur->estEpuise()];
+                $repondAvec = $fournisseur->estEpuise() ? null : $modele;
+            }
+            if ($fournisseur instanceof FournisseurAReplis) {
+                foreach ($fournisseur->modelesDeRepli() as $repli) {
+                    $aSec = $fournisseur instanceof GeminiAiEngine
+                        && $this->epuisement->estEpuise($fournisseur->cleDEpuisementDe($repli));
+                    $chaine[] = ['nom' => $repli, 'principal' => false, 'epuise' => $aSec];
+                    $repondAvec ??= $aSec ? null : $repli;
+                }
+            }
+
             $etat[] = [
                 'nom'        => $fournisseur->nom(),
                 'disponible' => $fournisseur->estDisponible(),
                 'epuise'     => $fournisseur->estEpuise(),
                 'modele'     => $modele !== '' ? $modele : null,
+                // Ce à quoi Ket est branchée à cet instant : le premier maillon qui a
+                // du souffle. `null` quand toute la chaîne est à sec — et c'est une
+                // information, pas une absence.
+                'repondAvec' => $repondAvec,
+                'chaine'     => \count($chaine) > 1 ? $chaine : [],
                 'cle'        => $cle,
                 'echeance'   => $cle !== null ? $this->epuisement->echeance($cle)?->format(\DateTimeInterface::ATOM) : null,
             ];
