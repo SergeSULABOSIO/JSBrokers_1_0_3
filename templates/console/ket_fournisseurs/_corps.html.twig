@@ -1,4 +1,17 @@
-{% extends 'console/form.html.twig' %}
+{# CORPS DU RÉGLAGE DES FOURNISSEURS DE KET — un seul exemplaire, deux hôtes.
+
+   Ce fragment était le corps de `console/ket_fournisseurs/form.html.twig`, un écran à
+   lui seul. Il vit désormais dans l'onglet « Fournisseurs » de la configuration de
+   Ket : qui répond pour elle est un RÉGLAGE comme un autre, et l'agent qui cherchait
+   « pourquoi Ket répond mal » devait jusqu'ici deviner laquelle des deux rubriques
+   ouvrir.
+
+   Il est extrait plutôt que recopié : deux gabarits qui rendent le même formulaire
+   finissent par diverger sur le point qui compte — ici, la liste des cinq familles.
+
+   Attend : `form` (KetFournisseursType), `etat` (EtatDesFournisseurs::tout()).
+   Ne porte NI la balise <form> NI le bouton d'envoi : c'est l'hôte qui les pose,
+   parce que lui seul sait vers quelle route il poste. #}
 
 {% set libelles = {
     'moteur':        {titre: 'Moteur de texte', aide: 'Qui rédige les réponses de Ket et choisit ses outils.'},
@@ -8,8 +21,29 @@
     'oreille':       {titre: 'Oreilles',        aide: 'Transcription de la parole en mode Live.'}
 } %}
 
-{% block console_form_body %}
     <style>
+        /* ── STYLES REPRIS DE LA COQUILLE DE FORMULAIRE ────────────────────────
+           Ce corps vivait dans `console/form.html.twig`, qui définissait
+           `.cs-fieldset` et `.cs-legend`. Il est désormais hébergé par un ONGLET :
+           sans ces règles, les cinq familles perdaient leur cadre et leurs légendes
+           s'affichaient en gros titres bruts. Un partiel réutilisable porte sa propre
+           présentation — sinon il ne rend correctement que chez son hôte d'origine. */
+        .cs-fieldset {
+            border:1px solid #dee2e6; border-radius:10px; background:#f8f9fa;
+            padding:1.15rem 1.25rem .35rem; margin:0 0 1.1rem;
+        }
+        .cs-fieldset:last-of-type { margin-bottom:0; }
+        .cs-legend {
+            display:inline-flex; align-items:center; gap:.45rem;
+            font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; font-weight:700;
+            color:#0047AB; margin-bottom:1rem; padding:0; width:auto; float:none;
+        }
+        /* Les champs (blancs) ressortent sur le fond clair du panneau. */
+        .cs-fieldset .form-control,
+        .cs-fieldset .form-select { background:#fff; height:48px; font-size:1rem; color:#000; }
+        .cs-fieldset .form-control:focus,
+        .cs-fieldset .form-select:focus { border-color:#0047AB; box-shadow:0 0 0 .25rem rgba(0,71,171,.35); }
+
         .cs-help { border:1px solid #d7e2f7; background:#f5f8ff; border-radius:12px; margin-bottom:1.5rem; }
         .cs-help > summary { cursor:pointer; list-style:none; padding:.85rem 1.1rem; font-weight:700; color:#0047AB;
             display:flex; align-items:center; gap:.5rem; }
@@ -230,15 +264,3 @@
             </div>
         </fieldset>
     {% endfor %}
-{% endblock %}
-
-{# Le réarmement est une action à part : il ne passe pas par l'enregistrement de la
-   politique, puisqu'il ne change rien à la politique — il efface une marque. Il vit
-   donc DEHORS du formulaire principal : imbriqué, il refermait celui-ci avant son
-   bouton « Enregistrer », qui ne faisait plus rien. #}
-{% block console_form_after %}
-    <form method="post" action="{{ path('console.ket.fournisseurs.rearmer') }}" id="kf-rearmer-form">
-        <input type="hidden" name="_token" value="{{ csrf_token('ket_rearmer') }}">
-        <input type="hidden" name="cle" id="kf-rearmer-cle">
-    </form>
-{% endblock %}

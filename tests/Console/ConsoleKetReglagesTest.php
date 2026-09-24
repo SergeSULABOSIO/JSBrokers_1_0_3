@@ -302,11 +302,16 @@ final class ConsoleKetReglagesTest extends WebTestCase
         self::assertSame([], $this->reglages()->outilsCoupes());
     }
 
+    /**
+     * TOUT OU RIEN : une valeur hors bornes n'enregistre pas non plus ses voisines.
+     * Un écran à moitié pris en compte est pire qu'un refus net — l'agent croit
+     * avoir réglé quatre seuils et n'en a réglé que trois, sans savoir lequel manque.
+     */
     public function testUnSeuilHorsBornesEstRefuse(): void
     {
         $this->client->loginUser($this->user(self::SUPER));
-        $this->client->request('POST', self::URL . '/parametre/vigie.horizon_jours', [
-            'valeur' => 5000,
+        $this->client->request('POST', self::URL . '/seuils', [
+            'valeurs' => ['vigie.horizon_jours' => 5000, 'plan_du_jour.max_lignes' => 5],
             'motif' => 'Horizon volontairement absurde.',
             '_token' => $this->jeton(),
         ]);
@@ -317,13 +322,18 @@ final class ConsoleKetReglagesTest extends WebTestCase
             $this->reglages()->parametre('vigie.horizon_jours'),
             'Une valeur hors bornes ne doit pas être enregistrée.'
         );
+        self::assertSame(
+            8,
+            $this->reglages()->parametre('plan_du_jour.max_lignes'),
+            'Le seuil voisin, pourtant valide, ne doit pas avoir été enregistré non plus.'
+        );
     }
 
     public function testUnSeuilDansLesBornesSEnregistre(): void
     {
         $this->client->loginUser($this->user(self::SUPER));
-        $this->client->request('POST', self::URL . '/parametre/vigie.horizon_jours', [
-            'valeur' => 45,
+        $this->client->request('POST', self::URL . '/seuils', [
+            'valeurs' => ['vigie.horizon_jours' => 45],
             'motif' => 'Nos courtiers anticipent plus tôt que prévu.',
             '_token' => $this->jeton(),
         ]);
@@ -377,6 +387,39 @@ final class ConsoleKetReglagesTest extends WebTestCase
         }
 
         $this->assertStringContainsString('personne ne peut modifier depuis la console', $html);
+    }
+
+    /**
+     * ON NE QUITTE PAS L'ONGLET OÙ L'ON TRAVAILLE.
+     *
+     * Le cas qui échouait n'est pas le filtre plein, c'est le filtre VIDÉ : on efface
+     * sa recherche, on clique « Filtrer », et il n'y a plus rien à déduire — l'agent
+     * se retrouvait sur le premier onglet sans avoir bougé. L'onglet est donc porté
+     * par l'URL, et non deviné d'après le filtre.
+     */
+    public function testUnFiltreVideResteSurLOngletDesOutils(): void
+    {
+        $this->client->loginUser($this->user(self::SUPER));
+
+        $crawler = $this->client->request('GET', self::URL . '?onglet=outils&q=&classe=');
+        $actif = $crawler->filter('.kr-tab.is-active');
+
+        self::assertCount(1, $actif, 'Un seul onglet doit être actif.');
+        self::assertSame(
+            'outils',
+            $actif->attr('data-tab'),
+            'Un filtre vidé doit laisser l’agent sur l’onglet où il travaillait.'
+        );
+    }
+
+    /** Un onglet inconnu dans l'URL ne doit pas ouvrir un volet vide. */
+    public function testUnOngletInconnuRetombeSurLePremier(): void
+    {
+        $this->client->loginUser($this->user(self::SUPER));
+
+        $crawler = $this->client->request('GET', self::URL . '?onglet=nimporte-quoi');
+
+        self::assertSame('mesures', $crawler->filter('.kr-tab.is-active')->attr('data-tab'));
     }
 
     /**

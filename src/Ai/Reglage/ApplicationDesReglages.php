@@ -82,11 +82,38 @@ final class ApplicationDesReglages
     }
 
     /**
-     * Déplace un seuil métier, entre ses bornes.
+     * Déplace PLUSIEURS seuils d'un coup, avec un seul motif.
      *
-     * @throws \DomainException si la clé est inconnue, la valeur hors bornes, ou le motif absent
+     * TOUT OU RIEN, et c'est la même règle que l'écran des fournisseurs : on valide
+     * les quatre valeurs AVANT d'en écrire une seule. Enregistrer les trois bonnes et
+     * refuser la quatrième laisserait l'agent devant un écran à moitié pris en
+     * compte, sans savoir laquelle manque.
+     *
+     * UN SEUL MOTIF POUR PLUSIEURS LIGNES DE JOURNAL, et c'est voulu : celui qui
+     * déplace deux seuils le fait pour une seule raison. Chaque seuil garde
+     * néanmoins sa propre ligne — c'est par seuil qu'on relit l'historique.
+     *
+     * @param array<string, int> $valeurs
+     *
+     * @throws \DomainException à la première valeur refusée, avant toute écriture
      */
-    public function reglerParametre(string $clef, int $valeur, string $motif, ?Utilisateur $auteur): void
+    public function reglerSeuils(array $valeurs, string $motif, ?Utilisateur $auteur): void
+    {
+        $motif = $this->exigerUnMotif($motif);
+
+        foreach ($valeurs as $clef => $valeur) {
+            $this->verifierSeuil((string) $clef, (int) $valeur);
+        }
+
+        foreach ($valeurs as $clef => $valeur) {
+            $this->reglerParametre((string) $clef, (int) $valeur, $motif, $auteur);
+        }
+    }
+
+    /**
+     * @throws \DomainException si la clé est inconnue ou la valeur hors bornes
+     */
+    private function verifierSeuil(string $clef, int $valeur): array
     {
         $regle = ReglagesDeKet::PARAMETRES[$clef] ?? null;
         if ($regle === null) {
@@ -102,6 +129,18 @@ final class ApplicationDesReglages
                 $valeur,
             ));
         }
+
+        return $regle;
+    }
+
+    /**
+     * Déplace UN seuil métier, entre ses bornes.
+     *
+     * @throws \DomainException si la clé est inconnue, la valeur hors bornes, ou le motif absent
+     */
+    public function reglerParametre(string $clef, int $valeur, string $motif, ?Utilisateur $auteur): void
+    {
+        $regle = $this->verifierSeuil($clef, $valeur);
 
         $motif = $this->exigerUnMotif($motif);
         $avant = $this->reglages->parametre($clef);

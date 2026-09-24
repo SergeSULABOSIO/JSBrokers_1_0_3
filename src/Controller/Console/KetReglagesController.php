@@ -2,12 +2,16 @@
 
 namespace App\Controller\Console;
 
+use App\Ai\Fournisseur\EtatDesFournisseurs;
+use App\Ai\Fournisseur\PolitiqueDesFournisseurs;
 use App\Ai\Reglage\ApplicationDesReglages;
 use App\Ai\Reglage\CatalogueDesReglages;
 use App\Ai\Reglage\Classe;
 use App\Ai\Reglage\ManifesteDesRegles;
 use App\Ai\Reglage\ReglagesDeKet;
 use App\Entity\Utilisateur;
+use App\Form\KetFournisseursType;
+use Symfony\Component\Form\FormInterface;
 use App\Repository\KetReglageJournalRepository;
 use App\Repository\EntrepriseRepository;
 use Symfony\Component\HttpFoundation\Request;
@@ -17,7 +21,17 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Translation\LocaleSwitcher;
 
 /**
- * CE QUE KET SAIT FAIRE, CE QUE CELA COÛTE, ET CE QU'ON PEUT EN COUPER.
+ * TOUT CE QUI SE RÈGLE SUR KET, DANS UN SEUL ÉCRAN.
+ *
+ * ── LA FUSION, ET POURQUOI ──────────────────────────────────────────────────
+ * « Réglages de Ket » et « Fournisseurs de Ket » étaient deux rubriques voisines dans
+ * le même menu. Un agent qui cherchait pourquoi Ket répond mal devait deviner
+ * laquelle ouvrir — et la réponse dépendait de la cause, qu'il ignorait justement.
+ * Qui répond pour Ket est un RÉGLAGE comme les autres : c'est désormais un onglet.
+ *
+ * Le gabarit du formulaire n'a pas été recopié mais EXTRAIT
+ * (`ket_fournisseurs/_corps.html.twig`) : deux écrans qui rendent le même formulaire
+ * finissent par diverger sur le point qui compte.
  *
  * ── POURQUOI CET ÉCRAN EXISTE ───────────────────────────────────────────────
  * Cinquante-deux outils partent au fournisseur à chaque tour, et personne dans
@@ -53,12 +67,17 @@ use Symfony\Component\Translation\LocaleSwitcher;
 #[IsGranted('ROLE_ADMIN')]
 class KetReglagesController extends AbstractConsoleController
 {
+    /** Les volets de l'écran, dans l'ordre. Sert à valider ce qui arrive par l'URL. */
+    private const ONGLETS = ['mesures', 'outils', 'seuils', 'regles', 'historique', 'fournisseurs'];
+
     public function __construct(
         private CatalogueDesReglages $catalogue,
         private EntrepriseRepository $entrepriseRepository,
         private ReglagesDeKet $reglages,
         private ApplicationDesReglages $application,
         private KetReglageJournalRepository $journal,
+        private PolitiqueDesFournisseurs $politique,
+        private EtatDesFournisseurs $etatFournisseurs,
     ) {
     }
 
@@ -89,23 +108,66 @@ class KetReglagesController extends AbstractConsoleController
 
         $cabinets = $this->entrepriseRepository->countAllGlobal();
 
-        // L'ONGLET QUI S'OUVRE, DÉCIDÉ ICI ET NON DANS LE NAVIGATEUR.
+        // L'ONGLET QUI S'OUVRE EST DIT PAR L'URL, PLUS DEVINÉ.
         //
-        // Le contrôleur Stimulus sait ouvrir un onglet depuis le fragment d'URL, et
-        // c'est par là que reviennent les actions POST. Mais un FILTRE est un GET :
-        // il ne peut pas porter de fragment. Sans cette ligne, chercher « tranche »
-        // dans les outils renverrait l'agent sur l'onglet des déclarations, devant
-        // un résultat qu'il ne voit pas — le pire des retours possibles.
-        $ongletActif = ($classe !== null && $classe !== '') || $recherche !== ''
-            ? 'outils'
-            : 'mesures';
+        // Un FILTRE est un GET : il ne peut pas porter de fragment, et le contrôleur
+        // Stimulus — qui sait lire `#tab-…` — n'a donc rien à lire au retour. La
+        // première version le DÉDUISAIT : « s'il y a un filtre, ouvre les outils ».
+        // Elle échouait sur le cas le plus banal, celui d'un filtre VIDÉ : on clique
+        // « Filtrer » après avoir effacé sa recherche, il n'y a plus de filtre à
+        // déduire, et l'agent est renvoyé sur le premier onglet alors qu'il n'a
+        // jamais quitté les outils.
+        //
+        // Le formulaire porte donc son onglet en clair. La déduction reste en repli
+        // pour un lien construit à la main, et la valeur est validée : un onglet
+        // inconnu dans l'URL ouvrirait un volet vide.
+        $ongletDemande = (string) $request->query->get('onglet', '');
+        $ongletActif = \in_array($ongletDemande, self::ONGLETS, true)
+            ? $ongletDemande
+            : ((($classe !== null && $classe !== '') || $recherche !== '') ? 'outils' : 'mesures');
+
+        // LE FORMULAIRE DES FOURNISSEURS N'EST CONSTRUIT QUE POUR QUI PEUT LE VOIR.
+        // Il décide de ce que la plateforme DÉPENSE : il reste super-admin, comme
+        // avant la fusion. Un agent du support voit donc les cinq autres onglets et
+        // pas celui-là — et la route qui l'enregistre le refuse de toute façon.
+        $peutRegler = $this->isGranted('ROLE_SUPER_ADMIN');
+
+        // UNE SAISIE REFUSÉE SE RÉAFFICHE, ELLE NE SE PERD PAS.
+        //
+        // KetFournisseursController nous passe son formulaire par `forward()` quand
+        // il l'a refusé : l'agent retrouve alors sa saisie ET la raison du refus,
+        // au lieu de devoir retaper le JSON qu'il venait d'écrire. C'est aussi ce qui
+        // rend le 422 automatique — `render()` le pose dès qu'une vue porte un
+        // formulaire soumis et invalide.
+        $refuse = $request->attributes->get('formFournisseursInvalide');
+        $formFournisseurs = match (true) {
+            $refuse instanceof FormInterface => $refuse->createView(),
+            $peutRegler => $this->createForm(KetFournisseursType::class, null, ['politique' => $this->politique->tout()])->createView(),
+            default => null,
+        };
+        if ($refuse instanceof FormInterface) {
+            $ongletActif = 'fournisseurs';
+        }
+
+        // 422 SUR UNE SAISIE REFUSÉE, et posé à la main : le code que Symfony pose
+        // tout seul quand un formulaire invalide est rendu ne traverse pas un
+        // `forward()`. Sans lui, le navigateur et les tests liraient « 200 OK » sur
+        // un enregistrement qui n'a pas eu lieu.
+        $reponse = $refuse instanceof FormInterface
+            ? new Response(null, Response::HTTP_UNPROCESSABLE_ENTITY)
+            : null;
 
         return $this->render('console/ket_reglages/index.html.twig', [
-            'pageName'      => 'Réglages de Ket',
+            'pageName'      => 'Configuration de Ket',
             'pageIcon'      => 'assistant-ia-parametres',
             'outils'        => array_values($filtres),
             'total'         => \count($outils),
-            'classes'       => Classe::cases(),
+            // ON N'OFFRE QUE CE QUI EXISTE. La liste proposait les quatre classes, dont
+            // « Paramètre » — qu'aucun outil ne porte, puisqu'elle désigne les seuils.
+            // Un filtre qui ne peut rendre que zéro résultat n'est pas un filtre, c'est
+            // une impasse : l'utilisateur conclut que la recherche est cassée
+            // (Bastien & Scapin > Gestion des erreurs, par la PRÉVENTION).
+            'classes'       => $this->classesPresentes($outils),
             'classeActive'  => $classe,
             'recherche'     => $recherche,
             'poids'         => $this->catalogue->poidsDesTrousses(),
@@ -114,7 +176,7 @@ class KetReglagesController extends AbstractConsoleController
             'coupes'        => $this->reglages->outilsCoupes(),
             'parametres'    => ReglagesDeKet::PARAMETRES,
             'valeurs'       => $this->reglages->parametres(),
-            'peutRegler'    => $this->isGranted('ROLE_SUPER_ADMIN'),
+            'peutRegler'    => $peutRegler,
             'vierge'        => $this->reglages->estVierge(),
             'dernierChangement' => $this->journal->dernierParElement(),
             'historique'    => $this->journal->derniers(),
@@ -124,7 +186,9 @@ class KetReglagesController extends AbstractConsoleController
                 + \count(ManifesteDesRegles::RESTITUTION)
                 + \count(ManifesteDesRegles::BOUSSOLE),
             'ongletActif'   => $ongletActif,
-        ]);
+            'formFournisseurs' => $formFournisseurs,
+            'etatFournisseurs' => $formFournisseurs !== null ? $this->etatFournisseurs->tout() : [],
+        ], $reponse);
     }
 
     /**
@@ -165,30 +229,40 @@ class KetReglagesController extends AbstractConsoleController
         // ON REVIENT D'OÙ L'ON VIENT. Le fragment rouvre l'onglet des outils : sans
         // lui, l'agent qui vient de couper un outil atterrit sur les déclarations et
         // doit retrouver sa ligne parmi cinquante-deux.
-        return $this->redirectToRoute('console.ket.reglages.index', ['_fragment' => 'tab-outils']);
+        return $this->redirectToRoute('console.ket.reglages.index', ['onglet' => 'outils', '_fragment' => 'tab-outils']);
     }
 
-    #[Route('/parametre/{clef}', name: 'parametre', requirements: ['clef' => '[a-z_.]+'], methods: ['POST'])]
+    /**
+     * LES QUATRE SEUILS EN UN SEUL GESTE.
+     *
+     * Quatre formulaires côte à côte, chacun avec son motif et son bouton, faisaient
+     * quatre fois le même travail à l'écran : celui qui déplace deux seuils le fait
+     * pour une seule raison, et il ne devrait avoir à l'écrire qu'une fois.
+     */
+    #[Route('/seuils', name: 'seuils', methods: ['POST'])]
     #[IsGranted('ROLE_SUPER_ADMIN')]
-    public function reglerParametre(string $clef, Request $request): Response
+    public function reglerSeuils(Request $request): Response
     {
         if (!$this->isCsrfTokenValid('ket_reglage', (string) $request->request->get('_token'))) {
             throw $this->createAccessDeniedException('Jeton CSRF invalide.');
         }
 
+        $soumis = (array) $request->request->all('valeurs');
+        $valeurs = [];
+        foreach (array_keys(ReglagesDeKet::PARAMETRES) as $clef) {
+            if (isset($soumis[$clef]) && $soumis[$clef] !== '') {
+                $valeurs[$clef] = (int) $soumis[$clef];
+            }
+        }
+
         try {
-            $this->application->reglerParametre(
-                $clef,
-                $request->request->getInt('valeur'),
-                (string) $request->request->get('motif'),
-                $this->utilisateurCourant(),
-            );
-            $this->addFlash('success', 'Seuil enregistré : il s’applique au prochain message de chaque cabinet.');
+            $this->application->reglerSeuils($valeurs, (string) $request->request->get('motif'), $this->utilisateurCourant());
+            $this->addFlash('success', 'Seuils enregistrés : ils s’appliquent au prochain message de chaque cabinet.');
         } catch (\DomainException $e) {
             $this->addFlash('error', $e->getMessage());
         }
 
-        return $this->redirectToRoute('console.ket.reglages.index', ['_fragment' => 'tab-seuils']);
+        return $this->redirectToRoute('console.ket.reglages.index', ['onglet' => 'seuils', '_fragment' => 'tab-seuils']);
     }
 
     #[Route('/reinitialiser', name: 'reinitialiser', methods: ['POST'])]
@@ -207,7 +281,27 @@ class KetReglagesController extends AbstractConsoleController
         }
 
         // Vers l'HISTORIQUE : c'est là que se lit ce qui vient d'être annulé.
-        return $this->redirectToRoute('console.ket.reglages.index', ['_fragment' => 'tab-historique']);
+        return $this->redirectToRoute('console.ket.reglages.index', ['onglet' => 'historique', '_fragment' => 'tab-historique']);
+    }
+
+    /**
+     * Les classes réellement portées par au moins un outil, dans l'ordre de l'enum.
+     *
+     * @param list<array{classe: Classe}> $outils
+     *
+     * @return list<Classe>
+     */
+    private function classesPresentes(array $outils): array
+    {
+        $vues = [];
+        foreach ($outils as $outil) {
+            $vues[$outil['classe']->value] = true;
+        }
+
+        return array_values(array_filter(
+            Classe::cases(),
+            static fn (Classe $c): bool => isset($vues[$c->value]),
+        ));
     }
 
     private function utilisateurCourant(): ?Utilisateur

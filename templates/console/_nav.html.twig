@@ -31,7 +31,7 @@
         { r: 'console.crm.ceo',     p: 'console.crm.ceo',            icon: 'dashboard', label: 'CEO' },
         { r: 'console.crm.rapport.', p: 'console.crm.rapport.index', icon: 'document',  label: 'Rapports' },
         { r: 'console.supervision.', p: 'console.supervision.index', icon: 'action:alert', label: 'Supervision' },
-        { r: 'console.ket.reglages.', p: 'console.ket.reglages.index', icon: 'assistant-ia-parametres', label: 'Réglages de Ket' },
+        { r: 'console.ket.', p: 'console.ket.reglages.index', icon: 'assistant-ia-parametres', label: 'Configuration de Ket' },
     ] },
     { label: 'Comptes', icon: 'client', items: [
         { r: 'console.collaborateur.', p: 'console.collaborateur.index', icon: 'action:role', label: 'Collaborateurs' },
@@ -72,8 +72,7 @@
         {% if vItems|length > 0 %}
         {% set isPilotage = g.label == 'Pilotage' %}
         {% set gActive = (isVentes and route starts with 'console.plan.')
-            or (isCrm and route starts with 'console.crm.parametres.')
-            or (isPilotage and route starts with 'console.ket.fournisseurs.') %}
+            or (isCrm and route starts with 'console.crm.parametres.') %}
         {% for it in vItems %}
             {% if route starts with it.r %}{% set gActive = true %}{% endif %}
         {% endfor %}
@@ -99,14 +98,6 @@
                        data-action="click->top-progress#show" {% if planActive %}aria-current="page"{% endif %}>
                         {{ ux_icon(resolve_icon_name('action:settings'), {height: '18px', width: '18px'}) }}
                         <span>Plan tarifaire</span>
-                    </a>
-                {% endif %}
-                {% if isPilotage and is_granted('ROLE_SUPER_ADMIN') %}
-                    {% set ketActive = route starts with 'console.ket.fournisseurs.' %}
-                    <a href="{{ path('console.ket.fournisseurs.index') }}" class="{{ ketActive ? 'is-active' }}"
-                       data-action="click->top-progress#show" {% if ketActive %}aria-current="page"{% endif %}>
-                        {{ ux_icon(resolve_icon_name('action:settings'), {height: '18px', width: '18px'}) }}
-                        <span>Fournisseurs de Ket</span>
                     </a>
                 {% endif %}
                 {% if isCrm and is_granted('ROLE_SUPER_ADMIN') %}
