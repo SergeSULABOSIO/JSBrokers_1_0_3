@@ -5,6 +5,7 @@ namespace App\Ai\Tool;
 use App\Ai\AiText;
 use App\Ai\Presentation\Colonnes;
 use App\Ai\Scope\AiScope;
+use App\Ai\Reglage\ReglagesDeKet;
 use App\Services\DashboardDataProvider;
 use App\Services\Search\PortefeuilleCritereFactory;
 use App\Services\Search\TranchePaiementScope;
@@ -62,7 +63,21 @@ final class VigieEcheancesTool implements AiToolInterface
         private readonly DashboardDataProvider $dashboard,
         private readonly TranchePaiementService $tranchePaiement,
         private readonly PortefeuilleCritereFactory $portefeuilleCritere,
+        /**
+         * LE SEUIL EST RÉGLABLE EN CONSOLE, la constante reste sa VALEUR DE NAISSANCE.
+         *
+         * Facultatif, comme pour TrousseCatalogue et pour la même raison : des tests
+         * construisent cette classe à la main, hors conteneur. `null` vaut « aucun
+         * réglage » — donc exactement le comportement d'avant l'écran.
+         */
+        private readonly ?ReglagesDeKet $reglages = null,
     ) {
+    }
+
+    /** L'horizon effectif : celui de la console, ou celui du code. */
+    private function horizonParDefaut(): int
+    {
+        return $this->reglages?->parametre('vigie.horizon_jours') ?? self::HORIZON_DEFAUT;
     }
 
     public function name(): string
@@ -113,7 +128,7 @@ final class VigieEcheancesTool implements AiToolInterface
                     'type' => 'integer',
                     'minimum' => 1,
                     'maximum' => self::HORIZON_MAX,
-                    'description' => 'Horizon des renouvellements en jours (défaut ' . self::HORIZON_DEFAUT . ').',
+                    'description' => 'Horizon des renouvellements en jours (défaut ' . $this->horizonParDefaut() . ').',
                 ],
             ],
             'required' => ['volet'],
@@ -164,7 +179,7 @@ final class VigieEcheancesTool implements AiToolInterface
         if ($volet !== 'tout' && !isset(self::VOLETS[$volet])) {
             return AiToolResult::introuvable($volet);
         }
-        $horizon = max(1, min(self::HORIZON_MAX, (int) ($args['horizonJours'] ?? self::HORIZON_DEFAUT)));
+        $horizon = max(1, min(self::HORIZON_MAX, (int) ($args['horizonJours'] ?? $this->horizonParDefaut())));
 
         $demandes = $volet === 'tout' ? array_keys(self::VOLETS) : [$volet];
         $labels = $this->accessResolver->libellesEntites();

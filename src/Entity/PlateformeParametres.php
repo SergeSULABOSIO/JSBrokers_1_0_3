@@ -457,6 +457,36 @@ class PlateformeParametres
         return $this;
     }
 
+    /**
+     * LES RÉGLAGES DE KET décidés en console : outils coupés, seuils métier.
+     *
+     * Forme : { "outils": { "chronologie": false }, "parametres": { "vigie.horizon_jours": 45 } }.
+     *
+     * ON N'Y ÉCRIT QUE LES ÉCARTS. Un outil absent de la carte est ACTIF, un
+     * paramètre absent vaut sa constante : le défaut reste dans le code, et cette
+     * colonne ne porte que ce qu'un agent a délibérément changé. C'est ce qui rend
+     * « rétablir les réglages par défaut » exact — il suffit de remettre NULL — et
+     * ce qui fait qu'un outil AJOUTÉ au code arrive actif sans qu'on y pense.
+     *
+     * Même parti pris que `ketFournisseurs` juste au-dessus : une seule colonne,
+     * fusionnée clé par clé, jamais remplacée en bloc.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?array $ketReglages = null;
+
+    public function getKetReglages(): ?array
+    {
+        return $this->ketReglages;
+    }
+
+    /** Une carte vide redevient NULL : « rien de personnalisé » se dit par l'absence. */
+    public function setKetReglages(?array $ketReglages): static
+    {
+        $this->ketReglages = ($ketReglages === null || $ketReglages === []) ? null : $ketReglages;
+
+        return $this;
+    }
+
     public function getUpdatedAt(): ?\DateTimeImmutable
     {
         return $this->updatedAt;

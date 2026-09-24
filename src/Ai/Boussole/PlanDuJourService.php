@@ -3,6 +3,7 @@
 namespace App\Ai\Boussole;
 
 use App\Entity\Avenant;
+use App\Ai\Reglage\ReglagesDeKet;
 use App\Entity\Entreprise;
 use App\Entity\Feedback;
 use App\Entity\Invite;
@@ -74,7 +75,21 @@ final class PlanDuJourService
         private readonly TranchePaiementService $tranchePaiement,
         private readonly NoteRecouvrementService $noteRecouvrement,
         private readonly OnboardingCompletude $onboarding,
+        /**
+         * LE SEUIL EST RÉGLABLE EN CONSOLE, la constante reste sa VALEUR DE NAISSANCE.
+         *
+         * Facultatif, comme pour TrousseCatalogue et pour la même raison : des tests
+         * construisent cette classe à la main, hors conteneur. `null` vaut « aucun
+         * réglage » — donc exactement le comportement d'avant l'écran.
+         */
+        private readonly ?ReglagesDeKet $reglages = null,
     ) {
+    }
+
+    /** Le nombre de lignes par section : celui de la console, ou celui du code. */
+    private function maxLignes(): int
+    {
+        return $this->reglages?->parametre('plan_du_jour.max_lignes') ?? self::MAX_LIGNES_PAR_SECTION;
     }
 
     /**
@@ -196,7 +211,7 @@ final class PlanDuJourService
             $entreprise,
             null,
             1,
-            self::MAX_LIGNES_PAR_SECTION * 4,
+            $this->maxLignes() * 4,
         );
 
         $taches = array_filter(
@@ -219,7 +234,7 @@ final class PlanDuJourService
             'detail' => $t->getExecutor()?->getNom(),
             'date' => $t->getToBeEndedAt()?->format('Y-m-d'),
             'statutTemporel' => $this->statutTemporel($t->getToBeEndedAt(), $jour),
-        ], array_slice($taches, 0, self::MAX_LIGNES_PAR_SECTION));
+        ], array_slice($taches, 0, $this->maxLignes()));
 
         return ['lignes' => $lignes, 'compte' => $compte, 'echeant' => count($taches)];
     }
@@ -251,7 +266,7 @@ final class PlanDuJourService
             $entreprise,
             null,
             1,
-            self::MAX_LIGNES_PAR_SECTION * 4,
+            $this->maxLignes() * 4,
         ));
 
         if ($this->chargeCritere->aUnPortefeuille('Feedback', $invite)) {
@@ -261,7 +276,7 @@ final class PlanDuJourService
                 $entreprise,
                 null,
                 1,
-                self::MAX_LIGNES_PAR_SECTION * 4,
+                $this->maxLignes() * 4,
             )));
         }
 
@@ -284,7 +299,7 @@ final class PlanDuJourService
             'contexte' => $f->getTache() !== null ? $this->tronquer((string) $f->getTache()->getDescription(), 40) : null,
             'date' => $f->getNextActionAt()?->format('Y-m-d'),
             'statutTemporel' => $this->statutTemporel($f->getNextActionAt(), $jour),
-        ], array_slice($uniques, 0, self::MAX_LIGNES_PAR_SECTION));
+        ], array_slice($uniques, 0, $this->maxLignes()));
 
         return [$this->composer(
             'feedbacks_actions',
@@ -319,7 +334,7 @@ final class PlanDuJourService
                 $entreprise,
                 null,
                 1,
-                self::MAX_LIGNES_PAR_SECTION,
+                $this->maxLignes(),
             );
 
             $total = $this->totalItems($resultat);
@@ -342,7 +357,7 @@ final class PlanDuJourService
             'detail' => $a->getCotation()?->getAssureur()?->getNom(),
             'date' => $a->getEndingAt()?->format('Y-m-d'),
             'statutTemporel' => $this->statutTemporel($a->getEndingAt(), $jour),
-        ], array_slice($avenants, 0, self::MAX_LIGNES_PAR_SECTION));
+        ], array_slice($avenants, 0, $this->maxLignes()));
 
         return [$this->composer(
             'renouvellements',
@@ -377,7 +392,7 @@ final class PlanDuJourService
             null,
             null,
             1,
-            self::MAX_LIGNES_PAR_SECTION,
+            $this->maxLignes(),
             $invite,
         );
 
@@ -391,7 +406,7 @@ final class PlanDuJourService
             null,
             null,
             1,
-            self::MAX_LIGNES_PAR_SECTION,
+            $this->maxLignes(),
             $invite,
         );
 
@@ -453,7 +468,7 @@ final class PlanDuJourService
      */
     private function sectionsNotes(Entreprise $entreprise, \DateTimeImmutable $jour): array
     {
-        $resultat = $this->noteRecouvrement->lister($entreprise, 1, self::MAX_LIGNES_PAR_SECTION);
+        $resultat = $this->noteRecouvrement->lister($entreprise, 1, $this->maxLignes());
 
         $lignes = array_map(function (Note $n) use ($jour): array {
             $anciennete = $this->noteRecouvrement->joursAnciennete($n, $jour);
@@ -525,7 +540,7 @@ final class PlanDuJourService
                 'detail' => $etape['poids'] === OnboardingCatalogue::POIDS_BLOQUANT ? 'Bloquant' : null,
                 'date' => $depuis,
                 'statutTemporel' => self::EN_RETARD,
-            ], array_slice($restantes, 0, self::MAX_LIGNES_PAR_SECTION));
+            ], array_slice($restantes, 0, $this->maxLignes()));
 
             $urgence = $this->onboarding->resteDuBloquant($entreprise)
                 ? BoussoleService::URGENCE['configuration']
