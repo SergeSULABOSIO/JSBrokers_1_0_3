@@ -96,6 +96,25 @@
     .kr-filtres button:hover { background: #003380; }
     .kr-filtres a { min-height: 44px; display: inline-flex; align-items: center; padding: .4rem .8rem; color: #6c757d; font-size: .88rem; }
 
+    /* ONGLETS — repris TELS QUELS de la fiche client CRM (console/crm/_styles.html.twig),
+       même contrôleur Stimulus `crm-tabs`. Deux barres d'onglets qui se ressemblent
+       sans être identiques, dans la même console, se lisent comme deux composants
+       différents : l'agent hésite. Style « pastilles » et non soulignement — chaque
+       rangée reste autonome quand les onglets passent à la ligne.
+       L'onglet actif porte FORME + COULEUR + OMBRE : jamais la couleur seule (WCAG 1.4.1). */
+    .kr-tabs { display:flex; flex-wrap:wrap; gap:.35rem; margin-bottom:1.25rem;
+        padding:.35rem; background:#f3f6fc; border:1px solid #e1e8f5; border-radius:12px; }
+    .kr-tab { border:0; background:transparent; padding:.6rem .95rem; border-radius:8px;
+        font-weight:600; font-size:.875rem; line-height:1.2; color:#495057; cursor:pointer;
+        white-space:nowrap; min-height:44px; display:inline-flex; align-items:center; gap:.4rem;
+        transition:background .12s ease, color .12s ease, box-shadow .12s ease; }
+    .kr-tab:hover { background:#e2eafb; color:#0047AB; }
+    .kr-tab.is-active { background:#0047AB; color:#fff; box-shadow:0 2px 6px rgba(0,71,171,.25); }
+    .kr-tab:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+    .kr-tab-compte { font-weight:700; opacity:.75; font-variant-numeric: tabular-nums; }
+    .kr-pane { display:none; }
+    .kr-pane.is-active { display:block; }
+
     .kr-compte { color: #6c757d; font-size: .85rem; margin: 0 0 .5rem; }
 
     /* Interrupteur : une case à cocher NATIVE, redessinée. Le clavier, le focus et
@@ -203,6 +222,33 @@
         </p>
     </section>
 
+    {# Les cinq blocs empilés faisaient une page de cinq mille pixels : l'historique,
+       tout en bas, avait toutes les chances de n'être jamais consulté. Ils deviennent
+       des onglets, avec le MÊME contrôleur que la fiche client CRM (`crm-tabs`), qui
+       sait de surcroît ouvrir un onglet précis depuis le fragment d'URL — ce dont on
+       se sert après chaque action pour revenir là d'où l'agent est parti. #}
+    <div data-controller="crm-tabs">
+        <nav class="kr-tabs" role="tablist" aria-label="Sections des réglages de Ket">
+            {% set onglets = {
+                mesures:    {libelle: 'Déclarations', compte: null},
+                outils:     {libelle: 'Outils de Ket', compte: total},
+                seuils:     {libelle: 'Seuils métier', compte: parametres|length},
+                regles:     {libelle: 'Règles et boussole', compte: reglesTotal},
+                historique: {libelle: 'Historique', compte: historique|length}
+            } %}
+            {% for cle, onglet in onglets %}
+                <button type="button" id="onglet-{{ cle }}"
+                        class="kr-tab {{ ongletActif == cle ? 'is-active' }}"
+                        role="tab" aria-controls="tab-{{ cle }}"
+                        aria-selected="{{ ongletActif == cle ? 'true' : 'false' }}"
+                        data-crm-tabs-target="tab" data-tab="{{ cle }}" data-action="crm-tabs#select">
+                    {{ onglet.libelle }}
+                    {% if onglet.compte is not null %}<span class="kr-tab-compte">{{ onglet.compte }}</span>{% endif %}
+                </button>
+            {% endfor %}
+        </nav>
+
+    <div class="kr-pane{% if ongletActif == 'mesures' %} is-active{% endif %}" data-crm-tabs-target="pane" data-tab="mesures" id="tab-mesures" role="tabpanel" aria-labelledby="onglet-mesures">
     <div class="cs-panel">
         <h2 class="cs-panel-title">Déclarations envoyées à chaque échange</h2>
         <dl class="kr-mesures">
@@ -228,11 +274,14 @@
             estimés à partir des octets réellement envoyés.
         </p>
     </div>
+    </div>
 
+    <div class="kr-pane{% if ongletActif == 'outils' %} is-active{% endif %}" data-crm-tabs-target="pane" data-tab="outils" id="tab-outils" role="tabpanel" aria-labelledby="onglet-outils">
     <div class="cs-panel">
         <h2 class="cs-panel-title">Outils de Ket</h2>
 
-        <form method="get" action="{{ path('console.ket.reglages.index') }}">
+        <form method="get" action="{{ path('console.ket.reglages.index') }}"
+              data-action="submit->top-progress#show">
             <fieldset class="kr-filtres">
                 <legend>Filtrer</legend>
                 <div>
@@ -343,7 +392,8 @@
 
                         {% if peutRegler and o.classe.estModifiable %}
                             {% set coupe = o.nom in coupes %}
-                            <form method="post" action="{{ path('console.ket.reglages.outil', {nom: o.nom}) }}" class="kr-agir">
+                            <form method="post" action="{{ path('console.ket.reglages.outil', {nom: o.nom}) }}" class="kr-agir"
+                                  data-action="submit->top-progress#show">
                                 <h3>{{ coupe ? 'Réactiver cet outil' : 'Couper cet outil' }}</h3>
 
                                 {# L'IMPACT EST MONTRÉ AVANT LE BOUTON, jamais après : une
@@ -380,7 +430,9 @@
             {% endfor %}
         {% endif %}
     </div>
+    </div>
 
+    <div class="kr-pane{% if ongletActif == 'seuils' %} is-active{% endif %}" data-crm-tabs-target="pane" data-tab="seuils" id="tab-seuils" role="tabpanel" aria-labelledby="onglet-seuils">
     <div class="cs-panel">
         <h2 class="cs-panel-title">Seuils métier</h2>
         <p class="kr-compte">
@@ -395,7 +447,8 @@
                 <p>{{ regle.explication }}</p>
 
                 {% if peutRegler %}
-                    <form method="post" action="{{ path('console.ket.reglages.parametre', {clef: clef}) }}" class="kr-seuil-ligne">
+                    <form method="post" action="{{ path('console.ket.reglages.parametre', {clef: clef}) }}" class="kr-seuil-ligne"
+                          data-action="submit->top-progress#show">
                         <div>
                             <label for="v-{{ clef }}">Valeur ({{ regle.unite }})</label>
                             <input type="number" id="v-{{ clef }}" name="valeur"
@@ -427,7 +480,9 @@
             </div>
         {% endfor %}
     </div>
+    </div>
 
+    <div class="kr-pane{% if ongletActif == 'regles' %} is-active{% endif %}" data-crm-tabs-target="pane" data-tab="regles" id="tab-regles" role="tabpanel" aria-labelledby="onglet-regles">
     <div class="cs-panel">
         <h2 class="cs-panel-title">Règles et boussole</h2>
         <p class="kr-compte">
@@ -464,7 +519,9 @@
             {% endfor %}
         {% endfor %}
     </div>
+    </div>
 
+    <div class="kr-pane{% if ongletActif == 'historique' %} is-active{% endif %}" data-crm-tabs-target="pane" data-tab="historique" id="tab-historique" role="tabpanel" aria-labelledby="onglet-historique">
     <div class="cs-panel">
         <h2 class="cs-panel-title">Historique des changements</h2>
 
@@ -499,7 +556,8 @@
         {% endif %}
 
         {% if peutRegler and not vierge %}
-            <form method="post" action="{{ path('console.ket.reglages.reinitialiser') }}" class="kr-agir">
+            <form method="post" action="{{ path('console.ket.reglages.reinitialiser') }}" class="kr-agir"
+                  data-action="submit->top-progress#show">
                 <h3>Rétablir les réglages d’origine</h3>
                 <div class="kr-impact">
                     <p>Tous les outils coupés redeviennent actifs et tous les seuils reprennent
@@ -516,6 +574,8 @@
                 </div>
             </form>
         {% endif %}
+    </div>
+    </div>
     </div>
 
 {% endblock %}
