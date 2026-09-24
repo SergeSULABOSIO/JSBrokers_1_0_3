@@ -2,6 +2,7 @@
 
 namespace App\Service\Workspace;
 
+use App\Entity\Avenant;
 use App\Entity\ConditionPartage;
 use App\Entity\ReversementRetroAgent;
 use Doctrine\ORM\EntityManagerInterface;
@@ -159,9 +160,16 @@ class ChampsObligatoiresInspector
      *
      * @param string[]|null $champsPilotables cf. champsManquants()
      *
+     * ⚠ PUBLIQUE, et pas par confort : la vérification des champs manquants de
+     * l'assistant ({@see WorkspaceMutationService::champsRequisManquants}) n'exerce
+     * QUE les prédicats champ par champ. Les règles de COMBINAISON ci-dessous ne
+     * partaient donc que par le formulaire HTTP : un plan de Ket pouvait écrire ce
+     * que l'écran refuse. Les deux chemins appellent désormais cette méthode, ce qui
+     * est la seule forme d'« une règle, un endroit » qui tienne.
+     *
      * @return array<string, string[]>
      */
-    private function incoherencesMetier(object $entity, string $shortName, ?array $champsPilotables): array
+    public function incoherencesMetier(object $entity, string $shortName, ?array $champsPilotables = null): array
     {
         // Une condition de partage rétrocède à UN bénéficiaire : un partenaire EXTERNE ou
         // un agent INTERNE, jamais les deux, jamais aucun. Avec les deux, l'assiette à
@@ -230,6 +238,44 @@ class ChampsObligatoiresInspector
                 return [$champ => [
                     'L’échéance et l’affaire réglées doivent appartenir à la même proposition.',
                 ]];
+            }
+        }
+
+        // UNE POLICE COUVRE UNE PÉRIODE, donc sa fin vient APRÈS son début. La règle
+        // paraît trop évidente pour mériter du code : elle n'était appliquée NULLE
+        // PART — ni ici, ni dans un validateur, ni par une contrainte CHECK (aucune des
+        // 79 migrations n'en pose). Pire, AvenantActionService dérive la durée par
+        // $startingAt->diff($endingAt)->days, TOUJOURS positif : une fin antérieure au
+        // début produisait donc une durée plausible, et la police s'enregistrait sans
+        // un mot. Tout ce qui pend à cette période — échéancier, primes exigibles,
+        // commissions, fenêtres de renouvellement — reposait alors sur une durée fausse.
+        //
+        // ⚠ SEULE L'INVERSION EST REFUSÉE, PAS L'ÉGALITÉ. Un avenant de RÉSILIATION porte
+        // délibérément startingAt == endingAt : il marque un INSTANT — la sortie du
+        // portefeuille — et non une période de couverture. MouvementAvenantBuilder le
+        // construit ainsi, et MouvementAvenantTest l'exige (« 2026-06-15 » des deux côtés).
+        // Refuser la durée nulle « par bon sens » revenait donc à inventer une règle que
+        // le métier contredit, et à bloquer une résiliation parfaitement valide.
+        if ($shortName === 'Avenant' && $entity instanceof Avenant) {
+            $debut = $entity->getStartingAt();
+            $fin = $entity->getEndingAt();
+            $pilotable = static fn (string $champ): bool
+                => $champsPilotables === null || in_array($champ, $champsPilotables, true);
+
+            // MÊME DISCIPLINE QUE CI-DESSUS : on ne reproche que ce que l'écran courant
+            // peut corriger. Un formulaire qui n'expose aucune des deux dates n'a pas à
+            // recevoir un refus qu'il ne saurait pas lever.
+            if ($debut !== null && $fin !== null && $fin < $debut
+                && ($pilotable('startingAt') || $pilotable('endingAt'))) {
+                // Le champ visé est celui que l'écran expose, et à défaut la date de fin :
+                // c'est elle que l'utilisateur corrige presque toujours.
+                $champ = $pilotable('endingAt') ? 'endingAt' : 'startingAt';
+
+                return [$champ => [sprintf(
+                    'La date de fin (%s) doit être postérieure à la date d’effet (%s).',
+                    $fin->format('d/m/Y'),
+                    $debut->format('d/m/Y'),
+                )]];
             }
         }
 

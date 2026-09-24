@@ -475,6 +475,7 @@ class WorkspaceMutationService
             if (!$form->isValid()) {
                 throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelle), $this->erreurs($form));
             }
+            $this->refuserLesIncoherences($entity, $op->entityShortName, $libelle);
             $this->commitWrite($entity, $scope->entreprise, $acteur, $metrer);
             // L'id existe : les opérations suivantes du plan peuvent y renvoyer.
             $refs->declarer($op->ref, method_exists($entity, 'getId') ? $entity->getId() : null);
@@ -489,6 +490,7 @@ class WorkspaceMutationService
                 if (!$form->isValid()) {
                     throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelle), $this->erreurs($form));
                 }
+                $this->refuserLesIncoherences($entity, $op->entityShortName, $libelle);
                 $this->commitWrite($entity, $scope->entreprise, $acteur, $metrer);
             }
         }
@@ -591,6 +593,7 @@ class WorkspaceMutationService
                     if (!$form->isValid()) {
                         throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelleEnfant), $this->erreurs($form));
                     }
+                    $this->refuserLesIncoherences($entiteEnfant, $enfantOp->entityShortName, $libelleEnfant);
                     $this->commitWrite($entiteEnfant, $scope->entreprise, $acteur, $metrer);
                 }
                 if ($enfantOp->isCreate()) {
@@ -959,6 +962,31 @@ class WorkspaceMutationService
      *
      * @return array<string, string[]>
      */
+    /**
+     * LES RÈGLES DE COMBINAISON, exercées sur le chemin de Ket comme sur celui de l'écran.
+     *
+     * {@see champsRequisManquants()} ne juge que champ par champ : il dit qu'une date
+     * est renseignée, jamais qu'elle est postérieure à l'autre. Les règles croisées
+     * vivaient donc uniquement dans le formulaire HTTP, et un plan de Ket écrivait ce
+     * que l'écran refuse — exactement ce qu'un garde-fou porté par le seul prompt ne
+     * peut pas empêcher.
+     *
+     * TOUTES LES VIOLATIONS PARTENT D'UN COUP : une par tour ferait payer au modèle un
+     * aller-retour complet par erreur, sur un quota qui se compte à la minute.
+     *
+     * @throws MutationException si l'entité est incohérente (motif en langage métier)
+     */
+    private function refuserLesIncoherences(object $entity, string $shortName, string $libelle): void
+    {
+        $incoherences = $this->champsInspector->incoherencesMetier($entity, $shortName);
+        if ($incoherences !== []) {
+            throw MutationException::invalide(
+                sprintf('Données incohérentes pour « %s ».', $libelle),
+                $incoherences,
+            );
+        }
+    }
+
     private function champsRequisManquants(object $entity, MutationOperation $op, array $ignorer = [], ?array $resolution = null): array
     {
         try {
