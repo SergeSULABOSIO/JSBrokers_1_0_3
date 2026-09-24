@@ -43,10 +43,20 @@ class KetFournisseursController extends AbstractConsoleController
     ) {
     }
 
+    /**
+     * ENREGISTRE la politique. L'ÉCRAN, lui, est l'onglet « Fournisseurs » de la
+     * configuration de Ket : un GET sur cette route y renvoie plutôt que de servir
+     * une seconde page montrant le même formulaire.
+     */
     #[Route('', name: 'index', methods: ['GET', 'POST'])]
     public function index(Request $request, LocaleSwitcher $localeSwitcher): Response
     {
         $this->applyLangPreference($request, $localeSwitcher);
+
+        if (!$request->isMethod('POST')) {
+            return $this->redirectToRoute('console.ket.reglages.index', ['onglet' => 'fournisseurs', '_fragment' => 'tab-fournisseurs']);
+        }
+
         $singleton = $this->repository->getSingleton();
 
         $form = $this->createForm(KetFournisseursType::class, null, [
@@ -100,20 +110,17 @@ class KetFournisseursController extends AbstractConsoleController
                 $this->politique->refresh();
                 $this->addFlash('success', 'Politique des fournisseurs enregistrée.');
 
-                return $this->redirectToRoute('console.ket.fournisseurs.index');
+                return $this->redirectToRoute('console.ket.reglages.index', ['onglet' => 'fournisseurs', '_fragment' => 'tab-fournisseurs']);
             }
         }
 
-        return $this->render('console/ket_fournisseurs/form.html.twig', [
-            'pageName'    => 'Ket — Fournisseurs',
-            'formIcon'    => 'action:settings',
-            'form'        => $form,
-            'backUrl'     => $this->generateUrl('console.dashboard'),
-            'backLabel'   => 'Console',
-            'submitLabel' => 'Enregistrer la politique',
-            'description' => 'Qui répond pour Ket, dans quel ordre, avec quel modèle. '
-                . 'Les clés d’API restent dans la configuration du serveur : cet écran n’affiche que leur présence.',
-            'etat'        => $this->etat->tout(),
+        // SAISIE REFUSÉE : on RÉAFFICHE, on ne redirige pas. Une redirection perdrait
+        // le JSON que l'agent vient d'écrire — parfois plusieurs lignes — et le
+        // renverrait devant un formulaire vierge portant un simple message d'erreur.
+        // L'écran fusionné rend le formulaire tel quel, erreurs comprises, et ouvre
+        // l'onglet des fournisseurs.
+        return $this->forward(KetReglagesController::class . '::index', [
+            'formFournisseursInvalide' => $form,
         ]);
     }
 
@@ -134,7 +141,7 @@ class KetFournisseursController extends AbstractConsoleController
             $this->addFlash('success', sprintf('« %s » est de nouveau interrogeable.', $cle));
         }
 
-        return $this->redirectToRoute('console.ket.fournisseurs.index');
+        return $this->redirectToRoute('console.ket.reglages.index', ['onglet' => 'fournisseurs', '_fragment' => 'tab-fournisseurs']);
     }
 
     /**

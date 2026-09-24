@@ -33,7 +33,14 @@ class ConsoleKetFournisseursTest extends WebTestCase
     private const USER = 'phpunit-ketfourn-user@test.local';
     private const SUPER = 'phpunit-ketfourn-super@test.local';
     private const PASSWORD = 'Test1234!';
-    private const URL = '/console/ket/fournisseurs';
+    /**
+     * L'ÉCRAN est désormais l'onglet « Fournisseurs » de la configuration de Ket.
+     * La route d'ENREGISTREMENT, elle, n'a pas bougé : c'est là que poste le
+     * formulaire, et c'est elle qui porte la garde super-admin.
+     */
+    private const URL = '/console/ket/reglages';
+    private const URL_ENREGISTREMENT = '/console/ket/fournisseurs';
+    private const RETOUR = '/console/ket/reglages?onglet=fournisseurs#tab-fournisseurs';
 
     private KernelBrowser $client;
 
@@ -84,11 +91,39 @@ class ConsoleKetFournisseursTest extends WebTestCase
         return $this->em()->getRepository(Utilisateur::class)->findOneBy(['email' => $email]);
     }
 
-    public function testLaPageEstReserveeAuSuperAdmin(): void
+    /**
+     * LA FUSION NE DOIT RIEN OUVRIR. L'écran qui accueille désormais l'onglet est
+     * consultable par tout agent de la console — c'est son intérêt : le support y
+     * lit ce que Ket sait faire. Le réglage des FOURNISSEURS, lui, décide de ce que
+     * la plateforme dépense : il reste super-admin.
+     *
+     * On vérifie donc les deux : un courtier client n'atteint pas l'écran du tout,
+     * et un agent ordinaire l'atteint SANS y trouver l'onglet ni pouvoir poster.
+     */
+    public function testLesFournisseursRestentReservesAuSuperAdmin(): void
     {
+        // Un utilisateur sans la qualité d'agent : rien du tout.
         $this->client->loginUser($this->user(self::USER));
         $this->client->request('GET', self::URL);
+        self::assertResponseStatusCodeSame(403);
 
+        // Un agent ordinaire, affecté : l'écran s'ouvre, l'onglet n'y est pas.
+        $agent = $this->user(self::USER);
+        $agent->setRoles(['ROLE_ADMIN']);
+        $agent->setDepartement(\App\Enum\Departement::RELATION_CLIENT);
+        $this->em()->flush();
+
+        $this->client->loginUser($agent);
+        $crawler = $this->client->request('GET', self::URL);
+        self::assertResponseIsSuccessful();
+        self::assertCount(
+            0,
+            $crawler->filter('#tab-fournisseurs'),
+            'L’onglet des fournisseurs ne doit pas exister pour un agent non super-admin.'
+        );
+
+        // Et la route d'enregistrement le refuse, même par appel direct.
+        $this->client->request('POST', self::URL_ENREGISTREMENT, []);
         self::assertResponseStatusCodeSame(403);
     }
 
@@ -125,7 +160,7 @@ class ConsoleKetFournisseursTest extends WebTestCase
     {
         $this->client->loginUser($this->user(self::SUPER));
         $crawler = $this->client->request('GET', self::URL);
-        $form = $crawler->filter('form')->form();
+        $form = $crawler->filter('#tab-fournisseurs form')->first()->form();
 
         // Le moteur simulé en tête : c'est le seul toujours disponible en test, donc
         // le seul dont on puisse affirmer qu'il répondra.
@@ -135,7 +170,7 @@ class ConsoleKetFournisseursTest extends WebTestCase
         ]);
         $this->client->submit($form);
 
-        self::assertResponseRedirects(self::URL);
+        self::assertResponseRedirects(self::RETOUR);
 
         static::getContainer()->get(PolitiqueDesFournisseurs::class)->refresh();
         self::assertSame(
@@ -153,7 +188,7 @@ class ConsoleKetFournisseursTest extends WebTestCase
     {
         $this->client->loginUser($this->user(self::SUPER));
         $crawler = $this->client->request('GET', self::URL);
-        $form = $crawler->filter('form')->form();
+        $form = $crawler->filter('#tab-fournisseurs form')->first()->form();
 
         $form['ket_fournisseurs[voixJson]'] = json_encode([
             'mode'  => 'epingle',
@@ -176,7 +211,7 @@ class ConsoleKetFournisseursTest extends WebTestCase
     {
         $this->client->loginUser($this->user(self::SUPER));
         $crawler = $this->client->request('GET', self::URL);
-        $form = $crawler->filter('form')->form();
+        $form = $crawler->filter('#tab-fournisseurs form')->first()->form();
 
         $form['ket_fournisseurs[moteurJson]'] = json_encode(['ordre' => ['simulated']]);
         $form['ket_fournisseurs[voixJson]'] = '{ ceci n’est pas du JSON';
@@ -207,9 +242,9 @@ class ConsoleKetFournisseursTest extends WebTestCase
         // a pas de session, donc pas de jeton à fabriquer.
         $token = $crawler->filter('#kf-rearmer-form input[name="_token"]')->attr('value');
 
-        $this->client->request('POST', self::URL . '/rearmer', ['cle' => $cle, '_token' => $token]);
+        $this->client->request('POST', self::URL_ENREGISTREMENT . '/rearmer', ['cle' => $cle, '_token' => $token]);
 
-        self::assertResponseRedirects(self::URL);
+        self::assertResponseRedirects(self::RETOUR);
         self::assertFalse($memoire->estEpuise($cle));
     }
 
@@ -224,7 +259,7 @@ class ConsoleKetFournisseursTest extends WebTestCase
      * d'envoi et la barre de progression, se retrouvait hors formulaire : un clic ne
      * partait nulle part, sans message, sans erreur en console, sans rien.
      *
-     * POURQUOI LE CRAWLER NE L'A PAS VU. `$crawler->filter('form')->form()` s'appuie
+     * POURQUOI LE CRAWLER NE L'A PAS VU. `$crawler->filter('#tab-fournisseurs form')->first()->form()` s'appuie
      * sur un analyseur permissif qui, lui, crée bien le formulaire imbriqué : les six
      * tests ci-dessus soumettaient un formulaire que le navigateur, lui, n'avait pas.
      * D'où cette assertion sur le HTML BRUT, la seule qui parle le même langage que
@@ -275,14 +310,14 @@ class ConsoleKetFournisseursTest extends WebTestCase
 
         $this->client->loginUser($this->user(self::SUPER));
         $crawler = $this->client->request('GET', self::URL);
-        $form = $crawler->filter('form')->form();
+        $form = $crawler->filter('#tab-fournisseurs form')->first()->form();
         $form['ket_fournisseurs[moteurJson]'] = json_encode([
             'mode'     => 'chaine',
             'ordre'    => ['anthropic', 'gemini'],
             'reglages' => ['anthropic' => ['modele' => 'claude-sonnet-5']],
         ]);
         $this->client->submit($form);
-        self::assertResponseRedirects(self::URL);
+        self::assertResponseRedirects(self::RETOUR);
 
         // AUCUN redémarrage, AUCUNE reconstruction : le même objet, interrogé à nouveau.
         self::assertSame('claude-sonnet-5', $moteur->modelName());
@@ -299,7 +334,7 @@ class ConsoleKetFournisseursTest extends WebTestCase
 
         $this->client->loginUser($this->user(self::SUPER));
         $crawler = $this->client->request('GET', self::URL);
-        $form = $crawler->filter('form')->form();
+        $form = $crawler->filter('#tab-fournisseurs form')->first()->form();
         $form['ket_fournisseurs[moteurJson]'] = json_encode([
             'ordre'    => ['anthropic'],
             'reglages' => ['anthropic' => ['modele' => 'claude-opus-5']],
@@ -320,7 +355,7 @@ class ConsoleKetFournisseursTest extends WebTestCase
     {
         $this->client->loginUser($this->user(self::SUPER));
         $crawler = $this->client->request('GET', self::URL);
-        $form = $crawler->filter('form')->form();
+        $form = $crawler->filter('#tab-fournisseurs form')->first()->form();
         $form['ket_fournisseurs[moteurJson]'] = json_encode([
             'ordre'    => ['anthropic'],
             'reglages' => ['anthropic' => ['modele' => 'le plus rapide svp']],
@@ -328,7 +363,7 @@ class ConsoleKetFournisseursTest extends WebTestCase
         $reponse = $this->client->submit($form);
 
         self::assertResponseStatusCodeSame(422);
-        $texte = $reponse->filter('form')->text();
+        $texte = $reponse->filter('#tab-fournisseurs')->text();
         self::assertStringContainsString('ne ressemble pas à un nom de modèle', $texte);
         self::assertStringContainsString('claude-haiku-4-5', $texte, 'L’erreur doit montrer un exemple correct.');
         self::assertNull(
@@ -418,7 +453,7 @@ class ConsoleKetFournisseursTest extends WebTestCase
         $memoire->marquer($cle, 3600);
 
         $this->client->loginUser($this->user(self::SUPER));
-        $this->client->request('POST', self::URL . '/rearmer', ['cle' => $cle, '_token' => 'faux']);
+        $this->client->request('POST', self::URL_ENREGISTREMENT . '/rearmer', ['cle' => $cle, '_token' => 'faux']);
 
         self::assertTrue($memoire->estEpuise($cle));
     }

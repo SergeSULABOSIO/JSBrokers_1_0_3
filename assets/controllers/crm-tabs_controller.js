@@ -21,7 +21,18 @@ export default class extends Controller {
     }
 
     select(event) {
-        this.activate(event.currentTarget.dataset.tab);
+        const name = event.currentTarget.dataset.tab;
+        this.activate(name);
+
+        // L'ONGLET CHOISI S'ÉCRIT DANS L'URL. Sans cela, il ne survit ni au F5, ni au
+        // retour arrière, ni au partage du lien : on retombe sur le premier volet,
+        // et il faut re-cliquer pour retrouver ce qu'on regardait. `replaceState`
+        // plutôt que le hash direct — poser `location.hash` ferait sauter la page
+        // jusqu'à l'ancre, ce qui n'a aucun sens quand on clique un onglet déjà
+        // visible à l'écran.
+        if (name && window.history && typeof window.history.replaceState === 'function') {
+            window.history.replaceState(null, '', `#tab-${name}`);
+        }
     }
 
     /** Active un onglet déclenché par un bouton externe (action rapide). */

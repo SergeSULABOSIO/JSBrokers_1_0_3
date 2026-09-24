@@ -78,42 +78,118 @@
     .kr-acces p:last-child { margin-bottom: 0; }
     .kr-acces strong { color: #212529; }
 
-    /* Filtres. */
-    .kr-filtres { display: flex; flex-wrap: wrap; gap: .6rem; align-items: flex-end; margin: 0 0 1rem; border: 0; padding: 0; }
-    .kr-filtres legend { font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; color: #6c757d; font-weight: 700; padding: 0; margin-bottom: .4rem; }
-    .kr-filtres label { display: block; font-size: .78rem; color: #6c757d; margin-bottom: .2rem; }
-    .kr-filtres select, .kr-filtres input[type="search"] {
-        min-height: 44px; padding: .4rem .6rem; border: 1px solid #ced4da; border-radius: 8px;
-        background: #fff; color: #212529; font-size: .9rem;
-    }
-    .kr-filtres select:focus, .kr-filtres input:focus {
-        outline: 0; border-color: #0047AB; box-shadow: 0 0 0 .2rem rgba(0, 71, 171, .35);
-    }
-    .kr-filtres button {
-        min-height: 44px; padding: .4rem 1rem; border: 0; border-radius: 8px;
-        background: #0047AB; color: #fff; font-weight: 600; cursor: pointer;
-    }
-    .kr-filtres button:hover { background: #003380; }
-    .kr-filtres a { min-height: 44px; display: inline-flex; align-items: center; padding: .4rem .8rem; color: #6c757d; font-size: .88rem; }
+    /* ONGLETS — LE PATTERN DE L'ESPACE DE TRAVAIL, sans la croix de fermeture.
+       Repris de `.workspace-tab-*` (assets/styles/interactive-menu.css) : rangée
+       posée sur un fond clair, onglets à coins arrondis en haut, actif en BLANC
+       coiffé d'un liseré cobalt. C'est la grammaire d'onglets que l'utilisateur
+       connaît déjà — en donner une seconde, différente, dans la même application,
+       lui demanderait de réapprendre ce qu'il sait faire.
 
-    /* ONGLETS — repris TELS QUELS de la fiche client CRM (console/crm/_styles.html.twig),
-       même contrôleur Stimulus `crm-tabs`. Deux barres d'onglets qui se ressemblent
-       sans être identiques, dans la même console, se lisent comme deux composants
-       différents : l'agent hésite. Style « pastilles » et non soulignement — chaque
-       rangée reste autonome quand les onglets passent à la ligne.
-       L'onglet actif porte FORME + COULEUR + OMBRE : jamais la couleur seule (WCAG 1.4.1). */
-    .kr-tabs { display:flex; flex-wrap:wrap; gap:.35rem; margin-bottom:1.25rem;
-        padding:.35rem; background:#f3f6fc; border:1px solid #e1e8f5; border-radius:12px; }
-    .kr-tab { border:0; background:transparent; padding:.6rem .95rem; border-radius:8px;
-        font-weight:600; font-size:.875rem; line-height:1.2; color:#495057; cursor:pointer;
-        white-space:nowrap; min-height:44px; display:inline-flex; align-items:center; gap:.4rem;
-        transition:background .12s ease, color .12s ease, box-shadow .12s ease; }
-    .kr-tab:hover { background:#e2eafb; color:#0047AB; }
-    .kr-tab.is-active { background:#0047AB; color:#fff; box-shadow:0 2px 6px rgba(0,71,171,.25); }
-    .kr-tab:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
-    .kr-tab-compte { font-weight:700; opacity:.75; font-variant-numeric: tabular-nums; }
-    .kr-pane { display:none; }
-    .kr-pane.is-active { display:block; }
+       Les valeurs sont écrites en clair plutôt qu'en variables : la console ne
+       charge pas `interactive-menu.css`, et un `var(--bg-muted)` non résolu rendrait
+       un onglet transparent. Ce sont les teintes de la charte, à une exception
+       assumée — #d0d5dd, le survol, qui vient de la barre d'origine et n'existe que
+       là : la reprendre garde les deux barres identiques.
+
+       Ces onglets ne se ferment PAS : ce sont des sections d'un même écran, pas des
+       rubriques qu'on ouvre et qu'on quitte. Pas de croix, donc, et pas de bouton
+       « + N » : à six, la rangée tient sans déborder.
+
+       LA BARRE ET LE CORPS NE FONT QU'UN BLOC. Séparés, ils se lisaient comme deux
+       cartes sans rapport : une rangée de boutons flottant au-dessus d'un panneau.
+       La barre n'a donc pas de bordure basse et pas de marge — c'est le panneau
+       juste dessous qui la referme, et l'onglet actif (blanc, sans bord bas) s'y
+       fond exactement comme dans l'espace de travail. */
+    .kr-tab-bar {
+        display: flex; flex-wrap: wrap; align-items: flex-end; gap: 2px;
+        background: #f8f9fa; border: 1px solid #dee2e6; border-bottom: 0;
+        border-radius: 12px 12px 0 0; padding: 6px 8px 0; margin-bottom: 0;
+    }
+    .kr-tab {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 8px 14px 7px; min-height: 44px;
+        background: #e9ecef; border: 1px solid transparent; border-bottom: none;
+        border-radius: 8px 8px 0 0;
+        font-family: inherit; font-size: .82rem; color: #6c757d;
+        white-space: nowrap; cursor: pointer; user-select: none;
+        transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
+    }
+    .kr-tab:hover { background: #d0d5dd; color: #343a40; }
+    .kr-tab:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(0, 71, 171, .35); }
+    /* Actif : FOND, LISERÉ et GRAISSE — jamais la couleur seule (WCAG 1.4.1). */
+    .kr-tab.is-active {
+        background: #ffffff; border-color: #dee2e6; color: #0047AB; font-weight: 600;
+        box-shadow: inset 0 2px 0 0 #0047AB;
+    }
+    .kr-tab-icone { display: inline-flex; align-items: center; flex-shrink: 0; }
+    .kr-tab-icone svg { width: 15px; height: 15px; }
+    .kr-tab-compte {
+        font-weight: 700; font-variant-numeric: tabular-nums; opacity: .7;
+        font-size: .78rem;
+    }
+    .kr-pane { display: none; }
+    .kr-pane.is-active { display: block; }
+    /* Le premier panneau du volet CONTINUE la barre : coins hauts carrés, pas de
+       bord haut. Les panneaux suivants (le volet des fournisseurs en a deux)
+       gardent leur forme de carte. */
+    .kr-pane > .cs-panel:first-child {
+        border-top-left-radius: 0; border-top-right-radius: 0; border-top: 0;
+    }
+
+    /* ── BARRE DE FILTRE ──────────────────────────────────────────────────
+       CE QUI N'ALLAIT PAS. Des contrôles posés à nu sur le fond de la carte, de
+       hauteurs différentes, un bouton plein collé à un lien nu : rien ne disait que
+       ces quatre éléments forment UN outil. Et rien ne disait non plus, avant de
+       cliquer, que « Filtrer » recharge la page.
+
+       CE QUI LE REMPLACE. Un bandeau qui les GROUPE (Bastien & Scapin > Groupement
+       par la localisation), des contrôles à la même hauteur (48 px, cible confortable
+       — WCAG 2.5.5 en demande 44), et une loupe DANS le champ : l'icône dit à quoi
+       sert la zone avant qu'on ait lu son libellé. « Tout afficher » devient un
+       bouton secondaire, parce que c'en est un — un lien nu se lit comme une
+       navigation, alors qu'il agit sur la liste. */
+    .kr-filtres {
+        display: flex; flex-wrap: wrap; gap: .75rem 1rem; align-items: flex-end;
+        background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 10px;
+        padding: .9rem 1rem; margin: 0 0 1.1rem;
+    }
+    .kr-filtre-champ { display: flex; flex-direction: column; min-width: 0; }
+    .kr-filtre-champ--large { flex: 1 1 20rem; }
+    .kr-filtres label {
+        font-size: .78rem; font-weight: 600; color: #6c757d; margin-bottom: .3rem;
+    }
+    .kr-filtres select,
+    .kr-filtres input[type="search"] {
+        height: 48px; padding: .4rem .7rem; border: 1px solid #ced4da; border-radius: 8px;
+        background: #fff; color: #212529; font-size: .95rem; font-family: inherit;
+    }
+    .kr-filtres select { min-width: 12rem; }
+    .kr-filtres select:focus,
+    .kr-filtres input[type="search"]:focus {
+        outline: 0; border-color: #0047AB; box-shadow: 0 0 0 .25rem rgba(0, 71, 171, .35);
+    }
+    /* La loupe vit DANS le champ : décorative, donc aria-hidden — le libellé et le
+       placeholder portent déjà le sens. */
+    .kr-champ-loupe { position: relative; display: flex; }
+    .kr-champ-loupe input[type="search"] { width: 100%; padding-left: 2.4rem; }
+    .kr-champ-loupe svg {
+        position: absolute; left: .75rem; top: 50%; transform: translateY(-50%);
+        width: 17px; height: 17px; color: #6c757d; pointer-events: none;
+    }
+    .kr-filtre-actions { display: flex; gap: .5rem; align-items: center; }
+    .kr-filtres .kr-btn { height: 48px; }
+    /* Bouton SECONDAIRE : même forme, même hauteur, poids visuel moindre — la
+       hiérarchie des deux actions se voit sans les lire. */
+    .kr-btn--secondaire {
+        display: inline-flex; align-items: center; height: 48px; padding: 0 1rem;
+        background: #fff; border: 1px solid #ced4da; border-radius: 8px;
+        color: #495057; font-weight: 600; font-size: .9rem; text-decoration: none;
+        transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+    }
+    .kr-btn--secondaire:hover { background: #e9ecef; border-color: #adb5bd; color: #212529; }
+    .kr-btn--secondaire:focus-visible {
+        outline: none; box-shadow: 0 0 0 .25rem rgba(0, 71, 171, .35);
+    }
 
     .kr-compte { color: #6c757d; font-size: .85rem; margin: 0 0 .5rem; }
 
@@ -158,13 +234,73 @@
     .kr-btn--danger { background: #dc3545; }
     .kr-btn--danger:hover { background: #b02a37; }
 
-    /* Seuils métier. */
-    .kr-seuil { border-bottom: 1px solid #f0f0f0; padding: .9rem .2rem; }
-    .kr-seuil:last-child { border-bottom: 0; }
-    .kr-seuil h3 { margin: 0 0 .15rem; font-size: .95rem; color: #212529; }
-    .kr-seuil p { margin: 0 0 .6rem; color: #6c757d; font-size: .85rem; }
-    .kr-seuil-ligne { display: flex; gap: .6rem; align-items: flex-end; flex-wrap: wrap; }
-    .kr-bornes { color: #6c757d; font-size: .8rem; padding-bottom: .7rem; }
+    /* ── SEUILS MÉTIER ────────────────────────────────────────────────────
+       CE QUI N'ALLAIT PAS. Quatre formulaires côte à côte, chacun avec son motif et
+       son bouton : le même geste demandé quatre fois. Et les champs numériques
+       n'avaient AUCUN style — la règle ne visait que `.kr-agir` —, si bien qu'un
+       « 30 » nu flottait entre deux libellés, sans cadre ni hauteur. On ne voyait
+       plus qu'il était saisissable.
+
+       CE QUI LE REMPLACE. Un tableau de description : à gauche le seuil et ce qu'il
+       fait, à droite sa valeur et ses bornes, toutes alignées sur la même colonne —
+       l'œil descend une seule ligne verticale au lieu de chercher quatre fois
+       (Bastien & Scapin > Groupement par la localisation). Puis UN motif et UN
+       bouton : celui qui déplace deux seuils le fait pour une seule raison. */
+    .kr-seuil {
+        display: grid; grid-template-columns: 1fr 13rem;
+        gap: .35rem 1.5rem; align-items: start;
+        padding: 1rem .75rem; border-bottom: 1px solid #f0f0f0; border-radius: 6px;
+        transition: background-color .12s ease;
+    }
+    .kr-seuil:last-of-type { border-bottom: 0; }
+    /* LA LIGNE SURVOLÉE SE DÉTACHE. Quatre seuils alignés se ressemblent : sans
+       retour au survol, on ne sait pas laquelle des quatre bornes appartient au champ
+       qu'on vise, et l'on corrige la mauvaise (Bastien & Scapin > Guidage).
+       Le même fond répond au CLAVIER (`:focus-within`) : un retour réservé à la
+       souris laisse le reste des utilisateurs sans repère. La teinte est celle du
+       survol des tableaux de la console — on ne réinvente pas un signal qui existe. */
+    .kr-seuil:hover,
+    .kr-seuil:focus-within { background: #f8f9fa; }
+    .kr-seuil-label {
+        grid-column: 1; margin: 0; font-size: .95rem; font-weight: 600; color: #212529;
+    }
+    .kr-seuil-aide { grid-column: 1; margin: 0; color: #6c757d; font-size: .85rem; }
+    .kr-seuil-champ { grid-column: 2; grid-row: 1 / span 2; }
+    .kr-seuil-saisie { display: flex; align-items: center; gap: .5rem; }
+    .kr-seuil-saisie input {
+        width: 5.5rem; height: 48px; padding: .4rem .65rem; text-align: right;
+        border: 1px solid #ced4da; border-radius: 8px;
+        background: #fff; color: #000; font-size: 1rem; font-family: inherit;
+        font-variant-numeric: tabular-nums;
+    }
+    .kr-seuil-saisie input:focus {
+        outline: 0; border-color: #0047AB; box-shadow: 0 0 0 .25rem rgba(0, 71, 171, .35);
+    }
+    .kr-seuil-unite { color: #495057; font-size: .88rem; }
+    .kr-bornes { margin: .3rem 0 0; color: #6c757d; font-size: .78rem; }
+    .kr-modifie {
+        display: inline-block; margin-left: .4rem; padding: .05rem .45rem;
+        border-radius: 999px; background: #fff3cd; color: #664d03;
+        font-size: .7rem; font-weight: 700; vertical-align: middle;
+    }
+    /* Le motif et le bouton closent la liste, séparés par un trait : ils portent sur
+       TOUT ce qui précède, et cela doit se voir avant de cliquer. */
+    .kr-seuil-pied { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid #dee2e6; }
+    .kr-seuil-pied label { display: block; font-size: .8rem; color: #6c757d; margin-bottom: .3rem; }
+    .kr-seuil-pied .kr-seuil-pied-ligne { display: flex; gap: .75rem; align-items: flex-start; flex-wrap: wrap; }
+    .kr-seuil-pied input[type="text"] {
+        flex: 1 1 24rem; min-height: 48px; padding: .5rem .65rem;
+        border: 1px solid #ced4da; border-radius: 8px; font-size: .95rem; font-family: inherit;
+    }
+    .kr-seuil-pied input[type="text"]:focus {
+        outline: 0; border-color: #0047AB; box-shadow: 0 0 0 .25rem rgba(0, 71, 171, .35);
+    }
+    .kr-seuil-pied .kr-btn { height: 48px; }
+
+    @media (max-width: 640px) {
+        .kr-seuil { grid-template-columns: 1fr; }
+        .kr-seuil-champ { grid-column: 1; grid-row: auto; margin-top: .5rem; }
+    }
 
     /* Historique. */
     /* Règles : une ligne par identifiant, l'identifiant en tête comme une cote. */
@@ -197,8 +333,8 @@
 {% endblock %}
 
 {% block console_subtitle %}
-    <p>Ce que Ket sait faire, et ce que cela coûte à chaque échange. Ces réglages valent
-       pour <strong>tous les cabinets</strong> de la plateforme.</p>
+    <p>Qui répond pour Ket, ce qu’elle sait faire, ce que cela coûte, et les règles qui
+       la tiennent. Ces réglages valent pour <strong>tous les cabinets</strong> de la plateforme.</p>
 {% endblock %}
 
 {% block console_body %}
@@ -228,25 +364,34 @@
        sait de surcroît ouvrir un onglet précis depuis le fragment d'URL — ce dont on
        se sert après chaque action pour revenir là d'où l'agent est parti. #}
     <div data-controller="crm-tabs">
-        <nav class="kr-tabs" role="tablist" aria-label="Sections des réglages de Ket">
+        <div class="kr-tab-bar" role="tablist" aria-label="Sections de la configuration de Ket">
             {% set onglets = {
-                mesures:    {libelle: 'Déclarations', compte: null},
-                outils:     {libelle: 'Outils de Ket', compte: total},
-                seuils:     {libelle: 'Seuils métier', compte: parametres|length},
-                regles:     {libelle: 'Règles et boussole', compte: reglesTotal},
-                historique: {libelle: 'Historique', compte: historique|length}
+                mesures:    {libelle: 'Déclarations',       icone: 'action:analyser', compte: null},
+                outils:     {libelle: 'Outils de Ket',      icone: 'action:settings', compte: total},
+                seuils:     {libelle: 'Seuils métier',      icone: 'action:filter',   compte: parametres|length},
+                regles:     {libelle: 'Règles et boussole', icone: 'role',            compte: reglesTotal},
+                historique: {libelle: 'Historique',         icone: 'jour-ferie',      compte: historique|length}
             } %}
+            {# Les fournisseurs restent SUPER-ADMIN : l'onglet n'existe pas pour les
+               autres, et la route qui l'enregistre les refuse de toute façon. #}
+            {% if formFournisseurs %}
+                {% set onglets = onglets|merge({fournisseurs: {libelle: 'Fournisseurs', icone: 'assistant-ia', compte: null}}) %}
+            {% endif %}
             {% for cle, onglet in onglets %}
                 <button type="button" id="onglet-{{ cle }}"
                         class="kr-tab {{ ongletActif == cle ? 'is-active' }}"
                         role="tab" aria-controls="tab-{{ cle }}"
                         aria-selected="{{ ongletActif == cle ? 'true' : 'false' }}"
                         data-crm-tabs-target="tab" data-tab="{{ cle }}" data-action="crm-tabs#select">
-                    {{ onglet.libelle }}
+                    {# Décorative : le libellé juste à côté dit déjà tout. #}
+                    <span class="kr-tab-icone" aria-hidden="true">
+                        {{ ux_icon(resolve_icon_name(onglet.icone), {height:'15px', width:'15px'}) }}
+                    </span>
+                    <span>{{ onglet.libelle }}</span>
                     {% if onglet.compte is not null %}<span class="kr-tab-compte">{{ onglet.compte }}</span>{% endif %}
                 </button>
             {% endfor %}
-        </nav>
+        </div>
 
     <div class="kr-pane{% if ongletActif == 'mesures' %} is-active{% endif %}" data-crm-tabs-target="pane" data-tab="mesures" id="tab-mesures" role="tabpanel" aria-labelledby="onglet-mesures">
     <div class="cs-panel">
@@ -283,26 +428,42 @@
         <form method="get" action="{{ path('console.ket.reglages.index') }}"
               data-action="submit->top-progress#show">
             <fieldset class="kr-filtres">
-                <legend>Filtrer</legend>
-                <div>
+                {# La légende est masquée : les libellés des deux champs disent déjà
+                   ce qu'on filtre, et un troisième titre au-dessus n'ajouterait qu'une
+                   ligne à lire. Elle reste dans le DOM pour les lecteurs d'écran, à qui
+                   le groupement, lui, ne se voit pas. #}
+                <legend class="visually-hidden">Filtrer les outils de Ket</legend>
+                {# LE FORMULAIRE DIT D'OÙ IL PART. Un GET ne peut pas porter de
+                   fragment : sans ce champ, filtrer renverrait sur le premier onglet
+                   dès que la recherche est vide. #}
+                <input type="hidden" name="onglet" value="outils">
+
+                <div class="kr-filtre-champ kr-filtre-champ--large">
+                    <label for="kr-q">Rechercher un outil</label>
+                    <span class="kr-champ-loupe">
+                        {{ ux_icon(resolve_icon_name('action:search'), {height:'17px', width:'17px'}) }}
+                        <input type="search" id="kr-q" name="q" value="{{ recherche }}"
+                               placeholder="Nom de l’outil, mot-clé…">
+                    </span>
+                </div>
+
+                <div class="kr-filtre-champ">
                     <label for="kr-classe">Classe</label>
                     <select id="kr-classe" name="classe">
-                        <option value="">Toutes</option>
+                        <option value="">Toutes les classes</option>
                         {% for c in classes %}
-                            {% if c.estModifiable or c.value == 'indispensable' %}
-                                <option value="{{ c.value }}" {{ classeActive == c.value ? 'selected' }}>{{ c.libelle }}</option>
-                            {% endif %}
+                            <option value="{{ c.value }}" {{ classeActive == c.value ? 'selected' }}>{{ c.libelle }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div>
-                    <label for="kr-q">Rechercher</label>
-                    <input type="search" id="kr-q" name="q" value="{{ recherche }}" placeholder="Nom, mot-clé…">
+
+                <div class="kr-filtre-actions">
+                    <button type="submit" class="kr-btn">Filtrer</button>
+                    {% if classeActive or recherche %}
+                        <a href="{{ path('console.ket.reglages.index', {onglet: 'outils'}) }}" class="kr-btn--secondaire"
+                           data-action="click->top-progress#show">Tout afficher</a>
+                    {% endif %}
                 </div>
-                <button type="submit">Filtrer</button>
-                {% if classeActive or recherche %}
-                    <a href="{{ path('console.ket.reglages.index') }}">Tout afficher</a>
-                {% endif %}
             </fieldset>
         </form>
 
@@ -441,44 +602,60 @@
             d’origine qui reprend la main.
         </p>
 
+        {% if peutRegler %}<form method="post" action="{{ path('console.ket.reglages.seuils') }}"
+              data-action="submit->top-progress#show">{% endif %}
+
         {% for clef, regle in parametres %}
+            {% set modifie = valeurs[clef] != regle.defaut %}
             <div class="kr-seuil">
-                <h3>{{ regle.libelle }}</h3>
-                <p>{{ regle.explication }}</p>
+                <label class="kr-seuil-label" for="v-{{ clef }}">
+                    {{ regle.libelle }}
+                    {% if modifie %}<span class="kr-modifie">modifié</span>{% endif %}
+                </label>
+                <p class="kr-seuil-aide" id="aide-{{ clef }}">{{ regle.explication }}</p>
 
-                {% if peutRegler %}
-                    <form method="post" action="{{ path('console.ket.reglages.parametre', {clef: clef}) }}" class="kr-seuil-ligne"
-                          data-action="submit->top-progress#show">
-                        <div>
-                            <label for="v-{{ clef }}">Valeur ({{ regle.unite }})</label>
-                            <input type="number" id="v-{{ clef }}" name="valeur"
-                                   value="{{ valeurs[clef] }}" min="{{ regle.min }}" max="{{ regle.max }}" required>
-                        </div>
-                        <div style="flex:1 1 20rem">
-                            <label for="m-{{ clef }}">Motif (obligatoire)</label>
-                            <input type="text" id="m-{{ clef }}" name="motif" required minlength="5"
-                                   style="width:100%;min-height:44px;padding:.5rem .65rem;border:1px solid #ced4da;border-radius:8px;font-size:.9rem"
-                                   placeholder="Pourquoi ce changement ?">
-                        </div>
-                        <span class="kr-bornes">entre {{ regle.min }} et {{ regle.max }} · d’origine : {{ regle.defaut }}</span>
-                        <input type="hidden" name="_token" value="{{ csrf_token('ket_reglage') }}">
-                        <button type="submit" class="kr-btn" style="margin-bottom:.35rem">Enregistrer</button>
-                    </form>
-                {% else %}
-                    <p><strong>{{ valeurs[clef] }} {{ regle.unite }}</strong>
-                       <span class="kr-bornes">· entre {{ regle.min }} et {{ regle.max }} · d’origine : {{ regle.defaut }}</span></p>
-                {% endif %}
-
-                {% set change = dernierChangement['parametre:' ~ clef]|default(null) %}
-                {% if change %}
-                    <p class="kr-compte" style="margin:.5rem 0 0">
-                        {{ change.ancienneValeur }} → <strong>{{ change.nouvelleValeur }}</strong>,
-                        le {{ change.effectueLe|date('d/m/Y') }} par {{ change.auteurNom }} —
-                        <em>« {{ change.motif }} »</em>
+                <div class="kr-seuil-champ">
+                    <div class="kr-seuil-saisie">
+                        {% if peutRegler %}
+                            <input type="number" id="v-{{ clef }}" name="valeurs[{{ clef }}]"
+                                   value="{{ valeurs[clef] }}" min="{{ regle.min }}" max="{{ regle.max }}"
+                                   step="1" required
+                                   aria-describedby="aide-{{ clef }} bornes-{{ clef }}">
+                        {% else %}
+                            <strong id="v-{{ clef }}">{{ valeurs[clef] }}</strong>
+                        {% endif %}
+                        <span class="kr-seuil-unite">{{ regle.unite }}</span>
+                    </div>
+                    {# Les bornes et la valeur d'origine sont RATTACHÉES au champ
+                       (aria-describedby) : un lecteur d'écran les annonce en entrant
+                       dedans, au moment où elles servent (WCAG 3.3.2). #}
+                    <p class="kr-bornes" id="bornes-{{ clef }}">
+                        entre {{ regle.min }} et {{ regle.max }} · d’origine&nbsp;: {{ regle.defaut }}
                     </p>
-                {% endif %}
+
+                    {% set change = dernierChangement['parametre:' ~ clef]|default(null) %}
+                    {% if change %}
+                        <p class="kr-bornes">
+                            {{ change.ancienneValeur }} → <strong>{{ change.nouvelleValeur }}</strong>,
+                            le {{ change.effectueLe|date('d/m/Y') }} par {{ change.auteurNom }}
+                        </p>
+                    {% endif %}
+                </div>
             </div>
         {% endfor %}
+
+        {% if peutRegler %}
+            <div class="kr-seuil-pied">
+                <label for="motif-seuils">Motif (obligatoire) — il vaut pour tous les seuils modifiés ci-dessus</label>
+                <div class="kr-seuil-pied-ligne">
+                    <input type="text" id="motif-seuils" name="motif" required minlength="5"
+                           placeholder="Pourquoi ce changement ? Sans motif, l’historique ne permet pas de savoir s’il faut le défaire.">
+                    <input type="hidden" name="_token" value="{{ csrf_token('ket_reglage') }}">
+                    <button type="submit" class="kr-btn">Enregistrer les seuils</button>
+                </div>
+            </div>
+            </form>
+        {% endif %}
     </div>
     </div>
 
@@ -576,6 +753,42 @@
         {% endif %}
     </div>
     </div>
+
+    {% if formFournisseurs %}
+        <div class="kr-pane{% if ongletActif == 'fournisseurs' %} is-active{% endif %}"
+             data-crm-tabs-target="pane" data-tab="fournisseurs" id="tab-fournisseurs"
+             role="tabpanel" aria-labelledby="onglet-fournisseurs">
+            <div class="cs-panel">
+                <h2 class="cs-panel-title">Qui répond pour Ket</h2>
+                <p class="kr-compte">
+                    Cinq familles — moteur de texte, compréhension, dictée, voix, oreilles —
+                    et pour chacune : qui répond, dans quel ordre, avec quel modèle.
+                    <strong>Aucune clé d’API ne se saisit ici</strong> : elles restent dans la
+                    configuration du serveur, et cet écran n’affiche que leur présence.
+                </p>
+
+                {{ form_start(formFournisseurs, {
+                    action: path('console.ket.fournisseurs.index'),
+                    attr: {'data-action': 'submit->top-progress#show'}
+                }) }}
+                    {% include 'console/ket_fournisseurs/_corps.html.twig' with {
+                        form: formFournisseurs, etat: etatFournisseurs
+                    } only %}
+                    <div class="kr-boutons" style="margin-top:1.25rem">
+                        <button type="submit" class="kr-btn">Enregistrer la politique</button>
+                    </div>
+                {{ form_end(formFournisseurs) }}
+            </div>
+
+            {# Le réarmement n'entre PAS dans le formulaire ci-dessus : imbriqué, il le
+               refermerait avant son bouton d'envoi, qui ne ferait plus rien. #}
+            <form method="post" action="{{ path('console.ket.fournisseurs.rearmer') }}" id="kf-rearmer-form"
+                  data-action="submit->top-progress#show">
+                <input type="hidden" name="_token" value="{{ csrf_token('ket_rearmer') }}">
+                <input type="hidden" name="cle" id="kf-rearmer-cle">
+            </form>
+        </div>
+    {% endif %}
     </div>
 
 {% endblock %}
