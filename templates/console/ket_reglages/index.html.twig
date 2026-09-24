@@ -20,7 +20,7 @@
     .kr-row[open] { background: #f8f9fa; }
     .kr-row > summary {
         display: grid;
-        grid-template-columns: 1fr 9rem 8rem 7rem;
+        grid-template-columns: 2.4rem 1fr 9rem 8rem 7rem;
         gap: .75rem; align-items: center;
         /* 44px minimum de zone cliquable (WCAG 2.5.5) : .7rem de part et d'autre
            d'une ligne de texte y suffisent, la hauteur minimale le garantit. */
@@ -30,6 +30,17 @@
     .kr-row > summary::-webkit-details-marker { display: none; }
     .kr-row > summary:hover { background: #f8f9fa; }
     .kr-row > summary:focus-visible { outline: 2px solid #0047AB; outline-offset: -2px; }
+    /* Pastille : même langage visuel que .cs-head-icon des entêtes de console
+       (fond cobalt très clair, glyphe cobalt), en plus petit pour une ligne de
+       liste. Décorative : aria-hidden, car le libellé juste à côté dit déjà tout —
+       une icône annoncée deux fois est du bruit au lecteur d'écran. */
+    .kr-pastille {
+        flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+        width: 34px; height: 34px; border-radius: 9px;
+        background: #e8f0fb; color: #0047AB;
+    }
+    .kr-pastille svg { width: 19px; height: 19px; }
+
     .kr-nom { min-width: 0; }
     .kr-nom strong { display: block; color: #212529; font-size: .93rem; }
     .kr-nom span { display: block; color: #6c757d; font-size: .82rem; margin-top: .1rem; }
@@ -94,7 +105,8 @@
     .cs-head p { max-width: none; }
 
     @media (max-width: 720px) {
-        .kr-row > summary { grid-template-columns: 1fr; gap: .35rem; }
+        .kr-row > summary { grid-template-columns: 2.4rem 1fr; gap: .35rem .6rem; }
+        .kr-tech, .kr-poids, .kr-etat { grid-column: 2; }
         .kr-poids { text-align: left; }
         .kr-fiche dl { grid-template-columns: 1fr; gap: .15rem .9rem; }
         .kr-fiche dt { margin-top: .5rem; }
@@ -185,6 +197,9 @@
             {% for o in outils %}
                 <details class="kr-row">
                     <summary>
+                        <span class="kr-pastille" aria-hidden="true">
+                            {{ ux_icon(resolve_icon_name(o.icone), {height:'19px', width:'19px'}) }}
+                        </span>
                         <span class="kr-nom">
                             <strong>{{ o.libelle }}</strong>
                             <span>{{ o.resume }}</span>

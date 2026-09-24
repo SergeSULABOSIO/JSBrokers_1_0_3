@@ -4,6 +4,7 @@ namespace App\Tests\Ai;
 
 use App\Ai\Reglage\CatalogueDesReglages;
 use App\Ai\Trousse\TrousseCatalogue;
+use App\Services\Canvas\Provider\Icon\IconCanvasProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
@@ -46,6 +47,42 @@ class ManifesteDesOutilsTest extends KernelTestCase
             'Ces fiches décrivent des outils qui n’existent plus : la console annoncerait '
             . 'une capacité que Ket n’a pas.'
         );
+    }
+
+    /**
+     * CHAQUE ICÔNE SE RÉSOUT, ET SON FICHIER EXISTE.
+     *
+     * Un alias inconnu d'IconCanvasProvider ne lève AUCUNE erreur : `ux_icon` reçoit
+     * `null` et la ligne perd sa pastille, au milieu de cinquante et une autres qui
+     * en portent une. Cela se lit comme une anomalie de l'outil, pas comme une faute
+     * de frappe dans une carte d'alias — donc on cherche au mauvais endroit.
+     *
+     * Le second contrôle va plus loin : l'alias peut exister et pointer un SVG absent
+     * du disque, avec exactement le même symptôme. On vérifie donc le fichier.
+     */
+    public function testChaqueOutilPorteUneIconeQuiSeResout(): void
+    {
+        self::bootKernel();
+
+        $provider = new IconCanvasProvider();
+        $racine = \dirname(__DIR__, 2);
+        $casses = [];
+
+        foreach (CatalogueDesReglages::iconesDecrites() as $outil => $alias) {
+            $resolu = $provider->resolveIconName($alias);
+            if ($resolu === null) {
+                $casses[] = sprintf('%s : l’alias « %s » est inconnu', $outil, $alias);
+                continue;
+            }
+
+            [$set, $nom] = explode(':', $resolu, 2) + [1 => ''];
+            $chemin = sprintf('%s/assets/icons/%s/%s.svg', $racine, $set, $nom);
+            if (!is_file($chemin)) {
+                $casses[] = sprintf('%s : « %s » n’est pas sur le disque (%s)', $outil, $resolu, $chemin);
+            }
+        }
+
+        self::assertSame([], $casses, 'Ces outils afficheraient une pastille vide.');
     }
 
     /**
