@@ -104,7 +104,7 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
             . '« avenantPrecedentId » (la police qu’elle REMPLACE, vide pour une affaire '
             . 'nouvelle). Utilise-les tels quels pour relier une police renouvelée à son '
             . 'renouvellement : n’essaie JAMAIS de le déduire d’une ressemblance de nom ou de date. '
-            . 'Les paramètres echeance (Avenant), statutPaiement (Tranche), validation (Cotation) '
+            . 'Les paramètres echeance (Avenant), axes (Tranche), validation (Cotation) '
             . 'et transformation (Piste) appliquent EXACTEMENT les mêmes règles que les filtres '
             . 'rapides de ces rubriques, tri par urgence inclus : à utiliser dès que la question '
             . 'porte sur une fenêtre d’échéance (« quels avenants échoient dans les 30 jours ? »), '

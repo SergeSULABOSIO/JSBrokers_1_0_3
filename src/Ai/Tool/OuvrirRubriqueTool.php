@@ -66,7 +66,7 @@ final class OuvrirRubriqueTool implements AiToolInterface, AiToolConditionnel
             . 'LA RUBRIQUE S\'OUVRE FILTRÉE : transmets le MÊME périmètre que celui de ta '
             . 'réponse écrite — lieA pour un rattachement (lieA={entite:"Client", nom:"Marlette"} '
             . 'accepte un NOM autant qu\'un id, le serveur le résout et calcule le chemin de '
-            . 'relations lui-même), filtre pour un texte, et echeance / statutPaiement / '
+            . 'relations lui-même), filtre pour un texte, et echeance / axes / '
             . 'validation / transformation pour les filtres rapides des rubriques. RÈGLE '
             . 'ABSOLUE : si ta réponse écrite porte sur un sous-ensemble (les pistes d\'UN '
             . 'client, les polices échues, les tranches impayées), la rubrique doit porter le '

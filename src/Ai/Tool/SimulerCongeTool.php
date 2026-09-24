@@ -32,7 +32,7 @@ use App\Service\Workspace\WorkspaceAccessResolver;
  * mêmes services que l'écran et les e-mails. Ce que l'outil annonce est donc, au chiffre
  * près, ce que l'enregistrement produira.
  */
-final class SimulerCongeTool implements AiToolInterface
+final class SimulerCongeTool implements AiToolInterface, AiToolConditionnel
 {
     public function __construct(
         private readonly CalculateurJoursOuvrables $calculateurJours,
@@ -96,6 +96,16 @@ final class SimulerCongeTool implements AiToolInterface
         }
 
         return null;
+    }
+
+    /**
+     * MÊME PORTE QUE CongesTool, et pour la même raison : execute() exige le droit de
+     * lecture sur les congés, donc déclarer cet outil sans ce droit revient à payer
+     * son schéma à chaque tour pour un refus certain.
+     */
+    public function estDisponible(AiScope $scope): bool
+    {
+        return $this->accessResolver->canRead($scope->invite, 'DemandeConge');
     }
 
     public function execute(array $args, AiScope $scope): AiToolResult

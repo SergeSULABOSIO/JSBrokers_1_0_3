@@ -26,7 +26,7 @@ use App\Service\Onboarding\OnboardingCompletude;
  * prérogative du propriétaire. Un invité, même largement habilité, se voit répondre
  * « hors périmètre » — il ne pourrait rien faire de la réponse.
  */
-final class EtatConfigurationTool implements AiToolInterface
+final class EtatConfigurationTool implements AiToolInterface, AiToolConditionnel
 {
     public function __construct(private readonly OnboardingCompletude $completude)
     {
@@ -88,6 +88,19 @@ final class EtatConfigurationTool implements AiToolInterface
         }
 
         return null;
+    }
+
+    /**
+     * LE PROPRIÉTAIRE, ET PERSONNE D’AUTRE.
+     *
+     * execute() rend un hors-périmètre à tout invité non propriétaire, et la boussole
+     * dit pourquoi : « Ne le rappelle qu’au propriétaire. Un invité ne peut pas
+     * configurer le cabinet ; le lui dire serait lui demander ce qu’il ne peut pas
+     * faire. » Le déclarer quand même, c’était tenir ce discours à chaque tour.
+     */
+    public function estDisponible(AiScope $scope): bool
+    {
+        return $scope->invite->isProprietaire() === true;
     }
 
     public function execute(array $args, AiScope $scope): AiToolResult
