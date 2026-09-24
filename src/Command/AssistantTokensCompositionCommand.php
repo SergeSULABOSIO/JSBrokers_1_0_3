@@ -4,6 +4,7 @@ namespace App\Command;
 
 use App\Ai\AiContextBuilder;
 use App\Ai\Debit\BudgetDebit;
+use App\Ai\Reglage\PoidsDesDeclarations;
 use App\Ai\Tool\AiToolConditionnel;
 use App\Ai\Tool\AiToolInterface;
 use App\Entity\AssistantMessage;
@@ -48,7 +49,12 @@ class AssistantTokensCompositionCommand extends Command
      * plafond du fournisseur ; les chiffres exacts viennent du journal, où le
      * fournisseur donne lui-même le compte.
      */
-    private const OCTETS_PAR_TOKEN = 3.7;
+    /**
+     * Le ratio vit dans PoidsDesDeclarations : l'écran de console annonce des gains
+     * avec la MÊME formule, et deux copies finiraient par ne plus dire le même
+     * chiffre pour le même outil.
+     */
+    private const OCTETS_PAR_TOKEN = PoidsDesDeclarations::OCTETS_PAR_TOKEN;
 
     /** @var iterable<AiToolInterface> */
     private iterable $tools;
@@ -130,11 +136,7 @@ class AssistantTokensCompositionCommand extends Command
         $octetsEcartes = 0;
         $nbEcartes = 0;
         foreach ($this->tools as $tool) {
-            $declaration = [
-                'name'        => $tool->name(),
-                'description' => $tool->description(),
-                'parameters'  => $tool->schema(),
-            ];
+            $declaration = PoidsDesDeclarations::declaration($tool);
             // Même filtrage que les moteurs : un outil que l'invité ne peut pas
             // exécuter, ou sans objet dans ce fil, n'est pas déclaré — donc pas
             // payé à chaque tour (cf. AiToolConditionnel). Sans conversation, on
@@ -257,13 +259,11 @@ class AssistantTokensCompositionCommand extends Command
 
     private function taille(array $donnees): int
     {
-        return \strlen((string) json_encode($donnees, JSON_UNESCAPED_UNICODE));
+        return PoidsDesDeclarations::octets($donnees);
     }
 
     private function lisible(int $octets): string
     {
-        return $octets >= 1024 * 1024
-            ? sprintf('%.1f Mo', $octets / 1024 / 1024)
-            : sprintf('%.1f Ko', $octets / 1024);
+        return PoidsDesDeclarations::lisible($octets);
     }
 }

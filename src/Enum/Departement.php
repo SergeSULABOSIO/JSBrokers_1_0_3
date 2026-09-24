@@ -115,11 +115,18 @@ enum Departement: string
             self::COMMERCIAL => [
                 'console.vente.', 'console.coupon.',
                 'console.crm.campagne.', 'console.crm.pipeline.', 'console.crm.client.',
+                // L'inventaire de Ket, en LECTURE. C'est le catalogue du produit —
+                // aucune donnée de cabinet — et c'est sur lui que se construit
+                // l'argumentaire. Les réglages eux-mêmes restent super-admin.
+                'console.ket.reglages.',
             ],
             self::RELATION_CLIENT => [
                 'console.crm.dashboard', 'console.crm.client.', 'console.crm.cs',
                 'console.crm.entreprise.', 'console.crm.tache.', 'console.crm.pipeline.',
                 'console.crm.ticket.', 'console.crm.notification.',
+                // Même raison : le support répond tous les jours à « Ket sait-elle
+                // faire X ? », et la réponse se cherchait jusqu'ici dans le code.
+                'console.ket.reglages.',
             ],
             self::RH => [
                 // RH = gestion des collaborateurs internes (pas les comptes
@@ -139,8 +146,8 @@ enum Departement: string
         return match ($this) {
             self::DIRECTION       => ['Toutes les rubriques de la console'],
             self::FINANCE         => ['Dépenses', 'Charges', 'Documents comptables', 'Fiscalité', 'Ventes', 'Coupons', 'Plan tarifaire', 'CFO'],
-            self::COMMERCIAL      => ['Ventes', 'Coupons', 'Marketing', 'Pipeline', 'Clients et prospects'],
-            self::RELATION_CLIENT => ['Tableau de bord CRM', 'Clients', 'Customer Success', 'Entreprises', 'Tâches', 'Pipeline', 'Support Client', 'Notifications'],
+            self::COMMERCIAL      => ['Ventes', 'Coupons', 'Marketing', 'Pipeline', 'Clients et prospects', 'Réglages de Ket (lecture)'],
+            self::RELATION_CLIENT => ['Tableau de bord CRM', 'Clients', 'Customer Success', 'Entreprises', 'Tâches', 'Pipeline', 'Support Client', 'Notifications', 'Réglages de Ket (lecture)'],
             self::RH              => ['Collaborateurs', 'Départements & rôles', 'Évaluations'],
         };
     }

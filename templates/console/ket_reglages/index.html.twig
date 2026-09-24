@@ -1,0 +1,250 @@
+{% extends 'console/base.html.twig' %}
+
+{# Réglages de Ket — inventaire en lecture seule.
+
+   AUCUN STYLE NOUVEAU N'EST INVENTÉ ICI : .cs-panel, .cs-table, .cs-badge et
+   .cs-empty viennent de console/base.html.twig, comme sur toutes les autres
+   rubriques. Seules les quelques règles ci-dessous sont propres à cet écran, et
+   elles n'ajoutent aucune couleur hors charte.
+
+   LA FICHE DE DÉTAIL EST UN <details>, PAS UN PANNEAU JAVASCRIPT. L'état est alors
+   exposé nativement aux technologies d'assistance, le clavier fonctionne sans qu'on
+   écrive une ligne, et rien ne se casse si le script ne charge pas. C'est le même
+   choix que la navigation de la console (cf. _nav.html.twig). #}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    /* Une ligne d'outil : mêmes proportions qu'un <tr>, mais dépliable. */
+    .kr-row { border-bottom: 1px solid #f0f0f0; }
+    .kr-row[open] { background: #f8f9fa; }
+    .kr-row > summary {
+        display: grid;
+        grid-template-columns: 1fr 9rem 8rem 7rem;
+        gap: .75rem; align-items: center;
+        /* 44px minimum de zone cliquable (WCAG 2.5.5) : .7rem de part et d'autre
+           d'une ligne de texte y suffisent, la hauteur minimale le garantit. */
+        padding: .7rem; min-height: 44px;
+        cursor: pointer; list-style: none;
+    }
+    .kr-row > summary::-webkit-details-marker { display: none; }
+    .kr-row > summary:hover { background: #f8f9fa; }
+    .kr-row > summary:focus-visible { outline: 2px solid #0047AB; outline-offset: -2px; }
+    .kr-nom { min-width: 0; }
+    .kr-nom strong { display: block; color: #212529; font-size: .93rem; }
+    .kr-nom span { display: block; color: #6c757d; font-size: .82rem; margin-top: .1rem; }
+    .kr-tech { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .78rem; color: #6c757d; }
+    .kr-poids { color: #495057; font-size: .85rem; text-align: right; }
+    .kr-etat { display: inline-flex; align-items: center; gap: .3rem; font-size: .82rem; color: #6c757d; }
+    .kr-etat svg { width: 15px; height: 15px; flex: 0 0 auto; }
+
+    /* Le corps de la fiche. */
+    .kr-fiche { padding: .25rem .7rem 1.1rem; }
+    .kr-fiche dl { display: grid; grid-template-columns: 11rem 1fr; gap: .45rem .9rem; margin: 0; }
+    .kr-fiche dt { color: #6c757d; font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; font-weight: 700; }
+    .kr-fiche dd { margin: 0; color: #495057; font-size: .88rem; }
+    .kr-fiche dd code { font-size: .8rem; color: #495057; }
+    .kr-prose { white-space: pre-line; }
+
+    /* En-tête chiffré : ce que la plateforme envoie au maximum, par trousse. */
+    .kr-mesures { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+    .kr-mesure { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 10px; padding: .85rem 1rem; }
+    .kr-mesure dt { color: #6c757d; font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; font-weight: 700; }
+    .kr-mesure dd { margin: .3rem 0 0; color: #0047AB; font-size: 1.25rem; font-weight: 700; }
+    .kr-mesure p { margin: .2rem 0 0; color: #6c757d; font-size: .8rem; }
+
+    /* Encart d'accès : cobalt très clair, le ton « information » de la charte. */
+    .kr-acces { background: #e8f0fb; border: 1px solid #dee2e6; border-radius: 12px; padding: 1rem 1.15rem; margin-bottom: 1.25rem; }
+    .kr-acces h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: #0047AB; margin: 0 0 .4rem; }
+    /* LE TEXTE OCCUPE SA LARGEUR. Un plafond de 80ch coupait les lignes vers 500 px
+       dans un panneau de 960 : le vide à droite se lisait comme un défaut de mise en
+       page, pas comme un confort de lecture. Le PANNEAU est désormais la mesure, ce
+       qui est déjà le cas des autres textes de la console (Cohérence, Bastien &
+       Scapin). Le texte reste aligné à gauche : `text-align: justify` creuse des
+       rivières d'espaces et pénalise les lecteurs dyslexiques — WCAG 1.4.8, et
+       Opquast le déconseille également. */
+    .kr-acces p { margin: 0 0 .35rem; color: #495057; font-size: .88rem; }
+    .kr-acces p:last-child { margin-bottom: 0; }
+    .kr-acces strong { color: #212529; }
+
+    /* Filtres. */
+    .kr-filtres { display: flex; flex-wrap: wrap; gap: .6rem; align-items: flex-end; margin: 0 0 1rem; border: 0; padding: 0; }
+    .kr-filtres legend { font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; color: #6c757d; font-weight: 700; padding: 0; margin-bottom: .4rem; }
+    .kr-filtres label { display: block; font-size: .78rem; color: #6c757d; margin-bottom: .2rem; }
+    .kr-filtres select, .kr-filtres input[type="search"] {
+        min-height: 44px; padding: .4rem .6rem; border: 1px solid #ced4da; border-radius: 8px;
+        background: #fff; color: #212529; font-size: .9rem;
+    }
+    .kr-filtres select:focus, .kr-filtres input:focus {
+        outline: 0; border-color: #0047AB; box-shadow: 0 0 0 .2rem rgba(0, 71, 171, .35);
+    }
+    .kr-filtres button {
+        min-height: 44px; padding: .4rem 1rem; border: 0; border-radius: 8px;
+        background: #0047AB; color: #fff; font-weight: 600; cursor: pointer;
+    }
+    .kr-filtres button:hover { background: #003380; }
+    .kr-filtres a { min-height: 44px; display: inline-flex; align-items: center; padding: .4rem .8rem; color: #6c757d; font-size: .88rem; }
+
+    .kr-compte { color: #6c757d; font-size: .85rem; margin: 0 0 .5rem; }
+
+    /* Même raison pour le sous-titre de page : `console/base.html.twig` plafonne
+       `.cs-head p` à 70ch. On ne lève la contrainte QUE sur cette page — la changer
+       dans le socle toucherait les dix-neuf autres rubriques de la console, ce qui
+       n'est pas une décision à prendre au détour d'un écran. */
+    .cs-head p { max-width: none; }
+
+    @media (max-width: 720px) {
+        .kr-row > summary { grid-template-columns: 1fr; gap: .35rem; }
+        .kr-poids { text-align: left; }
+        .kr-fiche dl { grid-template-columns: 1fr; gap: .15rem .9rem; }
+        .kr-fiche dt { margin-top: .5rem; }
+    }
+</style>
+{% endblock %}
+
+{% block console_subtitle %}
+    <p>Ce que Ket sait faire, et ce que cela coûte à chaque échange. Ces réglages valent
+       pour <strong>tous les cabinets</strong> de la plateforme.</p>
+{% endblock %}
+
+{% block console_body %}
+
+    <section class="kr-acces" aria-labelledby="kr-acces-titre">
+        <h2 id="kr-acces-titre">Qui a accès à Ket</h2>
+        <p>Ket est ouvert à un cabinet disposant d’un <strong>solde de jetons payant</strong> —
+           l’allocation gratuite ne suffit pas — et dont l’invité a le module
+           « Assistant IA » dans son périmètre. Cette condition
+           <strong>ne se modifie pas depuis la console</strong>.</p>
+        {# Accord du VERBE, pas seulement du nom : « 0 cabinet … disposent » se lit comme
+           une faute, et un écran d'administration qui écrit mal perd de sa crédibilité. #}
+        <p>Aujourd’hui, <strong>{{ cabinetsAvecKet }} cabinet{{ cabinetsAvecKet > 1 ? 's' : '' }}
+           sur {{ cabinets }}</strong> {{ cabinetsAvecKet > 1 ? 'disposent' : 'dispose' }} du solde nécessaire.
+           Les paquets et leurs prix se règlent dans
+           {% if console_can_access('console.plan.index') and is_granted('ROLE_SUPER_ADMIN') %}
+               <a href="{{ path('console.plan.index') }}">Ventes → Plan tarifaire</a>.
+           {% else %}
+               Ventes → Plan tarifaire (super-administrateur).
+           {% endif %}
+        </p>
+    </section>
+
+    <div class="cs-panel">
+        <h2 class="cs-panel-title">Déclarations envoyées à chaque échange</h2>
+        <dl class="kr-mesures">
+            {% for cle, m in poids %}
+                <div class="kr-mesure">
+                    <dt>Trousse {{ cle == 'lecture' ? 'de consultation' : 'de saisie' }}</dt>
+                    <dd>≈ {{ m.jetons|number_format(0, ',', ' ') }} jetons</dd>
+                    <p>{{ m.outils }} outils · {{ (m.octets / 1024)|number_format(1, ',', ' ') }} Ko</p>
+                </div>
+            {% endfor %}
+        </dl>
+        <p class="kr-compte" style="margin-top:1rem">
+            Ce sont des <strong>plafonds</strong> : selon les droits de l’invité et son appareil,
+            certains outils ne sont pas déclarés, et l’échange réel pèse moins. Les jetons sont
+            estimés à partir des octets réellement envoyés.
+        </p>
+    </div>
+
+    <div class="cs-panel">
+        <h2 class="cs-panel-title">Outils de Ket</h2>
+
+        <form method="get" action="{{ path('console.ket.reglages.index') }}">
+            <fieldset class="kr-filtres">
+                <legend>Filtrer</legend>
+                <div>
+                    <label for="kr-classe">Classe</label>
+                    <select id="kr-classe" name="classe">
+                        <option value="">Toutes</option>
+                        {% for c in classes %}
+                            {% if c.estModifiable or c.value == 'indispensable' %}
+                                <option value="{{ c.value }}" {{ classeActive == c.value ? 'selected' }}>{{ c.libelle }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="kr-q">Rechercher</label>
+                    <input type="search" id="kr-q" name="q" value="{{ recherche }}" placeholder="Nom, mot-clé…">
+                </div>
+                <button type="submit">Filtrer</button>
+                {% if classeActive or recherche %}
+                    <a href="{{ path('console.ket.reglages.index') }}">Tout afficher</a>
+                {% endif %}
+            </fieldset>
+        </form>
+
+        <p class="kr-compte">
+            {{ outils|length }} outil{{ outils|length > 1 ? 's' : '' }} affiché{{ outils|length > 1 ? 's' : '' }}
+            sur {{ total }}.
+        </p>
+
+        {% if outils is empty %}
+            <div class="cs-empty">Aucun outil ne correspond à ce filtre.</div>
+        {% else %}
+            {% for o in outils %}
+                <details class="kr-row">
+                    <summary>
+                        <span class="kr-nom">
+                            <strong>{{ o.libelle }}</strong>
+                            <span>{{ o.resume }}</span>
+                        </span>
+                        <span class="kr-tech">{{ o.nom }}</span>
+                        <span class="kr-poids">≈ {{ o.jetons|number_format(0, ',', ' ') }} jetons</span>
+                        {# Le statut n'est JAMAIS porté par la seule couleur (WCAG 1.4.1) :
+                           pastille, icône et libellé disent la même chose. #}
+                        <span class="kr-etat">
+                            {% if o.classe.estModifiable %}
+                                <span class="cs-badge cs-badge--ok">Actif</span>
+                            {% else %}
+                                {{ ux_icon(resolve_icon_name('action:password'), {height:'15px', width:'15px'}) }}
+                                <span class="cs-badge cs-badge--cobalt">Verrouillé</span>
+                            {% endif %}
+                        </span>
+                    </summary>
+
+                    <div class="kr-fiche">
+                        <dl>
+                            <dt>Classe</dt>
+                            <dd><strong>{{ o.classe.libelle }}</strong> — {{ o.classe.explication }}</dd>
+
+                            <dt>Nom technique</dt>
+                            <dd><code>{{ o.nom }}</code></dd>
+
+                            <dt>Trousses</dt>
+                            <dd>{{ o.trousses|join(', ') }}</dd>
+
+                            <dt>Poids par échange</dt>
+                            <dd>{{ o.octets|number_format(0, ',', ' ') }} octets, soit ≈ {{ o.jetons|number_format(0, ',', ' ') }} jetons</dd>
+
+                            {% if o.facture %}
+                                <dt>Facturation</dt>
+                                <dd>Cet outil <strong>débite des jetons</strong> au cabinet qui l’utilise
+                                    (<code>{{ o.facture }}</code>). Le couper supprimerait aussi cette recette.</dd>
+                            {% endif %}
+
+                            {% if o.conditionnel %}
+                                <dt>Conditions</dt>
+                                <dd>Cet outil n’est pas toujours déclaré : selon les droits de l’invité,
+                                    son appareil ou le fil en cours, il est écarté pour ne pas être payé
+                                    à chaque échange.</dd>
+                            {% endif %}
+
+                            <dt>Instructions au modèle</dt>
+                            <dd class="kr-prose">{{ o.description }}</dd>
+
+                            {% if o.aiguillage %}
+                                <dt>Règle d’appel</dt>
+                                <dd class="kr-prose">{{ o.aiguillage }}</dd>
+                            {% endif %}
+
+                            <dt>Source</dt>
+                            <dd><code>{{ o.source }}</code></dd>
+                        </dl>
+                    </div>
+                </details>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+{% endblock %}

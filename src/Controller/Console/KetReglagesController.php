@@ -1,0 +1,90 @@
+<?php
+
+namespace App\Controller\Console;
+
+use App\Ai\Reglage\CatalogueDesReglages;
+use App\Ai\Reglage\Classe;
+use App\Repository\EntrepriseRepository;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Translation\LocaleSwitcher;
+
+/**
+ * CE QUE KET SAIT FAIRE, ET CE QUE CELA COÛTE — en lecture seule.
+ *
+ * ── POURQUOI CET ÉCRAN EXISTE ───────────────────────────────────────────────
+ * Cinquante-trois outils partent au fournisseur à chaque tour, et personne dans
+ * l'équipe ne disposait de leur liste ailleurs que dans le code. Le support répond
+ * pourtant tous les jours à « Ket sait-elle faire X ? », et le commercial construit
+ * son argumentaire sur la réponse. Aller la chercher dans `src/Ai/Tool` n'est pas un
+ * chemin praticable pour eux.
+ *
+ * ── ROLE_ADMIN, ET NON SUPER-ADMIN — À LA DIFFÉRENCE DES FOURNISSEURS ───────
+ * L'écran voisin (`console.ket.fournisseurs`) décide de ce que la plateforme DÉPENSE :
+ * il est super-admin. Celui-ci ne fait que LIRE, et ce qu'il montre est le catalogue
+ * du produit — aucune donnée de cabinet, aucun chiffre d'affaires, aucun secret. Le
+ * fermer au support reviendrait à lui demander de deviner.
+ *
+ * Le filtrage par département (ConsoleAccessSubscriber) reste au-dessus : seuls la
+ * Direction, le Commercial et la Relation client portent le préfixe
+ * `console.ket.reglages.` dans leur périmètre. Finance et RH n'ont rien à y faire.
+ *
+ * ── CE QU'IL NE FAIT PAS ENCORE ─────────────────────────────────────────────
+ * Aucune écriture. Les interrupteurs arrivent au lot suivant, et les trois familles
+ * de règles (code, restitution, boussole) au dernier — leur numérotation n'étant pas
+ * encore arrêtée, les afficher maintenant reviendrait à graver un identifiant que
+ * l'on changerait ensuite.
+ */
+#[Route('/console/ket/reglages', name: 'console.ket.reglages.')]
+#[IsGranted('ROLE_ADMIN')]
+class KetReglagesController extends AbstractConsoleController
+{
+    public function __construct(
+        private CatalogueDesReglages $catalogue,
+        private EntrepriseRepository $entrepriseRepository,
+    ) {
+    }
+
+    #[Route('', name: 'index', methods: ['GET'])]
+    public function index(Request $request, LocaleSwitcher $localeSwitcher): Response
+    {
+        $this->applyLangPreference($request, $localeSwitcher);
+
+        $outils = $this->catalogue->outils();
+        $classe = $request->query->get('classe');
+        $recherche = trim((string) $request->query->get('q'));
+
+        // FILTRES EN PHP, ET C'EST ASSUMÉ. Cinquante-trois lignes tiennent en mémoire
+        // et viennent du conteneur, pas de la base : une requête paginée coûterait un
+        // aller-retour serveur pour trier ce que l'on a déjà entièrement sous la main.
+        $filtres = array_filter($outils, static function (array $o) use ($classe, $recherche): bool {
+            if ($classe !== null && $classe !== '' && $o['classe']->value !== $classe) {
+                return false;
+            }
+            if ($recherche === '') {
+                return true;
+            }
+
+            $foin = mb_strtolower($o['libelle'] . ' ' . $o['nom'] . ' ' . $o['resume']);
+
+            return str_contains($foin, mb_strtolower($recherche));
+        });
+
+        $cabinets = $this->entrepriseRepository->countAllGlobal();
+
+        return $this->render('console/ket_reglages/index.html.twig', [
+            'pageName'      => 'Réglages de Ket',
+            'pageIcon'      => 'assistant-ia-parametres',
+            'outils'        => array_values($filtres),
+            'total'         => \count($outils),
+            'classes'       => Classe::cases(),
+            'classeActive'  => $classe,
+            'recherche'     => $recherche,
+            'poids'         => $this->catalogue->poidsDesTrousses(),
+            'cabinets'      => $cabinets,
+            'cabinetsAvecKet' => $this->entrepriseRepository->countAvecSoldePayant(),
+        ]);
+    }
+}
