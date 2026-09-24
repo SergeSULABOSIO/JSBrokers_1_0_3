@@ -33,7 +33,7 @@ use App\Services\Search\CongeStatutScope;
  * rubrique. Demander le solde d'un collègue lui est refusé — les données de congé sont
  * des données personnelles.
  */
-final class CongesTool implements AiToolInterface
+final class CongesTool implements AiToolInterface, AiToolConditionnel
 {
     /** Nombre de demandes rendues par section : au-delà, on noie la réponse. */
     private const MAX_LIGNES = 15;
@@ -106,6 +106,22 @@ final class CongesTool implements AiToolInterface
         }
 
         return null;
+    }
+
+    /**
+     * DÉCLARÉ SEULEMENT SI L’INVITÉ PEUT LIRE LES CONGÉS.
+     *
+     * execute() refuse déjà sans ce droit : sans cette porte, l’outil partait à chaque
+     * tour pour ne jamais pouvoir répondre autre chose qu’un hors-périmètre. Son frère
+     * d’écriture (preparer_demande_conge) posait la condition depuis le début ; la
+     * lecture ne l’avait pas, et un cabinet sans module de congés payait les deux.
+     *
+     * La condition est MOT POUR MOT celle d’execute() : les deux doivent dire la même
+     * chose, sinon on présente un outil qu’on refusera ensuite.
+     */
+    public function estDisponible(AiScope $scope): bool
+    {
+        return $this->accessResolver->canRead($scope->invite, 'DemandeConge');
     }
 
     public function execute(array $args, AiScope $scope): AiToolResult

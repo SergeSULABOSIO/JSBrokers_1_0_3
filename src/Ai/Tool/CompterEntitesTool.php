@@ -44,7 +44,7 @@ final class CompterEntitesTool implements AiToolInterface, AiToolDeComprehension
         return "Compte le nombre d'enregistrements d'une catégorie de données de l'entreprise "
             . '(clients, avenants, pistes, notes, sinistres…). À appeler quand l’utilisateur '
             . 'demande « combien de … » ou « le nombre de … ». Les paramètres echeance (Avenant), '
-            . 'statutPaiement (Tranche), validation (Cotation) et transformation (Piste) '
+            . 'axes (Tranche), validation (Cotation) et transformation (Piste) '
             . 'appliquent EXACTEMENT les mêmes règles que les filtres rapides de ces rubriques : à '
             . 'utiliser dès que la question porte sur une fenêtre d’échéance (« combien d’avenants '
             . 'échoient dans les 30 jours ? »), un statut de paiement (« combien de tranches '
