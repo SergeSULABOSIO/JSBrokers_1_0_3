@@ -3,6 +3,7 @@
 namespace App\Tests\Console;
 
 use App\Entity\Utilisateur;
+use App\Enum\Departement;
 use App\Token\ParametresTokenService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -43,6 +44,15 @@ class ConsoleAccessTest extends WebTestCase
             $u->setNom('PHPUnit ' . $email);
             $u->setVerified(true);
             $u->setRoles($r);
+            // L'AGENT DE RÉFÉRENCE EST AFFECTÉ, et c'est désormais indispensable.
+            // Un compte sans département n'a plus la console entière (cf.
+            // ConsoleAccessResolver) : sans cette ligne, les assertions ci-dessous
+            // testeraient un fail-open qui n'existe plus. La Direction Générale est
+            // le département dont le périmètre vaut « toute la console », donc celui
+            // qui préserve exactement ce que ces tests voulaient dire.
+            if ($email === self::ADMIN) {
+                $u->setDepartement(Departement::DIRECTION);
+            }
             $u->setPassword($hasher->hashPassword($u, self::PASSWORD));
             $em->persist($u);
         }
@@ -136,6 +146,45 @@ class ConsoleAccessTest extends WebTestCase
                 $crawler->filter('.cs-head .cs-head-title .cs-head-icon svg')->count(),
                 sprintf('La pastille d\'icône doit être présente devant le titre de %s.', $url)
             );
+        }
+    }
+
+    /**
+     * UN AGENT NON AFFECTÉ N'A PLUS TOUTE LA CONSOLE.
+     *
+     * La politique était « fail-open jusqu'à affectation » : le compte le moins
+     * renseigné était le plus puissant. Il ne garde désormais que les routes
+     * toujours ouvertes — son tableau de bord, l'organigramme, sa propre fiche
+     * d'évaluation —, de quoi se connecter et demander son rattachement.
+     */
+    public function testAgentSansDepartementNAPlusQueLesRoutesToujoursOuvertes(): void
+    {
+        $agent = $this->user(self::ADMIN);
+        $agent->setDepartement(null);
+        $this->em()->flush();
+
+        $this->client->loginUser($agent);
+
+        foreach (['/console', '/console/departements'] as $url) {
+            $this->client->request('GET', $url);
+            $this->assertResponseIsSuccessful(sprintf(
+                'La page %s doit rester ouverte à un agent non affecté.',
+                $url
+            ));
+        }
+
+        foreach ([
+            '/console/utilisateurs',
+            '/console/entreprises',
+            '/console/ventes',
+            '/console/taxes',
+            '/console/depenses',
+        ] as $url) {
+            $this->client->request('GET', $url);
+            $this->assertResponseStatusCodeSame(403, sprintf(
+                'La page %s ne doit plus être atteignable par un agent sans département.',
+                $url
+            ));
         }
     }
 

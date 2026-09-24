@@ -9,11 +9,21 @@ use App\Entity\Utilisateur;
  * @description Source unique de la restriction par département (réutilisée par le
  * ConsoleAccessSubscriber pour le blocage serveur et par ConsoleAccessExtension pour
  * filtrer la navigation — DRY). Le super-admin et la Direction Générale ont un accès
- * complet. Politique de déploiement « fail-open jusqu'à affectation » : un
- * collaborateur SANS département conserve l'accès complet (comportement historique) ;
- * la restriction ne s'applique qu'une fois un département assigné. Cela évite tout
- * verrouillage pour un nouveau compte non encore rattaché — le super-admin restreint
- * en attribuant explicitement un département.
+ * complet.
+ *
+ * ── UN COMPTE SANS DÉPARTEMENT N'A PLUS TOUT ────────────────────────────────
+ * La politique était « fail-open jusqu'à affectation » : un collaborateur SANS
+ * département gardait l'accès COMPLET — finances, fiscalité, CRM, entreprises,
+ * clients, supervision —, la restriction ne commençant qu'une fois un département
+ * assigné. L'intention était d'éviter le verrouillage d'un compte neuf ; l'effet
+ * était l'inverse de celui d'un garde-fou : l'état par défaut, celui qu'on obtient
+ * en oubliant un champ, était le plus permissif de tous.
+ *
+ * Il est désormais le plus étroit. Un agent non affecté garde les routes
+ * ALWAYS_ALLOWED ci-dessous — son tableau de bord, l'organigramme et sa propre
+ * fiche d'évaluation —, de quoi se connecter, se situer et demander son
+ * rattachement. Le super-admin ouvre le reste en posant un département, ce qui est
+ * de toute façon le geste qu'il fait déjà.
  */
 class ConsoleAccessResolver
 {
@@ -24,16 +34,14 @@ class ConsoleAccessResolver
      */
     private const ALWAYS_ALLOWED = ['console.dashboard', 'console.departement.index', 'console.evaluation.mine'];
 
-    /** Accès complet : super-admin, non affecté (pas encore restreint), ou Direction. */
+    /** Accès complet : super-admin, ou Direction Générale. */
     public function isAllAccess(Utilisateur $user): bool
     {
         if (in_array('ROLE_SUPER_ADMIN', $user->getRoles(), true)) {
             return true;
         }
 
-        $departement = $user->getDepartement();
-
-        return $departement === null || $departement->grantsAll();
+        return $user->getDepartement()?->grantsAll() === true;
     }
 
     /**

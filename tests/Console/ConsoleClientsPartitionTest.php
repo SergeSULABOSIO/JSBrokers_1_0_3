@@ -3,6 +3,7 @@
 namespace App\Tests\Console;
 
 use App\Entity\Utilisateur;
+use App\Enum\Departement;
 use App\Services\ConsoleStatsProvider;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -48,6 +49,8 @@ class ConsoleClientsPartitionTest extends WebTestCase
             $u->setVerified(true);
             $u->setLocale('fr');
             $u->setRoles($spec['roles']);
+            // Idem : un agent non affecté ne verrait plus la rubrique Clients.
+            $u->setDepartement($spec['roles'] === [] ? null : Departement::DIRECTION);
             $u->setPaidTokens($spec['paid']);
             $u->setPassword($hasher->hashPassword($u, self::PASSWORD));
             $em->persist($u);

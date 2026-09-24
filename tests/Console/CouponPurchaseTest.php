@@ -5,6 +5,7 @@ namespace App\Tests\Console;
 use App\Entity\Coupon;
 use App\Entity\TokenPurchase;
 use App\Entity\Utilisateur;
+use App\Enum\Departement;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -44,6 +45,10 @@ class CouponPurchaseTest extends WebTestCase
         $admin->setNom('PHPUnit Coupon Admin');
         $admin->setVerified(true);
         $admin->setRoles(['ROLE_ADMIN']);
+        // L'agent doit désormais être AFFECTÉ pour atteindre une rubrique : le
+        // fail-open « sans département = accès complet » est fermé
+        // (ConsoleAccessResolver). DIRECTION = périmètre « toute la console ».
+        $admin->setDepartement(Departement::DIRECTION);
         $admin->setPassword($hasher->hashPassword($admin, self::PASSWORD));
         $em->persist($admin);
 

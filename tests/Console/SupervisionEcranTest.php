@@ -4,6 +4,7 @@ namespace App\Tests\Console;
 
 use App\Entity\ErreurApplicative;
 use App\Entity\Utilisateur;
+use App\Enum\Departement;
 use App\Supervision\EnregistreurDErreurs;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -53,6 +54,9 @@ final class SupervisionEcranTest extends WebTestCase
                 ->setNom('PHPUnit ' . $email)
                 ->setVerified(true)
                 ->setRoles($roles)
+                // Un agent doit désormais être AFFECTÉ pour voir autre chose que son
+                // tableau de bord (fail-open fermé dans ConsoleAccessResolver).
+                ->setDepartement($roles === [] ? null : Departement::DIRECTION)
                 ->setPassword($hasher->hashPassword($compte, self::PASSWORD));
             $em->persist($compte);
         }

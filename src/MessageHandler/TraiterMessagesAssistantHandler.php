@@ -2,6 +2,7 @@
 
 namespace App\MessageHandler;
 
+use App\Ai\Acces\PorteDeKet;
 use App\Ai\Telemetrie\JournalTokens;
 use App\Ai\Traitement\IdentiteDuTraitement;
 use App\Ai\Traitement\TraitementDuMessage;
@@ -44,6 +45,7 @@ final class TraiterMessagesAssistantHandler
         private readonly AssistantConversationRepository $conversations,
         private readonly VerrouDeConversation $verrou,
         private readonly IdentiteDuTraitement $identite,
+        private readonly PorteDeKet $porte,
         private readonly TraitementDuMessage $traitement,
         private readonly JournalTokens $journalTokens,
         private readonly MessageBusInterface $bus,
@@ -100,6 +102,36 @@ final class TraiterMessagesAssistantHandler
             ]);
             $this->em->remove($tache);
             $this->em->flush();
+
+            return;
+        }
+
+        // LA PORTE PEUT S'ÊTRE REFERMÉE PENDANT L'ATTENTE.
+        //
+        // Les gardes vivent à l'ACCEPTATION (AssistantIaController : module, premium,
+        // métrage), et c'est la bonne place — c'est elle qui doit rendre 402 ou 403,
+        // tout de suite. Mais entre le dépôt en file et le drainage, il s'écoule un
+        // temps pendant lequel le solde payant peut tomber à zéro, ou le propriétaire
+        // retirer à cet invité le module « Assistant IA ». Rien ne le rattrapait :
+        // la protection était au DÉPÔT, pas au traitement, et tenait donc entièrement
+        // au fait que `sendMessage()` reste à jamais le seul émetteur de ce message.
+        //
+        // C'est une dépendance à qui appelle, ce que B11 refuse partout ailleurs. On
+        // revérifie donc ici, et l'on ÉCHOUE la tâche plutôt que de la jeter en
+        // silence : l'utilisateur a vu sa question partir, il doit savoir pourquoi
+        // elle n'a pas de réponse.
+        $motif = $this->porte->motifDeFermeture($conversation->getInvite(), $conversation->getEntreprise());
+        if ($motif !== null) {
+            $this->logger->info('Assistant IA : accès refermé pendant l’attente, tâche abandonnée.', [
+                'tache' => $tache->getId(),
+                'motif' => $motif,
+            ]);
+            $this->marquerEchouee($tache, new \RuntimeException(
+                $motif === PorteDeKet::MOTIF_PREMIUM
+                    ? "L'assistant IA est réservé aux comptes disposant d'un solde de tokens payant. "
+                        . 'Rechargez votre solde, puis renvoyez votre question.'
+                    : "Vous n'avez plus accès à l'assistant IA sur cet espace de travail."
+            ));
 
             return;
         }

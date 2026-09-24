@@ -448,11 +448,27 @@ class AssistantIaController extends AbstractController
         ]);
     }
 
-    /** Renomme une conversation de l'invité. */
+    /**
+     * Renomme une conversation de l'invité.
+     *
+     * LES DEUX GARDES, COMME PARTOUT AILLEURS. Cette route et sa voisine
+     * `deleteConversation` étaient les deux seules du contrôleur à ne porter ni le
+     * module ni le premium : seul `requireConversation()` les protégeait, c'est-à-dire
+     * la seule propriété de la conversation. Un invité à qui l'on venait de retirer le
+     * module « Assistant IA », ou dont le cabinet n'avait plus de solde payant, pouvait
+     * donc encore renommer et SUPPRIMER ses fils. Une porte fermée n'a pas à laisser
+     * passer le ménage.
+     */
     #[Route('/api/conversations/{idEntreprise}/{idConversation}', name: 'api.conversation.rename', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS], methods: ['PATCH'])]
     public function renameConversation(int $idEntreprise, int $idConversation, Request $request): JsonResponse
     {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        if ($blocage = $this->blocagePremium($entreprise)) {
+            return $blocage;
+        }
         $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
 
         $payload = json_decode($request->getContent(), true) ?: [];
@@ -469,11 +485,17 @@ class AssistantIaController extends AbstractController
         return $this->json(['success' => true, 'titre' => $conversation->libelle()]);
     }
 
-    /** Supprime une conversation de l'invité (messages en cascade). */
+    /** Supprime une conversation de l'invité (messages en cascade) — mêmes gardes que le renommage. */
     #[Route('/api/conversations/{idEntreprise}/{idConversation}', name: 'api.conversation.delete', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS], methods: ['DELETE'])]
     public function deleteConversation(int $idEntreprise, int $idConversation): JsonResponse
     {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        if ($blocage = $this->blocagePremium($entreprise)) {
+            return $blocage;
+        }
         $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
 
         // Suppression en UNE requête SQL : la FK ON DELETE CASCADE de la base

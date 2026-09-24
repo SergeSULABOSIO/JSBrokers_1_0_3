@@ -626,4 +626,53 @@ class AssistantRafaleTest extends WebTestCase
         self::assertNull($this->taches()->prochaineEnAttente($conversation));
         self::assertCount(2, $this->fil($conversation));
     }
+
+    /**
+     * LA PORTE PEUT SE REFERMER PENDANT QUE LA QUESTION ATTEND.
+     *
+     * Les gardes de Ket — module et solde payant — vivent à l'ACCEPTATION, et
+     * c'est leur place : c'est là qu'un 402 ou un 403 a du sens. Mais entre le
+     * dépôt en file et le drainage il s'écoule un temps, et le worker, lui, ne
+     * revérifiait RIEN. La protection tenait donc entièrement au fait que
+     * `sendMessage()` reste à jamais le seul émetteur de ce message — une
+     * dépendance à QUI APPELLE, ce que le projet refuse partout ailleurs (la
+     * sécurité vit dans l'outil, pas dans l'appelant).
+     *
+     * Ici, le solde payant tombe à zéro APRÈS l'acceptation. La question ne doit
+     * pas être traitée — et pas davantage disparaître en silence : l'utilisateur
+     * a vu sa bulle partir, la tâche échoue donc avec un motif lisible.
+     */
+    public function testLaQuestionNEstPasTraiteeSiLAccesSeReferemePendantLAttente(): void
+    {
+        $seed = $this->seed();
+        $conversation = $this->conversation($seed);
+        $this->envoyer($seed['entreprise'], $conversation, 'Question acceptée quand tout allait bien.');
+
+        // Le solde payant s'épuise pendant que la question patiente en file.
+        $em = $this->em();
+        $proprietaire = $em->getRepository(Utilisateur::class)->findOneBy(['email' => self::OWNER_EMAIL]);
+        $proprietaire->setPaidTokens(0);
+        $em->flush();
+        $em->clear();
+
+        $this->drainer($conversation);
+
+        $taches = $this->tachesDe($conversation);
+        self::assertCount(1, $taches);
+        self::assertSame(
+            AssistantTache::STATUT_ECHOUEE,
+            $taches[0]->getStatut(),
+            'Une question dont le compte a perdu son solde payant ne doit pas être traitée par le worker.'
+        );
+        self::assertStringContainsString(
+            'solde de tokens payant',
+            (string) $taches[0]->getErreur(),
+            'Le motif doit nommer la cause : sans lui, la bulle reste sans explication.'
+        );
+        self::assertCount(
+            0,
+            $this->fil($conversation),
+            'Ni la question ni la réponse ne doivent entrer dans le fil : le moteur n’a pas tourné.'
+        );
+    }
 }

@@ -91,15 +91,33 @@ class DepartementRoleTest extends WebTestCase
         return $this->em()->getRepository(Utilisateur::class)->findOneBy(['email' => $email]);
     }
 
-    /** Non affecté : accès complet conservé (fail-open jusqu'à affectation). */
-    public function testUnassignedAgentKeepsFullAccess(): void
+    /**
+     * NON AFFECTÉ : LE PÉRIMÈTRE LE PLUS ÉTROIT, ET NON PLUS LE PLUS LARGE.
+     *
+     * Ce test disait l'inverse : « fail-open jusqu'à affectation », un agent sans
+     * département gardant la console entière. L'intention était d'éviter de
+     * verrouiller un compte neuf ; l'effet était qu'un champ oublié produisait le
+     * compte le plus puissant de la plateforme — finances, fiscalité, CRM,
+     * entreprises, clients, supervision.
+     *
+     * Il ne garde désormais que les routes toujours ouvertes (tableau de bord,
+     * organigramme, sa propre évaluation) : de quoi se connecter, se situer et
+     * demander son rattachement. Le super-administrateur ouvre le reste en posant
+     * un département, ce qu'il fait de toute façon.
+     */
+    public function testUnassignedAgentIsRestrictedToAlwaysAllowedRoutes(): void
     {
         $this->client->loginUser($this->user(self::LIBRE));
 
+        $this->client->request('GET', '/console');
+        $this->assertResponseIsSuccessful('Le tableau de bord reste ouvert : sans lui, le compte serait muré.');
+        $this->client->request('GET', '/console/departements');
+        $this->assertResponseIsSuccessful("L'organigramme reste ouvert : c'est par lui qu'on demande son rattachement.");
+
         $this->client->request('GET', '/console/taxes');
-        $this->assertResponseIsSuccessful();
+        $this->assertResponseStatusCodeSame(403, 'La fiscalité ne doit plus être ouverte à un agent non affecté.');
         $this->client->request('GET', '/console/crm');
-        $this->assertResponseIsSuccessful();
+        $this->assertResponseStatusCodeSame(403, 'Le CRM ne doit plus être ouvert à un agent non affecté.');
     }
 
     /** Finance : accède à son périmètre, bloqué ailleurs (403). */

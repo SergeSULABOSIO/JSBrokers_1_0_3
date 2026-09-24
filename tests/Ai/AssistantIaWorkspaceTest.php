@@ -550,6 +550,39 @@ class AssistantIaWorkspaceTest extends WebTestCase
         );
     }
 
+    /**
+     * LE MÉNAGE AUSSI PASSE PAR LA PORTE.
+     *
+     * `renameConversation` et `deleteConversation` étaient les deux seules routes
+     * du contrôleur à ne porter ni le module ni le premium : seule la propriété de
+     * la conversation les protégeait. Un invité dont le cabinet n'a plus de solde
+     * payant — ou à qui l'on vient de retirer le module — pouvait donc encore
+     * renommer et SUPPRIMER ses fils, c'est-à-dire agir sur une fonctionnalité
+     * qu'on lui refuse par ailleurs.
+     */
+    public function testRenommerEtSupprimerUneConversationPassentAussiParLaPorte(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed(comptePayant: false);
+        $conversation = $this->makeConversation($e, $guest, 'Titre d’origine');
+        $idConversation = (int) $conversation->getId();
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $url = sprintf('/admin/assistant-ia/api/conversations/%d/%d', $e->getId(), $idConversation);
+
+        $this->client->request('PATCH', $url, [], [], ['CONTENT_TYPE' => 'application/json'], json_encode(['titre' => 'Renommée en fraude']));
+        $this->assertResponseStatusCodeSame(402, 'Le renommage doit être refusé comme l’envoi de message.');
+        $this->assertTrue($this->jsonResponse()['premium']);
+
+        $this->client->request('DELETE', $url);
+        $this->assertResponseStatusCodeSame(402, 'La suppression doit être refusée comme l’envoi de message.');
+
+        // Et rien n'a bougé en base : ni le titre, ni l'existence de la conversation.
+        $this->em()->clear();
+        $relue = $this->em()->getRepository(AssistantConversation::class)->find($idConversation);
+        $this->assertNotNull($relue, 'La conversation a été supprimée malgré le refus.');
+        $this->assertSame('Titre d’origine', $relue->getTitre(), 'Le titre a changé malgré le refus.');
+    }
+
     public function testMenuProprietaireContientParametresIa(): void
     {
         ['owner' => $owner, 'entreprise' => $e] = $this->seed();
