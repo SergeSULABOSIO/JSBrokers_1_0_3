@@ -53,6 +53,26 @@ final class DialecteGeminiDuFil implements DialecteDuFil
      */
     private string $modeleCourant;
 
+    /**
+     * LA RÉDACTION PEUT AVOIR SON PROPRE MODÈLE, et c'est le meilleur rapport
+     * qualité/coût du chantier.
+     *
+     * Mesuré sur la campagne au 2026-09-25 : la planification pèse 83,9 % des jetons
+     * d'entrée, la rédaction 9,8 %. Or c'est la rédaction, et elle seule, qui écrit
+     * le texte que l'utilisateur lit. Payer un modèle plus capable sur un dixième du
+     * volume pour améliorer la totalité de ce qui est lu est un marché qu'on ne
+     * refuse pas.
+     *
+     * ET LE QUOTA SUIT. Google tient sa fenêtre PAR MODÈLE : les trois phases
+     * partageaient jusqu'ici un seul compteur de 250 000 jetons/minute — trois
+     * messages suffisaient à le saturer. Chaque phase déplacée arrive avec sa propre
+     * fenêtre. C'est la même raison qui justifie un modèle distinct pour la
+     * compréhension, et le .env le dit depuis l'origine.
+     *
+     * Vide = aucun modèle dédié, et tout se passe exactement comme avant.
+     */
+    private bool $redactionAbandonnee = false;
+
     /** @var string[] modèles de secours pas encore essayés, dans l'ordre */
     private array $replisRestants;
 
@@ -79,6 +99,16 @@ final class DialecteGeminiDuFil implements DialecteDuFil
         // comporte exactement comme avant, et les harnais qui le construisent à la main
         // n'ont rien à changer. Il ne sert qu'à COMPTER les bascules de secours.
         private readonly ?JournalTokens $journal = null,
+        /**
+         * LE MODÈLE DÉDIÉ À LA RÉDACTION, relu à chaque appel. Rend '' quand il n'y
+         * en a pas, et tout se passe alors exactement comme avant.
+         *
+         * ⚠ EN DERNIER ET FACULTATIF, comme les quatre paramètres ci-dessus. Posé au
+         * milieu, il s'était interverti avec la chaîne de secours — qui recevait la
+         * fermeture de la rédaction, donc une liste vide : les replis disparaissaient
+         * en silence, et trois tests l'ont dit aussitôt (2026-09-25).
+         */
+        private readonly ?\Closure $modeleDeRedaction = null,
     ) {
         $this->accorderAuReglage();
     }
@@ -118,6 +148,9 @@ final class DialecteGeminiDuFil implements DialecteDuFil
 
         $this->modeleRegle = $configure;
         $this->modeleCourant = $configure;
+        // Nouveau réglage, nouvelle chance pour le modèle dédié : on ne traîne pas
+        // d'un message à l'autre l'abandon décidé au précédent.
+        $this->redactionAbandonnee = false;
         $this->replisRestants = array_values(array_filter(
             array_map('trim', explode(',', (string) ($this->replisConfigures)())),
             static fn (string $m): bool => $m !== '' && $m !== $configure,
@@ -131,13 +164,36 @@ final class DialecteGeminiDuFil implements DialecteDuFil
     }
 
     /**
+     * LE MODÈLE DE CETTE PHASE-CI — celui du moteur, sauf pour la rédaction quand on
+     * lui en a donné un.
+     *
+     * ⚠ UN MODÈLE DÉDIÉ QUI TOMBE EST ABANDONNÉ POUR LE MESSAGE. Sans cette mémoire,
+     * la bascule de secours le rappellerait à chaque essai : elle change
+     * `modeleCourant`, mais cette méthode-ci rendrait toujours le même modèle dédié,
+     * et la boucle tournerait sur l'échec certain.
+     */
+    private function modelePour(Phase $phase): string
+    {
+        if ($phase !== Phase::REDACTION || $this->redactionAbandonnee) {
+            return $this->modeleCourant;
+        }
+        $dedie = $this->modeleDeRedaction === null ? '' : trim((string) ($this->modeleDeRedaction)());
+
+        return $dedie === '' ? $this->modeleCourant : $dedie;
+    }
+
+    /**
      * Le compteur de débit de Google est tenu PAR MODÈLE : la clé est le nom du
      * modèle, tel quel. C'est aussi ce qui rend la bascule de secours utile — un
      * autre modèle arrive avec sa propre fenêtre.
+     *
+     * La phase compte, depuis qu'une d'elles peut avoir son propre modèle : sans
+     * elle, la rédaction ferait fermer la fenêtre de la planification, et la sienne
+     * s'épuiserait sans qu'on la voie venir.
      */
-    public function cleDeDebit(): string
+    public function cleDeDebit(?Phase $phase = null): string
     {
-        return $this->modeleCourant;
+        return $phase === null ? $this->modeleCourant : $this->modelePour($phase);
     }
 
     public function filInitial(AiRequest $request): array
@@ -204,6 +260,20 @@ final class DialecteGeminiDuFil implements DialecteDuFil
         try {
             return $this->call($request, $fil, $trousse, $phase);
         } catch (\Throwable $e) {
+            // LE MODÈLE DÉDIÉ À LA RÉDACTION TOMBE : on le lâche et on rend la main au
+            // modèle du moteur, qui vient de faire tout le travail de planification et
+            // qui répond donc certainement. Un seul essai, et seulement ici : le
+            // rattrapage général ci-dessous s'applique ensuite comme avant.
+            if (!$this->redactionAbandonnee && $this->modelePour($phase) !== $this->modeleCourant) {
+                $this->redactionAbandonnee = true;
+                $this->logger->warning('Assistant IA (gemini) : le modèle dédié à la rédaction n\'a pas répondu, retour au modèle du moteur.', [
+                    'abandonne' => $this->modeleDeRedaction === null ? '' : ($this->modeleDeRedaction)(),
+                    'pris'      => $this->modeleCourant,
+                    'details'   => AiEngineFailure::detailsPourJournal($e),
+                ]);
+
+                return $this->appeler($request, $fil, $trousse, $phase);
+            }
             // ⚠ LE 503 NE SE SOIGNE PAS EN ATTENDANT. Il dit que le modèle est débordé
             // chez Google, pas que nous avons trop consommé : le fournisseur n'annonce
             // aucun délai, et l'attente n'a rien de prévisible. On change de modèle.
@@ -379,7 +449,7 @@ final class DialecteGeminiDuFil implements DialecteDuFil
             $this->logger->warning('Assistant IA : texte non UTF-8 réparé avant l\'envoi au modèle.', ['chemins' => $repares]);
         }
 
-        $response = $this->httpClient->request('POST', sprintf('%s/%s:generateContent', self::API_BASE, $this->modeleCourant), [
+        $response = $this->httpClient->request('POST', sprintf('%s/%s:generateContent', self::API_BASE, $this->modelePour($phase)), [
             'headers' => [
                 'x-goog-api-key' => $this->apiKey,
                 'content-type'   => 'application/json',
