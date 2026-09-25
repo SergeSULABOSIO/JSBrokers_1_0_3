@@ -132,7 +132,7 @@ final class AppelAnthropic implements FournisseurDeComprehension, FournisseurAMo
 
         $resultats = [];
         foreach ($aChercher as $appel) {
-            $resultat = $this->executeur->executer($appel['nom'], $appel['args'], $request->scope);
+            $resultat = $this->executeur->executer($appel['nom'], $appel['args'], $request->scope, Trousse::COMPREHENSION);
             $resultats[] = [
                 'type'        => 'tool_result',
                 'tool_use_id' => $appel['id'],

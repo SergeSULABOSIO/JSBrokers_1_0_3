@@ -4,6 +4,10 @@ namespace App\Ai\Tool;
 
 use App\Ai\Reglage\ReglagesDeKet;
 use App\Ai\Scope\AiScope;
+use App\Ai\Trousse\Trousse;
+use App\Ai\Trousse\TrousseCatalogue;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
@@ -29,6 +33,14 @@ final class ExecuteurDOutils
         #[AutowireIterator('app.ai_tool')] iterable $outils,
         /** Facultatif pour les tests unitaires — cf. TrousseCatalogue, même raison. */
         private readonly ?ReglagesDeKet $reglages = null,
+        /**
+         * Pour le RATTRAPAGE D'UN NOM ÉCORCHÉ : lui seul sait quels outils sont
+         * réellement déclarés au tour en cours, et c'est cette liste — pas un
+         * jugement porté ici — qui tient la frontière lecture/écriture.
+         */
+        private readonly ?TrousseCatalogue $catalogue = null,
+        /** Chaque rattrapage laisse une trace : on doit pouvoir vérifier qu'aucun n'abuse. */
+        private readonly LoggerInterface $logger = new NullLogger(),
     ) {
         $this->outils = $outils;
     }
@@ -36,7 +48,7 @@ final class ExecuteurDOutils
     /**
      * @param array<string, mixed> $args
      */
-    public function executer(string $nom, array $args, AiScope $scope): AiToolResult
+    public function executer(string $nom, array $args, AiScope $scope, ?Trousse $trousse = null): AiToolResult
     {
         // COUPÉ EN CONSOLE = INTROUVABLE, et c'est la bonne réponse.
         //
@@ -53,6 +65,37 @@ final class ExecuteurDOutils
 
         foreach ($this->outils as $outil) {
             if ($outil->name() === $nom) {
+                return $outil->execute($args, $scope);
+            }
+        }
+
+        // UN NOM ÉCORCHÉ COÛTAIT UN TOUR ENTIER. Mesuré au 2026-09-25 : 10 appels sur
+        // 188 (5,3 %) visaient un nom inexistant, tous quasi-homonymes du vrai —
+        // `analyser_portefeuille` pour `analyse_portefeuille`, `rechercher_entite` au
+        // singulier, `consultar_guide` en espagnol. Chacun rendait « introuvable », et
+        // le modèle devait repartir pour un tour de quarante mille jetons d'entrée.
+        //
+        // La correction ne devine rien : elle ne cherche que parmi les outils DÉCLARÉS
+        // à ce tour-là, et seulement si le plus proche est seul et à deux caractères
+        // près (cf. RattrapageDeNom). Sans trousse — appelant qui ne la connaît pas —,
+        // aucun rattrapage : on ne sait pas ce qui était déclaré, donc on ne touche à rien.
+        $vise = $trousse !== null && $this->catalogue !== null
+            ? RattrapageDeNom::leProche($nom, $this->catalogue->nomsDe($trousse, $scope))
+            : null;
+
+        if ($vise !== null) {
+            foreach ($this->outils as $outil) {
+                if ($outil->name() !== $vise) {
+                    continue;
+                }
+                // JOURNALISÉ SANS EXCEPTION : un rattrapage est une décision prise à la
+                // place du modèle, et rien ne doit permettre d'en douter après coup.
+                $this->logger->info('Assistant IA : nom d\'outil rattrapé.', [
+                    'demande' => $nom,
+                    'execute' => $vise,
+                    'trousse' => $trousse->libelle(),
+                ]);
+
                 return $outil->execute($args, $scope);
             }
         }

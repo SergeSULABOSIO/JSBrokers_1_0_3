@@ -587,7 +587,7 @@ final class OrchestrateurDeMessage
             $resultatsDuTour = [];
             foreach ($appels as $appel) {
                 $nom = $appel['nom'];
-                $result = $this->executeur->executer($nom, $appel['args'], $request->scope);
+                $result = $this->executeur->executer($nom, $appel['args'], $request->scope, $trousse);
                 $toolUsed = $nom;
                 $sequenceOutils[] = $nom;
                 // L'ACTION D'INTERFACE VOYAGE AVEC LE RÉSULTAT : quand un outil ne
