@@ -43,6 +43,17 @@ interface AppelDeComprehension extends Fournisseur
     public function modele(): string;
 
     /**
+     * Le modèle qui a RÉELLEMENT répondu au dernier appel — à distinguer de
+     * {@see modele()}, qui rend celui qu'on a demandé.
+     *
+     * Les deux diffèrent dès qu'un secours a pris le relais, et le journal doit dire
+     * le second, jamais le premier : nommer un modèle qui n'a pas parlé, c'est
+     * exactement le défaut corrigé le 2026-09-24 sur le bandeau des coulisses.
+     * Avant tout appel, rend le modèle demandé — il n'y a rien d'autre à dire.
+     */
+    public function modeleAyantRepondu(): string;
+
+    /**
      * La clé du compteur de débit de CE modèle.
      *
      * Elle ne se déduit pas du nom du modèle : Gemini compte un quota unique de
