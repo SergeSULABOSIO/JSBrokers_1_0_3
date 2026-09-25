@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { creerDetecteur, energie, FIN_MS, PLANCHER, SILENCE_NUMERIQUE, trameVivante } from '../../assets/controllers/ket-live-parole.js';
+import { creerDetecteur, energie, FIN_MS, momentDeVidange, PLANCHER, SILENCE_NUMERIQUE, trameVivante } from '../../assets/controllers/ket-live-parole.js';
 import { jalon, nouveauTour, resumeDuTour, totalDuTour } from '../../assets/controllers/ket-live-chrono.js';
 import { assembler, duree, encoderWav, reechantillonner, TAUX_OREILLE } from '../../assets/controllers/ket-live-wav.js';
 import { ENTETE_WAV } from '../../assets/controllers/assistant-voix-pcm.js';
@@ -185,6 +185,75 @@ test('une phrase interminable est transcrite sans attendre le silence', () => {
     assert.equal(d.pousser(0.4, t), 'debut');
     t += 2200;
     assert.equal(d.pousser(0.4, t), 'trop-long');
+});
+
+// ── Recouture d'une phrase hachée ────────────────────────────────────────────
+//
+// LE DÉFAUT QUE CES TESTS VERROUILLENT (2026-09-25). Chrome et Edge de bureau
+// tiennent leur session ouverte et rendent PLUSIEURS résultats définitifs au fil
+// d'une même phrase, un à chaque pause de diction. Le code ne recousait que si la
+// session s'était déjà refermée toute seule — la signature d'Android, qui n'arrive
+// JAMAIS sur un ordinateur. Chaque bout partait donc seul, comme une question
+// distincte, et Ket répondait au premier : « elle n'écoute pas ma phrase en
+// entièreté ».
+
+test('un morceau qui arrive alors qu’on parle encore attend la suite', () => {
+    assert.equal(momentDeVidange({ enCours: true }), 'plus-tard');
+});
+
+test('un morceau qui arrive après le silence part sans attendre', () => {
+    assert.equal(momentDeVidange({ enCours: false }), 'maintenant');
+});
+
+test('sans micro, seul le minuteur peut vidanger', () => {
+    // La permission du micro peut être refusée alors que la reconnaissance du
+    // navigateur, elle, fonctionne : on ne sait alors rien du silence.
+    assert.equal(momentDeVidange(null), 'minuteur');
+    assert.equal(momentDeVidange(undefined), 'minuteur');
+});
+
+test('une phrase dite en deux souffles se recoud, puis part au silence', () => {
+    // Le détecteur RÉEL, alimenté comme il le serait par le micro : c'est lui qui
+    // dit si l'utilisateur a fini, et c'est tout l'objet de la correction.
+    const d = creerDetecteur();
+    let t = 0;
+
+    // Premier souffle : « je voudrais la commission »
+    d.pousser(0.4, t);
+    t += 200;
+    assert.equal(d.pousser(0.4, t), 'debut');
+    t += 100;
+    d.pousser(0.4, t);
+    // Le navigateur rend son premier morceau : on parle ENCORE, donc on garde.
+    assert.equal(momentDeVidange(d.dernierePriseDeParole()), 'plus-tard',
+        'une pause de diction ne doit pas couper la phrase');
+
+    // Pause de diction, plus courte que le silence de fin : rien ne se ferme.
+    t += FIN_MS - 100;
+    assert.equal(d.pousser(0.0005, t), null, 'la pause est trop brève pour clore la phrase');
+    assert.equal(momentDeVidange(d.dernierePriseDeParole()), 'plus-tard');
+
+    // Second souffle : « sur la police de Marlette »
+    t += 100;
+    d.pousser(0.4, t);
+    t += 200;
+    d.pousser(0.4, t);
+
+    // Puis il se tait pour de bon.
+    t += 100;
+    d.pousser(0.0005, t);
+    t += FIN_MS + 50;
+    assert.equal(d.pousser(0.0005, t), 'fin');
+    assert.equal(momentDeVidange(d.dernierePriseDeParole()), 'maintenant',
+        'la phrase finie part tout de suite : aucune attente ajoutée');
+});
+
+test('les morceaux recousus forment UNE question, dans l’ordre dit', () => {
+    // Ce que le contrôleur remet à fusionnerTranscripts une fois la vidange décidée.
+    assert.equal(
+        fusionnerTranscripts(['je voudrais la commission', 'sur la police de Marlette']),
+        'je voudrais la commission sur la police de Marlette',
+    );
 });
 
 // ── WAV ──────────────────────────────────────────────────────────────────────

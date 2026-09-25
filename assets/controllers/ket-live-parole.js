@@ -17,6 +17,38 @@
  * Aucun micro, aucun DOM : testable sous `node --test tests/js/`.
  */
 
+/**
+ * QUAND FAIRE PARTIR CE QUI A ÉTÉ RECOUSU — la décision, seule et testable.
+ *
+ * La reconnaissance du navigateur ne rend pas une phrase, elle rend des MORCEAUX :
+ * sur Chrome et Edge de bureau, un résultat définitif tombe à chaque pause de
+ * diction, la session restant ouverte. Les envoyer au fil de l'eau, c'était poser
+ * une question par bout de phrase — « elle n'écoute pas ma phrase en entièreté ».
+ * On les garde donc, et il reste à savoir quand lâcher le paquet.
+ *
+ * C'EST LE MICRO QUI TRANCHE, PAS LA RECONNAISSANCE. Le détecteur ne clôt une prise
+ * de parole qu'après {@link FIN_MS} de silence : une prise CLOSE au moment où le
+ * texte arrive prouve que l'utilisateur s'est tu, et rien ne justifie de le faire
+ * attendre. Une prise encore OUVERTE prouve l'inverse — il enchaîne, on garde.
+ *
+ * ⚠ ON INTERROGE À L'ARRIVÉE DU TEXTE, jamais sur l'événement de fin. La
+ * reconnaissance rend toujours son texte APRÈS le son qui l'a produit : réagir à
+ * l'événement, ce serait courir après lui, et la course se perdrait tantôt d'un
+ * côté tantôt de l'autre. Lire l'état au bon moment supprime la course.
+ *
+ * SANS MICRO, rien de tout cela n'existe : la permission peut avoir été refusée (la
+ * reconnaissance du navigateur, elle, continue de fonctionner). On ne sait alors
+ * rien du silence, et seul un minuteur peut vidanger — c'est le sens de `minuteur`.
+ *
+ * @param {{enCours: boolean}|null} prise ce que rend `dernierePriseDeParole()`
+ * @returns {'maintenant'|'plus-tard'|'minuteur'}
+ */
+export function momentDeVidange(prise) {
+    if (prise === null || prise === undefined) return 'minuteur';
+
+    return prise.enCours === true ? 'plus-tard' : 'maintenant';
+}
+
 /** Durée de voix continue avant de déclarer que la phrase commence. */
 export const DEBUT_MS = 150;
 
