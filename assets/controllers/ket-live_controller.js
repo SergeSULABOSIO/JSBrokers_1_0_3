@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { creerDetecteur, energie, trameVivante } from './ket-live-parole.js';
+import { creerDetecteur, energie, momentDeVidange, trameVivante } from './ket-live-parole.js';
 import { assembler, duree, encoderWav, reechantillonner, TAUX_OREILLE } from './ket-live-wav.js';
 import { ETATS, libelleEtatLive, sessionInitiale, transition } from './ket-live-etat.js';
 import { choisir, programmeDesIntermedes } from './ket-live-intermedes.js';
@@ -659,6 +659,14 @@ export default class extends Controller {
         // COUPER Ket : le son n'est ni gardé ni envoyé, la reconnaissance a déjà le texte.
         if (this.session.oreille === 'navigateur') {
             if (evenement === 'debut' && ketParle) this._evenement('voix-detectee');
+            // LA PHRASE EST FINIE : ce qui attendait peut partir. C'est l'autre moitié
+            // de la vidange intelligente — _deposerLeTexte traite le texte arrivé APRÈS
+            // le silence, celle-ci traite le texte arrivé PENDANT qu'on parlait encore.
+            // « trop-long » compte aussi : le détecteur vient de clore la prise de
+            // parole, et plus rien d'autre ne viendra la fermer.
+            if ((evenement === 'fin' || evenement === 'trop-long') && !ketParle) {
+                this._envoyerLesMorceaux();
+            }
             // LE MICRO A ENTENDU UNE PHRASE ENTIÈRE, ET LA RECONNAISSANCE N'EN A RIEN
             // TIRÉ. Deux fois de suite, ce n'est plus un silence : c'est qu'elle n'a pas
             // le micro. On le lui laisse — quitte à perdre la détection d'interruption,
@@ -781,19 +789,35 @@ export default class extends Controller {
      * tenue ici sans rien demander au moteur.
      */
     _deposerLeTexte(texte) {
-        // ⚠ ON NE FAIT ATTENDRE PERSONNE SANS RAISON. Une oreille qui ne hache pas —
-        // celle d'un ordinateur, qui tient sa session ouverte — rend une phrase entière
-        // d'un coup : la retenir ajouterait REGROUPEMENT_MS à CHAQUE tour, et le harnais
-        // Live l'a mesuré (2104 ms au lieu de 1200). On n'attend donc que là où le
-        // hachage est PROUVÉ : la session s'est refermée toute seule (cf. _oreilleHachee).
-        if (this._oreilleHachee !== true) {
-            this._evenement('texte-entendu', { texte });
-
-            return;
-        }
         this._morceaux = [...(this._morceaux ?? []), texte];
         clearTimeout(this._regroupement);
-        this._regroupement = setTimeout(() => this._envoyerLesMorceaux(), this.constructor.REGROUPEMENT_MS);
+        this._regroupement = null;
+
+        // ⚠ ON N'ATTEND PLUS LA PREUVE DU HACHAGE — elle n'arrive jamais sur un
+        // ordinateur, et c'est précisément là que la phrase était coupée.
+        //
+        // La condition d'avant ne recousait QUE si la session s'était déjà refermée
+        // toute seule (Android). Or Chrome et Edge de bureau tiennent leur session
+        // ouverte ET rendent PLUSIEURS résultats définitifs au fil d'une même phrase,
+        // un à chaque pause de diction : chaque bout partait donc seul, comme une
+        // question distincte, et Ket répondait au premier. « Elle n'écoute pas ma
+        // phrase en entièreté », 2026-09-25.
+        //
+        // C'EST LE SILENCE QUI DÉCIDE, comme le disait déjà l'en-tête de cette méthode
+        // sans que le code le tienne. La règle vit dans momentDeVidange (cœur pur,
+        // testé) ; ici on ne fait que l'appliquer.
+        switch (momentDeVidange(this._detecteur?.dernierePriseDeParole() ?? null)) {
+            case 'maintenant':
+                // Il s'est tu : rien à attendre.
+                this._envoyerLesMorceaux();
+                break;
+            case 'minuteur':
+                // Pas de micro, donc pas de silence observable : le minuteur est le
+                // seul filet.
+                this._regroupement = setTimeout(() => this._envoyerLesMorceaux(), this.constructor.REGROUPEMENT_MS);
+                break;
+            // 'plus-tard' : il enchaîne. La fin de sa prise de parole vidangera.
+        }
     }
 
     /** La phrase entière prend la route — une seule question, dans l'ordre dit. */
@@ -1019,12 +1043,6 @@ export default class extends Controller {
             // transcrites plusieurs fois, et les réponses qui s'emmêlaient. C'est la
             // liste elle-même qui dira qu'elle a recommencé (finalesNouvelles).
             if (this.session.etat !== ETATS.ARRET && this.session.oreille === 'navigateur') {
-                // LA PREUVE DU HACHAGE, et elle vaut mieux qu'un test de navigateur :
-                // cette oreille vient de refermer sa session alors qu'on écoutait
-                // toujours. C'est la signature d'Android, qui clôt à chaque respiration
-                // et fait partir une question par bout de phrase. Désormais on recoud
-                // (cf. _deposerLeTexte) — et seulement ici.
-                this._oreilleHachee = true;
                 // LA SESSION EST FINIE : son décompte aussi. C'est `resultIndex` — le
                 // repère du navigateur — qui empêchera de relire une liste qui, elle,
                 // aurait continué (cf. finalesNouvelles). Garder le compteur d'une
@@ -1083,6 +1101,18 @@ export default class extends Controller {
 
     _arreterReconnaissance() {
         clearTimeout(this._repriseOreille);
+        // CE QUI A ÉTÉ DIT NE SE PERD PAS À LA FERMETURE. On neutralise `onend` juste
+        // après, donc rien ne relancera : un morceau resté en tampon disparaîtrait avec
+        // la session. Vidanger d'abord, c'est la règle « elle ne doit rien jeter ni
+        // ignorer qui vienne de moi » tenue jusque dans l'extinction.
+        //
+        // SAUF À L'ARRÊT, et c'est la règle que « fermer-micro » applique déjà : quand
+        // l'utilisateur quitte le mode Live, ce qu'il a commencé à dire ne doit pas lui
+        // revenir comme une question qu'il n'a pas posée.
+        if ((this._morceaux ?? []).length > 0) {
+            if (this.session.etat === ETATS.ARRET) this._morceaux = [];
+            else this._envoyerLesMorceaux();
+        }
         if (!this._reconnaissance) return;
         this._reconnaissance.onend = null;
         try { this._reconnaissance.stop(); } catch (e) { /* déjà arrêtée */ }
