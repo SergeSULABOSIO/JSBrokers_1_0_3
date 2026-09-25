@@ -101,6 +101,16 @@ final class SelecteurDeTrousse
      * déclencheurs la réclame, ni si l'écriture a seulement eu lieu. Sans ces deux
      * chiffres, resserrer revient à parier.
      */
+    /**
+     * Combien de messages de l'UTILISATEUR le filet lexical relit.
+     *
+     * Trois, parce qu'une saisie s'étale : « Enregistre la proposition de SUNU »,
+     * puis la réponse à une question, puis un montant. Compter les messages de KET
+     * dans ce nombre — ce qu'on faisait — revenait à lui laisser armer sa propre
+     * trousse, puisque le prompt lui ordonne de proposer l'écriture.
+     */
+    private const MESSAGES_LUS = 3;
+
     private string $dernierDeclencheur = 'aucun';
 
     /**
@@ -175,13 +185,51 @@ final class SelecteurDeTrousse
             return $retenir('a-propose-d-ecrire', Trousse::ECRITURE);
         }
 
-        // L'intention vit souvent dans le FIL et non dans la bulle (« vas y »,
-        // « essaie encore ») : on lit donc les derniers échanges, pas le seul
-        // dernier message.
-        $recent = '';
-        foreach (array_slice($requete->messages, -3) as $message) {
-            $recent .= ' ' . (string) ($message['content'] ?? '');
+        // ⚠ ON NE LIT QUE CE QUE L'UTILISATEUR A ÉCRIT — KET NE S'ARME PLUS ELLE-MÊME.
+        //
+        // CE QUE FAISAIT LA FENÊTRE. Elle concaténait les trois derniers messages du
+        // fil, TOUS RÔLES CONFONDUS — donc les réponses de Ket. Or le prompt lui
+        // ORDONNE de proposer l'écriture : « voulez-vous que je l'enregistre ? »,
+        // « je peux ouvrir le formulaire », « voici la proposition ». Elle armait
+        // ainsi sa propre trousse en parlant, et le gardait trois tours. Le filet
+        // lexical, fait pour lire une INTENTION D'UTILISATEUR, se lisait lui-même.
+        //
+        // MESURÉ le 2026-09-25 sur les 39 conversations réelles (821 tours) :
+        //   trois derniers messages, tous rôles (l'ancienne)  → 80,6 % armaient
+        //   trois derniers messages, UTILISATEUR seul         → 53,8 %
+        //   dernier message utilisateur seul                  → 28,7 %
+        // 426 tours sur 821 — plus de la moitié — n'étaient armés QUE par la présence
+        // de Ket dans la fenêtre, et ce sont des consultations manifestes : « il
+        // reste combien de polices échues chez moi ? », « la suivante », « ok ».
+        // Pour un taux d'écriture réellement constatée de 5 %.
+        //
+        // POURQUOI ON GARDE TROIS MESSAGES, et pas le seul dernier. Le seul dernier
+        // descendrait à 28,7 %, mais retirerait une capacité que le corpus protège :
+        // une saisie qui s'étale (« Enregistre la proposition de SUNU », puis, deux
+        // tours plus loin, « le taux est de 15 % »). Les deux signaux structurels
+        // ci-dessus la rattrapent souvent — pas toujours : Ket peut poser une
+        // question sans appeler d'outil et sans employer l'une de ses tournures
+        // d'offre. Un faux négatif prive l'utilisateur d'une capacité et lui fait
+        // entendre « je ne peux pas » ; un faux positif ne coûte que des jetons. Le
+        // compromis du docblock de tête reste donc intact — on a seulement cessé de
+        // compter la voix de Ket comme une intention de l'utilisateur.
+        //
+        // La source est l'ENTITÉ, pas la requête : le contenu y est brut, sans les
+        // marqueurs que le serveur ajoute pour le modèle — dont la bulle citée, qui
+        // recopie un EXTRAIT EXACT du message cité, souvent une réponse de Ket.
+        $demandes = $conversation?->derniersContenusUtilisateur(self::MESSAGES_LUS);
+        if ($demandes === null || $demandes === []) {
+            // Sans conversation (tests unitaires, fil non persisté), la requête est la
+            // seule source — elle ne porte alors aucun marqueur.
+            $demandes = [];
+            foreach ($requete->messages as $message) {
+                if (($message['role'] ?? null) === 'user') {
+                    $demandes[] = (string) ($message['content'] ?? '');
+                }
+            }
+            $demandes = array_slice($demandes, -self::MESSAGES_LUS);
         }
+        $recent = implode(' ', $demandes);
 
         // Le mot qui a mordu est CAPTURÉ, pas seulement constaté : c'est lui, et non
         // le nom du signal, qui dira quelle alternative retirer de la liste.
