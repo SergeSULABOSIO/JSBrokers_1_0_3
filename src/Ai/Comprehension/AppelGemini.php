@@ -63,12 +63,29 @@ final class AppelGemini implements FournisseurDeComprehension, FournisseurAModel
         private readonly MemoireDEpuisement $epuisement,
         #[Autowire(env: 'GEMINI_API_KEY')] private readonly string $apiKey,
         #[Autowire(env: 'GEMINI_MODELE_COMPREHENSION')] private readonly string $modeleParDefaut,
+        /**
+         * ⚠ LA CHAÎNE DE SECOURS QUI MANQUAIT — la cause des quatre replis sur dix.
+         *
+         * Le MOTEUR basculait déjà sur un modèle de secours au premier 503 et
+         * continuait de répondre ; cette phase-ci, non. Elle échouait simplement, et
+         * le message partait sans que personne ait compris la demande. Mesuré sur les
+         * journaux au 2026-09-25 : 41 % de replis sur 111 compréhensions, montant à
+         * 88 % les jours où le moteur, lui, basculait — la corrélation est nette,
+         * puisque c'est le même modèle qui tombe.
+         *
+         * On réutilise la liste du moteur : même fournisseur, mêmes pannes, et une
+         * seconde liste à tenir à jour finirait par diverger de la première.
+         */
+        #[Autowire(env: 'GEMINI_MODELES_REPLI')] private readonly string $modelesDeRepli = '',
         // LA POLITIQUE DE LA CONSOLE, en dernier et facultative : sans elle, ce
         // fournisseur se comporte exactement comme avant, sur le seul `.env`.
         // C'est ce qui permet aux harnais de test de l'ignorer sans rien perdre.
         private readonly ?PolitiqueDesFournisseurs $politique = null,
     ) {
     }
+
+    /** Le modèle qui a rendu la dernière réponse — null tant qu'aucune n'est venue. */
+    private ?string $modeleAyantRepondu = null;
 
     public function nom(): string
     {
@@ -86,6 +103,34 @@ final class AppelGemini implements FournisseurDeComprehension, FournisseurAModel
     public function modele(): string
     {
         return ModeleChoisi::pour($this->politique, 'comprehension', 'gemini', $this->modeleParDefaut);
+    }
+
+    /**
+     * Le modèle qui a réellement répondu — celui du secours quand le principal a
+     * rendu un 503. Avant tout appel, le modèle demandé : il n'y a rien d'autre à dire.
+     */
+    public function modeleAyantRepondu(): string
+    {
+        return $this->modeleAyantRepondu ?? $this->modele();
+    }
+
+    /**
+     * La chaîne parcourue : le modèle demandé, puis les secours, sans doublon.
+     *
+     * @return list<string>
+     */
+    private function chaineDesModeles(): array
+    {
+        $demande = $this->modele();
+        $chaine = [$demande];
+        foreach (explode(',', $this->modelesDeRepli) as $secours) {
+            $secours = trim($secours);
+            if ($secours !== '' && !in_array($secours, $chaine, true)) {
+                $chaine[] = $secours;
+            }
+        }
+
+        return $chaine;
     }
 
     /** Le compteur de Google est tenu par modèle : la clé est le nom du modèle. */
@@ -114,8 +159,13 @@ final class AppelGemini implements FournisseurDeComprehension, FournisseurAModel
     {
         $contents = $this->fil($request);
 
-        $reponse = $this->appeler($request, $contents, avecOutils: true);
-        $tokens = $this->facturer($reponse);
+        // LE PREMIER APPEL PARCOURT LA CHAÎNE ; les suivants restent sur le modèle qui
+        // a répondu. Changer de modèle EN COURS de compréhension mélangerait deux
+        // lectures de la même demande — et le second appel ne fait qu'imposer un
+        // schéma de sortie à ce que le premier a déjà trouvé.
+        [$reponse, $modele] = $this->premierAppel($request, $contents);
+        $this->modeleAyantRepondu = $modele;
+        $tokens = $this->facturer($reponse, $modele);
 
         $parts = $reponse['candidates'][0]['content']['parts'] ?? [];
         $appels = array_values(array_filter($parts, static fn (array $p) => isset($p['functionCall'])));
@@ -139,9 +189,34 @@ final class AppelGemini implements FournisseurDeComprehension, FournisseurAModel
         $contents[] = ['role' => 'user', 'parts' => $resultats];
 
         // Second et DERNIER appel : plus d'outils, un schéma de sortie strict.
-        $reponse = $this->appeler($request, $contents, avecOutils: false);
+        $reponse = $this->appeler($request, $contents, avecOutils: false, modele: $modele);
 
-        return ['texte' => self::texte($reponse), 'tokens' => $tokens + $this->facturer($reponse)];
+        return ['texte' => self::texte($reponse), 'tokens' => $tokens + $this->facturer($reponse, $modele)];
+    }
+
+    /**
+     * LE PREMIER APPEL, qui a le droit d'essayer les secours.
+     *
+     * Fail-open jusqu'au bout : si toute la chaîne tombe, on relance la DERNIÈRE
+     * exception, et Comprehenseur en fait un repli comme avant. Cette phase ne doit
+     * jamais empêcher une réponse — elle est là pour l'améliorer.
+     *
+     * @param array<int, array> $contents
+     *
+     * @return array{0: array<string, mixed>, 1: string} la réponse, et le modèle qui l'a rendue
+     */
+    private function premierAppel(AiRequest $request, array $contents): array
+    {
+        $derniere = null;
+        foreach ($this->chaineDesModeles() as $modele) {
+            try {
+                return [$this->appeler($request, $contents, avecOutils: true, modele: $modele), $modele];
+            } catch (\Throwable $e) {
+                $derniere = $e;
+            }
+        }
+
+        throw $derniere ?? new \RuntimeException('Aucun modèle de compréhension disponible.');
     }
 
     /**
@@ -175,10 +250,13 @@ final class AppelGemini implements FournisseurDeComprehension, FournisseurAModel
      *
      * @param array<string, mixed> $reponse
      */
-    private function facturer(array $reponse): int
+    private function facturer(array $reponse, ?string $modele = null): int
     {
         $tokens = (int) ($reponse['usageMetadata']['promptTokenCount'] ?? 0);
-        $this->budget->enregistrer($this->modele(), $tokens);
+        // Le compteur de Google est tenu PAR MODÈLE : facturer au principal ce qu'un
+        // secours a consommé fermerait la mauvaise fenêtre, et laisserait l'autre
+        // s'épuiser sans qu'on le voie venir.
+        $this->budget->enregistrer($modele ?? $this->modele(), $tokens);
 
         return $tokens;
     }
@@ -199,8 +277,9 @@ final class AppelGemini implements FournisseurDeComprehension, FournisseurAModel
      *
      * @return array<string, mixed>
      */
-    private function appeler(AiRequest $request, array $contents, bool $avecOutils): array
+    private function appeler(AiRequest $request, array $contents, bool $avecOutils, ?string $modele = null): array
     {
+        $modele ??= $this->modele();
         $prompt = $this->contextBuilder->toSystemPrompt($request, Trousse::COMPREHENSION, Phase::COMPREHENSION);
 
         // Les outils de LEVÉE D'AMBIGUÏTÉ, et eux seuls (cf. AiToolDeComprehension) :
@@ -227,7 +306,7 @@ final class AppelGemini implements FournisseurDeComprehension, FournisseurAModel
 
         return $this->httpClient->request('POST', sprintf(
             'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent',
-            $this->modele(),
+            $modele,
         ), [
             'headers' => [
                 'x-goog-api-key' => $this->apiKey,

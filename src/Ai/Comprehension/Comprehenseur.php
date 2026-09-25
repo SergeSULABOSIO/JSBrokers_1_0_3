@@ -281,7 +281,10 @@ final class Comprehenseur
     ): DemandeComprise {
         $this->journal->comprehension(
             $request,
-            $this->appel->modele(),
+            // CELUI QUI A PARLÉ, jamais celui qu'on a demandé : la chaîne de secours
+            // peut avoir pris le relais, et nommer le principal ferait chercher la
+            // cause d'une lenteur du côté d'un modèle qui n'a rien dit.
+            $this->appel->modeleAyantRepondu(),
             $comprise->claire ? 'claire' : 'a_clarifier',
             $comprise->origine,
             $tokens,

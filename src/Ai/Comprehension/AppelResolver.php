@@ -44,6 +44,15 @@ final class AppelResolver implements AppelDeComprehension
         return $this->appel()?->modele() ?? '';
     }
 
+    /**
+     * Le modèle qui a réellement parlé, demandé au fournisseur retenu : lui seul
+     * sait si sa chaîne de secours a pris le relais.
+     */
+    public function modeleAyantRepondu(): string
+    {
+        return $this->appel()?->modeleAyantRepondu() ?? '';
+    }
+
     public function cleDeDebit(): string
     {
         return $this->appel()?->cleDeDebit() ?? 'comprehension:aucun';

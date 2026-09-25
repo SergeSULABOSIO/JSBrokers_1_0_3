@@ -82,6 +82,16 @@ final class AppelAnthropic implements FournisseurDeComprehension, FournisseurAMo
         return ModeleChoisi::pour($this->politique, 'comprehension', 'anthropic', $this->modeleParDefaut);
     }
 
+    /**
+     * Ce fournisseur n'a pas de chaîne de secours : le modèle qui répond est
+     * toujours celui qu'on a demandé. Chez Google, où le principal rend des 503,
+     * la distinction est réelle — cf. AppelGemini.
+     */
+    public function modeleAyantRepondu(): string
+    {
+        return $this->modele();
+    }
+
     public function estDisponible(): bool
     {
         return trim($this->apiKey) !== '';
