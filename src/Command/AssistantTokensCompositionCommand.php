@@ -9,6 +9,7 @@ use App\Ai\Trousse\Phase;
 use App\Ai\Trousse\Trousse;
 use App\Ai\Trousse\TrousseCatalogue;
 use App\Ai\Tool\AiToolConditionnel;
+use App\Ai\Trousse\AiToolDeComprehension;
 use App\Ai\Tool\AiToolInterface;
 use App\Entity\AssistantMessage;
 use App\Repository\AssistantConversationRepository;
@@ -95,7 +96,7 @@ class AssistantTokensCompositionCommand extends Command
             // protocoles et cinquante-deux outils —, y compris pour mesurer une
             // consultation. Impossible, dans ces conditions, de comparer les deux
             // trousses, c'est-à-dire de chiffrer ce que coûte un mauvais aiguillage.
-            ->addOption('trousse', null, InputOption::VALUE_REQUIRED, 'Trousse à mesurer : « ecriture » (défaut) ou « lecture »', Trousse::ECRITURE->value)
+            ->addOption('trousse', null, InputOption::VALUE_REQUIRED, 'Trousse à mesurer : « ecriture » (défaut), « lecture » ou « comprehension »', Trousse::ECRITURE->value)
             ->addOption('phase', null, InputOption::VALUE_REQUIRED, 'Phase à mesurer : « planification » (défaut), « redaction » ou « comprehension »', 'planification');
     }
 
@@ -118,9 +119,15 @@ class AssistantTokensCompositionCommand extends Command
             return Command::FAILURE;
         }
 
+        // LA COMPRÉHENSION EST UNE TROUSSE COMME LES AUTRES, et elle était la seule
+        // qu'on ne savait pas mesurer. La commande rendait donc invariablement les
+        // trente-quatre outils de lecture pour une phase qui n'en déclare que TROIS
+        // (liste blanche AiToolDeComprehension) — soit vingt mille jetons annoncés
+        // là où il en part deux mille. Le chiffre du prompt était juste, celui des
+        // déclarations faux de près d'un facteur dix.
         $trousse = Trousse::tryFrom((string) $input->getOption('trousse'));
-        if ($trousse === null || $trousse === Trousse::COMPREHENSION) {
-            $io->error('Trousse inconnue : attendu « ecriture » ou « lecture ».');
+        if ($trousse === null) {
+            $io->error('Trousse inconnue : attendu « ecriture », « lecture » ou « comprehension ».');
 
             return Command::FAILURE;
         }
@@ -171,6 +178,11 @@ class AssistantTokensCompositionCommand extends Command
         $parOutil = [];
         $octetsEcartes = 0;
         $nbEcartes = 0;
+        // CE QUI PART VRAIMENT, demandé au catalogue plutôt que redéduit ici.
+        // Null sans conversation : aucun périmètre à lui opposer, on retombe alors
+        // sur les marqueurs, qui sont exactement ce que le catalogue lit lui-même.
+        $declares = $request !== null ? $this->catalogue->nomsDe($trousse, $request->scope) : null;
+
         foreach ($this->tools as $tool) {
             $declaration = PoidsDesDeclarations::declaration($tool);
             // Même filtrage que les moteurs : un outil que l'invité ne peut pas
@@ -181,10 +193,23 @@ class AssistantTokensCompositionCommand extends Command
                 && $tool instanceof AiToolConditionnel
                 && !$tool->estDisponible($request->scope);
             // LA PHASE D'ABORD : la rédaction ne déclare AUCUN outil (la clé `tools`
-            // est omise, pas vide). Puis la trousse : la lecture ne porte pas ceux qui
-            // préparent une écriture.
+            // est omise, pas vide).
+            //
+            // ── PUIS LE CATALOGUE, ET NON UNE RÈGLE RECOPIÉE ───────────────────────
+            // La trousse se lisait ici par une condition écrite à la main (« pas
+            // d'écriture hors trousse d'écriture »). Elle disait vrai pour deux
+            // trousses sur trois : la COMPRÉHENSION n'exclut pas des outils, elle en
+            // ADMET trois, et aucune règle par soustraction ne pouvait le rendre.
+            // TrousseCatalogue est la source unique de ce qui part au fournisseur —
+            // lui demander évite de mesurer autre chose que ce qui est envoyé.
             if (!$phase->declareDesOutils()) {
                 $ecarte = true;
+            } elseif ($declares !== null) {
+                $ecarte = !\in_array($tool->name(), $declares, true);
+            } elseif ($trousse === Trousse::COMPREHENSION) {
+                // Sans conversation, pas de périmètre à opposer au catalogue : on
+                // retombe sur le marqueur, qui est ce que le catalogue lit lui aussi.
+                $ecarte = !$tool instanceof AiToolDeComprehension;
             } elseif (!$trousse->estEcriture() && $this->catalogue->estOutilDEcriture($tool->name())) {
                 $ecarte = true;
             }

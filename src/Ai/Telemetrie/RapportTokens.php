@@ -219,6 +219,117 @@ final class RapportTokens
     }
 
     /**
+     * LES NOMS D'OUTILS QUE LE MODÈLE A ÉCORCHÉS, ET CE QU'ILS ONT COÛTÉ.
+     *
+     * Trois chiffres, et il faut les tenir SÉPARÉS — c'est l'erreur que le §5 du
+     * chantier signale explicitement :
+     *
+     *  · les noms INVENTÉS : tout appel visant un nom qui n'est pas un outil. Seuls
+     *    le nommage et les descriptions les font baisser ;
+     *  · les RATTRAPÉS : ceux qu'on a exécutés quand même, par ressemblance ou par
+     *    alias. Le rattrapage les déplace de la troisième colonne à celle-ci ;
+     *  · les INTROUVABLES : ceux qui n'ont rien exécuté du tout. C'est le seul
+     *    chiffre qu'un meilleur rattrapage fait baisser, et il doit tendre vers zéro.
+     *
+     * Un rattrapage n'est PAS un succès : le nom était faux, on l'a seulement sauvé.
+     * Un rapport qui les additionnerait aux appels réussis masquerait exactement le
+     * problème qu'on cherche à mesurer.
+     *
+     * @return array{
+     *     rattrapes: int,
+     *     introuvables: int,
+     *     coupes: int,
+     *     parNom: array<string, array{rattrape: int, introuvable: int, vise: string, origine: string, dernier: string}>
+     * }
+     */
+    public function nomsEcorches(): array
+    {
+        $parNom = [];
+        $rattrapes = 0;
+        $introuvables = 0;
+        $coupes = 0;
+
+        foreach ($this->lignes as $ligne) {
+            $evenement = $ligne['evenement'] ?? null;
+
+            if ($evenement === 'rattrapage') {
+                $nom = (string) ($ligne['demande'] ?? '');
+                if ($nom === '') {
+                    continue;
+                }
+                ++$rattrapes;
+                $parNom[$nom]['rattrape'] = ($parNom[$nom]['rattrape'] ?? 0) + 1;
+                $parNom[$nom]['introuvable'] ??= 0;
+                $parNom[$nom]['vise'] = (string) ($ligne['execute'] ?? '');
+                $parNom[$nom]['origine'] = (string) ($ligne['origine'] ?? JournalTokens::ORIGINE_DISTANCE);
+                $parNom[$nom]['dernier'] = (string) ($ligne['horodatage'] ?? '');
+                continue;
+            }
+
+            if ($evenement !== 'introuvable') {
+                continue;
+            }
+
+            // COUPÉ EN CONSOLE : compté à part, et jamais avec les fautes de frappe.
+            // C'est une décision de la plateforme, pas une erreur du modèle — les
+            // confondre ferait diagnostiquer un problème de nommage inexistant.
+            if ((string) ($ligne['motif'] ?? '') === JournalTokens::MOTIF_COUPE) {
+                ++$coupes;
+                continue;
+            }
+
+            $nom = (string) ($ligne['nom'] ?? '');
+            if ($nom === '') {
+                continue;
+            }
+            ++$introuvables;
+            $parNom[$nom]['introuvable'] = ($parNom[$nom]['introuvable'] ?? 0) + 1;
+            $parNom[$nom]['rattrape'] ??= 0;
+            $parNom[$nom]['vise'] ??= '';
+            $parNom[$nom]['origine'] ??= '';
+            $parNom[$nom]['dernier'] = (string) ($ligne['horodatage'] ?? '');
+        }
+
+        uasort(
+            $parNom,
+            static fn (array $a, array $b) => ($b['rattrape'] + $b['introuvable']) <=> ($a['rattrape'] + $a['introuvable']),
+        );
+
+        return [
+            'rattrapes'    => $rattrapes,
+            'introuvables' => $introuvables,
+            'coupes'       => $coupes,
+            'parNom'       => $parNom,
+        ];
+    }
+
+    /**
+     * TOUS LES NOMS D'OUTILS QUE LE MODÈLE A PRONONCÉS, existants ou non.
+     *
+     * Le dénominateur des deux indicateurs de nommage. Il se lit dans `tour.outils`,
+     * qui porte le nom DEMANDÉ quel que soit le résultat — c'est ainsi que les 5,3 %
+     * de noms inventés ont été mesurés avant même qu'il existe une ligne pour eux.
+     *
+     * @return array<string, int> nom prononcé => occurrences, du plus fréquent au moins
+     */
+    public function nomsPrononces(): array
+    {
+        $noms = [];
+        foreach ($this->tours() as $tour) {
+            foreach ((array) ($tour['outils'] ?? []) as $nom) {
+                $nom = (string) $nom;
+                if ($nom === '') {
+                    continue;
+                }
+                $noms[$nom] = ($noms[$nom] ?? 0) + 1;
+            }
+        }
+        arsort($noms);
+
+        return $noms;
+    }
+
+    /**
      * LE PLUS PETIT ALLÈGEMENT QUI RAMÈNE LES DÉPASSEMENTS À ZÉRO — ou rien, si
      * aucun n'y parvient.
      *

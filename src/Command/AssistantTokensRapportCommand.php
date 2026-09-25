@@ -2,7 +2,9 @@
 
 namespace App\Command;
 
+use App\Ai\Telemetrie\JournalTokens;
 use App\Ai\Telemetrie\RapportTokens;
+use App\Ai\Trousse\TrousseCatalogue;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\TableSeparator;
@@ -34,6 +36,12 @@ class AssistantTokensRapportCommand extends Command
 
     public function __construct(
         #[Autowire('%kernel.logs_dir%')] private readonly string $logsDir,
+        /**
+         * SOURCE UNIQUE des noms d'outils qui existent. Recopier une liste ici ferait
+         * diverger le rapport du catalogue dès le premier outil ajouté, et le rapport
+         * accuserait alors le modèle d'avoir inventé un nom parfaitement valide.
+         */
+        private readonly TrousseCatalogue $catalogue,
         // Le plafond réellement opposé au moteur (BudgetDebit) : sans lui, le
         // rapport continuerait de compter les dépassements contre le palier
         // gratuit longtemps après une bascule en payant.
@@ -256,7 +264,70 @@ class AssistantTokensRapportCommand extends Command
             ));
         }
 
-        $io->section('8. Projection — que rapporterait un allègement du bloc invariant ?');
+        // ── NOMS D'OUTILS ───────────────────────────────────────────────────────
+        //
+        // DEUX INDICATEURS, ET ILS NE MESURENT PAS LA MÊME CHOSE. Le rattrapage fait
+        // baisser les appels INTROUVABLES ; seuls le nommage et les descriptions font
+        // baisser les noms INVENTÉS. Les additionner reviendrait à croire un problème
+        // résolu parce qu'on en a masqué les effets.
+        $catalogue = array_map(static fn ($o): string => $o->name(), $this->catalogue->tous());
+        $prononces = $rapport->nomsPrononces();
+        $ecorches = $rapport->nomsEcorches();
+        $totalAppels = array_sum($prononces);
+        $inventes = 0;
+        foreach ($prononces as $nom => $n) {
+            if (!\in_array($nom, $catalogue, true)) {
+                $inventes += $n;
+            }
+        }
+
+        if ($totalAppels > 0 || $ecorches['rattrapes'] > 0 || $ecorches['introuvables'] > 0) {
+            $io->section('8. Noms d\'outils — le modèle nomme-t-il juste ?');
+            $io->writeln(sprintf(
+                ' Noms inventés : %d sur %d appels (%s). Ce que le NOMMAGE et les DESCRIPTIONS font baisser.',
+                $inventes,
+                $totalAppels,
+                $totalAppels > 0 ? number_format(100 * $inventes / $totalAppels, 1, ',', ' ') . ' %' : '—',
+            ));
+            $io->writeln(sprintf(
+                ' Rattrapés : %d — exécutés quand même. Restés introuvables : %d — un tour d\'entrée payé pour rien.',
+                $ecorches['rattrapes'],
+                $ecorches['introuvables'],
+            ));
+            if ($ecorches['coupes'] > 0) {
+                $io->writeln(sprintf(
+                    ' Outils coupés en console et demandés quand même : %d. Ce n\'est pas une faute de nommage.',
+                    $ecorches['coupes'],
+                ));
+            }
+            $io->newLine();
+
+            if ($ecorches['parNom'] !== []) {
+                $rangees = [];
+                foreach ($ecorches['parNom'] as $nom => $c) {
+                    $rangees[] = [
+                        $nom,
+                        $c['rattrape'] > 0 ? $c['rattrape'] : '—',
+                        $c['introuvable'] > 0 ? $c['introuvable'] : '—',
+                        $c['vise'] !== '' ? $c['vise'] : '—',
+                        // ALIAS ou RESSEMBLANCE : la distinction décide du retrait. Un alias
+                        // est un choix qu'on retirera à la revue ; une ressemblance est un
+                        // filet dont on espère qu'il se videra de lui-même.
+                        $c['origine'] === JournalTokens::ORIGINE_ALIAS ? 'alias' : ($c['origine'] !== '' ? 'ressemblance' : '—'),
+                        $c['dernier'] !== '' ? substr($c['dernier'], 0, 10) : '—',
+                    ];
+                }
+                $io->table(
+                    ['Nom demandé', 'Rattrapé', 'Introuvable', 'Exécuté à la place', 'Par', 'Dernière fois'],
+                    $rangees,
+                );
+                $io->writeln(' « Dernière fois » décide du retrait des alias : on ne retire que ce que plus personne n\'écrit.');
+            } else {
+                $io->writeln(' Aucun nom écorché sur la période — ou le journal est antérieur à cette mesure.');
+            }
+        }
+
+        $io->section('9. Projection — que rapporterait un allègement du bloc invariant ?');
         $rangees = [[
             'tel quel',
             number_format($observe['pic'], 0, ',', ' '),
