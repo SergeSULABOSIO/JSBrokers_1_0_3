@@ -56,6 +56,8 @@ final class EconomieTranche
         'primeTranche'       => Colonnes::MONTANT,
         'primeSignalee'      => Colonnes::MONTANT,
         'primeSolde'         => Colonnes::MONTANT,
+        'primePayeeLe'       => Colonnes::DATE,
+        'primePayeeOrigine'  => Colonnes::TEXTE,
         'commissionHt'       => Colonnes::MONTANT,
         'tauxTaxeAssureur'   => Colonnes::POURCENTAGE,
         'taxeAssureur'       => Colonnes::MONTANT,
@@ -99,7 +101,12 @@ final class EconomieTranche
         . 'Les taux sont LUS sur le paramétrage de l\'entreprise : ne les déduis jamais d\'une division. '
         . 'commissionExigible = solde de commission réclamable à l\'assureur, et il vaut 0 tant que la '
         . 'prime n\'est pas intégralement payée : ne PRORATISE jamais une commission sur un règlement '
-        . 'partiel de prime, cette règle n\'existe pas.';
+        . 'partiel de prime, cette règle n\'existe pas. '
+        . "primePayeeLe = date du DERNIER fait établissant le règlement de la prime par l'assuré ; "
+        . "primePayeeOrigine nomme la pièce qui l'établit. Dès que la tranche porte une prime payée, "
+        . "cette date EST la réponse à « quand a-t-il payé ? » : ne réponds JAMAIS qu'aucune date "
+        . "n'est disponible sans l'avoir lue, et ne mets jamais en doute une saisie du courtier sur "
+        . "la seule absence d'une date dans un autre outil.";
 
     /**
      * Projection APLATIE, à fusionner dans la ligne d'une liste : une valeur structurée
@@ -123,6 +130,18 @@ final class EconomieTranche
             'primeTranche'        => self::montant($tranche->primeTranche),
             'primeSignalee'       => self::montant($tranche->primeDeclareePayee),
             'primeSolde'          => self::solde($tranche->primeSoldeDue),
+            // ── LA DATE DU RÈGLEMENT, ET LA PIÈCE QUI L'ÉTABLIT ──────────────────
+            // ⚠ TROISIÈME OCCURRENCE DU MÊME DÉFAUT (incident du 2026-09-25). Un
+            // courtier demande « quel jour le client a-t-il payé sa prime, et combien de
+            // jours se sont écoulés depuis ? ». L'assistant, qui tenait la tranche
+            // hydratée, a répondu qu'aucune date n'était associée à ce règlement — et a
+            // invité le courtier à vérifier sa saisie. Le signalement était pourtant en
+            // base, daté du 20/09/2026, et l'écran affichait la tranche en « Prime payée ».
+            // La date était posée sur l'entité par la MÊME passe de calcul que tous les
+            // montants ci-dessous : personne ne la NOMMAIT. Or un montant payé sans date
+            // ne répond à aucune question de recouvrement.
+            'primePayeeLe'        => self::date($tranche->primePayeeLe),
+            'primePayeeOrigine'   => $tranche->primePayeeOrigine,
             'commissionHt'        => self::montant($tranche->montantCalculeHT),
             'tauxTaxeAssureur'    => self::taux($tranche->taxeAssureurTaux),
             'taxeAssureur'        => self::montant($tranche->taxeAssureurMontant),
@@ -263,6 +282,15 @@ final class EconomieTranche
     private static function montant(?float $valeur): ?float
     {
         return $valeur === null ? null : round($valeur, 2);
+    }
+
+    /**
+     * Une date de reglement, au format que le contrat de presentation attend en entree
+     * (le rendu en jj/mm/aaaa appartient au role DATE, pas a l'outil).
+     */
+    private static function date(?\DateTimeInterface $valeur): ?string
+    {
+        return $valeur?->format('Y-m-d');
     }
 
     /** Un solde négatif est un trop-perçu : rien ne reste dû, on rend 0. */

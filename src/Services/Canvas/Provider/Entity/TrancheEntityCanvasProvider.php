@@ -114,6 +114,8 @@ class TrancheEntityCanvasProvider implements EntityCanvasProviderInterface
             ["group" => "Suivi des Encaissements", "code" => "resteAPayer", "intitule" => "Reste à Payer", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant restant à encaisser."],
             ["group" => "Suivi des Encaissements", "code" => "retardPaiement", "intitule" => "En Retard ?", "type" => "Calcul", "format" => "Texte", "description" => "Indique si le paiement est en retard par rapport à l'échéance."],
             ["group" => "Suivi des Encaissements", "code" => "dateDernierEncaissement", "intitule" => "Dernier Encaissement", "type" => "Calcul", "format" => "Date", "description" => "Date du dernier paiement reçu pour cette tranche."],
+            ["group" => "Suivi des Encaissements", "code" => "primePayeeLe", "intitule" => "Prime Payée Le", "type" => "Calcul", "format" => "Date", "description" => "Date du dernier fait établissant le règlement de la prime par l'assuré : encaissement d'une facture client, paiement de prime signalé, ou à défaut réception du bordereau qui l'atteste."],
+            ["group" => "Suivi des Encaissements", "code" => "primePayeeOrigine", "intitule" => "Preuve du Règlement", "type" => "Calcul", "format" => "Texte", "description" => "La pièce qui établit ce règlement — une attestation de bordereau ne vaut pas un reçu, et la distinction doit rester lisible."],
         ];
     }
 }

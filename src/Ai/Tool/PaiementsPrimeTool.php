@@ -248,12 +248,20 @@ final class PaiementsPrimeTool implements AiToolInterface, AiToolConditionnel
                 'statutPaiement' => $tranche->statutPaiement ?? null,
                 'urgence' => $tranche->urgenceRecouvrement ?? null,
             ], static fn ($v) => $v !== null && $v !== '' && $v !== 'N/A'),
-            'prime' => [
+            'prime' => array_filter([
                 'totale' => round((float) ($tranche->primeTranche ?? 0), 2),
                 'payee' => round((float) ($tranche->primePayee ?? 0), 2),
                 'signalee' => round((float) ($tranche->primeDeclareePayee ?? 0), 2),
                 'solde' => round(max(0.0, (float) ($tranche->primeSoldeDue ?? 0)), 2),
-            ],
+                // QUAND, ET SUR QUELLE PIÈCE. Répété ici alors que la ligne de chaque
+                // signalement porte déjà sa date : les deux ne disent pas la même chose.
+                // La ligne date UN règlement ; celle-ci date LE paiement de la prime,
+                // y compris lorsqu'aucun signalement ne l'atteste — facture client
+                // encaissée, bordereau réconcilié. C'est le seul endroit où « payee > 0
+                // et aucun signalement » cesse d'être une contradiction apparente.
+                'payeeLe' => $tranche->primePayeeLe?->format('Y-m-d'),
+                'origine' => $tranche->primePayeeOrigine ?? null,
+            ], static fn ($v) => $v !== null && $v !== '' && $v !== 'N/A'),
             // CE QUE CE RÈGLEMENT RAPPORTE AU CABINET. Structuré par notion (une seule
             // tranche décrite, rien ne sera rendu en tableau) : commission HT, ses deux
             // taxes avec leurs taux LUS, TTC, encaissé, solde, exigible — puis le flux
@@ -274,7 +282,9 @@ final class PaiementsPrimeTool implements AiToolInterface, AiToolConditionnel
             'total' => (int) $signalements['totalItems'],
             'page' => (int) $signalements['currentPage'],
             'totalPages' => (int) $signalements['totalPages'],
-            'note' => "Signalement DÉCLARATIF : l'assuré a réglé la prime, encaissée par l'ASSUREUR — "
+            'note' => "« payeeLe » est LA date du règlement de la prime : réponds-y directement, "
+                . "sans autre appel, et ne dis jamais qu'aucune date n'est disponible tant qu'elle est là. "
+                . "Signalement DÉCLARATIF : l'assuré a réglé la prime, encaissée par l'ASSUREUR — "
                 . "jamais la trésorerie du cabinet (rien à voir avec l'entité Paiement). C'est ce qui "
                 . 'rend la commission de courtage exigible. « payee » peut dépasser « signalee » : la '
                 . 'prime est aussi réputée payée par les notes client encaissées ou par un bordereau '

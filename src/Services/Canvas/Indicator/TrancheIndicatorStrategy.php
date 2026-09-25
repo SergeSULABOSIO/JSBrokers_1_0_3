@@ -178,6 +178,8 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
             'resteAPayer' => round($this->getTranchePrime($entity) - $this->calculationHelper->getTranchePrimePayee($entity), 2),
             'retardPaiement' => $this->getTrancheRetardPaiement($entity),
             'dateDernierEncaissement' => $this->getTrancheDateDernierEncaissement($entity),
+            'primePayeeLe' => $this->getTranchePrimePayeeLe($entity),
+            'primePayeeOrigine' => $this->getTranchePrimePayeeOrigine($entity),
 
             // Nouveaux indicateurs pour l'affichage en liste
             'taxeCourtierAffichee' => sprintf('%s (%s %s)', $this->getTaxeAutoriteNom($entity, Taxe::REDEVABLE_COURTIER), number_format($montantTaxeCourtier, 2), $monnaieCode),
@@ -535,6 +537,105 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
             }
         }
         return $lastDate;
+    }
+
+    /**
+     * QUAND LA PRIME A ÉTÉ RÉGLÉE — la date qui manquait à tout le monde.
+     *
+     * ── L'INCIDENT DU 2026-09-25, ET POURQUOI CET INDICATEUR EXISTE ──────────────────
+     * Un courtier demande à l'assistant : « quelle prime le client a-t-il payée, quel
+     * jour, et combien de jours se sont écoulés depuis ? ». L'écran, lui, affichait la
+     * tranche en « Prime payée, commission due », et le signalement — 102 $, réglés le
+     * 20/09/2026 — figurait noir sur blanc dans le formulaire d'édition de la tranche.
+     * L'assistant a pourtant répondu qu'« aucune date de paiement n'est associée à cette
+     * transaction dans les données », puis a conseillé d'aller vérifier la saisie.
+     *
+     * Ce n'était ni une hallucination ni un défaut de droits : les outils qui raisonnent
+     * à la maille de la TRANCHE (suivi des impayés, vigie des échéances, économie de la
+     * tranche) rendaient le statut, la prime payée et la commission exigible — et pas une
+     * seule date. La date existait, à quelques lignes d'ici, dans
+     * `getTrancheDateDernierEncaissement` : posée sur la même entité, dans le même
+     * processus, par la même passe de calcul. Personne ne la NOMMAIT.
+     *
+     * C'est la troisième occurrence du même défaut (cf. les incidents des 2026-08-10 et
+     * 2026-08-11) et la règle est toujours la même : le modèle n'a que deux issues devant
+     * une information absente du résultat — la taire, ou l'inventer. Ici il l'a tue, et
+     * a mis en doute une saisie parfaitement correcte.
+     *
+     * ── CE QUE CETTE DATE EST, ET CE QU'ELLE N'EST PAS ──────────────────────────────
+     * C'est la date du DERNIER fait qui établit le règlement de la prime par l'assuré —
+     * jamais une date de commission. Trois sources, dans l'ordre de certitude, miroir
+     * exact des branches de `getTranchePrimePayee` :
+     *   1. le dernier encaissement d'une note CLIENT ou un paiement de prime SIGNALÉ
+     *      (tous deux datés à la main : ce sont des faits déclarés) ;
+     *   2. à défaut, la réception du BORDEREAU de production qui réconcilie la police —
+     *      l'assureur y déclare détenir la prime. C'est une date d'ATTESTATION, pas de
+     *      règlement : `primePayeeOrigine` le dit, pour que la nuance voyage avec elle.
+     *
+     * `null` tant que la prime n'est pas réputée payée : une date sans paiement serait
+     * pire que pas de date.
+     */
+    private function getTranchePrimePayeeLe(Tranche $tranche): ?\DateTimeInterface
+    {
+        if (round($this->calculationHelper->getTranchePrimePayee($tranche), 2) <= 0) {
+            return null;
+        }
+
+        // Les faits DATÉS À LA MAIN d'abord : encaissement d'une note client, signalement
+        // de paiement de prime. Ce sont eux que le courtier a sous les yeux.
+        if (($date = $this->getTrancheDateDernierEncaissement($tranche)) !== null) {
+            return $date;
+        }
+
+        // À défaut, l'attestation de l'assureur. On retient la PLUS RÉCENTE : c'est celle
+        // à partir de laquelle la prime est, sans conteste, entre ses mains.
+        $attestation = null;
+        foreach ($this->calculationHelper->getBordereauxAttestantTranche($tranche) as $bordereau) {
+            // Réception d'abord (le jour où le cabinet a eu la déclaration en main), fin de
+            // période ensuite. Le Bordereau ne porte pas de date de création : pas de
+            // troisième repli, et une attestation sans date reste sans date.
+            $date = $bordereau->getReceivedAt() ?? $bordereau->getPeriodeFin();
+            if ($date !== null && (!$attestation || $date > $attestation)) {
+                $attestation = $date;
+            }
+        }
+
+        return $attestation;
+    }
+
+    /**
+     * D'OÙ VIENT CETTE DATE — parce qu'un « payée le 20/09 » qui serait en réalité la
+     * réception d'un bordereau ne vaut pas un reçu, et que l'assistant comme le courtier
+     * doivent pouvoir faire la différence sans ouvrir la fiche.
+     *
+     * `N/A` (et non une chaîne vide) quand la prime n'est pas réputée payée : c'est la
+     * valeur que les projections de l'assistant écartent déjà d'office.
+     */
+    private function getTranchePrimePayeeOrigine(Tranche $tranche): string
+    {
+        if (round($this->calculationHelper->getTranchePrimePayee($tranche), 2) <= 0) {
+            return 'N/A';
+        }
+
+        $origines = [];
+        if (!$tranche->getPaiementsPrime()->isEmpty()) {
+            $origines[] = 'paiement de prime signalé';
+        }
+        foreach ($tranche->getArticles() as $article) {
+            $note = $article->getNote();
+            if ($note && $note->getAddressedTo() === Note::TO_CLIENT && $this->calculationHelper->getNoteMontantPaye($note) > 0) {
+                $origines[] = 'facture client encaissée';
+                break;
+            }
+        }
+        if ($origines === [] && $this->calculationHelper->isTrancheCommissionAssureurSoldee($tranche)) {
+            $origines[] = "commission reversée par l'assureur";
+        }
+        if ($origines === [] && $this->calculationHelper->isTrancheCouverteParBordereau($tranche)) {
+            $origines[] = 'bordereau de production réconcilié';
+        }
+
+        return $origines === [] ? 'N/A' : implode(' + ', $origines);
     }
 
     private function getTaxeAutoriteNom(Tranche $tranche, int $redevable): string

@@ -47,6 +47,11 @@ class DescriptionSansParametreFantomeTest extends KernelTestCase
         'filtreInterpreteCommeLien',
         // Colonnes rendues par la chronologie et la vigie.
         'saisiLe', 'aVenir',
+        // Le suivi des impayés DATE désormais le règlement de la prime et nomme la pièce
+        // qui l'établit : sans ces deux colonnes, il annonçait « prime payée » sans dire
+        // depuis quand, et l'assistant en a conclu qu'aucun paiement n'existait
+        // (incident du 2026-09-25).
+        'primePayeeLe', 'primePayeeOrigine',
 
         // ── ARGUMENTS D'AUTRES OUTILS ───────────────────────────────────────────────
         // preparer_programme enchaîne des étapes dont le champ `arguments` porte les

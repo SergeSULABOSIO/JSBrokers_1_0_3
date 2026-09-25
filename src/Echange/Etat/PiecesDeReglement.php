@@ -48,7 +48,22 @@ final class PiecesDeReglement
     }
 
     /**
-     * Règlements de prime — déclaratifs, portés directement par la tranche.
+     * Règlements de prime.
+     *
+     * ⚠ TROIS CIRCUITS, COMME LE MONTANT — et c'est tout l'enjeu, exactement comme pour
+     * la commission juste en dessous. Une prime est réputée payée de trois façons
+     * (`getTranchePrimePayee`) : par un PAIEMENT DE PRIME SIGNALÉ, porté par la tranche ;
+     * par une FACTURE CLIENT encaissée, portée par les articles ; ou par un BORDEREAU de
+     * production réconcilié, dans lequel l'assureur déclare détenir la prime.
+     *
+     * Ce fichier n'en lisait qu'un. Conséquence : une affaire dont la prime était réglée
+     * par facture ou attestée par bordereau affichait un montant payé et une colonne
+     * « payée le » VIDE — un solde qui s'affirme sans pièce en face, précisément ce que
+     * l'en-tête de ce fichier existe pour empêcher. Le même angle mort a fait répondre à
+     * l'assistant, le 2026-09-25, qu'aucune date n'était associée à un règlement.
+     *
+     * Le bordereau donne une date d'ATTESTATION, pas de règlement ; il n'est donc retenu
+     * qu'en dernier ressort, quand aucune pièce datée à la main n'existe.
      *
      * @return array{date: ?\DateTimeImmutable, references: string}
      */
@@ -57,6 +72,7 @@ final class PiecesDeReglement
         $dates = [];
         $references = [];
 
+        // ── CIRCUIT 1 : le signalement, déclaratif, porté par la tranche ────────────
         foreach ($tranche->getPaiementsPrime() as $paiement) {
             $date = $paiement->getPaidAt();
             if ($date !== null) {
@@ -65,6 +81,44 @@ final class PiecesDeReglement
             $reference = trim((string) $paiement->getReference());
             if ($reference !== '') {
                 $references[] = $reference;
+            }
+        }
+
+        // ── CIRCUIT 2 : la facture CLIENT encaissée ────────────────────────────────
+        // ⚠ MIROIR de la première boucle de `getTranchePrimePayee` : notes adressées au
+        // CLIENT, et elles seules. Une note à l'ASSUREUR ou à l'AUTORITÉ FISCALE règle
+        // une commission ou une taxe — jamais la prime de l'assuré.
+        foreach ($this->notesDe($tranche) as $note) {
+            if ($note->getAddressedTo() !== Note::TO_CLIENT) {
+                continue;
+            }
+            foreach ($note->getPaiements() as $paiement) {
+                $date = $paiement->getPaidAt();
+                if ($date !== null) {
+                    $dates[] = $date;
+                }
+                // La référence de la FACTURE d'abord, celle du règlement en repli — même
+                // ordre que la colonne « références de facture » de la commission.
+                $reference = trim((string) ($note->getReference() ?: $paiement->getReference()));
+                if ($reference !== '') {
+                    $references[] = $reference;
+                }
+            }
+        }
+
+        // ── CIRCUIT 3 : l'attestation de l'assureur, en DERNIER RESSORT ────────────
+        // Une date de réception de bordereau ne vaut pas un reçu : on ne l'affiche que
+        // lorsque rien d'autre ne date ce règlement, et sa référence dit d'où elle vient.
+        if ($dates === []) {
+            foreach ($this->helper->getBordereauxAttestantTranche($tranche) as $bordereau) {
+                $date = $bordereau->getReceivedAt() ?? $bordereau->getPeriodeFin();
+                if ($date !== null) {
+                    $dates[] = $date;
+                }
+                $reference = trim((string) ($bordereau->getReference() ?: $bordereau->getNom()));
+                if ($reference !== '') {
+                    $references[] = 'Bordereau ' . $reference;
+                }
             }
         }
 
