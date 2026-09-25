@@ -361,4 +361,128 @@ class JournalTokensTest extends TestCase
             self::assertArrayNotHasKey('debut', $etape);
         }
     }
+
+    /**
+     * UN REPLI QUI SE PRODUIT DANS UNE MÊME ÉTAPE NE S'EFFACE PAS.
+     *
+     * Le repli lui-même est réel : constaté le 25/09/2026 sur un échange réel, où
+     * gemini-3.1-flash-lite a répondu 503 et gemini-flash-lite-latest a pris la
+     * main. Ce jour-là il s'est lu sur deux lignes, l'orchestrateur rouvrant une
+     * étape par passage de boucle. Ce test verrouille l'AUTRE chemin — deux appels
+     * dans la même étape — où écraser `modele` tairait le repli.
+     */
+    public function testUnRepliEnCoursDePhaseResteLisible(): void
+    {
+        $journal = $this->journal();
+        $journal->nouveauMessage();
+        $journal->debutDePhase(\App\Ai\Trousse\Phase::PLANIFICATION);
+
+        foreach ([['gemini-3.1-flash-lite', 1], ['gemini-flash-lite-latest', 2]] as [$modele, $tour]) {
+            $journal->tour(
+                $this->request(),
+                'gemini',
+                $modele,
+                $tour,
+                ['entree' => 34000, 'sortie' => 50, 'cache' => 0],
+                ['systeme' => 1, 'outils' => 1, 'historique' => 1],
+                [],
+                3800,
+            );
+        }
+
+        $etape = $journal->recapitulatif()['etapes'][0];
+
+        self::assertSame(
+            'gemini-flash-lite-latest',
+            $etape['modele'],
+            'Le modèle mis en avant reste celui qui A RÉPONDU.'
+        );
+        self::assertSame(
+            ['gemini-3.1-flash-lite', 'gemini-flash-lite-latest'],
+            $etape['modeles'],
+            'Le modèle abandonné doit rester lisible : c’est lui qui explique le repli.'
+        );
+        self::assertSame(7600, $etape['msModele'], 'Les deux appels comptent, repli compris.');
+    }
+
+    /** Sans repli, la chaîne ne porte qu'un nom — pas de bruit sur le cas ordinaire. */
+    public function testSansRepliLaChaineNePorteQuUnModele(): void
+    {
+        $journal = $this->journal();
+        $journal->nouveauMessage();
+        $journal->debutDePhase(\App\Ai\Trousse\Phase::REDACTION);
+        $journal->tour(
+            $this->request(),
+            'gemini',
+            'gemini-3.1-flash-lite',
+            1,
+            ['entree' => 100, 'sortie' => 10, 'cache' => 0],
+            ['systeme' => 1, 'outils' => 1, 'historique' => 1],
+        );
+
+        self::assertSame(['gemini-3.1-flash-lite'], $journal->recapitulatif()['etapes'][0]['modeles']);
+    }
+
+    /*
+     * ── UNE PHASE QUI N'A APPELÉ PERSONNE NE NOMME PERSONNE ─────────────────
+     *
+     * `Comprehenseur::journaliser()` transmet toujours le modèle CONFIGURÉ, même
+     * quand la demande a été court-circuitée ou qu'une heuristique locale a pris le
+     * relais. Recopier ce nom dans le bandeau afficherait un modèle qui n'a jamais
+     * été interrogé. Constaté sur un échange réel le 25/09/2026.
+     */
+
+    public function testUneComprehensionLocaleNeNommeAucunModele(): void
+    {
+        foreach ([\App\Ai\Comprehension\DemandeComprise::ORIGINE_REPLI,
+                  \App\Ai\Comprehension\DemandeComprise::ORIGINE_COURT_CIRCUIT] as $origine) {
+            $journal = $this->journal();
+            $journal->nouveauMessage();
+            $journal->debutDePhase(\App\Ai\Trousse\Phase::COMPREHENSION);
+            $journal->comprehension($this->request(), 'gemini-3.1-flash-lite', 'claire', $origine, 0, 8086);
+
+            $etape = $journal->recapitulatif()['etapes'][0];
+
+            self::assertArrayNotHasKey(
+                'modele',
+                $etape,
+                sprintf('Origine « %s » : aucun modèle n’a répondu, aucun ne doit être nommé.', $origine)
+            );
+            self::assertSame($origine, $etape['origine'], 'L’écran doit pouvoir dire ce qui a eu lieu à la place.');
+        }
+    }
+
+    public function testUneComprehensionParLeModeleLeNomme(): void
+    {
+        $journal = $this->journal();
+        $journal->nouveauMessage();
+        $journal->debutDePhase(\App\Ai\Trousse\Phase::COMPREHENSION);
+        $journal->comprehension(
+            $this->request(),
+            'gemini-3.1-flash-lite',
+            'claire',
+            \App\Ai\Comprehension\DemandeComprise::ORIGINE_MODELE,
+            11101,
+            900,
+        );
+
+        $etape = $journal->recapitulatif()['etapes'][0];
+
+        self::assertSame('gemini-3.1-flash-lite', $etape['modele']);
+        self::assertSame(11101, $etape['entree']);
+        self::assertSame(900, $etape['msModele']);
+    }
+
+    /**
+     * LA VALEUR EST RECOPIÉE DANS LA TÉLÉMÉTRIE : ce test est le fil qui les relie.
+     * Si `DemandeComprise` renomme une origine, il casse ici plutôt qu'en silence
+     * dans le bandeau.
+     */
+    public function testLesOriginesDeLaComprehensionRestentAlignees(): void
+    {
+        self::assertSame(
+            \App\Ai\Comprehension\DemandeComprise::ORIGINE_MODELE,
+            \App\Ai\Telemetrie\JournalTokens::ORIGINE_MODELE
+        );
+    }
 }

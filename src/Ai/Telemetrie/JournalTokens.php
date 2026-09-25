@@ -73,6 +73,17 @@ final class JournalTokens
     public const ISSUE_CLARIFICATION = 'clarification';
 
     /**
+     * La compréhension a RÉELLEMENT été faite par un modèle.
+     *
+     * Miroir de `DemandeComprise::ORIGINE_MODELE`, et la seule valeur qui autorise
+     * le bandeau à nommer un modèle sur cette phase : les deux autres origines
+     * (court-circuit, repli local) n'interrogent personne. La valeur est répétée
+     * plutôt qu'importée pour que la télémétrie ne dépende pas de la compréhension —
+     * un test la compare aux deux constantes et échouera si l'une bouge.
+     */
+    public const ORIGINE_MODELE = 'modele';
+
+    /**
      * Corrélation. UN TRAITEMENT = un message de l'utilisateur : l'état ci-dessous
      * vit donc le temps d'un message et rattache ses lignes « tour » à sa ligne
      * « message ». Sans lui, deux messages traités coup sur coup produiraient des
@@ -217,7 +228,8 @@ final class JournalTokens
      *
      * @return array{appels: int, jetonsIa: int, etapes: list<array{cle: string, jetons: int, ms: int,
      *               moteur?: string, modele?: string, entree?: int, sortie?: int, cache?: int,
-     *               tours?: int, outils?: list<string>, msModele?: int}>}|null
+     *               tours?: int, outils?: list<string>, msModele?: int,
+     *               modeles?: list<string>, origine?: string}>}|null
      */
     public function recapitulatif(): ?array
     {
@@ -381,6 +393,24 @@ final class JournalTokens
 
             $etape['moteur'] = $moteur;
             $etape['modele'] = $modele;
+
+            // LA CHAÎNE DES MODÈLES, et pas seulement le dernier.
+            //
+            // En pratique l'orchestrateur ROUVRE une étape à chaque passage de boucle,
+            // si bien qu'un repli se lit déjà sur deux lignes distinctes du bandeau —
+            // vérifié sur un échange réel le 25/09/2026 : une planification sur
+            // gemini-3.1-flash-lite, puis une seconde sur gemini-flash-lite-latest.
+            //
+            // Mais `tour()` sait incrémenter `tours` sur une étape DÉJÀ ouverte, et ce
+            // chemin-là existe bel et bien. Le jour où deux appels partagent une étape,
+            // écraser `modele` tairait le repli — c'est-à-dire la première explication
+            // d'une réponse moins bonne que d'habitude. La chaîne coûte un tableau et
+            // supprime ce silence par construction.
+            $modeles = $etape['modeles'] ?? [];
+            if (!in_array($modele, $modeles, true)) {
+                $modeles[] = $modele;
+            }
+            $etape['modeles'] = $modeles;
             $etape['entree'] = ($etape['entree'] ?? 0) + ($tokens['entree'] ?? 0);
             $etape['sortie'] = ($etape['sortie'] ?? 0) + ($tokens['sortie'] ?? 0);
             $etape['cache']  = ($etape['cache'] ?? 0) + ($tokens['cache'] ?? 0);
@@ -520,12 +550,29 @@ final class JournalTokens
         // ⚠ On ne devine PAS le moteur : cette méthode ne reçoit que le modèle, et
         // un nom de moteur déduit d'un préfixe serait faux le jour où un fournisseur
         // renommera ses modèles. `coulissesEtape` sait afficher un modèle seul.
+        //
+        // ⚠⚠ ET SEULEMENT SI LE MODÈLE A RÉPONDU. `Comprehenseur::journaliser()`
+        // transmet TOUJOURS le modèle CONFIGURÉ, y compris quand la demande a été
+        // court-circuitée (salutation, message trop court) ou quand l'appel a échoué
+        // et qu'une heuristique locale a pris le relais. Recopier ce nom tel quel
+        // afficherait une pastille « gemini-3.1-flash-lite » sous une phase où
+        // aucun modèle n'a jamais été interrogé — constaté le 25/09/2026 sur un
+        // échange réel, avec `origine: repli` et `tokens: 0`.
+        //
+        // On garde donc `origine` et on ne nomme le modèle QUE lorsqu'il a répondu ;
+        // l'écran dira lui-même ce qui s'est passé à sa place. Le temps, en revanche,
+        // reste porté par l'étape : huit secondes à attendre un 503 sont huit
+        // secondes que l'utilisateur a réellement attendues.
         if ($this->etapes !== []) {
             $index = array_key_last($this->etapes);
-            $this->etapes[$index]['modele'] = $modele;
-            $this->etapes[$index]['entree'] = ($this->etapes[$index]['entree'] ?? 0) + $tokens;
-            $this->etapes[$index]['tours']  = ($this->etapes[$index]['tours'] ?? 0) + 1;
-            $this->etapes[$index]['msModele'] = ($this->etapes[$index]['msModele'] ?? 0) + $millisecondes;
+            $this->etapes[$index]['origine'] = $origine;
+
+            if ($origine === self::ORIGINE_MODELE) {
+                $this->etapes[$index]['modele'] = $modele;
+                $this->etapes[$index]['entree'] = ($this->etapes[$index]['entree'] ?? 0) + $tokens;
+                $this->etapes[$index]['tours']  = ($this->etapes[$index]['tours'] ?? 0) + 1;
+                $this->etapes[$index]['msModele'] = ($this->etapes[$index]['msModele'] ?? 0) + $millisecondes;
+            }
         }
 
         // Demande jugée ambiguë : le message s'arrête sur une reformulation à

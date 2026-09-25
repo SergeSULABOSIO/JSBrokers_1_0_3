@@ -5,6 +5,7 @@ namespace App\Command;
 use App\Ai\AiContextBuilder;
 use App\Ai\Engine\AiEngineInterface;
 use App\Ai\Scope\AiScope;
+use App\Ai\Telemetrie\JournalTokens;
 use App\Ai\Traitement\IdentiteDuTraitement;
 use App\Ai\Tool\AiToolInterface;
 use App\Entity\AssistantConversation;
@@ -46,6 +47,11 @@ class AssistantSmokeCommand extends Command
         // fumée ne peut vérifier que les outils de lecture. Même besoin, et donc
         // même code, que le traitement d'un message hors requête HTTP.
         private readonly IdentiteDuTraitement $identite,
+        // LE JOURNAL, pour imprimer les COULISSES telles que l'utilisateur les verra.
+        // Sans cela, le test de fumée prouvait que le moteur répond, jamais que le
+        // bandeau sous la bulle dit la vérité — et c'est là qu'était le trou du
+        // 25/09/2026 : un repli de modèle en cours de phase, invisible à l'écran.
+        private readonly JournalTokens $journalTokens,
         /** @var iterable<AiToolInterface> */
         #[AutowireIterator('app.ai_tool')] private readonly iterable $outils = [],
     ) {
@@ -114,9 +120,36 @@ class AssistantSmokeCommand extends Command
 
         $io->section(sprintf('Réponse (%d ms%s%s)', $duree, $reply->toolUsed ? ', outil : ' . $reply->toolUsed : '', $reply->refused ? ', REFUS périmètre' : ''));
         $io->text($reply->content);
+        $this->afficherLesCoulisses($io);
+
         $io->success('Le moteur a répondu.');
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * LES COULISSES, exactement telles qu'elles partiront au navigateur.
+     *
+     * C'est le récapitulatif du journal, sans retouche : moteur, modèle qui a
+     * répondu, modèles abandonnés en cas de repli, ventilation des jetons, outils
+     * appelés, temps passé chez le fournisseur. Le lire ICI est la seule façon de
+     * vérifier sur un ÉCHANGE RÉEL ce qu'un test unitaire ne peut que simuler.
+     */
+    private function afficherLesCoulisses(SymfonyStyle $io): void
+    {
+        $recap = $this->journalTokens->recapitulatif();
+        if ($recap === null) {
+            $io->section('Coulisses');
+            $io->text('Le journal est vide : ce moteur ne passe pas par le socle (cas du simulateur).');
+
+            return;
+        }
+
+        $io->section(sprintf('Coulisses — %d appel(s), %d jetons IA', $recap['appels'], $recap['jetonsIa']));
+        foreach ($recap['etapes'] as $etape) {
+            $io->writeln(sprintf(' <info>%s</info> — %d jetons, %d ms', $etape['cle'], $etape['jetons'], $etape['ms']));
+            $io->writeln('   ' . json_encode($etape, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        }
     }
 
     /**

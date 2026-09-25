@@ -4602,12 +4602,15 @@ export default class extends Controller {
      * Récapitulatif de ce que le message a coûté, sous la bulle : « 3 appels ·
      * 38 400 jetons IA · 6,2 s », dépliable pour le détail par étape.
      *
-     * MIROIR EXACT du bloc `activite` rendu par _assistant_ia_chat.html.twig :
-     * modifier l'un sans l'autre ferait diverger l'affichage direct et l'affichage
-     * après rechargement — même règle que pour le panneau de document produit.
+     * SEUL RENDU DU BANDEAU, et c'est délibéré : le gabarit Twig ne pose qu'un
+     * `<div data-activite>` que cette méthode hydrate au chargement (voir la boucle
+     * sur `[data-activite]`). L'affichage direct et l'affichage après rechargement
+     * ne peuvent donc pas diverger — il n'y a rien à tenir en miroir.
      *
-     * Aucune donnée du modèle n'entre ici : uniquement des nombres et des clés
-     * d'étape traduites par notre propre table de verbes.
+     * Aucune PROSE du modèle n'entre ici : des nombres, des clés d'étape traduites
+     * par notre table de verbes, et des identifiants techniques que le moteur a
+     * lui-même émis (nom de modèle, noms d'outils). Ces derniers sont affichés tels
+     * quels dans des `<code>`, via textContent — jamais interprétés comme du HTML.
      */
     renderActivite(bulle, activite) {
         const resume = resumeActivite(activite);

@@ -390,7 +390,11 @@ final class TraitementDuMessage
      * risque que la ligne lue pendant l'attente et le récapitulatif lu après
      * racontent deux histoires différentes.
      *
-     * @return array{appels: int, jetonsIa: int, secondes: float, etapes: list<array{cle: string, jetons: int}>}|null
+     * @return array{appels: int, jetonsIa: int, secondes: float, etapes: list<array<string, mixed>>}|null
+     *         chaque étape porte au moins `cle`, `jetons` et `ms` ; les coulisses
+     *         (moteur, modele, modeles, origine, entree, sortie, cache, tours,
+     *         msModele, outils) ne sont présentes que lorsqu'elles ont eu lieu —
+     *         c'est ce silence qui empêche le bandeau d'afficher des cases vides
      */
     private function activiteDuMessage(float $debutMoteur): ?array
     {

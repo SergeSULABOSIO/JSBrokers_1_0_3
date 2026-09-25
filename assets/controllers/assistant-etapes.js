@@ -84,7 +84,8 @@ export function explicationEtape(cle) {
  * Rend une liste de fragments plutôt qu'une chaîne : l'appelant en fait des éléments
  * distincts, et peut styler le modèle autrement que le reste.
  *
- * @param {{moteur?: string, modele?: string, outils?: string[], entree?: number,
+ * @param {{moteur?: string, modele?: string, modeles?: string[], origine?: string,
+ *          outils?: string[], entree?: number,
  *          sortie?: number, cache?: number, tours?: number, ms?: number}} etape
  * @param {string} locale
  * @returns {string[]}
@@ -94,10 +95,31 @@ export function coulissesEtape(etape, locale = 'fr-FR') {
     if (!etape) return [];
     const fragments = [];
 
+    // CE QUI S'EST PASSÉ À LA PLACE DU MODÈLE. La compréhension ne l'appelle pas
+    // toujours : une salutation est court-circuitée, et un appel qui échoue laisse
+    // la main à une heuristique locale. Le dire vaut mieux que de laisser une ligne
+    // muette — et bien mieux que de nommer un modèle qui n'a rien fait.
+    if (etape.origine === 'court-circuit') {
+        fragments.push('comprise sans appeler le modèle');
+    } else if (etape.origine === 'repli') {
+        fragments.push('le modèle n’a pas répondu — compréhension locale');
+    }
+
     if (etape.modele) {
         // Le moteur ET le modèle : « gemini » seul ne dit pas lequel a répondu, et
         // c'est justement la question.
         fragments.push(etape.moteur ? `${etape.moteur} · ${etape.modele}` : etape.modele);
+    }
+
+    // LE REPLI SE DIT. Quand une phase a été jouée par plusieurs modèles, c'est que
+    // le principal a lâché (503 ou 429) et qu'un secours a pris la main. Ne montrer
+    // que celui qui a fini serait vrai mais tairait la seule chose qui explique une
+    // réponse en dessous de l'ordinaire. On nomme donc les abandonnés, dans l'ordre.
+    const abandonnes = Array.isArray(etape.modeles)
+        ? etape.modeles.filter((m) => m !== etape.modele)
+        : [];
+    if (abandonnes.length) {
+        fragments.push(`après repli de ${abandonnes.join(', ')}`);
     }
 
     if (etape.tours > 1) {
