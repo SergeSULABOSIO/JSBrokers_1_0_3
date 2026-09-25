@@ -212,3 +212,60 @@ test('le temps passé chez le modèle est dit à part de la durée de l’étape
 test('sans mesure de temps, aucune ligne n’est inventée', () => {
     assert.deepEqual(coulissesEtape({ msModele: 0 }), []);
 });
+
+test('coulissesEtape nomme le modèle abandonné quand un repli a eu lieu', () => {
+    const fragments = coulissesEtape({
+        moteur: 'gemini',
+        modele: 'gemini-flash-lite-latest',
+        modeles: ['gemini-3.1-flash-lite', 'gemini-flash-lite-latest'],
+        tours: 2,
+    });
+
+    assert.equal(fragments[0], 'gemini · gemini-flash-lite-latest');
+    assert.equal(
+        fragments[1],
+        'après repli de gemini-3.1-flash-lite',
+        "Le modèle qui a lâché doit rester lisible : c'est lui qui explique le repli."
+    );
+});
+
+test('coulissesEtape reste muette sur le repli quand il n’y en a pas eu', () => {
+    const fragments = coulissesEtape({
+        moteur: 'gemini',
+        modele: 'gemini-3.1-flash-lite',
+        modeles: ['gemini-3.1-flash-lite'],
+    });
+
+    assert.ok(
+        !fragments.some((f) => f.includes('repli')),
+        "Le cas ordinaire ne doit porter aucune mention de repli."
+    );
+});
+
+test('coulissesEtape survit à un serveur qui ne connaît pas encore la chaîne', () => {
+    const fragments = coulissesEtape({ moteur: 'gemini', modele: 'gemini-3.1-flash-lite' });
+
+    assert.equal(fragments[0], 'gemini · gemini-3.1-flash-lite');
+    assert.ok(!fragments.some((f) => f.includes('repli')));
+});
+
+test('coulissesEtape dit ce qui a remplacé le modèle sur une compréhension locale', () => {
+    assert.deepEqual(
+        coulissesEtape({ origine: 'repli' }),
+        ['le modèle n’a pas répondu — compréhension locale']
+    );
+    assert.deepEqual(
+        coulissesEtape({ origine: 'court-circuit' }),
+        ['comprise sans appeler le modèle']
+    );
+});
+
+test('coulissesEtape ne commente pas une compréhension faite par le modèle', () => {
+    const fragments = coulissesEtape({ origine: 'modele', modele: 'gemini-3.1-flash-lite', entree: 11101 });
+
+    assert.equal(fragments[0], 'gemini-3.1-flash-lite');
+    assert.ok(
+        !fragments.some((f) => f.includes('locale') || f.includes('sans appeler')),
+        "Le cas ordinaire n'a rien à expliquer."
+    );
+});
