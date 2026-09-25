@@ -7,6 +7,7 @@ use App\Ai\Engine\SimulatedAiEngine;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
 use App\Ai\Tool\PaiementsPrimeTool;
+use App\Ai\Tool\SuiviImpayesTool;
 use App\Entity\Assureur;
 use App\Entity\Avenant;
 use App\Entity\ChargementPourPrime;
@@ -328,6 +329,55 @@ class PaiementsPrimeToolIntegrationTest extends KernelTestCase
         $this->assertSame(600.0, $result->data['prime']['signalee']);
         $this->assertSame(1000.0, $result->data['prime']['totale']);
         $this->assertSame(400.0, $result->data['prime']['solde']);
+    }
+
+    /**
+     * L'INCIDENT DU 2026-09-25, REJOUÉ SUR LES DEUX SURFACES QUI ONT FAILLI.
+     *
+     * Un courtier demande quel jour son client a réglé sa prime et combien de jours se
+     * sont écoulés depuis. L'assistant interroge d'abord le SUIVI DES IMPAYÉS — « une vue
+     * synthétique des tranches », dira-t-il lui-même —, y lit « prime payée, commission
+     * due », n'y trouve aucune date, et répond qu'« aucune date de paiement n'est associée
+     * à cette transaction dans les données », en invitant le courtier à vérifier sa
+     * saisie. Le signalement était pourtant en base, daté, et affiché dans le formulaire
+     * d'édition de la tranche.
+     *
+     * Le défaut n'était ni un droit manquant ni une donnée absente : la tranche hydratée
+     * PORTAIT la date, et aucune des deux projections ne la nommait. Ce test l'exige des
+     * deux côtés — la vue synthétique ET l'outil dédié —, parce que c'est la première qui
+     * répond quand la question ne nomme pas de tranche.
+     */
+    public function testLaDateDuReglementDeLaPrimeVoyageAvecLaTranche(): void
+    {
+        ['entreprise' => $entreprise, 'gestionnaire' => $invite, 'tranche' => $tranche] = $this->seed();
+        $scope = new AiScope($entreprise, $invite);
+
+        // ── La vue SYNTHÉTIQUE, celle que l'assistant interroge en premier ──────────
+        $suivi = static::getContainer()->get(SuiviImpayesTool::class)->execute([], $scope);
+        $this->assertSame(AiToolResult::STATUS_OK, $suivi->status);
+        $ligne = null;
+        foreach ($suivi->data['lignes'] as $candidate) {
+            if ($candidate['id'] === $tranche->getId()) {
+                $ligne = $candidate;
+            }
+        }
+        $this->assertNotNull($ligne, 'La tranche suivie doit figurer dans le suivi des impayés.');
+        $this->assertSame(
+            (new \DateTimeImmutable('-5 days'))->format('Y-m-d'),
+            $ligne['primePayeeLe'] ?? null,
+            "Le DERNIER règlement date la ligne : sans cette date, l'assistant nie un paiement qui existe."
+        );
+        $this->assertStringContainsString('signalé', $ligne['primePayeeOrigine'] ?? '');
+        $this->assertContains('primePayeeLe', array_keys($suivi->data['presentation']['colonnes'] ?? []));
+
+        // ── L'outil DÉDIÉ : la même date, au même endroit qu'on la cherche ──────────
+        $cible = $this->tool()->execute(['trancheId' => $tranche->getId()], $scope);
+        $this->assertSame(AiToolResult::STATUS_OK, $cible->status);
+        $this->assertSame(
+            (new \DateTimeImmutable('-5 days'))->format('Y-m-d'),
+            $cible->data['prime']['payeeLe'] ?? null,
+        );
+        $this->assertStringContainsString('signalé', $cible->data['prime']['origine'] ?? '');
     }
 
     public function testTrancheDUneAutreEntrepriseIntrouvable(): void

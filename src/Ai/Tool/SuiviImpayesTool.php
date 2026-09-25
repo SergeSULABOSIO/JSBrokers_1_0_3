@@ -58,7 +58,10 @@ final class SuiviImpayesTool implements AiToolInterface, AiToolConditionnel
             . 'arriérés, relances à faire, primes ou commissions en retard/dues/exigibles, qui doit '
             . 'payer, soldes dus, rétros à verser aux partenaires. Porte par défaut sur le '
             . 'PORTEFEUILLE de l\'utilisateur, comme la rubrique Tranches affichée (paramètre '
-            . 'perimetre). Restreignable à un client ou une cotation via lieA.';
+            . "perimetre). Restreignable à un client ou une cotation via lieA. "
+            . "Chaque ligne porte AUSSI la date à laquelle la prime a été réglée (primePayeeLe) "
+            . "et la pièce qui l'établit (primePayeeOrigine) : « quand ce client a-t-il payé sa "
+            . "prime ? » se répond depuis cette liste, sans second appel.";
     }
 
     public function aiguillage(): string
@@ -222,6 +225,9 @@ final class SuiviImpayesTool implements AiToolInterface, AiToolConditionnel
                 'police'          => Colonnes::TEXTE,
                 'echeance'        => Colonnes::DATE,
                 'dette'           => Colonnes::TEXTE,
+                // La date du règlement prend place DANS le tableau, entre l'échéance et
+                // ce qui reste dû : c'est là qu'on la cherche pour juger d'un retard.
+                'primePayeeLe'    => Colonnes::DATE,
                 'soldePrime'      => Colonnes::MONTANT,
                 'soldeCommission' => Colonnes::MONTANT,
             ]),
@@ -246,7 +252,20 @@ final class SuiviImpayesTool implements AiToolInterface, AiToolConditionnel
                 . 'NOMME LA DETTE : chaque ligne porte « dette » (prime / commission / prime+commission / '
                 . 'retro). Un soldePrime à 0 signifie PRIME SOLDÉE, jamais « rien à faire » — la dette '
                 . 'restante est alors celle de l\'assureur. Ne présente comme « primes dues » que des '
-                . 'lignes obtenues avec axes.prime = impayee ; sinon rappelle l\'outil avec cet axe.',
+                . "lignes obtenues avec axes.prime = impayee ; sinon rappelle l\'outil avec cet axe. "
+                // ── NE JAMAIS NIER UN PAIEMENT DEPUIS CETTE VUE (incident du 2026-09-25) ──
+                // Interrogé sur le jour où un client avait réglé sa prime, l'assistant a lu
+                // ici « prime payée », n'y a trouvé aucune date — la projection n'en portait
+                // pas — et a conclu qu'aucun paiement n'était enregistré, en invitant le
+                // courtier à vérifier une saisie parfaitement correcte. La date est désormais
+                // sur la ligne ; reste à interdire la conclusion, car une vue synthétique ne
+                // prouve JAMAIS une absence : elle ne montre que ce qu'elle projette.
+                . "« primePayeeLe » DATE le règlement de la prime et « primePayeeOrigine » nomme la pièce "
+                . "qui l'établit : réponds-y directement à « quand a-t-il payé ? ». Une ligne dont la prime "
+                . "est payée SANS date reste un paiement enregistré — appelle alors paiements_prime avec son "
+                . "« id » pour retrouver la pièce. Ne conclus JAMAIS, depuis cette vue, qu'un règlement "
+                . "n'existe pas ou qu'une saisie serait à vérifier : elle synthétise des dettes, elle n'est "
+                . "pas le registre des paiements.",
         ], static fn ($v) => $v !== null));
     }
 
@@ -315,6 +334,20 @@ final class SuiviImpayesTool implements AiToolInterface, AiToolConditionnel
             'joursRetard' => $joursRetard,
             'prime' => $tranche->primeTranche ?? null,
             'soldePrime' => $soldePrime,
+            // QUAND LA PRIME A ÉTÉ RÉGLÉE, et par quelle pièce on le sait.
+            //
+            // ⚠ C'EST CETTE VUE-CI QUI A MANQUÉ LE 2026-09-25. Un courtier demande quel
+            // jour son client a payé sa prime et combien de jours se sont écoulés depuis.
+            // L'assistant interroge ce suivi — la « vue synthétique des tranches », dira-
+            // t-il lui-même —, y lit « prime payée, commission due », n'y trouve AUCUNE
+            // date, et répond qu'aucune date n'est associée à ce règlement, en invitant le
+            // courtier à vérifier sa saisie. Le signalement était en base, daté, et visible
+            // à l'écran. La tranche hydratée PORTAIT la date : cette projection ne la
+            // nommait pas. Une ligne qui affirme « payée » doit dire depuis quand — sans
+            // quoi elle force l'assistant à un second appel qu'il n'a aucune raison de
+            // deviner, ou à une réponse fausse.
+            'primePayeeLe' => $tranche->primePayeeLe?->format('Y-m-d'),
+            'primePayeeOrigine' => $tranche->primePayeeOrigine ?? null,
             'soldeCommission' => $soldeCommission,
             // NOMME la dette restante. Sans ce champ, un soldePrime à 0 se lit « rien à
             // faire » alors que l'assureur doit encore sa commission — les deux dettes ont

@@ -180,6 +180,16 @@ class Tranche
     #[Groups(['list:read'])]
     public ?\DateTimeInterface $dateDernierEncaissement = null;
 
+    // QUAND LA PRIME A ÉTÉ RÉGLÉE, et par quelle pièce on le sait. Déclarées ici — et pas
+    // posées dynamiquement — pour la raison donnée plus bas à propos de `retroAgentDue` :
+    // hors groupe de sérialisation, une valeur calculée n'atteint ni le `data-entity`
+    // d'une ligne ni les actions qui s'y conditionnent.
+    #[Groups(['list:read'])]
+    public ?\DateTimeInterface $primePayeeLe = null;
+
+    #[Groups(['list:read'])]
+    public ?string $primePayeeOrigine = null;
+
     // Urgence de recouvrement (prime et/ou commission à collecter) : libellé affiché
     // en badge sur la liste + niveau technique (classe CSS / restitution assistant IA).
     #[Groups(['list:read'])]

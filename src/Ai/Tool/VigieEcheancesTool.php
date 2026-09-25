@@ -464,6 +464,10 @@ final class VigieEcheancesTool implements AiToolInterface
                     // Jour à jour : échéance ramenée à minuit (sinon l'heure tronque un jour).
                     ? max(0, -((int) $aujourdhui->diff(\DateTimeImmutable::createFromInterface($e->getEcheanceAt())->setTime(0, 0))->format('%r%a')))
                     : null,
+                // La date du règlement de la prime, au même titre que dans suivi_impayes :
+                // une ligne qui annonce « prime payée » sans dire depuis quand oblige
+                // l'assistant à un second appel, ou à une réponse fausse (2026-09-25).
+                'primePayeeLe'    => $e->primePayeeLe?->format('Y-m-d'),
                 'soldePrime'      => max(0.0, (float) ($e->primeSoldeDue ?? 0)),
                 'soldeCommission' => max(0.0, (float) ($e->solde_restant_du ?? 0)),
                 'retroAPayer'     => ($e->retroCommissionExigible ?? 0) > 0 ? (float) $e->retroCommissionExigible : null,

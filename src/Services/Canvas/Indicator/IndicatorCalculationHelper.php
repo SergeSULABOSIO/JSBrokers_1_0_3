@@ -2237,7 +2237,7 @@ class IndicatorCalculationHelper implements ResetInterface
      * Un bordereau analysé AVANT la persistance des montants garde la troisième variante
      * corrigée (imputation globale sur les plus anciennes), en repli.
      *
-     * @return array{couverts: array<int, true>, couvertsSoldes: array<int, true>, allocation: array<int, float>, parAvenant: array<int, array{reclame: float, encaisse: float}>, bordereauxParTranche: array<int, array<int, true>>}
+     * @return array{couverts: array<int, true>, couvertsSoldes: array<int, true>, allocation: array<int, float>, parAvenant: array<int, array{reclame: float, encaisse: float}>, bordereauxParTranche: array<int, array<int, true>>, attestationParAvenant: array<int, array<int, true>>}
      */
     private function getCouvertureBordereaux(Entreprise $entreprise): array
     {
@@ -2251,6 +2251,7 @@ class IndicatorCalculationHelper implements ResetInterface
         $allocation = [];
         $parAvenant = [];
         $bordereauxParTranche = [];
+        $attestationParAvenant = [];
 
         // QUEL BORDEREAU A NOURRI QUELLE TRANCHE.
         //
@@ -2359,6 +2360,13 @@ class IndicatorCalculationHelper implements ResetInterface
                 if ($estSolde) {
                     $couvertsSoldes[$avenantId] = true;
                 }
+                // QUEL bordereau atteste cette police, et pas seulement « un bordereau ».
+                // `bordereauxParTranche` ne retient que ceux qui ont fait RENTRER de
+                // l'argent ; une ligne « match » non encore réglée n'y figure donc jamais,
+                // alors qu'elle suffit à réputer la prime payée (cf. getTranchePrimePayee).
+                // Sans cette trace, une prime réputée payée par bordereau n'a aucune DATE à
+                // montrer — et l'assistant, faute de pièce, conclut que rien n'a été payé.
+                $attestationParAvenant[$avenantId][(int) $bordereau->getId()] = true;
             }
 
             if (!$porteLesMontants) {
@@ -2435,7 +2443,42 @@ class IndicatorCalculationHelper implements ResetInterface
             'allocation' => $allocation,
             'parAvenant' => $parAvenant,
             'bordereauxParTranche' => $bordereauxParTranche,
+            'attestationParAvenant' => $attestationParAvenant,
         ];
+    }
+
+    /**
+     * LES BORDEREAUX QUI ATTESTENT QUE L'ASSUREUR DÉTIENT LA PRIME de cette tranche.
+     *
+     * ⚠ À NE PAS CONFONDRE AVEC `getBordereauxCouvrantTranche`, juste en dessous, qui
+     * répond à une tout autre question : celui-là dit quels bordereaux ont fait RENTRER
+     * de la commission ; celui-ci dit lesquels ATTESTENT le règlement de la prime. Un
+     * bordereau de production réconcilié mais non encore payé n'appartient qu'au second
+     * ensemble — et c'est pourtant lui qui rend la commission exigible.
+     *
+     * Même filtre que `isTrancheCouverteParBordereau` (lignes « match » de la couverture
+     * mémoïsée), dont cette méthode n'est que la version NOMMÉE : là où le prédicat rend
+     * un booléen, on rend les pièces, parce qu'un « oui » sans date ne se présente pas.
+     *
+     * @return Bordereau[]
+     */
+    public function getBordereauxAttestantTranche(Tranche $tranche): array
+    {
+        $cotation = $tranche->getCotation();
+        $entreprise = $tranche->getEntreprise();
+        if (!$cotation || !$entreprise) {
+            return [];
+        }
+
+        $parAvenant = $this->getCouvertureBordereaux($entreprise)['attestationParAvenant'];
+        $ids = [];
+        foreach ($cotation->getAvenants() as $avenant) {
+            foreach (array_keys($parAvenant[(int) $avenant->getId()] ?? []) as $bordereauId) {
+                $ids[$bordereauId] = true;
+            }
+        }
+
+        return $ids === [] ? [] : $this->em->getRepository(Bordereau::class)->findBy(['id' => array_keys($ids)]);
     }
 
     /**
