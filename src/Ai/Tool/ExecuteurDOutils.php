@@ -4,10 +4,9 @@ namespace App\Ai\Tool;
 
 use App\Ai\Reglage\ReglagesDeKet;
 use App\Ai\Scope\AiScope;
+use App\Ai\Telemetrie\JournalTokens;
 use App\Ai\Trousse\Trousse;
 use App\Ai\Trousse\TrousseCatalogue;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
@@ -39,8 +38,18 @@ final class ExecuteurDOutils
          * jugement porté ici — qui tient la frontière lecture/écriture.
          */
         private readonly ?TrousseCatalogue $catalogue = null,
-        /** Chaque rattrapage laisse une trace : on doit pouvoir vérifier qu'aucun n'abuse. */
-        private readonly LoggerInterface $logger = new NullLogger(),
+        /**
+         * TOUT CE QUI N'A RIEN EXÉCUTÉ LAISSE UNE TRACE, et sur le canal qu'on relit.
+         *
+         * C'était un LoggerInterface autowiré, donc le canal « app » : noyé dans un
+         * dev.log de plusieurs gigaoctets en développement, et JAMAIS ÉCRIT en
+         * production, où le handler est en fingers_crossed sur « error ». La seule
+         * mesure du rattrapage manquait précisément là où le rattrapage sert.
+         *
+         * Facultatif comme les deux précédents, et pour la même raison : les tests
+         * unitaires montent cet exécuteur à la main.
+         */
+        private readonly ?JournalTokens $journal = null,
     ) {
         $this->outils = $outils;
     }
@@ -60,6 +69,11 @@ final class ExecuteurDOutils
         // déjà quoi en faire, et l'utilisateur n'apprend rien de la configuration de
         // la plateforme — ce qu'il n'a pas à connaître.
         if ($this->reglages !== null && !$this->reglages->outilActif($nom)) {
+            // Journalisé à part des noms inconnus : ce n'est pas une faute du modèle,
+            // c'est une décision de la plateforme. Les mélanger ferait croire à un
+            // problème de nommage là où il n'y en a pas.
+            $this->journal?->introuvable($scope, $nom, JournalTokens::MOTIF_COUPE, $trousse?->libelle());
+
             return AiToolResult::introuvable($nom);
         }
 
@@ -90,15 +104,18 @@ final class ExecuteurDOutils
                 }
                 // JOURNALISÉ SANS EXCEPTION : un rattrapage est une décision prise à la
                 // place du modèle, et rien ne doit permettre d'en douter après coup.
-                $this->logger->info('Assistant IA : nom d\'outil rattrapé.', [
-                    'demande' => $nom,
-                    'execute' => $vise,
-                    'trousse' => $trousse->libelle(),
-                ]);
+                $this->journal?->rattrapage($scope, $nom, $vise, $trousse->libelle());
 
                 return $outil->execute($args, $scope);
             }
         }
+
+        // RIEN N'A RÉPONDU, et c'est le chiffre du chantier. Un nom que ni le
+        // catalogue ni le rattrapage ne reconnaissent coûte un tour d'entrée complet
+        // — de l'ordre de quarante mille jetons — pour un résultat vide. Sans cette
+        // ligne, il était indistinguable d'un succès : l'orchestrateur pousse le nom
+        // DEMANDÉ dans `tour.outils` quoi qu'il arrive.
+        $this->journal?->introuvable($scope, $nom, JournalTokens::MOTIF_INCONNU, $trousse?->libelle());
 
         return AiToolResult::introuvable($nom);
     }

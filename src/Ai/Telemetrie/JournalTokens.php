@@ -4,6 +4,7 @@ namespace App\Ai\Telemetrie;
 
 use App\Ai\AiRequest;
 use App\Ai\Mutation\OutilsDePlan;
+use App\Ai\Scope\AiScope;
 use App\Ai\Trousse\Phase;
 use Psr\Log\LoggerInterface;
 
@@ -34,6 +35,29 @@ use Psr\Log\LoggerInterface;
  */
 final class JournalTokens
 {
+    /**
+     * POURQUOI UN APPEL D'OUTIL N'A RIEN EXÉCUTÉ, et par quel chemin un autre a
+     * fini par l'être. Quatre valeurs, et elles ne disent pas la même chose :
+     *
+     *  · MOTIF_COUPE   — l'outil existe, un agent l'a désactivé en console. Rien
+     *                    à corriger côté modèle : c'est une décision de la
+     *                    plateforme, et le compter avec les fautes de frappe
+     *                    ferait croire à un problème de nommage inexistant.
+     *  · MOTIF_INCONNU — le nom ne désigne aucun outil déclaré à ce tour, et il
+     *                    n'était assez proche d'aucun pour être rattrapé. C'est
+     *                    LE chiffre du chantier : un tour d'entrée payé pour rien.
+     *  · ORIGINE_DISTANCE — un nom écorché rattrapé par ressemblance (RattrapageDeNom).
+     *  · ORIGINE_ALIAS    — un ancien nom accepté explicitement, sans deviner.
+     *
+     * Les deux dernières vivent ici et non dans RattrapageDeNom parce que c'est le
+     * JOURNAL qui doit pouvoir les distinguer : un alias est un choix assumé qu'on
+     * retirera un jour, une ressemblance est un filet qu'on espère voir se vider.
+     */
+    public const MOTIF_COUPE = 'coupe';
+    public const MOTIF_INCONNU = 'inconnu';
+    public const ORIGINE_DISTANCE = 'distance';
+    public const ORIGINE_ALIAS = 'alias';
+
     /** Le modèle a rendu sa réponse (avec ou sans outil). */
     public const ISSUE_REPONSE = 'reponse';
     /**
@@ -136,6 +160,20 @@ final class JournalTokens
     private array $etapes = [];
     private int $appels = 0;
 
+    /**
+     * LA TROUSSE ARMÉE, ET LE SIGNAL QUI L'A ARMÉE — retenus pour être PERSISTÉS.
+     *
+     * Ils existaient déjà dans le journal (`routage`, puis `message.complement`),
+     * mais nulle part en base : `assistant_message.meta` ne portait la trousse sur
+     * AUCUN des 831 messages enregistrés. Conséquence pratique, mesurée le
+     * 2026-09-25 : impossible de constituer un corpus « question → trousse » sans
+     * rapprocher à la main un journal anonyme et une table de messages, par
+     * horodatage approché. Deux chaînes de caractères dans le récapitulatif
+     * suffisent à rendre la jointure exacte.
+     */
+    private ?string $trousseDuMessage = null;
+    private ?string $declencheurDuMessage = null;
+
     public function __construct(
         // Canal dédié : MonologBundle câble ici le logger « assistant_tokens »
         // d'après le nom de l'argument (convention <channel>Logger).
@@ -188,6 +226,8 @@ final class JournalTokens
         $this->dernierAppel = 0;
         $this->etapes = [];
         $this->appels = 0;
+        $this->trousseDuMessage = null;
+        $this->declencheurDuMessage = null;
     }
 
     /**
@@ -256,11 +296,16 @@ final class JournalTokens
             unset($etapes[$i]['debut']);
         }
 
-        return [
+        return array_filter([
             'appels'   => $this->appels,
             'jetonsIa' => $this->cumulIa,
+            // CE QUE LE MESSAGE A EMPORTÉ, écrit là où il sera relu. Les deux clés
+            // rendent la base auto-suffisante pour le corpus : plus besoin de
+            // rapprocher un journal anonyme d'une table de messages par horodatage.
+            'trousse'     => $this->trousseDuMessage,
+            'declencheur' => $this->declencheurDuMessage,
             'etapes'   => array_values($etapes),
-        ];
+        ], static fn ($v) => $v !== null);
     }
 
     /**
@@ -459,12 +504,21 @@ final class JournalTokens
         string $origine,
         int $tokens,
         int $millisecondes,
+        string $declencheur = '',
     ): void {
+        // RETENUS POUR LA BASE, et pas seulement pour le journal : cf. la propriété.
+        // Posés ici parce que c'est le seul endroit qui connaisse les deux au moment
+        // où la décision est prise — les recalculer plus tard pourrait rendre autre
+        // chose si l'état du fil a bougé entre-temps.
+        $this->trousseDuMessage = $trousse;
+        $this->declencheurDuMessage = $declencheur !== '' ? $declencheur : null;
+
         $this->assistantTokensLogger->info('routage', $this->identite($request) + [
             'evenement'     => 'routage',
             'moteur'        => $moteur,
             'trousse'       => $trousse,
             'origine'       => $origine,
+            'declencheur'   => $declencheur,
             'tokens'        => $tokens,
             'millisecondes' => $millisecondes,
         ]);
@@ -500,6 +554,69 @@ final class JournalTokens
             'pris'       => $pris,
             'motif'      => $motif,
             'phase'      => $phase->name,
+        ]);
+    }
+
+    /**
+     * UN NOM D'OUTIL ÉCORCHÉ, ET CE QU'ON EN A FAIT.
+     *
+     * Le rattrapage (cf. RattrapageDeNom) prend une décision À LA PLACE du modèle :
+     * il exécute un outil que le modèle n'a pas nommé. Rien ne doit permettre d'en
+     * douter après coup, et rien ne doit permettre de l'ignorer.
+     *
+     * ── POURQUOI CE CANAL, ET PAS LE LOGGER GÉNÉRAL ────────────────────────────
+     * La trace partait jusqu'ici sur le canal « app », par un logger autowiré. En
+     * DEV elle se noyait dans un dev.log de plusieurs gigaoctets ; en PROD elle
+     * n'était **jamais écrite**, le handler y étant en fingers_crossed sur « error ».
+     * Autrement dit : la seule mesure du rattrapage était indisponible là où le
+     * rattrapage sert. Sur ce canal-ci, app:assistant:tokens:rapport la relit.
+     *
+     * @param string $origine ORIGINE_DISTANCE (ressemblance) ou ORIGINE_ALIAS (ancien nom déclaré)
+     */
+    public function rattrapage(
+        AiScope $scope,
+        string $demande,
+        string $execute,
+        string $trousse,
+        string $origine = self::ORIGINE_DISTANCE,
+    ): void {
+        $this->assistantTokensLogger->info('rattrapage', $this->identiteDeScope($scope) + [
+            'evenement' => 'rattrapage',
+            'demande'   => $demande,
+            'execute'   => $execute,
+            'trousse'   => $trousse,
+            'origine'   => $origine,
+        ]);
+    }
+
+    /**
+     * UN APPEL D'OUTIL QUI N'A RIEN EXÉCUTÉ.
+     *
+     * Jusqu'ici, un appel introuvable était INDISTINGUABLE D'UN SUCCÈS dans le
+     * journal : l'orchestrateur pousse le nom DEMANDÉ dans `tour.outils` quel que
+     * soit le résultat, et AiToolResult::introuvable() ne journalisait nulle part.
+     * On pouvait donc compter les noms inventés — par différence avec le catalogue —
+     * mais jamais savoir lesquels avaient fini par s'exécuter quand même.
+     *
+     * C'est la distinction que le §5 du chantier demande explicitement : le
+     * rattrapage fait baisser les appels INTROUVABLES, jamais les noms INVENTÉS.
+     * Deux indicateurs, deux lignes de journal.
+     *
+     * @param string $motif MOTIF_COUPE (désactivé en console) ou MOTIF_INCONNU (nom sans correspondance)
+     */
+    public function introuvable(
+        AiScope $scope,
+        string $nom,
+        string $motif,
+        ?string $trousse = null,
+    ): void {
+        $this->assistantTokensLogger->info('introuvable', $this->identiteDeScope($scope) + [
+            'evenement' => 'introuvable',
+            'nom'       => $nom,
+            'motif'     => $motif,
+            // Sans trousse, l'appelant ne savait pas ce qui était déclaré — et le
+            // rattrapage n'a donc même pas été tenté. Le rapport doit pouvoir le dire.
+            'trousse'   => $trousse,
         ]);
     }
 
@@ -688,8 +805,21 @@ final class JournalTokens
      */
     private function identite(AiRequest $request): array
     {
-        $scope = $request->scope;
+        return $this->identiteDeScope($request->scope);
+    }
 
+    /**
+     * Même identité, à partir du SEUL périmètre.
+     *
+     * Les émissions posées depuis l'exécuteur d'outils n'ont pas d'AiRequest sous la
+     * main — elles vivent une couche plus bas, là où il ne reste que le scope. Or
+     * l'identité n'a jamais rien tiré d'autre du request : `identite()` commençait
+     * justement par en extraire le scope et ignorait le reste.
+     *
+     * @return array<string, int|string|null>
+     */
+    private function identiteDeScope(AiScope $scope): array
+    {
         return [
             'horodatage'   => (new \DateTimeImmutable())->format(\DateTimeInterface::ATOM),
             'messageId'    => $this->messageId,
