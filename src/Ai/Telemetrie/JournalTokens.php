@@ -215,7 +215,9 @@ final class JournalTokens
      * phases — il n'annonce donc aucune étape. Mieux vaut alors ne rien afficher
      * qu'afficher des zéros.
      *
-     * @return array{appels: int, jetonsIa: int, etapes: list<array{cle: string, jetons: int}>}|null
+     * @return array{appels: int, jetonsIa: int, etapes: list<array{cle: string, jetons: int, ms: int,
+     *               moteur?: string, modele?: string, entree?: int, sortie?: int, cache?: int,
+     *               tours?: int, outils?: list<string>, msModele?: int}>}|null
      */
     public function recapitulatif(): ?array
     {
@@ -231,10 +233,21 @@ final class JournalTokens
             $etapes[array_key_last($etapes)]['jetons'] += $this->dernierAppel;
         }
 
+        // La dernière étape n'est fermée par personne — plus rien ne commence après
+        // la rédaction. On la ferme ici, sans quoi elle afficherait zéro seconde.
+        $dernier = array_key_last($etapes);
+        $etapes[$dernier]['ms'] = (int) round((microtime(true) - $etapes[$dernier]['debut']) * 1000);
+
+        // L'HORODATAGE BRUT NE SORT PAS. Il n'a de sens que pour le calcul ci-dessus,
+        // et il partirait sinon jusqu'au navigateur, dans un JSON stocké en base.
+        foreach ($etapes as $i => $etape) {
+            unset($etapes[$i]['debut']);
+        }
+
         return [
             'appels'   => $this->appels,
             'jetonsIa' => $this->cumulIa,
-            'etapes'   => $etapes,
+            'etapes'   => array_values($etapes),
         ];
     }
 
@@ -245,8 +258,13 @@ final class JournalTokens
      * sans cela, une étape qui ne consomme rien (l'exécution locale des outils)
      * réafficherait le montant de la précédente, et l'utilisateur croirait payer deux
      * fois la même chose.
+     *
+     * `$coulisses` ENSEMENCE l'étape qui s'ouvre. C'est ainsi que l'exécution locale
+     * des outils porte LEUR NOM : sans cela, les noms restaient sur la phase qui les
+     * a DEMANDÉS, et la ligne « consulte vos données… » — celle que l'on regarde pour
+     * savoir ce qui a été lu — ne disait rien.
      */
-    private function annoncer(string $cle): void
+    private function annoncer(string $cle, array $coulisses = []): void
     {
         $jetons = $this->dernierAppel;
         $this->dernierAppel = 0;
@@ -259,7 +277,17 @@ final class JournalTokens
         if ($jetons > 0 && $this->etapes !== []) {
             $this->etapes[array_key_last($this->etapes)]['jetons'] += $jetons;
         }
-        $this->etapes[] = ['cle' => $cle, 'jetons' => 0];
+
+        // LA DURÉE SE MESURE EN FERMANT L'ÉTAPE PRÉCÉDENTE, pas en ouvrant celle-ci :
+        // une phase ne sait pas combien elle durera, elle sait seulement quand la
+        // suivante commence. La dernière est fermée par `recapitulatif()`.
+        $maintenant = microtime(true);
+        if ($this->etapes !== []) {
+            $dernier = array_key_last($this->etapes);
+            $this->etapes[$dernier]['ms'] = (int) round(($maintenant - $this->etapes[$dernier]['debut']) * 1000);
+        }
+
+        $this->etapes[] = ['cle' => $cle, 'jetons' => 0, 'debut' => $maintenant, 'ms' => 0] + $coulisses;
 
         if ($this->echo === null) {
             return;
@@ -281,6 +309,7 @@ final class JournalTokens
      * @param array<string, int>    $tokens  entree / sortie / cache
      * @param array<string, int>    $octets  system / outils / historique
      * @param list<string>          $outils  outils appelés par le modèle à ce tour
+     * @param int                   $millisecondes temps passé CHEZ LE FOURNISSEUR, reprises comprises
      */
     public function tour(
         AiRequest $request,
@@ -290,6 +319,7 @@ final class JournalTokens
         array $tokens,
         array $octets,
         array $outils = [],
+        int $millisecondes = 0,
     ): void {
         ++$this->toursEmis;
         $this->cumulEntree += $tokens['entree'] ?? 0;
@@ -321,6 +351,7 @@ final class JournalTokens
             'octetsOutils'     => $octets['outils'] ?? 0,
             'octetsHistorique' => $octets['historique'] ?? 0,
             'outils'           => $outils,
+            'millisecondes'    => $millisecondes,
         ]);
 
         // FIL D'ACTIVITÉ. Entrée ET sortie : l'utilisateur veut savoir ce que l'échange
@@ -329,12 +360,55 @@ final class JournalTokens
         $this->dernierAppel = ($tokens['entree'] ?? 0) + ($tokens['sortie'] ?? 0);
         $this->cumulIa += $this->dernierAppel;
 
+        // ── LES COULISSES, RETENUES POUR L'ÉCRAN ────────────────────────────────
+        //
+        // Ces quatre informations — qui a répondu, avec quel modèle, quels outils ont
+        // été appelés, et comment les jetons se répartissent — existaient déjà : elles
+        // partaient dans le journal Monolog, que seul un exploitant lit. L'utilisateur,
+        // lui, voyait « 35 714 jetons IA » sans savoir d'où ils venaient.
+        //
+        // ⚠ LE MODÈLE EST CELUI QUI A RÉPONDU, pas celui qui est configuré : un 503
+        // fait basculer sur un secours, et c'est ce nom-là que le dialecte transmet.
+        // Afficher le modèle configuré ferait mentir l'écran au moment précis où la
+        // question « pourquoi cette réponse est-elle moins bonne ? » se pose.
+        //
+        // On ENRICHIT l'étape courante — celle que `debutDePhase()` vient d'ouvrir —
+        // et non la précédente : à la différence du coût, qui n'est connu qu'au
+        // retour, le moteur et les outils sont ceux du tour qui vient de se jouer.
+        if ($this->etapes !== []) {
+            $index = array_key_last($this->etapes);
+            $etape = $this->etapes[$index];
+
+            $etape['moteur'] = $moteur;
+            $etape['modele'] = $modele;
+            $etape['entree'] = ($etape['entree'] ?? 0) + ($tokens['entree'] ?? 0);
+            $etape['sortie'] = ($etape['sortie'] ?? 0) + ($tokens['sortie'] ?? 0);
+            $etape['cache']  = ($etape['cache'] ?? 0) + ($tokens['cache'] ?? 0);
+            $etape['tours']  = ($etape['tours'] ?? 0) + 1;
+
+            // LE TEMPS PASSÉ CHEZ LE FOURNISSEUR, à distinguer de la durée de
+            // l'étape. Une phase peut attendre huit secondes dont sept chez Gemini
+            // et une à assembler le prompt : sans les deux chiffres, on ne sait pas
+            // s'il faut changer de modèle ou alléger ce qu'on lui envoie.
+            $etape['msModele'] = ($etape['msModele'] ?? 0) + $millisecondes;
+
+            if ($outils !== []) {
+                // Dédoublonné en gardant l'ORDRE d'appel : c'est l'enchaînement qui
+                // raconte ce que Ket a fait, pas l'ensemble des noms.
+                $etape['outils'] = array_values(array_unique([...($etape['outils'] ?? []), ...$outils]));
+            }
+
+            $this->etapes[$index] = $etape;
+        }
+
         // Des outils sont partis : Symfony va les exécuter localement, sans rien
         // demander à personne. C'est le silence le plus long du message, et le seul
         // qu'on puisse nommer honnêtement — d'où une étape à lui, qui n'est PAS une
         // phase (Phase déclare qu'il n'y en aura jamais une quatrième).
         if ($outils !== []) {
-            $this->annoncer('outils');
+            // LES NOMS SUIVENT LE TRAVAIL. C'est cette étape-ci qui lit les données ;
+            // c'est donc sur elle qu'on lit ce qui a été lu.
+            $this->annoncer('outils', ['outils' => array_values(array_unique($outils))]);
         }
     }
 
@@ -435,6 +509,23 @@ final class JournalTokens
             ++$this->appels;
             $this->dernierAppel = $tokens;
             $this->cumulIa += $tokens;
+        }
+
+        // LE MODÈLE DE CETTE PHASE-LÀ AUSSI. La compréhension tourne sur un modèle
+        // qui n'est PAS forcément celui de la planification — c'est une famille de
+        // fournisseurs distincte, réglable à part dans la console. L'écran affichait
+        // donc « réfléchit… » sans jamais dire qui avait réfléchi, alors que c'est
+        // précisément la phase la plus souvent mise en cause quand Ket comprend mal.
+        //
+        // ⚠ On ne devine PAS le moteur : cette méthode ne reçoit que le modèle, et
+        // un nom de moteur déduit d'un préfixe serait faux le jour où un fournisseur
+        // renommera ses modèles. `coulissesEtape` sait afficher un modèle seul.
+        if ($this->etapes !== []) {
+            $index = array_key_last($this->etapes);
+            $this->etapes[$index]['modele'] = $modele;
+            $this->etapes[$index]['entree'] = ($this->etapes[$index]['entree'] ?? 0) + $tokens;
+            $this->etapes[$index]['tours']  = ($this->etapes[$index]['tours'] ?? 0) + 1;
+            $this->etapes[$index]['msModele'] = ($this->etapes[$index]['msModele'] ?? 0) + $millisecondes;
         }
 
         // Demande jugée ambiguë : le message s'arrête sur une reformulation à
