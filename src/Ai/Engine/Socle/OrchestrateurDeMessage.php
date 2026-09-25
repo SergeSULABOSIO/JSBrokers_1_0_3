@@ -283,6 +283,12 @@ final class OrchestrateurDeMessage
             // l'utilisateur attend, pas après. Tout le reste de ce journal se
             // mesure au retour, et arriverait donc une phase trop tard.
             $this->journal->debutDePhase($phase);
+
+            // LE CHRONOMÈTRE DE L'APPEL, ouvert ici et arrêté au journal du tour. Il
+            // couvre donc l'appel ET ses éventuelles reprises (tour muet, surcharge) :
+            // c'est le temps que l'utilisateur SUBIT, pas celui d'un aller-retour
+            // isolé qu'il n'a jamais attendu seul.
+            $debutDeLAppel = $this->maintenant();
             try {
                 ['reponse' => $response, 'octets' => $octets, 'usage' => $usage] = $dialecte->appeler($request, $fil, $trousse, $phase);
             } catch (\Throwable $e) {
@@ -455,6 +461,7 @@ final class OrchestrateurDeMessage
                 $usage->pourLeJournal(),
                 $octets,
                 array_column($appels, 'nom'),
+                (int) round(($this->maintenant() - $debutDeLAppel) * 1000),
             );
 
             // Requête bloquée par les garde-fous du fournisseur (prompt ou réponse).

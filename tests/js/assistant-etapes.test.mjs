@@ -23,6 +23,9 @@ import {
     compteurEtape,
     decouperFlux,
     resumeActivite,
+    explicationEtape,
+    coulissesEtape,
+    dureeEtape,
 } from '../../assets/controllers/assistant-etapes.js';
 
 test('chaque étape du serveur a son verbe d’usager', () => {
@@ -134,4 +137,78 @@ test('un moteur sans télémétrie n’affiche aucun récapitulatif', () => {
     // Mieux vaut ne rien montrer que montrer des zéros (moteur simulé, Anthropic).
     assert.equal(resumeActivite(null, 'fr'), '');
     assert.equal(resumeActivite({ appels: 0, jetonsIa: 0 }, 'fr'), '');
+});
+
+/*
+ * LES COULISSES DE KET — ce que la partie DÉPLIÉE du bandeau a le droit de montrer.
+ *
+ * La ligne repliée reste en langage d'usager ; en dépliant, on vient chercher la
+ * cuisine interne : qui a répondu, avec quel modèle, quels outils, et où sont partis
+ * les jetons. Ces tests verrouillent la frontière entre les deux registres.
+ */
+
+test('chaque verbe d’usager a son explication de coulisse', () => {
+    for (const cle of Object.keys(VERBES)) {
+        assert.notEqual(
+            explicationEtape(cle),
+            '',
+            `L’étape « ${cle} » s’affiche sans expliquer ce qu’elle fait.`,
+        );
+    }
+});
+
+test('une clé inconnue n’explique rien plutôt que d’inventer', () => {
+    assert.equal(explicationEtape('phase-d-un-serveur-plus-recent'), '');
+});
+
+test('le modèle affiché est nommé avec son moteur', () => {
+    const fragments = coulissesEtape({ moteur: 'gemini', modele: 'gemini-3.5-flash-lite' });
+
+    assert.ok(
+        fragments.includes('gemini · gemini-3.5-flash-lite'),
+        'Le moteur seul ne dit pas QUEL modèle a répondu : les deux vont ensemble.',
+    );
+});
+
+test('la ventilation des jetons distingue ce qu’on envoie de ce que le modèle écrit', () => {
+    // Les espaces de groupement varient selon la locale (fine insécable, insécable) :
+    // on normalise avant de comparer plutôt que de parier sur un caractère précis.
+    const fragments = coulissesEtape({ entree: 35000, sortie: 700, cache: 26000 })
+        .join(' | ')
+        .replace(/\s/gu, ' ');
+
+    assert.ok(fragments.includes('35 000 envoyés'), fragments);
+    assert.ok(fragments.includes('700 écrits'), fragments);
+    assert.ok(fragments.includes('26 000 relus en cache'), fragments);
+});
+
+test('les outils appelés sont nommés', () => {
+    const fragments = coulissesEtape({ outils: ['vigie_echeances', 'suivi_impayes'] });
+
+    assert.ok(fragments.some((f) => f === 'outils : vigie_echeances, suivi_impayes'));
+});
+
+test('une étape sans coulisse ne produit aucune ligne vide', () => {
+    assert.deepEqual(coulissesEtape({ cle: 'outils', jetons: 0 }), []);
+    assert.deepEqual(coulissesEtape(null), []);
+});
+
+test('sous la seconde, la durée se dit en millisecondes', () => {
+    // « 0,0 s » se lirait comme une mesure ratée alors que l’étape a bien duré.
+    assert.equal(dureeEtape(240), '240 ms');
+    assert.equal(dureeEtape(4000), '4,0 s');
+    assert.equal(dureeEtape(0), '');
+});
+
+test('le temps passé chez le modèle est dit à part de la durée de l’étape', () => {
+    // Huit secondes d'étape dont sept chez le fournisseur ne se lisent pas comme
+    // huit secondes dont une : c'est la différence entre « changer de modèle » et
+    // « alléger ce qu'on lui envoie ».
+    const fragments = coulissesEtape({ msModele: 7400 });
+
+    assert.ok(fragments.some((f) => f === '7,4 s chez le modèle'), fragments.join(' | '));
+});
+
+test('sans mesure de temps, aucune ligne n’est inventée', () => {
+    assert.deepEqual(coulissesEtape({ msModele: 0 }), []);
 });

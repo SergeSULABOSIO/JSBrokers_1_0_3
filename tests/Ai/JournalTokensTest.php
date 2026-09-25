@@ -158,4 +158,207 @@ class JournalTokensTest extends TestCase
 
         $this->assertArrayNotHasKey('complement', $this->enregistrements[0]['context']);
     }
+
+    /*
+     * ── LES COULISSES REMONTENT JUSQU'À L'ÉCRAN ─────────────────────────────
+     *
+     * Le moteur savait déjà tout : qui a répondu, avec quel modèle, quels outils ont
+     * été appelés, comment les jetons se répartissent. Tout cela partait dans le
+     * journal Monolog, que seul un exploitant lit. L'utilisateur, lui, voyait
+     * « 35 714 jetons IA » sans savoir d'où ils venaient — un chiffre qu'on subit.
+     *
+     * Ces tests verrouillent le chemin qui va du moteur au récapitulatif affiché.
+     */
+
+    public function testLeRecapitulatifPorteLeModeleQuiARepondu(): void
+    {
+        $journal = $this->journal();
+        $journal->nouveauMessage();
+        $journal->debutDePhase(\App\Ai\Trousse\Phase::PLANIFICATION);
+        $journal->tour(
+            $this->request(),
+            'gemini',
+            // Un SECOURS, pas le modèle configuré : c'est le cas où l'écran mentait.
+            'gemini-3.5-flash-lite',
+            1,
+            ['entree' => 35000, 'sortie' => 700, 'cache' => 26000],
+            ['systeme' => 10, 'outils' => 20, 'historique' => 30],
+            ['vigie_echeances', 'suivi_impayes'],
+        );
+
+        $etape = $journal->recapitulatif()['etapes'][0];
+
+        self::assertSame('gemini', $etape['moteur']);
+        self::assertSame(
+            'gemini-3.5-flash-lite',
+            $etape['modele'],
+            'C’est le modèle qui A RÉPONDU qui doit remonter, jamais celui qui est configuré.'
+        );
+        self::assertSame(['vigie_echeances', 'suivi_impayes'], $etape['outils']);
+        self::assertSame(35000, $etape['entree']);
+        self::assertSame(700, $etape['sortie']);
+        self::assertSame(26000, $etape['cache']);
+    }
+
+    /**
+     * DEUX ALLERS-RETOURS SANS OUTIL RESTENT UNE SEULE ÉTAPE.
+     *
+     * ⚠ AVEC des outils, c'est autre chose : `tour()` ouvre alors l'étape « outils »
+     * juste après, parce que Symfony va les exécuter localement — ce temps-là n'est
+     * pas du temps de modèle et ne doit pas être compté comme tel. C'est pourquoi ce
+     * test appelle sans outil : c'est le seul cas où deux tours partagent une étape.
+     */
+    public function testDeuxToursSansOutilSeCumulentDansLaMemeEtape(): void
+    {
+        $journal = $this->journal();
+        $journal->nouveauMessage();
+        $journal->debutDePhase(\App\Ai\Trousse\Phase::PLANIFICATION);
+
+        foreach ([1, 2] as $tour) {
+            $journal->tour(
+                $this->request(),
+                'gemini',
+                'gemini-3.1-flash-lite',
+                $tour,
+                ['entree' => 1000, 'sortie' => 100, 'cache' => 0],
+                ['systeme' => 1, 'outils' => 1, 'historique' => 1],
+            );
+        }
+
+        $etapes = $journal->recapitulatif()['etapes'];
+
+        self::assertCount(1, $etapes);
+        self::assertSame(2, $etapes[0]['tours']);
+        self::assertSame(2000, $etapes[0]['entree']);
+        self::assertSame(200, $etapes[0]['sortie']);
+    }
+
+    /**
+     * UN TOUR AVEC OUTILS OUVRE L'ÉTAPE « OUTILS ». L'exécution locale n'est pas du
+     * temps de modèle : la confondre avec lui ferait croire que le fournisseur est
+     * lent alors que c'est une requête SQL qui l'est.
+     */
+    public function testUnTourAvecOutilsOuvreLEtapeDExecution(): void
+    {
+        $journal = $this->journal();
+        $journal->nouveauMessage();
+        $journal->debutDePhase(\App\Ai\Trousse\Phase::PLANIFICATION);
+        $journal->tour(
+            $this->request(),
+            'gemini',
+            'gemini-3.1-flash-lite',
+            1,
+            ['entree' => 1000, 'sortie' => 100, 'cache' => 0],
+            ['systeme' => 1, 'outils' => 1, 'historique' => 1],
+            ['rechercher_entites'],
+        );
+
+        $etapes = $journal->recapitulatif()['etapes'];
+
+        self::assertCount(2, $etapes);
+        self::assertSame(['rechercher_entites'], $etapes[0]['outils'], 'Les outils sont nommés sur la phase qui les a demandés.');
+        self::assertSame('outils', $etapes[1]['cle']);
+    }
+
+    /**
+     * L'ÉTAPE « OUTILS » PORTE LE NOM DES OUTILS, et pas seulement la phase qui les
+     * a demandés : c'est cette ligne-là qu'on regarde pour savoir ce qui a été lu.
+     */
+    public function testLEtapeDExecutionPorteLeNomDesOutils(): void
+    {
+        $journal = $this->journal();
+        $journal->nouveauMessage();
+        $journal->debutDePhase(\App\Ai\Trousse\Phase::PLANIFICATION);
+        $journal->tour(
+            $this->request(),
+            'gemini',
+            'gemini-3.1-flash-lite',
+            1,
+            ['entree' => 1000, 'sortie' => 100, 'cache' => 0],
+            ['systeme' => 1, 'outils' => 1, 'historique' => 1],
+            ['vigie_echeances', 'suivi_impayes'],
+            2400,
+        );
+
+        $etapes = $journal->recapitulatif()['etapes'];
+
+        self::assertSame('outils', $etapes[1]['cle']);
+        self::assertSame(
+            ['vigie_echeances', 'suivi_impayes'],
+            $etapes[1]['outils'],
+            'La ligne « consulte vos données… » doit nommer ce qui a été lu.'
+        );
+    }
+
+    /** Le temps passé chez le fournisseur remonte, distinct de la durée de l'étape. */
+    public function testLeTempsChezLeFournisseurRemonte(): void
+    {
+        $journal = $this->journal();
+        $journal->nouveauMessage();
+        $journal->debutDePhase(\App\Ai\Trousse\Phase::PLANIFICATION);
+        $journal->tour(
+            $this->request(),
+            'gemini',
+            'gemini-3.1-flash-lite',
+            1,
+            ['entree' => 1000, 'sortie' => 100, 'cache' => 0],
+            ['systeme' => 1, 'outils' => 1, 'historique' => 1],
+            [],
+            7400,
+        );
+
+        self::assertSame(7400, $journal->recapitulatif()['etapes'][0]['msModele']);
+    }
+
+    /**
+     * LA COMPRÉHENSION DIT SUR QUOI ELLE A RÉFLÉCHI. C'est une famille de
+     * fournisseurs distincte de la planification, réglable à part : l'écran affichait
+     * « réfléchit… » sans jamais dire qui avait réfléchi — or c'est la phase la plus
+     * souvent mise en cause quand Ket comprend mal.
+     */
+    public function testLaComprehensionPorteSonModeleEtSonTemps(): void
+    {
+        $journal = $this->journal();
+        $journal->nouveauMessage();
+        $journal->debutDePhase(\App\Ai\Trousse\Phase::COMPREHENSION);
+        $journal->comprehension($this->request(), 'claude-haiku-4-5', 'claire', 'modele', 11101, 900);
+
+        $etape = $journal->recapitulatif()['etapes'][0];
+
+        self::assertSame('claude-haiku-4-5', $etape['modele']);
+        self::assertSame(900, $etape['msModele']);
+        self::assertSame(11101, $etape['entree']);
+    }
+
+    /** Chaque étape porte sa durée, et la dernière n'est pas oubliée. */
+    public function testChaqueEtapePorteSaDuree(): void
+    {
+        $journal = $this->journal();
+        $journal->nouveauMessage();
+        $journal->debutDePhase(\App\Ai\Trousse\Phase::COMPREHENSION);
+        $journal->debutDePhase(\App\Ai\Trousse\Phase::REDACTION);
+
+        $etapes = $journal->recapitulatif()['etapes'];
+
+        self::assertCount(2, $etapes);
+        foreach ($etapes as $rang => $etape) {
+            self::assertArrayHasKey('ms', $etape, sprintf('L’étape %d ne porte pas sa durée.', $rang));
+            self::assertIsInt($etape['ms']);
+        }
+    }
+
+    /**
+     * L'HORODATAGE BRUT NE SORT PAS. Il ne sert qu'au calcul de la durée ; le laisser
+     * partirait un `microtime` jusque dans un JSON stocké en base, puis au navigateur.
+     */
+    public function testLHorodatageInterneNeSortPas(): void
+    {
+        $journal = $this->journal();
+        $journal->nouveauMessage();
+        $journal->debutDePhase(\App\Ai\Trousse\Phase::REDACTION);
+
+        foreach ($journal->recapitulatif()['etapes'] as $etape) {
+            self::assertArrayNotHasKey('debut', $etape);
+        }
+    }
 }

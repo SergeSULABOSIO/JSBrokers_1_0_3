@@ -18,9 +18,15 @@ import { formatNombre } from '../number-format.js';
  * qui ne sont pas des phases (l'exécution locale des outils, la frappe côté
  * navigateur).
  *
- * Des VERBES D'USAGER, jamais nos rouages : ni « planification », ni « trousse »,
- * ni nom de modèle. L'utilisateur veut savoir où en est son travail, pas comment
- * l'application est découpée.
+ * Des VERBES D'USAGER dans la ligne REPLIÉE : ni « planification », ni « trousse »,
+ * ni nom de modèle. Pendant l'attente, l'utilisateur veut savoir où en est son
+ * travail, pas comment l'application est découpée.
+ *
+ * ⚠ LA PARTIE DÉPLIÉE, ELLE, MONTRE LES ROUAGES — et c'est exactement ce qu'on vient
+ * y chercher. Qui a répondu, avec quel modèle, quels outils ont lu quelles données,
+ * ce que chaque phase a coûté et duré : c'est la cuisine interne de Ket, et la
+ * cacher n'a jamais rassuré personne. Les deux registres coexistent donc, chacun à
+ * sa place : le verbe en tête de ligne, la mécanique en dessous.
  */
 export const VERBES = {
     // Une question acceptée mais qui attend son tour : elle n'est PAS en train
@@ -34,6 +40,108 @@ export const VERBES = {
     redaction:     'rédige la réponse…',
     ecriture:      'écrit…',
 };
+
+/**
+ * CE QUE CHAQUE PHASE FAIT RÉELLEMENT, en une phrase.
+ *
+ * Le verbe dit où l'on en est ; celle-ci dit ce qui s'y passe. Elle ne s'affiche que
+ * dans la partie dépliée — répétée à chaque ligne pendant l'attente, elle serait du
+ * bruit ; lue une fois, quand on ouvre le détail, elle explique la facture.
+ *
+ * Écrites pour un COURTIER, pas pour un ingénieur : on nomme le geste métier
+ * (« relire votre question », « lire vos données »), jamais la classe qui l'exécute.
+ */
+export const EXPLICATIONS = {
+    attente:       'La question est en file : Ket n’en traite qu’une à la fois.',
+    comprehension: 'Ket relit votre question pour établir ce que vous voulez dire, avant d’agir.',
+    clarification: 'La demande est ambiguë : Ket préfère demander plutôt que de deviner.',
+    planification: 'Ket choisit les outils dont elle a besoin et prépare ses appels.',
+    outils:        'Ket lit vos données dans l’application — aucun appel au modèle ici.',
+    redaction:     'Ket met en forme la réponse à partir de ce qu’elle vient de lire.',
+    ecriture:      'La réponse s’affiche au fil de sa rédaction.',
+};
+
+/**
+ * L'explication d'une étape, ou une chaîne vide quand la clé est inconnue — un
+ * serveur plus récent que le navigateur ne doit pas produire de ligne bancale.
+ *
+ * @param {string} cle
+ * @returns {string}
+ */
+export function explicationEtape(cle) {
+    return EXPLICATIONS[cle] || '';
+}
+
+/**
+ * LES COULISSES D'UNE ÉTAPE, en une ligne : qui a répondu, avec quel modèle, quels
+ * outils, et comment les jetons se répartissent.
+ *
+ * ⚠ LE MODÈLE EST CELUI QUI A RÉPONDU, pas celui qui est configuré : un 503 fait
+ * basculer sur un secours, et c'est ce nom-là qui remonte. Afficher le modèle
+ * configuré ferait mentir l'écran au moment précis où l'on se demande pourquoi une
+ * réponse est moins bonne que d'habitude.
+ *
+ * Rend une liste de fragments plutôt qu'une chaîne : l'appelant en fait des éléments
+ * distincts, et peut styler le modèle autrement que le reste.
+ *
+ * @param {{moteur?: string, modele?: string, outils?: string[], entree?: number,
+ *          sortie?: number, cache?: number, tours?: number, ms?: number}} etape
+ * @param {string} locale
+ * @returns {string[]}
+ */
+export function coulissesEtape(etape, locale = 'fr-FR') {
+    // (`dureeEtape` est déclarée plus bas : une déclaration `function` est hissée.)
+    if (!etape) return [];
+    const fragments = [];
+
+    if (etape.modele) {
+        // Le moteur ET le modèle : « gemini » seul ne dit pas lequel a répondu, et
+        // c'est justement la question.
+        fragments.push(etape.moteur ? `${etape.moteur} · ${etape.modele}` : etape.modele);
+    }
+
+    if (etape.tours > 1) {
+        fragments.push(`${etape.tours} allers-retours`);
+    }
+
+    // LE TEMPS PASSÉ CHEZ LE FOURNISSEUR, distinct de la durée de l'étape affichée
+    // en tête de ligne. Une phase peut durer huit secondes dont sept chez Gemini et
+    // une à assembler ce qu'on lui envoie : les deux chiffres côte à côte disent
+    // s'il faut changer de modèle ou alléger le contexte. Un seul ne dit rien.
+    if (etape.msModele) {
+        fragments.push(`${dureeEtape(etape.msModele, locale)} chez le modèle`);
+    }
+
+    // LA VENTILATION DES JETONS. « Entrée » est ce qu'on ENVOIE (instructions, outils,
+    // historique), « sortie » ce que le modèle écrit. Le cache est compté à part
+    // parce qu'il ne se facture pas au même prix — et qu'un cache qui ne sert jamais
+    // est la première chose à regarder quand une conversation devient chère.
+    const ventilation = [];
+    if (etape.entree) ventilation.push(`${formatNombre(etape.entree, 0, locale)} envoyés`);
+    if (etape.sortie) ventilation.push(`${formatNombre(etape.sortie, 0, locale)} écrits`);
+    if (etape.cache) ventilation.push(`${formatNombre(etape.cache, 0, locale)} relus en cache`);
+    if (ventilation.length) fragments.push(ventilation.join(', '));
+
+    if (Array.isArray(etape.outils) && etape.outils.length) {
+        fragments.push(`outils : ${etape.outils.join(', ')}`);
+    }
+
+    return fragments;
+}
+
+/**
+ * La durée d'une étape, en toutes lettres. Sous la seconde, on donne les
+ * millisecondes : « 0,0 s » ferait croire à une mesure ratée.
+ *
+ * @param {number} ms
+ * @param {string} locale
+ * @returns {string}
+ */
+export function dureeEtape(ms, locale = 'fr-FR') {
+    if (!ms || ms < 0) return '';
+
+    return ms < 1000 ? `${ms} ms` : `${formatNombre(ms / 1000, 1, locale)} s`;
+}
 
 /**
  * Verbe d'une étape. Une clé inconnue — serveur plus récent que le navigateur,

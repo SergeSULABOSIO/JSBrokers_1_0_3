@@ -49,7 +49,10 @@ import {
 import { formatInstant } from '../datetime-format.js';
 import { formatNombre } from '../number-format.js';
 import { documentLocale } from '../locale.js';
-import { verbeEtape, compteurEtape, resumeActivite } from './assistant-etapes.js';
+import {
+    verbeEtape, compteurEtape, resumeActivite,
+    explicationEtape, coulissesEtape, dureeEtape,
+} from './assistant-etapes.js';
 import { ongletDeConversation } from './assistant-conversation-titre.js';
 
 /**
@@ -4620,12 +4623,52 @@ export default class extends Controller {
         const liste = document.createElement('ul');
         for (const etape of activite.etapes || []) {
             const ligne = document.createElement('li');
+
+            // ── L'EN-TÊTE : ce qu'on lisait déjà, inchangé ─────────────────────
+            // Le verbe à gauche, le coût à droite. C'est la ligne que l'utilisateur
+            // connaît ; on ne la déplace pas sous prétexte d'en ajouter d'autres.
+            const entete = document.createElement('span');
+            entete.className = 'aic-activite-tete';
+
             const verbe = document.createElement('span');
             verbe.textContent = verbeEtape(etape.cle);
+
             const cout = document.createElement('span');
             cout.className = 'aic-activite-cout';
-            cout.textContent = etape.jetons ? `${formatNombre(etape.jetons)} jetons IA` : '—';
-            ligne.append(verbe, cout);
+            // La DURÉE rejoint le coût : « 6 400 jetons » ne dit pas si l'attente
+            // venait du modèle ou d'une lecture de données. Les deux ensemble, si.
+            const duree = dureeEtape(etape.ms);
+            const jetons = etape.jetons ? `${formatNombre(etape.jetons)} jetons IA` : '';
+            cout.textContent = [jetons, duree].filter(Boolean).join(' · ') || '—';
+
+            entete.append(verbe, cout);
+            ligne.appendChild(entete);
+
+            // ── LES COULISSES : ce que Ket a fait, et avec quoi ────────────────
+            // Une phrase qui explique la phase, puis les rouages : moteur, modèle
+            // qui a RÉPONDU (pas celui configuré), ventilation des jetons, outils
+            // appelés. C'est la cuisine interne, et c'est ce qu'on vient chercher en
+            // dépliant. Rien ici n'est deviné : tout vient du journal du moteur.
+            const explication = explicationEtape(etape.cle);
+            if (explication) {
+                const dit = document.createElement('span');
+                dit.className = 'aic-activite-dit';
+                dit.textContent = explication;
+                ligne.appendChild(dit);
+            }
+
+            const fragments = coulissesEtape(etape);
+            if (fragments.length) {
+                const coulisses = document.createElement('span');
+                coulisses.className = 'aic-activite-coulisses';
+                fragments.forEach((fragment) => {
+                    const puce = document.createElement('code');
+                    puce.textContent = fragment;
+                    coulisses.appendChild(puce);
+                });
+                ligne.appendChild(coulisses);
+            }
+
             liste.appendChild(ligne);
         }
         bloc.appendChild(liste);
