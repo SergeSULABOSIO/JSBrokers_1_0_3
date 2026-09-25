@@ -187,6 +187,31 @@ class AssistantConversation
         return $dernier;
     }
 
+    /**
+     * Les CONTENUS des N derniers messages de l'utilisateur, dans l'ordre dit.
+     *
+     * Jumeau de {@see dernierMessageAssistant()}, et pour la même raison : c'est
+     * l'aiguillage de trousse qui s'y accroche, et il doit lire CE QUE L'UTILISATEUR
+     * A ÉCRIT — rien d'autre. Le contenu rendu ici est BRUT : les marqueurs que le
+     * serveur ajoute pour le modèle (objets en contexte, bulle citée) vivent dans la
+     * requête, pas dans l'entité. Or la bulle citée recopie un EXTRAIT EXACT du
+     * message cité, souvent une réponse de Ket — la lire reviendrait à laisser Ket
+     * armer sa propre trousse par la bande.
+     *
+     * @return list<string>
+     */
+    public function derniersContenusUtilisateur(int $combien): array
+    {
+        $contenus = [];
+        foreach ($this->messages as $message) {
+            if ($message->getRole() === AssistantMessage::ROLE_USER) {
+                $contenus[] = (string) $message->getContenu();
+            }
+        }
+
+        return array_slice($contenus, -max(1, $combien));
+    }
+
     /** @return Collection<int, AssistantConversationContexte> */
     public function getContextes(): Collection
     {

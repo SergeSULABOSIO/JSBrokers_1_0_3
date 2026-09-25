@@ -300,6 +300,75 @@ class SelecteurDeTrousseTest extends TestCase
         );
     }
 
+    /**
+     * ⚠ KET NE S'ARME PLUS ELLE-MÊME — le défaut le plus cher de l'aiguillage.
+     *
+     * Le filet lexical relisait les trois derniers messages du fil TOUS RÔLES
+     * CONFONDUS, donc les réponses de Ket. Or le prompt lui ORDONNE de parler
+     * d'enregistrer, de modifier, d'ouvrir un formulaire — sans quoi elle répondrait
+     * « je ne peux pas », ce qui est faux. Elle armait donc sa propre trousse en
+     * parlant, et le gardait trois tours.
+     *
+     * MESURÉ le 2026-09-25 sur les 39 conversations réelles (821 tours) : 80,6 % des
+     * tours armaient l'écriture, contre 53,8 % en ne lisant que l'utilisateur — 426
+     * tours armés par la seule présence de Ket dans la fenêtre, pour un taux
+     * d'écriture réellement constatée de 5 %.
+     *
+     * Le message de Ket ci-dessous porte « formulaire », une alternative de la liste,
+     * mais AUCUNE de ses tournures d'offre : les deux signaux structurels restent
+     * donc muets, et seule la fenêtre pouvait armer. C'est exactement le cas à fermer.
+     */
+    public function testLaProseDeKetNArmePlusLEcriture(): void
+    {
+        $conversation = new AssistantConversation();
+        $conversation->addMessage(
+            (new AssistantMessage())->setRole(AssistantMessage::ROLE_USER)->setContenu('combien de clients ?')
+        );
+        $conversation->addMessage(
+            (new AssistantMessage())
+                ->setRole(AssistantMessage::ROLE_ASSISTANT)
+                ->setContenu('Vous avez 12 clients. Le formulaire d’édition est accessible depuis chaque fiche.')
+        );
+        $conversation->addMessage(
+            (new AssistantMessage())->setRole(AssistantMessage::ROLE_USER)->setContenu('et combien de polices ?')
+        );
+
+        $this->assertSame(
+            Trousse::LECTURE,
+            $this->selecteur()->trousseDe($this->requete($this->bulles(['et combien de polices ?']), $conversation)),
+            'Deux consultations encadrant une phrase de Ket ne sont pas une demande d’écriture.',
+        );
+    }
+
+    /**
+     * ET L'UTILISATEUR, LUI, EST TOUJOURS LU SUR TROIS MESSAGES.
+     *
+     * Ne garder que son dernier message descendrait l'armement à 28,7 %, mais
+     * retirerait une capacité : une saisie s'étale, et la réponse à une question
+     * (« le taux est de 15 % ») ne contient aucun verbe. Les signaux structurels la
+     * rattrapent souvent, pas toujours — Ket peut poser une question sans appeler
+     * d'outil ni employer l'une de ses tournures d'offre. Un faux négatif prive
+     * l'utilisateur d'une capacité ; un faux positif ne coûte que des jetons.
+     */
+    public function testUneSaisieEtaleeResteArmeeParLesMessagesDeLUtilisateur(): void
+    {
+        $conversation = new AssistantConversation();
+        $conversation->addMessage(
+            (new AssistantMessage())->setRole(AssistantMessage::ROLE_USER)->setContenu('Enregistre la proposition de SUNU.')
+        );
+        $conversation->addMessage(
+            (new AssistantMessage())->setRole(AssistantMessage::ROLE_ASSISTANT)->setContenu('Il me manque le taux.')
+        );
+        $conversation->addMessage(
+            (new AssistantMessage())->setRole(AssistantMessage::ROLE_USER)->setContenu('le taux est de 15%')
+        );
+
+        $this->assertSame(
+            Trousse::ECRITURE,
+            $this->selecteur()->trousseDe($this->requete($this->bulles(['le taux est de 15%']), $conversation)),
+        );
+    }
+
     /** Un plan attend une décision : la suite est forcément une écriture. */
     public function testUnPlanEnAttenteOuvreLEcriture(): void
     {
