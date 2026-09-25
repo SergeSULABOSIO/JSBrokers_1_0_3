@@ -128,7 +128,7 @@ final class AppelGemini implements FournisseurDeComprehension, FournisseurAModel
         $resultats = [];
         foreach ($appels as $part) {
             $nom = (string) $part['functionCall']['name'];
-            $resultat = $this->executeur->executer($nom, (array) ($part['functionCall']['args'] ?? []), $request->scope);
+            $resultat = $this->executeur->executer($nom, (array) ($part['functionCall']['args'] ?? []), $request->scope, Trousse::COMPREHENSION);
             $resultats[] = ['functionResponse' => [
                 'name'     => $nom,
                 'response' => ['status' => $resultat->status] + $resultat->data,
