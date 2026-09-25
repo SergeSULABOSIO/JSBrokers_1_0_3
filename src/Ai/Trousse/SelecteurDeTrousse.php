@@ -103,16 +103,36 @@ final class SelecteurDeTrousse
      */
     private string $dernierDeclencheur = 'aucun';
 
+    /**
+     * LE MOT QUI A ARMÉ L'ÉCRITURE, quand c'est la liste de verbes qui a mordu.
+     *
+     * `dernierDeclencheur()` dit LEQUEL des six signaux a parlé ; il ne dit pas, pour
+     * le sixième, laquelle des alternatives de VERBES_ACTION s'est reconnue. Or c'est
+     * exactement ce qu'il faut pour resserrer la liste : mesuré sur les trente
+     * messages qui portent déjà le déclencheur, `verbe-action` arme l'écriture vingt
+     * fois sur vingt et une — et une seule de ces vingt écrit. Sans savoir QUEL mot a
+     * mordu, on ne peut que retirer des alternatives au hasard.
+     *
+     * Vide dès que le déclencheur n'est pas `verbe-action`.
+     */
+    private string $dernierMotArmeur = '';
+
     public function dernierDeclencheur(): string
     {
         return $this->dernierDeclencheur;
     }
 
+    public function dernierMotArmeur(): string
+    {
+        return $this->dernierMotArmeur;
+    }
+
     public function trousseDe(AiRequest $requete): Trousse
     {
         $conversation = $requete->scope->conversation;
-        $retenir = function (string $declencheur, Trousse $trousse): Trousse {
+        $retenir = function (string $declencheur, Trousse $trousse, string $mot = ''): Trousse {
             $this->dernierDeclencheur = $declencheur;
+            $this->dernierMotArmeur = $mot;
 
             return $trousse;
         };
@@ -163,8 +183,10 @@ final class SelecteurDeTrousse
             $recent .= ' ' . (string) ($message['content'] ?? '');
         }
 
-        return preg_match(self::VERBES_ACTION, $recent) === 1
-            ? $retenir('verbe-action', Trousse::ECRITURE)
+        // Le mot qui a mordu est CAPTURÉ, pas seulement constaté : c'est lui, et non
+        // le nom du signal, qui dira quelle alternative retirer de la liste.
+        return preg_match(self::VERBES_ACTION, $recent, $trouve) === 1
+            ? $retenir('verbe-action', Trousse::ECRITURE, mb_strtolower(trim($trouve[0])))
             : $retenir('aucun', Trousse::LECTURE);
     }
 

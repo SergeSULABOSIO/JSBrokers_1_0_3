@@ -521,12 +521,22 @@ final class JournalTokens
         string $origine,
         int $tokens,
         int $millisecondes,
+        string $motif = '',
+        string $detail = '',
     ): void {
         $this->assistantTokensLogger->info('comprehension', $this->identite($request) + [
             'evenement'     => 'comprehension',
             'modele'        => $modele,
             'clarte'        => $clarte,
             'origine'       => $origine,
+            // POURQUOI le repli, et pas seulement qu'il a eu lieu. Quatre cinquièmes
+            // des replis ressemblent à une panne silencieuse : sans motif, on ne
+            // pouvait que les compter. Déduit des journaux du 2026-09-25 : 41 % des
+            // 46 replis échouaient AVANT le délai (donc ni quota, ni plafond), 33 %
+            // voyaient leur SORTIE rejetée après avoir été payée, 26 % touchaient le
+            // délai. Ces trois-là appellent trois remèdes différents.
+            'motif'         => $motif,
+            'detail'        => $detail,
             'tokens'        => $tokens,
             'millisecondes' => $millisecondes,
         ]);

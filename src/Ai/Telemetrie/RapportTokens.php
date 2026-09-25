@@ -127,6 +127,127 @@ final class RapportTokens
         return $issues;
     }
 
+    /**
+     * L'AIGUILLAGE JUGÉ SUR PIÈCES : quel signal a réclamé quelle trousse, et une
+     * écriture a-t-elle seulement eu lieu.
+     *
+     * La trousse d'ÉCRITURE coûte dix-neuf déclarations d'outils de plus et
+     * vingt-sept kilo-octets de protocoles — mesuré au 2026-09-25, 29 146 jetons
+     * d'écart par message, soit 46 % du tour de planification. Le journal portait
+     * déjà `declencheur` et `ecriture_effective` depuis le 2026-09-23 ; personne ne
+     * les lisait. Ce sont pourtant les deux seules colonnes qui disent si l'on paie
+     * cet écart à bon escient.
+     *
+     * Les messages antérieurs à cette instrumentation n'ont pas de `complement` : ils
+     * sont ignorés plutôt que comptés comme « aucun », qui serait un faux.
+     *
+     * @return array<string, array{n: int, ecrit: int}> « trousse / déclencheur » => comptes
+     */
+    public function aiguillages(): array
+    {
+        $par = [];
+        foreach ($this->messages() as $message) {
+            $complement = $message['complement'] ?? null;
+            if (!is_array($complement) || !isset($complement['declencheur'])) {
+                continue;
+            }
+            $cle = sprintf('%s / %s', $complement['trousse'] ?? '?', $complement['declencheur']);
+            $par[$cle]['n'] = ($par[$cle]['n'] ?? 0) + 1;
+            $par[$cle]['ecrit'] = ($par[$cle]['ecrit'] ?? 0) + (($complement['ecriture_effective'] ?? false) ? 1 : 0);
+        }
+        uasort($par, static fn (array $a, array $b) => $b['n'] <=> $a['n']);
+
+        return $par;
+    }
+
+    /**
+     * LES MOTS QUI ARMENT L'ÉCRITURE, et combien de fois chacun a eu raison.
+     *
+     * `aiguillages()` dit que `verbe-action` réclame l'écriture pour rien ; celui-ci
+     * dit LEQUEL des mots de la liste en est responsable. C'est la différence entre
+     * retirer une alternative sur mesure et en retirer au hasard.
+     *
+     * @return array<string, array{n: int, ecrit: int}> le mot => comptes
+     */
+    public function motsQuiArment(): array
+    {
+        $mots = [];
+        foreach ($this->messages() as $message) {
+            $complement = $message['complement'] ?? null;
+            $mot = is_array($complement) ? trim((string) ($complement['mot_armeur'] ?? '')) : '';
+            if ($mot === '') {
+                continue;
+            }
+            $mots[$mot]['n'] = ($mots[$mot]['n'] ?? 0) + 1;
+            $mots[$mot]['ecrit'] = ($mots[$mot]['ecrit'] ?? 0) + (($complement['ecriture_effective'] ?? false) ? 1 : 0);
+        }
+        uasort($mots, static fn (array $a, array $b) => $b['n'] <=> $a['n']);
+
+        return $mots;
+    }
+
+    /**
+     * POURQUOI LA COMPRÉHENSION S'EST REPLIÉE — la phase tourne sur quatre messages
+     * sur dix sans rien comprendre, et « origine = repli » n'en disait pas la cause.
+     *
+     * Les jetons comptent ici autant que le compte : un repli `sortie-illisible` ou
+     * `chiffre-invente` a DÉJÀ été payé (l'appel a abouti, c'est sa sortie qu'on
+     * écarte), là où un `appel-echoue` ne rapporte aucun jeton au journal — même si
+     * le fournisseur, lui, a bien compté l'entrée contre le quota.
+     *
+     * @return array<string, array{n: int, tokens: int}> motif (détail) => comptes
+     */
+    public function motifsDeRepli(): array
+    {
+        $motifs = [];
+        foreach ($this->lignes as $ligne) {
+            if (($ligne['evenement'] ?? null) !== 'comprehension') {
+                continue;
+            }
+            $motif = trim((string) ($ligne['motif'] ?? ''));
+            if ($motif === '') {
+                continue;
+            }
+            $detail = trim((string) ($ligne['detail'] ?? ''));
+            $cle = $detail === '' ? $motif : sprintf('%s (%s)', $motif, $detail);
+            $motifs[$cle]['n'] = ($motifs[$cle]['n'] ?? 0) + 1;
+            $motifs[$cle]['tokens'] = ($motifs[$cle]['tokens'] ?? 0) + (int) ($ligne['tokens'] ?? 0);
+        }
+        uasort($motifs, static fn (array $a, array $b) => $b['n'] <=> $a['n']);
+
+        return $motifs;
+    }
+
+    /**
+     * LE PLUS PETIT ALLÈGEMENT QUI RAMÈNE LES DÉPASSEMENTS À ZÉRO — ou rien, si
+     * aucun n'y parvient.
+     *
+     * C'est la seule question que la projection pose vraiment, et la réponse était
+     * jusqu'ici ÉCRITE EN DUR sous le tableau : « si un −20 % ramène les dépassements
+     * à zéro… », imprimé à l'identique quels que soient les nombres au-dessus. Un
+     * rapport qui conclut avant de mesurer est pire qu'un rapport muet, parce qu'on
+     * le croit. Mesuré au 2026-09-25, la vraie réponse était −10 %.
+     *
+     * Rend 0.0 quand rien ne dépasse déjà, et null quand même le plus fort des
+     * allègements proposés laisse des dépassements — auquel cas ce n'est pas la
+     * taille du contexte qui sature, mais la simultanéité.
+     *
+     * @param list<float> $reductions les allègements à essayer, du plus faible au plus fort
+     */
+    public function reductionSuffisante(array $reductions): ?float
+    {
+        if ($this->picParMinute()['depassements'] === 0) {
+            return 0.0;
+        }
+        foreach ($reductions as $reduction) {
+            if ($this->picParMinute($reduction)['depassements'] === 0) {
+                return $reduction;
+            }
+        }
+
+        return null;
+    }
+
     /** @return list<int> nombre de tours de chaque message */
     public function toursParMessage(): array
     {

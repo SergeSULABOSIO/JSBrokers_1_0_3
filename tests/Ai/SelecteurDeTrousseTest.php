@@ -171,6 +171,37 @@ class SelecteurDeTrousseTest extends TestCase
     }
 
     /**
+     * ET IL DIT AUSSI QUEL MOT A MORDU — le nom du signal ne suffisait pas.
+     *
+     * Mesuré au 2026-09-25 sur les trente messages qui portaient déjà le déclencheur :
+     * `verbe-action` arme l'écriture vingt fois sur vingt et une, et UNE SEULE de ces
+     * vingt écrit. Le coupable est donc la liste de verbes — mais elle compte des
+     * dizaines d'alternatives, et savoir seulement que « l'une d'elles » a mordu ne
+     * permet d'en retirer aucune. Le mot capturé, lui, se compte et se juge.
+     */
+    public function testLAiguillageNommeLeMotQuiAArmeLEcriture(): void
+    {
+        $selecteur = $this->selecteur();
+
+        // Aucun armement lexical : rien à nommer.
+        $selecteur->trousseDe($this->requete($this->bulles(['combien de clients ?'])));
+        self::assertSame('', $selecteur->dernierMotArmeur());
+
+        $selecteur->trousseDe($this->requete($this->bulles(['enregistre ce paiement'])));
+        self::assertSame('enregistr', $selecteur->dernierMotArmeur());
+
+        // Le vocabulaire du métier arme aussi, et se nomme comme le reste : c'est
+        // précisément ce genre d'alternative qu'on voudra peut-être retirer.
+        $selecteur->trousseDe($this->requete($this->bulles(['j\'ai une offre venant de SFA'])));
+        self::assertSame('offre', $selecteur->dernierMotArmeur());
+
+        // ⚠ ET IL SE REMET À VIDE quand ce n'est plus lui qui décide : un mot laissé
+        // là par l'aiguillage précédent ferait accuser un innocent dans le journal.
+        $selecteur->trousseDe($this->requete($this->bulles(['combien de clients ?'])));
+        self::assertSame('', $selecteur->dernierMotArmeur());
+    }
+
+    /**
      * @dataProvider demandesDeConsultation
      */
     public function testUneConsultationResteEnLecture(string $question): void

@@ -5,6 +5,9 @@ namespace App\Command;
 use App\Ai\AiContextBuilder;
 use App\Ai\Debit\BudgetDebit;
 use App\Ai\Reglage\PoidsDesDeclarations;
+use App\Ai\Trousse\Phase;
+use App\Ai\Trousse\Trousse;
+use App\Ai\Trousse\TrousseCatalogue;
 use App\Ai\Tool\AiToolConditionnel;
 use App\Ai\Tool\AiToolInterface;
 use App\Entity\AssistantMessage;
@@ -65,6 +68,10 @@ class AssistantTokensCompositionCommand extends Command
         private readonly AssistantConversationRepository $conversationRepository,
         private readonly AiContextBuilder $contextBuilder,
         private readonly VersionService $versionService,
+        // SOURCE UNIQUE de l'appartenance d'un outil à l'écriture — la même que celle
+        // qui décide des déclarations réellement envoyées au fournisseur. Recopier ce
+        // jugement ici ferait mesurer autre chose que ce qui part.
+        private readonly TrousseCatalogue $catalogue,
         #[AutowireIterator('app.ai_tool')] iterable $tools,
         // Le plafond réellement opposé au moteur (BudgetDebit) : le « tours par
         // minute » ci-dessous doit décrire l'installation courante, pas le palier
@@ -80,7 +87,16 @@ class AssistantTokensCompositionCommand extends Command
         $this
             ->addArgument('idEntreprise', InputArgument::REQUIRED, "Identifiant de l'entreprise")
             ->addArgument('idConversation', InputArgument::OPTIONAL, 'Conversation réelle à mesurer (sinon conversation vide)')
-            ->addOption('outils', null, InputOption::VALUE_NONE, 'Détaille la taille de chaque déclaration d\'outil');
+            ->addOption('outils', null, InputOption::VALUE_NONE, 'Détaille la taille de chaque déclaration d\'outil')
+            // ⚠ SANS CES DEUX OPTIONS, LA COMMANDE MESURAIT TOUJOURS LE PIRE CAS.
+            //
+            // `toSystemPrompt()` était appelée sans trousse ni phase : elle rendait
+            // donc invariablement le prompt ÉCRITURE + PLANIFICATION — 27 Ko de
+            // protocoles et cinquante-deux outils —, y compris pour mesurer une
+            // consultation. Impossible, dans ces conditions, de comparer les deux
+            // trousses, c'est-à-dire de chiffrer ce que coûte un mauvais aiguillage.
+            ->addOption('trousse', null, InputOption::VALUE_REQUIRED, 'Trousse à mesurer : « ecriture » (défaut) ou « lecture »', Trousse::ECRITURE->value)
+            ->addOption('phase', null, InputOption::VALUE_REQUIRED, 'Phase à mesurer : « planification » (défaut), « redaction » ou « comprehension »', 'planification');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -98,6 +114,26 @@ class AssistantTokensCompositionCommand extends Command
             ?? $this->inviteRepository->findOneBy(['entreprise' => $entreprise]);
         if ($invite === null) {
             $io->error('Aucun invité rattaché à cette entreprise.');
+
+            return Command::FAILURE;
+        }
+
+        $trousse = Trousse::tryFrom((string) $input->getOption('trousse'));
+        if ($trousse === null || $trousse === Trousse::COMPREHENSION) {
+            $io->error('Trousse inconnue : attendu « ecriture » ou « lecture ».');
+
+            return Command::FAILURE;
+        }
+        // Phase est un enum PUR (aucune valeur adossée) : la correspondance se fait
+        // ici, au seul endroit qui parle à un humain — la ligne de commande.
+        $phase = match ((string) $input->getOption('phase')) {
+            'planification' => Phase::PLANIFICATION,
+            'redaction'     => Phase::REDACTION,
+            'comprehension' => Phase::COMPREHENSION,
+            default         => null,
+        };
+        if ($phase === null) {
+            $io->error('Phase inconnue : attendu « planification », « redaction » ou « comprehension ».');
 
             return Command::FAILURE;
         }
@@ -144,6 +180,14 @@ class AssistantTokensCompositionCommand extends Command
             $ecarte = $request !== null
                 && $tool instanceof AiToolConditionnel
                 && !$tool->estDisponible($request->scope);
+            // LA PHASE D'ABORD : la rédaction ne déclare AUCUN outil (la clé `tools`
+            // est omise, pas vide). Puis la trousse : la lecture ne porte pas ceux qui
+            // préparent une écriture.
+            if (!$phase->declareDesOutils()) {
+                $ecarte = true;
+            } elseif (!$trousse->estEcriture() && $this->catalogue->estOutilDEcriture($tool->name())) {
+                $ecarte = true;
+            }
 
             if ($ecarte) {
                 $octetsEcartes += $this->taille($declaration);
@@ -161,12 +205,14 @@ class AssistantTokensCompositionCommand extends Command
         }
 
         $octetsOutils = $this->taille($declarations);
-        $octetsPrompt = $request !== null ? \strlen($this->contextBuilder->toSystemPrompt($request)) : 0;
+        $octetsPrompt = $request !== null ? \strlen($this->contextBuilder->toSystemPrompt($request, $trousse, $phase)) : 0;
         $octetsHistorique = $request !== null ? $this->taille($request->messages) : 0;
         $total = $octetsOutils + $octetsPrompt + $octetsHistorique;
 
         $io->title(sprintf(
-            'Composition du payload — version applicative %s, %d outils déclarés',
+            'Composition du payload — trousse %s, phase %s — version %s, %d outils déclarés',
+            $trousse->libelle(),
+            mb_strtolower($phase->name),
             $this->versionService->getVersion(),
             \count($declarations),
         ));

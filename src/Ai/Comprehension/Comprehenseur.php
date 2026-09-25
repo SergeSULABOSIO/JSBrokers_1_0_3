@@ -47,6 +47,27 @@ final class Comprehenseur
      * seules, et tout dire après le tour précédent : les soumettre au comprenant,
      * c'est lui garantir une fausse ambiguïté sur le message le plus clair du fil.
      */
+    /**
+     * POURQUOI LE REPLI, et pas seulement qu'il a eu lieu.
+     *
+     * Le fail-open est intégral et le restera : il n'est pas question de bloquer un
+     * message parce que cette phase est tombée. Mais « origine = repli » ne disait
+     * rien de la panne, et quatre messages sur dix passaient par là — une phase payée
+     * qui ne comprend rien, sans qu'on puisse dire laquelle des cinq portes de sortie
+     * s'était ouverte.
+     *
+     * Déduit des journaux au 2026-09-25, sur 46 replis : 41 % échouaient AVANT le
+     * délai (ni quota, ni plafond : une panne d'appel), 33 % voyaient leur sortie
+     * rejetée APRÈS avoir été payée — 16 554 jetons en moyenne, jetés —, 26 %
+     * touchaient le délai de huit secondes. Trois causes, trois remèdes distincts :
+     * il fallait pouvoir les nommer avant de choisir lequel appliquer.
+     */
+    public const MOTIF_SANS_CLE = 'sans-cle';
+    public const MOTIF_DEBIT = 'debit-indisponible';
+    public const MOTIF_APPEL_ECHOUE = 'appel-echoue';
+    public const MOTIF_SORTIE_ILLISIBLE = 'sortie-illisible';
+    public const MOTIF_CHIFFRE_INVENTE = 'chiffre-invente';
+
     private const ACQUIESCEMENTS = '/^(oui|ok|okay|d\'accord|daccord|je confirme|confirme|'
         . 'vas.?y|allez.?y|go|c\'est bon|parfait|exact|tout à fait|continue|poursuis)[\s.!]*$/iu';
 
@@ -80,7 +101,7 @@ final class Comprehenseur
         // Aucune clé pour ce fournisseur : la phase n'existe pas, et c'est tout. La
         // demande part telle quelle, exactement comme avant qu'on l'invente.
         if (!$this->appel->estDisponible()) {
-            return $this->journaliser($request, DemandeComprise::claire($brut, DemandeComprise::ORIGINE_REPLI), 0, $debut);
+            return $this->journaliser($request, DemandeComprise::claire($brut, DemandeComprise::ORIGINE_REPLI), 0, $debut, self::MOTIF_SANS_CLE);
         }
 
         // On ne PATIENTE jamais avant cet appel. « symfony serve » n'a qu'un worker
@@ -88,7 +109,7 @@ final class Comprehenseur
         // l'utilisateur pour une phase qui ne fait qu'améliorer sa réponse serait un
         // marché perdant.
         if ($this->budget->secondesAvantLiberation($this->appel->cleDeDebit(), self::MAX_OUTPUT_TOKENS) !== 0) {
-            return $this->journaliser($request, DemandeComprise::claire($brut, DemandeComprise::ORIGINE_REPLI), 0, $debut);
+            return $this->journaliser($request, DemandeComprise::claire($brut, DemandeComprise::ORIGINE_REPLI), 0, $debut, self::MOTIF_DEBIT);
         }
 
         try {
@@ -100,10 +121,41 @@ final class Comprehenseur
                 'modele'      => $this->appel->modele(),
             ]);
 
-            return $this->journaliser($request, DemandeComprise::claire($brut, DemandeComprise::ORIGINE_REPLI), 0, $debut);
+            return $this->journaliser(
+                $request,
+                DemandeComprise::claire($brut, DemandeComprise::ORIGINE_REPLI),
+                0,
+                $debut,
+                self::MOTIF_APPEL_ECHOUE,
+                self::detailDe($e),
+            );
         }
 
-        return $this->journaliser($request, $this->interpreter($texte, $request), $tokens, $debut);
+        [$comprise, $motif] = $this->interpreter($texte, $request);
+
+        return $this->journaliser($request, $comprise, $tokens, $debut, $motif);
+    }
+
+    /**
+     * Ce qui distingue une panne d'une autre, en un mot : le code HTTP quand il y en
+     * a un, sinon le nom court de l'exception.
+     *
+     * Sans lui, `appel-echoue` mettrait dans le même sac un 429 (quota du
+     * fournisseur), un 503 (son indisponibilité) et un dépassement du délai que NOUS
+     * imposons — trois causes qui n'appellent pas du tout le même geste.
+     */
+    private static function detailDe(\Throwable $e): string
+    {
+        if (method_exists($e, 'getResponse')) {
+            try {
+                return 'http-' . $e->getResponse()->getStatusCode();
+            } catch (\Throwable) {
+                // La réponse n'est pas lisible : le nom de l'exception fera l'affaire.
+            }
+        }
+        $nom = (new \ReflectionClass($e))->getShortName();
+
+        return $nom === '' ? 'inconnu' : $nom;
     }
 
     /**
@@ -141,8 +193,15 @@ final class Comprehenseur
 
     /**
      * Lit la conclusion du fournisseur : un JSON, quel qu'en soit l'emballage.
+     *
+     * Rend le motif avec la conclusion : les deux replis possibles ici sont les seuls
+     * qui aient DÉJÀ été payés — l'appel a abouti, c'est sa sortie qu'on écarte. Les
+     * confondre avec une panne d'appel masquait 33 % des replis, et 16 554 jetons
+     * dépensés puis jetés par message concerné.
+     *
+     * @return array{0: DemandeComprise, 1: string} la conclusion, et le motif du repli (vide s'il n'y en a pas)
      */
-    private function interpreter(string $texte, AiRequest $request): DemandeComprise
+    private function interpreter(string $texte, AiRequest $request): array
     {
         $brut = $request->lastUserMessage();
 
@@ -162,7 +221,7 @@ final class Comprehenseur
 
         // Sortie inexploitable ou vide : on n'a rien appris, on ne bloque rien.
         if (!is_array($sortie) || $intention === '') {
-            return DemandeComprise::claire($brut, DemandeComprise::ORIGINE_REPLI);
+            return [DemandeComprise::claire($brut, DemandeComprise::ORIGINE_REPLI), self::MOTIF_SORTIE_ILLISIBLE];
         }
 
         // GARDE ANTI-DÉRIVE. Un modèle qui reformule invente des chiffres — c'est la
@@ -174,12 +233,15 @@ final class Comprehenseur
                 'intention' => mb_substr($intention, 0, 200),
             ]);
 
-            return DemandeComprise::claire($brut, DemandeComprise::ORIGINE_REPLI);
+            return [DemandeComprise::claire($brut, DemandeComprise::ORIGINE_REPLI), self::MOTIF_CHIFFRE_INVENTE];
         }
 
-        return ($sortie['claire'] ?? true) === false
-            ? DemandeComprise::aClarifier($intention, (array) ($sortie['questions'] ?? []))
-            : DemandeComprise::claire($intention);
+        return [
+            ($sortie['claire'] ?? true) === false
+                ? DemandeComprise::aClarifier($intention, (array) ($sortie['questions'] ?? []))
+                : DemandeComprise::claire($intention),
+            '',
+        ];
     }
 
     /**
@@ -209,8 +271,14 @@ final class Comprehenseur
         return false;
     }
 
-    private function journaliser(AiRequest $request, DemandeComprise $comprise, int $tokens, float $debut): DemandeComprise
-    {
+    private function journaliser(
+        AiRequest $request,
+        DemandeComprise $comprise,
+        int $tokens,
+        float $debut,
+        string $motif = '',
+        string $detail = '',
+    ): DemandeComprise {
         $this->journal->comprehension(
             $request,
             $this->appel->modele(),
@@ -218,6 +286,8 @@ final class Comprehenseur
             $comprise->origine,
             $tokens,
             (int) round((microtime(true) - $debut) * 1000),
+            $motif,
+            $detail,
         );
 
         return $comprise;

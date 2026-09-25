@@ -228,6 +228,7 @@ final class OrchestrateurDeMessage
         // pire qu'un journal muet.
         $this->trousseDuMessage = $trousse;
         $this->declencheurDuMessage = $this->selecteur->dernierDeclencheur();
+        $this->motArmeurDuMessage = $this->selecteur->dernierMotArmeur();
         $this->journal->routage(
             $request,
             $dialecte->nom(),
@@ -759,6 +760,9 @@ final class OrchestrateurDeMessage
 
     private string $declencheurDuMessage = 'aucun';
 
+    /** Laquelle des alternatives de VERBES_ACTION a mordu — vide si ce n'est pas elle. */
+    private string $motArmeurDuMessage = '';
+
     private function uneEcritureAEuLieu(array $sequenceOutils): bool
     {
         foreach ($sequenceOutils as $nom) {
@@ -803,6 +807,9 @@ final class OrchestrateurDeMessage
             [
                 'trousse'            => $this->trousseDuMessage?->libelle() ?? '?',
                 'declencheur'        => $this->declencheurDuMessage,
+                // Le MOT, et pas seulement le signal : sans lui, resserrer la liste de
+                // verbes revient à en retirer au hasard.
+                'mot_armeur'         => $this->motArmeurDuMessage,
                 'ecriture_effective' => $this->uneEcritureAEuLieu($sequenceOutils),
             ],
         );

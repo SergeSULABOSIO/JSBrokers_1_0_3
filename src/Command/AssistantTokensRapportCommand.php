@@ -194,7 +194,69 @@ class AssistantTokensRapportCommand extends Command
             ));
         }
 
-        $io->section('6. Projection — que rapporterait un allègement du bloc invariant ?');
+        // ── AIGUILLAGE ──────────────────────────────────────────────────────────
+        //
+        // La question la plus chère du rapport, et elle n'était pas posée : armer la
+        // trousse d'ÉCRITURE coûte dix-neuf déclarations d'outils de plus et
+        // vingt-sept kilo-octets de protocoles. Le journal portait déjà de quoi
+        // répondre depuis le 2026-09-23 ; il manquait seulement de le lire.
+        $aiguillages = $rapport->aiguillages();
+        if ($aiguillages !== []) {
+            $io->section('6. Aiguillage de trousse — paie-t-on l\'écriture à bon escient ?');
+            $rangees = [];
+            $armees = 0;
+            $ecrites = 0;
+            foreach ($aiguillages as $cle => $compte) {
+                $rangees[] = [
+                    $cle,
+                    $compte['n'],
+                    $compte['ecrit'],
+                    sprintf('%d %%', (int) round(100 * $compte['ecrit'] / max(1, $compte['n']))),
+                ];
+                if (str_starts_with($cle, 'ecriture')) {
+                    $armees += $compte['n'];
+                    $ecrites += $compte['ecrit'];
+                }
+            }
+            $io->table(['Trousse / déclencheur', 'Messages', 'Ayant écrit', 'Taux'], $rangees);
+            if ($armees > 0) {
+                $io->writeln(sprintf(
+                    ' Lecture : %d message(s) ont été armés pour l\'écriture, %d ont écrit (%d %%).'
+                    . ' Les %d autres ont payé la grosse trousse pour rien.',
+                    $armees,
+                    $ecrites,
+                    (int) round(100 * $ecrites / $armees),
+                    $armees - $ecrites,
+                ));
+            }
+
+            $mots = $rapport->motsQuiArment();
+            if ($mots !== []) {
+                $io->newLine();
+                $io->writeln(' <options=bold>Les mots qui arment l\'écriture</> — un mot qui n\'écrit jamais est un mot à retirer de la liste.');
+                $io->table(['Mot', 'Messages', 'Ayant écrit'], array_map(
+                    static fn (string $mot, array $c): array => [$mot, $c['n'], $c['ecrit']],
+                    array_keys($mots),
+                    array_values($mots),
+                ));
+            }
+        }
+
+        // ── COMPRÉHENSION ───────────────────────────────────────────────────────
+        $motifs = $rapport->motifsDeRepli();
+        if ($motifs !== []) {
+            $io->section('7. Compréhension — pourquoi elle s\'est repliée');
+            $io->writeln(' Un repli laisse le message partir sans rien comprendre. Les jetons disent lesquels');
+            $io->writeln(' avaient DÉJÀ été payés : une sortie rejetée coûte plein tarif pour rien.');
+            $io->newLine();
+            $io->table(['Motif', 'Occurrences', 'Jetons dépensés'], array_map(
+                static fn (string $cle, array $c): array => [$cle, $c['n'], number_format($c['tokens'], 0, ',', ' ')],
+                array_keys($motifs),
+                array_values($motifs),
+            ));
+        }
+
+        $io->section('8. Projection — que rapporterait un allègement du bloc invariant ?');
         $rangees = [[
             'tel quel',
             number_format($observe['pic'], 0, ',', ' '),
@@ -212,13 +274,14 @@ class AssistantTokensRapportCommand extends Command
         }
         $io->table(['Bloc invariant', 'Pic / minute', 'Tours au-dessus du plafond', 'Messages touchés'], $rangees);
 
-        $io->writeln(
-            ' Lecture : si un −20 % ramène les dépassements à zéro, le dégraissage vaut son risque de régression.'
-        );
-        $io->writeln(
-            ' S\'ils persistent même à −40 %, c\'est la simultanéité qui sature, pas la taille du contexte :'
-            . ' seul un plafond plus haut y changera quelque chose.'
-        );
+        // ⚠ LA CONCLUSION SE DÉDUIT DES CHIFFRES, elle ne les précède pas.
+        //
+        // Ces deux lignes étaient écrites EN DUR : « si un −20 % ramène les
+        // dépassements à zéro… », « s'ils persistent même à −40 %… ». Elles
+        // s'imprimaient à l'identique quels que soient les nombres du tableau
+        // au-dessus — un rapport qui conclut avant de mesurer est pire qu'un rapport
+        // muet, parce qu'on le croit.
+        $io->writeln(' ' . $this->lectureDeLaProjection($rapport, $observe));
         $io->newLine();
         $io->note(
             'La projection rejoue la chronologie observée. Elle ne modélise pas le fait qu\'un utilisateur '
@@ -226,6 +289,49 @@ class AssistantTokensRapportCommand extends Command
         );
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * CE QUE LA PROJECTION DIT VRAIMENT — déduit, jamais récité.
+     *
+     * Trois verdicts possibles, et un seul est vrai à la fois : rien ne dépasse ;
+     * un allègement suffit, et on dit lequel ; aucun allègement ne suffit, et c'est
+     * alors la simultanéité qui sature, pas la taille du contexte.
+     *
+     * @param array{pic: int, depassements: int, messagesEnDepassement: int} $observe
+     */
+    private function lectureDeLaProjection(RapportTokens $rapport, array $observe): string
+    {
+        // La DÉCISION vit dans RapportTokens (cœur pur, testé) ; il ne reste ici que
+        // la mise en mots — c'est le partage que suit tout le dossier.
+        $suffisante = $rapport->reductionSuffisante(self::REDUCTIONS);
+
+        if ($suffisante === 0.0) {
+            return 'Lecture : aucun tour ne dépasse le plafond sur la période. Le contexte n\'est pas'
+                . ' ce qui sature aujourd\'hui — alléger le bloc invariant ferait baisser la facture,'
+                . ' pas les refus.';
+        }
+
+        if ($suffisante !== null) {
+            return sprintf(
+                'Lecture : un allègement de %d %% du bloc invariant ramène les dépassements de %d à ZÉRO'
+                . ' (%d messages touchés aujourd\'hui). Le dégraissage vaut son risque de régression.',
+                (int) round(100 * $suffisante),
+                $observe['depassements'],
+                $observe['messagesEnDepassement'],
+            );
+        }
+
+        $pire = $rapport->picParMinute((float) max(self::REDUCTIONS));
+
+        return sprintf(
+            'Lecture : même à −%d %%, %d tours dépassent encore (contre %d aujourd\'hui). C\'est la'
+            . ' SIMULTANÉITÉ qui sature, pas la taille du contexte : seul un plafond plus haut —'
+            . ' ou un étalement des messages — y changera quelque chose.',
+            (int) round(100 * max(self::REDUCTIONS)),
+            $pire['depassements'],
+            $observe['depassements'],
+        );
     }
 
     /**
