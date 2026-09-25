@@ -48,7 +48,14 @@ interface DialecteDuFil
      * même chose (Gemini inclut les tokens cachés, Anthropic les exclut) ni au même
      * endroit (un seul compteur chez l'un, entrée et sortie séparées chez l'autre).
      */
-    public function cleDeDebit(): string;
+    /**
+     * La clé du compteur de débit — celle de la PHASE quand on la donne.
+     *
+     * Le fournisseur tient sa fenêtre par modèle, et une phase peut désormais avoir
+     * le sien (cf. GEMINI_MODELE_REDACTION). Sans la phase, on rend le modèle
+     * courant : c'est ce que faisaient tous les appelants avant, et ils restent justes.
+     */
+    public function cleDeDebit(?Phase $phase = null): string;
 
     /**
      * L'historique de la conversation, mis à la forme du fournisseur.

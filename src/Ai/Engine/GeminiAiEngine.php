@@ -79,6 +79,9 @@ final class GeminiAiEngine implements MoteurDeTexte, FournisseurAModele, Fournis
 
     private readonly string $replisParDefaut;
 
+    /** Modèle dédié à la RÉDACTION selon le .env — vide quand il n'y en a pas. */
+    private readonly string $redactionParDefaut;
+
     public function __construct(
         HttpClientInterface $httpClient,
         AiContextBuilder $contextBuilder,
@@ -126,6 +129,19 @@ final class GeminiAiEngine implements MoteurDeTexte, FournisseurAModele, Fournis
         // production, et les appels existants de ce constructeur restent valides — ce
         // qui est la condition posée en tête de ce fichier.
         ?\Closure $horloge = null,
+        /**
+         * MODÈLE DÉDIÉ À LA RÉDACTION. Vide = celui du moteur, et rien ne change.
+         *
+         * ⚠ EN DERNIER, ET AVEC UN DÉFAUT — la condition posée en tête de ce fichier.
+         * Placé au milieu, il décalait les arguments positionnels de tous les appels
+         * existants : cinquante erreurs de harnais l'ont dit aussitôt (2026-09-25).
+         *
+         * La rédaction ne pèse que 9,8 % des jetons d'entrée (mesuré sur la campagne)
+         * mais écrit 100 % de ce que l'utilisateur lit : c'est le seul endroit où
+         * payer plus cher se voit. Et Google tenant sa fenêtre PAR MODÈLE, la phase
+         * déplacée cesse de disputer son débit à la planification, qui en pèse 83,9 %.
+         */
+        #[Autowire(env: 'GEMINI_MODELE_REDACTION')] string $modeleDeRedaction = '',
     ) {
         $this->cleEstPosee = trim($apiKey) !== '';
         $this->epuisement = $epuisement;
@@ -133,6 +149,7 @@ final class GeminiAiEngine implements MoteurDeTexte, FournisseurAModele, Fournis
         // construction, pour s'accorder au réglage en vigueur.
         $this->modeleParDefaut = $model;
         $this->replisParDefaut = $modelesDeRepli;
+        $this->redactionParDefaut = $modeleDeRedaction;
         $this->fil = new DialecteGeminiDuFil(
             $httpClient,
             static fn (AiRequest $r, Trousse $t, Phase $p): string => $contextBuilder->toSystemPrompt($r, $t, $p),
@@ -149,6 +166,13 @@ final class GeminiAiEngine implements MoteurDeTexte, FournisseurAModele, Fournis
             // Le MÊME journal que l'orchestrateur : une bascule de secours doit figurer
             // dans la campagne, à côté des tours qu'elle a fait changer de modèle.
             $journal,
+            // PAR SON NOM, et non par sa position : ce constructeur aligne huit
+            // paramètres dont cinq facultatifs, et deux fermetures voisines s'y étaient
+            // déjà interverties une fois. Un nom ne s'intervertit pas.
+            //
+            // Relu à chaque appel, comme le modèle principal : un changement décidé en
+            // console part avec le message suivant, sans redémarrage.
+            modeleDeRedaction: fn (): string => ModeleChoisi::pour($this->politique, 'redaction', 'gemini', $this->redactionParDefaut),
         );
 
         // L'orchestrateur est CONSTRUIT ICI et non injecté : le faire entrer par le

@@ -629,7 +629,11 @@ final class OrchestrateurDeMessage
                     + \strlen($this->contextBuilder->toSystemPrompt($request, $trousse, Phase::REDACTION)))
                 / self::OCTETS_PAR_TOKEN,
             );
-            $attente = $this->budget->secondesAvantLiberation($dialecte->cleDeDebit(), $estime);
+            // LA FENÊTRE DE LA RÉDACTION, pas celle du tour qui vient de finir : depuis
+            // qu'elle peut avoir son propre modèle, ce n'est plus le même compteur —
+            // et renoncer à un tour parce qu'une AUTRE fenêtre est pleine serait un
+            // refus sans cause.
+            $attente = $this->budget->secondesAvantLiberation($dialecte->cleDeDebit(Phase::REDACTION), $estime);
 
             // Assez de débit tout de suite : on enchaîne, c'est le cas courant.
             if ($attente === 0) {
@@ -645,7 +649,7 @@ final class OrchestrateurDeMessage
                     'tours'          => $round + 1,
                     'cumulEntree'    => $cumulInput,
                     'estimeProchain' => $estime,
-                    'restant'        => $this->budget->restant($dialecte->cleDeDebit()),
+                    'restant'        => $this->budget->restant($dialecte->cleDeDebit(Phase::REDACTION)),
                     'attente'        => $attente,
                     'dernierOutil'   => $appels[0]['nom'] ?? null,
                 ]);

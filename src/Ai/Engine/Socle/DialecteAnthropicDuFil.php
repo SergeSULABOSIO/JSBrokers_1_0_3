@@ -88,7 +88,7 @@ final class DialecteAnthropicDuFil implements DialecteDuFil
      * sortie, et surtout il ne compte pas la même chose que Google — d'où une clé
      * qui ne peut pas être le simple nom du modèle.
      */
-    public function cleDeDebit(): string
+    public function cleDeDebit(?Phase $phase = null): string
     {
         return 'anthropic:in:' . $this->modeleCourant();
     }
