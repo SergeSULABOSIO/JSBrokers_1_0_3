@@ -328,10 +328,14 @@ class KetJustesseCommand extends Command
 
             try {
                 $reponse = $this->moteur->reply($this->contextBuilder->build($entreprise, $invite, $conversation));
-                $obtenus = $this->outilsAppeles();
-                $resultats[] = ['cas' => $c, 'obtenus' => $obtenus, 'erreur' => $reponse->refused ? 'refus périmètre' : null];
+                $resultats[] = [
+                    'cas'     => $c,
+                    'obtenus' => $this->outilsAppeles(),
+                    'clarifie' => $this->aDemandeUneClarification(),
+                    'erreur'  => $reponse->refused ? 'refus périmètre' : null,
+                ];
             } catch (\Throwable $e) {
-                $resultats[] = ['cas' => $c, 'obtenus' => [], 'erreur' => $e->getMessage()];
+                $resultats[] = ['cas' => $c, 'obtenus' => [], 'clarifie' => false, 'erreur' => $e->getMessage()];
             }
 
             if ($pause > 0 && $i < \count($cas) - 1) {
@@ -369,6 +373,36 @@ class KetJustesseCommand extends Command
     }
 
     /**
+     * LA COMPRÉHENSION A-T-ELLE REFUSÉ DE TRAITER LA DEMANDE ?
+     *
+     * ⚠ CE N'EST PAS UNE ERREUR DE CHOIX D'OUTIL, ET LES CONFONDRE FAUSSE TOUT.
+     *
+     * Quand la phase 0 juge une demande peu claire, le message s'arrête là : aucun outil
+     * n'est déclaré, aucun n'est appelé, et la planification n'a jamais lieu. Compter ces
+     * cas comme « outil attendu absent » reviendrait à imputer au nommage et aux
+     * descriptions un défaut qu'ils ne peuvent pas corriger — et à voir l'indicateur
+     * monter ou descendre au gré d'une phase que ce chantier ne touche pas.
+     *
+     * Mesuré le 2026-09-26 : 10 cas sur 38 (26 %) se terminent ainsi, sur des questions
+     * telles que « Donne-moi les rétrocommissions des agents » ou « La réserve est de
+     * combien ? ». C'est le défaut dominant du corpus, et il mérite son propre chantier.
+     *
+     * La marque est l'ABSENCE d'étape de planification dans le récapitulatif : on la lit
+     * là plutôt que sur un drapeau de la réponse, parce que c'est le journal qui fait foi
+     * sur ce qui s'est réellement passé.
+     */
+    private function aDemandeUneClarification(): bool
+    {
+        foreach ($this->journal->recapitulatif()['etapes'] ?? [] as $etape) {
+            if (($etape['cle'] ?? '') === 'planification') {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * L'INDICATEUR PRINCIPAL DU CHANTIER : bon outil au premier tour, sans rattrapage.
      *
      * « Bon » veut dire : l'ensemble des outils appelés contient TOUS ceux attendus, et
@@ -387,6 +421,7 @@ class KetJustesseCommand extends Command
         $manques = 0;
         $inventes = 0;
         $erreurs = 0;
+        $clarifies = 0;
         $ecarts = [];
 
         foreach ($resultats as $r) {
@@ -396,6 +431,21 @@ class KetJustesseCommand extends Command
             if ($r['erreur'] !== null) {
                 ++$erreurs;
                 $ecarts[] = [$r['cas']->libelle, implode(', ', $attendus) ?: '(aucun)', 'ERREUR : ' . $r['erreur']];
+                continue;
+            }
+
+            // ⚠ MIS À PART, ET C'EST LE POINT. Une demande jugée peu claire n'atteint
+            // jamais la planification : aucun outil ne lui est déclaré, aucun ne peut
+            // donc être choisi. La compter comme un mauvais choix imputerait au nommage
+            // un défaut qui vient d'ailleurs, et ferait bouger l'indicateur au gré d'une
+            // phase que ce chantier ne touche pas.
+            if (($r['clarifie'] ?? false) && $attendus !== []) {
+                ++$clarifies;
+                $ecarts[] = [
+                    $r['cas']->libelle,
+                    implode(', ', $attendus) ?: '(aucun)',
+                    'CLARIFICATION demandée — la question n\'a pas atteint les outils',
+                ];
                 continue;
             }
 
@@ -425,22 +475,39 @@ class KetJustesseCommand extends Command
         }
 
         $total = \count($resultats);
+        // LE DÉNOMINATEUR DE LA JUSTESSE N'EST PAS LE CORPUS ENTIER : c'est le nombre de
+        // cas où Ket a EU des outils à choisir. Les clarifications et les erreurs
+        // techniques n'ont jamais atteint ce choix ; les inclure mesurerait autre chose.
+        $aChoisi = $total - $clarifies - $erreurs;
+
         $io->section('Bilan');
         $io->table(
-            ['Indicateur', 'Cas', 'Part'],
+            ['Indicateur', 'Cas', 'Part du corpus'],
             [
                 ['Bon outil au premier tour, exactement', $justes, self::part($justes, $total)],
                 ['Bon outil, mais un outil de plus appelé', $justesAvecSupplement, self::part($justesAvecSupplement, $total)],
                 ['Outil attendu absent', $manques, self::part($manques, $total)],
                 ['Nom d\'outil inexistant prononcé', $inventes, self::part($inventes, $total)],
-                ['Erreur technique (non imputable au choix)', $erreurs, self::part($erreurs, $total)],
+                ['— Clarification demandée (hors choix d\'outil)', $clarifies, self::part($clarifies, $total)],
+                ['— Erreur technique (hors choix d\'outil)', $erreurs, self::part($erreurs, $total)],
             ],
         );
 
         $io->writeln(sprintf(
-            ' <info>INDICATEUR PRINCIPAL — bon outil au premier tour, sans rattrapage : %s</info>',
-            self::part($justes, $total),
+            ' <info>INDICATEUR PRINCIPAL — bon outil quand Ket a eu à choisir : %s (%d cas sur %d)</info>',
+            self::part($justes, $aChoisi),
+            $justes,
+            $aChoisi,
         ));
+        $io->writeln(sprintf(
+            ' Rapporté au corpus entier : %s. L\'écart entre les deux, ce sont les %d cas que la',
+            self::part($justes, $total),
+            $clarifies + $erreurs,
+        ));
+        $io->writeln(' COMPRÉHENSION a écartés avant tout choix d\'outil — ni le nommage ni les');
+        $io->writeln(' descriptions ne les corrigeront, et les confondre ferait varier l\'indicateur');
+        $io->writeln(' au gré d\'une phase que ce chantier ne touche pas.');
+        $io->newLine();
         $io->writeln(' Les appels rattrapés et les noms inventés se relisent aussi dans la section 8 de app:assistant:tokens:rapport.');
 
         if ($ecarts !== []) {
