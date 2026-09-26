@@ -18,9 +18,9 @@ use PHPUnit\Framework\TestCase;
  */
 class ChiffreFantomeTest extends TestCase
 {
-    /** Les chiffres réellement rendus par analyse_portefeuille ce jour-là. */
+    /** Les chiffres réellement rendus par analyser_portefeuille ce jour-là. */
     private const RESULTATS = [[
-        'outil' => 'analyse_portefeuille',
+        'outil' => 'analyser_portefeuille',
         'data'  => ['lignes' => [
             ['nom' => 'CHEMAF - Projet Etoile', 'nbPolices' => 1, 'primesTotales' => 442930.82, 'commissionsTtc' => 20869.20],
             ['nom' => 'Africa Global Logistics', 'nbPolices' => 2, 'primesTotales' => 266727.63, 'commissionsTtc' => 11383.05],

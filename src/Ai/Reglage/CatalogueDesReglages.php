@@ -91,7 +91,7 @@ final class CatalogueDesReglages
         // d'ici et laisser le test confirmer. Le faire en bloc reviendrait à
         // remanier le prompt entier d'un seul geste, sur l'artefact le plus sensible
         // du projet.
-        'analyse_portefeuille',
+        'analyser_portefeuille',
         'chronologie',
         'document_comptable',
         'fermer_rubrique',
@@ -113,8 +113,8 @@ final class CatalogueDesReglages
      */
     private const FACTURENT = [
         'preparer_document'     => 'meterDocumentIa',
-        'echange_exporter'      => 'meterEchange',
-        'echange_importer'      => 'meterEchange',
+        'exporter_portefeuille'      => 'meterEchange',
+        'importer_classeur'      => 'meterEchange',
         'lire_fiche'            => 'meterRead',
         'telecharger_documents' => 'meterRead',
         'attacher_fichier'      => 'meterFichierIa',
@@ -142,7 +142,7 @@ final class CatalogueDesReglages
      * @var array<string, array{0: string, 1: string, 2: string}>
      */
     private const FICHES = [
-        'analyse_portefeuille'               => ['Classements du portefeuille', 'Les meilleurs assureurs, clients, risques et intermédiaires, et la production mois par mois.', 'action:analyser'],
+        'analyser_portefeuille'               => ['Classements du portefeuille', 'Les meilleurs assureurs, clients, risques et intermédiaires, et la production mois par mois.', 'action:analyser'],
         'analyser_fichier_pour_saisie'       => ['Saisir depuis un fichier joint', 'Lit une pièce jointe et en tire les éléments d’un enregistrement à créer.', 'piece-sinistre'],
         'attacher_fichier'                   => ['Rattacher une pièce', 'Conserve une pièce jointe du chat sur un enregistrement du portefeuille.', 'action:attach'],
         'catalogue_des_risques'              => ['Catalogue des couvertures', 'Le catalogue complet des risques configurés, descriptions et taux compris — la base du conseil.', 'risque'],
@@ -151,9 +151,9 @@ final class CatalogueDesReglages
         'consulter_guide'                    => ['Consulter une fiche métier', 'Charge une fiche de connaissance (boussole, cycle de production, rétrocommissions…).', 'action:information'],
         'detail_depenses'                    => ['Détail des dépenses', 'Dépenses et charges ligne à ligne, au plan comptable OHADA.', 'depense'],
         'document_comptable'                 => ['États comptables', 'Trésorerie, résultat, TVA et les autres états SYSCOHADA, à l’instant.', 'document-comptable'],
-        'echange_consulter'                  => ['Renseigner sur l’import/export', 'Explique la rubrique d’échange et le format du classeur attendu.', 'echange'],
-        'echange_exporter'                   => ['Exporter le portefeuille', 'Produit le classeur Excel de l’état du portefeuille.', 'echange-export'],
-        'echange_importer'                   => ['Importer un classeur', 'Contrôle puis reprend un classeur Excel joint à la conversation.', 'echange-import'],
+        'consulter_echanges'                  => ['Renseigner sur l’import/export', 'Explique la rubrique d’échange et le format du classeur attendu.', 'echange'],
+        'exporter_portefeuille'                   => ['Exporter le portefeuille', 'Produit le classeur Excel de l’état du portefeuille.', 'echange-export'],
+        'importer_classeur'                   => ['Importer un classeur', 'Contrôle puis reprend un classeur Excel joint à la conversation.', 'echange-import'],
         'effort_commercial_agent'            => ['Rattacher un partage', 'Rattache ou détache une condition de partage à des affaires.', 'condition'],
         'envoyer_message_par_email'          => ['Envoyer la réponse par e-mail', 'Expédie la réponse précédente à un destinataire.', 'action:send-email'],
         'etat_configuration'                 => ['Complétude du cabinet', 'Ce qui manque encore pour que le cabinet soit opérationnel (propriétaire seulement).', 'action:settings'],

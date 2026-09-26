@@ -62,7 +62,7 @@ mise en place). Tant qu'une proposition n'a **aucun avenant**, ce n'est qu'un **
 - ses montants (prime, commission, rétro, réserve) ne sont que des **projections** et ne
   comptent **nulle part** : ni dans les indicateurs agrégés d'un client / portefeuille /
   assureur / partenaire (listes du workspace), ni chez Ket (`indicateur_calcule`,
-  `analyse_portefeuille`, chiffre d'affaires). Un client qui n'a que des propositions a une
+  `analyser_portefeuille`, chiffre d'affaires). Un client qui n'a que des propositions a une
   prime totale et une commission de **0** — ne jamais annoncer les chiffres d'un projet
   comme « engagés ».
 - ses **tranches ne comptent pas et ne sont pas suivies** — même si leur date d'effet est

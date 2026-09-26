@@ -214,7 +214,7 @@ final class SimulatedAiEngine implements MoteurDeTexte
                     : '',
             ),
             'vigie_echeances' => $this->formatVigie($data),
-            'analyse_portefeuille' => $this->formatAnalysePortefeuille($data),
+            'analyser_portefeuille' => $this->formatAnalysePortefeuille($data),
             'exporter_etat' => sprintf(
                 'Je lance le téléchargement : %s%s — il s\'ouvre dans un nouvel onglet.',
                 $data['libelle'],
@@ -277,7 +277,7 @@ final class SimulatedAiEngine implements MoteurDeTexte
         return $texte;
     }
 
-    /** Analyses agrégées du portefeuille (analyse_portefeuille) : classement, production ou encaissements. */
+    /** Analyses agrégées du portefeuille (analyser_portefeuille) : classement, production ou encaissements. */
     private function formatAnalysePortefeuille(array $data): string
     {
         $fmt = static fn (float $m) => number_format($m, 2, ',', ' ');

@@ -179,10 +179,11 @@ class KetJustesseCommand extends Command
      * sont à égale distance du nom écorché. Deux noms trop proches DANS UNE MÊME
      * TROUSSE désarment donc le filet pour toute leur famille, en silence.
      *
-     * Mesuré au 2026-09-25 : une seule paire y est, `echange_exporter` et
-     * `echange_importer` (distance 2), et elle franchit la frontière lecture/écriture —
-     * si bien qu'en trousse d'écriture, où les deux sont déclarés, aucune écorchure de
-     * cette famille n'est rattrapable.
+     * Mesuré au 2026-09-25 : une seule paire y était, `echange_exporter` et
+     * `echange_importer` (distance 2), et elle franchissait la frontière lecture/écriture —
+     * si bien qu'en trousse d'écriture, où les deux étaient déclarés, aucune écorchure de
+     * cette famille n'était rattrapable. Leur renommage du 2026-09-26 a porté la distance
+     * à 12, et AliasDOutilTest interdit désormais toute nouvelle paire.
      */
     private function sectionDistances(SymfonyStyle $io): void
     {

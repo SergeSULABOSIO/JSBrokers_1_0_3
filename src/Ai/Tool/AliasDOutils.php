@@ -45,10 +45,12 @@ final class AliasDOutils
      * @var array<string, string>
      */
     public const ALIAS = [
-        // Renommé le 2026-09-26. Le modèle écrivait DÉJÀ « analyser_portefeuille » :
-        // quatre appels réels sur ce nom, aucun sur l'ancien. On a aligné le nom sur
-        // ce que le modèle produit, plutôt que de corriger le modèle à chaque tour.
-        'analyser_portefeuille' => 'analyse_portefeuille',
+        // Renommé le 2026-09-26, dans le sens que le TERRAIN dictait : le modèle écrivait
+        // déjà « analyser_portefeuille » — quatre appels réels sur ce nom, aucun sur
+        // l'ancien. On a aligné l'outil sur ce que le modèle produit spontanément, plutôt
+        // que de corriger le modèle à chaque tour. L'alias couvre donc l'ANCIEN nom, celui
+        // que plus personne n'écrivait déjà.
+        'analyse_portefeuille' => 'analyser_portefeuille',
 
         // Fusionnés le 2026-09-26 dans rechercher_entites(mode: compte). Les deux
         // outils avaient les mêmes droits, le même périmètre et des schémas quasi
@@ -63,6 +65,40 @@ final class AliasDOutils
         // exactement cela : lire des données. Le filet ne pouvait rien pour lui ; un
         // alias, si.
         'lecture_donnees' => 'rechercher_entites',
+
+        // Renommés le 2026-09-26. « echange_exporter » et « echange_importer » étaient
+        // à distance 2 l'un de l'autre ET de part et d'autre de la frontière : en
+        // trousse d'écriture, où les deux sont déclarés, RattrapageDeNom refusait de
+        // trancher entre eux, et TOUTE écorchure de cette famille restait introuvable.
+        // ⚠ CHANGER LE VERBE NE SUFFISAIT PAS. Premier essai : « exporter_donnees » et
+        // « importer_donnees » — toujours à distance 2, le préfixe seul ayant bougé.
+        // Ce sont les OBJETS qui portent la distance : on exporte un PORTEFEUILLE, on
+        // importe un CLASSEUR. Distance 12, et chaque nom dit en plus ce qu'il manipule.
+        // « echange_consulter » suit ses deux frères, la famille gardant un vocabulaire
+        // d'un seul tenant.
+        'echange_exporter' => 'exporter_portefeuille',
+        'echange_importer' => 'importer_classeur',
+        'echange_consulter' => 'consulter_echanges',
+    ];
+
+    /**
+     * LES ANCIENS NOMS QUI ÉTAIENT DÉJÀ DES OUTILS D'ÉCRITURE.
+     *
+     * Un alias ne doit jamais faire passer de la lecture à l'écriture : ce serait ouvrir,
+     * par un mot d'hier, une capacité que le mot d'aujourd'hui réserve. Mais l'inverse
+     * n'est pas vrai — un ancien nom d'écriture PEUT viser un outil d'écriture, c'est même
+     * la seule chose qu'il puisse faire.
+     *
+     * La distinction ne se déduit plus du code : l'outil d'origine n'existe plus, rien ne
+     * dit donc de quel côté il était. Elle se DÉCLARE ici, et {@see AliasDOutilTest} refuse
+     * toute cible d'écriture qui ne figure pas dans cette liste. Ajouter un alias vers
+     * l'écriture oblige ainsi à l'écrire noir sur blanc, plutôt qu'à le laisser passer.
+     *
+     * @var list<string>
+     */
+    public const ANCIENS_NOMS_D_ECRITURE = [
+        // `echange_importer` importait un classeur : une écriture, hier comme aujourd'hui.
+        'echange_importer',
     ];
 
     /**

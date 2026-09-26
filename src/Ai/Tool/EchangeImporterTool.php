@@ -54,7 +54,7 @@ final class EchangeImporterTool implements AiToolInterface, AiToolEcriture, AiTo
 
     public function name(): string
     {
-        return 'echange_importer';
+        return 'importer_classeur';
     }
 
     public function description(): string
