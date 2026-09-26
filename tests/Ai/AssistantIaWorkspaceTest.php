@@ -849,7 +849,9 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $meta = $this->em()->getRepository(AssistantMessage::class)
             ->findOneBy(['role' => AssistantMessage::ROLE_ASSISTANT], ['id' => 'DESC'])
             ->getMeta();
-        $this->assertSame('compter_entites', $meta['tool']);
+        // Depuis la fusion du 2026-09-26, « combien de clients ? » est servi par
+        // rechercher_entites en mode compte : un seul outil pour les deux questions.
+        $this->assertSame('rechercher_entites', $meta['tool']);
     }
 
     public function testListeDesClientsDansPerimetre(): void

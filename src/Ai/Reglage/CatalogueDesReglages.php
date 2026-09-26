@@ -61,7 +61,6 @@ final class CatalogueDesReglages
         // sans elle, la phase qui lève les ambiguïtés de référence part sans aucun
         // outil. Puis le moteur générique d'écriture et ses compagnons, que les
         // protocoles nomment à chaque tour.
-        'compter_entites',
         'consulter_guide',
         'inventaire_champs',
         'lire_fiche',
@@ -148,7 +147,6 @@ final class CatalogueDesReglages
         'attacher_fichier'                   => ['Rattacher une pièce', 'Conserve une pièce jointe du chat sur un enregistrement du portefeuille.', 'action:attach'],
         'catalogue_des_risques'              => ['Catalogue des couvertures', 'Le catalogue complet des risques configurés, descriptions et taux compris — la base du conseil.', 'risque'],
         'chronologie'                        => ['Chronologie d’un dossier', 'Ce qui s’est passé sur un client, dans l’ordre.', 'jour-ferie'],
-        'compter_entites'                    => ['Compter', 'Combien de clients, de polices, d’échéances — par catégorie.', 'action:count'],
         'conges'                             => ['Congés d’un collaborateur', 'Solde, demandes et absences à venir.', 'conge'],
         'consulter_guide'                    => ['Consulter une fiche métier', 'Charge une fiche de connaissance (boussole, cycle de production, rétrocommissions…).', 'action:information'],
         'detail_depenses'                    => ['Détail des dépenses', 'Dépenses et charges ligne à ligne, au plan comptable OHADA.', 'depense'],

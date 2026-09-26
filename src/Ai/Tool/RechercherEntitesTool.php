@@ -50,6 +50,12 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
     /** Taille de page fixe côté serveur : maîtrise des tokens restitués au modèle. */
     private const PAGE_SIZE = 20;
 
+    /** Le mode COMPTE, tel que le schéma l'expose. */
+    public const MODE_COMPTE = 'compte';
+    /** Le mode LISTE — celui par défaut, et le seul qu'on avait avant la fusion. */
+    public const MODE_LISTE = 'liste';
+
+
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly JSBDynamicSearchService $searchService,
@@ -82,14 +88,16 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
 
     public function description(): string
     {
-        return "Liste ou recherche les enregistrements d'une catégorie de données de l'entreprise "
-            . '(clients, avenants, pistes, notes, sinistres…), avec filtre texte optionnel et '
-            . 'pagination (' . self::PAGE_SIZE . ' par page). À appeler quand l’utilisateur demande '
-            . '« liste », « affiche », « montre-moi », « quels sont »… Le paramètre lieA restreint '
+        return "Liste, recherche ou COMPTE les enregistrements d'une catégorie de données de "
+            . "l'entreprise (clients, avenants, pistes, notes, sinistres…), avec filtre texte "
+            . 'optionnel et pagination (' . self::PAGE_SIZE . ' par page). À appeler quand '
+            . 'l’utilisateur demande « liste », « affiche », « montre-moi », « quels sont »… '
+            . 'et aussi « combien », « nombre de » : dans ce cas mode=' . self::MODE_COMPTE
+            . ', qui rend le NOMBRE au lieu des lignes, avec exactement les mêmes filtres. Le paramètre lieA restreint '
             . 'aux enregistrements LIÉS à une fiche précise, même à plusieurs niveaux de relation '
             . '(ex. les tâches d’une piste, les tâches ou avenants d’un CLIENT via ses pistes) — '
             . 'SEUL moyen fiable de connaître les éléments liés : une fiche ne les contient jamais. '
-            . 'lieA accepte un NOM (lieA={entite:"Client", nom:"Kibali"}) autant qu’un id : ne fais '
+            . 'lieA accepte un NOM (lieA={entite:"Client", nom:"Dupont"}) autant qu’un id : ne fais '
             . 'JAMAIS une recherche préalable pour obtenir un identifiant, le serveur résout le nom. '
             . 'De même, un « filtre » qui ne correspond à aucun libellé mais au nom d’un '
             . 'rattachement (un client, un assureur) est réinterprété automatiquement, et le '
@@ -123,7 +131,9 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
 
     public function aiguillage(): string
     {
-        return '« lesquels / liste / montre-moi » : lister des enregistrements. Aussi pour « montre / liste les '
+        return '« lesquels / liste / montre-moi » : lister des enregistrements. '
+            . '« combien / nombre de » : LE MÊME outil avec mode=' . self::MODE_COMPTE . ', jamais un autre. '
+            . 'Aussi pour « montre / liste les '
             . 'polices non renouvelables (ou « à ne pas renouveler ») » avec echeance: non_renouvelables — le '
             . 'CINQUIÈME groupe d\'échéance, celui des décisions, aligné avec le chip du même nom dans la '
             . 'rubrique Avenants. Ces polices ne sont PAS un retard et n\'entrent dans AUCUNE des quatre '
@@ -135,9 +145,15 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
         return [
             'type' => 'object',
             'properties' => [
+                'mode' => [
+                    'type' => 'string',
+                    'enum' => [self::MODE_LISTE, self::MODE_COMPTE],
+                    'description' => 'liste (défaut) = les enregistrements ; compte = leur NOMBRE, '
+                        . 'mêmes filtres, sans les lignes.',
+                ],
                 'entite' => [
                     'type' => 'string',
-                    'description' => "Nom court de l'entité à lister (ex. Client, Avenant, Piste).",
+                    'description' => "Nom court de l'entité à lister ou compter (ex. Client, Avenant, Piste).",
                     'enum' => $this->lexique->nomsCourts(),
                 ],
                 'filtre' => [
@@ -165,12 +181,34 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
     public function match(string $question, AiScope $scope): ?array
     {
         $normalized = AiText::normalize($question);
-        if (!preg_match('/\b(liste[rsz]?|affiche[rsz]?|montre[rsz]?|enumere[rsz]?|quel(?:le)?s sont)\b/', $normalized)) {
+
+        // DEUX FAMILLES DE VERBES, UN SEUL OUTIL. « liste les clients » et « combien de
+        // clients ? » posent la même question au serveur ; seule la forme de la réponse
+        // change. Les deux aiguillages vivaient dans deux outils dont les match() étaient
+        // identiques à trois lignes près — c'est cette gémellité qui a fini par produire
+        // des noms d'outils inventés, le modèle hésitant entre deux portes vers la même
+        // pièce.
+        $veutCompter = (bool) preg_match('/\b(combien|nombre|compte[sz]?)\b/', $normalized);
+        $veutLister = (bool) preg_match(
+            '/\b(liste[rsz]?|affiche[rsz]?|montre[rsz]?|enumere[rsz]?|quel(?:le)?s sont)\b/',
+            $normalized,
+        );
+        if (!$veutCompter && !$veutLister) {
             return null;
         }
+
         // Le paiement d'une PRIME a son outil dédié : sans cette garde, « liste les
         // paiements de prime… » partait sur la rubrique Paiements (trésorerie du courtier).
         if (PaiementPrimeIntent::concerne($normalized)) {
+            return null;
+        }
+
+        // « compte » est aussi le SUBSTANTIF d'un relevé : « où en est le compte du client
+        // X ? » demande une position financière, pas un dénombrement. Sans cette garde, on
+        // l'emportait sur lire_soa — les outils sont essayés dans l'ordre du conteneur — et
+        // on répondait par un nombre de clients. La garde ne vaut QUE pour la famille du
+        // comptage : « liste les comptes clients » reste une liste.
+        if ($veutCompter && !$veutLister && ReleveDeCompteIntent::concerne($normalized)) {
             return null;
         }
 
@@ -183,6 +221,11 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
         // question exprime une fenêtre d'échéance ou un statut de paiement, on applique le
         // MÊME critère que le chip correspondant (sources uniques : les classes de scope).
         $args = ['entite' => $shortName];
+        // LA LISTE L'EMPORTE en cas d'ambiguïté (« liste-moi combien il y en a ») : rendre
+        // les lignes quand on attendait un nombre se rattrape d'un regard, l'inverse non.
+        if ($veutCompter && !$veutLister) {
+            $args['mode'] = self::MODE_COMPTE;
+        }
         if ($shortName === 'Avenant' && ($f = AvenantEcheanceScope::detecterDepuisTexte($normalized)) !== null) {
             $args['echeance'] = $f;
         } elseif ($shortName === 'Tranche' && ($s = TranchePaiementScope::versNomsCourts(TranchePaiementScope::detecterAxesDepuisTexte($normalized))) !== []) {
@@ -200,6 +243,22 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
         }
 
         return $args;
+    }
+
+    /**
+     * Cet appel demande-t-il un NOMBRE plutôt qu'une liste ?
+     *
+     * ⚠ LE DÉFAUT EST LA LISTE, et il le restera. Un `mode` absent, mal orthographié ou
+     * rendu dans une autre langue doit produire une liste : c'est le comportement
+     * d'avant la fusion, donc celui qui ne surprend personne. Rendre un nombre là où
+     * l'utilisateur attendait des lignes serait une régression silencieuse ; l'inverse
+     * se voit tout de suite et se rattrape au tour suivant.
+     *
+     * @param array<string, mixed> $args
+     */
+    private static function estUnCompte(array $args): bool
+    {
+        return self::MODE_COMPTE === strtolower(trim((string) ($args['mode'] ?? '')));
     }
 
     public function execute(array $args, AiScope $scope): AiToolResult
@@ -302,6 +361,42 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
         $criterePortefeuille = $perimetreEntreprise
             ? []
             : $this->portefeuilleCritere->pour($shortName, $scope->invite);
+
+        // ── MODE COMPTE ────────────────────────────────────────────────────────────
+        //
+        // « Combien de clients ? » et « la liste des clients » posent la MÊME question
+        // au serveur : mêmes droits, même périmètre, mêmes filtres, même SQL. Seule la
+        // taille de page change. Deux outils pour cela ne se distinguaient que par leur
+        // nom — et le modèle ne les distinguait justement pas : les deux seuls noms
+        // inventés que le rattrapage ne sauvait pas, « lister_entites » (3 appels) et
+        // « lecture_donnees » (1), sont nés de cette hésitation.
+        //
+        // Le compte se prend AVANT la pagination et AVANT les trois détours de repêchage
+        // (identifiant, description, rattachement). C'est voulu : un compte doit dire
+        // combien il y a d'enregistrements RÉPONDANT AUX CRITÈRES DEMANDÉS, pas combien
+        // une recherche élargie de son propre chef a fini par trouver — sans quoi le
+        // nombre annoncé ne correspondrait plus à la question posée.
+        if (self::estUnCompte($args)) {
+            $compte = $this->searchService->search(
+                $fqcn,
+                $criteria + $lienCriteria + $criteresRubrique + $criterePortefeuille,
+                $scope->entreprise,
+                null,
+                1,
+                1,
+            );
+            if (($compte['status']['code'] ?? 500) !== 200) {
+                return AiToolResult::introuvable($labels[$shortName]);
+            }
+
+            return AiToolResult::ok(array_filter([
+                'entite'    => $shortName,
+                'libelle'   => $labels[$shortName],
+                'filtre'    => $filtreRubrique,
+                'perimetre' => PortefeuilleScope::libellePerimetre($perimetreEntreprise, $criterePortefeuille),
+                'count'     => (int) $compte['totalItems'],
+            ], static fn ($v) => $v !== null));
+        }
 
         $result = $this->searchService->search($fqcn, $criteria + $lienCriteria + $criteresRubrique + $criterePortefeuille, $scope->entreprise, null, $page, self::PAGE_SIZE);
         if (($result['status']['code'] ?? 500) !== 200) {

@@ -7,7 +7,6 @@ use App\Ai\Finance\EconomieTranche;
 use App\Ai\Presentation\Colonnes;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
-use App\Ai\Tool\CompterEntitesTool;
 use App\Ai\Tool\EntiteLexique;
 use App\Ai\Tool\EntiteLibelle;
 use App\Ai\Tool\LireFicheTool;
@@ -667,7 +666,6 @@ class PaiementsPrimeToolTest extends TestCase
                 $this->createMock(\App\Services\ServiceMonnaies::class),
             ),
         );
-        $compter = new CompterEntitesTool($resolver, $search, $lexique, $this->fabriquePortefeuille());
         $lireFiche = new LireFicheTool(
             $resolver,
             $search,
@@ -683,7 +681,10 @@ class PaiementsPrimeToolTest extends TestCase
         );
 
         $this->assertNull($rechercher->match('Liste les paiements de prime de la tranche 12', $scope));
-        $this->assertNull($compter->match('Combien de paiements de prime ont été signalés ?', $scope));
+        // Depuis la fusion du 2026-09-26, le comptage passe par le MÊME outil que la
+        // liste : la garde PaiementPrimeIntent doit donc tenir sur les deux familles de
+        // verbes, « liste » comme « combien ».
+        $this->assertNull($rechercher->match('Combien de paiements de prime ont été signalés ?', $scope));
         $this->assertNull($lireFiche->match('Donne-moi les informations du paiement de prime de la tranche 12', $scope));
 
         // Non-régression : les questions sur la vraie rubrique Paiements passent toujours.
