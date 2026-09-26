@@ -83,6 +83,34 @@ final class ExecuteurDOutils
             }
         }
 
+        // UN ANCIEN NOM, ACCEPTÉ TEL QUEL — et AVANT le rattrapage, jamais après.
+        //
+        // L'ordre n'est pas indifférent. Un renommage est une correspondance DÉCLARÉE :
+        // elle doit s'appliquer telle quelle, sans dépendre de la ressemblance
+        // orthographique entre l'ancien nom et le nouveau. « compter_entites » est à
+        // distance 8 de « rechercher_entites » — le filet ne l'aurait jamais rattrapé,
+        // et faire reposer une transition sur le hasard des lettres n'aurait pas tenu.
+        //
+        // La frontière reste tenue par la suite : l'outil visé est cherché parmi ceux
+        // qu'on a, et un outil coupé en console a déjà rendu « introuvable » plus haut.
+        $alias = AliasDOutils::resoudre($nom, $this->nomsDesOutils());
+        if ($alias !== null && $this->estAtteignable($alias, $scope, $trousse)) {
+            foreach ($this->outils as $outil) {
+                if ($outil->name() !== $alias) {
+                    continue;
+                }
+                $this->journal?->rattrapage(
+                    $scope,
+                    $nom,
+                    $alias,
+                    $trousse?->libelle() ?? '',
+                    JournalTokens::ORIGINE_ALIAS,
+                );
+
+                return $outil->execute($args, $scope);
+            }
+        }
+
         // UN NOM ÉCORCHÉ COÛTAIT UN TOUR ENTIER. Mesuré au 2026-09-25 : 10 appels sur
         // 188 (5,3 %) visaient un nom inexistant, tous quasi-homonymes du vrai —
         // `analyser_portefeuille` pour `analyse_portefeuille`, `rechercher_entite` au
@@ -118,5 +146,50 @@ final class ExecuteurDOutils
         $this->journal?->introuvable($scope, $nom, JournalTokens::MOTIF_INCONNU, $trousse?->libelle());
 
         return AiToolResult::introuvable($nom);
+    }
+
+    /**
+     * ⚠ UN ALIAS NE DOIT ATTEINDRE QUE CE QUE SON NOM ACTUEL ATTEINDRAIT.
+     *
+     * Écrit après qu'un test l'eut mis en défaut : la première version cherchait la cible
+     * de l'alias directement parmi les outils du processus, court-circuitant les deux
+     * filtres qui comptent. Un outil COUPÉ EN CONSOLE redevenait donc joignable par son
+     * ancien nom — la coupure ne porte que sur le nom demandé —, et un outil d'écriture
+     * aurait pu l'être depuis un tour de lecture.
+     *
+     * La règle est désormais celle du rattrapage, mot pour mot : la cible doit figurer
+     * parmi les outils DÉCLARÉS à ce tour-ci. Ce n'est pas une garde de sécurité — elle
+     * reste dans execute(), en fail-closed — mais c'est la propriété qui empêche une
+     * commodité de transition d'ouvrir ce que la console a fermé.
+     *
+     * Sans trousse ni catalogue, l'appelant ne sait pas ce qui était déclaré : on se
+     * rabat sur le seul filtre dont on dispose, l'état de l'outil en console.
+     */
+    private function estAtteignable(string $cible, AiScope $scope, ?Trousse $trousse): bool
+    {
+        if ($trousse !== null && $this->catalogue !== null) {
+            return \in_array($cible, $this->catalogue->nomsDe($trousse, $scope), true);
+        }
+
+        return $this->reglages === null || $this->reglages->outilActif($cible);
+    }
+
+    /**
+     * Les noms d'outils réellement présents dans ce processus.
+     *
+     * Sert UNIQUEMENT à la garde « un nom qui existe n'est jamais un alias » : ce n'est
+     * pas la liste des outils déclarés au tour, qui dépend de la trousse et du périmètre,
+     * et que seul TrousseCatalogue sait établir.
+     *
+     * @return list<string>
+     */
+    private function nomsDesOutils(): array
+    {
+        $noms = [];
+        foreach ($this->outils as $outil) {
+            $noms[] = $outil->name();
+        }
+
+        return $noms;
     }
 }

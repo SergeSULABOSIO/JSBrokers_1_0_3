@@ -138,14 +138,21 @@ final class SimulatedAiEngine implements MoteurDeTexte
     /** Phrase de réponse par outil (le futur LLM formulera lui-même à partir des données). */
     private function formatToolReply(string $toolName, array $data): string
     {
-        return match ($toolName) {
-            'compter_entites' => sprintf(
+        // LE COMPTE SE RECONNAÎT À SA DONNÉE, plus à son outil. Depuis la fusion du
+        // 2026-09-26, `rechercher_entites` rend soit des lignes, soit un nombre : c'est
+        // la présence de « count » sans « items » qui distingue les deux, et non plus un
+        // nom d'outil. Tester le nom aurait laissé le comptage sans phrase.
+        if ($toolName === 'rechercher_entites' && isset($data['count']) && !isset($data['items'])) {
+            return sprintf(
                 'Votre espace de travail compte actuellement %d enregistrement%s dans la rubrique « %s »%s.',
                 $data['count'],
                 $data['count'] > 1 ? 's' : '',
                 $data['libelle'],
                 $this->mentionPerimetre($data),
-            ),
+            );
+        }
+
+        return match ($toolName) {
             'indicateur_calcule' => ($data['ambigu'] ?? false)
                 ? $this->formatCandidats($data)
                 : sprintf(

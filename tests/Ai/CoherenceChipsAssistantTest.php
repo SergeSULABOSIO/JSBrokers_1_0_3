@@ -4,7 +4,6 @@ namespace App\Tests\Ai;
 
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
-use App\Ai\Tool\CompterEntitesTool;
 use App\Ai\Tool\RechercherEntitesTool;
 use App\Ai\Tool\VigieEcheancesTool;
 use App\Entity\Avenant;
@@ -276,9 +275,21 @@ class CoherenceChipsAssistantTest extends KernelTestCase
         ];
     }
 
-    private function compter(): CompterEntitesTool
+    /**
+     * LE COMPTE, rendu par le MÊME outil que la liste depuis la fusion du 2026-09-26.
+     *
+     * `compter_entites` a disparu : « combien de clients ? » et « la liste des clients »
+     * posaient la même question au serveur — mêmes droits, même périmètre, mêmes filtres,
+     * même SQL —, et seule la taille de page les distinguait. Ce test ne change pas de
+     * nature pour autant : il continue d'opposer le chip de la rubrique au nombre que
+     * l'assistant annonce, et c'est bien le nombre de l'assistant qu'il lit.
+     */
+    private function compter(array $args, AiScope $scope): AiToolResult
     {
-        return static::getContainer()->get(CompterEntitesTool::class);
+        return $this->rechercher()->execute(
+            ['mode' => RechercherEntitesTool::MODE_COMPTE] + $args,
+            $scope,
+        );
     }
 
     private function rechercher(): RechercherEntitesTool
@@ -322,7 +333,7 @@ class CoherenceChipsAssistantTest extends KernelTestCase
             $idsChip = array_map(static fn (Avenant $a) => $a->getId(), $chip['data']);
 
             // Ce que Ket répond à « combien d'avenants … ? ».
-            $compte = $this->compter()->execute(['entite' => 'Avenant', 'echeance' => $statut], $scope);
+            $compte = $this->compter(['entite' => 'Avenant', 'echeance' => $statut], $scope);
             $this->assertSame(AiToolResult::STATUS_OK, $compte->status, "Chip {$statut}");
             $this->assertSame(
                 (int) $chip['totalItems'],
@@ -432,7 +443,7 @@ class CoherenceChipsAssistantTest extends KernelTestCase
                 $args['axes'][TranchePaiementScope::AXES[$cle]['nom']] = $valeur;
             }
 
-            $compte = $this->compter()->execute($args, $scope);
+            $compte = $this->compter($args, $scope);
             $this->assertSame(AiToolResult::STATUS_OK, $compte->status, "Chips « {$libelle} »");
             $this->assertSame(
                 (int) $chip['totalItems'],
@@ -506,7 +517,7 @@ class CoherenceChipsAssistantTest extends KernelTestCase
             );
             $idsChip = array_map(static fn (Cotation $c) => $c->getId(), $chip['data']);
 
-            $compte = $this->compter()->execute(['entite' => 'Cotation', 'validation' => $statut], $scope);
+            $compte = $this->compter(['entite' => 'Cotation', 'validation' => $statut], $scope);
             $this->assertSame(AiToolResult::STATUS_OK, $compte->status, "Chip {$statut}");
             $this->assertSame(
                 (int) $chip['totalItems'],
@@ -527,9 +538,9 @@ class CoherenceChipsAssistantTest extends KernelTestCase
         // coexistent une cotation souscrite (avec avenants, sur « Piste Cohérence »), une
         // caduque (rivale non souscrite sur cette MÊME piste bound) et une en attente (non
         // souscrite sur « Piste En Cours », piste non bound). Les trois groupes sont disjoints.
-        $souscrites = $this->compter()->execute(['entite' => 'Cotation', 'validation' => CotationSouscriptionScope::STATUT_SOUSCRITES], $scope);
-        $enAttente = $this->compter()->execute(['entite' => 'Cotation', 'validation' => CotationSouscriptionScope::STATUT_EN_ATTENTE], $scope);
-        $caduques = $this->compter()->execute(['entite' => 'Cotation', 'validation' => CotationSouscriptionScope::STATUT_CADUQUES], $scope);
+        $souscrites = $this->compter(['entite' => 'Cotation', 'validation' => CotationSouscriptionScope::STATUT_SOUSCRITES], $scope);
+        $enAttente = $this->compter(['entite' => 'Cotation', 'validation' => CotationSouscriptionScope::STATUT_EN_ATTENTE], $scope);
+        $caduques = $this->compter(['entite' => 'Cotation', 'validation' => CotationSouscriptionScope::STATUT_CADUQUES], $scope);
         $this->assertSame(1, $souscrites->data['count'], 'La seule cotation à avenants du portefeuille.');
         $this->assertSame(1, $enAttente->data['count'], 'La seule cotation sans avenant sur une piste non bound (« Cotation Voisine » est hors périmètre).');
         $this->assertSame(1, $caduques->data['count'], 'La seule proposition concurrente perdante (même piste que la souscrite).');
@@ -554,7 +565,7 @@ class CoherenceChipsAssistantTest extends KernelTestCase
             );
             $idsChip = array_map(static fn (Piste $p) => $p->getId(), $chip['data']);
 
-            $compte = $this->compter()->execute(['entite' => 'Piste', 'transformation' => $statut], $scope);
+            $compte = $this->compter(['entite' => 'Piste', 'transformation' => $statut], $scope);
             $this->assertSame(AiToolResult::STATUS_OK, $compte->status, "Chip {$statut}");
             $this->assertSame(
                 (int) $chip['totalItems'],
@@ -573,8 +584,8 @@ class CoherenceChipsAssistantTest extends KernelTestCase
 
         // Preuve que chaque chip isole bien sa moitié : une piste transformée (cotation à
         // avenants) et une en cours (sans) coexistent dans le portefeuille de l'invité.
-        $transformees = $this->compter()->execute(['entite' => 'Piste', 'transformation' => PisteTransformationScope::STATUT_TRANSFORMEES], $scope);
-        $enCours = $this->compter()->execute(['entite' => 'Piste', 'transformation' => PisteTransformationScope::STATUT_EN_COURS], $scope);
+        $transformees = $this->compter(['entite' => 'Piste', 'transformation' => PisteTransformationScope::STATUT_TRANSFORMEES], $scope);
+        $enCours = $this->compter(['entite' => 'Piste', 'transformation' => PisteTransformationScope::STATUT_EN_COURS], $scope);
         $this->assertSame(1, $transformees->data['count'], 'La seule piste transformée du portefeuille.');
         $this->assertSame(1, $enCours->data['count'], 'La seule piste en cours du portefeuille (« Piste Voisine » est hors périmètre).');
     }
@@ -591,20 +602,20 @@ class CoherenceChipsAssistantTest extends KernelTestCase
         // 5 : les 4 avenants des fenêtres d'échéance PLUS la police signalée non renouvelable.
         // Sans chip, aucune interception n'a lieu : le décompte est celui de la rubrique en
         // mode « Toutes », où une police écartée du pipeline reste bien visible.
-        $compte = $this->compter()->execute(['entite' => 'Avenant'], $scope);
+        $compte = $this->compter(['entite' => 'Avenant'], $scope);
         $this->assertSame(5, $compte->data['count'], 'Les 5 avenants du portefeuille, pas les 6 de l\'entreprise.');
         $this->assertSame('Portefeuille Cohérence', $compte->data['perimetre'], 'Le périmètre appliqué est annoncé.');
         $this->assertArrayNotHasKey('filtre', $compte->data, 'Aucun filtre annoncé quand aucun n\'est demandé.');
 
-        $compteTranches = $this->compter()->execute(['entite' => 'Tranche'], $scope);
+        $compteTranches = $this->compter(['entite' => 'Tranche'], $scope);
         $this->assertSame(2, $compteTranches->data['count']);
 
         // Une valeur inconnue est ignorée (pas d'erreur, pas de filtre appliqué).
-        $compteInvalide = $this->compter()->execute(['entite' => 'Avenant', 'echeance' => 'valeur-inconnue'], $scope);
+        $compteInvalide = $this->compter(['entite' => 'Avenant', 'echeance' => 'valeur-inconnue'], $scope);
         $this->assertSame(5, $compteInvalide->data['count']);
 
         // Le filtre d'une rubrique ne fuit jamais vers une autre entité.
-        $compteCroise = $this->compter()->execute(['entite' => 'Client', 'echeance' => AvenantEcheanceScope::STATUT_ECHUS], $scope);
+        $compteCroise = $this->compter(['entite' => 'Client', 'echeance' => AvenantEcheanceScope::STATUT_ECHUS], $scope);
         $this->assertSame(1, $compteCroise->data['count'], 'Le filtre échéance ne s\'applique qu\'aux avenants.');
     }
 
@@ -618,7 +629,7 @@ class CoherenceChipsAssistantTest extends KernelTestCase
         ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
         $scope = new AiScope($entreprise, $invite);
 
-        $dansMonPortefeuille = $this->compter()->execute(
+        $dansMonPortefeuille = $this->compter(
             ['entite' => 'Avenant', 'echeance' => AvenantEcheanceScope::STATUT_ECHUS],
             $scope
         );
@@ -636,7 +647,7 @@ class CoherenceChipsAssistantTest extends KernelTestCase
         );
 
         // Élargissement EXPLICITE : on retrouve alors l'avenant du portefeuille voisin.
-        $dansToutLEntreprise = $this->compter()->execute(
+        $dansToutLEntreprise = $this->compter(
             [
                 'entite' => 'Avenant',
                 'echeance' => AvenantEcheanceScope::STATUT_ECHUS,
@@ -693,7 +704,7 @@ class CoherenceChipsAssistantTest extends KernelTestCase
         ];
 
         foreach ($cas as $question => [$cle, $attendu]) {
-            $args = $this->compter()->match($question, $scope);
+            $args = $this->rechercher()->match($question, $scope);
             $this->assertIsArray($args, "Question non reconnue : {$question}");
             $this->assertSame($attendu, $args[$cle] ?? null, "Question : {$question}");
         }
@@ -715,16 +726,16 @@ class CoherenceChipsAssistantTest extends KernelTestCase
         ];
 
         foreach ($casAxes as $question => $attendu) {
-            $args = $this->compter()->match($question, $scope);
+            $args = $this->rechercher()->match($question, $scope);
             $this->assertIsArray($args, "Question non reconnue : {$question}");
             $this->assertSame($attendu, $args['axes'] ?? null, "Question : {$question}");
         }
 
         // Une question sans fenêtre exprimée ne pose AUCUN filtre (comptage global).
-        $args = $this->compter()->match('combien d\'avenants ?', $scope);
+        $args = $this->rechercher()->match('combien d\'avenants ?', $scope);
         $this->assertArrayNotHasKey('echeance', $args);
 
-        $args = $this->compter()->match('combien de tranches ?', $scope);
+        $args = $this->rechercher()->match('combien de tranches ?', $scope);
         $this->assertArrayNotHasKey('axes', $args);
     }
 
@@ -739,7 +750,7 @@ class CoherenceChipsAssistantTest extends KernelTestCase
     {
         $scope = new AiScope(new Entreprise(), new Invite());
 
-        $args = $this->compter()->match(
+        $args = $this->rechercher()->match(
             "J'ai combien d'avenants, dans mon portefeuille, qui ont échu déjà ?",
             $scope
         );
@@ -761,7 +772,7 @@ class CoherenceChipsAssistantTest extends KernelTestCase
             "combien d'avenants échus dans toute l'entreprise ?",
             "combien d'avenants échus sur tous les portefeuilles ?",
         ] as $question) {
-            $args = $this->compter()->match($question, $scope);
+            $args = $this->rechercher()->match($question, $scope);
             $this->assertSame(
                 PortefeuilleScope::PERIMETRE_ENTREPRISE,
                 $args['perimetre'] ?? null,
@@ -874,7 +885,7 @@ class CoherenceChipsAssistantTest extends KernelTestCase
         );
         $this->assertSame($idsChip, array_column($liste->data['items'], 'id'), 'Ket doit voir le même groupe.');
 
-        $compte = $this->compter()->execute(
+        $compte = $this->compter(
             ['entite' => 'Avenant', 'echeance' => AvenantEcheanceScope::STATUT_NON_RENOUVELABLES],
             $scope,
         );

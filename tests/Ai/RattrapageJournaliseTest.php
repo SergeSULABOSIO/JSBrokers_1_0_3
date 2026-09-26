@@ -79,14 +79,16 @@ class RattrapageJournaliseTest extends TestCase
     {
         $executeur = $this->executeur(['rechercher_entites']);
 
-        // « lecture_donnees » ne ressemble à rien du catalogue : c'est l'un des deux
-        // noms réellement inventés que le rattrapage ne sauve pas.
-        $resultat = $executeur->executer('lecture_donnees', [], $this->scope(), Trousse::LECTURE);
+        // « donnees_brutes » ne ressemble à rien du catalogue et n'est pas un ancien nom :
+        // ni le rattrapage ni les alias ne peuvent quoi que ce soit pour lui, et c'est
+        // exactement ce qu'on veut mesurer. (« lecture_donnees », l'écorchure réelle, est
+        // désormais servie par un alias — cf. testUnAncienNomEstServiEtJournaliseCommeAlias.)
+        $resultat = $executeur->executer('donnees_brutes', [], $this->scope(), Trousse::LECTURE);
 
         self::assertNull($this->ligne('rattrapage'), 'Rien ne doit être rattrapé sur un nom trop lointain.');
         $ligne = $this->ligne('introuvable');
         self::assertNotNull($ligne);
-        self::assertSame('lecture_donnees', $ligne['nom']);
+        self::assertSame('donnees_brutes', $ligne['nom']);
         self::assertSame(JournalTokens::MOTIF_INCONNU, $ligne['motif']);
         self::assertSame('lecture', $ligne['trousse']);
         self::assertSame(AiToolResult::STATUS_INTROUVABLE, $resultat->status);
@@ -127,6 +129,47 @@ class RattrapageJournaliseTest extends TestCase
     }
 
     /**
+     * UN ANCIEN NOM EST SERVI, ET DIT QU'IL L'A ÉTÉ PAR ALIAS.
+     *
+     * « compter_entites » a été fusionné dans « rechercher_entites » : distance 8, donc
+     * hors de portée du rattrapage. Sans alias, tout modèle encore entraîné sur l'ancien
+     * nom — ou tout fil rejoué — perdrait un tour entier à chaque appel.
+     *
+     * L'ORIGINE COMPTE AUTANT QUE LE RATTRAPAGE LUI-MÊME : c'est elle qui distingue un
+     * choix qu'on retirera à la revue d'un filet qu'on espère voir se vider tout seul.
+     */
+    public function testUnAncienNomEstServiEtJournaliseCommeAlias(): void
+    {
+        $executeur = $this->executeur(['rechercher_entites']);
+
+        $executeur->executer('compter_entites', [], $this->scope(), Trousse::LECTURE);
+
+        $ligne = $this->ligne('rattrapage');
+        self::assertNotNull($ligne, 'Un alias doit laisser la même trace qu\'un rattrapage.');
+        self::assertSame('compter_entites', $ligne['demande']);
+        self::assertSame('rechercher_entites', $ligne['execute']);
+        self::assertSame(JournalTokens::ORIGINE_ALIAS, $ligne['origine']);
+        self::assertNull($this->ligne('introuvable'), 'Un alias servi n\'est pas un échec.');
+    }
+
+    /**
+     * ⚠ UN ALIAS NE RESSUSCITE PAS UN OUTIL COUPÉ EN CONSOLE.
+     *
+     * C'est la propriété qui empêche la commodité de devenir une faille : couper un outil
+     * doit le rendre inatteignable par TOUS ses noms, l'actuel comme les anciens. Ici la
+     * cible est coupée, donc absente du catalogue — l'alias résout, mais ne trouve rien.
+     */
+    public function testUnAliasNeReveillePasUnOutilCoupe(): void
+    {
+        $executeur = $this->executeur(['rechercher_entites'], coupes: ['rechercher_entites']);
+
+        $executeur->executer('compter_entites', [], $this->scope(), Trousse::LECTURE);
+
+        self::assertNull($this->ligne('rattrapage'), 'Un outil coupé ne se rejoint pas par son ancien nom.');
+        self::assertNotNull($this->ligne('introuvable'));
+    }
+
+    /**
      * LE RAPPORT SÉPARE LES TROIS CHIFFRES — c'est tout l'objet du lot.
      *
      * Le rattrapage fait baisser les appels INTROUVABLES ; il ne fait pas baisser les
@@ -140,7 +183,7 @@ class RattrapageJournaliseTest extends TestCase
 
         $executeur->executer('rechercher_entite', [], $scope, Trousse::LECTURE);        // rattrapé
         $executeur->executer('analyser_portefeuille', [], $scope, Trousse::LECTURE);    // rattrapé
-        $executeur->executer('lecture_donnees', [], $scope, Trousse::LECTURE);          // introuvable
+        $executeur->executer('donnees_brutes', [], $scope, Trousse::LECTURE);           // introuvable
         $executeur->executer('statistiques', [], $scope, Trousse::LECTURE);             // coupé
 
         $rapport = new RapportTokens(array_map(
@@ -157,8 +200,8 @@ class RattrapageJournaliseTest extends TestCase
         // écorchure, et l'y faire apparaître inviterait à le renommer pour rien.
         self::assertArrayNotHasKey('statistiques', $ecorches['parNom']);
         self::assertSame('rechercher_entites', $ecorches['parNom']['rechercher_entite']['vise']);
-        self::assertSame(1, $ecorches['parNom']['lecture_donnees']['introuvable']);
-        self::assertSame(0, $ecorches['parNom']['lecture_donnees']['rattrape']);
+        self::assertSame(1, $ecorches['parNom']['donnees_brutes']['introuvable']);
+        self::assertSame(0, $ecorches['parNom']['donnees_brutes']['rattrape']);
     }
 
     /**

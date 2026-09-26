@@ -493,7 +493,7 @@ class AiContextBuilder
           si aucun ne convient vraiment, dis précisément ce que tu sais faire à la place.
         - Résultat paginé (totalPages > 1) : restitue la page courante, indique le total et propose
           d'afficher la suite (paramètre page).
-        - PÉRIMÈTRE : les outils de données (compter_entites, rechercher_entites, suivi_impayes)
+        - PÉRIMÈTRE : les outils de données (rechercher_entites, suivi_impayes)
           répondent par défaut dans le PORTEFEUILLE de ton interlocuteur — exactement ce que la
           rubrique lui affiche à l'écran. Quand l'outil restitue un champ « perimetre », nomme-le
           dans ta réponse (« dans votre portefeuille X ») : c'est ce qui garantit que ton chiffre
@@ -798,7 +798,7 @@ class AiContextBuilder
             COLONNES DE LA RUBRIQUE qu'il rend désormais avec chaque ligne (taux, montants,
             soldes — les mêmes qu'à l'écran). Pour un chiffre qui n'y figure PAS (agrégat,
             période, ventilation), passe par l'outil qui le porte : suivi_impayes /
-            paiements_prime / indicateur_calcule / compter_entites.
+            paiements_prime / indicateur_calcule / rechercher_entites.
           UN SEUL PLAN EN ATTENTE (verrou) : tant qu'un plan que tu as présenté n'a pas été tranché par
           l'utilisateur (marqueur « [SYSTÈME — ce plan … ATTEND ENCORE la décision … ] »), l'outil REFUSE
           d'en préparer un autre — il te renverra « planEnAttente ». Ne présente alors aucun tableau :
@@ -1465,7 +1465,7 @@ class AiContextBuilder
             existe : la couverture n'est acquise QUE lorsque le nouvel avenant est émis. Seules
             font exception les annulations et résiliations, qui scellent le sort par DÉCISION, sans
             avenant. Et n'INVENTE jamais l'explication d'un écart de chiffres : si un compte te
-            surprend, dis-le et vérifie avec compter_entites, ne fabrique pas une cause plausible.
+            surprend, dis-le et vérifie avec rechercher_entites (mode: compte), ne fabrique pas une cause plausible.
           • RÈGLE « NON RENOUVELABLE ≠ SOLDÉE ». Une police SIGNALÉE non renouvelable sort du suivi
             des échéances (chips, tableau de bord, vigie, programme du jour, boussole) parce que le
             courtier a tranché : il n'y aura pas de suite. Mais TOUT CE QUI RESTE DÛ DESSUS RESTE À
@@ -2305,7 +2305,7 @@ class AiContextBuilder
             . "couche texte), dis-le franchement et propose de classer le fichier ou de saisir les données à la main. "
             . "Si l'utilisateur veut ENREGISTRER ces données plutôt que les lire, va au point 4."
             . "\n3) RECHERCHER en base à partir du fichier (ex. retrouver le client dont le nom figure dans la "
-            . "pièce) : lis la donnée dans l'extrait puis appelle rechercher_entites / compter_entites avec cette valeur."
+            . "pièce) : lis la donnée dans l'extrait puis appelle rechercher_entites avec cette valeur."
             . "\n4) SAISIR un enregistrement DEPUIS la pièce (ex. « enregistre cette proposition », « crée le "
             . "client de ce document », « saisis cette facture ») — c'est le cas le plus utile : l'utilisateur "
             . "attache un document POUR NE PAS avoir à le recopier. Appelle analyser_fichier_pour_saisie avec "
@@ -2405,7 +2405,7 @@ class AiContextBuilder
             . "\n        contredire, c'est l'outil qui a une fenêtre ou un périmètre plus étroit : cite le"
             . "\n        compte de la boussole, et n'annonce JAMAIS une absence (« plus aucun… », « il ne"
             . "\n        reste rien… ») sur la seule foi d'un résultat d'outil vide ou partiel. En cas"
-            . "\n        d'écart, vérifie avec compter_entites avant d'affirmer quoi que ce soit."
+            . "\n        d'écart, vérifie avec rechercher_entites (mode: compte) avant d'affirmer quoi que ce soit."
             // Garde-fou du garde-fou : cette règle a servi, une fois, à justifier un tableau
             // de montants REFABRIQUÉS pour « tenir » le compte affiché ici. Un compte ne
             // porte aucun montant : la boussole compte des lignes, elle ne les détaille pas.

@@ -240,9 +240,11 @@ final class CorpusDeReference
                 'cotations-d-une-piste',
                 'La piste 1 a combien de cotations ?',
                 ['rechercher_entites'], Trousse::LECTURE, CasDuCorpus::LISTE,
-                note: 'Un COMPTAGE exprimé en « combien » mais qui appelle la liste : c\'est '
-                    . 'exactement l\'hésitation entre rechercher_entites et compter_entites '
-                    . 'qui a produit le nom inventé « lister_entites ».',
+                note: 'Un COMPTAGE exprimé en « combien » mais qui appelle la liste : le courtier '
+                    . 'veut voir les cotations, pas leur nombre. C\'est l\'hésitation entre les deux '
+                    . 'outils d\'alors qui a produit le nom inventé « lister_entites » ; ils n\'en '
+                    . 'font plus qu\'un depuis le 2026-09-26, et ce cas mesure désormais le choix '
+                    . 'du MODE plutôt que celui de l\'outil.',
             ),
             new CasDuCorpus(
                 'clients-du-cabinet',
@@ -257,13 +259,14 @@ final class CorpusDeReference
             new CasDuCorpus(
                 'compter-clients',
                 'Combien de clients avons-nous dans ce cabinet ?',
-                ['compter_entites'], Trousse::LECTURE, CasDuCorpus::LISTE,
-                note: 'Le comptage franc, à opposer à « la piste 1 a combien de cotations ».',
+                ['rechercher_entites'], Trousse::LECTURE, CasDuCorpus::LISTE,
+                note: 'Le comptage franc — mode=compte depuis la fusion du 2026-09-26 —, à opposer '
+                    . 'à « la piste 1 a combien de cotations », qui appelle une liste.',
             ),
             new CasDuCorpus(
                 'compter-clients-court',
                 'Nombre de nos clients ?',
-                ['compter_entites'], Trousse::LECTURE, CasDuCorpus::LISTE,
+                ['rechercher_entites'], Trousse::LECTURE, CasDuCorpus::LISTE,
             ),
             new CasDuCorpus(
                 'catalogue-risques-liste',
