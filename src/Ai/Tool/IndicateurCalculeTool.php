@@ -83,12 +83,15 @@ final class IndicateurCalculeTool implements AiToolInterface
 
     public function description(): string
     {
-        return "Donne la valeur d'un indicateur financier calculé (prime totale, commission "
-            . 'nette, solde prime, taux de sinistralité…) pour : un enregistrement nommé '
-            . '(client, portefeuille, avenant, assureur, risque, partenaire…) OU l\'ENTREPRISE '
-            . 'entière (entite=Entreprise, sans cible, période du/au optionnelle). À appeler '
-            . 'pour tout chiffre métier calculé — les attributs stockés relèvent de lire_fiche, '
-            . 'les états comptables de document_comptable.';
+        return "UN chiffre métier calculé, et un seul : prime totale, commission nette, solde "
+            . "de prime, taux de sinistralité… pour un enregistrement nommé (client, portefeuille, "
+            . "avenant, assureur, risque, partenaire) OU pour l'ENTREPRISE entière "
+            . '(entite=Entreprise, sans cible, période du/au optionnelle). '
+            . "NE PAS UTILISER pour un CLASSEMENT ou une VENTILATION sur plusieurs lignes — c'est "
+            . "analyser_portefeuille ; ni pour un attribut simplement STOCKÉ sur la fiche — c'est "
+            . "lire_fiche ; ni pour un état comptable — c'est document_comptable. "
+            . "Chaque indicateur rend sa définition et sa base (generee / encaissee / solde / "
+            . 'taux) : lis-les et nomme la bonne notion.';
     }
 
     public function aiguillage(): string

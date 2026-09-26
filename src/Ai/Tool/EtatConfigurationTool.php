@@ -39,20 +39,11 @@ final class EtatConfigurationTool implements AiToolInterface, AiToolConditionnel
 
     public function description(): string
     {
-        return 'État de configuration du cabinet : score de complétude en pourcentage et liste '
-            . 'des paramètres encore manquants pour pouvoir travailler de la piste jusqu\'à '
-            . 'l\'encaissement des commissions (assureurs, portefeuilles, comptes bancaires, taux '
-            . 'de change, conditions de partage, intermédiaires, collaborateurs et leurs droits, '
-            . 'classeurs, types de charges, fournisseurs, types de pièces sinistre, jours fériés, '
-            . 'paramètres de congé, régimes de travail). Chaque étape porte son poids : bloquante '
-            . '(sans elle la production s\'arrête), structurante ou de confort. '
-            . 'À appeler quand l\'utilisateur demande où en est la configuration de son cabinet, '
-            . 'ce qu\'il lui reste à paramétrer, pourquoi il ne peut pas créer une cotation ou une '
-            . 'police, ou quand la boussole signale une configuration incomplète. '
-            . 'RÉSERVÉ AU PROPRIÉTAIRE du cabinet. '
-            . 'Les catalogues semés d\'office à la création (monnaies, taxes, types de revenu, '
-            . 'types de chargement, risques, groupes, types d\'absence) n\'y figurent PAS : ils '
-            . 'existent déjà, il n\'y a rien à y faire.';
+        return "Où en est la configuration du cabinet : score de complétude et paramètres encore "
+            . "manquants pour travailler de la piste jusqu'à l'encaissement des commissions. Chaque "
+            . 'étape porte son poids — bloquante, structurante ou de confort. À appeler quand '
+            . "l'utilisateur demande ce qu'il lui reste à paramétrer, ou pourquoi il ne peut pas "
+            . 'créer une cotation ou une police. RÉSERVÉ AU PROPRIÉTAIRE du cabinet.';
     }
 
     public function aiguillage(): string

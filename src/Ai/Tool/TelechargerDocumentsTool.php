@@ -80,22 +80,17 @@ final class TelechargerDocumentsTool implements AiToolInterface
 
     public function description(): string
     {
-        return "LE moteur de recherche de FICHIERS, à tous les niveaux du dossier. Donne-lui une fiche "
-            . "(lieA) et il rend TOUT ce qui pend en dessous, aussi profond que ça aille : les fichiers "
-            . "d'un CLIENT, ce sont les siens PLUS ceux de ses pistes, de leurs cotations et de leurs "
-            . "polices ; ceux d'une PISTE partent de la piste et descendent ; ceux d'une COTATION "
-            . "partent de la cotation. Ne cherche donc JAMAIS niveau par niveau et ne pose pas de "
-            . "question de profondeur : un seul appel suffit, le serveur descend tout seul. Chaque "
-            . "ligne porte son NIVEAU — la rubrique d'où sort le fichier. Cherche aussi par "
-            . 'nom, ou par identifiants. SANS AUCUN CRITÈRE, rend TOUS les '
-            . "fichiers du portefeuille de l'utilisateur — c'est la bonne réponse à « la liste / le "
-            . 'tableau des fichiers de mon portefeuille », « tous mes documents ». À utiliser dès que '
-            . "l'utilisateur veut voir, lister, télécharger, récupérer ou consulter des FICHIERS "
-            . '(par opposition à des données) : cet outil est le seul qui rende le format, la taille, '
-            . "la date de mise en ligne et un bouton de téléchargement. N'utilise PAS rechercher_entites "
-            . "pour une demande de fichiers — il ne rend qu'une liste, sans téléchargement possible. "
-            . 'Différent de telecharger_fichiers, qui ne concerne QUE les pièces jointes de la '
-            . 'conversation en cours. Ne prétends JAMAIS ne pas pouvoir fournir de téléchargement.';
+        return "LE moteur de recherche de FICHIERS. Donne-lui une fiche (lieA) et il rend TOUT "
+            . "ce qui pend en dessous, aussi profond que ça aille : les fichiers d'un CLIENT, ce "
+            . "sont les siens PLUS ceux de ses pistes, cotations et polices. Ne cherche donc JAMAIS "
+            . "niveau par niveau et ne pose aucune question de profondeur — un seul appel suffit. "
+            . 'Sans aucun critère, rend TOUS les fichiers du portefeuille : c\'est la bonne réponse '
+            . 'à « le tableau des fichiers de mon portefeuille ». À utiliser dès que l\'utilisateur '
+            . 'veut voir, lister, télécharger ou récupérer des FICHIERS, par opposition à des '
+            . "données : c'est le seul outil qui rende un bouton de téléchargement. Ne pas utiliser "
+            . 'rechercher_entites pour cela — il ne rend qu\'une liste. Ni telecharger_fichiers, '
+            . 'qui ne couvre QUE les pièces jointes de la conversation. Ne prétends jamais ne pas '
+            . 'pouvoir fournir de téléchargement.';
     }
 
     public function aiguillage(): string

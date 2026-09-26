@@ -88,21 +88,13 @@ final class VigieEcheancesTool implements AiToolInterface
     public function description(): string
     {
         return 'Brief des échéances et points de vigilance du cabinet : polices déjà ÉCHUES et '
-            . 'polices à renouveler sous N jours (défaut 30), tâches non closes (dont en '
-            . 'retard), pistes en cours sans police, derniers sinistres notifiés, tranches '
-            . 'échues impayées (primes et commissions à relancer). À appeler quand '
-            . 'l\'utilisateur demande ce qu\'il doit surveiller/faire, ses renouvellements ou '
-            . 'un brief du jour. Le volet renouvellements est PARTITIONNÉ en « echues » et '
-            . '« aVenir », chacun avec son propre total : il reproduit EXACTEMENT les chips '
-            . '« Échus » + « Sous N jours » de la rubrique Avenants (mêmes bornes, même '
-            . 'exclusion des polices dont le sort est scellé), donc ses chiffres doivent '
-            . 'coïncider avec ceux de compter_entites (paramètre echeance) et avec la boussole. '
-            . 'Un « aVenir.total » non nul avec « echues.total » à zéro signifie qu\'il n\'y a '
-            . 'réellement aucune police échue — mais ne JAMAIS déduire l\'absence d\'échues '
-            . 'd\'un total global. Le volet impayes est lui aussi PARTITIONNÉ, par DETTE : '
-            . '« primes » (dues par l\'assuré) et « commissions » (dues par l\'assureur, prime '
-            . 'déjà soldée), ensembles disjoints — lis primes.total avant de parler de primes '
-            . 'impayées. Pour le détail complet des impayés, préférer suivi_impayes.';
+            . 'polices à renouveler sous N jours (défaut 30), tâches non closes, pistes en cours '
+            . 'sans police, derniers sinistres notifiés, tranches échues impayées. À appeler quand '
+            . "l'utilisateur demande ce qu'il doit surveiller, ses renouvellements, ou un brief du "
+            . 'jour. Les renouvellements et les impayés sont PARTITIONNÉS, chacun avec son propre '
+            . 'total — les échues et les à-venir d\'un côté, les primes (dues par l\'assuré) et les '
+            . 'commissions (dues par l\'assureur) de l\'autre : lis le total du volet dont tu '
+            . 'parles, jamais un total global. Pour le détail des impayés, préférer suivi_impayes.';
     }
 
     public function aiguillage(): string

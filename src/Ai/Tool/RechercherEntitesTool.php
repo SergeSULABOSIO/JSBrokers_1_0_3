@@ -88,45 +88,24 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
 
     public function description(): string
     {
-        return "Liste, recherche ou COMPTE les enregistrements d'une catégorie de données de "
-            . "l'entreprise (clients, avenants, pistes, notes, sinistres…), avec filtre texte "
-            . 'optionnel et pagination (' . self::PAGE_SIZE . ' par page). À appeler quand '
-            . 'l’utilisateur demande « liste », « affiche », « montre-moi », « quels sont »… '
-            . 'et aussi « combien », « nombre de » : dans ce cas mode=' . self::MODE_COMPTE
-            . ', qui rend le NOMBRE au lieu des lignes, avec exactement les mêmes filtres. Le paramètre lieA restreint '
-            . 'aux enregistrements LIÉS à une fiche précise, même à plusieurs niveaux de relation '
-            . '(ex. les tâches d’une piste, les tâches ou avenants d’un CLIENT via ses pistes) — '
-            . 'SEUL moyen fiable de connaître les éléments liés : une fiche ne les contient jamais. '
-            . 'lieA accepte un NOM (lieA={entite:"Client", nom:"Dupont"}) autant qu’un id : ne fais '
-            . 'JAMAIS une recherche préalable pour obtenir un identifiant, le serveur résout le nom. '
-            . 'De même, un « filtre » qui ne correspond à aucun libellé mais au nom d’un '
-            . 'rattachement (un client, un assureur) est réinterprété automatiquement, et le '
-            . 'champ « filtreInterpreteCommeLien » te dit alors ce qui a réellement été listé : '
-            . 'énonce-le. Un filtre entièrement NUMÉRIQUE est aussi cherché comme IDENTIFIANT '
-            . '(« 131 » ramène l’enregistrement #131 si aucun libellé ne porte ce texte) : c’est '
-            . 'la façon de retrouver un enregistrement dont tu connais l’id — celui d’un plan que '
-            . 'tu viens de faire exécuter, par exemple. '
-            . 'Chaque POLICE listée porte les DEUX SENS de sa chaîne de renouvellement : '
-            . '« suiteDeLaPolice » + « avenantsIssusIds » (ce qu’elle est devenue, avec les '
-            . 'identifiants des polices qui lui succèdent) et « origineDeLaPolice » + '
-            . '« avenantPrecedentId » (la police qu’elle REMPLACE, vide pour une affaire '
-            . 'nouvelle). Utilise-les tels quels pour relier une police renouvelée à son '
-            . 'renouvellement : n’essaie JAMAIS de le déduire d’une ressemblance de nom ou de date. '
-            . 'Les paramètres echeance (Avenant), axes (Tranche), validation (Cotation) '
-            . 'et transformation (Piste) appliquent EXACTEMENT les mêmes règles que les filtres '
-            . 'rapides de ces rubriques, tri par urgence inclus : à utiliser dès que la question '
-            . 'porte sur une fenêtre d’échéance (« quels avenants échoient dans les 30 jours ? »), '
-            . 'un statut de paiement, un statut de souscription (« quelles propositions en attente ? ») '
-            . 'ou un statut de transformation (« quelles pistes en cours ? »), afin que la réponse '
-            . 'coïncide avec ce que l’utilisateur voit à l’écran. La liste porte par défaut sur le '
-            . 'PORTEFEUILLE de l’utilisateur, comme la rubrique affichée (paramètre perimetre). '
-            . 'Chaque enregistrement porte son identifiant, son libellé ET LES COLONNES DE LA '
-            . 'RUBRIQUE (valeurs calculées comprises : taux, montants, soldes), avec leurs rôles '
-            . 'de présentation — tu peux donc composer un tableau riche sans autre appel. '
-            . 'Pour une COTATION, '
-            . 'chaque item porte aussi son statut (« Souscrite » = déjà liée à un avenant, donc '
-            . 'police concrétisée, PAS une simple proposition ; « En attente » = proposition non '
-            . 'validée) : appuie-toi dessus, ne suppose jamais qu’une cotation listée est en attente.';
+        return "Liste, recherche ou COMPTE les enregistrements d'une catégorie de données "
+            . "(clients, avenants, pistes, notes, sinistres…). Répond à « liste », « affiche », "
+            . "« montre-moi », « quels sont », et à « combien / nombre de » avec mode="
+            . self::MODE_COMPTE . ' (le nombre au lieu des lignes, mêmes filtres). '
+            . 'lieA restreint aux enregistrements LIÉS à une fiche, même à plusieurs relations de '
+            . "distance (les avenants d'un CLIENT via ses pistes) : c'est le SEUL moyen fiable, une "
+            . 'fiche ne contient jamais ses liés. lieA accepte un NOM autant qu\'un id — ne fais '
+            . "JAMAIS de recherche préalable pour obtenir un identifiant, le serveur résout le nom. "
+            . 'Un « filtre » qui ne correspond à aucun libellé est réessayé comme identifiant, comme '
+            . 'description, puis comme nom d\'un rattachement ; quand cela arrive, la réponse porte '
+            . 'un champ qui dit ce qui a réellement été listé — énonce-le. '
+            . 'echeance (Avenant), axes (Tranche), validation (Cotation) et transformation (Piste) '
+            . 'appliquent les mêmes règles que les filtres rapides de ces rubriques : utilise-les dès '
+            . "que la question porte sur une fenêtre d'échéance, un statut de paiement, de "
+            . 'souscription ou de transformation, pour que la réponse coïncide avec l\'écran. '
+            . "Porte par défaut sur le PORTEFEUILLE de l'utilisateur (paramètre perimetre), "
+            . self::PAGE_SIZE . ' par page. Chaque ligne porte les COLONNES DE LA RUBRIQUE, valeurs '
+            . 'calculées comprises : tu peux composer un tableau riche sans autre appel.';
     }
 
     public function aiguillage(): string

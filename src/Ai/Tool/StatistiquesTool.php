@@ -44,11 +44,12 @@ final class StatistiquesTool implements AiToolInterface
 
     public function description(): string
     {
-        return 'Agrège les champs STOCKÉS d\'une catégorie de données : compte, somme, moyenne, '
-            . 'min, max — regroupement optionnel (groupePar : champ ou relation, ex. répartition '
-            . 'des clients par groupe, top des pistes par risque) et période optionnelle (champDate '
-            . '+ du/au). Pour les montants CALCULÉS (prime, commission…), utiliser '
-            . 'indicateur_calcule. En cas de champ invalide, la réponse liste les champs valides.';
+        return 'Agrège des champs STOCKÉS : compte, somme, moyenne, min, max, avec regroupement '
+            . 'optionnel (répartition des clients par groupe, des pistes par risque) et période '
+            . "optionnelle. NE PAS UTILISER pour un montant CALCULÉ — prime, commission, "
+            . "sinistralité relèvent d'indicateur_calcule, et un classement du portefeuille "
+            . "d'analyser_portefeuille. En cas de champ invalide, la réponse liste les champs "
+            . 'valides.';
     }
 
     public function aiguillage(): string
