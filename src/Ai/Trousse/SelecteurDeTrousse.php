@@ -3,6 +3,7 @@
 namespace App\Ai\Trousse;
 
 use App\Ai\AiRequest;
+use App\Ai\AiText;
 use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Programme\ProgrammeEnCours;
 use App\Entity\AssistantConversation;
@@ -185,6 +186,31 @@ final class SelecteurDeTrousse
             return $retenir('a-propose-d-ecrire', Trousse::ECRITURE);
         }
 
+        // ── ACQUIESCEMENT : AUCUN OUTIL N'EST NÉCESSAIRE ───────────────────────────
+        //
+        // ⚠ LA PLACE DE CE TEST EST SA GARANTIE. Il vient APRÈS les six signaux
+        // structurels, et pas avant. Un « ok » qui répond à une proposition d'écrire, à
+        // un plan en attente ou à une saisie engagée est une CONFIRMATION : les signaux
+        // ci-dessus l'ont déjà attrapé et ont armé l'écriture. S'il passait en tête, cette
+        // validation partirait sans outil d'écriture, et le courtier n'aurait jamais le
+        // bouton qu'il vient de demander.
+        //
+        // ON NE LIT QUE LE DERNIER MESSAGE, et il doit être ENTIÈREMENT un acquiescement.
+        // « Ok, et maintenant la liste des clients » n'en est pas un ; le reconnaître à la
+        // présence du mot plutôt qu'à la forme entière du message coûterait un tour de
+        // recours à chaque fois.
+        //
+        // CE QUI N'EST PAS DANS LA LISTE, ET POURQUOI. « c'est fait ? » est une QUESTION :
+        // le courtier demande une vérification en base, et elle appelle une lecture.
+        // « essaie encore », « la suivante », « vas y » relancent une demande précédente —
+        // le corpus réel les montre sous rechercher_entites et sous suivi_impayes. Une
+        // remise en forme (« refais le tableau, trié par montant ») n'appelle non plus
+        // aucun outil, mais rien ne la distingue sûrement d'une demande de données : elle
+        // garde donc sa trousse. On capte moins que le gisement, et c'est voulu.
+        if ($this->estUnAcquiescement($conversation, $requete)) {
+            return $retenir('acquiescement', Trousse::AUCUN);
+        }
+
         // ⚠ ON NE LIT QUE CE QUE L'UTILISATEUR A ÉCRIT — KET NE S'ARME PLUS ELLE-MÊME.
         //
         // CE QUE FAISAIT LA FENÊTRE. Elle concaténait les trois derniers messages du
@@ -236,6 +262,87 @@ final class SelecteurDeTrousse
         return preg_match(self::VERBES_ACTION, $recent, $trouve) === 1
             ? $retenir('verbe-action', Trousse::ECRITURE, mb_strtolower(trim($trouve[0])))
             : $retenir('aucun', Trousse::LECTURE);
+    }
+
+    /**
+     * LES FORMULES QUI N'APPELLENT AUCUNE DONNÉE, et rien d'autre.
+     *
+     * Liste FERMÉE et volontairement courte : chaque entrée doit pouvoir constituer un
+     * message entier sans qu'aucune lecture ne soit nécessaire. Le doute profite
+     * toujours à la trousse complète — un faux positif coûte un tour de recours,
+     * un faux négatif ne coûte que des jetons.
+     */
+    private const ACQUIESCEMENTS = '/^(?:ok|okay|d.accord|tres bien|parfait|super|nickel|'
+        . 'genial|excellent|merci|beaucoup|bien|recu|entendu|compris|note'
+        . ')$/u';
+
+    /*
+     * ⚠ LES SALUTATIONS N'Y SONT PAS, ET C'EST UNE MESURE, PAS UNE PRUDENCE.
+     *
+     * « bonjour », « salut » semblaient les cas les plus évidents d'un message sans
+     * données. Deux tests antérieurs à ce lot disent le contraire, et ils ont raison :
+     *
+     *  · `SelecteurDeTrousseTest` inscrit « salut » parmi les consultations qui doivent
+     *    rester en LECTURE — et le corpus réel lui donne raison, un « salut » y ouvre
+     *    une conversation dont le tour suivant appelle un outil ;
+     *  · `AnthropicAiEngineTest` interroge le moteur avec « Bonjour » et vérifie que les
+     *    déclarations d'outils portent bien leur point de rupture de cache. Sans outil
+     *    déclaré, il n'y a plus rien à vérifier.
+     *
+     * Une salutation ouvre un échange ; un acquiescement le referme. Seul le second ne
+     * demande rien.
+     */
+
+    /**
+     * Le message est-il ENTIÈREMENT un acquiescement ?
+     *
+     * La ponctuation et les formules de politesse enchaînées sont tolérées (« Ok, merci ! »),
+     * pas le reste : dès qu'un mot hors liste apparaît, on rend la trousse complète.
+     */
+    private function estUnAcquiescement(?AssistantConversation $conversation, AiRequest $requete): bool
+    {
+        $dernier = $conversation?->derniersContenusUtilisateur(1)[0] ?? null;
+        if ($dernier === null) {
+            // Sans conversation (tests unitaires, fil non persisté), la requête est la
+            // seule source — même règle, même lecture du seul DERNIER message utilisateur.
+            foreach (array_reverse($requete->messages) as $message) {
+                if (($message['role'] ?? null) === 'user') {
+                    $dernier = (string) ($message['content'] ?? '');
+                    break;
+                }
+            }
+        }
+        if ($dernier === null || trim($dernier) === '') {
+            return false;
+        }
+
+        $normalise = AiText::normalize($dernier);
+        // Les séparateurs deviennent des frontières de segment : « ok, merci » est deux
+        // acquiescements, « ok donne la liste » n'en est pas un.
+        $segments = preg_split('/[\s,;.!?…\-]+/u', $normalise, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        if ($segments === []) {
+            return false;
+        }
+
+        // Un message d'un seul tenant peut valoir plusieurs mots (« tres bien », « bien
+        // recu ») : on essaie donc les regroupements de deux avant de refuser.
+        $i = 0;
+        $n = \count($segments);
+        while ($i < $n) {
+            $deux = $i + 1 < $n ? $segments[$i] . ' ' . $segments[$i + 1] : null;
+            if ($deux !== null && preg_match(self::ACQUIESCEMENTS, $deux) === 1) {
+                $i += 2;
+                continue;
+            }
+            if (preg_match(self::ACQUIESCEMENTS, $segments[$i]) === 1) {
+                ++$i;
+                continue;
+            }
+
+            return false;
+        }
+
+        return true;
     }
 
     /**

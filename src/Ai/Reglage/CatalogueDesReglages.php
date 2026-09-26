@@ -63,6 +63,10 @@ final class CatalogueDesReglages
         // protocoles nomment à chaque tour.
         'consulter_guide',
         'inventaire_champs',
+        // LA PORTE DE SORTIE de la trousse minimale. La couper la rendrait vraiment
+        // vide : Ket répondrait « je ne peux pas » à une demande légitime, sans aucun
+        // moyen de se rattraper. C'est le seul outil dont l'absence casse un chemin.
+        'reprendre_mes_outils',
         'lire_fiche',
         'ouvrir_dialogue',
         'parcours_saisie',
@@ -178,6 +182,7 @@ final class CatalogueDesReglages
         'preparer_operations'                => ['Créer, modifier, supprimer', 'Le chemin général de toute écriture préparée par Ket.', 'action:add'],
         'preparer_programme'                 => ['Enchaîner plusieurs plans', 'Une série d’écritures à valider l’une après l’autre.', 'groupe'],
         'quitter_workspace'                  => ['Quitter l’espace de travail', 'Propose de fermer l’espace de travail.', 'action:exit'],
+        'reprendre_mes_outils'               => ['Reprendre ses outils', 'La porte de sortie quand Ket répond sans outil et s’aperçoit qu’il lui en fallait un.', 'action:information'],
         'rechercher_entites'                 => ['Rechercher', 'Listes et recherches filtrées dans tout le portefeuille.', 'action:search'],
         'retrocommissions'                   => ['Rétrocommissions', 'Ce qui est dû aux agents internes et aux partenaires externes : dû, payé, solde, exigible.', 'partenaire'],
         'saisir_proposition'                 => ['Saisir une cotation', 'Enregistre une proposition complète en une fois.', 'cotation'],

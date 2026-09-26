@@ -6,6 +6,7 @@ use App\Ai\Reglage\ReglagesDeKet;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolConditionnel;
 use App\Ai\Tool\AiToolInterface;
+use App\Ai\Tool\RecoursOutilsTool;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
@@ -97,6 +98,19 @@ final class TrousseCatalogue
                 if (!$outil instanceof AiToolDeComprehension) {
                     continue;
                 }
+            } elseif ($trousse === Trousse::AUCUN) {
+                // LISTE BLANCHE D'UN SEUL OUTIL, et la porte de sortie avec. Écrire la
+                // règle en négatif — « tout sauf… » — aurait fait entrer au fil du temps
+                // chaque outil ajouté au projet dans la trousse censée n'en porter aucun.
+                if (!$outil instanceof RecoursOutilsTool) {
+                    continue;
+                }
+            } elseif ($outil instanceof RecoursOutilsTool) {
+                // ⚠ ET RÉCIPROQUEMENT. La porte de sortie n'a de sens QUE dans la trousse
+                // minimale : partout ailleurs, les outils sont déjà là, et la déclarer
+                // reviendrait à offrir au modèle une action qui ne fait rien — en lui
+                // laissant croire qu'il lui manque quelque chose alors qu'il a tout.
+                continue;
             } elseif (!$trousse->estEcriture() && $outil instanceof AiToolEcriture) {
                 continue;
             }
