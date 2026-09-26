@@ -30,21 +30,28 @@ final class ConsulterGuideTool implements AiToolInterface
 
     public function description(): string
     {
-        $catalogue = [];
-        foreach ($this->guides->catalogue() as $slug => $fiche) {
-            $catalogue[] = sprintf('%s (%s)', $slug, $fiche['description']);
-        }
-
-        return 'Charge une fiche de connaissance métier de la plateforme (notions, circuits, '
-            . 'recettes d’enchaînement d’outils). À appeler AVANT de répondre à une question de '
-            . 'méthode ou de vocabulaire (« comment marche… », « c’est quoi… »), jamais pour des '
-            . 'données. Fiches disponibles : ' . implode(' ; ', $catalogue) . '.';
+        return 'Charge une fiche de connaissance métier (notions, circuits, recettes '
+            . "d'enchaînement d'outils). À appeler AVANT de répondre à une question de méthode ou "
+            . 'de vocabulaire (« comment marche… », « c\'est quoi… »), jamais pour des données. '
+            . 'Le sujet se choisit dans la liste fermée du paramètre, qui dit ce que chaque fiche '
+            . 'couvre.';
     }
 
     public function aiguillage(): string
     {
         return 'Toute question de méthode, de vocabulaire ou de « comment faire », et « que peux-tu faire ? » '
             . '(fiche capacites-assistant). Consulte AVANT de répondre, puis appuie-toi sur la fiche.';
+    }
+
+    /** Ce que chaque fiche couvre, dérivé du catalogue : une fiche ajoutée s'y annonce seule. */
+    private function catalogueEnClair(): string
+    {
+        $lignes = [];
+        foreach ($this->guides->catalogue() as $slug => $fiche) {
+            $lignes[] = sprintf('%s = %s', $slug, $fiche['description']);
+        }
+
+        return implode(' ; ', $lignes) . '.';
     }
 
     public function schema(): array
@@ -54,7 +61,13 @@ final class ConsulterGuideTool implements AiToolInterface
             'properties' => [
                 'sujet' => [
                     'type' => 'string',
-                    'description' => 'Slug de la fiche à consulter.',
+                    // CE QUE CHAQUE FICHE COUVRE, ÉCRIT SUR LE PARAMÈTRE QU'IL CONTRAINT.
+                    //
+                    // Le catalogue vivait dans la description de l'outil, qu'il faisait enfler à
+                    // chaque fiche ajoutée — et il y était loin de l'enum qu'il commente. Le
+                    // déplacer ne coûte rien de plus et le rend utile là où le modèle choisit :
+                    // sans lui, il ne voit que des slugs et doit deviner ce qu'ils recouvrent.
+                    'description' => 'Fiche à consulter. ' . $this->catalogueEnClair(),
                     'enum' => $this->guides->slugs(),
                 ],
             ],

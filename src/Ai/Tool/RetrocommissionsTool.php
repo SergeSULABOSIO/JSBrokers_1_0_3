@@ -80,22 +80,16 @@ final class RetrocommissionsTool implements AiToolInterface
 
     public function description(): string
     {
-        return 'Consulte les RÉTROCOMMISSIONS dues aux bénéficiaires du partage de commission : '
-            . 'AGENTS INTERNES du cabinet et PARTENAIRES externes (intermédiaires). Ce qui leur est '
-            . 'DÛ, ce qui a été PAYÉ, le SOLDE et ce qui est EXIGIBLE. '
-            . 'Le bénéficiaire se désigne par son NOM (« Serge SULA », « SUNU Courtage ») ou son '
-            . 'identifiant ; sans bénéficiaire, rend une ligne par bénéficiaire — la réponse à « à '
-            . 'qui dois-je de la rétrocommission ? ». '
-            . 'detail="par_ligne" rend le décompte affaire par affaire : prime du client, commission '
-            . 'TTC et HT, taxes, commission pure, assiette partageable, rétrocommission, versé, '
-            . 'solde, exigible, condition appliquée, taux, origine du taux et assiette — de quoi '
-            . 'JUSTIFIER un montant contesté. detail="par_axe" ventile ces mêmes montants par '
-            . 'client, risque, assureur, mois ou condition. '
-            . 'du/au bornent la période sur la date d\'effet des polices. Le paramètre statut filtre '
-            . 'les affaires SOUSCRITES (défaut, seules celles dont la rétro est due), celles EN '
-            . 'ATTENTE de validation (projections, jamais un dû) ou les CADUQUES. '
-            . 'ATTENTION : le bénéficiaire n\'est PAS le gestionnaire de l\'affaire. Pour '
-            . 'ENREGISTRER un versement à un agent, utiliser signaler_reversement_retro_agent.';
+        return 'Ce qui est DÛ, PAYÉ, en SOLDE et EXIGIBLE aux bénéficiaires du partage de '
+            . 'commission : AGENTS INTERNES du cabinet et PARTENAIRES externes. Sans bénéficiaire, '
+            . 'rend une ligne par bénéficiaire — la réponse à « à qui dois-je de la '
+            . 'rétrocommission ? » ; avec, il se désigne par son NOM autant que par son '
+            . 'identifiant. detail="par_ligne" rend le décompte affaire par affaire, de la prime du '
+            . "client jusqu'à l'exigible, avec le taux appliqué et son origine : de quoi JUSTIFIER "
+            . 'un montant contesté. detail="par_axe" ventile par client, risque, assureur, mois ou '
+            . "condition. du/au bornent sur la date d'effet des polices. ATTENTION : le bénéficiaire "
+            . "n'est PAS le gestionnaire de l'affaire. Pour ENREGISTRER un versement, utiliser "
+            . 'signaler_reversement_retro_agent.';
     }
 
     public function aiguillage(): string

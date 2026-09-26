@@ -87,23 +87,16 @@ final class PaiementsPrimeTool implements AiToolInterface, AiToolConditionnel
 
     public function description(): string
     {
-        return 'Consulte les SIGNALEMENTS de paiement de prime : date de règlement, montant, '
-            . 'référence, description et nombre de pièces justificatives. CHAQUE LIGNE PORTE '
-            . 'AUSSI TOUTE L\'ÉCONOMIE DE SA TRANCHE, sans second appel : client, assureur, '
-            . 'police, statut, prime attendue / signalée / solde, commission HT, taxe assureur '
-            . '(TVA) et taxe courtier (ARCA) avec leurs taux, commission TTC, commission '
-            . 'encaissée, solde et COMMISSION EXIGIBLE, rétrocommission à verser au partenaire. '
-            . 'Avec trancheId, restitue les signalements d\'UNE tranche et son contexte complet '
-            . 'de règlement ; sans trancheId, liste les signalements de l\'entreprise, '
-            . 'filtrables par client ou cotation (lieA) et par période de paiement (du/au). '
-            . 'À appeler dès que la question porte sur le paiement de la PRIME par l\'assuré ou '
-            . 'sur ce qu\'il rapporte au cabinet : « la prime de cette tranche a-t-elle été '
-            . 'payée ? », « quels paiements de prime ont été signalés ? », « quelles commissions '
-            . 'ces règlements rendent-ils exigibles ? », « quelles taxes sur ces commissions ? ». '
-            . 'ATTENTION : un signalement est DÉCLARATIF — l\'assureur encaisse la prime, jamais '
-            . 'la trésorerie du cabinet ; ne jamais confondre avec l\'entité Paiement (rubrique '
-            . 'Paiements = encaissements du courtier). Pour EN CRÉER un, utiliser '
-            . 'signaler_paiement_prime.';
+        return 'Les SIGNALEMENTS de paiement de prime déjà enregistrés : date de règlement, '
+            . "montant, référence et pièces justificatives. Chaque ligne porte aussi toute "
+            . "l'économie de sa tranche — prime attendue, signalée et solde, commission HT, taxes "
+            . 'assureur et courtier, commission exigible, rétrocommission — sans second appel. '
+            . "Avec trancheId, les signalements d'UNE tranche ; sans, ceux de l'entreprise, "
+            . 'filtrables par client ou cotation (lieA) et par période (du/au). À appeler dès que la '
+            . "question porte sur le paiement de la PRIME par l'assuré ou sur ce qu'il rapporte au "
+            . 'cabinet. ATTENTION : un signalement est DÉCLARATIF — l\'assureur encaisse la prime, '
+            . "jamais la trésorerie du cabinet ; ne pas confondre avec l'entité Paiement, qui est "
+            . 'l\'encaissement du courtier. Pour EN CRÉER un, utiliser signaler_paiement_prime.';
     }
 
     public function aiguillage(): string

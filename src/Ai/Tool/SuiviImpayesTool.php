@@ -48,20 +48,21 @@ final class SuiviImpayesTool implements AiToolInterface, AiToolConditionnel
 
     public function description(): string
     {
-        return 'Suivi des paiements par tranche : soldes restants de PRIME (due par l\'assuré), '
-            . 'de COMMISSION (due par l\'assureur) et de RÉTROCOMMISSION (due par le courtier au '
-            . 'partenaire), retards par rapport à la date d\'échéance, triés par urgence (les plus '
-            . 'en retard d\'abord). Le filtre `axes` cible UNE dette à la fois ou les croise : '
-            . '{prime: impayee} = primes encore dues par les clients ; {prime: payee, commission: '
-            . 'impayee} = commissions à collecter MAINTENANT auprès de l\'assureur ; {retro: '
-            . 'impayee, commission: payee} = rétros à verser maintenant. À appeler pour : impayés, '
-            . 'arriérés, relances à faire, primes ou commissions en retard/dues/exigibles, qui doit '
-            . 'payer, soldes dus, rétros à verser aux partenaires. Porte par défaut sur le '
-            . 'PORTEFEUILLE de l\'utilisateur, comme la rubrique Tranches affichée (paramètre '
-            . "perimetre). Restreignable à un client ou une cotation via lieA. "
-            . "Chaque ligne porte AUSSI la date à laquelle la prime a été réglée (primePayeeLe) "
-            . "et la pièce qui l'établit (primePayeeOrigine) : « quand ce client a-t-il payé sa "
-            . "prime ? » se répond depuis cette liste, sans second appel.";
+        return "CE QUI RESTE DÛ, tranche par tranche : soldes de PRIME (due par l'assuré), de "
+            . "COMMISSION (due par l'assureur) et de RÉTROCOMMISSION (due par le courtier au "
+            . "partenaire), avec le retard sur l'échéance, les plus en retard d'abord. "
+            . "À appeler pour : impayés, arriérés, relances, primes ou commissions en retard, "
+            . 'dues ou exigibles, qui doit payer, soldes, rétros à verser. '
+            . 'Le filtre `axes` cible UNE dette ou les croise : {prime: impayee} = primes encore '
+            . 'dues ; {prime: payee, commission: impayee} = commissions à collecter MAINTENANT '
+            . "auprès de l'assureur ; {retro: impayee, commission: payee} = rétros à verser "
+            . 'maintenant. '
+            . "PRÉFÉRER rechercher_entites (entite=Tranche) quand la demande porte sur la LISTE de "
+            . "la rubrique plutôt que sur les soldes — les deux outils lisent les mêmes tranches, "
+            . 'celui-ci seul rend le décompte de la dette. '
+            . "Porte par défaut sur le PORTEFEUILLE de l'utilisateur, restreignable par lieA. "
+            . 'Chaque ligne porte la date de règlement de la prime et la pièce qui l\'établit : '
+            . '« quand ce client a-t-il payé ? » se répond sans second appel.';
     }
 
     public function aiguillage(): string

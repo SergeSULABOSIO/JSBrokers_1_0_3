@@ -528,10 +528,14 @@ final class CorpusDeReference
             new CasDuCorpus(
                 'statistiques-police-prime-la-plus-elevee',
                 'Dans mon portefeuille, donne-moi la police qui a généré la prime la plus élevée, à partir des avenants.',
-                ['statistiques'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
-                note: 'RECOUVREMENT FRONTAL avec analyser_portefeuille : « la prime la plus '
-                    . 'élevée » est servie par les deux. Le corpus porte les deux versions '
-                    . 'exprès, pour que le lot 5 ait de quoi trancher sur pièces.',
+                ['analyser_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
+                note: '⚠ CAS RÉÉTIQUETÉ le 2026-09-26, et c\'est le corpus qui avait tort. '
+                    . 'L\'étiquette venait du trafic réel, où `statistiques` avait répondu. Mais '
+                    . 'l\'aiguillage d\'`analyser_portefeuille` revendique explicitement « quelle '
+                    . 'POLICE porte la prime la plus élevée » (analyse=top_polices, le seul '
+                    . 'classement qui descende à l\'affaire). Le rejeu a donné '
+                    . '`analyser_portefeuille` : le modèle a suivi le contrat, c\'est la mesure '
+                    . 'qui le comptait en faute.',
             ),
             new CasDuCorpus(
                 'statistiques-prime-par-element',

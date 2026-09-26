@@ -73,16 +73,16 @@ final class AnalysePortefeuilleTool implements AiToolInterface
 
     public function description(): string
     {
-        return 'Analyses agrégées du portefeuille du cabinet : classements « top » des assureurs, '
-            . 'clients, risques ou intermédiaires — chaque ligne porte le nombre de polices, les '
-            . 'primes totales, les commissions TTC, la RÉSERVE du cabinet (ce qui lui reste après '
-            . 'rétrocessions) et la part de marché ; CHIFFRE D\'AFFAIRES (commissions encaissées, '
-            . 'HT et TTC) VENTILÉ par assureur, risque, client/assuré, portefeuille, partenaire '
-            . 'OU par mois ; COMPENSATIONS SINISTRES (indemnisations payable/payé/solde) ventilées '
-            . 'selon les mêmes axes ; production encaissée par mois ; derniers encaissements. '
-            . 'À appeler pour « chiffre d\'affaires par assureur », « CA par client 2026 », '
-            . '« indemnisations sinistres par risque », « top 5 clients », « production mensuelle ». '
-            . 'Pour un indicateur unitaire, préférer indicateur_calcule.';
+        return 'PLUSIEURS lignes comparées entre elles : classements et ventilations du '
+            . "portefeuille. NE PAS UTILISER pour un chiffre UNIQUE (« la prime totale du "
+            . 'portefeuille », « la réserve est de combien ») — c\'est indicateur_calcule ; ni '
+            . 'pour une répartition de champs STOCKÉS (combien de clients par groupe) — c\'est '
+            . 'statistiques. '
+            . 'Rend : les classements « top » d\'assureurs, clients, risques, intermédiaires ou '
+            . 'POLICES, chaque ligne portant nombre de polices, primes, commissions TTC, réserve '
+            . 'du cabinet et part de marché ; le CHIFFRE D\'AFFAIRES ventilé par assureur, risque, '
+            . 'client, portefeuille, partenaire ou par mois ; les COMPENSATIONS SINISTRES '
+            . '(payable / payé / solde) sur les mêmes axes ; la production encaissée par mois.';
     }
 
     public function aiguillage(): string
