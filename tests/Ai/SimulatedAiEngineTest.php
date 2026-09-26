@@ -271,7 +271,7 @@ class SimulatedAiEngineTest extends TestCase
                     'partMarche' => 45.5, 'ratioSP' => 20.0,
                 ]],
             ]),
-            'analyse_portefeuille',
+            'analyser_portefeuille',
         );
         $engine = new SimulatedAiEngine([$tool]);
         $reply = $engine->reply($this->makeRequest('Top des assureurs'));

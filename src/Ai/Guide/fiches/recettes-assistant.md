@@ -31,7 +31,7 @@ complète en texte simple.
 2. Mettre en avant l'urgent : renouvellements proches, tâches en retard.
 
 **Revue du portefeuille** — « Notre meilleur assureur ? », « Production 2026 ? » :
-1. `analyse_portefeuille` (analyse=top_assureurs / top_clients / top_risques /
+1. `analyser_portefeuille` (analyse=top_assureurs / top_clients / top_risques /
    top_intermediaires / production_mensuelle / encaissements, limite, annee).
 2. Croiser avec `indicateur_calcule` pour zoomer sur un acteur précis.
 

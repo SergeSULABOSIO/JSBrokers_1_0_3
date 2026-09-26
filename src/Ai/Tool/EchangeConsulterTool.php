@@ -53,7 +53,7 @@ final class EchangeConsulterTool implements AiToolInterface
 
     public function name(): string
     {
-        return 'echange_consulter';
+        return 'consulter_echanges';
     }
 
     public function description(): string
@@ -186,7 +186,7 @@ final class EchangeConsulterTool implements AiToolInterface
     /**
      * LES COLONNES DE L'ÉTAT DU PORTEFEUILLE, groupées par famille.
      *
-     * ⚠ SANS ELLES, LE PARAMÈTRE « colonnes » D'echange_exporter EST INUTILISABLE : le
+     * ⚠ SANS ELLES, LE PARAMÈTRE « colonnes » D'exporter_portefeuille EST INUTILISABLE : le
      * modèle ne peut pas deviner des codes qu'aucun outil ne lui montre, et il les
      * inventerait. C'est la contrepartie obligatoire du choix de colonnes — une capacité
      * offerte sans le moyen de s'en servir n'est pas une capacité.
@@ -219,7 +219,7 @@ final class EchangeConsulterTool implements AiToolInterface
             'validites' => ValiditeDesTranches::valeurs(),
             'exercices' => $this->etat->exercices($scope->entreprise),
             'note_colonnes' => "Ce sont les colonnes de l'ÉTAT DU PORTEFEUILLE, le fichier que "
-                . "produit echange_exporter : une ligne par TRANCHE de prime. Passe leurs « code » "
+                . "produit exporter_portefeuille : une ligne par TRANCHE de prime. Passe leurs « code » "
                 . "au paramètre « colonnes » pour n'en retenir qu'une partie ; vide = toutes. "
                 . "La colonne d'identité de la tranche est toujours présente, même non demandée. "
                 . "⚠ Cet état ne se réimporte pas : ses colonnes sont des résultats, pas des champs.",

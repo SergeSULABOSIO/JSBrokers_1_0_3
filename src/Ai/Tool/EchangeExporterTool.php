@@ -55,7 +55,7 @@ final class EchangeExporterTool implements AiToolInterface
 
     public function name(): string
     {
-        return 'echange_exporter';
+        return 'exporter_portefeuille';
     }
 
     public function description(): string
@@ -67,7 +67,7 @@ final class EchangeExporterTool implements AiToolInterface
             . 'résultats (soldes, encaissements) et non des champs. Pour préparer des données à '
             . 'importer, c\'est le GABARIT VIERGE qu\'il faut, dans l\'onglet Importer. '
             . 'Le paramètre « colonnes » restreint le fichier à certaines colonnes (codes obtenus '
-            . 'via echange_consulter) ; laissé vide, l\'état les porte toutes. Le paramètre '
+            . 'via consulter_echanges) ; laissé vide, l\'état les porte toutes. Le paramètre '
             . '« validite » choisit entre les tranches des POLICES, celles des PROJETS et les '
             . 'CADUQUES ; « exercice » restreint à une année de souscription. Le coût est annoncé '
             . 'AVANT le déclenchement, et le téléchargement reste un geste de l\'utilisateur.';
@@ -88,7 +88,7 @@ final class EchangeExporterTool implements AiToolInterface
                     'type' => 'array',
                     'items' => ['type' => 'string'],
                     'description' => 'Codes des colonnes à retenir dans l\'état (obtenus via '
-                        . 'echange_consulter). Vide ou absent = toutes les colonnes. La colonne '
+                        . 'consulter_echanges). Vide ou absent = toutes les colonnes. La colonne '
                         . 'd\'identité de la tranche est toujours présente.',
                 ],
                 'validite' => [
@@ -105,7 +105,7 @@ final class EchangeExporterTool implements AiToolInterface
                     'description' => "Exercice retenu, au format d'une année (« 2026 ») : "
                         . "celui de la DATE D'EFFET des polices, donc de la souscription. "
                         . "« tous » (défaut) ne filtre rien. Les exercices réellement présents "
-                        . "chez ce cabinet sont donnés par echange_consulter.",
+                        . "chez ce cabinet sont donnés par consulter_echanges.",
                 ],
             ],
         ];
@@ -145,7 +145,7 @@ final class EchangeExporterTool implements AiToolInterface
         if ($retenues === null) {
             return AiToolResult::introuvable(
                 implode(', ', array_map('strval', (array) ($args['colonnes'] ?? []))),
-                'Ces colonnes ne figurent pas dans l\'état. Appelle echange_consulter pour lui '
+                'Ces colonnes ne figurent pas dans l\'état. Appelle consulter_echanges pour lui '
                 . 'présenter la liste exacte des colonnes disponibles.',
             );
         }

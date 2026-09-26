@@ -68,7 +68,7 @@ final class AnalysePortefeuilleTool implements AiToolInterface
 
     public function name(): string
     {
-        return 'analyse_portefeuille';
+        return 'analyser_portefeuille';
     }
 
     public function description(): string

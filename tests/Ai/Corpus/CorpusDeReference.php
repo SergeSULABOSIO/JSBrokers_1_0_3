@@ -474,49 +474,49 @@ final class CorpusDeReference
             new CasDuCorpus(
                 'classement-top-clients',
                 'Donne-moi le top 5 de nos clients.',
-                ['analyse_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
+                ['analyser_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
             ),
             new CasDuCorpus(
                 'classement-top-clients-variante-dictee',
                 'top 5 de nos clients',
-                ['analyse_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
+                ['analyser_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
                 note: 'Variante dictée, sans verbe ni ponctuation. Quatre formulations du '
                     . 'même besoin ont été relevées dans une seule conversation.',
             ),
             new CasDuCorpus(
                 'classement-top-clients-detaille',
                 'Affiche le top 5 des clients, et pour chaque client la prime et la commission générées.',
-                ['analyse_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
+                ['analyser_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
             ),
             new CasDuCorpus(
                 'classement-meilleurs-assureurs',
                 'Donne-moi les meilleurs assureurs de notre portefeuille, celui qui a généré la prime la plus élevée.',
-                ['analyse_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
+                ['analyser_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
             ),
             new CasDuCorpus(
                 'classement-repartition-par-risque',
                 'Donne-moi la répartition des primes par risque.',
-                ['analyse_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
+                ['analyser_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
             ),
             new CasDuCorpus(
                 'classement-commissions-par-risque-et-assureur',
                 'Donne-moi un tableau des volumes de commissions exigibles par risque et par assureur.',
-                ['analyse_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
+                ['analyser_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
             ),
             new CasDuCorpus(
                 'classement-client-prime-la-plus-haute',
                 'Quel est le client ayant généré la prime la plus élevée ?',
-                ['analyse_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
+                ['analyser_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
             ),
             new CasDuCorpus(
                 'classement-risque-prime-la-plus-haute',
                 'Quel est le risque ayant porté la prime la plus haute ?',
-                ['analyse_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
+                ['analyser_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
             ),
             new CasDuCorpus(
                 'classement-prime-la-plus-basse',
                 'Donne-moi la prime la plus basse du portefeuille et le nom du client qui la porte.',
-                ['analyse_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
+                ['analyser_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
             ),
             new CasDuCorpus(
                 'classement-saturation',
@@ -529,7 +529,7 @@ final class CorpusDeReference
                 'statistiques-police-prime-la-plus-elevee',
                 'Dans mon portefeuille, donne-moi la police qui a généré la prime la plus élevée, à partir des avenants.',
                 ['statistiques'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
-                note: 'RECOUVREMENT FRONTAL avec analyse_portefeuille : « la prime la plus '
+                note: 'RECOUVREMENT FRONTAL avec analyser_portefeuille : « la prime la plus '
                     . 'élevée » est servie par les deux. Le corpus porte les deux versions '
                     . 'exprès, pour que le lot 5 ait de quoi trancher sur pièces.',
             ),
@@ -729,15 +729,15 @@ final class CorpusDeReference
             new CasDuCorpus(
                 'export-portefeuille-excel',
                 'Génère l\'état de mon portefeuille en classeur Excel.',
-                ['echange_exporter'], Trousse::LECTURE, CasDuCorpus::FICHIERS,
-                note: 'Outil à renommer au lot 4 : « echange_exporter » est à distance 2 de '
-                    . '« echange_importer », qui est de l\'autre côté de la frontière — le '
+                ['exporter_portefeuille'], Trousse::LECTURE, CasDuCorpus::FICHIERS,
+                note: 'Outil à renommer au lot 4 : « exporter_portefeuille » est à distance 2 de '
+                    . '« importer_classeur », qui est de l\'autre côté de la frontière — le '
                     . 'rattrapage refuse donc de trancher sur cette famille.',
             ),
             new CasDuCorpus(
                 'echange-consulter',
                 'Comment fonctionne la rubrique Importation / Exportation des données ?',
-                ['echange_consulter'], Trousse::LECTURE, CasDuCorpus::FICHIERS,
+                ['consulter_echanges'], Trousse::LECTURE, CasDuCorpus::FICHIERS,
             ),
         ];
     }
@@ -981,9 +981,9 @@ final class CorpusDeReference
             new CasDuCorpus(
                 'ecriture-importer-classeur',
                 'Importe les données de ce classeur Excel dans mon portefeuille.',
-                ['echange_importer'], Trousse::ECRITURE, CasDuCorpus::ECRITURE,
+                ['importer_classeur'], Trousse::ECRITURE, CasDuCorpus::ECRITURE,
                 contexte: CasDuCorpus::CONTEXTE_PIECE_JOINTE,
-                note: 'Le jumeau de echange_exporter, dont il est à distance 2 — et de l\'autre '
+                note: 'Le jumeau de exporter_portefeuille, dont il est à distance 2 — et de l\'autre '
                     . 'côté de la frontière. Les deux cas se lisent ensemble.',
             ),
             new CasDuCorpus(

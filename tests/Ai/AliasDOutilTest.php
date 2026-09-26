@@ -85,9 +85,12 @@ class AliasDOutilTest extends KernelTestCase
             if (!$catalogue->estOutilDEcriture($cible)) {
                 continue;
             }
-            // Une cible d'écriture n'est admissible que si l'ancien nom en était un
-            // aussi. Aucun de nos alias n'est dans ce cas aujourd'hui ; le jour où l'un
-            // le sera, ce test obligera à l'écrire explicitement ici.
+            // Une cible d'écriture n'est admissible que si l'ancien nom en était un aussi.
+            // L'outil d'origine n'existant plus, le code ne peut pas le dire : la liste
+            // ANCIENS_NOMS_D_ECRITURE le DÉCLARE, et ce test refuse tout le reste.
+            if (\in_array($ancien, AliasDOutils::ANCIENS_NOMS_D_ECRITURE, true)) {
+                continue;
+            }
             self::fail(sprintf(
                 'L\'alias « %s » mène à « %s », un outil d\'ÉCRITURE. Un ancien nom ne doit pas '
                 . 'ouvrir une capacité que son remplaçant réserve à l\'autre trousse.',
@@ -121,9 +124,10 @@ class AliasDOutilTest extends KernelTestCase
      * TROUSSE désarment donc le filet pour toute leur famille — en silence, et c'est le
      * pire : rien ne le signale, les écorchures redeviennent simplement introuvables.
      *
-     * Ce test ne dit pas « c'est interdit » : il IMPRIME les paires en cause, pour que le
-     * prochain nom choisi le soit en connaissance. Une seule paire subsiste aujourd'hui —
-     * `echange_exporter` / `echange_importer` —, et leur renommage est planifié.
+     * Le seuil est à ZÉRO depuis le 2026-09-26. La dernière paire, `echange_exporter` /
+     * `echange_importer`, a été renommée en `exporter_portefeuille` / `importer_classeur` :
+     * distance 12. Ce test nomme les fautives quand il échoue, pour que le nom suivant se
+     * choisisse en connaissance — pas pour qu'on relâche le seuil.
      */
     public function testLesNomsTropProchesSontConnusEtDenombres(): void
     {
@@ -140,11 +144,14 @@ class AliasDOutilTest extends KernelTestCase
             }
         }
 
-        // LE SEUIL EST UN CONSTAT, PAS UN IDÉAL. Il vaut 1 parce qu'une paire reste, et
-        // il doit DESCENDRE à mesure qu'on renomme — jamais monter. Un test qu'on relâche
-        // pour faire passer un ajout ne protège plus rien.
-        self::assertLessThanOrEqual(
-            1,
+        // LE SEUIL EST TOMBÉ À ZÉRO le 2026-09-26, et il n'a plus de raison de remonter.
+        // La dernière paire était `echange_exporter` / `echange_importer` ; leur
+        // renommage l'a portée à 12. Un ajout d'outil qui fait échouer ce test ne se
+        // corrige pas en relâchant le seuil : il se corrige en choisissant un autre nom,
+        // faute de quoi toute écorchure de cette famille redevient introuvable — en
+        // silence, ce qui est le pire.
+        self::assertSame(
+            0,
             \count($paires),
             'Des noms d\'outils sont trop proches pour que le rattrapage ose trancher entre eux : '
             . implode(', ', $paires) . '. Sur ces familles, une écorchure reste introuvable.',

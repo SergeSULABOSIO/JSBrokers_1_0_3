@@ -2,6 +2,7 @@
 
 namespace App\Ai\Reglage;
 
+use App\Ai\Tool\AliasDOutils;
 use App\Repository\PlateformeParametresRepository;
 use Symfony\Contracts\Service\ResetInterface;
 
@@ -188,11 +189,29 @@ final class ReglagesDeKet implements ResetInterface
 
         $enBase = $this->repository->getSingleton()->getKetReglages() ?? [];
 
+        // ⚠ UN RENOMMAGE NE DOIT PAS RALLUMER UN OUTIL QU'UN AGENT AVAIT COUPÉ.
+        //
+        // La carte n'enregistre que les ÉCARTS : un outil absent est ACTIF. Renommer
+        // `echange_exporter` en `exporter_portefeuille` laisserait donc en base une clé
+        // orpheline « echange_exporter => false » sans effet, et l'outil, désormais
+        // absent de la carte sous son nouveau nom, redeviendrait actif — SANS QUE
+        // PERSONNE NE LE DEMANDE, et sans trace. C'est le seul point du renommage qui
+        // change un comportement plutôt qu'un libellé.
+        //
+        // La traduction se fait à la LECTURE plutôt que par une migration : la table
+        // des alias est déjà la source unique des correspondances, et une migration
+        // aurait figé au jour du déploiement ce qu'un fil rejoué ou un export plus
+        // ancien peut encore porter.
         $outils = [];
         foreach (($enBase['outils'] ?? []) as $nom => $actif) {
-            if (\is_string($nom) && \is_bool($actif)) {
-                $outils[$nom] = $actif;
+            if (!\is_string($nom) || !\is_bool($actif)) {
+                continue;
             }
+            $nom = AliasDOutils::ALIAS[$nom] ?? $nom;
+            // Une coupure l'emporte toujours : si l'ancien et le nouveau nom coexistent
+            // en base et se contredisent, on retient le refus. Rallumer sur un doute
+            // serait exactement la panne qu'on ferme ici.
+            $outils[$nom] = ($outils[$nom] ?? true) && $actif;
         }
 
         $parametres = [];

@@ -1508,7 +1508,7 @@ class AiContextBuilder
           • Commission GÉNÉRÉE / totale (TTC) / nette (HT) = montant FACTURÉ/DÛ, pas forcément encore
             encaissé — ne l'annonce JAMAIS comme le chiffre d'affaires.
           • Commission EXIGIBLE = commission à collecter auprès de l'assureur (relève de suivi_impayes).
-          • PRODUCTION encaissée = flux de caisse BRUT (analyse_portefeuille production_mensuelle) —
+          • PRODUCTION encaissée = flux de caisse BRUT (analyser_portefeuille production_mensuelle) —
             plus large que le CA, ce n'est PAS le chiffre d'affaires.
           • PRIME = argent dû à l'assureur, JAMAIS la recette du courtier ; un PaiementPrime est
             DÉCLARATIF (il n'affecte pas la trésorerie du cabinet).

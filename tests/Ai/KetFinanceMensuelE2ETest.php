@@ -28,7 +28,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 /**
  * E2E applicatif du CA mensuel de Ket : de bout en bout à travers le VRAI
  * endpoint de chat (contrôleur -> AiEngineResolver -> moteur simulé -> outil
- * analyse_portefeuille -> BDD bdm_test), on vérifie que « chiffre d'affaires
+ * analyser_portefeuille -> BDD bdm_test), on vérifie que « chiffre d'affaires
  * ventilé par mois » restitue les commissions ENCAISSÉES (HT = CA comptable et
  * TTC = cash), de façon concise. On vérifie aussi l'outil directement sur la
  * vraie base (agrégation réelle des Paiement sur notes de commission).
@@ -325,7 +325,7 @@ class KetFinanceMensuelE2ETest extends WebTestCase
         $meta = $this->em()->getRepository(AssistantMessage::class)
             ->findOneBy(['role' => AssistantMessage::ROLE_ASSISTANT], ['id' => 'DESC'])
             ->getMeta();
-        $this->assertSame('analyse_portefeuille', $meta['tool']);
+        $this->assertSame('analyser_portefeuille', $meta['tool']);
     }
 
     /**
@@ -358,7 +358,7 @@ class KetFinanceMensuelE2ETest extends WebTestCase
         $meta = $this->em()->getRepository(AssistantMessage::class)
             ->findOneBy(['role' => AssistantMessage::ROLE_ASSISTANT], ['id' => 'DESC'])
             ->getMeta();
-        $this->assertSame('analyse_portefeuille', $meta['tool']);
+        $this->assertSame('analyser_portefeuille', $meta['tool']);
 
         // Concision : réponse courte, sans excuse ni télescopage de notions.
         $this->assertLessThanOrEqual(600, mb_strlen($contenu), 'La réponse CA mensuel doit rester concise.');

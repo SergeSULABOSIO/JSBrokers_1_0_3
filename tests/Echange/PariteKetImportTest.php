@@ -224,9 +224,9 @@ class PariteKetImportTest extends WebTestCase
         $scope = new AiScope($entreprise, $proprietaire, null);
 
         $lecture = $catalogue->nomsDe(Trousse::LECTURE, $scope);
-        self::assertContains('echange_consulter', $lecture, 'Consulter doit être disponible en lecture.');
-        self::assertContains('echange_exporter', $lecture, 'Exporter aussi : il ne mute rien.');
-        self::assertNotContains('echange_importer', $lecture, 'Importer est un outil d\'écriture.');
+        self::assertContains('consulter_echanges', $lecture, 'Consulter doit être disponible en lecture.');
+        self::assertContains('exporter_portefeuille', $lecture, 'Exporter aussi : il ne mute rien.');
+        self::assertNotContains('importer_classeur', $lecture, 'Importer est un outil d\'écriture.');
 
         self::assertInstanceOf(
             AiToolEcriture::class,
