@@ -43,6 +43,26 @@ enum Trousse: string
     /** Tout : lecture + préparation de plans d'écriture et parcours de saisie. */
     case ECRITURE = 'ecriture';
 
+    /**
+     * AUCUN OUTIL — sauf la porte de sortie.
+     *
+     * Un message sur trois n'en appelle aucun, et une part de ceux-là sont des
+     * acquiescements : « ok », « merci », « très bien ». Ils emportaient les 64 Ko de
+     * déclarations de la trousse de lecture pour une réponse d'une phrase.
+     *
+     * ── ET LA RÈGLE « DEUX TROUSSES » CI-DESSUS ? ──────────────────────────────
+     * Elle reste vraie, et cette valeur ne la contredit pas : elle repose sur le cache
+     * de PRÉFIXE, or les jetons mis en cache COMPTENT dans le quota par minute chez ce
+     * fournisseur (cf. JournalTokens). Le cache réduit la facture, jamais la
+     * saturation. Le calcul, ici, n'est donc pas le même : on perd une entrée de cache
+     * sur les messages concernés, et on gagne de ne pas envoyer 64 Ko du tout. Environ
+     * un à vingt, en faveur de la trousse minimale.
+     *
+     * Ce n'est PAS une troisième trousse de travail : elle ne déclare qu'un outil, et
+     * seulement pour que Ket puisse dire qu'elle s'est trompée de porte.
+     */
+    case AUCUN = 'aucun';
+
     public function estEcriture(): bool
     {
         return $this === self::ECRITURE;
