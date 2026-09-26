@@ -149,63 +149,14 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
                     'minimum' => 1,
                     'description' => 'Numéro de page à restituer (défaut : 1).',
                 ],
-                'echeance' => [
-                    'type' => 'string',
-                    'enum' => array_keys(AvenantEcheanceScope::VALEURS),
-                    'description' => 'AVENANT uniquement : restreint à une fenêtre d\'échéance — '
-                        . 'echus (déjà expirés), sous_30j (échéance dans les 30 prochains jours), '
-                        . 'de_31_a_60j, au_dela_60j. Mêmes bornes que les filtres rapides de la '
-                        . 'rubrique, résultats triés du plus urgent au moins urgent.',
-                ],
+                'echeance' => AvenantEcheanceScope::proprieteSchema(),
                 'axes' => TranchePaiementScope::proprieteSchema(
                     'TRANCHE uniquement, mêmes règles que les groupes de chips de la rubrique.'
                 ),
-                'validation' => [
-                    'type' => 'string',
-                    'enum' => array_keys(CotationSouscriptionScope::VALEURS),
-                    'description' => 'COTATION uniquement : restreint à un statut de souscription — '
-                        . 'souscrites (transformées en police, au moins un avenant), en_attente '
-                        . '(non transformées, encore en course), caduques (non transformées mais '
-                        . 'une autre proposition de la même piste est souscrite = marché perdu, '
-                        . 'sans suite). Mêmes règles que les filtres rapides de la rubrique.',
-                ],
-                'transformation' => [
-                    'type' => 'string',
-                    'enum' => array_keys(PisteTransformationScope::VALEURS),
-                    'description' => 'PISTE uniquement : restreint à un statut de transformation — '
-                        . 'transformees (au moins une cotation souscrite/transformée en police), '
-                        . 'en_cours (aucune cotation encore transformée). Mêmes règles que les '
-                        . 'filtres rapides de la rubrique.',
-                ],
+                'validation' => CotationSouscriptionScope::proprieteSchema(),
+                'transformation' => PisteTransformationScope::proprieteSchema(),
                 'perimetre' => PortefeuilleScope::proprieteSchema(),
-                'lieA' => [
-                    'type' => 'object',
-                    'description' => 'Restreint aux enregistrements LIÉS à un enregistrement précis, '
-                        . 'même indirectement (le chemin de relations est résolu automatiquement) : '
-                        . 'les tâches de la piste 42 → entite=Tache et lieA={entite: "Piste", id: 42} ; '
-                        . 'les avenants du client « Kibali » → entite=Avenant et '
-                        . 'lieA={entite: "Client", nom: "Kibali"}. Donne "id" si tu l\'as (fiche '
-                        . 'attachée, résultat précédent) ; SINON donne simplement "nom" — le serveur '
-                        . 'résout le nom lui-même, tu n\'as JAMAIS à faire une recherche préalable '
-                        . 'pour obtenir un identifiant.',
-                    'properties' => [
-                        'entite' => [
-                            'type' => 'string',
-                            'enum' => $this->lexique->nomsCourts(),
-                            'description' => "Nom court de l'enregistrement de rattachement.",
-                        ],
-                        'id' => [
-                            'type' => 'integer',
-                            'description' => "Identifiant de l'enregistrement de rattachement, si tu le connais déjà.",
-                        ],
-                        'nom' => [
-                            'type' => 'string',
-                            'description' => 'À défaut d\'identifiant : le nom dicté par l\'utilisateur '
-                                . '(« Kibali », « SUNU », « Mme Marlette »). Résolu par le serveur.',
-                        ],
-                    ],
-                    'required' => ['entite'],
-                ],
+                'lieA' => $this->lexique->lieASchema(),
             ],
             'required' => ['entite'],
         ];

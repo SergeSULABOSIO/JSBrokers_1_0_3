@@ -121,20 +121,7 @@ final class OuvrirRubriqueTool implements AiToolInterface, AiToolConditionnel
                         $this->lexique->nomsCourts(),
                     ),
                 ],
-                'lieA' => [
-                    'type' => 'object',
-                    'description' => 'Restreint la liste affichée aux enregistrements RATTACHÉS à une '
-                        . 'fiche précise — le même paramètre que rechercher_entites, et il faut y '
-                        . 'mettre la même chose. Le NOM suffit : {"entite":"Client","nom":"Marlette"}. '
-                        . 'Le serveur résout le nom et trouve seul le chemin de relations (direct ou '
-                        . 'à plusieurs niveaux).',
-                    'properties' => [
-                        'entite' => ['type' => 'string', 'enum' => $this->lexique->nomsCourts()],
-                        'id'     => ['type' => 'integer'],
-                        'nom'    => ['type' => 'string'],
-                    ],
-                    'required' => ['entite'],
-                ],
+                'lieA' => $this->lexique->lieASchema(),
                 'filtre' => [
                     'type' => 'string',
                     'description' => 'Filtre TEXTE appliqué au champ de recherche de la rubrique '
@@ -144,28 +131,12 @@ final class OuvrirRubriqueTool implements AiToolInterface, AiToolConditionnel
                 // MÊME VOCABULAIRE que rechercher_entites, délibérément : une intention
                 // exprimée une fois doit piloter la réponse ÉCRITE et l'écran sans être
                 // retraduite. Deux jeux de noms auraient produit deux listes.
-                'echeance' => [
-                    'type' => 'string',
-                    'enum' => array_keys(AvenantEcheanceScope::VALEURS),
-                    'description' => 'AVENANT uniquement : ouvre la rubrique sur une fenêtre d\'échéance '
-                        . '(chip de la rubrique) — echus, sous_30j, de_31_a_60j, au_dela_60j, '
-                        . 'non_renouvelables. Exactement les valeurs de rechercher_entites.',
-                ],
+                'echeance' => AvenantEcheanceScope::proprieteSchema(),
                 'axes' => TranchePaiementScope::proprieteSchema(
                     'TRANCHE uniquement : ouvre la rubrique sur les mêmes groupes de chips.'
                 ),
-                'validation' => [
-                    'type' => 'string',
-                    'enum' => array_keys(CotationSouscriptionScope::VALEURS),
-                    'description' => 'COTATION uniquement : ouvre la rubrique sur un statut de '
-                        . 'souscription (souscrites, en_attente, caduques).',
-                ],
-                'transformation' => [
-                    'type' => 'string',
-                    'enum' => array_keys(PisteTransformationScope::VALEURS),
-                    'description' => 'PISTE uniquement : ouvre la rubrique sur un statut de '
-                        . 'transformation (transformees, en_cours).',
-                ],
+                'validation' => CotationSouscriptionScope::proprieteSchema(),
+                'transformation' => PisteTransformationScope::proprieteSchema(),
                 // REVERSEMENTS : les mêmes chips que l'écran, mot pour mot. Le vocabulaire
                 // vient de ReversementScope, comme les options de la barre — deux listes
                 // de valeurs auraient fini par désigner deux sous-ensembles.
