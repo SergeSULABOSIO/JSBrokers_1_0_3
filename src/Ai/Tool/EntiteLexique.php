@@ -58,6 +58,51 @@ final class EntiteLexique
     }
 
     /**
+     * Fragment de schéma JSON décrivant l'argument `lieA` — « les enregistrements
+     * RATTACHÉS à celui-ci ».
+     *
+     * SOURCE UNIQUE. `rechercher_entites` et `ouvrir_rubrique` le déclaraient chacun
+     * de son côté, avec deux textes différents pour un paramètre dont `ouvrir_rubrique`
+     * précisait pourtant lui-même qu'« il faut y mettre la même chose ». Deux prose
+     * pour une règle identique, c'est une divergence qui attend son heure — et elle
+     * porterait ici sur la façon dont le modèle désigne un client.
+     *
+     * LE FOND DE LA RÈGLE, et la raison pour laquelle elle mérite d'être écrite une
+     * seule fois : le NOM suffit. Le serveur résout le nom et trouve seul le chemin de
+     * relations, direct ou à plusieurs niveaux. Sans cette phrase, le modèle fait une
+     * recherche préalable pour obtenir un identifiant — un tour entier, quarante mille
+     * jetons d'entrée, pour une donnée dont le serveur n'avait pas besoin.
+     *
+     * @return array<string, mixed>
+     */
+    public function lieASchema(): array
+    {
+        return [
+            'type' => 'object',
+            'description' => 'Restreint aux enregistrements LIÉS à celui-ci, même indirectement : '
+                . 'les avenants du client « Dupont » → entite=Avenant, lieA={entite:"Client",nom:"Dupont"}. '
+                . 'Donne "id" si tu le connais, SINON "nom" : le serveur résout le nom et trouve seul '
+                . 'le chemin. Tu n\'as JAMAIS à chercher un identifiant au préalable.',
+            'properties' => [
+                'entite' => [
+                    'type' => 'string',
+                    'enum' => $this->nomsCourts(),
+                    'description' => "Nom court de l'enregistrement de rattachement.",
+                ],
+                'id' => [
+                    'type' => 'integer',
+                    'description' => "Identifiant de l'enregistrement de rattachement, si tu le connais déjà.",
+                ],
+                'nom' => [
+                    'type' => 'string',
+                    'description' => 'À défaut d\'identifiant : le nom dicté par l\'utilisateur.',
+                ],
+            ],
+            'required' => ['entite'],
+        ];
+    }
+
+    /**
      * Libellés d'écran par nom court, tels que l'utilisateur les voit dans le menu
      * (« Propositions » pour Cotation, « Paiements de prime » pour PaiementPrime).
      * Simple passe-plat vers la carte de permissions : ce lexique est déjà le seul

@@ -235,4 +235,37 @@ final class AvenantEcheanceScope
             'libelle' => $jours === 0 ? "Échéance aujourd'hui" : sprintf('Échéance dans %d j', $jours),
         ];
     }
+
+    /**
+     * Fragment de schéma JSON décrivant l'argument `echeance` des outils de l'assistant.
+     *
+     * SOURCE UNIQUE. `rechercher_entites`, `compter_entites` et `ouvrir_rubrique`
+     * décrivaient ce filtre chacun dans ses propres mots — et les trois prose avaient
+     * DÉJÀ divergé de l'enum : deux d'entre elles énuméraient quatre valeurs là où la
+     * table en compte cinq, si bien que `non_renouvelables` était déclaré au modèle
+     * sans jamais lui être expliqué. Il ne pouvait donc l'employer qu'au jugé.
+     *
+     * La liste est désormais DÉRIVÉE de {@see VALEURS} : une valeur ajoutée à la table
+     * apparaît dans la description du même coup, et la dérive n'est plus possible.
+     *
+     * @return array{type: string, enum: string[], description: string}
+     */
+    public static function proprieteSchema(): array
+    {
+        return [
+            'type' => 'string',
+            'enum' => array_keys(self::VALEURS),
+            'description' => 'AVENANT uniquement. Fenêtre d\'échéance : ' . self::valeursEnClair() . '.',
+        ];
+    }
+
+    /** Les valeurs et leur libellé, tels que la rubrique les nomme à l'écran. */
+    private static function valeursEnClair(): string
+    {
+        return implode(', ', array_map(
+            static fn (string $v, string $l): string => $v . ' (' . mb_strtolower($l) . ')',
+            array_keys(self::VALEURS),
+            array_values(self::VALEURS),
+        ));
+    }
 }

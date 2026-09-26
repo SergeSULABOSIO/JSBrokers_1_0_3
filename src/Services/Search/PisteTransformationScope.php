@@ -92,4 +92,22 @@ final class PisteTransformationScope
 
         return null;
     }
+
+    /**
+     * Fragment de schéma JSON décrivant l'argument `transformation` des outils de l'assistant.
+     *
+     * SOURCE UNIQUE, même raison que ses deux jumeaux : trois outils, une seule règle.
+     *
+     * @return array{type: string, enum: string[], description: string}
+     */
+    public static function proprieteSchema(): array
+    {
+        return [
+            'type' => 'string',
+            'enum' => array_keys(self::VALEURS),
+            'description' => 'PISTE uniquement. Statut de transformation : '
+                . self::STATUT_TRANSFORMEES . ' (au moins une cotation souscrite), '
+                . self::STATUT_EN_COURS . ' (aucune).',
+        ];
+    }
 }

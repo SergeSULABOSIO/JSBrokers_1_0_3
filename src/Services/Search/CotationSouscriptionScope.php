@@ -123,4 +123,29 @@ final class CotationSouscriptionScope
 
         return null;
     }
+
+    /**
+     * Fragment de schéma JSON décrivant l'argument `validation` des outils de l'assistant.
+     *
+     * SOURCE UNIQUE, même raison que {@see AvenantEcheanceScope::proprieteSchema()} :
+     * trois outils répétaient la même prose, et une quatrième copie vivait dans
+     * `retrocommissions`. Quatre textes à maintenir pour une seule règle.
+     *
+     * La glose de « caduques » est conservée intégralement : c'est la seule des trois
+     * valeurs qu'un courtier ne devine pas de son nom — une proposition non transformée
+     * ALORS QU'UNE AUTRE de la même piste l'a été, c'est-à-dire un marché perdu.
+     *
+     * @return array{type: string, enum: string[], description: string}
+     */
+    public static function proprieteSchema(): array
+    {
+        return [
+            'type' => 'string',
+            'enum' => array_keys(self::VALEURS),
+            'description' => 'COTATION uniquement. Statut de souscription : '
+                . self::STATUT_SOUSCRITES . ' (transformées en police), '
+                . self::STATUT_EN_ATTENTE . ' (encore en course), '
+                . self::STATUT_CADUQUES . ' (perdues : une autre proposition de la même piste a été souscrite).',
+        ];
+    }
 }

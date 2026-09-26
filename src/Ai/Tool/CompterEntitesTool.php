@@ -71,33 +71,12 @@ final class CompterEntitesTool implements AiToolInterface, AiToolDeComprehension
                     'description' => "Nom court de l'entité à compter (ex. Client, Avenant, Piste).",
                     'enum' => $this->lexique->nomsCourts(),
                 ],
-                'echeance' => [
-                    'type' => 'string',
-                    'enum' => array_keys(AvenantEcheanceScope::VALEURS),
-                    'description' => 'AVENANT uniquement : restreint à une fenêtre d\'échéance — '
-                        . 'echus (déjà expirés), sous_30j (échéance dans les 30 prochains jours), '
-                        . 'de_31_a_60j, au_dela_60j. Mêmes bornes que les filtres rapides de la rubrique.',
-                ],
+                'echeance' => AvenantEcheanceScope::proprieteSchema(),
                 'axes' => TranchePaiementScope::proprieteSchema(
                     'TRANCHE uniquement, mêmes règles que les groupes de chips de la rubrique.'
                 ),
-                'validation' => [
-                    'type' => 'string',
-                    'enum' => array_keys(CotationSouscriptionScope::VALEURS),
-                    'description' => 'COTATION uniquement : restreint à un statut de souscription — '
-                        . 'souscrites (transformées en police, au moins un avenant), en_attente '
-                        . '(non transformées, encore en course), caduques (non transformées mais '
-                        . 'une autre proposition de la même piste est souscrite = marché perdu, '
-                        . 'sans suite). Mêmes règles que les filtres rapides de la rubrique.',
-                ],
-                'transformation' => [
-                    'type' => 'string',
-                    'enum' => array_keys(PisteTransformationScope::VALEURS),
-                    'description' => 'PISTE uniquement : restreint à un statut de transformation — '
-                        . 'transformees (au moins une cotation souscrite/transformée en police), '
-                        . 'en_cours (aucune cotation encore transformée). Mêmes règles que les '
-                        . 'filtres rapides de la rubrique.',
-                ],
+                'validation' => CotationSouscriptionScope::proprieteSchema(),
+                'transformation' => PisteTransformationScope::proprieteSchema(),
                 'perimetre' => PortefeuilleScope::proprieteSchema(),
             ],
             'required' => ['entite'],
