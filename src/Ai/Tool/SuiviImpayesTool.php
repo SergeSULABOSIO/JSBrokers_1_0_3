@@ -57,9 +57,8 @@ final class SuiviImpayesTool implements AiToolInterface, AiToolConditionnel
             . 'dues ; {prime: payee, commission: impayee} = commissions à collecter MAINTENANT '
             . "auprès de l'assureur ; {retro: impayee, commission: payee} = rétros à verser "
             . 'maintenant. '
-            . "PRÉFÉRER rechercher_entites (entite=Tranche) quand la demande porte sur la LISTE de "
-            . "la rubrique plutôt que sur les soldes — les deux outils lisent les mêmes tranches, "
-            . 'celui-ci seul rend le décompte de la dette. '
+            . "C'est le SEUL outil qui rende un solde, un retard ou un exigible : dès que la "
+            . "question porte sur ce qui reste dû, c'est ici, jamais ailleurs. "
             . "Porte par défaut sur le PORTEFEUILLE de l'utilisateur, restreignable par lieA. "
             . 'Chaque ligne porte la date de règlement de la prime et la pièce qui l\'établit : '
             . '« quand ce client a-t-il payé ? » se répond sans second appel.';
