@@ -92,6 +92,9 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
             . "(clients, avenants, pistes, notes, sinistres…). Répond à « liste », « affiche », "
             . "« montre-moi », « quels sont », et à « combien / nombre de » avec mode="
             . self::MODE_COMPTE . ' (le nombre au lieu des lignes, mêmes filtres). '
+            . "NE PAS UTILISER pour un solde restant dû, un impayé, un retard de paiement ou une "
+            . "commission exigible, même sur des tranches : c'est suivi_impayes, seul à rendre le "
+            . 'décompte de la dette. '
             . 'lieA restreint aux enregistrements LIÉS à une fiche, même à plusieurs relations de '
             . "distance (les avenants d'un CLIENT via ses pistes) : c'est le SEUL moyen fiable, une "
             . 'fiche ne contient jamais ses liés. lieA accepte un NOM autant qu\'un id — ne fais '
