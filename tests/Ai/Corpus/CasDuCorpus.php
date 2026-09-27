@@ -31,6 +31,12 @@ final class CasDuCorpus
      *                               relances (« essaie encore » n'a de sens que par ce qui
      *                               précède). Une des valeurs de self::CONTEXTES.
      * @param string       $note     pourquoi ce cas mérite sa place. Vide quand il est ordinaire.
+     * @param string       $antecedent CE QUE KET VENAIT DE RÉPONDRE, quand la question n'a de
+     *                               sens que par lui. « Dans cela, affiche uniquement celles
+     *                               dont les primes sont échues » ne désigne rien dans une
+     *                               conversation vide : rejouée à froid, elle mesure la
+     *                               patience du modèle, pas son choix d'outil. Vide quand la
+     *                               question se suffit — c'est le cas de la plupart.
      */
     public function __construct(
         public readonly string $libelle,
@@ -40,6 +46,7 @@ final class CasDuCorpus
         public readonly string $famille,
         public readonly string $contexte = self::CONTEXTE_AUCUN,
         public readonly string $note = '',
+        public readonly string $antecedent = '',
     ) {
     }
 

@@ -322,10 +322,7 @@ class KetJustesseCommand extends Command
 
             // Conversation TRANSIENTE, jamais persistée : le rejeu ne doit laisser
             // aucune trace dans le fil d'un courtier.
-            $conversation = (new AssistantConversation())->setEntreprise($entreprise)->setInvite($invite);
-            $conversation->addMessage(
-                (new AssistantMessage())->setRole(AssistantMessage::ROLE_USER)->setContenu($c->question),
-            );
+            $conversation = $this->filDuCas($c, $entreprise, $invite);
 
             try {
                 $reponse = $this->moteur->reply($this->contextBuilder->build($entreprise, $invite, $conversation));
@@ -346,6 +343,83 @@ class KetJustesseCommand extends Command
         $io->newLine(2);
 
         return $this->imprimerLeBilan($io, $resultats);
+    }
+
+    /**
+     * LE FIL DANS LEQUEL LA QUESTION EST POSÉE — et non la question toute seule.
+     *
+     * ── LE BIAIS QUE CETTE MÉTHODE CORRIGE ──────────────────────────────────────
+     *
+     * Le rejeu montait une conversation ne contenant que la question. Or une part du
+     * corpus n'a de sens que par ce qui précède : « Dans cela, affiche uniquement celles
+     * dont les primes sont échues » ne désigne RIEN dans un fil vide. Ket demandait une
+     * clarification — et elle avait raison —, mais la mesure comptait un mauvais choix
+     * d'outil. On mesurait la patience du modèle, pas son jugement.
+     *
+     * Deux choses sont donc restituées, et elles n'ont pas le même rôle :
+     *
+     *  · l'ANTÉCÉDENT donne un référent aux pronoms (« dans cela », « celles-ci ») ;
+     *  · le CONTEXTE reproduit le signal structurel que le sélecteur de trousse lit —
+     *    un plan en attente, une offre d'écrire, un tour qui vient d'écrire. Sans lui,
+     *    un « ok » de validation partirait en lecture et ne mesurerait rien de réel.
+     *
+     * Ce qui n'est PAS reproduit, faute de pouvoir l'être sans base : le programme en
+     * cours et la pièce jointe, qui exigent des enregistrements persistés. Les cas qui
+     * les déclarent sont rejoués sans eux, et c'est une limite connue du harnais — pas
+     * un résultat.
+     */
+    private function filDuCas(CasDuCorpus $cas, $entreprise, $invite): AssistantConversation
+    {
+        $conversation = (new AssistantConversation())->setEntreprise($entreprise)->setInvite($invite);
+
+        // L'antécédent d'abord : il doit précéder la question dans le fil, sans quoi le
+        // pronom n'aurait toujours rien à désigner.
+        $texte = $cas->antecedent !== '' ? $cas->antecedent : $this->antecedentDuContexte($cas);
+        if ($texte !== null) {
+            $reponse = (new AssistantMessage())
+                ->setRole(AssistantMessage::ROLE_ASSISTANT)
+                ->setContenu($texte);
+            // La META porte le signal structurel : c'est elle, et non le texte, que le
+            // sélecteur de trousse lit pour « le dernier tour a écrit » et « un plan
+            // attend une décision ».
+            $meta = $this->metaDuContexte($cas);
+            if ($meta !== []) {
+                $reponse->setMeta($meta);
+            }
+            $conversation->addMessage($reponse);
+        }
+
+        $conversation->addMessage(
+            (new AssistantMessage())->setRole(AssistantMessage::ROLE_USER)->setContenu($cas->question),
+        );
+
+        return $conversation;
+    }
+
+    /** La phrase que Ket aurait dite, quand le cas déclare un contexte sans antécédent écrit. */
+    private function antecedentDuContexte(CasDuCorpus $cas): ?string
+    {
+        return match ($cas->contexte) {
+            // La tournure d'offre est celle que SelecteurDeTrousse reconnaît : reproduire
+            // le signal exige d'employer ses mots, pas des mots équivalents.
+            CasDuCorpus::CONTEXTE_A_PROPOSE_D_ECRIRE => 'Voulez-vous que je l\'enregistre ?',
+            CasDuCorpus::CONTEXTE_DERNIER_TOUR_A_ECRIT => 'C\'est enregistré.',
+            CasDuCorpus::CONTEXTE_PLAN_EN_ATTENTE => 'Voici le plan, à valider.',
+            CasDuCorpus::CONTEXTE_PROGRAMME_EN_COURS => 'Étape 1 sur 3 terminée.',
+            default => null,
+        };
+    }
+
+    /** @return array<string, mixed> */
+    private function metaDuContexte(CasDuCorpus $cas): array
+    {
+        return match ($cas->contexte) {
+            // Un outil d'écriture réel : le sélecteur lit l'appartenance dans le
+            // catalogue, un nom inventé ne déclencherait rien.
+            CasDuCorpus::CONTEXTE_DERNIER_TOUR_A_ECRIT => ['tool' => 'preparer_operations'],
+            CasDuCorpus::CONTEXTE_PLAN_EN_ATTENTE => ['mutationPlan' => ['operations' => []]],
+            default => [],
+        };
     }
 
     /**
