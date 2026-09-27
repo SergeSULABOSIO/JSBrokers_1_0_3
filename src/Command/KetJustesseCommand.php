@@ -568,12 +568,29 @@ class KetJustesseCommand extends Command
             ],
         );
 
+        [$bas, $haut] = self::intervalle($justes, $aChoisi);
         $io->writeln(sprintf(
             ' <info>INDICATEUR PRINCIPAL — bon outil quand Ket a eu à choisir : %s (%d cas sur %d)</info>',
             self::part($justes, $aChoisi),
             $justes,
             $aChoisi,
         ));
+        // ⚠ L'INCERTITUDE EST IMPRIMÉE AVEC LE CHIFFRE, ET C'EST TOUT L'INTÉRÊT.
+        //
+        // Le 2026-09-27, la même famille a rendu 57,1 %, puis 38,9 %, puis 47,1 %, puis
+        // 46,7 %. Ces écarts ont été lus comme des effets de changements de code — et un
+        // lot a été annulé sur cette base. Sur quinze cas, UN SEUL vaut près de sept
+        // points, et le modèle n'est pas déterministe : une partie de ces écarts était du
+        // bruit. Un chiffre sans sa marge invite à conclure ce qu'il ne dit pas.
+        $io->writeln(sprintf(
+            ' Marge à 95 %% : de %s à %s. Deux passes dont les intervalles se CHEVAUCHENT ne',
+            self::pourcent($bas),
+            self::pourcent($haut),
+        ));
+        $io->writeln(' se départagent pas. Trancher un écart de DIX points en demanderait environ');
+        $io->writeln(' QUATRE CENTS : une famille de vingt cas ne détecte qu\'un effondrement, pas');
+        $io->writeln(' un progrès. Pour juger un lot, passer le corpus ENTIER — et même là, la');
+        $io->writeln(' marge reste de l\'ordre de sept points.');
         $io->writeln(sprintf(
             ' Rapporté au corpus entier : %s. L\'écart entre les deux, ce sont les %d cas que la',
             self::part($justes, $total),
@@ -607,6 +624,36 @@ class KetJustesseCommand extends Command
             $tous,
             static fn (CasDuCorpus $c): bool => str_contains($c->libelle, $motif) || $c->famille === $motif,
         ));
+    }
+
+    /**
+     * INTERVALLE DE CONFIANCE À 95 %, par le score de Wilson.
+     *
+     * Wilson plutôt que l'approximation normale : sur de petits effectifs — et quinze
+     * cas, c'est petit — l'approximation normale déborde de [0, 1] et annonce des marges
+     * absurdes près des extrêmes. Wilson reste borné et garde sa couverture jusqu'à une
+     * dizaine d'observations.
+     *
+     * @return array{0: float, 1: float}
+     */
+    private static function intervalle(int $succes, int $total): array
+    {
+        if ($total <= 0) {
+            return [0.0, 0.0];
+        }
+
+        $z = 1.96;
+        $p = $succes / $total;
+        $denominateur = 1 + $z ** 2 / $total;
+        $centre = ($p + $z ** 2 / (2 * $total)) / $denominateur;
+        $demi = $z * sqrt($p * (1 - $p) / $total + $z ** 2 / (4 * $total ** 2)) / $denominateur;
+
+        return [max(0.0, $centre - $demi), min(1.0, $centre + $demi)];
+    }
+
+    private static function pourcent(float $fraction): string
+    {
+        return number_format(100 * $fraction, 1, ',', ' ') . ' %';
     }
 
     private static function part(int $n, int $total): string
