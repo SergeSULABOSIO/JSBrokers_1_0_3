@@ -363,11 +363,13 @@ final class CorpusDeReference
                 'impayes-echues-seulement',
                 'Dans cela, affiche uniquement celles dont les primes sont échues.',
                 ['suivi_impayes'], Trousse::LECTURE, CasDuCorpus::IMPAYES,
+                antecedent: 'Voici les 14 tranches dont la prime reste due, du plus en retard au moins urgent.',
             ),
             new CasDuCorpus(
                 'impayes-non-echues',
                 'Celles dont les primes ne sont pas encore échues.',
                 ['suivi_impayes'], Trousse::LECTURE, CasDuCorpus::IMPAYES,
+                antecedent: 'Voici les 14 tranches dont la prime reste due, du plus en retard au moins urgent.',
             ),
             new CasDuCorpus(
                 'impayes-tranches-commission-payee',
@@ -388,6 +390,7 @@ final class CorpusDeReference
                 'impayes-compter-tranches',
                 'Combien de tranches affichent une prime impayée actuellement ? Peux-tu me donner la liste numérotée ?',
                 ['suivi_impayes'], Trousse::LECTURE, CasDuCorpus::IMPAYES,
+                antecedent: 'Voici les tranches de votre portefeuille, toutes dettes confondues.',
             ),
             new CasDuCorpus(
                 'impayes-commissions-facturables',
@@ -487,6 +490,7 @@ final class CorpusDeReference
                 'classement-top-clients-detaille',
                 'Affiche le top 5 des clients, et pour chaque client la prime et la commission générées.',
                 ['analyser_portefeuille'], Trousse::LECTURE, CasDuCorpus::CLASSEMENT,
+                antecedent: 'Voici le top 5 des clients par prime générée.',
             ),
             new CasDuCorpus(
                 'classement-meilleurs-assureurs',
@@ -641,6 +645,7 @@ final class CorpusDeReference
                 'fiche-ventilation-commission',
                 'Fais-moi la ventilation de cette commission.',
                 ['lire_fiche'], Trousse::LECTURE, CasDuCorpus::FICHE,
+                antecedent: 'Cette affaire a généré 1 240 de commission TTC.',
             ),
             new CasDuCorpus(
                 'fiche-cotation-d-un-assureur',
@@ -1222,6 +1227,7 @@ final class CorpusDeReference
                 [], Trousse::LECTURE, CasDuCorpus::AUCUN,
                 note: 'REMETTRE EN FORME N\'EXIGE AUCUNE DONNÉE NOUVELLE : tout est déjà dans '
                     . 'le fil. Un des cas les plus rentables du lot 6.',
+                antecedent: 'Voici les 8 clients du portefeuille, avec leur prime et leur commission.',
             ),
             new CasDuCorpus(
                 'aucun-ajouter-colonne',
@@ -1229,26 +1235,31 @@ final class CorpusDeReference
                 [], Trousse::LECTURE, CasDuCorpus::AUCUN,
                 note: 'Limite fine : si le taux n\'est pas dans le fil, il faut un outil. '
                     . 'Le cas est au corpus pour mesurer ce faux positif, pas pour le nier.',
+                antecedent: 'Voici les 6 partenaires enregistrés, avec leur nom et leur part.',
             ),
             new CasDuCorpus(
                 'aucun-total',
                 'Fais-moi le total de cette colonne.',
                 [], Trousse::LECTURE, CasDuCorpus::AUCUN,
+                antecedent: 'Voici les commissions par assureur : 4 200, 3 100, 1 850 et 940.',
             ),
             new CasDuCorpus(
                 'aucun-traduire',
                 'Traduis-moi ce tableau en anglais.',
                 [], Trousse::LECTURE, CasDuCorpus::AUCUN,
+                antecedent: 'Voici le tableau des polices échues, avec client, assureur et date de fin.',
             ),
             new CasDuCorpus(
                 'aucun-resume',
                 'Résume-moi tout ça en trois phrases.',
                 [], Trousse::LECTURE, CasDuCorpus::AUCUN,
+                antecedent: 'Voici le détail des 12 tranches impayées, avec prime due, commission et retard.',
             ),
             new CasDuCorpus(
                 'aucun-explication-de-soi',
                 'Explique-moi ce que tu as fait au juste, concrètement.',
                 [], Trousse::LECTURE, CasDuCorpus::AUCUN,
+                antecedent: 'Le compte client a été préparé, ainsi que sa piste et sa première cotation.',
             ),
         ];
     }
@@ -1355,6 +1366,7 @@ final class CorpusDeReference
                 'ambigu-redonne-les-details',
                 'Redonne-moi les détails ici, dans le chat.',
                 ['lire_fiche'], Trousse::LECTURE, CasDuCorpus::AMBIGU,
+                antecedent: 'La fiche a été ouverte dans la colonne de visualisation.',
             ),
             new CasDuCorpus(
                 'ambigu-refais',
