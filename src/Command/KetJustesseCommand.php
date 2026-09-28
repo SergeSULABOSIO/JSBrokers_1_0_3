@@ -244,7 +244,10 @@ class KetJustesseCommand extends Command
             $poids[$outil->name()] = [
                 'total'  => PoidsDesDeclarations::octetsDe($outil),
                 'desc'   => \strlen($outil->description()),
-                'lecture' => !$this->catalogue->estOutilDEcriture($outil->name()),
+                // DEMANDÉ AU CATALOGUE. « Pas un outil d'écriture » n'a jamais voulu dire
+                // « déclaré en lecture » : depuis la trousse minimale, la porte de sortie
+                // n'est ni l'un ni l'autre, et cette commande annonçait 381 octets de trop.
+                'lecture' => \in_array(Trousse::LECTURE, $this->catalogue->troussesDe($outil), true),
             ];
         }
         uasort($poids, static fn (array $a, array $b): int => $b['total'] <=> $a['total']);

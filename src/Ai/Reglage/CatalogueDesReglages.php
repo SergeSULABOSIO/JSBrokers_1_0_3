@@ -231,7 +231,7 @@ final class CatalogueDesReglages
                 'resume'       => $resume,
                 'icone'        => $icone,
                 'classe'       => self::classeDe($nom),
-                'trousses'     => self::troussesDe($outil),
+                'trousses'     => $this->troussesAffichees($outil),
                 'conditionnel' => $outil instanceof AiToolConditionnel,
                 'facture'      => self::FACTURENT[$nom] ?? null,
                 'octets'       => $octets,
@@ -268,13 +268,15 @@ final class CatalogueDesReglages
         $poids = [];
 
         foreach ([Trousse::LECTURE, Trousse::ECRITURE] as $trousse) {
-            $outils = [];
-            foreach ($this->trousseCatalogue->tous() as $outil) {
-                if (!$trousse->estEcriture() && $outil instanceof AiToolEcriture) {
-                    continue;
-                }
-                $outils[] = $outil;
-            }
+            // DEMANDÉ AU CATALOGUE, jamais redéduit ici. La version précédente écrivait
+            // « tout sauf l'écriture » — vrai tant qu'il n'existait que deux trousses,
+            // faux dès la trousse minimale : la porte de sortie était comptée dans les
+            // deux, soit quatre cent dix-sept octets et un outil de trop sur un écran
+            // dont tout l'intérêt est d'annoncer un poids juste.
+            $outils = array_values(array_filter(
+                $this->trousseCatalogue->tous(),
+                fn ($outil): bool => \in_array($trousse, $this->trousseCatalogue->troussesDe($outil), true),
+            ));
 
             $octets = PoidsDesDeclarations::octetsDeLaListe($outils);
 
@@ -348,15 +350,17 @@ final class CatalogueDesReglages
      *
      * @return list<string>
      */
-    private static function troussesDe(AiToolInterface $outil): array
+    private function troussesAffichees(AiToolInterface $outil): array
     {
-        if ($outil instanceof AiToolDeComprehension) {
-            // La compréhension est une liste BLANCHE : y figurer n'exclut pas les
-            // deux autres trousses, où ces outils de lecture restent déclarés.
-            return ['Compréhension', 'Lecture', 'Écriture'];
-        }
-
-        return $outil instanceof AiToolEcriture ? ['Écriture'] : ['Lecture', 'Écriture'];
+        // LES NOMS SONT UNE AFFAIRE D'ÉCRAN, l'appartenance une affaire de catalogue.
+        // La liste vient de TrousseCatalogue ; il ne reste ici que la traduction, et
+        // un ajout de trousse la fera échouer bruyamment plutôt que de l'omettre.
+        return array_map(static fn (Trousse $t): string => match ($t) {
+            Trousse::COMPREHENSION => 'Compréhension',
+            Trousse::LECTURE => 'Lecture',
+            Trousse::ECRITURE => 'Écriture',
+            Trousse::AUCUN => 'Trousse minimale',
+        }, $this->trousseCatalogue->troussesDe($outil));
     }
 
     /** Chemin du fichier, relatif à la racine du projet. */
