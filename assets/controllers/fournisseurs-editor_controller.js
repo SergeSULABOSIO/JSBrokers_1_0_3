@@ -366,33 +366,133 @@ export default class extends Controller {
         // On montre donc la CHAÎNE entière, chaque maillon marqué s'il est à sec, et
         // l'on DÉSIGNE celui auquel Ket est réellement branchée à cet instant.
         const chaine = Array.isArray(etat.chaine) ? etat.chaine : [];
-        if (chaine.length > 1) {
-            const bloc = document.createElement('p');
+        if (chaine.length > 0) {
+            const bloc = document.createElement('div');
             bloc.className = 'kf-chaine';
 
-            const titre = document.createElement('span');
+            const titre = document.createElement('p');
             titre.className = 'kf-chaine__titre';
-            titre.textContent = 'Modèles tentés, dans l’ordre :';
+            titre.textContent = chaine.length > 1
+                ? 'Modèles tentés, dans l’ordre'
+                : 'Modèle appelé';
             bloc.appendChild(titre);
 
-            chaine.forEach((maillon, rang) => {
-                const puce = document.createElement('span');
+            // UNE LISTE ORDONNÉE, PARCE QUE L'ORDRE EST L'INFORMATION (WCAG 1.3.1).
+            // Le rang décide de qui répond quand le premier refuse : le porter dans un
+            // `title`, comme avant, le rendait invisible au clavier et au lecteur
+            // d'écran. Un <ol> le dit à tout le monde, et le numéro s'affiche.
+            const liste = document.createElement('ol');
+            liste.className = 'kf-chaine__liste';
+
+            chaine.forEach((maillon) => {
                 const repond = maillon.nom === etat.repondAvec;
-                puce.className = `kf-chaine__modele${repond ? ' is-actif' : ''}${maillon.epuise ? ' is-epuise' : ''}`;
-                // L'état n'est JAMAIS porté par la seule couleur (WCAG 1.4.1) : il
-                // est écrit, entre parenthèses, à côté du nom.
-                puce.textContent = maillon.nom
-                    + (repond ? ' (répond)' : (maillon.epuise ? ' (à sec)' : ''));
-                puce.title = maillon.principal ? 'Modèle principal' : `Secours n° ${rang}`;
-                bloc.appendChild(puce);
+                const minutePleine = maillon.minutePleine === true;
+
+                const item = document.createElement('li');
+                item.className = `kf-maillon${repond ? ' is-actif' : ''}`
+                    + `${maillon.epuise ? ' is-epuise' : ''}${minutePleine && !maillon.epuise ? ' is-saturee' : ''}`
+                    + `${maillon.indisponible === true ? ' is-absent' : ''}`;
+
+                const nom = document.createElement('code');
+                nom.className = 'kf-maillon__nom';
+                nom.textContent = maillon.nom;
+                item.appendChild(nom);
+
+                // L'ÉTAT EST UN MOT, JAMAIS UNE COULEUR (WCAG 1.4.1). Trois refus
+                // possibles, et ils n'appellent pas le même geste : « à sec » attend une
+                // échéance ou un réarmement, « minute pleine » se résout tout seul en
+                // moins d'une minute, « en attente » veut dire qu'un modèle placé avant
+                // répond déjà.
+                const etatMot = document.createElement('span');
+                etatMot.className = 'kf-maillon__etat';
+                // QUATRE RAISONS DE NE PAS RÉPONDRE, et elles n'appellent pas le même
+                // geste : « non configuré » attend une clé sur le serveur, « à sec » une
+                // échéance ou un réarmement, « minute pleine » se résout seule en moins
+                // d'une minute, « en attente » veut dire qu'un modèle placé avant répond.
+                etatMot.textContent = maillon.indisponible === true
+                    ? 'non configuré'
+                    : (repond
+                        ? 'répond'
+                        : (maillon.epuise ? 'à sec' : (minutePleine ? 'minute pleine' : 'en attente')));
+                item.appendChild(etatMot);
+
+                if (typeof maillon.debitPart === 'number') {
+                    // UNE JAUGE PLUS UN CHIFFRE. Un pourcentage nu ne se compare pas d'un
+                    // coup d'œil entre trois modèles ; une barre, si. Le chiffre reste
+                    // pour qui veut la valeur, et `role="img"` + `aria-label` donnent la
+                    // même information à qui n'en voit aucune.
+                    const jauge = document.createElement('span');
+                    jauge.className = 'kf-maillon__jauge';
+                    jauge.setAttribute('role', 'img');
+                    jauge.setAttribute('aria-label',
+                        `Débit restant sur la minute : ${maillon.debitPart} %`);
+                    const barre = document.createElement('span');
+                    barre.className = 'kf-maillon__barre';
+                    barre.style.width = `${Math.max(2, Math.min(100, maillon.debitPart))}%`;
+                    jauge.appendChild(barre);
+                    item.appendChild(jauge);
+
+                    const chiffre = document.createElement('span');
+                    chiffre.className = 'kf-maillon__part';
+                    chiffre.setAttribute('aria-hidden', 'true');
+                    chiffre.textContent = `${maillon.debitPart} %`;
+                    item.appendChild(chiffre);
+                } else {
+                    // NE RIEN AFFICHER SERAIT ENCORE CACHER. La fenêtre compte des jetons
+                    // par minute : elle ne veut rien dire pour une voix qui compte en
+                    // caractères ni pour le navigateur, qui tourne dans la page. On le
+                    // DIT, au lieu de laisser une case vide que l'agent interpréterait.
+                    const sansObjet = document.createElement('span');
+                    sansObjet.className = 'kf-maillon__hors';
+                    sansObjet.textContent = 'hors fenêtre de débit';
+                    item.appendChild(sansObjet);
+                }
+
+                liste.appendChild(item);
             });
 
-            if (!etat.repondAvec) {
-                const alerte = document.createElement('span');
+            bloc.appendChild(liste);
+
+            // ── LE VERDICT, EN TÊTE ET EN TOUTES LETTRES ─────────────────────────
+            //
+            // L'écran montrait les INGRÉDIENTS de la décision — prêt, à sec, 100 % —
+            // et laissait l'agent la reconstituer. Il se trompait alors de bonne foi :
+            // « minute 100 % » n'a jamais voulu dire « Ket répondra ». On affiche donc
+            // la décision elle-même, calculée par le même garde-fou que le moteur.
+            const verdict = etat.verdict;
+            if (verdict && typeof verdict.peut === 'boolean') {
+                const ligne = document.createElement('p');
+                ligne.className = `kf-verdict${verdict.peut ? ' is-ok' : ' is-ko'}`;
+                ligne.setAttribute('role', 'status');
+                const mot = document.createElement('strong');
+                mot.textContent = verdict.peut
+                    ? 'Peut répondre maintenant'
+                    : 'Ne peut pas répondre maintenant';
+                ligne.appendChild(mot);
+                if (verdict.detail) {
+                    const detail = document.createElement('span');
+                    detail.className = 'kf-verdict__detail';
+                    detail.textContent = ` — ${verdict.detail}`;
+                    ligne.appendChild(detail);
+                }
+                bloc.appendChild(ligne);
+            }
+
+            if (!etat.repondAvec && etat.verdict && etat.verdict.cause !== 'absent') {
+                const alerte = document.createElement('p');
                 alerte.className = 'kf-chaine__alerte';
-                // Le dire en toutes lettres : « aucun modèle disponible » n'est pas
-                // une absence d'information, c'en est une — et elle explique tout.
-                alerte.textContent = 'Toute la chaîne est à sec : ce fournisseur ne répond plus.';
+                alerte.setAttribute('role', 'status');
+                // ⚠ DEUX CAUSES, DEUX GESTES. « À sec » attend une échéance ou un
+                // réarmement à la main ; une minute pleine se vide toute seule en moins
+                // de soixante secondes. Dire « ne répond plus » dans les deux cas
+                // enverrait l'agent réarmer un fournisseur qui n'a rien.
+                const toutesPleines = chaine.length > 0
+                    && chaine.every((m) => m.minutePleine === true && m.epuise !== true);
+                // TROIS CAUSES, TROIS PHRASES. Dire « à sec » d'un fournisseur sans clé
+                // envoyait l'agent cliquer « Réarmer » sur une marque qui n'existe pas.
+                alerte.textContent = toutesPleines
+                    ? 'Tous les modèles ont leur minute pleine : Ket répondra dès que la fenêtre se libère, sans intervention.'
+                    : "Toute la chaîne est à sec : ce fournisseur ne répond plus tant qu'une échéance n'est pas passée ou qu'il n'est pas réarmé.";
                 bloc.appendChild(alerte);
             }
 

@@ -11,6 +11,7 @@ use App\Ai\Fournisseur\FournisseurAModele;
 use App\Ai\Fournisseur\FournisseurAReplis;
 use App\Ai\Fournisseur\FournisseurDatable;
 use App\Ai\Fournisseur\MemoireDEpuisement;
+use App\Ai\Fournisseur\MemoireDesRefus;
 use App\Ai\Engine\Socle\DialecteGeminiDuFil;
 use App\Ai\Engine\Socle\OrchestrateurDeMessage;
 use App\Ai\Fournisseur\ModeleChoisi;
@@ -123,6 +124,12 @@ final class GeminiAiEngine implements MoteurDeTexte, FournisseurAModele, Fournis
         // n'est jamais « à sec » et se comporte exactement comme avant. C'est ce qui
         // permet aux harnais de test de l'ignorer sans rien perdre du reste.
         ?MemoireDEpuisement $epuisement = null,
+        /**
+         * LA TRACE DES REFUS DU FOURNISSEUR, transmise au dialecte qui les rencontre.
+         * Facultative comme sa voisine : sans elle, un 503 bascule comme avant, la
+         * console est seulement moins bavarde sur la raison.
+         */
+        private readonly ?MemoireDesRefus $refus = null,
         // LA POLITIQUE DE LA CONSOLE, après la mémoire et tout aussi facultative.
         private readonly ?PolitiqueDesFournisseurs $politique = null,
         // L'HORLOGE DU BUDGET DE DURÉE, en dernier et facultative : rien à passer en
@@ -173,6 +180,7 @@ final class GeminiAiEngine implements MoteurDeTexte, FournisseurAModele, Fournis
             // Relu à chaque appel, comme le modèle principal : un changement décidé en
             // console part avec le message suivant, sans redémarrage.
             modeleDeRedaction: fn (): string => ModeleChoisi::pour($this->politique, 'redaction', 'gemini', $this->redactionParDefaut),
+            refus: $refus,
         );
 
         // L'orchestrateur est CONSTRUIT ICI et non injecté : le faire entrer par le

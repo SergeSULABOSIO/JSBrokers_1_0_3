@@ -3,6 +3,7 @@
 namespace App\Command;
 
 use App\Ai\AiContextBuilder;
+use App\Ai\Debit\BudgetDebit;
 use App\Ai\Engine\AiEngineInterface;
 use App\Ai\Reglage\PoidsDesDeclarations;
 use App\Ai\Scope\AiScope;
@@ -98,6 +99,11 @@ class KetJustesseCommand extends Command
         // Le service n'est pas aliasé sur sa classe : on le désigne par son identifiant,
         // comme le fait le worker Messenger qui s'en sert pour la même raison.
         #[Autowire(service: 'services_resetter')] private readonly ServicesResetter $resetter,
+        /**
+         * LE MÊME GARDE-FOU QUE CELUI QUI ARRÊTE LE MOTEUR, interrogé avant de partir
+         * plutôt que subi après coup. C'est lui qui sait ce qu'il reste dans la fenêtre.
+         */
+        private readonly BudgetDebit $budget,
         private readonly EntityManagerInterface $em,
     ) {
         parent::__construct();
@@ -117,7 +123,10 @@ class KetJustesseCommand extends Command
             // trois appels et jusqu'à quarante mille jetons d'entrée, et la fenêtre du
             // quota se compte par MINUTE. Douze secondes ramènent la cadence sous le
             // plafond ; la passe dure plus longtemps et mesure enfin quelque chose.
-            ->addOption('pause', null, InputOption::VALUE_REQUIRED, 'Secondes entre deux cas, pour ne pas saturer la fenêtre de quota', '12');
+            // PLANCHER, et non cadence : la cadence se demande au garde-fou de débit avant
+            // chaque cas (cf. attendreLaPlace). Trois secondes suffisent à éviter les
+            // rafales ; c'est le budget qui décide du reste.
+            ->addOption('pause', null, InputOption::VALUE_REQUIRED, 'Plancher, en secondes, entre deux cas', '3');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -391,8 +400,8 @@ class KetJustesseCommand extends Command
             gc_collect_cycles();
             $this->identite->endosser($invite, $entreprise);
 
-            if ($pause > 0 && $i < \count($cas) - 1) {
-                sleep($pause);
+            if ($i < \count($cas) - 1) {
+                $this->attendreLaPlace($io, $pause);
             }
         }
         $io->newLine(2);
@@ -500,6 +509,40 @@ class KetJustesseCommand extends Command
         }
 
         return $outils;
+    }
+
+    /**
+     * ATTENDRE QUE LA FENÊTRE AIT DE LA PLACE — et pas une seconde de plus.
+     *
+     * On interroge le garde-fou lui-même : il tient la fenêtre glissante et sait à
+     * quelle seconde la prochaine entrée en sortira. Deviner une pause fixe ne pouvait
+     * pas marcher — un message de lecture coûte 50 000 jetons, un message d'écriture
+     * jusqu'à 185 000, pour une fenêtre utile de 212 500 la minute. La même pause est
+     * donc trop longue pour l'un et trois fois trop courte pour l'autre.
+     *
+     * Le plancher (`--pause`) reste utile pour souffler entre deux appels même quand le
+     * budget dit oui : il évite les rafales que le fournisseur compte autrement que nous.
+     */
+    private function attendreLaPlace(SymfonyStyle $io, int $plancher): void
+    {
+        // Le coût du PIRE cas : un message d'écriture, trois tours. Demander la place
+        // pour lui, c'est garantir qu'aucun cas du corpus ne se heurtera au mur.
+        $requis = 3 * (int) (PoidsDesDeclarations::jetons(124122 + 94779) * 1.05);
+        $cle = $this->moteur->modelName();
+
+        $attente = $this->budget->secondesAvantLiberation($cle, $requis) ?? 0;
+        // Null veut dire « même une fenêtre vide ne suffirait pas » : le pire cas dépasse
+        // le plafond à lui seul. On retombe alors sur le plancher — les cas de lecture,
+        // eux, passeront, et ceux d'écriture seront comptés comme coupés, pas comme faux.
+        $total = max($plancher, $attente);
+        if ($total <= 0) {
+            return;
+        }
+
+        for ($reste = $total; $reste > 0; --$reste) {
+            $io->write(sprintf("\r  %-62s attente %2d s", '', $reste));
+            sleep(1);
+        }
     }
 
     /**
