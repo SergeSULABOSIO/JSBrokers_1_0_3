@@ -112,7 +112,12 @@ class KetJustesseCommand extends Command
             // LE DÉBIT, ET POURQUOI IL EST RÉGLABLE. Le quota du palier gratuit se
             // compte par MINUTE : un rejeu lancé à pleine vitesse sature la fenêtre
             // et mesure alors des refus plutôt que des choix d'outil.
-            ->addOption('pause', null, InputOption::VALUE_REQUIRED, 'Secondes entre deux cas, pour ne pas saturer la fenêtre de quota', '5');
+            // ⚠ CINQ SECONDES NE TENAIENT PAS. Sur la passe complète du 2026-09-28, un
+            // message sur cinq a été coupé par le garde-fou de débit : chaque cas coûte
+            // trois appels et jusqu'à quarante mille jetons d'entrée, et la fenêtre du
+            // quota se compte par MINUTE. Douze secondes ramènent la cadence sous le
+            // plafond ; la passe dure plus longtemps et mesure enfin quelque chose.
+            ->addOption('pause', null, InputOption::VALUE_REQUIRED, 'Secondes entre deux cas, pour ne pas saturer la fenêtre de quota', '12');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -351,11 +356,22 @@ class KetJustesseCommand extends Command
 
             try {
                 $reponse = $this->moteur->reply($this->contextBuilder->build($entreprise, $invite, $conversation));
+                // LE QUOTA N'EST PAS UN JUGEMENT. Un message arrêté faute de débit sur la
+                // minute n'a pas choisi d'outil : il n'en a pas eu l'occasion. Le compter
+                // comme une erreur de choix, c'est reprocher à Ket la vitesse du rejeu.
+                $issue = $this->journal->derniereIssue();
+                $coupe = \in_array($issue, [
+                    JournalTokens::ISSUE_BUDGET_ATTEINT,
+                    JournalTokens::ISSUE_QUOTA_FOURNISSEUR,
+                    JournalTokens::ISSUE_DUREE_DEPASSEE,
+                    JournalTokens::ISSUE_TOURS_EPUISES,
+                ], true);
+
                 $resultats[] = [
-                    'cas'     => $c,
-                    'obtenus' => $this->outilsAppeles(),
+                    'cas'      => $c,
+                    'obtenus'  => $this->outilsAppeles(),
                     'clarifie' => $this->aDemandeUneClarification(),
-                    'erreur'  => $reponse->refused ? 'refus périmètre' : null,
+                    'erreur'   => $coupe ? 'quota : ' . $issue : ($reponse->refused ? 'refus périmètre' : null),
                 ];
             } catch (\Throwable $e) {
                 $resultats[] = ['cas' => $c, 'obtenus' => [], 'clarifie' => false, 'erreur' => $e->getMessage()];
