@@ -171,6 +171,17 @@ final class JournalTokens
      * horodatage approché. Deux chaînes de caractères dans le récapitulatif
      * suffisent à rendre la jointure exacte.
      */
+    /**
+     * L'ISSUE DU DERNIER MESSAGE, retenue pour qui mesure.
+     *
+     * Elle partait au journal et nulle part ailleurs. Un rejeu de corpus ne pouvait
+     * donc pas distinguer un message coupé par le quota — `budget_atteint`, la boucle
+     * arrêtée faute de débit — d'un message qui a répondu sans appeler d'outil. Sur la
+     * passe complète du 2026-09-28, quarante-six messages sur deux cent trente-deux
+     * étaient dans ce cas, et la mesure les a comptés comme de mauvais choix d'outil.
+     */
+    private ?string $derniereIssue = null;
+
     private ?string $trousseDuMessage = null;
     private ?string $declencheurDuMessage = null;
 
@@ -228,6 +239,13 @@ final class JournalTokens
         $this->appels = 0;
         $this->trousseDuMessage = null;
         $this->declencheurDuMessage = null;
+        $this->derniereIssue = null;
+    }
+
+    /** Comment le dernier message s'est terminé. Null tant qu'aucun ne s'est conclu. */
+    public function derniereIssue(): ?string
+    {
+        return $this->derniereIssue;
     }
 
     /**
@@ -754,6 +772,8 @@ final class JournalTokens
         array $sequenceOutils = [],
         array $complement = [],
     ): void {
+        $this->derniereIssue = $issue;
+
         $this->assistantTokensLogger->info('message', $this->identite($request) + [
             'evenement'      => 'message',
             'moteur'         => $moteur,
