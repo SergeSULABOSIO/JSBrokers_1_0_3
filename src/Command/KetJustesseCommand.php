@@ -23,7 +23,10 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\HttpKernel\DependencyInjection\ServicesResetter;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\When;
 
 /**
@@ -83,6 +86,19 @@ class KetJustesseCommand extends Command
         // parcours d'écriture cassent en ligne de commande et seule la lecture
         // serait mesurable — c'est-à-dire la moitié du corpus.
         private readonly IdentiteDuTraitement $identite,
+        /**
+         * CE QUI PERMET À CETTE COMMANDE DE TENIR CENT QUATRE-VINGT-QUINZE CAS.
+         *
+         * Le même service que celui dont se sert un worker Messenger entre deux messages.
+         * Sans lui, la passe complète mourait à 164 cas sur 195, mémoire épuisée : chaque
+         * cas laissait derrière lui son unité de travail Doctrine, ses enregistrements de
+         * journal et l'état des services à durée de requête. Un processus court ne le voit
+         * jamais ; celui-ci vit une heure.
+         */
+        // Le service n'est pas aliasé sur sa classe : on le désigne par son identifiant,
+        // comme le fait le worker Messenger qui s'en sert pour la même raison.
+        #[Autowire(service: 'services_resetter')] private readonly ServicesResetter $resetter,
+        private readonly EntityManagerInterface $em,
     ) {
         parent::__construct();
     }
@@ -321,7 +337,13 @@ class KetJustesseCommand extends Command
 
         $resultats = [];
         foreach ($cas as $i => $c) {
-            $io->write(sprintf("\r  %d/%d  %-48s", $i + 1, \count($cas), substr($c->libelle, 0, 48)));
+            $io->write(sprintf(
+                "\r  %d/%d  %-44s %4d Mo",
+                $i + 1,
+                \count($cas),
+                substr($c->libelle, 0, 44),
+                (int) (memory_get_usage(true) / 1048576),
+            ));
 
             // Conversation TRANSIENTE, jamais persistée : le rejeu ne doit laisser
             // aucune trace dans le fil d'un courtier.
@@ -338,6 +360,20 @@ class KetJustesseCommand extends Command
             } catch (\Throwable $e) {
                 $resultats[] = ['cas' => $c, 'obtenus' => [], 'clarifie' => false, 'erreur' => $e->getMessage()];
             }
+
+            // ── ON REPART PROPRE, CAS PAR CAS ─────────────────────────────────────
+            //
+            // L'ordre compte. Le resetter vide les services à durée de requête — dont le
+            // journal, qui accumule ses étapes —, `clear()` lâche les entités hydratées
+            // par les outils, et le ramasse-miettes conclut : sans lui, les cycles de
+            // références entre entités Doctrine survivent au clear.
+            //
+            // L'IDENTITÉ EST RÉENDOSSÉE APRÈS, et pas avant : le reset la jette avec le
+            // reste, et sans elle les cas d'écriture cassent sur un utilisateur absent.
+            $this->resetter->reset();
+            $this->em->clear();
+            gc_collect_cycles();
+            $this->identite->endosser($invite, $entreprise);
 
             if ($pause > 0 && $i < \count($cas) - 1) {
                 sleep($pause);
@@ -451,6 +487,47 @@ class KetJustesseCommand extends Command
     }
 
     /**
+     * LA QUESTION NOMME-T-ELLE UNE ENTITÉ QUI N'EXISTE PAS DANS LA BASE ?
+     *
+     * Les pseudonymes de l'anonymisation ne désignent aucun enregistrement réel. Une
+     * clarification sur l'un d'eux mesure l'anonymisation, pas le jugement de Ket : la
+     * compréhension a cherché, n'a rien trouvé, et a eu raison de demander.
+     *
+     * La liste vient de CorpusDeReference::PSEUDONYMES — celle-là même qui sert à relire
+     * l'anonymisation. Une seule table, deux usages, et pas de risque qu'elles divergent.
+     */
+    private static function nommeUnPseudonyme(string $question): bool
+    {
+        static $noms = null;
+        if ($noms === null) {
+            $noms = [];
+            foreach (CorpusDeReference::PSEUDONYMES as $famille => $liste) {
+                // Les personnes et les identifiants sont écartés : « Mme Perrin » ou
+                // « ASRVOY00000001 » ne se résolvent pas contre une table d'entités, et
+                // une clarification qui les vise dit autre chose.
+                if (!\in_array($famille, ['clients', 'assureurs', 'intermediaires', 'fournisseurs'], true)) {
+                    continue;
+                }
+                foreach (explode(',', $liste) as $nom) {
+                    $nom = trim($nom);
+                    if (mb_strlen($nom) >= 5) {
+                        $noms[] = mb_strtolower($nom);
+                    }
+                }
+            }
+        }
+
+        $question = mb_strtolower($question);
+        foreach ($noms as $nom) {
+            if (str_contains($question, $nom)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * LA COMPRÉHENSION A-T-ELLE REFUSÉ DE TRAITER LA DEMANDE ?
      *
      * ⚠ CE N'EST PAS UNE ERREUR DE CHOIX D'OUTIL, ET LES CONFONDRE FAUSSE TOUT.
@@ -500,6 +577,7 @@ class KetJustesseCommand extends Command
         $inventes = 0;
         $erreurs = 0;
         $clarifies = 0;
+        $pseudonymes = 0;
         $ecarts = [];
 
         foreach ($resultats as $r) {
@@ -518,6 +596,19 @@ class KetJustesseCommand extends Command
             // un défaut qui vient d'ailleurs, et ferait bouger l'indicateur au gré d'une
             // phase que ce chantier ne touche pas.
             if (($r['clarifie'] ?? false) && $attendus !== []) {
+                // ⚠ DEUX CLARIFICATIONS TRÈS DIFFÉRENTES, ET LES CONFONDRE FAUSSE TOUT.
+                // Celle qui porte sur un pseudonyme absent de la base mesure mon
+                // anonymisation ; l'autre mesure le jugement de Ket. Une seule des deux
+                // relève d'un chantier.
+                if (self::nommeUnPseudonyme($r['cas']->question)) {
+                    ++$pseudonymes;
+                    $ecarts[] = [
+                        $r['cas']->libelle,
+                        implode(', ', $attendus) ?: '(aucun)',
+                        'NOM ABSENT DE LA BASE — artefact d\'anonymisation, pas un défaut',
+                    ];
+                    continue;
+                }
                 ++$clarifies;
                 $ecarts[] = [
                     $r['cas']->libelle,
@@ -556,7 +647,7 @@ class KetJustesseCommand extends Command
         // LE DÉNOMINATEUR DE LA JUSTESSE N'EST PAS LE CORPUS ENTIER : c'est le nombre de
         // cas où Ket a EU des outils à choisir. Les clarifications et les erreurs
         // techniques n'ont jamais atteint ce choix ; les inclure mesurerait autre chose.
-        $aChoisi = $total - $clarifies - $erreurs;
+        $aChoisi = $total - $clarifies - $erreurs - $pseudonymes;
 
         $io->section('Bilan');
         $io->table(
@@ -567,6 +658,7 @@ class KetJustesseCommand extends Command
                 ['Outil attendu absent', $manques, self::part($manques, $total)],
                 ['Nom d\'outil inexistant prononcé', $inventes, self::part($inventes, $total)],
                 ['— Clarification demandée (hors choix d\'outil)', $clarifies, self::part($clarifies, $total)],
+                ['— Nom absent de la base (artefact du corpus)', $pseudonymes, self::part($pseudonymes, $total)],
                 ['— Erreur technique (hors choix d\'outil)', $erreurs, self::part($erreurs, $total)],
             ],
         );
@@ -597,7 +689,7 @@ class KetJustesseCommand extends Command
         $io->writeln(sprintf(
             ' Rapporté au corpus entier : %s. L\'écart entre les deux, ce sont les %d cas que la',
             self::part($justes, $total),
-            $clarifies + $erreurs,
+            $clarifies + $erreurs + $pseudonymes,
         ));
         $io->writeln(' COMPRÉHENSION a écartés avant tout choix d\'outil — ni le nommage ni les');
         $io->writeln(' descriptions ne les corrigeront, et les confondre ferait varier l\'indicateur');
