@@ -94,24 +94,7 @@ final class TrousseCatalogue
             // autres qui écartent. Elle doit le rester : un outil ajouté au projet
             // n'a aucune raison d'atterrir dans la phase la plus légère du moteur
             // sans que quelqu'un l'ait décidé.
-            if ($trousse === Trousse::COMPREHENSION) {
-                if (!$outil instanceof AiToolDeComprehension) {
-                    continue;
-                }
-            } elseif ($trousse === Trousse::AUCUN) {
-                // LISTE BLANCHE D'UN SEUL OUTIL, et la porte de sortie avec. Écrire la
-                // règle en négatif — « tout sauf… » — aurait fait entrer au fil du temps
-                // chaque outil ajouté au projet dans la trousse censée n'en porter aucun.
-                if (!$outil instanceof RecoursOutilsTool) {
-                    continue;
-                }
-            } elseif ($outil instanceof RecoursOutilsTool) {
-                // ⚠ ET RÉCIPROQUEMENT. La porte de sortie n'a de sens QUE dans la trousse
-                // minimale : partout ailleurs, les outils sont déjà là, et la déclarer
-                // reviendrait à offrir au modèle une action qui ne fait rien — en lui
-                // laissant croire qu'il lui manque quelque chose alors qu'il a tout.
-                continue;
-            } elseif (!$trousse->estEcriture() && $outil instanceof AiToolEcriture) {
+            if (!self::admisPar($trousse, $outil)) {
                 continue;
             }
             // COUPÉ EN CONSOLE : l'outil n'est déclaré à personne, sur toute la
@@ -142,6 +125,64 @@ final class TrousseCatalogue
     public function nomsDe(Trousse $trousse, AiScope $scope): array
     {
         return array_map(static fn (AiToolInterface $o) => $o->name(), $this->outilsDe($trousse, $scope));
+    }
+
+    /**
+     * L'APPARTENANCE STRUCTURELLE D'UN OUTIL À UNE TROUSSE — sans périmètre, sans console.
+     *
+     * Extraite de la boucle de `outilsDe()` pour qu'il n'en existe qu'UNE écriture. La
+     * console la redemandait de son côté, en la recopiant : tant que la règle était
+     * « tout sauf l'écriture », la copie disait vrai. La trousse minimale l'a rendue
+     * fausse, et l'écran a annoncé pendant un temps un poids et des trousses inexacts.
+     * Une règle recopiée ne diverge pas le jour où on l'écrit, mais le jour où on la
+     * change.
+     */
+    private static function admisPar(Trousse $trousse, AiToolInterface $outil): bool
+    {
+        // La trousse de COMPRÉHENSION est une LISTE BLANCHE, à l'inverse des deux
+        // autres qui écartent. Elle doit le rester : un outil ajouté au projet n'a
+        // aucune raison d'atterrir dans la phase la plus légère du moteur sans que
+        // quelqu'un l'ait décidé.
+        if ($trousse === Trousse::COMPREHENSION) {
+            return $outil instanceof AiToolDeComprehension;
+        }
+
+        // LISTE BLANCHE D'UN SEUL OUTIL. Écrire la règle en négatif — « tout sauf… » —
+        // aurait fait entrer au fil du temps chaque outil ajouté au projet dans la
+        // trousse censée n'en porter aucun.
+        if ($trousse === Trousse::AUCUN) {
+            return $outil instanceof RecoursOutilsTool;
+        }
+
+        // ⚠ ET RÉCIPROQUEMENT. La porte de sortie n'a de sens QUE dans la trousse
+        // minimale : partout ailleurs les outils sont déjà là, et la déclarer
+        // reviendrait à offrir au modèle une action qui ne fait rien.
+        if ($outil instanceof RecoursOutilsTool) {
+            return false;
+        }
+
+        return $trousse->estEcriture() || !$outil instanceof AiToolEcriture;
+    }
+
+    /**
+     * LES TROUSSES QUI DÉCLARERAIENT CET OUTIL, périmètre et console mis à part.
+     *
+     * Pour la CONSOLE, qui n'a ni entreprise ni invité à opposer au catalogue et ne peut
+     * donc pas appeler `outilsDe()`. C'est précisément ce vide qui l'avait poussée à
+     * recopier la règle. Elle la demande désormais ici, et la copie a disparu.
+     *
+     * @return list<Trousse>
+     */
+    public function troussesDe(AiToolInterface $outil): array
+    {
+        $retenues = [];
+        foreach (Trousse::cases() as $trousse) {
+            if (self::admisPar($trousse, $outil)) {
+                $retenues[] = $trousse;
+            }
+        }
+
+        return $retenues;
     }
 
     /**

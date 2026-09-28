@@ -22,6 +22,51 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  */
 class ManifesteDesOutilsTest extends KernelTestCase
 {
+    /**
+     * ⚠ LA CONSOLE DIT-ELLE LA MÊME CHOSE QUE LE CATALOGUE ?
+     *
+     * Elle a dit faux, et ce test est né de là. `CatalogueDesReglages` RECOPIAIT la règle
+     * d'appartenance aux trousses — « tout sauf l'écriture » — faute de pouvoir appeler
+     * `outilsDe()`, qui exige un périmètre que la console n'a pas. La copie disait vrai
+     * tant qu'il n'existait que deux trousses. La trousse minimale l'a rendue fausse :
+     * l'écran annonçait la porte de sortie en « Lecture, Écriture », alors qu'elle n'est
+     * déclarée dans ni l'une ni l'autre, et comptait ses 417 octets dans les deux poids.
+     *
+     * Une règle recopiée ne diverge pas le jour où on l'écrit, mais le jour où on la
+     * change. Ce test est là pour que ce jour-là soit rouge.
+     */
+    public function testLaConsoleAnnonceLesMemesTroussesQueLeCatalogue(): void
+    {
+        self::bootKernel();
+        $catalogue = static::getContainer()->get(TrousseCatalogue::class);
+        $console = static::getContainer()->get(CatalogueDesReglages::class);
+
+        $parNom = [];
+        foreach ($console->outils() as $ligne) {
+            $parNom[$ligne['nom']] = $ligne['trousses'];
+        }
+
+        foreach ($catalogue->tous() as $outil) {
+            $attendues = array_map(
+                static fn ($t): string => $t->libelle(),
+                $catalogue->troussesDe($outil),
+            );
+            $affichees = $parNom[$outil->name()] ?? [];
+
+            self::assertSame(
+                \count($attendues),
+                \count($affichees),
+                sprintf(
+                    'La console annonce %d trousse(s) pour « %s » là où le catalogue en déclare %d. '
+                    . 'L\'administrateur lit un périmètre qui n\'est pas celui qui part au fournisseur.',
+                    \count($affichees),
+                    $outil->name(),
+                    \count($attendues),
+                ),
+            );
+        }
+    }
+
     public function testChaqueOutilDuConteneurAUneFiche(): void
     {
         self::bootKernel();
