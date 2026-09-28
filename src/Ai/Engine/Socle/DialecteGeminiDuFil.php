@@ -8,6 +8,7 @@ use App\Ai\AiText;
 use App\Ai\Engine\DialecteGemini;
 use App\Ai\Engine\Usage;
 use App\Ai\Fournisseur\MemoireDEpuisement;
+use App\Ai\Fournisseur\MemoireDesRefus;
 use App\Ai\Telemetrie\JournalTokens;
 use App\Ai\Trousse\Phase;
 use App\Ai\Trousse\Trousse;
@@ -109,6 +110,16 @@ final class DialecteGeminiDuFil implements DialecteDuFil
          * en silence, et trois tests l'ont dit aussitôt (2026-09-25).
          */
         private readonly ?\Closure $modeleDeRedaction = null,
+        /**
+         * LA TRACE DES REFUS DU FOURNISSEUR, pour que la console puisse les dire.
+         *
+         * ⚠ EN DERNIER ET FACULTATIF, comme tous ceux qui l'ont précédé ici. La première
+         * version l'avait glissé après `$logger` : les neuf arguments suivants se sont
+         * décalés d'un cran, et la console est tombée sur un `TypeError` — « Argument #8
+         * doit être MemoireDesRefus, int donné ». Un constructeur appelé POSITIONNELLEMENT
+         * ne se complète que par la fin.
+         */
+        private readonly ?MemoireDesRefus $refus = null,
     ) {
         $this->accorderAuReglage();
     }
@@ -365,6 +376,36 @@ final class DialecteGeminiDuFil implements DialecteDuFil
      *
      * @return array{reponse: array, octets: array<string, int>, usage: Usage}
      */
+    public function basculerFauteDeDebit(\Closure $aDeLaPlace, AiRequest $request, Phase $phase): ?string
+    {
+        // ⚠ ON NE REVIENT JAMAIS EN ARRIÈRE, exactement comme la bascule sur erreur : un
+        // modèle déjà quitté reste quitté pour ce message. Sans cette règle, deux modèles
+        // saturés à tour de rôle feraient osciller la boucle jusqu'à épuisement des tours.
+        while ($this->replisRestants !== []) {
+            $candidat = array_shift($this->replisRestants);
+            if (!$aDeLaPlace($candidat)) {
+                continue;
+            }
+
+            $abandonne = $this->modeleCourant;
+            $this->modeleCourant = $candidat;
+
+            $this->logger->warning('Assistant IA (gemini) : débit saturé sur le modèle courant, bascule sur un modèle qui a de la place.', [
+                'abandonne' => $abandonne,
+                'repli'     => $candidat,
+            ]);
+            // MÊME ÉVÉNEMENT que la bascule sur erreur, et même motif « debit » : pour qui
+            // relit la campagne, c'est le même fait — un message a changé de modèle en
+            // route, donc de tarif et de fenêtre. Que la cause soit un 429 du fournisseur
+            // ou notre propre garde-fou ne change rien à ce qu'il faut en conclure.
+            $this->journal?->repli($request, $this->nom(), $abandonne, $candidat, 'debit', $phase);
+
+            return $candidat;
+        }
+
+        return null;
+    }
+
     private function basculerSurUnRepli(
         \Throwable $origine,
         AiRequest $request,
@@ -381,6 +422,15 @@ final class DialecteGeminiDuFil implements DialecteDuFil
                 'repli'     => $this->modeleCourant,
                 'details'   => AiEngineFailure::detailsPourJournal($origine),
             ]);
+
+            // ⚠ RETENU QUELQUES MINUTES, pour que la CONSOLE puisse le dire. Un 503 ne
+            // pose aucune marque durable — ce n'est pas un épuisement — et ne laissait
+            // donc de trace que dans le journal, que l'écran ne lit pas. L'agent voyait
+            // « peut répondre » pendant que les trois modèles refusaient.
+            $this->refus?->noter(
+                $abandonne,
+                AiEngineFailure::estLimiteDeDebit($origine) ? 'débit refusé par le fournisseur' : 'surchargé chez le fournisseur',
+            );
 
             // ⚠ DANS LE CANAL DE CAMPAGNE, pas seulement dans le journal général : c'est
             // le seul que `app:assistant:tokens:rapport` relit. Un message qui change de

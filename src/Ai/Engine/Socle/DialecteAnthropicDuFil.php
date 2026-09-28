@@ -93,6 +93,16 @@ final class DialecteAnthropicDuFil implements DialecteDuFil
         return 'anthropic:in:' . $this->modeleCourant();
     }
 
+    /**
+     * Aucune chaîne de secours ici : ce dialecte tourne sur un modèle unique, et il n'y a
+     * donc rien vers quoi basculer. Rendre null est la réponse juste — l'appelant conclut
+     * comme il le faisait avant que cette porte existe.
+     */
+    public function basculerFauteDeDebit(\Closure $aDeLaPlace, AiRequest $request, Phase $phase): ?string
+    {
+        return null;
+    }
+
     public function filInitial(AiRequest $request): array
     {
         return array_map(

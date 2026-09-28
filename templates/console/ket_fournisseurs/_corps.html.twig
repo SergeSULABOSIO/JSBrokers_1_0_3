@@ -43,11 +43,17 @@
            répond, pas seulement lequel est configuré. L'état est écrit à côté du
            nom — « (répond) », « (à sec) » — et jamais porté par la seule couleur
            (WCAG 1.4.1). */
+        /* BLOC, ET NON RANGEE. C'etait un flex en ligne : le titre et la liste
+           devenaient deux elements cote a cote, centres verticalement, et la liste
+           se retrouvait ecrasee a droite du titre. Le titre coiffe la liste. */
         .kf-chaine {
-            display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .45rem;
-            margin: .5rem 0 0; font-size: .78rem; color: #6c757d;
+            margin: .45rem 0 .1rem; font-size: .78rem; color: #6c757d;
+            border-top: 1px solid #edf1f7; padding-top: .4rem;
         }
-        .kf-chaine__titre { font-weight: 600; }
+        .kf-chaine__titre {
+            margin: 0 0 .25rem; font-weight: 600; font-size: .72rem;
+            text-transform: uppercase; letter-spacing: .02em; color: #6c757d;
+        }
         .kf-chaine__modele {
             padding: .1rem .5rem; border-radius: 999px;
             background: #e9ecef; color: #495057;
@@ -55,7 +61,70 @@
         }
         .kf-chaine__modele.is-actif { background: #d1e7dd; color: #0f5132; font-weight: 700; }
         .kf-chaine__modele.is-epuise { background: #f8d7da; color: #842029; text-decoration: line-through; }
-        .kf-chaine__alerte { color: #842029; font-weight: 600; }
+
+        /* ── LA CHAÎNE DE MODÈLES ─────────────────────────────────────────────────
+           Une ligne par modèle, quatre colonnes alignées : rang, nom, état, débit.
+           L'alignement EST la lisibilité — trois modèles se comparent d'un coup d'œil
+           là où une phrase concaténée oblige à lire chaque pastille.
+           Contrastes vérifiés sur fond blanc : #0f5132 ≈ 8,6:1 et #842029 ≈ 7,4:1,
+           tous deux au-delà du 4,5:1 exigé (WCAG 1.4.3). */
+        .kf-chaine__liste { list-style: none; margin: .35rem 0 0; padding: 0; counter-reset: kf-rang; }
+        .kf-maillon {
+            display: grid;
+            /* Rang, nom, etat, jauge, pourcentage. La jauge a une largeur MINIMALE :
+               en `1fr` seul elle se reduisait a un trait des que le conteneur etait
+               etroit, et une barre de deux pixels ne se compare pas. */
+            grid-template-columns: 1.3rem minmax(10rem, 1fr) 6.5rem minmax(4rem, 8rem) 2.6rem;
+            align-items: center;
+            gap: .4rem .6rem;
+            padding: .2rem .35rem;
+            border-radius: 4px;
+            font-size: .78rem;
+        }
+        @media (max-width: 720px) {
+            /* Sous cette largeur, la jauge passe sous le nom plutot que de l'ecraser. */
+            .kf-maillon { grid-template-columns: 1.3rem 1fr 6.5rem; }
+            .kf-maillon__jauge { grid-column: 2 / 3; }
+            .kf-maillon__part { grid-column: 3 / 4; text-align: left; }
+        }
+        .kf-maillon + .kf-maillon { margin-top: 2px; }
+        .kf-maillon::before {
+            counter-increment: kf-rang;
+            content: counter(kf-rang);
+            color: #6c757d;
+            font-variant-numeric: tabular-nums;
+            text-align: right;
+        }
+        .kf-maillon__nom { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: #212529; }
+        .kf-maillon__etat { font-weight: 600; color: #6c757d; }
+        .kf-maillon.is-actif { background: #d1e7dd; }
+        .kf-maillon.is-actif .kf-maillon__etat { color: #0f5132; }
+        .kf-maillon.is-epuise .kf-maillon__nom { text-decoration: line-through; }
+        .kf-maillon.is-epuise .kf-maillon__etat { color: #842029; }
+        .kf-maillon.is-saturee .kf-maillon__etat { color: #664d03; }
+        /* Non configure : on l'estompe sans le cacher — il faut pouvoir lire quel
+           modele SERAIT appele le jour ou la cle sera posee. */
+        .kf-maillon.is-absent { opacity: .55; }
+        .kf-maillon.is-absent .kf-maillon__barre { background: #adb5bd; }
+
+        /* La jauge double le chiffre, elle ne le remplace pas : une barre se compare,
+           un nombre se lit. Bordure plutôt que fond seul, pour rester visible en
+           contraste élevé et à l'impression. */
+        .kf-maillon__jauge {
+            display: block; height: .5rem; border: 1px solid #adb5bd;
+            border-radius: 999px; background: #fff; overflow: hidden;
+        }
+        .kf-maillon__barre { display: block; height: 100%; background: #0f5132; }
+        .kf-maillon.is-saturee .kf-maillon__barre { background: #997404; }
+        .kf-maillon.is-epuise .kf-maillon__barre { background: #842029; }
+        .kf-maillon__part { color: #495057; font-variant-numeric: tabular-nums; text-align: right; }
+        .kf-maillon__hors { grid-column: 4 / -1; color: #6c757d; font-style: italic; }
+        /* L'alerte est un PARAGRAPHE sous la liste, plus un element de rangee : elle
+           explique la liste entiere, elle ne qualifie aucun modele en particulier. */
+        .kf-chaine__alerte {
+            margin: .3rem 0 0; padding: .25rem .4rem; border-radius: 4px;
+            background: #fdf2f2; color: #842029; font-weight: 600; font-size: .76rem;
+        }
 
         /* Les champs (blancs) ressortent sur le fond clair du panneau. */
         .cs-fieldset .form-control,
@@ -147,7 +216,12 @@
         /* EN SERVICE : le repli ne fait pas qu'exister, il parle en ce moment. */
         .kf-item__mention--actif { background:#0047AB; color:#fff; }
 
-        .kf-item__reglage { display:flex; align-items:center; gap:.4rem; min-width:0; }
+        .kf-item__reglage { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem; min-width:0; }
+        /* LA CHAINE PREND SA PROPRE LIGNE, sur toute la largeur. Sans cela elle
+           devenait un troisieme element de la rangee, coince entre le libelle et le
+           champ de saisie : trois colonnes se disputaient la meme ligne et aucune
+           n'etait lisible. Vaut pour les CINQ familles, c'est le meme composant. */
+        .kf-item__reglage > .kf-chaine { flex: 1 0 100%; }
         .kf-item__reglage-nom { font-size:.73rem; color:#495057; text-transform:uppercase;
             letter-spacing:.02em; margin:0; cursor:pointer; }
         .kf-item__reglage input { flex:1 1 auto; min-width:0; max-width:24rem;

@@ -62,6 +62,26 @@ interface DialecteDuFil
      *
      * @return list<array<string, mixed>>
      */
+    /**
+     * BASCULER SUR UN MODÈLE QUI A ENCORE DU DÉBIT, sans qu'aucune requête n'ait échoué.
+     *
+     * ── POURQUOI CE N'EST PAS LA MÊME CHOSE QUE LA BASCULE SUR ERREUR ───────────────
+     *
+     * L'autre bascule répond à un REFUS du fournisseur : 503 surchargé, 429 saturé. Elle
+     * suppose donc qu'une requête est partie. Celle-ci répond à notre PROPRE garde-fou,
+     * qui arrête la boucle avant d'envoyer quoi que ce soit lorsque la fenêtre de la
+     * minute est pleine. Sans elle, Ket abandonnait en annonçant au courtier d'attendre
+     * une demi-minute, alors que la fenêtre se compte PAR MODÈLE et que les suivants de
+     * la chaîne étaient libres.
+     *
+     * Rend le nom du modèle retenu, ou null si aucun de la chaîne n'a la place demandée —
+     * auquel cas l'appelant conclut, comme avant.
+     *
+     * @param \Closure(string): bool $aDeLaPlace reçoit un nom de modèle, dit s'il peut
+     *                                          absorber ce que le tour va coûter
+     */
+    public function basculerFauteDeDebit(\Closure $aDeLaPlace, AiRequest $request, Phase $phase): ?string;
+
     public function filInitial(AiRequest $request): array;
 
     /**

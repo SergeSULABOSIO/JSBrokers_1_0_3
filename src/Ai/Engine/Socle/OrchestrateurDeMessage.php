@@ -645,6 +645,23 @@ final class OrchestrateurDeMessage
                 || $attente > self::MAX_ATTENTE_SECONDES
                 || $attenteCumulee + $attente > self::MAX_ATTENTE_CUMULEE_SECONDES;
 
+            // ── UN AUTRE MODÈLE A PEUT-ÊTRE DE LA PLACE ───────────────────────────
+            //
+            // La fenêtre de débit se compte PAR MODÈLE. Avant de renvoyer le courtier à
+            // sa patience, on regarde si un modèle de la chaîne peut absorber ce tour
+            // tout de suite. C'est gratuit : aucune requête n'est partie, et le seul
+            // coût d'un échec est une comparaison par modèle restant.
+            if ($tropLong) {
+                $bascule = $dialecte->basculerFauteDeDebit(
+                    fn (string $modele): bool => $this->budget->secondesAvantLiberation($modele, $estime) === 0,
+                    $request,
+                    $phase,
+                );
+                if ($bascule !== null) {
+                    continue;
+                }
+            }
+
             if ($tropLong) {
                 $this->logger->warning(sprintf('Assistant IA (%s) : débit par minute saturé, boucle arrêtée.', $dialecte->nom()), [
                     'tours'          => $round + 1,
