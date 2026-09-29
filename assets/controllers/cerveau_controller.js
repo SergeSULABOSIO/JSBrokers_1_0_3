@@ -654,8 +654,11 @@ export default class extends Controller {
             case 'ui:tranche.signaler-paiement-prime':
                 this.handleTrancheSignalerPaiementPrime(payload);
                 break;
-            case 'ui:tranche.facturer-commission': // réclamer la commission d'une échéance
+            case 'ui:tranche.facturer-commission': // réclamer la commission d'une ou plusieurs échéances
                 this.handleTrancheFacturerCommission(payload);
+                break;
+            case 'client:note.facturation-enregistree': // le picker a émis la note
+                this._handleNoteFacturationEnregistree(payload);
                 break;
             case 'ui:avenant.delete-piste-derivee':
                 this.handleAvenantDeletePisteDerivee(payload);
@@ -2819,38 +2822,48 @@ export default class extends Controller {
      * @param {string} payload.url - '/admin/note/api/get-facturation-context/{id}'
      */
     async handleTrancheFacturerCommission(payload) {
-        if (!payload.url) {
-            console.error("[Cerveau] handleTrancheFacturerCommission() : URL manquante.", payload);
-            this._showNotification("Impossible d'ouvrir la facturation : URL manquante.", 'error');
+        // LA SÉLECTION ENTIÈRE, PAS L'URL. Le socle ne substitue `%id%` que par la
+        // PREMIÈRE ligne cochée ; s'en contenter ferait facturer une échéance et
+        // oublier les autres, sans que rien ne le dise. Même lecture que
+        // handlePartagePickerRequest, le seul autre geste réellement multi-lignes.
+        const ids = (payload.selection || [])
+            .map((s) => parseInt(s.id, 10))
+            .filter((id) => Number.isInteger(id) && id > 0);
+
+        if (!payload.url || ids.length === 0) {
+            this._showNotification(
+                'Cochez au moins une échéance à facturer.',
+                'warning',
+            );
             return;
         }
-        try {
-            this.broadcast('app:loading.start');
-            const url = new URL(payload.url, window.location.origin);
-            if (this.currentIdEntreprise) {
-                url.searchParams.set('idEntreprise', this.currentIdEntreprise);
-            }
-            const response = await fetch(url.toString());
-            const result = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(result.message || `Erreur serveur ${response.status}`);
-            const { trancheId, formCanvas } = result;
 
-            this.openDialogBox({
-                entity:           {},
-                entityFormCanvas: formCanvas,
-                isCreationMode:   true,
-                context: {
-                    idEntreprise: this.currentIdEntreprise,
-                    idInvite:     this.currentIdInvite,
-                },
-                parentContext: { id: trancheId, fieldName: 'tranche' },
-            });
-        } catch (error) {
-            console.error("[Cerveau] handleTrancheFacturerCommission() failed:", error);
-            this._showNotification(error.message || "Impossible d'ouvrir la facturation de la commission.", 'error');
-        } finally {
-            this.broadcast('app:loading.stop');
+        await this._openStandalonePicker(`${payload.url}?ids=${ids.join(',')}`, {
+            controllerName: 'facturation-picker',
+            errorLabel: 'la facturation de la commission',
+        });
+    }
+
+    /**
+     * La note vient d'être émise : on notifie, et on rafraîchit la liste des échéances
+     * — leur commission passe d'« exigible » à « facturée ». Même séquence que le
+     * reversement, qui fait tomber les colonnes de l'agent.
+     * @private
+     */
+    _handleNoteFacturationEnregistree(payload) {
+        this._showNotification(payload.message || 'Note émise.', 'success');
+
+        const tabState = this._getCurrentWsTabState()[this.getActiveTabId()];
+        if (!tabState?.serverRootName) {
+            // Pas une liste : rien à rafraîchir, et se taire vaut mieux qu'une erreur
+            // de console pour une opération qui a RÉUSSI.
+            return;
         }
+
+        const etat = this._getActiveTabState();
+        this._publishSelectionStatus('Actualisation de la liste...');
+        this.broadcast('app:loading.start', { originatorId: etat.elementId, workspaceTabId: this.currentWorkspaceTabId });
+        this._requestListRefresh(this.getActiveTabId());
     }
 
     /**

@@ -5,6 +5,11 @@ namespace App\Controller\Admin;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use App\Entity\Assureur;
+use App\Entity\Client;
+use App\Entity\RevenuPourCourtier;
+use App\Entity\Entreprise;
+use App\Entity\CompteBancaire;
+use App\Entity\Article;
 use App\Entity\Bordereau;
 use App\Entity\Note;
 use App\Entity\Tranche;
@@ -126,66 +131,275 @@ class NoteController extends AbstractController
                     }
                 }
 
-                // FACTURER UNE ÉCHÉANCE, DEPUIS LA RUBRIQUE TRANCHES.
+                // ⚠ IL N'Y A PAS DE BRANCHE « TRANCHE » ICI, ET C'EST VOULU.
                 //
-                // Même déduction que la branche bordereau ci-dessus, et pour la même
-                // raison : réclamer la commission d'une échéance, c'est émettre une
-                // note de débit à l'assureur de sa police. Rien n'est deviné — tout
-                // vient de la tranche désignée.
+                // Une première version préremplissait ce formulaire depuis une échéance.
+                // Elle ne pouvait poser que l'EN-TÊTE : la collection `articles` est
+                // `mapped: false`, remplacée par un widget dont les enfants passent par
+                // le tampon du navigateur — rien, côté serveur, ne sait la semer. Le
+                // courtier obtenait donc une note vide dont il composait les lignes une
+                // à une, là où l'assistant posait les deux en un seul plan.
                 //
-                // ⚠ ET C'EST LA MÊME RÈGLE QUE CELLE DE L'ASSISTANT. `entetePour()` est
-                // appelée ici et par `preparer_facturation` : l'écran et la conversation
-                // proposent le même en-tête, sinon ils diraient deux choses du même geste.
-                if ($parentField === 'tranche' && $parentId) {
-                    $tranche = $this->em->find(Tranche::class, (int)$parentId);
-                    if ($tranche !== null && $tranche->getEntreprise() === $this->getEntreprise()) {
-                        $entete = $this->sourceDeFacturation->entetePour(
-                            $tranche,
-                            Note::TYPE_NOTE_DE_DEBIT,
-                            Note::TO_ASSUREUR,
-                        );
-                        $note->setType($entete['type']);
-                        $note->setAddressedTo($entete['addressedTo']);
-                        $note->setNom($entete['nom']);
-                        if ($entete['cible'] !== null) {
-                            $note->setAssureur($this->em->find(Assureur::class, $entete['cible']));
-                        }
-                    }
-                }
-
+                // La facturation depuis une échéance passe désormais par son PICKER
+                // (`/admin/note/facturation-picker`), qui écrit la note ET ses lignes en
+                // un seul POST. Ce formulaire garde son rôle : composer une note à la
+                // main, depuis la rubrique.
                 $note->setReference('N' . time());
             }
         );
     }
 
     /**
-     * LE CONTEXTE POUR FACTURER UNE ÉCHÉANCE — ce que le bouton « Facturer la
-     * commission » de la rubrique Tranches demande avant d'ouvrir le dialogue.
+     * LA FENÊTRE DE FACTURATION — ce que le bouton « Facturer la commission » de la
+     * rubrique Tranches ouvre, déjà remplie.
      *
-     * Miroir exact de `TrancheController::getPaiementPrimeContext()` : le cerveau a
-     * besoin du canevas de la Note et de l'identifiant du parent pour monter le
-     * dialogue ; le préremplissage, lui, se fait dans `getFormApi()`, que le dialogue
-     * appelle ensuite avec ce même parent.
+     * ⚠ DU HTML, PAS DU JSON. L'ouvreur de pickers autonomes (`picker-open.js`, partagé
+     * avec le portefeuille, le partage et les reversements) lit la réponse en TEXTE et
+     * l'insère telle quelle. Une enveloppe JSON lui donne une chaîne sans aucun élément
+     * — « Contenu du picker vide » — et le bouton ne fait rien d'autre qu'une
+     * notification d'erreur. Le piège est déjà commenté deux fois dans
+     * `RetroAgentController` : il a été payé une fois, il ne le sera pas deux.
      */
-    #[Route('/api/get-facturation-context/{id}', name: 'api.get_facturation_context', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
-    public function getFacturationContext(Tranche $tranche, Request $request): JsonResponse
+    #[Route('/facturation-picker', name: 'facturation_picker', methods: ['GET'])]
+    public function facturationPicker(Request $request): Response
     {
         // Mutation à venir (création d'une note) : Écriture sur Note, fail-closed.
         if (!$this->mayAccessEntity(Note::class, Invite::ACCESS_ECRITURE)) {
             return $this->accessDeniedJson();
         }
-        // Scoping : l'échéance doit appartenir à l'espace de travail courant.
-        if ($tranche->getEntreprise()?->getId() !== $this->getEntreprise()->getId()) {
-            return $this->json(['message' => 'Échéance introuvable dans cet espace de travail.'], Response::HTTP_NOT_FOUND);
+
+        $entreprise = $this->getEntreprise();
+        $addressedTo = $request->query->get('destinataire') === 'client'
+            ? Note::TO_CLIENT
+            : Note::TO_ASSUREUR;
+
+        $tranches = $this->tranchesDuPerimetre($request, $entreprise);
+        $groupes = $this->sourceDeFacturation->facturableDansLaSelection($entreprise, $tranches, $addressedTo);
+
+        // UNE NOTE A UN DESTINATAIRE. On propose donc le premier groupe, et l'on ANNONCE
+        // ce qui reste : mêler deux assureurs produirait une pièce que personne ne peut
+        // ni payer ni comptabiliser.
+        $groupe = $groupes[0] ?? null;
+        $suivants = array_slice($groupes, 1);
+
+        return $this->render('components/note/_facturation_picker.html.twig', [
+            'groupe' => $groupe,
+            'suivants' => array_map(
+                static fn (array $g): array => [
+                    'nom' => $g['nom'],
+                    'compte' => count($g['lignes']),
+                    'ids' => array_values(array_unique(array_column($g['lignes'], 'trancheId'))),
+                ],
+                $suivants,
+            ),
+            'destinataire' => $addressedTo === Note::TO_CLIENT ? 'client' : 'assureur',
+            'idsDemandes' => array_map(static fn (Tranche $t): int => (int) $t->getId(), $tranches),
+            'objet' => $groupe !== null ? $this->objetPropose($tranches, $addressedTo) : '',
+            'monnaie' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+            'comptes' => $this->em->getRepository(CompteBancaire::class)
+                ->findBy(['entreprise' => $entreprise], ['intitule' => 'ASC']),
+            'signataire' => $this->getInvite()?->getNom() ?? '',
+            'submitUrl' => $this->generateUrl('admin.note.facturation_submit'),
+            'apercuUrlPattern' => $this->generateUrl('admin.note.api.get_preview_url', ['id' => 0]),
+        ]);
+    }
+
+    /**
+     * LES ÉCHÉANCES COCHÉES, RÉDUITES À CELLES DU CABINET.
+     *
+     * Ce qui n'en relève pas est ignoré EN SILENCE, comme le fait le reversement : un
+     * identifiant étranger n'est pas une erreur de l'utilisateur, c'est une tentative
+     * ou une liste périmée — dans les deux cas, on n'en parle pas, on n'en fait rien.
+     *
+     * @return list<Tranche>
+     */
+    private function tranchesDuPerimetre(Request $request, Entreprise $entreprise): array
+    {
+        $ids = array_values(array_filter(array_map(
+            'intval',
+            explode(',', (string) $request->query->get('ids', '')),
+        )));
+        if ($ids === []) {
+            return [];
         }
 
-        $idEntreprise = (int) $request->query->get('idEntreprise', 0);
+        return $this->em->getRepository(Tranche::class)
+            ->createQueryBuilder('t')
+            ->andWhere('t.id IN (:ids)')
+            ->andWhere('t.entreprise = :entreprise')
+            ->setParameter('ids', $ids)
+            ->setParameter('entreprise', $entreprise)
+            ->orderBy('t.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /** L'objet proposé, déduit de la première échéance — la règle de l'assistant. */
+    private function objetPropose(array $tranches, int $addressedTo): string
+    {
+        $premiere = $tranches[0] ?? null;
+
+        return $premiere instanceof Tranche
+            ? (string) $this->sourceDeFacturation->entetePour($premiere, Note::TYPE_NOTE_DE_DEBIT, $addressedTo)['nom']
+            : 'Commission';
+    }
+
+    /**
+     * ÉMETTRE LA NOTE ET SES LIGNES, en une seule écriture.
+     *
+     * ── POURQUOI ICI, ET PAS PAR LE FORMULAIRE ──────────────────────────────────
+     * `NoteType` déclare `articles` en `mapped: false` : la collection est remplacée
+     * par un widget dont les enfants naissent dans leur propre dialogue, après que le
+     * parent existe. Passer par lui obligerait le courtier à composer ses lignes une
+     * à une — exactement ce que ce chantier supprime.
+     *
+     * ── ÉMETTRE, C'EST VALIDER ──────────────────────────────────────────────────
+     * `ValeursDeNaissance` pose `validated = false`, ce qui est juste pour une note
+     * composée à la main et relue avant envoi. Facturer est un acte achevé : la pièce
+     * part à l'assureur. Sans ce drapeau, la note n'entrerait jamais au suivi du
+     * recouvrement, qui ne compte que les notes validées.
+     */
+    #[Route('/facturation', name: 'facturation_submit', methods: ['POST'])]
+    public function facturationSubmit(Request $request): JsonResponse
+    {
+        if (!$this->mayAccessEntity(Note::class, Invite::ACCESS_ECRITURE)) {
+            return $this->accessDeniedJson();
+        }
+
+        $entreprise = $this->getEntreprise();
+        $donnees = json_decode($request->getContent(), true);
+        $lignes = is_array($donnees['lignes'] ?? null) ? $donnees['lignes'] : [];
+        if ($lignes === []) {
+            return $this->json(
+                ['message' => 'Cochez au moins une commission à facturer.'],
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+            );
+        }
+
+        $addressedTo = ($donnees['destinataire'] ?? 'assureur') === 'client'
+            ? Note::TO_CLIENT
+            : Note::TO_ASSUREUR;
+
+        $note = (new Note())
+            ->setType(Note::TYPE_NOTE_DE_DEBIT)
+            ->setAddressedTo($addressedTo)
+            ->setNom(trim((string) ($donnees['objet'] ?? '')) ?: 'Commission')
+            ->setValidated(true);
+        // Référence, signature et date d'émission : un seul endroit, partagé avec le
+        // formulaire et avec l'écriture de l'assistant.
+        $this->valeursDeNaissance->poser($note);
+        $note->setEntreprise($entreprise)->setInvite($this->getInvite());
+
+        if (($donnees['description'] ?? null) !== null && $donnees['description'] !== '') {
+            $note->setDescription((string) $donnees['description']);
+        }
+        $note->setSignedBy($this->texteOuNull($donnees['signataire'] ?? null));
+        $note->setTitleSignedBy($this->texteOuNull($donnees['titreSignataire'] ?? null));
+
+        // OÙ SE FAIRE PAYER : sans compte, le PDF ne dit pas à l'assureur où virer.
+        foreach ($this->comptesDuPerimetre($donnees['comptes'] ?? [], $entreprise) as $compte) {
+            $note->addCompte($compte);
+        }
+
+        $ecrites = 0;
+        foreach ($lignes as $ligne) {
+            $revenu = $this->em->getRepository(RevenuPourCourtier::class)->findOneBy([
+                'id' => (int) ($ligne['revenuId'] ?? 0),
+                'entreprise' => $entreprise,
+            ]);
+            if ($revenu === null) {
+                continue; // hors périmètre : ignoré en silence, comme le reversement.
+            }
+            $tranche = $this->em->getRepository(Tranche::class)->findOneBy([
+                'id' => (int) ($ligne['trancheId'] ?? 0),
+                'entreprise' => $entreprise,
+            ]);
+
+            // QUI DOIT L'ARGENT — déduit de la police, comme le fait l'assistant. Sans
+            // ce rattachement, la note n'aurait pas de débiteur : elle ne serait
+            // adressée à personne, n'entrerait dans aucun suivi, et le PDF ne porterait
+            // aucun nom. Posé sur la PREMIÈRE ligne : la fenêtre a déjà garanti qu'elles
+            // relèvent toutes du même destinataire.
+            if ($note->getAssureur() === null && $note->getClient() === null) {
+                $this->rattacherLeDestinataire($note, $tranche ?? $revenu->getCotation()?->getTranches()->first(), $addressedTo);
+            }
+
+            $article = (new Article())->setQuantite(1.0);
+            $article->setNote($note)->setRevenuFacture($revenu)->setTranche($tranche);
+            $article->setEntreprise($entreprise)->setInvite($this->getInvite());
+            $this->em->persist($article);
+            $note->addArticle($article);
+            ++$ecrites;
+        }
+
+        if ($ecrites === 0) {
+            return $this->json(
+                ['message' => 'Aucune ligne exploitable : ces commissions ne relèvent pas de cet espace de travail.'],
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+            );
+        }
+
+        $this->em->persist($note);
+        $this->em->flush();
 
         return $this->json([
-            'trancheId' => $tranche->getId(),
-            'trancheNom' => $tranche->getNom(),
-            'formCanvas' => $this->canvasBuilder->getEntityFormCanvas(new Note(), $idEntreprise),
+            'message' => sprintf(
+                '%s %s émise, portant %d commission%s.',
+                $addressedTo === Note::TO_CLIENT ? 'Note de débit au client' : 'Note de débit à l’assureur',
+                $note->getReference(),
+                $ecrites,
+                $ecrites > 1 ? 's' : '',
+            ),
+            'noteId' => $note->getId(),
+            // L'URL que le cerveau sait déjà ouvrir : sa branche « download » fait un
+            // window.open sur un PDF servi `inline`. Aucun code d'impression ici.
+            'pdfUrl' => $this->generateUrl('admin.note.api.get_preview_url', ['id' => $note->getId()]) . '?download=1',
         ]);
+    }
+
+    /**
+     * Rattache la note à celui qui doit l'argent, par la MÊME règle que l'assistant :
+     * `entetePour()` lit l'assureur — ou le client — de la police de l'échéance.
+     */
+    private function rattacherLeDestinataire(Note $note, mixed $source, int $addressedTo): void
+    {
+        if (!$source instanceof Tranche) {
+            return;
+        }
+
+        $cible = $this->sourceDeFacturation->entetePour($source, Note::TYPE_NOTE_DE_DEBIT, $addressedTo)['cible'];
+        if ($cible === null) {
+            return;
+        }
+
+        $addressedTo === Note::TO_CLIENT
+            ? $note->setClient($this->em->getRepository(Client::class)->find($cible))
+            : $note->setAssureur($this->em->getRepository(Assureur::class)->find($cible));
+    }
+
+    /** @return list<CompteBancaire> les comptes cochés qui relèvent bien du cabinet */
+    private function comptesDuPerimetre(mixed $ids, Entreprise $entreprise): array
+    {
+        $ids = array_values(array_filter(array_map('intval', is_array($ids) ? $ids : [])));
+        if ($ids === []) {
+            return [];
+        }
+
+        return $this->em->getRepository(CompteBancaire::class)
+            ->createQueryBuilder('c')
+            ->andWhere('c.id IN (:ids)')
+            ->andWhere('c.entreprise = :entreprise')
+            ->setParameter('ids', $ids)
+            ->setParameter('entreprise', $entreprise)
+            ->getQuery()
+            ->getResult();
+    }
+
+    private function texteOuNull(mixed $valeur): ?string
+    {
+        $texte = trim((string) $valeur);
+
+        return $texte === '' ? null : $texte;
     }
 
     #[Route('/api/get-preview-url/{id}', name: 'api.get_preview_url', methods: ['GET'])]

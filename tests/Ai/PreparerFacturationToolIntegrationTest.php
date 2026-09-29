@@ -6,6 +6,7 @@ use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
 use App\Ai\Tool\PreparerFacturationTool;
+use App\Entity\Article;
 use App\Entity\Assureur;
 use App\Entity\Avenant;
 use App\Entity\Chargement;
@@ -281,23 +282,99 @@ class PreparerFacturationToolIntegrationTest extends WebTestCase
     }
 
     /** Le type et le destinataire dictés priment sur la déduction. */
-    public function testUnAvoirAuClientEstPrepareQuandOnLeDemande(): void
+    public function testUnAvoirNeSePrepareQueSurCeQuiAEteFacture(): void
     {
         $seed = $this->seed();
+        $scope = new AiScope($seed['entreprise'], $seed['invite']);
+
+        // RIEN N'A ÉTÉ FACTURÉ : il n'y a rien à annuler. Un avoir sorti de nulle part
+        // créditerait un client de ce qu'on ne lui a jamais réclamé.
+        $avantToute = $this->outil()->execute(
+            ['trancheId' => $seed['tranche']->getId(), 'type' => 'credit', 'destinataire' => 'client'],
+            $scope,
+        );
+        self::assertSame(AiToolResult::STATUS_OK, $avantToute->status);
+        self::assertFalse($avantToute->data['pret'] ?? true,
+            'Aucun avoir ne doit se préparer sur une commission jamais facturée.',
+        );
+
+        // On facture, puis on annule : c'est le seul ordre qui ait un sens.
+        $this->facturerAuClient($seed);
 
         $resultat = $this->outil()->execute(
             ['trancheId' => $seed['tranche']->getId(), 'type' => 'credit', 'destinataire' => 'client'],
-            new AiScope($seed['entreprise'], $seed['invite']),
+            $scope,
         );
 
         self::assertSame(AiToolResult::STATUS_OK, $resultat->status);
-        self::assertTrue($resultat->data['pret'] ?? false);
+        self::assertTrue($resultat->data['pret'] ?? false,
+            'Une fois la commission facturée, l\'avoir devient préparable — sans cette symétrie, '
+            . 'une erreur de facturation serait définitive.',
+        );
 
         $champs = $resultat->uiAction['plan'][0]['fields'];
         self::assertSame(Note::TYPE_NOTE_DE_CREDIT, $champs['type']);
         self::assertSame(Note::TO_CLIENT, $champs['addressedTo']);
         self::assertArrayHasKey('client', $champs, 'Un avoir au client se rattache au client.');
-        self::assertSame(0, $this->notesEnBase());
+    }
+
+    /**
+     * REFACTURER LA MÊME ÉCHÉANCE NE DOIT RIEN PRÉPARER — et le refus doit NOMMER la
+     * note qui retient, sans quoi le courtier cherche sans savoir quoi.
+     */
+    public function testRefacturerLaMemeEcheanceEstRefuseEnNommantLaNote(): void
+    {
+        $seed = $this->seed();
+        $scope = new AiScope($seed['entreprise'], $seed['invite']);
+
+        $note = $this->facturerAuClient($seed);
+
+        $resultat = $this->outil()->execute(
+            ['trancheId' => $seed['tranche']->getId(), 'destinataire' => 'client'],
+            $scope,
+        );
+
+        self::assertSame(AiToolResult::STATUS_OK, $resultat->status);
+        self::assertFalse($resultat->data['pret'] ?? true, 'Aucun plan ne doit être préparé.');
+        self::assertStringContainsString(
+            (string) $note->getReference(),
+            (string) ($resultat->data['bloquant'] ?? ''),
+            'Le refus doit nommer la note qui porte déjà cette commission.',
+        );
+    }
+
+    /**
+     * Pose une note de débit au client portant la commission de l'échéance semée, et
+     * la rend. C'est ce qu'écrivent le picker et l'outil lui-même.
+     */
+    private function facturerAuClient(array $seed): Note
+    {
+        $em = $this->em();
+
+        $note = (new Note())
+            ->setNom('Facture de test')
+            ->setType(Note::TYPE_NOTE_DE_DEBIT)
+            ->setAddressedTo(Note::TO_CLIENT)
+            ->setReference('N-FACT-' . uniqid())
+            ->setSignature((string) time())
+            ->setValidated(true);
+        $note->setEntreprise($seed['entreprise']);
+        $em->persist($note);
+
+        $revenu = $em->getRepository(RevenuPourCourtier::class)->find($seed['revenuId']);
+        $tranche = $em->getRepository(Tranche::class)->find($seed['tranche']->getId());
+
+        $article = (new Article())->setQuantite(1.0);
+        $article->setNote($note)->setRevenuFacture($revenu)->setTranche($tranche);
+        $article->setEntreprise($seed['entreprise']);
+        $em->persist($article);
+        // Côté inverse : le décompte du déjà-facturé lit `revenu->getArticles()`.
+        $revenu->addArticle($article);
+        $note->addArticle($article);
+
+        $em->flush();
+
+        return $note;
     }
 
     /** Facturer la police entière : la note porte les revenus, sans échéance imposée. */

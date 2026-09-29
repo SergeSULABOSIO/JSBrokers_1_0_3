@@ -201,15 +201,24 @@ final class PreparerFacturationTool implements AiToolProduisantUnPlan, AiToolCon
         }
 
         $tranche = $source instanceof Tranche ? $source : null;
-        $facturables = $this->sourceDeFacturation->revenusFacturables(
+        // ⚠ LE TYPE COMPTE DANS LE TRI, PAS SEULEMENT DANS L'EN-TÊTE. Un avoir ne porte
+        // pas ce qui reste à facturer, mais ce qui l'a été : sans lui passer le type,
+        // un revenu intégralement facturé rendrait une liste vide et aucun avoir ne
+        // serait plus préparable.
+        $pesee = $this->sourceDeFacturation->pesee(
             $scope->entreprise,
             $addressedTo,
             $entete['cible'],
             $tranche,
+            $type,
         );
-        if ($facturables === []) {
-            return $this->rienAFacturer($this->pourquoiRien($source, $addressedTo));
+        if ($pesee['retenus'] === []) {
+            return $this->rienAFacturer($this->pourquoiRien($source, $addressedTo, $pesee['ecartes']));
         }
+        $facturables = array_map(
+            static fn (array $retenu) => $retenu['revenu'],
+            $pesee['retenus'],
+        );
 
         // Une ligne par revenu encore dû, rattachée à l'échéance quand on en a une.
         // `quantite` à 1 comme le formulaire en création : on facture l'unité de ce
@@ -228,6 +237,12 @@ final class PreparerFacturationTool implements AiToolProduisantUnPlan, AiToolCon
             'addressedTo' => $entete['addressedTo'],
             $addressedTo === Note::TO_CLIENT ? 'client' : 'assureur' => $entete['cible'],
             'nom' => $this->objet($args, $entete['nom']),
+            // ÉMETTRE, C'EST VALIDER. Une note naît non validée — c'est juste pour une
+            // saisie de rubrique, qui se relit avant d'être envoyée. Mais facturer est
+            // un acte achevé : la pièce part à l'assureur. Sans ce drapeau, la note
+            // n'entrerait jamais au suivi du recouvrement, qui ne compte que les notes
+            // validées — et ce suivi resterait vide, comme il l'est depuis toujours.
+            'validated' => true,
         ];
         if (($args['description'] ?? null) !== null && $args['description'] !== '') {
             $champsNote['description'] = (string) $args['description'];
@@ -306,22 +321,42 @@ final class PreparerFacturationTool implements AiToolProduisantUnPlan, AiToolCon
         ]);
     }
 
-    /** Pourquoi il n'y a rien à facturer, dit dans les mots du métier. */
-    private function pourquoiRien(Tranche|Avenant $source, int $addressedTo): string
+    /**
+     * POURQUOI IL N'Y A RIEN À FACTURER — et, quand c'est le cas, QUELLE PIÈCE le
+     * retient.
+     *
+     * Dire « rien à facturer » à un courtier dont l'écran annonce une commission
+     * exigible est une énigme, pas une réponse : il va rouvrir le dossier, chercher,
+     * et finir par redemander. On nomme donc la note qui consomme déjà le revenu —
+     * le service nous la rend, il serait absurde de la jeter.
+     *
+     * @param list<array{revenu: mixed, note: ?Note}> $ecartes
+     */
+    private function pourquoiRien(Tranche|Avenant $source, int $addressedTo, array $ecartes = []): string
     {
         $qui = $addressedTo === Note::TO_CLIENT ? 'ce client' : 'cet assureur';
+        $ou = $source instanceof Tranche ? 'cette échéance' : 'cette police';
 
-        return $source instanceof Tranche
-            ? sprintf(
-                'Il n’y a plus rien à facturer sur cette échéance : la commission due par %s a déjà '
-                . 'été intégralement encaissée, ou aucun revenu n’y est rattaché.',
-                $qui,
-            )
-            : sprintf(
-                'Il n’y a plus rien à facturer sur cette police : la commission due par %s a déjà '
-                . 'été intégralement encaissée.',
-                $qui,
-            );
+        foreach ($ecartes as $ecarte) {
+            $note = $ecarte['note'] ?? null;
+            if ($note instanceof Note) {
+                return sprintf(
+                    'Il n’y a plus rien à facturer sur %s : la commission due par %s est déjà portée '
+                    . 'par la note %s%s. Pour la refacturer, il faut d’abord l’annuler par un avoir, '
+                    . 'ou corriger cette note.',
+                    $ou,
+                    $qui,
+                    $note->getReference() ?? ('#' . $note->getId()),
+                    $note->getSentAt() !== null ? ' du ' . $note->getSentAt()->format('d/m/Y') : '',
+                );
+            }
+        }
+
+        return sprintf(
+            'Il n’y a plus rien à facturer sur %s : aucun revenu dû par %s n’y est rattaché.',
+            $ou,
+            $qui,
+        );
     }
 
     private function objet(array $args, string $deduit): string
