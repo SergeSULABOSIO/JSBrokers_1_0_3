@@ -81,13 +81,21 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
                 // courtier à passer par la conversation pour un geste de rubrique.
                 //
                 // AUCUNE CONDITION D'AFFICHAGE : le serveur seul sait si quelque chose
-                // reste dû, et il le dira dans le dialogue. Un bouton masqué
-                // n'apprendrait rien à celui qui cherche pourquoi il ne peut pas facturer.
+                // reste dû, et il le dira dans la fenêtre — en NOMMANT la note qui
+                // retient, s'il y en a une. Un bouton masqué n'apprendrait rien à celui
+                // qui cherche pourquoi il ne peut pas facturer.
+                //
+                // ⚠ `multi` ET UNE URL SANS `%id%` VONT ENSEMBLE. Le socle ne substitue
+                // `%id%` que par la PREMIÈRE ligne cochée ; garder le gabarit ferait
+                // donc facturer une échéance et oublier les autres, sans rien dire. La
+                // sélection entière voyage dans `payload.selection`, et c'est le cerveau
+                // qui la sérialise en `?ids=`.
                 [
                     "label" => "Facturer la commission",
                     "icon"  => "note",
+                    "multi" => true,
                     "event" => "ui:tranche.facturer-commission",
-                    "url"   => "/admin/note/api/get-facturation-context/%id%",
+                    "url"   => "/admin/note/facturation-picker",
                 ],
             ],
             // Entête contextuel du volet de saisie (pastille + description).

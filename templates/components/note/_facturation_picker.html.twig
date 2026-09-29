@@ -1,0 +1,264 @@
+{#
+    FACTURER UNE COMMISSION — une échéance, ou plusieurs cochées d'un coup.
+
+    Le tableau ne propose que ce qu'il RESTE À FACTURER : une commission déjà portée sur une
+    note n'y figure plus, même si elle n'a pas encore été encaissée. La distinction compte —
+    l'ancienne règle lisait le solde IMPAYÉ, et reproposait donc ce qui venait d'être facturé.
+    Sur une fenêtre qui coche tout d'office, c'eût été une double facturation en un clic.
+
+    UNE NOTE, UN DESTINATAIRE. Une sélection qui mêle deux assureurs ne peut pas produire une
+    seule pièce : on propose le premier, on annonce les suivants, et l'on repasse une fois par
+    assureur. Mélanger donnerait une facture que personne ne peut ni payer ni comptabiliser.
+
+    CE QUI EST ÉCARTÉ SE DIT, AVEC LA PIÈCE QUI LE RETIENT. « Rien à facturer » devant une
+    échéance dont la liste annonce une commission exigible est une énigme, pas une réponse.
+
+    Miroir visuel des pickers jsb-picker-* (/ergonomie-web : role=dialog, aria-modal,
+    fieldset/legend, cibles ≥44px, Échap, restitution du focus, zone d'erreur inline ;
+    /charte-couleurs : cobalt #0047AB). Piloté par « facturation-picker », auto-connecté à
+    l'insertion par le cerveau.
+#}
+<div class="jsb-picker-overlay"
+     data-controller="facturation-picker"
+     data-facturation-picker-submit-url-value="{{ submitUrl }}"
+     {# Le gabarit d'URL d'aperçu : l'identifiant de la note n'est connu qu'APRÈS
+        l'écriture, le client le substitue pour ouvrir le PDF. #}
+     data-facturation-picker-apercu-url-value="{{ apercuUrlPattern }}"
+     data-facturation-picker-destinataire-value="{{ destinataire }}"
+     data-facturation-picker-ids-value="{{ idsDemandes|join(',') }}"
+     data-facturation-picker-suivants-value="{{ suivants|json_encode|e('html_attr') }}"
+     data-picker-overlay>
+    <div class="jsb-picker-modal jsb-picker-modal--large"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="jsb-fact-picker-title"
+         aria-describedby="jsb-fact-picker-desc"
+         tabindex="-1">
+
+        <div class="modal-header jsb-picker-header">
+            <div class="d-flex align-items-center">
+                <span class="me-2 d-inline-flex" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('note') }}" style="width:22px;height:22px;color:#0047AB;" />
+                </span>
+                <h5 id="jsb-fact-picker-title" class="modal-title mb-0">
+                    {%- if groupe %}Facturer&nbsp;«&nbsp;{{ groupe.nom }}&nbsp;»
+                    {%- else %}Facturer une commission{% endif -%}
+                </h5>
+            </div>
+            <button type="button" class="btn-close" data-picker-close aria-label="Fermer la fenêtre"></button>
+        </div>
+
+        <div class="jsb-picker-progress" data-picker-progress role="progressbar" aria-hidden="true">
+            <div class="jsb-picker-progress-bar"></div>
+        </div>
+
+        <div class="jsb-picker-intro">
+            <span class="jsb-picker-intro-icon" aria-hidden="true">
+                <twig:UX:Icon name="{{ resolve_icon_name(destinataire == 'client' ? 'client' : 'assureur') }}" style="width:26px;height:26px;" />
+            </span>
+            <div class="jsb-picker-intro-text">
+                <p class="jsb-picker-intro-title">{{ groupe ? groupe.nom : 'Aucun destinataire' }}</p>
+                <p id="jsb-fact-picker-desc" class="jsb-picker-intro-desc">
+                    Les commissions qu'il reste à réclamer sont cochées. Décochez-en une pour la
+                    laisser de côté&nbsp;; elle restera facturable plus tard.
+                    {% if suivants is not empty %}
+                        <br><strong>Une note par destinataire&nbsp;:</strong>
+                        {% for s in suivants %}{{ s.nom }} ({{ s.compte }}){{ not loop.last ? ', ' }}{% endfor %}
+                        {{ suivants|length > 1 ? 'restent à facturer séparément' : 'reste à facturer séparément' }} —
+                        je vous les proposerai après celle-ci.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+        <p class="jsb-picker-empty text-danger" data-picker-error role="alert" hidden></p>
+
+        <div class="jsb-picker-listwrap jsb-picker-cartes">
+            {% if groupe is null or groupe.lignes is empty %}
+                <p class="jsb-picker-empty text-muted" role="status">
+                    Rien à facturer sur cette sélection&nbsp;: ces commissions sont déjà portées
+                    par une note, ou aucun revenu n'y est rattaché.
+                </p>
+            {% else %}
+                <fieldset class="jsb-picker-carte">
+                    <legend class="fs-6" style="color:#0d2440;">Commissions à facturer</legend>
+                    <div class="table-responsive">
+                        <table class="jsb-picker-table jsb-picker-table--lignes-cliquables"
+                               aria-label="Commissions qu'il reste à facturer">
+                            <thead>
+                                <tr>
+                                    <th scope="col" style="width:44px;">
+                                        <input class="form-check-input" type="checkbox" checked
+                                               data-action="change->facturation-picker#toutCocher"
+                                               aria-label="Tout cocher">
+                                    </th>
+                                    <th scope="col">Police / Échéance</th>
+                                    <th scope="col" class="jsb-picker-num">
+                                        Reste à facturer{% if monnaie %} <span class="text-muted">({{ monnaie }})</span>{% endif %}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for l in groupe.lignes %}
+                                    <tr data-facturation-picker-target="ligne"
+                                        data-tranche-id="{{ l.trancheId }}"
+                                        data-revenu-id="{{ l.revenuId }}"
+                                        data-montant="{{ l.montant }}"
+                                        data-action="click->facturation-picker#basculerLigne">
+                                        <td>
+                                            {# COCHÉES D'OFFICE : ces échéances viennent d'être
+                                               choisies dans la liste. Les faire recocher serait
+                                               redemander ce que l'utilisateur vient de dire. #}
+                                            <input class="form-check-input" type="checkbox" checked
+                                                   data-facturation-picker-target="coche"
+                                                   data-action="change->facturation-picker#recalculer"
+                                                   aria-label="Facturer {{ l.libelle }} — {{ l.police }}">
+                                        </td>
+                                        <td>
+                                            <strong>{{ l.police }}</strong>
+                                            <div class="text-muted small">
+                                                {{ l.libelle }}{% if l.echeance %} · échéance du {{ l.echeance }}{% endif %}
+                                            </div>
+                                        </td>
+                                        <td class="jsb-picker-num">{{ l.montant|number_format(2, ',', ' ') }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </fieldset>
+            {% endif %}
+
+            {% if groupe and groupe.ecartes is not empty %}
+                <fieldset class="jsb-picker-carte">
+                    <legend class="fs-6" style="color:#0d2440;">Déjà facturé</legend>
+                    <p class="text-muted small mb-2">
+                        Ces échéances ne sont plus facturables : une note les porte déjà. Pour les
+                        refacturer, annulez cette note par un avoir, ou corrigez-la.
+                    </p>
+                    <ul class="list-unstyled mb-0">
+                        {% for e in groupe.ecartes %}
+                            <li class="jsb-picker-ecarte">
+                                <strong>{{ e.police }}</strong>
+                                {%- if e.noteReference %} — déjà facturée par la note
+                                    <a href="#" data-facturation-picker-note-id="{{ e.noteId }}"
+                                       data-action="click->facturation-picker#ouvrirLaNote">{{ e.noteReference }}</a>
+                                    {%- if e.noteDate %} du {{ e.noteDate }}{% endif %}
+                                {%- else %} — plus rien à facturer{% endif %}.
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </fieldset>
+            {% endif %}
+
+            {% if groupe and groupe.lignes is not empty %}
+                <fieldset class="jsb-picker-carte">
+                    <legend class="fs-6" style="color:#0d2440;">La note</legend>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4">
+                            <label class="form-label" for="jsb-fact-destinataire">À qui l'adresser</label>
+                            {# CHANGER DE DESTINATAIRE RECALCULE TOUT : un client n'est pas
+                               l'assureur de sa police. La fenêtre se recharge donc côté serveur,
+                               plutôt que de laisser une règle métier descendre dans le navigateur. #}
+                            <select class="form-select" id="jsb-fact-destinataire"
+                                    data-facturation-picker-target="destinataire"
+                                    data-action="change->facturation-picker#changerDestinataire">
+                                <option value="assureur" {{ destinataire == 'assureur' ? 'selected' }}>L'assureur</option>
+                                <option value="client" {{ destinataire == 'client' ? 'selected' }}>Le client</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-8">
+                            <label class="form-label" for="jsb-fact-objet">Objet de la note</label>
+                            <input type="text" class="form-control" id="jsb-fact-objet"
+                                   name="facturation_objet" autocomplete="off"
+                                   value="{{ objet }}"
+                                   data-facturation-picker-target="objet">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="jsb-fact-description">Précision (facultatif)</label>
+                            <textarea class="form-control" id="jsb-fact-description" rows="2"
+                                      data-facturation-picker-target="description"></textarea>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="jsb-picker-carte">
+                    <legend class="fs-6" style="color:#0d2440;">Où vous faire payer</legend>
+                    {% if comptes is empty %}
+                        <p class="text-muted small mb-0">
+                            Aucun compte bancaire enregistré : la note ne dira pas où virer.
+                            Chemin : Finances → Comptes bancaires.
+                        </p>
+                    {% else %}
+                        <p class="text-muted small mb-2">
+                            Ces comptes figureront sur la note. Décochez ceux que vous ne voulez pas y voir.
+                        </p>
+                        {% for c in comptes %}
+                            <div class="form-check">
+                                {# TOUS COCHÉS : une note qui ne dit pas où payer oblige l'assureur
+                                   à rappeler. C'est le bloc « Informations de paiement » du PDF. #}
+                                <input class="form-check-input" type="checkbox" checked
+                                       id="jsb-fact-compte-{{ c.id }}" value="{{ c.id }}"
+                                       data-facturation-picker-target="compte">
+                                <label class="form-check-label" for="jsb-fact-compte-{{ c.id }}">
+                                    {{ c.intitule }}{% if c.numero %} <span class="text-muted small">· {{ c.numero }}</span>{% endif %}
+                                </label>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                </fieldset>
+
+                <fieldset class="jsb-picker-carte">
+                    <legend class="fs-6" style="color:#0d2440;">Signature</legend>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="jsb-fact-signataire">Signataire</label>
+                            <input type="text" class="form-control" id="jsb-fact-signataire"
+                                   name="facturation_signataire" autocomplete="off"
+                                   value="{{ signataire }}"
+                                   data-facturation-picker-target="signataire">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="jsb-fact-titre">Titre du signataire</label>
+                            <input type="text" class="form-control" id="jsb-fact-titre"
+                                   name="facturation_titre" autocomplete="off"
+                                   placeholder="Ex : Directeur Général"
+                                   data-facturation-picker-target="titreSignataire">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <section class="jsb-picker-carte" aria-label="Ce qui sera enregistré" aria-live="polite">
+                    <p class="mb-0" data-facturation-picker-target="apercu"></p>
+                </section>
+            {% endif %}
+        </div>
+
+        <div class="jsb-picker-foot">
+            <span class="text-muted small me-auto">
+                La note est émise <strong>validée</strong> : elle entre aussitôt au suivi du recouvrement.
+            </span>
+            <button type="button" class="btn btn-outline-secondary" data-picker-close>Annuler</button>
+            {% if groupe and groupe.lignes is not empty %}
+                <button type="button" class="btn btn-primary"
+                        data-picker-executer
+                        data-facturation-picker-target="executer">Enregistrer</button>
+            {% endif %}
+        </div>
+
+        {#
+            LE PIED D'APRÈS : il remplace celui du dessus une fois la note écrite.
+            Émettre une note sans pouvoir l'ouvrir obligerait à la retrouver dans la
+            rubrique pour l'envoyer — le geste serait à moitié fait.
+        #}
+        <div class="jsb-picker-foot" data-facturation-picker-target="footSucces" hidden>
+            <span class="text-success small me-auto" data-facturation-picker-target="messageSucces"></span>
+            <button type="button" class="btn btn-outline-secondary" data-picker-close>Fermer</button>
+            <button type="button" class="btn btn-outline-primary"
+                    data-facturation-picker-target="suivant"
+                    data-action="click->facturation-picker#facturerLesSuivantes" hidden>Facturer les suivantes</button>
+            <button type="button" class="btn btn-primary"
+                    data-action="click->facturation-picker#ouvrirLePdf">Ouvrir la note (PDF)</button>
+        </div>
+    </div>
+</div>

@@ -2,6 +2,7 @@
 
 namespace App\Tests\Services\Note;
 
+use App\Entity\Article;
 use App\Entity\Chargement;
 use App\Entity\ChargementPourPrime;
 use App\Entity\Client;
@@ -76,7 +77,7 @@ class SourceDeFacturationTest extends KernelTestCase
         $noms = [self::ENTREPRISE_NOM, self::VOISIN_NOM];
         $emails = [self::OWNER_EMAIL, self::VOISIN_EMAIL];
 
-        $tables = ['revenu_pour_courtier', 'tranche', 'chargement_pour_prime', 'cotation', 'piste', 'client', 'portefeuille', 'type_revenu', 'chargement', 'invite'];
+        $tables = ['article', 'note', 'revenu_pour_courtier', 'tranche', 'chargement_pour_prime', 'cotation', 'piste', 'client', 'portefeuille', 'type_revenu', 'chargement', 'invite'];
         foreach ($tables as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom IN (:noms)",
@@ -237,6 +238,163 @@ class SourceDeFacturationTest extends KernelTestCase
         self::assertContains($mien['revenuId'], $this->identifiants($facturables),
             'Une commission jamais encaissée doit être facturable : c\'est le cas nominal, celui '
             . 'que l\'assistant n\'arrivait pas à trouver.',
+        );
+    }
+
+    /**
+     * Pose une note de commission portant UNE ligne sur ce revenu, et rend la note.
+     *
+     * `quantite` à 1 et la tranche du dossier : c'est exactement ce qu'écrivent le
+     * picker et l'assistant. Le montant de la ligne n'est pas stocké — il se dérive.
+     */
+    private function facturer(array $cabinet, int $type, bool $validee): Note
+    {
+        $em = $this->em();
+
+        $note = (new Note())
+            ->setNom('Note de test')
+            ->setType($type)
+            ->setAddressedTo(Note::TO_CLIENT)
+            ->setReference('N-TEST-' . uniqid())
+            ->setSignature((string) time())
+            ->setValidated($validee);
+        $note->setEntreprise($cabinet['entreprise']);
+        $em->persist($note);
+
+        $revenu = $em->getRepository(RevenuPourCourtier::class)->find($cabinet['revenuId']);
+
+        $article = (new Article())->setQuantite(1.0);
+        $article->setNote($note)->setRevenuFacture($revenu)->setTranche($cabinet['tranche']);
+        $article->setEntreprise($cabinet['entreprise']);
+        $em->persist($article);
+        // Côté inverse : le calcul du déjà-facturé lit `revenu->getArticles()`.
+        $revenu->addArticle($article);
+        $note->addArticle($article);
+
+        $em->flush();
+
+        return $note;
+    }
+
+    /**
+     * LE DÉFAUT QUE CE CHANTIER FERME. « Facturable » lisait le solde IMPAYÉ : une
+     * commission déjà facturée mais pas encore réglée gardait un solde entier, et se
+     * proposait une seconde fois. Sur un écran qui coche tout d'office, c'est une
+     * double facturation en un clic.
+     */
+    public function testUneCommissionDejaFactureeNEstPlusProposee(): void
+    {
+        $mien = $this->semerUnCabinet(self::ENTREPRISE_NOM, self::OWNER_EMAIL, 'MIEN');
+
+        // AVANT / APRÈS dans le même cas, et c'est ce qui rend l'assertion probante :
+        // la facture est la SEULE chose qui change. Un test qui n'observerait que
+        // l'après passerait aussi sur un service qui ne propose jamais rien.
+        $avant = $this->identifiants($this->service()->revenusFacturables(
+            $mien['entreprise'], Note::TO_CLIENT, $mien['clientId'],
+        ));
+        self::assertContains($mien['revenuId'], $avant, 'Avant facturation, la commission est due.');
+
+        $this->facturer($mien, Note::TYPE_NOTE_DE_DEBIT, true);
+
+        // ⚠ LA COMMISSION N'A PAS ÉTÉ ENCAISSÉE POUR AUTANT : aucun paiement n'a été
+        // saisi. L'ancienne règle, qui lisait le solde IMPAYÉ, la reproposait donc ici
+        // — c'est exactement le défaut que ce cas verrouille.
+        $apres = $this->identifiants($this->service()->revenusFacturables(
+            $mien['entreprise'], Note::TO_CLIENT, $mien['clientId'],
+        ));
+
+        self::assertNotContains($mien['revenuId'], $apres,
+            'La commission a déjà été portée sur une note de débit : la proposer de nouveau '
+            . 'émettrait deux pièces pour le même argent.',
+        );
+    }
+
+    /**
+     * LES BROUILLONS COMPTENT AUSSI. Une ligne qui existe est un montant déjà réclamé
+     * quelque part, que quelqu'un ait appuyé sur « valider » ou non. Un brouillon est
+     * une note en cours, pas une note nulle.
+     */
+    public function testUneNoteNonValideeBloqueAussi(): void
+    {
+        $mien = $this->semerUnCabinet(self::ENTREPRISE_NOM, self::OWNER_EMAIL, 'MIEN');
+        $this->facturer($mien, Note::TYPE_NOTE_DE_DEBIT, false);
+
+        $facturables = $this->identifiants($this->service()->revenusFacturables(
+            $mien['entreprise'],
+            Note::TO_CLIENT,
+            $mien['clientId'],
+        ));
+
+        self::assertNotContains($mien['revenuId'], $facturables,
+            'Une note NON validée porte quand même la ligne : ignorer son état de validation '
+            . 'est ce qui empêche la double facturation.',
+        );
+    }
+
+    /**
+     * L'AVOIR ROUVRE CE QU'IL ANNULE. Sans cela, une erreur de facturation serait
+     * définitive : on ne pourrait ni la corriger, ni refacturer correctement.
+     */
+    public function testUnAvoirRendLeRevenuDeNouveauFacturable(): void
+    {
+        $mien = $this->semerUnCabinet(self::ENTREPRISE_NOM, self::OWNER_EMAIL, 'MIEN');
+        $this->facturer($mien, Note::TYPE_NOTE_DE_DEBIT, true);
+        $this->facturer($mien, Note::TYPE_NOTE_DE_CREDIT, true);
+
+        $facturables = $this->identifiants($this->service()->revenusFacturables(
+            $mien['entreprise'],
+            Note::TO_CLIENT,
+            $mien['clientId'],
+        ));
+
+        self::assertContains($mien['revenuId'], $facturables,
+            'L\'avoir a annulé la facture : le revenu redevient facturable, sinon une erreur '
+            . 'de saisie serait définitive.',
+        );
+    }
+
+    /**
+     * LE CRÉDIT EST LE MIROIR, ET CE N'EST PAS UN CONFORT. `preparer_facturation`
+     * accepte `type: credit` depuis toujours. Si le crédit lisait « reste à facturer »,
+     * un revenu intégralement facturé rendrait 0 — et l'assistant ne pourrait plus
+     * produire aucun avoir. Cette assertion est une non-régression.
+     */
+    public function testUnAvoirResteProposableSurUnRevenuEntierementFacture(): void
+    {
+        $mien = $this->semerUnCabinet(self::ENTREPRISE_NOM, self::OWNER_EMAIL, 'MIEN');
+        $this->facturer($mien, Note::TYPE_NOTE_DE_DEBIT, true);
+
+        $enDebit = $this->identifiants($this->service()->revenusFacturables(
+            $mien['entreprise'], Note::TO_CLIENT, $mien['clientId'], null, Note::TYPE_NOTE_DE_DEBIT,
+        ));
+        $enCredit = $this->identifiants($this->service()->revenusFacturables(
+            $mien['entreprise'], Note::TO_CLIENT, $mien['clientId'], null, Note::TYPE_NOTE_DE_CREDIT,
+        ));
+
+        self::assertNotContains($mien['revenuId'], $enDebit, 'Plus rien à facturer en débit.');
+        self::assertContains($mien['revenuId'], $enCredit,
+            'On ne peut annuler que ce qu\'on a émis : un revenu entièrement facturé doit rester '
+            . 'proposable pour un AVOIR.',
+        );
+    }
+
+    /**
+     * LE COURTIER DOIT SAVOIR QUI BLOQUE. Répondre « rien à facturer » à quelqu'un qui
+     * a l'échéance sous les yeux est une énigme : la pesée rend donc la note en cause.
+     */
+    public function testLaPeseeNommeLaNoteQuiBloque(): void
+    {
+        $mien = $this->semerUnCabinet(self::ENTREPRISE_NOM, self::OWNER_EMAIL, 'MIEN');
+        $note = $this->facturer($mien, Note::TYPE_NOTE_DE_DEBIT, true);
+
+        $pesee = $this->service()->pesee($mien['entreprise'], Note::TO_CLIENT, $mien['clientId']);
+
+        self::assertSame([], $pesee['retenus'], 'Il ne reste rien à facturer.');
+        self::assertCount(1, $pesee['ecartes']);
+        self::assertSame(
+            $note->getId(),
+            $pesee['ecartes'][0]['note']?->getId(),
+            'L\'écarté doit désigner la note qui le consomme : c\'est elle que l\'écran nommera.',
         );
     }
 

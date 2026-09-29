@@ -10,6 +10,7 @@ use App\Entity\RevenuPourCourtier;
 use App\Entity\Taxe;
 use App\Entity\Tranche;
 use App\Services\CanvasBuilder;
+use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -40,7 +41,9 @@ use Doctrine\ORM\EntityManagerInterface;
  *
  * ── LES QUATRE DESTINATAIRES, ET CE QU'ILS DOIVENT ──────────────────────────
  * Un revenu n'est pas « facturable » dans l'absolu : il l'est POUR QUELQU'UN.
- *  - assureur / client  → la COMMISSION du courtier reste due          (solde_restant_du)
+ *  - assureur / client  → la COMMISSION qui n'a pas encore été PORTÉE SUR UNE NOTE
+ *    (cf. `montantFacturable()` : ce qui reste à facturer, et non ce qui reste à
+ *    encaisser — la confusion des deux produisait une double facturation) ;
  *  - partenaire         → la RÉTROCOMMISSION reste à reverser          (retroCommissionSolde)
  *  - autorité fiscale   → la TAXE reste à reverser, et c'est le REDEVABLE de la
  *    taxe qui dit laquelle : au courtier (taxeCourtierSolde) ou à l'assureur
@@ -62,6 +65,10 @@ final class SourceDeFacturation
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly CanvasBuilder $canvasBuilder,
+        // Le montant d'une ligne de note ne se lit pas : il se derive du revenu, de
+        // la tranche et de la quantite. Une seule formule, celle que l'apercu et le
+        // PDF appliquent deja.
+        private readonly IndicatorCalculationHelper $calculs,
     ) {
     }
 
@@ -81,16 +88,44 @@ final class SourceDeFacturation
         int $addressedTo,
         ?int $cibleId = null,
         ?Tranche $tranche = null,
+        int $type = Note::TYPE_NOTE_DE_DEBIT,
+    ): array {
+        return array_map(
+            static fn (array $retenu): RevenuPourCourtier => $retenu['revenu'],
+            $this->pesee($entreprise, $addressedTo, $cibleId, $tranche, $type)['retenus'],
+        );
+    }
+
+    /**
+     * CE QUI EST FACTURABLE, ET CE QUI NE L'EST PLUS — avec, pour chaque écarté, la
+     * note qui le consomme.
+     *
+     * ── POURQUOI RENDRE AUSSI LES ÉCARTÉS ───────────────────────────────────────
+     * Répondre « rien à facturer » à un courtier qui a l'échéance sous les yeux, et
+     * dont l'écran annonce une commission exigible, est une énigme, pas une réponse.
+     * Il lui faut la PIÈCE responsable : « déjà facturée par la note N… du 12/09 ».
+     * Le service la connaît — c'est en parcourant les lignes qu'il a calculé le reste
+     * —, il serait absurde de la jeter pour la faire rechercher ensuite.
+     *
+     * @return array{retenus: list<array{revenu: RevenuPourCourtier, montant: float}>,
+     *               ecartes: list<array{revenu: RevenuPourCourtier, note: ?Note}>}
+     */
+    public function pesee(
+        Entreprise $entreprise,
+        int $addressedTo,
+        ?int $cibleId = null,
+        ?Tranche $tranche = null,
+        int $type = Note::TYPE_NOTE_DE_DEBIT,
     ): array {
         // SANS DESTINATAIRE, ON NE PROPOSE RIEN. « Facturable » n'a pas de sens
         // dans l'absolu : c'est le destinataire qui dit quelle dette on regarde.
         if (!in_array($addressedTo, self::destinatairesConnus(), true)) {
-            return [];
+            return ['retenus' => [], 'ecartes' => []];
         }
 
         $candidats = $this->candidats($entreprise, $addressedTo, $cibleId, $tranche);
         if ($candidats === []) {
-            return [];
+            return ['retenus' => [], 'ecartes' => []];
         }
 
         $autorite = $addressedTo === Note::TO_AUTORITE_FISCALE && $cibleId !== null
@@ -98,38 +133,132 @@ final class SourceDeFacturation
             : null;
 
         $retenus = [];
+        $ecartes = [];
         foreach ($candidats as $revenu) {
             $this->canvasBuilder->loadAllCalculatedValues($revenu);
-            if ($this->soldeDu($revenu, $addressedTo, $autorite) > self::SEUIL_SOLDE) {
-                $retenus[] = $revenu;
+            $montant = $this->montantFacturable($revenu, $addressedTo, $autorite, $type);
+
+            if ($montant > self::SEUIL_SOLDE) {
+                $retenus[] = ['revenu' => $revenu, 'montant' => round($montant, 2)];
+                continue;
             }
+            $ecartes[] = ['revenu' => $revenu, 'note' => $this->derniereNoteDe($revenu)];
         }
 
-        return $retenus;
+        return ['retenus' => $retenus, 'ecartes' => $ecartes];
     }
 
     /**
-     * Le solde que CE destinataire doit encore sur ce revenu. 0 quand il ne doit
-     * rien — ou quand on ne sait pas dire quoi, ce qui revient au même ici.
+     * Ce qu'il reste à porter sur une note, pour CE destinataire et CE type.
+     *
+     * ── « FACTURABLE » NE VEUT PAS DIRE « IMPAYÉ » ──────────────────────────────
+     * Cette règle lisait `solde_restant_du`, qui mesure ce qui n'a pas été ENCAISSÉ.
+     * Une commission déjà facturée mais pas encore réglée gardait donc un solde
+     * entier — et se proposait une seconde fois. Tant que la ligne se choisissait à
+     * la main, cela passait ; un écran qui coche tout d'office en aurait fait une
+     * double facturation en un clic.
+     *
+     * On compte donc ce qui a été FACTURÉ, pas ce qui a été payé.
+     *
+     * ── LE CRÉDIT EST LE MIROIR, ET IL N'EST PAS OPTIONNEL ──────────────────────
+     * Un avoir n'annule pas ce qui reste à facturer : il annule ce qui l'a été. Sans
+     * cette symétrie, un revenu intégralement facturé rendrait 0 pour un crédit — et
+     * l'assistant, qui accepte `type: credit` depuis toujours, ne pourrait plus
+     * produire aucun avoir. Ce n'est pas un ajout, c'est une non-régression.
      */
-    private function soldeDu(RevenuPourCourtier $revenu, int $addressedTo, ?AutoriteFiscale $autorite): float
-    {
-        return match (true) {
-            // La rétrocommission due à l'intermédiaire, pas la commission du cabinet.
-            $addressedTo === Note::TO_PARTENAIRE => (float) ($revenu->retroCommissionSolde ?? 0.0),
-
+    private function montantFacturable(
+        RevenuPourCourtier $revenu,
+        int $addressedTo,
+        ?AutoriteFiscale $autorite,
+        int $type,
+    ): float {
+        // Les deux autres axes gardent leurs soldes propres : `retroCommissionSolde`
+        // et les soldes de taxe tracent déjà le REVERSÉ, pas l'encaissé. Y toucher
+        // serait une seconde correction, sans nécessité.
+        if ($addressedTo === Note::TO_PARTENAIRE) {
+            return (float) ($revenu->retroCommissionSolde ?? 0.0);
+        }
+        if ($addressedTo === Note::TO_AUTORITE_FISCALE) {
             // LE REDEVABLE DE LA TAXE DÉCIDE, jamais le type de note : une taxe sur la
             // commission due par le courtier et une taxe due par l'assureur ne se
             // reversent pas sur le même solde (cf. Taxe::REDEVABLE_*).
-            $addressedTo === Note::TO_AUTORITE_FISCALE => match ($autorite?->getTaxe()?->getRedevable()) {
+            return match ($autorite?->getTaxe()?->getRedevable()) {
                 Taxe::REDEVABLE_COURTIER => (float) ($revenu->taxeCourtierSolde ?? 0.0),
                 Taxe::REDEVABLE_ASSUREUR => (float) ($revenu->taxeAssureurSolde ?? 0.0),
                 default => 0.0, // autorité inconnue ou sans taxe : on ne devine pas.
-            },
+            };
+        }
 
-            // Assureur et client : la commission de courtage restant due.
-            default => (float) ($revenu->solde_restant_du ?? 0.0),
-        };
+        // Assureur et client : la commission de courtage.
+        $facture = $this->dejaFacture($revenu);
+
+        return $type === Note::TYPE_NOTE_DE_CREDIT
+            // On ne peut annuler que ce qu'on a émis.
+            ? $facture
+            // Ce qui n'a pas encore été porté sur une note.
+            : (float) ($revenu->montantCalculeTTC ?? 0.0) - $facture;
+    }
+
+    /**
+     * CE QUI A DÉJÀ ÉTÉ PORTÉ SUR UNE NOTE, tous états confondus.
+     *
+     * ── LES BROUILLONS COMPTENT, ET C'EST VOULU ─────────────────────────────────
+     * On ne regarde pas `validated`. Une ligne qui existe, c'est un montant déjà
+     * réclamé quelque part : le refacturer produirait deux pièces pour le même argent,
+     * que quelqu'un ait appuyé sur « valider » ou non. Un brouillon est une note en
+     * cours, pas une note nulle.
+     *
+     * Le risque symétrique — un brouillon oublié qui bloque une facturation légitime —
+     * est visible et réparable : l'écran NOMME la note qui bloque, on la retrouve, on
+     * la supprime. Le risque inverse, lui, se découvre chez l'assureur.
+     *
+     * ── UN AVOIR REND FACTURABLE ────────────────────────────────────────────────
+     * Une ligne de note de CRÉDIT retranche : c'est exactement ce qu'un avoir fait.
+     */
+    private function dejaFacture(RevenuPourCourtier $revenu): float
+    {
+        $total = 0.0;
+        foreach ($revenu->getArticles() as $article) {
+            $note = $article->getNote();
+            if (!$this->estUneNoteDeCommission($note)) {
+                continue;
+            }
+            $montant = (float) $this->calculs->getArticleMontant($article);
+            $total += $note->getType() === Note::TYPE_NOTE_DE_CREDIT ? -$montant : $montant;
+        }
+
+        return $total;
+    }
+
+    /**
+     * La note la plus récente qui porte ce revenu — celle qu'on nomme au courtier
+     * quand il n'y a plus rien à facturer. null si aucune.
+     */
+    private function derniereNoteDe(RevenuPourCourtier $revenu): ?Note
+    {
+        $derniere = null;
+        foreach ($revenu->getArticles() as $article) {
+            $note = $article->getNote();
+            if (!$this->estUneNoteDeCommission($note)) {
+                continue;
+            }
+            if ($derniere === null || (int) $note->getId() > (int) $derniere->getId()) {
+                $derniere = $note;
+            }
+        }
+
+        return $derniere;
+    }
+
+    /**
+     * Une note de COMMISSION : adressée au client ou à l'assureur. Une note à un
+     * partenaire ou à une autorité fiscale porte une rétrocommission ou une taxe —
+     * la compter ici ferait disparaître une commission qui n'a jamais été réclamée.
+     */
+    private function estUneNoteDeCommission(?Note $note): bool
+    {
+        return $note !== null
+            && in_array($note->getAddressedTo(), [Note::TO_CLIENT, Note::TO_ASSUREUR], true);
     }
 
     /**
@@ -191,6 +320,102 @@ final class SourceDeFacturation
      * @return array{type: int, addressedTo: int, cible: ?int, nom: string} `cible` =
      *         identifiant de l'assureur ou du client, null s'il est introuvable
      */
+    /**
+     * CE QU'IL Y A À FACTURER DANS UNE SÉLECTION D'ÉCHÉANCES, groupé par destinataire.
+     *
+     * ── POURQUOI GROUPER ────────────────────────────────────────────────────────
+     * Une note a UN destinataire. Une sélection qui mêle deux assureurs ne peut donc
+     * pas produire une seule pièce : on la sépare, l'écran en propose une à la fois
+     * et annonce ce qui reste. Mélanger produirait une facture que personne ne peut
+     * ni payer ni comptabiliser.
+     *
+     * Le groupe est indexé par la cible et ORDONNÉ PAR NOM : l'ordre doit être
+     * déterministe, sinon deux ouvertures de la même sélection proposeraient des
+     * assureurs différents, et le courtier ne saurait plus où il en est.
+     *
+     * @param list<int> $trancheIds les échéances cochées, déjà scopées par l'appelant
+     *
+     * @return list<array{cible: ?int, nom: string, lignes: list<array{trancheId: int,
+     *         revenuId: int, libelle: string, police: string, echeance: string, montant: float}>,
+     *         ecartes: list<array{police: string, noteId: ?int, noteReference: ?string, noteDate: ?string}>}>
+     */
+    public function facturableDansLaSelection(
+        Entreprise $entreprise,
+        array $tranches,
+        int $addressedTo = Note::TO_ASSUREUR,
+        int $type = Note::TYPE_NOTE_DE_DEBIT,
+    ): array {
+        $groupes = [];
+
+        foreach ($tranches as $tranche) {
+            if (!$tranche instanceof Tranche) {
+                continue;
+            }
+            $cotation = $tranche->getCotation();
+            $destinataire = $addressedTo === Note::TO_CLIENT
+                ? $cotation?->getPiste()?->getClient()
+                : $cotation?->getAssureur();
+
+            // SANS DESTINATAIRE, PAS DE NOTE. Une police sans assureur enregistré ne
+            // se facture pas : on ne devine pas à qui l'adresser.
+            if ($destinataire === null) {
+                continue;
+            }
+
+            $cle = (int) $destinataire->getId();
+            $groupes[$cle] ??= [
+                'cible' => $cle,
+                'nom' => (string) $destinataire->getNom(),
+                'lignes' => [],
+                'ecartes' => [],
+            ];
+
+            $pesee = $this->pesee($entreprise, $addressedTo, $cle, $tranche, $type);
+            $police = $this->policeDe($tranche);
+
+            foreach ($pesee['retenus'] as $retenu) {
+                $groupes[$cle]['lignes'][] = [
+                    'trancheId' => (int) $tranche->getId(),
+                    'revenuId' => (int) $retenu['revenu']->getId(),
+                    'libelle' => (string) $retenu['revenu']->getNom(),
+                    'police' => $police,
+                    'echeance' => $tranche->getEcheanceAt()?->format('d/m/Y') ?? '',
+                    'montant' => $retenu['montant'],
+                ];
+            }
+
+            // CE QUI EST ÉCARTÉ SE DIT, AVEC LA PIÈCE QUI LE RETIENT. « Rien à
+            // facturer » devant une échéance dont l'écran annonce une commission
+            // exigible est une énigme, pas une réponse.
+            foreach ($pesee['ecartes'] as $ecarte) {
+                $note = $ecarte['note'];
+                $groupes[$cle]['ecartes'][] = [
+                    'police' => $police,
+                    'noteId' => $note?->getId(),
+                    'noteReference' => $note?->getReference(),
+                    'noteDate' => $note?->getSentAt()?->format('d/m/Y'),
+                ];
+            }
+        }
+
+        // Ordre déterministe : le nom du destinataire, pas l'ordre de la sélection.
+        $liste = array_values($groupes);
+        usort($liste, static fn (array $a, array $b): int => strcasecmp($a['nom'], $b['nom']));
+
+        return $liste;
+    }
+
+    /** La référence de police d'une échéance — ce que le courtier lit sur sa liste. */
+    private function policeDe(Tranche $tranche): string
+    {
+        $cotation = $tranche->getCotation();
+        $avenant = $cotation !== null && !$cotation->getAvenants()->isEmpty()
+            ? $cotation->getAvenants()->first()
+            : null;
+
+        return (string) ($avenant?->getReferencePolice() ?? $tranche->getNom() ?? '');
+    }
+
     public function entetePour(Tranche|Avenant $source, int $type, int $addressedTo = Note::TO_ASSUREUR): array
     {
         $cotation = $source->getCotation();
