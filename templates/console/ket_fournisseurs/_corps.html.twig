@@ -101,6 +101,10 @@
         .kf-maillon.is-actif .kf-maillon__etat { color: #0f5132; }
         .kf-maillon.is-epuise .kf-maillon__nom { text-decoration: line-through; }
         .kf-maillon.is-epuise .kf-maillon__etat { color: #842029; }
+        /* Refusé PAR LE FOURNISSEUR : même gravité qu'« à sec », cause différente.
+           #842029 sur blanc ≈ 7,4:1 (WCAG 1.4.3), et le mot « refusé » porte seul
+           l'information — la couleur ne fait que la redoubler (WCAG 1.4.1). */
+        .kf-maillon.is-refuse .kf-maillon__etat { color: #842029; }
         .kf-maillon.is-saturee .kf-maillon__etat { color: #664d03; }
         /* Non configure : on l'estompe sans le cacher — il faut pouvoir lire quel
            modele SERAIT appele le jour ou la cle sera posee. */

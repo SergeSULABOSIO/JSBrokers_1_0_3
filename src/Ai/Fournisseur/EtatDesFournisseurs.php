@@ -248,6 +248,12 @@ final class EtatDesFournisseurs
                     // le maillon qu'on lit, et « indisponible » est un état comme les
                     // autres. Sans lui, l'écran n'avait pas de mot à mettre.
                     'indisponible' => !$fournisseur->estDisponible(),
+                    // LE REFUS DU FOURNISSEUR LUI-MÊME, quatrième cause de silence. Il
+                    // ne se déduit d'aucun compteur local : notre fenêtre de débit est
+                    // même PARFAITEMENT VIDE quand Google refuse, puisque rien ne passe.
+                    // C'est ce qui faisait dire « a la place pour un tour » à un écran
+                    // dont les trois modèles venaient de répondre 503 (2026-09-28).
+                    'refus' => $this->refus->dernier($modele),
                 ] + $this->debitDe($modele, $suitLeDebit);
             }
             if ($fournisseur instanceof FournisseurAReplis) {
@@ -259,25 +265,31 @@ final class EtatDesFournisseurs
                         'principal' => false,
                         'epuise' => $aSec,
                         'indisponible' => !$fournisseur->estDisponible(),
+                        'refus'        => $this->refus->dernier($repli),
                     ] + $this->debitDe($repli, $suitLeDebit);
                 }
             }
 
-            // ⚠ « QUI RÉPOND » TIENT COMPTE DES TROIS REFUS POSSIBLES, et il a fallu
-            // deux corrections pour les réunir tous.
+            // ⚠ « QUI RÉPOND » TIENT COMPTE DES QUATRE REFUS POSSIBLES, et il a fallu
+            // trois corrections pour les réunir tous.
             //
             //  · INDISPONIBLE — pas de clé d'API sur ce serveur. Le fournisseur ne peut
             //    répondre à rien, et l'écran l'annonçait pourtant comme répondant : un
             //    « anthropic · non configuré » affichait « claude-haiku-4-5 répond ».
             //  · À SEC — marque durable posée quand le fournisseur se déclare épuisé.
             //  · MINUTE PLEINE — notre fenêtre de débit, qui se vide toute seule.
+            //  · REFUSÉ — le fournisseur a dit non il y a quelques minutes. AUCUN
+            //    compteur local ne le sait : quand Google répond 503, notre fenêtre
+            //    reste vide puisque rien ne part. C'est la cause qui manquait, et la
+            //    console affichait « gemini-flash-lite-latest répond » à la minute même
+            //    où ce modèle renvoyait « high demand » (2026-09-28, vu sur pièces).
             //
-            // Les trois se ressemblent à l'écran et n'appellent pas le même geste. Les
+            // Les quatre se ressemblent à l'écran et n'appellent pas le même geste. Les
             // confondre, c'est envoyer l'agent réarmer un fournisseur qui n'a pas de clé.
             $repondAvec = null;
             if ($fournisseur->estDisponible()) {
                 foreach ($chaine as $maillon) {
-                    if ($maillon['epuise'] || ($maillon['minutePleine'] ?? false)) {
+                    if ($maillon['epuise'] || ($maillon['minutePleine'] ?? false) || ($maillon['refus'] ?? null) !== null) {
                         continue;
                     }
                     $repondAvec = $maillon['nom'];
@@ -366,6 +378,15 @@ final class EtatDesFournisseurs
             return ['peut' => $repondAvec !== null, 'cause' => 'hors_debit', 'detail' => 'Non soumis à la fenêtre de jetons par minute.'];
         }
 
+        // ⚠ UNE CHAÎNE VIDE N'EST PAS UN TOUR TROP GROS. Sans ce garde, la boucle
+        // ci-dessous ne s'exécute jamais, `$meilleure` reste null, et le verdict tombait
+        // sur `trop_gros` — « un seul tour coûte ~58 537 jetons, au-delà du plafond de
+        // 212 500 ». Deux chiffres qui se contredisent dans leur propre phrase, servis
+        // au sujet d'un fournisseur qui n'annonce aucun modèle (le simulateur).
+        if ($chaine === []) {
+            return ['peut' => false, 'cause' => 'absent', 'detail' => 'Aucun modèle déclaré pour ce fournisseur.'];
+        }
+
         $meilleure = null;
         $refusRecent = null;
         foreach ($chaine as $maillon) {
@@ -377,7 +398,7 @@ final class EtatDesFournisseurs
             // 2026-09-28 : fenêtre vide, verdict « peut répondre », et les trois modèles
             // répondant « high demand ». Un modèle qui vient de refuser ne compte pas
             // comme disponible, si libre que soit sa minute.
-            $dernier = $this->refus->dernier($maillon['nom']);
+            $dernier = $maillon['refus'] ?? null;
             if ($dernier !== null) {
                 $refusRecent ??= $maillon['nom'] . ' : ' . $dernier['motif']
                     . sprintf(' (il y a %d s)', $dernier['secondes']);

@@ -409,12 +409,35 @@ export default class extends Controller {
                 // geste : « non configuré » attend une clé sur le serveur, « à sec » une
                 // échéance ou un réarmement, « minute pleine » se résout seule en moins
                 // d'une minute, « en attente » veut dire qu'un modèle placé avant répond.
+                //
+                // ⚠ « REFUSÉ » PASSE AVANT TOUT LE RESTE. C'est le seul état qu'aucun
+                // compteur local ne peut deviner : quand le fournisseur répond 503, notre
+                // fenêtre de débit reste à 100 % puisque rien ne part. L'écran affichait
+                // donc « répond · 100 % » sur un modèle qui venait de dire non — la
+                // contradiction relevée le 2026-09-28 entre le chat et cette page.
+                const refus = maillon.refus || null;
                 etatMot.textContent = maillon.indisponible === true
                     ? 'non configuré'
-                    : (repond
-                        ? 'répond'
-                        : (maillon.epuise ? 'à sec' : (minutePleine ? 'minute pleine' : 'en attente')));
+                    : (refus
+                        ? 'refusé'
+                        : (repond
+                            ? 'répond'
+                            : (maillon.epuise ? 'à sec' : (minutePleine ? 'minute pleine' : 'en attente'))));
                 item.appendChild(etatMot);
+
+                if (refus) {
+                    // LA CAUSE ET SON ÂGE, en clair, à la place de la jauge. Un
+                    // pourcentage de débit n'apprend rien sur un modèle dont le refus ne
+                    // vient pas de nous : l'afficher serait remettre en scène l'indice
+                    // qui a induit l'agent en erreur.
+                    item.classList.add('is-refuse');
+                    const cause = document.createElement('span');
+                    cause.className = 'kf-maillon__hors';
+                    cause.textContent = `${refus.motif} — il y a ${refus.secondes} s`;
+                    item.appendChild(cause);
+                    liste.appendChild(item);
+                    return;
+                }
 
                 if (typeof maillon.debitPart === 'number') {
                     // UNE JAUGE PLUS UN CHIFFRE. Un pourcentage nu ne se compare pas d'un
@@ -488,11 +511,18 @@ export default class extends Controller {
                 // enverrait l'agent réarmer un fournisseur qui n'a rien.
                 const toutesPleines = chaine.length > 0
                     && chaine.every((m) => m.minutePleine === true && m.epuise !== true);
-                // TROIS CAUSES, TROIS PHRASES. Dire « à sec » d'un fournisseur sans clé
+                // Refusé PAR LE FOURNISSEUR : ni notre fenêtre, ni une marque à réarmer.
+                // Le bandeau annonçait « toute la chaîne est à sec » et invitait à
+                // réarmer, alors que les trois modèles répondaient 503 « high demand » —
+                // rien à réarmer, rien à attendre d'autre que la fin de la pointe.
+                const toutesRefusees = chaine.length > 0 && chaine.every((m) => m.refus);
+                // QUATRE CAUSES, QUATRE PHRASES. Dire « à sec » d'un fournisseur sans clé
                 // envoyait l'agent cliquer « Réarmer » sur une marque qui n'existe pas.
-                alerte.textContent = toutesPleines
-                    ? 'Tous les modèles ont leur minute pleine : Ket répondra dès que la fenêtre se libère, sans intervention.'
-                    : "Toute la chaîne est à sec : ce fournisseur ne répond plus tant qu'une échéance n'est pas passée ou qu'il n'est pas réarmé.";
+                alerte.textContent = toutesRefusees
+                    ? 'Tous les modèles refusent en ce moment, chez le fournisseur : il n’y a rien à réarmer de notre côté. Cela passe en général en quelques minutes.'
+                    : (toutesPleines
+                        ? 'Tous les modèles ont leur minute pleine : Ket répondra dès que la fenêtre se libère, sans intervention.'
+                        : "Toute la chaîne est à sec : ce fournisseur ne répond plus tant qu'une échéance n'est pas passée ou qu'il n'est pas réarmé.");
                 bloc.appendChild(alerte);
             }
 
