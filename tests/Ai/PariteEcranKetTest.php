@@ -3,6 +3,7 @@
 namespace App\Tests\Ai;
 
 use App\Ai\Parite\CouvertureDesEcrans;
+use App\Ai\Parite\LibellesDesActionsDEcran;
 use App\Ai\Trousse\TrousseCatalogue;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -41,21 +42,20 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 class PariteEcranKetTest extends KernelTestCase
 {
     /**
-     * Où vivent les déclarations d'`attribute_actions`. Les canevas de formulaire en
-     * portent l'essentiel, mais trois entités et un contrôleur en déclarent aussi —
-     * les oublier ferait passer le test en ignorant un quart de l'inventaire.
+     * Où vivent les déclarations d'`attribute_actions` — la liste vit désormais dans
+     * {@see LibellesDesActionsDEcran::SOURCES}, et ce test la consomme.
+     *
+     * ⚠ ELLE EST PARTAGÉE, ET C'EST TOUT L'INTÉRÊT. L'inventaire que Ket récite relève
+     * les mêmes fichiers pour y lire les LIBELLÉS des boutons ; deux listes auraient
+     * fini par diverger, et ce test aurait alors surveillé un fichier que l'inventaire
+     * ignore — Ket réciterait un inventaire troué sans que rien ne rougisse.
+     *
+     * (Le commentaire d'origine parlait de « trois entités et un contrôleur » qui
+     * déclaraient aussi des actions. Ce n'est plus vrai : Avenant, Client et Invite
+     * n'en déclarent plus aucune, tout a migré dans les providers. Les chemins restent
+     * pour que le jour où l'on y remettrait une action, elle soit vue.)
      */
-    private const SOURCES = [
-        'src/Services/Canvas/Provider/Form',
-        'src/Services/Canvas/FormCanvasProvider.php',
-        'src/Entity/Avenant.php',
-        'src/Entity/Client.php',
-        'src/Entity/Invite.php',
-        'src/Controller/Admin/ProductionIntermediaireController.php',
-        // L'atelier de rapprochement des bordereaux déclare ses propres gestes de
-        // ligne (créer / corriger la police d'une ligne) au même format `event`.
-        'src/Controller/Admin/BordereauController.php',
-    ];
+    private const SOURCES = LibellesDesActionsDEcran::SOURCES;
 
     /**
      * Les actions d'écran RÉELLEMENT déclarées, relevées dans le code.

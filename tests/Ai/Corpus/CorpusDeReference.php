@@ -846,6 +846,19 @@ final class CorpusDeReference
                 'Crée-moi le compte client de Mme Perrin.',
                 ['preparer_operations'], Trousse::ECRITURE, CasDuCorpus::ECRITURE,
             ),
+            // ── FACTURER UNE COMMISSION ────────────────────────────────────────
+            // Le pendant EXACT du cas « impayes-commissions-facturables », qui reste
+            // en lecture sous suivi_impayes. Le même verbe, deux intentions : chiffrer
+            // ce qui est facturable, et émettre la pièce. Les garder côte à côte est
+            // ce qui empêche le nouvel outil de voler les demandes de recouvrement.
+            new CasDuCorpus(
+                'ecriture-facturer-commission-echeance',
+                'Facture cette commission à l’assureur : prépare-moi la note de débit.',
+                ['preparer_facturation'], Trousse::ECRITURE, CasDuCorpus::ECRITURE,
+                antecedent: 'La prime de cette échéance est soldée, la commission de 11,60 $ est donc exigible.',
+                note: 'Le cas qui a fait naître l’outil : Ket répondait qu’elle ne trouvait « aucune '
+                    . 'tranche de commission associée à cette police », alors que l’écran l’affichait.',
+            ),
             new CasDuCorpus(
                 'ecriture-creer-client-depuis-kyc',
                 'Voici le KYC. Crée-moi le compte de ce client.',

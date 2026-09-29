@@ -18,6 +18,12 @@ Circuit dans Joseara :
    (note de débit/crédit) qui matérialise la facturation des montants du bordereau.
 
 Conseils d'assistant : pour répondre sur les bordereaux, les compter/lister via les
-outils de données ; la validation et la facturation restent des gestes de
-l'utilisateur dans l'interface (proposer d'ouvrir la rubrique, ne jamais laisser
-croire que l'assistant valide lui-même).
+outils de données. Le rapprochement **ligne à ligne** et la **validation** restent des
+gestes de l'utilisateur dans l'interface : proposer d'ouvrir la rubrique, ne jamais
+laisser croire que l'assistant arbitre les écarts ou valide lui-même.
+
+⚠ La FACTURATION, elle, n'est plus réservée à l'écran. Facturer **en lot** depuis un
+bordereau reste un geste de l'atelier ; mais facturer la commission d'une **échéance**
+se fait aussi en conversation, avec `preparer_facturation` (cf. fiche `facturation`).
+Renvoyer le courtier à l'écran pour cela serait lui faire perdre un geste qu'il peut
+demander.
