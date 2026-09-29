@@ -6,6 +6,7 @@ use App\Ai\Engine\GeminiAiEngine;
 use App\Ai\Fournisseur\EtatDesFournisseurs;
 use App\Ai\Fournisseur\FournisseurAReplis;
 use App\Ai\Fournisseur\MemoireDEpuisement;
+use App\Ai\Fournisseur\MemoireDesRefus;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
@@ -45,8 +46,10 @@ class ChaineDeModelesTest extends KernelTestCase
     private function oublierTout(): void
     {
         $memoire = static::getContainer()->get(MemoireDEpuisement::class);
+        $refus = static::getContainer()->get(MemoireDesRefus::class);
         foreach (self::MODELES as $modele) {
             $memoire->oublier(MemoireDEpuisement::cle('moteur', 'gemini', $modele));
+            $refus->oublier($modele);
         }
     }
 
@@ -118,6 +121,76 @@ class ChaineDeModelesTest extends KernelTestCase
         self::assertNull(
             $this->etatDuMoteur()['repondAvec'],
             'Aucun modèle ne peut répondre : l’écran ne doit en nommer aucun.'
+        );
+    }
+
+    /**
+     * ⚠ LE TEST QUI MANQUAIT LE 2026-09-28, et son absence a coûté la journée.
+     *
+     * Les 3 410 tests étaient verts pendant que la console affichait
+     * « gemini-flash-lite-latest répond · 100 % » à la minute même où ce modèle
+     * renvoyait 503 « This model is currently experiencing high demand ». Aucun test
+     * ne pouvait le voir : ils mesuraient tous NOTRE compteur, et notre compteur est
+     * précisément vide quand le fournisseur refuse — rien ne part, donc rien n'est
+     * consommé. Une suite verte ne prouvait rien sur cet écran-là.
+     *
+     * Le refus du fournisseur est la QUATRIÈME cause de silence, et la seule qui ne se
+     * déduise d'aucune donnée locale. Elle doit donc être lue là où elle est écrite.
+     */
+    public function testUnModeleQueLeFournisseurVientDeRefuserNeRepondPas(): void
+    {
+        $moteur = $this->moteur();
+        $principal = $moteur->modeleEnVigueur();
+
+        static::getContainer()->get(MemoireDesRefus::class)
+            ->noter($principal, 'surchargé chez le fournisseur');
+
+        $etat = $this->etatDuMoteur();
+
+        self::assertNotSame(
+            $principal,
+            $etat['repondAvec'],
+            'Le fournisseur vient de refuser ce modèle : l’écran ne doit pas l’annoncer comme répondant.'
+        );
+        self::assertNotNull($etat['chaine'][0]['refus'], 'Le refus doit être porté par le maillon, pour que l’écran le nomme.');
+        self::assertSame($moteur->modelesDeRepli()[0], $etat['repondAvec']);
+    }
+
+    /**
+     * Toute la chaîne refusée : le verdict doit dire REFUS, et non « peut répondre ».
+     *
+     * C'est la contradiction exacte constatée sur pièces : notre fenêtre à 100 %, le
+     * verdict « a la place pour un tour », et le courtier lisant dans le chat que Ket
+     * ne peut pas répondre.
+     */
+    public function testToutRefuseDonneUnVerdictDeRefusEtAucunModele(): void
+    {
+        $refus = static::getContainer()->get(MemoireDesRefus::class);
+        foreach (self::MODELES as $modele) {
+            $refus->noter($modele, 'surchargé chez le fournisseur');
+        }
+
+        $etat = $this->etatDuMoteur();
+
+        self::assertNull($etat['repondAvec'], 'Aucun modèle ne peut répondre : l’écran ne doit en nommer aucun.');
+        self::assertFalse($etat['verdict']['peut'], 'Le verdict doit refuser, et non annoncer une place disponible.');
+        self::assertSame('refuse', $etat['verdict']['cause']);
+    }
+
+    /** Le refus s'efface de lui-même : passée la fenêtre, le modèle redevient éligible. */
+    public function testUnRefusOublieRendLeModeleAuService(): void
+    {
+        $moteur = $this->moteur();
+        $principal = $moteur->modeleEnVigueur();
+        $refus = static::getContainer()->get(MemoireDesRefus::class);
+
+        $refus->noter($principal, 'surchargé chez le fournisseur');
+        $refus->oublier($principal);
+
+        self::assertSame(
+            $principal,
+            $this->etatDuMoteur()['repondAvec'],
+            'Un refus passé ne doit pas écarter durablement un modèle : ce n’est pas un épuisement.'
         );
     }
 

@@ -77,6 +77,29 @@ final class DialecteGeminiDuFil implements DialecteDuFil
     /** @var string[] modèles de secours pas encore essayés, dans l'ordre */
     private array $replisRestants;
 
+    /**
+     * TOUTE la chaîne du message, y compris les modèles déjà quittés.
+     *
+     * `replisRestants` ne dit que « ce qui n'a pas encore été essayé ». C'est la bonne
+     * liste pour fuir une PANNE — on ne rejoue pas un modèle qui vient de tomber. C'est
+     * la mauvaise pour fuir une MINUTE PLEINE : un modèle abandonné il y a cinq secondes
+     * sur un 503 passager a, lui, sa fenêtre de débit entièrement libre. C'est même le
+     * seul qui en ait, puisque celui qui a répondu vient de consommer la sienne.
+     *
+     * @var list<string>
+     */
+    private array $chaineComplete = [];
+
+    /**
+     * Les modèles déjà retenus PAR LA BASCULE DE DÉBIT, dans ce message.
+     *
+     * Borne l'oscillation : sans elle, deux modèles qui se remplissent à tour de rôle
+     * se renverraient la balle jusqu'à épuisement des tours.
+     *
+     * @var list<string>
+     */
+    private array $debitDejaTentes = [];
+
     /** Le modèle que le RÉGLAGE demandait la dernière fois qu'on a regardé. */
     private string $modeleRegle;
 
@@ -166,6 +189,8 @@ final class DialecteGeminiDuFil implements DialecteDuFil
             array_map('trim', explode(',', (string) ($this->replisConfigures)())),
             static fn (string $m): bool => $m !== '' && $m !== $configure,
         ));
+        $this->chaineComplete = array_merge([$configure], $this->replisRestants);
+        $this->debitDejaTentes = [];
     }
 
     /** La marque d'épuisement du modèle configuré — vide quand rien ne la nomme. */
@@ -378,17 +403,50 @@ final class DialecteGeminiDuFil implements DialecteDuFil
      */
     public function basculerFauteDeDebit(\Closure $aDeLaPlace, AiRequest $request, Phase $phase): ?string
     {
-        // ⚠ ON NE REVIENT JAMAIS EN ARRIÈRE, exactement comme la bascule sur erreur : un
-        // modèle déjà quitté reste quitté pour ce message. Sans cette règle, deux modèles
-        // saturés à tour de rôle feraient osciller la boucle jusqu'à épuisement des tours.
-        while ($this->replisRestants !== []) {
-            $candidat = array_shift($this->replisRestants);
+        // ⚠ ON REGARDE TOUTE LA CHAÎNE, PAS SEULEMENT CE QUI RESTE À ESSAYER — et c'est
+        // la correction du 2026-09-28, prouvée sur le journal d'un message réel :
+        //
+        //     repli   | abandonne=gemini-3.1-flash-lite    | motif=indisponible
+        //     repli   | abandonne=gemini-flash-lite-latest | motif=indisponible
+        //     message | modele=gemini-3.5-flash-lite | issue=budget_atteint | restant=0
+        //
+        // Le message fuit deux 503, arrive sur le troisième modèle, QUI RÉPOND. La
+        // planification consomme sa minute ; la rédaction manque alors de place. À cet
+        // instant `replisRestants` est vide, et Ket annonçait au courtier « relancez dans
+        // 21 secondes » — pendant que les deux modèles quittés affichaient une fenêtre
+        // libre à 100 %, ce que la console montrait fidèlement. Deux écrans exacts, une
+        // contradiction totale.
+        //
+        // Fuir une PANNE et fuir une MINUTE PLEINE ne sont pas le même geste. Un modèle
+        // tombé reste tombé — un 503 se répéterait. Mais un modèle quitté il y a cinq
+        // secondes a une fenêtre de débit intacte : il est LE candidat, pas un exclu.
+        // On paie au pire un aller-retour réseau ; l'alternative était une demi-minute
+        // d'attente annoncée à l'utilisateur alors qu'aucune attente n'était nécessaire.
+        //
+        // `debitDejaTentes` borne l'oscillation : chaque modèle n'est retenu qu'une fois
+        // par ce chemin, donc au plus N bascules de débit dans un message.
+        foreach ($this->chaineComplete as $candidat) {
+            if ($candidat === $this->modeleCourant || \in_array($candidat, $this->debitDejaTentes, true)) {
+                continue;
+            }
             if (!$aDeLaPlace($candidat)) {
                 continue;
             }
 
+            $this->debitDejaTentes[] = $candidat;
+            // Il ne sera pas rejoué par la bascule d'ERREUR non plus : les deux chemins
+            // partagent la même chaîne, et un modèle retenu ici n'est plus « à essayer ».
+            $this->replisRestants = array_values(array_filter(
+                $this->replisRestants,
+                static fn (string $m): bool => $m !== $candidat,
+            ));
+
             $abandonne = $this->modeleCourant;
             $this->modeleCourant = $candidat;
+            // Le modèle QUITTÉ entre lui aussi dans la borne : sans cela, une chaîne de
+            // trois modèles pourrait revenir sur son point de départ et rouvrir le
+            // cycle. Chaque modèle n'est ainsi visité qu'une fois par message.
+            $this->debitDejaTentes[] = $abandonne;
 
             $this->logger->warning('Assistant IA (gemini) : débit saturé sur le modèle courant, bascule sur un modèle qui a de la place.', [
                 'abandonne' => $abandonne,
@@ -413,6 +471,18 @@ final class DialecteGeminiDuFil implements DialecteDuFil
         Trousse $trousse,
         Phase $phase,
     ): array {
+        // ⚠ RETENU QUELQUES MINUTES, pour que la CONSOLE puisse le dire. Un 503 ne pose
+        // aucune marque durable — ce n'est pas un épuisement — et ne laissait donc de
+        // trace que dans le journal, que l'écran ne lit pas. L'agent voyait « peut
+        // répondre » pendant que les trois modèles refusaient.
+        //
+        // ⚠ ON NOTE CELUI QUI VIENT DE REFUSER, pas celui qu'on quitte. Écrit d'abord
+        // dans la boucle, le refus n'était enregistré que pour un modèle ABANDONNÉ au
+        // profit d'un suivant — le DERNIER de la chaîne n'en a pas, la boucle sort et
+        // l'exception remonte. Le seul modèle que la console ne voyait pas refuser
+        // était donc précisément celui qui faisait échouer le message (2026-09-28).
+        $this->refus?->noter($this->modeleCourant, self::motifDuRefus($origine));
+
         while ($this->replisRestants !== []) {
             $abandonne = $this->modeleCourant;
             $this->modeleCourant = array_shift($this->replisRestants);
@@ -422,15 +492,6 @@ final class DialecteGeminiDuFil implements DialecteDuFil
                 'repli'     => $this->modeleCourant,
                 'details'   => AiEngineFailure::detailsPourJournal($origine),
             ]);
-
-            // ⚠ RETENU QUELQUES MINUTES, pour que la CONSOLE puisse le dire. Un 503 ne
-            // pose aucune marque durable — ce n'est pas un épuisement — et ne laissait
-            // donc de trace que dans le journal, que l'écran ne lit pas. L'agent voyait
-            // « peut répondre » pendant que les trois modèles refusaient.
-            $this->refus?->noter(
-                $abandonne,
-                AiEngineFailure::estLimiteDeDebit($origine) ? 'débit refusé par le fournisseur' : 'surchargé chez le fournisseur',
-            );
 
             // ⚠ DANS LE CANAL DE CAMPAGNE, pas seulement dans le journal général : c'est
             // le seul que `app:assistant:tokens:rapport` relit. Un message qui change de
@@ -455,10 +516,28 @@ final class DialecteGeminiDuFil implements DialecteDuFil
                 if (!AiEngineFailure::estMoteurIndisponible($e) && !AiEngineFailure::estLimiteDeDebit($e)) {
                     throw $e;
                 }
+                // Ce modèle-ci vient de refuser à son tour. Il est noté qu'il reste ou
+                // non un secours après lui : c'est justement le dernier qui manquait.
+                $this->refus?->noter($this->modeleCourant, self::motifDuRefus($e));
             }
         }
 
         throw $origine;
+    }
+
+    /**
+     * Le refus, dit avec le mot qui appelle le bon geste.
+     *
+     * Un 429 vient de NOTRE consommation — elle retombera. Un 503 « high demand » vient
+     * de la charge des autres, et aucun réglage de notre côté n'y change quoi que ce
+     * soit : le confondre avec un quota enverrait l'agent réarmer une marque qui
+     * n'existe pas.
+     */
+    private static function motifDuRefus(\Throwable $e): string
+    {
+        return AiEngineFailure::estLimiteDeDebit($e)
+            ? 'débit refusé par le fournisseur'
+            : 'surchargé chez le fournisseur';
     }
 
     /**

@@ -891,7 +891,21 @@ final class OrchestrateurDeMessage
     private function messageQuotaEpuise(?int $delai): string
     {
         if ($delai !== null) {
-            return $this->messageDebitSature($delai);
+            // ⚠ NE PAS RÉUTILISER messageDebitSature() ICI NON PLUS, et pour la raison
+            // SYMÉTRIQUE de celle notée au-dessus : ce texte-là décrit NOTRE fenêtre de
+            // jetons par minute, « partagée par tout le cabinet ». Or on arrive ici
+            // parce que le FOURNISSEUR a dit non — son propre quota, sa propre charge.
+            //
+            // Le 2026-09-28, les trois modèles Gemini refusaient (429 et 503 « high
+            // demand ») pendant que notre compteur était vide à 100 %. Ket accusait donc
+            // le cabinet d'avoir trop consommé, la console affichait une minute libre,
+            // et les deux se contredisaient sans qu'aucune des deux ne nomme la cause.
+            // Un utilisateur qui lit « limite partagée par tout le cabinet » cherche qui,
+            // chez lui, monopolise Ket : il cherchera longtemps.
+            return 'Mon fournisseur d’intelligence artificielle refuse mes appels en ce moment — '
+                . 'ses serveurs sont saturés, et cela ne vient ni de votre demande ni de la '
+                . sprintf('consommation du cabinet. Relancez-la dans %d secondes ', max(1, $delai))
+                . 'et je la termine : ce que j’ai déjà rassemblé reste dans le fil.';
         }
 
         return 'Mon moteur a épuisé son quota pour le moment — une limite partagée par tout le '

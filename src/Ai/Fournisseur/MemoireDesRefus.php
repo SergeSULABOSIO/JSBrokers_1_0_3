@@ -66,6 +66,18 @@ final class MemoireDesRefus
         return ['secondes' => max(0, $age), 'motif' => (string) ($enregistre['motif'] ?? '')];
     }
 
+    /**
+     * Efface la trace, pour les tests et pour un réarmement manuel.
+     *
+     * ⚠ LE CACHE EST PARTAGÉ : un test qui pose un refus sans l'effacer écarte ce
+     * modèle pour tous les suivants — le défaut exact que la mémoire d'épuisement
+     * documente déjà dans ChaineDeModelesTest.
+     */
+    public function oublier(string $modele): void
+    {
+        $this->cache->deleteItem($this->cle($modele));
+    }
+
     private function cle(string $modele): string
     {
         return 'ket.refus.' . preg_replace('/[^a-zA-Z0-9_.-]/', '_', $modele);
