@@ -69,6 +69,26 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
                     "event" => "ui:tranche.signaler-paiement-prime",
                     "url"   => "/admin/tranche/api/get-paiement-prime-context/%id%",
                 ],
+                // ── RÉCLAMER LA COMMISSION DE CETTE ÉCHÉANCE ──────────────────────
+                //
+                // Le geste qui suit le précédent : la prime payée rend la commission
+                // exigible, et c'est alors qu'on la facture. Le dialogue s'ouvre avec
+                // le type, le destinataire et l'objet déjà posés — déduits de la
+                // police par SourceDeFacturation, la MÊME règle que l'assistant.
+                //
+                // ⚠ SANS CE BOUTON, LA PARITÉ JOUERAIT À L'ENVERS. Ket sait facturer
+                // depuis une échéance ; un écran qui ne le saurait pas obligerait le
+                // courtier à passer par la conversation pour un geste de rubrique.
+                //
+                // AUCUNE CONDITION D'AFFICHAGE : le serveur seul sait si quelque chose
+                // reste dû, et il le dira dans le dialogue. Un bouton masqué
+                // n'apprendrait rien à celui qui cherche pourquoi il ne peut pas facturer.
+                [
+                    "label" => "Facturer la commission",
+                    "icon"  => "note",
+                    "event" => "ui:tranche.facturer-commission",
+                    "url"   => "/admin/note/api/get-facturation-context/%id%",
+                ],
             ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [

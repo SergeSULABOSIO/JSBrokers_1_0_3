@@ -3,6 +3,7 @@
 namespace App\Ai\Guide;
 
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
  * Fiches de connaissance métier de l'assistant IA (« skills » à divulgation
@@ -16,11 +17,22 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  */
 final class GuideRepository
 {
-    /** @var array<string, array{titre: string, description: string, chemin: string}>|null */
+    /** @var array<string, array{titre: string, description: string, chemin: ?string, derivee: ?FicheDerivee}>|null */
     private ?array $catalogue = null;
 
+    /**
+     * @param iterable<FicheDerivee> $derivees Fiches CALCULÉES, qui entrent au
+     *        catalogue par la même porte que les `.md` — sans quoi `slugs()` ne les
+     *        contiendrait pas, et l'enum du schéma de `consulter_guide` les
+     *        rendrait injoignables.
+     *
+     *        ⚠ LA VALEUR PAR DÉFAUT N'EST PAS UNE COMMODITÉ : `ConsulterGuideToolTest`
+     *        instancie ce dépôt à la main, sans conteneur, pour éprouver le catalogue
+     *        sans booter le noyau. La lui retirer casserait ce test.
+     */
     public function __construct(
         #[Autowire('%kernel.project_dir%')] private readonly string $projectDir,
+        #[AutowireIterator('app.ai_fiche_derivee')] private readonly iterable $derivees = [],
     ) {
     }
 
@@ -47,12 +59,19 @@ final class GuideRepository
             return null;
         }
 
-        $contenu = @file_get_contents($fiches[$slug]['chemin']);
+        // Une fiche DÉRIVÉE ne se lit pas sur le disque : elle se calcule, et
+        // seulement ici — c'est-à-dire seulement quand le modèle l'ouvre.
+        $derivee = $fiches[$slug]['derivee'] ?? null;
+        if ($derivee instanceof FicheDerivee) {
+            return $derivee->contenu();
+        }
+
+        $contenu = @file_get_contents((string) $fiches[$slug]['chemin']);
 
         return $contenu === false ? null : $contenu;
     }
 
-    /** @return array<string, array{titre: string, description: string, chemin: string}> */
+    /** @return array<string, array{titre: string, description: string, chemin: ?string, derivee: ?FicheDerivee}> */
     private function scan(): array
     {
         if ($this->catalogue !== null) {
@@ -67,8 +86,31 @@ final class GuideRepository
                 'titre'       => $titre,
                 'description' => $description,
                 'chemin'      => $chemin,
+                'derivee'     => null,
             ];
         }
+
+        foreach ($this->derivees as $derivee) {
+            $slug = $derivee->slug();
+            // ⚠ UNE DÉRIVÉE NE DOIT PAS ÉCLIPSER UN FICHIER. Un slug en double ferait
+            // disparaître une fiche `.md` du catalogue sans que rien ne le dise, et
+            // `consulter_guide` servirait autre chose que ce qu'on croit lui demander.
+            if (isset($this->catalogue[$slug])) {
+                throw new \LogicException(sprintf(
+                    'La fiche dérivée « %s » porte le slug d’une fiche existante (%s.md). '
+                    . 'Renomme-la : deux fiches ne peuvent pas répondre au même sujet.',
+                    $derivee::class,
+                    $slug,
+                ));
+            }
+            $this->catalogue[$slug] = [
+                'titre'       => $derivee->titre(),
+                'description' => $derivee->description(),
+                'chemin'      => null,
+                'derivee'     => $derivee,
+            ];
+        }
+
         ksort($this->catalogue);
 
         return $this->catalogue;

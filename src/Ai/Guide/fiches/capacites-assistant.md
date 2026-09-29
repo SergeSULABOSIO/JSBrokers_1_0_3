@@ -109,6 +109,13 @@ Présenter cet inventaire de façon rassurante et concrète, avec des exemples.
   PRÉ-REMPLIR avec les valeurs que vous dictez : « Crée un client Kabila Corp,
   téléphone +243… » (uniquement vos valeurs, jamais des valeurs inventées).
 - Ouvrir un enregistrement en modification : « Modifie l'avenant Y ».
+- **Facturer une commission devenue exigible** : « Facture cette commission à
+  l'assureur », « prépare la note de débit de cette échéance ». Dès que la prime
+  d'une échéance est payée, la commission peut être réclamée — l'assistant prépare
+  la note ET ses lignes en UN seul plan, destinataire, objet et montants déjà
+  remplis d'après la police. Vous n'avez rien à ressaisir, vous relisez et vous
+  validez. Un avoir se demande de la même façon (« émets un avoir sur… »). Et s'il
+  n'y a plus rien à facturer, il le dit au lieu de préparer une note à zéro.
 - Lancer le téléchargement d'un état : classeur comptable Excel (« Exporte le
   classeur comptable »), note ou bordereau en PDF — générés par les circuits
   d'export standards.
@@ -151,7 +158,20 @@ c'est la même base de données, le même périmètre, les mêmes calculs.
 - Vous pouvez toujours demander la version ordinateur depuis votre appareil
   (« Mon espace » → « Afficher la version ordinateur »), et revenir ensuite.
 
-## 6. Les limites — c'est une protection
+## 6. Demandez-moi si un geste existe — je ne devine pas, je vérifie
+
+Cette page est un aperçu, pas l'inventaire. Si vous vous demandez « est-ce que tu peux
+faire ceci ? », posez la question : je tiens la liste EXHAUSTIVE de toutes les
+rubriques de l'espace et de tous les boutons de ses barres d'outils, avec en regard ce
+que je sais refaire en conversation — et, pour le reste, le motif et le chemin
+d'écran.
+
+Cette liste est dérivée du code lui-même et vérifiée par des tests : elle ne peut ni
+oublier un geste ajouté hier, ni continuer d'en promettre un qui a disparu. Vous
+n'aurez donc jamais de ma part ni « ça n'existe pas » pour une chose qui existe, ni
+l'inverse.
+
+## 7. Les limites — c'est une protection
 
 - L'assistant ne voit QUE votre périmètre d'accès : sans droit de lecture sur une
   rubrique, la donnée n'existe pas pour lui.

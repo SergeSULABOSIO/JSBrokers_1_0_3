@@ -78,6 +78,10 @@ final class CouvertureDesEcrans
 
         // ── Encaissements et reversements ──────────────────────────────────
         'ui:tranche.signaler-paiement-prime' => 'signaler_paiement_prime',
+        // Réclamer la commission d'une échéance : l'écran ouvre le dialogue de note
+        // prérempli, Ket prépare le plan complet — même règle de facturation
+        // (App\Services\Note\SourceDeFacturation), deux surfaces.
+        'ui:tranche.facturer-commission' => 'preparer_facturation',
         'ui:retroagent.reversement-request' => 'signaler_reversement_retro_agent',
         'ui:production.reversement-request' => 'signaler_reversement_retro_agent',
         'ui:production.versements-request' => 'retrocommissions',

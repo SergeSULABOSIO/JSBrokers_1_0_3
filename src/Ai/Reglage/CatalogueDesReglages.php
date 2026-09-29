@@ -176,6 +176,7 @@ final class CatalogueDesReglages
         'preparer_decision_conge'            => ['Décider d’un congé', 'Prépare l’approbation, le refus ou l’annulation d’une demande.', 'action:check'],
         'preparer_demande_conge'             => ['Demander un congé', 'Prépare et soumet une demande de congé.', 'action:calendar'],
         'preparer_document'                  => ['Produire un document', 'Fabrique un document officiel : Word, Excel, PDF, Markdown ou HTML.', 'document'],
+        'preparer_facturation'               => ['Facturer une commission', 'Émet la note de débit ou de crédit qui réclame une commission au destinataire qui la doit.', 'note'],
         'preparer_envoi_soa'                 => ['Envoyer un relevé de compte', 'Ouvre la boîte d’envoi du relevé, destinataires déjà ciblés.', 'contact'],
         'preparer_marquage_non_renouvelable' => ['Signaler une police non renouvelable', 'Marque une police comme sans suite, avec son motif.', 'action:no-renew'],
         'preparer_mouvement_avenant'         => ['Mouvement de police', 'Renouvellement, prorogation, annulation, résiliation.', 'avenant'],

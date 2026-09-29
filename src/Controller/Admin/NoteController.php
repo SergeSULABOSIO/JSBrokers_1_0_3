@@ -4,9 +4,12 @@ namespace App\Controller\Admin;
 
 use Dompdf\Dompdf;
 use Dompdf\Options;
+use App\Entity\Assureur;
 use App\Entity\Bordereau;
 use App\Entity\Note;
+use App\Entity\Tranche;
 use App\Entity\Invite;
+use App\Services\Note\SourceDeFacturation;
 use App\Constantes\Constante;
 use App\Form\NoteType;
 use App\Repository\NoteRepository;
@@ -53,6 +56,9 @@ class NoteController extends AbstractController
         // Ce qu'une note porte en naissant — partagé avec le circuit d'écriture commun,
         // pour qu'une note importée soit en tout point une note créée d'un clic.
         private ValeursDeNaissance $valeursDeNaissance,
+        // La règle de facturation, partagée avec l'assistant : l'en-tête d'une note
+        // déduite d'une échéance se calcule au même endroit pour les deux surfaces.
+        private SourceDeFacturation $sourceDeFacturation,
         CanvasBuilder $canvasBuilder
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait
@@ -103,12 +109,12 @@ class NoteController extends AbstractController
                 $this->valeursDeNaissance->poser($note);
                 $note->setInvite($invite);
 
-                // Pré-remplissage depuis un bordereau parent (parentContext du dialog-instance)
-                $bordereauId = $request->query->get('parent_id');
+                // Pré-remplissage depuis un parent (parentContext du dialog-instance)
+                $parentId = $request->query->get('parent_id');
                 $parentField = $request->query->get('parent_field_name');
 
-                if ($parentField === 'bordereau' && $bordereauId) {
-                    $bordereau = $this->em->find(Bordereau::class, (int)$bordereauId);
+                if ($parentField === 'bordereau' && $parentId) {
+                    $bordereau = $this->em->find(Bordereau::class, (int)$parentId);
                     if ($bordereau) {
                         $note->setBordereau($bordereau);
                         $note->setType(Note::TYPE_NOTE_DE_DEBIT);
@@ -120,9 +126,66 @@ class NoteController extends AbstractController
                     }
                 }
 
+                // FACTURER UNE ÉCHÉANCE, DEPUIS LA RUBRIQUE TRANCHES.
+                //
+                // Même déduction que la branche bordereau ci-dessus, et pour la même
+                // raison : réclamer la commission d'une échéance, c'est émettre une
+                // note de débit à l'assureur de sa police. Rien n'est deviné — tout
+                // vient de la tranche désignée.
+                //
+                // ⚠ ET C'EST LA MÊME RÈGLE QUE CELLE DE L'ASSISTANT. `entetePour()` est
+                // appelée ici et par `preparer_facturation` : l'écran et la conversation
+                // proposent le même en-tête, sinon ils diraient deux choses du même geste.
+                if ($parentField === 'tranche' && $parentId) {
+                    $tranche = $this->em->find(Tranche::class, (int)$parentId);
+                    if ($tranche !== null && $tranche->getEntreprise() === $this->getEntreprise()) {
+                        $entete = $this->sourceDeFacturation->entetePour(
+                            $tranche,
+                            Note::TYPE_NOTE_DE_DEBIT,
+                            Note::TO_ASSUREUR,
+                        );
+                        $note->setType($entete['type']);
+                        $note->setAddressedTo($entete['addressedTo']);
+                        $note->setNom($entete['nom']);
+                        if ($entete['cible'] !== null) {
+                            $note->setAssureur($this->em->find(Assureur::class, $entete['cible']));
+                        }
+                    }
+                }
+
                 $note->setReference('N' . time());
             }
         );
+    }
+
+    /**
+     * LE CONTEXTE POUR FACTURER UNE ÉCHÉANCE — ce que le bouton « Facturer la
+     * commission » de la rubrique Tranches demande avant d'ouvrir le dialogue.
+     *
+     * Miroir exact de `TrancheController::getPaiementPrimeContext()` : le cerveau a
+     * besoin du canevas de la Note et de l'identifiant du parent pour monter le
+     * dialogue ; le préremplissage, lui, se fait dans `getFormApi()`, que le dialogue
+     * appelle ensuite avec ce même parent.
+     */
+    #[Route('/api/get-facturation-context/{id}', name: 'api.get_facturation_context', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function getFacturationContext(Tranche $tranche, Request $request): JsonResponse
+    {
+        // Mutation à venir (création d'une note) : Écriture sur Note, fail-closed.
+        if (!$this->mayAccessEntity(Note::class, Invite::ACCESS_ECRITURE)) {
+            return $this->accessDeniedJson();
+        }
+        // Scoping : l'échéance doit appartenir à l'espace de travail courant.
+        if ($tranche->getEntreprise()?->getId() !== $this->getEntreprise()->getId()) {
+            return $this->json(['message' => 'Échéance introuvable dans cet espace de travail.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $idEntreprise = (int) $request->query->get('idEntreprise', 0);
+
+        return $this->json([
+            'trancheId' => $tranche->getId(),
+            'trancheNom' => $tranche->getNom(),
+            'formCanvas' => $this->canvasBuilder->getEntityFormCanvas(new Note(), $idEntreprise),
+        ]);
     }
 
     #[Route('/api/get-preview-url/{id}', name: 'api.get_preview_url', methods: ['GET'])]

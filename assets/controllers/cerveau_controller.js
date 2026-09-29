@@ -654,6 +654,9 @@ export default class extends Controller {
             case 'ui:tranche.signaler-paiement-prime':
                 this.handleTrancheSignalerPaiementPrime(payload);
                 break;
+            case 'ui:tranche.facturer-commission': // réclamer la commission d'une échéance
+                this.handleTrancheFacturerCommission(payload);
+                break;
             case 'ui:avenant.delete-piste-derivee':
                 this.handleAvenantDeletePisteDerivee(payload);
                 break;
@@ -2796,6 +2799,55 @@ export default class extends Controller {
         } catch (error) {
             console.error("[Cerveau] handleTrancheSignalerPaiementPrime() failed:", error);
             this._showNotification(error.message || "Impossible d'ouvrir le signalement de paiement de prime.", 'error');
+        } finally {
+            this.broadcast('app:loading.stop');
+        }
+    }
+
+    /**
+     * FACTURER LA COMMISSION D'UNE ÉCHÉANCE (action « Facturer la commission »).
+     *
+     * Jumeau de handleTrancheSignalerPaiementPrime, et le geste qui lui succède : la
+     * prime payée rend la commission exigible, et c'est alors qu'on émet la note.
+     *
+     * Le serveur rend le canevas de la Note et l'identifiant de l'échéance ; le
+     * dialogue, lui, ira chercher le formulaire avec ce parent — et c'est là que
+     * l'en-tête se préremplit (type, destinataire, objet), par la même règle que
+     * l'assistant applique. Ici, on ne décide de rien.
+     *
+     * @param {object} payload
+     * @param {string} payload.url - '/admin/note/api/get-facturation-context/{id}'
+     */
+    async handleTrancheFacturerCommission(payload) {
+        if (!payload.url) {
+            console.error("[Cerveau] handleTrancheFacturerCommission() : URL manquante.", payload);
+            this._showNotification("Impossible d'ouvrir la facturation : URL manquante.", 'error');
+            return;
+        }
+        try {
+            this.broadcast('app:loading.start');
+            const url = new URL(payload.url, window.location.origin);
+            if (this.currentIdEntreprise) {
+                url.searchParams.set('idEntreprise', this.currentIdEntreprise);
+            }
+            const response = await fetch(url.toString());
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.message || `Erreur serveur ${response.status}`);
+            const { trancheId, formCanvas } = result;
+
+            this.openDialogBox({
+                entity:           {},
+                entityFormCanvas: formCanvas,
+                isCreationMode:   true,
+                context: {
+                    idEntreprise: this.currentIdEntreprise,
+                    idInvite:     this.currentIdInvite,
+                },
+                parentContext: { id: trancheId, fieldName: 'tranche' },
+            });
+        } catch (error) {
+            console.error("[Cerveau] handleTrancheFacturerCommission() failed:", error);
+            this._showNotification(error.message || "Impossible d'ouvrir la facturation de la commission.", 'error');
         } finally {
             this.broadcast('app:loading.stop');
         }

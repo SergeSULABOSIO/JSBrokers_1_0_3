@@ -83,6 +83,19 @@ final class SelecteurDeTrousse
         // une saisie. Ces trois mots — offre, cotation, proposition — ouvraient les
         // seuls faux négatifs du corpus.
         . 'offre|cotation|proposition|devis|accord\b|mission|que faire|comment (faire|proc[ée]der)|'
+        // ÉMETTRE UNE PIÈCE, CE N'EST PAS LA CHIFFRER. « Facturer » est un mot à double
+        // fond : dans « combien puis-je facturer aux assureurs ? » il annonce une
+        // LECTURE — le corpus de référence range ce cas sous suivi_impayes — et dans
+        // « facture cette commission », un ordre d'écriture. Un radical ouvert à droite
+        // confondrait les deux et rouvrirait le sur-armement mesuré le 2026-09-24.
+        //
+        // On ne retient donc que les formes où le doute n'existe pas : le verbe suivi de
+        // CE QU'ON FACTURE, l'impératif adressé (« facture-moi »), et les deux noms de
+        // pièce qu'on ne prononce que pour en produire une.
+        . 'factur(?:e|es|ez)\s+(?:ce|cet|cette|ces|l[ae]s?|l[\'’]|mon|ma|mes|notre|nos)\b|'
+        . 'factur(?:e|ez)[- ](?:moi|nous|le|la|les)\b|'
+        . 'note de d[ée]bit|note de cr[ée]dit|'
+        . '[ée]met(?:s|tre|tez)\b|'
         . 'r[ée]ponds|trait(?:e|es|ez|er)\b|prends en charge)/iu';
 
     public function __construct(

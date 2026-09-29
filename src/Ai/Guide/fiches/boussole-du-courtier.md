@@ -103,7 +103,9 @@ mise en place). Tant qu'une proposition n'a **aucun avenant**, ce n'est qu'un **
   suffit à désigner le bénéficiaire. Pour en verser une à un agent :
   `signaler_reversement_retro_agent`.
 - Commission générée / encaissée / exigible : `indicateur_calcule`.
-- Bordereaux et facturation en lot : rubrique Bordereaux → Note (`ouvrir_rubrique`, `exporter_etat`).
+- Facturer une commission devenue exigible (note de débit à l'assureur, ou avoir) :
+  `preparer_facturation`. Facturer **en lot** depuis un bordereau reste un geste de
+  l'atelier : rubrique Bordereaux → Note (`ouvrir_rubrique`, `exporter_etat`).
 - Devoir fiscal (TVA) : `document_comptable`.
 - Configuration du cabinet encore incomplète : `etat_configuration` (propriétaire uniquement).
 - Créer piste → cotation → avenant, ou une tâche : `parcours_saisie` puis `preparer_operations`.

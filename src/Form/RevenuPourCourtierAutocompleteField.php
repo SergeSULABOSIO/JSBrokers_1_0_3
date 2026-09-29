@@ -2,8 +2,13 @@
 
 namespace App\Form;
 
+use App\Entity\Article;
+use App\Entity\Entreprise;
 use App\Entity\Note;
 use App\Entity\RevenuPourCourtier;
+use App\Services\Note\SourceDeFacturation;
+use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use App\Services\FormListenerFactory;
 use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
@@ -21,7 +26,8 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
         private FormListenerFactory $ecouteurFormulaire,
         private RequestStack $requestStack,
         private EntityManagerInterface $em,
-        private CanvasBuilder $canvasBuilder
+        private CanvasBuilder $canvasBuilder,
+        private SourceDeFacturation $sourceDeFacturation
     ) {}
 
     // NOUVEAU : Propriété pour stocker les options résolues.
@@ -51,7 +57,32 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
             // FormTreeInspector qui monte le formulaire pour en lire l'arborescence,
             // worker de Ket), il filtre sur l'entreprise -1 et rend une liste vide. Sans
             // identité, on ne propose rien — jamais tout.
-            'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
+            //
+            // ── ET LA RÈGLE MÉTIER PAR-DESSUS ────────────────────────────────────
+            // Le cabinet ne suffit pas : on ne facture pas un revenu déjà soldé. Cette
+            // règle vit dans SourceDeFacturation, et c'est la MÊME que l'assistant
+            // applique — une seule règle, deux surfaces.
+            //
+            // ⚠ ELLE PASSE PAR LE QUERY_BUILDER, ET C'EST OBLIGÉ. L'endpoint
+            // d'autocomplétion ne lit QUE cette option (cf.
+            // WrappedEntityTypeAutocompleter::createFilteredQueryBuilder) : une liste
+            // posée en « choices » serait simplement ignorée par la recherche AJAX.
+            // Les soldes étant CALCULÉS, on ne peut pas les exprimer en DQL — on
+            // calcule donc les identifiants éligibles, et on restreint dessus.
+            'query_builder' => function (EntityRepository $er): QueryBuilder {
+                $qb = ($this->ecouteurFormulaire->setFiltreEntreprise())($er);
+                $eligibles = $this->identifiantsFacturables();
+
+                // null = contexte inconnu (construction du formulaire, validation d'une
+                // valeur soumise). On s'en tient alors au cabinet : être fail-closed ICI
+                // refuserait une valeur parfaitement légitime au moment de l'enregistrer.
+                if ($eligibles !== null) {
+                    $qb->andWhere('e.id IN (:facturables)')
+                       ->setParameter('facturables', $eligibles ?: [0]);
+                }
+
+                return $qb;
+            },
         ]);
 
         // CORRECTION POUR LE SURLIGNAGE :
@@ -78,77 +109,91 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
         return BaseEntityAutocompleteType::class;
     }
 
-    private function fetchAndFilterEligibleRevenus(Options $options): array
+    /**
+     * LES REVENUS QU'ON PEUT ENCORE FACTURER, ou null quand le contexte ne le dit pas.
+     *
+     * Le destinataire vient soit du formulaire en cours de saisie (les paramètres
+     * `live_*` que pose le contrôleur Stimulus), soit de la note déjà enregistrée
+     * qu'on édite. Sans lui, « facturable » n'a pas de sens : on rend null, et
+     * l'appelant s'en tient au cloisonnement par cabinet.
+     *
+     * L'ÉLÉMENT DÉJÀ CHOISI RESTE TOUJOURS PROPOSÉ. Sans cela, rouvrir une ligne de
+     * facture dont le revenu a été soldé depuis viderait le champ, et l'utilisateur
+     * perdrait la donnée en enregistrant une correction sans rapport.
+     *
+     * @return list<int>|null identifiants facturables, null si le contexte est muet
+     */
+    private function identifiantsFacturables(): ?array
     {
-        $er = $this->em->getRepository($options['class']);
-        $entrepriseId = $this->ecouteurFormulaire->getCurrentEntrepriseId();
-        $request = $this->requestStack->getCurrentRequest();
-        
-        $liveAssureurId = $request?->query->get('live_assureur_id');
-        $liveClientId = $request?->query->get('live_client_id');
-        $livePartenaireId = $request?->query->get('live_partenaire_id');
-        
-        $qb = $er->createQueryBuilder('r')
-            ->addSelect('tr', 'c', 'a', 'assureur', 'piste', 'client')
-            ->join('r.typeRevenu', 'tr')
-            ->join('r.cotation', 'c')
-            ->leftJoin('c.avenants', 'a') 
-            ->leftJoin('c.assureur', 'assureur')
-            ->leftJoin('c.piste', 'piste')
-            ->leftJoin('piste.client', 'client')
-            ->where('tr.entreprise = :eseId')
-            ->setParameter('eseId', $entrepriseId);
-
-        // Applique les filtres de base (destinataire)
-        if ($liveAssureurId) { 
-            $qb->andWhere('assureur.id = :assureurId')->setParameter('assureurId', $liveAssureurId); 
-        } elseif ($liveClientId) { 
-            $qb->andWhere('client.id = :clientId')->setParameter('clientId', $liveClientId); 
-        } elseif ($livePartenaireId) {
-            // Le filtrage pour partenaire se fait en PHP car il dépend de la rétrocommission calculée
+        $contexte = $this->destinataireCourant();
+        if ($contexte === null) {
+            return null;
         }
 
-        $potentielsRevenus = $qb->getQuery()->getResult();
+        try {
+            $entreprise = $this->em->getRepository(Entreprise::class)
+                ->find($this->ecouteurFormulaire->getCurrentEntrepriseId());
+        } catch (\Throwable) {
+            return null; // pas d'utilisateur courant : le cloisonnement fera seul le travail.
+        }
+        if ($entreprise === null) {
+            return null;
+        }
 
-        // Filtre final en PHP après hydratation par le CanvasBuilder
-        return array_filter($potentielsRevenus, function(RevenuPourCourtier $revenu) {
-            $this->canvasBuilder->loadAllCalculatedValues($revenu);
-            
-            // On unifie le contexte : priorité au live, sinon fallback sur le statique.
-            $request = $this->requestStack->getCurrentRequest();
-            $parentNote = $this->currentOptions ? $this->currentOptions['parent_note'] : null;
-            $noteAddressedTo = $parentNote?->getAddressedTo();
+        [$addressedTo, $cibleId] = $contexte;
 
-            // Scénario 1: Rétro-commission
-            if ($request?->query->has('live_partenaire_id') || ($parentNote && $noteAddressedTo === Note::TO_PARTENAIRE)) {
-                return ($revenu->retroCommissionSolde ?? 0.0) > 0.01;
+        $ids = [];
+        foreach ($this->sourceDeFacturation->revenusFacturables($entreprise, $addressedTo, $cibleId) as $revenu) {
+            $ids[] = (int) $revenu->getId();
+        }
+
+        $dejaChoisi = $this->currentOptions['parent_article'] ?? null;
+        $idChoisi = $dejaChoisi instanceof Article ? $dejaChoisi->getRevenuFacture()?->getId() : null;
+        if ($idChoisi !== null && !in_array((int) $idChoisi, $ids, true)) {
+            $ids[] = (int) $idChoisi;
+        }
+
+        return $ids;
+    }
+
+    /**
+     * À QUI CETTE NOTE S'ADRESSE, et sur qui elle porte — lu dans la requête en cours
+     * de saisie, à défaut sur la note déjà enregistrée. null quand ni l'un ni l'autre
+     * ne le dit.
+     *
+     * @return array{0: int, 1: ?int}|null [destinataire, identifiant de la cible]
+     */
+    private function destinataireCourant(): ?array
+    {
+        $requete = $this->requestStack->getCurrentRequest();
+
+        // LE FORMULAIRE EN COURS D'ABORD : il porte ce que l'utilisateur vient de
+        // choisir, là où la note enregistrée porte encore l'état d'avant.
+        $live = [
+            'live_assureur_id' => Note::TO_ASSUREUR,
+            'live_client_id' => Note::TO_CLIENT,
+            'live_partenaire_id' => Note::TO_PARTENAIRE,
+            'live_autorite_id' => Note::TO_AUTORITE_FISCALE,
+        ];
+        foreach ($live as $parametre => $destinataire) {
+            $valeur = $requete?->query->get($parametre);
+            if ($valeur !== null && $valeur !== '') {
+                return [$destinataire, (int) $valeur];
             }
+        }
 
-            // Scénario 2: Taxe
-            $liveAutoriteId = $request?->query->get('live_autorite_id');
-            if ($liveAutoriteId || ($parentNote && $noteAddressedTo === Note::TO_AUTORITE_FISCALE)) {
-                $autoriteId = $liveAutoriteId ?? $parentNote?->getAutoritefiscale()?->getId();
-                if ($autoriteId) {
-                    $autorite = $this->em->getRepository(\App\Entity\AutoriteFiscale::class)->find($autoriteId);
-                    if ($autorite && $taxe = $autorite->getTaxe()) {
-                        if ($taxe->getRedevable() === \App\Entity\Taxe::REDEVABLE_COURTIER) {
-                            return ($revenu->taxeCourtierSolde ?? 0.0) > 0.01;
-                        } elseif ($taxe->getRedevable() === \App\Entity\Taxe::REDEVABLE_ASSUREUR) {
-                            return ($revenu->taxeAssureurSolde ?? 0.0) > 0.01;
-                        }
-                    }
-                }
-            }
+        $note = $this->currentOptions['parent_note'] ?? null;
+        if (!$note instanceof Note || $note->getAddressedTo() === null) {
+            return null;
+        }
 
-            // Scénario 3 (par défaut): Commission
-            $liveAssureurId = $request?->query->get('live_assureur_id');
-            $liveClientId = $request?->query->get('live_client_id');
-            if ($liveAssureurId || $liveClientId || ($parentNote && in_array($noteAddressedTo, [Note::TO_ASSUREUR, Note::TO_CLIENT]))) {
-                return ($revenu->solde_restant_du ?? 0.0) > 0.01;
-            }
-
-            return false; // Par défaut, on ne montre rien si le contexte n'est pas clair.
-        });
+        return [$note->getAddressedTo(), match ($note->getAddressedTo()) {
+            Note::TO_ASSUREUR => $note->getAssureur()?->getId(),
+            Note::TO_CLIENT => $note->getClient()?->getId(),
+            Note::TO_PARTENAIRE => $note->getPartenaire()?->getId(),
+            Note::TO_AUTORITE_FISCALE => $note->getAutoritefiscale()?->getId(),
+            default => null,
+        }];
     }
 
     /**
