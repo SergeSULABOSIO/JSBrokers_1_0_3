@@ -38,10 +38,20 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
             'parent_article' => null, // NOUVEAU : On définit l'option personnalisée.
             'parent_note' => null, // NOUVEAU : Pour recevoir l'entité Note parente.
             
-            // On utilise une closure simple pour le query_builder, qui est robuste pour la validation.
-            'query_builder' => function (\App\Repository\RevenuPourCourtierRepository $er) {
-                return $er->createQueryBuilder('r');
-            },
+            // ⚠ CE CHAMP LISTAIT LES REVENUS DE TOUS LES CABINETS.
+            //
+            // La closure posée ici était nue — `createQueryBuilder('r')`, sans la moindre
+            // clause WHERE. L'endpoint /autocomplete/revenu_pour_courtier_autocomplete_field
+            // renvoyait donc les revenus de n'importe quelle entreprise, et le dialogue de
+            // ligne de note laissait en sélectionner un. Dix-sept autres champs de ce
+            // dossier scopaient pourtant depuis toujours ; celui-ci et la tranche étaient
+            // les deux seuls à ne pas le faire.
+            //
+            // setFiltreEntreprise() est fail-closed : sans identité (ligne de commande,
+            // FormTreeInspector qui monte le formulaire pour en lire l'arborescence,
+            // worker de Ket), il filtre sur l'entreprise -1 et rend une liste vide. Sans
+            // identité, on ne propose rien — jamais tout.
+            'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
         ]);
 
         // CORRECTION POUR LE SURLIGNAGE :
