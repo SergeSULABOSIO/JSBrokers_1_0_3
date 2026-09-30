@@ -108,6 +108,43 @@ class ClientController extends AbstractController
     }
 
     /**
+     * OUVRIR UNE PISTE AU CLIENT SÉLECTIONNÉ — le contexte dont le dialogue a besoin.
+     *
+     * ── POURQUOI UNE ROUTE, ET POURQUOI ICI ─────────────────────────────────────
+     * Le dialogue qui va s'ouvrir est celui d'une PISTE, pas d'un client : il lui faut
+     * le canevas de formulaire de Piste, que la rubrique Clients n'a pas sous la main.
+     * C'est le même besoin — et le même calque — que
+     * {@see AvenantController::getPisteDeriveeContext()}.
+     *
+     * ── LE DROIT REGARDÉ EST CELUI DE LA PISTE ──────────────────────────────────
+     * Le geste CRÉE une piste ; il ne lit pas un client. Demander le droit de lecture
+     * sur Client laisserait ouvrir un formulaire que l'enregistrement refusera ensuite,
+     * ce qui se découvre après la saisie.
+     *
+     * Déclarée AVANT la route fourre-tout api/{id}/{collectionName}/{usage}.
+     */
+    #[Route('/api/{id}/piste-context', name: 'api.piste_context', requirements: ['id' => Requirement::DIGITS], methods: ['GET'], priority: 1)]
+    public function getPisteContext(Client $client): Response
+    {
+        if (!$this->mayAccessEntity(\App\Entity\Piste::class, \App\Entity\Invite::ACCESS_ECRITURE)) {
+            return $this->accessDeniedJson();
+        }
+
+        // Scoping : le client doit relever de l'espace de travail courant. On rend 404
+        // plutôt qu'un refus nommé — un identifiant étranger n'a pas à faire confirmer
+        // l'existence du client, ni à en livrer le nom.
+        $entreprise = $this->getEntreprise();
+        if ($entreprise === null || $client->getEntreprise()?->getId() !== $entreprise->getId()) {
+            throw $this->createNotFoundException("Client introuvable dans cet espace de travail.");
+        }
+
+        return $this->json([
+            'clientId'   => $client->getId(),
+            'formCanvas' => $this->canvasBuilder->getEntityFormCanvas(new \App\Entity\Piste(), $entreprise->getId()),
+        ]);
+    }
+
+    /**
      * Boîte de SÉLECTION d'un portefeuille cible pour un client (actions « Affecter à un
      * portefeuille » / « Transférer vers un autre portefeuille » de la rubrique Clients).
      * Miroir du picker de clients de la fiche Portefeuille : liste les portefeuilles de

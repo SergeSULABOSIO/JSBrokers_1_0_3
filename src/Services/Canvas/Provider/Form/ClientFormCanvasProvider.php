@@ -43,10 +43,23 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                 "Un classeur à son nom est créé en même temps que la fiche. Tous ses documents s'y rangent d'eux-mêmes, sans que vous ayez à y penser.",
                 "Le relevé de compte que vous lui enverrez se construit à partir de cette fiche : ce qui y manque manquera aussi sur le relevé.",
             ],
+            // ── LES ACTIONS SE RANGENT EN FAMILLES ──────────────────────────────────
+            //
+            // La barre d'outils n'affiche que QUATRE entrées en ligne ; au-delà, le
+            // surplus tombe dans « Autres actions ». Un client rattaché à un portefeuille
+            // et doté d'un lien SOA en présentait sept à plat : les dernières étaient
+            // déjà enfouies, et toute action nouvelle le serait d'office.
+            //
+            // Deux familles ramènent la barre à trois entrées lisibles. Le regroupement
+            // est la SOURCE UNIQUE partagée par la barre et le clic droit (voir
+            // assets/controllers/actions-groupees.js) : une famille réduite à un seul
+            // membre visible est remise à plat toute seule, rien à prévoir.
             "attribute_actions" => [
                 [
                     "label" => "Voir le relevé de compte (SOA)",
                     "icon"  => "action:view",
+                    "groupe" => "Relevé de compte",
+                    "groupe_icone" => "action:view",
                     "event" => "ui:soa.view-request",
                     "url"   => "/admin/soa/client/%id%/workspace",
                 ],
@@ -55,12 +68,14 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                 [
                     "label" => "Copier le lien client (SOA)",
                     "icon"  => "action:copy",
+                    "groupe" => "Relevé de compte",
                     "event" => "ui:soa.copy-link-request",
                     "url"   => "/admin/soa/api/client/%id%/lien-public",
                 ],
                 [
                     "label" => "Envoyer le SOA par e-mail",
                     "icon"  => "action:send-email",
+                    "groupe" => "Relevé de compte",
                     "event" => "ui:soa.send-request",
                     "url"   => "/admin/soa/client/%id%/envoi-picker",
                 ],
@@ -68,6 +83,7 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                 [
                     "label" => "Voir les documents",
                     "icon"  => "classeur",
+                    "groupe" => "Relevé de compte",
                     "event" => "ui:soa.docs-picker-request",
                     "url"   => "/admin/soa/api/documents/client/%id%",
                 ],
@@ -77,6 +93,7 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                 [
                     "label"     => "Révoquer le lien du SOA",
                     "icon"      => "action:disable",
+                    "groupe"    => "Relevé de compte",
                     "event"     => "ui:soa.revoke-request",
                     "url"       => "/admin/soa/api/client/%id%/revoquer-lien",
                     "condition" => ["field" => "hasLienSoa", "value" => true],
@@ -88,6 +105,8 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                 [
                     "label"     => "Affecter à un portefeuille",
                     "icon"      => "portefeuille",
+                    "groupe"    => "Portefeuille",
+                    "groupe_icone" => "portefeuille",
                     "event"     => "ui:client.portefeuille-picker-request",
                     "url"       => "/admin/client/api/%id%/portefeuille-picker",
                     "condition" => ["field" => "hasPortefeuille", "value" => false],
@@ -95,6 +114,7 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                 [
                     "label"     => "Transférer vers un autre portefeuille",
                     "icon"      => "action:transfer",
+                    "groupe"    => "Portefeuille",
                     "event"     => "ui:client.portefeuille-picker-request",
                     "url"       => "/admin/client/api/%id%/portefeuille-picker",
                     "condition" => ["field" => "hasPortefeuille", "value" => true],
@@ -102,11 +122,28 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                 [
                     "label"     => "Retirer du portefeuille",
                     "icon"      => "action:detach",
+                    "groupe"    => "Portefeuille",
                     "event"     => "ui:client.retirer-portefeuille",
                     // Pas de %id% : l'id du client est transmis dans le payload et le
                     // cerveau fait DELETE {url}/{id} après confirmation.
                     "url"       => "/admin/client/api/retirer-portefeuille",
                     "condition" => ["field" => "hasPortefeuille", "value" => true],
+                ],
+                // ── OUVRIR UNE AFFAIRE AU CLIENT QU'ON A SOUS LES YEUX ──────────────
+                //
+                // Sans elle, décider d'ouvrir une piste obligeait à changer de rubrique,
+                // à créer une piste à blanc, puis à y rechercher le client — celui-là
+                // même qu'on venait de quitter.
+                //
+                // SANS FAMILLE, ET C'EST VOULU : c'est le geste qu'on vient faire ici,
+                // il doit se voir du premier coup d'œil et non se déplier.
+                // SANS CONDITION non plus : on peut toujours ouvrir une affaire à un
+                // client, quel que soit son état.
+                [
+                    "label" => "Créer une piste",
+                    "icon"  => "piste",
+                    "event" => "ui:client.creer-piste",
+                    "url"   => "/admin/client/api/%id%/piste-context",
                 ],
             ],
             // Entête contextuel du volet de saisie (pastille + description).
