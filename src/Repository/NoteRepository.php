@@ -49,6 +49,38 @@ class NoteRepository extends ServiceEntityRepository
     //        ;
     //    }
 
+    /**
+     * LES NOTES DU CABINET, CHRONOLOGIQUES — source des écritures d'ÉMISSION du
+     * moteur comptable du courtier (CourtierEcritureComptableService).
+     *
+     * ⚠ LE PÉRIMÈTRE EST CELUI DE `PaiementRepository::findChronologiqueForEntreprise()`,
+     * AU MOT PRÈS : jointure interne sur `note.invite.entreprise`. Ce n'est pas une
+     * coïncidence qu'il faut protéger — c'est une CONDITION. Les deux requêtes
+     * alimentent les deux moitiés d'une même partie double : l'émission fait naître la
+     * créance, l'encaissement la solde. Un périmètre plus large ici ferait naître des
+     * créances dont le règlement resterait invisible, et le compte 411 ne se solderait
+     * jamais. Élargir l'un OBLIGE à élargir l'autre.
+     *
+     * Le fetch-join des articles, du bordereau et de la taxe est celui de la
+     * ventilation HT / taxe : sans lui, chaque note rouvrirait la base.
+     *
+     * @return Note[]
+     */
+    public function findChronologiqueForEntreprise(int $idEntreprise): array
+    {
+        return $this->createQueryBuilder('n')
+            ->join('n.invite', 'i')
+            ->leftJoin('n.articles', 'a')->addSelect('a')
+            ->leftJoin('n.bordereau', 'b')->addSelect('b')
+            ->leftJoin('n.autoritefiscale', 'af')->addSelect('af')
+            ->leftJoin('af.taxe', 'tx')->addSelect('tx')
+            ->where('i.entreprise = :entrepriseId')
+            ->setParameter('entrepriseId', $idEntreprise)
+            ->orderBy('n.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function findAllNotesDueByInsurerAndClient(?RevenuPourCourtier $revenu): array
     {
         return $this->createQueryBuilder("note")

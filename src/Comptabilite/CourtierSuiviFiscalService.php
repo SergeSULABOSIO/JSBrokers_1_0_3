@@ -14,14 +14,18 @@ use App\Repository\TaxeRepository;
  * selon le REDEVABLE de la taxe (règle métier validée) :
  *
  *  - Taxes ASSUREUR (collectées, ex. TVA) : dette fiscale ordinaire, sans impact sur
- *    le résultat. Par mois : COLLECTÉ (crédits 443 des encaissements), DÉDUCTIBLE
- *    (TVA récupérable 445 des dépenses), SOLDE PAYABLE (collecté − déductible),
- *    PAYÉ (reversements D 443) et SOLDE DÛ (payable − payé).
+ *    le résultat. Par mois : COLLECTÉ (crédits 443 des FACTURATIONS, moins ce qu'un
+ *    avoir annule), DÉDUCTIBLE (TVA récupérable 445 des dépenses), SOLDE PAYABLE
+ *    (collecté − déductible), PAYÉ (reversements D 443) et SOLDE DÛ (payable − payé).
  *
  *  - Taxes COURTIER : CHARGES du cabinet (leurs reversements impactent trésorerie
- *    ET résultat, compte 641). Par mois : DÛ (taxe calculée sur le HT encaissé —
- *    métadonnée taxeCourtierDue des écritures d'encaissement), PAYÉ (reversements
+ *    ET résultat, compte 641). Par mois : DÛ (taxe calculée sur le HT FACTURÉ —
+ *    métadonnée taxeCourtierDue des écritures d'émission), PAYÉ (reversements
  *    D 641) et SOLDE DÛ (dû − payé).
+ *
+ * ⚠ LE FAIT GÉNÉRATEUR A CHANGÉ AVEC CELUI DU PRODUIT : la taxe naît de la facture,
+ * plus de l'encaissement. Les écritures d'encaissement d'AVANT la bascule restent lues,
+ * parce que l'historique n'a pas été repris — mais jamais en double pour une même note.
  *
  * Lecture seule, aucune persistance.
  */
@@ -59,14 +63,24 @@ class CourtierSuiviFiscalService
             }
             $mois = (int) $e['date']->format('n');
 
-            if ($e['type'] === 'encaissement') {
+            // ── LA TAXE SUIT LE PRODUIT ─────────────────────────────────────────
+            // Depuis le passage à l'engagement, elle naît à la FACTURATION. Les deux
+            // types cohabitent parce que l'historique, lui, est resté sur l'encaissement
+            // — mais jamais pour une même note : `produitUneCreance()` tranche, et une
+            // note validée n'émet plus d'écriture d'encaissement porteuse de taxe.
+            if (in_array($e['type'], ['encaissement', 'facturation', 'avoir_emis'], true)) {
                 $duCourtier[$mois] += (float) ($e['taxeCourtierDue'] ?? 0.0);
             }
 
             foreach ($e['lignes'] as $l) {
                 if ($l['compte'] === PlanComptable::TVA_FACTUREE) {
-                    if ($e['type'] === 'encaissement') {
+                    if (in_array($e['type'], ['encaissement', 'facturation'], true)) {
                         $collectee[$mois] += $l['credit'];
+                    } elseif ($e['type'] === 'avoir_emis') {
+                        // UN AVOIR RETRANCHE CE QU'IL ANNULE. Jusqu'ici aucun avoir ne
+                        // réduisait la taxe collectée : on déclarait un impôt sur un
+                        // produit qu'on venait de reprendre.
+                        $collectee[$mois] -= $l['debit'];
                     } elseif ($e['type'] === 'reversement_taxe') {
                         $reverse[$mois] += $l['debit'];
                     }
