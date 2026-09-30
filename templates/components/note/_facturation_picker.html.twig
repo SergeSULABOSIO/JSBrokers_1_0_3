@@ -96,6 +96,9 @@
                                     <th scope="col" class="jsb-picker-num">
                                         Reste à facturer{% if monnaie %} <span class="text-muted">({{ monnaie }})</span>{% endif %}
                                     </th>
+                                    <th scope="col" class="jsb-picker-num" style="width:11rem;">
+                                        Montant à facturer{% if monnaie %} <span class="text-muted">({{ monnaie }})</span>{% endif %}
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -104,6 +107,10 @@
                                         data-tranche-id="{{ l.trancheId }}"
                                         data-revenu-id="{{ l.revenuId }}"
                                         data-montant="{{ l.montant }}"
+                                        {# LE MONTANT POUR UNE QUANTITÉ DE 1. Facturer une part, c'est
+                                           poser une quantité fractionnaire — le serveur la calcule et
+                                           la borne, le navigateur ne fait que porter le nombre saisi. #}
+                                        data-unitaire="{{ l.unitaire }}"
                                         data-action="click->facturation-picker#basculerLigne">
                                         <td>
                                             {# COCHÉES D'OFFICE : ces échéances viennent d'être
@@ -121,6 +128,18 @@
                                             </div>
                                         </td>
                                         <td class="jsb-picker-num">{{ l.montant|number_format(2, ',', ' ') }}</td>
+                                        <td>
+                                            {# ON NE FACTURE PAS TOUJOURS TOUT LE DÛ. Prérempli au reste,
+                                               parce que réclamer la totalité est le geste courant ; une
+                                               réclamation partielle se fait en corrigeant ce nombre, et
+                                               le reliquat reste facturable plus tard. #}
+                                            <input type="number" class="form-control form-control-sm text-end"
+                                                   step="0.01" min="0" max="{{ l.montant }}"
+                                                   value="{{ l.montant|number_format(2, '.', '') }}"
+                                                   data-facturation-picker-target="montant"
+                                                   data-action="input->facturation-picker#recalculer"
+                                                   aria-label="Montant facturé pour {{ l.police }}">
+                                        </td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
@@ -154,30 +173,67 @@
             {% if groupe and groupe.lignes is not empty %}
                 <fieldset class="jsb-picker-carte">
                     <legend class="fs-6" style="color:#0d2440;">La note</legend>
-                    <div class="row g-3">
-                        <div class="col-12 col-md-4">
-                            <label class="form-label" for="jsb-fact-destinataire">À qui l'adresser</label>
+                    {# CHAMPS AU PATTERN MAISON — celui du picker de reversement : libellé en
+                       gras, aide AVANT le champ (aria-describedby), puis champ à icône
+                       incrustée `.jsb-picker-field`, de largeur BORNÉE. Un champ étiré sur
+                       toute la fenêtre ne dit rien de ce qu'on attend de lui. #}
+                    <div class="jsb-picker-champs">
+                        <div>
+                            <label for="jsb-fact-destinataire" class="form-label fw-semibold mb-0" style="color:#0d2440;">À qui l'adresser</label>
+                            <span class="text-muted small d-block mb-1" id="jsb-fact-destinataire-aide">
+                                Le destinataire ordinaire d'une commission de courtage est l'assureur.
+                            </span>
                             {# CHANGER DE DESTINATAIRE RECALCULE TOUT : un client n'est pas
                                l'assureur de sa police. La fenêtre se recharge donc côté serveur,
                                plutôt que de laisser une règle métier descendre dans le navigateur. #}
-                            <select class="form-select" id="jsb-fact-destinataire"
-                                    data-facturation-picker-target="destinataire"
-                                    data-action="change->facturation-picker#changerDestinataire">
-                                <option value="assureur" {{ destinataire == 'assureur' ? 'selected' }}>L'assureur</option>
-                                <option value="client" {{ destinataire == 'client' ? 'selected' }}>Le client</option>
-                            </select>
+                            <div class="jsb-picker-field" style="max-width:18rem;">
+                                <span class="jsb-picker-field-icon" aria-hidden="true">
+                                    {{ ux_icon(resolve_icon_name('assureur'), {width: '16px', height: '16px'}) }}
+                                </span>
+                                <select class="form-select" id="jsb-fact-destinataire"
+                                        data-facturation-picker-target="destinataire"
+                                        data-action="change->facturation-picker#changerDestinataire"
+                                        aria-describedby="jsb-fact-destinataire-aide">
+                                    <option value="assureur" {{ destinataire == 'assureur' ? 'selected' }}>L'assureur</option>
+                                    <option value="client" {{ destinataire == 'client' ? 'selected' }}>Le client</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="col-12 col-md-8">
-                            <label class="form-label" for="jsb-fact-objet">Objet de la note</label>
-                            <input type="text" class="form-control" id="jsb-fact-objet"
-                                   name="facturation_objet" autocomplete="off"
-                                   value="{{ objet }}"
-                                   data-facturation-picker-target="objet">
+                        <div>
+                            <label for="jsb-fact-objet" class="form-label fw-semibold mb-0" style="color:#0d2440;">Objet de la note</label>
+                            <span class="text-muted small d-block mb-1" id="jsb-fact-objet-aide">
+                                Déduit de la police. C'est ce que lira celui qui reçoit la note.
+                            </span>
+                            {# `name` et `autocomplete` ne sont pas décoratifs : un champ texte
+                               ANONYME se fait remplir tout seul par le navigateur, qui écraserait
+                               l'objet proposé par une adresse e-mail mémorisée. #}
+                            <div class="jsb-picker-field" style="max-width:26rem;">
+                                <span class="jsb-picker-field-icon" aria-hidden="true">
+                                    {{ ux_icon(resolve_icon_name('action:description'), {width: '16px', height: '16px'}) }}
+                                </span>
+                                <input type="text" class="form-control" id="jsb-fact-objet"
+                                       name="facturation_objet" autocomplete="off"
+                                       value="{{ objet }}"
+                                       data-facturation-picker-target="objet"
+                                       aria-describedby="jsb-fact-objet-aide">
+                            </div>
                         </div>
-                        <div class="col-12">
-                            <label class="form-label" for="jsb-fact-description">Précision (facultatif)</label>
-                            <textarea class="form-control" id="jsb-fact-description" rows="2"
-                                      data-facturation-picker-target="description"></textarea>
+                        <div class="jsb-picker-champs--pleine">
+                            <label for="jsb-fact-description" class="form-label fw-semibold mb-0" style="color:#0d2440;">Précision (facultatif)</label>
+                            <span class="text-muted small d-block mb-1" id="jsb-fact-description-aide">
+                                Une mention à porter sur la note — un rappel de convention, un délai.
+                            </span>
+                            {# `--top` : sur un champ multi-lignes, un centrage vertical ferait
+                               flotter l'icône au milieu du bloc. Elle s'aligne sur la première ligne. #}
+                            <div class="jsb-picker-field jsb-picker-field--top">
+                                <span class="jsb-picker-field-icon" aria-hidden="true">
+                                    {{ ux_icon(resolve_icon_name('action:edit'), {width: '16px', height: '16px'}) }}
+                                </span>
+                                <textarea class="form-control" id="jsb-fact-description" rows="2"
+                                          name="facturation_description" autocomplete="off"
+                                          data-facturation-picker-target="description"
+                                          aria-describedby="jsb-fact-description-aide"></textarea>
+                            </div>
                         </div>
                     </div>
                 </fieldset>
@@ -210,20 +266,38 @@
 
                 <fieldset class="jsb-picker-carte">
                     <legend class="fs-6" style="color:#0d2440;">Signature</legend>
-                    <div class="row g-3">
-                        <div class="col-12 col-md-6">
-                            <label class="form-label" for="jsb-fact-signataire">Signataire</label>
-                            <input type="text" class="form-control" id="jsb-fact-signataire"
-                                   name="facturation_signataire" autocomplete="off"
-                                   value="{{ signataire }}"
-                                   data-facturation-picker-target="signataire">
+                    <div class="jsb-picker-champs">
+                        <div>
+                            <label for="jsb-fact-signataire" class="form-label fw-semibold mb-0" style="color:#0d2440;">Signataire</label>
+                            <span class="text-muted small d-block mb-1" id="jsb-fact-signataire-aide">
+                                Le nom qui figurera au bas de la note. Le vôtre, par défaut.
+                            </span>
+                            <div class="jsb-picker-field">
+                                <span class="jsb-picker-field-icon" aria-hidden="true">
+                                    {{ ux_icon(resolve_icon_name('utilisateur'), {width: '16px', height: '16px'}) }}
+                                </span>
+                                <input type="text" class="form-control" id="jsb-fact-signataire"
+                                       name="facturation_signataire" autocomplete="off"
+                                       value="{{ signataire }}"
+                                       data-facturation-picker-target="signataire"
+                                       aria-describedby="jsb-fact-signataire-aide">
+                            </div>
                         </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label" for="jsb-fact-titre">Titre du signataire</label>
-                            <input type="text" class="form-control" id="jsb-fact-titre"
-                                   name="facturation_titre" autocomplete="off"
-                                   placeholder="Ex : Directeur Général"
-                                   data-facturation-picker-target="titreSignataire">
+                        <div>
+                            <label for="jsb-fact-titre" class="form-label fw-semibold mb-0" style="color:#0d2440;">Titre du signataire</label>
+                            <span class="text-muted small d-block mb-1" id="jsb-fact-titre-aide">
+                                La qualité de celui qui signe — elle engage le cabinet.
+                            </span>
+                            <div class="jsb-picker-field">
+                                <span class="jsb-picker-field-icon" aria-hidden="true">
+                                    {{ ux_icon(resolve_icon_name('role'), {width: '16px', height: '16px'}) }}
+                                </span>
+                                <input type="text" class="form-control" id="jsb-fact-titre"
+                                       name="facturation_titre" autocomplete="off"
+                                       placeholder="Ex : Directeur Général"
+                                       data-facturation-picker-target="titreSignataire"
+                                       aria-describedby="jsb-fact-titre-aide">
+                            </div>
                         </div>
                     </div>
                 </fieldset>
@@ -238,11 +312,17 @@
             <span class="text-muted small me-auto">
                 La note est émise <strong>validée</strong> : elle entre aussitôt au suivi du recouvrement.
             </span>
-            <button type="button" class="btn btn-outline-secondary" data-picker-close>Annuler</button>
+            <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
+                <twig:UX:Icon name="{{ resolve_icon_name('action:cancel') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                Annuler
+            </button>
             {% if groupe and groupe.lignes is not empty %}
-                <button type="button" class="btn btn-primary"
+                <button type="button" class="btn btn-primary jsb-picker-btn"
                         data-picker-executer
-                        data-facturation-picker-target="executer">Enregistrer</button>
+                        data-facturation-picker-target="executer">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:save') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                    Enregistrer
+                </button>
             {% endif %}
         </div>
 
@@ -253,12 +333,21 @@
         #}
         <div class="jsb-picker-foot" data-facturation-picker-target="footSucces" hidden>
             <span class="text-success small me-auto" data-facturation-picker-target="messageSucces"></span>
-            <button type="button" class="btn btn-outline-secondary" data-picker-close>Fermer</button>
-            <button type="button" class="btn btn-outline-primary"
+            <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
+                <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                Fermer
+            </button>
+            <button type="button" class="btn btn-outline-primary jsb-picker-btn"
                     data-facturation-picker-target="suivant"
-                    data-action="click->facturation-picker#facturerLesSuivantes" hidden>Facturer les suivantes</button>
-            <button type="button" class="btn btn-primary"
-                    data-action="click->facturation-picker#ouvrirLePdf">Ouvrir la note (PDF)</button>
+                    data-action="click->facturation-picker#facturerLesSuivantes" hidden>
+                <twig:UX:Icon name="{{ resolve_icon_name('action:renew') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                Facturer les suivantes
+            </button>
+            <button type="button" class="btn btn-primary jsb-picker-btn"
+                    data-action="click->facturation-picker#ouvrirLePdf">
+                <twig:UX:Icon name="{{ resolve_icon_name('action:pdf') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                Ouvrir la note (PDF)
+            </button>
         </div>
     </div>
 </div>

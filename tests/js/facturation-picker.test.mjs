@@ -113,6 +113,28 @@ test('changer de destinataire repasse par le SERVEUR', () => {
     );
 });
 
+test('le montant saisi voyage, borné au reste, et n\'est jamais converti ici', () => {
+    const corps = picker.slice(picker.indexOf('_lignesCochees() {'));
+
+    assert.match(
+        corps,
+        /this\.montantTargets\[index\]\?\.value/,
+        'Le champ est modifiable : on ne facture pas toujours tout le dû. S\'en tenir à '
+        + '`data-montant` rendrait le champ décoratif.',
+    );
+    assert.match(
+        corps,
+        /Math\.min\(Math\.abs\(saisi\), reste\)/,
+        'Un champ vidé ou aberrant ne doit pas facturer plus que le reste. Le serveur '
+        + 'reborne de toute façon — ceci évite seulement de laisser envoyer pour rien.',
+    );
+    assert.ok(
+        !/unitaire/i.test(picker),
+        'La conversion montant → quantité appartient au serveur : la refaire ici mettrait '
+        + 'deux formules en présence, et le jour où elles divergent, la note ment.',
+    );
+});
+
 test('le picker ne calcule aucun montant métier', () => {
     assert.match(
         picker,

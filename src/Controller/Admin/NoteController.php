@@ -173,7 +173,10 @@ class NoteController extends AbstractController
             ? Note::TO_CLIENT
             : Note::TO_ASSUREUR;
 
-        $tranches = $this->tranchesDuPerimetre($request, $entreprise);
+        $tranches = $this->tranchesDuPerimetre(
+            explode(',', (string) $request->query->get('ids', '')),
+            $entreprise,
+        );
         $groupes = $this->sourceDeFacturation->facturableDansLaSelection($entreprise, $tranches, $addressedTo);
 
         // UNE NOTE A UN DESTINATAIRE. On propose donc le premier groupe, et l'on ANNONCE
@@ -211,14 +214,13 @@ class NoteController extends AbstractController
      * identifiant étranger n'est pas une erreur de l'utilisateur, c'est une tentative
      * ou une liste périmée — dans les deux cas, on n'en parle pas, on n'en fait rien.
      *
+     * @param list<mixed> $ids les identifiants bruts, tels que reçus
+     *
      * @return list<Tranche>
      */
-    private function tranchesDuPerimetre(Request $request, Entreprise $entreprise): array
+    private function tranchesDuPerimetre(array $ids, Entreprise $entreprise): array
     {
-        $ids = array_values(array_filter(array_map(
-            'intval',
-            explode(',', (string) $request->query->get('ids', '')),
-        )));
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
         if ($ids === []) {
             return [];
         }
@@ -301,19 +303,54 @@ class NoteController extends AbstractController
             $note->addCompte($compte);
         }
 
+        // ── CE QUE LE SERVEUR ACCEPTE DE FACTURER, REPESÉ ICI ───────────────────
+        // Le navigateur envoie des identifiants et des montants ; aucun des deux n'est
+        // cru sur parole. On refait la MÊME pesée que celle qui a rempli la fenêtre :
+        // elle dit ce qui relève du cabinet, ce qu'il reste à facturer, et le montant
+        // d'une quantité de 1. Une ligne absente de cette carte a été facturée entre
+        // l'ouverture et l'envoi — on l'ignore, comme un identifiant étranger.
+        $tranchesPostees = $this->tranchesDuPerimetre(
+            array_map(static fn (mixed $l): mixed => $l['trancheId'] ?? 0, $lignes),
+            $entreprise,
+        );
+        $parId = [];
+        foreach ($tranchesPostees as $t) {
+            $parId[(int) $t->getId()] = $t;
+        }
+        $facturable = [];
+        foreach ($this->sourceDeFacturation->facturableDansLaSelection($entreprise, $tranchesPostees, $addressedTo) as $groupe) {
+            foreach ($groupe['lignes'] as $l) {
+                $facturable[$l['trancheId'] . ':' . $l['revenuId']] = $l;
+            }
+        }
+
         $ecrites = 0;
         foreach ($lignes as $ligne) {
+            $pesee = $facturable[((int) ($ligne['trancheId'] ?? 0)) . ':' . ((int) ($ligne['revenuId'] ?? 0))] ?? null;
+            if ($pesee === null) {
+                continue; // hors périmètre ou plus rien à facturer : ignoré en silence.
+            }
+
+            // LE MONTANT DEMANDÉ EST BORNÉ AU RESTE, et converti en quantité : `Article`
+            // n'a pas de champ montant, sa valeur se dérive de la quantité. Facturer une
+            // part laisse donc le reliquat facturable, sans une règle de plus.
+            $quantite = $this->sourceDeFacturation->quantitePour(
+                (float) $pesee['montant'],
+                (float) $pesee['unitaire'],
+                isset($ligne['montant']) ? (float) $ligne['montant'] : null,
+            );
+            if ($quantite <= 0.0) {
+                continue;
+            }
+
             $revenu = $this->em->getRepository(RevenuPourCourtier::class)->findOneBy([
-                'id' => (int) ($ligne['revenuId'] ?? 0),
+                'id' => (int) $ligne['revenuId'],
                 'entreprise' => $entreprise,
             ]);
             if ($revenu === null) {
-                continue; // hors périmètre : ignoré en silence, comme le reversement.
+                continue;
             }
-            $tranche = $this->em->getRepository(Tranche::class)->findOneBy([
-                'id' => (int) ($ligne['trancheId'] ?? 0),
-                'entreprise' => $entreprise,
-            ]);
+            $tranche = $parId[(int) $ligne['trancheId']] ?? null;
 
             // QUI DOIT L'ARGENT — déduit de la police, comme le fait l'assistant. Sans
             // ce rattachement, la note n'aurait pas de débiteur : elle ne serait
@@ -324,7 +361,7 @@ class NoteController extends AbstractController
                 $this->rattacherLeDestinataire($note, $tranche ?? $revenu->getCotation()?->getTranches()->first(), $addressedTo);
             }
 
-            $article = (new Article())->setQuantite(1.0);
+            $article = (new Article())->setQuantite($quantite);
             $article->setNote($note)->setRevenuFacture($revenu)->setTranche($tranche);
             $article->setEntreprise($entreprise)->setInvite($this->getInvite());
             $this->em->persist($article);
@@ -334,7 +371,7 @@ class NoteController extends AbstractController
 
         if ($ecrites === 0) {
             return $this->json(
-                ['message' => 'Aucune ligne exploitable : ces commissions ne relèvent pas de cet espace de travail.'],
+                ['message' => 'Aucune ligne exploitable : ces commissions ne relèvent pas de cet espace de travail, ou il n’y reste plus rien à facturer.'],
                 Response::HTTP_UNPROCESSABLE_ENTITY,
             );
         }

@@ -19,6 +19,7 @@ use App\Entity\RevenuPourCourtier;
 use App\Entity\Tranche;
 use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
+use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use App\Services\Note\NoteRecouvrementService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -364,6 +365,94 @@ class FacturationEcritureTest extends WebTestCase
         );
         self::assertStringContainsString((string) $this->notes()[0]->getReference(), $html,
             'Elle doit NOMMER la note qui bloque : « rien à facturer » sans la pièce est une énigme.',
+        );
+    }
+
+    /**
+     * LE RESTE À FACTURER TEL QUE LA FENÊTRE LE PROPOSE — lu sur la fenêtre elle-même,
+     * et non recalculé ici : un test qui refait le calcul ne prouve que lui-même.
+     */
+    private function resteProposé(int $trancheId): float
+    {
+        $this->client->request('GET', '/admin/note/facturation-picker?ids=' . $trancheId);
+        self::assertResponseIsSuccessful();
+
+        $html = (string) $this->client->getResponse()->getContent();
+        self::assertSame(1, preg_match('/data-montant="([0-9.]+)"/', $html, $m),
+            'La fenêtre doit proposer exactement une ligne facturable.',
+        );
+
+        return (float) $m[1];
+    }
+
+    private function montantDe(Note $note): float
+    {
+        return round(
+            static::getContainer()->get(IndicatorCalculationHelper::class)->getNoteMontantPayable($note),
+            2,
+        );
+    }
+
+    /**
+     * ON NE FACTURE PAS TOUJOURS TOUT LE DÛ.
+     *
+     * Un assureur peut n'en reconnaître qu'une part, ou un acompte avoir été convenu.
+     * La note ne porte alors que ce qu'on réclame — et, ce qui compte autant, LE
+     * RELIQUAT RESTE FACTURABLE : sans cela, réclamer la moitié ferait perdre l'autre.
+     *
+     * Rien de neuf ne le permet : `Article` dérive son montant de sa QUANTITÉ, et la
+     * règle du reste à facturer relit ces mêmes montants. Une quantité fractionnaire
+     * suffit, et le reliquat se rouvre tout seul.
+     */
+    public function testFacturerUnePartLaisseLeResteFacturable(): void
+    {
+        $seed = $this->seed();
+        $reste = $this->resteProposé($seed['trancheId']);
+        self::assertGreaterThan(1.0, $reste, 'Le jeu d\'essai doit avoir une commission à facturer.');
+
+        $part = round($reste / 2, 2);
+        [$code] = $this->facturer([[
+            'trancheId' => $seed['trancheId'],
+            'revenuId' => $seed['revenuId'],
+            'montant' => $part,
+        ]]);
+
+        self::assertSame(200, $code);
+        $note = $this->notes()[0];
+        self::assertEqualsWithDelta($part, $this->montantDe($note), 0.02,
+            'La note ne porte que ce qui a été réclamé.',
+        );
+        self::assertLessThan(1.0, (float) $note->getArticles()->first()->getQuantite(),
+            'Une part se facture par une QUANTITÉ fractionnaire : c\'est le seul champ '
+            . 'qui porte le montant d\'une ligne.',
+        );
+
+        self::assertEqualsWithDelta($reste - $part, $this->resteProposé($seed['trancheId']), 0.02,
+            'Le reliquat doit rester facturable — sinon réclamer la moitié perdrait l\'autre.',
+        );
+    }
+
+    /**
+     * ⚠ LE MONTANT VENU DU NAVIGATEUR N'EST PAS CRU SUR PAROLE.
+     *
+     * Le champ est libre, et rien n'empêche d'y poster mille là où il reste onze. Le
+     * plafond est posé côté serveur, par la MÊME pesée qui a rempli la fenêtre : sans
+     * lui, l'écran émettrait des créances que le portefeuille ne justifie pas.
+     */
+    public function testUnMontantSuperieurAuResteEstRameneAuReste(): void
+    {
+        $seed = $this->seed();
+        $reste = $this->resteProposé($seed['trancheId']);
+
+        [$code] = $this->facturer([[
+            'trancheId' => $seed['trancheId'],
+            'revenuId' => $seed['revenuId'],
+            'montant' => $reste * 100,
+        ]]);
+
+        self::assertSame(200, $code);
+        self::assertEqualsWithDelta($reste, $this->montantDe($this->notes()[0]), 0.02,
+            'Le serveur facture le reste, pas ce qu\'on lui a demandé.',
         );
     }
 

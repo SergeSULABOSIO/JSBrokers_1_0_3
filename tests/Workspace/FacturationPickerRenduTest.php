@@ -27,6 +27,9 @@ class FacturationPickerRenduTest extends KernelTestCase
         'police' => 'XCDDD41457845-2026',
         'echeance' => '12/09/2026',
         'montant' => 11.60,
+        // Le montant d'une quantité de 1 : ici l'échéance porte la moitié de la
+        // commission, donc facturer 11,60 vaut une quantité de 0,5.
+        'unitaire' => 23.20,
     ];
 
     private function rendre(array $surcharges = []): string
@@ -82,6 +85,95 @@ class FacturationPickerRenduTest extends KernelTestCase
         self::assertStringContainsString('data-montant="11.6"', $html);
         self::assertStringContainsString('XCDDD41457845-2026', $html, 'La police se lit sur la ligne.');
         self::assertStringContainsString('11,60', $html, 'Le montant s\'affiche en français.');
+    }
+
+    /**
+     * ON NE FACTURE PAS TOUJOURS TOUT LE DÛ.
+     *
+     * Une commission peut se réclamer en deux fois — parce qu'un assureur n'en reconnaît
+     * qu'une part, ou qu'un acompte a été convenu. Le champ arrive prérempli au reste,
+     * parce que tout réclamer est le geste courant, mais il reste modifiable, et son
+     * `max` dit tout de suite jusqu'où l'on peut aller.
+     */
+    public function testLeMontantEstModifiableEtPrerempliAuReste(): void
+    {
+        $html = $this->rendre();
+
+        self::assertStringContainsString('data-facturation-picker-target="montant"', $html);
+        self::assertStringContainsString('Montant à facturer', $html);
+        self::assertMatchesRegularExpression(
+            '/type="number"[^>]*max="11\.6"[^>]*value="11\.60"/',
+            $html,
+            'Le champ arrive au reste à facturer, et ne peut pas le dépasser.',
+        );
+    }
+
+    /**
+     * LE MONTANT POUR UNE QUANTITÉ DE 1 VOYAGE AVEC LA LIGNE.
+     *
+     * `Article` n'a aucun champ montant : facturer une part, c'est poser une quantité
+     * fractionnaire. Sans ce nombre, le serveur ne pourrait pas convertir « 5,00 » en
+     * quantité, et le montant redeviendrait un tout-ou-rien.
+     */
+    public function testLaLignePorteSonMontantUnitaire(): void
+    {
+        self::assertStringContainsString('data-unitaire="23.2"', $this->rendre());
+    }
+
+    /**
+     * CHAQUE CHAMP PORTE SA PASTILLE, comme partout ailleurs dans le workspace.
+     *
+     * Les alias viennent d'`IconCanvasProvider` : aucune icône n'est nommée en dur, et
+     * une colonne de champs sans icône, au milieu de fenêtres qui en portent, se lit
+     * comme une anomalie.
+     */
+    public function testLesChampsPortentLeurPastille(): void
+    {
+        $html = $this->rendre();
+
+        self::assertSame(
+            5,
+            substr_count($html, 'jsb-picker-field-icon'),
+            'Destinataire, objet, précision, signataire et titre : cinq champs, cinq pastilles.',
+        );
+        self::assertStringContainsString('jsb-picker-field--top', $html,
+            'Le champ multi-lignes aligne son icône sur la première ligne, sans quoi elle '
+            . 'flotterait au milieu du bloc.',
+        );
+        self::assertStringContainsString('name="facturation_description"', $html,
+            'Un champ texte ANONYME se fait remplir tout seul par le navigateur.',
+        );
+    }
+
+    /** Les boutons portent leur icône — les deux pieds compris. */
+    public function testLesBoutonsPortentLeurIcone(): void
+    {
+        $html = $this->rendre();
+
+        self::assertSame(
+            5,
+            substr_count($html, 'jsb-picker-btn'),
+            'Annuler, Enregistrer, Fermer, Facturer les suivantes, Ouvrir le PDF.',
+        );
+        // ⚠ ON NE CHERCHE PAS LE NOM DE L'ICÔNE : le circuit maison le résout en SVG
+        // INLINE au rendu, il n'en reste aucune trace dans la page. Ce qui se vérifie,
+        // c'est qu'AUCUN des cinq boutons ne part sans dessin.
+        //
+        // ⚠ ET PAS AU MOTIF NON PLUS : `data-action="click->…"` porte un `>` DANS son
+        // attribut, qu'un `[^>]*>` prend pour la fin de la balise. On découpe.
+        $sansIcone = [];
+        foreach (explode('<button', $html) as $bouton) {
+            if (!str_contains($bouton, 'jsb-picker-btn')) {
+                continue;
+            }
+            $corps = explode('</button>', $bouton)[0];
+            if (!str_contains($corps, '<svg')) {
+                $sansIcone[] = trim(strip_tags($corps));
+            }
+        }
+        self::assertSame([], $sansIcone,
+            'Chaque bouton ouvre sur son icône : un seul sans dessin fait un trou dans la rangée.',
+        );
     }
 
     /**
