@@ -380,13 +380,40 @@ class JSBDynamicSearchService
             $this->lotDeVersement->marquerReplie($replie);
         }
 
-        // NOUVEAU : Filtrer par le parent si le contexte est fourni (recherche dans une collection).
-        if ($parentContext && !empty($parentContext['id']) && !empty($parentContext['fieldName'])) {
-            $fieldName = $parentContext['fieldName'];
-            // Sécurité : on vérifie que le champ de la relation existe bien sur l'entité.
-            if ($this->em->getClassMetadata($entityClass)->hasAssociation($fieldName)) {
-                $qb->andWhere("{$rootAlias}.{$fieldName} = :parentId{$suffix}")
-                   ->setParameter("parentId{$suffix}", $parentContext['id']);
+        // ── UN ONGLET CONTEXTUEL NE MONTRE QUE LES ENFANTS DE SON PARENT ─────────────
+        //
+        // Le premier affichage d'un onglet passe par le getter Doctrine du parent : il est
+        // juste par construction. Tout le reste — page 2, recherche, « Réinitialiser »,
+        // rafraîchissement après un enregistrement — repart vers la rubrique ENTIÈRE de
+        // l'enfant, et n'est borné que par ce bloc.
+        //
+        // ⚠ IL ÉCHOUE FERMÉ, ET C'EST TOUT LE CHANGEMENT. Il ne posait rien quand le champ
+        // manquait : ni WHERE, ni log, ni erreur. Quatre des six onglets d'un client —
+        // pistes, sinistres, notes, partenaires — affichaient donc TOUT LE CABINET, sous un
+        // en-tête et une pastille portant le nom du client. Un écran qui affiche un
+        // périmètre sans l'appliquer est pire qu'un écran vide : il AFFIRME.
+        //
+        // `collection` dit que l'onglet A un parent. Si le champ manque ou ne correspond à
+        // rien, on rend une liste VIDE et on le journalise — jamais le cabinet entier.
+        if ($parentContext && !empty($parentContext['id']) && !empty($parentContext['collection'])) {
+            $champ = $parentContext['champ'] ?? null;
+            $nature = $parentContext['nature'] ?? null;
+
+            if ($champ && $metadata->hasAssociation($champ)) {
+                // Deux natures, et elles ne se filtrent pas pareil : l'enfant porte une
+                // référence vers le parent, ou une COLLECTION de parents (ManyToMany —
+                // les partenaires associés d'un client). Une égalité n'exprime pas une
+                // appartenance.
+                $nature === 'collection'
+                    ? $qb->andWhere(":parentId{$suffix} MEMBER OF {$rootAlias}.{$champ}")
+                    : $qb->andWhere("{$rootAlias}.{$champ} = :parentId{$suffix}");
+                $qb->setParameter("parentId{$suffix}", $parentContext['id']);
+            } else {
+                $this->logger?->error(
+                    '[JSBDynamicSearch] Onglet contextuel sans lien parent exploitable : liste vidée.',
+                    ['entite' => $entityClass, 'collection' => $parentContext['collection'], 'champ' => $champ],
+                );
+                $qb->andWhere('1 = 0');
             }
         }
 

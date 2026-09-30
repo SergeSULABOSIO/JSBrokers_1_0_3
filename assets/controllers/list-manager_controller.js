@@ -49,6 +49,10 @@ export default class extends BaseController {
         // Canvas de recherche de l'entité listée : mémorisé dans l'état d'onglet du
         // Cerveau pour recontextualiser la barre de recherche à chaque activation.
         searchCanvas: Array,
+        // LE LIEN VERS LE PARENT d'un onglet contextuel : {collection, champ, nature},
+        // résolu par Doctrine côté serveur. Vide sur la liste principale, qui n'a pas de
+        // parent. Le Cerveau le renvoie à chaque recherche pour borner la liste.
+        parentLien: Object,
     };
 
     /**
@@ -216,6 +220,12 @@ export default class extends BaseController {
             // Contexte de la barre de recherche : critères de l'entité de CET onglet.
             searchCanvas: this.hasSearchCanvasValue ? this.searchCanvasValue : [],
             entiteNom: this.entiteValue,
+            // Le lien vers le parent, tel que le serveur l'a résolu. Il ne se devine plus
+            // côté navigateur : c'est ce qui rendait quatre onglets d'un client aveugles
+            // à leur propre parent.
+            parentLien: (this.parentLienValue && this.parentLienValue.collection)
+                ? this.parentLienValue
+                : null,
         };
 
         // CORRECTION : Pour l'onglet principal, le tabId logique est 'principal'.

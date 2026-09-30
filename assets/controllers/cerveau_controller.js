@@ -1312,43 +1312,6 @@ export default class extends Controller {
 
 
     /**
-     * NOUVEAU : Trouve le nom du champ parent en parcourant le canvas de formulaire.
-     * @param {object} formCanvas - Le canvas du formulaire à inspecter.
-     * @returns {string|null} Le nom du champ parent (ex: 'notificationSinistre') ou null.
-     * @private
-     */
-    _findParentFieldName(formCanvas, collectionCode = null) {
-        if (!formCanvas || !Array.isArray(formCanvas.form_layout)) {
-            return null;
-        }
-
-        let premiere = null;
-
-        for (const row of formCanvas.form_layout) {
-            for (const col of row.colonnes || []) {
-                for (const field of col.champs || []) {
-                    if (typeof field !== 'object' || field.widget !== 'collection' || !field.options?.parentFieldName) {
-                        continue;
-                    }
-                    // LA COLLECTION DE L'ONGLET, quand on sait laquelle c'est.
-                    //
-                    // Une entité en porte souvent plusieurs (tranches ET documents d'un
-                    // avenant). Se contenter de la première donnerait à l'onglet
-                    // « Documents » le champ parent des tranches : la liste filtrerait sur
-                    // le mauvais lien, et une création s'y rattacherait au mauvais objet.
-                    if (collectionCode && field.field_code === collectionCode) {
-                        return field.options.parentFieldName;
-                    }
-                    if (premiere === null) premiere = field.options.parentFieldName;
-                }
-            }
-        }
-
-        // Repli historique : sans code de collection (onglet principal), la première.
-        return collectionCode ? null : premiere;
-    }
-
-    /**
      * NOUVEAU : Gère la logique de recherche et de réinitialisation pour éviter la répétition de code (DRY).
      * @param {object} [criteria={}] - Les critères de recherche. Un objet vide pour une réinitialisation.
      * @private
@@ -1391,16 +1354,23 @@ export default class extends Controller {
             return null;
         }
 
-        let parentFieldName = null;
-        // Pour une collection, le nom du champ liant au parent est dans le formCanvas de l'onglet principal.
-        const principalState = this._getCurrentWsTabState()['principal'];
-        if (principalState) {
-            parentFieldName = this._findParentFieldName(principalState.activeTabFormCanvas, onglet ? onglet[1] : null);
-        }
+        // LE LIEN VIENT DU SERVEUR, ON NE LE DEVINE PLUS.
+        //
+        // Il était cherché dans le canevas de FORMULAIRE du parent, alors que les onglets
+        // naissent du canevas d'ENTITÉ. Deux listes indépendantes : pour quatre des six
+        // onglets d'un client — pistes, sinistres, notes, partenaires — rien n'était
+        // trouvé, et la liste montrait TOUT LE CABINET sous une pastille au nom du client.
+        //
+        // Désormais Doctrine nomme le champ au chargement de l'onglet, et il voyage avec
+        // son état. On le renvoie tel quel : `collection` dit au serveur que cet onglet a
+        // bien un parent — un `champ` absent doit alors rendre une liste vide, pas tout.
+        const lien = this._getActiveTabState()?.parentLien || null;
 
         return {
             id: parentId,
-            fieldName: parentFieldName
+            collection: lien?.collection ?? (onglet ? onglet[1] : null),
+            champ: lien?.champ ?? null,
+            nature: lien?.nature ?? null,
         };
     }
 
@@ -1430,7 +1400,17 @@ export default class extends Controller {
 
         // Sans nom de champ, on ne saurait à QUOI rattacher : mieux vaut un enfant
         // orphelin qu'un enfant rattaché au mauvais objet.
-        return contexte && contexte.fieldName ? contexte : null;
+        //
+        // ⚠ ET SEULEMENT SUR UNE RELATION SIMPLE. Le préremplissage du formulaire appelle
+        // `set<Champ>()` sur l'entité : un ManyToMany — les partenaires associés d'un
+        // client, par exemple — n'a pas de setter de ce nom. On le filtre, on ne le
+        // prérenseigne pas.
+        if (!contexte || !contexte.champ || contexte.nature !== 'to_one') {
+            return null;
+        }
+
+        // Le dialogue attend `fieldName` : c'est lui qui devient `?parent_field_name=`.
+        return { id: contexte.id, fieldName: contexte.champ };
     }
 
     /**
