@@ -92,6 +92,10 @@ final class CouvertureDesEcrans
         // le plan d'écriture générique de Ket.
         'ui:client.portefeuille-picker-request' => 'preparer_operations',
         'ui:client.retirer-portefeuille' => 'preparer_operations',
+        // Ouvrir une piste au client sélectionné : une création d'entité ordinaire, que
+        // le plan d'écriture générique porte déjà — `DefautsContextuels` lui déduit même
+        // le type d'avenant, le nom et la description du risque.
+        'ui:client.creer-piste' => 'preparer_operations',
         'ui:portefeuille.client-picker-request' => 'preparer_operations',
         'ui:invite.portefeuille-form-request' => 'preparer_operations',
         'ui:invite.delete-portefeuille' => 'preparer_operations',

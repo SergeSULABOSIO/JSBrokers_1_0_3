@@ -104,6 +104,21 @@ class PisteController extends AbstractController
                     $piste->setExercice((int) date('Y'));
                     if ($piste->getRisque() && $piste->getClient()) {
                         $piste->setNom(mb_substr($piste->getRisque()->getNomComplet() . ' — ' . $piste->getClient()->getNom(), 0, 255));
+                    } elseif ($piste->getClient()) {
+                        // OUVERT DEPUIS LA RUBRIQUE CLIENTS : le risque n'est pas encore
+                        // choisi — le client ne dit pas ce qu'on va lui vendre. Le nom
+                        // resterait donc vide, alors qu'il est obligatoire.
+                        //
+                        // On reprend la forme « <préfixe> — <nom> » du reste du projet, et
+                        // le préfixe est le LIBELLÉ DU TYPE, pris à sa source unique. Vertu
+                        // gratuite : `piste-name-sync`, déjà posé sur ce formulaire, ne
+                        // réécrit un préfixe que s'il reconnaît un libellé de type — le nom
+                        // suivra donc tout seul si le courtier bascule sur « Prorogation ».
+                        $piste->setNom(mb_substr(
+                            PisteType::TYPE_AVENANT_LABELS[Piste::AVENANT_SOUSCRIPTION] . ' — ' . $piste->getClient()->getNom(),
+                            0,
+                            255,
+                        ));
                     }
                     return;
                 }

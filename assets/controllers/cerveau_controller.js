@@ -696,6 +696,9 @@ export default class extends Controller {
             case 'ui:client.portefeuille-picker-request':
                 this.handleClientPortefeuillePickerRequest(payload);
                 break;
+            case 'ui:client.creer-piste':
+                this.handleClientCreerPiste(payload);
+                break;
             case 'ui:portefeuille.client-picker-request':
                 this.handlePortefeuilleClientPickerRequest(payload);
                 break;
@@ -1449,6 +1452,13 @@ export default class extends Controller {
                 }
                 if (context.idAvenant) {
                     url.searchParams.set('idAvenant', context.idAvenant);
+                }
+                // Ouvrir une piste au client sélectionné : le préremplissage riche vit
+                // dans PisteController, qui lit ce paramètre depuis le cross-selling du
+                // relevé de compte. Il passe par le contexte, et non par une URL
+                // pré-cuisinée, pour survivre au rechargement en édition.
+                if (context.idClient) {
+                    url.searchParams.set('idClient', context.idClient);
                 }
             }
 
@@ -2739,6 +2749,64 @@ export default class extends Controller {
         } catch (error) {
             console.error("[Cerveau] handleAvenantPisteDeriveeFormRequest() failed:", error);
             this._showNotification(error.message || "Impossible d'ouvrir la piste dérivée.", 'error');
+        } finally {
+            this.broadcast('app:loading.stop');
+        }
+    }
+
+    /**
+     * OUVRIR UNE PISTE AU CLIENT SÉLECTIONNÉ, depuis la rubrique Clients.
+     *
+     * ── LA CORVÉE QUE CELA SUPPRIME ─────────────────────────────────────────────────
+     * Décider d'ouvrir une affaire à un client qu'on a sous les yeux obligeait à changer
+     * de rubrique, à créer une piste à blanc, puis à y rechercher ce même client à
+     * l'autocomplétion. On ressaisissait ce qu'on venait de quitter.
+     *
+     * ── LE PRÉREMPLISSAGE N'EST PAS RÉÉCRIT, IL EST RÉUTILISÉ ───────────────────────
+     * `PisteController::getFormApi` sait déjà remplir une piste à partir d'un `?idClient=`
+     * — c'est le cross-selling du relevé de compte. Une seule règle, deux surfaces : ce
+     * que l'une propose, l'autre le propose à l'identique.
+     *
+     * ⚠ `idClient` PASSE PAR LE CONTEXTE, JAMAIS CUIT DANS L'URL DU FORMULAIRE. Après
+     * l'enregistrement, le dialogue se recharge en ÉDITION et le cerveau concatène
+     * `/${id}` : une URL pré-cuisinée donnerait « get-form?idClient=X/{id} », identifiant
+     * après la query, la route repasserait en mode création et les collections de la
+     * piste disparaîtraient. Le piège a déjà été payé sur la piste dérivée.
+     *
+     * @param {object} payload - { url } avec %id% déjà résolu par la surface appelante.
+     */
+    async handleClientCreerPiste(payload) {
+        if (!payload.url) {
+            console.error("[Cerveau] handleClientCreerPiste() : URL manquante.", payload);
+            this._showNotification("Impossible d'ouvrir la piste : URL manquante.", 'error');
+            return;
+        }
+        try {
+            this.broadcast('app:loading.start');
+            const url = new URL(payload.url, window.location.origin);
+            if (this.currentIdEntreprise) {
+                url.searchParams.set('idEntreprise', this.currentIdEntreprise);
+            }
+            const response = await fetch(url.toString());
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.message || `Erreur serveur ${response.status}`);
+
+            const { clientId, formCanvas } = result;
+
+            this.openDialogBox({
+                entity: {},
+                entityFormCanvas: formCanvas,
+                isCreationMode: true,
+                context: {
+                    idEntreprise: this.currentIdEntreprise,
+                    idInvite: this.currentIdInvite,
+                    idClient: clientId,
+                },
+                parentContext: null,
+            });
+        } catch (error) {
+            console.error("[Cerveau] handleClientCreerPiste() failed:", error);
+            this._showNotification(error.message || "Impossible d'ouvrir la piste.", 'error');
         } finally {
             this.broadcast('app:loading.stop');
         }
