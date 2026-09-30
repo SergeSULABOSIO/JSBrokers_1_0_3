@@ -14,6 +14,10 @@ import PickerBase from './picker-base_controller.js';
  * la MÊME règle que l'assistant applique. Il ne fait qu'additionner ce que l'utilisateur a
  * coché, pour le lui montrer avant qu'il valide.
  *
+ * Le montant de chaque ligne est MODIFIABLE — on ne réclame pas toujours tout le dû — mais
+ * ce nombre n'est qu'une demande : le serveur repèse et le plafonne au reste réel, puis en
+ * déduit la quantité de la ligne. Aucune conversion ici.
+ *
  * ── ET IL NE DÉCIDE PAS DU DESTINATAIRE ─────────────────────────────────────────
  * Changer d'assureur pour client ne change pas un libellé : cela change les lignes, le
  * destinataire et l'objet. La fenêtre se RECHARGE donc côté serveur plutôt que de porter
@@ -28,7 +32,7 @@ export default class extends PickerBase {
     static pickerName = 'FACTURATION-PICKER';
 
     static targets = [
-        'ligne', 'coche', 'apercu', 'executer',
+        'ligne', 'coche', 'montant', 'apercu', 'executer',
         'destinataire', 'objet', 'description', 'compte', 'signataire', 'titreSignataire',
         'footSucces', 'messageSucces', 'suivant',
     ];
@@ -199,15 +203,27 @@ export default class extends PickerBase {
         if (this.hasSuivantTarget) this.suivantTarget.hidden = !resteDesSuivants;
     }
 
-    /** @return {Array<{trancheId: number, revenuId: number, montant: number}>} */
+    /**
+     * Les lignes cochées, avec le montant que le courtier a retenu.
+     *
+     * ⚠ LE MONTANT SAISI N'EST QU'UNE DEMANDE. Le serveur repèse la sélection et le
+     * PLAFONNE au reste réellement facturable : rien n'empêcherait, ici, de poster mille
+     * là où il reste onze. `data-montant` reste le repli — un champ vidé vaut « tout ».
+     *
+     * @return {Array<{trancheId: number, revenuId: number, montant: number}>}
+     */
     _lignesCochees() {
         const lignes = [];
         this.ligneTargets.forEach((ligne, index) => {
             const coche = this.cocheTargets[index];
             if (!coche || !coche.checked) return;
 
-            const montant = parseFloat(ligne.dataset.montant || '0');
-            if (!Number.isFinite(montant) || montant <= 0) return;
+            const reste = parseFloat(ligne.dataset.montant || '0');
+            if (!Number.isFinite(reste) || reste <= 0) return;
+
+            const saisi = parseFloat(this.montantTargets[index]?.value ?? '');
+            const montant = Number.isFinite(saisi) ? Math.min(Math.abs(saisi), reste) : reste;
+            if (montant <= 0) return;
 
             lignes.push({
                 trancheId: parseInt(ligne.dataset.trancheId, 10),

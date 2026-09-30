@@ -107,7 +107,7 @@ final class SourceDeFacturation
      * Le service la connaît — c'est en parcourant les lignes qu'il a calculé le reste
      * —, il serait absurde de la jeter pour la faire rechercher ensuite.
      *
-     * @return array{retenus: list<array{revenu: RevenuPourCourtier, montant: float}>,
+     * @return array{retenus: list<array{revenu: RevenuPourCourtier, montant: float, unitaire: float}>,
      *               ecartes: list<array{revenu: RevenuPourCourtier, note: ?Note}>}
      */
     public function pesee(
@@ -139,7 +139,11 @@ final class SourceDeFacturation
             $montant = $this->montantFacturable($revenu, $addressedTo, $autorite, $type);
 
             if ($montant > self::SEUIL_SOLDE) {
-                $retenus[] = ['revenu' => $revenu, 'montant' => round($montant, 2)];
+                $retenus[] = [
+                    'revenu' => $revenu,
+                    'montant' => round($montant, 2),
+                    'unitaire' => $this->unitaireDe($revenu, $tranche, $addressedTo),
+                ];
                 continue;
             }
             $ecartes[] = ['revenu' => $revenu, 'note' => $this->derniereNoteDe($revenu)];
@@ -197,6 +201,58 @@ final class SourceDeFacturation
             ? $facture
             // Ce qui n'a pas encore été porté sur une note.
             : (float) ($revenu->montantCalculeTTC ?? 0.0) - $facture;
+    }
+
+    /**
+     * LE MONTANT D'UNE LIGNE POUR UNE QUANTITÉ DE 1 — ce qui rend le partiel possible.
+     *
+     * ── POURQUOI CE NOMBRE EXISTE ───────────────────────────────────────────────
+     * On ne facture pas toujours tout le dû. Or `Article` n'a AUCUN champ montant :
+     * sa valeur se dérive, `TTC du revenu × quantité × fraction de l'échéance`
+     * ({@see IndicatorCalculationHelper::getArticleMontant()}). Facturer la moitié,
+     * c'est donc poser une QUANTITÉ de 0,5 — et le reliquat redevient facturable tout
+     * seul, puisque `dejaFacture()` relit ces mêmes montants. Pas une règle de plus.
+     *
+     * Ce nombre est le pivot de la conversion : `quantité = montant voulu ÷ unitaire`.
+     *
+     * ── SEULEMENT SUR L'AXE COMMISSION ──────────────────────────────────────────
+     * La rétrocommission et la taxe se dérivent d'autres bases (partage, redevable) :
+     * y appliquer cette formule rendrait un nombre faux, ce qui est pire que rien.
+     * On rend 0, et l'appelant sait que la ligne ne se fractionne pas.
+     */
+    private function unitaireDe(RevenuPourCourtier $revenu, ?Tranche $tranche, int $addressedTo): float
+    {
+        if ($tranche === null || !in_array($addressedTo, [Note::TO_CLIENT, Note::TO_ASSUREUR], true)) {
+            return 0.0;
+        }
+
+        return round(
+            $this->calculs->getRevenuMontantTTC($revenu) * $this->calculs->getTrancheTauxFactor($tranche),
+            2,
+        );
+    }
+
+    /**
+     * LA QUANTITÉ QUI PRODUIT LE MONTANT DEMANDÉ, bornée au reste réellement facturable.
+     *
+     * ⚠ UN MONTANT VENU DU NAVIGATEUR N'EST JAMAIS CRU SUR PAROLE. Le champ est libre,
+     * et rien n'empêche d'y poster mille là où il reste onze euros : le plafond est
+     * posé ici, du côté serveur, par la même pesée qui a rempli la fenêtre.
+     *
+     * Sans montant demandé — c'est le cas courant —, on facture le reste entier.
+     *
+     * @return float 0.0 si la ligne ne peut rien porter : l'appelant l'écarte alors
+     *               comme il écarterait une ligne décochée
+     */
+    public function quantitePour(float $reste, float $unitaire, ?float $montantDemande): float
+    {
+        if ($reste <= self::SEUIL_SOLDE || $unitaire <= 0.0) {
+            return 0.0;
+        }
+
+        $voulu = $montantDemande === null ? $reste : min(abs($montantDemande), $reste);
+
+        return $voulu <= self::SEUIL_SOLDE ? 0.0 : $voulu / $unitaire;
     }
 
     /**
@@ -336,7 +392,8 @@ final class SourceDeFacturation
      * @param list<int> $trancheIds les échéances cochées, déjà scopées par l'appelant
      *
      * @return list<array{cible: ?int, nom: string, lignes: list<array{trancheId: int,
-     *         revenuId: int, libelle: string, police: string, echeance: string, montant: float}>,
+     *         revenuId: int, libelle: string, police: string, echeance: string, montant: float,
+     *         unitaire: float}>,
      *         ecartes: list<array{police: string, noteId: ?int, noteReference: ?string, noteDate: ?string}>}>
      */
     public function facturableDansLaSelection(
@@ -381,6 +438,9 @@ final class SourceDeFacturation
                     'police' => $police,
                     'echeance' => $tranche->getEcheanceAt()?->format('d/m/Y') ?? '',
                     'montant' => $retenu['montant'],
+                    // Le pivot du montant modifiable : la fenêtre propose le reste, mais
+                    // le courtier peut ne réclamer qu'une part. Voir `unitaireDe()`.
+                    'unitaire' => $retenu['unitaire'],
                 ];
             }
 
