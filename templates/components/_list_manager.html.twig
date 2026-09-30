@@ -47,6 +47,12 @@
         data-list-manager-list-url-value="{{ listUrl | default('') }}"
         data-list-manager-pagination-value='{{ (paginationMeta is defined and paginationMeta is not empty ? paginationMeta|json_encode : '{}')|e('html_attr') }}'
         data-list-manager-initial-criteria-value='{{ (initialSearchCriteria is defined and initialSearchCriteria is not empty ? initialSearchCriteria|json_encode : '{}')|e('html_attr') }}'
+        {# LE LIEN VERS LE PARENT d'un onglet contextuel — {collection, champ, nature},
+           résolu par Doctrine côté serveur. Le navigateur ne le devine plus : il le
+           renvoie tel quel à chaque recherche, ce qui borne la liste au parent de
+           l'onglet. Absent sur la liste PRINCIPALE, qui n'a pas de parent.
+           Même gotcha `'{}'` que ci-dessus : une valeur Stimulus Object refuse `[]`. #}
+        data-list-manager-parent-lien-value='{{ (lienParent is defined and lienParent is not empty ? lienParent|json_encode : '{}')|e('html_attr') }}'
     >
         {% if usage|default('generic') != 'dialog' %}
         <div class="jsb-list-controls-bar" data-list-manager-target="controlsBar">

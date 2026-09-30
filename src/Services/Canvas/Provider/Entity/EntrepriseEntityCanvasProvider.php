@@ -73,18 +73,14 @@ class EntrepriseEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "createdAt", "intitule" => "Créée le", "type" => "Date"],
                 // Collections
                 ["code" => "invites", "intitule" => "Collaborateurs", "type" => "Collection", "targetEntity" => Invite::class, "displayField" => "nom"],
-                ["code" => "clients", "intitule" => "Clients", "type" => "Collection", "targetEntity" => Client::class, "displayField" => "nom"],
-                ["code" => "partenaires", "intitule" => "Partenaires", "type" => "Collection", "targetEntity" => Partenaire::class, "displayField" => "nom"],
-                ["code" => "assureurs", "intitule" => "Assureurs", "type" => "Collection", "targetEntity" => Assureur::class, "displayField" => "nom"],
-                ["code" => "groupes", "intitule" => "Groupes", "type" => "Collection", "targetEntity" => Groupe::class, "displayField" => "nom"],
-                ["code" => "risques", "intitule" => "Risques", "type" => "Collection", "targetEntity" => Risque::class, "displayField" => "nomComplet"],
-                ["code" => "monnaies", "intitule" => "Monnaies", "type" => "Collection", "targetEntity" => Monnaie::class, "displayField" => "nom"],
-                ["code" => "taxes", "intitule" => "Taxes", "type" => "Collection", "targetEntity" => Taxe::class, "displayField" => "nom"],
-                ["code" => "compteBancaires", "intitule" => "Comptes Bancaires", "type" => "Collection", "targetEntity" => CompteBancaire::class, "displayField" => "nom"],
-                ["code" => "typerevenus", "intitule" => "Types de Revenu", "type" => "Collection", "targetEntity" => TypeRevenu::class, "displayField" => "nom"],
-                ["code" => "chargements", "intitule" => "Types de Chargement", "type" => "Collection", "targetEntity" => Chargement::class, "displayField" => "nom"],
-                ["code" => "classeurs", "intitule" => "Classeurs", "type" => "Collection", "targetEntity" => Classeur::class, "displayField" => "nom"],
-                ["code" => "modelePieceSinistres", "intitule" => "Modèles de Pièces", "type" => "Collection", "targetEntity" => ModelePieceSinistre::class, "displayField" => "nom"],
+                // ── DOUZE ONGLETS FANTOMES RETIRES LE 2026-09-30 ────────────────────
+                // Clients, Partenaires, Assureurs, Groupes, Risques, Monnaies, Taxes,
+                // Comptes bancaires, Types de revenu, Types de chargement, Classeurs et
+                // Modeles de pieces etaient declares ici comme collections d'Entreprise.
+                // Or l'entite n'en porte AUCUNE : elle n'a que `utilisateurs`, `invites`
+                // et `documents`. Ces onglets ne pouvaient donc pas s'ouvrir — pas de
+                // getter, donc 404 —, et surtout ils ne pouvaient pas se filtrer.
+                // Ces rubriques existent par ailleurs, au menu, ou elles fonctionnent.
             ], $this->getSpecificIndicators(), $this->canvasHelper->getGlobalIndicatorsCanvas("Entreprise"))
         ];
     }

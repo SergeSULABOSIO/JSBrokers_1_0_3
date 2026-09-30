@@ -2,6 +2,7 @@
 
 namespace App\Controller\Admin;
 
+use App\Services\Canvas\LienDeCollection;
 use App\Entity\Assureur;
 use App\Entity\AutoriteFiscale;
 use App\Entity\Avenant;
@@ -571,7 +572,8 @@ trait ControllerUtilsTrait
         ?string $secondaryLabel = null,
         int $page = 1,
         int $limit = 20,
-        array $listActionOptions = []
+        array $listActionOptions = [],
+        ?array $lienParent = null
     ): Response {
         // Pagination pour les onglets génériques (non dialog).
         $dataArray = ($data instanceof \Doctrine\Common\Collections\Collection) ? $data->toArray() : (array)$data;
@@ -673,6 +675,21 @@ trait ControllerUtilsTrait
             // Amorce l'état du Cerveau pour cet onglet (badge « Mon portefeuille »
             // + persistance du périmètre en refresh/pagination), comme en liste principale.
             'initialSearchCriteria' => $initialSearchCriteria,
+            // LE LIEN VERS LE PARENT — {champ, nature}, résolu par Doctrine. Le navigateur
+            // ne le devine plus : il le reçoit ici et le renvoie tel quel à chaque
+            // recherche, ce qui borne la liste au parent de l'onglet. Le code de la
+            // collection l'accompagne : il dit au serveur que cet onglet EST contextuel,
+            // et qu'un lien manquant doit donc échouer FERMÉ plutôt que tout montrer.
+            //
+            // ⚠ LE CODE DE COLLECTION EST POSÉ MÊME QUAND LE CHAMP MANQUE. C'est lui qui
+            // permet au serveur de distinguer « cet onglet n'a pas de parent » de « cet
+            // onglet en a un, mais je ne sais pas lequel » — le second cas doit rendre une
+            // liste VIDE, jamais le cabinet entier.
+            'lienParent' => $usage === 'dialog' ? null : [
+                'collection' => $collectionFieldName,
+                'champ'      => $lienParent['champ'] ?? null,
+                'nature'     => $lienParent['nature'] ?? null,
+            ],
         ];
 
         if ($usage === "dialog") {
@@ -1565,7 +1582,13 @@ trait ControllerUtilsTrait
         $data = $this->ajusterCollectionContextuelle($collectionName, $parentEntity, $data);
         // Preload des relations avant renderCollectionOrList (évite N×M lazy-loads).
         $this->canvasBuilder->batchPreloadForCollection($data->toArray());
-        return $this->renderCollectionOrList($usage, $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField, $secondaryField, $secondaryLabel, $page, 20, $listActionOptions);
+
+        // LE LIEN VERS LE PARENT, RÉSOLU ICI ET UNE SEULE FOIS. Il descend jusqu'à l'état
+        // de l'onglet, et remonte à chaque recherche : c'est lui qui borne la liste quand
+        // elle cesse de passer par le getter ci-dessus. Voir resoudreLienParent().
+        $lienParent = $this->resoudreLienParent($parentEntityClass, $collectionName);
+
+        return $this->renderCollectionOrList($usage, $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField, $secondaryField, $secondaryLabel, $page, 20, $listActionOptions, $lienParent);
     }
 
     /**
@@ -1589,6 +1612,23 @@ trait ControllerUtilsTrait
             }
         }
         return $collectionMap;
+    }
+
+    /**
+     * Le lien qui rattache une collection a son parent, resolu par Doctrine.
+     *
+     * La regle vit dans {@see LienDeCollection} : c'est une fonction pure des metadonnees,
+     * et le test de contrat doit pouvoir l'interroger sans monter un controleur.
+     *
+     * @return array{champ: string, nature: string}|null
+     */
+    protected function resoudreLienParent(string $parentClass, string $collectionName): ?array
+    {
+        if (!property_exists($this, 'em') || !$this->em instanceof EntityManagerInterface) {
+            return null;
+        }
+
+        return LienDeCollection::pour($this->em, $parentClass, $collectionName);
     }
 
     /**
