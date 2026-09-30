@@ -4,6 +4,7 @@ namespace App\Tests\Workspace;
 
 use App\Comptabilite\CourtierEcritureComptableService;
 use App\Comptabilite\CourtierSuiviFiscalService;
+use App\Comptabilite\PlanComptable;
 use App\Entity\AutoriteFiscale;
 use App\Entity\Bordereau;
 use App\Entity\ChargeCourtier;
@@ -27,7 +28,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  * Tests fonctionnels des documents comptables OHADA du COURTIER (workspace) :
  *  - invariants comptables (partie double, actif = passif, résultat cohérent, TFT
  *    réconciliée) sur un jeu d'opérations couvrant tous les cas du schéma
- *    d'écritures (encaissement de commission via bordereau avec paiement partiel,
+ *    d'écritures — comptabilité à l'ENGAGEMENT : facturation d'une commission
+ *    via bordereau, PUIS son encaissement partiel qui solde la créance,
  *    rétro-commission, reversements de taxes assureur ET courtier, dépenses
  *    payée/engagée/annulée, capital social, paiement de sinistre EXCLU) ;
  *  - suivi fiscal (collecté / déductible / payable / payé / soldes, par redevable) ;
@@ -129,8 +131,10 @@ class WorkspaceDocumentsComptablesTest extends WebTestCase
      * Jeu d'opérations complet de l'exercice 2032. Montants choisis pour des
      * attendus lisibles (cf. assertions) :
      *   Capital 5000 (D 521 / C 101, daté du 1ᵉʳ paiement).
-     *   Encaissement partiel 580 sur note de bordereau (HT 1000 / taxe 160)
-     *     → prorata : 706 = 500, 443 = 80, 521 = 580.
+     *   FACTURATION de la note de bordereau, validée, émise le 15/02 (HT 1000 / taxe 160)
+     *     → D 411 = 1160, C 706 = 1000, C 443 = 160.
+     *   Encaissement partiel 580 de cette note → D 521 = 580, C 411 = 580.
+     *     Il reste donc 580 en créances au bilan, et le produit ne dépend PAS du payé.
      *   Rétro-commission partenaire payée 200 (sans compte) → D 632 / C 571.
      *   Reversement taxe ASSUREUR 30 → D 443 / C 571 (trésorerie seule).
      *   Reversement taxe COURTIER 50 → D 641 / C 571 (charge : trésorerie + résultat).
@@ -227,7 +231,12 @@ class WorkspaceDocumentsComptablesTest extends WebTestCase
         $noteDebit = new Note();
         $noteDebit->setNom('Facture bordereau test')->setReference('FACT-BRD-PHPUNIT')
             ->setType(Note::TYPE_NOTE_DE_DEBIT)->setAddressedTo(Note::TO_ASSUREUR)
-            ->setValidated(true)->setSignature('sig-test')->setBordereau($bordereau);
+            ->setValidated(true)->setSignature('sig-test')->setBordereau($bordereau)
+            // LA DATE DE LA PIÈCE, qui date son écriture d'émission. `ValeursDeNaissance`
+            // la pose sur toute note créée par l'application ; ici l'entité est montée à
+            // la main, et sans elle l'écriture tomberait sur `createdAt` — c'est-à-dire
+            // aujourd'hui, hors de l'exercice fictif de ce banc.
+            ->setSentAt(new \DateTimeImmutable('2032-02-15'));
         $noteDebit->setEntreprise($entreprise);
         $noteDebit->setInvite($ownerInvite);
         $em->persist($noteDebit);
@@ -339,24 +348,42 @@ class WorkspaceDocumentsComptablesTest extends WebTestCase
         $this->assertEqualsWithDelta($documents['journal']['totalDebit'], $documents['journal']['totalCredit'], 0.01, 'Le journal doit être équilibré.');
         $this->assertEqualsWithDelta($documents['balance']['totaux']['mvtD'], $documents['balance']['totaux']['mvtC'], 0.01, 'La balance doit être équilibrée.');
 
-        // Compte de résultat : produits 500 (part HT proratisée), charges 400
-        // (632 rétro 200 + 641 taxe courtier 50 + 62 loyer HT 100 + 65 engagée 50).
-        $this->assertEqualsWithDelta(500.0, $documents['resultat']['totalProduits'], 0.01);
+        // ── COMPTE DE RÉSULTAT — À L'ENGAGEMENT ─────────────────────────────────
+        // Produits 1000 : le HT FACTURÉ, constaté à l'émission de la note. Il valait
+        // 500 tant que le produit naissait de l'encaissement (la part HT des 580 reçus).
+        // Charges 400, inchangées : 632 rétro 200 + 641 taxe courtier 50 + 62 loyer HT
+        // 100 + 65 engagée 50 — les dettes, elles, restent sur l'encaissement.
+        $this->assertEqualsWithDelta(1000.0, $documents['resultat']['totalProduits'], 0.01);
         $this->assertEqualsWithDelta(400.0, $documents['resultat']['totalCharges'], 0.01);
-        $this->assertEqualsWithDelta(100.0, $documents['resultat']['resultat'], 0.01);
+        $this->assertEqualsWithDelta(600.0, $documents['resultat']['resultat'], 0.01);
 
         // TFR : le résultat net est identique à celui du compte de résultat.
         $tfr = $documents['tfr'];
-        $this->assertEqualsWithDelta(100.0, end($tfr)['montant'], 0.01, 'Le résultat net du TFR doit égaler celui du compte de résultat.');
+        $this->assertEqualsWithDelta(600.0, end($tfr)['montant'], 0.01, 'Le résultat net du TFR doit égaler celui du compte de résultat.');
 
-        // Bilan : Actif = Passif (ouverture ET clôture), total attendu 5200
-        // (trésorerie 5180 + TVA récupérable 20 = capital 5000 + résultat 100 + 401 50 + 443 50).
+        // ── BILAN : Actif = Passif, et la CRÉANCE y figure enfin ────────────────
+        // Actif 5780 = trésorerie 5180 + créances 580 (1160 facturés − 580 encaissés)
+        //            + TVA récupérable 20
+        // Passif 5780 = capital 5000 + résultat 600 + fournisseurs 50 + TVA facturée 130.
         $actif = end($documents['bilan']['actif']);
         $passif = end($documents['bilan']['passif']);
         $this->assertEqualsWithDelta($actif['cloture'], $passif['cloture'], 0.01, 'TOTAL ACTIF doit égaler TOTAL PASSIF.');
-        $this->assertEqualsWithDelta(5200.0, $actif['cloture'], 0.01);
+        $this->assertEqualsWithDelta(5780.0, $actif['cloture'], 0.01);
 
-        // TFT : encaissements 580, décaissements 400 (200+30+50+120), financement 5000,
+        $creances = null;
+        foreach ($documents['bilan']['actif'] as $poste) {
+            if (str_starts_with($poste['libelle'], 'Créances')) {
+                $creances = $poste['cloture'];
+            }
+        }
+        $this->assertNotNull($creances, 'Le bilan doit porter un poste de créances : sans lui, une '
+            . 'commission facturée et non encaissée n\'apparaîtrait nulle part.');
+        $this->assertEqualsWithDelta(580.0, $creances, 0.01, 'Facturé 1160, encaissé 580 : il reste 580 dus.');
+
+        // ── TFT : INCHANGÉ, et c'est juste ──────────────────────────────────────
+        // Un tableau de flux est par nature sur encaissement : les écritures d'émission
+        // ne touchent aucun compte de trésorerie, elles n'y entrent donc pas.
+        // Encaissements 580, décaissements 400 (200+30+50+120), financement 5000,
         // clôture 5180 — réconciliée avec la trésorerie du bilan.
         $tft = $documents['tft'];
         $this->assertEqualsWithDelta(580.0, $tft['encaissements'], 0.01);
@@ -375,6 +402,65 @@ class WorkspaceDocumentsComptablesTest extends WebTestCase
         $this->assertContains('CAPITAL', $pieces, 'L\'écriture fondatrice de capital doit être présente.');
     }
 
+    /**
+     * ⚠ AUCUN COMPTE MOUVEMENTÉ NE DOIT ÉCHAPPER AUX ÉTATS.
+     *
+     * La balance se construit toute seule, de tous les comptes rencontrés. Le BILAN, lui,
+     * énumère ses postes EN DUR : l'égalité Actif = Passif ne tient que parce que la liste
+     * couvre exactement les comptes employés. Ajouter un compte sans l'y porter
+     * déséquilibrerait le bilan EN SILENCE — sans erreur, sans exception, juste un total
+     * faux, que personne ne saurait rapprocher de quoi que ce soit.
+     *
+     * C'est très exactement ce qui a failli arriver en introduisant le 411. Ce test est le
+     * vrai correctif : le prochain compte ajouté fera échouer une assertion, au lieu de
+     * fausser un état. Il ne vérifie pas un montant, il vérifie une COUVERTURE.
+     */
+    public function testAucunCompteNEchappeAuBilan(): void
+    {
+        ['entreprise' => $e] = $this->seed();
+        /** @var CourtierEcritureComptableService $service */
+        $service = static::getContainer()->get(CourtierEcritureComptableService::class);
+
+        $documents = $service->documents($e, self::EXERCICE);
+
+        // Les comptes que le bilan sait porter. Toute addition à `bilan()` se répercute ici.
+        $portesParLeBilan = [
+            PlanComptable::BANQUES,
+            PlanComptable::CAISSE,
+            PlanComptable::CLIENTS,
+            PlanComptable::TVA_RECUPERABLE,
+            PlanComptable::CAPITAL_SOCIAL,
+            PlanComptable::FOURNISSEURS,
+            PlanComptable::TVA_FACTUREE,
+            PlanComptable::TVA_DUE,
+        ];
+
+        $orphelins = [];
+        foreach ($documents['balance']['lignes'] as $ligne) {
+            $compte = (string) $ligne['compte'];
+            $classe = PlanComptable::classe($compte);
+            // Les classes 6 et 7 partent au compte de résultat, dont le solde revient au
+            // bilan par la ligne « Résultat de l'exercice » : elles sont couvertes.
+            if ($classe === 6 || $classe === 7 || in_array($compte, $portesParLeBilan, true)) {
+                continue;
+            }
+            $orphelins[] = $compte;
+        }
+
+        self::assertSame([], $orphelins, sprintf(
+            'Ces comptes sont mouvementés mais n\'apparaissent ni au bilan ni au résultat : %s. '
+            . 'Le total du bilan est donc faux, sans que rien ne le signale. Portez-les dans '
+            . 'DocumentsComptablesBuilder::bilan(), et ajoutez-les à la liste de ce test.',
+            implode(', ', $orphelins),
+        ));
+
+        // Et la conséquence, vérifiée : les deux colonnes s'équilibrent.
+        $actif = end($documents['bilan']['actif']);
+        $passif = end($documents['bilan']['passif']);
+        self::assertEqualsWithDelta($actif['ouverture'], $passif['ouverture'], 0.01, 'Bilan d\'ouverture déséquilibré.');
+        self::assertEqualsWithDelta($actif['cloture'], $passif['cloture'], 0.01, 'Bilan de clôture déséquilibré.');
+    }
+
     public function testSuiviFiscalParRedevable(): void
     {
         ['entreprise' => $e] = $this->seed();
@@ -383,20 +469,23 @@ class WorkspaceDocumentsComptablesTest extends WebTestCase
 
         $suivi = $service->suivi($e, self::EXERCICE);
 
-        // Bloc ASSUREUR : collecté 80 (part taxe de l'encaissement), déductible 20
-        // (TVA de la dépense payée), solde payable 60, payé 30, solde dû 30.
+        // ── LA TAXE SUIT LE PRODUIT, donc la FACTURE ────────────────────────────
+        // Bloc ASSUREUR : collecté 160 (la taxe FACTURÉE de la note ; c'était 80, la
+        // part taxe des 580 encaissés), déductible 20 (TVA de la dépense payée), solde
+        // payable 140, payé 30, solde dû 110.
         $t = $suivi['assureur']['totaux'];
-        $this->assertEqualsWithDelta(80.0, $t['collectee'], 0.01);
+        $this->assertEqualsWithDelta(160.0, $t['collectee'], 0.01);
         $this->assertEqualsWithDelta(20.0, $t['deductible'], 0.01);
-        $this->assertEqualsWithDelta(60.0, $t['netDu'], 0.01);
+        $this->assertEqualsWithDelta(140.0, $t['netDu'], 0.01);
         $this->assertEqualsWithDelta(30.0, $t['reverse'], 0.01);
-        $this->assertEqualsWithDelta(30.0, $t['solde'], 0.01);
+        $this->assertEqualsWithDelta(110.0, $t['solde'], 0.01);
 
-        // Bloc COURTIER : dû 50 (10 % du HT encaissé 500), payé 50 (reversement 641), solde 0.
+        // Bloc COURTIER : dû 100 (10 % du HT FACTURÉ 1000 ; c'était 50 sur le HT
+        // encaissé), payé 50 (reversement 641), solde 50.
         $tc = $suivi['courtier']['totaux'];
-        $this->assertEqualsWithDelta(50.0, $tc['du'], 0.01);
+        $this->assertEqualsWithDelta(100.0, $tc['du'], 0.01);
         $this->assertEqualsWithDelta(50.0, $tc['paye'], 0.01);
-        $this->assertEqualsWithDelta(0.0, $tc['solde'], 0.01);
+        $this->assertEqualsWithDelta(50.0, $tc['solde'], 0.01);
 
         // Fiches des taxes par redevable : nom/code, taux et autorités assujetties.
         $this->assertCount(1, $suivi['taxes']['assureur']);

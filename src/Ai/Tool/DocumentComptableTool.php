@@ -51,8 +51,10 @@ final class DocumentComptableTool implements AiToolInterface, AiToolConditionnel
         'tresorerie'         => "Tableau de flux de trésorerie (TFT) : mouvements de liquidités de l'exercice "
             . '(encaissements − décaissements) et variation de la trésorerie. Mesure le cash réel, pas le résultat.',
         'resultat'           => "Compte de résultat : produits − charges = résultat net de l'exercice. Le poste "
-            . "« chiffre d'affaires » correspond aux commissions de courtage HT réellement encaissées (comptabilité "
-            . "d'encaissement) ; il ne comprend ni les primes (encaissées par l'assureur) ni les commissions non encore encaissées.",
+            . "« chiffre d'affaires » correspond aux commissions de courtage HT FACTURÉES (comptabilité "
+            . "d'engagement) : une commission entre au résultat dès l'émission de sa note, encaissée ou non. "
+            . "Ce qui reste dû figure au bilan, en créances. Le chiffre d'affaires ne comprend pas les primes, "
+            . "encaissées par l'assureur.",
         'bilan'              => 'Bilan : photographie du patrimoine à la clôture — actif (emplois) et passif '
             . '(ressources), qui s\'équilibrent. Décrit une situation, pas un flux.',
         'formation_resultat' => 'Formation du résultat (TFR) : soldes intermédiaires de gestion, du chiffre '

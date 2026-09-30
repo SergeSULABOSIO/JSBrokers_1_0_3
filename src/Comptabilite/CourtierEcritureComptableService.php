@@ -10,6 +10,7 @@ use App\Entity\Note;
 use App\Entity\Paiement;
 use App\Entity\Taxe;
 use App\Repository\DepenseCourtierRepository;
+use App\Repository\NoteRepository;
 use App\Repository\PaiementRepository;
 use App\Repository\ReversementRetroAgentRepository;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
@@ -20,15 +21,45 @@ use App\Services\ServiceTaxes;
  * @file Génération « à la volée » des écritures comptables du COURTIER (workspace).
  * @description Pendant workspace d'EcritureComptableService : dérive la comptabilité
  * en partie double du cabinet de courtage depuis ses données transactionnelles,
- * SCOPÉE à l'entreprise. Comptabilité de trésorerie : le fait générateur est le
- * PAIEMENT (Paiement.paidAt) — le chiffre d'affaires commissions est capturé quand
- * la note (facture) issue du bordereau de production, ou à articles, est payée.
+ * SCOPÉE à l'entreprise.
+ *
+ * ══ LE FAIT GÉNÉRATEUR DU PRODUIT EST L'ÉMISSION D'UNE NOTE VALIDÉE ══════════
+ *
+ * Longtemps, il fut le PAIEMENT : émettre une note ne produisait rien, et une
+ * commission facturée mais non réglée n'apparaissait NULLE PART — ni au journal, ni
+ * au grand livre, ni au bilan. Il n'existait même pas de compte de créance où la
+ * loger. Le cabinet ne pouvait pas lire ce qu'on lui devait.
+ *
+ *     émission d'une note de DÉBIT validée   D 411 TTC / C 706 HT + C 443 taxe
+ *     émission d'un AVOIR validé             D 706 HT + D 443 taxe / C 411 TTC
+ *     règlement de cette note                D 521|571 / C 411   (l'inverse pour un avoir)
+ *
+ * ⚠ `validated` DÉCIDE, et ce n'est pas un détail d'implémentation. C'est lui qui
+ * aligne la comptabilité sur le suivi du recouvrement, qui ne compte déjà que les
+ * notes validées : un seul chiffre, une seule définition — ce qui est au suivi est au
+ * bilan. C'est aussi ce qui rend la bascule SANS REPRISE : les écritures étant
+ * dérivées, comptabiliser toute note ferait revivre rétroactivement tout l'historique
+ * du cabinet, brouillons et essais compris. Aucune note ancienne n'étant validée,
+ * l'histoire garde exactement les écritures qu'elle avait, et la bascule est datée du
+ * premier geste fait par la fenêtre de facturation.
+ *
+ * ⚠ UN SEUL PRÉDICAT POUR LES DEUX MOITIÉS : {@see produitUneCreance()}. L'émission et
+ * le règlement l'interrogent tous les deux. Deux conditions écrites deux fois
+ * finiraient par diverger, et un règlement sans créance rendrait le 411 créditeur sans
+ * que rien ne le signale.
+ *
+ * ── CE QUI RESTE SUR L'ENCAISSEMENT, ET POURQUOI ────────────────────────────
+ * Les DETTES : rétrocommissions aux intermédiaires, taxes à reverser. Elles ont leur
+ * propre refus d'engagement, motivé plus bas dans {@see ecrituresRetroAgent()} — mêler
+ * un seul accrual à ce côté-là fausserait le rapprochement entre trésorerie et
+ * résultat. Et le règlement d'une note NON validée garde l'écriture d'hier : c'est ce
+ * qui laisse l'historique intact.
  *
  * Règles métier (validées) :
  *  - le courtier ne collecte PAS les primes et n'indemnise PAS les sinistres :
  *    les paiements liés aux sinistres sont exclus (aucun impact trésorerie/résultat) ;
- *  - note de DÉBIT payée → encaissement : D 521/571, C 706 Commissions (part HT),
- *    C 443 Taxes facturées (part taxe assureur, collectée pour le compte de l'État) ;
+ *  - note de DÉBIT non validée payée → encaissement d'hier : D 521/571, C 706
+ *    Commissions (part HT), C 443 Taxes facturées (part taxe assureur) ;
  *  - note de CRÉDIT payée (montants HT) → décaissement selon le destinataire :
  *      · partenaire        → D 632 Rémunérations d'intermédiaires (rétro-commission),
  *      · autorité fiscale  → taxe redevable ASSUREUR : D 443 (extinction de dette,
@@ -54,6 +85,7 @@ class CourtierEcritureComptableService
 
     public function __construct(
         private PaiementRepository $paiementRepository,
+        private NoteRepository $noteRepository,
         private DepenseCourtierRepository $depenseRepository,
         private ReversementRetroAgentRepository $reversementRepository,
         private IndicatorCalculationHelper $helper,
@@ -88,7 +120,13 @@ class CourtierEcritureComptableService
             $ecritures[] = $ecritureCapital;
         }
 
-        // 2) Paiements de notes (encaissements de commissions et décaissements).
+        // 2) ÉMISSION des notes validées : la créance naît, le produit avec elle.
+        foreach ($this->ecrituresEmission($id) as $ecriture) {
+            $ecritures[] = $ecriture;
+        }
+
+        // 3) Paiements de notes : extinction de la créance, ou encaissement d'hier
+        //    pour une note non validée (et décaissements de dettes).
         foreach ($paiements as $paiement) {
             $ecriture = $this->ecriturePaiement($paiement);
             if ($ecriture !== null) {
@@ -96,12 +134,12 @@ class CourtierEcritureComptableService
             }
         }
 
-        // 3) Dépenses du cabinet non annulées : charge HT, TVA déductible, sortie TTC.
+        // 4) Dépenses du cabinet non annulées : charge HT, TVA déductible, sortie TTC.
         foreach ($depenses as $depense) {
             $ecritures[] = $this->ecritureDepense($depense);
         }
 
-        // 4) Rétrocommissions versées aux AGENTS INTERNES : charge de personnel.
+        // 5) Rétrocommissions versées aux AGENTS INTERNES : charge de personnel.
         foreach ($this->ecrituresRetroAgent($id) as $ecriture) {
             $ecritures[] = $ecriture;
         }
@@ -137,6 +175,121 @@ class CourtierEcritureComptableService
     // ===================== Génération des écritures =====================
 
     /**
+     * CETTE NOTE FAIT-ELLE NAÎTRE UNE CRÉANCE ? — le prédicat unique.
+     *
+     * Interrogé par les DEUX moitiés de la partie double : l'écriture d'émission, et
+     * celle du règlement. C'est la seule garantie qu'un paiement ne solde jamais une
+     * créance qui n'existe pas — ce qui rendrait le compte 411 créditeur, sans erreur
+     * ni exception, et sans que rien ne le signale.
+     *
+     * Quatre conditions, et chacune a sa raison :
+     *  - VALIDÉE : un brouillon n'est pas une facture (cf. l'en-tête du fichier) ;
+     *  - adressée au CLIENT ou à l'ASSUREUR : une note à un partenaire ou à une
+     *    autorité fiscale porte une dette, pas une créance ;
+     *  - d'un TYPE connu : un type non renseigné ne se comptabilise pas à l'aveugle,
+     *    il retombe sur le chemin d'hier ;
+     *  - d'un montant non nul : une note vide n'a rien à porter.
+     */
+    private function produitUneCreance(Note $note): bool
+    {
+        if ($note->isValidated() !== true) {
+            return false;
+        }
+        if (!in_array($note->getAddressedTo(), [Note::TO_CLIENT, Note::TO_ASSUREUR], true)) {
+            return false;
+        }
+        if (!in_array($note->getType(), [Note::TYPE_NOTE_DE_DEBIT, Note::TYPE_NOTE_DE_CREDIT], true)) {
+            return false;
+        }
+
+        [$ht, $taxe] = $this->ventiler($note);
+
+        return abs($ht + $taxe) >= 0.005;
+    }
+
+    /**
+     * LES ÉCRITURES D'ÉMISSION — ce que la facturation inscrit au journal.
+     *
+     *     note de DÉBIT   D 411 Créances  TTC / C 706 Commissions HT / C 443 taxe
+     *     AVOIR           D 706 HT / D 443 taxe / C 411 Créances  TTC
+     *
+     * LA DATE EST CELLE DE LA PIÈCE, `sentAt`, et non son horodatage de création : un
+     * exercice se coupe à une date, et le courtier doit pouvoir la porter. À défaut —
+     * une note ancienne, un import —, `createdAt` fait foi ; sans l'un ni l'autre, on
+     * n'écrit rien plutôt que de dater au hasard.
+     *
+     * @return list<array>
+     */
+    private function ecrituresEmission(int $entrepriseId): array
+    {
+        $ecritures = [];
+
+        foreach ($this->noteRepository->findChronologiqueForEntreprise($entrepriseId) as $note) {
+            if (!$this->produitUneCreance($note)) {
+                continue;
+            }
+            $date = $note->getSentAt() ?? $note->getCreatedAt();
+            if ($date === null) {
+                continue;
+            }
+
+            [$ht, $taxe] = $this->ventiler($note);
+            $ttc = round($ht + $taxe, 2);
+            $estDebit = $note->getType() === Note::TYPE_NOTE_DE_DEBIT;
+
+            $lignes = [];
+            if ($estDebit) {
+                $lignes[] = $this->ligne(PlanComptable::CLIENTS, $ttc, 0.0);
+                if (abs($ht) >= 0.005) {
+                    $lignes[] = $this->ligne(PlanComptable::SERVICES_VENDUS, 0.0, $ht);
+                }
+                if (abs($taxe) >= 0.005) {
+                    $lignes[] = $this->ligne(PlanComptable::TVA_FACTUREE, 0.0, $taxe);
+                }
+            } else {
+                if (abs($ht) >= 0.005) {
+                    $lignes[] = $this->ligne(PlanComptable::SERVICES_VENDUS, $ht, 0.0);
+                }
+                if (abs($taxe) >= 0.005) {
+                    $lignes[] = $this->ligne(PlanComptable::TVA_FACTUREE, $taxe, 0.0);
+                }
+                $lignes[] = $this->ligne(PlanComptable::CLIENTS, 0.0, $ttc);
+            }
+
+            $ecritures[] = [
+                'date'    => $date,
+                'piece'   => $note->getReference() ?: ('N-' . $note->getId()),
+                'libelle' => trim(sprintf(
+                    '%s %s — %s',
+                    $estDebit ? 'Facturation' : 'Avoir émis',
+                    $note->getNom() ?? ('note #' . $note->getId()),
+                    $this->helper->getNoteAddressedToString($note) ?? '',
+                ), ' —'),
+                'type'    => $estDebit ? 'facturation' : 'avoir_emis',
+                'lignes'  => $lignes,
+                // Métadonnée (ignorée par le moteur de documents) : taxe dont le COURTIER
+                // est redevable, due sur le HT FACTURÉ — elle suit le produit, et a donc
+                // quitté l'écriture d'encaissement en même temps que lui. Un avoir la
+                // retranche : on ne doit pas l'impôt d'un produit qu'on a annulé.
+                // ⚠ L'EXONÉRATION VAUT ICI AUSSI : une affaire exonérée ne fait naître
+                // aucune dette fiscale sur sa commission.
+                'taxeCourtierDue' => round(
+                    $this->serviceTaxes->getMontantTaxeSurCommission(
+                        $estDebit ? $ht : -$ht,
+                        $this->isIARD($note),
+                        false,
+                        $this->cotationDe($note),
+                        $note->getEntreprise(),
+                    ),
+                    2,
+                ),
+            ];
+        }
+
+        return $ecritures;
+    }
+
+    /**
      * Écriture dérivée d'un paiement de note. Null si le montant est négligeable.
      */
     private function ecriturePaiement(Paiement $paiement): ?array
@@ -155,7 +308,35 @@ class CourtierEcritureComptableService
             'piece' => $paiement->getReference() ?: ('P-' . $paiement->getId()),
         ];
 
-        // ---- Note de DÉBIT : encaissement de commissions (± taxe assureur). ----
+        // ---- La note a fait naître une créance : le règlement l'ÉTEINT. ----
+        // Aucune ventilation ici, et c'est le point : le produit a déjà été constaté à
+        // l'émission. Le recompter au paiement doublerait le chiffre d'affaires.
+        if ($this->produitUneCreance($note)) {
+            $estDebit = $note->getType() === Note::TYPE_NOTE_DE_DEBIT;
+
+            return $base + [
+                'libelle' => trim(sprintf(
+                    '%s %s — %s',
+                    $estDebit ? 'Encaissement' : 'Remboursement',
+                    $note->getNom() ?? ('note #' . $note->getId()),
+                    $destinataire,
+                ), ' —'),
+                'type'    => $estDebit ? 'encaissement' : 'remboursement',
+                'lignes'  => $estDebit
+                    ? [
+                        $this->ligne($tresorerie, $montant, 0.0),
+                        $this->ligne(PlanComptable::CLIENTS, 0.0, $montant),
+                    ]
+                    : [
+                        $this->ligne(PlanComptable::CLIENTS, $montant, 0.0),
+                        $this->ligne($tresorerie, 0.0, $montant),
+                    ],
+            ];
+        }
+
+        // ---- Note de DÉBIT NON VALIDÉE : l'encaissement d'hier, inchangé. ----
+        // C'est ce qui laisse l'historique du cabinet exactement où il était : aucune
+        // note ancienne n'est validée, donc aucun exercice passé ne bouge.
         if ($note->getType() === Note::TYPE_NOTE_DE_DEBIT) {
             [$htPart, $taxePart] = $this->ventilerEncaissement($note, $montant);
 
@@ -233,14 +414,8 @@ class CourtierEcritureComptableService
      */
     private function ventilerEncaissement(Note $note, float $montantPaye): array
     {
-        if ($note->getArticles()->isEmpty() && $note->getBordereau() !== null) {
-            $ht    = (float) ($note->getBordereau()->getMontantComHtPayableNow() ?? 0.0);
-            $taxe  = (float) ($note->getBordereau()->getMontantTaxePayableNow() ?? 0.0);
-            $total = $ht + $taxe;
-        } else {
-            $total = $this->helper->getNoteMontantPayable($note);
-            $ht    = $this->helper->getNoteMontantHT($note);
-        }
+        [$ht, $taxe] = $this->ventiler($note);
+        $total = $ht + $taxe;
 
         // Note sans montant théorique : tout en produit (aucune base de proratisation).
         if ($total < 0.005) {
@@ -251,6 +426,34 @@ class CourtierEcritureComptableService
         $taxePart = round($montantPaye - $htPart, 2);
 
         return [$htPart, $taxePart];
+    }
+
+    /**
+     * LES MONTANTS TOTAUX D'UNE NOTE : part HT (commissions) et part taxe assureur.
+     *
+     * Deux compositions possibles, et une seule lecture :
+     *  - note de BORDEREAU (sans articles) : les montants persistés du bordereau ;
+     *  - note à ARTICLES : les montants calculés, ligne par ligne.
+     *
+     * C'est la base de l'écriture d'ÉMISSION — qui porte la note entière — et celle du
+     * prorata d'un encaissement d'une note non validée. Les deux lisent le même nombre :
+     * deux lectures divergentes feraient une créance qui ne s'éteint pas.
+     *
+     * @return array{0:float, 1:float} [part HT, part taxe]
+     */
+    private function ventiler(Note $note): array
+    {
+        if ($note->getArticles()->isEmpty() && $note->getBordereau() !== null) {
+            return [
+                round((float) ($note->getBordereau()->getMontantComHtPayableNow() ?? 0.0), 2),
+                round((float) ($note->getBordereau()->getMontantTaxePayableNow() ?? 0.0), 2),
+            ];
+        }
+
+        $total = round($this->helper->getNoteMontantPayable($note), 2);
+        $ht    = round($this->helper->getNoteMontantHT($note), 2);
+
+        return [$ht, round($total - $ht, 2)];
     }
 
     /**
@@ -540,6 +743,9 @@ class CourtierEcritureComptableService
         $libelle = match ($compte) {
             PlanComptable::SERVICES_VENDUS => 'Commissions de courtage',
             PlanComptable::TVA_FACTUREE    => 'État, taxes facturées (collectées)',
+            // « Clients » serait trompeur : la plupart des commissions se réclament à
+            // l'ASSUREUR, pas au client. Le compte est le même, le libellé le dit.
+            PlanComptable::CLIENTS         => 'Créances sur assureurs et clients',
             default                        => PlanComptable::libelle($compte),
         };
 

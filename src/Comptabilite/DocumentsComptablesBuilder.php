@@ -397,9 +397,16 @@ final class DocumentsComptablesBuilder
 
     /**
      * Bilan comparatif (ouverture / clôture de l'exercice) : Actif (trésorerie,
-     * TVA récupérable) et Passif (capitaux propres = capital + report + résultat,
-     * dettes = fournisseurs + TVA facturée). L'égalité Actif = Passif est garantie
-     * par l'équilibre des écritures.
+     * créances, TVA récupérable) et Passif (capitaux propres = capital + report +
+     * résultat, dettes = fournisseurs + TVA facturée). L'égalité Actif = Passif est
+     * garantie par l'équilibre des écritures.
+     *
+     * ⚠ CES POSTES SONT ÉNUMÉRÉS EN DUR, contrairement à la balance — et l'égalité ne
+     * tient QUE parce que la liste couvre tous les comptes réellement mouvementés.
+     * Un compte nouveau qu'on oublierait ici déséquilibrerait le bilan EN SILENCE :
+     * sans erreur, sans exception, juste un total faux. C'est ce qui a failli arriver
+     * en introduisant le 411, et c'est pourquoi un test parcourt désormais la balance
+     * pour exiger que chaque compte soit couvert, ici ou au compte de résultat.
      *
      * @return array{actif:array, passif:array}
      */
@@ -411,6 +418,8 @@ final class DocumentsComptablesBuilder
         $colonne = function (array $agg, bool $cloture) use ($resultatExercice): array {
             $tresorerie = round($this->solde($agg, PlanComptable::BANQUES) + $this->solde($agg, PlanComptable::CAISSE), 2);
             $tvaRecup   = $this->solde($agg, PlanComptable::TVA_RECUPERABLE);
+            // Ce qui a été facturé et n'a pas encore été encaissé. Compte débiteur.
+            $creances   = $this->solde($agg, PlanComptable::CLIENTS);
 
             $capital    = -$this->solde($agg, PlanComptable::CAPITAL_SOCIAL); // compte créditeur
             // Résultat cumulé porté en capitaux propres = Σ produits − Σ charges (depuis l'origine).
@@ -426,8 +435,9 @@ final class DocumentsComptablesBuilder
             return [
                 'actif' => [
                     'tresorerie' => $tresorerie,
+                    'creances'   => $creances,
                     'tvaRecup'   => $tvaRecup,
-                    'total'      => round($tresorerie + $tvaRecup, 2),
+                    'total'      => round($tresorerie + $creances + $tvaRecup, 2),
                 ],
                 'passif' => [
                     'capital'      => $capital,
@@ -447,6 +457,7 @@ final class DocumentsComptablesBuilder
         return [
             'actif' => [
                 ['libelle' => 'Trésorerie (banques, caisse)', 'ouverture' => $ouv['actif']['tresorerie'], 'cloture' => $clo['actif']['tresorerie']],
+                ['libelle' => 'Créances (notes émises non encaissées)', 'ouverture' => $ouv['actif']['creances'], 'cloture' => $clo['actif']['creances']],
                 ['libelle' => 'État, TVA récupérable', 'ouverture' => $ouv['actif']['tvaRecup'], 'cloture' => $clo['actif']['tvaRecup']],
                 ['libelle' => 'TOTAL ACTIF', 'ouverture' => $ouv['actif']['total'], 'cloture' => $clo['actif']['total'], 'total' => true],
             ],

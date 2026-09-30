@@ -19,6 +19,15 @@ final class PlanComptable
     public const REPORT_A_NOUVEAU    = '11';  // Résultats cumulés des exercices antérieurs
     public const RESULTAT_EXERCICE   = '13';  // Résultat net de l'exercice
     public const FOURNISSEURS        = '401'; // Dettes fournisseurs (charges engagées non payées)
+    /**
+     * Créances sur les tiers : ce qui a été FACTURÉ et n'a pas encore été encaissé.
+     *
+     * Ce compte a longtemps manqué, et son absence était visible : une commission
+     * réclamée à un assureur n'apparaissait NULLE PART — ni au journal, ni au grand
+     * livre, ni au bilan, dont l'actif ne comptait que la trésorerie et la TVA
+     * récupérable. Le cabinet ne pouvait pas lire ce qu'on lui devait.
+     */
+    public const CLIENTS             = '411'; // Créances clients (notes émises non encaissées)
     public const TVA_FACTUREE        = '443'; // État, TVA facturée (collectée sur les ventes)
     public const TVA_RECUPERABLE     = '445'; // État, TVA récupérable (déductible sur les achats)
     public const TVA_DUE             = '4441'; // État, TVA due (liquidée, restant à reverser)
@@ -46,6 +55,7 @@ final class PlanComptable
         self::REPORT_A_NOUVEAU  => 'Report à nouveau',
         self::RESULTAT_EXERCICE => 'Résultat net de l\'exercice',
         self::FOURNISSEURS      => 'Fournisseurs',
+        self::CLIENTS           => 'Clients',
         self::TVA_FACTUREE      => 'État, TVA facturée',
         self::TVA_RECUPERABLE   => 'État, TVA récupérable',
         self::TVA_DUE           => 'État, TVA due',

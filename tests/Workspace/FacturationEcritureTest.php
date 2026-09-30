@@ -2,6 +2,8 @@
 
 namespace App\Tests\Workspace;
 
+use App\Comptabilite\CourtierEcritureComptableService;
+use App\Comptabilite\PlanComptable;
 use App\Entity\Article;
 use App\Entity\Assureur;
 use App\Entity\Avenant;
@@ -453,6 +455,48 @@ class FacturationEcritureTest extends WebTestCase
         self::assertSame(200, $code);
         self::assertEqualsWithDelta($reste, $this->montantDe($this->notes()[0]), 0.02,
             'Le serveur facture le reste, pas ce qu\'on lui a demandé.',
+        );
+    }
+
+    /**
+     * LE GESTE VA JUSQU'À LA COMPTABILITÉ — c'est le point de tout le chantier.
+     *
+     * Émettre une note ne produisait aucune écriture : une commission réclamée à un
+     * assureur n'apparaissait ni au journal, ni au grand livre, ni au bilan. Depuis le
+     * passage à l'engagement, la facture EST le fait générateur du produit. Ce test
+     * boucle la chaîne depuis le bouton de l'écran, et non depuis le service : c'est le
+     * seul endroit qui prouve que les deux bouts sont reliés.
+     *
+     * Le détail des écritures — l'avoir, le brouillon, l'extinction de la créance — vit
+     * dans {@see FacturationComptabiliteTest}, qui n'a pas besoin de tout ce dossier.
+     */
+    public function testLaNoteEmiseEntreAuJournalEtPorteLaCreance(): void
+    {
+        $seed = $this->seed();
+
+        $this->facturer([['trancheId' => $seed['trancheId'], 'revenuId' => $seed['revenuId']]]);
+        $note = $this->notes()[0];
+
+        $documents = static::getContainer()->get(CourtierEcritureComptableService::class)
+            ->documents($seed['entreprise'], (int) $note->getSentAt()->format('Y'));
+
+        $emission = null;
+        foreach ($documents['journal']['ecritures'] as $ecriture) {
+            if ($ecriture['piece'] === $note->getReference()) {
+                $emission = $ecriture;
+            }
+        }
+        self::assertNotNull($emission, 'La note émise depuis l\'écran doit entrer au journal.');
+        self::assertSame('facturation', $emission['type']);
+
+        $creance = 0.0;
+        foreach ($emission['lignes'] as $ligne) {
+            if ((string) $ligne['compte'] === PlanComptable::CLIENTS) {
+                $creance = $ligne['debit'];
+            }
+        }
+        self::assertGreaterThan(0.0, $creance,
+            'La commission facturée doit naître en créance : c\'est ce qui la rend lisible au bilan.',
         );
     }
 
