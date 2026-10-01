@@ -134,6 +134,25 @@ class Note implements OwnerAwareInterface
     #[Groups(['list:read'])]
     public ?bool $aUnSoldeDu = null;
 
+    /**
+     * Badge de PROVENANCE : « Bordereau » quand la note est issue d'un bordereau de
+     * production, null sinon. Le rendu d'une ligne n'affiche un badge que si sa valeur
+     * n'est pas vide — c'est ainsi qu'une note ordinaire reste muette.
+     */
+    #[Groups(['list:read'])]
+    public ?string $bordereauAffiche = null;
+
+    /**
+     * La référence du bordereau d'origine, pour la ligne secondaire : savoir qu'une note
+     * vient d'un bordereau ne dit pas DUQUEL.
+     *
+     * ⚠ Code PLAT obligatoire : le rendu d'une ligne fait `attribute(entity, code)`, où un
+     * chemin pointé (« bordereau.reference ») est lu comme un nom de propriété et fait
+     * tomber la rubrique ENTIÈRE.
+     */
+    #[Groups(['list:read'])]
+    public ?string $bordereauReference = null;
+
     #[Groups(['list:read'])]
     public ?float $montantTaxe = null;
 
