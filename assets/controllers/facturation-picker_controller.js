@@ -126,6 +126,26 @@ export default class extends PickerBase {
         this._notifyCerveau('ui:note.preview-request', { url: this._urlApercu(this.noteId) + '?download=1' });
     }
 
+    /**
+     * SIGNALER LE RÈGLEMENT DE LA NOTE QU'ON VIENT D'ÉMETTRE.
+     *
+     * Émettre n'est que la moitié du geste : la note part pour être payée. On ouvre donc
+     * le formulaire de Paiement — celui qui existe déjà, avec ses pièces justificatives —
+     * rattaché à cette note et prérempli de son solde. Aucun champ n'est recopié ici :
+     * deux formulaires pour un même objet finiraient par diverger.
+     *
+     * La fenêtre se ferme : la note est émise, son PDF a pu être ouvert, et le dialogue
+     * qui s'ouvre réclame toute l'attention.
+     */
+    signalerLeReglement() {
+        if (!this.noteId) return;
+
+        this._notifyCerveau('ui:note.paiement-request', {
+            url: `/admin/note/api/${this.noteId}/paiement-context`,
+        });
+        this.close();
+    }
+
     /** Rouvre la fenêtre sur le destinataire suivant, avec SES échéances. */
     facturerLesSuivantes() {
         const suivant = (this.suivantsValue || [])[0];

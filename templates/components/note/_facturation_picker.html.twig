@@ -337,6 +337,17 @@
                 <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" style="width:15px;height:15px;" aria-hidden="true" />
                 Fermer
             </button>
+            {# ── ÉMETTRE N'EST QUE LA MOITIÉ DU GESTE ────────────────────────────
+               Une note part pour être PAYÉE. L'encaissement ne se saisissait qu'en
+               rouvrant la note et en descendant dans sa collection de paiements : deux
+               détours, et seulement si l'on y pensait. On le propose dans la foulée.
+               Le formulaire ouvert est celui de Paiement, rattaché à cette note et
+               prérempli au solde — aucun champ recopié ici. #}
+            <button type="button" class="btn btn-outline-primary jsb-picker-btn"
+                    data-action="click->facturation-picker#signalerLeReglement">
+                <twig:UX:Icon name="{{ resolve_icon_name('paiement') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                Signaler le règlement
+            </button>
             <button type="button" class="btn btn-outline-primary jsb-picker-btn"
                     data-facturation-picker-target="suivant"
                     data-action="click->facturation-picker#facturerLesSuivantes" hidden>

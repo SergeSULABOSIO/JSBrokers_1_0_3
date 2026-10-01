@@ -68,7 +68,28 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
                     "icon" => "action:download",
                     "event" => "ui:note.preview-request", // On réutilise le même événement
                     "url" => "/admin/note/api/get-preview-url/%id%?download=1" // On ajoute un paramètre pour le téléchargement
-                ]
+                ],
+                // ── ÉMETTRE N'EST QUE LA MOITIÉ DU GESTE ────────────────────────────
+                //
+                // Une note part pour être PAYÉE. L'encaissement ne se saisissait qu'en
+                // ouvrant la note et en descendant dans l'accordéon « Paiements liés » :
+                // deux détours, et seulement si l'on y pensait.
+                //
+                // Ouvert depuis la FICHE, le formulaire enregistré va se ranger dans
+                // cette même collection — le cerveau lui passe l'identifiant du widget,
+                // qui se recharge alors tout seul. Ouvert depuis la barre d'outils ou le
+                // clic droit, c'est la liste des notes qui se rafraîchit.
+                //
+                // La condition évite de proposer de régler ce qui est déjà payé : cela
+                // inviterait à un double encaissement, et le formulaire s'ouvrirait sans
+                // montant à proposer.
+                [
+                    "label"     => "Signaler le règlement",
+                    "icon"      => "paiement",
+                    "event"     => "ui:note.paiement-request",
+                    "url"       => "/admin/note/api/%id%/paiement-context",
+                    "condition" => ["field" => "aUnSoldeDu", "value" => true],
+                ],
             ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [

@@ -12,6 +12,7 @@ use App\Entity\CompteBancaire;
 use App\Entity\Article;
 use App\Entity\Bordereau;
 use App\Entity\Note;
+use App\Entity\Paiement;
 use App\Entity\Tranche;
 use App\Entity\Invite;
 use App\Services\Note\SourceDeFacturation;
@@ -244,6 +245,65 @@ class NoteController extends AbstractController
         return $premiere instanceof Tranche
             ? (string) $this->sourceDeFacturation->entetePour($premiere, Note::TYPE_NOTE_DE_DEBIT, $addressedTo)['nom']
             : 'Commission';
+    }
+
+    /**
+     * SIGNALER LE RÈGLEMENT D'UNE NOTE — le contexte dont le formulaire a besoin.
+     *
+     * ── POURQUOI CE GESTE EST ICI ───────────────────────────────────────────────
+     * Émettre une note n'est que la moitié du geste : elle part à l'assureur pour être
+     * PAYÉE. Jusqu'ici, l'encaissement ne se saisissait qu'en rouvrant la note et en
+     * descendant dans sa collection de paiements — deux détours, et seulement si l'on y
+     * pensait. La fenêtre de facturation le propose désormais dans la foulée.
+     *
+     * ── AUCUN FORMULAIRE N'EST RÉÉCRIT ──────────────────────────────────────────
+     * `PaiementType` existe, avec sa date, sa référence, son compte et ses pièces
+     * justificatives. On rend son canevas et on laisse le dialogue ordinaire faire le
+     * reste : le rattachement à la note passe par le `parentContext` du cerveau, et le
+     * montant par défaut par `?default_montant=`, que ce formulaire lit déjà.
+     *
+     * C'est le calque exact de {@see TrancheController::getPaiementPrimeContext()}.
+     *
+     * ── LE DROIT REGARDÉ EST CELUI DE LA NOTE ───────────────────────────────────
+     * Un paiement est une sous-entité structurelle gouvernée par sa note — c'est déjà
+     * ainsi qu'il se saisit dans le dialogue de la note, par sa collection.
+     */
+    #[Route('/api/{id}/paiement-context', name: 'api.paiement_context', requirements: ['id' => Requirement::DIGITS], methods: ['GET'], priority: 1)]
+    public function getPaiementContext(Note $note, Request $request): JsonResponse
+    {
+        if (!$this->mayAccessEntity(Note::class, Invite::ACCESS_ECRITURE)) {
+            return $this->accessDeniedJson();
+        }
+
+        $entreprise = $this->getEntreprise();
+        if ($entreprise === null || $note->getEntreprise()?->getId() !== $entreprise->getId()) {
+            return $this->json(
+                ['message' => 'Note introuvable dans cet espace de travail.'],
+                Response::HTTP_NOT_FOUND,
+            );
+        }
+
+        // LE SOLDE SE LIT, IL NE SE RECALCULE PAS. C'est la valeur calculée que la
+        // rubrique Notes affiche déjà : montant payable − montant payé. En refaire ici
+        // une seconde soustraction mettrait deux chiffres en présence.
+        $this->canvasBuilder->loadAllCalculatedValues($note);
+        $solde = round((float) ($note->solde ?? 0.0), 2);
+
+        return $this->json([
+            'noteId'        => $note->getId(),
+            'noteReference' => $note->getReference(),
+            // Un solde négatif ou nul n'a rien à proposer : on ne prérenseigne alors rien
+            // plutôt que d'inscrire un montant que personne ne doit.
+            'solde'         => $solde > 0.0 ? $solde : null,
+            // LA COLLECTION QUI ATTEND CE PAIEMENT. Le dialogue de la note porte un
+            // widget « Paiements liés » ; quand il est ouvert, le paiement enregistré
+            // doit s'y ranger plutôt que de n'apparaître qu'au prochain chargement.
+            //
+            // Le nom vient d'ici, et non d'une chaîne écrite dans le navigateur : c'est
+            // le même fournisseur de canevas qui déclare l'action ET cette collection.
+            'collection'    => 'paiements',
+            'formCanvas'    => $this->canvasBuilder->getEntityFormCanvas(new Paiement(), $entreprise->getId()),
+        ]);
     }
 
     /**

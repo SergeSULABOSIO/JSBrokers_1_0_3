@@ -151,9 +151,10 @@ class FacturationPickerRenduTest extends KernelTestCase
         $html = $this->rendre();
 
         self::assertSame(
-            5,
+            6,
             substr_count($html, 'jsb-picker-btn'),
-            'Annuler, Enregistrer, Fermer, Facturer les suivantes, Ouvrir le PDF.',
+            'Annuler, Enregistrer, Fermer, Signaler le règlement, Facturer les suivantes, '
+            . 'Ouvrir le PDF.',
         );
         // ⚠ ON NE CHERCHE PAS LE NOM DE L'ICÔNE : le circuit maison le résout en SVG
         // INLINE au rendu, il n'en reste aucune trace dans la page. Ce qui se vérifie,
@@ -286,6 +287,21 @@ class FacturationPickerRenduTest extends KernelTestCase
         self::assertStringContainsString('Ouvrir la note (PDF)', $html);
         self::assertStringContainsString('facturation-picker#ouvrirLePdf', $html);
         self::assertStringContainsString('facturation-picker#facturerLesSuivantes', $html);
+    }
+
+    /**
+     * ÉMETTRE N'EST QUE LA MOITIÉ DU GESTE : une note part pour être PAYÉE.
+     *
+     * L'encaissement ne se saisissait qu'en rouvrant la note et en descendant dans sa
+     * collection de paiements — deux détours, et seulement si l'on y pensait. La fenêtre
+     * le propose désormais dans la foulée, à côté du PDF.
+     */
+    public function testLePiedDeSuccesPermetDeSignalerLeReglement(): void
+    {
+        $html = $this->rendre();
+
+        self::assertStringContainsString('Signaler le règlement', $html);
+        self::assertStringContainsString('facturation-picker#signalerLeReglement', $html);
     }
 
     /** La fenêtre annonce ce qu'elle fait : la note part validée, donc au recouvrement. */

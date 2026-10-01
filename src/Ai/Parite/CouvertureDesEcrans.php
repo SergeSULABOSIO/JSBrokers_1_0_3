@@ -78,6 +78,10 @@ final class CouvertureDesEcrans
 
         // ── Encaissements et reversements ──────────────────────────────────
         'ui:tranche.signaler-paiement-prime' => 'signaler_paiement_prime',
+        // Le règlement d'une NOTE, lui, n'a pas d'outil dédié : c'est la création d'un
+        // Paiement rattaché à la note, que le plan d'écriture générique porte déjà.
+        // Le pendant de `signaler_paiement_prime` côté commission.
+        'ui:note.paiement-request' => 'preparer_operations',
         // Réclamer la commission d'une échéance : l'écran ouvre le dialogue de note
         // prérempli, Ket prépare le plan complet — même règle de facturation
         // (App\Services\Note\SourceDeFacturation), deux surfaces.
