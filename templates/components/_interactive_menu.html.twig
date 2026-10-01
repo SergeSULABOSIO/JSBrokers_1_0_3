@@ -332,8 +332,8 @@
                Les rubriques qui ne tiennent pas sont REPLIÉES derrière « + N » plutôt que
                défilées : même mécanique que la barre d'onglets d'une rubrique, même module
                (DebordementOnglets). Le wrapper est le référent de position du panneau. #}
-            <div class="workspace-tab-bar-wrapper" data-workspace-manager-target="workspaceTabBarWrapper">
-                <div class="workspace-tab-bar" role="tablist" aria-label="Onglets de travail"
+            <div class="workspace-tab-bar-wrapper jsb-onglets-barre" data-workspace-manager-target="workspaceTabBarWrapper">
+                <div class="workspace-tab-bar jsb-onglets-rangee" role="tablist" aria-label="Onglets de travail"
                      data-workspace-manager-target="workspaceTabBar"></div>
 
                 {# CE QU'UN GESTE CHANGE SANS RIEN DÉPLACER À L'ÉCRAN.
@@ -344,7 +344,7 @@
                       data-workspace-manager-target="annonceOnglets"></span>
 
                 <button type="button"
-                        class="list-tabs-more workspace-tabs-more d-none"
+                        class="list-tabs-more d-none"
                         data-workspace-manager-target="workspaceTabsMore"
                         data-action="click->workspace-manager#toggleWorkspaceTabsOverflow"
                         aria-expanded="false"
@@ -633,10 +633,10 @@
 
     {# Template pour un onglet de l'espace de travail (col-3) #}
     <template data-workspace-manager-target="workspaceTabTemplate">
-        <div class="workspace-tab-item" role="tab" tabindex="0" aria-selected="false"
+        <div class="workspace-tab-item jsb-onglet" role="tab" tabindex="0" aria-selected="false"
              data-action="click->workspace-manager#activateWorkspaceTab">
-            <span class="workspace-tab-icon"></span>
-            <span class="workspace-tab-title"></span>
+            <span class="workspace-tab-icon jsb-onglet-icone"></span>
+            <span class="workspace-tab-title jsb-onglet-titre"></span>
             <button class="workspace-tab-close" type="button"
                     data-action="click->workspace-manager#closeWorkspaceTab"
                     aria-label="Fermer l'onglet">

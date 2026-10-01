@@ -40,7 +40,11 @@ export class DebordementOnglets {
             classeRepli: 'is-tab-replie',
             classeActive: 'active',
             largeurBouton: 76,
-            libelle: (onglet) => onglet.textContent.trim(),
+            // Le libellé se lit sur `.jsb-onglet-titre` quand il existe : un onglet peut
+            // porter autre chose que son titre (la croix de fermeture du workspace), et
+            // un `textContent` brut ramasserait ce texte-là avec.
+            libelle: (onglet) => onglet.querySelector('.jsb-onglet-titre')?.textContent.trim()
+                || onglet.textContent.trim(),
             activer: (onglet) => onglet.click(),
             ...config,
         };
@@ -196,7 +200,7 @@ export class DebordementOnglets {
 
             // L'icône de l'onglet est recopiée : le panneau se lit avec les mêmes repères
             // que la barre (Bastien & Scapin > Cohérence).
-            const icone = onglet.querySelector('.list-tab-icon, .workspace-tab-icon');
+            const icone = onglet.querySelector('.jsb-onglet-icone');
             if (icone && icone.innerHTML.trim() !== '') {
                 const copie = icone.cloneNode(true);
                 copie.setAttribute('aria-hidden', 'true');
@@ -240,7 +244,7 @@ export class DebordementOnglets {
         // résolues côté serveur, et en écrire une ici ferait un second jeu qui
         // cesserait de suivre le premier. À défaut, un « × » textuel — une croix
         // absente rendrait le bouton invisible.
-        const source = onglet.querySelector('.workspace-tab-close, .list-tab-close');
+        const source = onglet.querySelector('.workspace-tab-close');
         const svg = source?.querySelector('svg');
         if (svg) {
             const copie = svg.cloneNode(true);

@@ -2738,11 +2738,12 @@ export default class extends Controller {
 
     /**
      * Le gestionnaire de débordement de la barre du workspace — même module que la barre
-     * d'onglets d'une rubrique, avec deux adaptations :
-     *  - le libellé se lit sur `.workspace-tab-title`, car chaque onglet porte aussi une
-     *    croix de fermeture dont le texte polluerait un simple textContent ;
-     *  - l'activation passe par _activateWorkspaceTabById, et non par un clic simulé :
-     *    cliquer l'onglet déclencherait aussi ses gestes de fermeture et de glisser.
+     * d'onglets d'une rubrique, avec une adaptation : l'activation passe par
+     * _activateWorkspaceTabById, et non par un clic simulé, car cliquer l'onglet
+     * déclencherait aussi ses gestes de fermeture et de glisser.
+     *
+     * Le libellé n'est plus configuré ici : le socle lit `.jsb-onglet-titre`, que les deux
+     * barres portent désormais — c'est exactement ce que cette option recopiait.
      * @private
      */
     _debordementWorkspace() {
@@ -2756,8 +2757,6 @@ export default class extends Controller {
             compteur: this.hasWorkspaceTabsMoreCountTarget ? this.workspaceTabsMoreCountTarget : null,
             panneau: this.hasWorkspaceTabsOverflowPanelTarget ? this.workspaceTabsOverflowPanelTarget : null,
             selecteurOnglet: '.workspace-tab-item',
-            libelle: (onglet) => onglet.querySelector('.workspace-tab-title')?.textContent.trim()
-                || onglet.textContent.trim(),
             activer: (onglet) => this._activateWorkspaceTabById(onglet.dataset.tabId),
             // FERMER DEPUIS LE PANNEAU. Sans ce geste, un onglet replié ne pouvait pas
             // être fermé du tout : il fallait d'abord le ramener dans la barre.
