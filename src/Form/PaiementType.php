@@ -3,6 +3,7 @@
 namespace App\Form;
 
 use App\Constantes\Constante;
+use App\Entity\CompteBancaire;
 use App\Entity\Paiement;
 use App\Entity\Note;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
@@ -56,9 +57,20 @@ class PaiementType extends AbstractType
             // 2. Récupération de la note (déjà associée par le Controller via renderFormCanvas)
             $note = $paiement->getNote();
 
-            // Fallback : recherche via la requête si l'association n'est pas encore faite
-            $noteId = $note ? $note->getId() : $request?->query->get('parent_id');
-            $note = $note ?? ($noteId ? $this->em->getRepository(Note::class)->find($noteId) : null);
+            // Repli : l'association n'est pas encore faite quand le formulaire s'ouvre, car
+            // `renderFormCanvas` appelle l'initialiseur AVANT de poser le parent. On relit
+            // donc la requête.
+            //
+            // ⚠ ET L'ON VÉRIFIE DE QUEL PARENT IL S'AGIT. `parent_id` était lu sans regarder
+            // `parent_field_name` : un paiement ouvert depuis une OFFRE D'INDEMNISATION —
+            // l'autre parent possible de cette entité — passait l'identifiant de l'offre, et
+            // celui-ci était cherché parmi les NOTES. Une note sans rapport pouvait alors
+            // prêter son montant, son compte et son libellé de destinataire. Le formulaire
+            // n'aurait rien signalé : il se serait simplement ouvert prérempli de travers.
+            if ($note === null && $request?->query->get('parent_field_name') === 'note') {
+                $noteId = (int) $request->query->get('parent_id');
+                $note = $noteId > 0 ? $this->em->getRepository(Note::class)->find($noteId) : null;
+            }
 
             if ($note) {
                 // 3. Calcul du montant par défaut (le solde de la note)
@@ -87,8 +99,32 @@ class PaiementType extends AbstractType
                     );
                     $paiement->setDescription($defaultDescription);
                 }
-                // 6. Recherche du compte bancaire par défaut à partir de la note parente.
+                // 6. OÙ ENCAISSER — un champ obligatoire qui ne doit jamais s'ouvrir vide.
+                //
+                // D'abord le compte porté par la NOTE : c'est celui qu'elle annonce à son
+                // destinataire, et donc celui sur lequel les fonds arrivent. Toute autre
+                // réponse ferait diverger la comptabilité de ce que la pièce a demandé.
                 $defaultCompte = $note->getComptes()->first() ?: null;
+
+                // À défaut — une note composée à la main, ou issue d'un bordereau, n'en
+                // porte aucun —, le premier compte du cabinet. Sans ce repli, le champ
+                // s'ouvrait vide et l'enregistrement échouait sur « Ce champ est
+                // obligatoire », au terme d'une saisie déjà faite.
+                //
+                // ⚠ AUCUN FILTRE DE MONNAIE N'EST POSSIBLE, ET IL N'EN FAUT PAS :
+                // `CompteBancaire` ne porte pas de monnaie. Le workspace n'en a qu'UNE,
+                // celle d'affichage, dans laquelle tous les montants sont exprimés — tous
+                // les comptes y sont donc implicitement. Donner une monnaie aux comptes
+                // serait un chantier à part (migration, formulaire, affichage).
+                //
+                // « Premier » = le premier ENREGISTRÉ, pas le premier par ordre
+                // alphabétique : c'est le compte principal du cabinet dans l'immense
+                // majorité des cas, et surtout un défaut STABLE — renommer un compte ne
+                // doit pas changer celui que le formulaire propose.
+                $defaultCompte ??= $this->em->getRepository(CompteBancaire::class)->findOneBy(
+                    ['entreprise' => $note->getEntreprise()],
+                    ['id' => 'ASC'],
+                );
             }
         }
 
