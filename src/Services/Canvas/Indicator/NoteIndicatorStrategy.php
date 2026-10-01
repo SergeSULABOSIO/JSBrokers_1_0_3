@@ -4,6 +4,7 @@ namespace App\Services\Canvas\Indicator;
 
 use App\Entity\Note;
 use App\Entity\Paiement;
+use App\Services\Search\NoteReglementScope;
 use App\Services\ServiceDates;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -31,6 +32,7 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
         }
 
         $montantTotal = round($this->getNoteMontantPayable($entity), 2);
+        $montantPaye = round($this->getNoteMontantPaye($entity), 2);
         $montantTaxe = round($this->getNoteMontantTaxe($entity), 2);
         $montantHT = $montantTotal - $montantTaxe;
 
@@ -38,13 +40,15 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'typeString' => $this->getNoteTypeString($entity),
             'addressedToString' => $this->calculationHelper->getNoteAddressedToString($entity),
             'montantTotal' => $montantTotal,
-            'montantPaye' => round($this->getNoteMontantPaye($entity), 2),
-            'solde' => round($this->getNoteSolde($entity), 2),
+            'montantPaye' => $montantPaye,
+            'solde' => round($montantTotal - $montantPaye, 2),
             // IL RESTE QUELQUE CHOSE À ENCAISSER — condition d'affichage de l'action
             // « Signaler le règlement ». La proposer sur une note soldée inviterait à un
             // double encaissement, et ouvrirait un formulaire sans montant à proposer.
-            'aUnSoldeDu' => $this->aUnSoldeDu($this->getNoteSolde($entity)),
-            'statutPaiement' => $this->getNoteStatutPaiementString($entity),
+            'aUnSoldeDu' => NoteReglementScope::resteADue($montantTotal, $montantPaye),
+            'statutPaiement' => NoteReglementScope::libelleAffichage(
+                NoteReglementScope::statut($montantTotal, $montantPaye),
+            ),
             'montantTaxe' => $montantTaxe,
             'nomTaxe' => $this->getNoteNomTaxe($entity),
             'tauxTaxe' => $this->getNoteTauxTaxe($entity, $montantHT),
@@ -64,25 +68,20 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             ? round(($montantTaxe / $montantHT) * 100, 2)
             : 0.0;
 
-        $statutPaiement = match (true) {
-            $montantTotal == 0 && $montantPaye == 0 => 'N/A',
-            $montantPaye >= $montantTotal            => 'Payée',
-            $montantPaye > 0                         => 'Partiel',
-            default                                  => 'Impayée',
-        };
-
         return [
             'typeString'       => $this->getNoteTypeString($note),
             'addressedToString'=> $this->calculationHelper->getNoteAddressedToString($note),
             'montantTotal'     => $montantTotal,
             'montantPaye'      => $montantPaye,
             'solde'            => $solde,
-            // ⚠ LES DEUX CHEMINS DE CALCUL, OU AUCUN. Une note de bordereau tire ses
-            // montants du bordereau et non de ses articles : oublier cette ligne
-            // priverait du bouton de règlement toutes les notes issues d'un bordereau,
-            // c'est-à-dire la plupart.
-            'aUnSoldeDu'       => $this->aUnSoldeDu($solde),
-            'statutPaiement'   => $statutPaiement,
+            // ⚠ LES DEUX CHEMINS PASSENT PAR LA MÊME RÈGLE. Elle était écrite deux fois —
+            // en `if` pour les notes à articles, en `match` ici —, et la première ignorait
+            // le bordereau : appelée seule sur une note de bordereau, elle lisait des
+            // articles vides et répondait « N/A » à tort. Deux copies finissent par diverger.
+            'aUnSoldeDu'       => NoteReglementScope::resteADue($montantTotal, $montantPaye),
+            'statutPaiement'   => NoteReglementScope::libelleAffichage(
+                NoteReglementScope::statut($montantTotal, $montantPaye),
+            ),
             'montantTaxe'      => $montantTaxe,
             'nomTaxe'          => 'Taxe',
             'tauxTaxe'         => $tauxTaxe,
@@ -131,41 +130,12 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
         return $montant;
     }
 
-    /**
-     * Reste-t-il quelque chose à encaisser sur cette note ?
-     *
-     * Le seuil est celui du projet — `SourceDeFacturation::SEUIL_SOLDE` et
-     * `NoteRecouvrementService` le partagent déjà : en deçà d'un centime, un solde relève
-     * de l'arrondi comptable et non d'une créance. On n'en crée pas un troisième.
-     */
-    private function aUnSoldeDu(float $solde): bool
-    {
-        return round($solde, 2) > 0.01;
-    }
 
     private function getNoteSolde(Note $note): float
     {
         return $this->getNoteMontantPayable($note) - $this->getNoteMontantPaye($note);
     }
 
-    private function getNoteStatutPaiementString(?Note $note): ?string
-    {
-        if ($note === null) return null;
-
-        $montantDu = $this->getNoteMontantPayable($note);
-        $montantPaye = $this->getNoteMontantPaye($note);
-
-        if ($montantDu == 0 && $montantPaye == 0) {
-            return 'N/A';
-        }
-        if ($montantPaye >= $montantDu) {
-            return 'Payée';
-        }
-        if ($montantPaye > 0 && $montantPaye < $montantDu) {
-            return 'Partiel';
-        }
-        return 'Impayée';
-    }
 
     private function getNoteNomTaxe(Note $note): ?string
     {

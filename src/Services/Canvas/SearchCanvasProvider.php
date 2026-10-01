@@ -147,6 +147,22 @@ class SearchCanvasProvider
             }
         }
 
+        // Critère synthétique « Règlement » (Note) : le solde d'une note n'est jamais stocké
+        // — `Article` ne persiste qu'une quantité —, donc ce critère est intercepté par le
+        // moteur, qui bascule sur un classement en mémoire. Le type 'Boolean' rend un
+        // <select> depuis la map de valeurs, badge inclus ; les chips de la rubrique et ce
+        // badge manipulent la MÊME clé et restent donc synchronisés par construction.
+        if ($shortName === 'Note') {
+            array_unshift($searchCriteria, [
+                'Nom' => \App\Services\Search\NoteReglementScope::CRITERION_KEY,
+                'Display' => \App\Services\Search\NoteReglementScope::LIBELLE_AXE,
+                'Type' => 'Boolean',
+                'Valeur' => \App\Services\Search\NoteReglementScope::valeurs(),
+                'isDefault' => false,
+                'Icone' => \App\Services\Search\NoteReglementScope::ICONE_AXE,
+            ]);
+        }
+
         // Critère synthétique « Échéance » (Avenant) : l'échéance est une vraie colonne, mais
         // la traduction valeur → fenêtre temporelle est portée par la clé spéciale
         // AvenantEcheanceScope::CRITERION_KEY, interceptée par le moteur (filtre/tri SQL).
