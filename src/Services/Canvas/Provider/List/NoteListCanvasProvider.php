@@ -23,9 +23,25 @@ class NoteListCanvasProvider implements ListCanvasProviderInterface
             "colonne_principale" => [
                 "titre_colonne" => "Notes",
                 "texte_principal" => ["attribut_code" => "nom", "icone" => "note"],
+                // ── D'OÙ VIENT CETTE NOTE ───────────────────────────────────────────
+                // Rien ne distinguait une note issue d'un bordereau de production d'une
+                // note composée à la main : mêmes montants, même statut, même ligne. Or
+                // les deux ne se corrigent pas de la même façon — l'une se reprend dans
+                // son bordereau, l'autre ligne à ligne.
+                //
+                // NIVEAU NEUTRE, délibérément. Les niveaux existants disent tous une
+                // urgence ou une action (critique, exigible, rétro à payer) ; une
+                // provenance n'en est pas une. Le badge ne paraît que sur les notes
+                // concernées : une note ordinaire reste muette plutôt que marquée.
+                "badges" => [
+                    ["attribut_code" => "bordereauAffiche"],
+                ],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Réf: ", "attribut_code" => "reference"],
+                    // Savoir qu'une note vient d'un bordereau ne dit pas DUQUEL : la
+                    // référence permet d'aller le retrouver sans ouvrir la note.
+                    ["attribut_prefixe" => "Bordereau: ", "attribut_code" => "bordereauReference", "icone" => "bordereau"],
                     ["attribut_prefixe" => "Dest.: ", "attribut_code" => "addressedToString"],
                     ["attribut_prefixe" => "Statut: ", "attribut_code" => "statutPaiement"],
                 ],

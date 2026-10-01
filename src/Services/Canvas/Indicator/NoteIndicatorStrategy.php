@@ -52,7 +52,27 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'montantTaxe' => $montantTaxe,
             'nomTaxe' => $this->getNoteNomTaxe($entity),
             'tauxTaxe' => $this->getNoteTauxTaxe($entity, $montantHT),
+            // ⚠ CE CHEMIN-CI AUSSI. La bascule vers `calculateFromBordereau()` exige que la
+            // note n'ait AUCUN article ; une note qui porterait les deux passerait par ici,
+            // et resterait sans badge alors qu'elle est bien liée à un bordereau. La
+            // provenance se lit sur la relation, pas sur le chemin de calcul emprunté.
+            'bordereauAffiche' => $this->bordereauAffiche($entity),
+            'bordereauReference' => $entity->getBordereau()?->getReference(),
         ];
+    }
+
+    /**
+     * LE BADGE DE PROVENANCE. Rien pour une note ordinaire : le rendu d'une ligne n'affiche
+     * un badge que si sa valeur n'est pas vide, et c'est ce qui laisse les notes courantes
+     * muettes plutôt que de les marquer « ordinaire ».
+     *
+     * Le niveau reste NEUTRE — le gris par défaut. Les niveaux existants disent tous une
+     * urgence ou une action à mener (critique, exigible, rétro à payer) ; une provenance
+     * n'en est pas une, et lui emprunter le cobalt ferait croire à un geste attendu.
+     */
+    private function bordereauAffiche(Note $note): ?string
+    {
+        return $note->getBordereau() !== null ? 'Bordereau' : null;
     }
 
     private function calculateFromBordereau(Note $note): array
@@ -85,6 +105,8 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'montantTaxe'      => $montantTaxe,
             'nomTaxe'          => 'Taxe',
             'tauxTaxe'         => $tauxTaxe,
+            'bordereauAffiche' => $this->bordereauAffiche($note),
+            'bordereauReference' => $bordereau->getReference(),
         ];
     }
 
