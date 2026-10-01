@@ -716,78 +716,20 @@ a.company-version:hover {
 
 /* --- Barre d'onglets col-3 --- */
 
-/* Le wrapper porte le fond, la bordure et le bouton « + N » ; il est le référent de
-   position du panneau des rubriques repliées. */
-.workspace-tab-bar-wrapper {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  gap: 4px;
-  min-width: 0;
-  background-color: var(--bg-light);
-  border-bottom: 1px solid var(--border-light);
-  padding: 6px 8px 0;
-  flex-shrink: 0;
-}
+/* LE DESSIN DE CETTE BARRE N'EST PLUS ÉCRIT ICI. Le bandeau, la rangée et l'onglet
+   lui-même viennent de `.jsb-onglets-barre` / `.jsb-onglets-rangee` / `.jsb-onglet`
+   (app.css), que porte aussi la barre d'onglets d'une rubrique : c'était la même barre
+   dessinée deux fois, et elles avaient fini par ne plus se ressembler.
 
-.workspace-tab-bar {
-  display: flex;
-  flex-direction: row;
-  /* Les rubriques qui ne tiennent pas sont REPLIÉES derrière « + N », plus défilées :
-     une barre de défilement ne dit ni combien il en reste, ni comment y aller. */
-  overflow: hidden;
-  min-height: 38px;
-  align-items: flex-end;
-  flex: 1 1 auto;
-  min-width: 0;
-  gap: 2px;
-}
+   Ne subsiste ci-dessous que ce qui est PROPRE au workspace — ce que la barre
+   contextuelle n'a pas : des onglets qu'on ferme, qu'on rouvre, et une rangée qui peut
+   être vide. app.css se charge AVANT ce fichier : à spécificité égale, ces règles-ci
+   gardent le dernier mot. */
 
-/* Aucun onglet ouvert : la barre ET son cadre s'effacent. La règle portait sur la seule
-   rangée ; depuis qu'un wrapper l'entoure, c'est lui qui doit disparaître, sinon un
-   bandeau vide subsisterait en haut de l'espace de travail. */
+/* Aucun onglet ouvert : la barre ET son cadre s'effacent. Propre au workspace — la barre
+   d'une rubrique garde toujours son onglet « Principal », elle n'est jamais vide. */
 .workspace-tab-bar-wrapper:has(.workspace-tab-bar:empty) {
   display: none;
-}
-
-/* Onglet de rubrique replié : retiré de la rangée, accessible par le panneau. */
-.workspace-tab-item.is-tab-replie {
-  display: none;
-}
-
-/* Le bouton « + N » de cette barre s'assoit sur la ligne des onglets. */
-.workspace-tabs-more {
-  min-height: 38px;
-  margin-bottom: 0;
-}
-
-.workspace-tab-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px 7px;
-  background-color: var(--bg-muted);
-  border: 1px solid transparent;
-  border-bottom: none;
-  cursor: pointer;
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-  user-select: none;
-  border-radius: var(--nav-radius-sm) var(--nav-radius-sm) 0 0;
-  transition: background-color var(--nav-transition), color var(--nav-transition), box-shadow var(--nav-transition);
-  max-width: 200px;
-  font-family: inherit;
-}
-
-.workspace-tab-item:hover {
-  background-color: #d0d5dd;
-  color: var(--text-dark-secondary);
-}
-
-.workspace-tab-item:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--cobalt-focus-ring);
 }
 
 /* ONGLET RÉUTILISÉ : le halo dit que le geste a porté.
@@ -804,23 +746,10 @@ a.company-version:hover {
   animation: onglet-reutilise 600ms ease-out 1;
 }
 
-.workspace-tab-item.active {
-  background-color: var(--bg-white);
-  border-color: var(--border-light);
-  box-shadow: inset 0 2px 0 0 var(--cobalt);
-  color: var(--cobalt);
-  font-weight: 600;
-}
-
-.workspace-tab-icon {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
+/* Le libellé cède la place à la croix dans les 200 px de l'onglet. La barre d'une
+   rubrique n'a pas de croix : son titre y dispose de toute la largeur, et « Partenaires
+   Associés » s'y écrit en entier. */
 .workspace-tab-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
   max-width: 120px;
 }
 
@@ -1477,7 +1406,6 @@ a.company-version:hover {
   .rubrique-item,
   .rubrique-icon,
   .company-version,
-  .workspace-tab-item,
   .workspace-tab-close,
   .workspace-tab-close svg,
   .tab-item,

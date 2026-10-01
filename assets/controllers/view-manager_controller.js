@@ -185,7 +185,9 @@ export default class extends Controller {
 
         if (isSingleSelection && canvas) {
             const collections = this._findCollectionsInCanvas(canvas);
-            collections.forEach(collectionInfo => this._createTab(collectionInfo, entities[0], entityType));
+            // Le RANG sert au dépliement en cascade : chaque onglet entre un cran après
+            // le précédent, dans l'ordre où le canvas les déclare.
+            collections.forEach((collectionInfo, rang) => this._createTab(collectionInfo, entities[0], entityType, rang));
         }
 
         // Guidage : la pastille d'entête rappelle QUEL élément a ouvert les
@@ -508,10 +510,23 @@ export default class extends Controller {
         });
     }
 
-    _createTab(collectionInfo, parentEntity, parentEntityType) {
+    _createTab(collectionInfo, parentEntity, parentEntityType, rang = 0) {
         const tabId = `collection-${collectionInfo.code}-for-${parentEntity.id}`;
         const tab = document.createElement('button');
-        tab.className = 'list-tab';
+        tab.className = 'list-tab jsb-onglet';
+
+        // DÉPLIEMENT. Cocher une ligne fait naître six onglets d'un coup ; sans
+        // transition, le changement est si net qu'il ne se rattache pas au geste qui l'a
+        // causé. La cascade dit qu'ils viennent d'arriver, et dans quel ordre.
+        // 40 ms par onglet, plafonnés à 6 : au-delà, l'attente se remarquerait plus que
+        // l'effet. L'animation ne touche qu'`opacity` et `transform` (cf. app.css) — le
+        // repli mesure `offsetWidth` pendant qu'elle joue.
+        tab.classList.add('se-deplie');
+        tab.style.animationDelay = `${Math.min(rang, 6) * 40}ms`;
+        tab.addEventListener('animationend', () => {
+            tab.classList.remove('se-deplie');
+            tab.style.animationDelay = '';
+        }, { once: true });
 
         const collectionUrl = '/admin/' + parentEntityType.toLowerCase() + '/api/' + parentEntity.id + '/' + collectionInfo.code + '/generic';
         
@@ -527,12 +542,19 @@ export default class extends Controller {
         // (aria-hidden), injectée par le circuit d'icônes du cerveau (handleIconLoaded).
         if (collectionInfo.icone) {
             const iconHolder = document.createElement('span');
-            iconHolder.className = 'list-tab-icon';
+            iconHolder.className = 'list-tab-icon jsb-onglet-icone';
             iconHolder.setAttribute('aria-hidden', 'true');
             iconHolder.id = `tab-icon-${tabId}`;
             tab.appendChild(iconHolder);
         }
-        tab.appendChild(document.createTextNode(collectionInfo.intitule));
+        // Le libellé vit dans un span : c'est lui qui porte l'ellipsis quand il est trop
+        // long, et c'est lui que le panneau des onglets repliés lit (`.jsb-onglet-titre`).
+        // `textContent` de l'onglet reste identique — c'est la valeur envoyée au cerveau
+        // comme `tabName`, elle ne doit pas bouger.
+        const titre = document.createElement('span');
+        titre.className = 'jsb-onglet-titre';
+        titre.textContent = collectionInfo.intitule;
+        tab.appendChild(titre);
         // ARIA : pattern tablist/tab/tabpanel (WCAG 4.1.2)
         tab.setAttribute('role', 'tab');
         tab.setAttribute('id', `tab-${tabId}`);
@@ -545,7 +567,7 @@ export default class extends Controller {
         // Icône demandée APRÈS insertion : handleIconLoaded cherche le porte-icône
         // dans tabsContainerTarget — une réponse rapide (cache) le manquerait sinon.
         if (collectionInfo.icone) {
-            this.notifyCerveau('ui:icon.request', { iconName: collectionInfo.icone, iconSize: 18, requesterId: `tab-icon-${tabId}` });
+            this.notifyCerveau('ui:icon.request', { iconName: collectionInfo.icone, iconSize: 16, requesterId: `tab-icon-${tabId}` });
         }
 
         // On prépare le conteneur de contenu en clonant le template

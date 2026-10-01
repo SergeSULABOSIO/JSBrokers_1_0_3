@@ -430,7 +430,10 @@ textarea:hover,
     font-weight: bold;
     color: #343a40;
     font-size: 1.1rem;
-    margin-bottom: 7px;
+    /* 0 et non 7 px : la barre d'onglets n'est plus dans ce bloc — elle traverse
+       l'entête, sous la rangée du titre. Les 7 px n'espaçaient plus rien, ils
+       épaississaient la rangée. */
+    margin-bottom: 0;
 }
 
 /* Icône de la rubrique (entête du view-manager) — remplace les styles inline.
@@ -460,47 +463,171 @@ textarea:hover,
     font-weight: 500;
 }
 
-/* Barre d'onglets */
-/* Barre d'onglets : la rangée et son bouton de repli. Le wrapper est le référent de
-   positionnement du panneau des onglets repliés. */
-.list-tabs-wrapper {
+/* ================================================================== */
+/* COMPOSANT D'ONGLET — partagé par les DEUX barres du workspace        */
+/* ================================================================== */
+/* Celle des RUBRIQUES ouvertes (colonne 3, `.workspace-tab-*`) et celle des onglets
+   d'une rubrique (`.list-tab*` : Principal + collections de la ligne sélectionnée).
+
+   Elles portaient deux grammaires d'onglets différentes dans le même écran : encadrée
+   en haut, soulignée en bas. Deux façons d'être un onglet obligent à réapprendre ce
+   qu'on sait déjà faire (Bastien & Scapin > Cohérence) — et garantissaient qu'en
+   retouchant l'une, on oublierait l'autre.
+
+   ⚠ `.workspace-tab-item`, `.list-tab`, `.workspace-tab-title`… SUBSISTENT : ce sont
+   des points d'accroche JavaScript (querySelector, closest) et des cibles de tests.
+   Elles ne portent plus que ce qui leur est PROPRE — voir interactive-menu.css, qui se
+   charge après ce fichier et garde donc le dernier mot sur les spécificités. */
+
+/* Le bandeau : il porte le fond, la bordure basse et le bouton « + N », et sert de
+   référent de position au panneau des onglets repliés. */
+.jsb-onglets-barre {
     position: relative;
     display: flex;
     align-items: flex-end;
     gap: 4px;
     min-width: 0;
+    flex-shrink: 0;
+    padding: 6px 8px 0;
+    background-color: var(--bg-light);
+    border-bottom: 1px solid var(--border-light);
 }
 
-.list-tabs-container {
+/* La rangée. Les onglets qui ne tiennent pas sont REPLIÉS derrière « + N » (cf.
+   `.is-tab-replie`), jamais défilés : une barre de défilement de 3 px ne se voit pas,
+   et ce qu'elle cachait était à la fois invisible ET introuvable. */
+.jsb-onglets-rangee {
     display: flex;
-    margin-top: 3px;
-    /* Les onglets qui ne tiennent pas sont REPLIÉS (cf. .is-tab-replie), plus
-       défilés : une barre de défilement de 3 px ne se voit pas, et ce qu'elle
-       cachait était introuvable. */
+    flex-direction: row;
     overflow: hidden;
+    min-height: 38px;
+    align-items: flex-end;
     flex: 1 1 auto;
     min-width: 0;
-    white-space: nowrap;
+    gap: 2px;
 }
 
-/* Les masques de fondu et la barre de défilement horizontale de cette rangée ont été
-   retirés : les onglets qui ne tiennent pas sont désormais REPLIÉS derrière « + N »
-   (cf. .list-tabs-more), et non plus défilés derrière un fondu. Un fondu dit qu'il
-   « reste quelque chose » ; il ne dit pas quoi, ni combien, ni comment y aller. */
+.jsb-onglet {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px 7px;
+    background-color: var(--bg-muted);
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: var(--nav-radius-sm) var(--nav-radius-sm) 0 0;
+    color: var(--text-muted);
+    /* `font-family`, `font-size` et `line-height` sont ÉCRITS, pas hérités : la barre
+       contextuelle emploie un <button>, qui n'hérite ni de la police ni de l'interligne
+       du corps. 1.5 est la valeur que le <div> du workspace calcule aujourd'hui
+       (--bs-body-line-height) : les deux barres restent au pixel. */
+    font-family: inherit;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    white-space: nowrap;
+    user-select: none;
+    cursor: pointer;
+    max-width: 200px;
+    transition: background-color var(--nav-transition), color var(--nav-transition), box-shadow var(--nav-transition);
+}
 
-.list-tab.is-tab-replie {
+.jsb-onglet:hover {
+    /* #d0d5dd : exception assumée, héritée de la barre du workspace. La reprendre garde
+       les deux barres identiques — en inventer une seconde les séparerait. */
+    background-color: #d0d5dd;
+    color: var(--text-dark-secondary);
+}
+
+/* ACTIF : fond, liseré cobalt EN HAUT et graisse — jamais la couleur seule (WCAG 1.4.1). */
+.jsb-onglet.active {
+    background-color: var(--bg-white);
+    border-color: var(--border-light);
+    box-shadow: inset 0 2px 0 0 var(--cobalt);
+    color: var(--cobalt);
+    font-weight: 600;
+}
+
+/* Anneau de focus EN INSET, et non extérieur : la rangée est en `overflow: hidden`, un
+   halo posé dehors y serait rogné sur les bords (WCAG 2.4.7). */
+.jsb-onglet:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--cobalt-focus-ring);
+}
+/* Sur l'onglet actif, l'anneau s'AJOUTE au liseré : le remplacer ferait disparaître le
+   repère d'état au moment précis où le clavier s'y pose. */
+.jsb-onglet.active:focus-visible {
+    box-shadow: inset 0 2px 0 0 var(--cobalt), inset 0 0 0 2px var(--cobalt-focus-ring);
+}
+
+.jsb-onglet-icone {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+/* La TAILLE est écrite ici, pas laissée au serveur. Les icônes arrivent du circuit du
+   cerveau avec leurs propres attributs `width`/`height`, et les deux barres ne les
+   demandaient pas à la même taille : les onglets d'une rubrique se retrouvaient avec des
+   icônes plus grosses que ceux du workspace, pour la seule raison qu'un chiffre différait
+   dans deux appels. */
+.jsb-onglet-icone svg {
+    width: 16px;
+    height: 16px;
+}
+
+.jsb-onglet-titre {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+/* Onglet replié : retiré de la rangée, atteignable par le panneau « + N ». */
+.jsb-onglet.is-tab-replie {
     display: none;
 }
 
-/* Bouton de repli. Cible ≥ 44 px (WCAG 2.5.5), état ouvert marqué par le fond cobalt
-   ET la rotation du chevron — jamais par la couleur seule (WCAG 1.4.1). */
+/* DÉPLIEMENT DES ONGLETS CONTEXTUELS.
+   Cocher une ligne de la liste principale fait naître six onglets d'un coup. Sans
+   transition, le changement est si net qu'il ne se rattache pas au geste qui l'a causé :
+   on voit un écran différent, pas une conséquence. La cascade depuis la gauche raconte
+   l'ordre dans lequel ils arrivent (Nielsen 1, visibilité de l'état du système).
+
+   ⚠ `opacity` et `transform` UNIQUEMENT. `DebordementOnglets.recalculer()` mesure
+   `offsetWidth` pour décider de ce qui se replie, et cette mesure a lieu PENDANT
+   l'animation. Un `transform` ne change pas `offsetWidth` ; animer `width`, `padding`,
+   `max-width` ou `margin` ferait mesurer des onglets rétrécis, afficherait un « + N »
+   faux, puis se corrigerait tout seul — un scintillement qu'on ne sait plus expliquer. */
+@keyframes jsb-onglet-deplie {
+    from { opacity: 0; transform: translateY(5px) scaleX(.9); }
+    to   { opacity: 1; transform: none; }
+}
+
+.jsb-onglet.se-deplie {
+    /* `bottom left` : l'onglet se déplie depuis le bord du précédent, pas depuis son
+       centre — c'est le sens de lecture de la rangée. */
+    transform-origin: bottom left;
+    animation: jsb-onglet-deplie 220ms ease-out both;
+}
+
+/* WCAG 2.3.3 : on retire le MOUVEMENT, pas le retour visuel. `animation: none` annule
+   aussi le `both`, donc aucun onglet ne reste figé à `opacity: 0`. */
+@media (prefers-reduced-motion: reduce) {
+    .jsb-onglet { transition: none !important; }
+    .jsb-onglet.se-deplie { animation: none !important; }
+}
+
+/* Bouton de repli, commun aux deux barres. État ouvert marqué par le fond cobalt ET la
+   rotation du chevron — jamais par la couleur seule (WCAG 1.4.1).
+
+   38 px pour s'asseoir sur la ligne des onglets, comme eux : à 44 px il dépassait de la
+   rangée et la barre contextuelle ne ressemblait à rien de connu. La CIBLE au doigt,
+   elle, reste à 44 px (WCAG 2.5.5) — voir le bloc `@media (pointer: coarse)` plus bas. */
 .list-tabs-more {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    min-height: 44px;
+    min-height: 38px;
     padding: 8px 12px;
-    margin-bottom: 6px;
+    margin-bottom: 0;
     border: 1px solid #dee2e6;
     border-radius: 999px;
     background-color: #ffffff;
@@ -541,6 +668,22 @@ textarea:hover,
 }
 .list-tabs-more[aria-expanded="true"] .list-tabs-more-chevron {
     transform: rotate(180deg);
+}
+
+/* 38 px de DESSIN pour tenir la ligne des onglets, 44 px de CIBLE au doigt : les 3 px
+   manquants de chaque côté sont repris par une zone invisible, sans déplacer le bouton
+   d'un pixel (WCAG 2.5.5). Même procédé que `.context-toolbar .btn::after`.
+   `position: relative` est posé ICI seulement : le panneau des onglets repliés s'ancre
+   sur le BANDEAU, pas sur le bouton — il n'est donc pas affecté. */
+@media (pointer: coarse) {
+    .list-tabs-more {
+        position: relative;
+    }
+    .list-tabs-more::after {
+        content: '';
+        position: absolute;
+        inset: -3px;
+    }
 }
 
 /* Panneau des onglets repliés : surcouche ancrée sous le bouton, jamais une modale —
@@ -645,55 +788,11 @@ textarea:hover,
     outline: 2px solid #0047AB;
     outline-offset: -2px;
 }
-.list-tabs-overflow-item .list-tab-icon svg {
+.list-tabs-overflow-item .jsb-onglet-icone svg {
     width: 1.05em;
     height: 1.05em;
 }
 
-.list-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    cursor: pointer;
-    background-color: transparent;
-    border: none;
-    border-bottom: 6px solid transparent;
-    color: #6c757d;
-    font-weight: 500;
-    transition: all 0.2s ease-in-out;
-}
-
-/* Icône d'onglet (entité de la rubrique / entité cible de la collection).
-   Hérite de la couleur du texte de l'onglet : grise inactive, foncée active
-   — l'état actif reste porté par graisse + soulignement cobalt (pas par la
-   couleur seule). */
-.list-tab .list-tab-icon {
-    display: inline-flex;
-    flex-shrink: 0;
-}
-.list-tab .list-tab-icon svg {
-    width: 1.05em;
-    height: 1.05em;
-}
-
-.list-tab:hover {
-    border-bottom-color: #dee2e6;
-    color: #212529;
-}
-
-.list-tab.active {
-    font-weight: bold;
-    color: #212529;
-    border-bottom-color: #0047AB;
-}
-
-/* Focus clavier : anneau cobalt de la charte (cohérent avec .list-row-action-btn).
-   En inset car le conteneur défilant (overflow-x) rognerait un halo extérieur. */
-.list-tab:focus-visible {
-    outline: none;
-    box-shadow: inset 0 0 0 2px rgba(0, 71, 171, 0.35); /* --cobalt-focus-ring */
-}
 
 /* --- 3.2 Barre d'outils contextuelle --- */
 /* ================================================================== */
