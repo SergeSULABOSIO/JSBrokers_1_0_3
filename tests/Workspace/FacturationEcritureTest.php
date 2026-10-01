@@ -500,6 +500,50 @@ class FacturationEcritureTest extends WebTestCase
         );
     }
 
+    /**
+     * ÉMETTRE N'EST QUE LA MOITIÉ DU GESTE : la note part pour être PAYÉE.
+     *
+     * Jusqu'ici l'encaissement ne se saisissait qu'en rouvrant la note et en descendant
+     * dans sa collection de paiements. La fenêtre le propose dans la foulée — et c'est le
+     * formulaire de Paiement EXISTANT qui s'ouvre, prérempli du solde, pour qu'un
+     * règlement saisi ici soit en tout point celui saisi ailleurs.
+     */
+    public function testLaNoteEmiseProposeSonReglementPrereempliDuSolde(): void
+    {
+        $seed = $this->seed();
+        $this->facturer([['trancheId' => $seed['trancheId'], 'revenuId' => $seed['revenuId']]]);
+        $note = $this->notes()[0];
+
+        $this->client->request('GET', sprintf('/admin/note/api/%d/paiement-context', $note->getId()));
+        self::assertResponseIsSuccessful();
+
+        $charge = json_decode((string) $this->client->getResponse()->getContent(), true);
+
+        self::assertSame($note->getId(), $charge['noteId']);
+        self::assertSame(
+            '/admin/paiement/api/get-form',
+            $charge['formCanvas']['parametres']['endpoint_form_url'] ?? null,
+            'C\'est le formulaire de Paiement qui s\'ouvre, pas un second écrit pour l\'occasion.',
+        );
+        self::assertEqualsWithDelta(
+            $this->montantDe($note),
+            (float) $charge['solde'],
+            0.02,
+            'Le solde proposé est celui que la rubrique Notes affiche : montant payable '
+            . 'moins montant payé. Le recalculer ici mettrait deux chiffres en présence.',
+        );
+    }
+
+    /** Une note d'un autre cabinet ne se règle pas, et son existence n'est pas confirmée. */
+    public function testUneNoteHorsPerimetreNeSeReglePas(): void
+    {
+        $this->seed();
+
+        $this->client->request('GET', '/admin/note/api/999999999/paiement-context');
+
+        self::assertSame(404, $this->client->getResponse()->getStatusCode());
+    }
+
     /** Une échéance d'un autre cabinet est ignorée, et rien ne s'écrit à vide. */
     public function testUneCommissionHorsPerimetreNEcritRien(): void
     {

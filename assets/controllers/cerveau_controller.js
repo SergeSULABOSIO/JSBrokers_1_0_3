@@ -699,6 +699,9 @@ export default class extends Controller {
             case 'ui:client.creer-piste':
                 this.handleClientCreerPiste(payload);
                 break;
+            case 'ui:note.paiement-request':
+                this.handleNotePaiementRequest(payload);
+                break;
             case 'ui:portefeuille.client-picker-request':
                 this.handlePortefeuilleClientPickerRequest(payload);
                 break;
@@ -2807,6 +2810,73 @@ export default class extends Controller {
         } catch (error) {
             console.error("[Cerveau] handleClientCreerPiste() failed:", error);
             this._showNotification(error.message || "Impossible d'ouvrir la piste.", 'error');
+        } finally {
+            this.broadcast('app:loading.stop');
+        }
+    }
+
+    /**
+     * SIGNALER LE RÈGLEMENT D'UNE NOTE — depuis la fenêtre qui vient de l'émettre.
+     *
+     * Émettre n'est que la moitié du geste : une note part pour être PAYÉE. L'encaissement
+     * ne se saisissait qu'en rouvrant la note et en descendant dans sa collection de
+     * paiements — deux détours, et seulement si l'on y pensait.
+     *
+     * Miroir exact de `handleTrancheSignalerPaiementPrime` : aucun formulaire n'est
+     * réécrit. Le dialogue ordinaire de Paiement s'ouvre, rattaché à la note par
+     * `parentContext {fieldName: 'note'}`, et prérempli de son solde via `default_montant`
+     * — un paramètre que `PaiementController::getFormApi` lit depuis toujours.
+     *
+     * @param {object} payload - { url } vers la route de contexte de la note.
+     */
+    async handleNotePaiementRequest(payload) {
+        if (!payload.url) {
+            console.error("[Cerveau] handleNotePaiementRequest() : URL manquante.", payload);
+            this._showNotification("Impossible d'ouvrir le règlement : URL manquante.", 'error');
+            return;
+        }
+        try {
+            this.broadcast('app:loading.start');
+            const url = new URL(payload.url, window.location.origin);
+            if (this.currentIdEntreprise) {
+                url.searchParams.set('idEntreprise', this.currentIdEntreprise);
+            }
+            const response = await fetch(url.toString());
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.message || `Erreur serveur ${response.status}`);
+
+            const { noteId, solde, collection, formCanvas } = result;
+
+            // LE PAIEMENT VA SE RANGER DANS LA COLLECTION QUI L'ATTEND.
+            //
+            // Le dialogue de la note porte un widget « Paiements liés ». S'il est à
+            // l'écran, on lui adresse l'enregistrement : `originatorId` traverse le
+            // dialogue, revient dans `app:entity.saved`, et le widget se recharge seul.
+            // C'est le chemin que son propre bouton « + » emprunte déjà — on n'en écrit
+            // pas un second.
+            //
+            // Absent de l'écran — fenêtre de facturation, barre d'outils de la rubrique —,
+            // `openDialogBox` retombe sur l'onglet actif et rafraîchit la liste des notes.
+            // C'est exactement ce qu'il faut dans ces deux cas.
+            const widget = collection ? document.getElementById(`collection-${collection}`) : null;
+
+            this.openDialogBox({
+                entity: {},
+                entityFormCanvas: formCanvas,
+                isCreationMode: true,
+                context: {
+                    idEntreprise: this.currentIdEntreprise,
+                    idInvite: this.currentIdInvite,
+                    // Un solde nul ou déjà soldé ne propose rien : mieux vaut un champ
+                    // vide qu'un montant que personne ne doit.
+                    ...(solde ? { defaultValue: { target: 'montant', value: solde } } : {}),
+                    ...(widget ? { originatorId: widget.id } : {}),
+                },
+                parentContext: { id: noteId, fieldName: 'note' },
+            });
+        } catch (error) {
+            console.error("[Cerveau] handleNotePaiementRequest() failed:", error);
+            this._showNotification(error.message || "Impossible d'ouvrir le règlement.", 'error');
         } finally {
             this.broadcast('app:loading.stop');
         }

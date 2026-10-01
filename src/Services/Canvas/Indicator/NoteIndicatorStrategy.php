@@ -40,6 +40,10 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'montantTotal' => $montantTotal,
             'montantPaye' => round($this->getNoteMontantPaye($entity), 2),
             'solde' => round($this->getNoteSolde($entity), 2),
+            // IL RESTE QUELQUE CHOSE À ENCAISSER — condition d'affichage de l'action
+            // « Signaler le règlement ». La proposer sur une note soldée inviterait à un
+            // double encaissement, et ouvrirait un formulaire sans montant à proposer.
+            'aUnSoldeDu' => $this->aUnSoldeDu($this->getNoteSolde($entity)),
             'statutPaiement' => $this->getNoteStatutPaiementString($entity),
             'montantTaxe' => $montantTaxe,
             'nomTaxe' => $this->getNoteNomTaxe($entity),
@@ -73,6 +77,11 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'montantTotal'     => $montantTotal,
             'montantPaye'      => $montantPaye,
             'solde'            => $solde,
+            // ⚠ LES DEUX CHEMINS DE CALCUL, OU AUCUN. Une note de bordereau tire ses
+            // montants du bordereau et non de ses articles : oublier cette ligne
+            // priverait du bouton de règlement toutes les notes issues d'un bordereau,
+            // c'est-à-dire la plupart.
+            'aUnSoldeDu'       => $this->aUnSoldeDu($solde),
             'statutPaiement'   => $statutPaiement,
             'montantTaxe'      => $montantTaxe,
             'nomTaxe'          => 'Taxe',
@@ -120,6 +129,18 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             }
         }
         return $montant;
+    }
+
+    /**
+     * Reste-t-il quelque chose à encaisser sur cette note ?
+     *
+     * Le seuil est celui du projet — `SourceDeFacturation::SEUIL_SOLDE` et
+     * `NoteRecouvrementService` le partagent déjà : en deçà d'un centime, un solde relève
+     * de l'arrondi comptable et non d'une créance. On n'en crée pas un troisième.
+     */
+    private function aUnSoldeDu(float $solde): bool
+    {
+        return round($solde, 2) > 0.01;
     }
 
     private function getNoteSolde(Note $note): float

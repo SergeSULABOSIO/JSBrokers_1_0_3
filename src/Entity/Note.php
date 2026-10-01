@@ -125,6 +125,15 @@ class Note implements OwnerAwareInterface
     #[Groups(['list:read'])]
     public ?string $statutPaiement = null;
 
+    /**
+     * Il reste quelque chose à encaisser — condition d'affichage de l'action
+     * « Signaler le règlement ». Déclarée ici, et non posée dynamiquement : les
+     * propriétés dynamiques sont dépréciées, et `Note` fait partie des entités déjà
+     * assainies.
+     */
+    #[Groups(['list:read'])]
+    public ?bool $aUnSoldeDu = null;
+
     #[Groups(['list:read'])]
     public ?float $montantTaxe = null;
 

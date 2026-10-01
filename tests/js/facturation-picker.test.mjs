@@ -135,6 +135,62 @@ test('le montant saisi voyage, borné au reste, et n\'est jamais converti ici', 
     );
 });
 
+test('émettre n\'est que la moitié du geste : le règlement se signale depuis la fenêtre', () => {
+    assert.match(
+        picker,
+        /signalerLeReglement\(\)[\s\S]*?ui:note\.paiement-request[\s\S]*?paiement-context/,
+        'Une note part pour être PAYÉE. Sans ce bouton, l\'encaissement ne se saisit qu\'en '
+        + 'rouvrant la note et en descendant dans sa collection de paiements.',
+    );
+    assert.match(
+        cerveau,
+        /case 'ui:note\.paiement-request':/,
+        'Sans ce `case`, le bouton serait inerte.',
+    );
+
+    const debut = cerveau.indexOf('async handleNotePaiementRequest(payload) {');
+    // Borne large À DESSEIN : trop courte, elle coupait le `parentContext` final et
+    // l'assertion échouait sur du texte absent de la TRANCHE, pas du fichier.
+    const handler = cerveau.slice(debut, debut + 2600);
+
+    assert.match(handler, /parentContext: \{ id: noteId, fieldName: 'note' \}/,
+        'Le paiement se rattache à SA note : sans ce lien, il naîtrait orphelin et le solde '
+        + 'de la note ne bougerait pas.');
+    assert.match(handler, /defaultValue: \{ target: 'montant', value: solde \}/,
+        'Le montant arrive prérempli au solde — `PaiementController` lit ce paramètre depuis '
+        + 'toujours, par `?default_montant=`.');
+    assert.ok(
+        !/montant:|reference:|paidAt:/.test(handler),
+        'Aucun champ n\'est recopié ici : c\'est le formulaire de Paiement qui s\'ouvre. Deux '
+        + 'formulaires pour un même objet finiraient par diverger.',
+    );
+});
+
+test('le paiement se range dans la collection « Paiements liés » quand elle est à l\'écran', () => {
+    const debut = cerveau.indexOf('async handleNotePaiementRequest(payload) {');
+    const handler = cerveau.slice(debut, debut + 2600);
+
+    assert.match(
+        handler,
+        /document\.getElementById\(`collection-\$\{collection\}`\)/,
+        'Le widget se retrouve par le nom que LE SERVEUR donne à la collection — pas par '
+        + 'une chaîne écrite ici, qui se tairait le jour où le champ serait renommé.',
+    );
+    assert.match(
+        handler,
+        /\.\.\.\(widget \? \{ originatorId: widget\.id \} : \{\}\)/,
+        'Posé SEULEMENT si la fiche de la note est ouverte. Sinon `openDialogBox` retombe '
+        + 'sur l\'onglet actif et rafraîchit la liste des notes — ce qu\'il faut depuis la '
+        + 'fenêtre de facturation ou la barre d\'outils.',
+    );
+    assert.ok(
+        !/app:list\.refresh-request/.test(handler),
+        'Aucun rafraîchissement n\'est écrit ici : `originatorId` traverse le dialogue, '
+        + 'revient dans `app:entity.saved`, et le widget se recharge seul. C\'est le chemin '
+        + 'que son propre bouton « + » emprunte déjà.',
+    );
+});
+
 test('le picker ne calcule aucun montant métier', () => {
     assert.match(
         picker,
