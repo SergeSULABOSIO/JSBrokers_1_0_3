@@ -1895,6 +1895,22 @@ trait ControllerUtilsTrait
             );
         }
 
+        // Notes : au premier chargement, la rubrique montre ce qu'il reste à ENCAISSER.
+        // C'est la première question qu'on se pose en ouvrant ses notes, et le filtre est
+        // retirable d'un clic (chip « Toutes » ou badge de la barre de recherche).
+        //
+        // ⚠ Ce critère ne se COMBINE avec aucun périmètre portefeuille : Note est
+        // délibérément absente de PortefeuilleScope — une note de débit agrège les
+        // commissions de plusieurs clients, souvent de plusieurs gestionnaires, et ce suivi
+        // est au niveau du CABINET. La rubrique n'affichera donc qu'un seul badge, là où
+        // Tranches en cumule deux. Ce n'est pas un oubli.
+        if ($shortName === 'Note') {
+            $criteria += \App\Services\Search\NoteReglementScope::critereRecherche(
+                'Note',
+                \App\Services\Search\NoteReglementScope::IMPAYEE,
+            );
+        }
+
         // Cotations (propositions) : au premier chargement, on met en avant le travail
         // commercial restant → les propositions « En attente » (non transformées en police).
         // Critère retirable comme les autres (badge de la barre ou dialogue avancé) → « Toutes ».

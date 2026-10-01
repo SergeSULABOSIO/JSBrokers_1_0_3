@@ -3,6 +3,7 @@
 namespace App\Services\Canvas\Provider\List;
 
 use App\Entity\Note;
+use App\Services\Search\NoteReglementScope;
 use App\Services\ServiceMonnaies;
 
 class NoteListCanvasProvider implements ListCanvasProviderInterface
@@ -49,6 +50,50 @@ class NoteListCanvasProvider implements ListCanvasProviderInterface
                     "attribut_type" => "nombre",
                 ],
             ],
+            // Chips de filtre rapide, rendus par `_list_manager` hors dialogue. UN SEUL
+            // groupe : une note n'a qu'une dette, la sienne, envers son seul destinataire.
+            // Les quatre axes de Tranche répondent à quatre dettes de débiteurs différents —
+            // les imiter ici inventerait des distinctions qui n'existent pas.
+            //
+            // Dérivés de NoteReglementScope : aucun libellé ni icône n'est recopié.
+            "filtres_predefinis" => [$this->groupeDeChips()],
+        ];
+    }
+
+    /**
+     * Le groupe de chips, construit depuis la source unique des états.
+     *
+     * ⚠ `titre_complet` n'est pas décoratif : il alimente `aria-label`, `title` ET
+     * `data-criterion-label`, donc le libellé du badge de la barre de recherche. L'omettre
+     * ferait retomber le badge sur le libellé court — « Partielles », qui isolé ne dit pas
+     * de quoi il s'agit.
+     *
+     * L'option vide retire le critère. Elle ne déclare aucune condition : elle doit rester
+     * indestructible.
+     */
+    private function groupeDeChips(): array
+    {
+        $options = [];
+        foreach (NoteReglementScope::ETATS as $valeur => $etat) {
+            $options[] = [
+                "value" => $valeur,
+                "label" => NoteReglementScope::libelleCourt($valeur),
+                "icon" => $etat['icone'],
+                "titre_complet" => NoteReglementScope::libelle($valeur),
+            ];
+        }
+        $options[] = [
+            "value" => "",
+            "label" => "Toutes",
+            "icon" => "action:filter",
+            "titre_complet" => NoteReglementScope::LIBELLE_AXE . ' : toutes',
+        ];
+
+        return [
+            "critere" => NoteReglementScope::CRITERION_KEY,
+            "libelle" => NoteReglementScope::LIBELLE_AXE,
+            "titre" => NoteReglementScope::TITRE_CHIPS,
+            "options" => $options,
         ];
     }
 }

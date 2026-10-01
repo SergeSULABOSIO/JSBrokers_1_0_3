@@ -11,6 +11,8 @@ use App\Services\Search\CotationSouscriptionScope;
 use App\Services\Search\ReversementScope;
 use App\Services\Search\PisteTransformationScope;
 use App\Services\Search\PortefeuilleScope;
+use App\Services\Note\NoteReglementService;
+use App\Services\Search\NoteReglementScope;
 use App\Services\Search\TranchePaiementScope;
 use App\Service\Retro\LotDeVersement;
 use App\Services\Tranche\TranchePaiementService;
@@ -113,6 +115,7 @@ class JSBDynamicSearchService
     public function __construct(
         EntityManagerInterface $em,
         private readonly TranchePaiementService $tranchePaiement,
+        private readonly NoteReglementService $noteReglement,
         // La maille de lecture des reversements se déclare ici et se lit ailleurs : voir
         // le repli, plus bas.
         private readonly LotDeVersement $lotDeVersement,
@@ -181,6 +184,43 @@ class JSBDynamicSearchService
                 }
             }
             // Axes vides ou inconnus : clés déjà retirées, la recherche standard reprend.
+        }
+
+        // Critère synthétique « Règlement » (Note uniquement). Même raison qu'au-dessus, et
+        // UN SEUL axe : une note n'a qu'une dette, la sienne, envers son seul destinataire.
+        // Son solde n'est pas davantage stocké — `Article` ne persiste qu'une quantité, et
+        // le montant d'une ligne passe par le type de la note, le taux de taxe, la fraction
+        // de l'échéance. On charge l'ensemble scopé, puis NoteReglementService classe et
+        // pagine en mémoire. Forme de retour identique à ce chemin-ci.
+        if ($entityName === 'Note' && NoteReglementScope::porteLeCritere($criteria)) {
+            $valeur = NoteReglementScope::extraireValeur($criteria);
+            // ⚠ RETIRER AVANT DE TESTER LA VALEUR. `__reglement_note__` n'est pas une
+            // colonne : laissée dans les critères, elle ferait lever Doctrine sur un champ
+            // inconnu dès que la recherche standard reprend.
+            $criteria = NoteReglementScope::retirerCritere($criteria);
+
+            if ($valeur !== null) {
+                try {
+                    $qb = $this->em->getRepository($entityClass)->createQueryBuilder('e');
+                    $this->applyCriteriaToQueryBuilder($qb, $criteria, $entreprise, $parentContext, $status);
+                    if ($status['error'] !== null) {
+                        return ['status' => $status, 'data' => [], 'totalItems' => 0];
+                    }
+
+                    return $this->noteReglement->filtrerTrierPaginer($qb->getQuery()->getResult(), $valeur, $page, $limit);
+                } catch (\Exception $e) {
+                    return [
+                        'status' => [
+                            'error' => 'Une erreur inattendue est survenue: ' . $e->getMessage(),
+                            'code' => 500,
+                            'message' => 'Erreur interne du serveur.',
+                        ],
+                        'data' => [], 'totalItems' => 0, 'currentPage' => $page,
+                        'totalPages' => 1, 'itemsPerPage' => $limit,
+                    ];
+                }
+            }
+            // Valeur inconnue : clé déjà retirée, la recherche standard reprend.
         }
 
         // Critère synthétique « Échéance » (Avenant uniquement). À la différence de Tranche,

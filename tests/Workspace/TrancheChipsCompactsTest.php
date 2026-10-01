@@ -127,6 +127,10 @@ class TrancheChipsCompactsTest extends KernelTestCase
             'Avenant' => \App\Services\Canvas\Provider\List\AvenantListCanvasProvider::class,
             'Cotation' => \App\Services\Canvas\Provider\List\CotationListCanvasProvider::class,
             'Piste' => \App\Services\Canvas\Provider\List\PisteListCanvasProvider::class,
+            // ⚠ CETTE LISTE EST CODÉE EN DUR : une rubrique qu'on y oublie garde ses chips
+            // hors de portée de la règle, sans que rien ne le signale. Toute rubrique qui
+            // déclare `filtres_predefinis` doit y être inscrite.
+            'Note' => \App\Services\Canvas\Provider\List\NoteListCanvasProvider::class,
         ];
 
         foreach ($providers as $entite => $classe) {
