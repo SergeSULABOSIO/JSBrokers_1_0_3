@@ -126,16 +126,25 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
                     ['width' => 12, 'champs' => ['descriptionDuRisque']]
                 ]
             ],
-            // LE CLIENT NE SE REDEMANDE PAS EN MODIFICATION.
+            // LE CLIENT NE SE REDEMANDE PAS — NI EN MODIFICATION, NI QUAND IL EST DEJA CONNU.
             //
-            // Une affaire appartient à un client dès sa création, et on ne rouvre pas sa
+            // Une affaire appartient a un client des sa creation, et on ne rouvre pas sa
             // fiche pour en changer : on y travaille les autres champs. Laisser le champ
-            // occuper toute une rangée en tête — développé en carte, avec les chiffres du
-            // client — c'est poser une question dont la réponse est déjà donnée, avant
-            // celles qui comptent. Il reste rendu, donc porteur de sa valeur, mais masqué,
-            // et le client est rappelé parmi les faits en tête du dialogue.
+            // occuper toute une rangee en tete — developpe en carte, avec les chiffres du
+            // client — c'est poser une question dont la reponse est deja donnee, avant
+            // celles qui comptent. Il reste rendu, donc porteur de sa valeur, mais masque,
+            // et le client est rappele parmi les faits en tete du dialogue.
+            //
+            // LA CREATION DEPUIS UN CLIENT tombait pourtant a cote. « Creer une piste »
+            // ouvre ce formulaire avec le client deja pose (ClientController::pisteContext
+            // passe `idClient`, l'initialiseur fait le reste) — mais SANS
+            // `parent_field_name`, le seul signal que `renderFormCanvas` sache lire pour
+            // masquer la rangee d'un parent. Le geste avait nomme le client, l'entete le
+            // rappelait, et le formulaire le redemandait quand meme, carte deployee et
+            // croix d'effacement comprise : il proposait de defaire ce qu'on venait de
+            // faire. On regarde donc l'ENTITE, qui dit la verite dans les deux cas.
             [
-                'hidden' => !$isParentNew,
+                'hidden' => !$isParentNew || $object->getClient() !== null,
                 'colonnes' => [
                     ['width' => 12, 'champs' => ['client']]
                 ]
