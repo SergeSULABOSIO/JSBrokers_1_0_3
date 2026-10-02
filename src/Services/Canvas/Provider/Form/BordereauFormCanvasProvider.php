@@ -121,13 +121,13 @@ class BordereauFormCanvasProvider implements FormCanvasProviderInterface
             [
                 'fieldName' => 'operations', 
                 'entityRouteName' => 'operation', 
-                'formTitle' => 'Opération', 
+                'formTitle' => 'Opération', 'ongletTitre' => 'Opérations', 
                 'parentFieldName' => 'bordereau',
                 'totalizableField' => 'montantTTC', // Champ à totaliser
                 'secondaryField' => 'referencePolice', // Champ secondaire à afficher
                 'secondaryLabel' => 'Police: ' // Label pour le champ secondaire
             ],
-            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'bordereau']
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'ongletTitre' => 'Documents', 'parentFieldName' => 'bordereau']
         ];
 
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);

@@ -200,7 +200,7 @@ class DemandeCongeFormCanvasProvider implements FormCanvasProviderInterface
 
         // Justificatifs : certificat médical, acte, attestation…
         $collections = [
-            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Justificatif', 'parentFieldName' => 'demandeConge'],
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Justificatif', 'ongletTitre' => 'Justificatifs', 'parentFieldName' => 'demandeConge'],
         ];
 
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);

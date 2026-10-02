@@ -97,11 +97,11 @@ class RisqueFormCanvasProvider implements FormCanvasProviderInterface
             ],
         ];
         $collections = [
-            ['fieldName' => 'pistes', 'entityRouteName' => 'piste', 'formTitle' => 'Piste', 'parentFieldName' => 'risque'],
-            ['fieldName' => 'notificationSinistres', 'entityRouteName' => 'notificationsinistre', 'formTitle' => 'Sinistre', 'parentFieldName' => 'risque'],
+            ['fieldName' => 'pistes', 'entityRouteName' => 'piste', 'formTitle' => 'Piste', 'ongletTitre' => 'Pistes', 'parentFieldName' => 'risque'],
+            ['fieldName' => 'notificationSinistres', 'entityRouteName' => 'notificationsinistre', 'formTitle' => 'Sinistre', 'ongletTitre' => 'Sinistres', 'parentFieldName' => 'risque'],
         ];
         // Pièces jointes de cette fiche.
-        $collections[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'risque'];
+        $collections[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'ongletTitre' => 'Documents', 'parentFieldName' => 'risque'];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;
     }

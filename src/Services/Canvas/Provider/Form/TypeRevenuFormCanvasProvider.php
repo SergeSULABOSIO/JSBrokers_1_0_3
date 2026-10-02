@@ -58,7 +58,7 @@ class TypeRevenuFormCanvasProvider implements FormCanvasProviderInterface
 
         // Pièces jointes de cette fiche.
         $collections = [
-            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'typeRevenu'],
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'ongletTitre' => 'Documents', 'parentFieldName' => 'typeRevenu'],
         ];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 

@@ -57,7 +57,7 @@ class AssureurFormCanvasProvider implements FormCanvasProviderInterface
 
         // Pièces jointes de cette fiche.
         $collections = [
-            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'assureur'],
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'ongletTitre' => 'Documents', 'parentFieldName' => 'assureur'],
         ];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 

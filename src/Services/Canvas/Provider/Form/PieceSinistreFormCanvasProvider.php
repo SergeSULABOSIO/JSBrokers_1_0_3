@@ -91,7 +91,7 @@ class PieceSinistreFormCanvasProvider implements FormCanvasProviderInterface
         ];
 
         $collections = [
-            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'pieceSinistre'],
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'ongletTitre' => 'Documents', 'parentFieldName' => 'pieceSinistre'],
         ];
 
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);

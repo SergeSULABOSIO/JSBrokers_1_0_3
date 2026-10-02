@@ -61,7 +61,7 @@ class OperationFormCanvasProvider implements FormCanvasProviderInterface
 
         // Pièces jointes de cette fiche.
         $collections = [
-            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'operation'],
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'ongletTitre' => 'Documents', 'parentFieldName' => 'operation'],
         ];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 

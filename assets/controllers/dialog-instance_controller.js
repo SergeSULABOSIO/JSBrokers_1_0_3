@@ -951,11 +951,33 @@ export default class extends Controller {
      * et messages `invalid-feedback` que NOUS avons insérés). À appeler avant chaque
      * nouvelle soumission pour éviter l'empilement des messages d'un essai à l'autre.
      */
+    /**
+     * La barre d'onglets de CE dialogue, ou null s'il n'en a pas (aucune collection).
+     *
+     * On la vise directement plutot que de diffuser sur `document` : deux dialogues
+     * peuvent etre ouverts en meme temps -- une piste, puis une cotation ouverte depuis
+     * sa liste -- et une diffusion globale ferait repondre les onglets du parent a ce
+     * qui se passe chez l'enfant.
+     * @private
+     */
+    _barreDOnglets() {
+        return this.contentTarget?.querySelector('[data-controller~="onglets-formulaire"]') ?? null;
+    }
+
+    /** @private */
+    _notifierLesOnglets(nom, detail = {}) {
+        this._barreDOnglets()?.dispatchEvent(new CustomEvent(nom, { detail }));
+    }
+
     clearFieldErrors() {
         const form = this.contentTarget?.querySelector('form');
         if (!form) return;
         form.querySelectorAll('.invalid-feedback.d-block').forEach(el => el.remove());
         form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+
+        // Les marqueurs des ONGLETS suivent : sans ce signal, un « ! » survivrait a la
+        // correction qui l'a resolu.
+        this._notifierLesOnglets('app:formulaire-onglets.erreurs-changees');
     }
 
     /**
@@ -1010,11 +1032,16 @@ export default class extends Controller {
 
         // Défilement + focus sur le premier champ fautif pour un repérage immédiat.
         if (firstInvalid) {
+            // Une erreur serveur peut frapper un champ hors de l'onglet ouvert : on l'y
+            // amene, sans quoi le refus d'enregistrer ne montre rien de ce qui le cause.
+            this._notifierLesOnglets('app:formulaire-onglets.reveler', { element: firstInvalid });
             firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
             if (typeof firstInvalid.focus === 'function') {
                 firstInvalid.focus({ preventScroll: true });
             }
         }
+
+        this._notifierLesOnglets('app:formulaire-onglets.erreurs-changees');
     }
 
 
@@ -1463,8 +1490,18 @@ export default class extends Controller {
 
         let firstInvalid = null;
         form.querySelectorAll('[required]').forEach(champ => {
-            // offsetParent === null ⇒ champ (ou un ancêtre) masqué : on l'ignore.
-            if (champ.offsetParent === null || champ.disabled) return;
+            // MASQUE PAR QUOI ? La question n'etait pas posee : `offsetParent === null`
+            // suffisait a ecarter un champ. Depuis que le formulaire a des onglets, un
+            // champ requis de « Principal » est invisible des qu'un autre onglet est
+            // ouvert -- et il etait donc silencieusement dispense d'etre rempli.
+            //
+            // Masque par le seul ONGLET : on le valide quand meme, et on revele son
+            // onglet. Masque par la visibilite conditionnelle (`d-none`) ou desactive :
+            // on continue de le laisser tranquille, le serveur restant la reference.
+            const masqueParOnglet = champ.closest('.jsb-onglets-panneau.est-cache');
+            if (masqueParOnglet
+                ? (champ.disabled || champ.closest('.d-none'))
+                : (champ.offsetParent === null || champ.disabled)) return;
 
             const valeur = (champ.value ?? '').toString().trim();
             if (valeur !== '') return;
@@ -1480,6 +1517,10 @@ export default class extends Controller {
         if (firstInvalid) {
             const nb = form.querySelectorAll('.is-invalid').length;
             this.showFeedback('error', `Veuillez corriger les erreurs ci-dessous. (${nb} champ${nb > 1 ? 's' : ''} à corriger)`);
+            // L'onglet d'abord, le defilement ensuite : defiler vers un champ range
+            // dans un panneau cache ne montre rien.
+            this._notifierLesOnglets('app:formulaire-onglets.reveler', { element: firstInvalid });
+            this._notifierLesOnglets('app:formulaire-onglets.erreurs-changees');
             firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
             if (typeof firstInvalid.focus === 'function') {
                 firstInvalid.focus({ preventScroll: true });

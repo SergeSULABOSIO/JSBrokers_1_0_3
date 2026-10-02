@@ -1,0 +1,130 @@
+{# templates/components/dialog/_form_row.html.twig
+
+   LE RENDU D'UNE RANGEE DU LAYOUT, extrait de `_form_content.html.twig`.
+
+   Il est appele depuis DEUX endroits : le panneau « Principal » et le panneau de
+   chaque onglet de collection — et aussi, inchange, par les dialogues sans aucune
+   collection, qui ne portent pas d'onglets du tout. Un seul code de rendu de rangee,
+   donc aucune divergence possible entre ces chemins.
+
+   Variables attendues (contrat de l'include ... only) :
+     row          — la rangee du canevas (group_title, hidden, visibility_conditions, colonnes)
+     form         — la FormView du dialogue
+     formCanvas   — pour parametres.field_icons et parametres.field_titles
+     idEntreprise, idInvite — passes a chaque form_widget
+
+   Le theme de collection est RE-DECLARE ici : un `form_theme` a une portee de
+   gabarit, celui de `_form_content` ne nous suivrait pas dans l'include. #}
+{% form_theme form 'themes/_collection_widget.html.twig' %}
+                    {# INTERTITRE DE SECTION — il nomme un GROUPE, pas un champ.
+                       La classe « required » était posée en dur : un titre de section y
+                       prenait l'apparence d'un champ obligatoire, promettant une saisie
+                       qu'il ne demande pas. Aucun provider n'utilisait ce mécanisme, ce
+                       qui explique que personne ne l'ait vu. #}
+                    {% if row.group_title is defined %}
+                        <div class="row">
+                            <div class="col-12"><span class="dlg-group-title">{{ row.group_title }}</span></div>
+                        </div>
+                    {% endif %}
+
+                    {% set row_visibility_conditions = (row.visibility_conditions is defined) ? row.visibility_conditions|json_encode : null %}
+
+                    {# Une rangée masquée par le CANEVAS se signale : sans ce marqueur, la
+                       seconde passe du contrôleur la rouvrait aussitôt (une colonne visible
+                       suffisait à conclure « rangée visible »), et le masquage déclaré
+                       n'existait que dans le HTML brut. #}
+                    <div class="row{% if row.hidden is defined and row.hidden %} d-none{% endif %}"
+                        {% if row.hidden is defined and row.hidden %}data-rangee-masquee="1"{% endif %}
+                        data-dialog-instance-target="formRow {% if row_visibility_conditions %}dynamicFieldContainer{% endif %}"
+                        {% if row_visibility_conditions %}
+                            data-visibility-conditions-value="{{ row_visibility_conditions }}"
+                        {% endif %}
+                    >
+                        {% for col in row.colonnes %}
+                            {# On utilise la largeur définie dans le canvas, sinon on divise équitablement #}
+                            {% set col_class = col.width is defined ? 'col-md-' ~ col.width : 'col-md-' ~ (12 / row.colonnes|length)|round(0, 'floor') %}
+
+                            {# FALLBACK : Si aucune condition n'est sur la ligne, on vérifie la colonne (ancien comportement). #}
+                            {% set first_field_in_col = col.champs[0] ?? null %}
+                            {% set col_visibility_conditions = (not row_visibility_conditions and first_field_in_col is mapping and first_field_in_col.visibility_conditions is defined) ? first_field_in_col.visibility_conditions|json_encode : null %}
+
+                            <div class="{{ col_class }}"
+                                {% if col_visibility_conditions %}
+                                    data-dialog-instance-target="dynamicFieldContainer"
+                                    data-visibility-conditions-value="{{ col_visibility_conditions }}"
+                                {% endif %}
+                            >
+                                {% set champs_list = col.champs is defined ? col.champs : [col] %}
+                                {% for field in champs_list %}
+                                    {% set field_code = (field is mapping and field.field_code is defined) ? field.field_code : field %}
+                                    {% if field is mapping and field.widget is defined and field.widget == 'collection' %}
+                                        {# Pour les collections, on appelle form_widget directement pour éviter le div.mb-3 superflu.
+                                           L'icône du champ voyage dans manager_options : une collection porte sa pastille
+                                           comme n'importe quel autre champ, sans quoi elle fait un trou dans l'alignement
+                                           de la colonne d'icônes. Repli sur l'alias générique « collection » quand le
+                                           provider n'en déclare pas. #}
+                                        {% set field_icon = formCanvas.parametres.field_icons[field_code]|default('collection') %}
+                                        {% if form[field_code] is defined %}
+                                            {# EXACTEMENT la même carte qu'un champ simple : pastille et libellé dans
+                                               le bandeau, contenu dans le corps. La collection cesse ainsi d'être le
+                                               seul bloc à flotter sans son cadre blanc — et l'icône se pose devant le
+                                               TITRE DU BLOC, pas dans l'accordéon, qui garde son seul disque +/-. #}
+                                            <div class="mb-3 dlg-field-card" data-field-code="{{ field_code }}">
+                                                <div class="dlg-field-card-head">
+                                                    <span class="dlg-field-card-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(field_icon), {height: '16px', width: '16px'}) }}</span>
+                                                    {{ form_label(form[field_code]) }}
+                                                </div>
+                                                <div class="dlg-field-card-body">
+                                                    {{ form_widget(form[field_code], {'manager_options': field.options, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
+                                                    {{ form_help(form[field_code]) }}
+                                                    {{ form_errors(form[field_code]) }}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    {% else %}
+                                        {# Pour les champs standards, on utilise form_row qui génère un div.mb-3. #}
+                                        {% if form[field_code] is defined %}
+                                            {% set current_field_options = (field is mapping and field.options is defined) ? field.options : {} %}
+                                            {% set current_widget_attr = current_field_options.attr|default({}) %}
+
+                                            {# Détection automatique des Textarea pour activer l'éditeur riche #}
+                                            {% if 'textarea' in form[field_code].vars.block_prefixes %}
+                                                {% set current_widget_attr = current_widget_attr|merge({'data-controller': 'rich-text'}) %}
+                                            {% endif %}
+
+                                            {# Icône de champ opt-in (field_icons du canvas) : la carte est rendue
+                                               à la main pour poser une mini-pastille devant le libellé. Sans icône,
+                                               form_row d'origine inchangé. #}
+                                            {% set field_icon = formCanvas.parametres.field_icons[field_code]|default(null) %}
+                                            {% if field_icon %}
+                                                {# TITRE DE CARTE EXPLICITE (`field_titles` du canvas).
+                                                   Certains widgets consomment eux-mêmes leur libellé — une case à
+                                                   cocher l'affiche à côté de la case — et `form_label` ne rend
+                                                   alors RIEN : la carte se retrouvait avec une pastille et un
+                                                   bandeau vide. On donne donc un titre à la carte, distinct du
+                                                   libellé du champ. #}
+                                                {% set field_title = formCanvas.parametres.field_titles[field_code]|default(null) %}
+                                                <div class="mb-3 dlg-field-card" data-field-code="{{ field_code }}">
+                                                    <div class="dlg-field-card-head">
+                                                        <span class="dlg-field-card-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(field_icon), {height: '16px', width: '16px'}) }}</span>
+                                                        {% if field_title %}
+                                                            <span class="form-label">{{ field_title }}</span>
+                                                        {% else %}
+                                                            {{ form_label(form[field_code]) }}
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="dlg-field-card-body">
+                                                        {{ form_widget(form[field_code], {'manager_options': current_field_options, 'attr': current_widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
+                                                        {{ form_help(form[field_code]) }}
+                                                        {{ form_errors(form[field_code]) }}
+                                                    </div>
+                                                </div>
+                                            {% else %}
+                                                {{ form_row(form[field_code], {'manager_options': current_field_options, 'attr': current_widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>

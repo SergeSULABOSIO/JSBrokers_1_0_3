@@ -51,7 +51,7 @@ class AutoriteFiscaleFormCanvasProvider implements FormCanvasProviderInterface
 
         // Pièces jointes de cette fiche.
         $collections = [
-            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'autoriteFiscale'],
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'ongletTitre' => 'Documents', 'parentFieldName' => 'autoriteFiscale'],
         ];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 

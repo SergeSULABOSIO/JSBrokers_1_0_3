@@ -194,23 +194,23 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
         $collectionsConfig = [
             [
                 'fieldName' => 'rolesEnFinance', 'entityRouteName' => 'rolesenfinance',
-                'formTitle' => 'Rôle en Finance', 'parentFieldName' => 'invite'
+                'formTitle' => 'Rôle en Finance', 'ongletTitre' => 'Finance', 'parentFieldName' => 'invite'
             ],
             [
                 'fieldName' => 'rolesEnMarketing', 'entityRouteName' => 'rolesenmarketing',
-                'formTitle' => 'Rôle en Marketing', 'parentFieldName' => 'invite'
+                'formTitle' => 'Rôle en Marketing', 'ongletTitre' => 'Marketing', 'parentFieldName' => 'invite'
             ],
             [
                 'fieldName' => 'rolesEnProduction', 'entityRouteName' => 'rolesenproduction',
-                'formTitle' => 'Rôle en Production', 'parentFieldName' => 'invite'
+                'formTitle' => 'Rôle en Production', 'ongletTitre' => 'Production', 'parentFieldName' => 'invite'
             ],
             [
                 'fieldName' => 'rolesEnSinistre', 'entityRouteName' => 'rolesensinistre',
-                'formTitle' => 'Rôle en Sinistre', 'parentFieldName' => 'invite'
+                'formTitle' => 'Rôle en Sinistre', 'ongletTitre' => 'Sinistre', 'parentFieldName' => 'invite'
             ],
             [
                 'fieldName' => 'rolesEnAdministration', 'entityRouteName' => 'rolesenadministration',
-                'formTitle' => 'Rôle en Administration', 'parentFieldName' => 'invite'
+                'formTitle' => 'Rôle en Administration', 'ongletTitre' => 'Administration', 'parentFieldName' => 'invite'
             ],
         ];
 
@@ -219,7 +219,7 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
         // celui que le trait injecte à la création depuis cette fiche.
         $collectionsConfig[] = [
             'fieldName' => 'conditionsPartageAgent', 'entityRouteName' => 'conditionpartage',
-            'formTitle' => 'Condition de partage', 'parentFieldName' => 'agent',
+            'formTitle' => 'Condition de partage', 'ongletTitre' => 'Conditions de partage', 'parentFieldName' => 'agent',
             'parentRouteName' => 'invite',
         ];
 
@@ -229,7 +229,7 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
         // ailleurs, alors que la méthode reçoit `$collectionsConfig` : la collection
         // « Documents » de la fiche Invité était donc déclarée dans le FormType mais
         // jamais rendue à l'écran.
-        $collectionsConfig[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'inviteRattache', 'parentRouteName' => 'invite'];
+        $collectionsConfig[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'ongletTitre' => 'Documents', 'parentFieldName' => 'inviteRattache', 'parentRouteName' => 'invite'];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collectionsConfig);
 
         return $layout;

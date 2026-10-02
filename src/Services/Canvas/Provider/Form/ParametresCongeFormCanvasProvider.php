@@ -98,7 +98,7 @@ class ParametresCongeFormCanvasProvider implements FormCanvasProviderInterface
             [
                 'fieldName' => 'periodesBlocage',
                 'entityRouteName' => 'periodeblocage',
-                'formTitle' => 'Période de blocage',
+                'formTitle' => 'Période de blocage', 'ongletTitre' => 'Périodes de blocage',
                 'parentFieldName' => 'parametres',
                 'parentRouteName' => 'parametresconge',
             ],

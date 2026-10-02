@@ -90,7 +90,7 @@ class PortefeuilleFormCanvasProvider implements FormCanvasProviderInterface
             [
                 'fieldName'       => 'clients',
                 'entityRouteName' => 'client',
-                'formTitle'       => 'Client',
+                'formTitle'       => 'Client', 'ongletTitre' => 'Clients',
                 'parentFieldName' => 'portefeuille',
                 // « Ajouter » ouvre une boîte de sélection de clients existants (sans
                 // portefeuille) à rattacher — pas un formulaire de création de client.
@@ -114,7 +114,7 @@ class PortefeuilleFormCanvasProvider implements FormCanvasProviderInterface
             [
                 'fieldName' => 'documents',
                 'entityRouteName' => 'document',
-                'formTitle' => 'Document',
+                'formTitle' => 'Document', 'ongletTitre' => 'Documents',
                 'parentFieldName' => 'portefeuille',
             ],
         ]);

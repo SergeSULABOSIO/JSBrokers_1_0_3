@@ -151,7 +151,7 @@ class ReversementRetroAgentFormCanvasProvider implements FormCanvasProviderInter
         ];
 
         $collections = [
-            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Pièce', 'parentFieldName' => 'reversementRetroAgent'],
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Pièce', 'ongletTitre' => 'Pièces', 'parentFieldName' => 'reversementRetroAgent'],
         ];
 
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);

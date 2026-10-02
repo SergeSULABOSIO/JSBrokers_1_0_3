@@ -58,7 +58,7 @@ class GroupeFormCanvasProvider implements FormCanvasProviderInterface
 
         // Pièces jointes de cette fiche.
         $collections = [
-            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'groupe'],
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'ongletTitre' => 'Documents', 'parentFieldName' => 'groupe'],
         ];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
