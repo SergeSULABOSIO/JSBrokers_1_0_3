@@ -691,9 +691,22 @@ textarea:hover,
        rangee d'onglets soit rognee d'un pixel. Ce nombre suit donc le padding de
        `.form-column` (l. ~2691) : changer l'un oblige a changer l'autre. */
     top: -1.5rem;
-    z-index: 3;
-    margin: 0 -1.5rem;
-    padding-inline: calc(8px + 1.5rem);
+    /* 110, ET NON 3 : le bandeau cree un CONTEXTE D'EMPILEMENT, dans lequel son panneau
+       « + N » (z-index 1050) se retrouve enferme. Tout le groupe vaut donc ce seul nombre
+       face au reste du formulaire — et l'entete collant du tableau d'une collection, lui,
+       est a 100 (`thead.sticky-header`). A 3, il passait DEVANT le panneau : la liste des
+       onglets replies etait coupee par la ligne « MONTANT FINAL / ACTIONS ».
+
+       Ne pas ramener ce nombre sous 100 en croyant ranger : c'est l'entete du tableau
+       qu'il doit dominer, pas un empilement arbitraire. */
+    z-index: 110;
+    /* DEUX NOMBRES DIFFERENTS, ET C'EST VOULU : le decalage VERTICAL ci-dessus se cale
+       sur la colonne qui defile (1.5rem), le debord HORIZONTAL ci-dessous sur le CADRE
+       qui entoure (1.25rem, cf. `--gouttiere-cadre`). Les aligner l'un sur l'autre
+       ferait soit reapparaitre la bande decouverte, soit recouper la bordure du cadre.
+       Sans cadre (aucun `form_intro`), la variable vaut 0 : aucun debord. */
+    margin-inline: calc(-1 * var(--gouttiere-cadre, 0rem));
+    padding-inline: calc(8px + var(--gouttiere-cadre, 0rem));
 }
 
 /* Bouton de repli, commun aux deux barres. État ouvert marqué par le fond cobalt ET la
@@ -2340,6 +2353,50 @@ tr.row-selected:hover > td {
     font-weight: 400;                  /* L'unité répétée à chaque cellule est dé-emphasée, la valeur reste en gras */
 }
 
+/* ══ LE TABLEAU D'UNE COLLECTION DE DIALOGUE ══
+   Trois colonnes — principale | valeur | actions — de largeur FIGEE.
+
+   `table-layout: fixed` est la seule facon de garantir la meme abscisse d'un onglet a
+   l'autre : sous `auto`, une largeur n'est qu'une suggestion que le contenu peut
+   deborder, et deux onglets voisins placeraient leur colonne de valeur a deux endroits
+   differents — l'oeil le verrait sauter en changeant d'onglet.
+
+   Le selecteur se scope tout seul : le <colgroup> n'est pose qu'en dialogue. */
+.table-enhanced:has(> colgroup) {
+    table-layout: fixed;
+    /* En `ch`, et non en pixels : la colonne doit tenir le PLUS GRAND montant reel, qui
+       n'est pas un montant en dollars. « 125 000 000,00 CDF » fait 18 caracteres, et
+       `.td-numeric` interdit le repli — une largeur calee sur « 10 250,00 USD » ferait
+       deborder le franc congolais sur la colonne d'actions. `ch` suit la police, donc le
+       debordement ne revient pas au premier changement de fonte. Aucune requete media ne
+       la retrecit : c'est la colonne PRINCIPALE qui cede et ellipse, un libelle tronque
+       restant lisible la ou un montant tronque est faux. */
+    --jsb-col-valeur: 20ch;
+    /* Deux boutons de 34 px, leur gouttiere et le rembourrage de cellule. */
+    --jsb-col-actions: 104px;
+}
+.table-enhanced > colgroup > col.jsb-col-valeur  { width: var(--jsb-col-valeur); }
+.table-enhanced > colgroup > col.jsb-col-actions { width: var(--jsb-col-actions); }
+
+/* PIED DE TOTAL — convention comptable : le total se lit SOUS la colonne qu'il somme.
+   Un filet epais le detache du corps ; c'est le seul signe dont il a besoin. */
+.table-enhanced > tfoot > tr > th,
+.table-enhanced > tfoot > tr > td {
+    border-top: 2px solid var(--border-medium, #ced4da);
+    border-bottom: none;
+    background-color: var(--bg-white, #ffffff);
+}
+.table-enhanced > tfoot > tr > th {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted, #6c757d);
+}
+.table-enhanced > tfoot .td-numeric {
+    font-weight: 700;
+    color: var(--cobalt, #0047AB);
+}
 /* --- 3.7 États de chargement et vides --- */
 /*
 ===================================================================
@@ -3129,7 +3186,12 @@ tr.row-selected:hover > td {
 /* Cadre englobant du formulaire : appliqué dès que le canvas fournit un
    entête contextuel. */
 .form-column:has(.form-intro) form {
-    padding: 1.25rem;
+    /* LE CADRE DECLARE SA GOUTTIERE, et le bandeau collant s'en sert pour border a
+       l'interieur de lui (cf. `.form-column .jsb-onglets-barre`). Recopier le nombre
+       d'un bloc a l'autre, c'est ce qui avait fait deborder le bandeau de 3 px et
+       couper la bordure du cadre sur toute sa hauteur. */
+    --gouttiere-cadre: 1.25rem;
+    padding: var(--gouttiere-cadre);
     border: 1px solid #dee2e6;
     border-radius: 14px;
     background-color: #f8f9fa;
@@ -3867,69 +3929,18 @@ tr.row-selected:hover > td {
 .form-column .mb-3:has(.collection-manager-accordion) > .form-label {
     display: none;
 }
-.collection-item {
-    padding: 0.5rem 0.5rem; /* CORRECTION : Gouttière horizontale réduite pour correspondre au padding de 0.5rem des autres champs. */
-    display: flex;
-    align-items: center;
-    border-bottom: 1px solid #f0f0f0;
-    position: relative;
-    cursor: pointer;
-    margin-left: 0px;
-    margin-right: 0px;
-    transition: background-color 0.2s ease;
-    background-color: #ffffff;
-}
-.collection-item:last-child {
-    border-bottom: none;
-}
-.collection-item:hover {
-    background-color: #f5f5f5;
-}
-.collection-item.selected {
-    background-color: #e9ecef;
-}
-.item-icon {
-    margin-right: 12px;
-    color: #6c757d;
-}
-.item-text {
-    flex-grow: 1;
-}
-.text-main {
-    font-weight: 500;
-}
+/* `.collection-item`, `.item-icon`, `.item-text`, `.text-main` ont ete retires le
+   2026-10-02 : ils stylaient `templates/components/_collection.html.twig` et
+   `collection_items/`, que plus aucun code n'incluait.
+
+   ⚠ `.text-secondary` ci-dessous vivait au milieu de ce bloc mort, mais il est bien
+   VIVANT : il redefinit globalement l'utilitaire Bootstrap, et des dizaines de gabarits
+   en dependent. Le supprimer avec son voisinage aurait ete la plus large regression du
+   lot. */
 .text-secondary {
     font-size: 0.85em;
     color: #a0a0a0;
 }
-.item-actions {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    background-color: rgba(255, 255, 255, 0.9);
-    border-radius: 5px;
-    padding: 2px 5px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-.item-actions .btn {
-    background-color: transparent;
-    border-radius: 50%;
-    padding: 5px;
-    transition: background-color 0.2s ease-in-out;
-}
-.item-actions .btn-edit {
-    color: #6c757d;
-}
-.item-actions .btn-delete {
-    color: #dc3545;
-}
-.item-actions .btn:hover {
-    background-color: #e9ecef;
-}
-
 .title-right-block .btn {
     display: inline-flex;
     align-items: center;
@@ -4093,34 +4104,8 @@ tr.row-selected:hover > td {
     font-size: 0.8rem;
 }
 
-/* --- 5.3 Boutons d'action contextuels (sur les lignes) --- */
-/*
-===================================================================
- SECTION: BOUTONS D'ACTION CONTEXTUELS POUR LES LIGNES DE LISTE
-===================================================================
-*/
-
-.contextual-row-actions {
-    position: absolute;
-    top: 50%;
-    right: 1rem;
-    transform: translateY(-50%);
-    display: flex;
-    gap: 0.5rem;
-    background-color: rgba(255, 255, 255, 0.9);
-    padding: 0.25rem 0.5rem;
-    border-radius: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
-    z-index: 10;
-}
-
-.contextual-row-actions.visible {
-    opacity: 1;
-    visibility: visible;
-}
+/* `.contextual-row-actions` a ete retiree le 2026-10-02 : aucun gabarit ne la posait.
+   Les actions de ligne vivent dans `.list-row-actions-container` (section 5.4). */
 
 /*
 ===================================================================

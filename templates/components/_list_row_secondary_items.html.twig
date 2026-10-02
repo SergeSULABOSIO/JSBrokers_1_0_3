@@ -16,11 +16,50 @@
     Paramètres attendus :
     - `entity` : l'objet de données de la ligne.
     - `col_principale` : `listeCanvas.colonne_principale` (textes secondaires + séparateur).
+
+    Paramètres OPTIONNELS, posés par les collections de dialogue uniquement. Leurs
+    valeurs par défaut rendent ce gabarit identique à ce qu'il était : une liste
+    principale ne voit aucune différence.
+    - `est_dialogue` : autorise la mise en pastille d'un état.
+    - `secondaire_extra` : le champ secondaire déclaré par le widget de collection
+      (`secondaryField`/`secondaryLabel`), rendu dans la même grammaire que le reste.
+    - `retrogradees` : les colonnes chiffrées que la colonne de valeur n'a pas retenues.
+      Elles arrivent RÉSOLUES de PHP (code, unité, titre) — ce gabarit ne fait aucune
+      arithmétique d'index.
 #}
+{% set est_dialogue = est_dialogue|default(false) %}
+
+{#
+    UNE SEULE LISTE, UNE SEULE BOUCLE.
+
+    Les trois sources sont fusionnées AVANT de boucler, et non rendues dans trois blocs
+    successifs. En Twig, une variable posée dans un `for` ne survit pas à la sortie de la
+    boucle : un second bloc repartirait de `rendus = 0` et rouvrirait la ligne par un
+    séparateur orphelin — sans la moindre erreur pour le dire. `|map` compose la liste
+    sans jamais écrire dans une boucle.
+#}
+{% set items = col_principale.textes_secondaires|default([])
+    |merge(retrogradees|default([])|map(r => {
+        'attribut_code': r.code,
+        'attribut_prefixe': r.titre ~ ' : ',
+        'est_nombre': true,
+        'unite': r.unite
+    }))
+    |merge(secondaire_extra|default(null) is not null ? [{
+        'attribut_code': secondaire_extra.code,
+        'attribut_prefixe': secondaire_extra.label|default(''),
+        'attribut_type': secondaire_extra.type|default('')
+    }] : []) %}
+
 {% set rendus = 0 %}
-{% for texte in col_principale.textes_secondaires %}
+{% for texte in items %}
     {% set valeur = attribute(entity, texte.attribut_code) %}
-    {% if texte.attribut_type|default('') == 'date' and valeur is not null %}
+    {% if texte.est_nombre|default(false) %}
+        {# Une colonne chiffrée rétrogradée garde son format : le MÊME que celui de la
+           colonne de valeur, sans quoi deux montants de la même ligne s'écriraient de
+           deux façons. #}
+        {% set affichage = (valeur is null or valeur is same as('')) ? null : valeur|format_nombre(2) %}
+    {% elseif texte.attribut_type|default('') == 'date' and valeur is not null %}
         {% set affichage = valeur|date('d/m/Y') %}
     {% elseif texte.attribut_type|default('') == 'text' and texte.attribut_taille_max is defined and texte.attribut_taille_max is not null and valeur is not null and valeur|length > texte.attribut_taille_max %}
         {% set affichage = valeur|slice(0, texte.attribut_taille_max) ~ '...' %}
@@ -31,10 +70,31 @@
         {# L'icône explicite du canevas prime ; sinon on la déduit du code
            d'attribut (secondary_icon), pour couvrir toutes les listes. #}
         {% set sec_icone = texte.icone|default(secondary_icon(texte.attribut_code)) %}
+        {# UN ÉTAT SE LIT D'UN COUP D'ŒIL — une pastille, pas une phrase.
+           Le critère « ce code désigne-t-il un état ? » n'est pas réécrit ici : c'est
+           `is etat`, la même reconnaissance que celle qui vient de choisir l'icône
+           (IconExtension). Deux écritures du même critère finiraient par diverger.
+           Aucune sémantique de couleur n'est inventée : niveau NEUTRE par défaut ; un
+           canevas peut en déclarer un (`niveau`) parmi les 7 variantes existantes.
+           Jamais `.badge` : la classe est forcée en bleu plein et en italique ici. #}
+        {% set en_pastille = est_dialogue and (texte.pastille|default(false) or texte.attribut_code is etat) %}
         <span class="d-inline-flex align-items-center flex-shrink-0" data-responsive-cell-target="secondaryItem">
             {% if rendus > 0 %}<span class="mx-2 text-secondary" aria-hidden="true">{{ col_principale.textes_secondaires_separateurs|default(' &bull; ')|raw }}</span>{% endif %}
-            <twig:UX:Icon name="{{ resolve_icon_name(sec_icone) }}" style="width: {{ texte.icone_taille | default('1.1em') }}; height: {{ texte.icone_taille | default('1.1em') }}; margin-right: 4px;" aria-hidden="true" />
-            {{ texte.attribut_prefixe | default('') }}{{ affichage }}
+            {% if en_pastille %}
+                {# Le préfixe (« Statut : ») n'est plus écrit : la pastille le dit par sa
+                   forme. Il reste pour les lecteurs d'écran, qui n'ont pas la forme. #}
+                <span class="visually-hidden">{{ texte.attribut_prefixe|default('État : ') }}</span>
+                <span class="jsb-state-badge{{ texte.niveau is defined ? ' jsb-state-badge--' ~ texte.niveau : '' }}">{{ affichage }}</span>
+            {% else %}
+                <twig:UX:Icon name="{{ resolve_icon_name(sec_icone) }}" style="width: {{ texte.icone_taille | default('1.1em') }}; height: {{ texte.icone_taille | default('1.1em') }}; margin-right: 4px;" aria-hidden="true" />
+                {# UN SEUL NOEUD DE TEXTE, unite comprise.
+                   Le conteneur est en `d-inline-flex` : chaque morceau y devient un ELEMENT
+                   FLEX, et les espaces qui les separent sont supprimes. Un `<span>` autour de
+                   l'unite donnait « Commission TTC :USD0,00 ». La de-emphase de l'unite n'a
+                   d'interet que dans la colonne alignee, ou elle garde les decimales en face ;
+                   ici tout est deja petit et gris. #}
+                {{ texte.attribut_prefixe | default('') }}{{ (texte.est_nombre|default(false) and texte.unite|default('') != '') ? texte.unite ~ ' ' : '' }}{{ affichage }}
+            {% endif %}
         </span>
         {% set rendus = rendus + 1 %}
     {% endif %}

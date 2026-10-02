@@ -5,6 +5,7 @@ namespace App\Twig\Extension;
 use App\Services\Canvas\Provider\Icon\IconCanvasProvider;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
+use Twig\TwigTest;
 
 class IconExtension extends AbstractExtension
 {
@@ -19,6 +20,29 @@ class IconExtension extends AbstractExtension
             new TwigFunction('resolve_icon_name', [$this, 'resolveIconName']),
             new TwigFunction('secondary_icon', [$this, 'secondaryIcon']),
         ];
+    }
+
+    public function getTests(): array
+    {
+        return [
+            // `{% if code is etat %}` — LA MEME reconnaissance que celle qui choisit
+            // l'icone d'un etat, ci-dessous. Deux ecritures du meme critere finiraient
+            // par diverger : une ligne afficherait la pastille sans son icone, ou
+            // l'inverse, et personne ne saurait laquelle des deux a raison.
+            new TwigTest('etat', [$this, 'estEtat']),
+        ];
+    }
+
+    /**
+     * Ce code d'attribut designe-t-il un ETAT ? Source unique du critere : la liste des
+     * collections s'en sert pour decider qu'une metadonnee se rend en pastille plutot
+     * qu'en texte, et `secondaryIcon()` pour lui donner son icone.
+     */
+    public function estEtat(?string $code): bool
+    {
+        $c = strtolower((string) $code);
+
+        return str_contains($c, 'statut') || str_contains($c, 'status') || str_contains($c, 'etat');
     }
 
     /**
@@ -61,8 +85,9 @@ class IconExtension extends AbstractExtension
         if (preg_match('/(montant|prime|commission|retro|solde|total|taxe|tva|reserve|assiette|revenu|franchise|paiement|versement|encaisse|decaisse|tresorerie|capital|usd|cdf|eur)/', $c)) {
             return 'lucide:coins';
         }
-        // Statuts.
-        if (str_contains($c, 'statut') || str_contains($c, 'status') || str_contains($c, 'etat')) {
+        // Statuts. Le critere vit dans estEtat() : la pastille de la liste des
+        // collections et cette icone doivent toujours parler du meme champ.
+        if ($this->estEtat($c)) {
             return 'lucide:info';
         }
         // Références, codes, numéros, identifiants légaux.

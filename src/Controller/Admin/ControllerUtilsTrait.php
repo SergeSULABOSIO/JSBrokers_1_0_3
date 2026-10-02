@@ -549,6 +549,10 @@ trait ControllerUtilsTrait
             // « dialog » : c'est le contexte d'une collection, celui qui rend la colonne
             // d'actions à droite de la ligne.
             'usage' => 'dialog',
+            // MEMES CELLULES QUE LES LIGNES DU SERVEUR. Sans cette resolution, la ligne du
+            // tampon rendait toutes les colonnes numeriques du canevas enfant la ou le
+            // tableau n'en a qu'une : deux comptes de <td> dans un meme <tbody>.
+            'colonneValeur' => $this->resoudreColonneValeur($entityClass, $data['ligne_colonne_valeur'] ?? null),
             'listActionOptions' => [
                 // Une collection de RATTACHEMENT dit « Retirer » plutôt que « Supprimer ».
                 // Le navigateur transmet ces libellés : ils vivent dans la configuration du
@@ -560,6 +564,66 @@ trait ControllerUtilsTrait
             ],
         ]);
     }
+    /**
+     * LA COLONNE DE VALEUR D'UNE COLLECTION, RESOLUE UNE SEULE FOIS.
+     *
+     * En dialogue, une rangee porte UNE valeur, alignee a droite sur une colonne commune
+     * a toutes les collections — c'est elle qui permet au pied de total de tomber sous ce
+     * qu'il somme, et aux actions de tomber au meme endroit d'un onglet a l'autre.
+     *
+     * Trois sources, dans cet ordre :
+     *   1. le champ totalisable declare par le canevas du PARENT (primeTranche…) ;
+     *   2. a defaut, la PREMIERE colonne numerique du canevas de liste de l'enfant ;
+     *   3. a defaut, rien — la colonne reste, VIDE : sans elle, les valeurs, les actions
+     *      et le pied ne tomberaient plus a la meme abscisse.
+     *
+     * `retrogradees` porte TOUTES les colonnes numeriques qui ne sont pas celle retenue,
+     * collections totalisables comprises. Ce cas se serait perdu : quand le champ
+     * totalisable ne figure pas parmi `colonnes_numeriques`, ce sont TOUTES les colonnes
+     * numeriques qui descendent en metadonnees, et aucune regle d'index ecrite en Twig ne
+     * l'aurait devine. La vue ne fait donc aucune arithmetique : elle recoit des listes.
+     *
+     * Appelee AUSSI par rendreLigneEnAttente() : une ligne du tampon doit porter
+     * exactement les memes cellules que les lignes rendues par le serveur.
+     *
+     * @return array{code: ?string, unite: string, titre: string, retrogradees: array<int, array{code: string, unite: string, titre: string}>}
+     */
+    private function resoudreColonneValeur(string $entityClass, ?string $totalizableField): array
+    {
+        $numeriques = $this->canvasBuilder->getListeCanvas($entityClass)['colonnes_numeriques'] ?? [];
+        $champs = $this->canvasBuilder->getEntityCanvas($entityClass)['liste'] ?? [];
+
+        $decrire = static function (?string $code) use ($champs, $numeriques): array {
+            foreach ($champs as $def) {
+                if (($def['code'] ?? null) === $code) {
+                    return ['code' => $code, 'unite' => (string) ($def['unite'] ?? ''), 'titre' => (string) ($def['intitule'] ?? $def['description'] ?? 'Valeur')];
+                }
+            }
+            foreach ($numeriques as $col) {
+                if (($col['attribut_code'] ?? null) === $code) {
+                    return ['code' => $code, 'unite' => (string) ($col['attribut_unité'] ?? ''), 'titre' => (string) ($col['titre_colonne'] ?? 'Valeur')];
+                }
+            }
+
+            return ['code' => $code, 'unite' => '', 'titre' => 'Valeur'];
+        };
+
+        $retenu = ($totalizableField !== null && $totalizableField !== '')
+            ? $totalizableField
+            : ($numeriques[0]['attribut_code'] ?? null);
+
+        $retrogradees = [];
+        foreach ($numeriques as $col) {
+            $code = $col['attribut_code'] ?? null;
+            if ($code === null || $code === $retenu) {
+                continue;
+            }
+            $retrogradees[] = $decrire($code);
+        }
+
+        return $decrire($retenu) + ['retrogradees' => $retrogradees];
+    }
+
     private function renderCollectionOrList(
         string $usage,
         string $entityClass,
@@ -573,7 +637,12 @@ trait ControllerUtilsTrait
         int $page = 1,
         int $limit = 20,
         array $listActionOptions = [],
-        ?array $lienParent = null
+        ?array $lienParent = null,
+        // LE TOTAL, CALCULE PAR L'APPELANT — il l'avait deja en main pour sa reponse JSON.
+        // Le recalculer ici donnerait deux additions pour un seul nombre, et donc, tot ou
+        // tard, deux resultats qui se contredisent.
+        ?float $totalValue = null,
+        string $totalUnit = ''
     ): Response {
         // Pagination pour les onglets génériques (non dialog).
         $dataArray = ($data instanceof \Doctrine\Common\Collections\Collection) ? $data->toArray() : (array)$data;
@@ -669,6 +738,10 @@ trait ControllerUtilsTrait
             'secondaryField' => $secondaryField,
             'secondaryLabel' => $secondaryLabel,
             'totalizableFieldDetails' => $totalizableFieldDetails,
+            // LA COLONNE DE VALEUR ET SES RETROGRADEES, resolues ici et nulle part ailleurs.
+            'colonneValeur' => $this->resoudreColonneValeur($entityClass, $totalizableField),
+            'totalValue' => $totalValue,
+            'totalUnit' => $totalUnit,
             'secondaryFieldDetails' => $secondaryFieldDetails,
             'paginationMeta' => $paginationMeta,
             'listActionOptions' => $listActionOptions,
@@ -1634,7 +1707,7 @@ trait ControllerUtilsTrait
                 }
             }
 
-            $html = $this->renderCollectionOrList('dialog', $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField, $secondaryField, $secondaryLabel, 1, PHP_INT_MAX, $listActionOptions)->getContent();
+            $html = $this->renderCollectionOrList('dialog', $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField, $secondaryField, $secondaryLabel, 1, PHP_INT_MAX, $listActionOptions, null, $totalValue, $totalUnit)->getContent();
 
             return new JsonResponse([
                 'html' => $html,

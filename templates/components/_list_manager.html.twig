@@ -190,7 +190,26 @@
                 'usage': usage|default('generic'),
             }) }}
         {% else %}
+            {# LE DIALOGUE, DECIDE UNE FOIS. Trois endroits en dependent — entete, lignes,
+               pied — et le recalculer a chaque fois serait trois occasions d'en oublier un. #}
+            {% set estCollection = usage|default('generic') == 'dialog' %}
+            {# Le parent n'est pas encore ecrit : il n'y a rien a totaliser qui soit vrai. #}
+            {% set parentEnAttente = parentEntity is defined and parentEntity is not null and parentEntity.id is null %}
             <table class="table table-hover table-sm table-enhanced" aria-label="Liste de {{ entite_nom }}">
+                {# LES LARGEURS, PORTEES PAR LE COLGROUP ET PAR LUI SEUL.
+
+                   Sous `table-layout: fixed`, c'est la forme canonique — et la seule qui
+                   evite un `style=` en ligne, qu'une politique de securite de contenu
+                   stricte interdirait. Sans largeurs figees, deux onglets voisins placeraient
+                   leur colonne de valeur a deux abscisses differentes : l'oeil le verrait
+                   sauter en changeant d'onglet. #}
+                {% if estCollection %}
+                    <colgroup>
+                        <col>
+                        <col class="jsb-col-valeur">
+                        <col class="jsb-col-actions">
+                    </colgroup>
+                {% endif %}
                 <thead class="table-light sticky-header">
                     <tr class="text-center">
                         {# Colonne Id. + case « tout sélectionner » : réservée aux listes principales.
@@ -210,8 +229,21 @@
                                 <div class='d-flex justify-content-start text-secondary m-2'>{{ listeCanvas.colonne_principale.titre_colonne | default('Titre principal') }}</div>
                             </th>
                         {% endif %}
-                        {# On n'affiche les colonnes numériques que si on n'est PAS dans une collection totalisable de dialogue #}
-                        {% if not (usage is defined and usage == 'dialog' and totalizableField is defined and totalizableField is not null) %}
+                        {% if estCollection %}
+                            {# UNE SEULE COLONNE DE VALEUR, TOUJOURS PRESENTE — meme pour une
+                               collection qui n'a rien a chiffrer : c'est elle qui fixe
+                               l'abscisse commune. Quand elle n'a pas d'intitule, celui-ci
+                               passe en texte masque plutot que de disparaitre : une colonne
+                               sans nom accessible est une colonne muette pour un lecteur
+                               d'ecran (WCAG 1.3.1). #}
+                            <th scope="col" class="th-numeric">
+                                {% if colonneValeur.code|default(null) %}
+                                    <div class='text-secondary m-2'>{{ colonneValeur.titre }}</div>
+                                {% else %}
+                                    <span class="visually-hidden">Valeur</span>
+                                {% endif %}
+                            </th>
+                        {% else %}
                             {% for colonne in listeCanvas.colonnes_numeriques | default([]) %}
                                 <th scope="col" style="width:150px" class="th-numeric">
                                     <div class='text-secondary m-2'>{{ colonne.titre_colonne | default('Valeur') }}</div>
@@ -220,7 +252,7 @@
                         {% endif %}
                         {# NOUVEAU : Colonne d'actions pour les collections dans un dialogue #}
                         {% if usage is defined and usage == 'dialog' %}
-                            <th scope="col" style="width: 100px;" class="text-end pe-4">
+                            <th scope="col" class="text-end pe-4">
                                 <div class='d-flex justify-content-end text-secondary m-2'>Actions</div>
                             </th>
                         {% endif %}
@@ -239,10 +271,38 @@
                             'parentEntity': parentEntity|default(null),
                             'totalizableField': totalizableField|default(null),
                             'totalizableFieldDetails': totalizableFieldDetails|default(null),
+                            'colonneValeur': colonneValeur|default({'code': null, 'unite': '', 'titre': 'Valeur', 'retrogradees': []}),
+                            'secondaryField': secondaryField|default(null),
+                            'secondaryLabel': secondaryLabel|default(null),
+                            'secondaryFieldDetails': secondaryFieldDetails|default(null),
                             'listActionOptions': listActionOptions|default({})
                         }) }}
                     {% endfor %}
                 </tbody>
+                {# LE TOTAL EN PIED, SOUS LA COLONNE QU'IL SOMME (convention comptable).
+                   Il vivait dans l'entete du bloc, loin des nombres qu'il additionne : on
+                   lisait une somme sans voir ses termes.
+
+                   RIEN N'EST RECALCULE ICI : la valeur vient de handleCollectionApiRequest(),
+                   qui l'avait deja en main pour sa reponse JSON. Une seule addition, un seul
+                   nombre.
+
+                   PAS DE PIED QUAND LE PARENT N'EST PAS ECRIT : le serveur ne connait alors
+                   que les elements RATTACHES, pas ceux qui attendent dans le tampon du
+                   navigateur. Un total qui ment est pire qu'un total absent. #}
+                {% if estCollection and totalizableField is defined and totalizableField is not null
+                      and not parentEnAttente and data|length > 0 %}
+                    <tfoot>
+                        <tr>
+                            <th scope="row" class="text-end pe-3">Total</th>
+                            <td class="text-end td-numeric">
+                                <span class="text-secondary td-numeric-unit">{{ totalUnit|default('') }}</span>
+                                {{ (totalValue|default(0))|format_nombre(2) }}
+                            </td>
+                            <td aria-hidden="true"></td>
+                        </tr>
+                    </tfoot>
+                {% endif %}
             </table>
         {% endif %}
         </div>
@@ -254,7 +314,6 @@
                    crée ou qu'on modifie donneraient deux visages à une même situation — et
                    celui de la création doit dire ce qui a d'unique ici : la saisie est
                    possible tout de suite, et elle sera écrite avec la fiche. #}
-                {% set parentEnAttente = parentEntity is defined and parentEntity is not null and parentEntity.id is null %}
                 {% set emptyStateParams = {
                     title: "La collection est vide",
                     description: parentEnAttente
