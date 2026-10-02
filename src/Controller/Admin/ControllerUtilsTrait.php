@@ -877,6 +877,72 @@ trait ControllerUtilsTrait
      *                               It receives the new entity and the current Invite as arguments.
      * @return Response
      */
+    /**
+     * Renseigne, sur chaque rangee d'onglet du canevas, le NOMBRE d'elements de sa
+     * collection — pour que la pastille de l'onglet soit juste des la premiere seconde,
+     * alors meme que la liste, elle, ne se charge qu'a l'ouverture de son onglet.
+     *
+     * UNE REQUETE DE COMPTAGE, JAMAIS UNE HYDRATATION. `$collection->count()` serait
+     * tentant, mais aucune association de ce projet n'est en `fetch: EXTRA_LAZY` : il
+     * chargerait l'integralite de la collection, ce que le chargement paresseux cherche
+     * precisement a eviter.
+     *
+     * La requete part du PARENT (`FROM Parent p JOIN p.champ c`) et non de l'enfant :
+     * une ManyToMany et une OneToMany unidirectionnelle n'ont pas de champ inverse sur
+     * l'enfant, un `WHERE c.<parent> = :parent` y echouerait.
+     *
+     * `null` (donc aucune pastille) des que l'une des conditions manque :
+     *  - le parent n'est pas encore en base (creation) — le compte vient alors du tampon,
+     *    pose par le navigateur sur `app:collection.compte` ;
+     *  - le champ n'est pas une association directe ;
+     *  - la collection est hors du perimetre de lecture de l'invite. UN COMPTE EST UNE
+     *    INFORMATION : on applique ici le controle d'acces exact de l'endpoint de liste
+     *    (handleCollectionApiRequest), sans quoi la pastille annoncerait ce que la liste
+     *    refuse de montrer.
+     */
+    private function renseignerLesComptesDOnglets(array &$formCanvas, object $parentEntity): void
+    {
+        if (!isset($formCanvas['form_layout']) || !is_array($formCanvas['form_layout'])) {
+            return;
+        }
+
+        $parentId = $parentEntity->getId();
+        // getName() et non `::class` : une entite chargee par Doctrine peut etre un PROXY,
+        // dont le nom de classe n'existe pas en DQL.
+        $metadata = $this->em->getClassMetadata($parentEntity::class);
+        $parentClass = $metadata->getName();
+        $collectionMap = $this->getCollectionMap();
+
+        foreach ($formCanvas['form_layout'] as $index => $row) {
+            if (!isset($row['onglet_titre'])) {
+                continue;
+            }
+            // Pas de pastille par defaut : le gabarit ne rend rien sur un compte null.
+            $formCanvas['form_layout'][$index]['onglet_compte'] = null;
+
+            $fieldName = $row['colonnes'][0]['champs'][0]['field_code'] ?? null;
+            if ($fieldName === null || $parentId === null || !$metadata->hasAssociation($fieldName)) {
+                continue;
+            }
+
+            $classeEnfant = $collectionMap[$fieldName] ?? null;
+            if ($classeEnfant === null || !$this->mayAccessEntity($classeEnfant, Invite::ACCESS_LECTURE)) {
+                continue;
+            }
+
+            try {
+                $formCanvas['form_layout'][$index]['onglet_compte'] = (int) $this->em
+                    ->createQuery(sprintf('SELECT COUNT(c) FROM %s p JOIN p.%s c WHERE p = :parent', $parentClass, $fieldName))
+                    ->setParameter('parent', $parentEntity)
+                    ->getSingleScalarResult();
+            } catch (\Throwable) {
+                // Un compte est un confort d'affichage, jamais une condition : s'il
+                // echoue, l'onglet existe quand meme et sa liste dira la verite.
+            }
+        }
+    }
+
+
     private function renderFormCanvas(
         Request $request,
         string $entityClass,
@@ -978,6 +1044,12 @@ trait ControllerUtilsTrait
         // layout ni masqué (ex. la tâche d'un feedback). Lecture best-effort, aucune
         // incidence métier. L'entreprise (contexte implicite du workspace) et
         // l'utilisateur (déjà porté par les attributs calculés) sont exclus.
+        // LE COMPTE DE CHAQUE ONGLET, pose avant le rendu. La liste d'une collection ne se
+        // charge qu'a l'ouverture de son onglet ; sans ce comptage, la pastille resterait
+        // muette jusqu'au premier clic, et le dialogue ne dirait plus ce qu'il contient.
+        $this->renseignerLesComptesDOnglets($formCanvas, $entity);
+
+
         $parentContextFacts = [];
         foreach ($this->buildParentAssociationMapFromEntity($entityClass) as $parentField => $parentClass) {
             if (in_array($parentField, ['entreprise', 'utilisateur'], true)) {

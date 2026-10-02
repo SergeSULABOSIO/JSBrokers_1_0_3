@@ -77,7 +77,7 @@ class PaiementFormCanvasProvider implements FormCanvasProviderInterface
         ];
 
         $collections = [
-            ['fieldName' => 'preuves', 'entityRouteName' => 'document', 'formTitle' => 'Preuve', 'parentFieldName' => 'paiement'],
+            ['fieldName' => 'preuves', 'entityRouteName' => 'document', 'formTitle' => 'Preuve', 'ongletTitre' => 'Preuves', 'parentFieldName' => 'paiement'],
         ];
 
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);

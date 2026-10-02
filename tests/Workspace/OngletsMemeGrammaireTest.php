@@ -28,6 +28,10 @@ class OngletsMemeGrammaireTest extends TestCase
     private const TWIG_RUBRIQUE = __DIR__ . '/../../templates/components/_view_manager.html.twig';
     private const JS_RUBRIQUE = __DIR__ . '/../../assets/controllers/view-manager_controller.js';
     private const JS_SOCLE = __DIR__ . '/../../assets/controllers/onglets-debordement.js';
+    /* TROISIEME CONSOMMATEUR : les onglets d'un formulaire de saisie, ou chaque
+       collection d'un dialogue est un onglet. Voir OngletsDeFormulaireTest pour ce qui
+       lui est propre ; ici, on ne verifie qu'une chose -- qu'il ne redessine rien. */
+    private const TWIG_FORMULAIRE = __DIR__ . '/../../templates/components/dialog/_form_content.html.twig';
 
     private function lire(string $chemin): string
     {
@@ -76,10 +80,18 @@ class OngletsMemeGrammaireTest extends TestCase
         );
         self::assertStringNotContainsString('.workspace-tab-bar-wrapper {', $workspace);
         self::assertStringNotContainsString('.workspace-tab-bar {', $workspace);
+
+        // Le formulaire non plus : il n'apporte aucune feuille, aucune balise <style>.
+        // Ses specificites (panneaux, bandeau collant, compte, alerte) vivent dans la
+        // feuille partagee, a la suite du composant.
+        $formulaire = $this->lire(self::TWIG_FORMULAIRE);
+        self::assertStringNotContainsString('<style', $formulaire);
+        self::assertStringContainsString('.jsb-onglets-panneau {', $partage);
+        self::assertStringContainsString('.form-column .jsb-onglets-barre {', $partage);
     }
 
-    /** Les deux barres portent le composant partagé — sinon il ne s'applique à personne. */
-    public function testLesDeuxBarresPortentLeComposantPartage(): void
+    /** Les trois barres portent le composant partage -- sinon il ne s'applique a personne. */
+    public function testLesTroisBarresPortentLeComposantPartage(): void
     {
         $workspace = $this->lire(self::TWIG_WORKSPACE);
         $rubrique = $this->lire(self::TWIG_RUBRIQUE);
@@ -97,6 +109,15 @@ class OngletsMemeGrammaireTest extends TestCase
         self::assertStringContainsString("tab.className = 'list-tab jsb-onglet'", $js);
         self::assertStringContainsString("iconHolder.className = 'list-tab-icon jsb-onglet-icone'", $js);
         self::assertStringContainsString("titre.className = 'jsb-onglet-titre'", $js);
+
+        // La barre du FORMULAIRE porte le meme composant -- et, elle, aucune classe
+        // d'accroche heritee : elle est nee avec, il n'y avait rien a conserver.
+        $formulaire = $this->lire(self::TWIG_FORMULAIRE);
+        self::assertStringContainsString('class="jsb-onglets-barre"', $formulaire);
+        self::assertStringContainsString('class="jsb-onglets-rangee" role="tablist"', $formulaire);
+        self::assertStringContainsString('class="jsb-onglet active"', $formulaire);
+        self::assertStringContainsString('class="jsb-onglet-icone"', $formulaire);
+        self::assertStringContainsString('class="jsb-onglet-titre"', $formulaire);
     }
 
     /** Le bandeau — fond clair et bordure basse — est le même des deux côtés. */

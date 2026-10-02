@@ -71,7 +71,37 @@ export default class extends Controller {
         this.groupe = creerGroupe(this.parentFieldNameValue);
         this.boundTampon = this._surDemandeDeTampon.bind(this);
         document.addEventListener('app:collection.tampon-request', this.boundTampon);
-        this.load();
+
+        // CHARGEMENT PARESSEUX -- mais seulement quand il y a vraiment quelque chose a
+        // economiser. Une collection vit desormais dans un ONGLET du formulaire : charger
+        // les sept listes d'une fiche Invite pour n'en regarder qu'une etait un cout pur.
+        //
+        // Trois cas ne se different PAS, et chacun pour une raison qui lui est propre :
+        //  - l'onglet est deja ouvert (panneau non cache) : il n'y a rien a attendre ;
+        //  - mode DIFFERE : `load()` ne fait que rendre le tampon, sans aucun reseau, et
+        //    c'est lui qui donne son compte a la pastille de l'onglet ;
+        //  - `defaultValueConfig` : le point de liste du serveur CREE l'element par defaut
+        //    a la lecture (CotationController::getCotationTranchesApi). Differer la lecture
+        //    differerait une ecriture -- un effet de bord qu'on ne deplace pas en silence.
+        const panneau = this.element.closest('.jsb-onglets-panneau');
+        const aDesDefautsServeur = Array.from(this.element.attributes)
+            .some((a) => a.name.startsWith('data-collection-default-value-config'));
+        const differable = panneau && panneau.classList.contains('est-cache')
+            && !this.differeValue && !aDesDefautsServeur;
+
+        if (!differable) {
+            this.load();
+        } else if (this.element.dataset.chargeDemandee === 'oui') {
+            // L'onglet a ete ouvert AVANT que ce controleur ne se branche : l'evenement
+            // est passe dans le vide, l'attribut l'a retenu. Sans cette branche, la liste
+            // resterait vide pour toujours.
+            this.load();
+        } else {
+            // L'ecouteur est pose AVANT le marquage, pour qu'aucun reveil emis entre les
+            // deux ne se perde ; et le marquage n'ecrase jamais un « oui » deja la.
+            this.element.addEventListener('app:collection.charger', () => this.load(), { once: true });
+            this.element.dataset.chargeDemandee = 'non';
+        }
     }
 
     disconnect() {
@@ -131,12 +161,6 @@ export default class extends Controller {
                     }
                 }));
 
-                // Ouvrir l'accordéon pour que la ligne soit visible après fermeture du dialogue
-                if (!this.contentPanelTarget.classList.contains('is-open')) {
-                    this.contentPanelTarget.classList.add('is-open');
-                    const icon = this.titleContentTarget.querySelector('.toggle-icon');
-                    if (icon) icon.textContent = '−';
-                }
 
                 // Ouvrir automatiquement le formulaire d'édition de la tranche créée
                 if (data.defaultItemId) {
@@ -168,51 +192,6 @@ export default class extends Controller {
         }
     }
 
-
-    /**
-     * Affiche ou masque le contenu de l'accordéon.
-     */
-    toggleAccordion() {
-        // On ne permet pas d'ouvrir l'accordéon s'il est désactivé
-        if (this.disabledValue) {
-            return;
-        }
-
-        this.contentPanelTarget.classList.toggle('is-open');
-        // CORRECTION : On cible l'icône dans le conteneur du titre visible (titleContentTarget),
-        // et non la première icône trouvée dans le widget, qui pouvait être celle du squelette de chargement.
-        const icon = this.titleContentTarget.querySelector('.toggle-icon');
-        if (icon) {
-            // On met à jour l'icône en fonction de l'état ouvert/fermé.
-            icon.textContent = this.contentPanelTarget.classList.contains('is-open') ? '−' : '+';
-        }
-    }
-
-    /**
-     * Affiche un message dans la console lorsque la souris entre dans la zone du titre.
-     * Ne fait rien si le widget est désactivé (mode création).
-     */
-    logMouseEnter() {
-        // console.log(`${this.nomControleur} - Souris entrée sur le titre de l'accordéon (mode édition).`, this.addButtonContainerTarget);
-        if (!this.disabledValue) {
-            if (this.hasAddButtonContainerTarget) {
-                this.addButtonContainerTarget.style.opacity = '1';
-            }
-        }
-    }
-
-    /**
-     * Affiche un message dans la console lorsque la souris quitte la zone du titre.
-     * Ne fait rien si le widget est désactivé (mode création).
-     */
-    logMouseLeave() {
-        // console.log(`${this.nomControleur} - Souris sortie du titre de l'accordéon (mode édition).`, this.addButtonContainerTarget);
-        if (!this.disabledValue) {
-            if (this.hasAddButtonContainerTarget) {
-                this.addButtonContainerTarget.style.opacity = '0';
-            }
-        }
-    }
 
     /**
      * Affiche les boutons d'action pour une ligne survolée.
@@ -315,6 +294,11 @@ export default class extends Controller {
      * @param {CustomEvent} event
      */
     refresh(event) {
+        // Une collection mise en attente le reste : la recharger ici ferait rentrer par la
+        // fenetre les requetes que le chargement paresseux vient de faire sortir par la
+        // porte. Elle sera fraiche a l'ouverture de son onglet, c'est tout ce qu'on demande.
+        if (this.element.dataset.chargeDemandee === 'non') return;
+
         // L'ID 'originatorId' est l'ID de l'élément HTML du contrôleur collection
         // qui a initié l'action. On ne rafraîchit que si c'est nous.
         if (event.detail.originatorId === this.element.id) {
@@ -328,8 +312,20 @@ export default class extends Controller {
      * Met à jour le badge affichant le nombre d'éléments.
      */
     updateCount(count = null) {
+        const itemCount = count !== null
+            ? count
+            : this.listContainerTarget.querySelectorAll('[data-item-id]').length;
+
+        // LA PASTILLE DE L'ONGLET, la seule visible quand la liste est repliee derriere
+        // son onglet. En creation, le serveur ne compte rien (le parent n'a pas d'id) :
+        // c'est cet evenement, et lui seul, qui fait apparaitre le nombre des elements
+        // mis en attente dans le tampon.
+        this.element.dispatchEvent(new CustomEvent('app:collection.compte', {
+            bubbles: true,
+            detail: { count: itemCount },
+        }));
+
         if (this.hasCountBadgeTarget) {
-            const itemCount = count !== null ? count : this.listContainerTarget.querySelectorAll('[data-item-id]').length;
             this.countBadgeTarget.textContent = itemCount;
             this.countBadgeTarget.style.display = itemCount > 0 ? 'inline-block' : 'none';
         }
@@ -339,7 +335,7 @@ export default class extends Controller {
      * Déclenche l'ouverture de la boîte de dialogue pour ajouter un nouvel élément.
      */
     addItem(event) {
-        // ce qui évite de déclencher l'action 'toggleAccordion' du titre.
+        // Le clic ne doit pas remonter a l'entete de la liste.
         event.stopPropagation();
 
         // Mode SÉLECTION : rattacher des ressources existantes (ex. clients d'un

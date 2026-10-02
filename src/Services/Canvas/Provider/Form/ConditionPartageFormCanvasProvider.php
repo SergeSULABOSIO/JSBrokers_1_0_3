@@ -171,7 +171,7 @@ class ConditionPartageFormCanvasProvider implements FormCanvasProviderInterface
         $collections = [[
             'fieldName' => 'produits',
             'entityRouteName' => 'risque',
-            'formTitle' => 'Risque',
+            'formTitle' => 'Risque', 'ongletTitre' => 'Risques',
             'parentFieldName' => 'conditionPartage',
             'hidden' => false,
             // ON CHOISIT AU CATALOGUE, ON NE FABRIQUE PAS. Un risque (« Incendie », « RC
@@ -195,7 +195,7 @@ class ConditionPartageFormCanvasProvider implements FormCanvasProviderInterface
             ]],
         ]];
         // Pièces jointes de cette fiche.
-        $collections[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'conditionPartage'];
+        $collections[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'ongletTitre' => 'Documents', 'parentFieldName' => 'conditionPartage'];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;
     }

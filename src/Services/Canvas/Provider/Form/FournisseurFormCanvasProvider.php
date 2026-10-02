@@ -73,7 +73,7 @@ class FournisseurFormCanvasProvider implements FormCanvasProviderInterface
 
         // Dossier fournisseur : contrats, agréments, preuves de partenariat…
         $collections = [
-            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'fournisseur'],
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'ongletTitre' => 'Documents', 'parentFieldName' => 'fournisseur'],
         ];
 
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);

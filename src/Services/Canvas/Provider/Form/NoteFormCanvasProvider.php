@@ -187,7 +187,7 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             $collections[] = [
                 'fieldName'      => 'articles',
                 'entityRouteName'=> 'article',
-                'formTitle'      => 'Article',
+                'formTitle'      => 'Article', 'ongletTitre' => 'Articles',
                 'parentFieldName'=> 'note',
                 'totalizableField'=> 'montantArticle',
                 'disabled'       => false,
@@ -197,7 +197,7 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
         $collections[] = [
             'fieldName'      => 'paiements',
             'entityRouteName'=> 'paiement',
-            'formTitle'      => 'Paiement',
+            'formTitle'      => 'Paiement', 'ongletTitre' => 'Paiements',
             'parentFieldName'=> 'note',
             'totalizableField'=> 'montantPaiement',
             'secondaryField' => 'paidAt',
@@ -206,7 +206,7 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
         ];
 
         // Pièces jointes de cette fiche.
-        $collections[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'note'];
+        $collections[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'ongletTitre' => 'Documents', 'parentFieldName' => 'note'];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
         // On ajoute le reste des champs après les collections

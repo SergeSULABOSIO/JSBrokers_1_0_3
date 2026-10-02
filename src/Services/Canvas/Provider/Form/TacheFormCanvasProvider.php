@@ -75,8 +75,8 @@ class TacheFormCanvasProvider implements FormCanvasProviderInterface
         ];
 
         $collections = [
-            ['fieldName' => 'feedbacks', 'entityRouteName' => 'feedback', 'formTitle' => 'Feedback', 'parentFieldName' => 'tache'],
-            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'tache'],
+            ['fieldName' => 'feedbacks', 'entityRouteName' => 'feedback', 'formTitle' => 'Feedback', 'ongletTitre' => 'Feedbacks', 'parentFieldName' => 'tache'],
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'ongletTitre' => 'Documents', 'parentFieldName' => 'tache'],
         ];
 
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);

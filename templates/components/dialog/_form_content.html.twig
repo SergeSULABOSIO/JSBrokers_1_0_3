@@ -119,122 +119,121 @@
             {{ form_start(form, {'attr': form_controller
                 ? {'novalidate': 'novalidate', 'data-controller': form_controller}
                 : {'novalidate': 'novalidate'}}) }}
+            {# ══ PARTITION DU LAYOUT EN ONGLETS ══
+               Une rangée qui porte `onglet_titre` est une COLLECTION, et chaque collection
+               devient un onglet — `FormCanvasProviderTrait` pousse déjà une rangée dédiée
+               par collection, la maille y était donc toute faite. Tout le reste forme
+               l'onglet « Principal ».
+
+               `|filter` et non une boucle avec `set` : en Twig, une variable posée DANS un
+               `for` ne survit pas à la sortie de la boucle — la partition serait repartie
+               vide, sans la moindre erreur pour le dire.
+
+               Aucune collection → aucune barre : le dialogue est alors rendu exactement
+               comme avant, ce qui garantit que ceux qui n'en portent pas ne bougent pas. #}
+            {% set rangees_onglets = formCanvas.form_layout|default([])|filter(r => r.onglet_titre is defined) %}
+            {% set rangees_principales = formCanvas.form_layout|default([])|filter(r => r.onglet_titre is not defined) %}
+
             {% if formCanvas.form_layout is defined and formCanvas.form_layout is not empty %}
-                {# Pour chaque ligne définie dans la configuration du layout... #}
-                {% for row in formCanvas.form_layout %}
-                    {# INTERTITRE DE SECTION — il nomme un GROUPE, pas un champ.
-                       La classe « required » était posée en dur : un titre de section y
-                       prenait l'apparence d'un champ obligatoire, promettant une saisie
-                       qu'il ne demande pas. Aucun provider n'utilisait ce mécanisme, ce
-                       qui explique que personne ne l'ait vu. #}
-                    {% if row.group_title is defined %}
-                        <div class="row">
-                            <div class="col-12"><span class="dlg-group-title">{{ row.group_title }}</span></div>
-                        </div>
-                    {% endif %}
+                {% if rangees_onglets is empty %}
+                    {% for row in rangees_principales %}
+                        {% include 'components/dialog/_form_row.html.twig' with { row: row, form: form, formCanvas: formCanvas, idEntreprise: idEntreprise, idInvite: idInvite } only %}
+                    {% endfor %}
+                {% else %}
+                    {# PRÉFIXE D'INSTANCE. Deux dialogues coexistent dès qu'on ouvre une
+                       cotation depuis la liste d'une piste. Sans préfixe, deux
+                       id="onglet-principal" dans le même document : aria-controls et
+                       querySelector désigneraient le mauvais dialogue, et cliquer un
+                       onglet de l'enfant remuerait le parent. #}
+                    {% set uid = 'ong' ~ random(100000, 999999) %}
+                    {# Un formulaire peut n'être fait QUE de collections : il n'a alors pas
+                       d'onglet « Principal », et c'est son premier onglet qui s'ouvre. #}
+                    {% set a_un_principal = rangees_principales is not empty %}
 
-                    {% set row_visibility_conditions = (row.visibility_conditions is defined) ? row.visibility_conditions|json_encode : null %}
-
-                    {# Une rangée masquée par le CANEVAS se signale : sans ce marqueur, la
-                       seconde passe du contrôleur la rouvrait aussitôt (une colonne visible
-                       suffisait à conclure « rangée visible »), et le masquage déclaré
-                       n'existait que dans le HTML brut. #}
-                    <div class="row{% if row.hidden is defined and row.hidden %} d-none{% endif %}"
-                        {% if row.hidden is defined and row.hidden %}data-rangee-masquee="1"{% endif %}
-                        data-dialog-instance-target="formRow {% if row_visibility_conditions %}dynamicFieldContainer{% endif %}"
-                        {% if row_visibility_conditions %}
-                            data-visibility-conditions-value="{{ row_visibility_conditions }}"
-                        {% endif %}
-                    >
-                        {% for col in row.colonnes %}
-                            {# On utilise la largeur définie dans le canvas, sinon on divise équitablement #}
-                            {% set col_class = col.width is defined ? 'col-md-' ~ col.width : 'col-md-' ~ (12 / row.colonnes|length)|round(0, 'floor') %}
-
-                            {# FALLBACK : Si aucune condition n'est sur la ligne, on vérifie la colonne (ancien comportement). #}
-                            {% set first_field_in_col = col.champs[0] ?? null %}
-                            {% set col_visibility_conditions = (not row_visibility_conditions and first_field_in_col is mapping and first_field_in_col.visibility_conditions is defined) ? first_field_in_col.visibility_conditions|json_encode : null %}
-
-                            <div class="{{ col_class }}"
-                                {% if col_visibility_conditions %}
-                                    data-dialog-instance-target="dynamicFieldContainer"
-                                    data-visibility-conditions-value="{{ col_visibility_conditions }}"
+                    <div data-controller="onglets-formulaire">
+                        <div class="jsb-onglets-barre" data-onglets-formulaire-target="barre">
+                            <div class="jsb-onglets-rangee" role="tablist" aria-label="Sections de la fiche"
+                                 data-onglets-formulaire-target="rangee"
+                                 data-action="keydown->onglets-formulaire#handleTabKeydown">
+                                {% if a_un_principal %}
+                                    <button type="button" class="jsb-onglet active" role="tab"
+                                            id="{{ uid }}-onglet-principal" aria-selected="true" tabindex="0"
+                                            aria-controls="{{ uid }}-panneau-principal" data-tab-id="principal"
+                                            data-onglets-formulaire-target="onglet"
+                                            data-action="click->onglets-formulaire#switchTab">
+                                        <span class="jsb-onglet-icone" aria-hidden="true">{{ ux_icon(resolve_icon_name(entityCanvas.parametres.icone|default('lucide:file-text'))) }}</span>
+                                        <span class="jsb-onglet-titre">Principal</span>
+                                    </button>
                                 {% endif %}
-                            >
-                                {% set champs_list = col.champs is defined ? col.champs : [col] %}
-                                {% for field in champs_list %}
-                                    {% set field_code = (field is mapping and field.field_code is defined) ? field.field_code : field %}
-                                    {% if field is mapping and field.widget is defined and field.widget == 'collection' %}
-                                        {# Pour les collections, on appelle form_widget directement pour éviter le div.mb-3 superflu.
-                                           L'icône du champ voyage dans manager_options : une collection porte sa pastille
-                                           comme n'importe quel autre champ, sans quoi elle fait un trou dans l'alignement
-                                           de la colonne d'icônes. Repli sur l'alias générique « collection » quand le
-                                           provider n'en déclare pas. #}
-                                        {% set field_icon = formCanvas.parametres.field_icons[field_code]|default('collection') %}
-                                        {% if form[field_code] is defined %}
-                                            {# EXACTEMENT la même carte qu'un champ simple : pastille et libellé dans
-                                               le bandeau, contenu dans le corps. La collection cesse ainsi d'être le
-                                               seul bloc à flotter sans son cadre blanc — et l'icône se pose devant le
-                                               TITRE DU BLOC, pas dans l'accordéon, qui garde son seul disque +/-. #}
-                                            <div class="mb-3 dlg-field-card" data-field-code="{{ field_code }}">
-                                                <div class="dlg-field-card-head">
-                                                    <span class="dlg-field-card-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(field_icon), {height: '16px', width: '16px'}) }}</span>
-                                                    {{ form_label(form[field_code]) }}
-                                                </div>
-                                                <div class="dlg-field-card-body">
-                                                    {{ form_widget(form[field_code], {'manager_options': field.options, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
-                                                    {{ form_help(form[field_code]) }}
-                                                    {{ form_errors(form[field_code]) }}
-                                                </div>
-                                            </div>
+                                {% for row in rangees_onglets %}
+                                    {% set field_code = row.colonnes[0].champs[0].field_code %}
+                                    {% set actif = not a_un_principal and loop.first %}
+                                    {% set compte = row.onglet_compte|default(null) %}
+                                    <button type="button"
+                                            class="jsb-onglet{{ actif ? ' active' }}{{ row.hidden|default(false) ? ' d-none' }}"
+                                            role="tab" id="{{ uid }}-onglet-{{ field_code }}"
+                                            aria-selected="{{ actif ? 'true' : 'false' }}"
+                                            tabindex="{{ actif ? '0' : '-1' }}"
+                                            aria-controls="{{ uid }}-panneau-{{ field_code }}"
+                                            data-tab-id="{{ field_code }}"
+                                            data-onglets-formulaire-target="onglet"
+                                            data-action="click->onglets-formulaire#switchTab">
+                                        <span class="jsb-onglet-icone" aria-hidden="true">{{ ux_icon(resolve_icon_name(formCanvas.parametres.field_icons[field_code]|default('collection'))) }}</span>
+                                        <span class="jsb-onglet-titre">{{ row.onglet_titre }}</span>
+                                        {# PASTILLE DE COMPTE — et surtout AUCUN aria-label sur
+                                           l'onglet : il remplacerait le nom accessible entier et
+                                           effacerait ce nombre. Le nom se lit « Cotations 3
+                                           éléments », accordé au singulier comme il se doit.
+                                           Absente en création (compte nul) : le contrôleur la
+                                           crée alors au premier élément mis en attente. #}
+                                        {% if compte %}
+                                            <span class="jsb-onglet-compte">{{ compte }}<span class="visually-hidden"> {{ compte > 1 ? 'éléments' : 'élément' }}</span></span>
                                         {% endif %}
-                                    {% else %}
-                                        {# Pour les champs standards, on utilise form_row qui génère un div.mb-3. #}
-                                        {% if form[field_code] is defined %}
-                                            {% set current_field_options = (field is mapping and field.options is defined) ? field.options : {} %}
-                                            {% set current_widget_attr = current_field_options.attr|default({}) %}
-
-                                            {# Détection automatique des Textarea pour activer l'éditeur riche #}
-                                            {% if 'textarea' in form[field_code].vars.block_prefixes %}
-                                                {% set current_widget_attr = current_widget_attr|merge({'data-controller': 'rich-text'}) %}
-                                            {% endif %}
-
-                                            {# Icône de champ opt-in (field_icons du canvas) : la carte est rendue
-                                               à la main pour poser une mini-pastille devant le libellé. Sans icône,
-                                               form_row d'origine inchangé. #}
-                                            {% set field_icon = formCanvas.parametres.field_icons[field_code]|default(null) %}
-                                            {% if field_icon %}
-                                                {# TITRE DE CARTE EXPLICITE (`field_titles` du canvas).
-                                                   Certains widgets consomment eux-mêmes leur libellé — une case à
-                                                   cocher l'affiche à côté de la case — et `form_label` ne rend
-                                                   alors RIEN : la carte se retrouvait avec une pastille et un
-                                                   bandeau vide. On donne donc un titre à la carte, distinct du
-                                                   libellé du champ. #}
-                                                {% set field_title = formCanvas.parametres.field_titles[field_code]|default(null) %}
-                                                <div class="mb-3 dlg-field-card" data-field-code="{{ field_code }}">
-                                                    <div class="dlg-field-card-head">
-                                                        <span class="dlg-field-card-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(field_icon), {height: '16px', width: '16px'}) }}</span>
-                                                        {% if field_title %}
-                                                            <span class="form-label">{{ field_title }}</span>
-                                                        {% else %}
-                                                            {{ form_label(form[field_code]) }}
-                                                        {% endif %}
-                                                    </div>
-                                                    <div class="dlg-field-card-body">
-                                                        {{ form_widget(form[field_code], {'manager_options': current_field_options, 'attr': current_widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
-                                                        {{ form_help(form[field_code]) }}
-                                                        {{ form_errors(form[field_code]) }}
-                                                    </div>
-                                                </div>
-                                            {% else %}
-                                                {{ form_row(form[field_code], {'manager_options': current_field_options, 'attr': current_widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
-                                            {% endif %}
-                                        {% endif %}
-                                    {% endif %}
+                                    </button>
                                 {% endfor %}
+                            </div>
+
+                            {# Repli « + N » : même grammaire que les deux barres du workspace,
+                               piloté par le même module (onglets-debordement.js). Sans « fermer » :
+                               un onglet de formulaire ne se ferme pas, il n'a donc pas de croix. #}
+                            <button type="button" class="list-tabs-more d-none"
+                                    data-onglets-formulaire-target="boutonPlus"
+                                    data-action="click->onglets-formulaire#toggleDebordement"
+                                    aria-expanded="false" aria-haspopup="true"
+                                    aria-controls="{{ uid }}-panneau-debordement">
+                                <span data-onglets-formulaire-target="compteurPlus">+0</span>
+                                <span class="visually-hidden">sections supplémentaires</span>
+                                <twig:UX:Icon name="{{ resolve_icon_name('lucide:chevron-down') }}" class="list-tabs-more-chevron" aria-hidden="true" />
+                            </button>
+                            <div id="{{ uid }}-panneau-debordement" class="list-tabs-overflow-panel d-none"
+                                 data-onglets-formulaire-target="panneauDebordement"
+                                 role="list" aria-label="Sections repliées"></div>
+                        </div>
+
+                        {# TOUTES les rangées sont rendues, y compris celles des onglets masqués :
+                           form_end(render_rest: true) recracherait sinon leurs champs en bas du
+                           formulaire. On cache l'onglet, jamais la rangée. #}
+                        {% if a_un_principal %}
+                            <div class="jsb-onglets-panneau" id="{{ uid }}-panneau-principal" role="tabpanel"
+                                 tabindex="0" aria-labelledby="{{ uid }}-onglet-principal"
+                                 data-onglets-formulaire-target="panneau" data-tab-id="principal">
+                                {% for row in rangees_principales %}
+                                    {% include 'components/dialog/_form_row.html.twig' with { row: row, form: form, formCanvas: formCanvas, idEntreprise: idEntreprise, idInvite: idInvite } only %}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {% for row in rangees_onglets %}
+                            {% set actif = not a_un_principal and loop.first %}
+                            <div class="jsb-onglets-panneau{{ actif ? '' : ' est-cache' }}"
+                                 id="{{ uid }}-panneau-{{ row.colonnes[0].champs[0].field_code }}" role="tabpanel"
+                                 tabindex="0" aria-labelledby="{{ uid }}-onglet-{{ row.colonnes[0].champs[0].field_code }}"
+                                 data-onglets-formulaire-target="panneau"
+                                 data-tab-id="{{ row.colonnes[0].champs[0].field_code }}">
+                                {% include 'components/dialog/_form_row.html.twig' with { row: row, form: form, formCanvas: formCanvas, idEntreprise: idEntreprise, idInvite: idInvite } only %}
                             </div>
                         {% endfor %}
                     </div>
-                {% endfor %}
+                {% endif %}
             {% else %}
                 {{ form_widget(form) }}
             {% endif %}

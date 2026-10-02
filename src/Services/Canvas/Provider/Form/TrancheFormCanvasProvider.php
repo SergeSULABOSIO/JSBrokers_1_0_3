@@ -161,10 +161,10 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
         // Signalements de paiement de la prime (marché où l'ASSUREUR encaisse) :
         // trace déclarative qui rend la commission exigible — jamais la trésorerie.
         $collections = [
-            ['fieldName' => 'paiementsPrime', 'entityRouteName' => 'paiementprime', 'formTitle' => 'Paiement de prime', 'parentFieldName' => 'tranche'],
+            ['fieldName' => 'paiementsPrime', 'entityRouteName' => 'paiementprime', 'formTitle' => 'Paiement de prime', 'ongletTitre' => 'Paiements de prime', 'parentFieldName' => 'tranche'],
         ];
         // Pièces jointes de cette fiche.
-        $collections[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'tranche'];
+        $collections[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'ongletTitre' => 'Documents', 'parentFieldName' => 'tranche'];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
         return $layout;

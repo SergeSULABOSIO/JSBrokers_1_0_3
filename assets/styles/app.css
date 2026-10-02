@@ -615,6 +615,80 @@ textarea:hover,
     .jsb-onglet.se-deplie { animation: none !important; }
 }
 
+/* ONGLETS D'UN FORMULAIRE DE SAISIE — troisieme consommateur du composant ci-dessus.
+   Chaque collection d'un dialogue y est un onglet, et les champs ordinaires forment
+   « Principal ». RIEN N'EST REDESSINE ICI : on n'ajoute que ce qui est propre a cette
+   barre-la — des panneaux, un bandeau qui tient en haut d'une colonne qui defile, un
+   compte et une alerte. */
+
+.jsb-onglets-panneau {
+    padding-top: 12px;
+}
+/* `est-cache` et non `d-none` : `dialog-instance#displayErrors` deplie les ancetres
+   `.d-none` pour montrer un champ fautif, et ferait alors apparaitre deux panneaux a
+   la fois. Un panneau ne s'ouvre que par son onglet. */
+.jsb-onglets-panneau.est-cache {
+    display: none;
+}
+
+/* Le nombre d'elements, lisible sans ouvrir l'onglet. */
+.jsb-onglet-compte {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background-color: var(--bg-white);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1;
+}
+.jsb-onglet.active .jsb-onglet-compte {
+    background-color: var(--cobalt);
+    color: var(--bg-white);
+}
+
+/* UN ONGLET QUI CACHE UNE ERREUR LE DIT — par un SIGNE, et non par un `box-shadow` :
+   celui-ci porte deja le lisere cobalt de `.active` ET l'anneau de focus, et une
+   troisieme ecriture en effacerait une autre. Le « ! » est double d'un texte masque
+   pour les lecteurs d'ecran (WCAG 1.4.1 : jamais la couleur seule). */
+.jsb-onglet-alerte,
+.list-tabs-more.a-une-erreur::before {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: #dc3545;
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+}
+/* Un onglet fautif replie derriere « + N » emporterait son marqueur hors de vue : le
+   bouton le reprend a son compte, comme il reprend deja l'onglet courant. */
+.list-tabs-more.a-une-erreur::before {
+    content: '!';
+    margin-right: 2px;
+}
+
+/* LA BARRE TIENT EN HAUT DU FORMULAIRE. Le conteneur defilant du dialogue est
+   `.form-column` (et non `.modal-body`, qui est en `overflow-y: hidden`) : sans cela,
+   un long onglet « Principal » emporterait la barre hors de l'ecran, et changer
+   d'onglet obligerait a remonter. Les marges negatives reprennent le padding de la
+   colonne, pour que le contenu ne defile pas dans les gouttieres de la barre. */
+.form-column .jsb-onglets-barre {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    margin: 0 -1.5rem;
+    padding-inline: calc(8px + 1.5rem);
+}
+
 /* Bouton de repli, commun aux deux barres. État ouvert marqué par le fond cobalt ET la
    rotation du chevron — jamais par la couleur seule (WCAG 1.4.1).
 
@@ -3669,9 +3743,11 @@ tr.row-selected:hover > td {
     justify-content: space-between;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.6rem 0.75rem; /* même bandeau que .dlg-field-card-head */
-    cursor: pointer;
+    padding: 0.6rem 0.75rem; /* meme bandeau que .dlg-field-card-head */
+    /* Plus de `cursor: pointer` : l'entete n'ouvre plus rien, c'est l'ONGLET qui
+       ouvre la liste. Une main sur un bandeau inerte promet un geste qui n'existe pas. */
 }
+
 .title-left-block {
     flex-grow: 1;
     /* NOUVEAU : On transforme le conteneur en flex pour aligner tous les éléments sur une seule ligne. */
@@ -3693,22 +3769,6 @@ tr.row-selected:hover > td {
     cursor: not-allowed;
 }
 
-.toggle-icon {
-    /* Disque d'état ouvert/fermé : cible visuelle nette dans le bandeau. */
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 8px;
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    font-size: 1em;
-    font-weight: bold;
-    line-height: 1;
-    color: #495057;
-}
 .field-label {
     font-size: 0.85rem;
     font-weight: 600;
@@ -3730,20 +3790,23 @@ tr.row-selected:hover > td {
        retombait alors contre le spinner. margin-left:auto le tient a droite quelle que
        soit la regle gagnante, et quoi qu'il ait a sa gauche. */
     margin-left: auto;
-    transition: opacity 0.3s ease; /* On ne garde que la transition sur l'opacité */
-    opacity: 0;
+    /* VISIBLE EN PERMANENCE. Il n'apparaissait qu'au survol, du temps ou le titre
+       etait la poignee d'un accordeon. Un bouton qu'il faut trouver en promenant la
+       souris n'existe pas pour qui navigue au clavier (WCAG 2.1.1). */
     /* La gouttière est maintenant gérée par le padding du .accordion-title parent. */
 }
-.accordion-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease-out;
-}
-.accordion-content.is-open {
-    max-height: 400px;
-    overflow-y: auto;
+/* LA LISTE EST OUVERTE : il n'y a plus d'accordeon a deplier, chaque collection etant
+   un onglet du formulaire -- et l'onglet ouvre deja son contenu.
+
+   SURCHARGE, ET NON SIMPLE SUPPRESSION. `.accordion-content` designe AUSSI le panneau
+   des attributs calcules du workspace (interactive-menu.css l. 1163), et cette
+   regle-la n'est pas scopee : chargee apres app.css, elle retomberait sur nous et
+   replierait la liste, sans plus aucun moyen de l'ouvrir. */
+.collection-manager-accordion .accordion-content {
+    max-height: none;
+    overflow: visible;
     padding: 1px;
-    border-top: 1px solid #e0e0e0; /* le filet n'apparaît que quand le panneau est ouvert */
+    border-top: 1px solid #e0e0e0;
 }
 
 /*

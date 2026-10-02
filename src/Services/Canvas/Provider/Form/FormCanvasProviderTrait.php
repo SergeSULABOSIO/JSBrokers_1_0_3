@@ -105,6 +105,16 @@ trait FormCanvasProviderTrait
             $layout[] = [
                 "couleur_fond" => "white",
                 "hidden" => $isHidden,
+                // CETTE RANGEE EST UN ONGLET, et voici son intitule. Le gabarit du
+                // dialogue partitionne le layout sur cette seule cle : les rangees sans
+                // `onglet_titre` forment l'onglet « Principal », celles qui en portent un
+                // deviennent un onglet chacune.
+                //
+                // `formTitle` est deja declare par CHAQUE collection : aucun provider n'est
+                // a reprendre pour que les onglets existent. `ongletTitre` ne sert qu'a
+                // corriger le nombre la ou le titre du formulaire est au singulier
+                // (« Cotation » nomme le formulaire d'ajout, « Cotations » nomme l'onglet).
+                "onglet_titre" => $config['ongletTitre'] ?? $config['formTitle'],
                 "colonnes" => [
                     ["champs" => [$this->getCollectionWidgetConfig(
                         $config['fieldName'],
