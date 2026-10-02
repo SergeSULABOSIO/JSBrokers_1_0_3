@@ -302,6 +302,61 @@ class ClientCreerPisteActionTest extends WebTestCase
     }
 
     /**
+     * LE CLIENT DEJA CONNU N'EST PAS REDEMANDE.
+     *
+     * Le geste a nomme le client — c'est un clic droit SUR lui — et l'entete du dialogue
+     * le rappelle. Lui redemander lequel, dans une carte deployee qui affiche ses chiffres
+     * et porte une croix d'effacement, c'est proposer de defaire ce qu'on vient de faire.
+     *
+     * Le champ reste RENDU (il porte la valeur qui sera enregistree, et `render_rest` le
+     * recracherait en bas du formulaire s'il disparaissait) : c'est sa RANGEE qui est
+     * masquee.
+     */
+    public function testLeClientDejaConnuNEstPasRedemande(): void
+    {
+        [, , $client] = $this->seed();
+        $this->connecter(self::OWNER_EMAIL);
+
+        $this->client->request('GET', sprintf('/admin/piste/api/get-form?idClient=%d', $client->getId()));
+        self::assertResponseIsSuccessful();
+        $html = (string) $this->client->getResponse()->getContent();
+
+        self::assertStringContainsString(
+            'data-field-code="client"',
+            $html,
+            'Le champ doit rester rendu : il porte le client qui sera enregistre.',
+        );
+        self::assertStringContainsString(
+            'd-none',
+            (string) $this->rangeeDuClient($html),
+            'La rangee du client doit etre masquee quand le client est deja connu.',
+        );
+
+        // SANS client connu, la question se pose vraiment : la rangee reste visible.
+        $this->client->request('GET', '/admin/piste/api/get-form');
+        self::assertResponseIsSuccessful();
+        $htmlSansClient = (string) $this->client->getResponse()->getContent();
+        self::assertStringNotContainsString(
+            'd-none',
+            (string) $this->rangeeDuClient($htmlSansClient),
+            'Une piste creee sans client doit encore demander lequel.',
+        );
+    }
+
+    /** La rangee qui porte le champ client, pour juger de son masquage. */
+    private function rangeeDuClient(string $html): ?string
+    {
+        $pos = strpos($html, 'data-field-code="client"');
+        if ($pos === false) {
+            return null;
+        }
+        $amont = substr($html, max(0, $pos - 2000), min($pos, 2000));
+        $debut = strrpos($amont, '<div class="row');
+
+        return $debut === false ? null : substr($amont, $debut);
+    }
+
+    /**
      * NON-RÉGRESSION : le cross-selling du relevé de compte garde SON nom.
      *
      * Les deux surfaces partagent la même règle. Quand le risque est connu — c'est le cas
