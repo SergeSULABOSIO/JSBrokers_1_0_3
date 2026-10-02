@@ -363,4 +363,47 @@ class OngletsDeFormulaireTest extends TestCase
             $this->lire(self::TRAIT_CANEVAS),
         );
     }
+
+    /**
+     * LE BANDEAU NE LAISSE AUCUNE BANDE DECOUVERTE AU-DESSUS DE LUI.
+     *
+     * A `top: 0`, il se calait 24 px sous le bord visible de `.form-column` — la hauteur
+     * de sa gouttiere — et cette bande restait a decouvert : le contenu y defilait a cote
+     * du bandeau (un titre de carte, la barre d'outils de l'editeur riche), ce qui se
+     * lisait comme un chevauchement. Mesure au navigateur : bande de 24 px avant, 0 px
+     * apres.
+     *
+     * Le nombre est donc COUPLE au padding de la colonne : ce test tient les deux
+     * ensemble, pour que changer l'un sans l'autre se voie.
+     */
+    public function testLeBandeauNeLaissePasDeBandeDecouverte(): void
+    {
+        $css = $this->lire(self::CSS_PARTAGE);
+
+        $bandeau = $this->corpsDeRegle($css, '.form-column .jsb-onglets-barre');
+        self::assertStringContainsString('position: sticky', $bandeau);
+        self::assertStringContainsString(
+            'top: -1.5rem',
+            $bandeau,
+            'A top: 0, une bande de la hauteur de la gouttiere reste a decouvert au-dessus du bandeau.',
+        );
+
+        $colonne = $this->corpsDeRegle($css, '.form-column');
+        self::assertStringContainsString(
+            'padding: 1.5rem',
+            $colonne,
+            'Le decalage du bandeau vaut cette gouttiere : changer l\'une oblige a changer l\'autre.',
+        );
+    }
+
+    /** Le corps d'une regle CSS, volontairement naif : aucune accolade imbriquee ici. */
+    private function corpsDeRegle(string $css, string $selecteur): string
+    {
+        $debut = strpos($css, "\n" . $selecteur . ' {');
+        self::assertNotFalse($debut, sprintf('Regle « %s » absente.', $selecteur));
+        $ouvre = (int) strpos($css, '{', $debut);
+        $ferme = (int) strpos($css, '}', $ouvre);
+
+        return substr($css, $ouvre + 1, $ferme - $ouvre - 1);
+    }
 }

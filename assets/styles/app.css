@@ -683,7 +683,14 @@ textarea:hover,
    colonne, pour que le contenu ne defile pas dans les gouttieres de la barre. */
 .form-column .jsb-onglets-barre {
     position: sticky;
-    top: 0;
+    /* -1.5rem, ET NON 0 : c'est la GOUTTIERE HAUTE de `.form-column` (padding: 1.5rem).
+       A `top: 0`, le bandeau se calait 24 px sous le bord visible de la colonne, et cette
+       bande restait a decouvert : le contenu y defilait a cote du bandeau — un titre de
+       carte, la barre d'outils de l'editeur riche — en donnant l'impression de passer
+       PAR-DESSUS lui. Mesure a l'appui : bande de 24 px avant, 0 px apres, sans que la
+       rangee d'onglets soit rognee d'un pixel. Ce nombre suit donc le padding de
+       `.form-column` (l. ~2691) : changer l'un oblige a changer l'autre. */
+    top: -1.5rem;
     z-index: 3;
     margin: 0 -1.5rem;
     padding-inline: calc(8px + 1.5rem);
