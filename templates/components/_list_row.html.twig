@@ -90,10 +90,16 @@
             {% set texte_principal = col_principale.texte_principal %}
             {# `valeur_principale` est posée en tête du fichier (cf. data-label du <tr>). #}
 
+            {# LES GUILLEMETS, EN LISTE SEULEMENT.
+               Dans une collection, chaque rangee tient dans une boite etroite deja nommee
+               par son onglet : les guillemets n'y desambiguisent plus rien, et ils volent
+               deux caracteres a un libelle souvent tronque. En liste principale ils
+               restent : c'est la grammaire de ces ecrans, et on ne la change pas ici. #}
+            {% set g = (usage is defined and usage == 'dialog') ? '' : '"' %}
             {% if texte_principal.attribut_taille_max is defined and texte_principal.attribut_taille_max is not null and valeur_principale|length > texte_principal.attribut_taille_max %}
-                "{{ valeur_principale|slice(0, texte_principal.attribut_taille_max) ~ '...' }}"
+                {{ g|raw }}{{ valeur_principale|slice(0, texte_principal.attribut_taille_max) ~ '...' }}{{ g|raw }}
             {% else %}
-                "{{ valeur_principale }}"
+                {{ g|raw }}{{ valeur_principale }}{{ g|raw }}
             {% endif %}
 
             {# Badges d'état déclarés par le canvas de liste (optionnels) : texte issu d'un
@@ -127,40 +133,60 @@
            colonne (width:0 / min-width:100%) : le masquage progressif opéré par
            `responsive-cell` ne re-modifie pas la largeur du <td> (anti-oscillation). #}
         <small class="text-secondary mt-1 list-row-secondary" data-responsive-cell-target="secondaryInfo">
-            {# CORRECTION : La logique d'affichage est maintenant conditionnelle pour éviter les régressions. #}
-            {% if usage is defined and usage == 'dialog' and totalizableField is defined and totalizableField is not null %}
-                {# CAS 1 : Collection totalisable dans une boîte de dialogue. On utilise le nouveau rendu. #}
-                {% include 'components/collection/_list_item_secondary_line.html.twig' with {
-                    'item': entity,
-                    'parentEntity': parentEntity|default(null),
-                    'totalizableField': totalizableField,
-                    'totalizableFieldDetails': totalizableFieldDetails,
-                    'secondaryField': secondaryField|default(null),
-                    'secondaryLabel': secondaryLabel|default(null),
-                    'secondaryFieldDetails': secondaryFieldDetails|default(null)
-                } %}
-            {% else %}
-                {# CAS 3 : Toutes les autres listes (principales, onglets).
-                   Rendu commun des items secondaires (filtrage des vides, icônes,
-                   séparateur porté par l'item) + cibles `secondaryItem` pour le
-                   masquage progressif selon la largeur disponible. #}
-                {% include 'components/_list_row_secondary_items.html.twig' with {
-                    'entity': entity,
-                    'col_principale': col_principale
-                } only %}
-                {# Indicateur de troncature : rendu visible par `responsive-cell`
-                   dès qu'au moins un item est masqué ; son `title` liste les
-                   valeurs masquées. `aria-hidden` car les items masqués restent
-                   dans l'arbre d'accessibilité (visually-hidden) — l'annoncer
-                   créerait un doublon vocal. #}
-                <span class="d-none flex-shrink-0 ms-1" data-responsive-cell-target="moreIndicator" aria-hidden="true">&hellip;</span>
-            {% endif %}
+            {# UN SEUL RENDU DE META, POUR LES LISTES COMME POUR LES COLLECTIONS.
+
+               La collection totalisable avait le sien, qui n'affichait qu'un montant en
+               gras — montant qui occupe desormais sa propre colonne. Ce qui reste, ce sont
+               des metadonnees : exactement ce que ce gabarit sait rendre, avec ses icones,
+               son filtrage des valeurs vides et ses cibles `secondaryItem`.
+
+               Le `only` est sur : TOUT ce dont le gabarit a besoin est nomme ci-dessous.
+               Les parametres de collection valent leur defaut hors dialogue, si bien
+               qu'une liste principale rend exactement ce qu'elle rendait. #}
+            {% include 'components/_list_row_secondary_items.html.twig' with {
+                'entity': entity,
+                'col_principale': col_principale,
+                'est_dialogue': usage is defined and usage == 'dialog',
+                'retrogradees': (usage is defined and usage == 'dialog') ? colonneValeur.retrogradees|default([]) : [],
+                'secondaire_extra': (usage is defined and usage == 'dialog' and secondaryField|default(null) is not null) ? {
+                    'code': secondaryField,
+                    'label': secondaryLabel|default(''),
+                    'type': (secondaryFieldDetails.type|default(secondaryFieldDetails.format|default('')) == 'Date') ? 'date' : ''
+                } : null
+            } only %}
+            {# Indicateur de troncature : rendu visible par `responsive-cell` des
+               qu'au moins un item est masque ; son `title` liste les valeurs
+               masquees. `aria-hidden` car les items masques restent dans l'arbre
+               d'accessibilite (visually-hidden) — l'annoncer creerait un doublon. #}
+            <span class="d-none flex-shrink-0 ms-1" data-responsive-cell-target="moreIndicator" aria-hidden="true">&hellip;</span>
         </small>
     </td>
 
-    {# Colonnes suivantes : Cellules numériques dynamiques #}
-    {# On n'affiche les colonnes numériques que si on n'est PAS dans une collection totalisable de dialogue #}
-    {% if not (usage is defined and usage == 'dialog' and totalizableField is defined and totalizableField is not null) %}
+    {# LA VALEUR, SUR UNE COLONNE COMMUNE A TOUTES LES COLLECTIONS.
+
+       En dialogue le tableau a TOUJOURS trois colonnes — principale | valeur | actions —
+       quelle que soit la collection : c'est ce qui fait tomber les montants, les actions
+       et le pied de total a la meme abscisse d'un onglet a l'autre. La colonne reste donc
+       rendue meme quand il n'y a rien a chiffrer.
+
+       Aucune largeur en ligne : le <colgroup> du tableau la porte seul. #}
+    {% if usage is defined and usage == 'dialog' %}
+        <td class="text-end fw-bold td-numeric">
+            <small>
+                {% if colonneValeur.code|default(null) %}
+                    {% set valeur_cellule = attribute(entity, colonneValeur.code) %}
+                    {% if valeur_cellule is null or valeur_cellule is same as('') %}
+                        {# Une valeur ABSENTE n'est pas un zero. #}
+                        <span class="text-secondary" aria-hidden="true">&mdash;</span>
+                        <span class="visually-hidden">non renseigne</span>
+                    {% else %}
+                        <span class="text-secondary td-numeric-unit">{{ colonneValeur.unite }}</span> {{ valeur_cellule|format_nombre(2) }}
+                    {% endif %}
+                {% endif %}
+            </small>
+        </td>
+    {% else %}
+    {# Colonnes numeriques des listes principales : autant que le canevas en declare. #}
         {% for colonne in listeCanvas.colonnes_numeriques %}
             <td class="text-end fw-bold td-numeric">
                 <small>
@@ -171,7 +197,7 @@
                         <span class="text-secondary" aria-hidden="true">&mdash;</span>
                         <span class="visually-hidden">non renseigné</span>
                     {% else %}
-                        <span class="text-secondary td-numeric-unit">{{ colonne.attribut_unité }}</span> {{ valeur_numerique | number_format(2, ',', ' ') }}
+                        <span class="text-secondary td-numeric-unit">{{ colonne.attribut_unité }}</span> {{ valeur_numerique|format_nombre(2) }}
                     {% endif %}
                 </small>
             </td>

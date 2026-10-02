@@ -25,7 +25,6 @@ export default class extends Controller {
         "rowActions", // Cible pour les conteneurs d'actions de ligne
         "titleLoading",
         "titleContent",
-        "totalValueDisplay"
     ];
 
     static values = {
@@ -149,8 +148,9 @@ export default class extends Controller {
             // On injecte le HTML de la liste
             this.listContainerTarget.innerHTML = data.html;
 
-            // On met à jour le total et le compteur
-            this.updateTotal(data.totalValue, data.totalUnit);
+            // On met a jour le compteur. LE TOTAL N'EST PLUS RAFRAICHI ICI : il vit
+            // desormais dans le HTML de la liste, au pied du tableau, et arrive donc
+            // avec `data.html`. Un chemin de moins a tenir synchronise.
             this.updateCount(data.itemCount);
 
             if (data.defaultCreated) {
@@ -263,29 +263,6 @@ export default class extends Controller {
             // L'animation d'entrée est conservée.
             this.tooltipElement.remove();
             this.tooltipElement = null;
-        }
-    }
-
-    /**
-     * NOUVEAU : Met à jour l'affichage du montant total dans le titre de l'accordéon.
-     * @param {number|null} totalValue 
-     * @param {string|null} totalUnit 
-     */
-    updateTotal(totalValue, totalUnit) {
-        if (!this.hasTotalValueDisplayTarget) {
-            return;
-        }
-
-        if (totalValue !== null && totalValue !== undefined) {
-            const formattedValue = totalValue.toLocaleString('fr-FR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
-
-            this.totalValueDisplayTarget.textContent = `${formattedValue} ${totalUnit || ''}`.trim();
-            this.totalValueDisplayTarget.style.display = 'inline-block';
-        } else {
-            this.totalValueDisplayTarget.style.display = 'none';
         }
     }
 
