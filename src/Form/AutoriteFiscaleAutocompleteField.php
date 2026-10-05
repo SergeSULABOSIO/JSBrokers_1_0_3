@@ -43,7 +43,6 @@ class AutoriteFiscaleAutocompleteField extends AbstractType
                     ->setParameter('eseId', $entreprise?->getId() ?? 0)
                     ->orderBy('autorite.id', 'ASC');
             },
-            'as_html' => true,
             // La logique de rendu est maintenant déléguée au service dédié.
             'choice_label' => fn(AutoriteFiscale $autorite) => $this->canvasProvider->getChoiceLabel($autorite),
         ]);

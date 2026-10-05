@@ -32,7 +32,6 @@ class TrancheAutocompleteField extends AbstractType
             'placeholder' => 'Sélectionner une tranche à facturer',
             'revenu_id' => null, // Injecté depuis ArticleType pour le mode édition
             'searchable_fields' => ['nom'],
-            'as_html' => true,
             'choice_label' => fn (Tranche $tranche) => $this->canvasProvider->getChoiceLabel($tranche),
 
 

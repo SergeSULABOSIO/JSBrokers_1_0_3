@@ -8,12 +8,14 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\UX\Autocomplete\Form\AsEntityAutocompleteField;
 use Symfony\UX\Autocomplete\Form\BaseEntityAutocompleteType;
+use App\Services\Canvas\Autocomplete\RenduOptionAutocomplete;
 
 #[AsEntityAutocompleteField]
 class RisqueAutocompleteField extends AbstractType
 {
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
+        private RenduOptionAutocomplete $rendu,
     ) {}
     
     public function configureOptions(OptionsResolver $resolver): void
@@ -23,15 +25,11 @@ class RisqueAutocompleteField extends AbstractType
             'placeholder' => 'Sélectionner un risque',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
             'searchable_fields' => ['nomComplet', 'code'],
-            'as_html' => true,
-            'choice_label' => function(Risque $risque) {
-                return sprintf(
-                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">Code: %s. %s</div></div>',
-                    htmlspecialchars($risque->getNomComplet()),
-                    htmlspecialchars($risque->getCode()),
-                    htmlspecialchars(mb_substr($risque->getDescription() ?? '', 0, 50) . (mb_strlen($risque->getDescription() ?? '') > 50 ? '...' : ''))
-                );
-            },
+            'choice_label' => fn (Risque $risque) => $this->rendu->libelle(
+                titre: $risque->getNomComplet(),
+                suffixe: $risque->getCode(),
+                contact: [$risque->getDescription()],
+            ),
         ]);
     }
 

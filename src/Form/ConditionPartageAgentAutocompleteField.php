@@ -10,6 +10,7 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\UX\Autocomplete\Form\AsEntityAutocompleteField;
 use Symfony\UX\Autocomplete\Form\BaseEntityAutocompleteType;
+use App\Services\Canvas\Autocomplete\RenduOptionAutocomplete;
 
 /**
  * Rattachement d'une CONDITION DE PARTAGE — d'agent interne OU de partenaire externe.
@@ -40,6 +41,7 @@ class ConditionPartageAgentAutocompleteField extends AbstractType
 {
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
+        private RenduOptionAutocomplete $rendu,
     ) {
     }
 
@@ -61,23 +63,19 @@ class ConditionPartageAgentAutocompleteField extends AbstractType
                 return $qb->orderBy($qb->getRootAliases()[0] . '.nom', 'ASC');
             },
             'searchable_fields' => ['nom'],
-            'as_html' => true,
-            'choice_label' => function (ConditionPartage $condition) {
-                return sprintf(
-                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">%s &middot; %s %%</div></div>',
-                    htmlspecialchars($condition->getNom() ?? ''),
-                    // LE BÉNÉFICIAIRE, quelle que soit sa famille : lire `getAgent()` seul
-                    // aurait affiché « Agent supprimé » sur toutes les conditions de
-                    // partenaire — un libellé qui ment sur ce qu'on s'apprête à rattacher.
-                    htmlspecialchars(
-                        ($condition->estPourAgent()
-                            ? $condition->getAgent()?->getNom()
-                            : $condition->getPartenaire()?->getNom())
+            'choice_label' => fn (ConditionPartage $condition) => $this->rendu->libelle(
+                titre: $condition->getNom(),
+                contact: [
+                    ($condition->estPourAgent()
+                        ? $condition->getAgent()?->getNom()
+                        : $condition->getPartenaire()?->getNom())
                         ?? 'Bénéficiaire supprimé',
-                    ),
-                    htmlspecialchars(rtrim(rtrim(number_format((float) $condition->getTaux(), 2, ',', ' '), '0'), ',')),
-                );
-            },
+                    // LE TAUX EST DEJA EN POINTS (convention unique du projet). On retire
+                    // les zeros inutiles : « 50 % » se lit mieux que « 50,00 % », et c'est
+                    // ce que faisait l'ancien rendu.
+                    rtrim(rtrim(number_format((float) $condition->getTaux(), 2, ',', ' '), '0'), ',') . ' %',
+                ],
+            ),
         ]);
     }
 

@@ -8,6 +8,7 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\UX\Autocomplete\Form\AsEntityAutocompleteField;
 use Symfony\UX\Autocomplete\Form\BaseEntityAutocompleteType;
+use App\Services\Canvas\Autocomplete\RenduOptionAutocomplete;
 
 /**
  * Sélection d'un AVENANT (une police, ou l'un de ses actes) par sa référence.
@@ -25,6 +26,7 @@ class AvenantAutocompleteField extends AbstractType
 {
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
+        private RenduOptionAutocomplete $rendu,
     ) {
     }
 
@@ -35,31 +37,37 @@ class AvenantAutocompleteField extends AbstractType
             'placeholder' => 'Sélectionner une police',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
             'searchable_fields' => ['referencePolice'],
-            'as_html' => true,
             'choice_label' => function (Avenant $avenant) {
                 $cotation = $avenant->getCotation();
                 $piste = $cotation?->getPiste();
 
-                $contexte = array_filter([
-                    $piste?->getClient()?->getNom(),
-                    $piste?->getRisque()?->getCode(),
-                    $cotation?->getAssureur()?->getNom(),
-                ]);
-                $periode = $avenant->getStartingAt() !== null
-                    ? sprintf(
-                        '%s → %s',
-                        $avenant->getStartingAt()->format('d/m/Y'),
-                        $avenant->getEndingAt()?->format('d/m/Y') ?? '…',
-                    )
-                    : null;
-
-                return sprintf(
-                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">%s</div></div>',
-                    htmlspecialchars($avenant->getReferencePolice() ?: 'Police sans référence'),
-                    htmlspecialchars(implode(' · ', array_filter([implode(' · ', $contexte), $periode]))),
+                return $this->rendu->libelle(
+                    titre: $avenant->getReferencePolice() ?: 'Police sans référence',
+                    contact: [
+                        $piste?->getClient()?->getNom(),
+                        $piste?->getRisque()?->getCode(),
+                        $cotation?->getAssureur()?->getNom(),
+                        $this->periode($avenant),
+                    ],
                 );
             },
         ]);
+    }
+
+    /**
+     * La periode de couverture, ou rien.
+     *
+     * Sans date de debut, il n'y a pas de periode a annoncer : mieux vaut se taire que
+     * d'ecrire une borne seule, que le lecteur prendrait pour l'autre.
+     */
+    private function periode(Avenant $avenant): ?string
+    {
+        $debut = $avenant->getStartingAt();
+        if ($debut === null) {
+            return null;
+        }
+
+        return $debut->format('d/m/Y') . ' → ' . ($avenant->getEndingAt()?->format('d/m/Y') ?? '…');
     }
 
     public function getParent(): string

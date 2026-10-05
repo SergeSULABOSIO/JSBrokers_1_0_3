@@ -25,7 +25,6 @@ class CompteBancaireAutocompleteField extends AbstractType
             'placeholder' => "Séléctionnez le compte",
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
             'searchable_fields' => ['nom', 'numero', 'banque'],
-            'as_html' => true,
             // La logique de rendu est maintenant déléguée au service dédié.
             'choice_label' => fn(CompteBancaire $compte) => $this->canvasProvider->getChoiceLabel($compte),
         ]);

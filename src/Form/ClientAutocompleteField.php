@@ -25,7 +25,6 @@ class ClientAutocompleteField extends AbstractType
             'placeholder' => 'Sélectionner le client',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
             'searchable_fields' => ['nom', 'email'],
-            'as_html' => true,
             // La logique de rendu est maintenant déléguée au service dédié.
             'choice_label' => fn(Client $client) => $this->canvasProvider->getChoiceLabel($client),
         ]);

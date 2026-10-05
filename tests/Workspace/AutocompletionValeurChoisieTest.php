@@ -56,10 +56,10 @@ class AutocompletionValeurChoisieTest extends TestCase
     public function testLAideAuChoixQuitteLeChampUneFoisLeChoixFait(): void
     {
         self::assertMatchesRegularExpression(
-            '/\.ts-control \.item:has\(\.jsb-autocomplete-item\) \.jsb-autocomplete-indicators\s*\{\s*display:\s*none/',
+            '/\.ts-control \.item:has\(\.jsb-autocomplete-item\) \.jsb-autocomplete-aide\s*\{\s*display:\s*none/',
             $this->css(),
-            'Les tuiles chiffrées doivent disparaître du champ. Elles servent à CHOISIR ; une fois '
-            . 'le choix fait, elles ne répondent plus à aucune question et occupent cinq lignes.',
+            'L\'aide au choix doit disparaître du champ. Elle sert à CHOISIR ; une fois '
+            . 'le choix fait, elle ne répond plus à aucune question et occupe jusqu’à cinq lignes.',
         );
     }
 

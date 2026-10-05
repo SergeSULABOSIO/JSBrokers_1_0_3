@@ -25,7 +25,6 @@ class BordereauAutocompleteField extends AbstractType
             'placeholder' => 'Sélectionner un bordereau',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
             'searchable_fields' => ['nom', 'reference'],
-            'as_html' => true,
             'choice_label' => fn(Bordereau $bordereau) => $this->canvasProvider->getChoiceLabel($bordereau),
         ]);
     }

@@ -8,12 +8,14 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\UX\Autocomplete\Form\AsEntityAutocompleteField;
 use Symfony\UX\Autocomplete\Form\BaseEntityAutocompleteType;
+use App\Services\Canvas\Autocomplete\RenduOptionAutocomplete;
 
 #[AsEntityAutocompleteField]
 class InviteAutocompleteField extends AbstractType
 {
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
+        private RenduOptionAutocomplete $rendu,
     ) {}
     
     public function configureOptions(OptionsResolver $resolver): void
@@ -23,14 +25,10 @@ class InviteAutocompleteField extends AbstractType
             'placeholder' => 'Ajouter un invité',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
             'searchable_fields' => ['nom'],
-            'as_html' => true,
-            'choice_label' => function(Invite $invite) {
-                return sprintf(
-                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">%s</div></div>',
-                    htmlspecialchars($invite->getNom() ?? ''),
-                    htmlspecialchars($invite->getUtilisateur()?->getEmail() ?? '')
-                );
-            },
+            'choice_label' => fn (Invite $invite) => $this->rendu->libelle(
+                titre: $invite->getNom(),
+                contact: [$invite->getUtilisateur()?->getEmail()],
+            ),
         ]);
     }
 

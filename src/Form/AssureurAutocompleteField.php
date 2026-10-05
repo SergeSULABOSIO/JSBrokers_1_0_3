@@ -25,7 +25,6 @@ class AssureurAutocompleteField extends AbstractType
             'placeholder' => 'Sélectionner un assureur',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
             'searchable_fields' => ['nom', 'email'],
-            'as_html' => true,
             // La logique de rendu est maintenant déléguée au service dédié.
             'choice_label' => fn(Assureur $assureur) => $this->canvasProvider->getChoiceLabel($assureur),
         ]);
