@@ -69,6 +69,8 @@ use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use DateTimeImmutable;
 use Symfony\Component\Form\FormInterface;
+use App\Service\Workspace\AucunCabinetOuvertException;
+use App\Service\Workspace\CabinetActif;
 
 /**
  * @trait ControllerUtilsTrait
@@ -413,37 +415,51 @@ trait ControllerUtilsTrait
         return $invite->getEntreprise();
     }
 
+    /**
+     * LE CABINET OUVERT A UNE SEULE AUTORITE : {@see CabinetActif}.
+     *
+     * Ce point rendait auparavant un invite ARBITRAIRE d'un autre cabinet lorsque
+     * `connectedTo` ne correspondait a aucune Invite -- un repli pose pour « ne pas
+     * casser l'acces », et qui le rouvrait precisement quand il venait d'etre retire.
+     * Une Invite revoquee laissait donc le cabinet ouvert : le perimetre de roles
+     * venait d'un cabinet pendant que les requetes filtrees servaient l'autre.
+     *
+     * Le gardien ferme desormais (connectedTo = null) au lieu de choisir a la place
+     * de l'utilisateur, et l'absence de cabinet ouvert se dit par une exception, non
+     * par un second choix.
+     */
     private function getInvite(): Invite
     {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-        if (!$user) {
-            throw $this->createAccessDeniedException("Utilisateur non authentifié.");
+        $invite = $this->cabinetActif()->invite();
+
+        if ($invite === null) {
+            throw new AucunCabinetOuvertException();
         }
 
-        // L'entreprise active est celle du workspace courant (connectedTo), synchronisée à chaque
-        // entrée de workspace par EspaceDeTravailComponentController. Un utilisateur peut posséder
-        // plusieurs Invite (un par entreprise) : sans ce filtre, findOneBy renverrait un invité
-        // arbitraire, souvent celui d'une entreprise déjà quittée — ce qui faussait notamment le SOA.
-        $criteria = ['utilisateur' => $user];
-        $connectedTo = $user->getConnectedTo();
-        if ($connectedTo !== null) {
-            $criteria['entreprise'] = $connectedTo;
-        }
-
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneBy($criteria);
-
-        // Filet de sécurité : si aucun invité ne correspond à l'entreprise connectée (données
-        // incohérentes), on retombe sur l'ancien comportement pour ne pas casser l'accès.
-        if (!$invite && $connectedTo !== null) {
-            $invite = $this->inviteRepository->findOneBy(['utilisateur' => $user]);
-        }
-
-        if (!$invite) {
-            throw $this->createNotFoundException("Aucun invité trouvé pour l'utilisateur actuel.");
-        }
         return $invite;
+    }
+
+    /**
+     * Le gardien, pris au conteneur plutot qu'au constructeur.
+     *
+     * Ce trait est utilise par 57 controleurs, qui declarent chacun leurs dependances.
+     * Passer par le ServiceSubscriber d'AbstractController evite d'ajouter un argument
+     * a 57 constructeurs -- et surtout evite que l'un d'eux soit oublie, ce qui le
+     * laisserait sur l'ancien comportement sans que rien ne le signale.
+     */
+    private function cabinetActif(): CabinetActif
+    {
+        return $this->container->get(CabinetActif::class);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function getSubscribedServices(): array
+    {
+        return array_merge(parent::getSubscribedServices(), [
+            CabinetActif::class => CabinetActif::class,
+        ]);
     }
 
     private function getEntityName(object|string $objectOrClass): string

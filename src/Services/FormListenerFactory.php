@@ -12,12 +12,14 @@ use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Form\Event\PostSubmitEvent;
+use App\Service\Workspace\CabinetActif;
 
 class FormListenerFactory
 {
 
     public function __construct(
-        private Security $security
+        private Security $security,
+        private CabinetActif $cabinetActif,
     ) {}
     public function timeStamps(): callable
     {
@@ -95,26 +97,26 @@ class FormListenerFactory
         return $user->getId();
     }
 
+    /**
+     * LE FILTRE D'ENTREPRISE DE TOUS LES CHAMPS DE RELATION.
+     *
+     * Il ne lit plus `getConnectedTo()` directement : il demande au gardien
+     * {@see CabinetActif}, seul habilite a dire quel cabinet est OUVERT. La difference
+     * n'est pas cosmetique -- `connectedTo` pouvait designer un cabinet ou l'utilisateur
+     * n'avait plus aucune Invite, et le filtre servait alors ses donnees quand meme.
+     *
+     * FAIL-CLOSED : sans cabinet ouvert, le gardien rend AUCUN_CABINET (-1), qu'aucune
+     * ligne ne porte, donc la liste de choix est VIDE. Le cas d'un appelant sans session
+     * existe pour de bon -- une ligne de commande, un test qui n'inspecte qu'un champ,
+     * FormTreeInspector qui monte un FormType pour en lire l'arborescence : aucun n'a de
+     * session, et tous doivent pouvoir CONSTRUIRE le formulaire sans rien proposer.
+     */
     public function setFiltreEntreprise(): callable
     {
         return function (EntityRepository $er): QueryBuilder {
-            $user = $this->security->getUser();
-
-            // AUCUN UTILISATEUR AUTHENTIFIÉ : le cas existe pour de bon, et il ne doit
-            // pas casser la CONSTRUCTION du formulaire. Une ligne de commande, un test
-            // qui n'inspecte qu'un champ, FormTreeInspector qui monte un FormType pour
-            // en lire l'arborescence : aucun n'a de session, et tous montaient jusqu'ici
-            // sur une erreur fatale « getConnectedTo() on null » — d'autant plus
-            // déroutante qu'elle survenait dans un champ SANS RAPPORT avec ce qu'on
-            // regardait, embarqué par une collection imbriquée.
-            //
-            // Le repli est FAIL-CLOSED : l'entreprise -1 n'existe pas, la liste de choix
-            // est donc VIDE. Sans identité, on ne propose rien — jamais tout.
-            $entreprise = $user instanceof Utilisateur ? $user->getConnectedTo() : null;
-
             return $er->createQueryBuilder('e')
                 ->where('e.entreprise =:eseId')
-                ->setParameter('eseId', $entreprise?->getId() ?? -1)
+                ->setParameter('eseId', $this->cabinetActif->identifiant())
                 ->orderBy('e.id', 'ASC');
         };
     }

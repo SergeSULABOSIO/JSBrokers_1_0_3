@@ -125,6 +125,15 @@ class TrancheTotauxBarTest extends WebTestCase
         $owner->setProprietaire(true);
         $em->persist($owner);
 
+        // LE CABINET OUVERT, comme le ferait l'interface.
+        //
+        // Ce test se connecte puis attaque directement une URL profonde -- une sequence
+        // qu'aucun parcours reel ne produit : apres connexion on atterrit sur le CHOIX
+        // d'espace (admin.entreprise.index), et c'est en entrant dans un cabinet que
+        // `connectedTo` est pose. Le gardien CabinetActif exige desormais ce prealable
+        // au lieu de deviner un invite, ce qui rendait l'ancien repli invisible ici.
+        $ownerUser->setConnectedTo($entreprise);
+
         $piste = (new Piste())
             ->setNom('Piste Totaux')
             ->setTypeAvenant(0)

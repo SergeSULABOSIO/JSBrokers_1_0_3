@@ -2,6 +2,11 @@
 // pendant le démarrage de l'application est justement de celles qu'on veut
 // voir, et la veille doit déjà être en place pour l'attraper.
 import './veille-erreurs.js';
+// AVANT bootstrap.js, pour la meme raison que la veille : un controleur Stimulus peut
+// emettre une requete des son connect(), et l'enveloppe doit deja etre en place. Aucun
+// script du projet ne capture window.fetch dans une variable au chargement -- verifie --
+// mais l'ordre reste le seul garde-fou si l'un venait a le faire.
+import './cabinet-ferme.js';
 import './bootstrap.js';
 /*
  * Welcome to your app's main JavaScript file!
