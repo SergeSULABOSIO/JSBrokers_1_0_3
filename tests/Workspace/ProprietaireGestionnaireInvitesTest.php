@@ -114,8 +114,13 @@ class ProprietaireGestionnaireInvitesTest extends WebTestCase
     public function testLeDrapeauNePeutPasNaitreFauxPourUnProprietaire(): void
     {
         ['entreprise' => $entreprise, 'user' => $user] = $this->provisionner();
-
-        $second = (new Invite())->setNom('Second propriétaire')->setUtilisateur($user)
+        // UNE INVITATION EN ATTENTE, et non un second invite du meme compte : un compte
+        // n'a qu'une invitation par cabinet (uniq_invite_utilisateur_entreprise).
+        //
+        // L'invariant teste ici porte sur le DRAPEAU du proprietaire, pas sur l'identite
+        // du compte -- et le cycle de vie s'applique aussi bien a une invitation dont le
+        // destinataire n'a pas encore cree son compte.
+        $second = (new Invite())->setNom('Second propriétaire')
             ->setEntreprise($entreprise)->setProprietaire(true)
             ->setGestionnaireInvites(false);
         $this->em->persist($second);

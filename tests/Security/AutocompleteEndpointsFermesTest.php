@@ -207,10 +207,20 @@ class AutocompleteEndpointsFermesTest extends WebTestCase
     /**
      * SANS SESSION, AUCUN ALIAS NE DOIT RENDRE LA MOINDRE LIGNE.
      *
-     * Trois formes de refus sont admises, parce que le durcissement a venir
-     * (`access_control` sur ^/autocomplete) en produira une autre que celle d'aujourd'hui :
-     * liste vide, 401/403, ou redirection vers la connexion. Ce test ne doit pas se mettre
-     * en travers de son propre durcissement.
+     * ⚠ DEPUIS L'`access_control` SUR ^/autocomplete, CE TEST NE CONTROLE PLUS LE FILTRE.
+     *
+     * La regle `- { path: ^/autocomplete, roles: IS_AUTHENTICATED }` arrete la requete AU
+     * PARE-FEU : elle redirige vers la connexion avant que le moindre `query_builder` ne
+     * soit consulte. Ce qui est verifie ici est donc le PARE-FEU, et plus le cloisonnement.
+     *
+     * Le controle du filtre est porte, seul, par les tests CONNECTES --
+     * `testAucunAliasNeMontreLeCabinetVoisin` et
+     * `testUnInviteDesDeuxCabinetsNeVoitQueLeCabinetActif`. Les supprimer en croyant que
+     * celui-ci les double rouvrirait la fuite inter-cabinets sans qu'aucun test ne tombe.
+     *
+     * Trois formes de refus restent admises -- liste vide, 401/403, ou redirection vers la
+     * connexion -- pour que ce test survive a un changement de la regle, dans un sens comme
+     * dans l'autre.
      */
     public function testAucunAliasNeSertDeDonneesAUnAppelantAnonyme(): void
     {

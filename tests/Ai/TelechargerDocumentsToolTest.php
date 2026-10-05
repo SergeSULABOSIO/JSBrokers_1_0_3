@@ -263,7 +263,11 @@ class TelechargerDocumentsToolTest extends KernelTestCase
         // n'est pas le mien, ses pièces ne me regardent pas — bien que nous partagions
         // l'entreprise, donc le scoping de sécurité.
         $autreGestionnaire = (new Invite())->setNom('Collègue');
-        $autreGestionnaire->setUtilisateur($owner)->setEntreprise($entreprise)->setProprietaire(false);
+        // SANS COMPTE RATTACHE : le collegue n'est pas le proprietaire, et un compte n'a
+        // qu'une invitation par cabinet. Ce test n'ouvre jamais de session en son nom --
+        // il n'existe ici que comme GESTIONNAIRE d'un portefeuille, ce qu'une invitation
+        // en attente remplit tout aussi bien.
+        $autreGestionnaire->setEntreprise($entreprise)->setProprietaire(false);
         $em->persist($autreGestionnaire);
 
         $autrePortefeuille = (new Portefeuille())->setNom('Portefeuille du collègue')->setGestionnaire($autreGestionnaire);

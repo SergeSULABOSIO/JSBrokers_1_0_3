@@ -189,9 +189,18 @@ class BeneficiaireNestPasGestionnaireTest extends KernelTestCase
             $em->persist($entreprise);
         }
 
-        $gaston = (new Invite())->setNom('Gaston le gestionnaire' . $suffixe)->setProprietaire(true);
-        $gaston->setUtilisateur($owner)->setEntreprise($entreprise);
-        $em->persist($gaston);
+        // GASTON SE REUTILISE, comme le compte et le cabinet juste au-dessus. `semer()`
+        // est appele deux fois dans un meme test ; en recreer un second attachait deux
+        // invitations au meme compte dans le meme cabinet -- ce que la base refuse
+        // desormais, et ce qui rendait deja le perimetre effectif non deterministe.
+        $gaston = $em->getRepository(Invite::class)->findOneBy([
+            'utilisateur' => $owner, 'entreprise' => $entreprise,
+        ]);
+        if ($gaston === null) {
+            $gaston = (new Invite())->setNom('Gaston le gestionnaire')->setProprietaire(true);
+            $gaston->setUtilisateur($owner)->setEntreprise($entreprise);
+            $em->persist($gaston);
+        }
 
         // Alice n'a AUCUNE piste à son nom : elle ne gère rien.
         $alice = (new Invite())->setNom('Alice l\'apporteuse' . $suffixe)->setProprietaire(false);
