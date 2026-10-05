@@ -4,87 +4,79 @@ namespace App\Services\Canvas\Autocomplete;
 
 use App\Entity\Bordereau;
 use App\Services\CanvasBuilder;
-use App\Services\ServiceMonnaies;
 
 /**
- * Construit le rendu HTML pour l'entité Bordereau dans les champs d'autocomplétion.
+ * Le libellé d'un Bordereau dans un champ d'autocomplétion.
+ *
+ * ── TROIS CHIFFRES QUI SE SOUSTRAIENT VRAIMENT ──────────────────────────────────
+ * L'ancien rendu affichait « Montant TTC », « Encaissé » et « Solde » côte à côte. Trois
+ * nombres alignés invitent à soustraire — et la soustraction ne tombait pas juste :
+ * `solde` vaut `comTtcPayableNow − montantEncaisse` (BordereauIndicatorStrategy, l. 44),
+ * alors que le premier chiffre montré était `montantCommissionTTC`, la somme de TOUS les
+ * avenants du bordereau (l. 37).
+ *
+ * On montre donc `comTtcPayableNow` sous « Exigible » : *Exigible − Encaissé = Reste dû*
+ * est désormais vrai à l'écran. Le total de commission de tous les avenants reste lisible
+ * sur la fiche du bordereau, où il n'induit personne en erreur.
+ *
+ * ── LE STATUT A ÉTÉ RETIRÉ, ET CE N'EST PAS UN OUBLI ────────────────────────────
+ * L'ancien rendu annonçait « Payé » un bordereau seulement FACTURÉ. Deux machines à états
+ * cohabitent sur la colonne `statut` — un cycle de paiement (0-5) et un cycle d'analyse
+ * (10-15) — et `STATUT_PAYE` comme `STATUT_FACTURE` valent tous deux **3**. Le provider
+ * lisait la valeur APRÈS que `loadAllCalculatedValues()` l'ait écrasée par un état
+ * d'analyse, puis la comparait aux constantes de paiement.
+ *
+ * Un libellé « nom + contact + trois chiffres » n'a pas de place pour un statut : le
+ * retirer ne coûte rien et cesse d'exposer un défaut qui appartient à l'entité. La
+ * collision de constantes, elle, reste à trancher ailleurs.
+ *
+ * ── LA DEVISE AUSSI ─────────────────────────────────────────────────────────────
+ * `getCodeMonnaieAffichage()` était concaténé trois fois à des sommes brutes. Or
+ * `Bordereau` n'a aucun champ de devise et aucune conversion n'a lieu : le code affirmait
+ * une unité que le calcul n'établit pas. Sept des huit rendus n'en affichaient d'ailleurs
+ * aucune.
  */
 class BordereauAutocompleteCanvasProvider
 {
     public function __construct(
         private CanvasBuilder $canvasBuilder,
-        private ServiceMonnaies $serviceMonnaies
+        private RenduOptionAutocomplete $rendu,
     ) {
     }
 
     public function getChoiceLabel(Bordereau $bordereau): string
     {
-        // 1. Hydratation de l'entité avec les valeurs calculées (solde, totaux, etc.)
         $this->canvasBuilder->loadAllCalculatedValues($bordereau);
 
-        // 2. Extraction des données pour l'affichage
-        $nomBordereau = $bordereau->getNom() ?? 'Bordereau sans nom';
-        $reference = $bordereau->getReference() ?? 'N/A';
-        $assureurNom = $bordereau->getAssureur()?->getNom() ?? 'N/A';
-        $periodeDebut = $bordereau->getPeriodeDebut()?->format('d/m/Y') ?? 'N/A';
-        $periodeFin = $bordereau->getPeriodeFin()?->format('d/m/Y') ?? 'N/A';
+        $periode = $this->periode($bordereau);
 
-        // Utilisation des propriétés hydratées par le CanvasBuilder
-        $montantCommissionTTC = $bordereau->montantCommissionTTC ?? 0.0;
-        $montantEncaisse = $bordereau->montantEncaisse ?? 0.0;
-        $solde = $bordereau->solde ?? 0.0;
-        $statut = $bordereau->getStatut() ?? Bordereau::STATUT_A_VERIFIER; // Default to a known status
+        return $this->rendu->libelle(
+            titre: $bordereau->getNom(),
+            suffixe: $bordereau->getReference(),
+            contact: [$bordereau->getAssureur()?->getNom(), $periode],
+            chiffres: [
+                Chiffre::montant('Exigible', $bordereau->comTtcPayableNow ?? null),
+                Chiffre::montant('Encaissé', $bordereau->montantEncaisse ?? null),
+                Chiffre::solde('Reste dû', $bordereau->solde ?? null),
+            ],
+        );
+    }
 
-        // Déterminer la classe CSS pour le solde
-        $soldeClass = 'text-success';
-        if ($solde > 0.01) {
-            $soldeClass = 'text-danger';
-        } elseif ($solde < -0.01) {
-            $soldeClass = 'text-warning'; // Overpaid or credit
+    /**
+     * La période, ou rien.
+     *
+     * Une seule des deux bornes ne dit pas une période : mieux vaut se taire que d'écrire
+     * « 01/04/2026 - » et laisser l'utilisateur deviner la seconde.
+     */
+    private function periode(Bordereau $bordereau): ?string
+    {
+        $debut = $bordereau->getPeriodeDebut();
+        $fin = $bordereau->getPeriodeFin();
+
+        if ($debut === null || $fin === null) {
+            return null;
         }
 
-        // Déterminer le texte du statut
-        $statutText = match ($statut) {
-            Bordereau::STATUT_A_VERIFIER => 'À vérifier',
-            Bordereau::STATUT_CONTESTE => 'Contesté',
-            Bordereau::STATUT_VALIDE => 'Validé',
-            Bordereau::STATUT_PAYE => 'Payé',
-            Bordereau::STATUT_PARTIELLEMENT_PAYE => 'Partiellement Payé',
-            Bordereau::STATUT_ANNULE => 'Annulé',
-            default => 'Inconnu',
-        };
-
-        // 3. Construction du HTML
-        return sprintf(
-            '<div class="jsb-autocomplete-item">
-                <div class="jsb-autocomplete-title">%s <span class="jsb-autocomplete-title-suffix">(Réf: %s)</span></div>
-                <div class="jsb-autocomplete-context">
-                    <span>Assureur: <strong>%s</strong></span>
-                    <span class="jsb-context-separator">|</span>
-                    <span>Période: <strong>%s - %s</strong></span>
-                </div>
-                <div class="jsb-autocomplete-indicators">
-                    <div><div><span class="jsb-indicator-label">Montant TTC</span><span class="jsb-indicator-value">%s %s</span></div></div>
-                    <div><div><span class="jsb-indicator-label">Encaissé</span><span class="jsb-indicator-value">%s %s</span></div></div>
-                    <div><div><span class="jsb-indicator-label">Solde</span><span class="jsb-indicator-value %s">%s %s</span></div></div>
-                </div>
-                <div class="jsb-autocomplete-context mt-2">
-                    <span>Statut: <strong>%s</strong></span>
-                </div>
-            </div>',
-            htmlspecialchars($nomBordereau),
-            htmlspecialchars($reference),
-            htmlspecialchars($assureurNom),
-            htmlspecialchars($periodeDebut),
-            htmlspecialchars($periodeFin),
-            number_format($montantCommissionTTC, 2, ',', ' '),
-            htmlspecialchars($this->serviceMonnaies->getCodeMonnaieAffichage()),
-            number_format($montantEncaisse, 2, ',', ' '),
-            htmlspecialchars($this->serviceMonnaies->getCodeMonnaieAffichage()),
-            $soldeClass,
-            number_format($solde, 2, ',', ' '),
-            htmlspecialchars($this->serviceMonnaies->getCodeMonnaieAffichage()),
-            htmlspecialchars($statutText)
-        );
+        return $debut->format('d/m/Y') . ' – ' . $fin->format('d/m/Y');
     }
 }

@@ -6,52 +6,36 @@ use App\Entity\Client;
 use App\Services\CanvasBuilder;
 
 /**
- * Construit le rendu HTML pour l'entité Client dans les champs d'autocomplétion.
+ * Le libelle d'un Client dans un champ d'autocompletion.
+ *
+ * Cinq tuiles chiffrees et un `Email: N/A | Tel: N/A` sont devenus trois chiffres et une
+ * ligne de contact qui n'existe que s'il y a un contact.
+ *
+ * ── POURQUOI « COMM. DUE » ET NON « SOLDE » ─────────────────────────────────────
+ * « Solde » en rouge sous le nom d'un client ne dit pas QUI doit QUOI. `solde_restant_du`
+ * est la commission que NOUS n'avons pas encore encaissee sur ses affaires -- pas sa
+ * dette de prime. Deux mots de plus, et le doute disparait.
  */
 class ClientAutocompleteCanvasProvider
 {
-    public function __construct(private CanvasBuilder $canvasBuilder)
-    {
+    public function __construct(
+        private CanvasBuilder $canvasBuilder,
+        private RenduOptionAutocomplete $rendu,
+    ) {
     }
 
     public function getChoiceLabel(Client $client): string
     {
         $this->canvasBuilder->loadAllCalculatedValues($client);
 
-        $nomClient = $client->getNom() ?? 'Client sans nom';
-        $email = $client->getEmail() ?? 'N/A';
-        $telephone = $client->getTelephone() ?? 'N/A';
-
-        $primeTTC = $client->primeTotale ?? 0.0;
-        $commissionTTC = $client->montantTTC ?? 0.0;
-        $taxeCourtier = $client->taxeCourtierMontant ?? 0.0;
-        $taxeAssureur = $client->taxeAssureurMontant ?? 0.0;
-        $retroCommission = $client->retroCommission ?? 0.0;
-
-        return sprintf(
-            '<div class="jsb-autocomplete-item">
-                <div class="jsb-autocomplete-title">%s</div>
-                <div class="jsb-autocomplete-context">
-                    <span>Email: <strong>%s</strong></span>
-                    <span class="jsb-context-separator">|</span>
-                    <span>Tél: <strong>%s</strong></span>
-                </div>
-                <div class="jsb-autocomplete-indicators">
-                    <div><div><span class="jsb-indicator-label">Prime TTC</span><span class="jsb-indicator-value">%s</span></div></div>
-                    <div><div><span class="jsb-indicator-label">Com. TTC</span><span class="jsb-indicator-value">%s</span></div></div>
-                    <div><div><span class="jsb-indicator-label">Taxe Courtier</span><span class="jsb-indicator-value">%s</span></div></div>
-                    <div><div><span class="jsb-indicator-label">Taxe Assureur</span><span class="jsb-indicator-value">%s</span></div></div>
-                    <div><div><span class="jsb-indicator-label">Rétro com.</span><span class="jsb-indicator-value">%s</span></div></div>
-                </div>
-            </div>',
-            htmlspecialchars($nomClient),
-            htmlspecialchars($email),
-            htmlspecialchars($telephone),
-            number_format($primeTTC, 2, ',', ' '),
-            number_format($commissionTTC, 2, ',', ' '),
-            number_format($taxeCourtier, 2, ',', ' '),
-            number_format($taxeAssureur, 2, ',', ' '),
-            number_format($retroCommission, 2, ',', ' ')
+        return $this->rendu->libelle(
+            titre: $client->getNom(),
+            contact: [$client->getEmail(), $client->getTelephone()],
+            chiffres: [
+                Chiffre::montant('Prime', $client->primeTotale ?? null),
+                Chiffre::montant('Comm. TTC', $client->montantTTC ?? null),
+                Chiffre::solde('Comm. due', $client->solde_restant_du ?? null),
+            ],
         );
     }
 }
