@@ -72,7 +72,15 @@ class JSBDynamicSearchService
         'DemandeConge',
         'DepenseCourtier',
         'Document',
-        'Entreprise',
+        // ENTREPRISE N'EST PAS UNE ENTITE DE L'ESPACE DE TRAVAIL.
+        //
+        // Elle y figurait, et c'est elle qui designe le CABINET lui-meme : la consulter,
+        // c'est lire l'objet locataire. Aucun ecran de l'espace de travail n'a besoin de
+        // lire celui d'un autre, et le detail generique la servait a n'importe quel
+        // invite authentifie -- il plantait seulement parce que son canevas appelle un
+        // getClients() qui n'existe pas. Une protection par accident n'en est pas une.
+        //
+        // Le cabinet courant se lit par /admin/entreprise, qui sait a qui il appartient.
         'Feedback',
         'Fournisseur',
         'Groupe',
