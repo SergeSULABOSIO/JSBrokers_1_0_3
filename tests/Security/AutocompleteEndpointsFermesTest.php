@@ -414,6 +414,26 @@ class AutocompleteEndpointsFermesTest extends WebTestCase
     }
 
     /**
+     * Rattache un compte EXISTANT a un second cabinet, sans toucher a son cabinet actif.
+     *
+     * Rien ne l interdit : Utilisateur::$invites est une OneToMany, et aucune contrainte
+     * d unicite ne protege le couple (utilisateur, entreprise). C est meme le
+     * fonctionnement normal du produit -- la bascule de workspace existe pour cela.
+     */
+    private function rattacherAuCabinet(int $ownerId, int $entrepriseId, string $nom): void
+    {
+        $em = $this->em();
+        $utilisateur = $em->getRepository(Utilisateur::class)->find($ownerId);
+        $entreprise = $em->getRepository(Entreprise::class)->find($entrepriseId);
+
+        $invite = (new Invite())->setNom($nom);
+        $invite->setUtilisateur($utilisateur)->setEntreprise($entreprise)->setProprietaire(true);
+        $em->persist($invite);
+        $em->flush();
+        $em->clear();
+    }
+
+    /**
      * Les identifiants qu'un endpoint propose REELLEMENT.
      *
      * Le statut est verifie ici, et non devine : une 5xx rendait auparavant une liste
@@ -580,6 +600,95 @@ class AutocompleteEndpointsFermesTest extends WebTestCase
             . 'Le `query_builder` de ces champs doit passer par '
             . 'FormListenerFactory::setFiltreEntreprise(), qui filtre sur getConnectedTo() -- '
             . 'l\'entreprise ACTIVE de l\'utilisateur, et non une autre.',
+            implode("
+  ", array_map(
+                static fn (string $a, string $d): string => $a . ' -> ' . $d,
+                array_keys($fuites),
+                $fuites,
+            )),
+        ));
+    }
+
+    /**
+     * LE CAS DISCRIMINANT : INVITE DANS LES DEUX CABINETS, CONNECTE A UN SEUL.
+     *
+     * Le test voisin oppose deux comptes etrangers l un a l autre : un filtre qui se
+     * tromperait de QUESTION -- « a quels cabinets cet utilisateur a-t-il acces ? » au
+     * lieu de « quel cabinet est ouvert ? » -- y passerait au vert, puisque l attaquant
+     * n a aucun acces au cabinet voisin.
+     *
+     * Ici le compte de B est AUSSI invite du cabinet A, et son connectedTo vaut B. Les
+     * deux lectures divergent donc : l union rendrait A et B, le cabinet actif ne rend
+     * que B. C est le seul montage qui prouve que setFiltreEntreprise() lit bien
+     * getConnectedTo() -- un SEUL cabinet, celui qui est ouvert -- et non l ensemble des
+     * cabinets atteignables.
+     *
+     * Enjeu concret : sans cela, quitter un cabinet ne fermerait rien.
+     */
+    public function testUnInviteDesDeuxCabinetsNeVoitQueLeCabinetActif(): void
+    {
+        $seed = $this->semerLesDeuxCabinets();
+
+        // Le proprietaire de B devient AUSSI invite de A. Son cabinet actif reste B.
+        $this->rattacherAuCabinet($seed['b']['owner'], $seed['a']['entreprise'], 'Invite croisee A');
+
+        $alias = $this->aliasDuRegistre();
+
+        // Tout acces au conteneur AVANT la premiere requete (voir le test voisin).
+        $classes = [];
+        $idsDeA = [];
+        $idsDeB = [];
+        foreach ($alias as $a) {
+            $classe = $this->classeDeLAlias($a);
+            $classes[$a] = $classe;
+            $idsDeA[$a] = $this->identifiantsDuCabinet($classe, $seed['a']['entreprise']);
+            $idsDeB[$a] = $this->identifiantsDuCabinet($classe, $seed['b']['entreprise']);
+        }
+
+        $utilisateur = $this->em()->getRepository(Utilisateur::class)->find($seed['b']['owner']);
+
+        // PRECONDITIONS, sans quoi ce test ne discriminerait rien.
+        self::assertSame(
+            $seed['b']['entreprise'],
+            $utilisateur->getConnectedTo()?->getId(),
+            "Le cabinet actif du compte doit etre B : s il avait bascule, ce test opposerait de nouveau deux etrangers.",
+        );
+        self::assertCount(
+            2,
+            $this->em()->getRepository(Invite::class)->findBy(['utilisateur' => $utilisateur]),
+            "Le compte doit etre invite dans les DEUX cabinets, sinon un filtre sur l union rendrait le meme resultat qu un filtre sur le cabinet actif, et le test passerait sans rien distinguer.",
+        );
+
+        $this->client->loginUser($utilisateur);
+
+        $fuites = [];
+        $muets = [];
+        foreach ($alias as $a) {
+            $proposes = $this->identifiantsProposes($a);
+
+            $voisin = array_values(array_intersect($proposes, $idsDeA[$a]));
+            if ([] !== $voisin) {
+                $fuites[$a] = $classes[$a] . ' #' . implode(', #', $voisin);
+            }
+            if ([] === array_intersect($proposes, $idsDeB[$a])) {
+                $muets[] = $a;
+            }
+        }
+
+        self::assertSame([], $muets, sprintf(
+            "Ces alias ne proposent rien du cabinet ACTIF : %s. L assertion de cloisonnement ne "
+            . "prouverait alors rien pour eux.",
+            implode(', ', $muets),
+        ));
+
+        self::assertSame([], $fuites, sprintf(
+            "FILTRE SUR L UNION, PAS SUR LE CABINET ACTIF. Le compte est invite dans A et dans B, "
+            . "mais c est B qui est ouvert ; or on lui propose des entites de A :
+  %s
+"
+            . "setFiltreEntreprise() doit filtrer sur getConnectedTo() -- le cabinet OUVERT, un seul "
+            . "-- et jamais sur l ensemble des cabinets ou le compte possede une Invite. Sinon "
+            . "quitter un cabinet ne fermerait rien.",
             implode("
   ", array_map(
                 static fn (string $a, string $d): string => $a . ' -> ' . $d,
