@@ -121,6 +121,11 @@
         ],
         "post-update-cmd": [
             "@auto-scripts"
+        ],
+        "test": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php bin/phpunit",
+            "node --test tests/js/"
         ]
     },
     "conflict": {
@@ -143,5 +148,8 @@
         "symfony/phpunit-bridge": "^7.1",
         "symfony/stopwatch": "7.1.*",
         "symfony/web-profiler-bundle": "7.1.*"
+    },
+    "scripts-descriptions": {
+        "test": "Lance les DEUX suites : PHPUnit, puis les tests JavaScript (node --test tests/js/). Les tests JS ne sont rattaches a aucun autre point d'entree -- ni bin/deploy.sh, ou node n'existe pas, ni la CI : sans ce script, ils ne seraient plus jamais relances."
     }
 }
