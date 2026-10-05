@@ -71,6 +71,7 @@ use DateTimeImmutable;
 use Symfony\Component\Form\FormInterface;
 use App\Service\Workspace\AucunCabinetOuvertException;
 use App\Service\Workspace\CabinetActif;
+use App\Service\Workspace\AppartenanceAuCabinet;
 
 /**
  * @trait ControllerUtilsTrait
@@ -440,6 +441,14 @@ trait ControllerUtilsTrait
     }
 
     /**
+     * Le controle d'appartenance, pris au conteneur comme le gardien.
+     */
+    private function appartenance(): AppartenanceAuCabinet
+    {
+        return $this->container->get(AppartenanceAuCabinet::class);
+    }
+
+    /**
      * Le gardien, pris au conteneur plutot qu'au constructeur.
      *
      * Ce trait est utilise par 57 controleurs, qui declarent chacun leurs dependances.
@@ -459,6 +468,7 @@ trait ControllerUtilsTrait
     {
         return array_merge(parent::getSubscribedServices(), [
             CabinetActif::class => CabinetActif::class,
+            AppartenanceAuCabinet::class => AppartenanceAuCabinet::class,
         ]);
     }
 
@@ -1052,6 +1062,16 @@ trait ControllerUtilsTrait
             return $this->accessDeniedComponent($entityClass);
         }
 
+        // EN EDITION, L'ENTITE DOIT ETRE LA NOTRE.
+        //
+        // `renderFormCanvas()` lit l'entreprise et l'invite dans la SESSION, puis ne
+        // controle que le TYPE. L'entite, elle, a ete resolue par son numero dans l'URL :
+        // le formulaire d'edition d'un assureur d'un autre cabinet s'ouvrait donc
+        // normalement, avec ses donnees.
+        if (!$isCreationMode) {
+            $this->appartenance()->exigerLeCabinetOuvert($entity, $this->getEntityName($entityClass));
+        }
+
         if (!$entity) {
             $entity = new $entityClass();
             // On appelle l'initialiseur pour définir les valeurs par défaut (ex: Entreprise, dates, etc.)
@@ -1206,11 +1226,31 @@ trait ControllerUtilsTrait
             throw $this->createNotFoundException("L'entité avec l'ID " . ($data['id'] ?? 'null') . " n'a pas été trouvée.");
         }
 
-        // CORRECTION : On extrait les IDs des données soumises pour valider l'accès.
-        // On utilise les données du formulaire (`$data`) plutôt que la requête pour plus de fiabilité.
-        $idEntreprise = isset($data['idEntreprise']) ? (int)$data['idEntreprise'] : 0;
-        $idInvite = isset($data['idInvite']) ? (int)$data['idInvite'] : 0;
-        ['entreprise' => $currentEntreprise, 'invite' => $currentInvite] = $this->validateWorkspaceAccess($idEntreprise, $idInvite);
+        // EN EDITION, L'ENTITE DOIT ETRE LA NOTRE.
+        //
+        // L'identifiant vient du CORPS de la requete, pas de l'URL : une route a `{id}`
+        // ne suffisait donc pas a faire l'inventaire des surfaces d'ecriture. Mesure
+        // avant correctif : un invite du cabinet B renommait le Groupe du cabinet A en
+        // postant simplement son numero, et le serveur repondait 200.
+        if (!$isCreationMode) {
+            $this->appartenance()->exigerLeCabinetOuvert($entity, $this->getEntityName($entity));
+        }
+
+        // LE CABINET VIENT DU GARDIEN, JAMAIS DES IDENTIFIANTS SOUMIS.
+        //
+        // Ces lignes lisaient `idEntreprise` et `idInvite` dans le CORPS de la requete,
+        // puis les passaient a validateWorkspaceAccess() -- qui verifiait la coherence
+        // invite <-> entreprise, jamais l'appartenance de l'invite a l'utilisateur
+        // authentifie. L'entreprise ainsi obtenue etait ensuite posee sur l'entite creee.
+        //
+        // Mesure avant correctif : le cabinet A comptait un Groupe, il en comptait deux
+        // apres un POST emis par un invite du cabinet B portant les identifiants de A.
+        // On ne CREE pas chez autrui en declarant son numero.
+        //
+        // Le cabinet ouvert est la seule reponse admissible : il a ete etabli par une
+        // bascule explicite, elle-meme verifiee (voir BasculeDeCabinet).
+        $currentInvite = $this->getInvite();
+        $currentEntreprise = $currentInvite->getEntreprise();
 
         // CONTRÔLE D'ACCÈS (mutation) : création → Écriture, édition → Modification.
         // Pour Invite et les rôles RolesEn*, le resolver exige la gestion des invités.
@@ -1438,6 +1478,11 @@ trait ControllerUtilsTrait
      */
     private function handleDeleteApi(object $entity): Response
     {
+        // L'INSTANCE D'ABORD : le verbe le plus grave etait le moins garde. Ce chemin ne
+        // passait meme pas par validateWorkspaceAccess() -- un identifiant suffisait a
+        // supprimer la ligne d'un autre cabinet.
+        $this->appartenance()->exigerLeCabinetOuvert($entity, $this->getEntityName($entity));
+
         // CONTRÔLE D'ACCÈS (suppression) : exige le droit de Suppression sur l'entité
         // (ou la gestion des invités pour Invite / RolesEn*).
         if (!$this->mayAccessEntity($entity, Invite::ACCESS_SUPPRESSION)) {
@@ -2292,6 +2337,15 @@ trait ControllerUtilsTrait
         }
 
         $entity = $this->em->getRepository($entityClass)->find($id);
+
+        // L'INSTANCE, ET NON SEULEMENT SON TYPE.
+        //
+        // `mayAccessEntity()` ci-dessus juge si le perimetre de roles couvre « les
+        // Assureurs » ; il ne dit rien de l'assureur #34615. Et aucun SQLFilter Doctrine
+        // n'est declare dans ce projet : rien ne restreignait ce `find()` au cabinet
+        // ouvert. Un invite d'un cabinet lisait ainsi n'importe quelle entite de
+        // n'importe quel autre, par simple enumeration d'identifiants.
+        $this->appartenance()->exigerLeCabinetOuvert($entity, $entityType);
 
         if (!$entity) {
             throw new NotFoundHttpException("L'entité '$entityType' avec l'ID '$id' n'a pas été trouvée.");
