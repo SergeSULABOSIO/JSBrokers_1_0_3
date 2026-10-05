@@ -61,6 +61,14 @@ class TokenMeteringFlowTest extends WebTestCase
         $invite->setEntreprise($entreprise);
         $invite->setProprietaire(true);
         $em->persist($invite);
+        // LE CABINET OUVERT, comme le ferait l'interface.
+        //
+        // Ce test se connecte puis attaque directement une URL profonde -- une sequence
+        // qu'aucun parcours reel ne produit : apres connexion on atterrit sur le CHOIX
+        // d'espace (admin.entreprise.index), et c'est en entrant dans un cabinet que
+        // `connectedTo` est pose. Le gardien CabinetActif exige desormais ce prealable
+        // au lieu de deviner un invite, ce qui rendait l'ancien repli invisible ici.
+        $user->setConnectedTo($entreprise);
 
         // Données par défaut (monnaies, taxes, chargements, types de revenu,
         // risques) comme à la création réelle : la liste des risques sera donc
