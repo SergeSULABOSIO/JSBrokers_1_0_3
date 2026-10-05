@@ -6,56 +6,42 @@ use App\Entity\Assureur;
 use App\Services\CanvasBuilder;
 
 /**
- * Construit le rendu HTML pour l'entité Assureur dans les champs d'autocomplétion.
+ * Le libellé d'un Assureur dans un champ d'autocomplétion.
+ *
+ * ── CE QU'IL AFFICHAIT ──────────────────────────────────────────────────────────
+ * Soixante et une lignes de `sprintf`, pour une carte de sept à dix-huit lignes : le nom,
+ * puis `Email: N/A | Tél: N/A`, puis CINQ tuiles chiffrées empilées — prime, commission,
+ * taxe courtier, taxe assureur, rétro. Le tout restait affiché dans le champ une fois le
+ * choix fait, `render.option` et `render.item` étant identiques dans le bundle.
+ *
+ * ── CE QU'IL AFFICHE ────────────────────────────────────────────────────────────
+ * Le nom, une ligne de contact s'il y en a une, et TROIS chiffres : ce qui est placé, ce
+ * qui est rentré, ce qui reste. Une liste d'autocomplétion sert à choisir ; cinq chiffres
+ * obligent à lire avant de choisir.
+ *
+ * Tout le « comment » vit dans {@see RenduOptionAutocomplete} — balisage, échappement,
+ * troncature, format selon la langue, et le sort des champs vides.
  */
 class AssureurAutocompleteCanvasProvider
 {
-    public function __construct(private CanvasBuilder $canvasBuilder)
-    {
+    public function __construct(
+        private CanvasBuilder $canvasBuilder,
+        private RenduOptionAutocomplete $rendu,
+    ) {
     }
 
     public function getChoiceLabel(Assureur $assureur): string
     {
-        // 1. Hydratation de l'entité avec les valeurs calculées
         $this->canvasBuilder->loadAllCalculatedValues($assureur);
 
-        // 2. Extraction des données pour l'affichage
-        $nomAssureur = $assureur->getNom() ?? 'Assureur sans nom';
-        $email = $assureur->getEmail() ?? 'N/A';
-        $telephone = $assureur->getTelephone() ?? 'N/A';
-
-        // Utilisation des propriétés hydratées par AssureurIndicatorStrategy
-        $primeTTC = $assureur->primeTotale ?? 0.0;
-        $commissionTTC = $assureur->montantTTC ?? 0.0;
-        $taxeCourtier = $assureur->taxeCourtierMontant ?? 0.0;
-        $taxeAssureur = $assureur->taxeAssureurMontant ?? 0.0;
-        $retroCommission = $assureur->retroCommission ?? 0.0;
-
-        // 3. Construction du HTML
-        return sprintf(
-            '<div class="jsb-autocomplete-item">
-                <div class="jsb-autocomplete-title">%s</div>
-                <div class="jsb-autocomplete-context">
-                    <span>Email: <strong>%s</strong></span>
-                    <span class="jsb-context-separator">|</span>
-                    <span>Tél: <strong>%s</strong></span>
-                </div>
-                <div class="jsb-autocomplete-indicators">
-                    <div><div><span class="jsb-indicator-label">Prime TTC</span><span class="jsb-indicator-value">%s</span></div></div>
-                    <div><div><span class="jsb-indicator-label">Com. TTC</span><span class="jsb-indicator-value">%s</span></div></div>
-                    <div><div><span class="jsb-indicator-label">Taxe Courtier</span><span class="jsb-indicator-value">%s</span></div></div>
-                    <div><div><span class="jsb-indicator-label">Taxe Assureur</span><span class="jsb-indicator-value">%s</span></div></div>
-                    <div><div><span class="jsb-indicator-label">Rétro com.</span><span class="jsb-indicator-value">%s</span></div></div>
-                </div>
-            </div>',
-            htmlspecialchars($nomAssureur),
-            htmlspecialchars($email),
-            htmlspecialchars($telephone),
-            number_format($primeTTC, 2, ',', ' '),
-            number_format($commissionTTC, 2, ',', ' '),
-            number_format($taxeCourtier, 2, ',', ' '),
-            number_format($taxeAssureur, 2, ',', ' '),
-            number_format($retroCommission, 2, ',', ' ')
+        return $this->rendu->libelle(
+            titre: $assureur->getNom(),
+            contact: [$assureur->getEmail(), $assureur->getTelephone()],
+            chiffres: [
+                Chiffre::montant('Prime', $assureur->primeTotale ?? null),
+                Chiffre::montant('Comm. TTC', $assureur->montantTTC ?? null),
+                Chiffre::solde('Comm. due', $assureur->solde_restant_du ?? null),
+            ],
         );
     }
 }

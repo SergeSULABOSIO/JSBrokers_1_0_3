@@ -43,6 +43,7 @@
   --success: #198754;
   --warning: #ffc107;
   --danger: #dc3545;
+  --success-dark: #0f5132;
   --danger-dark: #842029;
   --danger-bg: #f8d7da;
 
@@ -4240,6 +4241,81 @@ tr:hover .list-row-actions-container,
     color: #ced4da;
 }
 
+/* ------------------------------------------------------------------ */
+/* LIGNE 3 : L'AIDE AU CHOIX                                           */
+/* ------------------------------------------------------------------ */
+/*
+ * TROIS CHIFFRES EN LIGNE, et non cinq tuiles empilees.
+ *
+ * L'ancienne grille `repeat(auto-fit, minmax(7.5rem, 1fr))` ne faisait qu'UNE colonne
+ * dans une deroulante de 350 px : les cinq tuiles s'empilaient, et la carte occupait
+ * sept a dix-huit lignes. Une liste d'autocompletion sert a CHOISIR ; au-dela de trois
+ * chiffres on ne choisit plus, on lit.
+ */
+/*
+ * TROIS CHIFFRES SUR UNE SEULE LIGNE — et c'est une contrainte, pas une preference.
+ *
+ * Mesure au navigateur, dans une deroulante de 380 px : avec un espacement de 14 px et
+ * des libelles complets, le troisieme chiffre passait a la ligne. On retombait sur
+ * l'empilement qu'on venait justement de supprimer, en trois lignes au lieu de cinq.
+ *
+ * `space-between` repartit l'espace disponible au lieu de le fixer, et le libelle cede
+ * avant la valeur : un montant tronque ne veut rien dire, un libelle raccourci se devine.
+ */
+.jsb-autocomplete-aide {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    column-gap: 10px;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    overflow: hidden;
+}
+
+/* Libelle et valeur restent solidaires : un retour a la ligne entre eux les separerait. */
+.jsb-chiffre {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+/*
+ * --text-body, et non --text-muted : mesure sur le fond d'une option survolee
+ * (#e8f0fb), #6c757d tombe a 4,08 — sous le seuil AA de 4,5. #495057 tient 7,12.
+ */
+.jsb-chiffre-libelle {
+    color: var(--text-body, #495057);
+    font-weight: 400;
+    /* Le libelle se laisse rogner ; la valeur, jamais. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/*
+ * `tabular-nums` : trois montants qu'on compare doivent aligner leurs chiffres, sans
+ * quoi l'oeil compare des largeurs au lieu de comparer des valeurs.
+ */
+.jsb-chiffre-valeur {
+    color: var(--text-dark, #212529);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/*
+ * LES TEINTES SOMBRES, et c'est mesure, pas esthetique.
+ *
+ * Sur le fond d'une option survolee (#e8f0fb), --success (#198754) et --danger
+ * (#dc3545) tombent a 3,95 et 3,94 — sous le seuil AA de 4,5. Leurs variantes foncees
+ * tiennent 8,15 et 8,24, sur ce fond comme sur le blanc.
+ *
+ * Et la couleur n'est JAMAIS seule a porter l'etat (WCAG 1.4.1) : « 0,00 » dit le solde,
+ * un nombre non nul dit le reste, le signe moins dit le trop-percu.
+ */
+.jsb-chiffre--solde { color: var(--success-dark, #0f5132); }
+.jsb-chiffre--du { color: var(--danger-dark, #842029); }
+
 /* LIGNE 3 : GRILLE DE TUILES KPI */
 .jsb-autocomplete-indicators {
     display: grid;
@@ -4295,6 +4371,68 @@ tr:hover .list-row-actions-container,
 .jsb-indicator-value.text-danger { color: #dc3545 !important; }
 .jsb-indicator-value.text-warning { color: #e69500 !important; } /* Orange charte, contraste AA sur fond clair */
 .jsb-indicator-value.text-cobalt { color: #0047AB !important; }
+
+/* ------------------------------------------------------------------ */
+/* LA VALEUR CHOISIE N'EST PAS UNE OPTION DE LISTE                     */
+/* ------------------------------------------------------------------ */
+/*
+ * LE SERVEUR NE PRODUIT QU'UNE SEULE CHAÎNE POUR DEUX ÉTATS.
+ *
+ * Dans le contrôleur du bundle, `render.option` et `render.item` sont identiques
+ * (controller.js, l. 348-350) : le même HTML sert la liste déroulante ET le champ une
+ * fois le choix fait. Les cinq tuiles chiffrées, utiles pour CHOISIR entre deux
+ * assureurs, restaient donc affichées en permanence sous une valeur déjà choisie — sept
+ * à dix-huit lignes occupées pour une information que l'utilisateur vient d'arrêter.
+ *
+ * Et un `render` passé depuis PHP serait silencieusement écrasé (`mergeConfigs_fn`,
+ * spread plat, l. 371-381) : la distinction ne peut pas se faire côté serveur.
+ *
+ * ── POURQUOI LE CSS, ET NON UN HOOK JAVASCRIPT ──────────────────────────────────
+ * Parce que l'appelant n'a rien à savoir du mécanisme : aucun provider, aucun FormType,
+ * aucun contrôleur Stimulus ne change. Et parce que le projet consomme déjà cinq classes
+ * de Tom Select, dont la version est épinglée (2.3.1) : on ne crée aucune dépendance
+ * nouvelle.
+ *
+ * ── CHAQUE RÈGLE EST SCOPÉE, ET CE N'EST PAS DÉCORATIF ──────────────────────────
+ * `:has(.jsb-autocomplete-item)` restreint ces règles à NOTRE balisage. Sans lui, elles
+ * toucheraient tous les Tom Select de l'application — la barre de recherche, les select
+ * simples — qui n'ont rien demandé.
+ */
+
+/* L'aide au choix quitte le champ, et reste dans la déroulante où elle sert. */
+.ts-control .item:has(.jsb-autocomplete-item) .jsb-autocomplete-aide,
+.ts-control .item:has(.jsb-autocomplete-item) .jsb-autocomplete-indicators {
+    display: none;
+}
+
+/*
+ * Le padding de 10px/12px est celui de l'OPTION de menu : dans le champ, il ferait
+ * grandir le contrôle. On ne touche pas à celui de `.ts-control`, qui vient du thème.
+ */
+.ts-control .item:has(.jsb-autocomplete-item) .jsb-autocomplete-item {
+    padding: 0;
+    gap: 2px;
+}
+
+/*
+ * EN MODE MULTIPLE, SEUL LE NOM SURVIT.
+ *
+ * Trois champs sont `multiple` et passent par ces providers : les partenaires d'un
+ * client (ClientType), les assistants d'un invité (InviteType), les comptes bancaires
+ * d'une note (NoteType). Cinq comptes sélectionnés empileraient cinq fois deux lignes —
+ * le défaut qu'on vient de fermer, multiplié par cinq.
+ */
+.ts-wrapper.multi .ts-control .item:has(.jsb-autocomplete-item) .jsb-autocomplete-context {
+    display: none;
+}
+
+/*
+ * Le contrôle grandit vers le haut, pas vers le bas : une valeur sur deux lignes doit
+ * s'aligner sur la première, comme le ferait un texte ordinaire.
+ */
+.ts-wrapper.single .ts-control:has(.jsb-autocomplete-item) {
+    align-items: flex-start;
+}
 
 /* NOUVEAU : Style pour les options de mappage déjà sélectionnées */
 .mapped-option {
