@@ -67,6 +67,31 @@ function releverLesEvenements() {
         // événement du DOM, et c'est tout ce qui compte ici.
         for (const [, evenement] of source.matchAll(/broadcast\(\s*'(app:[\w.-]+)'/g)) emis.add(evenement);
         for (const [, evenement] of source.matchAll(/CustomEvent\(\s*'(app:[\w.-]+)'/g)) emis.add(evenement);
+
+        // LA TROISIÈME FAÇON D'ÉMETTRE : une aide qui reçoit le nom EN PARAMÈTRE.
+        //
+        // Ce test a cru morts deux écouteurs bien vivants. `dialog-instance` n'écrit pas
+        // `new CustomEvent('app:formulaire-onglets.reveler')` : il appelle
+        // `_notifierLesOnglets('app:formulaire-onglets.reveler', …)`, et c'est l'aide qui
+        // construit l'événement à partir de son paramètre. Les deux motifs ci-dessus ne
+        // voyaient qu'un `CustomEvent(nom)` — un identifiant, pas un littéral — et
+        // concluaient à l'absence d'émetteur.
+        //
+        // Un faux positif coûte ici plus cher qu'un faux négatif : il désigne du code
+        // vivant comme mort, et invite à le supprimer. On repère donc les aides dont le
+        // corps construit un CustomEvent à partir d'un de leurs paramètres, puis on relève
+        // les noms littéraux qu'on leur passe.
+        const aides = new Set();
+        for (const [, aide, parametre] of source.matchAll(
+            /(\w+)\s*\(\s*(\w+)[^)]*\)\s*\{[\s\S]{0,400}?new CustomEvent\(\s*\2\b/g,
+        )) {
+            if (aide !== 'function' && aide !== 'if' && aide !== 'for') aides.add(aide);
+        }
+        for (const aide of aides) {
+            for (const [, evenement] of source.matchAll(
+                new RegExp(`\\b${aide}\\(\\s*'(app:[\\w.-]+)'`, 'g'),
+            )) emis.add(evenement);
+        }
     }
 
     return { ecoutes, emis };
