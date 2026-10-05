@@ -396,8 +396,10 @@ class WorkspaceMutationServiceTest extends WebTestCase
     {
         $owner = $this->seedUser(self::OWNER_A);
         $ent = $this->seedEntreprise(self::ENT_A, $owner);
-        $this->seedOwnerInvite($ent, $owner);
-        $client = $this->seedClient($ent, $this->seedOwnerInvite($ent, $owner), 'Client X');
+        // UN SEUL invite proprietaire, reutilise. L'appeler deux fois creait un doublon
+        // (utilisateur, entreprise) -- involontaire, et desormais refuse par la base.
+        $inviteOwner = $this->seedOwnerInvite($ent, $owner);
+        $client = $this->seedClient($ent, $inviteOwner, 'Client X');
 
         $intrus = $this->seedUser(self::INTRUS);
         $inviteIntrus = (new Invite())->setNom('Intrus')->setUtilisateur($intrus)->setEntreprise($ent)->setProprietaire(false);

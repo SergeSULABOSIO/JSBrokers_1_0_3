@@ -27,6 +27,37 @@ use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Entity\ChargeCourtier;
+use App\Entity\ChargementPourPrime;
+use App\Entity\Charge;
+use App\Entity\Contact;
+use App\Entity\DemandeConge;
+use App\Entity\Depense;
+use App\Entity\DepenseCourtier;
+use App\Entity\Document;
+use App\Entity\Feedback;
+use App\Entity\Fournisseur;
+use App\Entity\JourFerie;
+use App\Entity\ModelePieceSinistre;
+use App\Entity\Monnaie;
+use App\Entity\Note;
+use App\Entity\NotificationSinistre;
+use App\Entity\OffreIndemnisationSinistre;
+use App\Entity\Operation;
+use App\Entity\Paiement;
+use App\Entity\PaiementPrime;
+use App\Entity\ParametresConge;
+use App\Entity\PeriodeBlocage;
+use App\Entity\PieceSinistre;
+use App\Entity\RegimeTravail;
+use App\Entity\ReversementRetroAgent;
+use App\Entity\RolesEnAdministration;
+use App\Entity\RolesEnFinance;
+use App\Entity\RolesEnMarketing;
+use App\Entity\RolesEnProduction;
+use App\Entity\RolesEnSinistre;
+use App\Entity\Tache;
+use App\Entity\TypeAbsence;
 
 /**
  * DEUX CABINETS COMPLETS, SYMETRIQUES, ET CE QU'ILS CONTIENNENT.
@@ -67,6 +98,16 @@ trait SemisDeDeuxCabinetsTrait
         Invite::class, Partenaire::class, Piste::class, Portefeuille::class,
         RevenuPourCourtier::class, Risque::class, Taxe::class, Tranche::class,
         TypeRevenu::class,
+        // Les 29 ajoutees pour que le test de cloisonnement puisse JUGER ces classes :
+        // sans entite semee, « refuse » et « rien a montrer » restent indistincts.
+        ChargeCourtier::class, ChargementPourPrime::class, Contact::class, DemandeConge::class,
+        DepenseCourtier::class, Document::class, Feedback::class, Fournisseur::class,
+        JourFerie::class, ModelePieceSinistre::class, Monnaie::class, Note::class,
+        NotificationSinistre::class, OffreIndemnisationSinistre::class, Operation::class,
+        Paiement::class, PaiementPrime::class, ParametresConge::class, PeriodeBlocage::class,
+        PieceSinistre::class, RegimeTravail::class, ReversementRetroAgent::class,
+        RolesEnAdministration::class, RolesEnFinance::class, RolesEnMarketing::class,
+        RolesEnProduction::class, RolesEnSinistre::class, Tache::class, TypeAbsence::class,
     ];
 
     private function em(): EntityManagerInterface
@@ -82,11 +123,29 @@ trait SemisDeDeuxCabinetsTrait
 
         // Enfants d'abord : chaque table ne part qu'une fois ses references levees.
         $tables = [
-            'article', 'revenu_pour_courtier', 'tranche', 'avenant', 'bordereau',
+            // Les enfants d'abord. `operation` est traitee a part : elle ne porte pas
+            // d'entreprise_id, elle la tient de son bordereau.
+            'paiement_prime', 'article', 'revenu_pour_courtier', 'tranche', 'avenant',
+            'depense_courtier', 'charge_courtier', 'note', 'paiement', 'reversement_retro_agent',
+            'piece_sinistre', 'offre_indemnisation_sinistre', 'notification_sinistre',
+            'modele_piece_sinistre', 'demande_conge', 'jour_ferie', 'parametres_conge',
+            'periode_blocage', 'regime_travail', 'type_absence', 'document', 'feedback',
+            'fournisseur', 'tache', 'chargement_pour_prime', 'contact', 'monnaie',
+            'roles_en_administration', 'roles_en_finance', 'roles_en_marketing',
+            'roles_en_production', 'roles_en_sinistre', 'bordereau',
             'cotation', 'piste', 'condition_partage', 'autorite_fiscale', 'taxe',
             'compte_bancaire', 'chargement', 'classeur', 'client', 'groupe',
             'portefeuille', 'partenaire', 'assureur', 'risque', 'type_revenu', 'invite',
         ];
+        // `operation` ne porte pas d'entreprise_id : on la denoue par son bordereau,
+        // AVANT que celui-ci ne parte.
+        $conn->executeStatement(
+            'DELETE o FROM operation o JOIN bordereau b ON o.bordereau_id = b.id'
+            . ' JOIN entreprise e ON b.entreprise_id = e.id WHERE e.nom IN (:noms)',
+            ['noms' => $noms],
+            ['noms' => ArrayParameterType::STRING],
+        );
+
         foreach ($tables as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom IN (:noms)",
@@ -309,6 +368,12 @@ trait SemisDeDeuxCabinetsTrait
             ->setEntreprise($entreprise);
         $em->persist($bordereau);
 
+        $this->semerLeReste($entreprise, $invite, $suffixe, $maintenant, [
+            'client' => $client, 'assureur' => $assureur, 'cotation' => $cotation,
+            'tranche' => $tranche, 'revenu' => $revenu, 'bordereau' => $bordereau,
+            'partenaire' => $partenaire, 'risque' => $risque, 'classeur' => $classeur,
+        ]);
+
         return ['owner' => $owner, 'entreprise' => $entreprise];
     }
 
@@ -339,8 +404,16 @@ trait SemisDeDeuxCabinetsTrait
      */
     private function identifiantsDuCabinet(string $classe, int $entrepriseId): array
     {
-        return array_map('intval', $this->em()
-            ->createQuery(sprintf('SELECT e.id FROM %s e WHERE e.entreprise = :ese', $classe))
+        // UNE CLASSE SUR CINQUANTE N'A PAS D'`entreprise` : `Operation` la tient de son
+        // bordereau. Le chemin est ecrit ici comme il l'est dans AppartenanceAuCabinet --
+        // deux endroits, mais aucun des deux ne DEVINE : le deviner reviendrait a traiter
+        // « pas d'entreprise » comme « globale », ce qui ouvrirait toutes les
+        // sous-entites qu'un parent protege.
+        $dql = $classe === Operation::class
+            ? 'SELECT e.id FROM ' . Operation::class . ' e JOIN e.bordereau b WHERE b.entreprise = :ese'
+            : sprintf('SELECT e.id FROM %s e WHERE e.entreprise = :ese', $classe);
+
+        return array_map('intval', $this->em()->createQuery($dql)
             ->setParameter('ese', $entrepriseId)
             ->getSingleColumnResult());
     }
@@ -386,5 +459,165 @@ trait SemisDeDeuxCabinetsTrait
         }
         $em->flush();
         $em->clear();
+    }
+
+    /**
+     * LES VINGT-NEUF AUTRES CLASSES QU'UNE ROUTE PEUT ATTEINDRE.
+     *
+     * Elles ne sont pas semees pour le plaisir de l'exhaustivite. Les tests de
+     * cloisonnement n'osent juger que ce qu'ils ont seme : sans ligne en base, « on te le
+     * refuse » et « il n'y a rien a montrer » sont indistinguables, et l'assertion passe
+     * au vert sans rien prouver. C'est ce qui a laisse vivre la fuite d'Article.
+     *
+     * Chaque entite est reduite au STRICT NECESSAIRE -- les colonnes NOT NULL sans defaut,
+     * et les parents sans lesquels la ligne n'existerait pas. On ne cherche pas a
+     * reproduire un cabinet realiste : on cherche une ligne par classe, rattachee au bon
+     * cabinet.
+     *
+     * @param array<string, object> $socle les entites deja creees dont celles-ci dependent
+     */
+    private function semerLeReste(
+        Entreprise $entreprise,
+        Invite $invite,
+        string $suffixe,
+        \DateTimeImmutable $maintenant,
+        array $socle,
+    ): void {
+        $em = $this->em();
+
+        $monnaie = (new Monnaie())->setNom('Dollar ' . $suffixe)->setCode('US' . $suffixe)
+            ->setTauxusd('1')->setFonction(Monnaie::FONCTION_SAISIE_ET_AFFICHAGE)->setLocale(false);
+        $monnaie->setEntreprise($entreprise);
+        $em->persist($monnaie);
+
+        $contact = (new Contact())->setNom('Contact ' . $suffixe)->setTelephone('+243000000001')
+            ->setType(Contact::TYPE_CONTACT_PRODUCTION);
+        $contact->setEntreprise($entreprise);
+        $em->persist($contact);
+
+        $document = (new Document())->setNom('Document ' . $suffixe);
+        $document->setEntreprise($entreprise);
+        $em->persist($document);
+
+        $feedback = (new Feedback())->setDescription('Retour ' . $suffixe)->setType(Feedback::TYPE_CALL);
+        $feedback->setEntreprise($entreprise);
+        $em->persist($feedback);
+
+        $fournisseur = (new Fournisseur())->setNom('Fournisseur ' . $suffixe)->setActif(true);
+        $fournisseur->setEntreprise($entreprise);
+        $em->persist($fournisseur);
+
+        $tache = (new Tache())->setDescription('Tache ' . $suffixe)
+            ->setToBeEndedAt($maintenant->modify('+7 days'))->setClosed(false);
+        $tache->setEntreprise($entreprise);
+        $em->persist($tache);
+
+        $chargementPrime = (new ChargementPourPrime())->setNom('Chargement prime ' . $suffixe);
+        $chargementPrime->setEntreprise($entreprise);
+        $em->persist($chargementPrime);
+
+        // FINANCES
+        $charge = (new ChargeCourtier())->setCode('CH' . $suffixe)->setLibelle('Charge ' . $suffixe)
+            ->setCompteOhada('6010')->setComportement(Charge::COMPORTEMENT_FIXE)
+            ->setPeriodicite(Charge::PERIODICITE_MENSUELLE)->setActif(true);
+        $charge->setEntreprise($entreprise);
+        $em->persist($charge);
+
+        $depense = (new DepenseCourtier())->setDateDepense($maintenant->modify('-3 days'))
+            ->setMontant('100')->setTauxTva('16')->setMoyenPaiement(Depense::MOYEN_BANQUE)
+            ->setStatut(Depense::STATUT_ENGAGEE)->setCharge($charge);
+        $depense->setEntreprise($entreprise);
+        $em->persist($depense);
+
+        $note = (new Note())->setNom('Note ' . $suffixe)->setType(Note::TYPE_NOTE_DE_DEBIT)
+            ->setAddressedTo(Note::TO_CLIENT)->setReference('NDD-' . $suffixe)
+            ->setValidated(false)->setSignature('Signature ' . $suffixe);
+        $note->setEntreprise($entreprise);
+        $em->persist($note);
+
+        $paiement = (new Paiement())->setMontant(50.0)->setPaidAt($maintenant->modify('-2 days'));
+        $paiement->setEntreprise($entreprise);
+        $em->persist($paiement);
+
+        $paiementPrime = (new PaiementPrime())->setPaidAt($maintenant->modify('-2 days'))
+            ->setMontant(75.0)->setReference('PP-' . $suffixe)->setTranche($socle['tranche']);
+        $paiementPrime->setEntreprise($entreprise);
+        $em->persist($paiementPrime);
+
+        $reversement = (new ReversementRetroAgent())->setMontant(25.0)
+            ->setPaidAt($maintenant->modify('-1 day'))->setReference('RV-' . $suffixe);
+        $reversement->setEntreprise($entreprise);
+        $em->persist($reversement);
+
+        // `Operation` est la SEULE des cinquante classes a ne pas porter `entreprise` :
+        // elle la tient de son bordereau. C'est le chemin declare dans AppartenanceAuCabinet.
+        $operation = (new Operation())->setReferencePolice('POL-' . $suffixe . '-001')
+            ->setNumeroAvenant('AV-1')->setMontantHT(1000.0)->setBordereau($socle['bordereau']);
+        $em->persist($operation);
+
+        // SINISTRES
+        $modelePiece = (new ModelePieceSinistre())->setNom('Modele ' . $suffixe)->setObligatoire(true);
+        $modelePiece->setEntreprise($entreprise);
+        $em->persist($modelePiece);
+
+        $notification = (new NotificationSinistre())->setOccuredAt($maintenant->modify('-20 days'));
+        $notification->setEntreprise($entreprise);
+        $em->persist($notification);
+
+        $piece = (new PieceSinistre())->setDescription('Piece ' . $suffixe)
+            ->setReceivedAt($maintenant->modify('-15 days'))->setFourniPar('Client ' . $suffixe);
+        $piece->setEntreprise($entreprise);
+        $em->persist($piece);
+
+        $offre = (new OffreIndemnisationSinistre())->setMontantPayable(500.0)
+            ->setBeneficiaire('Beneficiaire ' . $suffixe);
+        $offre->setEntreprise($entreprise);
+        $em->persist($offre);
+
+        // CONGES
+        $typeAbsence = (new TypeAbsence())->setCode('TA' . $suffixe)->setLibelle('Conges ' . $suffixe)
+            ->setDecompte(true)->setJustificatifRequis(false)->setAutoriseDemiJournee(true)->setActif(true);
+        $typeAbsence->setEntreprise($entreprise);
+        $em->persist($typeAbsence);
+
+        $demande = (new DemandeConge())->setDateDebut($maintenant->modify('+10 days'))
+            ->setDateFin($maintenant->modify('+12 days'))->setDemiJourneeDebut(false)
+            ->setDemiJourneeFin(false)->setStatut(DemandeConge::STATUT_BROUILLON)
+            ->setOrigine(DemandeConge::ORIGINE_UI);
+        $demande->setEntreprise($entreprise);
+        $em->persist($demande);
+
+        $jourFerie = (new JourFerie())->setDate($maintenant->modify('+30 days'))
+            ->setLibelle('Ferie ' . $suffixe)->setExercice((int) $maintenant->format('Y'));
+        $jourFerie->setEntreprise($entreprise);
+        $em->persist($jourFerie);
+
+        $parametres = (new ParametresConge())->setDelaiPreavisJours(7)->setSeuilAlerteReport('5')
+            ->setRelanceApresJours(3)->setDotationAnnuelle('20');
+        $parametres->setEntreprise($entreprise);
+        $em->persist($parametres);
+
+        $periode = (new PeriodeBlocage())->setLibelle('Blocage ' . $suffixe)
+            ->setDateDebut($maintenant->modify('+60 days'))->setDateFin($maintenant->modify('+70 days'))
+            ->setActif(true);
+        $periode->setEntreprise($entreprise);
+        $em->persist($periode);
+
+        $regime = (new RegimeTravail())->setJoursOuvres([1, 2, 3, 4, 5])->setTauxOccupation('100')
+            ->setDateDebut($maintenant->modify('-365 days'));
+        $regime->setEntreprise($entreprise);
+        $em->persist($regime);
+
+        // LES CINQ JEUX DE ROLES. Leurs colonnes d'acces sont des tableaux NOT NULL : un
+        // tableau VIDE est un jeu de roles valide -- celui qui n'accorde rien.
+        foreach ([
+            RolesEnAdministration::class, RolesEnFinance::class, RolesEnMarketing::class,
+            RolesEnProduction::class, RolesEnSinistre::class,
+        ] as $classeDeRoles) {
+            $roles = new $classeDeRoles();
+            $roles->setNom('Roles ' . $suffixe);
+            $roles->setEntreprise($entreprise);
+            $em->persist($roles);
+        }
     }
 }

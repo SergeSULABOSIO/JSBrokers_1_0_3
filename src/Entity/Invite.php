@@ -10,6 +10,20 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Component\Serializer\Annotation\Groups;
 use App\Repository\InviteRepository;
 
+/**
+ * UN COMPTE N'A QU'UNE SEULE INVITATION PAR CABINET.
+ *
+ * Tout le cloisonnement repose sur `CabinetActif`, qui resout l'invite par
+ * `findOneBy(['utilisateur', 'entreprise'])`. Avec deux lignes, Doctrine en rend UNE,
+ * arbitrairement : le perimetre effectif d'un compte deviendrait non deterministe --
+ * memes utilisateur et cabinet, et des droits qui changent selon ce que la base sert en
+ * premier.
+ *
+ * L'unicite ne mord PAS sur les invitations en attente : `utilisateur_id` y est NULL
+ * tant que la personne n'a pas cree son compte, et SQL n'applique pas l'unicite aux
+ * NULL. Un cabinet peut donc avoir autant d'invitations en attente qu'il veut.
+ */
+#[ORM\UniqueConstraint(name: 'uniq_invite_utilisateur_entreprise', columns: ['utilisateur_id', 'entreprise_id'])]
 #[ORM\Entity(repositoryClass: InviteRepository::class)]
 #[ORM\HasLifecycleCallbacks]
 class Invite

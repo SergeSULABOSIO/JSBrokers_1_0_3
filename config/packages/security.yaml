@@ -58,6 +58,27 @@ security:
         # rien (une comparaison de préfixe par requête) et elle transforme une
         # omission silencieuse en 403.
         - { path: ^/console, roles: ROLE_ADMIN }
+        # L'AUTOCOMPLÉTION, FERMÉE AU PRÉFIXE.
+        #
+        # `#[AsEntityAutocompleteField]` inscrit un champ au registre, et
+        # `EntityAutocompleteController` sert /autocomplete/{alias} PAR ALIAS — sans
+        # jamais regarder si un formulaire emploie le champ. L'option `security` du
+        # bundle vaut `false` par défaut, et `isGranted()` rend alors `true` sans
+        # condition : le seul rempart était le `query_builder` de chaque champ.
+        #
+        # Deux champs ne l'avaient pas. L'un servait le nom de tous les cabinets de la
+        # plateforme à un appelant NON AUTHENTIFIÉ ; l'autre, la référence de police, le
+        # taux de commission et le montant facturé de tous les cabinets.
+        #
+        # Cette ligne ne remplace pas les query_builders : elle les double. Un champ
+        # ajouté demain sans filtre fuirait encore entre cabinets — c'est le test
+        # AutocompleteEndpointsFermesTest qui tient cela — mais plus jamais au public.
+        #
+        # IS_AUTHENTICATED et non IS_AUTHENTICATED_FULLY : le pare-feu `main` active
+        # `remember_me` (7 jours). FULLY refuse une session restaurée par cookie, et
+        # tous les champs de relation seraient vides pour ces utilisateurs — un défaut
+        # fonctionnel invisible en développement, où l'on se reconnecte à la main.
+        - { path: ^/autocomplete, roles: IS_AUTHENTICATED }
         # - { path: ^/profile, roles: ROLE_USER }
 
 when@test:
