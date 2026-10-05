@@ -42,7 +42,6 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
             'placeholder' => 'Rechercher un revenu',
             'note_id' => null, 
             'searchable_fields' => ['nom'],
-            'as_html' => true,
             'parent_article' => null, // NOUVEAU : On définit l'option personnalisée.
             'parent_note' => null, // NOUVEAU : Pour recevoir l'entité Note parente.
             

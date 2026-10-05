@@ -8,12 +8,14 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\UX\Autocomplete\Form\AsEntityAutocompleteField;
 use Symfony\UX\Autocomplete\Form\BaseEntityAutocompleteType;
+use App\Services\Canvas\Autocomplete\RenduOptionAutocomplete;
 
 #[AsEntityAutocompleteField]
 class TypeRevenuAutocompleteField extends AbstractType
 {
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
+        private RenduOptionAutocomplete $rendu,
     ) {
     }
 
@@ -24,17 +26,12 @@ class TypeRevenuAutocompleteField extends AbstractType
             'placeholder' => 'Sélectionner un type de revenu',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
             'searchable_fields' => ['nom'],
-            'as_html' => true,
             // NOUVELLE APPROCHE : On utilise un 'callable' pour générer le HTML directement ici,
             // ce qui est plus robuste que de dépendre d'un fichier template externe.
-            'choice_label' => function(TypeRevenu $typeRevenu) {
-                $description = $this->generateDescriptionForChoice($typeRevenu);
-                return sprintf(
-                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">%s</div></div>',
-                    htmlspecialchars($typeRevenu->getNom()),
-                    htmlspecialchars($description)
-                );
-            },
+            'choice_label' => fn (TypeRevenu $typeRevenu) => $this->rendu->libelle(
+                titre: $typeRevenu->getNom(),
+                contact: [$this->generateDescriptionForChoice($typeRevenu)],
+            ),
         ]);
     }
 

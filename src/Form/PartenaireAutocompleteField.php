@@ -26,7 +26,6 @@ class PartenaireAutocompleteField extends AbstractType
             'placeholder' => 'Sélectionner le partenaire',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
             'searchable_fields' => ['nom', 'email'],
-            'as_html' => true,
             // La logique de rendu est maintenant déléguée au service dédié.
             'choice_label' => fn(Partenaire $partenaire) => $this->canvasProvider->getChoiceLabel($partenaire),
         ]);

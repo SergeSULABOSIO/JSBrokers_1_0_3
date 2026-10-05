@@ -4316,62 +4316,6 @@ tr:hover .list-row-actions-container,
 .jsb-chiffre--solde { color: var(--success-dark, #0f5132); }
 .jsb-chiffre--du { color: var(--danger-dark, #842029); }
 
-/* LIGNE 3 : GRILLE DE TUILES KPI */
-.jsb-autocomplete-indicators {
-    display: grid;
-    /* Voir le commentaire ci-dessus : la largeur disponible décide du nombre de
-       colonnes, et non plus un compte écrit en dur par chaque provider. */
-    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
-    gap: 8px;
-    margin-top: 2px;
-}
-/* Un montant long ne pousse pas la tuile hors de son cadre : il se coupe à la ligne
-   plutôt que d'élargir la piste (`min-width: auto` est la valeur par défaut d'un
-   élément de grille, et c'est elle qui laissait déborder). */
-.jsb-autocomplete-indicators > div { min-width: 0; }
-.jsb-indicator-value { overflow-wrap: anywhere; }
-
-/* Chaque colonne = une tuile KPI autonome (fini la bande grise unique). */
-.jsb-autocomplete-indicators > div {
-    background-color: #f8f9fa; /* Fond gris très clair */
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
-    padding: 8px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px; /* Espace entre métriques d'une même colonne */
-}
-
-/* Colonne mise en avant selon le contexte de facturation (accent cobalt). */
-.jsb-indicator-highlight {
-    background-color: #e8f0fb !important;
-    border-color: #0047AB !important;
-}
-
-.jsb-indicator-label {
-    display: block;
-    font-size: 0.65rem;
-    letter-spacing: 0.02em;
-    color: #6c757d;
-    text-transform: uppercase;
-    margin-bottom: 2px;
-    line-height: 1.2;
-}
-
-.jsb-indicator-value {
-    display: block;
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: #212529;
-    line-height: 1.2;
-}
-
-/* Variantes de couleurs pour les valeurs (états sémantiques de la charte) */
-.jsb-indicator-value.text-success { color: #198754 !important; }
-.jsb-indicator-value.text-danger { color: #dc3545 !important; }
-.jsb-indicator-value.text-warning { color: #e69500 !important; } /* Orange charte, contraste AA sur fond clair */
-.jsb-indicator-value.text-cobalt { color: #0047AB !important; }
-
 /* ------------------------------------------------------------------ */
 /* LA VALEUR CHOISIE N'EST PAS UNE OPTION DE LISTE                     */
 /* ------------------------------------------------------------------ */
@@ -4400,8 +4344,7 @@ tr:hover .list-row-actions-container,
  */
 
 /* L'aide au choix quitte le champ, et reste dans la déroulante où elle sert. */
-.ts-control .item:has(.jsb-autocomplete-item) .jsb-autocomplete-aide,
-.ts-control .item:has(.jsb-autocomplete-item) .jsb-autocomplete-indicators {
+.ts-control .item:has(.jsb-autocomplete-item) .jsb-autocomplete-aide {
     display: none;
 }
 
