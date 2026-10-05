@@ -39,6 +39,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use App\Service\Workspace\BasculeDeCabinet;
 
 #[Route('/espacedetravail', name: 'app_espace_de_travail_component.')]
 #[IsGranted('ROLE_USER')]
@@ -62,6 +63,7 @@ class EspaceDeTravailComponentController extends AbstractController
         private PorteDeKet $porteDeKet,
         private AssistantConversationRepository $conversationRepository,
         private AssistantParametresRepository $parametresRepository,
+        private BasculeDeCabinet $bascule,
     ) {}
 
     protected function getCollectionMap(): array
@@ -83,19 +85,19 @@ class EspaceDeTravailComponentController extends AbstractController
     public function index(int $idInvite, int $idEntreprise, Request $request): Response
     {
         // AMÉLIORATION : On passe explicitement les IDs de la route pour une validation sécurisée.
-        $access = $this->validateWorkspaceAccess($idEntreprise, $idInvite);
-
+        // OUVRIR, ET NON SEULEMENT VALIDER. `BasculeDeCabinet` verifie que l'invite
+        // presente appartient A L'UTILISATEUR COURANT autant qu'a ce cabinet -- l'ancien
+        // validateWorkspaceAccess() ne posait que la seconde question, et la coherence
+        // interne d'un couple ne dit rien de celui qui le presente.
+        $invite = $this->bascule->ouvrir($idInvite, $idEntreprise);
+        $access = ['entreprise' => $invite->getEntreprise(), 'invite' => $invite];
         // On synchronise l'entreprise « connectée » avec l'espace de travail courant.
         // Les services et formulaires d'autocomplétion (ex: GroupeAutocompleteField) filtrent
         // par `getConnectedTo()` : sans cette synchronisation, l'endpoint d'autocomplétion
         // (route UX autonome, sans contexte de workspace) utiliserait une entreprise obsolète
         // et ne renverrait aucune suggestion. On n'écrit en base que si la valeur change.
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-        if ($user->getConnectedTo() !== $access['entreprise']) {
-            $user->setConnectedTo($access['entreprise']);
-            $this->em->flush();
-        }
+        // L'ouverture passe par le gardien : il verifie que l'invite est LE NOTRE
+        // avant d'ecrire quoi que ce soit (voir BasculeDeCabinet).
 
         // ── LE TERMINAL CHOISIT LA SURFACE ──────────────────────────────────────
         //
@@ -264,7 +266,7 @@ class EspaceDeTravailComponentController extends AbstractController
     public function loadComponent(int $idInvite, int $idEntreprise, Request $request, LoggerInterface $logger): Response
     {
         // AMÉLIORATION : On passe explicitement les IDs de la route pour une validation sécurisée.
-        $this->validateWorkspaceAccess($idEntreprise, $idInvite);
+        $this->bascule->ouvrir($idInvite, $idEntreprise);
 
         $logger->info('[ESPACE_DE_TRAVAIL] API /load-component reçue, redirection vers le contrôleur compétent.', [
             'params' => $request->query->all()
@@ -305,16 +307,16 @@ class EspaceDeTravailComponentController extends AbstractController
     )]
     public function searchAutocomplete(int $idInvite, int $idEntreprise, Request $request): JsonResponse
     {
-        $access = $this->validateWorkspaceAccess($idEntreprise, $idInvite);
-
+        // OUVRIR, ET NON SEULEMENT VALIDER. `BasculeDeCabinet` verifie que l'invite
+        // presente appartient A L'UTILISATEUR COURANT autant qu'a ce cabinet -- l'ancien
+        // validateWorkspaceAccess() ne posait que la seconde question, et la coherence
+        // interne d'un couple ne dit rien de celui qui le presente.
+        $invite = $this->bascule->ouvrir($idInvite, $idEntreprise);
+        $access = ['entreprise' => $invite->getEntreprise(), 'invite' => $invite];
         // Synchronise l'entreprise « connectée » (voir index()) pour que le scope de
         // recherche et l'autocomplétion reflètent bien le workspace courant.
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-        if ($user->getConnectedTo() !== $access['entreprise']) {
-            $user->setConnectedTo($access['entreprise']);
-            $this->em->flush();
-        }
+        // L'ouverture passe par le gardien : il verifie que l'invite est LE NOTRE
+        // avant d'ecrire quoi que ce soit (voir BasculeDeCabinet).
 
         $empty = new JsonResponse(['results' => [], 'next_page' => null]);
 

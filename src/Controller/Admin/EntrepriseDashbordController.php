@@ -23,6 +23,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use App\Service\Workspace\CabinetActif;
 
 #[Route("/admin/entreprise_dashbord", name: 'admin.entreprise_dashboard.')]
 #[IsGranted('ROLE_USER')]
@@ -35,6 +36,7 @@ class EntrepriseDashbordController extends AbstractController
         private EntrepriseRepository $entrepriseRepository,
         private WorkspaceAccessResolver $accessResolver,
         private OnboardingCompletude $onboardingCompletude,
+        private CabinetActif $cabinetActif,
     ) {
     }
 
@@ -64,15 +66,21 @@ class EntrepriseDashbordController extends AbstractController
     public function index(int $idEntreprise, Request $request, JSBTableauDeBordBuilder $jSBTableauDeBordBuilder)
     {
         /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Entreprise $ese */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        //on signale que le user s'est connecté à cette entreprise
-        $user->setConnectedTo($entreprise);
-        $this->manager->persist($user);
-        $this->manager->flush();
+        // UNE PAGE DE CONSULTATION NE MODIFIE JAMAIS L'ETAT.
+        //
+        // Ces lignes prenaient l'identifiant dans l'URL et ECRIVAIENT `connectedTo` sans
+        // un seul controle : un GET suffisait a faire basculer le cabinet actif de
+        // n'importe quel compte authentifie vers n'importe quel cabinet. Et le plantage
+        // survenant plus loin dans l'action n'annulait rien -- le flush avait deja eu lieu.
+        //
+        // On n'a pas protege cette ecriture : on l'a RETIREE. La bascule ne passe plus que
+        // par l'espace de travail, qui la fait explicitement via BasculeDeCabinet. Ici, on
+        // se contente de lire le cabinet deja ouvert ; s'il ne correspond pas a l'URL, on
+        // renvoie au choix d'espace plutot que de basculer dans le dos de l'utilisateur.
+        $entreprise = $this->cabinetActif->entreprise();
+        if ($entreprise === null || $entreprise->getId() !== $idEntreprise) {
+            return $this->redirectToRoute('admin.entreprise.index');
+        }
 
         //Initialisation du formulaire de recherche
         /** @var CriteresRechercheDashBordDTO $criteres */
