@@ -1086,8 +1086,20 @@ trait ControllerUtilsTrait
                 continue;
             }
 
+            // HORS PÉRIMÈTRE : L'ONGLET DISPARAÎT, IL NE SE CONTENTE PAS DE SE TAIRE.
+            //
+            // La liste était déjà gardée (handleCollectionApiRequest refuse la collection
+            // dont l'enfant n'est pas lisible), mais le BOUTON de l'onglet, lui, restait
+            // offert : on cliquait, et le panneau rendait une erreur de chargement. On
+            // promettait une porte pour la fermer au nez.
+            //
+            // Le droit se lit ici de toute façon, pour la pastille de compte : on s'en
+            // sert aussi pour retirer l'onglet. Un geste, deux surfaces d'accord.
             $classeEnfant = $collectionMap[$fieldName] ?? null;
             if ($classeEnfant === null || !$this->mayAccessEntity($classeEnfant, Invite::ACCESS_LECTURE)) {
+                if ($classeEnfant !== null) {
+                    $formCanvas['form_layout'][$index]['hidden'] = true;
+                }
                 continue;
             }
 
@@ -1770,6 +1782,23 @@ trait ControllerUtilsTrait
 
         $page = ($request !== null) ? max(1, $request->query->getInt('page', 1)) : 1;
         $parentEntity = $this->findParentOrNew($parentEntityClass, $id);
+
+        // LE PARENT AUSSI DOIT ÊTRE DU CABINET OUVERT.
+        //
+        // Le contrôle ci-dessus juge le TYPE de la collection (« les sinistres sont-ils
+        // dans mon périmètre ? ») ; il ne dit rien du CLIENT #34615 dont on demande les
+        // sinistres. L'identifiant vient de l'URL, `findParentOrNew()` fait un `find()`
+        // nu, et aucun SQLFilter Doctrine n'existe dans ce projet : la collection d'un
+        // parent d'un autre cabinet se lisait donc entièrement.
+        //
+        // Même garde, même service et même verdict 404 que la suppression — un refus
+        // nommé confirmerait l'existence de la ligne qu'on protège.
+        //
+        // `$id === 0` reste hors garde : c'est le parent qui n'existe pas encore (mode
+        // différé), il n'a pas de cabinet à comparer.
+        if ($id !== 0) {
+            $this->appartenance()->exigerLeCabinetOuvert($parentEntity, $this->getEntityName($parentEntity));
+        }
 
         // Preload batch des relations avant le calcul des indicateurs (évite N lazy-loads).
         $this->canvasBuilder->batchPreloadForCollection([$parentEntity]);
