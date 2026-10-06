@@ -24,8 +24,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  * l'autocomplétion. On ressaisissait ce qu'on venait de quitter.
  *
  * ── CE QUE CE BANC PROTÈGE ──────────────────────────────────────────────────────────
- *   1. l'action existe, et SANS FAMILLE — rangée avec les autres, elle se déplierait au
- *      lieu de se voir, alors que c'est le geste qu'on vient faire ;
+ *   1. l'action existe, et elle est rangée dans la famille « Créer… » ;
  *   2. la barre d'outils reste LISIBLE : elle ne montre que quatre entrées en ligne, et
  *      le client en portait déjà sept à plat ;
  *   3. la route rend le canevas de PISTE — celui de Client n'ouvrirait pas le bon
@@ -170,10 +169,17 @@ class ClientCreerPisteActionTest extends WebTestCase
     }
 
     /**
-     * L'ACTION EXISTE, ET ELLE NE SE DÉPLIE PAS.
+     * L'ACTION EXISTE, ET ELLE EST RANGÉE DANS « Créer… ».
      *
-     * Une famille coûte un clic de plus. C'est justifié pour un relevé de compte qu'on
-     * consulte de temps en temps ; pas pour le geste qu'on vient précisément faire.
+     * Elle a d'abord vécu à plat, seule de son espèce : une famille coûte un clic de plus,
+     * et c'était cher pour le geste qu'on vient précisément faire. « Créer un sinistre »
+     * l'a rejointe, et à deux elles remplissaient la barre — quatre entrées, soit le
+     * plafond exact au-delà duquel le surplus tombe dans « Autres actions ».
+     *
+     * La famille leur rend cette place, et elle vaut CONVENTION : toute action de création
+     * future rejoint « Créer… » plutôt que d'ouvrir une famille de plus. Rien n'est perdu
+     * quand il n'en reste qu'une de visible — actions-groupees.js remet alors la famille à
+     * plat tout seul.
      */
     public function testLActionEstDeclareeEtResteVisibleDEmblee(): void
     {
@@ -191,8 +197,12 @@ class ClientCreerPisteActionTest extends WebTestCase
         self::assertSame('Créer une piste', $creerPiste['label']);
         self::assertSame('piste', $creerPiste['icon'], 'L\'alias vient d\'IconCanvasProvider, jamais un nom en dur.');
         self::assertSame('/admin/client/api/%id%/piste-context', $creerPiste['url']);
-        self::assertArrayNotHasKey('groupe', $creerPiste,
-            'Sans famille : rangée avec les autres, elle se déplierait au lieu de se voir.',
+        self::assertSame('Créer…', $creerPiste['groupe'] ?? null,
+            'Toute action de création se range dans la même famille : c\'est la convention.',
+        );
+        self::assertSame('action:add', $creerPiste['groupe_icone'] ?? null,
+            'L\'icône de la famille est celle de l\'ajout — le même signe pour le même geste '
+            . 'partout. Alias d\'IconCanvasProvider, jamais un nom en dur.',
         );
         self::assertArrayNotHasKey('condition', $creerPiste,
             'On peut toujours ouvrir une affaire à un client, quel que soit son état.',
@@ -208,6 +218,9 @@ class ClientCreerPisteActionTest extends WebTestCase
      *
      * Le regroupement en familles ramène l'affichage à trois entrées. Ce test ne compte
      * pas des boutons : il vérifie que le PLAFOND ne peut plus être franchi en silence.
+     *
+     * ⚠ « Créer une piste » et « Créer un sinistre » ne comptent QUE POUR UNE : si une
+     * création future sortait de la famille « Créer… », ce test le dirait.
      */
     public function testLesActionsSeRangentSousLePlafondDeLaBarre(): void
     {
@@ -233,6 +246,9 @@ class ClientCreerPisteActionTest extends WebTestCase
         );
         self::assertArrayHasKey('Relevé de compte', $entrees);
         self::assertArrayHasKey('Portefeuille', $entrees);
+        self::assertArrayHasKey('Créer…', $entrees,
+            'Les deux créations se rangent ensemble, et ne pèsent donc qu\'une entrée.',
+        );
     }
 
     /** La route rend le canevas de PISTE : celui du client n'ouvrirait pas le bon dialogue. */

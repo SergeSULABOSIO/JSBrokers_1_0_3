@@ -108,25 +108,29 @@ class ClientController extends AbstractController
     }
 
     /**
-     * OUVRIR UNE PISTE AU CLIENT SÉLECTIONNÉ — le contexte dont le dialogue a besoin.
+     * OUVRIR UN DOSSIER AU CLIENT SÉLECTIONNÉ — le contexte dont le dialogue a besoin.
      *
      * ── POURQUOI UNE ROUTE, ET POURQUOI ICI ─────────────────────────────────────
-     * Le dialogue qui va s'ouvrir est celui d'une PISTE, pas d'un client : il lui faut
-     * le canevas de formulaire de Piste, que la rubrique Clients n'a pas sous la main.
-     * C'est le même besoin — et le même calque — que
+     * Le dialogue qui va s'ouvrir est celui d'une PISTE ou d'un SINISTRE, pas d'un
+     * client : il lui faut le canevas de formulaire de l'enfant, que la rubrique Clients
+     * n'a pas sous la main. C'est le même besoin — et le même calque — que
      * {@see AvenantController::getPisteDeriveeContext()}.
      *
-     * ── LE DROIT REGARDÉ EST CELUI DE LA PISTE ──────────────────────────────────
-     * Le geste CRÉE une piste ; il ne lit pas un client. Demander le droit de lecture
-     * sur Client laisserait ouvrir un formulaire que l'enregistrement refusera ensuite,
-     * ce qui se découvre après la saisie.
+     * ── LE DROIT REGARDÉ EST CELUI DE L'ENFANT ──────────────────────────────────
+     * Le geste CRÉE une piste ou un sinistre ; il ne lit pas un client. Demander le droit
+     * de lecture sur Client laisserait ouvrir un formulaire que l'enregistrement refusera
+     * ensuite, ce qui se découvre après la saisie.
      *
-     * Déclarée AVANT la route fourre-tout api/{id}/{collectionName}/{usage}.
+     * ── UN SEUL CORPS POUR LES DEUX GESTES ──────────────────────────────────────
+     * Piste et sinistre ne diffèrent que par l'entité visée : le droit, le scoping et la
+     * forme de la réponse sont identiques. Les écrire deux fois, c'était se condamner à
+     * corriger deux fois le jour où le scoping changerait — et à n'en corriger qu'une.
+     *
+     * @param class-string $entiteEnfant l'entité que le dialogue va créer
      */
-    #[Route('/api/{id}/piste-context', name: 'api.piste_context', requirements: ['id' => Requirement::DIGITS], methods: ['GET'], priority: 1)]
-    public function getPisteContext(Client $client): Response
+    private function contexteDeCreationPourLeClient(Client $client, string $entiteEnfant): Response
     {
-        if (!$this->mayAccessEntity(\App\Entity\Piste::class, \App\Entity\Invite::ACCESS_ECRITURE)) {
+        if (!$this->mayAccessEntity($entiteEnfant, \App\Entity\Invite::ACCESS_ECRITURE)) {
             return $this->accessDeniedJson();
         }
 
@@ -140,8 +144,25 @@ class ClientController extends AbstractController
 
         return $this->json([
             'clientId'   => $client->getId(),
-            'formCanvas' => $this->canvasBuilder->getEntityFormCanvas(new \App\Entity\Piste(), $entreprise->getId()),
+            'formCanvas' => $this->canvasBuilder->getEntityFormCanvas(new $entiteEnfant(), $entreprise->getId()),
         ]);
+    }
+
+    /**
+     * Ouvrir une AFFAIRE au client. Déclarée AVANT la route fourre-tout
+     * api/{id}/{collectionName}/{usage}, que sa forme ferait sinon capturer.
+     */
+    #[Route('/api/{id}/piste-context', name: 'api.piste_context', requirements: ['id' => Requirement::DIGITS], methods: ['GET'], priority: 1)]
+    public function getPisteContext(Client $client): Response
+    {
+        return $this->contexteDeCreationPourLeClient($client, \App\Entity\Piste::class);
+    }
+
+    /** Déclarer un SINISTRE au client. Même priorité, même raison. */
+    #[Route('/api/{id}/sinistre-context', name: 'api.sinistre_context', requirements: ['id' => Requirement::DIGITS], methods: ['GET'], priority: 1)]
+    public function getSinistreContext(Client $client): Response
+    {
+        return $this->contexteDeCreationPourLeClient($client, \App\Entity\NotificationSinistre::class);
     }
 
     /**

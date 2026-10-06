@@ -132,6 +132,47 @@ class ClientType extends AbstractType
                 'label' => 'Documents',
                 'entry_options' => ['label' => false],
                 'mapped' => false,
+            ])
+            // ── LES AFFAIRES ET LES DOSSIERS DU CLIENT, SUR SA PROPRE FICHE ──────────
+            //
+            // Voir les pistes ouvertes à un client obligeait à quitter sa fiche, à changer
+            // de rubrique, puis à l'y rechercher — celui-là même qu'on venait de quitter.
+            //
+            // ⚠ CES DEUX CHAMPS SONT INDISPENSABLES, et pas seulement décoratifs : le
+            // gabarit d'une rangée de collection est gardé par
+            // `{% if form[field_code] is defined %}` (_form_row.html.twig). Un onglet
+            // déclaré au canevas sans son champ ici s'affiche avec un PANNEAU VIDE —
+            // c'est l'état actuel de la fiche Risque, à ne pas reproduire.
+            //
+            // ⚠ `prototype => false` : LE GABARIT D'AJOUT N'EST LU PAR PERSONNE. Ajouter
+            // un élément ouvre le dialogue de l'enfant (itemFormUrl) ; le prototype finit
+            // dans un `display:none` et aucun `data-prototype` n'est consommé nulle part.
+            // Le construire ferait instancier ET rendre tout l'arbre des formulaires sous
+            // PisteType (cotations → tranches, avenants…) à chaque ouverture d'une fiche
+            // client, y compris pour corriger un numéro de téléphone. La clé ferme aussi,
+            // au passage, la récursion ClientType → Piste → ConditionPartage → Risque →
+            // (pistes) qui s'ouvrirait le jour où RisqueType déclarerait ses pistes.
+            // `allow_add` reste VRAI : c'est lui — et non le prototype — que
+            // FormTreeInspector lit pour ouvrir la même surface à l'assistant.
+            ->add('pistes', CollectionType::class, [
+                'entry_type' => PisteType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'label' => 'Pistes',
+                'entry_options' => ['label' => false],
+                'mapped' => false,
+                'prototype' => false,
+            ])
+            ->add('notificationSinistres', CollectionType::class, [
+                'entry_type' => NotificationSinistreType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'label' => 'Sinistres',
+                'entry_options' => ['label' => false],
+                'mapped' => false,
+                'prototype' => false,
             ]);
     }
 

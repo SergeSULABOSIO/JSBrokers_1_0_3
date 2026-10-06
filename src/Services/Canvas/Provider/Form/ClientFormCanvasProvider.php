@@ -129,21 +129,41 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                     "url"       => "/admin/client/api/retirer-portefeuille",
                     "condition" => ["field" => "hasPortefeuille", "value" => true],
                 ],
-                // ── OUVRIR UNE AFFAIRE AU CLIENT QU'ON A SOUS LES YEUX ──────────────
+                // ── OUVRIR UN DOSSIER AU CLIENT QU'ON A SOUS LES YEUX ───────────────
                 //
-                // Sans elle, décider d'ouvrir une piste obligeait à changer de rubrique,
-                // à créer une piste à blanc, puis à y rechercher le client — celui-là
-                // même qu'on venait de quitter.
+                // Sans elles, décider d'ouvrir une piste ou de déclarer un sinistre
+                // obligeait à changer de rubrique, à créer la fiche à blanc, puis à y
+                // rechercher le client — celui-là même qu'on venait de quitter.
                 //
-                // SANS FAMILLE, ET C'EST VOULU : c'est le geste qu'on vient faire ici,
-                // il doit se voir du premier coup d'œil et non se déplier.
-                // SANS CONDITION non plus : on peut toujours ouvrir une affaire à un
-                // client, quel que soit son état.
+                // ── « Créer… » EST LA FAMILLE D'ACCUEIL DE TOUTE CRÉATION ───────────
+                //
+                // Ces deux gestes étaient d'abord à plat, la piste étant seule de son
+                // espèce. À deux, ils remplissaient la barre : quatre entrées, soit le
+                // plafond exact au-delà duquel le surplus tombe dans « Autres actions ».
+                // La famille leur rend cette place, et elle en fait une CONVENTION : toute
+                // action de création future rejoint « Créer… », avec la même icône
+                // `action:add` — celle que porte déjà le bouton « Ajouter » des
+                // collections, donc le même signe pour le même geste partout.
+                //
+                // Rien n'est perdu quand il n'y a qu'un membre : actions-groupees.js remet
+                // une famille d'un seul visible à plat tout seul.
+                //
+                // SANS CONDITION : on peut toujours ouvrir un dossier à un client, quel
+                // que soit son état.
                 [
-                    "label" => "Créer une piste",
-                    "icon"  => "piste",
-                    "event" => "ui:client.creer-piste",
-                    "url"   => "/admin/client/api/%id%/piste-context",
+                    "label"  => "Créer une piste",
+                    "icon"   => "piste",
+                    "groupe" => "Créer…",
+                    "groupe_icone" => "action:add",
+                    "event"  => "ui:client.creer-piste",
+                    "url"    => "/admin/client/api/%id%/piste-context",
+                ],
+                [
+                    "label"  => "Créer un sinistre",
+                    "icon"   => "sinistre",
+                    "groupe" => "Créer…",
+                    "event"  => "ui:client.creer-sinistre",
+                    "url"    => "/admin/client/api/%id%/sinistre-context",
                 ],
             ],
             // Entête contextuel du volet de saisie (pastille + description).
@@ -167,6 +187,8 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                 "partenaires" => "partenaire",
                 "contacts"    => "contact",
                 "documents"   => "document",
+                "pistes"      => "piste",
+                "notificationSinistres" => "sinistre",
             ],
         ];
         $layout = $this->buildClientLayout($object, $isParentNew);
@@ -250,6 +272,30 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
         $collections = [
             // Ligne 9: "Contacts"
             ['fieldName' => 'contacts', 'entityRouteName' => 'contact', 'formTitle' => 'Contact', 'ongletTitre' => 'Contacts', 'parentFieldName' => 'client'],
+
+            // ── LES AFFAIRES DU CLIENT ──────────────────────────────────────────────
+            // Le total additionne la prime des cotations SOUSCRITES de chaque piste
+            // (indicateur calculé primeTotale) : c'est ce que ce client pèse en portefeuille.
+            ['fieldName' => 'pistes', 'entityRouteName' => 'piste', 'formTitle' => 'Piste', 'ongletTitre' => 'Pistes', 'parentFieldName' => 'client', 'totalizableField' => 'primeTotale'],
+
+            // ── LES SINISTRES DU CLIENT ─────────────────────────────────────────────
+            //
+            // 🔴 `parentRouteName` EST INDISPENSABLE ICI, et c'est la seule subtilité de
+            // cet onglet. Le champ par lequel un sinistre désigne son client s'appelle
+            // `assure`, pas `client` : sans l'échappatoire, getCollectionWidgetConfig()
+            // fabriquerait listUrl = /admin/assure/api/... — une route qui n'existe pas,
+            // et un onglet muet. `parentFieldName` doit RESTER 'assure' : c'est un nom de
+            // CHAMP (le setter de l'enfant, la clé du FormData), pas un segment d'URL.
+            //
+            // PAS DE TAMPON, contrairement aux pistes. Un sinistre porte sur une police
+            // déjà souscrite ; un client qu'on est en train de saisir n'en a aucune.
+            // L'onglet reste VISIBLE — on voit qu'il existe et qu'il attend — mais sa
+            // liste dit « Commencez par enregistrer » et le bouton d'ajout est retiré.
+            // `hidden => false` est obligatoire : sans lui, le défaut
+            // `$isParentNew && $isDisabled` ferait disparaître l'onglet au lieu de le
+            // désarmer.
+            ['fieldName' => 'notificationSinistres', 'entityRouteName' => 'notificationsinistre', 'formTitle' => 'Sinistre', 'ongletTitre' => 'Sinistres', 'parentFieldName' => 'assure', 'parentRouteName' => 'client', 'totalizableField' => 'evaluationChiffree', 'disabled' => $isParentNew, 'hidden' => false],
+
             // Ligne 9: "Documents"
             ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'ongletTitre' => 'Documents', 'parentFieldName' => 'client'],
         ];

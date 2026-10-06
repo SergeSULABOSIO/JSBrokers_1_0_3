@@ -1,5 +1,8 @@
 /**
- * OUVRIR UNE PISTE AU CLIENT SÉLECTIONNÉ — et survivre au rechargement.
+ * OUVRIR UN DOSSIER AU CLIENT SÉLECTIONNÉ — et survivre au rechargement.
+ *
+ * Deux gestes, une seule mécanique : « Créer une piste » et « Créer un sinistre » passent
+ * par le même handler, et ce fichier verrouille autant leur routage que leur mutualisation.
  *
  * ── LE PIÈGE QUE CE CONTRAT FERME ───────────────────────────────────────────────────
  * Le préremplissage d'une piste depuis un client se demande par `?idClient=`. Il serait
@@ -25,16 +28,35 @@ import { fileURLToPath } from 'node:url';
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'assets', 'controllers');
 const cerveau = readFileSync(join(RACINE, 'cerveau_controller.js'), 'utf8');
 
-test('le cerveau route l\'action de la rubrique Clients', () => {
-    assert.match(
-        cerveau,
-        /case 'ui:client\.creer-piste':\s*\n\s*this\.handleClientCreerPiste\(payload\);/,
-        'Sans ce `case`, le bouton serait inerte : la barre d\'outils diffuse, le cerveau décide.',
+test('le cerveau route les DEUX actions de la rubrique Clients', () => {
+    for (const [evenement, libelle] of [
+        ['ui:client.creer-piste', 'la piste'],
+        ['ui:client.creer-sinistre', 'le sinistre'],
+    ]) {
+        const motif = new RegExp(
+            `case '${evenement.replace('.', '\\.')}':\\s*\\n\\s*`
+            + `this\\.handleClientCreerDossier\\(payload, '${libelle}'\\);`,
+        );
+        assert.match(cerveau, motif,
+            `Sans ce \`case\`, « ${evenement} » serait inerte : la barre d'outils diffuse, `
+            + 'le cerveau décide.');
+    }
+});
+
+test('un seul corps sert les deux gestes', () => {
+    assert.ok(
+        !/async handleClientCreerPiste\(/.test(cerveau) && !/async handleClientCreerSinistre\(/.test(cerveau),
+        'Piste et sinistre suivent la même mécanique : deux copies auraient divergé au '
+        + 'premier correctif. Un seul handler, paramétré par le mot à dire.',
+    );
+    assert.equal(
+        (cerveau.match(/async handleClientCreerDossier\(/g) || []).length, 1,
+        'Le handler mutualisé doit exister une fois, et une seule.',
     );
 });
 
 test('idClient voyage par le CONTEXTE, jamais cuit dans l\'URL du formulaire', () => {
-    const debut = cerveau.indexOf('async handleClientCreerPiste(payload) {');
+    const debut = cerveau.indexOf('async handleClientCreerDossier(payload, libelle) {');
     assert.ok(debut >= 0, 'Le handler doit exister.');
     const handler = cerveau.slice(debut, debut + 2000);
 
@@ -60,12 +82,12 @@ test('le contexte idClient est bien propagé en query au get-form', () => {
 });
 
 test('le préremplissage n\'est pas réécrit côté navigateur', () => {
-    const debut = cerveau.indexOf('async handleClientCreerPiste(payload) {');
+    const debut = cerveau.indexOf('async handleClientCreerDossier(payload, libelle) {');
     const handler = cerveau.slice(debut, debut + 2000);
 
     assert.ok(
         !/setNom|typeAvenant|exercice/i.test(handler),
-        'La règle de préremplissage vit dans PisteController, partagée avec le relevé de '
-        + 'compte. En porter une seconde ici les ferait diverger.',
+        'La règle de préremplissage vit dans PisteController et NotificationSinistreController, '
+        + 'partagée avec le relevé de compte. En porter une seconde ici les ferait diverger.',
     );
 });
