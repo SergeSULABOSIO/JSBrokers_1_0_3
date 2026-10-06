@@ -1692,6 +1692,17 @@ trait ControllerUtilsTrait
         if (!$this->mayAccessEntity($collectionMap[$collectionName], Invite::ACCESS_LECTURE)) {
             throw $this->createAccessDeniedException("Cette collection n'est pas dans votre périmètre d'accès.");
         }
+        // LA REQUETE COURANTE, SANS ALLER LA DEMANDER A QUARANTE-CINQ CONTROLEURS.
+        //
+        // Le parametre existe depuis toujours, et UN SEUL appelant le renseignait
+        // (ConditionPartageController). Partout ailleurs il valait `null`, si bien que
+        // `?page=` et `?ids=` etaient lus sur un objet absent et ignores EN SILENCE : une
+        // pagination sans effet, un rattachement invisible en creation. Le trait tient deja
+        // un `RequestStack` injecte par setter autowire, pour exactement ce genre de besoin ;
+        // on le lit ici plutot que de retoucher quarante-quatre signatures. L'argument reste
+        // accepte : un appelant qui le passe gagne.
+        $request ??= $this->requestStack?->getCurrentRequest();
+
         $page = ($request !== null) ? max(1, $request->query->getInt('page', 1)) : 1;
         $parentEntity = $this->findParentOrNew($parentEntityClass, $id);
 
