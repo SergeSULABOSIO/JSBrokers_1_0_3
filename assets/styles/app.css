@@ -3517,6 +3517,18 @@ tr.row-selected:hover > td {
     100% { background-position: -200% 0; }
 }
 
+/* WCAG 2.3.3 : on retire le MOUVEMENT, pas le retour visuel — le bloc gris reste, il dit
+   toujours « ceci se charge ». La regle vise le PSEUDO-ELEMENT, seul porteur de
+   l'animation ci-dessus : ecrite sur `.skeleton-line`, elle n'aurait rien neutralise.
+   Elle couvre d'un coup les cinq squelettes du projet, celui du total compris. */
+@media (prefers-reduced-motion: reduce) {
+    .skeleton-line::after,
+    .skeleton-row::after {
+        animation: none;
+        background: var(--sk-soft);
+    }
+}
+
 /* LE SQUELETTE D'UN TOTAL, dans la cellule de valeur du pied d'une collection.
    Rien n'est redessine : la base `.skeleton-line` apporte le gris, le degrade, les jetons
    de theme et l'animation. Ne restent que les dimensions — et `1em` de haut pour que la
