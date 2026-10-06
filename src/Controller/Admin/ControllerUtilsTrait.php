@@ -560,14 +560,24 @@ trait ControllerUtilsTrait
      * Les indicateurs calculés sont chargés comme pour n'importe quelle ligne — ils vaudront
      * simplement zéro, l'entité n'ayant encore aucune histoire.
      *
+     * REND AUSSI SA VALEUR, et non la seule ligne : le navigateur la gardera dans son
+     * tampon et nous la rendra au moment d'afficher la liste, pour que le PIED DE TOTAL
+     * compte ce qui attend d'être écrit. Lui seul sait ce qu'il a saisi ; nous seuls savons
+     * le calculer. Elle est lue sur `colonneValeur.code` — la colonne que la ligne affiche —
+     * afin que le pied somme très exactement ce que la colonne montre.
+     *
      * @param array $data la charge soumise, d'où proviennent les options d'action de ligne
+     *
+     * @return array{ligne: string, valeur: float|null}
      */
-    private function rendreLigneEnAttente(object $entity, string $entityClass, array $data): string
+    private function rendreLigneEnAttente(object $entity, string $entityClass, array $data): array
     {
         $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
         $this->loadCalculatedValues($entityCanvas, $entity);
 
-        return $this->renderView('components/_list_row.html.twig', [
+        $colonneValeur = $this->resoudreColonneValeur($entityClass, $data['ligne_colonne_valeur'] ?? null);
+
+        $ligne = $this->renderView('components/_list_row.html.twig', [
             'entity' => $entity,
             'listeCanvas' => $this->canvasBuilder->getListeCanvas($entityClass),
             'entite_nom' => $this->getEntityName($entityClass),
@@ -578,7 +588,7 @@ trait ControllerUtilsTrait
             // MEMES CELLULES QUE LES LIGNES DU SERVEUR. Sans cette resolution, la ligne du
             // tampon rendait toutes les colonnes numeriques du canevas enfant la ou le
             // tableau n'en a qu'une : deux comptes de <td> dans un meme <tbody>.
-            'colonneValeur' => $this->resoudreColonneValeur($entityClass, $data['ligne_colonne_valeur'] ?? null),
+            'colonneValeur' => $colonneValeur,
             'listActionOptions' => [
                 // Une collection de RATTACHEMENT dit « Retirer » plutôt que « Supprimer ».
                 // Le navigateur transmet ces libellés : ils vivent dans la configuration du
@@ -589,7 +599,59 @@ trait ControllerUtilsTrait
                 'hideEditAction' => true,
             ],
         ]);
+
+        return [
+            'ligne' => $ligne,
+            // `null` quand la collection n'a rien a chiffrer : il n'y a alors pas de pied
+            // de total non plus, et le navigateur ne transmettra rien.
+            'valeur' => $colonneValeur['code'] !== null
+                ? $this->valeurTotalisable($entity, $colonneValeur['code'])
+                : null,
+        ];
     }
+    /**
+     * L'accesseur de propriete, construit UNE fois pour tout le trait.
+     *
+     * `createPropertyAccessor()` monte un petit graphe d'extracteurs : en construire un par
+     * element d'une collection serait payer ce montage a chaque ligne d'un total.
+     */
+    private ?\Symfony\Component\PropertyAccess\PropertyAccessorInterface $accesseurTotal = null;
+
+    /**
+     * LA VALEUR TOTALISABLE D'UN ELEMENT, LUE EN UN SEUL ENDROIT.
+     *
+     * DANS LE MEME ORDRE QUE `attribute()` EN TWIG, qui rend la cellule : propriete
+     * accessible d'abord, accesseur ensuite. L'ordre inverse — celui de PropertyAccessor
+     * seul — ferait diverger le pied de sa colonne des qu'un getter et une propriete
+     * calculee portent le meme nom, et changerait au passage des totaux d'aujourd'hui.
+     *
+     * `loadAllCalculatedValues()` ecrit par simple affectation (`$entity->{$cle} = …`) sur
+     * des proprietes PUBLIQUES DECLAREES (`public ?float $montant_final = null;`) : aucune
+     * entite du projet ne porte `#[AllowDynamicProperties]`, et PHP 8.2 les deprecierait.
+     * `get_object_vars()`, appele hors de la classe, voit exactement ce perimetre-la.
+     *
+     * Il est aussi plus sur que la lecture qu'il remplace : `property_exists()` repond
+     * `true` pour une propriete PRIVEE, et l'acces direct levait alors une `Error` fatale.
+     * Ce cas descend desormais vers l'accesseur, qui saura passer par le getter.
+     *
+     * Un total ne leve pas : un champ introuvable n'ajoute rien.
+     */
+    private function valeurTotalisable(object $item, string $champ): float
+    {
+        $this->canvasBuilder->loadAllCalculatedValues($item);
+
+        $proprietes = get_object_vars($item);
+        if (array_key_exists($champ, $proprietes)) {
+            return (float) ($proprietes[$champ] ?? 0);
+        }
+
+        $accesseur = $this->accesseurTotal ??= \Symfony\Component\PropertyAccess\PropertyAccess::createPropertyAccessor();
+
+        return $accesseur->isReadable($item, $champ)
+            ? (float) ($accesseur->getValue($item, $champ) ?? 0)
+            : 0.0;
+    }
+
     /**
      * LA COLONNE DE VALEUR D'UNE COLLECTION, RESOLUE UNE SEULE FOIS.
      *
@@ -1404,8 +1466,11 @@ trait ControllerUtilsTrait
                     //
                     // L'entité est complète — elle vient de passer toute la validation — mais
                     // n'a pas d'id : le tampon posera le sien sur la ligne.
-                    'ligne' => $this->rendreLigneEnAttente($entity, $entityClass, $data),
-                ]);
+                    //
+                    // `ligne` ET `valeur` : la seconde voyagera dans le tampon et nous
+                    // reviendra pour le pied de total, que la fiche parente n'existe pas
+                    // encore n'y changeant rien.
+                ] + $this->rendreLigneEnAttente($entity, $entityClass, $data));
             }
 
             // MÉTRAGE TOKENS (écriture) + PERSISTANCE : bloquant, via le point de
@@ -1696,11 +1761,11 @@ trait ControllerUtilsTrait
         //
         // Le parametre existe depuis toujours, et UN SEUL appelant le renseignait
         // (ConditionPartageController). Partout ailleurs il valait `null`, si bien que
-        // `?page=` et `?ids=` etaient lus sur un objet absent et ignores EN SILENCE : une
-        // pagination sans effet, un rattachement invisible en creation. Le trait tient deja
-        // un `RequestStack` injecte par setter autowire, pour exactement ce genre de besoin ;
-        // on le lit ici plutot que de retoucher quarante-quatre signatures. L'argument reste
-        // accepte : un appelant qui le passe gagne.
+        // `?page=`, `?ids=` — et `?en_attente=` apres eux — etaient lus sur un objet absent
+        // et ignores EN SILENCE : une pagination sans effet, un rattachement invisible en
+        // creation. Le trait tient deja un `RequestStack` injecte par setter autowire, pour
+        // exactement ce genre de besoin ; on le lit ici plutot que de retoucher quarante-
+        // quatre signatures. L'argument reste accepte : un appelant qui le passe gagne.
         $request ??= $this->requestStack?->getCurrentRequest();
 
         $page = ($request !== null) ? max(1, $request->query->getInt('page', 1)) : 1;
@@ -1754,21 +1819,39 @@ trait ControllerUtilsTrait
                 );
             }
 
+            // CE QUI ATTEND DANS LE TAMPON DU NAVIGATEUR, POUR QUE LE TOTAL SOIT VRAI
+            // AVANT MEME QUE LA FICHE PARENTE N'EXISTE.
+            //
+            // Le pied ne s'affichait pas en création : le serveur ne connaissait que les
+            // éléments RATTACHÉS, jamais ceux qui attendaient dans le navigateur, et un
+            // total qui ment est pire qu'un total absent. On ne lève pas la règle, on lève
+            // sa cause — le navigateur nous rend les valeurs qu'il détient, chacune calculée
+            // ICI au moment du `dry_run` (cf. rendreLigneEnAttente). L'addition reste
+            // unique, et le formatage aussi.
+            //
+            // MEME GARDE QUE `ids` : `$id === 0` seulement. Un parent écrit n'a pas de
+            // tampon, et le total d'une fiche réelle ne doit pas pouvoir être gonflé par un
+            // paramètre d'URL.
+            $valeursEnAttente = ($id === 0)
+                ? array_map(
+                    'floatval',
+                    array_filter(explode(',', (string) $request?->query->get('en_attente', '')), 'is_numeric'),
+                )
+                : [];
+
             // Preload inconditionnel — couvre totalizableField ET les collections sans champ totalisable.
             $this->canvasBuilder->batchPreloadForCollection($data->toArray());
 
-            if ($totalizableField) {
-                $total = 0;
-                $fieldName = $totalizableField;
-                $camelCaseField = lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $fieldName))));
-                $valueGetter = 'get' . ucfirst($camelCaseField);
-
+            // PAS DE TOTAL QUAND IL N'Y A RIEN A TOTALISER — et c'est le contrôleur qui en
+            // décide, pas la vue : `$totalValue` reste `null`, et le gabarit n'a plus qu'une
+            // condition à lire au lieu de quatre. Une liste vide n'annonce donc pas
+            // « Total 0,00 », qui ferait croire à une somme nulle plutôt qu'à une absence.
+            if ($totalizableField && (count($data) + count($valeursEnAttente)) > 0) {
+                $total = 0.0;
                 foreach ($data as $item) {
-                    $this->canvasBuilder->loadAllCalculatedValues($item);
-                    $value = property_exists($item, $fieldName) ? ($item->{$fieldName} ?? 0) : 0;
-                    $total += $value;
+                    $total += $this->valeurTotalisable($item, $totalizableField);
                 }
-                $totalValue = $total;
+                $totalValue = $total + array_sum($valeursEnAttente);
 
                 $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
                 foreach ($entityCanvas['liste'] as $fieldDef) {

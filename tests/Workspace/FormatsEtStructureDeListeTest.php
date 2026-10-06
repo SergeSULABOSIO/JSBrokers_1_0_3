@@ -102,8 +102,97 @@ class FormatsEtStructureDeListeTest extends TestCase
         self::assertStringContainsString('th scope="row"', $manager);
         self::assertStringContainsString('totalValue', $manager, 'Le pied affiche la valeur recue, il ne la somme pas.');
         self::assertStringNotContainsString('|sum', $manager, 'Aucune addition dans la vue.');
-        self::assertStringContainsString('not parentEnAttente', $manager, 'Pas de pied quand le parent n\'est pas ecrit.');
+
+        // UNE SEULE CONDITION, ET ELLE VIENT DU CONTROLEUR. Le pied exigeait autrefois que
+        // le parent soit ecrit ; le navigateur rend desormais au serveur les valeurs de son
+        // tampon, si bien que le total vaut dans les deux modes. La vue ne compte plus de
+        // lignes et n'interroge plus l'etat du parent : elle lit `totalValue`.
+        self::assertStringContainsString(
+            'estCollection and totalValue is defined and totalValue is not null',
+            $manager,
+            "Le controleur decide s'il y a un total ; la vue ne le rededuit pas.",
+        );
+        self::assertStringNotContainsString(
+            'not parentEnAttente',
+            $manager,
+            "Le pied ne depend plus de l'etat du parent.",
+        );
     }
+
+    /**
+     * LES DEUX PIEDS QUE LE NAVIGATEUR CLONE AU LIEU DE LES ECRIRE.
+     *
+     * Pendant le calcul du total, le nombre affiche est perime : un squelette prend sa
+     * place. Son balisage vient d'ICI — un pied fabrique en JS ressemblerait au vrai sans
+     * jamais lui etre identique, et s'en ecarterait au premier changement de ce gabarit.
+     *
+     * Ils dependent de `estTotalisable` (la CONFIGURATION) et non de `totalValue` (l'etat
+     * du moment) : au tout premier ajout dans une collection vide, aucun pied n'est encore
+     * rendu, et c'est precisement la qu'un squelette doit pouvoir paraitre.
+     */
+    public function testLesGabaritsDePiedSontRendusParLeServeur(): void
+    {
+        $manager = $this->lire(self::LIST_MANAGER);
+
+        self::assertStringContainsString(
+            '{% set estTotalisable = totalizableField is defined and totalizableField is not null %}',
+            $manager,
+            'La question « cette collection a-t-elle un total ? » se pose une seule fois.',
+        );
+        self::assertStringContainsString(
+            '{% if estCollection|default(false) and estTotalisable|default(false) %}',
+            $manager,
+            'Les gabarits suivent la configuration, jamais `totalValue`.',
+        );
+        self::assertStringContainsString('<template data-collection-target="squelettePied">', $manager);
+        self::assertStringContainsString('<template data-collection-target="piedIndisponible">', $manager);
+        self::assertStringContainsString('skeleton-line skeleton-total', $manager, 'Le squelette reutilise la base existante.');
+
+        // MEME STRUCTURE QUE LE VRAI PIED : trois cellules. Sans cela le tableau changerait
+        // de geometrie pendant l'attente — l'inverse de ce qu'un squelette doit faire.
+        foreach (['squelettePied', 'piedIndisponible'] as $cible) {
+            $bloc = $this->blocDuGabarit($manager, $cible);
+            self::assertSame(1, substr_count($bloc, '<th scope="row"'), $cible . ' : un entete de rangee.');
+            self::assertSame(2, substr_count($bloc, '<td'), $cible . ' : deux cellules, comme le vrai pied.');
+        }
+
+        $js = $this->lire(self::JS_COLLECTION);
+        self::assertStringContainsString('squelettePied', $js, 'Le controleur cible le gabarit.');
+        // Nommer `<tfoot>` dans un commentaire est permis — l'ECRIRE ne l'est pas. On
+        // retire donc les blocs de documentation avant de chercher le balisage.
+        self::assertStringNotContainsString(
+            '<tfoot',
+            $this->sansCommentaires($js),
+            "Le navigateur clone un pied, il n'en ecrit aucun.",
+        );
+    }
+
+    /** Le corps d'un `<template>`, pour compter ses cellules sans relire tout le gabarit. */
+    private function blocDuGabarit(string $source, string $cible): string
+    {
+        $debut = strpos($source, '<template data-collection-target="' . $cible . '">');
+        self::assertNotFalse($debut, 'Gabarit « ' . $cible . ' » introuvable.');
+        $fin = strpos($source, '</template>', $debut);
+        self::assertNotFalse($fin);
+
+        return substr($source, $debut, $fin - $debut);
+    }
+
+    /** Les commentaires portent des accolades : les laisser fausserait toute lecture de bloc. */
+    private function sansCommentaires(string $css): string
+    {
+        while (($debut = strpos($css, '/*')) !== false) {
+            $fin = strpos($css, '*/', $debut);
+            if ($fin === false) {
+                break;
+            }
+            $css = substr($css, 0, $debut) . ' ' . substr($css, $fin + 2);
+        }
+
+        return $css;
+    }
+
+
 
     /** Les largeurs sont portées par le colgroup, jamais par un `style=` en ligne. */
     public function testLesLargeursPassentParLeColgroup(): void

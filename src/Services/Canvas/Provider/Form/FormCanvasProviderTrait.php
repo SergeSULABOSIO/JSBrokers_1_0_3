@@ -43,36 +43,24 @@ trait FormCanvasProviderTrait
             if (isset($config['deleteActionLabel']))  $extraOptions['deleteActionLabel'] = $config['deleteActionLabel'];
             if (isset($config['deleteActionIcon']))   $extraOptions['deleteActionIcon'] = $config['deleteActionIcon'];
 
-            if (isset($config['totalizableField']) && !$isParentNew) {
-                $total = 0;
-                $getter = 'get' . ucfirst($config['fieldName']);
-                if (method_exists($parentEntity, $getter)) {
-                    $collection = $parentEntity->{$getter}();
-
-                    $fieldName = $config['totalizableField'];
-                    // Convertit snake_case (ex: montant_final) en PascalCase (MontantFinal) pour le getter.
-                    $camelCaseField = lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $fieldName))));
-                    $valueGetter = 'get' . ucfirst($camelCaseField);
-
-                    foreach ($collection as $item) {
-                        // ÉTAPE CRUCIALE : Charger les valeurs calculées pour l'élément avant de les utiliser.
-                        if (property_exists($this, 'canvasBuilder') && $this->canvasBuilder instanceof CanvasBuilder) {
-                            $this->canvasBuilder->loadAllCalculatedValues($item);
-                        }
-
-                        $value = 0;
-                        // Essayer le getter d'abord (ex: getMontantFinal())
-                        if (method_exists($item, $valueGetter)) {
-                            $value = $item->{$valueGetter}();
-                        // Sinon, vérifier la propriété publique (ex: montant_final)
-                        } elseif (property_exists($item, $fieldName) && isset($item->{$fieldName})) {
-                            $value = $item->{$fieldName};
-                        }
-                        $total += $value ?? 0;
-                    }
-                }
+            // LE CHAMP TOTALISABLE EST UNE DONNEE DE CONFIGURATION : il vaut en CREATION
+            // comme en edition.
+            //
+            // Il etait auparavant conditionne a `!$isParentNew`, le temps d'une addition
+            // faite ici meme. Cette addition n'etait lue par PERSONNE — ni par un gabarit,
+            // ni par le navigateur (aucun `totalValue` dans assets/) — et coutait un
+            // `loadAllCalculatedValues()` par element de chaque collection totalisable, a
+            // CHAQUE construction de formulaire. Le seul qui additionne est
+            // `handleCollectionApiRequest()`, qui l'avait deja en main pour sa reponse
+            // JSON : une addition, un nombre.
+            //
+            // Ne plus declarer le champ en creation avait deux effets invisibles : aucun
+            // pied de total (le serveur ignorait qu'il y avait quelque chose a totaliser),
+            // et une colonne de valeur qui retombait sur la premiere colonne numerique de
+            // l'enfant au lieu du champ totalisable — donc pas forcement la meme grandeur
+            // qu'en edition.
+            if (isset($config['totalizableField'])) {
                 $extraOptions['totalizableField'] = $config['totalizableField'];
-                $extraOptions['totalValue'] = $total;
             }
 
             // LE VERROU DE LA CRÉATION — ouvert, sauf là où l'enfant ne peut pas s'en passer.
