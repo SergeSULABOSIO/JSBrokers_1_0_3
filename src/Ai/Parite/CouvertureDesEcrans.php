@@ -100,6 +100,9 @@ final class CouvertureDesEcrans
         // le plan d'écriture générique porte déjà — `DefautsContextuels` lui déduit même
         // le type d'avenant, le nom et la description du risque.
         'ui:client.creer-piste' => 'preparer_operations',
+        // Déclarer un sinistre au client sélectionné : même nature, même plan générique
+        // d'écriture — l'assuré est déduit du client qu'on avait sous les yeux.
+        'ui:client.creer-sinistre' => 'preparer_operations',
         'ui:portefeuille.client-picker-request' => 'preparer_operations',
         'ui:invite.portefeuille-form-request' => 'preparer_operations',
         'ui:invite.delete-portefeuille' => 'preparer_operations',

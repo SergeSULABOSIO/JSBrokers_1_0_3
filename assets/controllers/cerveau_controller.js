@@ -697,7 +697,10 @@ export default class extends Controller {
                 this.handleClientPortefeuillePickerRequest(payload);
                 break;
             case 'ui:client.creer-piste':
-                this.handleClientCreerPiste(payload);
+                this.handleClientCreerDossier(payload, 'la piste');
+                break;
+            case 'ui:client.creer-sinistre':
+                this.handleClientCreerDossier(payload, 'le sinistre');
                 break;
             case 'ui:note.paiement-request':
                 this.handleNotePaiementRequest(payload);
@@ -2758,12 +2761,18 @@ export default class extends Controller {
     }
 
     /**
-     * OUVRIR UNE PISTE AU CLIENT SÉLECTIONNÉ, depuis la rubrique Clients.
+     * OUVRIR UN DOSSIER AU CLIENT SÉLECTIONNÉ, depuis la rubrique Clients.
      *
      * ── LA CORVÉE QUE CELA SUPPRIME ─────────────────────────────────────────────────
-     * Décider d'ouvrir une affaire à un client qu'on a sous les yeux obligeait à changer
-     * de rubrique, à créer une piste à blanc, puis à y rechercher ce même client à
-     * l'autocomplétion. On ressaisissait ce qu'on venait de quitter.
+     * Décider d'ouvrir une affaire — ou de déclarer un sinistre — à un client qu'on a sous
+     * les yeux obligeait à changer de rubrique, à créer la fiche à blanc, puis à y
+     * rechercher ce même client à l'autocomplétion. On ressaisissait ce qu'on venait de
+     * quitter.
+     *
+     * ── UN SEUL CORPS POUR LES DEUX GESTES ──────────────────────────────────────────
+     * Piste et sinistre suivent la MÊME mécanique : une route de contexte rend l'identifiant
+     * du client et le canevas de l'enfant, puis le dialogue s'ouvre en création. Seul le mot
+     * du message d'erreur change. Deux copies auraient divergé au premier correctif.
      *
      * ── LE PRÉREMPLISSAGE N'EST PAS RÉÉCRIT, IL EST RÉUTILISÉ ───────────────────────
      * `PisteController::getFormApi` sait déjà remplir une piste à partir d'un `?idClient=`
@@ -2777,11 +2786,13 @@ export default class extends Controller {
      * piste disparaîtraient. Le piège a déjà été payé sur la piste dérivée.
      *
      * @param {object} payload - { url } avec %id% déjà résolu par la surface appelante.
+     * @param {string} libelle - ce qu'on ouvre, tel qu'il se dit dans un message d'erreur
+     *        (« la piste », « le sinistre ») : l'utilisateur lit le dossier, pas l'event.
      */
-    async handleClientCreerPiste(payload) {
+    async handleClientCreerDossier(payload, libelle) {
         if (!payload.url) {
-            console.error("[Cerveau] handleClientCreerPiste() : URL manquante.", payload);
-            this._showNotification("Impossible d'ouvrir la piste : URL manquante.", 'error');
+            console.error("[Cerveau] handleClientCreerDossier() : URL manquante.", payload);
+            this._showNotification(`Impossible d'ouvrir ${libelle} : URL manquante.`, 'error');
             return;
         }
         try {
@@ -2808,8 +2819,8 @@ export default class extends Controller {
                 parentContext: null,
             });
         } catch (error) {
-            console.error("[Cerveau] handleClientCreerPiste() failed:", error);
-            this._showNotification(error.message || "Impossible d'ouvrir la piste.", 'error');
+            console.error("[Cerveau] handleClientCreerDossier() failed:", error);
+            this._showNotification(error.message || `Impossible d'ouvrir ${libelle}.`, 'error');
         } finally {
             this.broadcast('app:loading.stop');
         }

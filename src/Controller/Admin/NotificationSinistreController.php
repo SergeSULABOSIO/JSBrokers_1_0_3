@@ -14,6 +14,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Tache;
+use App\Entity\Client;
 use App\Entity\Invite;
 use DateTimeImmutable;
 use App\Entity\Contact;
@@ -99,11 +100,28 @@ class NotificationSinistreController extends AbstractController
             NotificationSinistre::class,
             NotificationSinistreType::class,
             $notification,
-            function (NotificationSinistre $notification, Invite $invite) {
+            function (NotificationSinistre $notification, Invite $invite) use ($request) {
                 $notification->setOccuredAt(new DateTimeImmutable("now"));
                 $notification->setNotifiedAt(new DateTimeImmutable("now"));
                 $notification->setInvite($invite);
                 $notification->setDescriptionDeFait("RAS");
+
+                // PRÉREMPLISSAGE DEPUIS LA RUBRIQUE CLIENTS (« Créer un sinistre »).
+                //
+                // Même règle, deux surfaces : PisteController lit déjà `?idClient=` pour
+                // le même geste. Déclarer un sinistre au client qu'on a sous les yeux ne
+                // doit pas obliger à le rechercher à l'autocomplétion.
+                //
+                // ⚠ L'APPARTENANCE EST VÉRIFIÉE ICI AUSSI. Le paramètre vient de l'URL :
+                // s'en remettre à la route de contexte laisserait un identifiant forgé
+                // préremplir un client d'un autre cabinet.
+                $idClient = (int) $request->query->get('idClient', 0);
+                if ($idClient !== 0) {
+                    $client = $this->em->find(Client::class, $idClient);
+                    if ($client && $client->getEntreprise() === $invite->getEntreprise()) {
+                        $notification->setAssure($client);
+                    }
+                }
             }
         );
     }
