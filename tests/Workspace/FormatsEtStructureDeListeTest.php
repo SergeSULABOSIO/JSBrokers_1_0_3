@@ -167,6 +167,44 @@ class FormatsEtStructureDeListeTest extends TestCase
         );
     }
 
+    /**
+     * LE MOUVEMENT REDUIT NEUTRALISE LE SELECTEUR QUI PORTE VRAIMENT L'ANIMATION.
+     *
+     * Ecrite sur `.skeleton-line`, la regle n'aurait rien neutralise : le shimmer vit sur le
+     * PSEUDO-ELEMENT. On COMPARE donc les deux selecteurs au lieu d'en figer un — deplacer
+     * l'animation un jour fera echouer ce test, plutot que desactiver la protection en
+     * silence (WCAG 2.3.3).
+     */
+    public function testLeMouvementReduitViseLeSelecteurAnime(): void
+    {
+        $css = $this->sansCommentaires($this->lire(self::CSS));
+
+        $anime = $this->selecteurDuBlocContenant($css, 'animation: shimmer-advanced');
+
+        $calme = null;
+        $depuis = 0;
+        while (($pos = strpos($css, 'animation: none', $depuis)) !== false) {
+            $selecteur = $this->selecteurDuBlocA($css, $pos);
+            if (str_contains($selecteur, 'skeleton')) {
+                self::assertStringContainsString(
+                    'prefers-reduced-motion',
+                    substr($css, max(0, $pos - 400), min(400, $pos)),
+                    'La neutralisation doit etre conditionnee au mouvement reduit.',
+                );
+                $calme = $selecteur;
+                break;
+            }
+            $depuis = $pos + 1;
+        }
+
+        self::assertNotNull($calme, "Aucune regle ne neutralise l'animation des squelettes.");
+        self::assertSame(
+            $anime,
+            $calme,
+            'Le mouvement reduit doit viser EXACTEMENT le selecteur qui porte le shimmer.',
+        );
+    }
+
     /** Le corps d'un `<template>`, pour compter ses cellules sans relire tout le gabarit. */
     private function blocDuGabarit(string $source, string $cible): string
     {
@@ -192,7 +230,32 @@ class FormatsEtStructureDeListeTest extends TestCase
         return $css;
     }
 
+    /** Le sélecteur du bloc qui contient cette déclaration, sans espaces. */
+    private function selecteurDuBlocContenant(string $css, string $declaration): string
+    {
+        $pos = strpos($css, $declaration);
+        self::assertNotFalse($pos, 'Declaration introuvable : ' . $declaration);
 
+        return $this->selecteurDuBlocA($css, $pos);
+    }
+
+    /** Le sélecteur du bloc dans lequel tombe cette position, sans espaces. */
+    private function selecteurDuBlocA(string $css, int $pos): string
+    {
+        $ouvrante = strrpos(substr($css, 0, $pos), '{');
+        self::assertNotFalse($ouvrante, 'Declaration hors de tout bloc.');
+
+        $avant = substr($css, 0, $ouvrante);
+        // La borne gauche est la fin de la regle precedente — ou l'ouverture du @media qui
+        // nous englobe, selon ce qui vient en dernier.
+        $borne = max((int) strrpos($avant, '}'), (int) strrpos($avant, '{'));
+
+        return str_replace(
+            [' ', chr(9), chr(10), chr(13)],
+            '',
+            substr($css, $borne + 1, $ouvrante - $borne - 1),
+        );
+    }
 
     /** Les largeurs sont portées par le colgroup, jamais par un `style=` en ligne. */
     public function testLesLargeursPassentParLeColgroup(): void
