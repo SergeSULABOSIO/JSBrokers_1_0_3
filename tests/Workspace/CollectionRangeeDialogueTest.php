@@ -3,6 +3,7 @@
 namespace App\Tests\Workspace;
 
 use App\Entity\Client;
+use App\Entity\Chargement;
 use App\Entity\CompteBancaire;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
@@ -60,7 +61,7 @@ class CollectionRangeeDialogueTest extends WebTestCase
     {
         $conn = $this->em()->getConnection();
         $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email = :m', ['m' => self::EMAIL]);
-        foreach (['paiement', 'compte_bancaire', 'tache', 'cotation', 'piste', 'client', 'portefeuille', 'risque', 'monnaie', 'invite'] as $table) {
+        foreach (['paiement', 'compte_bancaire', 'tache', 'chargement_pour_prime', 'chargement', 'cotation', 'piste', 'client', 'portefeuille', 'risque', 'monnaie', 'invite'] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :nom",
                 ['nom' => self::ENTREPRISE_NOM],
@@ -262,7 +263,7 @@ class CollectionRangeeDialogueTest extends WebTestCase
         return static::getContainer()->get(\App\Services\ServiceNombres::class)->format($valeur, 2);
     }
 
-    /** @return array{pisteId:int, compteId:int} */
+    /** @return array{pisteId:int, compteId:int, entrepriseId:int, inviteId:int, chargementId:int} */
     private function semer(): array
     {
         $em = $this->em();
@@ -322,6 +323,12 @@ class CollectionRangeeDialogueTest extends WebTestCase
         $tache->setPiste($piste)->setEntreprise($entreprise);
         $em->persist($tache);
 
+        // LE CATALOGUE DES CHARGEMENTS : « Prime nette » est le type que porte la ligne
+        // dont le dry-run doit savoir dire la valeur.
+        $chargement = (new Chargement())->setNom('Prime nette')->setFonction(Chargement::FONCTION_PRIME_NETTE);
+        $chargement->setEntreprise($entreprise);
+        $em->persist($chargement);
+
         $compte = (new CompteBancaire())->setIntitule('Compte de rangee')->setNumero('00123')
             ->setBanque('Banque de rangee')->setCodeSwift('SWIFT');
         $compte->setEntreprise($entreprise);
@@ -334,28 +341,185 @@ class CollectionRangeeDialogueTest extends WebTestCase
         $em->persist($paiement);
 
         $em->flush();
-        $ids = ['pisteId' => (int) $piste->getId(), 'compteId' => (int) $compte->getId()];
+        $ids = [
+            'pisteId' => (int) $piste->getId(),
+            'compteId' => (int) $compte->getId(),
+            'entrepriseId' => (int) $entreprise->getId(),
+            'inviteId' => (int) $proprietaire->getId(),
+            'chargementId' => (int) $chargement->getId(),
+        ];
         $em->clear();
 
         return $ids;
     }
 
     /**
-     * PAS DE TOTAL QUAND LE PARENT N'EST PAS ENCORE ECRIT.
+     * UN PARENT NON ECRIT AFFICHE LE TOTAL DE CE QUI ATTEND.
      *
-     * Le serveur ne connait alors que les elements RATTACHES, jamais ceux qui attendent
-     * dans le tampon du navigateur : un total calcule la-dessus serait faux, et un total
-     * qui ment est pire qu'un total absent. Les trois colonnes, elles, restent — sans quoi
-     * les lignes injectees par le tampon se desaligneraient du tableau.
+     * Le pied disparaissait en creation : le serveur ne connaissait que les elements
+     * RATTACHES, jamais ceux qui patientaient dans le tampon du navigateur, et un total qui
+     * ment est pire qu'un total absent. On n'a pas leve la regle, on a leve sa cause — le
+     * navigateur rend ces valeurs-la, et l'addition reste faite ICI, une seule fois.
+     *
+     * Les trois colonnes restent, sans quoi les lignes injectees par le tampon se
+     * desaligneraient du tableau.
      */
-    public function testUnParentNonEcritNAucunPiedMaisGardeSesTroisColonnes(): void
+    public function testUnParentNonEcritAfficheLeTotalDeCeQuiAttend(): void
+    {
+        $ids = $this->semer();
+        $this->connecter();
+
+        [$c, $json] = $this->collection('/admin/piste/api/0/cotations/dialog?en_attente=1000,100,160,20');
+
+        self::assertCount(1, $c->filter('table > tfoot'), 'Le total vaut avant l\'enregistrement comme apres.');
+        self::assertCount(3, $c->filter('table > thead th'), 'Trois colonnes quand meme : le tampon y injecte ses lignes.');
+
+        self::assertSame(1280.0, (float) $json['totalValue'], 'Le serveur additionne ce que le tampon lui a rendu.');
+        self::assertStringContainsString(
+            $this->nombreRendu(1280.0),
+            trim($c->filter('table > tfoot .td-numeric')->text()),
+            'Le pied dit le meme nombre que la reponse JSON : une seule addition.',
+        );
+
+        // L'UNITE EST CELLE DE L'EDITION. Un pied de creation qui dirait une autre devise
+        // que le meme pied en edition serait un second affichage, pas le meme.
+        [$edition] = $this->collection('/admin/piste/api/' . $ids['pisteId'] . '/cotations/dialog');
+        self::assertSame(
+            trim($edition->filter('tfoot .td-numeric-unit')->text()),
+            trim($c->filter('tfoot .td-numeric-unit')->text()),
+            'Creation et edition portent la meme unite.',
+        );
+    }
+
+    /**
+     * RIEN A TOTALISER, AUCUN PIED — « Total 0,00 » ferait lire une somme nulle la ou il
+     * n'y a pas encore de termes. C'est le controleur qui tranche (`totalValue` a `null`),
+     * la vue ne compte plus de lignes pour le deviner.
+     */
+    public function testUneCollectionVideNAnnonceAucunTotal(): void
     {
         $this->semer();
         $this->connecter();
 
-        [$c] = $this->collection('/admin/piste/api/0/cotations/dialog');
+        [$c, $json] = $this->collection('/admin/piste/api/0/cotations/dialog');
 
-        self::assertCount(0, $c->filter('tfoot'), 'Aucun total ne peut etre vrai avant l\'enregistrement.');
-        self::assertCount(3, $c->filter('table > thead th'), 'Trois colonnes quand meme : le tampon y injecte ses lignes.');
+        self::assertNull($json['totalValue'], 'Pas de termes, pas de total.');
+        // SOUS LE TABLEAU, et non n'importe ou : les deux gabarits de squelette portent eux
+        // aussi un <tfoot>, et DOMDocument ne met pas le contenu d'un <template> a part
+        // comme le fait un navigateur.
+        self::assertCount(0, $c->filter('table > tfoot'), 'Et donc pas de pied.');
+        self::assertCount(3, $c->filter('table > thead th'), 'Les trois colonnes, elles, tiennent l\'alignement.');
     }
+
+    /**
+     * LES GABARITS DE PIED SONT LA DES LA CREATION — et pas ailleurs.
+     *
+     * `FormatsEtStructureDeListeTest` lit la CONDITION dans le gabarit ; ce test-ci lit ce
+     * que le serveur REND vraiment, dans les trois situations qui comptent :
+     *
+     *   1. parent non ecrit ET liste vide — le cas ou aucun pied n'existe encore, et
+     *      precisement celui ou le premier ajout doit pouvoir montrer un squelette ;
+     *   2. collection SANS champ totalisable — rien a masquer, donc aucun gabarit ;
+     *   3. le squelette porte le MEME nombre de cellules que le vrai pied, sans quoi le
+     *      tableau changerait de geometrie pendant l'attente.
+     */
+    public function testLesGabaritsDePiedExistentDesLaCreationEtPasAilleurs(): void
+    {
+        $ids = $this->semer();
+        $this->connecter();
+
+        // 1. Parent non ecrit, liste vide : pas de pied, mais les deux gabarits.
+        [$creation] = $this->collection('/admin/piste/api/0/cotations/dialog');
+        self::assertCount(0, $creation->filter('table > tfoot'), 'Rien a totaliser, donc pas de pied.');
+        self::assertCount(1, $creation->filter('template[data-collection-target="squelettePied"]'));
+        self::assertCount(1, $creation->filter('template[data-collection-target="piedIndisponible"]'));
+
+        // 2. Collection sans champ totalisable : aucun gabarit.
+        [$taches] = $this->collection('/admin/piste/api/' . $ids['pisteId'] . '/taches/dialog');
+        self::assertCount(0, $taches->filter('template[data-collection-target]'), 'Rien a totaliser, aucun gabarit.');
+
+        // 3. Le squelette a la geometrie du vrai pied.
+        [$edition] = $this->collection('/admin/piste/api/' . $ids['pisteId'] . '/cotations/dialog');
+        $vrai = $edition->filter('table > tfoot')->first();
+        self::assertCount(1, $vrai, 'Il faut un vrai pied pour avoir quelque chose a comparer.');
+
+        foreach (['squelettePied', 'piedIndisponible'] as $cible) {
+            $gabarit = $edition->filter('template[data-collection-target="' . $cible . '"]');
+            self::assertCount(1, $gabarit, $cible . ' doit etre rendu en edition aussi.');
+            self::assertSame(
+                $vrai->filter('th, td')->count(),
+                $gabarit->filter('th, td')->count(),
+                sprintf('« %s » doit avoir autant de cellules que le vrai pied.', $cible),
+            );
+        }
+    }
+
+    /**
+     * `en_attente` NE GONFLE PAS LE TOTAL D'UNE FICHE ECRITE.
+     *
+     * Une fiche enregistree n'a pas de tampon : le parametre n'a aucun sens pour elle, et
+     * l'honorer laisserait une URL forgee afficher n'importe quel total sur un dossier
+     * reel. Meme garde que `ids`, au meme endroit : `$id === 0` seulement.
+     */
+    public function testEnAttenteNeGonflePasLeTotalDUneFicheEcrite(): void
+    {
+        $ids = $this->semer();
+        $this->connecter();
+
+        [, $reference] = $this->collection('/admin/piste/api/' . $ids['pisteId'] . '/cotations/dialog');
+        [$c, $force] = $this->collection('/admin/piste/api/' . $ids['pisteId'] . '/cotations/dialog?en_attente=999999');
+
+        self::assertSame($reference['totalValue'], $force['totalValue'], 'Le total d\'une fiche ecrite ne s\'ajoute pas.');
+        self::assertStringNotContainsString(
+            '999',
+            trim($c->filter('table > tfoot .td-numeric')->text()),
+            'Rien de ce qui vient de l\'URL n\'entre dans le pied d\'une fiche reelle.',
+        );
+    }
+
+    /**
+     * LE DRY-RUN REND LA VALEUR QUE SA LIGNE AFFICHE.
+     *
+     * C'est l'invariant de tout le mecanisme : le pied somme EXACTEMENT ce que la colonne
+     * montre. Les deux sortent donc du meme `resoudreColonneValeur()` et de la meme lecture
+     * — deux chemins pour un seul nombre finiraient par en donner deux.
+     */
+    public function testLeDryRunRendLaValeurQueSaLigneAffiche(): void
+    {
+        $ids = $this->semer();
+        $this->connecter();
+
+        // UN CHARGEMENT, et non une cotation vide : il faut un montant NON NUL pour que
+        // l'egalite entre la valeur rendue et la cellule affichee prouve quelque chose.
+        // C'est aussi le cas de la capture d'ecran — une prime nette de 1 000.
+        $this->client->request('POST', '/admin/chargementpourprime/api/submit', [
+            'idEntreprise' => $ids['entrepriseId'],
+            'idInvite' => $ids['inviteId'],
+            'nom' => 'Prime nette en attente',
+            'montantFlatExceptionel' => 1000,
+            'type' => $ids['chargementId'],
+            'dry_run' => '1',
+            // Ce que le navigateur transmet depuis `data-collection-totalizable-field-value`.
+            'ligne_colonne_valeur' => 'montant_final',
+        ]);
+
+        self::assertResponseIsSuccessful();
+        $reponse = json_decode((string) $this->client->getResponse()->getContent(), true);
+
+        self::assertTrue($reponse['valide'] ?? false, 'La saisie tient sans etre ecrite.');
+        self::assertArrayHasKey('valeur', $reponse, 'La ligne en attente repart avec sa valeur.');
+        self::assertIsNumeric($reponse['valeur']);
+
+        // LA VALEUR CALCULEE EXISTE SUR UNE ENTITE NON PERSISTEE. Si elle tombait a zero,
+        // tout le mecanisme serait vain : le pied additionnerait des riens.
+        self::assertSame(1000.0, (float) $reponse['valeur'], 'Une entite detachee sait deja ce qu elle vaut.');
+
+        $cellule = trim((new Crawler($reponse['ligne']))->filter('.td-numeric')->text());
+        self::assertStringContainsString(
+            $this->nombreRendu((float) $reponse['valeur']),
+            $cellule,
+            'La valeur rendue est celle que la cellule affiche.',
+        );
+    }
+
 }

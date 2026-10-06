@@ -3517,6 +3517,18 @@ tr.row-selected:hover > td {
     100% { background-position: -200% 0; }
 }
 
+/* LE SQUELETTE D'UN TOTAL, dans la cellule de valeur du pied d'une collection.
+   Rien n'est redessine : la base `.skeleton-line` apporte le gris, le degrade, les jetons
+   de theme et l'animation. Ne restent que les dimensions — et `1em` de haut pour que la
+   rangee garde EXACTEMENT la hauteur qu'aura le montant : aucun saut de mise en page entre
+   l'attente et le nombre. */
+.skeleton-total {
+    display: inline-block;
+    vertical-align: middle;
+    width: 7ch;
+    height: 1em;
+}
+
 /* NOUVEAU : Style pour le squelette sur fond sombre (colonne des attributs) */
 .calculated-attributes-column-skeleton .skeleton-line {
     background-color: var(--sk-dark-bg); /* Un gris plus clair que le fond #212529 */

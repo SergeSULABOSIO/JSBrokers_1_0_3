@@ -193,8 +193,14 @@
             {# LE DIALOGUE, DECIDE UNE FOIS. Trois endroits en dependent — entete, lignes,
                pied — et le recalculer a chaque fois serait trois occasions d'en oublier un. #}
             {% set estCollection = usage|default('generic') == 'dialog' %}
-            {# Le parent n'est pas encore ecrit : il n'y a rien a totaliser qui soit vrai. #}
+            {# Le parent n'est pas encore ecrit. Ne sert plus au pied — qui vaut desormais
+               dans les deux modes — mais a l'etat vide, dont le texte change. #}
             {% set parentEnAttente = parentEntity is defined and parentEntity is not null and parentEntity.id is null %}
+            {# CETTE COLLECTION A-T-ELLE UN TOTAL ? Question de CONFIGURATION, et donc
+               independante de `totalValue`, qui dit seulement s'il y a aujourd'hui quelque
+               chose a totaliser. Les gabarits de squelette en dependent : ils doivent exister
+               des le premier ajout, quand aucun pied n'est encore rendu. #}
+            {% set estTotalisable = totalizableField is defined and totalizableField is not null %}
             <table class="table table-hover table-sm table-enhanced" aria-label="Liste de {{ entite_nom }}">
                 {# LES LARGEURS, PORTEES PAR LE COLGROUP ET PAR LUI SEUL.
 
@@ -287,11 +293,15 @@
                    qui l'avait deja en main pour sa reponse JSON. Une seule addition, un seul
                    nombre.
 
-                   PAS DE PIED QUAND LE PARENT N'EST PAS ECRIT : le serveur ne connait alors
-                   que les elements RATTACHES, pas ceux qui attendent dans le tampon du
-                   navigateur. Un total qui ment est pire qu'un total absent. #}
-                {% if estCollection and totalizableField is defined and totalizableField is not null
-                      and not parentEnAttente and data|length > 0 %}
+                   UNE SEULE CONDITION, ET C'EST LE CONTROLEUR QUI L'A TRANCHEE. Le pied
+                   exigeait autrefois que le parent soit ECRIT : le serveur ne connaissait
+                   alors que les elements rattaches, pas ceux qui attendaient dans le tampon
+                   du navigateur, et un total qui ment est pire qu'un total absent. Le
+                   navigateur nous rend desormais ces valeurs-la (`?en_attente=`), si bien
+                   que le total est vrai en creation comme en edition. Reste a savoir s'il y
+                   a quelque chose a totaliser : `totalValue` vaut `null` quand il n'y a
+                   rien, et la vue n'a plus a le deviner en comptant des lignes. #}
+                {% if estCollection and totalValue is defined and totalValue is not null %}
                     <tfoot>
                         <tr>
                             <th scope="row" class="text-end pe-3">Total</th>
@@ -306,6 +316,49 @@
             </table>
         {% endif %}
         </div>
+        {# LE PIED PENDANT QUE LE TOTAL SE CALCULE, ET CELUI QUI DIT QU'IL N'A PAS PU.
+
+           Deux gabarits, et non deux chaines dans le JS : le navigateur ne fabrique aucun
+           balisage de liste — c'est la regle qui evite un second habillage, divergeant du
+           premier des que ce fichier change. Il ne fait que cloner.
+
+           RENDUS MEME SANS `totalValue` : au tout premier ajout d'une collection vide, il
+           n'y a pas encore de pied, et c'est precisement la qu'un squelette doit pouvoir
+           paraitre. Ils dependent donc de `estTotalisable` (la configuration) et non de
+           `totalValue` (l'etat du moment).
+
+           HORS DU <table>, et non dedans : un <template> y serait deplace par l'analyseur
+           HTML, qui n'admet pas n'importe quel noeud entre <tbody> et <tfoot>.
+
+           Ils vivent en revanche DANS le conteneur que le contrôleur de collection remplace
+           a chaque chargement : ils reviennent avec chaque reponse, et manquent seulement au
+           tout premier affichage — ou rien n'est perime, donc rien n'est a masquer. #}
+        {% if estCollection|default(false) and estTotalisable|default(false) %}
+            <template data-collection-target="squelettePied">
+                <tfoot>
+                    <tr>
+                        <th scope="row" class="text-end pe-3">Total</th>
+                        <td class="text-end td-numeric">
+                            <span class="text-secondary td-numeric-unit">{{ totalUnit|default('') }}</span>
+                            <span class="skeleton-line skeleton-total" aria-hidden="true"></span>
+                            <span class="visually-hidden">Calcul du total en cours…</span>
+                        </td>
+                        <td aria-hidden="true"></td>
+                    </tr>
+                </tfoot>
+            </template>
+            {# « Total | Indisponible » se lit deja en entier : repeter « Total » dans la
+               cellule le ferait annoncer deux fois par un lecteur d'ecran. #}
+            <template data-collection-target="piedIndisponible">
+                <tfoot>
+                    <tr>
+                        <th scope="row" class="text-end pe-3">Total</th>
+                        <td class="text-end td-numeric text-secondary">Indisponible</td>
+                        <td aria-hidden="true"></td>
+                    </tr>
+                </tfoot>
+            </template>
+        {% endif %}
         <div data-list-manager-target="emptyStateContainer" class="d-none h-100">
             {% if usage is defined and usage == 'dialog' %}
                 {# CAS : État vide pour une collection DANS UN FORMULAIRE D'ÉDITION.

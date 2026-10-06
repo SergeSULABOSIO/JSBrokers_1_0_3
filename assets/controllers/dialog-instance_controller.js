@@ -1145,6 +1145,13 @@ export default class extends Controller {
         if (widget?.dataset.collectionDeleteActionIconValue) {
             formData.append('ligne_delete_icon', widget.dataset.collectionDeleteActionIconValue);
         }
+        // LE CHAMP QUE LA COLONNE DE VALEUR AFFICHE — et que le pied de total additionne.
+        // Sans lui, le serveur retombait sur la première colonne numérique du canevas de
+        // l'enfant : la ligne en attente pouvait montrer une autre grandeur que les lignes
+        // enregistrées, et sa valeur ne pouvait pas entrer dans le total.
+        if (widget?.dataset.collectionTotalizableFieldValue) {
+            formData.append('ligne_colonne_valeur', widget.dataset.collectionTotalizableFieldValue);
+        }
 
         try {
             const response = await fetch(this.entityFormCanvas.parametres.endpoint_submit_url, {
@@ -1157,6 +1164,7 @@ export default class extends Controller {
             formData.delete('dry_run');
             formData.delete('ligne_delete_label');
             formData.delete('ligne_delete_icon');
+            formData.delete('ligne_colonne_valeur');
 
             document.dispatchEvent(new CustomEvent('app:collection.tampon-request', {
                 detail: {
@@ -1166,6 +1174,10 @@ export default class extends Controller {
                     libelle: this._libelleDeLaSaisie(formData),
                     // Rendue par _list_row.html.twig, comme une ligne déjà enregistrée.
                     ligne: result.ligne,
+                    // Le nombre que cette ligne affiche dans sa colonne de valeur, calculé
+                    // par le serveur au même instant. C'est lui qui permettra au pied de
+                    // total de compter ce qui attend d'être écrit.
+                    valeur: result.valeur,
                     submitUrl: this.entityFormCanvas.parametres.endpoint_submit_url,
                     // LE SOUS-ARBRE : ce que ce dialogue portait lui-même en attente. C'est
                     // par lui que la généalogie tient sur toute sa profondeur.

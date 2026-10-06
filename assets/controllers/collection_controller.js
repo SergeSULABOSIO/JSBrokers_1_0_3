@@ -10,6 +10,24 @@ import {
 } from './collection-tampon.js';
 
 /**
+ * LE RYTHME DU SQUELETTE DE TOTAL, en millisecondes — deux réglages à observer.
+ *
+ * Chacun corrige un défaut opposé. Sans le PREMIER, une réponse de 40 ms ferait clignoter
+ * un squelette que l'œil lit comme un défaut d'affichage. Sans le SECOND, un squelette
+ * apparu à 151 ms disparaîtrait à 160 : une secousse, pas une attente.
+ *
+ * ⚠ LE SEUIL EST À RÉGLER SUR CE QU'ON MESURE EN PRODUCTION, pas sur une intuition.
+ * Le point de liste répond en ~208 ms sur le poste de développement (mesure du 2026-10-06,
+ * `php -S` local, collection de quatre lignes) : le squelette paraît donc PRESQUE TOUJOURS
+ * ici. Si la production se révèle plus rapide, monter `DELAI_AVANT_SQUELETTE` au-dessus de
+ * la latence courante le réservera aux attentes réelles ; si elle est plus lente, le
+ * baisser le fera paraître plus tôt. Les deux nombres sont indépendants : le plancher ne
+ * protège que de la secousse, une fois le squelette affiché.
+ */
+const DELAI_AVANT_SQUELETTE = 150;
+const DUREE_MIN_SQUELETTE = 300;
+
+/**
  * @class CollectionController
  * @extends Controller
  * @description Gère un widget de formulaire de type collection.
@@ -25,6 +43,10 @@ export default class extends Controller {
         "rowActions", // Cible pour les conteneurs d'actions de ligne
         "titleLoading",
         "titleContent",
+        // Les deux pieds que le SERVEUR sait ecrire et que le navigateur se contente de
+        // cloner : celui qui dit « je calcule », et celui qui dit « je n'ai pas pu ».
+        "squelettePied",
+        "piedIndisponible",
     ];
 
     static values = {
@@ -112,6 +134,8 @@ export default class extends Controller {
         }
         // Nettoie le sélecteur de clients s'il est resté ouvert.
         this.closePicker();
+        // Une requête de liste encore en vol écrirait dans un DOM qui n'est plus là.
+        this._annulerLeChargementEnCours();
     }
 
     /**
@@ -743,6 +767,15 @@ export default class extends Controller {
             // Le balisage rendu par le serveur : c'est LUI qu'on affichera, pas une
             // reconstruction locale qui finirait par en différer.
             ligne: detail.ligne,
+            // Le nombre que cette ligne affiche dans sa colonne de valeur, calculé par le
+            // serveur au moment du dry-run. Il repart vers lui au prochain rendu, pour que
+            // le pied de total compte ce qui attend d'être écrit.
+            //
+            // AUCUN CHEMIN DE MODIFICATION n'existe aujourd'hui : une ligne en attente se
+            // retire, elle ne se rouvre pas (`hideEditAction` est forcé sur sa ligne). Qui
+            // en créerait un devra réécrire `valeur` ici en même temps que `ligne`, sans
+            // quoi le total resterait sur l'ancien montant.
+            valeur: detail.valeur,
         });
 
         this._rendreTampon();
@@ -835,7 +868,16 @@ export default class extends Controller {
         const idsChoisis = noeuds.filter((n) => n.nature === 'rattachement').map((n) => n.idCible);
         const lignesCreees = noeuds.filter((n) => n.nature === 'creation');
 
-        await this._chargerLeCadre(idsChoisis);
+        // LES VALEURS QUI MANQUENT AU SERVEUR POUR DIRE LE TOTAL.
+        //
+        // Celles des lignes RATTACHÉES, il les retrouve lui-même à partir de leurs
+        // identifiants ; celles des ENFANTS ne le regardent pas, ils appartiennent à une
+        // autre liste. Ne restent donc que les créations de ce niveau-ci.
+        const valeurs = lignesCreees
+            .map((n) => n.valeur)
+            .filter((v) => typeof v === 'number' && Number.isFinite(v));
+
+        await this._chargerLeCadre(idsChoisis, valeurs);
         this._marquerLesLignesRattachees();
         this._injecterLesLignes(lignesCreees);
         this._poserLePiedEnAttente(total);
@@ -843,22 +885,162 @@ export default class extends Controller {
 
     /**
      * Le cadre de la liste, demandé au serveur exactement comme en mode édition.
+     *
+     * LE TOTAL EST CALCULÉ LÀ-BAS, pas ici : on lui rend les valeurs que le tampon détient
+     * (`en_attente`), comme on lui rend déjà les identifiants des lignes rattachées
+     * (`ids`). Une seule addition, un seul formatage, un seul gabarit.
+     *
+     * PENDANT CE TEMPS, LE TOTAL AFFICHÉ EST PÉRIMÉ — il ne compte pas la ligne qu'on vient
+     * d'ajouter. Un squelette prend sa place. Les LIGNES, elles, ne bougent pas : elles
+     * sortent du tampon, le navigateur les connaît déjà, et les faire clignoter à chaque
+     * ajout serait un recul. C'est la différence avec `_toggleLoadingState`, qui efface
+     * toute la liste en mode édition, où rien n'est connu localement.
+     *
+     * @param {Array<number|string>} idsChoisis les entités existantes à rattacher
+     * @param {Array<number>} valeurs les montants des lignes qui attendent d'être créées
      * @private
      */
-    async _chargerLeCadre(idsChoisis) {
+    async _chargerLeCadre(idsChoisis, valeurs = []) {
+        // UNE REQUÊTE CHASSE LA PRÉCÉDENTE. Trois ajouts rapides lancent trois rendus : sans
+        // cela, la réponse la plus lente écraserait la plus récente, et le total afficherait
+        // un état révolu.
+        this._annulerLeChargementEnCours();
+        const controleur = new AbortController();
+        this._chargementEnCours = controleur;
+
+        const aUnPied = Boolean(this.element.dataset.collectionTotalizableFieldValue);
+        let poseA = 0;
+
+        if (aUnPied) {
+            controleur.minuteur = setTimeout(() => {
+                controleur.minuteur = null;
+                const gabarit = this.hasSquelettePiedTarget ? this.squelettePiedTarget : null;
+                if (this._poserLePied(gabarit)) {
+                    poseA = Date.now();
+                    this.listContainerTarget.querySelector('table')?.setAttribute('aria-busy', 'true');
+                }
+            }, DELAI_AVANT_SQUELETTE);
+        }
+
         try {
             const url = new URL(`${this.listUrlValue}/dialog`, window.location.origin);
             if (idsChoisis.length > 0) url.searchParams.set('ids', idsChoisis.join(','));
+            if (valeurs.length > 0) url.searchParams.set('en_attente', valeurs.join(','));
 
-            const reponse = await fetch(url);
+            const reponse = await fetch(url, { signal: controleur.signal });
             if (!reponse.ok) throw new Error(reponse.statusText);
             const data = await reponse.json();
+
+            if (poseA) await this._patienter(DUREE_MIN_SQUELETTE - (Date.now() - poseA));
+            // Le plancher a pu laisser passer un chargement plus récent : il a la main.
+            if (controleur.signal.aborted) return;
+
+            // Le squelette et `aria-busy` partent avec le balisage qu'ils occupaient.
             this.listContainerTarget.innerHTML = data.html;
         } catch (error) {
-            // Le tampon reste intact : c'est l'affichage qui manque, pas la saisie.
-            this.listContainerTarget.innerHTML =
-                `<div class="alert alert-warning">Impossible d'afficher la liste : ${error.message}</div>`;
+            // Un chargement plus récent a pris la main : ce n'est pas une panne, et c'est
+            // lui qui mènera l'affichage à son terme.
+            if (error.name === 'AbortError') return;
+            this._rendreApresEchec();
+        } finally {
+            // TOUJOURS — succès, échec et abandon. Sans cela, une réponse arrivée en moins
+            // de 150 ms laisserait le minuteur poser le squelette APRÈS le rendu, par-dessus
+            // le bon total : le défaut qu'on corrige, à l'envers.
+            if (controleur.minuteur) clearTimeout(controleur.minuteur);
+            if (this._chargementEnCours === controleur) this._chargementEnCours = null;
         }
+    }
+
+    /** Le chargement en vol n'a plus de destinataire : sa requête ET son minuteur. @private */
+    _annulerLeChargementEnCours() {
+        const precedent = this._chargementEnCours;
+        if (!precedent) return;
+
+        if (precedent.minuteur) {
+            clearTimeout(precedent.minuteur);
+            precedent.minuteur = null;
+        }
+        precedent.abort();
+        this._chargementEnCours = null;
+    }
+
+    /** @private */
+    _patienter(ms) {
+        return ms > 0 ? new Promise((resoudre) => setTimeout(resoudre, ms)) : Promise.resolve();
+    }
+
+    /**
+     * Pose au pied du tableau le `<tfoot>` d'un gabarit rendu par le serveur.
+     *
+     * Le navigateur ne fabrique aucun balisage de liste — il clone. Un pied écrit ici
+     * ressemblerait à celui du serveur sans jamais lui être identique, et s'en écarterait
+     * au premier changement de `_list_manager.html.twig`.
+     *
+     * @returns {boolean} faux quand il n'y a rien à poser — au tout premier chargement le
+     *   gabarit n'a pas encore été rendu, et il n'y a alors aucun total périmé à masquer.
+     * @private
+     */
+    _poserLePied(gabarit) {
+        const table = this.listContainerTarget.querySelector('table');
+        const pied = gabarit?.content.querySelector('tfoot');
+        if (!table || !pied) return false;
+
+        table.querySelector('tfoot')?.remove();
+        table.appendChild(pied.cloneNode(true));
+        return true;
+    }
+
+    /**
+     * L'affichage après un échec : il montre LE TAMPON COURANT, pas le rendu précédent.
+     *
+     * Laisser le tableau en l'état afficherait l'avant-dernière vérité — la ligne qu'on
+     * vient de retirer y serait encore. Mais on ne REPOSE rien ici : `_rendreTampon()`
+     * poursuit son cours juste après nous et réinjectera les lignes et le rappel par le
+     * chemin nominal. Les reposer ici aussi les afficherait DEUX FOIS — défaut vu au
+     * navigateur, invisible à la lecture du code. On se borne donc à retirer ce que le
+     * cadre, faute d'avoir été rechargé, montre encore à tort.
+     *
+     * Le pied, lui, est bien posé ici : lui seul ne sera pas réécrit ensuite, et il doit
+     * dire son indisponibilité plutôt qu'un ancien chiffre. Un total faux est pire qu'un
+     * total absent.
+     *
+     * LIMITE ASSUMÉE : un rattachement AJOUTÉ pendant la panne ne peut pas paraître — son
+     * balisage n'existe que côté serveur, et le fabriquer ici rouvrirait le second
+     * habillage que tout ce mécanisme évite. La pastille de l'onglet le compte déjà, et le
+     * prochain chargement réussi le fera paraître.
+     * @private
+     */
+    _rendreApresEchec() {
+        const table = this.listContainerTarget.querySelector('table');
+        const corps = this.listContainerTarget.querySelector('tbody');
+        if (!table || !corps) {
+            // Rien n'est affiché : c'était le premier chargement. Le tampon reste intact —
+            // c'est l'affichage qui manque, pas la saisie.
+            this.listContainerTarget.innerHTML =
+                `<div class="alert alert-warning">Impossible d'afficher la liste.</div>`;
+            return;
+        }
+        table.removeAttribute('aria-busy');
+
+        const noeuds = this.groupe?.noeuds ?? [];
+
+        // Les RATTACHEMENTS portent `data-cible-id`, posé par `_marquerLesLignesRattachees()`
+        // précisément pour les retrouver : on ne garde que ceux encore au tampon.
+        const cibles = new Set(
+            noeuds.filter((n) => n.nature === 'rattachement').map((n) => String(n.idCible)),
+        );
+        corps.querySelectorAll('tr[data-cible-id]').forEach((ligne) => {
+            if (!cibles.has(ligne.dataset.cibleId)) ligne.remove();
+        });
+
+        // Place nette pour la réinjection qui suit : les lignes en attente déjà posées et
+        // le rappel qui les compte seront l'un et l'autre réécrits dans un instant.
+        corps.querySelectorAll('tr.collection-ligne-en-attente:not([data-cible-id])')
+            .forEach((ligne) => ligne.remove());
+        this.listContainerTarget.querySelectorAll('.collection-pied-attente')
+            .forEach((rappel) => rappel.remove());
+
+        this._poserLePied(this.hasPiedIndisponibleTarget ? this.piedIndisponibleTarget : null);
     }
 
     /**
