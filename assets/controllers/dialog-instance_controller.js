@@ -1,5 +1,8 @@
 import { Controller } from '@hotwired/stimulus';
 import { conditionRemplie } from './condition-action.js';
+import { urlAction } from './actions-groupees.js';
+import { BarreActions } from './barre-actions.js';
+import { nomAffiche } from './selecto.js';
 import { resumeDeFermeture } from './collection-tampon.js';
 import { champsSources, conteneurVisible, rangeeVisible, trouverChamp, valeurObservee } from './visibilite-conditions.js';
 /**
@@ -24,7 +27,8 @@ export default class extends Controller {
         'closeButton', 'progressBarContainer', 'footer', 'feedbackContainer', 'submitButton', 'closeFooterButton', 'gesteDeSuite', // Removed montantHT, montantTaxe
         'operationsContainer', // Kept operationsContainer as it's still relevant for other logic if needed.
         'saveIcon', 'closeIcon',
-        'addressedTo'
+        'addressedTo',
+        'barreActions', 'barreActionsContenu'
     ];
     
 
@@ -75,6 +79,18 @@ export default class extends Controller {
         this.boundAvantDechargement = this._avertirAvantDechargement.bind(this);
         window.addEventListener('beforeunload', this.boundAvantDechargement);
 
+        // La barre des actions de la fiche : MÊME rendu que celle du workspace
+        // (barre-actions.js). Créée ici pour que son écoute des icônes soit en place
+        // avant la première demande.
+        this.barreActions = new BarreActions(this.barreActionsContenuTarget, {
+            declencher: (action) => this._declencherAction(action),
+            prefixe: `${this.element.id || 'dialogue'}-action`,
+            // Icône ET libellé : la barre a toute la largeur du dialogue, chaque bouton
+            // peut dire ce qu'il fait au lieu de le faire deviner au survol.
+            libelles: true,
+        });
+        this.boundSurSaisie = this._surSaisie.bind(this);
+
         const detail = this.element.dialogDetail;
 
         if (detail) {
@@ -100,6 +116,8 @@ export default class extends Controller {
         document.removeEventListener('app:dialog.do-close', this.boundDoClose);
         document.removeEventListener('cerveau:event', this.boundAbandon);
         window.removeEventListener('beforeunload', this.boundAvantDechargement);
+        // Referme un menu de famille resté déplié et retire les écouteurs de la barre.
+        this.barreActions.detruire();
     }
 
     /**
@@ -211,6 +229,7 @@ export default class extends Controller {
             this.contentTarget.innerHTML = `<div class="alert alert-danger">${errorMessage}</div>`;
             this.contentTarget.classList.remove('text-center', 'p-5', 'd-flex', 'align-items-center', 'justify-content-center');
             this.contentTarget.style.minHeight = ''; // Réinitialiser la hauteur minimale
+            this.barreActionsTarget.hidden = true; // pas de fiche, pas d'actions
             // Notifier le cerveau de l'échec de chargement
             this.notifyCerveau('app:error.api', {
                 error: `Échec du chargement du formulaire: ${errorMessage}`
@@ -268,8 +287,9 @@ export default class extends Controller {
         // l'utilisateur ne relise (c'est lui qui enregistre).
         this.applyPrefill();
 
-        // NOUVEAU : Initialiser la logique de la barre d'outils des attributs
-        this.initializeAttributeToolbar();
+        // La barre des actions de la fiche, recalculée à CHAQUE chargement : après un
+        // enregistrement, ses conditions se relisent sur l'entité à jour.
+        this._afficherBarreActions();
 
         const mainDialogElement = this.modalOutlet.element;
 
@@ -343,14 +363,6 @@ export default class extends Controller {
             targetElement = this.hasCloseIconTarget ? this.closeIconTarget : null;
         } else if (requesterId === this.dialogId + '-geste-de-suite') {
             targetElement = this.element.querySelector('[data-geste-de-suite-icone]');
-        }
-        // NOUVEAU : Gérer les icônes pour la barre d'outils des attributs
-        else if (requesterId.startsWith(`${this.dialogId}-attr-action-`)) {
-            // CORRECTION : On extrait l'alias encodé en retirant le préfixe.
-            const encodedAlias = requesterId.substring((this.dialogId + '-attr-action-').length);
-            // On cherche le conteneur d'icône correspondant dans la barre d'outils. On remplace '--' par ':' pour retrouver l'alias original.
-            const originalAlias = encodedAlias.replace('--', ':');
-            targetElement = this.element.querySelector(`.attributes-toolbar .button-icon[data-icon-alias="${originalAlias}"]`);
         }
     
         // Si une cible a été trouvée, on injecte l'icône de manière robuste.
@@ -576,9 +588,17 @@ export default class extends Controller {
         // On stocke le message de succès pour l'afficher APRÈS le rechargement de la vue.
         this.feedbackOnNextLoad = { type: 'success', message: result.message };
 
+        // L'ENTITÉ À JOUR, en création comme en édition. Le serveur la renvoie avec ses
+        // valeurs calculées (groupe list:read) : c'est sur elle que la barre d'actions
+        // relit ses conditions au rechargement. En édition, on gardait celle de
+        // l'ouverture — un client retiré de son portefeuille se voyait encore proposer
+        // « Retirer du portefeuille ».
+        if (result.entity?.id) {
+            this.entity = result.entity;
+        }
+
         // Si c'était une création, on met à jour l'état interne pour passer en mode édition.
         if (this.isCreateMode && result.entity) {
-            this.entity = result.entity;
             this.isCreateMode = false;
 
             // LE GESTE DE SUITE SE DÉCIDE ICI, pendant qu'on sait encore que c'était une
@@ -670,65 +690,116 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVEAU : Initialise les icônes pour la barre d'outils des attributs.
-     * Cette méthode est appelée une fois que le contenu du formulaire est chargé.
+     * LA BARRE DES ACTIONS DE LA FICHE, pleine largeur au-dessus des deux volets.
+     *
+     * Les actions viennent du canevas SERVEUR, rendu avec l'entité (`data-actions-fiche`
+     * sur la rangée du formulaire) ; seules celles dont la condition tient sur l'entité
+     * s'affichent — même règle que la barre de liste et le clic droit
+     * (condition-action.js). Le rendu est celui du workspace (barre-actions.js), SANS
+     * plafond : la barre a toute la largeur du dialogue, chaque action y reste visible.
+     *
+     * Absente en création : il n'y a pas encore de fiche sur laquelle agir.
+     * @private
      */
-    initializeAttributeToolbar() {
-        const attributeToolbar = this.element.querySelector('.attributes-toolbar');
-        if (!attributeToolbar) return;
-
-        // Actions conditionnelles : le template rend TOUS les boutons ; on masque ici
-        // ceux dont la condition échoue contre l'entité. La règle est celle des deux
-        // autres surfaces (barre de liste et clic droit) — `condition-action.js` —, et
-        // non une troisième copie : elles proposent les mêmes actions et doivent donc
-        // répondre la même chose. Une action sans condition reste toujours visible.
-        attributeToolbar.querySelectorAll('button[data-condition]').forEach(button => {
-            let condition = null;
+    _afficherBarreActions() {
+        const source = this.contentTarget.querySelector('[data-actions-fiche]');
+        let actions = [];
+        if (source && !this.isCreateMode) {
             try {
-                condition = JSON.parse(button.dataset.condition);
+                actions = JSON.parse(source.dataset.actionsFiche) || [];
             } catch (e) {
-                condition = null;
+                actions = [];
             }
-            button.classList.toggle('d-none', !conditionRemplie(this.entity, condition));
-        });
+        }
+        this._sourceFiche = source;
 
-        const iconContainers = attributeToolbar.querySelectorAll('.button-icon[data-icon-alias]');
-        iconContainers.forEach(container => {
-            const iconAlias = container.dataset.iconAlias;
-            if (iconAlias) {
-                this.notifyCerveau('ui:icon.request', {
-                    iconName: iconAlias,
-                    iconSize: 18, // Taille adaptée pour un bouton de barre d'outils
-                    // On crée un ID de demandeur unique et valide comme sélecteur CSS.
-                    // On remplace ':' par '--' pour éviter les erreurs de syntaxe.
-                    requesterId: `${this.dialogId}-attr-action-${iconAlias.replace(':', '--')}`
-                });
-            }
+        const visibles = actions.filter((action) => conditionRemplie(this.entity, action.condition));
+        this.barreActions.afficher(visibles);
+        this.barreActionsTarget.hidden = visibles.length === 0;
+
+        this._armerGardeDeSaisie();
+    }
+
+    /**
+     * Le SELECTO de la fiche ouverte — la même forme que celui d'une ligne de liste
+     * (list-row#buildSelectoPayload) : `{ id, entity, entityType, entityCanvas, name }`.
+     * Les handlers du cerveau lisent `selection[0].id`, `.name` et `.entityType` ; une
+     * action doit donc recevoir la même chose qu'elle parte d'une ligne ou d'une fiche.
+     * @private
+     */
+    _selectoDeLaFiche() {
+        const source = this._sourceFiche;
+        let entityCanvas = null;
+        try {
+            entityCanvas = JSON.parse(source?.dataset.entityCanvas || 'null');
+        } catch (e) {
+            entityCanvas = null;
+        }
+
+        return {
+            id: this.entity.id,
+            entity: this.entity,
+            entityType: source?.dataset.entityType || '',
+            entityCanvas,
+            name: nomAffiche(source?.dataset.label, this.entity, this.entity.id),
+        };
+    }
+
+    /**
+     * Un clic sur une action de la fiche : même contrat que la barre du workspace
+     * (`url` + `selection`), plus l'`id` que lisaient déjà certains handlers.
+     * @private
+     */
+    _declencherAction(action) {
+        const id = this.entity.id;
+        this.notifyCerveau(action.event, {
+            id,
+            url: urlAction(action, id),
+            selection: [this._selectoDeLaFiche()],
         });
     }
 
     /**
-     * NOUVEAU : Gère le clic sur un bouton d'action de la barre d'outils des attributs.
-     * @param {MouseEvent} event 
+     * UNE ACTION NE PART PAS PENDANT UNE SAISIE NON ENREGISTRÉE.
+     *
+     * Les actions travaillent sur la fiche TELLE QU'ELLE EST EN BASE. Lancée pendant une
+     * saisie, l'une d'elles pouvait être défaite sans un mot : « Retirer du
+     * portefeuille » s'appliquait, mais le champ Portefeuille du formulaire gardait
+     * l'ancienne valeur, et l'« Enregistrer » suivant la réécrivait. La barre est donc
+     * grisée — pas masquée : son infobulle dit quoi faire.
+     *
+     * L'état « modifié » se mesure contre une EMPREINTE du formulaire prise au
+     * chargement, et non au premier événement : un widget qui se signale sans rien
+     * changer ne grise rien, et une saisie défaite rend la barre.
+     * @private
      */
-    handleAttributeAction(event) {
-        const button = event.currentTarget;
-        const eventName = button.dataset.eventName;
-        const urlTemplate = button.dataset.eventUrl; // C'est maintenant un template d'URL
-        const payload = JSON.parse(button.dataset.eventPayload || '{}');
+    _armerGardeDeSaisie() {
+        const form = this.contentTarget.querySelector('form');
+        this.barreActions.desactiver(false);
+        if (!form || this.barreActionsTarget.hidden) return;
 
-        if (eventName && urlTemplate) {
-            // CORRECTION : On remplace le placeholder %id% par l'ID de l'entité en cours d'édition.
-            // this.entity.id est toujours disponible dans ce contexte.
-            const finalUrl = urlTemplate.includes('%id%')
-                ? urlTemplate.replace('%id%', this.entity.id)
-                : urlTemplate;
-
-            // On enrichit le payload avec l'URL que le cerveau devra appeler
-            payload.url = finalUrl;
-            this.notifyCerveau(eventName, payload);
-        }
+        this._empreinteInitiale = this._empreinteDuFormulaire(form);
+        form.addEventListener('input', this.boundSurSaisie);
+        form.addEventListener('change', this.boundSurSaisie);
     }
+
+    /** @private */
+    _surSaisie(event) {
+        const form = event.currentTarget;
+        const modifie = this._empreinteDuFormulaire(form) !== this._empreinteInitiale;
+        this.barreActions.desactiver(modifie, 'Enregistrez d\'abord vos modifications.');
+    }
+
+    /**
+     * Les valeurs du formulaire, sérialisées. Un fichier compte par son nom : son
+     * contenu n'a pas à être relu à chaque frappe.
+     * @private
+     */
+    _empreinteDuFormulaire(form) {
+        return JSON.stringify([...new FormData(form).entries()]
+            .map(([nom, valeur]) => [nom, valeur instanceof File ? valeur.name : valeur]));
+    }
+
     /**
      * Vérifie la visibilité de tous les champs et lignes dynamiques.
      */

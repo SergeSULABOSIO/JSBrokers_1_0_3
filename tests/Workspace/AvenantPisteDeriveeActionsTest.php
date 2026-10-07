@@ -21,7 +21,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  * Tests fonctionnels des actions spéciales « piste dérivée » de la rubrique Avenant
  * (pattern Invité → Portefeuille) :
  *  - attribut calculé hasPisteDerivee qui pilote la visibilité des actions ;
- *  - exposition des actions conditionnelles dans le canevas (data-condition-*) ;
+ *  - exposition des actions conditionnelles dans le canevas (data-actions-fiche) ;
  *  - endpoint de contexte (mode edit/create selon l'état réel de l'avenant) ;
  *  - suppression de la piste dérivée via l'avenant (l'avenant de base est CONSERVÉ,
  *    malgré la cascade remove de Piste::avenantDeBase ; 404 sans piste dérivée).
@@ -240,9 +240,9 @@ class AvenantPisteDeriveeActionsTest extends WebTestCase
         ['avenantWithPiste' => $withP] = $this->seed();
         $this->client->loginUser($this->user(self::OWNER_EMAIL));
 
-        // Le formulaire d'édition d'un avenant rend la barre d'outils des attributs avec
-        // les trois actions « piste dérivée » et leurs conditions (data-condition-*),
-        // filtrées côté JS contre l'entité (dialog-instance#initializeAttributeToolbar).
+        // Le formulaire d'édition d'un avenant transmet à la barre d'actions de la fiche
+        // les trois actions « piste dérivée » et leurs conditions (data-actions-fiche),
+        // filtrées côté JS contre l'entité (dialog-instance#_afficherBarreActions).
         $this->client->request('GET', '/admin/avenant/api/get-form/' . $withP->getId());
         $this->assertResponseIsSuccessful();
         $html = (string) $this->client->getResponse()->getContent();
@@ -253,7 +253,7 @@ class AvenantPisteDeriveeActionsTest extends WebTestCase
         // obligeait le JS à reconstruire la règle — et il l'a laissée tomber le jour où
         // une condition a porté « present » plutôt que « value ». Les trois surfaces la
         // lisent désormais avec la même fonction (condition-action.js).
-        $this->assertStringContainsString('data-condition=', $html, 'Les actions doivent porter leur condition pour le filtrage côté dialogue.');
+        $this->assertStringContainsString('data-actions-fiche=', $html, 'Les actions doivent voyager avec leur condition vers la barre du dialogue.');
         $this->assertStringContainsString('hasPisteDerivee', $html, 'Et la condition doit nommer son champ.');
     }
 

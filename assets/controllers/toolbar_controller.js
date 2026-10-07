@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 import { conditionRemplie } from './condition-action.js';
-import { grouperActions, urlAction } from './actions-groupees.js';
-import { positionnerMenu } from './menu-flottant.js';
+import { urlAction } from './actions-groupees.js';
+import { BarreActions } from './barre-actions.js';
 
 /**
  * Nombre maximal d'entrées d'actions spécifiques affichées EN LIGNE dans la barre.
@@ -76,20 +76,26 @@ export default class extends Controller {
         this.selectos = [];
         this.activeFormCanvas = this.entityFormCanvasValue;
         
-        // NOUVEAU : Initialisation du cache pour les icônes.
-        this.iconCache = new Map();
-
         this.boundHandleContextUpdate = this.handleContextUpdate.bind(this);
-        
-        // NOUVEAU : Lier la méthode pour gérer la réception des icônes.
-        this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
 
+        // Le RENDU des actions spécifiques (boutons, familles, menus, icônes, clavier) est
+        // partagé avec la barre du dialogue d'entité : barre-actions.js. La barre ne
+        // garde ici que ce qui lui est propre — quelles actions, et ce qu'un clic envoie.
+        //
+        // UNE SEULE INSTANCE : Stimulus appelle initialize() avant connect(), qui le
+        // rappelle. Deux barres, ce seraient deux écouteurs clavier — chaque flèche
+        // sauterait alors deux boutons.
+        this.barreActions ??= new BarreActions(this.specificActionsContainerTarget, {
+            declencher: (action) => this._declencher(action),
+            prefixe: 'toolbar-action',
+            barre: this.element,
+        });
 
         this.initializeToolbarState();
         this.setupEventListeners();
 
-        // NOUVEAU : Pré-charger les icônes spécifiques dès le début.
-        this._preloadSpecificActionIcons();
+        // Pré-charger les icônes spécifiques dès le début.
+        this.barreActions.precharger(this.activeFormCanvas?.parametres?.attribute_actions);
     }
 
     /**
@@ -99,9 +105,6 @@ export default class extends Controller {
      */
     setupEventListeners() {
         document.addEventListener('app:context.changed', this.boundHandleContextUpdate); // NOUVEAU : Écoute le changement de contexte global
-
-        // NOUVEAU : Écouter la réponse du cerveau lorsque l'icône est prête.
-        document.addEventListener('app:icon.loaded', this.boundHandleIconLoaded);
     }
 
     /**
@@ -122,9 +125,8 @@ export default class extends Controller {
      */
     disconnect() {
         document.removeEventListener('app:context.changed', this.boundHandleContextUpdate);
-
-        // NOUVEAU : Nettoyer l'écouteur d'icône.
-        document.removeEventListener('app:icon.loaded', this.boundHandleIconLoaded);
+        this.barreActions?.detruire();
+        this.barreActions = null;
     }
 
     /**
@@ -246,26 +248,9 @@ export default class extends Controller {
         // Les actions spécifiques sont aussi cachées par défaut.
         this.toggleButton(this.specificActionsSeparatorTarget, false);
         this.specificActionsContainerTarget.innerHTML = '';
-    }
 
-    /**
-     * NOUVEAU : Parcourt les actions spécifiques définies dans le canvas
-     * et demande au cerveau de pré-charger les icônes manquantes.
-     * @private
-     */
-    _preloadSpecificActionIcons() {
-        const specificActions = this.activeFormCanvas?.parametres?.attribute_actions || [];
-        if (specificActions.length === 0) return;
-
-        specificActions.forEach(action => {
-            if (action.icon && !this.iconCache.has(action.icon)) {
-                this.notifyCerveau('ui:icon.request', {
-                    iconName: action.icon,
-                    // CORRECTION : Remplacer ':' par '--' pour créer un ID de requête valide comme sélecteur CSS.
-                    requesterId: `toolbar-preload-${action.icon.replace(/:/g, '--')}` 
-                });
-            }
-        });
+        // Un seul arrêt de tabulation dans la barre, posé dès l'affichage.
+        this.barreActions.rafraichirNavigation();
     }
 
     /**
@@ -309,248 +294,28 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVEAU : Crée et affiche les boutons pour les actions spécifiques.
+     * Affiche les actions spécifiques — rendu délégué au module partagé.
      * @param {Array} actions - Le tableau de configuration des actions venant du FormCanvas.
      * @private
      */
     updateSpecificActionButtons(actions) {
-        // On vide le conteneur
-        this.specificActionsContainerTarget.innerHTML = '';
-        this._fermerMenuOuvert();
-
         // On affiche ou masque le séparateur en fonction de la présence d'actions
         this.toggleButton(this.specificActionsSeparatorTarget, actions.length > 0);
 
-        if (actions.length === 0) {
-            return;
-        }
+        // REGROUPEMENT PAR FAMILLE, et au-delà de TOOLBAR_MAX_ACTIONS_EN_LIGNE entrées,
+        // le surplus rejoint « Autres actions » : la barre du workspace partage sa ligne
+        // avec les actions CRUD, elle doit garder une largeur prévisible.
+        this.barreActions.afficher(actions, { maxInline: TOOLBAR_MAX_ACTIONS_EN_LIGNE });
+    }
 
+    /**
+     * Un clic sur une action spécifique : l'action part au cerveau avec la sélection.
+     * @private
+     */
+    _declencher(action) {
         // Une action transverse n'a pas de ligne : l'identifiant peut manquer, et le
         // lire sans précaution faisait échouer TOUT le rendu de la barre.
         const selectedId = this.selectos[0]?.id ?? null;
-
-        // REGROUPEMENT PAR FAMILLE : une famille d'actions (les mouvements d'une
-        // police, par exemple) devient UN bouton qui déploie ses membres. Au-delà de
-        // MAX_ACTIONS_EN_LIGNE entrées, le surplus rejoint « Autres actions » — la
-        // barre reste lisible quel que soit le nombre d'actions déclarées.
-        grouperActions(actions, { maxInline: TOOLBAR_MAX_ACTIONS_EN_LIGNE }).forEach((entree) => {
-            this.specificActionsContainerTarget.appendChild(
-                entree.type === 'groupe'
-                    ? this._creerBoutonGroupe(entree, selectedId)
-                    : this._creerBoutonAction(entree.action, selectedId),
-            );
-        });
-    }
-
-    /**
-     * Bouton d'une action simple (comportement historique : icône seule + infobulle).
-     * @private
-     */
-    _creerBoutonAction(action, selectedId) {
-        const button = document.createElement('button');
-        button.className = 'btn btn-default';
-        button.setAttribute('type', 'button');
-        button.setAttribute('title', action.label);
-        button.setAttribute('aria-label', action.label);
-        button.setAttribute('data-controller', 'ripple');
-
-        this._poserIcone(button, action.icon, `toolbar-specific-action-${action.icon.replace(/:/g, '--')}-${selectedId}`);
-
-        button.addEventListener('click', () => {
-            this.notifyCerveau(action.event, { url: urlAction(action, selectedId), selection: this.selectos });
-        });
-
-        return button;
-    }
-
-    /**
-     * Bouton d'une FAMILLE : icône + chevron, ouvrant un menu déroulant qui liste
-     * les actions membres (icône + libellé, cette fois explicite — un menu a la
-     * place d'écrire, contrairement à la barre).
-     * @private
-     */
-    _creerBoutonGroupe(groupe, selectedId) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'toolbar-groupe';
-
-        const button = document.createElement('button');
-        button.className = 'btn btn-default toolbar-groupe-bouton';
-        button.setAttribute('type', 'button');
-        button.setAttribute('title', groupe.label);
-        button.setAttribute('aria-label', groupe.label);
-        button.setAttribute('aria-haspopup', 'menu');
-        button.setAttribute('aria-expanded', 'false');
-        // Le chevron « ce bouton déploie un menu » est un ::after CSS, PAS un élément :
-        // le circuit d'icônes remplace l'innerHTML du bouton à l'arrivée de l'icône
-        // (handleIconLoaded) et effacerait un enfant posé ici.
-        this._poserIcone(button, groupe.icon, `toolbar-groupe-${groupe.icon.replace(/:/g, '--')}-${selectedId}`);
-
-        const menu = document.createElement('ul');
-        menu.className = 'toolbar-groupe-menu';
-        menu.setAttribute('role', 'menu');
-        menu.setAttribute('aria-label', groupe.label);
-        menu.hidden = true;
-
-        groupe.actions.forEach((action) => {
-            const item = document.createElement('li');
-            item.setAttribute('role', 'menuitem');
-            item.setAttribute('tabindex', '-1');
-
-            const icone = document.createElement('span');
-            icone.className = 'toolbar-groupe-menu-icone';
-            icone.setAttribute('aria-hidden', 'true');
-            this._poserIcone(icone, action.icon, `toolbar-groupe-item-${action.icon.replace(/:/g, '--')}-${selectedId}-${crypto.randomUUID()}`, 18);
-            item.appendChild(icone);
-
-            const libelle = document.createElement('span');
-            libelle.textContent = action.label;
-            item.appendChild(libelle);
-
-            item.addEventListener('click', (event) => {
-                event.stopPropagation();
-                this._fermerMenuOuvert();
-                this.notifyCerveau(action.event, { url: urlAction(action, selectedId), selection: this.selectos });
-            });
-            menu.appendChild(item);
-        });
-
-        button.addEventListener('click', (event) => {
-            event.stopPropagation();
-            const ouvert = !menu.hidden;
-            this._fermerMenuOuvert();
-            if (!ouvert) this._ouvrirMenu(button, menu);
-        });
-
-        wrapper.append(button, menu);
-
-        return wrapper;
-    }
-
-    /** Ouvre le menu d'une famille et arme la fermeture (clic extérieur / Échap). @private */
-    _ouvrirMenu(button, menu) {
-        menu.hidden = false;
-        button.setAttribute('aria-expanded', 'true');
-        this.menuOuvert = { button, menu };
-
-        // ── OÙ LE MENU SE POSE ─────────────────────────────────────────────────────
-        //
-        // Il se posait en `absolute` dans la barre, avec une règle CSS qui le rabattait
-        // à droite dès qu'il était le DERNIER bouton — au motif qu'un dernier bouton est
-        // en fin de barre. C'est faux dès que la barre en porte peu : le bouton se
-        // trouve alors à GAUCHE, le menu part vers l'arrière, et il sort du panneau, qui
-        // le rogne. On lisait « …pteurs de congés ».
-        //
-        // On mesure donc, et l'on pose en coordonnées viewport avec la géométrie
-        // PARTAGÉE (menu-flottant.js) : celle du menu de bulle, du chip-sélecteur et du
-        // menu contextuel. Elle bascule au-dessus s'il n'y a pas la place dessous et
-        // écrête aux bords — un menu ne peut plus sortir de l'écran, où qu'il s'ouvre.
-        // `fixed` le sort au passage de tout ancêtre à `overflow: hidden`.
-        this._positionnerMenuDeGroupe(button, menu);
-
-        // La barre défile et se réagence (flex-wrap) : le menu doit suivre son bouton,
-        // faute de quoi il resterait posé là où le bouton n'est plus.
-        this.boundSuivreMenu = () => this._positionnerMenuDeGroupe(button, menu);
-        window.addEventListener('resize', this.boundSuivreMenu);
-        window.addEventListener('scroll', this.boundSuivreMenu, true);
-
-        this.boundFermerMenu = (event) => {
-            if (!menu.contains(event.target)) this._fermerMenuOuvert();
-        };
-        this.boundEchapMenu = (event) => {
-            if (event.key === 'Escape') {
-                this._fermerMenuOuvert();
-                button.focus(); // restitution du focus au déclencheur (WCAG 2.4.3)
-            }
-        };
-        document.addEventListener('click', this.boundFermerMenu);
-        document.addEventListener('keydown', this.boundEchapMenu);
-
-        menu.querySelector('[role="menuitem"]')?.focus();
-    }
-
-    /**
-     * Pose le menu d'une famille sous son bouton, en coordonnées viewport.
-     * @private
-     */
-    _positionnerMenuDeGroupe(button, menu) {
-        const ancre = button.getBoundingClientRect();
-        const { left, top } = positionnerMenu({
-            ancre,
-            menu: { largeur: menu.offsetWidth, hauteur: menu.offsetHeight },
-            viewport: { largeur: window.innerWidth, hauteur: window.innerHeight },
-            // À GAUCHE : le menu s'ouvre du côté où le bouton commence, dans le sens du
-            // geste. Aligné à droite, il partait vers l'arrière.
-            alignement: 'gauche',
-        });
-        menu.style.left = `${left}px`;
-        menu.style.top = `${top}px`;
-    }
-
-    /** Referme le menu de famille ouvert, s'il y en a un. @private */
-    _fermerMenuOuvert() {
-        if (this.boundSuivreMenu) {
-            window.removeEventListener('resize', this.boundSuivreMenu);
-            window.removeEventListener('scroll', this.boundSuivreMenu, true);
-            this.boundSuivreMenu = null;
-        }
-        if (this.boundFermerMenu) {
-            document.removeEventListener('click', this.boundFermerMenu);
-            this.boundFermerMenu = null;
-        }
-        if (this.boundEchapMenu) {
-            document.removeEventListener('keydown', this.boundEchapMenu);
-            this.boundEchapMenu = null;
-        }
-        if (!this.menuOuvert) return;
-        this.menuOuvert.menu.hidden = true;
-        this.menuOuvert.button.setAttribute('aria-expanded', 'false');
-        this.menuOuvert = null;
-    }
-
-    /**
-     * Pose une icône dans un conteneur : depuis le cache si possible, sinon en la
-     * demandant au cerveau (circuit d'icônes existant, inchangé).
-     * @private
-     */
-    _poserIcone(conteneur, iconName, requesterId, iconSize = 31) {
-        if (!iconName) return;
-        if (this.iconCache.has(iconName)) {
-            this.handleIconLoaded({ detail: { html: this.iconCache.get(iconName), requesterId, iconName } }, conteneur);
-
-            return;
-        }
-        conteneur.id = requesterId;
-        this.notifyCerveau('ui:icon.request', { iconName, iconSize, requesterId });
-    }
-
-    /**
-     * NOUVEAU : Gère la réception du HTML de l'icône et l'injecte dans le bon conteneur.
-     * @param {CustomEvent} event L'événement contenant le HTML de l'icône.
-     * @param {HTMLElement|null} directTarget Le bouton cible si l'icône vient du cache.
-     * @param {CustomEvent} event
-     */
-    handleIconLoaded(event, directTarget = null) {
-        const { html, requesterId, iconName } = event.detail;
-    
-        // Étape 1 : Mettre en cache l'icône dans tous les cas.
-        if (iconName && html) {
-            this.iconCache.set(iconName, html);
-        }
-
-        // Étape 2 : Trouver la cible (soit via l'ID de la requête, soit la cible directe passée en paramètre)
-        const targetButton = directTarget || (requesterId ? this.element.querySelector(`#${requesterId}`) : null);
-
-        // Étape 3 : Injecter l'icône de manière intelligente.
-        if (targetButton && html) {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = html;
-            const svgElement = tempDiv.querySelector('svg');
-            if (svgElement) {
-                svgElement.classList.add('toolbar-icon');
-                svgElement.setAttribute('aria-hidden', 'true');
-                targetButton.innerHTML = '';
-                targetButton.appendChild(svgElement);
-            }
-        }
+        this.notifyCerveau(action.event, { url: urlAction(action, selectedId), selection: this.selectos });
     }
 }

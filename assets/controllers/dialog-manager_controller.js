@@ -42,7 +42,17 @@ export default class extends Controller {
                          role="progressbar" aria-label="Chargement du contenu" aria-valuemin="0" aria-valuemax="100">
                         <div class="dialog-progress-bar" aria-hidden="true"></div>
                     </div>
-                    <div data-dialog-instance-target="content" class="modal-body p-0"> 
+                    <!-- Barre d'actions de la fiche : HORS du corps, elle occupe toute la
+                         largeur au-dessus des deux volets et ne défile pas avec eux. Même
+                         barre que celle du workspace (.context-toolbar, barre-actions.js). -->
+                    <div class="dialog-barre-actions" data-dialog-instance-target="barreActions" hidden>
+                        <div class="context-toolbar" role="toolbar" aria-label="Actions sur la fiche"
+                             data-controller="dark-tooltip" data-dialog-instance-target="barreActionsContenu"></div>
+                    </div>
+                    <!-- PAS de « p-0 » ici : son !important annulait la gouttière de 1rem de
+                         .custom-modal-scroll .modal-body. Les volets collaient alors aux
+                         bords du dialogue et à la barre d'actions, qui, elle, la respecte. -->
+                    <div data-dialog-instance-target="content" class="modal-body">
                         <div class="d-flex justify-content-center align-items-center h-100" style="min-height: 200px;">
                             <div class="spinner-border" role="status">
                                 <span class="visually-hidden">Loading...</span>
