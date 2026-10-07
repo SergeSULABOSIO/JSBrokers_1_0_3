@@ -1,9 +1,5 @@
 {# templates/components/dialog/_form_content.html.twig #}
 {% form_theme form 'themes/_collection_widget.html.twig' %}
-{% set title = isCreationMode
-    ? formCanvas.parametres.titre_creation
-    : formCanvas.parametres.titre_modification|replace({'%id%': entity.id})
-%}
 {# ── LES ACTIONS DE LA FICHE ─────────────────────────────────────────────────────
    Elles s'affichent dans la barre pleine largeur de la coquille du dialogue
    (dialog-manager), construite par dialog-instance#_afficherBarreActions avec le MÊME
@@ -14,15 +10,25 @@
    ligne de liste (_list_row) : type, canevas et nom affiché. Une action reçoit ainsi la
    même chose, qu'elle parte d'une ligne ou d'une fiche.
 
-   En création, rien : il n'y a pas encore de fiche sur laquelle agir. #}
+   En création, rien : il n'y a pas encore de fiche sur laquelle agir.
+
+   LE LIBELLÉ (`data-label`) est posé pour TOUTE fiche en édition, actions ou non : c'est
+   aussi lui que le titre du dialogue affiche à la place du numéro (selecto.js#titreDeFiche). #}
 {% set actions_fiche = isCreationMode ? [] : formCanvas.parametres.attribute_actions|default([]) %}
 {% set code_libelle = listeCanvas.colonne_principale.texte_principal.attribut_code|default(null) %}
     <div class="row gx-0" data-icon-name="{{ entityCanvas.parametres.icone|default('') }}"
+        {% if not isCreationMode %}
+            data-label="{{ code_libelle ? attribute(entity, code_libelle)|default('') : '' }}"
+            data-entity-type="{{ entite_nom|default('') }}"
+            {# L'ENTITÉ TELLE QU'ELLE EST EN BASE, à chaque chargement — même sérialisation
+               qu'une ligne de liste. C'est sur elle que la barre relit ses conditions :
+               après une action qui a changé la fiche, le dialogue rechargé ne doit plus
+               raisonner sur l'entité de son ouverture. #}
+            data-entite="{{ entity|serialize('json', {'groups': 'list:read', 'enable_max_depth': true}) }}"
+        {% endif %}
         {% if actions_fiche is not empty %}
             data-actions-fiche="{{ actions_fiche|json_encode(constant('JSON_UNESCAPED_SLASHES') b-or constant('JSON_UNESCAPED_UNICODE')) }}"
-            data-entity-type="{{ entite_nom|default('') }}"
             data-entity-canvas="{{ entityCanvas|json_encode }}"
-            data-label="{{ code_libelle ? attribute(entity, code_libelle)|default('') : '' }}"
         {% endif %}>
         {# La colonne des attributs est incluse ici et gère sa propre classe de colonne (ex: col-auto) #}
         {% include 'components/dialog/_calculated_attributes.html.twig' with { entity: entity, canvas: entityCanvas } %}
@@ -138,6 +144,11 @@
             {{ form_start(form, {'attr': form_controller
                 ? {'novalidate': 'novalidate', 'data-controller': form_controller}
                 : {'novalidate': 'novalidate'}}) }}
+            {# L'EMPREINTE D'OUVERTURE : à l'enregistrement, le serveur la compare à la base
+               et refuse (409) d'écraser une fiche modifiée entre-temps (EmpreinteDeFiche). #}
+            {% if empreinteFiche|default(null) %}
+                <input type="hidden" name="_empreinte_fiche" value="{{ empreinteFiche }}">
+            {% endif %}
             {# ══ PARTITION DU LAYOUT EN ONGLETS ══
                Une rangée qui porte `onglet_titre` est une COLLECTION, et chaque collection
                devient un onglet — `FormCanvasProviderTrait` pousse déjà une rangée dédiée

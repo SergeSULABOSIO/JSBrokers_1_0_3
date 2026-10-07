@@ -78,6 +78,10 @@ export default class extends Controller {
         document.addEventListener('cerveau:event', this.boundAbandon);
         this.boundAvantDechargement = this._avertirAvantDechargement.bind(this);
         window.addEventListener('beforeunload', this.boundAvantDechargement);
+        // Une action a modifié une fiche : si c'est la nôtre, on se recharge (cf. cerveau
+        // #_annoncerFicheModifiee) au lieu de garder un état que « Enregistrer » renverrait.
+        this.boundFicheModifiee = this._surFicheModifiee.bind(this);
+        document.addEventListener('app:fiche.modifiee', this.boundFicheModifiee);
 
         // La barre des actions de la fiche : MÊME rendu que celle du workspace
         // (barre-actions.js). Créée ici pour que son écoute des icônes soit en place
@@ -116,6 +120,7 @@ export default class extends Controller {
         document.removeEventListener('app:dialog.do-close', this.boundDoClose);
         document.removeEventListener('cerveau:event', this.boundAbandon);
         window.removeEventListener('beforeunload', this.boundAvantDechargement);
+        document.removeEventListener('app:fiche.modifiee', this.boundFicheModifiee);
         // Referme un menu de famille resté déplié et retire les écouteurs de la barre.
         this.barreActions.detruire();
     }
@@ -223,8 +228,18 @@ export default class extends Controller {
             return;
         }
 
+        // RECHARGÉE APRÈS UNE ACTION, LA FICHE N'EXISTE PLUS : l'action l'a supprimée (tri
+        // du dossier). Afficher « erreur 404 » dans le dialogue n'aurait aucun sens — on le
+        // ferme ; la notification de l'action a déjà dit ce qui a été supprimé.
+        if (error && this._rechargementApresAction && error.status === 404) {
+            this._rechargementApresAction = false;
+            this.notifyCerveau('ui:dialog.close-request', { dialogId: this.dialogId });
+            return;
+        }
+        this._rechargementApresAction = false;
+
         if (error) {
-            const errorMessage = error.message || "Une erreur inconnue est survenue.";            
+            const errorMessage = error.message || "Une erreur inconnue est survenue.";
             this.titleTarget.textContent = "Erreur"; // Mettre à jour le titre avec l'erreur
             this.contentTarget.innerHTML = `<div class="alert alert-danger">${errorMessage}</div>`;
             this.contentTarget.classList.remove('text-center', 'p-5', 'd-flex', 'align-items-center', 'justify-content-center');
@@ -267,7 +282,10 @@ export default class extends Controller {
         });
 
         // On remplace tout le contenu de la modale par le HTML reçu.
-        this.contentTarget.innerHTML = html; 
+        this.contentTarget.innerHTML = html;
+
+        // L'entité telle que le serveur vient de la lire — et non plus celle de l'ouverture.
+        this._relireLaFiche();
 
         // On attache l'action de soumission au nouveau formulaire qui vient d'être injecté.
         const form = this.element.querySelector('form'); // Form is now inside modal-body, so search from modal-content
@@ -332,6 +350,17 @@ export default class extends Controller {
             const id = this._suiteApresCreation;
             this._suiteApresCreation = null;
             this._poserLeGesteDeSuite(id);
+        }
+
+        // Rechargée après une action, la fiche rouvre l'onglet où l'on se trouvait : une
+        // action lancée depuis « Contacts » ne doit pas renvoyer sur « Principal ». Différé
+        // d'un tour : le contrôleur des onglets se connecte après l'injection du HTML.
+        if (this._ongletARestaurer) {
+            const onglet = this._ongletARestaurer;
+            this._ongletARestaurer = null;
+            setTimeout(() => {
+                this.contentTarget.querySelector(`.jsb-onglet[data-tab-id="${CSS.escape(onglet)}"]:not(.active)`)?.click();
+            }, 0);
         }
 
         // On s'assure que les boutons sont réactivés après un rechargement.
@@ -542,6 +571,16 @@ export default class extends Controller {
      * @private
      */
     handleFailedSubmit(error, bodyContainer, originalBodyHtml) {
+        // LA FICHE A CHANGÉ EN BASE DEPUIS SON OUVERTURE (409, EmpreinteDeFiche) : rien
+        // n'a été écrit. Ce n'est pas une erreur de saisie — aucun champ n'est à corriger
+        // ici — mais un choix à proposer : recharger la fiche, en sachant ce qu'on perd.
+        if (error?.conflit) {
+            this.notifyCerveau('app:form.validation-error', { message: error.message, errors: {} });
+            this._signalerFichePerimee(error.message);
+            this.feedbackOnNextLoad = null;
+            return;
+        }
+
         // // 1. On restaure le formulaire original pour permettre à l'utilisateur de corriger.
         // if (bodyContainer && originalBodyHtml) {
         //     bodyContainer.innerHTML = originalBodyHtml;
@@ -702,16 +741,15 @@ export default class extends Controller {
      * @private
      */
     _afficherBarreActions() {
-        const source = this.contentTarget.querySelector('[data-actions-fiche]');
+        const source = this._sourceFiche;
         let actions = [];
-        if (source && !this.isCreateMode) {
+        if (source?.dataset.actionsFiche && !this.isCreateMode) {
             try {
                 actions = JSON.parse(source.dataset.actionsFiche) || [];
             } catch (e) {
                 actions = [];
             }
         }
-        this._sourceFiche = source;
 
         const visibles = actions.filter((action) => conditionRemplie(this.entity, action.condition));
         this.barreActions.afficher(visibles);
@@ -776,7 +814,10 @@ export default class extends Controller {
     _armerGardeDeSaisie() {
         const form = this.contentTarget.querySelector('form');
         this.barreActions.desactiver(false);
-        if (!form || this.barreActionsTarget.hidden) return;
+        this._empreinteInitiale = null;
+        // Suivie pour TOUTE fiche en édition, barre ou non : c'est aussi elle qui décide
+        // si une fiche modifiée ailleurs peut être rechargée sans rien perdre.
+        if (!form || this.isCreateMode) return;
 
         this._empreinteInitiale = this._empreinteDuFormulaire(form);
         form.addEventListener('input', this.boundSurSaisie);
@@ -784,10 +825,95 @@ export default class extends Controller {
     }
 
     /** @private */
-    _surSaisie(event) {
-        const form = event.currentTarget;
-        const modifie = this._empreinteDuFormulaire(form) !== this._empreinteInitiale;
-        this.barreActions.desactiver(modifie, 'Enregistrez d\'abord vos modifications.');
+    _surSaisie() {
+        this.barreActions.desactiver(this._saisieEnCours(), 'Enregistrez d\'abord vos modifications.');
+    }
+
+    /**
+     * Le formulaire diffère-t-il de ce que le serveur a envoyé ?
+     * @private
+     */
+    _saisieEnCours() {
+        const form = this.contentTarget.querySelector('form');
+        return !!form && this._empreinteInitiale !== null
+            && this._empreinteDuFormulaire(form) !== this._empreinteInitiale;
+    }
+
+    /**
+     * La racine de la fiche (rangée du formulaire) et l'entité qu'elle porte, relues à
+     * CHAQUE chargement. Les conditions de la barre se lisent sur cette entité-là : après
+     * une action, celle de l'ouverture du dialogue est périmée.
+     * @private
+     */
+    _relireLaFiche() {
+        this._sourceFiche = this.contentTarget.querySelector('[data-icon-name]');
+        const serialisee = this._sourceFiche?.dataset.entite;
+        if (!serialisee || this.isCreateMode) return;
+        try {
+            const entite = JSON.parse(serialisee);
+            if (entite?.id) this.entity = entite;
+        } catch (e) {
+            // Une entité illisible n'empêche pas d'éditer : on garde la précédente.
+        }
+    }
+
+    /**
+     * UNE ACTION VIENT DE MODIFIER UNE FICHE — la nôtre ?
+     *
+     * Sans rechargement, le formulaire gardait l'état d'avant l'action, et son
+     * « Enregistrer » le renvoyait : « Retirer du portefeuille » était défait sans un mot.
+     *  - formulaire intact : on recharge (formulaire, attributs, barre et conditions) ;
+     *  - saisie en cours : on ne jette JAMAIS ce que l'utilisateur a tapé. Un bandeau
+     *    l'avertit et lui offre de recharger ; s'il enregistre quand même, le serveur
+     *    refuse (empreinte, 409) au lieu d'écraser.
+     * @private
+     */
+    _surFicheModifiee(event) {
+        const { entityType, id, origine } = event.detail || {};
+        if (this.isCreateMode || !this.entity?.id || origine === this.dialogId) return;
+        if (String(id) !== String(this.entity.id)) return;
+        const notreType = this._sourceFiche?.dataset.entityType;
+        if (notreType && entityType && notreType !== entityType) return;
+
+        if (this._saisieEnCours()) {
+            this._signalerFichePerimee('Cette fiche vient d\'être modifiée par une action. Vos saisies ne sont pas enregistrées.');
+            return;
+        }
+        this._rechargerLaFiche('Fiche mise à jour : une action vient de la modifier.');
+    }
+
+    /**
+     * Recharge la fiche depuis la base, en revenant à l'onglet courant.
+     * @param {string} message - dit à l'utilisateur pourquoi la fiche a bougé.
+     * @private
+     */
+    _rechargerLaFiche(message) {
+        this._ongletARestaurer = this.contentTarget.querySelector('.jsb-onglet.active')?.dataset.tabId || null;
+        this._rechargementApresAction = true;
+        this.feedbackOnNextLoad = { type: 'success', message };
+        this.reloadView();
+    }
+
+    /** Bouton « Recharger la fiche » du bandeau : la saisie en cours est abandonnée, sciemment. */
+    rechargerLaFiche() {
+        this._rechargerLaFiche('Fiche rechargée depuis la base.');
+    }
+
+    /**
+     * LE BANDEAU « FICHE PÉRIMÉE » : ce qui s'est passé, et le geste pour en sortir.
+     * Au pied du dialogue, là où s'affichent déjà les retours d'enregistrement.
+     * @private
+     */
+    _signalerFichePerimee(message) {
+        this.showFeedback('warning', message);
+        const conteneur = this.feedbackContainerTarget.querySelector('.feedback-message');
+        if (!conteneur) return;
+        const bouton = document.createElement('button');
+        bouton.type = 'button';
+        bouton.className = 'btn btn-sm btn-outline-primary ms-2';
+        bouton.dataset.action = 'click->dialog-instance#rechargerLaFiche';
+        bouton.textContent = 'Recharger la fiche';
+        conteneur.appendChild(bouton);
     }
 
     /**

@@ -187,6 +187,18 @@ trait ControllerUtilsTrait
     }
 
     /**
+     * Empreinte des champs d'une fiche : un « Enregistrer » refuse d'écraser une fiche
+     * modifiée en base depuis l'ouverture de son formulaire (409 qui nomme les champs).
+     */
+    private \App\Services\Form\EmpreinteDeFiche $empreinteDeFiche;
+
+    #[Required]
+    public function setEmpreinteDeFiche(\App\Services\Form\EmpreinteDeFiche $empreinteDeFiche): void
+    {
+        $this->empreinteDeFiche = $empreinteDeFiche;
+    }
+
+    /**
      * Payload des fiches : relations du canevas que la sérialisation ne publie pas.
      * Injecté par setter autowiré (#[Required]) comme les autres services du trait —
      * aucun constructeur de contrôleur à toucher.
@@ -1146,6 +1158,14 @@ trait ControllerUtilsTrait
             $this->appartenance()->exigerLeCabinetOuvert($entity, $this->getEntityName($entityClass));
         }
 
+        // L'EMPREINTE D'OUVERTURE, prise ICI : entité telle que lue en base, formulaire
+        // construit, AVANT tout calcul d'attribut. C'est exactement le chemin que suit
+        // l'enregistrement pour la recalculer — une valeur posée en mémoire entre les
+        // deux passerait sinon pour une modification, et chaque sauvegarde serait refusée.
+        $empreinteFiche = $isCreationMode
+            ? null
+            : $this->empreinteDeFiche->jeton($this->createForm($formTypeClass, $entity));
+
         if (!$entity) {
             $entity = new $entityClass();
             // On appelle l'initialiseur pour définir les valeurs par défaut (ex: Entreprise, dates, etc.)
@@ -1275,6 +1295,7 @@ trait ControllerUtilsTrait
             // (le nom que l'écran affiche).
             'entite_nom' => $this->getEntityName($entityClass),
             'listeCanvas' => $this->canvasBuilder->getListeCanvas($entityClass),
+            'empreinteFiche' => $empreinteFiche,
         ]);
     }
 
@@ -1366,6 +1387,36 @@ trait ControllerUtilsTrait
         }
 
         $form = $this->createForm($formTypeClass, $entity);
+
+        // LA FICHE A-T-ELLE CHANGÉ DEPUIS L'OUVERTURE DU FORMULAIRE ?
+        //
+        // Le dialogue renvoie TOUS ses champs, touchés ou non. Si la base a bougé entre
+        // l'ouverture et l'enregistrement (une action lancée depuis la fiche, l'assistant,
+        // un collègue), l'ancienne valeur affichée écraserait la nouvelle — « Retirer du
+        // portefeuille » était ainsi défait sans un mot. On compare l'empreinte d'ouverture
+        // à celle de la base, AVANT d'appliquer la saisie, et l'on refuse en nommant les
+        // champs. Garde OPT-IN : seul le dialogue envoie l'empreinte ; l'assistant et les
+        // imports, qui écrivent par d'autres chemins, ne sont pas concernés.
+        $jetonOuverture = $data[\App\Services\Form\EmpreinteDeFiche::CHAMP] ?? null;
+        unset($submittedData[\App\Services\Form\EmpreinteDeFiche::CHAMP]);
+        if (!$isCreationMode && is_string($jetonOuverture) && $jetonOuverture !== '') {
+            $champsModifies = $this->empreinteDeFiche->champsModifies($form, $jetonOuverture);
+            if ($champsModifies !== []) {
+                $libelles = array_map(
+                    fn (string $champ) => $this->champsObligatoiresInspector->libelleChamp($entityClass, $champ),
+                    $champsModifies,
+                );
+
+                return $this->json([
+                    'conflit' => true,
+                    'champs' => $champsModifies,
+                    'message' => sprintf(
+                        'Cette fiche a été modifiée depuis son ouverture (%s). Rien n\'a été enregistré : rechargez-la pour repartir de son état actuel.',
+                        implode(', ', $libelles),
+                    ),
+                ], Response::HTTP_CONFLICT);
+            }
+        }
 
         // CORRECTION : S'assure que les champs à choix multiples (checkboxes) sont bien vidés.
         // Quand un champ 'multiple' est soumis sans aucune option cochée, sa clé est absente des données POST.

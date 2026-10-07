@@ -345,6 +345,103 @@ class ClientPortefeuilleActionsTest extends WebTestCase
         );
     }
 
+    /** L'empreinte d'ouverture que le formulaire d'édition transporte. */
+    private function empreinteDuFormulaire(string $html): string
+    {
+        self::assertSame(1, preg_match('/name="_empreinte_fiche" value="([^"]+)"/', $html, $m), "Le formulaire d'édition doit porter son empreinte d'ouverture.");
+
+        return html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5);
+    }
+
+    /**
+     * LE SCÉNARIO EXACT DE LA PERTE DE DONNÉES : retrait, puis « Enregistrer ».
+     *
+     * La fiche est ouverte (le client est dans le portefeuille ALPHA), « Retirer du
+     * portefeuille » s'applique en base, puis le formulaire — qui affiche encore ALPHA —
+     * est enregistré. Avant la garde, il réécrivait ALPHA : le retrait était défait sans
+     * un mot. Il doit désormais être refusé, en nommant le champ, et rien ne doit bouger.
+     */
+    public function testEnregistrerUneFichePerimeeEstRefuseSansRienEcraser(): void
+    {
+        ['clientIn' => $clientIn, 'pfA' => $pfA] = $this->seed();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $this->client->request('GET', '/admin/client/api/get-form/' . $clientIn->getId());
+        $this->assertResponseIsSuccessful();
+        $empreinte = $this->empreinteDuFormulaire((string) $this->client->getResponse()->getContent());
+
+        $this->client->request('DELETE', '/admin/client/api/retirer-portefeuille/' . $clientIn->getId());
+        $this->assertResponseIsSuccessful('Le retrait doit réussir.');
+
+        // Le formulaire d'avant le retrait, tel que le dialogue l'enverrait.
+        $this->client->request('POST', '/admin/client/api/submit', [
+            'id' => $clientIn->getId(),
+            'nom' => self::CLI_IN . ' (corrigé)',
+            'portefeuille' => $pfA->getId(),
+            '_empreinte_fiche' => $empreinte,
+        ]);
+
+        $this->assertResponseStatusCodeSame(409, 'Une fiche modifiée depuis son ouverture ne doit pas être écrasée.');
+        $reponse = json_decode((string) $this->client->getResponse()->getContent(), true);
+        $this->assertTrue($reponse['conflit'] ?? false);
+        $this->assertContains('portefeuille', $reponse['champs'] ?? [], 'Le refus doit nommer le champ qui a changé.');
+        $this->assertStringContainsString('Rien n\'a été enregistré', $reponse['message'] ?? '');
+
+        $this->em()->clear();
+        $relu = $this->em()->getRepository(Client::class)->find($clientIn->getId());
+        $this->assertNull($relu->getPortefeuille(), 'Le retrait doit tenir : le client reste sans portefeuille.');
+        $this->assertSame(self::CLI_IN, $relu->getNom(), 'Rien de la saisie refusée ne doit avoir été écrit.');
+
+        // Rechargée, la fiche porte la nouvelle empreinte et l'entité à jour : elle s'enregistre.
+        $this->client->request('GET', '/admin/client/api/get-form/' . $clientIn->getId());
+        $html = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('&quot;hasPortefeuille&quot;:false', $html, "L'entité transmise au dialogue doit être celle de la base.");
+        $this->client->request('POST', '/admin/client/api/submit', [
+            'id' => $clientIn->getId(),
+            'nom' => self::CLI_IN . ' (corrigé)',
+            '_empreinte_fiche' => $this->empreinteDuFormulaire($html),
+        ]);
+        $this->assertResponseIsSuccessful("Une fiche rechargée doit s'enregistrer normalement.");
+        $this->em()->clear();
+        $this->assertSame(self::CLI_IN . ' (corrigé)', $this->em()->getRepository(Client::class)->find($clientIn->getId())->getNom());
+    }
+
+    /**
+     * PAS DE FAUX REFUS. L'empreinte d'ouverture et celle que recalcule l'enregistrement
+     * doivent coïncider tant que la base n'a pas bougé — sinon chaque sauvegarde serait
+     * refusée. Vérifié sur trois entités dont les formulaires diffèrent (relations,
+     * choix, collections, champs calculés).
+     */
+    public function testLEmpreinteDOuvertureCoincideAvecLaBaseIntacte(): void
+    {
+        ['clientIn' => $clientIn, 'pfA' => $pfA] = $this->seed();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $gestionnaire = $pfA->getGestionnaire();
+
+        $cas = [
+            ['/admin/client/api/get-form/', Client::class, \App\Form\ClientType::class, $clientIn->getId()],
+            ['/admin/portefeuille/api/get-form/', Portefeuille::class, \App\Form\PortefeuilleType::class, $pfA->getId()],
+            ['/admin/invite/api/get-form/', Invite::class, \App\Form\InviteType::class, $gestionnaire->getId()],
+        ];
+        foreach ($cas as [$url, $classe, $type, $id]) {
+            $this->client->request('GET', $url . $id);
+            $this->assertResponseIsSuccessful($url);
+            $empreinte = $this->empreinteDuFormulaire((string) $this->client->getResponse()->getContent());
+
+            $this->em()->clear();
+            $entite = $this->em()->getRepository($classe)->find($id);
+            $form = static::getContainer()->get('form.factory')->create($type, $entite);
+            $this->assertSame(
+                [],
+                static::getContainer()->get(\App\Services\Form\EmpreinteDeFiche::class)->champsModifies($form, $empreinte),
+                "$classe : l'empreinte d'ouverture doit coïncider avec la base intacte.",
+            );
+        }
+
+        $this->client->request('GET', '/admin/client/api/get-form/0');
+        $this->assertStringNotContainsString('_empreinte_fiche', (string) $this->client->getResponse()->getContent(), 'En création, il n\'y a rien à protéger.');
+    }
+
     public function testHasPortefeuilleCalculatedIndicator(): void
     {
         ['clientIn' => $clientIn, 'clientLibre' => $libre] = $this->seed();
