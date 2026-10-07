@@ -2,6 +2,8 @@
 
 namespace App\Entity;
 
+use App\Validator as AppAssert;
+
 use App\Entity\Traits\AuditableTrait;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
@@ -14,6 +16,7 @@ use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: NotificationSinistreRepository::class)]
 #[ORM\HasLifecycleCallbacks]
+#[AppAssert\ReferenceDePoliceExistante]
 class NotificationSinistre implements OwnerAwareInterface
 {
     use AuditableTrait;
