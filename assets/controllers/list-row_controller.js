@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { nomAffiche } from './selecto.js';
 
 /**
  * @class ListRowController
@@ -126,32 +127,24 @@ export default class extends Controller {
      * @returns {string} jamais vide
      */
     _nomDeLaLigne() {
-        const etiquette = (this.element.dataset.label || '').trim();
-        if (etiquette !== '') {
-            return etiquette;
-        }
-
         // Repli pour les gabarits qui rendent une ligne sans passer par `_list_row`
         // (la production intermédiaire a son propre corps de tableau).
         // ⚠ `hasCheckboxTarget` ET NON L'OPÉRATEUR OPTIONNEL : le getter de cible Stimulus
         // LÈVE quand la cible manque, il ne rend pas `undefined`. Or la colonne de sélection
         // est masquée en collection embarquée (`usage == 'dialog'`).
         const entite = this.hasCheckboxTarget ? this.checkboxTarget.dataset.entity : null;
+        let donnees = null;
         if (entite) {
             try {
-                const donnees = JSON.parse(entite) || {};
-                for (const champ of ['nom', 'libelle', 'reference', 'titre', 'numero']) {
-                    const valeur = donnees[champ];
-                    if (typeof valeur === 'string' && valeur.trim() !== '') {
-                        return valeur.trim();
-                    }
-                }
+                donnees = JSON.parse(entite);
             } catch {
                 // Une entité illisible n'est pas une raison de perdre la sélection.
             }
         }
 
-        return `Élément #${this.idobjetValue}`;
+        // La règle est PARTAGÉE avec la barre d'actions du dialogue (selecto.js) : une
+        // même fiche se nomme pareil d'où que parte le clic.
+        return nomAffiche(this.element.dataset.label, donnees, this.idobjetValue);
     }
 
     /**

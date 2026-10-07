@@ -3,51 +3,14 @@
 {#
     Repère de page dédié aux attributs calculés (colonne sombre).
     <aside> + aria-label : identifie la zone comme contenu complémentaire pour les technologies d'assistance (Bastien & Scapin > Guidage).
-    Le contrôleur de tooltip englobe la barre d'outils ET les attributs.
+    Les actions de la fiche n'habitent plus cette colonne : elles ont leur barre pleine
+    largeur au-dessus des deux volets (cf. _form_content.html.twig).
 #}
 {# En CRÉATION, cette colonne ne parle plus d'attributs calculés : sur une entité
    neuve ils valent tous zéro. Elle explique alors CE QU'ON EST EN TRAIN DE CRÉER.
    Son intitulé accessible suit donc le mode. #}
 <aside class="col-auto calculated-attributes-column" style="width: 400px;"
        aria-label="{{ isCreationMode ? 'À quoi sert ce paramètre' : 'Attributs calculés' }}">
-    {# Barre d'outils des attributs, visible uniquement en mode édition #}
-    {% if not isCreationMode and formCanvas.parametres.attribute_actions is defined and formCanvas.parametres.attribute_actions is not empty %}
-        {# role="toolbar" + aria-label : regroupe les actions et annonce leur finalité (WCAG 1.3.1) #}
-        <div class="attributes-toolbar" role="toolbar" aria-label="Actions sur les attributs">
-            {% for action in formCanvas.parametres.attribute_actions %}
-                <button
-                    type="button"
-                    class="btn btn-sm attributes-toolbar-button"
-                    data-controller="ripple" {# Effet d'onde au clic #}
-                    {# aria-label garantit un nom accessible même quand le libellé texte est masqué (WCAG 4.1.2) #}
-                    aria-label="{{ action.label }}"
-                    data-meta-tip="{{ action.label }}"
-                    data-action="click->dialog-instance#handleAttributeAction"
-                    data-event-name="{{ action.event }}"
-                    data-event-url="{{ action.url }}"
-                    data-event-payload="{{ {id: entity.id}|json_encode }}"
-                    {# Condition éventuelle de l'action, rendue ENTIÈRE.
-                       Elle était éclatée en deux attributs — champ et valeur — ce qui
-                       obligeait le JS à reconstruire la règle, et l'a laissé tomber le jour
-                       où une condition a porté « present » plutôt que « value ». Le
-                       contrat entier voyage désormais d'un bloc, et les trois surfaces
-                       (barre de liste, clic droit, barre de dialogue) le lisent avec la
-                       MÊME fonction : condition-action.js. #}
-                    {% if action.condition is defined %}
-                        data-condition="{{ action.condition|json_encode }}"
-                    {% endif %}
-                >
-                    {# Icône chargée par son alias via JS ; décorative → masquée aux lecteurs d'écran (WCAG 1.1.1) #}
-                    <span class="button-icon" data-icon-alias="{{ action.icon }}" aria-hidden="true"></span>
-                    {# Afficher le texte seulement si on a moins de 2 boutons #}
-                    {% if formCanvas.parametres.attribute_actions|length < 2 %}
-                        <span>{{ action.label }}</span>
-                    {% endif %}
-                </button>
-            {% endfor %}
-        </div>
-    {% endif %}
-
     {#
         ── EN CRÉATION : LA DESCRIPTION DU PARAMÈTRE ───────────────────────────────────
         Cette colonne était purement et simplement INVISIBLE en création (cf. la règle
@@ -85,8 +48,7 @@
     {% elseif canvas is defined and canvas.liste is defined and canvas.liste is not empty %}
         {% set calculated_attributes = canvas.liste|filter(attr => attr.type == 'Calcul') %}
         {% if calculated_attributes is not empty %}
-            {# On ajoute une classe pour gérer l'espacement si la barre d'outils est présente #}
-            <h5 class="column-title {% if not isCreationMode and formCanvas.parametres.attribute_actions is defined %}mt-3{% endif %}">
+            <h5 class="column-title">
                 {# Pastille cobalt de l'entité : écho de l'entête contextuel du volet droit (Cohérence). #}
                 <span class="column-title-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(canvas.parametres.icone|default('default')), {height: '20px', width: '20px'}) }}</span>
                 Attributs calculés

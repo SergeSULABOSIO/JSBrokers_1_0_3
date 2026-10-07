@@ -4,7 +4,26 @@
     ? formCanvas.parametres.titre_creation
     : formCanvas.parametres.titre_modification|replace({'%id%': entity.id})
 %}
-    <div class="row gx-0" data-icon-name="{{ entityCanvas.parametres.icone|default('') }}">
+{# ── LES ACTIONS DE LA FICHE ─────────────────────────────────────────────────────
+   Elles s'affichent dans la barre pleine largeur de la coquille du dialogue
+   (dialog-manager), construite par dialog-instance#_afficherBarreActions avec le MÊME
+   rendu que la barre du workspace (barre-actions.js). Le gabarit ne fait que les
+   transmettre : la source reste le canevas SERVEUR, calculé avec l'entité.
+
+   Avec elles, de quoi composer le selecto de la fiche — la forme exacte de celui d'une
+   ligne de liste (_list_row) : type, canevas et nom affiché. Une action reçoit ainsi la
+   même chose, qu'elle parte d'une ligne ou d'une fiche.
+
+   En création, rien : il n'y a pas encore de fiche sur laquelle agir. #}
+{% set actions_fiche = isCreationMode ? [] : formCanvas.parametres.attribute_actions|default([]) %}
+{% set code_libelle = listeCanvas.colonne_principale.texte_principal.attribut_code|default(null) %}
+    <div class="row gx-0" data-icon-name="{{ entityCanvas.parametres.icone|default('') }}"
+        {% if actions_fiche is not empty %}
+            data-actions-fiche="{{ actions_fiche|json_encode(constant('JSON_UNESCAPED_SLASHES') b-or constant('JSON_UNESCAPED_UNICODE')) }}"
+            data-entity-type="{{ entite_nom|default('') }}"
+            data-entity-canvas="{{ entityCanvas|json_encode }}"
+            data-label="{{ code_libelle ? attribute(entity, code_libelle)|default('') : '' }}"
+        {% endif %}>
         {# La colonne des attributs est incluse ici et gère sa propre classe de colonne (ex: col-auto) #}
         {% include 'components/dialog/_calculated_attributes.html.twig' with { entity: entity, canvas: entityCanvas } %}
 

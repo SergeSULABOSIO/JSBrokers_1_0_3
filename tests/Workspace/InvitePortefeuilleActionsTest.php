@@ -20,7 +20,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  *  - préremplissage du gestionnaire à la création (parentContext de dialog-instance) ;
  *  - suppression du portefeuille via l'invité (clients détachés, pas supprimés ; 404 sans
  *    portefeuille) ;
- *  - exposition des actions conditionnelles dans le canevas (data-condition-*) et de
+ *  - exposition des actions conditionnelles dans le canevas (data-actions-fiche) et de
  *    l'attribut calculé hasPortefeuille qui pilote leur visibilité.
  *
  * On agit en tant que PROPRIÉTAIRE de l'entreprise (bypass du contrôle d'accès) pour
@@ -258,9 +258,9 @@ class InvitePortefeuilleActionsTest extends WebTestCase
         ['gestionnaire' => $gestionnaire] = $this->seed();
         $this->client->loginUser($this->user(self::OWNER_EMAIL));
 
-        // Le formulaire d'édition d'un invité rend la barre d'outils des attributs avec
-        // les trois actions « portefeuille » et leurs conditions (data-condition-*),
-        // filtrées côté JS contre l'entité (dialog-instance#initializeAttributeToolbar).
+        // Le formulaire d'édition d'un invité transmet à la barre d'actions de la fiche
+        // les trois actions « portefeuille » et leurs conditions (data-actions-fiche),
+        // filtrées côté JS contre l'entité (dialog-instance#_afficherBarreActions).
         $this->client->request('GET', '/admin/invite/api/get-form/' . $gestionnaire->getId());
         $this->assertResponseIsSuccessful();
         $html = (string) $this->client->getResponse()->getContent();
@@ -270,7 +270,7 @@ class InvitePortefeuilleActionsTest extends WebTestCase
         // La condition voyage ENTIÈRE, en JSON : éclatée en champ + valeur, elle
         // obligeait chaque surface à reconstruire la règle. Les trois la lisent
         // désormais avec la même fonction (condition-action.js).
-        $this->assertStringContainsString('data-condition=', $html, 'Les actions doivent porter leur condition pour le filtrage côté dialogue.');
+        $this->assertStringContainsString('data-actions-fiche=', $html, 'Les actions doivent voyager avec leur condition vers la barre du dialogue.');
         $this->assertStringContainsString('hasPortefeuille', $html, 'Et la condition doit nommer son champ.');
     }
 

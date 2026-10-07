@@ -1270,6 +1270,11 @@ trait ControllerUtilsTrait
             'idEntreprise' => $entreprise->getId(),
             'idInvite' => $invite->getId(),
             'parentContextFacts' => $parentContextFacts,
+            // De quoi composer le SELECTO de la fiche pour sa barre d'actions, à
+            // l'identique d'une ligne de liste : type d'entité et colonne principale
+            // (le nom que l'écran affiche).
+            'entite_nom' => $this->getEntityName($entityClass),
+            'listeCanvas' => $this->canvasBuilder->getListeCanvas($entityClass),
         ]);
     }
 

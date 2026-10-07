@@ -2680,6 +2680,79 @@ tr.row-selected:hover > td {
     flex-shrink: 0;
 }
 
+/* 4.2.c BARRE DES ACTIONS DE LA FICHE — pleine largeur, au-dessus des deux volets.
+   C'est la barre du workspace (.context-toolbar, rendue par barre-actions.js) : mêmes
+   boutons, mêmes familles déroulantes, mêmes couleurs de charte. Seul son ÉCRIN est
+   propre au dialogue : une carte blanche posée sur le fond gris du corps, avec la même
+   gouttière que lui (1rem) — le pendant des deux cartes qu'elle surplombe. Hors du
+   `.modal-body`, elle ne défile pas avec le formulaire. */
+.dialog-barre-actions {
+    flex-shrink: 0;
+    background-color: #f0f0f0; /* même gris que .modal-body */
+    padding: 1rem 1rem 0;
+}
+.dialog-barre-actions .context-toolbar {
+    width: 100%;
+    background-color: #ffffff;
+    border-radius: var(--bs-border-radius);
+    padding: 0.35rem 0.5rem;
+    gap: 0.25rem;
+}
+
+/* ICÔNE + LIBELLÉ. Dans le dialogue, la barre a la place d'ÉCRIRE ce que fait chaque
+   bouton : « Relevé de compte », « Portefeuille », « Attacher des pièces » se lisent
+   d'un coup d'œil, là où une icône seule obligeait à survoler pour comprendre
+   (Nielsen 6 — reconnaître plutôt que se souvenir). Les couleurs restent celles de
+   `.context-toolbar` : gris #495057 au repos, cobalt au survol, pour l'icône ET le texte. */
+.context-toolbar .btn.a-libelle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #495057;
+    white-space: nowrap;
+}
+.context-toolbar .btn-default.a-libelle:hover,
+.context-toolbar .toolbar-groupe-bouton.a-libelle[aria-expanded="true"] {
+    color: #0047AB;
+}
+.context-toolbar .btn.a-libelle .toolbar-icone {
+    display: inline-flex;
+}
+.context-toolbar .btn.a-libelle .toolbar-icon {
+    width: 20px;
+    height: 20px;
+}
+/* Le chevron d'une famille se pose APRÈS le libellé, avec de l'air. */
+.context-toolbar .toolbar-groupe-bouton.a-libelle {
+    padding-right: 1.5rem !important;
+}
+.context-toolbar .toolbar-groupe-bouton.a-libelle::after {
+    right: 0.6rem;
+}
+.context-toolbar .toolbar-groupe-bouton.a-libelle[aria-expanded="true"]::after {
+    border-top-color: #0047AB;
+}
+
+/* Écran étroit : les libellés se taisent, la barre redevient celle du workspace
+   (icônes + infobulle) et tient sur une ligne au lieu d'en empiler trois. */
+@media (max-width: 767.98px) {
+    .dialog-barre-actions .toolbar-libelle {
+        display: none;
+    }
+    .context-toolbar .btn.a-libelle {
+        padding: 0.4rem;
+    }
+    .context-toolbar .toolbar-groupe-bouton.a-libelle {
+        padding-right: 1.05rem !important;
+    }
+    .context-toolbar .toolbar-groupe-bouton.a-libelle::after {
+        right: 0.35rem;
+    }
+}
+
 /* 2. On dit au corps de prendre tout l'espace restant et d'organiser les colonnes */
 .custom-modal-scroll .modal-body {
     flex: 1;
@@ -2909,66 +2982,6 @@ tr.row-selected:hover > td {
     margin-top: 1.25rem; /* Ajoute un espace au-dessus des groupes, sauf le premier */
 }
 
-/* NOUVEAU : Barre d'outils pour la colonne des attributs */
-.attributes-toolbar {
-    background-color: #343a40; /* Un gris un peu plus clair que le fond de la colonne */
-    border: 1px solid #495057; /* Même délimitation que les panneaux de groupe */
-    border-radius: var(--bs-border-radius-sm);
-    padding: 0.5rem;
-    margin-bottom: 1rem;
-    display: flex;
-    gap: 0.5rem;
-}
-
-.attributes-toolbar-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    font-size: 0.85rem;
-    padding: 0.3rem 0.8rem;
-    /* Taille de cible confortable pour le pointeur et le tactile (WCAG 2.5.5 / 2.5.8) */
-    min-width: 32px;
-    min-height: 32px;
-    /* NOUVEAU : Styles pour le bouton sans bordure */
-    border: none;
-    color: #e9ecef; /* Couleur gris clair pour l'icône par défaut */
-}
-
-.attributes-toolbar-button:hover {
-    background-color: rgba(255, 255, 255, 0.1); /* Léger fond blanc transparent au survol */
-    color: #ffffff; /* Icône blanche au survol */
-}
-
-.attributes-toolbar-button:active {
-    background-color: rgba(255, 255, 255, 0.2);
-    transform: scale(0.97);
-}
-
-/* On neutralise l'ombre Bootstrap au focus souris... */
-.attributes-toolbar-button:focus {
-    box-shadow: none;
-}
-
-/*
-   ...mais on rétablit un indicateur de focus clairement visible au clavier (WCAG 2.4.7 / 1.4.11).
-   Bleu Bootstrap #0d6efd = couleur de focus de la charte, contrastée sur le fond sombre de la barre.
-*/
-.attributes-toolbar-button:focus-visible {
-    outline: 2px solid #0d6efd;
-    outline-offset: 2px;
-    color: #ffffff;
-}
-
-.attributes-toolbar-button .button-icon {
-    display: inline-flex;
-    align-items: center;
-}
-
-.attributes-toolbar-button .button-icon svg {
-    width: 18px;
-    height: 18px;
-}
 /* --- 4.4 Styles de formulaire spécifiques aux dialogues --- */
 /*
 ===================================================================

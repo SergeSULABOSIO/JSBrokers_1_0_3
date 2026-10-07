@@ -71,7 +71,9 @@ for (const [nom, source] of Object.entries(CONTROLEURS)) {
  * bords du viewport. Aucun menu ne peut plus sortir de l'écran.
  */
 test("barre d’outils : le menu de famille est posé par la géométrie partagée", () => {
-    const source = CONTROLEURS['barre d’outils'];
+    // Le rendu des familles vit désormais dans le module PARTAGÉ par la barre du
+    // workspace et celle du dialogue d'entité : c'est là que la règle doit tenir.
+    const source = readFileSync(join(RACINE, 'barre-actions.js'), 'utf8');
 
     assert.match(
         source,
@@ -81,7 +83,7 @@ test("barre d’outils : le menu de famille est posé par la géométrie partag�
 
     assert.match(
         source,
-        /_positionnerMenuDeGroupe\(button, menu\) \{[\s\S]*?alignement: 'gauche',/,
+        /_positionnerMenu\(button, menu\) \{[\s\S]*?alignement: 'gauche',/,
         "Le menu s'ouvre du côté où le bouton commence, dans le sens du geste.",
     );
 });

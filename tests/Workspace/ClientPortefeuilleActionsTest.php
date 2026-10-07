@@ -19,7 +19,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  *    marqué « Actuel » sans bouton d'action) ;
  *  - affectation d'un client libre, refus du portefeuille actuel (409), transfert ;
  *  - retrait non destructif (client détaché, pas supprimé ; 404 au second appel) ;
- *  - exposition des actions conditionnelles dans le canevas (data-condition-*) et de
+ *  - exposition des actions conditionnelles dans le canevas (data-actions-fiche) et de
  *    l'attribut calculé hasPortefeuille (booléen strict) qui pilote leur visibilité.
  *
  * On agit en tant que PROPRIÉTAIRE de l'entreprise (bypass du contrôle d'accès) pour
@@ -297,8 +297,52 @@ class ClientPortefeuilleActionsTest extends WebTestCase
         // La condition voyage ENTIÈRE, en JSON : éclatée en champ + valeur, elle
         // obligeait chaque surface à reconstruire la règle. Les trois la lisent
         // désormais avec la même fonction (condition-action.js).
-        $this->assertStringContainsString('data-condition=', $html, 'Les actions doivent porter leur condition pour le filtrage côté dialogue.');
+        $this->assertStringContainsString('data-actions-fiche=', $html, 'Les actions doivent voyager avec leur condition vers la barre du dialogue.');
         $this->assertStringContainsString('hasPortefeuille', $html, 'Et la condition doit nommer son champ.');
+    }
+
+    /**
+     * LA BARRE D'ACTIONS A QUITTÉ LA COLONNE DES ATTRIBUTS — et elle emporte de quoi
+     * composer le selecto de la fiche.
+     *
+     * Les actions vivaient dans une barre sombre, enfermée dans la colonne des attributs
+     * calculés : elle disparaissait avec elle, et neuf boutons n'y tenaient plus. Le
+     * gabarit ne fait plus que TRANSMETTRE les actions à la barre pleine largeur de la
+     * coquille du dialogue, avec le type, le canevas et le nom de la fiche — la forme
+     * d'une ligne de liste, pour qu'une action reçoive la même chose d'où qu'elle parte.
+     *
+     * En création, rien : il n'y a pas de fiche sur laquelle agir.
+     */
+    public function testLeFormulaireTransmetLesActionsALaBarreDeLaFiche(): void
+    {
+        ['clientIn' => $clientIn] = $this->seed();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $this->client->request('GET', '/admin/client/api/get-form/' . $clientIn->getId());
+        $this->assertResponseIsSuccessful();
+        $html = (string) $this->client->getResponse()->getContent();
+
+        $this->assertStringContainsString('data-actions-fiche=', $html);
+        $this->assertStringContainsString('data-entity-type="Client"', $html, 'Le type de la fiche, comme sur une ligne de liste.');
+        $this->assertStringContainsString('data-label="' . self::CLI_IN . '"', $html, 'Le nom affiché vient de la colonne principale de la liste.');
+        $this->assertStringContainsString('data-entity-canvas=', $html);
+        $this->assertStringNotContainsString('attributes-toolbar', $html, "L'ancienne barre de la colonne des attributs ne doit plus être rendue.");
+
+        // Les actions voyagent ENTIÈRES — URL lisibles, conditions comprises.
+        preg_match('/data-actions-fiche="([^"]*)"/', $html, $m);
+        $actions = json_decode(html_entity_decode($m[1] ?? '', ENT_QUOTES | ENT_HTML5), true);
+        $this->assertIsArray($actions, 'Les actions doivent être un JSON valide.');
+        $retrait = array_values(array_filter($actions, fn ($a) => str_contains($a['url'] ?? '', 'retirer-portefeuille')));
+        $this->assertNotEmpty($retrait, "L'action de retrait doit figurer parmi les actions transmises.");
+        $this->assertArrayHasKey('condition', $retrait[0], 'Sa condition doit voyager avec elle.');
+
+        $this->client->request('GET', '/admin/client/api/get-form/0');
+        $this->assertResponseIsSuccessful();
+        $this->assertStringNotContainsString(
+            'data-actions-fiche=',
+            (string) $this->client->getResponse()->getContent(),
+            'En création, aucune action : la fiche n\'existe pas encore.',
+        );
     }
 
     public function testHasPortefeuilleCalculatedIndicator(): void
