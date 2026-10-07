@@ -49,9 +49,9 @@ export default class extends Controller {
                         <div class="context-toolbar" role="toolbar" aria-label="Actions sur la fiche"
                              data-controller="dark-tooltip" data-dialog-instance-target="barreActionsContenu"></div>
                     </div>
-                    <!-- PAS de « p-0 » ici : son !important annulait la gouttière de 1rem de
-                         .custom-modal-scroll .modal-body. Les volets collaient alors aux
-                         bords du dialogue et à la barre d'actions, qui, elle, la respecte. -->
+                    <!-- PAS de « p-0 » ici : son !important masquait la règle
+                         .custom-modal-scroll .modal-body, seule source de la gouttière du
+                         corps — nulle désormais, volets jointifs comme au workspace. -->
                     <div data-dialog-instance-target="content" class="modal-body">
                         <div class="d-flex justify-content-center align-items-center h-100" style="min-height: 200px;">
                             <div class="spinner-border" role="status">
