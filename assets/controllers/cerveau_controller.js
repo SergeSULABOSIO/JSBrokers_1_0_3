@@ -2,6 +2,7 @@ import { Controller } from '@hotwired/stimulus';
 import { } from './base_controller.js';
 import { ouvrirPickerAutonome } from './picker-open.js';
 import { estDelegue, proprietaireDe } from './cerveau-delegations.js';
+import { libelleDeFiche, titreDeFiche } from './selecto.js';
 // Le même lecteur que la reprise de données : une suppression en chaîne peut emporter
 // cent lignes, et l'écran doit voir l'avancement du début à la fin.
 import { lireFluxNdjson } from './flux-ndjson.js';
@@ -120,6 +121,15 @@ export default class extends Controller {
         if (!type || !source || !payload || !timestamp) {
             console.error("🧠 [Cerveau] Événement invalide reçu. Structure attendue: {type, source, payload, timestamp}", event.detail);
             return;
+        }
+
+        // LA FICHE VISÉE PAR LA DERNIÈRE ACTION. Une action part toujours avec la fiche
+        // qu'elle concerne (`selection[0]`, depuis une liste comme depuis un dialogue),
+        // mais son succès revient souvent d'un picker qui ne la nomme plus. On la retient
+        // au départ pour pouvoir l'annoncer modifiée à l'arrivée (_annoncerFicheModifiee).
+        const designee = payload.selection?.length === 1 ? payload.selection[0] : null;
+        if (designee?.entityType && designee.id != null) {
+            this._ficheDeLAction = { entityType: designee.entityType, id: designee.id };
         }
 
         switch (type) {
@@ -312,6 +322,7 @@ export default class extends Controller {
                 break;
             case 'app:entity.saved':
                 this._showNotification('Enregistrement réussi !', 'success');
+                if (!String(payload.originatorId || '').startsWith('collection-')) this._annoncerFicheModifiee(this._ficheDeLAction, payload.dialogId);
                 // Si l'on était parti d'une boîte de décision pour corriger la demande,
                 // on y retourne sans attendre un clic de fermeture.
                 this._retournerALaDecisionApresCorrection(payload);
@@ -716,6 +727,7 @@ export default class extends Controller {
                 break;
             case 'client:portefeuille.updated': { // succès d'une affectation/transfert via le picker
                 this._showNotification(payload.message || 'Portefeuille mis à jour.', 'success');
+                this._annoncerFicheModifiee();
                 // Barre de progression du workspace + squelette de la liste pendant le
                 // rafraîchissement (arrêtés par app:list.rendered), comme la pagination.
                 const pfUpdatedState = this._getActiveTabState();
@@ -735,6 +747,7 @@ export default class extends Controller {
                 break;
             case 'client:partage.updated': { // succès d'un rattachement via le picker
                 this._showNotification(payload.message || 'Condition de partage rattachée.', 'success');
+                this._annoncerFicheModifiee();
                 // Le voyant « Effort commercial » ne s'allume qu'au rafraîchissement :
                 // c'est le serveur qui le calcule, ligne par ligne.
                 const partageState = this._getActiveTabState();
@@ -1013,6 +1026,26 @@ export default class extends Controller {
     }
 
     /**
+     * UNE ACTION A MODIFIÉ UNE FICHE : on le dit, pour qu'un dialogue qui l'affiche se
+     * recharge au lieu de garder — et de renvoyer à l'enregistrement — un état périmé.
+     *
+     * À appeler dans la branche de SUCCÈS de chaque action qui écrit. La cible vaut, par
+     * défaut, la fiche retenue au départ de l'action (cf. handleEvent) : la plupart des
+     * succès reviennent d'un picker qui ne la nomme plus. Une cible inexacte ne coûte
+     * qu'un rechargement de trop ; une cible manquée est rattrapée par la garde serveur
+     * (empreinte, 409).
+     *
+     * @param {{entityType: string, id: (string|number)}|null} [cible]
+     * @param {string|null} [origine] - le dialogue qui vient lui-même d'enregistrer (il
+     *        se recharge déjà : inutile de le relancer).
+     * @private
+     */
+    _annoncerFicheModifiee(cible = this._ficheDeLAction, origine = null) {
+        if (!cible?.entityType || cible.id == null) return;
+        this.broadcast('app:fiche.modifiee', { entityType: cible.entityType, id: cible.id, origine });
+    }
+
+    /**
      * Diffuse une demande de rafraîchissement de la liste.
      * @param {string|null} [originatorId=null] - L'ID du composant qui a initié la demande, pour un rafraîchissement ciblé.
      * @param {object} [criteriaPayload={}] - Le payload contenant les critères de recherche.
@@ -1250,6 +1283,7 @@ export default class extends Controller {
                 this.broadcast('app:list.refresh-request', { originatorId });
             } else {
                 this._requestListRefresh(originatorId);
+                this._annoncerFicheModifiee();
             }
         }
 
@@ -1474,7 +1508,12 @@ export default class extends Controller {
 
             const response = await fetch(finalUrl);
             if (!response.ok) {
-                throw new Error(`Le serveur a répondu avec une erreur ${response.status}`);
+                // Le statut voyage avec l'erreur : un 404 au RECHARGEMENT d'une fiche
+                // veut dire qu'une action vient de la supprimer, et le dialogue doit
+                // alors se fermer en le disant plutôt qu'afficher une erreur.
+                const erreur = new Error(`Le serveur a répondu avec une erreur ${response.status}`);
+                erreur.status = response.status;
+                throw erreur;
             }
 
             const html = await response.text();
@@ -1487,10 +1526,15 @@ export default class extends Controller {
 
 
             // NOUVEAU : Déterminer le titre correct en fonction du mode (création/édition)
+            // En édition, le titre NOMME la fiche au lieu d'afficher son numéro : le jeton
+            // d'identifiant du gabarit cède la place à son libellé (selecto.js).
             const isCreationMode = !(entity && entity.id);
             let title = isCreationMode
                 ? (entityFormCanvas.parametres.titre_creation || "Création")
-                : (entityFormCanvas.parametres.titre_modification || "Modification de l'élément #%id%").replace('%id%', entity.id);
+                : titreDeFiche(
+                    entityFormCanvas.parametres.titre_modification || "Modification de l'élément #%id%",
+                    libelleDeFiche(contentRoot?.dataset.label, entity),
+                );
 
             // On renvoie le contenu à l'instance de dialogue qui l'a demandé
             this.broadcast('ui:dialog.content-ready', {
@@ -1505,7 +1549,7 @@ export default class extends Controller {
             // En cas d'erreur, on la renvoie aussi à l'instance concernée
             this.broadcast('ui:dialog.content-ready', {
                 dialogId,
-                error: { message: error.message || "Une erreur inconnue est survenue." }
+                error: { message: error.message || "Une erreur inconnue est survenue.", status: error.status ?? null }
             });
         }
     }
@@ -1881,6 +1925,7 @@ export default class extends Controller {
             );
         }
         this._setSelectionState([]);
+        this._annoncerFicheModifiee();
         this._requestListRefresh();
     }
 
@@ -1892,6 +1937,7 @@ export default class extends Controller {
      */
     _handleRetroAgentReversementEnregistre(payload) {
         this._showNotification(payload.message || 'Reversement enregistré.', 'success');
+        this._annoncerFicheModifiee();
 
         // CE QU'IL FAUT RAFRAÎCHIR EST TOUJOURS UNE LISTE, désormais.
         //
@@ -2054,6 +2100,7 @@ export default class extends Controller {
             this._showNotification(`Non attaché${refuses.length > 1 ? 's' : ''} : ${detail}.`, 'warning');
         }
         if (crees.length === 0) return;
+        this._annoncerFicheModifiee();
 
         const etat = this._getActiveTabState();
         this.broadcast('app:loading.start', { originatorId: etat.elementId, workspaceTabId: this.currentWorkspaceTabId });
@@ -2109,6 +2156,7 @@ export default class extends Controller {
             if (!response.ok) throw new Error(data.message || `Erreur serveur ${response.status}`);
 
             this._showNotification(data.message || 'Lien du relevé de compte révoqué.', 'success');
+            this._annoncerFicheModifiee();
             const revokeState = this._getActiveTabState();
             this._publishSelectionStatus('Actualisation de la liste...');
             this.broadcast('app:loading.start', { originatorId: revokeState.elementId, workspaceTabId: this.currentWorkspaceTabId });
@@ -2161,6 +2209,7 @@ export default class extends Controller {
      */
     _handleAvenantMouvementEnregistre(payload) {
         this._showNotification(payload.message || 'Mouvement enregistré.', 'success');
+        this._annoncerFicheModifiee();
         const etat = this._getActiveTabState();
         this._publishSelectionStatus('Actualisation de la liste...');
         this.broadcast('app:loading.start', { originatorId: etat.elementId, workspaceTabId: this.currentWorkspaceTabId });
@@ -2353,6 +2402,7 @@ export default class extends Controller {
      */
     _handleCongeDecisionEnregistree(payload) {
         this._showNotification(payload.message || 'Décision enregistrée.', 'success');
+        this._annoncerFicheModifiee();
 
         const tabState = this._getCurrentWsTabState()[this.getActiveTabId()];
         if (!tabState?.serverRootName) {
@@ -2376,6 +2426,7 @@ export default class extends Controller {
      */
     _handleAvenantNonRenouvelableEnregistre(payload) {
         this._showNotification(payload.message || 'Décision enregistrée.', 'success');
+        this._annoncerFicheModifiee();
         const etat = this._getActiveTabState();
         this._publishSelectionStatus('Actualisation de la liste...');
         this.broadcast('app:loading.start', { originatorId: etat.elementId, workspaceTabId: this.currentWorkspaceTabId });
@@ -2981,6 +3032,7 @@ export default class extends Controller {
      */
     _handleNoteFacturationEnregistree(payload) {
         this._showNotification(payload.message || 'Note émise.', 'success');
+        this._annoncerFicheModifiee();
 
         const tabState = this._getCurrentWsTabState()[this.getActiveTabId()];
         if (!tabState?.serverRootName) {
@@ -3142,6 +3194,7 @@ export default class extends Controller {
             if (!reponse.ok) throw new Error(data.message || `Erreur serveur ${reponse.status}`);
 
             this._showNotification(data.message || 'Condition de partage détachée.', 'success');
+            this._annoncerFicheModifiee();
             const detachState = this._getActiveTabState();
             this._publishSelectionStatus('Actualisation de la liste...');
             this.broadcast('app:loading.start', { originatorId: detachState.elementId, workspaceTabId: this.currentWorkspaceTabId });
@@ -3229,6 +3282,7 @@ export default class extends Controller {
             if (!response.ok) throw new Error(data.message || `Erreur serveur ${response.status}`);
 
             this._showNotification(data.message || 'Client retiré du portefeuille.', 'success');
+            this._annoncerFicheModifiee({ entityType: 'Client', id: clientId });
             this._setSelectionState([]); // la sélection ne reflète plus l'état, on la vide
             // Barre de progression du workspace + squelette de la liste pendant le
             // rafraîchissement (arrêtés par app:list.rendered), comme la pagination.

@@ -1,5 +1,6 @@
 import BaseController from './base_controller.js';
 import { Toast, Modal, Dropdown } from 'bootstrap';
+import { libelleDeFiche, titreDeFiche } from './selecto.js';
 /**
  * @class BordereauAnalysisController
  * @description Gère l'interface de l'analyse de bordereau en deux étapes.
@@ -2480,9 +2481,13 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             const icon = contentRoot ? contentRoot.dataset.iconName : null;
 
             const isCreationMode = !(entity && entity.id);
+            // Même règle que le cerveau : le titre nomme la fiche, pas son numéro.
             const title = isCreationMode
                 ? (entityFormCanvas?.parametres?.titre_creation || 'Création')
-                : (entityFormCanvas?.parametres?.titre_modification || 'Modification #%id%').replace('%id%', entity.id);
+                : titreDeFiche(
+                    entityFormCanvas?.parametres?.titre_modification || 'Modification #%id%',
+                    libelleDeFiche(contentRoot?.dataset.label, entity),
+                );
 
             document.dispatchEvent(new CustomEvent('ui:dialog.content-ready', {
                 bubbles: true,
