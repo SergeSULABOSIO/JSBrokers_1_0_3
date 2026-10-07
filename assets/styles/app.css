@@ -2682,21 +2682,15 @@ tr.row-selected:hover > td {
 
 /* 4.2.c BARRE DES ACTIONS DE LA FICHE — pleine largeur, au-dessus des deux volets.
    C'est la barre du workspace (.context-toolbar, rendue par barre-actions.js) : mêmes
-   boutons, mêmes familles déroulantes, mêmes couleurs de charte. Seul son ÉCRIN est
-   propre au dialogue : une carte blanche posée sur le fond gris du corps, avec la même
-   gouttière que lui (1rem) — le pendant des deux cartes qu'elle surplombe. Hors du
-   `.modal-body`, elle ne défile pas avec le formulaire. */
+   boutons, mêmes familles déroulantes, mêmes couleurs de charte. Son ÉCRIN aussi est
+   celui du workspace : un BANDEAU blanc collé sous l'en-tête, gouttière de 8 px (le
+   `p-2` de _view_manager) et filet bas de 1 px (.sticky-header) — pas une carte posée
+   sur un fond gris. Hors du `.modal-body`, elle ne défile pas avec le formulaire. */
 .dialog-barre-actions {
     flex-shrink: 0;
-    background-color: #f0f0f0; /* même gris que .modal-body */
-    padding: 1rem 1rem 0;
-}
-.dialog-barre-actions .context-toolbar {
-    width: 100%;
     background-color: #ffffff;
-    border-radius: var(--bs-border-radius);
-    padding: 0.35rem 0.5rem;
-    gap: 0.25rem;
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--border-light);
 }
 
 /* ICÔNE + LIBELLÉ. Dans le dialogue, la barre a la place d'ÉCRIRE ce que fait chaque
@@ -2753,15 +2747,20 @@ tr.row-selected:hover > td {
     }
 }
 
-/* 2. On dit au corps de prendre tout l'espace restant et d'organiser les colonnes */
+/* 2. On dit au corps de prendre tout l'espace restant et d'organiser les colonnes.
+   VOLETS JOINTIFS, comme les colonnes du workspace : ni gouttière extérieure, ni gris
+   entre eux. Ils touchent la barre, les bords du dialogue et son pied ; la colonne
+   sombre touche le formulaire sans filet, comme col-1 touche col-2 (le contraste
+   suffit). Cette règle est la SEULE source de la gouttière : aucune classe `p-0` dans
+   la coquille, dont le `!important` la masquait. */
 .custom-modal-scroll .modal-body {
     flex: 1;
     overflow-y: hidden; /* On empêche le scroll sur le corps parent */
     background-color: #f0f0f0;
     min-height: 0;
-    padding: 1rem; /* Gouttière extérieure */
+    padding: 0;
     display: flex; /* Le corps devient le conteneur flex */
-    gap: 1rem; /* Gouttière entre les colonnes */
+    gap: 0;
 }
 
 /* --- 4.3 Layout à deux colonnes --- */
@@ -2773,12 +2772,12 @@ tr.row-selected:hover > td {
 
 /* --- Colonne de gauche (Attributs Calculés) --- */
 .calculated-attributes-column {
-    /* Styles de base pour la colonne sombre */
-    border-top: 3px solid #0047AB;
+    /* Styles de base pour la colonne sombre. Un PANNEAU et non une carte, comme les
+       colonnes du workspace : ni coins arrondis, ni accent cobalt en tête — le filet
+       cobalt de l'en-tête signe déjà le dialogue. */
     background-color: #212529;
     color: #e9ecef;
     padding: 1.5rem;
-    border-radius: var(--bs-border-radius);
 
     /* NOUVEAU : Assurer que l'icône du bouton Enregistrer est blanche */
     .btn-primary .button-icon svg {
@@ -2906,9 +2905,9 @@ tr.row-selected:hover > td {
     min-width: 0; /* Correctif flex pour empêcher le dépassement horizontal. */
     padding: 1.5rem; /* Padding interne pour le contenu du formulaire. */
     overflow-y: auto;
-    /* NOUVEAU : Fond blanc et coins arrondis pour un aspect "carte" dans le corps gris. */
+    /* Fond blanc, SANS coins arrondis : un panneau jointif, comme les colonnes du
+       workspace, et non plus une carte posée sur un fond gris. */
     background-color: #ffffff;
-    border-radius: var(--bs-border-radius);
 }
 
 /* Stabilité des colonnes */
@@ -3574,8 +3573,7 @@ tr.row-selected:hover > td {
 /* NOUVEAU : Fond sombre pour le squelette de la colonne des attributs */
 .calculated-attributes-column-skeleton {
     background-color: #212529; /* Couleur de fond de la colonne des attributs */
-    border-radius: var(--bs-border-radius); /* NOUVEAU: Assurer le même border-radius que la colonne réelle */
-    padding: 1.5rem; /* Assurer le même padding que la colonne réelle */
+    padding: 1.5rem; /* Assurer le même padding que la colonne réelle (sans coins arrondis, comme elle) */
 }
 
 /* NOUVEAU : Squelette pour la colonne de formulaire, imitant parfaitement .form-column */
@@ -3584,8 +3582,7 @@ tr.row-selected:hover > td {
     min-width: 0;
     overflow: hidden; /* Le squelette ne doit pas défiler */
     padding: 1.5rem; /* Imitation du padding de .form-column */
-    background-color: #ffffff; /* Imitation du fond de .form-column */
-    border-radius: var(--bs-border-radius); /* Imitation du radius de .form-column */
+    background-color: #ffffff; /* Imitation du fond de .form-column (sans coins arrondis, comme elle) */
 }
 
 /* --- 4.6 Messages de feedback --- */
