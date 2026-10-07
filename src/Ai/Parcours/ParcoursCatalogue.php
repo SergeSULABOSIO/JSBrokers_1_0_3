@@ -188,7 +188,7 @@ final class ParcoursCatalogue
                     'entite' => 'NotificationSinistre', 'via' => 'socle', 'role' => self::ROLE_SOCLE,
                     'questions' => [
                         'Qui est l’assuré concerné et quel est l’assureur ?',
-                        'Quelle référence de police et quelle référence de sinistre ?',
+                        'Sur quelle police le sinistre porte-t-il, et quelle référence de sinistre ?',
                         'Quand le sinistre est-il survenu, et quand a-t-il été notifié ?',
                         'Où, et quels sont les faits et les dommages ?',
                     ],

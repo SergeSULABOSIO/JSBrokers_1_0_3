@@ -8,6 +8,12 @@ use App\Entity\Assureur;
 use App\Services\ServiceMonnaies;
 use App\Entity\NotificationSinistre;
 use App\Services\FormListenerFactory;
+use App\Service\Workspace\CabinetActif;
+use App\Services\ReferencesDePolice;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -26,6 +32,8 @@ class NotificationSinistreType extends AbstractType
         private FormListenerFactory $ecouteurFormulaire,
         private TranslatorInterface $translatorInterface,
         private ServiceMonnaies $serviceMonnaies,
+        private ReferencesDePolice $referencesDePolice,
+        private CabinetActif $cabinetActif,
     ) {}
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -49,12 +57,26 @@ class NotificationSinistreType extends AbstractType
                 'placeholder' => 'Taper pour chercher le client...',
                 'required' => true,
             ])
-            ->add('referencePolice', TextType::class, [
-                'help' => "Vous devez fournir la référence de la police d'assurance",
+            // LA POLICE SE CHOISIT, ELLE NE SE TAPE PLUS.
+            //
+            // C'était un champ de texte libre : on pouvait y écrire n'importe quoi, et rien
+            // ne le relevait. Un sinistre finissait rattaché à une police inexistante — on
+            // s'en apercevait en réclamant à l'assureur. Les choix sont désormais les
+            // références RÉELLES du cabinet, et le validateur d'entité applique la même
+            // règle à toute écriture, assistant compris.
+            //
+            // Les choix se posent dans un écouteur, pas ici : l'assuré n'est connu qu'une
+            // fois l'entité hydratée — y compris quand « Créer un sinistre » vient de le
+            // poser depuis la fiche d'un client.
+            ->add('referencePolice', ChoiceType::class, [
+                'help' => "Choisissez la police concernée parmi celles de votre portefeuille.",
                 'label' => "Référence de la police",
                 'required' => true,
+                'placeholder' => 'Sélectionner une police',
+                'autocomplete' => true,
+                'choices' => [],
                 'attr' => [
-                    'placeholder' => "Réf. Police",
+                    'placeholder' => "Taper pour chercher une police...",
                 ],
             ])
             ->add('referenceSinistre', TextType::class, [
@@ -175,6 +197,42 @@ class NotificationSinistreType extends AbstractType
                 'mapped' => false,
             ])
         ;
+
+        $builder->addEventListener(FormEvents::PRE_SET_DATA, function (FormEvent $evenement): void {
+            $this->poserLesPolices($evenement->getForm(), $evenement->getData());
+        });
+    }
+
+    /**
+     * LES POLICES PROPOSÉES DÉPENDENT DE L'ASSURÉ — donc de la donnée, pas du type.
+     *
+     * Quand l'assuré est connu, on ne propose QUE ses polices : lui en offrir d'autres
+     * serait inviter à l'erreur que le validateur refusera ensuite.
+     *
+     * ⚠ LA VALEUR DÉJÀ ENREGISTRÉE EST TOUJOURS REMISE DANS LA LISTE, même introuvable.
+     * Des sinistres anciens portent une référence saisie à la main : sans cela, leur fiche
+     * deviendrait inouvrable — un ChoiceType refuse une valeur hors de ses choix — et on ne
+     * pourrait même plus y corriger un numéro de téléphone. Elle est marquée pour que le
+     * défaut se voie.
+     */
+    private function poserLesPolices(FormInterface $formulaire, ?NotificationSinistre $sinistre): void
+    {
+        $entreprise = $this->cabinetActif->entreprise();
+        if ($entreprise === null) {
+            return;
+        }
+
+        $choix = $this->referencesDePolice->pourLeCabinet($entreprise, $sinistre?->getAssure());
+
+        $actuelle = trim((string) $sinistre?->getReferencePolice());
+        if ($actuelle !== '' && !in_array($actuelle, $choix, true)) {
+            $choix[$actuelle . ' — référence introuvable'] = $actuelle;
+        }
+
+        $champ = $formulaire->get('referencePolice');
+        $options = $champ->getConfig()->getOptions();
+        $options['choices'] = $choix;
+        $formulaire->add('referencePolice', ChoiceType::class, $options);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
