@@ -289,23 +289,68 @@ if [ -n "$LIGNES_FAUTIVES" ]; then
 fi
 ok ".env.local present, APP_ENV=prod, syntaxe valide"
 
+# Un refus de l'etape 1 : le passage REEL s'arrete ; la repetition a blanc, elle,
+# ne modifie rien et CONTINUE pour montrer le reste des controles — mais elle dit
+# clairement que le passage reel s'arretera, sinon on croit l'avertissement sans
+# consequence.
+refuser() {
+  if [ "$DRY_RUN" -eq 1 ]; then
+    ko "(repetition a blanc : on continue, mais le passage REEL refusera)"
+  else
+    exit 1
+  fi
+}
+
 if [ "$SKIP_GIT" -eq 0 ]; then
-  # Un fichier SUIVI modifié à la main sur le serveur sera écrasé par le reset.
-  # Mieux vaut le dire avant que de le découvrir après.
-  if ! git diff --quiet || ! git diff --cached --quiet; then
+  MODIFIES="$(git status --porcelain --untracked-files=no | cut -c4-)"
+
+  # ── public/.htaccess : LES BLOCS DE L'HÉBERGEUR ────────────────────────────
+  # cPanel (MultiPHP Manager), LiteSpeed et d'autres écrivent leurs réglages dans
+  # ce fichier versionné, en blocs signés « # … BEGIN … » / « # … END … ». Le
+  # dépôt n'en porte aucun : ils sont à l'hébergeur. Le 2026-10-08, l'un d'eux a
+  # arrêté le déploiement. Désormais :
+  #   · ils sont SAUVEGARDÉS ici, puis REMIS après le reset (étape 4) ;
+  #   · toute retouche HORS de ces blocs reste refusée, comme avant ;
+  #   · un bloc qui impose au site un PHP trop ancien est refusé, avec la marche
+  #     à suivre : le garder laisserait le site sur ce PHP, le jeter ne servirait
+  #     à rien — cPanel le réécrirait, la cause étant dans le réglage du domaine.
+  # Outil et règles : bin/htaccess-hebergeur.sh.
+  HTACCESS="public/.htaccess"
+  BLOCS_HEBERGEUR=""
+  if printf '%s\n' "$MODIFIES" | grep -qxF "$HTACCESS"; then
+    if ! diff -q <(bash bin/htaccess-hebergeur.sh sans-blocs "$HTACCESS") <(git show "HEAD:$HTACCESS") >/dev/null; then
+      ko "public/.htaccess a ete modifie sur le serveur HORS des blocs de l'hebergeur."
+      ko "Pour voir ce qui differe :  git diff $HTACCESS"
+      ko "Une regle utile se reporte dans le depot ; sinon :  git checkout -- $HTACCESS"
+      refuser
+    fi
+    for VERSION_IMPOSEE in $(bash bin/htaccess-hebergeur.sh php-imposes "$HTACCESS"); do
+      MAJ="${VERSION_IMPOSEE%%.*}"; MIN="${VERSION_IMPOSEE#*.}"
+      if [ "$MAJ" -lt 8 ] || { [ "$MAJ" -eq 8 ] && [ "$MIN" -lt 2 ]; }; then
+        ko "cPanel impose PHP $VERSION_IMPOSEE au SITE (bloc ajoute dans $HTACCESS) ;"
+        ko "l'application exige PHP 8.2. Le controle ci-dessus porte sur le PHP de la"
+        ko "ligne de commande, PAS sur celui qui sert les pages."
+        ko "-> cPanel -> MultiPHP Manager -> domaine joseara.com -> « inherit » (herite :"
+        ko "   c'est alors le PHP choisi dans « Select PHP Version », le 8.2 equipe),"
+        ko "   ou a defaut PHP 8.2. cPanel reecrit lui-meme le bloc ; relancez ensuite."
+        refuser
+      fi
+    done
+    BLOCS_HEBERGEUR="$BACKUP_DIR/htaccess-hebergeur-$HORODATAGE"
+    bash bin/htaccess-hebergeur.sh blocs "$HTACCESS" > "$BLOCS_HEBERGEUR"
+    ok "public/.htaccess : blocs de l'hebergeur conserves (copie : $BLOCS_HEBERGEUR)"
+    MODIFIES="$(printf '%s\n' "$MODIFIES" | grep -vxF "$HTACCESS" || true)"
+  fi
+
+  # Un AUTRE fichier SUIVI modifié à la main sur le serveur sera écrasé par le
+  # reset. Mieux vaut le dire avant que de le découvrir après.
+  if [ -n "$MODIFIES" ]; then
     ko "Des fichiers SUIVIS ont ete modifies sur le serveur :"
-    git status --porcelain | grep -v '^??' | tee -a "$JOURNAL"
+    printf '%s\n' "$MODIFIES" | tee -a "$JOURNAL"
     ko "Ils seront ECRASES par « git reset --hard »."
     ko "Pour voir ce qui differe :  git diff --stat && git diff"
     ko "Pour les abandonner         :  git checkout -- <fichier>"
-    if [ "$DRY_RUN" -eq 1 ]; then
-      # La répétition à blanc ne modifie rien : elle CONTINUE pour montrer le
-      # reste des contrôles. Mais elle doit dire clairement que le passage réel,
-      # lui, s'arrêtera ici — sinon on croit l'avertissement sans conséquence.
-      ko "(repetition a blanc : on continue, mais le passage REEL refusera)"
-    else
-      exit 1
-    fi
+    refuser
   else
     ok "Copie de travail propre"
   fi
@@ -465,6 +510,12 @@ if [ "$SKIP_GIT" -eq 0 ]; then
   # la version visée, point.
   executer "git reset --hard '$CIBLE'"
   ok "Code pose sur $(git rev-parse --short HEAD)"
+  # Les blocs de l'hébergeur, sauvegardés à l'étape 1, reprennent leur place :
+  # le reset vient de les retirer, et le site ne doit pas perdre son réglage PHP.
+  if [ -n "$BLOCS_HEBERGEUR" ] && [ -s "$BLOCS_HEBERGEUR" ]; then
+    executer "{ printf '\n'; cat '$BLOCS_HEBERGEUR'; } >> '$APP_DIR/$HTACCESS'"
+    ok "Blocs de l'hebergeur remis dans $HTACCESS"
+  fi
 else
   info "Code deja pose par l'appelant (--skip-git)"
 fi

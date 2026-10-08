@@ -73,6 +73,14 @@ Ensuite, il suffit de taper `publier`.
   tâches rapportent ce qu'elles feraient sans rien faire.
 - **Le 15 décembre**, lancer à blanc l'ouverture de l'exercice de congés : un
   cron annuel est un cron dont on découvre la panne un an trop tard.
+- **`public/.htaccess` modifié par cPanel** : c'est attendu. MultiPHP Manager,
+  LiteSpeed et d'autres y écrivent des blocs signés `# … BEGIN …` / `# … END …`.
+  `publier` les **sauvegarde** (`~/backups/htaccess-hebergeur-*`) et les **remet**
+  après la mise à jour du code (`bin/htaccess-hebergeur.sh`). Il refuse seulement :
+  une retouche **hors** de ces blocs, et un bloc qui impose au **site** un PHP
+  inférieur à 8.2. Dans ce dernier cas : cPanel → **MultiPHP Manager** →
+  `joseara.com` → **inherit** (le PHP de « Select PHP Version », le 8.2 équipé), puis
+  relancer `publier`. *Vécu le 2026-10-08 : cPanel avait imposé `ea-php81`.*
 
 ---
 
