@@ -41,6 +41,20 @@ trait FormCanvasProviderTrait
                 $extraOptions['consultationSeule'] = true;
                 $extraOptions['hideDeleteAction'] = true;
             }
+            // UNE LISTE QUI N'EST PAS UNE ASSOCIATION : l'URL se déclare au lieu de se
+            // déduire (`%parentId%` substitué). Son endpoint répond au contrat des
+            // collections ({html, itemCount}) — ex. le relevé financier d'une tranche.
+            if (isset($config['listUrl'])) {
+                $extraOptions['listUrl'] = $extraOptions['url'] = str_replace('%parentId%', (string) $parentId, $config['listUrl']);
+            }
+            // CE QUE LA LISTE MONTRE DÉPEND D'AUTRES PIÈCES : quand l'une d'elles change
+            // (route d'enfant listée dans `rechargerSur`), c'est la FICHE PARENTE entière
+            // qui se recharge (`app:fiche.modifiee`), pas seulement cette liste — un
+            // encaissement de commission change aussi l'exigible des taxes et des rétros.
+            if (isset($config['ficheParente'])) {
+                $extraOptions['ficheParente'] = $config['ficheParente'];
+                $extraOptions['rechargerSur'] = $config['rechargerSur'] ?? [];
+            }
             // Personnalisation des actions de ligne (bouton d'édition masqué, libellé/icône
             // de l'action de suppression — ex. « Retirer » pour un détachement).
             // NOM DE ROUTE DU PARENT, quand il diffère du nom du champ.

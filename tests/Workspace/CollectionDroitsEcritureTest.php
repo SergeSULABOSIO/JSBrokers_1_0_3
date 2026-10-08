@@ -10,6 +10,7 @@ use App\Entity\Note;
 use App\Entity\Paiement;
 use App\Entity\PaiementPrime;
 use App\Entity\Piste;
+use App\Entity\RolesEnAdministration;
 use App\Entity\RolesEnFinance;
 use App\Entity\Tranche;
 use App\Entity\Utilisateur;
@@ -63,7 +64,7 @@ class CollectionDroitsEcritureTest extends WebTestCase
             ['e' => [self::OWNER_EMAIL, self::GUEST_EMAIL]],
             ['e' => \Doctrine\DBAL\ArrayParameterType::STRING],
         );
-        foreach (['paiement_prime', 'paiement', 'note', 'tranche', 'cotation', 'piste', 'client', 'roles_en_finance', 'invite'] as $table) {
+        foreach (['paiement_prime', 'paiement', 'note', 'tranche', 'cotation', 'piste', 'client', 'roles_en_finance', 'roles_en_administration', 'invite'] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :nom",
                 ['nom' => self::ENT],
@@ -82,7 +83,7 @@ class CollectionDroitsEcritureTest extends WebTestCase
      * Un cabinet, son propriétaire, un invité aux droits Finance fournis, et une tranche
      * portant un paiement de prime ; une note portant un paiement.
      *
-     * @param array<string, int[]> $droits accessTranche / accessNote / accessPaiement
+     * @param array<string, int[]> $droits accessTranche / accessNote / accessPaiement / accessDocument
      *
      * @return array{tranche: int, paiementPrime: int, note: int, paiement: int}
      */
@@ -112,6 +113,11 @@ class CollectionDroitsEcritureTest extends WebTestCase
         $roles->setEntreprise($ent);
         $guest->addRolesEnFinance($roles);
         $em->persist($roles);
+        $admin = (new RolesEnAdministration())->setNom('Administration du gestionnaire')
+            ->setAccessDocument($droits['document'] ?? []);
+        $admin->setEntreprise($ent);
+        $guest->addRolesEnAdministration($admin);
+        $em->persist($admin);
         $em->persist($guest);
 
         $client = (new Client())->setNom('Client Droits')->setExonere(false)->setEntreprise($ent);
@@ -235,12 +241,18 @@ class CollectionDroitsEcritureTest extends WebTestCase
      */
     public function testLesBoutonsDeCollectionSuiventLesDroitsSurLEnfant(): void
     {
-        $ids = $this->semer(['tranche' => [Invite::ACCESS_LECTURE, Invite::ACCESS_MODIFICATION]]);
+        $ids = $this->semer([
+            'tranche'  => [Invite::ACCESS_LECTURE, Invite::ACCESS_MODIFICATION],
+            'document' => [Invite::ACCESS_LECTURE],
+        ]);
         $this->connecter(self::GUEST_EMAIL);
 
+        // Le widget : des pièces jointes qu'on lit sans pouvoir en ajouter.
         $fiche = $this->ouvrir('/admin/tranche/api/get-form/' . $ids['tranche']);
-        self::assertFalse($this->ajoutOffert($fiche, 'paiementsPrime'), 'Ajouter un paiement de prime exige l\'Écriture.');
+        self::assertFalse($this->ajoutOffert($fiche, 'documents'), 'Ajouter une pièce exige l\'Écriture sur Document.');
 
+        // La liste : les signalements de prime, gouvernés par la tranche (Modification
+        // sans Suppression).
         $liste = $this->listeDeCollection(sprintf('/admin/tranche/api/%d/paiementsPrime/dialog', $ids['tranche']));
         self::assertSame(1, $liste->filter('[data-action="click->collection#editItem"]')->count(), 'La Modification garde le crayon.');
         self::assertSame(0, $liste->filter('[data-action="click->collection#deleteItem"]')->count(), 'Sans Suppression, pas de corbeille.');
@@ -293,7 +305,7 @@ class CollectionDroitsEcritureTest extends WebTestCase
         $this->connecter(self::OWNER_EMAIL);
 
         $fiche = $this->ouvrir('/admin/tranche/api/get-form/' . $ids['tranche']);
-        self::assertTrue($this->ajoutOffert($fiche, 'paiementsPrime'));
+        self::assertTrue($this->ajoutOffert($fiche, 'documents'));
         self::assertContains('Facturer la commission', $this->actionsDeLaFiche($fiche));
 
         $liste = $this->listeDeCollection(sprintf('/admin/tranche/api/%d/paiementsPrime/dialog', $ids['tranche']));
