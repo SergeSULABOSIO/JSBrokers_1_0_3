@@ -318,7 +318,21 @@ if [ "$SKIP_GIT" -eq 0 ]; then
   HTACCESS="public/.htaccess"
   BLOCS_HEBERGEUR=""
   if printf '%s\n' "$MODIFIES" | grep -qxF "$HTACCESS"; then
-    if ! diff -q <(bash bin/htaccess-hebergeur.sh sans-blocs "$HTACCESS") <(git show "HEAD:$HTACCESS") >/dev/null; then
+    # ⚠ PAS DE SUBSTITUTION DE PROCESSUS (diff sur deux commandes) : elle passe par /dev/fd,
+    # ABSENT sous CloudLinux (CageFS isole chaque compte). Le 2026-10-08, l'outil a
+    # échoué, et son échec a été lu comme une différence : faux refus. On compare donc
+    # deux FICHIERS, et l'on distingue « différents » (1) d'« impossible à comparer » (2).
+    HT_SERVEUR="$BACKUP_DIR/htaccess-sans-blocs-$HORODATAGE"
+    HT_DEPOT="$BACKUP_DIR/htaccess-depot-$HORODATAGE"
+    bash bin/htaccess-hebergeur.sh sans-blocs "$HTACCESS" > "$HT_SERVEUR"
+    git show "HEAD:$HTACCESS" > "$HT_DEPOT"
+    COMPARAISON=0
+    cmp -s "$HT_SERVEUR" "$HT_DEPOT" || COMPARAISON=$?
+    rm -f "$HT_SERVEUR" "$HT_DEPOT"
+    if [ "$COMPARAISON" -gt 1 ]; then
+      ko "Impossible de comparer $HTACCESS a la version du depot (cmp, code $COMPARAISON)."
+      refuser
+    elif [ "$COMPARAISON" -eq 1 ]; then
       ko "public/.htaccess a ete modifie sur le serveur HORS des blocs de l'hebergeur."
       ko "Pour voir ce qui differe :  git diff $HTACCESS"
       ko "Une regle utile se reporte dans le depot ; sinon :  git checkout -- $HTACCESS"
