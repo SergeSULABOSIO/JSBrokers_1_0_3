@@ -382,15 +382,17 @@ class OngletsDeFormulaireTest extends TestCase
 
         $bandeau = $this->corpsDeRegle($css, '.form-column .jsb-onglets-barre');
         self::assertStringContainsString('position: sticky', $bandeau);
+        // La colonne n'a plus de gouttiere (grammaire du workspace) : le decalage vaut 0.
+        // Le couplage, lui, demeure — si l'une revient, l'autre doit suivre.
         self::assertStringContainsString(
-            'top: -1.5rem',
+            'top: 0;',
             $bandeau,
-            'A top: 0, une bande de la hauteur de la gouttiere reste a decouvert au-dessus du bandeau.',
+            'Le decalage du bandeau doit valoir la gouttiere haute de la colonne, en negatif.',
         );
 
         $colonne = $this->corpsDeRegle($css, '.form-column');
         self::assertStringContainsString(
-            'padding: 1.5rem',
+            'padding: 0;',
             $colonne,
             'Le decalage du bandeau vaut cette gouttiere : changer l\'une oblige a changer l\'autre.',
         );

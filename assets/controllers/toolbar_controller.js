@@ -1,6 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { conditionRemplie } from './condition-action.js';
-import { urlAction } from './actions-groupees.js';
+import { actionsVisibles, urlAction } from './actions-groupees.js';
 import { BarreActions } from './barre-actions.js';
 
 /**
@@ -172,24 +171,10 @@ export default class extends Controller {
         // Règle : "Supprimer" est visible dès qu'il y a au moins une sélection (unique ou multiple).
         this.toggleButton(this.btsupprimerTarget, canDelete);
 
-        // Gérer les actions spécifiques à l'entité, avec filtrage conditionnel par état.
-        // ── TROIS PORTÉES, ET NON DEUX ─────────────────────────────────────────────
-        // `sans_selection` : l'action ne porte sur AUCUNE ligne — un calendrier d'équipe,
-        //   une grille de compteurs regardent tout le cabinet. Les enfermer derrière une
-        //   sélection obligeait à cocher une ligne au hasard pour ouvrir un écran qui ne
-        //   la concerne pas, et laissait croire qu'ils en dépendaient.
-        // `multi` : visible dès 1 ligne, une ou plusieurs.
-        // sans drapeau : sélection UNIQUE (comportement historique inchangé).
-        const rawActions   = canvasParams.attribute_actions || [];
-        const entityData   = this.selectos[0]?.entity || {};
-        const specificActions = rawActions.filter(action => {
-            if (action.sans_selection === true) return true;
-
-            const countOk = action.multi === true ? selectionCount >= 1 : selectionCount === 1;
-            if (!countOk) return false;
-            return conditionRemplie(entityData, action.condition);
-        });
-        this.updateSpecificActionButtons(specificActions);
+        // Les actions spécifiques que la sélection permet : MÊME règle que le menu
+        // contextuel (actions-groupees.js#actionsVisibles) — portées `sans_selection`,
+        // `multi` ou sélection unique, puis la condition de chaque action.
+        this.updateSpecificActionButtons(actionsVisibles(canvasParams.attribute_actions, this.selectos));
     }
 
     /**

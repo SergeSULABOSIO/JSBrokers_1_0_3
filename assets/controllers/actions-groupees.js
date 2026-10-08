@@ -17,6 +17,38 @@
  *   "groupe_icone"  => "action:renew"              (facultatif : icône de l'entrée)
  */
 
+import { conditionRemplie } from './condition-action.js';
+
+/**
+ * LES ACTIONS QU'UNE SÉLECTION PERMET — une seule règle pour la barre d'outils et le
+ * menu contextuel, qui la recopiaient chacun à l'identique.
+ *
+ * ── TROIS PORTÉES, ET NON DEUX ──────────────────────────────────────────────────────
+ *  - `sans_selection` : l'action ne porte sur AUCUNE ligne — un calendrier d'équipe,
+ *    une grille de compteurs regardent tout le cabinet. Les enfermer derrière une
+ *    sélection obligeait à cocher une ligne au hasard pour ouvrir un écran qui ne la
+ *    concerne pas, et laissait croire qu'ils en dépendaient ;
+ *  - `multi` : visible dès 1 ligne, une ou plusieurs ;
+ *  - sans drapeau : sélection UNIQUE (comportement historique).
+ * Puis la condition éventuelle de l'action, lue sur l'entité de la première ligne.
+ *
+ * @param {object[]} actions Les `attribute_actions` du canevas.
+ * @param {object[]} selection Les selectos sélectionnés.
+ * @returns {object[]}
+ */
+export function actionsVisibles(actions, selection) {
+    const nombre = selection?.length || 0;
+    const entite = selection?.[0]?.entity || {};
+
+    return (actions || []).filter((action) => {
+        if (action.sans_selection === true) return true;
+
+        const compteOk = action.multi === true ? nombre >= 1 : nombre === 1;
+        if (!compteOk) return false;
+        return conditionRemplie(entite, action.condition);
+    });
+}
+
 /** Libellé du groupe de débordement (au-delà du seuil d'entrées en ligne). */
 export const GROUPE_DEBORDEMENT = 'Autres actions';
 

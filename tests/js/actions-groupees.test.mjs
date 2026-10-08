@@ -11,7 +11,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { grouperActions, urlAction, GROUPE_DEBORDEMENT } from '../../assets/controllers/actions-groupees.js';
+import { actionsVisibles, grouperActions, urlAction, GROUPE_DEBORDEMENT } from '../../assets/controllers/actions-groupees.js';
 
 const action = (label, groupe = null, extra = {}) => ({
     label,
@@ -124,4 +124,31 @@ test('grouperActions tolère une liste absente', () => {
 test('urlAction ne substitue %id% que s’il est présent', () => {
     assert.equal(urlAction({ url: '/a/%id%/b' }, 42), '/a/42/b');
     assert.equal(urlAction({ url: '/a/b' }, 42), '/a/b', 'URL sans jeton : inchangée');
+});
+
+// LES ACTIONS VISIBLES : une seule règle pour la barre d’outils et le menu contextuel.
+const ligne = (id, entity = {}) => ({ id, entity });
+const actions = [
+    { label: 'Unique' },
+    { label: 'Multi', multi: true },
+    { label: 'Transverse', sans_selection: true },
+    { label: 'Si portefeuille', condition: { field: 'hasPortefeuille', value: true } },
+];
+const noms = (selection) => actionsVisibles(actions, selection).map((a) => a.label);
+
+test('actionsVisibles : sans sélection, seules les actions transverses', () => {
+    assert.deepEqual(noms([]), ['Transverse']);
+});
+
+test('actionsVisibles : une ligne, les actions uniques et multiples, conditions lues sur la ligne', () => {
+    assert.deepEqual(noms([ligne(1, { hasPortefeuille: true })]), ['Unique', 'Multi', 'Transverse', 'Si portefeuille']);
+    assert.deepEqual(noms([ligne(1, { hasPortefeuille: false })]), ['Unique', 'Multi', 'Transverse']);
+});
+
+test('actionsVisibles : plusieurs lignes, plus d’action à sélection unique', () => {
+    assert.deepEqual(noms([ligne(1), ligne(2)]), ['Multi', 'Transverse']);
+});
+
+test('actionsVisibles : aucun canevas, aucune action — sans lever', () => {
+    assert.deepEqual(actionsVisibles(undefined, undefined), []);
 });
