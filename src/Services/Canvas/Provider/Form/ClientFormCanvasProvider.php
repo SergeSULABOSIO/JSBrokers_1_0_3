@@ -2,6 +2,7 @@
 
 namespace App\Services\Canvas\Provider\Form;
 
+use App\Entity\Invite;
 use App\Entity\Client;
 use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
@@ -96,6 +97,7 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                     "groupe"    => "Relevé de compte",
                     "event"     => "ui:soa.revoke-request",
                     "url"       => "/admin/soa/api/client/%id%/revoquer-lien",
+                    "droit" => ["entite" => "Client", "niveau" => Invite::ACCESS_MODIFICATION], // garde de l'endpoint
                     "condition" => ["field" => "hasLienSoa", "value" => true],
                 ],
                 // Actions « portefeuille » conditionnelles (pattern Invité→Portefeuille) :
@@ -109,6 +111,7 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                     "groupe_icone" => "portefeuille",
                     "event"     => "ui:client.portefeuille-picker-request",
                     "url"       => "/admin/client/api/%id%/portefeuille-picker",
+                    "droit" => ["entite" => "Client", "niveau" => Invite::ACCESS_MODIFICATION], // garde de l'endpoint
                     "condition" => ["field" => "hasPortefeuille", "value" => false],
                 ],
                 [
@@ -117,6 +120,7 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                     "groupe"    => "Portefeuille",
                     "event"     => "ui:client.portefeuille-picker-request",
                     "url"       => "/admin/client/api/%id%/portefeuille-picker",
+                    "droit" => ["entite" => "Client", "niveau" => Invite::ACCESS_MODIFICATION], // garde de l'endpoint
                     "condition" => ["field" => "hasPortefeuille", "value" => true],
                 ],
                 [
@@ -127,6 +131,7 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                     // Pas de %id% : l'id du client est transmis dans le payload et le
                     // cerveau fait DELETE {url}/{id} après confirmation.
                     "url"       => "/admin/client/api/retirer-portefeuille",
+                    "droit" => ["entite" => "Client", "niveau" => Invite::ACCESS_MODIFICATION], // garde de l'endpoint
                     "condition" => ["field" => "hasPortefeuille", "value" => true],
                 ],
                 // ── OUVRIR UN DOSSIER AU CLIENT QU'ON A SOUS LES YEUX ───────────────
@@ -157,6 +162,7 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                     "groupe_icone" => "action:add",
                     "event"  => "ui:client.creer-piste",
                     "url"    => "/admin/client/api/%id%/piste-context",
+                    "droit" => ["entite" => "Client", "niveau" => Invite::ACCESS_MODIFICATION], // garde de l'endpoint
                 ],
                 [
                     "label"  => "Créer un sinistre",
@@ -164,6 +170,7 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                     "groupe" => "Créer…",
                     "event"  => "ui:client.creer-sinistre",
                     "url"    => "/admin/client/api/%id%/sinistre-context",
+                    "droit" => ["entite" => "Client", "niveau" => Invite::ACCESS_MODIFICATION], // garde de l'endpoint
                 ],
             ],
             // Entête contextuel du volet de saisie (pastille + description).

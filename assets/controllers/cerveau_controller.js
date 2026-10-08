@@ -1500,6 +1500,11 @@ export default class extends Controller {
                 if (context.idClient) {
                     url.searchParams.set('idClient', context.idClient);
                 }
+                // « Consulter » une ligne : le serveur n'exige que la Lecture et rend la
+                // fiche inerte. Porté par le contexte, il survit au rechargement.
+                if (context.consultation) {
+                    url.searchParams.set('consultation', '1');
+                }
             }
 
             // 5. On lance la requête avec l'URL finale

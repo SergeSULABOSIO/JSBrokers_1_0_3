@@ -83,6 +83,7 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
                     "icon"  => "action:resend-invitation",
                     "event" => "ui:invite.resend-request",
                     "url"   => "/admin/invite/api/resend-invitation/%id%",
+                    "droit" => ["entite" => "Invite", "niveau" => Invite::ACCESS_ECRITURE], // garde de l'endpoint (gestion des invités)
                 ],
                 // RÉTROCOMMISSION DE L'AGENT — visibles seulement si quelque chose est
                 // EXIGIBLE, c'est-à-dire réclamable aujourd'hui : le cabinet a encaissé sa

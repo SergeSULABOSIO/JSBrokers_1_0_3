@@ -655,23 +655,43 @@ export default class extends Controller {
      * @param {MouseEvent} event
      */
     editItem(event) {
+        this._ouvrirLaLigne(event, false);
+    }
+
+    /**
+     * « Consulter » : la même fiche, ouverte en LECTURE. C'est le bouton d'une ligne
+     * qu'on n'a pas le droit de modifier (ControllerUtilsTrait::droitsSurLaCollection).
+     * Le serveur exige alors la seule Lecture et rend un formulaire inerte, sans
+     * « Enregistrer » ; le paramètre voyage dans le contexte, qui survit au rechargement.
+     * @param {MouseEvent} event
+     */
+    consulterItem(event) {
+        this._ouvrirLaLigne(event, true);
+    }
+
+    /** @private */
+    _ouvrirLaLigne(event, consultation) {
         event.stopPropagation();
         // CORRECTION : On cherche l'ID sur la ligne parente (tr) la plus proche.
         const row = event.currentTarget.closest('tr');
         if (!row || !row.dataset.itemId) return;
         const itemId = row.dataset.itemId;
- 
+
         const formCanvas = {
             parametres: {
                 titre_creation: this.itemTitleCreateValue,
-                titre_modification: this.itemTitleEditValue,
+                titre_modification: consultation
+                    ? this.itemTitleEditValue.replace(/^Modifier/, 'Consulter')
+                    : this.itemTitleEditValue,
                 endpoint_form_url: this.itemFormUrlValue,
-                endpoint_submit_url: this.itemSubmitUrlValue,
+                // Une consultation n'enregistre rien : sans URL, aucune soumission possible.
+                endpoint_submit_url: consultation ? null : this.itemSubmitUrlValue,
             }
         };
- 
+
         const context = {
             originatorId: this.element.id, // On s'identifie pour le rafraîchissement
+            ...(consultation ? { consultation: true } : {}),
         };
  
         const parentContext = {

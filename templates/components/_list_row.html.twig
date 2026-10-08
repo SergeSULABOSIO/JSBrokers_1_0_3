@@ -209,18 +209,30 @@
         <td class="text-end pe-3">
             {% set delete_label = listActionOptions.deleteActionLabel|default('Supprimer') %}
             <div class="list-row-actions-container" data-collection-target="rowActions">
-                {# Bouton d'édition masquable par collection (ex. clients d'un portefeuille). #}
+                {# Bouton d'édition masquable par collection (ex. clients d'un portefeuille).
+                   SANS DROIT DE MODIFICATION, la ligne garde un bouton : « Consulter », qui
+                   ouvre la même fiche en lecture (ControllerUtilsTrait::droitsSurLaCollection).
+                   Une ligne qu'on peut lire doit pouvoir s'ouvrir. #}
                 {% if not (listActionOptions.hideEditAction|default(false)) %}
-                    <button type="button" class="btn btn-sm btn-light list-row-action-btn shadow-sm border-0" title="Modifier" aria-label="Modifier l'élément #{{ entity.id }}" data-action="click->collection#editItem">
-                        <twig:UX:Icon name="{{ resolve_icon_name('lucide:edit') }}" style="width: 20px; height: 20px;" class="text-primary"/>
-                    </button>
+                    {% if listActionOptions.consultationSeule|default(false) %}
+                        <button type="button" class="btn btn-sm btn-light list-row-action-btn shadow-sm border-0" title="Consulter" aria-label="Consulter l'élément #{{ entity.id }}" data-action="click->collection#consulterItem">
+                            <twig:UX:Icon name="{{ resolve_icon_name('action:view') }}" style="width: 20px; height: 20px;" class="text-primary"/>
+                        </button>
+                    {% else %}
+                        <button type="button" class="btn btn-sm btn-light list-row-action-btn shadow-sm border-0" title="Modifier" aria-label="Modifier l'élément #{{ entity.id }}" data-action="click->collection#editItem">
+                            <twig:UX:Icon name="{{ resolve_icon_name('lucide:edit') }}" style="width: 20px; height: 20px;" class="text-primary"/>
+                        </button>
+                    {% endif %}
                 {% endif %}
                 {# Libellé/icône de l'action de suppression personnalisables : pour une
                    collection « de rattachement » (portefeuille), l'action DÉTACHE et non
-                   supprime — d'où « Retirer » + icône adaptée. #}
-                <button type="button" class="btn btn-sm btn-light list-row-action-btn list-row-action-btn--danger shadow-sm border-0" title="{{ delete_label }}" aria-label="{{ delete_label }} #{{ entity.id }}" data-action="click->collection#deleteItem">
-                    <twig:UX:Icon name="{{ resolve_icon_name(listActionOptions.deleteActionIcon|default('lucide:trash-2')) }}" style="width: 20px; height: 20px;" class="text-danger" />
-                </button>
+                   supprime — d'où « Retirer » + icône adaptée. Absente sans droit de
+                   suppression ; la CELLULE, elle, reste : le tableau garde ses trois colonnes. #}
+                {% if not (listActionOptions.hideDeleteAction|default(false)) %}
+                    <button type="button" class="btn btn-sm btn-light list-row-action-btn list-row-action-btn--danger shadow-sm border-0" title="{{ delete_label }}" aria-label="{{ delete_label }} #{{ entity.id }}" data-action="click->collection#deleteItem">
+                        <twig:UX:Icon name="{{ resolve_icon_name(listActionOptions.deleteActionIcon|default('lucide:trash-2')) }}" style="width: 20px; height: 20px;" class="text-danger" />
+                    </button>
+                {% endif %}
             </div>
         </td>
     {% endif %}

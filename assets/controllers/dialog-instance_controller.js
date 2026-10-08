@@ -297,6 +297,7 @@ export default class extends Controller {
         // Le pied de la boîte doit dire ce que son bouton fait vraiment : « Ajouter »
         // quand la saisie est différée, « Enregistrer » quand elle part en base.
         this._habillerLePiedSiDiffere();
+        this._habillerLePiedSiConsultation();
 
         // Initialiser la logique de visibilité dynamique du formulaire
         this.initializeFormVisibility();
@@ -446,6 +447,8 @@ export default class extends Controller {
      */
     async submitForm(event) {
         event.preventDefault();
+        // Fiche consultée : aucune URL de soumission, rien à envoyer (touche Entrée comprise).
+        if (!this.entityFormCanvas?.parametres?.endpoint_submit_url) return;
         this.toggleLoading(true);
         this.toggleProgressBar(true);
   
@@ -1483,6 +1486,20 @@ export default class extends Controller {
      * expression qui déclenche la mise au tampon décide de l'habillage.
      * @private
      */
+    /**
+     * UNE FICHE CONSULTÉE N'ENREGISTRE RIEN : son pied n'offre que « Fermer ».
+     * Le serveur l'a rendue inerte (formulaire `disabled`, sans URL de soumission) ; le
+     * bouton qui resterait ne ferait que promettre un enregistrement impossible.
+     * @private
+     */
+    _habillerLePiedSiConsultation() {
+        // On AJOUTE seulement : d'autres habillages masquent aussi ce bouton (geste de
+        // suite d'un congé), et le réafficher ici les déferait.
+        if (this.hasSubmitButtonTarget && this.contentTarget.querySelector('[data-consultation]')) {
+            this.submitButtonTarget.classList.add('d-none');
+        }
+    }
+
     _habillerLePiedSiDiffere() {
         if (!this.parentContext?.differe) return;
 

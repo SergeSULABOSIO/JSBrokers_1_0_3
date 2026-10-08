@@ -2,6 +2,7 @@
 
 namespace App\Services\Canvas\Provider\Form;
 
+use App\Entity\Invite;
 use App\Entity\Note;
 use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
@@ -88,6 +89,7 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
                     "icon"      => "paiement",
                     "event"     => "ui:note.paiement-request",
                     "url"       => "/admin/note/api/%id%/paiement-context",
+                    "droit" => ["entite" => "Note", "niveau" => Invite::ACCESS_ECRITURE], // garde de l'endpoint
                     "condition" => ["field" => "aUnSoldeDu", "value" => true],
                 ],
             ],

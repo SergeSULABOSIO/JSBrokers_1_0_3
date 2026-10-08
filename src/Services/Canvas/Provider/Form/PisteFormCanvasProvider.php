@@ -2,6 +2,7 @@
 
 namespace App\Services\Canvas\Provider\Form;
 
+use App\Entity\Invite;
 use App\Entity\Piste;
 use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
@@ -64,6 +65,7 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
                     "groupe_icone" => "partenaire",
                     "event"        => "ui:partage.picker-request",
                     "url"          => "/admin/partage/piste/conditions-picker",
+                    "droit" => ["entite" => "Piste", "niveau" => Invite::ACCESS_ECRITURE], // garde de l'endpoint
                     "multi"        => true,
                     // AUCUNE CONDITION D'AFFICHAGE. Le picker rattache ce qui est libre et
                     // détache ce qui est posé : il n'y a plus d'état où l'action n'aurait

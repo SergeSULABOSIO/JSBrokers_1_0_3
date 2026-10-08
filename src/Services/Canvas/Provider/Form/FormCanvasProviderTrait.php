@@ -27,6 +27,20 @@ trait FormCanvasProviderTrait
             if (isset($config['pickerUrl'])) {
                 $extraOptions['pickerUrl'] = str_replace('%parentId%', (string) $parentId, $config['pickerUrl']);
             }
+            // RATTACHER / DÉTACHER ÉCRIT SUR LE PARENT : ses routes (…/client-picker,
+            // …/detach-client) gardent le parent, pas l'enfant. Les boutons de la
+            // collection suivront donc ce droit-là (ControllerUtilsTrait::droitsSurLaCollection).
+            if (isset($config['pickerUrl']) || isset($config['itemDeleteUrl'])) {
+                $extraOptions['gardeSurLeParent'] = true;
+            }
+            // LECTURE SEULE DÉCLARÉE : ni « Ajouter », ni actions de ligne, quels que soient
+            // les droits — la collection ne fait que MONTRER (ex. le relevé financier d'une
+            // tranche). Les droits ne peuvent que l'y ajouter, jamais la lever.
+            if (!empty($config['lectureSeule'])) {
+                $extraOptions['lectureSeule'] = true;
+                $extraOptions['consultationSeule'] = true;
+                $extraOptions['hideDeleteAction'] = true;
+            }
             // Personnalisation des actions de ligne (bouton d'édition masqué, libellé/icône
             // de l'action de suppression — ex. « Retirer » pour un détachement).
             // NOM DE ROUTE DU PARENT, quand il diffère du nom du champ.

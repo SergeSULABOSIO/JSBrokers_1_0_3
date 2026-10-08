@@ -2,6 +2,7 @@
 
 namespace App\Services\Canvas\Provider\Form;
 
+use App\Entity\Invite;
 use App\Entity\Avenant;
 use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
@@ -71,6 +72,7 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
                     "groupe_icone" => "partenaire",
                     "event"        => "ui:partage.picker-request",
                     "url"          => "/admin/partage/avenant/conditions-picker",
+                    "droit" => ["entite" => "Avenant", "niveau" => Invite::ACCESS_ECRITURE], // garde de l'endpoint
                     "multi"        => true,
                     // AUCUNE CONDITION D'AFFICHAGE. Le picker rattache ce qui est libre et
                     // détache ce qui est posé : il n'y a plus d'état où l'action n'aurait
@@ -88,6 +90,7 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
                     "groupe_icone" => "action:renew",
                     "event"        => "ui:avenant.mouvement-request",
                     "url"          => "/admin/avenant/api/mouvement-picker/renouvellement/%id%",
+                    "droit" => [["entite" => "Piste", "niveau" => Invite::ACCESS_ECRITURE], ["entite" => "Cotation", "niveau" => Invite::ACCESS_ECRITURE], ["entite" => "Avenant", "niveau" => Invite::ACCESS_ECRITURE]], // garde de l'endpoint (contexteMouvement)
                     "condition"    => ["field" => "hasPisteDerivee", "value" => false],
                 ],
                 [
@@ -96,6 +99,7 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
                     "groupe"    => "Mouvements de la police",
                     "event"     => "ui:avenant.mouvement-request",
                     "url"       => "/admin/avenant/api/mouvement-picker/prorogation/%id%",
+                    "droit" => [["entite" => "Piste", "niveau" => Invite::ACCESS_ECRITURE], ["entite" => "Cotation", "niveau" => Invite::ACCESS_ECRITURE], ["entite" => "Avenant", "niveau" => Invite::ACCESS_ECRITURE]], // garde de l'endpoint (contexteMouvement)
                     "condition" => ["field" => "hasPisteDerivee", "value" => false],
                 ],
                 [
@@ -104,6 +108,7 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
                     "groupe"    => "Mouvements de la police",
                     "event"     => "ui:avenant.mouvement-request",
                     "url"       => "/admin/avenant/api/mouvement-picker/annulation/%id%",
+                    "droit" => [["entite" => "Piste", "niveau" => Invite::ACCESS_ECRITURE], ["entite" => "Cotation", "niveau" => Invite::ACCESS_ECRITURE], ["entite" => "Avenant", "niveau" => Invite::ACCESS_ECRITURE]], // garde de l'endpoint (contexteMouvement)
                     "condition" => ["field" => "hasPisteDerivee", "value" => false],
                 ],
                 [
@@ -112,6 +117,7 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
                     "groupe"    => "Mouvements de la police",
                     "event"     => "ui:avenant.mouvement-request",
                     "url"       => "/admin/avenant/api/mouvement-picker/resiliation/%id%",
+                    "droit" => [["entite" => "Piste", "niveau" => Invite::ACCESS_ECRITURE], ["entite" => "Cotation", "niveau" => Invite::ACCESS_ECRITURE], ["entite" => "Avenant", "niveau" => Invite::ACCESS_ECRITURE]], // garde de l'endpoint (contexteMouvement)
                     "condition" => ["field" => "hasPisteDerivee", "value" => false],
                 ],
                 // Gestion manuelle de l'opportunité dérivée : même famille métier que
@@ -141,6 +147,7 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
                     // générique app:api.delete-request après confirmation.
                     "event"     => "ui:avenant.delete-piste-derivee",
                     "url"       => "/admin/avenant/api/delete-piste-derivee",
+                    "droit" => [["entite" => "Piste", "niveau" => Invite::ACCESS_ECRITURE], ["entite" => "Cotation", "niveau" => Invite::ACCESS_ECRITURE], ["entite" => "Avenant", "niveau" => Invite::ACCESS_ECRITURE]], // garde de l'endpoint (contexteMouvement)
                     "condition" => ["field" => "hasPisteDerivee", "value" => true],
                 ],
                 // SUIVI DU RENOUVELLEMENT — famille distincte des mouvements : ici rien n'est
