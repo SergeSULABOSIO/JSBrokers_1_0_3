@@ -67,7 +67,11 @@
             {# Visible en permanence, et non plus au seul survol : il ne surmonte plus une
                ligne cliquable dont il fallait ménager l'affordance, et un bouton qu'il faut
                trouver en passant la souris n'existe pas pour qui navigue au clavier. #}
-            <div class="title-right-block {{ isDisabled ? 'd-none' : '' }}" data-collection-target="addButtonContainer">
+            {# LECTURE SEULE : pas de bouton, et non un bouton grisé — `disabled` bloquerait
+               aussi le chargement de la liste, qu'on veut voir. Posée par les droits
+               (pas d'Écriture sur l'enfant) ou par le canevas (collection qui ne fait que
+               montrer). #}
+            <div class="title-right-block {{ (isDisabled or manager_options.lectureSeule|default(false)) ? 'd-none' : '' }}" data-collection-target="addButtonContainer">
                 <button type="button" class="btn btn-sm btn-primary" data-action="click->collection#addItem">
                     <twig:UX:Icon name="gridicons:add" style="width: 23px;" />
                     <span>Ajouter </span>

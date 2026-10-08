@@ -2,6 +2,7 @@
 
 namespace App\Services\Canvas\Provider\Form;
 
+use App\Entity\Invite;
 use App\Entity\Portefeuille;
 use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
@@ -51,6 +52,7 @@ class PortefeuilleFormCanvasProvider implements FormCanvasProviderInterface
                     "icon"  => "client",
                     "event" => "ui:portefeuille.client-picker-request",
                     "url"   => "/admin/portefeuille/api/%id%/client-picker",
+                    "droit" => ["entite" => "Portefeuille", "niveau" => Invite::ACCESS_MODIFICATION], // garde de l'endpoint
                 ],
             ],
             // Entête contextuel du volet de saisie (pastille + description).

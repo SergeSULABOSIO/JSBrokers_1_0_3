@@ -287,7 +287,136 @@ trait ControllerUtilsTrait
             unset($canvas['parametres']['endpoint_delete_url']);
         }
 
+        return $this->filtrerActionsParDroit($canvas);
+    }
+
+    /**
+     * UNE ACTION RAPIDE QUE LE SERVEUR REFUSERAIT N'EST PAS PROPOSÉE.
+     *
+     * Les `attribute_actions` s'affichaient à tous : « Facturer la commission » paraissait
+     * chez un gestionnaire sans droit sur les notes, et le refus n'arrivait qu'au clic.
+     * Une action peut désormais DÉCLARER le droit que vérifie son endpoint :
+     *
+     *     'droit' => ['entite' => 'Note', 'niveau' => Invite::ACCESS_ECRITURE]
+     *
+     * ou une LISTE d'exigences, toutes requises (un mouvement d'avenant écrit une piste,
+     * une cotation et un avenant). La déclaration recopie la garde de l'endpoint, rien
+     * de plus : le serveur garde son refus, ceci n'en est que l'écho.
+     *
+     * Sans déclaration, l'action reste : beaucoup d'actions ne font que LIRE (aperçu,
+     * téléchargement), et masquer par défaut cacherait ce que l'utilisateur peut faire.
+     */
+    private function filtrerActionsParDroit(array $canvas): array
+    {
+        $actions = $canvas['parametres']['attribute_actions'] ?? null;
+        if (!is_array($actions)) {
+            return $canvas;
+        }
+
+        $canvas['parametres']['attribute_actions'] = array_values(array_filter(
+            $actions,
+            fn ($action) => !is_array($action) || $this->satisfaitLeDroit($action['droit'] ?? null),
+        ));
+
         return $canvas;
+    }
+
+    /** Une exigence `['entite', 'niveau']`, une liste d'exigences, ou rien (= permis). */
+    private function satisfaitLeDroit(?array $droit): bool
+    {
+        if ($droit === null || $droit === []) {
+            return true;
+        }
+        $exigences = isset($droit['entite']) ? [$droit] : $droit;
+        foreach ($exigences as $exigence) {
+            if (!$this->mayAccessEntity('App\\Entity\\' . $exigence['entite'], (int) $exigence['niveau'])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * CE QUE L'INVITÉ PEUT ÉCRIRE DANS UNE COLLECTION DE DIALOGUE.
+     *
+     * Chaque bouton suit le droit EXACT que vérifie son endpoint : ajouter ouvre le
+     * formulaire de création de l'enfant (Écriture), modifier son formulaire d'édition
+     * (Modification), supprimer sa route de suppression (Suppression) — les niveaux de
+     * `renderFormCanvas()` et `handleDeleteApi()`.
+     *
+     * Deux exceptions, et elles disent où se trouve la garde :
+     *  - une collection de RATTACHEMENT (`gardeSurLeParent` : sélecteur + détachement,
+     *    ex. les clients d'un portefeuille) écrit sur le PARENT, que ses routes gardent
+     *    en Modification ;
+     *  - une classe enfant inconnue laisse les boutons : on ne prétend pas savoir ce
+     *    qu'on ne sait pas, le serveur tranchera.
+     *
+     * @return array{ajout: bool, modification: bool, suppression: bool}
+     */
+    private function droitsSurLaCollection(?string $classeEnfant, array $options = [], ?object $parent = null): array
+    {
+        if (!empty($options['gardeSurLeParent']) && $parent !== null) {
+            $peut = $this->mayAccessEntity($parent, Invite::ACCESS_MODIFICATION);
+
+            return ['ajout' => $peut, 'modification' => $peut, 'suppression' => $peut];
+        }
+        if ($classeEnfant === null || !class_exists($classeEnfant)) {
+            return ['ajout' => true, 'modification' => true, 'suppression' => true];
+        }
+
+        return [
+            'ajout'        => $this->mayAccessEntity($classeEnfant, Invite::ACCESS_ECRITURE),
+            'modification' => $this->mayAccessEntity($classeEnfant, Invite::ACCESS_MODIFICATION),
+            'suppression'  => $this->mayAccessEntity($classeEnfant, Invite::ACCESS_SUPPRESSION),
+        ];
+    }
+
+    /**
+     * Les droits traduits en options d'affichage, une seule fois pour les deux surfaces
+     * (le widget rendu avec le dialogue, la liste rendue par l'endpoint JSON).
+     *
+     * Sans Modification, la ligne ne perd pas son bouton : elle le change en
+     * « Consulter » — une ligne qu'on peut lire doit pouvoir s'ouvrir.
+     */
+    private function optionsDeDroits(array $droits, array $options = []): array
+    {
+        return [
+            'lectureSeule'      => !empty($options['lectureSeule']) || !$droits['ajout'],
+            'consultationSeule' => !empty($options['consultationSeule']) || !$droits['modification'],
+            'hideDeleteAction'  => !empty($options['hideDeleteAction']) || !$droits['suppression'],
+        ];
+    }
+
+    /**
+     * Pose sur chaque widget de collection du dialogue les options de droits.
+     *
+     * En CONSULTATION, tout le dialogue est en lecture : ses collections aussi, quels
+     * que soient les droits sur leurs enfants — on ne modifie pas le contenu d'une fiche
+     * qu'on n'a pas le droit de modifier.
+     */
+    private function appliquerLesDroitsAuxCollections(array &$formCanvas, object $parentEntity, bool $consultation): void
+    {
+        if (!isset($formCanvas['form_layout']) || !is_array($formCanvas['form_layout'])) {
+            return;
+        }
+        $collectionMap = $this->getCollectionMap();
+
+        foreach ($formCanvas['form_layout'] as $index => $row) {
+            $champ = $row['colonnes'][0]['champs'][0] ?? null;
+            if (!is_array($champ) || ($champ['widget'] ?? null) !== 'collection') {
+                continue;
+            }
+            $options = $champ['options'] ?? [];
+            $droits = $consultation
+                ? ['ajout' => false, 'modification' => false, 'suppression' => false]
+                : $this->droitsSurLaCollection($collectionMap[$champ['field_code']] ?? null, $options, $parentEntity);
+
+            $formCanvas['form_layout'][$index]['colonnes'][0]['champs'][0]['options'] = array_merge(
+                $options,
+                $this->optionsDeDroits($droits, $options),
+            );
+        }
     }
 
     /**
@@ -816,7 +945,8 @@ trait ControllerUtilsTrait
 
         $parameters = [
             'listId' => $listId, // NOUVEAU : ID unique pour le contrôleur list-manager.
-            'can_add' => true, // On autorise l'ajout pour les listes de collection
+            // L'ajout suit le droit d'écriture sur l'enfant (cf. droitsSurLaCollection).
+            'can_add' => $listActionOptions['canAdd'] ?? true,
             'data' => $data,
             'usage' => $usage,
             'entite_nom' => $this->getEntityName($entityClass),
@@ -1143,7 +1273,16 @@ trait ControllerUtilsTrait
         // CONTRÔLE D'ACCÈS (ouverture du formulaire) : créer exige l'Écriture, éditer
         // exige la Modification. Pour les invités et les rôles, exige la gestion des
         // invités (propriétaire ou délégué), géré par le resolver.
-        $requiredLevel = $isCreationMode ? Invite::ACCESS_ECRITURE : Invite::ACCESS_MODIFICATION;
+        //
+        // LA CONSULTATION, DEMANDÉE EXPRESSÉMENT (`?consultation=1`), n'exige que la
+        // Lecture : c'est le bouton « Consulter » d'une ligne de collection qu'on ne peut
+        // pas modifier. Les modales sont à fond statique — ouvrir la fiche dans la colonne
+        // de visualisation la laisserait derrière, invisible. Sans le paramètre, rien ne
+        // change : l'ouverture d'une fiche exige toujours la Modification.
+        $consultation = !$isCreationMode && $request->query->getBoolean('consultation');
+        $requiredLevel = $isCreationMode
+            ? Invite::ACCESS_ECRITURE
+            : ($consultation ? Invite::ACCESS_LECTURE : Invite::ACCESS_MODIFICATION);
         if (!$this->mayAccessEntity($entity ?? $entityClass, $requiredLevel)) {
             return $this->accessDeniedComponent($entityClass);
         }
@@ -1252,6 +1391,18 @@ trait ControllerUtilsTrait
         // muette jusqu'au premier clic, et le dialogue ne dirait plus ce qu'il contient.
         $this->renseignerLesComptesDOnglets($formCanvas, $entity);
 
+        // LES BOUTONS D'ÉCRITURE SUIVENT LES DROITS, dans le dialogue comme dans la liste :
+        // actions rapides déclarant leur droit, Ajouter/Modifier/Supprimer des collections.
+        $formCanvas = $this->filtrerActionsParDroit($formCanvas);
+        $this->appliquerLesDroitsAuxCollections($formCanvas, $entity, $consultation);
+        if ($consultation) {
+            // Une fiche consultée n'agit sur rien : ni enregistrement, ni suppression, ni
+            // action rapide. Le marqueur `consultation` habille le pied (sans « Enregistrer »).
+            unset($formCanvas['parametres']['endpoint_submit_url'], $formCanvas['parametres']['endpoint_delete_url']);
+            $formCanvas['parametres']['attribute_actions'] = [];
+            $formCanvas['parametres']['consultation'] = true;
+        }
+
 
         $parentContextFacts = [];
         foreach ($this->buildParentAssociationMapFromEntity($entityClass) as $parentField => $parentClass) {
@@ -1276,7 +1427,9 @@ trait ControllerUtilsTrait
             }
         }
 
-        $form = $this->createForm($formTypeClass, $entity);
+        // En consultation, le formulaire entier est inerte : `disabled` est hérité par
+        // chaque champ, et un formulaire désactivé n'accepte aucune soumission.
+        $form = $this->createForm($formTypeClass, $entity, $consultation ? ['disabled' => true] : []);
         $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
 
         // dd("idEntreprise:", $entreprise->getId(), "idInvite:", $invite->getId(), "isCreationMode:", $isCreationMode, "canvas:", $formCanvas);
@@ -1870,10 +2023,20 @@ trait ControllerUtilsTrait
         // Personnalisation des actions de ligne (ex. portefeuille : « Retirer » au lieu de
         // « Supprimer », et pas de bouton d'édition). Valeurs par défaut = comportement
         // historique (édition + suppression standard).
+        // Les boutons de ligne suivent les droits sur l'ENFANT — la même fonction que le
+        // widget rendu avec le dialogue, pour que la liste et son bouton « Ajouter » ne se
+        // contredisent jamais.
+        $optionsDeDroits = $this->optionsDeDroits(
+            $this->droitsSurLaCollection($collectionMap[$collectionName], $collectionOptions, $parentEntity),
+            $collectionOptions,
+        );
         $listActionOptions = [
             'hideEditAction'    => (bool) ($collectionOptions['hideEditAction'] ?? false),
             'deleteActionLabel' => $collectionOptions['deleteActionLabel'] ?? null,
             'deleteActionIcon'  => $collectionOptions['deleteActionIcon'] ?? null,
+            'consultationSeule' => $optionsDeDroits['consultationSeule'],
+            'hideDeleteAction'  => $optionsDeDroits['hideDeleteAction'],
+            'canAdd'            => !$optionsDeDroits['lectureSeule'],
         ];
 
         // --- NOUVELLE LOGIQUE DE RÉPONSE JSON ---

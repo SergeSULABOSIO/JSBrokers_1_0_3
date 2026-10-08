@@ -367,16 +367,28 @@
                    crée ou qu'on modifie donneraient deux visages à une même situation — et
                    celui de la création doit dire ce qui a d'unique ici : la saisie est
                    possible tout de suite, et elle sera écrite avec la fiche. #}
-                {% set emptyStateParams = {
-                    title: "La collection est vide",
-                    description: parentEnAttente
-                        ? "Ajoutez vos éléments dès maintenant : ils seront créés en même temps que la fiche."
-                        : "Ajouter un élément à la collection en cliquant sur le bouton \"Ajouter\".",
-                    icon_name: entityCanvas.parametres.icone | default('lucide:folder-plus'),
-                    button_text: "Ajouter",
-                    button_action: customAddAction, 
-                    button_icon: "lucide:plus-circle"
-                } %}
+                {# SANS DROIT D'AJOUT, l'état vide constate et n'invite à rien : un bouton
+                   « Ajouter » promettrait un geste que le serveur refuserait.
+                   ⚠ PAS `can_add|default(true)` : `default` remplace aussi une valeur VIDE,
+                   et `false|default(true)` vaut `true` — le refus serait ignoré. #}
+                {% if can_add is not defined or can_add %}
+                    {% set emptyStateParams = {
+                        title: "La collection est vide",
+                        description: parentEnAttente
+                            ? "Ajoutez vos éléments dès maintenant : ils seront créés en même temps que la fiche."
+                            : "Ajouter un élément à la collection en cliquant sur le bouton \"Ajouter\".",
+                        icon_name: entityCanvas.parametres.icone | default('lucide:folder-plus'),
+                        button_text: "Ajouter",
+                        button_action: customAddAction,
+                        button_icon: "lucide:plus-circle"
+                    } %}
+                {% else %}
+                    {% set emptyStateParams = {
+                        title: "La collection est vide",
+                        description: "Aucun élément n'y est encore rattaché.",
+                        icon_name: entityCanvas.parametres.icone | default('lucide:folder-plus')
+                    } %}
+                {% endif %}
             {% else %}
                 {# CAS : État vide pour une liste principale OU une collection contextuelle (hors formulaire). #}
                 {% set emptyStateParams = {

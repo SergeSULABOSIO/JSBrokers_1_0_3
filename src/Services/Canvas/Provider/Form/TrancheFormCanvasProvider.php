@@ -2,6 +2,7 @@
 
 namespace App\Services\Canvas\Provider\Form;
 
+use App\Entity\Invite;
 use App\Entity\Tranche;
 
 class TrancheFormCanvasProvider implements FormCanvasProviderInterface
@@ -57,6 +58,7 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
                     "groupe_icone" => "partenaire",
                     "event"        => "ui:partage.picker-request",
                     "url"          => "/admin/partage/tranche/conditions-picker",
+                    "droit" => ["entite" => "Tranche", "niveau" => Invite::ACCESS_ECRITURE], // garde de l'endpoint
                     "multi"        => true,
                     // AUCUNE CONDITION D'AFFICHAGE. Le picker rattache ce qui est libre et
                     // détache ce qui est posé : il n'y a plus d'état où l'action n'aurait
@@ -68,6 +70,7 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
                     "icon"  => "paiement",
                     "event" => "ui:tranche.signaler-paiement-prime",
                     "url"   => "/admin/tranche/api/get-paiement-prime-context/%id%",
+                    "droit" => ["entite" => "Tranche", "niveau" => Invite::ACCESS_ECRITURE], // garde de l'endpoint
                 ],
                 // ── RÉCLAMER LA COMMISSION DE CETTE ÉCHÉANCE ──────────────────────
                 //
@@ -96,6 +99,7 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
                     "multi" => true,
                     "event" => "ui:tranche.facturer-commission",
                     "url"   => "/admin/note/facturation-picker",
+                    "droit" => ["entite" => "Note", "niveau" => Invite::ACCESS_ECRITURE], // garde de l'endpoint
                 ],
             ],
             // Entête contextuel du volet de saisie (pastille + description).
