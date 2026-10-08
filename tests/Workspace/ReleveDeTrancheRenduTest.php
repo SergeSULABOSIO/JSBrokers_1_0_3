@@ -288,6 +288,30 @@ class ReleveDeTrancheRenduTest extends WebTestCase
         self::assertSame(2, $json['itemCount'], 'La pastille additionne les lignes des deux blocs.');
     }
 
+    /**
+     * LA PASTILLE PARAÎT DÈS LE RENDU DE LA FICHE, sans qu'on ouvre l'onglet — et c'est le
+     * nombre que l'onglet affichera une fois ouvert. Un onglet du relevé n'est pas une
+     * association : sans compte calculé côté serveur, sa pastille n'arrivait qu'au clic.
+     */
+    public function testLaPastilleParaitDesLeRenduEtEgaleLeContenu(): void
+    {
+        $ids = $this->semer();
+        $this->connecter(self::OWNER_EMAIL);
+
+        $fiche = $this->client->request('GET', '/admin/tranche/api/get-form/' . $ids['tranche']);
+        self::assertResponseIsSuccessful();
+
+        $vus = 0;
+        foreach (\App\Services\Tranche\ReleveDeTranche::ONGLETS as $champ => $famille) {
+            $pastille = $fiche->filter(sprintf('[role="tab"][data-tab-id="%s"] .jsb-onglet-compte', $champ));
+            $auRendu = $pastille->count() > 0 ? (int) $pastille->text() : 0;
+            ['json' => $json] = $this->releve($ids['tranche'], $famille);
+            self::assertSame($json['itemCount'], $auRendu, "Onglet « $famille » : la pastille du rendu doit égaler le contenu.");
+            $vus += $auRendu;
+        }
+        self::assertGreaterThan(0, $vus, 'Le semis porte des mouvements : au moins une pastille doit paraître.');
+    }
+
     public function testUneFamilleOuUnUsageInconnusRepondent404(): void
     {
         $ids = $this->semer();

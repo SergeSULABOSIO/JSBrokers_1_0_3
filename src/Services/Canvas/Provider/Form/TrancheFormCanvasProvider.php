@@ -4,6 +4,7 @@ namespace App\Services\Canvas\Provider\Form;
 
 use App\Entity\Invite;
 use App\Entity\Tranche;
+use App\Services\Tranche\ReleveDeTranche;
 
 class TrancheFormCanvasProvider implements FormCanvasProviderInterface
 {
@@ -192,12 +193,16 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
         //
         // Rien à relever avant la naissance de la tranche : masqués en création.
         $collections = [];
-        foreach ([
-            ['relevePrime', 'prime', 'Prime', 'paiementprime', 'Paiement de prime'],
-            ['releveCommission', 'commission', 'Commission', 'tranche', 'Commission'],
-            ['releveRetro', 'retrocommission', 'Rétrocommissions', 'tranche', 'Rétrocommission'],
-            ['releveTaxe', 'taxe', 'Taxes', 'tranche', 'Taxe'],
-        ] as [$champ, $famille, $onglet, $route, $titre]) {
+        // Champ d'onglet → famille : ReleveDeTranche::ONGLETS, la table que lit aussi le
+        // contrôleur pour COMPTER chaque onglet dès le rendu. Ici, l'habillage seulement.
+        $habillage = [
+            'prime'           => ['Prime', 'paiementprime', 'Paiement de prime'],
+            'commission'      => ['Commission', 'tranche', 'Commission'],
+            'retrocommission' => ['Rétrocommissions', 'tranche', 'Rétrocommission'],
+            'taxe'            => ['Taxes', 'tranche', 'Taxe'],
+        ];
+        foreach (ReleveDeTranche::ONGLETS as $champ => $famille) {
+            [$onglet, $route, $titre] = $habillage[$famille];
             $collections[] = [
                 'fieldName'       => $champ,
                 'entityRouteName' => $route,

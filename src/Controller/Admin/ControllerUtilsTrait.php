@@ -1203,6 +1203,21 @@ trait ControllerUtilsTrait
      *    (handleCollectionApiRequest), sans quoi la pastille annoncerait ce que la liste
      *    refuse de montrer.
      */
+    /**
+     * Le compte des onglets qui ne sont pas des associations Doctrine, par champ d'onglet.
+     *
+     * Une liste calculée (servie par un endpoint dédié, cf. `listUrl`) n'a pas de COUNT à
+     * faire en base : seul son contrôleur sait la compter. Sans ce point d'entrée, sa
+     * pastille n'apparaissait qu'à l'ouverture de l'onglet — trop tard pour dire ce que la
+     * fiche contient. Vide par défaut ; à surcharger par le contrôleur qui en a.
+     *
+     * @return array<string, int> champ d'onglet → nombre d'éléments
+     */
+    protected function comptesDOngletsCalcules(object $parentEntity): array
+    {
+        return [];
+    }
+
     private function renseignerLesComptesDOnglets(array &$formCanvas, object $parentEntity): void
     {
         if (!isset($formCanvas['form_layout']) || !is_array($formCanvas['form_layout'])) {
@@ -1215,6 +1230,9 @@ trait ControllerUtilsTrait
         $metadata = $this->em->getClassMetadata($parentEntity::class);
         $parentClass = $metadata->getName();
         $collectionMap = $this->getCollectionMap();
+        // Les onglets qui ne sont PAS des associations (ex. le relevé d'une tranche) : leur
+        // contrôleur sait les compter, et la pastille paraît dès le rendu de la fiche.
+        $comptesCalcules = $parentId !== null ? $this->comptesDOngletsCalcules($parentEntity) : [];
 
         foreach ($formCanvas['form_layout'] as $index => $row) {
             if (!isset($row['onglet_titre'])) {
@@ -1224,6 +1242,10 @@ trait ControllerUtilsTrait
             $formCanvas['form_layout'][$index]['onglet_compte'] = null;
 
             $fieldName = $row['colonnes'][0]['champs'][0]['field_code'] ?? null;
+            if ($fieldName !== null && array_key_exists($fieldName, $comptesCalcules)) {
+                $formCanvas['form_layout'][$index]['onglet_compte'] = $comptesCalcules[$fieldName];
+                continue;
+            }
             if ($fieldName === null || $parentId === null || !$metadata->hasAssociation($fieldName)) {
                 continue;
             }
