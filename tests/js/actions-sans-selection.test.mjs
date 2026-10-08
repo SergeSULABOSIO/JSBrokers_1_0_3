@@ -33,14 +33,24 @@ const CONTROLEURS = {
     'menu contextuel': readFileSync(join(RACINE, 'context-menu_controller.js'), 'utf8'),
 };
 
+// LA RÈGLE N'EST PLUS ÉCRITE QU'UNE FOIS (actions-groupees.js#actionsVisibles) : les deux
+// surfaces la recopiaient à l'identique. On vérifie donc la règle à sa source, et que
+// chaque surface y passe bien — une copie locale réintroduirait la divergence.
+const PARTAGE = readFileSync(join(RACINE, 'actions-groupees.js'), 'utf8');
+
+test('la règle partagée : le drapeau sans_selection court-circuite le décompte', () => {
+    assert.match(
+        PARTAGE,
+        /if \(action\.sans_selection === true\) return true;/,
+        'Sans ce court-circuit, l\'action retombe sur la règle du décompte et reste '
+        + 'invisible tant qu\'aucune ligne n\'est cochée.',
+    );
+});
+
 for (const [nom, source] of Object.entries(CONTROLEURS)) {
-    test(`${nom} : le drapeau sans_selection court-circuite le décompte`, () => {
-        assert.match(
-            source,
-            /if \(action\.sans_selection === true\) return true;/,
-            'Sans ce court-circuit, l\'action retombe sur la règle du décompte et reste '
-            + 'invisible tant qu\'aucune ligne n\'est cochée.',
-        );
+    test(`${nom} : les actions visibles viennent de la règle partagée`, () => {
+        assert.match(source, /actionsVisibles\(/);
+        assert.doesNotMatch(source, /action\.sans_selection/, 'aucune copie locale de la règle');
     });
 
     test(`${nom} : une sélection vide ne fait pas tomber le rendu`, () => {

@@ -684,14 +684,13 @@ textarea:hover,
    colonne, pour que le contenu ne defile pas dans les gouttieres de la barre. */
 .form-column .jsb-onglets-barre {
     position: sticky;
-    /* -1.5rem, ET NON 0 : c'est la GOUTTIERE HAUTE de `.form-column` (padding: 1.5rem).
-       A `top: 0`, le bandeau se calait 24 px sous le bord visible de la colonne, et cette
-       bande restait a decouvert : le contenu y defilait a cote du bandeau — un titre de
-       carte, la barre d'outils de l'editeur riche — en donnant l'impression de passer
-       PAR-DESSUS lui. Mesure a l'appui : bande de 24 px avant, 0 px apres, sans que la
-       rangee d'onglets soit rognee d'un pixel. Ce nombre suit donc le padding de
-       `.form-column` (l. ~2691) : changer l'un oblige a changer l'autre. */
-    top: -1.5rem;
+    /* LE DÉCALAGE VAUT LA GOUTTIÈRE HAUTE DE `.form-column`, en négatif. Avec une
+       gouttière, le bandeau se calait sous le bord visible de la colonne et une bande
+       restait à découvert : le contenu y défilait à côté de lui, comme s'il passait
+       PAR-DESSUS. La colonne n'a plus de gouttière (grammaire du workspace) : le bandeau
+       se cale donc à 0. Ce nombre suit le padding de `.form-column` : changer l'un oblige
+       à changer l'autre. */
+    top: 0;
     /* 110, ET NON 3 : le bandeau cree un CONTEXTE D'EMPILEMENT, dans lequel son panneau
        « + N » (z-index 1050) se retrouve enferme. Tout le groupe vaut donc ce seul nombre
        face au reste du formulaire — et l'entete collant du tableau d'une collection, lui,
@@ -701,11 +700,11 @@ textarea:hover,
        Ne pas ramener ce nombre sous 100 en croyant ranger : c'est l'entete du tableau
        qu'il doit dominer, pas un empilement arbitraire. */
     z-index: 110;
-    /* DEUX NOMBRES DIFFERENTS, ET C'EST VOULU : le decalage VERTICAL ci-dessus se cale
-       sur la colonne qui defile (1.5rem), le debord HORIZONTAL ci-dessous sur le CADRE
-       qui entoure (1.25rem, cf. `--gouttiere-cadre`). Les aligner l'un sur l'autre
-       ferait soit reapparaitre la bande decouverte, soit recouper la bordure du cadre.
-       Sans cadre (aucun `form_intro`), la variable vaut 0 : aucun debord. */
+    /* DEUX SOURCES DIFFERENTES, ET C'EST VOULU : le decalage VERTICAL ci-dessus se cale
+       sur la colonne qui defile, le debord HORIZONTAL ci-dessous sur le CADRE qui entoure
+       (cf. `--gouttiere-cadre`). Les deux valent 0 depuis que le formulaire suit la
+       grammaire du workspace ; le mecanisme reste, pour qu'un cadre qui retrouverait une
+       gouttiere ne recoupe pas sa propre bordure. */
     margin-inline: calc(-1 * var(--gouttiere-cadre, 0rem));
     padding-inline: calc(8px + var(--gouttiere-cadre, 0rem));
 }
@@ -2903,7 +2902,12 @@ tr.row-selected:hover > td {
     /* NOUVEAU : La colonne de formulaire est un item flex qui grandit et défile. */
     flex: 1;
     min-width: 0; /* Correctif flex pour empêcher le dépassement horizontal. */
-    padding: 1.5rem; /* Padding interne pour le contenu du formulaire. */
+    /* AUCUNE GOUTTIÈRE, comme une colonne du workspace : l'entête, les onglets et les
+       cartes de champ touchent les bords et se séparent par des filets. Chaque bloc
+       porte ses propres marges intérieures. Ce nombre est COUPLÉ au décalage du bandeau
+       d'onglets collant (`.form-column .jsb-onglets-barre`, top) : changer l'un oblige
+       à changer l'autre. */
+    padding: 0;
     overflow-y: auto;
     /* Fond blanc, SANS coins arrondis : un panneau jointif, comme les colonnes du
        workspace, et non plus une carte posée sur un fond gris. */
@@ -2989,18 +2993,42 @@ tr.row-selected:hover > td {
 */
 
 /* NOUVEAU : Ajoute une délimitation visuelle pour chaque champ dans un formulaire de dialogue. */
+/* CARTES DE CHAMP JOINTIVES, comme les lignes d'une liste du workspace : aucune
+   gouttière entre elles, un filet de 1 px pour les séparer, ni ombre ni coins arrondis.
+
+   Le filet est une ombre INTÉRIEURE (droite + bas), et non une bordure : il se dessine
+   dans la carte, n'élargit rien, ne déborde pas de la colonne (qui défile, et
+   montrerait une barre horizontale pour un pixel), et il marche aussi bien dans les
+   rangées Bootstrap que dans la grille des formulaires de rôle — sans avoir à deviner
+   quelle carte est la dernière de sa rangée.
+
+   `!important` sur la marge : la classe `mb-3` de Bootstrap l'est elle-même. Elle reste
+   dans le gabarit, où elle sert de crochet à ces règles. */
 .form-column .mb-3 {
-    /* La gouttière verticale est gérée par la marge standard de Bootstrap (mb-3 = 1rem) */
+    margin-bottom: 0 !important;
     padding: 0.5rem;
-    border-radius: var(--bs-border-radius-sm);
+    border-radius: 0;
     background-color: #ffffff; /* Assure un fond blanc propre */
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.08);
+    box-shadow: inset -1px -1px 0 var(--border-light);
     transition: box-shadow 0.2s ease-in-out;
 }
 
-/* NOUVEAU : Améliore l'UX en surlignant le bloc entier lorsque l'un de ses champs a le focus. */
+/* Le champ actif se signale par un anneau cobalt, intérieur lui aussi : il ne mord
+   pas sur les cartes voisines. */
 .form-column .mb-3:focus-within {
-    box-shadow: 0 0 0 1px #0047AB, 0 0 0 3px rgba(0, 71, 171, 0.15), 0 1px 3px rgba(0, 0, 0, 0.08);
+    box-shadow: inset 0 0 0 2px #0047AB;
+}
+
+/* Les rangées et colonnes de Bootstrap perdent leurs gouttières : les cartes se
+   touchent bord à bord. */
+.form-column form .row {
+    --bs-gutter-x: 0;
+    --bs-gutter-y: 0;
+}
+
+/* Le panneau d'un onglet commence au ras du bandeau d'onglets. */
+.form-column .jsb-onglets-panneau {
+    padding-top: 0;
 }
 
 /*
@@ -3033,14 +3061,12 @@ tr.row-selected:hover > td {
 .form-column:has(input[name^="access"]) form {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+    /* Cartes jointives, séparées par leur filet intérieur, comme partout ailleurs dans
+       le formulaire (grammaire du workspace) : ni gouttière, ni cadre gris. */
+    gap: 0;
     align-items: stretch;
-    /* Cadre englobant du formulaire : le fond léger (#f8f9fa) fait ressortir
-       les cartes blanches, à la manière des .cs-fieldset de la Console. */
-    padding: 1.25rem;
-    border: 1px solid #dee2e6;
-    border-radius: 14px;
-    background-color: #f8f9fa;
+    padding: 0;
+    background-color: #ffffff;
 }
 .form-column:has(input[name^="access"]) form > .row,
 .form-column:has(input[name^="access"]) form .row > [class*="col-"] {
@@ -3053,20 +3079,13 @@ tr.row-selected:hover > td {
 .form-column:has(input[name^="access"]) .mb-3 {
     margin: 0 !important;
     padding: 0.9rem 1rem 0.75rem;
-    border: 1px solid #dee2e6;
-    border-radius: 12px;
-    background-color: #ffffff;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    /* Filet intérieur et anneau de focus : ceux de toutes les cartes du formulaire. */
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
 }
-/* Survol : élévation discrète (visibilité de l'état du système, Nielsen 1). */
+/* Survol : un fond à peine teinté plutôt qu'une élévation — une carte jointive ne
+   « sort » pas de sa grille (visibilité de l'état du système, Nielsen 1). */
 .form-column:has(input[name^="access"]) .mb-3:hover {
-    border-color: #ced4da;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-}
-.form-column:has(input[name^="access"]) .mb-3:focus-within {
-    border-color: #0047AB;
-    box-shadow: 0 0 0 3px rgba(0, 71, 171, 0.15);
+    background-color: var(--bg-light);
 }
 /* Carte à entête bandeau (variante avec icône) : le rembourrage global disparaît,
    chaque zone interne (entête, options) porte le sien ; overflow:hidden pour que
@@ -3202,12 +3221,13 @@ tr.row-selected:hover > td {
     /* LE CADRE DECLARE SA GOUTTIERE, et le bandeau collant s'en sert pour border a
        l'interieur de lui (cf. `.form-column .jsb-onglets-barre`). Recopier le nombre
        d'un bloc a l'autre, c'est ce qui avait fait deborder le bandeau de 3 px et
-       couper la bordure du cadre sur toute sa hauteur. */
-    --gouttiere-cadre: 1.25rem;
+       couper la bordure du cadre sur toute sa hauteur.
+
+       NULLE désormais, comme au workspace : plus de cadre gris arrondi autour des
+       onglets. Les cartes de champ touchent le bandeau d'onglets et les bords. */
+    --gouttiere-cadre: 0rem;
     padding: var(--gouttiere-cadre);
-    border: 1px solid #dee2e6;
-    border-radius: 14px;
-    background-color: #f8f9fa;
+    background-color: #ffffff;
 }
 /* Carte à entête bandeau : le rembourrage est porté par les zones internes,
    overflow:hidden pour que le bandeau épouse les coins arrondis. */
@@ -3314,9 +3334,12 @@ tr.row-selected:hover > td {
     display: flex;
     align-items: flex-start; /* le bloc texte peut porter plusieurs lignes + les puces de contexte */
     gap: 0.9rem;
-    margin-bottom: 1.1rem;
-    padding-bottom: 1.1rem;
-    border-bottom: 1px solid #e0e0e0; /* écho du <hr> d'entête des formulaires Console */
+    /* Un BANDEAU, comme l'entête d'une rubrique du workspace : il porte ses propres
+       marges intérieures (la colonne n'en a plus) et se sépare de ce qui suit par un
+       filet, sans marge. */
+    margin: 0;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-light);
 }
 .form-column .form-intro-icon {
     flex: 0 0 auto;
@@ -3398,10 +3421,11 @@ tr.row-selected:hover > td {
     display: flex;
     align-items: flex-start;
     gap: 0.75rem;
-    margin-bottom: 1rem;
-    padding: 0.7rem 0.9rem;
-    border-radius: 10px;
+    /* Bandeau pleine largeur, au ras de la colonne (grammaire du workspace). */
+    margin: 0;
+    padding: 0.7rem 1.25rem;
     border-left: 4px solid;
+    border-bottom: 1px solid var(--border-light);
 }
 .form-column .form-alerte-icon {
     flex: 0 0 auto;
@@ -6567,7 +6591,11 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
    ───────────────────────────────────────────────────────────────────────────── */
 .dlg-group-title {
     display: block;
-    margin: 1.25rem 0 0.35rem;
+    /* La colonne n'a plus de gouttière : l'intertitre porte la sienne, et un filet le
+       sépare des cartes qu'il annonce. */
+    margin: 0;
+    padding: 1rem 1.25rem 0.35rem;
+    box-shadow: inset 0 -1px 0 var(--border-light);
     color: var(--text-cobalt, #0047AB);
     font-size: 0.82rem;
     font-weight: 700;

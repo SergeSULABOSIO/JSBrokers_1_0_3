@@ -1,5 +1,6 @@
 import { grouperActions } from './actions-groupees.js';
 import { positionnerMenu } from './menu-flottant.js';
+import { CircuitIcones } from './circuit-icones.js';
 
 /**
  * BARRE D'ACTIONS SPÉCIFIQUES — rendu PARTAGÉ par la barre d'outils du workspace et
@@ -15,16 +16,6 @@ import { positionnerMenu } from './menu-flottant.js';
  * Chaque surface garde ce qui lui est propre : QUELLES actions afficher (sélection,
  * conditions), le plafond en ligne, et ce que déclenche un clic (`declencher`).
  */
-
-/**
- * Cache des icônes, au niveau du MODULE : la barre du workspace et celle d'un dialogue
- * demandent les mêmes alias, inutile de les redemander au cerveau.
- * @type {Map<string, string>}
- */
-const cacheIcones = new Map();
-
-/** Compteur des identifiants de requête d'icône — unique, et valide comme sélecteur CSS. */
-let compteurRequetes = 0;
 
 export class BarreActions {
     /**
@@ -47,10 +38,11 @@ export class BarreActions {
         this.desactivation = null;
         this.courant = null;
 
-        // Abonné DÈS la construction : la réponse du cerveau est différée, mais elle doit
-        // trouver l'écouteur en place (cf. gotcha du circuit d'icônes).
-        this.boundIconeChargee = this._surIconeChargee.bind(this);
-        document.addEventListener('app:icon.loaded', this.boundIconeChargee);
+        // Le circuit d'icônes est PARTAGÉ avec le menu contextuel (circuit-icones.js).
+        this.icones = new CircuitIcones(conteneur, {
+            prefixe,
+            habiller: (svg) => svg.classList.add('toolbar-icon'),
+        });
 
         // ── UN SEUL ARRÊT DE TABULATION, PUIS LES FLÈCHES ─────────────────────────
         // C'est ce que promet `role="toolbar"` (WAI-ARIA APG) : Tab entre dans la barre
@@ -185,11 +177,7 @@ export class BarreActions {
 
     /** Demande au cerveau, en avance, les icônes absentes du cache. */
     precharger(actions) {
-        (actions || []).forEach((action) => {
-            if (action.icon && !cacheIcones.has(action.icon)) {
-                this._demanderIcone(action.icon, `${this.prefixe}-precharge-${++compteurRequetes}`);
-            }
-        });
+        this.icones.precharger((actions || []).map((action) => action.icon));
     }
 
     /**
@@ -198,7 +186,7 @@ export class BarreActions {
      */
     detruire() {
         this.fermerMenu();
-        document.removeEventListener('app:icon.loaded', this.boundIconeChargee);
+        this.icones.detruire();
         this.barre.removeEventListener('keydown', this.boundNavigation);
         this.barre.removeEventListener('focusin', this.boundFocus);
     }
@@ -231,7 +219,7 @@ export class BarreActions {
      */
     _habiller(button, alias, libelle) {
         if (!this.libelles) {
-            this._poserIcone(button, alias);
+            this.icones.poser(button, alias);
             return;
         }
         const porteur = document.createElement('span');
@@ -242,7 +230,7 @@ export class BarreActions {
         texte.textContent = libelle;
         button.classList.add('a-libelle');
         button.append(porteur, texte);
-        this._poserIcone(porteur, alias);
+        this.icones.poser(porteur, alias);
     }
 
     /**
@@ -281,7 +269,7 @@ export class BarreActions {
             const icone = document.createElement('span');
             icone.className = 'toolbar-groupe-menu-icone';
             icone.setAttribute('aria-hidden', 'true');
-            this._poserIcone(icone, action.icon, 18);
+            this.icones.poser(icone, action.icon, 18);
             item.appendChild(icone);
 
             const libelle = document.createElement('span');
@@ -408,59 +396,5 @@ export class BarreActions {
         this.menuOuvert.menu.hidden = true;
         this.menuOuvert.button.setAttribute('aria-expanded', 'false');
         this.menuOuvert = null;
-    }
-
-    /**
-     * Pose une icône dans un conteneur : depuis le cache si possible, sinon en la
-     * demandant au cerveau (circuit d'icônes existant, inchangé).
-     * @private
-     */
-    _poserIcone(cible, alias, taille = 31) {
-        if (!alias) return;
-        if (cacheIcones.has(alias)) {
-            this._injecterIcone(cible, cacheIcones.get(alias));
-            return;
-        }
-        cible.id = `${this.prefixe}-${++compteurRequetes}`;
-        this._demanderIcone(alias, cible.id, taille);
-    }
-
-    /** @private */
-    _demanderIcone(alias, requesterId, taille = 31) {
-        this.conteneur.dispatchEvent(new CustomEvent('cerveau:event', {
-            bubbles: true,
-            detail: {
-                type: 'ui:icon.request',
-                source: 'BarreActions',
-                payload: { iconName: alias, iconSize: taille, requesterId },
-                timestamp: Date.now(),
-            },
-        }));
-    }
-
-    /**
-     * Réponse du cerveau : on met l'icône en cache dans tous les cas, et on la pose si
-     * la requête venait de CETTE barre.
-     * @private
-     */
-    _surIconeChargee(event) {
-        const { html, requesterId, iconName } = event.detail || {};
-        if (!html || html.trim().startsWith('<!--')) return;
-        if (iconName) cacheIcones.set(iconName, html);
-
-        const cible = requesterId ? this.conteneur.querySelector(`#${CSS.escape(requesterId)}`) : null;
-        if (cible) this._injecterIcone(cible, html);
-    }
-
-    /** Remplace le contenu de la cible par le SVG reçu, habillé `.toolbar-icon`. @private */
-    _injecterIcone(cible, html) {
-        const modele = document.createElement('template');
-        modele.innerHTML = html.trim();
-        const svg = modele.content.querySelector('svg');
-        if (!svg) return;
-        svg.classList.add('toolbar-icon');
-        svg.setAttribute('aria-hidden', 'true');
-        cible.innerHTML = '';
-        cible.appendChild(svg);
     }
 }

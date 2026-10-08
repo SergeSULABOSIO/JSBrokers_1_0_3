@@ -1,6 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
-import { conditionRemplie } from './condition-action.js';
-import { grouperActions } from './actions-groupees.js';
+import { actionsVisibles, grouperActions, urlAction } from './actions-groupees.js';
+import { CircuitIcones } from './circuit-icones.js';
 
 /**
  * @class ContextMenuController
@@ -41,8 +41,13 @@ export default class extends Controller {
         this.entities = [];
         this.entityFormCanvas = null;
 
-        // NOUVEAU : Cache pour les icônes, comme dans la barre d'outils
-        this.iconCache = new Map();
+        // Le circuit d'icônes est PARTAGÉ avec les barres d'actions (circuit-icones.js) :
+        // même cache, mêmes identifiants uniques. Dans un menu, l'icône prend la couleur
+        // du texte de son entrée.
+        this.icones = new CircuitIcones(this.element, {
+            prefixe: 'context-menu-icon',
+            habiller: (svg) => { svg.style.color = 'inherit'; },
+        });
 
         this.boundHandleContextUpdate = this.handleContextUpdate.bind(this);
         this.boundHideContextMenu = this.hideContextMenu.bind(this);
@@ -52,9 +57,6 @@ export default class extends Controller {
         document.addEventListener('click', this.boundHideContextMenu, false);
         document.addEventListener('app:context.changed', this.boundHandleContextUpdate);
 
-        // NOUVEAU : Écouteur pour la réception des icônes
-        this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
-        document.addEventListener('app:icon.loaded', this.boundHandleIconLoaded);
     }
 
     /**
@@ -64,7 +66,7 @@ export default class extends Controller {
     disconnect() {
         document.removeEventListener('click', this.boundHideContextMenu, false);
         document.removeEventListener('app:context.changed', this.boundHandleContextUpdate);
-        document.removeEventListener('app:icon.loaded', this.boundHandleIconLoaded);
+        this.icones.detruire();
         document.removeEventListener('keydown', this.boundHandleKeyboardShortcuts);
     }
 
@@ -176,23 +178,9 @@ export default class extends Controller {
             }
         }
 
-        // Gérer les actions spécifiques avec filtrage conditionnel par état.
-        // ── TROIS PORTÉES, ET NON DEUX ─────────────────────────────────────────────
-        // `sans_selection` : l'action ne porte sur AUCUNE ligne — un calendrier d'équipe,
-        //   une grille de compteurs regardent tout le cabinet. Les enfermer derrière une
-        //   sélection obligeait à cocher une ligne au hasard pour ouvrir un écran qui ne
-        //   la concerne pas, et laissait croire qu'ils en dépendaient.
-        // `multi` : visible dès 1 ligne, une ou plusieurs.
-        // sans drapeau : sélection UNIQUE (comportement historique inchangé).
-        const rawActions  = this.entityFormCanvas?.parametres?.attribute_actions || [];
-        const entityData  = this.entities[0]?.entity || {};
-        const specificActions = rawActions.filter(action => {
-            if (action.sans_selection === true) return true;
-
-            const countOk = action.multi === true ? hasSelection : isSingleSelection;
-            if (!countOk) return false;
-            return conditionRemplie(entityData, action.condition);
-        });
+        // Les actions spécifiques que la sélection permet : MÊME règle que la barre
+        // d'outils (actions-groupees.js#actionsVisibles).
+        const specificActions = actionsVisibles(this.entityFormCanvas?.parametres?.attribute_actions, this.entities);
         if (this.hasSpecificActionsContainerTarget) {
             this.updateSpecificActionButtons(specificActions);
         }
@@ -284,7 +272,7 @@ export default class extends Controller {
         li.setAttribute('tabindex', '-1');
         li.setAttribute('data-action', 'click->context-menu#notify');
         li.setAttribute('data-context-menu-event-name-param', action.event);
-        li.dataset.url = action.url && action.url.includes('%id%') ? action.url.replace('%id%', selectedId) : action.url;
+        li.dataset.url = urlAction(action, selectedId) ?? '';
         li.dataset.selection = JSON.stringify(this.entities);
 
         li.appendChild(this._creerIcone(action.icon));
@@ -367,58 +355,16 @@ export default class extends Controller {
     }
 
     /**
-     * Conteneur d'icône alimenté par le circuit d'icônes du cerveau (cache d'abord).
+     * Conteneur d'icône d'une entrée, alimenté par le circuit partagé (cache d'abord).
      * @private
      */
     _creerIcone(iconName) {
         const span = document.createElement('span');
         span.className = 'context-menu-icon';
         span.setAttribute('aria-hidden', 'true');
-        if (!iconName) return span;
-
-        span.id = `context-menu-icon-${iconName.replace(':', '--')}-${crypto.randomUUID()}`;
-        if (this.iconCache.has(iconName)) {
-            // Différé d'une microtâche : l'élément n'est pas encore dans le document,
-            // et handleIconLoaded le retrouve par getElementById.
-            queueMicrotask(() => this.handleIconLoaded({
-                detail: { html: this.iconCache.get(iconName), requesterId: span.id, iconName },
-            }));
-        } else {
-            this.notifyCerveau('ui:icon.request', { iconName, iconSize: 18, requesterId: span.id });
-        }
+        this.icones.poser(span, iconName, 18);
 
         return span;
-    }
-
-    /**
-     * NOUVEAU : Gère la réception du HTML de l'icône et l'injecte.
-     * @param {CustomEvent} event
-     */
-    handleIconLoaded(event) {
-        const { html, requesterId, iconName } = event.detail;
-
-        if (iconName && html && !html.trim().startsWith('<!--')) {
-            this.iconCache.set(iconName, html);
-        }
-
-        // On ne traite que les requêtes venant de ce contrôleur
-        if (requesterId && requesterId.startsWith('context-menu-icon-')) {
-            const iconContainer = document.getElementById(requesterId);
-            if (iconContainer && html && !html.trim().startsWith('<!--')) {
-                // Injection robuste de l'icône
-                iconContainer.innerHTML = '';
-                const template = document.createElement('template');
-                template.innerHTML = html.trim();
-                if (template.content.firstChild) {
-                    // On s'assure que l'icône SVG a la bonne couleur pour le menu sombre
-                    const svg = template.content.firstChild;
-                    if (svg.tagName.toLowerCase() === 'svg') {
-                        svg.style.color = 'inherit'; // Hérite la couleur du texte du menu
-                    }
-                    iconContainer.appendChild(svg);
-                }
-            }
-        }
     }
 
     /**

@@ -340,17 +340,19 @@ class FormatsEtStructureDeListeTest extends TestCase
      * `<form>`, dont la gouttière est de 1.25rem : 3 px de trop, et la bordure du cadre
      * paraissait coupée sur toute la hauteur du bandeau.
      *
-     * Les deux nombres restent DIFFÉRENTS, et c'est voulu : le décalage vertical se cale
-     * sur la colonne qui défile, le débord horizontal sur le cadre qui entoure.
+     * Les deux SOURCES restent distinctes, et c'est voulu : le décalage vertical se cale
+     * sur la colonne qui défile, le débord horizontal sur le cadre qui entoure. Toutes
+     * deux valent 0 depuis que le formulaire suit la grammaire du workspace (aucune
+     * gouttière) — le mécanisme, lui, demeure.
      */
     public function testLeBandeauBordeALinterieurDuCadre(): void
     {
         $css = $this->lire(self::CSS);
 
         self::assertMatchesRegularExpression(
-            '/\.form-column:has\(\.form-intro\) form \{[^}]*--gouttiere-cadre:\s*1\.25rem/s',
+            '/\.form-column:has\(\.form-intro\) form \{[^}]*--gouttiere-cadre:\s*0rem/s',
             $css,
-            'Le cadre doit declarer SA gouttiere.',
+            'Le cadre doit declarer SA gouttiere (nulle, comme au workspace).',
         );
         self::assertMatchesRegularExpression(
             '/\.form-column \.jsb-onglets-barre \{[^}]*margin-inline:\s*calc\(-1 \* var\(--gouttiere-cadre/s',
@@ -358,9 +360,9 @@ class FormatsEtStructureDeListeTest extends TestCase
             'Le debord horizontal suit la gouttiere du cadre, et ne la recopie pas.',
         );
         self::assertMatchesRegularExpression(
-            '/\.form-column \.jsb-onglets-barre \{[^}]*top:\s*-1\.5rem/s',
+            '/\.form-column \.jsb-onglets-barre \{[^}]*top:\s*0;/s',
             $css,
-            'Le decalage VERTICAL, lui, reste cale sur la colonne qui defile.',
+            'Le decalage VERTICAL, lui, reste cale sur la colonne qui defile (sans gouttiere : 0).',
         );
     }
 
