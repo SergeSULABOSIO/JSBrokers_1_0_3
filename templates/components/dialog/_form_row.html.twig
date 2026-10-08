@@ -80,6 +80,24 @@
                                                     {{ form_errors(form[field_code]) }}
                                                 </div>
                                             </div>
+                                        {% elseif field.options.lectureSeule|default(false) %}
+                                            {# UNE LISTE QUI NE FAIT QUE MONTRER, SANS CHAMP DE FORMULAIRE —
+                                               ex. le relevé financier d'une tranche, qui n'est pas une
+                                               association. Même carte, même widget (_collection_manager) :
+                                               rien à soumettre, donc rien à déclarer dans le FormType. #}
+                                            <div class="mb-3 dlg-field-card" data-field-code="{{ field_code }}">
+                                                <div class="dlg-field-card-head">
+                                                    <span class="dlg-field-card-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(field_icon), {height: '16px', width: '16px'}) }}</span>
+                                                    <span class="form-label">{{ row.onglet_titre|default(field_code) }}</span>
+                                                </div>
+                                                <div class="dlg-field-card-body">
+                                                    {{ include('themes/_collection_manager.html.twig', {
+                                                        manager_options: field.options,
+                                                        dom_id: field_code,
+                                                        libelle: row.onglet_titre|default(field_code),
+                                                    }, with_context = false) }}
+                                                </div>
+                                            </div>
                                         {% endif %}
                                     {% else %}
                                         {# Pour les champs standards, on utilise form_row qui génère un div.mb-3. #}

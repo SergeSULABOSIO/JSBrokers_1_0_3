@@ -25,12 +25,18 @@ export default class extends Controller {
         editorContainer.style.height = '200px';
         this.element.parentNode.insertBefore(editorContainer, this.element);
 
+        // UN CHAMP DÉSACTIVÉ RESTE EN LECTURE — fiche ouverte en consultation, notamment.
+        // L'éditeur ignorait l'attribut : il offrait sa barre d'outils et se laissait
+        // saisir, promettant un enregistrement qui ne viendrait jamais.
+        const inerte = this.element.disabled;
+
         // 2. Initialiser Quill sur ce conteneur.
         // Quill va automatiquement créer la barre d'outils (.ql-toolbar) comme un frère juste avant l'éditeur.
         this.quill = new Quill(editorContainer, {
-            modules: { toolbar: toolbarOptions },
+            modules: { toolbar: inerte ? false : toolbarOptions },
             theme: 'snow',
-            placeholder: this.element.getAttribute('placeholder') || 'Saisissez votre texte ici...'
+            readOnly: inerte,
+            placeholder: inerte ? '' : (this.element.getAttribute('placeholder') || 'Saisissez votre texte ici...')
         });
 
         // 3. Charger le contenu initial du textarea dans l'éditeur.

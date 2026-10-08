@@ -4375,6 +4375,69 @@ tr:hover .list-row-actions-container,
 .jsb-chiffre--du { color: var(--danger-dark, #842029); }
 
 /* ------------------------------------------------------------------ */
+/* RELEVÉ FINANCIER D'UNE TRANCHE (onglets Prime, Commission…)         */
+/* ------------------------------------------------------------------ */
+/*
+ * Rien d'inventé : la synthèse reprend `.jsb-chiffre*` (libellé + valeur solidaires,
+ * chiffres tabulaires, teinte foncée du solde/dû), le tableau la grammaire des
+ * collections de dialogue (trois colonnes figées). Ne s'ajoutent que l'espacement des
+ * blocs et le retour à la ligne des chiffres — une fiche étroite (tablette) en aligne
+ * deux par ligne plutôt que de les rogner.
+ */
+.jsb-releve-bloc + .jsb-releve-bloc {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color, #dee2e6);
+}
+
+/* Titre et synthèse prennent la gouttière des cellules du tableau (`.p-2`) : sans elle,
+   ils collaient au bord du cadre quand les lignes juste dessous s'en écartaient. */
+.jsb-releve-titre,
+.jsb-releve-chiffres,
+.jsb-releve-vide {
+    padding-inline: 0.5rem;
+}
+
+.jsb-releve-titre {
+    margin: 0.5rem 0 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-dark, #212529);
+}
+
+.jsb-releve-chiffres {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    margin: 0 0 0.75rem;
+    font-size: 0.8rem;
+}
+
+/* `<dl>` sémantique : on annule les marges par défaut de dt/dd. */
+.jsb-releve-chiffres dt,
+.jsb-releve-chiffres dd {
+    margin: 0;
+}
+
+.jsb-releve-vide {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-body, #495057);
+}
+
+/*
+ * INFÉRÉ : un montant que le calcul déduit, sans pièce de règlement derrière lui.
+ * Contour pointillé + le mot lui-même — jamais la couleur seule (WCAG 1.4.1). Cobalt de
+ * la charte sur fond transparent : 8,6:1 sur blanc.
+ */
+.jsb-state-badge--infere {
+    background: transparent;
+    color: #0047AB;
+    border: 1px dashed #0047AB;
+}
+
+
+/* ------------------------------------------------------------------ */
 /* LA VALEUR CHOISIE N'EST PAS UNE OPTION DE LISTE                     */
 /* ------------------------------------------------------------------ */
 /*

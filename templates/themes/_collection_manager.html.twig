@@ -1,0 +1,102 @@
+{# templates/themes/_collection_manager.html.twig
+
+   LE WIDGET D'UNE COLLECTION DE DIALOGUE : entête (compte, « Ajouter »), liste chargée
+   par collection_controller. Extrait du bloc `collection_widget` pour servir DEUX chemins :
+   le champ de formulaire (le bloc l'inclut) et l'onglet SANS champ FormType — une liste
+   qui ne fait que montrer, comme le relevé financier d'une tranche (_form_row l'inclut).
+   Un seul balisage : les deux chemins ne peuvent pas diverger.
+
+   Variables : manager_options (options du canevas), dom_id (suffixe d'id), libelle (nom
+   accessible de la liste). #}
+{# On récupère les options passées par form_row() #}
+{% set manager_options = manager_options|default({}) %}
+
+{# On récupère l'état 'disabled' depuis les options #}
+{% set isDisabled = manager_options.disabled|default(false) %}
+
+{# MODE DIFFÉRÉ : le parent n'a pas encore d'id, mais la collection reste utilisable.
+   Ses éléments sont gardés en mémoire du navigateur (collection-tampon.js) et créés
+   après l'enregistrement de l'ancêtre, chacun recevant l'id que le niveau du dessus
+   vient d'obtenir. #}
+{% set estDiffere = (manager_options.parentEntityId|default(0) == 0) and not isDisabled %}
+
+{# L'ACCORDÉON SUIT LA DÉCISION DU SERVEUR, ET RIEN D'AUTRE.
+   Il la recalculait auparavant pour son compte (parentEntityId == 0), si bien qu'une
+   collection ouverte côté serveur serait restée inerte à l'écran — le verrou aurait été
+   levé sans le moindre effet visible. FormCanvasProviderTrait est seul juge. #}
+{% set isAccordionDisabled = isDisabled %}
+
+{# On découple : le contrôleur JS n'est bloqué que si l'accordéon entier est inactif #}
+{% set stimulus_options = manager_options|merge({
+    'disabled': isAccordionDisabled,
+    'differe': estDiffere
+}) %}
+
+<div
+    {{ stimulus_controller('collection', stimulus_options) }}
+    class="collection-manager-accordion {{ isAccordionDisabled ? 'is-disabled' : '' }}"
+    id="collection-{{ dom_id }}"
+    data-collection-id-entreprise-value="{{ manager_options.idEntreprise|default('') }}"
+    data-collection-id-invite-value="{{ manager_options.idInvite|default('') }}"
+>
+    {# ENTÊTE DE LA LISTE — ET NON PLUS UN ACCORDÉON.
+       Chaque collection est désormais un ONGLET du formulaire : ouvrir l'onglet ouvre
+       déjà la liste. Garder un repli par-dessus demandait deux clics pour voir une
+       liste, et laissait à l'écran un disque « + » qui ne répondait plus à rien.
+       Ce qui AGIT reste : le total, le compte, et le bouton d'ajout. #}
+    <div class="accordion-title">
+        {# Conteneur pour l'état de chargement, initialement caché #}
+        <div class="title-left-block-loading" data-collection-target="titleLoading" style="display: none; align-items: center;">
+            <span class="spinner-border spinner-border-sm text-primary me-2" role="status" aria-hidden="true"></span>
+            <span class="loading-text fw-normal">Chargement de la liste...</span>
+        </div>
+
+        {# Conteneur pour le titre normal, qui sera caché pendant le chargement #}
+        <div class="title-left-block" data-collection-target="titleContent">
+            {# LE TOTAL A QUITTE CET ENTETE. Il se lit desormais au PIED de la liste,
+               sous la colonne qu'il somme (convention comptable) : ici, il flottait
+               au-dessus d'un tableau sans jamais designer ce qu'il additionnait.
+               Voir le <tfoot> de components/_list_manager.html.twig. #}
+            {# TAUTOLOGIE ÉVITÉE. L'onglet, juste au-dessus, nomme déjà la collection :
+               répéter « Droits d'accès dans le module Finances » deux lignes de suite
+               n'apprend rien et double la charge de lecture (Bastien & Scapin > Charge
+               de travail). L'entête annonce donc ce qu'il surmonte — la liste —, et le
+               lecteur d'écran garde le libellé complet pour que le bloc reste
+               identifiable hors contexte visuel. #}
+            <strong class="field-label">Liste</strong>
+            <span class="visually-hidden">{{ libelle }}</span>
+            {# `.jsb-onglet-compte` et non `.badge` : cette derniere est forcee en bleu
+               plein et en italique dans ce projet, et deux commentaires du CSS
+               interdisent explicitement de s'en servir. La pastille 18 px existe deja. #}
+            <span class="jsb-onglet-compte" data-collection-target="countBadge" style="display: none;">0</span>
+        </div>
+
+        {# --- CORRECTION : On rend toujours le bouton, mais on le cache avec une classe si désactivé --- #}
+        {# Visible en permanence, et non plus au seul survol : il ne surmonte plus une
+           ligne cliquable dont il fallait ménager l'affordance, et un bouton qu'il faut
+           trouver en passant la souris n'existe pas pour qui navigue au clavier. #}
+        {# LECTURE SEULE : pas de bouton, et non un bouton grisé — `disabled` bloquerait
+           aussi le chargement de la liste, qu'on veut voir. Posée par les droits
+           (pas d'Écriture sur l'enfant) ou par le canevas (collection qui ne fait que
+           montrer). #}
+        <div class="title-right-block {{ (isDisabled or manager_options.lectureSeule|default(false)) ? 'd-none' : '' }}" data-collection-target="addButtonContainer">
+            <button type="button" class="btn btn-sm btn-primary" data-action="click->collection#addItem">
+                <twig:UX:Icon name="gridicons:add" style="width: 23px;" />
+                <span>Ajouter </span>
+            </button>
+        </div>
+    </div>
+
+    {# LA LISTE. `.accordion-content` est conservée : quatre règles de tableau s'y
+       accrochent (app.css). Son repli, lui, est levé par
+       `.collection-manager-accordion .accordion-content` — surcharge nécessaire, la
+       règle `.accordion-content` d'interactive-menu.css n'étant PAS scopée au
+       workspace et retombant donc sur nous. #}
+    <div class="accordion-content" data-collection-target="contentPanel">
+        <div class="list-container" data-collection-target="listContainer">
+            {# La liste des contacts sera chargée ici via AJAX #}
+            <div class="text-center"><span class="spinner-border"></span> Chargement...</div>
+        </div>
+    </div>
+</div>
+

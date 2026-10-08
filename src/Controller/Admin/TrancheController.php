@@ -3,8 +3,12 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Invite;
+use App\Entity\Note;
 use App\Entity\PaiementPrime;
+use App\Entity\ReversementRetroAgent;
 use App\Entity\Tranche;
+use App\Services\ServiceMonnaies;
+use App\Services\Tranche\ReleveDeTranche;
 use App\Form\TrancheType;
 use App\Constantes\Constante;
 use App\Repository\InviteRepository;
@@ -135,6 +139,57 @@ class TrancheController extends AbstractController
     public function query(Request $request): Response
     {
         return $this->renderViewOrListComponent(Tranche::class, $request, true);
+    }
+
+    /**
+     * LE RELEVÉ FINANCIER D'UNE TRANCHE, pour une famille — l'onglet Prime, Commission,
+     * Rétrocommissions ou Taxes de sa fiche.
+     *
+     * Il répond au CONTRAT D'UNE COLLECTION ({html, itemCount}) : l'onglet se charge à
+     * l'ouverture, se compte et se rafraîchit par collection_controller, sans JS dédié.
+     * La pastille compte les lignes de mouvement, compléments inférés compris.
+     *
+     * Gardes : la famille et l'usage sont énumérés (`requirements` : sinon 404), la
+     * Lecture de la Tranche est exigée (les quatre onglets suivent ce seul droit), et la
+     * tranche doit être du cabinet ouvert. Les seuls gestes rendus — sur un signalement
+     * de prime — suivent les droits sur PaiementPrime, comme dans toute collection ; le
+     * compte bancaire d'une ligne n'est montré qu'à qui lit la pièce qui le porte.
+     */
+    #[Route(
+        '/api/{id}/releve/{famille}/{usage}',
+        name: 'api.releve',
+        requirements: ['id' => Requirement::DIGITS, 'famille' => 'prime|commission|retrocommission|taxe', 'usage' => 'dialog'],
+        methods: ['GET'],
+        priority: 10,
+    )]
+    public function releveApi(int $id, string $famille, ReleveDeTranche $releve, ServiceMonnaies $monnaies): JsonResponse
+    {
+        if (!$this->mayAccessEntity(Tranche::class, Invite::ACCESS_LECTURE)) {
+            return $this->accessDeniedJson();
+        }
+        $tranche = $this->em->getRepository(Tranche::class)->find($id);
+        $this->appartenance()->exigerLeCabinetOuvert($tranche, 'Cette tranche');
+
+        $blocs = $releve->pour($tranche, $famille);
+
+        $html = $this->renderView('components/dialog/_releve_tranche.html.twig', [
+            'blocs'               => $blocs,
+            'famille'             => $famille,
+            'trancheId'           => $tranche->getId(),
+            'unite'               => (string) $monnaies->getCodeMonnaieAffichage(),
+            'droitsPaiementPrime' => $this->droitsSurLaCollection(PaiementPrime::class),
+            'voirCompte'          => [
+                'Note'                  => $this->mayAccessEntity(Note::class, Invite::ACCESS_LECTURE),
+                'ReversementRetroAgent' => $this->mayAccessEntity(ReversementRetroAgent::class, Invite::ACCESS_LECTURE),
+            ],
+        ]);
+
+        return $this->json([
+            'html'      => $html,
+            'itemCount' => array_sum(array_map(static fn (array $bloc): int => count($bloc['lignes']), $blocs)),
+            // Le total vit dans le pied de chaque bloc : plusieurs blocs, plusieurs totaux.
+            'totalValue' => null,
+        ]);
     }
 
     #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]

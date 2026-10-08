@@ -1,0 +1,136 @@
+{# templates/components/dialog/_releve_tranche.html.twig
+
+   LE RELEVÉ FINANCIER D'UNE TRANCHE, pour une famille (prime, commission,
+   rétrocommissions, taxes). Rendu par TrancheController::releveApi et consommé TEL QUEL
+   par collection_controller (contrat {html, itemCount}) : l'onglet se charge, se compte
+   et se rafraîchit comme n'importe quelle collection, sans une ligne de JS dédiée.
+
+   LECTURE SEULE. Ni « Ajouter », ni geste de ligne — sauf sur un SIGNALEMENT de prime,
+   seule pièce que la fiche possède : ses boutons suivent les droits sur PaiementPrime,
+   exactement comme dans toute autre collection (droitsPaiementPrime).
+
+   MÊME GRAMMAIRE QUE LES COLLECTIONS : trois colonnes figées (mouvement | montant |
+   actions), total au pied sous la colonne qu'il somme, unité = monnaie d'affichage.
+
+   Variables : blocs (ReleveDeTranche::pour), unite, voirCompte (type de pièce → bool),
+   droitsPaiementPrime {ajout, modification, suppression}, famille, trancheId. #}
+<div class="jsb-releve">
+    {% for bloc in blocs %}
+        {% set titre_id = 'releve-' ~ bloc.cle ~ '-' ~ trancheId %}
+        <section class="jsb-releve-bloc" aria-labelledby="{{ titre_id }}">
+            <h6 class="jsb-releve-titre" id="{{ titre_id }}">{{ bloc.titre }}</h6>
+
+            {# LA SYNTHÈSE, lue sur les indicateurs de la fiche (ReleveDeTranche). Un solde
+               se dit par son chiffre ET sa teinte, jamais par la couleur seule. #}
+            <dl class="jsb-releve-chiffres">
+                {% for chiffre in bloc.chiffres %}
+                    <div class="jsb-chiffre{{ chiffre.ton ? ' jsb-chiffre--' ~ chiffre.ton : '' }}">
+                        <dt class="jsb-chiffre-libelle">{{ chiffre.libelle }}</dt>
+                        <dd class="jsb-chiffre-valeur">
+                            {%- if chiffre.nature == 'montant' -%}
+                                {{ unite ~ ' ' ~ chiffre.valeur|format_nombre(2) }}
+                            {%- else -%}
+                                {{ chiffre.valeur|default('—') }}
+                            {%- endif -%}
+                        </dd>
+                    </div>
+                {% endfor %}
+            </dl>
+
+            {% if bloc.lignes is empty %}
+                <p class="jsb-releve-vide">Aucun mouvement enregistré.</p>
+            {% else %}
+                <table class="table table-hover table-sm table-enhanced" aria-label="Mouvements — {{ bloc.titre }}">
+                    <colgroup>
+                        <col>
+                        <col class="jsb-col-valeur">
+                        <col class="jsb-col-actions">
+                    </colgroup>
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col"><div class="d-flex justify-content-start text-secondary m-2">Mouvement</div></th>
+                            <th scope="col" class="th-numeric"><div class="text-secondary m-2">Montant</div></th>
+                            <th scope="col" class="text-end pe-4"><span class="visually-hidden">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="table-group-divider">
+                        {% for ligne in bloc.lignes %}
+                            {% set est_signalement = ligne.pieceEntite == 'PaiementPrime' and ligne.pieceId %}
+                            {# LA MÉTADONNÉE, EN UN SEUL NŒUD DE TEXTE : `.list-row-secondary` est en
+                               flex, qui supprime les espaces entre éléments. Le compte bancaire n'y
+                               paraît que pour qui a le droit de LIRE la pièce qui le porte. #}
+                            {% set meta = [] %}
+                            {% if ligne.date %}{% set meta = meta|merge([ligne.date|date('d/m/Y')]) %}{% endif %}
+                            {% if ligne.reference %}{% set meta = meta|merge(['Réf. ' ~ ligne.reference]) %}{% endif %}
+                            {% if ligne.montantBrut is not null and ligne.montantBrut|round(2) != ligne.montant|round(2) %}
+                                {% set meta = meta|merge(['Règlement de la note : ' ~ unite ~ ' ' ~ ligne.montantBrut|format_nombre(2)]) %}
+                            {% endif %}
+                            {% if not ligne.imputable %}{% set meta = meta|merge(['note sans montant facturable : rien d\'imputé']) %}{% endif %}
+                            {% if ligne.lot %}{% set meta = meta|merge(['Lot ' ~ ligne.lot]) %}{% endif %}
+                            {% if ligne.compte and voirCompte[ligne.pieceEntite]|default(false) %}{% set meta = meta|merge([ligne.compte]) %}{% endif %}
+                            <tr class="align-middle"{% if est_signalement %} data-item-id="{{ ligne.pieceId }}"{% endif %}>
+                                <td class="p-2">
+                                    <div class="list-row-primary">
+                                        {{ ligne.libelle }}
+                                        {% if ligne.estInferee %}
+                                            {# INFÉRÉ : aucune pièce derrière cette ligne, c'est une règle du
+                                               calcul qui l'ajoute. Badge DISTINCT (contour, et le mot), pour
+                                               qu'on ne cherche pas un reçu qui n'existe pas. #}
+                                            <span class="jsb-state-badge jsb-state-badge--infere" title="Montant déduit par le calcul (aucune pièce de règlement rattachée à la tranche)">Inféré</span>
+                                        {% else %}
+                                            <span class="jsb-state-badge">{{ ligne.nature }}</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if meta is not empty %}
+                                        <small class="text-secondary mt-1 list-row-secondary">{{ meta|join(' · ') }}</small>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end fw-bold td-numeric">
+                                    <small><span class="text-secondary td-numeric-unit">{{ unite }}</span> {{ ligne.montant|format_nombre(2) }}</small>
+                                </td>
+                                <td class="text-end pe-3">
+                                    {% if est_signalement %}
+                                        <div class="list-row-actions-container">
+                                            {% if droitsPaiementPrime.modification %}
+                                                <button type="button" class="btn btn-sm btn-light list-row-action-btn shadow-sm border-0" title="Modifier" aria-label="Modifier le signalement #{{ ligne.pieceId }}" data-action="click->collection#editItem">
+                                                    <twig:UX:Icon name="{{ resolve_icon_name('lucide:edit') }}" style="width: 20px; height: 20px;" class="text-primary"/>
+                                                </button>
+                                            {% else %}
+                                                <button type="button" class="btn btn-sm btn-light list-row-action-btn shadow-sm border-0" title="Consulter" aria-label="Consulter le signalement #{{ ligne.pieceId }}" data-action="click->collection#consulterItem">
+                                                    <twig:UX:Icon name="{{ resolve_icon_name('action:view') }}" style="width: 20px; height: 20px;" class="text-primary"/>
+                                                </button>
+                                            {% endif %}
+                                            {% if droitsPaiementPrime.suppression %}
+                                                <button type="button" class="btn btn-sm btn-light list-row-action-btn list-row-action-btn--danger shadow-sm border-0" title="Supprimer" aria-label="Supprimer le signalement #{{ ligne.pieceId }}" data-action="click->collection#deleteItem">
+                                                    <twig:UX:Icon name="{{ resolve_icon_name('lucide:trash-2') }}" style="width: 20px; height: 20px;" class="text-danger" />
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th scope="row" class="text-end pe-3">{{ bloc.totalLibelle }}</th>
+                            <td class="text-end td-numeric">
+                                <span class="text-secondary td-numeric-unit">{{ unite }}</span>
+                                {{ bloc.total|format_nombre(2) }}
+                            </td>
+                            <td aria-hidden="true"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            {% endif %}
+        </section>
+    {% else %}
+        {{ include('components/_empty_state.html.twig', {
+            title: 'Rien à relever',
+            description: famille == 'retrocommission'
+                ? 'Cette tranche ne porte aucune rétrocommission, et aucun versement n\'y est rattaché.'
+                : 'Cette tranche ne porte aucun montant de cette nature, et aucun mouvement n\'y est rattaché.',
+            icon_name: 'tranche',
+        }) }}
+    {% endfor %}
+</div>

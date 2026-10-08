@@ -9,6 +9,13 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
 {
     use FormCanvasProviderTrait;
 
+    /**
+     * Les pièces dont l'enregistrement change le relevé d'une tranche — routes d'enfant
+     * de collection (`/admin/{route}/api/submit`) : signalement de prime, note, article,
+     * paiement d'une note, reversement de rétrocommission.
+     */
+    private const ROUTES_FINANCIERES = ['paiementprime', 'note', 'article', 'paiement', 'reversementretroagent'];
+
     public function supports(string $entityClassName): bool
     {
         return $entityClassName === Tranche::class;
@@ -116,8 +123,16 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
                 "pourcentage"    => "action:count",
                 "payableAt"      => "action:calendar",
                 "echeanceAt"     => "action:calendar",
-                "paiementsPrime" => "paiement",
+                "relevePrime"      => "paiement",
+                "releveCommission" => "revenu",
+                "releveRetro"      => "depense",
+                "releveTaxe"       => "taxe",
             ],
+            // `paiementsPrime` reste dans TrancheType (Ket et la reprise l'écrivent), mais
+            // n'a plus d'onglet : il ne doit pas réapparaître en bas du formulaire par
+            // render_rest. Il est `mapped: false` — sa soumission n'écrit rien, et ne
+            // peut donc effacer aucun paiement (orphanRemoval).
+            "suppress_fields" => ["paiementsPrime"],
         ];
         $layout = $this->buildTrancheLayout($object, $isParentNew);
 
@@ -162,11 +177,44 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
             ]],
         ];
 
-        // Signalements de paiement de la prime (marché où l'ASSUREUR encaisse) :
-        // trace déclarative qui rend la commission exigible — jamais la trésorerie.
-        $collections = [
-            ['fieldName' => 'paiementsPrime', 'entityRouteName' => 'paiementprime', 'formTitle' => 'Paiement de prime', 'ongletTitre' => 'Paiements de prime', 'parentFieldName' => 'tranche'],
-        ];
+        // ── LE RELEVÉ FINANCIER : QUATRE ONGLETS EN LECTURE SEULE ───────────────────
+        //
+        // Le gestionnaire de compte voit tout de l'échéance — dû, exigible, payé, solde,
+        // et chaque mouvement — sans rien toucher de ce qui relève de la comptabilité.
+        // Chaque onglet est un widget de collection branché sur le relevé
+        // (TrancheController::releveApi), qui répond au contrat des collections : il se
+        // charge, se compte et se rafraîchit comme les autres, sans JS dédié.
+        //
+        // L'ancien onglet « Paiements de prime » est FONDU dans « Prime » : les
+        // signalements y sont des lignes, à côté des factures client et des bordereaux.
+        // On signale par l'action « Signaler un paiement de prime » ; une ligne de
+        // signalement se corrige depuis le relevé, selon les droits sur PaiementPrime.
+        //
+        // Rien à relever avant la naissance de la tranche : masqués en création.
+        $collections = [];
+        foreach ([
+            ['relevePrime', 'prime', 'Prime', 'paiementprime', 'Paiement de prime'],
+            ['releveCommission', 'commission', 'Commission', 'tranche', 'Commission'],
+            ['releveRetro', 'retrocommission', 'Rétrocommissions', 'tranche', 'Rétrocommission'],
+            ['releveTaxe', 'taxe', 'Taxes', 'tranche', 'Taxe'],
+        ] as [$champ, $famille, $onglet, $route, $titre]) {
+            $collections[] = [
+                'fieldName'       => $champ,
+                'entityRouteName' => $route,
+                'formTitle'       => $titre,
+                'ongletTitre'     => $onglet,
+                'parentFieldName' => 'tranche',
+                'listUrl'         => '/admin/tranche/api/%parentId%/releve/' . $famille,
+                'lectureSeule'    => true,
+                'disabled'        => $isParentNew,
+                'hidden'          => $isParentNew,
+                // Un mouvement financier, d'où qu'il vienne, change plusieurs familles à
+                // la fois (une commission encaissée rend des taxes et des rétros
+                // exigibles) : c'est la fiche entière qui se recharge.
+                'ficheParente'    => 'Tranche',
+                'rechargerSur'    => self::ROUTES_FINANCIERES,
+            ];
+        }
         // Pièces jointes de cette fiche.
         $collections[] = ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'ongletTitre' => 'Documents', 'parentFieldName' => 'tranche'];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);

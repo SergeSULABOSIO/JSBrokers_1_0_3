@@ -18,7 +18,9 @@ class FormatsEtStructureDeListeTest extends TestCase
     private const LIST_ROW = __DIR__ . '/../../templates/components/_list_row.html.twig';
     private const LIST_ROW_META = __DIR__ . '/../../templates/components/_list_row_secondary_items.html.twig';
     private const LIST_MANAGER = __DIR__ . '/../../templates/components/_list_manager.html.twig';
-    private const WIDGET = __DIR__ . '/../../templates/themes/_collection_widget.html.twig';
+    // Le balisage du widget vit dans _collection_manager (le bloc de thème l'inclut, et
+    // un onglet sans champ de formulaire aussi).
+    private const WIDGET = __DIR__ . '/../../templates/themes/_collection_manager.html.twig';
     private const JS_COLLECTION = __DIR__ . '/../../assets/controllers/collection_controller.js';
     private const CSS = __DIR__ . '/../../assets/styles/app.css';
     private const TRAIT_CONTROLEUR = __DIR__ . '/../../src/Controller/Admin/ControllerUtilsTrait.php';

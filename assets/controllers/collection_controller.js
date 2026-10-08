@@ -72,6 +72,12 @@ export default class extends Controller {
         idInvite: Number,
         context: Object,
         watchIds: { type: Array, default: [] },
+        // LA FICHE SUIT CETTE LISTE. Type de la fiche parente (ex. « Tranche ») et routes
+        // d'enfant (`/admin/{route}/api/submit`) dont un enregistrement change ce que la
+        // liste montre. Quand l'une d'elles bouge, c'est la FICHE ENTIÈRE qui se recharge
+        // (app:fiche.modifiee) — cf. _rechargerLaFicheSiConcernee().
+        ficheParente: String,
+        rechargerSur: { type: Array, default: [] },
     };
 
     /**
@@ -295,6 +301,8 @@ export default class extends Controller {
      * @param {CustomEvent} event
      */
     refresh(event) {
+        if (this._rechargerLaFicheSiConcernee(event)) return;
+
         // Une collection mise en attente le reste : la recharger ici ferait rentrer par la
         // fenetre les requetes que le chargement paresseux vient de faire sortir par la
         // porte. Elle sera fraiche a l'ouverture de son onglet, c'est tout ce qu'on demande.
@@ -307,6 +315,46 @@ export default class extends Controller {
         } else if (this.watchIdsValue.length > 0 && this.watchIdsValue.includes(event.detail.originatorId)) {
             this.load();
         }
+    }
+
+    /**
+     * UN MOUVEMENT FINANCIER A CHANGÉ : LA FICHE ENTIÈRE SE RECHARGE, PAS SEULEMENT CETTE LISTE.
+     *
+     * Le relevé d'une tranche montre quatre familles qui se tiennent : une commission
+     * encaissée rend des taxes et des rétrocommissions exigibles. Recharger le seul onglet
+     * laisserait les trois autres — et les attributs calculés — dire l'état d'avant.
+     *
+     * Déclencheurs : un geste parti de CETTE liste (corriger un signalement), ou d'une
+     * autre collection dont la route d'enfant figure dans `rechargerSur` (le règlement
+     * d'une note saisi dans un dialogue empilé). Le reste — un document ajouté — ne
+     * concerne pas le relevé et suit le chemin ordinaire.
+     *
+     * UN SEUL RECHARGEMENT pour tous les onglets de la fiche : le premier qui répond le
+     * marque sur l'événement (partagé par tous les écouteurs), les autres s'effacent.
+     * @returns {boolean} vrai si la fiche est rechargée (inutile, alors, de recharger la liste)
+     * @private
+     */
+    _rechargerLaFicheSiConcernee(event) {
+        if (!this.ficheParenteValue || !this.parentEntityIdValue) return false;
+
+        const origine = event.detail?.originatorId;
+        if (origine !== this.element.id) {
+            const url = document.getElementById(origine)?.dataset?.collectionItemSubmitUrlValue || '';
+            const route = (url.match(/^\/admin\/([^/]+)\/api\/submit/) || [])[1];
+            if (!route || !this.rechargerSurValue.includes(route)) return false;
+        }
+
+        const cle = `${this.ficheParenteValue}:${this.parentEntityIdValue}`;
+        event.detail.fichesRechargees ??= [];
+        if (!event.detail.fichesRechargees.includes(cle)) {
+            event.detail.fichesRechargees.push(cle);
+            document.dispatchEvent(new CustomEvent('app:fiche.modifiee', {
+                bubbles: true,
+                detail: { entityType: this.ficheParenteValue, id: this.parentEntityIdValue, origine: null },
+            }));
+        }
+
+        return true;
     }
 
     /**
