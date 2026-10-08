@@ -30,6 +30,11 @@ final class ReleveDeTranche
 {
     public const FAMILLES = ['prime', 'commission', 'retrocommission', 'taxe'];
 
+    /** Libellé d'un solde négatif : ce qu'on a REÇU en trop (prime, commission). */
+    private const TROP_PERCU = 'Trop-perçu';
+    /** Libellé d'un solde négatif : ce que le cabinet a VERSÉ en trop (rétros, taxes). */
+    private const TROP_VERSE = 'Trop-versé';
+
     public function __construct(
         private readonly TranchePaiementService $paiements,
         private readonly PiecesDeReglement $pieces,
@@ -52,7 +57,7 @@ final class ReleveDeTranche
                 [
                     $this->montant('Prime due', $tranche->primeTranche),
                     $this->montant('Payée', $tranche->primePayee),
-                    $this->solde('Solde', $tranche->primeSoldeDue),
+                    $this->solde($tranche->primeSoldeDue, self::TROP_PERCU),
                     ['libelle' => 'Échéance', 'valeur' => $tranche->getEcheanceAt()?->format('d/m/Y'), 'ton' => null, 'nature' => 'texte'],
                 ],
                 $this->pieces->lignesPrime($tranche),
@@ -66,7 +71,7 @@ final class ReleveDeTranche
                     $this->montant('Due', $eco['commissionTtc'] ?? 0.0),
                     $this->montant('Exigible', $eco['commissionExigible'] ?? 0.0),
                     $this->montant('Encaissée', $tranche->montant_paye),
-                    $this->solde('Solde', $tranche->solde_restant_du),
+                    $this->solde($tranche->solde_restant_du, self::TROP_PERCU),
                 ],
                 $this->pieces->lignesCommission($tranche),
                 (float) $tranche->montant_paye,
@@ -80,7 +85,7 @@ final class ReleveDeTranche
                         $this->montant('Due', $eco['retroCommission'] ?? 0.0),
                         $this->montant('Exigible', $eco['retroAPayer'] ?? 0.0),
                         $this->montant('Versée', $tranche->retroCommissionReversee),
-                        $this->solde('Solde', $tranche->retroCommissionSolde),
+                        $this->solde($tranche->retroCommissionSolde, self::TROP_VERSE),
                     ],
                     $this->pieces->lignesRetro($tranche, false),
                     (float) $tranche->retroCommissionReversee,
@@ -93,7 +98,7 @@ final class ReleveDeTranche
                         $this->montant('Due', $eco['retroAgentDue'] ?? 0.0),
                         $this->montant('Exigible', $eco['retroAgentExigible'] ?? 0.0),
                         $this->montant('Versée', $tranche->retroAgentReversee),
-                        $this->solde('Solde', $tranche->retroAgentSolde),
+                        $this->solde($tranche->retroAgentSolde, self::TROP_VERSE),
                     ],
                     $this->pieces->lignesRetro($tranche, true),
                     (float) $tranche->retroAgentReversee,
@@ -132,7 +137,7 @@ final class ReleveDeTranche
                 $this->montant('Due', $eco[$cle] ?? 0.0),
                 $this->montant('Exigible', $eco[$cle . 'Exigible'] ?? 0.0),
                 $this->montant('Payée', $assureur ? $tranche->taxeAssureurPayee : $tranche->taxeCourtierPayee),
-                $this->solde('Solde', $assureur ? $tranche->taxeAssureurSolde : $tranche->taxeCourtierSolde),
+                $this->solde($assureur ? $tranche->taxeAssureurSolde : $tranche->taxeCourtierSolde, self::TROP_VERSE),
             ],
             $this->pieces->lignesTaxe($tranche, $assureur ? Taxe::REDEVABLE_ASSUREUR : Taxe::REDEVABLE_COURTIER),
             (float) ($assureur ? $tranche->taxeAssureurPayee : $tranche->taxeCourtierPayee),
@@ -198,21 +203,21 @@ final class ReleveDeTranche
     }
 
     /**
-     * LE SOLDE BRUT, SIGNE COMPRIS. Positif : il reste dû (teinte « dû ») ; nul : réglé
-     * (teinte « soldé ») ; NÉGATIF : il a été versé plus que dû — un trop-perçu, que le
-     * signe moins dit seul, sans teinte. L'écrêter à zéro, comme le fait la projection
-     * de l'assistant, afficherait « réglé » sur un versement fait sans aucun dû : c'est
-     * précisément l'anomalie que le relevé doit laisser voir.
+     * LE SOLDE, SANS JAMAIS CACHER UN EXCÉDENT. Positif : « Solde », il reste dû (teinte
+     * « dû ») ; nul : « Solde » réglé (teinte « soldé ») ; NÉGATIF : il a été payé plus que
+     * dû, et le libellé le NOMME — « Trop-perçu » quand le cabinet ou l'assureur a reçu
+     * trop (prime, commission), « Trop-versé » quand c'est le cabinet qui a trop payé
+     * (rétrocessions, taxes) —, montant en positif. L'écrêter à zéro, comme le fait la
+     * projection de l'assistant, afficherait « réglé » sur un versement fait sans aucun
+     * dû : c'est précisément l'anomalie que le relevé doit laisser voir.
      */
-    private function solde(string $libelle, ?float $valeur): array
+    private function solde(?float $valeur, string $libelleExcedent): array
     {
         $valeur = round((float) $valeur, 2);
-        $ton = match (true) {
-            $valeur > 0.0 => 'du',
-            $valeur < 0.0 => null,
-            default => 'solde',
-        };
+        if ($valeur < 0.0) {
+            return ['libelle' => $libelleExcedent, 'valeur' => -$valeur, 'ton' => null, 'nature' => 'montant'];
+        }
 
-        return ['libelle' => $libelle, 'valeur' => $valeur + 0.0, 'ton' => $ton, 'nature' => 'montant'];
+        return ['libelle' => 'Solde', 'valeur' => $valeur + 0.0, 'ton' => $valeur > 0.0 ? 'du' : 'solde', 'nature' => 'montant'];
     }
 }

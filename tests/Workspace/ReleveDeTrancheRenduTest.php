@@ -73,8 +73,8 @@ class ReleveDeTrancheRenduTest extends WebTestCase
         $emails = [self::OWNER_EMAIL, self::GUEST_EMAIL, self::AUTRE_EMAIL];
         $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email IN (:e)', ['e' => $emails], ['e' => \Doctrine\DBAL\ArrayParameterType::STRING]);
         foreach ([self::ENT, self::ENT_AUTRE] as $nom) {
-            foreach (['paiement_prime', 'paiement', 'article', 'note', 'compte_bancaire', 'avenant', 'tranche', 'revenu_pour_courtier',
-                      'type_revenu', 'cotation', 'piste', 'client', 'monnaie', 'roles_en_finance', 'invite'] as $table) {
+            foreach (['reversement_retro_agent', 'paiement_prime', 'paiement', 'article', 'note', 'compte_bancaire', 'avenant', 'tranche', 'revenu_pour_courtier',
+                      'type_revenu', 'cotation', 'piste', 'client', 'partenaire', 'monnaie', 'roles_en_finance', 'invite'] as $table) {
                 $conn->executeStatement(
                     "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :nom",
                     ['nom' => $nom],
@@ -256,6 +256,36 @@ class ReleveDeTrancheRenduTest extends WebTestCase
         self::assertStringContainsString('80,00', $pied, 'Aucune conversion : 80 saisis, 80 affichés (comme les indicateurs).');
         self::assertStringNotContainsString('collection#addItem', $json['html']);
         self::assertSame(0, $crawler->filter('[data-action*="collection#"]')->count(), 'La commission ne se modifie pas d\'ici.');
+    }
+
+    /**
+     * LA PASTILLE COMPTE LES LIGNES DE MOUVEMENT, tous blocs confondus (compléments inférés
+     * compris) — ni les blocs, ni les pièces distinctes. Deux versements, l'un à un agent,
+     * l'autre à un partenaire : deux blocs d'une ligne, une pastille à 2.
+     */
+    public function testLaPastilleCompteLesLignesDeTousLesBlocs(): void
+    {
+        $ids = $this->semer();
+        $em = $this->em();
+        $tranche = $em->getRepository(Tranche::class)->find($ids['tranche']);
+        $ent = $tranche->getEntreprise();
+        $agent = $em->getRepository(Invite::class)->findOneBy(['entreprise' => $ent, 'proprietaire' => true]);
+        $partenaire = (new \App\Entity\Partenaire())->setNom('Partenaire SUNU')->setPart(20.0);
+        $partenaire->setEntreprise($ent);
+        $em->persist($partenaire);
+        foreach ([[$agent, null, 'VA'], [null, $partenaire, 'VP']] as [$a, $p, $ref]) {
+            $r = (new \App\Entity\ReversementRetroAgent())->setMontant(10.0)->setPaidAt(new \DateTimeImmutable('-1 day'))->setReference($ref);
+            $r->setAgent($a)->setPartenaire($p)->setTranche($tranche)->setEntreprise($ent);
+            $em->persist($r);
+        }
+        $em->flush();
+        $em->clear();
+        $this->connecter(self::OWNER_EMAIL);
+
+        ['json' => $json, 'crawler' => $crawler] = $this->releve($ids['tranche'], 'retrocommission');
+
+        self::assertSame(2, $crawler->filter('.jsb-releve-bloc')->count(), 'Deux blocs : partenaire et agent.');
+        self::assertSame(2, $json['itemCount'], 'La pastille additionne les lignes des deux blocs.');
     }
 
     public function testUneFamilleOuUnUsageInconnusRepondent404(): void
