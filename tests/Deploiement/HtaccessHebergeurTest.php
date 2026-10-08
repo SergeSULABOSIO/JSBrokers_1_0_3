@@ -114,6 +114,11 @@ class HtaccessHebergeurTest extends TestCase
         $script = (string) file_get_contents(self::racine() . '/bin/deploy.sh');
 
         self::assertStringContainsString('htaccess-hebergeur.sh sans-blocs', $script);
+        // /dev/fd n'existe pas sous CloudLinux (CageFS) : « <( … ) » y échoue, et cet
+        // échec avait été lu comme une différence — faux refus du 2026-10-08.
+        foreach (glob(self::racine() . '/bin/*.sh') as $sh) {
+            self::assertStringNotContainsString('<(', (string) file_get_contents($sh), basename($sh) . ' : pas de substitution de processus, /dev/fd est absent en production.');
+        }
         self::assertStringContainsString('htaccess-hebergeur.sh php-imposes', $script);
         self::assertMatchesRegularExpression('/\[ "\$MAJ" -eq 8 \] && \[ "\$MIN" -lt 2 \]/', $script, 'Le minimum comparé est PHP 8.2.');
 
