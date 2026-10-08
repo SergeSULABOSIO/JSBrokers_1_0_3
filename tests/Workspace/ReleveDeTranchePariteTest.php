@@ -7,6 +7,8 @@ use App\Entity\Article;
 use App\Entity\AutoriteFiscale;
 use App\Entity\Avenant;
 use App\Entity\Bordereau;
+use App\Entity\Chargement;
+use App\Entity\ChargementPourPrime;
 use App\Entity\Client;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
@@ -77,7 +79,7 @@ class ReleveDeTranchePariteTest extends KernelTestCase
         $conn = $this->em()->getConnection();
         $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email = :e', ['e' => self::OWNER_EMAIL]);
         foreach (['reversement_retro_agent', 'paiement_prime', 'paiement', 'article', 'note', 'bordereau', 'avenant', 'tranche',
-                  'revenu_pour_courtier', 'type_revenu', 'cotation', 'piste', 'client', 'partenaire', 'autorite_fiscale', 'taxe', 'invite'] as $table) {
+                  'revenu_pour_courtier', 'type_revenu', 'chargement_pour_prime', 'chargement', 'cotation', 'piste', 'client', 'partenaire', 'autorite_fiscale', 'taxe', 'invite'] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :nom",
                 ['nom' => self::ENT],
@@ -99,7 +101,7 @@ class ReleveDeTranchePariteTest extends KernelTestCase
      *
      * @return array{t1: Tranche, t2: Tranche, revenu: RevenuPourCourtier, avenant: Avenant}
      */
-    private function semer(float $commission = 300.0): array
+    private function semer(float $commission = 300.0, bool $affaireComplete = false): array
     {
         $em = $this->em();
         $owner = (new Utilisateur())->setEmail(self::OWNER_EMAIL)->setNom('Relevé')->setVerified(true)->setPassword('x');
@@ -121,7 +123,29 @@ class ReleveDeTranchePariteTest extends KernelTestCase
         $cotation->setPiste($piste)->setEntreprise($this->ent);
         $em->persist($cotation);
 
-        $type = (new TypeRevenu())->setNom('Commission')->setMontantflat($commission)->setShared(false)
+        // AFFAIRE COMPLÈTE : une prime réelle, une commission PARTAGEABLE avec le partenaire
+        // de la piste (20 %), et les deux taxes sur commission — de quoi rendre exigibles,
+        // au fil des règlements, la commission, les taxes et la rétrocession.
+        if ($affaireComplete) {
+            $partenaire = (new Partenaire())->setNom('Partenaire de la piste')->setPart(20.0);
+            $partenaire->setEntreprise($this->ent);
+            $em->persist($partenaire);
+            $piste->setPartenaire($partenaire);
+            $primeNette = (new Chargement())->setNom('Prime nette')->setFonction(Chargement::FONCTION_PRIME_NETTE);
+            $primeNette->setEntreprise($this->ent);
+            $em->persist($primeNette);
+            $chargement = (new ChargementPourPrime())->setNom('Prime')->setMontantFlatExceptionel(10000.0)->setType($primeNette)->setCotation($cotation);
+            $chargement->setEntreprise($this->ent);
+            $em->persist($chargement);
+            $cotation->addChargement($chargement);
+            foreach ([Taxe::REDEVABLE_ASSUREUR => ['TVA', '16'], Taxe::REDEVABLE_COURTIER => ['ARCA', '2']] as $redevable => [$code, $taux]) {
+                $taxe = (new Taxe())->setCode($code)->setDescription($code)->setTauxIARD($taux)->setTauxVIE($taux)->setRedevable($redevable);
+                $taxe->setEntreprise($this->ent);
+                $em->persist($taxe);
+            }
+        }
+
+        $type = (new TypeRevenu())->setNom('Commission')->setMontantflat($commission)->setShared($affaireComplete)
             ->setMultipayments(true)->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR);
         $type->setEntreprise($this->ent);
         $em->persist($type);
@@ -364,9 +388,10 @@ class ReleveDeTranchePariteTest extends KernelTestCase
         self::assertSame(round((float) $t1->retroAgentReversee, 2), $this->somme($blocs['retro-agent']['lignes']));
 
         // Aucun partage n'est paramétré : rien n'était dû. Le bloc se montre quand même
-        // (il porte un versement), et son solde dit le TROP-VERSÉ — jamais « réglé ».
+        // (il porte un versement), et il NOMME l'excédent — jamais « Solde 0,00 » (réglé).
         $soldes = array_column($blocs['retro-partenaire']['chiffres'], 'valeur', 'libelle');
-        self::assertSame(-20.0, $soldes['Solde'], 'Un versement sans dû se lit en solde négatif.');
+        self::assertArrayNotHasKey('Solde', $soldes);
+        self::assertSame(20.0, $soldes['Trop-versé'] ?? null, 'Un versement sans dû se lit « Trop-versé 20,00 ».');
     }
 
     // ───────────────────────────── Taxes ─────────────────────────────
@@ -405,5 +430,85 @@ class ReleveDeTranchePariteTest extends KernelTestCase
             array_values(array_unique(array_map(static fn ($l) => $l->libelle, $blocs['taxe-assureur']['lignes']))),
             'La note de l\'autre redevable n\'y paraît pas.',
         );
+    }
+
+    // ─────────────── Rafraîchissement (B4) : ce que dit la fiche RECHARGÉE ───────────────
+
+    /** Les chiffres d'un bloc, par libellé, relus sur une tranche fraîche — comme la fiche rechargée. */
+    private function chiffresFrais(int $trancheId, string $famille, string $bloc): array
+    {
+        $this->em()->clear();
+        static::getContainer()->get(IndicatorCalculationHelper::class)->reset();
+        $tranche = $this->em()->getRepository(Tranche::class)->find($trancheId);
+
+        // LE CABINET DES TAXES EST CELUI DE L'UTILISATEUR CONNECTÉ (ServiceTaxes::getMontantTaxe
+        // sans entreprise explicite) : sans session, toute taxe due vaudrait 0, et le test
+        // comparerait deux zéros. On connecte le propriétaire, comme le ferait la requête.
+        $owner = $this->em()->getRepository(Utilisateur::class)->findOneBy(['email' => self::OWNER_EMAIL]);
+        static::getContainer()->get('security.token_storage')->setToken(
+            new \Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken($owner, 'main', $owner->getRoles()),
+        );
+
+        return array_column($this->blocs($tranche, $famille)[$bloc]['chiffres'] ?? [], 'valeur', 'libelle');
+    }
+
+    /**
+     * UN NOUVEAU SIGNALEMENT qui solde la prime rend la commission EXIGIBLE : c'est l'onglet
+     * Commission — pas seulement l'onglet Prime — qui change. D'où le rechargement de la
+     * fiche entière (app:fiche.modifiee), et non du seul onglet d'où part le geste.
+     */
+    public function testUnNouveauSignalementRendLaCommissionExigible(): void
+    {
+        ['t1' => $t1] = $this->semer(300.0, true);
+        $id = $t1->getId();
+        $avant = $this->chiffresFrais($id, 'commission', 'commission');
+        self::assertGreaterThan(0.0, $avant['Due']);
+        self::assertSame(0.0, $avant['Exigible'], 'Prime impayée : rien d\'exigible.');
+
+        $prime = (float) $this->chiffresFrais($id, 'prime', 'prime')['Prime due'];
+        self::assertGreaterThan(0.0, $prime);
+        $tranche = $this->em()->getRepository(Tranche::class)->find($id);
+        $signalement = (new PaiementPrime())->setPaidAt(new \DateTimeImmutable('-1 day'))->setMontant($prime)->setReference('PP-SOLDE');
+        $signalement->setEntreprise($tranche->getEntreprise());
+        $tranche->addPaiementsPrime($signalement);
+        $this->em()->persist($signalement);
+        $this->em()->flush();
+
+        $apres = $this->chiffresFrais($id, 'commission', 'commission');
+        self::assertSame($avant['Due'], $apres['Exigible'], 'Prime soldée : toute la commission devient exigible.');
+        self::assertSame(0.0, $this->chiffresFrais($id, 'prime', 'prime')['Solde']);
+    }
+
+    /**
+     * UN ENCAISSEMENT DE COMMISSION rend exigibles une part des TAXES et de la
+     * RÉTROCESSION, au prorata (Exigibilite) : deux autres onglets que celui de la
+     * commission.
+     */
+    public function testUnEncaissementRendTaxesEtRetrosExigibles(): void
+    {
+        ['t1' => $t1, 'revenu' => $revenu] = $this->semer(300.0, true);
+        $id = $t1->getId();
+        $revenuId = $revenu->getId();
+        $taxeAvant = $this->chiffresFrais($id, 'taxe', 'taxe-assureur');
+        $retroAvant = $this->chiffresFrais($id, 'retrocommission', 'retro-partenaire');
+        self::assertGreaterThan(0.0, $taxeAvant['Due'] ?? 0.0, 'La TVA sur commission est due.');
+        self::assertGreaterThan(0.0, $retroAvant['Due'] ?? 0.0, 'La rétrocession du partenaire est due.');
+        self::assertSame(0.0, $taxeAvant['Exigible']);
+        self::assertSame(0.0, $retroAvant['Exigible']);
+
+        $tranche = $this->em()->getRepository(Tranche::class)->find($id);
+        $revenu = $this->em()->getRepository(RevenuPourCourtier::class)->find($revenuId);
+        $this->ent = $tranche->getEntreprise();
+        $this->invite = $this->em()->getRepository(Invite::class)->findOneBy(['entreprise' => $this->ent, 'proprietaire' => true]);
+        $note = $this->note(Note::TO_ASSUREUR, 'ND-ENC');
+        $this->article($note, $tranche, $revenu);
+        $this->paiement($note, 100.0, 'VIR-ENC');
+        $this->em()->flush();
+
+        $taxeApres = $this->chiffresFrais($id, 'taxe', 'taxe-assureur');
+        $retroApres = $this->chiffresFrais($id, 'retrocommission', 'retro-partenaire');
+        self::assertGreaterThan(0.0, $taxeApres['Exigible'], 'L\'encaissement rend une part de la TVA exigible.');
+        self::assertGreaterThan(0.0, $retroApres['Exigible'], 'L\'encaissement rend une part de la rétrocession exigible.');
+        self::assertLessThan($taxeApres['Due'], $taxeApres['Exigible'], 'Au prorata : un encaissement partiel n\'en rend exigible qu\'une part.');
     }
 }
