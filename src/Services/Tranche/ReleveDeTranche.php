@@ -30,6 +30,17 @@ final class ReleveDeTranche
 {
     public const FAMILLES = ['prime', 'commission', 'retrocommission', 'taxe'];
 
+    /**
+     * Les onglets du relevé dans la fiche Tranche : champ d'onglet → famille. SOURCE UNIQUE,
+     * lue par le canevas (qui crée les onglets) et par le contrôleur (qui les compte).
+     */
+    public const ONGLETS = [
+        'relevePrime'      => 'prime',
+        'releveCommission' => 'commission',
+        'releveRetro'      => 'retrocommission',
+        'releveTaxe'       => 'taxe',
+    ];
+
     /** Libellé d'un solde négatif : ce qu'on a REÇU en trop (prime, commission). */
     private const TROP_PERCU = 'Trop-perçu';
     /** Libellé d'un solde négatif : ce que le cabinet a VERSÉ en trop (rétros, taxes). */
@@ -120,6 +131,26 @@ final class ReleveDeTranche
             $blocs,
             static fn (array $bloc): bool => $bloc['du'] > 0.0 || $bloc['lignes'] !== [] || $bloc['cle'] === 'prime',
         ));
+    }
+
+    /**
+     * LE COMPTE DE CHAQUE ONGLET, dès le rendu de la fiche — sans attendre qu'on l'ouvre.
+     *
+     * C'est le nombre que l'endpoint renverra en `itemCount` (toutes les lignes de tous
+     * les blocs : un bloc qui porte une ligne est toujours montré), calculé par les MÊMES
+     * méthodes : la pastille ne change pas au clic. Sans synthèse ni hydratation des
+     * indicateurs — seules les lignes comptent, et elles n'en dépendent pas.
+     *
+     * @return array<string, int> famille → nombre de lignes
+     */
+    public function compter(Tranche $tranche): array
+    {
+        return [
+            'prime'           => \count($this->pieces->lignesPrime($tranche)),
+            'commission'      => \count($this->pieces->lignesCommission($tranche)),
+            'retrocommission' => \count($this->pieces->lignesRetro($tranche, false)) + \count($this->pieces->lignesRetro($tranche, true)),
+            'taxe'            => \count($this->pieces->lignesTaxe($tranche, Taxe::REDEVABLE_ASSUREUR)) + \count($this->pieces->lignesTaxe($tranche, Taxe::REDEVABLE_COURTIER)),
+        ];
     }
 
     /** @param array<string, mixed> $eco */

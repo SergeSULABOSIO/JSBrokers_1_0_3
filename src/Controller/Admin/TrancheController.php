@@ -46,6 +46,7 @@ class TrancheController extends AbstractController
         private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer, // Ajout de SerializerInterface
         private CalculationProvider $calculationProvider, // Ajout de CalculationProvider
+        private ReleveDeTranche $releve,
         CanvasBuilder $canvasBuilder // Inject CanvasBuilder without property promotion
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait
@@ -55,6 +56,21 @@ class TrancheController extends AbstractController
     protected function getCollectionMap(): array
     {
         return $this->buildCollectionMapFromEntity(Tranche::class);
+    }
+
+    /**
+     * Les onglets du relevé ne sont pas des associations : on les compte ici, pour que leur
+     * pastille paraisse dès le rendu de la fiche — le même nombre que renverra l'endpoint
+     * à l'ouverture de l'onglet (ReleveDeTranche::compter).
+     */
+    protected function comptesDOngletsCalcules(object $parentEntity): array
+    {
+        if (!$parentEntity instanceof Tranche) {
+            return [];
+        }
+        $parFamille = $this->releve->compter($parentEntity);
+
+        return array_map(static fn (string $famille): int => $parFamille[$famille], ReleveDeTranche::ONGLETS);
     }
 
     protected function getParentAssociationMap(): array
@@ -162,7 +178,7 @@ class TrancheController extends AbstractController
         methods: ['GET'],
         priority: 10,
     )]
-    public function releveApi(int $id, string $famille, ReleveDeTranche $releve, ServiceMonnaies $monnaies): JsonResponse
+    public function releveApi(int $id, string $famille, ServiceMonnaies $monnaies): JsonResponse
     {
         if (!$this->mayAccessEntity(Tranche::class, Invite::ACCESS_LECTURE)) {
             return $this->accessDeniedJson();
@@ -170,7 +186,7 @@ class TrancheController extends AbstractController
         $tranche = $this->em->getRepository(Tranche::class)->find($id);
         $this->appartenance()->exigerLeCabinetOuvert($tranche, 'Cette tranche');
 
-        $blocs = $releve->pour($tranche, $famille);
+        $blocs = $this->releve->pour($tranche, $famille);
 
         $html = $this->renderView('components/dialog/_releve_tranche.html.twig', [
             'blocs'               => $blocs,
