@@ -65,7 +65,7 @@ final class ReglagesDeKet implements ResetInterface
             'min' => 3, 'max' => 20, 'defaut' => 8,
             'libelle' => 'Lignes du programme du jour',
             'unite' => 'lignes',
-            'explication' => 'Le nombre de points que Ket retient par section dans le programme du jour.',
+            'explication' => 'Le nombre de points que Ket retient par section quand on lui demande le programme du jour (il ne s’affiche plus d’office à l’ouverture d’une conversation).',
         ],
         'fil.max_messages' => [
             'min' => 6, 'max' => 40, 'defaut' => 20,

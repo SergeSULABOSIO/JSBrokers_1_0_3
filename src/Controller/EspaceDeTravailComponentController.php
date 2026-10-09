@@ -226,12 +226,12 @@ class EspaceDeTravailComponentController extends AbstractController
             'assistantNom' => $this->parametresRepository->nomPour($entreprise),
             // LE CHAT N'EST PAS RENDU ICI, IL EST ADRESSÉ.
             //
-            // Son partial a besoin de bien plus que d'une conversation : programme du
-            // jour, fiches de contexte, thème de l'utilisateur, plafonds de fichiers.
+            // Son partial a besoin de bien plus que d'une conversation : accueil, fiches
+            // de contexte, thème de l'utilisateur, plafonds de fichiers.
             // Tout cela est déjà calculé par `admin.assistantia.chat`, qui re-vérifie
             // au passage les deux verrous. Recopier ce calcul ici en ferait une
-            // seconde version à tenir à jour — celle qui, un jour, oublierait le
-            // programme du jour.
+            // seconde version à tenir à jour — celle qui, un jour, oublierait
+            // l'accueil.
             //
             // Le front va donc chercher le chat à cette URL, exactement comme le
             // workspace de bureau le fait au rechargement

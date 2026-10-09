@@ -1,0 +1,43 @@
+{# ══════════════════════════════════════════════════════════════════════════════
+   ACCUEIL — ce qu'affiche une conversation VIDE (AccueilDeKet).
+
+   Une salutation, une phrase tirée au hasard, et les suggestions que les droits
+   de l'invité permettent de satisfaire. Rien d'autre : le programme du jour ne
+   s'impose plus à chaque nouveau fil, il se DEMANDE — c'est la 1re suggestion.
+
+   Ce n'est PAS un message du fil, ni un `.aic-msg` : ni menu ⋮, ni citation, ni
+   export, et `nouvelleConversation()` ne le compte pas comme un fil entamé. Il
+   s'efface tout seul dès qu'une bulle entre dans le fil — règle CSS `:has()`,
+   sans JS — et revient de même si l'envoi échoue et que la bulle est retirée.
+
+   Une suggestion PRÉ-REMPLIT le champ (assistant-chat#suggerer), elle n'envoie
+   rien : l'utilisateur relit, complète, et décide de ce qui lui coûte des tokens.
+
+   Attendu : `accueil` = {titre, phrase, suggestions[]}, et `assistantNom`
+   (passés en `only` : le partial ne voit rien d'autre).
+═══════════════════════════════════════════════════════════════════════════════ #}
+<section class="aic-accueil" data-accueil-ket aria-label="Accueil de {{ assistantNom }}">
+    <span class="aic-accueil-marque" aria-hidden="true">
+        <twig:UX:Icon name="{{ resolve_icon_name('assistant-ia') }}" />
+    </span>
+    <h2 class="aic-accueil-titre">{{ accueil.titre }}</h2>
+    <p class="aic-accueil-phrase">{{ accueil.phrase }}</p>
+
+    {% if accueil.suggestions is not empty %}
+        <ul class="aic-accueil-suggestions" aria-label="Suggestions de questions">
+            {% for suggestion in accueil.suggestions %}
+                <li>
+                    <button type="button" class="aic-chip aic-chip--suggestion"
+                            data-action="click->assistant-chat#suggerer"
+                            data-suggestion="{{ suggestion.question }}"
+                            title="{{ suggestion.question }}">
+                        <span class="aic-chip-icon" aria-hidden="true">
+                            <twig:UX:Icon name="{{ resolve_icon_name(suggestion.icone) }}" />
+                        </span>
+                        <span class="aic-chip-label">{{ suggestion.libelle }}</span>
+                    </button>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</section>

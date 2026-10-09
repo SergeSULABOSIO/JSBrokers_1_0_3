@@ -817,6 +817,20 @@ export default class extends Controller {
         }
     }
 
+    /**
+     * Suggestion de l'accueil : PRÉ-REMPLIT le champ, n'envoie rien — l'utilisateur
+     * relit, complète, et décide de ce qui lui coûte des tokens. Un texte déjà tapé
+     * n'est jamais écrasé : on se contente alors de rendre le focus au champ.
+     */
+    suggerer(event) {
+        if (this.inputTarget.value.trim() === '') {
+            this.inputTarget.value = event.currentTarget.dataset.suggestion || '';
+            // Même chemin qu'une frappe : hauteur, bouton Live/Envoyer, compteur.
+            this.onInput();
+        }
+        this.inputTarget.focus();
+    }
+
     /** Zone de saisie auto-extensible (max ~8 lignes). */
     autoGrow() {
         const input = this.inputTarget;
@@ -2514,8 +2528,8 @@ export default class extends Controller {
      * On réinjecte le PARTIAL COMPLET plutôt que de vider la liste des messages :
      * l'entête, le composer et le contrôleur portent tous l'identifiant de la
      * conversation. Un simple effacement laisserait un chat qui écrit encore dans
-     * l'ancien fil — et le programme du jour, rendu par le serveur pour une
-     * conversation vide, ne s'afficherait pas.
+     * l'ancien fil — et l'accueil, rendu par le serveur pour une conversation
+     * vide, ne s'afficherait pas.
      *
      * L'ONGLET CHANGE D'IDENTITÉ, PAS SEULEMENT DE CONTENU. Une version
      * précédente remplaçait le panneau sur place et ne réécrivait que l'URL
@@ -2768,24 +2782,10 @@ export default class extends Controller {
      * droits, fail-closed) puis rejoue le circuit standard des listes
      * (app:liste-element:openned).
      */
-    /**
-     * Ligne du PROGRAMME DU JOUR (bulle d'ouverture rendue par le serveur) :
-     * ouvre la fiche concernée dans la colonne de visualisation. Même chemin que
-     * l'outil visualiser_fiche — l'endpoint re-valide les droits, fail-closed.
-     */
-    ouvrirFichePlan(event) {
-        const ligne = event.currentTarget;
-
-        this.openVisualizationAction({
-            entite: ligne.dataset.planEntite,
-            id: ligne.dataset.planId,
-        });
-    }
-
     async openVisualizationAction(action) {
         if (!this.hasVisualContextUrlValue) return;
         // Barre de progression du workspace pendant la récupération de la fiche :
-        // sans elle, un clic sur une ligne du programme du jour ne produit RIEN à
+        // sans elle, une demande d'ouverture de fiche ne produit RIEN à
         // l'écran tant que le serveur répond — l'utilisateur reclique. Le workspace
         // l'arrête de lui-même quand l'onglet s'ouvre (app:tab.opened) ; on ne la
         // coupe donc ici que sur les chemins qui n'ouvrent aucun onglet (erreur).

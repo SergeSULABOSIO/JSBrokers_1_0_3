@@ -368,11 +368,11 @@ class AiContextBuilderSystemPromptFormatTest extends KernelTestCase
         $this->assertStringContainsString('4 client(s) sous 100 % de couverture', $prompt);
         // Routage vers le nouvel outil.
         $this->assertStringContainsString('saturation_portefeuille', $prompt);
-        // Le programme du jour est déjà affiché par le serveur à l'ouverture d'une
-        // conversation vide : sans ce garde-fou, Ket le redéroule à la 1re question
-        // et l'utilisateur lit deux fois la même liste.
-        $this->assertStringContainsString('DÉJÀ vu son programme du jour', $prompt);
-        $this->assertStringContainsString('plan_du_jour', $prompt);
+        // Le programme du jour ne s'affiche PLUS d'office à l'ouverture d'une
+        // conversation (un accueil bref le remplace) : Ket ne doit donc plus
+        // prétendre que l'utilisateur l'a vu — elle parlerait d'une liste fantôme.
+        $this->assertStringNotContainsString('DÉJÀ vu son programme du jour', $prompt);
+        $this->assertStringNotContainsString('bulle d\'ouverture', $prompt);
     }
 
     /**

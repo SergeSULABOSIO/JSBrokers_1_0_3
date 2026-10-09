@@ -93,10 +93,17 @@ final class PlanDuJourService
     }
 
     /**
+     * Les entités dont le droit de lecture ouvre une section du programme. Source
+     * unique : plan() ne lit rien d'autre (section() le vérifie), et la suggestion
+     * « Mon programme du jour » de l'accueil de Ket (AccueilDeKet) s'y règle pour
+     * ne jamais être proposée à un invité qui n'obtiendrait qu'un programme vide.
+     */
+    public const ENTITES = ['Tache', 'Feedback', 'Avenant', 'Tranche', 'Note'];
+
+    /**
      * Programme du jour de l'invité. `priorite` = la section actionnable la plus
-     * urgente, sur laquelle Ket appuie son ouverture ; `toutAuVert` signale qu'il
-     * n'y a rien à faire (ou rien de visible dans le périmètre), auquel cas
-     * l'appelant doit retomber sur le message d'accueil ordinaire.
+     * urgente ; `toutAuVert` signale qu'il n'y a rien à faire (ou rien de visible
+     * dans le périmètre) — Ket doit alors le dire, pas inventer une tâche.
      *
      * @return array{date: string, sections: array<int, array>, priorite: ?array, toutAuVert: bool}
      */
@@ -128,13 +135,15 @@ final class PlanDuJourService
 
     /**
      * Enveloppe fail-closed (canRead) + fail-safe (exceptions avalées) d'un groupe
-     * de sections : l'ouverture du chat ne doit JAMAIS échouer à cause du plan.
+     * de sections : une réponse de Ket ne doit JAMAIS échouer à cause du plan.
      *
      * @param callable(): array<int, array> $calcul
      * @return array<int, array>
      */
     private function section(Invite $invite, string $entite, callable $calcul): array
     {
+        // Une section lue hors de ENTITES ferait mentir la suggestion de l'accueil.
+        \assert(\in_array($entite, self::ENTITES, true));
         if (!$this->accessResolver->canRead($invite, $entite)) {
             return [];
         }

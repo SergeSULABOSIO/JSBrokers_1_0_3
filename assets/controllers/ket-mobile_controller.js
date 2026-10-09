@@ -98,7 +98,7 @@ export default class extends Controller {
     /**
      * Va chercher le chat de la dernière conversation et le pose dans la
      * surface. Le serveur ne l'a pas rendu en ligne à dessein : son partial a
-     * besoin du programme du jour, des fiches de contexte et du thème, tous
+     * besoin de l'accueil, des fiches de contexte et du thème, tous
      * déjà calculés par la route du chat — la recopier ici en ferait une
      * seconde version à tenir à jour.
      *

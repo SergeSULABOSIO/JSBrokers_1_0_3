@@ -7,6 +7,7 @@ use App\Entity\AssistantMessage;
 use App\Entity\Client;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Ai\AccueilDeKet;
 use App\Entity\RolesEnProduction;
 use App\Entity\Utilisateur;
 use App\Repository\TokenConsumptionRepository;
@@ -33,9 +34,12 @@ class AssistantIaWorkspaceTest extends WebTestCase
     private const ENTREPRISE_NOM = 'PHPUnit IA SARL';
     private const ENTREPRISE_B_NOM = 'PHPUnit IA Autre SARL';
     private const DENIED_MARKER = 'jsb-access-denied';
-    /** Marqueur de MARKUP de la bulle « programme du jour » (les classes CSS aic-plan-*
-     *  figurent aussi dans la feuille de style inline du chat et ne prouvent rien). */
+    /** Marqueur de MARKUP de l'ancienne bulle « programme du jour », qui ne doit plus
+     *  s'afficher d'office (les classes CSS figurent aussi dans la feuille de style
+     *  inline du chat et ne prouvent rien : on teste du texte ou des attributs). */
     private const PLAN_MARKER = 'Voici votre programme du';
+    /** Marqueur de MARKUP de l'accueil : un attribut, absent de la feuille de style. */
+    private const ACCUEIL_MARKER = 'data-accueil-ket';
 
     private KernelBrowser $client;
 
@@ -1625,7 +1629,7 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $this->assertResponseStatusCodeSame(403);
     }
 
-    // ── Programme du jour (bulle d'ouverture) ─────────────────────────────────
+    // ── Accueil d'une conversation vide ───────────────────────────────────────
 
     /** Tâche ouverte de l'entreprise, échéant à $jours du jour (négatif = en retard). */
     private function makeTache(Entreprise $entreprise, string $description, int $jours, ?Invite $executor = null): void
@@ -1650,79 +1654,72 @@ class AssistantIaWorkspaceTest extends WebTestCase
     }
 
     /**
-     * Rien à traiter : le plan est « tout au vert », le contrôleur passe null et
-     * l'accueil ordinaire reprend sa place. Non-régression du repli — un invité
-     * sans périmètre ne doit jamais tomber sur une bulle vide.
+     * La salutation attendue à l'instant de la requête, dans le fuseau de
+     * l'APPLICATION. Lue avant ET après : à cheval sur 5 h ou 18 h, les deux sont
+     * acceptables, mais aucune autre.
      *
-     * ⚠ LE TEST S'ADRESSE AU COLLABORATEUR, PLUS AU PROPRIÉTAIRE. Depuis que le
-     * programme du jour porte la section « Configuration du cabinet », un cabinet
-     * fraîchement semé n'est jamais « tout au vert » POUR SON PROPRIÉTAIRE : il lui
-     * reste des assureurs, des portefeuilles et des comptes bancaires à créer, et
-     * c'est précisément ce qu'on veut lui rappeler. Le cas « rien à faire » se teste
-     * donc avec l'invité, qui ne voit pas cette dette — elle ne le concerne pas.
+     * @param callable(): string $requete
+     * @return array{0: string, 1: list<string>}
      */
-    public function testConversationVideSansRienAFaireGardeLAccueilOrdinaire(): void
+    private function avecSalutation(callable $requete): array
     {
-        ['guest' => $guest, 'entreprise' => $e] = $this->seed();
-        $conversation = $this->makeConversation($e, $guest);
+        $fuseau = (string) ($_ENV['APP_TIMEZONE'] ?? '');
+        $avant = AccueilDeKet::salutation(AccueilDeKet::maintenant($fuseau));
+        $contenu = $requete();
+        $apres = AccueilDeKet::salutation(AccueilDeKet::maintenant($fuseau));
 
-        $content = $this->ouvrirChat($e, $conversation, self::GUEST_EMAIL);
-
-        $this->assertStringContainsString("Posez-moi une question sur les données", $content);
-        // Marqueur de MARKUP : les classes aic-plan-* apparaissent aussi dans la
-        // feuille de style inline du chat, elles ne prouvent donc rien.
-        $this->assertStringNotContainsString(self::PLAN_MARKER, $content);
+        return [$contenu, array_values(array_unique([$avant, $apres]))];
     }
 
     /**
-     * LE PENDANT DU TEST PRÉCÉDENT, CÔTÉ PROPRIÉTAIRE : un cabinet neuf n'a rien à
-     * traiter, mais il a tout à configurer. Ket ouvre donc sur la dette, en nommant
-     * ce qui manque — c'est le rappel qui doit se voir partout où c'est possible.
+     * UNE CONVERSATION VIDE S'OUVRE SUR UN ACCUEIL BREF, plus sur le programme du
+     * jour. Le propriétaire a pourtant une tâche en retard ET une dette de
+     * configuration : rien de tout cela n'est déroulé d'office — il le demande.
      */
-    public function testConversationVideOuvreSurLaDetteDeConfiguration(): void
-    {
-        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
-        $conversation = $this->makeConversation($e, $owner);
-
-        $content = $this->ouvrirChat($e, $conversation, self::OWNER_EMAIL);
-
-        $this->assertStringContainsString(self::PLAN_MARKER, $content, 'La bulle de programme doit être rendue.');
-        $this->assertStringContainsString('Configuration du cabinet', $content);
-        // Nommer ce qui bloque, et pas seulement le mesurer.
-        $this->assertStringContainsString('Assureurs', $content);
-    }
-
-    /**
-     * Une tâche en retard, non assignée (donc « à moi » au sens de la règle
-     * executor IS NULL OR = moi) : Ket ouvre sur le programme du jour, avec la
-     * section, la ligne et la pastille de retard.
-     */
-    public function testConversationVideOuvreSurLeProgrammeDuJour(): void
+    public function testConversationVideOuvreSurLAccueil(): void
     {
         ['owner' => $owner, 'entreprise' => $e] = $this->seed();
         $this->makeTache($e, 'Relancer AXA sur la police 2026-014', -3);
         $conversation = $this->makeConversation($e, $owner);
 
-        $content = $this->ouvrirChat($e, $conversation, self::OWNER_EMAIL);
+        [$content, $salutations] = $this->avecSalutation(
+            fn (): string => $this->ouvrirChat($e, $conversation, self::OWNER_EMAIL)
+        );
 
-        $this->assertStringContainsString(self::PLAN_MARKER, $content, 'La bulle de programme doit être rendue.');
-        $this->assertStringContainsString('Mes tâches', $content);
-        $this->assertStringContainsString('Relancer AXA sur la police 2026-014', $content);
-        // Pastille de retard, empruntée aux variantes markdown existantes.
-        $this->assertStringContainsString('aic-md-badge--danger', $content);
-        // La ligne ouvre la fiche, elle ne navigue pas.
-        $this->assertStringContainsString('assistant-chat#ouvrirFichePlan', $content);
-        $this->assertStringContainsString('data-plan-entite="Tache"', $content);
-        // L'accueil ordinaire a bien cédé la place.
-        $this->assertStringNotContainsString("Posez-moi une question sur les données", $content);
+        $this->assertStringContainsString(self::ACCUEIL_MARKER, $content);
+        // Salué par son prénom (« PHPUnit IA » → « PHPUnit »), à l'heure du cabinet.
+        $titres = array_map(static fn (string $s): string => $s . ', PHPUnit', $salutations);
+        $this->assertTrue(
+            array_reduce($titres, static fn (bool $vu, string $t): bool => $vu || str_contains($content, $t), false),
+            'Titre attendu : ' . implode(' ou ', $titres)
+        );
+        // Une des phrases de la liste — une seule source pour elles.
+        $phrases = array_filter(
+            AccueilDeKet::PHRASES,
+            static fn (string $p): bool => str_contains($content, htmlspecialchars($p, ENT_QUOTES))
+        );
+        $this->assertCount(1, $phrases, 'Une phrase de AccueilDeKet::PHRASES, tirée au hasard.');
+        // Le propriétaire lit tout : les trois suggestions, qui pré-remplissent le champ.
+        foreach (AccueilDeKet::SUGGESTIONS as $suggestion) {
+            $this->assertStringContainsString(
+                'data-suggestion="' . htmlspecialchars($suggestion['question'], ENT_QUOTES) . '"',
+                $content
+            );
+        }
+        $this->assertStringContainsString('assistant-chat#suggerer', $content);
+
+        // PLUS DE BOMBARDEMENT : ni le programme, ni sa tâche, ni l'ancien accueil bavard.
+        $this->assertStringNotContainsString(self::PLAN_MARKER, $content);
+        $this->assertStringNotContainsString('Relancer AXA sur la police 2026-014', $content);
+        $this->assertStringNotContainsString('Configuration du cabinet', $content);
+        $this->assertStringNotContainsString('Posez-moi une question sur les données', $content);
     }
 
     /**
-     * FAIL-CLOSED : sans le droit de lecture sur les Tâches, la section disparaît.
-     * L'invité de ce test n'a que le module IA et la Lecture Client — aucune tâche
-     * ne doit lui être annoncée, même si l'entreprise en compte.
+     * SANS PÉRIMÈTRE, AUCUNE SUGGESTION. Mesuré : cet invité (Client seul) recevait un
+     * refus sur les échéances et un programme vide. L'accueil reste, sans promesse.
      */
-    public function testProgrammeDuJourNAnnoncePasLesTachesHorsPerimetre(): void
+    public function testAccueilSansPerimetreNeProposeAucuneSuggestion(): void
     {
         ['guest' => $guest, 'entreprise' => $e] = $this->seed();
         $this->makeTache($e, 'Tâche invisible pour cet invité', -1);
@@ -1730,18 +1727,41 @@ class AssistantIaWorkspaceTest extends WebTestCase
 
         $content = $this->ouvrirChat($e, $conversation, self::GUEST_EMAIL);
 
+        $this->assertStringContainsString(self::ACCUEIL_MARKER, $content);
+        $this->assertStringNotContainsString('data-suggestion=', $content);
         $this->assertStringNotContainsString('Tâche invisible pour cet invité', $content);
-        $this->assertStringNotContainsString('Mes tâches', $content);
     }
 
     /**
-     * Le programme n'ouvre que ce qui n'a pas encore commencé : dès qu'un message
-     * existe, la bulle disparaît et le fil reprend ses droits.
+     * SANS LES FINANCES, PAS DE « PRIMES À ENCAISSER ». Lire les polices suffit aux
+     * échéances et au programme ; les primes vivent sur les tranches, hors de portée.
      */
-    public function testConversationEntameeNAffichePlusLeProgramme(): void
+    public function testAccueilSansFinancesNeProposePasLesPrimes(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed();
+        $role = new RolesEnProduction();
+        $role->setNom('Polices seules');
+        $role->setAccessAvenant([Invite::ACCESS_LECTURE]);
+        $role->setEntreprise($e);
+        $guest->addRolesEnProduction($role);
+        $this->em()->persist($role);
+        $this->em()->flush();
+        $conversation = $this->makeConversation($e, $guest);
+
+        $content = $this->ouvrirChat($e, $conversation, self::GUEST_EMAIL);
+
+        $this->assertStringContainsString('data-suggestion="Quelles polices arrivent à échéance ?"', $content);
+        $this->assertStringContainsString('data-suggestion="Quel est mon programme du jour ?"', $content);
+        $this->assertStringNotContainsString('data-suggestion="Quelles primes restent à encaisser ?"', $content);
+    }
+
+    /**
+     * L'accueil n'ouvre que ce qui n'a pas encore commencé : dès qu'un message
+     * existe, il disparaît et le fil reprend ses droits.
+     */
+    public function testConversationEntameeNAffichePasLAccueil(): void
     {
         ['owner' => $owner, 'entreprise' => $e] = $this->seed();
-        $this->makeTache($e, 'Relancer AXA sur la police 2026-014', -3);
         $conversation = $this->makeConversation($e, $owner, 'Déjà entamée');
 
         // addMessage() et pas seulement setConversation() : la conversation vient
@@ -1757,7 +1777,7 @@ class AssistantIaWorkspaceTest extends WebTestCase
 
         $content = $this->ouvrirChat($e, $conversation, self::OWNER_EMAIL);
 
+        $this->assertStringNotContainsString(self::ACCUEIL_MARKER, $content);
         $this->assertStringNotContainsString(self::PLAN_MARKER, $content);
-        $this->assertStringNotContainsString("Posez-moi une question sur les données", $content);
     }
 }

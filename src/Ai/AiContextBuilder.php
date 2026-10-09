@@ -2218,17 +2218,6 @@ class AiContextBuilder
             }
         }
 
-        // La bulle d'OUVERTURE (programme du jour) est rendue par le serveur et n'est
-        // PAS un message : elle n'a donc pas de numéro et ne peut pas être reprise.
-        // Sans cette précision, Ket répondait « il me manque quelques éléments » à
-        // « exporte-moi ceci » — alors qu'un simple appel d'outil lui rend la donnée.
-        $texte .= "\n\n• LE PROGRAMME DU JOUR (la bulle d'ouverture : tâches, échéances, impayés) n'est PAS"
-            . "\n  un message du fil et n'a pas de numéro : il ne peut pas être repris par sourceMessageId."
-            . "\n  Si l'utilisateur demande d'en faire un document (« exporte ceci », « mets-moi ça dans un"
-            . "\n  rapport »), appelle plan_du_jour pour en récupérer les chiffres, puis rédige les sections"
-            . "\n  du document à partir de CE QU'IL TE REND. Ne lui redemande RIEN : le titre, la"
-            . "\n  problématique, l'introduction et la conclusion, c'est à toi de les écrire.";
-
         if ($documents !== []) {
             $texte .= "\n\n• DOCUMENTS DÉJÀ PRODUITS dans ce fil. Quand l'utilisateur demande LE MÊME"
                 . "\n  rapport dans un AUTRE format (« refais-le en HTML », « le même en PDF »), NE LE"
@@ -2385,15 +2374,6 @@ class AiContextBuilder
                 . "\n        ni une formule générale. Termine sur ce que l'utilisateur a demandé, et"
                 . "\n        rien d'autre. Un rappel qui n'a rien à rappeler apprend à l'utilisateur à"
                 . "\n        sauter la dernière ligne, et il la sautera le jour où elle comptera.";
-
-        // Le PROGRAMME DU JOUR est affiché par le serveur à l'ouverture d'une
-        // conversation vide (PlanDuJourService, même barème d'urgence que ci-dessus).
-        // Sans ce rappel, Ket le redéroule intégralement à la première question et
-        // l'utilisateur lit deux fois la même liste.
-        $tete .= "\n        L'utilisateur a DÉJÀ vu son programme du jour (tâches, actions de feedback,"
-            . "\n        renouvellements, primes, commissions) affiché à l'ouverture de cette conversation :"
-            . "\n        ne le redéroule pas intégralement, appuie-toi dessus. S'il en redemande le détail,"
-            . "\n        appelle plan_du_jour (ou l'outil du volet concerné) plutôt que de citer de mémoire.";
 
         // GARDE-FOU. Ces comptes sortent du MÊME moteur que les listes affichées à
         // l'écran : ils sont, par construction, ce que l'utilisateur voit. Sans cette

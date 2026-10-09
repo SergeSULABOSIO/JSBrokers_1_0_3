@@ -2,6 +2,7 @@
 
 namespace App\Tests\Ai;
 
+use App\Ai\AccueilDeKet;
 use App\Ai\AiRequest;
 use App\Ai\Programme\ProgrammeEnCours;
 use App\Ai\Scope\AiScope;
@@ -117,6 +118,13 @@ class SelecteurDeTrousseTest extends TestCase
         yield 'une ventilation' => ['Donne-moi le chiffre d’affaires par assureur.'];
         yield 'une explication' => ['Explique-moi ma trésorerie du mois dernier.'];
         yield 'une salutation' => ['salut'];
+
+        // LES SUGGESTIONS DE L'ACCUEIL, lues sur la constante même : une suggestion qui
+        // armerait l'écriture (« renouveler » est un verbe d'action) ferait d'un simple
+        // clic une demande de saisie.
+        foreach (AccueilDeKet::SUGGESTIONS as $suggestion) {
+            yield 'suggestion d’accueil : ' . $suggestion['libelle'] => [$suggestion['question']];
+        }
 
         // ── LES PIÈGES DE SOUS-CHAÎNE, MESURÉS LE 2026-09-23 ────────────────────
         //
