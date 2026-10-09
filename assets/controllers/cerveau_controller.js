@@ -668,6 +668,12 @@ export default class extends Controller {
             case 'ui:tranche.facturer-commission': // réclamer la commission d'une ou plusieurs échéances
                 this.handleTrancheFacturerCommission(payload);
                 break;
+            case 'ui:tranche.regularisation-request': // déclarer due / remettre à régulariser une échéance
+                this.handleTrancheRegularisationRequest(payload);
+                break;
+            case 'client:tranche.regularisation-execute':
+                this._handleTrancheRegularisationExecute(payload);
+                break;
             case 'client:note.facturation-enregistree': // le picker a émis la note
                 this._handleNoteFacturationEnregistree(payload);
                 break;
@@ -3006,6 +3012,49 @@ export default class extends Controller {
      * @param {object} payload
      * @param {string} payload.url - '/admin/note/api/get-facturation-context/{id}'
      */
+    /**
+     * Régularisation d'une échéance devenue sans objet (police annulée ou résiliée) : la
+     * déclarer due quand même, ou revenir sur ce choix. Confirmation par la modale générique
+     * (geste réversible : pas d'alerte « irréversible »), puis POST.
+     * @param {object} payload
+     * @param {string} payload.url - '/admin/tranche/api/regularisation/{id}/maintenir|remettre'
+     */
+    handleTrancheRegularisationRequest(payload) {
+        if (!payload.url) {
+            this._showNotification('Impossible de régulariser l’échéance : contexte manquant.', 'error');
+            return;
+        }
+        const maintenir = payload.url.endsWith('/maintenir');
+        this.broadcast('ui:confirmation.request', {
+            title: maintenir ? 'Déclarer l’échéance due' : 'Remettre l’échéance à régulariser',
+            body: maintenir
+                ? 'La police a été annulée ou résiliée, mais la prime de cette échéance reste acquise à l’assureur : elle revient dans le recouvrement (relances, alertes, primes à encaisser).'
+                : 'L’échéance ressort du recouvrement : elle redevient « à régulariser », à solder par une note de crédit ou à déclarer due plus tard.',
+            itemDescriptions: [payload.selection?.[0]?.name || 'l’échéance sélectionnée'],
+            showIrreversible: false,
+            onConfirm: { type: 'client:tranche.regularisation-execute', payload: { url: payload.url } },
+        });
+    }
+
+    /** @private POST de la régularisation confirmée, puis rafraîchissement de la liste active. */
+    async _handleTrancheRegularisationExecute(payload) {
+        try {
+            const response = await fetch(payload.url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.message || `Erreur serveur ${response.status}`);
+
+            this._showNotification(data.message || 'Échéance mise à jour.', 'success');
+            this._annoncerFicheModifiee();
+            const etat = this._getActiveTabState();
+            this.broadcast('app:loading.start', { originatorId: etat.elementId, workspaceTabId: this.currentWorkspaceTabId });
+            this._requestListRefresh(this.getActiveTabId());
+            this.broadcast('ui:confirmation.close');
+        } catch (error) {
+            console.error('[Cerveau] _handleTrancheRegularisationExecute() failed:', error);
+            this.broadcast('ui:confirmation.error', { error: error.message || 'La régularisation a échoué.' });
+        }
+    }
+
     async handleTrancheFacturerCommission(payload) {
         // LA SÉLECTION ENTIÈRE, PAS L'URL. Le socle ne substitue `%id%` que par la
         // PREMIÈRE ligne cochée ; s'en contenter ferait facturer une échéance et
@@ -3023,7 +3072,10 @@ export default class extends Controller {
             return;
         }
 
-        await this._openStandalonePicker(`${payload.url}?ids=${ids.join(',')}`, {
+        // L'URL peut déjà porter une requête (« ?type=credit », « ?destinataire=… ») :
+        // un second « ? » ferait perdre les échéances (« …?destinataire=client?ids=… »).
+        const separateur = payload.url.includes('?') ? '&' : '?';
+        await this._openStandalonePicker(`${payload.url}${separateur}ids=${ids.join(',')}`, {
             controllerName: 'facturation-picker',
             errorLabel: 'la facturation de la commission',
         });

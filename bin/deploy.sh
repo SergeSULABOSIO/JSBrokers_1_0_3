@@ -751,6 +751,13 @@ if [ "$SKIP_MIGRATIONS" -eq 0 ]; then
     executer "APP_ENV=prod $PHP -d memory_limit=512M bin/console doctrine:migrations:migrate \
               --no-interaction --allow-no-migration"
     ok "Schema a jour"
+
+    # Échéances « à régulariser » des annulations et résiliations déjà enregistrées.
+    # Idempotent : un second passage ne marque plus rien. Pour un examen préalable :
+    #   php bin/console app:echeances:regulariser --rattrapage --dry-run
+    executer "APP_ENV=prod $PHP -d memory_limit=512M bin/console app:echeances:regulariser \
+              --rattrapage --no-interaction"
+    ok "Echeances a regulariser rattrapees"
   fi
 else
   ko "Migrations SAUTEES a la demande"

@@ -41,6 +41,8 @@ export default class extends PickerBase {
         submitUrl: String,
         apercuUrl: String,
         destinataire: String,
+        // « credit » : régulariser ce qui a déjà été facturé (note de crédit).
+        type: { type: String, default: 'debit' },
         ids: String,
         suivants: Array,
     };
@@ -102,7 +104,7 @@ export default class extends PickerBase {
     changerDestinataire() {
         const choisi = this.hasDestinataireTarget ? this.destinataireTarget.value : 'assureur';
         this._notifyCerveau('ui:tranche.facturer-commission', {
-            url: '/admin/note/facturation-picker?destinataire=' + encodeURIComponent(choisi),
+            url: '/admin/note/facturation-picker?type=' + encodeURIComponent(this.typeValue || 'debit') + '&destinataire=' + encodeURIComponent(choisi),
             selection: (this.idsValue || '').split(',').filter(Boolean).map((id) => ({ id })),
         });
         this.close();
@@ -152,7 +154,7 @@ export default class extends PickerBase {
         if (!suivant || !suivant.ids?.length) return;
 
         this._notifyCerveau('ui:tranche.facturer-commission', {
-            url: '/admin/note/facturation-picker?destinataire=' + encodeURIComponent(this.destinataireValue || 'assureur'),
+            url: '/admin/note/facturation-picker?type=' + encodeURIComponent(this.typeValue || 'debit') + '&destinataire=' + encodeURIComponent(this.destinataireValue || 'assureur'),
             selection: suivant.ids.map((id) => ({ id })),
         });
         this.close();
@@ -180,6 +182,7 @@ export default class extends PickerBase {
                 body: JSON.stringify({
                     lignes,
                     destinataire: this.hasDestinataireTarget ? this.destinataireTarget.value : 'assureur',
+                    type: this.typeValue || 'debit',
                     objet: this.hasObjetTarget ? this.objetTarget.value : null,
                     description: this.hasDescriptionTarget ? this.descriptionTarget.value : null,
                     comptes: this.compteTargets.filter((c) => c.checked).map((c) => parseInt(c.value, 10)),

@@ -109,6 +109,43 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
                     "url"   => "/admin/note/facturation-picker",
                     "droit" => ["entite" => "Note", "niveau" => Invite::ACCESS_ECRITURE], // garde de l'endpoint
                 ],
+                // RÉGULARISATION — échéance sans objet après annulation / résiliation de la
+                // police (« à régulariser »). Deux issues, chacune visible dans le seul état
+                // où elle a un sens (condition sur regularisationEtat) :
+                //  - une NOTE DE CRÉDIT, par la fenêtre de facturation en type crédit (elle
+                //    reprend ce qui a déjà été facturé) ; une fois émise, l'échéance se lit
+                //    « Régularisée » ;
+                //  - la DÉCLARER DUE quand même, si la prime reste acquise à l'assureur —
+                //    réversible par « Remettre à régulariser ».
+                [
+                    "label"        => "Régulariser par note de crédit",
+                    "icon"         => "note",
+                    "groupe"       => "Régularisation",
+                    "groupe_icone" => "action:calendar",
+                    "multi"        => true,
+                    "event"        => "ui:tranche.facturer-commission",
+                    "url"          => "/admin/note/facturation-picker?type=credit",
+                    "droit"        => ["entite" => "Note", "niveau" => Invite::ACCESS_ECRITURE],
+                    "condition"    => ["field" => "regularisationEtat", "value" => "a_regulariser"],
+                ],
+                [
+                    "label"     => "Déclarer due quand même",
+                    "icon"      => "action:completed",
+                    "groupe"    => "Régularisation",
+                    "event"     => "ui:tranche.regularisation-request",
+                    "url"       => "/admin/tranche/api/regularisation/%id%/maintenir",
+                    "droit"     => ["entite" => "Tranche", "niveau" => Invite::ACCESS_MODIFICATION],
+                    "condition" => ["field" => "regularisationEtat", "value" => "a_regulariser"],
+                ],
+                [
+                    "label"     => "Remettre à régulariser",
+                    "icon"      => "action:calendar",
+                    "groupe"    => "Régularisation",
+                    "event"     => "ui:tranche.regularisation-request",
+                    "url"       => "/admin/tranche/api/regularisation/%id%/remettre",
+                    "droit"     => ["entite" => "Tranche", "niveau" => Invite::ACCESS_MODIFICATION],
+                    "condition" => ["field" => "regularisationEtat", "value" => "maintenue"],
+                ],
             ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
