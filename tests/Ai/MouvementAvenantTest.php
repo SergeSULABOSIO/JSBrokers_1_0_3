@@ -35,6 +35,7 @@ use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Clock\Test\ClockSensitiveTrait;
 
 /**
  * LES QUATRE MOUVEMENTS D'UNE POLICE, EN ZÉRO QUESTION.
@@ -49,6 +50,15 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
  */
 class MouvementAvenantTest extends WebTestCase
 {
+    use ClockSensitiveTrait;
+
+    /**
+     * « Aujourd'hui » du builder, FIGÉ : les fixtures datent la police de base de 2026, et
+     * le builder juge désormais si une période est déjà échue. Sans horloge figée, ces
+     * tests changeraient de sens le jour où 2027 serait passé.
+     */
+    private const AUJOURDHUI = '2026-10-09 10:00:00';
+
     private const ENT   = 'PHPUnit-KetMouvement';
     private const OWNER = 'phpunit-ketmouvement-owner@test.local';
 
@@ -60,6 +70,7 @@ class MouvementAvenantTest extends WebTestCase
 
     protected function setUp(): void
     {
+        self::mockTime(self::AUJOURDHUI);
         $this->client   = static::createClient();
         $this->em       = static::getContainer()->get(EntityManagerInterface::class);
         $this->outil    = static::getContainer()->get(PreparerMouvementAvenantTool::class);
@@ -413,10 +424,11 @@ class MouvementAvenantTest extends WebTestCase
         $this->assertCount(1, $revenus);
         $this->assertSame(18.0, $revenus[0]['champs']['tauxExceptionel'], 'Un taux ne se proratise pas.');
 
-        // Le lien retour sur la police de base, sans toucher à son statut.
+        // Le lien retour sur la police de base, et son statut « Renouvelé » : resté « En
+        // cours », elle serait comptée parmi les polices actives à côté de son successeur.
         $lien = $this->op($d, 'Avenant', 'edit')['champs'];
         $this->assertSame('@mouvement', $lien['pisteDeRenouvellement']);
-        $this->assertArrayNotHasKey('renewalStatus', $lien, 'Une police renouvelée reste en vigueur jusqu’à son échéance.');
+        $this->assertSame((string) Avenant::RENEWAL_STATUS_RENEWED, $lien['renewalStatus']);
     }
 
     /** Prorogation : prime au prorata des jours, échéancier réduit à une tranche. */
@@ -1180,7 +1192,8 @@ class MouvementAvenantTest extends WebTestCase
         $this->assertResponseIsSuccessful();
         $html = $this->client->getResponse()->getContent();
         $this->assertStringContainsString('data-controller="mouvement-picker"', $html);
-        $this->assertStringContainsString('Aucune information ne vous est demandée', $html, 'Un renouvellement ne demande rien.');
+        $this->assertStringContainsString("Seule la prise d'effet est modifiable", $html, 'Un renouvellement ne demande rien d’autre.');
+        $this->assertStringContainsString('value="2027-01-01"', $html, 'La prise d’effet est pré-remplie au lendemain de l’échéance.');
         $this->assertStringContainsString('01/01/2027', $html, 'La période dérivée est affichée avant validation.');
 
         // Prorogation : la durée saisie pilote l'aperçu, prorata compris.
@@ -1216,12 +1229,9 @@ class MouvementAvenantTest extends WebTestCase
             $this->assertStringNotContainsString('non renseigné', $html, sprintf('%s : aucun intitulé négatif.', $mouvement));
             $this->assertStringNotContainsString('data-mouvement-picker-target="executer" disabled', $html, sprintf('%s : le bouton est actif d’emblée.', $mouvement));
 
-            // Un renouvellement n'a aucun champ (il ne demande rien) ; les trois
-            // autres exposent leur champ unique au pattern maison, à icône incrustée.
-            if ($mouvement === 'renouvellement') {
-                $this->assertStringNotContainsString('jsb-picker-field', $html, 'Un renouvellement ne demande rien : aucun champ.');
-                continue;
-            }
+            // Chaque mouvement expose son champ unique au pattern maison, à icône
+            // incrustée — pour le renouvellement, une prise d'effet facultative et
+            // pré-remplie (le bouton est actif d'emblée, vérifié ci-dessus).
             $this->assertStringContainsString('jsb-picker-field', $html, sprintf('%s : les champs suivent le pattern maison.', $mouvement));
             $this->assertStringContainsString('jsb-picker-field-icon', $html, sprintf('%s : icône incrustée dans le champ.', $mouvement));
         }
@@ -1302,7 +1312,275 @@ class MouvementAvenantTest extends WebTestCase
             '…et l’opportunité dérivée porte bien une résiliation.',
         );
 
-        // Le nouvel avenant de résiliation est actif, la police de base ne l'est plus.
-        $this->assertSame(1, $dashboard->getPoliciesActives($s['ent']), 'La police résiliée cède sa place à l’acte de résiliation.');
+        // Ni la police résiliée ni l'acte de résiliation ne sont des polices actives :
+        // l'acte ne couvre rien. Il naissait « En cours » et gonflait ce compte.
+        $this->assertSame(0, $dashboard->getPoliciesActives($s['ent']), 'Une police résiliée ne laisse aucune police active.');
+        $acte = $base->getPisteDeRenouvellement()->getCotations()->first()->getAvenants()->first();
+        $this->assertSame(Avenant::RENEWAL_STATUS_CANCELLED, $acte->getRenewalStatus(), 'L’acte de résiliation naît « Annulé / résilié ».');
+    }
+
+    // ───────────────────────── 6. Statut de la base, abandon, prise d'effet ─────────────────────────
+
+    /** Rend la police de base ÉCHUE depuis 18 mois (01/01/2025 → 31/03/2025) : la situation de #168. */
+    private function vieillir(array $s): void
+    {
+        $s['base']->setStartingAt(new DateTimeImmutable('2025-01-01'))->setEndingAt(new DateTimeImmutable('2025-03-31'));
+        $this->em->flush();
+    }
+
+    /** Exécute un mouvement par le moteur unique, comme l'écran et Ket. */
+    private function executer(array $s, MouvementAvenant $mouvement, array $args = []): void
+    {
+        $scope = $this->scope($s);
+        $d = $this->builder->construire($mouvement, $s['base'], $args, $scope);
+        $this->assertArrayHasKey('operations', $d, json_encode($d, JSON_UNESCAPED_UNICODE));
+        $refs = MutationReferences::live();
+        foreach (MutationPlan::fromArray($d['operations'])->operationsOrdonnees() as $op) {
+            $this->mutation->executer($op, $scope, $s['user'], $refs);
+        }
+        $this->em->flush();
+        $this->em->clear();
+    }
+
+    /** Le tableau de bord mémoïse ses avenants par requête : on lit un état frais. */
+    private function tableauDeBord(): DashboardDataProvider
+    {
+        $dashboard = static::getContainer()->get(DashboardDataProvider::class);
+        (new \ReflectionProperty($dashboard, 'cacheAvenantsActifs'))->setValue($dashboard, []);
+
+        return $dashboard;
+    }
+
+    /** Chaque mouvement écrit sur la police de base le statut de SON sort. */
+    public function testChaqueMouvementEcritSonStatutSurLaBase(): void
+    {
+        $s = $this->seed();
+        $attendus = [
+            [MouvementAvenant::Renouvellement, [], Avenant::RENEWAL_STATUS_RENEWED],
+            [MouvementAvenant::Prorogation, ['dureeJours' => 20], Avenant::RENEWAL_STATUS_EXTENDED],
+            [MouvementAvenant::Annulation, ['dateEffet' => '2026-06-15'], Avenant::RENEWAL_STATUS_CANCELLED],
+            [MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15'], Avenant::RENEWAL_STATUS_CANCELLED],
+        ];
+
+        foreach ($attendus as [$mouvement, $args, $statut]) {
+            $d = $this->builder->construire($mouvement, $s['base'], $args, $this->scope($s));
+            $this->assertSame((string) $statut, $this->op($d, 'Avenant', 'edit')['champs']['renewalStatus'], $mouvement->value);
+            $this->assertSame($statut, $mouvement->statutDeLaBase());
+        }
+    }
+
+    /**
+     * POINT 1 — la base renouvelée quitte le DÉNOMBREMENT des polices actives, mais GARDE
+     * sa production dans les agrégats financiers : sa prime a été facturée, le successeur
+     * couvre une autre période. Avant, base et successeur étaient comptés deux fois parmi
+     * les polices actives.
+     */
+    public function testUnRenouvellementSortLaBaseDesPolicesActivesSansEffacerSaProduction(): void
+    {
+        $s = $this->seed();
+        $primesAvant = $this->tableauDeBord()->getPrimesTotales($s['ent']);
+        $commissionsAvant = $this->tableauDeBord()->getCommissionsTotales($s['ent']);
+        $this->assertGreaterThan(0.0, $primesAvant);
+        $this->assertSame(1, $this->tableauDeBord()->getPoliciesActives($s['ent']));
+
+        $this->executer($s, MouvementAvenant::Renouvellement);
+
+        $base = $this->em->getRepository(Avenant::class)->find($s['base']->getId());
+        $this->assertSame(Avenant::RENEWAL_STATUS_RENEWED, $base->getRenewalStatus());
+        $this->assertSame(
+            Avenant::RENEWAL_STATUS_RUNNING,
+            $base->getPisteDeRenouvellement()->getStatutBaseAvantMouvement(),
+            'L’opportunité dérivée mémorise le statut d’avant le mouvement.',
+        );
+
+        $dashboard = $this->tableauDeBord();
+        $this->assertSame(1, $dashboard->getPoliciesActives($s['ent']), 'Une seule police active : le successeur.');
+        $this->assertEqualsWithDelta(2 * $primesAvant, $dashboard->getPrimesTotales($s['ent']), 0.01, 'La prime de la base reste acquise, celle du successeur s’y ajoute.');
+        $this->assertEqualsWithDelta(2 * $commissionsAvant, $dashboard->getCommissionsTotales($s['ent']), 0.01, 'Idem pour la commission.');
+    }
+
+    /**
+     * POINTS 2 ET 3 — abandonner le mouvement depuis l'écran (« Supprimer la piste
+     * dérivée ») rend à la base EXACTEMENT son statut d'avant — ici « Prorogé », pas un
+     * « En cours » supposé — et emporte l'avenant successeur : aucun double comptage ne
+     * peut revenir.
+     */
+    public function testAbandonDepuisLEcranRestitueLeStatutExactEtEmporteLeSuccesseur(): void
+    {
+        $s = $this->seed();
+        $baseId = $s['base']->getId();
+        $s['base']->setRenewalStatus(Avenant::RENEWAL_STATUS_EXTENDED);
+        $this->em->flush();
+        $primesAvant = $this->tableauDeBord()->getPrimesTotales($s['ent']);
+
+        $this->executer($s, MouvementAvenant::Renouvellement);
+        $base = $this->em->getRepository(Avenant::class)->find($baseId);
+        $this->assertSame(Avenant::RENEWAL_STATUS_RENEWED, $base->getRenewalStatus());
+        $deriveeId = $base->getPisteDeRenouvellement()->getId();
+        $successeurId = $base->getPisteDeRenouvellement()->getCotations()->first()->getAvenants()->first()->getId();
+        $this->em->clear();
+
+        $this->client->request('DELETE', '/admin/avenant/api/delete-piste-derivee/' . $baseId);
+        $this->assertResponseIsSuccessful();
+        $this->em->clear();
+
+        $base = $this->em->getRepository(Avenant::class)->find($baseId);
+        $this->assertNotNull($base, 'La police de base survit.');
+        $this->assertSame(Avenant::RENEWAL_STATUS_EXTENDED, $base->getRenewalStatus(), 'Elle retrouve EXACTEMENT son statut d’avant.');
+        $this->assertNull($this->em->getRepository(Piste::class)->find($deriveeId), 'L’opportunité dérivée est supprimée.');
+        $this->assertNull($this->em->getRepository(Avenant::class)->find($successeurId), 'Le successeur part avec elle (cascade).');
+        $this->assertEqualsWithDelta($primesAvant, $this->tableauDeBord()->getPrimesTotales($s['ent']), 0.01, 'Plus aucune trace du successeur dans les primes.');
+    }
+
+    /** Un statut changé à la main après le mouvement est une décision : l'abandon n'y touche pas. */
+    public function testAbandonNEcrasePasUnStatutPoseALaMain(): void
+    {
+        $s = $this->seed();
+        $baseId = $s['base']->getId();
+        $this->executer($s, MouvementAvenant::Renouvellement);
+
+        $base = $this->em->getRepository(Avenant::class)->find($baseId);
+        $base->setRenewalStatus(Avenant::RENEWAL_STATUS_LOST);
+        $this->em->flush();
+        $this->em->clear();
+
+        $this->client->request('DELETE', '/admin/avenant/api/delete-piste-derivee/' . $baseId);
+        $this->assertResponseIsSuccessful();
+        $this->em->clear();
+
+        $this->assertSame(Avenant::RENEWAL_STATUS_LOST, $this->em->getRepository(Avenant::class)->find($baseId)->getRenewalStatus());
+    }
+
+    /** POINT 4 — une prise d'effet AVANT le lendemain de l'échéance chevaucherait la base : refusée. */
+    public function testUnePriseDEffetQuiChevaucheLaBaseEstRefusee(): void
+    {
+        $s = $this->seed();
+
+        $d = $this->builder->construire(MouvementAvenant::Renouvellement, $s['base'], ['dateEffet' => '2026-12-15'], $this->scope($s));
+        $this->assertArrayNotHasKey('operations', $d);
+        $this->assertStringContainsString('chevaucheraient du 15/12/2026 au 31/12/2026', $d['bloquant']);
+
+        $this->client->request(
+            'POST',
+            '/admin/avenant/api/mouvement/renouvellement/' . $s['base']->getId(),
+            [], [], ['CONTENT_TYPE' => 'application/json'], json_encode(['dateEffet' => '2026-12-15']),
+        );
+        $this->assertResponseStatusCodeSame(422);
+        $this->em->clear();
+        $this->assertNull($this->em->getRepository(Avenant::class)->find($s['base']->getId())->getPisteDeRenouvellement(), 'Rien n’est écrit.');
+    }
+
+    /** POINT 4 — une prise d'effet APRÈS le lendemain est acceptée, mais nommée : interruption de couverture. */
+    public function testUnePriseDEffetTardiveAnnonceUneInterruptionDeCouverture(): void
+    {
+        $s = $this->seed();
+
+        $d = $this->builder->construire(MouvementAvenant::Renouvellement, $s['base'], ['dateEffet' => '2027-02-01'], $this->scope($s));
+        $avenant = $this->op($d, 'Avenant')['champs'];
+        $this->assertStringStartsWith('2027-02-01', $avenant['startingAt']);
+        $this->assertStringStartsWith('2028-01-31', $avenant['endingAt'], 'Même durée que la base (365 jours).');
+        $this->assertCount(1, $d['ecarts']);
+        $this->assertStringContainsString('Interruption de couverture de 31 jours', $d['ecarts'][0]);
+        $this->assertStringContainsString('du 01/01/2027 au 31/01/2027', $d['ecarts'][0]);
+    }
+
+    /** La prise d'effet pré-remplie (le lendemain de l'échéance) est la continuité : aucun écart. */
+    public function testLaPriseDEffetAuLendemainNEstPasUnEcart(): void
+    {
+        $s = $this->seed();
+
+        $d = $this->builder->construire(MouvementAvenant::Renouvellement, $s['base'], ['dateEffet' => '2027-01-01'], $this->scope($s));
+        $this->assertSame([], $d['ecarts']);
+        $this->assertSame('2027-01-01', $this->builder->dateEffetParDefaut($s['base'])->format('Y-m-d'));
+    }
+
+    /** POINT 5 — renouvellement ET prorogation annoncent une période déjà échue avant validation. */
+    public function testUnePeriodeDejaEchueEstAnnonceeAvantValidation(): void
+    {
+        $s = $this->seed();
+        $this->vieillir($s);
+        $scope = $this->scope($s);
+
+        $renouvellement = $this->builder->construire(MouvementAvenant::Renouvellement, $s['base'], ['dateEffet' => '2025-04-01'], $scope);
+        $this->assertStringContainsString('(01/04/2025 → 29/06/2025) est déjà échue', implode(' ', $renouvellement['avertissements']));
+
+        $prorogation = $this->builder->construire(MouvementAvenant::Prorogation, $s['base'], ['dureeJours' => 30], $scope);
+        $this->assertStringContainsString('(01/04/2025 → 30/04/2025) est déjà échue', implode(' ', $prorogation['avertissements']));
+
+        // Une reprise à une date récente n'est plus échue : plus d'avertissement, mais
+        // l'interruption de couverture est nommée.
+        $reprise = $this->builder->construire(MouvementAvenant::Renouvellement, $s['base'], ['dateEffet' => '2026-10-09'], $scope);
+        $this->assertStringNotContainsString('déjà échue', implode(' ', $reprise['avertissements']));
+        $this->assertStringContainsString('Interruption de couverture', implode(' ', $reprise['ecarts']));
+
+        // Le picker de l'écran pré-remplit le lendemain de l'échéance et l'avertissement est VISIBLE.
+        $this->client->request('GET', '/admin/avenant/api/mouvement-picker/renouvellement/' . $s['base']->getId());
+        $html = $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('value="2025-04-01"', $html);
+        $this->assertStringContainsString('est déjà échue', $html);
+    }
+
+    /**
+     * POINT 6 — Ket ne crée pas un avenant né expiré : quand la période par défaut serait
+     * déjà échue, la date d'effet devient la seule question, avertissement à l'appui.
+     */
+    public function testKetDemandeLaDatePlutotQueDeCreerUnAvenantNeExpire(): void
+    {
+        $s = $this->seed();
+        $this->vieillir($s);
+
+        $this->assertFalse(MouvementAvenant::Renouvellement->exigeDate());
+        $this->assertTrue(MouvementAvenant::Renouvellement->exigeDate(periodeParDefautEchue: true));
+
+        $resultat = $this->outil->execute(['mouvement' => 'renouvellement', 'avenantId' => $s['base']->getId()], $this->scope($s));
+        $this->assertFalse($resultat->data['pret'] ?? true, 'Aucun plan : la date manque.');
+        $this->assertNull($resultat->uiAction, 'Aucun bouton de validation.');
+        $this->assertSame('dateEffet', $resultat->data['aDemander'][0]['champ']);
+        $this->assertSame('2025-04-01', $resultat->data['aDemander'][0]['dateSuggeree'], 'Le lendemain reste proposé, pour une régularisation.');
+        $this->assertStringContainsString('déjà échue', $resultat->data['aDemander'][0]['question']);
+        $this->assertStringContainsString('déjà échue', implode(' ', $resultat->data['avertissements']), 'L’avertissement est relayé.');
+        $this->assertStringContainsString('avertissements', $resultat->data['note']);
+
+        // Avec une date d'effet, le plan se prépare.
+        $avecDate = $this->outil->execute(['mouvement' => 'renouvellement', 'avenantId' => $s['base']->getId(), 'dateDebut' => '2026-10-09'], $this->scope($s));
+        $this->assertTrue($avecDate->data['pret'] ?? false, json_encode($avecDate->data, JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * L'ACTE d'une résiliation ne couvre rien : il n'entre jamais dans la vigie des
+     * échéances, son badge est neutre, et aucun mouvement ne peut lui être appliqué.
+     */
+    public function testLActeDeResiliationNAttendAucuneSuite(): void
+    {
+        $s = $this->seed();
+        $this->executer($s, MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15']);
+
+        $base = $this->em->getRepository(Avenant::class)->find($s['base']->getId());
+        $acte = $base->getPisteDeRenouvellement()->getCotations()->first()->getAvenants()->first();
+
+        $suite = static::getContainer()->get(\App\Services\AvenantRenouvellementResolver::class)->resoudre($acte);
+        $this->assertSame(Avenant::RENEWAL_STATUS_CANCELLED, $suite['code']);
+        $this->assertTrue($suite['acte']);
+        $this->assertSame('Acte de résiliation', $suite['statut']);
+
+        $echeances = array_map(static fn (Avenant $a) => $a->getId(), $this->tableauDeBord()->getAllRenouvellements($s['ent'], 400));
+        $this->assertNotContains($acte->getId(), $echeances, 'Un acte échu n’est pas une police à renouveler.');
+
+        $this->client->request('GET', '/admin/avenant/api/mouvement-picker/renouvellement/' . $acte->getId());
+        $this->assertResponseStatusCodeSame(409);
+
+        $ket = $this->outil->execute(['mouvement' => 'renouvellement', 'avenantId' => $acte->getId()], $this->scope($s));
+        $this->assertFalse($ket->data['pret'] ?? true);
+        $this->assertStringContainsString('acte d’une résiliation', $ket->data['bloquant']);
+    }
+
+    /** POINT 8 — le nom de l'opportunité dérivée ne porte qu'UN préfixe, celui du mouvement. */
+    public function testLeNomDeLOpportuniteNePorteQuUnPrefixe(): void
+    {
+        $s = $this->seed();
+        $s['piste']->setNom('Prorogation — Renouvellement — Incendie ACME 2026');
+
+        $d = $this->builder->construire(MouvementAvenant::Renouvellement, $s['base'], [], $this->scope($s));
+        $this->assertSame('Renouvellement — Incendie ACME 2026', $this->op($d, 'Piste')['champs']['nom']);
     }
 }

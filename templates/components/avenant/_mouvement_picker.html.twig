@@ -59,7 +59,7 @@
                         Indiquez {{ mouvement == 'prorogation' ? 'la durée de prolongation' : 'la date de prise d’effet' }}&nbsp;:
                         c'est la <strong>seule</strong> information requise. Tout le reste est repris de la police en cours.
                     {% else %}
-                        <strong>Aucune information ne vous est demandée</strong>&nbsp;: période, prime, composition,
+                        <strong>Seule la prise d'effet est modifiable</strong>&nbsp;: durée, prime, composition,
                         échéancier, rémunération, partenaires et conditions de partage sont repris de la police en cours.
                     {% endif %}
                     {% if apercu.source.periodeBase is defined %}
@@ -115,6 +115,32 @@
                                    aria-describedby="mvt-date-aide">
                         </div>
                     {% endif %}
+                </fieldset>
+            {% elseif mouvement == 'renouvellement' %}
+                {# PRISE D'EFFET DU RENOUVELLEMENT — facultative, pré-remplie au lendemain de
+                   l'échéance (règle du builder, MouvementAvenantBuilder::dateEffetParDefaut).
+                   Elle n'est modifiable que pour une raison : une police échue depuis
+                   longtemps, reprise au lendemain de son échéance, donnerait un avenant né
+                   expiré. L'aperçu le dit ; une date antérieure (chevauchement) est refusée,
+                   une date postérieure est annoncée comme une interruption de couverture. #}
+                <fieldset class="border-0 p-0 m-0 mb-3">
+                    <legend class="fs-6 fw-semibold mb-1" style="color:#0d2440;">Prise d’effet</legend>
+                    <label for="mvt-date" class="form-label fw-semibold mb-0" style="color:#0d2440;">
+                        Date d'effet du renouvellement
+                    </label>
+                    <span class="text-muted small d-block mb-1" id="mvt-date-aide">
+                        Par défaut, le lendemain de l'échéance (continuité de couverture). Modifiez-la si la police
+                        a été reprise après une interruption.
+                    </span>
+                    <div class="jsb-picker-field" style="max-width:15rem;">
+                        <span class="jsb-picker-field-icon" aria-hidden="true">
+                            {{ ux_icon(resolve_icon_name('action:calendar'), {width: '16px', height: '16px'}) }}
+                        </span>
+                        <input type="date" id="mvt-date" class="form-control"
+                               value="{{ dateDefaut }}"
+                               data-mouvement-picker-target="date"
+                               aria-describedby="mvt-date-aide">
+                    </div>
                 </fieldset>
             {% endif %}
 

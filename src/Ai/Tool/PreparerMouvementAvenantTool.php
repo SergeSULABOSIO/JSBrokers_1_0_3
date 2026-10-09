@@ -62,7 +62,9 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
             . 'Désigne la police par avenantId, ou par "police" (la référence dictée par l\'utilisateur). '
             . 'RENOUVELLEMENT : ne demande RIEN à l\'utilisateur — période, prime, composition, échéancier, '
             . 'commission, assureur, référence, partenaires et conditions de partage sont tous dérivés de la '
-            . 'police de base par le serveur. PROROGATION / ANNULATION / RÉSILIATION : fournis la durée '
+            . 'police de base par le serveur — SAUF pour une police expirée depuis si longtemps que la période '
+            . 'par défaut serait déjà échue : l\'outil renvoie alors « aDemander » (la date d\'effet), à relayer '
+            . 'avec son avertissement. PROROGATION / ANNULATION / RÉSILIATION : fournis la durée '
             . '(dureeJours) ou la date d\'effet (dateEffet) — c\'est la seule chose à demander, et seulement si '
             . 'l\'utilisateur ne l\'a pas déjà dite. N\'appelle NI parcours_saisie NI inventaire_champs pour un '
             . 'mouvement. Si l\'utilisateur annonce un écart (« la prime passe à 12 000 », « à effet du 1er août », '
@@ -112,7 +114,8 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
                 ],
                 'dateEffet' => [
                     'type' => 'string',
-                    'description' => 'ANNULATION / RÉSILIATION : date de prise d\'effet, au format AAAA-MM-JJ.',
+                    'description' => 'ANNULATION / RÉSILIATION : date de prise d\'effet, au format AAAA-MM-JJ. '
+                        . 'RENOUVELLEMENT : seulement en réponse à « aDemander » (police expirée de longue date).',
                 ],
                 'dateDebut' => [
                     'type' => 'string',
@@ -251,6 +254,21 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
             ]);
         }
 
+        // L'ACTE d'une annulation / résiliation ne couvre rien : il n'a pas de suite à
+        // recevoir. Même garde que la boîte de mouvement de l'écran.
+        if (AvenantSuccessionScope::estActeDeFin($base)) {
+            return AiToolResult::ok([
+                'pret'     => false,
+                'bloquant' => sprintf(
+                    'L’avenant « %s » est l’acte d’une %s : il ne couvre rien et n’a pas de suite à recevoir. '
+                    . 'Rien n’a été enregistré.',
+                    (string) $base->getReferencePolice(),
+                    mb_strtolower(MouvementAvenant::depuisTypeAvenant($base->getCotation()?->getPiste()?->getTypeAvenant())?->libelle() ?? 'annulation'),
+                ),
+                'note'     => 'Explique-le en une phrase. Ne présente aucun plan.',
+            ]);
+        }
+
         // Idempotence : une police ne porte qu'un mouvement à la fois. Sans cette
         // garde, redemander « renouvelle-la » créerait un second jeu d'écritures.
         if ($base->getPisteDeRenouvellement() !== null) {
@@ -273,9 +291,14 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
         if (isset($decalque['aDemander'])) {
             return AiToolResult::ok([
                 'pret'      => false,
-                'aDemander' => $decalque['aDemander'],
-                'source'    => $decalque['source'] ?? null,
+                'aDemander'      => $decalque['aDemander'],
+                'source'         => $decalque['source'] ?? null,
+                // Police échue depuis longtemps : la période par défaut serait déjà échue.
+                // L'avertissement accompagne la question, pour que Ket dise POURQUOI elle
+                // demande une date sur un renouvellement qui n'en demande d'habitude aucune.
+                'avertissements' => $decalque['avertissements'] ?? [],
                 'note'      => 'Il manque la SEULE information que tu aies le droit de demander pour ce mouvement. '
+                    . 'Si « avertissements » n’est pas vide, RELAIE-le en une phrase avant ta question. '
                     . 'Pose la question telle quelle, en UNE ligne, sans rien demander d’autre (ni période, ni '
                     . 'prime, ni assureur : tout le reste est dérivé de la police). NOMME au passage la police '
                     . 'concernée (« source » : client, référence, période) pour que l’utilisateur voie que tu l’as '

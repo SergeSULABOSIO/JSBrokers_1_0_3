@@ -2,6 +2,10 @@
 
 namespace App\Service\Workspace;
 
+use App\Ai\Mouvement\MouvementAvenant;
+use App\Entity\Avenant;
+use App\Entity\Piste;
+
 /**
  * LES LIENS QU'UNE SUPPRESSION NE DOIT JAMAIS REMONTER.
  *
@@ -70,6 +74,10 @@ final class LiensProteges
                 continue;
             }
 
+            if ($entity instanceof Piste && $cible instanceof Avenant) {
+                self::restituerStatutDeLaBase($entity, $cible);
+            }
+
             // Sens retour d'abord : c'est lui qui porte la clé étrangère côté cible.
             if ($reciproque !== null) {
                 $setterCible = 'set' . ucfirst($reciproque);
@@ -86,5 +94,27 @@ final class LiensProteges
         }
 
         return $coupes;
+    }
+
+    /**
+     * ABANDONNER UN MOUVEMENT REND À LA POLICE LE STATUT QU'ELLE PORTAIT AVANT LUI.
+     *
+     * Le mouvement avait écrit sur la base « Renouvelé », « Prorogé » ou « Annulé /
+     * résilié ». L'opportunité partie, son avenant successeur part avec elle (cascade
+     * Piste → Cotation → Avenant) : laisser la base sous ce statut la ferait disparaître
+     * des polices actives et des agrégats du tableau de bord sans rien pour la remplacer.
+     *
+     * On restaure le statut MÉMORISÉ (Piste::$statutBaseAvantMouvement), pas un « En
+     * cours » supposé, et seulement si la base porte encore celui que CE mouvement a
+     * écrit : un statut changé à la main depuis est une décision humaine, on n'y touche pas.
+     */
+    private static function restituerStatutDeLaBase(Piste $piste, Avenant $base): void
+    {
+        $avant = $piste->getStatutBaseAvantMouvement();
+        $ecrit = MouvementAvenant::depuisTypeAvenant($piste->getTypeAvenant())?->statutDeLaBase();
+
+        if ($avant !== null && $ecrit !== null && $base->getRenewalStatus() === $ecrit) {
+            $base->setRenewalStatus($avant);
+        }
     }
 }

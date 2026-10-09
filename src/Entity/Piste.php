@@ -125,6 +125,24 @@ class Piste implements OwnerAwareInterface
     #[ORM\OneToOne(cascade: ['persist', 'remove'])]
     private ?Avenant $avenantDeBase = null;
 
+    /**
+     * STATUT DE RENOUVELLEMENT QUE PORTAIT LA POLICE DE BASE AU MOMENT OÙ CETTE
+     * OPPORTUNITÉ DÉRIVÉE L'A RATTACHÉE — avant que le mouvement ne le change.
+     *
+     * Un mouvement écrit sur la base « Renouvelé », « Prorogé » ou « Annulé / résilié »
+     * (MouvementAvenant::statutDeLaBase). L'abandonner (supprimer cette opportunité)
+     * doit rendre à la base EXACTEMENT ce qu'elle portait, pas un « En cours » supposé :
+     * une police prorogée puis renouvelée, renouvellement abandonné, redevient prorogée.
+     * La restitution vit dans LiensProteges::dissocier(), point unique des deux chemins
+     * de suppression (écran et assistante).
+     *
+     * Posé par setAvenantDeBase(), qui est appelé AVANT l'écriture du statut par les deux
+     * chemins de création (plan de mouvement : l'opération Piste précède le lien ;
+     * formulaire de piste dérivée : aucun statut n'y est écrit).
+     */
+    #[ORM\Column(type: 'smallint', nullable: true)]
+    private ?int $statutBaseAvantMouvement = null;
+
     // Le renouvelable est le cas NORMAL d'une police : sans défaut, ce champ restait
     // vide à toute création et la condition de renouvellement d'une affaire était
     // indéterminée. `typeAvenant`, lui, n'a volontairement pas de défaut — c'est un
@@ -488,6 +506,11 @@ class Piste implements OwnerAwareInterface
         return $this;
     }
 
+    public function getStatutBaseAvantMouvement(): ?int
+    {
+        return $this->statutBaseAvantMouvement;
+    }
+
     public function getAvenantDeBase(): ?Avenant
     {
         return $this->avenantDeBase;
@@ -495,6 +518,12 @@ class Piste implements OwnerAwareInterface
 
     public function setAvenantDeBase(?Avenant $avenantDeBase): static
     {
+        // Seul un CHANGEMENT de police mémorise son statut : un formulaire qui réécrit la
+        // même police après coup ne doit pas remplacer le statut d'avant le mouvement par
+        // celui que le mouvement a lui-même posé.
+        if ($avenantDeBase !== $this->avenantDeBase) {
+            $this->statutBaseAvantMouvement = $avenantDeBase?->getRenewalStatus();
+        }
         $this->avenantDeBase = $avenantDeBase;
 
         return $this;

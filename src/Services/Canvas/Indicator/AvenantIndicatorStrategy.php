@@ -315,6 +315,11 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
      */
     private function badgeSortScelle(array $renouvellement): array
     {
+        // L'acte d'une annulation / résiliation n'a pas de successeur : il EST la fin.
+        if ($renouvellement['acte'] ?? false) {
+            return ['libelle' => (string) $renouvellement['statut'], 'niveau' => 'faible'];
+        }
+
         $successeur = $renouvellement['avenantsIssus'][0]['id'] ?? null;
         $suffixe    = $successeur !== null ? sprintf(' · avenant #%d', $successeur) : '';
 

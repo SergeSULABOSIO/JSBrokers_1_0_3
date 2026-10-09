@@ -29,6 +29,29 @@ class DashboardDataProvider
 
     private array $cacheAvenantsActifs = [];
 
+    /**
+     * Statuts dont les primes et commissions entrent dans les agrégats FINANCIERS du
+     * tableau de bord (primes, commissions, taxes, rétrocommissions, revenus perçus,
+     * classements).
+     *
+     * UNE POLICE RENOUVELÉE OU PROROGÉE GARDE SA PRODUCTION. Les mouvements écrivent
+     * désormais « Renouvelé » / « Prorogé » sur la police de base : filtrer ici sur le
+     * seul « En cours » aurait effacé sa prime et sa commission — pourtant facturées,
+     * souvent encaissées — à l'instant même du renouvellement. Pire : les revenus perçus
+     * soustraient du dû TOUT l'encaissé, la base aurait donc laissé ses règlements sans
+     * la créance qu'ils soldent. Le successeur couvre une AUTRE période : les deux
+     * productions s'additionnent, ce n'est pas un double comptage.
+     *
+     * Le DÉNOMBREMENT des polices actives, lui, reste sur « En cours » seul
+     * (getPoliciesActives) : là, base et successeur seraient bien la même police
+     * comptée deux fois.
+     */
+    private const STATUTS_EN_PRODUCTION = [
+        Avenant::RENEWAL_STATUS_RUNNING,
+        Avenant::RENEWAL_STATUS_RENEWED,
+        Avenant::RENEWAL_STATUS_EXTENDED,
+    ];
+
     private function getAvenantsActifsHydrates(Entreprise $entreprise): array
     {
         $key = $entreprise->getId();
@@ -45,10 +68,10 @@ class DashboardDataProvider
              LEFT JOIN p.client cl
              LEFT JOIN p.risque r
              LEFT JOIN p.partenaire par
-             WHERE a.entreprise = :e AND a.renewalStatus = :status'
+             WHERE a.entreprise = :e AND a.renewalStatus IN (:statuts)'
         )
         ->setParameter('e', $entreprise)
-        ->setParameter('status', Avenant::RENEWAL_STATUS_RUNNING)
+        ->setParameter('statuts', self::STATUTS_EN_PRODUCTION)
         ->getResult();
 
         foreach ($avenants as $avenant) {
