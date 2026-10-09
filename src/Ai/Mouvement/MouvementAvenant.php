@@ -80,10 +80,9 @@ enum MouvementAvenant: string
 
     /**
      * Le mouvement met-il fin à la police de base ? Si oui, le plan pose
-     * renewalStatus = CANCELLED dessus, sans quoi elle resterait comptée parmi
-     * les « polices actives » et dans les primes totales du tableau de bord
-     * (DashboardDataProvider::getPoliciesActives / getAvenantsActifsHydrates,
-     * qui filtrent sur cette colonne stockée).
+     * renewalStatus = CANCELLED dessus, sans quoi elle resterait comptée dans le
+     * portefeuille en vigueur jusqu'à sa date de fin (DashboardDataProvider : polices
+     * en vigueur et classements excluent les polices annulées / résiliées).
      */
     public function annuleLaPolice(): bool
     {
@@ -92,9 +91,9 @@ enum MouvementAvenant: string
 
     /**
      * Statut STOCKÉ (Avenant::renewalStatus) que le mouvement pose sur la police de
-     * base. Sans lui, une police renouvelée restait « En cours » à côté de son
-     * successeur : les deux étaient comptées parmi les polices actives et dans les
-     * primes totales du tableau de bord (DashboardDataProvider filtre sur RUNNING).
+     * base : ce que la police est DEVENUE, lisible sur sa fiche et dans le relevé de
+     * compte. Le tableau de bord ne le lit que pour écarter les polices annulées du
+     * portefeuille en vigueur ; ses totaux de production se bornent par date d'effet.
      */
     public function statutDeLaBase(): int
     {

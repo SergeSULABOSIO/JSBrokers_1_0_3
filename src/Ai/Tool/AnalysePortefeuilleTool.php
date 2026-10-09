@@ -18,7 +18,7 @@ use App\Service\Workspace\WorkspaceAccessResolver;
  * tableau de bord.
  *
  * COÛT : les tops hydratent les valeurs calculées de TOUS les avenants actifs
- * (DashboardDataProvider::getAvenantsActifsHydrates, mémoïsé par requête HTTP
+ * (DashboardDataProvider::getAvenantsEnVigueurHydrates, mémoïsé par requête HTTP
  * — les rounds de tool-calling successifs réutilisent le cache). Une analyse
  * par appel.
  *

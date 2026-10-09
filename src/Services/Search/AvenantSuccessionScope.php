@@ -48,13 +48,12 @@ use Doctrine\ORM\EntityManagerInterface;
  * porte bornes() pour le SQL et classifier() pour le badge. Un test confronte les
  * deux faces sur le même jeu de données : c'est le garde-fou contre la divergence.
  *
- * CE QUI N'EST PAS CONCERNÉ. Les agrégats du tableau de bord lisent la colonne
- * stockée renewalStatus, que les mouvements tiennent à jour sur la police de base
- * (MouvementAvenant::statutDeLaBase) : le dénombrement des polices actives n'y garde
- * que « En cours » — une police reprise y serait comptée EN DOUBLE avec son
- * successeur —, les totaux de primes et de commissions gardent aussi « Renouvelé » et
- * « Prorogé » — sa production d'exercice reste acquise. Une police reprise est
- * vivante au sens de la COUVERTURE, jamais au sens du dénombrement.
+ * CE QUI N'EST PAS CONCERNÉ. Les agrégats du tableau de bord ne lisent pas cette
+ * règle : le portefeuille en vigueur se borne par la PÉRIODE (couvre aujourd'hui, ni
+ * annulée ni résiliée) — une police reprise en sort d'elle-même, sa période étant
+ * close —, la production d'un exercice par la DATE D'EFFET, quel que soit le sort.
+ * Une police reprise est vivante au sens de la COUVERTURE, jamais au sens du
+ * dénombrement.
  */
 final class AvenantSuccessionScope
 {
