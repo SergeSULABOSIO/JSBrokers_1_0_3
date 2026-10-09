@@ -2094,6 +2094,128 @@ class MouvementAvenantTest extends WebTestCase
         $this->assertArrayNotHasKey('aRegulariser', $lignes['T1'], 'T1 reste due.');
     }
 
+    // ───────────────────────── 10. Régulariser une échéance, et le rattrapage ─────────────────────────
+
+    /** Les trois actions existent, chacune conditionnée à l'état où elle a un sens. */
+    public function testLesActionsDeRegularisationSontOffertes(): void
+    {
+        $s = $this->seed();
+        $canvas = static::getContainer()->get(\App\Services\CanvasBuilder::class)->getEntityFormCanvas($this->tranche($s, 'T2'), $s['ent']->getId());
+        $actions = [];
+        foreach ($canvas['parametres']['attribute_actions'] ?? [] as $action) {
+            $actions[$action['label']] = $action;
+        }
+
+        $this->assertSame(['field' => 'regularisationEtat', 'value' => 'a_regulariser'], $actions['Régulariser par note de crédit']['condition']);
+        $this->assertStringContainsString('type=credit', $actions['Régulariser par note de crédit']['url']);
+        $this->assertSame(['field' => 'regularisationEtat', 'value' => 'a_regulariser'], $actions['Déclarer due quand même']['condition']);
+        $this->assertSame(['field' => 'regularisationEtat', 'value' => 'maintenue'], $actions['Remettre à régulariser']['condition']);
+    }
+
+    /** « Déclarer due » remet l'échéance dans le recouvrement ; « Remettre » l'en ressort ; un geste incohérent est refusé. */
+    public function testDeclarerDuePuisRemettreARegulariser(): void
+    {
+        $s = $this->seed();
+        $this->executer($s, MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15']);
+        $id = $this->tranche($s, 'T2')->getId();
+        $service = static::getContainer()->get(\App\Services\Tranche\TranchePaiementService::class);
+        $ent = $this->em->getRepository(Entreprise::class)->find($s['ent']->getId());
+        $impayees = fn () => array_map(static fn (Tranche $t) => $t->getNom(), $service->lister($ent, ['prime' => 'impayee'], null, null, 1, 50)['items']);
+
+        $this->client->request('POST', '/admin/tranche/api/regularisation/' . $id . '/maintenir');
+        $this->assertResponseIsSuccessful();
+        $this->em->clear();
+        $this->assertSame(Tranche::REGULARISATION_MAINTENUE, $this->tranche($s, 'T2')->getRegularisation());
+        $this->assertContains('T2', $impayees(), 'Déclarée due : elle revient dans le recouvrement.');
+
+        $this->client->request('POST', '/admin/tranche/api/regularisation/' . $id . '/maintenir');
+        $this->assertResponseStatusCodeSame(409, 'Déjà déclarée due.');
+
+        $this->client->request('POST', '/admin/tranche/api/regularisation/' . $id . '/remettre');
+        $this->assertResponseIsSuccessful();
+        $this->em->clear();
+        $this->assertSame(Tranche::REGULARISATION_A_REGULARISER, $this->tranche($s, 'T2')->getRegularisation());
+        $this->assertNotContains('T2', $impayees());
+    }
+
+    /**
+     * « Régulariser par note de crédit » : la fenêtre de facturation, en type crédit, reprend
+     * la commission déjà facturée ; une fois l'avoir émis, l'échéance se lit « Régularisée ».
+     */
+    public function testUneNoteDeCreditRegulariseLEcheance(): void
+    {
+        $s = $this->seed();
+        $t2 = $this->tranche($s, 'T2');
+        $revenu = $s['cotation']->getRevenus()->first();
+        $note = (new \App\Entity\Note())->setNom('Commission T2')->setType(\App\Entity\Note::TYPE_NOTE_DE_DEBIT)
+            ->setAddressedTo(\App\Entity\Note::TO_ASSUREUR)->setReference('N-T2-7')->setValidated(true)->setSignature('');
+        $note->setEntreprise($s['ent']);
+        $note->setAssureur($s['cotation']->getAssureur());
+        $this->em->persist($note);
+        $article = (new \App\Entity\Article())->setQuantite(1.0);
+        $article->setNote($note)->setTranche($t2)->setRevenuFacture($revenu);
+        $article->setEntreprise($s['ent']);
+        $this->em->persist($article);
+        $this->em->flush();
+        $this->executer($s, MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15']);
+
+        $this->client->request('GET', '/admin/note/facturation-picker?type=credit&ids=' . $t2->getId());
+        $this->assertResponseIsSuccessful();
+        $html = $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('Note de crédit', $html);
+        $this->assertStringContainsString('data-facturation-picker-type-value="credit"', $html);
+
+        $this->client->request('POST', '/admin/note/facturation', [], [], ['CONTENT_TYPE' => 'application/json'], json_encode([
+            'type' => 'credit',
+            'destinataire' => 'assureur',
+            'lignes' => [['trancheId' => $t2->getId(), 'revenuId' => $revenu->getId()]],
+        ]));
+        $this->assertResponseIsSuccessful();
+        $this->assertStringContainsString('Note de crédit', json_decode($this->client->getResponse()->getContent(), true)['message']);
+
+        $this->em->clear();
+        $t2 = $this->tranche($s, 'T2');
+        static::getContainer()->get(\App\Services\Tranche\TranchePaiementService::class)->chargerIndicateurs([$t2]);
+        $this->assertSame('Régularisée', $t2->statutPaiement);
+        $this->assertSame('regularisee', $t2->regularisationEtat);
+        $this->assertStringContainsString('Régularisée par la note de crédit', $t2->regularisationExplication);
+    }
+
+    /**
+     * RATTRAPAGE : --dry-run liste sans écrire ; le mode réel marque et affiche le même
+     * récapitulatif ; un second passage ne marque plus rien (idempotence).
+     */
+    public function testLaCommandeDeRattrapageEstIdempotenteEtSaitSimuler(): void
+    {
+        $s = $this->seed();
+        $this->executer($s, MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15']);
+        // Situation d'avant la règle : la résiliation existe, l'échéance n'a pas été marquée.
+        $this->tranche($s, 'T2')->leverRegularisation();
+        $this->em->flush();
+        $this->em->clear();
+
+        $application = new \Symfony\Bundle\FrameworkBundle\Console\Application(static::$kernel);
+        $commande = new \Symfony\Component\Console\Tester\CommandTester($application->find('app:echeances:regulariser'));
+
+        $commande->execute(['--rattrapage' => true, '--dry-run' => true]);
+        $sortie = $commande->getDisplay();
+        $this->assertStringContainsString('SIMULATION', $sortie);
+        $this->assertStringContainsString('POL-MVT-1', $sortie, 'La police.');
+        $this->assertStringContainsString('T2 · 15/07/2026', $sortie, 'L’échéance.');
+        $this->assertStringContainsString('Résiliation au 15/06/2026', $sortie, 'L’acte en cause.');
+        $this->assertStringContainsString('serait marquée', $sortie);
+        $this->em->clear();
+        $this->assertNull($this->tranche($s, 'T2')->getRegularisation(), 'Rien n’est écrit en simulation.');
+
+        $commande->execute(['--rattrapage' => true]);
+        $this->assertStringContainsString('1 échéance marquée', $commande->getDisplay());
+        $this->em->clear();
+        $this->assertSame(Tranche::REGULARISATION_A_REGULARISER, $this->tranche($s, 'T2')->getRegularisation());
+
+        $commande->execute(['--rattrapage' => true]);
+        $this->assertStringContainsString('0 échéance marquée, 1 déjà marquée', $commande->getDisplay(), 'Idempotente.');
+    }
+
     /** POINT 8 — le nom de l'opportunité dérivée ne porte qu'UN préfixe, celui du mouvement. */
     public function testLeNomDeLOpportuniteNePorteQuUnPrefixe(): void
     {

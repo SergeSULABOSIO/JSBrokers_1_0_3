@@ -178,7 +178,11 @@ class NoteController extends AbstractController
             explode(',', (string) $request->query->get('ids', '')),
             $entreprise,
         );
-        $groupes = $this->sourceDeFacturation->facturableDansLaSelection($entreprise, $tranches, $addressedTo);
+        // NOTE DE CRÉDIT (« Régulariser par note de crédit » d'une échéance sans objet après
+        // annulation / résiliation) : la même fenêtre, sur ce qui a DÉJÀ été facturé —
+        // SourceDeFacturation sait déjà qu'on ne peut annuler que ce qu'on a émis.
+        $type = $request->query->get('type') === 'credit' ? Note::TYPE_NOTE_DE_CREDIT : Note::TYPE_NOTE_DE_DEBIT;
+        $groupes = $this->sourceDeFacturation->facturableDansLaSelection($entreprise, $tranches, $addressedTo, $type);
 
         // UNE NOTE A UN DESTINATAIRE. On propose donc le premier groupe, et l'on ANNONCE
         // ce qui reste : mêler deux assureurs produirait une pièce que personne ne peut
@@ -197,6 +201,7 @@ class NoteController extends AbstractController
                 $suivants,
             ),
             'destinataire' => $addressedTo === Note::TO_CLIENT ? 'client' : 'assureur',
+            'type' => $type === Note::TYPE_NOTE_DE_CREDIT ? 'credit' : 'debit',
             'idsDemandes' => array_map(static fn (Tranche $t): int => (int) $t->getId(), $tranches),
             'objet' => $groupe !== null ? $this->objetPropose($tranches, $addressedTo) : '',
             'monnaie' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
@@ -342,10 +347,11 @@ class NoteController extends AbstractController
             ? Note::TO_CLIENT
             : Note::TO_ASSUREUR;
 
+        $type = ($donnees['type'] ?? 'debit') === 'credit' ? Note::TYPE_NOTE_DE_CREDIT : Note::TYPE_NOTE_DE_DEBIT;
         $note = (new Note())
-            ->setType(Note::TYPE_NOTE_DE_DEBIT)
+            ->setType($type)
             ->setAddressedTo($addressedTo)
-            ->setNom(trim((string) ($donnees['objet'] ?? '')) ?: 'Commission')
+            ->setNom(trim((string) ($donnees['objet'] ?? '')) ?: ($type === Note::TYPE_NOTE_DE_CREDIT ? 'Avoir sur commission' : 'Commission'))
             ->setValidated(true);
         // Référence, signature et date d'émission : un seul endroit, partagé avec le
         // formulaire et avec l'écriture de l'assistant.
@@ -378,7 +384,7 @@ class NoteController extends AbstractController
             $parId[(int) $t->getId()] = $t;
         }
         $facturable = [];
-        foreach ($this->sourceDeFacturation->facturableDansLaSelection($entreprise, $tranchesPostees, $addressedTo) as $groupe) {
+        foreach ($this->sourceDeFacturation->facturableDansLaSelection($entreprise, $tranchesPostees, $addressedTo, $type) as $groupe) {
             foreach ($groupe['lignes'] as $l) {
                 $facturable[$l['trancheId'] . ':' . $l['revenuId']] = $l;
             }
@@ -442,7 +448,8 @@ class NoteController extends AbstractController
         return $this->json([
             'message' => sprintf(
                 '%s %s émise, portant %d commission%s.',
-                $addressedTo === Note::TO_CLIENT ? 'Note de débit au client' : 'Note de débit à l’assureur',
+                ($type === Note::TYPE_NOTE_DE_CREDIT ? 'Note de crédit' : 'Note de débit')
+                    . ($addressedTo === Note::TO_CLIENT ? ' au client' : ' à l’assureur'),
                 $note->getReference(),
                 $ecrites,
                 $ecrites > 1 ? 's' : '',

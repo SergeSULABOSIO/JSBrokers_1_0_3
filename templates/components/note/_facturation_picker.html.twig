@@ -25,6 +25,7 @@
         l'écriture, le client le substitue pour ouvrir le PDF. #}
      data-facturation-picker-apercu-url-value="{{ apercuUrlPattern }}"
      data-facturation-picker-destinataire-value="{{ destinataire }}"
+     data-facturation-picker-type-value="{{ type|default('debit') }}"
      data-facturation-picker-ids-value="{{ idsDemandes|join(',') }}"
      data-facturation-picker-suivants-value="{{ suivants|json_encode|e('html_attr') }}"
      data-picker-overlay>
@@ -41,7 +42,9 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('note') }}" style="width:22px;height:22px;color:#0047AB;" />
                 </span>
                 <h5 id="jsb-fact-picker-title" class="modal-title mb-0">
-                    {%- if groupe %}Facturer&nbsp;«&nbsp;{{ groupe.nom }}&nbsp;»
+                    {%- if type|default('debit') == 'credit' %}
+                        {%- if groupe %}Note de crédit à&nbsp;«&nbsp;{{ groupe.nom }}&nbsp;»{% else %}Note de crédit{% endif -%}
+                    {%- elseif groupe %}Facturer&nbsp;«&nbsp;{{ groupe.nom }}&nbsp;»
                     {%- else %}Facturer une commission{% endif -%}
                 </h5>
             </div>

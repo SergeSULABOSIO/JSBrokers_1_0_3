@@ -135,6 +135,46 @@ class TrancheController extends AbstractController
         ]);
     }
 
+    /**
+     * RÉGULARISATION D'UNE ÉCHÉANCE après annulation / résiliation de sa police :
+     *  - « maintenir » : la déclarer due quand même (la prime reste acquise à l'assureur) —
+     *    elle revient dans le recouvrement normal ;
+     *  - « remettre » : revenir sur ce choix — elle ressort du recouvrement.
+     * La voie « note de crédit » passe par la fenêtre de facturation (type=credit).
+     * L'état d'avant le mouvement reste mémorisé : l'abandon du mouvement le restituera.
+     */
+    #[Route('/api/regularisation/{id}/{geste}', name: 'api.regularisation', requirements: ['id' => Requirement::DIGITS, 'geste' => 'maintenir|remettre'], methods: ['POST'])]
+    public function regularisation(Tranche $tranche, string $geste): JsonResponse
+    {
+        if (!$this->mayAccessEntity(Tranche::class, Invite::ACCESS_MODIFICATION)) {
+            return $this->accessDeniedJson();
+        }
+        if ($tranche->getEntreprise()?->getId() !== $this->getEntreprise()->getId()) {
+            return $this->json(['message' => 'Tranche introuvable dans cet espace de travail.'], Response::HTTP_NOT_FOUND);
+        }
+
+        // Le geste doit correspondre à l'état réel : deux utilisateurs agissant en même temps
+        // ne doivent pas se contredire en silence.
+        $attendu = $geste === 'maintenir' ? Tranche::REGULARISATION_A_REGULARISER : Tranche::REGULARISATION_MAINTENUE;
+        if ($tranche->getRegularisation() !== $attendu) {
+            return $this->json([
+                'message' => $geste === 'maintenir'
+                    ? 'Cette échéance n’est pas « à régulariser » : il n’y a rien à déclarer dû.'
+                    : 'Cette échéance n’a pas été déclarée due : elle est déjà hors du recouvrement.',
+            ], Response::HTTP_CONFLICT);
+        }
+
+        $geste === 'maintenir' ? $tranche->declarerDue() : $tranche->remettreARegulariser();
+        $this->em->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => $geste === 'maintenir'
+                ? sprintf('L’échéance « %s » est déclarée due : elle revient dans le recouvrement.', $tranche->getNom())
+                : sprintf('L’échéance « %s » est de nouveau « à régulariser » : elle sort du recouvrement.', $tranche->getNom()),
+        ]);
+    }
+
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request): JsonResponse
     {
