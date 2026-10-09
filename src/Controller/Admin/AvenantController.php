@@ -399,6 +399,7 @@ class AvenantController extends AbstractController
             'reconduit'      => $decalque['reconduit'],
             'avertissements' => $decalque['avertissements'],
             'source'         => $decalque['source'],
+            'regularisation' => $decalque['regularisation'] ?? null,
         ];
     }
 

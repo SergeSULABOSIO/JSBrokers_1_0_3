@@ -228,9 +228,7 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
 
     private function getTranchePrime(Tranche $tranche): float
     {
-        $taux = $this->calculateTrancheTauxFactor($tranche);
-        $primeTotale = $this->calculationHelper->getCotationMontantPrimePayableParClient($tranche->getCotation());
-        return $primeTotale * $taux;
+        return $this->calculationHelper->getTranchePrime($tranche);
     }
 
     private function getTrancheMontantHT(Tranche $tranche): float
@@ -242,9 +240,7 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
 
     private function getTrancheMontantTTC(Tranche $tranche): float
     {
-        $taux = $this->calculateTrancheTauxFactor($tranche);
-        $cotationTTC = $this->calculationHelper->getCotationMontantCommissionTtc($tranche->getCotation(), -1, false);
-        return $cotationTTC * $taux;
+        return $this->calculationHelper->getTrancheCommissionTtc($tranche);
     }
 
     private function getTrancheTaxeCourtierMontant(Tranche $tranche): float

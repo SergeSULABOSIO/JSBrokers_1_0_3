@@ -1809,6 +1809,178 @@ class MouvementAvenantTest extends WebTestCase
         $this->assertNotNull($this->em->getRepository(Piste::class)->find($deriveeId));
     }
 
+    // ───────────────────────── 8. Échéances « à régulariser » après annulation / résiliation ─────────────────────────
+
+    /** Les échéances (ids) qu'un décalque met « à régulariser ». */
+    private function tranchesARegulariser(array $decalque): array
+    {
+        return array_values(array_map(
+            static fn (array $op) => $op['id'],
+            array_filter($decalque['operations'], static fn (array $op) => $op['entite'] === 'Tranche' && $op['op'] === 'edit'),
+        ));
+    }
+
+    private function tranche(array $s, string $nom): Tranche
+    {
+        return $this->em->getRepository(Tranche::class)->findOneBy(['nom' => $nom, 'cotation' => $s['cotation']->getId()]);
+    }
+
+    /**
+     * LA BORNE, au jour près et au sens LARGE : T2 est exigible le 15/07/2026. Une
+     * résiliation la VEILLE ou LE JOUR MÊME la met « à régulariser » (elle couvre une
+     * période où la police n'existe plus) ; LE LENDEMAIN, non. T1 (15/01) n'est jamais
+     * concernée. Aucun montant ne change.
+     */
+    public function testLaBorneDeLaDateDEffetEstAuJourEtAuSensLarge(): void
+    {
+        $s = $this->seed();
+        $t2 = $this->tranche($s, 'T2')->getId();
+
+        foreach (['2026-07-14' => [$t2], '2026-07-15' => [$t2], '2026-07-16' => []] as $effet => $attendu) {
+            $d = $this->builder->construire(MouvementAvenant::Resiliation, $s['base'], ['dateEffet' => $effet], $this->scope($s));
+            $this->assertSame($attendu, $this->tranchesARegulariser($d), 'Résiliation au ' . $effet);
+            $this->assertSame(count($attendu), $d['regularisation']['nombre']);
+        }
+
+        // Un renouvellement ne touche aucune échéance.
+        $this->assertSame([], $this->tranchesARegulariser($this->builder->construire(MouvementAvenant::Renouvellement, $s['base'], [], $this->scope($s))));
+    }
+
+    /** Exécutée, la résiliation pose l'état et mémorise l'état d'avant — sans changer un montant. */
+    public function testLaResiliationMetLEcheanceARegulariserSansToucherAuxMontants(): void
+    {
+        $s = $this->seed();
+        $this->executer($s, MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15']);
+
+        $t2 = $this->tranche($s, 'T2');
+        $this->assertSame(Tranche::REGULARISATION_A_REGULARISER, $t2->getRegularisation());
+        $this->assertNull($t2->getRegularisationAvant());
+        $this->assertSame(Piste::AVENANT_RESILIATION, $t2->getRegularisationPar()?->getTypeAvenant());
+        $this->assertSame(40.0, $t2->getPourcentage(), 'Le montant de l’échéance ne change pas.');
+        $this->assertSame('2026-07-15', $t2->getPayableAt()->format('Y-m-d'));
+        $this->assertNull($this->tranche($s, 'T1')->getRegularisation(), 'T1, exigible avant l’acte, reste due.');
+    }
+
+    /** Une échéance déjà encaissée, même en partie, n'est pas touchée : elle est signalée (ristourne possible). */
+    public function testUneEcheanceDejaEncaisseeNEstPasToucheeMaisSignalee(): void
+    {
+        $s = $this->seed();
+        $t2 = $this->tranche($s, 'T2');
+        $paiement = (new \App\Entity\PaiementPrime())->setReference('PP-T2')->setMontant(100.0)
+            ->setPaidAt(new DateTimeImmutable('2026-07-20'))->setDescription('Acompte')->setTranche($t2);
+        $paiement->setEntreprise($s['ent']);
+        $this->em->persist($paiement);
+        $this->em->flush();
+        $this->em->clear();
+
+        $base = $this->em->getRepository(Avenant::class)->find($s['base']->getId());
+        $d = $this->builder->construire(MouvementAvenant::Resiliation, $base, ['dateEffet' => '2026-06-15'], $this->scope($s));
+        $this->assertSame([], $this->tranchesARegulariser($d));
+        $this->assertCount(1, $d['regularisation']['ristournePossible']);
+        $this->assertStringContainsString('« T2 » déjà encaissée', implode(' ', $d['avertissements']));
+        $this->assertStringContainsString('ristourne', implode(' ', $d['avertissements']));
+    }
+
+    /**
+     * CAS DE LA COMMISSION DÉJÀ FACTURÉE : l'échéance passe bien « à régulariser », mais la
+     * note est nommée, dans l'aperçu (et Ket) comme sur la fiche.
+     */
+    public function testUneCommissionDejaFactureeEstSignalee(): void
+    {
+        $s = $this->seed();
+        $t2 = $this->tranche($s, 'T2');
+        $note = (new \App\Entity\Note())->setNom('Commission T2')->setType(\App\Entity\Note::TYPE_NOTE_DE_DEBIT)
+            ->setAddressedTo(\App\Entity\Note::TO_ASSUREUR)->setReference('N-T2-1')->setValidated(true)->setSignature('');
+        $note->setEntreprise($s['ent']);
+        $this->em->persist($note);
+        $article = (new \App\Entity\Article())->setQuantite(1.0);
+        $article->setNote($note)->setTranche($t2)->setRevenuFacture($s['cotation']->getRevenus()->first());
+        $article->setEntreprise($s['ent']);
+        $this->em->persist($article);
+        $this->em->flush();
+        $this->em->clear();
+
+        $base = $this->em->getRepository(Avenant::class)->find($s['base']->getId());
+        $d = $this->builder->construire(MouvementAvenant::Resiliation, $base, ['dateEffet' => '2026-06-15'], $this->scope($s));
+        $this->assertSame([$t2->getId()], $this->tranchesARegulariser($d), 'Elle passe bien à régulariser.');
+        $this->assertStringContainsString('Commission déjà facturée : note n° N-T2-1, à régulariser auprès de l’assureur.', implode(' ', $d['avertissements']));
+        $this->assertSame('Commission déjà facturée : note n° N-T2-1, à régulariser auprès de l’assureur.', $d['regularisation']['echeances'][0]['commissionFacturee']);
+
+        // L'aperçu de l'écran le dit aussi.
+        $this->client->request('GET', '/admin/avenant/api/mouvement-apercu/resiliation/' . $base->getId() . '?dateEffet=2026-06-15');
+        $html = json_decode($this->client->getResponse()->getContent(), true)['html'];
+        $this->assertStringContainsString('à régulariser', $html);
+        $this->assertStringContainsString('note n° N-T2-1', $html);
+        $this->assertStringContainsString('par note de crédit', $html);
+    }
+
+    /** Ket prépare exactement les mêmes écritures que l'écran (même builder). */
+    public function testKetPrepareLesMemesEcrituresDeRegularisation(): void
+    {
+        $s = $this->seed();
+        $ket = $this->outil->execute(['mouvement' => 'resiliation', 'avenantId' => $s['base']->getId(), 'dateEffet' => '2026-06-15'], $this->scope($s));
+        $this->assertTrue($ket->data['pret'] ?? false, json_encode($ket->data, JSON_UNESCAPED_UNICODE));
+        $ops = array_filter($ket->uiAction['plan'], static fn (array $op) => ($op['entite'] ?? '') === 'Tranche');
+        $this->assertCount(1, $ops, 'Une écriture pour T2, dans le plan de Ket.');
+        $this->assertSame(1, $ket->data['regularisation']['nombre']);
+    }
+
+    /**
+     * ABANDON : les échéances reprennent EXACTEMENT leur état d'avant — y compris un état
+     * non nul (« maintenue »), et même après avoir été déclarées dues entre-temps.
+     */
+    public function testLAbandonRestitueLEtatDAvantDesEcheances(): void
+    {
+        $s = $this->seed();
+        $t2 = $this->tranche($s, 'T2');
+        (new \ReflectionProperty($t2, 'regularisation'))->setValue($t2, Tranche::REGULARISATION_MAINTENUE);
+        $this->em->flush();
+
+        $this->executer($s, MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15']);
+        $t2 = $this->tranche($s, 'T2');
+        $this->assertSame(Tranche::REGULARISATION_A_REGULARISER, $t2->getRegularisation());
+        $this->assertSame(Tranche::REGULARISATION_MAINTENUE, $t2->getRegularisationAvant());
+        $t2->declarerDue();
+        $this->em->flush();
+        $this->em->clear();
+
+        $this->client->request('DELETE', '/admin/avenant/api/delete-piste-derivee/' . $s['base']->getId());
+        $this->assertResponseIsSuccessful();
+        $this->em->clear();
+
+        $t2 = $this->tranche($s, 'T2');
+        $this->assertSame(Tranche::REGULARISATION_MAINTENUE, $t2->getRegularisation(), 'Exactement l’état d’avant le mouvement.');
+        $this->assertNull($t2->getRegularisationPar());
+        $this->assertNull($t2->getRegularisationAvant());
+    }
+
+    /** Une note de crédit déjà émise sur une échéance régularisée interdit l'abandon (écran et Ket). */
+    public function testUneNoteDeCreditEmiseInterditLAbandon(): void
+    {
+        $s = $this->seed();
+        $this->executer($s, MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15']);
+        $t2 = $this->tranche($s, 'T2');
+        $ent = $this->em->getRepository(Entreprise::class)->find($s['ent']->getId());
+        $avoir = (new \App\Entity\Note())->setNom('Avoir T2')->setType(\App\Entity\Note::TYPE_NOTE_DE_CREDIT)
+            ->setAddressedTo(\App\Entity\Note::TO_ASSUREUR)->setReference('AV-T2-1')->setValidated(true)->setSignature('');
+        $avoir->setEntreprise($ent);
+        $this->em->persist($avoir);
+        $article = (new \App\Entity\Article())->setQuantite(1.0);
+        $article->setNote($avoir)->setTranche($t2);
+        $article->setEntreprise($ent);
+        $this->em->persist($article);
+        $this->em->flush();
+        $this->em->clear();
+
+        $this->client->request('DELETE', '/admin/avenant/api/delete-piste-derivee/' . $s['base']->getId());
+        $this->assertResponseStatusCodeSame(409);
+        $this->assertStringContainsString('note n° AV-T2-1', json_decode($this->client->getResponse()->getContent(), true)['message']);
+
+        $ket = $this->outil->execute(['mouvement' => 'resiliation', 'avenantId' => $s['base']->getId(), 'abandonnerMouvementExistant' => true], $this->scope($s));
+        $this->assertStringContainsString('note de crédit', $ket->data['bloquant'] ?? '');
+        $this->assertSame(Tranche::REGULARISATION_A_REGULARISER, $this->tranche($s, 'T2')->getRegularisation(), 'Rien n’a bougé.');
+    }
+
     /** POINT 8 — le nom de l'opportunité dérivée ne porte qu'UN préfixe, celui du mouvement. */
     public function testLeNomDeLOpportuniteNePorteQuUnPrefixe(): void
     {

@@ -2688,6 +2688,18 @@ class IndicatorCalculationHelper implements ResetInterface
         return $this->serviceTaxes->getTaxeApplicable($isIARD, $isTaxeAssureur);
     }
 
+    /** Prime d'une échéance : celle de sa proposition, à la part de l'échéance. */
+    public function getTranchePrime(Tranche $tranche): float
+    {
+        return $this->getCotationMontantPrimePayableParClient($tranche->getCotation()) * $this->getTrancheTauxFactor($tranche);
+    }
+
+    /** Commission TTC d'une échéance : celle de sa proposition, à la part de l'échéance. */
+    public function getTrancheCommissionTtc(Tranche $tranche): float
+    {
+        return $this->getCotationMontantCommissionTtc($tranche->getCotation(), -1, false) * $this->getTrancheTauxFactor($tranche);
+    }
+
     public function getTrancheTauxFactor(Tranche $tranche): float
     {
         if ($tranche->getPourcentage() !== null && $tranche->getPourcentage() > 0) {

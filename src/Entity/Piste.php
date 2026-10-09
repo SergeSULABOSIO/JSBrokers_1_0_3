@@ -70,6 +70,16 @@ class Piste implements OwnerAwareInterface
     private Collection $cotations;
 
     /**
+     * Échéances de la police de BASE que ce mouvement (annulation, résiliation) a mises
+     * « à régulariser ». AUCUNE cascade : elles appartiennent à la police de base, pas au
+     * mouvement — l'abandon les rend à leur état d'avant (LiensProteges::dissocier).
+     *
+     * @var Collection<int, Tranche>
+     */
+    #[ORM\OneToMany(targetEntity: Tranche::class, mappedBy: 'regularisationPar')]
+    private Collection $tranchesRegularisees;
+
+    /**
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'piste', cascade: ['persist', 'remove'], orphanRemoval: true)]
@@ -177,6 +187,7 @@ class Piste implements OwnerAwareInterface
     {
         $this->taches = new ArrayCollection();
         $this->cotations = new ArrayCollection();
+        $this->tranchesRegularisees = new ArrayCollection();
         $this->documents = new ArrayCollection();
         $this->conditionsPartageExceptionnelles = new ArrayCollection();
         $this->conditionsPartageAgent = new ArrayCollection();
@@ -504,6 +515,12 @@ class Piste implements OwnerAwareInterface
         $this->exercice = $exercice;
 
         return $this;
+    }
+
+    /** @return Collection<int, Tranche> */
+    public function getTranchesRegularisees(): Collection
+    {
+        return $this->tranchesRegularisees;
     }
 
     public function getStatutBaseAvantMouvement(): ?int

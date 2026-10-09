@@ -10,6 +10,7 @@ use App\Form\AvenantType;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use App\Services\Piste\NomDePisteDerivee;
 use App\Services\ReconductionPartageService;
+use App\Services\Tranche\RegularisationDesEcheances;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
@@ -57,6 +58,7 @@ final class MouvementAvenantBuilder
     public function __construct(
         private readonly IndicatorCalculationHelper $indicatorHelper,
         private readonly ReconductionPartageService $reconductionPartage,
+        private readonly RegularisationDesEcheances $regularisation,
         private readonly ClockInterface $horloge,
         // Fuseau de l'application, EXPLICITE : « aujourd'hui » décide si une période est
         // déjà échue, et une heure de mur différente de celle des chips d'échéance ferait
@@ -251,6 +253,15 @@ final class MouvementAvenantBuilder
             'champs' => $champsLien,
         ];
 
+        // LES ÉCHÉANCES QUE L'ACTE REND SANS OBJET. Une annulation ou une résiliation fait
+        // passer « à régulariser » les échéances de la police qui couvrent une période où
+        // elle n'existe plus : elles sortent du recouvrement, sans qu'aucun montant change.
+        // Une écriture par échéance, DANS le plan : écran et Ket l'annoncent et la facturent
+        // pareil. La règle vit dans RegularisationDesEcheances, pas ici.
+        [$opsRegularisation, $regularisation] = $mouvement->annuleLaPolice()
+            ? $this->regularisationDesEcheances($base, $debut, $etape, $avertissements)
+            : [[], null];
+
         if ($mouvement === MouvementAvenant::Renouvellement
             && $pisteBase->getRenewalCondition() === Piste::RENEWAL_CONDITION_ONCE_OFF_AND_EXTENDABLE) {
             $avertissements[] = 'L’opportunité de base est marquée « temporaire non renouvelable » : '
@@ -258,9 +269,13 @@ final class MouvementAvenantBuilder
         }
 
         return [
-            'operations'     => [$opPiste, $opCotation, $opAvenant, $opLien],
+            'operations'     => [$opPiste, $opCotation, $opAvenant, $opLien, ...$opsRegularisation],
             'source'         => $source,
-            'defauts'        => $this->defauts($mouvement, $debut, $fin, $periode['jours'], $facteur),
+            'defauts'        => array_merge(
+                $this->defauts($mouvement, $debut, $fin, $periode['jours'], $facteur),
+                $regularisation['defaut'] ?? [],
+            ),
+            'regularisation' => $regularisation,
             'ecarts'         => $ecarts,
             'reconduit'      => [
                 'chargements'  => count($chargements),
@@ -276,6 +291,83 @@ final class MouvementAvenantBuilder
             ],
             'avertissements' => $avertissements,
         ];
+    }
+
+    /**
+     * Les échéances qu'un acte à effet du $dateEffet met « à régulariser » : une opération
+     * par échéance (« @mouvement » pose l'état et mémorise l'état d'avant), le résumé de
+     * l'aperçu, et les signalements — commission déjà facturée, ristourne possible.
+     *
+     * @param array<int, string> $avertissements enrichi par référence
+     *
+     * @return array{0: array<int, array<string, mixed>>, 1: array<string, mixed>}
+     */
+    private function regularisationDesEcheances(Avenant $base, \DateTimeImmutable $dateEffet, string $etape, array &$avertissements): array
+    {
+        $analyse = $this->regularisation->analyser($base, $dateEffet);
+        $ops = [];
+        $echeances = [];
+
+        foreach ($analyse['aRegulariser'] as $ligne) {
+            $tranche = $ligne['tranche'];
+            if ($tranche->getId() === null) {
+                continue;
+            }
+            $ops[] = [
+                'op'     => 'edit',
+                'entite' => 'Tranche',
+                'id'     => $tranche->getId(),
+                'etape'  => $etape,
+                'champs' => ['regularisationPar' => '@' . self::REF_PISTE],
+            ];
+            $commissionFacturee = RegularisationDesEcheances::phraseCommissionFacturee($ligne['notesDeCommission']);
+            $echeances[] = [
+                'nom'                => (string) $tranche->getNom(),
+                'date'               => RegularisationDesEcheances::dateDeReference($tranche)?->format('d/m/Y'),
+                'prime'              => $ligne['prime'],
+                'commissionFacturee' => $commissionFacturee,
+            ];
+            if ($commissionFacturee !== null) {
+                $avertissements[] = sprintf('Échéance « %s » : %s', (string) $tranche->getNom(), $commissionFacturee);
+            }
+        }
+
+        $ristournes = [];
+        foreach ($analyse['ristournePossible'] as $ligne) {
+            $ristournes[] = [
+                'nom'        => (string) $ligne['tranche']->getNom(),
+                'date'       => RegularisationDesEcheances::dateDeReference($ligne['tranche'])?->format('d/m/Y'),
+                'prime'      => $ligne['prime'],
+                'primePayee' => $ligne['primePayee'],
+            ];
+            $avertissements[] = sprintf(
+                'Échéance « %s » déjà encaissée (%s sur %s) : elle n’est pas touchée, mais peut donner lieu à '
+                . 'ristourne — par note de crédit.',
+                (string) $ligne['tranche']->getNom(),
+                number_format($ligne['primePayee'], 2, ',', ' '),
+                number_format($ligne['prime'], 2, ',', ' '),
+            );
+        }
+
+        $nombre = count($echeances);
+        $defaut = $nombre === 0 ? [] : [sprintf(
+            '%d échéance%s de la police (%s de prime) passe%s « à régulariser » : elle%s sort%s du recouvrement. '
+            . 'La ristourne éventuelle se fait par note de crédit.',
+            $nombre,
+            $nombre > 1 ? 's' : '',
+            number_format($analyse['montant'], 2, ',', ' '),
+            $nombre > 1 ? 'nt' : '',
+            $nombre > 1 ? 's' : '',
+            $nombre > 1 ? 'ent' : '',
+        )];
+
+        return [$ops, [
+            'nombre'            => $nombre,
+            'montant'           => $analyse['montant'],
+            'echeances'         => $echeances,
+            'ristournePossible' => $ristournes,
+            'defaut'            => $defaut,
+        ]];
     }
 
     /**

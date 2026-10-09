@@ -43,6 +43,33 @@ class Tranche
     #[Groups(['list:read'])]
     private ?\DateTimeImmutable $echeanceAt = null;
 
+    /*
+     * ÉCHÉANCE « À RÉGULARISER » — après une annulation ou une résiliation de sa police.
+     *
+     * Une échéance qui devient exigible le jour de la date d'effet de l'acte, ou après,
+     * couvre une période où la police n'existe plus : la réclamer, ce serait relancer le
+     * client pour une prime qu'il ne doit pas. Elle SORT DU RECOUVREMENT (relances, alertes,
+     * primes à encaisser — écran et Ket) sans que ses montants changent : la ristourne
+     * éventuelle se fait à la main, par note de crédit. Règle : RegularisationDesEcheances.
+     *
+     * Trois colonnes, sur le principe du statut de la police de base
+     * (Piste::$statutBaseAvantMouvement) : l'état, le mouvement qui l'a posé, et l'état
+     * d'AVANT — restitué tel quel si le mouvement est abandonné (LiensProteges::dissocier).
+     */
+    public const REGULARISATION_A_REGULARISER = 'a_regulariser';
+    /** Déclarée due malgré l'acte (la prime reste acquise à l'assureur) : recouvrement normal. */
+    public const REGULARISATION_MAINTENUE = 'maintenue';
+
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $regularisation = null;
+
+    #[ORM\ManyToOne(targetEntity: Piste::class, inversedBy: 'tranchesRegularisees')]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Piste $regularisationPar = null;
+
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $regularisationAvant = null;
+
     /**
      * @var Collection<int, Article>
      */
@@ -281,6 +308,24 @@ class Tranche
     #[Groups(['list:read'])]
     public ?string $partageLibelle = null;
 
+    // ── Régularisation après annulation / résiliation (TrancheIndicatorStrategy) ──
+    /** a_regulariser | regularisee | maintenue | null — sert aussi de condition aux actions. */
+    #[Groups(['list:read'])]
+    public ?string $regularisationEtat = null;
+
+    #[Groups(['list:read'])]
+    public ?string $regularisationExplication = null;
+
+    /** « Commission déjà facturée : note n° X, à régulariser auprès de l'assureur. » */
+    #[Groups(['list:read'])]
+    public ?string $commissionDejaFacturee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $primeARegulariser = null;
+
+    #[Groups(['list:read'])]
+    public ?float $commissionARegulariser = null;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();
@@ -416,6 +461,80 @@ class Tranche
     public function getEcheanceAt(): ?\DateTimeImmutable
     {
         return $this->echeanceAt;
+    }
+
+    public function getRegularisation(): ?string
+    {
+        return $this->regularisation;
+    }
+
+    public function getRegularisationPar(): ?Piste
+    {
+        return $this->regularisationPar;
+    }
+
+    public function getRegularisationAvant(): ?string
+    {
+        return $this->regularisationAvant;
+    }
+
+    /** L'échéance est-elle hors du recouvrement, en attente de régularisation ? */
+    public function estARegulariser(): bool
+    {
+        return $this->regularisation === self::REGULARISATION_A_REGULARISER;
+    }
+
+    /**
+     * Pose l'état « à régulariser » au nom d'un mouvement (annulation, résiliation), en
+     * MÉMORISANT l'état d'avant. Appelé par le plan du mouvement : la relation se donne par
+     * son identifiant (« @mouvement »), le moteur de mutation la pose par ce setter.
+     * Sans effet si c'est déjà ce mouvement : un plan rejoué ne doit pas écraser l'état
+     * d'avant par celui qu'il a lui-même posé.
+     */
+    public function setRegularisationPar(?Piste $mouvement): static
+    {
+        if ($mouvement === null) {
+            return $this->leverRegularisation();
+        }
+        if ($mouvement !== $this->regularisationPar) {
+            $this->regularisationAvant = $this->regularisation;
+            $this->regularisation = self::REGULARISATION_A_REGULARISER;
+            $this->regularisationPar = $mouvement;
+        }
+
+        return $this;
+    }
+
+    /** Abandon du mouvement : l'échéance reprend EXACTEMENT son état d'avant. */
+    public function leverRegularisation(): static
+    {
+        if ($this->regularisationPar !== null) {
+            $this->regularisation = $this->regularisationAvant;
+        }
+        $this->regularisationAvant = null;
+        $this->regularisationPar = null;
+
+        return $this;
+    }
+
+    /** « Déclarer due quand même » : la prime reste acquise, le recouvrement reprend. */
+    public function declarerDue(): static
+    {
+        if ($this->regularisationPar !== null) {
+            $this->regularisation = self::REGULARISATION_MAINTENUE;
+        }
+
+        return $this;
+    }
+
+    /** Revenir sur « déclarée due » : l'échéance sort de nouveau du recouvrement. */
+    public function remettreARegulariser(): static
+    {
+        if ($this->regularisationPar !== null) {
+            $this->regularisation = self::REGULARISATION_A_REGULARISER;
+        }
+
+        return $this;
     }
 
     public function setEcheanceAt(?\DateTimeImmutable $echeanceAt): static

@@ -5,6 +5,7 @@ namespace App\Service\Workspace;
 use App\Ai\Mouvement\MouvementAvenant;
 use App\Entity\Article;
 use App\Entity\Avenant;
+use App\Entity\Note;
 use App\Entity\NotificationSinistre;
 use App\Entity\Paiement;
 use App\Entity\PaiementPrime;
@@ -78,6 +79,28 @@ final class LiensProteges
         if (!$entity instanceof Piste || $entity->getId() === null
             || MouvementAvenant::depuisTypeAvenant($entity->getTypeAvenant()) === null) {
             return null;
+        }
+
+        // UNE NOTE DE CRÉDIT DÉJÀ ÉMISE sur une échéance que ce mouvement a mise « à
+        // régulariser » : annuler la résiliation laisserait un avoir sans objet.
+        $avoirs = $em->createQueryBuilder()
+            ->select('DISTINCT n.reference AS reference, n.id AS id')
+            ->from(Article::class, 'ar')
+            ->join('ar.note', 'n')
+            ->join('ar.tranche', 't')
+            ->where('t.regularisationPar = :piste')
+            ->andWhere('n.type = :credit')
+            ->setParameter('piste', $entity)
+            ->setParameter('credit', Note::TYPE_NOTE_DE_CREDIT)
+            ->getQuery()->getArrayResult();
+        if ($avoirs !== []) {
+            return sprintf(
+                'Impossible d’abandonner ce mouvement : %s déjà émise%s pour régulariser les échéances qu’il a '
+                . 'rendues sans objet (%s). L’abandonner laisserait un avoir sans objet. Annulez d’abord cette note.',
+                count($avoirs) > 1 ? count($avoirs) . ' notes de crédit' : 'une note de crédit',
+                count($avoirs) > 1 ? 's' : '',
+                implode(', ', array_map(static fn (array $a): string => 'note n° ' . ($a['reference'] ?: '#' . $a['id']), $avoirs)),
+            );
         }
 
         // Successeurs : interrogés en base, jamais lus dans les collections en mémoire
@@ -201,6 +224,11 @@ final class LiensProteges
 
             if ($entity instanceof Piste && $cible instanceof Avenant) {
                 self::restituerStatutDeLaBase($entity, $cible);
+                // Les échéances que ce mouvement avait mises « à régulariser » reprennent
+                // EXACTEMENT leur état d'avant — même principe que le statut de la base.
+                foreach ($entity->getTranchesRegularisees()->toArray() as $tranche) {
+                    $tranche->leverRegularisation();
+                }
             }
 
             // Sens retour d'abord : c'est lui qui porte la clé étrangère côté cible.
