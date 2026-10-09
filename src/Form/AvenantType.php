@@ -69,11 +69,11 @@ class AvenantType extends AbstractType
                 'label' => "Echéance",
                 'widget' => 'single_text',
             ])
-            // Statut de renouvellement de la police. Colonne stockée que deux KPI du
-            // tableau de bord interrogent (DashboardDataProvider::getPoliciesActives /
-            // getAvenantsActifsHydrates) : sans champ de formulaire, une police annulée
-            // ou résiliée restait comptée « active » à jamais, et aucun chemin — écran
-            // comme assistant — ne pouvait la corriger.
+            // Statut de renouvellement de la police. Le portefeuille en vigueur du tableau
+            // de bord écarte les polices « Annulé / résilié » (DashboardDataProvider) : sans
+            // champ de formulaire, une police annulée en cours de période restait comptée en
+            // vigueur jusqu'à son terme, et aucun chemin — écran comme assistant — ne
+            // pouvait la corriger.
             ->add('renewalStatus', ChoiceType::class, [
                 'label' => "Statut de la police",
                 'help' => "Laissez « En cours » tant que la police court. Un mouvement (renouvellement, prorogation, résiliation) met ce statut à jour.",

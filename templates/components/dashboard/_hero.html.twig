@@ -161,8 +161,14 @@
                             <twig:UX:Icon name="mdi:bank-outline" style="width:14px;height:14px;" />
                         </span>
                         <div class="flex-grow-1">
-                            <span class="db-hero-metric-label">Solde restant dû</span>
+                            <span class="db-hero-metric-label">Solde restant dû (tous exercices)</span>
                             <span class="db-hero-metric-value">{{ revenusBreakdown.solde|number_format(2, ',', ' ') }} $</span>
+                            {# Le solde n'a pas d'exercice : tous les avenants non soldés. La part
+                               née avant l'exercice regardé est nommée, pour qu'un impayé ancien ne
+                               se lise pas comme une créance de l'année. #}
+                            {% if revenusBreakdown.soldeAnterieur|default(0) > 0 %}
+                                <span class="db-hero-metric-label">dont exercices antérieurs&nbsp;: {{ revenusBreakdown.soldeAnterieur|number_format(2, ',', ' ') }} $</span>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

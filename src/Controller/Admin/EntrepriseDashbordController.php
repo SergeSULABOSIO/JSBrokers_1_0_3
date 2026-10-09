@@ -254,12 +254,14 @@ class EntrepriseDashbordController extends AbstractController
             'entreprise'       => $entreprise,
             'exercice'         => $exercice,
             'paiementsTotaux'  => $provider->getPaiementsTotaux($entreprise, $debut, $fin),
+            // Le portefeuille EN VIGUEUR aujourd'hui (nombre de polices) ; la PRODUCTION de
+            // l'exercice retenu (primes, commissions, rétro, taxes, détail des revenus).
             'policiesActives'  => $provider->getPoliciesActives($entreprise),
-            'primesTotales'    => $provider->getPrimesTotales($entreprise),
-            'retrocommissions' => $provider->getRetrocommissionsTotales($entreprise),
-            'taxes'            => $provider->getTaxesTotales($entreprise),
-            'commissions'      => $provider->getCommissionsTotales($entreprise),
-            'revenusBreakdown' => $provider->getRevenusPercusBreakdown($entreprise),
+            'primesTotales'    => $provider->getPrimesTotales($entreprise, $exercice),
+            'retrocommissions' => $provider->getRetrocommissionsTotales($entreprise, $exercice),
+            'taxes'            => $provider->getTaxesTotales($entreprise, $exercice),
+            'commissions'      => $provider->getCommissionsTotales($entreprise, $exercice),
+            'revenusBreakdown' => $provider->getRevenusPercusBreakdown($entreprise, $exercice),
             // Ce que le cabinet a encaissé DEPUIS TOUJOURS : c'est ce qui permet au bandeau
             // de distinguer « rien encaissé » de « rien encaissé sur CET exercice ».
             'encaisseTousExercices' => $provider->getTotalEncaisseCommissions($entreprise),

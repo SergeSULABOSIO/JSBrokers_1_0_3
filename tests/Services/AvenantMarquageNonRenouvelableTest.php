@@ -326,7 +326,7 @@ class AvenantMarquageNonRenouvelableTest extends KernelTestCase
         $this->assertSame(
             Avenant::RENEWAL_STATUS_RUNNING,
             $this->avenant($s['enCours'])->getRenewalStatus(),
-            'renewalStatus pilote les polices actives et les totaux de primes : il ne doit pas bouger.'
+            'Le marquage ne touche pas renewalStatus : la police reste dans le portefeuille en vigueur.'
         );
     }
 

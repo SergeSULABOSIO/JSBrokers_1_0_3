@@ -105,6 +105,9 @@ class MouvementAvenantTest extends WebTestCase
             'DELETE p FROM paiement p JOIN entreprise e ON p.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE ar FROM article ar JOIN entreprise e ON ar.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE n FROM note n JOIN entreprise e ON n.entreprise_id = e.id WHERE e.nom = :n',
+            // Sinistres du ratio S/P (avant les clients, qui en sont les assurés).
+            'DELETE o FROM offre_indemnisation_sinistre o JOIN entreprise e ON o.entreprise_id = e.id WHERE e.nom = :n',
+            'DELETE ns FROM notification_sinistre ns JOIN entreprise e ON ns.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE cp FROM condition_partage cp JOIN entreprise e ON cp.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE a FROM avenant a JOIN entreprise e ON a.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE tr FROM tranche tr JOIN entreprise e ON tr.entreprise_id = e.id WHERE e.nom = :n',
@@ -1351,7 +1354,7 @@ class MouvementAvenantTest extends WebTestCase
     private function tableauDeBord(): DashboardDataProvider
     {
         $dashboard = static::getContainer()->get(DashboardDataProvider::class);
-        (new \ReflectionProperty($dashboard, 'cacheAvenantsActifs'))->setValue($dashboard, []);
+        (new \ReflectionProperty($dashboard, 'cacheAvenants'))->setValue($dashboard, []);
 
         return $dashboard;
     }
@@ -1375,17 +1378,19 @@ class MouvementAvenantTest extends WebTestCase
     }
 
     /**
-     * POINT 1 — la base renouvelée quitte le DÉNOMBREMENT des polices actives, mais GARDE
-     * sa production dans les agrégats financiers : sa prime a été facturée, le successeur
-     * couvre une autre période. Avant, base et successeur étaient comptés deux fois parmi
-     * les polices actives.
+     * POINT 1 — DEUX QUESTIONS, DEUX ENSEMBLES, aucun double comptage.
+     *  - PORTEFEUILLE EN VIGUEUR : la police qui couvre aujourd'hui. La base (2026) l'est
+     *    jusqu'au 31/12/2026 ; à partir de 2027, c'est son successeur — jamais les deux.
+     *  - PRODUCTION D'UN EXERCICE : par date d'effet, quel que soit le statut. La base reste
+     *    dans 2026 (sa prime a été facturée), le successeur compte dans 2027 : chaque prime
+     *    une fois, dans son exercice. Le statut « Renouvelé » écrit sur la base n'efface rien.
      */
-    public function testUnRenouvellementSortLaBaseDesPolicesActivesSansEffacerSaProduction(): void
+    public function testUnRenouvellementNeDoubleNiLesPolicesNiLaProduction(): void
     {
         $s = $this->seed();
-        $primesAvant = $this->tableauDeBord()->getPrimesTotales($s['ent']);
-        $commissionsAvant = $this->tableauDeBord()->getCommissionsTotales($s['ent']);
-        $this->assertGreaterThan(0.0, $primesAvant);
+        $primes2026 = $this->tableauDeBord()->getPrimesTotales($s['ent'], 2026);
+        $commissions2026 = $this->tableauDeBord()->getCommissionsTotales($s['ent'], 2026);
+        $this->assertGreaterThan(0.0, $primes2026);
         $this->assertSame(1, $this->tableauDeBord()->getPoliciesActives($s['ent']));
 
         $this->executer($s, MouvementAvenant::Renouvellement);
@@ -1399,9 +1404,83 @@ class MouvementAvenantTest extends WebTestCase
         );
 
         $dashboard = $this->tableauDeBord();
-        $this->assertSame(1, $dashboard->getPoliciesActives($s['ent']), 'Une seule police active : le successeur.');
-        $this->assertEqualsWithDelta(2 * $primesAvant, $dashboard->getPrimesTotales($s['ent']), 0.01, 'La prime de la base reste acquise, celle du successeur s’y ajoute.');
-        $this->assertEqualsWithDelta(2 * $commissionsAvant, $dashboard->getCommissionsTotales($s['ent']), 0.01, 'Idem pour la commission.');
+        $this->assertSame(1, $dashboard->getPoliciesActives($s['ent']), 'Le 09/10/2026, seule la base couvre.');
+        $this->assertEqualsWithDelta($primes2026, $dashboard->getPrimesTotales($s['ent'], 2026), 0.01, 'La production 2026 est intacte : ni effacée par le statut, ni doublée.');
+        $this->assertEqualsWithDelta($commissions2026, $dashboard->getCommissionsTotales($s['ent'], 2026), 0.01);
+        $this->assertEqualsWithDelta($primes2026, $dashboard->getPrimesTotales($s['ent'], 2027), 0.01, 'Le successeur produit en 2027, à l’identique.');
+
+        self::mockTime('2027-03-01 10:00:00');
+        $this->assertSame(1, $this->tableauDeBord()->getPoliciesActives($s['ent']), 'En 2027, seul le successeur couvre : la base renouvelée n’est plus comptée.');
+    }
+
+    /**
+     * Le détail des revenus suit l'exercice (même assiette que les cartes) — SAUF le solde :
+     * il porte sur TOUS les avenants non soldés, et nomme la part née avant l'exercice. Un
+     * impayé de 2026 reste visible quand on regarde 2027.
+     */
+    public function testLeDetailDesRevenusSuitLExerciceMaisPasLeSolde(): void
+    {
+        $s = $this->seed();
+        $this->executer($s, MouvementAvenant::Renouvellement);
+        $dashboard = $this->tableauDeBord();
+
+        $d2026 = $dashboard->getRevenusPercusBreakdown($s['ent'], 2026);
+        $d2027 = $dashboard->getRevenusPercusBreakdown($s['ent'], 2027);
+        foreach ([2026 => $d2026, 2027 => $d2027] as $annee => $detail) {
+            $this->assertEqualsWithDelta($dashboard->getCommissionsTotales($s['ent'], $annee), $detail['ttc'], 0.01, (string) $annee);
+        }
+        $this->assertGreaterThan(0.0, $d2026['ttc']);
+
+        // Rien n'est encaissé : le solde est la commission des DEUX polices, quel que soit
+        // l'exercice regardé ; seule la part « antérieure » change.
+        $total = $d2026['ttc'] + $d2027['ttc'];
+        $this->assertEqualsWithDelta($total, $d2026['solde'], 0.01);
+        $this->assertEqualsWithDelta($total, $d2027['solde'], 0.01, 'L’impayé 2026 reste visible en regardant 2027.');
+        $this->assertEqualsWithDelta(0.0, $d2026['soldeAnterieur'], 0.01);
+        $this->assertEqualsWithDelta($d2026['ttc'], $d2027['soldeAnterieur'], 0.01, 'Dont exercices antérieurs : la police 2026.');
+        $this->assertSame(0.0, $dashboard->getRevenusPercusBreakdown($s['ent'], 2025)['ttc'], 'Aucune production en 2025.');
+    }
+
+    /**
+     * Le ratio S/P d'un assureur rapporte les sinistres des polices EN VIGUEUR (même
+     * référence, survenus pendant leur période) à leurs primes : un sinistre d'une autre
+     * police, ou hors période, n'y entre plus.
+     */
+    public function testLeRatioSPNeRetientQueLesSinistresDesPolicesEnVigueur(): void
+    {
+        $s = $this->seed();
+        $ent = $this->em->getRepository(Entreprise::class)->find($s['ent']->getId());
+        $assureur = $this->em->getRepository(Avenant::class)->find($s['base']->getId())->getCotation()->getAssureur();
+        $client = $s['piste']->getClient();
+
+        foreach ([['POL-MVT-1', '2026-05-01', 1000.0], ['POL-MVT-1', '2025-05-01', 7000.0], ['AUTRE-POLICE', '2026-05-01', 9000.0]] as [$ref, $quand, $montant]) {
+            $sinistre = (new \App\Entity\NotificationSinistre())->setReferencePolice($ref)->setOccuredAt(new DateTimeImmutable($quand));
+            $sinistre->setAssureur($assureur);
+            $sinistre->setAssure($this->em->getRepository(Client::class)->find($client->getId()));
+            $sinistre->setEntreprise($ent);
+            $this->em->persist($sinistre);
+            $offre = (new \App\Entity\OffreIndemnisationSinistre())->setMontantPayable($montant)->setBeneficiaire('ACME');
+            $offre->setNotificationSinistre($sinistre);
+            $offre->setEntreprise($ent);
+            $this->em->persist($offre);
+        }
+        $this->em->flush();
+
+        $ligne = $this->tableauDeBord()->getTopAssureursAvecIndicateurs($ent)[0];
+        $this->assertEqualsWithDelta(1000.0, $ligne['sinistresIndemnises'], 0.01, 'Seul le sinistre de la police en vigueur, dans sa période, compte.');
+    }
+
+    /** Une police résiliée sort du portefeuille en vigueur mais GARDE la production qu'elle a faite. */
+    public function testUneResiliationGardeLaProductionDeLaPolice(): void
+    {
+        $s = $this->seed();
+        $primes2026 = $this->tableauDeBord()->getPrimesTotales($s['ent'], 2026);
+
+        $this->executer($s, MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15']);
+
+        $dashboard = $this->tableauDeBord();
+        $this->assertSame(0, $dashboard->getPoliciesActives($s['ent']));
+        $this->assertEqualsWithDelta($primes2026, $dashboard->getPrimesTotales($s['ent'], 2026), 0.01, 'L’annulation n’efface pas les primes déjà produites.');
     }
 
     /**
@@ -1416,9 +1495,8 @@ class MouvementAvenantTest extends WebTestCase
         $baseId = $s['base']->getId();
         $s['base']->setRenewalStatus(Avenant::RENEWAL_STATUS_EXTENDED);
         $this->em->flush();
-        $primesAvant = $this->tableauDeBord()->getPrimesTotales($s['ent']);
-
         $this->executer($s, MouvementAvenant::Renouvellement);
+        $this->assertGreaterThan(0.0, $this->tableauDeBord()->getPrimesTotales($s['ent'], 2027), 'Le successeur produit en 2027.');
         $base = $this->em->getRepository(Avenant::class)->find($baseId);
         $this->assertSame(Avenant::RENEWAL_STATUS_RENEWED, $base->getRenewalStatus());
         $deriveeId = $base->getPisteDeRenouvellement()->getId();
@@ -1434,7 +1512,7 @@ class MouvementAvenantTest extends WebTestCase
         $this->assertSame(Avenant::RENEWAL_STATUS_EXTENDED, $base->getRenewalStatus(), 'Elle retrouve EXACTEMENT son statut d’avant.');
         $this->assertNull($this->em->getRepository(Piste::class)->find($deriveeId), 'L’opportunité dérivée est supprimée.');
         $this->assertNull($this->em->getRepository(Avenant::class)->find($successeurId), 'Le successeur part avec elle (cascade).');
-        $this->assertEqualsWithDelta($primesAvant, $this->tableauDeBord()->getPrimesTotales($s['ent']), 0.01, 'Plus aucune trace du successeur dans les primes.');
+        $this->assertEqualsWithDelta(0.0, $this->tableauDeBord()->getPrimesTotales($s['ent'], 2027), 0.01, 'Plus aucune trace du successeur dans la production 2027.');
     }
 
     /** Un statut changé à la main après le mouvement est une décision : l'abandon n'y touche pas. */

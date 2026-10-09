@@ -16,6 +16,7 @@ use App\Services\CanvasBuilder;
 use App\Services\Search\AvenantEcheanceScope;
 use App\Services\Search\AvenantSuccessionScope;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Clock\ClockInterface;
 
 class DashboardDataProvider
 {
@@ -25,41 +26,89 @@ class DashboardDataProvider
         private TaxeRepository $taxeRepository,
         private AvenantEntityCanvasProvider $avenantCanvasProvider,
         private IndicatorCalculationHelper $calculationHelper,
+        // « Aujourd'hui » du portefeuille en vigueur : l'horloge de l'application, que les
+        // tests figent (ClockSensitiveTrait) — une date en dur s'y périmerait.
+        private ClockInterface $horloge,
     ) {}
 
-    private array $cacheAvenantsActifs = [];
+    /** Minuit du jour, dans le fuseau de l'application (APP_TIMEZONE, posé par le Kernel). */
+    private function aujourdhui(): \DateTimeImmutable
+    {
+        return \DateTimeImmutable::createFromInterface($this->horloge->now())
+            ->setTimezone(new \DateTimeZone(date_default_timezone_get()))
+            ->setTime(0, 0);
+    }
+
+    /** @var array<string, Avenant[]> avenants hydratés, mémoïsés par requête HTTP */
+    private array $cacheAvenants = [];
+
+    /*
+     * DEUX QUESTIONS, DEUX ENSEMBLES — et aucun des deux ne lit un statut pour dire une date.
+     *
+     *  - LE PORTEFEUILLE EN VIGUEUR (« Polices », classements, parts de marché) : les
+     *    avenants qui COUVRENT AUJOURD'HUI — période en cours, ni annulés ni résiliés. Une
+     *    police renouvelée en sort d'elle-même, sa période étant close : seul son
+     *    successeur y figure. Un avenant d'acte (annulation, résiliation) n'y entre jamais.
+     *
+     *  - LA PRODUCTION D'UN EXERCICE (cartes Primes, Commissions, Rétro, Taxes et détail
+     *    des revenus) : les avenants dont la DATE D'EFFET tombe dans l'exercice, QUEL QUE
+     *    SOIT LEUR SORT. Une police annulée ou renouvelée garde la production qu'elle a
+     *    faite ; une police et son successeur ne s'additionnent que s'ils prennent effet
+     *    dans le même exercice — deux productions réelles, pas un doublon.
+     *
+     * Avant, un seul ensemble « statut En cours, depuis toujours » servait les deux : une
+     * police échue jamais renouvelée restait comptée indéfiniment, et toute écriture du
+     * statut faisait apparaître ou disparaître de la production.
+     */
+
+    /** Filtre DQL du portefeuille en vigueur (alias « a ») — un seul texte pour la liste et le compte. */
+    private const FILTRE_EN_VIGUEUR = 'a.startingAt < :demain AND a.endingAt >= :aujourdhui AND a.renewalStatus <> :annule';
+
+    private function parametresEnVigueur(\Doctrine\ORM\Query $requete, Entreprise $entreprise): \Doctrine\ORM\Query
+    {
+        return $requete
+            ->setParameter('e', $entreprise)
+            ->setParameter('aujourdhui', $this->aujourdhui())
+            ->setParameter('demain', $this->aujourdhui()->modify('+1 day'))
+            ->setParameter('annule', Avenant::RENEWAL_STATUS_CANCELLED);
+    }
+
+    /** Portefeuille en vigueur, hydraté (indicateurs calculés chargés). */
+    private function getAvenantsEnVigueurHydrates(Entreprise $entreprise): array
+    {
+        return $this->cacheAvenants['vigueur:' . $entreprise->getId()] ??= $this->hydrater(
+            $this->parametresEnVigueur($this->requeteAvenants(self::FILTRE_EN_VIGUEUR), $entreprise)->getResult()
+        );
+    }
 
     /**
-     * Statuts dont les primes et commissions entrent dans les agrégats FINANCIERS du
-     * tableau de bord (primes, commissions, taxes, rétrocommissions, revenus perçus,
-     * classements).
-     *
-     * UNE POLICE RENOUVELÉE OU PROROGÉE GARDE SA PRODUCTION. Les mouvements écrivent
-     * désormais « Renouvelé » / « Prorogé » sur la police de base : filtrer ici sur le
-     * seul « En cours » aurait effacé sa prime et sa commission — pourtant facturées,
-     * souvent encaissées — à l'instant même du renouvellement. Pire : les revenus perçus
-     * soustraient du dû TOUT l'encaissé, la base aurait donc laissé ses règlements sans
-     * la créance qu'ils soldent. Le successeur couvre une AUTRE période : les deux
-     * productions s'additionnent, ce n'est pas un double comptage.
-     *
-     * Le DÉNOMBREMENT des polices actives, lui, reste sur « En cours » seul
-     * (getPoliciesActives) : là, base et successeur seraient bien la même police
-     * comptée deux fois.
+     * TOUS les avenants du cabinet, hydratés — pour ce qui ne connaît pas d'exercice : un
+     * impayé reste dû quel que soit l'exercice regardé.
      */
-    private const STATUTS_EN_PRODUCTION = [
-        Avenant::RENEWAL_STATUS_RUNNING,
-        Avenant::RENEWAL_STATUS_RENEWED,
-        Avenant::RENEWAL_STATUS_EXTENDED,
-    ];
-
-    private function getAvenantsActifsHydrates(Entreprise $entreprise): array
+    private function getTousLesAvenantsHydrates(Entreprise $entreprise): array
     {
-        $key = $entreprise->getId();
-        if (isset($this->cacheAvenantsActifs[$key])) {
-            return $this->cacheAvenantsActifs[$key];
-        }
+        return $this->cacheAvenants['tous:' . $entreprise->getId()] ??= $this->hydrater(
+            $this->requeteAvenants('1 = 1')->setParameter('e', $entreprise)->getResult()
+        );
+    }
 
-        $avenants = $this->em->createQuery(
+    /** Production de l'exercice : date d'effet dans l'exercice, quel que soit le sort. */
+    private function getAvenantsDeLExerciceHydrates(Entreprise $entreprise, ?int $annee): array
+    {
+        $annee ??= (int) $this->aujourdhui()->format('Y');
+
+        return $this->cacheAvenants['exercice:' . $entreprise->getId() . ':' . $annee] ??= $this->hydrater(
+            $this->requeteAvenants('a.startingAt >= :debut AND a.startingAt < :fin')
+                ->setParameter('e', $entreprise)
+                ->setParameter('debut', new \DateTimeImmutable(sprintf('%d-01-01 00:00:00', $annee)))
+                ->setParameter('fin', new \DateTimeImmutable(sprintf('%d-01-01 00:00:00', $annee + 1)))
+                ->getResult()
+        );
+    }
+
+    private function requeteAvenants(string $filtre): \Doctrine\ORM\Query
+    {
+        return $this->em->createQuery(
             'SELECT a, cot, ass, p, cl, r, par
              FROM App\Entity\Avenant a
              LEFT JOIN a.cotation cot
@@ -68,53 +117,50 @@ class DashboardDataProvider
              LEFT JOIN p.client cl
              LEFT JOIN p.risque r
              LEFT JOIN p.partenaire par
-             WHERE a.entreprise = :e AND a.renewalStatus IN (:statuts)'
-        )
-        ->setParameter('e', $entreprise)
-        ->setParameter('statuts', self::STATUTS_EN_PRODUCTION)
-        ->getResult();
+             WHERE a.entreprise = :e AND ' . $filtre
+        );
+    }
 
+    /** @param Avenant[] $avenants */
+    private function hydrater(array $avenants): array
+    {
         foreach ($avenants as $avenant) {
             $this->canvasBuilder->loadAllCalculatedValues($avenant);
         }
 
-        return $this->cacheAvenantsActifs[$key] = $avenants;
+        return $avenants;
     }
 
-    public function getPrimesTotales(Entreprise $entreprise): float
+    /** @param Avenant[] $avenants */
+    private function somme(array $avenants, string $indicateur): float
     {
         $total = 0.0;
-        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
-            $total += (float) ($avenant->primeTotale ?? 0);
+        foreach ($avenants as $avenant) {
+            $total += (float) ($avenant->{$indicateur} ?? 0);
         }
+
         return $total;
     }
 
-    public function getRetrocommissionsTotales(Entreprise $entreprise): float
+    /** Primes de la production de l'exercice (année civile ; l'année en cours par défaut). */
+    public function getPrimesTotales(Entreprise $entreprise, ?int $annee = null): float
     {
-        $total = 0.0;
-        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
-            $total += (float) ($avenant->retroCommission ?? 0);
-        }
-        return $total;
+        return $this->somme($this->getAvenantsDeLExerciceHydrates($entreprise, $annee), 'primeTotale');
     }
 
-    public function getTaxesTotales(Entreprise $entreprise): float
+    public function getRetrocommissionsTotales(Entreprise $entreprise, ?int $annee = null): float
     {
-        $total = 0.0;
-        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
-            $total += (float) ($avenant->taxeCourtierMontant ?? 0);
-        }
-        return $total;
+        return $this->somme($this->getAvenantsDeLExerciceHydrates($entreprise, $annee), 'retroCommission');
     }
 
-    public function getCommissionsTotales(Entreprise $entreprise): float
+    public function getTaxesTotales(Entreprise $entreprise, ?int $annee = null): float
     {
-        $total = 0.0;
-        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
-            $total += (float) ($avenant->montantTTC ?? 0);
-        }
-        return $total;
+        return $this->somme($this->getAvenantsDeLExerciceHydrates($entreprise, $annee), 'taxeCourtierMontant');
+    }
+
+    public function getCommissionsTotales(Entreprise $entreprise, ?int $annee = null): float
+    {
+        return $this->somme($this->getAvenantsDeLExerciceHydrates($entreprise, $annee), 'montantTTC');
     }
 
     public function getPaiementsTotaux(Entreprise $entreprise, \DateTimeImmutable $debut, \DateTimeImmutable $fin): float
@@ -133,18 +179,16 @@ class DashboardDataProvider
         return (float) ($result ?? 0);
     }
 
+    /**
+     * Nombre de polices du portefeuille EN VIGUEUR aujourd'hui. Un COUNT, pas l'ensemble
+     * hydraté : compter n'a pas à calculer les indicateurs de chaque police.
+     */
     public function getPoliciesActives(Entreprise $entreprise): int
     {
-        $result = $this->em->createQuery(
-            'SELECT COUNT(a.id) FROM App\Entity\Avenant a
-             WHERE a.entreprise = :e
-               AND a.renewalStatus = :status'
-        )
-        ->setParameter('e', $entreprise)
-        ->setParameter('status', Avenant::RENEWAL_STATUS_RUNNING)
-        ->getSingleScalarResult();
-
-        return (int) ($result ?? 0);
+        return (int) $this->parametresEnVigueur(
+            $this->em->createQuery('SELECT COUNT(a.id) FROM App\Entity\Avenant a WHERE a.entreprise = :e AND ' . self::FILTRE_EN_VIGUEUR),
+            $entreprise,
+        )->getSingleScalarResult();
     }
 
     /**
@@ -291,7 +335,7 @@ class DashboardDataProvider
     private function getAvenantsParAssureur(Entreprise $entreprise): array
     {
         $grouped = [];
-        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
+        foreach ($this->getAvenantsEnVigueurHydrates($entreprise) as $avenant) {
             $assureur = $avenant->getCotation()?->getAssureur();
             if (!$assureur) continue;
             $assId = $assureur->getId();
@@ -331,8 +375,20 @@ class DashboardDataProvider
         return $grouped;
     }
 
+    /**
+     * Sinistres indemnisés par assureur, sur LE MÊME ENSEMBLE que les primes du ratio S/P :
+     * les polices en vigueur. Un sinistre n'est rattaché à sa police que par la référence
+     * (texte) ; on retient donc ceux dont la référence est celle d'une police en vigueur ET
+     * survenus pendant sa période. Avant, tous les sinistres depuis toujours étaient
+     * rapportés aux primes du portefeuille actuel : le ratio mêlait deux mesures.
+     */
     private function getSinistresParAssureur(Entreprise $entreprise): array
     {
+        $enVigueur = array_map(static fn (Avenant $a) => $a->getId(), $this->getAvenantsEnVigueurHydrates($entreprise));
+        if ($enVigueur === []) {
+            return [];
+        }
+
         $rows = $this->em->createQuery(
             'SELECT ass.id as assId,
                     SUM(ois.montantPayable) as montantIndemnise
@@ -340,9 +396,16 @@ class DashboardDataProvider
              JOIN ns.assureur ass
              LEFT JOIN ns.offreIndemnisationSinistres ois
              WHERE ns.entreprise = :e
+               AND EXISTS (
+                   SELECT 1 FROM App\Entity\Avenant av
+                   WHERE av.id IN (:enVigueur)
+                     AND av.referencePolice = ns.referencePolice
+                     AND ns.occuredAt >= av.startingAt AND ns.occuredAt <= av.endingAt
+               )
              GROUP BY ass.id'
         )
         ->setParameter('e', $entreprise)
+        ->setParameter('enVigueur', $enVigueur)
         ->getResult();
 
         $indexed = [];
@@ -367,7 +430,7 @@ class DashboardDataProvider
     public function getTopPolicesAvecIndicateurs(Entreprise $entreprise): array
     {
         $lignes = [];
-        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
+        foreach ($this->getAvenantsEnVigueurHydrates($entreprise) as $avenant) {
             $cotation = $avenant->getCotation();
             $piste = $cotation?->getPiste();
             $lignes[] = [
@@ -382,7 +445,7 @@ class DashboardDataProvider
             ];
         }
 
-        $totalPrimes = $this->getPrimesTotales($entreprise);
+        $totalPrimes = $this->somme($this->getAvenantsEnVigueurHydrates($entreprise), 'primeTotale');
         foreach ($lignes as &$ligne) {
             $ligne['partMarche'] = $totalPrimes > 0 ? round($ligne['primesTotales'] / $totalPrimes * 100, 1) : 0.0;
         }
@@ -409,7 +472,7 @@ class DashboardDataProvider
     {
         $parAssureur = $this->getAvenantsParAssureur($entreprise);
         $sinistres   = $this->getSinistresParAssureur($entreprise);
-        $totalPrimes = $this->getPrimesTotales($entreprise);
+        $totalPrimes = $this->somme($this->getAvenantsEnVigueurHydrates($entreprise), 'primeTotale');
 
         foreach ($parAssureur as &$row) {
             $sin = $sinistres[$row['id']] ?? 0.0;
@@ -427,7 +490,7 @@ class DashboardDataProvider
     private function getAvenantsParClient(Entreprise $entreprise): array
     {
         $grouped = [];
-        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
+        foreach ($this->getAvenantsEnVigueurHydrates($entreprise) as $avenant) {
             $client = $avenant->getCotation()?->getPiste()?->getClient();
             if (!$client) continue;
             $clientId = $client->getId();
@@ -483,7 +546,7 @@ class DashboardDataProvider
     {
         $parClient   = $this->getAvenantsParClient($entreprise);
         $sinistres   = $this->getSinistresParClient($entreprise);
-        $totalPrimes = $this->getPrimesTotales($entreprise);
+        $totalPrimes = $this->somme($this->getAvenantsEnVigueurHydrates($entreprise), 'primeTotale');
 
         foreach ($parClient as &$row) {
             $sin = $sinistres[$row['id']] ?? 0.0;
@@ -543,7 +606,7 @@ class DashboardDataProvider
     private function getAvenantsParRisque(Entreprise $entreprise): array
     {
         $grouped = [];
-        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
+        foreach ($this->getAvenantsEnVigueurHydrates($entreprise) as $avenant) {
             $risque = $avenant->getCotation()?->getPiste()?->getRisque();
             if (!$risque) continue;
             $risqueId = $risque->getId();
@@ -599,7 +662,7 @@ class DashboardDataProvider
     {
         $parRisque   = $this->getAvenantsParRisque($entreprise);
         $sinistres   = $this->getSinistresParRisque($entreprise);
-        $totalPrimes = $this->getPrimesTotales($entreprise);
+        $totalPrimes = $this->somme($this->getAvenantsEnVigueurHydrates($entreprise), 'primeTotale');
 
         foreach ($parRisque as &$row) {
             $sin = $sinistres[$row['id']] ?? 0.0;
@@ -637,7 +700,7 @@ class DashboardDataProvider
     private function getAvenantsParPartenaire(Entreprise $entreprise): array
     {
         $grouped = [];
-        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
+        foreach ($this->getAvenantsEnVigueurHydrates($entreprise) as $avenant) {
             $piste = $avenant->getCotation()?->getPiste();
             if (!$piste) continue;
             // UN SEUL INTERMÉDIAIRE PAR AFFAIRE. Cette boucle comptait le même avenant
@@ -673,7 +736,7 @@ class DashboardDataProvider
     public function getTopIntermediairesAvecIndicateurs(Entreprise $entreprise): array
     {
         $parPartenaire = $this->getAvenantsParPartenaire($entreprise);
-        $totalRetro    = $this->getRetrocommissionsTotales($entreprise);
+        $totalRetro    = $this->somme($this->getAvenantsEnVigueurHydrates($entreprise), 'retroCommission');
 
         foreach ($parPartenaire as &$row) {
             $row['sinistresIndemnises'] = 0.0;
@@ -687,10 +750,6 @@ class DashboardDataProvider
         return $this->sliceAvecRestes(array_values($parPartenaire));
     }
 
-    /**
-     * Total des paiements reçus sur les notes de commission (adressées au client ou à l'assureur),
-     * toutes années confondues — sert au calcul du solde restant dû.
-     */
     /**
      * Les commissions encaissées depuis toujours, TOUS EXERCICES CONFONDUS.
      *
@@ -714,8 +773,30 @@ class DashboardDataProvider
         return (float) $result;
     }
 
-    public function getRevenusPercusBreakdown(Entreprise $entreprise): array
+    /**
+     * Détail des revenus de l'EXERCICE (même assiette que les cartes : la production dont la
+     * date d'effet tombe dans l'exercice) — SAUF LE SOLDE, qui n'a pas d'exercice.
+     *
+     * LE SOLDE RESTANT DÛ EST CELUI DE TOUS LES AVENANTS NON SOLDÉS, tous exercices
+     * confondus : un impayé de 2025 doit rester visible quand on regarde 2026, sinon changer
+     * d'exercice ferait disparaître une créance. La part née avant l'exercice regardé est
+     * annoncée à part (« dont exercices antérieurs »). Ce n'est plus « dû de l'exercice moins
+     * TOUT l'encaissé historique », qui mêlait deux périodes.
+     */
+    public function getRevenusPercusBreakdown(Entreprise $entreprise, ?int $annee = null): array
     {
+        $annee ??= (int) $this->aujourdhui()->format('Y');
+        $debutExercice = new \DateTimeImmutable(sprintf('%d-01-01 00:00:00', $annee));
+        $solde          = 0.0;
+        $soldeAnterieur = 0.0;
+        foreach ($this->getTousLesAvenantsHydrates($entreprise) as $avenant) {
+            $du = max(0.0, (float) ($avenant->solde_restant_du ?? 0));
+            $solde += $du;
+            if ($avenant->getStartingAt() !== null && $avenant->getStartingAt() < $debutExercice) {
+                $soldeAnterieur += $du;
+            }
+        }
+
         $ttc               = 0.0;
         $ht                = 0.0;
         $taxeCourtierTotal = 0.0;
@@ -723,7 +804,7 @@ class DashboardDataProvider
         $retrocom          = 0.0;
         $reserve           = 0.0;
 
-        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
+        foreach ($this->getAvenantsDeLExerciceHydrates($entreprise, $annee) as $avenant) {
             $ttc               += (float) ($avenant->montantTTC          ?? 0);
             $ht                += (float) ($avenant->montantHT           ?? 0);
             $taxeCourtierTotal += (float) ($avenant->taxeCourtierMontant ?? 0);
@@ -734,8 +815,6 @@ class DashboardDataProvider
 
         $pur = $ht - $taxeCourtierTotal;
 
-        $totalEncaisse = $this->getTotalEncaisseCommissions($entreprise);
-        $solde = max(0.0, $ttc - $totalEncaisse);
 
         $taxeCourtierEntity = $this->taxeRepository->findOneBy([
             'redevable'  => Taxe::REDEVABLE_COURTIER,
@@ -769,6 +848,7 @@ class DashboardDataProvider
             'retrocom'    => round($retrocom, 2),
             'reserve'     => round($reserve, 2),
             'solde'       => round($solde, 2),
+            'soldeAnterieur' => round($soldeAnterieur, 2),
             'tipTTC'      => $desc['montantTTC']       ?? '',
             'tipHT'       => $desc['montantHT']        ?? '',
             'tipPur'      => $desc['montantPur']       ?? '',
