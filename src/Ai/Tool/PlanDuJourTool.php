@@ -7,12 +7,12 @@ use App\Ai\Boussole\PlanDuJourService;
 use App\Ai\Scope\AiScope;
 
 /**
- * Outil de pilotage : LE PROGRAMME DU JOUR du courtier — la todo list par laquelle
- * Ket ouvre la conversation, redemandable à tout moment (« et mon plan du jour ? »).
+ * Outil de pilotage : LE PROGRAMME DU JOUR du courtier — sa todo list, À LA DEMANDE
+ * (« et mon plan du jour ? », ou la suggestion « Mon programme du jour » de l'accueil).
+ * Il ne s'affiche plus d'office à l'ouverture d'une conversation.
  *
- * Il DÉLÈGUE intégralement à PlanDuJourService, qui sert aussi la bulle d'ouverture
- * du chat : les chiffres annoncés par Ket en cours de conversation sont donc, par
- * construction, ceux qui ont été affichés à l'ouverture.
+ * Il DÉLÈGUE intégralement à PlanDuJourService : ses chiffres sont, par
+ * construction, ceux des rubriques.
  *
  * Le gating fail-closed vit dans le service (une section dont l'entité est hors
  * périmètre disparaît) ; l'outil ne refuse globalement que si rien ne subsiste.
@@ -38,8 +38,6 @@ final class PlanDuJourTool implements AiToolInterface
             . 'total, le montant en jeu et jusqu\'à ' . PlanDuJourService::MAX_LIGNES_PAR_SECTION
             . ' lignes. À appeler quand l\'utilisateur demande son plan du jour, sa todo list, '
             . 'ce qu\'il doit faire aujourd\'hui, ou par quoi commencer. '
-            . 'Ce plan est DÉJÀ AFFICHÉ à l\'ouverture d\'une conversation vide : ne le répète pas '
-            . 'intégralement en début de conversation, appuie-toi dessus. '
             . 'Pour le DÉTAIL chiffré d\'un volet, enchaîner sur l\'outil dédié : suivi_impayes '
             . '(primes et commissions), vigie_echeances (pistes, sinistres), '
             . 'saturation_portefeuille (opportunités de vente).';
@@ -104,9 +102,9 @@ final class PlanDuJourTool implements AiToolInterface
             ));
         }
 
-        // `colonnes` est un entête de TABLEAU, utile à la bulle d'ouverture et à elle
-        // seule : le réexpédier au modèle à chaque tour ne serait que des tokens
-        // perdus (le quota se mesure en tokens d'ENTRÉE par minute).
+        // `colonnes` est un entête de TABLEAU, sans utilité pour le modèle : le lui
+        // expédier à chaque tour ne serait que des tokens perdus (le quota se mesure
+        // en tokens d'ENTRÉE par minute).
         $sections = array_map(
             static function (array $section): array {
                 unset($section['colonnes']);

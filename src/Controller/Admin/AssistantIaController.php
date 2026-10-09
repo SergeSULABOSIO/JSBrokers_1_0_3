@@ -5,7 +5,7 @@ namespace App\Controller\Admin;
 use App\Ai\Acces\PorteDeKet;
 use App\Ai\Comprehension\ClarificationEnAttente;
 use App\Ai\AiContextBuilder;
-use App\Ai\Boussole\PlanDuJourService;
+use App\Ai\AccueilDeKet;
 use App\Ai\Dictee\FinisseurDeDictee;
 use App\Ai\Live\IntermedesDeKet;
 use App\Ai\Oreille\FournisseurDOreille;
@@ -172,7 +172,7 @@ class AssistantIaController extends AbstractController
         private UserPasswordHasherInterface $passwordHasher,
         private ValidatorInterface $validator,
         private FichierTexteExtracteur $fichierExtracteur,
-        private PlanDuJourService $planDuJour,
+        private AccueilDeKet $accueil,
         private AssistantProgrammeRepository $programmeRepository,
         private ProgrammeEnCours $programmeEnCours,
         private ProgrammeRunner $programmeRunner,
@@ -296,17 +296,23 @@ class AssistantIaController extends AbstractController
             return $this->renderPremium($entreprise, $invite);
         }
         $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+        // Route authentifiée, mais l'accueil ne doit jamais faire tomber l'ouverture du
+        // chat : sans utilisateur, la salutation reste simplement sans prénom.
+        $utilisateur = $this->getUser();
 
         return $this->render('components/_assistant_ia_chat.html.twig', [
             'conversation'    => $conversation,
             'assistantNom'    => $this->parametresRepository->nomPour($entreprise),
-            // PROGRAMME DU JOUR : calculé uniquement pour une conversation VIDE, où il
-            // remplace la bulle d'accueil. Rendu serveur = aucun token consommé et
-            // aucun risque d'invention : ce sont les chiffres des rubriques, tels quels.
-            // Le service est fail-safe, mais l'ouverture du chat ne doit dépendre de
-            // rien : un pépin ici retombe simplement sur l'accueil ordinaire.
-            'planDuJour'      => $conversation->getMessages()->isEmpty()
-                ? $this->planDuJourOuNull($entreprise, $invite)
+            // ACCUEIL : seulement pour une conversation VIDE. Une salutation, une phrase
+            // et des suggestions — plus le programme du jour d'office, qui revenait à
+            // chaque nouveau fil. L'heure est lue dans le fuseau de l'APPLICATION,
+            // nommé explicitement : celui de PHP peut être UTC en mutualisé.
+            'accueil'         => $conversation->getMessages()->isEmpty()
+                ? $this->accueil->pour(
+                    $invite,
+                    $utilisateur instanceof Utilisateur ? $utilisateur->getNom() : null,
+                    AccueilDeKet::maintenant((string) $this->getParameter('app.timezone')),
+                )
                 : null,
             'entreprise'      => $entreprise,
             'idEntreprise'    => $idEntreprise,
@@ -317,28 +323,6 @@ class AssistantIaController extends AbstractController
             // `prefers-color-scheme` avant le premier rendu visuel.
             'themeAssistant'  => $this->currentUser()->getThemeAssistant() ?? 'auto',
         ]);
-    }
-
-    /**
-     * Programme du jour de l'invité, ou `null` si le calcul échoue ou n'a rien à
-     * dire. Le template retombe alors sur le message d'accueil ordinaire — mieux
-     * vaut un accueil neutre qu'un chat qui ne s'ouvre pas.
-     */
-    private function planDuJourOuNull(Entreprise $entreprise, Invite $invite): ?array
-    {
-        try {
-            $plan = $this->planDuJour->plan($entreprise, $invite);
-        } catch (\Throwable $e) {
-            $this->logger->warning('[AssistantIa] Programme du jour indisponible.', [
-                'entreprise' => $entreprise->getId(),
-                'invite' => $invite->getId(),
-                'exception' => $e->getMessage(),
-            ]);
-
-            return null;
-        }
-
-        return $plan['toutAuVert'] ? null : $plan;
     }
 
     /**

@@ -6,6 +6,12 @@
 parameters:
     # Adresse expéditeur unique pour tous les emails sortants (vérification, invitations…).
     app.mail_from: '%env(MAILER_FROM)%'
+    # Horloge de référence de l'application (cf. Kernel::boot). Exposée pour qu'un
+    # calcul d'heure de mur la nomme EXPLICITEMENT au lieu de se fier au fuseau
+    # courant de PHP — en mutualisé, date.timezone peut valoir UTC. Vide si la
+    # variable manque : l'appelant retombe alors sur le fuseau courant.
+    env(APP_TIMEZONE): ''
+    app.timezone: '%env(APP_TIMEZONE)%'
 
 services:
     # default configuration for services in *this* file
