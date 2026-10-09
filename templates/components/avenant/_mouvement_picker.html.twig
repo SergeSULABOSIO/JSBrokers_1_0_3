@@ -93,14 +93,13 @@
                Une seule colonne en dessous. #}
             <div class="jsb-picker-champs" style="align-items:start;">
             <fieldset class="jsb-picker-carte">
-                {# La légende de carte EST le titre visible du champ ; le <label>, masqué
-                   visuellement, reste lu par les lecteurs d'écran (WCAG 1.3.1). Un second
-                   titre visible doublait la légende, en gris .form-label (#adb5bd) trop
-                   pâle sur blanc (WCAG 1.4.3). #}
+                {# Libellé VISIBLE (WCAG 3.3.2), au jeton de la charte des titres de champ :
+                   .field-label, #343a40 — contraste ≈ 11:1 sur blanc (WCAG 1.4.3). Pas
+                   .form-label : son gris #adb5bd ne fait que ≈ 2:1. #}
                 <legend>{{ mouvement == 'prorogation' ? 'Durée de la prorogation' : 'Prise d’effet' }}</legend>
 
                 {% if mouvement == 'prorogation' %}
-                    <label for="mvt-duree" class="visually-hidden">Nombre de jours de prorogation</label>
+                    <label for="mvt-duree" class="field-label d-block mb-1">Nombre de jours de prorogation</label>
                     <span class="text-muted small d-block mb-1" id="mvt-duree-aide">
                         Au-delà de l'échéance actuelle. La prime complémentaire est calculée au prorata de cette durée.
                     </span>
@@ -121,7 +120,7 @@
                        (MouvementAvenantBuilder::dateEffetParDefaut). Une date antérieure est
                        refusée (chevauchement), une date postérieure annoncée comme une
                        interruption de couverture — l'aperçu ci-dessous le dit. #}
-                    <label for="mvt-date" class="visually-hidden">Date d'effet {{ mouvement == 'renouvellement' ? 'du renouvellement' : 'de l’acte' }}</label>
+                    <label for="mvt-date" class="field-label d-block mb-1">Date d'effet {{ mouvement == 'renouvellement' ? 'du renouvellement' : 'de l’acte' }}</label>
                     <span class="text-muted small d-block mb-1" id="mvt-date-aide">
                         {% if mouvement == 'renouvellement' %}
                             Par défaut, le lendemain de l'échéance&nbsp;: la couverture continue sans interruption.
@@ -158,22 +157,21 @@
             <span class="jsb-picker-hint text-muted small me-auto">
                 Rien n'est enregistré avant votre validation.
             </span>
-            <span class="d-inline-flex gap-2">
-                {# Icônes CONTEXTUELLES : « annuler » et « enregistrer » disent ce que
-                   fait le bouton, pas une croix et une coche génériques. #}
-                <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
-                    <twig:UX:Icon name="{{ resolve_icon_name('action:cancel') }}" style="width:15px;height:15px;" aria-hidden="true" />
-                    Annuler
-                </button>
-                {# Libellé PRÉCIS : on dit ce qui sera enregistré, pas « valider ». #}
-                <button type="button" class="btn btn-primary jsb-picker-btn"
-                        data-picker-executer
-                        data-mouvement-picker-target="executer"
-                        {{ apercu.pret ?? false ? '' : 'disabled' }}>
-                    <twig:UX:Icon name="{{ resolve_icon_name('action:save') }}" style="width:15px;height:15px;" aria-hidden="true" />
-                    Enregistrer {{ determinant }}{{ libelleMin }}
-                </button>
-            </span>
+            {# Icônes CONTEXTUELLES : « annuler » et « enregistrer » disent ce que fait le
+               bouton. Boutons ENFANTS DIRECTS du pied, comme dans les autres boîtes : c'est
+               ce qui permet au socle de les passer à la ligne sur téléphone. #}
+            <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
+                <twig:UX:Icon name="{{ resolve_icon_name('action:cancel') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                Annuler
+            </button>
+            {# Libellé PRÉCIS : on dit ce qui sera enregistré, pas « valider ». #}
+            <button type="button" class="btn btn-primary jsb-picker-btn"
+                    data-picker-executer
+                    data-mouvement-picker-target="executer"
+                    {{ apercu.pret ?? false ? '' : 'disabled' }}>
+                <twig:UX:Icon name="{{ resolve_icon_name('action:save') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                Enregistrer {{ determinant }}{{ libelleMin }}
+            </button>
         </footer>
     </div>
 </div>

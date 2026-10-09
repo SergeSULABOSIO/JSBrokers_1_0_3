@@ -6342,6 +6342,15 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     background: #f8f9fa;
 }
 .jsb-picker-hint { margin: 0; }
+/* À LARGEUR DE TÉLÉPHONE, LE PIED PASSE À LA LIGNE. Sur une seule ligne, l'aide et deux
+   boutons ne tenaient pas dans 400 px : le bouton d'action principal était coupé hors de
+   la boîte (constaté sur « Enregistrer le renouvellement »). L'aide prend toute la
+   largeur, les boutons se partagent la ligne suivante et gardent leur cible ≥ 44 px. */
+@media (max-width: 575.98px) {
+    .jsb-picker-foot { flex-wrap: wrap; }
+    .jsb-picker-foot > .jsb-picker-hint { flex: 1 1 100%; }
+    .jsb-picker-foot > .jsb-picker-btn { flex: 1 1 auto; white-space: normal; }
+}
 
 /* ── Boîte « Attacher des pièces » ───────────────────────────────────────────
    Le picker de dépôt réutilise TOUT le socle .jsb-picker-* (overlay, entête,

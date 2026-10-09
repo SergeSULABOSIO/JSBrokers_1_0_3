@@ -1674,7 +1674,16 @@ class MouvementAvenantTest extends WebTestCase
         $successeur = $cotation->getAvenants()->first();
         $ent = $this->em->getRepository(Entreprise::class)->find($s['ent']->getId());
 
-        if ($mouvement === 'encaissementPrime') {
+        if (str_starts_with($mouvement, 'sinistre:')) {
+            // Un sinistre se rattache à sa police par la référence et la date de survenance.
+            $sinistre = (new \App\Entity\NotificationSinistre())
+                ->setReferencePolice($successeur->getReferencePolice())
+                ->setOccuredAt(new DateTimeImmutable(substr($mouvement, 9)));
+            $sinistre->setAssureur($cotation->getAssureur());
+            $sinistre->setAssure($derivee->getClient());
+            $sinistre->setEntreprise($ent);
+            $this->em->persist($sinistre);
+        } elseif ($mouvement === 'encaissementPrime') {
             $paiement = (new \App\Entity\PaiementPrime())
                 ->setReference('PP-MVT-1')->setMontant(500.0)->setPaidAt(new DateTimeImmutable('2027-01-20'))
                 ->setDescription('Avis de règlement')->setTranche($cotation->getTranches()->first());
@@ -1734,6 +1743,43 @@ class MouvementAvenantTest extends WebTestCase
         $message = json_decode($this->client->getResponse()->getContent(), true)['message'];
         $this->assertStringContainsString('1 note émise', $message);
         $this->assertStringContainsString('1 encaissement de note', $message);
+    }
+
+    /** ÉCRAN — un sinistre déclaré sur le successeur interdit de l'effacer : un sinistre porte toujours une police. */
+    public function testLEcranRefuseDAbandonnerUnSuccesseurSinistre(): void
+    {
+        $s = $this->seed();
+        [$baseId, $deriveeId] = $this->renouvelerPuisFinancer($s, 'sinistre:2027-02-10');
+
+        $this->client->request('DELETE', '/admin/avenant/api/delete-piste-derivee/' . $baseId);
+        $this->assertResponseStatusCodeSame(409);
+        $message = json_decode($this->client->getResponse()->getContent(), true)['message'];
+        $this->assertStringContainsString('1 sinistre déclaré', $message);
+        $this->assertStringContainsString('un sinistre doit toujours porter une police existante', $message);
+        $this->em->clear();
+        $this->assertNotNull($this->em->getRepository(Piste::class)->find($deriveeId));
+    }
+
+    /** KET — même refus pour un sinistre déclaré sur le successeur. */
+    public function testKetRefuseDAbandonnerUnSuccesseurSinistre(): void
+    {
+        $s = $this->seed();
+        [$baseId] = $this->renouvelerPuisFinancer($s, 'sinistre:2027-02-10');
+        $ket = $this->outil->execute(['mouvement' => 'renouvellement', 'avenantId' => $baseId, 'abandonnerMouvementExistant' => true], $this->scope($s));
+        $this->assertFalse($ket->data['pret'] ?? true);
+        $this->assertNull($ket->uiAction);
+        $this->assertStringContainsString('1 sinistre déclaré', $ket->data['bloquant']);
+    }
+
+    /** Un sinistre de la POLICE DE BASE, survenu dans sa période, ne bloque pas l'abandon : la base survit. */
+    public function testUnSinistreDeLaBaseNeBloquePasLAbandon(): void
+    {
+        $s = $this->seed();
+        // Même référence, mais survenu pendant la période de la BASE (2026) : il appartient à
+        // la base, qui survit à l'abandon. Rien ne s'y oppose.
+        [$baseId] = $this->renouvelerPuisFinancer($s, 'sinistre:2026-05-01');
+        $ket = $this->outil->execute(['mouvement' => 'renouvellement', 'avenantId' => $baseId, 'abandonnerMouvementExistant' => true], $this->scope($s));
+        $this->assertTrue($ket->data['pret'] ?? false, json_encode($ket->data, JSON_UNESCAPED_UNICODE));
     }
 
     /**
