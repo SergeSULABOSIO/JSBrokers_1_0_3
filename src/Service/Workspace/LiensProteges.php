@@ -5,6 +5,7 @@ namespace App\Service\Workspace;
 use App\Ai\Mouvement\MouvementAvenant;
 use App\Entity\Article;
 use App\Entity\Avenant;
+use App\Entity\NotificationSinistre;
 use App\Entity\Paiement;
 use App\Entity\PaiementPrime;
 use App\Entity\Piste;
@@ -56,6 +57,11 @@ final class LiensProteges
      * émise ou qu'une commission a été encaissée sur lui, la suppression effacerait des
      * écritures réelles : elle est refusée, en disant lesquelles et quoi faire à la place.
      *
+     * UN SINISTRE PORTE TOUJOURS UNE POLICE EXISTANTE. Un sinistre déclaré sur l'avenant issu
+     * (même référence de police, survenu pendant sa période — c'est par là qu'un sinistre se
+     * rattache à sa police) le rend lui aussi indélébile : l'effacer laisserait un sinistre
+     * sans police.
+     *
      * L'opportunité se reconnaît à son TYPE de mouvement, pas au lien avenantDeBase : les
      * deux chemins de suppression coupent ce lien (dissocier()) avant de planifier, et la
      * règle doit tenir quel que soit l'état du lien en mémoire.
@@ -77,7 +83,7 @@ final class LiensProteges
         // Successeurs : interrogés en base, jamais lus dans les collections en mémoire
         // (Cotation::setPiste est unidirectionnel).
         $successeurs = $em->createQueryBuilder()
-            ->select('a.id, a.numero, IDENTITY(a.cotation) AS cotation')
+            ->select('a.id, a.numero, a.referencePolice, a.startingAt, a.endingAt, IDENTITY(a.cotation) AS cotation')
             ->from(Avenant::class, 'a')
             ->join('a.cotation', 'c')
             ->where('c.piste = :piste')
@@ -116,10 +122,31 @@ final class LiensProteges
             ->setParameter('notes', $notes)
             ->getQuery()->getSingleScalarResult();
 
+        // Sinistres rattachés à un avenant issu : même référence de police, survenus dans sa
+        // période — la règle de rattachement du ratio S/P du tableau de bord.
+        $sinistres = 0;
+        foreach ($successeurs as $successeur) {
+            if (($successeur['referencePolice'] ?? '') === '' || $successeur['startingAt'] === null || $successeur['endingAt'] === null) {
+                continue;
+            }
+            $sinistres += (int) $em->createQueryBuilder()
+                ->select('COUNT(ns.id)')
+                ->from(NotificationSinistre::class, 'ns')
+                ->where('ns.entreprise = :entreprise')
+                ->andWhere('ns.referencePolice = :reference')
+                ->andWhere('ns.occuredAt >= :debut AND ns.occuredAt <= :fin')
+                ->setParameter('entreprise', $entity->getEntreprise())
+                ->setParameter('reference', $successeur['referencePolice'])
+                ->setParameter('debut', $successeur['startingAt'])
+                ->setParameter('fin', $successeur['endingAt'])
+                ->getQuery()->getSingleScalarResult();
+        }
+
         $faits = array_filter([
             $encaissementsPrime > 0 ? sprintf('%d encaissement%s de prime', $encaissementsPrime, $encaissementsPrime > 1 ? 's' : '') : null,
             count($notes) > 0 ? sprintf('%d note%s émise%s', count($notes), count($notes) > 1 ? 's' : '', count($notes) > 1 ? 's' : '') : null,
             $encaissementsNote > 0 ? sprintf('%d encaissement%s de note', $encaissementsNote, $encaissementsNote > 1 ? 's' : '') : null,
+            $sinistres > 0 ? sprintf('%d sinistre%s déclaré%s', $sinistres, $sinistres > 1 ? 's' : '', $sinistres > 1 ? 's' : '') : null,
         ]);
         if ($faits === []) {
             return null;
@@ -131,9 +158,10 @@ final class LiensProteges
         ));
 
         return sprintf(
-            'Impossible d’abandonner ce mouvement : l’avenant qui en est issu, %s, porte déjà des mouvements '
-            . 'financiers (%s). Supprimer l’opportunité dérivée les effacerait avec lui. Annulez d’abord ces '
-            . 'écritures, ou enregistrez plutôt une annulation de la police qui en est issue.',
+            'Impossible d’abandonner ce mouvement : l’avenant qui en est issu, %s, porte déjà des écritures '
+            . '(%s). Supprimer l’opportunité dérivée les effacerait avec lui — et un sinistre doit toujours '
+            . 'porter une police existante. Annulez d’abord ces écritures, ou enregistrez plutôt une annulation '
+            . 'de la police qui en est issue.',
             $noms,
             implode(', ', $faits),
         );
