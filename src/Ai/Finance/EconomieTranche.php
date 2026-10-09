@@ -127,6 +127,9 @@ final class EconomieTranche
 
         return array_filter([
             'statutTranche'       => $tranche->statutPaiement,
+            // Police annulée / résiliée : pourquoi l'échéance n'est plus réclamée, et quoi faire.
+            'regularisation'      => $tranche->regularisationExplication,
+            'commissionDejaFacturee' => $tranche->commissionDejaFacturee,
             'primeTranche'        => self::montant($tranche->primeTranche),
             'primeSignalee'       => self::montant($tranche->primeDeclareePayee),
             'primeSolde'          => self::solde($tranche->primeSoldeDue),

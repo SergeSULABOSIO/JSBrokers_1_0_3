@@ -184,7 +184,17 @@ class TranchePaiementService
             return false; // projet (cotation non validée) ou ni prime ni commission
         }
 
-        foreach (TranchePaiementScope::normaliserAxes($axes) as $cle => $valeur) {
+        // SORTIE DU RECOUVREMENT (police annulée / résiliée) : l'échéance n'appartient plus à
+        // aucune dette — elle ne répond qu'à l'axe « régularisation », ou à la liste sans
+        // filtre. C'est ce qui l'écarte des chips, de suivi_impayes, de la vigie, de la
+        // boussole et du plan du jour en UN seul endroit.
+        $axesNormalises = TranchePaiementScope::normaliserAxes($axes);
+        $horsRecouvrement = in_array($tranche->regularisationEtat ?? null, [TranchePaiementScope::A_REGULARISER, TranchePaiementScope::REGULARISEE], true);
+        if ($horsRecouvrement && $axesNormalises !== [] && !isset($axesNormalises[TranchePaiementScope::AXE_REGULARISATION])) {
+            return false;
+        }
+
+        foreach ($axesNormalises as $cle => $valeur) {
             if (!$this->respecteAxe($tranche, $cle, $valeur)) {
                 return false;
             }
@@ -237,6 +247,8 @@ class TranchePaiementService
                 && ($valeur === TranchePaiementScope::ECHUE
                     ? $this->estEchue($tranche)
                     : !$this->estEchue($tranche)),
+
+            TranchePaiementScope::AXE_REGULARISATION => ($tranche->regularisationEtat ?? null) === $valeur,
 
             default => true,
         };

@@ -372,7 +372,8 @@ final class LireSoaTool implements AiToolInterface, AiToolConditionnel
                         'primeTotale'  => $this->valeur($e['tranche'], 'primeTranche'),
                         'paye'         => $e['primePayee'],
                         'solde'        => $e['primeSolde'],
-                        'retard'       => $this->retard($e['tranche']),
+                        // Police annulée / résiliée : l'échéance reste listée, plus réclamée.
+                        'retard'       => !empty($e['aRegulariser']) ? 'À régulariser — plus réclamée' : $this->retard($e['tranche']),
                     ];
                 },
                 $tranches,

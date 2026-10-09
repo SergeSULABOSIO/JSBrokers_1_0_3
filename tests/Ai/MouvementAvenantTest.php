@@ -1981,6 +1981,119 @@ class MouvementAvenantTest extends WebTestCase
         $this->assertSame(Tranche::REGULARISATION_A_REGULARISER, $this->tranche($s, 'T2')->getRegularisation(), 'Rien n’a bougé.');
     }
 
+    // ───────────────────────── 9. Les lecteurs : l'échéance à régulariser sort du recouvrement ─────────────────────────
+
+    /** Résiliation au 15/06/2026 exécutée, indicateurs de T2 chargés. */
+    private function resilierEtLireT2(array $s): Tranche
+    {
+        $this->executer($s, MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15']);
+        $t2 = $this->tranche($s, 'T2');
+        static::getContainer()->get(\App\Services\Tranche\TranchePaiementService::class)->chargerIndicateurs([$t2]);
+
+        return $t2;
+    }
+
+    /** La fiche : statut, badge neutre, explication, soldes à zéro — et le montant non réclamé reste visible. */
+    public function testLaFicheDeLEcheanceDitPourquoiElleNEstPlusReclamee(): void
+    {
+        $s = $this->seed();
+        $t2 = $this->resilierEtLireT2($s);
+
+        $this->assertSame('À régulariser', $t2->statutPaiement);
+        $this->assertSame('a_regulariser', $t2->regularisationEtat);
+        $this->assertSame('faible', $t2->urgenceNiveau, 'Badge neutre, pas une alarme de retard.');
+        $this->assertSame(0.0, (float) $t2->primeSoldeDue);
+        $this->assertSame(0.0, (float) $t2->solde_restant_du);
+        $this->assertSame(0.0, (float) $t2->commissionExigible);
+        $this->assertGreaterThan(0.0, $t2->primeARegulariser, 'Le montant non réclamé reste visible.');
+        $this->assertGreaterThan(0.0, (float) $t2->primeTranche, 'La prime de l’échéance ne change pas.');
+        $this->assertStringContainsString('la résiliation de la police à effet du 15/06/2026', $t2->regularisationExplication);
+        $this->assertStringContainsString('note de crédit', $t2->regularisationExplication);
+        $this->assertNull($t2->commissionDejaFacturee);
+    }
+
+    /** Sur la fiche aussi : la commission déjà facturée est nommée. */
+    public function testLaFicheNommeLaCommissionDejaFacturee(): void
+    {
+        $s = $this->seed();
+        $t2 = $this->tranche($s, 'T2');
+        $note = (new \App\Entity\Note())->setNom('Commission T2')->setType(\App\Entity\Note::TYPE_NOTE_DE_DEBIT)
+            ->setAddressedTo(\App\Entity\Note::TO_ASSUREUR)->setReference('N-T2-9')->setValidated(true)->setSignature('');
+        $note->setEntreprise($s['ent']);
+        $this->em->persist($note);
+        $article = (new \App\Entity\Article())->setQuantite(1.0);
+        $article->setNote($note)->setTranche($t2)->setRevenuFacture($s['cotation']->getRevenus()->first());
+        $article->setEntreprise($s['ent']);
+        $this->em->persist($article);
+        $this->em->flush();
+
+        $t2 = $this->resilierEtLireT2($s);
+        $this->assertSame('Commission déjà facturée : note n° N-T2-9, à régulariser auprès de l’assureur.', $t2->commissionDejaFacturee);
+    }
+
+    /** Chips et Ket : hors de toute dette ; seul l'axe « régularisation » (ou la liste sans filtre) la montre. */
+    public function testLEcheanceSortDesChipsEtDuSuiviDesImpayes(): void
+    {
+        $s = $this->seed();
+        $this->executer($s, MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15']);
+        $service = static::getContainer()->get(\App\Services\Tranche\TranchePaiementService::class);
+        $ent = $this->em->getRepository(Entreprise::class)->find($s['ent']->getId());
+        $noms = static fn (array $r) => array_map(static fn (Tranche $t) => $t->getNom(), $r['items']);
+
+        $this->assertNotContains('T2', $noms($service->lister($ent, ['prime' => 'impayee'], null, null, 1, 50)), 'Plus dans les primes impayées.');
+        $this->assertNotContains('T2', $noms($service->lister($ent, ['commission' => 'impayee'], null, null, 1, 50)));
+        $this->assertSame(['T2'], $noms($service->lister($ent, ['regularisation' => 'a_regulariser'], null, null, 1, 50)), 'Retrouvée par son chip.');
+        $this->assertContains('T2', $noms($service->lister($ent, [], null, null, 1, 50)), 'Toujours visible sans filtre.');
+
+        $ket = static::getContainer()->get(\App\Ai\Tool\SuiviImpayesTool::class)->execute(['axes' => ['prime' => 'impayee']], $this->scope($s));
+        $this->assertNotContains('T2', array_column($ket->data['lignes'] ?? [], 'tranche'), 'Ket ne la réclame plus.');
+    }
+
+    /** Agrégats : police, proposition et client ne comptent plus la prime ni la commission non réclamées. */
+    public function testLesSoldesAgregesExcluentLEcheanceARegulariser(): void
+    {
+        $s = $this->seed();
+        $canvas = static::getContainer()->get(\App\Services\CanvasBuilder::class);
+        $helper = static::getContainer()->get(\App\Services\Canvas\Indicator\IndicatorCalculationHelper::class);
+
+        $base = $this->em->getRepository(Avenant::class)->find($s['base']->getId());
+        $canvas->loadAllCalculatedValues($base);
+        $soldePrimeAvant = (float) $base->primeSoldeDue;
+        $soldeComAvant = (float) $base->solde_restant_du;
+
+        $this->executer($s, MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15']);
+        $t2 = $this->tranche($s, 'T2');
+        $partT2 = $helper->getTrancheARegulariser($t2);
+        $this->assertGreaterThan(0.0, $partT2['prime']);
+
+        $base = $this->em->getRepository(Avenant::class)->find($s['base']->getId());
+        $canvas->loadAllCalculatedValues($base);
+        $this->assertEqualsWithDelta($soldePrimeAvant - $partT2['prime'], (float) $base->primeSoldeDue, 0.01, 'Solde de prime de la police.');
+        $this->assertEqualsWithDelta($soldeComAvant - $partT2['commission'], (float) $base->solde_restant_du, 0.01, 'Solde de commission (bandeau du tableau de bord).');
+        $this->assertEqualsWithDelta($partT2['prime'], (float) $base->primeARegulariser, 0.01);
+
+        $stats = $helper->getIndicateursGlobaux($this->em->getRepository(Entreprise::class)->find($s['ent']->getId()), false, ['clientCible' => $s['piste']->getClient()]);
+        $this->assertEqualsWithDelta($partT2['prime'], $stats['prime_a_regulariser'], 0.01, 'Agrégats du client.');
+    }
+
+    /** Le relevé de compte (écran, lien public, e-mail, Ket) n'en réclame plus le solde au client. */
+    public function testLeReleveDeCompteNeReclamePlusLEcheance(): void
+    {
+        $s = $this->seed();
+        $this->executer($s, MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15']);
+        $client = $this->em->getRepository(Client::class)->find($s['piste']->getClient()->getId());
+        $ent = $this->em->getRepository(Entreprise::class)->find($s['ent']->getId());
+        $contexte = static::getContainer()->get(\App\Service\Soa\SoaContextBuilder::class)->build($client, $ent, null, true);
+
+        $lignes = [];
+        foreach ($contexte['tranches'] as $ligne) {
+            $lignes[$ligne['tranche']->getNom()] = $ligne;
+        }
+        $this->assertTrue($lignes['T2']['aRegulariser'] ?? false, 'Toujours sur le relevé, avec sa mention.');
+        $this->assertSame(0.0, $lignes['T2']['primeSolde']);
+        $this->assertArrayNotHasKey('aRegulariser', $lignes['T1'], 'T1 reste due.');
+    }
+
     /** POINT 8 — le nom de l'opportunité dérivée ne porte qu'UN préfixe, celui du mouvement. */
     public function testLeNomDeLOpportuniteNePorteQuUnPrefixe(): void
     {

@@ -46,7 +46,8 @@ class PortefeuilleIndicatorStrategy implements IndicatorCalculationStrategyInter
             ? min(1.0, max(0.0, $commissionPayee / $stats['commission_totale']))
             : 0.0;
         $primePayee = round($stats['prime_totale'] * $tauxReglement, 2);
-        $primeSolde = round($stats['prime_totale'] - $primePayee, 2);
+        // Les échéances « à régulariser » (police annulée / résiliée) ne sont plus réclamées.
+        $primeSolde = round(max(0.0, $stats['prime_totale'] - $primePayee - $stats['prime_a_regulariser']), 2);
         $indiceSolvabilite = round($tauxReglement * 100, 2);
 
         return [

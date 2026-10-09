@@ -14,6 +14,8 @@ use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\ServiceMonnaies;
 use Symfony\Contracts\Service\ResetInterface;
+use App\Services\Tranche\RegularisationDesEcheances;
+use App\Form\PisteType;
 
 class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface, ResetInterface
 {
@@ -40,6 +42,7 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
         // LE VOYANT « effort commercial » : une seule autorité le calcule, pour les
         // quatre écrans de l'arbre d'une affaire.
         private RattachementDuPartage $rattachement,
+        private RegularisationDesEcheances $regularisation,
     ) {
     }
 
@@ -93,7 +96,7 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
         $montantRetroAgent = round($this->getTrancheRetroAgent($entity), 2);
         $retroAgentReversee = round($this->calculationHelper->getTrancheMontantRetroAgentReversee($entity), 2);
         $commissionExigible = $this->getTrancheCommissionExigible($entity);
-        return [
+        $indicateurs = [
             // LE VOYANT DE LA LIGNE, et le drapeau des actions de partage : une seule
             // valeur pour une seule information — deux champs finiraient par se
             // contredire. `null` pour une affaire du cabinet seul, qui est le cas normal.
@@ -187,6 +190,99 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
             'commissionTTCAffichee' => sprintf('Com TTC (%s %s)', number_format($montantCommissionTTC, 2), $monnaieCode),
             'retroCommissionAffichee' => sprintf('RétroCom (%s %s)', number_format($montantRetroCommission, 2), $monnaieCode),
         ];
+
+        return $this->appliquerRegularisation($entity, $indicateurs);
+    }
+
+    /**
+     * L'ÉCHÉANCE « À RÉGULARISER » SORT DU RECOUVREMENT — un seul point, pour tous les lecteurs.
+     *
+     * Une annulation ou une résiliation a rendu l'échéance sans objet (RegularisationDesEcheances).
+     * Ses MONTANTS ne changent pas (prime, commission, taxes restent ceux de l'échéance) ; ce
+     * qui change, c'est ce qu'on en RÉCLAME : solde de prime, solde de commission, commission
+     * et rétro exigibles tombent à zéro, le statut devient « À régulariser » (ou
+     * « Régularisée » une fois la note de crédit émise), l'urgence devient un badge neutre.
+     * Chips, Ket (suivi_impayes, vigie, boussole, plan du jour), relevé de compte et totaux
+     * lisent CES valeurs : aucun d'eux ne refait la règle. Ce qui n'est plus réclamé reste
+     * visible, dans primeARegulariser / commissionARegulariser et l'explication de la fiche.
+     *
+     * « Maintenue » (déclarée due quand même) garde le recouvrement normal, avec son explication.
+     *
+     * @param array<string, mixed> $indicateurs
+     *
+     * @return array<string, mixed>
+     */
+    private function appliquerRegularisation(Tranche $tranche, array $indicateurs): array
+    {
+        $indicateurs += [
+            'regularisationEtat' => null,
+            'regularisationExplication' => null,
+            'commissionDejaFacturee' => null,
+            'primeARegulariser' => null,
+            'commissionARegulariser' => null,
+        ];
+        if ($tranche->getRegularisation() === null) {
+            return $indicateurs;
+        }
+
+        $acte = $this->acteEnCause($tranche);
+
+        if ($tranche->getRegularisation() === Tranche::REGULARISATION_MAINTENUE) {
+            $indicateurs['regularisationEtat'] = Tranche::REGULARISATION_MAINTENUE;
+            $indicateurs['regularisationExplication'] = sprintf(
+                'Déclarée due malgré %s : la prime reste acquise à l’assureur, le recouvrement est normal.',
+                $acte,
+            );
+
+            return $indicateurs;
+        }
+
+        $avoir = $this->regularisation->noteDeCredit($tranche);
+        $etat = $avoir !== null ? 'regularisee' : Tranche::REGULARISATION_A_REGULARISER;
+        $libelle = $avoir !== null ? 'Régularisée' : 'À régulariser';
+
+        return array_merge($indicateurs, [
+            'regularisationEtat' => $etat,
+            'regularisationExplication' => $avoir !== null
+                ? sprintf('Régularisée par la note de crédit n° %s (%s).', $avoir->getReference() ?: '#' . $avoir->getId(), $acte)
+                : sprintf(
+                    'Échéance sans objet après %s : elle couvre une période où la police n’existe plus et sort du '
+                    . 'recouvrement. Régularisez-la par une note de crédit, ou déclarez-la due si la prime reste '
+                    . 'acquise à l’assureur.',
+                    $acte,
+                ),
+            'commissionDejaFacturee' => $avoir === null
+                ? RegularisationDesEcheances::phraseCommissionFacturee($this->regularisation->notesDeCommission($tranche))
+                : null,
+            'primeARegulariser' => round(max(0.0, (float) $indicateurs['primeSoldeDue']), 2),
+            'commissionARegulariser' => round(max(0.0, (float) $indicateurs['solde_restant_du']), 2),
+            'statutPaiement' => $libelle,
+            'urgenceRecouvrement' => $libelle,
+            'urgenceNiveau' => 'faible',
+            'primeSoldeDue' => 0.0,
+            'resteAPayer' => 0.0,
+            'solde_restant_du' => 0.0,
+            'commissionExigible' => 0.0,
+            'commissionExigibleAffiche' => '',
+            'retroCommissionExigible' => 0.0,
+            'retroAPayerAffiche' => '',
+            'retardPaiement' => 'Non',
+        ]);
+    }
+
+    /** « la résiliation à effet du 15/06/2026 » — l'acte qui a rendu l'échéance sans objet. */
+    private function acteEnCause(Tranche $tranche): string
+    {
+        $piste = $tranche->getRegularisationPar();
+        $mouvement = mb_strtolower(PisteType::TYPE_AVENANT_LABELS[$piste?->getTypeAvenant()] ?? 'annulation');
+        $effet = $piste?->getCotations()->first() ?: null;
+        $effet = $effet ? ($effet->getAvenants()->first() ?: null)?->getStartingAt() : null;
+
+        return sprintf(
+            '%s de la police%s',
+            $mouvement === 'annulation' ? 'l’annulation' : 'la ' . $mouvement,
+            $effet !== null ? ' à effet du ' . $effet->format('d/m/Y') : '',
+        );
     }
 
     private function calculateTrancheAge(Tranche $tranche): string

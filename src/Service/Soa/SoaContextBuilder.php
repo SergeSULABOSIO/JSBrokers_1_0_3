@@ -184,9 +184,16 @@ class SoaContextBuilder
         // Posées SUR l'entrée : les gabarits n'ont plus qu'à les lire, et l'outil
         // `lire_soa` lit exactement les mêmes.
         foreach ($polices as $i => $entree) {
-            $polices[$i] += $this->prorata($entree['avenant'], 'primeTotale', $ratioPaiement, null);
+            // Le dû d'une police ne comprend plus ses échéances « à régulariser ».
+            $polices[$i] += $this->prorata($entree['avenant'], 'primeTotale', $ratioPaiement, null, 'primeARegulariser');
         }
         foreach ($tranches as $i => $entree) {
+            // UNE ÉCHÉANCE « À RÉGULARISER » N'EST PLUS RÉCLAMÉE AU CLIENT (police annulée ou
+            // résiliée) : elle reste sur le relevé, avec sa mention, mais sans solde à payer.
+            if ($entree['tranche']->estARegulariser()) {
+                $tranches[$i] += ['primePayee' => 0.0, 'primeSolde' => 0.0, 'aRegulariser' => true];
+                continue;
+            }
             // Une tranche a un montant payé PROPRE : c'est lui qui sert de repli
             // quand aucun prorata n'est applicable — une police, elle, affiche 0.
             $tranches[$i] += $this->prorata($entree['tranche'], 'primeTranche', $ratioPaiement, 'primePayee');
@@ -246,9 +253,9 @@ class SoaContextBuilder
      *
      * @return array{primePayee: float, primeSolde: float}
      */
-    private function prorata(object $ligne, string $cleMontant, ?float $ratio, ?string $cleRepli): array
+    private function prorata(object $ligne, string $cleMontant, ?float $ratio, ?string $cleRepli, ?string $cleDeduite = null): array
     {
-        $du = $this->valeurCalculee($ligne, $cleMontant);
+        $du = max(0.0, $this->valeurCalculee($ligne, $cleMontant) - ($cleDeduite === null ? 0.0 : $this->valeurCalculee($ligne, $cleDeduite)));
 
         $payee = $ratio !== null
             ? $du * $ratio

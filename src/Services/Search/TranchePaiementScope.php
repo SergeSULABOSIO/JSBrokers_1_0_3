@@ -41,6 +41,12 @@ final class TranchePaiementScope
     public const AXE_COMMISSION = '__paiement_commission__';
     public const AXE_RETRO = '__paiement_retro__';
     public const AXE_ECHEANCE = '__echeance_tranche__';
+    /**
+     * Échéances sorties du recouvrement par une annulation / résiliation de leur police.
+     * Elles n'apparaissent dans AUCUN autre axe (ni payées, ni impayées : rien n'y est plus
+     * réclamé) — seulement ici, et dans la liste sans filtre.
+     */
+    public const AXE_REGULARISATION = '__regularisation_tranche__';
 
     /**
      * Valeurs des trois axes de dette.
@@ -62,6 +68,8 @@ final class TranchePaiementScope
 
     /** Valeurs de l'axe d'échéance. */
     public const ECHUE = 'echue';
+    public const A_REGULARISER = 'a_regulariser';
+    public const REGULARISEE = 'regularisee';
     public const A_ECHOIR = 'a_echoir';
 
     /**
@@ -166,6 +174,24 @@ final class TranchePaiementScope
             'icones' => [
                 self::ECHUE => 'action:alert',
                 self::A_ECHOIR => 'action:calendar',
+            ],
+        ],
+        self::AXE_REGULARISATION => [
+            'nom' => 'regularisation',
+            'libelle' => 'Régularisation (police annulée ou résiliée)',
+            'titre' => 'Régularisation',
+            'icone' => 'action:calendar',
+            'valeurs' => [
+                self::A_REGULARISER => 'À régulariser (sorties du recouvrement)',
+                self::REGULARISEE => 'Régularisées par note de crédit',
+            ],
+            'courts' => [
+                self::A_REGULARISER => 'À régulariser',
+                self::REGULARISEE => 'Régularisées',
+            ],
+            'icones' => [
+                self::A_REGULARISER => 'action:calendar',
+                self::REGULARISEE => 'action:completed',
             ],
         ],
     ];
