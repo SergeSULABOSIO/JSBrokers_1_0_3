@@ -6,8 +6,12 @@ use App\Ai\Scope\AiScope;
 use App\Entity\Avenant;
 use App\Entity\Cotation;
 use App\Entity\Piste;
+use App\Form\AvenantType;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
+use App\Services\Piste\NomDePisteDerivee;
 use App\Services\ReconductionPartageService;
+use Psr\Clock\ClockInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
  * DÉCALQUE d'une police : traduit un MOUVEMENT (renouvellement, prorogation,
@@ -53,7 +57,42 @@ final class MouvementAvenantBuilder
     public function __construct(
         private readonly IndicatorCalculationHelper $indicatorHelper,
         private readonly ReconductionPartageService $reconductionPartage,
+        private readonly ClockInterface $horloge,
+        // Fuseau de l'application, EXPLICITE : « aujourd'hui » décide si une période est
+        // déjà échue, et une heure de mur différente de celle des chips d'échéance ferait
+        // dire à l'aperçu le contraire de la rubrique autour de minuit.
+        #[Autowire('%app.timezone%')]
+        private readonly string $fuseau = '',
     ) {
+    }
+
+    /** Minuit du jour, dans le fuseau de l'application (APP_TIMEZONE). */
+    public function aujourdhui(): \DateTimeImmutable
+    {
+        try {
+            $zone = new \DateTimeZone($this->fuseau);
+        } catch (\Exception) {
+            $zone = new \DateTimeZone(date_default_timezone_get());
+        }
+
+        return \DateTimeImmutable::createFromInterface($this->horloge->now())->setTimezone($zone)->setTime(0, 0);
+    }
+
+    /**
+     * Prise d'effet d'un renouvellement ou d'une prorogation quand l'utilisateur n'en
+     * donne pas : le lendemain de l'échéance, pour une couverture continue. Source
+     * unique de cette règle — le picker y lit la date qu'il pré-remplit.
+     */
+    public function dateEffetParDefaut(Avenant $base): ?\DateTimeImmutable
+    {
+        $fin = $base->getEndingAt();
+
+        return $fin !== null ? $this->dateEffetParDefautDepuis($fin) : null;
+    }
+
+    private function dateEffetParDefautDepuis(\DateTimeImmutable $finBase): \DateTimeImmutable
+    {
+        return $finBase->modify('+1 day');
     }
 
     /**
@@ -99,8 +138,15 @@ final class MouvementAvenantBuilder
         $source = $this->source($base, $pisteBase, $cotationBase, $debutBase, $finBase);
 
         $periode = $this->periode($mouvement, $debutBase, $finBase, $args);
+        if (isset($periode['bloquant'])) {
+            return ['bloquant' => $periode['bloquant'], 'source' => $source];
+        }
         if (isset($periode['aDemander'])) {
-            return ['aDemander' => [$periode['aDemander']], 'source' => $source];
+            return [
+                'aDemander'      => [$periode['aDemander']],
+                'source'         => $source,
+                'avertissements' => $periode['avertissements'] ?? [],
+            ];
         }
 
         /** @var \DateTimeImmutable $debut */
@@ -120,6 +166,15 @@ final class MouvementAvenantBuilder
 
         $avertissements = [];
         $ecarts         = $periode['ecarts'];
+
+        // UN AVENANT NÉ EXPIRÉ. Une police échue depuis longtemps, reprise au lendemain
+        // de son échéance, donne une période elle-même déjà échue : l'avenant entrera à
+        // son tour dans « Échus » dès sa création. C'est juste pour une régularisation
+        // (l'assureur a bien reconduit, la saisie rattrape), faux pour une reprise après
+        // interruption — seul l'utilisateur le sait, il doit donc le VOIR avant de valider.
+        if ($mouvement->porteUnePrime() && $fin < $this->aujourdhui()) {
+            $avertissements[] = $this->avertissementPeriodeEchue($debut, $fin);
+        }
         $etape          = sprintf('%s de la police', $mouvement->libelle());
 
         // ---------------------------------------------------------------- Piste dérivée
@@ -180,12 +235,14 @@ final class MouvementAvenantBuilder
             'champs' => $this->champsAvenant($mouvement, $base, $debut, $fin, $periode['jours'], $args, $ecarts, $avertissements),
         ];
 
-        $champsLien = ['pisteDeRenouvellement' => '@' . self::REF_PISTE];
-        if ($mouvement->annuleLaPolice()) {
-            // Sans ce statut, la police morte resterait comptée parmi les
-            // « polices actives » et dans les primes totales du tableau de bord.
-            $champsLien['renewalStatus'] = (string) Avenant::RENEWAL_STATUS_CANCELLED;
-        }
+        // LE STATUT DE LA BASE SUIT SON SORT, pour les quatre mouvements. Resté « En
+        // cours », une police renouvelée était comptée parmi les polices actives À CÔTÉ de
+        // son successeur. Le statut d'avant est mémorisé par l'opportunité dérivée
+        // (Piste::$statutBaseAvantMouvement) et restitué si le mouvement est abandonné.
+        $champsLien = [
+            'pisteDeRenouvellement' => '@' . self::REF_PISTE,
+            'renewalStatus'         => (string) $mouvement->statutDeLaBase(),
+        ];
         $opLien = [
             'op'     => 'edit',
             'entite' => 'Avenant',
@@ -248,17 +305,20 @@ final class MouvementAvenantBuilder
     // ------------------------------------------------------------------ période
 
     /**
-     * Période du nouvel avenant. Le renouvellement se déduit ENTIÈREMENT de la
-     * police de base ; les trois autres mouvements exigent une date de
-     * l'utilisateur — c'est la seule information qu'il ait à fournir.
+     * Période du nouvel avenant. Le renouvellement se déduit de la police de base
+     * (sauf période par défaut déjà échue, cf. MouvementAvenant::exigeDate) ; les
+     * trois autres mouvements exigent une date de l'utilisateur — c'est la seule
+     * information qu'il ait à fournir. Une prise d'effet choisie qui chevaucherait la
+     * police de base est refusée (« bloquant »).
      *
      * @return array{debut?: \DateTimeImmutable, fin?: \DateTimeImmutable, jours?: int,
-     *               ecarts?: array<int,string>, aDemander?: array{champ: string, question: string}}
+     *               ecarts?: array<int,string>, bloquant?: string, avertissements?: array<int,string>,
+     *               aDemander?: array{champ: string, question: string, dateSuggeree?: string}}
      */
     private function periode(MouvementAvenant $m, \DateTimeImmutable $debutBase, \DateTimeImmutable $finBase, array $args): array
     {
         $ecarts    = [];
-        $lendemain = $finBase->modify('+1 day');
+        $lendemain = $this->dateEffetParDefautDepuis($finBase);
 
         if ($m->annuleLaPolice()) {
             $effet = $this->date($args['dateEffet'] ?? null) ?? $this->date($args['dateDebut'] ?? null);
@@ -272,10 +332,16 @@ final class MouvementAvenantBuilder
             return ['debut' => $effet, 'fin' => $effet, 'jours' => 0, 'ecarts' => $ecarts];
         }
 
-        $debut = $this->date($args['dateDebut'] ?? null);
+        // `dateEffet` est le nom du champ de la boîte de mouvement, `dateDebut` celui de
+        // l'outil de l'assistante : deux noms, une seule information.
+        $debut = $this->date($args['dateDebut'] ?? null) ?? $this->date($args['dateEffet'] ?? null);
+        $dateFournie = $debut !== null || $this->date($args['dateFin'] ?? null) !== null;
         if ($debut !== null) {
-            $ecarts[] = sprintf('Prise d’effet fixée au %s (au lieu du lendemain de l’échéance, le %s).',
-                $debut->format('d/m/Y'), $lendemain->format('d/m/Y'));
+            $controle = $this->controlerPriseDEffet($debut, $finBase, $lendemain);
+            if (isset($controle['bloquant'])) {
+                return $controle;
+            }
+            $ecarts = array_merge($ecarts, $controle['ecarts']);
         }
         $debut ??= $lendemain;
 
@@ -301,7 +367,88 @@ final class MouvementAvenantBuilder
         }
         $fin ??= $debut->modify(sprintf('+%d days', $this->joursInclus($debutBase, $finBase) - 1));
 
+        // LA SEULE QUESTION D'UN RENOUVELLEMENT. Sans date fournie, la période par défaut
+        // part du lendemain de l'échéance ; si elle est déjà ÉCHUE, l'avenant naîtrait
+        // expiré. Plutôt que de le créer en silence, on demande la date d'effet — en
+        // rappelant que le lendemain reste la bonne réponse pour une régularisation.
+        if (!$dateFournie && $m->exigeDate(periodeParDefautEchue: $fin < $this->aujourdhui())) {
+            return [
+                'aDemander' => [
+                    'champ'        => 'dateEffet',
+                    'question'     => sprintf(
+                        'Cette police a expiré le %s : renouvelée au lendemain de son échéance, la nouvelle '
+                        . 'période (%s → %s) serait déjà échue. À quelle date le renouvellement prend-il effet ? '
+                        . '(Répondez « le %s » s’il s’agit de régulariser une reconduction déjà accordée par '
+                        . 'l’assureur.)',
+                        $finBase->format('d/m/Y'),
+                        $debut->format('d/m/Y'),
+                        $fin->format('d/m/Y'),
+                        $lendemain->format('d/m/Y'),
+                    ),
+                    'dateSuggeree' => $lendemain->format(self::FORMAT_DATE),
+                ],
+                'avertissements' => [$this->avertissementPeriodeEchue($debut, $fin)],
+            ];
+        }
+
         return ['debut' => $debut, 'fin' => $fin, 'jours' => $this->joursInclus($debut, $fin), 'ecarts' => $ecarts];
+    }
+
+    /**
+     * Une prise d'effet choisie par l'utilisateur, confrontée à la fin de la police de base.
+     *
+     *  - AVANT le lendemain de l'échéance : refusée. Deux polices couvriraient le même
+     *    risque sur la même période — une prime payée deux fois, et une commission
+     *    réclamée deux fois à l'assureur.
+     *  - LE LENDEMAIN : continuité de couverture, aucun écart à signaler.
+     *  - APRÈS : acceptée, mais annoncée comme une INTERRUPTION DE COUVERTURE, avec ses
+     *    dates : c'est un trou pendant lequel l'assuré n'était pas couvert.
+     *
+     * @return array{bloquant?: string, ecarts: array<int, string>}
+     */
+    private function controlerPriseDEffet(\DateTimeImmutable $debut, \DateTimeImmutable $finBase, \DateTimeImmutable $lendemain): array
+    {
+        $jourDebut     = $debut->setTime(0, 0);
+        $jourLendemain = $lendemain->setTime(0, 0);
+
+        if ($jourDebut < $jourLendemain) {
+            return ['bloquant' => sprintf(
+                'Prise d’effet au %s impossible : la police de base couvre déjà jusqu’au %s inclus. Les deux '
+                . 'polices se chevaucheraient du %s au %s. Choisissez une prise d’effet au %s ou plus tard.',
+                $jourDebut->format('d/m/Y'),
+                $finBase->format('d/m/Y'),
+                $jourDebut->format('d/m/Y'),
+                $finBase->format('d/m/Y'),
+                $jourLendemain->format('d/m/Y'),
+            ), 'ecarts' => []];
+        }
+
+        if ($jourDebut > $jourLendemain) {
+            $trou = $this->joursEntre($jourLendemain, $jourDebut);
+
+            return ['ecarts' => [sprintf(
+                'Interruption de couverture de %d jour%s : l’assuré n’est pas couvert du %s au %s (la police de '
+                . 'base a expiré le %s, la nouvelle prend effet le %s).',
+                $trou,
+                $trou > 1 ? 's' : '',
+                $jourLendemain->format('d/m/Y'),
+                $jourDebut->modify('-1 day')->format('d/m/Y'),
+                $finBase->format('d/m/Y'),
+                $jourDebut->format('d/m/Y'),
+            )]];
+        }
+
+        return ['ecarts' => []];
+    }
+
+    private function avertissementPeriodeEchue(\DateTimeImmutable $debut, \DateTimeImmutable $fin): string
+    {
+        return sprintf(
+            'La nouvelle période (%s → %s) est déjà échue : cet avenant apparaîtra à son tour dans « Échus ». '
+            . 'Si la police a été reprise après une interruption, choisissez une date d’effet plus récente.',
+            $debut->format('d/m/Y'),
+            $fin->format('d/m/Y'),
+        );
     }
 
     // ------------------------------------------------------------------ champs
@@ -315,7 +462,7 @@ final class MouvementAvenantBuilder
         \DateTimeImmutable $debut,
         float $facteur,
     ): array {
-        $nom = mb_substr(sprintf('%s — %s', $m->libelle(), (string) $pisteBase->getNom()), 0, 255);
+        $nom = NomDePisteDerivee::nommer($m->libelle(), $pisteBase->getNom());
 
         // descriptionDuRisque est NOT NULL : on la reprend, à défaut celle du
         // risque, à défaut le nom de la piste — jamais une question à l'utilisateur.
@@ -429,7 +576,7 @@ final class MouvementAvenantBuilder
             default                          => sprintf('%s au %s', $m->libelle(), $debut->format('d/m/Y')),
         };
 
-        return [
+        $champs = [
             'cotation'        => '@' . self::REF_COTATION,
             'referencePolice' => mb_substr($reference, 0, 255),
             'numero'          => mb_substr($numero, 0, 255),
@@ -437,6 +584,15 @@ final class MouvementAvenantBuilder
             'startingAt'      => $debut->format(self::FORMAT_DATETIME),
             'endingAt'        => $fin->format(self::FORMAT_DATETIME),
         ];
+
+        // L'ACTE D'UNE ANNULATION OU D'UNE RÉSILIATION n'est pas une police qui couvre :
+        // né « En cours », il gonflait les polices actives, puis entrait dans « Échus » au
+        // lendemain de sa date d'effet en réclamant un renouvellement.
+        if ($m->annuleLaPolice()) {
+            $champs['renewalStatus'] = (string) Avenant::RENEWAL_STATUS_CANCELLED;
+        }
+
+        return $champs;
     }
 
     /**
@@ -728,9 +884,15 @@ final class MouvementAvenantBuilder
             ];
         }
 
+        $statut = sprintf(
+            'La police de base passe au statut « %s » : son successeur prend le relais parmi les polices actives.',
+            AvenantType::RENEWAL_STATUS_LABELS[$m->statutDeLaBase()],
+        );
+
         if ($m === MouvementAvenant::Prorogation) {
             return [
                 sprintf('Prorogation de %d jour%s, du %s au %s.', $jours, $jours > 1 ? 's' : '', $debut->format('d/m/Y'), $fin->format('d/m/Y')),
+                $statut,
                 sprintf('Prime recalculée au prorata des jours prorogés (facteur %s).', number_format($facteur, 4, ',', ' ')),
                 'Échéancier réduit à une tranche unique, exigible à la prise d’effet.',
                 'Même assureur, même référence de police, numéro d’avenant incrémenté.',
@@ -739,7 +901,8 @@ final class MouvementAvenantBuilder
         }
 
         return [
-            sprintf('Nouvelle période du %s au %s (lendemain de l’échéance, même durée).', $debut->format('d/m/Y'), $fin->format('d/m/Y')),
+            sprintf('Nouvelle période du %s au %s (même durée que la police de base).', $debut->format('d/m/Y'), $fin->format('d/m/Y')),
+            $statut,
             'Même assureur, même référence de police, numéro d’avenant incrémenté.',
             'Prime, composition, échéancier (dates décalées d’autant) et rémunération du courtier reconduits à l’identique.',
             'Partenaires et conditions de partage reconduits ; une tâche de suivi du paiement est ajoutée.',

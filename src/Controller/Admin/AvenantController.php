@@ -24,6 +24,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
 use App\Services\Avenant\MarquageNonRenouvelableService;
 use App\Services\CanvasBuilder;
+use App\Services\AvenantRenouvellementResolver;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use App\Controller\Admin\ControllerUtilsTrait;
@@ -58,6 +59,7 @@ class AvenantController extends AbstractController
         private MouvementAvenantBuilder $mouvementBuilder,
         private WorkspaceMutationService $mutationService,
         private MarquageNonRenouvelableService $marquageNonRenouvelable,
+        private AvenantRenouvellementResolver $renouvellementResolver,
         CanvasBuilder $canvasBuilder // Inject CanvasBuilder without property promotion
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait
@@ -204,10 +206,14 @@ class AvenantController extends AbstractController
         // Valeurs proposées dans les champs. L'aperçu est calculé AVEC elles : sans
         // cela, la boîte s'ouvrait sur « renseignez l'information demandée » alors
         // que le champ était déjà rempli, puis se corrigeait toute seule.
+        //
+        // RENOUVELLEMENT : la prise d'effet est pré-remplie au lendemain de l'échéance (la
+        // règle vit dans le builder) et reste modifiable — pour une police échue depuis
+        // longtemps, ce lendemain donnerait un avenant né expiré, et l'aperçu le dit.
         $defauts = match (true) {
-            $type === MouvementAvenant::Prorogation => ['dureeJours' => self::PROROGATION_JOURS_DEFAUT],
-            $type->exigeDate()                      => ['dateEffet' => (new DateTimeImmutable())->format('Y-m-d')],
-            default                                 => [],
+            $type === MouvementAvenant::Prorogation    => ['dureeJours' => self::PROROGATION_JOURS_DEFAUT],
+            $type === MouvementAvenant::Renouvellement => array_filter(['dateEffet' => $this->mouvementBuilder->dateEffetParDefaut($avenant)?->format('Y-m-d')]),
+            default                                    => ['dateEffet' => $this->mouvementBuilder->aujourdhui()->format('Y-m-d')],
         };
 
         return $this->render('components/avenant/_mouvement_picker.html.twig', [
@@ -325,9 +331,18 @@ class AvenantController extends AbstractController
         if ($avenant->getEntreprise()?->getId() !== $this->getEntreprise()->getId()) {
             return $this->json(['message' => 'Avenant introuvable dans cet espace de travail.'], Response::HTTP_NOT_FOUND);
         }
-        if ($avenant->getPisteDeRenouvellement() !== null) {
+        // Lue par le resolver, source unique de « qu'est devenue cette police » : les DEUX
+        // sens du double lien (un lien à moitié posé reste un mouvement), et l'avenant
+        // d'ACTE d'une annulation / résiliation, qui n'a pas de suite à recevoir.
+        $suite = $this->renouvellementResolver->resoudre($avenant);
+        if ($suite['pisteDeriveeId'] !== null) {
             return $this->json([
                 'message' => 'Cette police porte déjà une opportunité dérivée : un mouvement y a déjà été enregistré.',
+            ], Response::HTTP_CONFLICT);
+        }
+        if ($suite['acte'] ?? false) {
+            return $this->json([
+                'message' => sprintf('Cet avenant est l’%s d’une police : il ne couvre rien et n’a pas de suite à recevoir.', mb_strtolower((string) $suite['statut'])),
             ], Response::HTTP_CONFLICT);
         }
 

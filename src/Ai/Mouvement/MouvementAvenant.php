@@ -2,6 +2,7 @@
 
 namespace App\Ai\Mouvement;
 
+use App\Entity\Avenant;
 use App\Entity\Piste;
 use App\Form\PisteType;
 
@@ -23,7 +24,8 @@ use App\Form\PisteType;
  *  - l'affaire poursuit-elle son cycle de vie ? (poursuitLeCycle → tâche de
  *    suivi du paiement, car c'est le paiement de la prime qui rend la
  *    commission exigible)
- *  - la police de base meurt-elle ? (annuleLaPolice → renewalStatus CANCELLED)
+ *  - la police de base meurt-elle ? (annuleLaPolice)
+ *  - quel statut la police de base prend-elle ? (statutDeLaBase)
  *
  * Les libellés ne sont pas redéclarés ici : ils viennent de
  * PisteType::TYPE_AVENANT_LABELS, déjà source unique du champ de formulaire et
@@ -54,14 +56,16 @@ enum MouvementAvenant: string
     }
 
     /**
-     * L'utilisateur DOIT-il fournir une date (ou une durée) ? Faux pour le seul
-     * renouvellement : tout y est puisé dans la police de base, il n'a rien à
-     * fournir. Pour les trois autres, la date d'effet est la SEULE information
-     * que l'assistant est autorisé à demander.
+     * L'utilisateur DOIT-il fournir une date (ou une durée) ? Pour les trois autres
+     * mouvements, oui : c'est la SEULE information que l'assistant est autorisé à
+     * demander. Pour le renouvellement, non — tout est puisé dans la police de base —
+     * SAUF si la période qu'on en déduirait est déjà échue : l'avenant naîtrait expiré,
+     * et seul l'utilisateur sait s'il s'agit d'une régularisation (le lendemain de
+     * l'échéance est alors juste) ou d'une reprise après interruption.
      */
-    public function exigeDate(): bool
+    public function exigeDate(bool $periodeParDefautEchue = false): bool
     {
-        return $this !== self::Renouvellement;
+        return $this !== self::Renouvellement || $periodeParDefautEchue;
     }
 
     /**
@@ -84,6 +88,34 @@ enum MouvementAvenant: string
     public function annuleLaPolice(): bool
     {
         return $this === self::Annulation || $this === self::Resiliation;
+    }
+
+    /**
+     * Statut STOCKÉ (Avenant::renewalStatus) que le mouvement pose sur la police de
+     * base. Sans lui, une police renouvelée restait « En cours » à côté de son
+     * successeur : les deux étaient comptées parmi les polices actives et dans les
+     * primes totales du tableau de bord (DashboardDataProvider filtre sur RUNNING).
+     */
+    public function statutDeLaBase(): int
+    {
+        return match ($this) {
+            self::Renouvellement => Avenant::RENEWAL_STATUS_RENEWED,
+            self::Prorogation    => Avenant::RENEWAL_STATUS_EXTENDED,
+            self::Annulation,
+            self::Resiliation    => Avenant::RENEWAL_STATUS_CANCELLED,
+        };
+    }
+
+    /** Mouvement porté par une opportunité dérivée (Piste::AVENANT_*) ; null hors des quatre. */
+    public static function depuisTypeAvenant(?int $typeAvenant): ?self
+    {
+        foreach (self::cases() as $mouvement) {
+            if ($mouvement->typeAvenant() === $typeAvenant) {
+                return $mouvement;
+            }
+        }
+
+        return null;
     }
 
     /** Le mouvement porte-t-il une prime (chargements, échéancier, revenus) ? */

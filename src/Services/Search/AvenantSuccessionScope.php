@@ -3,6 +3,7 @@
 namespace App\Services\Search;
 
 use App\Entity\Avenant;
+use App\Entity\Cotation;
 use App\Entity\Piste;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -22,7 +23,9 @@ use Doctrine\ORM\EntityManagerInterface;
  *   opportunité dérivée lui a donné un AVENANT SUCCESSEUR (renouvellement,
  *   prorogation), porte une DÉCISION DE FIN (annulation, résiliation), ou le
  *   courtier a SIGNALÉ qu'elle ne serait pas renouvelée. Elle y RESTE tant qu'une
- *   action est due : mouvement AMORCÉ SANS AVENANT, ou AUCUNE SUITE.
+ *   action est due : mouvement AMORCÉ SANS AVENANT, ou AUCUNE SUITE. L'avenant
+ *   d'ACTE d'une annulation ou d'une résiliation n'y entre jamais : il ne couvre
+ *   rien (dqlActeDeFin / estActeDeFin).
  *
  * LE QUATRIÈME SORT — la décision sans mouvement. Les trois premiers se lisent dans
  * la chaîne (une piste, un avenant successeur) ; le quatrième est une note portée par
@@ -45,11 +48,13 @@ use Doctrine\ORM\EntityManagerInterface;
  * porte bornes() pour le SQL et classifier() pour le badge. Un test confronte les
  * deux faces sur le même jeu de données : c'est le garde-fou contre la divergence.
  *
- * CE QUI N'EST PAS CONCERNÉ. Les agrégats « polices actives » et les totaux de
- * primes (filtrés sur la colonne stockée renewalStatus) ne connaissent PAS cette
- * règle : y faire entrer une police reprise la compterait EN DOUBLE avec son
- * successeur. Une police reprise est vivante au sens de la COUVERTURE, jamais au
- * sens comptable.
+ * CE QUI N'EST PAS CONCERNÉ. Les agrégats du tableau de bord lisent la colonne
+ * stockée renewalStatus, que les mouvements tiennent à jour sur la police de base
+ * (MouvementAvenant::statutDeLaBase) : le dénombrement des polices actives n'y garde
+ * que « En cours » — une police reprise y serait comptée EN DOUBLE avec son
+ * successeur —, les totaux de primes et de commissions gardent aussi « Renouvelé » et
+ * « Prorogé » — sa production d'exercice reste acquise. Une police reprise est
+ * vivante au sens de la COUVERTURE, jamais au sens du dénombrement.
  */
 final class AvenantSuccessionScope
 {
@@ -162,10 +167,47 @@ final class AvenantSuccessionScope
         string $suffix = '',
     ): string {
         return sprintf(
-            '%s.nonRenouvelable = false AND NOT EXISTS (%s)',
+            '%s.nonRenouvelable = false AND NOT EXISTS (%s) AND NOT EXISTS (%s)',
             $rootAlias,
             self::dqlSuccessionScellee($em, $rootAlias, $suffix),
+            self::dqlActeDeFin($em, $rootAlias, $suffix),
         );
+    }
+
+    /**
+     * L'ACTE D'UNE DÉCISION DE FIN EST SCELLÉ PAR NATURE. Une annulation ou une
+     * résiliation s'enregistre par un avenant d'acte (période effet → effet, sans
+     * prime), né de l'opportunité dérivée typée annulation / résiliation. Cet avenant
+     * ne couvre rien : il n'a pas de suite à recevoir. Sans cette règle, il entrait dans
+     * « Échus » au lendemain de sa date d'effet et réclamait un renouvellement.
+     *
+     * Se lit sur l'opportunité PROPRE de l'avenant (sa proposition → son opportunité),
+     * et non sur une opportunité dérivée de lui : c'est la différence avec
+     * dqlSuccessionScellee(). Partage son paramètre : MOUVEMENTS_SCELLANTS.
+     *
+     * Jumelle PHP : AvenantRenouvellementResolver, qui rend le code CANCELLED à un tel acte.
+     */
+    public static function dqlActeDeFin(
+        EntityManagerInterface $em,
+        string $rootAlias,
+        string $suffix = '',
+    ): string {
+        $c = 'acteCotation' . $suffix;
+        $p = 'actePiste' . $suffix;
+
+        return $em->createQueryBuilder()
+            ->select('1')
+            ->from(Cotation::class, $c)
+            ->join("{$c}.piste", $p)
+            ->where("{$c}.id = IDENTITY({$rootAlias}.cotation)")
+            ->andWhere("{$p}.typeAvenant IN (:mouvementsScellants{$suffix})")
+            ->getDQL();
+    }
+
+    /** Face PHP de dqlActeDeFin() : l'avenant est-il l'acte d'une annulation / résiliation ? */
+    public static function estActeDeFin(Avenant $avenant): bool
+    {
+        return in_array($avenant->getCotation()?->getPiste()?->getTypeAvenant(), self::MOUVEMENTS_SCELLANTS, true);
     }
 
     /** Nom du paramètre à lier avec MOUVEMENTS_SCELLANTS pour le DQL ci-dessus. */

@@ -253,6 +253,13 @@ final class AvenantRenouvellementResolver
             return $this->marqueeNonRenouvelable($base);
         }
 
+        // L'avenant est-il lui-même l'ACTE d'une annulation ou d'une résiliation ? Il ne
+        // couvre rien et n'attend aucune suite : son sort est scellé par nature. Face PHP
+        // de AvenantSuccessionScope::dqlActeDeFin().
+        if (AvenantSuccessionScope::estActeDeFin($base)) {
+            return $this->acteDeFin($base);
+        }
+
         $piste = $this->pisteDerivee($base);
 
         if ($piste === null) {
@@ -345,6 +352,42 @@ final class AvenantRenouvellementResolver
             'pisteDeriveeId' => null,
             'typeMouvement'  => null,
             'avenantsIssus'  => [],
+        ];
+    }
+
+    /**
+     * Avenant d'ACTE : celui qui enregistre une annulation ou une résiliation (période
+     * effet → effet, sans prime). Il ne couvre rien ; la police qu'il éteint est celle de
+     * base de son opportunité. Code CANCELLED, comme la police éteinte : c'est ce qui le
+     * fait sortir des chips d'échéance (estScelle) et neutralise son badge.
+     *
+     * @return array<string, mixed>
+     */
+    private function acteDeFin(Avenant $acte): array
+    {
+        $piste     = $acte->getCotation()?->getPiste();
+        $mouvement = $this->libelleMouvement($piste?->getTypeAvenant()) ?? 'Annulation';
+        $eteinte   = $piste?->getAvenantDeBase();
+        $effet     = $acte->getStartingAt();
+        // « Acte d’annulation », « acte de résiliation » : élision devant une voyelle.
+        $de        = preg_match('/^[aeiouyéèêh]/iu', $mouvement) === 1 ? 'd’' : 'de ';
+
+        return [
+            'code'           => Avenant::RENEWAL_STATUS_CANCELLED,
+            'statut'         => 'Acte ' . $de . mb_strtolower($mouvement),
+            'phrase'         => sprintf(
+                'ACTE %s%s : cet avenant enregistre la fin de %s. Il ne couvre rien et n’attend aucune '
+                . 'suite — rien à renouveler.',
+                mb_strtoupper($de . $mouvement),
+                $effet !== null ? ' à effet du ' . $effet->format('d/m/Y') : '',
+                $eteinte?->getId() !== null
+                    ? sprintf('la police de l’avenant #%d (réf. %s)', $eteinte->getId(), $eteinte->getReferencePolice() ?? '—')
+                    : 'la police de base',
+            ),
+            'pisteDeriveeId' => null,
+            'typeMouvement'  => $mouvement,
+            'avenantsIssus'  => [],
+            'acte'           => true,
         ];
     }
 

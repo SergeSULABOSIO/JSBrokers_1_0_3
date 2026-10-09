@@ -1836,7 +1836,10 @@ class AiContextBuilder
           preparer_mouvement_avenant (avenantId, ou « police » = la référence dictée) —
           • RENOUVELLEMENT (« renouvelle / reconduis cette police », « à l'identique », « refais la
             même police pour l'année prochaine ») => mouvement="renouvellement". AUCUNE information
-            n'est requise de l'utilisateur : tout est puisé dans la police de base ;
+            n'est requise de l'utilisateur : tout est puisé dans la police de base — sauf si la police a
+            expiré depuis si longtemps que la nouvelle période serait déjà échue : l'outil renvoie alors
+            « aDemander » (la date d'effet) ; relaie son avertissement, pose la question, et repasse la
+            réponse en dateEffet ;
           • PROROGATION (« proroge / prolonge cet avenant de 20 jours ») => "prorogation" + dureeJours
             (ou dateFin) ;
           • ANNULATION (« annule cet avenant au 15 juin 2026 ») => "annulation" + dateEffet ;

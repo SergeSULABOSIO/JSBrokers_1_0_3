@@ -52,6 +52,9 @@ class DescriptionSansParametreFantomeTest extends KernelTestCase
         // depuis quand, et l'assistant en a conclu qu'aucun paiement n'existait
         // (incident du 2026-09-25).
         'primePayeeLe', 'primePayeeOrigine',
+        // preparer_mouvement_avenant annonce la seule question qu'il peut renvoyer : la
+        // date d'effet d'un renouvellement dont la période par défaut serait déjà échue.
+        'aDemander',
 
         // ── ARGUMENTS D'AUTRES OUTILS ───────────────────────────────────────────────
         // preparer_programme enchaîne des étapes dont le champ `arguments` porte les

@@ -181,6 +181,12 @@ class AvenantSuccessionScopeTest extends KernelTestCase
         $levee->setNonRenouvelablePar($this->invite);
         $levee->setNonRenouvelable(false);
 
+        // L'ACTE D'UNE ANNULATION : période effet → effet, ÉCHUE. Il ne couvre rien : sans
+        // la règle de l'acte de fin, il entrait dans « Échus » et réclamait un renouvellement.
+        $annulee = $this->police('POL-ANNULEE', $echu);
+        $acte = $this->deriver($annulee, Piste::AVENANT_ANNULATION, avecAvenantIssu: true);
+        $acte->setStartingAt($echu)->setEndingAt($echu);
+
         $em->flush();
 
         return [
@@ -194,6 +200,8 @@ class AvenantSuccessionScopeTest extends KernelTestCase
             'marquee'        => $marquee->getId(),
             'marqueeEnCours' => $marqueeEnCours->getId(),
             'levee'          => $levee->getId(),
+            'annulee'        => $annulee->getId(),
+            'acteAnnulation' => $acte->getId(),
         ];
     }
 
@@ -231,7 +239,7 @@ class AvenantSuccessionScopeTest extends KernelTestCase
         int $typeAvenant,
         bool $avecAvenantIssu,
         bool $lienSurAvenant = true,
-    ): void {
+    ): ?Avenant {
         $em = $this->em();
 
         $derivee = (new Piste())->setNom('Mouvement ' . $base->getReferencePolice())
@@ -257,7 +265,11 @@ class AvenantSuccessionScopeTest extends KernelTestCase
                 ->setEndingAt(new \DateTimeImmutable('+1 year'));
             $successeur->setEntreprise($this->entreprise)->setInvite($this->invite);
             $em->persist($successeur);
+
+            return $successeur;
         }
+
+        return null;
     }
 
     /** @return array<int, int> ids des avenants renvoyés par une fenêtre d'échéance. */
@@ -408,6 +420,29 @@ class AvenantSuccessionScopeTest extends KernelTestCase
         // Et les marquées y sont bien, alors qu'elles ne sont dans AUCUNE fenêtre de dates.
         $this->assertArrayHasKey($s['marquee'], $comptes);
         $this->assertArrayHasKey($s['marqueeEnCours'], $comptes);
+    }
+
+    /**
+     * L'ACTE D'UNE ANNULATION / RÉSILIATION n'est dans aucune fenêtre d'échéance, et son
+     * badge est neutre : il ne couvre rien, il n'a rien à renouveler.
+     */
+    public function testLActeDUneAnnulationNEstDansAucuneFenetre(): void
+    {
+        $s = $this->seed();
+
+        foreach ([
+            AvenantEcheanceScope::STATUT_ECHUS,
+            AvenantEcheanceScope::STATUT_30J,
+            AvenantEcheanceScope::STATUT_31_60J,
+            AvenantEcheanceScope::STATUT_60_PLUS,
+        ] as $statut) {
+            $this->assertNotContains($s['acteAnnulation'], $this->fenetre($statut), $statut);
+        }
+
+        $acte = $this->em()->getRepository(Avenant::class)->find($s['acteAnnulation']);
+        $indicateurs = static::getContainer()->get(AvenantIndicatorStrategy::class)->calculate($acte);
+        $this->assertSame('Acte d’annulation', $indicateurs['urgenceEcheance']);
+        $this->assertSame('faible', $indicateurs['urgenceEcheanceNiveau']);
     }
 
     /**

@@ -13,6 +13,7 @@ use App\Repository\PisteRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use App\Services\CanvasBuilder;
+use App\Services\Piste\NomDePisteDerivee;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
@@ -162,7 +163,8 @@ class PisteController extends AbstractController
                     $piste->setCommissionPotentielle($this->indicatorHelper->getCotationMontantCommissionTtc($cotation, -1, false) ?: $src->getCommissionPotentielle());
                     $piste->setRenewalCondition($src->getRenewalCondition() ?? Piste::RENEWAL_CONDITION_RENEWABLE);
                     $piste->setPartenaire($src->getPartenaire());
-                    $piste->setNom(mb_substr('Renouvellement — ' . $src->getNom(), 0, 255));
+                    // Un seul préfixe, quel que soit le nombre de mouvements déjà subis.
+                    $piste->setNom(NomDePisteDerivee::nommer(PisteType::TYPE_AVENANT_LABELS[Piste::AVENANT_RENOUVELLEMENT], $src->getNom()));
                 }
 
                 $piste->setTypeAvenant(Piste::AVENANT_RENOUVELLEMENT);
