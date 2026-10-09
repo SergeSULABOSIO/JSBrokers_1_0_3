@@ -374,6 +374,9 @@ class IndicatorCalculationHelper implements ResetInterface
     {
         $totals = array_fill_keys([
             'prime_totale', 'prime_totale_payee', 'commission_totale', 'commission_totale_encaissee',
+            // Ce qui n'est PLUS réclamé (échéances « à régulariser » après annulation /
+            // résiliation) : retiré des soldes, jamais de la prime ni de la commission.
+            'prime_a_regulariser', 'commission_a_regulariser',
             'commission_nette', 'commission_pure', 'prime_nette', 'commission_partageable', 'reserve',
             'retro_commission_partenaire', 'retro_commission_partenaire_payee',
             // EXIGIBLE côté PARTENAIRE : ce que le cabinet doit sortir MAINTENANT, parce
@@ -587,6 +590,10 @@ class IndicatorCalculationHelper implements ResetInterface
             $commission_totale += $commission_ttc_cotation;
             $commission_totale_encaissee += $this->getCotationMontantCommissionEncaissee($cotation);
 
+            $aRegulariser = $this->getCotationARegulariser($cotation);
+            $prime_a_regulariser += $aRegulariser['prime'];
+            $commission_a_regulariser += $aRegulariser['commission'];
+
             $cotation_com_nette = $this->getCotationMontantCommissionHt($cotation, -1, false);
             $commission_nette += $cotation_com_nette;
 
@@ -633,6 +640,9 @@ class IndicatorCalculationHelper implements ResetInterface
             // n'ont pas de pourcentage du tout (le prorata = montantFlat / prime totale).
             // Le brut donnait ex. 1 381,48 × 100 = 138 148 de « prime totale » (Ket/visualisation).
             $facteur = $this->getTrancheTauxFactor($trancheCible);
+            $aRegulariserTranche = $this->getTrancheARegulariser($trancheCible);
+            $prime_a_regulariser = $aRegulariserTranche['prime'];
+            $commission_a_regulariser = $aRegulariserTranche['commission'];
             $prime_totale *= $facteur;
             $commission_totale *= $facteur;
             $commission_nette *= $facteur;
@@ -669,8 +679,8 @@ class IndicatorCalculationHelper implements ResetInterface
         // cibles restreignent de la même façon (un partenaireCible ne compte pas non plus
         // les rétros des autres).
         $reserve = Reserve::calculer($commission_pure, $retro_commission_partenaire, $retro_commission_agent);
-        $prime_totale_solde = $prime_totale - $prime_totale_payee;
-        $commission_totale_solde = $commission_totale - $commission_totale_encaissee;
+        $prime_totale_solde = $prime_totale - $prime_totale_payee - $prime_a_regulariser;
+        $commission_totale_solde = $commission_totale - $commission_totale_encaissee - $commission_a_regulariser;
         $retro_commission_partenaire_solde = $retro_commission_partenaire - $retro_commission_partenaire_payee;
         $retro_commission_agent_solde = $retro_commission_agent - $retro_commission_agent_payee;
         $taxe_courtier_solde = $taxe_courtier - $taxe_courtier_payee;
@@ -692,6 +702,8 @@ class IndicatorCalculationHelper implements ResetInterface
             'prime_totale' => $prime_totale,
             'prime_totale_payee' => $prime_totale_payee,
             'prime_totale_solde' => $prime_totale_solde,
+            'prime_a_regulariser' => $prime_a_regulariser,
+            'commission_a_regulariser' => $commission_a_regulariser,
             'commission_totale' => $commission_totale,
             'commission_totale_encaissee' => $commission_totale_encaissee,
             'commission_totale_solde' => $commission_totale_solde,
@@ -2686,6 +2698,38 @@ class IndicatorCalculationHelper implements ResetInterface
     public function getTaxeApplicable(bool $isIARD, bool $isTaxeAssureur): ?\App\Entity\Taxe
     {
         return $this->serviceTaxes->getTaxeApplicable($isIARD, $isTaxeAssureur);
+    }
+
+    /**
+     * Ce qu'une échéance « à régulariser » ne réclame plus (police annulée ou résiliée) :
+     * le reste de sa prime et de sa commission. Zéro pour toute autre échéance — y compris
+     * « maintenue », déclarée due quand même.
+     *
+     * @return array{prime: float, commission: float}
+     */
+    public function getTrancheARegulariser(Tranche $tranche): array
+    {
+        if (!$tranche->estARegulariser()) {
+            return ['prime' => 0.0, 'commission' => 0.0];
+        }
+
+        return [
+            'prime'      => max(0.0, $this->getTranchePrime($tranche) - $this->getTranchePrimePayee($tranche)),
+            'commission' => max(0.0, $this->getTrancheCommissionTtc($tranche) - $this->getTrancheMontantCommissionEncaissee($tranche)),
+        ];
+    }
+
+    /** @return array{prime: float, commission: float} somme des échéances à régulariser de la proposition */
+    public function getCotationARegulariser(?Cotation $cotation): array
+    {
+        $total = ['prime' => 0.0, 'commission' => 0.0];
+        foreach ($cotation?->getTranches() ?? [] as $tranche) {
+            $part = $this->getTrancheARegulariser($tranche);
+            $total['prime'] += $part['prime'];
+            $total['commission'] += $part['commission'];
+        }
+
+        return $total;
     }
 
     /** Prime d'une échéance : celle de sa proposition, à la part de l'échéance. */

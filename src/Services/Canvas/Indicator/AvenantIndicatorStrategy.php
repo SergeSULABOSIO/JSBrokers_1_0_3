@@ -84,6 +84,7 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
         $tauxSP       = $this->calculationHelper->getCotationTauxSP($cotation);
 
         $primeTotale = $this->calculationHelper->getCotationMontantPrimePayableParClient($cotation);
+        $aRegulariser = $this->calculationHelper->getCotationARegulariser($cotation);
         $primePayee  = $this->calculationHelper->getCotationMontantPrimePayableParClientPayee($cotation);
 
         $commissionHt        = $this->calculationHelper->getCotationMontantCommissionHt($cotation, -1, false);
@@ -151,7 +152,11 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'montantMoyenTranche' => $this->calculationHelper->calculateMontantMoyenTranche($cotation),
             'primeTotale' => round($primeTotale, 2),
             'primePayee' => round($primePayee, 2),
-            'primeSoldeDue' => round($primeTotale - $primePayee, 2),
+            // Les échéances « à régulariser » (police annulée / résiliée) ne sont plus réclamées :
+            // ni au client (solde de prime), ni à l'assureur (solde de commission, que somme le
+            // « solde restant dû » du tableau de bord). Les montants, eux, ne bougent pas.
+            'primeSoldeDue' => round($primeTotale - $primePayee - $aRegulariser['prime'], 2),
+            'primeARegulariser' => round($aRegulariser['prime'], 2),
             // Ce que les bordereaux de production ont réclamé à l'assureur SUR CETTE POLICE,
             // et ce qui est effectivement rentré dessus. Valeurs DÉRIVÉES des lignes
             // d'analyse : rien n'est stocké sur l'avenant, qui peut figurer dans plusieurs
@@ -166,7 +171,7 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'taxeAssureurMontant' => round($taxeAssureur, 2),
             'montant_du' => round($commissionTtc, 2),
             'montant_paye' => round($commissionEncaissee, 2),
-            'solde_restant_du' => round($commissionTtc - $commissionEncaissee, 2),
+            'solde_restant_du' => round($commissionTtc - $commissionEncaissee - $aRegulariser['commission'], 2),
             'taxeCourtierPayee' => round($taxeCourtierPayee, 2),
             'taxeCourtierSolde' => round($taxeCourtier - $taxeCourtierPayee, 2),
             'taxeAssureurPayee' => round($taxeAssureurPayee, 2),

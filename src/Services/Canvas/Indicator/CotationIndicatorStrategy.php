@@ -54,7 +54,8 @@ class CotationIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'montantMoyenTranche' => $this->calculationHelper->calculateMontantMoyenTranche($entity),
             'primeTotale' => round($this->calculationHelper->getCotationMontantPrimePayableParClient($entity), 2),
             'primePayee' => round($this->calculationHelper->getCotationMontantPrimePayableParClientPayee($entity), 2),
-            'primeSoldeDue' => round($this->calculationHelper->getCotationMontantPrimePayableParClient($entity) - $this->calculationHelper->getCotationMontantPrimePayableParClientPayee($entity), 2),
+            // Les échéances « à régulariser » (police annulée / résiliée) ne sont plus réclamées.
+            'primeSoldeDue' => round($this->calculationHelper->getCotationMontantPrimePayableParClient($entity) - $this->calculationHelper->getCotationMontantPrimePayableParClientPayee($entity) - $this->calculationHelper->getCotationARegulariser($entity)['prime'], 2),
             'tauxCommission' => $this->calculationHelper->getCotationTauxSP($entity),
             'montantHT' => round($this->calculationHelper->getCotationMontantCommissionHt($entity, -1, false), 2),
             'montantTTC' => round($this->calculationHelper->getCotationMontantCommissionTtc($entity, -1, false), 2),
@@ -65,7 +66,7 @@ class CotationIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'tauxTaxeCourtierPercent' => $this->calculationHelper->getCotationTauxTaxeCourtierPercent($entity),
             'montant_du' => round($this->calculationHelper->getCotationMontantCommissionTtc($entity, -1, false), 2),
             'montant_paye' => round($this->calculationHelper->getCotationMontantCommissionEncaissee($entity), 2),
-            'solde_restant_du' => round($this->calculationHelper->getCotationMontantCommissionTtc($entity, -1, false) - $this->calculationHelper->getCotationMontantCommissionEncaissee($entity), 2),
+            'solde_restant_du' => round($this->calculationHelper->getCotationMontantCommissionTtc($entity, -1, false) - $this->calculationHelper->getCotationMontantCommissionEncaissee($entity) - $this->calculationHelper->getCotationARegulariser($entity)['commission'], 2),
             'taxeCourtierPayee' => round($this->calculationHelper->getCotationMontantTaxeCourtierPayee($entity), 2),
             'taxeCourtierSolde' => round($this->calculationHelper->getCotationMontantTaxeCourtier($entity, false) - $this->calculationHelper->getCotationMontantTaxeCourtierPayee($entity), 2),
             'taxeAssureurPayee' => round($this->calculationHelper->getCotationMontantTaxeAssureurPayee($entity), 2),

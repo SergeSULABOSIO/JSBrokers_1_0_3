@@ -297,7 +297,10 @@
                                 {{ item.primeSolde|number_format(2, ',', ' ') }} {{ monnaie }}
                             </td>
                             <td>
-                                {% if tranche.retardPaiement and tranche.retardPaiement != 'Non' and tranche.retardPaiement != 'N/A' %}
+                                {% if item.aRegulariser|default(false) %}
+                                    {# Police annulée / résiliée : l'échéance n'est plus réclamée. #}
+                                    <span class="text-solde-ok" style="font-size:.8rem;">À régulariser — plus réclamée</span>
+                                {% elseif tranche.retardPaiement and tranche.retardPaiement != 'Non' and tranche.retardPaiement != 'N/A' %}
                                     <span class="badge-retard">{{ tranche.retardPaiement }}</span>
                                 {% else %}
                                     <span class="text-solde-ok" style="font-size:.8rem;">—</span>

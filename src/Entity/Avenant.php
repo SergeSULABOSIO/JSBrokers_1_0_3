@@ -128,6 +128,10 @@ class Avenant
     public ?float $primePayee = null;
     #[Groups(['list:read'])]
     public ?float $primeSoldeDue = null;
+
+    /** Prime des échéances « à régulariser » (police annulée / résiliée) : plus réclamée. */
+    #[Groups(['list:read'])]
+    public ?float $primeARegulariser = null;
     /**
      * Commission que les bordereaux de production ont RÉCLAMÉE à l'assureur sur cette
      * police, et ce qui est effectivement rentré dessus. Dérivés des lignes d'analyse des
