@@ -354,6 +354,10 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
             'source'           => $decalque['source'],
             'ecarts'           => $decalque['ecarts'],
             'reconduit'        => $decalque['reconduit'],
+            // Annulation / résiliation : les échéances qui sortent du recouvrement, celles
+            // qui peuvent donner lieu à ristourne, les commissions déjà facturées — le même
+            // résumé que l'aperçu de l'écran.
+            'regularisation'   => $decalque['regularisation'] ?? null,
             'consigne'         => 'Présente le plan et le budget comme pour toute écriture, et ÉNONCE les '
                 . '« defauts » : ce sont les hypothèses que tu as appliquées à la place de questions. Si « ecarts » '
                 . 'n’est pas vide, dis-le explicitement — ce n’est alors plus « à l’identique ». Ne redemande '

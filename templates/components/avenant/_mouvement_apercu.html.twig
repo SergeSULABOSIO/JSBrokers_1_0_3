@@ -89,6 +89,43 @@
         </dd>
     </dl>
 
+    {# ANNULATION / RÉSILIATION : ce que l'acte fait des échéances de la police. Celles qui
+       couvrent une période où la police n'existe plus sortent du recouvrement ; celles déjà
+       encaissées ne sont pas touchées mais peuvent donner lieu à ristourne. Règle :
+       RegularisationDesEcheances (même texte que Ket). Encadré neutre : rien n'est en faute. #}
+    {% set regul = apercu.regularisation ?? null %}
+    {% if regul and (regul.nombre > 0 or regul.ristournePossible is not empty) %}
+        <div class="bg-light border rounded d-flex gap-2 align-items-start py-2 px-3 mt-2 small">
+            <twig:UX:Icon name="mdi:calendar-alert" style="width:18px;height:18px;flex:0 0 auto;color:#0047AB;" aria-hidden="true" />
+            <div>
+                {% if regul.nombre > 0 %}
+                    <p class="fw-semibold mb-1">
+                        {{ regul.nombre }} échéance{{ regul.nombre > 1 ? 's' }} passe{{ regul.nombre > 1 ? 'nt' }} «&nbsp;à régulariser&nbsp;»
+                        ({{ regul.montant|number_format(2, ',', ' ') }} de prime)
+                    </p>
+                    <ul class="list-unstyled mb-1">
+                        {% for e in regul.echeances %}
+                            <li class="mb-1">
+                                {{ e.nom }}{% if e.date %} · {{ e.date }}{% endif %} · {{ e.prime|number_format(2, ',', ' ') }}
+                                {% if e.commissionFacturee %}<br><span class="text-muted">{{ e.commissionFacturee }}</span>{% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    <p class="text-muted mb-1">Elles sortent du recouvrement, sans changer de montant.</p>
+                {% endif %}
+                {% if regul.ristournePossible is not empty %}
+                    <p class="fw-semibold mb-1">Déjà encaissées — ristourne possible</p>
+                    <ul class="list-unstyled mb-1">
+                        {% for e in regul.ristournePossible %}
+                            <li class="mb-1">{{ e.nom }}{% if e.date %} · {{ e.date }}{% endif %} · {{ e.primePayee|number_format(2, ',', ' ') }} encaissés sur {{ e.prime|number_format(2, ',', ' ') }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                <p class="text-muted mb-0">La ristourne éventuelle se fait par note de crédit.</p>
+            </div>
+        </div>
+    {% endif %}
+
     {# Les hypothèses appliquées : consultables, mais repliées — elles expliquent l'acte,
        elles ne demandent rien. Ouvertes, elles se lisent comme une liste à puces cobalt. #}
     {% if apercu.defauts is not empty %}
