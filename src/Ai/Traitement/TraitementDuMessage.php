@@ -361,12 +361,9 @@ final class TraitementDuMessage
             ]));
         $conversation->addMessage($messageAssistant);
 
-        // Le titre ne se fabrique plus à partir du premier message. Il en
-        // reprenait quatre-vingts caractères — une phrase entière dans un
-        // onglet, qui étirait la barre et restait figée pour toujours sur le
-        // hasard de la première question. Une conversation sans titre choisi
-        // s'affiche « CONV#135 » (AssistantConversation::libelle()), et
-        // l'utilisateur la renomme d'un double-clic sur son onglet.
+        // Le titre ne se fabrique PAS ici : il est posé dès l'ENVOI de la question,
+        // par le contrôleur (AssistantConversation::titrerDepuis), pour que
+        // l'onglet change avant même la réponse de Ket.
 
         $this->em->flush();
 

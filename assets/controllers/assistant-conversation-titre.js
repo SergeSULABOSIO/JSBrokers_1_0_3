@@ -35,7 +35,22 @@ export function conversationDeLOnglet(tabElement) {
 }
 
 /**
+ * Le titre tel qu'il s'affiche : sur l'onglet de la colonne 4, sinon sur la ligne
+ * de la colonne 3. `null` s'il ne se voit nulle part (chat mobile, par exemple).
+ */
+export function titreAffiche(convId) {
+    const onglet = ongletDeConversation(convId)?.querySelector('[data-role="tab-title"]');
+    const ligne = document.querySelector(`.ai-conv-item[data-conv-id='${convId}'] [data-role="conv-titre"]`);
+
+    return (onglet ?? ligne)?.textContent.trim() ?? null;
+}
+
+/**
  * Écrit le nouveau titre partout où il se voit.
+ *
+ * TOUJOURS EN `textContent`, JAMAIS EN `innerHTML` : le titre vient désormais du
+ * texte libre de l'utilisateur (titre automatique tiré de sa question), et
+ * « <b>Primes</b> » doit s'afficher tel quel, pas en gras.
  *
  * @param {string|number} convId
  * @param {string} titre
