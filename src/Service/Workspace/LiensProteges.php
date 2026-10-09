@@ -3,8 +3,12 @@
 namespace App\Service\Workspace;
 
 use App\Ai\Mouvement\MouvementAvenant;
+use App\Entity\Article;
 use App\Entity\Avenant;
+use App\Entity\Paiement;
+use App\Entity\PaiementPrime;
 use App\Entity\Piste;
+use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * LES LIENS QU'UNE SUPPRESSION NE DOIT JAMAIS REMONTER.
@@ -41,6 +45,99 @@ final class LiensProteges
     private const AVANT_SUPPRESSION = [
         'Piste' => ['avenantDeBase' => 'pisteDeRenouvellement'],
     ];
+
+    /**
+     * ABANDONNER UN MOUVEMENT N'EFFACE JAMAIS DE L'ARGENT. — règle UNIQUE, écran et Ket.
+     *
+     * Supprimer l'opportunité dérivée d'un mouvement (renouvellement, prorogation,
+     * annulation, résiliation) emporte, en cascade, son avenant successeur — et avec lui
+     * tout ce qui s'y rattache. Tant que ce successeur n'a vécu aucun mouvement financier,
+     * c'est un retour arrière propre. Dès qu'une prime a été encaissée, qu'une note a été
+     * émise ou qu'une commission a été encaissée sur lui, la suppression effacerait des
+     * écritures réelles : elle est refusée, en disant lesquelles et quoi faire à la place.
+     *
+     * L'opportunité se reconnaît à son TYPE de mouvement, pas au lien avenantDeBase : les
+     * deux chemins de suppression coupent ce lien (dissocier()) avant de planifier, et la
+     * règle doit tenir quel que soit l'état du lien en mémoire.
+     *
+     * Appelée par SuppressionEnCascade::planifier() — point de passage de TOUTE suppression,
+     * annonce comme exécution, écran comme assistante — et par les deux appelants de
+     * dissocier() AVANT de couper quoi que ce soit : un refus ne doit laisser aucune
+     * dissociation en mémoire, qu'un flush ultérieur de la requête écrirait.
+     *
+     * @return string|null le motif du refus, rédigé pour l'utilisateur ; null si permis
+     */
+    public static function refusDeSuppression(object $entity, EntityManagerInterface $em): ?string
+    {
+        if (!$entity instanceof Piste || $entity->getId() === null
+            || MouvementAvenant::depuisTypeAvenant($entity->getTypeAvenant()) === null) {
+            return null;
+        }
+
+        // Successeurs : interrogés en base, jamais lus dans les collections en mémoire
+        // (Cotation::setPiste est unidirectionnel).
+        $successeurs = $em->createQueryBuilder()
+            ->select('a.id, a.numero, IDENTITY(a.cotation) AS cotation')
+            ->from(Avenant::class, 'a')
+            ->join('a.cotation', 'c')
+            ->where('c.piste = :piste')
+            ->setParameter('piste', $entity)
+            ->getQuery()
+            ->getArrayResult();
+        if ($successeurs === []) {
+            return null;
+        }
+        $cotations = array_values(array_unique(array_map(static fn (array $s) => (int) $s['cotation'], $successeurs)));
+
+        $encaissementsPrime = (int) $em->createQueryBuilder()
+            ->select('COUNT(pp.id)')
+            ->from(PaiementPrime::class, 'pp')
+            ->join('pp.tranche', 't')
+            ->where('IDENTITY(t.cotation) IN (:cotations)')
+            ->setParameter('cotations', $cotations)
+            ->getQuery()->getSingleScalarResult();
+
+        // Une note (facture, note de débit ou de crédit) porte ses lignes sur une tranche
+        // (prime) ou sur un revenu (commission). Les encaissements de commission passent
+        // par la note : ils se comptent à partir d'elle.
+        $notes = $em->createQueryBuilder()
+            ->select('DISTINCT IDENTITY(ar.note) AS note')
+            ->from(Article::class, 'ar')
+            ->leftJoin('ar.tranche', 't')
+            ->leftJoin('ar.revenuFacture', 'r')
+            ->where('IDENTITY(t.cotation) IN (:cotations) OR IDENTITY(r.cotation) IN (:cotations)')
+            ->andWhere('ar.note IS NOT NULL')
+            ->setParameter('cotations', $cotations)
+            ->getQuery()->getSingleColumnResult();
+        $encaissementsNote = $notes === [] ? 0 : (int) $em->createQueryBuilder()
+            ->select('COUNT(p.id)')
+            ->from(Paiement::class, 'p')
+            ->where('IDENTITY(p.note) IN (:notes)')
+            ->setParameter('notes', $notes)
+            ->getQuery()->getSingleScalarResult();
+
+        $faits = array_filter([
+            $encaissementsPrime > 0 ? sprintf('%d encaissement%s de prime', $encaissementsPrime, $encaissementsPrime > 1 ? 's' : '') : null,
+            count($notes) > 0 ? sprintf('%d note%s émise%s', count($notes), count($notes) > 1 ? 's' : '', count($notes) > 1 ? 's' : '') : null,
+            $encaissementsNote > 0 ? sprintf('%d encaissement%s de note', $encaissementsNote, $encaissementsNote > 1 ? 's' : '') : null,
+        ]);
+        if ($faits === []) {
+            return null;
+        }
+
+        $noms = implode(', ', array_map(
+            static fn (array $s) => sprintf('#%d (n° %s)', $s['id'], $s['numero'] ?? '—'),
+            $successeurs,
+        ));
+
+        return sprintf(
+            'Impossible d’abandonner ce mouvement : l’avenant qui en est issu, %s, porte déjà des mouvements '
+            . 'financiers (%s). Supprimer l’opportunité dérivée les effacerait avec lui. Annulez d’abord ces '
+            . 'écritures, ou enregistrez plutôt une annulation de la police qui en est issue.',
+            $noms,
+            implode(', ', $faits),
+        );
+    }
 
     /**
      * Champs protégés d'une entité, ou tableau vide si elle n'en a aucun.

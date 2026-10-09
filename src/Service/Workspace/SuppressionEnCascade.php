@@ -89,6 +89,13 @@ class SuppressionEnCascade
             ), $libelles);
         }
 
+        // Abandonner un mouvement dont l'avenant issu a déjà vécu financièrement effacerait
+        // de l'argent : refus, motivé (règle unique, cf. LiensProteges).
+        $refusDuLien = LiensProteges::refusDeSuppression($racine, $this->em);
+        if ($refusDuLien !== null) {
+            return PlanDeSuppression::refuse($classe, $id, $refusDuLien, $libelles);
+        }
+
         $aDetruire = [$classe => [$id => $id]];
         $aDetacher = [];
         $conservations = [];

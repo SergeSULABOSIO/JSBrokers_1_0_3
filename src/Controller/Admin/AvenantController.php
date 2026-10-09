@@ -167,6 +167,13 @@ class AvenantController extends AbstractController
             return $this->json(['message' => "Cet avenant n'a aucune piste dérivée."], Response::HTTP_NOT_FOUND);
         }
 
+        // Règle d'abandon AVANT toute dissociation : un refus ne doit laisser aucun lien
+        // coupé en mémoire, qu'un flush ultérieur de la requête écrirait.
+        $refus = LiensProteges::refusDeSuppression($piste, $this->em);
+        if ($refus !== null) {
+            return $this->json(['message' => $refus], Response::HTTP_CONFLICT);
+        }
+
         // Dissociation AVANT suppression : Piste::avenantDeBase est en
         // cascade:['remove'] — laissée telle quelle, la suppression de la piste
         // détruirait l'avenant de base. La règle (et les DEUX sens du lien, qui sont
