@@ -100,6 +100,11 @@ class MouvementAvenantTest extends WebTestCase
         foreach ([
             'DELETE f FROM feedback f JOIN tache t ON f.tache_id = t.id JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE t FROM tache t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :n',
+            // Mouvements financiers posés sur un successeur (règle d'abandon).
+            'DELETE pp FROM paiement_prime pp JOIN entreprise e ON pp.entreprise_id = e.id WHERE e.nom = :n',
+            'DELETE p FROM paiement p JOIN entreprise e ON p.entreprise_id = e.id WHERE e.nom = :n',
+            'DELETE ar FROM article ar JOIN entreprise e ON ar.entreprise_id = e.id WHERE e.nom = :n',
+            'DELETE n FROM note n JOIN entreprise e ON n.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE cp FROM condition_partage cp JOIN entreprise e ON cp.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE a FROM avenant a JOIN entreprise e ON a.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE tr FROM tranche tr JOIN entreprise e ON tr.entreprise_id = e.id WHERE e.nom = :n',
@@ -979,10 +984,10 @@ class MouvementAvenantTest extends WebTestCase
     }
 
     /**
-     * À l'inverse, on n'abandonne PAS un mouvement dont le sort est scellé : un avenant
-     * successeur porte la couverture, et le supprimer détruirait une police vivante.
+     * Un mouvement ABOUTI s'abandonne aussi, par la même règle que l'écran : son avenant
+     * successeur n'a vécu aucun mouvement financier, il part avec l'opportunité.
      */
-    public function testAbandonRefuseSurUnMouvementScelle(): void
+    public function testAbandonDUnMouvementAboutiSansFinanceEstPermis(): void
     {
         $s = $this->seed();
 
@@ -1016,9 +1021,9 @@ class MouvementAvenantTest extends WebTestCase
             'abandonnerMouvementExistant' => true,
         ], $this->scope($s));
 
-        $this->assertFalse($resultat->data['pret'] ?? true);
-        $this->assertNull($resultat->uiAction, 'Aucun bouton : rien ne doit pouvoir être détruit ici.');
-        $this->assertStringContainsString('SCELLÉ', $resultat->data['bloquant']);
+        $this->assertTrue($resultat->data['pret'] ?? false, json_encode($resultat->data, JSON_UNESCAPED_UNICODE));
+        $this->assertTrue($resultat->data['abandon'] ?? false);
+        $this->assertNotNull($resultat->uiAction, 'Un vrai plan, donc un vrai bouton.');
     }
 
     /**
@@ -1572,6 +1577,112 @@ class MouvementAvenantTest extends WebTestCase
         $ket = $this->outil->execute(['mouvement' => 'renouvellement', 'avenantId' => $acte->getId()], $this->scope($s));
         $this->assertFalse($ket->data['pret'] ?? true);
         $this->assertStringContainsString('acte d’une résiliation', $ket->data['bloquant']);
+    }
+
+    // ───────────────────────── 7. Abandon : la règle financière unique ─────────────────────────
+
+    /**
+     * Exécute un renouvellement, puis pose sur l'avenant successeur le mouvement financier
+     * demandé. Rend [id base, id opportunité dérivée, id successeur].
+     *
+     * @return array{0: int, 1: int, 2: int}
+     */
+    private function renouvelerPuisFinancer(array $s, string $mouvement): array
+    {
+        $this->executer($s, MouvementAvenant::Renouvellement);
+        $base = $this->em->getRepository(Avenant::class)->find($s['base']->getId());
+        $derivee = $base->getPisteDeRenouvellement();
+        $cotation = $derivee->getCotations()->first();
+        $successeur = $cotation->getAvenants()->first();
+        $ent = $this->em->getRepository(Entreprise::class)->find($s['ent']->getId());
+
+        if ($mouvement === 'encaissementPrime') {
+            $paiement = (new \App\Entity\PaiementPrime())
+                ->setReference('PP-MVT-1')->setMontant(500.0)->setPaidAt(new DateTimeImmutable('2027-01-20'))
+                ->setDescription('Avis de règlement')->setTranche($cotation->getTranches()->first());
+            $paiement->setEntreprise($ent);
+            $this->em->persist($paiement);
+        } else {
+            $note = (new \App\Entity\Note())->setNom('Note de commission')->setType(0)
+                ->setAddressedTo(\App\Entity\Note::TO_ASSUREUR)->setReference('N-MVT-1')
+                ->setValidated(true)->setSignature('');
+            $note->setEntreprise($ent);
+            $this->em->persist($note);
+            $article = (new \App\Entity\Article())->setQuantite(1.0);
+            $article->setNote($note)->setRevenuFacture($cotation->getRevenus()->first());
+            $article->setEntreprise($ent);
+            $this->em->persist($article);
+            if ($mouvement === 'encaissementNote') {
+                $paiement = (new \App\Entity\Paiement())->setMontant(100.0)->setReference('ENC-MVT-1')
+                    ->setPaidAt(new DateTimeImmutable('2027-02-01'))->setNote($note);
+                $paiement->setEntreprise($ent);
+                $this->em->persist($paiement);
+            }
+        }
+        $this->em->flush();
+        $ids = [$base->getId(), $derivee->getId(), $successeur->getId()];
+        $this->em->clear();
+
+        return $ids;
+    }
+
+    /** ÉCRAN — un successeur qui a encaissé une prime ne peut pas être effacé par l'abandon. */
+    public function testLEcranRefuseDAbandonnerUnSuccesseurQuiAEncaisse(): void
+    {
+        $s = $this->seed();
+        [$baseId, $deriveeId, $successeurId] = $this->renouvelerPuisFinancer($s, 'encaissementPrime');
+
+        $this->client->request('DELETE', '/admin/avenant/api/delete-piste-derivee/' . $baseId);
+        $this->assertResponseStatusCodeSame(409);
+        $message = json_decode($this->client->getResponse()->getContent(), true)['message'];
+        $this->assertStringContainsString(sprintf('#%d', $successeurId), $message, 'Le successeur est nommé.');
+        $this->assertStringContainsString('1 encaissement de prime', $message);
+
+        $this->em->clear();
+        $base = $this->em->getRepository(Avenant::class)->find($baseId);
+        $this->assertSame($deriveeId, $base->getPisteDeRenouvellement()?->getId(), 'Le lien n’a pas été coupé.');
+        $this->assertSame(Avenant::RENEWAL_STATUS_RENEWED, $base->getRenewalStatus(), 'Le statut n’a pas été restitué.');
+        $this->assertNotNull($this->em->getRepository(Avenant::class)->find($successeurId), 'Le successeur est intact.');
+    }
+
+    /** ÉCRAN — une note émise sur le successeur bloque aussi, et son encaissement est nommé. */
+    public function testLEcranRefuseDAbandonnerUnSuccesseurFacture(): void
+    {
+        $s = $this->seed();
+        [$baseId] = $this->renouvelerPuisFinancer($s, 'encaissementNote');
+
+        $this->client->request('DELETE', '/admin/avenant/api/delete-piste-derivee/' . $baseId);
+        $this->assertResponseStatusCodeSame(409);
+        $message = json_decode($this->client->getResponse()->getContent(), true)['message'];
+        $this->assertStringContainsString('1 note émise', $message);
+        $this->assertStringContainsString('1 encaissement de note', $message);
+    }
+
+    /**
+     * KET — même règle, même message : l'abandon d'un successeur facturé est refusé sans plan,
+     * et le moteur de mutation lui-même refuse une suppression directe de l'opportunité.
+     */
+    public function testKetAppliqueLaMemeRegleQueLEcran(): void
+    {
+        $s = $this->seed();
+        [$baseId, $deriveeId] = $this->renouvelerPuisFinancer($s, 'note');
+        $scope = $this->scope($s);
+
+        $ket = $this->outil->execute(['mouvement' => 'renouvellement', 'avenantId' => $baseId, 'abandonnerMouvementExistant' => true], $scope);
+        $this->assertFalse($ket->data['pret'] ?? true);
+        $this->assertNull($ket->uiAction);
+        $this->assertStringContainsString('1 note émise', $ket->data['bloquant']);
+
+        // Plan générique (preparer_operations) : le moteur oppose la même règle.
+        $op = MutationPlan::fromArray([['op' => 'delete', 'entite' => 'Piste', 'id' => $deriveeId]])->operationsOrdonnees()[0];
+        $user = $this->em->getRepository(Utilisateur::class)->find($s['user']->getId());
+        try {
+            $this->mutation->executer($op, $scope, $user);
+            self::fail('La suppression devait être refusée.');
+        } catch (\App\Service\Workspace\MutationException $e) {
+            $this->assertStringContainsString('Impossible d’abandonner ce mouvement', $e->getMessage());
+        }
+        $this->assertNotNull($this->em->getRepository(Piste::class)->find($deriveeId));
     }
 
     /** POINT 8 — le nom de l'opportunité dérivée ne porte qu'UN préfixe, celui du mouvement. */

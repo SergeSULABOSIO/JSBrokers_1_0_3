@@ -7,23 +7,65 @@
 
     `apercu` provient de AvenantController::apercuMouvement(), lui-même alimenté par
     MouvementAvenantBuilder — la même source que la réponse de l'assistant.
+
+    ORDRE DE LECTURE (Nielsen 1 et 5) : d'abord ce qui demande l'attention — refus,
+    avertissements, écarts —, puis les chiffres de l'acte, enfin les hypothèses
+    appliquées, repliées : elles ne sont qu'une explication, pas une décision à prendre.
+    Couleurs de la charte uniquement : alertes Bootstrap danger / warning (fond et texte
+    sémantiques), cobalt pour la donnée clé, puces neutres .jsb-picker-chip--free.
 #}
 {% if apercu.bloquant is defined %}
-    <p class="jsb-picker-empty text-danger" role="alert">{{ apercu.bloquant }}</p>
+    <div class="alert alert-danger d-flex gap-2 align-items-start py-2 px-3 mb-0 small" role="alert">
+        <twig:UX:Icon name="mdi:shield-alert-outline" style="width:18px;height:18px;flex:0 0 auto;" aria-hidden="true" />
+        <span>{{ apercu.bloquant }}</span>
+    </div>
 {% elseif not (apercu.pret ?? false) %}
     <p class="jsb-picker-empty" role="status">
         {{ apercu.question ?? "Renseignez l'information demandée pour voir l'aperçu." }}
     </p>
 {% else %}
-    <dl class="row mb-2" style="font-size:.86rem;">
-        <dt class="col-5 fw-semibold text-muted">Nouvelle période</dt>
-        <dd class="col-7 mb-1">{{ apercu.debut|date('d/m/Y') }} → {{ apercu.fin|date('d/m/Y') }}</dd>
+    {% if apercu.avertissements is not empty %}
+        <div class="alert alert-warning d-flex gap-2 align-items-start py-2 px-3 mb-2 small" role="alert">
+            <twig:UX:Icon name="mdi:calendar-alert" style="width:18px;height:18px;flex:0 0 auto;" aria-hidden="true" />
+            <ul class="list-unstyled mb-0">
+                {% for avertissement in apercu.avertissements %}
+                    <li{{ not loop.last ? ' class="mb-1"' }}>{{ avertissement }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
 
-        <dt class="col-5 fw-semibold text-muted">Numéro d'avenant</dt>
-        <dd class="col-7 mb-1">{{ apercu.numero ?? '—' }}</dd>
+    {% if apercu.ecarts is not empty %}
+        {# Un écart n'est pas une erreur : c'est ce qui fait que l'acte n'est plus « à
+           l'identique ». Encadré neutre, pas une couleur d'alerte. #}
+        <div class="bg-light border rounded d-flex gap-2 align-items-start py-2 px-3 mb-2 small">
+            <twig:UX:Icon name="mdi:information-outline" style="width:18px;height:18px;flex:0 0 auto;color:#0047AB;" aria-hidden="true" />
+            <div>
+                <p class="fw-semibold mb-1">Écarts par rapport à la police en cours</p>
+                <ul class="list-unstyled mb-0">
+                    {% for ecart in apercu.ecarts %}
+                        <li{{ not loop.last ? ' class="mb-1"' }}>{{ ecart }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    {% endif %}
 
-        <dt class="col-5 fw-semibold text-muted">Éléments repris</dt>
-        <dd class="col-7 mb-1">
+    <dl class="row mb-0 small">
+        {# Un ACTE (annulation, résiliation) n'a pas de période : il a une date d'effet. #}
+        {% if apercu.debut == apercu.fin %}
+            <dt class="col-sm-4 fw-semibold text-muted">Date d'effet</dt>
+            <dd class="col-sm-8 mb-2 jsb-picker-num--accent">{{ apercu.debut|date('d/m/Y') }}</dd>
+        {% else %}
+            <dt class="col-sm-4 fw-semibold text-muted">Nouvelle période</dt>
+            <dd class="col-sm-8 mb-2 jsb-picker-num--accent">{{ apercu.debut|date('d/m/Y') }} → {{ apercu.fin|date('d/m/Y') }}</dd>
+        {% endif %}
+
+        <dt class="col-sm-4 fw-semibold text-muted">Numéro d'avenant</dt>
+        <dd class="col-sm-8 mb-2">{{ apercu.numero ?? '—' }}</dd>
+
+        <dt class="col-sm-4 fw-semibold text-muted">Éléments repris</dt>
+        <dd class="col-sm-8 mb-0">
             {% set repris = [] %}
             {% if apercu.reconduit.chargements > 0 %}{% set repris = repris|merge(['%d composante(s) de prime'|format(apercu.reconduit.chargements)]) %}{% endif %}
             {% if apercu.reconduit.tranches > 0 %}{% set repris = repris|merge(['%d tranche(s)'|format(apercu.reconduit.tranches)]) %}{% endif %}
@@ -35,35 +77,31 @@
                identifiant), à distinguer des conditions de partenaire qui sont clonées. #}
             {% if apercu.reconduit.conditionsAgent|default(0) > 0 %}{% set repris = repris|merge(["%d rémunération(s) d'agent interne"|format(apercu.reconduit.conditionsAgent)]) %}{% endif %}
             {% if apercu.reconduit.tacheDeSuivi > 0 %}{% set repris = repris|merge(['1 tâche de suivi du paiement']) %}{% endif %}
-            {{ repris is empty ? 'Aucun (acte seul)' : repris|join(' · ') }}
+            {% if repris is empty %}
+                <span class="text-muted">Aucun (acte seul)</span>
+            {% else %}
+                <ul class="list-unstyled d-flex flex-wrap gap-1 mb-0">
+                    {% for element in repris %}
+                        <li class="jsb-picker-chip jsb-picker-chip--free">{{ element }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
         </dd>
     </dl>
 
-    <ul class="list-unstyled mb-0" style="font-size:.82rem;">
-        {% for defaut in apercu.defauts %}
-            <li class="d-flex gap-2 mb-1">
-                <span aria-hidden="true" style="color:#0047AB;">•</span>
-                <span class="text-muted">{{ defaut }}</span>
-            </li>
-        {% endfor %}
-    </ul>
-
-    {% if apercu.ecarts is not empty %}
-        <p class="mt-2 mb-0 fw-semibold" style="font-size:.82rem; color:#0d2440;">Écarts par rapport à la police de base</p>
-        <ul class="list-unstyled mb-0" style="font-size:.82rem;">
-            {% for ecart in apercu.ecarts %}
-                <li class="text-muted">— {{ ecart }}</li>
-            {% endfor %}
-        </ul>
-    {% endif %}
-
-    {% if apercu.avertissements is not empty %}
-        <div class="alert alert-warning mt-2 mb-0 py-2 px-3" role="alert" style="font-size:.82rem;">
-            <ul class="list-unstyled mb-0">
-                {% for avertissement in apercu.avertissements %}
-                    <li>{{ avertissement }}</li>
+    {# Les hypothèses appliquées : consultables, mais repliées — elles expliquent l'acte,
+       elles ne demandent rien. Ouvertes, elles se lisent comme une liste à puces cobalt. #}
+    {% if apercu.defauts is not empty %}
+        <details class="mt-2 small">
+            <summary class="fw-semibold text-muted">Hypothèses appliquées ({{ apercu.defauts|length }})</summary>
+            <ul class="list-unstyled mb-0 mt-1">
+                {% for defaut in apercu.defauts %}
+                    <li class="d-flex gap-2 mb-1">
+                        <span aria-hidden="true" style="color:#0047AB;">•</span>
+                        <span class="text-muted">{{ defaut }}</span>
+                    </li>
                 {% endfor %}
             </ul>
-        </div>
+        </details>
     {% endif %}
 {% endif %}

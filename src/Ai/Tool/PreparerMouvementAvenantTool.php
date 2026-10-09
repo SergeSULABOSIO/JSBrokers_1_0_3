@@ -10,7 +10,9 @@ use App\Ai\Scope\AiScope;
 use App\Entity\Avenant;
 use App\Services\AvenantRenouvellementResolver;
 use App\Services\JSBDynamicSearchService;
+use App\Service\Workspace\LiensProteges;
 use App\Services\Search\AvenantSuccessionScope;
+use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * Outil DÉDIÉ aux quatre MOUVEMENTS d'une police existante : renouvellement,
@@ -45,6 +47,7 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
         // Source unique « un nom dicté → un identifiant » : c'est par elle qu'un nom de
         // CLIENT devient une police, sans second tour d'outils.
         private readonly ResolveurDeReferences $resolveur,
+        private readonly EntityManagerInterface $em,
     ) {
     }
 
@@ -161,8 +164,8 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
                 ],
                 'abandonnerMouvementExistant' => [
                     'type' => 'boolean',
-                    'description' => 'ABANDON d\'un mouvement amorcé. Ne mets true QUE si l\'outil t\'a déjà '
-                        . 'répondu « mouvementAmorce » ET que l\'utilisateur a explicitement demandé de repartir '
+                    'description' => 'ABANDON d\'un mouvement existant. Ne mets true QUE si l\'outil t\'a déjà '
+                        . 'répondu « mouvementAmorce » ou « dejaTraite » ET que l\'utilisateur a explicitement demandé de repartir '
                         . 'de zéro (« abandonne ce renouvellement », « supprime cette opportunité », « recommence »). '
                         . 'Prépare alors un plan de SUPPRESSION de l\'opportunité dérivée — la police de base est '
                         . 'conservée, ses quatre mouvements redeviennent disponibles. Le plan est soumis à '
@@ -371,26 +374,21 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
      * supprimer (cf. LiensProteges), faute de quoi la cascade Doctrine emporterait la
      * police elle-même.
      *
-     * REFUS quand le sort est SCELLÉ : un avenant successeur a été émis, la couverture
-     * repose sur lui. Supprimer l'opportunité détruirait une police vivante — jamais
-     * par ce chemin.
+     * MÊME RÈGLE QUE L'ÉCRAN (LiensProteges::refusDeSuppression) : un mouvement ABOUTI
+     * s'abandonne aussi — son avenant successeur part avec l'opportunité — tant que ce
+     * successeur n'a vécu aucun mouvement financier. Sinon, refus motivé.
      */
     private function planDAbandon(Avenant $base, array $args, AiScope $scope): AiToolResult
     {
         $derivee = $base->getPisteDeRenouvellement();
-        $suite = $this->renouvellementResolver->resoudre($base);
 
-        if (AvenantSuccessionScope::estScelle($suite['code'])) {
+        $refus = LiensProteges::refusDeSuppression($derivee, $this->em);
+        if ($refus !== null) {
             return AiToolResult::ok([
                 'pret'     => false,
-                'bloquant' => sprintf(
-                    'Le sort de cette police est SCELLÉ (%s) : son opportunité dérivée porte une suite réelle. '
-                    . 'L’abandonner détruirait une police vivante — cet outil ne le fera pas.',
-                    $suite['statut'],
-                ),
-                'note'     => 'Explique-le en une phrase. Ne prépare AUCUN plan. Si l’utilisateur veut vraiment '
-                    . 'défaire cette suite, il doit passer par la fiche, où chaque suppression est confirmée '
-                    . 'séparément.',
+                'bloquant' => $refus,
+                'note'     => 'Explique-le en une phrase, en nommant les écritures qui l’empêchent. Ne prépare '
+                    . 'AUCUN plan.',
             ]);
         }
 
@@ -471,7 +469,9 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
                 'note' => 'Le sort de cette police est SCELLÉ : il n’y a plus rien à écrire. Ne prépare AUCUN '
                     . 'plan et n’annonce aucun bouton. Dis à l’utilisateur ce que la police est DEVENUE, en '
                     . 'reprenant « suiteDeLaPolice » : si un avenant lui succède, NOMME-le (numéro et période). '
-                    . 'Propose d’ouvrir la fiche s’il veut la modifier.',
+                    . 'Propose d’ouvrir la fiche s’il veut la modifier. S’il demande EXPLICITEMENT d’abandonner '
+                    . 'ce mouvement, rappelle l’outil avec abandonnerMouvementExistant=true : le serveur refusera '
+                    . 'si la police issue a déjà vécu financièrement.',
             ]);
         }
 

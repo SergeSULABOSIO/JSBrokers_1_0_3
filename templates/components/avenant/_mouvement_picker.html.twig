@@ -3,23 +3,33 @@
     résiliation), ouverte depuis la liste des avenants — barre d'outils ou clic droit.
 
     Un SEUL picker pour les quatre mouvements : ils ne diffèrent que par l'unique
-    information variable (rien / une durée / une date d'effet). Tout le reste — la
-    période dérivée, la prime, ce qui est reconduit — est calculé par le serveur et
-    affiché en APERÇU, jamais saisi : c'est la même promesse que côté assistant, où
-    un renouvellement ne pose aucune question.
+    information variable (une date d'effet facultative / une durée / une date d'effet).
+    Tout le reste — la période dérivée, la prime, ce qui est reconduit — est calculé par
+    le serveur et affiché en APERÇU, jamais saisi : c'est la même promesse que côté
+    assistant.
 
-    Miroir visuel des pickers jsb-picker-* (/ergonomie-web : role=dialog, aria-modal,
-    fieldset/legend, cibles ≥44px, Échap, restitution du focus, zone d'erreur inline ;
-    /charte-couleurs : cobalt #0047AB). Piloté par le contrôleur Stimulus
+    MISE EN PAGE : le socle .jsb-picker-* en CARTES (.jsb-picker-cartes / .jsb-picker-carte,
+    comme la boîte de facturation) — une carte pour la seule saisie, une carte pour ce qui
+    sera enregistré — au format .jsb-picker-modal--large du socle, fait pour des cartes
+    empilées. Les alertes de l'aperçu viennent EN TÊTE de leur carte, juste sous le
+    champ qui les provoque : une interruption de couverture ou une période déjà échue doit
+    se voir sans défiler (Nielsen 1 et 5).
+
+    /ergonomie-web : role=dialog, aria-modal, fieldset/legend, un libellé par champ, aide
+    reliée par aria-describedby, cibles ≥44px, Échap, restitution du focus, zone d'erreur
+    inline, libellé d'action précis. /charte-couleurs : cobalt #0047AB, textes #212529 /
+    #6c757d, aucune couleur hors palette. Piloté par le contrôleur Stimulus
     « mouvement-picker », auto-connecté à l'insertion par le cerveau.
 #}
+{% set libelleMin = libelle|lower %}
+{% set determinant = mouvement == 'annulation' ? 'l’' : (mouvement == 'renouvellement' ? 'le ' : 'la ') %}
 <div class="jsb-picker-overlay"
      data-controller="mouvement-picker"
      data-mouvement-picker-apercu-url-value="{{ path('admin.avenant.api.mouvement_apercu', {mouvement: mouvement, id: avenant.id}) }}"
      data-mouvement-picker-executer-url-value="{{ path('admin.avenant.api.mouvement_executer', {mouvement: mouvement, id: avenant.id}) }}"
      data-mouvement-picker-libelle-value="{{ libelle|e('html_attr') }}"
      data-picker-overlay>
-    <div class="jsb-picker-modal"
+    <div class="jsb-picker-modal jsb-picker-modal--large"
          role="dialog"
          aria-modal="true"
          aria-labelledby="jsb-mvt-picker-title"
@@ -56,81 +66,69 @@
                 </p>
                 <p id="jsb-mvt-picker-desc" class="jsb-picker-intro-desc">
                     {% if exigeDate %}
-                        Indiquez {{ mouvement == 'prorogation' ? 'la durée de prolongation' : 'la date de prise d’effet' }}&nbsp;:
-                        c'est la <strong>seule</strong> information requise. Tout le reste est repris de la police en cours.
+                        {{ mouvement == 'prorogation' ? 'La durée de prolongation' : 'La date de prise d’effet' }} est la
+                        <strong>seule</strong> information requise&nbsp;: tout le reste est repris de la police en cours.
                     {% else %}
                         <strong>Seule la prise d'effet est modifiable</strong>&nbsp;: durée, prime, composition,
                         échéancier, rémunération, partenaires et conditions de partage sont repris de la police en cours.
                     {% endif %}
-                    {% if apercu.source.periodeBase is defined %}
-                        Police de base&nbsp;: <strong>{{ apercu.source.periodeBase }}</strong>.
-                    {% endif %}
                 </p>
+                {# La période de la police en cours, en repère chiffré : c'est par rapport à
+                   elle que se lit la prise d'effet saisie juste en dessous. #}
+                {% if apercu.source.periodeBase is defined %}
+                    <div class="jsb-picker-stats">
+                        <span>Police en cours</span>
+                        <span class="jsb-picker-stat-sep" aria-hidden="true">|</span>
+                        <span class="jsb-picker-stat-num">{{ apercu.source.periodeBase }}</span>
+                    </div>
+                {% endif %}
             </div>
         </div>
 
         <p class="jsb-picker-empty text-danger" data-picker-error role="alert" hidden></p>
 
-        <div class="jsb-picker-listwrap" style="padding: .25rem 1.25rem 1rem;">
-            {% if exigeDate %}
-                {# Champs au pattern maison : libellé en gras, aide AVANT le champ
-                   (aria-describedby), puis champ à icône incrustée .jsb-picker-field —
-                   comme le picker de destinataires de l'assistant. #}
-                <fieldset class="border-0 p-0 m-0 mb-3">
-                    <legend class="fs-6 fw-semibold mb-1" style="color:#0d2440;">
-                        {{ mouvement == 'prorogation' ? 'Durée de la prorogation' : 'Prise d’effet' }}
-                    </legend>
-                    {% if mouvement == 'prorogation' %}
-                        <label for="mvt-duree" class="form-label fw-semibold mb-0" style="color:#0d2440;">
-                            Nombre de jours <span class="fw-normal text-muted small">(au-delà de l'échéance actuelle)</span>
-                        </label>
-                        <span class="text-muted small d-block mb-1" id="mvt-duree-aide">
-                            La prime complémentaire est calculée au prorata de cette durée.
+        <div class="jsb-picker-listwrap jsb-picker-cartes">
+            {# Deux colonnes dès 720 px (grille .jsb-picker-champs du socle) : la saisie à
+               gauche, sa conséquence à droite — l'œil va de l'une à l'autre sans défiler.
+               Une seule colonne en dessous. #}
+            <div class="jsb-picker-champs" style="align-items:start;">
+            <fieldset class="jsb-picker-carte">
+                {# La légende de carte EST le titre visible du champ ; le <label>, masqué
+                   visuellement, reste lu par les lecteurs d'écran (WCAG 1.3.1). Un second
+                   titre visible doublait la légende, en gris .form-label (#adb5bd) trop
+                   pâle sur blanc (WCAG 1.4.3). #}
+                <legend>{{ mouvement == 'prorogation' ? 'Durée de la prorogation' : 'Prise d’effet' }}</legend>
+
+                {% if mouvement == 'prorogation' %}
+                    <label for="mvt-duree" class="visually-hidden">Nombre de jours de prorogation</label>
+                    <span class="text-muted small d-block mb-1" id="mvt-duree-aide">
+                        Au-delà de l'échéance actuelle. La prime complémentaire est calculée au prorata de cette durée.
+                    </span>
+                    <div class="jsb-picker-field" style="max-width:13rem;">
+                        <span class="jsb-picker-field-icon" aria-hidden="true">
+                            {{ ux_icon(resolve_icon_name('action:count'), {width: '16px', height: '16px'}) }}
                         </span>
-                        <div class="jsb-picker-field" style="max-width:13rem;">
-                            <span class="jsb-picker-field-icon" aria-hidden="true">
-                                {{ ux_icon(resolve_icon_name('action:count'), {width: '16px', height: '16px'}) }}
-                            </span>
-                            <input type="number" id="mvt-duree" class="form-control"
-                                   min="1" max="3650" step="1" value="{{ dureeDefaut }}"
-                                   placeholder="Nombre de jours"
-                                   autocomplete="off"
-                                   data-mouvement-picker-target="duree"
-                                   aria-describedby="mvt-duree-aide">
-                        </div>
-                    {% else %}
-                        <label for="mvt-date" class="form-label fw-semibold mb-0" style="color:#0d2440;">
-                            Date d'effet de {{ mouvement == 'annulation' ? "l'annulation" : 'la résiliation' }}
-                        </label>
-                        <span class="text-muted small d-block mb-1" id="mvt-date-aide">
-                            L'acte ne porte aucune prime : une éventuelle ristourne se traite séparément.
-                        </span>
-                        <div class="jsb-picker-field" style="max-width:15rem;">
-                            <span class="jsb-picker-field-icon" aria-hidden="true">
-                                {{ ux_icon(resolve_icon_name('action:calendar'), {width: '16px', height: '16px'}) }}
-                            </span>
-                            <input type="date" id="mvt-date" class="form-control"
-                                   value="{{ dateDefaut }}"
-                                   data-mouvement-picker-target="date"
-                                   aria-describedby="mvt-date-aide">
-                        </div>
-                    {% endif %}
-                </fieldset>
-            {% elseif mouvement == 'renouvellement' %}
-                {# PRISE D'EFFET DU RENOUVELLEMENT — facultative, pré-remplie au lendemain de
-                   l'échéance (règle du builder, MouvementAvenantBuilder::dateEffetParDefaut).
-                   Elle n'est modifiable que pour une raison : une police échue depuis
-                   longtemps, reprise au lendemain de son échéance, donnerait un avenant né
-                   expiré. L'aperçu le dit ; une date antérieure (chevauchement) est refusée,
-                   une date postérieure est annoncée comme une interruption de couverture. #}
-                <fieldset class="border-0 p-0 m-0 mb-3">
-                    <legend class="fs-6 fw-semibold mb-1" style="color:#0d2440;">Prise d’effet</legend>
-                    <label for="mvt-date" class="form-label fw-semibold mb-0" style="color:#0d2440;">
-                        Date d'effet du renouvellement
-                    </label>
+                        <input type="number" id="mvt-duree" class="form-control"
+                               min="1" max="3650" step="1" value="{{ dureeDefaut }}"
+                               placeholder="Nombre de jours"
+                               autocomplete="off"
+                               required aria-required="true"
+                               data-mouvement-picker-target="duree"
+                               aria-describedby="mvt-duree-aide">
+                    </div>
+                {% else %}
+                    {# Renouvellement : FACULTATIVE, pré-remplie au lendemain de l'échéance
+                       (MouvementAvenantBuilder::dateEffetParDefaut). Une date antérieure est
+                       refusée (chevauchement), une date postérieure annoncée comme une
+                       interruption de couverture — l'aperçu ci-dessous le dit. #}
+                    <label for="mvt-date" class="visually-hidden">Date d'effet {{ mouvement == 'renouvellement' ? 'du renouvellement' : 'de l’acte' }}</label>
                     <span class="text-muted small d-block mb-1" id="mvt-date-aide">
-                        Par défaut, le lendemain de l'échéance (continuité de couverture). Modifiez-la si la police
-                        a été reprise après une interruption.
+                        {% if mouvement == 'renouvellement' %}
+                            Par défaut, le lendemain de l'échéance&nbsp;: la couverture continue sans interruption.
+                            Modifiez-la si la police a été reprise plus tard.
+                        {% else %}
+                            L'acte ne porte aucune prime&nbsp;: une éventuelle ristourne se traite séparément.
+                        {% endif %}
                     </span>
                     <div class="jsb-picker-field" style="max-width:15rem;">
                         <span class="jsb-picker-field-icon" aria-hidden="true">
@@ -138,25 +136,27 @@
                         </span>
                         <input type="date" id="mvt-date" class="form-control"
                                value="{{ dateDefaut }}"
+                               {{ exigeDate ? 'required aria-required="true"' : '' }}
                                data-mouvement-picker-target="date"
                                aria-describedby="mvt-date-aide">
                     </div>
-                </fieldset>
-            {% endif %}
+                {% endif %}
+            </fieldset>
 
             {# APERÇU — ce que la validation écrira, rafraîchi par le serveur à chaque
                changement de durée ou de date. Source unique avec l'assistant. #}
-            <section aria-labelledby="mvt-apercu-titre" aria-live="polite">
-                <h6 id="mvt-apercu-titre" class="fw-semibold mb-2" style="color:#0d2440;">Ce qui sera enregistré</h6>
+            <section class="jsb-picker-carte" aria-labelledby="mvt-apercu-titre" aria-live="polite">
+                <h6 id="mvt-apercu-titre" class="jsb-picker-carte-titre">Ce qui sera enregistré</h6>
                 <div data-mouvement-picker-target="apercu">
                     {{ include('components/avenant/_mouvement_apercu.html.twig', {apercu: apercu}) }}
                 </div>
             </section>
+            </div>
         </div>
 
         <footer class="jsb-picker-foot">
-            <span class="jsb-picker-hint text-muted small">
-                Les tâches et comptes-rendus de la police de base ne sont pas repris.
+            <span class="jsb-picker-hint text-muted small me-auto">
+                Rien n'est enregistré avant votre validation.
             </span>
             <span class="d-inline-flex gap-2">
                 {# Icônes CONTEXTUELLES : « annuler » et « enregistrer » disent ce que
@@ -165,12 +165,13 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('action:cancel') }}" style="width:15px;height:15px;" aria-hidden="true" />
                     Annuler
                 </button>
+                {# Libellé PRÉCIS : on dit ce qui sera enregistré, pas « valider ». #}
                 <button type="button" class="btn btn-primary jsb-picker-btn"
                         data-picker-executer
                         data-mouvement-picker-target="executer"
                         {{ apercu.pret ?? false ? '' : 'disabled' }}>
                     <twig:UX:Icon name="{{ resolve_icon_name('action:save') }}" style="width:15px;height:15px;" aria-hidden="true" />
-                    Valider et enregistrer
+                    Enregistrer {{ determinant }}{{ libelleMin }}
                 </button>
             </span>
         </footer>
