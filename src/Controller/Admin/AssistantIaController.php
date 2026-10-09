@@ -599,6 +599,18 @@ class AssistantIaController extends AbstractController
             ], Response::HTTP_PAYMENT_REQUIRED);
         }
 
+        // TITRE AUTOMATIQUE : une conversation sans titre prend celui de sa première
+        // vraie question — APRÈS le métrage (un envoi refusé ne baptise rien) et
+        // AVANT le dépôt, dont le flush l'enregistre : la réponse, 200 comme 202,
+        // porte ainsi déjà le nouveau `conversationTitre`. `$contenu` est le texte
+        // BRUT de l'utilisateur (contexte, citation et fichiers voyagent à part). Une
+        // confirmation d'intention répète NOTRE reformulation, pas sa demande : elle
+        // ne baptise pas. Un titre déjà posé, choisi ou automatique, n'est jamais
+        // écrasé (AssistantConversation::titrerDepuis).
+        if (!$confirmationDIntention) {
+            $conversation->titrerDepuis($contenu, $this->parametresRepository->nomPour($entreprise));
+        }
+
         // LE TRAITEMENT VIT À PART. Tout ce qui précède décide d'un code
         // d'erreur (400/402/403/404) et doit donc rester ici, sur le chemin de la
         // requête : un message accepté puis refusé trente secondes plus tard

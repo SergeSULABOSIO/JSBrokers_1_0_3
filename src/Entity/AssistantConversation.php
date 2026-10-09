@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Ai\TitreDeConversation;
 use App\Repository\AssistantConversationRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -10,8 +11,8 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * Fil de conversation entre un invité et l'assistant IA de l'entreprise.
  * L'historique est PAR INVITÉ (confidentialité entre collègues) : un invité ne
- * voit et ne manipule que ses propres conversations. Le titre est dérivé du
- * premier message envoyé.
+ * voit et ne manipule que ses propres conversations. Le titre est tiré de la
+ * première vraie question (titrerDepuis), puis renommable à volonté.
  */
 #[ORM\Entity(repositoryClass: AssistantConversationRepository::class)]
 #[ORM\HasLifecycleCallbacks]
@@ -125,19 +126,31 @@ class AssistantConversation
     }
 
     /**
+     * Donne un titre à la conversation à partir de sa question, si elle n'en a
+     * PAS ENCORE. Seul endroit où vit la règle « jamais écrasé » : un titre choisi
+     * par l'utilisateur (renommage) ou déjà posé par une question précédente
+     * reste tel quel. Une question banale (« Bonjour ! ») ne pose rien, et la
+     * suivante retentera. La fabrique du texte : TitreDeConversation.
+     *
+     * @param string $question     le texte BRUT tapé par l'utilisateur
+     * @param string $nomAssistant le nom configuré de l'assistant (« Ket, peux-tu… »)
+     */
+    public function titrerDepuis(string $question, string $nomAssistant): void
+    {
+        if ($this->titre === null) {
+            $this->titre = TitreDeConversation::depuis($question, $nomAssistant);
+        }
+    }
+
+    /**
      * Ce qu'on AFFICHE pour désigner cette conversation. Source unique : onglet
      * de la colonne 4, liste de la colonne 3, charges utiles JSON.
      *
-     * POURQUOI UN LIBELLÉ DÉRIVÉ PLUTÔT QU'UN TITRE ÉCRIT EN BASE. Le titre
-     * était auparavant fabriqué au premier message, en tronquant celui-ci à
-     * quatre-vingts caractères. C'était long, c'était laid dans un onglet — la
-     * barre s'étirait sur une phrase entière — et surtout c'était FIGÉ : le
-     * hasard de la première phrase collait à la conversation pour toujours.
-     *
-     * Une conversation non renommée s'appelle donc « CONV#135 ». Court, stable,
-     * et sans ambiguïté quand plusieurs onglets sont ouverts. `titre` reste NUL
-     * en base tant que l'utilisateur n'a rien choisi : rien à migrer, et le jour
-     * où il renomme, c'est son texte qui prime.
+     * Sans titre, une conversation s'appelle « CONV#135 » : court, stable, et sans
+     * ambiguïté quand plusieurs onglets sont ouverts. Elle en reçoit un dès sa
+     * première vraie question (titrerDepuis) — court et débarrassé des formules de
+     * politesse, pas la phrase entière d'autrefois, qui étirait l'onglet. Le jour
+     * où l'utilisateur renomme, c'est son texte qui prime.
      */
     public function libelle(): string
     {

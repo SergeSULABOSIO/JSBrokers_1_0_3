@@ -725,6 +725,107 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $this->assertStringContainsString('Dossier flotte auto', (string) $this->client->getResponse()->getContent());
     }
 
+    // ── Titre automatique tiré de la première question ────────────────────────
+
+    private function titreEnBase(int $idConversation): ?string
+    {
+        $titre = $this->em()->getConnection()->fetchOne(
+            'SELECT titre FROM assistant_conversation WHERE id = :id',
+            ['id' => $idConversation]
+        );
+
+        return $titre === false ? null : $titre;
+    }
+
+    /** Un titre CHOISI par l'utilisateur n'est jamais remplacé par une question. */
+    public function testUneConversationRenommeeGardeSonTitreALEnvoi(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $guest, 'Dossier flotte auto');
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), 'Combien de clients avons-nous ?');
+        $this->assertResponseIsSuccessful();
+
+        $this->assertSame('Dossier flotte auto', $this->jsonResponse()['conversationTitre']);
+        $this->assertSame('Dossier flotte auto', $this->titreEnBase($conversation->getId()));
+    }
+
+    /**
+     * La PREMIÈRE vraie question baptise, les suivantes non ; une salutation seule
+     * ne baptise rien et laisse la question suivante le faire. Puis l'utilisateur
+     * renomme : son choix l'emporte, et un nouveau message n'y touche plus.
+     */
+    public function testLaPremiereVraieQuestionBaptiseEtLeRenommageLEmporte(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $guest);
+        $id = $conversation->getId();
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
+        $this->postMessage($e->getId(), $id, 'Bonjour !');
+        $this->assertSame('CONV#' . $id, $this->jsonResponse()['conversationTitre'], 'Une salutation ne baptise pas.');
+        $this->assertNull($this->titreEnBase($id));
+
+        $this->postMessage($e->getId(), $id, 'Ket, peux-tu me dire combien de clients avons-nous ?');
+        $this->assertSame('Dire combien de clients avons-nous', $this->jsonResponse()['conversationTitre']);
+
+        $this->postMessage($e->getId(), $id, 'Et les assureurs ?');
+        $this->assertSame('Dire combien de clients avons-nous', $this->titreEnBase($id), 'Le 2ᵉ message ne rebaptise pas.');
+
+        $this->client->request(
+            'PATCH',
+            sprintf('/admin/assistant-ia/api/conversations/%d/%d', $e->getId(), $id),
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode(['titre' => 'Mon dossier'])
+        );
+        $this->assertResponseIsSuccessful();
+        $this->postMessage($e->getId(), $id, 'Et les partenaires ?');
+        $this->assertSame('Mon dossier', $this->jsonResponse()['conversationTitre']);
+        $this->assertSame('Mon dossier', $this->titreEnBase($id));
+    }
+
+    /** Un envoi refusé (solde épuisé) ne laisse AUCUNE trace — pas même un titre. */
+    public function testUnEnvoiRefuseFauteDeTokensNeBaptisePas(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $guest);
+        $owner = $this->user(self::OWNER_EMAIL);
+        $owner->setFreeTokens(0);
+        $owner->setPaidTokens(1);
+        $owner->setFreeWindowStartedAt(new \DateTimeImmutable());
+        $this->em()->flush();
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), 'Quelles primes restent à encaisser ?');
+
+        $this->assertResponseStatusCodeSame(402);
+        $this->assertNull($this->titreEnBase($conversation->getId()));
+    }
+
+    /**
+     * LE TITRE VIENT DU TEXTE LIBRE : du balisage s'y affiche tel quel, jamais
+     * interprété. Il est rendu échappé dans la liste des conversations (et le JS ne
+     * l'écrit qu'en textContent, cf. assistant-conversation-titre.js).
+     */
+    public function testUnTitreContenantDuBalisageResteDuTexte(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $guest);
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), '<b>Primes</b> à encaisser ?');
+        $this->assertResponseIsSuccessful();
+        $this->assertSame('<b>Primes</b> à encaisser', $this->jsonResponse()['conversationTitre'], 'Le texte est gardé tel quel.');
+
+        $this->client->request('GET', sprintf('/admin/assistant-ia/workspace/%d', $e->getId()));
+        $liste = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('&lt;b&gt;Primes&lt;/b&gt; à encaisser', $liste);
+        $this->assertStringNotContainsString('<b>Primes</b>', $liste);
+    }
+
     public function testRenommageInvalideOuDAutruiRefuse(): void
     {
         ['guest' => $guest, 'entreprise' => $e] = $this->seed();
@@ -777,21 +878,11 @@ class AssistantIaWorkspaceTest extends WebTestCase
         // Sans personnalisation, le personnage porte le nom par défaut « Ket ».
         $this->assertStringContainsString('Ket', $data['assistant']['contenu']);
         $this->assertStringContainsString(self::ENTREPRISE_NOM, $data['assistant']['contenu']);
-        // Le titre n'est PLUS dérivé du premier message. Il en reprenait
-        // quatre-vingts caractères — une phrase entière dans un onglet, figée
-        // pour toujours sur le hasard de la première question. Une conversation
-        // non renommée s'appelle « CONV#<id> » ; l'utilisateur choisit le reste,
-        // d'un double-clic sur l'onglet.
-        $this->assertSame(
-            'CONV#' . $conversation->getId(),
-            $data['conversationTitre'],
-            'Le libellé par défaut est court et dérivé de l’identifiant.'
-        );
-        $this->assertStringNotContainsString(
-            'Bonjour',
-            (string) $data['conversationTitre'],
-            'Le premier message ne doit plus baptiser la conversation.'
-        );
+        // La première vraie question BAPTISE la conversation : « CONV#<id> » cède la
+        // place à un titre court, débarrassé de sa formule de politesse — pas la
+        // phrase entière d'autrefois. Il revient dans la réponse même de l'envoi.
+        $this->assertSame('Qui es-tu', $data['conversationTitre']);
+        $this->assertSame('Qui es-tu', $this->titreEnBase($conversation->getId()), 'Le titre est enregistré.');
 
         // Les deux messages (question + réponse) sont persistés.
         $conn = $this->em()->getConnection();

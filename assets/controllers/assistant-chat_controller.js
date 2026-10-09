@@ -53,7 +53,7 @@ import {
     verbeEtape, compteurEtape, resumeActivite,
     explicationEtape, coulissesEtape, dureeEtape,
 } from './assistant-etapes.js';
-import { ongletDeConversation } from './assistant-conversation-titre.js';
+import { appliquerTitre, ongletDeConversation, titreAffiche } from './assistant-conversation-titre.js';
 
 /**
  * Les deux icônes du panneau de téléchargement, écrites une fois : elles sont posées
@@ -818,6 +818,17 @@ export default class extends Controller {
     }
 
     /**
+     * Répercute le titre rapporté par le serveur — seulement s'il a CHANGÉ : la
+     * plupart des envois ne touchent pas au titre, et réécrire quatre endroits
+     * (dont le localStorage) à chaque message serait du travail pour rien.
+     */
+    _majTitre(titre) {
+        if (typeof titre !== 'string' || titre === '') return;
+        if (titreAffiche(this.idConversationValue) === titre) return;
+        appliquerTitre(this.idConversationValue, titre, this.idEntrepriseValue);
+    }
+
+    /**
      * Suggestion de l'accueil : PRÉ-REMPLIT le champ, n'envoie rien — l'utilisateur
      * relit, complète, et décide de ce qui lui coûte des tokens. Un texte déjà tapé
      * n'est jamais écrasé : on se contente alors de rendre le focus au champ.
@@ -886,6 +897,11 @@ export default class extends Controller {
 
             const statut = response.status;
             const data = await response.json().catch(() => null);
+
+            // TITRE AUTOMATIQUE : la première vraie question baptise la conversation
+            // côté serveur, et la réponse (200 comme 202) le rapporte. On l'applique
+            // AVANT la bulle de Ket, pour que l'onglet change dès l'envoi.
+            if (statut >= 200 && statut < 300) this._majTitre(data?.conversationTitre);
 
             if (statut === 402) {
                 userBubble.remove();
