@@ -74,15 +74,22 @@ export default class extends PickerBaseController {
         const url = new URL(this.apercuUrlValue, window.location.origin);
         Object.entries(this._params()).forEach(([cle, valeur]) => url.searchParams.set(cle, valeur));
 
+        // SEULE LA DERNIÈRE DEMANDE S'AFFICHE. L'aperçu initial (date par défaut) et celui
+        // de la date saisie partent presque ensemble : si le premier répondait en dernier,
+        // il recouvrait le second — l'aperçu ne disait plus ce que le champ allait écrire.
+        const jeton = (this.jetonApercu = (this.jetonApercu || 0) + 1);
+
         try {
             const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             const data = await response.json().catch(() => ({}));
+            if (jeton !== this.jetonApercu) return;
             if (!response.ok) throw new Error(data.message || `Erreur serveur ${response.status}`);
 
             this.apercuTarget.innerHTML = data.html || '';
             if (this.hasExecuterTarget) this.executerTarget.disabled = !data.pret;
             this._showError(null);
         } catch (error) {
+            if (jeton !== this.jetonApercu) return; // une demande plus récente fait foi
             console.error('[MOUVEMENT-PICKER] aperçu :', error);
             // L'aperçu précédent reste affiché : on signale sans effacer le contexte.
             this._showError("L'aperçu n'a pas pu être actualisé.");

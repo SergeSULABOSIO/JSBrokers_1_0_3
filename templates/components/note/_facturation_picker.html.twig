@@ -18,6 +18,7 @@
     /charte-couleurs : cobalt #0047AB). Piloté par « facturation-picker », auto-connecté à
     l'insertion par le cerveau.
 #}
+{% set credit = type|default('debit') == 'credit' %}
 <div class="jsb-picker-overlay"
      data-controller="facturation-picker"
      data-facturation-picker-submit-url-value="{{ submitUrl }}"
@@ -42,7 +43,7 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('note') }}" style="width:22px;height:22px;color:#0047AB;" />
                 </span>
                 <h5 id="jsb-fact-picker-title" class="modal-title mb-0">
-                    {%- if type|default('debit') == 'credit' %}
+                    {%- if credit %}
                         {%- if groupe %}Note de crédit à&nbsp;«&nbsp;{{ groupe.nom }}&nbsp;»{% else %}Note de crédit{% endif -%}
                     {%- elseif groupe %}Facturer&nbsp;«&nbsp;{{ groupe.nom }}&nbsp;»
                     {%- else %}Facturer une commission{% endif -%}
@@ -62,8 +63,13 @@
             <div class="jsb-picker-intro-text">
                 <p class="jsb-picker-intro-title">{{ groupe ? groupe.nom : 'Aucun destinataire' }}</p>
                 <p id="jsb-fact-picker-desc" class="jsb-picker-intro-desc">
+                    {% if credit %}
+                    Les commissions déjà facturées sur ces échéances sont cochées&nbsp;: la note de
+                    crédit les annule auprès du destinataire. Décochez-en une pour la laisser de côté.
+                    {% else %}
                     Les commissions qu'il reste à réclamer sont cochées. Décochez-en une pour la
                     laisser de côté&nbsp;; elle restera facturable plus tard.
+                    {% endif %}
                     {% if suivants is not empty %}
                         <br><strong>Une note par destinataire&nbsp;:</strong>
                         {% for s in suivants %}{{ s.nom }} ({{ s.compte }}){{ not loop.last ? ', ' }}{% endfor %}
@@ -79,15 +85,19 @@
         <div class="jsb-picker-listwrap jsb-picker-cartes">
             {% if groupe is null or groupe.lignes is empty %}
                 <p class="jsb-picker-empty text-muted" role="status">
+                    {% if credit %}
+                    Rien à créditer sur cette sélection&nbsp;: aucune commission n'y a été facturée.
+                    {% else %}
                     Rien à facturer sur cette sélection&nbsp;: ces commissions sont déjà portées
                     par une note, ou aucun revenu n'y est rattaché.
+                    {% endif %}
                 </p>
             {% else %}
                 <fieldset class="jsb-picker-carte">
-                    <legend class="fs-6" style="color:#0d2440;">Commissions à facturer</legend>
+                    <legend class="fs-6" style="color:#0d2440;">{{ credit ? 'Commissions à créditer' : 'Commissions à facturer' }}</legend>
                     <div class="table-responsive">
                         <table class="jsb-picker-table jsb-picker-table--lignes-cliquables"
-                               aria-label="Commissions qu'il reste à facturer">
+                               aria-label="{{ credit ? 'Commissions à créditer' : 'Commissions qu’il reste à facturer' }}">
                             <thead>
                                 <tr>
                                     <th scope="col" style="width:44px;">
@@ -97,10 +107,10 @@
                                     </th>
                                     <th scope="col">Police / Échéance</th>
                                     <th scope="col" class="jsb-picker-num">
-                                        Reste à facturer{% if monnaie %} <span class="text-muted">({{ monnaie }})</span>{% endif %}
+                                        {{ credit ? 'Commission facturée' : 'Reste à facturer' }}{% if monnaie %} <span class="text-muted">({{ monnaie }})</span>{% endif %}
                                     </th>
                                     <th scope="col" class="jsb-picker-num" style="width:11rem;">
-                                        Montant à facturer{% if monnaie %} <span class="text-muted">({{ monnaie }})</span>{% endif %}
+                                        {{ credit ? 'Montant à créditer' : 'Montant à facturer' }}{% if monnaie %} <span class="text-muted">({{ monnaie }})</span>{% endif %}
                                     </th>
                                 </tr>
                             </thead>
@@ -241,6 +251,7 @@
                     </div>
                 </fieldset>
 
+                {% if not credit %}
                 <fieldset class="jsb-picker-carte">
                     <legend class="fs-6" style="color:#0d2440;">Où vous faire payer</legend>
                     {% if comptes is empty %}
@@ -266,6 +277,7 @@
                         {% endfor %}
                     {% endif %}
                 </fieldset>
+                {% endif %}
 
                 <fieldset class="jsb-picker-carte">
                     <legend class="fs-6" style="color:#0d2440;">Signature</legend>
@@ -313,7 +325,11 @@
 
         <div class="jsb-picker-foot">
             <span class="text-muted small me-auto">
+                {% if credit %}
+                La note de crédit est émise <strong>validée</strong> : elle annule aussitôt la commission facturée.
+                {% else %}
                 La note est émise <strong>validée</strong> : elle entre aussitôt au suivi du recouvrement.
+                {% endif %}
             </span>
             <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
                 <twig:UX:Icon name="{{ resolve_icon_name('action:cancel') }}" style="width:15px;height:15px;" aria-hidden="true" />
@@ -347,7 +363,7 @@
                Le formulaire ouvert est celui de Paiement, rattaché à cette note et
                prérempli au solde — aucun champ recopié ici. #}
             <button type="button" class="btn btn-outline-primary jsb-picker-btn"
-                    data-action="click->facturation-picker#signalerLeReglement">
+                    data-action="click->facturation-picker#signalerLeReglement"{{ credit ? ' hidden' }}>
                 <twig:UX:Icon name="{{ resolve_icon_name('paiement') }}" style="width:15px;height:15px;" aria-hidden="true" />
                 Signaler le règlement
             </button>
