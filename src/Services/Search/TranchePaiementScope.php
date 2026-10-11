@@ -183,7 +183,7 @@ final class TranchePaiementScope
             'icone' => 'action:calendar',
             'valeurs' => [
                 self::A_REGULARISER => 'À régulariser (sorties du recouvrement)',
-                self::REGULARISEE => 'Régularisées par note de crédit',
+                self::REGULARISEE => 'Régularisées (note de crédit ou clôture sans avoir)',
             ],
             'courts' => [
                 self::A_REGULARISER => 'À régulariser',

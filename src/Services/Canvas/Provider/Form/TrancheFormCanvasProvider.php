@@ -126,7 +126,27 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
                     "event"        => "ui:tranche.facturer-commission",
                     "url"          => "/admin/note/facturation-picker?type=credit",
                     "droit"        => ["entite" => "Note", "niveau" => Invite::ACCESS_ECRITURE],
-                    "condition"    => ["field" => "regularisationEtat", "value" => "a_regulariser"],
+                    // Seulement s'il y a quelque chose à créditer (une commission facturée).
+                    "condition"    => ["field" => "regularisationVoie", "value" => "avoir"],
+                ],
+                [
+                    // Rien n'a été facturé : il n'y a rien à créditer, on clôt la régularisation.
+                    "label"     => "Clôturer sans avoir",
+                    "icon"      => "action:completed",
+                    "groupe"    => "Régularisation",
+                    "event"     => "ui:tranche.regularisation-request",
+                    "url"       => "/admin/tranche/api/regularisation/%id%/cloturer",
+                    "droit"     => ["entite" => "Tranche", "niveau" => Invite::ACCESS_MODIFICATION],
+                    "condition" => ["field" => "regularisationVoie", "value" => "cloture"],
+                ],
+                [
+                    "label"     => "Rouvrir la régularisation",
+                    "icon"      => "action:calendar",
+                    "groupe"    => "Régularisation",
+                    "event"     => "ui:tranche.regularisation-request",
+                    "url"       => "/admin/tranche/api/regularisation/%id%/rouvrir",
+                    "droit"     => ["entite" => "Tranche", "niveau" => Invite::ACCESS_MODIFICATION],
+                    "condition" => ["field" => "regularisationVoie", "value" => "cloturee"],
                 ],
                 [
                     "label"     => "Déclarer due quand même",

@@ -216,6 +216,7 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
     {
         $indicateurs += [
             'regularisationEtat' => null,
+            'regularisationVoie' => null,
             'regularisationExplication' => null,
             'commissionDejaFacturee' => null,
             'primeARegulariser' => null,
@@ -238,22 +239,41 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface,
         }
 
         $avoir = $this->regularisation->noteDeCredit($tranche);
-        $etat = $avoir !== null ? 'regularisee' : Tranche::REGULARISATION_A_REGULARISER;
-        $libelle = $avoir !== null ? 'Régularisée' : 'À régulariser';
+        $cloturee = $tranche->getRegularisation() === Tranche::REGULARISATION_CLOTUREE;
+        $notes = $this->regularisation->notesDeCommission($tranche);
+        $regularisee = $avoir !== null || $cloturee;
+        $libelle = $regularisee ? 'Régularisée' : 'À régulariser';
+
+        // LA VOIE OUVERTE — condition des actions : un AVOIR n'a d'objet que si une commission
+        // a été facturée ; sinon, on CLÔTURE sans avoir (sinon l'échéance ne pourrait jamais
+        // devenir « Régularisée »). Une clôture se rouvre ; un avoir émis s'annule par sa note.
+        $voie = match (true) {
+            $avoir !== null => 'avoir_emis',
+            $cloturee       => 'cloturee',
+            $notes !== []   => 'avoir',
+            default         => 'cloture',
+        };
 
         return array_merge($indicateurs, [
-            'regularisationEtat' => $etat,
-            'regularisationExplication' => $avoir !== null
-                ? sprintf('Régularisée par la note de crédit n° %s (%s).', $avoir->getReference() ?: '#' . $avoir->getId(), $acte)
-                : sprintf(
+            'regularisationEtat' => $regularisee ? 'regularisee' : Tranche::REGULARISATION_A_REGULARISER,
+            'regularisationVoie' => $voie,
+            'regularisationExplication' => match ($voie) {
+                'avoir_emis' => sprintf('Régularisée par la note de crédit n° %s (%s).', $avoir->getReference() ?: '#' . $avoir->getId(), $acte),
+                'cloturee'   => sprintf('Régularisée sans avoir : rien n’avait été facturé sur cette échéance (%s).', $acte),
+                'avoir'      => sprintf(
                     'Échéance sans objet après %s : elle couvre une période où la police n’existe plus et sort du '
                     . 'recouvrement. Régularisez-la par une note de crédit, ou déclarez-la due si la prime reste '
                     . 'acquise à l’assureur.',
                     $acte,
                 ),
-            'commissionDejaFacturee' => $avoir === null
-                ? RegularisationDesEcheances::phraseCommissionFacturee($this->regularisation->notesDeCommission($tranche))
-                : null,
+                default      => sprintf(
+                    'Échéance sans objet après %s : elle couvre une période où la police n’existe plus et sort du '
+                    . 'recouvrement. Rien n’ayant été facturé, clôturez-la sans avoir, ou déclarez-la due si la prime '
+                    . 'reste acquise à l’assureur.',
+                    $acte,
+                ),
+            },
+            'commissionDejaFacturee' => $regularisee ? null : RegularisationDesEcheances::phraseCommissionFacturee($notes),
             'primeARegulariser' => round(max(0.0, (float) $indicateurs['primeSoldeDue']), 2),
             'commissionARegulariser' => round(max(0.0, (float) $indicateurs['solde_restant_du']), 2),
             'statutPaiement' => $libelle,

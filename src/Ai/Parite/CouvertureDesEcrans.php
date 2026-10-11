@@ -131,6 +131,14 @@ final class CouvertureDesEcrans
      * @var array<string, string>
      */
     public const ECRAN_SEULEMENT = [
+        // ── Régularisation d'une échéance sans objet (police annulée / résiliée) ──
+        // Ket MARQUE les échéances (même builder que l'écran, `preparer_mouvement_avenant`)
+        // et les LIT (statut, explication, chips) ; il n'a pas encore d'outil pour les
+        // quatre gestes qui suivent — déclarer due, remettre, clôturer sans avoir, rouvrir.
+        'ui:tranche.regularisation-request' => "Gestes de régularisation d'une échéance (déclarer due, "
+            . 'remettre à régulariser, clôturer sans avoir, rouvrir) : aucun outil de Ket ne les porte '
+            . "encore. Ket marque et explique l'échéance, le geste se fait à l'écran.",
+
         // ── Navigation pure ────────────────────────────────────────────────
         // Ouvrir une rubrique n'a pas d'objet sans colonnes. Ket possède bien
         // l'outil correspondant (`ouvrir_rubrique`), mais il n'est justement pas

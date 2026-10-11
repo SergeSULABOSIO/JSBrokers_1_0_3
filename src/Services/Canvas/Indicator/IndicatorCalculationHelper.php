@@ -2709,7 +2709,7 @@ class IndicatorCalculationHelper implements ResetInterface
      */
     public function getTrancheARegulariser(Tranche $tranche): array
     {
-        if (!$tranche->estARegulariser()) {
+        if (!$tranche->estHorsRecouvrement()) {
             return ['prime' => 0.0, 'commission' => 0.0];
         }
 

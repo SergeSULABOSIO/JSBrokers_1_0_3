@@ -3024,12 +3024,17 @@ export default class extends Controller {
             this._showNotification('Impossible de régulariser l’échéance : contexte manquant.', 'error');
             return;
         }
-        const maintenir = payload.url.endsWith('/maintenir');
+        const geste = payload.url.split('/').pop();
+        const textes = {
+            maintenir: ['Déclarer l’échéance due', 'La police a été annulée ou résiliée, mais la prime de cette échéance reste acquise à l’assureur : elle revient dans le recouvrement (relances, alertes, primes à encaisser).'],
+            remettre: ['Remettre l’échéance à régulariser', 'L’échéance ressort du recouvrement et redevient « à régulariser » : par une note de crédit, par une clôture sans avoir si rien n’a été facturé, ou à déclarer due plus tard.'],
+            cloturer: ['Clôturer sans avoir', 'Rien n’a été facturé sur cette échéance : il n’y a rien à créditer. Elle devient « Régularisée », sans note. Vous pourrez rouvrir la régularisation.'],
+            rouvrir: ['Rouvrir la régularisation', 'L’échéance redevient « à régulariser » : elle reste hors du recouvrement.'],
+        };
+        const [titre, corps] = textes[geste] || textes.remettre;
         this.broadcast('ui:confirmation.request', {
-            title: maintenir ? 'Déclarer l’échéance due' : 'Remettre l’échéance à régulariser',
-            body: maintenir
-                ? 'La police a été annulée ou résiliée, mais la prime de cette échéance reste acquise à l’assureur : elle revient dans le recouvrement (relances, alertes, primes à encaisser).'
-                : 'L’échéance ressort du recouvrement : elle redevient « à régulariser », à solder par une note de crédit ou à déclarer due plus tard.',
+            title: titre,
+            body: corps,
             itemDescriptions: [payload.selection?.[0]?.name || 'l’échéance sélectionnée'],
             showIrreversible: false,
             onConfirm: { type: 'client:tranche.regularisation-execute', payload: { url: payload.url } },
