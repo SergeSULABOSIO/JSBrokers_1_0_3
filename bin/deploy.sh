@@ -753,11 +753,23 @@ if [ "$SKIP_MIGRATIONS" -eq 0 ]; then
     ok "Schema a jour"
 
     # Échéances « à régulariser » des annulations et résiliations déjà enregistrées.
-    # Idempotent : un second passage ne marque plus rien. Pour un examen préalable :
-    #   php bin/console app:echeances:regulariser --rattrapage --dry-run
-    executer "APP_ENV=prod $PHP -d memory_limit=512M bin/console app:echeances:regulariser \
-              --rattrapage --no-interaction"
-    ok "Echeances a regulariser rattrapees"
+    # SIMULATION SEULEMENT : le déploiement n'écrit rien ici. La commande n'existe en
+    # production qu'APRÈS ce déploiement, ses colonnes qu'APRÈS les migrations ci-dessus :
+    # c'est donc ici, et seulement ici, qu'on peut lire ce qu'elle ferait. L'application se
+    # lance à la main, après lecture du récapitulatif (commande idempotente).
+    # Hors « executer » : elle n'écrit rien, et son récapitulatif doit s'AFFICHER (executer
+    # n'écrit la sortie que dans le journal). En répétition à blanc, les migrations n'ont
+    # pas été jouées : la simulation n'aurait pas ses colonnes, on l'annonce seulement.
+    if [ "$DRY_RUN" -eq 1 ]; then
+      printf '\033[0;33m   [A BLANC] simulation du rattrapage des echeances (apres migrations)\033[0m\n' | tee -a "$JOURNAL"
+    else
+      APP_ENV=prod "$PHP" -d memory_limit=512M bin/console app:echeances:regulariser \
+        --rattrapage --dry-run --no-interaction 2>&1 | tee -a "$JOURNAL" \
+        || ko "Simulation du rattrapage en echec : a relancer a la main apres le deploiement."
+    fi
+    info "Rattrapage des echeances : SIMULATION ci-dessus, rien n'a ete ecrit."
+    info "Apres lecture, pour appliquer :"
+    info "  cd $APP_DIR && APP_ENV=prod $PHP bin/console app:echeances:regulariser --rattrapage"
   fi
 else
   ko "Migrations SAUTEES a la demande"
