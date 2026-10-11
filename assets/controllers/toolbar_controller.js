@@ -75,7 +75,10 @@ export default class extends Controller {
         this.selectos = [];
         this.activeFormCanvas = this.entityFormCanvasValue;
         
-        this.boundHandleContextUpdate = this.handleContextUpdate.bind(this);
+        // UNE SEULE fonction liée : initialize() passe deux fois (Stimulus, puis connect()).
+        // Deux bind() distincts posaient deux écouteurs, dont disconnect() n'ôtait que le
+        // second — le premier survivait et touchait une barre détruite (barreActions nul).
+        this.boundHandleContextUpdate ??= this.handleContextUpdate.bind(this);
 
         // Le RENDU des actions spécifiques (boutons, familles, menus, icônes, clavier) est
         // partagé avec la barre du dialogue d'entité : barre-actions.js. La barre ne
