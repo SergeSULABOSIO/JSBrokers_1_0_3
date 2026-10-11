@@ -190,7 +190,7 @@ class SoaContextBuilder
         foreach ($tranches as $i => $entree) {
             // UNE ÉCHÉANCE « À RÉGULARISER » N'EST PLUS RÉCLAMÉE AU CLIENT (police annulée ou
             // résiliée) : elle reste sur le relevé, avec sa mention, mais sans solde à payer.
-            if ($entree['tranche']->estARegulariser()) {
+            if ($entree['tranche']->estHorsRecouvrement()) {
                 $tranches[$i] += ['primePayee' => 0.0, 'primeSolde' => 0.0, 'aRegulariser' => true];
                 continue;
             }

@@ -240,6 +240,9 @@ final class PaiementsPrimeTool implements AiToolInterface, AiToolConditionnel
                 'echeance' => $tranche->getEcheanceAt()?->format('Y-m-d'),
                 'statutPaiement' => $tranche->statutPaiement ?? null,
                 'urgence' => $tranche->urgenceRecouvrement ?? null,
+                // Police annulée / résiliée : pourquoi l'échéance n'est plus réclamée.
+                'regularisation' => $tranche->regularisationExplication ?? null,
+                'commissionDejaFacturee' => $tranche->commissionDejaFacturee ?? null,
             ], static fn ($v) => $v !== null && $v !== '' && $v !== 'N/A'),
             'prime' => array_filter([
                 'totale' => round((float) ($tranche->primeTranche ?? 0), 2),

@@ -9,6 +9,7 @@ use App\Entity\ReversementRetroAgent;
 use App\Entity\Tranche;
 use App\Services\ServiceMonnaies;
 use App\Services\Tranche\ReleveDeTranche;
+use App\Services\Tranche\RegularisationDesEcheances;
 use App\Form\TrancheType;
 use App\Constantes\Constante;
 use App\Repository\InviteRepository;
@@ -138,13 +139,14 @@ class TrancheController extends AbstractController
     /**
      * RÉGULARISATION D'UNE ÉCHÉANCE après annulation / résiliation de sa police :
      *  - « maintenir » : la déclarer due quand même (la prime reste acquise à l'assureur) —
-     *    elle revient dans le recouvrement normal ;
-     *  - « remettre » : revenir sur ce choix — elle ressort du recouvrement.
+     *    elle revient dans le recouvrement normal ; « remettre » revient sur ce choix ;
+     *  - « cloturer » : la clore SANS AVOIR, quand rien n'a été facturé dessus (il n'y a rien
+     *    à créditer) — elle devient « Régularisée » ; « rouvrir » revient sur ce choix.
      * La voie « note de crédit » passe par la fenêtre de facturation (type=credit).
      * L'état d'avant le mouvement reste mémorisé : l'abandon du mouvement le restituera.
      */
-    #[Route('/api/regularisation/{id}/{geste}', name: 'api.regularisation', requirements: ['id' => Requirement::DIGITS, 'geste' => 'maintenir|remettre'], methods: ['POST'])]
-    public function regularisation(Tranche $tranche, string $geste): JsonResponse
+    #[Route('/api/regularisation/{id}/{geste}', name: 'api.regularisation', requirements: ['id' => Requirement::DIGITS, 'geste' => 'maintenir|remettre|cloturer|rouvrir'], methods: ['POST'])]
+    public function regularisation(Tranche $tranche, string $geste, RegularisationDesEcheances $regularisation): JsonResponse
     {
         if (!$this->mayAccessEntity(Tranche::class, Invite::ACCESS_MODIFICATION)) {
             return $this->accessDeniedJson();
@@ -155,23 +157,40 @@ class TrancheController extends AbstractController
 
         // Le geste doit correspondre à l'état réel : deux utilisateurs agissant en même temps
         // ne doivent pas se contredire en silence.
-        $attendu = $geste === 'maintenir' ? Tranche::REGULARISATION_A_REGULARISER : Tranche::REGULARISATION_MAINTENUE;
+        $attendu = [
+            'maintenir' => Tranche::REGULARISATION_A_REGULARISER,
+            'cloturer'  => Tranche::REGULARISATION_A_REGULARISER,
+            'remettre'  => Tranche::REGULARISATION_MAINTENUE,
+            'rouvrir'   => Tranche::REGULARISATION_CLOTUREE,
+        ][$geste];
         if ($tranche->getRegularisation() !== $attendu) {
+            return $this->json(['message' => match ($geste) {
+                'maintenir', 'cloturer' => 'Cette échéance n’est pas « à régulariser ».',
+                'remettre'              => 'Cette échéance n’a pas été déclarée due.',
+                'rouvrir'               => 'Cette échéance n’a pas été clôturée sans avoir.',
+            }], Response::HTTP_CONFLICT);
+        }
+        // Clore sans avoir suppose qu'il n'y ait RIEN à créditer.
+        if ($geste === 'cloturer' && ($regularisation->notesDeCommission($tranche) !== [] || $regularisation->noteDeCredit($tranche) !== null)) {
             return $this->json([
-                'message' => $geste === 'maintenir'
-                    ? 'Cette échéance n’est pas « à régulariser » : il n’y a rien à déclarer dû.'
-                    : 'Cette échéance n’a pas été déclarée due : elle est déjà hors du recouvrement.',
+                'message' => 'Une commission a été facturée sur cette échéance : régularisez-la par une note de crédit.',
             ], Response::HTTP_CONFLICT);
         }
 
-        $geste === 'maintenir' ? $tranche->declarerDue() : $tranche->remettreARegulariser();
+        match ($geste) {
+            'maintenir'           => $tranche->declarerDue(),
+            'cloturer'            => $tranche->cloturerSansAvoir(),
+            'remettre', 'rouvrir' => $tranche->remettreARegulariser(),
+        };
         $this->em->flush();
 
         return $this->json([
             'success' => true,
-            'message' => $geste === 'maintenir'
-                ? sprintf('L’échéance « %s » est déclarée due : elle revient dans le recouvrement.', $tranche->getNom())
-                : sprintf('L’échéance « %s » est de nouveau « à régulariser » : elle sort du recouvrement.', $tranche->getNom()),
+            'message' => sprintf(match ($geste) {
+                'maintenir' => 'L’échéance « %s » est déclarée due : elle revient dans le recouvrement.',
+                'cloturer'  => 'L’échéance « %s » est régularisée sans avoir.',
+                'remettre', 'rouvrir' => 'L’échéance « %s » est de nouveau « à régulariser » : elle reste hors du recouvrement.',
+            }, $tranche->getNom()),
         ]);
     }
 

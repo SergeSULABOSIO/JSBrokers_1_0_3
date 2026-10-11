@@ -119,7 +119,9 @@ class MouvementAvenantTest extends WebTestCase
             'DELETE ch FROM chargement ch JOIN entreprise e ON ch.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE pa FROM partenaire pa JOIN entreprise e ON pa.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE ri FROM risque ri JOIN entreprise e ON ri.entreprise_id = e.id WHERE e.nom = :n',
+            'DELETE ct FROM contact ct JOIN entreprise e ON ct.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE c FROM client c JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom = :n',
+            'DELETE g FROM groupe g JOIN entreprise e ON g.entreprise_id = e.id WHERE e.nom = :n',
             // Après les clients (qui portent la clé étrangère), avant les invités (gestionnaires).
             'DELETE pf FROM portefeuille pf JOIN entreprise e ON pf.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE ass FROM assureur ass JOIN entreprise e ON ass.entreprise_id = e.id WHERE e.nom = :n',
@@ -1339,6 +1341,12 @@ class MouvementAvenantTest extends WebTestCase
     /** Exécute un mouvement par le moteur unique, comme l'écran et Ket. */
     private function executer(array $s, MouvementAvenant $mouvement, array $args = []): void
     {
+        // Après un em->clear(), les entités du jeu sont détachées : on les relit.
+        if (!$this->em->contains($s['ent'])) {
+            foreach (['ent' => Entreprise::class, 'inv' => Invite::class, 'user' => Utilisateur::class, 'base' => Avenant::class] as $cle => $classe) {
+                $s[$cle] = $this->em->getRepository($classe)->find($s[$cle]->getId());
+            }
+        }
         $scope = $this->scope($s);
         $d = $this->builder->construire($mouvement, $s['base'], $args, $scope);
         $this->assertArrayHasKey('operations', $d, json_encode($d, JSON_UNESCAPED_UNICODE));
@@ -2008,7 +2016,7 @@ class MouvementAvenantTest extends WebTestCase
         $this->assertGreaterThan(0.0, $t2->primeARegulariser, 'Le montant non réclamé reste visible.');
         $this->assertGreaterThan(0.0, (float) $t2->primeTranche, 'La prime de l’échéance ne change pas.');
         $this->assertStringContainsString('la résiliation de la police à effet du 15/06/2026', $t2->regularisationExplication);
-        $this->assertStringContainsString('note de crédit', $t2->regularisationExplication);
+        $this->assertStringContainsString('clôturez-la sans avoir', $t2->regularisationExplication, 'Rien de facturé : la voie est la clôture.');
         $this->assertNull($t2->commissionDejaFacturee);
     }
 
@@ -2096,7 +2104,10 @@ class MouvementAvenantTest extends WebTestCase
 
     // ───────────────────────── 10. Régulariser une échéance, et le rattrapage ─────────────────────────
 
-    /** Les trois actions existent, chacune conditionnée à l'état où elle a un sens. */
+    /**
+     * Les actions existent, chacune conditionnée à l'état où elle a un sens : l'AVOIR quand
+     * une commission a été facturée, la CLÔTURE quand rien ne l'a été — jamais les deux.
+     */
     public function testLesActionsDeRegularisationSontOffertes(): void
     {
         $s = $this->seed();
@@ -2106,10 +2117,115 @@ class MouvementAvenantTest extends WebTestCase
             $actions[$action['label']] = $action;
         }
 
-        $this->assertSame(['field' => 'regularisationEtat', 'value' => 'a_regulariser'], $actions['Régulariser par note de crédit']['condition']);
+        $this->assertSame(['field' => 'regularisationVoie', 'value' => 'avoir'], $actions['Régulariser par note de crédit']['condition']);
         $this->assertStringContainsString('type=credit', $actions['Régulariser par note de crédit']['url']);
+        $this->assertSame(['field' => 'regularisationVoie', 'value' => 'cloture'], $actions['Clôturer sans avoir']['condition']);
+        $this->assertStringEndsWith('/cloturer', $actions['Clôturer sans avoir']['url']);
+        $this->assertSame('ui:tranche.regularisation-request', $actions['Clôturer sans avoir']['event'], 'Passe par la confirmation.');
+        $this->assertSame(['field' => 'regularisationVoie', 'value' => 'cloturee'], $actions['Rouvrir la régularisation']['condition']);
         $this->assertSame(['field' => 'regularisationEtat', 'value' => 'a_regulariser'], $actions['Déclarer due quand même']['condition']);
         $this->assertSame(['field' => 'regularisationEtat', 'value' => 'maintenue'], $actions['Remettre à régulariser']['condition']);
+    }
+
+    /** Résiliation au 15/06/2026 exécutée ; rend T2 rechargée avec ses indicateurs. */
+    private function t2Lue(array $s): Tranche
+    {
+        $this->em->clear();
+        $t2 = $this->tranche($s, 'T2');
+        static::getContainer()->get(\App\Services\Tranche\TranchePaiementService::class)->chargerIndicateurs([$t2]);
+
+        return $t2;
+    }
+
+    /**
+     * RIEN À CRÉDITER : la voie offerte est la clôture ; clôturée, l'échéance se lit
+     * « Régularisée » (sans note), reste hors du recouvrement et du relevé ; on peut la
+     * rouvrir, et un geste incohérent est refusé.
+     */
+    public function testCloturerSansAvoirPuisRouvrir(): void
+    {
+        $s = $this->seed();
+        $this->executer($s, MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15']);
+        $id = $this->tranche($s, 'T2')->getId();
+        $this->assertSame('cloture', $this->t2Lue($s)->regularisationVoie, 'Rien de facturé : la clôture est la voie offerte.');
+
+        $this->client->request('POST', '/admin/tranche/api/regularisation/' . $id . '/cloturer');
+        $this->assertResponseIsSuccessful();
+        $this->assertStringContainsString('régularisée sans avoir', json_decode($this->client->getResponse()->getContent(), true)['message']);
+
+        $t2 = $this->t2Lue($s);
+        $this->assertSame(Tranche::REGULARISATION_CLOTUREE, $t2->getRegularisation());
+        $this->assertSame('Régularisée', $t2->statutPaiement);
+        $this->assertSame('regularisee', $t2->regularisationEtat);
+        $this->assertSame('cloturee', $t2->regularisationVoie);
+        $this->assertStringContainsString('Régularisée sans avoir', $t2->regularisationExplication);
+        $this->assertSame(0.0, (float) $t2->primeSoldeDue, 'Toujours hors du recouvrement.');
+        $this->assertSame(0, $this->em->getRepository(\App\Entity\Article::class)->count(['tranche' => $id]), 'Aucune note émise.');
+
+        $service = static::getContainer()->get(\App\Services\Tranche\TranchePaiementService::class);
+        $ent = $this->em->getRepository(Entreprise::class)->find($s['ent']->getId());
+        $noms = static fn (array $r) => array_map(static fn (Tranche $t) => $t->getNom(), $r['items']);
+        $this->assertNotContains('T2', $noms($service->lister($ent, ['prime' => 'impayee'], null, null, 1, 50)));
+        $this->assertSame(['T2'], $noms($service->lister($ent, ['regularisation' => 'regularisee'], null, null, 1, 50)), 'Chip « Régularisée ».');
+
+        $client = $this->em->getRepository(Client::class)->find($s['piste']->getClient()->getId());
+        $soa = static::getContainer()->get(\App\Service\Soa\SoaContextBuilder::class)->build($client, $ent, null, true);
+        $ligne = array_values(array_filter($soa['tranches'], static fn (array $l) => $l['tranche']->getNom() === 'T2'))[0];
+        $this->assertSame(0.0, $ligne['primeSolde'], 'Le relevé ne la réclame pas.');
+
+        $this->client->request('POST', '/admin/tranche/api/regularisation/' . $id . '/cloturer');
+        $this->assertResponseStatusCodeSame(409, 'Déjà clôturée.');
+        $this->client->request('POST', '/admin/tranche/api/regularisation/' . $id . '/maintenir');
+        $this->assertResponseStatusCodeSame(409, 'Une échéance clôturée se rouvre d’abord.');
+
+        $this->client->request('POST', '/admin/tranche/api/regularisation/' . $id . '/rouvrir');
+        $this->assertResponseIsSuccessful();
+        $t2 = $this->t2Lue($s);
+        $this->assertSame(Tranche::REGULARISATION_A_REGULARISER, $t2->getRegularisation());
+        $this->assertSame('À régulariser', $t2->statutPaiement);
+        $this->assertSame('cloture', $t2->regularisationVoie);
+    }
+
+    /** Une commission facturée : la clôture n'est pas offerte, et l'endpoint la refuse. */
+    public function testCloturerEstRefuseeQuandUneCommissionAEteFacturee(): void
+    {
+        $s = $this->seed();
+        $t2 = $this->tranche($s, 'T2');
+        $note = (new \App\Entity\Note())->setNom('Commission T2')->setType(\App\Entity\Note::TYPE_NOTE_DE_DEBIT)
+            ->setAddressedTo(\App\Entity\Note::TO_ASSUREUR)->setReference('N-T2-5')->setValidated(true)->setSignature('');
+        $note->setEntreprise($s['ent']);
+        $this->em->persist($note);
+        $article = (new \App\Entity\Article())->setQuantite(1.0);
+        $article->setNote($note)->setTranche($t2)->setRevenuFacture($s['cotation']->getRevenus()->first());
+        $article->setEntreprise($s['ent']);
+        $this->em->persist($article);
+        $this->em->flush();
+        $this->executer($s, MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15']);
+
+        $this->assertSame('avoir', $this->t2Lue($s)->regularisationVoie, 'La voie offerte est la note de crédit.');
+        $this->client->request('POST', '/admin/tranche/api/regularisation/' . $t2->getId() . '/cloturer');
+        $this->assertResponseStatusCodeSame(409);
+        $this->assertStringContainsString('note de crédit', json_decode($this->client->getResponse()->getContent(), true)['message']);
+        $this->em->clear();
+        $this->assertSame(Tranche::REGULARISATION_A_REGULARISER, $this->tranche($s, 'T2')->getRegularisation());
+    }
+
+    /** L'abandon du mouvement restitue l'état d'avant, clôture comprise. */
+    public function testLAbandonRestitueLEtatDAvantApresUneCloture(): void
+    {
+        $s = $this->seed();
+        $this->executer($s, MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15']);
+        $id = $this->tranche($s, 'T2')->getId();
+        $this->client->request('POST', '/admin/tranche/api/regularisation/' . $id . '/cloturer');
+        $this->assertResponseIsSuccessful();
+
+        $this->client->request('DELETE', '/admin/avenant/api/delete-piste-derivee/' . $s['base']->getId());
+        $this->assertResponseIsSuccessful();
+        $t2 = $this->t2Lue($s);
+        $this->assertNull($t2->getRegularisation(), 'Exactement l’état d’avant le mouvement.');
+        $this->assertNull($t2->getRegularisationPar());
+        $this->assertNotSame('Régularisée', $t2->statutPaiement);
+        $this->assertGreaterThan(0.0, (float) $t2->primeSoldeDue, 'De nouveau réclamée.');
     }
 
     /** « Déclarer due » remet l'échéance dans le recouvrement ; « Remettre » l'en ressort ; un geste incohérent est refusé. */
@@ -2164,6 +2280,11 @@ class MouvementAvenantTest extends WebTestCase
         $html = $this->client->getResponse()->getContent();
         $this->assertStringContainsString('Note de crédit', $html);
         $this->assertStringContainsString('data-facturation-picker-type-value="credit"', $html);
+        // Le vocabulaire de l'avoir, pas celui de la facture : rien à encaisser.
+        $this->assertStringContainsString('Commissions à créditer', $html);
+        $this->assertStringContainsString('Montant à créditer', $html);
+        $this->assertStringNotContainsString('Où vous faire payer', $html);
+        $this->assertStringNotContainsString('suivi du recouvrement', $html);
 
         $this->client->request('POST', '/admin/note/facturation', [], [], ['CONTENT_TYPE' => 'application/json'], json_encode([
             'type' => 'credit',
@@ -2214,6 +2335,135 @@ class MouvementAvenantTest extends WebTestCase
 
         $commande->execute(['--rattrapage' => true]);
         $this->assertStringContainsString('0 échéance marquée, 1 déjà marquée', $commande->getDisplay(), 'Idempotente.');
+    }
+
+    // ───────────────────────── 11. Tous les lecteurs, rubrique par rubrique ─────────────────────────
+
+    /**
+     * Les soldes des rubriques Assureurs, Partenaires, Groupes, Risques et Contacts passent
+     * par le même agrégat (getIndicateursGlobaux) : chacun perd exactement la part de T2.
+     */
+    public function testLesSoldesDesRubriquesExcluentLEcheanceARegulariser(): void
+    {
+        $s = $this->seed();
+        $client = $this->em->getRepository(Client::class)->find($s['piste']->getClient()->getId());
+        $groupe = (new \App\Entity\Groupe())->setNom('Groupe MVT')->setDescription('Groupe de test');
+        $groupe->setEntreprise($s['ent']);
+        $this->em->persist($groupe);
+        $client->setGroupe($groupe);
+        $contact = (new \App\Entity\Contact())->setNom('Contact MVT')->setTelephone('+243000000001')
+            ->setType(\App\Entity\Contact::TYPE_CONTACT_PRODUCTION)->setClient($client);
+        $contact->setEntreprise($s['ent']);
+        $this->em->persist($contact);
+        $this->em->flush();
+        $ids = [
+            'Assureur'   => [Assureur::class, $s['cotation']->getAssureur()->getId()],
+            'Partenaire' => [Partenaire::class, $s['partenaire']->getId()],
+            'Groupe'     => [\App\Entity\Groupe::class, $groupe->getId()],
+            'Risque'     => [Risque::class, $s['piste']->getRisque()->getId()],
+            'Contact'    => [\App\Entity\Contact::class, $contact->getId()],
+        ];
+        $canvas = static::getContainer()->get(\App\Services\CanvasBuilder::class);
+        $soldes = function () use ($ids, $canvas): array {
+            $this->em->clear();
+            $lus = [];
+            foreach ($ids as $rubrique => [$classe, $id]) {
+                $entite = $this->em->getRepository($classe)->find($id);
+                $canvas->loadAllCalculatedValues($entite);
+                $lus[$rubrique] = [(float) $entite->primeSoldeDue, (float) $entite->solde_restant_du];
+            }
+
+            return $lus;
+        };
+
+        $avant = $soldes();
+        $this->executer($s, MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15']);
+        $partT2 = static::getContainer()->get(\App\Services\Canvas\Indicator\IndicatorCalculationHelper::class)
+            ->getTrancheARegulariser($this->tranche($s, 'T2'));
+        $this->assertGreaterThan(0.0, $partT2['prime']);
+        $this->assertGreaterThan(0.0, $partT2['commission']);
+
+        foreach ($soldes() as $rubrique => [$prime, $commission]) {
+            $this->assertEqualsWithDelta($avant[$rubrique][0] - $partT2['prime'], $prime, 0.01, $rubrique . ' : solde de prime.');
+            $this->assertEqualsWithDelta($avant[$rubrique][1] - $partT2['commission'], $commission, 0.01, $rubrique . ' : solde de commission.');
+        }
+    }
+
+    /** Ket : indicateur_calcule (même agrégat) et paiements_prime (même hydratation que l'écran). */
+    public function testLesOutilsDeKetNeReclamentPlusLEcheance(): void
+    {
+        $s = $this->seed();
+        $indicateur = static::getContainer()->get(\App\Ai\Tool\IndicateurCalculeTool::class);
+        $args = ['code' => 'prime_totale_solde', 'entite' => 'Client', 'id' => $s['piste']->getClient()->getId()];
+        $this->em->clear(); // le client relu de la base connaît sa piste
+        $avant = (float) $indicateur->execute($args, $this->scope($s))->data['valeur'];
+
+        $this->executer($s, MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15']);
+        $t2 = $this->tranche($s, 'T2');
+        $partT2 = static::getContainer()->get(\App\Services\Canvas\Indicator\IndicatorCalculationHelper::class)->getTrancheARegulariser($t2);
+        $this->em->clear();
+        $this->assertEqualsWithDelta($avant - $partT2['prime'], (float) $indicateur->execute($args, $this->scope($s))->data['valeur'], 0.01, 'indicateur_calcule');
+
+        $paiements = static::getContainer()->get(\App\Ai\Tool\PaiementsPrimeTool::class)->execute(['trancheId' => $t2->getId()], $this->scope($s));
+        $this->assertSame('À régulariser', $paiements->data['tranche']['statutPaiement'], 'paiements_prime');
+        $this->assertSame('À régulariser', $paiements->data['tranche']['urgence']);
+        $this->assertSame(0.0, $paiements->data['prime']['solde']);
+        $this->assertArrayNotHasKey('commissionExigible', $paiements->data);
+        $this->assertStringContainsString('sort du recouvrement', $paiements->data['tranche']['regularisation'] ?? '');
+    }
+
+    /** L'export EtatDuPortefeuille : la ligne de T2 reste, sans solde réclamé. */
+    public function testLExportEtatDuPortefeuilleNeReclamePlusLEcheance(): void
+    {
+        $s = $this->seed();
+        $this->executer($s, MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15']);
+        $this->em->clear();
+        $ent = $this->em->getRepository(Entreprise::class)->find($s['ent']->getId());
+
+        $lignes = [];
+        foreach (static::getContainer()->get(\App\Echange\Etat\EtatDuPortefeuille::class)->lignes($ent) as $ligne) {
+            $lignes[$ligne['trancheNom']] = $ligne;
+        }
+        $this->assertSame(0.0, $lignes['T2']['primeSolde']);
+        $this->assertSame(0.0, $lignes['T2']['commissionSolde']);
+        $this->assertSame(0.0, $lignes['T2']['commissionExigible']);
+        $this->assertGreaterThan(0.0, (float) $lignes['T2']['primeTotale'], 'La prime de l’échéance reste exportée.');
+        $this->assertGreaterThan(0.0, (float) $lignes['T1']['primeSolde'], 'T1 reste due.');
+    }
+
+    /**
+     * Badge d'urgence et recherche : T2 est échue au 09/10/2026 — sans l'acte, badge
+     * CRITIQUE ; à régulariser, badge neutre. La recherche par axes de paiement
+     * (JSBDynamicSearchService, celle des chips et de Ket) l'écarte aussi.
+     */
+    public function testLeBadgeDUrgenceEtLaRechercheEcartentLEcheance(): void
+    {
+        $s = $this->seed();
+        $search = static::getContainer()->get(\App\Services\JSBDynamicSearchService::class);
+        $Scope = \App\Services\Search\TranchePaiementScope::class;
+        $noms = function (array $criteres) use ($s, $search): array {
+            $this->em->clear();
+            $ent = $this->em->getRepository(Entreprise::class)->find($s['ent']->getId());
+            $r = $search->search(Tranche::class, $criteres, $ent, null, 1, 50);
+
+            return array_map(static fn (Tranche $t) => $t->getNom(), $r['data']);
+        };
+
+        $this->tranche($s, 'T2')->setEcheanceAt(new DateTimeImmutable('2026-07-15'));
+        $this->em->flush();
+        $this->assertSame('critique', $this->t2Lue($s)->urgenceNiveau, 'Avant l’acte : échue et impayée.');
+        $this->assertContains('T2', $noms([$Scope::AXE_PRIME => $Scope::IMPAYEE]));
+        $this->assertContains('T2', $noms([$Scope::AXE_ECHEANCE => $Scope::ECHUE]));
+
+        $this->executer($s, MouvementAvenant::Resiliation, ['dateEffet' => '2026-06-15']);
+        $t2 = $this->t2Lue($s);
+        $this->assertSame('faible', $t2->urgenceNiveau, 'Badge neutre.');
+        $this->assertSame('À régulariser', $t2->urgenceRecouvrement);
+        $this->assertNotContains('T2', $noms([$Scope::AXE_PRIME => $Scope::IMPAYEE]), 'Recherche : primes impayées.');
+        $this->assertNotContains('T2', $noms([$Scope::AXE_COMMISSION => $Scope::IMPAYEE]));
+        $this->assertNotContains('T2', $noms([$Scope::AXE_ECHEANCE => $Scope::ECHUE]), 'Recherche : échues.');
+        $this->assertSame(['T2'], $noms([$Scope::AXE_REGULARISATION => $Scope::A_REGULARISER]));
+        $this->assertContains('T2', $noms([]), 'Sans axe, la recherche la montre toujours.');
     }
 
     /** POINT 8 — le nom de l'opportunité dérivée ne porte qu'UN préfixe, celui du mouvement. */

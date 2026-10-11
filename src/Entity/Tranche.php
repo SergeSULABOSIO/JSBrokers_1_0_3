@@ -59,6 +59,11 @@ class Tranche
     public const REGULARISATION_A_REGULARISER = 'a_regulariser';
     /** Déclarée due malgré l'acte (la prime reste acquise à l'assureur) : recouvrement normal. */
     public const REGULARISATION_MAINTENUE = 'maintenue';
+    /**
+     * Clôturée SANS AVOIR : rien n'avait été facturé sur l'échéance, il n'y a donc rien à
+     * créditer — la régularisation est faite. Réversible, et restituée à l'abandon.
+     */
+    public const REGULARISATION_CLOTUREE = 'cloturee';
 
     #[ORM\Column(length: 20, nullable: true)]
     private ?string $regularisation = null;
@@ -316,6 +321,10 @@ class Tranche
     #[Groups(['list:read'])]
     public ?string $regularisationExplication = null;
 
+    /** avoir | cloture | avoir_emis | cloturee | null — la voie de régularisation ouverte (conditions d'actions). */
+    #[Groups(['list:read'])]
+    public ?string $regularisationVoie = null;
+
     /** « Commission déjà facturée : note n° X, à régulariser auprès de l'assureur. » */
     #[Groups(['list:read'])]
     public ?string $commissionDejaFacturee = null;
@@ -485,6 +494,15 @@ class Tranche
     }
 
     /**
+     * Hors du recouvrement : en attente de régularisation, ou clôturée sans avoir. Rien n'y
+     * est plus réclamé. (« Maintenue » y revient : elle est due.)
+     */
+    public function estHorsRecouvrement(): bool
+    {
+        return in_array($this->regularisation, [self::REGULARISATION_A_REGULARISER, self::REGULARISATION_CLOTUREE], true);
+    }
+
+    /**
      * Pose l'état « à régulariser » au nom d'un mouvement (annulation, résiliation), en
      * MÉMORISANT l'état d'avant. Appelé par le plan du mouvement : la relation se donne par
      * son identifiant (« @mouvement »), le moteur de mutation la pose par ce setter.
@@ -527,7 +545,17 @@ class Tranche
         return $this;
     }
 
-    /** Revenir sur « déclarée due » : l'échéance sort de nouveau du recouvrement. */
+    /** Rien n'a été facturé : la régularisation se clôt sans note de crédit. */
+    public function cloturerSansAvoir(): static
+    {
+        if ($this->regularisationPar !== null) {
+            $this->regularisation = self::REGULARISATION_CLOTUREE;
+        }
+
+        return $this;
+    }
+
+    /** Revenir sur « déclarée due » ou sur « clôturée sans avoir » : de nouveau à régulariser. */
     public function remettreARegulariser(): static
     {
         if ($this->regularisationPar !== null) {
