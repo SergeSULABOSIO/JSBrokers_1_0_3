@@ -139,6 +139,7 @@ class BordereauController extends AbstractController
     #[Route('/api/get-analysis-url/{id}', name: 'api.get_analysis_url', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
     public function getAnalysisUrlApi(Bordereau $bordereau, Request $request): JsonResponse
     {
+        $this->appartenance()->exigerLeCabinetOuvert($bordereau, 'Ce bordereau');
         // On génère l'URL de la page d'analyse.
         $finalUrl = $this->generateUrl(
             'admin.bordereau.show_analysis',
@@ -152,6 +153,7 @@ class BordereauController extends AbstractController
     #[Route('/api/get-linked-note-preview-url/{id}', name: 'api.get_linked_note_preview_url', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
     public function getLinkedNotePreviewUrl(Bordereau $bordereau, Request $request): JsonResponse
     {
+        $this->appartenance()->exigerLeCabinetOuvert($bordereau, 'Ce bordereau');
         $note = $bordereau->getNotes()->first();
         if (!$note) {
             return $this->json(['error' => 'Aucune note liée à ce bordereau.'], 404);
@@ -173,6 +175,7 @@ class BordereauController extends AbstractController
     #[Route('/api/get-linked-note-context/{id}', name: 'api.get_linked_note_context', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
     public function getLinkedNoteContext(Bordereau $bordereau, Request $request): JsonResponse
     {
+        $this->appartenance()->exigerLeCabinetOuvert($bordereau, 'Ce bordereau');
         $note = $bordereau->getNotes()->first();
         if (!$note) {
             return $this->json(['error' => 'Aucune note liée à ce bordereau.'], 404);
@@ -189,6 +192,7 @@ class BordereauController extends AbstractController
     #[Route('/analyse/{id}', name: 'show_analysis', methods: ['GET'])]
     public function showAnalysis(Bordereau $bordereau, ParameterBagInterface $params, ChargementRepository $chargementRepository, TypeRevenuRepository $typeRevenuRepository): Response
     {
+        $this->appartenance()->exigerLeCabinetOuvert($bordereau, 'Ce bordereau');
         return $this->render('admin/bordereau/bordereau_analysis.html.twig',
             $this->buildAnalysisTemplateData($bordereau, $params, $chargementRepository, $typeRevenuRepository)
         );
@@ -197,6 +201,7 @@ class BordereauController extends AbstractController
     #[Route('/workspace-apercu/{id}', name: 'workspace_apercu', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
     public function showWorkspaceContent(Bordereau $bordereau, ParameterBagInterface $params, ChargementRepository $chargementRepository, TypeRevenuRepository $typeRevenuRepository): JsonResponse
     {
+        $this->appartenance()->exigerLeCabinetOuvert($bordereau, 'Ce bordereau');
         $data = $this->buildAnalysisTemplateData($bordereau, $params, $chargementRepository, $typeRevenuRepository);
         $html = $this->renderView('admin/bordereau/bordereau_analysis_workspace.html.twig', $data);
         return $this->json([
@@ -373,7 +378,7 @@ class BordereauController extends AbstractController
         );
         $avenantsForRestoration = [];
         if (!empty($avenantIdsToLoad)) {
-            $loadedAvenants = $this->avenantRepository->findBy(['id' => $avenantIdsToLoad]);
+            $loadedAvenants = $this->avenantRepository->findBy(['id' => $avenantIdsToLoad, 'entreprise' => $bordereau->getEntreprise()]);
             foreach ($loadedAvenants as $av) {
                 $avenantsForRestoration[$av->getId()] = $av;
             }
@@ -606,6 +611,7 @@ class BordereauController extends AbstractController
     #[Route('/api/submit-analysis/{id}', name: 'api.submit_analysis', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     public function submitAnalysisApi(Bordereau $bordereau, Request $request, ParameterBagInterface $params): JsonResponse
     {
+        $this->appartenance()->exigerLeCabinetOuvert($bordereau, 'Ce bordereau');
         $mode = $request->query->get('mode', 'init');
 
         return match ($mode) {
@@ -640,7 +646,7 @@ class BordereauController extends AbstractController
         $policeReferences = array_filter(array_unique(
             array_map(fn($row) => $row[$refCol] ?? null, $selectedSheetData)
         ));
-        $avenantsFromDb = $this->avenantRepository->findBy(['referencePolice' => $policeReferences]);
+        $avenantsFromDb = $this->avenantRepository->findBy(['referencePolice' => $policeReferences, 'entreprise' => $bordereau->getEntreprise()]);
         $avenantsMap = [];
         foreach ($avenantsFromDb as $avenant) {
             $this->loadCalculatedValues(null, $avenant);
@@ -741,7 +747,7 @@ class BordereauController extends AbstractController
         $chunkPoliceRefs = array_filter(array_unique(
             array_map(fn($row) => $row[$refColForMatch] ?? null, $chunk)
         ));
-        $chunkAvenants = $this->avenantRepository->findBy(['referencePolice' => $chunkPoliceRefs]);
+        $chunkAvenants = $this->avenantRepository->findBy(['referencePolice' => $chunkPoliceRefs, 'entreprise' => $bordereau->getEntreprise()]);
         $chunkAvenantsMap = [];
         foreach ($chunkAvenants as $avenant) {
             $this->loadCalculatedValues(null, $avenant);
@@ -988,6 +994,7 @@ class BordereauController extends AbstractController
     #[Route('/api/save-analysis-state/{id}', name: 'api.save_analysis_state', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     public function saveAnalysisState(Bordereau $bordereau, Request $request): JsonResponse
     {
+        $this->appartenance()->exigerLeCabinetOuvert($bordereau, 'Ce bordereau');
         $payload = json_decode($request->getContent(), true);
         dump('saveAnalysisState: Payload reçu du frontend:', $payload);
 
@@ -1045,6 +1052,7 @@ class BordereauController extends AbstractController
         if (!$bordereau) {
             return $this->json(['success' => false, 'message' => 'Bordereau introuvable.'], 404);
         }
+        $this->appartenance()->exigerLeCabinetOuvert($bordereau, 'Ce bordereau');
 
         $raw  = json_decode($request->getContent(), true);
         $data = $raw['payload'] ?? $raw;
@@ -1056,6 +1064,9 @@ class BordereauController extends AbstractController
             }
 
             return $this->json($result);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $e) {
+            // Un refus (404 d'une police d'un autre cabinet) n'est pas une panne.
+            throw $e;
         } catch (\Exception $e) {
             return $this->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
@@ -1085,6 +1096,7 @@ class BordereauController extends AbstractController
                 'message' => 'Bordereau introuvable.'
             ], 404);
         }
+        $this->appartenance()->exigerLeCabinetOuvert($bordereau, 'Ce bordereau');
         $raw   = json_decode($request->getContent(), true);
         $body  = $raw['payload'] ?? $raw;
         $items = $body['items'] ?? ($raw['items'] ?? []);
@@ -1154,6 +1166,9 @@ class BordereauController extends AbstractController
         if ($actionType === 'discrepancy') {
             $avenant = $this->avenantRepository->find($data['avenant_id'] ?? null);
             if (!$avenant) throw new \Exception("Avenant introuvable.");
+            // L'identifiant vient du corps de la requête, et la police est MODIFIÉE ensuite :
+            // celle d'un autre cabinet ne se met pas à jour depuis ce bordereau.
+            $this->appartenance()->exigerLeCabinetOuvert($avenant, 'Cet avenant');
             
             $this->avenantActionService->updateFromBordereauLine($avenant, $excelData, $bordereau);
             
@@ -1245,6 +1260,7 @@ class BordereauController extends AbstractController
         if (!$bordereau) {
             return $this->json(['success' => false, 'message' => 'Bordereau introuvable.'], 404);
         }
+        $this->appartenance()->exigerLeCabinetOuvert($bordereau, 'Ce bordereau');
 
         // Changer le statut vers VALIDE
         $bordereau->setCurrentAnalysisStep(Bordereau::STATUT_ANALYSE_TERMINEE);
@@ -1301,6 +1317,7 @@ class BordereauController extends AbstractController
     #[Route('/api/export-analysis-pdf/{id}', name: 'api.export_analysis_pdf', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
     public function exportAnalysisPdf(Bordereau $bordereau): Response
     {
+        $this->appartenance()->exigerLeCabinetOuvert($bordereau, 'Ce bordereau');
         $pdfString = $this->bordereauPdfService->generatePdfString($bordereau);
 
         if ($pdfString === null) {

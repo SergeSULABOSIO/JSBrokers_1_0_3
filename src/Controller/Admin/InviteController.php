@@ -214,6 +214,9 @@ class InviteController extends AbstractController
         if (!$this->workspaceAccessResolver->canManageInvites($this->getInvite())) {
             return $this->json(['success' => false, 'message' => "Action réservée au propriétaire de l'espace de travail."], 403);
         }
+        // Gérer les invitations de SON cabinet ne donne aucun droit sur celles d'un autre :
+        // le courriel partirait au nom du cabinet voisin.
+        $this->appartenance()->exigerLeCabinetOuvert($invite, 'Cette invitation');
 
         try {
             $this->dispatcher->dispatch(new InvitationEvent($invite));

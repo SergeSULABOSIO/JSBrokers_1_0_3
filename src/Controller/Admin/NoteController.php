@@ -122,6 +122,9 @@ class NoteController extends AbstractController
                 if ($parentField === 'bordereau' && $parentId) {
                     $bordereau = $this->em->find(Bordereau::class, (int)$parentId);
                     if ($bordereau) {
+                        // Le bordereau vient de l'URL et sa référence est recopiée :
+                        // celui d'un autre cabinet ne se facture pas d'ici.
+                        $this->appartenance()->exigerLeCabinetOuvert($bordereau, 'Ce bordereau');
                         $note->setBordereau($bordereau);
                         $note->setType(Note::TYPE_NOTE_DE_DEBIT);
                         $note->setAddressedTo(Note::TO_ASSUREUR);
@@ -509,6 +512,7 @@ class NoteController extends AbstractController
     #[Route('/api/get-preview-url/{id}', name: 'api.get_preview_url', methods: ['GET'])]
     public function getPreviewUrlApi(Note $note, Request $request): JsonResponse
     {
+        $this->appartenance()->exigerLeCabinetOuvert($note, 'Cette note');
         // NOUVEAU : On vérifie si on doit télécharger directement ou juste afficher/imprimer.
         if ($request->query->get('download')) {
             // Si le paramètre 'download' est présent, on génère l'URL de téléchargement PDF.
@@ -528,6 +532,9 @@ class NoteController extends AbstractController
     #[Route('/apercu/{id}', name: 'show_preview', methods: ['GET'])]
     public function showPreview(Note $note): Response
     {
+        // Une note porte des montants, un débiteur et des coordonnées bancaires : son
+        // numéro dans l'URL ne suffit pas à l'ouvrir.
+        $this->appartenance()->exigerLeCabinetOuvert($note, 'Cette note');
         // CORRECTION : On charge les valeurs calculées pour la note ET pour chaque article.
         
         // 1. On charge les valeurs de la note (montantTotal, montantTaxe, etc.)
@@ -554,6 +561,7 @@ class NoteController extends AbstractController
     #[Route('/workspace-apercu/{id}', name: 'workspace_content', methods: ['GET'])]
     public function showWorkspaceContent(Note $note): JsonResponse
     {
+        $this->appartenance()->exigerLeCabinetOuvert($note, 'Cette note');
         $this->canvasBuilder->loadAllCalculatedValues($note);
         foreach ($note->getArticles() as $article) {
             $this->canvasBuilder->loadAllCalculatedValues($article);
@@ -578,6 +586,7 @@ class NoteController extends AbstractController
     #[Route('/download-pdf/{id}', name: 'download_pdf', methods: ['GET'])]
     public function downloadPdf(Note $note): Response
     {
+        $this->appartenance()->exigerLeCabinetOuvert($note, 'Cette note');
         // 1. On configure DomPDF pour qu'il respecte les styles d'impression (@media print)
         $pdfOptions = new Options();
         $pdfOptions->set('defaultFont', 'Arial');
@@ -712,6 +721,9 @@ class NoteController extends AbstractController
                         if ($parentField === 'bordereau' && $bordereauId) {
                             $bordereau = $this->em->find(Bordereau::class, (int)$bordereauId);
                             if ($bordereau) {
+                                // Le bordereau est MODIFIÉ juste après (statut « Note émise ») :
+                                // celui d'un autre cabinet ne doit ni se lier ni bouger.
+                                $this->appartenance()->exigerLeCabinetOuvert($bordereau, 'Ce bordereau');
                                 $note->setBordereau($bordereau);
                             }
                         }

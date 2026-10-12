@@ -1707,17 +1707,17 @@ class AssistantIaWorkspaceTest extends WebTestCase
 
         $this->client->loginUser($this->user(self::OTHER_EMAIL));
 
-        // La garde MODULE ferme désormais la porte en premier (invité d'une autre
-        // entreprise = pas d'accès au module ici) : accès restreint, et surtout
-        // AUCUNE donnée de la conversation ne fuite.
+        // LE CABINET DE LA ROUTE N'EST PAS LE SIEN : 404, avant même la garde du module.
+        // C'est le refus commun de toutes les routes `{idEntreprise}` — il ne distingue
+        // pas « pas à vous » de « n'existe pas » — et surtout AUCUNE donnée de la
+        // conversation ne fuite.
         $this->client->request('GET', sprintf('/admin/assistant-ia/chat/%d/%d', $e->getId(), $conversation->getId()));
-        $this->assertResponseIsSuccessful();
+        $this->assertResponseStatusCodeSame(404);
         $content = (string) $this->client->getResponse()->getContent();
-        $this->assertStringContainsString(self::DENIED_MARKER, $content);
         $this->assertStringNotContainsString('Conversation privée A', $content);
 
         $this->postMessage($e->getId(), $conversation->getId(), 'Je ne devrais pas pouvoir écrire ici.');
-        $this->assertResponseStatusCodeSame(403);
+        $this->assertResponseStatusCodeSame(404);
     }
 
     // ── Accueil d'une conversation vide ───────────────────────────────────────

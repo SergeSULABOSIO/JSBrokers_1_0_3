@@ -23,6 +23,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use App\Service\Workspace\AppartenanceAuCabinet;
 use App\Service\Workspace\CabinetActif;
 
 #[Route("/admin/entreprise_dashbord", name: 'admin.entreprise_dashboard.')]
@@ -37,7 +38,22 @@ class EntrepriseDashbordController extends AbstractController
         private WorkspaceAccessResolver $accessResolver,
         private OnboardingCompletude $onboardingCompletude,
         private CabinetActif $cabinetActif,
+        private AppartenanceAuCabinet $appartenance,
     ) {
+    }
+
+    /**
+     * Le cabinet que la route désigne — à condition que ce soit le cabinet OUVERT.
+     *
+     * Chaque bloc et chaque fragment lisait `{idEntreprise}` dans l'URL puis faisait
+     * `find()` : la garde de bloc ne juge que le TYPE (« peut-il lire les Notes ? »), avec
+     * l'invité de la session. Changer ce nombre suffisait donc à afficher les KPIs, la
+     * comptabilité, les renouvellements ou les encaissements de n'importe quel cabinet.
+     * `index()` faisait déjà cette comparaison ; tous les blocs la font désormais.
+     */
+    private function entrepriseDeLaRoute(int $idEntreprise): Entreprise
+    {
+        return $this->appartenance->exigerLIdentifiantDuCabinet($idEntreprise);
     }
 
     /**
@@ -114,7 +130,7 @@ class EntrepriseDashbordController extends AbstractController
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
 
         // LA DETTE DE CONFIGURATION EN TÊTE DU TABLEAU DE BORD.
         //
@@ -172,6 +188,9 @@ class EntrepriseDashbordController extends AbstractController
         \App\Services\Canvas\CalculationProvider $calculationProvider,
         \App\Repository\DemandeCongeRepository $demandeRepository,
     ): Response {
+        // Ce bloc lit l'invité CONNECTÉ, pas la route ; il exige pourtant, comme ses
+        // voisins, que la route désigne le cabinet ouvert : une règle sans exception.
+        $this->entrepriseDeLaRoute($idEntreprise);
         if ($denied = $this->denyBlockIfCannotRead('DemandeConge')) { return $denied; }
 
         $user = $this->getUser();
@@ -245,7 +264,7 @@ class EntrepriseDashbordController extends AbstractController
         ExercicesDuCabinet $exercices,
     ): Response {
         if ($denied = $this->denyBlockIfCannotRead('Note')) { return $denied; }
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
         $exercice = $exercices->retenir($entreprise, $request->query->getInt('exercice') ?: null);
         $debut = new DateTimeImmutable("1/1/" . $exercice . " 00:00");
         $fin   = new DateTimeImmutable("12/31/" . $exercice . " 23:59");
@@ -288,7 +307,7 @@ class EntrepriseDashbordController extends AbstractController
         ExercicesDuCabinet $exercices,
     ): Response {
         if ($denied = $this->denyBlockIfCannotRead('DepenseCourtier')) { return $denied; }
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
 
         // ⚠ « MÊME SOURCE QUE LES DOCUMENTS COMPTABLES » DEVIENT ENFIN VRAI. La source
         // l'était déjà, mais pas l'exercice : ce bloc forçait `date('Y')` là où l'écran des
@@ -393,7 +412,7 @@ class EntrepriseDashbordController extends AbstractController
     public function loadBlockRenewals(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): Response
     {
         if ($denied = $this->denyBlockIfCannotRead('Avenant')) { return $denied; }
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
 
         return $this->render('components/dashboard/_renewals.html.twig', [
             'entreprise'      => $entreprise,
@@ -409,7 +428,7 @@ class EntrepriseDashbordController extends AbstractController
     #[Route('/renewals-fragment/{idEntreprise}', name: 'renewals_fragment', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
     public function loadRenewalsFragment(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): Response
     {
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
 
         return $this->render('components/dashboard/_renewals_list.html.twig', [
             'entreprise'      => $entreprise,
@@ -423,7 +442,7 @@ class EntrepriseDashbordController extends AbstractController
     public function loadBlockEncaissements(int $idEntreprise, DashboardDataProvider $provider): Response
     {
         if ($denied = $this->denyBlockIfCannotRead('Paiement')) { return $denied; }
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
 
         return $this->render('components/dashboard/_encaissements.html.twig', [
             'entreprise'           => $entreprise,
@@ -434,7 +453,7 @@ class EntrepriseDashbordController extends AbstractController
     #[Route('/encaissements-fragment/{idEntreprise}', name: 'encaissements_fragment', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
     public function loadEncaissementsFragment(int $idEntreprise, DashboardDataProvider $provider): Response
     {
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
 
         return $this->render('components/dashboard/_encaissements_list.html.twig', [
             'derniersEncaissements' => $provider->getDerniersEncaissements($entreprise),
@@ -445,7 +464,7 @@ class EntrepriseDashbordController extends AbstractController
     public function loadBlockDepenses(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): Response
     {
         if ($denied = $this->denyBlockIfCannotRead('DepenseCourtier')) { return $denied; }
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
 
         return $this->render('components/dashboard/_depenses.html.twig', [
             'utilisateur'      => $this->getUser(),
@@ -458,7 +477,7 @@ class EntrepriseDashbordController extends AbstractController
     #[Route('/depenses-fragment/{idEntreprise}', name: 'depenses_fragment', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
     public function loadDepensesFragment(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): Response
     {
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
 
         return $this->render('components/dashboard/_depenses_list.html.twig', [
             'utilisateur'      => $this->getUser(),
@@ -472,7 +491,7 @@ class EntrepriseDashbordController extends AbstractController
     public function loadBlockSinistres(int $idEntreprise, DashboardDataProvider $provider): Response
     {
         if ($denied = $this->denyBlockIfCannotRead('NotificationSinistre')) { return $denied; }
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
 
         return $this->render('components/dashboard/_sinistres.html.twig', [
             'entreprise'        => $entreprise,
@@ -483,7 +502,7 @@ class EntrepriseDashbordController extends AbstractController
     #[Route('/sinistres-fragment/{idEntreprise}', name: 'sinistres_fragment', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
     public function loadSinistresFragment(int $idEntreprise, DashboardDataProvider $provider): Response
     {
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
 
         return $this->render('components/dashboard/_sinistres_list.html.twig', [
             'derniersSinistres' => $provider->getDerniersSinistres($entreprise),
@@ -496,7 +515,7 @@ class EntrepriseDashbordController extends AbstractController
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
 
         return $this->render('components/dashboard/_block_tasks.html.twig', [
             'utilisateur'      => $user,
@@ -511,7 +530,7 @@ class EntrepriseDashbordController extends AbstractController
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
 
         return $this->render('components/dashboard/_block_users.html.twig', [
             'utilisateur' => $user,
@@ -524,7 +543,7 @@ class EntrepriseDashbordController extends AbstractController
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
 
         return $this->render('components/dashboard/_users_list.html.twig', [
             'utilisateur' => $user,
@@ -537,7 +556,7 @@ class EntrepriseDashbordController extends AbstractController
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
 
         return $this->render('components/dashboard/_block_top_lists.html.twig', [
             'utilisateur'       => $user,
@@ -552,7 +571,7 @@ class EntrepriseDashbordController extends AbstractController
     #[Route('/sidebar/{idEntreprise}', name: 'sidebar', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
     public function loadSidebarFragment(int $idEntreprise): Response
     {
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
 
         return $this->render('components/dashboard/_sidebar.html.twig', [
             'entreprise' => $entreprise,
@@ -562,7 +581,7 @@ class EntrepriseDashbordController extends AbstractController
     #[Route('/feedbacks-fragment/{idEntreprise}', name: 'feedbacks_fragment', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
     public function loadFeedbacksFragment(int $idEntreprise, DashboardDataProvider $provider): Response
     {
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
         return $this->render('components/dashboard/_feedbacks_list.html.twig', [
             'derniersFeedbacks' => $provider->getDerniersFeedbacks($entreprise),
         ]);
@@ -574,7 +593,7 @@ class EntrepriseDashbordController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
         if ($denied = $this->denyBlockIfCannotRead('Piste')) { return $denied; }
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
         return $this->render('components/dashboard/_block_pistes.html.twig', [
             'utilisateur' => $user,
             'entreprise'  => $entreprise,
@@ -587,7 +606,7 @@ class EntrepriseDashbordController extends AbstractController
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
         return $this->render('components/dashboard/_pistes_list.html.twig', [
             'utilisateur' => $user,
             'entreprise'  => $entreprise,
@@ -601,7 +620,7 @@ class EntrepriseDashbordController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
         if ($denied = $this->denyBlockIfCannotRead('Bordereau')) { return $denied; }
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
         return $this->render('components/dashboard/_block_bordereaux.html.twig', [
             'utilisateur' => $user,
             'entreprise'  => $entreprise,
@@ -615,7 +634,7 @@ class EntrepriseDashbordController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
         if ($denied = $this->denyBlockIfCannotRead('Note')) { return $denied; }
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
         return $this->render('components/dashboard/_block_notes.html.twig', [
             'utilisateur' => $user,
             'entreprise'  => $entreprise,
@@ -629,7 +648,7 @@ class EntrepriseDashbordController extends AbstractController
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
         return $this->render('components/dashboard/_notes_list.html.twig', [
             'utilisateur' => $user,
             'entreprise'  => $entreprise,
@@ -643,7 +662,7 @@ class EntrepriseDashbordController extends AbstractController
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
         return $this->render('components/dashboard/_bordereaux_list.html.twig', [
             'utilisateur' => $user,
             'entreprise'  => $entreprise,
@@ -660,7 +679,7 @@ class EntrepriseDashbordController extends AbstractController
         ExercicesDuCabinet $exercices,
     ): Response {
         if ($denied = $this->denyBlockIfCannotRead('Avenant')) { return $denied; }
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
         $exercice = $exercices->retenir($entreprise, $request->query->getInt('exercice') ?: null);
         $monthly = $provider->getProductionMensuelle($entreprise, $exercice);
 
@@ -688,7 +707,7 @@ class EntrepriseDashbordController extends AbstractController
         Request $request,
         ExercicesDuCabinet $exercices,
     ): JsonResponse {
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
         $exercice = $exercices->retenir($entreprise, $request->query->getInt('exercice') ?: null);
         $monthly = $provider->getProductionMensuelle($entreprise, $exercice);
 
@@ -708,7 +727,7 @@ class EntrepriseDashbordController extends AbstractController
         Request $request,
         ExercicesDuCabinet $exercices,
     ): JsonResponse {
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
         $exercice = $exercices->retenir($entreprise, $request->query->getInt('exercice') ?: null);
         $data = $provider->getProductionTableData($entreprise, $exercice);
         $data['currency'] = $serviceMonnaies->getCodeMonnaieAffichage() ?? $serviceMonnaies->getCodeMonnaieLocale();
@@ -723,7 +742,7 @@ class EntrepriseDashbordController extends AbstractController
         Request $request,
         ExercicesDuCabinet $exercices,
     ): JsonResponse {
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
         $exercice = $exercices->retenir($entreprise, $request->query->getInt('exercice') ?: null);
         $data = $provider->getProductionGroupData($entreprise, $exercice);
         $data['currency'] = $serviceMonnaies->getCodeMonnaieAffichage() ?? $serviceMonnaies->getCodeMonnaieLocale();

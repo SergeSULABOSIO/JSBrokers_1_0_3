@@ -137,6 +137,26 @@ class JSBDynamicSearchService
      * La logique de votre ancienne fonction "chercher".
      * Elle ne dépend plus de l'objet Request, mais d'un simple tableau.
      */
+    /**
+     * Une réponse VIDE a la même forme qu'une réponse pleine.
+     *
+     * Les sorties anticipées (entité non interrogeable, chemin spécial en erreur) ne
+     * rendaient que `data` et `totalItems` : le rafraîchissement d'une liste lit aussi
+     * `currentPage`, `totalPages` et `itemsPerPage`, et plantait donc en 500 au lieu
+     * d'afficher une liste vide.
+     */
+    private function resultatVide(array $status, int $page, int $limit): array
+    {
+        return [
+            'status' => $status,
+            'data' => [],
+            'totalItems' => 0,
+            'currentPage' => $page,
+            'totalPages' => 0,
+            'itemsPerPage' => $limit,
+        ];
+    }
+
     public function search(string $entityClass, array $criteria, Entreprise $entreprise, ?array $parentContext = null, int $page = 1, int $limit = 20): array
     {
         $results = [];
@@ -157,7 +177,7 @@ class JSBDynamicSearchService
                 "code" => 403,
                 "message" => "L'interrogation de l'entité '{$entityName}' n'est pas autorisée."
             ];
-            return ['status' => $status, 'data' => [], 'totalItems' => 0];
+            return $this->resultatVide($status, $page, $limit);
         }
 
         // Critères synthétiques « Paiement » (Tranche uniquement) : les soldes de prime, de
@@ -175,7 +195,7 @@ class JSBDynamicSearchService
                     $qb = $this->em->getRepository($entityClass)->createQueryBuilder('e');
                     $this->applyCriteriaToQueryBuilder($qb, $criteria, $entreprise, $parentContext, $status);
                     if ($status['error'] !== null) {
-                        return ['status' => $status, 'data' => [], 'totalItems' => 0];
+                        return $this->resultatVide($status, $page, $limit);
                     }
 
                     return $this->tranchePaiement->filtrerTrierPaginer($qb->getQuery()->getResult(), $axes, $page, $limit);
@@ -212,7 +232,7 @@ class JSBDynamicSearchService
                     $qb = $this->em->getRepository($entityClass)->createQueryBuilder('e');
                     $this->applyCriteriaToQueryBuilder($qb, $criteria, $entreprise, $parentContext, $status);
                     if ($status['error'] !== null) {
-                        return ['status' => $status, 'data' => [], 'totalItems' => 0];
+                        return $this->resultatVide($status, $page, $limit);
                     }
 
                     return $this->noteReglement->filtrerTrierPaginer($qb->getQuery()->getResult(), $valeur, $page, $limit);
@@ -248,7 +268,7 @@ class JSBDynamicSearchService
                     $qb = $this->em->getRepository($entityClass)->createQueryBuilder('e');
                     $this->applyCriteriaToQueryBuilder($qb, $criteria, $entreprise, $parentContext, $status);
                     if ($status['error'] !== null) {
-                        return ['status' => $status, 'data' => [], 'totalItems' => 0];
+                        return $this->resultatVide($status, $page, $limit);
                     }
 
                     $countQb = $this->em->getRepository($entityClass)->createQueryBuilder('e_count');

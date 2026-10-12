@@ -526,30 +526,6 @@ trait ControllerUtilsTrait
             'nextRenewalAt' => $e->nextRenewalAt?->format(DateTimeImmutable::ATOM),
         ], Response::HTTP_PAYMENT_REQUIRED);
     }
-    /**
-     * Valide l'accès à un espace de travail en se basant sur idEntreprise et idInvite.
-     *
-     * Cette méthode vérifie que l'entreprise et l'invité existent et que l'invité
-     * appartient bien à l'entreprise spécifiée. Elle retourne les entités validées.
-     * @return array{entreprise: Entreprise, invite: Invite} Un tableau contenant les entités validées.
-     *
-     * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException Si l'entreprise n'est pas trouvée.
-     * @throws \Symfony\Component\Security\Core\Exception\AccessDeniedException Si l'accès est refusé.
-     */
-    private function validateWorkspaceAccess(int $idEntreprise, int $idInvite): array
-    {
-        $entreprise = $this->entrepriseRepository->find($idEntreprise) ?? throw $this->createNotFoundException("L'entreprise n'a pas été trouvée pour générer le formulaire.");
-        $invite = $idInvite
-            ? ($this->inviteRepository->find($idInvite) ?? throw $this->createNotFoundException("L'invité n'a pas été trouvé."))
-            : $this->getInvite();
-
-        if ($invite->getEntreprise()->getId() !== $entreprise->getId()) {
-            throw $this->createAccessDeniedException("L'invité n'appartient pas à l'entreprise spécifiée.");
-        }
-
-        return ['entreprise' => $entreprise, 'invite' => $invite];
-    }
-
     private function getEntreprise(): Entreprise
     {
         /** @var Invite $invite */
@@ -1015,8 +991,6 @@ trait ControllerUtilsTrait
      */
     private function renderViewOrListComponent(string $entityClass, Request $request, bool $isQueryResult = false, array $extraCriteria = []): Response
     {
-        $idInvite = $request->attributes->get('idInvite');
-        $idEntreprise = $request->attributes->get('idEntreprise');
         $data = [];
 
         // CONTRÔLE D'ACCÈS (lecture) : l'invité connecté doit avoir le droit de lecture
@@ -1026,12 +1000,20 @@ trait ControllerUtilsTrait
             return $isQueryResult ? $this->accessDeniedJson() : $this->accessDeniedComponent($entityClass);
         }
 
+        // LE CABINET ET L'INVITÉ VIENNENT DU GARDIEN, JAMAIS DE LA ROUTE.
+        //
+        // Les deux identifiants étaient lus dans le chemin (`{idEntreprise}`, `{idInvite}`)
+        // puis passés à `find()`. Le contrôle ci-dessus ne juge que le TYPE, avec l'invité
+        // de la session : changer le nombre dans l'URL suffisait donc à lister les pistes,
+        // les clients ou les notes de n'importe quel cabinet — et à lui faire payer les
+        // tokens de la lecture. L'identifiant de la route n'a plus qu'à être celui du
+        // cabinet ouvert ; l'invité est le sien.
+        $entreprise = $this->appartenance()->exigerLIdentifiantDuCabinet($request->attributes->get('idEntreprise'));
+        $idEntreprise = $entreprise->getId();
+        $idInvite = $this->getInvite()->getId();
+
         // CAS 1: C'est une requête API pour rafraîchir la liste (recherche, etc.)
         if ($isQueryResult) {
-            $entreprise = $this->entrepriseRepository->find($idEntreprise);
-            if (!$entreprise) {
-                return new JsonResponse(['error' => 'Entreprise non trouvée.'], Response::HTTP_BAD_REQUEST);
-            }
             // CORRECTION : Le payload contient maintenant 'criteria', 'parentContext' et 'page'.
             $payload = json_decode($request->getContent(), true) ?? [];
             $criteria = $payload['criteria'] ?? [];
@@ -1088,7 +1070,6 @@ trait ControllerUtilsTrait
         else {
             $template = 'components/_view_manager.html.twig';
             // Chargement automatique de la première page (20 premiers éléments).
-            $entreprise = $this->entrepriseRepository->find($idEntreprise);
             // Filtre(s) actif(s) par défaut au premier chargement (ex. rubrique Client :
             // périmètre du portefeuille de l'invité). Vide pour la plupart des entités.
             // Le même jeu de critères est renvoyé au frontend pour amorcer l'état du Cerveau
@@ -1359,6 +1340,9 @@ trait ControllerUtilsTrait
                 $parentClass = $parentMap[$parentFieldName];
                 $parentEntity = $this->em->getRepository($parentClass)->find($parentId);
                 if ($parentEntity) {
+                    // Le parent vient de l'URL : son nom et ses chiffres s'affichent dans
+                    // l'entête du formulaire. Celui d'un autre cabinet ne s'ouvre pas.
+                    $this->appartenance()->exigerLeCabinetOuvert($parentEntity, $this->getEntityName($parentClass));
                     $entity->$setter($parentEntity);
                 }
             }
@@ -1547,18 +1531,7 @@ trait ControllerUtilsTrait
             // (la Note parente) est nécessaire AVANT la soumission pour que les QueryBuilders des
             // champs Autocomplete (Revenu, Tranche) puissent valider les IDs soumis.
             // On pré-hydrate l'entité avec son parent si on est en mode création.
-            $parentMap = $this->buildParentAssociationMapFromEntity($entityClass);
-            foreach ($parentMap as $parentField => $parentClass) {
-                if (isset($data[$parentField]) && !empty($data[$parentField])) {
-                    $parentEntity = $this->em->getRepository($parentClass)->find($data[$parentField]);
-                    if ($parentEntity) {
-                        $setter = 'set' . ucfirst($parentField);
-                        if (method_exists($entity, $setter)) {
-                            $entity->$setter($parentEntity);
-                        }
-                    }
-                }
-            }
+            $this->poserLesParentsSoumis($entity, $entityClass, $data);
         }
 
         $form = $this->createForm($formTypeClass, $entity);
@@ -1669,21 +1642,7 @@ trait ControllerUtilsTrait
             // comme Document ou Tache, en lisant directement les données brutes de la requête.
             // Elle est appelée après la validation du formulaire mais avant la persistance,
             // ce qui est le moment idéal pour établir la liaison parente.
-            $parentMap = $this->buildParentAssociationMapFromEntity($entityClass);
-            foreach ($parentMap as $parentField => $parentClass) {
-                // On vérifie si un champ correspondant à une relation parente (ex: 'cotation', 'piste')
-                // est présent et non vide dans les données soumises.
-                if (isset($data[$parentField]) && !empty($data[$parentField])) {
-                    $parentEntity = $this->em->getRepository($parentClass)->find($data[$parentField]);
-                    if ($parentEntity) {
-                        $setter = 'set' . ucfirst($parentField);
-                        if (method_exists($entity, $setter)) {
-                            // On appelle le setter (ex: setCotation()) sur l'entité enfant.
-                            $entity->$setter($parentEntity);
-                        }
-                    }
-                }
-            }
+            $this->poserLesParentsSoumis($entity, $entityClass, $data);
 
             // VALIDATION SEULE — le dialogue veut savoir si la saisie TIENDRAIT.
             //
@@ -2208,6 +2167,41 @@ trait ControllerUtilsTrait
      * @param string $entityClass Le FQCN de l'entité enfant à inspecter.
      * @return array<string, string> La carte d'association (nom de la propriété => FQCN de l'entité parente).
      */
+    /**
+     * Pose sur l'entité les parents dont le CORPS de la requête donne l'identifiant.
+     *
+     * ⚠ TOUTE association ManyToOne est concernée — `entreprise`, `invite` et
+     * `utilisateur` compris. Le parent était chargé par `find()` puis posé sans autre
+     * question : un `entreprise=<autre cabinet>` glissé dans le POST écrasait le
+     * `setEntreprise()` du cabinet ouvert, et `invite/api/submit` créait ainsi une
+     * invitation ACTIVE chez autrui — l'inscription étant publique, n'importe quel
+     * propriétaire de cabinet pouvait s'ouvrir celui d'un autre. En édition, la même
+     * boucle déplaçait une fiche vers un autre cabinet, ou rattachait un jeu de rôles à
+     * l'invité d'un autre cabinet.
+     *
+     * Chaque parent doit donc être du cabinet ouvert ; sinon 404, comme pour l'entité
+     * elle-même. Une Entreprise n'y passe que si c'est la sienne, et un Utilisateur — qui
+     * n'appartient à aucun cabinet — n'y passe jamais : aucun formulaire ne le poste.
+     */
+    private function poserLesParentsSoumis(object $entity, string $entityClass, array $data): void
+    {
+        foreach ($this->buildParentAssociationMapFromEntity($entityClass) as $parentField => $parentClass) {
+            if (empty($data[$parentField])) {
+                continue;
+            }
+            $setter = 'set' . ucfirst($parentField);
+            if (!method_exists($entity, $setter)) {
+                continue;
+            }
+            $parentEntity = $this->em->getRepository($parentClass)->find($data[$parentField]);
+            if ($parentEntity === null) {
+                continue;
+            }
+            $this->appartenance()->exigerLeCabinetOuvert($parentEntity, $this->getEntityName($parentClass));
+            $entity->$setter($parentEntity);
+        }
+    }
+
     protected function buildParentAssociationMapFromEntity(string $entityClass): array
     {
         $parentMap = [];
@@ -2672,9 +2666,19 @@ trait ControllerUtilsTrait
             throw $this->createAccessDeniedException("Cette entité n'est pas dans votre périmètre d'accès.");
         }
 
-        $repository = $this->em->getRepository($entityClass);
+        // LES SIENNES, ET SEULEMENT ELLES. C'était un `findAll()` : la route rendait, pour
+        // un type donné, les fiches de TOUS les cabinets de la plateforme.
+        $entreprise = $this->getEntreprise();
+        if ($entityClass === Entreprise::class) {
+            return [$entreprise];
+        }
+        if (!$this->em->getClassMetadata($entityClass)->hasAssociation('entreprise')) {
+            // Un type qui ne porte pas son cabinet (Operation, qui le tient de son
+            // bordereau) ne se liste pas d'ici : rien plutôt que tout.
+            return [];
+        }
 
-        return $repository->findAll();
+        return $this->em->getRepository($entityClass)->findBy(['entreprise' => $entreprise]);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Controller\Admin;
 
+use App\Service\Workspace\AppartenanceAuCabinet;
 use App\Echange\Canevas\CanevasDEchange;
 use App\Echange\Classeur\AnnotateurJsbx;
 use App\Echange\Classeur\ClasseurIllisibleException;
@@ -89,6 +90,7 @@ class EchangeController extends AbstractController
         private readonly EchangeOccurrenceRepository $occurrences,
         private readonly EchangeImportRunRepository $importRuns,
         private readonly EntrepriseRepository $entrepriseRepository,
+        private readonly AppartenanceAuCabinet $appartenance,
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly TokenAccountService $tokenAccountService,
         #[Autowire('%kernel.project_dir%')]
@@ -880,10 +882,13 @@ class EchangeController extends AbstractController
      */
     private function resolveWorkspace(int $idEntreprise): array
     {
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-        if (!$entreprise instanceof Entreprise) {
-            throw $this->createNotFoundException('Entreprise introuvable.');
-        }
+        // LE CABINET DE LA ROUTE DOIT ÊTRE LE CABINET OUVERT — sinon 404, à la source.
+        //
+        // On chargeait l'entreprise désignée par l'URL, quelle qu'elle soit, et l'on se
+        // contentait d'écarter l'invité s'il n'en était pas : chacun des appelants devait
+        // ensuite penser à refuser un invité nul. La porte est désormais fermée ici, une
+        // fois, pour tous.
+        $entreprise = $this->appartenance->exigerLIdentifiantDuCabinet($idEntreprise);
 
         /** @var Utilisateur $user */
         $user = $this->getUser();
