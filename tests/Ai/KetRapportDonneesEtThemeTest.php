@@ -102,6 +102,9 @@ class KetRapportDonneesEtThemeTest extends KernelTestCase
 
         $invite = (new Invite())->setNom('Owner')->setUtilisateur($user)->setEntreprise($entreprise)->setProprietaire(true);
         $em->persist($invite);
+        // Le cabinet OUVERT, comme après l'entrée dans l'espace de travail : les routes
+        // de l'assistant exigent que `{idEntreprise}` le désigne.
+        $user->setConnectedTo($entreprise);
 
         $conversation = (new AssistantConversation())->setEntreprise($entreprise)->setInvite($invite);
         $em->persist($conversation);

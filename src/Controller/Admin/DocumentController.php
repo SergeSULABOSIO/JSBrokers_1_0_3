@@ -463,12 +463,13 @@ class DocumentController extends AbstractController
 
         // Le cloisonnement par cabinet : sans lui, un identifiant dicté au hasard
         // rattacherait une pièce au dossier d'une autre entreprise.
-        $entreprise = $this->getInvite()->getEntreprise();
-        if (method_exists($cible, 'getEntreprise')
-            && $cible->getEntreprise() !== null
-            && $cible->getEntreprise()->getId() !== $entreprise?->getId()) {
-            throw $this->createNotFoundException('Enregistrement introuvable.');
-        }
+        //
+        // ⚠ LE CONTRÔLE ÉCRIT ICI LAISSAIT PASSER EN CAS DE DOUTE : une cible sans
+        // `getEntreprise()` (Operation, les entités de la console) ou dont le cabinet était
+        // nul passait, et une `Entreprise` visée comme cible ne se comparait à rien. Le
+        // gardien commun refuse au contraire tout ce qu'il ne sait pas rattacher, résout
+        // Operation par son bordereau, et n'accepte une Entreprise que si c'est la sienne.
+        $this->appartenance()->exigerLeCabinetOuvert($cible, 'Enregistrement');
 
         return $cible;
     }

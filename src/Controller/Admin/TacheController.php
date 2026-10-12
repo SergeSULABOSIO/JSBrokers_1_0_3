@@ -137,6 +137,12 @@ class TacheController extends AbstractController
         if (!$this->isCsrfTokenValid('db-task-close', $request->headers->get('X-CSRF-Token'))) {
             return $this->json(['error' => 'Token invalide'], 403);
         }
+        // Le jeton CSRF prouve d'où vient la requête, pas à qui est la tâche ; et clôturer
+        // est une MODIFICATION, qui obéit au même droit que le formulaire.
+        $this->appartenance()->exigerLeCabinetOuvert($tache, 'Cette tâche');
+        if (!$this->mayAccessEntity($tache, Invite::ACCESS_MODIFICATION)) {
+            return $this->accessDeniedJson();
+        }
         $tache->setClosed(true);
         $this->em->flush();
         return $this->json(['success' => true]);
@@ -147,9 +153,9 @@ class TacheController extends AbstractController
     #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
     public function query(Request $request)
     {
-        $idInvite = $request->attributes->get('idInvite');
-        $invite = $this->inviteRepository->find($idInvite);
-        return $this->renderViewOrListComponent(Tache::class, $request, true, ['executor' => ['IS_NULL_OR_EQ' => $invite]]);
+        // L'exécutant est l'invité de la SESSION, jamais celui de la route : un `{idInvite}`
+        // d'un autre cabinet ne doit rien désigner ici.
+        return $this->renderViewOrListComponent(Tache::class, $request, true, ['executor' => ['IS_NULL_OR_EQ' => $this->getInvite()]]);
     }
 
 

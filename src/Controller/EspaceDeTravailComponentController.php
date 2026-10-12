@@ -287,6 +287,7 @@ class EspaceDeTravailComponentController extends AbstractController
     #[Route('/api/get-entities/{entityType}/{idEntreprise}', name: 'api_get_entities', methods: ['GET'])]
     public function getEntities(string $entityType, int $idEntreprise): JsonResponse
     {
+        $this->appartenance()->exigerLIdentifiantDuCabinet($idEntreprise);
         // La logique de validation et de récupération est maintenant dans le trait.
         // On retourne les entités en utilisant le groupe de sérialisation
         return $this->json($this->getEntitiesForType($entityType), 200, [], ['groups' => 'list:read']);

@@ -122,6 +122,11 @@ class CotationController extends AbstractController
 
         if ($id > 0) {
             $cotation = $this->em->find(Cotation::class, $id);
+            // AVANT l'écriture : le contrôle de handleCollectionApiRequest(), plus bas, venait
+            // après qu'une tranche eut déjà été créée sur la cotation d'un autre cabinet.
+            if ($cotation !== null) {
+                $this->appartenance()->exigerLeCabinetOuvert($cotation, 'Cette cotation');
+            }
             if ($cotation && $cotation->getTranches()->isEmpty()) {
                 $dateEffet = new \DateTimeImmutable('today');
                 if (!$cotation->getAvenants()->isEmpty()) {

@@ -2,6 +2,7 @@
 
 namespace App\Controller\Admin;
 
+use App\Service\Workspace\AppartenanceAuCabinet;
 use App\Comptabilite\ComptaExportService;
 use App\Comptabilite\CourtierEcritureComptableService;
 use App\Comptabilite\CourtierSuiviFiscalService;
@@ -47,6 +48,7 @@ class DocumentComptableWorkspaceController extends AbstractController
         private CourtierSuiviFiscalService $suiviFiscal,
         private ComptaExportService $exportService,
         private EntrepriseRepository $entrepriseRepository,
+        private AppartenanceAuCabinet $appartenance,
         private WorkspaceAccessResolver $accessResolver,
         private TokenAccountService $tokenAccountService,
     ) {
@@ -144,10 +146,13 @@ class DocumentComptableWorkspaceController extends AbstractController
      */
     private function resolveWorkspace(int $idEntreprise): array
     {
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-        if (!$entreprise instanceof Entreprise) {
-            throw $this->createNotFoundException('Entreprise introuvable.');
-        }
+        // LE CABINET DE LA ROUTE DOIT ÊTRE LE CABINET OUVERT — sinon 404, à la source.
+        //
+        // On chargeait l'entreprise désignée par l'URL, quelle qu'elle soit, et l'on se
+        // contentait d'écarter l'invité s'il n'en était pas : chacun des appelants devait
+        // ensuite penser à refuser un invité nul. La porte est désormais fermée ici, une
+        // fois, pour tous.
+        $entreprise = $this->appartenance->exigerLIdentifiantDuCabinet($idEntreprise);
 
         /** @var Utilisateur $user */
         $user = $this->getUser();

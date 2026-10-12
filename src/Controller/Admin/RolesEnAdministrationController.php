@@ -58,6 +58,11 @@ class RolesEnAdministrationController extends AbstractController
 
                 if ($targetInviteId) {
                     $targetInvite = $this->inviteRepository->find($targetInviteId);
+                    // Un jeu de rôles accorde des DROITS : ouvert sur l'invité d'un autre
+                    // cabinet, il en distribuait chez autrui.
+                    if ($targetInvite !== null) {
+                        $this->appartenance()->exigerLeCabinetOuvert($targetInvite, 'Cet invité');
+                    }
                 }
 
                 // Set the invite for the new role, prioritizing the target invite if found

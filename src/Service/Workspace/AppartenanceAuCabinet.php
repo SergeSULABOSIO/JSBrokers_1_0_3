@@ -93,13 +93,40 @@ class AppartenanceAuCabinet
     }
 
     /**
+     * L'identifiant de cabinet porté par une ROUTE est-il celui du cabinet ouvert ?
+     *
+     * Quarante-cinq rubriques et le tableau de bord prennent `{idEntreprise}` dans leur
+     * chemin, puis faisaient `find($idEntreprise)` : changer ce nombre dans l'URL suffisait
+     * à lister les pistes ou les chiffres d'un autre cabinet. Le cabinet ouvert est la
+     * seule réponse admissible — l'identifiant de la route n'a plus qu'à lui être égal.
+     */
+    public function exigerLIdentifiantDuCabinet(int|string|null $idEntreprise): Entreprise
+    {
+        $ouvert = $this->cabinetActif->entreprise();
+        if ($ouvert === null || $idEntreprise === null || (string) $ouvert->getId() !== (string) $idEntreprise) {
+            throw new NotFoundHttpException("Ce cabinet n'a pas été trouvé.");
+        }
+
+        return $ouvert;
+    }
+
+    /**
      * Le cabinet d'une entité — le sien, ou celui de son parent déclaré.
      *
      * Une classe qui n'a ni `entreprise` ni chemin déclaré rend `null`, donc un refus. Le
      * silence se lit comme un non : c'est la seule lecture sûre quand on ne sait pas.
+     *
+     * UNE ENTREPRISE EST SON PROPRE CABINET. Sans cette règle, elle rendait `null`, et le
+     * contrôle ne pouvait que la refuser — y compris la sienne. Les appelants qui
+     * recevaient une Entreprise (parent posté, cible d'un document) s'en passaient donc,
+     * et c'est par ce trou qu'un `entreprise=<autre cabinet>` posté passait.
      */
     private function entrepriseDe(object $entite): ?Entreprise
     {
+        if ($entite instanceof Entreprise) {
+            return $entite;
+        }
+
         $classe = $this->em->getClassMetadata($entite::class)->getName();
 
         if (isset(self::PAR_LE_PARENT[$classe])) {

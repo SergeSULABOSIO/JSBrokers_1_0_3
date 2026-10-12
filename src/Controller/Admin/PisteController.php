@@ -150,6 +150,9 @@ class PisteController extends AbstractController
 
                 $avenant = $this->em->find(Avenant::class, $idAvenant);
                 if (!$avenant) return;
+                // La police vient de l'URL, et ses chiffres sont recopiés dans le formulaire :
+                // celle d'un autre cabinet ne s'y prête pas.
+                $this->appartenance()->exigerLeCabinetOuvert($avenant, 'Cet avenant');
 
                 $src = $avenant->getCotation()?->getPiste();
                 if ($src) {
@@ -190,7 +193,9 @@ class PisteController extends AbstractController
                     $idAvenant = (int) $request->request->get('idAvenant', 0);
                     if ($idAvenant) {
                         $avenant = $this->em->find(Avenant::class, $idAvenant);
-                        if ($avenant && $avenant->getEntreprise() === $piste->getEntreprise()) {
+                        // Le cabinet OUVERT, et non celui de la piste : ce dernier se
+                        // forgeait en postant `entreprise=` avant que le trait ne le refuse.
+                        if ($avenant && $this->appartenance()->estDuCabinetOuvert($avenant)) {
                             // On persiste la piste AVANT de la référencer depuis l'avenant
                             // managé : Avenant::pisteDeRenouvellement n'a pas de cascade
                             // persist, et un flush anticipé (métrage de tokens) rejetterait
@@ -220,6 +225,12 @@ class PisteController extends AbstractController
     {
         if (!$this->isCsrfTokenValid('db-piste-close', $request->headers->get('X-CSRF-Token'))) {
             return $this->json(['error' => 'Token invalide'], 403);
+        }
+        // Le jeton CSRF prouve d'où vient la requête, pas à qui est la piste ; et clôturer
+        // est une MODIFICATION, qui obéit au même droit que le formulaire.
+        $this->appartenance()->exigerLeCabinetOuvert($piste, 'Cette piste');
+        if (!$this->mayAccessEntity($piste, Invite::ACCESS_MODIFICATION)) {
+            return $this->accessDeniedJson();
         }
         $piste->setClosed(true);
         $this->em->flush();

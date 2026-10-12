@@ -233,6 +233,11 @@ class ProductionIntermediaireController extends AbstractController
 
     private function rendre(Request $request, bool $estRafraichissement): Response
     {
+        // Le rapport est calculé sur le cabinet OUVERT ; l'identifiant de la route doit
+        // le désigner, comme pour toutes les rubriques — un `{idEntreprise}` étranger
+        // ne sert pas même une coquille vide.
+        $this->appartenance()->exigerLIdentifiantDuCabinet($request->attributes->get('idEntreprise'));
+
         // ⚠ LE DROIT DE LA RUBRIQUE N'EST PAS LE DROIT DE LA PRODUCTION.
         //
         // Le menu est gaté sur « Intermédiaires » — c'est leur production qu'on met en
