@@ -138,12 +138,18 @@ export default class extends PickerBase {
      *
      * La fenêtre se ferme : la note est émise, son PDF a pu être ouvert, et le dialogue
      * qui s'ouvre réclame toute l'attention.
+     *
+     * LE MÊME GESTE SUR UNE NOTE QUI EXISTAIT DÉJÀ : quand tout est facturé mais pas
+     * tout réglé, le bloc « À encaisser » désigne sa note par un paramètre d'action
+     * (`data-facturation-picker-note-id-param`). Sans note désignée ni émise, rien ne
+     * part : pas d'appel vers `/api/undefined/…`.
      */
-    signalerLeReglement() {
-        if (!this.noteId) return;
+    signalerLeReglement(event) {
+        const noteId = event?.params?.noteId ?? this.noteId;
+        if (!noteId) return;
 
         this._notifyCerveau('ui:note.paiement-request', {
-            url: `/admin/note/api/${this.noteId}/paiement-context`,
+            url: `/admin/note/api/${noteId}/paiement-context`,
         });
         this.close();
     }
