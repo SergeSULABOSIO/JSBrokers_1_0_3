@@ -389,12 +389,26 @@ final class SourceDeFacturation
      * déterministe, sinon deux ouvertures de la même sélection proposeraient des
      * assureurs différents, et le courtier ne saurait plus où il en est.
      *
-     * @param list<int> $trancheIds les échéances cochées, déjà scopées par l'appelant
+     * ── RIEN À FACTURER N'EST PAS RIEN À ENCAISSER ──────────────────────────────
+     * Une commission entièrement portée par une note, mais réglée en partie, n'a plus
+     * rien à facturer — et reste due. La liste l'annonce « exigible » ; la fenêtre
+     * doit donc dire combien il reste à encaisser, et sur QUELLE note : c'est un
+     * règlement à obtenir, pas une seconde pièce à émettre.
+     *
+     * `notesARegler` est indexé par note puis aplati : une note qui porte plusieurs
+     * échéances de la sélection n'est comptée qu'UNE fois. Additionner par échéance
+     * annoncerait le double de ce qui est dû. Débit seulement : un avoir n'est pas une
+     * créance, et une fenêtre de note de crédit ne parle pas d'encaissement.
+     *
+     * @param list<Tranche> $tranches les échéances cochées, déjà scopées par l'appelant
      *
      * @return list<array{cible: ?int, nom: string, lignes: list<array{trancheId: int,
      *         revenuId: int, libelle: string, police: string, echeance: string, montant: float,
      *         unitaire: float}>,
-     *         ecartes: list<array{police: string, noteId: ?int, noteReference: ?string, noteDate: ?string}>}>
+     *         ecartes: list<array{police: string, noteId: ?int, noteReference: ?string, noteDate: ?string,
+     *         noteSolde: float}>,
+     *         notesARegler: list<array{noteId: int, reference: ?string, date: ?string, solde: float}>,
+     *         aEncaisser: float}>
      */
     public function facturableDansLaSelection(
         Entreprise $entreprise,
@@ -403,6 +417,8 @@ final class SourceDeFacturation
         int $type = Note::TYPE_NOTE_DE_DEBIT,
     ): array {
         $groupes = [];
+        // Le solde d'une note, calculé UNE fois même si elle porte toute la sélection.
+        $soldes = [];
 
         foreach ($tranches as $tranche) {
             if (!$tranche instanceof Tranche) {
@@ -425,6 +441,8 @@ final class SourceDeFacturation
                 'nom' => (string) $destinataire->getNom(),
                 'lignes' => [],
                 'ecartes' => [],
+                'notesARegler' => [],
+                'aEncaisser' => 0.0,
             ];
 
             $pesee = $this->pesee($entreprise, $addressedTo, $cle, $tranche, $type);
@@ -449,20 +467,80 @@ final class SourceDeFacturation
             // exigible est une énigme, pas une réponse.
             foreach ($pesee['ecartes'] as $ecarte) {
                 $note = $ecarte['note'];
+                $aRegler = $type === Note::TYPE_NOTE_DE_DEBIT
+                    ? $this->notesARegler($ecarte['revenu'], $tranche, $soldes)
+                    : [];
                 $groupes[$cle]['ecartes'][] = [
                     'police' => $police,
                     'noteId' => $note?->getId(),
                     'noteReference' => $note?->getReference(),
                     'noteDate' => $note?->getSentAt()?->format('d/m/Y'),
+                    // Le solde de la NOTE nommée, pas celui de la ligne : une note peut
+                    // porter d'autres échéances.
+                    'noteSolde' => $aRegler[(int) $note?->getId()]['solde'] ?? 0.0,
                 ];
+                // `+` sur des clés de note : une note déjà retenue ne l'est pas deux fois.
+                $groupes[$cle]['notesARegler'] += $aRegler;
             }
         }
+
+        foreach ($groupes as &$groupe) {
+            $groupe['notesARegler'] = array_values($groupe['notesARegler']);
+            $groupe['aEncaisser'] = round(array_sum(array_column($groupe['notesARegler'], 'solde')), 2);
+        }
+        unset($groupe);
 
         // Ordre déterministe : le nom du destinataire, pas l'ordre de la sélection.
         $liste = array_values($groupes);
         usort($liste, static fn (array $a, array $b): int => strcasecmp($a['nom'], $b['nom']));
 
         return $liste;
+    }
+
+    /**
+     * Les notes de DÉBIT qui portent ce revenu sur cette échéance et restent dues,
+     * indexées par note. Toutes, et non la seule dernière : deux facturations
+     * partielles font deux pièces à régler.
+     *
+     * @param array<int, float> $soldes mémoïsation par note, partagée sur la sélection
+     *
+     * @return array<int, array{noteId: int, reference: ?string, date: ?string, solde: float}>
+     */
+    private function notesARegler(RevenuPourCourtier $revenu, Tranche $tranche, array &$soldes): array
+    {
+        $notes = [];
+        foreach ($revenu->getArticles() as $article) {
+            $note = $article->getNote();
+            if (!$this->estUneNoteDeCommission($note)
+                || $note->getType() !== Note::TYPE_NOTE_DE_DEBIT
+                || $article->getTranche()?->getId() !== $tranche->getId()) {
+                continue;
+            }
+            $id = (int) $note->getId();
+            $solde = $soldes[$id] ??= $this->soldeDe($note);
+            if ($solde > 0.0) {
+                $notes[$id] = [
+                    'noteId' => $id,
+                    'reference' => $note->getReference(),
+                    'date' => $note->getSentAt()?->format('d/m/Y'),
+                    'solde' => $solde,
+                ];
+            }
+        }
+
+        return $notes;
+    }
+
+    /**
+     * LE SOLDE SE LIT, IL NE SE RECALCULE PAS : c'est la valeur que la rubrique Notes
+     * affiche et que le formulaire de paiement préremplit. Le seuil d'arrondi est celui
+     * de `NoteReglementScope`, porté par `aUnSoldeDu`.
+     */
+    private function soldeDe(Note $note): float
+    {
+        $this->canvasBuilder->loadAllCalculatedValues($note);
+
+        return $note->aUnSoldeDu ? round(max(0.0, (float) $note->solde), 2) : 0.0;
     }
 
     /** La référence de police d'une échéance — ce que le courtier lit sur sa liste. */

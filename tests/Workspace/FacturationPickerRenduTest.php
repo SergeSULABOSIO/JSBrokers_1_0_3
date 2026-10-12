@@ -323,4 +323,95 @@ class FacturationPickerRenduTest extends KernelTestCase
             'Un bouton qui ne peut qu\'échouer ne doit pas être proposé.',
         );
     }
+
+    // ── RIEN À FACTURER N'EST PAS RIEN À ENCAISSER ─────────────────────────────
+    // L'incident : 11,60 facturés, 8,00 réglés. La liste annonçait 3,60 à collecter, la
+    // fenêtre « rien à facturer » — sans un mot des 3,60 ni de la note qui les porte.
+
+    private const ECARTE = [
+        'police' => 'XCDDD41457845-2026',
+        'noteId' => 1,
+        'noteReference' => 'N1790767662318',
+        'noteDate' => '30/09/2026',
+        'noteSolde' => 3.60,
+    ];
+
+    private const NOTE_A_REGLER = [
+        'noteId' => 1,
+        'reference' => 'N1790767662318',
+        'date' => '30/09/2026',
+        'solde' => 3.60,
+    ];
+
+    private function groupeEcarte(array $ecartes, array $notesARegler, float $aEncaisser): array
+    {
+        return ['groupe' => [
+            'cible' => 3,
+            'nom' => 'ACTIVA',
+            'lignes' => [],
+            'ecartes' => $ecartes,
+            'notesARegler' => $notesARegler,
+            'aEncaisser' => $aEncaisser,
+        ]];
+    }
+
+    public function testUneNotePartiellementRegleeAnnonceLeResteAEncaisser(): void
+    {
+        $html = $this->rendre($this->groupeEcarte([self::ECARTE], [self::NOTE_A_REGLER], 3.60));
+
+        self::assertStringNotContainsString('Rien à facturer sur cette sélection', $html,
+            'Dire « rien » quand 3,60 restent dus est l\'énigme que ce correctif ferme.',
+        );
+        self::assertStringContainsString('Rien de plus à facturer', $html);
+        self::assertStringContainsString('3,60 USD', $html, 'Le reste dû, au format monétaire de l\'application.');
+        self::assertStringContainsString('à encaisser', $html);
+        self::assertStringContainsString('data-facturation-picker-note-id-param="1"', $html,
+            'Le règlement se signale sur la note qui porte la créance.',
+        );
+        self::assertStringContainsString('click->facturation-picker#signalerLeReglement', $html);
+        self::assertStringNotContainsString('data-picker-executer', $html, 'Aucune seconde note à émettre.');
+        self::assertStringNotContainsString('sont cochées', $html, 'Rien n\'est coché : ne pas le prétendre.');
+        self::assertStringNotContainsString('suivi du recouvrement', $html,
+            'Aucune note ne sera émise : annoncer qu\'elle part validée serait hors sujet.',
+        );
+        self::assertSame(1, substr_count($html, 'à facturer'),
+            'Le « rien à facturer » se dit une fois, pas dans l\'intro ET dans le message.',
+        );
+    }
+
+    /** Une note qui porte deux échéances : un seul bouton, et son solde jamais doublé. */
+    public function testDeuxEcheancesSurUneMemeNoteNeDonnentQuUnBouton(): void
+    {
+        $note = ['solde' => 10.0] + self::NOTE_A_REGLER;
+        $html = $this->rendre($this->groupeEcarte(
+            [['noteSolde' => 10.0] + self::ECARTE, ['noteSolde' => 10.0, 'police' => 'AUTRE-2026'] + self::ECARTE],
+            [$note],
+            10.0,
+        ));
+
+        self::assertSame(1, substr_count($html, 'data-facturation-picker-note-id-param='),
+            'Un bouton par NOTE, pas par échéance.',
+        );
+        self::assertStringNotContainsString('20,00', $html, 'Le solde de la note ne s\'additionne pas par échéance.');
+        self::assertStringContainsString('10,00 USD', $html);
+    }
+
+    /** Une note soldée : le message d'origine, sans bouton de règlement. */
+    public function testUneNoteSoldeeGardeLeMessageDOrigine(): void
+    {
+        $html = $this->rendre($this->groupeEcarte([['noteSolde' => 0.0] + self::ECARTE], [], 0.0));
+
+        self::assertStringContainsString('Rien à facturer sur cette sélection', $html);
+        self::assertStringNotContainsString('data-facturation-picker-note-id-param', $html);
+        self::assertStringNotContainsString('à encaisser', $html);
+    }
+
+    /** Une fenêtre de note de crédit ne parle pas d'encaissement. */
+    public function testEnCreditRienNEstAnnonceAEncaisser(): void
+    {
+        $html = $this->rendre(['type' => 'credit'] + $this->groupeEcarte([], [], 0.0));
+
+        self::assertStringContainsString('Rien à créditer', $html);
+        self::assertStringNotContainsString('à encaisser', $html);
+    }
 }

@@ -138,7 +138,7 @@ test('le montant saisi voyage, borné au reste, et n\'est jamais converti ici', 
 test('émettre n\'est que la moitié du geste : le règlement se signale depuis la fenêtre', () => {
     assert.match(
         picker,
-        /signalerLeReglement\(\)[\s\S]*?ui:note\.paiement-request[\s\S]*?paiement-context/,
+        /signalerLeReglement\(event\)[\s\S]*?ui:note\.paiement-request[\s\S]*?paiement-context/,
         'Une note part pour être PAYÉE. Sans ce bouton, l\'encaissement ne se saisit qu\'en '
         + 'rouvrant la note et en descendant dans sa collection de paiements.',
     );
@@ -164,6 +164,16 @@ test('émettre n\'est que la moitié du geste : le règlement se signale depuis 
         'Aucun champ n\'est recopié ici : c\'est le formulaire de Paiement qui s\'ouvre. Deux '
         + 'formulaires pour un même objet finiraient par diverger.',
     );
+});
+
+test('le règlement se signale aussi sur une note DÉJÀ émise, et jamais sans note', () => {
+    // Tout facturé, pas tout réglé : le bloc « À encaisser » désigne SA note par un
+    // paramètre d'action. Le pied de succès, lui, n'en passe pas et retombe sur la note
+    // qu'on vient d'émettre — un seul geste, pas deux chemins.
+    assert.match(picker, /const noteId = event\?\.params\?\.noteId \?\? this\.noteId;/);
+    assert.match(picker, /if \(!noteId\) return;/,
+        'Sans note désignée ni émise, rien ne part : pas d\'appel vers /api/undefined/…');
+    assert.match(picker, /url: `\/admin\/note\/api\/\$\{noteId\}\/paiement-context`/);
 });
 
 test('le paiement se range dans la collection « Paiements liés » quand elle est à l\'écran', () => {

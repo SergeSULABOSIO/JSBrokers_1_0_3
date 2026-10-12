@@ -10,12 +10,14 @@ use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Note;
+use App\Entity\Paiement;
 use App\Entity\Piste;
 use App\Entity\Portefeuille;
 use App\Entity\RevenuPourCourtier;
 use App\Entity\Tranche;
 use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
+use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use App\Services\Note\SourceDeFacturation;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -77,7 +79,8 @@ class SourceDeFacturationTest extends KernelTestCase
         $noms = [self::ENTREPRISE_NOM, self::VOISIN_NOM];
         $emails = [self::OWNER_EMAIL, self::VOISIN_EMAIL];
 
-        $tables = ['article', 'note', 'revenu_pour_courtier', 'tranche', 'chargement_pour_prime', 'cotation', 'piste', 'client', 'portefeuille', 'type_revenu', 'chargement', 'invite'];
+        // `paiement` AVANT `note` : il la référence.
+        $tables = ['paiement', 'article', 'note', 'revenu_pour_courtier', 'tranche', 'chargement_pour_prime', 'cotation', 'piste', 'client', 'portefeuille', 'type_revenu', 'chargement', 'invite'];
         foreach ($tables as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom IN (:noms)",
@@ -516,5 +519,205 @@ class SourceDeFacturationTest extends KernelTestCase
         self::assertSame(Note::TYPE_NOTE_DE_CREDIT, $entete['type']);
         self::assertSame(Note::TO_CLIENT, $entete['addressedTo']);
         self::assertStringContainsString('Avoir', $entete['nom']);
+    }
+
+    // ── RIEN À FACTURER N'EST PAS RIEN À ENCAISSER ─────────────────────────────
+    //
+    // L'incident : une commission de 11,60 entièrement portée par une note, réglée
+    // 8,00 par l'assureur. La liste, la fiche et l'assistant annonçaient 3,60 à
+    // collecter ; la fenêtre de facturation répondait « rien à facturer », sans un mot
+    // des 3,60. Elle avait raison sur le fond — refacturer serait une double facture —
+    // mais taisait ce qui restait dû, et sur quelle pièce.
+
+    /**
+     * Une note de commission sur les échéances données, à la quantité donnée.
+     *
+     * @param list<array{0: Tranche, 1: float}> $lignes [échéance, quantité]
+     */
+    private function emettre(array $cabinet, array $lignes, int $type = Note::TYPE_NOTE_DE_DEBIT): Note
+    {
+        $em = $this->em();
+
+        $note = (new Note())
+            ->setNom('Note de test')
+            ->setType($type)
+            ->setAddressedTo(Note::TO_CLIENT)
+            ->setReference('N-TEST-' . uniqid())
+            ->setSignature((string) time())
+            ->setValidated(true);
+        $note->setEntreprise($cabinet['entreprise']);
+        $em->persist($note);
+
+        $revenu = $em->getRepository(RevenuPourCourtier::class)->find($cabinet['revenuId']);
+        foreach ($lignes as [$tranche, $quantite]) {
+            $article = (new Article())->setQuantite($quantite);
+            $article->setNote($note)->setRevenuFacture($revenu)->setTranche($tranche);
+            $article->setEntreprise($cabinet['entreprise']);
+            $em->persist($article);
+            $revenu->addArticle($article);
+            $note->addArticle($article);
+            $tranche->addArticle($article);
+        }
+        $em->flush();
+
+        return $note;
+    }
+
+    private function payer(array $cabinet, Note $note, float $montant): void
+    {
+        $paiement = (new Paiement())
+            ->setMontant($montant)
+            ->setReference('PAY-TEST-' . uniqid())
+            ->setPaidAt(new \DateTimeImmutable('-1 day'));
+        $paiement->setEntreprise($cabinet['entreprise']);
+        $note->addPaiement($paiement);
+        $this->em()->persist($paiement);
+        $this->em()->flush();
+    }
+
+    /** Ce que la note réclame — la valeur que la rubrique Notes affiche. */
+    private function payable(Note $note): float
+    {
+        return round(static::getContainer()->get(IndicatorCalculationHelper::class)->getNoteMontantPayable($note), 2);
+    }
+
+    /** Coupe l'échéance unique du semis en deux moitiés : 50 % + 50 %. */
+    private function deuxiemeTranche(array $cabinet): Tranche
+    {
+        $premiere = $cabinet['tranche']->setPourcentage(50.0);
+        $seconde = (new Tranche())
+            ->setNom('Tranche 2')
+            ->setPourcentage(50.0)
+            ->setPayableAt(new \DateTimeImmutable('-30 days'))
+            ->setEcheanceAt(new \DateTimeImmutable('+30 days'));
+        $seconde->setCotation($premiere->getCotation());
+        $seconde->setEntreprise($cabinet['entreprise']);
+        $this->em()->persist($seconde);
+        $premiere->getCotation()->addTranche($seconde);
+        $this->em()->flush();
+
+        return $seconde;
+    }
+
+    /** @return array{cible: ?int, nom: string, lignes: list<array>, ecartes: list<array>, notesARegler: list<array>, aEncaisser: float} */
+    private function groupe(array $cabinet, array $tranches, int $type = Note::TYPE_NOTE_DE_DEBIT): array
+    {
+        $groupes = $this->service()->facturableDansLaSelection($cabinet['entreprise'], $tranches, Note::TO_CLIENT, $type);
+        self::assertCount(1, $groupes, 'Un seul destinataire dans la sélection : un seul groupe.');
+
+        return $groupes[0];
+    }
+
+    public function testUneNotePartiellementRegleeAnnonceSonResteAEncaisser(): void
+    {
+        $mien = $this->semerUnCabinet(self::ENTREPRISE_NOM, self::OWNER_EMAIL, 'MIEN');
+        $note = $this->emettre($mien, [[$mien['tranche'], 1.0]]);
+        $payable = $this->payable($note);
+        self::assertGreaterThan(0.0, $payable, 'Semis : la note doit réclamer quelque chose.');
+        $this->payer($mien, $note, round($payable - 3.60, 2));
+
+        $groupe = $this->groupe($mien, [$mien['tranche']]);
+
+        self::assertSame([], $groupe['lignes'], 'Tout est facturé : refacturer serait une double facture.');
+        self::assertCount(1, $groupe['notesARegler']);
+        self::assertSame($note->getId(), $groupe['notesARegler'][0]['noteId']);
+        self::assertEqualsWithDelta(3.60, $groupe['notesARegler'][0]['solde'], 0.001);
+        self::assertEqualsWithDelta(3.60, $groupe['aEncaisser'], 0.001,
+            'Les 3,60 que la liste annonce doivent être dits ici, sur la note qui les porte.',
+        );
+        self::assertEqualsWithDelta(3.60, $groupe['ecartes'][0]['noteSolde'], 0.001);
+    }
+
+    /**
+     * UNE NOTE, DEUX ÉCHÉANCES : le solde est celui de la NOTE, compté une fois.
+     * L'additionner par écarté annoncerait le double de ce qui est dû.
+     */
+    public function testUneNotePortantDeuxEcheancesNEstCompteeQuUneFois(): void
+    {
+        $mien = $this->semerUnCabinet(self::ENTREPRISE_NOM, self::OWNER_EMAIL, 'MIEN');
+        $seconde = $this->deuxiemeTranche($mien);
+        $note = $this->emettre($mien, [[$mien['tranche'], 1.0], [$seconde, 1.0]]);
+        $this->payer($mien, $note, round($this->payable($note) - 10.0, 2));
+
+        $groupe = $this->groupe($mien, [$mien['tranche'], $seconde]);
+
+        self::assertCount(2, $groupe['ecartes'], 'Les deux échéances sont déjà facturées.');
+        self::assertCount(1, $groupe['notesARegler'], 'Une seule note : une seule entrée, un seul bouton.');
+        self::assertEqualsWithDelta(10.0, $groupe['aEncaisser'], 0.001, 'Le solde de la note, pas son double.');
+    }
+
+    /** Deux facturations partielles sur la même échéance : deux pièces à régler. */
+    public function testDeuxNotesPartiellesSontToutesDeuxAnnoncees(): void
+    {
+        $mien = $this->semerUnCabinet(self::ENTREPRISE_NOM, self::OWNER_EMAIL, 'MIEN');
+        $premiere = $this->emettre($mien, [[$mien['tranche'], 0.5]]);
+        $seconde = $this->emettre($mien, [[$mien['tranche'], 0.5]]);
+
+        $groupe = $this->groupe($mien, [$mien['tranche']]);
+
+        self::assertEqualsCanonicalizing(
+            [$premiere->getId(), $seconde->getId()],
+            array_column($groupe['notesARegler'], 'noteId'),
+            'Chaque note qui porte la commission et reste due doit être nommée — pas seulement la dernière.',
+        );
+        self::assertEqualsWithDelta($this->payable($premiere) + $this->payable($seconde), $groupe['aEncaisser'], 0.001);
+    }
+
+    public function testUneNoteSoldeeOuSurpayeeNAnnonceRien(): void
+    {
+        $mien = $this->semerUnCabinet(self::ENTREPRISE_NOM, self::OWNER_EMAIL, 'MIEN');
+        $note = $this->emettre($mien, [[$mien['tranche'], 1.0]]);
+        $this->payer($mien, $note, $this->payable($note) + 5.0);
+
+        $groupe = $this->groupe($mien, [$mien['tranche']]);
+
+        self::assertSame([], $groupe['notesARegler'], 'Un trop-perçu ne se réclame pas.');
+        self::assertSame(0.0, $groupe['aEncaisser']);
+        self::assertSame(0.0, $groupe['ecartes'][0]['noteSolde']);
+    }
+
+    /** En deçà du seuil, c'est un arrondi, pas une créance. */
+    public function testUnSoldeSousLeSeuilEstTraiteCommeNul(): void
+    {
+        $mien = $this->semerUnCabinet(self::ENTREPRISE_NOM, self::OWNER_EMAIL, 'MIEN');
+        $note = $this->emettre($mien, [[$mien['tranche'], 1.0]]);
+        $this->payer($mien, $note, $this->payable($note) - 0.004);
+
+        $groupe = $this->groupe($mien, [$mien['tranche']]);
+
+        self::assertSame([], $groupe['notesARegler']);
+        self::assertSame(0.0, $groupe['aEncaisser']);
+    }
+
+    /**
+     * DÉBIT SEULEMENT. Une note de crédit n'est pas une créance à encaisser : son
+     * solde ne s'annonce jamais « à encaisser », ni en débit ni en crédit.
+     */
+    public function testUneNoteDeCreditNEstJamaisAnnonceeAEncaisser(): void
+    {
+        $mien = $this->semerUnCabinet(self::ENTREPRISE_NOM, self::OWNER_EMAIL, 'MIEN');
+        // Débit 1,5 soldé, avoir 0,5 non réglé : déjà facturé = 1 → l'échéance est écartée.
+        $debit = $this->emettre($mien, [[$mien['tranche'], 1.5]]);
+        $this->payer($mien, $debit, $this->payable($debit));
+        $this->emettre($mien, [[$mien['tranche'], 0.5]], Note::TYPE_NOTE_DE_CREDIT);
+
+        $groupe = $this->groupe($mien, [$mien['tranche']]);
+
+        self::assertCount(1, $groupe['ecartes']);
+        self::assertSame([], $groupe['notesARegler'], 'L\'avoir non réglé n\'est pas une somme à encaisser.');
+        self::assertSame(0.0, $groupe['aEncaisser']);
+    }
+
+    /** Une fenêtre de note de crédit ne parle pas d'encaissement. */
+    public function testEnModeCreditRienNEstAnnonceAEncaisser(): void
+    {
+        $mien = $this->semerUnCabinet(self::ENTREPRISE_NOM, self::OWNER_EMAIL, 'MIEN');
+        $note = $this->emettre($mien, [[$mien['tranche'], 1.0]]);
+        $this->payer($mien, $note, 1.0);
+
+        $groupe = $this->groupe($mien, [$mien['tranche']], Note::TYPE_NOTE_DE_CREDIT);
+
+        self::assertSame([], $groupe['notesARegler']);
+        self::assertSame(0.0, $groupe['aEncaisser']);
     }
 }

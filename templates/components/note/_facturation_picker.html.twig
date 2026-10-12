@@ -19,6 +19,12 @@
     l'insertion par le cerveau.
 #}
 {% set credit = type|default('debit') == 'credit' %}
+{# RIEN À FACTURER N'EST PAS RIEN À ENCAISSER : une commission portée par une note réglée
+   en partie reste due. Le serveur dit combien, et sur quelles notes (dédupliquées : une
+   note qui porte plusieurs échéances n'est comptée qu'une fois). Débit seulement. #}
+{% set aEncaisser = groupe ? groupe.aEncaisser|default(0) : 0 %}
+{% set notesARegler = groupe ? groupe.notesARegler|default([]) : [] %}
+{% set rienACocher = groupe is null or groupe.lignes is empty %}
 <div class="jsb-picker-overlay"
      data-controller="facturation-picker"
      data-facturation-picker-submit-url-value="{{ submitUrl }}"
@@ -63,7 +69,10 @@
             <div class="jsb-picker-intro-text">
                 <p class="jsb-picker-intro-title">{{ groupe ? groupe.nom : 'Aucun destinataire' }}</p>
                 <p id="jsb-fact-picker-desc" class="jsb-picker-intro-desc">
-                    {% if credit %}
+                    {% if rienACocher %}
+                    {# Le « rien » se dit UNE fois, dans le message ci-dessous : l'intro ne fait que situer. #}
+                    {{ credit ? 'Note de crédit sur cette sélection.' : 'État de facturation de cette sélection.' }}
+                    {% elseif credit %}
                     Les commissions déjà facturées sur ces échéances sont cochées&nbsp;: la note de
                     crédit les annule auprès du destinataire. Décochez-en une pour la laisser de côté.
                     {% else %}
@@ -83,10 +92,14 @@
         <p class="jsb-picker-empty text-danger" data-picker-error role="alert" hidden></p>
 
         <div class="jsb-picker-listwrap jsb-picker-cartes">
-            {% if groupe is null or groupe.lignes is empty %}
+            {% if rienACocher %}
                 <p class="jsb-picker-empty text-muted" role="status">
                     {% if credit %}
                     Rien à créditer sur cette sélection&nbsp;: aucune commission n'y a été facturée.
+                    {% elseif aEncaisser > 0 %}
+                    Rien de plus à facturer&nbsp;: ces commissions sont déjà portées par une note.
+                    Il reste <strong>{{ aEncaisser|format_montant(2, null, monnaie|default("")) }}</strong> à encaisser —
+                    un règlement à obtenir, pas une nouvelle note à émettre.
                     {% else %}
                     Rien à facturer sur cette sélection&nbsp;: ces commissions sont déjà portées
                     par une note, ou aucun revenu n'y est rattaché.
@@ -165,8 +178,8 @@
                 <fieldset class="jsb-picker-carte">
                     <legend class="fs-6" style="color:#0d2440;">Déjà facturé</legend>
                     <p class="text-muted small mb-2">
-                        Ces échéances ne sont plus facturables : une note les porte déjà. Pour les
-                        refacturer, annulez cette note par un avoir, ou corrigez-la.
+                        Ces échéances ne sont plus facturables : une note les porte déjà. Ce qui reste
+                        dû s'encaisse sur cette note ; pour en changer le montant, ouvrez-la et corrigez-la.
                     </p>
                     <ul class="list-unstyled mb-0">
                         {% for e in groupe.ecartes %}
@@ -176,7 +189,43 @@
                                     <a href="#" data-facturation-picker-note-id="{{ e.noteId }}"
                                        data-action="click->facturation-picker#ouvrirLaNote">{{ e.noteReference }}</a>
                                     {%- if e.noteDate %} du {{ e.noteDate }}{% endif %}
+                                    {#- Le montant n'est pas répété ici : une note qui porte plusieurs
+                                        échéances l'afficherait autant de fois. Il est dit une fois,
+                                        par note, dans « À encaisser ». #}
+                                    {%- if not credit and e.noteSolde|default(0) > 0 %}, réglée en partie{% endif %}
                                 {%- else %} — plus rien à facturer{% endif %}.
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </fieldset>
+            {% endif %}
+
+            {% if not credit and notesARegler is not empty %}
+                <fieldset class="jsb-picker-carte">
+                    <legend class="fs-6" style="color:#0d2440;">À encaisser</legend>
+                    <p class="text-muted small mb-2">
+                        Ces notes réclament déjà la commission ; il reste à en obtenir le règlement.
+                    </p>
+                    <ul class="list-unstyled mb-0">
+                        {% for n in notesARegler %}
+                            <li class="jsb-picker-ecarte d-flex flex-wrap align-items-center gap-2">
+                                <span class="me-auto">
+                                    Note
+                                    <a href="#" data-facturation-picker-note-id="{{ n.noteId }}"
+                                       data-action="click->facturation-picker#ouvrirLaNote">{{ n.reference ?: '#' ~ n.noteId }}</a>
+                                    {%- if n.date %} du {{ n.date }}{% endif %} — reste
+                                    <strong>{{ n.solde|format_montant(2, null, monnaie|default('')) }}</strong> à encaisser.
+                                </span>
+                                {# UN BOUTON PAR NOTE : le paiement se rattache à la note, et le
+                                   formulaire se préremplit de son solde. Même geste que le pied de
+                                   succès, sur une note qui existait déjà. #}
+                                <button type="button" class="btn btn-outline-primary btn-sm jsb-picker-btn"
+                                        data-facturation-picker-note-id-param="{{ n.noteId }}"
+                                        aria-label="Signaler le règlement de la note {{ n.reference ?: '#' ~ n.noteId }}"
+                                        data-action="click->facturation-picker#signalerLeReglement">
+                                    <twig:UX:Icon name="{{ resolve_icon_name('paiement') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                                    Signaler le règlement
+                                </button>
                             </li>
                         {% endfor %}
                     </ul>
@@ -325,10 +374,13 @@
 
         <div class="jsb-picker-foot">
             <span class="text-muted small me-auto">
+                {# Rien à émettre : annoncer comment la note partirait serait hors sujet. #}
+                {% if not rienACocher %}
                 {% if credit %}
                 La note de crédit est émise <strong>validée</strong> : elle annule aussitôt la commission facturée.
                 {% else %}
                 La note est émise <strong>validée</strong> : elle entre aussitôt au suivi du recouvrement.
+                {% endif %}
                 {% endif %}
             </span>
             <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
