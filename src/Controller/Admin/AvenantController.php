@@ -10,6 +10,7 @@ use App\Ai\Mutation\MutationReferences;
 use App\Ai\Scope\AiScope;
 use App\Entity\Avenant;
 use App\Entity\Cotation;
+use App\Service\Avenant\DefautsDeSouscription;
 use App\Entity\Invite;
 use App\Entity\Piste;
 use App\Form\AvenantType;
@@ -83,14 +84,39 @@ class AvenantController extends AbstractController
     }
 
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
-    public function getFormApi(?Avenant $avenant, Request $request): Response
+    public function getFormApi(?Avenant $avenant, Request $request, DefautsDeSouscription $defautsDeSouscription): Response
     {
         return $this->renderFormCanvas(
             $request,
             Avenant::class,
             AvenantType::class,
             $avenant,
-            function (Avenant $avenant, Invite $invite) {
+            function (Avenant $avenant, Invite $invite) use ($request, $defautsDeSouscription) {
+                // SOUS UNE COTATION, C'EST UNE SOUSCRIPTION : les valeurs sont celles de Ket
+                // (DefautsDeSouscription) — période tirée de la DURÉE de la proposition,
+                // numéro 0, description qui nomme la proposition. On proposait « maintenant
+                // + 1 an » quelle que soit la durée : une cotation de six mois devenait une
+                // police d'un an dès qu'on la souscrivait à l'écran.
+                //
+                // L'initialiseur passe AVANT que le trait ne pose le parent : il lit donc
+                // lui-même `parent_id`, et vérifie que la cotation est celle du cabinet.
+                $parentId = (int) $request->query->get('parent_id', 0);
+                if ($parentId > 0 && $request->query->get('parent_field_name') === 'cotation') {
+                    $cotation = $this->em->find(Cotation::class, $parentId);
+                    if ($cotation !== null) {
+                        $this->appartenance()->exigerLeCabinetOuvert($cotation, 'Cette cotation');
+                        $valeurs = $defautsDeSouscription->pour($cotation);
+                        $avenant->setStartingAt($valeurs['startingAt']);
+                        if ($valeurs['endingAt'] !== null) {
+                            $avenant->setEndingAt($valeurs['endingAt']);
+                        }
+                        $avenant->setNumero($valeurs['numero']);
+                        $avenant->setDescription($valeurs['description']);
+
+                        return;
+                    }
+                }
+
                 $avenant->setStartingAt(new DateTimeImmutable("now"));
                 $avenant->setEndingAt(new DateTimeImmutable("+1 year"));
             }

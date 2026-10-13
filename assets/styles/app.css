@@ -43,6 +43,15 @@
   --success: #198754;
   --warning: #ffc107;
   --danger: #dc3545;
+
+  /* --- Étapes du pipe commercial (Pistes) : UNE couleur par étape, appliquée à
+     l'identique au marqueur de la liste, au chip et au Kanban. Des ALIAS de jetons
+     existants, aucune couleur nouvelle : gris tant que rien n'est engagé, cobalt qui
+     fonce à mesure que l'offre se précise, vert — réservé — pour la police souscrite. --- */
+  --etape-a_coter: var(--text-label);
+  --etape-en_cotation: var(--cobalt-hover);
+  --etape-offres_chiffrees: var(--cobalt-dark);
+  --etape-transformees: var(--success);
   --success-dark: #0f5132;
   --danger-dark: #842029;
   --danger-bg: #f8d7da;
@@ -1794,6 +1803,22 @@ textarea:hover,
 .jsb-state-badge--retro { background: #e8f0fb; color: #0047AB; }
 /* Commission exigible : prime encaissée par l'assureur → à collecter MAINTENANT (cobalt plein). */
 .jsb-state-badge--exigible { background: #0047AB; color: #ffffff; }
+/* Étape du pipe (Pistes) : surface claire et liseré de la couleur de l'étape. Le libellé
+   porte le sens ; la couleur ne fait que le confirmer (WCAG 1.4.1). */
+.jsb-state-badge--etape-a_coter,
+.jsb-state-badge--etape-en_cotation,
+.jsb-state-badge--etape-offres_chiffrees,
+.jsb-state-badge--etape-transformees {
+    background: var(--bg-white);
+    color: var(--text-dark-secondary);
+    border: 1px solid var(--border-light);
+    padding-left: 0.6rem;
+    box-shadow: inset 3px 0 0 var(--etape);
+}
+.jsb-state-badge--etape-a_coter { --etape: var(--etape-a_coter); }
+.jsb-state-badge--etape-en_cotation { --etape: var(--etape-en_cotation); }
+.jsb-state-badge--etape-offres_chiffrees { --etape: var(--etape-offres_chiffrees); }
+.jsb-state-badge--etape-transformees { --etape: var(--etape-transformees); }
 
 /* Chips de filtre rapide : rangée dédiée sous la barre de contrôles, juste avant la
    liste (la barre de contrôles — statut + pagination + totaux — était saturée).
@@ -2075,6 +2100,14 @@ textarea:hover,
     font-family: inherit;
     transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.15s;
 }
+/* Chips d'étape du pipe : l'icône porte la couleur de son étape (hors état actif, qui
+   reste cobalt plein comme tous les chips). Bornés au critère des Pistes : une autre
+   rubrique peut avoir une valeur homonyme. */
+[data-preset-criterion="__transformation_piste__"] .jsb-preset-chip[data-criterion-value="a_coter"]:not(.is-active) .jsb-preset-chip__icon { color: var(--etape-a_coter); }
+[data-preset-criterion="__transformation_piste__"] .jsb-preset-chip[data-criterion-value="en_cotation"]:not(.is-active) .jsb-preset-chip__icon { color: var(--etape-en_cotation); }
+[data-preset-criterion="__transformation_piste__"] .jsb-preset-chip[data-criterion-value="offres_chiffrees"]:not(.is-active) .jsb-preset-chip__icon { color: var(--etape-offres_chiffrees); }
+[data-preset-criterion="__transformation_piste__"] .jsb-preset-chip[data-criterion-value="transformees"]:not(.is-active) .jsb-preset-chip__icon { color: var(--etape-transformees); }
+
 .jsb-preset-chip__icon {
     display: inline-flex; /* aligne verticalement le SVG sur le libellé */
 }

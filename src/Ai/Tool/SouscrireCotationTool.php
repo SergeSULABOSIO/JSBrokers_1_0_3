@@ -10,6 +10,7 @@ use App\Ai\Trousse\AiToolEcriture;
 use App\Entity\Cotation;
 use App\Entity\Invite;
 use App\Service\Workspace\WorkspaceAccessResolver;
+use App\Service\Avenant\DefautsDeSouscription;
 use App\Services\JSBDynamicSearchService;
 
 /**
@@ -46,6 +47,10 @@ final class SouscrireCotationTool implements AiToolProduisantUnPlan, AiToolEcrit
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly ResolveurDeReferences $resolveur,
         private readonly JSBDynamicSearchService $searchService,
+        // Les valeurs de l'avenant né d'une souscription : la MÊME règle que l'écran. En
+        // dernière position, et sans état : les tests qui construisent l'outil par position
+        // n'ont rien à changer.
+        private readonly DefautsDeSouscription $defautsDeSouscription = new DefautsDeSouscription(),
     ) {
     }
 
@@ -152,32 +157,23 @@ final class SouscrireCotationTool implements AiToolProduisantUnPlan, AiToolEcrit
             return $question;
         }
 
-        $defauts = [];
-        $debut = $this->dateEffet($args, $defauts);
-        $duree = (int) $cotation->getDuree();
-        $fin = $duree > 0 ? $debut->modify(sprintf('+%d month', $duree))->modify('-1 day') : null;
-        if ($fin !== null) {
-            $defauts[] = sprintf(
-                'Période de couverture : du %s au %s (durée de %d mois portée par la proposition).',
-                $debut->format('d/m/Y'),
-                $fin->format('d/m/Y'),
-                $duree,
-            );
-        }
-
-        $numero = trim((string) ($args['numero'] ?? ''));
-        if ($numero === '') {
-            $numero = '0';
-            $defauts[] = 'Numéro d’avenant : 0 (la police d’origine).';
-        }
+        // LES VALEURS DE L'AVENANT viennent de DefautsDeSouscription — la règle que l'écran
+        // applique aussi. L'outil ne garde que ce qui est propre à la conversation : lire la
+        // date dictée, et la référence de police.
+        $valeurs = $this->defautsDeSouscription->pour(
+            $cotation,
+            $this->dateEffet($args),
+            isset($args['numero']) ? (string) $args['numero'] : null,
+        );
+        $defauts = $valeurs['annonces'];
 
         $champs = array_filter([
             'cotation'        => $cotation->getId(),
-            'startingAt'      => $debut->format('Y-m-d\TH:i'),
-            'endingAt'        => $fin?->format('Y-m-d\TH:i'),
-            'numero'          => $numero,
+            'startingAt'      => $valeurs['startingAt']->format('Y-m-d\TH:i'),
+            'endingAt'        => $valeurs['endingAt']?->format('Y-m-d\TH:i'),
+            'numero'          => $valeurs['numero'],
             'referencePolice' => trim((string) ($args['referencePolice'] ?? '')) ?: null,
-            'description'     => sprintf('Souscription de la proposition « %s ».', (string) $cotation->getNom()),
+            'description'     => $valeurs['description'],
         ], static fn ($v) => $v !== null && $v !== '');
 
         $resultat = $this->planBuilder->construire(
@@ -302,7 +298,7 @@ final class SouscrireCotationTool implements AiToolProduisantUnPlan, AiToolEcrit
         // créerait un second contrat sur le même marché.
         $aSouscrire = [];
         foreach ($candidates as $candidate) {
-            if ($candidate instanceof Cotation && count($candidate->getAvenants()) === 0) {
+            if ($candidate instanceof Cotation && !$this->defautsDeSouscription->dejaSouscrite($candidate)) {
                 $aSouscrire[] = $candidate;
             }
         }
@@ -342,22 +338,21 @@ final class SouscrireCotationTool implements AiToolProduisantUnPlan, AiToolEcrit
         return $trouvee instanceof Cotation ? $trouvee : null;
     }
 
-    /** Date d'effet dictée, ou celle du jour (défaut annoncé). */
-    private function dateEffet(array $args, array &$defauts): \DateTimeImmutable
+    /**
+     * La date d'effet DICTÉE, ou null : le jour même est alors posé — et annoncé — par
+     * DefautsDeSouscription. Une date illisible vaut une date absente.
+     */
+    private function dateEffet(array $args): ?\DateTimeImmutable
     {
         $donnee = trim((string) ($args['dateEffet'] ?? ''));
-        if ($donnee !== '') {
-            try {
-                return new \DateTimeImmutable($donnee);
-            } catch (\Exception) {
-                // Date illisible : le jour même, et le défaut est annoncé comme les autres.
-            }
+        if ($donnee === '') {
+            return null;
         }
-
-        $aujourdhui = new \DateTimeImmutable('today');
-        $defauts[] = sprintf('Prise d’effet : %s (aucune date dictée).', $aujourdhui->format('d/m/Y'));
-
-        return $aujourdhui;
+        try {
+            return new \DateTimeImmutable($donnee);
+        } catch (\Exception) {
+            return null;
+        }
     }
 
     /** @param array<int, array<string, mixed>> $questions */
