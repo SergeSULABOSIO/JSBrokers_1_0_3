@@ -657,36 +657,49 @@ class JSBDynamicSearchService
                     continue; // valeur vide/inconnue (« Toutes ») : filtre ignoré
                 }
 
-                // Sous-requête A : les cotations DIRECTEMENT souscrites (au moins un avenant).
+                // ⚠ DES EXISTS CORRÉLÉS, JAMAIS UN `NOT IN (SELECT …)`.
+                //
+                // Les sous-requêtes renvoyaient `IDENTITY(av.cotation)` et `IDENTITY(cot.piste)`,
+                // sur TOUTE la plateforme. Or une police peut n'avoir aucune cotation (créée depuis
+                // la barre d'outils des Avenants), et une cotation aucune piste : une seule valeur
+                // NULL dans la liste, et `x NOT IN (…, NULL)` vaut NULL pour chaque ligne — le chip
+                // « En attente » se vidait alors, en silence, dans tous les cabinets à la fois.
+                //
+                // Corrélées, ces sous-requêtes ne regardent que la cotation (ou la piste) de la
+                // ligne : aucun NULL d'ailleurs ne peut plus les atteindre. Et une cotation SANS
+                // piste, non souscrite, redevient « en attente » — ce que dit sa fiche.
+                //
+                // A : la cotation elle-même porte au moins un avenant.
                 $avAlias = 'souscription_av' . $suffix;
-                $cotationsSouscrites = $this->em->createQueryBuilder()
-                    ->select("IDENTITY({$avAlias}.cotation)")
+                $souscrite = $this->em->createQueryBuilder()
+                    ->select("{$avAlias}.id")
                     ->from(\App\Entity\Avenant::class, $avAlias)
+                    ->where("IDENTITY({$avAlias}.cotation) = {$rootAlias}.id")
                     ->getDQL();
 
                 if ($statut === CotationSouscriptionScope::STATUT_SOUSCRITES) {
-                    $qb->andWhere($qb->expr()->in("{$rootAlias}.id", $cotationsSouscrites));
+                    $qb->andWhere($qb->expr()->exists($souscrite));
                     continue;
                 }
 
                 // « en attente » et « caduques » : la cotation elle-même n'est jamais souscrite.
-                $qb->andWhere($qb->expr()->notIn("{$rootAlias}.id", $cotationsSouscrites));
+                $qb->andWhere($qb->expr()->not($qb->expr()->exists($souscrite)));
 
-                // On distingue par l'état de la PISTE : est-elle « bound » (au moins une de ses
-                // cotations souscrite) ? Sous-requête B, alias distincts pour éviter toute
-                // collision avec la sous-requête A ci-dessus.
+                // B : une AUTRE cotation de la même piste est souscrite (la piste est « bound »).
+                // Alias distincts de ceux de A, pour qu'aucune collision ne soit possible.
                 $avpAlias = 'souscription_avp' . $suffix;
                 $cotpAlias = 'souscription_cotp' . $suffix;
-                $pistesBound = $this->em->createQueryBuilder()
-                    ->select("IDENTITY({$cotpAlias}.piste)")
+                $pisteSouscrite = $this->em->createQueryBuilder()
+                    ->select("{$avpAlias}.id")
                     ->from(\App\Entity\Avenant::class, $avpAlias)
                     ->join("{$avpAlias}.cotation", $cotpAlias)
+                    ->where("IDENTITY({$cotpAlias}.piste) = IDENTITY({$rootAlias}.piste)")
                     ->getDQL();
 
                 if ($statut === CotationSouscriptionScope::STATUT_CADUQUES) {
-                    $qb->andWhere($qb->expr()->in("IDENTITY({$rootAlias}.piste)", $pistesBound));
+                    $qb->andWhere($qb->expr()->exists($pisteSouscrite));
                 } else { // STATUT_EN_ATTENTE
-                    $qb->andWhere($qb->expr()->notIn("IDENTITY({$rootAlias}.piste)", $pistesBound));
+                    $qb->andWhere($qb->expr()->not($qb->expr()->exists($pisteSouscrite)));
                 }
                 continue;
             }
@@ -704,18 +717,22 @@ class JSBDynamicSearchService
                     continue; // valeur vide/inconnue (« Toutes ») : filtre ignoré
                 }
 
+                // EXISTS CORRÉLÉ, et non `NOT IN (SELECT IDENTITY(cot.piste) …)` : une seule
+                // cotation sans piste, n'importe où sur la plateforme, mettait un NULL dans la
+                // liste et vidait « En cours » partout (même défaut que pour les Cotations).
                 $avAlias = 'transformation_av' . $suffix;
                 $cotAlias = 'transformation_cot' . $suffix;
-                $sousRequete = $this->em->createQueryBuilder()
-                    ->select("IDENTITY({$cotAlias}.piste)")
+                $transformee = $this->em->createQueryBuilder()
+                    ->select("{$avAlias}.id")
                     ->from(\App\Entity\Avenant::class, $avAlias)
                     ->join("{$avAlias}.cotation", $cotAlias)
+                    ->where("IDENTITY({$cotAlias}.piste) = {$rootAlias}.id")
                     ->getDQL();
 
                 if ($statut === PisteTransformationScope::STATUT_TRANSFORMEES) {
-                    $qb->andWhere($qb->expr()->in("{$rootAlias}.id", $sousRequete));
+                    $qb->andWhere($qb->expr()->exists($transformee));
                 } else {
-                    $qb->andWhere($qb->expr()->notIn("{$rootAlias}.id", $sousRequete));
+                    $qb->andWhere($qb->expr()->not($qb->expr()->exists($transformee)));
                 }
                 continue;
             }

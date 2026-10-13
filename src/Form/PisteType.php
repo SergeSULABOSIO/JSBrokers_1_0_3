@@ -6,6 +6,7 @@ use App\Entity\Piste;
 use App\Entity\ConditionPartage;
 use App\Entity\Partenaire;
 use App\Services\FormListenerFactory;
+use App\Services\ServiceMonnaies;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -37,7 +38,11 @@ class PisteType extends AbstractType
 
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
-        private TranslatorInterface $translatorInterface
+        private TranslatorInterface $translatorInterface,
+        // L'unité des montants est la monnaie d'AFFICHAGE du cabinet — celle de toutes les
+        // listes et de tous les autres formulaires. « USD » écrit en dur mentait à tout
+        // cabinet qui compte dans une autre monnaie.
+        private ServiceMonnaies $serviceMonnaies,
     ) {}
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -116,7 +121,7 @@ class PisteType extends AbstractType
             ])
             ->add('primePotentielle', MoneyType::class, [
                 'label' => "Prime Potentielle",
-                'currency' => "USD",
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                 'grouping' => true,
                 'attr' => [
                     'placeholder' => "Prime potentielle",
@@ -124,7 +129,7 @@ class PisteType extends AbstractType
             ])
             ->add('commissionPotentielle', MoneyType::class, [
                 'label' => "Commission Potentielle",
-                'currency' => "USD",
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                 'grouping' => true,
                 'attr' => [
                     'placeholder' => "Commission potentielle",

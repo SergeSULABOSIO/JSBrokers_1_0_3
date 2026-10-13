@@ -7,6 +7,7 @@ use App\Entity\Avenant;
 use App\Entity\Client;
 use App\Entity\Entreprise;
 use App\Entity\Cotation;
+use App\Entity\Piste;
 use App\Entity\Groupe;
 use App\Entity\Invite;
 use App\Entity\Portefeuille;
@@ -3085,6 +3086,33 @@ class IndicatorCalculationHelper implements ResetInterface
             }
         }
 
+        $this->preloadGrapheDesPistes($pistes, $cotations);
+    }
+
+    /**
+     * LA PAGE D'UNE LISTE DE PISTES, LUE EN UN NOMBRE FIXE DE REQUÊTES.
+     *
+     * Chaque ligne calcule son étape, son statut et ses montants souscrits en parcourant
+     * ses cotations, leurs avenants, leurs revenus et leurs chargements. Sans lot, chaque
+     * piste les rechargeait une à une : le coût d'une page croissait avec le nombre de
+     * pistes ET de cotations. Le graphe est le même que celui des rubriques agrégatrices,
+     * et c'est le même parcours qui le lit.
+     *
+     * @param Piste[] $pistes
+     */
+    public function preloadPisteRelations(array $pistes): void
+    {
+        $this->preloadGrapheDesPistes($pistes, []);
+    }
+
+    /**
+     * Pistes → cotations → avenants → graphe financier : une collection to-many par requête.
+     *
+     * @param Piste[]    $pistes
+     * @param Cotation[] $cotations cotations déjà connues, à joindre à celles des pistes
+     */
+    private function preloadGrapheDesPistes(array $pistes, array $cotations): void
+    {
         if ($pistes !== []) {
             foreach ($this->em->createQuery(
                 'SELECT p, c FROM App\Entity\Piste p LEFT JOIN p.cotations c WHERE p.id IN (:ids)'

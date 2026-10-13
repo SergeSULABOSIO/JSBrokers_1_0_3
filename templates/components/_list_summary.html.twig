@@ -15,8 +15,12 @@
         <option value="">-- Choisir --</option>
     </select>
     <span class="jsb-list-summary__divider" aria-hidden="true"></span>
-    <span class="jsb-list-summary__item">
-        <span class="jsb-list-summary__item-label">Total</span>
+    {# « TOTAL DE LA PAGE », et non « Total » : la somme porte sur les lignes AFFICHÉES
+       (vingt au plus), pas sur tout le filtre. Lu à côté de « 1–20 sur 42 », un simple
+       « Total » se prenait pour celui des 42 — un chiffre faux qu'on croit juste. #}
+    <span class="jsb-list-summary__item"
+          title="Somme des lignes affichées sur cette page — les autres pages n'y sont pas comptées.">
+        <span class="jsb-list-summary__item-label">Total de la page</span>
         <span class="jsb-list-summary__item-value"
             data-list-summary-target="globalTotal"
             aria-live="polite"

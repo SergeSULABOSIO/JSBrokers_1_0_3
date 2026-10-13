@@ -101,6 +101,11 @@ class CalculationProvider
                 => $this->calculationHelper->preloadCotationRelations($items),
             is_a($entityClass, Avenant::class, true)
                 => $this->calculationHelper->preloadAvenantRelations($items),
+            // La liste des Pistes : étape, statut et montants souscrits se lisent tous sur
+            // les cotations de la ligne. Sans cette branche, la Piste tombait dans le cas
+            // par défaut, qui ne la connaît pas — et chaque ligne chargeait son graphe seule.
+            is_a($entityClass, \App\Entity\Piste::class, true)
+                => $this->calculationHelper->preloadPisteRelations($items),
             // TOUT CE QU'UNE LIGNE DE REVERSEMENT DIT EST CELUI DE SON VIREMENT — le compte
             // de pièces, le total versé, le nombre d'échéances réglées. Sans ce
             // préchargement, chaque ligne interrogerait son lot, et un lot de trois lignes

@@ -2298,28 +2298,11 @@ export default class extends Controller {
         const ids = this._selectionEnAttente?.[tabId];
         if (!ids || ids.length === 0) return;
 
-        // ⚠ LES FILTRES PASSENT AVANT, ET CE RENDU-CI N'EST PEUT-ÊTRE PAS LE BON.
-        //
-        // Un onglet restauré AVEC DES FILTRES se rend deux fois : une première à son
-        // chargement, liste entière, puis une seconde après que ses filtres ont été posés
-        // — car les poser déclenche une recherche, qui vide la sélection au passage.
-        // Recocher au premier rendu revient donc à faire effacer la sélection par le
-        // geste suivant.
-        //
-        // ── POURQUOI UN COMPTEUR DE RENDUS ET NON L'ÉTAT DES CRITÈRES ───────────────
-        // La garde lisait `_criteresEnAttente`, vidé au moment où les filtres sont posés.
-        // Elle supposait donc que le premier rendu arrive AVANT cette pose. C'était vrai
-        // tant que seul un rafraîchissement annonçait un rendu ; ça ne l'est plus depuis
-        // que la liste rendue par le serveur s'annonce elle aussi — elle le fait dans la
-        // même pile d'appels que la pose des filtres, et la garde ne voyait alors plus
-        // rien à attendre. On note donc explicitement, à la restauration, quels onglets
-        // devront sauter leur premier rendu : le fait ne dépend plus de l'ordre.
-        if (this._premierRenduAIgnorer?.[tabId]) {
-            delete this._premierRenduAIgnorer[tabId];
-
-            return;
-        }
-
+        // LE PREMIER RENDU ANNONCÉ EST TOUJOURS LE BON. Un onglet restauré AVEC des filtres
+        // ne s'annonce plus à son chargement : la recherche que la pose des filtres déclenche
+        // part dans la même pile, et la liste se tait tant qu'elle charge (cf.
+        // premier-rendu.js). Le drapeau « premier rendu à ignorer » qui compensait n'a plus
+        // lieu d'être — il faisait même manquer la repose quand la recherche n'avait pas lieu.
         delete this._selectionEnAttente[tabId];
 
         // On laisse le rendu s'achever : les contrôleurs de ligne ne sont rattachés
@@ -3146,14 +3129,6 @@ export default class extends Controller {
         // « la sélection est perdue après un rafraîchissement »). On la repose donc
         // après le rendu, pas avec les critères.
         this._selectionEnAttente = { ...(this._selectionEnAttente || {}), ...selectionARestaurer(tabs) };
-
-        // UN ONGLET QUI A DES FILTRES À REPOSER SE RENDRA DEUX FOIS : on note ici qu'il
-        // faudra ignorer son premier rendu, plutôt que de le déduire plus tard de l'état
-        // des critères — lequel dépend de l'ordre des appels ({@see reposerSelectionDOnglet}).
-        this._premierRenduAIgnorer = {
-            ...(this._premierRenduAIgnorer || {}),
-            ...Object.fromEntries(Object.keys(criteresARestaurer(tabs)).map((id) => [id, true])),
-        };
 
         // LE GROUPEMENT DES ONGLETS EN SURNOMBRE SE RECALCULE ICI AUSSI.
         //
