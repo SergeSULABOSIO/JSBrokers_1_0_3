@@ -7801,19 +7801,39 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 .jsb-pipe__terminale { margin: 0; padding: 0.75rem; border: 1px dashed var(--border-medium); border-radius: 8px; font-size: 0.8rem; color: var(--text-muted); text-align: center; }
 .jsb-pipe__vide[hidden] { display: none; }
 .jsb-pipe__pied { margin: 0; font-size: 0.75rem; color: var(--text-muted); text-align: center; }
+/* « VOIR LES TRANSFORMÉES », « VOIR DANS LA LISTE » : deux liens qui mènent à la vue
+   Liste — d'où l'icône de la bascule « Liste », qui dit la destination avant le texte.
+   Au repos, un lien (cobalt, soulignement fin) ; au survol, une pastille cobalt très
+   claire et l'icône qui avance d'un pas : on va QUELQUE PART. Cible de 44 px (WCAG 2.5.5). */
 .jsb-pipe__lien {
     align-self: flex-start;
-    background: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    padding: 0.25rem 0.5rem;
+    background: transparent;
     border: 0;
-    padding: 0.25rem 0;
+    border-radius: 6px;
     color: var(--cobalt);
     font-size: 0.8rem;
     font-weight: 600;
     text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
     cursor: pointer;
-    min-height: 44px;
+    transition: background-color 0.15s ease-out, color 0.15s ease-out;
 }
-.jsb-pipe__lien:hover { color: var(--cobalt-dark); }
+.jsb-pipe__lien-icone { display: inline-flex; transition: transform 0.15s ease-out; }
+/* Dans la colonne terminale, le lien se lit sur le MÊME AXE que le texte centré au-dessus. */
+.jsb-pipe__colonne--terminale > .jsb-pipe__lien { align-self: center; }
+.jsb-pipe__lien:hover { background: var(--bg-cobalt-subtle); color: var(--cobalt-dark); }
+.jsb-pipe__lien:hover .jsb-pipe__lien-icone { transform: translateX(2px); }
+.jsb-pipe__lien:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--cobalt-focus-ring); }
+@media (prefers-reduced-motion: reduce) {
+    .jsb-pipe__lien, .jsb-pipe__lien-icone { transition: none; }
+    .jsb-pipe__lien:hover .jsb-pipe__lien-icone { transform: none; }
+}
 .jsb-pipe__clotures {
     flex: 0 0 auto; /* la rangée qui défile cède la place, pas le pied */
     display: flex;

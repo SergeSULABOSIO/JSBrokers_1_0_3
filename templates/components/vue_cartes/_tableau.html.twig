@@ -52,7 +52,8 @@
             {%- else %}
                 <p class="jsb-pipe__terminale">Le pipe s'arrête ici : la police est émise.</p>
                 <button type="button" class="jsb-pipe__lien" data-action="click->vue-cartes#voirLesTransformees">
-                    Voir les transformées
+                    <span class="jsb-pipe__lien-icone" aria-hidden="true">{{ ux_icon(resolve_icon_name('action:vue-liste'), {width: '14px', height: '14px'}) }}</span>
+                    <span>Voir les transformées</span>
                 </button>
             {%- endif %}
         </section>
@@ -61,6 +62,9 @@
     <footer class="jsb-pipe__clotures" data-clotures hidden>
         <span aria-hidden="true">{{ ux_icon(resolve_icon_name('action:cancel'), {width: '14px', height: '14px'}) }}</span>
         <span data-texte></span>
-        <button type="button" class="jsb-pipe__lien" data-action="click->vue-cartes#voirDansLaListe">Voir dans la liste</button>
+        <button type="button" class="jsb-pipe__lien" data-action="click->vue-cartes#voirDansLaListe">
+            <span class="jsb-pipe__lien-icone" aria-hidden="true">{{ ux_icon(resolve_icon_name('action:vue-liste'), {width: '14px', height: '14px'}) }}</span>
+            <span>Voir dans la liste</span>
+        </button>
     </footer>
 </div>
