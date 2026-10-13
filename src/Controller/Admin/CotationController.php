@@ -81,8 +81,14 @@ class CotationController extends AbstractController
             $request,
             Cotation::class,
             CotationType::class,
-            function (Cotation $cotation) {
-                if ($cotation->getId() === null && $cotation->getTranches()->isEmpty()) {
+            function (Cotation $cotation) use ($request) {
+                // UNE TRANCHE DE 100 % PAR DÉFAUT — seulement si AUCUNE n'arrive. Créée depuis
+                // le dialogue, la cotation part SEULE : les tranches saisies à la main
+                // attendent dans le navigateur et ne sont écrites qu'après elle. Le dialogue
+                // les annonce (`_en_attente[tranches]`) ; sans cela, le défaut s'ajoutait à
+                // la tranche saisie — deux tranches (incident du 2026-10-13).
+                $tranchesAnnoncees = (int) ($request->request->all('_en_attente')['tranches'] ?? 0);
+                if ($cotation->getId() === null && $cotation->getTranches()->isEmpty() && $tranchesAnnoncees === 0) {
                     $dateBase = new \DateTimeImmutable('today');
                     $duree = $cotation->getDuree();
                     $echeanceAt = $duree > 0 ? ($dateBase->modify('+' . $duree . ' months') ?: null) : null;

@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { poserLeCompte } from './compte-onglet.js';
 import { DebordementOnglets } from './onglets-debordement.js';
 
 /**
@@ -258,12 +259,17 @@ export default class extends Controller {
             onglet.insertBefore(pastille, onglet.querySelector('.jsb-onglet-alerte'));
         }
 
-        pastille.textContent = String(compte);
-        const mot = document.createElement('span');
-        mot.className = 'visually-hidden';
+        // Le mot masqué d'abord (créé une fois, puis seulement réaccordé), le chiffre ensuite :
+        // c'est lui seul que poserLeCompte fait défiler — même mouvement que partout ailleurs.
+        let mot = pastille.querySelector('.visually-hidden');
+        if (!mot) {
+            mot = document.createElement('span');
+            mot.className = 'visually-hidden';
+            pastille.appendChild(mot);
+        }
         // Accordé : « 1 élément », jamais « 1 éléments ».
         mot.textContent = compte > 1 ? ' éléments' : ' élément';
-        pastille.appendChild(mot);
+        poserLeCompte(pastille, compte);
     }
 
     /**

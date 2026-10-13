@@ -175,3 +175,14 @@ export function resumeDeFermeture(groupes) {
 export function vider(groupe) {
     if (groupe) groupe.noeuds = [];
 }
+
+/**
+ * Le nom d'une collection chez son parent (`tranches`), lu dans l'URL de sa liste :
+ * `/admin/{rubrique}/api/{id}/{collection}`, suivi ou non de `/{usage}` — le widget du
+ * dialogue porte l'URL SANS usage (il l'ajoute au chargement). À l'enregistrement du
+ * parent, ce nom dit au serveur ce qui arrive juste après (`_en_attente[tranches]`), pour
+ * qu'un défaut ne s'ajoute pas à une saisie déjà faite.
+ */
+export function codeDeCollection(url) {
+    return String(url ?? '').match(/\/api\/[^/?]+\/([^/?]+)(?:\/[^/?]+)?(?:\?|$)/)?.[1] ?? null;
+}

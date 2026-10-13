@@ -3,6 +3,7 @@ import { } from './base_controller.js';
 import { ouvrirPickerAutonome } from './picker-open.js';
 import { estDelegue, proprietaireDe } from './cerveau-delegations.js';
 import { libelleDeFiche, titreDeFiche } from './selecto.js';
+import { criteresSans, messageFicheHorsFiltre } from './fiche-hors-filtre.js';
 // Le même lecteur que la reprise de données : une suppression en chaîne peut emporter
 // cent lignes, et l'écran doit voir l'avancement du début à la fin.
 import { lireFluxNdjson } from './flux-ndjson.js';
@@ -237,6 +238,9 @@ export default class extends Controller {
             case 'ui:search.reset-request':
                 this._handleSearchRequest({}); // On passe un objet vide pour réinitialiser.
                 break;
+            case 'ui:fiche-hors-filtre.afficher-request':
+                this._afficherLaFicheHorsFiltre(payload);
+                break;
             case 'ui:filter.preset': {
                 // Chip de filtre rapide (ex. statut de paiement des tranches) : pose ou
                 // retire (valeur vide = « Toutes ») les critères synthétiques en conservant
@@ -334,7 +338,11 @@ export default class extends Controller {
                         this.broadcast('app:list.refresh-request', { originatorId });
                     } else {
                         // Sinon, c'est une liste principale dans un onglet, on utilise l'ancienne logique.
-                        this._requestListRefresh(originatorId);
+                        // LA FICHE ENREGISTRÉE PASSE-T-ELLE LE FILTRE ? Le serveur le dit en même
+                        // temps qu'il rend la liste (cf. _signalerFicheHorsFiltre).
+                        const id = payload.entity?.id;
+                        this._ficheEnregistree = id ? { id, libelle: libelleDeFiche('', payload.entity) } : null;
+                        this._requestListRefresh(originatorId, id ? { verifier: id } : {});
                     }
                 }
                 break;
@@ -520,7 +528,14 @@ export default class extends Controller {
                 const wsStateTarget = initWsId
                     ? (this.tabsState[initWsId] || (this.tabsState[initWsId] = {}))
                     : this._getCurrentWsTabState();
-                if (!wsStateTarget[tabId]) {
+                // UN ONGLET DE COLLECTION QUI S'INITIALISE VIENT D'ÊTRE RENDU À NEUF par le
+                // serveur (il est détruit à chaque changement de sélection) : son état est
+                // celui qu'il annonce. Garder l'ancien — critères, page, sélection d'une
+                // visite précédente du même parent — faisait rafraîchir la liste avec d'autres
+                // critères que ceux sous lesquels elle venait de s'afficher.
+                // ⚠ Seulement l'onglet du WORKSPACE (il annonce son workspaceTabId) : la
+                // collection d'un dialogue porte le même identifiant et ne doit pas l'écraser.
+                if (!wsStateTarget[tabId] || (initWsId && String(tabId).startsWith('collection-'))) {
                     state.elementId = elementId;
                     state.serverRootName = serverRootName;
                     wsStateTarget[tabId] = state;
@@ -1141,6 +1156,8 @@ export default class extends Controller {
                     searchCriteria: tabState.searchCriteria,
                     workspaceTabId: this.currentWorkspaceTabId,
                 });
+
+                if (data.verification) this._signalerFicheHorsFiltre(data.verification, targetTabId);
             })
             .catch(error => {
                 this.broadcast('app:error.api', {
@@ -1182,6 +1199,48 @@ export default class extends Controller {
      */
     _showNotification(text, type = 'info') {
         this.broadcast('app:notification.show', { text, type });
+    }
+
+    /**
+     * LA FICHE EST ENREGISTRÉE, MAIS LE FILTRE ACTIF L'ÉCARTE : on le dit, avec le geste
+     * qui la montre. Sans cela, « Enregistrement réussi » suivi d'une liste où elle manque
+     * se lisait comme une saisie perdue.
+     *
+     * Le geste est lié à l'onglet qui a rafraîchi : retiré d'un AUTRE onglet, le filtre
+     * tomberait sur une autre liste.
+     * @private
+     */
+    _signalerFicheHorsFiltre(verification, tabId) {
+        const fiche = this._ficheEnregistree;
+        this._ficheEnregistree = null;
+        const message = messageFicheHorsFiltre(verification, fiche?.id === verification.id ? fiche.libelle : null);
+        if (!message) return;
+
+        const criteres = this._getCurrentWsTabState()[tabId]?.searchCriteria || {};
+        this.broadcast('app:notification.show', {
+            text: message.texte,
+            type: 'warning',
+            action: message.action ? {
+                label: message.action,
+                evenement: {
+                    type: 'ui:fiche-hors-filtre.afficher-request',
+                    payload: { workspaceTabId: this.currentWorkspaceTabId, tabId, criteria: criteresSans(criteres, message.cles) },
+                },
+            } : null,
+        });
+    }
+
+    /**
+     * « Retirer ce filtre », depuis l'avertissement : la recherche repart par le chemin
+     * normal (badges, chips et persistance suivent), si l'on est toujours sur la liste.
+     * @private
+     */
+    _afficherLaFicheHorsFiltre(payload) {
+        if (payload.workspaceTabId !== this.currentWorkspaceTabId || payload.tabId !== this.activeTabId) {
+            this._showNotification("La liste a changé depuis l'enregistrement : retirez le filtre depuis sa barre de recherche.", 'info');
+            return;
+        }
+        this._handleSearchRequest(payload.criteria || {});
     }
 
     /**

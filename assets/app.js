@@ -1842,15 +1842,20 @@ export function saveCookie(nom, valeur) {
         return _tip;
     }
 
+    // ⚠ ÉCHAPPÉ : `dataset` rend la valeur DÉCODÉE de l'attribut (cf. data-piste-tip).
+    function esc(s) {
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
     function buildContent(el) {
-        var prime    = el.dataset.renewPrime    || '—';
-        var comm     = el.dataset.renewComm     || '—';
-        var retro    = el.dataset.renewRetro    || '—';
-        var reserve  = el.dataset.renewReserve  || '—';
-        var periode  = el.dataset.renewPeriode  || '—';
-        var risque   = el.dataset.renewRisque   || '—';
-        var assureur = el.dataset.renewAssureur || '—';
-        var piste    = el.dataset.renewPiste;
+        var prime    = esc(el.dataset.renewPrime    || '—');
+        var comm     = esc(el.dataset.renewComm     || '—');
+        var retro    = esc(el.dataset.renewRetro    || '—');
+        var reserve  = esc(el.dataset.renewReserve  || '—');
+        var periode  = esc(el.dataset.renewPeriode  || '—');
+        var risque   = esc(el.dataset.renewRisque   || '—');
+        var assureur = esc(el.dataset.renewAssureur || '—');
+        var piste    = el.dataset.renewPiste ? esc(el.dataset.renewPiste) : '';
         var pisteHtml = piste
             ? '<span class="tip-ok">✔ ' + piste + '</span>'
             : '<span class="tip-nok">✘ Aucune piste en cours</span>';
@@ -2071,16 +2076,22 @@ export function saveCookie(nom, valeur) {
         return _tipEl;
     }
 
+    // ⚠ ÉCHAPPÉ : `dataset` rend la valeur DÉCODÉE de l'attribut — un nom de piste saisi
+    // « <img onerror=…> » s'exécutait au survol, malgré le `|e` du gabarit.
+    function _esc(s) {
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
     function _buildTipContent(details) {
-        var nom         = details.dataset.pisteNom         || '—';
-        var client      = details.dataset.pisteClient      || '—';
-        var risque      = details.dataset.pisteRisque      || '—';
-        var description = details.dataset.pisteDescription || '';
-        var statut      = details.dataset.pisteStatut      || '—';
-        var days        = details.dataset.pisteDays        || '—';
-        var invite      = details.dataset.pisteInvite      || '—';
-        var prime       = details.dataset.pistePrime       || '—';
-        var commission  = details.dataset.pisteCommission  || '—';
+        var nom         = _esc(details.dataset.pisteNom         || '—');
+        var client      = _esc(details.dataset.pisteClient      || '—');
+        var risque      = _esc(details.dataset.pisteRisque      || '—');
+        var description = _esc(details.dataset.pisteDescription || '');
+        var statut      = _esc(details.dataset.pisteStatut      || '—');
+        var days        = _esc(details.dataset.pisteDays        || '—');
+        var invite      = _esc(details.dataset.pisteInvite      || '—');
+        var prime       = _esc(details.dataset.pistePrime       || '—');
+        var commission  = _esc(details.dataset.pisteCommission  || '—');
 
         var rows = '<tr><td colspan="2" class="tip-section">Piste</td></tr>' +
             '<tr><td>Nom</td><td><strong>' + nom + '</strong></td></tr>' +

@@ -202,14 +202,10 @@ class JSBDynamicSearchService
             $resultat['etapes'][$code] = ['nombre' => 0, 'somme' => 0.0];
         }
 
-        unset($criteria[PisteTransformationScope::CRITERION_KEY], $criteria[PisteTransformationScope::CLE_PISTES_OUVERTES]);
-        $status = ['error' => null, 'code' => 200, 'message' => ''];
-        $filtree = $this->em->getRepository(\App\Entity\Piste::class)->createQueryBuilder('e_agg');
-        $this->applyCriteriaToQueryBuilder($filtree, $criteria, $entreprise, null, $status, '_agg');
-        if ($status['error'] !== null) {
+        $filtree = $this->pistesDuPipe($criteria, $entreprise, '_agg');
+        if ($filtree === null) {
             return $resultat;
         }
-        $filtree->select('e_agg.id');
 
         ['T' => $t, 'C' => $c, 'K' => $k] = $this->predicatsDEtapePiste('p_agg', '_aggp');
         $dql = sprintf(
@@ -241,6 +237,52 @@ class JSBDynamicSearchService
         }
 
         return $resultat;
+    }
+
+    /**
+     * Les ids des pistes TRANSFORMÉES du filtre — tout le filtre, clôturées comprises, comme
+     * le compteur de la colonne (agregerPistesParEtape) : même filtre, même prédicat T. La
+     * colonne en tire la commission réellement souscrite.
+     *
+     * @return list<int>
+     */
+    public function idsDesPistesTransformees(array $criteria, Entreprise $entreprise): array
+    {
+        $filtree = $this->pistesDuPipe($criteria, $entreprise, '_trf');
+        if ($filtree === null) {
+            return [];
+        }
+        ['T' => $t] = $this->predicatsDEtapePiste('p_trf', '_trfp');
+        $requete = $this->em->createQuery(sprintf(
+            'SELECT p_trf.id FROM %s p_trf WHERE p_trf.id IN (%s) AND %s',
+            \App\Entity\Piste::class,
+            $filtree->getDQL(),
+            $t,
+        ));
+        foreach ($filtree->getParameters() as $parametre) {
+            $requete->setParameter($parametre->getName(), $parametre->getValue(), $parametre->getType());
+        }
+
+        return array_map('intval', array_column($requete->getScalarResult(), 'id'));
+    }
+
+    /**
+     * Les ids des pistes du filtre, SANS le statut ni le filtre des pistes ouvertes : les
+     * colonnes du Kanban SONT le statut, et les clôturées s'y comptent à part. Null si les
+     * critères sont refusés.
+     */
+    private function pistesDuPipe(array $criteria, Entreprise $entreprise, string $suffixe): ?\Doctrine\ORM\QueryBuilder
+    {
+        unset($criteria[PisteTransformationScope::CRITERION_KEY], $criteria[PisteTransformationScope::CLE_PISTES_OUVERTES]);
+        $status = ['error' => null, 'code' => 200, 'message' => ''];
+        $alias = 'e' . $suffixe;
+        $filtree = $this->em->getRepository(\App\Entity\Piste::class)->createQueryBuilder($alias);
+        $this->applyCriteriaToQueryBuilder($filtree, $criteria, $entreprise, null, $status, $suffixe);
+        if ($status['error'] !== null) {
+            return null;
+        }
+
+        return $filtree->select($alias . '.id');
     }
 
     /**

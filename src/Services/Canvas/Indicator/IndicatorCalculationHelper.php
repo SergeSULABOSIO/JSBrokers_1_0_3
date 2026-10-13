@@ -445,6 +445,13 @@ class IndicatorCalculationHelper implements ResetInterface
         // rien, la règle métier étant désormais appliquée dans tous les cas.
         $qb->andWhere('SIZE(c.avenants) > 0');
         if ($pisteCible) $qb->andWhere('p = :pisteCible')->setParameter('pisteCible', $pisteCible);
+        // UN ENSEMBLE DE PISTES, par leurs ids — celles d'un filtre de liste (colonne
+        // « Transformées » de la vue Cartes). Un ensemble VIDE ne vaut rien, pas « tout ».
+        if (array_key_exists('pistesCibles', $options)) {
+            $ids = array_values(array_unique(array_map('intval', (array) $options['pistesCibles'])));
+            if ($ids === []) $qb->andWhere('1=0');
+            else $qb->andWhere('p.id IN (:pistesCibles)')->setParameter('pistesCibles', $ids);
+        }
         if ($cotationCible) $qb->andWhere('c = :cotationCible')->setParameter('cotationCible', $cotationCible);
         if ($assureurCible) {
             if ($assureurCible->getId() === null) $qb->andWhere('1=0');

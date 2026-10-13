@@ -78,8 +78,9 @@ final class PisteTransformationScope
      * LE PIPE, déclaré une fois : ce que chaque étape montre et ce qu'il faut pour la
      * franchir. La liste (marqueur de la sous-ligne), le chip et la vue Cartes en lisent
      * le libellé, l'icône (alias d'IconCanvasProvider) et la couleur (jeton `--etape-*`).
+     * `description` dit QUELLES pistes l'étape réunit — l'infobulle de sa colonne.
      *
-     * @var array<string, array{singulier: string, pluriel: string, icone: string, raison: string}>
+     * @var array<string, array{singulier: string, pluriel: string, icone: string, raison: string, description: string}>
      */
     public const ETAPES = [
         self::ETAPE_A_COTER => [
@@ -87,24 +88,28 @@ final class PisteTransformationScope
             'pluriel' => 'À coter',
             'icone' => 'action:information',
             'raison' => 'aucune cotation n’a encore été demandée',
+            'description' => 'Pistes ouvertes pour lesquelles aucune cotation n’a encore été demandée à un assureur. Prochain geste : ajouter une cotation.',
         ],
         self::ETAPE_EN_COTATION => [
             'singulier' => 'En cotation',
             'pluriel' => 'En cotation',
             'icone' => 'cotation',
             'raison' => 'aucune cotation n’a de prime',
+            'description' => 'Pistes ouvertes dont au moins une cotation est demandée, mais dont aucune n’a encore de prime chiffrée. Prochain geste : saisir la prime reçue.',
         ],
         self::ETAPE_OFFRES_CHIFFREES => [
             'singulier' => 'Offre chiffrée',
             'pluriel' => 'Offres chiffrées',
             'icone' => 'revenu',
             'raison' => 'aucune cotation n’a encore été souscrite',
+            'description' => 'Pistes ouvertes dont au moins une cotation porte une prime chiffrée, sans qu’aucune soit encore souscrite. Prochain geste : souscrire l’offre retenue.',
         ],
         self::STATUT_TRANSFORMEES => [
             'singulier' => 'Transformée',
             'pluriel' => 'Transformées',
             'icone' => 'action:completed',
             'raison' => '',
+            'description' => 'Pistes dont une cotation a été souscrite : la police est émise. Elles sortent du pipe actif.',
         ],
     ];
 

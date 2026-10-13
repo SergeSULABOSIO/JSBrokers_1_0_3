@@ -105,6 +105,70 @@ class TranchePourcentageConventionTest extends WebTestCase
     }
 
     /**
+     * UN DÉFAUT NE VAUT QUE POUR CE QUI N'ARRIVE PAS (incident du 2026-10-13).
+     *
+     * Créée depuis le dialogue, la cotation part seule : la tranche saisie à la main
+     * attend dans le navigateur, et n'est écrite qu'après elle. Le serveur, qui ne la
+     * voyait pas, posait sa tranche unique — puis la tranche saisie s'y ajoutait : deux
+     * tranches, 200 %. Le dialogue annonce désormais ce qui suit (`_en_attente`).
+     */
+    public function testUneTrancheAnnonceeEnAttenteSupprimeLeDefaut(): void
+    {
+        [$ent, $inv] = $this->login();
+
+        $this->client->request('POST', '/admin/cotation/api/submit', [
+            'idEntreprise' => $ent->getId(),
+            'idInvite'     => $inv->getId(),
+            'nom'          => 'Cotation avec tranche saisie',
+            'duree'        => 12,
+            '_en_attente'  => ['tranches' => '1'],
+        ]);
+        $this->assertResponseIsSuccessful();
+        $idCotation = json_decode($this->client->getResponse()->getContent(), true)['entity']['id'];
+
+        $this->em->clear();
+        $this->assertCount(0, $this->em->find(Cotation::class, $idCotation)->getTranches(),
+            'La tranche annoncée arrive juste après : aucun défaut ne doit la précéder.');
+
+        // Le rejeu du tampon : la tranche saisie à la main, rattachée à la cotation.
+        $this->client->request('POST', '/admin/tranche/api/submit', [
+            'idEntreprise' => $ent->getId(),
+            'idInvite'     => $inv->getId(),
+            'nom'          => 'Tranche saisie',
+            'pourcentage'  => '100',
+            'payableAt'    => (new \DateTimeImmutable('today'))->format('Y-m-d\TH:i'),
+            'echeanceAt'   => (new \DateTimeImmutable('+1 year'))->format('Y-m-d\TH:i'),
+            'cotation'     => $idCotation,
+        ]);
+        $this->assertResponseIsSuccessful();
+
+        $this->em->clear();
+        $tranches = $this->em->find(Cotation::class, $idCotation)->getTranches();
+        $this->assertCount(1, $tranches, 'Une seule tranche : celle de l’utilisateur.');
+        $this->assertSame('Tranche saisie', $tranches->first()->getNom());
+    }
+
+    /** Une AUTRE collection en attente (chargements, revenus…) ne dispense pas du défaut. */
+    public function testUneAutreCollectionEnAttenteGardeLeDefaut(): void
+    {
+        [$ent, $inv] = $this->login();
+
+        $this->client->request('POST', '/admin/cotation/api/submit', [
+            'idEntreprise' => $ent->getId(),
+            'idInvite'     => $inv->getId(),
+            'nom'          => 'Cotation avec chargements en attente',
+            'duree'        => 12,
+            '_en_attente'  => ['chargements' => '2'],
+        ]);
+        $this->assertResponseIsSuccessful();
+
+        $this->em->clear();
+        $cotation = $this->em->getRepository(Cotation::class)->findOneBy(['nom' => 'Cotation avec chargements en attente']);
+        $this->assertCount(1, $cotation->getTranches());
+        $this->assertSame(100.0, $cotation->getTranches()->first()->getPourcentage());
+    }
+
+    /**
      * Même exigence sur l'autre porte d'entrée : l'ouverture de la collection
      * « tranches » d'une cotation qui n'en a aucune en crée une, et la PERSISTE.
      */

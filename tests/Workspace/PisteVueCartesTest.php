@@ -269,6 +269,55 @@ class PisteVueCartesTest extends WebTestCase
         }
     }
 
+    /**
+     * LA COLONNE « TRANSFORMÉES » DIT CE QUI A ÉTÉ GAGNÉ : la commission réellement souscrite
+     * (celle que calcule le moteur des indicateurs pour les polices), pas l'estimation saisie
+     * sur la piste — 400 ici, que la colonne ne doit pas reprendre.
+     */
+    public function testLaColonneTransformeesAfficheLaCommissionSouscrite(): void
+    {
+        $ids = $this->semer();
+        $this->rubrique($ids);
+        $source = $this->source((string) $this->client->getResponse()->getContent());
+
+        $em = $this->em();
+        $attendu = static::getContainer()->get(\App\Services\Canvas\CalculationProvider::class)->getIndicateursGlobaux(
+            $em->find(Entreprise::class, $ids['entreprise']), true, ['pistesCibles' => [$ids['Piste transformee']]],
+        )['commission_totale'];
+
+        $somme = (string) $source->filter('data[data-etape="transformees"]')->attr('data-somme');
+        self::assertStringStartsWith('EUR ', $somme);
+        $nombre = (float) str_replace([' ', "\u{202F}", "\u{00A0}", ','], ['', '', '', '.'], substr($somme, 4));
+        self::assertEqualsWithDelta($attendu, $nombre, 0.001, 'La colonne reprend la commission souscrite calculée par le moteur.');
+        self::assertNotEqualsWithDelta(400.0, $nombre, 0.001, 'Et non la commission potentielle de la piste.');
+    }
+
+    /**
+     * L'INFOBULLE (celle du tableau de bord) : chaque en-tête de colonne dit QUELLES pistes
+     * l'étape réunit ; chaque carte, la fiche en bref. Une seule infobulle par carte : les
+     * `title` natifs, qui se superposaient à elle, ont disparu.
+     */
+    public function testLesInfobullesDuPipe(): void
+    {
+        $ids = $this->semer();
+        $crawler = $this->rubrique($ids);
+        $html = (string) $this->client->getResponse()->getContent();
+
+        self::assertCount(1, $crawler->filter('.jsb-pipe[data-controller~="infobulle"]'));
+        foreach (PisteTransformationScope::ETAPES as $code => $etape) {
+            $entete = json_decode((string) $crawler->filter(sprintf('[data-colonne="%s"] .jsb-pipe__entete', $code))->attr('data-infobulle'), true);
+            self::assertSame($etape['description'], $entete[0]['texte'], "La description de « $code » vient de la source unique des étapes.");
+            self::assertSame('Calcul', $entete[1]['titre']);
+        }
+
+        $carte = $this->source($html)->filter(sprintf('[data-carte][data-id="%d"]', $ids['Piste chiffree']));
+        $bulle = json_decode((string) $carte->attr('data-infobulle'), true);
+        self::assertSame(['Piste', 'Potentiel', 'Gestion'], array_column($bulle, 'titre'));
+        self::assertSame(['Nom', 'Piste chiffree'], $bulle[0]['lignes'][0]);
+        self::assertSame(['Prime', 'EUR 3 000,00'], str_replace("\u{202F}", ' ', $bulle[1]['lignes'][0]));
+        self::assertCount(0, $carte->filter('[title]'), 'Aucune infobulle native dans la carte.');
+    }
+
     public function testLeCookieChoisitLaVueDesLeHtml(): void
     {
         $ids = $this->semer();
