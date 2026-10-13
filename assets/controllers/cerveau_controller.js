@@ -505,6 +505,9 @@ export default class extends Controller {
                 this.broadcast('app:list.rendered', {
                     itemCount: renderedState.pageItemCount,
                     totalItems: renderedState.totalItems,
+                    // L'onglet de la liste qui s'annonce, s'il le dit : l'onglet courant a pu
+                    // changer pendant le chargement.
+                    ...(payload.workspaceTabId ? { workspaceTabId: payload.workspaceTabId } : {}),
                 });
                 this.broadcast('app:loading.stop');
                 break;

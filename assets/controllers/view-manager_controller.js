@@ -265,7 +265,7 @@ export default class extends Controller {
         // rangée — l'onglet actif n'est jamais replié — et remet à jour le panneau ouvert.
         this.updateTabsOverflow();
 
-        const newContent = this.tabContentContainerTarget.querySelector(`#${this.activeTabId}`);
+        const newContent = this._panneau(this.activeTabId);
 
         if (newTabId === 'principal') {
             console.log(`[${++window.logSequence}] [${this.nomControleur}] - _activateTab - Affichage de l'onglet principal.`);
@@ -349,7 +349,7 @@ export default class extends Controller {
             console.log(`  → ignoré (stale guard: tabId=${tabId} !== activeTabId=${this.activeTabId})`);
             return;
         }
-        const contentContainer = this.tabContentContainerTarget.querySelector(`#${tabId}`);
+        const contentContainer = this._panneau(tabId);
         if (contentContainer) {
             contentContainer.innerHTML = html;
             // PERSISTANCE : marque le contenu comme chargé — les prochaines activations
@@ -497,6 +497,17 @@ export default class extends Controller {
         return canvas.liste.filter(attr => attr.type === 'Collection');
     }
 
+    /**
+     * Le panneau de contenu d'un onglet — par son attribut, jamais par son id.
+     *
+     * @param {string} tabId
+     * @returns {HTMLElement|null}
+     * @private
+     */
+    _panneau(tabId) {
+        return this.tabContentContainerTarget.querySelector(`[data-panneau-onglet="${CSS.escape(tabId)}"]`);
+    }
+
     _removeCollectionTabs() {
         this.tabsContainerTarget.querySelectorAll('[data-tab-type="collection"]').forEach(tab => {
             // CORRECTION : les panneaux de contenu sont identifiés par leur `id`
@@ -504,7 +515,7 @@ export default class extends Controller {
             // ne matchait jamais et les panneaux s'accumulaient dans le DOM.
             // querySelectorAll : purge aussi d'éventuels doublons hérités.
             this.tabContentContainerTarget
-                .querySelectorAll(`[id="${tab.dataset.tabId}"]`)
+                .querySelectorAll(`[data-panneau-onglet="${CSS.escape(tab.dataset.tabId)}"]`)
                 .forEach(content => content.remove());
             tab.remove();
         });
@@ -559,7 +570,7 @@ export default class extends Controller {
         tab.setAttribute('role', 'tab');
         tab.setAttribute('id', `tab-${tabId}`);
         tab.setAttribute('aria-selected', 'false');
-        tab.setAttribute('aria-controls', tabId);
+        tab.setAttribute('aria-controls', `panneau-${tabId}`);
         // Roving tabindex : seul l'onglet actif est tabbable, les flèches font le reste.
         tab.setAttribute('tabindex', '-1');
         this.tabsContainerTarget.appendChild(tab);
@@ -572,7 +583,13 @@ export default class extends Controller {
 
         // On prépare le conteneur de contenu en clonant le template
         const contentContainer = this.collectionTabTemplateTarget.content.cloneNode(true).firstElementChild;
-        contentContainer.id = tabId;
+        // L'ID DU PANNEAU N'EST PAS CELUI DE SA LISTE. Ils étaient égaux (`tabId`), et
+        // l'identifiant figurait donc DEUX fois dans la page : le panneau ne se retrouvait
+        // que parce qu'il précède sa liste dans le DOM. On le retrouve désormais par
+        // `data-panneau-onglet` ({@see _panneau}), et la liste garde l'id que le cerveau
+        // utilise pour router ses rafraîchissements.
+        contentContainer.id = `panneau-${tabId}`;
+        contentContainer.dataset.panneauOnglet = tabId;
         contentContainer.style.display = 'none';
         contentContainer.setAttribute('role', 'tabpanel');
         contentContainer.setAttribute('aria-labelledby', `tab-${tabId}`);

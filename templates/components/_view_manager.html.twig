@@ -63,7 +63,7 @@
                  data-view-manager-target="tabsContainer"
                  data-action="keydown->view-manager#handleTabKeydown"
             >
-                <button class="list-tab jsb-onglet active" role="tab" id="tab-principal" aria-selected="true" aria-controls="principal" data-tab-id="principal" data-action="click->view-manager#switchTab">
+                <button class="list-tab jsb-onglet active" role="tab" id="tab-principal" aria-selected="true" aria-controls="panneau-principal" data-tab-id="principal" data-action="click->view-manager#switchTab">
                     {# Signifiance : l'onglet principal porte l'icône de l'entité de la
                        rubrique, comme les onglets de collection portent celle de leur
                        entité cible. Décorative (aria-hidden), le libellé reste le texte. #}
@@ -123,7 +123,11 @@
        (`position: sticky` s'accroche au plus proche ancêtre défilant). #}
     <div class="flex-grow-1" style="overflow: auto; min-height: 0;" data-view-manager-target="tabContentContainer">
         <div
-            id="principal" {# CORRECTION: L'ID doit être 'principal' pour correspondre à l'onglet et aux commandes du cerveau. #}
+            {# `principal` est l'id de la LISTE (clé de routage du cerveau) ; le panneau en
+               porte un autre, sans quoi l'identifiant figurait deux fois dans la page. Le
+               view-manager le retrouve par `data-panneau-onglet`. #}
+            id="panneau-principal"
+            data-panneau-onglet="principal"
             role="tabpanel"
             aria-labelledby="tab-principal"
             tabindex="0"

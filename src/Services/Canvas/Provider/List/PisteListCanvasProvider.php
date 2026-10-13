@@ -22,7 +22,10 @@ class PisteListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Pistes",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:road-variant"],
+                // Pas de clé `icone` ici : la ligne prend l'icône du canevas d'ENTITÉ (une
+                // empreinte de pas). Celle qu'on déclarait (« mdi:road-variant ») n'était lue
+                // par personne — une configuration qui ment sur ce qu'on voit à l'écran.
+                "texte_principal" => ["attribut_code" => "nom"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     // LE VOYANT DE L'EFFORT COMMERCIAL, en tête : c'est ce qui distingue un

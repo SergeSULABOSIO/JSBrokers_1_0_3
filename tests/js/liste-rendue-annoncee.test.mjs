@@ -80,32 +80,44 @@ test("l'annonce passe par une seule et même méthode", () => {
     );
 });
 
-test("l'annonce initiale est réservée à la liste PRINCIPALE", () => {
+test("l'annonce initiale passe par la règle partagée (liste PRINCIPALE, rien en cours de chargement)", () => {
     const corps = corpsDeMethode(listManager, '_initializeAndNotifyState() {');
 
+    // La règle elle-même — principale seulement, et muette pendant un chargement — est
+    // éprouvée dans premier-rendu.test.mjs. Ici, on vérifie que le contrôleur la CONSULTE.
+    //
+    // ⚠ L'ANCIENNE GARDE ÉTAIT DU CODE MORT : `isPrincipalTab` testait le préfixe
+    // `list-manager-`, qu'aucun gabarit ne produit — la liste principale porte l'id
+    // `principal`. Ce test vérifiait donc la présence d'une condition toujours fausse.
     assert.match(
         corps,
-        /if \(isPrincipalTab\) \{\s*\n\s*this\._annoncerLeRendu\(\);/,
+        /if \(doitAnnoncerLePremierRendu\(this\.element\.id, this\._chargementEnCours === true\)\) \{\s*\n\s*this\._annoncerLeRendu\(\);/,
         "Une collection contextuelle partage le workspaceTabId de sa rubrique : la laisser "
         + 'annoncer ferait cocher ses lignes avec les identifiants de la liste voisine.',
     );
 });
 
-test("le rendu à ignorer est noté à la restauration, pas déduit de l'état des critères", () => {
+test("un chargement en cours fait taire l'annonce initiale — plus besoin de « premier rendu à ignorer »", () => {
+    // Des filtres restaurés sont reposés DANS la pile d'appels de l'initialisation : la
+    // recherche part, le squelette est déjà là. La liste le sait, et se tait ; le rendu
+    // qui compte est celui du rafraîchissement, qui s'annonce de lui-même.
     assert.match(
+        corpsDeMethode(listManager, 'handleLoadingStart(event) {'),
+        /this\._chargementEnCours = true;/,
+        'La liste doit noter qu\'un chargement la concerne.',
+    );
+    assert.match(
+        corpsDeMethode(listManager, 'handleListRefreshed(event) {'),
+        /this\._chargementEnCours = false;/,
+        'Et l\'oublier quand les lignes arrivent.',
+    );
+
+    // Le drapeau qui compensait est retiré : il faisait sauter le premier rendu de tout
+    // onglet restauré avec des filtres, y compris quand ce rendu était le SEUL — la
+    // sélection ne revenait alors jamais (constaté en navigateur, avec ou sans filtre).
+    assert.doesNotMatch(
         workspaceManager,
         /_premierRenduAIgnorer/,
-        'La garde doit être posée explicitement à la restauration.',
+        'Le drapeau « premier rendu à ignorer » ne doit pas revenir.',
     );
-
-    const corps = corpsDeMethode(workspaceManager, 'reposerSelectionDOnglet(event) {');
-
-    assert.match(
-        corps,
-        /this\._premierRenduAIgnorer\?\.\[tabId\]/,
-        "La garde ne doit plus lire `_criteresEnAttente` : celui-ci est vidé au moment où les "
-        + "filtres sont posés, dans la même pile d'appels que l'annonce du rendu initial — "
-        + "elle ne voyait donc plus rien à attendre.",
-    );
-
 });

@@ -1,4 +1,5 @@
 import BaseController from './base_controller.js';
+import { estListePrincipale, doitAnnoncerLePremierRendu } from './premier-rendu.js';
 // Les règles de cohérence des chips vivent dans leur module pur — lequel réutilise la
 // grammaire de visibilité des DIALOGUES, sans en inventer une seconde.
 import { etatChipPreset, chipVisible, resoudreClicChip } from './chip-preset-etat.js';
@@ -230,7 +231,7 @@ export default class extends BaseController {
 
         // CORRECTION : Pour l'onglet principal, le tabId logique est 'principal'.
         // Pour les autres (collections), le tabId est l'ID de l'élément lui-même.
-        const isPrincipalTab = this.element.id.startsWith('list-manager-');
+        const isPrincipalTab = estListePrincipale(this.element.id);
         const tabId = isPrincipalTab ? 'principal' : this.element.id;
 
         // 3. Notifie le cerveau avec l'état initial.
@@ -273,7 +274,11 @@ export default class extends BaseController {
         // persistée (cf. workspace-manager, memoriserCriteresDOnglet), et une collection
         // contextuelle partage le `workspaceTabId` de sa rubrique : la laisser annoncer
         // ferait cocher ses propres lignes avec les identifiants de la liste voisine.
-        if (isPrincipalTab) {
+        //
+        // ⚠ SAUF SI UN CHARGEMENT VIENT DE PARTIR : `ui:tab.initialized` a pu reposer des
+        // filtres restaurés, dans cette même pile d'appels — le squelette est déjà là, et
+        // c'est le rafraîchissement qui s'annoncera ({@see doitAnnoncerLePremierRendu}).
+        if (doitAnnoncerLePremierRendu(this.element.id, this._chargementEnCours === true)) {
             this._annoncerLeRendu();
         }
     }
@@ -293,7 +298,14 @@ export default class extends BaseController {
             ? this._lastPagination.totalItems
             : itemCount;
 
-        this.notifyCerveau('app:list.rendered', { itemCount, totalItems });
+        // L'onglet d'espace de travail de CETTE liste : le cerveau relayait son onglet
+        // courant, qui peut avoir changé pendant le chargement — les compteurs et la
+        // sélection reposée seraient alors tombés sur un autre onglet.
+        this.notifyCerveau('app:list.rendered', {
+            itemCount,
+            totalItems,
+            ...(this.workspaceTabId ? { workspaceTabId: this.workspaceTabId } : {}),
+        });
     }
 
     // --- CHIPS DE FILTRE RAPIDE ---
@@ -770,6 +782,7 @@ export default class extends BaseController {
         if (this.workspaceTabId && event.detail?.workspaceTabId !== this.workspaceTabId) return;
         const { originatorId } = event.detail || {};
         if (originatorId === this.element.id) {
+            this._chargementEnCours = true;
             this.donneesTarget.innerHTML = this._getListSkeletonHtml();
             // On s'assure que le conteneur de la liste est visible et que le message d'état vide est caché.
             this.listContainerTarget.classList.remove('d-none');
@@ -810,6 +823,7 @@ export default class extends BaseController {
             return;
         }
 
+        this._chargementEnCours = false;
         this.donneesTarget.innerHTML = html;
 
         const hasRows = this.donneesTarget.querySelector('tr') !== null;
