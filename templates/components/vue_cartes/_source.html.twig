@@ -1,0 +1,26 @@
+{#
+    LA SOURCE DES CARTES — clonée dans les colonnes par `vue-cartes_controller`.
+
+    Elle voyage AVEC LES LIGNES, à la fin du `<tbody>` : au premier rendu (_list_manager) comme à
+    chaque rafraîchissement (_list_content). L'analyseur HTML admet un `<template>` à cet endroit,
+    et son contenu est inerte — list-manager, qui compte les `<tr>` et les `[data-item-id]`, ne le
+    voit pas.
+
+    `data-vue-effective` dit la vue que le serveur a RENDUE : un statut autre que « En cours »
+    demandé en vue Cartes fait basculer en Liste (sans écraser le statut demandé).
+
+    Paramètres : data, listeCanvas, vueCartes {vue, agregats, cloturees, monnaie, droits}.
+#}
+<template data-vue-cartes-source data-vue-effective="{{ vueCartes.vue }}">
+    {%- if vueCartes.vue == 'cartes' -%}
+        {%- for entity in data -%}
+            {{ include(listeCanvas.vue_cartes.gabarit_carte, {'entity': entity, 'listeCanvas': listeCanvas, 'vueCartes': vueCartes}) }}
+        {%- endfor -%}
+        {#- Les compteurs GLOBAUX de chaque colonne (tout le filtre, pas la page). -#}
+        {%- for code, agregat in vueCartes.agregats -%}
+            <data data-etape="{{ code }}" value="{{ agregat.nombre }}"
+                  data-somme="{{ vueCartes.monnaie }} {{ agregat.somme|format_nombre(2) }}"></data>
+        {%- endfor -%}
+        <data data-cloturees value="{{ vueCartes.cloturees }}"></data>
+    {%- endif -%}
+</template>

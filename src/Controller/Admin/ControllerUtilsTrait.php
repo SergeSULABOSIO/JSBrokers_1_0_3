@@ -2,6 +2,7 @@
 
 namespace App\Controller\Admin;
 
+use Symfony\Component\HttpFoundation\Cookie;
 use App\Services\Canvas\LienDeCollection;
 use App\Entity\Assureur;
 use App\Entity\AutoriteFiscale;
@@ -1023,6 +1024,8 @@ trait ControllerUtilsTrait
 
             // Appel du service de recherche refactorisé et sécurisé
             // CORRECTION : On passe le contexte du parent au service de recherche.
+            $listeCanvas = $this->canvasBuilder->getListeCanvas($entityClass);
+            [$criteria, $vueCartes, $basculerEnListe] = $this->preparerLaVueCartes($request, $entityClass, $criteria, $parentContext, $entreprise, $listeCanvas);
             $searchResult = $this->searchService->search($entityClass, $criteria, $entreprise, $parentContext, $page, 20);
             $data = $searchResult['data'];
 
@@ -1049,13 +1052,14 @@ trait ControllerUtilsTrait
             // OPTIMISATION : On ne passe au template que les variables strictement nécessaires.
             $html = $this->renderView('components/_list_content.html.twig', [
                 'data' => $data,
-                'listeCanvas' => $this->canvasBuilder->getListeCanvas($entityClass),
+                'vueCartes' => $vueCartes,
+                'listeCanvas' => $listeCanvas,
                 'entite_nom' => $this->getEntityName($entityClass), // CORRECTION : On passe le nom de l'entité
                 'entityCanvas' => $this->canvasBuilder->getEntityCanvas($entityClass) // CORRECTION : On passe le canvas de l'entité
             ]);
 
             // On retourne la réponse JSON structurée attendue par le Cerveau
-            return new JsonResponse([
+            return $this->avecLaVueDeListe($vueCartes, $basculerEnListe, new JsonResponse([
                 'html'                       => $html,
                 'numericAttributesAndValues' => $numericData,
                 'pagination'                 => [
@@ -1064,7 +1068,7 @@ trait ControllerUtilsTrait
                     'totalItems'   => $searchResult['totalItems'],
                     'itemsPerPage' => $searchResult['itemsPerPage'],
                 ],
-            ]);
+            ]));
         }
         // CAS 2: C'est le chargement initial de la page, on rend le conteneur principal.
         else {
@@ -1077,7 +1081,12 @@ trait ControllerUtilsTrait
             $initialCriteria = [];
             if ($entreprise) {
                 $initialCriteria = $this->getInitialSearchCriteria($entityClass, (int)$idInvite, $entreprise);
-                $searchResult = $this->searchService->search($entityClass, $initialCriteria, $entreprise, null, 1, 20);
+                // Les critères CHERCHÉS peuvent porter un filtre caché (les pistes ouvertes de
+                // la vue Cartes) ; ceux qu'on RENVOIE au navigateur restent ceux qu'il voit.
+                [$criteresCherches, $vueCartes, $basculerEnListe] = $this->preparerLaVueCartes(
+                    $request, $entityClass, $initialCriteria, null, $entreprise, $this->canvasBuilder->getListeCanvas($entityClass),
+                );
+                $searchResult = $this->searchService->search($entityClass, $criteresCherches, $entreprise, null, 1, 20);
                 $data = $searchResult['data'];
 
                 // MÉTRAGE TOKENS (lecture) au chargement initial de la liste. En cas
@@ -1144,10 +1153,96 @@ trait ControllerUtilsTrait
             'paginationMeta' => $paginationMeta ?? ['currentPage' => 1, 'totalPages' => 0, 'totalItems' => 0, 'itemsPerPage' => 20],
             // Critères actifs par défaut (amorçage de l'état Cerveau + badge de filtre).
             'initialSearchCriteria' => $initialCriteria ?? [],
+            'vueCartes' => $vueCartes ?? null,
         ];
 
         // dd("Paramètres - searchCanvas:", $parameters["searchCanvas"]);
-        return $this->render($template, $parameters);
+        return $this->avecLaVueDeListe($vueCartes ?? null, $basculerEnListe ?? false, $this->render($template, $parameters));
+    }
+
+    /**
+     * LA VUE CARTES D'UNE LISTE PRINCIPALE — seulement si son canevas déclare `vue_cartes`.
+     *
+     * La vue choisie vit dans un cookie (`listeVue_<cabinet>_<entité>`), que le serveur lit
+     * pour rendre la bonne vue DÈS le HTML : aucun flash, dans un sens comme dans l'autre.
+     * Défaut et valeur inconnue : « cartes » (même règle que vue-cartes-regles.js).
+     *
+     * ⚠ UN STATUT DEMANDÉ N'EST JAMAIS ÉCRASÉ. Les cartes montrent le pipe ACTIF (« En
+     * cours ») ; si un autre statut est demandé en vue Cartes — recherche avancée, badge
+     * retiré, Ket —, la réponse BASCULE en vue Liste, avec ce statut, et le cookie suit.
+     *
+     * En vue Cartes, la recherche écarte les pistes clôturées (critère caché), et les
+     * en-têtes de colonne reçoivent leurs compteurs globaux.
+     *
+     * @return array{0: array, 1: ?array, 2: bool} critères à chercher, contexte de la vue, bascule en Liste
+     */
+    private function preparerLaVueCartes(Request $request, string $entityClass, array $criteria, ?array $parentContext, Entreprise $entreprise, array $listeCanvas): array
+    {
+        if (!isset($listeCanvas['vue_cartes']) || $parentContext !== null) {
+            return [$criteria, null, false];
+        }
+
+        $cle = sprintf('listeVue_%d_%s', $entreprise->getId(), $this->getEntityName($entityClass));
+        $vue = in_array($request->cookies->get($cle), ['cartes', 'liste'], true) ? (string) $request->cookies->get($cle) : 'cartes';
+
+        $statut = $criteria[\App\Services\Search\PisteTransformationScope::CRITERION_KEY] ?? null;
+        $statut = is_array($statut) ? ($statut['value'] ?? null) : $statut;
+        $basculer = false;
+        if ($vue === 'cartes' && $statut !== \App\Services\Search\PisteTransformationScope::STATUT_EN_COURS) {
+            $vue = 'liste';
+            $basculer = true;
+        }
+
+        $contexte = [
+            'vue' => $vue,
+            'monnaie' => $listeCanvas['vue_cartes']['monnaie'] ?? '',
+            'agregats' => [],
+            'cloturees' => 0,
+            'droits' => [],
+        ];
+        if ($vue === 'cartes') {
+            $agregat = $this->searchService->agregerPistesParEtape($criteria, $entreprise);
+            $contexte['agregats'] = $agregat['etapes'];
+            $contexte['cloturees'] = $agregat['cloturees'];
+            $contexte['droits'] = $this->droitsDesActionsDuPipe();
+            $criteria[\App\Services\Search\PisteTransformationScope::CLE_PISTES_OUVERTES] = true;
+        }
+        $contexte['cle'] = $cle;
+
+        return [$criteria, $contexte, $basculer];
+    }
+
+    /**
+     * Le geste de chaque étape est-il permis ? Une action n'est AFFICHÉE que si son chemin
+     * l'est ; le serveur la revérifie au clic (PisteController::actionPipeApi).
+     *
+     * @return array<string, bool>
+     */
+    private function droitsDesActionsDuPipe(): array
+    {
+        $peutModifierLaPiste = $this->mayAccessEntity(\App\Entity\Piste::class, Invite::ACCESS_MODIFICATION);
+
+        return [
+            \App\Services\Search\PisteTransformationScope::ETAPE_A_COTER
+                => $this->mayAccessEntity(\App\Entity\Cotation::class, Invite::ACCESS_ECRITURE),
+            \App\Services\Search\PisteTransformationScope::ETAPE_EN_COTATION
+                => $this->mayAccessEntity(\App\Entity\ChargementPourPrime::class, Invite::ACCESS_ECRITURE)
+                && ($peutModifierLaPiste || $this->mayAccessEntity(\App\Entity\Cotation::class, Invite::ACCESS_MODIFICATION)),
+            \App\Services\Search\PisteTransformationScope::ETAPE_OFFRES_CHIFFREES
+                => $peutModifierLaPiste || $this->mayAccessEntity(\App\Entity\Avenant::class, Invite::ACCESS_ECRITURE),
+        ];
+    }
+
+    /** La bascule en Liste décidée par le serveur suit dans le cookie. */
+    private function avecLaVueDeListe(?array $vueCartes, bool $basculer, Response $reponse): Response
+    {
+        if ($basculer && $vueCartes !== null) {
+            $reponse->headers->setCookie(Cookie::create(
+                $vueCartes['cle'], 'liste', new \DateTimeImmutable('+1 year'), '/', null, null, false, false, Cookie::SAMESITE_LAX,
+            ));
+        }
+
+        return $reponse;
     }
 
     /**

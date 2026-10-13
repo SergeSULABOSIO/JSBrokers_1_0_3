@@ -15,3 +15,8 @@
         'secondaryFieldDetails': secondaryFieldDetails|default(null)
     }) }}
 {% endfor %}
+{# La source de la vue Cartes voyage AVEC les lignes : list-manager remplace le contenu du
+   `<tbody>`, et `vue-cartes_controller` y retrouve la nouvelle source. #}
+{% if vueCartes|default(null) %}
+    {{ include('components/vue_cartes/_source.html.twig') }}
+{% endif %}

@@ -48,6 +48,9 @@ final class LibellesDesActionsDEcran
         // L'atelier de rapprochement des bordereaux déclare ses propres gestes de
         // ligne (créer / corriger la police d'une ligne) au même format `event`.
         'src/Controller/Admin/BordereauController.php',
+        // Les actions des cartes du pipe (vue Cartes des Pistes) : la prochaine action de
+        // chaque étape, déclarée dans le canevas de liste.
+        'src/Services/Canvas/Provider/List/PisteListCanvasProvider.php',
     ];
 
     /** @var array<string, list<string>>|null relevé mémoïsé : le worker vit */

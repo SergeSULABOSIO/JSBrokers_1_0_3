@@ -181,6 +181,69 @@ class JSBDynamicSearchService
     }
 
     /**
+     * LES EN-TÊTES DU KANBAN : par étape, le nombre de pistes et la somme de leurs
+     * commissions potentielles — pour TOUT le filtre courant, pas pour la page.
+     *
+     * Les critères sont ceux de la liste (même applyCriteriaToQueryBuilder), moins le
+     * statut — les colonnes SONT le statut — et moins le filtre des pistes ouvertes : on
+     * compte à part les pistes clôturées, que le pied du Kanban annonce.
+     *
+     * UNE requête. Le `IN (filtrée)` externe neutralise les doublons qu'une jointure vers
+     * une collection (recherche texte sur une relation) introduirait dans un SUM. Les
+     * étapes viennent de predicatsDEtapePiste() : la colonne et son compteur ne peuvent pas
+     * compter deux choses différentes.
+     *
+     * @return array{etapes: array<string, array{nombre: int, somme: float}>, cloturees: int}
+     */
+    public function agregerPistesParEtape(array $criteria, Entreprise $entreprise): array
+    {
+        $resultat = ['etapes' => [], 'cloturees' => 0];
+        foreach (array_keys(PisteTransformationScope::ETAPES) as $code) {
+            $resultat['etapes'][$code] = ['nombre' => 0, 'somme' => 0.0];
+        }
+
+        unset($criteria[PisteTransformationScope::CRITERION_KEY], $criteria[PisteTransformationScope::CLE_PISTES_OUVERTES]);
+        $status = ['error' => null, 'code' => 200, 'message' => ''];
+        $filtree = $this->em->getRepository(\App\Entity\Piste::class)->createQueryBuilder('e_agg');
+        $this->applyCriteriaToQueryBuilder($filtree, $criteria, $entreprise, null, $status, '_agg');
+        if ($status['error'] !== null) {
+            return $resultat;
+        }
+        $filtree->select('e_agg.id');
+
+        ['T' => $t, 'C' => $c, 'K' => $k] = $this->predicatsDEtapePiste('p_agg', '_aggp');
+        $dql = sprintf(
+            "SELECT CASE WHEN %s THEN '%s' WHEN %s THEN '%s' WHEN %s THEN '%s' ELSE '%s' END AS etape,"
+            . ' p_agg.closed AS cloture, COUNT(p_agg.id) AS nombre, SUM(COALESCE(p_agg.commissionPotentielle, 0)) AS somme'
+            . ' FROM %s p_agg WHERE p_agg.id IN (%s) GROUP BY etape, cloture',
+            $t, PisteTransformationScope::STATUT_TRANSFORMEES,
+            $c, PisteTransformationScope::ETAPE_OFFRES_CHIFFREES,
+            $k, PisteTransformationScope::ETAPE_EN_COTATION,
+            PisteTransformationScope::ETAPE_A_COTER,
+            \App\Entity\Piste::class,
+            $filtree->getDQL(),
+        );
+        $requete = $this->em->createQuery($dql);
+        foreach ($filtree->getParameters() as $parametre) {
+            $requete->setParameter($parametre->getName(), $parametre->getValue(), $parametre->getType());
+        }
+
+        foreach ($requete->getArrayResult() as $ligne) {
+            $etape = (string) $ligne['etape'];
+            // Une piste clôturée sort du pipe actif : elle est comptée à part. Une police
+            // souscrite puis close reste, elle, une transformée.
+            if ((bool) $ligne['cloture'] && $etape !== PisteTransformationScope::STATUT_TRANSFORMEES) {
+                $resultat['cloturees'] += (int) $ligne['nombre'];
+                continue;
+            }
+            $resultat['etapes'][$etape]['nombre'] += (int) $ligne['nombre'];
+            $resultat['etapes'][$etape]['somme'] += (float) $ligne['somme'];
+        }
+
+        return $resultat;
+    }
+
+    /**
      * Une réponse VIDE a la même forme qu'une réponse pleine.
      *
      * Les sorties anticipées (entité non interrogeable, chemin spécial en erreur) ne
@@ -754,6 +817,11 @@ class JSBDynamicSearchService
             // SQL : on filtre par EXISTS / NOT EXISTS sur une sous-requête des pistes ayant au
             // moins un avenant rattaché via l'une de leurs cotations. Compose automatiquement
             // avec les autres critères, le périmètre portefeuille, la pagination et le comptage.
+            if ($field === PisteTransformationScope::CLE_PISTES_OUVERTES) {
+                $qb->andWhere("{$rootAlias}.closed = false");
+                continue;
+            }
+
             if ($field === PisteTransformationScope::CRITERION_KEY) {
                 $statut = is_array($value) ? ($value['value'] ?? null) : $value;
                 if (!PisteTransformationScope::estValide(is_string($statut) ? $statut : null)) {

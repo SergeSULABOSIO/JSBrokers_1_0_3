@@ -1,0 +1,80 @@
+{#
+    UNE PISTE EN CARTE : où en est-elle, et quelle est la prochaine action ?
+
+    Quatre lignes, hauteur constante — l'œil compare des cartes qui ont la même forme.
+      L1  le nom (une ligne) et l'ancienneté de la DERNIÈRE ACTIVITÉ ;
+      L2  le client (omis s'il est déjà dans le nom), le risque, le type d'avenant, les cotations ;
+      L3  UN montant : la commission potentielle (la prime en infobulle) ;
+      L4  le responsable et l'action primaire — rien d'autre, pour que son nom se lise.
+
+    La carte est une VUE de la ligne : sa case pilote celle de la ligne (vue-cartes_controller).
+    L'action est rendue seulement si le cabinet a le droit du geste ; le serveur le revérifie
+    au clic (PisteController::actionPipe).
+
+    Paramètres : entity (Piste, valeurs calculées chargées), listeCanvas, vueCartes.
+#}
+{%- set etape = entity.etapePipe -%}
+{%- set client = entity.client ? entity.client.nom : null -%}
+{%- set action = (not entity.closed) ? (listeCanvas.vue_cartes.actions[etape] ?? null) : null -%}
+{%- set peutAgir = action and (vueCartes.droits[etape] ?? false) -%}
+<li class="jsb-carte jsb-carte--{{ etape }}{{ entity.closed ? ' is-cloturee' : '' }}"
+    data-carte
+    data-id="{{ entity.id }}"
+    data-etape="{{ etape }}"
+    tabindex="0"
+    aria-labelledby="carte-{{ entity.id }}-titre"
+    data-action="click->vue-cartes#cliquer dblclick->vue-cartes#ouvrir keydown->vue-cartes#clavier contextmenu->vue-cartes#menu">
+
+    <div class="jsb-carte__ligne jsb-carte__ligne--titre">
+        <input type="checkbox" class="form-check-input jsb-carte__case" data-case
+               aria-label="Sélectionner la piste « {{ entity.nom }} »"
+               data-action="change->vue-cartes#cocher">
+        <span class="jsb-carte__titre" id="carte-{{ entity.id }}-titre"
+              title="{{ entity.nom }} — n° {{ entity.id }}{{ entity.createdAt ? ' · créée le ' ~ entity.createdAt|date('d/m/Y') : '' }}">{{ entity.nom }}</span>
+        {%- if entity.joursSansActivite is not null %}
+            <span class="jsb-carte__age jsb-carte__age--{{ entity.niveauActivite }}"
+                  title="Dernière activité le {{ entity.derniereActivite|date('d/m/Y') }} (piste, cotations, primes, avenants){{ entity.createdAt ? ' · créée le ' ~ entity.createdAt|date('d/m/Y') : '' }}">
+                <span aria-hidden="true">{{ ux_icon(resolve_icon_name('action:activite'), {width: '12px', height: '12px'}) }}</span>
+                {{ entity.joursSansActivite }} j
+                <span class="visually-hidden">depuis la dernière activité</span>
+            </span>
+        {%- endif %}
+    </div>
+
+    <div class="jsb-carte__ligne jsb-carte__ligne--contexte">
+        {%- set morceaux = [] -%}
+        {%- if client and not (client|lower in entity.nom|lower) -%}{%- set morceaux = morceaux|merge([client]) -%}{%- endif -%}
+        {%- if entity.risqueCode and entity.risqueCode != 'N/A' -%}{%- set morceaux = morceaux|merge([entity.risqueCode]) -%}{%- endif -%}
+        {%- set morceaux = morceaux|merge([entity.typeAvenantString]) -%}
+        {%- set morceaux = morceaux|merge([entity.nombreCotations ~ ' cotation' ~ (entity.nombreCotations > 1 ? 's' : '')]) -%}
+        {{ morceaux|join(' · ') }}
+    </div>
+
+    <div class="jsb-carte__ligne jsb-carte__ligne--montant"
+         title="Prime potentielle : {{ entity.primePotentielle is null ? '—' : vueCartes.monnaie ~ ' ' ~ entity.primePotentielle|format_nombre(2) }}">
+        <span class="jsb-carte__etiquette">Comm. potentielle</span>
+        {%- if entity.commissionPotentielle is null %}
+            <span class="jsb-carte__montant" aria-hidden="true">—</span><span class="visually-hidden">non renseignée</span>
+        {%- else %}
+            <span class="jsb-carte__montant"><span class="jsb-carte__unite">{{ vueCartes.monnaie }}</span> {{ entity.commissionPotentielle|format_nombre(2) }}</span>
+        {%- endif %}
+    </div>
+
+    <div class="jsb-carte__ligne jsb-carte__ligne--pied">
+        <span class="jsb-carte__avatar" aria-hidden="true">{{ entity.responsableInitiales ?: '?' }}</span>
+        <span class="jsb-carte__responsable" title="{{ entity.responsableSource }}">{{ entity.responsableNom ?: 'Non attribué' }}</span>
+        {%- if entity.closed %}
+            <span class="jsb-carte__cloturee">
+                <span aria-hidden="true">{{ ux_icon(resolve_icon_name('action:cancel'), {width: '12px', height: '12px'}) }}</span> Clôturée
+            </span>
+        {%- elseif peutAgir %}
+            <button type="button" class="jsb-carte__action"
+                    data-evenement="{{ action.event }}"
+                    data-action="click->vue-cartes#agir"
+                    aria-label="{{ action.label }} — « {{ entity.nom }} »">
+                <span aria-hidden="true">{{ ux_icon(resolve_icon_name(action.icon), {width: '14px', height: '14px'}) }}</span>
+                {{ action.label }}
+            </button>
+        {%- endif %}
+    </div>
+</li>

@@ -41,6 +41,10 @@ class PisteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'renewalConditionString' => $this->getPisteRenewalConditionString($entity),
             'statutTransformation' => $this->getPisteStatutTransformation($entity),
             ...$this->etapeDuPipe($entity),
+            ...$this->activite($entity),
+            ...$this->responsable($entity),
+            // Le marqueur de la liste : vide (donc absent) tant que la piste est ouverte.
+            'clotureLibelle' => $entity->isClosed() ? 'Clôturée' : '',
             'nombreCotations' => $entity->getCotations()->count(),
             'agePiste' => $this->calculatePisteAge($entity),
             'primeTotale' => round($this->aggregateSubscribedCotationIndicator($entity, 'primeTotale'), 2),
@@ -109,6 +113,65 @@ class PisteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             // Le suffixe de classe du marqueur coloré (`.jsb-state-badge--etape-…`).
             'etapePipeNiveau' => 'etape-' . $etape,
         ];
+    }
+
+    /**
+     * LA DERNIÈRE ACTIVITÉ, ET NON LA CRÉATION : une piste ancienne sur laquelle on vient de
+     * saisir une prime n'est pas « en retard ». Le plus récent `updatedAt` de la piste, de
+     * ses cotations, de leurs chargements et de leurs avenants — ce que le préchargement
+     * de la page a déjà lu (aucune requête de plus). Les tâches n'y sont pas : les lire
+     * coûterait une requête par carte.
+     *
+     * @return array{derniereActivite: ?\DateTimeImmutable, joursSansActivite: ?int, niveauActivite: string}
+     */
+    private function activite(Piste $piste): array
+    {
+        $dates = [$piste->getUpdatedAt(), $piste->getCreatedAt()];
+        foreach ($piste->getCotations() as $cotation) {
+            $dates[] = $cotation->getUpdatedAt();
+            foreach ($cotation->getChargements() as $chargement) {
+                $dates[] = $chargement->getUpdatedAt();
+            }
+            foreach ($cotation->getAvenants() as $avenant) {
+                $dates[] = $avenant->getUpdatedAt();
+            }
+        }
+        $dates = array_filter($dates, static fn ($d) => $d instanceof \DateTimeInterface);
+        if ($dates === []) {
+            return ['derniereActivite' => null, 'joursSansActivite' => null, 'niveauActivite' => 'neutre'];
+        }
+        $derniere = \DateTimeImmutable::createFromInterface(max($dates));
+        $jours = max(0, (int) $this->serviceDates->daysEntre($derniere, new DateTimeImmutable()));
+
+        return [
+            'derniereActivite' => $derniere,
+            'joursSansActivite' => $jours,
+            // Trente jours sans geste : à surveiller ; soixante : en retard.
+            'niveauActivite' => $jours > 60 ? 'retard' : ($jours >= 30 ? 'surveiller' : 'neutre'),
+        ];
+    }
+
+    /**
+     * QUI SUIT LA PISTE. Le gestionnaire du portefeuille du client ; à défaut, celui qui a
+     * saisi la piste ; à défaut, personne — et la carte le dit (« Non attribué »).
+     *
+     * @return array{responsableNom: ?string, responsableSource: string, responsableInitiales: ?string}
+     */
+    private function responsable(Piste $piste): array
+    {
+        $gestionnaire = $piste->getClient()?->getPortefeuille()?->getGestionnaire();
+        [$invite, $source] = $gestionnaire !== null
+            ? [$gestionnaire, 'Gestionnaire du portefeuille du client']
+            : [$piste->getInvite(), 'Créateur de la piste (aucun gestionnaire de portefeuille)'];
+        $nom = trim((string) $invite?->getNom());
+        if ($nom === '') {
+            return ['responsableNom' => null, 'responsableSource' => 'Aucun gestionnaire ni créateur connu', 'responsableInitiales' => null];
+        }
+
+        $mots = preg_split('/\s+/u', $nom) ?: [$nom];
+        $initiales = mb_strtoupper(mb_substr($mots[0], 0, 1) . (count($mots) > 1 ? mb_substr(end($mots), 0, 1) : ''));
+
+        return ['responsableNom' => $nom, 'responsableSource' => $source, 'responsableInitiales' => $initiales];
     }
 
     private function calculatePisteAge(Piste $piste): string

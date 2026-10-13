@@ -32,6 +32,9 @@ class PisteListCanvasProvider implements ListCanvasProviderInterface
                 // qui ne parlait pas la langue du chip (« Transformées »).
                 "badges" => [
                     ["attribut_code" => "etapePipeLibelle", "attribut_niveau" => "etapePipeNiveau"],
+                    // Une piste clôturée (depuis le tableau de bord) le DIT : vide, donc
+                    // absent, tant qu'elle est ouverte.
+                    ["attribut_code" => "clotureLibelle", "niveau_fixe" => "cloturee"],
                 ],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
@@ -81,6 +84,35 @@ class PisteListCanvasProvider implements ListCanvasProviderInterface
             // LES ÉTAPES DANS L'ORDRE DU PIPE, puis « En cours » qui réunit les trois
             // premières, puis « Toutes ». Libellés et icônes viennent de
             // PisteTransformationScope : le chip, la ligne et la colonne ne peuvent pas diverger.
+            // LA VUE CARTES — le pipe commercial. Seule la liste des Pistes la déclare.
+            //
+            // Chaque étape active a UNE action, la prochaine concrète. L'écran ne fabrique pas
+            // la fiche à ouvrir : l'événement part vers le cerveau, qui demande au serveur
+            // (PisteController::actionPipeApi) quelle fiche, quel onglet, sur des données
+            // fraîches. `label` AVANT `event` : c'est ainsi que l'inventaire des actions
+            // d'écran (LibellesDesActionsDEcran) apparie les deux.
+            "vue_cartes" => [
+                "gabarit_carte" => "components/vue_cartes/_carte_piste.html.twig",
+                "etapes" => PisteTransformationScope::ETAPES,
+                "monnaie" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                "actions" => [
+                    PisteTransformationScope::ETAPE_A_COTER => [
+                        "label" => "Ajouter une cotation",
+                        "event" => "ui:piste.coter-request",
+                        "icon" => "action:add",
+                    ],
+                    PisteTransformationScope::ETAPE_EN_COTATION => [
+                        "label" => "Saisir la prime",
+                        "event" => "ui:piste.saisir-prime-request",
+                        "icon" => "action:edit",
+                    ],
+                    PisteTransformationScope::ETAPE_OFFRES_CHIFFREES => [
+                        "label" => "Souscrire",
+                        "event" => "ui:piste.souscrire-request",
+                        "icon" => "action:completed",
+                    ],
+                ],
+            ],
             "filtres_predefinis" => [
                 [
                     "critere" => PisteTransformationScope::CRITERION_KEY,

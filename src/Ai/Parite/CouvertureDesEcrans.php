@@ -103,6 +103,14 @@ final class CouvertureDesEcrans
         // Déclarer un sinistre au client sélectionné : même nature, même plan générique
         // d'écriture — l'assuré est déduit du client qu'on avait sous les yeux.
         'ui:client.creer-sinistre' => 'preparer_operations',
+
+        // ── Pipe commercial (vue Cartes des Pistes) ────────────────────────
+        // Ajouter une cotation, saisir la prime d'une cotation : des créations ordinaires,
+        // que le plan d'écriture générique porte. Souscrire : l'outil dédié, qui préremplit
+        // l'avenant par la MÊME règle que l'écran (DefautsDeSouscription).
+        'ui:piste.coter-request' => 'preparer_operations',
+        'ui:piste.saisir-prime-request' => 'preparer_operations',
+        'ui:piste.souscrire-request' => 'souscrire_cotation',
         'ui:portefeuille.client-picker-request' => 'preparer_operations',
         'ui:invite.portefeuille-form-request' => 'preparer_operations',
         'ui:invite.delete-portefeuille' => 'preparer_operations',

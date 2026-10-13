@@ -137,6 +137,10 @@ export default class extends Controller {
         this.entityFormCanvas = detail.entityFormCanvas;
         this.entity = detail.entity;
         this.userContext = detail.context || {}; //La variable context fourni à ce controlleur l'ID de l'entreprise et l'ID de l'invité
+        // L'ONGLET OÙ OUVRIR LA FICHE, quand celui qui l'ouvre le sait (l'action d'une carte
+        // du pipe : « Saisir la prime » → Chargements). Même mécanisme que la réouverture
+        // d'une fiche rechargée : handleContentReady clique l'onglet une fois le HTML posé.
+        this._ongletARestaurer = this.userContext.ongletInitial || null;
         this.isCreateMode = !(this.entity && this.entity.id);
         this.parentContext = detail.parentContext || null;
         this.formTemplateHTML = detail.formTemplateHTML || null;
