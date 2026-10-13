@@ -53,8 +53,29 @@ export default class extends Controller {
         this.element.insertAdjacentHTML('beforeend', toastHTML);
 
         const newToastEl = this.element.lastElementChild; //
+
+        // UN GESTE, FACULTATIF : `action = { label, evenement: { type, payload } }`. Le bouton
+        // renvoie l'événement au cerveau — le toast ne fait rien lui-même. Construit par le
+        // DOM, jamais par chaîne : le libellé n'est pas du HTML.
+        const action = event.detail.action;
+        if (action?.label && action.evenement?.type) {
+            const bouton = document.createElement('button');
+            bouton.type = 'button';
+            bouton.className = `btn btn-sm ${config.text === 'text-white' ? 'btn-light' : 'btn-dark'} mt-2 d-block`;
+            bouton.textContent = action.label;
+            bouton.addEventListener('click', () => {
+                bouton.dispatchEvent(new CustomEvent('cerveau:event', {
+                    bubbles: true,
+                    detail: { type: action.evenement.type, source: this.nomControleur, payload: action.evenement.payload || {}, timestamp: Date.now() },
+                }));
+                Toast.getOrCreateInstance(newToastEl).hide();
+            });
+            newToastEl.querySelector('.toast-body').appendChild(bouton);
+        }
+
         const toast = new Toast(newToastEl, {
-            delay: 10000 // Le toast disparaît après 10 secondes
+            // 10 secondes ; davantage quand il y a un geste à faire, le temps de lire PUIS d'agir.
+            delay: action ? 20000 : 10000
         });
 
         // Supprimer le toast du DOM une fois qu'il est caché pour garder le HTML propre

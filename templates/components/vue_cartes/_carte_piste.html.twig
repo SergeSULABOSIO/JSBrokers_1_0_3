@@ -2,10 +2,14 @@
     UNE PISTE EN CARTE : où en est-elle, et quelle est la prochaine action ?
 
     Quatre lignes, hauteur constante — l'œil compare des cartes qui ont la même forme.
-      L1  le nom (une ligne) et l'ancienneté de la DERNIÈRE ACTIVITÉ ;
-      L2  le client (omis s'il est déjà dans le nom), le risque, le type d'avenant, les cotations ;
+      L1  le nom (une ligne), le nombre d'offres reçues et l'ancienneté de la DERNIÈRE ACTIVITÉ ;
+      L2  le client (omis s'il est déjà dans le nom), le risque, le type d'avenant ;
       L3  UN montant : la commission potentielle (la prime en infobulle) ;
       L4  le responsable et l'action primaire — rien d'autre, pour que son nom se lise.
+
+    UNE SEULE INFOBULLE, celle de la carte entière (infobulle_controller — l'infobulle sombre du
+    tableau de bord) : la fiche en bref, en trois sections. Les infobulles natives des pastilles
+    et du nom ont disparu — deux infobulles à la fois se recouvraient.
 
     La carte est une VUE de la ligne : sa case pilote celle de la ligne (vue-cartes_controller).
     L'action est rendue seulement si le cabinet a le droit du geste ; le serveur le revérifie
@@ -17,23 +21,50 @@
 {%- set client = entity.client ? entity.client.nom : null -%}
 {%- set action = (not entity.closed) ? (listeCanvas.vue_cartes.actions[etape] ?? null) : null -%}
 {%- set peutAgir = action and (vueCartes.droits[etape] ?? false) -%}
+{%- set offres = entity.nombreCotations|default(0) -%}
+{%- set prime = entity.primePotentielle is null ? '—' : vueCartes.monnaie ~ ' ' ~ entity.primePotentielle|format_nombre(2) -%}
+{%- set commission = entity.commissionPotentielle is null ? '—' : vueCartes.monnaie ~ ' ' ~ entity.commissionPotentielle|format_nombre(2) -%}
+{%- set description = entity.descriptionDuRisque|default('')|striptags|trim -%}
+{#- L'INFOBULLE NE RÉPÈTE PAS LA CARTE : elle dit ce que la carte tronque (nom, client,
+    risque, responsable) ou tait (prime, date d'activité, description). Type, étape et offres
+    se lisent déjà sur la carte. -#}
+{%- set infobulle = [
+    {
+        titre: 'Piste',
+        lignes: [
+            ['Nom', entity.nom],
+            ['Client', client ?: '—'],
+            ['Risque', entity.risque ? entity.risque.nomComplet : '—', 'tip-risque'],
+            ['Dernière activité', entity.derniereActivite ? entity.derniereActivite|date('d/m/Y') : '—'],
+        ],
+        texte: description|length > 90 ? description|slice(0, 89) ~ '…' : description,
+    },
+    {titre: 'Potentiel', lignes: [['Prime', prime], ['Commission', commission]]},
+    {titre: 'Gestion', lignes: [['Responsable', entity.responsableNom ?: 'Non attribué']]},
+] -%}
 <li class="jsb-carte jsb-carte--{{ etape }}{{ entity.closed ? ' is-cloturee' : '' }}"
     data-carte
     data-id="{{ entity.id }}"
     data-etape="{{ etape }}"
     tabindex="0"
     aria-labelledby="carte-{{ entity.id }}-titre"
+    data-infobulle="{{ infobulle|json_encode|e('html_attr') }}"
     data-action="click->vue-cartes#cliquer dblclick->vue-cartes#ouvrir keydown->vue-cartes#clavier contextmenu->vue-cartes#menu">
 
     <div class="jsb-carte__ligne jsb-carte__ligne--titre">
         <input type="checkbox" class="form-check-input jsb-carte__case" data-case
                aria-label="Sélectionner la piste « {{ entity.nom }} »"
                data-action="change->vue-cartes#cocher">
-        <span class="jsb-carte__titre" id="carte-{{ entity.id }}-titre"
-              title="{{ entity.nom }} — n° {{ entity.id }}{{ entity.createdAt ? ' · créée le ' ~ entity.createdAt|date('d/m/Y') : '' }}">{{ entity.nom }}</span>
+        <span class="jsb-carte__titre" id="carte-{{ entity.id }}-titre">{{ entity.nom }}</span>
+        {#- LES OFFRES REÇUES, à côté de l'ancienneté : deux faits brefs, même pastille. En
+            fin de ligne 2, le compte se perdait sous les points de suspension. -#}
+        <span class="jsb-carte__offres">
+            <span aria-hidden="true">{{ ux_icon(resolve_icon_name('cotation'), {width: '12px', height: '12px'}) }}</span>
+            {{ offres }}
+            <span class="visually-hidden">offre{{ offres > 1 ? 's' : '' }} reçue{{ offres > 1 ? 's' : '' }}</span>
+        </span>
         {%- if entity.joursSansActivite is not null %}
-            <span class="jsb-carte__age jsb-carte__age--{{ entity.niveauActivite }}"
-                  title="Dernière activité le {{ entity.derniereActivite|date('d/m/Y') }} (piste, cotations, primes, avenants){{ entity.createdAt ? ' · créée le ' ~ entity.createdAt|date('d/m/Y') : '' }}">
+            <span class="jsb-carte__age jsb-carte__age--{{ entity.niveauActivite }}">
                 <span aria-hidden="true">{{ ux_icon(resolve_icon_name('action:activite'), {width: '12px', height: '12px'}) }}</span>
                 {{ entity.joursSansActivite }} j
                 <span class="visually-hidden">depuis la dernière activité</span>
@@ -46,12 +77,10 @@
         {%- if client and not (client|lower in entity.nom|lower) -%}{%- set morceaux = morceaux|merge([client]) -%}{%- endif -%}
         {%- if entity.risqueCode and entity.risqueCode != 'N/A' -%}{%- set morceaux = morceaux|merge([entity.risqueCode]) -%}{%- endif -%}
         {%- set morceaux = morceaux|merge([entity.typeAvenantString]) -%}
-        {%- set morceaux = morceaux|merge([entity.nombreCotations ~ ' cotation' ~ (entity.nombreCotations > 1 ? 's' : '')]) -%}
         {{ morceaux|join(' · ') }}
     </div>
 
-    <div class="jsb-carte__ligne jsb-carte__ligne--montant"
-         title="Prime potentielle : {{ entity.primePotentielle is null ? '—' : vueCartes.monnaie ~ ' ' ~ entity.primePotentielle|format_nombre(2) }}">
+    <div class="jsb-carte__ligne jsb-carte__ligne--montant">
         <span class="jsb-carte__etiquette">Comm. potentielle</span>
         {%- if entity.commissionPotentielle is null %}
             <span class="jsb-carte__montant" aria-hidden="true">—</span><span class="visually-hidden">non renseignée</span>
@@ -62,7 +91,7 @@
 
     <div class="jsb-carte__ligne jsb-carte__ligne--pied">
         <span class="jsb-carte__avatar" aria-hidden="true">{{ entity.responsableInitiales ?: '?' }}</span>
-        <span class="jsb-carte__responsable" title="{{ entity.responsableSource }}">{{ entity.responsableNom ?: 'Non attribué' }}</span>
+        <span class="jsb-carte__responsable">{{ entity.responsableNom ?: 'Non attribué' }}</span>
         {%- if entity.closed %}
             <span class="jsb-carte__cloturee">
                 <span aria-hidden="true">{{ ux_icon(resolve_icon_name('action:cancel'), {width: '12px', height: '12px'}) }}</span> Clôturée

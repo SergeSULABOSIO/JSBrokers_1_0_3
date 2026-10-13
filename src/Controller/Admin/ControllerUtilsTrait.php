@@ -587,6 +587,7 @@ trait ControllerUtilsTrait
         return array_merge(parent::getSubscribedServices(), [
             CabinetActif::class => CabinetActif::class,
             AppartenanceAuCabinet::class => AppartenanceAuCabinet::class,
+            \App\Services\Canvas\CalculationProvider::class => \App\Services\Canvas\CalculationProvider::class,
         ]);
     }
 
@@ -854,19 +855,23 @@ trait ControllerUtilsTrait
         $dataArray = ($data instanceof \Doctrine\Common\Collections\Collection) ? $data->toArray() : (array)$data;
         $dataArray = array_reverse($dataArray); // derniers éléments (ID le plus élevé) en premier
 
-        // PÉRIMÈTRE PORTEFEUILLE : les onglets de collection appliquent la même logique
-        // de filtrage par défaut que les listes principales (getInitialSearchCriteria) :
-        // pour une entité enfant scopable (Cotation, Tâche…), seuls les éléments rattachés
-        // à un portefeuille géré par l'invité sont affichés au chargement. Le critère est
-        // renvoyé au frontend (badge « Mon portefeuille » retirable) et le moteur de
-        // recherche le ré-applique aux refresh/paginations. Sans objet pour les dialogues
-        // (édition des éléments du parent).
+        // UN ONGLET CONTEXTUEL MONTRE CE QUE LA FICHE CONTIENT — TOUT ce qu'elle contient.
+        //
+        // Il appliquait les filtres par défaut de la rubrique (« Mon portefeuille », statut
+        // « En attente »…), pensés pour la liste PRINCIPALE. Deux contresens en sortaient :
+        //  — sous une piste dont le client n'est dans aucun de mes portefeuilles, l'onglet
+        //    Cotations était VIDE par construction : la fiche ouverte, ses enfants cachés
+        //    (incident du 2026-10-13 : « Aucun élément trouvé », puis « Réinitialiser »
+        //    affichait la cotation) ;
+        //  — seul le portefeuille était appliqué aux données ; le statut ne l'était qu'en
+        //    badge. Le premier affichage et le premier rafraîchissement ne montraient donc pas
+        //    la même liste sous les mêmes chips.
+        // Le périmètre portefeuille est un confort de lecture, pas une frontière (cf.
+        // PortefeuilleScope) : on a ouvert la fiche, on voit son contenu. La seule frontière
+        // — les congés d'autrui — reste posée.
         $initialSearchCriteria = [];
         if ($usage !== 'dialog') {
-            $initialSearchCriteria = $this->getInitialSearchCriteria($entityClass, $this->getInvite()->getId(), $this->getEntreprise());
-            if ($initialSearchCriteria !== []) {
-                $dataArray = $this->filterByPortefeuilleScope($dataArray, $entityClass, $this->getInvite()->getId());
-            }
+            $initialSearchCriteria = $this->criteresDUnOngletContextuel($entityClass);
         }
         $totalItems = count($dataArray);
         if ($usage !== 'dialog') {
@@ -886,6 +891,16 @@ trait ControllerUtilsTrait
         // CORRECTION : Le list-manager de la collection a besoin du formCanvas de l'entité qu'il gère (l'enfant),
         // et non celui du parent, pour que la barre des totaux et la barre d'outils fonctionnent correctement.
         $entityFormCanvas = $this->canvasBuilder->getEntityFormCanvas(new $entityClass(), $this->getEntreprise()->getId());
+        // LES GESTES DE LIGNE que l'ENFANT déclare (ex. « Souscrire » d'une cotation) : dans
+        // une collection de dialogue, et seulement ceux dont le droit est acquis — chaque
+        // bouton suit le droit de SON point d'entrée, pas celui de la liste.
+        if ($usage === 'dialog') {
+            $listActionOptions['actionsDeLigne'] = array_values(array_filter(
+                $entityFormCanvas['parametres']['actions_de_ligne'] ?? [],
+                fn (array $geste): bool => !isset($geste['droit'])
+                    || $this->mayAccessEntity('App\\Entity\\' . $geste['droit']['entite'], $geste['droit']['niveau']),
+            ));
+        }
 
         // dd($entityFormCanvas);
 
@@ -982,6 +997,54 @@ trait ControllerUtilsTrait
     }
 
     /**
+     * LA FICHE QU'ON VIENT D'ENREGISTRER EST-ELLE DANS LE FILTRE ACTIF ?
+     *
+     * Une liste se rafraîchit après un enregistrement, mais AVEC SES CRITÈRES : une piste
+     * créée pour un client qu'aucun de mes portefeuilles ne porte n'y reparaît pas sous
+     * « Mon portefeuille ». Le rafraîchissement a eu lieu, le toast a dit « réussi », et la
+     * fiche semblait perdue (incident du 2026-10-13 : quatre minutes de recherches, toutes
+     * sous le même filtre, avant un F5 qui l'avait retiré).
+     *
+     * On le demande au moteur lui-même — la page affichée n'en dit rien : la fiche peut
+     * répondre au filtre et se trouver sur une autre page. La même recherche, bornée à
+     * l'identifiant, dit si elle passe ; puis, pour chaque critère DEMANDÉ, la même sans
+     * lui dit lequel l'écarte. Ces sondes ne partent qu'après un enregistrement, et ne
+     * rapportent qu'un booléen : aucune entité n'est envoyée au navigateur.
+     *
+     * @param list<string> $clesDemandees les critères posés par l'utilisateur (pas ceux qu'une
+     *                                    vue ajoute d'elle-même, comme les pistes ouvertes)
+     *
+     * @return array{id: int, visible: bool|null, masqueePar: list<array{cle: string, libelle: string}>}
+     *         `visible` vaut null quand la fiche n'est pas de cette liste (rien à dire)
+     */
+    private function verifierLaFicheEnregistree(string $entityClass, int $id, array $criteria, array $clesDemandees, Entreprise $entreprise, ?array $parentContext): array
+    {
+        $dedans = fn (array $criteres): bool => ($this->searchService->search(
+            $entityClass, array_merge($criteres, ['id' => $id]), $entreprise, $parentContext, 1, 1,
+        )['totalItems'] ?? 0) > 0;
+
+        $verdict = ['id' => $id, 'visible' => null, 'masqueePar' => []];
+        if ($id <= 0 || array_key_exists('id', $criteria) || !$dedans([])) {
+            return $verdict;
+        }
+        $verdict['visible'] = $dedans($criteria);
+        if ($verdict['visible']) {
+            return $verdict;
+        }
+
+        $libelles = array_column($this->canvasBuilder->getSearchCanvas($entityClass), 'Display', 'Nom');
+        foreach ($clesDemandees as $cle) {
+            $sansLui = $criteria;
+            unset($sansLui[$cle]);
+            if ($dedans($sansLui)) {
+                $verdict['masqueePar'][] = ['cle' => (string) $cle, 'libelle' => (string) ($libelles[$cle] ?? $cle)];
+            }
+        }
+
+        return $verdict;
+    }
+
+    /**
      * Renders either the full view manager or just the list component for a given entity.
      * This method handles both initial page loads (index) and dynamic search queries (query).
      *
@@ -1068,7 +1131,9 @@ trait ControllerUtilsTrait
                     'totalItems'   => $searchResult['totalItems'],
                     'itemsPerPage' => $searchResult['itemsPerPage'],
                 ],
-            ]));
+            ] + (isset($payload['verifier']) ? ['verification' => $this->verifierLaFicheEnregistree(
+                $entityClass, (int) $payload['verifier'], $criteria, array_keys($payload['criteria'] ?? []), $entreprise, $parentContext,
+            )] : [])));
         }
         // CAS 2: C'est le chargement initial de la page, on rend le conteneur principal.
         else {
@@ -1202,6 +1267,14 @@ trait ControllerUtilsTrait
         ];
         if ($vue === 'cartes') {
             $agregat = $this->searchService->agregerPistesParEtape($criteria, $entreprise);
+            // LA COLONNE « TRANSFORMÉES » DIT CE QUI A ÉTÉ GAGNÉ : la commission RÉELLE des
+            // polices souscrites (commission TTC due au courtier, celle de la colonne
+            // « Comm. totale » des cotations), et non plus l'estimation saisie sur la piste.
+            // Même filtre que son compteur ; même calcul que partout ailleurs.
+            $agregat['etapes'][\App\Services\Search\PisteTransformationScope::STATUT_TRANSFORMEES]['somme']
+                = (float) ($this->container->get(\App\Services\Canvas\CalculationProvider::class)->getIndicateursGlobaux(
+                    $entreprise, true, ['pistesCibles' => $this->searchService->idsDesPistesTransformees($criteria, $entreprise)],
+                )['commission_totale'] ?? 0.0);
             $contexte['agregats'] = $agregat['etapes'];
             $contexte['cloturees'] = $agregat['cloturees'];
             $contexte['droits'] = $this->droitsDesActionsDuPipe();
@@ -2035,6 +2108,44 @@ trait ControllerUtilsTrait
     abstract protected function getCollectionMap(): array;
 
     /**
+     * LE NOMBRE D'ÉLÉMENTS DE CHAQUE ONGLET CONTEXTUEL — sans en charger aucune liste.
+     *
+     * Les onglets d'une fiche sélectionnée ne chargent leur liste qu'au clic : l'utilisateur
+     * n'ira peut-être jamais en voir un. Leur badge, lui, se lit d'emblée : UNE requête par
+     * sélection, pour tous les onglets (cf. ComptesContextuelsController, view-manager).
+     *
+     * Le compte passe par LE MÊME CHEMIN que l'onglet (getter du parent, puis
+     * ajusterCollectionContextuelle) : le badge annonce ce que l'onglet montrera. Mêmes gardes
+     * que lui — le parent du cabinet ouvert (404 sinon), chaque collection seulement si son
+     * entité est lisible ; une collection illisible n'a pas de compte, donc pas de badge.
+     *
+     * Public, sans route : le contrôleur central y renvoie par `forward()`.
+     */
+    public function comptesDesCollections(string $parentEntityClass, int $id): JsonResponse
+    {
+        if ($id <= 0 || !$this->mayAccessEntity($parentEntityClass, Invite::ACCESS_LECTURE)) {
+            throw $this->createNotFoundException();
+        }
+        $parent = $this->em->find($parentEntityClass, $id) ?? throw $this->createNotFoundException();
+        $this->appartenance()->exigerLeCabinetOuvert($parent, $this->getEntityName($parent));
+
+        $comptes = [];
+        foreach ($this->getCollectionMap() as $nom => $classe) {
+            $getter = 'get' . ucfirst($nom);
+            if (!method_exists($parent, $getter) || !$this->mayAccessEntity($classe, Invite::ACCESS_LECTURE)) {
+                continue;
+            }
+            $collection = $parent->$getter();
+            if (!$collection instanceof \Doctrine\Common\Collections\Collection) {
+                continue;
+            }
+            $comptes[$nom] = count($this->ajusterCollectionContextuelle($nom, $parent, $collection));
+        }
+
+        return new JsonResponse(['comptes' => $comptes]);
+    }
+
+    /**
      * Gère une requête API générique pour une collection liée à une entité parente.
      *
      * @param int $id L'ID de l'entité parente.
@@ -2663,87 +2774,29 @@ trait ControllerUtilsTrait
     }
 
     /**
-     * Applique en mémoire le « périmètre portefeuille » à une collection déjà chargée
-     * (onglets de collection : les éléments viennent du getter du parent, pas du moteur
-     * de recherche). Même sémantique que JSBDynamicSearchService : l'élément est retenu
-     * si AU MOINS un des chemins de PortefeuilleScope mène à un portefeuille dont le
-     * gestionnaire est l'invité connecté — ou s'il est ORPHELIN et que son entité le
-     * tolère.
+     * Les critères d'un ONGLET CONTEXTUEL : aucun filtre de lecture, la fiche montre tout
+     * ce qu'elle contient (cf. renderCollectionOrList).
      *
-     * ⚠ CETTE DERNIÈRE CLAUSE MANQUAIT, et le commentaire ci-dessus affirmait pourtant
-     * déjà « même sémantique » (incident du 2026-08-24). Le chemin SQL honore
-     * `PortefeuilleScope::tolereLesOrphelins()` ; ce filtre-ci l'ignorait. Conséquence :
-     * l'onglet contextuel « Justificatifs » d'une rétro s'affichait VIDE. Un document
-     * rattaché à un reversement n'atteint aucun portefeuille — la règle déclarée le veut
-     * donc visible, mais la règle appliquée ici le supprimait. Il fallait cliquer sur
-     * « Réinitialiser » pour que la pièce apparaisse, parce que ce geste passe par le
-     * moteur de recherche, c'est-à-dire par l'implémentation CORRECTE.
+     * Les défauts d'une rubrique — « Mon portefeuille », statut « En attente », tranches
+     * impayées, avenants échus — servent sa liste PRINCIPALE. Sous une fiche, ils cachaient
+     * ses propres enfants : sous une piste hors de mes portefeuilles, l'onglet Cotations
+     * était vide par construction. Et ils n'étaient appliqués aux données qu'en partie (le
+     * portefeuille, par un filtre en mémoire qui doublait le moteur — et avait déjà divergé
+     * de lui le 2026-08-24), le reste n'étant qu'un badge : le premier affichage et le
+     * premier rafraîchissement ne montraient pas la même liste.
      *
-     * Deux implémentations d'une même règle, dont une seule lisait la règle. C'est le
-     * motif exact des divergences déjà rencontrées sur les échéances : la déclaration doit
-     * être unique ET consultée par tous ses consommateurs.
+     * Ne reste que la FRONTIÈRE : les demandes de congé d'autrui, données personnelles, que
+     * DemandeCongeController::query() repose d'ailleurs à chaque rafraîchissement.
      *
-     * @param array<int, object> $items
-     * @return array<int, object>
+     * @return array<string, mixed>
      */
-    protected function filterByPortefeuilleScope(array $items, string $entityClass, int $idInvite): array
+    private function criteresDUnOngletContextuel(string $entityClass): array
     {
-        $shortName = (new \ReflectionClass($entityClass))->getShortName();
-        $paths = \App\Services\Search\PortefeuilleScope::pathsFor($shortName);
-        if ($paths === []) {
-            return $items;
+        if ((new \ReflectionClass($entityClass))->getShortName() !== 'DemandeConge') {
+            return [];
         }
 
-        $tolereLesOrphelins = \App\Services\Search\PortefeuilleScope::tolereLesOrphelins($shortName);
-        // Les relations testées sont les PREMIERS SEGMENTS des chemins, dérivées d'eux :
-        // elles vivent sur l'entité elle-même. Même source que le chemin SQL.
-        $relationsDirectes = \App\Services\Search\PortefeuilleScope::relationsDirectes($shortName);
-
-        return array_values(array_filter($items, function (object $item) use ($paths, $idInvite, $tolereLesOrphelins, $relationsDirectes): bool {
-            foreach ($paths as $path) {
-                $value = $item;
-                foreach (explode('.', $path) as $segment) {
-                    if (!is_object($value)) {
-                        $value = null;
-                        break;
-                    }
-                    $getter = 'get' . ucfirst($segment);
-                    $value = method_exists($value, $getter) ? $value->$getter() : null;
-                    if ($value === null) {
-                        break;
-                    }
-                }
-                if ($value instanceof \App\Entity\Invite && $value->getId() === $idInvite) {
-                    return true;
-                }
-            }
-
-            // L'ORPHELIN RESTE VISIBLE quand l'entité le tolère : le périmètre
-            // portefeuille est un CONFORT DE LECTURE, pas une frontière de sécurité
-            // (celle-ci est le scoping entreprise, sans exception). Écarter une pièce qui
-            // n'appartient à personne d'autre serait la faire disparaître pour rien.
-            return $tolereLesOrphelins && !$this->aUneRelationDePerimetre($item, $relationsDirectes);
-        }));
-    }
-
-    /**
-     * L'élément renseigne-t-il au moins une de ses relations de périmètre ?
-     *
-     * Sinon il est ORPHELIN au sens de PortefeuilleScope : aucun portefeuille ne peut le
-     * revendiquer, dans un sens comme dans l'autre.
-     *
-     * @param string[] $relationsDirectes
-     */
-    private function aUneRelationDePerimetre(object $item, array $relationsDirectes): bool
-    {
-        foreach ($relationsDirectes as $relation) {
-            $getter = 'get' . ucfirst($relation);
-            if (method_exists($item, $getter) && $item->$getter() !== null) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->getInitialSearchCriteria($entityClass, $this->getInvite()->getId(), $this->getEntreprise());
     }
 
     protected function getEntitiesForType(string $entityType): array

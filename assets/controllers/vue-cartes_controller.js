@@ -1,6 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 import {
-    clicDeSelection, cleDeLaVue, cookieDeVue, doitDistribuer, messageDEtape, vueARestaurer,
+    clicDeSelection, cleDeLaVue, cookieDeVue, doitDistribuer, messageDEtape, partsDuPipe, vueARestaurer,
 } from './vue-cartes-regles.js';
 
 /**
@@ -40,6 +40,17 @@ export default class extends Controller {
 
         document.addEventListener('app:list.rendered', this._surRendu);
         document.addEventListener('app:loading.start', this._surChargement);
+        // LE GRIS DU CHARGEMENT FINIT AVEC LE CHARGEMENT — pas avec la distribution d'une
+        // source. Il ne s'éteignait qu'à l'arrivée de nouvelles cartes : un chargement qui
+        // finissait sans elles (réponse en vue Liste, réponses croisées d'une bascule rapide,
+        // échec réseau) laissait le pipe grisé, comme désactivé, au retour en Cartes.
+        this._surFinDeChargement = () => this.hasTableauTarget && this.tableauTarget.removeAttribute('aria-busy');
+        document.addEventListener('app:loading.stop', this._surFinDeChargement);
+        // LA SÉLECTION POSÉE PAR PROGRAMME — restauration après F5, « Tout cocher » — coche
+        // les cases des lignes sans `change` : la carte l'apprend par l'annonce du cerveau.
+        // À SENS UNIQUE : on relit les cases, on n'émet rien ; aucune boucle possible.
+        this._surContexte = () => this._refleterLaSelection();
+        document.addEventListener('app:context.changed', this._surContexte);
         document.addEventListener('cerveau:event', this._surEvenementCerveau);
         document.addEventListener('app:boite-dialogue:init-request', this._surOuvertureDeDialogue);
         document.addEventListener('hidden.bs.modal', this._surFermetureDeModale);
@@ -53,6 +64,8 @@ export default class extends Controller {
     disconnect() {
         document.removeEventListener('app:list.rendered', this._surRendu);
         document.removeEventListener('app:loading.start', this._surChargement);
+        document.removeEventListener('app:loading.stop', this._surFinDeChargement);
+        document.removeEventListener('app:context.changed', this._surContexte);
         document.removeEventListener('cerveau:event', this._surEvenementCerveau);
         document.removeEventListener('app:boite-dialogue:init-request', this._surOuvertureDeDialogue);
         document.removeEventListener('hidden.bs.modal', this._surFermetureDeModale);
@@ -183,6 +196,27 @@ export default class extends Controller {
                 pied.hidden = total <= affichees;
                 pied.textContent = `${affichees} affichée${affichees > 1 ? 's' : ''} sur ${total}`;
             }
+        });
+
+        // LA PART DE CHAQUE ÉTAPE, recalculée à chaque rendu sur les compteurs GLOBAUX.
+        const nombres = Object.fromEntries([...source.content.querySelectorAll('data[data-etape]')]
+            .map((d) => [d.dataset.etape, Number(d.value) || 0]));
+        const parts = partsDuPipe(nombres);
+        this.tableauTarget.querySelectorAll('[data-colonne]').forEach((colonne) => {
+            const part = parts?.[colonne.dataset.colonne];
+            const texte = colonne.querySelector('[data-part]');
+            const jauge = colonne.querySelector('[data-jauge]');
+            if (texte) {
+                texte.hidden = !part;
+                texte.textContent = part ? part.libelle : '';
+                if (part) {
+                    const precision = document.createElement('span');
+                    precision.className = 'visually-hidden';
+                    precision.textContent = ' des pistes du filtre';
+                    texte.appendChild(precision);
+                }
+            }
+            if (jauge) jauge.style.width = `${part ? part.pourcent : 0}%`;
         });
 
         const clotures = source.content.querySelector('data[data-cloturees]');

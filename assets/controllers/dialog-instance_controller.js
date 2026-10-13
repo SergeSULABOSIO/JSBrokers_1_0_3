@@ -503,6 +503,9 @@ export default class extends Controller {
         // rattacher cet enfant. On emprunte quand même TOUT le chemin de validation du
         // serveur — pour dire immédiatement si la saisie tiendrait — mais on s'arrête
         // avant l'écriture, et on range le résultat dans le tampon de la collection.
+        // AVANT l'aiguillage : une saisie elle-même en attente est rejouée plus tard avec CE
+        // formData — l'annonce de ses propres enfants doit voyager avec lui.
+        this._annoncerLesTampons(formData);
         if (this.parentContext?.differe) {
             await this._mettreEnAttente(formData);
             return;
@@ -1418,6 +1421,23 @@ export default class extends Controller {
      * Rejoue les tampons de ce dialogue, l'ancêtre ayant désormais un id.
      * @private
      */
+    /**
+     * LE SERVEUR APPREND CE QUI ARRIVE JUSTE APRÈS LA FICHE : `_en_attente[tranches]=1`.
+     *
+     * Les éléments en attente ne sont créés qu'APRÈS l'enregistrement du parent (cf.
+     * _rejouerLesTampons). Au moment où il enregistre, le serveur voit donc une cotation
+     * SANS tranche — et lui en donnait une de 100 % par défaut, avant que celle saisie à la
+     * main ne la rejoigne : deux tranches (incident du 2026-10-13). Un défaut ne vaut que
+     * pour ce qui n'arrive pas.
+     * @private
+     */
+    _annoncerLesTampons(formData) {
+        [...this.element.querySelectorAll('[data-controller~="collection"]')]
+            .map((noeud) => this.application.getControllerForElementAndIdentifier(noeud, 'collection'))
+            .filter((w) => w?.differeValue && w.compterEnAttente() > 0 && w.codeDeLaCollection())
+            .forEach((w) => formData.append(`_en_attente[${w.codeDeLaCollection()}]`, String(w.compterEnAttente())));
+    }
+
     async _rejouerLesTampons(parentId) {
         if (!parentId) return [];
 

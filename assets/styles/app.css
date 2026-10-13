@@ -660,6 +660,18 @@ textarea:hover,
     background-color: var(--cobalt);
     color: var(--bg-white);
 }
+/* LE NOMBRE ARRIVE, PUIS IL ARRIVE VRAIMENT (compte-onglet.js). Une pulsation douce tant
+   que le compte est en route ; un léger rebond quand il change — le chiffre, lui, défile.
+   Rien que de l'opacité et une échelle : aucune couleur nouvelle, aucune mise en page qui
+   bouge. Et rien du tout pour qui a demandé moins de mouvement. */
+.jsb-onglet-compte.is-chargement { animation: jsb-compte-attente 1.1s ease-in-out infinite; }
+.jsb-onglet-compte.vient-de-changer { animation: jsb-compte-rebond 0.32s ease-out; }
+@keyframes jsb-compte-attente { 50% { opacity: 0.4; } }
+@keyframes jsb-compte-rebond { 0% { transform: scale(0.85); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+    .jsb-onglet-compte.is-chargement,
+    .jsb-onglet-compte.vient-de-changer { animation: none; }
+}
 
 /* UN ONGLET QUI CACHE UNE ERREUR LE DIT — par un SIGNE, et non par un `box-shadow` :
    celui-ci porte deja le lisere cobalt de `.active` ET l'anneau de focus, et une
@@ -2410,8 +2422,12 @@ tr.row-selected:hover > td {
        la retrecit : c'est la colonne PRINCIPALE qui cede et ellipse, un libelle tronque
        restant lisible la ou un montant tronque est faux. */
     --jsb-col-valeur: 20ch;
-    /* Deux boutons de 34 px, leur gouttiere et le rembourrage de cellule. */
-    --jsb-col-actions: 104px;
+    /* TROIS boutons de 34 px (Modifier, un geste declare comme Souscrire, Supprimer),
+       leurs gouttieres de 10 px et le rembourrage de cellule. Calibree pour deux, la
+       colonne ecrasait le troisieme : les cibles se touchaient, et un clic tombait sur la
+       voisine. Commune a toutes les collections : la colonne de valeur garde la meme
+       abscisse d'un onglet a l'autre. */
+    --jsb-col-actions: 148px;
 }
 .table-enhanced > colgroup > col.jsb-col-valeur  { width: var(--jsb-col-valeur); }
 .table-enhanced > colgroup > col.jsb-col-actions { width: var(--jsb-col-actions); }
@@ -4216,7 +4232,9 @@ tr.row-selected:hover > td {
     opacity: 0; /* Caché par défaut (souris) */
     transition: opacity 0.2s ease-in-out;
     display: flex;
-    gap: 0.5rem;
+    /* UNE GOUTTIÈRE FRANCHE entre deux cibles : un clic destiné à l'une ne doit pas
+       tomber sur sa voisine — et la voisine peut être « Supprimer ». */
+    gap: 0.625rem;
     justify-content: flex-end;
 }
 
@@ -4242,6 +4260,7 @@ tr:hover .list-row-actions-container,
 .list-row-action-btn {
     width: 34px;
     height: 34px;
+    flex-shrink: 0; /* la cible garde ses 34 px, quel que soit le nombre de boutons */
     padding: 0;
     display: inline-flex;
     align-items: center;
@@ -5380,6 +5399,9 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 #db-piste-tip .tip-section:first-child, .jsb-ctx-tip .tip-section:first-child { border-top: none; padding-top: 3px; }
 #db-piste-tip .tip-risque, .jsb-ctx-tip .tip-risque { color: #fbbf24; }
 #db-piste-tip .tip-libelle, .jsb-ctx-tip .tip-libelle { color: #9ca3af; font-style: italic; font-size: .68rem; padding-top: 1px; padding-bottom: 3px; }
+/* Un paragraphe qui EXPLIQUE (infobulle_controller : description d'une étape du pipe, mode
+   de calcul) : lisible, sur plusieurs lignes — pas une note en italique. */
+.jsb-ctx-tip .tip-para { color: #e9ecef; white-space: normal; font-size: .7rem; line-height: 1.45; padding-top: 2px; padding-bottom: 4px; }
 /* Infobulle posée AU-DESSUS d'une surface déjà sombre (chat de l'assistant en
    mode sombre) : son ombre portée noire n'y délimite plus rien. On lui rend un
    contour perceptible, sans toucher au style partagé avec le tableau de bord.
@@ -7694,20 +7716,36 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 .jsb-preset-filters-wrap:has(.jsb-vue-bascule),
 .jsb-vue-bascule { margin-left: auto; }
 
+/* LA BARRE DE DÉFILEMENT HORIZONTALE EST TOUJOURS AU BAS DE LA ZONE — jamais sous la
+   plus haute colonne. La rangée ne prenait que la hauteur de ses cartes : sa barre flottait
+   juste sous elles, au milieu d'un grand vide, et remontait ou descendait avec leur nombre.
+   En vue Cartes, la zone de la liste ne défile donc plus elle-même : elle est une colonne
+   bornée que le pipe REMPLIT, et c'est la rangée des colonnes qui défile, sur les deux
+   axes — la barre horizontale est ainsi posée au pied, et la verticale sur le côté.
+   (`.d-none` de l'état vide garde la main : il est en !important.) */
+.jsb-list-manager.is-vue-cartes > .table-scroll-wrapper {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
 .jsb-pipe {
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
     padding: 0.75rem;
-    min-height: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
     background: var(--bg-body, #f3f3f3);
 }
-/* La rangée des colonnes : SEULE elle défile horizontalement (la page, jamais). */
+/* La rangée des colonnes : SEULE elle défile (la page, jamais), et elle occupe toute la
+   hauteur restante — sa barre horizontale est au pied de l'écran. */
 .jsb-pipe__colonnes {
     display: flex;
     gap: 0.75rem;
     align-items: flex-start;
-    overflow-x: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
     padding-bottom: 0.25rem;
 }
 .jsb-pipe[aria-busy="true"] { opacity: 0.6; }
@@ -7728,19 +7766,36 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 .jsb-pipe__colonne--en_cotation { --etape: var(--etape-en_cotation); }
 .jsb-pipe__colonne--offres_chiffrees { --etape: var(--etape-offres_chiffrees); }
 .jsb-pipe__colonne--transformees { --etape: var(--etape-transformees); }
-.jsb-pipe__colonne--terminale { flex: 0 0 170px; }
+/* LA COLONNE TERMINALE TIENT SON PIRE CAS sur une ligne : icône, « Transformées », un
+   compteur à trois chiffres et « > 99 % ». À 170 px, la part passait à la ligne. */
+.jsb-pipe__colonne--terminale { flex: 0 0 236px; }
 
 .jsb-pipe__titre {
     display: flex;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 0.4rem;
+    min-width: 0;
     margin: 0;
     font-size: 0.9rem;
     font-weight: 700;
     color: var(--text-dark);
 }
+/* UNE SEULE LIGNE, ET UN SEUL ÉLÉMENT QUI CÈDE : le libellé (ellipsis, nom complet dans
+   l'infobulle). L'icône, le compteur et la part gardent leur taille — un chiffre coupé ou
+   renvoyé à la ligne se lirait mal, ou pas du tout. */
+.jsb-pipe__libelle { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.jsb-pipe__icone,
+.jsb-pipe__titre > .jsb-onglet-compte,
+.jsb-pipe__part { flex-shrink: 0; white-space: nowrap; }
 .jsb-pipe__icone { color: var(--etape); display: inline-flex; }
 .jsb-pipe__somme { margin: 0.15rem 0 0; font-size: 0.75rem; color: var(--text-muted); }
+/* LA PART DE L'ÉTAPE : le chiffre, discret, à côté du compteur — et la même part en longueur,
+   un filet à la couleur de l'étape. La couleur souligne ; le chiffre informe. */
+.jsb-pipe__part { margin-left: auto; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.jsb-pipe__jauge { display: block; height: 3px; margin-top: 0.35rem; border-radius: 999px; background: var(--border-light); overflow: hidden; }
+.jsb-pipe__jauge > span { display: block; height: 100%; width: 0; background: var(--etape, var(--border-medium)); border-radius: inherit; transition: width 0.35s ease-out; }
+@media (prefers-reduced-motion: reduce) { .jsb-pipe__jauge > span { transition: none; } }
 .jsb-pipe__cartes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 .jsb-pipe__vide,
 .jsb-pipe__terminale { margin: 0; padding: 0.75rem; border: 1px dashed var(--border-medium); border-radius: 8px; font-size: 0.8rem; color: var(--text-muted); text-align: center; }
@@ -7760,6 +7815,7 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 }
 .jsb-pipe__lien:hover { color: var(--cobalt-dark); }
 .jsb-pipe__clotures {
+    flex: 0 0 auto; /* la rangée qui défile cède la place, pas le pied */
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -7811,7 +7867,9 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 .jsb-carte__unite { font-weight: 400; color: var(--text-muted); }
 
 /* Ancienneté de la dernière activité : neutre, à surveiller, en retard — paires fond/texte
-   de la charte. Le nombre de jours est écrit : la couleur ne fait que le souligner. */
+   de la charte. Le nombre de jours est écrit : la couleur ne fait que le souligner.
+   Les offres reçues prennent la même pastille, neutre : c'est un compte, pas une alerte. */
+.jsb-carte__offres,
 .jsb-carte__age {
     flex: 0 0 auto;
     display: inline-flex;

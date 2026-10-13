@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-    clicDeSelection, cleDeLaVue, cookieDeVue, dialogueSuivi, doitDistribuer, messageDEtape, vueARestaurer, vueDuCookie,
+    clicDeSelection, cleDeLaVue, cookieDeVue, dialogueSuivi, doitDistribuer, messageDEtape, partsDuPipe, vueARestaurer, vueDuCookie,
 } from '../../assets/controllers/vue-cartes-regles.js';
 
 const ETAPES = {
@@ -69,4 +69,32 @@ test('un dialogue ouvert depuis la fiche de la carte lui est rattaché (collecti
     assert.equal(dialogueSuivi({ racine: true }), true);
     assert.equal(dialogueSuivi({ dansUnDialogueSuivi: true }), true, 'la cotation ouverte depuis la piste, l’avenant depuis la cotation');
     assert.equal(dialogueSuivi({}), false, 'un dialogue sans lien avec la carte ne compte pas');
+});
+
+test('la part de chaque étape : en nombre de pistes, entière, et les quatre font 100', () => {
+    // Le cas de l'écran : 2 · 1 · 1 · 42 — arrondies une à une, elles feraient 99.
+    const parts = partsDuPipe({ a_coter: 2, en_cotation: 1, offres_chiffrees: 1, transformees: 42 });
+    assert.deepEqual(Object.fromEntries(Object.entries(parts).map(([c, p]) => [c, p.libelle])),
+        { a_coter: '5 %', en_cotation: '2 %', offres_chiffrees: '2 %', transformees: '91 %' });
+    assert.equal(Object.values(parts).reduce((s, p) => s + p.pourcent, 0), 100);
+});
+
+test('la somme fait toujours 100, quel que soit le partage', () => {
+    for (const nombres of [[1, 1, 1, 0], [3, 3, 3, 3], [7, 0, 0, 0], [1, 2, 3, 994], [13, 17, 19, 51]]) {
+        const parts = partsDuPipe(Object.fromEntries(nombres.map((n, i) => [`e${i}`, n])));
+        assert.equal(Object.values(parts).reduce((s, p) => s + p.pourcent, 0), 100, JSON.stringify(nombres));
+    }
+});
+
+test('une étape non vide ne tombe jamais à « 0 % », et sa voisine ne prétend pas « 100 % »', () => {
+    const parts = partsDuPipe({ a_coter: 1, transformees: 250 });
+    assert.equal(parts.a_coter.libelle, '< 1 %');
+    assert.equal(parts.transformees.libelle, '> 99 %');
+    assert.equal(partsDuPipe({ a_coter: 0, transformees: 5 }).transformees.libelle, '100 %');
+    assert.equal(partsDuPipe({ a_coter: 0, transformees: 5 }).a_coter.libelle, '0 %');
+});
+
+test('aucune piste : aucune part, plutôt qu’un « 0 % » partout', () => {
+    assert.equal(partsDuPipe({ a_coter: 0, en_cotation: 0 }), null);
+    assert.equal(partsDuPipe({}), null);
 });

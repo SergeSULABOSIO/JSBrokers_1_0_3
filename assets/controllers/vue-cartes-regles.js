@@ -110,3 +110,48 @@ export function messageDEtape({ avant, apres, enregistre }, etapes) {
 export function dialogueSuivi({ racine = false, dansUnDialogueSuivi = false }) {
     return racine || dansUnDialogueSuivi;
 }
+
+/**
+ * LA PART DE CHAQUE ÉTAPE DANS LE PIPE — en nombre de pistes, sur les quatre colonnes du
+ * filtre actif (les clôturées, annoncées en pied, n'y entrent pas : 100 % = ce qu'on voit).
+ *
+ * ENTIERS, ET LA SOMME FAIT 100. Arrondir chaque part à part donne 99 ou 101 : on répartit
+ * au PLUS FORT RESTE (chaque part reçoit sa partie entière, puis les points manquants vont
+ * aux plus grands restes). Une étape NON VIDE qui tomberait à 0 s'annonce « < 1 % » : on ne
+ * fait pas disparaître des pistes qui existent — et sa voisine à 100 s'annonce alors
+ * « > 99 % », qui reste vrai. Sans aucune piste, aucune part : un « 0 % »
+ * partout affirmerait une répartition qui n'existe pas.
+ *
+ * @param {Record<string, number>} nombres  compteur global de chaque étape
+ * @returns {Record<string, {pourcent: number, libelle: string}>|null}
+ */
+export function partsDuPipe(nombres) {
+    const codes = Object.keys(nombres || {});
+    const total = codes.reduce((s, c) => s + Math.max(0, Number(nombres[c]) || 0), 0);
+    if (total === 0) return null;
+
+    const brutes = codes.map((code) => {
+        const exacte = (Math.max(0, Number(nombres[code]) || 0) * 100) / total;
+        return { code, entiere: Math.floor(exacte), reste: exacte - Math.floor(exacte) };
+    });
+    let manquants = 100 - brutes.reduce((s, b) => s + b.entiere, 0);
+    [...brutes].sort((a, b) => b.reste - a.reste).forEach((b) => {
+        if (manquants > 0 && b.reste > 0) {
+            b.entiere += 1;
+            manquants -= 1;
+        }
+    });
+
+    // « 100 % » n'est vrai que si aucune autre étape n'a de piste ; sinon « > 99 % ».
+    const etapesNonVides = codes.filter((c) => (Number(nombres[c]) || 0) > 0).length;
+    const libelle = (entiere, nonVide) => {
+        if (entiere === 0 && nonVide) return '< 1 %';
+        if (entiere === 100 && etapesNonVides > 1) return '> 99 %';
+        return `${entiere} %`;
+    };
+
+    return Object.fromEntries(brutes.map(({ code, entiere }) => [
+        code,
+        { pourcent: entiere, libelle: libelle(entiere, (Number(nombres[code]) || 0) > 0) },
+    ]));
+}

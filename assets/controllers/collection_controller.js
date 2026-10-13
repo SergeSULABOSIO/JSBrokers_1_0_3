@@ -1,6 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 import {
     ajouter as ajouterAuTampon,
+    codeDeCollection,
     compter as compterLeTampon,
     creerGroupe,
     libellesEnAttente,
@@ -758,6 +759,32 @@ export default class extends Controller {
     }
 
     /**
+     * UN GESTE DÉCLARÉ PAR L'ENFANT (ex. « Souscrire » une cotation) : la création d'une
+     * fiche RATTACHÉE À LA LIGNE — un avenant dont la cotation est le parent. Même chemin
+     * que « Ajouter » (`ui:toolbar.add-request`) ; l'origine est cette collection, qui se
+     * rafraîchira à l'enregistrement — et la ligne souscrite perdra son bouton.
+     * @param {MouseEvent} event
+     */
+    actionDeLigne(event) {
+        event.stopPropagation();
+        const geste = event.currentTarget.dataset;
+        const row = event.currentTarget.closest('tr');
+        if (!row?.dataset.itemId || !geste.gesteForm || !geste.gesteChamp) return;
+
+        this.notifyCerveau('ui:toolbar.add-request', {
+            formCanvas: {
+                parametres: {
+                    titre_creation: geste.gesteTitre,
+                    endpoint_form_url: geste.gesteForm,
+                    endpoint_submit_url: geste.gesteSubmit,
+                },
+            },
+            context: { originatorId: this.element.id },
+            parentContext: { id: row.dataset.itemId, fieldName: geste.gesteChamp },
+        });
+    }
+
+    /**
      * Demande la confirmation avant de supprimer un élément.
      * @param {MouseEvent} event
      */
@@ -852,6 +879,11 @@ export default class extends Controller {
     /** Nombre d'éléments en attente ici, descendants compris — le chiffre du garde-fou. */
     compterEnAttente() {
         return this.differeValue ? compterLeTampon(this.groupe) : 0;
+    }
+
+    /** Le nom de cette collection chez le parent (cf. dialog-instance#_annoncerLesTampons). */
+    codeDeLaCollection() {
+        return codeDeCollection(this.urlValue);
     }
 
     /** Ce qui serait perdu à l'abandon, nommé — jamais un simple nombre. */

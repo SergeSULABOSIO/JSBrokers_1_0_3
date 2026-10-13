@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { marquerEnChargement, poserLeCompte } from './compte-onglet.js';
 import { DebordementOnglets } from './onglets-debordement.js';
 
 /**
@@ -95,6 +96,11 @@ export default class extends Controller {
         document.addEventListener('app:display.update', this.boundHandleDisplayUpdate);
         document.addEventListener('view-manager:tab-content.loaded', this.boundHandleTabContentLoaded);
         document.addEventListener('workspace:tab-became-active', this.boundHandleTabBecameActive);
+        this.boundListeRafraichie = (e) => {
+            if (this.workspaceTabId && e.detail?.workspaceTabId !== this.workspaceTabId) return;
+            this._surListeRafraichie(e);
+        };
+        document.addEventListener('app:list.refreshed', this.boundListeRafraichie);
 
         // Affordance de débordement de la barre d'onglets : recalculée quand la
         // barre change de taille (le scroll est couvert par data-action côté template).
@@ -114,6 +120,8 @@ export default class extends Controller {
         document.removeEventListener('app:display.update', this.boundHandleDisplayUpdate);
         document.removeEventListener('view-manager:tab-content.loaded', this.boundHandleTabContentLoaded);
         document.removeEventListener('workspace:tab-became-active', this.boundHandleTabBecameActive);
+        document.removeEventListener('app:list.refreshed', this.boundListeRafraichie);
+        this._comptesEnCours?.abort();
         document.removeEventListener('app:icon.loaded', this.boundHandleIconLoaded);
         this.tabsOverflowObserver.disconnect();
         this.closeTabsOverflow();
@@ -188,6 +196,7 @@ export default class extends Controller {
             // Le RANG sert au dépliement en cascade : chaque onglet entre un cran après
             // le précédent, dans l'ordre où le canvas les déclare.
             collections.forEach((collectionInfo, rang) => this._createTab(collectionInfo, entities[0], entityType, rang));
+            if (collections.length > 0) this._chargerLesComptes();
         }
 
         // Guidage : la pastille d'entête rappelle QUEL élément a ouvert les
@@ -274,7 +283,7 @@ export default class extends Controller {
             this.notifyCerveau('ui:tab.context-changed', {
                 tabId: this.activeTabId,
                 // trim : le libellé peut être précédé d'une icône (nœuds/espaces).
-                tabName: clickedTab.textContent.trim(),
+                tabName: this._nomDeLOnglet(clickedTab),
                 parentId: this.collectionTabsParentId,
             });
             this._processNextQueuedTab();
@@ -289,7 +298,7 @@ export default class extends Controller {
             // continuaient de refléter la sélection de l'onglet précédent.
             this.notifyCerveau('ui:tab.context-changed', {
                 tabId: newTabId,
-                tabName: clickedTab.textContent.trim(),
+                tabName: this._nomDeLOnglet(clickedTab),
                 parentId: this.collectionTabsParentId,
             });
 
@@ -312,7 +321,7 @@ export default class extends Controller {
                 this.notifyCerveau('app:tab-content.load-request', {
                     tabId,
                     url: collectionUrl,
-                    tabName: clickedTab.textContent.trim(),
+                    tabName: this._nomDeLOnglet(clickedTab),
                     workspaceTabId: this.workspaceTabId
                 });
                 // isLoadingValue reste true ; libéré dans handleTabContentLoaded
@@ -381,7 +390,7 @@ export default class extends Controller {
         // plutôt que l'ID technique (ex: "collection-contacts-for-1").
         const activeTabBtn = this.tabsContainerTarget.querySelector(`[data-tab-id="${this.activeTabId}"]`);
         const tabName = activeTabBtn
-            ? activeTabBtn.textContent.trim()
+            ? this._nomDeLOnglet(activeTabBtn)
             : (this.activeTabId === 'principal' ? 'Principal' : this.activeTabId);
         this.notifyCerveau('ui:tab.context-changed', {
             tabId: this.activeTabId,
@@ -508,6 +517,68 @@ export default class extends Controller {
         return this.tabContentContainerTarget.querySelector(`[data-panneau-onglet="${CSS.escape(tabId)}"]`);
     }
 
+    /** Le libellé d'un onglet — sans sa pastille de compte, qui n'est pas son nom. */
+    _nomDeLOnglet(onglet) {
+        return (onglet.querySelector('.jsb-onglet-titre') ?? onglet).textContent.trim();
+    }
+
+    /**
+     * LES BADGES DES ONGLETS CONTEXTUELS : une requête pour tous, AUCUNE liste chargée.
+     *
+     * Chaque onglet ne charge sa liste qu'au clic — l'utilisateur n'ira peut-être jamais
+     * en voir un. Le serveur compte par le même chemin que l'onglet (le badge annonce ce
+     * que la liste montrera). Une réponse qui arrive après un changement de sélection est
+     * ignorée ; une collection sans compte (non lisible) garde son badge caché.
+     * @private
+     */
+    async _chargerLesComptes() {
+        const parentId = this.collectionTabsParentId;
+        const type = this.parentEntityType;
+        if (!parentId || !type) return;
+
+        this._comptesEnCours?.abort();
+        const controleur = new AbortController();
+        this._comptesEnCours = controleur;
+        const badges = [...this.tabsContainerTarget.querySelectorAll('[data-compte-collection]')];
+        badges.forEach((badge) => marquerEnChargement(badge));
+        let comptes = {};
+        try {
+            const reponse = await fetch(`/admin/comptes-contextuels/${encodeURIComponent(type)}/${encodeURIComponent(parentId)}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
+                signal: controleur.signal,
+            });
+            if (reponse.ok) comptes = (await reponse.json()).comptes || {};
+        } catch (erreur) {
+            if (erreur?.name === 'AbortError') return; // une sélection plus récente a pris la main
+        }
+        if (parentId !== this.collectionTabsParentId) return;
+
+        // Sans compte (échec, collection non lisible), la pastille s'efface : un « 0 » qui
+        // resterait affirmerait un vide que personne n'a constaté.
+        badges.forEach((badge) => {
+            const n = comptes[badge.dataset.compteCollection];
+            if (!Number.isInteger(n)) {
+                badge.hidden = true;
+                return;
+            }
+            badge.hidden = false;
+            badge.setAttribute('aria-label', `${n} élément${n > 1 ? 's' : ''}`);
+            poserLeCompte(badge, n);
+        });
+    }
+
+    /**
+     * Une liste d'onglet de CETTE fiche vient d'être rafraîchie (ajout, suppression,
+     * recherche) : ses comptes ont pu changer. Un compte de plus, pas une liste de plus.
+     * @private
+     */
+    _surListeRafraichie(event) {
+        const origine = String(event.detail?.originatorId || '');
+        if (this.collectionTabsParentId && origine.startsWith('collection-') && origine.endsWith(`-for-${this.collectionTabsParentId}`)) {
+            this._chargerLesComptes();
+        }
+    }
+
     _removeCollectionTabs() {
         this.tabsContainerTarget.querySelectorAll('[data-tab-type="collection"]').forEach(tab => {
             // CORRECTION : les panneaux de contenu sont identifiés par leur `id`
@@ -566,6 +637,16 @@ export default class extends Controller {
         titre.className = 'jsb-onglet-titre';
         titre.textContent = collectionInfo.intitule;
         tab.appendChild(titre);
+        // LE NOMBRE D'ÉLÉMENTS, à l'extrême droite — la pastille des onglets du dialogue
+        // (`.jsb-onglet-compte`). Posée DÈS l'onglet, à 0 et « en chargement » : la place
+        // ne saute pas quand le compte arrive, et la pulsation dit qu'il arrive
+        // (compte-onglet.js ; cf. _chargerLesComptes).
+        const compte = document.createElement('span');
+        compte.className = 'jsb-onglet-compte';
+        compte.dataset.compteCollection = collectionInfo.code;
+        compte.textContent = '0';
+        marquerEnChargement(compte);
+        tab.appendChild(compte);
         // ARIA : pattern tablist/tab/tabpanel (WCAG 4.1.2)
         tab.setAttribute('role', 'tab');
         tab.setAttribute('id', `tab-${tabId}`);

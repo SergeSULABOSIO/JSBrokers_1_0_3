@@ -44,6 +44,26 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
                 "Une cotation validée porte l'avenant : c'est le moment où une proposition devient un contrat.",
                 "La période de couverture est de douze mois par défaut, ajustable — elle sera alignée sur les dates réelles de l'avenant lorsque celui-ci sera émis.",
             ],
+            // ── LES GESTES D'UNE LIGNE DE COTATION, dans toute collection qui en liste ──
+            //
+            // Déclarés ICI, sur la cotation, et non sur chaque parent (piste, assureur…) :
+            // le geste suit la cotation partout où elle est listée. « Souscrire » ouvre la
+            // création de l'AVENANT rattaché à la cotation — le placement — prérempli par
+            // DefautsDeSouscription (AvenantController::getFormApi), comme la carte du pipe
+            // et Ket. Rendu sur une cotation PAS ENCORE souscrite (`si_vide`), et seulement
+            // si le droit d'écrire un avenant est acquis ; l'enregistrement le revérifie.
+            "actions_de_ligne" => [
+                [
+                    "label"        => "Souscrire",
+                    "icon"         => "action:completed",
+                    "titre"        => "Souscription — nouvel avenant",
+                    "form_url"     => "/admin/avenant/api/get-form",
+                    "submit_url"   => "/admin/avenant/api/submit",
+                    "champ_parent" => "cotation",
+                    "si_vide"      => "avenants",
+                    "droit"        => ["entite" => "Avenant", "niveau" => Invite::ACCESS_ECRITURE],
+                ],
+            ],
             // Picker de documents générique (client + piste parente + cotation + polices).
             "attribute_actions" => [
                 // ── L'EFFORT COMMERCIAL D'UN AGENT INTERNE ────────────────────────────

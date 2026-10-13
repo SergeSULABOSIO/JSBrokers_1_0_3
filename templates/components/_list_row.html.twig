@@ -224,6 +224,24 @@
                         </button>
                     {% endif %}
                 {% endif %}
+                {# LES GESTES QUE L'ENFANT DÉCLARE (`actions_de_ligne` de son canevas, filtrés
+                   par le droit côté serveur) — ex. « Souscrire » une cotation. `si_vide` : le
+                   geste n'a de sens que tant que la relation nommée est vide (une cotation
+                   déjà souscrite ne se souscrit pas). Une ligne en attente n'a pas d'id :
+                   rien ne peut encore s'y rattacher. #}
+                {% for geste in listActionOptions.actionsDeLigne|default([]) %}
+                    {% if entity.id and (geste.si_vide is not defined or attribute(entity, geste.si_vide)|length == 0) %}
+                        <button type="button" class="btn btn-sm btn-light list-row-action-btn shadow-sm border-0"
+                                title="{{ geste.label }}" aria-label="{{ geste.label }} l'élément #{{ entity.id }}"
+                                data-action="click->collection#actionDeLigne"
+                                data-geste-titre="{{ geste.titre }}"
+                                data-geste-form="{{ geste.form_url }}"
+                                data-geste-submit="{{ geste.submit_url }}"
+                                data-geste-champ="{{ geste.champ_parent }}">
+                            <twig:UX:Icon name="{{ resolve_icon_name(geste.icon) }}" style="width: 20px; height: 20px;" class="text-success"/>
+                        </button>
+                    {% endif %}
+                {% endfor %}
                 {# Libellé/icône de l'action de suppression personnalisables : pour une
                    collection « de rattachement » (portefeuille), l'action DÉTACHE et non
                    supprime — d'où « Retirer » + icône adaptée. Absente sans droit de
