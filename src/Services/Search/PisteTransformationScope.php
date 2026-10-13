@@ -55,6 +55,13 @@ final class PisteTransformationScope
     public const SEUIL_PRIME_CHIFFREE = 0.005;
 
     /**
+     * LA VUE CARTES MONTRE LE PIPE ACTIF : sans les pistes clôturées (depuis le tableau de
+     * bord). Critère posé par le serveur seul, jamais par un chip — le pied du Kanban dit
+     * combien il en écarte, et « Voir dans la liste » les montre.
+     */
+    public const CLE_PISTES_OUVERTES = '__pistes_ouvertes__';
+
+    /**
      * @var array<string, string> Valeur du critère => libellé affiché (badge, select du
      *      dialogue avancé, chips), DANS L'ORDRE DU PIPE. « En cours » vient après, parce
      *      qu'il regroupe les trois premières étapes ; « Toutes » est l'absence de valeur.

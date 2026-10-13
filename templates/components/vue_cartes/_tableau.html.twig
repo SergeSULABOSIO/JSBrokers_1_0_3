@@ -1,0 +1,56 @@
+{#
+    LE PIPE COMMERCIAL — trois colonnes actives, et la colonne terminale des Transformées.
+
+    Les colonnes sont VIDES au rendu : `vue-cartes_controller` y clone les cartes de la source
+    (cf. _source.html.twig) et y pose les compteurs. En-tête : le nombre de pistes de l'étape et
+    la somme de leurs commissions potentielles, pour TOUT le filtre courant — le corps, lui,
+    ne montre que la page (vingt pistes au plus, même pagination que la Liste).
+
+    Paramètres : listeCanvas (vue_cartes.etapes).
+#}
+<div class="jsb-pipe" role="region" aria-label="Pipe commercial des pistes" data-vue-cartes-target="tableau">
+    {# UNE RANGÉE, QUI DÉFILE. Repliées à la ligne, les colonnes cassaient la lecture du
+       pipe de gauche à droite : la dernière étape passait SOUS la première. #}
+    <div class="jsb-pipe__colonnes">
+    {%- for code, etape in listeCanvas.vue_cartes.etapes %}
+        {%- if code != 'transformees' %}
+            <section class="jsb-pipe__colonne jsb-pipe__colonne--{{ code }}" data-colonne="{{ code }}"
+                     aria-labelledby="pipe-{{ code }}-titre">
+                <header class="jsb-pipe__entete">
+                    <h3 class="jsb-pipe__titre" id="pipe-{{ code }}-titre">
+                        <span class="jsb-pipe__icone" aria-hidden="true">{{ ux_icon(resolve_icon_name(etape.icone), {width: '16px', height: '16px'}) }}</span>
+                        {{ etape.pluriel }}
+                        <span class="jsb-onglet-compte" data-total aria-label="pistes à cette étape">—</span>
+                    </h3>
+                    <p class="jsb-pipe__somme" title="Somme des commissions potentielles de l'étape, pour tout le filtre">
+                        <span data-somme>—</span>
+                    </p>
+                </header>
+                <ul class="jsb-pipe__cartes" data-cartes role="list"></ul>
+                <p class="jsb-pipe__vide" data-vide>Aucune piste à cette étape sur cette page.</p>
+                <p class="jsb-pipe__pied" data-pied hidden></p>
+            </section>
+        {%- else %}
+            <section class="jsb-pipe__colonne jsb-pipe__colonne--transformees jsb-pipe__colonne--terminale"
+                     data-colonne="transformees" aria-labelledby="pipe-transformees-titre">
+                <header class="jsb-pipe__entete">
+                    <h3 class="jsb-pipe__titre" id="pipe-transformees-titre">
+                        <span class="jsb-pipe__icone" aria-hidden="true">{{ ux_icon(resolve_icon_name(etape.icone), {width: '16px', height: '16px'}) }}</span>
+                        {{ etape.pluriel }}
+                        <span class="jsb-onglet-compte" data-total aria-label="pistes transformées">—</span>
+                    </h3>
+                </header>
+                <p class="jsb-pipe__terminale">Le pipe s'arrête ici : la police est émise.</p>
+                <button type="button" class="jsb-pipe__lien" data-action="click->vue-cartes#voirLesTransformees">
+                    Voir les transformées
+                </button>
+            </section>
+        {%- endif %}
+    {%- endfor %}
+    </div>
+    <footer class="jsb-pipe__clotures" data-clotures hidden>
+        <span aria-hidden="true">{{ ux_icon(resolve_icon_name('action:cancel'), {width: '14px', height: '14px'}) }}</span>
+        <span data-texte></span>
+        <button type="button" class="jsb-pipe__lien" data-action="click->vue-cartes#voirDansLaListe">Voir dans la liste</button>
+    </footer>
+</div>

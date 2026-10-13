@@ -2083,7 +2083,8 @@ textarea:hover,
     font-size: 0.85rem;
 }
 
-.jsb-preset-chip {
+.jsb-preset-chip,
+.jsb-vue-choix {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -2111,7 +2112,8 @@ textarea:hover,
 .jsb-preset-chip__icon {
     display: inline-flex; /* aligne verticalement le SVG sur le libellé */
 }
-.jsb-preset-chip:hover {
+.jsb-preset-chip:hover,
+.jsb-vue-choix:hover {
     color: #0047AB;
     background: rgba(0, 71, 171, 0.08);
     transform: translateY(-1px);
@@ -2119,12 +2121,15 @@ textarea:hover,
 .jsb-preset-chip:active {
     transform: none; /* effet d'enfoncement à la pression */
 }
-.jsb-preset-chip:focus-visible {
+.jsb-preset-chip:focus-visible,
+.jsb-vue-choix:focus-visible {
     outline: 2px solid #0047AB;
     outline-offset: 2px;
 }
 .jsb-preset-chip.is-active,
-.jsb-preset-chip.is-active:hover {
+.jsb-preset-chip.is-active:hover,
+.jsb-vue-choix.is-active,
+.jsb-vue-choix.is-active:hover {
     background: #0047AB;
     color: #ffffff;
     box-shadow: 0 1px 3px rgba(0, 71, 171, 0.35);
@@ -7667,3 +7672,219 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     .jsb-purge-rouet { animation: none; border-top-color: var(--cobalt); }
 }
 .jsb-purge-rouet + .jsb-purge-etat-ligne { margin-left: 0.4rem; }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   VUE CARTES — le pipe commercial des Pistes (vue-cartes_controller).
+   Une seule question : où en est chaque piste, et quelle est la prochaine action ?
+   Jetons de la charte seulement ; la couleur d'une étape (`--etape-*`) est celle du chip
+   et du marqueur de la vue Liste.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* LA VUE INACTIVE SORT DU RENDU (display:none), pas seulement de l'écran : un lecteur
+   d'écran ne doit pas lire deux fois la même page.
+   ⚠ Le chip « Statut » se masque par son ENVELOPPE : chips-defilement.js sort le titre du
+   groupe dans `.jsb-preset-filters-wrap` — masquer le seul groupe laissait une pilule
+   « Statut » vide. */
+.is-vue-cartes .table-enhanced,
+.is-vue-cartes .jsb-preset-filters-wrap:has([data-preset-criterion="__transformation_piste__"]),
+.is-vue-cartes [data-preset-criterion="__transformation_piste__"] { display: none; }
+.is-vue-liste .jsb-pipe { display: none; }
+
+/* La bascule « Vue », à droite de la rangée des chips (enveloppée elle aussi). */
+.jsb-preset-filters-wrap:has(.jsb-vue-bascule),
+.jsb-vue-bascule { margin-left: auto; }
+
+.jsb-pipe {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.75rem;
+    min-height: 100%;
+    background: var(--bg-body, #f3f3f3);
+}
+/* La rangée des colonnes : SEULE elle défile horizontalement (la page, jamais). */
+.jsb-pipe__colonnes {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+}
+.jsb-pipe[aria-busy="true"] { opacity: 0.6; }
+
+.jsb-pipe__colonne {
+    flex: 1 0 270px;
+    max-width: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: var(--bg-light);
+    border: 1px solid var(--border-light);
+    border-top: 3px solid var(--etape, var(--border-medium));
+    border-radius: 10px;
+    padding: 0.6rem;
+}
+.jsb-pipe__colonne--a_coter { --etape: var(--etape-a_coter); }
+.jsb-pipe__colonne--en_cotation { --etape: var(--etape-en_cotation); }
+.jsb-pipe__colonne--offres_chiffrees { --etape: var(--etape-offres_chiffrees); }
+.jsb-pipe__colonne--transformees { --etape: var(--etape-transformees); }
+.jsb-pipe__colonne--terminale { flex: 0 0 170px; }
+
+.jsb-pipe__titre {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+.jsb-pipe__icone { color: var(--etape); display: inline-flex; }
+.jsb-pipe__somme { margin: 0.15rem 0 0; font-size: 0.75rem; color: var(--text-muted); }
+.jsb-pipe__cartes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.jsb-pipe__vide,
+.jsb-pipe__terminale { margin: 0; padding: 0.75rem; border: 1px dashed var(--border-medium); border-radius: 8px; font-size: 0.8rem; color: var(--text-muted); text-align: center; }
+.jsb-pipe__vide[hidden] { display: none; }
+.jsb-pipe__pied { margin: 0; font-size: 0.75rem; color: var(--text-muted); text-align: center; }
+.jsb-pipe__lien {
+    align-self: flex-start;
+    background: none;
+    border: 0;
+    padding: 0.25rem 0;
+    color: var(--cobalt);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+    min-height: 44px;
+}
+.jsb-pipe__lien:hover { color: var(--cobalt-dark); }
+.jsb-pipe__clotures {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-white);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: var(--text-body);
+}
+
+/* ── La carte : quatre lignes, hauteur constante ─────────────────────────────── */
+.jsb-carte {
+    display: grid;
+    grid-template-rows: repeat(4, auto);
+    gap: 0.3rem;
+    padding: 0.6rem 0.7rem 0.6rem 0.85rem;
+    background: var(--bg-white);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    box-shadow: inset 4px 0 0 var(--etape), var(--shadow-sm);
+    cursor: pointer;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.jsb-carte--a_coter { --etape: var(--etape-a_coter); }
+.jsb-carte--en_cotation { --etape: var(--etape-en_cotation); }
+.jsb-carte--offres_chiffrees { --etape: var(--etape-offres_chiffrees); }
+.jsb-carte--transformees { --etape: var(--etape-transformees); }
+.jsb-carte:hover { border-color: var(--cobalt); box-shadow: inset 4px 0 0 var(--etape), var(--shadow-md); }
+.jsb-carte:focus-visible { outline: none; border-color: var(--cobalt); box-shadow: inset 4px 0 0 var(--etape), 0 0 0 3px var(--cobalt-focus-ring); }
+.jsb-carte.is-selected { background: var(--bg-cobalt-subtle); border-color: var(--cobalt); }
+.jsb-carte.is-cloturee { opacity: 0.75; }
+
+.jsb-carte__ligne { display: flex; align-items: center; gap: 0.4rem; min-width: 0; font-size: 0.8rem; color: var(--text-body); }
+.jsb-carte__case { flex: 0 0 auto; margin: 0; }
+.jsb-carte__titre {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+.jsb-carte__ligne--contexte { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--text-muted); }
+.jsb-carte__etiquette { color: var(--text-muted); }
+.jsb-carte__montant { margin-left: auto; font-weight: 700; color: var(--text-dark); }
+.jsb-carte__unite { font-weight: 400; color: var(--text-muted); }
+
+/* Ancienneté de la dernière activité : neutre, à surveiller, en retard — paires fond/texte
+   de la charte. Le nombre de jours est écrit : la couleur ne fait que le souligner. */
+.jsb-carte__age {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: var(--bg-light);
+    color: var(--text-muted);
+}
+.jsb-carte__age--surveiller { background: #fff3cd; color: #664d03; }
+.jsb-carte__age--retard { background: #f8d7da; color: #842029; }
+
+.jsb-carte__avatar {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--bg-cobalt-subtle);
+    color: var(--cobalt);
+    font-size: 0.65rem;
+    font-weight: 700;
+}
+.jsb-carte__responsable { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+/* L'ACTION PRIMAIRE, TOUJOURS VISIBLE (le tactile n'a pas de survol), et assez grande
+   pour un doigt (WCAG 2.5.8). */
+.jsb-carte__action {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-height: 32px;
+    padding: 0.25rem 0.6rem;
+    border: 1px solid var(--cobalt);
+    border-radius: 6px;
+    background: var(--bg-white);
+    color: var(--cobalt);
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.jsb-carte__action:hover { background: var(--cobalt); color: var(--text-white); }
+.jsb-carte__action:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--cobalt-focus-ring); }
+.jsb-carte__cloturee {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    background: var(--bg-muted);
+    color: var(--text-body);
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+/* Marqueur « Clôturée » de la vue Liste (badge d'état). */
+.jsb-state-badge--cloturee { background: var(--bg-muted); color: var(--text-body); }
+
+/* ÉCRAN ÉTROIT : une colonne à la fois, qui s'aimante au défilement horizontal. */
+@media (max-width: 768px) {
+    .jsb-pipe__colonnes { scroll-snap-type: x mandatory; }
+    .jsb-pipe__colonne { flex: 0 0 85%; max-width: none; scroll-snap-align: start; }
+    .jsb-pipe__colonne--terminale { flex: 0 0 60%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .jsb-carte { transition: none; }
+}

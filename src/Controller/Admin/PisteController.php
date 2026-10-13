@@ -2,6 +2,10 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\ChargementPourPrime;
+use App\Entity\Cotation;
+use App\Services\Search\PisteTransformationScope;
+use App\Service\Avenant\DefautsDeSouscription;
 use App\Entity\Avenant;
 use App\Entity\Client;
 use App\Entity\Piste;
@@ -218,6 +222,113 @@ class PisteController extends AbstractController
                 }
             }
         );
+    }
+
+    /**
+     * L'ÉTAPE D'UNE PISTE, maintenant — ce que la carte compare, une fois la fiche fermée,
+     * à l'étape qu'elle avait avant l'action (« Piste passée en … » / « La piste reste … »).
+     */
+    #[Route('/api/etape/{id}', name: 'api.etape', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function etapeApi(Piste $piste): JsonResponse
+    {
+        $this->appartenance()->exigerLeCabinetOuvert($piste, 'Cette piste');
+        if (!$this->mayAccessEntity($piste, Invite::ACCESS_LECTURE)) {
+            return $this->accessDeniedJson();
+        }
+        $this->canvasBuilder->loadAllCalculatedValues($piste);
+
+        return $this->json(['etape' => $piste->etapePipe, 'libelle' => $piste->etapePipeLibelle]);
+    }
+
+    /**
+     * L'ACTION PRIMAIRE D'UNE CARTE : quelle fiche ouvrir, sur quel onglet — décidé ICI, sur
+     * des données fraîches, et non par l'écran qui a pu vieillir.
+     *
+     *  - coter        → création d'une cotation sous la piste ;
+     *  - saisir-prime → la cotation, onglet Chargements ; plusieurs cotations : la piste,
+     *                   onglet Cotations ;
+     *  - souscrire    → création d'un AVENANT sous la cotation chiffrée, prérempli par
+     *                   DefautsDeSouscription (comme Ket) ; plusieurs : la piste, onglet Cotations.
+     *
+     * ⚠ 409 SEULEMENT SI L'ACTION EST DEVENUE IMPOSSIBLE — piste clôturée, cotation déjà
+     * souscrite, droit absent. Une carte périmée dont l'action reste valable s'ouvre
+     * normalement : le rafraîchissement la rangera dans sa colonne. Un autre cabinet : 404.
+     */
+    #[Route('/api/action-pipe/{id}/{action}', name: 'api.action_pipe', requirements: ['id' => Requirement::DIGITS, 'action' => 'coter|saisir-prime|souscrire'], methods: ['GET'])]
+    public function actionPipeApi(Piste $piste, string $action, DefautsDeSouscription $defautsDeSouscription): JsonResponse
+    {
+        $this->appartenance()->exigerLeCabinetOuvert($piste, 'Cette piste');
+        if ($piste->isClosed()) {
+            return $this->refusDuPipe('Cette piste est clôturée : elle ne se travaille plus depuis le pipe.');
+        }
+
+        $cotations = $piste->getCotations()->toArray();
+        $peutModifierLaPiste = $this->mayAccessEntity($piste, Invite::ACCESS_MODIFICATION);
+        $versLaPiste = fn () => $peutModifierLaPiste
+            ? $this->ouvertureDuPipe($piste, Piste::class, null, 'cotations')
+            : $this->refusDuPipe("Vous n'avez pas le droit de modifier cette piste.");
+
+        if ($action === 'coter') {
+            return $this->mayAccessEntity(Cotation::class, Invite::ACCESS_ECRITURE)
+                ? $this->ouvertureDuPipe(null, Cotation::class, ['id' => $piste->getId(), 'fieldName' => 'piste'], null)
+                : $this->refusDuPipe("Vous n'avez pas le droit d'ajouter une cotation.");
+        }
+
+        if ($action === 'saisir-prime') {
+            if (!$this->mayAccessEntity(ChargementPourPrime::class, Invite::ACCESS_ECRITURE)) {
+                return $this->refusDuPipe("Vous n'avez pas le droit de saisir une prime.");
+            }
+            if (count($cotations) === 1) {
+                return $this->mayAccessEntity(Cotation::class, Invite::ACCESS_MODIFICATION)
+                    ? $this->ouvertureDuPipe($cotations[0], Cotation::class, null, 'chargements')
+                    : $versLaPiste();
+            }
+
+            return $versLaPiste();
+        }
+
+        // souscrire
+        $chiffrees = array_values(array_filter(
+            $cotations,
+            fn (Cotation $c) => PisteTransformationScope::primeChiffree($this->indicatorHelper->getCotationMontantPrimePayableParClient($c)),
+        ));
+        $aSouscrire = array_values(array_filter($chiffrees, fn (Cotation $c) => !$defautsDeSouscription->dejaSouscrite($c)));
+        if (count($aSouscrire) === 1) {
+            return $this->mayAccessEntity(\App\Entity\Avenant::class, Invite::ACCESS_ECRITURE)
+                ? $this->ouvertureDuPipe(null, \App\Entity\Avenant::class, ['id' => $aSouscrire[0]->getId(), 'fieldName' => 'cotation'], null)
+                : $this->refusDuPipe("Vous n'avez pas le droit de souscrire une cotation.");
+        }
+        if ($aSouscrire === [] && $chiffrees !== []) {
+            return $this->refusDuPipe('La cotation chiffrée de cette piste est déjà souscrite.');
+        }
+
+        return $versLaPiste();
+    }
+
+    /**
+     * La fiche à ouvrir, dans la forme qu'attend openDialogBox — le canevas filtré par les
+     * droits, comme celui de la barre d'outils.
+     */
+    private function ouvertureDuPipe(?object $entite, string $classe, ?array $parent, ?string $onglet): JsonResponse
+    {
+        $idEntreprise = (int) $this->getEntreprise()->getId();
+        $canevas = $this->applyPermissionToFormCanvas(
+            $this->canvasBuilder->getEntityFormCanvas($entite ?? new $classe(), $idEntreprise),
+            $classe,
+        );
+
+        return $this->json([
+            'entity' => $entite === null ? new \stdClass() : ['id' => $entite->getId()],
+            'formCanvas' => $canevas,
+            'isCreationMode' => $entite === null,
+            'parentContext' => $parent,
+            'ongletInitial' => $onglet,
+        ]);
+    }
+
+    private function refusDuPipe(string $message): JsonResponse
+    {
+        return $this->json(['message' => $message], Response::HTTP_CONFLICT);
     }
 
     #[Route('/api/close/{id}', name: 'api.close', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]

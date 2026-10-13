@@ -680,6 +680,13 @@ export default class extends Controller {
             case 'client:note.facturation-enregistree': // le picker a émis la note
                 this._handleNoteFacturationEnregistree(payload);
                 break;
+            // Les actions des cartes du pipe (vue Cartes des Pistes) : le serveur dit quelle
+            // fiche ouvrir, sur quel onglet.
+            case 'ui:piste.coter-request':
+            case 'ui:piste.saisir-prime-request':
+            case 'ui:piste.souscrire-request':
+                this.handleActionDuPipe(type, payload);
+                break;
             case 'ui:avenant.delete-piste-derivee':
                 this.handleAvenantDeletePisteDerivee(payload);
                 break;
@@ -2966,6 +2973,54 @@ export default class extends Controller {
      * préremplit le montant avec le solde de prime restant, le submit associe l'enfant.
      * @param {object} payload - { url } avec %id% déjà résolu par la surface appelante.
      */
+    /**
+     * L'ACTION PRIMAIRE D'UNE CARTE DU PIPE.
+     *
+     * Le navigateur ne décide pas de la fiche : il demande au serveur
+     * (`/admin/piste/api/action-pipe/{id}/{action}`), qui relit la piste — sa carte a pu
+     * vieillir — et répond la fiche, son canevas filtré par les droits, l'onglet où
+     * l'ouvrir. Un 409 dit pourquoi l'action est devenue impossible ; il s'affiche tel quel.
+     *
+     * Le contexte porte `_vueCartes` (la piste) : c'est ainsi que la vue Cartes reconnaît
+     * SA fiche, et ce qu'on y enregistre.
+     */
+    async handleActionDuPipe(type, payload) {
+        const action = {
+            'ui:piste.coter-request': 'coter',
+            'ui:piste.saisir-prime-request': 'saisir-prime',
+            'ui:piste.souscrire-request': 'souscrire',
+        }[type];
+        if (!action || !payload?.pisteId) {
+            return;
+        }
+        try {
+            this.broadcast('app:loading.start');
+            const reponse = await fetch(`/admin/piste/api/action-pipe/${payload.pisteId}/${action}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const resultat = await reponse.json().catch(() => ({}));
+            if (!reponse.ok) {
+                throw new Error(resultat.message || "Cette action n'est plus possible sur cette piste.");
+            }
+            this.openDialogBox({
+                entity: resultat.entity,
+                entityFormCanvas: resultat.formCanvas,
+                isCreationMode: resultat.isCreationMode === true,
+                context: {
+                    idEntreprise: this.currentIdEntreprise,
+                    idInvite: this.currentIdInvite,
+                    ongletInitial: resultat.ongletInitial || null,
+                    _vueCartes: payload.pisteId,
+                },
+                parentContext: resultat.parentContext || null,
+            });
+        } catch (error) {
+            this._showNotification(error.message || "Impossible d'ouvrir la fiche.", 'error');
+        } finally {
+            this.broadcast('app:loading.stop');
+        }
+    }
+
     async handleTrancheSignalerPaiementPrime(payload) {
         if (!payload.url) {
             console.error("[Cerveau] handleTrancheSignalerPaiementPrime() : URL manquante.", payload);

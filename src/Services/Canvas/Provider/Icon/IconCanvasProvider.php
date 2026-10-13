@@ -164,6 +164,9 @@ class IconCanvasProvider
         'action:transfer'     => 'mdi:swap-horizontal', // transfert vers un autre rattachement
         'action:upload'       => 'hugeicons:upload-01',
         'action:view'         => 'hugeicons:view',
+        'action:vue-cartes'   => 'tabler:layout-kanban',        // vue Cartes (pipe en colonnes)
+        'action:activite'     => 'mdi:calendar-clock',          // ancienneté de la dernière activité (carte de piste)
+        'action:vue-liste'    => 'mdi:format-list-bulleted',    // vue Liste (tableau)
         'action:word'         => 'tabler:file-type-docx', // export « Word » (.doc HTML-Word)
     ];
 
