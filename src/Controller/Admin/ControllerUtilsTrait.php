@@ -579,6 +579,12 @@ trait ControllerUtilsTrait
         return $this->container->get(CabinetActif::class);
     }
 
+    /** Les valeurs qu'une entité porte dès sa naissance, prises au conteneur comme le gardien. */
+    private function valeursDeNaissance(): \App\Service\Workspace\ValeursDeNaissance
+    {
+        return $this->container->get(\App\Service\Workspace\ValeursDeNaissance::class);
+    }
+
     /**
      * @return array<string, string>
      */
@@ -588,6 +594,7 @@ trait ControllerUtilsTrait
             CabinetActif::class => CabinetActif::class,
             AppartenanceAuCabinet::class => AppartenanceAuCabinet::class,
             \App\Services\Canvas\CalculationProvider::class => \App\Services\Canvas\CalculationProvider::class,
+            \App\Service\Workspace\ValeursDeNaissance::class => \App\Service\Workspace\ValeursDeNaissance::class,
         ]);
     }
 
@@ -1782,6 +1789,16 @@ trait ControllerUtilsTrait
         $champsPilotables = $isCreationMode
             ? $champsFormulaire
             : array_values(array_intersect($champsFormulaire, array_keys($data)));
+        // LES VALEURS DE NAISSANCE AVANT LE CONTRÔLE, ET NON APRÈS. Ce ne sont pas des
+        // questions posées à l'utilisateur (cf. ValeursDeNaissance) : la référence d'une
+        // note, « Générée automatiquement », est un champ DÉSACTIVÉ, jamais soumis. Posée
+        // seulement dans `beforePersist`, elle manquait au contrôle ci-dessous — et toute
+        // note créée par le dialogue tombait en 422 « Référence obligatoire ». `poser()`
+        // ne remplace rien de ce qui est déjà posé, et ne rend de valeurs que pour les
+        // entités qui en déclarent : les autres rubriques ne voient aucune différence.
+        if ($isCreationMode) {
+            $this->valeursDeNaissance()->poser($entity);
+        }
         $champsManquants = $this->champsObligatoiresInspector->champsManquants($entity, $champsPilotables);
 
         if ($form->isSubmitted() && $form->isValid() && empty($champsManquants)) {

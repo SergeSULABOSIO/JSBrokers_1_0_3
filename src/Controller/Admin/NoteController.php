@@ -695,10 +695,12 @@ class NoteController extends AbstractController
             NoteType::class,
             function (Note $note) use ($inviteConnecte, $request) {
                 if (!$note->getId()) {
-                    if (!$note->getReference()) {
-                        $note->setReference("N" . time());
-                    }
-                    // ⚠ SIGNATURE, VALIDATION ET DATE D'ÉMISSION VIENNENT D'UN SEUL ENDROIT.
+                    // ⚠ RÉFÉRENCE, SIGNATURE, VALIDATION ET DATE D'ÉMISSION VIENNENT D'UN
+                    // SEUL ENDROIT — et, sur ce chemin, AVANT le contrôle des champs
+                    // obligatoires (ControllerUtilsTrait::handleFormSubmission) : la
+                    // référence est un champ désactivé, jamais soumis, et son absence faisait
+                    // échouer toute création en 422. L'appel ci-dessous reste comme filet :
+                    // `poser()` ne remplace rien de ce qui est déjà posé.
                     //
                     // Ces trois valeurs étaient posées ici, et une seconde fois plus haut
                     // dans ce contrôleur — donc nulle part ailleurs. Tout ce qui écrit
