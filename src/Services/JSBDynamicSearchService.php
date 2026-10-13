@@ -138,6 +138,49 @@ class JSBDynamicSearchService
      * Elle ne dépend plus de l'objet Request, mais d'un simple tableau.
      */
     /**
+     * LES TROIS FAITS QUI RANGENT UNE PISTE DANS LE PIPE, en conditions DQL corrélées à
+     * `$rootAlias` (une Piste) :
+     *
+     *  - T : une de ses cotations porte un avenant (elle est transformée) ;
+     *  - C : une de ses cotations a une prime CHIFFRÉE — la somme de ses chargements atteint
+     *        PisteTransformationScope::SEUIL_PRIME_CHIFFREE ;
+     *  - K : elle a au moins une cotation.
+     *
+     * Le filtre du chip et l'agrégat par étape de la vue Cartes les lisent tous deux : la
+     * colonne et son compteur ne peuvent pas compter deux choses différentes.
+     *
+     * ⚠ DES EXISTS CORRÉLÉS, JAMAIS `NOT IN (SELECT …)` : une seule valeur NULL dans une
+     * liste vide un `NOT IN` pour toutes les lignes.
+     *
+     * @return array{T: string, C: string, K: string}
+     */
+    public function predicatsDEtapePiste(string $rootAlias, string $suffix = ''): array
+    {
+        $av = 'etape_av' . $suffix;
+        $ct = 'etape_ct' . $suffix;
+        $cc = 'etape_cc' . $suffix;
+        $ch = 'etape_ch' . $suffix;
+        $ck = 'etape_ck' . $suffix;
+        $seuil = PisteTransformationScope::SEUIL_PRIME_CHIFFREE;
+
+        return [
+            'T' => sprintf(
+                'EXISTS (SELECT %1$s.id FROM %2$s %1$s JOIN %1$s.cotation %3$s WHERE IDENTITY(%3$s.piste) = %4$s.id)',
+                $av, \App\Entity\Avenant::class, $ct, $rootAlias,
+            ),
+            'C' => sprintf(
+                'EXISTS (SELECT %1$s.id FROM %2$s %1$s WHERE IDENTITY(%1$s.piste) = %3$s.id'
+                . ' AND (SELECT SUM(%4$s.montantFlatExceptionel) FROM %5$s %4$s WHERE IDENTITY(%4$s.cotation) = %1$s.id) >= %6$s)',
+                $cc, \App\Entity\Cotation::class, $rootAlias, $ch, \App\Entity\ChargementPourPrime::class, $seuil,
+            ),
+            'K' => sprintf(
+                'EXISTS (SELECT %1$s.id FROM %2$s %1$s WHERE IDENTITY(%1$s.piste) = %3$s.id)',
+                $ck, \App\Entity\Cotation::class, $rootAlias,
+            ),
+        ];
+    }
+
+    /**
      * Une réponse VIDE a la même forme qu'une réponse pleine.
      *
      * Les sorties anticipées (entité non interrogeable, chemin spécial en erreur) ne
@@ -717,22 +760,19 @@ class JSBDynamicSearchService
                     continue; // valeur vide/inconnue (« Toutes ») : filtre ignoré
                 }
 
-                // EXISTS CORRÉLÉ, et non `NOT IN (SELECT IDENTITY(cot.piste) …)` : une seule
-                // cotation sans piste, n'importe où sur la plateforme, mettait un NULL dans la
-                // liste et vidait « En cours » partout (même défaut que pour les Cotations).
-                $avAlias = 'transformation_av' . $suffix;
-                $cotAlias = 'transformation_cot' . $suffix;
-                $transformee = $this->em->createQueryBuilder()
-                    ->select("{$avAlias}.id")
-                    ->from(\App\Entity\Avenant::class, $avAlias)
-                    ->join("{$avAlias}.cotation", $cotAlias)
-                    ->where("IDENTITY({$cotAlias}.piste) = {$rootAlias}.id")
-                    ->getDQL();
-
-                if ($statut === PisteTransformationScope::STATUT_TRANSFORMEES) {
-                    $qb->andWhere($qb->expr()->exists($transformee));
-                } else {
-                    $qb->andWhere($qb->expr()->not($qb->expr()->exists($transformee)));
+                // UNE CONDITION PAR VALEUR, À PARTIR DES TROIS MÊMES FAITS que l'indicateur de
+                // chaque ligne (PisteTransformationScope::etapeDe) : T (souscrite), C (une
+                // prime chiffrée), K (au moins une cotation).
+                ['T' => $t, 'C' => $c, 'K' => $k] = $this->predicatsDEtapePiste($rootAlias, $suffix);
+                $conditions = match ($statut) {
+                    PisteTransformationScope::STATUT_TRANSFORMEES => [$t],
+                    PisteTransformationScope::STATUT_EN_COURS => ["NOT {$t}"],
+                    PisteTransformationScope::ETAPE_OFFRES_CHIFFREES => ["NOT {$t}", $c],
+                    PisteTransformationScope::ETAPE_EN_COTATION => ["NOT {$t}", "NOT {$c}", $k],
+                    PisteTransformationScope::ETAPE_A_COTER => ["NOT {$k}"],
+                };
+                foreach ($conditions as $condition) {
+                    $qb->andWhere($condition);
                 }
                 continue;
             }

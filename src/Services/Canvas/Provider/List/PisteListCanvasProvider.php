@@ -26,6 +26,13 @@ class PisteListCanvasProvider implements ListCanvasProviderInterface
                 // empreinte de pas). Celle qu'on déclarait (« mdi:road-variant ») n'était lue
                 // par personne — une configuration qui ment sur ce qu'on voit à l'écran.
                 "texte_principal" => ["attribut_code" => "nom"],
+                // L'ÉTAPE DU PIPE, en marqueur coloré à côté du nom : le MÊME libellé que le
+                // chip et que la colonne de la vue Cartes, la MÊME couleur (`--etape-*`).
+                // Elle remplace « Transformée (Souscrite) » / « En cours » de la sous-ligne,
+                // qui ne parlait pas la langue du chip (« Transformées »).
+                "badges" => [
+                    ["attribut_code" => "etapePipeLibelle", "attribut_niveau" => "etapePipeNiveau"],
+                ],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     // LE VOYANT DE L'EFFORT COMMERCIAL, en tête : c'est ce qui distingue un
@@ -36,7 +43,6 @@ class PisteListCanvasProvider implements ListCanvasProviderInterface
                     // `attribute(entity, code)`, où un chemin pointé (« agent.nom ») est lu
                     // comme un nom de propriété et fait tomber la rubrique ENTIÈRE.
                     ["attribut_code" => "partageLibelle", "icone" => "partenaire"],
-                    ["attribut_code" => "statutTransformation"],
                     ["attribut_code" => "client"],
                     ["attribut_code" => "risqueCode"],
                 ],
@@ -68,21 +74,43 @@ class PisteListCanvasProvider implements ListCanvasProviderInterface
                 ],
             ],
             // Chips de filtre rapide rendus par _List_manager (hors dialogues) : chaque option
-            // pose/retire le critère synthétique « Statut de transformation » via le Cerveau. Le
-            // moteur filtre en SQL (EXISTS / NOT EXISTS sur les avenants des cotations de la
-            // piste). Même clé que le badge de la barre de recherche → les deux restent
-            // synchronisés. `icon` = alias IconCanvasProvider, résolu par resolve_icon_name().
+            // pose/retire le critère synthétique du pipe via le Cerveau ; le moteur filtre en
+            // SQL (JSBDynamicSearchService::predicatsDEtapePiste). Même clé que le badge de la
+            // barre de recherche → les deux restent synchronisés.
+            //
+            // LES ÉTAPES DANS L'ORDRE DU PIPE, puis « En cours » qui réunit les trois
+            // premières, puis « Toutes ». Libellés et icônes viennent de
+            // PisteTransformationScope : le chip, la ligne et la colonne ne peuvent pas diverger.
             "filtres_predefinis" => [
                 [
                     "critere" => PisteTransformationScope::CRITERION_KEY,
                     "libelle" => "Statut",
                     "options" => [
-                        ["value" => PisteTransformationScope::STATUT_TRANSFORMEES, "label" => PisteTransformationScope::libelle(PisteTransformationScope::STATUT_TRANSFORMEES), "icon" => "action:completed"],
+                        ...$this->optionsDesEtapes(),
                         ["value" => PisteTransformationScope::STATUT_EN_COURS, "label" => PisteTransformationScope::libelle(PisteTransformationScope::STATUT_EN_COURS), "icon" => "action:ongoing"],
                         ["value" => "", "label" => "Toutes", "icon" => "action:filter"],
                     ],
                 ],
             ],
         ];
+    }
+
+    /**
+     * Une option de chip par étape du pipe, dans l'ordre.
+     *
+     * @return list<array{value: string, label: string, icon: string}>
+     */
+    private function optionsDesEtapes(): array
+    {
+        $options = [];
+        foreach (PisteTransformationScope::ETAPES as $code => $etape) {
+            $options[] = [
+                "value" => $code,
+                "label" => PisteTransformationScope::libelle($code),
+                "icon" => $etape['icone'],
+            ];
+        }
+
+        return $options;
     }
 }

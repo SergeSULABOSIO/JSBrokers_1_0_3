@@ -4,6 +4,7 @@ namespace App\Services\Canvas\Indicator;
 
 use App\Service\Partage\RattachementDuPartage;
 use App\Entity\Piste;
+use App\Services\Search\PisteTransformationScope;
 use App\Services\ServiceDates;
 use DateTimeImmutable;
 
@@ -39,6 +40,7 @@ class PisteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'typeAvenantString' => $this->getPisteTypeAvenantString($entity),
             'renewalConditionString' => $this->getPisteRenewalConditionString($entity),
             'statutTransformation' => $this->getPisteStatutTransformation($entity),
+            ...$this->etapeDuPipe($entity),
             'nombreCotations' => $entity->getCotations()->count(),
             'agePiste' => $this->calculatePisteAge($entity),
             'primeTotale' => round($this->aggregateSubscribedCotationIndicator($entity, 'primeTotale'), 2),
@@ -77,6 +79,36 @@ class PisteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             }
         }
         return 'En cours';
+    }
+
+    /**
+     * L'ÉTAPE DU PIPE : la même règle que le chip et que la colonne du Kanban.
+     *
+     * Trois faits, lus sur les cotations — souscrite, prime chiffrée, au moins une — et
+     * rangés par PisteTransformationScope::etapeDe(). Le seuil de la prime est celui des
+     * prédicats SQL (SEUIL_PRIME_CHIFFREE) : une piste ne peut pas être « Offre chiffrée »
+     * dans sa ligne et « En cotation » dans le filtre.
+     *
+     * @return array{etapePipe: string, etapePipeLibelle: string, etapePipeNiveau: string}
+     */
+    private function etapeDuPipe(Piste $piste): array
+    {
+        $transformee = false;
+        $chiffree = false;
+        foreach ($piste->getCotations() as $cotation) {
+            $transformee = $transformee || $this->calculationHelper->isCotationBound($cotation);
+            $chiffree = $chiffree || PisteTransformationScope::primeChiffree(
+                $this->calculationHelper->getCotationMontantPrimePayableParClient($cotation)
+            );
+        }
+        $etape = PisteTransformationScope::etapeDe($transformee, $chiffree, !$piste->getCotations()->isEmpty());
+
+        return [
+            'etapePipe' => $etape,
+            'etapePipeLibelle' => PisteTransformationScope::ETAPES[$etape]['singulier'],
+            // Le suffixe de classe du marqueur coloré (`.jsb-state-badge--etape-…`).
+            'etapePipeNiveau' => 'etape-' . $etape,
+        ];
     }
 
     private function calculatePisteAge(Piste $piste): string
