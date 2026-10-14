@@ -51,7 +51,7 @@ final class PortefeuilleScope
      */
     private const PATHS = [
         'Client' => ['portefeuille.gestionnaire'],
-        'Piste' => ['client.portefeuille.gestionnaire'],
+        // 'Piste' : RÈGLE PROPRE, ci-dessous — et non plus un chemin. Ne pas la réinscrire ici.
         'Cotation' => ['piste.client.portefeuille.gestionnaire'],
         'Avenant' => ['cotation.piste.client.portefeuille.gestionnaire'],
         'Tranche' => ['cotation.piste.client.portefeuille.gestionnaire'],
@@ -101,6 +101,27 @@ final class PortefeuilleScope
             'feedback.tache.piste.client.portefeuille.gestionnaire',
         ],
     ];
+
+    /**
+     * LES ENTITÉS DONT « MON PORTEFEUILLE » SUIT UNE RÈGLE, et non un chemin.
+     *
+     * Une piste est à MOI quand j'en suis le RESPONSABLE : le gestionnaire du portefeuille
+     * de son client, sinon son créateur (ResponsableDePiste). Un chemin vers le seul
+     * gestionnaire faisait disparaître de « Mon portefeuille » les pistes d'un client sans
+     * portefeuille — que leur carte attribuait pourtant à leur créateur.
+     *
+     * 'Piste' n'est donc plus dans PATHS : un appelant qui lirait encore son chemin n'y
+     * trouverait rien, au lieu d'une règle fausse. isScopable() reste vrai.
+     *
+     * @var array<string, class-string>
+     */
+    public const REGLE_PROPRE = ['Piste' => ResponsableDePiste::class];
+
+    /** La classe qui porte la règle propre de l'entité, ou null si elle suit ses chemins. */
+    public static function regleDe(string $entityShortName): ?string
+    {
+        return self::REGLE_PROPRE[$entityShortName] ?? null;
+    }
 
     /**
      * Entités dont un enregistrement N'ATTEIGNANT AUCUN portefeuille reste VISIBLE.
@@ -209,7 +230,7 @@ final class PortefeuilleScope
      */
     public static function isScopable(string $entityShortName): bool
     {
-        return isset(self::PATHS[$entityShortName]);
+        return isset(self::PATHS[$entityShortName]) || isset(self::REGLE_PROPRE[$entityShortName]);
     }
 
     /**
