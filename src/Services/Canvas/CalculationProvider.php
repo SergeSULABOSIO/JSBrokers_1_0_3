@@ -72,6 +72,18 @@ class CalculationProvider
     }
 
     /**
+     * La commission souscrite de ces cotations, arrêtée au plafond.
+     *
+     * @param list<int> $cotationIds
+     *
+     * @return array{somme: float, plafonne: bool}
+     */
+    public function commissionSouscriteBornee(array $cotationIds, ?float $plafond): array
+    {
+        return $this->calculationHelper->commissionSouscriteBornee($cotationIds, $plafond);
+    }
+
+    /**
      * Les rubriques dont chaque ligne appelle getIndicateursGlobaux() avec sa propre
      * cible, et la clé d'option correspondante. Un Contact n'a pas d'agrégat propre :
      * ses chiffres sont ceux de son CLIENT, d'où la cible empruntée.

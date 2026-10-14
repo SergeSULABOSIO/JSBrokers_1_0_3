@@ -25,6 +25,9 @@
             ? 'Pistes transformées du filtre actif, et commission souscrite sur leurs polices (TTC, en ' ~ monnaie ~ ').'
             : 'Pistes de l’étape sur tout le filtre actif (pas seulement la page), et somme de leurs commissions potentielles en ' ~ monnaie ~ '. Clôturées exclues.' -%}
         {%- set calcul = calcul ~ ' Le pourcentage : part de l’étape dans les pistes des quatre colonnes (clôturées exclues) ; les quatre font 100 %.' -%}
+        {%- if terminale and listeCanvas.vue_cartes.plafond_transformees|default(null) -%}
+            {%- set calcul = calcul ~ ' Montant plafonné : le calcul s’arrête au-delà de ' ~ listeCanvas.vue_cartes.plafond_transformees|format_nombre(0) ~ ' ' ~ monnaie ~ ' (« + de … »).' -%}
+        {%- endif -%}
         <section class="jsb-pipe__colonne jsb-pipe__colonne--{{ code }}{{ terminale ? ' jsb-pipe__colonne--terminale' : '' }}"
                  data-colonne="{{ code }}" aria-labelledby="pipe-{{ code }}-titre">
             <header class="jsb-pipe__entete" tabindex="0"

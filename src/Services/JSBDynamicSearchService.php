@@ -241,28 +241,34 @@ class JSBDynamicSearchService
     }
 
     /**
-     * Les ids des pistes TRANSFORMÉES du filtre — tout le filtre, clôturées comprises, comme
-     * le compteur de la colonne (agregerPistesParEtape) : même filtre, même prédicat T. La
-     * colonne en tire la commission réellement souscrite.
+     * Les ids des COTATIONS SOUSCRITES des pistes du filtre — tout le filtre, clôturées
+     * comprises, comme le compteur de la colonne Transformées (agregerPistesParEtape) : une
+     * piste est transformée quand une de ses cotations porte un avenant. La colonne en tire
+     * la commission souscrite, par paquets et sous plafond.
      *
-     * @return list<int>
+     * Une seule requête, la sous-requête du filtre en IN : aucune piste ni cotation hydratée.
+     * Le cabinet est revérifié par l'invité de la piste — la jointure même de
+     * getIndicateursGlobaux, pour que les deux sommes portent sur les mêmes cotations.
+     *
+     * @return list<int> triés : l'ordre des paquets ne change pas d'un appel à l'autre
      */
-    public function idsDesPistesTransformees(array $criteria, Entreprise $entreprise): array
+    public function idsDesCotationsSouscritesDuFiltre(array $criteria, Entreprise $entreprise): array
     {
         $filtree = $this->pistesDuPipe($criteria, $entreprise, '_trf');
         if ($filtree === null) {
             return [];
         }
-        ['T' => $t] = $this->predicatsDEtapePiste('p_trf', '_trfp');
         $requete = $this->em->createQuery(sprintf(
-            'SELECT p_trf.id FROM %s p_trf WHERE p_trf.id IN (%s) AND %s',
-            \App\Entity\Piste::class,
+            'SELECT c_trf.id FROM %s c_trf JOIN c_trf.piste p_trf JOIN p_trf.invite i_trf
+             WHERE p_trf.id IN (%s) AND i_trf.entreprise = :entreprise_trf AND SIZE(c_trf.avenants) > 0
+             ORDER BY c_trf.id',
+            \App\Entity\Cotation::class,
             $filtree->getDQL(),
-            $t,
         ));
         foreach ($filtree->getParameters() as $parametre) {
             $requete->setParameter($parametre->getName(), $parametre->getValue(), $parametre->getType());
         }
+        $requete->setParameter('entreprise_trf', $entreprise);
 
         return array_map('intval', array_column($requete->getScalarResult(), 'id'));
     }

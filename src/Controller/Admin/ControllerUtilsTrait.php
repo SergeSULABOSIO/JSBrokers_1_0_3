@@ -1278,10 +1278,17 @@ trait ControllerUtilsTrait
             // polices souscrites (commission TTC due au courtier, celle de la colonne
             // « Comm. totale » des cotations), et non plus l'estimation saisie sur la piste.
             // Même filtre que son compteur ; même calcul que partout ailleurs.
-            $agregat['etapes'][\App\Services\Search\PisteTransformationScope::STATUT_TRANSFORMEES]['somme']
-                = (float) ($this->container->get(\App\Services\Canvas\CalculationProvider::class)->getIndicateursGlobaux(
-                    $entreprise, true, ['pistesCibles' => $this->searchService->idsDesPistesTransformees($criteria, $entreprise)],
-                )['commission_totale'] ?? 0.0);
+            //
+            // SOUS PLAFOND : au-delà de PLAFOND_SIGMA_TRANSFORMEES (par monnaie d'affichage),
+            // le calcul s'arrête et la colonne dit « + de … » — le chiffre exact coûtait la
+            // commission de TOUTES les polices du filtre.
+            $plafond = \App\Services\Canvas\Indicator\IndicatorCalculationHelper::plafondSigmaTransformees($contexte['monnaie']);
+            $sigma = $this->container->get(\App\Services\Canvas\CalculationProvider::class)->commissionSouscriteBornee(
+                $this->searchService->idsDesCotationsSouscritesDuFiltre($criteria, $entreprise),
+                $plafond,
+            );
+            $agregat['etapes'][\App\Services\Search\PisteTransformationScope::STATUT_TRANSFORMEES]['somme'] = $sigma['somme'];
+            $agregat['etapes'][\App\Services\Search\PisteTransformationScope::STATUT_TRANSFORMEES]['plafond'] = $sigma['plafonne'] ? $plafond : null;
             $contexte['agregats'] = $agregat['etapes'];
             $contexte['cloturees'] = $agregat['cloturees'];
             $contexte['droits'] = $this->droitsDesActionsDuPipe();
