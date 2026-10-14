@@ -5,6 +5,8 @@
  * et au contrôleur de n'être qu'un câblage.
  */
 
+import { cookieAEcrire, lireCookie } from './cookies.js';
+
 /** Les deux vues d'une liste qui déclare `vue_cartes`. */
 export const VUES = ['cartes', 'liste'];
 
@@ -34,20 +36,16 @@ export function cleDeLaVue(idEntreprise, entite) {
 
 /**
  * La chaîne à écrire dans `document.cookie`. Un an, tout le site (le serveur la lit sur le
- * chargement de la rubrique ET sur chaque rafraîchissement), `SameSite=Lax`.
- *
- * ⚠ PAS LE `saveCookie` HISTORIQUE (base_controller) : il préfixe la valeur et écrit une date
- * d'expiration invalide — le serveur aurait lu « 9111986cartes ».
+ * chargement de la rubrique ET sur chaque rafraîchissement) — la façon unique d'écrire un
+ * cookie (cookies.js).
  */
 export function cookieDeVue(cle, vue) {
-    return `${cle}=${vueARestaurer(vue)}; path=/; max-age=31536000; SameSite=Lax`;
+    return cookieAEcrire(cle, vueARestaurer(vue));
 }
 
-/** Lit la vue dans une chaîne `document.cookie`. */
+/** Lit la vue dans une chaîne `document.cookie` (cookies.js : repli sur l'ancien préfixe). */
 export function vueDuCookie(cookies, cle) {
-    const trouve = String(cookies ?? '').split(';').map((c) => c.trim()).find((c) => c.startsWith(`${cle}=`));
-
-    return vueARestaurer(trouve ? decodeURIComponent(trouve.slice(cle.length + 1)) : null);
+    return vueARestaurer(lireCookie(cookies, cle));
 }
 
 /**
