@@ -516,6 +516,7 @@ class NoteController extends AbstractController
     public function getPreviewUrlApi(Note $note, Request $request): JsonResponse
     {
         $this->appartenance()->exigerLeCabinetOuvert($note, 'Cette note');
+        $this->exigerLaLectureDesNotes();
         // NOUVEAU : On vérifie si on doit télécharger directement ou juste afficher/imprimer.
         if ($request->query->get('download')) {
             // Si le paramètre 'download' est présent, on génère l'URL de téléchargement PDF.
@@ -538,6 +539,7 @@ class NoteController extends AbstractController
         // Une note porte des montants, un débiteur et des coordonnées bancaires : son
         // numéro dans l'URL ne suffit pas à l'ouvrir.
         $this->appartenance()->exigerLeCabinetOuvert($note, 'Cette note');
+        $this->exigerLaLectureDesNotes();
         // CORRECTION : On charge les valeurs calculées pour la note ET pour chaque article.
         
         // 1. On charge les valeurs de la note (montantTotal, montantTaxe, etc.)
@@ -565,6 +567,7 @@ class NoteController extends AbstractController
     public function showWorkspaceContent(Note $note): JsonResponse
     {
         $this->appartenance()->exigerLeCabinetOuvert($note, 'Cette note');
+        $this->exigerLaLectureDesNotes();
         $this->canvasBuilder->loadAllCalculatedValues($note);
         foreach ($note->getArticles() as $article) {
             $this->canvasBuilder->loadAllCalculatedValues($article);
@@ -590,6 +593,8 @@ class NoteController extends AbstractController
     public function downloadPdf(Note $note): Response
     {
         $this->appartenance()->exigerLeCabinetOuvert($note, 'Cette note');
+        // Ket y mène aussi son export « note_pdf » (l'ancien état TCPDF est supprimé).
+        $this->exigerLaLectureDesNotes();
         // 1. On configure DomPDF pour qu'il respecte les styles d'impression (@media print)
         $pdfOptions = new Options();
         $pdfOptions->set('defaultFont', 'Arial');

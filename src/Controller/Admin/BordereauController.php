@@ -154,6 +154,8 @@ class BordereauController extends AbstractController
     public function getLinkedNotePreviewUrl(Bordereau $bordereau, Request $request): JsonResponse
     {
         $this->appartenance()->exigerLeCabinetOuvert($bordereau, 'Ce bordereau');
+        // Le droit au bordereau ne donne pas droit à sa note.
+        $this->exigerLaLectureDesNotes();
         $note = $bordereau->getNotes()->first();
         if (!$note) {
             return $this->json(['error' => 'Aucune note liée à ce bordereau.'], 404);
@@ -176,6 +178,8 @@ class BordereauController extends AbstractController
     public function getLinkedNoteContext(Bordereau $bordereau, Request $request): JsonResponse
     {
         $this->appartenance()->exigerLeCabinetOuvert($bordereau, 'Ce bordereau');
+        // Le droit au bordereau ne donne pas droit à sa note.
+        $this->exigerLaLectureDesNotes();
         $note = $bordereau->getNotes()->first();
         if (!$note) {
             return $this->json(['error' => 'Aucune note liée à ce bordereau.'], 404);

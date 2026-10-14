@@ -46,7 +46,8 @@ final class ExporterEtatTool implements AiToolInterface
         return 'Lance le téléchargement d\'un état : « document_comptable » = classeur Excel des '
             . 'états comptables SYSCOHADA (journal, grand-livre, balance, résultat, TFR, bilan, '
             . 'TFT, suivi fiscal, ou all = classeur complet) ; « note_pdf » / « bordereau_pdf » = '
-            . 'impression PDF d\'une note de débit/crédit (id requis — obtiens-le d\'abord via '
+            . 'PDF d\'une note de débit/crédit, avec le bordereau d\'assureur fusionné quand la note '
+            . 'en porte un (id requis — obtiens-le d\'abord via '
             . 'rechercher_entites). À appeler quand l\'utilisateur veut exporter, télécharger ou '
             . 'imprimer. Pour CONSULTER les chiffres d\'un état comptable, préférer document_comptable.';
     }
@@ -66,7 +67,8 @@ final class ExporterEtatTool implements AiToolInterface
                     'type' => 'string',
                     'enum' => self::ETATS,
                     'description' => 'document_comptable = classeur Excel comptable ; note_pdf = note '
-                        . 'de débit/crédit PDF ; bordereau_pdf = bordereau PDF de la note.',
+                        . 'de débit/crédit PDF ; bordereau_pdf = le même PDF (le bordereau d\'assureur y est '
+                        . 'fusionné quand la note en porte un).',
                 ],
                 'doc' => [
                     'type' => 'string',
@@ -173,23 +175,21 @@ final class ExporterEtatTool implements AiToolInterface
             return AiToolResult::introuvable(sprintf('%s #%d', $labels['Note'] ?? 'Note', $idNote));
         }
 
-        $route = $etat === 'note_pdf' ? 'admin.etats.imprimer_note' : 'admin.etats.imprimer_bordereau_note';
-
+        // ⚠ UN SEUL PDF, CELUI DE L'ÉCRAN (décision du 2026-10-14). Les deux exports menaient à
+        // l'ancien état TCPDF (`admin.etats.*`), en 500 pour tout destinataire — il lisait
+        // `Article::getMontant()` et `getIdPoste()`, disparus. Le PDF de la note fusionne déjà
+        // le bordereau d'assureur quand elle en porte un : « bordereau_pdf » reste accepté,
+        // pour ce que l'utilisateur demande, et ouvre ce même document.
         return AiToolResult::ok(
             [
                 'etat'    => $etat,
-                'libelle' => $etat === 'note_pdf' ? 'note (PDF)' : 'bordereau de note (PDF)',
+                'libelle' => $etat === 'note_pdf' ? 'note (PDF)' : 'note et son bordereau (PDF)',
                 'cible'   => $this->libelleur->libelle($note, $this->libelleur->displayField(Note::class)),
                 'note'    => 'Le PDF s\'ouvre dans un nouvel onglet de l\'utilisateur.',
             ],
             uiAction: [
                 'type' => TypeAction::OUVRIR_URL->value,
-                'url'  => $this->urlGenerator->generate($route, [
-                    'idEntreprise' => $scope->entreprise->getId(),
-                    'idNote'       => $idNote,
-                    // Paramètre CATCH_ALL requis par la route : cible de repli du redirect d'échec.
-                    'currentURL'   => 'admin',
-                ]),
+                'url'  => $this->urlGenerator->generate('admin.note.download_pdf', ['id' => $idNote]),
             ],
         );
     }

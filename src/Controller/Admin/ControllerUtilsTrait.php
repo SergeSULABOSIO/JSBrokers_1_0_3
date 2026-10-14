@@ -249,6 +249,22 @@ trait ControllerUtilsTrait
         );
     }
 
+    /**
+     * UNE NOTE NE SE MONTRE QU'À QUI LIT LES NOTES — sous aucune forme (décision du
+     * 2026-10-14) : PDF, aperçu, aperçu imprimable, contenu de la colonne de travail, ni
+     * depuis le bordereau qui la porte. Une note dit des montants, un débiteur et des
+     * coordonnées bancaires ; avoir droit au bordereau ne donne pas droit à sa facture.
+     * À appeler APRÈS le contrôle d'appartenance : une note d'un autre cabinet reste un 404.
+     *
+     * @throws \Symfony\Component\Security\Core\Exception\AccessDeniedException 403
+     */
+    private function exigerLaLectureDesNotes(): void
+    {
+        if (!$this->mayAccessEntity(\App\Entity\Note::class, Invite::ACCESS_LECTURE)) {
+            throw $this->createAccessDeniedException('La consultation des notes est hors de votre périmètre d’accès.');
+        }
+    }
+
     /** Panneau « Accès restreint » rendu dans la colonne de travail (lecture refusée). */
     private function accessDeniedComponent(object|string $entityOrClass): Response
     {
