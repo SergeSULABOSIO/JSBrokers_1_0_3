@@ -65,8 +65,8 @@ Effets d'un mouvement : statut de la base (`MouvementAvenant::statutDeLaBase`, :
 échéances postérieures « à régulariser » pour annulation/résiliation
 (`RegularisationDesEcheances`), tâche de suivi du paiement pour renouvellement/prorogation.
 Un seul avenant par piste de mouvement (précondition `premierAvenant`, sous verrou).
-`Constante::calculerPeriodeCouverture` est MORTE et contredit ces règles : ne pas l'utiliser —
-sa suppression est décidée (§7).
+L'ancienne `Constante::calculerPeriodeCouverture`, morte et contraire à ces règles, a été
+supprimée (§7) : ces règles n'ont plus qu'un exemplaire.
 
 ## 4. Invariants métier — à citer dans tout plan
 
@@ -129,9 +129,14 @@ sa suppression est décidée (§7).
 2. ~~Refus de supprimer une note qui porte des paiements~~ — **fait** (§5, invariant acquis).
 3. **« Mon portefeuille » étendu** aux entités qui descendent d'une piste, via `ResponsableDePiste` (§4).
 4. **Une seule monnaie par cabinet**, saisie = affichage (§4).
-5. **Nettoyage** : supprimer `Constante::calculerPeriodeCouverture` et la chaîne `getIdPoste()` de
-   `Constante` (7 méthodes, appelées seulement par elles-mêmes ou par deux gabarits inclus nulle
-   part), après un dernier grep.
+5. ~~Nettoyage de `Constante`~~ — **fait** (décisions du 2026-10-14). Le dernier grep a démenti
+   la prémisse : la chaîne `getIdPoste()` n'était pas seulement morte, elle servait l'ancien état
+   TCPDF (`EtatsController`), en 500 pour tout destinataire, et l'export `note_pdf` de Ket y
+   menait. Ket ouvre désormais le PDF de la note (`admin.note.download_pdf`) ; l'ancien état,
+   ses gabarits et tout le code de `Constante` que plus rien n'atteignait (325 méthodes sur
+   380) sont supprimés. Et **une note ne se montre qu'à qui lit les notes**, sous aucune forme :
+   PDF, aperçus, colonne de travail, ni depuis le bordereau qui la porte
+   (`ControllerUtilsTrait::exigerLaLectureDesNotes`). Test : `ExporterEtatPdfTest`.
 
 ## 8. Réflexes avant de coder
 

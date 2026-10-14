@@ -113,17 +113,18 @@ class ExporterEtatToolTest extends TestCase
         $urlGenerator = $this->createMock(UrlGeneratorInterface::class);
         $urlGenerator->expects($this->once())
             ->method('generate')
-            ->with('admin.etats.imprimer_note', ['idEntreprise' => 42, 'idNote' => 7, 'currentURL' => 'admin'])
-            ->willReturn('/admin/etats/imprimerNote/42/7/admin');
+            ->with('admin.note.download_pdf', ['id' => 7])
+            ->willReturn('/admin/note/download-pdf/7');
 
         $tool = $this->makeTool(['Note' => true], $search, $urlGenerator);
         $result = $tool->execute(['etat' => 'note_pdf', 'idNote' => 7], $this->makeScope());
 
         $this->assertSame(AiToolResult::STATUS_OK, $result->status);
-        $this->assertSame('/admin/etats/imprimerNote/42/7/admin', $result->uiAction['url']);
+        $this->assertSame('/admin/note/download-pdf/7', $result->uiAction['url']);
     }
 
-    public function testBordereauPdfUtiliseSaRoute(): void
+    /** « bordereau_pdf » ouvre le même PDF : le bordereau d'assureur y est fusionné (décision du 2026-10-14). */
+    public function testBordereauPdfOuvreLePdfDeLaNote(): void
     {
         $search = $this->createMock(JSBDynamicSearchService::class);
         $search->method('search')->willReturn(['status' => ['code' => 200], 'data' => [new Note()]]);
@@ -131,8 +132,8 @@ class ExporterEtatToolTest extends TestCase
         $urlGenerator = $this->createMock(UrlGeneratorInterface::class);
         $urlGenerator->expects($this->once())
             ->method('generate')
-            ->with('admin.etats.imprimer_bordereau_note', $this->anything())
-            ->willReturn('/admin/etats/imprimerBordereauNote/42/7/admin');
+            ->with('admin.note.download_pdf', ['id' => 7])
+            ->willReturn('/admin/note/download-pdf/7');
 
         $tool = $this->makeTool(['Note' => true], $search, $urlGenerator);
         $result = $tool->execute(['etat' => 'bordereau_pdf', 'idNote' => 7], $this->makeScope());
