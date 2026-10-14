@@ -225,12 +225,12 @@
                     {% endif %}
                 {% endif %}
                 {# LES GESTES QUE L'ENFANT DÉCLARE (`actions_de_ligne` de son canevas, filtrés
-                   par le droit côté serveur) — ex. « Souscrire » une cotation. `si_vide` : le
-                   geste n'a de sens que tant que la relation nommée est vide (une cotation
-                   déjà souscrite ne se souscrit pas). Une ligne en attente n'a pas d'id :
+                   par le droit côté serveur) — ex. « Souscrire » une cotation. `si` : l'attribut
+                   calculé, vrai, qui dit que le geste a un sens (une cotation déjà souscrite,
+                   ou sans la prime que son type exige, ne se souscrit pas). Une ligne en attente n'a pas d'id :
                    rien ne peut encore s'y rattacher. #}
                 {% for geste in listActionOptions.actionsDeLigne|default([]) %}
-                    {% if entity.id and (geste.si_vide is not defined or attribute(entity, geste.si_vide)|length == 0) %}
+                    {% if entity.id and (geste.si is not defined or attribute(entity, geste.si)) %}
                         <button type="button" class="btn btn-sm btn-light list-row-action-btn shadow-sm border-0"
                                 title="{{ geste.label }}" aria-label="{{ geste.label }} l'élément #{{ entity.id }}"
                                 data-action="click->collection#actionDeLigne"

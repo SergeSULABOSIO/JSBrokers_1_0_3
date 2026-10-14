@@ -7,6 +7,8 @@ use App\Entity\Avenant;
 use App\Entity\Cotation;
 use App\Entity\Piste;
 use App\Form\AvenantType;
+use App\Service\Avenant\DefautsDeSouscription;
+use App\Services\Search\PisteTransformationScope;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use App\Services\Piste\NomDePisteDerivee;
 use App\Services\ReconductionPartageService;
@@ -202,6 +204,26 @@ final class MouvementAvenantBuilder
         $revenus = $mouvement->porteUnePrime()
             ? $this->revenusReconduits($cotationBase, $facteur, $etape)
             : [];
+
+        // UNE GARANTIE RECONDUITE OU ÉTENDUE SANS PRIME N'A PAS DE SENS — la règle du
+        // premier avenant (DefautsDeSouscription::PRIME_EXIGEE), dite ICI, avant le plan.
+        // Sinon le contrôle à blanc l'ignore (la cotation n'est encore qu'une promesse),
+        // l'utilisateur valide, et le refus tombe à l'écriture de l'avenant. Le cas existe :
+        // une police reprise sans prime.
+        if (DefautsDeSouscription::primeExigee($mouvement->typeAvenant())) {
+            $primeReconduite = array_sum(array_map(
+                static fn (array $c): float => (float) ($c['champs']['montantFlatExceptionel'] ?? 0.0),
+                $chargements,
+            ));
+            if (!PisteTransformationScope::primeChiffree($primeReconduite)) {
+                return ['bloquant' => sprintf(
+                    '%s sans prime n’a pas de sens : la police « %s » n’a aucune prime à reconduire. '
+                    . 'Indiquez la prime de ce mouvement, ou saisissez d’abord celle de la police.',
+                    $mouvement === MouvementAvenant::Prorogation ? 'Une prorogation' : 'Un renouvellement',
+                    (string) $base->getReferencePolice(),
+                ), 'source' => $source];
+            }
+        }
 
         $collectionsCotation = [];
         foreach (['chargements' => $chargements, 'tranches' => $tranches, 'revenus' => $revenus] as $nom => $elements) {

@@ -2,6 +2,7 @@
 
 namespace App\Services\Canvas\Indicator;
 
+use App\Service\Avenant\DefautsDeSouscription;
 use App\Service\Partage\RattachementDuPartage;
 use App\Entity\Cotation;
 use App\Services\Search\CotationSouscriptionScope;
@@ -16,6 +17,7 @@ class CotationIndicatorStrategy implements IndicatorCalculationStrategyInterface
         // LE VOYANT « effort commercial » : une seule autorité le calcule, pour les
         // quatre écrans de l'arbre d'une affaire.
         private RattachementDuPartage $rattachement,
+        private DefautsDeSouscription $defautsDeSouscription,
     ) {
     }
 
@@ -40,6 +42,7 @@ class CotationIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'risqueDescription' => $this->calculationHelper->getRisqueDescriptionFromCotation($entity),
             'contextePiste' => $this->calculationHelper->getCotationContextePiste($entity),
             'statutSouscription' => CotationSouscriptionScope::statutLibelle($this->calculationHelper->isCotationBound($entity)),
+            'souscriptible' => $this->defautsDeSouscription->peutEtreSouscrite($entity),
             'referencePolice' => $this->calculationHelper->getCotationReferencePolice($entity),
             'periodeCouverture' => $this->calculationHelper->getCotationPeriodeCouverture($entity),
             'indemnisationDue' => round($this->calculationHelper->getCotationIndemnisationDue($entity), 2),

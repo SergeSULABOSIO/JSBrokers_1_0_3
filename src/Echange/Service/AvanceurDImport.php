@@ -18,6 +18,7 @@ use App\Entity\EchangeOccurrence;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Repository\EchangeImportRunRepository;
+use App\Service\Workspace\OrigineEcriture;
 use App\Service\Workspace\WorkspaceMutationService;
 use App\Token\TokenAccountService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -398,6 +399,10 @@ final class AvanceurDImport
                     $scope,
                     $refs,
                     peutDemanderLePortefeuille: false,
+                    // LA REPRISE RECONSTITUE L'HISTORIQUE : une police souscrite sans prime
+                    // chiffrée dans l'outil d'origine se reprend telle quelle. Seul ce moteur
+                    // pose cette origine — ni Ket, ni l'écran, ni une donnée du fichier.
+                    origine: OrigineEcriture::Reprise,
                 );
                 if (!$diagnostic['ok']) {
                     // ⚠ LE CATALOGUE SUIT, et c'est lui qui rend le reproche utilisable :
@@ -533,6 +538,7 @@ final class AvanceurDImport
                             $refs,
                             metrer: !$offerte,
                             peutDemanderLePortefeuille: false,
+                            origine: OrigineEcriture::Reprise,
                         );
                     }
 

@@ -40,6 +40,10 @@ export default class extends Controller {
         "contentPanel",
         "listContainer",
         "addButtonContainer",
+        // Le bouton « Ajouter » et la phrase qui prend sa place quand l'ajout est
+        // impossible (option de canevas `ajoutImpossible`, relayée par la liste).
+        "boutonAjout",
+        "explicationAjout",
         "countBadge",
         "rowActions", // Cible pour les conteneurs d'actions de ligne
         "titleLoading",
@@ -183,6 +187,7 @@ export default class extends Controller {
             // desormais dans le HTML de la liste, au pied du tableau, et arrive donc
             // avec `data.html`. Un chemin de moins a tenir synchronise.
             this.updateCount(data.itemCount);
+            this._appliquerAjoutImpossible(data);
 
             if (data.defaultCreated) {
                 document.dispatchEvent(new CustomEvent('app:notification.show', {
@@ -223,6 +228,22 @@ export default class extends Controller {
         }
     }
 
+
+    /**
+     * LA RAISON QUI INTERDIT L'AJOUT PEUT TOMBER PENDANT QUE LE DIALOGUE EST OUVERT : une
+     * prime saisie dans l'onglet voisin rend la souscription possible. La liste, rechargée,
+     * rapporte la raison du moment (`ajoutImpossible`, null quand il n'y en a plus) ; on
+     * bascule entre le bouton et la phrase que le serveur a déjà écrits.
+     * Clé absente de la réponse → rien ne change (collection qui ne la déclare pas).
+     */
+    _appliquerAjoutImpossible(data) {
+        if (!('ajoutImpossible' in data) || !this.hasBoutonAjoutTarget || !this.hasExplicationAjoutTarget) return;
+        const motif = data.ajoutImpossible || '';
+        this.explicationAjoutTarget.textContent = motif;
+        this.explicationAjoutTarget.hidden = motif === '';
+        this.explicationAjoutTarget.toggleAttribute('data-ajout-impossible', motif !== '');
+        this.boutonAjoutTarget.hidden = motif !== '';
+    }
 
     /**
      * Affiche les boutons d'action pour une ligne survolée.

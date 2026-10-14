@@ -5,6 +5,7 @@ namespace App\Services\Canvas\Provider\Form;
 use App\Entity\Invite;
 use App\Entity\Cotation;
 use App\Services\CanvasBuilder;
+use App\Service\Avenant\DefautsDeSouscription;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\Canvas\Provider\Form\FormCanvasProviderInterface;
 
@@ -14,7 +15,8 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
 
     public function __construct(
         private CanvasBuilder $canvasBuilder,
-        private EntityManagerInterface $em
+        private EntityManagerInterface $em,
+        private DefautsDeSouscription $defautsDeSouscription,
     ) {
     }
 
@@ -50,8 +52,10 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
             // le geste suit la cotation partout où elle est listée. « Souscrire » ouvre la
             // création de l'AVENANT rattaché à la cotation — le placement — prérempli par
             // DefautsDeSouscription (AvenantController::getFormApi), comme la carte du pipe
-            // et Ket. Rendu sur une cotation PAS ENCORE souscrite (`si_vide`), et seulement
-            // si le droit d'écrire un avenant est acquis ; l'enregistrement le revérifie.
+            // et Ket. Rendu sur une cotation SOUSCRIPTIBLE (`si` : pas encore souscrite, et
+            // chiffrée si son type l'exige — DefautsDeSouscription::peutEtreSouscrite), et
+            // seulement si le droit d'écrire un avenant est acquis ; l'enregistrement le
+            // revérifie.
             "actions_de_ligne" => [
                 [
                     "label"        => "Souscrire",
@@ -60,7 +64,7 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
                     "form_url"     => "/admin/avenant/api/get-form",
                     "submit_url"   => "/admin/avenant/api/submit",
                     "champ_parent" => "cotation",
-                    "si_vide"      => "avenants",
+                    "si"           => "souscriptible",
                     "droit"        => ["entite" => "Avenant", "niveau" => Invite::ACCESS_ECRITURE],
                 ],
             ],
@@ -150,11 +154,32 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
             ['fieldName' => 'tranches', 'entityRouteName' => 'tranche', 'formTitle' => 'Tranche', 'ongletTitre' => 'Tranches', 'parentFieldName' => 'cotation', 'totalizableField' => 'primeTranche', 'watchIds' => ['collection-cotation_chargements', 'collection-cotation_revenus']],
             ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'ongletTitre' => 'Documents', 'parentFieldName' => 'cotation'],
             ['fieldName' => 'taches', 'entityRouteName' => 'tache', 'formTitle' => 'Tâche', 'ongletTitre' => 'Tâches', 'parentFieldName' => 'cotation'],
-            ['fieldName' => 'avenants', 'entityRouteName' => 'avenant', 'formTitle' => 'Avenant', 'ongletTitre' => 'Avenants', 'parentFieldName' => 'cotation', 'totalizableField' => 'primeTotale'],
+            // `watchIds` : une prime saisie dans l'onglet Chargements peut lever le refus —
+            // la liste se recharge, et avec elle la raison du moment.
+            ['fieldName' => 'avenants', 'entityRouteName' => 'avenant', 'formTitle' => 'Avenant', 'ongletTitre' => 'Avenants', 'parentFieldName' => 'cotation', 'totalizableField' => 'primeTotale', 'watchIds' => ['collection-cotation_chargements'], 'ajoutImpossible' => $this->ajoutDAvenantImpossible($object)],
         ];
 
         $this->addCollectionWidgetsToLayout($layout, $object, $isCreateMode, $collections);
 
         return $layout;
+    }
+
+    /**
+     * LE « + » DES AVENANTS DIT POURQUOI IL N'EST PAS LÀ — la règle du serveur
+     * (DefautsDeSouscription::refusDAvenant), jamais une copie : le bouton ne promet que ce
+     * que l'enregistrement acceptera.
+     *
+     * En création, la cotation n'a ni id ni prime enregistrée : on ne peut pas encore en
+     * juger, sauf pour un type exempté de prime, qui reste libre.
+     */
+    private function ajoutDAvenantImpossible(Cotation $cotation): ?string
+    {
+        if ($cotation->getId() === null) {
+            return DefautsDeSouscription::primeExigee($cotation->getPiste()?->getTypeAvenant())
+                ? 'Enregistrez d’abord la cotation et sa prime.'
+                : null;
+        }
+
+        return $this->defautsDeSouscription->refusDAvenant($cotation);
     }
 }

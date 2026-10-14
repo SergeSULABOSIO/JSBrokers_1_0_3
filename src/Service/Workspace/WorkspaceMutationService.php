@@ -90,6 +90,9 @@ class WorkspaceMutationService
         // Le moteur qui emporte toute la chaîne d'une donnée sans toucher aux objets
         // transversaux. Même raison d'être en dernier que son voisin du dessus.
         private readonly SuppressionEnCascade $suppression,
+        // Une relation donnée par son id doit être du cabinet du périmètre. En dernier,
+        // pour la même raison que ses voisins.
+        private readonly AppartenanceAuCabinet $appartenance,
     ) {
     }
 
@@ -170,6 +173,8 @@ class WorkspaceMutationService
         AiScope $scope,
         ?MutationReferences $refs = null,
         bool $peutDemanderLePortefeuille = true,
+        // ⚠ Un PARAMÈTRE, jamais une donnée de l'opération : seul le moteur de reprise le passe.
+        ?OrigineEcriture $origine = null,
     ): array {
         $refs ??= MutationReferences::dryRun();
         $labels = $this->accessResolver->libellesEntites();
@@ -258,6 +263,19 @@ class WorkspaceMutationService
             }
         }
 
+        // UNE CRÉATION QUE L'ÉCRITURE REFUSERA EST REFUSÉE DÈS L'ANALYSE. Les règles de
+        // combinaison (ChampsObligatoiresInspector::incoherencesMetier — dates d'un avenant,
+        // prime exigée de son premier avenant…) ne partaient qu'à l'exécution : Ket montrait
+        // un plan prêt, l'utilisateur le validait, et le refus tombait APRÈS son geste.
+        //
+        // L'AVENANT SEUL : à l'analyse, une relation PROMISE par le plan (`@partenaire`,
+        // `@tranche`) n'est pas encore résolue. Les autres règles (bénéficiaire d'un
+        // partage, objet d'un reversement) la liraient vide et refuseraient à tort ; celles
+        // de l'avenant ne s'appliquent qu'à une cotation déjà écrite, donc lisible ici.
+        if ($manquants === [] && $op->isCreate() && $op->entityShortName === 'Avenant') {
+            $manquants = $this->champsInspector->incoherencesMetier($copie, $op->entityShortName, null, $origine);
+        }
+
         // La création est « promise » aux opérations suivantes du plan.
         if ($op->isCreate()) {
             $refs->declarer($op->ref);
@@ -268,7 +286,7 @@ class WorkspaceMutationService
         // facturablesArbre() (utilisée à l'identique par le budget et l'exécution).
         $impacts = [];
         $bloque = false;
-        $this->analyserCollections($copie, $op, $scope, $op->entityShortName, '', 0, $manquants, $impacts, $bloque, $refs);
+        $this->analyserCollections($copie, $op, $scope, $op->entityShortName, '', 0, $manquants, $impacts, $bloque, $refs, $origine);
 
         $base['impacts'] = array_merge($base['impacts'], $impacts);
 
@@ -304,6 +322,7 @@ class WorkspaceMutationService
         array &$impacts,
         bool &$bloque,
         ?MutationReferences $refs = null,
+        ?OrigineEcriture $origine = null,
     ): void {
         $refs ??= MutationReferences::dryRun();
         if ($parentOp->collections === [] || $profondeur >= FormTreeInspector::PROFONDEUR_MAX) {
@@ -390,13 +409,36 @@ class WorkspaceMutationService
                         }
                     }
                 }
+                $this->analyserLAvenantDUneCotation($parent, $parentOp, $enfant, $copieEnfant, $cheminEnfant, $manquants, $origine);
                 if ($enfant->isCreate()) {
                     $refs->declarer($enfant->ref);
                 }
 
                 // Récursion : les collections de l'enfant.
-                $this->analyserCollections($copieEnfant, $enfant, $scope, $ce->childShortName, $cheminEnfant . '.', $profondeur + 1, $manquants, $impacts, $bloque, $refs);
+                $this->analyserCollections($copieEnfant, $enfant, $scope, $ce->childShortName, $cheminEnfant . '.', $profondeur + 1, $manquants, $impacts, $bloque, $refs, $origine);
             }
+        }
+    }
+
+    /**
+     * L'AVENANT ÉCRIT DANS LES COLLECTIONS D'UNE COTATION, jugé dès l'analyse — le plan
+     * « contrat reçu » le porte ainsi. Mêmes règles qu'à l'écriture (incoherencesMetier :
+     * dates, prime exigée), sur une copie qu'on rattache à sa cotation sans toucher à la
+     * collection de celle-ci (Avenant::setCotation ne l'y ajoute pas).
+     *
+     * Une limite, assumée : quand le même plan apporte des chargements, la prime n'existe
+     * qu'une fois écrite — on ne la recompose pas ici. L'écriture en juge alors, avenants
+     * écrits en dernier (executerCollections), dans la transaction du plan.
+     */
+    private function analyserLAvenantDUneCotation(object $parent, MutationOperation $parentOp, MutationOperation $enfant, object $copieEnfant, string $chemin, array &$manquants, ?OrigineEcriture $origine): void
+    {
+        if (!$enfant->isCreate() || !$parent instanceof \App\Entity\Cotation || !$copieEnfant instanceof \App\Entity\Avenant
+            || isset($manquants[$chemin]) || ($parentOp->collections['chargements'] ?? []) !== []) {
+            return;
+        }
+        $copieEnfant->setCotation($parent);
+        foreach ($this->champsInspector->incoherencesMetier($copieEnfant, 'Avenant', null, $origine) as $champ => $msgs) {
+            $manquants[$chemin . ($champ === '' ? '' : '.' . $champ)] = $msgs;
         }
     }
 
@@ -413,6 +455,8 @@ class WorkspaceMutationService
         ?MutationReferences $refs = null,
         bool $metrer = true,
         bool $peutDemanderLePortefeuille = true,
+        // ⚠ Un PARAMÈTRE, jamais une donnée de l'opération : seul le moteur de reprise le passe.
+        ?OrigineEcriture $origine = null,
     ): array {
         $refs ??= MutationReferences::live();
         $labels = $this->accessResolver->libellesEntites();
@@ -475,7 +519,7 @@ class WorkspaceMutationService
             if (!$form->isValid()) {
                 throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelle), $this->erreurs($form));
             }
-            $this->refuserLesIncoherences($entity, $op->entityShortName, $libelle);
+            $this->refuserLesIncoherences($entity, $op->entityShortName, $libelle, $origine);
             $this->commitWrite($entity, $scope->entreprise, $acteur, $metrer);
             // L'id existe : les opérations suivantes du plan peuvent y renvoyer.
             $refs->declarer($op->ref, method_exists($entity, 'getId') ? $entity->getId() : null);
@@ -490,7 +534,7 @@ class WorkspaceMutationService
                 if (!$form->isValid()) {
                     throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelle), $this->erreurs($form));
                 }
-                $this->refuserLesIncoherences($entity, $op->entityShortName, $libelle);
+                $this->refuserLesIncoherences($entity, $op->entityShortName, $libelle, $origine);
                 $this->commitWrite($entity, $scope->entreprise, $acteur, $metrer);
             }
         }
@@ -498,7 +542,7 @@ class WorkspaceMutationService
         // Collections imbriquées (récursif) : chaque nœud écrit est métré et persisté
         // exactement comme via son propre formulaire dans l'UI.
         $enfants = [];
-        $this->executerCollections($entity, $op, $scope, $acteur, $op->entityShortName, 0, $enfants, $refs, $metrer);
+        $this->executerCollections($entity, $op, $scope, $acteur, $op->entityShortName, 0, $enfants, $refs, $metrer, $origine);
 
         return [
             'op'      => $op->op,
@@ -529,13 +573,24 @@ class WorkspaceMutationService
         array &$enfants,
         ?MutationReferences $refs = null,
         bool $metrer = true,
+        ?OrigineEcriture $origine = null,
     ): void {
         $refs ??= MutationReferences::live();
         if ($parentOp->collections === [] || $profondeur >= FormTreeInspector::PROFONDEUR_MAX) {
             return;
         }
 
-        foreach ($parentOp->collections as $nomCollection => $ops) {
+        // LES AVENANTS EN DERNIER. Le premier avenant d'une cotation exige sa prime
+        // (DefautsDeSouscription) : écrit avant les chargements du même plan, il serait
+        // refusé à tort. L'ordre des autres collections reste celui du plan.
+        $collections = $parentOp->collections;
+        if (isset($collections['avenants'])) {
+            $avenants = $collections['avenants'];
+            unset($collections['avenants']);
+            $collections['avenants'] = $avenants;
+        }
+
+        foreach ($collections as $nomCollection => $ops) {
             $ce = $this->formTreeInspector->collectionEditable($parentShortName, $nomCollection);
             if ($ce === null) {
                 throw MutationException::horsPerimetre(sprintf('Collection « %s » non éditable.', $nomCollection));
@@ -593,7 +648,7 @@ class WorkspaceMutationService
                     if (!$form->isValid()) {
                         throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelleEnfant), $this->erreurs($form));
                     }
-                    $this->refuserLesIncoherences($entiteEnfant, $enfantOp->entityShortName, $libelleEnfant);
+                    $this->refuserLesIncoherences($entiteEnfant, $enfantOp->entityShortName, $libelleEnfant, $origine);
                     $this->commitWrite($entiteEnfant, $scope->entreprise, $acteur, $metrer);
                 }
                 if ($enfantOp->isCreate()) {
@@ -601,7 +656,7 @@ class WorkspaceMutationService
                 }
 
                 $petitsEnfants = [];
-                $this->executerCollections($entiteEnfant, $enfantOp, $scope, $acteur, $ce->childShortName, $profondeur + 1, $petitsEnfants, $refs, $metrer);
+                $this->executerCollections($entiteEnfant, $enfantOp, $scope, $acteur, $ce->childShortName, $profondeur + 1, $petitsEnfants, $refs, $metrer, $origine);
 
                 $enfants[] = [
                     'op'      => $enfantOp->op,
@@ -976,9 +1031,9 @@ class WorkspaceMutationService
      *
      * @throws MutationException si l'entité est incohérente (motif en langage métier)
      */
-    private function refuserLesIncoherences(object $entity, string $shortName, string $libelle): void
+    private function refuserLesIncoherences(object $entity, string $shortName, string $libelle, ?OrigineEcriture $origine = null): void
     {
-        $incoherences = $this->champsInspector->incoherencesMetier($entity, $shortName);
+        $incoherences = $this->champsInspector->incoherencesMetier($entity, $shortName, null, $origine);
         if ($incoherences !== []) {
             throw MutationException::invalide(
                 sprintf('Données incohérentes pour « %s ».', $libelle),
@@ -1533,6 +1588,16 @@ class WorkspaceMutationService
                 }
                 if (!empty($fields[$field])) {
                     $parent = $this->em->getRepository((string) $mapping->targetEntity)->find($fields[$field]);
+                    // UN ID D'UN AUTRE CABINET NE RATTACHE RIEN. Le `find()` est nu (aucun
+                    // filtre Doctrine dans ce projet) : sans ce contrôle, Ket écrivait un
+                    // avenant sous la cotation d'un autre cabinet, et les motifs de refus
+                    // en citaient le nom. La relation reste vide et l'écriture est refusée,
+                    // par le mot d'une ligne absente : un refus nommé confirmerait
+                    // l'existence de ce qu'on protège.
+                    if ($parent !== null && $this->appartenance->estDUnAutreCabinet($parent, $scope->entreprise)) {
+                        $parent = null;
+                        $piecesRefusees[$field] = sprintf('« %s » : introuvable dans votre cabinet.', $field);
+                    }
                     $setter = 'set' . ucfirst($field);
                     if ($parent !== null && method_exists($entity, $setter)) {
                         $entity->{$setter}($parent);

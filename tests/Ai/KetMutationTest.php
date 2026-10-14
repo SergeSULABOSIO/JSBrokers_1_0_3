@@ -330,6 +330,8 @@ class KetMutationTest extends TestCase
             // fail-closed et le périmètre : un double suffit, sauf à celui qui éprouve
             // justement la suppression.
             $suppression ?? $this->createMock(\App\Service\Workspace\SuppressionEnCascade::class),
+            // Le contrôle de cabinet des relations : le vrai, sur l'EM du test.
+            new \App\Service\Workspace\AppartenanceAuCabinet($this->createMock(\App\Service\Workspace\CabinetActif::class), $emResolved),
         );
     }
 
