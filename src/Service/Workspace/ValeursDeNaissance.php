@@ -88,18 +88,12 @@ final class ValeursDeNaissance
     {
         return match (true) {
             $entity instanceof Note => [
-                // ⚠ « GÉNÉRÉE AUTOMATIQUEMENT », dit le formulaire — et il le fait en
-                // désactivant le champ, donc en IGNORANT toute valeur soumise. Une note
-                // créée autrement que par l'écran repartait sans référence vers une colonne
-                // qui la refuse : l'import échouait en SQL après un contrôle qui avait dit
-                // oui.
+                // ⚠ LA RÉFÉRENCE N'EST PLUS ICI. Elle n'est plus une valeur de naissance
+                // mais un NUMÉRO, unique et chronologique dans le cabinet, pris au moment
+                // où la note s'écrit ({@see \App\EventListener\NumerotationDesNotesListener}) :
+                // posée ici, chaque formulaire abandonné ou refusé aurait consommé le sien.
+                // Et le champ est redevenu une vraie question — éditable, facultatif.
                 //
-                // ⚠ ET ELLE DISTINGUE. L'écran en crée une à la fois, si bien qu'un
-                // horodatage à la seconde suffisait ; une reprise en crée des centaines
-                // dans la même seconde, et autant de pièces au même numéro seraient
-                // impossibles à rapprocher d'une échéance. Le format ne change pas pour
-                // autant — c'est toujours « N » suivi de chiffres.
-                'reference' => 'N' . time() . random_int(100, 999),
                 // ⚠ CE N'EST PAS UNE SIGNATURE, malgré son nom : la colonne est NOT NULL et
                 // aucun formulaire ne la propose. L'écran y met l'horodatage du moment
                 // depuis toujours ; qui signe vraiment se lit dans `signedBy`, lui

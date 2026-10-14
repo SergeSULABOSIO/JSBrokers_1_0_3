@@ -1820,12 +1820,12 @@ trait ControllerUtilsTrait
             ? $champsFormulaire
             : array_values(array_intersect($champsFormulaire, array_keys($data)));
         // LES VALEURS DE NAISSANCE AVANT LE CONTRÔLE, ET NON APRÈS. Ce ne sont pas des
-        // questions posées à l'utilisateur (cf. ValeursDeNaissance) : la référence d'une
-        // note, « Générée automatiquement », est un champ DÉSACTIVÉ, jamais soumis. Posée
-        // seulement dans `beforePersist`, elle manquait au contrôle ci-dessous — et toute
-        // note créée par le dialogue tombait en 422 « Référence obligatoire ». `poser()`
-        // ne remplace rien de ce qui est déjà posé, et ne rend de valeurs que pour les
-        // entités qui en déclarent : les autres rubriques ne voient aucune différence.
+        // questions posées à l'utilisateur (cf. ValeursDeNaissance) : la signature d'une
+        // note est une colonne NOT NULL qu'aucun formulaire ne propose. Posées seulement
+        // dans `beforePersist`, elles manquaient au contrôle ci-dessous — et toute note
+        // créée par le dialogue tombait en 422. `poser()` ne remplace rien de ce qui est
+        // déjà posé, et ne rend de valeurs que pour les entités qui en déclarent : les
+        // autres rubriques ne voient aucune différence.
         if ($isCreationMode) {
             $this->valeursDeNaissance()->poser($entity);
         }

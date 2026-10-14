@@ -272,7 +272,10 @@ class WorkspaceMutationService
         // `@tranche`) n'est pas encore résolue. Les autres règles (bénéficiaire d'un
         // partage, objet d'un reversement) la liraient vide et refuseraient à tort ; celles
         // de l'avenant ne s'appliquent qu'à une cotation déjà écrite, donc lisible ici.
-        if ($manquants === [] && $op->isCreate() && $op->entityShortName === 'Avenant') {
+        //
+        // ET LA NOTE, en création comme en modification : sa seule règle (une référence
+        // n'appartient qu'à une note du cabinet) ne lit que la référence et le cabinet.
+        if ($manquants === [] && (($op->isCreate() && $op->entityShortName === 'Avenant') || $op->entityShortName === 'Note')) {
             $manquants = $this->champsInspector->incoherencesMetier($copie, $op->entityShortName, null, $origine);
         }
 

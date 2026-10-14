@@ -15,10 +15,11 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
  * UNE NOTE SE CRÉE PAR SON DIALOGUE.
  *
  * Elle ne le pouvait pas : « Référence : ce champ est obligatoire » (422), à chaque
- * fois. Le formulaire montre la référence DÉSACTIVÉE — « Générée automatiquement » —,
- * donc jamais soumise ; la colonne est NOT NULL ; et le contrôle des champs obligatoires
- * passait AVANT que la référence ne soit posée (`beforePersist`). Le défaut précédait le
- * chantier de la vue Cartes : même ordre, même champ, au commit 9d850466.
+ * fois. Le formulaire montrait la référence désactivée, donc jamais soumise ; la colonne
+ * est NOT NULL ; et le contrôle des champs obligatoires passait AVANT que la référence ne
+ * soit posée (`beforePersist`). Depuis le 2026-10-14, le champ est éditable et facultatif :
+ * vide, la note reçoit le numéro suivant de sa série à l'écriture
+ * (NumerotationDesNotesTest).
  *
  * Et la note née d'un bordereau : rattachée à lui, qui passe à « Note émise » — mais
  * jamais un bordereau d'un autre cabinet.
@@ -82,25 +83,25 @@ class NoteCreationDialogueTest extends WebTestCase
         self::assertResponseIsSuccessful((string) $this->client->getResponse()->getContent());
         $note = $this->noteNommee('Note créée par le dialogue');
         self::assertNotNull($note, 'La note doit exister en base.');
-        self::assertMatchesRegularExpression('/^N\d+$/', (string) $note->getReference(), 'Référence générée automatiquement.');
+        self::assertMatchesRegularExpression('/^ND-\d{4}-\d{5}$/', (string) $note->getReference(), 'Référence générée : le numéro suivant de la série.');
     }
 
     /**
      * LES VALEURS DE NAISSANCE NE SE CHOISISSENT PAS DEPUIS LA REQUÊTE. Posées désormais
      * avant le contrôle des champs, elles ne doivent rien céder à un client qui les
-     * enverrait : la référence est un champ désactivé, `validated` et `signature` ne sont
-     * pas des champs du formulaire.
+     * enverrait : `validated` et `signature` ne sont pas des champs du formulaire. La
+     * référence, elle, en est un — éditable depuis le 2026-10-14 : elle est conservée.
      */
     public function testLesValeursDeNaissanceIgnorentCeQueLaRequeteEnvoie(): void
     {
         [$s, $invite, $assureur] = $this->semerEtConnecterA();
 
         $this->client->request('POST', '/admin/note/api/submit', $this->champsDuDialogue($s, $invite, $assureur, 'Note forcée')
-            + ['reference' => 'PIRATE', 'validated' => '1', 'signature' => 'PIRATE']);
+            + ['reference' => 'REF-SAISIE', 'validated' => '1', 'signature' => 'PIRATE']);
 
         self::assertResponseIsSuccessful((string) $this->client->getResponse()->getContent());
         $note = $this->noteNommee('Note forcée');
-        self::assertMatchesRegularExpression('/^N\d+$/', (string) $note->getReference(), 'La référence envoyée est ignorée.');
+        self::assertSame('REF-SAISIE', $note->getReference(), 'La référence saisie est conservée : le champ est éditable.');
         self::assertFalse($note->isValidated(), 'Une note naît NON validée, quoi que dise la requête.');
         self::assertNotSame('PIRATE', $note->getSignature());
         self::assertNotNull($note->getSignature());

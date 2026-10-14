@@ -113,22 +113,7 @@ sa suppression est décidée (§7).
 | **Avoir plutôt que suppression** : on ne crédite que l'émis ; les échéances sans objet passent « à régulariser » sans changer de montant ; l'abandon d'un mouvement qui a vécu financièrement est refusé (409) | `SourceDeFacturation.php:198-203` ; `RegularisationDesEcheances.php:13-27` ; `LiensProteges.php:77-185` | `MouvementAvenantTest::testUneNoteDeCreditEmiseInterditLAbandon` |
 | **Taxes et exonération** : taxe sur commission nulle si client exonéré OU risque non imposable — les deux taxes tombent ensemble | `ServiceTaxes.php:139-179` | `CommissionExonereeTest` |
 | **Une note réglée ne se supprime pas et ne perd pas de ligne, elle s'annule par la note contraire** (avoir pour une note de débit, note de débit pour un avoir) : toute suppression qui détruirait une note ayant reçu un paiement, ou lui retirerait une ligne, est refusée (409 qui nomme la note) — la note elle-même, ou emportée/amputée par la suppression d'une piste, d'une police ou d'un client ; épargner le règlement n'y change rien. Un PAIEMENT, lui, reste supprimable (correction d'une saisie erronée, reprise mal faite) : le refus le propose, et la note est ensuite libre. Écran, Ket et dossier (décisions du 2026-10-14) | `SuppressionEnCascade::notesRegleesTouchees` (contrôle du plan final) | `SuppressionEnChaineTest::testUneNoteRegleeNeSeSupprimePas`, `::testUneNoteRegleeAChevalNePerdPasDeLigne`, `::testEpargnerLeReglementNeRendPasLaFactureSupprimable`, `::testKetNeSupprimePasUneNoteReglee`, `::testUneNoteDeCreditRegleeSAnnuleParUneNoteDeDebit` |
-
-### Invariants CIBLES (décidés, pas encore codés)
-
-**Numérotation des notes : unique et chronologique par cabinet** — décision de Serge du
-2026-10-14. **CHANTIER PRIORITAIRE.**
-- *Cible* : chaque note d'un cabinet reçoit une référence **générée**, **unique** et
-  **chronologique** (format choisi par le produit, décision du 2026-10-14). Le champ reste
-  **éditable** : la référence générée est une proposition que le cabinet peut remplacer — une
-  référence saisie reste soumise à l'unicité dans le cabinet.
-- *État actuel* : `'N' . time() . random_int(100, 999)` (`ValeursDeNaissance.php:102`),
-  `'N' . time()` (`NoteController.php:151`), `'FACT-' . référence du bordereau`
-  (`NoteController.php:133`) ; colonne NOT NULL **sans contrainte d'unicité**
-  (`Note.php:77-79`).
-- *Écart* : doublons possibles (deux notes dans la même seconde, ou du même bordereau), aucune
-  continuité, aucune chronologie garantie ; les tests ne vérifient que le format
-  (`NoteCreationDialogueTest`).
+| **Numérotation des notes : unique dans le cabinet, et chronologique** (décisions du 2026-10-14). Le produit génère `ND-AAAA-NNNNN` (débit) / `NC-AAAA-NNNNN` (crédit) : une série par cabinet, par année et par type, remise à 1 chaque année. Le numéro est pris **à l'écriture**, pour toutes les portes (dialogue, picker, Ket, reprise, bordereau) : un formulaire abandonné n'en consomme aucun. Le champ reste **éditable** : une référence saisie est conservée et ne consomme rien ; un numéro déjà saisi à la main est sauté. Une référence n'appartient qu'à une note du cabinet (casse et accents confondus) ; deux cabinets peuvent porter la même. Une note émise garde un numéro (le vider est refusé). Un numéro peut se perdre si l'écriture échoue hors transaction englobante, jamais se répéter | `NumerotationDesNotes::prochaine` (`NumerotationDesNotes.php:63`, incrément SQL atomique) ; `NumerotationDesNotesListener::onFlush` (:37) ; `ChampsObligatoiresInspector.php:46` (référence non exigée à la création) et :320 (unicité, référence vidée, longueur) ; index `uniq_note_entreprise_reference` (`Note.php:16`) ; migration `Version20261014160000` (doublons existants suffixés -2, -3, chaque renommage listé) | `NumerotationDesNotesTest` (13 tests, dont la concurrence entre deux connexions) ; `NoteCreationDialogueTest` |
 
 ## 6. À CONFIRMER
 
@@ -140,7 +125,7 @@ sa suppression est décidée (§7).
 
 ## 7. Chantiers décidés (ne rien coder sans plan validé)
 
-1. **Numérotation unique et chronologique des notes** — prioritaire (§5).
+1. ~~Numérotation unique et chronologique des notes~~ — **fait** (§5, invariant acquis).
 2. ~~Refus de supprimer une note qui porte des paiements~~ — **fait** (§5, invariant acquis).
 3. **« Mon portefeuille » étendu** aux entités qui descendent d'une piste, via `ResponsableDePiste` (§4).
 4. **Une seule monnaie par cabinet**, saisie = affichage (§4).

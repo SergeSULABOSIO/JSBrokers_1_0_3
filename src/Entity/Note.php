@@ -10,6 +10,10 @@ use Symfony\Component\Serializer\Annotation\Groups;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: NoteRepository::class)]
+// UNE RÉFÉRENCE N'APPARTIENT QU'À UNE NOTE DU CABINET (décision du 2026-10-14). Le refus
+// lisible vient d'avant (ChampsObligatoiresInspector::incoherencesMetier) ; l'index est le
+// dernier rempart, contre deux écritures simultanées.
+#[ORM\UniqueConstraint(name: 'uniq_note_entreprise_reference', columns: ['entreprise_id', 'reference'])]
 #[ORM\HasLifecycleCallbacks]
 class Note implements OwnerAwareInterface
 {
@@ -393,9 +397,15 @@ class Note implements OwnerAwareInterface
         return $this->reference;
     }
 
-    public function setReference(string $reference): static
+    /**
+     * Vide (null ou blanc), la note recevra son numéro à l'écriture
+     * ({@see \App\EventListener\NumerotationDesNotesListener}) : le champ du formulaire
+     * est facultatif à la création, et un champ texte laissé vide soumet null.
+     */
+    public function setReference(?string $reference): static
     {
-        $this->reference = $reference;
+        $reference = $reference !== null ? trim($reference) : null;
+        $this->reference = $reference === '' ? null : $reference;
 
         return $this;
     }
