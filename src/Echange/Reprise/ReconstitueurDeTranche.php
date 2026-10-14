@@ -959,10 +959,9 @@ final class ReconstitueurDeTranche
                 'type' => Note::TYPE_NOTE_DE_DEBIT,
                 'addressedTo' => $auClient ? Note::TO_CLIENT : Note::TO_ASSUREUR,
                 $auClient ? 'client' : 'assureur' => $destinataire,
-                // ⚠ PAS DE RÉFÉRENCE ICI : le formulaire de la note désactive ce champ —
-                // « générée automatiquement » — et ignore donc toute valeur soumise. Elle
-                // est posée à la naissance de l'entité, comme la signature et la
-                // validation ({@see \App\Service\Workspace\ValeursDeNaissance}).
+                // ⚠ PAS DE RÉFÉRENCE ICI : la note reçoit le numéro suivant de sa série au
+                // moment où elle s'écrit, comme toute note
+                // ({@see \App\EventListener\NumerotationDesNotesListener}).
                 'description' => 'Situation reprise depuis un classeur de reprise.',
             ]),
             collections: [

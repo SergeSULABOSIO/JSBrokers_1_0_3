@@ -129,9 +129,10 @@ class NoteController extends AbstractController
                         $note->setType(Note::TYPE_NOTE_DE_DEBIT);
                         $note->setAddressedTo(Note::TO_ASSUREUR);
                         $note->setAssureur($bordereau->getAssureur());
+                        // La référence du bordereau est dans l'OBJET ; la note prend le
+                        // numéro de sa série, comme toute note (décision du 2026-10-14).
                         $note->setNom('Commission — Bordereau ' . $bordereau->getReference());
-                        $note->setReference('FACT-' . $bordereau->getReference());
-                        return; // référence déjà définie, on sort
+                        return;
                     }
                 }
 
@@ -148,7 +149,9 @@ class NoteController extends AbstractController
                 // (`/admin/note/facturation-picker`), qui écrit la note ET ses lignes en
                 // un seul POST. Ce formulaire garde son rôle : composer une note à la
                 // main, depuis la rubrique.
-                $note->setReference('N' . time());
+                //
+                // Pas de référence posée ici : le champ reste vide à l'ouverture, et la
+                // note reçoit le numéro suivant de sa série à l'enregistrement.
             }
         );
     }
@@ -356,7 +359,7 @@ class NoteController extends AbstractController
             ->setAddressedTo($addressedTo)
             ->setNom(trim((string) ($donnees['objet'] ?? '')) ?: ($type === Note::TYPE_NOTE_DE_CREDIT ? 'Avoir sur commission' : 'Commission'))
             ->setValidated(true);
-        // Référence, signature et date d'émission : un seul endroit, partagé avec le
+        // Signature et date d'émission (la référence est prise à l'écriture) : un seul endroit, partagé avec le
         // formulaire et avec l'écriture de l'assistant.
         $this->valeursDeNaissance->poser($note);
         $note->setEntreprise($entreprise)->setInvite($this->getInvite());
@@ -653,9 +656,18 @@ class NoteController extends AbstractController
             }
         }
 
+        // La référence est une SAISIE LIBRE (champ éditable) : guillemet, barre oblique ou
+        // accent casseraient un en-tête écrit à la main. Nom UTF-8 complet, et repli ASCII.
+        $nomDuFichier = 'note-' . str_replace(['/', '\\'], '-', (string) $note->getReference()) . '.pdf';
+        $repliAscii = preg_replace('/[^A-Za-z0-9._-]/u', '_', $nomDuFichier);
+
         return new Response($notePdfString, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="note-' . $note->getReference() . '.pdf"',
+            'Content-Disposition' => \Symfony\Component\HttpFoundation\HeaderUtils::makeDisposition(
+                \Symfony\Component\HttpFoundation\HeaderUtils::DISPOSITION_INLINE,
+                $nomDuFichier,
+                $repliAscii,
+            ),
         ]);
     }
 
@@ -695,12 +707,12 @@ class NoteController extends AbstractController
             NoteType::class,
             function (Note $note) use ($inviteConnecte, $request) {
                 if (!$note->getId()) {
-                    // ⚠ RÉFÉRENCE, SIGNATURE, VALIDATION ET DATE D'ÉMISSION VIENNENT D'UN
-                    // SEUL ENDROIT — et, sur ce chemin, AVANT le contrôle des champs
-                    // obligatoires (ControllerUtilsTrait::handleFormSubmission) : la
-                    // référence est un champ désactivé, jamais soumis, et son absence faisait
-                    // échouer toute création en 422. L'appel ci-dessous reste comme filet :
-                    // `poser()` ne remplace rien de ce qui est déjà posé.
+                    // ⚠ SIGNATURE, VALIDATION ET DATE D'ÉMISSION VIENNENT D'UN SEUL
+                    // ENDROIT — et, sur ce chemin, AVANT le contrôle des champs obligatoires
+                    // (ControllerUtilsTrait::handleFormSubmission). L'appel ci-dessous reste
+                    // comme filet : `poser()` ne remplace rien de ce qui est déjà posé. La
+                    // référence, elle, est le numéro de la série, pris à l'écriture
+                    // (NumerotationDesNotesListener) quand le champ est laissé vide.
                     //
                     // Ces trois valeurs étaient posées ici, et une seconde fois plus haut
                     // dans ce contrôleur — donc nulle part ailleurs. Tout ce qui écrit

@@ -32,12 +32,15 @@ class NoteType extends AbstractType
                     'placeholder' => "Ex: Commission sur police #123",
                 ],
             ])
+            // ÉDITABLE ET FACULTATIF (décision du 2026-10-14) : vide, la note reçoit le numéro
+            // suivant de sa série à l'enregistrement (NumerotationDesNotesListener) ; saisie,
+            // la référence est conservée, pourvu qu'aucune autre note du cabinet ne la porte.
             ->add('reference', TextType::class, [
                 'required' => false,
-                'disabled' => true,
                 'label' => "Référence",
+                'help' => "Laissez vide : le numéro suivant de la série est attribué à l'enregistrement.",
                 'attr' => [
-                    'placeholder' => "Générée automatiquement",
+                    'placeholder' => "Générée à l'enregistrement (ex. ND-" . date('Y') . "-00042)",
                 ],
             ])
             ->add('description', TextareaType::class, [
