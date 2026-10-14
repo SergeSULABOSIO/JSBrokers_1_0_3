@@ -247,7 +247,7 @@ class SuppressionEnChaineTest extends WebTestCase
      *
      * @return array{piste: Piste, cotation: Cotation, avenant: Avenant, tranche: Tranche, revenu: RevenuPourCourtier, note: Note, article: Article, paiement: Paiement}
      */
-    private function dossierComplet(array $cabinet, string $suffixe): array
+    private function dossierComplet(array $cabinet, string $suffixe, bool $factureReglee = true): array
     {
         $em = $this->em();
         $piste = $this->piste($cabinet, 'Affaire ' . $suffixe);
@@ -264,11 +264,16 @@ class SuppressionEnChaineTest extends WebTestCase
         $note = $this->note($cabinet, 'ND-SEC-' . $suffixe);
         $article = $this->article($cabinet, $note, $tranche, $revenu);
 
-        $paiement = (new Paiement())->setMontant(1000.0)->setPaidAt(new DateTimeImmutable('2026-04-01'));
-        $paiement->setNote($note);
-        $paiement->setEntreprise($cabinet['entreprise']);
-        $paiement->setInvite($cabinet['invite']);
-        $em->persist($paiement);
+        // UNE FACTURE RÉGLÉE NE SE SUPPRIME PAS (décision du 2026-10-14) : les tests qui
+        // éprouvent autre chose que ce refus prennent un dossier à facture non réglée.
+        $paiement = null;
+        if ($factureReglee) {
+            $paiement = (new Paiement())->setMontant(1000.0)->setPaidAt(new DateTimeImmutable('2026-04-01'));
+            $paiement->setNote($note);
+            $paiement->setEntreprise($cabinet['entreprise']);
+            $paiement->setInvite($cabinet['invite']);
+            $em->persist($paiement);
+        }
 
         $em->flush();
 
@@ -459,7 +464,7 @@ class SuppressionEnChaineTest extends WebTestCase
      * la base refuserait de laisser un lien pendre dans le vide. La seule façon de tenir la
      * promesse de l'écran est de couper ce lien.
      */
-    public function testLeTriExecuteDetruitEtDetacheCommeAnnonce(): void
+    public function testEpargnerLeReglementNeRendPasLaFactureSupprimable(): void
     {
         $cabinet = $this->cabinet();
         $d = $this->dossierComplet($cabinet, 'EXEC');
@@ -468,26 +473,19 @@ class SuppressionEnChaineTest extends WebTestCase
         $idPiste = (int) $d['piste']->getId();
         $idPaiement = (int) $d['paiement']->getId();
 
+        // Décocher le règlement pour emporter la facture : c'était le contournement. Une note
+        // réglée ne se supprime pas (décision du 2026-10-14) — elle s'annule par avoir.
         $rapport = $this->executerLeDossier('piste', $idPiste, [
             'lots'      => ['Piste#' . $idPiste],
             'conserver' => ['Paiement' => [$idPaiement]],
         ]);
 
-        $this->assertSame([], $rapport['echecs'], 'Aucune partie ne devait résister.');
-        $this->assertGreaterThan(0, $rapport['detruits']);
-
-        $this->assertFalse($this->existe(Piste::class, $idPiste), 'L’affaire est partie.');
-        $this->assertFalse($this->existe(Cotation::class, $d['cotation']->getId()));
-        $this->assertFalse($this->existe(Tranche::class, $d['tranche']->getId()));
-
-        // La pièce épargnée survit, son lien coupé — pas ignorée, DÉTACHÉE.
+        $this->assertStringContainsString('la note n° ND-SEC-EXEC, qui a déjà reçu 1 paiement', implode(' ', array_map(static fn ($e) => json_encode($e, JSON_UNESCAPED_UNICODE), $rapport['echecs'])),
+            'Le refus nomme la facture réglée.');
+        $this->assertTrue($this->existe(Piste::class, $idPiste), 'Rien n’est parti : l’affaire reste.');
+        $this->assertTrue($this->existe(Note::class, $d['note']->getId()), 'La facture reste.');
         $paiement = $this->em()->find(Paiement::class, $idPaiement);
-        $this->assertNotNull($paiement, 'Le règlement épargné doit survivre à son dossier.');
-        $this->assertNull($paiement->getNote(), 'Et son lien à la facture disparue doit être coupé.');
-
-        // Les transversaux n'ont pas bougé.
-        $this->assertTrue($this->existe(Client::class, $cabinet['client']->getId()));
-        $this->assertTrue($this->existe(Risque::class, $cabinet['risque']->getId()));
+        $this->assertNotNull($paiement?->getNote(), 'Le règlement reste attaché à sa facture.');
     }
 
     /**
@@ -779,8 +777,8 @@ class SuppressionEnChaineTest extends WebTestCase
     public function testLeDossierPartEnEntierSansToucherAuxTransversaux(): void
     {
         $cabinet = $this->cabinet();
-        $dossier = $this->dossierComplet($cabinet, 'CHAINE');
-        $ids = array_map(static fn ($o) => $o->getId(), $dossier);
+        $dossier = $this->dossierComplet($cabinet, 'CHAINE', factureReglee: false);
+        $ids = array_map(static fn ($o) => $o?->getId(), $dossier);
         $idClient = $cabinet['client']->getId();
         $idRisque = $cabinet['risque']->getId();
 
@@ -792,7 +790,7 @@ class SuppressionEnChaineTest extends WebTestCase
             [
                 'piste' => Piste::class, 'cotation' => Cotation::class, 'avenant' => Avenant::class,
                 'tranche' => Tranche::class, 'revenu' => RevenuPourCourtier::class,
-                'article' => Article::class, 'note' => Note::class, 'paiement' => Paiement::class,
+                'article' => Article::class, 'note' => Note::class,
             ] as $cle => $classe
         ) {
             $this->assertFalse($this->existe($classe, $ids[$cle]), sprintf('« %s » devait partir avec le dossier.', $cle));
@@ -813,7 +811,7 @@ class SuppressionEnChaineTest extends WebTestCase
     public function testLaPorteeEstAnnonceeAvantDeConfirmer(): void
     {
         $cabinet = $this->cabinet();
-        $dossier = $this->dossierComplet($cabinet, 'APERCU');
+        $dossier = $this->dossierComplet($cabinet, 'APERCU', factureReglee: false);
         $idPiste = $dossier['piste']->getId();
 
         $this->client->loginUser($this->user(self::OWNER_EMAIL));
@@ -826,7 +824,6 @@ class SuppressionEnChaineTest extends WebTestCase
         $this->assertSame([], $apercu['refus'] ?? ['non vide'], 'Rien ne bloque ce dossier.');
         $this->assertGreaterThan(1, (int) ($apercu['total'] ?? 0), 'La portée dépasse la seule opportunité.');
         $this->assertSame(1, $parNature['Note'] ?? 0, 'La facture est annoncée AVANT la confirmation.');
-        $this->assertSame(1, $parNature['Paiement'] ?? 0, 'Son règlement aussi.');
         $this->assertArrayNotHasKey('Client', $parNature, 'Le client est transversal : il n\'est pas annoncé.');
 
         // ET L'APERÇU N'EST PAS UNE PORTE DÉROBÉE : il exige le droit de suppression.
@@ -913,7 +910,7 @@ class SuppressionEnChaineTest extends WebTestCase
     public function testLeVersementDejaEffectueSurvitDetache(): void
     {
         $cabinet = $this->cabinet();
-        $dossier = $this->dossierComplet($cabinet, 'RETRO');
+        $dossier = $this->dossierComplet($cabinet, 'RETRO', factureReglee: false);
 
         $versement = (new ReversementRetroAgent())->setMontant(250.0)
             ->setPaidAt(new DateTimeImmutable('2026-05-01'))->setReference('RETRO-SEC-1');
@@ -939,5 +936,109 @@ class SuppressionEnChaineTest extends WebTestCase
         $this->assertNull($survivant->getAvenant(), 'Son lien vers la police est coupé, pas pendant.');
         $this->assertNull($survivant->getTranche(), "Et celui vers l'échéance aussi.");
         $this->assertSame(250.0, $survivant->getMontant(), 'Le montant versé est intact.');
+    }
+
+    /**
+     * UNE NOTE RÉGLÉE NE SE SUPPRIME PAS — elle s'annule par une note de crédit (décision du
+     * 2026-10-14). Ni elle-même, ni emportée par la suppression de son affaire : 409 qui la
+     * nomme, et rien n'est effacé.
+     */
+    public function testUneNoteRegleeNeSeSupprimePas(): void
+    {
+        $cabinet = $this->cabinet();
+        $d = $this->dossierComplet($cabinet, 'REGLEE');
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $reponse = $this->supprimer('note', (int) $d['note']->getId());
+        $this->assertSame(409, $reponse['statut']);
+        $this->assertSame('La note n° ND-SEC-REGLEE a déjà reçu 1 paiement : une note réglée ne se supprime pas. Annulez-la par une note de crédit. '
+            . 'S’il s’agit d’une saisie erronée, supprimez d’abord son paiement.',
+            (string) ($reponse['corps']['message'] ?? ''));
+
+        $reponse = $this->supprimer('piste', (int) $d['piste']->getId());
+        $this->assertSame(409, $reponse['statut']);
+        $this->assertStringContainsString('Cette suppression emporterait la note n° ND-SEC-REGLEE, qui a déjà reçu 1 paiement', (string) ($reponse['corps']['message'] ?? ''));
+
+        foreach ([Note::class => $d['note'], Paiement::class => $d['paiement'], Piste::class => $d['piste']] as $classe => $objet) {
+            $this->assertTrue($this->existe($classe, (int) $objet->getId()), $classe . ' : rien n’est effacé.');
+        }
+    }
+
+    /** Une note SANS règlement se supprime toujours. */
+    public function testUneNoteNonRegleeSeSupprime(): void
+    {
+        $cabinet = $this->cabinet();
+        $d = $this->dossierComplet($cabinet, 'LIBRE', factureReglee: false);
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $reponse = $this->supprimer('note', (int) $d['note']->getId());
+        $this->assertSame(200, $reponse['statut'], (string) ($reponse['corps']['message'] ?? ''));
+        $this->assertFalse($this->existe(Note::class, (int) $d['note']->getId()));
+    }
+
+    /** Ket se heurte au même refus, dès le contrôle à blanc. */
+    public function testKetNeSupprimePasUneNoteReglee(): void
+    {
+        $cabinet = $this->cabinet();
+        $d = $this->dossierComplet($cabinet, 'KET');
+        $service = static::getContainer()->get(\App\Service\Workspace\WorkspaceMutationService::class);
+        $scope = new \App\Ai\Scope\AiScope($cabinet['entreprise'], $cabinet['invite']);
+
+        $analyse = $service->analyserOperation(new \App\Ai\Mutation\MutationOperation('delete', 'Note', (int) $d['note']->getId()), $scope);
+        $this->assertFalse($analyse['ok']);
+        $this->assertTrue($analyse['bloque'] ?? false);
+        $this->assertStringContainsString('une note réglée ne se supprime pas', json_encode($analyse, JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * UNE NOTE RÉGLÉE NE PERD PAS DE LIGNE (décision du 2026-10-14). La facture à cheval sur
+     * deux affaires, déjà réglée : supprimer l'une des affaires lui retirerait une ligne, et
+     * son total baisserait sans bruit. Refus qui la nomme ; rien ne part.
+     */
+    public function testUneNoteRegleeAChevalNePerdPasDeLigne(): void
+    {
+        $cabinet = $this->cabinet();
+        $em = $this->em();
+
+        $pisteA = $this->piste($cabinet, 'Affaire RA');
+        $trancheA = $this->tranche($cabinet, $this->cotation($cabinet, $pisteA, 'Proposition RA'), 'Échéance RA');
+        $pisteB = $this->piste($cabinet, 'Affaire RB');
+        $trancheB = $this->tranche($cabinet, $this->cotation($cabinet, $pisteB, 'Proposition RB'), 'Échéance RB');
+
+        $note = $this->note($cabinet, 'ND-SEC-GROUPEE-R');
+        $ligneA = $this->article($cabinet, $note, $trancheA);
+        $this->article($cabinet, $note, $trancheB);
+        $paiement = (new Paiement())->setMontant(500.0)->setPaidAt(new DateTimeImmutable('2026-04-01'));
+        $paiement->setNote($note);
+        $paiement->setEntreprise($cabinet['entreprise']);
+        $paiement->setInvite($cabinet['invite']);
+        $em->persist($paiement);
+        $em->flush();
+
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $reponse = $this->supprimer('piste', (int) $pisteA->getId());
+
+        $this->assertSame(409, $reponse['statut']);
+        $this->assertSame(
+            'Cette suppression retirerait une ligne de la note n° ND-SEC-GROUPEE-R, qui a déjà reçu 1 paiement : une note réglée ne change pas. '
+            . 'Annulez-la par une note de crédit, puis émettez-en une nouvelle sans cette ligne. S’il s’agit d’une saisie erronée, supprimez d’abord son paiement.',
+            (string) ($reponse['corps']['message'] ?? ''),
+        );
+        $this->assertTrue($this->existe(Piste::class, (int) $pisteA->getId()), 'L’affaire reste.');
+        $this->assertTrue($this->existe(Article::class, (int) $ligneA->getId()), 'Sa ligne de facture aussi.');
+    }
+
+    /** Le remède suit le type : une note de CRÉDIT réglée s'annule par une note de débit. */
+    public function testUneNoteDeCreditRegleeSAnnuleParUneNoteDeDebit(): void
+    {
+        $cabinet = $this->cabinet();
+        $d = $this->dossierComplet($cabinet, 'AVOIR');
+        $d['note']->setType(Note::TYPE_NOTE_DE_CREDIT);
+        $this->em()->flush();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $reponse = $this->supprimer('note', (int) $d['note']->getId());
+        $this->assertSame(409, $reponse['statut']);
+        $this->assertStringContainsString('Annulez-la par une note de débit.', (string) ($reponse['corps']['message'] ?? ''));
     }
 }

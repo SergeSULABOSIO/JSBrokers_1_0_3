@@ -557,6 +557,21 @@ class EcritureImportTest extends WebTestCase
         self::assertGreaterThan(0, $idPiste, 'La reprise doit avoir créé une opportunité.');
         self::assertSame(1, $this->compter('note', $entreprise), 'La reprise a bien créé une facture.');
 
+        // ⚠ UNE NOTE RÉGLÉE NE SE SUPPRIME PAS (décision du 2026-10-14), y compris en cascade.
+        // La commission reprise est ENCAISSÉE : la piste ne part pas d'un coup, et le refus
+        // dit comment corriger une reprise erronée — retirer d'abord le paiement.
+        $this->client->request('DELETE', '/admin/piste/api/delete/' . $idPiste);
+        self::assertSame(409, $this->client->getResponse()->getStatusCode());
+        self::assertStringContainsString(
+            'S’il s’agit d’une saisie erronée, supprimez d’abord son paiement.',
+            (string) (json_decode((string) $this->client->getResponse()->getContent(), true)['message'] ?? ''),
+        );
+        self::assertSame(1, $this->compter('note', $entreprise), 'Rien n’est parti.');
+
+        $idPaiement = (int) $this->em()->getConnection()->fetchOne('SELECT id FROM paiement WHERE entreprise_id = ?', [$entreprise->getId()]);
+        $this->client->request('DELETE', '/admin/paiement/api/delete/' . $idPaiement);
+        self::assertSame(200, $this->client->getResponse()->getStatusCode(), 'Le paiement d’une reprise erronée se retire.');
+
         $this->client->request('DELETE', '/admin/piste/api/delete/' . $idPiste);
 
         self::assertSame(

@@ -3,6 +3,8 @@
 namespace App\Service\Workspace;
 
 use App\Echange\Service\Progression;
+use App\Entity\Note;
+use App\Entity\Paiement;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -133,6 +135,17 @@ class SuppressionEnCascade
             $this->epargner($aDetruire, $aDetacher, $aretes, $refus, $libelles, $exclusions);
         }
 
+        // UNE NOTE RÉGLÉE NE SE SUPPRIME PAS, NI NE PERD DE LIGNE — elle s'annule par une note
+        // contraire (décisions du 2026-10-14). Contrôlé sur le plan FINAL, pour toutes les
+        // portes : la note visée elle-même, celle qu'emporterait la suppression d'une piste,
+        // d'une police ou d'un client, et celle qui survivrait amputée d'une ligne. Une seule
+        // note réglée touchée bloque tout le plan, et le refus la nomme.
+        array_push($refus, ...$this->notesRegleesTouchees(
+            $aDetruire[Note::class] ?? [],
+            $aDetruire[\App\Entity\Article::class] ?? [],
+            $classe === Note::class,
+        ));
+
         return new PlanDeSuppression(
             racineClasse: $classe,
             racineId: $id,
@@ -186,6 +199,81 @@ class SuppressionEnCascade
 
             throw $e;
         }
+    }
+
+    /**
+     * Les motifs de refus des notes RÉGLÉES (au moins un paiement) que ce plan toucherait :
+     * détruites, ou amputées d'une ligne. Une phrase par note, qui la nomme et dit quoi faire.
+     *
+     * @param array<int, int> $idsDeNotes    notes que le plan détruit
+     * @param array<int, int> $idsDArticles  lignes que le plan détruit
+     *
+     * @return list<string>
+     */
+    private function notesRegleesTouchees(array $idsDeNotes, array $idsDArticles, bool $laNoteEstLaCible): array
+    {
+        // Les notes dont une LIGNE part, sans que la note parte elle-même.
+        $amputees = [];
+        foreach (array_chunk(array_values($idsDArticles), self::TAILLE_DE_LOT) as $lot) {
+            foreach ($this->em->createQueryBuilder()
+                ->select('DISTINCT IDENTITY(ar.note) AS note')
+                ->from(\App\Entity\Article::class, 'ar')
+                ->where('ar.id IN (:ids)')
+                ->setParameter('ids', $lot)
+                ->getQuery()->getSingleColumnResult() as $idNote) {
+                if ($idNote !== null && !isset($idsDeNotes[(int) $idNote]) && !in_array((int) $idNote, $idsDeNotes, true)) {
+                    $amputees[(int) $idNote] = (int) $idNote;
+                }
+            }
+        }
+
+        $touchees = array_values(array_unique(array_merge(array_map('intval', array_values($idsDeNotes)), array_values($amputees))));
+        if ($touchees === []) {
+            return [];
+        }
+
+        $motifs = [];
+        foreach (array_chunk($touchees, self::TAILLE_DE_LOT) as $lot) {
+            $reglees = $this->em->createQueryBuilder()
+                ->select('n.id AS id, n.reference AS reference, n.type AS type, COUNT(p.id) AS paiements')
+                ->from(Paiement::class, 'p')
+                ->join('p.note', 'n')
+                ->where('n.id IN (:ids)')
+                ->groupBy('n.id, n.reference, n.type')
+                ->setParameter('ids', $lot)
+                ->getQuery()->getArrayResult();
+
+            foreach ($reglees as $note) {
+                $nom = 'la note n° ' . ((string) $note['reference'] !== '' ? $note['reference'] : '#' . $note['id']);
+                $paiements = (int) $note['paiements'];
+                $recue = sprintf('a déjà reçu %d paiement%s', $paiements, $paiements > 1 ? 's' : '');
+                // Le remède est la note CONTRAIRE : un avoir annule une note de débit, une
+                // note de débit annule un avoir.
+                $contraire = (int) $note['type'] === Note::TYPE_NOTE_DE_CREDIT ? 'une note de débit' : 'une note de crédit';
+                // L'AUTRE CAS : un règlement saisi par erreur (une reprise mal faite, une
+                // double saisie). Le paiement, lui, se supprime — après quoi la note est libre.
+                $saisieErronee = sprintf(
+                    ' S’il s’agit d’une saisie erronée, supprimez d’abord %s.',
+                    $paiements > 1 ? 'ses paiements' : 'son paiement',
+                );
+
+                $motifs[] = isset($amputees[(int) $note['id']])
+                    ? sprintf(
+                        'Cette suppression retirerait une ligne de %s, qui %s : une note réglée ne change pas. '
+                        . 'Annulez-la par %s, puis émettez-en une nouvelle sans cette ligne.%s',
+                        $nom, $recue, $contraire, $saisieErronee,
+                    )
+                    : sprintf(
+                        '%s %s : une note réglée ne se supprime pas. Annulez-la par %s.%s',
+                        $laNoteEstLaCible ? ucfirst($nom) : 'Cette suppression emporterait ' . $nom . ', qui',
+                        $recue,
+                        $contraire,
+                        $saisieErronee,
+                    );
+            }
+        }
+
+        return $motifs;
     }
 
     // ─────────────────────────────── Parcours ─────────────────────────────────
