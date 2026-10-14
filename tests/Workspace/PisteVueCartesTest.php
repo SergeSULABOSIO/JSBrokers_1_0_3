@@ -386,6 +386,30 @@ class PisteVueCartesTest extends WebTestCase
         self::assertStringContainsString('Souscrire', $action($ids['Piste chiffree'])->text());
     }
 
+    /**
+     * LE GESTE SUIT LE TYPE DE LA PISTE : « Renouveler » pour un renouvellement chiffré ;
+     * « Annuler la police » dès « En cotation » pour une annulation, qui n'a pas de prime à
+     * saisir. Même événement : le serveur choisit le chemin (AdoptionParLeMouvementTest).
+     */
+    public function testLeGesteDeLaCarteSuitLeTypeDeLaPiste(): void
+    {
+        $ids = $this->semer();
+        $retyper = fn (string $piste, int $type) => $this->em()
+            ->createQuery('UPDATE App\Entity\Piste p SET p.typeAvenant = :t WHERE p.id = :id')
+            ->execute(['t' => $type, 'id' => $ids[$piste]]);
+        $retyper('Piste chiffree', Piste::AVENANT_RENOUVELLEMENT);
+        $retyper('Piste en cotation', Piste::AVENANT_ANNULATION);
+        $this->rubrique($ids);
+        $source = $this->source((string) $this->client->getResponse()->getContent());
+
+        $action = static fn (int $id) => $source->filter(sprintf('[data-carte][data-id="%d"] .jsb-carte__action', $id));
+        self::assertSame('ui:piste.souscrire-request', $action($ids['Piste chiffree'])->attr('data-evenement'));
+        self::assertStringContainsString('Renouveler', $action($ids['Piste chiffree'])->text());
+        self::assertSame('ui:piste.souscrire-request', $action($ids['Piste en cotation'])->attr('data-evenement'),
+            'Une annulation n’a pas de prime à saisir : sa carte propose l’acte.');
+        self::assertStringContainsString('Annuler la police', $action($ids['Piste en cotation'])->text());
+    }
+
     public function testSansDroitDEcritureAucuneActionNEstProposee(): void
     {
         $ids = $this->semer();

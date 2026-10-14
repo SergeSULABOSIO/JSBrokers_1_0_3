@@ -3,6 +3,7 @@
 namespace App\Services\Canvas\Provider\List;
 
 use App\Entity\Piste;
+use App\Service\Avenant\DefautsDeSouscription;
 use App\Services\Search\PisteTransformationScope;
 use App\Services\ServiceMonnaies;
 
@@ -106,12 +107,16 @@ class PisteListCanvasProvider implements ListCanvasProviderInterface
                         "event" => "ui:piste.saisir-prime-request",
                         "icon" => "action:edit",
                     ],
+                    // Les cartes « Offres chiffrées » prennent l'action de LEUR TYPE
+                    // (actionsDeSouscription, ci-dessous). Cette entrée reste écrite en
+                    // toutes lettres : l'inventaire des actions d'écran (Ket) la lit dans
+                    // le code, et un libellé calculé lui échapperait.
                     PisteTransformationScope::ETAPE_OFFRES_CHIFFREES => [
                         "label" => "Souscrire",
                         "event" => "ui:piste.souscrire-request",
                         "icon" => "action:completed",
                     ],
-                ],
+                ] + $this->actionsDeSouscription(),
             ],
             "filtres_predefinis" => [
                 [
@@ -144,5 +149,26 @@ class PisteListCanvasProvider implements ListCanvasProviderInterface
         }
 
         return $options;
+    }
+    /**
+     * UN GESTE PAR TYPE, UN SEUL ÉVÉNEMENT. « Renouveler », « Annuler la police »… partent
+     * tous en `ui:piste.souscrire-request` : c'est le serveur (PisteController::actionPipeApi)
+     * qui choisit le chemin du type — formulaire ou mouvement de la police. Le verbe vient
+     * de DefautsDeSouscription::VERBE.
+     *
+     * @return array<string, array{label: string, event: string, icon: string}>
+     */
+    private function actionsDeSouscription(): array
+    {
+        $actions = [];
+        foreach (DefautsDeSouscription::VERBE as $type => $verbe) {
+            $actions[DefautsDeSouscription::cleDeSouscription($type)] = [
+                'label' => $verbe,
+                'event' => 'ui:piste.souscrire-request',
+                'icon'  => DefautsDeSouscription::icone($type),
+            ];
+        }
+
+        return $actions;
     }
 }

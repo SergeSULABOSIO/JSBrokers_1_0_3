@@ -595,34 +595,18 @@ class MouvementAvenantTest extends WebTestCase
     }
 
     /**
-     * L'IMPASSE SANS SORTIE, corrigée. Une police dont le renouvellement est AMORCÉ
-     * (opportunité dérivée créée, aucun avenant émis) ne pouvait plus rien : l'outil
-     * refusait à vie, et la rubrique lui retirait ses quatre boutons de mouvement. Résultat
-     * en production : l'utilisateur redemandait le renouvellement encore et encore, et
-     * AUCUN bouton n'apparaissait jamais.
+     * L'IMPASSE SANS SORTIE, corrigée — puis remplacée par l'ADOPTION (décision métier du
+     * 2026-10-13). Une police dont le renouvellement est AMORCÉ (opportunité dérivée créée,
+     * aucun avenant émis) ne pouvait plus rien : l'outil refusait à vie. Il renvoyait ensuite
+     * vers une écriture générique de l'avenant — sans les dates ni le statut du mouvement.
      *
-     * Le refus doit désormais NOMMER l'écriture qui reste — faire valider la proposition —
-     * pour que l'assistant enchaîne sur un vrai plan, donc un vrai bouton.
+     * Désormais le MOUVEMENT ADOPTE la proposition montée. Sans prime, il ne le peut pas : le
+     * refus dit pourquoi, et désigne la proposition.
      */
-    public function testMouvementAmorceNommeLEcritureQuiResteEtLaPropositionAValider(): void
+    public function testMouvementAmorceSansPrimeDitPourquoiIlNAdoptePas(): void
     {
         $s = $this->seed();
-
-        // Renouvellement amorcé : opportunité dérivée + proposition, mais AUCUN avenant.
-        $derivee = (new Piste())
-            ->setNom('Renouvellement — amorcé')->setClient($s['piste']->getClient())->setRisque($s['piste']->getRisque())
-            ->setTypeAvenant(Piste::AVENANT_RENOUVELLEMENT)->setDescriptionDuRisque('x')->setExercice(2027);
-        $derivee->setEntreprise($s['ent'])->setInvite($s['inv']);
-        $this->em->persist($derivee);
-
-        $proposition = (new Cotation())->setNom('Offre de renouvellement - SFA')->setDuree(365);
-        $proposition->setPiste($derivee);
-        $proposition->setEntreprise($s['ent']);
-        $derivee->addCotation($proposition);
-        $this->em->persist($proposition);
-
-        $s['base']->setPisteDeRenouvellement($derivee);
-        $this->em->flush();
+        [, $proposition] = $this->amorcer($s, null);
 
         $resultat = $this->outil->execute(
             ['mouvement' => 'renouvellement', 'avenantId' => $s['base']->getId()],
@@ -631,18 +615,73 @@ class MouvementAvenantTest extends WebTestCase
 
         $this->assertTrue($resultat->data['mouvementAmorce'] ?? false, 'Amorcé, donc pas scellé.');
         $this->assertFalse($resultat->data['pret'] ?? true);
-        $this->assertNull($resultat->uiAction, 'Aucun bouton pour le mouvement lui-même.');
+        $this->assertNull($resultat->uiAction, 'Aucun bouton : rien d’écrivable.');
+        $this->assertSame([], $resultat->data['propositionsEnAttente'], 'Rien d’adoptable n’est offert au choix.');
+        $this->assertStringContainsString('prime chiffrée', $resultat->data['bloquant']);
+        $this->assertStringContainsString((string) $proposition->getNom(), $resultat->data['bloquant'], 'Le refus nomme la proposition.');
+    }
 
-        // La proposition à faire valider est DÉSIGNÉE, avec son identifiant.
-        $this->assertSame(
-            [$proposition->getId()],
-            array_column($resultat->data['propositionsEnAttente'], 'cotationId'),
+    /**
+     * MOUVEMENT AMORCÉ ET PROPOSITION CHIFFRÉE : Ket adopte, comme la boîte de l'écran. Le
+     * plan n'écrit QUE l'avenant (sur la proposition, en précondition « premier avenant »),
+     * le lien et le statut de la base, et la tâche de suivi — ni piste, ni cotation, ni
+     * prime reconduite : ce qui a été négocié fait foi, durée comprise.
+     */
+    public function testMouvementAmorceEtChiffreKetAdopteLaProposition(): void
+    {
+        $s = $this->seed();
+        [$derivee, $proposition] = $this->amorcer($s, 2500.0, 6);
+
+        $resultat = $this->outil->execute(
+            ['mouvement' => 'renouvellement', 'avenantId' => $s['base']->getId()],
+            $this->scope($s),
         );
-        $this->assertStringContainsString('FAIRE VALIDER', $resultat->data['prochaineEtape']);
 
-        // Et la consigne envoie l'assistant préparer CETTE écriture, dans le même tour.
-        $this->assertStringContainsString('preparer_operations', $resultat->data['note']);
-        $this->assertStringContainsString('MÊME TOUR', $resultat->data['note']);
+        $this->assertTrue($resultat->data['pret'] ?? false, json_encode($resultat->data, JSON_UNESCAPED_UNICODE));
+        $this->assertNotNull($resultat->uiAction);
+        $decalque = $this->builder->construire(MouvementAvenant::Renouvellement, $s['base'], [], $this->scope($s), $proposition);
+        $entites = array_map(static fn (array $op) => $op['op'] . ' ' . $op['entite'], $decalque['operations']);
+        $this->assertNotContains('create Piste', $entites);
+        $this->assertNotContains('create Cotation', $entites);
+        $avenant = array_values(array_filter($decalque['operations'], static fn (array $op) => $op['op'] === 'create' && $op['entite'] === 'Avenant'))[0];
+        $this->assertSame($proposition->getId(), $avenant['champs']['cotation']);
+        $this->assertTrue($avenant['premierAvenant']);
+        $this->assertSame('2027-01-01T00:00:00', $avenant['champs']['startingAt'], 'Au lendemain de l’échéance de la base.');
+        $this->assertSame('2027-06-30T00:00:00', $avenant['champs']['endingAt'], 'Six mois : la durée de la proposition fait foi.');
+        $this->assertSame($derivee->getId(), $decalque['adoptee']['pisteId']);
+    }
+
+    /**
+     * Amorce un renouvellement : piste dérivée liée à la base, une proposition — chiffrée de
+     * `$prime` si donné.
+     *
+     * @return array{0: Piste, 1: Cotation}
+     */
+    private function amorcer(array $s, ?float $prime, int $duree = 12): array
+    {
+        $derivee = (new Piste())
+            ->setNom('Renouvellement — amorcé')->setClient($s['piste']->getClient())->setRisque($s['piste']->getRisque())
+            ->setTypeAvenant(Piste::AVENANT_RENOUVELLEMENT)->setDescriptionDuRisque('x')->setExercice(2027);
+        $derivee->setEntreprise($s['ent'])->setInvite($s['inv']);
+        $derivee->setAvenantDeBase($s['base']);
+        $this->em->persist($derivee);
+
+        $proposition = (new Cotation())->setNom('Offre de renouvellement - SFA')->setDuree($duree);
+        $proposition->setPiste($derivee);
+        $proposition->setEntreprise($s['ent']);
+        $derivee->addCotation($proposition);
+        $this->em->persist($proposition);
+        if ($prime !== null) {
+            $chargement = (new ChargementPourPrime())->setNom('Prime nette')->setMontantFlatExceptionel($prime);
+            $chargement->setEntreprise($s['ent']);
+            $proposition->addChargement($chargement);
+            $this->em->persist($chargement);
+        }
+
+        $s['base']->setPisteDeRenouvellement($derivee);
+        $this->em->flush();
+
+        return [$derivee, $proposition];
     }
 
     /**

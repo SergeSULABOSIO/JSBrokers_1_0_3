@@ -2,11 +2,13 @@
 
 namespace App\Service\Avenant;
 
+use App\Ai\Mouvement\MouvementAvenant;
 use App\Entity\Avenant;
 use App\Entity\Cotation;
 use App\Entity\Piste;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use App\Services\Search\PisteTransformationScope;
+use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * CE QU'UN AVENANT REÇOIT QUAND ON SOUSCRIT UNE COTATION.
@@ -49,7 +51,25 @@ final class DefautsDeSouscription
         // Facultatif à la construction seulement : le conteneur l'injecte toujours. Sans lui,
         // la prime ne se lit pas, et estChiffree() le dit plutôt que de répondre au hasard.
         private readonly ?IndicatorCalculationHelper $indicateurs = null,
+        // Pour lire le lien police ↔ piste dérivée du côté de la POLICE (cf. policeDeBase).
+        private readonly ?EntityManagerInterface $em = null,
     ) {
+    }
+
+    /**
+     * LA POLICE QUE CETTE PISTE FAIT ÉVOLUER, lue des DEUX côtés du lien — comme
+     * AvenantRenouvellementResolver : un lien posé d'un seul côté reste un mouvement.
+     */
+    public function policeDeBase(?Piste $piste): ?Avenant
+    {
+        if ($piste === null) {
+            return null;
+        }
+
+        return $piste->getAvenantDeBase()
+            ?? ($piste->getId() !== null && $this->em !== null
+                ? $this->em->getRepository(Avenant::class)->findOneBy(['pisteDeRenouvellement' => $piste])
+                : null);
     }
 
     /** Un type inconnu, ou une piste sans type, retombe sur « exigée » : c'est le cas courant. */
@@ -103,6 +123,115 @@ final class DefautsDeSouscription
         return !$this->dejaSouscrite($cotation) && $this->refusDAvenant($cotation) === null;
     }
 
+    /**
+     * LE VERBE DU GESTE QUI CRÉE LE PREMIER AVENANT, selon le type de la piste — la carte du
+     * pipe, et les messages qui orientent. Repris des actions de la police
+     * (AvenantFormCanvasProvider) pour les quatre mouvements.
+     *
+     * @var array<int, string>
+     */
+    public const VERBE = [
+        Piste::AVENANT_SOUSCRIPTION   => 'Souscrire',
+        Piste::AVENANT_INCORPORATION  => 'Souscrire',
+        Piste::AVENANT_PROROGATION    => 'Proroger',
+        Piste::AVENANT_ANNULATION     => 'Annuler la police',
+        Piste::AVENANT_RESILIATION    => 'Résilier la police',
+        Piste::AVENANT_RENOUVELLEMENT => 'Renouveler',
+    ];
+
+    public static function verbe(?int $typeAvenant): string
+    {
+        return self::VERBE[$typeAvenant] ?? 'Souscrire';
+    }
+
+    /**
+     * L'icône du même geste — celles des mouvements de la police (AvenantFormCanvasProvider),
+     * pour qu'un même acte ait la même image sur la carte, la ligne et le menu de la police.
+     *
+     * @var array<int, string>
+     */
+    public const ICONE = [
+        Piste::AVENANT_SOUSCRIPTION   => 'action:completed',
+        Piste::AVENANT_INCORPORATION  => 'action:completed',
+        Piste::AVENANT_PROROGATION    => 'action:prorogation',
+        Piste::AVENANT_ANNULATION     => 'action:annulation',
+        Piste::AVENANT_RESILIATION    => 'action:resiliation',
+        Piste::AVENANT_RENOUVELLEMENT => 'action:renew',
+    ];
+
+    public static function icone(?int $typeAvenant): string
+    {
+        return self::ICONE[$typeAvenant] ?? 'action:completed';
+    }
+
+    /**
+     * LE CHEMIN DU TYPE : null = le formulaire d'avenant (souscription, incorporation) ;
+     * sinon le MOUVEMENT de la police de base, qui adopte la piste et sa cotation
+     * (MouvementAvenantBuilder) — dates, statut de la base et échéances y vivent déjà.
+     */
+    public static function mouvementDe(?int $typeAvenant): ?MouvementAvenant
+    {
+        return MouvementAvenant::depuisTypeAvenant($typeAvenant);
+    }
+
+    /**
+     * UN REFUS QUI MÈNE QUELQUE PART : la proposition d'une piste de mouvement ne se
+     * « souscrit » pas, elle se valide par le mouvement de sa police. Null pour une
+     * souscription ou une incorporation.
+     *
+     * Sans police de base, aucun geste de l'écran ne rattache une piste EXISTANTE à une
+     * police : on oriente vers celui qui existe, le mouvement lancé depuis la police.
+     */
+    public function orientationVersLeMouvement(Cotation $cotation): ?string
+    {
+        $piste = $cotation->getPiste();
+        $mouvement = self::mouvementDe($piste?->getTypeAvenant());
+        if ($mouvement === null) {
+            return null;
+        }
+        $base = $this->policeDeBase($piste);
+        if ($base === null) {
+            return sprintf(
+                'Cette piste n’est rattachée à aucune police. « %s » se fait depuis la police elle-même : '
+                . 'rubrique Avenants, menu « Mouvements de la police ».',
+                $mouvement->libelle(),
+            );
+        }
+
+        return sprintf(
+            '« %s » n’est pas une souscription : la proposition « %s » se valide par le mouvement « %s » de la police « %s », qui l’adopte.',
+            $mouvement->libelle(),
+            (string) $cotation->getNom(),
+            self::verbe($piste->getTypeAvenant()),
+            (string) $base->getReferencePolice(),
+        );
+    }
+
+    /**
+     * L'ACTION D'UNE CARTE DU PIPE, selon son étape et le type de sa piste — la clé de
+     * `vue_cartes.actions` (PisteListCanvasProvider) et de ses droits.
+     *
+     * Un type EXEMPTÉ de prime (incorporation, annulation, résiliation) n'a pas de prime à
+     * saisir : dès « En cotation », sa carte propose le geste qui crée son avenant.
+     */
+    public static function actionDuPipe(?string $etape, ?int $typeAvenant): ?string
+    {
+        return match ($etape) {
+            PisteTransformationScope::ETAPE_A_COTER          => PisteTransformationScope::ETAPE_A_COTER,
+            PisteTransformationScope::ETAPE_EN_COTATION      => self::primeExigee($typeAvenant)
+                ? PisteTransformationScope::ETAPE_EN_COTATION
+                : self::cleDeSouscription($typeAvenant),
+            PisteTransformationScope::ETAPE_OFFRES_CHIFFREES => self::cleDeSouscription($typeAvenant),
+            default                                          => null,
+        };
+    }
+
+    /** « souscrire-{type} » ; un type inconnu suit la souscription. */
+    public static function cleDeSouscription(?int $typeAvenant): string
+    {
+        return 'souscrire-' . (isset(self::VERBE[$typeAvenant]) ? $typeAvenant : Piste::AVENANT_SOUSCRIPTION);
+    }
+
     /** Le sujet du motif de refus, accordé au type. @var array<int, string> */
     private const LIBELLE_DU_GESTE = [
         Piste::AVENANT_SOUSCRIPTION   => 'Une souscription',
@@ -129,11 +258,41 @@ final class DefautsDeSouscription
             $annonces[] = sprintf('Prise d’effet : %s (aucune date dictée).', $debut->format('d/m/Y'));
         }
 
+        // L'INCORPORATION S'ACHÈVE AVEC LA POLICE qu'elle complète (décision métier du
+        // 2026-10-13) : l'assuré ou le véhicule ajouté l'est jusqu'à l'échéance commune.
+        // Sans police de base connue, la règle de la souscription s'applique — et se dit.
+        $piste = $cotation->getPiste();
+        $finDeLaBase = $piste?->getTypeAvenant() === Piste::AVENANT_INCORPORATION
+            ? $this->policeDeBase($piste)?->getEndingAt()
+            : null;
+        // Une police déjà échue ne borne rien : l'incorporation finirait avant de commencer.
+        if ($finDeLaBase !== null && \DateTimeImmutable::createFromInterface($finDeLaBase) < $debut) {
+            $annonces[] = sprintf(
+                'La police « %s » est échue depuis le %s : la période de l’incorporation suit la durée de la proposition.',
+                (string) $this->policeDeBase($piste)->getReferencePolice(),
+                $finDeLaBase->format('d/m/Y'),
+            );
+            $finDeLaBase = null;
+            $piste = null;
+        }
+        $fin = null;
+        if ($finDeLaBase !== null) {
+            $fin = \DateTimeImmutable::createFromInterface($finDeLaBase);
+            $annonces[] = sprintf(
+                'Période de couverture : du %s au %s, échéance de la police « %s » qu’elle complète.',
+                $debut->format('d/m/Y'),
+                $fin->format('d/m/Y'),
+                (string) $this->policeDeBase($piste)->getReferencePolice(),
+            );
+        } elseif ($piste?->getTypeAvenant() === Piste::AVENANT_INCORPORATION) {
+            $annonces[] = 'Aucune police de base rattachée à cette incorporation : sa période suit la durée de la proposition, comme une souscription.';
+        }
+
         // LA DURÉE DE LA PROPOSITION FAIT LA PÉRIODE : début + durée en mois − 1 jour. Sans
         // durée, on ne devine pas de fin.
         $duree = (int) $cotation->getDuree();
-        $fin = $duree > 0 ? $debut->modify(sprintf('+%d month', $duree))->modify('-1 day') : null;
-        if ($fin !== null) {
+        $fin ??= $duree > 0 ? $debut->modify(sprintf('+%d month', $duree))->modify('-1 day') : null;
+        if ($fin !== null && $finDeLaBase === null) {
             $annonces[] = sprintf(
                 'Période de couverture : du %s au %s (durée de %d mois portée par la proposition).',
                 $debut->format('d/m/Y'),

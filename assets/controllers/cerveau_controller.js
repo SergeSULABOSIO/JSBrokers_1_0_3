@@ -3061,6 +3061,13 @@ export default class extends Controller {
             if (!reponse.ok) {
                 throw new Error(resultat.message || "Cette action n'est plus possible sur cette piste.");
             }
+            // UN MOUVEMENT DE POLICE (renouveler, proroger, annuler, résilier) : le serveur
+            // répond par la boîte du mouvement, qui adopte la piste — la même que le menu
+            // de la police ouvre.
+            if (resultat.pickerUrl) {
+                await this.handleAvenantMouvementRequest({ url: resultat.pickerUrl });
+                return;
+            }
             this.openDialogBox({
                 entity: resultat.entity,
                 entityFormCanvas: resultat.formCanvas,

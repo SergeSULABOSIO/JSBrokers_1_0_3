@@ -4,6 +4,7 @@ namespace App\Services\Canvas\Indicator;
 
 use App\Service\Partage\RattachementDuPartage;
 use App\Entity\Piste;
+use App\Service\Avenant\DefautsDeSouscription;
 use App\Services\Search\PisteTransformationScope;
 use App\Services\ServiceDates;
 use DateTimeImmutable;
@@ -112,6 +113,8 @@ class PisteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'etapePipeLibelle' => PisteTransformationScope::ETAPES[$etape]['singulier'],
             // Le suffixe de classe du marqueur coloré (`.jsb-state-badge--etape-…`).
             'etapePipeNiveau' => 'etape-' . $etape,
+            // La prochaine action de la carte : l'étape ET le type (renouveler, annuler…).
+            'actionPipe' => DefautsDeSouscription::actionDuPipe($etape, $piste->getTypeAvenant()),
         ];
     }
 

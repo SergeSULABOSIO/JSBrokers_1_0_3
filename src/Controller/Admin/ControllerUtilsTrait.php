@@ -1310,7 +1310,30 @@ trait ControllerUtilsTrait
                 && ($peutModifierLaPiste || $this->mayAccessEntity(\App\Entity\Cotation::class, Invite::ACCESS_MODIFICATION)),
             \App\Services\Search\PisteTransformationScope::ETAPE_OFFRES_CHIFFREES
                 => $peutModifierLaPiste || $this->mayAccessEntity(\App\Entity\Avenant::class, Invite::ACCESS_ECRITURE),
-        ];
+        ] + $this->droitsDesGestesDeSouscription($peutModifierLaPiste);
+    }
+
+    /**
+     * Le geste de chaque type : un MOUVEMENT de police écrit piste, cotation et avenant
+     * (même garde que AvenantController::contexteMouvement) ; une souscription, l'avenant
+     * — ou la piste, ouverte sur ses cotations quand il faut choisir.
+     *
+     * @return array<string, bool>
+     */
+    private function droitsDesGestesDeSouscription(bool $peutModifierLaPiste): array
+    {
+        $mouvement = $this->mayAccessEntity(\App\Entity\Piste::class, Invite::ACCESS_ECRITURE)
+            && $this->mayAccessEntity(\App\Entity\Cotation::class, Invite::ACCESS_ECRITURE)
+            && $this->mayAccessEntity(\App\Entity\Avenant::class, Invite::ACCESS_ECRITURE);
+        $souscription = $peutModifierLaPiste || $this->mayAccessEntity(\App\Entity\Avenant::class, Invite::ACCESS_ECRITURE);
+
+        $droits = [];
+        foreach (array_keys(\App\Service\Avenant\DefautsDeSouscription::VERBE) as $type) {
+            $droits[\App\Service\Avenant\DefautsDeSouscription::cleDeSouscription($type)]
+                = \App\Service\Avenant\DefautsDeSouscription::mouvementDe($type) !== null ? $mouvement : $souscription;
+        }
+
+        return $droits;
     }
 
     /** La bascule en Liste décidée par le serveur suit dans le cookie. */

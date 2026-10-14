@@ -289,6 +289,23 @@ class PisteController extends AbstractController
         // souscrire — la règle de l'enregistrement, jamais une copie : pas encore souscrite,
         // et chiffrée si le type de la piste l'exige (DefautsDeSouscription).
         $aSouscrire = array_values(array_filter($cotations, fn (Cotation $c) => $defautsDeSouscription->peutEtreSouscrite($c)));
+
+        // UN SEUL CHEMIN PAR TYPE. Renouvellement, prorogation, annulation, résiliation : le
+        // MOUVEMENT de la police de base, qui adopte cette piste et sa proposition (dates,
+        // statut de la base, échéances). La boîte du mouvement s'ouvre à la place du formulaire.
+        $mouvement = DefautsDeSouscription::mouvementDe($piste->getTypeAvenant());
+        if ($mouvement !== null && count($aSouscrire) === 1) {
+            $base = $defautsDeSouscription->policeDeBase($piste);
+            if ($base === null) {
+                return $this->refusDuPipe((string) $defautsDeSouscription->orientationVersLeMouvement($aSouscrire[0]));
+            }
+
+            return $this->json(['pickerUrl' => $this->generateUrl('admin.avenant.api.mouvement_picker', [
+                'mouvement' => $mouvement->value,
+                'id'        => $base->getId(),
+                'cotation'  => $aSouscrire[0]->getId(),
+            ])]);
+        }
         if (count($aSouscrire) === 1) {
             return $this->mayAccessEntity(\App\Entity\Avenant::class, Invite::ACCESS_ECRITURE)
                 ? $this->ouvertureDuPipe(null, \App\Entity\Avenant::class, ['id' => $aSouscrire[0]->getId(), 'fieldName' => 'cotation'], null)

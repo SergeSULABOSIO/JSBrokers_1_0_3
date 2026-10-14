@@ -159,6 +159,11 @@ final class SouscrireCotationTool implements AiToolProduisantUnPlan, AiToolEcrit
         // LA RÈGLE DE L'ENREGISTREMENT, DITE AVANT LE PLAN : une souscription sans prime
         // n'a pas de sens (DefautsDeSouscription). Le plan serait refusé à l'exécution ;
         // on le dit maintenant, dans les mots du métier.
+        // UNE PISTE DE MOUVEMENT ne se souscrit pas : sa proposition se valide par le
+        // mouvement de sa police (preparer_mouvement_avenant), qui l'adopte.
+        if (($orientation = $this->defautsDeSouscription->orientationVersLeMouvement($cotation)) !== null) {
+            return $this->refuser($orientation, $this->noteDeMouvement($cotation));
+        }
         if (($motif = $this->defautsDeSouscription->refusDAvenant($cotation)) !== null) {
             return $this->refuser($motif);
         }
@@ -322,8 +327,14 @@ final class SouscrireCotationTool implements AiToolProduisantUnPlan, AiToolEcrit
         // de choisir entre des offres qu'aucun choix ne rendrait souscriptibles.
         $souscriptibles = array_values(array_filter(
             $aSouscrire,
-            fn (Cotation $c) => $this->defautsDeSouscription->refusDAvenant($c) === null,
+            fn (Cotation $c) => $this->defautsDeSouscription->orientationVersLeMouvement($c) === null
+                && $this->defautsDeSouscription->refusDAvenant($c) === null,
         ));
+        // Il ne reste que des propositions de mouvement : on oriente vers le mouvement.
+        if ($souscriptibles === [] && count($aSouscrire) === 1
+            && ($orientation = $this->defautsDeSouscription->orientationVersLeMouvement($aSouscrire[0])) !== null) {
+            return [null, $this->refuser($orientation, $this->noteDeMouvement($aSouscrire[0]))];
+        }
         if ($souscriptibles === []) {
             return [null, $this->refuser(count($aSouscrire) === 1
                 ? (string) $this->defautsDeSouscription->refusDAvenant($aSouscrire[0])
@@ -376,14 +387,33 @@ final class SouscrireCotationTool implements AiToolProduisantUnPlan, AiToolEcrit
     }
 
     /** Un refus qui ne se lève pas par une réponse : `bloquant` est la phrase du courtier. */
-    private function refuser(string $motif): AiToolResult
+    private function refuser(string $motif, ?string $note = null): AiToolResult
     {
         return AiToolResult::ok([
             'pret'     => false,
             'bloquant' => $motif,
-            'note'     => 'Dis ce motif en UNE phrase, sans présenter de plan ni annoncer de bouton : '
+            'note'     => $note ?? 'Dis ce motif en UNE phrase, sans présenter de plan ni annoncer de bouton : '
                 . 'la souscription reprendra quand la prime de la proposition sera saisie.',
         ]);
+    }
+
+    /** Pour le modèle : le bon outil, et la police à lui donner. */
+    private function noteDeMouvement(Cotation $cotation): string
+    {
+        $piste = $cotation->getPiste();
+        $mouvement = DefautsDeSouscription::mouvementDe($piste?->getTypeAvenant());
+        $base = $this->defautsDeSouscription->policeDeBase($piste);
+
+        return $base === null
+            ? 'Dis ce motif en UNE phrase. Ne présente aucun plan et n’appelle aucun autre outil dans ce tour.'
+            : sprintf(
+                'Dis ce motif en UNE phrase, puis propose de préparer le mouvement. S’il accepte — ou s’il a déjà '
+                . 'demandé de valider cette proposition, ce qui vaut acceptation — appelle preparer_mouvement_avenant '
+                . 'DANS LE MÊME TOUR avec mouvement="%s" et avenantId=%d : le mouvement adoptera la proposition #%d.',
+                $mouvement?->value,
+                (int) $base->getId(),
+                (int) $cotation->getId(),
+            );
     }
 
     /** @param array<int, array<string, mixed>> $questions */

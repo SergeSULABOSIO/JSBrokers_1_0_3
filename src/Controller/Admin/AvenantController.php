@@ -228,13 +228,13 @@ class AvenantController extends AbstractController
      * d'effet) : un formulaire ici, une phrase là-bas.
      */
     #[Route('/api/mouvement-picker/{mouvement}/{id}', name: 'api.mouvement_picker', requirements: ['id' => Requirement::DIGITS, 'mouvement' => '[a-z]+'], methods: ['GET'])]
-    public function mouvementPicker(string $mouvement, Avenant $avenant): Response
+    public function mouvementPicker(string $mouvement, Avenant $avenant, Request $request): Response
     {
-        $contexte = $this->contexteMouvement($mouvement, $avenant, Invite::ACCESS_ECRITURE);
+        $contexte = $this->contexteMouvement($mouvement, $avenant, Invite::ACCESS_ECRITURE, $request);
         if ($contexte instanceof JsonResponse) {
             return $contexte;
         }
-        [$type, $scope] = $contexte;
+        [$type, $scope, $adoptee] = $contexte;
 
         // Valeurs proposées dans les champs. L'aperçu est calculé AVEC elles : sans
         // cela, la boîte s'ouvrait sur « renseignez l'information demandée » alors
@@ -243,8 +243,14 @@ class AvenantController extends AbstractController
         // RENOUVELLEMENT : la prise d'effet est pré-remplie au lendemain de l'échéance (la
         // règle vit dans le builder) et reste modifiable — pour une police échue depuis
         // longtemps, ce lendemain donnerait un avenant né expiré, et l'aperçu le dit.
+        //
+        // ADOPTION : la durée de la proposition adoptée pré-remplit celle de la prorogation
+        // (ce qui a été négocié fait foi) ; elle reste modifiable.
+        $dureeAdoptee = ($adoptee !== null && ($lendemain = $this->mouvementBuilder->dateEffetParDefaut($avenant)) !== null)
+            ? $this->mouvementBuilder->joursDeLaProposition($adoptee, $lendemain)
+            : null;
         $defauts = match (true) {
-            $type === MouvementAvenant::Prorogation    => ['dureeJours' => self::PROROGATION_JOURS_DEFAUT],
+            $type === MouvementAvenant::Prorogation    => ['dureeJours' => $dureeAdoptee ?? self::PROROGATION_JOURS_DEFAUT],
             $type === MouvementAvenant::Renouvellement => array_filter(['dateEffet' => $this->mouvementBuilder->dateEffetParDefaut($avenant)?->format('Y-m-d')]),
             default                                    => ['dateEffet' => $this->mouvementBuilder->aujourdhui()->format('Y-m-d')],
         };
@@ -254,9 +260,11 @@ class AvenantController extends AbstractController
             'libelle'     => $type->libelle(),
             'exigeDate'   => $type->exigeDate(),
             'avenant'     => $avenant,
-            'dureeDefaut' => self::PROROGATION_JOURS_DEFAUT,
+            'dureeDefaut' => $defauts['dureeJours'] ?? self::PROROGATION_JOURS_DEFAUT,
             'dateDefaut'  => $defauts['dateEffet'] ?? null,
-            'apercu'      => $this->apercuMouvement($type, $avenant, $defauts, $scope),
+            'apercu'      => $this->apercuMouvement($type, $avenant, $defauts, $scope, $adoptee),
+            // La proposition adoptée voyage dans les URL de l'aperçu et de l'exécution.
+            'adoptee'     => $adoptee,
         ]);
     }
 
@@ -269,12 +277,14 @@ class AvenantController extends AbstractController
     #[Route('/api/mouvement-apercu/{mouvement}/{id}', name: 'api.mouvement_apercu', requirements: ['id' => Requirement::DIGITS, 'mouvement' => '[a-z]+'], methods: ['GET'])]
     public function mouvementApercu(string $mouvement, Avenant $avenant, Request $request): JsonResponse
     {
-        $contexte = $this->contexteMouvement($mouvement, $avenant, Invite::ACCESS_ECRITURE);
+        $contexte = $this->contexteMouvement($mouvement, $avenant, Invite::ACCESS_ECRITURE, $request);
         if ($contexte instanceof JsonResponse) {
             return $contexte;
         }
-        [$type, $scope] = $contexte;
-        $apercu = $this->apercuMouvement($type, $avenant, $request->query->all(), $scope);
+        [$type, $scope, $adoptee] = $contexte;
+        $args = $request->query->all();
+        unset($args['cotation']);
+        $apercu = $this->apercuMouvement($type, $avenant, $args, $scope, $adoptee);
 
         // Le fragment est rendu par le SERVEUR (même partiel qu'à l'ouverture) : le
         // JS ne fabrique aucun libellé, il substitue le bloc. Un seul markup à maintenir.
@@ -292,14 +302,14 @@ class AvenantController extends AbstractController
     #[Route('/api/mouvement/{mouvement}/{id}', name: 'api.mouvement_executer', requirements: ['id' => Requirement::DIGITS, 'mouvement' => '[a-z]+'], methods: ['POST'])]
     public function mouvementExecuter(string $mouvement, Avenant $avenant, Request $request): JsonResponse
     {
-        $contexte = $this->contexteMouvement($mouvement, $avenant, Invite::ACCESS_ECRITURE);
+        $contexte = $this->contexteMouvement($mouvement, $avenant, Invite::ACCESS_ECRITURE, $request);
         if ($contexte instanceof JsonResponse) {
             return $contexte;
         }
-        [$type, $scope] = $contexte;
+        [$type, $scope, $adoptee] = $contexte;
 
         $args = json_decode($request->getContent() ?: '{}', true);
-        $decalque = $this->mouvementBuilder->construire($type, $avenant, is_array($args) ? $args : [], $scope);
+        $decalque = $this->mouvementBuilder->construire($type, $avenant, is_array($args) ? $args : [], $scope, $adoptee);
 
         if (isset($decalque['bloquant'])) {
             return $this->json(['success' => false, 'message' => $decalque['bloquant']], Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -328,7 +338,12 @@ class AvenantController extends AbstractController
                 'buyUrl'  => $this->generateUrl('admin.token.buy'),
             ], Response::HTTP_PAYMENT_REQUIRED);
         } catch (MutationException $e) {
-            return $this->json(['success' => false, 'message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+            // BLOQUÉ = l'état a changé sous nos pieds (la proposition vient d'être adoptée
+            // par un autre) : un conflit, pas une saisie à corriger.
+            return $this->json(
+                ['success' => false, 'message' => $e->getMessage()],
+                $e->statut === MutationException::BLOQUE ? Response::HTTP_CONFLICT : Response::HTTP_UNPROCESSABLE_ENTITY,
+            );
         }
 
         return $this->json([
@@ -346,9 +361,14 @@ class AvenantController extends AbstractController
      * d'écriture (fail-closed), avenant de l'espace de travail courant, police pas
      * déjà mouvementée — l'idempotence exacte de l'outil de l'assistant.
      *
-     * @return array{0: MouvementAvenant, 1: AiScope}|JsonResponse
+     * ADOPTION (`?cotation=`) : la police porte déjà sa piste dérivée, montée et chiffrée à
+     * part ; le mouvement l'ADOPTE au lieu d'en créer une seconde. Le 409 « déjà dotée d'une
+     * piste dérivée » ne se lève que pour CETTE piste-là — le builder juge le reste (type,
+     * clôture, proposition sans avenant, prime).
+     *
+     * @return array{0: MouvementAvenant, 1: AiScope, 2: ?Cotation}|JsonResponse
      */
-    private function contexteMouvement(string $mouvement, Avenant $avenant, int $niveau): array|JsonResponse
+    private function contexteMouvement(string $mouvement, Avenant $avenant, int $niveau, ?Request $request = null): array|JsonResponse
     {
         $type = MouvementAvenant::depuis($mouvement);
         if ($type === null) {
@@ -368,7 +388,36 @@ class AvenantController extends AbstractController
         // sens du double lien (un lien à moitié posé reste un mouvement), et l'avenant
         // d'ACTE d'une annulation / résiliation, qui n'a pas de suite à recevoir.
         $suite = $this->renouvellementResolver->resoudre($avenant);
-        if ($suite['pisteDeriveeId'] !== null) {
+
+        $adoptee = null;
+        $idAdoptee = (int) ($request?->query->get('cotation') ?? 0);
+        if ($idAdoptee > 0) {
+            $adoptee = $this->em->find(Cotation::class, $idAdoptee);
+            // Même verdict qu'un identifiant qui n'existe pas : on ne confirme rien.
+            if ($adoptee === null || !$this->appartenance()->estDuCabinetOuvert($adoptee)) {
+                return $this->json(['message' => 'Proposition introuvable dans cet espace de travail.'], Response::HTTP_NOT_FOUND);
+            }
+        }
+        $adopteSaPiste = $adoptee !== null && $suite['pisteDeriveeId'] !== null
+            && $adoptee->getPiste()?->getId() === $suite['pisteDeriveeId'];
+        // Déjà adoptée — elle, ou l'offre concurrente de la même piste (un collègue, ou Ket,
+        // l'a souscrite entre l'ouverture et le clic) : l'état a changé, ce n'est pas une
+        // saisie à corriger.
+        foreach ($adoptee?->getPiste()?->getCotations() ?? [] as $offre) {
+            if (count($offre->getAvenants()) > 0) {
+                return $this->json([
+                    'message' => sprintf('La proposition « %s » porte déjà son avenant : elle vient d’être souscrite.', (string) $offre->getNom()),
+                ], Response::HTTP_CONFLICT);
+            }
+        }
+        // Le lien n'était posé que du côté de la police : l'adoption le pose aussi du côté
+        // de la piste — une MODIFICATION de la piste, à exiger dès l'ouverture.
+        if ($adopteSaPiste && $adoptee->getPiste()->getAvenantDeBase()?->getId() !== $avenant->getId()
+            && !$this->mayAccessEntity(Piste::class, Invite::ACCESS_MODIFICATION)) {
+            return $this->accessDeniedJson();
+        }
+
+        if ($suite['pisteDeriveeId'] !== null && !$adopteSaPiste) {
             return $this->json([
                 'message' => 'Cette police porte déjà une opportunité dérivée : un mouvement y a déjà été enregistré.',
             ], Response::HTTP_CONFLICT);
@@ -379,7 +428,7 @@ class AvenantController extends AbstractController
             ], Response::HTTP_CONFLICT);
         }
 
-        return [$type, new AiScope($this->getEntreprise(), $this->getInvite())];
+        return [$type, new AiScope($this->getEntreprise(), $this->getInvite()), $adoptee];
     }
 
     /**
@@ -390,9 +439,9 @@ class AvenantController extends AbstractController
      *
      * @return array<string, mixed>
      */
-    private function apercuMouvement(MouvementAvenant $type, Avenant $avenant, array $args, AiScope $scope): array
+    private function apercuMouvement(MouvementAvenant $type, Avenant $avenant, array $args, AiScope $scope, ?Cotation $adoptee = null): array
     {
-        $decalque = $this->mouvementBuilder->construire($type, $avenant, $args, $scope);
+        $decalque = $this->mouvementBuilder->construire($type, $avenant, $args, $scope, $adoptee);
 
         if (isset($decalque['bloquant'])) {
             return ['pret' => false, 'bloquant' => $decalque['bloquant'], 'source' => []];

@@ -18,6 +18,8 @@ class CotationIndicatorStrategy implements IndicatorCalculationStrategyInterface
         // quatre écrans de l'arbre d'une affaire.
         private RattachementDuPartage $rattachement,
         private DefautsDeSouscription $defautsDeSouscription,
+        // L'adoption par le mouvement : la même règle que la boîte de l'écran et Ket.
+        private \App\Ai\Mouvement\MouvementAvenantBuilder $mouvements,
     ) {
     }
 
@@ -42,7 +44,7 @@ class CotationIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'risqueDescription' => $this->calculationHelper->getRisqueDescriptionFromCotation($entity),
             'contextePiste' => $this->calculationHelper->getCotationContextePiste($entity),
             'statutSouscription' => CotationSouscriptionScope::statutLibelle($this->calculationHelper->isCotationBound($entity)),
-            'souscriptible' => $this->defautsDeSouscription->peutEtreSouscrite($entity),
+            ...$this->gesteDeSouscription($entity),
             'referencePolice' => $this->calculationHelper->getCotationReferencePolice($entity),
             'periodeCouverture' => $this->calculationHelper->getCotationPeriodeCouverture($entity),
             'indemnisationDue' => round($this->calculationHelper->getCotationIndemnisationDue($entity), 2),
@@ -87,5 +89,40 @@ class CotationIndicatorStrategy implements IndicatorCalculationStrategyInterface
         if (!$cotation->getCreatedAt()) return 'N/A';
         $jours = $this->serviceDates->daysEntre($cotation->getCreatedAt(), new DateTimeImmutable()) ?? 0;
         return $jours . ' jour(s)';
+    }
+    /**
+     * LE GESTE QUI CRÉE LE PREMIER AVENANT DE CETTE LIGNE — un seul chemin par type :
+     *  - souscription, incorporation : le formulaire (`souscriptible`) ;
+     *  - les quatre mouvements : la boîte du mouvement de la police, qui ADOPTE cette
+     *    proposition (`urlDuMouvement`, null tant qu'elle n'est pas adoptable), sous le
+     *    verbe et l'icône du type.
+     *
+     * @return array{souscriptible: bool, urlDuMouvement: ?string, verbeDuMouvement: ?string, iconeDuMouvement: ?string}
+     */
+    private function gesteDeSouscription(Cotation $cotation): array
+    {
+        $type = $cotation->getPiste()?->getTypeAvenant();
+        $mouvement = DefautsDeSouscription::mouvementDe($type);
+        if ($mouvement === null) {
+            return [
+                'souscriptible'    => $this->defautsDeSouscription->peutEtreSouscrite($cotation),
+                'urlDuMouvement'   => null,
+                'verbeDuMouvement' => null,
+                'iconeDuMouvement' => null,
+            ];
+        }
+
+        $base = $this->defautsDeSouscription->policeDeBase($cotation->getPiste());
+        $adoptable = $base !== null && $cotation->getId() !== null
+            && $this->mouvements->refusDAdoption($mouvement, $base, $cotation) === null;
+
+        return [
+            'souscriptible'    => false,
+            'urlDuMouvement'   => $adoptable
+                ? sprintf('/admin/avenant/api/mouvement-picker/%s/%d?cotation=%d', $mouvement->value, $base->getId(), $cotation->getId())
+                : null,
+            'verbeDuMouvement' => DefautsDeSouscription::verbe($type),
+            'iconeDuMouvement' => DefautsDeSouscription::icone($type),
+        ];
     }
 }

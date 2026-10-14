@@ -231,7 +231,7 @@ class AvenantPrimeExigeeTest extends WebTestCase
         $s = $this->semerLeCabinet();
         $nonChiffree = $this->cotation($s, Piste::AVENANT_SOUSCRIPTION);
         $chiffree = $this->cotation($s, Piste::AVENANT_SOUSCRIPTION, 900.0);
-        $exemptee = $this->cotation($s, Piste::AVENANT_ANNULATION);
+        $exemptee = $this->cotation($s, Piste::AVENANT_INCORPORATION);
 
         $formulaire = function (int $id): string {
             $this->client->request('GET', sprintf('/admin/cotation/api/get-form/%d', $id));
@@ -242,7 +242,10 @@ class AvenantPrimeExigeeTest extends WebTestCase
 
         self::assertStringContainsString('data-ajout-impossible', $formulaire($nonChiffree), 'Le « + » cède la place à son explication.');
         self::assertStringNotContainsString('data-ajout-impossible', $formulaire($chiffree));
-        self::assertStringNotContainsString('data-ajout-impossible', $formulaire($exemptee), 'Une annulation n’exige pas de prime.');
+        self::assertStringNotContainsString('data-ajout-impossible', $formulaire($exemptee), 'Une incorporation n’exige pas de prime.');
+        // Une annulation non plus — mais son avenant naît du mouvement de la police : le « + »
+        // y renvoie (AdoptionParLeMouvementTest).
+        self::assertStringContainsString('Mouvements de la police', $formulaire($this->cotation($s, Piste::AVENANT_ANNULATION)));
     }
 
     /** Ket : la même garde, au contrôle à blanc ET à l'écriture ; la reprise seule en est exemptée. */

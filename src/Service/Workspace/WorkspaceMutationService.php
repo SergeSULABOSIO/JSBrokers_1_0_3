@@ -443,6 +443,46 @@ class WorkspaceMutationService
     }
 
     /**
+     * « CETTE PISTE N'A PAS ENCORE DONNÉ SON AVENANT » — revérifié À L'ÉCRITURE, sous verrou.
+     *
+     * Le mouvement qui adopte une proposition l'a vérifié en préparant son plan ; entre
+     * l'aperçu et le clic, un collègue (ou Ket) a pu adopter la même — ou l'offre
+     * concurrente de la même piste. Le contrôle est donc refait ici, dans la transaction :
+     *  - la ligne de la PISTE est verrouillée (SELECT … FOR UPDATE) : une seconde adoption,
+     *    par la même proposition ou par une autre de la piste, ATTEND la fin de la première ;
+     *  - l'avenant existant est cherché par une lecture VERROUILLANTE, qui lit le dernier
+     *    état validé — une lecture simple relirait l'instantané pris au début de la
+     *    transaction (REPEATABLE READ) et manquerait l'avenant que l'autre vient d'écrire.
+     * Une attente trop longue, ou un interblocage, se dit comme un conflit — jamais un 500.
+     * Pas de contrainte d'unicité en base : une cotation peut porter plusieurs avenants
+     * (les avenants suivants) ; seule l'ADOPTION exige d'être la première.
+     */
+    private function exigerLePremierAvenant(object $entity): void
+    {
+        $cotation = $entity instanceof \App\Entity\Avenant ? $entity->getCotation() : null;
+        $piste = $cotation?->getPiste();
+        if ($cotation === null || $cotation->getId() === null || $piste === null || $piste->getId() === null) {
+            throw MutationException::invalide('Cet avenant doit être rattaché à une proposition existante.');
+        }
+        try {
+            $this->em->lock($piste, \Doctrine\DBAL\LockMode::PESSIMISTIC_WRITE);
+            $existant = $this->em->getConnection()->fetchOne(
+                'SELECT a.id FROM avenant a JOIN cotation c ON c.id = a.cotation_id WHERE c.piste_id = ? LIMIT 1 FOR UPDATE',
+                [$piste->getId()],
+            );
+        } catch (\Doctrine\DBAL\Exception\LockWaitTimeoutException|\Doctrine\DBAL\Exception\DeadlockException) {
+            throw MutationException::bloque('Une autre écriture est en cours sur cette piste : rien n’a été enregistré. Réessayez dans un instant.');
+        }
+        if ($existant !== false) {
+            throw MutationException::bloque(sprintf(
+                'La proposition « %s » vient d’être souscrite, ou une autre de la piste « %s » : la police est déjà traitée. Rien n’a été enregistré.',
+                (string) $cotation->getNom(),
+                (string) $piste->getNom(),
+            ));
+        }
+    }
+
+    /**
      * Exécute réellement une opération. À appeler DANS une transaction :
      * lève MutationException (rollback) ou InsufficientTokensException.
      *
@@ -520,6 +560,9 @@ class WorkspaceMutationService
                 throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelle), $this->erreurs($form));
             }
             $this->refuserLesIncoherences($entity, $op->entityShortName, $libelle, $origine);
+            if ($op->premierAvenant) {
+                $this->exigerLePremierAvenant($entity);
+            }
             $this->commitWrite($entity, $scope->entreprise, $acteur, $metrer);
             // L'id existe : les opérations suivantes du plan peuvent y renvoyer.
             $refs->declarer($op->ref, method_exists($entity, 'getId') ? $entity->getId() : null);

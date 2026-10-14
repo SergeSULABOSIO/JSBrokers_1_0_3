@@ -19,8 +19,10 @@
 #}
 {%- set etape = entity.etapePipe -%}
 {%- set client = entity.client ? entity.client.nom : null -%}
-{%- set action = (not entity.closed) ? (listeCanvas.vue_cartes.actions[etape] ?? null) : null -%}
-{%- set peutAgir = action and (vueCartes.droits[etape] ?? false) -%}
+{#- L'action suit l'étape ET le type de la piste (« Renouveler », « Annuler la police »…) :
+    la clé est calculée par DefautsDeSouscription::actionDuPipe. -#}
+{%- set action = (not entity.closed and entity.actionPipe|default(null)) ? (listeCanvas.vue_cartes.actions[entity.actionPipe] ?? null) : null -%}
+{%- set peutAgir = action and (vueCartes.droits[entity.actionPipe] ?? false) -%}
 {%- set offres = entity.nombreCotations|default(0) -%}
 {%- set prime = entity.primePotentielle is null ? '—' : vueCartes.monnaie ~ ' ' ~ entity.primePotentielle|format_nombre(2) -%}
 {%- set commission = entity.commissionPotentielle is null ? '—' : vueCartes.monnaie ~ ' ' ~ entity.commissionPotentielle|format_nombre(2) -%}

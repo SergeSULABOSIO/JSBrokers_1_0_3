@@ -229,17 +229,33 @@
                    calculé, vrai, qui dit que le geste a un sens (une cotation déjà souscrite,
                    ou sans la prime que son type exige, ne se souscrit pas). Une ligne en attente n'a pas d'id :
                    rien ne peut encore s'y rattacher. #}
+                {# Un geste peut emprunter son libellé et son icône à la ligne (`label_attribut`,
+                   `icon_attribut` : « Renouveler », « Annuler la police »…), et ouvrir une
+                   boîte par un ÉVÉNEMENT du cerveau plutôt qu'un formulaire (`evenement` +
+                   `url_attribut` : le mouvement de la police qui adopte la proposition). #}
                 {% for geste in listActionOptions.actionsDeLigne|default([]) %}
                     {% if entity.id and (geste.si is not defined or attribute(entity, geste.si)) %}
-                        <button type="button" class="btn btn-sm btn-light list-row-action-btn shadow-sm border-0"
-                                title="{{ geste.label }}" aria-label="{{ geste.label }} l'élément #{{ entity.id }}"
-                                data-action="click->collection#actionDeLigne"
-                                data-geste-titre="{{ geste.titre }}"
-                                data-geste-form="{{ geste.form_url }}"
-                                data-geste-submit="{{ geste.submit_url }}"
-                                data-geste-champ="{{ geste.champ_parent }}">
-                            <twig:UX:Icon name="{{ resolve_icon_name(geste.icon) }}" style="width: 20px; height: 20px;" class="text-success"/>
-                        </button>
+                        {% set libelleGeste = (geste.label_attribut is defined ? attribute(entity, geste.label_attribut) : null) ?: geste.label %}
+                        {% set iconeGeste = (geste.icon_attribut is defined ? attribute(entity, geste.icon_attribut) : null) ?: geste.icon %}
+                        {% if geste.evenement is defined %}
+                            <button type="button" class="btn btn-sm btn-light list-row-action-btn shadow-sm border-0"
+                                    title="{{ libelleGeste }}" aria-label="{{ libelleGeste }} — élément #{{ entity.id }}"
+                                    data-action="click->collection#evenementDeLigne"
+                                    data-geste-evenement="{{ geste.evenement }}"
+                                    data-geste-url="{{ attribute(entity, geste.url_attribut) }}">
+                                <twig:UX:Icon name="{{ resolve_icon_name(iconeGeste) }}" style="width: 20px; height: 20px;" class="text-success"/>
+                            </button>
+                        {% else %}
+                            <button type="button" class="btn btn-sm btn-light list-row-action-btn shadow-sm border-0"
+                                    title="{{ libelleGeste }}" aria-label="{{ libelleGeste }} l'élément #{{ entity.id }}"
+                                    data-action="click->collection#actionDeLigne"
+                                    data-geste-titre="{{ geste.titre }}"
+                                    data-geste-form="{{ geste.form_url }}"
+                                    data-geste-submit="{{ geste.submit_url }}"
+                                    data-geste-champ="{{ geste.champ_parent }}">
+                                <twig:UX:Icon name="{{ resolve_icon_name(iconeGeste) }}" style="width: 20px; height: 20px;" class="text-success"/>
+                            </button>
+                        {% endif %}
                     {% endif %}
                 {% endfor %}
                 {# Libellé/icône de l'action de suppression personnalisables : pour une

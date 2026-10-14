@@ -60,7 +60,7 @@ class DescriptionSansParametreFantomeTest extends KernelTestCase
         // preparer_programme enchaîne des étapes dont le champ `arguments` porte les
         // paramètres de l'outil de CHAQUE étape : sa description les nomme forcément,
         // et ils n'ont aucune raison de figurer dans son propre schéma.
-        'abandonnerMouvementExistant', 'agentId', 'assureurId', 'avenantId', 'cibleId',
+        'abandonnerMouvementExistant', 'agentId', 'assureurId', 'avenantId', 'cibleId', 'cotationId',
         'compteBancaireId', 'dateDebut', 'dateEffet', 'dateFin', 'demandeId',
         'demiJourneeDebut', 'demiJourneeFin', 'dureeJours', 'fichierId', 'paidAt',
         'partenaireId', 'referencePolice', 'trancheId', 'typeAbsence',
