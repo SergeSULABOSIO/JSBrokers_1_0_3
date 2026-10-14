@@ -1107,8 +1107,18 @@ export default class extends Controller {
         // un rafraîchissement (après enregistrement, transfert de portefeuille,
         // refresh manuel…) relançait la requête SANS filtre — un client transféré
         // hors du périmètre restait affiché. Un payload explicite garde la priorité.
+        //
+        // LA DERNIÈRE DEMANDE FAIT AUTORITÉ, PAS LA DERNIÈRE RÉPONSE. Deux rafraîchissements
+        // du même onglet partaient en parallèle, et leurs réponses s'affichaient dans l'ordre
+        // d'ARRIVÉE : sur un réseau lent, Liste → Cartes → Liste → Cartes finissait en Liste
+        // (rejeu bridé du 2026-10-14). La requête précédente de l'onglet est donc annulée —
+        // sa réponse n'arrive plus, et le serveur n'a plus à la servir.
+        tabState._requeteListe?.abort();
+        const annulation = new AbortController();
+        tabState._requeteListe = annulation;
         fetch(url, {
             method: 'POST',
+            signal: annulation.signal,
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
             body: JSON.stringify({
                 criteria: tabState.searchCriteria || {},
@@ -1160,6 +1170,9 @@ export default class extends Controller {
                 if (data.verification) this._signalerFicheHorsFiltre(data.verification, targetTabId);
             })
             .catch(error => {
+                // Annulée par une demande plus récente : ce n'est pas une erreur, et c'est
+                // cette demande-là qui éteindra le chargement.
+                if (error?.name === 'AbortError') return;
                 this.broadcast('app:error.api', {
                     error: error.message,
                     url: url,
@@ -1167,6 +1180,9 @@ export default class extends Controller {
                 });
                 // On arrête le chargement en cas d'erreur réseau ou serveur.
                 this.broadcast('app:loading.stop');
+            })
+            .finally(() => {
+                if (tabState._requeteListe === annulation) tabState._requeteListe = null;
             });
     }
 
