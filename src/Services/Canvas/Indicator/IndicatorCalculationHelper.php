@@ -371,6 +371,62 @@ class IndicatorCalculationHelper implements ResetInterface
         return 0.0;
     }
 
+    /**
+     * LE PLAFOND DE LA Σ « TRANSFORMÉES » DE LA VUE CARTES, par monnaie d'affichage.
+     *
+     * La colonne dit ce qui a été gagné ; au-delà de ce montant, son chiffre exact n'apprend
+     * plus rien à qui regarde le pipe — et le calculer coûtait la commission de TOUTES les
+     * polices souscrites du filtre (≈ 7 s pour 1 000 polices, mesuré le 2026-10-14). Le
+     * calcul s'arrête donc dès que le plafond est franchi, et la colonne affiche « + de USD
+     * 900 000 ». Une monnaie absente de la table : pas de plafond, montant exact.
+     *
+     * @var array<string, float>
+     */
+    public const PLAFOND_SIGMA_TRANSFORMEES = ['USD' => 900000.0];
+
+    /**
+     * Le plafond de la monnaie d'affichage, ou null. Le code est lu tel qu'il a été SAISI
+     * (Monnaie::setCode ne le normalise pas) : « usd » ou « USD  » doivent plafonner aussi.
+     */
+    public static function plafondSigmaTransformees(?string $codeMonnaie): ?float
+    {
+        return self::PLAFOND_SIGMA_TRANSFORMEES[strtoupper(trim((string) $codeMonnaie))] ?? null;
+    }
+
+    /**
+     * Σ de la commission TTC des cotations données, PAR PAQUETS, arrêtée dès que le plafond
+     * est franchi. Même calcul, cotation par cotation, que `commission_totale` de
+     * getIndicateursGlobaux (getCotationMontantCommissionTtc(c, -1, false)) : sous le
+     * plafond, les deux chiffres sont égaux.
+     *
+     * Chaque paquet précharge son graphe (preloadDepuisCotationIds, nombre FIXE de requêtes) :
+     * au-delà du plafond, les paquets suivants ne sont jamais chargés.
+     *
+     * @param list<int> $cotationIds cotations SOUSCRITES, dans un ordre stable
+     *
+     * @return array{somme: float, plafonne: bool}
+     */
+    public function commissionSouscriteBornee(array $cotationIds, ?float $plafond, int $paquet = 100): array
+    {
+        $somme = 0.0;
+        foreach (array_chunk(array_values(array_unique(array_map('intval', $cotationIds))), max(1, $paquet)) as $ids) {
+            $this->preloadDepuisCotationIds($ids);
+            // Le préchargement vient d'hydrater ces cotations : find() les relit dans
+            // l'identity map, sans requête de plus.
+            foreach ($ids as $id) {
+                $cotation = $this->em->find(Cotation::class, $id);
+                if ($cotation !== null) {
+                    $somme += $this->getCotationMontantCommissionTtc($cotation, -1, false);
+                }
+            }
+            if ($plafond !== null && $somme > $plafond) {
+                return ['somme' => round($somme, 2), 'plafonne' => true];
+            }
+        }
+
+        return ['somme' => round($somme, 2), 'plafonne' => false];
+    }
+
     public function getIndicateursGlobaux(Entreprise $entreprise, bool $isBound, array $options = []): array
     {
         $totals = array_fill_keys([
@@ -445,8 +501,9 @@ class IndicatorCalculationHelper implements ResetInterface
         // rien, la règle métier étant désormais appliquée dans tous les cas.
         $qb->andWhere('SIZE(c.avenants) > 0');
         if ($pisteCible) $qb->andWhere('p = :pisteCible')->setParameter('pisteCible', $pisteCible);
-        // UN ENSEMBLE DE PISTES, par leurs ids — celles d'un filtre de liste (colonne
-        // « Transformées » de la vue Cartes). Un ensemble VIDE ne vaut rien, pas « tout ».
+        // UN ENSEMBLE DE PISTES, par leurs ids — celles d'un filtre de liste. (La colonne
+        // « Transformées » de la vue Cartes ne passe plus ici : commissionSouscriteBornee.)
+        // Un ensemble VIDE ne vaut rien, pas « tout ».
         if (array_key_exists('pistesCibles', $options)) {
             $ids = array_values(array_unique(array_map('intval', (array) $options['pistesCibles'])));
             if ($ids === []) $qb->andWhere('1=0');

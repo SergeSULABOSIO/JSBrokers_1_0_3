@@ -18,8 +18,10 @@
         {%- endfor -%}
         {#- Les compteurs GLOBAUX de chaque colonne (tout le filtre, pas la page). -#}
         {%- for code, agregat in vueCartes.agregats -%}
+            {#- Plafonnée : le calcul s'est arrêté au plafond — on dit « au-delà », sans décimales. -#}
             <data data-etape="{{ code }}" value="{{ agregat.nombre }}"
-                  data-somme="{{ vueCartes.monnaie }} {{ agregat.somme|format_nombre(2) }}"></data>
+                  data-somme="{{ agregat.plafond|default(null) ? '+ de ' ~ vueCartes.monnaie ~ ' ' ~ agregat.plafond|format_nombre(0) : vueCartes.monnaie ~ ' ' ~ agregat.somme|format_nombre(2) }}"
+                  {%- if agregat.plafond|default(null) %} data-plafonne="{{ agregat.plafond }}"{% endif %}></data>
         {%- endfor -%}
         <data data-cloturees value="{{ vueCartes.cloturees }}"></data>
     {%- endif -%}

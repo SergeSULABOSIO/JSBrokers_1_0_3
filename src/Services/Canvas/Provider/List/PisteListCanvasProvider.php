@@ -96,6 +96,8 @@ class PisteListCanvasProvider implements ListCanvasProviderInterface
                 "gabarit_carte" => "components/vue_cartes/_carte_piste.html.twig",
                 "etapes" => PisteTransformationScope::ETAPES,
                 "monnaie" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                // Au-delà, la Σ des Transformées n'est plus calculée (IndicatorCalculationHelper).
+                "plafond_transformees" => \App\Services\Canvas\Indicator\IndicatorCalculationHelper::plafondSigmaTransformees($this->serviceMonnaies->getCodeMonnaieAffichage()),
                 "actions" => [
                     PisteTransformationScope::ETAPE_A_COTER => [
                         "label" => "Ajouter une cotation",
