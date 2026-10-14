@@ -14,6 +14,10 @@ tous.** Une nouvelle règle RDC se pose dans la CONFIGURATION du cabinet (entit�
 AutoriteFiscale, Chargement, Risque), pas dans le code commun. Ce qui n'est pas prouvé par le
 code est marqué **À CONFIRMER**.
 
+**Le produit définit des COMPORTEMENTS PAR DÉFAUT, jamais des valeurs imposées** (décision de
+Serge du 2026-10-14) : taux de taxes, taux de commission, branches — tout ce qui est semé reste
+**éditable par chaque cabinet**, qui l'ajuste selon son pays.
+
 **Règle du taux de commission** (décision de Serge du 2026-10-14) : le taux de commission est
 **choisi par chaque cabinet dans la fourchette légale**. Aucune politique propre à un cabinet
 (par exemple « toujours le maxima ») ne devient une règle du produit : le code propose, borne
@@ -25,8 +29,8 @@ et contrôle — il ne choisit pas à la place du cabinet.
 
 | Élément | Valeur | Preuve | Configurable ensuite ? |
 |---|---|---|---|
-| TVA (DGI), à charge de l'assureur | 16 % IARD / 0 % VIE | `ServiceInitialisationEntreprise.php:290-306` | oui (entité `Taxe` du cabinet) |
-| Frais ARCA, à charge du courtier | 2 % IARD / 2 % VIE | :308-318 | oui |
+| TVA (DGI), à charge de l'assureur | 16 % IARD / 0 % VIE — **pas de TVA sur la VIE, confirmé** (2026-10-14) | `ServiceInitialisationEntreprise.php:290-306` | oui (entité `Taxe` du cabinet) |
+| Frais ARCA, à charge du courtier | 2 % IARD / 2 % VIE — **confirmé** (2026-10-14) | :308-318 | oui |
 | Chargements « TVA », « ARCA » (frais de surveillance) | — | :343-351 | oui |
 | Commissions par défaut | fronting 30 %, consultance 5 %, honoraire 2 % | :365-387 | oui |
 | 43 risques et leur taux de commission « Maxima HT » (5 à 25 %) | `assets/data/risques_defaut.json` | :392-405 | oui — ce sont des **valeurs de départ**, pas une politique : le cabinet choisit son taux (règle ci-dessus). Leur source réglementaire n'est pas citée. |
@@ -85,11 +89,10 @@ présenter une valeur du code comme leur application.
 | **États prudentiels** à remettre à l'ARCA | absents (les bordereaux existants sont commerciaux) | non planifié |
 | **Loi n° 15/005** (Code des assurances), statut de « courtier agréé » | absents | non planifié |
 
-## 7. À CONFIRMER (comptable)
+## 7. Défauts confirmés pour la branche VIE (2026-10-14)
 
-Rien n'est codé à ce titre ; les valeurs semées restent celles du §1.
-- Le taux ARCA de **2 % s'applique-t-il aussi à la branche VIE** ?
-- La **TVA à 0 % sur la VIE** est-elle la règle en vigueur ?
+- Les frais **ARCA de 2 % s'appliquent aussi à la VIE** ; il n'y a **pas de TVA sur la VIE**.
+- Ce sont des **défauts**, déjà semés ainsi (§1) : chaque cabinet peut les modifier.
 
 ## 8. Réflexes
 

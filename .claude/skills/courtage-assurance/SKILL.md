@@ -92,6 +92,8 @@ sa suppression est décidée (§7).
   `MonnaieDuCabinetTest`).
 - *Écart constaté* : en DEV, des cabinets saisissent en **CDF** et affichent en **USD** — les
   montants saisis en CDF s'affichent avec l'étiquette USD, sans conversion.
+- *Reprise de l'existant* (décision du 2026-10-14) : les montants saisis dans une autre monnaie
+  sont **convertis dans la monnaie d'affichage** du cabinet, qui devient sa monnaie unique.
 - *Chantier* : ultérieur (§7). D'ici là, ne rien coder qui suppose deux monnaies.
 
 **« Mon portefeuille » des entités qui descendent d'une piste** — décision de Serge du 2026-10-14.
@@ -115,8 +117,10 @@ sa suppression est décidée (§7).
 
 **Numérotation des notes : unique et chronologique par cabinet** — décision de Serge du
 2026-10-14. **CHANTIER PRIORITAIRE.**
-- *Cible* : chaque note d'un cabinet porte une référence **unique** et **chronologique**. Le
-  format exact sera confirmé par le comptable — **À CONFIRMER (comptable)**.
+- *Cible* : chaque note d'un cabinet reçoit une référence **générée**, **unique** et
+  **chronologique** (format choisi par le produit, décision du 2026-10-14). Le champ reste
+  **éditable** : la référence générée est une proposition que le cabinet peut remplacer — une
+  référence saisie reste soumise à l'unicité dans le cabinet.
 - *État actuel* : `'N' . time() . random_int(100, 999)` (`ValeursDeNaissance.php:102`),
   `'N' . time()` (`NoteController.php:151`), `'FACT-' . référence du bordereau`
   (`NoteController.php:133`) ; colonne NOT NULL **sans contrainte d'unicité**
@@ -139,7 +143,6 @@ sa suppression est décidée (§7).
   reverser (note de crédit). Le code ne fait que SIGNALER les échéances déjà encaissées
   (`RegularisationDesEcheances::ristournePossible`, :66-98) ; « elle reste manuelle, par note de
   crédit » (:15). **Chantier ultérieur.**
-- **Format de la référence des notes** (comptable) : cf. §5.
 
 ## 7. Chantiers décidés (ne rien coder sans plan validé)
 
