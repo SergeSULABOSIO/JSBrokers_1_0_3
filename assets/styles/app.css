@@ -4062,6 +4062,18 @@ tr.row-selected:hover > td {
     border-radius: 8px; /* Forme rectangulaire avec coins arrondis */
     padding: 0.5rem 1rem; /* Padding pour un aspect rectangulaire */
 }
+/* LA PHRASE QUI PREND LA PLACE DU BOUTON « AJOUTER » quand l'ajout est impossible
+   (option `ajoutImpossible` du canevas). Texte d'aide, pas une erreur : gris muet sur
+   fond clair (charte : --text-muted, 4,7:1 sur blanc), à droite comme le bouton qu'elle
+   remplace, et bornée en largeur pour ne pas écraser l'entête de la liste. */
+.jsb-ajout-impossible {
+    margin: 0;
+    max-width: 32rem;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    color: #6c757d;
+    text-align: right;
+}
 
 /*
 ===================================================================

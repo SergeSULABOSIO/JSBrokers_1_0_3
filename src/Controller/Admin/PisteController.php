@@ -4,7 +4,6 @@ namespace App\Controller\Admin;
 
 use App\Entity\ChargementPourPrime;
 use App\Entity\Cotation;
-use App\Services\Search\PisteTransformationScope;
 use App\Service\Avenant\DefautsDeSouscription;
 use App\Entity\Avenant;
 use App\Entity\Client;
@@ -287,19 +286,24 @@ class PisteController extends AbstractController
             return $versLaPiste();
         }
 
-        // souscrire
-        $chiffrees = array_values(array_filter(
-            $cotations,
-            fn (Cotation $c) => PisteTransformationScope::primeChiffree($this->indicatorHelper->getCotationMontantPrimePayableParClient($c)),
-        ));
-        $aSouscrire = array_values(array_filter($chiffrees, fn (Cotation $c) => !$defautsDeSouscription->dejaSouscrite($c)));
+        // souscrire — la règle de l'enregistrement, jamais une copie : pas encore souscrite,
+        // et chiffrée si le type de la piste l'exige (DefautsDeSouscription).
+        $aSouscrire = array_values(array_filter($cotations, fn (Cotation $c) => $defautsDeSouscription->peutEtreSouscrite($c)));
         if (count($aSouscrire) === 1) {
             return $this->mayAccessEntity(\App\Entity\Avenant::class, Invite::ACCESS_ECRITURE)
                 ? $this->ouvertureDuPipe(null, \App\Entity\Avenant::class, ['id' => $aSouscrire[0]->getId(), 'fieldName' => 'cotation'], null)
                 : $this->refusDuPipe("Vous n'avez pas le droit de souscrire une cotation.");
         }
-        if ($aSouscrire === [] && $chiffrees !== []) {
-            return $this->refusDuPipe('La cotation chiffrée de cette piste est déjà souscrite.');
+        if ($aSouscrire === []) {
+            $enAttente = array_values(array_filter($cotations, fn (Cotation $c) => !$defautsDeSouscription->dejaSouscrite($c)));
+            // Une seule offre, et une raison de la refuser : on la dit, au lieu d'ouvrir un
+            // formulaire que l'enregistrement rejetterait.
+            if (count($enAttente) === 1 && ($motif = $defautsDeSouscription->refusDAvenant($enAttente[0])) !== null) {
+                return $this->refusDuPipe($motif);
+            }
+            if ($enAttente === [] && $cotations !== []) {
+                return $this->refusDuPipe('La cotation de cette piste est déjà souscrite.');
+            }
         }
 
         return $versLaPiste();

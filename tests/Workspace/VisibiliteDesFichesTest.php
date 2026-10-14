@@ -3,6 +3,7 @@
 namespace App\Tests\Workspace;
 
 use App\Entity\Avenant;
+use App\Entity\ChargementPourPrime;
 use App\Entity\Client;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
@@ -63,7 +64,7 @@ class VisibiliteDesFichesTest extends WebTestCase
         $noms = [self::CABINET, self::VOISIN];
         $emails = [self::EMAIL, self::EMAIL_LECTEUR];
         $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email IN (:e)', ['e' => $emails], ['e' => ArrayParameterType::STRING]);
-        foreach (['avenant', 'tranche', 'cotation', 'piste', 'client', 'portefeuille', 'monnaie', 'roles_en_marketing', 'roles_en_production', 'invite'] as $table) {
+        foreach (['avenant', 'tranche', 'chargement_pour_prime', 'cotation', 'piste', 'client', 'portefeuille', 'monnaie', 'roles_en_marketing', 'roles_en_production', 'invite'] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom IN (:n)",
                 ['n' => $noms],
@@ -104,8 +105,13 @@ class VisibiliteDesFichesTest extends WebTestCase
 
         $mienne = $this->piste($cabinet, $invite, 'Piste de mon portefeuille', $duPortefeuille);
         $horsPortefeuille = $this->piste($cabinet, $invite, 'Piste hors portefeuille', $sansPortefeuille);
-        $avecOffres = $this->piste($cabinet, $invite, 'Piste aux deux offres', $sansPortefeuille);
-        $this->cotation($avecOffres, 'Offre en attente');
+        $avecOffres = $this->piste($cabinet, $invite, 'Piste aux trois offres', $sansPortefeuille);
+        $enAttente = $this->cotation($avecOffres, 'Offre en attente');
+        $prime = (new ChargementPourPrime())->setNom('Prime nette')->setMontantFlatExceptionel(500.0);
+        $prime->setCotation($enAttente)->setEntreprise($cabinet);
+        $em->persist($prime);
+        // Une souscription sans prime n'a pas de sens : cette offre ne se souscrit pas encore.
+        $this->cotation($avecOffres, 'Offre sans prime');
         $souscrite = $this->cotation($avecOffres, 'Offre souscrite');
         $a = (new Avenant())->setReferencePolice('POL-VISIBILITE')->setNumero('0')->setDescription('Souscription')
             ->setStartingAt(new \DateTimeImmutable('-10 days'))->setEndingAt(new \DateTimeImmutable('+355 days'))
@@ -240,7 +246,7 @@ class VisibiliteDesFichesTest extends WebTestCase
         self::assertResponseIsSuccessful();
         $comptes = json_decode((string) $this->client->getResponse()->getContent(), true)['comptes'];
 
-        self::assertSame(2, $comptes['cotations'], 'Deux offres, souscrite comprise — comme l’onglet.');
+        self::assertSame(3, $comptes['cotations'], 'Trois offres, souscrite comprise — comme l’onglet.');
         self::assertSame(0, $comptes['taches']);
         self::assertSame(0, $comptes['documents']);
     }
@@ -292,6 +298,8 @@ class VisibiliteDesFichesTest extends WebTestCase
         self::assertSame('cotation', $bouton->attr('data-geste-champ'));
         self::assertCount(0, $ligne('Offre souscrite')->filter('[data-action="click->collection#actionDeLigne"]'),
             'Une cotation déjà souscrite ne se souscrit pas.');
+        self::assertCount(0, $ligne('Offre sans prime')->filter('[data-action="click->collection#actionDeLigne"]'),
+            'Une souscription sans prime n’a pas de sens : pas de geste tant que la prime n’est pas chiffrée.');
     }
 
     /** Sans le droit d'écrire un avenant, aucun bouton : un geste que le serveur refuserait n'est pas proposé. */

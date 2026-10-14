@@ -120,6 +120,45 @@ class DefautsDeSouscriptionTest extends WebTestCase
         self::assertTrue($defauts->dejaSouscrite($cotation));
     }
 
+    /**
+     * LA PRIME EXIGÉE, SANS BASE : le seuil du pipe (ROUND(Σ, 2) > 0), le motif nommé
+     * d'après le type, et l'avenant suivant toujours libre.
+     */
+    public function testLaPrimeExigee(): void
+    {
+        $prime = 0.0;
+        $indicateurs = $this->createMock(\App\Services\Canvas\Indicator\IndicatorCalculationHelper::class);
+        $indicateurs->method('getCotationMontantPrimePayableParClient')->willReturnCallback(static function () use (&$prime) {
+            return $prime;
+        });
+        $defauts = new DefautsDeSouscription($indicateurs);
+        $cotation = (new Cotation())->setNom('Proposition')->setPiste((new Piste())->setTypeAvenant(Piste::AVENANT_RENOUVELLEMENT));
+
+        $prime = 0.001;
+        self::assertFalse($defauts->estChiffree($cotation), '0,001 s’arrondit à 0,00 : rien de chiffré, comme au pipe.');
+        self::assertStringStartsWith('Un renouvellement sans prime', (string) $defauts->refusDAvenant($cotation));
+        self::assertFalse($defauts->peutEtreSouscrite($cotation));
+
+        $prime = 0.01;
+        self::assertNull($defauts->refusDAvenant($cotation));
+        self::assertTrue($defauts->peutEtreSouscrite($cotation));
+
+        $prime = 0.0;
+        $cotation->getPiste()->setTypeAvenant(Piste::AVENANT_RESILIATION);
+        self::assertNull($defauts->refusDAvenant($cotation), 'Une résiliation n’exige pas de prime.');
+
+        $cotation->getPiste()->setTypeAvenant(Piste::AVENANT_SOUSCRIPTION);
+        $premier = new Avenant();
+        $cotation->addAvenant($premier);
+        self::assertStringStartsWith('Une souscription sans prime', (string) $defauts->refusDAvenant($cotation, $premier),
+            'L’avenant en cours d’écriture ne compte pas comme « précédent ».');
+        self::assertNull($defauts->refusDAvenant($cotation, new Avenant()), 'Un avenant suivant est toujours permis.');
+        self::assertFalse($defauts->peutEtreSouscrite($cotation), 'Déjà souscrite : le geste « Souscrire » n’a plus de sens.');
+
+        $this->expectException(\LogicException::class);
+        (new DefautsDeSouscription())->estChiffree($cotation);
+    }
+
     public function testLeFormulaireDeLAvenantSousUneCotationEstPreremplitCommeKet(): void
     {
         $ids = $this->semer();

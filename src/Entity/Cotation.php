@@ -80,6 +80,10 @@ class Cotation
     #[Groups(['list:read'])]
     public ?string $statutSouscription = null;
 
+    // Le geste « Souscrire » a-t-il un sens ? (DefautsDeSouscription::peutEtreSouscrite :
+    // pas encore souscrite, et chiffrée si son type l'exige.) Lu par le bouton de ligne.
+    public ?bool $souscriptible = null;
+
     #[Groups(['list:read'])]
     public ?string $referencePolice = null;
 

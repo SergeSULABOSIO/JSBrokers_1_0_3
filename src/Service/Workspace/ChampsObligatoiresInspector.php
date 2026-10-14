@@ -4,6 +4,7 @@ namespace App\Service\Workspace;
 
 use App\Entity\Avenant;
 use App\Entity\ConditionPartage;
+use App\Service\Avenant\DefautsDeSouscription;
 use App\Entity\ReversementRetroAgent;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
@@ -89,6 +90,9 @@ class ChampsObligatoiresInspector
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly FormFactoryInterface $formFactory,
+        // Facultatif à la construction seulement (des tests le construisent à la main) : le
+        // conteneur l'injecte toujours, et la règle de prime de l'avenant en dépend.
+        private readonly ?DefautsDeSouscription $defautsDeSouscription = null,
     ) {
     }
 
@@ -169,7 +173,7 @@ class ChampsObligatoiresInspector
      *
      * @return array<string, string[]>
      */
-    public function incoherencesMetier(object $entity, string $shortName, ?array $champsPilotables = null): array
+    public function incoherencesMetier(object $entity, string $shortName, ?array $champsPilotables = null, ?OrigineEcriture $origine = null): array
     {
         // Une condition de partage rétrocède à UN bénéficiaire : un partenaire EXTERNE ou
         // un agent INTERNE, jamais les deux, jamais aucun. Avec les deux, l'assiette à
@@ -276,6 +280,21 @@ class ChampsObligatoiresInspector
                     $fin->format('d/m/Y'),
                     $debut->format('d/m/Y'),
                 )]];
+            }
+
+            // UNE GARANTIE CRÉÉE, RECONDUITE OU ÉTENDUE EXIGE UNE PRIME CHIFFRÉE. Le PREMIER
+            // avenant d'une cotation, pour les types qui l'exigent (DefautsDeSouscription::
+            // PRIME_EXIGEE), sur une cotation sans prime : refusé — ici, parce que c'est ici
+            // que passent l'écran, Ket et les mouvements. Erreur GLOBALE : aucun champ du
+            // formulaire d'avenant ne la corrige, c'est la prime de la cotation qui manque.
+            //
+            // ⚠ LA REPRISE EN EST EXEMPTÉE, par un paramètre que seul son moteur passe
+            // (OrigineEcriture) : elle reconstitue l'historique d'un portefeuille réel.
+            $cotation = $entity->getCotation();
+            if ($entity->getId() === null && $cotation !== null && $origine !== OrigineEcriture::Reprise
+                && $this->defautsDeSouscription !== null
+                && ($refus = $this->defautsDeSouscription->refusDAvenant($cotation, $entity)) !== null) {
+                return ['' => [$refus]];
             }
         }
 

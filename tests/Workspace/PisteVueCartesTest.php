@@ -459,6 +459,10 @@ class PisteVueCartesTest extends WebTestCase
         [$code, $r] = $action('Piste transformee', 'souscrire');
         self::assertSame(409, $code);
         self::assertStringContainsString('déjà souscrite', $r['message']);
+        // Carte périmée sur une offre sans prime : la règle de l'enregistrement, dite d'avance.
+        [$code, $r] = $action('Piste en cotation', 'souscrire');
+        self::assertSame(409, $code);
+        self::assertStringContainsString('prime chiffrée', $r['message']);
 
         // UN AUTRE CABINET : 404.
         [$code] = $action('etrangere', 'coter');

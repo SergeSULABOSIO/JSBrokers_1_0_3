@@ -9,6 +9,8 @@ use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
 use App\Ai\Tool\SouscrireCotationTool;
+use App\Service\Avenant\DefautsDeSouscription;
+use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
@@ -39,7 +41,8 @@ class SouscrireCotationToolTest extends TestCase
     private array $operationsVues = [];
 
     /**
-     * @param array<int, array{id: int, nom: string, duree: int, avenants: int}> $cotations
+     * @param array<int, array{id: int, nom: string, duree: int, avenants: int, prime?: float}> $cotations
+     *        `prime` absente = 1 000 (chiffrée) : le cas courant d'une offre qu'on souscrit
      */
     private function makeTool(
         array $cotations = [[ 'id' => 126, 'nom' => 'Assurance Incendie', 'duree' => 12, 'avenants' => 0 ]],
@@ -97,6 +100,13 @@ class SouscrireCotationToolTest extends TestCase
 
         $resolveur = $this->resolveurAvec(['Assureur' => [4 => 'SUNU IARD RDC']], $resolver);
 
+        // La prime de chaque offre, lue comme le ferait le vrai calcul.
+        $primes = array_column($cotations, 'prime', 'id');
+        $indicateurs = $this->createMock(IndicatorCalculationHelper::class);
+        $indicateurs->method('getCotationMontantPrimePayableParClient')->willReturnCallback(
+            static fn (Cotation $c) => $primes[$c->getId()] ?? 1000.0,
+        );
+
         return new SouscrireCotationTool(
             new PlanBuilder(
                 $mutation,
@@ -108,6 +118,7 @@ class SouscrireCotationToolTest extends TestCase
             $resolver,
             $resolveur,
             $search,
+            new DefautsDeSouscription($indicateurs),
         );
     }
 
@@ -189,6 +200,37 @@ class SouscrireCotationToolTest extends TestCase
 
         $this->assertFalse($result->data['pret']);
         $this->assertSame('deja_souscrite', $result->data['aDemander'][0]['probleme']);
+    }
+
+    /**
+     * UNE SOUSCRIPTION SANS PRIME N'A PAS DE SENS : refus `bloquant`, dans les mots du
+     * métier, et aucun plan construit — l'enregistrement le refuserait de toute façon.
+     */
+    public function testUnePropositionSansPrimeNeSeSouscritPas(): void
+    {
+        $result = $this->makeTool([
+            ['id' => 126, 'nom' => 'Incendie — SUNU', 'duree' => 12, 'avenants' => 0, 'prime' => 0.0],
+        ])->execute(['assureur' => 'SUNU'], $this->scope());
+
+        $this->assertFalse($result->data['pret']);
+        $this->assertStringContainsString('prime chiffrée', $result->data['bloquant']);
+        $this->assertStringContainsString('Incendie — SUNU', $result->data['bloquant']);
+        $this->assertSame([], $this->operationsVues);
+    }
+
+    /**
+     * Deux offres, une seule chiffrée : l'autre n'est pas une candidate — aucun choix ne la
+     * rendrait souscriptible. La question « laquelle ? » n'a donc pas lieu d'être.
+     */
+    public function testLOffreSansPrimeNEstPasUneCandidate(): void
+    {
+        $this->makeTool([
+            ['id' => 126, 'nom' => 'Incendie — SUNU', 'duree' => 12, 'avenants' => 0],
+            ['id' => 114, 'nom' => 'RC Auto — SUNU', 'duree' => 12, 'avenants' => 0, 'prime' => 0.0],
+        ])->execute(['assureur' => 'SUNU', 'referencePolice' => 'P1'], $this->scope());
+
+        $this->assertCount(1, $this->operationsVues);
+        $this->assertSame(126, $this->operationsVues[0]->fields['cotation']);
     }
 
     /** Sans aucune désignation, on demande — on ne prend pas la première venue. */

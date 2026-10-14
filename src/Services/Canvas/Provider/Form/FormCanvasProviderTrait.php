@@ -16,6 +16,9 @@ trait FormCanvasProviderTrait
             if (isset($config['secondaryField'])) $extraOptions['secondaryField'] = $config['secondaryField'];
             if (isset($config['secondaryLabel'])) $extraOptions['secondaryLabel'] = $config['secondaryLabel'];
             if (isset($config['watchIds'])) $extraOptions['watchIds'] = $config['watchIds'];
+            // AJOUT IMPOSSIBLE, ET POURQUOI : la phrase remplace le bouton « Ajouter ».
+            // Clé transmise même à null : la liste rechargée sait alors relever le bouton.
+            if (array_key_exists('ajoutImpossible', $config)) $extraOptions['ajoutImpossible'] = $config['ajoutImpossible'];
             // Permet de remplacer l'URL de suppression par défaut (child::delete) par une
             // action non destructive — ex. « détacher » un client d'un portefeuille sans
             // supprimer l'entité partagée. %parentId% est substitué par l'ID du parent.

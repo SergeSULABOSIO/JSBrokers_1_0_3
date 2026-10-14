@@ -121,6 +121,21 @@ class AppartenanceAuCabinet
      * recevaient une Entreprise (parent posté, cible d'un document) s'en passaient donc,
      * et c'est par ce trou qu'un `entreprise=<autre cabinet>` posté passait.
      */
+    /**
+     * L'entité est-elle, de façon CERTAINE, celle d'un autre cabinet que `$cabinet` ?
+     *
+     * Pour les écritures qui ne passent pas par le cabinet ouvert de la session (Ket, la
+     * reprise) : elles portent leur cabinet dans leur périmètre. Une entité sans cabinet
+     * connu (référentiel commun) n'est pas « d'un autre cabinet » — c'est la seule
+     * différence avec estDuCabinetOuvert(), qui la refuse.
+     */
+    public function estDUnAutreCabinet(object $entite, Entreprise $cabinet): bool
+    {
+        $sienne = $this->entrepriseDe($entite);
+
+        return $sienne !== null && $sienne->getId() !== $cabinet->getId();
+    }
+
     private function entrepriseDe(object $entite): ?Entreprise
     {
         if ($entite instanceof Entreprise) {

@@ -47,10 +47,10 @@ final class SouscrireCotationTool implements AiToolProduisantUnPlan, AiToolEcrit
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly ResolveurDeReferences $resolveur,
         private readonly JSBDynamicSearchService $searchService,
-        // Les valeurs de l'avenant né d'une souscription : la MÊME règle que l'écran. En
-        // dernière position, et sans état : les tests qui construisent l'outil par position
-        // n'ont rien à changer.
-        private readonly DefautsDeSouscription $defautsDeSouscription = new DefautsDeSouscription(),
+        // Les valeurs de l'avenant né d'une souscription, et la garde de la prime : la MÊME
+        // règle que l'écran. Sans valeur par défaut : construit nu, le service ne sait pas
+        // lire une prime (DefautsDeSouscription::estChiffree), et l'outil refuserait tout.
+        private readonly DefautsDeSouscription $defautsDeSouscription,
     ) {
     }
 
@@ -155,6 +155,12 @@ final class SouscrireCotationTool implements AiToolProduisantUnPlan, AiToolEcrit
         [$cotation, $question] = $this->trouverLaCotation($args, $scope);
         if ($cotation === null) {
             return $question;
+        }
+        // LA RÈGLE DE L'ENREGISTREMENT, DITE AVANT LE PLAN : une souscription sans prime
+        // n'a pas de sens (DefautsDeSouscription). Le plan serait refusé à l'exécution ;
+        // on le dit maintenant, dans les mots du métier.
+        if (($motif = $this->defautsDeSouscription->refusDAvenant($cotation)) !== null) {
+            return $this->refuser($motif);
         }
 
         // LES VALEURS DE L'AVENANT viennent de DefautsDeSouscription — la règle que l'écran
@@ -310,6 +316,20 @@ final class SouscrireCotationTool implements AiToolProduisantUnPlan, AiToolEcrit
                 'probleme' => $candidates === [] ? 'introuvable' : 'deja_souscrite',
             ]])];
         }
+
+        // Une proposition sans la prime que son type exige ne se souscrit pas : elle n'est
+        // pas une candidate. S'il n'en reste aucune, on dit pourquoi au lieu de demander
+        // de choisir entre des offres qu'aucun choix ne rendrait souscriptibles.
+        $souscriptibles = array_values(array_filter(
+            $aSouscrire,
+            fn (Cotation $c) => $this->defautsDeSouscription->refusDAvenant($c) === null,
+        ));
+        if ($souscriptibles === []) {
+            return [null, $this->refuser(count($aSouscrire) === 1
+                ? (string) $this->defautsDeSouscription->refusDAvenant($aSouscrire[0])
+                : 'Aucune de ces propositions n’a encore de prime chiffrée : une souscription sans prime n’a pas de sens. Saisissez d’abord la prime de celle que le client retient.')];
+        }
+        $aSouscrire = $souscriptibles;
         if (count($aSouscrire) > 1) {
             $valeurs = [];
             foreach ($aSouscrire as $candidate) {
@@ -353,6 +373,17 @@ final class SouscrireCotationTool implements AiToolProduisantUnPlan, AiToolEcrit
         } catch (\Exception) {
             return null;
         }
+    }
+
+    /** Un refus qui ne se lève pas par une réponse : `bloquant` est la phrase du courtier. */
+    private function refuser(string $motif): AiToolResult
+    {
+        return AiToolResult::ok([
+            'pret'     => false,
+            'bloquant' => $motif,
+            'note'     => 'Dis ce motif en UNE phrase, sans présenter de plan ni annoncer de bouton : '
+                . 'la souscription reprendra quand la prime de la proposition sera saisie.',
+        ]);
     }
 
     /** @param array<int, array<string, mixed>> $questions */

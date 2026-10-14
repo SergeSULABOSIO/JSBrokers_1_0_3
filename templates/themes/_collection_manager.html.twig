@@ -79,8 +79,16 @@
            aussi le chargement de la liste, qu'on veut voir. Posée par les droits
            (pas d'Écriture sur l'enfant) ou par le canevas (collection qui ne fait que
            montrer). #}
+        {# AJOUT IMPOSSIBLE, ET DIT POURQUOI. Un bouton qui répond « 422 » après coup, ou
+           qui disparaît sans un mot, laisse chercher ce qui manque (Bastien & Scapin >
+           Guidage ; Nielsen 9). Le canevas pose la raison (`ajoutImpossible`) ; la phrase
+           prend la place du bouton, et le rechargement de la liste la lève quand la
+           raison tombe (collection#_appliquerAjoutImpossible). #}
+        {% set ajoutImpossible = manager_options.ajoutImpossible|default(null) %}
         <div class="title-right-block {{ (isDisabled or manager_options.lectureSeule|default(false)) ? 'd-none' : '' }}" data-collection-target="addButtonContainer">
-            <button type="button" class="btn btn-sm btn-primary" data-action="click->collection#addItem">
+            <p class="jsb-ajout-impossible" data-collection-target="explicationAjout" role="status"
+               {{ ajoutImpossible ? 'data-ajout-impossible' : 'hidden' }}>{{ ajoutImpossible }}</p>
+            <button type="button" class="btn btn-sm btn-primary" data-action="click->collection#addItem" data-collection-target="boutonAjout" {{ ajoutImpossible ? 'hidden' : '' }}>
                 <twig:UX:Icon name="gridicons:add" style="width: 23px;" />
                 <span>Ajouter </span>
             </button>

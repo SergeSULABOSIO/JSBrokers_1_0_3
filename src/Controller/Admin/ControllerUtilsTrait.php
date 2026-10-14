@@ -1909,7 +1909,11 @@ trait ControllerUtilsTrait
         }
 
         return $this->json([
-            'message' => 'Veuillez corriger les erreurs ci-dessous.',
+            // UNE ERREUR GLOBALE (clé '') N'A PAS DE CHAMP OÙ S'AFFICHER : le dialogue ne la
+            // montre que par ce message, dans son pied. « Veuillez corriger les erreurs
+            // ci-dessous » n'aurait rien désigné — une prime manquante ne se corrige dans
+            // aucun champ du formulaire d'avenant.
+            'message' => isset($errors['']) ? implode(' ', $errors['']) : 'Veuillez corriger les erreurs ci-dessous.',
             'errors' => $errors,
             'labels' => $labels,
         ], 422);
@@ -2321,8 +2325,14 @@ trait ControllerUtilsTrait
                 'totalValue' => $totalValue,
                 'totalUnit' => $totalUnit,
                 'itemCount' => count($data),
-                'isDisabled' => $collectionOptions['disabled'] ?? false
-            ]);
+                'isDisabled' => $collectionOptions['disabled'] ?? false,
+            ] + (
+                // La raison qui interdit l'ajout, recalculée à chaque chargement : une
+                // prime saisie entre-temps la lève (collection#_appliquerAjoutImpossible).
+                array_key_exists('ajoutImpossible', $collectionOptions)
+                    ? ['ajoutImpossible' => $collectionOptions['ajoutImpossible']]
+                    : []
+            ));
         }
 
         $getter = 'get' . ucfirst($collectionName);
