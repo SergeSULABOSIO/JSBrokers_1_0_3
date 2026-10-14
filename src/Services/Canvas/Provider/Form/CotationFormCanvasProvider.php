@@ -67,6 +67,20 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
                     "si"           => "souscriptible",
                     "droit"        => ["entite" => "Avenant", "niveau" => Invite::ACCESS_ECRITURE],
                 ],
+                // Les QUATRE MOUVEMENTS (renouveler, proroger, annuler, résilier) : la même
+                // boîte que le menu de la police, qui adopte cette proposition. Verbe, icône
+                // et adresse viennent de la ligne (CotationIndicatorStrategy) ; le serveur
+                // revérifie tout à l'ouverture (AvenantController::contexteMouvement).
+                [
+                    "label"          => "Valider par le mouvement de la police",
+                    "label_attribut" => "verbeDuMouvement",
+                    "icon"           => "action:completed",
+                    "icon_attribut"  => "iconeDuMouvement",
+                    "evenement"      => "ui:avenant.mouvement-request",
+                    "url_attribut"   => "urlDuMouvement",
+                    "si"             => "urlDuMouvement",
+                    "droit"          => ["entite" => "Avenant", "niveau" => Invite::ACCESS_ECRITURE],
+                ],
             ],
             // Picker de documents générique (client + piste parente + cotation + polices).
             "attribute_actions" => [
@@ -174,6 +188,13 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
      */
     private function ajoutDAvenantImpossible(Cotation $cotation): ?string
     {
+        // UN SEUL CHEMIN PAR TYPE : le premier avenant d'une piste de mouvement (renouvellement,
+        // prorogation, annulation, résiliation) naît du mouvement de sa police — dates, statut
+        // de la base, échéances. Le « + » d'ici n'en porterait aucun.
+        if (count($cotation->getAvenants()) === 0
+            && ($orientation = $this->defautsDeSouscription->orientationVersLeMouvement($cotation)) !== null) {
+            return $orientation;
+        }
         if ($cotation->getId() === null) {
             return DefautsDeSouscription::primeExigee($cotation->getPiste()?->getTypeAvenant())
                 ? 'Enregistrez d’abord la cotation et sa prime.'

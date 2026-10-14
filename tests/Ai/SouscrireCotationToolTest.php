@@ -91,6 +91,16 @@ class SouscrireCotationToolTest extends TestCase
                     for ($i = 0; $i < $donnees['avenants']; $i++) {
                         $c->addAvenant(new \App\Entity\Avenant());
                     }
+                    // Une piste de MOUVEMENT (type) rattachée à sa police (base).
+                    if (isset($donnees['type'])) {
+                        $piste = (new \App\Entity\Piste())->setTypeAvenant($donnees['type']);
+                        if (isset($donnees['base'])) {
+                            $police = (new \App\Entity\Avenant())->setReferencePolice($donnees['base']);
+                            (new \ReflectionProperty(\App\Entity\Avenant::class, 'id'))->setValue($police, 900);
+                            $piste->setAvenantDeBase($police);
+                        }
+                        $c->setPiste($piste);
+                    }
                     $entites[] = $c;
                 }
 
@@ -231,6 +241,24 @@ class SouscrireCotationToolTest extends TestCase
 
         $this->assertCount(1, $this->operationsVues);
         $this->assertSame(126, $this->operationsVues[0]->fields['cotation']);
+    }
+
+    /**
+     * UNE PROPOSITION DE RENOUVELLEMENT NE SE « SOUSCRIT » PAS : elle se valide par le
+     * mouvement de sa police, qui l'adopte. Le refus le dit, et la consigne mène Ket au bon
+     * outil, avec la police et la proposition.
+     */
+    public function testUnePropositionDeMouvementEstOrienteeVersLeMouvement(): void
+    {
+        $result = $this->makeTool([
+            ['id' => 126, 'nom' => 'Renouvellement — SUNU', 'duree' => 12, 'avenants' => 0, 'type' => \App\Entity\Piste::AVENANT_RENOUVELLEMENT, 'base' => 'POL-77'],
+        ])->execute(['assureur' => 'SUNU'], $this->scope());
+
+        $this->assertFalse($result->data['pret']);
+        $this->assertStringContainsString('« Renouveler » de la police « POL-77 »', $result->data['bloquant']);
+        $this->assertStringContainsString('preparer_mouvement_avenant', $result->data['note']);
+        $this->assertStringContainsString('avenantId=900', $result->data['note']);
+        $this->assertSame([], $this->operationsVues, 'Aucun avenant écrit hors du mouvement.');
     }
 
     /** Sans aucune désignation, on demande — on ne prend pas la première venue. */

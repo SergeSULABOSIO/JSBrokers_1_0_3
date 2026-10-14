@@ -62,6 +62,8 @@ final class MouvementAvenantBuilder
         private readonly ReconductionPartageService $reconductionPartage,
         private readonly RegularisationDesEcheances $regularisation,
         private readonly ClockInterface $horloge,
+        // La règle de la prime du premier avenant, pour la proposition ADOPTÉE.
+        private readonly DefautsDeSouscription $defautsDeSouscription,
         // Fuseau de l'application, EXPLICITE : « aujourd'hui » décide si une période est
         // déjà échue, et une heure de mur différente de celle des chips d'échéance ferait
         // dire à l'aperçu le contraire de la rubrique autour de minuit.
@@ -112,8 +114,11 @@ final class MouvementAvenantBuilder
      *     reconduit?: array<string, int>,
      *     avertissements?: array<int, string>
      * }
+     *
+     * @param Cotation|null $adoptee la proposition DÉJÀ MONTÉE sur la piste dérivée de la
+     *                               police, à adopter au lieu d'en créer une (cf. adoption())
      */
-    public function construire(MouvementAvenant $mouvement, Avenant $base, array $args, AiScope $scope): array
+    public function construire(MouvementAvenant $mouvement, Avenant $base, array $args, AiScope $scope, ?Cotation $adoptee = null): array
     {
         $cotationBase = $base->getCotation();
         $pisteBase    = $cotationBase?->getPiste();
@@ -141,7 +146,11 @@ final class MouvementAvenantBuilder
         // client était parfaitement connu.
         $source = $this->source($base, $pisteBase, $cotationBase, $debutBase, $finBase);
 
-        $periode = $this->periode($mouvement, $debutBase, $finBase, $args);
+        if ($adoptee !== null && ($refus = $this->refusDAdoption($mouvement, $base, $adoptee)) !== null) {
+            return ['bloquant' => $refus, 'source' => $source];
+        }
+
+        $periode = $this->periode($mouvement, $debutBase, $finBase, $args, $adoptee);
         if (isset($periode['bloquant'])) {
             return ['bloquant' => $periode['bloquant'], 'source' => $source];
         }
@@ -178,6 +187,10 @@ final class MouvementAvenantBuilder
         // interruption — seul l'utilisateur le sait, il doit donc le VOIR avant de valider.
         if ($mouvement->porteUnePrime() && $fin < $this->aujourdhui()) {
             $avertissements[] = $this->avertissementPeriodeEchue($debut, $fin);
+        }
+
+        if ($adoptee !== null) {
+            return $this->adoption($mouvement, $base, $pisteBase, $adoptee, $debut, $fin, $periode['jours'], $args, $ecarts, $avertissements, $source, $scope);
         }
         $etape          = sprintf('%s de la police', $mouvement->libelle());
 
@@ -324,8 +337,10 @@ final class MouvementAvenantBuilder
      *
      * @return array{0: array<int, array<string, mixed>>, 1: array<string, mixed>}
      */
-    private function regularisationDesEcheances(Avenant $base, \DateTimeImmutable $dateEffet, string $etape, array &$avertissements): array
+    private function regularisationDesEcheances(Avenant $base, \DateTimeImmutable $dateEffet, string $etape, array &$avertissements, int|string|null $piste = null): array
     {
+        // La piste dérivée : promise par le plan (« @mouvement »), ou déjà écrite (adoption).
+        $piste ??= '@' . self::REF_PISTE;
         $analyse = $this->regularisation->analyser($base, $dateEffet);
         $ops = [];
         $echeances = [];
@@ -340,7 +355,7 @@ final class MouvementAvenantBuilder
                 'entite' => 'Tranche',
                 'id'     => $tranche->getId(),
                 'etape'  => $etape,
-                'champs' => ['regularisationPar' => '@' . self::REF_PISTE],
+                'champs' => ['regularisationPar' => $piste],
             ];
             $commissionFacturee = RegularisationDesEcheances::phraseCommissionFacturee($ligne['notesDeCommission']);
             $echeances[] = [
@@ -392,6 +407,190 @@ final class MouvementAvenantBuilder
         ]];
     }
 
+    // ------------------------------------------------------------------ adoption
+
+    /**
+     * LA DURÉE DE LA PROPOSITION, en jours, à partir de `$debut` : `durée` mois, dernier jour
+     * inclus. Null quand la proposition n'en porte pas — la règle de la police de base
+     * s'applique alors. Source unique : le picker y lit la durée qu'il pré-remplit.
+     */
+    public function joursDeLaProposition(Cotation $proposition, \DateTimeImmutable $debut): ?int
+    {
+        $mois = (int) $proposition->getDuree();
+        if ($mois <= 0) {
+            return null;
+        }
+
+        return $this->joursInclus($debut, $debut->modify(sprintf('+%d month', $mois))->modify('-1 day'));
+    }
+
+    /**
+     * La proposition peut-elle être ADOPTÉE par ce mouvement de cette police ? Null si oui,
+     * sinon la raison, dans les mots du métier.
+     *
+     * Elle doit appartenir à la piste dérivée DE CETTE POLICE (les deux sens du lien, comme
+     * AvenantRenouvellementResolver), d'un type qui est CE mouvement, encore ouverte, et sans
+     * avenant. Un mouvement qui porte une prime l'exige chiffrée (DefautsDeSouscription).
+     */
+    public function refusDAdoption(MouvementAvenant $mouvement, Avenant $base, Cotation $proposition): ?string
+    {
+        $piste = $proposition->getPiste();
+        $deLaPolice = $piste !== null && (
+            $piste->getAvenantDeBase()?->getId() === $base->getId()
+            || $base->getPisteDeRenouvellement()?->getId() === $piste->getId()
+        );
+        if (!$deLaPolice) {
+            return sprintf(
+                'La proposition « %s » n’appartient pas à la piste de mouvement de la police « %s ».',
+                (string) $proposition->getNom(),
+                (string) $base->getReferencePolice(),
+            );
+        }
+        if ($piste->getTypeAvenant() !== $mouvement->typeAvenant()) {
+            return sprintf(
+                'La piste « %s » prépare une %s, pas une %s : choisissez le mouvement qui lui correspond.',
+                (string) $piste->getNom(),
+                mb_strtolower(MouvementAvenant::depuisTypeAvenant($piste->getTypeAvenant())?->libelle() ?? 'souscription'),
+                mb_strtolower($mouvement->libelle()),
+            );
+        }
+        if ($piste->isClosed()) {
+            return sprintf('La piste « %s » est clôturée : elle ne se souscrit plus.', (string) $piste->getNom());
+        }
+        if (count($proposition->getAvenants()) > 0) {
+            return sprintf('La proposition « %s » porte déjà son avenant : elle est souscrite.', (string) $proposition->getNom());
+        }
+        // UNE PISTE DE MOUVEMENT DONNE UN SEUL AVENANT : deux offres d'assureurs pour un même
+        // renouvellement sont concurrentes — en adopter une rend l'autre caduque.
+        foreach ($piste->getCotations() as $autre) {
+            if ($autre !== $proposition && count($autre->getAvenants()) > 0) {
+                return sprintf(
+                    'La piste « %s » a déjà donné son avenant, par la proposition « %s » : la police est déjà traitée.',
+                    (string) $piste->getNom(),
+                    (string) $autre->getNom(),
+                );
+            }
+        }
+
+        return $this->defautsDeSouscription->refusDAvenant($proposition);
+    }
+
+    /**
+     * LE MOUVEMENT ADOPTE LA PISTE DÉRIVÉE DÉJÀ MONTÉE, au lieu d'en créer une seconde
+     * (décision métier du 2026-10-13). La piste et sa proposition existent : elles ont été
+     * négociées. Le plan n'écrit donc que l'AVENANT, sur la proposition adoptée, et garde
+     * les effets du mouvement : le statut de la police de base, les échéances qu'une
+     * annulation ou une résiliation rend sans objet, la tâche de suivi du paiement.
+     *
+     * Ni prime ni échéancier reconduits : ceux de la proposition FONT FOI. Sa durée aussi
+     * (periode()). L'avenant porte la précondition `premierAvenant` : deux adoptions
+     * concurrentes de la même proposition n'en souscrivent qu'une.
+     *
+     * @param array<int, string> $ecarts
+     * @param array<int, string> $avertissements
+     * @param array<string, mixed> $source
+     *
+     * @return array<string, mixed>
+     */
+    private function adoption(
+        MouvementAvenant $mouvement,
+        Avenant $base,
+        Piste $pisteBase,
+        Cotation $proposition,
+        \DateTimeImmutable $debut,
+        \DateTimeImmutable $fin,
+        int $jours,
+        array $args,
+        array $ecarts,
+        array $avertissements,
+        array $source,
+        AiScope $scope,
+    ): array {
+        $piste = $proposition->getPiste();
+        $etape = sprintf('%s de la police', $mouvement->libelle());
+
+        $operations = [];
+        // Le lien vers la police, posé du côté de la piste s'il ne l'était que de l'autre :
+        // c'est en le posant que la piste retient le statut d'avant (restitué à l'abandon).
+        if ($piste->getAvenantDeBase()?->getId() !== $base->getId()) {
+            $operations[] = ['op' => 'edit', 'entite' => 'Piste', 'id' => $piste->getId(), 'etape' => $etape, 'champs' => ['avenantDeBase' => $base->getId()]];
+        }
+
+        $champsAvenant = $this->champsAvenant($mouvement, $base, $debut, $fin, $jours, $args, $ecarts, $avertissements);
+        $champsAvenant['cotation'] = $proposition->getId();
+        $operations[] = ['op' => 'create', 'entite' => 'Avenant', 'etape' => $etape, 'premierAvenant' => true, 'champs' => $champsAvenant];
+
+        $operations[] = [
+            'op'     => 'edit',
+            'entite' => 'Avenant',
+            'id'     => $base->getId(),
+            'etape'  => $etape,
+            'champs' => ['pisteDeRenouvellement' => $piste->getId(), 'renewalStatus' => (string) $mouvement->statutDeLaBase()],
+        ];
+
+        [$opsRegularisation, $regularisation] = $mouvement->annuleLaPolice()
+            ? $this->regularisationDesEcheances($base, $debut, $etape, $avertissements, $piste->getId())
+            : [[], null];
+        array_push($operations, ...$opsRegularisation);
+
+        // La tâche de suivi, rattachée à la proposition adoptée — à l'échéance de sa
+        // première tranche, comme pour un mouvement qui en crée une.
+        $tache = null;
+        if ($mouvement->poursuitLeCycle()) {
+            $tranches = [];
+            foreach ($proposition->getTranches() as $tranche) {
+                $tranches[] = ['champs' => ['payableAt' => $tranche->getPayableAt()?->format(self::FORMAT_DATE)]];
+            }
+            $tache = $this->tacheDeSuivi($base, $pisteBase, $tranches, $debut, $scope);
+            $tache['entite'] = 'Tache';
+            $tache['champs']['cotation'] = $proposition->getId();
+            $operations[] = $tache;
+        }
+
+        return [
+            'operations'     => $operations,
+            'source'         => $source,
+            'defauts'        => array_merge(
+                $this->defautsDAdoption($mouvement, $proposition, $debut, $fin, $jours),
+                $regularisation['defaut'] ?? [],
+            ),
+            'regularisation' => $regularisation,
+            'ecarts'         => $ecarts,
+            'reconduit'      => [
+                'chargements' => 0, 'tranches' => 0, 'revenus' => 0, 'partenaire' => 0, 'conditions' => 0,
+                'conditionsAgent' => 0, 'tacheDeSuivi' => $tache === null ? 0 : 1,
+            ],
+            'adoptee'        => ['cotationId' => $proposition->getId(), 'nom' => $proposition->getNom(), 'pisteId' => $piste->getId(), 'piste' => $piste->getNom()],
+            'avertissements' => $avertissements,
+        ];
+    }
+
+    /** @return array<int, string> Ce que l'adoption a décidé à la place de l'utilisateur. */
+    private function defautsDAdoption(MouvementAvenant $m, Cotation $proposition, \DateTimeImmutable $debut, \DateTimeImmutable $fin, int $jours): array
+    {
+        $defauts = [sprintf(
+            'La proposition « %s » déjà montée est adoptée : %s.',
+            (string) $proposition->getNom(),
+            $m->porteUnePrime()
+                ? 'sa prime, son échéancier et sa rémunération font foi, rien n’est reconduit de la police de base'
+                : 'aucune nouvelle piste ni proposition n’est créée',
+        )];
+        $defauts[] = match (true) {
+            $m->annuleLaPolice()               => sprintf('%s à effet du %s.', $m->libelle(), $debut->format('d/m/Y')),
+            $m === MouvementAvenant::Prorogation => sprintf('Prorogation de %d jour%s, du %s au %s.', $jours, $jours > 1 ? 's' : '', $debut->format('d/m/Y'), $fin->format('d/m/Y')),
+            default                            => sprintf('Nouvelle période du %s au %s%s.', $debut->format('d/m/Y'), $fin->format('d/m/Y'),
+                (int) $proposition->getDuree() > 0 ? sprintf(' (durée de %d mois portée par la proposition)', (int) $proposition->getDuree()) : ' (même durée que la police de base)'),
+        };
+        $defauts[] = $m->annuleLaPolice()
+            ? 'La police de base passe au statut « Annulé / résilié » et sort des polices actives.'
+            : sprintf('La police de base passe au statut « %s » : son successeur prend le relais parmi les polices actives.', AvenantType::RENEWAL_STATUS_LABELS[$m->statutDeLaBase()]);
+        if ($m->poursuitLeCycle()) {
+            $defauts[] = 'Une tâche de suivi du paiement est ajoutée.';
+        }
+
+        return $defauts;
+    }
+
     /**
      * IDENTITÉ de la police à faire évoluer — indépendante des arguments, donc
      * disponible dès l'ouverture d'une boîte de mouvement, avant toute date saisie.
@@ -429,7 +628,7 @@ final class MouvementAvenantBuilder
      *               ecarts?: array<int,string>, bloquant?: string, avertissements?: array<int,string>,
      *               aDemander?: array{champ: string, question: string, dateSuggeree?: string}}
      */
-    private function periode(MouvementAvenant $m, \DateTimeImmutable $debutBase, \DateTimeImmutable $finBase, array $args): array
+    private function periode(MouvementAvenant $m, \DateTimeImmutable $debutBase, \DateTimeImmutable $finBase, array $args, ?Cotation $adoptee = null): array
     {
         $ecarts    = [];
         $lendemain = $this->dateEffetParDefautDepuis($finBase);
@@ -462,6 +661,11 @@ final class MouvementAvenantBuilder
         if ($m === MouvementAvenant::Prorogation) {
             $fin   = $this->date($args['dateFin'] ?? null);
             $jours = isset($args['dureeJours']) ? max(1, (int) $args['dureeJours']) : null;
+            // CE QUI A ÉTÉ NÉGOCIÉ FAIT FOI : la durée de la proposition adoptée, à défaut
+            // d'une durée dictée.
+            if ($fin === null && $jours === null && $adoptee !== null) {
+                $jours = $this->joursDeLaProposition($adoptee, $debut);
+            }
             if ($fin === null && $jours === null) {
                 return ['aDemander' => [
                     'champ'    => 'duree',
@@ -474,12 +678,14 @@ final class MouvementAvenantBuilder
             return ['debut' => $debut, 'fin' => $fin, 'jours' => $jours, 'ecarts' => $ecarts];
         }
 
-        // Renouvellement : même durée que la police de base.
+        // Renouvellement : même durée que la police de base — sauf proposition adoptée qui
+        // porte la sienne : ce qui a été négocié fait foi.
         $fin = $this->date($args['dateFin'] ?? null);
         if ($fin !== null) {
             $ecarts[] = sprintf('Échéance fixée au %s (au lieu d’une durée identique à la police de base).', $fin->format('d/m/Y'));
         }
-        $fin ??= $debut->modify(sprintf('+%d days', $this->joursInclus($debutBase, $finBase) - 1));
+        $joursAdoptes = $adoptee !== null ? $this->joursDeLaProposition($adoptee, $debut) : null;
+        $fin ??= $debut->modify(sprintf('+%d days', ($joursAdoptes ?? $this->joursInclus($debutBase, $finBase)) - 1));
 
         // LA SEULE QUESTION D'UN RENOUVELLEMENT. Sans date fournie, la période par défaut
         // part du lendemain de l'échéance ; si elle est déjà ÉCHUE, l'avenant naîtrait

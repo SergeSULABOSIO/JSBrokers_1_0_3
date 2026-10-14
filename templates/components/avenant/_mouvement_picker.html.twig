@@ -22,11 +22,14 @@
     « mouvement-picker », auto-connecté à l'insertion par le cerveau.
 #}
 {% set libelleMin = libelle|lower %}
+{# ADOPTION : la proposition déjà montée voyage dans les deux URL — l'aperçu et l'écriture
+   jugent la même chose. #}
+{% set routeArgs = {mouvement: mouvement, id: avenant.id}|merge(adoptee|default(null) ? {cotation: adoptee.id} : {}) %}
 {% set determinant = mouvement == 'annulation' ? 'l’' : (mouvement == 'renouvellement' ? 'le ' : 'la ') %}
 <div class="jsb-picker-overlay"
      data-controller="mouvement-picker"
-     data-mouvement-picker-apercu-url-value="{{ path('admin.avenant.api.mouvement_apercu', {mouvement: mouvement, id: avenant.id}) }}"
-     data-mouvement-picker-executer-url-value="{{ path('admin.avenant.api.mouvement_executer', {mouvement: mouvement, id: avenant.id}) }}"
+     data-mouvement-picker-apercu-url-value="{{ path('admin.avenant.api.mouvement_apercu', routeArgs) }}"
+     data-mouvement-picker-executer-url-value="{{ path('admin.avenant.api.mouvement_executer', routeArgs) }}"
      data-mouvement-picker-libelle-value="{{ libelle|e('html_attr') }}"
      data-picker-overlay>
     <div class="jsb-picker-modal jsb-picker-modal--large"

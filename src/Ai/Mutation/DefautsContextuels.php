@@ -112,6 +112,7 @@ final class DefautsContextuels
                 collections: $collections,
                 ref: $op->ref,
                 etape: $op->etape,
+                premierAvenant: $op->premierAvenant,
             );
         }
 
@@ -141,6 +142,7 @@ final class DefautsContextuels
             collections: $op->collections,
             ref: $op->ref,
             etape: $op->etape,
+            premierAvenant: $op->premierAvenant,
         );
     }
 

@@ -104,6 +104,12 @@ final class MutationOperation
         public readonly array $collections = [],
         public readonly ?string $ref = null,
         public readonly ?string $etape = null,
+        // PRÉCONDITION D'ÉCRITURE (création d'Avenant) : la cotation ne doit porter AUCUN
+        // avenant au moment où celui-ci s'écrit — vérifié sous verrou, dans la transaction
+        // (WorkspaceMutationService::exigerLePremierAvenant). Posée par le mouvement qui
+        // ADOPTE une proposition : deux adoptions concurrentes n'en souscrivent qu'une.
+        // Elle ne peut qu'AJOUTER un refus : venue d'un plan dicté, elle ne lève rien.
+        public readonly bool $premierAvenant = false,
     ) {
     }
 
@@ -198,6 +204,7 @@ final class MutationOperation
             collections: self::collectionsFromArray($data['collections'] ?? []),
             ref: $ref !== '' ? $ref : null,
             etape: $etape !== '' ? $etape : null,
+            premierAvenant: ($data['premierAvenant'] ?? false) === true,
         );
     }
 
@@ -279,6 +286,9 @@ final class MutationOperation
         if ($this->etape !== null) {
             $data['etape'] = $this->etape;
         }
+        if ($this->premierAvenant) {
+            $data['premierAvenant'] = true;
+        }
         if ($this->collections !== []) {
             $data['collections'] = [];
             foreach ($this->collections as $nom => $enfants) {
@@ -299,13 +309,13 @@ final class MutationOperation
      */
     public function withEntityShortName(string $shortName): self
     {
-        return new self($this->op, $shortName, $this->targetId, $this->fields, $this->collections, $this->ref, $this->etape);
+        return new self($this->op, $shortName, $this->targetId, $this->fields, $this->collections, $this->ref, $this->etape, $this->premierAvenant);
     }
 
     /** Copie de l'opération avec d'autres sous-collections (filtrage d'étapes). */
     public function withCollections(array $collections): self
     {
-        return new self($this->op, $this->entityShortName, $this->targetId, $this->fields, $collections, $this->ref, $this->etape);
+        return new self($this->op, $this->entityShortName, $this->targetId, $this->fields, $collections, $this->ref, $this->etape, $this->premierAvenant);
     }
 
     /**

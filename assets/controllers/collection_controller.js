@@ -806,6 +806,21 @@ export default class extends Controller {
     }
 
     /**
+     * UN GESTE DE LIGNE QUI OUVRE UNE BOÎTE DU CERVEAU, et non un formulaire : le mouvement
+     * de la police qui adopte cette proposition (« Renouveler », « Annuler la police »…).
+     * L'adresse vient du serveur, sur la ligne ; le cerveau ouvre la même boîte que le menu
+     * de la police.
+     * @param {MouseEvent} event
+     */
+    evenementDeLigne(event) {
+        event.stopPropagation();
+        const { gesteEvenement, gesteUrl } = event.currentTarget.dataset;
+        if (!gesteEvenement || !gesteUrl) return;
+
+        this.notifyCerveau(gesteEvenement, { url: gesteUrl });
+    }
+
+    /**
      * Demande la confirmation avant de supprimer un élément.
      * @param {MouseEvent} event
      */

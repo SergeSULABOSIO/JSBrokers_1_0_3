@@ -8,6 +8,7 @@ use App\Ai\Mouvement\MouvementAvenantBuilder;
 use App\Ai\Resolution\ResolveurDeReferences;
 use App\Ai\Scope\AiScope;
 use App\Entity\Avenant;
+use App\Entity\Cotation;
 use App\Services\AvenantRenouvellementResolver;
 use App\Services\JSBDynamicSearchService;
 use App\Service\Workspace\LiensProteges;
@@ -98,6 +99,11 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
                     'type' => 'integer',
                     'description' => 'Identifiant de la police (avenant) à faire évoluer. À privilégier : sans '
                         . 'ambiguïté. Obtenu par rechercher_entites ou vigie_echeances.',
+                ],
+                'cotationId' => [
+                    'type' => 'integer',
+                    'description' => 'Seulement si la piste de ce mouvement porte PLUSIEURS propositions en attente : '
+                        . 'celle à adopter (identifiant renvoyé dans « propositionsEnAttente »).',
                 ],
                 'police' => [
                     'type' => 'string',
@@ -274,13 +280,22 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
 
         // Idempotence : une police ne porte qu'un mouvement à la fois. Sans cette
         // garde, redemander « renouvelle-la » créerait un second jeu d'écritures.
-        if ($base->getPisteDeRenouvellement() !== null) {
-            return ($args['abandonnerMouvementExistant'] ?? false) === true
-                ? $this->planDAbandon($base, $args, $scope)
-                : $this->mouvementDejaEnCours($base);
+        //
+        // SAUF ADOPTION : la piste dérivée a été montée À PART (proposition négociée,
+        // chiffrée) et attend son avenant. Le mouvement l'ADOPTE — même règle que la boîte
+        // de l'écran (MouvementAvenantBuilder::refusDAdoption) — au lieu de la doubler.
+        $adoptee = null;
+        if ($this->pisteDerivee($base) !== null) {
+            if (($args['abandonnerMouvementExistant'] ?? false) === true) {
+                return $this->planDAbandon($base, $args, $scope);
+            }
+            $adoptee = $this->propositionAAdopter($mouvement, $base, $args);
+            if ($adoptee === null) {
+                return $this->mouvementDejaEnCours($base, $mouvement, (int) ($args['cotationId'] ?? 0));
+            }
         }
 
-        $decalque = $this->builder->construire($mouvement, $base, $args, $scope);
+        $decalque = $this->builder->construire($mouvement, $base, $args, $scope, $adoptee);
 
         if (isset($decalque['bloquant'])) {
             return AiToolResult::ok([
@@ -384,7 +399,7 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
      */
     private function planDAbandon(Avenant $base, array $args, AiScope $scope): AiToolResult
     {
-        $derivee = $base->getPisteDeRenouvellement();
+        $derivee = $this->pisteDerivee($base);
 
         $refus = LiensProteges::refusDeSuppression($derivee, $this->em);
         if ($refus !== null) {
@@ -445,9 +460,40 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
      * Le cas SCELLÉ (avenant successeur émis, annulation, résiliation) reste un refus sec :
      * là, il n'y a réellement plus rien à écrire.
      */
-    private function mouvementDejaEnCours(Avenant $base): AiToolResult
+    /**
+     * LA PISTE DÉRIVÉE DE LA POLICE, lue des DEUX côtés du lien — comme l'écran
+     * (AvenantRenouvellementResolver) : un lien posé d'un seul côté reste un mouvement, et
+     * ne le voir que d'un côté ferait monter une seconde piste.
+     */
+    private function pisteDerivee(Avenant $base): ?\App\Entity\Piste
     {
-        $derivee = $base->getPisteDeRenouvellement();
+        return $base->getPisteDeRenouvellement()
+            ?? ($base->getId() !== null ? $this->em->getRepository(\App\Entity\Piste::class)->findOneBy(['avenantDeBase' => $base]) : null);
+    }
+
+    /**
+     * La proposition de la piste dérivée que CE mouvement peut adopter — une seule, ou celle
+     * que `cotationId` désigne parmi elles. Null s'il n'y en a pas, ou s'il faut choisir.
+     */
+    private function propositionAAdopter(MouvementAvenant $mouvement, Avenant $base, array $args): ?Cotation
+    {
+        $adoptables = [];
+        foreach ($this->pisteDerivee($base)?->getCotations() ?? [] as $cotation) {
+            if ($this->builder->refusDAdoption($mouvement, $base, $cotation) === null) {
+                $adoptables[(int) $cotation->getId()] = $cotation;
+            }
+        }
+        $designee = (int) ($args['cotationId'] ?? 0);
+        if ($designee > 0) {
+            return $adoptables[$designee] ?? null;
+        }
+
+        return count($adoptables) === 1 ? reset($adoptables) : null;
+    }
+
+    private function mouvementDejaEnCours(Avenant $base, ?MouvementAvenant $mouvement = null, int $cotationDesignee = 0): AiToolResult
+    {
+        $derivee = $this->pisteDerivee($base);
         // On ne dit pas seulement QU'un mouvement existe, on dit ce que la police est
         // DEVENUE : « déjà renouvelée par l'avenant #120 » plutôt que « porte une
         // opportunité dérivée ».
@@ -480,16 +526,38 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
         }
 
         // Mouvement AMORCÉ : les propositions de la piste dérivée encore sans avenant sont
-        // exactement ce qu'il reste à faire valider.
+        // exactement ce qu'il reste à faire valider — PAR CE MOUVEMENT, qui les adopte. Si
+        // aucune ne peut l'être, on dit pourquoi (prime absente, autre type de mouvement).
+        //
+        // Seules les propositions ADOPTABLES sont offertes au choix : proposer une offre que le
+        // mouvement refuserait ferait tourner la conversation en rond.
         $propositions = [];
+        $raisons = [];
         foreach ($derivee->getCotations() as $cotation) {
-            if ($cotation->getAvenants()->count() === 0) {
-                $propositions[] = [
-                    'cotationId' => $cotation->getId(),
-                    'nom'        => $cotation->getNom(),
-                    'assureur'   => $cotation->getAssureur()?->getNom(),
-                ];
+            if ($cotation->getAvenants()->count() > 0) {
+                continue;
             }
+            $raison = $mouvement !== null ? $this->builder->refusDAdoption($mouvement, $base, $cotation) : null;
+            if ($raison !== null) {
+                $raisons[(int) $cotation->getId()] = $raison;
+                continue;
+            }
+            $propositions[] = [
+                'cotationId' => $cotation->getId(),
+                'nom'        => $cotation->getNom(),
+                'assureur'   => $cotation->getAssureur()?->getNom(),
+            ];
+        }
+        // La proposition désignée ne peut pas être adoptée, ou aucune ne le peut : on dit
+        // pourquoi, sans rien proposer d'autre à valider.
+        $refus = $raisons[$cotationDesignee] ?? ($propositions === [] && $raisons !== [] ? implode(' ', array_unique($raisons)) : null);
+        if ($refus !== null) {
+            return AiToolResult::ok($commun + [
+                'mouvementAmorce'       => true,
+                'propositionsEnAttente' => $propositions,
+                'bloquant'              => $refus,
+                'note'                  => 'Dis ce motif en UNE phrase. Ne présente aucun plan et n’annonce aucun bouton.',
+            ]);
         }
 
         $etape = $propositions === []
@@ -499,8 +567,7 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
                 $derivee->getId(),
             )
             : sprintf(
-                'La proposition de renouvellement existe déjà (%s) : pour que la police soit reconduite, il '
-                . 'faut la FAIRE VALIDER, c’est-à-dire créer l’avenant sur cette cotation.',
+                'Plusieurs propositions attendent sur cette piste (%s) : laquelle le mouvement doit-il adopter ?',
                 implode(', ', array_map(
                     static fn (array $p): string => sprintf('#%d « %s »', $p['cotationId'], $p['nom']),
                     $propositions,
@@ -517,14 +584,14 @@ final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan, AiTo
                 $suite['phrase'],
                 $etape,
             ),
-            'note' => 'Ce mouvement est AMORCÉ MAIS PAS ABOUTI : la police n’est PAS reconduite, et cet outil '
-                . 'ne peut pas en préparer un second (ce serait un doublon). Ne dis donc PAS que c’est fait, et '
-                . 'n’annonce SURTOUT pas un bouton ici. Mais ne t’arrête pas là : énonce « prochaineEtape » en '
-                . 'une phrase, puis PROPOSE de la réaliser. S’il accepte — ou s’il a déjà dit « renouvelle-la », '
-                . 'ce qui vaut acceptation — appelle preparer_operations DANS LE MÊME TOUR pour cette écriture '
-                . '(créer l’Avenant sur la cotation indiquée, en reprenant la période qui suit l’échéance de la '
-                . 'police de base ; ou créer la Cotation sur l’opportunité #' . $derivee->getId() . ' si aucune '
-                . 'proposition n’existe). C’est CE plan-là qui portera le bouton « Valider et exécuter ». '
+            'note' => 'Ce mouvement est AMORCÉ MAIS PAS ABOUTI : la police n’est PAS reconduite. Ne dis donc PAS '
+                . 'que c’est fait, et n’annonce SURTOUT pas un bouton ici. Énonce « prochaineEtape » en une phrase. '
+                . 'S’il faut CHOISIR une proposition, pose la question en proposant celles de '
+                . '« propositionsEnAttente » ; à sa réponse, rappelle preparer_mouvement_avenant avec le même '
+                . 'mouvement, la même police et cotationId = la proposition choisie : le mouvement l’adoptera. '
+                . 'S’il n’y a AUCUNE proposition, propose de la créer (preparer_operations : une Cotation sur '
+                . 'l’opportunité #' . $derivee->getId() . '), puis de revenir à ce mouvement. N’écris JAMAIS '
+                . 'l’avenant par preparer_operations : ses dates et le statut de la police ne suivraient pas. '
                 . 'Alternative à mentionner s’il préfère repartir de zéro : supprimer l’opportunité dérivée '
                 . 'depuis la fiche de la police, ce qui rouvre les quatre mouvements.',
         ]);

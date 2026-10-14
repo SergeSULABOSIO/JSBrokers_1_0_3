@@ -103,6 +103,7 @@ final class PlanBuilder
                 collections: $op->collections,
                 ref: $op->ref,
                 etape: $op->etape,
+                premierAvenant: $op->premierAvenant,
             );
         }
 

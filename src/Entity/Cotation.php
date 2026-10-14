@@ -84,6 +84,12 @@ class Cotation
     // pas encore souscrite, et chiffrée si son type l'exige.) Lu par le bouton de ligne.
     public ?bool $souscriptible = null;
 
+    // Les quatre mouvements : la boîte du mouvement de la police qui adopte cette proposition
+    // (null tant qu'elle n'est pas adoptable), son verbe et son icône. Lus par le bouton de ligne.
+    public ?string $urlDuMouvement = null;
+    public ?string $verbeDuMouvement = null;
+    public ?string $iconeDuMouvement = null;
+
     #[Groups(['list:read'])]
     public ?string $referencePolice = null;
 
