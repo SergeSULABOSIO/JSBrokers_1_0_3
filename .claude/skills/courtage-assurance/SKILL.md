@@ -112,6 +112,7 @@ sa suppression est décidée (§7).
 | **Sens** : débit validé = D 411 TTC / C 706 HT + C 443 taxe ; avoir = l'inverse ; règlement = D 521/571 / C 411. Seule une note VALIDÉE fait naître la créance | `CourtierEcritureComptableService.php:20-48`, :178-206 | `FacturationComptabiliteTest` |
 | **Avoir plutôt que suppression** : on ne crédite que l'émis ; les échéances sans objet passent « à régulariser » sans changer de montant ; l'abandon d'un mouvement qui a vécu financièrement est refusé (409) | `SourceDeFacturation.php:198-203` ; `RegularisationDesEcheances.php:13-27` ; `LiensProteges.php:77-185` | `MouvementAvenantTest::testUneNoteDeCreditEmiseInterditLAbandon` |
 | **Taxes et exonération** : taxe sur commission nulle si client exonéré OU risque non imposable — les deux taxes tombent ensemble | `ServiceTaxes.php:139-179` | `CommissionExonereeTest` |
+| **Une note réglée ne se supprime pas et ne perd pas de ligne, elle s'annule par la note contraire** (avoir pour une note de débit, note de débit pour un avoir) : toute suppression qui détruirait une note ayant reçu un paiement, ou lui retirerait une ligne, est refusée (409 qui nomme la note) — la note elle-même, ou emportée/amputée par la suppression d'une piste, d'une police ou d'un client ; épargner le règlement n'y change rien. Un PAIEMENT, lui, reste supprimable (correction d'une saisie erronée, reprise mal faite) : le refus le propose, et la note est ensuite libre. Écran, Ket et dossier (décisions du 2026-10-14) | `SuppressionEnCascade::notesRegleesTouchees` (contrôle du plan final) | `SuppressionEnChaineTest::testUneNoteRegleeNeSeSupprimePas`, `::testUneNoteRegleeAChevalNePerdPasDeLigne`, `::testEpargnerLeReglementNeRendPasLaFactureSupprimable`, `::testKetNeSupprimePasUneNoteReglee`, `::testUneNoteDeCreditRegleeSAnnuleParUneNoteDeDebit` |
 
 ### Invariants CIBLES (décidés, pas encore codés)
 
@@ -129,13 +130,6 @@ sa suppression est décidée (§7).
   continuité, aucune chronologie garantie ; les tests ne vérifient que le format
   (`NoteCreationDialogueTest`).
 
-**Une note émise ne se supprime pas, elle s'annule par avoir** — décision de Serge du 2026-10-14.
-- *Cible* : la suppression d'une note qui porte des paiements est refusée (**409** qui explique,
-  cf. « Suppression refusée = 409 qui explique ») ; l'annulation passe par une note de crédit.
-- *État actuel* : rien ne l'empêche — `Note::paiements` est en `cascade: remove` +
-  `orphanRemoval` (`Note.php:74`) : supprimer la note emporte ses règlements. Aucun test.
-- *Chantier* : ultérieur (§7).
-
 ## 6. À CONFIRMER
 
 - **Ristourne** (Serge) : aucun mouvement typé ni calcul. Une annulation ou une résiliation en
@@ -147,7 +141,7 @@ sa suppression est décidée (§7).
 ## 7. Chantiers décidés (ne rien coder sans plan validé)
 
 1. **Numérotation unique et chronologique des notes** — prioritaire (§5).
-2. **Refus de supprimer une note qui porte des paiements** — 409, annulation par avoir (§5).
+2. ~~Refus de supprimer une note qui porte des paiements~~ — **fait** (§5, invariant acquis).
 3. **« Mon portefeuille » étendu** aux entités qui descendent d'une piste, via `ResponsableDePiste` (§4).
 4. **Une seule monnaie par cabinet**, saisie = affichage (§4).
 5. **Nettoyage** : supprimer `Constante::calculerPeriodeCouverture` et la chaîne `getIdPoste()` de
