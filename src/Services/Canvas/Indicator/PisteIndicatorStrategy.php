@@ -162,10 +162,11 @@ class PisteIndicatorStrategy implements IndicatorCalculationStrategyInterface
      */
     private function responsable(Piste $piste): array
     {
-        $gestionnaire = $piste->getClient()?->getPortefeuille()?->getGestionnaire();
-        [$invite, $source] = $gestionnaire !== null
-            ? [$gestionnaire, 'Gestionnaire du portefeuille du client']
-            : [$piste->getInvite(), 'Créateur de la piste (aucun gestionnaire de portefeuille)'];
+        // La règle UNIQUE du responsable (ResponsableDePiste) — celle de « Mon portefeuille ».
+        $invite = \App\Services\Search\ResponsableDePiste::de($piste);
+        $source = $piste->getClient()?->getPortefeuille()?->getGestionnaire() !== null
+            ? 'Gestionnaire du portefeuille du client'
+            : 'Créateur de la piste (aucun gestionnaire de portefeuille)';
         $nom = trim((string) $invite?->getNom());
         if ($nom === '') {
             return ['responsableNom' => null, 'responsableSource' => 'Aucun gestionnaire ni créateur connu', 'responsableInitiales' => null];

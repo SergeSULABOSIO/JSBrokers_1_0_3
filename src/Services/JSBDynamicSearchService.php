@@ -10,6 +10,7 @@ use App\Services\Search\AvenantSuccessionScope;
 use App\Services\Search\CotationSouscriptionScope;
 use App\Services\Search\ReversementScope;
 use App\Services\Search\PisteTransformationScope;
+use App\Services\Search\ResponsableDePiste;
 use App\Services\Search\PortefeuilleScope;
 use App\Services\Note\NoteReglementService;
 use App\Services\Search\NoteReglementScope;
@@ -646,6 +647,27 @@ class JSBDynamicSearchService
             if ($field === PortefeuilleScope::CRITERION_KEY) {
                 $inviteId = is_array($value) ? ($value['value'] ?? null) : $value;
                 $shortName = (new \ReflectionClass($entityClass))->getShortName();
+
+                // LA PISTE : « à moi » = j'en suis le responsable (gestionnaire du portefeuille
+                // de son client, sinon son créateur). Même règle que sa carte, que Ket et que
+                // la vigie : ResponsableDePiste.
+                if (PortefeuilleScope::regleDe($shortName) === ResponsableDePiste::class) {
+                    if ($inviteId === null || $inviteId === '') {
+                        continue;
+                    }
+                    $gestionnaire = $this->joinPath($qb, $rootAlias, $metadata, ResponsableDePiste::CHEMIN_GESTIONNAIRE, $joinedEntities, $suffix);
+                    if ($gestionnaire === null) {
+                        // Même conduite qu'un chemin invalide, ci-dessous : on le dit.
+                        $this->logger?->warning('[JSBDynamicSearch] Chemin du responsable de piste invalide : périmètre ignoré.', [
+                            'entity' => $entityClass, 'path' => ResponsableDePiste::CHEMIN_GESTIONNAIRE,
+                        ]);
+                        continue;
+                    }
+                    $qb->andWhere(ResponsableDePiste::predicat($gestionnaire, $rootAlias, 'scopeInvite' . $suffix))
+                       ->setParameter('scopeInvite' . $suffix, $inviteId);
+                    continue;
+                }
+
                 $paths = PortefeuilleScope::pathsFor($shortName);
 
                 if ($inviteId === null || $inviteId === '' || empty($paths)) {

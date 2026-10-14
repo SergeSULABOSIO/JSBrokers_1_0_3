@@ -946,7 +946,11 @@ class DashboardDataProvider
 
     public function getPistesEnCours(Entreprise $entreprise, int $limit = 60, ?Invite $portefeuilleDe = null): array
     {
-        $perimetre = $portefeuilleDe !== null ? ' AND pfg.id = :pfInvite' : '';
+        // « Mon portefeuille » des pistes = celles dont l'invité est le RESPONSABLE (règle
+        // unique de la carte, de la liste et de Ket : ResponsableDePiste).
+        $perimetre = $portefeuilleDe !== null
+            ? ' AND ' . \App\Services\Search\ResponsableDePiste::predicat('pfg', 'p', 'pfInvite')
+            : '';
 
         $query = $this->em->createQuery(
             'SELECT p, cl, r, inv FROM App\Entity\Piste p

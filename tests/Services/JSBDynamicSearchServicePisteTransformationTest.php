@@ -31,6 +31,7 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 class JSBDynamicSearchServicePisteTransformationTest extends KernelTestCase
 {
     private const OWNER_EMAIL = 'phpunit-pistetransfo-owner@test.local';
+    private const COLLEGUE_EMAIL = 'phpunit-pistetransfo-collegue@test.local';
     private const ENTREPRISE_NOM = 'PHPUnit PisteTransfo SARL';
     private const ENTREPRISE_B_NOM = 'PHPUnit PisteTransfo Autre SARL';
 
@@ -73,7 +74,7 @@ class JSBDynamicSearchServicePisteTransformationTest extends KernelTestCase
             ['noms' => $noms],
             ['noms' => \Doctrine\DBAL\ArrayParameterType::STRING]
         );
-        $conn->executeStatement("DELETE FROM utilisateur WHERE email = :email", ['email' => self::OWNER_EMAIL]);
+        $conn->executeStatement("DELETE FROM utilisateur WHERE email IN (:emails)", ['emails' => [self::OWNER_EMAIL, self::COLLEGUE_EMAIL]], ['emails' => \Doctrine\DBAL\ArrayParameterType::STRING]);
     }
 
     private function makeEntreprise(string $nom, Utilisateur $owner): Entreprise
@@ -169,9 +170,14 @@ class JSBDynamicSearchServicePisteTransformationTest extends KernelTestCase
         $transfoPf2 = $this->makePiste($entrepriseA, $inviteA, 'Transfo PF 2', $portefeuille, true);
         $enCoursPf = $this->makePiste($entrepriseA, $inviteA, 'En Cours PF', $portefeuille, false);
 
-        // Hors portefeuille (client sans portefeuille), même entreprise.
-        $transfoHorsPf = $this->makePiste($entrepriseA, $inviteA, 'Transfo Hors PF', null, true);
-        $enCoursHorsPf = $this->makePiste($entrepriseA, $inviteA, 'En Cours Hors PF', null, false);
+        // Hors portefeuille (client sans portefeuille), même entreprise, montées par un
+        // COLLÈGUE : sans gestionnaire, une piste revient à son créateur (ResponsableDePiste)
+        // — créées par l'invité A, elles seraient dans SON portefeuille.
+        $collegueUser = (new Utilisateur())->setEmail(self::COLLEGUE_EMAIL)->setNom('PHPUnit Collègue')->setVerified(true)->setPassword('irrelevant');
+        $em->persist($collegueUser);
+        $collegueA = $this->makeInvite($entrepriseA, $collegueUser, 'Collègue A');
+        $transfoHorsPf = $this->makePiste($entrepriseA, $collegueA, 'Transfo Hors PF', null, true);
+        $enCoursHorsPf = $this->makePiste($entrepriseA, $collegueA, 'En Cours Hors PF', null, false);
 
         // --- Entreprise B (scoping) ---
         $entrepriseB = $this->makeEntreprise(self::ENTREPRISE_B_NOM, $ownerUser);

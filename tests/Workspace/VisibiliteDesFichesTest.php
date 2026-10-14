@@ -35,6 +35,7 @@ class VisibiliteDesFichesTest extends WebTestCase
 {
     private const EMAIL = 'phpunit-visibilite-fiches@test.local';
     private const EMAIL_LECTEUR = 'phpunit-visibilite-fiches-lecteur@test.local';
+    private const EMAIL_COLLEGUE = 'phpunit-visibilite-fiches-collegue@test.local';
     private const CABINET = 'PHPUnit Visibilite Fiches SARL';
     private const VOISIN = 'PHPUnit Visibilite Fiches Voisin SARL';
 
@@ -62,7 +63,7 @@ class VisibiliteDesFichesTest extends WebTestCase
     {
         $conn = $this->em()->getConnection();
         $noms = [self::CABINET, self::VOISIN];
-        $emails = [self::EMAIL, self::EMAIL_LECTEUR];
+        $emails = [self::EMAIL, self::EMAIL_LECTEUR, self::EMAIL_COLLEGUE];
         $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email IN (:e)', ['e' => $emails], ['e' => ArrayParameterType::STRING]);
         foreach (['avenant', 'tranche', 'chargement_pour_prime', 'cotation', 'piste', 'client', 'portefeuille', 'monnaie', 'roles_en_marketing', 'roles_en_production', 'invite'] as $table) {
             $conn->executeStatement(
@@ -104,8 +105,15 @@ class VisibiliteDesFichesTest extends WebTestCase
         $em->persist($sansPortefeuille);
 
         $mienne = $this->piste($cabinet, $invite, 'Piste de mon portefeuille', $duPortefeuille);
-        $horsPortefeuille = $this->piste($cabinet, $invite, 'Piste hors portefeuille', $sansPortefeuille);
-        $avecOffres = $this->piste($cabinet, $invite, 'Piste aux trois offres', $sansPortefeuille);
+        // Montées par un COLLÈGUE : sans gestionnaire de portefeuille, une piste revient à son
+        // créateur (ResponsableDePiste) — créées par l'invité, elles seraient dans SON
+        // portefeuille, et ne seraient plus « hors portefeuille ».
+        $utilisateurCollegue = (new Utilisateur())->setEmail(self::EMAIL_COLLEGUE)->setNom('Collègue')->setVerified(true)->setPassword('x');
+        $em->persist($utilisateurCollegue);
+        $collegue = (new Invite())->setNom('Collègue')->setUtilisateur($utilisateurCollegue)->setEntreprise($cabinet)->setProprietaire(false);
+        $em->persist($collegue);
+        $horsPortefeuille = $this->piste($cabinet, $collegue, 'Piste hors portefeuille', $sansPortefeuille);
+        $avecOffres = $this->piste($cabinet, $collegue, 'Piste aux trois offres', $sansPortefeuille);
         $enAttente = $this->cotation($avecOffres, 'Offre en attente');
         $prime = (new ChargementPourPrime())->setNom('Prime nette')->setMontantFlatExceptionel(500.0);
         $prime->setCotation($enAttente)->setEntreprise($cabinet);

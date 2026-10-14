@@ -43,7 +43,7 @@ final class PortefeuilleCritereFactory
         return [PortefeuilleScope::CRITERION_KEY => [
             'operator' => '=',
             'value' => $invite->getId(),
-            'label' => $this->libelle($invite),
+            'label' => $this->libelle($invite, $entityShortName),
         ]];
     }
 
@@ -67,7 +67,7 @@ final class PortefeuilleCritereFactory
      * décompte au-delà, et mention explicite quand il n'en gère aucun (la liste est alors
      * vide à l'écran — l'assistant doit pouvoir l'expliquer plutôt que d'annoncer un zéro sec).
      */
-    public function libelle(Invite $invite): string
+    public function libelle(Invite $invite, ?string $entityShortName = null): string
     {
         $portefeuilles = $this->em->getRepository(Portefeuille::class)->findBy(['gestionnaire' => $invite]);
         $nb = count($portefeuilles);
@@ -75,6 +75,10 @@ final class PortefeuilleCritereFactory
         return match (true) {
             $nb === 1 => (string) $portefeuilles[0]->getNom(),
             $nb > 1 => $nb . ' portefeuilles',
+            // LES PISTES NE SONT PAS VIDES SANS PORTEFEUILLE : celles qu'il a créées pour un
+            // client sans gestionnaire sont à lui (ResponsableDePiste). Dire « aucun
+            // portefeuille » ferait annoncer une liste vide à côté d'une liste pleine.
+            PortefeuilleScope::regleDe((string) $entityShortName) === ResponsableDePiste::class => 'les pistes dont vous êtes responsable',
             default => 'aucun portefeuille',
         };
     }
