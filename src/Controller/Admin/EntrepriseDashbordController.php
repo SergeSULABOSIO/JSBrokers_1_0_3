@@ -5,14 +5,11 @@ namespace App\Controller\Admin;
 use DateTimeImmutable;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
-use App\Form\RechercheDashBordType;
-use App\DTO\CriteresRechercheDashBordDTO;
 use App\Repository\EntrepriseRepository;
 use App\Service\Onboarding\OnboardingCompletude;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\DashboardDataProvider;
 use App\Services\ExercicesDuCabinet;
-use App\Services\JSBTableauDeBordBuilder;
 use App\Services\ServiceMonnaies;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,7 +17,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
-use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use App\Service\Workspace\AppartenanceAuCabinet;
@@ -32,7 +28,6 @@ class EntrepriseDashbordController extends AbstractController
 {
 
     public function __construct(
-        private TranslatorInterface $translator,
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
         private WorkspaceAccessResolver $accessResolver,
@@ -49,7 +44,7 @@ class EntrepriseDashbordController extends AbstractController
      * `find()` : la garde de bloc ne juge que le TYPE (« peut-il lire les Notes ? »), avec
      * l'invité de la session. Changer ce nombre suffisait donc à afficher les KPIs, la
      * comptabilité, les renouvellements ou les encaissements de n'importe quel cabinet.
-     * `index()` faisait déjà cette comparaison ; tous les blocs la font désormais.
+     * Tous les blocs font cette comparaison.
      */
     private function entrepriseDeLaRoute(int $idEntreprise): Entreprise
     {
@@ -78,52 +73,9 @@ class EntrepriseDashbordController extends AbstractController
     }
 
 
-    #[Route('/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index(int $idEntreprise, Request $request, JSBTableauDeBordBuilder $jSBTableauDeBordBuilder)
-    {
-        /** @var Utilisateur $user */
-        // UNE PAGE DE CONSULTATION NE MODIFIE JAMAIS L'ETAT.
-        //
-        // Ces lignes prenaient l'identifiant dans l'URL et ECRIVAIENT `connectedTo` sans
-        // un seul controle : un GET suffisait a faire basculer le cabinet actif de
-        // n'importe quel compte authentifie vers n'importe quel cabinet. Et le plantage
-        // survenant plus loin dans l'action n'annulait rien -- le flush avait deja eu lieu.
-        //
-        // On n'a pas protege cette ecriture : on l'a RETIREE. La bascule ne passe plus que
-        // par l'espace de travail, qui la fait explicitement via BasculeDeCabinet. Ici, on
-        // se contente de lire le cabinet deja ouvert ; s'il ne correspond pas a l'URL, on
-        // renvoie au choix d'espace plutot que de basculer dans le dos de l'utilisateur.
-        $entreprise = $this->cabinetActif->entreprise();
-        if ($entreprise === null || $entreprise->getId() !== $idEntreprise) {
-            return $this->redirectToRoute('admin.entreprise.index');
-        }
-
-        //Initialisation du formulaire de recherche
-        /** @var CriteresRechercheDashBordDTO $criteres */
-        $criteres = (new CriteresRechercheDashBordDTO())
-            ->setDateDebut(new DateTimeImmutable("1/1/" . date('Y') . " 00:00"))
-            ->setDateFin(new DateTimeImmutable("12/31/" . date('Y') . " 23:59"));
-
-        $formulaire_recherche = $this->createForm(RechercheDashBordType::class, $criteres);
-        $formulaire_recherche->handleRequest($request);
-
-        // Très important de vérifier si le formulaire est soumis
-        if ($formulaire_recherche->isSubmitted() && $formulaire_recherche->isValid()) {
-            $jSBTableauDeBordBuilder->build($formulaire_recherche->getData());
-        } else {
-            $jSBTableauDeBordBuilder->build($criteres);
-        }
-        return $this->render('admin/dashbord/index.html.twig', [
-            'pageName' => $this->translator->trans("company_dashboard_page_name"),
-            'utilisateur' => $user,
-            'entreprise' => $entreprise,
-            // 'activator' => $this->activator,
-            'page' => $request->query->getInt("page", 1),
-            'dashboard' => $jSBTableauDeBordBuilder->getDashboard(),
-            'formulaire_recherche' => $formulaire_recherche,
-            'nbFiltresAvancesActif' => $criteres->nbFiltresAvancesActif(),
-        ]);
-    }
+    // L'ANCIEN TABLEAU DE BORD (action `index`, page autonome à formulaire de dates) a été
+    // retiré le 2026-10-14 : aucun lien ne le servait plus, il plantait (500), et l'espace de
+    // travail le remplace — blocs ci-dessous. Sa route répond désormais 404.
 
     #[Route('/workspace/{idEntreprise}', name: 'workspace', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function loadWorkspaceComponent(int $idEntreprise, ExercicesDuCabinet $exercices): Response

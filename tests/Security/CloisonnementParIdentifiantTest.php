@@ -562,6 +562,11 @@ class CloisonnementParIdentifiantTest extends WebTestCase
             }
         }
 
+        // L'ancien tableau de bord (EntrepriseDashbordController::index) a été retiré le
+        // 2026-10-14 : sa route n'existe plus, et rien ne peut plus basculer par elle.
+        $this->client->request('GET', $chemins['tableau de bord']);
+        self::assertSame(Response::HTTP_NOT_FOUND, $this->client->getResponse()->getStatusCode());
+
         self::assertSame([], $bascules, sprintf(
             "BASCULE VERS LE CABINET D'AUTRUI. Le compte du cabinet B a pris le cabinet A pour "
             . "cabinet actif, et la valeur est PERSISTEE sur Utilisateur :\n  %s\n"

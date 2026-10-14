@@ -153,9 +153,10 @@ class BasculeDeCabinetTest extends WebTestCase
         self::assertSame($seed['b']['entreprise'], $this->cabinetActifEnBase($seed['b']['owner']),
             'Un GET de consultation ne doit rien ecrire, meme quand la bascule serait permise. '
             . "Sinon l'utilisateur change de perimetre sans l'avoir demande.");
-        self::assertSame(Response::HTTP_FOUND, $reponse->getStatusCode(),
-            'Faute de pouvoir afficher ce cabinet, on renvoie au choix d\'espace.');
-        self::assertStringContainsString('/admin/entreprise', (string) $reponse->headers->get('Location'));
+        // L'ANCIEN TABLEAU DE BORD N'EXISTE PLUS (retiré le 2026-10-14) : sa route répond 404.
+        // La garantie qui compte demeure, ci-dessus — rien n'a été écrit.
+        self::assertSame(Response::HTTP_NOT_FOUND, $reponse->getStatusCode(),
+            'L’ancienne page de tableau de bord a été retirée.');
     }
 
     /**
