@@ -276,7 +276,9 @@ class WorkspaceMutationService
         // ET LA NOTE, en création comme en modification : sa seule règle (une référence
         // n'appartient qu'à une note du cabinet) ne lit que la référence et le cabinet. De
         // même la MONNAIE (une seule monnaie de travail) : elle ne lit que le cabinet.
-        if ($manquants === [] && (($op->isCreate() && $op->entityShortName === 'Avenant') || in_array($op->entityShortName, ['Note', 'Monnaie'], true))) {
+        // Et TYPEREVENU / CHARGEMENT (une commission ne se calcule pas sur une taxe) : leurs
+        // règles ne lisent que la fonction du chargement et le cabinet.
+        if ($manquants === [] && (($op->isCreate() && $op->entityShortName === 'Avenant') || in_array($op->entityShortName, ['Note', 'Monnaie', 'TypeRevenu', 'Chargement'], true))) {
             $manquants = $this->champsInspector->incoherencesMetier($copie, $op->entityShortName, null, $origine);
         }
 

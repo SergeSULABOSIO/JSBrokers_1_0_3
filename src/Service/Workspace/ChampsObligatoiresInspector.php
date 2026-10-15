@@ -63,6 +63,11 @@ class ChampsObligatoiresInspector
         // commission (getCotationMontantChargementPrime matche le TYPE, pas le nom)
         // → prime affichée mais commission à 0. On l'exige donc à la création.
         'ChargementPourPrime' => ['type'],
+        // Un type de revenu SANS chargement cible n'a pas d'assiette : sa commission en
+        // pourcentage vaut 0 en silence. Le formulaire le marquait obligatoire, mais la
+        // colonne l'accepte vide, et une édition qui le vidait était enregistrée (chantier
+        // « Assiette et source unique de la commission », 2026-10-15).
+        'TypeRevenu' => ['typeChargement'],
     ];
 
     /**
@@ -316,6 +321,35 @@ class ChampsObligatoiresInspector
                 && $this->defautsDeSouscription !== null
                 && ($refus = $this->defautsDeSouscription->refusDAvenant($cotation, $entity)) !== null) {
                 return ['' => [$refus]];
+            }
+        }
+
+        // UNE COMMISSION NE SE CALCULE PAS SUR UNE TAXE (Art. 2 du barème ARCA : prime nette
+        // d'impôts et taxes ; décision du 2026-10-15). Deux portes : le type de revenu qui
+        // viserait une taxe, et le chargement visé qui DEVIENDRAIT une taxe. Le formulaire
+        // ne propose déjà plus de taxe ; cette garde vaut pour tout ce qui écrit autrement.
+        if ($shortName === 'TypeRevenu' && $entity instanceof \App\Entity\TypeRevenu
+            && ($champsPilotables === null || in_array('typeChargement', $champsPilotables, true))
+            && $entity->getTypeChargement()?->getFonction() === \App\Entity\Chargement::FONCTION_TAXE) {
+            return ['typeChargement' => [sprintf(
+                'Une commission ne se calcule pas sur une taxe : « %s » en est une. Choisissez la prime nette, ou une autre composante de la prime.',
+                (string) $entity->getTypeChargement()->getNom(),
+            )]];
+        }
+        if ($shortName === 'Chargement' && $entity instanceof \App\Entity\Chargement && $entity->getId() !== null
+            && ($champsPilotables === null || in_array('fonction', $champsPilotables, true))
+            && $entity->getFonction() === \App\Entity\Chargement::FONCTION_TAXE) {
+            // Seuls les types du MÊME cabinet sont nommés : un message ne cite jamais une
+            // donnée d'un autre cabinet.
+            $type = $this->em->getRepository(\App\Entity\TypeRevenu::class)
+                ->findOneBy(['typeChargement' => $entity, 'entreprise' => $entity->getEntreprise()]);
+            if ($type !== null) {
+                return ['fonction' => [sprintf(
+                    'Ce chargement sert de base au type de revenu « %s » : une commission ne se calcule pas sur une taxe. '
+                    . 'Changez d’abord le chargement cible de « %s ».',
+                    (string) $type->getNom(),
+                    (string) $type->getNom(),
+                )]];
             }
         }
 
