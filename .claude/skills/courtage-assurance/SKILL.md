@@ -98,6 +98,10 @@ supprimée (§7) : ces règles n'ont plus qu'un exemplaire.
   reverser (note de crédit). Le code ne fait que SIGNALER les échéances déjà encaissées
   (`RegularisationDesEcheances::ristournePossible`, :66-98) ; « elle reste manuelle, par note de
   crédit » (:15). **Chantier ultérieur.**
+- **Numérotation des notes SANS TROU ?** (Serge consulte son comptable, 2026-10-15). Aujourd'hui
+  unique et chronologique, mais un numéro peut se perdre quand une écriture échoue hors
+  transaction englobante (`NumerotationDesNotes`, §5). **Ne rien modifier à la numérotation
+  avant sa réponse.**
 
 ## 7. Chantiers décidés (ne rien coder sans plan validé)
 
@@ -113,6 +117,24 @@ supprimée (§7) : ces règles n'ont plus qu'un exemplaire.
    380) sont supprimés. Et **une note ne se montre qu'à qui lit les notes**, sous aucune forme :
    PDF, aperçus, colonne de travail, ni depuis le bordereau qui la porte
    (`ControllerUtilsTrait::exigerLaLectureDesNotes`). Test : `ExporterEtatPdfTest`.
+
+### Chantiers ultérieurs (signalés le 2026-10-15, non décidés — plan à valider avant tout code)
+
+6. **Badge « Mon portefeuille » incomplet.** Quand l'invité gère au moins un portefeuille, le
+   libellé du périmètre est le nom de ce portefeuille (`PortefeuilleCritereFactory::libelle`,
+   :70), alors que la liste montre AUSSI les affaires dont il est responsable pour des clients
+   sans gestionnaire (§4). Ket annonce donc « dans votre portefeuille X » un ensemble plus large.
+7. **Trois chemins de documents manquants sous « Mon portefeuille ».** `PortefeuilleScope`
+   ('Document', :94 et :131) n'a ni `feedback.tache.cotation.piste`, ni
+   `feedback.tache.notificationSinistre.assure…`, ni `tache.offreIndemnisationSinistre…`. Ces
+   documents ne sont pas orphelins (leur retour ou leur tâche est renseigné) : sous « Mon
+   portefeuille », ils sont invisibles pour TOUT le monde. ⚠ Document joint déjà 55 tables par
+   requête ; le plafond de MariaDB est 61 : tout ajout se mesure.
+8. **Plan Ket en deux temps refusé à l'analyse.** Un plan « passer la monnaie de travail en
+   référence, puis promouvoir une autre » est bloqué dès le contrôle à blanc : chaque opération
+   est jugée sur une copie face à la BASE (`WorkspaceMutationService.php:280`), qui voit encore
+   la première monnaie de travail — alors que l'exécution, séquentielle, passerait. Même cause
+   possible pour toute règle « une seule X par cabinet » jugée à l'analyse.
 
 ## 8. Réflexes avant de coder
 
