@@ -32,17 +32,10 @@ class NoteType extends AbstractType
                     'placeholder' => "Ex: Commission sur police #123",
                 ],
             ])
-            // ÉDITABLE ET FACULTATIF (décision du 2026-10-14) : vide, la note reçoit le numéro
-            // suivant de sa série à l'enregistrement (NumerotationDesNotesListener) ; saisie,
-            // la référence est conservée, pourvu qu'aucune autre note du cabinet ne la porte.
-            ->add('reference', TextType::class, [
-                'required' => false,
-                'label' => "Référence",
-                'help' => "Laissez vide : le numéro suivant de la série est attribué à l'enregistrement.",
-                'attr' => [
-                    'placeholder' => "Générée à l'enregistrement (ex. ND-" . date('Y') . "-00042)",
-                ],
-            ])
+            // PAS DE CHAMP « RÉFÉRENCE » (règle OHADA, décision du 2026-10-15) : un brouillon
+            // reçoit une référence provisoire, et la validation pose le numéro définitif de
+            // la série (NumerotationDesNotesListener). Une référence du client se note dans
+            // la description.
             ->add('description', TextareaType::class, [
                 'label' => "Description détaillée",
                 'required' => false,
@@ -161,8 +154,10 @@ class NoteType extends AbstractType
                     'placeholder' => "Ex: Directeur Général",
                 ],
             ])
+            // La date d'ENVOI, pour le suivi. La date d'ÉMISSION, elle, est l'instant de
+            // la validation et ne se saisit pas (Note::$emiseLe).
             ->add('sentAt', DateTimeType::class, [
-                'label' => "Date de soumission",
+                'label' => "Date d'envoi",
                 'required' => false,
                 'widget' => 'single_text',
             ])

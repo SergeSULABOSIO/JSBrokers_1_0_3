@@ -213,10 +213,10 @@ class CourtierEcritureComptableService
      *     note de DÉBIT   D 411 Créances  TTC / C 706 Commissions HT / C 443 taxe
      *     AVOIR           D 706 HT / D 443 taxe / C 411 Créances  TTC
      *
-     * LA DATE EST CELLE DE LA PIÈCE, `sentAt`, et non son horodatage de création : un
-     * exercice se coupe à une date, et le courtier doit pouvoir la porter. À défaut —
-     * une note ancienne, un import —, `createdAt` fait foi ; sans l'un ni l'autre, on
-     * n'écrit rien plutôt que de dater au hasard.
+     * LA DATE EST CELLE DE L'ÉMISSION, `emiseLe` — l'instant de la validation qui fait
+     * naître la créance (règle OHADA, 2026-10-15) ; elle ne se saisit pas, et ne bouge
+     * donc plus. À défaut — une note d'avant cette règle —, `sentAt`, puis `createdAt` ;
+     * sans aucun, on n'écrit rien plutôt que de dater au hasard.
      *
      * @return list<array>
      */
@@ -228,7 +228,9 @@ class CourtierEcritureComptableService
             if (!$this->produitUneCreance($note)) {
                 continue;
             }
-            $date = $note->getSentAt() ?? $note->getCreatedAt();
+            // LA DATE D'ÉMISSION, celle de la validation qui fait naître la créance (règle
+            // OHADA, 2026-10-15) — et non plus la date d'envoi, qui se saisit et bougeait.
+            $date = $note->getEmiseLe() ?? $note->getSentAt() ?? $note->getCreatedAt();
             if ($date === null) {
                 continue;
             }

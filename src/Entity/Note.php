@@ -102,9 +102,22 @@ class Note implements OwnerAwareInterface
     #[Groups(['list:read'])]
     private ?string $titleSignedBy = null;
 
+    /** La date d'ENVOI (suivi) : une information, sans effet comptable — voir $emiseLe. */
     #[ORM\Column(nullable: true)]
     #[Groups(['list:read'])]
     private ?\DateTimeImmutable $sentAt = null;
+
+    /**
+     * LA DATE D'ÉMISSION : l'instant de la validation, posé en même temps que le numéro
+     * définitif ({@see \App\EventListener\NumerotationDesNotesListener}) et jamais saisi.
+     * C'est elle qui date la créance au journal et qui s'imprime sur la pièce. Le numéro
+     * suivant de la série est pris sous verrou APRÈS le commit de celui-ci : une note
+     * n'est donc jamais émise avant la précédente de sa série (règle OHADA). Null pour un
+     * brouillon.
+     */
+    #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
+    private ?\DateTimeImmutable $emiseLe = null;
 
     #[ORM\ManyToOne(inversedBy: 'notes')]
     #[ORM\JoinColumn(nullable: true)]
@@ -137,6 +150,10 @@ class Note implements OwnerAwareInterface
      */
     #[Groups(['list:read'])]
     public ?bool $aUnSoldeDu = null;
+
+    /** Condition d'affichage de l'action « Valider la note » (calculée, non persistée). */
+    #[Groups(['list:read'])]
+    public ?bool $aValider = null;
 
     /**
      * Badge de PROVENANCE : « Bordereau » quand la note est issue d'un bordereau de
@@ -398,9 +415,9 @@ class Note implements OwnerAwareInterface
     }
 
     /**
-     * Vide (null ou blanc), la note recevra son numéro à l'écriture
-     * ({@see \App\EventListener\NumerotationDesNotesListener}) : le champ du formulaire
-     * est facultatif à la création, et un champ texte laissé vide soumet null.
+     * La référence n'est jamais saisie : un brouillon reçoit une référence provisoire à
+     * l'écriture, une note validée son numéro définitif
+     * ({@see \App\EventListener\NumerotationDesNotesListener}).
      */
     public function setReference(?string $reference): static
     {
@@ -480,6 +497,25 @@ class Note implements OwnerAwareInterface
         $this->sentAt = $sentAt;
 
         return $this;
+    }
+
+    public function getEmiseLe(): ?\DateTimeImmutable
+    {
+        return $this->emiseLe;
+    }
+
+    /** Réservé à la numérotation : la date d'émission ne se saisit pas. */
+    public function setEmiseLe(?\DateTimeImmutable $emiseLe): static
+    {
+        $this->emiseLe = $emiseLe;
+
+        return $this;
+    }
+
+    /** Un brouillon : pas encore validé, il n'a ni numéro définitif ni valeur comptable. */
+    public function estBrouillon(): bool
+    {
+        return $this->validated !== true;
     }
 
     public function getBordereau(): ?Bordereau

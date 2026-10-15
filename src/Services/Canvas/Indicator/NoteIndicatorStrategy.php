@@ -46,6 +46,8 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             // « Signaler le règlement ». La proposer sur une note soldée inviterait à un
             // double encaissement, et ouvrirait un formulaire sans montant à proposer.
             'aUnSoldeDu' => NoteReglementScope::resteADue($montantTotal, $montantPaye),
+            // Seul un brouillon se valide : condition de l'action « Valider la note ».
+            'aValider' => $entity->estBrouillon(),
             'statutPaiement' => NoteReglementScope::libelleAffichage(
                 NoteReglementScope::statut($montantTotal, $montantPaye),
             ),
@@ -99,6 +101,7 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             // le bordereau : appelée seule sur une note de bordereau, elle lisait des
             // articles vides et répondait « N/A » à tort. Deux copies finissent par diverger.
             'aUnSoldeDu'       => NoteReglementScope::resteADue($montantTotal, $montantPaye),
+            'aValider'         => $note->estBrouillon(),
             'statutPaiement'   => NoteReglementScope::libelleAffichage(
                 NoteReglementScope::statut($montantTotal, $montantPaye),
             ),

@@ -181,7 +181,9 @@ class ReleveDeTranchePariteTest extends KernelTestCase
     private function note(int $destinataire, string $ref, ?AutoriteFiscale $autorite = null): Note
     {
         $note = (new Note())->setNom($ref)->setReference($ref)->setType(Note::TYPE_NOTE_DE_DEBIT)
-            ->setAddressedTo($destinataire)->setValidated(true)->setSignature('sig');
+            ->setAddressedTo($destinataire)->setValidated(true)->setSignature('sig')
+            // Déjà émise : elle garde sa référence, que le relevé cite.
+            ->setEmiseLe(new \DateTimeImmutable('-3 days'));
         $note->setEntreprise($this->ent)->setInvite($this->invite);
         if ($autorite !== null) {
             $note->setAutoritefiscale($autorite);

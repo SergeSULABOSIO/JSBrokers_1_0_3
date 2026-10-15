@@ -93,6 +93,10 @@ class WorkspaceMutationService
         // Une relation donnée par son id doit être du cabinet du périmètre. En dernier,
         // pour la même raison que ses voisins.
         private readonly AppartenanceAuCabinet $appartenance,
+        // Valider une note (`validated: true`) : le service même du geste d'écran — numéro
+        // définitif et date d'émission, en une transaction. En dernier, et facultatif, pour
+        // les tests qui construisent ce service à la main.
+        private readonly ?\App\Service\Note\EmissionDeNote $emission = null,
     ) {
     }
 
@@ -273,13 +277,23 @@ class WorkspaceMutationService
         // partage, objet d'un reversement) la liraient vide et refuseraient à tort ; celles
         // de l'avenant ne s'appliquent qu'à une cotation déjà écrite, donc lisible ici.
         //
-        // ET LA NOTE, en création comme en modification : sa seule règle (une référence
-        // n'appartient qu'à une note du cabinet) ne lit que la référence et le cabinet. De
-        // même la MONNAIE (une seule monnaie de travail) : elle ne lit que le cabinet.
+        // ET LA NOTE, en création comme en modification (ses règles ne lisent que la note
+        // elle-même et son cabinet). De même la MONNAIE (une seule monnaie de travail) : elle ne lit que le cabinet.
         // Et TYPEREVENU / CHARGEMENT (une commission ne se calcule pas sur une taxe) : leurs
         // règles ne lisent que la fonction du chargement et le cabinet.
         if ($manquants === [] && (($op->isCreate() && $op->entityShortName === 'Avenant') || in_array($op->entityShortName, ['Note', 'Monnaie', 'TypeRevenu', 'Chargement'], true))) {
             $manquants = $this->champsInspector->incoherencesMetier($copie, $op->entityShortName, null, $origine);
+        }
+
+        // VALIDER UNE NOTE EXISTANTE : le refus se dit dès l'analyse (déjà validée, vide,
+        // sans destinataire, montant nul…), par la règle même de l'exécution. Pas quand le
+        // plan touche aussi ses lignes : elles ne sont pas encore là, et l'exécution — qui
+        // valide APRÈS les collections — tranchera. Ni pour une note CRÉÉE dans le plan.
+        if ($manquants === [] && $op->entityShortName === 'Note' && !$op->isCreate() && $op->collections === []
+            && $copie instanceof \App\Entity\Note && $this->emission !== null
+            && array_key_exists('validated', $op->fields) && $this->versBooleen($op->fields['validated'])
+            && ($motif = $this->emission->motifDeRefus($copie)) !== null) {
+            $manquants = ['validated' => [$motif]];
         }
 
         // La création est « promise » aux opérations suivantes du plan.
@@ -592,6 +606,19 @@ class WorkspaceMutationService
         // exactement comme via son propre formulaire dans l'UI.
         $enfants = [];
         $this->executerCollections($entity, $op, $scope, $acteur, $op->entityShortName, 0, $enfants, $refs, $metrer, $origine);
+
+        // VALIDER UNE NOTE, APRÈS SES LIGNES. Le formulaire n'a pas de champ `validated` :
+        // la validation est un ACTE (numéro définitif, date d'émission, créance), confié à
+        // EmissionDeNote comme à l'écran. Et elle vient APRÈS les collections — l'en-tête
+        // s'écrit avant ses articles : validée plus tôt, la note serait émise vide.
+        if ($entity instanceof \App\Entity\Note && $entity->estBrouillon()
+            && array_key_exists('validated', $op->fields) && $this->versBooleen($op->fields['validated'])) {
+            try {
+                ($this->emission ?? throw new \LogicException('EmissionDeNote indisponible.'))->valider($entity);
+            } catch (\App\Service\Note\NoteNonValidable $refus) {
+                throw MutationException::invalide(sprintf('« %s » ne peut pas être validée.', $libelle), ['validated' => [$refus->getMessage()]]);
+            }
+        }
 
         return [
             'op'      => $op->op,

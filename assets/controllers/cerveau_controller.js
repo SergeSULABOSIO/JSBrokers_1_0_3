@@ -607,6 +607,12 @@ export default class extends Controller {
             case 'ui:note.preview-request':
                 this.handleNotePreviewRequest(payload);
                 break;
+            case 'ui:note.valider-request': // « Valider la note » : confirmation d'abord
+                this.handleNoteValiderRequest(payload);
+                break;
+            case 'client:note.valider-execute': // confirmation donnée → POST effectif
+                this._handleNoteValiderExecute(payload);
+                break;
             case 'ui:soa.view-request':
                 this.handleSoaViewRequest(payload);
                 break;
@@ -2201,6 +2207,66 @@ export default class extends Controller {
         const etat = this._getActiveTabState();
         this.broadcast('app:loading.start', { originatorId: etat.elementId, workspaceTabId: this.currentWorkspaceTabId });
         this._requestListRefresh(this.getActiveTabId());
+    }
+
+    /**
+     * « Valider la note » : le brouillon devient une pièce comptable (numéro définitif,
+     * date d'émission, créance au journal). IRRÉVERSIBLE — une note validée se corrige
+     * par un avoir —, d'où la confirmation, alerte « irréversible » affichée. Le serveur
+     * re-vérifie tout (droit, cabinet, état, montant) et dit pourquoi s'il refuse.
+     * @param {object} payload
+     * @param {string} payload.url - '/admin/note/api/{id}/valider' (id déjà résolu)
+     * @param {Array}  [payload.selection] - fourni par la toolbar / le menu contextuel
+     */
+    handleNoteValiderRequest(payload) {
+        if (!payload.url) {
+            console.error('[Cerveau] handleNoteValiderRequest() : URL manquante.', payload);
+            this._showNotification('Impossible de valider la note : contexte manquant.', 'error');
+            return;
+        }
+        const nomNote = payload.selection?.[0]?.name || 'la note sélectionnée';
+        this.broadcast('ui:confirmation.request', {
+            title: 'Valider la note',
+            body: "La note reçoit son numéro définitif et sa date d'émission, et sa créance entre au journal. Une note validée ne se modifie plus et ne se supprime pas : toute correction passera par un avoir.",
+            itemDescriptions: [nomNote],
+            showIrreversible: true,
+            onConfirm: {
+                type: 'client:note.valider-execute',
+                payload: { url: payload.url },
+            },
+        });
+    }
+
+    /**
+     * Exécute la validation après confirmation : POST, notification (le message du
+     * serveur porte le numéro attribué), puis rafraîchissement — l'action disparaît
+     * de la note validée (condition aValider).
+     * @private
+     */
+    async _handleNoteValiderExecute(payload) {
+        if (!payload.url) {
+            this.broadcast('ui:confirmation.error', { error: 'Contexte de validation manquant.' });
+            return;
+        }
+        try {
+            const response = await fetch(payload.url, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.message || `Erreur serveur ${response.status}`);
+
+            this._showNotification(data.message || 'Note validée.', 'success');
+            this._annoncerFicheModifiee();
+            const etat = this._getActiveTabState();
+            this._publishSelectionStatus('Actualisation de la liste...');
+            this.broadcast('app:loading.start', { originatorId: etat.elementId, workspaceTabId: this.currentWorkspaceTabId });
+            this._requestListRefresh(this.getActiveTabId());
+            this.broadcast('ui:confirmation.close');
+        } catch (error) {
+            console.error('[Cerveau] _handleNoteValiderExecute() failed:', error);
+            this.broadcast('ui:confirmation.error', { error: error.message || 'La validation a échoué.' });
+        }
     }
 
     /**

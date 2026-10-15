@@ -1937,7 +1937,7 @@ class MouvementAvenantTest extends WebTestCase
         $s = $this->seed();
         $t2 = $this->tranche($s, 'T2');
         $note = (new \App\Entity\Note())->setNom('Commission T2')->setType(\App\Entity\Note::TYPE_NOTE_DE_DEBIT)
-            ->setAddressedTo(\App\Entity\Note::TO_ASSUREUR)->setReference('N-T2-1')->setValidated(true)->setSignature('');
+            ->setAddressedTo(\App\Entity\Note::TO_ASSUREUR)->setValidated(true)->setSignature('');
         $note->setEntreprise($s['ent']);
         $this->em->persist($note);
         $article = (new \App\Entity\Article())->setQuantite(1.0);
@@ -1945,19 +1945,20 @@ class MouvementAvenantTest extends WebTestCase
         $article->setEntreprise($s['ent']);
         $this->em->persist($article);
         $this->em->flush();
+        $refNote = $note->getReference(); // numéro attribué à la validation
         $this->em->clear();
 
         $base = $this->em->getRepository(Avenant::class)->find($s['base']->getId());
         $d = $this->builder->construire(MouvementAvenant::Resiliation, $base, ['dateEffet' => '2026-06-15'], $this->scope($s));
         $this->assertSame([$t2->getId()], $this->tranchesARegulariser($d), 'Elle passe bien à régulariser.');
-        $this->assertStringContainsString('Commission déjà facturée : note n° N-T2-1, à régulariser auprès de l’assureur.', implode(' ', $d['avertissements']));
-        $this->assertSame('Commission déjà facturée : note n° N-T2-1, à régulariser auprès de l’assureur.', $d['regularisation']['echeances'][0]['commissionFacturee']);
+        $this->assertStringContainsString('Commission déjà facturée : note n° ' . $refNote . ', à régulariser auprès de l’assureur.', implode(' ', $d['avertissements']));
+        $this->assertSame('Commission déjà facturée : note n° ' . $refNote . ', à régulariser auprès de l’assureur.', $d['regularisation']['echeances'][0]['commissionFacturee']);
 
         // L'aperçu de l'écran le dit aussi.
         $this->client->request('GET', '/admin/avenant/api/mouvement-apercu/resiliation/' . $base->getId() . '?dateEffet=2026-06-15');
         $html = json_decode($this->client->getResponse()->getContent(), true)['html'];
         $this->assertStringContainsString('à régulariser', $html);
-        $this->assertStringContainsString('note n° N-T2-1', $html);
+        $this->assertStringContainsString('note n° ' . $refNote, $html);
         $this->assertStringContainsString('par note de crédit', $html);
     }
 
@@ -2009,7 +2010,7 @@ class MouvementAvenantTest extends WebTestCase
         $t2 = $this->tranche($s, 'T2');
         $ent = $this->em->getRepository(Entreprise::class)->find($s['ent']->getId());
         $avoir = (new \App\Entity\Note())->setNom('Avoir T2')->setType(\App\Entity\Note::TYPE_NOTE_DE_CREDIT)
-            ->setAddressedTo(\App\Entity\Note::TO_ASSUREUR)->setReference('AV-T2-1')->setValidated(true)->setSignature('');
+            ->setAddressedTo(\App\Entity\Note::TO_ASSUREUR)->setValidated(true)->setSignature('');
         $avoir->setEntreprise($ent);
         $this->em->persist($avoir);
         $article = (new \App\Entity\Article())->setQuantite(1.0);
@@ -2017,11 +2018,12 @@ class MouvementAvenantTest extends WebTestCase
         $article->setEntreprise($ent);
         $this->em->persist($article);
         $this->em->flush();
+        $refNote = $avoir->getReference(); // numéro attribué à la validation
         $this->em->clear();
 
         $this->client->request('DELETE', '/admin/avenant/api/delete-piste-derivee/' . $s['base']->getId());
         $this->assertResponseStatusCodeSame(409);
-        $this->assertStringContainsString('note n° AV-T2-1', json_decode($this->client->getResponse()->getContent(), true)['message']);
+        $this->assertStringContainsString('note n° ' . $refNote, json_decode($this->client->getResponse()->getContent(), true)['message']);
 
         $ket = $this->outil->execute(['mouvement' => 'resiliation', 'avenantId' => $s['base']->getId(), 'abandonnerMouvementExistant' => true], $this->scope($s));
         $this->assertStringContainsString('note de crédit', $ket->data['bloquant'] ?? '');
@@ -2065,7 +2067,7 @@ class MouvementAvenantTest extends WebTestCase
         $s = $this->seed();
         $t2 = $this->tranche($s, 'T2');
         $note = (new \App\Entity\Note())->setNom('Commission T2')->setType(\App\Entity\Note::TYPE_NOTE_DE_DEBIT)
-            ->setAddressedTo(\App\Entity\Note::TO_ASSUREUR)->setReference('N-T2-9')->setValidated(true)->setSignature('');
+            ->setAddressedTo(\App\Entity\Note::TO_ASSUREUR)->setValidated(true)->setSignature('');
         $note->setEntreprise($s['ent']);
         $this->em->persist($note);
         $article = (new \App\Entity\Article())->setQuantite(1.0);
@@ -2073,9 +2075,10 @@ class MouvementAvenantTest extends WebTestCase
         $article->setEntreprise($s['ent']);
         $this->em->persist($article);
         $this->em->flush();
+        $refNote = $note->getReference(); // numéro attribué à la validation
 
         $t2 = $this->resilierEtLireT2($s);
-        $this->assertSame('Commission déjà facturée : note n° N-T2-9, à régulariser auprès de l’assureur.', $t2->commissionDejaFacturee);
+        $this->assertSame('Commission déjà facturée : note n° ' . $refNote . ', à régulariser auprès de l’assureur.', $t2->commissionDejaFacturee);
     }
 
     /** Chips et Ket : hors de toute dette ; seul l'axe « régularisation » (ou la liste sans filtre) la montre. */

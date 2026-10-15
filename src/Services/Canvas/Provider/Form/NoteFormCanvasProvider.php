@@ -49,8 +49,13 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             // NOUVEAU : Définition de la barre d'outils pour le volet des attributs.
             // Cette barre ne sera affichée qu'en mode édition.
             "attribute_actions" => [
+                // LA PIÈCE : visualiser, imprimer, télécharger — trois gestes sur le même
+                // document, repliés en UNE famille. La barre n'affiche que quatre entrées en
+                // ligne ; « Valider la note » (2026-10-15) faisait la cinquième.
                 [
                     "label" => "Visualiser la note",
+                    "groupe" => "La pièce",
+                    "groupe_icone" => "action:view",
                     "icon" => "action:view", // Alias pour l'icône de visualisation
                     "event" => "ui:note.preview-request", // Événement à envoyer au cerveau
                     // CORRECTION : On utilise un placeholder %id% que le JavaScript remplacera par l'ID de l'élément sélectionné.
@@ -59,6 +64,7 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
                 // NOUVEAU : Action pour imprimer la note
                 [
                     "label" => "Imprimer",
+                    "groupe" => "La pièce",
                     "icon" => "action:print",
                     "event" => "ui:note.preview-request", // On réutilise le même événement qui ouvre une nouvelle fenêtre
                     "url" => "/admin/note/api/get-preview-url/%id%?print=1" // On ajoute un paramètre pour déclencher l'impression
@@ -66,6 +72,7 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
                 // NOUVEAU : Action pour télécharger la note en PDF
                 [
                     "label" => "Télécharger en PDF",
+                    "groupe" => "La pièce",
                     "icon" => "action:download",
                     "event" => "ui:note.preview-request", // On réutilise le même événement
                     "url" => "/admin/note/api/get-preview-url/%id%?download=1" // On ajoute un paramètre pour le téléchargement
@@ -92,6 +99,19 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
                     "droit" => ["entite" => "Note", "niveau" => Invite::ACCESS_ECRITURE], // garde de l'endpoint
                     "condition" => ["field" => "aUnSoldeDu", "value" => true],
                 ],
+                // ── VALIDER : LE BROUILLON DEVIENT UNE PIÈCE COMPTABLE ────────────────
+                // Numéro définitif de la série, date d'émission, créance au journal — et
+                // c'est irréversible : une note validée se corrige par un avoir (règle
+                // OHADA, 2026-10-15). D'où la confirmation, et la condition : seul un
+                // brouillon se valide.
+                [
+                    "label"     => "Valider la note",
+                    "icon"      => "action:check",
+                    "event"     => "ui:note.valider-request",
+                    "url"       => "/admin/note/api/%id%/valider",
+                    "droit" => ["entite" => "Note", "niveau" => Invite::ACCESS_ECRITURE], // garde de l'endpoint
+                    "condition" => ["field" => "aValider", "value" => true],
+                ],
             ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
@@ -108,7 +128,6 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
                 "partenaire"      => "partenaire",
                 "autoritefiscale" => "autorite-fiscale",
                 "nom"             => "action:edit",
-                "reference"       => "action:edit",
                 "description"     => "action:description",
                 "articles"        => "action:cart",
                 "paiements"       => "paiement",
@@ -172,10 +191,10 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             // Ligne 3: le nom
             ["colonnes" => [["champs" => ["nom"]]]],
 
-            // Ligne 4: la référence
-            ["colonnes" => [["champs" => ["reference"]]]],
+            // (La référence ne se saisit plus : provisoire pour un brouillon, numéro
+            // définitif à la validation — règle OHADA, 2026-10-15.)
 
-            // Ligne 5: La description détaillée (Editeur riche)
+            // Ligne 4: La description détaillée (Editeur riche)
             ["colonnes" => [["champs" => ["description"]]]],
 
         ];
@@ -222,7 +241,7 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             // Ligne 12: Titre du signataire
             ["colonnes" => [["champs" => ["titleSignedBy"]]]],
             
-            // Ligne 13: Date de soumission
+            // Ligne 13: Date d'envoi (suivi ; la date d'émission est celle de la validation)
             ["colonnes" => [["champs" => ["sentAt"]]]],
         ];
         

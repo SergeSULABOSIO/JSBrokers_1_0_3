@@ -6,36 +6,34 @@ use App\Entity\Note;
 use Doctrine\DBAL\Connection;
 
 /**
- * LE NUMÉRO D'UNE NOTE : unique dans son cabinet, et chronologique.
+ * LE NUMÉRO D'UNE NOTE : unique, chronologique et CONTINU dans sa série.
  *
- * ── LA RÈGLE (décisions du 2026-10-14) ──────────────────────────────────────────────
- * Le produit génère la référence : `ND-AAAA-NNNNN` pour une note de débit,
- * `NC-AAAA-NNNNN` pour une note de crédit. Chaque cabinet a ses séries ; chacune repart à
- * 1 le 1er janvier. Le champ reste ÉDITABLE : une référence saisie est conservée telle
- * quelle et ne consomme aucun numéro. Seule l'unicité dans le cabinet est imposée.
- *
- * Elle remplace `'N' . time()`, qui ne disait rien de l'ordre d'émission et pouvait se
- * répéter, ce qu'aucun contrôle n'empêchait.
+ * ── LA RÈGLE (pratique comptable OHADA, décision de Serge du 2026-10-15) ────────────
+ * Chaque note VALIDÉE porte un numéro `ND-AAAA-NNNNN` (débit) ou `NC-AAAA-NNNNN`
+ * (crédit) : une série par cabinet, par année d'émission et par type, sans trou ni
+ * doublon. Le numéro est attribué À LA VALIDATION — c'est elle qui fait naître la
+ * créance —, jamais à la saisie, et il ne se saisit pas. Un brouillon porte une
+ * référence PROVISOIRE, `BROUILLON-…`, clairement distincte : il peut être supprimé sans
+ * laisser de trou. (Avant le 2026-10-15, le numéro était pris à la création et la
+ * référence restait éditable ; la règle OHADA l'a remplacé.)
  *
  * ── POURQUOI UNE SEULE INSTRUCTION SQL ──────────────────────────────────────────────
  * `UPDATE … SET sequence = LAST_INSERT_ID(sequence + 1)` incrémente et retient la nouvelle
- * valeur pour CETTE connexion, en un seul geste : la ligne est verrouillée le temps de
- * l'instruction, et deux enregistrements simultanés obtiennent deux numéros. Lire puis
- * écrire en deux temps les aurait laissés repartir avec le même.
+ * valeur pour CETTE connexion, en un seul geste. La ligne de la série reste verrouillée
+ * (InnoDB) jusqu'à la fin de la transaction : une seconde validation de la même série
+ * ATTEND, puis prend le numéro suivant. Deux validations simultanées ne lisent donc
+ * jamais la même valeur, et la chronologie suit l'ordre des numéros.
  *
- * ⚠ UN NUMÉRO PEUT SE PERDRE, JAMAIS SE RÉPÉTER. Le numéro est pris juste avant
- * l'écriture de la note ; si celle-ci échoue ensuite, il reste consommé (sauf quand une
- * transaction englobante l'annule, comme le contrôle à blanc de Ket). La série reste
- * unique et chronologique ; un trou y est possible, rare.
- *
- * ⚠ DANS UNE TRANSACTION ENGLOBANTE, LA SÉRIE RESTE VERROUILLÉE JUSQU'À SA FIN (plan de
- * Ket, palier d'import) : les autres notes du même cabinet et du même type attendent. C'est
- * le prix d'un numéro rendu à la série quand l'écriture est annulée. Prendre le numéro sur
- * une connexion à part libérerait la série aussitôt, mais chaque contrôle à blanc, chaque
- * import annulé y laisserait un trou.
+ * ⚠ PAS DE TROU, À UNE CONDITION : QUE LA VALIDATION SOIT DANS UNE TRANSACTION. Si elle
+ * échoue après la prise du numéro, l'annulation rend l'incrément à la série. C'est
+ * pourquoi toute validation passe par {@see EmissionDeNote::valider}, qui l'enveloppe —
+ * Doctrine, lui, déclenche `onFlush` AVANT d'ouvrir sa propre transaction.
  */
 final class NumerotationDesNotes
 {
+    /** Préfixe des références provisoires : un brouillon n'a pas de numéro. */
+    public const PREFIXE_BROUILLON = 'BROUILLON-';
+
     public function __construct(private readonly Connection $connexion)
     {
     }
@@ -52,43 +50,65 @@ final class NumerotationDesNotes
     }
 
     /**
-     * Réserve et rend le prochain numéro libre de la série.
+     * Réserve et rend le numéro suivant de la série.
      *
-     * Un numéro déjà porté par une note du cabinet (saisi à la main, ou repris d'un
-     * import) est sauté : la référence générée ne collisionne jamais.
-     *
-     * @param list<string> $dejaPrises références posées dans la même écriture, pas
-     *                                 encore en base
+     * Un numéro déjà PORTÉ par une note du cabinet est sauté : il est déjà émis (pièce
+     * d'avant cette règle, quand la référence se saisissait encore), donc pas un trou. Le
+     * refuser bloquerait la série pour toujours — chaque essai annulé retomberait dessus.
      */
-    public function prochaine(int $entrepriseId, ?int $type, int $annee, array $dejaPrises = []): string
+    public function prochaine(int $entrepriseId, ?int $type, int $annee): string
     {
         $serie = $type === Note::TYPE_NOTE_DE_CREDIT ? Note::TYPE_NOTE_DE_CREDIT : Note::TYPE_NOTE_DE_DEBIT;
 
-        // La ligne de la série naît à 0 la première fois ; IGNORE laisse intacte celle
-        // qui existe déjà, y compris si un enregistrement simultané vient de la créer.
-        $this->connexion->executeStatement(
-            'INSERT IGNORE INTO compteur_de_notes (entreprise_id, annee, type, sequence) VALUES (?, ?, ?, 0)',
-            [$entrepriseId, $annee, $serie],
-        );
-
-        // Comparées comme la base les compare : la casse ne distingue pas deux références.
-        $dejaPrises = array_map('mb_strtolower', $dejaPrises);
-
         do {
-            $touchees = $this->connexion->executeStatement(
-                'UPDATE compteur_de_notes SET sequence = LAST_INSERT_ID(sequence + 1)'
-                . ' WHERE entreprise_id = ? AND annee = ? AND type = ?',
+            $reference = self::formater($serie, $annee, $this->incrementer($entrepriseId, $annee, $serie));
+        } while ($this->estDejaPortee($entrepriseId, $reference));
+
+        return $reference;
+    }
+
+    /**
+     * Incrémente la série et rend la nouvelle valeur.
+     *
+     * ⚠ L'UPDATE D'ABORD, la création de la ligne seulement à défaut. Un `INSERT IGNORE`
+     * sur une ligne existante pose un verrou PARTAGÉ tenu jusqu'au commit : deux
+     * validations simultanées le prenaient chacune, puis chacune attendait l'autre pour
+     * l'UPDATE — un interblocage. Une série existe presque toujours : l'UPDATE seul suffit.
+     */
+    private function incrementer(int $entrepriseId, int $annee, int $serie): int
+    {
+        $sql = 'UPDATE compteur_de_notes SET sequence = LAST_INSERT_ID(sequence + 1) WHERE entreprise_id = ? AND annee = ? AND type = ?';
+        $touchees = $this->connexion->executeStatement($sql, [$entrepriseId, $annee, $serie]);
+
+        if ($touchees !== 1) {
+            // La série naît à 0 ; IGNORE laisse intacte celle qu'une validation simultanée
+            // viendrait de créer.
+            $this->connexion->executeStatement(
+                'INSERT IGNORE INTO compteur_de_notes (entreprise_id, annee, type, sequence) VALUES (?, ?, ?, 0)',
                 [$entrepriseId, $annee, $serie],
             );
-            // ⚠ SANS LIGNE TOUCHÉE, LAST_INSERT_ID() GARDE UNE VALEUR PÉRIMÉE — et la boucle
-            // retomberait indéfiniment sur le même numéro. IGNORE n'avale pas que les
-            // doublons (une clé étrangère refusée aussi) : on ne se fie qu'au fait.
-            if ($touchees !== 1) {
-                throw new \LogicException(sprintf('Série de notes introuvable (cabinet %d, %d, type %d) : aucun numéro attribué.', $entrepriseId, $annee, $serie));
-            }
-            $sequence = (int) $this->connexion->fetchOne('SELECT LAST_INSERT_ID()');
-            $reference = self::formater($serie, $annee, $sequence);
-        } while (in_array(mb_strtolower($reference), $dejaPrises, true) || $this->estDejaPortee($entrepriseId, $reference));
+            $touchees = $this->connexion->executeStatement($sql, [$entrepriseId, $annee, $serie]);
+        }
+        // ⚠ SANS LIGNE TOUCHÉE, LAST_INSERT_ID() GARDE UNE VALEUR PÉRIMÉE. IGNORE n'avale
+        // pas que les doublons (une clé étrangère refusée aussi) : on ne se fie qu'au fait.
+        if ($touchees !== 1) {
+            throw new \LogicException(sprintf('Série de notes introuvable (cabinet %d, %d, type %d) : aucun numéro attribué.', $entrepriseId, $annee, $serie));
+        }
+
+        return (int) $this->connexion->fetchOne('SELECT LAST_INSERT_ID()');
+    }
+
+    /**
+     * Une référence provisoire, unique dans le cabinet : `BROUILLON-` (ou le préfixe
+     * donné) suivi de huit caractères hexadécimaux. Elle ne consomme aucun numéro.
+     *
+     * @param list<string> $dejaPrises références posées dans la même écriture
+     */
+    public function provisoire(int $entrepriseId, string $prefixe = self::PREFIXE_BROUILLON, array $dejaPrises = []): string
+    {
+        do {
+            $reference = $prefixe . strtoupper(bin2hex(random_bytes(4)));
+        } while (in_array($reference, $dejaPrises, true) || $this->estDejaPortee($entrepriseId, $reference));
 
         return $reference;
     }

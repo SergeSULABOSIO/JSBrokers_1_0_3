@@ -29,6 +29,8 @@ use setasign\Fpdi\Tcpdf\Fpdi;
 use setasign\Fpdi\PdfParser\StreamReader;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Service\Workspace\ValeursDeNaissance;
+use App\Service\Note\EmissionDeNote;
+use App\Service\Note\NoteNonValidable;
 use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
 use App\Controller\Admin\ControllerUtilsTrait;
@@ -65,6 +67,9 @@ class NoteController extends AbstractController
         // La règle de facturation, partagée avec l'assistant : l'en-tête d'une note
         // déduite d'une échéance se calcule au même endroit pour les deux surfaces.
         private SourceDeFacturation $sourceDeFacturation,
+        // Le SEUL chemin de la validation : numéro définitif et date d'émission, en une
+        // transaction (règle OHADA).
+        private EmissionDeNote $emissionDeNote,
         CanvasBuilder $canvasBuilder
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait
@@ -123,8 +128,8 @@ class NoteController extends AbstractController
                         $note->setType(Note::TYPE_NOTE_DE_DEBIT);
                         $note->setAddressedTo(Note::TO_ASSUREUR);
                         $note->setAssureur($bordereau->getAssureur());
-                        // La référence du bordereau est dans l'OBJET ; la note prend le
-                        // numéro de sa série, comme toute note (décision du 2026-10-14).
+                        // La référence du bordereau est dans l'OBJET ; la note prendra le
+                        // numéro de sa série à sa validation, comme toute note (OHADA).
                         $note->setNom('Commission — Bordereau ' . $bordereau->getReference());
                         return;
                     }
@@ -273,6 +278,38 @@ class NoteController extends AbstractController
      * Un paiement est une sous-entité structurelle gouvernée par sa note — c'est déjà
      * ainsi qu'il se saisit dans le dialogue de la note, par sa collection.
      */
+    /**
+     * « VALIDER LA NOTE » : le brouillon devient une pièce comptable — numéro définitif
+     * de sa série, date d'émission, créance au journal. Irréversible : une note validée
+     * se corrige par un avoir (règle OHADA, décision du 2026-10-15). Le geste passe par
+     * {@see EmissionDeNote}, comme le picker et Ket.
+     */
+    #[Route('/api/{id}/valider', name: 'api.valider', requirements: ['id' => Requirement::DIGITS], methods: ['POST'], priority: 1)]
+    public function validerApi(Note $note): JsonResponse
+    {
+        if (!$this->mayAccessEntity(Note::class, Invite::ACCESS_ECRITURE)) {
+            return $this->accessDeniedJson();
+        }
+
+        // Un id d'un autre cabinet : 404, sans confirmer qu'il existe.
+        $entreprise = $this->getEntreprise();
+        if ($entreprise === null || $note->getEntreprise()?->getId() !== $entreprise->getId()) {
+            return $this->json(['message' => 'Note introuvable dans cet espace de travail.'], Response::HTTP_NOT_FOUND);
+        }
+
+        try {
+            $this->emissionDeNote->valider($note);
+        } catch (NoteNonValidable $refus) {
+            return $this->json(['message' => $refus->getMessage()], Response::HTTP_CONFLICT);
+        }
+
+        return $this->json([
+            'message' => sprintf('Note validée : elle porte désormais le numéro %s.', $note->getReference()),
+            'noteId' => $note->getId(),
+            'reference' => $note->getReference(),
+        ]);
+    }
+
     #[Route('/api/{id}/paiement-context', name: 'api.paiement_context', requirements: ['id' => Requirement::DIGITS], methods: ['GET'], priority: 1)]
     public function getPaiementContext(Note $note, Request $request): JsonResponse
     {
@@ -351,10 +388,9 @@ class NoteController extends AbstractController
         $note = (new Note())
             ->setType($type)
             ->setAddressedTo($addressedTo)
-            ->setNom(trim((string) ($donnees['objet'] ?? '')) ?: ($type === Note::TYPE_NOTE_DE_CREDIT ? 'Avoir sur commission' : 'Commission'))
-            ->setValidated(true);
-        // Signature et date d'émission (la référence est prise à l'écriture) : un seul endroit, partagé avec le
-        // formulaire et avec l'écriture de l'assistant.
+            ->setNom(trim((string) ($donnees['objet'] ?? '')) ?: ($type === Note::TYPE_NOTE_DE_CREDIT ? 'Avoir sur commission' : 'Commission'));
+        // Signature et valeurs de naissance : un seul endroit, partagé avec le formulaire
+        // et avec l'écriture de l'assistant. La validation vient à la fin (EmissionDeNote).
         $this->valeursDeNaissance->poser($note);
         $note->setEntreprise($entreprise)->setInvite($this->getInvite());
 
@@ -442,8 +478,13 @@ class NoteController extends AbstractController
             );
         }
 
-        $this->em->persist($note);
-        $this->em->flush();
+        // ÉMETTRE, C'EST VALIDER — dans une transaction : la note, ses lignes, son numéro
+        // et sa date d'émission s'écrivent ensemble, ou rien ne s'écrit (pas de trou).
+        try {
+            $this->emissionDeNote->valider($note);
+        } catch (NoteNonValidable $refus) {
+            return $this->json(['message' => $refus->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
 
         return $this->json([
             'message' => sprintf(
@@ -710,8 +751,8 @@ class NoteController extends AbstractController
                     // ENDROIT — et, sur ce chemin, AVANT le contrôle des champs obligatoires
                     // (ControllerUtilsTrait::handleFormSubmission). L'appel ci-dessous reste
                     // comme filet : `poser()` ne remplace rien de ce qui est déjà posé. La
-                    // référence, elle, est le numéro de la série, pris à l'écriture
-                    // (NumerotationDesNotesListener) quand le champ est laissé vide.
+                    // référence, elle, est provisoire jusqu'à la validation, qui pose le
+                    // numéro de la série (NumerotationDesNotesListener).
                     //
                     // Ces trois valeurs étaient posées ici, et une seconde fois plus haut
                     // dans ce contrôleur — donc nulle part ailleurs. Tout ce qui écrit
