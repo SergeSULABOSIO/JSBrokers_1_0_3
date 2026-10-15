@@ -2,7 +2,7 @@
 
 namespace App\Tests\Ai;
 
-use App\Constantes\Constante;
+use App\Ai\Proposition\RevenuCourtierPrescrit;
 use App\Entity\Chargement;
 use App\Entity\ChargementPourPrime;
 use App\Entity\Client;
@@ -11,32 +11,27 @@ use App\Entity\Piste;
 use App\Entity\RevenuPourCourtier;
 use App\Entity\Risque;
 use App\Entity\TypeRevenu;
+use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
- * CE QUE KET ANNONCE DOIT ÊTRE CE QUE L'APPLICATION FACTURE.
+ * CE QUE KET ANNONCE DOIT ÊTRE CE QUE LES ÉCRANS FACTURENT.
  *
  * ── POURQUOI CE TEST EXISTE ─────────────────────────────────────────────────────────
- * ⚠ DEUX LECTURES D'UNE MÊME CASCADE, ET RIEN NE LES TENAIT ENSEMBLE.
- * `Constante::Revenu_getMontant_ht()` CALCULE la rémunération du courtier ;
- * `RevenuCourtierPrescrit::prescription()` l'ANNONCE à l'utilisateur avant écriture
- * (« Rémunération du courtier : "Commission Ordinaire" — 10,00 % (taux prescrit par le
- * risque) »). La seconde se déclare « dans l'ordre exact de la cascade » de la première —
- * une promesse tenue par un commentaire, c'est-à-dire par personne.
+ * `RevenuCourtierPrescrit::prescription()` ANNONCE la rémunération du courtier avant
+ * écriture (« "Commission Ordinaire" — 10,00 % (taux prescrit par le risque) ») ; les
+ * écrans, la facturation, les notes et la comptabilité la CALCULENT par
+ * `IndicatorCalculationHelper::getRevenuMontantHt()`.
  *
- * Elle a d'ailleurs été rompue : l'ordre du calcul a changé le 2026-09-12 (le taux
- * exceptionnel du revenu passe avant celui du risque, et le forfait d'un type s'ajoute au
- * lieu d'être multiplié par l'assiette) sans que rien n'oblige le miroir à suivre.
+ * ⚠ CE TEST COMPARAIT KET À LA CASCADE DE `Constante`, PAS AUX ÉCRANS — et les
+ * deux cascades n'avaient pas le même ordre : `Constante` (et Ket) plaçaient le taux du
+ * RISQUE avant le pourcentage du TYPE, les écrans l'inverse. Un type qui portait les deux
+ * facturait 10 % pendant que Ket en annonçait 15 %, sans que rien ne le voie. Décision du
+ * 2026-10-15 (chantier « Assiette et source unique de la commission ») : l'ordre des
+ * ÉCRANS fait foi, c'est celui qui a été facturé ; une seule règle, `TarifDuRevenu`.
  *
- * ── CE QUE LA PARITÉ SIGNIFIE ICI ───────────────────────────────────────────────────
- * Pour une même configuration, le taux ANNONCÉ appliqué à l'assiette doit rendre
- * exactement le montant CALCULÉ. Si les deux divergent, Ket promet une commission que la
- * facture ne portera pas — et c'est l'utilisateur qui découvre l'écart, au relevé.
- *
- * ⚠ LA PREMIÈRE BRANCHE DE LA CASCADE VIT AILLEURS, et c'est normal : `prescription()` dit
- * ce que la configuration prescrit À DÉFAUT de dérogation, puisque le revenu n'existe pas
- * encore. Le taux DICTÉ est porté par `deriver()`. Le dernier cas ci-dessous vérifie que
- * cette moitié-là tient aussi : un taux dicté doit être ce que le calcul retient.
+ * ⚠ LA PREMIÈRE BRANCHE (taux DICTÉ) vit dans `deriver()`, qui l'écrit en
+ * `tauxExceptionel` sur le revenu : le dernier cas vérifie que les écrans le retiennent.
  */
 class RevenuCourtierPrescritPariteTest extends KernelTestCase
 {
@@ -45,7 +40,7 @@ class RevenuCourtierPrescritPariteTest extends KernelTestCase
     /**
      * @dataProvider configurations
      */
-    public function testLeTauxAnnonceEstCeluiQuiCalcule(
+    public function testLeMontantAnnonceParKetEstCeluiQueLesEcransFacturent(
         bool $adosseAuRisque,
         float $tauxDuRisque,
         ?float $pourcentageDuType,
@@ -54,60 +49,63 @@ class RevenuCourtierPrescritPariteTest extends KernelTestCase
     ): void {
         $revenu = $this->revenu($adosseAuRisque, $tauxDuRisque, $pourcentageDuType, $forfaitDuType);
 
-        $calcule = $this->constante()->Revenu_getMontant_ht($revenu);
-        self::assertSame($montantAttendu, $calcule, 'Le calcul lui-même doit être celui attendu.');
+        $facture = $this->ecrans()->getRevenuMontantHt($revenu);
+        self::assertEqualsWithDelta($montantAttendu, $facture, 0.005, 'Ce que les écrans facturent.');
 
-        // ⚠ ON PASSE PAR LE TARIF EFFECTIF, jumeau déclaré de la cascade et source de ce
-        // que l'export et l'écran affichent. S'il divergeait du calcul, tout ce qui
-        // annonce un taux à l'utilisateur mentirait de la même façon.
-        $tarif = $this->constante()->Revenu_getTarif_effectif($revenu);
-
-        $annonce = $tarif['taux'] !== null
-            ? self::PRIME_NETTE * ($tarif['taux'] / 100.0)
-            : (float) ($tarif['forfait'] ?? 0.0);
-
-        self::assertEqualsWithDelta(
-            $calcule,
-            $annonce,
-            0.005,
-            'Ce qui est annoncé à l\'utilisateur doit produire ce que l\'application facture.',
-        );
+        self::assertEqualsWithDelta($facture, $this->annonceDeKet($revenu), 0.005,
+            'Ce que Ket annonce avant l’écriture doit être ce que les écrans factureront.');
     }
 
     public static function configurations(): iterable
     {
-        // Le taux du risque, quand le type s'y adosse.
+        // Le taux du risque, quand le type s'y adosse et ne porte rien d'autre.
         yield 'taux du risque' => [true, 10.0, null, null, 1000.0];
 
         // Le taux propre au type, quand il ne s'adosse pas au risque.
         yield 'taux du type' => [false, 0.0, 12.0, null, 1200.0];
 
-        // ⚠ LE FORFAIT D'UN TYPE S'AJOUTE, IL NE SE MULTIPLIE PAS. Il était multiplié par
-        // l'assiette : 5 000 sur une prime de 10 000 facturait cinquante millions, quand
-        // le miroir annonçait « montant forfaitaire de 5 000 ». C'est cet écart-là qui a
-        // révélé lequel des deux disait vrai.
+        // ⚠ LE FORFAIT D'UN TYPE S'AJOUTE, IL NE SE MULTIPLIE PAS.
         yield 'forfait du type' => [false, 0.0, null, 5000.0, 5000.0];
+
+        // ⚠ LE DRAPEAU ET UN POURCENTAGE : le pourcentage du TYPE l'emporte (ordre des
+        // écrans). Ket annonçait le taux du risque, 15 %, pour une facture à 10 %.
+        yield 'drapeau et pourcentage du type' => [true, 15.0, 10.0, null, 1000.0];
+
+        // Le drapeau et un forfait : le forfait du type l'emporte.
+        yield 'drapeau et forfait du type' => [true, 15.0, null, 5000.0, 5000.0];
+
+        // Le drapeau, un risque sans taux, rien sur le type : rien n'est prescrit.
+        yield 'risque sans taux' => [true, 0.0, null, null, 0.0];
+    }
+
+    public function testUnTauxDicteParKetEstCeluiQueLesEcransFacturent(): void
+    {
+        $revenu = $this->revenu(adosseAuRisque: true, tauxDuRisque: 10.0, pourcentageDuType: 12.0);
+        $revenu->setTauxExceptionel(17.5);
+
+        self::assertEqualsWithDelta(1750.0, $this->ecrans()->getRevenuMontantHt($revenu), 0.005,
+            'Un taux dicté par l’assistant (taux exceptionnel du revenu) l’emporte sur tout.');
     }
 
     /**
-     * ⚠ ET LA MOITIÉ PORTÉE PAR `deriver()` : UN TAUX DICTÉ L'EMPORTE.
-     *
-     * Ket écrit alors un `tauxExceptionel` sur le revenu. Avant la correction du 2026-09-12,
-     * ce taux était enregistré puis IGNORÉ dès que le type s'adossait au risque — Ket
-     * annonçait « taux exceptionnel dicté de 17,50 % » et l'application facturait les 10 %
-     * du risque. La promesse de l'assistant était fausse, et rien ne le disait.
+     * Ce que Ket annonce pour ce type et ce risque (méthode privée de l'annonce : elle n'a
+     * pas d'autre entrée hors de la base), rapporté à l'assiette.
      */
-    public function testUnTauxDicteParKetEstCeluiQuiCalcule(): void
+    private function annonceDeKet(RevenuPourCourtier $revenu): float
     {
-        $revenu = $this->revenu(adosseAuRisque: true, tauxDuRisque: 10.0);
-        $revenu->setTauxExceptionel(17.5);
+        $prescrit = static::getContainer()->get(RevenuCourtierPrescrit::class);
+        $methode = new \ReflectionMethod($prescrit, 'prescription');
+        $prescription = $methode->invoke($prescrit, $revenu->getTypeRevenu(), $revenu->getCotation()->getPiste()->getRisque());
 
-        self::assertSame(
-            1750.0,
-            $this->constante()->Revenu_getMontant_ht($revenu),
-            'Un taux dicté par l\'assistant doit être celui qui facture.',
-        );
-        self::assertSame(17.5, $this->constante()->Revenu_getTarif_effectif($revenu)['taux']);
+        if ($prescription === null) {
+            return 0.0;
+        }
+        if ($prescription['taux'] !== null) {
+            return self::PRIME_NETTE * $prescription['taux']->fraction();
+        }
+
+        // Un forfait : l'annonce le nomme ; c'est le forfait du type.
+        return (float) $revenu->getTypeRevenu()->getMontantflat();
     }
 
     /** Une affaire montée en mémoire, assise sur une prime nette de 10 000. */
@@ -117,7 +115,9 @@ class RevenuCourtierPrescritPariteTest extends KernelTestCase
         ?float $pourcentageDuType = null,
         ?float $forfaitDuType = null,
     ): RevenuPourCourtier {
+        // Les écrans apparient le chargement cible PAR IDENTIFIANT : il en faut un.
         $primeNette = (new Chargement())->setNom('Prime nette')->setFonction(Chargement::FONCTION_PRIME_NETTE);
+        (new \ReflectionProperty($primeNette, 'id'))->setValue($primeNette, 1);
 
         $type = (new TypeRevenu())->setNom('Commission Ordinaire')->setTypeChargement($primeNette)
             ->setAppliquerPourcentageDuRisque($adosseAuRisque);
@@ -144,10 +144,10 @@ class RevenuCourtierPrescritPariteTest extends KernelTestCase
         return $revenu;
     }
 
-    private function constante(): Constante
+    private function ecrans(): IndicatorCalculationHelper
     {
         self::bootKernel();
 
-        return static::getContainer()->get(Constante::class);
+        return static::getContainer()->get(IndicatorCalculationHelper::class);
     }
 }

@@ -136,10 +136,15 @@ de frais accessoires + 1 840 de TVA + 230 d'ARCA, risque à 15 %.
   **conforme**. *À confirmer auprès de l'ARCA en cas de contrôle.* (La lecture large — toute la
   prime hors taxes — aurait donné 11 500 × 15 % = 1 725, soit 225 de plus dans l'épreuve ; elle
   n'est PAS retenue.)
-- ⚠ **Écart 1 — un chargement de TAXE peut servir d'assiette.** Le champ « Chargement cible »
+- ✅ **Écart 1 RÉSOLU** (`310a724f`) : le sélecteur n'offre plus de taxe (ni de chargement
+  d'un autre cabinet) et une garde serveur refuse, écran comme Ket (`AssietteDeLaCommissionTest`).
+  Constat d'origine : **un chargement de TAXE pouvait servir d'assiette.** Le champ « Chargement cible »
   (`TypeRevenuType.php:56-62`) n'est filtré sur aucune fonction : un type à 10 % visant la TVA
   facture **184** de commission sur une taxe — contraire à l'Art. 2 dans toutes les lectures.
-- ⚠ **Écart 2 — deux cascades n'ont pas le même ordre.** Les écrans et la facturation
+- ✅ **Écart 2 RÉSOLU** : une seule règle, `TarifDuRevenu`, dans l'ordre des écrans (celui qui
+  a été facturé) ; la cascade de `Constante` est supprimée, Ket et l'export s'y alignent
+  (`RevenuCourtierPrescritPariteTest` compare désormais Ket aux ÉCRANS). Constat d'origine :
+  **deux cascades n'avaient pas le même ordre.** Les écrans et la facturation
   (`IndicatorCalculationHelper`, :1084-1096) appliquent le pourcentage du TYPE avant le taux du
   RISQUE ; `Constante::Revenu_getMontant_ht` (:913, :949-970) et l'annonce de Ket
   (`RevenuCourtierPrescrit::prescription`, :292-309) font l'inverse, comme le promet le
@@ -151,9 +156,11 @@ de frais accessoires + 1 840 de TVA + 230 d'ARCA, risque à 15 %.
   de `courtage-assurance`.)
 - ⚠ **Écart 3 — deux lignes du même chargement sur une cotation.** Rien ne l'interdit
   (`ChargementPourPrime` sans contrainte d'unicité) ; les écrans retiennent la PREMIÈRE ligne
-  (`break`, :1112), `Constante` la DERNIÈRE (`Cotation_getMontant_chargement_prime`,
-  :899-911) ; aucun ne les additionne. Prime nette 10 000 + 4 000 : écrans **1 500**, Ket
-  **600**, somme attendue 2 100.
+  (`IndicatorCalculationHelper::getCotationMontantChargementPrime`, `break`) ; aucune lecture ne
+  les additionne. Prime nette 10 000 + 4 000 : écrans **1 500**, somme attendue 2 100. (La
+  copie de `Constante`, qui retenait la DERNIÈRE ligne — 600 —, est supprimée avec l'écart 2 :
+  il ne reste qu'un calcul, celui des écrans.) **En attente** de la mesure d'impact en
+  production (décision de Serge sur l'historique).
 
 ### Chantiers ultérieurs (CIBLE ou à décider — sans plan détaillé, rien à coder sans plan validé)
 

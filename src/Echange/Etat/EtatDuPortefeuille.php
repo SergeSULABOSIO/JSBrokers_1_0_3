@@ -3,7 +3,6 @@
 namespace App\Echange\Etat;
 
 use App\Ai\Finance\EconomieTranche;
-use App\Constantes\Constante;
 use App\Echange\Reprise\ValeursMultiples;
 use App\Echange\Service\Progression;
 use App\Entity\Avenant;
@@ -73,10 +72,6 @@ final class EtatDuPortefeuille
         private readonly IndicatorCalculationHelper $helper,
         // La condition retenue pour un bénéficiaire : source unique du taux affiché.
         private readonly BeneficiaireRetroFactory $beneficiaires,
-        // Le TARIF EFFECTIF d'un revenu se lit sur la cascade qui le CALCULE, jamais sur
-        // une seconde version écrite ici : deux lectures qui divergent afficheraient un
-        // taux que la commission ne suit pas.
-        private readonly Constante $constante,
     ) {
     }
 
@@ -436,8 +431,8 @@ final class EtatDuPortefeuille
      * le marqueur : la valeur est ÉCRITE pour être lue, et MARQUÉE pour n'être pas
      * reprise ({@see \App\Echange\Reprise\ValeursMultiples}).
      *
-     * ⚠ ET LE TARIF SE LIT SUR LA CASCADE QUI CALCULE. `Revenu_getTarif_effectif()` est
-     * la jumelle de `Revenu_getMontant_ht()` : en réécrire une seconde version ici
+     * ⚠ ET LE TARIF SE LIT SUR LA RÈGLE QUI CALCULE ({@see \App\Service\Commission\TarifDuRevenu},
+     * celle des écrans et de la facturation) : en réécrire une seconde version ici
      * afficherait tôt ou tard un taux que la commission ne suit pas.
      */
     private function revenusDe(?Cotation $cotation): ?string
@@ -467,7 +462,7 @@ final class EtatDuPortefeuille
                 $nom = 'Revenu sans nom';
             }
 
-            $tarif = $this->constante->Revenu_getTarif_effectif($revenu);
+            $tarif = \App\Service\Commission\TarifDuRevenu::deRevenu($revenu);
             $herite = $tarif['origine'] !== 'revenu';
 
             if ($tarif['taux'] !== null) {

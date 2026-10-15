@@ -96,8 +96,9 @@ final class ParcoursCatalogue
                     ],
                     'note' => 'AUCUNE proposition ne se place sans commission : cette étape est ajoutée '
                         . 'D’OFFICE. Le type de revenu (« typeRevenu ») est OBLIGATOIRE — c’est lui qui porte '
-                        . 'la base de calcul et le taux. À défaut de taux exceptionnel, le taux prescrit par '
-                        . 'la configuration du RISQUE de l’opportunité s’applique, puis celui du type. Ne '
+                        . 'la base de calcul et le taux. À défaut de taux exceptionnel, le pourcentage ou le '
+                        . 'forfait du TYPE s’applique ; à défaut, le taux prescrit par le RISQUE de '
+                        . 'l’opportunité si le type s’y adosse. Ne '
                         . 'demande donc pas un taux qui est déjà prescrit.',
                 ],
                 [

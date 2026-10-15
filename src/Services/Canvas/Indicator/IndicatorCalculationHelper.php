@@ -1069,34 +1069,22 @@ class IndicatorCalculationHelper implements ResetInterface
         return $montant;
     }
 
+    /**
+     * La commission HT d'un revenu : son TARIF (TarifDuRevenu — taux du revenu, forfait du
+     * revenu, % du type, forfait du type, taux du risque, dans cet ordre) appliqué à
+     * l'ASSIETTE (le chargement cible de son type). Une seule règle pour les écrans, la
+     * facturation, l'export et Ket.
+     */
     public function getRevenuMontantHt(?RevenuPourCourtier $revenu): float
     {
-        $montant = 0;
-        if ($revenu) {
-            $typeRevenu = $revenu->getTypeRevenu();
-            if ($typeRevenu) {
-                $cotation = $revenu->getCotation();
-                $montantChargementPrime = $this->getCotationMontantChargementPrime($cotation, $typeRevenu);
-
-                // PRIORITÉ 1 : Exceptions sur l'instance de revenu (Overrule)
-                if ($revenu->getTauxExceptionel() && $revenu->getTauxExceptionel() != 0) {
-                    $montant = $montantChargementPrime * $revenu->getFraction();
-                } elseif ($revenu->getMontantFlatExceptionel() && $revenu->getMontantFlatExceptionel() != 0) {
-                    $montant = $revenu->getMontantFlatExceptionel();
-                } 
-                // PRIORITÉ 2 : Valeurs par défaut du Type de Revenu
-                elseif ($typeRevenu->getPourcentage() && $typeRevenu->getPourcentage() != 0) {
-                    $montant = $montantChargementPrime * $typeRevenu->getFraction();
-                } elseif ($typeRevenu->getMontantflat() && $typeRevenu->getMontantflat() != 0) {
-                    $montant = $typeRevenu->getMontantflat();
-                }
-                // PRIORITÉ 3 : Logique dynamique par Risque
-                elseif ($typeRevenu->isAppliquerPourcentageDuRisque() && ($risque = $this->getCotationRisque($cotation))) {
-                    $montant = $montantChargementPrime * $risque->getFraction();
-                }
-            }
+        if ($revenu === null || $revenu->getTypeRevenu() === null) {
+            return 0.0;
         }
-        return $montant;
+
+        return \App\Service\Commission\TarifDuRevenu::montantHt(
+            \App\Service\Commission\TarifDuRevenu::deRevenu($revenu),
+            (float) $this->getCotationMontantChargementPrime($revenu->getCotation(), $revenu->getTypeRevenu()),
+        );
     }
 
     public function getCotationMontantChargementPrime(?Cotation $cotation, ?TypeRevenu $typeRevenu)
