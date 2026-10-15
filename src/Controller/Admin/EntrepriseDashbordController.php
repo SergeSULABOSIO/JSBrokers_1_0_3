@@ -236,7 +236,7 @@ class EntrepriseDashbordController extends AbstractController
             // Ce que le cabinet a encaissé DEPUIS TOUJOURS : c'est ce qui permet au bandeau
             // de distinguer « rien encaissé » de « rien encaissé sur CET exercice ».
             'encaisseTousExercices' => $provider->getTotalEncaisseCommissions($entreprise),
-            'deviseCode'       => $serviceMonnaies->getCodeMonnaieAffichage() ?? $serviceMonnaies->getCodeMonnaieLocale(),
+            'deviseCode'       => $serviceMonnaies->getCodeMonnaieAffichage() ?? 'USD',
         ]);
     }
 
@@ -373,7 +373,7 @@ class EntrepriseDashbordController extends AbstractController
             // action et ne doivent pas gonfler les seaux d'urgence. Elles forment leur propre
             // onglet, comme leur propre chip dans la rubrique.
             'nonRenouvelables' => $provider->getAvenantsNonRenouvelables($entreprise),
-            'deviseCode'      => $serviceMonnaies->getCodeMonnaieAffichage() ?? $serviceMonnaies->getCodeMonnaieLocale(),
+            'deviseCode'      => $serviceMonnaies->getCodeMonnaieAffichage() ?? 'USD',
         ]);
     }
 
@@ -386,7 +386,7 @@ class EntrepriseDashbordController extends AbstractController
             'entreprise'      => $entreprise,
             'renouvellements' => $provider->getAllRenouvellements($entreprise),
             'nonRenouvelables' => $provider->getAvenantsNonRenouvelables($entreprise),
-            'deviseCode'      => $serviceMonnaies->getCodeMonnaieAffichage() ?? $serviceMonnaies->getCodeMonnaieLocale(),
+            'deviseCode'      => $serviceMonnaies->getCodeMonnaieAffichage() ?? 'USD',
         ]);
     }
 
@@ -591,7 +591,7 @@ class EntrepriseDashbordController extends AbstractController
             'utilisateur' => $user,
             'entreprise'  => $entreprise,
             'notes'       => $provider->getDerniersNotes($entreprise),
-            'deviseCode'  => $serviceMonnaies->getCodeMonnaieAffichage() ?? '$',
+            'deviseCode'  => $serviceMonnaies->getCodeMonnaieAffichage() ?? 'USD',
         ]);
     }
 
@@ -605,7 +605,7 @@ class EntrepriseDashbordController extends AbstractController
             'utilisateur' => $user,
             'entreprise'  => $entreprise,
             'notes'       => $provider->getDerniersNotes($entreprise),
-            'deviseCode'  => $serviceMonnaies->getCodeMonnaieAffichage() ?? '$',
+            'deviseCode'  => $serviceMonnaies->getCodeMonnaieAffichage() ?? 'USD',
         ]);
     }
 
@@ -644,7 +644,7 @@ class EntrepriseDashbordController extends AbstractController
             'entreprise'   => $entreprise,
             'monthly'      => array_values($monthly),
             'year'         => $exercice,
-            'deviseCode'   => $serviceMonnaies->getCodeMonnaieAffichage() ?? $serviceMonnaies->getCodeMonnaieLocale(),
+            'deviseCode'   => $serviceMonnaies->getCodeMonnaieAffichage() ?? 'USD',
             'prodDataUrl'  => $this->generateUrl('admin.entreprise_dashboard.production_data',   $avecExercice),
             'tableDataUrl' => $this->generateUrl('admin.entreprise_dashboard.production_table',  $avecExercice),
             'groupUrl'     => $this->generateUrl('admin.entreprise_dashboard.production_group',  $avecExercice),
@@ -666,7 +666,7 @@ class EntrepriseDashbordController extends AbstractController
         return new JsonResponse([
             'monthly'  => array_values($monthly),
             'year'     => $exercice,
-            'currency' => $serviceMonnaies->getCodeMonnaieAffichage() ?? $serviceMonnaies->getCodeMonnaieLocale(),
+            'currency' => $serviceMonnaies->getCodeMonnaieAffichage() ?? 'USD',
             'total'    => array_sum($monthly),
         ]);
     }
@@ -682,7 +682,7 @@ class EntrepriseDashbordController extends AbstractController
         $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
         $exercice = $exercices->retenir($entreprise, $request->query->getInt('exercice') ?: null);
         $data = $provider->getProductionTableData($entreprise, $exercice);
-        $data['currency'] = $serviceMonnaies->getCodeMonnaieAffichage() ?? $serviceMonnaies->getCodeMonnaieLocale();
+        $data['currency'] = $serviceMonnaies->getCodeMonnaieAffichage() ?? 'USD';
         return new JsonResponse($data);
     }
 
@@ -697,7 +697,7 @@ class EntrepriseDashbordController extends AbstractController
         $entreprise = $this->entrepriseDeLaRoute($idEntreprise);
         $exercice = $exercices->retenir($entreprise, $request->query->getInt('exercice') ?: null);
         $data = $provider->getProductionGroupData($entreprise, $exercice);
-        $data['currency'] = $serviceMonnaies->getCodeMonnaieAffichage() ?? $serviceMonnaies->getCodeMonnaieLocale();
+        $data['currency'] = $serviceMonnaies->getCodeMonnaieAffichage() ?? 'USD';
         return new JsonResponse($data);
     }
 }

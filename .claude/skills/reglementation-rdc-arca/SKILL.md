@@ -34,7 +34,7 @@ et contrôle — il ne choisit pas à la place du cabinet.
 | Chargements « TVA », « ARCA » (frais de surveillance) | — | :343-351 | oui |
 | Commissions par défaut | fronting 30 %, consultance 5 %, honoraire 2 % | :365-387 | oui |
 | 43 risques et leur taux de commission « Maxima HT » (5 à 25 %) | `assets/data/risques_defaut.json` | :392-405 | oui — ce sont des **valeurs de départ**, pas une politique : le cabinet choisit son taux (règle ci-dessus). Leur source réglementaire n'est pas citée. |
-| Monnaie locale | déduite du pays | :274-286 (`ServiceGeographie`) | oui |
+| Monnaie locale | déduite du pays, posée en **référence** (capital social, mentions légales, taux) ; la monnaie de **travail** par défaut est l'USD (décision du 2026-10-15) | `initialiserMonnaies` (`ServiceGeographie`) ; `MonnaieDeTravail` | oui — la monnaie de travail tant qu'aucun montant n'est saisi |
 
 ⚠ **Le pays n'est pas consulté pour les taxes** (`initialiserTaxes`, :294) : un cabinet hors RDC
 reçoit aussi DGI / TVA 16 % / ARCA 2 %.

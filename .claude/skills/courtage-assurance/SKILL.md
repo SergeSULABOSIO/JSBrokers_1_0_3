@@ -79,22 +79,7 @@ supprimée (§7) : ces règles n'ont plus qu'un exemplaire.
 | **Une source unique par montant** : commission TTC = `getCotationMontantCommissionTtc` ; taxe via `ServiceTaxes` | `IndicatorCalculationHelper.php:1001-1023` | `SigmaTransformeesPlafonneeTest`, `RetroCoherenceEcransTest`, `ReversementPariteEcranKetTest` |
 | **Les taux sont en POINTS** (16 = 16 %) ; le calcul passe par `getFraction()` | `Tranche.php:433-444`, `TypeRevenu.php:272-276`… | `TauxConventionPourcentageTest`, `ReferentielSemeEnPointsTest` |
 | **La commission est exigible à proportion de la prime encaissée** | `getTrancheRetroExigible` (`IndicatorCalculationHelper.php:1853`) | `ExigibiliteProportionnelleTest` |
-
-### Invariants CIBLES (décidés, pas encore codés)
-
-**Une seule monnaie par cabinet** — décision de Serge du 2026-10-14.
-- *Cible* : une seule monnaie par cabinet, **saisie = affichage**, tant qu'aucune entité ne porte
-  sa propre monnaie.
-- *État actuel* : rien ne l'impose. `Monnaie::FONCTION_*` (`Monnaie.php:58-61`) sans contrainte
-  d'unicité ; l'affichage prend la PREMIÈRE monnaie « affichage » trouvée, la locale retombe sur
-  USD (`ServiceMonnaies.php:42-79`) ; les montants saisis ne sont jamais convertis. Ket ne
-  convertit jamais et parle la monnaie du cabinet (`AiContextBuilder.php:1373-1401`,
-  `MonnaieDuCabinetTest`).
-- *Écart constaté* : en DEV, des cabinets saisissent en **CDF** et affichent en **USD** — les
-  montants saisis en CDF s'affichent avec l'étiquette USD, sans conversion.
-- *Reprise de l'existant* (décision du 2026-10-14) : les montants saisis dans une autre monnaie
-  sont **convertis dans la monnaie d'affichage** du cabinet, qui devient sa monnaie unique.
-- *Chantier* : ultérieur (§7). D'ici là, ne rien coder qui suppose deux monnaies.
+| **Une seule monnaie par cabinet** (décisions du 2026-10-14 et du 2026-10-15) : la monnaie de TRAVAIL (saisie = affichage = calcul, fonction `SAISIE_ET_AFFICHAGE`) est unique ; toute autre monnaie est une RÉFÉRENCE (fonction `AUCUNE`) — la monnaie du pays sert au capital social et aux mentions légales, avec son taux. **Aucun montant n'est jamais converti** : un montant ne porte pas sa monnaie, et l'écran affichait la monnaie d'affichage pendant la saisie — l'existant y était déjà (migration sans conversion). La monnaie de travail ne change plus, ni ne se supprime, une fois des montants saisis. Nouveau cabinet : USD de travail, monnaie du pays en référence. Écran et Ket | `MonnaieDeTravail::refus`, `::refusDeSuppression`, `::aDesMontants` ; `ChampsObligatoiresInspector::incoherencesMetier` ; `SuppressionEnCascade::planifier` ; `ServiceInitialisationEntreprise::initialiserMonnaies` ; migration `Version20261015090000` | `MonnaieDeTravailTest`, `MonnaieDuCabinetTest` |
 
 ## 5. Invariants comptables
 
@@ -119,7 +104,7 @@ supprimée (§7) : ces règles n'ont plus qu'un exemplaire.
 1. ~~Numérotation unique et chronologique des notes~~ — **fait** (§5, invariant acquis).
 2. ~~Refus de supprimer une note qui porte des paiements~~ — **fait** (§5, invariant acquis).
 3. ~~« Mon portefeuille » étendu aux entités qui descendent d'une piste~~ — **fait** (§4, invariant acquis).
-4. **Une seule monnaie par cabinet**, saisie = affichage (§4).
+4. ~~Une seule monnaie par cabinet~~ — **fait** (§4, invariant acquis). La prémisse « convertir l'existant » est tombée : rien n'enregistrait la monnaie d'un montant, et l'écran montrait la monnaie d'affichage à la saisie (décision du 2026-10-15 : rien à convertir).
 5. ~~Nettoyage de `Constante`~~ — **fait** (décisions du 2026-10-14). Le dernier grep a démenti
    la prémisse : la chaîne `getIdPoste()` n'était pas seulement morte, elle servait l'ancien état
    TCPDF (`EtatsController`), en 500 pour tout destinataire, et l'export `note_pdf` de Ket y

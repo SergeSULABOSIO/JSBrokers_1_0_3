@@ -54,6 +54,7 @@ class SuppressionEnCascade
         private readonly EntityManagerInterface $em,
         private readonly CompositionDuGraphe $graphe,
         private readonly WorkspaceAccessResolver $acces,
+        private readonly \App\Service\Monnaie\MonnaieDeTravail $monnaieDeTravail,
     ) {
     }
 
@@ -96,6 +97,13 @@ class SuppressionEnCascade
         $refusDuLien = LiensProteges::refusDeSuppression($racine, $this->em);
         if ($refusDuLien !== null) {
             return PlanDeSuppression::refuse($classe, $id, $refusDuLien, $libelles);
+        }
+
+        // La monnaie de travail d'un cabinet qui a des montants ne se retire pas : ils y
+        // sont enregistrés et ne sont jamais convertis (MonnaieDeTravail).
+        if ($racine instanceof \App\Entity\Monnaie
+            && ($refusMonnaie = $this->monnaieDeTravail->refusDeSuppression($racine)) !== null) {
+            return PlanDeSuppression::refuse($classe, $id, $refusMonnaie, $libelles);
         }
 
         $aDetruire = [$classe => [$id => $id]];

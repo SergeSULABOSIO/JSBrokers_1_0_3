@@ -274,8 +274,9 @@ class WorkspaceMutationService
         // de l'avenant ne s'appliquent qu'à une cotation déjà écrite, donc lisible ici.
         //
         // ET LA NOTE, en création comme en modification : sa seule règle (une référence
-        // n'appartient qu'à une note du cabinet) ne lit que la référence et le cabinet.
-        if ($manquants === [] && (($op->isCreate() && $op->entityShortName === 'Avenant') || $op->entityShortName === 'Note')) {
+        // n'appartient qu'à une note du cabinet) ne lit que la référence et le cabinet. De
+        // même la MONNAIE (une seule monnaie de travail) : elle ne lit que le cabinet.
+        if ($manquants === [] && (($op->isCreate() && $op->entityShortName === 'Avenant') || in_array($op->entityShortName, ['Note', 'Monnaie'], true))) {
             $manquants = $this->champsInspector->incoherencesMetier($copie, $op->entityShortName, null, $origine);
         }
 

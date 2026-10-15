@@ -585,7 +585,9 @@ class WorkspaceDocumentsComptablesTest extends WebTestCase
         // tauxusd = unités de la monnaie pour 1 USD (pivot).
         $cdf = new \App\Entity\Monnaie();
         $cdf->setNom('Franc congolais')->setCode('CDF')->setTauxusd('2800.00')
-            ->setFonction(\App\Entity\Monnaie::FONCTION_SAISIE_UNIQUEMENT)->setLocale(true);
+            // La monnaie du pays est une RÉFÉRENCE (modèle du 2026-10-15) : elle ne sert
+            // qu'au capital social, converti dans la monnaie de travail.
+            ->setFonction(\App\Entity\Monnaie::FONCTION_AUCUNE)->setLocale(true);
         $cdf->setEntreprise($e);
         $em->persist($cdf);
 

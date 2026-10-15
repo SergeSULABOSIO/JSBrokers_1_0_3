@@ -121,9 +121,10 @@ class ReleveDeTrancheRenduTest extends WebTestCase
         $em->persist($roles);
         $em->persist($guest);
 
-        // DEUX MONNAIES : la saisie en francs, l'affichage en dollars. Les indicateurs ne
-        // convertissent rien ; le relevé non plus — sinon son pied quitterait la fiche.
-        foreach ([['Franc congolais', 'CDF', '2800', Monnaie::FONCTION_SAISIE_UNIQUEMENT, true], ['Dollar', 'USD', '1', Monnaie::FONCTION_AFFICHAGE_UNIQUEMENT, false]] as [$nom, $code, $taux, $fonction, $locale]) {
+        // LA MONNAIE DE TRAVAIL EN DOLLARS, celle du pays en référence (modèle du
+        // 2026-10-15). Les indicateurs ne convertissent rien ; le relevé non plus — sinon son
+        // pied quitterait la fiche.
+        foreach ([['Franc congolais', 'CDF', '2800', Monnaie::FONCTION_AUCUNE, true], ['Dollar', 'USD', '1', Monnaie::FONCTION_SAISIE_ET_AFFICHAGE, false]] as [$nom, $code, $taux, $fonction, $locale]) {
             $m = (new Monnaie())->setNom($nom)->setCode($code)->setTauxusd($taux)->setFonction($fonction)->setLocale($locale);
             $m->setEntreprise($ent);
             $em->persist($m);

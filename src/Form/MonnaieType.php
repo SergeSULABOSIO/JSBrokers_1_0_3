@@ -50,23 +50,23 @@ class MonnaieType extends AbstractType
                     'placeholder' => "Ex. 2800 pour le franc congolais",
                 ],
             ])
+            // UNE SEULE MONNAIE DE TRAVAIL PAR CABINET (décisions du 2026-10-14 et du
+            // 2026-10-15) : saisie = affichage. « Saisie uniquement » et « Affichage
+            // uniquement » promettaient une conversion que rien ne faisait — les montants ne
+            // sont jamais convertis. Deux rôles restent ; la règle vit dans MonnaieDeTravail.
             ->add('fonction', ChoiceType::class, [
-                'label' => "Fonction",
+                'label' => "Rôle dans le cabinet",
                 'expanded' => true,
                 'required' => true,
                 'label_html' => true,
                 'choices'  => [
-                    "Aucune" => Monnaie::FONCTION_AUCUNE,
-                    "Saisie et Affichage" => Monnaie::FONCTION_SAISIE_ET_AFFICHAGE,
-                    "Saisie Uniquement" => Monnaie::FONCTION_SAISIE_UNIQUEMENT,
-                    "Affichage Uniquement" => Monnaie::FONCTION_AFFICHAGE_UNIQUEMENT,
+                    "Monnaie de travail" => Monnaie::FONCTION_SAISIE_ET_AFFICHAGE,
+                    "Référence" => Monnaie::FONCTION_AUCUNE,
                 ],
                 'choice_label' => function ($choice, $key, $value) {
                     return match ($choice) {
-                        Monnaie::FONCTION_AUCUNE => '<div><strong>Aucune</strong><div class="text-muted small">Cette monnaie n\'est pas utilisée activement.</div></div>',
-                        Monnaie::FONCTION_SAISIE_ET_AFFICHAGE => '<div><strong>Saisie et Affichage</strong><div class="text-muted small">Utilisée pour les transactions et les rapports.</div></div>',
-                        Monnaie::FONCTION_SAISIE_UNIQUEMENT => '<div><strong>Saisie Uniquement</strong><div class="text-muted small">Uniquement pour l\'enregistrement des opérations.</div></div>',
-                        Monnaie::FONCTION_AFFICHAGE_UNIQUEMENT => '<div><strong>Affichage Uniquement</strong><div class="text-muted small">Uniquement pour la conversion dans les rapports.</div></div>',
+                        Monnaie::FONCTION_SAISIE_ET_AFFICHAGE => '<div><strong>Monnaie de travail</strong><div class="text-muted small">Celle de tous vos montants, à la saisie comme à l\'affichage. Une seule par cabinet ; elle ne change plus une fois des montants saisis.</div></div>',
+                        Monnaie::FONCTION_AUCUNE => '<div><strong>Référence</strong><div class="text-muted small">Son taux sert au capital social et aux mentions légales. Aucun montant n\'y est saisi ni converti.</div></div>',
                         default => $key,
                     };
                 },
@@ -82,7 +82,7 @@ class MonnaieType extends AbstractType
                 ],
                 'choice_label' => function ($choice, $key, $value) {
                     if ($choice === true) {
-                        return '<div><strong>Oui</strong><div class="text-muted small">C\'est la devise de référence pour la comptabilité.</div></div>';
+                        return '<div><strong>Oui</strong><div class="text-muted small">C\'est la monnaie du pays du cabinet : celle du capital social et des mentions légales.</div></div>';
                     }
                     return '<div><strong>Non</strong><div class="text-muted small">C\'est une devise étrangère.</div></div>';
                 },

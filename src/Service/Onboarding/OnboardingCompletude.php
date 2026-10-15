@@ -236,16 +236,17 @@ class OnboardingCompletude
      * LES MONNAIES, ET LE TAUX DE LA MONNAIE LOCALE.
      *
      * ── LA CARTE COMPTE LES MONNAIES, LE CRITÈRE N'EN REGARDE QU'UNE ────────────────
-     * Un cabinet encaisse souvent dans plusieurs devises : la carte liste donc TOUTES
-     * ses monnaies et laisse en ajouter, comme n'importe quelle autre.
+     * La carte liste TOUTES les monnaies du cabinet — sa monnaie de travail et ses
+     * références — et laisse en ajouter, comme n'importe quelle autre.
      *
-     * Ce qui décide de l'achèvement, en revanche, ne porte que sur la monnaie LOCALE :
-     * le semis la pose à 1.00, un placeholder, et tant qu'il n'a pas bougé toute
-     * conversion est fausse en silence. Compter les lignes ne dirait rien de cela — on
-     * aurait une étape « faite » dès la création, avec un taux faux.
+     * Ce qui décide de l'achèvement, en revanche, ne porte que sur la monnaie LOCALE (le
+     * pays) : le semis la pose à 1.00, un placeholder, et tant qu'il n'a pas bougé le
+     * capital social, exprimé en monnaie de travail dans les états comptables, est faux en
+     * silence. Compter les lignes ne dirait rien de cela.
      *
-     * L'étape est donc faite si le cabinet travaille en dollars (aucune monnaie locale
-     * n'a alors été semée, il n'y a rien à corriger) ou si ce taux a été retouché.
+     * L'étape est donc faite si le cabinet est en dollars (aucune monnaie locale semée),
+     * si la monnaie locale EST sa monnaie de travail (rien à convertir : le taux ne sert
+     * plus), ou si ce taux a été retouché.
      *
      * @return array{fait: bool, nombre: int, apercu: array<int, array<string, mixed>>, reste: int}
      */
@@ -256,7 +257,9 @@ class OnboardingCompletude
             ->findOneBy(['entreprise' => $entreprise, 'locale' => true]);
 
         // Cabinet en dollars : pas de seconde monnaie, donc pas de taux à ajuster.
-        $fait = $locale === null || abs((float) $locale->getTauxusd() - 1.0) > 0.000001;
+        $fait = $locale === null
+            || $locale->getFonction() === Monnaie::FONCTION_SAISIE_ET_AFFICHAGE
+            || abs((float) $locale->getTauxusd() - 1.0) > 0.000001;
 
         $nombre = $this->compter(Monnaie::class, $entreprise);
         $apercu = $avecApercu ? $this->apercu(Monnaie::class, $entreprise) : [];

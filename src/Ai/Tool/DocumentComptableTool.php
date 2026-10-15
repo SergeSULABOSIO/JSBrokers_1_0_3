@@ -16,7 +16,7 @@ use App\Service\Workspace\WorkspaceAccessResolver;
  * formation du résultat (TFR), balance, journal. C'est l'outil des questions
  * financières d'ENTREPRISE (« quel est le solde de la trésorerie ? », « quel
  * est le résultat net ? ») — par opposition à indicateur_calcule, qui répond
- * sur UN client. Montants en USD (monnaie d'affichage, sans conversion).
+ * sur UN client. Montants dans la monnaie de travail du cabinet, sans conversion.
  *
  * FAIL-CLOSED : même garde que la rubrique du workspace — lecture de la
  * pseudo-entité « DocumentComptable » (RolesEnFinance::accessDocumentComptable).
@@ -71,6 +71,9 @@ final class DocumentComptableTool implements AiToolInterface, AiToolConditionnel
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly CourtierEcritureComptableService $comptabilite,
         private readonly CourtierSuiviFiscalService $suiviFiscal,
+        // Facultatif à la construction seulement (un test le construit à la main) : le
+        // conteneur l'injecte toujours.
+        private readonly ?\App\Services\ServiceMonnaies $serviceMonnaies = null,
     ) {
     }
 
@@ -188,7 +191,9 @@ final class DocumentComptableTool implements AiToolInterface, AiToolConditionnel
             'legende'   => self::LEGENDES[$document] ?? '',
             'exercice'  => $exercice,
             'exercices' => $exercices,
-            'monnaie'   => 'USD',
+            // La monnaie de TRAVAIL du cabinet — celle de ses écritures, jamais convertie —
+            // et non « USD » en dur, qui mentait à un cabinet travaillant dans une autre.
+            'monnaie'   => $this->serviceMonnaies?->getMonnaieAffichagePourEntreprise($scope->entreprise)?->getCode() ?? 'USD',
             'donnees'   => $donnees,
         ]);
     }

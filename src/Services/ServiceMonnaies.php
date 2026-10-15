@@ -33,24 +33,42 @@ class ServiceMonnaies
                 /** @var Entreprise $entreprise */
                 $entreprise = $this->getUtilisateurConnecte()->getConnectedTo();
                 // MODIFICATION : On utilise le repository pour trouver les monnaies par entreprise.
-                return $monnaieRepository->findBy(['entreprise' => $entreprise]);
+                // ⚠ ORDRE STABLE : sans lui, « la première monnaie d'affichage » dépendait
+                // de l'ordre que la base voulait bien rendre.
+                return $monnaieRepository->findBy(['entreprise' => $entreprise], ['id' => 'ASC']);
             }
         }
         return [];
     }
 
+    /**
+     * La monnaie de TRAVAIL du cabinet connecté : celle de la saisie et de l'affichage — il
+     * n'y en a qu'une (MonnaieDeTravail). Aucun montant n'est jamais converti.
+     */
     public function getMonnaieAffichage(): ?Monnaie
     {
-        // MODIFICATION : On utilise la méthode modernisée getMonnaies().
-        $monnaies = $this->getMonnaies();
-        if (!empty($monnaies)) {
-            foreach ($monnaies as $monnaie) {
-                /** @var Monnaie $monnaie */
-                if ($monnaie->getFonction() == Monnaie::FONCTION_AFFICHAGE_UNIQUEMENT || $monnaie->getFonction() == Monnaie::FONCTION_SAISIE_ET_AFFICHAGE) {
-                    return $monnaie;
-                }
+        return self::monnaieDeTravail($this->getMonnaies());
+    }
+
+    /**
+     * La monnaie de travail parmi celles d'un cabinet (triées par id) : la PREMIÈRE qui
+     * s'affiche — « saisie et affichage », ou une ancienne « affichage uniquement ».
+     *
+     * ⚠ LA PREMIÈRE PAR ID, SANS PRÉFÉRER L'UNE DES DEUX FONCTIONS. C'est la règle qui a
+     * toujours choisi l'étiquette posée à côté des montants pendant leur saisie ; en changer
+     * ferait lire d'anciens montants dans une autre monnaie. Même règle que
+     * MonnaieDeTravail::estLaRetenue() et que la migration du 2026-10-15.
+     *
+     * @param Monnaie[] $monnaies
+     */
+    private static function monnaieDeTravail(array $monnaies): ?Monnaie
+    {
+        foreach ($monnaies as $monnaie) {
+            if (in_array($monnaie->getFonction(), [Monnaie::FONCTION_SAISIE_ET_AFFICHAGE, Monnaie::FONCTION_AFFICHAGE_UNIQUEMENT], true)) {
+                return $monnaie;
             }
         }
+
         return null;
     }
 
@@ -86,7 +104,7 @@ class ServiceMonnaies
     /** @return Monnaie[] Monnaies configurées pour une entreprise donnée. */
     public function getMonnaiesPourEntreprise(Entreprise $entreprise): array
     {
-        return $this->entityManager->getRepository(Monnaie::class)->findBy(['entreprise' => $entreprise]);
+        return $this->entityManager->getRepository(Monnaie::class)->findBy(['entreprise' => $entreprise], ['id' => 'ASC']);
     }
 
     /** Monnaie LOCALE d'une entreprise (celle des paramètres, ex. CDF), ou null. */
@@ -101,23 +119,20 @@ class ServiceMonnaies
         return null;
     }
 
-    /** Monnaie d'AFFICHAGE d'une entreprise (celle des rapports, ex. USD), ou null. */
+    /** La monnaie de TRAVAIL d'une entreprise (saisie = affichage, ex. USD), ou null. */
     public function getMonnaieAffichagePourEntreprise(Entreprise $entreprise): ?Monnaie
     {
-        foreach ($this->getMonnaiesPourEntreprise($entreprise) as $monnaie) {
-            if ($monnaie->getFonction() === Monnaie::FONCTION_AFFICHAGE_UNIQUEMENT
-                || $monnaie->getFonction() === Monnaie::FONCTION_SAISIE_ET_AFFICHAGE) {
-                return $monnaie;
-            }
-        }
-
-        return null;
+        return self::monnaieDeTravail($this->getMonnaiesPourEntreprise($entreprise));
     }
 
     /**
-     * Convertit un montant saisi en monnaie LOCALE vers la monnaie d'AFFICHAGE de
-     * l'entreprise, via le pivot USD : `tauxusd` = nombre d'unités de la monnaie
+     * Convertit un montant exprimé en monnaie LOCALE (le pays) vers la monnaie de travail
+     * de l'entreprise, via le pivot USD : `tauxusd` = nombre d'unités de la monnaie
      * pour 1 USD (USD = 1.00). Ex. CDF (taux 2800) → USD : montant / 2800.
+     *
+     * ⚠ SON SEUL USAGE EST LE CAPITAL SOCIAL, saisi dans la monnaie du pays pour les
+     * mentions légales. Les montants du métier, eux, sont dans la monnaie de travail et ne
+     * sont JAMAIS convertis.
      * Défensif : sans monnaies configurées, sans taux exploitable ou si locale et
      * affichage sont identiques, le montant est retourné TEL QUEL (pas de conversion).
      */
