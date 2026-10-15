@@ -46,30 +46,34 @@ final class PortefeuilleScope
     public const LIBELLE_ENTREPRISE = "toute l'entreprise";
 
     /**
+     * Libellés du périmètre d'un invité qui ne gère AUCUN portefeuille, quand l'entité suit
+     * (au moins en partie) le responsable de la piste : il y voit encore ce dont il est
+     * responsable — les pistes qu'il a créées pour un client sans gestionnaire, et ce qui en
+     * descend. Ket les reconnaît pour expliquer une liste vide (AiContextBuilder).
+     */
+    public const LIBELLE_PISTES_RESPONSABLE = 'les pistes dont vous êtes responsable';
+    public const LIBELLE_AFFAIRES_RESPONSABLE = 'les affaires dont vous êtes responsable';
+    public const LIBELLE_AUCUN_PORTEFEUILLE = 'aucun portefeuille';
+
+    /**
+     * LES CHEMINS QUI SUIVENT LE CLIENT : vers « …portefeuille.gestionnaire », combinés en OU.
+     *
+     * Ce qui ne dépend que du CLIENT (le client lui-même, ses sinistres, un document qui lui
+     * est rattaché directement) appartient au gestionnaire de son portefeuille. Ce qui
+     * descend d'une PISTE suit une autre règle : {@see CHEMINS_VERS_LA_PISTE}.
+     *
      * @var array<string, string[]> Nom court d'entité => chemins de relation vers
      *      « …portefeuille.gestionnaire » (combinés en OU).
      */
     private const PATHS = [
         'Client' => ['portefeuille.gestionnaire'],
-        // 'Piste' : RÈGLE PROPRE, ci-dessous — et non plus un chemin. Ne pas la réinscrire ici.
-        'Cotation' => ['piste.client.portefeuille.gestionnaire'],
-        'Avenant' => ['cotation.piste.client.portefeuille.gestionnaire'],
-        'Tranche' => ['cotation.piste.client.portefeuille.gestionnaire'],
-        // Sous-entité structurelle de la Tranche (signalement déclaratif du paiement de
-        // la prime) : même périmètre que sa tranche, un cran plus loin. N'affecte PAS le
-        // widget de collection du dialogue Tranche, exempté du filtre (usage 'dialog').
-        'PaiementPrime' => ['tranche.cotation.piste.client.portefeuille.gestionnaire'],
         'NotificationSinistre' => ['assure.portefeuille.gestionnaire'],
         'OffreIndemnisationSinistre' => ['notificationSinistre.assure.portefeuille.gestionnaire'],
         'Tache' => [
-            'piste.client.portefeuille.gestionnaire',
-            'cotation.piste.client.portefeuille.gestionnaire',
             'notificationSinistre.assure.portefeuille.gestionnaire',
             'offreIndemnisationSinistre.notificationSinistre.assure.portefeuille.gestionnaire',
         ],
         'Feedback' => [
-            'tache.piste.client.portefeuille.gestionnaire',
-            'tache.cotation.piste.client.portefeuille.gestionnaire',
             'tache.notificationSinistre.assure.portefeuille.gestionnaire',
             'tache.offreIndemnisationSinistre.notificationSinistre.assure.portefeuille.gestionnaire',
         ],
@@ -89,38 +93,67 @@ final class PortefeuilleScope
          */
         'Document' => [
             'client.portefeuille.gestionnaire',
-            'piste.client.portefeuille.gestionnaire',
-            'cotation.piste.client.portefeuille.gestionnaire',
-            'avenant.cotation.piste.client.portefeuille.gestionnaire',
             'pieceSinistre.notificationSinistre.assure.portefeuille.gestionnaire',
             'offreIndemnisationSinistre.notificationSinistre.assure.portefeuille.gestionnaire',
-            'paiementPrime.tranche.cotation.piste.client.portefeuille.gestionnaire',
-            'tache.piste.client.portefeuille.gestionnaire',
-            'tache.cotation.piste.client.portefeuille.gestionnaire',
             'tache.notificationSinistre.assure.portefeuille.gestionnaire',
-            'feedback.tache.piste.client.portefeuille.gestionnaire',
         ],
     ];
 
     /**
-     * LES ENTITÉS DONT « MON PORTEFEUILLE » SUIT UNE RÈGLE, et non un chemin.
+     * CE QUI DESCEND D'UNE PISTE SUIT LE RESPONSABLE DE LA PISTE (décision du 2026-10-14).
      *
-     * Une piste est à MOI quand j'en suis le RESPONSABLE : le gestionnaire du portefeuille
-     * de son client, sinon son créateur (ResponsableDePiste). Un chemin vers le seul
-     * gestionnaire faisait disparaître de « Mon portefeuille » les pistes d'un client sans
-     * portefeuille — que leur carte attribuait pourtant à leur créateur.
+     * Une piste est à MOI quand j'en suis le RESPONSABLE : le gestionnaire du portefeuille de
+     * son client, sinon son créateur ({@see ResponsableDePiste}). Ses cotations, ses polices,
+     * ses tranches, les tâches et les documents qui lui sont rattachés la suivent : avant,
+     * ils ne suivaient que le gestionnaire, et une piste montée pour un client sans
+     * portefeuille était dans « Mon portefeuille » de son créateur… sans sa cotation ni sa
+     * police.
      *
-     * 'Piste' n'est donc plus dans PATHS : un appelant qui lirait encore son chemin n'y
-     * trouverait rien, au lieu d'une règle fausse. isScopable() reste vrai.
+     * Chaque chemin mène à la PISTE ; '' désigne l'entité elle-même (la Piste). Les chemins
+     * d'une entité se combinent en OU avec ceux de {@see PATHS}.
      *
-     * @var array<string, class-string>
+     * Cette règle ne fait qu'AJOUTER : « le gestionnaire, ou à défaut le créateur » contient
+     * « le gestionnaire ». Personne ne perd ce qu'il voyait.
+     *
+     * @var array<string, string[]>
      */
-    public const REGLE_PROPRE = ['Piste' => ResponsableDePiste::class];
+    private const CHEMINS_VERS_LA_PISTE = [
+        'Piste' => [''],
+        'Cotation' => ['piste'],
+        'Avenant' => ['cotation.piste'],
+        'Tranche' => ['cotation.piste'],
+        // Sous-entité structurelle de la Tranche (signalement déclaratif du paiement de
+        // la prime) : même périmètre que sa tranche, un cran plus loin. N'affecte PAS le
+        // widget de collection du dialogue Tranche, exempté du filtre (usage 'dialog').
+        'PaiementPrime' => ['tranche.cotation.piste'],
+        'Tache' => ['piste', 'cotation.piste'],
+        'Feedback' => ['tache.piste', 'tache.cotation.piste'],
+        'Document' => [
+            'piste',
+            'cotation.piste',
+            'avenant.cotation.piste',
+            'paiementPrime.tranche.cotation.piste',
+            'tache.piste',
+            'tache.cotation.piste',
+            'feedback.tache.piste',
+        ],
+    ];
 
-    /** La classe qui porte la règle propre de l'entité, ou null si elle suit ses chemins. */
-    public static function regleDe(string $entityShortName): ?string
+    /**
+     * Les chemins de l'entité qui mènent à une PISTE ('' = l'entité est la piste), à
+     * soumettre à la règle du responsable ({@see ResponsableDePiste}).
+     *
+     * @return list<string>
+     */
+    public static function cheminsVersLaPiste(string $entityShortName): array
     {
-        return self::REGLE_PROPRE[$entityShortName] ?? null;
+        return self::CHEMINS_VERS_LA_PISTE[$entityShortName] ?? [];
+    }
+
+    /** Une partie au moins du périmètre de cette entité suit-elle le responsable de la piste ? */
+    public static function suitLeResponsableDePiste(string $entityShortName): bool
+    {
+        return isset(self::CHEMINS_VERS_LA_PISTE[$entityShortName]);
     }
 
     /**
@@ -181,6 +214,10 @@ final class PortefeuilleScope
     public static function cheminsVersLeClient(string $entityShortName): array
     {
         $chemins = [];
+        // Ce qui mène à une piste mène à son client, un segment plus loin.
+        foreach (self::cheminsVersLaPiste($entityShortName) as $chemin) {
+            $chemins[$chemin === '' ? 'client' : $chemin . '.client'] = true;
+        }
         foreach (self::pathsFor($entityShortName) as $chemin) {
             if (!str_ends_with($chemin, self::SUFFIXE_GESTIONNAIRE)) {
                 // Un chemin qui n'atteint pas le gestionnaire par ce suffixe n'est pas
@@ -207,16 +244,19 @@ final class PortefeuilleScope
     public static function relationsDirectes(string $entityShortName): array
     {
         $premiers = [];
-        foreach (self::pathsFor($entityShortName) as $chemin) {
-            $premiers[strtok($chemin, '.')] = true;
+        foreach ([...self::cheminsVersLaPiste($entityShortName), ...self::pathsFor($entityShortName)] as $chemin) {
+            if ($chemin !== '') {
+                $premiers[strtok($chemin, '.')] = true;
+            }
         }
 
         return array_keys($premiers);
     }
 
     /**
-     * Retourne les chemins de périmètre pour une entité (nom court), ou un tableau vide si
-     * l'entité n'est pas concernée par ce filtre par défaut.
+     * Les chemins de l'entité qui suivent le CLIENT (vers « …portefeuille.gestionnaire »),
+     * ou un tableau vide. ⚠ Ce n'est qu'UNE des deux familles : ce qui descend d'une piste
+     * est dans {@see cheminsVersLaPiste()}.
      *
      * @return string[]
      */
@@ -230,7 +270,7 @@ final class PortefeuilleScope
      */
     public static function isScopable(string $entityShortName): bool
     {
-        return isset(self::PATHS[$entityShortName]) || isset(self::REGLE_PROPRE[$entityShortName]);
+        return isset(self::PATHS[$entityShortName]) || isset(self::CHEMINS_VERS_LA_PISTE[$entityShortName]);
     }
 
     /**

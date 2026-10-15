@@ -167,9 +167,14 @@ class JSBDynamicSearchServiceCotationSouscriptionTest extends KernelTestCase
         $souscritePf2 = $this->makeCotation($entrepriseA, $inviteA, 'Souscrite PF 2', $portefeuille, true);
         $enAttentePf = $this->makeCotation($entrepriseA, $inviteA, 'En Attente PF', $portefeuille, false);
 
-        // Hors portefeuille (client sans portefeuille), même entreprise.
-        $souscriteHorsPf = $this->makeCotation($entrepriseA, $inviteA, 'Souscrite Hors PF', null, true);
-        $enAttenteHorsPf = $this->makeCotation($entrepriseA, $inviteA, 'En Attente Hors PF', null, false);
+        // Hors portefeuille (client sans portefeuille), même entreprise — pistes montées par
+        // un AUTRE invité : sans gestionnaire, une cotation suit le créateur de sa piste
+        // (ResponsableDePiste, décision du 2026-10-14). Créées par l'invité A, elles seraient
+        // à lui.
+        $autreA = (new Invite())->setNom('Collègue A')->setEntreprise($entrepriseA)->setProprietaire(false);
+        $em->persist($autreA);
+        $souscriteHorsPf = $this->makeCotation($entrepriseA, $autreA, 'Souscrite Hors PF', null, true);
+        $enAttenteHorsPf = $this->makeCotation($entrepriseA, $autreA, 'En Attente Hors PF', null, false);
 
         // --- Entreprise B (scoping) ---
         $entrepriseB = $this->makeEntreprise(self::ENTREPRISE_B_NOM, $ownerUser);

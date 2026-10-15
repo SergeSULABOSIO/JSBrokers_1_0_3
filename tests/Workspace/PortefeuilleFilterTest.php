@@ -618,7 +618,11 @@ class PortefeuilleFilterTest extends WebTestCase
 
         $this->assertStringNotContainsString(self::TRANCHE_IN, $html, 'Aucune tranche ne doit apparaître sans portefeuille géré.');
         $this->assertStringNotContainsString(self::TRANCHE_OUT, $html, 'Aucune tranche ne doit apparaître sans portefeuille géré.');
-        $this->assertStringContainsString('aucun portefeuille', html_entity_decode($html, ENT_QUOTES | ENT_HTML5), 'Le libellé du périmètre doit refléter l\'absence de portefeuille géré.');
+        // Sans portefeuille géré, la tranche reste à lui quand il est le RESPONSABLE de sa piste
+        // (il l'a créée pour un client sans gestionnaire — décision du 2026-10-14) : le badge
+        // le dit, plutôt qu'un « aucun portefeuille » qui contredirait une liste non vide.
+        // (Le libellé voyage aussi en JSON, accents échappés : on lit sa partie sans accent.)
+        $this->assertStringContainsString('les affaires dont vous', html_entity_decode($html, ENT_QUOTES | ENT_HTML5), 'Le libellé du périmètre dit ce que l’invité voit encore.');
     }
 
     /**

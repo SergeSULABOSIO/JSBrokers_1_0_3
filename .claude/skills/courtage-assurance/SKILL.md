@@ -45,7 +45,7 @@ et l'écart — jamais présentée comme acquise.
 | Premier avenant (souscription, incorporation) | `DefautsDeSouscription::pour` (:251) | dialogue Avenant sous la cotation | `souscrire_cotation` |
 | Mouvement (renouvellement, prorogation, annulation, résiliation) | `MouvementAvenantBuilder::construire` (:121) — adopte la piste dérivée déjà montée | « Mouvements de la police », carte du pipe | `preparer_mouvement_avenant` |
 | Échéancier | tranches de la cotation ; « Tranche unique » 100 % par défaut (`CotationController.php:96`, :147) | `/admin/tranche` | — |
-| Facturation | Note + Articles ; référence posée à la naissance (`ValeursDeNaissance.php:102`) | `facturation_picker` (`NoteController.php:167`) | `preparer_facturation` |
+| Facturation | Note + Articles ; numéro `ND-`/`NC-AAAA-NNNNN` pris à l'écriture (`NumerotationDesNotesListener`, §5) | `facturation_picker` (`NoteController.php:167`) | `preparer_facturation` |
 | Créance | note **validée**, débit ou crédit, adressée au client ou à l'assureur → D 411 / C 706 + C 443 (`CourtierEcritureComptableService.php:33-34`, :193-209) | — | — |
 | Encaissement | `Paiement` de la note → D 521/571 / C 411 (:35) ; prime de l'assuré : `PaiementPrime` | `/admin/paiement`, `/admin/paiementprime` | `signaler_paiement_prime` ; **aucun outil Ket pour l'encaissement d'une note** |
 | Rétrocession | `ConditionPartage` ; exigible à proportion de l'encaissé | `/admin/retro-agent`, `reversement_picker` | `retrocommissions`, `signaler_reversement_retro_agent` |
@@ -75,7 +75,7 @@ supprimée (§7) : ces règles n'ont plus qu'un exemplaire.
 | **À facturer ≠ à encaisser.** Facturable = TTC − déjà facturé ; un avoir rend le revenu de nouveau facturable ; « rien à facturer » n'est pas « rien à encaisser » | `SourceDeFacturation.php:158-203`, :264-285, :392-413 | `SourceDeFacturationTest`, `FacturationEcritureTest::testFacturerUnePartLaisseLeResteFacturable` |
 | **Prime exigée selon le type** (§3), au PREMIER avenant seulement ; type inconnu → exigée | `DefautsDeSouscription.php:41-48`, :101-118 | `AvenantPrimeExigeeTest`, `DefautsDeSouscriptionTest::testLaPrimeExigee` |
 | **Dates selon le type** (§3) | `DefautsDeSouscription::pour`, `MouvementAvenantBuilder::periode` | `DefautsDeSouscriptionTest::testLaRegle`, `MouvementAvenantTest`, `AdoptionParLeMouvementTest` |
-| **Le responsable d'une piste** = gestionnaire du portefeuille du client, sinon son créateur ; c'est lui qui la voit dans « Mon portefeuille » | `ResponsableDePiste.php:22-38` | `ResponsableDePistePariteTest` |
+| **Le responsable d'une piste** = gestionnaire du portefeuille du client, sinon son créateur ; c'est lui qui la voit dans « Mon portefeuille » — **elle et tout ce qui en descend** : cotations, polices, tranches, paiements de prime, tâches, retours et documents rattachés à la piste (décision du 2026-10-14). Ce qui ne dépend que du CLIENT (le client, ses sinistres, un document du client) garde la règle du portefeuille client. La règle ne fait qu'ajouter : personne ne perd ce qu'il voyait. Liste, Ket, vigie (polices, tâches) et suivi des paiements de prime lisent le même registre | `ResponsableDePiste.php:22-38` ; `PortefeuilleScope::CHEMINS_VERS_LA_PISTE` | `ResponsableDePistePariteTest`, `PortefeuilleDescendantsDePisteTest` |
 | **Une source unique par montant** : commission TTC = `getCotationMontantCommissionTtc` ; taxe via `ServiceTaxes` | `IndicatorCalculationHelper.php:1001-1023` | `SigmaTransformeesPlafonneeTest`, `RetroCoherenceEcransTest`, `ReversementPariteEcranKetTest` |
 | **Les taux sont en POINTS** (16 = 16 %) ; le calcul passe par `getFraction()` | `Tranche.php:433-444`, `TypeRevenu.php:272-276`… | `TauxConventionPourcentageTest`, `ReferentielSemeEnPointsTest` |
 | **La commission est exigible à proportion de la prime encaissée** | `getTrancheRetroExigible` (`IndicatorCalculationHelper.php:1853`) | `ExigibiliteProportionnelleTest` |
@@ -95,15 +95,6 @@ supprimée (§7) : ces règles n'ont plus qu'un exemplaire.
 - *Reprise de l'existant* (décision du 2026-10-14) : les montants saisis dans une autre monnaie
   sont **convertis dans la monnaie d'affichage** du cabinet, qui devient sa monnaie unique.
 - *Chantier* : ultérieur (§7). D'ici là, ne rien coder qui suppose deux monnaies.
-
-**« Mon portefeuille » des entités qui descendent d'une piste** — décision de Serge du 2026-10-14.
-- *Cible* : cotations, polices, tranches, tâches et documents rattachés à une piste suivent
-  `ResponsableDePiste`, comme la piste elle-même. Ce qui ne dépend que du CLIENT garde la règle du
-  portefeuille client.
-- *État actuel* : ces entités suivent `piste.client.portefeuille.gestionnaire`
-  (`PortefeuilleScope.php:55-99`). Une piste créée pour un client sans portefeuille est dans
-  « Mon portefeuille » de son créateur, mais sa cotation et sa police n'y sont pas.
-- *Chantier* : ultérieur (§7), avec tests de parité.
 
 ## 5. Invariants comptables
 
@@ -127,7 +118,7 @@ supprimée (§7) : ces règles n'ont plus qu'un exemplaire.
 
 1. ~~Numérotation unique et chronologique des notes~~ — **fait** (§5, invariant acquis).
 2. ~~Refus de supprimer une note qui porte des paiements~~ — **fait** (§5, invariant acquis).
-3. **« Mon portefeuille » étendu** aux entités qui descendent d'une piste, via `ResponsableDePiste` (§4).
+3. ~~« Mon portefeuille » étendu aux entités qui descendent d'une piste~~ — **fait** (§4, invariant acquis).
 4. **Une seule monnaie par cabinet**, saisie = affichage (§4).
 5. ~~Nettoyage de `Constante`~~ — **fait** (décisions du 2026-10-14). Le dernier grep a démenti
    la prémisse : la chaîne `getIdPoste()` n'était pas seulement morte, elle servait l'ancien état

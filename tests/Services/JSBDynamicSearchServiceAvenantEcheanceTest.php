@@ -208,8 +208,13 @@ class JSBDynamicSearchServiceAvenantEcheanceTest extends KernelTestCase
         $entre3160 = $this->makeAvenant($cotationPf, $entrepriseA, $inviteA, 'POL-45', new \DateTimeImmutable('+45 days'));
         $auDela = $this->makeAvenant($cotationPf, $entrepriseA, $inviteA, 'POL-90', new \DateTimeImmutable('+90 days'));
 
-        // Avenant expiré HORS portefeuille (client sans portefeuille), même entreprise.
-        $cotationHorsPf = $this->makeCotation($entrepriseA, $inviteA, 'Cotation Hors PF', null);
+        // Avenant expiré HORS portefeuille (client sans portefeuille), même entreprise — piste
+        // montée par un AUTRE invité : sans gestionnaire, une police suit le créateur de sa
+        // piste (ResponsableDePiste, décision du 2026-10-14). Créée par l'invité A, elle
+        // serait à lui.
+        $autreA = (new Invite())->setNom('Collègue A')->setEntreprise($entrepriseA)->setProprietaire(false);
+        $em->persist($autreA);
+        $cotationHorsPf = $this->makeCotation($entrepriseA, $autreA, 'Cotation Hors PF', null);
         $echuHorsPf = $this->makeAvenant($cotationHorsPf, $entrepriseA, $inviteA, 'POL-ECHU-HORS', new \DateTimeImmutable('-5 days'));
 
         // --- Entreprise B : aucun avenant expiré (futur seulement) ---
@@ -427,7 +432,10 @@ class JSBDynamicSearchServiceAvenantEcheanceTest extends KernelTestCase
         // Jeu « B » : cotation + avenant expiré témoin, même entreprise, HORS portefeuille.
         $assureurB = $this->makeAssureur($entrepriseA, 'Assureur B', 'B');
         $risqueB = $this->makeRisque($entrepriseA, $inviteA, 'Risque Auto B', 'RQ-B');
-        $cotationB = $this->makeCotation($entrepriseA, $inviteA, 'Cotation Filtre B', null, $assureurB, $risqueB);
+        // Piste montée par un AUTRE invité (sinon, sans gestionnaire, elle serait à A).
+        $autreA = (new Invite())->setNom('Collègue Filtre B')->setEntreprise($entrepriseA)->setProprietaire(false);
+        $em->persist($autreA);
+        $cotationB = $this->makeCotation($entrepriseA, $autreA, 'Cotation Filtre B', null, $assureurB, $risqueB);
         $avenantB = $this->makeAvenant($cotationB, $entrepriseA, $inviteA, 'POL-FILTRE-B', new \DateTimeImmutable('-10 days'));
 
         $em->flush();

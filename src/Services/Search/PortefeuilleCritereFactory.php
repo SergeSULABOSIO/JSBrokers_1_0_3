@@ -75,11 +75,13 @@ final class PortefeuilleCritereFactory
         return match (true) {
             $nb === 1 => (string) $portefeuilles[0]->getNom(),
             $nb > 1 => $nb . ' portefeuilles',
-            // LES PISTES NE SONT PAS VIDES SANS PORTEFEUILLE : celles qu'il a créées pour un
-            // client sans gestionnaire sont à lui (ResponsableDePiste). Dire « aucun
+            // LES PISTES NE SONT PAS VIDES SANS PORTEFEUILLE, ni ce qui en descend : celles
+            // qu'il a créées pour un client sans gestionnaire sont à lui (ResponsableDePiste),
+            // avec leurs cotations, polices, tranches, tâches et documents. Dire « aucun
             // portefeuille » ferait annoncer une liste vide à côté d'une liste pleine.
-            PortefeuilleScope::regleDe((string) $entityShortName) === ResponsableDePiste::class => 'les pistes dont vous êtes responsable',
-            default => 'aucun portefeuille',
+            $entityShortName === 'Piste' => PortefeuilleScope::LIBELLE_PISTES_RESPONSABLE,
+            PortefeuilleScope::suitLeResponsableDePiste((string) $entityShortName) => PortefeuilleScope::LIBELLE_AFFAIRES_RESPONSABLE,
+            default => PortefeuilleScope::LIBELLE_AUCUN_PORTEFEUILLE,
         };
     }
 }

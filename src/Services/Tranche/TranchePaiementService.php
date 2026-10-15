@@ -7,6 +7,7 @@ use App\Entity\Invite;
 use App\Entity\Tranche;
 use App\Services\CanvasBuilder;
 use App\Services\Search\PortefeuilleScope;
+use App\Services\Search\ResponsableDePiste;
 use App\Services\Search\TranchePaiementScope;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -116,16 +117,19 @@ class TranchePaiementService
             $qb->andWhere("{$alias}.client = :lieA")->setParameter('lieA', $lieAId);
         }
 
-        // Périmètre portefeuille : chemin de relations emprunté à PortefeuilleScope (source
-        // unique partagée avec le moteur de recherche des listes) — le dernier segment est le
-        // gestionnaire, comparé à l'invité.
+        // Périmètre portefeuille : une tranche suit le RESPONSABLE de sa piste
+        // (ResponsableDePiste), par le chemin que PortefeuilleScope déclare — source unique
+        // partagée avec le moteur de recherche des listes. Le client, son portefeuille et son
+        // gestionnaire se joignent en LEFT : leur absence fait jouer le repli sur le créateur.
         if ($invitePortefeuille !== null) {
-            $segments = explode('.', PortefeuilleScope::pathsFor('Tranche')[0] ?? '');
-            $gestionnaire = array_pop($segments);
-            if ($gestionnaire !== null && $segments !== []) {
-                $alias = $joindreChemin($segments);
-                $qb->andWhere("{$alias}.{$gestionnaire} = :invitePortefeuille")
-                    ->setParameter('invitePortefeuille', $invitePortefeuille);
+            $chemin = PortefeuilleScope::cheminsVersLaPiste('Tranche')[0] ?? null;
+            if ($chemin !== null) {
+                $piste = $joindreChemin(explode('.', $chemin));
+                $qb->leftJoin("{$piste}.client", 'pf_client')
+                    ->leftJoin('pf_client.portefeuille', 'pf_portefeuille')
+                    ->leftJoin('pf_portefeuille.gestionnaire', 'pf_gestionnaire')
+                    ->andWhere(ResponsableDePiste::predicat('pf_gestionnaire', $piste, 'invitePortefeuille'))
+                    ->setParameter('invitePortefeuille', $invitePortefeuille->getId());
             }
         }
 

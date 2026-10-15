@@ -405,11 +405,12 @@ class PaiementsPrimeToolIntegrationTest extends KernelTestCase
         $this->assertSame('Portefeuille PP A', $vuGestionnaire->data['perimetre']);
         $this->assertSame(600.0, $vuGestionnaire->data['montantPage']);
 
-        // Un invité qui ne gère aucun portefeuille ne voit rien — et le périmètre le dit,
-        // pour que l'assistant explique le zéro au lieu de l'annoncer sèchement.
+        // Un invité qui ne gère aucun portefeuille ne voit rien ici (il n'est responsable
+        // d'aucune de ces pistes) — et le périmètre dit ce qu'il voit : les affaires dont il
+        // est responsable (décision du 2026-10-14), pour que l'assistant explique le zéro.
         $vuAutre = $this->tool()->execute([], new AiScope($entreprise, $autre));
         $this->assertSame(0, $vuAutre->data['total']);
-        $this->assertSame('aucun portefeuille', $vuAutre->data['perimetre']);
+        $this->assertSame('les affaires dont vous êtes responsable', $vuAutre->data['perimetre']);
 
         // Élargi à l'entreprise : les signalements reviennent, ceux de l'entreprise B non.
         $vuEntreprise = $this->tool()->execute(
