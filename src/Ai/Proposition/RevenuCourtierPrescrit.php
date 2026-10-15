@@ -26,9 +26,9 @@ use App\Util\Pourcentage;
  * une part partenaire et des taxes sur commission à zéro.
  *
  * CE QU'IL NE STOCKE PAS, ET C'EST L'ESSENTIEL. Le taux n'est PAS recopié dans le
- * revenu. La cascade de {@see \App\Constantes\Constante::Revenu_getMontant_ht()} le
- * résout à la LECTURE : un type portant `appliquerPourcentageDuRisque` va chercher le
- * pourcentage prescrit par le risque de l'opportunité. Créer le revenu avec son seul
+ * revenu. La règle unique {@see \App\Service\Commission\TarifDuRevenu} le résout à la
+ * LECTURE : un type portant `appliquerPourcentageDuRisque` (et ni pourcentage ni forfait)
+ * va chercher le pourcentage prescrit par le risque de l'opportunité. Créer le revenu avec son seul
  * `typeRevenu` suffit donc — et la commission suivra le risque si son taux change
  * demain. Un `tauxExceptionel` n'est écrit que si l'utilisateur DÉROGE explicitement.
  *
@@ -273,9 +273,9 @@ final class RevenuCourtierPrescrit
     }
 
     /**
-     * Ce que la configuration PRESCRIT pour ce type, dans l'ordre exact de la cascade
-     * de Constante::Revenu_getMontant_ht() — source unique du calcul réel. Renvoie
-     * null quand rien n'est prescrit : c'est alors une question, pas un défaut.
+     * Ce que la configuration PRESCRIT pour ce type, par la règle unique du calcul réel
+     * ({@see \App\Service\Commission\TarifDuRevenu}). Renvoie null quand rien n'est
+     * prescrit : c'est alors une question, pas un défaut.
      *
      * ⚠ LA PREMIÈRE BRANCHE DE LA CASCADE N'EST PAS ICI, ET ELLE NE PEUT PAS Y ÊTRE. Le
      * calcul commence par le `tauxExceptionel` DU REVENU, qui l'emporte désormais sur le
@@ -291,33 +291,26 @@ final class RevenuCourtierPrescrit
      */
     private function prescription(TypeRevenu $type, ?Risque $risque): ?array
     {
-        if ($type->isAppliquerPourcentageDuRisque() === true) {
-            $taux = Pourcentage::fromPourcent($risque?->getPourcentageCommissionSpecifiqueHT());
-            if ($risque === null || $taux->estNul()) {
-                return null;
-            }
+        // LA MÊME RÈGLE QUE LES ÉCRANS (TarifDuRevenu) : % du type, forfait du type, puis
+        // le taux du risque en dernier recours. L'annonce plaçait le risque d'abord, et
+        // promettait 15 % sur un type facturé à 10 % (constat du 2026-10-15).
+        $tarif = \App\Service\Commission\TarifDuRevenu::deType($type, $risque);
 
-            return [
-                'libelle' => sprintf(
-                    '%s (taux prescrit par le risque « %s »)',
-                    $taux->format(2),
-                    (string) $risque->getNomComplet(),
-                ),
-                'taux' => $taux,
-            ];
+        if ($tarif['forfait'] !== null) {
+            return ['libelle' => sprintf('montant forfaitaire de %s', $this->nombre($tarif['forfait'])), 'taux' => null];
+        }
+        if ($tarif['taux'] === null) {
+            return null;
         }
 
-        $taux = Pourcentage::fromPourcent($type->getPourcentage());
-        if (!$taux->estNul()) {
-            return ['libelle' => sprintf('%s (taux habituel du type)', $taux->format(2)), 'taux' => $taux];
-        }
+        $taux = Pourcentage::fromPourcent($tarif['taux']);
 
-        $forfait = (float) ($type->getMontantflat() ?? 0.0);
-        if ($forfait !== 0.0) {
-            return ['libelle' => sprintf('montant forfaitaire de %s', $this->nombre($forfait)), 'taux' => null];
-        }
-
-        return null;
+        return [
+            'libelle' => $tarif['origine'] === 'risque'
+                ? sprintf('%s (taux prescrit par le risque « %s »)', $taux->format(2), (string) $risque?->getNomComplet())
+                : sprintf('%s (taux habituel du type)', $taux->format(2)),
+            'taux' => $taux,
+        ];
     }
 
     /**

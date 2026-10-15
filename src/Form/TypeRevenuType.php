@@ -75,20 +75,24 @@ class TypeRevenuType extends AbstractType
                 'placeholder' => 'Choisissez la composante de la prime…',
                 'help' => 'La composante de la prime sur laquelle ce revenu se calcule (en général la prime nette). Une taxe (TVA, ARCA) ne peut pas servir de base.',
             ])
+            // ⚠ CE LIBELLÉ PROMETTAIT L'INVERSE DU CALCUL (« Privilégier le taux du risque…
+            // appliqué en priorité ») : la facturation a toujours placé le pourcentage et le
+            // forfait du TYPE avant le taux du risque. L'ordre facturé fait foi (décision du
+            // 2026-10-15, TarifDuRevenu) ; le libellé le dit désormais.
             ->add('appliquerPourcentageDuRisque', ChoiceType::class, [
                 'required' => false,
-                'label' => "Privilégier le taux de commission configuré pour le risque concerné?",
+                'label' => "À défaut de pourcentage ou de forfait sur ce type, appliquer le taux de commission du risque ?",
                 'expanded' => true,
                 'choices'  => [
-                    "Oui, s'il existe et qu'il est différent du pourcentage de ce revenu." => true,
+                    "Oui, quand ce type ne porte ni pourcentage ni forfait." => true,
                     "Non, pas du tout." => false,
                 ],
                 'label_html' => true,
                 'choice_label' => function ($choice, $key, $value) {
                     if ($choice === true) {
-                        return '<div><strong>Oui</strong><div class="text-muted small">En cas de différence, le taux spécifique au risque sera appliqué en priorité.</div></div>';
+                        return '<div><strong>Oui</strong><div class="text-muted small">Sans pourcentage ni forfait sur ce type, la commission suit le taux configuré pour le risque de l\'affaire. Un pourcentage ou un forfait du type l\'emporte toujours.</div></div>';
                     }
-                    return '<div><strong>Non</strong><div class="text-muted small">Le taux de ce type de revenu sera toujours appliqué.</div></div>';
+                    return '<div><strong>Non</strong><div class="text-muted small">Seuls le pourcentage ou le forfait de ce type s\'appliquent.</div></div>';
                 },
             ])
             ->add('pourcentage', PercentType::class, [

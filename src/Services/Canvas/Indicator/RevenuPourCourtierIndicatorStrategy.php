@@ -125,24 +125,24 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
         $typeRevenu = $revenu->getTypeRevenu();
         if (!$typeRevenu) return "Type de revenu non défini";
 
-        // Ces taux (exceptionnel, type de revenu, risque) sont stockés en POINTS →
-        // affichage via le VO Pourcentage::fromPourcent (jamais de ×100 à la main).
-        if ($revenu->getTauxExceptionel() !== null && $revenu->getTauxExceptionel() != 0) {
-            return "Taux exceptionnel de " . Pourcentage::fromPourcent($revenu->getTauxExceptionel())->format(2);
+        // LA MÊME RÈGLE QUE LE CALCUL (TarifDuRevenu) : la fiche décrit ce qui est facturé.
+        // Taux en POINTS → affichage via le VO Pourcentage (jamais de ×100 à la main).
+        $tarif = \App\Service\Commission\TarifDuRevenu::deRevenu($revenu);
+        $estDerogation = $tarif['origine'] === 'revenu';
+
+        if ($tarif['taux'] !== null) {
+            $taux = Pourcentage::fromPourcent($tarif['taux'])->format(2);
+
+            return match ($tarif['origine']) {
+                'risque' => "Taux du risque de " . $taux,
+                'type' => "Taux par défaut de " . $taux,
+                default => "Taux exceptionnel de " . $taux,
+            };
         }
-        if ($revenu->getMontantFlatExceptionel()) {
-            return "Montant fixe exceptionnel de " . $revenu->getMontantFlatExceptionel();
+        if ($tarif['forfait'] !== null) {
+            return ($estDerogation ? "Montant fixe exceptionnel de " : "Montant fixe par défaut de ") . $tarif['forfait'];
         }
-        if ($typeRevenu->getPourcentage() !== null && $typeRevenu->getPourcentage() != 0) {
-            return "Taux par défaut de " . Pourcentage::fromPourcent($typeRevenu->getPourcentage())->format(2);
-        }
-        if ($typeRevenu->getMontantflat()) {
-            return "Montant fixe par défaut de " . $typeRevenu->getMontantflat();
-        }
-        if ($typeRevenu->isAppliquerPourcentageDuRisque() && $revenu->getCotation()?->getPiste()?->getRisque()) {
-            $tauxRisque = $revenu->getCotation()->getPiste()->getRisque()->getPourcentageCommissionSpecifiqueHT();
-            return "Taux du risque de " . Pourcentage::fromPourcent($tauxRisque)->format(2);
-        }
+
         return "Logique de calcul non spécifiée";
     }
 

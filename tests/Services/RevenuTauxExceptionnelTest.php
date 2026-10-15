@@ -2,7 +2,8 @@
 
 namespace App\Tests\Services;
 
-use App\Constantes\Constante;
+use App\Service\Commission\TarifDuRevenu;
+use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use App\Entity\Chargement;
 use App\Entity\Client;
 use App\Entity\ChargementPourPrime;
@@ -28,8 +29,11 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  * comptait pas, la note vaudrait zéro et son règlement la rendrait négative.
  *
  * ── CE QUI EST VÉRIFIÉ SANS BASE DE DONNÉES ─────────────────────────────────────────
- * `Revenu_getMontant_ht()` ne lit que des objets déjà hydratés : on les monte à la main,
- * ce qui rend l'ordre de la cascade lisible en un coup d'œil — et le test rapide.
+ * Le calcul des ÉCRANS (`IndicatorCalculationHelper::getRevenuMontantHt()`, sur la règle
+ * unique `TarifDuRevenu` depuis le 2026-10-15) ne lit que des objets déjà hydratés : on
+ * les monte à la main, ce qui rend l'ordre lisible en un coup d'œil — et le test rapide.
+ * Il interrogeait la cascade de `Constante`, d'un autre ordre que
+ * celle qui facture, supprimée depuis.
  */
 class RevenuTauxExceptionnelTest extends KernelTestCase
 {
@@ -39,8 +43,7 @@ class RevenuTauxExceptionnelTest extends KernelTestCase
      * ⚠ LE CAS QUI A MOTIVÉ TOUT LE CHANTIER.
      *
      * Un taux saisi sur le revenu l'emporte sur celui du risque. C'est le sens du mot
-     * « exceptionnel », et c'est ce que le formulaire promet déjà : « Privilégier le taux
-     * du risque ? Oui, s'il existe ET QU'IL EST DIFFÉRENT DU POURCENTAGE DE CE REVENU ».
+     * « exceptionnel ».
      */
     public function testUnTauxExceptionnelLEmporteSurLeTauxDuRisque(): void
     {
@@ -50,7 +53,7 @@ class RevenuTauxExceptionnelTest extends KernelTestCase
             tauxExceptionnel: 17.5,
         );
 
-        self::assertSame(1750.0, $this->constante()->Revenu_getMontant_ht($revenu));
+        self::assertSame(1750.0, $this->ecrans()->getRevenuMontantHt($revenu));
     }
 
     /** Sans dérogation, le taux du risque continue de s'appliquer : rien n'a changé pour lui. */
@@ -62,7 +65,7 @@ class RevenuTauxExceptionnelTest extends KernelTestCase
             tauxExceptionnel: null,
         );
 
-        self::assertSame(1000.0, $this->constante()->Revenu_getMontant_ht($revenu));
+        self::assertSame(1000.0, $this->ecrans()->getRevenuMontantHt($revenu));
     }
 
     /**
@@ -86,13 +89,13 @@ class RevenuTauxExceptionnelTest extends KernelTestCase
 
         self::assertSame(
             5000.0,
-            $this->constante()->Revenu_getMontant_ht($revenu),
+            $this->ecrans()->getRevenuMontantHt($revenu),
             'Le forfait est facturé tel quel, et le taux du risque n\'est plus consulté.',
         );
 
         // Et le tarif ANNONCÉ suit : sans cela, l'écran afficherait 10 % sur une
         // commission facturée au forfait.
-        $tarif = $this->constante()->Revenu_getTarif_effectif($revenu);
+        $tarif = TarifDuRevenu::deRevenu($revenu);
         self::assertSame(5000.0, $tarif['forfait']);
         self::assertNull($tarif['taux']);
         self::assertSame('revenu', $tarif['origine']);
@@ -112,7 +115,7 @@ class RevenuTauxExceptionnelTest extends KernelTestCase
             forfaitExceptionnel: 5000.0,
         );
 
-        self::assertSame(1750.0, $this->constante()->Revenu_getMontant_ht($revenu));
+        self::assertSame(1750.0, $this->ecrans()->getRevenuMontantHt($revenu));
     }
 
     /**
@@ -132,10 +135,10 @@ class RevenuTauxExceptionnelTest extends KernelTestCase
             forfaitDuType: 5000.0,
         );
 
-        self::assertSame(5000.0, $this->constante()->Revenu_getMontant_ht($revenu));
+        self::assertSame(5000.0, $this->ecrans()->getRevenuMontantHt($revenu));
     }
 
-    /** Le taux du type reste le dernier recours, appliqué à l'assiette. */
+    /** Le taux du type s'applique à l'assiette, quand le revenu ne déroge pas. */
     public function testLeTauxDuTypeSAppliqueEnDernierRecours(): void
     {
         $revenu = $this->revenu(
@@ -145,7 +148,7 @@ class RevenuTauxExceptionnelTest extends KernelTestCase
             pourcentageDuType: 12.0,
         );
 
-        self::assertSame(1200.0, $this->constante()->Revenu_getMontant_ht($revenu));
+        self::assertSame(1200.0, $this->ecrans()->getRevenuMontantHt($revenu));
     }
 
     /**
@@ -157,21 +160,19 @@ class RevenuTauxExceptionnelTest extends KernelTestCase
      */
     public function testLeTarifEffectifSuitLaMemeCascadeQueLeCalcul(): void
     {
-        $constante = $this->constante();
-
-        $derogation = $constante->Revenu_getTarif_effectif(
+        $derogation = TarifDuRevenu::deRevenu(
             $this->revenu(typeAdosseAuRisque: true, tauxDuRisque: 10.0, tauxExceptionnel: 17.5),
         );
         self::assertSame(17.5, $derogation['taux']);
         self::assertSame('revenu', $derogation['origine'], 'Une dérogation appartient au revenu.');
 
-        $herite = $constante->Revenu_getTarif_effectif(
+        $herite = TarifDuRevenu::deRevenu(
             $this->revenu(typeAdosseAuRisque: true, tauxDuRisque: 10.0, tauxExceptionnel: null),
         );
         self::assertSame(10.0, $herite['taux']);
         self::assertSame('risque', $herite['origine'], 'Hérité : à marquer, donc à ne pas recopier.');
 
-        $duType = $constante->Revenu_getTarif_effectif(
+        $duType = TarifDuRevenu::deRevenu(
             $this->revenu(typeAdosseAuRisque: false, tauxDuRisque: 0.0, tauxExceptionnel: null, pourcentageDuType: 12.0),
         );
         self::assertSame(12.0, $duType['taux']);
@@ -181,7 +182,7 @@ class RevenuTauxExceptionnelTest extends KernelTestCase
     /** Un risque sans taux prescrit ne tarife rien — et le dire vaut mieux qu'écrire un zéro. */
     public function testUnRisqueSansTauxNeTarifeRien(): void
     {
-        $tarif = $this->constante()->Revenu_getTarif_effectif(
+        $tarif = TarifDuRevenu::deRevenu(
             $this->revenu(typeAdosseAuRisque: true, tauxDuRisque: 0.0, tauxExceptionnel: null),
         );
 
@@ -192,9 +193,9 @@ class RevenuTauxExceptionnelTest extends KernelTestCase
     /**
      * Un revenu monté à la main, assis sur une prime nette de 10 000.
      *
-     * L'assiette est appariée par le TYPE de chargement, jamais par son nom
-     * (`Cotation_getMontant_chargement_prime`) : le même objet `Chargement` doit donc
-     * servir des deux côtés, sans quoi l'assiette vaut zéro et tous les cas rendent 0.
+     * L'assiette est appariée par l'IDENTIFIANT du type de chargement, jamais par son nom
+     * (`getCotationMontantChargementPrime`) : le chargement reçoit donc un id, et le même
+     * objet sert des deux côtés, sans quoi l'assiette vaut zéro et tous les cas rendent 0.
      */
     private function revenu(
         bool $typeAdosseAuRisque,
@@ -207,6 +208,7 @@ class RevenuTauxExceptionnelTest extends KernelTestCase
         bool $risqueImposable = true,
     ): RevenuPourCourtier {
         $primeNette = (new Chargement())->setNom('Prime nette')->setFonction(Chargement::FONCTION_PRIME_NETTE);
+        (new \ReflectionProperty($primeNette, 'id'))->setValue($primeNette, 1);
 
         $type = (new TypeRevenu())
             ->setNom('Commission Ordinaire')
@@ -244,14 +246,11 @@ class RevenuTauxExceptionnelTest extends KernelTestCase
         return $revenu;
     }
 
-    /**
-     * La god-class du calcul porte seize dépendances : on la prend au conteneur plutôt que
-     * de la monter à la main. Le noyau démarre une fois pour tout le fichier de test.
-     */
-    private function constante(): Constante
+    /** Le calcul des écrans, pris au conteneur. */
+    private function ecrans(): IndicatorCalculationHelper
     {
         self::bootKernel();
 
-        return static::getContainer()->get(Constante::class);
+        return static::getContainer()->get(IndicatorCalculationHelper::class);
     }
 }

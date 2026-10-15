@@ -22,7 +22,7 @@ namespace App\Echange\Reprise;
  * « Frais de consultance » devenait « Commission Ordinaire », et l'information du
  * classeur était perdue. La règle actuelle sépare les deux — le revenu garde SON nom, le
  * type n'est qu'un rattachement — et le taux de la ligne l'emporte de toute façon sur
- * celui du type ({@see \App\Constantes\Constante::Revenu_getMontant_ht()}). Le débiteur
+ * celui du type ({@see \App\Service\Commission\TarifDuRevenu}). Le débiteur
  * reste le seul réglage hérité, et l'utilisateur en est averti nommément.
  *
  * ⚠ LA REPRISE NE CRÉE PAS DE TYPES DE REVENU — elle crée des REVENUS. Une seule

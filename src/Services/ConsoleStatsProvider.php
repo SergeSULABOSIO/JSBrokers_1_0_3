@@ -13,12 +13,12 @@ use Symfony\UX\Chartjs\Model\Chart;
 /**
  * @file Agrégats globaux de la plateforme pour le tableau de bord de la Console.
  * @description Centralise les KPIs (comptes, ventes, revenu, tokens) et la
- * construction des graphiques Chart.js (même bundle/pattern que JSBChartBuilder).
+ * construction des graphiques Chart.js (bundle symfony/ux-chartjs).
  * Lecture seule : ne modifie aucune donnée.
  */
 class ConsoleStatsProvider
 {
-    /** Palette cohérente avec JSBChartBuilder, accent cobalt en tête. */
+    /** Palette de la charte, accent cobalt en tête. */
     private const COLORS = [
         'rgb(0,71,171)',    // cobalt (marque)
         'rgb(77,77,255)',
