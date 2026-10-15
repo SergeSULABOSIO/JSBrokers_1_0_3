@@ -15,6 +15,11 @@ use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class PieceSinistreType extends AbstractType
 {
+    public function __construct(
+        private \App\Services\FormListenerFactory $ecouteurFormulaire,
+    ) {
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -41,6 +46,9 @@ class PieceSinistreType extends AbstractType
                 'label' => "Nature de la pièce",
                 'required' => false,
                 'class' => ModelePieceSinistre::class,
+                // UN SÉLECTEUR N'AFFICHE JAMAIS LES DONNÉES D'UN AUTRE CABINET (règle,
+                // 2026-10-15) : sans ce filtre, il listait les modèles de tous les cabinets.
+                'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
                 'expanded' => true,
                 'label_html' => true,
                 'choice_label' => function (ModelePieceSinistre $modele) {
