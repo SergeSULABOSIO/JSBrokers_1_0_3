@@ -33,7 +33,7 @@ et contrôle — il ne choisit pas à la place du cabinet.
 | Frais ARCA, à charge du courtier | 2 % IARD / 2 % VIE — **confirmé** (2026-10-14) | :308-318 | oui |
 | Chargements « TVA », « ARCA » (frais de surveillance) | — | :343-351 | oui |
 | Commissions par défaut | fronting 30 %, consultance 5 %, honoraire 2 % | :365-387 | oui |
-| 43 risques et leur taux de commission « Maxima HT » (5 à 25 %) | `assets/data/risques_defaut.json` | :392-405 | oui — ce sont des **valeurs de départ**, pas une politique : le cabinet choisit son taux (règle ci-dessus). Leur source réglementaire n'est pas citée. |
+| 43 risques et leur taux de commission « Maxima HT » (5 à 25 %) | `assets/data/risques_defaut.json` | :392-405 | oui — ce sont des **valeurs de départ**, pas une politique : le cabinet choisit son taux (règle ci-dessus). Ils égalent, un à un, les **maxima du barème ARCA 005/24** (constat du §6) ; le fichier ne cite toujours pas sa source. |
 | Monnaie locale | déduite du pays, posée en **référence** (capital social, mentions légales, taux) ; la monnaie de **travail** par défaut est l'USD (décision du 2026-10-15) | `initialiserMonnaies` (`ServiceGeographie`) ; `MonnaieDeTravail` | oui — la monnaie de travail tant qu'aucun montant n'est saisi |
 
 ⚠ **Le pays n'est pas consulté pour les taxes** (`initialiserTaxes`, :294) : un cabinet hors RDC
@@ -85,9 +85,34 @@ présenter une valeur du code comme leur application.
 
 | Référentiel | État dans le code | Suite |
 |---|---|---|
-| **Barème ARCA des commissions** (Règlement n° 005/24) | absent — `risques_defaut.json` ne cite aucune source | Serge fournira le barème comme **fichier de référence** ; il bornera la fourchette légale dans laquelle chaque cabinet choisit son taux |
+| **Barème ARCA des commissions** (Règlement n° 005/24) | non implémenté : seuls les MAXIMA sont semés comme taux par défaut (`risques_defaut.json`, sans citer sa source) ; ni minima, ni contrôle de fourchette, ni régimes des Art. 3 à 6 | **Fichier de référence : [`references/bareme-arca-005-24.md`](references/bareme-arca-005-24.md)** — transcription **à relire contre le texte officiel** (À CONFIRMER, Serge) avant tout usage dans le code. Il borne la fourchette légale dans laquelle chaque cabinet choisit son taux |
 | **États prudentiels** à remettre à l'ARCA | absents (les bordereaux existants sont commerciaux) | non planifié |
 | **Loi n° 15/005** (Code des assurances), statut de « courtier agréé » | absents | non planifié |
+
+### Constat : les 43 risques semés face au barème 005/24 (2026-10-15, rien corrigé)
+
+Comparaison ligne à ligne de `assets/data/risques_defaut.json` au fichier de référence (14
+catégories Vie + 29 IARD = 43, « Risques pétroliers » en doublon dans le texte comptée une fois).
+
+- **Ce sont les maxima, tous les 43.** Chaque taux égale le maxima de sa catégorie (5 à 25 %),
+  et aucun n'est hors de la fourchette [minima, maxima]. Le fichier suit l'ordre des deux tableaux
+  de l'Art. 1er. Les minima ne sont semés nulle part.
+- **Barème de 2024, sans indice d'un barème antérieur.** Les 43 valeurs coïncident avec le
+  005/24, y compris ses distinctions fines (Incendie *MRH* 25 % / *Autres* 16 %, Accidents
+  corporels et Maladies *Individuelle* / *Groupe*, Automobile *RC* / *Dommages* et *Flotte*
+  11 %). Le fichier est né le 2026-06-16 (`0eb7b06d`), après la signature du règlement
+  (2024-12-20). ⚠ Le texte du 25 mai 2018 n'étant pas en référence, on ne peut pas exclure que
+  certaines valeurs y soient identiques : la coïncidence prouve l'accord avec 2024, pas
+  l'absence de reprise de 2018.
+- **Aucun risque sans catégorie, aucune catégorie sans risque** : correspondance 1 pour 1. Deux
+  écarts de LIBELLÉ seulement, sans effet sur le taux : `IARD-ASS-VOY` « Assistance - Voyage »
+  (le barème dit « Assistance », sans restriction au voyage — le libellé semé est plus étroit
+  que la catégorie) ; `IARD-AGRI` « Risque Agricole » (barème : « Risques agricoles »). Les
+  autres différences ne tiennent qu'aux articles (« des Véhicules… »).
+- **Hors de ce constat, à vérifier séparément** : l'assiette (Art. 2 : prime nette d'impôts et
+  taxes) à laquelle le taux du risque est appliqué (`RevenuCourtierPrescrit.php:295`), et les
+  régimes que le semis ignore — réassurance > 75 % (Art. 3), plafond pluriannuel (Art. 4),
+  date d'effet et ancien barème pour les contrats non renouvelés (Art. 6).
 
 ## 7. Défauts confirmés pour la branche VIE (2026-10-14)
 
