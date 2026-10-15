@@ -130,11 +130,12 @@ de frais accessoires + 1 840 de TVA + 230 d'ARCA, risque à 15 %.
   **exclus** le fronting, les frais accessoires, la TVA et l'ARCA. Épreuve : 10 000 × 15 % =
   **1 500**. Consultance (5 %) et honoraire (2 %) visent aussi la prime nette ; la
   « Commission sur Fronting » (30 %) vise le seul fronting.
-- **Acquis OU écart selon la lecture de l'Art. 2 — À CONFIRMER (Serge).** Si « prime nette
-  d'impôts et taxes » s'entend hors frais accessoires et hors fronting, le défaut est
-  **conforme**. S'il s'entend de TOUTE la prime hors taxes (nette + fronting + accessoires),
-  l'assiette est trop étroite : 11 500 × 15 % = **1 725**, soit **225 de moins (−13 %)** dans
-  l'épreuve. Les taxes, elles, sont bien exclues dans les deux lectures.
+- **ACQUIS — lecture étroite de l'Art. 2 retenue (décision de Serge du 2026-10-15).** La base
+  est la **prime nette seule**, hors fronting, hors frais accessoires et hors taxes, conforme à
+  la pratique du marché : le réglage par défaut (« Commission » → « Prime nette ») est donc
+  **conforme**. *À confirmer auprès de l'ARCA en cas de contrôle.* (La lecture large — toute la
+  prime hors taxes — aurait donné 11 500 × 15 % = 1 725, soit 225 de plus dans l'épreuve ; elle
+  n'est PAS retenue.)
 - ⚠ **Écart 1 — un chargement de TAXE peut servir d'assiette.** Le champ « Chargement cible »
   (`TypeRevenuType.php:56-62`) n'est filtré sur aucune fonction : un type à 10 % visant la TVA
   facture **184** de commission sur une taxe — contraire à l'Art. 2 dans toutes les lectures.
@@ -172,8 +173,8 @@ de frais accessoires + 1 840 de TVA + 230 d'ARCA, risque à 15 %.
    fournir).
 4. **Semer les minima** à côté des maxima (`risques_defaut.json` ne porte que le maxima).
 
-À décider aussi, à partir du constat d'assiette ci-dessus : la lecture de l'Art. 2 (prime nette
-seule ou toute la prime hors taxes) et le traitement des écarts 1 à 3.
+Les écarts 1 à 3 du constat d'assiette sont devenus un chantier **prioritaire** de
+`courtage-assurance` (« Assiette et source unique de la commission »), décision du 2026-10-15.
 
 ## 7. Défauts confirmés pour la branche VIE (2026-10-14)
 
