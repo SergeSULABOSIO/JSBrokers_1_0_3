@@ -27,7 +27,7 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
         /** @var Note $entity */
 
         // Note de bordereau : pas d'articles, montants issus du bordereau persisté
-        if ($entity->getArticles()->isEmpty() && $entity->getBordereau() !== null) {
+        if ($entity->getArticles()->isEmpty() && ($entity->getBordereau() !== null || $entity->estFigee())) {
             return $this->calculateFromBordereau($entity);
         }
 
@@ -82,8 +82,8 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
         $bordereau   = $note->getBordereau();
         // Figée, la note garde les montants de sa validation, même si le bordereau est
         // réanalysé depuis.
-        $montantHT   = round($note->estFigee() ? (float) $note->getMontantHtFige() : ($bordereau->getMontantComHtPayableNow() ?? 0.0), 2);
-        $montantTaxe = round($note->estFigee() ? (float) $note->getMontantTtcFige() - (float) $note->getMontantHtFige() : ($bordereau->getMontantTaxePayableNow() ?? 0.0), 2);
+        $montantHT   = round($note->estFigee() ? (float) $note->getMontantHtFige() : ($bordereau?->getMontantComHtPayableNow() ?? 0.0), 2);
+        $montantTaxe = round($note->estFigee() ? (float) $note->getMontantTtcFige() - (float) $note->getMontantHtFige() : ($bordereau?->getMontantTaxePayableNow() ?? 0.0), 2);
         $montantTotal = round($montantHT + $montantTaxe, 2);
         $montantPaye  = round($this->getNoteMontantPaye($note), 2);
         $solde        = round($montantTotal - $montantPaye, 2);
@@ -111,7 +111,7 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'nomTaxe'          => 'Taxe',
             'tauxTaxe'         => $tauxTaxe,
             'bordereauAffiche' => $this->bordereauAffiche($note),
-            'bordereauReference' => $bordereau->getReference(),
+            'bordereauReference' => $bordereau?->getReference(),
         ];
     }
 

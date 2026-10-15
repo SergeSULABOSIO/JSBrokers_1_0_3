@@ -276,11 +276,11 @@ class FigeageDesNotesTest extends KernelTestCase
         $this->em()->find(Client::class, $c['client'])->setExonere(true);
         $this->em()->flush();
 
-        // Le TTC du jour vaut le HT (1 000) : l'avoir d'une unité vaut 1 000, dont
-        // 1 000 × 1 000 / 1 160 HT — le rapport figé de la note annulée.
+        // L'avoir d'une unité rend TOUT ce qui a été émis — 1 160, dont 1 000 HT et 160 de
+        // taxe —, et non le TTC du jour (1 000, le client étant devenu exonéré).
         $avoir = $this->valider($this->brouillon($c, 'Avoir', Note::TYPE_NOTE_DE_CREDIT));
         $montants = $this->montants((int) $avoir->getId());
-        self::assertEqualsWithDelta(1000.0, $montants['ttc'], 0.01);
-        self::assertEqualsWithDelta(round(1000 * 1000 / 1160, 2), $montants['ht'], 0.01, 'Au rapport HT/TTC figé de la note annulée.');
+        self::assertEqualsWithDelta(1160.0, $montants['ttc'], 0.01);
+        self::assertEqualsWithDelta(1000.0, $montants['ht'], 0.01, 'Au rapport HT/TTC figé de la note annulée.');
     }
 }

@@ -445,13 +445,14 @@ class CourtierEcritureComptableService
      */
     private function ventiler(Note $note): array
     {
-        if ($note->getArticles()->isEmpty() && $note->getBordereau() !== null) {
-            // Figée : les montants de la validation, jamais ceux d'un bordereau réanalysé.
-            if ($note->estFigee()) {
-                $ht = round((float) $note->getMontantHtFige(), 2);
+        // Figée et sans ligne (note de bordereau) : les montants de la validation, jamais
+        // ceux d'un bordereau réanalysé — ni zéro si le bordereau a été détaché depuis.
+        if ($note->getArticles()->isEmpty() && $note->estFigee()) {
+            $ht = round((float) $note->getMontantHtFige(), 2);
 
-                return [$ht, round((float) $note->getMontantTtcFige() - $ht, 2)];
-            }
+            return [$ht, round((float) $note->getMontantTtcFige() - $ht, 2)];
+        }
+        if ($note->getArticles()->isEmpty() && $note->getBordereau() !== null) {
 
             return [
                 round((float) ($note->getBordereau()->getMontantComHtPayableNow() ?? 0.0), 2),

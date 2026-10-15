@@ -218,9 +218,10 @@ class SuppressionEnChaineTest extends WebTestCase
     private function note(array $cabinet, string $reference): Note
     {
         $note = (new Note())->setNom('Note ' . $reference)->setReference($reference)
-            ->setType(0)->setAddressedTo(0)->setValidated(true)->setSignature('PHPUnit')
-            // Déjà émise : elle garde sa référence, que les refus citent.
-            ->setEmiseLe(new \DateTimeImmutable('-3 days'));
+            // UN BROUILLON : ces tests portent sur la suppression d'un dossier et sur la règle
+            // « note réglée » (paiement d'abord). Une note VALIDÉE, elle, ne se supprime pas
+            // du tout (règle OHADA) : IntangibiliteDesNotesTest.
+            ->setType(0)->setAddressedTo(0)->setValidated(false)->setSignature('PHPUnit');
         $note->setEntreprise($cabinet['entreprise']);
         $note->setInvite($cabinet['invite']);
         $this->em()->persist($note);

@@ -215,17 +215,20 @@ final class PreparerFacturationTool implements AiToolProduisantUnPlan, AiToolCon
         if ($pesee['retenus'] === []) {
             return $this->rienAFacturer($this->pourquoiRien($source, $addressedTo, $pesee['ecartes']));
         }
-        $facturables = array_map(
-            static fn (array $retenu) => $retenu['revenu'],
-            $pesee['retenus'],
-        );
-
         // Une ligne par revenu encore dû, rattachée à l'échéance quand on en a une.
-        // `quantite` à 1 comme le formulaire en création : on facture l'unité de ce
-        // que le revenu porte, le montant se dérive.
+        //
+        // ⚠ LA QUANTITÉ PORTE LE RESTE, PAS L'UNITÉ. Une note émise ne se recalcule plus :
+        // après une hausse de taux, ce qui reste à facturer est l'ÉCART, et une ligne à 1
+        // refacturerait toute la commission ; après une baisse, l'avoir rend l'EXCÉDENT, pas
+        // tout le facturé. Même conversion que le picker de l'écran (quantitePour) ; sans
+        // unité connue (aucune échéance désignée), la ligne reste à 1.
         $lignes = [];
-        foreach ($facturables as $revenu) {
-            $champs = ['revenuFacture' => $revenu->getId(), 'quantite' => 1];
+        foreach ($pesee['retenus'] as $retenu) {
+            $revenu = $retenu['revenu'];
+            $quantite = $retenu['unitaire'] > 0.0
+                ? round($this->sourceDeFacturation->quantitePour((float) $retenu['montant'], (float) $retenu['unitaire'], null), 6)
+                : 1;
+            $champs = ['revenuFacture' => $revenu->getId(), 'quantite' => $quantite];
             if ($tranche !== null) {
                 $champs['tranche'] = $tranche->getId();
             }

@@ -65,6 +65,14 @@ class RevenuPourCourtier
     #[Groups(['list:read'])]
     public ?float $montantCalculeTTC = null;
 
+    /** Facturé sur ce revenu, net des avoirs (notes émises : montant figé). */
+    #[Groups(['list:read'])]
+    public ?float $montantFacture = null;
+
+    /** L'écart entre le dû du moment et le facturé, dit en clair (« À créditer : … »). */
+    #[Groups(['list:read'])]
+    public ?string $ecartDeFacturation = null;
+
     #[Groups(['list:read'])]
     public ?string $descriptionCalcul = null;
 

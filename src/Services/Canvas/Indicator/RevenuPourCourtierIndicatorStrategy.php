@@ -78,6 +78,11 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             // UNE COLONNE ANNONCÉE EST UNE COLONNE RENDUE : sans elle, la réserve baisserait
             // sans que rien n'explique où l'argent est passé.
             'retroAgentDue' => round($this->calculationHelper->getRevenuMontantRetroAgent($entity), 2),
+            // L'ÉCART APRÈS FACTURATION, VISIBLE ET EXPLIQUÉ (règle OHADA, 2026-10-15) : une
+            // note émise ne bouge plus, si bien qu'une prime ou un taux corrigés depuis
+            // laissent un écart — à facturer, ou à créditer par un avoir.
+            'montantFacture' => round($this->calculationHelper->getRevenuMontantFacture($entity), 2),
+            'ecartDeFacturation' => $this->ecartDeFacturation($entity),
             'reserve' => $this->getReserveCourtier($entity),
         ];
     }
@@ -118,6 +123,26 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, null, -1),
             $this->calculationHelper->getRevenuMontantRetroAgent($revenu),
         );
+    }
+
+    /**
+     * L'écart entre le dû du moment et ce qui a été facturé, en une phrase — null quand
+     * rien n'a encore été facturé (tout reste à facturer, sans écart à expliquer) ou que
+     * les deux concordent.
+     */
+    private function ecartDeFacturation(RevenuPourCourtier $revenu): ?string
+    {
+        $facture = round($this->calculationHelper->getRevenuMontantFacture($revenu), 2);
+        $du = round($this->calculationHelper->getRevenuMontantTTC($revenu), 2);
+        $ecart = round($du - $facture, 2);
+        if (abs($facture) < 0.01 || abs($ecart) < 0.01) {
+            return null;
+        }
+        $f = static fn (float $m): string => number_format($m, 2, ',', ' ');
+
+        return $ecart > 0
+            ? sprintf('À facturer : %s (dû aujourd’hui %s, déjà facturé %s).', $f($ecart), $f($du), $f($facture))
+            : sprintf('À créditer : %s par un avoir (facturé %s, dû aujourd’hui %s).', $f(-$ecart), $f($facture), $f($du));
     }
 
     private function getRevenuPourCourtierDescriptionCalcul(RevenuPourCourtier $revenu): string

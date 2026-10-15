@@ -228,7 +228,9 @@ class WorkspaceMutationService
         // Sans ce garde-fou, la parité avec l'assistant serait un trou de sécurité déguisé
         // en fonctionnalité : la règle vaudrait pour qui l'emprunte, et pas pour qui la
         // contourne. On la pose donc là où TOUS les chemins d'écriture passent.
-        $refusPartage = $this->refusDuRattachementAgent($op, $cible);
+        // UNE NOTE VALIDÉE NE SE MODIFIE PLUS, NI SES LIGNES (règle OHADA) : un BLOCAGE, que
+        // Ket restitue comme tel — pas une « information manquante ».
+        $refusPartage = $this->refusDeNoteIntangible($op, $cible, $scope) ?? $this->refusDuRattachementAgent($op, $cible);
         if ($refusPartage !== null) {
             $base['impacts'] = [$refusPartage];
             $base['bloque'] = true;
@@ -569,6 +571,13 @@ class WorkspaceMutationService
             ];
         }
 
+        // UNE NOTE VALIDÉE NE S'ÉCRIT PLUS — re-vérifié à l'exécution, comme à l'analyse :
+        // entre les deux, la note a pu être validée.
+        $refusIntangible = $this->refusDeNoteIntangible($op, $op->isCreate() ? null : $this->trouverCible($op, $scope), $scope);
+        if ($refusIntangible !== null) {
+            throw MutationException::bloque($refusIntangible);
+        }
+
         // Renvois vers les créations DÉJÀ exécutées de ce plan : résolus en id réels
         // (source unique avec le dry-run) avant toute validation.
         $resolution = $this->resoudreReferences($op, $refs);
@@ -789,6 +798,38 @@ class WorkspaceMutationService
      * On ne regarde que les opérations qui TOUCHENT ce champ : tout le reste passe, y compris
      * les éditions d'une piste qui portent d'autres champs.
      */
+    /**
+     * Une note intangible (validée, ou de reprise) ne s'écrit plus : ni son en-tête, ni ses
+     * lignes. Restent permis ses PAIEMENTS et ses DOCUMENTS, et la demande de validation
+     * seule (dont EmissionDeNote dit « déjà validée »). La suppression a son propre
+     * contrôle, sur le plan complet (SuppressionEnCascade).
+     */
+    private function refusDeNoteIntangible(MutationOperation $op, ?object $cible, AiScope $scope): ?string
+    {
+        if ($op->isDelete()) {
+            return null;
+        }
+        if ($op->entityShortName === 'Note' && $cible instanceof \App\Entity\Note && \App\Service\Note\NoteIntangible::estIntangible($cible)) {
+            $champs = array_diff(array_keys($op->fields), ['validated']);
+            $collections = array_diff(array_keys($op->collections), ['paiements', 'documents']);
+
+            return ($champs !== [] || $collections !== []) ? \App\Service\Note\NoteIntangible::motif($cible) : null;
+        }
+        if ($op->entityShortName === 'Article') {
+            $note = $cible instanceof \App\Entity\Article
+                ? $cible->getNote()
+                : (is_numeric($op->fields['note'] ?? null) ? $this->em->find(\App\Entity\Note::class, (int) $op->fields['note']) : null);
+            // Une note d'un AUTRE cabinet n'est jamais nommée : son refus viendra, muet, du
+            // contrôle d'appartenance.
+            if ($note !== null && $note->getEntreprise()?->getId() === $scope->entreprise->getId()
+                && \App\Service\Note\NoteIntangible::estIntangible($note)) {
+                return \App\Service\Note\NoteIntangible::motif($note, true);
+            }
+        }
+
+        return null;
+    }
+
     private function refusDuRattachementAgent(MutationOperation $op, ?object $cible): ?string
     {
         if ($op->entityShortName !== 'Piste' || !array_key_exists('conditionsPartageAgent', $op->fields)) {

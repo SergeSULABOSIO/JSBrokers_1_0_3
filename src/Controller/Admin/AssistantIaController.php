@@ -847,6 +847,15 @@ class AssistantIaController extends AbstractController
                 'journal'   => $journal,
                 'rolledBack' => true,
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        } catch (\App\Service\Note\NoteIntangibleException $e) {
+            // Le dernier rempart des notes émises : un refus métier, rédigé pour le courtier.
+            return $this->json([
+                'success'    => false,
+                'statut'     => MutationException::BLOQUE,
+                'message'    => $e->getMessage(),
+                'journal'    => $journal,
+                'rolledBack' => true,
+            ], Response::HTTP_CONFLICT);
         } catch (\Throwable $e) {
             $this->logger->error('Ket : échec d’exécution du plan de mutation.', ['exception' => $e]);
 
