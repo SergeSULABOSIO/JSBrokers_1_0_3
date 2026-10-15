@@ -74,8 +74,11 @@ class TypeRevenuController extends AbstractController
             function (TypeRevenu $typeRevenu, Invite $invite) {
                 $typeRevenu->setNom("REVENUE" . (rand(2000, 3000)));
                 $typeRevenu->setEntreprise($invite->getEntreprise());
-                // POINTS : 10 = 10 % (cf. TypeRevenu::getFraction).
-                $typeRevenu->setPourcentage(10);
+                // UN TYPE NEUF S'ADOSSE AU TAUX DU RISQUE (décision du 2026-10-15). Pas de
+                // pourcentage par défaut : celui du type passe AVANT le risque (TarifDuRevenu),
+                // et 10 % rendait le drapeau sans effet. Le courtier qui veut un taux fixe le
+                // saisit (en POINTS : 10 = 10 %).
+                $typeRevenu->setPourcentage(null);
                 $typeRevenu->setAppliquerPourcentageDuRisque(true);
                 $typeRevenu->setMontantflat(0);
                 $typeRevenu->setMultipayments(true);
