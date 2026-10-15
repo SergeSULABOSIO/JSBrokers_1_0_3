@@ -36,15 +36,19 @@ class MonnaieFormCanvasProvider implements FormCanvasProviderInterface
             // Colonne gauche du dialogue EN CRÉATION : ce que ce paramètre apporte
             // au cabinet. Le premier paragraphe sert aussi de « pourquoi » sur la
             // carte du guide de démarrage — un seul texte, deux surfaces.
+            // ⚠ CE TEXTE ANNONÇAIT UNE CONVERSION QUI N'EXISTE PAS (« il sert à convertir
+            // primes, commissions et taxes »). Un cabinet travaille dans UNE monnaie, et aucun
+            // montant n'est jamais converti (MonnaieDeTravail) ; le taux de la monnaie du pays
+            // ne sert qu'au capital social, exprimé dans les états comptables.
             "description_creation" => [
-                "La monnaie locale de votre cabinet a été créée avec un taux de change provisoire de 1,00 : tant qu'il n'est pas ajusté, toute conversion est fausse en silence.",
-                "Le taux exprime combien d'unités de cette monnaie valent un dollar. Il sert à convertir primes, commissions et taxes dès qu'une affaire n'est pas libellée dans la monnaie d'affichage.",
-                "Corrigez-le maintenant, puis à chaque révision sensible : aucun écran ne signale un taux périmé, et un montant converti faux ne se voit qu'au moment de payer.",
+                "La monnaie de votre pays a été créée avec un taux de change provisoire de 1,00 : tant qu'il n'est pas ajusté, votre capital social est faux dans les états comptables.",
+                "Le taux exprime combien d'unités de cette monnaie valent un dollar. Il sert au capital social et aux mentions légales — vos primes, commissions et taxes restent dans la monnaie de travail du cabinet, sans conversion.",
+                "Corrigez-le maintenant, puis à chaque révision sensible : aucun écran ne signale un taux périmé.",
             ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Monnaie",
-                "description" => "Vous configurez une devise utilisée par l'entreprise : code, taux de change vers l'USD, format local et fonction. Elle conditionne l'affichage et la conversion des montants dans toute la gestion financière.",
+                "description" => "Vous configurez une devise du cabinet : code, taux de change vers l'USD et rôle. Le cabinet travaille dans UNE seule monnaie, celle de tous ses montants ; les autres sont des références (capital social, mentions légales). Aucun montant n'est converti.",
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [

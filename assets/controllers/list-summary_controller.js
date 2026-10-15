@@ -16,7 +16,9 @@ export default class extends Controller {
     static targets = ["globalTotal", "selectionTotal", "attributeSelector"];
 
     static values = {
-        currencyCode: { type: String, default: 'EUR' }
+        // Repli seulement : le serveur passe la monnaie de travail du cabinet. USD, le
+        // défaut d'un cabinet — jamais l'euro, qu'aucun cabinet ne reçoit.
+        currencyCode: { type: String, default: 'USD' }
     };
 
     /**
@@ -224,7 +226,7 @@ export default class extends Controller {
      * @private
      */
     formatCurrency(valueInCents) {
-        const currency = this.currencyCodeValue || 'EUR';
+        const currency = this.currencyCodeValue || 'USD';
         return new Intl.NumberFormat('fr-FR', { style: 'currency', currency }).format(valueInCents / 100);
     }
 }

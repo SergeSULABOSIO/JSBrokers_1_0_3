@@ -6,6 +6,7 @@ use App\Entity\Avenant;
 use App\Entity\ConditionPartage;
 use App\Entity\Note;
 use App\Service\Avenant\DefautsDeSouscription;
+use App\Service\Monnaie\MonnaieDeTravail;
 use App\Service\Note\NumerotationDesNotes;
 use App\Entity\ReversementRetroAgent;
 use Doctrine\ORM\EntityManagerInterface;
@@ -109,6 +110,7 @@ class ChampsObligatoiresInspector
         // conteneur l'injecte toujours, et la règle de prime de l'avenant en dépend.
         private readonly ?DefautsDeSouscription $defautsDeSouscription = null,
         private readonly ?NumerotationDesNotes $numerotationDesNotes = null,
+        private readonly ?MonnaieDeTravail $monnaieDeTravail = null,
     ) {
     }
 
@@ -315,6 +317,14 @@ class ChampsObligatoiresInspector
                 && ($refus = $this->defautsDeSouscription->refusDAvenant($cotation, $entity)) !== null) {
                 return ['' => [$refus]];
             }
+        }
+
+        // UN CABINET TRAVAILLE DANS UNE SEULE MONNAIE, et elle ne change plus une fois des
+        // montants saisis (décisions du 2026-10-14 et du 2026-10-15) : MonnaieDeTravail.
+        if ($shortName === 'Monnaie' && $entity instanceof \App\Entity\Monnaie && $this->monnaieDeTravail !== null
+            && ($champsPilotables === null || in_array('fonction', $champsPilotables, true) || in_array('code', $champsPilotables, true))
+            && ($refus = $this->monnaieDeTravail->refus($entity)) !== null) {
+            return [$refus['champ'] => [$refus['message']]];
         }
 
         // UNE RÉFÉRENCE N'APPARTIENT QU'À UNE NOTE DU CABINET (décision du 2026-10-14). Le

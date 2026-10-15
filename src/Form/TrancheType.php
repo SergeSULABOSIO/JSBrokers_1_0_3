@@ -19,7 +19,8 @@ use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 class TrancheType extends AbstractType
 {
     public function __construct(
-        private FormListenerFactory $ecouteurFormulaire
+        private FormListenerFactory $ecouteurFormulaire,
+        private \App\Services\ServiceMonnaies $serviceMonnaies,
     ) {}
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -76,7 +77,9 @@ class TrancheType extends AbstractType
             ->add('montantFlat', MoneyType::class, [
                 'label' => "Montant fixe",
                 'required' => false,
-                'currency' => "USD",
+                // La monnaie de travail du cabinet, comme tous les montants (et non « USD »
+                // en dur, qui mentait à un cabinet travaillant dans une autre monnaie).
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage() ?? 'USD',
                 'grouping' => true,
                 'attr' => [
                     'placeholder' => "Montant fixe",

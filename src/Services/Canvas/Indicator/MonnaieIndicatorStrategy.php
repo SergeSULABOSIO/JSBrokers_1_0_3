@@ -38,8 +38,10 @@ class MonnaieIndicatorStrategy implements IndicatorCalculationStrategyInterface
     private function getMonnaieFonctionString(Monnaie $monnaie): string
     {
         return match ($monnaie->getFonction()) {
-            Monnaie::FONCTION_AUCUNE => "Aucune",
-            Monnaie::FONCTION_SAISIE_ET_AFFICHAGE => "Saisie et Affichage",
+            // Les deux rôles d'une monnaie depuis le 2026-10-15 (MonnaieDeTravail) ; les deux
+            // suivants ne se lisent plus que sur des données d'avant la migration.
+            Monnaie::FONCTION_AUCUNE => "Référence",
+            Monnaie::FONCTION_SAISIE_ET_AFFICHAGE => "Monnaie de travail",
             Monnaie::FONCTION_SAISIE_UNIQUEMENT => "Saisie Uniquement",
             Monnaie::FONCTION_AFFICHAGE_UNIQUEMENT => "Affichage Uniquement",
             default => "Non définie",

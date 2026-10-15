@@ -258,9 +258,11 @@ class ServiceInitialisationEntreprise
     }
 
     /**
-     * USD sert de monnaie d'affichage de référence (taux 1.00). La monnaie locale,
-     * dérivée du pays de l'entreprise, est ajoutée pour la saisie ; son taux est un
-     * placeholder (1.00) que le courtier ajuste ensuite dans l'espace de travail.
+     * UNE SEULE MONNAIE DE TRAVAIL : USD (saisie = affichage, taux 1.00), que le cabinet
+     * peut changer tant qu'il n'a saisi aucun montant (MonnaieDeTravail). La monnaie du
+     * PAYS est posée en RÉFÉRENCE — capital social, mentions légales, taux de change — et
+     * non plus « pour la saisie » : aucun montant n'est jamais converti. Son taux est un
+     * placeholder (1.00) que le courtier ajuste ensuite (étape du guide de démarrage).
      */
     private function initialiserMonnaies(Entreprise $entreprise, Invite $proprietaire): void
     {
@@ -282,7 +284,7 @@ class ServiceInitialisationEntreprise
                 ->setCode($codeLocal)
                 ->setTauxusd('1.00') // placeholder : taux de change à ajuster par le courtier
                 ->setLocale(true)
-                ->setFonction(Monnaie::FONCTION_SAISIE_UNIQUEMENT));
+                ->setFonction(Monnaie::FONCTION_AUCUNE));
         }
     }
 

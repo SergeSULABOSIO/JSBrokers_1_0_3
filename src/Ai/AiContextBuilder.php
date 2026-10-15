@@ -1074,10 +1074,9 @@ class AiContextBuilder
     /**
      * LE CODE DE LA MONNAIE dans laquelle ce cabinet lit ses montants.
      *
-     * SOURCE UNIQUE : ServiceMonnaies, c'est-à-dire le paramétrage « Monnaies » de
-     * l'entreprise — la monnaie dont la fonction est « affichage » ou « saisie et
-     * affichage ». Repli sur la monnaie LOCALE, dont le service garantit lui-même
-     * un dernier ressort à USD.
+     * SOURCE UNIQUE : ServiceMonnaies, c'est-à-dire la monnaie de TRAVAIL du cabinet
+     * (saisie = affichage, MonnaieDeTravail). Sans elle : USD, le défaut d'un cabinet —
+     * jamais la monnaie locale, qui n'est qu'une référence (capital social, taux).
      *
      * POURQUOI CETTE MÉTHODE EXISTE (2026-08-12). Le prompt système ne nommait
      * AUCUNE monnaie : la seule que le modèle y rencontrait était « € », dans
@@ -1391,14 +1390,12 @@ class AiContextBuilder
 
     private function monnaieDuCabinet(Entreprise $entreprise): string
     {
-        $affichage = $this->serviceMonnaies->getMonnaieAffichagePourEntreprise($entreprise);
-        if ($affichage !== null && trim((string) $affichage->getCode()) !== '') {
-            return trim((string) $affichage->getCode());
-        }
-
-        $locale = $this->serviceMonnaies->getMonnaieLocalePourEntreprise($entreprise);
-        if ($locale !== null && trim((string) $locale->getCode()) !== '') {
-            return trim((string) $locale->getCode());
+        // La monnaie de TRAVAIL du cabinet (saisie = affichage). Pas de repli sur la monnaie
+        // LOCALE : elle n'est qu'une référence (capital social, taux) — aucun montant n'y est
+        // saisi. Sans monnaie de travail : USD, le défaut d'un cabinet.
+        $travail = $this->serviceMonnaies->getMonnaieAffichagePourEntreprise($entreprise);
+        if ($travail !== null && trim((string) $travail->getCode()) !== '') {
+            return trim((string) $travail->getCode());
         }
 
         return 'USD';
