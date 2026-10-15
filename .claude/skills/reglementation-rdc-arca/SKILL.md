@@ -154,13 +154,13 @@ de frais accessoires + 1 840 de TVA + 230 d'ARCA, risque à 15 %.
   `IndicatorCalculationHelper` : l'écart lui échappe. Le type semé n'a pas de pourcentage, d'où
   l'absence de symptôme par défaut. (Touche aussi l'invariant « une source unique par montant »
   de `courtage-assurance`.)
-- ⚠ **Écart 3 — deux lignes du même chargement sur une cotation.** Rien ne l'interdit
-  (`ChargementPourPrime` sans contrainte d'unicité) ; les écrans retiennent la PREMIÈRE ligne
-  (`IndicatorCalculationHelper::getCotationMontantChargementPrime`, `break`) ; aucune lecture ne
-  les additionne. Prime nette 10 000 + 4 000 : écrans **1 500**, somme attendue 2 100. (La
-  copie de `Constante`, qui retenait la DERNIÈRE ligne — 600 —, est supprimée avec l'écart 2 :
-  il ne reste qu'un calcul, celui des écrans.) **En attente** de la mesure d'impact en
-  production (décision de Serge sur l'historique).
+- ✅ **Écart 3 RÉSOLU** : l'assiette est la SOMME des lignes du chargement cible
+  (`IndicatorCalculationHelper::getCotationMontantChargementPrime`) ; Ket additionnait déjà
+  (`SaisirPropositionTool::assiettes`). Mesure en production du 2026-10-15 : **aucun cas**
+  (Q1 à Q3 vides, aucun cabinet n'y travaille encore) — aucun historique à reprendre, dossier
+  clos. Test :
+  `AssietteSommeDesLignesTest`. Constat d'origine : deux lignes « prime nette » 10 000 + 4 000
+  donnaient **1 500** à l'écran (première ligne seule), 2 100 attendus.
 
 ### Chantiers ultérieurs (CIBLE ou à décider — sans plan détaillé, rien à coder sans plan validé)
 

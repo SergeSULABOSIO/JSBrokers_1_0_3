@@ -76,7 +76,7 @@ supprimée (§7) : ces règles n'ont plus qu'un exemplaire.
 | **Prime exigée selon le type** (§3), au PREMIER avenant seulement ; type inconnu → exigée | `DefautsDeSouscription.php:41-48`, :101-118 | `AvenantPrimeExigeeTest`, `DefautsDeSouscriptionTest::testLaPrimeExigee` |
 | **Dates selon le type** (§3) | `DefautsDeSouscription::pour`, `MouvementAvenantBuilder::periode` | `DefautsDeSouscriptionTest::testLaRegle`, `MouvementAvenantTest`, `AdoptionParLeMouvementTest` |
 | **Le responsable d'une piste** = gestionnaire du portefeuille du client, sinon son créateur ; c'est lui qui la voit dans « Mon portefeuille » — **elle et tout ce qui en descend** : cotations, polices, tranches, paiements de prime, tâches, retours et documents rattachés à la piste (décision du 2026-10-14). Ce qui ne dépend que du CLIENT (le client, ses sinistres, un document du client) garde la règle du portefeuille client. La règle ne fait qu'ajouter : personne ne perd ce qu'il voyait. Liste, Ket, vigie (polices, tâches) et suivi des paiements de prime lisent le même registre | `ResponsableDePiste.php:22-38` ; `PortefeuilleScope::CHEMINS_VERS_LA_PISTE` | `ResponsableDePistePariteTest`, `PortefeuilleDescendantsDePisteTest` |
-| **Une source unique par montant** : commission TTC = `getCotationMontantCommissionTtc` ; taxe via `ServiceTaxes`. Le TARIF d'une commission (taux du revenu → forfait du revenu → % du type → forfait du type → taux du risque, ordre facturé) vit dans `TarifDuRevenu`, seul lu par les écrans, la facturation, la fiche, l'export et l'annonce de Ket ; une taxe ne sert jamais d'assiette (2026-10-15) | `IndicatorCalculationHelper.php:1001-1023` ; `src/Service/Commission/TarifDuRevenu.php` | `SigmaTransformeesPlafonneeTest`, `RetroCoherenceEcransTest`, `ReversementPariteEcranKetTest`, `RevenuCourtierPrescritPariteTest` (Ket ↔ écrans), `RevenuTauxExceptionnelTest`, `AssietteDeLaCommissionTest` |
+| **Une source unique par montant** : commission TTC = `getCotationMontantCommissionTtc` ; taxe via `ServiceTaxes`. Le TARIF d'une commission (taux du revenu → forfait du revenu → % du type → forfait du type → taux du risque, ordre facturé) vit dans `TarifDuRevenu`, seul lu par les écrans, la facturation, la fiche, l'export et l'annonce de Ket ; une taxe ne sert jamais d'assiette, et l'assiette est la SOMME des lignes du chargement cible (2026-10-15) | `IndicatorCalculationHelper.php:1001-1023` ; `src/Service/Commission/TarifDuRevenu.php` ; `IndicatorCalculationHelper::getCotationMontantChargementPrime` | `SigmaTransformeesPlafonneeTest`, `RetroCoherenceEcransTest`, `ReversementPariteEcranKetTest`, `RevenuCourtierPrescritPariteTest` (Ket ↔ écrans), `RevenuTauxExceptionnelTest`, `AssietteDeLaCommissionTest`, `AssietteSommeDesLignesTest` |
 | **Les taux sont en POINTS** (16 = 16 %) ; le calcul passe par `getFraction()` | `Tranche.php:433-444`, `TypeRevenu.php:272-276`… | `TauxConventionPourcentageTest`, `ReferentielSemeEnPointsTest` |
 | **La commission est exigible à proportion de la prime encaissée** | `getTrancheRetroExigible` (`IndicatorCalculationHelper.php:1853`) | `ExigibiliteProportionnelleTest` |
 | **Une seule monnaie par cabinet** (décisions du 2026-10-14 et du 2026-10-15) : la monnaie de TRAVAIL (saisie = affichage = calcul, fonction `SAISIE_ET_AFFICHAGE`) est unique ; toute autre monnaie est une RÉFÉRENCE (fonction `AUCUNE`) — la monnaie du pays sert au capital social et aux mentions légales, avec son taux. **Aucun montant n'est jamais converti** : un montant ne porte pas sa monnaie, et l'écran affichait la monnaie d'affichage pendant la saisie — l'existant y était déjà (migration sans conversion). La monnaie de travail ne change plus, ni ne se supprime, une fois des montants saisis. Nouveau cabinet : USD de travail, monnaie du pays en référence. Écran et Ket | `MonnaieDeTravail::refus`, `::refusDeSuppression`, `::aDesMontants` ; `ChampsObligatoiresInspector::incoherencesMetier` ; `SuppressionEnCascade::planifier` ; `ServiceInitialisationEntreprise::initialiserMonnaies` ; migration `Version20261015090000` | `MonnaieDeTravailTest`, `MonnaieDuCabinetTest` |
@@ -105,21 +105,21 @@ supprimée (§7) : ces règles n'ont plus qu'un exemplaire.
 
 ## 7. Chantiers décidés (ne rien coder sans plan validé)
 
-0. **PRIORITAIRE — Assiette et source unique de la commission** (décision de Serge du
-   2026-10-15). Touche l'invariant « **une source unique par montant** » (§4) : trois écarts
-   prouvés par le constat d'assiette de `reglementation-rdc-arca` (§6) — (1) une TAXE peut
-   servir de chargement cible (`TypeRevenuType.php:56-62`) ; (2) deux cascades n'ordonnent pas
-   taux du type et taux du risque de la même façon (écrans `IndicatorCalculationHelper` contre
-   `Constante` et Ket ; `RevenuCourtierPrescritPariteTest` ne compare Ket qu'à `Constante`) ;
-   (3) plusieurs lignes du même chargement cible : les écrans retiennent la première,
-   `Constante` la dernière, aucun ne les additionne. Décisions : taxe interdite comme cible
-   (serveur, formulaire, Ket) ; une seule règle de priorité, **l'ordre des écrans fait foi**
-   (c'est celui qui a été facturé) et le texte du formulaire est corrigé ; la commission porte
-   sur la **SOMME** des lignes du chargement cible. Traitement de l'historique à trancher au vu
-   d'une **mesure d'impact** en production. L'assiette elle-même (prime nette seule) est
-   conforme (lecture étroite de l'Art. 2, `reglementation-rdc-arca` §6). **Avancement** :
-   écart 1 fait (`310a724f`) ; écart 2 fait (source unique `TarifDuRevenu`, cascade de
-   `Constante` supprimée) ; écart 3 en attente de la mesure d'impact en production.
+0. ~~Assiette et source unique de la commission~~ — **fait** (décisions du 2026-10-15 ; §4,
+   invariant acquis ; détail des trois écarts dans `reglementation-rdc-arca` §6). Une taxe ne
+   sert jamais d'assiette (`310a724f`) ; une seule règle de tarif, `TarifDuRevenu`, dans
+   l'ordre facturé (`63a9d85d`) ; l'assiette est la **somme** des lignes du chargement cible.
+   Mesure en production : aucun cas sur les trois écarts, donc aucun historique à reprendre.
+   (Un épinglage « forfait = montant facturé » a été écarté : un renouvellement recopie le
+   forfait du revenu — `MouvementAvenantBuilder::revenusReconduits` — et l'aurait figé pour
+   toutes les suites de la police.) Et **un
+   type de commission neuf s'ouvre sans pourcentage, adossé au taux du risque** (décision du
+   2026-10-15 : 10 % par défaut rendait le drapeau sans effet ; test
+   `AssietteDeLaCommissionTest::testUnTypeNeufSAdosseAuTauxDuRisque`).
+   ⚠ **Question de fond restée ouverte** : le montant d'une note émise n'est pas FIGÉ, il se
+   recalcule à chaque lecture — toute retouche après facturation (prime, taux du risque,
+   chargement) change la note envoyée. Figer HT/TTC de chaque article à l'émission serait la
+   protection générale : chantier structurel distinct, **non décidé**.
 1. ~~Numérotation unique et chronologique des notes~~ — **fait** (§5, invariant acquis).
 2. ~~Refus de supprimer une note qui porte des paiements~~ — **fait** (§5, invariant acquis).
 3. ~~« Mon portefeuille » étendu aux entités qui descendent d'une piste~~ — **fait** (§4, invariant acquis).
