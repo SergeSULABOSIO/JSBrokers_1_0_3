@@ -647,40 +647,39 @@ class JSBDynamicSearchService
 
             // CAS 0 : Périmètre « Mon portefeuille » (critère synthétique). On filtre les
             // éléments rattachés — directement ou indirectement — à un portefeuille géré par
-            // l'invité (Portefeuille.gestionnaire = :id), via un OU sur les chemins déclarés
-            // pour l'entité (cf. PortefeuilleScope). Les entités polymorphes (Tâche, Feedback)
-            // ont plusieurs chemins ; un élément est visible si AU MOINS un s'applique.
+            // l'invité, via un OU sur les chemins déclarés pour l'entité (cf. PortefeuilleScope) :
+            // ceux qui mènent à une PISTE suivent son responsable (ResponsableDePiste), ceux qui
+            // mènent au CLIENT suivent le gestionnaire de son portefeuille. Les entités
+            // polymorphes (Tâche, Feedback, Document) mêlent les deux ; un élément est visible
+            // si AU MOINS un chemin s'applique.
             if ($field === PortefeuilleScope::CRITERION_KEY) {
                 $inviteId = is_array($value) ? ($value['value'] ?? null) : $value;
                 $shortName = (new \ReflectionClass($entityClass))->getShortName();
 
-                // LA PISTE : « à moi » = j'en suis le responsable (gestionnaire du portefeuille
-                // de son client, sinon son créateur). Même règle que sa carte, que Ket et que
-                // la vigie : ResponsableDePiste.
-                if (PortefeuilleScope::regleDe($shortName) === ResponsableDePiste::class) {
-                    if ($inviteId === null || $inviteId === '') {
-                        continue;
-                    }
-                    $gestionnaire = $this->joinPath($qb, $rootAlias, $metadata, ResponsableDePiste::CHEMIN_GESTIONNAIRE, $joinedEntities, $suffix);
-                    if ($gestionnaire === null) {
-                        // Même conduite qu'un chemin invalide, ci-dessous : on le dit.
-                        $this->logger?->warning('[JSBDynamicSearch] Chemin du responsable de piste invalide : périmètre ignoré.', [
-                            'entity' => $entityClass, 'path' => ResponsableDePiste::CHEMIN_GESTIONNAIRE,
-                        ]);
-                        continue;
-                    }
-                    $qb->andWhere(ResponsableDePiste::predicat($gestionnaire, $rootAlias, 'scopeInvite' . $suffix))
-                       ->setParameter('scopeInvite' . $suffix, $inviteId);
-                    continue;
-                }
-
                 $paths = PortefeuilleScope::pathsFor($shortName);
+                $versLaPiste = PortefeuilleScope::cheminsVersLaPiste($shortName);
 
-                if ($inviteId === null || $inviteId === '' || empty($paths)) {
+                if ($inviteId === null || $inviteId === '' || ($paths === [] && $versLaPiste === [])) {
                     continue; // rien à appliquer (entité non concernée ou id manquant)
                 }
 
                 $orParts = [];
+
+                // CE QUI DESCEND D'UNE PISTE (la piste elle-même comprise) : « à moi » = j'en
+                // suis le RESPONSABLE — gestionnaire du portefeuille de son client, sinon son
+                // créateur. Même règle que la carte, que Ket et que la vigie : ResponsableDePiste.
+                foreach ($versLaPiste as $chemin) {
+                    $piste = $chemin === '' ? $rootAlias : $this->joinPath($qb, $rootAlias, $metadata, $chemin, $joinedEntities, $suffix);
+                    $versLeGestionnaire = ($chemin === '' ? '' : $chemin . '.') . ResponsableDePiste::CHEMIN_GESTIONNAIRE;
+                    $gestionnaire = $piste === null ? null : $this->joinPath($qb, $rootAlias, $metadata, $versLeGestionnaire, $joinedEntities, $suffix);
+                    if ($gestionnaire === null) {
+                        $this->logger?->warning('[JSBDynamicSearch] Chemin vers la piste invalide ignoré.', [
+                            'entity' => $entityClass, 'path' => $versLeGestionnaire,
+                        ]);
+                        continue;
+                    }
+                    $orParts[] = ResponsableDePiste::predicat($gestionnaire, $piste, 'scopeInvite' . $suffix);
+                }
                 foreach ($paths as $path) {
                     $finalAlias = $this->joinPath($qb, $rootAlias, $metadata, $path, $joinedEntities, $suffix);
                     if ($finalAlias === null) {

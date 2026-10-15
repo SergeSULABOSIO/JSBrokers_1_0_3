@@ -213,7 +213,10 @@ class DashboardDataProvider
     public function getAllRenouvellements(Entreprise $entreprise, int $maxDays = 365, ?Invite $portefeuilleDe = null): array
     {
         $sortNonScelle = AvenantSuccessionScope::predicatSortNonScelle($this->em, 'a', '_vigie');
-        $perimetre = $portefeuilleDe !== null ? ' AND pfg.id = :pfInvite' : '';
+        // Une police suit le RESPONSABLE de sa piste (ResponsableDePiste), comme sa liste.
+        $perimetre = $portefeuilleDe !== null
+            ? ' AND ' . \App\Services\Search\ResponsableDePiste::predicat('pfg', 'p', 'pfInvite')
+            : '';
         $bornes = AvenantEcheanceScope::bornesHorizon($maxDays, new \DateTimeImmutable('today'));
         // Borne basse conditionnelle : ouverte pour les échues, mais la clause reste
         // écrite si un appelant futur borne la fenêtre à gauche.
@@ -279,7 +282,10 @@ class DashboardDataProvider
      */
     public function getAvenantsNonRenouvelables(Entreprise $entreprise, ?Invite $portefeuilleDe = null): array
     {
-        $perimetre = $portefeuilleDe !== null ? ' AND pfg.id = :pfInvite' : '';
+        // Une police suit le RESPONSABLE de sa piste (ResponsableDePiste), comme sa liste.
+        $perimetre = $portefeuilleDe !== null
+            ? ' AND ' . \App\Services\Search\ResponsableDePiste::predicat('pfg', 'p', 'pfInvite')
+            : '';
 
         $query = $this->em->createQuery(
             'SELECT a, c, ass, p, cl, r, pdr, pf, pfg FROM App\Entity\Avenant a
@@ -896,14 +902,19 @@ class DashboardDataProvider
      * Tâches non closes. $portefeuilleDe restreint au PÉRIMÈTRE PORTEFEUILLE de
      * l'invité : une tâche rejoint le portefeuille par QUATRE chemins alternatifs
      * (piste, cotation, sinistre, offre d'indemnisation), combinés en OU — mêmes
-     * chemins que PortefeuilleScope::PATHS['Tache'], la source unique du filtre
-     * posé sur la rubrique. Sans cette restriction, l'assistant annoncerait à un
+     * chemins et mêmes règles que PortefeuilleScope pour 'Tache' (responsable de la
+     * piste par la piste ou la cotation, gestionnaire du client par un sinistre), la
+     * source unique du filtre posé sur la rubrique. Sans cette restriction, l'assistant annoncerait à un
      * gestionnaire les tâches de tout le cabinet, que sa liste ne lui montre pas.
      */
     public function getTachesNonCloses(Entreprise $entreprise, int $limit = 100, ?Invite $portefeuilleDe = null): array
     {
+        // Par la piste ou la cotation : le RESPONSABLE de la piste (ResponsableDePiste) ; par
+        // un sinistre : le gestionnaire du client. Mêmes familles que PortefeuilleScope['Tache'].
+        $parLaPiste = \App\Services\Search\ResponsableDePiste::predicat('pg1', 'tp', 'pfInvite');
+        $parLaCotation = \App\Services\Search\ResponsableDePiste::predicat('pg2', 'tcp', 'pfInvite');
         $perimetre = $portefeuilleDe !== null
-            ? ' AND (pg1.id = :pfInvite OR pg2.id = :pfInvite OR pg3.id = :pfInvite OR pg4.id = :pfInvite)'
+            ? " AND ($parLaPiste OR $parLaCotation OR pg3.id = :pfInvite OR pg4.id = :pfInvite)"
             : '';
 
         $query = $this->em->createQuery(

@@ -501,7 +501,10 @@ class AiContextBuilder
           (perimetre=entreprise) que si l'utilisateur le demande explicitement, et dis-le alors.
           Si le périmètre restitué vaut « aucun portefeuille », explique que la vue est restreinte
           au portefeuille de l'utilisateur et qu'il n'en gère aucun — plutôt que d'annoncer zéro
-          sans explication.
+          sans explication. S'il vaut « les pistes dont vous êtes responsable » ou « les affaires
+          dont vous êtes responsable », l'utilisateur ne gère aucun portefeuille : il ne voit que
+          les pistes qu'il a montées pour un client sans gestionnaire, et ce qui en descend
+          (propositions, polices, échéances, tâches, documents). Dis-le de même.
         {$sectionMiseEnForme}
         - Question de méthode, de vocabulaire ou de « comment faire » => consulter_guide AVANT de
           répondre, puis appuie-toi sur la fiche. Fiches disponibles :

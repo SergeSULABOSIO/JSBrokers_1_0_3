@@ -604,8 +604,12 @@ final class SimulatedAiEngine implements MoteurDeTexte
             return ', pour toute l\'entreprise';
         }
 
-        if ($perimetre === 'aucun portefeuille') {
+        if ($perimetre === PortefeuilleScope::LIBELLE_AUCUN_PORTEFEUILLE) {
             return ', dans votre portefeuille — vous n\'en gérez actuellement aucun';
+        }
+
+        if ($perimetre === PortefeuilleScope::LIBELLE_AFFAIRES_RESPONSABLE || $perimetre === PortefeuilleScope::LIBELLE_PISTES_RESPONSABLE) {
+            return ', parmi ' . $perimetre . ' — vous ne gérez aucun portefeuille : seules comptent les pistes que vous avez montées pour un client sans gestionnaire';
         }
 
         return sprintf(' (périmètre : votre portefeuille « %s »)', $perimetre);

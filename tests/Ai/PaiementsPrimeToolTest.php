@@ -301,7 +301,9 @@ class PaiementsPrimeToolTest extends TestCase
 
         $this->assertSame(AiToolResult::STATUS_OK, $result->status);
         $this->assertArrayHasKey(PortefeuilleScope::CRITERION_KEY, $criteres);
-        $this->assertSame('aucun portefeuille', $result->data['perimetre']);
+        // Sans portefeuille géré, un paiement de prime reste à lui s'il est le RESPONSABLE de
+        // la piste (décision du 2026-10-14) : le périmètre le dit.
+        $this->assertSame(PortefeuilleScope::LIBELLE_AFFAIRES_RESPONSABLE, $result->data['perimetre']);
         $this->assertSame(500.0, $result->data['montantPage']);
     }
 
