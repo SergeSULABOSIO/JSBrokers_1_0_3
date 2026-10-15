@@ -53,12 +53,27 @@ class TypeRevenuType extends AbstractType
                     return $labels[$value] ?? '<div><strong>' . $key . '</strong></div>';
                 },
             ])
+            // L'ASSIETTE D'UNE COMMISSION N'EST JAMAIS UNE TAXE (Art. 2 du barème ARCA : prime
+            // nette d'impôts et taxes ; décision du 2026-10-15). Et seulement les chargements DU
+            // CABINET : sans filtre, ce sélecteur listait ceux de tous les cabinets. Ket et la
+            // reprise soumettent ce même formulaire ; la garde serveur est dans
+            // ChampsObligatoiresInspector::incoherencesMetier.
             ->add('typeChargement', EntityType::class, [
                 'label' => "Chargement cible",
                 'required' => true,
                 'class' => Chargement::class,
                 'choice_label' => 'nom',
-                'help' => 'Le composant de la prime (ou chargement) sur base duquel ce revenu sera calculé automatiquement.',
+                'query_builder' => fn (\Doctrine\ORM\EntityRepository $er): \Doctrine\ORM\QueryBuilder
+                    => ($this->ecouteurFormulaire->setFiltreEntreprise())($er)
+                        ->andWhere('e.fonction IS NULL OR e.fonction <> :taxe')
+                        ->setParameter('taxe', Chargement::FONCTION_TAXE),
+                // ⚠ UN CHOIX EXPLICITE, JAMAIS UNE BASCULE SILENCIEUSE. Un type d'avant ce
+                // filtre peut viser une taxe, désormais absente de la liste : sans option
+                // vide, le navigateur présélectionnait la première option, et enregistrer un
+                // autre champ changeait en silence la base de la commission. Vide, le champ
+                // obligatoire oblige à la choisir.
+                'placeholder' => 'Choisissez la composante de la prime…',
+                'help' => 'La composante de la prime sur laquelle ce revenu se calcule (en général la prime nette). Une taxe (TVA, ARCA) ne peut pas servir de base.',
             ])
             ->add('appliquerPourcentageDuRisque', ChoiceType::class, [
                 'required' => false,
