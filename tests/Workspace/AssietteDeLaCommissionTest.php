@@ -264,6 +264,36 @@ class AssietteDeLaCommissionTest extends WebTestCase
         self::assertSame(200, $libre['statut'], $libre['texte']);
     }
 
+    /**
+     * UN TYPE NEUF S'ADOSSE AU TAUX DU RISQUE (décision du 2026-10-15). Il s'ouvrait sur 10 %
+     * ET le drapeau : le pourcentage du type passant avant le risque, le drapeau ne servait à
+     * rien. Désormais le pourcentage est vide, le drapeau coché — et le type enregistré tel
+     * quel facture bien le taux du risque.
+     */
+    public function testUnTypeNeufSAdosseAuTauxDuRisque(): void
+    {
+        $s = $this->semer(self::CABINET, self::EMAIL);
+
+        $this->client->request('GET', '/admin/typerevenu/api/get-form');
+        $html = (string) $this->client->getResponse()->getContent();
+        self::assertMatchesRegularExpression('/<input[^>]*name="pourcentage"[^>]*>/', $html);
+        preg_match('/<input[^>]*name="pourcentage"[^>]*>/', $html, $pourcentage);
+        self::assertDoesNotMatchRegularExpression('/value="[^"]+"/', $pourcentage[0], 'Le pourcentage s’ouvre vide.');
+        // Le drapeau est un groupe de boutons radio : c'est l'option « oui » qui est cochée.
+        preg_match('/<input[^>]*name="appliquerPourcentageDuRisque"[^>]*value="1"[^>]*>/', $html, $drapeau);
+        self::assertStringContainsString('checked', $drapeau[0] ?? '', 'Le drapeau « taux du risque » s’ouvre coché.');
+
+        // Ce que le formulaire neuf envoie, sans retouche : le taux du risque s'applique.
+        $champs = ['pourcentage' => '', 'montantflat' => '0', 'appliquerPourcentageDuRisque' => '1']
+            + $this->typeRevenu('Commission au taux du risque', $this->chargement($s['entreprise'], 'Prime nette'));
+        $permis = $this->soumettre('typerevenu', $s, $champs);
+        self::assertSame(200, $permis['statut'], $permis['texte']);
+
+        $type = $this->em()->getRepository(TypeRevenu::class)->findOneBy(['nom' => 'Commission au taux du risque']);
+        $tarif = \App\Service\Commission\TarifDuRevenu::deType($type, (new \App\Entity\Risque())->setPourcentageCommissionSpecifiqueHT(15));
+        self::assertSame(['taux' => 15.0, 'forfait' => null, 'origine' => 'risque'], $tarif);
+    }
+
     /** Le sélecteur ne propose que les chargements du cabinet, et jamais une taxe. */
     public function testLeSelecteurNeProposeQueLesChargementsDuCabinetHorsTaxes(): void
     {

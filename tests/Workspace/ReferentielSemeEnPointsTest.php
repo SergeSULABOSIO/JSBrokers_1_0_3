@@ -149,10 +149,11 @@ class ReferentielSemeEnPointsTest extends WebTestCase
         // partenaire est passée à 20 points, l'usage courant d'un apporteur extérieur.
         // Ce qui se vérifie ici n'est pas le nombre mais l'UNITÉ — un écran qui s'ouvre
         // sur 0,2 % là où il annonce 20 % est le piège que ce test existe pour attraper.
+        // Le type de revenu n'y est plus : depuis le 2026-10-15 il s'ouvre SANS pourcentage,
+        // adossé au taux du risque (AssietteDeLaCommissionTest::testUnTypeNeufSAdosseAuTauxDuRisque).
         foreach ([
             '/admin/risque/api/get-form' => 10,
             '/admin/partenaire/api/get-form' => 20,
-            '/admin/typerevenu/api/get-form' => 10,
         ] as $url => $points) {
             $this->client->request('GET', $url);
             $this->assertResponseIsSuccessful(sprintf('Le formulaire %s s’ouvre.', $url));
