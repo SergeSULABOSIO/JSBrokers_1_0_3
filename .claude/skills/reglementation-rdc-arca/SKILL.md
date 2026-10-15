@@ -114,6 +114,67 @@ catégories Vie + 29 IARD = 43, « Risques pétroliers » en doublon dans le tex
   régimes que le semis ignore — réassurance > 75 % (Art. 3), plafond pluriannuel (Art. 4),
   date d'effet et ancien barème pour les contrats non renouvelés (Art. 6).
 
+### Constat : l'assiette de la commission face à l'Art. 2 (2026-10-15, lecture seule, rien corrigé)
+
+L'Art. 2 exprime les taux en pourcentage de la **prime nette d'impôts et taxes** (hors TVA, hors
+frais ARCA). Épreuve en mémoire sur une prime de 10 000 de prime nette + 1 000 de fronting + 500
+de frais accessoires + 1 840 de TVA + 230 d'ARCA, risque à 15 %.
+
+- **L'assiette est UN SEUL chargement : le « chargement cible » du type de revenu**, pas une
+  somme de composantes (`IndicatorCalculationHelper::getRevenuMontantHt`, :1072-1099 →
+  `getCotationMontantChargementPrime`, :1102-1115). Le taux s'y applique tel quel
+  (`× getFraction()`), qu'il vienne du revenu, du type ou du risque
+  (`RevenuCourtierPrescrit.php:295` ne fait qu'ANNONCER ce dernier).
+- **Le type semé « Commission » (taux du risque) vise « Prime nette »**
+  (`ServiceInitialisationEntreprise::initialiserChargementsEtRevenus`, :358-364) : sont
+  **exclus** le fronting, les frais accessoires, la TVA et l'ARCA. Épreuve : 10 000 × 15 % =
+  **1 500**. Consultance (5 %) et honoraire (2 %) visent aussi la prime nette ; la
+  « Commission sur Fronting » (30 %) vise le seul fronting.
+- **Acquis OU écart selon la lecture de l'Art. 2 — À CONFIRMER (Serge).** Si « prime nette
+  d'impôts et taxes » s'entend hors frais accessoires et hors fronting, le défaut est
+  **conforme**. S'il s'entend de TOUTE la prime hors taxes (nette + fronting + accessoires),
+  l'assiette est trop étroite : 11 500 × 15 % = **1 725**, soit **225 de moins (−13 %)** dans
+  l'épreuve. Les taxes, elles, sont bien exclues dans les deux lectures.
+- ⚠ **Écart 1 — un chargement de TAXE peut servir d'assiette.** Le champ « Chargement cible »
+  (`TypeRevenuType.php:56-62`) n'est filtré sur aucune fonction : un type à 10 % visant la TVA
+  facture **184** de commission sur une taxe — contraire à l'Art. 2 dans toutes les lectures.
+- ⚠ **Écart 2 — deux cascades n'ont pas le même ordre.** Les écrans et la facturation
+  (`IndicatorCalculationHelper`, :1084-1096) appliquent le pourcentage du TYPE avant le taux du
+  RISQUE ; `Constante::Revenu_getMontant_ht` (:913, :949-970) et l'annonce de Ket
+  (`RevenuCourtierPrescrit::prescription`, :292-309) font l'inverse, comme le promet le
+  formulaire (« Privilégier le taux de commission configuré pour le risque »). Un type qui
+  porte les DEUX (rien ne l'interdit) : écrans **1 000** (10 %), Ket **1 500** (15 %).
+  `RevenuCourtierPrescritPariteTest` compare Ket à `Constante`, jamais à
+  `IndicatorCalculationHelper` : l'écart lui échappe. Le type semé n'a pas de pourcentage, d'où
+  l'absence de symptôme par défaut. (Touche aussi l'invariant « une source unique par montant »
+  de `courtage-assurance`.)
+- ⚠ **Écart 3 — deux lignes du même chargement sur une cotation.** Rien ne l'interdit
+  (`ChargementPourPrime` sans contrainte d'unicité) ; les écrans retiennent la PREMIÈRE ligne
+  (`break`, :1112), `Constante` la DERNIÈRE (`Cotation_getMontant_chargement_prime`,
+  :899-911) ; aucun ne les additionne. Prime nette 10 000 + 4 000 : écrans **1 500**, Ket
+  **600**, somme attendue 2 100.
+
+### Chantiers ultérieurs (CIBLE ou à décider — sans plan détaillé, rien à coder sans plan validé)
+
+1. **Contrôle de fourchette, en AVERTISSEMENT et non en blocage.** Pour un cabinet soumis à
+   l'ARCA, signaler un taux saisi hors de [minima ; maxima] de sa catégorie — le cabinet reste
+   libre de son taux (§1). Exception : le régime de l'Art. 3, dont la commission ne se lit pas
+   en pourcentage de la prime. Suppose les minima (point 4) et un rattachement fiable
+   risque → catégorie du barème.
+2. **Art. 3 — réassurance au-delà de 75 %** : commission de 25 à 35 % de la COMMISSION DE
+   RÉASSURANCE obtenue sur la part cédée à un réassureur non établi en RDC (fourchette de
+   l'Art. 1er sur la part non cédée). **Prioritaire pour les risques miniers et pétroliers**
+   (barème à 1-5 %, souvent réassurés au-delà de 75 %). Rien ne modélise aujourd'hui la part
+   cédée ni la commission de réassurance.
+3. **Art. 4 et Art. 6.** Plafond du versement anticipé de la commission d'un contrat
+   pluriannuel (3 fois la commission de la première année) ; ancien barème du 25 mai 2018 pour
+   les contrats en cours non encore renouvelés (la date d'effet décide — texte de 2018 à
+   fournir).
+4. **Semer les minima** à côté des maxima (`risques_defaut.json` ne porte que le maxima).
+
+À décider aussi, à partir du constat d'assiette ci-dessus : la lecture de l'Art. 2 (prime nette
+seule ou toute la prime hors taxes) et le traitement des écarts 1 à 3.
+
 ## 7. Défauts confirmés pour la branche VIE (2026-10-14)
 
 - Les frais **ARCA de 2 % s'appliquent aussi à la VIE** ; il n'y a **pas de TVA sur la VIE**.
