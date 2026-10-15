@@ -44,6 +44,13 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   Aucun filtre Doctrine ne protège un `find()` nu.
 - **Le refus d'un id étranger est un 404**, jamais un refus nommé : il confirmerait l'existence
   de ce qu'on protège. Un message d'erreur ne cite jamais le nom d'une donnée d'un autre cabinet.
+- **UN SÉLECTEUR N'AFFICHE JAMAIS LES DONNÉES D'UN AUTRE CABINET** — c'est la règle (Serge,
+  2026-10-15). Tout `EntityType` (liste, boutons radio, cases) porte un `query_builder` filtré par
+  cabinet — `FormListenerFactory::setFiltreEntreprise()` —, comme les champs à autocomplétion.
+  Refuser l'id étranger à l'écriture ne suffit pas : la liste, elle, montrait noms et
+  descriptions. Deux sélecteurs l'avaient oublié (chargement cible d'un type de revenu, modèle
+  de pièce de sinistre) ; test `SelecteursDuCabinetTest`. Seule exception : la console interne
+  de Joseara, hors cabinet (ex. `CrmTicketType`).
 - **« Mon portefeuille » est un confort de lecture, pas une frontière** : la frontière est le
   scoping entreprise, toujours appliqué.
 
