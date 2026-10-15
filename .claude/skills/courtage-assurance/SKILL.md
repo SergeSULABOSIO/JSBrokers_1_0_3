@@ -105,6 +105,19 @@ supprimée (§7) : ces règles n'ont plus qu'un exemplaire.
 
 ## 7. Chantiers décidés (ne rien coder sans plan validé)
 
+0. **PRIORITAIRE — Assiette et source unique de la commission** (décision de Serge du
+   2026-10-15). Touche l'invariant « **une source unique par montant** » (§4) : trois écarts
+   prouvés par le constat d'assiette de `reglementation-rdc-arca` (§6) — (1) une TAXE peut
+   servir de chargement cible (`TypeRevenuType.php:56-62`) ; (2) deux cascades n'ordonnent pas
+   taux du type et taux du risque de la même façon (écrans `IndicatorCalculationHelper` contre
+   `Constante` et Ket ; `RevenuCourtierPrescritPariteTest` ne compare Ket qu'à `Constante`) ;
+   (3) plusieurs lignes du même chargement cible : les écrans retiennent la première,
+   `Constante` la dernière, aucun ne les additionne. Décisions : taxe interdite comme cible
+   (serveur, formulaire, Ket) ; une seule règle de priorité, **l'ordre des écrans fait foi**
+   (c'est celui qui a été facturé) et le texte du formulaire est corrigé ; la commission porte
+   sur la **SOMME** des lignes du chargement cible. Traitement de l'historique à trancher au vu
+   d'une **mesure d'impact** en production. L'assiette elle-même (prime nette seule) est
+   conforme (lecture étroite de l'Art. 2, `reglementation-rdc-arca` §6). Plan en cours.
 1. ~~Numérotation unique et chronologique des notes~~ — **fait** (§5, invariant acquis).
 2. ~~Refus de supprimer une note qui porte des paiements~~ — **fait** (§5, invariant acquis).
 3. ~~« Mon portefeuille » étendu aux entités qui descendent d'une piste~~ — **fait** (§4, invariant acquis).
