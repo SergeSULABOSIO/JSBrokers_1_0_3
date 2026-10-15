@@ -88,11 +88,10 @@ final class ValeursDeNaissance
     {
         return match (true) {
             $entity instanceof Note => [
-                // ⚠ LA RÉFÉRENCE N'EST PLUS ICI. Elle n'est plus une valeur de naissance
-                // mais un NUMÉRO, unique et chronologique dans le cabinet, pris au moment
-                // où la note s'écrit ({@see \App\EventListener\NumerotationDesNotesListener}) :
-                // posée ici, chaque formulaire abandonné ou refusé aurait consommé le sien.
-                // Et le champ est redevenu une vraie question — éditable, facultatif.
+                // ⚠ LA RÉFÉRENCE N'EST PAS ICI. Un brouillon reçoit une référence provisoire
+                // à l'écriture, et le NUMÉRO définitif naît à la validation
+                // ({@see \App\EventListener\NumerotationDesNotesListener}, règle OHADA) :
+                // posé ici, chaque formulaire abandonné aurait consommé le sien.
                 //
                 // ⚠ CE N'EST PAS UNE SIGNATURE, malgré son nom : la colonne est NOT NULL et
                 // aucun formulaire ne la propose. L'écran y met l'horodatage du moment
@@ -102,7 +101,8 @@ final class ValeursDeNaissance
                 // Une note naît NON VALIDÉE. La validation est un geste posé ensuite, par
                 // quelqu'un : la présumer faite reviendrait à sauter ce geste.
                 'validated' => false,
-                // La date d'émission, faute de mieux : une note existe parce qu'on l'émet.
+                // La date d'ENVOI proposée par défaut (suivi). La date d'ÉMISSION, elle,
+                // est celle de la validation (Note::$emiseLe).
                 'sentAt' => new \DateTimeImmutable(),
             ],
             default => [],

@@ -9,20 +9,24 @@ use Doctrine\ORM\Event\OnFlushEventArgs;
 use Doctrine\ORM\Events;
 
 /**
- * UNE NOTE REÇOIT SON NUMÉRO AU MOMENT OÙ ELLE S'ÉCRIT, ET PAS AVANT.
+ * LE NUMÉRO DÉFINITIF NAÎT AVEC LA VALIDATION ; UN BROUILLON N'A QU'UNE RÉFÉRENCE PROVISOIRE.
  *
- * ── POURQUOI À L'ÉCRITURE ───────────────────────────────────────────────────────────
- * Un numéro attribué à l'ouverture du formulaire serait consommé par chaque dialogue
- * abandonné, chaque saisie refusée en 422, chaque plan de Ket que l'utilisateur ne
- * confirme pas : la série se remplirait de trous. Ici, seule une note qui s'écrit
- * vraiment prend un numéro.
+ * ── CE QUI SE PASSE À L'ÉCRITURE ────────────────────────────────────────────────────
+ *  • Un BROUILLON qui s'écrit sans référence reçoit `BROUILLON-XXXXXXXX` : il ne
+ *    consomme aucun numéro, et sa suppression ne laisse aucun trou.
+ *  • Une note qui DEVIENT validée — créée validée (picker de facturation) ou passée de
+ *    brouillon à validée (geste « Valider », Ket) — reçoit le numéro suivant de sa
+ *    série et sa date d'émission, qui est l'instant même : l'année de la série est celle
+ *    de l'émission (règle OHADA, décision du 2026-10-15).
  *
- * ⚠ ET C'EST LE SEUL ENDROIT, pour toutes les portes : le dialogue, le picker de
- * facturation, Ket, la reprise et le bordereau. Toutes passent par le flush.
+ * ⚠ UNE NOTE DÉJÀ ÉMISE GARDE SON NUMÉRO. Celle dont la date d'émission est déjà posée
+ * — l'existant repris (Version20261015170000), une pièce historique — n'est pas
+ * renumérotée : un numéro émis se conserve, même hors du format de la série.
  *
- * ── CE QUI EST RESPECTÉ ─────────────────────────────────────────────────────────────
- * Une référence déjà posée (saisie dans le champ, qui reste éditable, ou reprise d'un
- * import) est conservée telle quelle : seule une note SANS référence en reçoit une.
+ * ⚠ C'EST LE SEUL ENDROIT, pour toutes les portes : toutes passent par le flush. Mais
+ * `onFlush` précède la transaction de Doctrine : sans transaction englobante, un échec
+ * de l'écriture perdrait le numéro. Les portes métier valident donc par
+ * {@see \App\Service\Note\EmissionDeNote::valider}, qui l'enveloppe.
  *
  * `onFlush` (même patron que {@see ConditionDOfficeListener}) : Doctrine a déjà fait
  * l'inventaire des changements, d'où le recalcul après avoir posé la référence.
@@ -38,34 +42,49 @@ final class NumerotationDesNotesListener
     {
         $em = $args->getObjectManager();
         $uow = $em->getUnitOfWork();
+        $meta = $em->getClassMetadata(Note::class);
 
-        // Les références déjà posées sur les notes de CETTE écriture : pas encore en base,
-        // elles ne doivent pas pour autant être attribuées une seconde fois.
+        // Références provisoires posées dans CETTE écriture, pas encore en base.
         $prises = [];
-        foreach ($uow->getScheduledEntityInsertions() as $entite) {
-            if ($entite instanceof Note && trim((string) $entite->getReference()) !== '' && $entite->getEntreprise()?->getId() !== null) {
-                $prises[$entite->getEntreprise()->getId()][] = (string) $entite->getReference();
-            }
-        }
 
-        foreach ($uow->getScheduledEntityInsertions() as $entite) {
-            if (!$entite instanceof Note || trim((string) $entite->getReference()) !== '') {
+        foreach ($uow->getScheduledEntityInsertions() as $note) {
+            if (!$note instanceof Note || ($entrepriseId = $note->getEntreprise()?->getId()) === null) {
+                // Sans cabinet, la note ne s'écrira pas (colonne NOT NULL).
                 continue;
             }
-            $entrepriseId = $entite->getEntreprise()?->getId();
-            if ($entrepriseId === null) {
-                // Sans cabinet, la note ne s'écrira pas (colonne NOT NULL) : aucun
-                // numéro à consommer pour elle.
+            if ($note->isValidated() === true && $note->getEmiseLe() === null) {
+                $this->emettre($note, $entrepriseId);
+            } elseif (trim((string) $note->getReference()) === '') {
+                $reference = $this->numerotation->provisoire($entrepriseId, NumerotationDesNotes::PREFIXE_BROUILLON, $prises[$entrepriseId] ?? []);
+                $prises[$entrepriseId][] = $reference;
+                $note->setReference($reference);
+            } else {
                 continue;
             }
-
-            // L'année de l'horloge de référence (APP_TIMEZONE, posé au démarrage du noyau).
-            $annee = (int) (new \DateTimeImmutable())->format('Y');
-            $reference = $this->numerotation->prochaine($entrepriseId, $entite->getType(), $annee, $prises[$entrepriseId] ?? []);
-            $prises[$entrepriseId][] = $reference;
-
-            $entite->setReference($reference);
-            $uow->recomputeSingleEntityChangeSet($em->getClassMetadata(Note::class), $entite);
+            $uow->recomputeSingleEntityChangeSet($meta, $note);
         }
+
+        foreach ($uow->getScheduledEntityUpdates() as $note) {
+            if (!$note instanceof Note || $note->isValidated() !== true || $note->getEmiseLe() !== null) {
+                continue;
+            }
+            $changement = $uow->getEntityChangeSet($note)['validated'] ?? null;
+            if ($changement === null || $changement[0] === true) {
+                continue;
+            }
+            $this->emettre($note, (int) $note->getEntreprise()->getId());
+            $uow->recomputeSingleEntityChangeSet($meta, $note);
+        }
+    }
+
+    /** Le numéro suivant de la série, et la date d'émission : l'instant de la validation. */
+    private function emettre(Note $note, int $entrepriseId): void
+    {
+        // L'horloge de référence (APP_TIMEZONE, posé au démarrage du noyau).
+        $annee = (int) (new \DateTimeImmutable())->format('Y');
+        $note->setReference($this->numerotation->prochaine($entrepriseId, $note->getType(), $annee));
+        // LA DATE APRÈS LE NUMÉRO : prise une fois le verrou de la série obtenu, elle ne
+        // peut précéder celle de la note qui a pris le numéro d'avant.
+        $note->setEmiseLe(new \DateTimeImmutable());
     }
 }

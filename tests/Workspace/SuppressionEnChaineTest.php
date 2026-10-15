@@ -218,7 +218,9 @@ class SuppressionEnChaineTest extends WebTestCase
     private function note(array $cabinet, string $reference): Note
     {
         $note = (new Note())->setNom('Note ' . $reference)->setReference($reference)
-            ->setType(0)->setAddressedTo(0)->setValidated(true)->setSignature('PHPUnit');
+            ->setType(0)->setAddressedTo(0)->setValidated(true)->setSignature('PHPUnit')
+            // Déjà émise : elle garde sa référence, que les refus citent.
+            ->setEmiseLe(new \DateTimeImmutable('-3 days'));
         $note->setEntreprise($cabinet['entreprise']);
         $note->setInvite($cabinet['invite']);
         $this->em()->persist($note);

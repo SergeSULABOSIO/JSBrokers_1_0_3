@@ -161,7 +161,10 @@ class FacturationComptabiliteTest extends KernelTestCase
             ->setType($type)->setAddressedTo(Note::TO_ASSUREUR)
             ->setValidated($validee)->setSignature('sig')
             ->setBordereau($bordereau)
-            ->setSentAt(new \DateTimeImmutable($sentAt));
+            ->setSentAt(new \DateTimeImmutable($sentAt))
+            // Une pièce historique, DÉJÀ ÉMISE à cette date : elle garde sa référence, et le
+            // journal la date de son émission (sans quoi la validation la daterait d'aujourd'hui).
+            ->setEmiseLe($validee ? new \DateTimeImmutable($sentAt) : null);
         $note->setInvite($invite)->setEntreprise($entreprise);
         $em->persist($note);
         $em->flush();

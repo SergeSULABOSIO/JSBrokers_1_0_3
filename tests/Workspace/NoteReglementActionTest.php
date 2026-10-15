@@ -238,8 +238,8 @@ class NoteReglementActionTest extends WebTestCase
 
     /**
      * LA BARRE D'OUTILS N'AFFICHE QUE QUATRE ENTRÉES EN LIGNE ; au-delà, le surplus tombe
-     * dans « Autres actions ». La rubrique Notes en comptait trois : la quatrième tient
-     * encore, sans regroupement. La cinquième ne tiendrait pas.
+     * dans « Autres actions ». Depuis « Valider la note », les trois gestes sur la pièce
+     * (visualiser, imprimer, télécharger) forment une famille : trois entrées en tout.
      */
     public function testLaRubriqueResteSousLePlafondDeLaBarre(): void
     {

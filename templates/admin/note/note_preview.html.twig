@@ -119,7 +119,9 @@
             .single-article-note .invoice-body   { padding: 0.5rem 1.25rem; }
             .single-article-note .invoice-footer { padding: 0.5rem 1.25rem; }
         }
-    </style>
+            /* Un brouillon n'est pas une pièce comptable : il le dit (règle OHADA). */
+        .note-brouillon { display: inline-block; padding: .15rem .5rem; background: #fff3cd; color: #664d03; border: 1px solid #664d03; font-weight: 700; letter-spacing: .05em; }
+</style>
 </head>
 <body>
 
@@ -167,7 +169,7 @@
                     <div class="col text-end">
                         <h2 class="invoice-type-heading">{{ note.typeString }}</h2>
                         <p class="mb-1"><strong>Référence :</strong> {{ note.reference }}</p>
-                        <p class="mb-0"><strong>Date :</strong> {{ note.sentAt|date('d/m/Y') }}</p>
+                        {% if note.validated %}<p class="mb-0"><strong>Date d'émission :</strong> {{ (note.emiseLe ?? note.sentAt ?? note.createdAt)|date('d/m/Y') }}</p>{% else %}<p class="mb-0 note-brouillon" role="note">BROUILLON — sans valeur comptable</p>{% endif %}
                     </div>
                 </div>
                 <hr>

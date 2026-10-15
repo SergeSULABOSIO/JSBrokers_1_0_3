@@ -83,14 +83,15 @@ class NoteCreationDialogueTest extends WebTestCase
         self::assertResponseIsSuccessful((string) $this->client->getResponse()->getContent());
         $note = $this->noteNommee('Note créée par le dialogue');
         self::assertNotNull($note, 'La note doit exister en base.');
-        self::assertMatchesRegularExpression('/^ND-\d{4}-\d{5}$/', (string) $note->getReference(), 'Référence générée : le numéro suivant de la série.');
+        // Un brouillon : référence PROVISOIRE ; le numéro de la série vient à la validation (OHADA).
+        self::assertMatchesRegularExpression('/^BROUILLON-[0-9A-F]{8}$/', (string) $note->getReference(), 'Un brouillon porte une référence provisoire.');
     }
 
     /**
      * LES VALEURS DE NAISSANCE NE SE CHOISISSENT PAS DEPUIS LA REQUÊTE. Posées désormais
      * avant le contrôle des champs, elles ne doivent rien céder à un client qui les
-     * enverrait : `validated` et `signature` ne sont pas des champs du formulaire. La
-     * référence, elle, en est un — éditable depuis le 2026-10-14 : elle est conservée.
+     * enverrait : `validated`, `signature` et `reference` ne sont pas des champs du
+     * formulaire (la référence ne se saisit plus depuis le 2026-10-15, règle OHADA).
      */
     public function testLesValeursDeNaissanceIgnorentCeQueLaRequeteEnvoie(): void
     {
@@ -101,7 +102,7 @@ class NoteCreationDialogueTest extends WebTestCase
 
         self::assertResponseIsSuccessful((string) $this->client->getResponse()->getContent());
         $note = $this->noteNommee('Note forcée');
-        self::assertSame('REF-SAISIE', $note->getReference(), 'La référence saisie est conservée : le champ est éditable.');
+        self::assertMatchesRegularExpression('/^BROUILLON-[0-9A-F]{8}$/', (string) $note->getReference(), 'Une référence envoyée est ignorée : elle ne se saisit pas.');
         self::assertFalse($note->isValidated(), 'Une note naît NON validée, quoi que dise la requête.');
         self::assertNotSame('PIRATE', $note->getSignature());
         self::assertNotNull($note->getSignature());

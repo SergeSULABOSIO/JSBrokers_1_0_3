@@ -82,6 +82,10 @@ final class CouvertureDesEcrans
         // Paiement rattaché à la note, que le plan d'écriture générique porte déjà.
         // Le pendant de `signaler_paiement_prime` côté commission.
         'ui:note.paiement-request' => 'preparer_operations',
+        // Valider un brouillon de note (numéro définitif, date d'émission) : une
+        // modification de la note portant `validated: true`, que le plan générique
+        // transmet à EmissionDeNote — le même service que le geste d'écran.
+        'ui:note.valider-request' => 'preparer_operations',
         // Réclamer la commission d'une échéance : l'écran ouvre le dialogue de note
         // prérempli, Ket prépare le plan complet — même règle de facturation
         // (App\Services\Note\SourceDeFacturation), deux surfaces.

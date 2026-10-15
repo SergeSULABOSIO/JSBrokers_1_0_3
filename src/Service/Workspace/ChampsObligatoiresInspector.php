@@ -4,7 +4,6 @@ namespace App\Service\Workspace;
 
 use App\Entity\Avenant;
 use App\Entity\ConditionPartage;
-use App\Entity\Note;
 use App\Service\Avenant\DefautsDeSouscription;
 use App\Service\Monnaie\MonnaieDeTravail;
 use App\Service\Note\NumerotationDesNotes;
@@ -37,12 +36,11 @@ class ChampsObligatoiresInspector
 
     /**
      * Colonnes NOT NULL qu'une fiche NEUVE peut laisser vides : elles sont posées au
-     * moment de l'écriture. La référence d'une note est son numéro, pris au flush
-     * ({@see \App\EventListener\NumerotationDesNotesListener}) — l'exiger ici, c'était
-     * refuser en 422 toute note dont le champ, facultatif, est resté vide.
+     * moment de l'écriture. La référence d'une note est posée au flush — provisoire pour
+     * un brouillon, numéro définitif à la validation
+     * ({@see \App\EventListener\NumerotationDesNotesListener}) ; elle ne se saisit pas.
      *
-     * ⚠ À LA CRÉATION SEULEMENT. Une note émise garde sa référence : la vider en
-     * modification reste un champ obligatoire manquant.
+     * À LA CRÉATION SEULEMENT : une note déjà écrite porte toujours sa référence.
      */
     private const POSES_A_L_ECRITURE = [
         'Note' => ['reference'],
@@ -114,6 +112,8 @@ class ChampsObligatoiresInspector
         // Facultatif à la construction seulement (des tests le construisent à la main) : le
         // conteneur l'injecte toujours, et la règle de prime de l'avenant en dépend.
         private readonly ?DefautsDeSouscription $defautsDeSouscription = null,
+        // Plus lu depuis que la référence d'une note ne se saisit plus (2026-10-15) ; gardé à
+        // sa place parce que des tests construisent ce service par arguments POSITIONNELS.
         private readonly ?NumerotationDesNotes $numerotationDesNotes = null,
         private readonly ?MonnaieDeTravail $monnaieDeTravail = null,
     ) {
@@ -361,39 +361,9 @@ class ChampsObligatoiresInspector
             return [$refus['champ'] => [$refus['message']]];
         }
 
-        // UNE RÉFÉRENCE N'APPARTIENT QU'À UNE NOTE DU CABINET (décision du 2026-10-14). Le
-        // champ est éditable : une saisie peut reprendre le numéro d'une autre note, et deux
-        // pièces au même numéro ne se distinguent plus, ni au rapprochement ni devant
-        // l'assureur. Ici, parce que l'écran et Ket y passent tous deux ; l'index unique de
-        // la table ne tranche qu'en dernier ressort, et en erreur SQL.
-        if ($shortName === 'Note' && $entity instanceof Note
-            && ($champsPilotables === null || in_array('reference', $champsPilotables, true))) {
-            $reference = $entity->getReference();
-            $cabinet = $entity->getEntreprise()?->getId();
-
-            // UNE NOTE ÉMISE GARDE UN NUMÉRO. Seule une note NEUVE reçoit le suivant de sa
-            // série ; vider celui d'une note existante écrirait NULL dans une colonne qui le
-            // refuse — l'écran le signale comme champ manquant, Ket passait jusqu'au SQL.
-            if ($reference === null && $entity->getId() !== null) {
-                return ['reference' => ['Une note émise garde sa référence : saisissez-en une.']];
-            }
-            // La colonne en tient 255 ; au-delà, l'écriture échouerait en SQL. Un caractère
-            // de contrôle (saut de ligne, tabulation) n'a pas sa place dans un numéro qui
-            // s'imprime et nomme le PDF.
-            if ($reference !== null && (mb_strlen($reference) > 255 || preg_match('/\p{Cc}/u', $reference))) {
-                return ['reference' => ['Une référence tient sur une ligne, en 255 caractères au plus.']];
-            }
-
-            if ($reference !== null && $cabinet !== null && $this->numerotationDesNotes !== null
-                && $this->numerotationDesNotes->estDejaPortee($cabinet, $reference, $entity->getId())) {
-                // Le champ vide ne se propose qu'à la création : une note émise garde un numéro.
-                return ['reference' => [sprintf(
-                    'La référence « %s » est déjà portée par une autre note de ce cabinet. Choisissez-en une autre%s.',
-                    $reference,
-                    $entity->getId() === null ? ', ou laissez le champ vide pour recevoir le numéro suivant' : '',
-                )]];
-            }
-        }
+        // (La RÉFÉRENCE d'une note ne se contrôle plus ici : elle ne se saisit plus. Un
+        // brouillon reçoit une référence provisoire, la validation le numéro définitif de
+        // sa série — règle OHADA, 2026-10-15 ; NumerotationDesNotesListener.)
 
         return [];
     }

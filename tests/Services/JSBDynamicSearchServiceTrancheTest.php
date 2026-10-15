@@ -762,7 +762,9 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
         $note = new Note();
         $note->setNom('Note multi-avenants')->setReference('NOTE-MULTI')
             ->setType(Note::TYPE_NOTE_DE_DEBIT)->setAddressedTo(Note::TO_ASSUREUR)
-            ->setValidated(true)->setSignature('sig-test')->setBordereau($bordereau);
+            ->setValidated(true)->setSignature('sig-test')->setBordereau($bordereau)
+            // Déjà émise : elle garde sa référence, que le test relit plus bas.
+            ->setEmiseLe(new \DateTimeImmutable('-3 days'));
         $note->setEntreprise($entreprise);
         $note->setInvite($invite);
         $em->persist($note);
