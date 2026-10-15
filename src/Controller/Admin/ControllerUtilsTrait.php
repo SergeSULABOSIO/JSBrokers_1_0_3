@@ -1630,6 +1630,26 @@ trait ControllerUtilsTrait
             $formCanvas['parametres']['consultation'] = true;
         }
 
+        // UNE NOTE VALIDÉE (ou une ligne de cette note) S'OUVRE EN LECTURE : ni
+        // enregistrement, ni suppression, ni ligne ajoutée — mais ses actions (la pièce,
+        // signaler le règlement), ses paiements et ses documents restent ouverts. L'en-tête
+        // dit pourquoi, et quoi faire : un avoir (règle OHADA, 2026-10-15).
+        $intangible = !$consultation && !$isCreationMode && $entity !== null
+            && ($motifIntangible = \App\Service\Note\NoteIntangible::refus($entity)) !== null;
+        if ($intangible) {
+            unset($formCanvas['parametres']['endpoint_submit_url'], $formCanvas['parametres']['endpoint_delete_url']);
+            $formCanvas['parametres']['consultation'] = true;
+            $formCanvas['parametres']['form_intro']['description'] = $motifIntangible;
+            foreach ($formCanvas['form_layout'] ?? [] as $i => $rangee) {
+                if (($rangee['colonnes'][0]['champs'][0]['field_code'] ?? null) === 'articles') {
+                    $formCanvas['form_layout'][$i]['colonnes'][0]['champs'][0]['options'] = array_merge(
+                        $rangee['colonnes'][0]['champs'][0]['options'] ?? [],
+                        $this->optionsDeDroits(['ajout' => false, 'modification' => false, 'suppression' => false], $rangee['colonnes'][0]['champs'][0]['options'] ?? []),
+                    );
+                }
+            }
+        }
+
 
         $parentContextFacts = [];
         foreach ($this->buildParentAssociationMapFromEntity($entityClass) as $parentField => $parentClass) {
@@ -1656,7 +1676,7 @@ trait ControllerUtilsTrait
 
         // En consultation, le formulaire entier est inerte : `disabled` est hérité par
         // chaque champ, et un formulaire désactivé n'accepte aucune soumission.
-        $form = $this->createForm($formTypeClass, $entity, $consultation ? ['disabled' => true] : []);
+        $form = $this->createForm($formTypeClass, $entity, ($consultation || $intangible) ? ['disabled' => true] : []);
         $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
 
         // dd("idEntreprise:", $entreprise->getId(), "idInvite:", $invite->getId(), "isCreationMode:", $isCreationMode, "canvas:", $formCanvas);
@@ -1753,6 +1773,12 @@ trait ControllerUtilsTrait
             // champs Autocomplete (Revenu, Tranche) puissent valider les IDs soumis.
             // On pré-hydrate l'entité avec son parent si on est en mode création.
             $this->poserLesParentsSoumis($entity, $entityClass, $data);
+        }
+
+        // UNE NOTE VALIDÉE NE SE MODIFIE PLUS, NI SES LIGNES (règle OHADA, 2026-10-15) : on
+        // le dit avant tout, et rien n'est écrit. La correction passe par un avoir.
+        if (($refusIntangible = \App\Service\Note\NoteIntangible::refus($entity)) !== null) {
+            return $this->json(['message' => $refusIntangible], Response::HTTP_CONFLICT);
         }
 
         $form = $this->createForm($formTypeClass, $entity);
@@ -1875,6 +1901,12 @@ trait ControllerUtilsTrait
             // ce qui est le moment idéal pour établir la liaison parente.
             $this->poserLesParentsSoumis($entity, $entityClass, $data);
 
+            // ET APRÈS LA POSE DES PARENTS : une ligne existante qu'on RATTACHE à une note
+            // validée change cette note autant qu'une ligne ajoutée (règle OHADA).
+            if (($refusIntangible = \App\Service\Note\NoteIntangible::refus($entity)) !== null) {
+                return $this->json(['message' => $refusIntangible], Response::HTTP_CONFLICT);
+            }
+
             // VALIDATION SEULE — le dialogue veut savoir si la saisie TIENDRAIT.
             //
             // Une collection dont le parent n'existe pas encore garde ses éléments en
@@ -1914,6 +1946,10 @@ trait ControllerUtilsTrait
                 $this->workspaceMutationService->commitWrite($entity, $currentEntreprise, $this->getUser());
             } catch (InsufficientTokensException $e) {
                 return $this->tokensBlockedJson($e);
+            } catch (\App\Service\Note\NoteIntangibleException $e) {
+                // Le dernier rempart a parlé (une porte que les contrôles d'avant n'ont pas
+                // vue) : un refus lisible, pas une erreur 500.
+                return $this->json(['message' => $e->getMessage()], Response::HTTP_CONFLICT);
             }
 
             // NOTIFICATION PÉRIMÈTRE : si un rôle (RolesEn*) vient d'être enregistré, on
@@ -2051,9 +2087,10 @@ trait ControllerUtilsTrait
                 'message' => $this->compteRenduDeSuppression($entityName, $rapport),
                 'rapport' => $rapport,
             ]];
-        } catch (MutationException $e) {
+        } catch (MutationException|\App\Service\Note\NoteIntangibleException $e) {
             // Refus MÉTIER énoncé par le moteur (le cabinet lui-même, une donnée qu'on ne
-            // peut pas atteindre…). Il est déjà rédigé pour l'utilisateur : on le relaie.
+            // peut pas atteindre…), ou par le dernier rempart des notes émises. Il est déjà
+            // rédigé pour l'utilisateur : on le relaie.
             return ['statut' => Response::HTTP_CONFLICT, 'corps' => ['message' => $e->getMessage()]];
         } catch (\Throwable $e) {
             // ⚠ ON ATTRAPE `Throwable`, PAS SEULEMENT `Exception`. Sur le chemin diffusé, la

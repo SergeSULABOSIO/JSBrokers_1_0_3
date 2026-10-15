@@ -142,7 +142,7 @@ final class SourceDeFacturation
                 $retenus[] = [
                     'revenu' => $revenu,
                     'montant' => round($montant, 2),
-                    'unitaire' => $this->unitaireDe($revenu, $tranche, $addressedTo),
+                    'unitaire' => $this->unitaireDe($revenu, $tranche, $addressedTo, $type),
                 ];
                 continue;
             }
@@ -195,12 +195,19 @@ final class SourceDeFacturation
 
         // Assureur et client : la commission de courtage.
         $facture = $this->dejaFacture($revenu);
+        $ecart = (float) ($revenu->montantCalculeTTC ?? 0.0) - $facture;
 
-        return $type === Note::TYPE_NOTE_DE_CREDIT
-            // On ne peut annuler que ce qu'on a émis.
-            ? $facture
-            // Ce qui n'a pas encore été porté sur une note.
-            : (float) ($revenu->montantCalculeTTC ?? 0.0) - $facture;
+        if ($type === Note::TYPE_NOTE_DE_CREDIT) {
+            // « À CRÉDITER » (règle OHADA, 2026-10-15) : une note émise ne bouge plus. Si le
+            // dû a BAISSÉ depuis (prime, taux, chargement corrigés), l'excédent facturé se
+            // rend par un avoir — c'est lui qu'on propose. Sinon, l'avoir annule ce qui a été
+            // émis : on ne peut annuler que ce qu'on a émis.
+            return $ecart < -self::SEUIL_SOLDE ? -$ecart : $facture;
+        }
+
+        // « À FACTURER » : ce qui n'a pas encore été porté sur une note — le dû du moment
+        // moins le facturé, figé pour les notes émises.
+        return $ecart;
     }
 
     /**
@@ -220,10 +227,20 @@ final class SourceDeFacturation
      * y appliquer cette formule rendrait un nombre faux, ce qui est pire que rien.
      * On rend 0, et l'appelant sait que la ligne ne se fractionne pas.
      */
-    private function unitaireDe(RevenuPourCourtier $revenu, ?Tranche $tranche, int $addressedTo): float
+    private function unitaireDe(RevenuPourCourtier $revenu, ?Tranche $tranche, int $addressedTo, int $type = Note::TYPE_NOTE_DE_DEBIT): float
     {
         if ($tranche === null || !in_array($addressedTo, [Note::TO_CLIENT, Note::TO_ASSUREUR], true)) {
             return 0.0;
+        }
+
+        // UN AVOIR SE MESURE À CE QUI A ÉTÉ ÉMIS (IndicatorCalculationHelper::getArticleMontant,
+        // cas de l'avoir) : son unité est tout le facturé de cette échéance, si des notes de
+        // débit validées le portent — le dû du moment peut être tombé à zéro.
+        if ($type === Note::TYPE_NOTE_DE_CREDIT) {
+            $emis = $this->calculs->getDebitsFigesDuRevenu($revenu, $tranche)['ttc'];
+            if ($emis > 0.0) {
+                return round($emis, 2);
+            }
         }
 
         return round(
@@ -273,17 +290,8 @@ final class SourceDeFacturation
      */
     private function dejaFacture(RevenuPourCourtier $revenu): float
     {
-        $total = 0.0;
-        foreach ($revenu->getArticles() as $article) {
-            $note = $article->getNote();
-            if (!$this->estUneNoteDeCommission($note)) {
-                continue;
-            }
-            $montant = (float) $this->calculs->getArticleMontant($article);
-            $total += $note->getType() === Note::TYPE_NOTE_DE_CREDIT ? -$montant : $montant;
-        }
-
-        return $total;
+        // Source unique, partagée avec la fiche du revenu (écart à facturer / à créditer).
+        return $this->calculs->getRevenuMontantFacture($revenu);
     }
 
     /**
@@ -474,7 +482,7 @@ final class SourceDeFacturation
                     'police' => $police,
                     'noteId' => $note?->getId(),
                     'noteReference' => $note?->getReference(),
-                    'noteDate' => $note?->getSentAt()?->format('d/m/Y'),
+                    'noteDate' => ($note?->getEmiseLe() ?? $note?->getSentAt())?->format('d/m/Y'), // la date d'émission d'abord
                     // Le solde de la NOTE nommée, pas celui de la ligne : une note peut
                     // porter d'autres échéances.
                     'noteSolde' => $aRegler[(int) $note?->getId()]['solde'] ?? 0.0,

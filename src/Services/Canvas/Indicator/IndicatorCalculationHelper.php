@@ -1179,12 +1179,12 @@ class IndicatorCalculationHelper implements ResetInterface
     public function getNoteMontantTotal(?Note $note): float
     {
         if (!$note) return 0.0;
+        // Une note sans ligne figée (note de bordereau) garde le montant de sa validation —
+        // même si le bordereau est réanalysé, ou détaché depuis.
+        if ($note->getArticles()->isEmpty() && $note->estFigee() && $note->getMontantTtcFige() !== null) {
+            return $note->getMontantTtcFige();
+        }
         if ($note->getArticles()->isEmpty() && $note->getBordereau() !== null) {
-            // Une note de bordereau figée garde le montant de sa validation, même si le
-            // bordereau est réanalysé depuis.
-            if ($note->estFigee() && $note->getMontantTtcFige() !== null) {
-                return $note->getMontantTtcFige();
-            }
             $bordereau = $note->getBordereau();
             return ($bordereau->getMontantComHtPayableNow() ?? 0.0)
                  + ($bordereau->getMontantTaxePayableNow() ?? 0.0);
@@ -2737,6 +2737,17 @@ class IndicatorCalculationHelper implements ResetInterface
             return abs($montantRetroBase * $facteurTranche * $quantite);
         }
  
+        // CAS 3 BIS : AVOIR AU CLIENT OU À L'ASSUREUR, sur ce qui a été FACTURÉ. Un avoir rend
+        // une part de ce qui a été émis — pas du dû du moment : une unité d'avoir vaut tout
+        // le facturé (notes de débit validées, montants figés) sur ce revenu et cette
+        // échéance. Le dû a beau tomber à zéro (taux retiré, prime annulée), l'avoir reste
+        // possible ; et il rend exactement ce que la note annulée avait porté.
+        if ($note->getType() === Note::TYPE_NOTE_DE_CREDIT && $revenu && $tranche
+            && in_array($note->getAddressedTo(), [Note::TO_CLIENT, Note::TO_ASSUREUR], true)
+            && ($facture = $this->getDebitsFigesDuRevenu($revenu, $tranche)['ttc']) > 0.0) {
+            return abs($facture * ($article->getQuantite() ?? 1.0));
+        }
+
         // CAS 3 : Comportement par défaut pour les autres notes (débit, crédit client/assureur...).
         // Le montant est basé sur le montant TTC du revenu, proportionnellement à la tranche.
         if ($revenu && $tranche) {
@@ -2800,18 +2811,45 @@ class IndicatorCalculationHelper implements ResetInterface
     }
 
     /**
-     * NOUVEAU : Méthode publique pour accéder à la logique de ServiceTaxes.
-     *
-     * @param boolean $isIARD
-     * @param boolean $isTaxeAssureur
-     * @return Taxe|null
+     * CE QUI A ÉTÉ FACTURÉ SUR CE REVENU, net des avoirs — au client ou à l'assureur,
+     * brouillons compris (une ligne qui existe est un montant déjà réclamé). Les notes
+     * validées comptent pour leur montant FIGÉ : c'est contre lui que se mesure l'écart.
+     * Source unique : la facturation (reste à facturer, à créditer) et la fiche du revenu.
      */
+    public function getRevenuMontantFacture(RevenuPourCourtier $revenu): float
+    {
+        $total = 0.0;
+        foreach ($revenu->getArticles() as $article) {
+            $note = $article->getNote();
+            if ($note === null || !in_array($note->getAddressedTo(), [Note::TO_CLIENT, Note::TO_ASSUREUR], true)) {
+                continue;
+            }
+            $montant = $this->getArticleMontant($article);
+            $total += $note->getType() === Note::TYPE_NOTE_DE_CREDIT ? -$montant : $montant;
+        }
+
+        return $total;
+    }
+
     /**
-     * Le rapport HT / TTC des lignes FIGÉES des notes de débit émises (validées) sur ce
-     * revenu — et cette échéance, s'il y en a une —, au client ou à l'assureur. Null si
-     * aucune : l'avoir se ventile alors au taux du moment.
+     * Le rapport HT / TTC des lignes FIGÉES des notes de débit émises sur ce revenu (et
+     * cette échéance). Null si aucune : l'avoir se ventile alors au taux du moment.
      */
     private function rapportHtDesDebitsFiges(RevenuPourCourtier $revenu, ?Tranche $tranche): ?float
+    {
+        $figes = $this->getDebitsFigesDuRevenu($revenu, $tranche);
+
+        return $figes['ttc'] > 0.0 ? $figes['ht'] / $figes['ttc'] : null;
+    }
+
+    /**
+     * CE QUI A ÉTÉ ÉMIS : la somme des lignes FIGÉES des notes de débit VALIDÉES sur ce
+     * revenu — et cette échéance, s'il y en a une —, au client ou à l'assureur. C'est la
+     * base d'un avoir (ce qu'il peut rendre) et de sa ventilation.
+     *
+     * @return array{ht: float, ttc: float}
+     */
+    public function getDebitsFigesDuRevenu(RevenuPourCourtier $revenu, ?Tranche $tranche): array
     {
         $ht = 0.0;
         $ttc = 0.0;
@@ -2828,9 +2866,10 @@ class IndicatorCalculationHelper implements ResetInterface
             $ttc += (float) $ligne->getMontantTtcFige();
         }
 
-        return $ttc > 0.0 ? $ht / $ttc : null;
+        return ['ht' => $ht, 'ttc' => $ttc];
     }
 
+    /** La taxe applicable (assureur ou courtier) du cabinet donné, sinon de l'utilisateur connecté. */
     public function getTaxeApplicable(bool $isIARD, bool $isTaxeAssureur, ?\App\Entity\Entreprise $entreprise = null): ?\App\Entity\Taxe
     {
         return $this->serviceTaxes->getTaxeApplicable($isIARD, $isTaxeAssureur, $entreprise);

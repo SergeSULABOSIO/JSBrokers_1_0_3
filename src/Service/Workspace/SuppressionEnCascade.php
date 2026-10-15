@@ -154,6 +154,12 @@ class SuppressionEnCascade
             $classe === Note::class,
         ));
 
+        // ⚠ ET UN DÉTACHEMENT N'EST PAS PLUS PERMIS QU'UNE SUPPRESSION. Supprimer le
+        // bordereau, le client ou l'assureur d'une note VALIDÉE la laisserait debout, mais
+        // modifiée — sans destinataire, ou (note de bordereau) sans montant. Le détachement
+        // passe par un UPDATE en masse, que le rempart du flush ne voit pas : on refuse ici.
+        array_push($refus, ...$this->notesValideesDetachees($aDetacher, $aDetruire));
+
         return new PlanDeSuppression(
             racineClasse: $classe,
             racineId: $id,
@@ -241,6 +247,37 @@ class SuppressionEnCascade
         }
 
         $motifs = [];
+
+        // UNE NOTE VALIDÉE NE SE SUPPRIME PAS ET NE PERD AUCUNE LIGNE, payée ou non (règle
+        // OHADA, décision du 2026-10-15) : c'est une pièce comptable émise. Supprimer son
+        // paiement n'y change rien, d'où ce motif d'abord, et sans le remède « supprimez son
+        // paiement » qui ne vaut que pour un brouillon.
+        //
+        // UNE NOTE DE REPRISE, elle, n'est pas une pièce émise par Joseara : figée (son
+        // montant ne dérive plus), elle se supprime comme un brouillon — la règle « note
+        // réglée » ci-dessous —, si bien qu'un import erroné se défait (décision de Serge
+        // du 2026-10-16).
+        $intangibles = [];
+        foreach (array_chunk($touchees, self::TAILLE_DE_LOT) as $lot) {
+            foreach ($this->em->getRepository(Note::class)->createQueryBuilder('n')
+                ->where('n.id IN (:ids)')
+                ->andWhere('n.validated = true OR n.figeeLe IS NOT NULL')
+                ->setParameter('ids', $lot)
+                ->getQuery()->getResult() as $note) {
+                // La note de reprise : supprimée ENTIÈRE, elle suit la règle « réglée »
+                // ci-dessous ; AMPUTÉE d'une ligne, jamais — elle est figée.
+                if ($note->isValidated() !== true && !isset($amputees[(int) $note->getId()])) {
+                    continue;
+                }
+                $intangibles[(int) $note->getId()] = true;
+                $motif = \App\Service\Note\NoteIntangible::motif($note, isset($amputees[(int) $note->getId()]));
+                $motifs[] = isset($amputees[(int) $note->getId()])
+                    ? 'Cette suppression retirerait une ligne d’une note émise. ' . $motif
+                    : ($laNoteEstLaCible ? $motif : 'Cette suppression emporterait une note émise. ' . $motif);
+            }
+        }
+        $touchees = array_values(array_filter($touchees, static fn (int $id): bool => !isset($intangibles[$id])));
+
         foreach (array_chunk($touchees, self::TAILLE_DE_LOT) as $lot) {
             $reglees = $this->em->createQueryBuilder()
                 ->select('n.id AS id, n.reference AS reference, n.type AS type, COUNT(p.id) AS paiements')
@@ -665,6 +702,54 @@ class SuppressionEnCascade
      *
      * @param int[] $ids
      */
+    /**
+     * Les notes VALIDÉES qu'un détachement modifierait (la note elle-même, ou l'une de ses
+     * lignes) sans les détruire.
+     *
+     * @param array<int, array{classe: class-string, champ: string, ids: int[]}> $aDetacher
+     * @param array<class-string, array<int, int>>                              $aDetruire
+     *
+     * @return list<string>
+     */
+    private function notesValideesDetachees(array $aDetacher, array $aDetruire): array
+    {
+        $notes = [];
+        foreach ($aDetacher as $detachement) {
+            // L'invité qui a saisi la note n'est pas son CONTENU : un collaborateur qui part
+            // ne bloque rien (la pièce garde son cabinet, son destinataire et ses montants).
+            if ($detachement['champ'] === 'invite') {
+                continue;
+            }
+            if ($detachement['classe'] === Note::class) {
+                foreach ($detachement['ids'] as $id) {
+                    $notes[(int) $id] = (int) $id;
+                }
+            } elseif ($detachement['classe'] === \App\Entity\Article::class && $detachement['ids'] !== []) {
+                foreach ($this->em->createQueryBuilder()->select('DISTINCT IDENTITY(ar.note) AS note')
+                    ->from(\App\Entity\Article::class, 'ar')->where('ar.id IN (:ids)')
+                    ->setParameter('ids', array_values($detachement['ids']))->getQuery()->getSingleColumnResult() as $idNote) {
+                    if ($idNote !== null) {
+                        $notes[(int) $idNote] = (int) $idNote;
+                    }
+                }
+            }
+        }
+        $detruites = array_map('intval', array_values($aDetruire[Note::class] ?? []));
+        $notes = array_values(array_diff($notes, $detruites));
+        if ($notes === []) {
+            return [];
+        }
+
+        $motifs = [];
+        foreach ($this->em->getRepository(Note::class)->createQueryBuilder('n')
+            ->where('n.id IN (:ids)')->andWhere('n.validated = true')
+            ->setParameter('ids', $notes)->getQuery()->getResult() as $note) {
+            $motifs[] = 'Cette suppression modifierait une note émise. ' . \App\Service\Note\NoteIntangible::motif($note);
+        }
+
+        return $motifs;
+    }
+
     private function detacher(string $classe, string $champ, array $ids): int
     {
         $touchees = 0;
