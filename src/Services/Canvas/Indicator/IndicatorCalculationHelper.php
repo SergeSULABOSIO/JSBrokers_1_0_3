@@ -1089,15 +1089,18 @@ class IndicatorCalculationHelper implements ResetInterface
 
     public function getCotationMontantChargementPrime(?Cotation $cotation, ?TypeRevenu $typeRevenu)
     {
-        $montantChargementCible = 0;
+        // L'ASSIETTE EST LA SOMME DE TOUTES LES LIGNES DU CHARGEMENT CIBLE (décision du
+        // 2026-10-15) : deux lignes « prime nette » comptent toutes deux. Seule la première
+        // l'était — Ket, lui, additionnait déjà (SaisirPropositionTool::assiettes). Aucune
+        // note émise n'en dépendait (mesure en production du 2026-10-15).
+        $montantChargementCible = 0.0;
         if ($cotation != null && $typeRevenu != null && $typeRevenu->getTypeChargement()) {
             $targetTypeId = $typeRevenu->getTypeChargement()->getId();
-            
+
             foreach ($cotation->getChargements() as $loading) {
                 // Comparaison robuste par ID pour éviter les problèmes de Proxy Doctrine
                 if ($loading->getType() && $loading->getType()->getId() === $targetTypeId) {
-                    $montantChargementCible = $loading->getMontantFlatExceptionel() ?? 0.0;
-                    break; // On a trouvé le chargement correspondant, on peut sortir
+                    $montantChargementCible += (float) ($loading->getMontantFlatExceptionel() ?? 0.0);
                 }
             }
         }
