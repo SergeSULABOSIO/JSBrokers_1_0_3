@@ -47,7 +47,7 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             // double encaissement, et ouvrirait un formulaire sans montant à proposer.
             'aUnSoldeDu' => NoteReglementScope::resteADue($montantTotal, $montantPaye),
             // Seul un brouillon se valide : condition de l'action « Valider la note ».
-            'aValider' => $entity->estBrouillon(),
+            'aValider' => $entity->estBrouillon() && !$entity->estDeReprise(),
             'statutPaiement' => NoteReglementScope::libelleAffichage(
                 NoteReglementScope::statut($montantTotal, $montantPaye),
             ),
@@ -80,8 +80,10 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
     private function calculateFromBordereau(Note $note): array
     {
         $bordereau   = $note->getBordereau();
-        $montantHT   = round($bordereau->getMontantComHtPayableNow() ?? 0.0, 2);
-        $montantTaxe = round($bordereau->getMontantTaxePayableNow() ?? 0.0, 2);
+        // Figée, la note garde les montants de sa validation, même si le bordereau est
+        // réanalysé depuis.
+        $montantHT   = round($note->estFigee() ? (float) $note->getMontantHtFige() : ($bordereau->getMontantComHtPayableNow() ?? 0.0), 2);
+        $montantTaxe = round($note->estFigee() ? (float) $note->getMontantTtcFige() - (float) $note->getMontantHtFige() : ($bordereau->getMontantTaxePayableNow() ?? 0.0), 2);
         $montantTotal = round($montantHT + $montantTaxe, 2);
         $montantPaye  = round($this->getNoteMontantPaye($note), 2);
         $solde        = round($montantTotal - $montantPaye, 2);
@@ -101,7 +103,7 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             // le bordereau : appelée seule sur une note de bordereau, elle lisait des
             // articles vides et répondait « N/A » à tort. Deux copies finissent par diverger.
             'aUnSoldeDu'       => NoteReglementScope::resteADue($montantTotal, $montantPaye),
-            'aValider'         => $note->estBrouillon(),
+            'aValider'         => $note->estBrouillon() && !$note->estDeReprise(),
             'statutPaiement'   => NoteReglementScope::libelleAffichage(
                 NoteReglementScope::statut($montantTotal, $montantPaye),
             ),
@@ -115,11 +117,14 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function getNoteMontantTaxe(Note $note): float
     {
-        // Les notes de crédit (rétro-commission, paiement de taxe) sont considérées comme HT.
-        if ($note->getType() === Note::TYPE_NOTE_DE_CREDIT) {
+        // Une note de crédit à un partenaire (rétrocommission) ou à une autorité fiscale
+        // (la taxe elle-même) n'a pas de part de taxe.
+        if ($note->getType() === Note::TYPE_NOTE_DE_CREDIT
+            && in_array($note->getAddressedTo(), [Note::TO_PARTENAIRE, Note::TO_AUTORITE_FISCALE], true)) {
             return 0.0;
         }
-        // Pour les notes de débit, la taxe est la différence entre le montant TTC et le montant HT.
+        // Note de débit, ou AVOIR au client ou à l'assureur : la taxe est la différence
+        // entre le TTC et le HT — l'avoir rend la taxe qu'avait portée la note annulée.
         return $this->calculationHelper->getNoteMontantPayable($note) - $this->calculationHelper->getNoteMontantHT($note);
     }
 
@@ -164,25 +169,15 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function getNoteNomTaxe(Note $note): ?string
     {
-        // On prend le premier article pour déterminer le contexte de la taxe.
-        $firstArticle = $note->getArticles()->first();
-        if (!$firstArticle || !$firstArticle->getRevenuFacture()) {
-            return 'Taxe';
-        }
-
-        $revenu = $firstArticle->getRevenuFacture();
-        $isIARD = $this->calculationHelper->isIARD($revenu->getCotation());
-        
-        // On utilise le service de taxes pour trouver la taxe applicable.
-        // Pour une note de débit, la taxe est toujours celle de l'assureur.
-        // CORRECTION : On utilise la nouvelle méthode publique du helper.
-        $taxe = $this->calculationHelper->getTaxeApplicable($isIARD, true);
-
-        return $taxe?->getCode() ?? 'Taxe';
+        // Source unique, partagée avec le figeage de la note.
+        return $this->calculationHelper->getNoteNomTaxe($note);
     }
 
     private function getNoteTauxTaxe(Note $note, float $montantHT): ?float
     {
+        if ($note->estFigee() && $note->getTauxTaxeFige() !== null) {
+            return $note->getTauxTaxeFige();
+        }
         $montantTaxe = $this->getNoteMontantTaxe($note);
         if ($montantHT > 0 && $montantTaxe > 0) {
             return ($montantTaxe / $montantHT) * 100;

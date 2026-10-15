@@ -959,9 +959,11 @@ final class ReconstitueurDeTranche
                 'type' => Note::TYPE_NOTE_DE_DEBIT,
                 'addressedTo' => $auClient ? Note::TO_CLIENT : Note::TO_ASSUREUR,
                 $auClient ? 'client' : 'assureur' => $destinataire,
-                // ⚠ PAS DE RÉFÉRENCE ICI : la note reçoit le numéro suivant de sa série au
-                // moment où elle s'écrit, comme toute note
-                // ({@see \App\EventListener\NumerotationDesNotesListener}).
+                // ⚠ UNE NOTE DE REPRISE N'EST PAS UNE FACTURE ÉMISE PAR JOSEARA : elle
+                // reste hors série (« REPRISE-… »), non validée, mais figée à l'import et
+                // intangible (règle OHADA, décision du 2026-10-15). C'est l'ORIGINE de
+                // l'écriture (OrigineEcriture::Reprise, passée par le moteur) qui le décide
+                // — jamais un champ de l'opération (WorkspaceMutationService::executer).
                 'description' => 'Situation reprise depuis un classeur de reprise.',
             ]),
             collections: [

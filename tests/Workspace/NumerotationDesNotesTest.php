@@ -41,6 +41,8 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
  */
 class NumerotationDesNotesTest extends WebTestCase
 {
+    use AffaireFacturableTrait;
+
     private const EMAIL_A = 'phpunit-emission-a@test.local';
     private const EMAIL_B = 'phpunit-emission-b@test.local';
     private const CABINET_A = 'PHPUnit Emission A SARL';
@@ -61,11 +63,6 @@ class NumerotationDesNotesTest extends WebTestCase
         parent::tearDown();
     }
 
-    private function em(): EntityManagerInterface
-    {
-        return static::getContainer()->get(EntityManagerInterface::class);
-    }
-
     /** Après une transaction annulée, Doctrine ferme le gestionnaire : on en reprend un neuf. */
     private function emNeuf(): EntityManagerInterface
     {
@@ -76,24 +73,7 @@ class NumerotationDesNotesTest extends WebTestCase
 
     private function cleanUp(): void
     {
-        $conn = $this->em()->getConnection();
-        $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email IN (?, ?)', [self::EMAIL_A, self::EMAIL_B]);
-        foreach ($conn->fetchFirstColumn('SELECT id FROM entreprise WHERE nom IN (?, ?)', [self::CABINET_A, self::CABINET_B]) as $id) {
-            $tables = $conn->fetchFirstColumn(
-                "SELECT TABLE_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND COLUMN_NAME = 'entreprise_id' AND TABLE_NAME <> 'entreprise'"
-            );
-            $conn->executeStatement('SET FOREIGN_KEY_CHECKS = 0');
-            try {
-                foreach ($tables as $table) {
-                    $conn->executeStatement("DELETE FROM `$table` WHERE entreprise_id = ?", [$id]);
-                }
-                $conn->executeStatement('DELETE FROM entreprise WHERE id = ?', [$id]);
-            } finally {
-                $conn->executeStatement('SET FOREIGN_KEY_CHECKS = 1');
-            }
-        }
-        $conn->executeStatement('DELETE FROM utilisateur WHERE email IN (?, ?)', [self::EMAIL_A, self::EMAIL_B]);
-        $this->em()->clear();
+        $this->effacerLesCabinets([self::CABINET_A, self::CABINET_B], [self::EMAIL_A, self::EMAIL_B]);
     }
 
     private static function annee(): int
@@ -106,99 +86,9 @@ class NumerotationDesNotesTest extends WebTestCase
         return sprintf('%s-%d-%05d', $prefixe, self::annee(), $sequence);
     }
 
-    /**
-     * Un cabinet et une affaire chiffrée : prime nette 10 000, commission de 10 %, une
-     * échéance à 100 %. Rend les identifiants utiles.
-     *
-     * @return array{owner: int, entreprise: int, invite: int, assureur: int, revenu: int, tranche: int}
-     */
-    private function semer(string $nom, string $email): array
-    {
-        $em = $this->em();
-        $owner = (new Utilisateur())->setEmail($email)->setNom('Propriétaire')->setVerified(true)->setPassword('x');
-        $em->persist($owner);
-        $cabinet = (new Entreprise())->setNom($nom)->setLicence('L')->setAdresse('1 rue')
-            ->setTelephone('+243000000067')->setRccm('R')->setIdnat('I')->setNumimpot('N')->setUtilisateur($owner);
-        $em->persist($cabinet);
-        $owner->setConnectedTo($cabinet);
-        $invite = (new Invite())->setNom('Propriétaire')->setUtilisateur($owner)->setEntreprise($cabinet)->setProprietaire(true);
-        $em->persist($invite);
-
-        $client = (new Client())->setNom('Client ' . $nom)->setExonere(false);
-        $client->setEntreprise($cabinet);
-        $em->persist($client);
-        $assureur = (new Assureur())->setNom('Assureur ' . $nom);
-        $assureur->setEntreprise($cabinet);
-        $em->persist($assureur);
-        $piste = (new Piste())->setNom('Piste')->setTypeAvenant(Piste::AVENANT_SOUSCRIPTION)
-            ->setDescriptionDuRisque('Risque')->setExercice(self::annee())->setClient($client);
-        $piste->setEntreprise($cabinet)->setInvite($invite);
-        $em->persist($piste);
-        $cotation = (new Cotation())->setNom('Cotation')->setDuree(12);
-        $cotation->setPiste($piste)->setAssureur($assureur)->setEntreprise($cabinet);
-        $em->persist($cotation);
-
-        $primeNette = (new Chargement())->setNom('Prime nette')->setFonction(Chargement::FONCTION_PRIME_NETTE);
-        $primeNette->setEntreprise($cabinet);
-        $em->persist($primeNette);
-        $ligne = (new ChargementPourPrime())->setNom('Prime nette')->setMontantFlatExceptionel(10000.0)
-            ->setType($primeNette)->setCotation($cotation);
-        $ligne->setEntreprise($cabinet);
-        $em->persist($ligne);
-        $cotation->addChargement($ligne);
-
-        $type = (new TypeRevenu())->setNom('Commission')->setPourcentage(10.0)->setShared(false)
-            ->setMultipayments(true)->setTypeChargement($primeNette)->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR);
-        $type->setEntreprise($cabinet);
-        $em->persist($type);
-        $revenu = (new RevenuPourCourtier())->setNom('Commission');
-        $revenu->setCotation($cotation)->setTypeRevenu($type)->setEntreprise($cabinet);
-        $em->persist($revenu);
-        $cotation->addRevenu($revenu);
-        $tranche = (new Tranche())->setNom('Tranche unique')->setPourcentage(100.0)
-            ->setPayableAt(new \DateTimeImmutable('-10 days'))->setEcheanceAt(new \DateTimeImmutable('+20 days'));
-        $tranche->setCotation($cotation)->setEntreprise($cabinet);
-        $em->persist($tranche);
-        $cotation->addTranche($tranche);
-        $em->flush();
-
-        return [
-            'owner' => (int) $owner->getId(), 'entreprise' => (int) $cabinet->getId(), 'invite' => (int) $invite->getId(),
-            'assureur' => (int) $assureur->getId(), 'revenu' => (int) $revenu->getId(), 'tranche' => (int) $tranche->getId(),
-        ];
-    }
-
     private function connecter(array $c): void
     {
         $this->client->loginUser($this->em()->find(Utilisateur::class, $c['owner']));
-    }
-
-    /** Un brouillon portant une ligne (la commission entière), écrit hors de l'écran. */
-    private function brouillon(array $c, string $nom, int $type = Note::TYPE_NOTE_DE_DEBIT, bool $avecLigne = true): int
-    {
-        $em = $this->em();
-        $cabinet = $em->find(Entreprise::class, $c['entreprise']);
-        $note = (new Note())->setNom($nom)->setType($type)->setAddressedTo(Note::TO_ASSUREUR)
-            ->setAssureur($em->find(Assureur::class, $c['assureur']))->setSignature('t')->setValidated(false);
-        $note->setEntreprise($cabinet);
-        if ($avecLigne) {
-            $article = (new Article())->setQuantite(1.0)
-                ->setRevenuFacture($em->find(RevenuPourCourtier::class, $c['revenu']))
-                ->setTranche($em->find(Tranche::class, $c['tranche']));
-            $article->setEntreprise($cabinet);
-            $note->addArticle($article);
-        }
-        $em->persist($note);
-        $em->flush();
-
-        return (int) $note->getId();
-    }
-
-    private function note(int $id): Note
-    {
-        $this->em()->clear();
-
-        return $this->em()->find(Note::class, $id);
     }
 
     /** Valide par le geste d'écran ; rend le statut et le message. */
@@ -222,7 +112,7 @@ class NumerotationDesNotesTest extends WebTestCase
 
     public function testUnBrouillonPorteUneReferenceProvisoireEtNeConsommeAucunNumero(): void
     {
-        $c = $this->semer(self::CABINET_A, self::EMAIL_A);
+        $c = $this->semerUneAffaire(self::CABINET_A, self::EMAIL_A);
         $this->connecter($c);
 
         $this->client->request('POST', '/admin/note/api/submit', [
@@ -243,7 +133,7 @@ class NumerotationDesNotesTest extends WebTestCase
 
     public function testLaValidationPoseLeNumeroSuivantEtLaDateDEmission(): void
     {
-        $c = $this->semer(self::CABINET_A, self::EMAIL_A);
+        $c = $this->semerUneAffaire(self::CABINET_A, self::EMAIL_A);
         $this->connecter($c);
         $premiere = $this->brouillon($c, 'Première');
         $seconde = $this->brouillon($c, 'Seconde');
@@ -266,8 +156,8 @@ class NumerotationDesNotesTest extends WebTestCase
     /** Une série par type et par cabinet ; un avoir a la sienne. */
     public function testUneSerieParTypeEtParCabinet(): void
     {
-        $a = $this->semer(self::CABINET_A, self::EMAIL_A);
-        $b = $this->semer(self::CABINET_B, self::EMAIL_B);
+        $a = $this->semerUneAffaire(self::CABINET_A, self::EMAIL_A);
+        $b = $this->semerUneAffaire(self::CABINET_B, self::EMAIL_B);
         $emission = static::getContainer()->get(EmissionDeNote::class);
 
         $emission->valider($this->note($this->brouillon($a, 'Débit A')));
@@ -288,7 +178,7 @@ class NumerotationDesNotesTest extends WebTestCase
      */
     public function testUneValidationQuiEchoueNeConsommeAucunNumero(): void
     {
-        $c = $this->semer(self::CABINET_A, self::EMAIL_A);
+        $c = $this->semerUneAffaire(self::CABINET_A, self::EMAIL_A);
         $id = $this->brouillon($c, 'Échouera puis passera');
         $em = $this->em();
         $saboteur = new class {
@@ -328,7 +218,7 @@ class NumerotationDesNotesTest extends WebTestCase
      */
     public function testDeuxValidationsSimultaneesNiDoublonNiTrou(): void
     {
-        $c = $this->semer(self::CABINET_A, self::EMAIL_A);
+        $c = $this->semerUneAffaire(self::CABINET_A, self::EMAIL_A);
         $id = $this->brouillon($c, 'Concurrente');
         $connexion = $this->em()->getConnection();
         $autre = DriverManager::getConnection($connexion->getParams());
@@ -354,7 +244,7 @@ class NumerotationDesNotesTest extends WebTestCase
 
     public function testLaSuppressionDUnBrouillonNeLaissePasDeTrou(): void
     {
-        $c = $this->semer(self::CABINET_A, self::EMAIL_A);
+        $c = $this->semerUneAffaire(self::CABINET_A, self::EMAIL_A);
         $this->connecter($c);
         $abandonne = $this->brouillon($c, 'Abandonné');
         $garde = $this->brouillon($c, 'Gardé');
@@ -368,8 +258,8 @@ class NumerotationDesNotesTest extends WebTestCase
 
     public function testUneNoteSansLigneOuDUnAutreCabinetNeSeValidePas(): void
     {
-        $a = $this->semer(self::CABINET_A, self::EMAIL_A);
-        $b = $this->semer(self::CABINET_B, self::EMAIL_B);
+        $a = $this->semerUneAffaire(self::CABINET_A, self::EMAIL_A);
+        $b = $this->semerUneAffaire(self::CABINET_B, self::EMAIL_B);
         $this->connecter($a);
 
         $vide = $this->validerALEcran($this->brouillon($a, 'Sans ligne', avecLigne: false));
@@ -385,7 +275,7 @@ class NumerotationDesNotesTest extends WebTestCase
     /** Ket valide par le même service : en créant une note validée, ou en validant un brouillon. */
     public function testKetValideParLeMemeService(): void
     {
-        $c = $this->semer(self::CABINET_A, self::EMAIL_A);
+        $c = $this->semerUneAffaire(self::CABINET_A, self::EMAIL_A);
         // Les sélecteurs du formulaire sont filtrés par le cabinet de l'utilisateur connecté.
         $this->connecter($c);
         $em = $this->em();

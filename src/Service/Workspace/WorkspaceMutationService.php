@@ -46,6 +46,17 @@ use Symfony\Component\Form\FormInterface;
  */
 class WorkspaceMutationService
 {
+    /**
+     * Colonnes que le SYSTÈME pose, et que l'inventaire ne propose donc pas à Ket comme
+     * champs à écrire : le numéro et la date d'émission d'une note (sa validation), ses
+     * montants figés, son origine (seul le moteur de reprise la fixe). Les annoncer, c'était
+     * laisser Ket croire qu'il les avait écrits — le formulaire les ignore en silence.
+     */
+    private const POSES_PAR_LE_SYSTEME = [
+        'Note' => ['reference', 'emiseLe', 'figeeLe', 'montantHtFige', 'montantTtcFige', 'libelleTaxeFige', 'tauxTaxeFige', 'origine'],
+        'Article' => ['montantHtFige', 'montantTtcFige'],
+    ];
+
     /** Types de champs scalaires pilotables par l'IA (miroir de PrefillWhitelist). */
     private const TYPES_SCALAIRES = [
         'string', 'text', 'integer', 'smallint', 'bigint', 'float', 'decimal',
@@ -618,6 +629,16 @@ class WorkspaceMutationService
             } catch (\App\Service\Note\NoteNonValidable $refus) {
                 throw MutationException::invalide(sprintf('« %s » ne peut pas être validée.', $libelle), ['validated' => [$refus->getMessage()]]);
             }
+        }
+
+        // UNE NOTE DE REPRISE se fige à l'import, elle aussi APRÈS ses lignes : hors série
+        // (« REPRISE-… »), non validée, mais intangible (décision du 2026-10-15).
+        // ⚠ PAR LE PARAMÈTRE `$origine`, JAMAIS PAR UN CHAMP DE L'OPÉRATION : seul le moteur
+        // de reprise le passe. Un champ, Ket pourrait le fournir — et une note hors série,
+        // sans créance au journal, s'obtiendrait d'une phrase.
+        if ($entity instanceof \App\Entity\Note && $op->isCreate() && !$entity->estFigee()
+            && $origine === OrigineEcriture::Reprise) {
+            ($this->emission ?? throw new \LogicException('EmissionDeNote indisponible.'))->figerUneReprise($entity);
         }
 
         return [
@@ -1213,7 +1234,8 @@ class WorkspaceMutationService
 
         // Champs scalaires pilotables.
         foreach ($meta->getFieldNames() as $field) {
-            if (in_array($field, ChampsObligatoiresInspector::CHAMPS_SYSTEME, true) || in_array($field, $autoChamps, true)) {
+            if (in_array($field, ChampsObligatoiresInspector::CHAMPS_SYSTEME, true) || in_array($field, $autoChamps, true)
+                || in_array($field, self::POSES_PAR_LE_SYSTEME[$shortName] ?? [], true)) {
                 continue;
             }
             if (!in_array((string) $meta->getTypeOfField($field), self::TYPES_SCALAIRES, true)) {

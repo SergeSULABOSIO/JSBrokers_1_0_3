@@ -164,6 +164,13 @@ class PrechargementPisteTest extends KernelTestCase
     {
         $cabinet = $this->semer();
 
+        // UNE PAGE POUR RIEN, D'ABORD : le barème des taxes du cabinet se lit une fois, puis
+        // reste en cache (ServiceTaxes::getTaxes). Un coût FIXE — que la première page
+        // mesurée paierait seule, faisant croire à une différence entre 4 et 12 pistes.
+        // (Il n'apparaissait pas avant le 2026-10-15 : sans utilisateur connecté, la taxe
+        // ne se calculait pas du tout — le TTC valait le HT.)
+        $this->page($cabinet, 4, true);
+
         $quatre = $this->page($cabinet, 4, true);
         $douze = $this->page($cabinet, 12, true);
         $douzeSansLot = $this->page($cabinet, 12, false);

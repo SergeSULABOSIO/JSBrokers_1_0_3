@@ -1180,6 +1180,11 @@ class IndicatorCalculationHelper implements ResetInterface
     {
         if (!$note) return 0.0;
         if ($note->getArticles()->isEmpty() && $note->getBordereau() !== null) {
+            // Une note de bordereau figée garde le montant de sa validation, même si le
+            // bordereau est réanalysé depuis.
+            if ($note->estFigee() && $note->getMontantTtcFige() !== null) {
+                return $note->getMontantTtcFige();
+            }
             $bordereau = $note->getBordereau();
             return ($bordereau->getMontantComHtPayableNow() ?? 0.0)
                  + ($bordereau->getMontantTaxePayableNow() ?? 0.0);
@@ -2307,6 +2312,24 @@ class IndicatorCalculationHelper implements ResetInterface
      *
      * @return array{couverts: array<int, true>, couvertsSoldes: array<int, true>, allocation: array<int, float>, parAvenant: array<int, array{reclame: float, encaisse: float}>, bordereauxParTranche: array<int, array<int, true>>, attestationParAvenant: array<int, array<int, true>>}
      */
+    /**
+     * Ce que réclame la note d'un bordereau : le montant FIGÉ de ses notes figées (sans
+     * ligne, elles ne portent que lui), sinon le montant que déclare le bordereau.
+     */
+    private function montantReclameParLeBordereau(Bordereau $bordereau): float
+    {
+        $figees = 0.0;
+        $aUneNoteFigee = false;
+        foreach ($bordereau->getNotes() as $note) {
+            if ($note->estFigee() && $note->getArticles()->isEmpty()) {
+                $figees += (float) $note->getMontantTtcFige();
+                $aUneNoteFigee = true;
+            }
+        }
+
+        return $aUneNoteFigee ? $figees : (float) ($bordereau->getMontantPayableNow() ?? 0);
+    }
+
     private function getCouvertureBordereaux(Entreprise $entreprise): array
     {
         $entrepriseId = (int) $entreprise->getId();
@@ -2449,7 +2472,10 @@ class IndicatorCalculationHelper implements ResetInterface
             // RÉGIME EXACT. Le dénominateur est ce que la NOTE réclame — la même base que
             // le paiement —, pas le dû théorique des polices : un bordereau ne facture
             // souvent qu'une partie de la commission des affaires qu'il réconcilie.
-            $reclameTotal = round((float) ($bordereau->getMontantPayableNow() ?? 0), 2);
+            // ⚠ CE QUE LA NOTE RÉCLAME, AU MONTANT DE SON ÉMISSION : une note figée garde son
+            // montant même si le bordereau est réanalysé depuis — le règlement se mesure
+            // contre la pièce envoyée, pas contre un bordereau qui a bougé (OHADA, 2026-10-15).
+            $reclameTotal = round($this->montantReclameParLeBordereau($bordereau), 2);
             $taux = $reclameTotal > 0 ? min(1.0, $encaisse / $reclameTotal) : 0.0;
             if ($taux <= 0) {
                 continue;
@@ -2664,13 +2690,27 @@ class IndicatorCalculationHelper implements ResetInterface
         $revenu = $article->getRevenuFacture();
         $tranche = $article->getTranche();
         $note = $article->getNote();
- 
+
         if (!$note) return 0.0;
- 
+
+        // UNE NOTE FIGÉE NE SE RECALCULE PLUS (règle OHADA, 2026-10-15) : son montant est
+        // celui de sa validation, quoi qu'il soit arrivé depuis à la prime, au taux ou au
+        // chargement. Tous les lecteurs passent par ici — PDF, soldes, journal, SOA, Ket.
+        if ($note->estFigee() && $article->getMontantTtcFige() !== null) {
+            return $article->getMontantTtcFige();
+        }
+
         // CAS 1 : Note de crédit pour une autorité fiscale (taxe).
         // Le montant doit être le montant de la taxe, en négatif.
         if ($note->getType() === Note::TYPE_NOTE_DE_CREDIT && $note->getAddressedTo() === Note::TO_AUTORITE_FISCALE) {
             $autoriteFiscale = $note->getAutoritefiscale();
+            // ⚠ L'EXONÉRATION VAUT AUSSI ICI. Le taux de l'autorité s'appliquait
+            // directement : une affaire exonérée (client exonéré, risque non imposable)
+            // reversait une taxe qu'elle n'avait jamais portée. La règle est unique
+            // (ServiceTaxes::commissionExonereePour), et les deux taxes tombent ensemble.
+            if ($revenu && $this->serviceTaxes->commissionExonereePour($revenu->getCotation())) {
+                return 0.0;
+            }
             if ($autoriteFiscale && $autoriteFiscale->getTaxe()) {
                 $taxe = $autoriteFiscale->getTaxe();
                 $montantHTRevenu = $this->getRevenuMontantHt($revenu);
@@ -2723,13 +2763,28 @@ class IndicatorCalculationHelper implements ResetInterface
 
         if (!$note) return 0.0;
 
-        // Pour les notes de crédit (taxe, rétro-commission), le montant est déjà HT.
-        if ($note->getType() === Note::TYPE_NOTE_DE_CREDIT) {
-            // On réutilise la logique existante qui est correcte pour les crédits.
+        if ($note->estFigee() && $article->getMontantHtFige() !== null) {
+            return $article->getMontantHtFige();
+        }
+
+        // Pour les notes de crédit à une autorité fiscale (la taxe elle-même) ou à un
+        // partenaire (rétrocommission), le montant n'a pas de part de taxe : HT = montant.
+        if ($note->getType() === Note::TYPE_NOTE_DE_CREDIT
+            && in_array($note->getAddressedTo(), [Note::TO_AUTORITE_FISCALE, Note::TO_PARTENAIRE], true)) {
             return $this->getArticleMontant($article);
         }
 
-        // CAS PAR DÉFAUT : Note de débit (commission, etc.)
+        // CAS PAR DÉFAUT : note de débit, ET AVOIR au client ou à l'assureur. ⚠ L'avoir
+        // tombait dans la branche ci-dessus : son « HT » valait le TTC, et son écriture
+        // passait tout au 706, rien au 443 — alors que la note qu'il annule avait ventilé
+        // les deux. Il ventile désormais COMME ELLE : au rapport HT/TTC FIGÉ des notes de
+        // débit émises sur ce revenu (et cette échéance), et non au taux de taxe du jour —
+        // un client devenu exonéré depuis, ou un taux changé, ne doivent pas laisser au 443
+        // une taxe collectée jamais rendue.
+        if ($note->getType() === Note::TYPE_NOTE_DE_CREDIT && $revenu
+            && ($rapport = $this->rapportHtDesDebitsFiges($revenu, $tranche)) !== null) {
+            return abs($this->getArticleMontant($article) * $rapport);
+        }
         // Le montant est basé sur le montant HT du revenu, proportionnellement à la tranche.
         if ($revenu && $tranche) {
             $quantite = $article->getQuantite() ?? 1.0;
@@ -2751,9 +2806,52 @@ class IndicatorCalculationHelper implements ResetInterface
      * @param boolean $isTaxeAssureur
      * @return Taxe|null
      */
-    public function getTaxeApplicable(bool $isIARD, bool $isTaxeAssureur): ?\App\Entity\Taxe
+    /**
+     * Le rapport HT / TTC des lignes FIGÉES des notes de débit émises (validées) sur ce
+     * revenu — et cette échéance, s'il y en a une —, au client ou à l'assureur. Null si
+     * aucune : l'avoir se ventile alors au taux du moment.
+     */
+    private function rapportHtDesDebitsFiges(RevenuPourCourtier $revenu, ?Tranche $tranche): ?float
     {
-        return $this->serviceTaxes->getTaxeApplicable($isIARD, $isTaxeAssureur);
+        $ht = 0.0;
+        $ttc = 0.0;
+        foreach ($revenu->getArticles() as $ligne) {
+            $debit = $ligne->getNote();
+            if ($debit === null || $debit->isValidated() !== true || !$debit->estFigee()
+                || $debit->getType() !== Note::TYPE_NOTE_DE_DEBIT
+                || !in_array($debit->getAddressedTo(), [Note::TO_CLIENT, Note::TO_ASSUREUR], true)
+                || ($tranche !== null && $ligne->getTranche()?->getId() !== $tranche->getId())
+                || $ligne->getMontantTtcFige() === null) {
+                continue;
+            }
+            $ht += (float) $ligne->getMontantHtFige();
+            $ttc += (float) $ligne->getMontantTtcFige();
+        }
+
+        return $ttc > 0.0 ? $ht / $ttc : null;
+    }
+
+    public function getTaxeApplicable(bool $isIARD, bool $isTaxeAssureur, ?\App\Entity\Entreprise $entreprise = null): ?\App\Entity\Taxe
+    {
+        return $this->serviceTaxes->getTaxeApplicable($isIARD, $isTaxeAssureur, $entreprise);
+    }
+
+    /**
+     * Le nom de la taxe que porte une note — celui de la taxe de l'assureur, dans le
+     * contexte (IARD ou vie) de sa première ligne ; figé avec la note.
+     */
+    public function getNoteNomTaxe(Note $note): string
+    {
+        if ($note->estFigee() && $note->getLibelleTaxeFige() !== null) {
+            return $note->getLibelleTaxeFige();
+        }
+        $premiere = $note->getArticles()->first();
+        if (!$premiere || !$premiere->getRevenuFacture()) {
+            return 'Taxe';
+        }
+        $cotation = $premiere->getRevenuFacture()->getCotation();
+
+        return $this->getTaxeApplicable($this->isIARD($cotation), true, $cotation?->getEntreprise() ?? $note->getEntreprise())?->getCode() ?? 'Taxe';
     }
 
     /**

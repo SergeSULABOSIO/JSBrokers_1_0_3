@@ -12,8 +12,9 @@ use Doctrine\ORM\EntityManagerInterface;
  *
  * ── LE SEUL CHEMIN DE LA VALIDATION ─────────────────────────────────────────────────
  * Le geste « Valider la note », le picker de facturation et Ket passent tous ici. La
- * validation fait naître la créance au journal ; elle est irréversible — une note
- * validée se corrige par un avoir.
+ * validation fait naître la créance au journal, et FIGE les montants de la note
+ * ({@see FigeageDeNote}) ; elle est irréversible — une note validée se corrige par un
+ * avoir.
  *
  * ── POURQUOI LA TRANSACTION, ET POURQUOI ICI ────────────────────────────────────────
  * Le numéro est pris au flush ({@see \App\EventListener\NumerotationDesNotesListener}),
@@ -30,7 +31,34 @@ final class EmissionDeNote
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly IndicatorCalculationHelper $calcul,
+        private readonly FigeageDeNote $figeage,
+        private readonly NumerotationDesNotes $numerotation,
     ) {
+    }
+
+    /**
+     * UNE NOTE DE REPRISE : une commission déjà encaissée dans l'ancien système. Ce n'est
+     * pas une facture émise par Joseara — elle reste HORS SÉRIE (référence « REPRISE-… »)
+     * et non validée : aucune créance ne naît au journal. Mais ses montants sont FIGÉS à
+     * l'import, comme ceux d'une note validée (décision de Serge du 2026-10-15). À appeler
+     * une fois ses lignes posées.
+     */
+    public function figerUneReprise(Note $note): Note
+    {
+        if ($note->estFigee()) {
+            return $note;
+        }
+        $this->em->wrapInTransaction(function () use ($note): void {
+            $note->setOrigine(Note::ORIGINE_REPRISE);
+            if (($entreprise = $note->getEntreprise()?->getId()) !== null) {
+                $note->setReference($this->numerotation->provisoire($entreprise, 'REPRISE-'));
+            }
+            $this->figeage->figer($note);
+            $this->em->persist($note);
+            $this->em->flush();
+        });
+
+        return $note;
     }
 
     /**
@@ -46,6 +74,8 @@ final class EmissionDeNote
         }
 
         $this->em->wrapInTransaction(function () use ($note): void {
+            // LES MONTANTS SE FIGENT AVEC LE NUMÉRO : une note émise ne se recalcule plus.
+            $this->figeage->figer($note);
             $note->setValidated(true);
             $this->em->persist($note);
             $this->em->flush();
@@ -59,6 +89,12 @@ final class EmissionDeNote
     {
         if ($note->isValidated() === true) {
             return sprintf('La note %s est déjà validée.', $note->getReference());
+        }
+        // Une note de REPRISE retrace une commission déjà encaissée dans l'ancien système.
+        // La valider lui donnerait un numéro de la série et ferait naître aujourd'hui une
+        // créance d'hier : le chiffre d'affaires d'une période passée glisserait au présent.
+        if ($note->estDeReprise()) {
+            return sprintf('La note %s retrace une commission reprise de votre ancien système : elle ne se valide pas.', $note->getReference());
         }
         if ($note->getEntreprise() === null) {
             return 'Cette note n’appartient à aucun cabinet.';

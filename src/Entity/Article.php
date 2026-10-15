@@ -42,6 +42,18 @@ class Article
     #[Groups(['list:read'])]
     private ?RevenuPourCourtier $revenuFacture = null; // Sérialisation directe pour l'ID et les propriétés simples
 
+    /**
+     * LES MONTANTS FIGÉS À LA VALIDATION DE LA NOTE (règle OHADA, 2026-10-15). Null tant
+     * que la note n'est pas figée : le montant se calcule alors depuis le revenu. Figés,
+     * ils ne se recalculent plus — une prime, un taux ou un chargement modifié après
+     * coup ne change jamais une note émise ({@see \App\Service\Note\FigeageDeNote}).
+     */
+    #[ORM\Column(nullable: true)]
+    private ?float $montantHtFige = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?float $montantTtcFige = null;
+
     // --- Attributs calculés (non persistés) ---
     // Hydratés par ArticleIndicatorStrategy et sérialisables.
 
@@ -71,6 +83,25 @@ class Article
 
     #[Groups(['list:read'])]
     public ?float $valeurUnitaireHT = null;
+
+    public function getMontantHtFige(): ?float
+    {
+        return $this->montantHtFige;
+    }
+
+    public function getMontantTtcFige(): ?float
+    {
+        return $this->montantTtcFige;
+    }
+
+    /** Réservé au figeage de la note : un montant figé ne se saisit pas. */
+    public function figer(float $ht, float $ttc): static
+    {
+        $this->montantHtFige = $ht;
+        $this->montantTtcFige = $ttc;
+
+        return $this;
+    }
 
     public function getId(): ?int
     {
