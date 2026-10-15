@@ -119,6 +119,37 @@ class Note implements OwnerAwareInterface
     #[Groups(['list:read'])]
     private ?\DateTimeImmutable $emiseLe = null;
 
+    /**
+     * LES MONTANTS FIGÉS (règle OHADA, 2026-10-15) : posés à la validation — ou à
+     * l'import d'une note de reprise —, ils ne se recalculent plus. Null tant que la note
+     * n'est pas figée ({@see \App\Service\Note\FigeageDeNote}).
+     */
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $figeeLe = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?float $montantHtFige = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?float $montantTtcFige = null;
+
+    #[ORM\Column(length: 50, nullable: true)]
+    private ?string $libelleTaxeFige = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?float $tauxTaxeFige = null;
+
+    /**
+     * D'OÙ VIENT LA NOTE. Une note de REPRISE retrace une commission déjà encaissée dans
+     * l'ancien système : ce n'est pas une facture émise par Joseara. Elle reste hors série
+     * (référence « REPRISE-… »), ne fait naître aucune créance au journal, mais elle est
+     * figée et intangible comme une note validée (décision de Serge du 2026-10-15).
+     */
+    #[ORM\Column(options: ['default' => 0])]
+    private int $origine = self::ORIGINE_JOSEARA;
+    public const ORIGINE_JOSEARA = 0;
+    public const ORIGINE_REPRISE = 1;
+
     #[ORM\ManyToOne(inversedBy: 'notes')]
     #[ORM\JoinColumn(nullable: true)]
     private ?Bordereau $bordereau = null;
@@ -510,6 +541,66 @@ class Note implements OwnerAwareInterface
         $this->emiseLe = $emiseLe;
 
         return $this;
+    }
+
+    /** Ses montants sont-ils figés (note validée, ou note de reprise) ? */
+    public function estFigee(): bool
+    {
+        return $this->figeeLe !== null;
+    }
+
+    public function getFigeeLe(): ?\DateTimeImmutable
+    {
+        return $this->figeeLe;
+    }
+
+    public function getMontantHtFige(): ?float
+    {
+        return $this->montantHtFige;
+    }
+
+    public function getMontantTtcFige(): ?float
+    {
+        return $this->montantTtcFige;
+    }
+
+    public function getLibelleTaxeFige(): ?string
+    {
+        return $this->libelleTaxeFige;
+    }
+
+    public function getTauxTaxeFige(): ?float
+    {
+        return $this->tauxTaxeFige;
+    }
+
+    /** Réservé au figeage ({@see \App\Service\Note\FigeageDeNote}) : rien de tout cela ne se saisit. */
+    public function figer(float $ht, float $ttc, ?string $libelleTaxe, ?float $tauxTaxe, \DateTimeImmutable $le): static
+    {
+        $this->montantHtFige = $ht;
+        $this->montantTtcFige = $ttc;
+        $this->libelleTaxeFige = $libelleTaxe;
+        $this->tauxTaxeFige = $tauxTaxe;
+        $this->figeeLe = $le;
+
+        return $this;
+    }
+
+    public function getOrigine(): int
+    {
+        return $this->origine;
+    }
+
+    public function setOrigine(int $origine): static
+    {
+        $this->origine = $origine;
+
+        return $this;
+    }
+
+    public function estDeReprise(): bool
+    {
+        return $this->origine === self::ORIGINE_REPRISE;
     }
 
     /** Un brouillon : pas encore validé, il n'a ni numéro définitif ni valeur comptable. */

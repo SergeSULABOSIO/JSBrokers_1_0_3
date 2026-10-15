@@ -147,6 +147,11 @@ class ServiceTaxes implements ResetInterface
             return 0.0;
         }
 
+        // LE CABINET DE L'AFFAIRE, à défaut d'un cabinet donné. Sans lui, `getTaxes()` le
+        // cherchait chez l'utilisateur CONNECTÉ : en ligne de commande (figeage des notes,
+        // reprise), il n'y en a pas, la liste revenait vide — et le TTC valait le HT.
+        $entreprise ??= $cotation?->getEntreprise();
+
         return (float) $this->getMontantTaxe($montantNet, $tauxIARD, $taxeAssureur, $entreprise);
     }
 

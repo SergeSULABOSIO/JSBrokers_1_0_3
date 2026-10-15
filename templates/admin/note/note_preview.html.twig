@@ -202,9 +202,9 @@
 
                 {# Calcul des totaux selon la source (isBordereauNote/hasNoArticles définis plus haut) #}
                 {% if isBordereauNote and hasNoArticles %}
-                    {% set totalHT  = note.bordereau.montantComHtPayableNow %}
-                    {% set totalTTC = note.bordereau.montantPayableNow %}
-                    {% set totalTax = note.bordereau.montantTaxePayableNow %}
+                    {% set totalHT  = note.montantTotal - note.montantTaxe %}{# figés à la validation, même si le bordereau est réanalysé #}
+                    {% set totalTTC = note.montantTotal %}
+                    {% set totalTax = note.montantTaxe %}
                 {% else %}
                     {% set totalHT  = note.montantTotal - note.montantTaxe %}
                     {% set totalTTC = note.montantTotal %}
@@ -230,8 +230,8 @@
                                     <small class="text-muted">Bordereau {{ note.bordereau.reference }}</small>
                                 </td>
                                 <td>{{ 1|number_format(2, ',', ' ') }}</td>
-                                <td>{{ note.bordereau.montantPayableNow|number_format(2, ',', ' ') }} {{ monnaie }}</td>
-                                <td>{{ note.bordereau.montantPayableNow|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                                <td>{{ totalTTC|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                                <td>{{ totalTTC|number_format(2, ',', ' ') }} {{ monnaie }}</td>
                             </tr>
                         {% else %}
                             {% for article in note.articles %}
@@ -253,7 +253,7 @@
                             <td class="border-0">{{ totalHT|number_format(2, ',', ' ') }} {{ monnaie }}</td>
                         </tr>
 
-                        {% if note.type != 1 and totalTax > 0 %}
+                        {% if totalTax > 0 %}{# un avoir rend aussi la taxe de la note annulée #}
                             <tr role="presentation">
                                 <td colspan="3" class="text-end border-0">{{ note.nomTaxe }} ({{ note.tauxTaxe|pourcentage }})</td>
                                 <td class="border-0">{{ totalTax|number_format(2, ',', ' ') }} {{ monnaie }}</td>
