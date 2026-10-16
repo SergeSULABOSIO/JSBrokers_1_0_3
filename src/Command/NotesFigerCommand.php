@@ -60,6 +60,11 @@ final class NotesFigerCommand extends Command
         $this->addOption('confirmer', null, InputOption::VALUE_NONE, 'Fige réellement. Sans cette option, la commande se contente de lister.');
     }
 
+    private static function f(float $montant): string
+    {
+        return number_format($montant, 2, ',', ' ');
+    }
+
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
@@ -80,8 +85,18 @@ final class NotesFigerCommand extends Command
             return Command::SUCCESS;
         }
 
+        // DEUX CHIFFRES, ET UN SEUL DOIT ÊTRE NUL.
+        //  • CONTRÔLE : le montant FIGÉ face au montant RECALCULÉ juste avant le figeage. Le
+        //    figeage photographie le calcul : l'écart doit valoir 0,00 — sinon le figé ne dit
+        //    pas ce que la note disait, et rien ne doit être confirmé (⚠).
+        //  • RESTE À ENCAISSER : le montant face aux paiements reçus. Une INFORMATION, pas une
+        //    anomalie : une note partiellement réglée se fige telle quelle, et son reste se
+        //    suit au recouvrement. (Un trop-perçu, payé au-delà du montant, est signalé aussi.)
+        // À blanc, le figeage se fait EN MÉMOIRE et n'est pas écrit : le contrôle se lit avant
+        // de confirmer.
         $lignes = [];
-        $alertes = 0;
+        $anomalies = 0;
+        $tropPercus = 0;
         $figees = 0;
         $echecs = [];
         foreach ($ids as $id) {
@@ -89,30 +104,33 @@ final class NotesFigerCommand extends Command
                 /** @var Note $note */
                 $note = $this->em->find(Note::class, (int) $id);
                 $reprise = $note->isValidated() !== true;
-                $montant = round($this->calcul->getNoteMontantTotal($note), 2);
+                $recalcule = round($this->calcul->getNoteMontantTotal($note), 2);
                 $paye = round($this->calcul->getNoteMontantPaye($note), 2);
-                // ⚠ PAYÉ AU-DELÀ DU MONTANT : la note se recalcule aujourd'hui sous ce qu'elle
-                // a encaissé (une règle corrigée depuis, une prime baissée…). La figer ainsi
-                // graverait un trop-perçu : à regarder AVANT de confirmer.
-                $alerte = $paye > $montant + 0.005;
-                $alertes += $alerte ? 1 : 0;
+
+                if ($confirmer && $reprise) {
+                    $note->setOrigine(Note::ORIGINE_REPRISE);
+                    // Hors série : une référence PROVISOIRE devient « REPRISE-… ». Un numéro
+                    // déjà émis, lui, se conserve — le renommer ferait un trou.
+                    if (str_starts_with((string) $note->getReference(), NumerotationDesNotes::PREFIXE_BROUILLON)) {
+                        $note->setReference($this->numerotation->provisoire((int) $note->getEntreprise()->getId(), 'REPRISE-'));
+                    }
+                }
+                $fige = round($this->figeage->figer($note)['ttc'], 2);
+                $ecart = round($fige - $recalcule, 2);
+                $anomalies += abs($ecart) >= 0.01 ? 1 : 0;
+                $reste = round($fige - $paye, 2);
+                $tropPercus += $reste <= -0.01 ? 1 : 0;
+
                 $lignes[] = [
                     $note->getEntreprise()?->getId(), $note->getId(), $note->getReference(),
                     $reprise ? 'reprise' : 'validée',
-                    number_format($montant, 2, ',', ' '), number_format($paye, 2, ',', ' '),
-                    number_format(round($montant - $paye, 2), 2, ',', ' ') . ($alerte ? ' ⚠ payé > montant' : ''),
+                    self::f($recalcule), self::f($fige),
+                    self::f($ecart) . (abs($ecart) >= 0.01 ? ' ⚠' : ' ✓'),
+                    self::f($paye),
+                    $reste <= -0.01 ? self::f($reste) . ' (trop-perçu)' : self::f($reste),
                 ];
 
                 if ($confirmer) {
-                    if ($reprise) {
-                        $note->setOrigine(Note::ORIGINE_REPRISE);
-                        // Hors série : une référence PROVISOIRE devient « REPRISE-… ». Un
-                        // numéro déjà émis, lui, se conserve — le renommer ferait un trou.
-                        if (str_starts_with((string) $note->getReference(), NumerotationDesNotes::PREFIXE_BROUILLON)) {
-                            $note->setReference($this->numerotation->provisoire((int) $note->getEntreprise()->getId(), 'REPRISE-'));
-                        }
-                    }
-                    $this->figeage->figer($note);
                     $this->em->flush();
                     ++$figees;
                 }
@@ -123,13 +141,24 @@ final class NotesFigerCommand extends Command
                     break; // une écriture refusée ferme le gestionnaire : on s'arrête là.
                 }
             }
-            // Le graphe d'une note ne sert plus : la mémoire ne grossit pas avec le lot.
+            // Le graphe d'une note ne sert plus — et, à blanc, son figeage en mémoire est jeté.
             $this->em->clear();
+            $this->calcul->reset();
         }
 
-        $io->table(['Cabinet', 'Note', 'Référence', 'Nature', 'Montant (TTC) figé', 'Payé', 'Écart (reste dû)'], $lignes);
-        if ($alertes > 0) {
-            $io->warning(sprintf('%d note(s) ont encaissé plus que leur montant recalculé (⚠) : vérifiez-les avant de confirmer.', $alertes));
+        $io->table(
+            ['Cabinet', 'Note', 'Référence', 'Nature', 'Recalculé (TTC)', 'Figé (TTC)', 'Contrôle figé − recalculé', 'Payé', 'Reste à encaisser (info)'],
+            $lignes,
+        );
+        $io->text([
+            'Contrôle figé − recalculé : doit valoir 0,00 (✓). Un écart (⚠) signifie que le figé ne reproduit pas la note : ne confirmez pas.',
+            'Reste à encaisser : information — une note partiellement réglée se fige telle quelle ; son reste se suit au recouvrement.',
+        ]);
+        if ($anomalies > 0) {
+            $io->error(sprintf('%d note(s) : le montant figé ne reproduit pas le montant recalculé (⚠). Ne confirmez pas — signalez-le.', $anomalies));
+        }
+        if ($tropPercus > 0) {
+            $io->note(sprintf('%d note(s) ont reçu plus que leur montant (trop-perçu) : à vérifier au recouvrement.', $tropPercus));
         }
         foreach ($echecs as $echec) {
             $io->error($echec);
