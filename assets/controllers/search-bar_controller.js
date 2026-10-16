@@ -2,6 +2,9 @@
 import BaseController from './base_controller.js';
 import { construireResumeFiltres } from './search-bar-filtres.js';
 import { positionnerMenu, indexApresTouche } from './menu-flottant.js';
+// L'ancienne copie locale (textContent → innerHTML) n'échappait ni " ni ' — or le résumé
+// place libellés et clés dans des ATTRIBUTS (title, aria-label, data-filter-key).
+import { echapper } from './echapper.js';
 
 /** Identifiants uniques du volet : plusieurs barres coexistent (une par rubrique/onglet). */
 let compteurInstances = 0;
@@ -244,12 +247,12 @@ export default class extends BaseController {
             const { cle, libelle, texte } = resume.filtres[0];
             return `
             <span class="jsb-filter-badge">
-                <span class="jsb-filter-badge__text" title="${this.escapeHtml(texte)}">${this.escapeHtml(texte)}</span>
+                <span class="jsb-filter-badge__text" title="${echapper(texte)}">${echapper(texte)}</span>
                 <button type="button"
                     class="jsb-filter-badge__remove"
-                    aria-label="Retirer le filtre ${this.escapeHtml(libelle)}"
+                    aria-label="Retirer le filtre ${echapper(libelle)}"
                     data-action="click->search-bar#removeFilter"
-                    data-filter-key="${this.escapeHtml(cle)}">×</button>
+                    data-filter-key="${echapper(cle)}">×</button>
             </span>`;
         }
 
@@ -274,12 +277,12 @@ export default class extends BaseController {
 
         this.popoverListTarget.innerHTML = resume.filtres.map(({ cle, libelle, texte }) => `
             <li class="jsb-search-bar__popover-item">
-                <span class="jsb-search-bar__popover-text">${this.escapeHtml(texte)}</span>
+                <span class="jsb-search-bar__popover-text">${echapper(texte)}</span>
                 <button type="button"
                     class="jsb-filter-badge__remove"
-                    aria-label="Retirer le filtre ${this.escapeHtml(libelle)}"
+                    aria-label="Retirer le filtre ${echapper(libelle)}"
                     data-action="click->search-bar#removeFilter"
-                    data-filter-key="${this.escapeHtml(cle)}">×</button>
+                    data-filter-key="${echapper(cle)}">×</button>
             </li>`).join('');
     }
 
@@ -399,16 +402,5 @@ export default class extends BaseController {
             ? this.chip
             : (this.summaryTarget.querySelector('.jsb-filter-badge__remove') || this.simpleSearchInputTarget);
         cible?.focus();
-    }
-
-    /**
-     * Échappe une chaîne pour une insertion sûre dans du HTML.
-     * @param {*} value
-     * @returns {string}
-     */
-    escapeHtml(value) {
-        const div = document.createElement('div');
-        div.textContent = value == null ? '' : String(value);
-        return div.innerHTML;
     }
 }

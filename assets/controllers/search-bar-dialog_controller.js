@@ -2,6 +2,7 @@
 import BaseController from './base_controller.js';
 import { Modal } from 'bootstrap';
 import TomSelect from 'tom-select';
+import { echapper } from './echapper.js';
 
 /**
  * @class SearchBarDialogController
@@ -91,20 +92,20 @@ export default class extends BaseController {
      */
     renderCriterion(criterion) {
         const id = this.criterionId(criterion);
-        const name = this.esc(criterion.Nom);
-        const type = this.esc(criterion.Type);
+        const name = echapper(criterion.Nom);
+        const type = echapper(criterion.Type);
         const field = this.renderField(criterion, id);
 
         // Icône « de signification » : placeholder rempli après rendu via le mécanisme
         // partagé d'icônes. Alias fourni par le serveur (searchCanvas.Icone).
-        const iconAlias = this.esc(criterion.Icone || 'action:filter');
+        const iconAlias = echapper(criterion.Icone || 'action:filter');
         const iconId = `jsb-crit-icon-${id}`;
 
         return `
         <fieldset class="criterion-block" data-criterion-block data-criterion-name="${name}" data-criterion-type="${type}">
             <legend class="criterion-header">
                 <span class="criterion-header__icon" id="${iconId}" data-icon-alias="${iconAlias}" aria-hidden="true"></span>
-                <span class="criterion-header__label">${this.esc(criterion.Display)}</span>
+                <span class="criterion-header__label">${echapper(criterion.Display)}</span>
             </legend>
             <div class="criterion-body">${field}</div>
         </fieldset>`;
@@ -152,7 +153,7 @@ export default class extends BaseController {
 
         switch (criterion.Type) {
             case 'Text': {
-                const value = this.esc(this.readTextValue(active));
+                const value = echapper(this.readTextValue(active));
                 const mode = this.readTextMode(active);
                 return `
                 <div class="jsb-field-row">
@@ -162,14 +163,14 @@ export default class extends BaseController {
                         ${this.opt('exact', 'Exact', mode)}
                     </select>
                     <input type="text" id="${id}" class="form-control" data-role="text-value"
-                           value="${value}" placeholder="Saisir ${this.esc(label)}…"
-                           aria-label="${this.esc(criterion.Display)}">
+                           value="${value}" placeholder="Saisir ${echapper(label)}…"
+                           aria-label="${echapper(criterion.Display)}">
                 </div>`;
             }
 
             case 'Number': {
                 const filter = (typeof active === 'object' && active !== null) ? active : {};
-                const value = filter.value !== undefined ? this.esc(filter.value) : '';
+                const value = filter.value !== undefined ? echapper(filter.value) : '';
                 const op = filter.operator || '=';
                 return `
                 <div class="jsb-field-row">
@@ -183,14 +184,14 @@ export default class extends BaseController {
                     </select>
                     <input type="number" id="${id}" class="form-control" data-role="number-value"
                            value="${value}" placeholder="Saisir une valeur…"
-                           aria-label="${this.esc(criterion.Display)}">
+                           aria-label="${echapper(criterion.Display)}">
                 </div>`;
             }
 
             case 'DateTimeRange': {
                 const filter = (typeof active === 'object' && active !== null) ? active : {};
-                const from = this.esc(filter.from || '');
-                const to = this.esc(filter.to || '');
+                const from = echapper(filter.from || '');
+                const to = echapper(filter.to || '');
                 return `
                 <div class="jsb-date-presets" role="group" aria-label="Périodes rapides">
                     <button type="button" class="jsb-preset-btn" data-preset="today">Aujourd'hui</button>
@@ -220,7 +221,7 @@ export default class extends BaseController {
                     opts += this.opt(String(key), String(val), current);
                 }
                 return `
-                <select id="${id}" class="form-select" data-role="boolean" aria-label="${this.esc(criterion.Display)}">
+                <select id="${id}" class="form-select" data-role="boolean" aria-label="${echapper(criterion.Display)}">
                     ${opts}
                 </select>`;
             }
@@ -230,13 +231,13 @@ export default class extends BaseController {
                 // On pré-charge l'option sélectionnée (id + libellé) le cas échéant.
                 let preselected = '';
                 if (typeof active === 'object' && active !== null && active.value) {
-                    preselected = `<option value="${this.esc(active.value)}" selected>${this.esc(active.label || active.value)}</option>`;
+                    preselected = `<option value="${echapper(active.value)}" selected>${echapper(active.label || active.value)}</option>`;
                 }
                 return `
                 <select id="${id}" class="form-select jsb-relation-select" data-role="relation"
-                        data-entity="${this.esc(criterion.targetEntity || '')}"
-                        data-display-field="${this.esc(criterion.displayField || 'nom')}"
-                        aria-label="${this.esc(criterion.Display)}">
+                        data-entity="${echapper(criterion.targetEntity || '')}"
+                        data-display-field="${echapper(criterion.displayField || 'nom')}"
+                        aria-label="${echapper(criterion.Display)}">
                     <option value=""></option>
                     ${preselected}
                 </select>`;
@@ -482,7 +483,7 @@ export default class extends BaseController {
     /** Construit une <option>, sélectionnée si sa valeur correspond à la valeur courante. */
     opt(value, label, current) {
         const selected = String(value) === String(current) ? ' selected' : '';
-        return `<option value="${this.esc(value)}"${selected}>${this.esc(label)}</option>`;
+        return `<option value="${echapper(value)}"${selected}>${echapper(label)}</option>`;
     }
 
     readTextValue(active) {
@@ -496,12 +497,5 @@ export default class extends BaseController {
             return active.mode || 'contains';
         }
         return 'contains';
-    }
-
-    /** Échappe une valeur pour insertion HTML sûre. */
-    esc(value) {
-        const div = document.createElement('div');
-        div.textContent = value == null ? '' : String(value);
-        return div.innerHTML.replace(/"/g, '&quot;');
     }
 }

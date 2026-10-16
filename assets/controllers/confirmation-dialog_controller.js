@@ -2,6 +2,7 @@ import { Controller } from '@hotwired/stimulus';
 import { Modal } from 'bootstrap';
 import { confirmationAutorisee, DELAI_ARMEMENT_MS as DELAI_PAR_DEFAUT } from './confirmation-armement.js';
 import { contenuDuCorps } from './confirmation-corps.js';
+import { echapper } from './echapper.js';
 
 /**
  * @class ConfirmationDialogController
@@ -293,7 +294,7 @@ export default class extends Controller {
                 li.className = 'list-group-item py-1 px-0 border-0 d-flex align-items-center bg-transparent';
                 
                 // Utilise une icône Bootstrap pour la cohérence
-                li.innerHTML = `<i class="bi bi-file-earmark-minus me-2"></i> ${this._escapeHtml(description)}`;
+                li.innerHTML = `<i class="bi bi-file-earmark-minus me-2"></i> ${echapper(description)}`;
                 this.itemListTarget.appendChild(li);
             });
             this.itemDetailsContainerTarget.style.display = 'block';
@@ -532,16 +533,6 @@ export default class extends Controller {
         this.modal.hide();
     }
 
-    /**
-     * NOUVEAU : Échappe le HTML pour éviter les injections XSS.
-     * @param {string} unsafe 
-     * @returns 
-     */
-    _escapeHtml(unsafe) {
-        return unsafe
-             .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-             .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-    }
 
     /**
      * Affiche ou cache la barre de progression.

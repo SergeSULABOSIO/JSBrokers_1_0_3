@@ -12,6 +12,8 @@ import {
 } from './criteres-persistes.js';
 import { dedoublonnerOnglets, ongletExistantPourRubrique } from './onglets-uniques.js';
 import { echapper } from './echapper.js';
+import { texteRicheEnTexte, texteRicheSur } from './texte-riche.js';
+import { estTexteRiche } from './texte-riche-regles.js';
 
 /**
  * LES DEUX SEUILS DE DISPOSITION — écrits ici ET dans `interactive-menu.css`.
@@ -835,20 +837,26 @@ export default class extends Controller {
                             ? new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
                             : value;
 
-                        item.innerHTML = `<strong>${key} :</strong> <span>${formattedValue}</span>`;
+                        // Clés et valeurs sont des DONNÉES (ex. noms de fichiers déposés) :
+                        // posées par le DOM, jamais par une chaîne HTML.
+                        const cle = document.createElement('strong');
+                        cle.textContent = `${key} :`;
+                        const valeur = document.createElement('span');
+                        valeur.textContent = String(formattedValue ?? '');
+                        item.append(cle, ' ', valeur);
                         list.appendChild(item);
                     }
                     content.appendChild(list);
                     contentValueElement = list; // NOUVEAU : Attacher le tooltip à la liste complète
                 } else {
-                    content.innerHTML = this.formatValue(calculatedValue, formatAs, attribute.unite);
+                    this._poserValeur(content, this.formatValue(calculatedValue, formatAs, attribute.unite), formatAs);
                     contentValueElement = content; // NOUVEAU : Attacher le tooltip au conteneur de valeur
                 }
                 break;
 
             default: // Gère 'Nombre', 'Date', 'Texte'
                 const rawValue = this._valeurCanvas(entity, attribute.code);
-                content.innerHTML = this.formatValue(rawValue, attribute.type, attribute.unite);
+                this._poserValeur(content, this.formatValue(rawValue, attribute.type, attribute.unite), attribute.type);
                 contentValueElement = content; // NOUVEAU : Attacher le tooltip au conteneur de valeur
                 break;
         }
@@ -979,9 +987,15 @@ export default class extends Controller {
                                 link.dataset.entityType = this._getCleanEntityName(attribute.targetEntity);
                                 formattedValue = link.outerHTML;
                                 break;
-                            default: // Gère Nombre, Date, Entier, Texte
-                                formattedValue = this.formatValue(value, attribute.type, attribute.unite);
+                            default: { // Gère Nombre, Date, Entier, Texte
+                                // ÉCHAPPÉE : la phrase est du HTML (le lien de relation, le
+                                // gras), mais la valeur est une donnée. Un Texte peut être le
+                                // HTML de l'éditeur riche : dans une phrase, on n'en garde
+                                // que la substance.
+                                const brute = this.formatValue(value, attribute.type, attribute.unite);
+                                formattedValue = echapper(estTexteRiche(brute) ? texteRicheEnTexte(brute) : brute);
                                 break;
+                            }
                         }
                         if (isImportant) {
                             formattedValue = `<strong>${formattedValue}</strong>`;
@@ -1015,7 +1029,7 @@ export default class extends Controller {
         const mainTitleField = entityCanvas?.liste?.find(attr => attr.col_principale)?.texte_principal.attribut_code || 'nom';
         const mainTitle = this._getVal(entity, mainTitleField);
         if (!mainTitle) return '<p class="text-muted">Aucune description disponible pour cet élément.</p>';
-        return `<p>Détails pour l'élément : <strong>${mainTitle}</strong> (ID: ${entity.id}).</p>`;
+        return `<p>Détails pour l'élément : <strong>${echapper(mainTitle)}</strong> (ID: ${echapper(entity.id)}).</p>`;
     }
 
     /**
@@ -1657,6 +1671,24 @@ export default class extends Controller {
         }
 
         this._appliquerEtatFlyout(etatSuivant(this.etatFlyout, { type: 'exterieur' }));
+    }
+
+    /**
+     * POSE UNE VALEUR DU PANNEAU D'ATTRIBUTS. Le HTML de l'éditeur riche (Quill, reconnu à
+     * son bloc d'ouverture : estTexteRiche) est assaini (texteRicheSur) et garde sa mise en
+     * forme. Tout le reste — un nom, une référence, un nombre, un montant avec son code de
+     * monnaie saisi par le cabinet — est du texte, posé par textContent, tel qu'il a été saisi.
+     * @param {HTMLElement} cible
+     * @param {*} valeur  la valeur déjà formatée (formatValue)
+     * @param {string} type
+     * @private
+     */
+    _poserValeur(cible, valeur, type) {
+        if ((type || 'Texte') === 'Texte' && estTexteRiche(valeur)) {
+            cible.innerHTML = texteRicheSur(valeur);
+        } else {
+            cible.textContent = String(valeur ?? '');
+        }
     }
 
     /**

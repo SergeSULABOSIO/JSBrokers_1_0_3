@@ -1283,13 +1283,6 @@ export default class extends Controller {
         });
     }
 
-    /** Le libellé vient d'une saisie utilisateur : il ne doit jamais être interprété. */
-    _echapper(texte) {
-        const noeud = document.createElement('span');
-        noeud.textContent = texte ?? '';
-
-        return noeud.innerHTML;
-    }
 
     notifyCerveau(type, payload = {}) {
         const event = new CustomEvent('cerveau:event', {
