@@ -525,8 +525,10 @@ class ClientPistesEtSinistresTest extends WebTestCase
             'Déclarer un sinistre au client qu\'on a sous les yeux ne doit pas obliger à le rechercher.',
         );
 
+        // Un identifiant d'un autre cabinet est INTROUVABLE (404), et non plus ignoré en
+        // silence (200) — sans livrer aucun nom (cloisonnement, 2026-10-17).
         $this->client->request('GET', sprintf('/admin/notificationsinistre/api/get-form?idClient=%d', $voisin->getId()));
-        self::assertResponseIsSuccessful();
+        self::assertResponseStatusCodeSame(404);
         self::assertStringNotContainsString(
             self::CLIENT_VOISIN,
             (string) $this->client->getResponse()->getContent(),

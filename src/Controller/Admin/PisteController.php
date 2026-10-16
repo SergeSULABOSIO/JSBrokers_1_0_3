@@ -89,15 +89,18 @@ class PisteController extends AbstractController
                 $idClient = (int) $request->query->get('idClient', 0);
                 $idRisque = (int) $request->query->get('idRisque', 0);
                 if ($idClient || $idRisque) {
-                    $entreprise = $invite->getEntreprise();
-
-                    $client = $idClient ? $this->em->find(Client::class, $idClient) : null;
-                    if ($client && $client->getEntreprise() === $entreprise) {
+                    // UN IDENTIFIANT VENU DE L'URL PASSE PAR LE GARDIEN : d'autrui ou
+                    // inexistant, 404 — et non plus ignoré en silence (réponse 200 qui
+                    // laissait croire au préremplissage).
+                    if ($idClient) {
+                        $client = $this->em->find(Client::class, $idClient);
+                        $this->appartenance()->exigerLeCabinetOuvert($client, 'Ce client');
                         $piste->setClient($client);
                     }
 
                     $risque = $idRisque ? $this->em->find(Risque::class, $idRisque) : null;
-                    if ($risque && $risque->getEntreprise() === $entreprise) {
+                    if ($idRisque) {
+                        $this->appartenance()->exigerLeCabinetOuvert($risque, 'Ce risque');
                         $piste->setRisque($risque);
                         if ($risque->getDescription() !== null) {
                             $piste->setDescriptionDuRisque($risque->getDescription());
@@ -152,9 +155,10 @@ class PisteController extends AbstractController
                 }
 
                 $avenant = $this->em->find(Avenant::class, $idAvenant);
-                if (!$avenant) return;
                 // La police vient de l'URL, et ses chiffres sont recopiés dans le formulaire :
-                // celle d'un autre cabinet ne s'y prête pas.
+                // celle d'un autre cabinet ne s'y prête pas. Inexistante ou d'autrui, la MÊME
+                // réponse (404) : un « return » silencieux pour la première faisait du refus
+                // de la seconde un oracle d'existence.
                 $this->appartenance()->exigerLeCabinetOuvert($avenant, 'Cet avenant');
 
                 $src = $avenant->getCotation()?->getPiste();
@@ -185,38 +189,43 @@ class PisteController extends AbstractController
         // On récupère l'invité connecté de manière sécurisée côté serveur
         $inviteConnecte = $this->getInvite();
 
+        // LA POLICE DE BASE POSTÉE EST DU CABINET OUVERT — vérifié AVANT le formulaire, et
+        // refusé par un 404. Elle était ignorée en silence : la piste naissait sans base, et
+        // la réponse ne disait rien. (Le cabinet OUVERT, et non celui de la piste : ce
+        // dernier se forgeait en postant `entreprise=` avant que le trait ne le refuse.)
+        $idAvenant = (int) $request->request->get('idAvenant', 0);
+        $avenantDeBase = null;
+        if ($idAvenant) {
+            $avenantDeBase = $this->em->find(Avenant::class, $idAvenant);
+            $this->appartenance()->exigerLeCabinetOuvert($avenantDeBase, 'Cet avenant');
+        }
+
         return $this->handleFormSubmission(
             $request,
             Piste::class,
             PisteType::class,
-            function (Piste $piste) use ($inviteConnecte, $request) {
+            function (Piste $piste) use ($inviteConnecte, $avenantDeBase) {
                 if (!$piste->getId()) {
                     $piste->setInvite($inviteConnecte);
 
-                    $idAvenant = (int) $request->request->get('idAvenant', 0);
-                    if ($idAvenant) {
-                        $avenant = $this->em->find(Avenant::class, $idAvenant);
-                        // Le cabinet OUVERT, et non celui de la piste : ce dernier se
-                        // forgeait en postant `entreprise=` avant que le trait ne le refuse.
-                        if ($avenant && $this->appartenance()->estDuCabinetOuvert($avenant)) {
-                            // On persiste la piste AVANT de la référencer depuis l'avenant
-                            // managé : Avenant::pisteDeRenouvellement n'a pas de cascade
-                            // persist, et un flush anticipé (métrage de tokens) rejetterait
-                            // sinon une piste « nouvelle » atteinte via cette relation.
-                            $this->em->persist($piste);
-                            $avenant->setPisteDeRenouvellement($piste);
-                            $piste->setAvenantDeBase($avenant);
+                    if ($avenantDeBase !== null) {
+                        // On persiste la piste AVANT de la référencer depuis l'avenant
+                        // managé : Avenant::pisteDeRenouvellement n'a pas de cascade
+                        // persist, et un flush anticipé (métrage de tokens) rejetterait
+                        // sinon une piste « nouvelle » atteinte via cette relation.
+                        $this->em->persist($piste);
+                        $avenantDeBase->setPisteDeRenouvellement($piste);
+                        $piste->setAvenantDeBase($avenantDeBase);
 
-                            // LA RECONDUCTION DU PARTAGE N'EST PLUS APPELÉE ICI.
-                            //
-                            // Elle se déclenche seule, pour toute piste écrite avec un avenant
-                            // de base — quelle que soit la porte ({@see
-                            // \App\EventListener\ReconductionPartageListener}). Deux
-                            // déclencheurs pour une règle, c'était deux endroits où elle
-                            // pouvait diverger : un plan d'écriture générique de l'assistant
-                            // qui posait `avenantDeBase` autrement ne reconduisait rien, et le
-                            // partage d'une police disparaissait au renouvellement sans un mot.
-                        }
+                        // LA RECONDUCTION DU PARTAGE N'EST PLUS APPELÉE ICI.
+                        //
+                        // Elle se déclenche seule, pour toute piste écrite avec un avenant
+                        // de base — quelle que soit la porte ({@see
+                        // \App\EventListener\ReconductionPartageListener}). Deux
+                        // déclencheurs pour une règle, c'était deux endroits où elle
+                        // pouvait diverger : un plan d'écriture générique de l'assistant
+                        // qui posait `avenantDeBase` autrement ne reconduisait rien, et le
+                        // partage d'une police disparaissait au renouvellement sans un mot.
                     }
                 }
             }

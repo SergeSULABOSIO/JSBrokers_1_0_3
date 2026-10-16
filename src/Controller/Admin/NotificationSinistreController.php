@@ -115,12 +115,12 @@ class NotificationSinistreController extends AbstractController
                 // ⚠ L'APPARTENANCE EST VÉRIFIÉE ICI AUSSI. Le paramètre vient de l'URL :
                 // s'en remettre à la route de contexte laisserait un identifiant forgé
                 // préremplir un client d'un autre cabinet.
+                // D'autrui ou inexistant : 404 par le gardien — et non plus ignoré en silence.
                 $idClient = (int) $request->query->get('idClient', 0);
                 if ($idClient !== 0) {
                     $client = $this->em->find(Client::class, $idClient);
-                    if ($client && $client->getEntreprise() === $invite->getEntreprise()) {
-                        $notification->setAssure($client);
-                    }
+                    $this->appartenance()->exigerLeCabinetOuvert($client, 'Ce client');
+                    $notification->setAssure($client);
                 }
             }
         );

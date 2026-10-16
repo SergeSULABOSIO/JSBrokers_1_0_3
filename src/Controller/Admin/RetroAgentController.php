@@ -630,11 +630,9 @@ class RetroAgentController extends AbstractController
     /** Un partenaire d'un AUTRE cabinet n'existe pas ici : scoping strict, comme l'agent. */
     private function assertPartenaireDuPerimetre(Partenaire $partenaire): void
     {
-        $connecte = $this->getInvite();
-        if ($connecte === null || $partenaire->getEntreprise() === null
-            || $partenaire->getEntreprise() !== $connecte->getEntreprise()) {
-            throw $this->createAccessDeniedException("Ce partenaire n'est pas dans votre espace de travail.");
-        }
+        // 404, et non un 403 qui le nomme : « ce partenaire n'est pas dans votre espace »
+        // confirmait qu'il existe ailleurs.
+        $this->appartenance()->exigerLeCabinetOuvert($partenaire, 'Ce partenaire');
     }
 
     /**
@@ -664,10 +662,8 @@ class RetroAgentController extends AbstractController
     private function assertPeutConsulter(Invite $agent): void
     {
         $connecte = $this->getInvite();
-        if ($connecte === null || $agent->getEntreprise() === null
-            || $agent->getEntreprise() !== $connecte->getEntreprise()) {
-            throw $this->createAccessDeniedException("Cet agent n'est pas dans votre espace de travail.");
-        }
+        // D'autrui : 404, sans le nommer (cf. AppartenanceAuCabinet).
+        $this->appartenance()->exigerLeCabinetOuvert($agent, 'Cet agent');
 
         if ($agent->getId() === $connecte->getId()) {
             return; // Ses propres rétrocommissions : toujours consultables.
@@ -688,10 +684,8 @@ class RetroAgentController extends AbstractController
     private function assertPeutVerser(Invite $agent): void
     {
         $connecte = $this->getInvite();
-        if ($connecte === null || $agent->getEntreprise() === null
-            || $agent->getEntreprise() !== $connecte->getEntreprise()) {
-            throw $this->createAccessDeniedException("Cet agent n'est pas dans votre espace de travail.");
-        }
+        // D'autrui : 404, sans le nommer (cf. AppartenanceAuCabinet).
+        $this->appartenance()->exigerLeCabinetOuvert($agent, 'Cet agent');
 
         if (!$this->accessResolver->canManageInvites($connecte)) {
             throw $this->createAccessDeniedException(

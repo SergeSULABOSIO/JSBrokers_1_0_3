@@ -344,16 +344,19 @@ class PartageRattachementController extends AbstractController
             return [];
         }
 
-        $entreprise = $this->getInvite()->getEntreprise();
         $pistes = [];
+        $objets = $this->em->getRepository($classe)->findBy(['id' => $ids]);
 
-        foreach ($this->em->getRepository($classe)->findBy(['id' => $ids]) as $objet) {
-            // Le cloisonnement par cabinet : sans lui, un identifiant dicté au hasard
-            // rattacherait une condition à l'affaire d'une autre entreprise.
-            if (method_exists($objet, 'getEntreprise')
-                && $objet->getEntreprise()?->getId() !== $entreprise?->getId()) {
-                continue;
-            }
+        // LE CLOISONNEMENT PAR CABINET, ET SANS SILENCE. Un identifiant d'autrui — ou
+        // inexistant : même réponse, sinon le refus sert d'oracle — fait refuser TOUTE la
+        // sélection par un 404. Il était écarté en silence : le geste semblait réussir, et
+        // le compte annoncé (« 3 affaires ») ne disait pas ce qui avait été retiré.
+        if (\count($objets) !== \count(array_unique($ids))) {
+            throw $this->createNotFoundException("Cette sélection n'a pas été trouvée.");
+        }
+
+        foreach ($objets as $objet) {
+            $this->appartenance()->exigerLeCabinetOuvert($objet, 'Cette sélection');
 
             $piste = $this->rattachement->piste($objet);
             if ($piste !== null && $piste->getId() !== null) {
