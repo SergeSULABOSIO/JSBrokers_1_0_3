@@ -87,7 +87,7 @@ final class CabinetViderCommand extends Command
         private readonly EntityManagerInterface $em,
         private readonly Connection $connexion,
         private readonly ServiceInitialisationEntreprise $initialisation,
-        // EN PRODUCTION, LES NOTES ÉMISES SE CONSERVENT DIX ANS (règle OHADA) : cet outil de
+        // EN PRODUCTION, LES PIÈCES COMPTABLES SE CONSERVENT DIX ANS (règle OHADA) : cet outil de
         // remise à zéro les effacerait sans archive. Il reste libre en dev et en test.
         private readonly \App\Service\Note\ConservationDesPieces $conservation,
         #[\Symfony\Component\DependencyInjection\Attribute\Autowire('%kernel.environment%')]
@@ -129,13 +129,13 @@ final class CabinetViderCommand extends Command
             return Command::FAILURE;
         }
 
-        // En production, un cabinet qui porte des notes émises ne se vide pas : ce sont des
+        // En production, un cabinet qui porte la moindre pièce comptable ne se vide pas : ce sont des
         // pièces comptables, à conserver dix ans (OHADA). Hors production, l'outil reste libre.
-        if ($this->environnement === 'prod' && ($notes = $this->conservation->notesAConserver($entreprise)) > 0) {
+        if ($this->environnement === 'prod' && ($pieces = $this->conservation->piecesAConserver($entreprise)) !== []) {
             $io->error(sprintf(
-                'Ce cabinet porte %d note(s) émise(s) — des pièces comptables à conserver dix ans (OHADA). '
+                'Ce cabinet porte des pièces comptables (%s), à conserver dix ans (OHADA). '
                 . 'En production, il ne se vide pas : supprimez-le, après avoir remis son archive comptable.',
-                $notes,
+                $this->conservation->decompteEnClair($pieces),
             ));
 
             return Command::FAILURE;
