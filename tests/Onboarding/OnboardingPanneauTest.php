@@ -221,9 +221,11 @@ class OnboardingPanneauTest extends WebTestCase
         $this->client->request('GET', sprintf('/admin/onboarding/workspace/%d/%d', $e->getId(), $guest->getId()));
         $this->assertResponseStatusCodeSame(403);
 
-        // Et l'invité ne passe pas non plus en empruntant l'identifiant du propriétaire.
+        // Et l'invité ne passe pas non plus en empruntant l'identifiant du propriétaire :
+        // ce n'est pas le sien, il n'existe donc pas pour lui — 404, comme tout identifiant
+        // qui n'est pas le sien (cloisonnement, 2026-10-17).
         $this->client->request('GET', sprintf('/admin/onboarding/workspace/%d/%d', $e->getId(), $owner->getId()));
-        $this->assertResponseStatusCodeSame(403);
+        $this->assertResponseStatusCodeSame(404);
     }
 
     /**

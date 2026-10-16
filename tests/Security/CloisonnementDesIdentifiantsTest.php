@@ -4,12 +4,15 @@ namespace App\Tests\Security;
 
 use App\Entity\Avenant;
 use App\Entity\Bordereau;
+use App\Entity\Client;
 use App\Entity\Cotation;
 use App\Entity\Groupe;
 use App\Entity\Invite;
 use App\Entity\Note;
 use App\Entity\Operation;
+use App\Entity\Partenaire;
 use App\Entity\Piste;
+use App\Entity\Risque;
 use App\Entity\Tache;
 use App\Entity\Utilisateur;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -628,5 +631,133 @@ class CloisonnementDesIdentifiantsTest extends WebTestCase
         $this->exigerLAcces("Attacher un document à sa propre opération #$operationB");
         $this->client->request('GET', '/admin/document/api/attacher/entrepriseRattachee/' . $s['entB']);
         $this->exigerLAcces('Attacher un document à son propre cabinet');
+    }
+
+    // ── C : IDENTIFIANTS IGNORÉS EN SILENCE OU REFUSÉS EN LES NOMMANT (2026-10-17) ─
+    //
+    // Un id d'autrui ne doit ni être avalé sans un mot (réponse 200 : le geste semble avoir
+    // réussi), ni refusé en le nommant (403 « ce partenaire n'est pas dans votre espace » :
+    // la confirmation qu'il existe ailleurs). Un id inexistant et un id d'autrui répondent
+    // la MÊME chose — 404 — sinon le refus sert d'oracle.
+
+    /** PisteController get-form : `?idClient=` et `?idRisque=` (préremplissage depuis le SOA). */
+    public function testLeClientEtLeRisqueDuPreremplissageDePisteSontDuCabinet(): void
+    {
+        $s = $this->semer();
+        $clientA = $this->premier(Client::class, $s['entA']);
+        $clientB = $this->premier(Client::class, $s['entB']);
+        $risqueA = $this->premier(Risque::class, $s['entA']);
+        $risqueB = $this->premier(Risque::class, $s['entB']);
+        $this->connecterB($s);
+
+        $this->client->request('GET', '/admin/piste/api/get-form?idClient=' . $clientA);
+        $this->exigerLeRefus("Préremplir une piste avec le client #$clientA du cabinet A");
+        $this->client->request('GET', '/admin/piste/api/get-form?idRisque=' . $risqueA);
+        $this->exigerLeRefus("Préremplir une piste avec le risque #$risqueA du cabinet A");
+
+        $this->client->request('GET', '/admin/piste/api/get-form?idClient=' . $clientB . '&idRisque=' . $risqueB);
+        $this->exigerLAcces('Préremplir une piste avec son propre client et son propre risque');
+    }
+
+    /** PisteController get-form : un `?idAvenant=` inexistant répond comme un id d'autrui. */
+    public function testUnAvenantInexistantNEstPasUnOracle(): void
+    {
+        $s = $this->semer();
+        $this->connecterB($s);
+
+        $this->client->request('GET', '/admin/piste/api/get-form?idAvenant=2147483000');
+        $this->exigerLeRefus('Dériver une piste d\'une police qui n\'existe pas');
+    }
+
+    /** PisteController submit : `idAvenant` d'autrui posté avec une piste. */
+    public function testLaPoliceDeBasePosteeAvecUnePisteEstDuCabinet(): void
+    {
+        $s = $this->semer();
+        $avenantA = $this->premier(Avenant::class, $s['entA']);
+        $avenantB = $this->premier(Avenant::class, $s['entB']);
+        $this->connecterB($s);
+
+        $this->client->request('POST', '/admin/piste/api/submit', ['idAvenant' => $avenantA]);
+        $this->exigerLeRefus("Poster une piste dérivée de la police #$avenantA du cabinet A");
+
+        $this->client->request('POST', '/admin/piste/api/submit', ['idAvenant' => $avenantB]);
+        $this->exigerLAcces("Poster une piste dérivée de sa propre police #$avenantB");
+    }
+
+    /** NotificationSinistreController get-form : `?idClient=` de l'assuré. */
+    public function testLAssureDUnSinistrePreremplieEstDuCabinet(): void
+    {
+        $s = $this->semer();
+        $clientA = $this->premier(Client::class, $s['entA']);
+        $clientB = $this->premier(Client::class, $s['entB']);
+        $this->connecterB($s);
+
+        $this->client->request('GET', '/admin/notificationsinistre/api/get-form?idClient=' . $clientA);
+        $this->exigerLeRefus("Déclarer un sinistre pour le client #$clientA du cabinet A");
+
+        $this->client->request('GET', '/admin/notificationsinistre/api/get-form?idClient=' . $clientB);
+        $this->exigerLAcces('Déclarer un sinistre pour son propre client');
+    }
+
+    /** PortefeuilleController get-form : `?parent_id=` du gestionnaire. */
+    public function testLeGestionnaireDUnPortefeuillePreremplieEstDuCabinet(): void
+    {
+        $s = $this->semer();
+        $this->connecterB($s);
+
+        $this->client->request('GET', '/admin/portefeuille/api/get-form?parent_field_name=gestionnaire&parent_id=' . $s['invA']);
+        $this->exigerLeRefus("Ouvrir un portefeuille géré par l'invité #{$s['invA']} du cabinet A");
+
+        $this->client->request('GET', '/admin/portefeuille/api/get-form?parent_field_name=gestionnaire&parent_id=' . $s['invB']);
+        $this->exigerLAcces('Ouvrir un portefeuille géré par soi-même');
+    }
+
+    /** PartageRattachementController : une sélection `?ids=` qui contient un id d'autrui. */
+    public function testUneSelectionMeleeAUnIdDAutruiEstRefusee(): void
+    {
+        $s = $this->semer();
+        $pisteA = $this->premier(Piste::class, $s['entA']);
+        $pisteB = $this->premier(Piste::class, $s['entB']);
+        $this->connecterB($s);
+
+        $this->client->request('GET', '/admin/partage/piste/conditions-picker?ids=' . $pisteB . ',' . $pisteA);
+        $this->exigerLeRefus("Ouvrir le partage d'une sélection qui contient la piste #$pisteA du cabinet A");
+
+        $this->client->request('GET', '/admin/partage/piste/conditions-picker?ids=' . $pisteB);
+        $this->exigerLAcces('Ouvrir le partage de sa propre piste');
+    }
+
+    /** RetroAgentController : un agent ou un partenaire d'autrui répondait 403 en le nommant. */
+    public function testLesRetrosDUnAgentOuDUnPartenaireDAutruiSontIntrouvables(): void
+    {
+        $s = $this->semer();
+        $partenaireA = $this->premier(Partenaire::class, $s['entA']);
+        $partenaireB = $this->premier(Partenaire::class, $s['entB']);
+        $this->connecterB($s);
+
+        $this->client->request('GET', '/admin/retro-agent/' . $s['invA'] . '/reversement-picker');
+        $this->exigerLeRefus("Ouvrir le reversement de l'agent #{$s['invA']} du cabinet A");
+        $this->client->request('GET', '/admin/retro-agent/partenaire/' . $partenaireA . '/reversement-picker');
+        $this->exigerLeRefus("Ouvrir le reversement du partenaire #$partenaireA du cabinet A");
+
+        $this->client->request('GET', '/admin/retro-agent/' . $s['invB'] . '/reversement-picker');
+        $this->exigerLAcces('Ouvrir son propre reversement d\'agent');
+        $this->client->request('GET', '/admin/retro-agent/partenaire/' . $partenaireB . '/reversement-picker');
+        $this->exigerLAcces('Ouvrir le reversement de son propre partenaire');
+    }
+
+    /** OnboardingWorkspaceController : le guide d'un cabinet d'autrui répondait 403 en le nommant. */
+    public function testLeGuideDeDemarrageDAutruiEstIntrouvable(): void
+    {
+        $s = $this->semer();
+        $this->connecterB($s);
+
+        $this->client->request('GET', '/admin/onboarding/workspace/' . $s['entA'] . '/' . $s['invB']);
+        $this->exigerLeRefus("Ouvrir le guide de démarrage du cabinet #{$s['entA']}");
+        $this->client->request('GET', '/admin/onboarding/workspace/' . $s['entA'] . '/' . $s['invA']);
+        $this->exigerLeRefus("Ouvrir le guide de démarrage du cabinet #{$s['entA']} avec son invité");
+
+        $this->client->request('GET', '/admin/onboarding/workspace/' . $s['entB'] . '/' . $s['invB']);
+        $this->exigerLAcces('Ouvrir son propre guide de démarrage');
     }
 }

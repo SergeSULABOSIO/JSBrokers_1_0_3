@@ -159,11 +159,16 @@ class OnboardingWorkspaceController extends AbstractController
         /** @var Utilisateur|null $user */
         $user = $this->getUser();
 
+        // UN CABINET QUI N'EST PAS LE SIEN N'EXISTE PAS ICI : 404, comme un identifiant
+        // inexistant. Le 403 nommé confirmait qu'un cabinet portait ce numéro.
         if ($user === null
             || $invite->getUtilisateur()?->getId() !== $user->getId()
             || $invite->getEntreprise()?->getId() !== $entreprise->getId()
-            || $invite->isProprietaire() !== true
         ) {
+            throw $this->createNotFoundException("L'entreprise n'a pas été trouvée.");
+        }
+        // Son PROPRE cabinet, mais sans en être propriétaire : là, le refus peut s'expliquer.
+        if ($invite->isProprietaire() !== true) {
             throw $this->createAccessDeniedException('La configuration du cabinet est réservée à son propriétaire.');
         }
 
