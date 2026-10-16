@@ -103,9 +103,7 @@ supprimée (§7) : ces règles n'ont plus qu'un exemplaire.
 - **Un cabinet SANS note émise mais avec des dépenses** se supprime sans archive : la règle de
   conservation porte sur les notes (décision du 2026-10-15). L'étendre aux dépenses et aux
   reversements est à décider.
-- **Avoir sur un revenu à plusieurs échéances** : l'écart « à créditer » se mesure au niveau du
-  revenu, pas échéance par échéance — un avoir sur une échéance peut proposer tout son facturé.
-  Limite connue.
+- **Avoir sur un revenu à plusieurs échéances** : chantier connu, §7 point 7.
 
 ## 7. Chantiers décidés (ne rien coder sans plan validé)
 
@@ -139,8 +137,37 @@ supprimée (§7) : ces règles n'ont plus qu'un exemplaire.
    2026-10-15 et du 2026-10-16 ; §5, trois invariants acquis). Numéro à la validation
    (`9032c97c`), montants figés (`b8ddf2fa`), intangibilité et écart à facturer / à créditer
    (`3707bbeb`), conservation et archive avant purge (`47a520d4`). Mesure en production avant
-   livraison : une seule note validée, aucun trou, aucun doublon. **Après le déploiement** :
-   `app:notes:figer` à blanc, puis `--confirmer`.
+   livraison : une seule note validée, aucun trou, aucun doublon. Après le déploiement du
+   2026-10-16, `app:notes:figer --confirmer` a figé `N1790767662318` à 11,60 (contrôle 0,00,
+   entièrement réglée).
+7. **Avoir sur une police à plusieurs échéances** — chantier CONNU, rien à coder pour l'instant
+   (décision de Serge du 2026-10-16). L'écart « à créditer » se mesure au niveau du REVENU
+   (`SourceDeFacturation::montantFacturable`, `IndicatorCalculationHelper::getRevenuMontantFacture`),
+   pas échéance par échéance. Exemple : commission de 1 000 en deux échéances, la première
+   facturée 500 (figée), puis le dû passe à 900 — écart de +400 au niveau du revenu, aucun
+   excédent détecté ; un avoir sur la première échéance propose alors tout son facturé (500)
+   au lieu de 50. Le picker et Ket proposent le montant, le courtier peut le corriger ; rien
+   n'est faux à l'émission, mais la proposition peut l'être. **Mesure à relancer
+   régulièrement** (lecture seule ; Serge, phpMyAdmin, base de production) — validée sur la base
+   DEV le 2026-10-16 (0 ligne) :
+   ```sql
+   SELECT e.id AS cabinet_id, e.nom AS cabinet,
+          COUNT(DISTINCT n.id) AS avoirs_emis,
+          COUNT(DISTINCT co.id) AS polices,
+          ROUND(SUM(COALESCE(a.montant_ttc_fige, 0)), 2) AS montant_credite_ttc
+   FROM note n
+   JOIN entreprise e ON e.id = n.entreprise_id
+   JOIN article a ON a.note_id = n.id
+   JOIN revenu_pour_courtier r ON r.id = a.revenu_facture_id
+   JOIN cotation co ON co.id = r.cotation_id
+   WHERE n.type = 1 AND n.validated = 1 AND n.addressed_to IN (0, 1)
+     AND (SELECT COUNT(*) FROM tranche t WHERE t.cotation_id = co.id) > 1
+   GROUP BY e.id, e.nom
+   ORDER BY e.id;
+   ```
+   Elle compte les avoirs VALIDÉS (`type` 1), au client ou à l'assureur, dont une ligne porte un
+   revenu d'une police à plus d'une échéance. Dès qu'elle rend des lignes, le chantier mérite un
+   plan : écart mesuré par échéance (dû de l'échéance − facturé figé de l'échéance).
 
 ### Chantiers ultérieurs (signalés le 2026-10-15, non décidés — plan à valider avant tout code)
 

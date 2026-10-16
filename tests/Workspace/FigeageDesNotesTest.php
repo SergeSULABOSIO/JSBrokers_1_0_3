@@ -187,7 +187,13 @@ class FigeageDesNotesTest extends KernelTestCase
         $commande = new CommandTester($application->find('app:notes:figer'));
 
         $commande->execute([]);
-        self::assertStringContainsString('1 160,00', $commande->getDisplay(), 'Le TTC, taxe comprise, même sans utilisateur connecté.');
+        $sortie = $commande->getDisplay();
+        self::assertStringContainsString('1 160,00', $sortie, 'Le TTC, taxe comprise, même sans utilisateur connecté.');
+        // Le CONTRÔLE (figé − recalculé) est nul, et le dit ; le reste à encaisser (rien n'est
+        // payé : 1 160) est une information, pas une anomalie.
+        self::assertStringContainsString('0,00 ✓', $sortie);
+        self::assertStringContainsString('Reste à encaisser (info)', $sortie);
+        self::assertStringNotContainsString('Ne confirmez pas — signalez-le', $sortie);
         self::assertFalse($this->note($id)->estFigee(), 'À blanc : rien n’est écrit.');
 
         $commande->execute(['--confirmer' => true]);
