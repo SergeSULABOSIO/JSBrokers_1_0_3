@@ -9,14 +9,14 @@
 
 {% block content %}
     {{ m.heading('action:description', 'email_token_refund_heading'|trans({}, 'messages', lang)) }}
-    {{ m.paragraph('email_token_refund_greeting'|trans({'%name%': purchase.utilisateur.nom}, 'messages', lang)) }}
+    {{ m.paragraph('email_token_refund_greeting'|trans({'%name%': purchase.utilisateur.nom|e}, 'messages', lang)) }}
 
     {{ m.heading('action:description', 'email_token_details_heading'|trans({}, 'messages', lang)) }}
-    {{ m.paragraph('<strong>' ~ 'email_token_label_pack'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.pack|capitalize) }}
+    {{ m.paragraph('<strong>' ~ 'email_token_label_pack'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.pack|capitalize|e) }}
     {{ m.paragraph('<strong>' ~ 'email_token_label_amount'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.montantUsd|number_format(2, '.', ' ') ~ ' $') }}
-    {{ m.paragraph('<strong>' ~ 'email_token_label_reference'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.reference) }}
+    {{ m.paragraph('<strong>' ~ 'email_token_label_reference'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.reference|e) }}
     {% if purchase.invoiceNumber %}
-        {{ m.paragraph('<strong>' ~ 'email_token_label_invoice'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.invoiceNumber) }}
+        {{ m.paragraph('<strong>' ~ 'email_token_label_invoice'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.invoiceNumber|e) }}
     {% endif %}
 
     {{ m.button(accountUrl, 'email_token_button'|trans({}, 'messages', lang)) }}

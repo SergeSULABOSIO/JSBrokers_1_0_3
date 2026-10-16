@@ -9,8 +9,10 @@
 
 {% block content %}
     {{ m.heading('document', 'email_soa_heading'|trans({}, 'messages', lang)) }}
-    {{ m.paragraph('email_soa_greeting'|trans({'%name%': recipientName}, 'messages', lang)) }}
-    {{ m.paragraph('email_soa_intro'|trans({'%entreprise%': entrepriseNom, '%client%': clientNom}, 'messages', lang)) }}
+    {# ⚠ `paragraph`/`note` rendent en |raw, et `trans` n'échappe pas ses paramètres : les
+       noms passent par |e. (`heading` échappe lui-même son titre.) #}
+    {{ m.paragraph('email_soa_greeting'|trans({'%name%': recipientName|e}, 'messages', lang)) }}
+    {{ m.paragraph('email_soa_intro'|trans({'%entreprise%': entrepriseNom|e, '%client%': clientNom|e}, 'messages', lang)) }}
 
     {% if messageCourtier %}
         {{ m.heading('feedback', 'email_soa_message_heading'|trans({'%entreprise%': entrepriseNom}, 'messages', lang)) }}
@@ -22,5 +24,5 @@
     {{ m.paragraph('email_soa_validity'|trans({'%date%': expiresAt|date('d/m/Y')}, 'messages', lang)) }}
 
     {{ m.note('email_soa_security_note'|trans({}, 'messages', lang)) }}
-    {{ m.note('email_soa_contact'|trans({'%entreprise%': entrepriseNom, '%tel%': entrepriseTel ? ' — ' ~ entrepriseTel : ''}, 'messages', lang)) }}
+    {{ m.note('email_soa_contact'|trans({'%entreprise%': entrepriseNom|e, '%tel%': entrepriseTel ? ' — ' ~ entrepriseTel|e : ''}, 'messages', lang)) }}
 {% endblock %}

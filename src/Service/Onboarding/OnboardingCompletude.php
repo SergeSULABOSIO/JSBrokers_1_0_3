@@ -431,11 +431,7 @@ class OnboardingCompletude
      */
     private function enTexte(string $brut): string
     {
-        // Les balises de bloc laissent des mots collés si on les retire sans rien mettre
-        // à la place : « <p>Un</p><p>deux</p> » deviendrait « Undeux ».
-        $texte = strip_tags(str_replace(['<br>', '<br/>', '<br />', '</p>', '</div>', '</li>'], ' ', $brut));
-        $texte = html_entity_decode($texte, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $texte = trim((string) preg_replace('/\s+/u', ' ', $texte));
+        $texte = \App\Service\TexteRiche\TexteRiche::enTexte($brut);
 
         // Une ligne d'aperçu ne vaut que par son début : le reste est tronqué par le CSS
         // de toute façon, et le transporter en entier ne fait que grossir la page.

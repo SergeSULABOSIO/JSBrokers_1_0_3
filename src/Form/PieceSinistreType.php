@@ -20,6 +20,19 @@ class PieceSinistreType extends AbstractType
     ) {
     }
 
+    /**
+     * Le libellé d'un modèle, rendu en HTML (`label_html`) : le nom et la description sont
+     * SAISIS par le cabinet — la description dans l'éditeur riche. Ils n'y entrent donc
+     * qu'échappés, la description lue comme du texte (TexteRiche::enTexte).
+     */
+    public static function libelleDuModele(ModelePieceSinistre $modele): string
+    {
+        $nom = htmlspecialchars((string) $modele->getNom(), ENT_QUOTES, 'UTF-8');
+        $description = htmlspecialchars(\App\Service\TexteRiche\TexteRiche::enTexte($modele->getDescription()), ENT_QUOTES, 'UTF-8');
+
+        return '<div><strong>' . $nom . '</strong><div class="text-muted small">' . $description . '</div></div>';
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -51,9 +64,7 @@ class PieceSinistreType extends AbstractType
                 'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
                 'expanded' => true,
                 'label_html' => true,
-                'choice_label' => function (ModelePieceSinistre $modele) {
-                    return '<div><strong>' . $modele->getNom() . '</strong><div class="text-muted small">' . ($modele->getDescription() ?? '') . '</div></div>';
-                },
+                'choice_label' => [self::class, 'libelleDuModele'],
             ])
             // --- AJOUT DE LA COLLECTION DE DOCUMENTS ---
             ->add('documents', CollectionType::class, [

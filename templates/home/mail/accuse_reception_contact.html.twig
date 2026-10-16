@@ -5,19 +5,21 @@
 
 {% set wantsCallback = data.wantsPhone and data.phone is not empty %}
 
+{# ⚠ `paragraph` rend son argument en |raw : TOUTE donnée saisie concaténée au balisage
+   passe par |e. Ici, c'est un visiteur ANONYME qui saisit — et qui choisit l'adresse. #}
 {% block content %}
     {{ m.heading('feedback', 'Merci pour votre message') }}
     {{ m.paragraph(
-        'Bonjour <strong>' ~ data.name ~ '</strong>,<br>'
+        'Bonjour <strong>' ~ data.name|e ~ '</strong>,<br>'
         ~ (wantsCallback
-            ? 'nous avons bien reçu votre message. Notre équipe vous rappellera au <strong>' ~ data.phone ~ '</strong> dans les meilleurs délais.'
+            ? 'nous avons bien reçu votre message. Notre équipe vous rappellera au <strong>' ~ data.phone|e ~ '</strong> dans les meilleurs délais.'
             : 'nous avons bien reçu votre message. Notre équipe vous répondra dans les meilleurs délais.')
     ) }}
 
     {{ m.heading('action:description', 'Votre message') }}
-    {{ m.paragraph('<strong>Objet&nbsp;:</strong> ' ~ data.objet) }}
+    {{ m.paragraph('<strong>Objet&nbsp;:</strong> ' ~ data.objet|e) }}
     {% if wantsCallback %}
-        {{ m.paragraph('<strong>Téléphone&nbsp;:</strong> ' ~ data.phone) }}
+        {{ m.paragraph('<strong>Téléphone&nbsp;:</strong> ' ~ data.phone|e) }}
     {% endif %}
     {{ m.paragraph(data.message|nl2br) }}
 

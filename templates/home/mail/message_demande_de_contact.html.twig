@@ -9,18 +9,20 @@
 
     {% set wantsCallback = data.wantsPhone and data.phone is not empty %}
 
+    {# ⚠ `paragraph` et `note` rendent leur argument en |raw : toute donnée saisie par le
+       visiteur passe par |e (et par |e('html_attr') dans un attribut). #}
     {{ m.heading('utilisateur', 'Coordonnées') }}
     {{ m.paragraph(
-        '<strong>Nom&nbsp;:</strong> ' ~ data.name ~ '<br>
-         <strong>E-mail&nbsp;:</strong> <a href="mailto:' ~ data.email ~ '" style="color:#0047AB; text-decoration:none;">' ~ data.email ~ '</a><br>'
+        '<strong>Nom&nbsp;:</strong> ' ~ data.name|e ~ '<br>
+         <strong>E-mail&nbsp;:</strong> <a href="mailto:' ~ data.email|e('html_attr') ~ '" style="color:#0047AB; text-decoration:none;">' ~ data.email|e ~ '</a><br>'
          ~ (wantsCallback
-            ? '<strong>Téléphone&nbsp;:</strong> <a href="tel:' ~ data.phone|replace({' ': ''}) ~ '" style="color:#0047AB; text-decoration:none;">' ~ data.phone ~ '</a><br>'
+            ? '<strong>Téléphone&nbsp;:</strong> <a href="tel:' ~ data.phone|replace({' ': ''})|e('html_attr') ~ '" style="color:#0047AB; text-decoration:none;">' ~ data.phone|e ~ '</a><br>'
             : '')
-         ~ '<strong>Objet&nbsp;:</strong> ' ~ data.objet
+         ~ '<strong>Objet&nbsp;:</strong> ' ~ data.objet|e
     ) }}
 
     {% if wantsCallback %}
-        {{ m.note('Le visiteur souhaite être recontacté <strong>par téléphone</strong> au <strong>' ~ data.phone ~ '</strong>.') }}
+        {{ m.note('Le visiteur souhaite être recontacté <strong>par téléphone</strong> au <strong>' ~ data.phone|e ~ '</strong>.') }}
     {% endif %}
 
     {{ m.heading('action:description', 'Message') }}

@@ -4,18 +4,21 @@
 {# E-mail interne (équipe Joseara) : rédigé en français. #}
 {% block subject %}Joseara — {{ titre }}{% endblock %}
 
+{# ⚠ `paragraph`/`note` rendent en |raw. L'accroche et les détails citent des données
+   saisies (sujet et message d'un ticket, noms) et ne portent aucun balisage voulu :
+   tout passe par |e. #}
 {% block content %}
     {{ m.heading(icone, titre) }}
-    {{ m.paragraph(intro) }}
+    {{ m.paragraph(intro|e) }}
 
     {% if perimetre is defined %}
         {# Rendu structuré (cartes par module + pastilles de niveaux) : lisible et pro. #}
         {{ m.perimetre(perimetre) }}
     {% elseif details is defined %}
         {% for label, valeur in details %}
-            {{ m.paragraph('<strong>' ~ label ~ '&nbsp;:</strong> ' ~ valeur) }}
+            {{ m.paragraph('<strong>' ~ label|e ~ '&nbsp;:</strong> ' ~ valeur|e) }}
         {% endfor %}
     {% endif %}
 
-    {{ m.note(piedNote|default('Notification automatique adressée à l\'équipe Joseara pour information.')) }}
+    {{ m.note(piedNote|default('Notification automatique adressée à l\'équipe Joseara pour information.')|e) }}
 {% endblock %}
