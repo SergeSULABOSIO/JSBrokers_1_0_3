@@ -125,7 +125,10 @@
             </span>
             <h1>{{ pageName }}</h1>
         </div>
-        {% if description is defined and description %}<p>{{ description|raw }}</p>{% endif %}
+        {# ÉCHAPPÉE, JAMAIS `|raw` : la description peut citer une donnée venue du dehors —
+           le sujet d'un ticket, saisi par un client ou un visiteur anonyme de la vitrine
+           (CrmTicketController::traiterFeedback). Aucune description ne porte de balise. #}
+        {% if description is defined and description %}<p>{{ description }}</p>{% endif %}
         <hr>
     </div>
 

@@ -461,7 +461,7 @@ entreprise_guest_tip_body: "Cette entreprise appartient à :owner. Vous y accéd
 entreprise_action_edit_aria: "Modifier :company"
 entreprise_action_delete_aria: "Supprimer :company"
 entreprise_delete_confirm_title: "Supprimer l'entreprise"
-entreprise_delete_confirm_body: "<p>L'entreprise <strong>:company</strong>, l'ensemble de ses données opérationnelles et ses fichiers seront <strong>définitivement détruits</strong> du serveur.</p>"
+entreprise_delete_confirm_body: "L'entreprise « :company », l'ensemble de ses données opérationnelles et ses fichiers seront définitivement détruits du serveur."
 entreprise_menu_aria: "Actions sur l'entreprise"
 entreprise_menu_open_workspace: "Aller dans l'espace de travail"
 entreprise_menu_open_onboarding: "Terminer la configuration du cabinet"

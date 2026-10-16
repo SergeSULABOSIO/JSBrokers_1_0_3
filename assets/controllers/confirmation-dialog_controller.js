@@ -1,6 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 import { Modal } from 'bootstrap';
 import { confirmationAutorisee, DELAI_ARMEMENT_MS as DELAI_PAR_DEFAUT } from './confirmation-armement.js';
+import { contenuDuCorps } from './confirmation-corps.js';
 
 /**
  * @class ConfirmationDialogController
@@ -202,12 +203,14 @@ export default class extends Controller {
     /**
      * Ouvre la modale et prépare l'action de confirmation.
      * @param {object} payload - Les données de l'événement.
-     * @param {string} payload.title - Le titre de la modale.
-     * @param {string} payload.body - Le corps du message de la modale.
+     * @param {string} payload.title - Le titre de la modale (texte).
+     * @param {string} [payload.corpsTexte] - Le corps, en TEXTE : toujours sûr, prioritaire.
+     * @param {string} [payload.body] - Le corps, en HTML : réservé à un appelant JS qui compose
+     *        un balisage et en échappe lui-même les données (cf. confirmation-corps.js).
      * @param {object} payload.onConfirm - L'action à notifier au Cerveau en cas de confirmation.
      */
     open(payload) {
-        const { title, body, onConfirm, itemDescriptions, headerClass, confirmClass, showIrreversible, requirePassword } = payload;
+        const { title, onConfirm, itemDescriptions, headerClass, confirmClass, showIrreversible, requirePassword } = payload;
 
         // Repart toujours d'un état propre : bouton réactivé, message d'erreur effacé,
         // confirmation désarmée jusqu'à l'affichage complet (cf. shown.bs.modal).
@@ -218,8 +221,16 @@ export default class extends Controller {
         this.toggleProgressBar(false);
         this.feedbackTarget.innerHTML = '';
 
-        this.titleTarget.innerHTML = title || 'Confirmation requise';
-        this.bodyTarget.innerHTML = body || 'Êtes-vous sûr ?';
+        // DU TEXTE, PAS DU HTML. Le titre est toujours un libellé ; le corps aussi, sauf
+        // quand un appelant JS compose lui-même un balisage échappé (`body`). Un corps
+        // venu d'un gabarit (`corpsTexte`, cf. confirm-action) porte des noms saisis.
+        this.titleTarget.textContent = title || 'Confirmation requise';
+        const corps = contenuDuCorps(payload);
+        if (corps.html) {
+            this.bodyTarget.innerHTML = corps.valeur;
+        } else {
+            this.bodyTarget.textContent = corps.valeur;
+        }
         this.onConfirmDetail = onConfirm;
 
         // Confirmation forte par mot de passe (optionnelle).
