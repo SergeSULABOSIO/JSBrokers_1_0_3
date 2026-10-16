@@ -4,11 +4,14 @@
 {# E-mail de campagne marketing CRM, envoyé au client (propriétaire). #}
 {% block subject %}{{ objet }}{% endblock %}
 
+{# LE MESSAGE D'UNE CAMPAGNE EST DU TEXTE SEUL (décision de Serge, 2026-10-16) : un agent
+   ne doit pas pouvoir glisser du balisage — ni un lien piégé — dans un e-mail envoyé à
+   tous les clients. Une ligne du message = un paragraphe, échappé. #}
 {% block content %}
     {{ m.heading('action:premium', objet) }}
-    {{ m.paragraph('Bonjour ' ~ (clientNom ?: '') ~ ',') }}
+    {{ m.paragraph('Bonjour ' ~ (clientNom ?: '')|e ~ ',') }}
     {% for ligne in messageLignes %}
-        {{ m.paragraph(ligne) }}
+        {{ m.paragraph(ligne|e) }}
     {% endfor %}
     {{ m.button(lien, 'Accéder à Joseara') }}
     {{ m.note('Vous recevez cet e-mail en tant qu\'utilisateur de la plateforme Joseara.') }}

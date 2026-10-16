@@ -184,8 +184,10 @@ class CongeMailer
      */
     private function redaction(HistoriqueDemande $transition, DemandeConge $demande, Invite $agent): array
     {
-        $nom = (string) ($agent->getNom() ?? 'Un collaborateur');
-        $auteur = (string) ($transition->getAuteur()?->getNom() ?? 'Un valideur');
+        // ÉCHAPPÉS ICI : l'accroche porte du balisage voulu (<strong>) et le gabarit la rend
+        // telle quelle (`paragraph` en |raw). Un nom saisi n'y entre donc qu'échappé.
+        $nom = htmlspecialchars((string) ($agent->getNom() ?? 'Un collaborateur'), ENT_QUOTES, 'UTF-8');
+        $auteur = htmlspecialchars((string) ($transition->getAuteur()?->getNom() ?? 'Un valideur'), ENT_QUOTES, 'UTF-8');
         $periode = $this->periode($demande);
 
         return match ($transition->getStatutApres()) {

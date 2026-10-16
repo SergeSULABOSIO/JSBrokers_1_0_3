@@ -196,7 +196,8 @@
 
         <div class="ent-head">
             <h1>{{ pageName }}</h1>
-            <p>{{ "entreprise_creation_description_message" | trans({':user': utilisateur.nom}) | raw }}</p>
+            {# Traduction balisée (|raw) : le nom saisi passe par |e. #}
+            <p>{{ "entreprise_creation_description_message" | trans({':user': utilisateur.nom|e}) | raw }}</p>
         </div>
 
         <div class="ent-form-card">

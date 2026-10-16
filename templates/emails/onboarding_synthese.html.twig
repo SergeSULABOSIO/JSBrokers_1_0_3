@@ -13,8 +13,8 @@
 {% block content %}
     {% if bilan.complet %}
         {{ m.heading('action:completed', 'Votre cabinet est prêt') }}
-        {{ m.paragraph('Bonjour ' ~ recipientName ~ ',') }}
-        {{ m.paragraph('La configuration de <strong>' ~ entrepriseNom ~ '</strong> est terminée.
+        {{ m.paragraph('Bonjour ' ~ recipientName|e ~ ',') }}
+        {{ m.paragraph('La configuration de <strong>' ~ entrepriseNom|e ~ '</strong> est terminée.
             Votre cabinet dispose désormais de tout ce qu\'il lui faut pour travailler, de la
             piste jusqu\'à l\'encaissement des commissions.') }}
         {{ m.etapes(bilan, []) }}
@@ -22,8 +22,8 @@
             concernées — ils vivent avec votre cabinet.') }}
     {% else %}
         {{ m.heading('action:settings', 'Où en est la configuration de votre cabinet') }}
-        {{ m.paragraph('Bonjour ' ~ recipientName ~ ',') }}
-        {{ m.paragraph('Votre progression sur <strong>' ~ entrepriseNom ~ '</strong> vient d\'avancer.
+        {{ m.paragraph('Bonjour ' ~ recipientName|e ~ ',') }}
+        {{ m.paragraph('Votre progression sur <strong>' ~ entrepriseNom|e ~ '</strong> vient d\'avancer.
             Voici ce qui est en place, et ce qu\'il reste à régler pour que votre cabinet soit
             pleinement opérationnel.') }}
 

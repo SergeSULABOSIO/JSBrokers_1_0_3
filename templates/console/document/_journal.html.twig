@@ -14,7 +14,8 @@
         {% for l in e.lignes %}
             <tr class="{{ loop.first ? 'ecr-start' : '' }}">
                 <td>{{ loop.first ? e.date|date('d/m/Y') : '' }}</td>
-                <td>{{ loop.first ? ('<code>' ~ e.piece ~ '</code>')|raw : '' }}</td>
+                {# La référence de la pièce est SAISIE (dépense, règlement de taxe) : échappée. #}
+                <td>{% if loop.first %}<code>{{ e.piece }}</code>{% endif %}</td>
                 <td>{{ loop.first ? e.libelle : '' }}</td>
                 <td><span class="cs-doc-account">{{ l.compte }}</span> {{ l.libelle }}</td>
                 <td class="num">{{ l.debit ? fmt.m(l.debit) : '' }}</td>

@@ -9,18 +9,18 @@
 
 {% block content %}
     {{ m.heading('action:cart', 'email_token_heading_confirmed'|trans({}, 'messages', lang)) }}
-    {{ m.paragraph('email_token_greeting'|trans({'%name%': purchase.utilisateur.nom}, 'messages', lang)) }}
+    {{ m.paragraph('email_token_greeting'|trans({'%name%': purchase.utilisateur.nom|e}, 'messages', lang)) }}
 
     {{ m.heading('action:description', 'email_token_details_heading'|trans({}, 'messages', lang)) }}
-    {{ m.paragraph('<strong>' ~ 'email_token_label_pack'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.pack|capitalize) }}
+    {{ m.paragraph('<strong>' ~ 'email_token_label_pack'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.pack|capitalize|e) }}
     {{ m.paragraph('<strong>' ~ 'email_token_label_credited'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.tokens|format_nombre(0, lang)) }}
     {{ m.paragraph('<strong>' ~ 'email_token_label_amount'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.montantUsd|format_montant(2, lang)) }}
-    {{ m.paragraph('<strong>' ~ 'email_token_label_reference'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.reference) }}
+    {{ m.paragraph('<strong>' ~ 'email_token_label_reference'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.reference|e) }}
     {% if purchase.invoiceNumber %}
-        {{ m.paragraph('<strong>' ~ 'email_token_label_invoice'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.invoiceNumber) }}
+        {{ m.paragraph('<strong>' ~ 'email_token_label_invoice'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.invoiceNumber|e) }}
     {% endif %}
     {% if purchase.cardLast4 %}
-        {{ m.paragraph('<strong>' ~ 'email_token_label_card'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> •••• •••• •••• ' ~ purchase.cardLast4) }}
+        {{ m.paragraph('<strong>' ~ 'email_token_label_card'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> •••• •••• •••• ' ~ purchase.cardLast4|e) }}
     {% endif %}
 
     {{ m.button(accountUrl, 'email_token_button'|trans({}, 'messages', lang)) }}

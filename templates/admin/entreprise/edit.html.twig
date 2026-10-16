@@ -240,7 +240,9 @@
                 {{ ux_icon(resolve_icon_name('entreprise'), {height: '28px', width: '28px', class: 'ent-head-icon'}) }}
                 {{ pageName }}
             </h1>
-            <p>{{ "entreprise_edition_description_message" | trans({':user': utilisateur.nom, ':company': entreprise.nom}) | raw }}</p>
+            {# La traduction porte du balisage (|raw), mais `trans` n'échappe pas ses
+               paramètres : les noms saisis passent par |e. #}
+            <p>{{ "entreprise_edition_description_message" | trans({':user': utilisateur.nom|e, ':company': entreprise.nom|e}) | raw }}</p>
         </div>
 
         {# Cadre réglementaire du marché par défaut : le courtier ne collecte PAS les
@@ -315,7 +317,7 @@
 
                 {# Rappel important transformé en toast permanent (haut à droite, fixe, non fermable). #}
                 {{ include('components/_workspace_params_toast.html.twig', {
-                    message: 'entreprise_params_toast_edit'|trans({':company': entreprise.nom})
+                    message: 'entreprise_params_toast_edit'|trans({':company': entreprise.nom|e})
                 }) }}
 
                 <div class="ent-actions">

@@ -61,9 +61,11 @@
 
     {# ── BLOC IDENTITÉ ─────────────────────────────────────────────────────────────── #}
     {% set identite %}
-        {{ t.ligne('Collaborateur', d.agent ? d.agent.nom : 'Non précisé') }}
+        {# ⚠ `ligne` rend sa valeur en |raw (pour « &nbsp;j » et le report en <span>) :
+           toute donnée saisie passe par |e — et un champ riche par |en_texte, puis |e. #}
+        {{ t.ligne('Collaborateur', d.agent ? d.agent.nom|e : 'Non précisé') }}
         {% if d.valideur %}
-            {{ t.ligne('Valideur', d.valideur.nom) }}
+            {{ t.ligne('Valideur', d.valideur.nom|e) }}
         {% endif %}
     {% endset %}
     {{ t.tableau('Identité', identite) }}
@@ -71,13 +73,13 @@
     {# ── BLOC DEMANDE ─────────────────────────────────────────────────────────────── #}
     {% set bloc %}
         {{ t.ligne('Référence', '#' ~ d.id) }}
-        {{ t.ligne("Type d'absence", d.typeAbsence ? d.typeAbsence|trim : 'Non précisé') }}
+        {{ t.ligne("Type d'absence", d.typeAbsence ? d.typeAbsence|trim|e : 'Non précisé') }}
         {{ t.ligne('Du', d.dateDebut ? d.dateDebut|date('d/m/Y') : '—') }}
         {{ t.ligne('Au', d.dateFin ? d.dateFin|date('d/m/Y') : '—') }}
         {% if d.demiJourneeDebut %}{{ t.ligne('Premier jour', 'demi-journée') }}{% endif %}
         {% if d.demiJourneeFin %}{{ t.ligne('Dernier jour', 'demi-journée') }}{% endif %}
         {{ t.ligne('Jours ouvrables décomptés', jours ~ '&nbsp;j', true) }}
-        {% if d.motif %}{{ t.ligne('Motif', d.motif) }}{% endif %}
+        {% if d.motif %}{{ t.ligne('Motif', d.motif|en_texte|e) }}{% endif %}
         {{ t.ligne('Justificatif', d.documents|length > 0 ? 'oui (' ~ d.documents|length ~ ')' : 'aucun') }}
         {{ t.ligne('Déposée le', d.createdAt ? d.createdAt|date('d/m/Y à H:i') : '—') }}
     {% endset %}
@@ -106,7 +108,7 @@
     {% if d.controlesContournes %}
         {% set contournes %}
             {% for regle in d.contournements %}
-                {{ t.ligne('Contrôle franchi', regle) }}
+                {{ t.ligne('Contrôle franchi', regle|e) }}
             {% endfor %}
         {% endset %}
         {{ t.tableau('⚠ Règles du cabinet contournées', contournes) }}
@@ -116,7 +118,7 @@
     {% if ctx.transition.statutApres == 'SOUMISE' and ctx.collegues|length > 0 %}
         {% set contexte %}
             {% for collegue in ctx.collegues %}
-                {{ t.ligne(collegue.nom, collegue.periode) }}
+                {{ t.ligne(collegue.nom, collegue.periode|e) }}
             {% endfor %}
         {% endset %}
         {{ t.tableau('Déjà absents sur tout ou partie de la période', contexte) }}
@@ -125,14 +127,14 @@
     {# ── BLOC DÉCISION — sur les mails de décision uniquement ─────────────────────── #}
     {% if ctx.transition.statutApres != 'SOUMISE' %}
         {% set decision %}
-            {{ t.ligne('Sens', ctx.titre) }}
-            {{ t.ligne('Auteur', ctx.transition.auteur ? ctx.transition.auteur.nom : '—') }}
+            {{ t.ligne('Sens', ctx.titre|e) }}
+            {{ t.ligne('Auteur', ctx.transition.auteur ? ctx.transition.auteur.nom|e : '—') }}
             {{ t.ligne('Rendue le', ctx.transition.createdAt ? ctx.transition.createdAt|date('d/m/Y à H:i') : '—') }}
             {% if ctx.estAutoApprouvee %}
                 {{ t.ligne('Mention', 'auto-approuvée (seul valideur du cabinet)', true) }}
             {% endif %}
             {% if ctx.transition.commentaire %}
-                {{ t.ligne('Commentaire', ctx.transition.commentaire) }}
+                {{ t.ligne('Commentaire', ctx.transition.commentaire|en_texte|e) }}
             {% endif %}
         {% endset %}
         {{ t.tableau('La décision', decision) }}
