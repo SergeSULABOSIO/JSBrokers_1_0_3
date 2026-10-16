@@ -1,11 +1,6 @@
 ---
 name: courtage-assurance
-description: Le métier du courtage d'assurance tel que JSBrokers l'implémente — glossaire (terme → entité), cycle de vie piste → police → facturation → encaissement → rétrocession, règles par type d'avenant, invariants métier et comptables avec leurs preuves et leurs tests, décisions prises et chantiers décidés. Invoquer avant tout plan touchant cotations, avenants, tranches, notes, paiements, commissions ou rétrocessions.
-trigger when: >
-  Déclencher AUTOMATIQUEMENT dès qu'une tâche touche : piste, cotation, prime, chargement,
-  commission, revenu, tranche, échéance, avenant, police, renouvellement, prorogation,
-  annulation, résiliation, incorporation, note de débit/crédit, avoir, facturation,
-  encaissement, paiement, rétrocommission, reversement, partenaire, taxe, sinistre, monnaie.
+description: Le métier du courtage d'assurance dans JSBrokers — glossaire terme → entité, cycle piste → police → facturation → encaissement → rétrocession, règles par type d'avenant, invariants prouvés, chantiers décidés. Invoquer avant tout plan touchant piste, cotation, prime, chargement, commission, revenu, tranche, échéance, avenant, police, renouvellement, prorogation, annulation, résiliation, incorporation, note de débit ou de crédit, avoir, facturation, encaissement, paiement, rétrocommission, reversement, partenaire, taxe, sinistre ou monnaie.
 ---
 
 # Skill — Le courtage d'assurance dans JSBrokers
@@ -47,7 +42,7 @@ et l'écart — jamais présentée comme acquise.
 | Échéancier | tranches de la cotation ; « Tranche unique » 100 % par défaut (`CotationController.php:96`, :147) | `/admin/tranche` | — |
 | Facturation | Note + Articles ; numéro `ND-`/`NC-AAAA-NNNNN` pris à l'écriture (`NumerotationDesNotesListener`, §5) | `facturation_picker` (`NoteController.php:167`) | `preparer_facturation` |
 | Créance | note **validée**, débit ou crédit, adressée au client ou à l'assureur → D 411 / C 706 + C 443 (`CourtierEcritureComptableService.php:33-34`, :193-209) | — | — |
-| Encaissement | `Paiement` de la note → D 521/571 / C 411 (:35) ; prime de l'assuré : `PaiementPrime` | `/admin/paiement`, `/admin/paiementprime` | `signaler_paiement_prime` ; **aucun outil Ket pour l'encaissement d'une note** |
+| Encaissement | `Paiement` de la note → D 521/571 / C 411 (:35) ; prime de l'assuré : `PaiementPrime` | `/admin/paiement`, `/admin/paiementprime` | `signaler_paiement_prime` ; règlement d'une note : pas d'outil dédié, `preparer_operations` crée le `Paiement` (`CouvertureDesEcrans.php:81-84`, `ui:note.paiement-request`) |
 | Rétrocession | `ConditionPartage` ; exigible à proportion de l'encaissé | `/admin/retro-agent`, `reversement_picker` | `retrocommissions`, `signaler_reversement_retro_agent` |
 
 ## 3. Le type de mouvement décide de tout

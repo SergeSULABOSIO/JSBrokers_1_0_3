@@ -1,9 +1,6 @@
 ---
 name: jsbrokers-dev
-description: Règles de développement du projet JSBrokers (Joseara) — principe BIC Cristal, cloisonnement entre cabinets, source unique et parité écran ↔ Ket, rendu « le navigateur clone », procédure de test, livraison et mode Plan. Invoquer avant tout plan ou toute modification de code de ce dépôt.
-trigger when: >
-  Déclencher AUTOMATIQUEMENT dès qu'une tâche touche le code de C:\JSBrokers_1_0_3 :
-  un plan, une correction, une fonctionnalité, une revue, un test, un commit ou un push.
+description: Règles de développement du dépôt JSBrokers (Joseara) — BIC Cristal, cloisonnement entre cabinets, source unique et parité écran ↔ Ket, « le serveur écrit, le navigateur clone », échappement, procédure de test, livraison, mode Plan. Invoquer avant tout plan, correction, fonctionnalité, revue, test, commit ou push dans ce dépôt.
 ---
 
 # Skill — Développer dans JSBrokers
@@ -72,6 +69,15 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   fabrique ni libellé ni chiffre (ex. `<template data-vue-cartes-source>`, aperçu des mouvements).
 - Les décisions JS testables vivent dans des modules purs (`vue-cartes-regles.js`, `cookies.js`,
   `compte-onglet.js`) couverts par `tests/js/*.test.mjs`.
+- **Tout contenu dynamique est échappé.** Twig échappe par défaut : jamais `|raw` sur une donnée
+  saisie. En JS, une donnée se pose par `textContent`, jamais par `innerHTML` ni par une chaîne
+  HTML — infobulles comprises (modèle : `infobulle_controller.js`, contenu construit par
+  `textContent`). Incident (`03e5f6b0`) : les infobulles « pistes » et « renouvellements » du
+  tableau de bord injectaient leurs valeurs en HTML (`dataset` décode l'attribut) ; un nom de
+  piste piégé s'exécutait au survol, malgré le `|e` du gabarit (corrigé `assets/app.js:1744`
+  et `:1979`).
+  ⚠ Le toast rend son texte en HTML (`notification-manager_controller.js:47`) : l'appelant
+  échappe (`echapper`, `fiche-hors-filtre.js:14`).
 - Les cookies s'écrivent et se lisent par `assets/controllers/cookies.js`, et nulle part ailleurs.
 - Asset Mapper : aucune compilation. En dev, rien à builder ; en E2E, ne pas laisser `public/assets`.
 
