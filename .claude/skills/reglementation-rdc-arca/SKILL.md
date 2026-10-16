@@ -63,6 +63,19 @@ reçoit aussi DGI / TVA 16 % / ARCA 2 %.
   SYSCOHADA (journal, grand-livre, balance, TFR, bilan, TFT — `DocumentsComptablesBuilder.php`).
 - Comptes fixés en dur : 6611, 632 (`RetroAgentController.php:344`, `AgentRetro.php:131`).
 - OHADA couvre 17 pays ; **un cabinet hors OHADA n'a pas d'alternative**.
+- **Appliqué depuis le 2026-10-16** (Acte uniforme OHADA relatif au droit comptable, SYSCOHADA
+  révisé ; décisions de Serge du 2026-10-15) — détail et preuves dans `courtage-assurance` §5 :
+  - **pièce justificative intangible** : une note validée a ses montants figés, ne se modifie
+    plus et ne se supprime pas ; la correction passe par un avoir ;
+  - **numérotation continue** : numéro attribué à la validation, sans trou ni doublon, par
+    série (cabinet, année d'émission, débit/crédit), date d'émission jamais antérieure à la
+    précédente ;
+  - **conservation dix ans** : aucune purge d'une note émise sans remise d'une archive
+    comptable à jour (PDF, lignes, paiements, journal, empreintes).
+- ⚠ **À CONFIRMER (comptable), RIEN À CODER** : le régime DGI de la **facture normalisée**
+  (dispositif électronique fiscal) s'applique-t-il aux notes de débit portant de la TVA ? Si
+  oui, la note devrait être émise par ce dispositif (numéro, signature fiscale) — ce qui
+  remettrait en cause la numérotation interne. Ne rien en déduire avant la réponse.
 
 ## 5. Règles RDC appliquées à TOUS les cabinets (constat, non corrigé)
 
