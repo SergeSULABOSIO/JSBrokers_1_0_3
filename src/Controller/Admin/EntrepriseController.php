@@ -279,6 +279,28 @@ class EntrepriseController extends AbstractController
         ]);
     }
 
+    /**
+     * L'ARCHIVE COMPTABLE DU CABINET, que le propriétaire télécharge avant de le supprimer :
+     * le PDF de chaque note émise, leurs lignes, leurs paiements et le journal (conservation
+     * dix ans, règle OHADA). Sa remise est enregistrée — c'est elle qui rend la suppression
+     * possible.
+     */
+    #[Route('/{id}/archive-comptable', name: 'archive_comptable', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    public function archiveComptable(Entreprise $entreprise, Request $request, \App\Service\Note\ArchiveComptableDuCabinet $archive): \Symfony\Component\HttpFoundation\Response
+    {
+        // POST ET JETON : télécharger l'archive ENREGISTRE sa remise, qui rend la suppression
+        // possible. Un lien suivi depuis un autre site ne doit pas le faire à l'insu de qui l'a.
+        if (!$this->isCsrfTokenValid('archive-entreprise-' . $entreprise->getId(), (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Jeton CSRF invalide.');
+        }
+        $this->denyUnlessOwner($entreprise);
+        $remise = $archive->remettre($entreprise);
+
+        return (new \Symfony\Component\HttpFoundation\BinaryFileResponse($remise['chemin']))
+            ->setContentDisposition(\Symfony\Component\HttpFoundation\ResponseHeaderBag::DISPOSITION_ATTACHMENT, $remise['nom'])
+            ->deleteFileAfterSend();
+    }
+
     #[Route('/{id}', name: 'remove', requirements: ['id' => Requirement::DIGITS], methods: ['DELETE'])]
     public function remove(Entreprise $entreprise, Request $request)
     {
@@ -302,17 +324,29 @@ class EntrepriseController extends AbstractController
             return $this->redirectToRoute("admin.entreprise.index");
         }
 
-        // Le nom est lu avant la purge : l'entité ne sera plus exploitable ensuite.
+        // Le nom est lu avant la purge : l'entité ne sera plus exploitable ensuite. De même la
+        // remise de l'archive comptable : la purge l'efface avec le cabinet, la notification
+        // en garde la trace (date, empreinte SHA-256).
         $nom = $entreprise->getNom();
+        $archiveRemise = $entreprise->getArchiveComptableRemiseLe()
+            ? $entreprise->getArchiveComptableRemiseLe()->format('d/m/Y H:i') . ' — SHA-256 ' . $entreprise->getArchiveComptableEmpreinte()
+            : '—';
 
-        // Destruction inconditionnelle : données scopées, fichiers uploadés, entreprise.
-        $this->serviceSuppression->supprimer($entreprise);
+        // Destruction : données scopées, fichiers uploadés, entreprise — sauf si des pièces
+        // comptables restent à conserver sans archive remise (règle OHADA).
+        try {
+            $this->serviceSuppression->supprimer($entreprise);
+        } catch (\DomainException $refus) {
+            $this->addFlash("error", $refus->getMessage());
+
+            return $this->redirectToRoute("admin.entreprise.index");
+        }
 
         $this->dispatcher->dispatch(new AgentNotificationEvent(
             AgentNotificationEvent::ACTION_DELETE,
             AgentNotificationEvent::TYPE_ENTREPRISE,
             $nom,
-            ['Entreprise' => $nom, 'Supprimée par' => $user->getNom() ?: (string) $user->getEmail()],
+            ['Entreprise' => $nom, 'Supprimée par' => $user->getNom() ?: (string) $user->getEmail(), 'Archive comptable remise' => $archiveRemise],
         ));
 
         $this->addFlash("success", $this->translator->trans("entreprise_deleted_ok", [

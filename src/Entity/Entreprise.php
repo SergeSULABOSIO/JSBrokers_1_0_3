@@ -32,6 +32,36 @@ class Entreprise
     #[ORM\Column(length: 255)]
     private ?string $licence = null;
 
+    /**
+     * LA REMISE DE L'ARCHIVE COMPTABLE (conservation dix ans, règle OHADA ; décision de
+     * Serge du 2026-10-15) : quand elle a été téléchargée, et l'empreinte SHA-256 du
+     * fichier remis. La suppression du cabinet n'est permise qu'après une remise
+     * POSTÉRIEURE à la dernière pièce émise ({@see \App\Service\Note\ConservationDesPieces}).
+     */
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $archiveComptableRemiseLe = null;
+
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $archiveComptableEmpreinte = null;
+
+    public function getArchiveComptableRemiseLe(): ?\DateTimeImmutable
+    {
+        return $this->archiveComptableRemiseLe;
+    }
+
+    public function getArchiveComptableEmpreinte(): ?string
+    {
+        return $this->archiveComptableEmpreinte;
+    }
+
+    public function enregistrerRemiseDeLArchive(\DateTimeImmutable $le, string $empreinte): static
+    {
+        $this->archiveComptableRemiseLe = $le;
+        $this->archiveComptableEmpreinte = $empreinte;
+
+        return $this;
+    }
+
     #[Assert\NotBlank()]
     #[ORM\Column(length: 255)]
     private ?string $adresse = null;

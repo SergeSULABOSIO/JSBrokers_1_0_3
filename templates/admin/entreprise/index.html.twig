@@ -359,6 +359,15 @@
                                        title="{{ 'commom_edit' | trans }}" aria-label="{{ 'entreprise_action_edit_aria'|trans({':company': entreprise.nom}) }}">
                                         {{ ux_icon('tabler:edit', {height: '20px', width: '20px'}) }}
                                     </a>
+                                    {# Les pièces comptables se conservent dix ans (OHADA) : la
+                                       suppression n'est permise qu'après la remise de cette archive. #}
+                                    <form action="{{ path('admin.entreprise.archive_comptable', {'id': entreprise.id}) }}" method="post" class="ent-archive-form">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('archive-entreprise-' ~ entreprise.id) }}">
+                                        <button type="submit" class="ent-icon-btn"
+                                                title="Télécharger l'archive comptable" aria-label="Télécharger l'archive comptable de {{ entreprise.nom }}">
+                                            {{ ux_icon('tabler:file-zip', {height: '20px', width: '20px'}) }}
+                                        </button>
+                                    </form>
                                     <form action="{{ path('admin.entreprise.remove', {'id': entreprise.id}) }}" method="post"
                                           data-controller="confirm-action"
                                           data-action="submit->confirm-action#request"
@@ -449,6 +458,14 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" style="width:16px;height:16px;" />
                 </span>
                 <span class="flex-grow-1" data-entreprise-context-menu-target="editLabel">{{ 'commom_edit' | trans }}</span>
+            </li>
+            {# Avant « Supprimer », et pour cause : la suppression exige l'archive remise (OHADA). #}
+            <li role="menuitem" tabindex="-1" data-menu-key="archive"
+                data-action="click->entreprise-context-menu#onItemClick">
+                <span class="context-menu-icon" aria-hidden="true">
+                    <twig:UX:Icon name="tabler:file-zip" style="width:16px;height:16px;" />
+                </span>
+                <span class="flex-grow-1">Télécharger l'archive comptable</span>
             </li>
             <li role="separator" class="separator" data-menu-key="sep"></li>
             <li role="menuitem" tabindex="-1" data-menu-key="delete" class="is-danger"

@@ -120,6 +120,11 @@ trait AffaireFacturableTrait
         $em->persist($tranche);
         $cotation->addTranche($tranche);
         $em->flush();
+        // Une monnaie de travail, comme tout cabinet initialisé : le PDF écrit le montant en lettres.
+        $em->getConnection()->executeStatement(
+            'INSERT INTO monnaie (entreprise_id, nom, code, tauxusd, fonction, locale, created_at) VALUES (?, ?, ?, 1, 0, 0, NOW())',
+            [$cabinet->getId(), 'Dollar américain', 'USD'],
+        );
 
         return [
             'owner' => (int) $owner->getId(), 'entreprise' => (int) $cabinet->getId(), 'invite' => (int) $invite->getId(),
