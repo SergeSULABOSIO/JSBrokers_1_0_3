@@ -2,8 +2,6 @@
 
 namespace App\Controller\Admin;
 
-use Dompdf\Dompdf;
-use Dompdf\Options;
 use App\Entity\Assureur;
 use App\Entity\Client;
 use App\Entity\RevenuPourCourtier;
@@ -21,12 +19,9 @@ use App\Form\NoteType;
 use App\Repository\NoteRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
-use App\Services\BordereauAnalysisPdfService;
 use App\Services\CanvasBuilder;
 use App\Services\ServiceMonnaies;
 use App\Services\Canvas\CalculationProvider;
-use setasign\Fpdi\Tcpdf\Fpdi;
-use setasign\Fpdi\PdfParser\StreamReader;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Service\Workspace\ValeursDeNaissance;
 use App\Service\Note\EmissionDeNote;
@@ -60,7 +55,6 @@ class NoteController extends AbstractController
         private SerializerInterface $serializer, // Ajout de SerializerInterface
         private CalculationProvider $calculationProvider,
         private ServiceMonnaies $serviceMonnaies, // NOUVEAU : Injection du service des monnaies
-        private BordereauAnalysisPdfService $bordereauPdfService,
         // Ce qu'une note porte en naissant — partagé avec le circuit d'écriture commun,
         // pour qu'une note importée soit en tout point une note créée d'un clic.
         private ValeursDeNaissance $valeursDeNaissance,
@@ -70,6 +64,7 @@ class NoteController extends AbstractController
         // Le SEUL chemin de la validation : numéro définitif et date d'émission, en une
         // transaction (règle OHADA).
         private EmissionDeNote $emissionDeNote,
+        private \App\Service\Note\NotePdf $notePdf,
         CanvasBuilder $canvasBuilder
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait
@@ -630,75 +625,12 @@ class NoteController extends AbstractController
         $this->appartenance()->exigerLeCabinetOuvert($note, 'Cette note');
         // Ket y mène aussi son export « note_pdf » (l'ancien état TCPDF est supprimé).
         $this->exigerLaLectureDesNotes();
-        // 1. On configure DomPDF pour qu'il respecte les styles d'impression (@media print)
-        $pdfOptions = new Options();
-        $pdfOptions->set('defaultFont', 'Arial');
-        $pdfOptions->set('isHtml5ParserEnabled', true);
-        // AUCUN accès distant. Le gabarit incorpore désormais son CSS (voir
-        // note_preview.html.twig) : laisser cette option à « true » ferait sortir
-        // une requête HTTPS SYNCHRONE du serveur à chaque PDF — le rendu de la
-        // note se mettrait alors à dépendre de la disponibilité d'un CDN, et à
-        // expirer quand l'hébergeur filtre le trafic sortant.
-        // Elle offrait au passage la lecture de ressources arbitraires à qui
-        // contrôlerait le contenu d'une note.
-        // Les quatre autres usages de DomPDF du projet (TokenInvoicePdfService,
-        // BordereauAnalysisPdfService, PdfRapportRenderer, MessageExporter) sont
-        // déjà dans ce régime : on aligne le cinquième.
-        $pdfOptions->set('isRemoteEnabled', false);
-        // La ligne la plus importante : elle demande à DomPDF de simuler le rendu d'impression
-        // NOUVEAU : Améliore la compatibilité avec les CSS modernes (Flexbox, etc.)
-        $pdfOptions->set('chroot', $this->getParameter('kernel.project_dir') . '/public');
-
-
-        $pdfOptions->setDefaultMediaType('print');
-
-        $dompdf = new Dompdf($pdfOptions);
-
-        // 2. On récupère le contexte nécessaire pour le template, comme dans showPreview
-        $this->canvasBuilder->loadAllCalculatedValues($note);
-        foreach ($note->getArticles() as $article) {
-            $this->canvasBuilder->loadAllCalculatedValues($article);
-        }
-        $entreprise = $this->getEntreprise();
-        $entityCanvas = $this->canvasBuilder->getEntityCanvas(Note::class);
-        $monnaie = $this->serviceMonnaies->getCodeMonnaieAffichage();
-
-        // NOUVEAU : On prépare les chemins absolus pour les images
-        $logoPath = null;
-        if ($entreprise && $entreprise->getThumbnail()) {
-            $logoPath = $this->getParameter('kernel.project_dir') . '/public/images/entreprises/' . $entreprise->getThumbnail();
-        } else {
-            $logoPath = $this->getParameter('kernel.project_dir') . '/public/images/entreprises/logofav.png';
-        }
-
-        // 3. On génère le HTML en utilisant la méthode renderView
-        $html = $this->renderView('admin/note/note_preview.html.twig', [
-            'note' => $note,
-            'entreprise' => $entreprise,
-            'entityCanvas' => $entityCanvas,
-            'monnaie' => $monnaie,
-            // On passe le chemin absolu du logo au template
-            'logo_path_for_pdf' => $logoPath,
-        ]);
-
-        // 4. On charge le HTML dans DomPDF, on génère le PDF et on le propose au téléchargement
-        $dompdf->loadHtml($html);
-        $dompdf->setPaper('A4', 'portrait');
-        $dompdf->render();
-        $notePdfString = $dompdf->output();
-
-        // 5. Si la note est liée à un bordereau, on annexe les lignes conformes en paysage
-        $bordereau = $note->getBordereau();
-        if ($bordereau !== null) {
-            $bordereauPdfString = $this->bordereauPdfService->generatePdfString($bordereau, matchOnly: true);
-            if ($bordereauPdfString !== null) {
-                $notePdfString = $this->mergePdfs($notePdfString, $bordereauPdfString);
-            }
-        }
+        // Un seul rendu, partagé avec l'archive comptable du cabinet (NotePdf).
+        $notePdfString = $this->notePdf->rendre($note);
 
         // La référence est une SAISIE LIBRE (champ éditable) : guillemet, barre oblique ou
         // accent casseraient un en-tête écrit à la main. Nom UTF-8 complet, et repli ASCII.
-        $nomDuFichier = 'note-' . str_replace(['/', '\\'], '-', (string) $note->getReference()) . '.pdf';
+        $nomDuFichier = \App\Service\Note\NotePdf::nomDeFichier($note);
         $repliAscii = preg_replace('/[^A-Za-z0-9._-]/u', '_', $nomDuFichier);
 
         return new Response($notePdfString, 200, [
@@ -709,31 +641,6 @@ class NoteController extends AbstractController
                 $repliAscii,
             ),
         ]);
-    }
-
-    private function mergePdfs(string $notePdf, string $bordereauPdf): string
-    {
-        $fpdi = new Fpdi('P', 'mm', 'A4');
-        $fpdi->setPrintHeader(false);
-        $fpdi->setPrintFooter(false);
-
-        $count = $fpdi->setSourceFile(StreamReader::createByString($notePdf));
-        for ($i = 1; $i <= $count; $i++) {
-            $tpl  = $fpdi->importPage($i);
-            $size = $fpdi->getTemplateSize($tpl);
-            $fpdi->AddPage($size['width'] > $size['height'] ? 'L' : 'P', [$size['width'], $size['height']]);
-            $fpdi->useTemplate($tpl, 0, 0, $size['width'], $size['height'], true);
-        }
-
-        $count = $fpdi->setSourceFile(StreamReader::createByString($bordereauPdf));
-        for ($i = 1; $i <= $count; $i++) {
-            $tpl  = $fpdi->importPage($i);
-            $size = $fpdi->getTemplateSize($tpl);
-            $fpdi->AddPage($size['width'] > $size['height'] ? 'L' : 'P', [$size['width'], $size['height']]);
-            $fpdi->useTemplate($tpl, 0, 0, $size['width'], $size['height'], true);
-        }
-
-        return $fpdi->Output('', 'S');
     }
 
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]

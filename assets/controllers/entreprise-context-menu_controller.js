@@ -59,14 +59,16 @@ export default class extends Controller {
         const demarrageLink = card.querySelector('.ent-demarrage-link');
         // `:not()` écarte le raccourci ci-dessus : sans cela, « Éditer » aurait pointé
         // vers le guide dès que celui-ci est présent, puisqu'il vient en premier.
-        const editLink = card.querySelector('.ent-actions a:not(.ent-demarrage-link)');
-        const deleteForm = card.querySelector('.ent-actions form');
+        const editLink = card.querySelector('.ent-actions a:not(.ent-demarrage-link):not(.ent-archive-link)');
+        // L'archive comptable, à télécharger avant toute suppression (pièces à conserver dix ans, OHADA).
+        const archiveLink = card.querySelector('.ent-archive-form');
+        const deleteForm = card.querySelector('.ent-actions form:not(.ent-archive-form)');
         if (!workspaceLink && !demarrageLink && !editLink && !deleteForm) return; // carte non actionnable → menu natif
 
         event.preventDefault();
 
         const nom = card.dataset.ecNom || "l'entreprise";
-        this.current = { workspaceLink, demarrageLink, editLink, deleteForm };
+        this.current = { workspaceLink, demarrageLink, editLink, archiveLink, deleteForm };
 
         if (this.hasEditLabelTarget) this.editLabelTarget.textContent = this._labelFor('edit', nom);
         if (this.hasDeleteLabelTarget) this.deleteLabelTarget.textContent = this._labelFor('delete', nom);
@@ -78,6 +80,7 @@ export default class extends Controller {
             const allowed = (key === 'workspace' && workspaceLink)
                 || (key === 'demarrage' && demarrageLink)
                 || (key === 'edit' && editLink)
+                || (key === 'archive' && archiveLink)
                 || (key === 'delete' && deleteForm);
             item.style.display = allowed ? '' : 'none';
         });
@@ -128,6 +131,9 @@ export default class extends Controller {
         } else if (key === 'edit' && current.editLink) {
             // Réutilise le lien existant (navigation + barre de progression).
             current.editLink.click();
+        } else if (key === 'archive' && current.archiveLink) {
+            // Un téléchargement (POST, jeton) : le formulaire caché de la carte fait le travail.
+            current.archiveLink.submit();
         } else if (key === 'delete' && current.deleteForm) {
             // Réutilise le formulaire existant : confirm-action intercepte le submit
             // et affiche la boîte de confirmation avec mot de passe.

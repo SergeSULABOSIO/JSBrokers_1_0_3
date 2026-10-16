@@ -54,6 +54,8 @@ class ServiceSuppressionEntreprise
         private readonly string $repertoireDocuments,
         #[Autowire('%kernel.project_dir%/public/pdfs')]
         private readonly string $repertoirePdfs,
+        // Les pièces comptables se conservent dix ans : pas de purge sans archive remise.
+        private readonly \App\Service\Note\ConservationDesPieces $conservation,
     ) {}
 
     /**
@@ -64,6 +66,13 @@ class ServiceSuppressionEntreprise
         $id = $entreprise->getId();
         if ($id === null) {
             throw new \InvalidArgumentException("Impossible de supprimer une entreprise non persistée.");
+        }
+
+        // ⚠ LES NOTES ÉMISES SE CONSERVENT DIX ANS (règle OHADA, décision du 2026-10-15) :
+        // la purge ne les emporte qu'une fois leur archive remise, et à jour. Les deux portes
+        // (propriétaire, console) passent ici.
+        if (($refus = $this->conservation->refusDeSuppression($entreprise)) !== null) {
+            throw new \DomainException($refus);
         }
 
         // ── Phase A : collecte des fichiers à détruire (avant la purge) ────────

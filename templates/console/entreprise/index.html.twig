@@ -33,6 +33,15 @@
                     <td>{{ e.createdAt ? e.createdAt|format_datetime('medium', 'none', locale: app.user.locale) : '—' }}</td>
                     {% if is_granted('ROLE_SUPER_ADMIN') %}
                         <td hidden data-cm-actions>
+                            {# Les pièces comptables se conservent dix ans (OHADA) : la suppression
+                               n'est permise qu'après la remise de cette archive, à jour. #}
+                            <form action="{{ path('console.entreprise.archive_comptable', {id: e.id}) }}" method="post" style="display:inline;">
+                                <input type="hidden" name="_token" value="{{ csrf_token('archive-entreprise-' ~ e.id) }}">
+                                <button type="submit" class="cs-icon-btn"
+                                        title="Télécharger l'archive comptable" aria-label="Télécharger l'archive comptable de {{ e.nom }}">
+                                    {{ ux_icon('tabler:file-zip', {height:'18px', width:'18px'}) }}
+                                </button>
+                            </form>
                             <form action="{{ path('console.entreprise.delete', {id: e.id}) }}" method="post" style="display:inline;"
                                   data-controller="confirm-action" data-action="submit->confirm-action#request"
                                   data-confirm-action-title-value="Supprimer l'entreprise"

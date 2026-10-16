@@ -49,6 +49,23 @@ class EntrepriseController extends AbstractConsoleController
         ]);
     }
 
+    /** L'archive comptable d'un cabinet, avant sa suppression par la console (règle OHADA). */
+    #[Route('/{id}/archive-comptable', name: 'archive_comptable', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[IsGranted('ROLE_SUPER_ADMIN')]
+    public function archiveComptable(Entreprise $entreprise, Request $request, \App\Service\Note\ArchiveComptableDuCabinet $archive): Response
+    {
+        // POST ET JETON : télécharger l'archive ENREGISTRE sa remise, qui rend la suppression
+        // possible. Un lien suivi depuis un autre site ne doit pas le faire à l'insu de qui l'a.
+        if (!$this->isCsrfTokenValid('archive-entreprise-' . $entreprise->getId(), (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Jeton CSRF invalide.');
+        }
+        $remise = $archive->remettre($entreprise);
+
+        return (new \Symfony\Component\HttpFoundation\BinaryFileResponse($remise['chemin']))
+            ->setContentDisposition(\Symfony\Component\HttpFoundation\ResponseHeaderBag::DISPOSITION_ATTACHMENT, $remise['nom'])
+            ->deleteFileAfterSend();
+    }
+
     #[Route('/{id}', name: 'delete', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsGranted('ROLE_SUPER_ADMIN')]
     public function delete(Entreprise $entreprise, Request $request): Response
@@ -59,15 +76,26 @@ class EntrepriseController extends AbstractConsoleController
 
         $nom = $entreprise->getNom();
         $proprietaire = $entreprise->getUtilisateur();
+        // La remise de l'archive comptable, que la purge efface : la notification en garde la trace.
+        $archiveRemise = $entreprise->getArchiveComptableRemiseLe()
+            ? $entreprise->getArchiveComptableRemiseLe()->format('d/m/Y H:i') . ' — SHA-256 ' . $entreprise->getArchiveComptableEmpreinte()
+            : '—';
 
-        // Destruction totale et irréversible (données scopées + fichiers serveur).
-        $this->serviceSuppression->supprimer($entreprise);
+        // Destruction totale et irréversible (données scopées + fichiers serveur) — sauf si
+        // des pièces comptables restent à conserver sans archive remise (règle OHADA).
+        try {
+            $this->serviceSuppression->supprimer($entreprise);
+        } catch (\DomainException $refus) {
+            $this->addFlash('error', $refus->getMessage());
+
+            return $this->redirectToRoute('console.entreprise.index');
+        }
 
         $this->dispatcher->dispatch(new AgentNotificationEvent(
             AgentNotificationEvent::ACTION_DELETE,
             AgentNotificationEvent::TYPE_ENTREPRISE,
             $nom,
-            ['Entreprise' => $nom, 'Propriétaire' => $proprietaire?->getNom() ?: '—'],
+            ['Entreprise' => $nom, 'Propriétaire' => $proprietaire?->getNom() ?: '—', 'Archive comptable remise' => $archiveRemise],
         ));
         $this->addFlash('success', sprintf('Entreprise « %s » supprimée.', $nom));
 
