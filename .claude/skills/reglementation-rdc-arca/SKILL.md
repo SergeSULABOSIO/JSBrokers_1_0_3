@@ -72,10 +72,10 @@ reçoit aussi DGI / TVA 16 % / ARCA 2 %.
     précédente ;
   - **conservation dix ans** : aucune purge d'une note émise sans remise d'une archive
     comptable à jour (PDF, lignes, paiements, journal, empreintes).
-- ⚠ **À CONFIRMER (comptable), RIEN À CODER** : le régime DGI de la **facture normalisée**
-  (dispositif électronique fiscal) s'applique-t-il aux notes de débit portant de la TVA ? Si
-  oui, la note devrait être émise par ce dispositif (numéro, signature fiscale) — ce qui
-  remettrait en cause la numérotation interne. Ne rien en déduire avant la réponse.
+- **Homologation DGI des factures** : chantier DÉCIDÉ, ultérieur (§6, chantier 5). ⚠ **Règle
+  d'ici là** : tout changement qui touche la VALIDATION d'une note ou son PDF doit rester
+  compatible avec une homologation AU MOMENT DE LA VALIDATION et avec l'ajout ultérieur, sur la
+  pièce, du QR code et des références fiscales.
 
 ## 5. Règles RDC appliquées à TOUS les cabinets (constat, non corrigé)
 
@@ -192,6 +192,30 @@ de frais accessoires + 1 840 de TVA + 230 d'ARCA, risque à 15 %.
    les contrats en cours non encore renouvelés (la date d'effet décide — texte de 2018 à
    fournir).
 4. **Semer les minima** à côté des maxima (`risques_defaut.json` ne porte que le maxima).
+5. **Intégration de l'API DGI : homologation des factures** — chantier DÉCIDÉ (Serge,
+   2026-10-16), ULTÉRIEUR, sans plan. La DGI permet de raccorder un module de facturation à sa
+   plateforme pour HOMOLOGUER chaque facture : elle rend un QR code et des références fiscales
+   à porter sur la pièce. Remplace la question « facture normalisée : à confirmer ».
+   - *Prérequis déjà acquis* (`courtage-assurance` §5) :
+     - **numéro attribué à la validation**, continu, dans une transaction
+       (`EmissionDeNote::valider`) — le point unique où brancher l'appel d'homologation ;
+     - **montants figés** à la validation (HT, taxe, TTC, par ligne et au total —
+       `FigeageDeNote`) : ce qui est homologué ne bouge plus ;
+     - **intangibilité** d'une note validée (`NoteIntangible`, dernier rempart au flush) :
+       une pièce homologuée ne se modifie ni ne se supprime ;
+     - **un seul rendu du PDF** (`NotePdf`), partagé par le téléchargement et l'archive : le
+       QR code et les références n'auront qu'un endroit où s'imprimer.
+   - *Prérequis EN PARTIE acquis* : **avoirs liés**. Un avoir se mesure aux lignes figées des
+     notes de débit émises sur le même revenu et la même échéance, et se ventile comme elles
+     (`IndicatorCalculationHelper::getDebitsFigesDuRevenu`). Mais il ne porte AUCUNE
+     référence explicite au numéro de la note qu'il annule : si la DGI exige qu'un avoir cite
+     la facture d'origine, ce lien est à créer.
+   - *À établir au plan* : le contrat de l'API (authentification, champs, délais) ; le
+     comportement si la plateforme ne répond pas (valider quand même et homologuer ensuite,
+     ou refuser la validation) — question métier, à trancher par Serge ; les colonnes qui
+     garderont la réponse (QR code, références, date d'homologation), figées comme le reste ;
+     les notes déjà émises (homologation rétroactive ou non) ; le périmètre (notes de débit
+     portant de la TVA seulement, ou toutes).
 
 Les écarts 1 à 3 du constat d'assiette sont devenus un chantier **prioritaire** de
 `courtage-assurance` (« Assiette et source unique de la commission »), décision du 2026-10-15.
