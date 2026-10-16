@@ -461,7 +461,7 @@ entreprise_guest_tip_body: "This company belongs to :owner. You access it as a g
 entreprise_action_edit_aria: "Edit :company"
 entreprise_action_delete_aria: "Delete :company"
 entreprise_delete_confirm_title: "Delete the company"
-entreprise_delete_confirm_body: "<p>The company <strong>:company</strong>, all of its operational data and its files will be <strong>permanently destroyed</strong> from the server.</p>"
+entreprise_delete_confirm_body: "The company “:company”, all of its operational data and its files will be permanently destroyed from the server."
 entreprise_menu_aria: "Company actions"
 entreprise_menu_open_workspace: "Go to the workspace"
 entreprise_menu_open_onboarding: "Finish setting up the firm"

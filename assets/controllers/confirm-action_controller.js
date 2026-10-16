@@ -19,7 +19,9 @@ import { Controller } from '@hotwired/stimulus';
  *   data-controller="confirm-action"
  *   data-action="submit->confirm-action#request"
  *   data-confirm-action-title-value="…"
- *   data-confirm-action-body-value="…"        (HTML autorisé)
+ *   data-confirm-action-body-value="…"        (TEXTE, jamais du HTML : Twig y place des
+ *                                              noms saisis, et Stimulus rend l'attribut
+ *                                              décodé — cf. confirmation-corps.js)
  *   data-confirm-action-item-value="…"         (élément concerné, optionnel)
  *   data-confirm-action-irreversible-value="true"
  */
@@ -50,7 +52,7 @@ export default class extends Controller {
         document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
             detail: {
                 title: this.titleValue,
-                body: this.bodyValue,
+                corpsTexte: this.bodyValue,
                 itemDescriptions: this.itemValue ? [this.itemValue] : [],
                 showIrreversible: this.irreversibleValue,
                 requirePassword: this.requirePasswordValue,
