@@ -44,7 +44,6 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final class ArchiveComptableDuCabinet
 {
-    private \ZipArchive $zip;
     /** @var array<string, string> chemin dans l'archive => empreinte */
     private array $empreintes = [];
     /** @var array<string, true> */
@@ -58,6 +57,8 @@ final class ArchiveComptableDuCabinet
         private readonly CourtierEcritureComptableService $journal,
         private readonly DocumentFichier $documentFichier,
         private readonly ConservationDesPieces $conservation,
+        // L'écriture du ZIP, remplaçable dans les tests (une fermeture qui échoue).
+        private readonly EcritureZip $zip = new EcritureZip(),
     ) {
     }
 
@@ -81,8 +82,7 @@ final class ArchiveComptableDuCabinet
         $this->empreintes = [];
         $this->nomsPris = [];
         try {
-            $this->zip = new \ZipArchive();
-            if ($this->zip->open($chemin, \ZipArchive::OVERWRITE) !== true) {
+            if (!$this->zip->ouvrir($chemin)) {
                 throw new \RuntimeException('Archive impossible à créer.');
             }
 
@@ -189,7 +189,7 @@ final class ArchiveComptableDuCabinet
             foreach (['notes.csv' => $notes, 'lignes.csv' => $lignes, 'paiements.csv' => $paiements, 'paiements-de-prime.csv' => $primes,
                 'depenses.csv' => $depenses, 'reversements.csv' => $reversements, 'journal.csv' => $journal] as $nom => $contenu) {
                 $csv = self::csv($contenu);
-                $this->zip->addFromString($nom, $csv);
+                $this->zip->ajouterContenu($nom, $csv);
                 $this->empreintes[$nom] = hash('sha256', $csv);
             }
 
@@ -199,12 +199,12 @@ final class ArchiveComptableDuCabinet
             foreach ($this->empreintes as $fichier => $empreinte) {
                 $manifeste .= $empreinte . '  ' . $fichier . "\n";
             }
-            $this->zip->addFromString('MANIFESTE.txt', $manifeste);
+            $this->zip->ajouterContenu('MANIFESTE.txt', $manifeste);
             // ⚠ LA FERMETURE EST LE MOMENT OÙ TOUT S'ÉCRIT : libzip n'ouvre les fichiers ajoutés
             // qu'ici. Un justificatif supprimé entre-temps, un disque plein — et le ZIP sort
             // VIDE, sans exception (avertissement seulement, en production). Une archive vide
             // remise rendrait le cabinet supprimable : on échoue, rien n'est enregistré.
-            if ($this->zip->close() !== true || !is_file($chemin) || filesize($chemin) === 0) {
+            if (!$this->zip->fermer() || !is_file($chemin) || filesize($chemin) === 0) {
                 throw new \RuntimeException('L’archive comptable n’a pas pu être écrite (un justificatif a disparu pendant sa construction, ou le disque est plein). Rien n’a été remis : réessayez.');
             }
 
@@ -280,7 +280,7 @@ final class ArchiveComptableDuCabinet
         if ($empreinte === false) {
             throw new \RuntimeException(sprintf('Le fichier « %s » est illisible : l’archive n’est pas remise.', $cible));
         }
-        $this->zip->addFile($source, $cible);
+        $this->zip->ajouterFichier($cible, $source);
         $this->empreintes[$cible] = $empreinte;
     }
 

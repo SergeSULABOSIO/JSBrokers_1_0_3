@@ -289,6 +289,64 @@ class ConservationDesPiecesTest extends WebTestCase
         @unlink($remise['chemin']);
     }
 
+    /**
+     * UNE ARCHIVE QUI N'A PAS PU S'ÉCRIRE N'EST PAS REMISE. libzip n'écrit qu'à la fermeture :
+     * un justificatif supprimé pendant la construction, un disque plein, et le ZIP sortirait
+     * vide. La fermeture échoue ici (écriture simulée) : la remise n'est pas enregistrée, le
+     * fichier temporaire est effacé, et la suppression du cabinet reste refusée.
+     */
+    public function testUneArchiveQuiNAPuSEcrireNestPasRemise(): void
+    {
+        [$c] = $this->cabinetAvecUneNoteEmise();
+        $conteneur = static::getContainer();
+        $fermetureRatee = new class extends \App\Service\Note\EcritureZip {
+            public ?string $chemin = null;
+
+            public function ouvrir(string $chemin): bool
+            {
+                $this->chemin = $chemin;
+
+                return parent::ouvrir($chemin);
+            }
+
+            public function fermer(): bool
+            {
+                parent::fermer();
+
+                return false; // ce que rend libzip quand un fichier ajouté a disparu
+            }
+        };
+        $archive = new ArchiveComptableDuCabinet(
+            $this->em(),
+            $conteneur->get(\App\Service\Note\NotePdf::class),
+            $conteneur->get(\App\Services\Canvas\Indicator\IndicatorCalculationHelper::class),
+            $conteneur->get(\App\Comptabilite\CourtierEcritureComptableService::class),
+            $conteneur->get(\App\Service\Document\DocumentFichier::class),
+            $conteneur->get(ConservationDesPieces::class),
+            $fermetureRatee,
+        );
+
+        try {
+            $archive->remettre($this->cabinet($c));
+            self::fail('Une archive qui n’a pas pu s’écrire ne se remet pas.');
+        } catch (\RuntimeException $echec) {
+            self::assertStringContainsString('n’a pas pu être écrite', $echec->getMessage());
+        }
+
+        self::assertFileDoesNotExist((string) $fermetureRatee->chemin, 'Le fichier temporaire est effacé.');
+        $this->em()->clear();
+        $cabinet = $this->cabinet($c);
+        self::assertNull($cabinet->getArchiveComptableRemiseLe(), 'Aucune remise enregistrée.');
+        self::assertNull($cabinet->getArchiveComptableEmpreinte());
+        self::assertNotNull($conteneur->get(ConservationDesPieces::class)->refusDeSuppression($cabinet));
+        try {
+            $conteneur->get(ServiceSuppressionEntreprise::class)->supprimer($cabinet);
+            self::fail('La suppression reste refusée.');
+        } catch (\DomainException) {
+        }
+        self::assertSame(1, (int) $this->em()->getConnection()->fetchOne('SELECT COUNT(*) FROM entreprise WHERE id = ?', [$c['entreprise']]));
+    }
+
     /** Un justificatif joint APRÈS la remise n'est pas dans l'archive remise : elle n'est plus à jour. */
     public function testUnJustificatifJointApresLaRemiseRendLArchivePasAJour(): void
     {
