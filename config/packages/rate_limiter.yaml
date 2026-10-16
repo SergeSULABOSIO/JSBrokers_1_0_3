@@ -1,0 +1,26 @@
+# LE FORMULAIRE DE CONTACT ANONYME (vitrine) — limites d'envoi.
+#
+# Un visiteur sans compte choisit l'adresse où Joseara envoie l'accusé de réception :
+# sans limite, le formulaire est un relais d'e-mails pour qui veut. Deux clés, parce que
+# deux abus : un même poste qui envoie en rafale (par IP), et une même boîte qu'on noie
+# depuis plusieurs postes (par adresse de destination).
+#
+# L'IP est REMOTE_ADDR : l'hébergement ne passe par aucun proxy (vérifié par Serge,
+# 2026-10-16 : ni cf-ray ni « server: cloudflare »), TRUSTED_PROXIES reste vide. Chaque
+# refus journalise l'IP retenue (canal « contact ») pour le vérifier en production.
+#
+# `lock_factory: null` : pas de verrou entre requêtes simultanées (le composant Lock
+# n'est pas installé). Au pire, deux envois exactement simultanés sont comptés de façon
+# approchée — sans gravité pour un formulaire de contact.
+framework:
+    rate_limiter:
+        contact_par_ip:
+            policy: sliding_window
+            limit: 5
+            interval: '1 hour'
+            lock_factory: null
+        contact_par_destinataire:
+            policy: sliding_window
+            limit: 3
+            interval: '1 day'
+            lock_factory: null

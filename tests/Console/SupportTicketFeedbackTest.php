@@ -7,6 +7,7 @@ use App\Entity\Crm\CrmTicketFeedback;
 use App\Entity\Utilisateur;
 use App\Enum\Departement;
 use App\Repository\Crm\CrmTicketRepository;
+use App\Service\Contact\GardeDuFormulaireDeContact;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -105,6 +106,10 @@ class SupportTicketFeedbackTest extends WebTestCase
         $form['demande_contact[email]'] = self::CONTACT_EMAIL;
         $form['demande_contact[objet]'] = 'Question';
         $form['demande_contact[message]'] = 'Bonjour, j\'ai une question sur vos services.';
+        // Un humain met plus de trois secondes à remplir le formulaire : sans cela, le
+        // garde le prendrait pour un robot et n'enverrait rien (GardeDuFormulaireDeContact).
+        $form['demande_contact[affiche_le]'] = static::getContainer()->get(GardeDuFormulaireDeContact::class)
+            ->jeton(new \DateTimeImmutable('-1 minute'));
         $this->client->submit($form);
         $this->assertResponseRedirects();
 

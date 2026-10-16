@@ -16,6 +16,7 @@ use App\Entity\Utilisateur;
 use App\DTO\DemandeContactDTO;
 use App\Form\DemandeContactType;
 use App\Event\DemandeContactEvent;
+use App\Service\Contact\GardeDuFormulaireDeContact;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -35,7 +36,7 @@ class SecurityController extends AbstractController
     ) {}
 
     #[Route(path: '/', name: 'app_index')]
-    public function index(Request $request, EventDispatcherInterface $dispatcher): Response
+    public function index(Request $request, EventDispatcherInterface $dispatcher, GardeDuFormulaireDeContact $garde): Response
     {
         // Vitrine publique : la langue ne peut dépendre d'un compte connecté. On
         // l'expose via un paramètre ?lang= (fr|en), auto-suffisant pour les visiteurs
@@ -57,11 +58,20 @@ class SecurityController extends AbstractController
         ]);
         $contactForm->handleRequest($request);
         if ($contactForm->isSubmitted() && $contactForm->isValid()) {
-            try {
-                $dispatcher->dispatch(new DemandeContactEvent($contactForm->getData()));
+            // LE GARDE AVANT L'ENVOI : un robot reçoit la même réponse qu'un humain, mais
+            // rien ne part ; un envoi au-delà des limites est refusé, et le dit.
+            $verdict = $garde->verifier($request, $contactForm, $contactForm->getData());
+            if ($verdict === GardeDuFormulaireDeContact::LIMITE) {
+                $this->addFlash('error', $this->translator->trans('contact_trop_de_demandes'));
+            } elseif ($verdict === GardeDuFormulaireDeContact::ROBOT) {
                 $this->addFlash('success', $this->translator->trans('contact_email_sent_ok'));
-            } catch (\Throwable) {
-                $this->addFlash('error', $this->translator->trans('contact_email_sent_error'));
+            } else {
+                try {
+                    $dispatcher->dispatch(new DemandeContactEvent($contactForm->getData()));
+                    $this->addFlash('success', $this->translator->trans('contact_email_sent_ok'));
+                } catch (\Throwable) {
+                    $this->addFlash('error', $this->translator->trans('contact_email_sent_error'));
+                }
             }
             return $this->redirect($this->generateUrl('app_index', ['lang' => $lang]) . '#contact');
         }

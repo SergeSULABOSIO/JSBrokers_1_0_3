@@ -3,6 +3,8 @@
 namespace App\Form;
 
 use App\DTO\DemandeContactDTO;
+use App\Service\Contact\GardeDuFormulaireDeContact;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -15,6 +17,10 @@ use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 
 class DemandeContactType extends AbstractType
 {
+    public function __construct(private readonly GardeDuFormulaireDeContact $garde)
+    {
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -54,6 +60,23 @@ class DemandeContactType extends AbstractType
                 'label' => "ContactForm.phone",
                 'required' => false,
                 'empty_data' => '',
+            ])
+            // ANTI-ROBOT, sans service tiers (GardeDuFormulaireDeContact) : un champ piège
+            // qu'un humain ne voit ni n'atteint au clavier, et l'instant d'affichage signé
+            // — un formulaire renvoyé en moins de trois secondes n'a été lu par personne.
+            ->add(GardeDuFormulaireDeContact::CHAMP_PIEGE, TextType::class, [
+                'mapped' => false,
+                'required' => false,
+                'label' => 'Site web (laisser vide)',
+                'attr' => ['autocomplete' => 'off', 'tabindex' => '-1'],
+                'row_attr' => [
+                    'aria-hidden' => 'true',
+                    'style' => 'position:absolute; left:-10000px; top:auto; width:1px; height:1px; overflow:hidden;',
+                ],
+            ])
+            ->add(GardeDuFormulaireDeContact::CHAMP_HORODATAGE, HiddenType::class, [
+                'mapped' => false,
+                'data' => $this->garde->jeton(),
             ])
             // Le bouton de soumission est fourni par chaque template (pour le styliser
             // et y intégrer une icône) ; il n'est donc pas déclaré dans le type.

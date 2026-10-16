@@ -17,6 +17,7 @@ ContactForm.send: "Envoyer le message"
 contact_email_laisser_message: "Cher <strong>:userName</strong>, </br>Merci de nous laisser un message à travers ce formulaire. Notre équipe vous reviendra dans le plus bref délai."
 contact_email_sent_ok: "L'email a bien été envoyé. Nous vous reviendrons au plus vite."
 contact_email_sent_error: "Echec d'envoie de l'email. Merci de réessyer ou vérifier si vous avez la connexion Internet."
+contact_trop_de_demandes: "Vous avez envoyé plusieurs messages en peu de temps. Merci de réessayer un peu plus tard : votre demande précédente nous est bien parvenue."
 contact_email_title: "Formulaire de contact"
 base_welcome: 'Bienvenue!'
 base_tutoriels: 'Tutoriels'

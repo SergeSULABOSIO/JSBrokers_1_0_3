@@ -3,25 +3,17 @@
 
 {% block subject %}Joseara — Accusé de réception{% endblock %}
 
-{% set wantsCallback = data.wantsPhone and data.phone is not empty %}
-
-{# ⚠ `paragraph` rend son argument en |raw : TOUTE donnée saisie concaténée au balisage
-   passe par |e. Ici, c'est un visiteur ANONYME qui saisit — et qui choisit l'adresse. #}
+{#
+   L'ACCUSÉ NE RECOPIE RIEN DE CE QUI A ÉTÉ SAISI, hors le nom (échappé) — décision de
+   Serge du 2026-10-16. Le visiteur est anonyme et choisit lui-même l'adresse : recopier
+   l'objet, le message ou le téléphone ferait de ce formulaire un moyen d'envoyer, sous la
+   signature de Joseara, le texte de son choix à qui il veut. Le message complet ne part
+   qu'à l'équipe (message_demande_de_contact).
+#}
 {% block content %}
     {{ m.heading('feedback', 'Merci pour votre message') }}
-    {{ m.paragraph(
-        'Bonjour <strong>' ~ data.name|e ~ '</strong>,<br>'
-        ~ (wantsCallback
-            ? 'nous avons bien reçu votre message. Notre équipe vous rappellera au <strong>' ~ data.phone|e ~ '</strong> dans les meilleurs délais.'
-            : 'nous avons bien reçu votre message. Notre équipe vous répondra dans les meilleurs délais.')
-    ) }}
-
-    {{ m.heading('action:description', 'Votre message') }}
-    {{ m.paragraph('<strong>Objet&nbsp;:</strong> ' ~ data.objet|e) }}
-    {% if wantsCallback %}
-        {{ m.paragraph('<strong>Téléphone&nbsp;:</strong> ' ~ data.phone|e) }}
-    {% endif %}
-    {{ m.paragraph(data.message|nl2br) }}
+    {{ m.paragraph('Bonjour <strong>' ~ data.name|e ~ '</strong>,') }}
+    {{ m.paragraph('Nous avons bien reçu votre message. Notre équipe vous répondra dans les meilleurs délais.') }}
 
     {{ m.note('Ceci est un accusé de réception automatique : merci de ne pas y répondre directement.') }}
 {% endblock %}

@@ -8,6 +8,7 @@ use App\Entity\Utilisateur;
 use App\Form\DemandeContactType;
 use Symfony\Component\Mime\Email;
 use App\Event\DemandeContactEvent;
+use App\Service\Contact\GardeDuFormulaireDeContact;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -34,7 +35,7 @@ class DemandeContactController extends AbstractController
     ) {}
 
     #[Route(name: 'index')]
-    public function index(Request $request, EventDispatcherInterface $dispatcher): Response
+    public function index(Request $request, EventDispatcherInterface $dispatcher, GardeDuFormulaireDeContact $garde): Response
     {
         /** @var Utilisateur */
         $user = $this->getUser();
@@ -44,13 +45,21 @@ class DemandeContactController extends AbstractController
         $form = $this->createForm(DemandeContactType::class, $data);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
-            try {
-                //Lancer un évènement
-                $dispatcher->dispatch(new DemandeContactEvent($data));
+            // MÊME GARDE que la vitrine : cette porte accepte le même formulaire (même jeton
+            // CSRF), elle ne doit pas servir à contourner les limites.
+            $verdict = $garde->verifier($request, $form, $data);
+            if ($verdict === GardeDuFormulaireDeContact::LIMITE) {
+                $this->addFlash("danger", $this->translator->trans("contact_trop_de_demandes"));
+            } elseif ($verdict === GardeDuFormulaireDeContact::ROBOT) {
                 $this->addFlash("success", $this->translator->trans("contact_email_sent_ok"));
-            } catch (\Throwable $th) {
-                //throw $th;
-                $this->addFlash("danger", $this->translator->trans("contact_email_sent_error"));
+            } else {
+                try {
+                    //Lancer un évènement
+                    $dispatcher->dispatch(new DemandeContactEvent($data));
+                    $this->addFlash("success", $this->translator->trans("contact_email_sent_ok"));
+                } catch (\Throwable) {
+                    $this->addFlash("danger", $this->translator->trans("contact_email_sent_error"));
+                }
             }
             return $this->redirectToRoute('admin.demande.contact.index');
         }
