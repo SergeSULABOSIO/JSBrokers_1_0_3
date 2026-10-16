@@ -310,6 +310,38 @@ class ReversementEditionTest extends WebTestCase
     }
 
     /**
+     * UNE ÉDITION PAR LE PICKER NE PERD PAS LA DESCRIPTION (2026-10-17).
+     *
+     * Le picker de reversement n'envoie AUCUNE description : il ne la propose pas. Le
+     * serveur la réécrivait pourtant avec ce qu'il ne recevait pas — `null` — à chaque
+     * correction. Une perte de donnée silencieuse : la date corrigée, le commentaire disparu.
+     */
+    public function testCorrigerUnVersementGardeSaDescription(): void
+    {
+        $s = $this->semer();
+        $reversement = $this->em()->getRepository(ReversementRetroAgent::class)->find($s['ids'][0]);
+        $reversement->setDescription('Virement de septembre, convenu par téléphone.');
+        $this->em()->flush();
+        $this->connecter();
+
+        $this->poster(
+            $s['ids'][0],
+            [['trancheId' => 0, 'avenantId' => $s['avenantIds'][0], 'montant' => 10.0]],
+            '2026-09-15',
+        );
+        self::assertResponseIsSuccessful();
+
+        $this->em()->clear();
+        $apres = $this->em()->getRepository(ReversementRetroAgent::class)->find($s['ids'][0]);
+        self::assertSame('2026-09-15', $apres?->getPaidAt()?->format('Y-m-d'), 'La correction est bien passée.');
+        self::assertSame(
+            'Virement de septembre, convenu par téléphone.',
+            $apres?->getDescription(),
+            'La description, que le picker n\'envoie pas, a été effacée par la correction.',
+        );
+    }
+
+    /**
      * UN VIREMENT QUI RETOMBE À UNE SEULE LIGNE N'EST PLUS UN LOT.
      *
      * La `lotReference` n'est posée qu'à partir de deux lignes — sans quoi un versement
