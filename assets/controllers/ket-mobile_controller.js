@@ -1,5 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 import { CHAT, FEUILLE, surfaceSuivante, indexDuProchainFocus } from './ket-mobile-feuille.js';
+import { echapper } from './echapper.js';
 
 /**
  * @class KetMobileController
@@ -345,11 +346,10 @@ export default class extends Controller {
         if (!this.hasSortieUrlValue || this.sortieUrlValue === '') return;
 
         const nom = this.entrepriseNomValue || 'cette entreprise';
-        const safeNom = nom.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
             detail: {
                 title: "Fermer l'espace de travail",
-                body: `<p>Vous êtes sur le point de fermer l'espace de travail de <strong>${safeNom}</strong> et de revenir à votre page personnelle.</p><p>Voulez-vous continuer ?</p>`,
+                corpsHtml: `<p>Vous êtes sur le point de fermer l'espace de travail de <strong>${echapper(nom)}</strong> et de revenir à votre page personnelle.</p><p>Voulez-vous continuer ?</p>`,
                 showIrreversible: false,
                 onConfirm: {
                     type: 'app:workspace.logout-execute',

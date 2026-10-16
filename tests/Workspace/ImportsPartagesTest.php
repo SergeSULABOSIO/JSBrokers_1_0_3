@@ -68,12 +68,24 @@ class ImportsPartagesTest extends TestCase
     /**
      * Le CODE seul : ni commentaires, ni chaînes.
      *
-     * Les deux emploient les mêmes mots sans rien consommer.
+     * Les deux emploient les mêmes mots sans rien consommer. Sauf l'INTERPOLATION d'un
+     * gabarit littéral : `${echapper(nom)}` est du code, et consomme l'import — on la garde.
      */
     private function codeNu(string $source): string
     {
         $sansCommentaires = preg_replace('!/\*.*?\*/|//[^\n]*!s', '', $source) ?? $source;
-        $sansChaines = preg_replace('/\'[^\'\\\\\n]*\'|"[^"\\\\\n]*"|`[^`]*`/s', "''", $sansCommentaires);
+        $sansChaines = preg_replace_callback(
+            '/\'[^\'\\\\\n]*\'|"[^"\\\\\n]*"|`[^`]*`/s',
+            static function (array $m): string {
+                if (!str_starts_with($m[0], '`')) {
+                    return "''";
+                }
+                preg_match_all('/\$\{([^}]*)\}/', $m[0], $interpolations);
+
+                return "''" . ($interpolations[1] === [] ? '' : ' (' . implode(') (', $interpolations[1]) . ')');
+            },
+            $sansCommentaires,
+        );
 
         return $sansChaines ?? $sansCommentaires;
     }

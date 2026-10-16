@@ -4,8 +4,8 @@
  * `confirm-action` transporte un corps écrit dans un attribut de gabarit — où Twig
  * place des noms saisis (cabinet, utilisateur, coupon…). Stimulus DÉCODE l'attribut :
  * injecté en HTML, `« <img onerror=…> »` s'exécutait chez l'agent de la console qui
- * ouvrait la confirmation. `corpsTexte` est posé par textContent ; `body` (HTML) reste
- * réservé aux appelants JS qui composent eux-mêmes un balisage échappé.
+ * ouvrait la confirmation. `body` et `corpsTexte` sont posés par textContent ; seul
+ * `corpsHtml` porte du balisage — un appelant JS qui l'oublie obtient du texte.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -24,12 +24,27 @@ test('un corps texte reste du texte, même s\'il ressemble à du HTML', () => {
     );
 });
 
-test('le texte l\'emporte sur un body HTML transmis en même temps', () => {
-    assert.deepEqual(contenuDuCorps({ corpsTexte: 'texte', body: '<b>html</b>' }), { html: false, valeur: 'texte' });
+test('body est du TEXTE : un appelant qui oublie corpsHtml n\'ouvre pas de faille', () => {
+    assert.deepEqual(contenuDuCorps({ body: 'Fermer <img src=x onerror=alert(1)> ?' }), { html: false, valeur: 'Fermer <img src=x onerror=alert(1)> ?' });
 });
 
-test('un body HTML venu d\'un appelant JS reste du HTML', () => {
-    assert.deepEqual(contenuDuCorps({ body: 'Fermer <strong>X</strong> ?' }), { html: true, valeur: 'Fermer <strong>X</strong> ?' });
+test('corpsHtml, la seule porte du balisage, l\'emporte sur le texte', () => {
+    assert.deepEqual(contenuDuCorps({ corpsHtml: 'Fermer <strong>X</strong> ?', body: 'x' }), { html: true, valeur: 'Fermer <strong>X</strong> ?' });
+});
+
+test('corpsTexte l\'emporte sur body', () => {
+    assert.deepEqual(contenuDuCorps({ corpsTexte: 'texte', body: 'autre' }), { html: false, valeur: 'texte' });
+});
+
+// Les appelants qui composent un corps balisé passent par corpsHtml ET échappent leurs
+// données avec la fonction partagée — plus de copie locale (safeNom, escapeHtml…).
+test('chaque corps balisé passe par corpsHtml et par echapper', () => {
+    for (const fichier of ['assistant-ia_controller.js', 'ket-mobile_controller.js', 'workspace-manager_controller.js', 'packs-editor_controller.js', 'weights-editor_controller.js']) {
+        const code = source(fichier);
+        assert.doesNotMatch(code, /\bbody:\s*`[^`]*<strong>/, `${fichier} : un body balisé serait désormais affiché en texte`);
+        assert.match(code, /corpsHtml:\s*`[^`]*\$\{echapper\(/, `${fichier} : la donnée du corps balisé doit passer par echapper`);
+        assert.match(code, /import \{ echapper \} from '\.\/echapper\.js'/, fichier);
+    }
 });
 
 test('sans corps, la question par défaut, en texte', () => {
@@ -53,4 +68,12 @@ test('la confirmation pose son titre en texte et son corps par contenuDuCorps', 
     assert.doesNotMatch(code, /titleTarget\.innerHTML\s*=/);
     assert.match(code, /contenuDuCorps\(payload\)/);
     assert.doesNotMatch(code, /bodyTarget\.innerHTML\s*=\s*body\b/);
+});
+
+// LE TOAST : même garde, sur son branchement. Son texte cite des noms saisis et des
+// refus du serveur ; il ne doit jamais rentrer dans la chaîne HTML du toast.
+test('le toast pose son texte par textContent, jamais dans sa chaîne HTML', () => {
+    const code = source('notification-manager_controller.js');
+    assert.doesNotMatch(code, /\$\{\s*text\s*\}/);
+    assert.match(code, /querySelector\('\.toast-body'\)\.textContent\s*=\s*text/);
 });

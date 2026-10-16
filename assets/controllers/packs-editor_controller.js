@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { echapper } from './echapper.js';
 
 /**
  * @class PacksEditorController
@@ -112,7 +113,7 @@ export default class extends Controller {
         document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
             detail: {
                 title: 'Supprimer le paquet',
-                body: `Voulez-vous vraiment supprimer le paquet <strong>${this.escapeHtml(nom)}</strong> ?`
+                corpsHtml: `Voulez-vous vraiment supprimer le paquet <strong>${echapper(nom)}</strong> ?`
                     + ' Il ne sera plus proposé à l\'achat ni affiché sur le portail public.',
                 itemDescriptions: [nom],
                 showIrreversible: true,
@@ -229,13 +230,6 @@ export default class extends Controller {
 
     titleize(key) {
         return key.charAt(0).toUpperCase() + key.slice(1);
-    }
-
-    /** Échappe le HTML (le corps de la confirmation est inséré via innerHTML). */
-    escapeHtml(unsafe) {
-        return String(unsafe)
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 
     formatInt(value) {
