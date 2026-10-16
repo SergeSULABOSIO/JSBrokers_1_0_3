@@ -13,6 +13,10 @@ monolog:
         # bavard, le retirer des alertes d'un mot — sans rien perdre de sa
         # journalisation ni de son comptage dans la Console.
         - navigateur
+        # Refus du formulaire de contact anonyme (limiteur, robot) : l'IP retenue, jamais
+        # le contenu. Canal SÉPARÉ et fichier dédié : en prod, « main » est en
+        # fingers_crossed sur « error » et n'écrirait jamais ces avertissements.
+        - contact
 
 when@dev:
     monolog:
@@ -32,6 +36,13 @@ when@dev:
                 # huit journées de septembre 2026 avaient déjà disparu avant qu'on les lise.
                 # Le coût est dérisoire — ces fichiers pèsent quelques dizaines de kilo-octets
                 # par jour — et prod.log reste à 14, lui qui pèse autrement plus.
+                max_files: 90
+                formatter: monolog.formatter.json
+            contact:
+                type: rotating_file
+                path: "%kernel.logs_dir%/contact.log"
+                level: info
+                channels: [contact]
                 max_files: 90
                 formatter: monolog.formatter.json
             # uncomment to get logging in your browser
@@ -63,6 +74,11 @@ when@test:
                 type: stream
                 path: "%kernel.logs_dir%/%kernel.environment%.log"
                 level: debug
+            # Les refus du formulaire de contact, relus par FormulaireDeContactTest.
+            contact:
+                type: test
+                level: info
+                channels: [contact]
 
 when@prod:
     monolog:
@@ -113,6 +129,15 @@ when@prod:
                 # huit journées de septembre 2026 avaient déjà disparu avant qu'on les lise.
                 # Le coût est dérisoire — ces fichiers pèsent quelques dizaines de kilo-octets
                 # par jour — et prod.log reste à 14, lui qui pèse autrement plus.
+                max_files: 90
+                formatter: monolog.formatter.json
+            # Refus du formulaire de contact : var/log/contact-AAAA-MM-JJ.log, lisible
+            # depuis le Gestionnaire de fichiers de cPanel (même raison que prod.log).
+            contact:
+                type: rotating_file
+                path: "%kernel.logs_dir%/contact.log"
+                level: info
+                channels: [contact]
                 max_files: 90
                 formatter: monolog.formatter.json
 

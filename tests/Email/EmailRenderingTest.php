@@ -133,14 +133,15 @@ class EmailRenderingTest extends KernelTestCase
             'senderEmail' => 'contact@joseara.com',
         ]);
 
-        // Accusé de réception adressé au visiteur (nom repris, message renvoyé).
+        // Accusé de réception adressé au visiteur : son nom, et une phrase fixe.
         $this->assertStringContainsString('Merci pour votre message', $html);
         $this->assertStringContainsString('Victor ESAFE', $html);
-        // L'accusé confirme le rappel téléphonique au numéro fourni.
-        $this->assertStringContainsString('+243 999 000 111', $html);
-        $this->assertStringContainsString('rappellera', $html);
-        // Le saut de ligne du message est converti en <br> (filtre nl2br).
-        $this->assertStringContainsString('<br', $html);
+        $this->assertStringContainsString('Nous avons bien reçu votre message', $html);
+        // RIEN de ce qu'il a saisi d'autre n'est recopié (décision du 2026-10-16) : un
+        // visiteur anonyme choisit l'adresse, l'accusé ne doit pas transporter son texte.
+        $this->assertStringNotContainsString('Demande de rendez-vous', $html);
+        $this->assertStringNotContainsString('Je souhaite un devis', $html);
+        $this->assertStringNotContainsString('+243 999 000 111', $html);
         $this->assertStringContainsString('<svg', $html);
         $this->assertStringContainsString('cid:', $html);
     }
