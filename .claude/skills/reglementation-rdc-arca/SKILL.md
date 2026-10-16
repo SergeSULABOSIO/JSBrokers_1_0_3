@@ -1,10 +1,6 @@
 ---
 name: reglementation-rdc-arca
-description: Ce que JSBrokers implémente de la réglementation de la RDC (ARCA, DGI, OHADA) — taux et taxes semés, mentions légales, comptabilité SYSCOHADA — avec leurs preuves, ce qui est configurable par cabinet, les règles RDC appliquées à tous les cabinets, et les référentiels externes pas encore implémentés. Invoquer dès qu'une taxe, un taux réglementaire, une mention légale, un état ou une règle propre à la RDC est en jeu.
-trigger when: >
-  Déclencher AUTOMATIQUEMENT dès qu'une tâche mentionne : ARCA, DGI, TVA, taxe, frais de
-  surveillance, RDC, Congo, CDF, OHADA, SYSCOHADA, RCCM, Id.Nat, numéro d'impôt, agrément,
-  licence, état prudentiel, bordereau réglementaire, barème de commission, taux de commission.
+description: Ce que JSBrokers implémente de la réglementation RDC (ARCA, DGI, OHADA) — taxes et taux semés, mentions légales, SYSCOHADA, ce qui est configurable par cabinet, référentiels pas encore implémentés. Invoquer dès qu'il est question d'ARCA, DGI, TVA, taxe, frais de surveillance, RDC, Congo, CDF, OHADA, SYSCOHADA, RCCM, Id.Nat, numéro d'impôt, agrément, licence, état prudentiel, bordereau réglementaire, barème ou taux de commission, ou d'une mention légale.
 ---
 
 # Skill — Réglementation RDC / ARCA dans JSBrokers
