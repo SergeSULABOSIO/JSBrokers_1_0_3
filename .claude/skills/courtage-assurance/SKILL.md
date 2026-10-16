@@ -85,11 +85,13 @@ supprimée (§7) : ces règles n'ont plus qu'un exemplaire.
 
 | Invariant | Preuve | Test |
 |---|---|---|
-| **Sens** : débit validé = D 411 TTC / C 706 HT + C 443 taxe ; avoir = l'inverse ; règlement = D 521/571 / C 411. Seule une note VALIDÉE fait naître la créance | `CourtierEcritureComptableService.php:20-48`, :178-206 | `FacturationComptabiliteTest` |
+| **Sens** : débit validé = D 411 TTC / C 706 HT + C 443 taxe ; avoir = l'inverse (ventilé HT et taxe comme la note qu'il annule) ; règlement = D 521/571 / C 411. Seule une note VALIDÉE fait naître la créance, à sa **date d'émission** (`emiseLe`) | `CourtierEcritureComptableService.php:20-48`, :178-206 | `FacturationComptabiliteTest` |
 | **Avoir plutôt que suppression** : on ne crédite que l'émis ; les échéances sans objet passent « à régulariser » sans changer de montant ; l'abandon d'un mouvement qui a vécu financièrement est refusé (409) | `SourceDeFacturation.php:198-203` ; `RegularisationDesEcheances.php:13-27` ; `LiensProteges.php:77-185` | `MouvementAvenantTest::testUneNoteDeCreditEmiseInterditLAbandon` |
 | **Taxes et exonération** : taxe sur commission nulle si client exonéré OU risque non imposable — les deux taxes tombent ensemble | `ServiceTaxes.php:139-179` | `CommissionExonereeTest` |
-| **Une note réglée ne se supprime pas et ne perd pas de ligne, elle s'annule par la note contraire** (avoir pour une note de débit, note de débit pour un avoir) : toute suppression qui détruirait une note ayant reçu un paiement, ou lui retirerait une ligne, est refusée (409 qui nomme la note) — la note elle-même, ou emportée/amputée par la suppression d'une piste, d'une police ou d'un client ; épargner le règlement n'y change rien. Un PAIEMENT, lui, reste supprimable (correction d'une saisie erronée, reprise mal faite) : le refus le propose, et la note est ensuite libre. Écran, Ket et dossier (décisions du 2026-10-14) | `SuppressionEnCascade::notesRegleesTouchees` (contrôle du plan final) | `SuppressionEnChaineTest::testUneNoteRegleeNeSeSupprimePas`, `::testUneNoteRegleeAChevalNePerdPasDeLigne`, `::testEpargnerLeReglementNeRendPasLaFactureSupprimable`, `::testKetNeSupprimePasUneNoteReglee`, `::testUneNoteDeCreditRegleeSAnnuleParUneNoteDeDebit` |
-| **Numérotation des notes : unique dans le cabinet, et chronologique** (décisions du 2026-10-14). Le produit génère `ND-AAAA-NNNNN` (débit) / `NC-AAAA-NNNNN` (crédit) : une série par cabinet, par année et par type, remise à 1 chaque année. Le numéro est pris **à l'écriture**, pour toutes les portes (dialogue, picker, Ket, reprise, bordereau) : un formulaire abandonné n'en consomme aucun. Le champ reste **éditable** : une référence saisie est conservée et ne consomme rien ; un numéro déjà saisi à la main est sauté. Une référence n'appartient qu'à une note du cabinet (casse et accents confondus) ; deux cabinets peuvent porter la même. Une note émise garde un numéro (le vider est refusé). Un numéro peut se perdre si l'écriture échoue hors transaction englobante, jamais se répéter | `NumerotationDesNotes::prochaine` (`NumerotationDesNotes.php:63`, incrément SQL atomique) ; `NumerotationDesNotesListener::onFlush` (:37) ; `ChampsObligatoiresInspector.php:46` (référence non exigée à la création) et :320 (unicité, référence vidée, longueur) ; index `uniq_note_entreprise_reference` (`Note.php:16`) ; migration `Version20261014160000` (doublons existants suffixés -2, -3, chaque renommage listé) | `NumerotationDesNotesTest` (13 tests, dont la concurrence entre deux connexions) ; `NoteCreationDialogueTest` |
+| **Une note réglée ne se supprime pas et ne perd pas de ligne, elle s'annule par la note contraire** (avoir pour une note de débit, note de débit pour un avoir) — règle des **brouillons** et des **notes de reprise** (une note VALIDÉE, elle, ne se supprime jamais : invariant suivant) : toute suppression qui détruirait une note ayant reçu un paiement, ou lui retirerait une ligne, est refusée (409 qui nomme la note) — la note elle-même, ou emportée/amputée par la suppression d'une piste, d'une police ou d'un client ; épargner le règlement n'y change rien. Un PAIEMENT, lui, reste supprimable (correction d'une saisie erronée, reprise mal faite) : le refus le propose, et la note est ensuite libre. Écran, Ket et dossier (décisions du 2026-10-14) | `SuppressionEnCascade::notesRegleesTouchees` (contrôle du plan final) | `SuppressionEnChaineTest::testUneNoteRegleeNeSeSupprimePas`, `::testUneNoteRegleeAChevalNePerdPasDeLigne`, `::testEpargnerLeReglementNeRendPasLaFactureSupprimable`, `::testKetNeSupprimePasUneNoteReglee`, `::testUneNoteDeCreditRegleeSAnnuleParUneNoteDeDebit` |
+| **Numérotation continue, attribuée à la validation** (pratique comptable OHADA, décision de Serge du 2026-10-15 ; remplace celle du 2026-10-14). Chaque note **validée** porte un numéro unique, chronologique et continu, sans trou ni doublon : `ND-AAAA-NNNNN` (débit) / `NC-AAAA-NNNNN` (crédit), une série par cabinet, par année d'émission et par type. Il est attribué **à la validation** — c'est elle qui fait naître la créance —, dans la même transaction : une validation qui échoue rend son numéro à la série ; deux validations simultanées s'attendent (verrou de ligne du compteur, jusqu'au commit). La date d'émission (`emiseLe`) est l'instant de la validation, prise après le verrou : jamais antérieure à la précédente de la série. Un **brouillon** porte une référence provisoire `BROUILLON-XXXXXXXX` et se supprime sans trou. La référence **ne se saisit plus**. Un numéro déjà émis se conserve (la note de prod `N1790767662318`, d'avant la règle) ; un numéro déjà porté est sauté, jamais bloquant. Seuls chemins : « Valider la note » (écran), picker de facturation, Ket (`validated: true`, appliqué après les lignes) — tous par `EmissionDeNote` | `EmissionDeNote::valider` ; `NumerotationDesNotesListener` ; `NumerotationDesNotes::prochaine` (UPDATE d'abord) ; migration `Version20261015170000` | `NumerotationDesNotesTest` (validation qui échoue après la prise du numéro, deux validations simultanées, brouillon supprimé, Ket, cabinet étranger) |
+| **Intangibilité d'une note validée** (OHADA, 2026-10-15) : ses montants — HT, taxe, TTC, par ligne et au total — sont **figés à la validation** et ne se recalculent plus ; une note validée ne se modifie plus (en-tête, lignes, comptes, dévalidation) et ne se supprime pas, payée ou non, ni directement ni en cascade, ni par un détachement. Restent permis : ses paiements, ses documents, la date d'envoi. Toute correction passe par la note contraire, puis une nouvelle note. Un changement de prime, de taux ou de chargement après facturation ne touche jamais la note : il fait apparaître un écart « à facturer » ou « à créditer » sur la fiche du revenu, et l'avoir se mesure à ce qui a été ÉMIS (il reste possible si le dû tombe à zéro). Le journal, dérivé des montants figés et daté de l'émission, ne change plus. Note de **reprise** : hors série, figée, non modifiable, mais supprimable entière (décision du 2026-10-16) | `FigeageDeNote` ; `NoteIntangible` (écran 409, dialogue en lecture, Ket bloqué) ; `IntangibiliteDesNotesListener` (dernier rempart) ; `SuppressionEnCascade` ; `IndicatorCalculationHelper::getRevenuMontantFacture` ; commande `app:notes:figer` (l'existant) | `FigeageDesNotesTest`, `IntangibiliteDesNotesTest` |
+| **Conservation dix ans** (Acte uniforme OHADA relatif au droit comptable, 2026-10-15) : rien ne purge une note émise. La suppression d'un cabinet n'est permise qu'après la remise de son **archive comptable À JOUR** (PDF des notes, lignes, paiements, journal, empreintes SHA-256), datée du début de sa construction ; `app:cabinet:vider` refuse en production | `ArchiveComptableDuCabinet` ; `ConservationDesPieces` ; `ServiceSuppressionEntreprise::supprimer` | `ConservationDesPiecesTest` |
 
 ## 6. À CONFIRMER
 
@@ -98,10 +100,12 @@ supprimée (§7) : ces règles n'ont plus qu'un exemplaire.
   reverser (note de crédit). Le code ne fait que SIGNALER les échéances déjà encaissées
   (`RegularisationDesEcheances::ristournePossible`, :66-98) ; « elle reste manuelle, par note de
   crédit » (:15). **Chantier ultérieur.**
-- **Numérotation des notes SANS TROU ?** (Serge consulte son comptable, 2026-10-15). Aujourd'hui
-  unique et chronologique, mais un numéro peut se perdre quand une écriture échoue hors
-  transaction englobante (`NumerotationDesNotes`, §5). **Ne rien modifier à la numérotation
-  avant sa réponse.**
+- **Un cabinet SANS note émise mais avec des dépenses** se supprime sans archive : la règle de
+  conservation porte sur les notes (décision du 2026-10-15). L'étendre aux dépenses et aux
+  reversements est à décider.
+- **Avoir sur un revenu à plusieurs échéances** : l'écart « à créditer » se mesure au niveau du
+  revenu, pas échéance par échéance — un avoir sur une échéance peut proposer tout son facturé.
+  Limite connue.
 
 ## 7. Chantiers décidés (ne rien coder sans plan validé)
 
@@ -116,11 +120,10 @@ supprimée (§7) : ces règles n'ont plus qu'un exemplaire.
    type de commission neuf s'ouvre sans pourcentage, adossé au taux du risque** (décision du
    2026-10-15 : 10 % par défaut rendait le drapeau sans effet ; test
    `AssietteDeLaCommissionTest::testUnTypeNeufSAdosseAuTauxDuRisque`).
-   ⚠ **Question de fond restée ouverte** : le montant d'une note émise n'est pas FIGÉ, il se
-   recalcule à chaque lecture — toute retouche après facturation (prime, taux du risque,
-   chargement) change la note envoyée. Figer HT/TTC de chaque article à l'émission serait la
-   protection générale : chantier structurel distinct, **non décidé**.
-1. ~~Numérotation unique et chronologique des notes~~ — **fait** (§5, invariant acquis).
+   La question de fond qui restait ouverte — le montant d'une note émise se recalculait — est
+   réglée par le chantier 6.
+1. ~~Numérotation unique et chronologique des notes~~ — **fait** (§5), puis remplacée par la
+   numérotation continue attribuée à la validation (chantier 6).
 2. ~~Refus de supprimer une note qui porte des paiements~~ — **fait** (§5, invariant acquis).
 3. ~~« Mon portefeuille » étendu aux entités qui descendent d'une piste~~ — **fait** (§4, invariant acquis).
 4. ~~Une seule monnaie par cabinet~~ — **fait** (§4, invariant acquis). La prémisse « convertir l'existant » est tombée : rien n'enregistrait la monnaie d'un montant, et l'écran montrait la monnaie d'affichage à la saisie (décision du 2026-10-15 : rien à convertir).
@@ -132,6 +135,12 @@ supprimée (§7) : ces règles n'ont plus qu'un exemplaire.
    380) sont supprimés. Et **une note ne se montre qu'à qui lit les notes**, sous aucune forme :
    PDF, aperçus, colonne de travail, ni depuis le bordereau qui la porte
    (`ControllerUtilsTrait::exigerLaLectureDesNotes`). Test : `ExporterEtatPdfTest`.
+6. ~~Émission d'une note : numéro et montants figés~~ — **fait** (règle OHADA, décisions du
+   2026-10-15 et du 2026-10-16 ; §5, trois invariants acquis). Numéro à la validation
+   (`9032c97c`), montants figés (`b8ddf2fa`), intangibilité et écart à facturer / à créditer
+   (`3707bbeb`), conservation et archive avant purge (`47a520d4`). Mesure en production avant
+   livraison : une seule note validée, aucun trou, aucun doublon. **Après le déploiement** :
+   `app:notes:figer` à blanc, puis `--confirmer`.
 
 ### Chantiers ultérieurs (signalés le 2026-10-15, non décidés — plan à valider avant tout code)
 
