@@ -512,8 +512,13 @@ class RetroAgentController extends AbstractController
                 ->setPaidAt($paidAt)
                 ->setReference($reference)
                 ->setLotReference($lotReference)
-                ->setCompteBancaire($compte)
-                ->setDescription($donnees['description'] ?? null);
+                ->setCompteBancaire($compte);
+            // LA DESCRIPTION N'EST RÉÉCRITE QUE SI LA REQUÊTE EN PORTE UNE. Le picker n'en
+            // envoie pas : `?? null` effaçait, à chaque correction d'un versement, celle qui
+            // avait été saisie ailleurs (fiche, Ket). Une ligne neuve naît sans description.
+            if (array_key_exists('description', $donnees)) {
+                $reversement->setDescription($donnees['description']);
+            }
             $reversement->setEntreprise($entreprise)->setInvite($this->getInvite());
             $this->em->persist($reversement);
 
