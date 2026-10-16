@@ -403,6 +403,9 @@ ESPACE_MO=$(df -Pm "$APP_DIR" | awk 'NR==2{print $4}')
 ok "Espace disque : ${ESPACE_MO} Mo libres"
 
 BESOIN_COMPOSER=1
+# L'EMPREINTE DU composer.lock RÉELLEMENT INSTALLÉ dans vendor/, écrite après chaque
+# `composer install` réussi (étape 6).
+EMPREINTE_VENDOR="$APP_DIR/vendor/.composer-lock.sha1"
 if [ "$SKIP_GIT" -eq 0 ]; then
   SHA_AVANT="$(git rev-parse HEAD)"
   CIBLE="${REF:-$DEPOT/$BRANCHE}"
@@ -416,14 +419,28 @@ if [ "$SKIP_GIT" -eq 0 ]; then
   git --no-pager log --oneline "HEAD..$CIBLE" 2>/dev/null | head -40 | tee -a "$JOURNAL" || true
   git --no-pager diff --stat "HEAD..$CIBLE" 2>/dev/null | tail -20 | tee -a "$JOURNAL" || true
 
-  # composer.lock inchangé ⇒ vendor/ inchangé ⇒ on saute l'étape la plus longue
-  # et la plus risquée. C'est ce qui fait qu'une mise à jour courante dure vingt
-  # secondes au lieu de quatre minutes.
-  if git diff --quiet "HEAD..$CIBLE" -- composer.lock 2>/dev/null; then
-    BESOIN_COMPOSER=0; info "composer.lock inchange -> vendor/ conserve tel quel"
-  else
-    info "composer.lock MODIFIE -> reinstallation des dependances"
+  # (set -e + pipefail : un échec ici arrêterait le script. Empreinte vide ⇒ réinstallation.)
+  LOCK_VISE=""
+  if git cat-file -e "$CIBLE:composer.lock" 2>/dev/null; then
+    LOCK_VISE="$(git show "$CIBLE:composer.lock" | sha1sum | cut -d' ' -f1)"
   fi
+else
+  LOCK_VISE=""
+  [ -f "$APP_DIR/composer.lock" ] && LOCK_VISE="$(sha1sum "$APP_DIR/composer.lock" | cut -d' ' -f1)"
+fi
+
+# composer.lock déjà installé ⇒ vendor/ inchangé ⇒ on saute l'étape la plus longue et
+# la plus risquée : une mise à jour courante dure vingt secondes au lieu de quatre minutes.
+#
+# ⚠ ON COMPARE AU vendor/ INSTALLÉ, JAMAIS À HEAD. Incident du 2026-10-17 : la commande
+# `publier` du serveur fait un `git pull` AVANT d'appeler ce script ; HEAD était donc déjà
+# sur la version visée, « composer.lock inchangé » a été conclu, et symfony/rate-limiter
+# — ajouté par ce déploiement — n'a jamais été installé (échec au cache:warmup, site resté
+# en maintenance). Sans empreinte (premier passage après ce correctif) : on réinstalle.
+if [ -n "$LOCK_VISE" ] && [ -f "$EMPREINTE_VENDOR" ] && [ "$(cat "$EMPREINTE_VENDOR")" = "$LOCK_VISE" ]; then
+  BESOIN_COMPOSER=0; info "composer.lock deja installe -> vendor/ conserve tel quel"
+else
+  info "composer.lock different de vendor/ (ou empreinte absente) -> reinstallation des dependances"
 fi
 
 if [ "$PREMIERE_INSTALLATION" -eq 0 ]; then
@@ -570,6 +587,9 @@ if [ "$BESOIN_COMPOSER" -eq 1 ] || [ ! -f "$APP_DIR/vendor/autoload_runtime.php"
   # bas, dans le bon ordre et sans dépendre du réseau.
   executer "APP_ENV=prod $COMPOSER_CMD install --no-dev --no-interaction --no-progress \
             --no-scripts --optimize-autoloader --classmap-authoritative --prefer-dist"
+  # L'empreinte de ce qui vient d'être installé : c'est elle que le prochain déploiement
+  # comparera, et non l'historique git (cf. étape 1).
+  sha1sum "$APP_DIR/composer.lock" | cut -d' ' -f1 > "$EMPREINTE_VENDOR"
   ok "vendor/ reinstalle"
 else
   info "vendor/ conserve (composer.lock inchange)"
