@@ -6,14 +6,10 @@
  * portefeuille ») n'y reparaît pas : le toast disait « réussi » et la fiche semblait perdue.
  * Le serveur dit si elle passe le filtre, et lequel l'écarte ; on le dit à l'utilisateur, avec
  * le geste qui la montre.
+ *
+ * Le message est du TEXTE : le toast le pose par textContent (notification-manager). Il
+ * n'est donc pas échappé ici — il le serait deux fois.
  */
-
-const ECHAPPER = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-
-/** Le toast insère son texte en HTML : un nom de fiche n'y entre qu'échappé. */
-export function echapper(texte) {
-    return String(texte ?? '').replace(/[&<>"']/g, (c) => ECHAPPER[c]);
-}
 
 /**
  * Le message, ou null s'il n'y a rien à dire (fiche visible, ou étrangère à la liste).
@@ -25,7 +21,7 @@ export function echapper(texte) {
 export function messageFicheHorsFiltre(verification, libelle) {
     if (!verification || verification.visible !== false) return null;
 
-    const fiche = libelle ? `« ${echapper(libelle)} »` : 'La fiche';
+    const fiche = libelle ? `« ${libelle} »` : 'La fiche';
     const filtres = (verification.masqueePar || []).filter((m) => m && m.cle);
     if (filtres.length === 0) {
         return {
@@ -35,7 +31,7 @@ export function messageFicheHorsFiltre(verification, libelle) {
         };
     }
 
-    const noms = filtres.map((m) => `« ${echapper(m.libelle || m.cle)} »`);
+    const noms = filtres.map((m) => `« ${m.libelle || m.cle} »`);
     const liste = noms.length === 1 ? noms[0] : `${noms.slice(0, -1).join(', ')} et ${noms.at(-1)}`;
     const pluriel = filtres.length > 1;
 

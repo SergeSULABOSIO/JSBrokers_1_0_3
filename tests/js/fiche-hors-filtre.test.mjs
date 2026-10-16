@@ -10,7 +10,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { criteresSans, echapper, messageFicheHorsFiltre } from '../../assets/controllers/fiche-hors-filtre.js';
+import { criteresSans, messageFicheHorsFiltre } from '../../assets/controllers/fiche-hors-filtre.js';
 import { codeDeCollection } from '../../assets/controllers/collection-tampon.js';
 
 test('visible, ou étrangère à la liste : rien à dire', () => {
@@ -43,10 +43,11 @@ test('aucun filtre isolable : on le dit, sans proposer un geste qui ne suffirait
     assert.equal(m.action, null);
 });
 
-test('le nom de la fiche entre ÉCHAPPÉ dans un toast rendu en HTML', () => {
-    assert.equal(echapper('<img src=x onerror=alert(1)> & "q"'), '&lt;img src=x onerror=alert(1)&gt; &amp; &quot;q&quot;');
-    const m = messageFicheHorsFiltre({ id: 1, visible: false, masqueePar: [] }, '<b>X</b>');
-    assert.ok(!m.texte.includes('<b>'));
+test('le nom de la fiche reste du TEXTE : le toast le pose par textContent, sans double échappement', () => {
+    const m = messageFicheHorsFiltre({ id: 1, visible: false, masqueePar: [{ cle: 'a', libelle: 'R&D' }] }, '<b>X</b>');
+    assert.ok(m.texte.startsWith('« <b>X</b> »'), 'le nom tel qu\'il a été saisi');
+    assert.ok(m.texte.includes('« R&D »'));
+    assert.ok(!m.texte.includes('&lt;') && !m.texte.includes('&amp;'));
 });
 
 test('retirer les filtres en cause garde les autres', () => {

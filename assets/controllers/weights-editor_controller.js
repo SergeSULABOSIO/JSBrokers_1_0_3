@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { echapper } from './echapper.js';
 
 /**
  * @class WeightsEditorController
@@ -168,7 +169,7 @@ export default class extends Controller {
         document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
             detail: {
                 title: "Supprimer le poids d'écriture",
-                body: `Voulez-vous vraiment retirer le poids d'écriture de l'entité <strong>${this._escapeHtml(nom)}</strong> ? `
+                corpsHtml: `Voulez-vous vraiment retirer le poids d'écriture de l'entité <strong>${echapper(nom)}</strong> ? `
                     + 'Elle utilisera alors le poids d\'écriture par défaut.',
                 itemDescriptions: [nom],
                 showIrreversible: true,
@@ -246,11 +247,5 @@ export default class extends Controller {
     formatInt(value) {
         const n = parseInt(value, 10);
         return Number.isFinite(n) ? n.toLocaleString('fr-FR') : value;
-    }
-
-    _escapeHtml(unsafe) {
-        return String(unsafe)
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 }

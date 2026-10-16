@@ -43,9 +43,7 @@ export default class extends Controller {
                     <strong class="ms-2 me-auto">${config.title}</strong>
                     <button type="button" class="btn-close ${closeButtonClass}" data-bs-dismiss="toast" aria-label="Fermer"></button>
                 </div>
-                <div class="toast-body">
-                    ${text}
-                </div>
+                <div class="toast-body"></div>
             </div>
         `;
 
@@ -53,6 +51,12 @@ export default class extends Controller {
         this.element.insertAdjacentHTML('beforeend', toastHTML);
 
         const newToastEl = this.element.lastElementChild; //
+
+        // LE MESSAGE EST DU TEXTE, posé par textContent — jamais interpolé dans le HTML
+        // ci-dessus. Il cite des noms saisis (client, échéance, fichier, référence de
+        // police…) et des refus du serveur : en HTML, un nom piégé s'exécutait au
+        // premier toast. Aucun appelant ne compte sur une balise (audit du 2026-10-16).
+        newToastEl.querySelector('.toast-body').textContent = text ?? '';
 
         // UN GESTE, FACULTATIF : `action = { label, evenement: { type, payload } }`. Le bouton
         // renvoie l'événement au cerveau — le toast ne fait rien lui-même. Construit par le

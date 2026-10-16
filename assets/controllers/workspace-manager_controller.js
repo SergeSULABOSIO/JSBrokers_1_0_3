@@ -11,6 +11,7 @@ import {
     selectionARestaurer,
 } from './criteres-persistes.js';
 import { dedoublonnerOnglets, ongletExistantPourRubrique } from './onglets-uniques.js';
+import { echapper } from './echapper.js';
 
 /**
  * LES DEUX SEUILS DE DISPOSITION — écrits ici ET dans `interactive-menu.css`.
@@ -330,11 +331,10 @@ export default class extends Controller {
         event.preventDefault();
         const url = event.currentTarget.href;
         const nom = this.entrepriseNomValue || 'cette entreprise';
-        const safeNom = nom.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
             detail: {
                 title: "Quitter l'espace de travail",
-                body: `<p>Vous êtes sur le point de vous déconnecter et de quitter l'espace de travail de <strong>${safeNom}</strong>.</p><p>Voulez-vous continuer ?</p>`,
+                corpsHtml: `<p>Vous êtes sur le point de vous déconnecter et de quitter l'espace de travail de <strong>${echapper(nom)}</strong>.</p><p>Voulez-vous continuer ?</p>`,
                 showIrreversible: false,
                 onConfirm: {
                     type: 'app:workspace.logout-execute',
@@ -359,11 +359,10 @@ export default class extends Controller {
             return;
         }
         const nom = this.entrepriseNomValue || 'cette entreprise';
-        const safeNom = nom.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
             detail: {
                 title: "Fermer l'espace de travail",
-                body: `<p>Vous êtes sur le point de fermer l'espace de travail de <strong>${safeNom}</strong> et de revenir à votre page personnelle.</p><p>Voulez-vous continuer ?</p>`,
+                corpsHtml: `<p>Vous êtes sur le point de fermer l'espace de travail de <strong>${echapper(nom)}</strong> et de revenir à votre page personnelle.</p><p>Voulez-vous continuer ?</p>`,
                 showIrreversible: false,
                 onConfirm: {
                     type: 'app:workspace.logout-execute',

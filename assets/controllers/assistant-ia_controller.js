@@ -1,5 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 import { appliquerTitre, editerEnPlace } from './assistant-conversation-titre.js';
+import { echapper } from './echapper.js';
 
 /**
  * @class AssistantIaController
@@ -141,12 +142,10 @@ export default class extends Controller {
     /** Demande confirmation avant suppression (modale générique du Cerveau). */
     requestDelete(event) {
         const { deleteUrl, convId, convTitre } = event.currentTarget.dataset;
-        const safeTitre = (convTitre || 'cette conversation')
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
             detail: {
                 title: 'Supprimer la conversation',
-                body: `<p>Vous êtes sur le point de supprimer la conversation <strong>${safeTitre}</strong> et tous ses messages.</p><p>Cette action est irréversible. Voulez-vous continuer ?</p>`,
+                corpsHtml: `<p>Vous êtes sur le point de supprimer la conversation <strong>${echapper(convTitre || 'cette conversation')}</strong> et tous ses messages.</p><p>Cette action est irréversible. Voulez-vous continuer ?</p>`,
                 showIrreversible: false,
                 onConfirm: {
                     type: 'ia:conversation.delete-execute',

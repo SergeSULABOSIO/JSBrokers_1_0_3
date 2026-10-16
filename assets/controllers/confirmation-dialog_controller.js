@@ -204,9 +204,9 @@ export default class extends Controller {
      * Ouvre la modale et prépare l'action de confirmation.
      * @param {object} payload - Les données de l'événement.
      * @param {string} payload.title - Le titre de la modale (texte).
-     * @param {string} [payload.corpsTexte] - Le corps, en TEXTE : toujours sûr, prioritaire.
-     * @param {string} [payload.body] - Le corps, en HTML : réservé à un appelant JS qui compose
-     *        un balisage et en échappe lui-même les données (cf. confirmation-corps.js).
+     * @param {string} [payload.body] - Le corps, en TEXTE (de même que `corpsTexte`).
+     * @param {string} [payload.corpsHtml] - Le corps, en HTML : la seule porte du balisage,
+     *        pour un appelant JS qui en échappe chaque donnée avec `echapper` (confirmation-corps.js).
      * @param {object} payload.onConfirm - L'action à notifier au Cerveau en cas de confirmation.
      */
     open(payload) {
