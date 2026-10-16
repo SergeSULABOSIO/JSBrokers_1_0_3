@@ -19,6 +19,9 @@ import './styles/interactive-menu.css';
 // Correctif global des menus d'autocomplétion (champs relation) dans les dialogues.
 import './autocomplete-dropdown-global.js';
 import { Chart } from 'chart.js';
+// Les infobulles et tableaux du tableau de bord composent du HTML autour de valeurs lues
+// dans `dataset` (rendu DÉCODÉ : le |e du gabarit n'y protège de rien) : chacune passe ici.
+import { echapper } from './controllers/echapper.js';
 console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
 // LA CHAÎNE D'ICÔNES PAR COOKIE (defineIcone, setIcone, downloadIcone, updatTabIcones,
@@ -624,17 +627,17 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
     }
 
     function buildContent(el) {
-        var charge = el.dataset.depTipCharge || '—';
-        var tiers  = el.dataset.depTipTiers  || '';
-        var compte = el.dataset.depTipCompte || '';
-        var ttc    = el.dataset.depTipTtc    || '—';
-        var ht     = el.dataset.depTipHt     || '—';
-        var tva    = el.dataset.depTipTva    || '—';
-        var statut = el.dataset.depTipStatut || '—';
-        var sColor = el.dataset.depTipStatutColor || '#adb5bd';
-        var moyen  = el.dataset.depTipMoyen  || '—';
-        var date   = el.dataset.depTipDate   || '—';
-        var ref    = el.dataset.depTipRef    || '';
+        var charge = echapper(el.dataset.depTipCharge || '—');
+        var tiers  = echapper(el.dataset.depTipTiers  || '');
+        var compte = echapper(el.dataset.depTipCompte || '');
+        var ttc    = echapper(el.dataset.depTipTtc    || '—');
+        var ht     = echapper(el.dataset.depTipHt     || '—');
+        var tva    = echapper(el.dataset.depTipTva    || '—');
+        var statut = echapper(el.dataset.depTipStatut || '—');
+        var sColor = echapper(el.dataset.depTipStatutColor || '#adb5bd');
+        var moyen  = echapper(el.dataset.depTipMoyen  || '—');
+        var date   = echapper(el.dataset.depTipDate   || '—');
+        var ref    = echapper(el.dataset.depTipRef    || '');
 
         var rows = '<tr><td colspan="2" class="tip-section">Dépense</td></tr>' +
             '<tr><td>Charge</td><td>' + charge + '</td></tr>';
@@ -862,15 +865,15 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
     }
 
     function buildContent(el) {
-        var ref      = el.dataset.cashRef      || '—';
-        var montant  = el.dataset.cashMontant  || '—';
-        var date     = el.dataset.cashDate     || '—';
-        var libelle  = el.dataset.cashLibelle  || '';
-        var noteNom  = el.dataset.cashNoteNom  || '';
-        var facture  = el.dataset.cashFacture  || '';
-        var solde    = el.dataset.cashSolde    || '';
+        var ref      = echapper(el.dataset.cashRef      || '—');
+        var montant  = echapper(el.dataset.cashMontant  || '—');
+        var date     = echapper(el.dataset.cashDate     || '—');
+        var libelle  = echapper(el.dataset.cashLibelle  || '');
+        var noteNom  = echapper(el.dataset.cashNoteNom  || '');
+        var facture  = echapper(el.dataset.cashFacture  || '');
+        var solde    = echapper(el.dataset.cashSolde    || '');
         var soldeDue = el.dataset.cashSoldeNegatif === 'true';
-        var sentAt   = el.dataset.cashSentAt   || '';
+        var sentAt   = echapper(el.dataset.cashSentAt   || '');
 
         var rows = '<tr><td colspan="2" class="tip-section">Encaissement</td></tr>' +
             '<tr><td>Référence</td><td>' + ref + '</td></tr>' +
@@ -951,19 +954,19 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
     }
 
     function buildContent(el) {
-        var ref       = el.dataset.sinRef       || '—';
-        var pol       = el.dataset.sinPol       || '';
-        var dateNotif = el.dataset.sinDateNotif || '';
-        var dateOccur = el.dataset.sinDateOccur || '';
-        var assure    = el.dataset.sinAssure    || '';
-        var assureur  = el.dataset.sinAssureur  || '';
-        var risque    = el.dataset.sinRisque    || '';
-        var lieu      = el.dataset.sinLieu      || '';
-        var desc      = el.dataset.sinDesc      || '';
-        var dommage   = el.dataset.sinDommage   || '';
-        var evalVal   = el.dataset.sinEval      || '';
-        var indemnise = el.dataset.sinIndemnise || '';
-        var solde     = el.dataset.sinSolde     || '';
+        var ref       = echapper(el.dataset.sinRef       || '—');
+        var pol       = echapper(el.dataset.sinPol       || '');
+        var dateNotif = echapper(el.dataset.sinDateNotif || '');
+        var dateOccur = echapper(el.dataset.sinDateOccur || '');
+        var assure    = echapper(el.dataset.sinAssure    || '');
+        var assureur  = echapper(el.dataset.sinAssureur  || '');
+        var risque    = echapper(el.dataset.sinRisque    || '');
+        var lieu      = echapper(el.dataset.sinLieu      || '');
+        var desc      = echapper(el.dataset.sinDesc      || '');
+        var dommage   = echapper(el.dataset.sinDommage   || '');
+        var evalVal   = echapper(el.dataset.sinEval      || '');
+        var indemnise = echapper(el.dataset.sinIndemnise || '');
+        var solde     = echapper(el.dataset.sinSolde     || '');
         var soldeOk   = el.dataset.sinSoldeOk   === 'true';
 
         var rows = '<tr><td colspan="2" class="tip-section">Sinistre</td></tr>' +
@@ -1677,9 +1680,6 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
         return _tip;
     }
 
-    function escapeHtml(s) {
-        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
 
     function showDbMetaTip(chip) {
         var txt = chip.dataset.metaTip;
@@ -1687,7 +1687,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
         var tip = getOrCreateTip();
         if (txt.indexOf('[PLUS]') !== -1) {
             var parts = txt.split('[PLUS]');
-            tip.innerHTML = escapeHtml(parts[0]) + '<b>Pour plus d\'infos, consultez la liste des feedbacks</b>';
+            tip.innerHTML = echapper(parts[0]) + '<b>Pour plus d\'infos, consultez la liste des feedbacks</b>';
         } else {
             tip.textContent = txt;
         }
@@ -1740,20 +1740,16 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
         return _tip;
     }
 
-    // ⚠ ÉCHAPPÉ : `dataset` rend la valeur DÉCODÉE de l'attribut (cf. data-piste-tip).
-    function esc(s) {
-        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
 
     function buildContent(el) {
-        var prime    = esc(el.dataset.renewPrime    || '—');
-        var comm     = esc(el.dataset.renewComm     || '—');
-        var retro    = esc(el.dataset.renewRetro    || '—');
-        var reserve  = esc(el.dataset.renewReserve  || '—');
-        var periode  = esc(el.dataset.renewPeriode  || '—');
-        var risque   = esc(el.dataset.renewRisque   || '—');
-        var assureur = esc(el.dataset.renewAssureur || '—');
-        var piste    = el.dataset.renewPiste ? esc(el.dataset.renewPiste) : '';
+        var prime    = echapper(el.dataset.renewPrime    || '—');
+        var comm     = echapper(el.dataset.renewComm     || '—');
+        var retro    = echapper(el.dataset.renewRetro    || '—');
+        var reserve  = echapper(el.dataset.renewReserve  || '—');
+        var periode  = echapper(el.dataset.renewPeriode  || '—');
+        var risque   = echapper(el.dataset.renewRisque   || '—');
+        var assureur = echapper(el.dataset.renewAssureur || '—');
+        var piste    = el.dataset.renewPiste ? echapper(el.dataset.renewPiste) : '';
         var pisteHtml = piste
             ? '<span class="tip-ok">✔ ' + piste + '</span>'
             : '<span class="tip-nok">✘ Aucune piste en cours</span>';
@@ -1824,18 +1820,15 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
         return _tip;
     }
 
-    function escapeHtml(s) {
-        return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
 
     function buildContent(el) {
         var label  = el.dataset.tipLabel  || '';
         var intro  = el.dataset.tipIntro  || '';
         var calcul = el.dataset.tipCalcul || '';
-        return (label ? '<div class="tip-title">' + escapeHtml(label) + '</div>' : '') +
-            '<p class="tip-intro">' + escapeHtml(intro) + '</p>' +
+        return (label ? '<div class="tip-title">' + echapper(label) + '</div>' : '') +
+            '<p class="tip-intro">' + echapper(intro) + '</p>' +
             '<div class="tip-section">Calcul</div>' +
-            '<p class="tip-calcul">' + escapeHtml(calcul) + '</p>';
+            '<p class="tip-calcul">' + echapper(calcul) + '</p>';
     }
 
     function positionTip(mx, my) {
@@ -1974,22 +1967,17 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
         return _tipEl;
     }
 
-    // ⚠ ÉCHAPPÉ : `dataset` rend la valeur DÉCODÉE de l'attribut — un nom de piste saisi
-    // « <img onerror=…> » s'exécutait au survol, malgré le `|e` du gabarit.
-    function _esc(s) {
-        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
 
     function _buildTipContent(details) {
-        var nom         = _esc(details.dataset.pisteNom         || '—');
-        var client      = _esc(details.dataset.pisteClient      || '—');
-        var risque      = _esc(details.dataset.pisteRisque      || '—');
-        var description = _esc(details.dataset.pisteDescription || '');
-        var statut      = _esc(details.dataset.pisteStatut      || '—');
-        var days        = _esc(details.dataset.pisteDays        || '—');
-        var invite      = _esc(details.dataset.pisteInvite      || '—');
-        var prime       = _esc(details.dataset.pistePrime       || '—');
-        var commission  = _esc(details.dataset.pisteCommission  || '—');
+        var nom         = echapper(details.dataset.pisteNom         || '—');
+        var client      = echapper(details.dataset.pisteClient      || '—');
+        var risque      = echapper(details.dataset.pisteRisque      || '—');
+        var description = echapper(details.dataset.pisteDescription || '');
+        var statut      = echapper(details.dataset.pisteStatut      || '—');
+        var days        = echapper(details.dataset.pisteDays        || '—');
+        var invite      = echapper(details.dataset.pisteInvite      || '—');
+        var prime       = echapper(details.dataset.pistePrime       || '—');
+        var commission  = echapper(details.dataset.pisteCommission  || '—');
 
         var rows = '<tr><td colspan="2" class="tip-section">Piste</td></tr>' +
             '<tr><td>Nom</td><td><strong>' + nom + '</strong></td></tr>' +
@@ -2392,13 +2380,13 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
     }
 
     function _buildBordTipContent(span) {
-        var ref     = span.dataset.bordTipRef      || '—';
-        var assur   = span.dataset.bordTipAssureur || '—';
-        var statut  = span.dataset.bordTipStatut   || '—';
-        var sColor  = span.dataset.bordTipStatutColor || '#adb5bd';
-        var periode = span.dataset.bordTipPeriode  || '—';
-        var recu    = span.dataset.bordTipRecu     || '—';
-        var days    = span.dataset.bordTipDays     || '—';
+        var ref     = echapper(span.dataset.bordTipRef      || '—');
+        var assur   = echapper(span.dataset.bordTipAssureur || '—');
+        var statut  = echapper(span.dataset.bordTipStatut   || '—');
+        var sColor  = echapper(span.dataset.bordTipStatutColor || '#adb5bd');
+        var periode = echapper(span.dataset.bordTipPeriode  || '—');
+        var recu    = echapper(span.dataset.bordTipRecu     || '—');
+        var days    = echapper(span.dataset.bordTipDays     || '—');
 
         return '<table>' +
             '<tr><td colspan="2" class="tip-section">Bordereau</td></tr>' +
@@ -2706,15 +2694,15 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
     }
 
     function _buildNoteTipContent(span) {
-        var ref    = span.dataset.noteTipRef    || '—';
-        var dest   = span.dataset.noteTipDest   || '—';
-        var type   = span.dataset.noteTipType   || '—';
-        var statut = span.dataset.noteTipStatut || '—';
-        var sColor = span.dataset.noteTipStatutColor || '#adb5bd';
-        var mnt    = span.dataset.noteTipMontant || '—';
-        var solde  = span.dataset.noteTipSolde  || '—';
-        var date   = span.dataset.noteTipDate   || '—';
-        var days   = span.dataset.noteTipDays   || '—';
+        var ref    = echapper(span.dataset.noteTipRef    || '—');
+        var dest   = echapper(span.dataset.noteTipDest   || '—');
+        var type   = echapper(span.dataset.noteTipType   || '—');
+        var statut = echapper(span.dataset.noteTipStatut || '—');
+        var sColor = echapper(span.dataset.noteTipStatutColor || '#adb5bd');
+        var mnt    = echapper(span.dataset.noteTipMontant || '—');
+        var solde  = echapper(span.dataset.noteTipSolde  || '—');
+        var date   = echapper(span.dataset.noteTipDate   || '—');
+        var days   = echapper(span.dataset.noteTipDays   || '—');
 
         return '<table>' +
             '<tr><td colspan="2" class="tip-section">Note</td></tr>' +
@@ -3099,8 +3087,8 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
             : '';
 
         tip.innerHTML =
-            '<div style="font-weight:600;color:#0047AB;margin-bottom:2px;">' + monthName + (year ? ' ' + year : '') + '</div>' +
-            '<div style="font-size:.82rem;">Encaissé : <strong>' + _prodFmt(val) + '</strong></div>';
+            '<div style="font-weight:600;color:#0047AB;margin-bottom:2px;">' + monthName + (year ? ' ' + echapper(year) : '') + '</div>' +
+            '<div style="font-size:.82rem;">Encaissé : <strong>' + echapper(_prodFmt(val)) + '</strong></div>';
 
         var chartPos = context.chart.canvas.getBoundingClientRect();
         var x = chartPos.left + window.scrollX + tooltip.caretX;
@@ -3336,14 +3324,14 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
         var taxAss = _fmtTaxLabel(data.taxeAssureurNom || 'Taxe assureur', data.taxeAssureurTaux);
 
         function fmtCells(obj) {
-            return '<td>' + _prodFmt(obj.primeTtc          || 0) + '</td>'
-                 + '<td>' + _prodFmt(obj.commissionPure    || 0) + '</td>'
-                 + '<td>' + _prodFmt(obj.retrocommission   || 0) + '</td>'
-                 + '<td>' + _prodFmt(obj.taxeCourtier      || 0) + '</td>'
-                 + '<td>' + _prodFmt(obj.taxeAssureur      || 0) + '</td>'
-                 + '<td>' + _prodFmt(obj.commissionTtc     || 0) + '</td>'
-                 + '<td>' + _prodFmt(obj.encaissements     || 0) + '</td>'
-                 + '<td>' + _prodFmt(obj.solde             || 0) + '</td>';
+            return '<td>' + echapper(_prodFmt(obj.primeTtc          || 0)) + '</td>'
+                 + '<td>' + echapper(_prodFmt(obj.commissionPure    || 0)) + '</td>'
+                 + '<td>' + echapper(_prodFmt(obj.retrocommission   || 0)) + '</td>'
+                 + '<td>' + echapper(_prodFmt(obj.taxeCourtier      || 0)) + '</td>'
+                 + '<td>' + echapper(_prodFmt(obj.taxeAssureur      || 0)) + '</td>'
+                 + '<td>' + echapper(_prodFmt(obj.commissionTtc     || 0)) + '</td>'
+                 + '<td>' + echapper(_prodFmt(obj.encaissements     || 0)) + '</td>'
+                 + '<td>' + echapper(_prodFmt(obj.solde             || 0)) + '</td>';
         }
 
         var html = '<table class="db-prod-table">'
@@ -3352,8 +3340,8 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
                  + '<th>Prime TTC</th>'
                  + '<th>Commission pure</th>'
                  + '<th>Rétrocommission</th>'
-                 + '<th>' + taxCou + '</th>'
-                 + '<th>' + taxAss + '</th>'
+                 + '<th>' + echapper(taxCou) + '</th>'
+                 + '<th>' + echapper(taxAss) + '</th>'
                  + '<th>Commission totale</th>'
                  + '<th>Encaissements</th>'
                  + '<th>Solde dû</th>'
@@ -3373,7 +3361,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
             Object.keys(assureurs).forEach(function (assId) {
                 var ass = assureurs[assId];
                 html += '<tr class="db-prod-tr-assureur" data-month="' + m + '">'
-                      + '<td>' + (ass.nom || '—') + '</td>'
+                      + '<td>' + echapper(ass.nom || '—') + '</td>'
                       + fmtCells(ass)
                       + '</tr>';
             });
@@ -3531,19 +3519,19 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
         _fields.forEach(function(f) { grand[f] = 0; });
 
         function fmtCells(obj) {
-            return _fields.map(function(f) { return '<td>' + _prodFmt(obj[f] || 0) + '</td>'; }).join('');
+            return _fields.map(function(f) { return '<td>' + echapper(_prodFmt(obj[f] || 0)) + '</td>'; }).join('');
         }
 
         var rows = items.map(function (item) {
             _fields.forEach(function(f) { grand[f] += item[f] || 0; });
-            return '<tr class="db-prod-tr-assureur"><td>' + (item.nom || '—') + '</td>' + fmtCells(item) + '</tr>';
+            return '<tr class="db-prod-tr-assureur"><td>' + echapper(item.nom || '—') + '</td>' + fmtCells(item) + '</tr>';
         }).join('');
 
         el.innerHTML = '<table class="db-prod-table">'
             + '<thead><tr>'
             + '<th style="min-width:110px;text-align:left;">Libellé</th>'
             + '<th>Prime TTC</th><th>Commission pure</th><th>Rétrocommission</th>'
-            + '<th>' + taxCou + '</th><th>' + taxAss + '</th>'
+            + '<th>' + echapper(taxCou) + '</th><th>' + echapper(taxAss) + '</th>'
             + '<th>Commission totale</th><th>Encaissements</th><th>Solde dû</th>'
             + '</tr></thead><tbody>' + rows + '</tbody>'
             + '<tfoot><tr class="db-prod-tr-grand"><td>Total général</td>' + fmtCells(grand) + '</tr></tfoot>'
@@ -3570,16 +3558,16 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
         _fields.forEach(function(f) { grand[f] = 0; });
 
         function fmtCells(obj) {
-            return _fields.map(function(f) { return '<td>' + _prodFmt(obj[f] || 0) + '</td>'; }).join('');
+            return _fields.map(function(f) { return '<td>' + echapper(_prodFmt(obj[f] || 0)) + '</td>'; }).join('');
         }
 
         var rows = '';
         items.forEach(function (item) {
-            var assId = item.id;
+            var assId = Number(item.id) || 0;
             _fields.forEach(function(f) { grand[f] += item[f] || 0; });
             rows += '<tr class="db-prod-tr-month db-prod-tr-ass-head" data-ass-id="' + assId + '"'
                   + ' onclick="dbProdToggleAssureur(this,' + assId + ')">'
-                  + '<td><span class="db-prod-chevron">▼</span>' + (item.nom || '—') + '</td>'
+                  + '<td><span class="db-prod-chevron">▼</span>' + echapper(item.nom || '—') + '</td>'
                   + fmtCells(item) + '</tr>';
 
             var monthData = monthly[assId] || {};
@@ -3597,7 +3585,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
             + '<thead><tr>'
             + '<th style="min-width:130px;text-align:left;">Libellé</th>'
             + '<th>Prime TTC</th><th>Commission pure</th><th>Rétrocommission</th>'
-            + '<th>' + taxCou + '</th><th>' + taxAss + '</th>'
+            + '<th>' + echapper(taxCou) + '</th><th>' + echapper(taxAss) + '</th>'
             + '<th>Commission totale</th><th>Encaissements</th><th>Solde dû</th>'
             + '</tr></thead><tbody>' + rows + '</tbody>'
             + '<tfoot><tr class="db-prod-tr-grand"><td>Total général</td>' + fmtCells(grand) + '</tr></tfoot>'
@@ -3639,16 +3627,17 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
         _fields.forEach(function(f) { grand[f] = 0; });
 
         function fmtCells(obj) {
-            return _fields.map(function(f) { return '<td>' + _prodFmt(obj[f] || 0) + '</td>'; }).join('');
+            return _fields.map(function(f) { return '<td>' + echapper(_prodFmt(obj[f] || 0)) + '</td>'; }).join('');
         }
 
         var rows = '';
         items.forEach(function (item) {
-            var risId = item.id;
+            // Un id de risque, ou « __none__ » : il entre dans un onclick, rien d'autre n'y passe.
+            var risId = String(item.id).replace(/[^\w-]/g, '');
             _fields.forEach(function(f) { grand[f] += item[f] || 0; });
             rows += '<tr class="db-prod-tr-month db-prod-tr-ass-head" data-ris-id="' + risId + '"'
                   + ' onclick="dbProdToggleRisque(this,\'' + risId + '\')">'
-                  + '<td><span class="db-prod-chevron">▼</span>' + (item.nom || '—') + '</td>'
+                  + '<td><span class="db-prod-chevron">▼</span>' + echapper(item.nom || '—') + '</td>'
                   + fmtCells(item) + '</tr>';
 
             var monthData = monthly[risId] || {};
@@ -3666,7 +3655,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
             + '<thead><tr>'
             + '<th style="min-width:130px;text-align:left;">Libellé</th>'
             + '<th>Prime TTC</th><th>Commission pure</th><th>Rétrocommission</th>'
-            + '<th>' + taxCou + '</th><th>' + taxAss + '</th>'
+            + '<th>' + echapper(taxCou) + '</th><th>' + echapper(taxAss) + '</th>'
             + '<th>Commission totale</th><th>Encaissements</th><th>Solde dû</th>'
             + '</tr></thead><tbody>' + rows + '</tbody>'
             + '<tfoot><tr class="db-prod-tr-grand"><td>Total général</td>' + fmtCells(grand) + '</tr></tfoot>'

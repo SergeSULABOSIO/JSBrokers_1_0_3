@@ -44,7 +44,7 @@
         {% endif %}
 
         {% set ref      = p.note ? p.note.reference : (p.reference ?? '—') %}
-        {% set libelle  = (p.description ?? '')|striptags %}
+        {% set libelle  = (p.description ?? '')|en_texte %}
         {% set noteNom  = p.note ? (p.note.nom ?? '') : '' %}
         {% set noteDesc = p.note ? (p.note.description ?? '') : '' %}
         {% set searchText = (ref ~ '|' ~ libelle ~ '|' ~ noteNom ~ '|' ~ noteDesc)|lower %}

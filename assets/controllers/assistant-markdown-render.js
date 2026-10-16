@@ -1,5 +1,6 @@
 import { Marked } from 'marked';
 import DOMPurify from 'dompurify';
+import { echapper } from './echapper.js';
 
 import { celluleTableau, ligneTableau } from './assistant-markdown-table.js';
 
@@ -12,10 +13,6 @@ import { celluleTableau, ligneTableau } from './assistant-markdown-table.js';
  */
 const BADGE_VARIANTES = new Set(['success', 'danger', 'warning', 'info', 'neutral']);
 
-/** Échappe le texte destiné au contenu d'une balise (jamais interprété comme HTML). */
-function echapperHtml(texte) {
-    return String(texte ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
 
 const marked = new Marked({
     gfm: true,
@@ -46,9 +43,9 @@ const marked = new Marked({
             // montera un <canvas> Chart.js. Le JSON n'est jamais du HTML.
             const langue = (lang || '').trim().toLowerCase();
             if (langue === 'chart' || langue === 'graphique') {
-                return `<div class="aic-chart"><code class="aic-chart-spec">${echapperHtml(text)}</code></div>`;
+                return `<div class="aic-chart"><code class="aic-chart-spec">${echapper(text)}</code></div>`;
             }
-            return `<code>${echapperHtml(text)}</code>`;
+            return `<code>${echapper(text)}</code>`;
         },
     },
 });

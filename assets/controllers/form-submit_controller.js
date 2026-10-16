@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { echapper } from './echapper.js';
 
 /**
  * @class FormSubmitController
@@ -93,7 +94,7 @@ export default class extends Controller {
         link.style.pointerEvents = 'none';
         link.innerHTML =
             '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>'
-            + this.escape(text);
+            + echapper(text);
     }
 
     submitting(event) {
@@ -118,7 +119,7 @@ export default class extends Controller {
         button.setAttribute('aria-busy', 'true');
         button.innerHTML =
             '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>'
-            + this.escape(this.loadingTextValue);
+            + echapper(this.loadingTextValue);
 
         // On désactive APRÈS le déclenchement de la soumission (au tick suivant) :
         // désactiver en plein événement `submit` peut, sur certains navigateurs,
@@ -126,11 +127,5 @@ export default class extends Controller {
         window.requestAnimationFrame(() => {
             button.disabled = true;
         });
-    }
-
-    escape(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
     }
 }

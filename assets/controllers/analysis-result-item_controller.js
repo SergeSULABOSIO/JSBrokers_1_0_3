@@ -241,7 +241,7 @@ export default class extends BaseController {
         // Remplacer le texte de détails par un message de succès
         const detailsText = this.element.querySelector('.analysis-item-header p');
         if (detailsText) {
-            detailsText.innerHTML = `<span class="text-success fw-bold">✓ Traité — ${message}</span>`;
+            this._poserStatut(detailsText, 'text-success fw-bold', `✓ Traité — ${message ?? ''}`);
         }
 
         // Masquer les boutons d'action (inutiles après traitement)
@@ -267,8 +267,22 @@ export default class extends BaseController {
     _showActionError(message) {
         const detailsText = this.element.querySelector('.analysis-item-header p');
         if (detailsText) {
-            detailsText.innerHTML = `<span class="text-danger small">⚠ Erreur : ${message} — Veuillez réessayer.</span>`;
+            this._poserStatut(detailsText, 'text-danger small', `⚠ Erreur : ${message ?? ''} — Veuillez réessayer.`);
         }
+    }
+
+    /**
+     * Pose un statut de ligne, en TEXTE : le message vient du serveur — parfois le texte
+     * d'une exception, qui peut reprendre des cellules du fichier importé.
+     * @param {HTMLElement} cible
+     * @param {string} classes
+     * @param {string} texte
+     */
+    _poserStatut(cible, classes, texte) {
+        const statut = document.createElement('span');
+        statut.className = classes;
+        statut.textContent = texte;
+        cible.replaceChildren(statut);
     }
 
     // Les méthodes showTooltip et hideTooltip sont copiées de collection_controller.js

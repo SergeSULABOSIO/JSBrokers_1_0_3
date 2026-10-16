@@ -1145,12 +1145,17 @@ export default class extends Controller {
         }
 
         // On crée le message HTML et on l'ajoute au conteneur
-        feedbackContainer.innerHTML = `
-            <div class="feedback-message ${feedbackClass}">
-                <span class="timestamp">${timestamp}</span>
-                <span>${message}</span>
-            </div>
-        `;
+        // DU TEXTE, posé par le DOM : le message cite des libellés saisis (rejeu partiel
+        // d'une collection) et des refus du serveur, jamais du balisage voulu.
+        const bloc = document.createElement('div');
+        bloc.className = `feedback-message ${feedbackClass}`.trim();
+        const horodatage = document.createElement('span');
+        horodatage.className = 'timestamp';
+        horodatage.textContent = timestamp;
+        const texte = document.createElement('span');
+        texte.textContent = String(message ?? '');
+        bloc.append(horodatage, ' ', texte);
+        feedbackContainer.replaceChildren(bloc);
     }
 
     /**

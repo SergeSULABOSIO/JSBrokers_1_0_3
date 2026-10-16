@@ -1,6 +1,7 @@
 import BaseController from './base_controller.js';
 import { Toast, Modal, Dropdown } from 'bootstrap';
 import { libelleDeFiche, titreDeFiche } from './selecto.js';
+import { echapper } from './echapper.js';
 /**
  * @class BordereauAnalysisController
  * @description Gère l'interface de l'analyse de bordereau en deux étapes.
@@ -687,7 +688,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             default:
                 return; // Aucun toast pour les états non définis (ex : step=99 bordereau validé)
         }
-        this._showToast('info', `<strong>${title}</strong><br>${message}`, true, true);
+        this._showToast('info', `<strong>${echapper(title)}</strong><br>${echapper(message)}`, true, true, true);
         this._initialToastShown = true;
     }
     /**
@@ -1127,7 +1128,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             // Mapper les noms de champs système à leurs noms d'affichage
             const unmappedDisplayNames = unmappedRequiredFields.map(field => this.mappingOptionsValue[field] || field);
 
-            message += `Il reste <strong>${requiredRemainingCount}</strong> champ(s) obligatoire(s) à mapper : <em>${unmappedDisplayNames.join(', ')}</em>.`;
+            message += `Il reste <strong>${requiredRemainingCount}</strong> champ(s) obligatoire(s) à mapper : <em>${echapper(unmappedDisplayNames.join(', '))}</em>.`;
         } else {
             message += `Tous les champs obligatoires (<strong>${this.requiredMappings.size}/${this.requiredMappings.size}</strong>) sont mappés.`;
             if (totalOptionalCount > 0) {
@@ -1135,7 +1136,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             }
         }
 
-        this._showToast('info', message, true, true);
+        this._showToast('info', message, true, true, true);
     }
 
     /**
@@ -1693,7 +1694,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         const detailsText = itemElement.querySelector('.analysis-item-header p');
         if (detailsText) {
-            detailsText.innerHTML = `<span class="text-success fw-bold">✓ Traité en lot — ${message}</span>`;
+            // Le message vient du serveur : du texte, posé par textContent.
+            const statut = document.createElement('span');
+            statut.className = 'text-success fw-bold';
+            statut.textContent = `✓ Traité en lot — ${message ?? ''}`;
+            detailsText.replaceChildren(statut);
         }
 
         const actionsContainer = itemElement.querySelector(
@@ -2286,10 +2291,13 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * Remplace l'affichage inline dans la toolbar.
      *
      * @param {'success'|'warning'|'error'|'info'} type
-     * @param {string} message - Texte du message (HTML autorisé)
+     * @param {string} message - Texte du message (du TEXTE ; du HTML seulement avec `enHtml`)
      * @param {boolean} [autoHide=false] - Si true, le toast se ferme automatiquement après 4s
+     * @param {boolean} [forceShow=false]
+     * @param {boolean} [enHtml=false] - Le message est du HTML composé par l'appelant, qui en
+     *        a échappé chaque donnée (`echapper`).
      */
-    _showToast(type, message, autoHide = true, forceShow = false) {
+    _showToast(type, message, autoHide = true, forceShow = false, enHtml = false) {
         console.log(`[BordereauAnalysis] _showToast() - Type: ${type}, Message: ${message}, ForceShow: ${forceShow}`);
         if (!this.element.isConnected || !this.hasToastContainerTarget) {
             return;
@@ -2319,7 +2327,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 <div class="d-flex">
                     <div class="toast-body">
                         <span class="flex-shrink-0">${config.icon}</span>
-                        <span>${message}</span>
+                        <span data-toast-message></span>
                     </div>
                     <button type="button" class="btn-close ${closeButtonClass} me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>
@@ -2329,6 +2337,18 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         // Append the toast to the toast container
         this.toastContainerTarget.insertAdjacentHTML('beforeend', toastHTML);
         const newToastEl = document.getElementById(toastId);
+
+        // DU TEXTE PAR DÉFAUT : le message relaie des refus du serveur, voire le texte d'une
+        // exception (cellules d'un fichier importé). Le HTML seulement sur demande explicite
+        // (`enHtml`), pour un appelant qui compose lui-même son gras et échappe ses données.
+        const porteMessage = newToastEl?.querySelector('[data-toast-message]');
+        if (porteMessage) {
+            if (enHtml) {
+                porteMessage.innerHTML = message;
+            } else {
+                porteMessage.textContent = String(message ?? '');
+            }
+        }
 
         try {
             const toast = new Toast(newToastEl, {
