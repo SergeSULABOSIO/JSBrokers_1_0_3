@@ -119,3 +119,37 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
 - Outillage honnête : ne citer que les skills, agents et outils réellement disponibles.
 - Faire le point régulièrement quand l'utilisateur le demande ; un rapport final reprend ce qui
   a été fait, mesuré, écarté, et ce qui reste ouvert.
+
+## 8. Chantiers décidés (développement) — rien à coder sans plan validé
+
+Inscrits le 2026-10-16 (décisions de Serge), après l'inventaire fait pour la skill
+`jsb-construire-rubrique`. Le détail des preuves est dans ses fichiers de référence.
+
+1. **PRIORITAIRE — audit de l'échappement.** Chaque site audité un par un : le toast qui rend
+   son texte en HTML (`notification-manager_controller.js:47`), `innerHTML` dans 46 contrôleurs,
+   18 `|raw` dans les gabarits. Une seule fonction d'échappement partagée au lieu des treize
+   écrites à la main (`assets/app.js:1681`, :1745, :1828, :1980, `fiche-hors-filtre.js:14`, et
+   sept contrôleurs). Dans le même chantier : `PisteController::getFormApi` compare l'entreprise
+   à la main (`PisteController.php:94-101`) — à faire passer par `AppartenanceAuCabinet`.
+2. **Dialogues et toasts.** Échap ferme un dialogue, avec une confirmation s'il y a une saisie
+   non enregistrée (aujourd'hui `data-bs-keyboard="false"`, `dialog-manager_controller.js:30`).
+   Toasts : `role="status"` pour une information, `role="alert"` réservé aux erreurs
+   (aujourd'hui `role="alert"` partout, `notification-manager_controller.js:40`).
+3. **Composants dupliqués.** Quatre infobulles (`infobulle`/`.jsb-ctx-tip`, `#db-meta-tip` et
+   `data-renew-tip` dans `assets/app.js`, `soa-section-tip`) et quatre menus contextuels
+   (`context-menu`, `console-context-menu`, `entreprise-context-menu`, `soa-context-menu`) :
+   un seul de chaque.
+4. **Totaliseur.** Le chiffre est calculé et formaté par le serveur, plus par le navigateur
+   (`list-summary_controller.js:148-154`, `Intl.NumberFormat('fr-FR')` :230).
+5. **Valeurs en dur.** Replis `'USD'` (`TrancheType.php:82`, `_list_summary.html.twig:3`,
+   placeholder `DepenseType.php:48`) ; `format_montant` à `'$'` par défaut
+   (`NombreExtension.php`) ; couleurs hexadécimales des badges (`app.css:1809-1810`, contraste
+   du blanc sur `#e69500` à mesurer) ; `date('Y')` dans `PisteController.php:108`, :177.
+6. **État vide.** Distinguer « aucune donnée » de « tout est filtré »
+   (`_list_manager.html.twig:420-425`).
+7. **Route morte** `/admin/piste/test` (`PisteController.php:65-69`).
+8. **Mascottes.** Partages (Paiement et PaiementPrime ; Chargement et ChargementPourPrime ;
+   DepenseCourtier et ReversementRetroAgent ; Invite et ProductionIntermediaire) et alias
+   d'action utilisés comme mascotte (cinq Roles* sur `action:role`, ParametresConge sur
+   `action:settings`, PeriodeBlocage sur `action:resiliation`). Serge tranche cas par cas au
+   premier chantier de rubrique, avec le test prescrit par `jsb-construire-rubrique` §6.
