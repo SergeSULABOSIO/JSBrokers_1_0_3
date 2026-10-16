@@ -21,6 +21,8 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   `courtage-assurance` (§7).
 - **Une politique propre à un cabinet ne devient jamais une règle du produit** (ex. « toujours
   le taux maxima ») : le produit propose, borne et contrôle ; le cabinet choisit.
+- **Nouvelle rubrique, nouvel écran ou nouvelle fonctionnalité → skill `jsb-construire-rubrique`**
+  (fiche de rubrique, parcours en phases, composants, états, textes, icône mascotte).
 
 ## 1. BIC Cristal — le principe de conception
 
