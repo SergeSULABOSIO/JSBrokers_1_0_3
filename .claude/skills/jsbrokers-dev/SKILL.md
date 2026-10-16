@@ -144,7 +144,10 @@ Inscrits le 2026-10-16 (décisions de Serge), après l'inventaire fait pour la s
 5. **Valeurs en dur.** Replis `'USD'` (`TrancheType.php:82`, `_list_summary.html.twig:3`,
    placeholder `DepenseType.php:48`) ; `format_montant` à `'$'` par défaut
    (`NombreExtension.php`) ; couleurs hexadécimales des badges (`app.css:1809-1810`, contraste
-   du blanc sur `#e69500` à mesurer) ; `date('Y')` dans `PisteController.php:108`, :177.
+   du blanc sur `#e69500` à mesurer) ; `date('Y')` dans `PisteController.php:108`, :177 ;
+   `color:#0d2440` hors charte, en style inline, sur 11 titres et libellés du picker de
+   facturation (`_facturation_picker.html.twig:110` à :351) ; format de date `d/m/Y` écrit en
+   dur sur la carte de piste (`_carte_piste.html.twig:40`), au lieu de `format_datetime`.
 6. **État vide.** Distinguer « aucune donnée » de « tout est filtré »
    (`_list_manager.html.twig:420-425`).
 7. **Route morte** `/admin/piste/test` (`PisteController.php:65-69`).
