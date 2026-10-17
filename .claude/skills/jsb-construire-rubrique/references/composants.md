@@ -93,6 +93,25 @@ Statut : **partagé** (≥ 2 rubriques ou surfaces) ou **local** (une seule).
 - Canevas : `form_intro`, `field_icons`, `facts_labels`, `visibility_conditions`.
 - Champ de picker : `.jsb-picker-field` (`app.css:5887`) ; carte de champ `.dlg-field-card` (:3147).
 
+### Confirmation — partagé
+- `confirmation-dialog_controller.js`, ouvert par `confirm-action_controller.js` (gabarits) ou
+  par événement. Titre toujours en texte. Corps : `corpsTexte` (le défaut, pour toute donnée) ;
+  `corpsHtml` seulement pour un HTML composé soi-même avec `echapper` (décision pure :
+  `confirmation-corps.js`). `data-confirm-action-body-value` est du TEXTE, jamais du HTML.
+
+### Éditeur riche (Quill) — partagé
+- Tout `<textarea>` d'un dialogue devient Quill (`_form_row.html.twig`,
+  `rich-text_controller.js`) : le champ stocke du HTML. **Le déclarer** au registre
+  `ChampsEnTexteRiche` (sinon `ChampsEnTexteRicheTest` échoue) : il est alors assaini au flush
+  et contrôlé en longueur.
+- Le lire comme du texte : filtre Twig `texte_lisible` (liste, tableau de bord, e-mail) ou
+  `TexteRiche::lisible()` (PHP, Ket). Le rendre en HTML : `texteRicheSur` (JS, DOMPurify).
+  Jamais `|striptags`, jamais `|raw`.
+
+### Échappement JS — partagé
+- `assets/controllers/echapper.js` : `echapper(valeur)`, les cinq caractères. Seule porte
+  quand on compose une chaîne HTML ; sinon `textContent`.
+
 ### Badges et compteurs — partagé
 - `.jsb-state-badge` (`app.css:1796`), modificateurs `--etape-*` posés par la stratégie
   d'indicateurs (`PisteIndicatorStrategy.php:114`).
@@ -103,7 +122,8 @@ Statut : **partagé** (≥ 2 rubriques ou surfaces) ou **local** (une seule).
   `action = {label, evenement}` ajoute un bouton construit par le DOM (:57-74) ; durée 10 s,
   20 s avec un geste (:78). Relais : `flash-toast_controller.js` (messages flash),
   `api-response-notifier_controller.js`.
-- ⚠ Le texte est inséré en HTML (:47) : l'appelant échappe (`echapper`, `fiche-hors-filtre.js:14`).
+- Le texte est posé par `textContent` (depuis le chantier 1, C2) : l'appelant passe le texte
+  BRUT, sans l'échapper (sinon il s'afficherait en entités).
 - ⚠ Rôle **CIBLE** (arbitrage de Serge, 2026-10-16) : `role="status"` pour une information,
   `role="alert"` réservé aux erreurs. Aujourd'hui `role="alert"` partout (:40) — chantier 2.
 
@@ -121,6 +141,7 @@ Statut : **partagé** (≥ 2 rubriques ou surfaces) ou **local** (une seule).
 - Alias : `IconCanvasProvider.php:10-171` ; Twig : `ux_icon(resolve_icon_name('alias'))` ou
   `<twig:UX:Icon name="{{ resolve_icon_name(...) }}">`. Mascotte : `SKILL.md` §6.
 - Côté client : circuit `ui:icon.request` → `app:icon.loaded`, jamais de réponse synchrone.
+  Cache persistant par `icone-memorisee.js` uniquement (un SVG inerte, sinon redemandé).
 
 ### Cookies — partagé
 - `assets/controllers/cookies.js` : `cookieAEcrire` (:28), `lireCookie` (:42). Seule porte.
@@ -136,8 +157,11 @@ Statut : **partagé** (≥ 2 rubriques ou surfaces) ou **local** (une seule).
   (`infobulle` / `.jsb-ctx-tip` ; `#db-meta-tip` et `data-renew-tip` dans `assets/app.js` ;
   `soa-section-tip` dans `soa-context-menu_controller.js`) et quatre menus contextuels
   (`context-menu`, `console-context-menu`, `entreprise-context-menu`, `soa-context-menu`).
-  Treize échappements écrits à la main (`assets/app.js:1681`, :1745, :1828, :1980,
-  `fiche-hors-filtre.js:14`, et sept contrôleurs) — chantier 1.
+- **Treize échappements écrits à la main**, dont certains oubliaient `"` et `'` : fusionnés
+  dans `echapper.js` (chantier 1, C2/C4) ; un garde-fou node refuse leur retour.
+- **Texte riche réaffiché tel quel** : `<img onerror>` collé dans une description s'exécutait
+  à l'ouverture de la fiche (Quill) et dans le panneau d'attributs ; assaini au flush et à
+  l'affichage depuis le chantier 1 (C6).
 - **Chips qui ne suivaient pas le design existant**, boutons maison au lieu de la pilule,
   classes sans leur montage, police réduite « un cran plus compact » : trois allers-retours
   sur le même composant (mémoire « Réutiliser le pattern UI existant »).
@@ -148,6 +172,9 @@ Statut : **partagé** (≥ 2 rubriques ou surfaces) ou **local** (une seule).
 - [ ] J'ai recopié le montage complet, sans redimensionner le composant.
 - [ ] Échelon de l'échelle de décision justifié dans le plan (`SKILL.md` §5).
 - [ ] Les interactions passent par le Cerveau ; les événements sont nommés `ui:*` / `app:*`.
-- [ ] Aucun contenu dynamique posé par `innerHTML` ; le texte d'un toast est échappé.
+- [ ] Aucun contenu dynamique posé par `innerHTML` ; une chaîne HTML composée passe par
+      `echapper` ; un toast reçoit du texte brut.
+- [ ] Un champ riche (`<textarea>` de dialogue) est déclaré au registre `ChampsEnTexteRiche`,
+      et se lit partout par `texte_lisible`.
 - [ ] Toute action d'écran est au manifeste `CouvertureDesEcrans`.
 - [ ] Un composant nouveau ou modifié est décrit ici, avec son statut.
