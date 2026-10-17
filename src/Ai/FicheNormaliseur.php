@@ -3,6 +3,7 @@
 namespace App\Ai;
 
 use App\Entity\Risque;
+use App\Service\TexteRiche\TexteRiche;
 use App\Services\Canvas\CalculationProvider;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 
@@ -170,6 +171,9 @@ final class FicheNormaliseur
             if (is_array($valeur)) {
                 $valeur = $this->nettoyer($valeur);
             }
+            // UN CHAMP RICHE SE LIT COMME DU TEXTE : Ket recevait le HTML de l'éditeur
+            // (« <p>Clients <strong>VIP</strong></p> ») et le recopiait tel quel.
+            $valeur = TexteRiche::lisible($valeur);
             if ($valeur === null || $valeur === '' || $valeur === []) {
                 continue;
             }

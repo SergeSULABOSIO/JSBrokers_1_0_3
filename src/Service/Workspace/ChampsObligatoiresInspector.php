@@ -7,6 +7,8 @@ use App\Entity\ConditionPartage;
 use App\Service\Avenant\DefautsDeSouscription;
 use App\Service\Monnaie\MonnaieDeTravail;
 use App\Service\Note\NumerotationDesNotes;
+use App\Service\TexteRiche\ChampsEnTexteRiche;
+use App\Service\TexteRiche\TexteRiche;
 use App\Entity\ReversementRetroAgent;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
@@ -116,6 +118,8 @@ class ChampsObligatoiresInspector
         // sa place parce que des tests construisent ce service par arguments POSITIONNELS.
         private readonly ?NumerotationDesNotes $numerotationDesNotes = null,
         private readonly ?MonnaieDeTravail $monnaieDeTravail = null,
+        // Facultatif pour la même raison (construction manuelle dans des tests).
+        private readonly ?TexteRiche $texteRiche = null,
     ) {
     }
 
@@ -365,7 +369,47 @@ class ChampsObligatoiresInspector
         // brouillon reçoit une référence provisoire, la validation le numéro définitif de
         // sa série — règle OHADA, 2026-10-15 ; NumerotationDesNotesListener.)
 
-        return [];
+        return $this->texteRicheTropLong($entity, $champsPilotables);
+    }
+
+    /**
+     * UN TEXTE RICHE QUI NE TIENT PLUS DANS SA COLONNE UNE FOIS ASSAINI.
+     *
+     * L'assainissement (AssainissementDuTexteRicheListener) a lieu au flush : un texte qui
+     * débordait alors la colonne (souvent 255) tombait en 500, ou tronqué, son HTML cassé.
+     * On le dit AVANT, ici — point commun de l'écran et de Ket —, en mesurant la valeur
+     * telle qu'elle sera écrite.
+     *
+     * @param string[]|null $champsPilotables
+     * @return array<string, string[]>
+     */
+    private function texteRicheTropLong(object $entity, ?array $champsPilotables): array
+    {
+        if ($this->texteRiche === null) {
+            return [];
+        }
+        $meta = $this->em->getClassMetadata($entity::class);
+        $erreurs = [];
+        foreach (ChampsEnTexteRiche::de($entity) as $champ) {
+            if ($champsPilotables !== null && !in_array($champ, $champsPilotables, true)) {
+                continue;
+            }
+            $valeur = $meta->getFieldValue($entity, $champ);
+            $max = $meta->getFieldMapping($champ)['length'] ?? null;
+            if ($max === null || !TexteRiche::estRiche($valeur)) {
+                continue;
+            }
+            $longueur = mb_strlen($this->texteRiche->assainir($valeur));
+            if ($longueur > $max) {
+                $erreurs[$champ] = [sprintf(
+                    'Ce texte est trop long une fois mis en forme (%d caractères pour %d) : raccourcissez-le ou allégez sa mise en forme.',
+                    $longueur,
+                    $max,
+                )];
+            }
+        }
+
+        return $erreurs;
     }
 
     /**

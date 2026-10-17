@@ -62,7 +62,7 @@
     {# ── BLOC IDENTITÉ ─────────────────────────────────────────────────────────────── #}
     {% set identite %}
         {# ⚠ `ligne` rend sa valeur en |raw (pour « &nbsp;j » et le report en <span>) :
-           toute donnée saisie passe par |e — et un champ riche par |en_texte, puis |e. #}
+           toute donnée saisie passe par |e — et un champ riche par |texte_lisible, puis |e. #}
         {{ t.ligne('Collaborateur', d.agent ? d.agent.nom|e : 'Non précisé') }}
         {% if d.valideur %}
             {{ t.ligne('Valideur', d.valideur.nom|e) }}
@@ -79,7 +79,7 @@
         {% if d.demiJourneeDebut %}{{ t.ligne('Premier jour', 'demi-journée') }}{% endif %}
         {% if d.demiJourneeFin %}{{ t.ligne('Dernier jour', 'demi-journée') }}{% endif %}
         {{ t.ligne('Jours ouvrables décomptés', jours ~ '&nbsp;j', true) }}
-        {% if d.motif %}{{ t.ligne('Motif', d.motif|en_texte|e) }}{% endif %}
+        {% if d.motif %}{{ t.ligne('Motif', d.motif|texte_lisible|e) }}{% endif %}
         {{ t.ligne('Justificatif', d.documents|length > 0 ? 'oui (' ~ d.documents|length ~ ')' : 'aucun') }}
         {{ t.ligne('Déposée le', d.createdAt ? d.createdAt|date('d/m/Y à H:i') : '—') }}
     {% endset %}
@@ -134,7 +134,7 @@
                 {{ t.ligne('Mention', 'auto-approuvée (seul valideur du cabinet)', true) }}
             {% endif %}
             {% if ctx.transition.commentaire %}
-                {{ t.ligne('Commentaire', ctx.transition.commentaire|en_texte|e) }}
+                {{ t.ligne('Commentaire', ctx.transition.commentaire|texte_lisible|e) }}
             {% endif %}
         {% endset %}
         {{ t.tableau('La décision', decision) }}

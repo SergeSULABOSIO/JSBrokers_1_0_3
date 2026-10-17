@@ -10,6 +10,9 @@
  */
 
 export const BALISES = ['p', 'br', 'strong', 'em', 'u', 's', 'ol', 'ul', 'li', 'h1', 'h2', 'h3', 'span'];
+
+/** Les formats Quill que la barre d'outils produit (rich-text_controller.js) — et eux seuls. */
+export const FORMATS_DE_LA_BARRE = ['bold', 'italic', 'underline', 'strike', 'color', 'background', 'list', 'align', 'header'];
 export const ATTRIBUTS = ['class', 'style', 'data-list', 'contenteditable'];
 
 const COULEUR = /^(#[0-9a-f]{3,8}|rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(,\s*(0|1|0?\.\d+)\s*)?\))$/i;

@@ -168,14 +168,14 @@
 
             {# Le motif du collaborateur : ce qu'il a écrit en posant sa demande. #}
             {% if demande.motif %}
-                {# `striptags` PARCE QUE LE MOTIF EST SAISI EN TEXTE RICHE. Le champ est
+                {# `texte_lisible` PARCE QUE LE MOTIF EST SAISI EN TEXTE RICHE. Le champ est
                    servi par un éditeur qui rend « <p>RAS…</p> » : affiché tel quel, le
                    valideur lisait les balises au milieu de la phrase. Filtrer plutôt que
                    rendre le HTML : c'est du texte écrit par un tiers, et cette boîte n'a
                    aucune raison d'exécuter sa mise en forme. #}
                 <section class="jsb-picker-carte" aria-labelledby="conge-motif-titre">
                     <h6 id="conge-motif-titre" class="jsb-picker-carte-titre">Motif du collaborateur</h6>
-                    <p class="mb-0">{{ demande.motif|striptags|trim ?: '—' }}</p>
+                    <p class="mb-0">{{ demande.motif|texte_lisible|trim ?: '—' }}</p>
                 </section>
             {% endif %}
 

@@ -1,0 +1,41 @@
+# LE TEXTE RICHE, ASSAINI À L'ÉCRITURE (chantier d'échappement, C6).
+#
+# Tout <textarea> d'un dialogue est un éditeur Quill : ces champs stockent du HTML. Le
+# serveur n'en garde que ce que la barre d'outils produit (rich-text_controller.js) :
+# paragraphes, gras, italique, souligné, barré, listes, titres 1 à 3, couleur, fond,
+# alignement. Lien, image, cadre, script, gestionnaire d'événement : retirés.
+# Les VALEURS d'attributs sont filtrées par AttributsDeLaBarreQuill (classes ql-*,
+# couleurs, listes) — le même filtre que le navigateur (texte-riche-regles.js).
+framework:
+    html_sanitizer:
+        sanitizers:
+            texte_riche:
+                allow_elements:
+                    p: [class]
+                    br: []
+                    strong: []
+                    em: []
+                    u: []
+                    s: []
+                    ol: [class]
+                    ul: [class]
+                    li: [class, data-list]
+                    h1: [class]
+                    h2: [class]
+                    h3: [class]
+                    span: [class, style, contenteditable]
+                # UNE BALISE REFUSÉE LAISSE SON TEXTE. Par défaut, un élément hors liste part
+                # AVEC ses enfants : « Voir <a>le contrat</a> » devenait « Voir  », et l'écouteur
+                # assainit à CHAQUE flush de l'entité — une valeur existante perdait ce texte au
+                # premier changement de statut. Ici, seule la balise disparaît. Ce qui n'est pas
+                # listé (script, style, iframe, img…) part toujours avec son contenu.
+                block_elements: [a, abbr, address, article, aside, b, big, blockquote, center, cite, code,
+                    dd, del, details, dfn, div, dl, dt, figcaption, figure, font, footer, h4, h5, h6,
+                    header, i, ins, kbd, label, main, mark, nav, pre, q, samp, section, small,
+                    strike, sub, summary, sup, table, tbody, td, tfoot, th, thead, tr, tt, var]
+                # Aucune troncature : la limite par défaut (20 000 octets) coupait en silence, et
+                # vidait tout si la coupe tombait au milieu d'un caractère accentué. La longueur
+                # est contrôlée en amont (ChampsObligatoiresInspector), en caractères.
+                max_input_length: -1
+                with_attribute_sanitizers:
+                    - App\Service\TexteRiche\AttributsDeLaBarreQuill

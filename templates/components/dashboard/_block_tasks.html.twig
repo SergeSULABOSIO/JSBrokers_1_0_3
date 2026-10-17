@@ -109,7 +109,7 @@
                             <twig:UX:Icon name="hugeicons:task-02" style="width:13px;height:13px;" />
                         </div>
                         <span class="db-task-label small fw-semibold flex-grow-1 text-truncate"
-                              style="color:#212529;" title="{{ tache.description|striptags }}">{{ tache.description|striptags }}</span>
+                              style="color:#212529;" title="{{ tache.description|texte_lisible }}">{{ tache.description|texte_lisible }}</span>
                         <span class="badge rounded-pill"
                               style="background:{{ prioBg }};color:#fff;font-size:.58rem;flex-shrink:0;">
                             {{ prioLabel }}
@@ -119,7 +119,7 @@
                     </summary>
 
                     <div class="px-2 py-2 bg-light rounded-bottom" style="font-size:.73rem;">
-                        <p class="mb-2" style="color:#212529;word-break:break-word;">{{ tache.description|striptags }}</p>
+                        <p class="mb-2" style="color:#212529;word-break:break-word;">{{ tache.description|texte_lisible }}</p>
 
                         {% if tache.piste or tache.cotation or tache.notificationSinistre %}
                         <div class="d-flex gap-3 flex-wrap mb-1">
@@ -171,7 +171,7 @@
                             {% if tache.feedbacks|length > 0 %}
                                 {% set _fbLines = [] %}
                                 {% for fb in tache.feedbacks|slice(0, 5) %}
-                                    {% set _desc = fb.description|striptags %}
+                                    {% set _desc = fb.description|texte_lisible %}
                                     {% set _fbLine = (fb.invite ? fb.invite.nom : 'Anonyme') ~ ': ' ~ (_desc|slice(0, 55)) ~ (_desc|length > 55 ? '…' : '') %}
                                     {% set _fbLines = _fbLines|merge([_fbLine]) %}
                                 {% endfor %}

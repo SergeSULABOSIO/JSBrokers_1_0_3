@@ -9,6 +9,7 @@ use App\Entity\Invite;
 use App\Entity\Note;
 use App\Entity\Taxe;
 use App\Repository\TaxeRepository;
+use App\Service\TexteRiche\TexteRiche;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use App\Services\Canvas\Indicator\AvenantIndicatorStrategy;
 use App\Services\Canvas\Provider\Entity\AvenantEntityCanvasProvider;
@@ -839,14 +840,14 @@ class DashboardDataProvider
             'taxeCourtier' => [
                 'montant'     => round($taxeCourtierTotal, 2),
                 'nom'         => $taxeCourtierEntity?->getCode() ?? 'Taxe courtier',
-                'description' => strip_tags($taxeCourtierEntity?->getDescription() ?? ''),
+                'description' => TexteRiche::lisible($taxeCourtierEntity?->getDescription() ?? ''),
                 'taux'        => (float) ($taxeCourtierEntity?->getTauxIARD() ?? 0),
                 'tip'         => $this->buildTaxTip($taxeCourtierEntity, "Taxe réglementaire à votre charge, calculée sur votre commission.\nRetenue sur le Revenu TTC et reversée à l'administration fiscale."),
             ],
             'taxeAssureur' => [
                 'montant'     => round($taxeAssureurTotal, 2),
                 'nom'         => $taxeAssureurEntity?->getCode() ?? 'Taxe assureur',
-                'description' => strip_tags($taxeAssureurEntity?->getDescription() ?? ''),
+                'description' => TexteRiche::lisible($taxeAssureurEntity?->getDescription() ?? ''),
                 'taux'        => (float) ($taxeAssureurEntity?->getTauxIARD() ?? 0),
                 'tip'         => $this->buildTaxTip($taxeAssureurEntity, "Taxe à la charge de l'assureur sur les primes, collectée par le courtier.\nReversée à l'administration fiscale."),
             ],
@@ -869,7 +870,7 @@ class DashboardDataProvider
         if ($taxe === null) {
             return $fallback;
         }
-        $lines = [strip_tags($taxe->getDescription() ?? '')];
+        $lines = [TexteRiche::lisible($taxe->getDescription())];
         $taux = (float) ($taxe->getTauxIARD() ?? 0);
         if ($taux > 0) {
             $formatted = (fmod($taux, 1.0) === 0.0)

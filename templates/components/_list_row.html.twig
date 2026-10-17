@@ -20,7 +20,7 @@
    portait que l'identifiant : la corbeille, le menu contextuel et la boîte de confirmation
    annonçaient « Élément #117 » au lieu de nommer l'affaire qu'on s'apprête à effacer. On ne
    peut pas demander à quelqu'un de valider ce qu'on ne lui nomme pas. #}
-{% set valeur_principale = attribute(entity, listeCanvas.colonne_principale.texte_principal.attribut_code) %}
+{% set valeur_principale = attribute(entity, listeCanvas.colonne_principale.texte_principal.attribut_code)|texte_lisible %}
 <tr
     id="liste_row_{{ entity.id }}"
     data-controller="list-row"

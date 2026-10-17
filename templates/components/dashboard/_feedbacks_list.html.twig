@@ -1,8 +1,8 @@
 {% set typeIcons = {0: 'mdi:handshake-outline', 1: 'mdi:phone-outline', 2: 'mdi:email-outline', 3: 'mdi:message-outline'} %}
 {% for fb in derniersFeedbacks %}
     {% set typeIcon = typeIcons[fb.type] ?? 'mdi:chat-outline' %}
-    {% set desc = fb.description|striptags %}
-    {% set taskDesc = fb.tache ? (fb.tache.description|striptags) : null %}
+    {% set desc = fb.description|texte_lisible %}
+    {% set taskDesc = fb.tache ? (fb.tache.description|texte_lisible) : null %}
     <div class="db-fb-item" tabindex="0" role="button">
         <div class="d-flex align-items-start gap-2">
             <span class="db-fb-type-icon flex-shrink-0 pt-1">

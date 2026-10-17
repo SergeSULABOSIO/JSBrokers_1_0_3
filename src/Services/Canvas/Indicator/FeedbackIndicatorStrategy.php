@@ -3,6 +3,7 @@
 namespace App\Services\Canvas\Indicator;
 
 use App\Entity\Feedback;
+use App\Service\TexteRiche\TexteRiche;
 use App\Services\ServiceDates;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use DateTimeImmutable;
@@ -34,7 +35,7 @@ class FeedbackIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'delaiProchaineAction' => $this->calculateFeedbackDelaiProchaineAction($entity),
             'ageFeedback' => $this->calculateFeedbackAge($entity),
             'statutProchaineAction' => $this->getFeedbackStatutProchaineActionString($entity),
-            'descriptionText' => strip_tags($entity->getDescription() ?? ''),
+            'descriptionText' => TexteRiche::lisible($entity->getDescription() ?? ''),
             'auteurNom' => $auteurNom,
             'nombreDocuments' => $entity->getDocuments()->count(),
             'estEnRetard' => $this->getFeedbackEstEnRetardString($entity),

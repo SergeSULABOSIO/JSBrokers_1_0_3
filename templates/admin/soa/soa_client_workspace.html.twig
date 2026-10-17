@@ -468,7 +468,7 @@
                                         <td><strong>{{ piste.nom }}</strong></td>
                                         <td>{{ piste.risque ? piste.risque.nomComplet : '—' }}</td>
                                         <td>{{ piste.primePotentielle is not null ? piste.primePotentielle|number_format(2, ',', ' ') ~ ' ' ~ monnaie : '—' }}</td>
-                                        <td class="text-muted">{% set desc = piste.descriptionDuRisque|default('')|striptags|trim %}{{ desc ? desc|slice(0, 80) ~ (desc|length > 80 ? '…' : '') : '—' }}</td>
+                                        <td class="text-muted">{% set desc = piste.descriptionDuRisque|default('')|texte_lisible|trim %}{{ desc ? desc|slice(0, 80) ~ (desc|length > 80 ? '…' : '') : '—' }}</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
@@ -608,8 +608,8 @@
                                     <tr data-id="{{ sinistre.id }}"
                                         data-label="{{ sinistre.referenceSinistre|default('Sinistre #' ~ sinistre.id) }}">
                                         <td><strong>{{ sinistre.referenceSinistre|default('—') }}</strong></td>
-                                        <td class="soa-circonstance" title="{{ sinistre.descriptionDeFait|default('')|striptags }}">
-                                            <span class="soa-circonstance-clamp">{{ sinistre.descriptionDeFait ? sinistre.descriptionDeFait|striptags : '—' }}</span>
+                                        <td class="soa-circonstance" title="{{ sinistre.descriptionDeFait|default('')|texte_lisible }}">
+                                            <span class="soa-circonstance-clamp">{{ sinistre.descriptionDeFait ? sinistre.descriptionDeFait|texte_lisible : '—' }}</span>
                                         </td>
                                         <td>{{ sinistre.risque ? sinistre.risque.nomComplet : '—' }}</td>
                                         <td style="white-space:nowrap;">{{ sinistre.occuredAt ? sinistre.occuredAt|date('d/m/Y') : '—' }}</td>
@@ -777,12 +777,12 @@
                             <tbody>
                                 {% for tache in tachesActives %}
                                     {% set dernierFeedback = tache.feedbacks|last %}
-                                    {% set tacheLabel = tache.description|striptags|trim %}
+                                    {% set tacheLabel = tache.description|texte_lisible|trim %}
                                     <tr class="tache-active-row"
                                         data-id="{{ tache.id }}"
                                         data-label="{{ tacheLabel|slice(0, 60) }}{{ tacheLabel|length > 60 ? '…' : '' }}">
-                                        <td><strong>{{ tache.description|striptags|trim }}</strong></td>
-                                        <td class="text-muted" style="font-size:.8rem;">{{ tache.contexteTache|default('')|striptags|trim ?: '—' }}</td>
+                                        <td><strong>{{ tache.description|texte_lisible|trim }}</strong></td>
+                                        <td class="text-muted" style="font-size:.8rem;">{{ tache.contexteTache|default('')|texte_lisible|trim ?: '—' }}</td>
                                         <td style="white-space:nowrap;">
                                             {{ tache.toBeEndedAt ? tache.toBeEndedAt|date('d/m/Y') : '—' }}
                                         </td>
@@ -791,7 +791,7 @@
                                                 <span class="badge" style="background-color:#495057; color:#fff; font-size:.72rem;">
                                                     {{ feedbackTypeLabels[dernierFeedback.type]|default('?') }}
                                                 </span>
-                                                {% set fbDesc = dernierFeedback.description|default('')|striptags|trim %}
+                                                {% set fbDesc = dernierFeedback.description|default('')|texte_lisible|trim %}
                                                 {{ fbDesc|slice(0, 60) }}{{ fbDesc|length > 60 ? '…' : '' }}
                                                 {% if dernierFeedback.nextActionAt %}
                                                     <br><small class="text-muted">Proch. action : {{ dernierFeedback.nextActionAt|date('d/m/Y') }}</small>
@@ -828,14 +828,14 @@
                                 {% for tache in tachesCloses %}
                                     {% set dernierFeedback = tache.feedbacks|last %}
                                     <tr class="tache-closed-row">
-                                        <td><s>{{ tache.description|striptags|trim }}</s></td>
-                                        <td class="text-muted" style="font-size:.8rem;">{{ tache.contexteTache|default('')|striptags|trim ?: '—' }}</td>
+                                        <td><s>{{ tache.description|texte_lisible|trim }}</s></td>
+                                        <td class="text-muted" style="font-size:.8rem;">{{ tache.contexteTache|default('')|texte_lisible|trim ?: '—' }}</td>
                                         <td style="font-size:.8rem;">
                                             {% if dernierFeedback %}
                                                 <span class="badge" style="background-color:#495057; color:#fff; font-size:.72rem;">
                                                     {{ feedbackTypeLabels[dernierFeedback.type]|default('?') }}
                                                 </span>
-                                                {% set fbDesc = dernierFeedback.description|default('')|striptags|trim %}
+                                                {% set fbDesc = dernierFeedback.description|default('')|texte_lisible|trim %}
                                                 {{ fbDesc|slice(0, 60) }}{{ fbDesc|length > 60 ? '…' : '' }}
                                             {% else %}
                                                 <span class="text-muted">—</span>
@@ -885,7 +885,7 @@
                                             <td><strong>{{ risque.nomComplet }}</strong></td>
                                             <td>{{ risque.code|default('—') }}</td>
                                             <td>{{ risque.branche == constant('App\\Entity\\Risque::BRANCHE_VIE') ? 'Vie' : 'IARD' }}</td>
-                                            <td class="text-muted" style="font-size:.8rem;">{% set desc = risque.description|default('')|striptags|trim %}{{ desc ? desc|slice(0, 80) ~ (desc|length > 80 ? '…' : '') : '—' }}</td>
+                                            <td class="text-muted" style="font-size:.8rem;">{% set desc = risque.description|default('')|texte_lisible|trim %}{{ desc ? desc|slice(0, 80) ~ (desc|length > 80 ? '…' : '') : '—' }}</td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>

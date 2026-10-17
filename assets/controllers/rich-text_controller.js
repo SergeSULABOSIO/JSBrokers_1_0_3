@@ -1,5 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 import Quill from 'https://cdn.jsdelivr.net/npm/quill@2.0.2/+esm';
+import { texteRicheSur } from './texte-riche.js';
+import { estTexteRiche, FORMATS_DE_LA_BARRE } from './texte-riche-regles.js';
 
 /**
  * @class RichTextController
@@ -34,13 +36,26 @@ export default class extends Controller {
         // Quill va automatiquement créer la barre d'outils (.ql-toolbar) comme un frère juste avant l'éditeur.
         this.quill = new Quill(editorContainer, {
             modules: { toolbar: inerte ? false : toolbarOptions },
+            // LES FORMATS DE LA BARRE D'OUTILS, ET EUX SEULS. Sans cette liste, un COLLAGE
+            // produisait tout ce que Quill sait faire — lien, image, vidéo, code — que
+            // l'assainissement du serveur retire ensuite : mieux vaut ne pas l'offrir.
+            formats: FORMATS_DE_LA_BARRE,
             theme: 'snow',
             readOnly: inerte,
             placeholder: inerte ? '' : (this.element.getAttribute('placeholder') || 'Saisissez votre texte ici...')
         });
 
         // 3. Charger le contenu initial du textarea dans l'éditeur.
-        this.quill.root.innerHTML = this.element.value;
+        // ASSAINI, OU POSÉ COMME DU TEXTE. Le contenu stocké était injecté tel quel en HTML :
+        // `<img onerror=…>` enregistré par une autre porte (POST direct, import) s'exécutait
+        // à l'ouverture de la fiche. Le HTML de l'éditeur passe par la liste blanche
+        // (texteRicheSur) ; un texte simple — écrit par Ket ou un import — reste du texte.
+        const valeur = this.element.value;
+        if (estTexteRiche(valeur)) {
+            this.quill.root.innerHTML = texteRicheSur(valeur);
+        } else {
+            this.quill.setText(valeur);
+        }
 
         // 4. Cacher le textarea original, qui ne sert plus que de stockage de données.
         this.element.style.display = 'none';
