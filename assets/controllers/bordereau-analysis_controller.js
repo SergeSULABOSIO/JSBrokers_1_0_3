@@ -2,6 +2,7 @@ import BaseController from './base_controller.js';
 import { Toast, Modal, Dropdown } from 'bootstrap';
 import { libelleDeFiche, titreDeFiche } from './selecto.js';
 import { echapper } from './echapper.js';
+import { lireIconeMemorisee, memoriserIcone } from './icone-memorisee.js';
 /**
  * @class BordereauAnalysisController
  * @description Gère l'interface de l'analyse de bordereau en deux étapes.
@@ -260,10 +261,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         // zéro requête serveur pour une icône déjà vue, même après rechargement.
         // Diffusion différée d'un microtask : le demandeur peut être en pleine
         // construction (écouteur pas encore abonné) — cf. gotcha du circuit d'icônes.
-        let stored = null;
-        try {
-            stored = window.localStorage.getItem(`jsb-icon-v1::${iconName}::${iconSize}`);
-        } catch { /* localStorage indisponible : on retombe sur le fetch */ }
+        // Relu par icone-memorisee.js : un SVG inerte, ou rien.
+        const stored = lireIconeMemorisee(iconName, iconSize);
         if (stored) {
             this.iconCache.set(iconName, stored);
             await Promise.resolve();
@@ -294,7 +293,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 if (html && !html.trim().startsWith('<!--')) {
                     this.iconCache.set(iconName, html);
                     // Persistance pour les prochaines sessions (silencieux si quota/indisponible).
-                    try { window.localStorage.setItem(`jsb-icon-v1::${iconName}::${iconSize}`, html); } catch { /* no-op */ }
+                    memoriserIcone(iconName, iconSize, html);
                 }
                 return html;
             } catch (error) {
@@ -2653,9 +2652,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         }
         // Cache persistant (localStorage, clés partagées avec le cerveau) — diffusion
         // différée d'un microtask, cf. gotcha du circuit d'icônes.
-        const storageKey = `jsb-icon-v1::${iconName}::${iconSize || 24}`;
-        let stored = null;
-        try { stored = window.localStorage.getItem(storageKey); } catch { /* no-op */ }
+        const stored = lireIconeMemorisee(iconName, iconSize || 24);
         if (stored) {
             this.iconCache.set(iconName, stored);
             await Promise.resolve();
@@ -2672,7 +2669,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             const html = await response.text();
             if (html && !html.trim().startsWith('<!--')) {
                 this.iconCache.set(iconName, html);
-                try { window.localStorage.setItem(storageKey, html); } catch { /* no-op */ }
+                memoriserIcone(iconName, iconSize || 24, html);
             }
             document.dispatchEvent(new CustomEvent('app:icon.loaded', {
                 bubbles: true,

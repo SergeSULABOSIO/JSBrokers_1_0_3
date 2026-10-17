@@ -14,6 +14,7 @@ import { dedoublonnerOnglets, ongletExistantPourRubrique } from './onglets-uniqu
 import { echapper } from './echapper.js';
 import { texteRicheEnTexte, texteRicheSur } from './texte-riche.js';
 import { estTexteRiche } from './texte-riche-regles.js';
+import { urlDeMemeOrigine } from './url-de-confiance.js';
 
 /**
  * LES DEUX SEUILS DE DISPOSITION — écrits ici ET dans `interactive-menu.css`.
@@ -3089,9 +3090,16 @@ export default class extends Controller {
     async _loadTabFromUrl(tabData) {
         const panel = this.workspaceTabPanelsTarget.querySelector(`[data-tab-id="${tabData.id}"]`);
         if (!panel) return;
+        // L'URL vient du localStorage, et sa réponse part en innerHTML : notre origine seulement.
+        const url = urlDeMemeOrigine(tabData.loadUrl);
+        if (!url) {
+            panel.innerHTML = `<div class="p-4 text-danger">Impossible de recharger l'onglet.</div>`;
+            panel.dataset.loaded = 'true';
+            return;
+        }
         this.progressBarTarget.style.display = 'block';
         try {
-            const response = await fetch(tabData.loadUrl);
+            const response = await fetch(url);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const { html } = await response.json();
             panel.innerHTML = html;
@@ -3187,7 +3195,12 @@ export default class extends Controller {
         const storageKey = `visualizationHtmlTab_${this.idEntrepriseValue}`;
         let saved;
         try { saved = JSON.parse(localStorage.getItem(storageKey) || 'null'); } catch { saved = null; }
-        if (!saved?.sourceUrl || !saved?.tabKey) {
+        // Le HTML de cette URL part en innerHTML : une URL d'une autre origine est oubliée.
+        const sourceUrl = urlDeMemeOrigine(saved?.sourceUrl);
+        if (saved && !sourceUrl) {
+            try { localStorage.removeItem(storageKey); } catch { /* no-op */ }
+        }
+        if (!sourceUrl || !saved?.tabKey) {
             // Rien à restaurer : si le script inline avait tout de même ouvert la
             // phase plein écran, on revient à la disposition normale.
             this._finirRestaurationPleinEcran(false);
@@ -3202,7 +3215,7 @@ export default class extends Controller {
         document.dispatchEvent(new CustomEvent('app:loading.start'));
 
         try {
-            const response = await fetch(saved.sourceUrl);
+            const response = await fetch(sourceUrl);
             if (!response.ok) {
                 localStorage.removeItem(storageKey);
                 this._finirRestaurationPleinEcran(false);
@@ -3215,7 +3228,7 @@ export default class extends Controller {
                     title: saved.title,
                     iconAlias: saved.iconAlias,
                     tabKey: saved.tabKey,
-                    sourceUrl: saved.sourceUrl,
+                    sourceUrl,
                 },
             });
             this._finirRestaurationPleinEcran(true);

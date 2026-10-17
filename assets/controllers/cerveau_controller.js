@@ -7,6 +7,7 @@ import { criteresSans, messageFicheHorsFiltre } from './fiche-hors-filtre.js';
 // Le même lecteur que la reprise de données : une suppression en chaîne peut emporter
 // cent lignes, et l'écran doit voir l'avancement du début à la fin.
 import { lireFluxNdjson } from './flux-ndjson.js';
+import { lireIconeMemorisee, memoriserIcone } from './icone-memorisee.js';
 // La règle du lot — séquentielle, et qui nomme CHAQUE refus — vit dans un module pur :
 // ce contrôleur dépend de Stimulus et d'un DOM que la suite JS n'a pas, la règle non.
 import { supprimerEnLot, verdictDuLot } from './suppression-en-lot.js';
@@ -1680,12 +1681,9 @@ export default class extends Controller {
 
         // Cache PERSISTANT (localStorage) : survit aux rechargements de page — aucune
         // requête serveur pour une icône déjà vue lors d'une session précédente.
-        // try/catch : localStorage peut être indisponible (mode privé, quota).
-        const storageKey = `jsb-icon-v1::${cacheKey}`;
-        let stored = null;
-        try {
-            stored = window.localStorage.getItem(storageKey);
-        } catch { /* localStorage indisponible : on retombe sur le fetch */ }
+        // RELU PAR icone-memorisee.js : seul un SVG inerte revient du stockage ; une
+        // entrée réécrite est effacée et l'icône redemandée au serveur.
+        const stored = lireIconeMemorisee(iconName, iconSize);
         if (stored) {
             this._iconCache.set(cacheKey, Promise.resolve(stored));
             // Diffusion différée d'un microtask : le demandeur émet souvent sa requête
@@ -1715,7 +1713,7 @@ export default class extends Controller {
             const html = await fetchPromise;
             this._iconCache.set(cacheKey, Promise.resolve(html));
             // Persistance pour les prochaines sessions (silencieux si quota/indisponible).
-            try { window.localStorage.setItem(storageKey, html); } catch { /* no-op */ }
+            memoriserIcone(iconName, iconSize, html);
             this.broadcast('app:icon.loaded', { iconName, html, requesterId });
         } catch (error) {
             console.error(`[Cerveau] Failed to fetch icon '${iconName}':`, error);

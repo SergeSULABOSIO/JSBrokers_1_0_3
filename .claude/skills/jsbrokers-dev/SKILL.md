@@ -50,6 +50,9 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   descriptions. Deux sélecteurs l'avaient oublié (chargement cible d'un type de revenu, modèle
   de pièce de sinistre) ; test `SelecteursDuCabinetTest`. Seule exception : la console interne
   de Joseara, hors cabinet (ex. `CrmTicketType`).
+- **ÉCART CONNU** (relevé au chantier 1, C5) : environ 36 contrôles d'appartenance sont encore
+  écrits à la main (`getEntreprise() !== …` puis 404) au lieu d'`AppartenanceAuCabinet`. Ils
+  refusent bien en 404 ; tout code touché à proximité les y ramène.
 - **« Mon portefeuille » est un confort de lecture, pas une frontière** : la frontière est le
   scoping entreprise, toujours appliqué.
 
@@ -78,8 +81,32 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   tableau de bord injectaient leurs valeurs en HTML (`dataset` décode l'attribut) ; un nom de
   piste piégé s'exécutait au survol, malgré le `|e` du gabarit (corrigé `assets/app.js:1744`
   et `:1979`).
-  ⚠ Le toast rend son texte en HTML (`notification-manager_controller.js:47`) : l'appelant
-  échappe (`echapper`, `fiche-hors-filtre.js:14`).
+- **Les sources uniques de l'échappement** (chantier 1, 2026-10-17) — on les appelle, on n'en
+  écrit pas d'autre :
+  - `assets/controllers/echapper.js` : la SEULE fonction d'échappement JS, pour un HTML qu'on
+    compose soi-même. Garde-fou `tests/js/echappement-unique.test.mjs` (aucun
+    `replace(/&/g` ailleurs).
+  - **Toast = texte** (`textContent`). Confirmation : `corpsTexte` par défaut, `corpsHtml`
+    seulement pour un HTML composé avec `echapper`.
+  - Twig : `tests/Twig/RawSurDonneesTest.php` tient la liste blanche motivée des `|raw` ; un
+    `|raw` nouveau la fait échouer. Une traduction balisée : `trans({':x': valeur|e})|raw`. Les
+    macros d'e-mail gardent leur `|raw` : chaque donnée y entre par `|e`.
+- **Texte riche** : tout `<textarea>` de dialogue est un éditeur Quill, qui stocke du HTML.
+  - Registre `App\Service\TexteRiche\ChampsEnTexteRiche` : **un nouveau `<textarea>` s'y déclare**
+    (`ChampsEnTexteRicheTest` refuse l'oubli).
+  - À l'écriture, l'écouteur `AssainissementDuTexteRicheListener` (onFlush : écran, Ket, import)
+    réduit le HTML à la barre d'outils (`symfony/html-sanitizer`, configuration `texte_riche`,
+    `AttributsDeLaBarreQuill`). ⚠ `#[Target('texte_riche')]` obligatoire : sans lui,
+    l'assainisseur PAR DÉFAUT arrive en silence. Un HTML qui déborde la colonne est refusé en
+    422 (`ChampsObligatoiresInspector`), jamais tronqué.
+  - À la lecture : filtre `texte_lisible` / `TexteRiche::lisible()` partout où le champ se lit
+    comme du texte (listes, tableau de bord, SOA, Ket) — le HTML de l'éditeur devient du texte,
+    un texte simple reste intact (`striptags` coupait « A<B »). Rendu en HTML : `texteRicheSur`
+    (DOMPurify, même liste blanche) ; Quill reçoit `formats: FORMATS_DE_LA_BARRE`.
+  - L'export `.jsbx` garde le HTML : format d'échange ré-importable, réassaini au flush.
+- **Ce qu'on relit du `localStorage` n'est pas sûr** : une icône passe par
+  `icone-memorisee.js` (SVG inerte, sinon effacée), une URL d'onglet par `url-de-confiance.js`
+  (même origine) avant tout `fetch` suivi d'un `innerHTML`.
 - Les cookies s'écrivent et se lisent par `assets/controllers/cookies.js`, et nulle part ailleurs.
 - Asset Mapper : aucune compilation. En dev, rien à builder ; en E2E, ne pas laisser `public/assets`.
 
@@ -106,6 +133,13 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   `git push JSBrokers_1_0_3 master` (pas d'`origin`).
 - L'utilisateur commite aussi depuis son poste : toujours `fetch` avant de commiter.
 - Mise en production : `bin/deploy.sh` + `bin/publier.ps1` ; jamais `git clean` ni `rm -rf var/`.
+  `publier` fait le `git pull` AVANT `deploy.sh` : les dépendances se réinstallent sur
+  l'empreinte de `composer.lock` (`vendor/.composer-lock.sha1`). **Prévenir Serge de tout commit
+  qui modifie `composer.lock`.**
+- Vérifications faites en production (chantier 1) : requêtes REGEXP de détection des charges
+  dans les champs texte (lecture seule, phpMyAdmin) — aucune trace, contre-épreuve valide ;
+  journal du limiteur du formulaire de contact `var/log/contact-AAAA-MM-JJ.log` (IP retenue =
+  `REMOTE_ADDR`, pas de proxy, `TRUSTED_PROXIES` vide).
 
 ## 7. Mode Plan
 
@@ -125,12 +159,12 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
 Inscrits le 2026-10-16 (décisions de Serge), après l'inventaire fait pour la skill
 `jsb-construire-rubrique`. Le détail des preuves est dans ses fichiers de référence.
 
-1. **PRIORITAIRE — audit de l'échappement.** Chaque site audité un par un : le toast qui rend
-   son texte en HTML (`notification-manager_controller.js:47`), `innerHTML` dans 46 contrôleurs,
-   18 `|raw` dans les gabarits. Une seule fonction d'échappement partagée au lieu des treize
-   écrites à la main (`assets/app.js:1681`, :1745, :1828, :1980, `fiche-hors-filtre.js:14`, et
-   sept contrôleurs). Dans le même chantier : `PisteController::getFormApi` compare l'entreprise
-   à la main (`PisteController.php:94-101`) — à faire passer par `AppartenanceAuCabinet`.
+1. ✅ **FAIT (2026-10-16/17) — audit de l'échappement**, en huit commits : C0 console Joseara
+   (XSS stockée cabinet → console), C1 e-mails et `|raw`, C2 `echapper.js` + toast en texte,
+   C3 formulaire de contact (limites, champ piège, accusé réduit), C4 tableau de bord /
+   espace de travail / recherche, C5 cloisonnement de `getFormApi` et de ses huit frères (404),
+   C6 texte riche assaini, C7 caches du `localStorage` et infobulle d'attribut. Les règles qui en
+   restent sont au §4. Production vérifiée : aucune trace d'exploitation.
 2. **Dialogues et toasts.** Échap ferme un dialogue, avec une confirmation s'il y a une saisie
    non enregistrée (aujourd'hui `data-bs-keyboard="false"`, `dialog-manager_controller.js:30`).
    Toasts : `role="status"` pour une information, `role="alert"` réservé aux erreurs
@@ -150,9 +184,31 @@ Inscrits le 2026-10-16 (décisions de Serge), après l'inventaire fait pour la s
    dur sur la carte de piste (`_carte_piste.html.twig:40`), au lieu de `format_datetime`.
 6. **État vide.** Distinguer « aucune donnée » de « tout est filtré »
    (`_list_manager.html.twig:420-425`).
-7. **Route morte** `/admin/piste/test` (`PisteController.php:65-69`).
+7. **Routes et code morts** : `/admin/piste/test` (`PisteController.php:65-69`) ;
+   `/admin/demande_contact` répond 500 en GET (gabarit absent) — le POST, lui, passe par
+   `GardeDuFormulaireDeContact` ; `RetroAgentController::assertPeutConsulter`, jamais appelée.
 8. **Mascottes.** Partages (Paiement et PaiementPrime ; Chargement et ChargementPourPrime ;
    DepenseCourtier et ReversementRetroAgent ; Invite et ProductionIntermediaire) et alias
    d'action utilisés comme mascotte (cinq Roles* sur `action:role`, ParametresConge sur
    `action:settings`, PeriodeBlocage sur `action:resiliation`). Serge tranche cas par cas au
    premier chantier de rubrique, avec le test prescrit par `jsb-construire-rubrique` §6.
+
+Inscrits le 2026-10-17, à la clôture du chantier 1 (constats faits en route, prouvés) :
+
+9. **CSP, d'abord en `Content-Security-Policy-Report-Only`**, avec un point de collecte des
+   violations. Aucun en-tête CSP aujourd'hui (`public/.htaccess` ne pose que
+   `Permissions-Policy`). Recensement à résorber avant d'appliquer : 91 gestionnaires `on…=`
+   dans les gabarits et 4 dans des chaînes JS (dont les `onclick` des tableaux de production
+   d'`assets/app.js`), 12 `<script>` inline, 1 610 attributs `style=` (qui imposeront
+   `style-src 'unsafe-inline'` au début). Quill est chargé depuis jsDelivr
+   (`rich-text_controller.js:2`, CSS :84) : le vendoriser par `importmap:require`, ou l'autoriser
+   explicitement.
+10. **Relais de `$e->getMessage()` vers l'écran** (fuite d'information : chemin, SQL, classe) :
+    environ 15 sites, par ex. `ControllerUtilsTrait.php:1952`, `EchangeController.php:322`,
+    `BordereauController.php:1075`, `AvenantController.php:344`. Message métier à l'écran,
+    détail au journal (supervision).
+11. **La recherche fait un `LIKE` sur le HTML brut des champs riches**
+    (`JSBDynamicSearchService:1095-1102`) : « strong » trouve tout texte en gras, et un mot
+    coupé par une balise n'est pas trouvé.
+12. **`composer audit` : 55 avis de sécurité** sur les dépendances (2026-10-16) — à trier, mettre
+    à jour par lots testés.

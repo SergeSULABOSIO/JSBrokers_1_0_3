@@ -49,7 +49,10 @@ export default class extends Controller {
             document.body.appendChild(this.tooltipElement);
         }
 
-        this.tooltipElement.innerHTML = content;
+        // DU TEXTE. `dataset` rend l'attribut décodé : en innerHTML, un `&lt;img…&gt;` bien
+        // échappé par le gabarit redevenait une balise. Les descriptions des canevas sont
+        // du texte (aucune balise, vérifié le 2026-10-17).
+        this.tooltipElement.textContent = content;
         const targetRect = event.currentTarget.getBoundingClientRect();
         const tooltipRect = this.tooltipElement.getBoundingClientRect();
 
