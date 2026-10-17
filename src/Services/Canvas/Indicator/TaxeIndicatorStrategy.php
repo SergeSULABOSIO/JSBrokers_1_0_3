@@ -3,6 +3,7 @@
 namespace App\Services\Canvas\Indicator;
 
 use App\Entity\Taxe;
+use App\Service\TexteRiche\TexteRiche;
 use App\Services\ServiceDates;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -37,7 +38,7 @@ class TaxeIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'montantTaxePaye' => round($stats['paid'], 2),
             'soldeRestantDu' => round($stats['balance'], 2),
             'autoritesFiscalesString' => $this->getAutoritesFiscalesString($entity),
-            'descriptionStripped' => strip_tags($entity->getDescription() ?? ''),
+            'descriptionStripped' => TexteRiche::lisible($entity->getDescription() ?? ''),
         ];
     }
 

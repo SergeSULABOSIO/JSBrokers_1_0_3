@@ -4,7 +4,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BALISES, classesAdmises, estTexteRiche, listeAdmise, styleAdmis } from '../../assets/controllers/texte-riche-regles.js';
+import { BALISES, classesAdmises, estTexteRiche, FORMATS_DE_LA_BARRE, listeAdmise, styleAdmis } from '../../assets/controllers/texte-riche-regles.js';
 
 test('les balises de la barre d\'outils, et elles seules', () => {
     assert.deepEqual(BALISES, ['p', 'br', 'strong', 'em', 'u', 's', 'ol', 'ul', 'li', 'h1', 'h2', 'h3', 'span']);
@@ -41,4 +41,11 @@ test('le HTML de l\'éditeur se reconnaît à son bloc ; un texte simple reste d
     assert.equal(estTexteRiche('<img src=x onerror=alert(1)>'), false);
     assert.equal(estTexteRiche('R&D < 10'), false);
     assert.equal(estTexteRiche(42), false);
+});
+
+test('les formats offerts à l\'éditeur sont ceux de sa barre d\'outils', () => {
+    assert.deepEqual(FORMATS_DE_LA_BARRE, ['bold', 'italic', 'underline', 'strike', 'color', 'background', 'list', 'align', 'header']);
+    for (const absent of ['link', 'image', 'video', 'code-block', 'formula']) {
+        assert.ok(!FORMATS_DE_LA_BARRE.includes(absent), absent);
+    }
 });

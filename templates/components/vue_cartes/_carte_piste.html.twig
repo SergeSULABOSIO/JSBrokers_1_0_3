@@ -26,7 +26,7 @@
 {%- set offres = entity.nombreCotations|default(0) -%}
 {%- set prime = entity.primePotentielle is null ? '—' : vueCartes.monnaie ~ ' ' ~ entity.primePotentielle|format_nombre(2) -%}
 {%- set commission = entity.commissionPotentielle is null ? '—' : vueCartes.monnaie ~ ' ' ~ entity.commissionPotentielle|format_nombre(2) -%}
-{%- set description = entity.descriptionDuRisque|default('')|striptags|trim -%}
+{%- set description = entity.descriptionDuRisque|default('')|texte_lisible|trim -%}
 {#- L'INFOBULLE NE RÉPÈTE PAS LA CARTE : elle dit ce que la carte tronque (nom, client,
     risque, responsable) ou tait (prime, date d'activité, description). Type, étape et offres
     se lisent déjà sur la carte. -#}

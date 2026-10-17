@@ -53,7 +53,7 @@
 
 {% set rendus = 0 %}
 {% for texte in items %}
-    {% set valeur = attribute(entity, texte.attribut_code) %}
+    {% set valeur = attribute(entity, texte.attribut_code)|texte_lisible %}
     {% if texte.est_nombre|default(false) %}
         {# Une colonne chiffrée rétrogradée garde son format : le MÊME que celui de la
            colonne de valeur, sans quoi deux montants de la même ligne s'écriraient de

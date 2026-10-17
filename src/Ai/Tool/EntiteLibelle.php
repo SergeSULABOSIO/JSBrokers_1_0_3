@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tool;
 
+use App\Service\TexteRiche\TexteRiche;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
@@ -98,6 +99,8 @@ final class EntiteLibelle
             $libelle = method_exists($entity, '__toString') ? (string) $entity : ('#' . $entity->getId());
         }
 
-        return (string) $libelle;
+        // `description` est un candidat de libellé (Tache…) : le HTML de l'éditeur se nomme
+        // par son texte.
+        return (string) TexteRiche::lisible($libelle);
     }
 }

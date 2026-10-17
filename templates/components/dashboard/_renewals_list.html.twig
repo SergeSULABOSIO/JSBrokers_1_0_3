@@ -219,7 +219,7 @@
                     {% if avenant.description %}
                     <span style="color:#6c757d;">
                         <twig:UX:Icon name="fluent:text-description-16-filled" style="width:11px;height:11px;" class="me-1" />
-                        {{ avenant.description|striptags|slice(0, 80) }}{{ avenant.description|striptags|length > 80 ? '…' : '' }}
+                        {{ avenant.description|texte_lisible|slice(0, 80) }}{{ avenant.description|texte_lisible|length > 80 ? '…' : '' }}
                     </span>
                     {% endif %}
                 </div>

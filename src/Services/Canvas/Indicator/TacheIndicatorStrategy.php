@@ -3,6 +3,7 @@
 namespace App\Services\Canvas\Indicator;
 
 use App\Entity\Tache;
+use App\Service\TexteRiche\TexteRiche;
 use App\Services\ServiceDates;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -28,7 +29,7 @@ class TacheIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'ageTache' => $this->calculateTacheAge($entity),
             'nombreFeedbacks' => $this->countTacheFeedbacks($entity),
             'contexteTache' => $this->getTacheContexteString($entity),
-            'descriptionText' => strip_tags($entity->getDescription() ?? ''),
+            'descriptionText' => TexteRiche::lisible($entity->getDescription() ?? ''),
             'prioriteCalculee' => $this->getTachePrioriteCalculee($entity),
             'dernierFeedbackDate' => $this->getTacheDernierFeedbackDate($entity),
             'nombreDocuments' => $this->countTacheDocuments($entity),

@@ -10,6 +10,7 @@ use App\Entity\Invite;
 use App\Entity\Note;
 use App\Entity\Tache;
 use App\Entity\Tranche;
+use App\Service\TexteRiche\TexteRiche;
 use App\Service\Onboarding\OnboardingCatalogue;
 use App\Service\Onboarding\OnboardingCompletude;
 use App\Service\Workspace\WorkspaceAccessResolver;
@@ -633,6 +634,9 @@ final class PlanDuJourService
 
     private function tronquer(string $texte, int $max = 80): string
     {
+        // Couper le HTML de l'éditeur laisserait des balises ouvertes : on coupe son texte.
+        $texte = (string) TexteRiche::lisible($texte);
+
         return mb_strlen($texte) > $max ? mb_substr($texte, 0, $max - 1) . '…' : $texte;
     }
 }

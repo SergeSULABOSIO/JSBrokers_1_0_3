@@ -51,7 +51,7 @@
                         {{ mouvement.quantiteFloat > 0 ? '+' : '' }}{{ mouvement.quantiteFloat|number_format(1, ',', ' ') }}
                     </td>
                     <td>
-                        {{ mouvement.commentaire ? mouvement.commentaire|striptags|trim : '—' }}
+                        {{ mouvement.commentaire ? mouvement.commentaire|texte_lisible|trim : '—' }}
                         {% if mouvement.origine == 'KET' %}
                             <span class="text-muted"> · via l'assistant</span>
                         {% endif %}

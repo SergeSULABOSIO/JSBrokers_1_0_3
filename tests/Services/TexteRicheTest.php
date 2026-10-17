@@ -40,4 +40,14 @@ class TexteRicheTest extends TestCase
         self::assertSame('', TexteRiche::enTexte(null));
         self::assertSame('', TexteRiche::enTexte('<p><br></p>'));
     }
+
+    /** Ce qu'une liste, Ket ou le tableau de bord affichent d'un champ qui PEUT être riche. */
+    public function testLisibleNeConvertitQueLeTexteRiche(): void
+    {
+        self::assertSame('Clients VIP', TexteRiche::lisible('<p>Clients <strong>VIP</strong></p>'));
+        // Un texte simple garde ses chevrons : strip_tags y aurait coupé « <B ».
+        self::assertSame('remise « A<B »', TexteRiche::lisible('remise « A<B »'));
+        self::assertSame(12.5, TexteRiche::lisible(12.5));
+        self::assertNull(TexteRiche::lisible(null));
+    }
 }

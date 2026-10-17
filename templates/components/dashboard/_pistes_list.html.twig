@@ -89,7 +89,7 @@
                  data-piste-nom="{{ piste.nom|e }}"
                  data-piste-client="{{ clientNom|e }}"
                  data-piste-risque="{{ risqueNom|e }}"
-                 data-piste-description="{{ description|striptags|slice(0,120)|e }}"
+                 data-piste-description="{{ description|texte_lisible|slice(0,120)|e }}"
                  data-piste-statut="{{ statutLabel|e }}"
                  data-piste-days="{{ _days|round(0, 'ceil') }}"
                  data-piste-invite="{{ inviteNom|e }}"
@@ -137,7 +137,7 @@
                 {% if description %}
                 <p class="mb-2" style="color:#212529;word-break:break-word;">
                     <twig:UX:Icon name="fluent:text-description-16-filled" style="width:11px;height:11px;" class="me-1" />
-                    {{ description|striptags|slice(0, 120) }}{{ description|striptags|length > 120 ? '…' : '' }}
+                    {{ description|texte_lisible|slice(0, 120) }}{{ description|texte_lisible|length > 120 ? '…' : '' }}
                 </p>
                 {% endif %}
 

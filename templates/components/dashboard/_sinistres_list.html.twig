@@ -56,8 +56,8 @@
         {% set assureurNom = s.assureur ? (s.assureur.nom ?? '') : '' %}
         {% set assureNom  = s.assureNom ?? (s.assure ? (s.assure.nom ?? '') : '') %}
         {% set risqueNom  = s.risque ? (s.risque.nom ?? '') : '' %}
-        {% set lieu       = (s.lieu ?? '')|en_texte %}
-        {% set description = (s.descriptionDeFait ?? '')|en_texte %}
+        {% set lieu       = (s.lieu ?? '')|texte_lisible %}
+        {% set description = (s.descriptionDeFait ?? '')|texte_lisible %}
         {% set searchText = (refSin ~ '|' ~ refPol ~ '|' ~ assureurNom ~ '|' ~ assureNom ~ '|' ~ risqueNom)|lower %}
 
         {% set soldeAVerser = s.compensationSoldeAverser ?? 0 %}

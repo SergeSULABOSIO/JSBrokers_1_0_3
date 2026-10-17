@@ -44,7 +44,7 @@
         {% endif %}
 
         {% set ref      = p.note ? p.note.reference : (p.reference ?? '—') %}
-        {% set libelle  = (p.description ?? '')|en_texte %}
+        {% set libelle  = (p.description ?? '')|texte_lisible %}
         {% set noteNom  = p.note ? (p.note.nom ?? '') : '' %}
         {% set noteDesc = p.note ? (p.note.description ?? '') : '' %}
         {% set searchText = (ref ~ '|' ~ libelle ~ '|' ~ noteNom ~ '|' ~ noteDesc)|lower %}
@@ -102,7 +102,7 @@
                         </div>
                         {% if noteDesc %}
                         <div class="text-muted mt-1" style="padding-left:15px;">
-                            {{ noteDesc|striptags|slice(0, 120) }}{{ noteDesc|striptags|length > 120 ? '…' : '' }}
+                            {{ noteDesc|texte_lisible|slice(0, 120) }}{{ noteDesc|texte_lisible|length > 120 ? '…' : '' }}
                         </div>
                         {% endif %}
                     {% else %}

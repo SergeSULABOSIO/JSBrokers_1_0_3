@@ -202,7 +202,7 @@
                             <td><strong>{{ piste.nom }}</strong></td>
                             <td>{{ piste.risque ? piste.risque.nomComplet : '—' }}</td>
                             <td>{{ piste.primePotentielle is not null ? piste.primePotentielle|number_format(2, ',', ' ') ~ ' ' ~ monnaie : '—' }}</td>
-                            <td class="text-muted">{% set desc = piste.descriptionDuRisque|default('')|striptags|trim %}{{ desc ?: '—' }}</td>
+                            <td class="text-muted">{% set desc = piste.descriptionDuRisque|default('')|texte_lisible|trim %}{{ desc ?: '—' }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -343,8 +343,8 @@
                     {% for sinistre in sinistres %}
                         <tr>
                             <td><strong>{{ sinistre.referenceSinistre|default('—') }}</strong></td>
-                            <td class="soa-circonstance" title="{{ sinistre.descriptionDeFait|default('')|striptags }}">
-                                <span class="soa-circonstance-clamp">{{ sinistre.descriptionDeFait ? sinistre.descriptionDeFait|striptags : '—' }}</span>
+                            <td class="soa-circonstance" title="{{ sinistre.descriptionDeFait|default('')|texte_lisible }}">
+                                <span class="soa-circonstance-clamp">{{ sinistre.descriptionDeFait ? sinistre.descriptionDeFait|texte_lisible : '—' }}</span>
                             </td>
                             <td>{{ sinistre.risque ? sinistre.risque.nomComplet : '—' }}</td>
                             <td style="white-space:nowrap;">{{ sinistre.occuredAt ? sinistre.occuredAt|date('d/m/Y') : '—' }}</td>
@@ -517,13 +517,13 @@
                     {% for tache in tachesActives %}
                         {% set dernierFeedback = tache.feedbacks|last %}
                         <tr class="tache-active-row">
-                            <td><strong>{{ tache.description|striptags|trim }}</strong></td>
-                            <td class="text-muted" style="font-size:.8rem;">{{ tache.contexteTache|default('')|striptags|trim ?: '—' }}</td>
+                            <td><strong>{{ tache.description|texte_lisible|trim }}</strong></td>
+                            <td class="text-muted" style="font-size:.8rem;">{{ tache.contexteTache|default('')|texte_lisible|trim ?: '—' }}</td>
                             <td style="white-space:nowrap;">{{ tache.toBeEndedAt ? tache.toBeEndedAt|date('d/m/Y') : '—' }}</td>
                             <td style="font-size:.8rem;">
                                 {% if dernierFeedback %}
                                     <span class="badge" style="background-color:#495057; color:#fff; font-size:.72rem;">{{ feedbackTypeLabels[dernierFeedback.type]|default('?') }}</span>
-                                    {{ dernierFeedback.description|default('')|striptags|trim }}
+                                    {{ dernierFeedback.description|default('')|texte_lisible|trim }}
                                     {% if dernierFeedback.nextActionAt %}
                                         <br><small class="text-muted">Proch. action : {{ dernierFeedback.nextActionAt|date('d/m/Y') }}</small>
                                     {% endif %}
@@ -557,12 +557,12 @@
                     {% for tache in tachesCloses %}
                         {% set dernierFeedback = tache.feedbacks|last %}
                         <tr class="tache-closed-row">
-                            <td><s>{{ tache.description|striptags|trim }}</s></td>
-                            <td class="text-muted" style="font-size:.8rem;">{{ tache.contexteTache|default('')|striptags|trim ?: '—' }}</td>
+                            <td><s>{{ tache.description|texte_lisible|trim }}</s></td>
+                            <td class="text-muted" style="font-size:.8rem;">{{ tache.contexteTache|default('')|texte_lisible|trim ?: '—' }}</td>
                             <td style="font-size:.8rem;">
                                 {% if dernierFeedback %}
                                     <span class="badge" style="background-color:#495057; color:#fff; font-size:.72rem;">{{ feedbackTypeLabels[dernierFeedback.type]|default('?') }}</span>
-                                    {{ dernierFeedback.description|default('')|striptags|trim }}
+                                    {{ dernierFeedback.description|default('')|texte_lisible|trim }}
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
