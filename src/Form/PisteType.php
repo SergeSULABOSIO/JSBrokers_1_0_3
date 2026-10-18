@@ -157,7 +157,8 @@ class PisteType extends AbstractType
                 'help' => "L'apporteur de cette affaire. Sans lui, aucune commission n'est partagée. "
                     . "Son taux habituel s'applique, sauf condition contraire ci-dessous.",
                 'class' => Partenaire::class,
-                'choice_label' => "nom",
+                // Pas de `choice_label` ici : celui du champ (libellé riche) vaut pour l'option
+                // choisie comme pour la recherche AJAX, qui ne voit jamais celui d'un FormType.
                 'multiple' => false,
                 'expanded' => false,
                 'autocomplete' => true,
@@ -176,7 +177,6 @@ class PisteType extends AbstractType
                 'help' => "Conditions RÉUTILISABLES : définies une fois, rattachées à plusieurs affaires. "
                     . "Leur part se calcule sur ce qui reste APRÈS l'intermédiaire externe.",
                 'class' => ConditionPartage::class,
-                'choice_label' => "nom",
                 'multiple' => true,
                 'expanded' => false,
                 'by_reference' => false,
